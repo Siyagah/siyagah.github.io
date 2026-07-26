@@ -2959,6 +2959,7 @@ function shiftHeadingLevel(ev,dir){
   if(newLevel<1)target='h1';
   else if(newLevel>4)target='p';
   else target='h'+newLevel;
+  try{const sel=window.getSelection();if(sel&&!sel.isCollapsed)sel.collapseToStart();}catch(e){} /* v03.78 — same corruption guard as fb() */
   document.execCommand('formatBlock',false,'<'+target+'>');
   ed.focus();
   try{ed.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){}
@@ -3000,7 +3001,12 @@ function fb(ev,tag){
   let cur=null;
   try{const sel=window.getSelection();
     if(sel&&sel.rangeCount){let n=sel.getRangeAt(0).startContainer;n=(n&&n.nodeType===1)?n:(n&&n.parentElement);
-      const b=n&&n.closest&&n.closest('h1,h2,h3,h4,h5,h6');if(b)cur=b.tagName.toLowerCase();}
+      const b=n&&n.closest&&n.closest('h1,h2,h3,h4,h5,h6');if(b)cur=b.tagName.toLowerCase();
+      /* v03.78 — collapse to caret before formatBlock (see _fwFb for why:
+         a multi-paragraph selection can otherwise get merged into one
+         heading element by the browser). */
+      if(!sel.isCollapsed)sel.collapseToStart();
+    }
   }catch(e){}
   const target=(cur&&cur===tag)?'p':tag;
   document.execCommand('formatBlock',false,'<'+target+'>');
@@ -5323,14 +5329,6 @@ function renderDatabaseSection(){
     {id:'db-myfavs',    icon:'❤️', name:'My Favourites',cnt:favCnt},
     {id:'db-mycal',icon:'📅',name:'My Calendar',cnt:(DB.calEvents||[]).length},
   ];
-  /* Real user-created MyDatabase folders (e.g. the 7 starter folders, or any
-     folder manually placed in this section) — excludes the two special
-     backing folders for My Favourites/My Contacts (already shown as virtual
-     rows above) and journalMode folders (already shown via My Journal). This
-     was previously entirely missing: only the 4 hardcoded virtual items below
-     were ever rendered, so any real db-section folder had no render path. */
-  const extraFolders=DB.folders.filter(f=>f.sectionId==='db-section'&&!f.parentId&&!f.journalMode
-    &&f.id!=='db-fav-folder'&&f.id!=='db-ct-folder').sort((a,b)=>(a.order||0)-(b.order||0));
   const body=open?'<div class="db-body sec-body">'+items.map(it=>{
     const act=ST.folder===it.id;
     return '<div class="tr-row sf-row'+(act?' sel':'')+'" style="padding-left:13px;cursor:pointer"'
@@ -5341,7 +5339,7 @@ function renderDatabaseSection(){
       +'<span class="tr-name"'+(DB.theme?.dbColors?.[it.id]?' style="color:'+DB.theme.dbColors[it.id]+'"':'')+'>'+esc(it.name)+'</span>'
       +(it.cnt?'<span class="tr-cnt">'+it.cnt+'</span>':'')
       +'</div>';
-  }).join('')+extraFolders.map(f=>trNode(f,0)).join('')+'</div>':'';
+  }).join('')+'</div>':'';
   return '<div class="sf-sec db-sec">'
     +'<div class="sec-hd db-hd-sec" onclick="ST.dbOpen=ST.dbOpen===false;renderTree()">'
     +'<span class="sec-tog">'+(open?'▾':'▸')+'</span>'
@@ -6711,7 +6709,7 @@ function closeNoteModal(){
   }
   document.getElementById('note-modal-bg')?.classList.remove('active');
   renderP3H();
-  if(_fwFocusedAid){_pinPanelInject();_tocInject();} /* hand both panels back to a focused pop-out, if any */
+  if(_fwFocusedAid)_tocInject(); /* TOC hands back to a focused pop-out, if any — sidepane no longer needs this, each window keeps its own */
 }
 function _modalDragStart(e){
   if(e.button!==0)return;
@@ -6976,14 +6974,13 @@ function duplicateNote(aid){
 let _fwZTop=6000;
 const _fwAutoTimer={};
 let _fwFocusedAid=null;
-/* v03.74 — tracks which float window currently "owns" the shared Pinned
-   Tabs Sidepane (per Smahk: one shared panel that follows focus, rather
-   than one per window). Called on open, on bring-to-front, and on every
-   mousedown inside a window. */
+/* v03.74 — tracks which float window is focused, used by TOC (which still
+   follows focus, shared/single-instance). The sidepane no longer needs
+   this: each window keeps its own independent copy (v03.76). Called on
+   open, on bring-to-front, and on every mousedown inside a window. */
 function _fwFocus(aid){
   if(_fwFocusedAid===aid)return;
   _fwFocusedAid=aid;
-  _pinPanelInject();
   _tocInject();
 }
 function popOutNote(aid){
@@ -7016,6 +7013,7 @@ function _fwCreate(aid){
   win.addEventListener('mousedown',()=>{_fwZTop++;win.style.zIndex=_fwZTop;_fwFocus(aid);},{capture:true});
   _fwWireDrag(win.querySelector('.fw-hd'),win,aid);
   _fwAddResizeHandles(win,aid);
+  _fwPinInject(aid);
   const ed=win.querySelector('.fw-ed');
   if(ed)ed.addEventListener('input',()=>_fwScheduleAutoSave(aid));
   const ti=win.querySelector('.fw-ti');
@@ -7121,7 +7119,18 @@ function _fwFb(ev,aid,tag){
   let cur=null;
   try{const sel=window.getSelection();
     if(sel&&sel.rangeCount){let n=sel.getRangeAt(0).startContainer;n=(n&&n.nodeType===1)?n:(n&&n.parentElement);
-      const b=n&&n.closest&&ed.contains(n)&&n.closest('h1,h2,h3,h4,h5,h6');if(b)cur=b.tagName.toLowerCase();}
+      const b=n&&n.closest&&ed.contains(n)&&n.closest('h1,h2,h3,h4,h5,h6');if(b)cur=b.tagName.toLowerCase();
+      /* v03.78 — collapse an active selection to the caret before
+         formatBlock. Without this, selecting across multiple paragraphs
+         and clicking a heading button can make the browser wrap the
+         WHOLE selected range into one heading element instead of
+         converting each block — silently merging several paragraphs'
+         worth of content into a single corrupted heading. Collapsing
+         guarantees only the one block at the caret is ever affected,
+         which is the only behaviour a "toggle heading" button should
+         ever have anyway. */
+      if(!sel.isCollapsed)sel.collapseToStart();
+    }
   }catch(e){}
   const target=(cur&&cur===tag)?'p':tag;
   document.execCommand('formatBlock',false,'<'+target+'>');
@@ -7236,7 +7245,6 @@ function closeFloatWin(aid){
   if(_fwFocusedAid===aid){
     const rest=Array.from(document.querySelectorAll('.float-win'));
     _fwFocusedAid=rest.length?rest.reduce((a,b)=>(+a.style.zIndex>+b.style.zIndex?a:b)).id.slice(3):null;
-    _pinPanelInject();
     _tocInject();
   }
 }
@@ -8237,7 +8245,7 @@ function _tocToggleSide(){
      TOC panel's own width, which could leave stale/incorrect padding when
      a pin-panel was also present, causing the note body to render at the
      wrong width after repositioning). */
-  _pinPanelInject(); /* pin-panel may need to flip sides too, if it's in 'opposite side' mode */
+  if(inModal)_pinPanelInject(); /* modal pin-panel may need to flip sides too, if it's in 'opposite side' mode — float sidepanes have their own independent side pref, unaffected by TOC */
   if(inModal)_syncP3CPadding();else _fwSyncBodyPadding(_fwFocusedAid);
 }
 function _tocStartResize(e){
@@ -8307,14 +8315,14 @@ function pinTabToPanel(aid){
   if(DB.theme.pinTabIds.includes(aid)){toast('📌 Already pinned');return;}
   DB.theme.pinTabIds.push(aid);
   persist();
-  _pinPanelInject();
+  _pinRefreshAll();
   toast('📌 Pinned to sidepane');
 }
 function unpinTab(aid){
   if(!DB.theme?.pinTabIds)return;
   DB.theme.pinTabIds=DB.theme.pinTabIds.filter(x=>x!==aid);
   persist();
-  _pinPanelInject();
+  _pinRefreshAll();
 }
 function _pinPanelToggleSide(){
   if(!DB.theme)DB.theme={};
@@ -8345,18 +8353,18 @@ function _extractHeadingsFromHTML(html){
 function togPinExpand(aid){
   if(!ST.pinExpand)ST.pinExpand={};
   ST.pinExpand[aid]=!ST.pinExpand[aid];
-  _pinPanelInject();
+  _pinRefreshAll();
 }
 function togPinCardMode(aid){
   if(!ST.pinCardMode)ST.pinCardMode={};
   ST.pinCardMode[aid]=!ST.pinCardMode[aid];
-  _pinPanelInject();
+  _pinRefreshAll();
 }
 function togPinHeadExpand(aid,idx){
   if(!ST.pinHeadExpand)ST.pinHeadExpand={};
   const key=aid+'|h'+idx;
   ST.pinHeadExpand[key]=!ST.pinHeadExpand[key];
-  _pinPanelInject();
+  _pinRefreshAll();
 }
 function _pinHeadsTreeHTML(aid,heads){
   return heads.map((h,i)=>{
@@ -8395,21 +8403,15 @@ function _pinCardHTML(a,isCurrent){
   }
   return h+'</div>';
 }
-function _pinHostEl(){
-  if(ST.noteModal)return document.getElementById('p3');
-  if(_fwFocusedAid)return document.getElementById('fw-'+_fwFocusedAid);
-  return null;
-}
 function _pinPanelInject(){
-  const host=_pinHostEl();
-  if(!host){document.getElementById('pin-panel')?.remove();_fwClearAllBodyPadding();return;}
+  if(!ST.noteModal){document.getElementById('pin-panel')?.remove();return;}
+  const host=document.getElementById('p3');if(!host)return;
   if(!DB.theme)DB.theme={};
   if(!DB.theme.pinTabIds)DB.theme.pinTabIds=[];
-  const inModal=ST.noteModal;
-  const pos=DB.theme.pinPanelPos==='below'?'below':'side'; /* default: side (opposite of TOC in modal mode; plain right in float mode — float windows don't have a TOC panel yet) */
-  const tocLeft=inModal&&document.getElementById('p3')?.classList.contains('toc-left');
+  const pos=DB.theme.pinPanelPos==='below'?'below':'side'; /* default: side (opposite of TOC) */
+  const tocLeft=host.classList.contains('toc-left');
   const tocSide=tocLeft?'left':'right';
-  const pinSide=(!inModal)?'right':(pos==='side'?(tocSide==='left'?'right':'left'):tocSide);
+  const pinSide=pos==='side'?(tocSide==='left'?'right':'left'):tocSide;
 
   const ids=DB.theme.pinTabIds.filter(id=>DB.articles.some(a=>a.id===id));
   if(ids.length!==DB.theme.pinTabIds.length){DB.theme.pinTabIds=ids;persist();}
@@ -8417,11 +8419,9 @@ function _pinPanelInject(){
   let inner='<div class="pin-hd"><span>📌 Sidepane</span>'
     +`<button class="pin-side-btn" onclick="_pinPanelToggleSide()" title="${pos==='side'?'Move below Contents':'Move to opposite side'}">${pos==='side'?'⬇':'◫'}</button></div>`;
 
-  /* The currently-open/focused note always appears first — the modal's
-     ST.article when in modal mode, or the focused float window's note
-     when popped out — deduped if it's ALSO pinned. */
-  const curId=inModal?(ST.article&&ST.article!=='cal'?ST.article:null):_fwFocusedAid;
-  const curArt=curId?DB.articles.find(a=>a.id===curId):null;
+  /* The currently-open note always appears first, so its headings are
+     browsable the same way as pinned notes — deduped if it's ALSO pinned. */
+  const curArt=(ST.article&&ST.article!=='cal')?DB.articles.find(a=>a.id===ST.article):null;
   if(curArt)inner+=_pinCardHTML(curArt,true);
 
   const others=ids.filter(id=>!curArt||id!==curArt.id);
@@ -8432,10 +8432,10 @@ function _pinPanelInject(){
   }
 
   let panel=document.getElementById('pin-panel');
-  const prevHost=panel&&panel.parentElement;
   if(!panel){
     panel=document.createElement('div');
     panel.id='pin-panel';
+    panel.className='pin-panel';
     panel.ondragover=_pinPanelDragOver;
     panel.ondragleave=_pinPanelDragLeave;
     panel.ondrop=_pinPanelDrop;
@@ -8444,36 +8444,133 @@ function _pinPanelInject(){
     const _pic=document.createElement('div');_pic.className='pin-inner';panel.appendChild(_pic);
     const _pw=(DB.theme&&DB.theme.pinPanelWidth)||200;
     panel.style.width=_pw+'px';
+    host.appendChild(panel);
   }
-  if(panel.parentElement!==host)host.appendChild(panel);
   panel.classList.toggle('pin-left',pinSide==='left');
   panel.classList.toggle('pin-right',pinSide==='right');
   const _pinInner=panel.querySelector('.pin-inner')||panel;
   _pinInner.innerHTML=inner;
 
-  if(inModal){
-    const p3h=document.getElementById('p3h');
-    const tb=document.getElementById('tab-bar');
-    const baseTop=(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32);
-    if(pos==='below'){
-      const toc=document.getElementById('toc-panel');
-      panel.style.top=(baseTop+(toc?toc.offsetHeight:0))+'px';
-    } else {
-      panel.style.top=baseTop+'px';
-    }
-    panel.style.bottom='8px';
-    _syncP3CPadding();
+  const p3h=document.getElementById('p3h');
+  const tb=document.getElementById('tab-bar');
+  const baseTop=(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32);
+  if(pos==='below'){
+    const toc=document.getElementById('toc-panel');
+    panel.style.top=(baseTop+(toc?toc.offsetHeight:0))+'px';
   } else {
-    const hd=host.querySelector('.fw-hd');
-    panel.style.top=(hd?hd.offsetHeight:34)+'px';
-    panel.style.bottom=(pinSide==='right'?'14px':'0px'); /* leaves the native resize-corner grip clickable */
-    /* Clear padding on whichever window previously hosted the panel
-       (focus may have just moved from one float window to another). */
-    if(prevHost&&prevHost!==host&&prevHost.classList&&prevHost.classList.contains('float-win')){
-      const prevAid=prevHost.id.slice(3);_fwSyncBodyPadding(prevAid);
-    }
-    _fwSyncBodyPadding(_fwFocusedAid);
+    panel.style.top=baseTop+'px';
   }
+  panel.style.bottom='8px';
+  _syncP3CPadding();
+}
+/* v03.76 — Sidepane in float windows: per Smahk, each popped-out note now
+   gets its OWN independent sidepane, visible at the same time as every
+   other open window's — not one shared panel that jumps to whichever
+   window is focused (that was the previous behaviour, now reverted for
+   float mode only; the modal above is unaffected — it's inherently
+   single-instance so sharing was never the issue there). */
+function _fwPinRefreshAll(){
+  document.querySelectorAll('.float-win').forEach(win=>_fwPinInject(win.id.slice(3)));
+}
+function _pinRefreshAll(){
+  _pinPanelInject();
+  _fwPinRefreshAll();
+}
+function _fwPinInject(aid){
+  const win=document.getElementById('fw-'+aid);if(!win)return;
+  if(!DB.theme)DB.theme={};
+  if(!DB.theme.pinTabIds)DB.theme.pinTabIds=[];
+  const side=DB.theme.fwPinSide==='left'?'left':'right';
+  const ids=DB.theme.pinTabIds.filter(id=>DB.articles.some(a=>a.id===id));
+  if(ids.length!==DB.theme.pinTabIds.length){DB.theme.pinTabIds=ids;persist();}
+
+  let inner='<div class="pin-hd"><span>📌 Sidepane</span>'
+    +`<button class="pin-side-btn" onclick="_fwPinToggleSide()" title="Move to opposite side">◫</button></div>`;
+  const curArt=DB.articles.find(a=>a.id===aid);
+  if(curArt)inner+=_pinCardHTML(curArt,true);
+  const others=ids.filter(id=>!curArt||id!==curArt.id);
+  if(!others.length){
+    inner+='<div class="pin-empty">Drag a tab here (or tap 📌 on a tab) to pin it alongside this note</div>';
+  } else {
+    others.forEach(id=>{const a=DB.articles.find(x=>x.id===id);if(a)inner+=_pinCardHTML(a,false);});
+  }
+
+  let panel=document.getElementById('pin-panel-'+aid);
+  if(!panel){
+    panel=document.createElement('div');
+    panel.id='pin-panel-'+aid;
+    panel.className='pin-panel';
+    panel.ondragover=ev=>_fwPinDragOver(ev,aid);
+    panel.ondragleave=ev=>_fwPinDragLeave(ev,aid);
+    panel.ondrop=ev=>_fwPinDrop(ev,aid);
+    const _rh=document.createElement('div');_rh.className='pin-resize-h';
+    _rh.onmousedown=ev=>_fwPinStartResize(ev,aid);panel.appendChild(_rh);
+    const _pic=document.createElement('div');_pic.className='pin-inner';panel.appendChild(_pic);
+    const _pw=(DB.theme&&DB.theme.pinPanelWidth)||200;
+    panel.style.width=_pw+'px';
+    win.appendChild(panel);
+  }
+  const _pinInner=panel.querySelector('.pin-inner')||panel;
+  _pinInner.innerHTML=inner;
+
+  const hd=win.querySelector('.fw-hd');
+  panel.style.top=(hd?hd.offsetHeight:34)+'px';
+  /* Positioned + the resize handle placed with inline styles rather than
+     relying on CSS selectors scoped to a single shared #pin-panel id —
+     each window now has its own pin-panel-{aid} id, so the old
+     "#pin-panel.pin-left .pin-resize-h{right:0}" rules never matched it.
+     This also directly fixes the "resize only grabs from the left edge"
+     report: the handle is now explicitly placed on the correct (inner)
+     edge for whichever side the panel is docked to. */
+  const rh=panel.querySelector('.pin-resize-h');
+  panel.classList.toggle('pin-left',side==='left');
+  panel.classList.toggle('pin-right',side==='right');
+  if(side==='left'){
+    panel.style.left='0';panel.style.right='auto';panel.style.bottom='0px';
+    panel.style.borderLeft='none';panel.style.borderRight='1.5px solid var(--border2)';
+    if(rh){rh.style.left='auto';rh.style.right='0';}
+  } else {
+    panel.style.right='0';panel.style.left='auto';panel.style.bottom='14px'; /* leaves the resize-corner grip clickable */
+    panel.style.borderRight='none';panel.style.borderLeft='1.5px solid var(--border2)';
+    if(rh){rh.style.right='auto';rh.style.left='0';}
+  }
+  _fwSyncBodyPadding(aid);
+}
+function _fwPinToggleSide(){
+  if(!DB.theme)DB.theme={};
+  DB.theme.fwPinSide=DB.theme.fwPinSide==='left'?'right':'left';
+  persist();
+  _fwPinRefreshAll();
+}
+function _fwPinDragOver(ev,aid){ev.preventDefault();document.getElementById('pin-panel-'+aid)?.classList.add('pin-drop-over');}
+function _fwPinDragLeave(ev,aid){document.getElementById('pin-panel-'+aid)?.classList.remove('pin-drop-over');}
+function _fwPinDrop(ev,aid){
+  ev.preventDefault();
+  document.getElementById('pin-panel-'+aid)?.classList.remove('pin-drop-over');
+  const dropAid=_pinDragAid||_artDragId||(function(){try{return ev.dataTransfer.getData('text/plain');}catch(e){return null;}})();
+  _pinDragAid=null;
+  if(dropAid)pinTabToPanel(dropAid);
+}
+function _fwPinStartResize(e,aid){
+  if(e.button!==0)return;
+  e.preventDefault();
+  var startX=e.clientX;
+  var panel=document.getElementById('pin-panel-'+aid);if(!panel)return;
+  var startW=panel.offsetWidth||200;
+  var isLeft=DB.theme&&DB.theme.fwPinSide==='left';
+  function onMove(ev){
+    var nw=Math.max(150,Math.min(420,isLeft?startW+(ev.clientX-startX):startW-(ev.clientX-startX)));
+    panel.style.width=nw+'px';
+    _fwSyncBodyPadding(aid);
+  }
+  function onUp(){
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('mouseup',onUp);
+    if(!DB.theme)DB.theme={};
+    DB.theme.pinPanelWidth=panel.offsetWidth;persist();
+  }
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onUp);
 }
 /* Pads the focused float window's body so its title/toolbar/content never
    render underneath the shared sidepane — mirrors _syncP3CPadding()'s job
@@ -8483,10 +8580,10 @@ function _fwSyncBodyPadding(aid){
   const win=document.getElementById('fw-'+aid);if(!win)return;
   const body=win.querySelector('.fw-body');if(!body)return;
   const toc=document.getElementById('toc-panel');
-  const pin=document.getElementById('pin-panel');
+  const pin=document.getElementById('pin-panel-'+aid);
   let left=0,right=0;
   if(toc&&toc.parentElement===win){ if(toc.classList.contains('toc-left'))left+=toc.offsetWidth; else right+=toc.offsetWidth; }
-  if(pin&&pin.parentElement===win){ if(pin.classList.contains('pin-left'))left+=pin.offsetWidth; else right+=pin.offsetWidth; }
+  if(pin){ if(pin.classList.contains('pin-left'))left+=pin.offsetWidth; else right+=pin.offsetWidth; }
   body.style.paddingLeft=left?left+'px':'';
   body.style.paddingRight=right?right+'px':'';
 }
@@ -14878,9 +14975,29 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
 .toc-resize-h:hover,.toc-resize-h:active{background:rgba(99,102,241,.2)}
 #p3.toc-right .toc-resize-h{left:0}
 #p3.toc-left .toc-resize-h{right:0}
+/* v03.76 fix — the two rules above only ever matched inside the modal
+   (ancestor #p3), so a float-window TOC panel's resize handle never got
+   positioned onto the correct (inner) edge when flipped to the left side —
+   it silently sat at its default un-positioned spot instead, which read as
+   "only resizes from the left edge, not the right". These two are scoped
+   to the panel itself instead of an ancestor, so they work regardless of
+   which host (modal or float window) the panel is in. */
+#toc-panel.toc-right .toc-resize-h{left:0}
+#toc-panel.toc-left .toc-resize-h{right:0}
 
 /* ── Pinned Tabs sidepane (popped-out note only) ─────────────────────────── */
 #pin-panel{position:absolute;width:200px;overflow-y:auto;background:var(--paper);z-index:9}
+/* v03.76 — class-based duplicates of the base/content rules below, so every
+   float window's own independent pin-panel-{aid} (which can't share the
+   #pin-panel id) still gets the same look. Float instances position
+   themselves via inline styles (set in _fwPinInject) rather than the
+   .pin-left/.pin-right ID-scoped rules further down, which stay exactly
+   as they were for the modal. */
+.pin-panel{position:absolute;width:200px;overflow-y:auto;background:var(--paper);z-index:9}
+.pin-panel.pin-drop-over{background:rgba(99,102,241,.06)}
+.pin-panel .pin-hd{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;padding:12px 14px 8px;border-bottom:1px solid var(--border2);margin-bottom:4px}
+.pin-panel .pin-side-btn{background:none;border:none;cursor:pointer;color:var(--t3);font-size:12px;padding:2px 4px;border-radius:4px;line-height:1;flex-shrink:0}
+.pin-panel .pin-empty{padding:16px 14px;font-size:12px;color:var(--t3);text-align:center;line-height:1.5;border:1.5px dashed var(--border2);border-radius:var(--rl);margin:0 10px}
 .pin-resize-h{position:absolute;top:0;bottom:0;width:6px;cursor:col-resize;z-index:5;background:transparent}
 .pin-resize-h:hover,.pin-resize-h:active{background:rgba(99,102,241,.2)}
 #pin-panel.pin-left .pin-resize-h{right:0}
