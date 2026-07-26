@@ -3,6 +3,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Knowledge Notebook</title>
+<!-- SIYAGAH APP VERSION — single source of truth for the delivery filename.
+     Format: XX.YY
+       XX = Major Features / upgrades (bump this, reset YY to 00)
+       YY = Enhancements / fixes (bump this for smaller changes)
+     Claude: on every delivery, read this value, bump it per the rule
+     above, update it here, and name the downloaded file
+     "Siyagah v{APP_VERSION}.html" -->
+<meta name="app-version" content="03.75">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1981,7 +1989,7 @@ function exportDeploy(){
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href = url;
-  a.download = 'Siyagah-Deploy.html';
+  a.download = `Siyagah v${APP_VERSION} - Deploy.html`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast('🚀 Deploy file ready — upload to Firebase Hosting / GitHub Pages');
@@ -12635,6 +12643,14 @@ function updateSaveUI(){
   }
 }
 
+
+/* ── App version ──────────────────────────────────────────────────────
+   Single source of truth is the <meta name="app-version"> tag in <head>.
+   Format XX.YY — XX = Major Features/upgrades, YY = Enhancements/fixes.
+   Claude updates that tag (and this stays in sync automatically) on every
+   delivery, bumping it from whatever value is already in the file that's
+   deployed on GitHub. ─────────────────────────────────────────────────── */
+const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || '00.00';
 
 /* ── Timestamped filename ────────────────────────────────────────────── */
 /** Returns "Siyagah - DD.MM.YY - HH.MM AM/PM.html" — safe on all OSes */
