@@ -8081,9 +8081,13 @@ function _tocInject(){
   const heads=_tocScan();
   const existing=document.getElementById('toc-panel');
   if(heads.length<3){
+    const oldHost=existing&&existing.parentElement;
     if(existing){existing.remove();host.classList.remove('has-toc');}
     _tocUnbindScroll();
     if(inModal)_syncP3CPadding();else _fwSyncBodyPadding(_fwFocusedAid);
+    if(!inModal&&oldHost&&oldHost!==host&&oldHost.classList&&oldHost.classList.contains('float-win')){
+      _fwSyncBodyPadding(oldHost.id.slice(3)); /* clear stale padding on the window TOC just left */
+    }
     return;
   }
   const _side=DB.theme&&DB.theme.tocSide==='left'?'left':'right';
@@ -8150,6 +8154,9 @@ function _tocInject(){
   }
   _tocSetActive(0);
   if(inModal)_syncP3CPadding();else _fwSyncBodyPadding(_fwFocusedAid);
+  if(!inModal&&prevHost&&prevHost!==host&&prevHost.classList&&prevHost.classList.contains('float-win')){
+    _fwSyncBodyPadding(prevHost.id.slice(3)); /* clear stale padding on the window TOC just left */
+  }
 }
 function togTocTitle(){
   ST.tocTitleOpen=!(ST.tocTitleOpen!==false);
