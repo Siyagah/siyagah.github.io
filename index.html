@@ -5323,6 +5323,14 @@ function renderDatabaseSection(){
     {id:'db-myfavs',    icon:'❤️', name:'My Favourites',cnt:favCnt},
     {id:'db-mycal',icon:'📅',name:'My Calendar',cnt:(DB.calEvents||[]).length},
   ];
+  /* Real user-created MyDatabase folders (e.g. the 7 starter folders, or any
+     folder manually placed in this section) — excludes the two special
+     backing folders for My Favourites/My Contacts (already shown as virtual
+     rows above) and journalMode folders (already shown via My Journal). This
+     was previously entirely missing: only the 4 hardcoded virtual items below
+     were ever rendered, so any real db-section folder had no render path. */
+  const extraFolders=DB.folders.filter(f=>f.sectionId==='db-section'&&!f.parentId&&!f.journalMode
+    &&f.id!=='db-fav-folder'&&f.id!=='db-ct-folder').sort((a,b)=>(a.order||0)-(b.order||0));
   const body=open?'<div class="db-body sec-body">'+items.map(it=>{
     const act=ST.folder===it.id;
     return '<div class="tr-row sf-row'+(act?' sel':'')+'" style="padding-left:13px;cursor:pointer"'
@@ -5333,7 +5341,7 @@ function renderDatabaseSection(){
       +'<span class="tr-name"'+(DB.theme?.dbColors?.[it.id]?' style="color:'+DB.theme.dbColors[it.id]+'"':'')+'>'+esc(it.name)+'</span>'
       +(it.cnt?'<span class="tr-cnt">'+it.cnt+'</span>':'')
       +'</div>';
-  }).join('')+'</div>':'';
+  }).join('')+extraFolders.map(f=>trNode(f,0)).join('')+'</div>':'';
   return '<div class="sf-sec db-sec">'
     +'<div class="sec-hd db-hd-sec" onclick="ST.dbOpen=ST.dbOpen===false;renderTree()">'
     +'<span class="sec-tog">'+(open?'▾':'▸')+'</span>'
