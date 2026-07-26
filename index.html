@@ -1499,6 +1499,7 @@ sup.ann-sup:hover{text-decoration:underline}
 .fw-tb{display:flex;gap:3px;padding:5px 8px;border-bottom:1px solid var(--border2);
   flex-shrink:0;flex-wrap:wrap;align-items:center}
 .fw-tb .nti-save{margin-left:auto}
+.fw-tb .eb-grp-btn{flex:0 0 auto!important;padding:4px 7px!important;font-size:12px!important}
 .fw-ed{flex:1;overflow-y:auto;padding:10px;outline:none;font-size:13px;line-height:1.6;color:var(--t1)}
 @media(max-width:899px){.float-win{display:none!important}}
 #note-modal-bg{display:none;position:fixed;inset:0;z-index:5000;
@@ -6583,6 +6584,16 @@ function openTabClrPicker(ev,id){
 
 /* \u2550\u2550 NOTE MODAL POP-OUT \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
 let _mDrag=null;
+/* v03.74 — re-opens the original single-note modal pop-up (kept available
+   per Smahk, alongside the newer multi-window float pop-outs). Selects the
+   note into Pane 3 first since openNoteModal() just resizes/repositions
+   the existing #p3 around whatever ST.article currently is. */
+function openNoteAsModal(aid){
+  hideCtx();
+  if(window.innerWidth<900){ selArt(aid); if(window.innerWidth<1200)showPane('p3'); return; }
+  selArt(aid);
+  openNoteModal();
+}
 function openNoteModal(){
   if(window.innerWidth<900)return;
   ST.noteModal=true;
@@ -6692,6 +6703,7 @@ function closeNoteModal(){
   }
   document.getElementById('note-modal-bg')?.classList.remove('active');
   renderP3H();
+  if(_fwFocusedAid){_pinPanelInject();_tocInject();} /* hand both panels back to a focused pop-out, if any */
 }
 function _modalDragStart(e){
   if(e.button!==0)return;
@@ -6955,45 +6967,124 @@ function duplicateNote(aid){
    require a much larger refactor of the single global #ed editing system. */
 let _fwZTop=6000;
 const _fwAutoTimer={};
+let _fwFocusedAid=null;
+/* v03.74 — tracks which float window currently "owns" the shared Pinned
+   Tabs Sidepane (per Smahk: one shared panel that follows focus, rather
+   than one per window). Called on open, on bring-to-front, and on every
+   mousedown inside a window. */
+function _fwFocus(aid){
+  if(_fwFocusedAid===aid)return;
+  _fwFocusedAid=aid;
+  _pinPanelInject();
+  _tocInject();
+}
 function popOutNote(aid){
   hideCtx();
   if(window.innerWidth<900){ selArt(aid); if(window.innerWidth<1200)showPane('p3'); return; }
   const ex=document.getElementById('fw-'+aid);
-  if(ex){ _fwZTop++; ex.style.zIndex=_fwZTop; const ed=ex.querySelector('.fw-ed'); if(ed)ed.focus(); return; }
+  if(ex){ _fwZTop++; ex.style.zIndex=_fwZTop; const ed=ex.querySelector('.fw-ed'); if(ed)ed.focus(); _fwFocus(aid); return; }
   _fwCreate(aid);
 }
 function _fwCreate(aid){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return;
   const n=document.querySelectorAll('.float-win').length;
   const vw=window.innerWidth,vh=window.innerHeight;
-  const w=Math.min(440,vw-40),h=Math.min(520,vh-60);
-  const x=Math.min(60+n*28,Math.max(10,vw-w-10)),y=Math.min(60+n*28,Math.max(10,vh-h-10));
   const win=document.createElement('div');
   win.className='float-win';win.id='fw-'+aid;
+  /* v03.74 — restore this note's remembered position/size if it has one
+     (clamped to the current viewport), otherwise cascade as before. */
+  const saved=DB.theme&&DB.theme.fwPos&&DB.theme.fwPos[aid];
+  let w,h,x,y;
+  if(saved&&saved.width&&saved.height){
+    w=Math.min(saved.width,vw-8);h=Math.min(saved.height,vh-8);
+    x=Math.max(0,Math.min(saved.left,vw-w));y=Math.max(0,Math.min(saved.top,vh-h));
+  } else {
+    w=Math.min(440,vw-40);h=Math.min(520,vh-60);
+    x=Math.min(60+n*28,Math.max(10,vw-w-10));y=Math.min(60+n*28,Math.max(10,vh-h-10));
+  }
   win.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;z-index:'+(++_fwZTop);
   win.innerHTML=_fwRenderBody(aid);
   document.body.appendChild(win);
-  win.addEventListener('mousedown',()=>{_fwZTop++;win.style.zIndex=_fwZTop;},{capture:true});
-  _fwWireDrag(win.querySelector('.fw-hd'),win);
+  win.addEventListener('mousedown',()=>{_fwZTop++;win.style.zIndex=_fwZTop;_fwFocus(aid);},{capture:true});
+  _fwWireDrag(win.querySelector('.fw-hd'),win,aid);
+  _fwAddResizeHandles(win,aid);
   const ed=win.querySelector('.fw-ed');
   if(ed)ed.addEventListener('input',()=>_fwScheduleAutoSave(aid));
   const ti=win.querySelector('.fw-ti');
   if(ti)ti.addEventListener('input',()=>_fwScheduleAutoSave(aid));
   _captureNoteHistory(a,'session-start');
+  _fwFocus(aid);
+}
+/* v03.74 — full edge/corner resize to match the original modal pop-up's
+   handle set (R/B/L edges + TR/TL/BL corners; BR is the native CSS
+   resize:both grip, already present). One generic handler instead of the
+   modal's 18 direction-specific functions — same math, far less code, and
+   doesn't touch the modal's own resize functions at all. */
+function _fwResizeStart(ev,aid,dir){
+  if(ev.button!==0)return;
+  ev.preventDefault();
+  const win=document.getElementById('fw-'+aid);if(!win)return;
+  const r=win.getBoundingClientRect();
+  const start={x:ev.clientX,y:ev.clientY,l:r.left,t:r.top,w:r.width,h:r.height};
+  function move(e){
+    let l=start.l,t=start.t,w=start.w,h=start.h;
+    const dx=e.clientX-start.x,dy=e.clientY-start.y;
+    if(dir.includes('r'))w=Math.max(320,start.w+dx);
+    if(dir.includes('l')){w=Math.max(320,start.w-dx);l=start.l+(start.w-w);}
+    if(dir.includes('b'))h=Math.max(240,start.h+dy);
+    if(dir.includes('t')){h=Math.max(240,start.h-dy);t=start.t+(start.h-h);}
+    win.style.width=w+'px';win.style.height=h+'px';win.style.left=l+'px';win.style.top=t+'px';
+    _fwSyncBodyPadding(aid);
+  }
+  function up(){
+    document.removeEventListener('mousemove',move);
+    document.removeEventListener('mouseup',up);
+    document.body.style.cursor='';document.body.style.userSelect='';
+    _fwSavePos(aid);
+  }
+  document.addEventListener('mousemove',move);
+  document.addEventListener('mouseup',up,{once:true});
+  document.body.style.userSelect='none';
+  document.body.style.cursor=dir.length===1?(dir==='l'||dir==='r'?'ew-resize':'ns-resize'):(dir==='tr'||dir==='bl'?'nesw-resize':'nwse-resize');
+}
+function _fwAddResizeHandles(win,aid){
+  const specs=[['r','modal-resize-r'],['b','modal-resize-b'],['l','modal-resize-l'],
+    ['tr','modal-corner modal-corner-tr'],['tl','modal-corner modal-corner-tl'],['bl','modal-corner modal-corner-bl']];
+  specs.forEach(([dir,cls])=>{
+    const el=document.createElement('div');
+    el.className=cls;
+    el.addEventListener('mousedown',ev=>_fwResizeStart(ev,aid,dir));
+    win.appendChild(el);
+  });
+}
+/* Remembers this float window's position/size per-note (DB.theme.fwPos),
+   restored next time the same note is popped out. Debounced via the
+   ResizeObserver below so the native CSS resize:both (bottom-right) grip
+   is captured too, not just drag/the new edge handles. */
+function _fwSavePos(aid){
+  const win=document.getElementById('fw-'+aid);if(!win)return;
+  if(!DB.theme)DB.theme={};
+  if(!DB.theme.fwPos)DB.theme.fwPos={};
+  const r=win.getBoundingClientRect();
+  DB.theme.fwPos[aid]={left:Math.round(r.left),top:Math.round(r.top),width:Math.round(r.width),height:Math.round(r.height)};
+  persist();
 }
 function _fwRenderBody(aid){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return '';
+  const _grps=[
+    {id:'text', icon:'<b>Aa</b>',label:'Text style'},
+    {id:'heads',icon:'H',        label:'Headings'},
+    {id:'lists',icon:'≡',        label:'Lists'},
+    {id:'hist', icon:'↺',        label:'History'},
+  ];
+  const ebIcons=_grps.map(g=>`<button class="et eb-grp-btn" data-g="${g.id}" onmousedown="_fwTogGroup('${aid}','${g.id}',this)" title="${g.label}">${g.icon}</button>`).join('');
   return '<div class="fw-hd"><span class="fw-drag">⠿</span>'
     +'<span class="fw-title-disp">'+esc(a.title||'Untitled')+'</span>'
     +'<button class="fw-close" onclick="closeFloatWin(\''+aid+'\')" title="Close">✕</button></div>'
     +'<div class="fw-body">'
     +'<input class="fw-ti" id="fw-ti-'+aid+'" value="'+esc(a.title||'')+'" placeholder="Title…">'
     +'<div class="fw-tb">'
-    +'<button class="et" onmousedown="event.preventDefault();document.execCommand(\'bold\')" title="Bold"><b>B</b></button>'
-    +'<button class="et" onmousedown="event.preventDefault();document.execCommand(\'italic\')" title="Italic"><i>I</i></button>'
-    +'<button class="et" onmousedown="event.preventDefault();document.execCommand(\'underline\')" title="Underline"><u>U</u></button>'
-    +'<button class="et" onmousedown="event.preventDefault();document.execCommand(\'insertUnorderedList\')" title="Bullet list">•≡</button>'
-    +'<button class="et" onmousedown="event.preventDefault();document.execCommand(\'insertOrderedList\')" title="Numbered list">1≡</button>'
+    +ebIcons
     +'<button class="nti-picker-btn" onclick="openNtiPicker(\''+aid+'\',this)" title="Note types">🏷</button>'
     +'<button class="nti-picker-btn" onclick="openAttachMenu(event,\''+aid+'\')" title="Attach: Folder · Journal · MyDatabase">📎</button>'
     +'<button class="nti-picker-btn nti-save" onclick="_fwSave(\''+aid+'\')" title="Save">💾 Save</button>'
@@ -7001,14 +7092,83 @@ function _fwRenderBody(aid){
     +'<div class="fw-ed" id="fw-ed-'+aid+'" contenteditable="true">'+(a.content||'')+'</div>'
     +'</div>';
 }
-function _fwWireDrag(handle,win){
+/* v03.73 fix — the v03.57 "pop from anywhere" rewrite gave float windows their
+   own decoupled #fw-ed-{aid} editor, but the old rich toolbar (headings,
+   lists, undo/redo, history…) was left out because those functions are all
+   hard-wired to the single global #ed (they call document.getElementById('ed')
+   directly, several even force-refocus it) — reusing them as-is on a float
+   window would silently act on the WRONG editor / yank focus back to the main
+   pane. Fix: self-contained fw-scoped equivalents below, each explicitly
+   targeting #fw-ed-{aid}. Zero changes to ec()/fb()/shiftHeadingLevel() or
+   any other existing function — main editor behaviour is untouched. */
+function _fwEc(ev,aid,cmd,val){
+  ev.preventDefault();
+  document.execCommand(cmd,false,val||null);
+  const ed=document.getElementById('fw-ed-'+aid);if(ed)ed.focus();
+  _fwScheduleAutoSave(aid);
+}
+function _fwFb(ev,aid,tag){
+  ev.preventDefault();
+  const ed=document.getElementById('fw-ed-'+aid);if(!ed)return;
+  let cur=null;
+  try{const sel=window.getSelection();
+    if(sel&&sel.rangeCount){let n=sel.getRangeAt(0).startContainer;n=(n&&n.nodeType===1)?n:(n&&n.parentElement);
+      const b=n&&n.closest&&ed.contains(n)&&n.closest('h1,h2,h3,h4,h5,h6');if(b)cur=b.tagName.toLowerCase();}
+  }catch(e){}
+  const target=(cur&&cur===tag)?'p':tag;
+  document.execCommand('formatBlock',false,'<'+target+'>');
+  ed.focus();
+  _fwScheduleAutoSave(aid);
+}
+function _fwBuildEBSub(aid,g){
+  const subs={
+    text:[
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','bold')" title="Bold"><b>B</b></button>`,
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','italic')" title="Italic"><i>I</i></button>`,
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','underline')" title="Underline"><u>U</u></button>`,
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','strikeThrough')" title="Strikethrough"><s>S</s></button>`,
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','removeFormat')" title="Clear formatting">✗A</button>`,
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','justifyLeft')" title="Align left">⯇</button>`,
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','justifyCenter')" title="Align center">⯃</button>`,
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','justifyRight')" title="Align right">⯈</button>`,
+    ],
+    heads:[
+      `<button class="et" onmousedown="_fwFb(event,'${aid}','h1')" style="font-weight:800">H1</button>`,
+      `<button class="et" onmousedown="_fwFb(event,'${aid}','h2')" style="font-weight:700">H2</button>`,
+      `<button class="et" onmousedown="_fwFb(event,'${aid}','h3')" style="font-weight:700">H3</button>`,
+      `<button class="et" onmousedown="_fwFb(event,'${aid}','p')" title="Normal text">¶</button>`,
+    ],
+    lists:[
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','insertUnorderedList')">• List</button>`,
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','insertOrderedList')">1. List</button>`,
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','formatBlock','<blockquote>')" style="font-style:italic">❝</button>`,
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','insertHorizontalRule')">─</button>`,
+    ],
+    hist:[
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','undo')" title="Undo">↩</button>`,
+      `<button class="et" onmousedown="_fwEc(event,'${aid}','redo')" title="Redo">↪</button>`,
+      `<button class="et" onmousedown="event.preventDefault()" onclick="openNoteHistory('${aid}')" title="Note History — restore an earlier version">🕐</button>`,
+    ],
+  };
+  return (subs[g]||[]).join('');
+}
+const _fwEbGroup={};
+function _fwTogGroup(aid,g,btn){
+  const key='fw-'+aid;
+  if(_fwEbGroup[key]===g){_fwEbGroup[key]=null;closeFloatPop('fw-eb-pop');btn.classList.remove('on');return;}
+  _fwEbGroup[key]=g;
+  const win=document.getElementById('fw-'+aid);
+  if(win)win.querySelectorAll('.eb-grp-btn').forEach(b=>b.classList.toggle('on',b===btn));
+  _openFloatPop('fw-eb-pop',btn,_fwBuildEBSub(aid,g));
+}
+function _fwWireDrag(handle,win,aid){
   if(!handle)return;
   let sx,sy,sl,st;
   function move(e){
     win.style.left=Math.max(0,Math.min(sl+(e.clientX-sx),window.innerWidth-60))+'px';
     win.style.top=Math.max(0,Math.min(st+(e.clientY-sy),window.innerHeight-40))+'px';
   }
-  function up(){document.removeEventListener('mousemove',move);}
+  function up(){document.removeEventListener('mousemove',move);if(aid)_fwSavePos(aid);}
   handle.addEventListener('mousedown',e=>{
     if(e.target.closest('.fw-close'))return;
     sx=e.clientX;sy=e.clientY;
@@ -7017,6 +7177,13 @@ function _fwWireDrag(handle,win){
     document.addEventListener('mouseup',up,{once:true});
     e.preventDefault();
   });
+  /* Catches the native CSS resize:both (bottom-right) grip, which fires no
+     mouseup we can hook directly — a debounced observer is the reliable way
+     to persist that path too, without touching the grip itself. */
+  if(aid&&typeof ResizeObserver!=='undefined'){
+    let _rt;
+    new ResizeObserver(()=>{clearTimeout(_rt);_rt=setTimeout(()=>_fwSavePos(aid),400);}).observe(win);
+  }
 }
 /* Flushes DOM → data only (no save-history/toast) — used both by explicit
    Save and by close, so closing never silently drops an in-progress edit. */
@@ -7058,6 +7225,12 @@ function closeFloatWin(aid){
   const a=DB.articles.find(x=>x.id===aid);
   if(a){_captureNoteHistory(a,'save');persist();renderTree();renderP2C();renderP3H();renderP3C();renderTabBar();}
   const win=document.getElementById('fw-'+aid);if(win)win.remove();
+  if(_fwFocusedAid===aid){
+    const rest=Array.from(document.querySelectorAll('.float-win'));
+    _fwFocusedAid=rest.length?rest.reduce((a,b)=>(+a.style.zIndex>+b.style.zIndex?a:b)).id.slice(3):null;
+    _pinPanelInject();
+    _tocInject();
+  }
 }
 
 
@@ -7859,11 +8032,21 @@ function _citeModalHTML(){
 
 
 /* ── v33.00 TOC Outline Panel ── */
-var _tocScrollBound=false;
+var _tocBoundEl=null;
 
+function _tocHostEl(){
+  if(ST.noteModal)return document.getElementById('p3');
+  if(_fwFocusedAid)return document.getElementById('fw-'+_fwFocusedAid);
+  return null;
+}
+function _tocScrollEl(){
+  if(ST.noteModal)return document.getElementById('p3c');
+  const host=_tocHostEl();
+  return host?host.querySelector('.fw-ed'):null;
+}
 function _tocScan(){
-  const p3c=document.getElementById('p3c');if(!p3c)return[];
-  return Array.from(p3c.querySelectorAll('h1,h2,h3,h4')).map(function(el,i){
+  const scrollEl=_tocScrollEl();if(!scrollEl)return[];
+  return Array.from(scrollEl.querySelectorAll('h1,h2,h3,h4')).map(function(el,i){
     return {el:el,level:parseInt(el.tagName[1]),text:el.textContent.trim()||'(Heading)',idx:i};
   });
 }
@@ -7876,16 +8059,21 @@ function _tocItemHTML(h,ns){
 }
 
 function _tocInject(){
-  if(!ST.noteModal)return;
+  const host=_tocHostEl();
+  const inModal=ST.noteModal;
+  if(!host){document.getElementById('toc-panel')?.remove();_tocUnbindScroll();return;}
   const heads=_tocScan();
-  const p3=document.getElementById('p3');
   const existing=document.getElementById('toc-panel');
   if(heads.length<3){
-    if(existing){existing.remove();p3&&p3.classList.remove('has-toc');}
-    _tocUnbindScroll();_syncP3CPadding();return;
+    if(existing){existing.remove();host.classList.remove('has-toc');}
+    _tocUnbindScroll();
+    if(inModal)_syncP3CPadding();else _fwSyncBodyPadding(_fwFocusedAid);
+    return;
   }
-  const _tocSideLbl=(DB.theme&&DB.theme.tocSide==='left')?'▶':'◄';
-  const curArt=(ST.article&&ST.article!=='cal')?DB.articles.find(a=>a.id===ST.article):null;
+  const _side=DB.theme&&DB.theme.tocSide==='left'?'left':'right';
+  const _tocSideLbl=_side==='left'?'▶':'◄';
+  const curId=inModal?(ST.article&&ST.article!=='cal'?ST.article:null):_fwFocusedAid;
+  const curArt=curId?DB.articles.find(a=>a.id===curId):null;
   const titleOpen=ST.tocTitleOpen!==false; /* default OPEN */
   let inner='<div class="toc-hd"><span>Contents</span>'+'<button class="toc-side-btn" onclick="_tocToggleSide()" title="Move panel to other side">'+_tocSideLbl+'</button></div>';
   if(curArt){
@@ -7896,39 +8084,56 @@ function _tocInject(){
   if(titleOpen){
     heads.forEach(function(h){inner+=_tocItemHTML(h,'_toc');});
   }
-  if(existing){
+  const prevHost=existing&&existing.parentElement;
+  if(existing&&prevHost===host){
     /* Update content only — preserve the resize handle */
     const _etw=existing.querySelector('div:not(.toc-resize-h)')||existing;
     _etw.innerHTML=inner;
   }else{
-    const panel=document.createElement('div');
-    panel.id='toc-panel';
-    /* Resize handle on inner edge */
-    const _rh=document.createElement('div');_rh.className='toc-resize-h';
-    _rh.onmousedown=_tocStartResize;panel.appendChild(_rh);
-    /* Content wrapper */
-    const _tic=document.createElement('div');_tic.innerHTML=inner;panel.appendChild(_tic);
-    const p3h=document.getElementById('p3h');
-    const tb=document.getElementById('tab-bar');
-    panel.style.top=((p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32))+'px';
-    const _tw=(DB.theme&&DB.theme.tocWidth)||212;
-    panel.style.width=_tw+'px';
-    p3&&p3.appendChild(panel);
-    p3&&p3.classList.add('has-toc');
-    const _side=DB.theme&&DB.theme.tocSide==='left'?'left':'right';
-    p3&&p3.classList.toggle('toc-left',_side==='left');
-    p3&&p3.classList.toggle('toc-right',_side==='right');
+    const panel=existing||document.createElement('div');
+    if(!existing){
+      panel.id='toc-panel';
+      const _rh=document.createElement('div');_rh.className='toc-resize-h';
+      _rh.onmousedown=_tocStartResize;panel.appendChild(_rh);
+      const _tic=document.createElement('div');_tic.innerHTML=inner;panel.appendChild(_tic);
+      const _tw=(DB.theme&&DB.theme.tocWidth)||212;
+      panel.style.width=_tw+'px';
+    } else {
+      const _etw=panel.querySelector('div:not(.toc-resize-h)')||panel;
+      _etw.innerHTML=inner;
+      /* Reparenting between windows — old scroll binding no longer applies */
+      _tocUnbindScroll();
+    }
+    host.appendChild(panel);
+    if(inModal){
+      const p3h=document.getElementById('p3h');
+      const tb=document.getElementById('tab-bar');
+      panel.style.top=((p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32))+'px';
+      panel.style.bottom='';panel.style.left='';panel.style.right='';panel.style.borderLeft='';panel.style.borderRight='';
+      host.classList.add('has-toc');
+      host.classList.toggle('toc-left',_side==='left');
+      host.classList.toggle('toc-right',_side==='right');
+    } else {
+      const hd=host.querySelector('.fw-hd');
+      panel.style.top=(hd?hd.offsetHeight:34)+'px';
+      panel.style.bottom=(_side==='left'?'0px':'14px'); /* leaves the resize-corner grip clickable when on the right */
+      if(_side==='left'){panel.style.left='0';panel.style.right='auto';panel.style.borderLeft='none';panel.style.borderRight='1.5px solid var(--border2)';}
+      else{panel.style.right='0';panel.style.left='auto';panel.style.borderRight='none';panel.style.borderLeft='1.5px solid var(--border2)';}
+    }
+    panel.classList.toggle('toc-left',_side==='left');
+    panel.classList.toggle('toc-right',_side==='right');
     _tocBindScroll();
   }
-  /* Bind editor input → debounced refresh */
-  const ed=document.getElementById('ed');
+  /* Bind editor input → debounced refresh (per-editor, so each float
+     window's own #fw-ed-{aid} only ever gets bound once) */
+  const ed=inModal?document.getElementById('ed'):host.querySelector('.fw-ed');
   if(ed&&!ed._tocBound){
     var _dt;
     ed.addEventListener('input',function(){clearTimeout(_dt);_dt=setTimeout(_tocInject,400);});
     ed._tocBound=true;
   }
   _tocSetActive(0);
-  _syncP3CPadding();
+  if(inModal)_syncP3CPadding();else _fwSyncBodyPadding(_fwFocusedAid);
 }
 function togTocTitle(){
   ST.tocTitleOpen=!(ST.tocTitleOpen!==false);
@@ -7936,31 +8141,31 @@ function togTocTitle(){
 }
 
 function _tocBindScroll(){
-  if(_tocScrollBound)return;
-  const p3c=document.getElementById('p3c');if(!p3c)return;
-  p3c.__tocScroll=function(){
-    const top=p3c.scrollTop;
-    const hs=p3c.querySelectorAll('h1,h2,h3,h4');
+  const scrollEl=_tocScrollEl();if(!scrollEl)return;
+  if(_tocBoundEl===scrollEl)return;
+  if(_tocBoundEl)_tocUnbindScroll();
+  scrollEl.__tocScroll=function(){
+    const top=scrollEl.scrollTop;
+    const hs=scrollEl.querySelectorAll('h1,h2,h3,h4');
     let active=0;
     hs.forEach(function(h,i){if(h.offsetTop<=top+60)active=i;});
     _tocSetActive(active);
   };
-  p3c.addEventListener('scroll',p3c.__tocScroll);
-  _tocScrollBound=true;
+  scrollEl.addEventListener('scroll',scrollEl.__tocScroll);
+  _tocBoundEl=scrollEl;
 }
 
 function _tocUnbindScroll(){
-  const p3c=document.getElementById('p3c');
-  if(p3c&&p3c.__tocScroll){
-    p3c.removeEventListener('scroll',p3c.__tocScroll);
-    p3c.__tocScroll=null;
+  if(_tocBoundEl&&_tocBoundEl.__tocScroll){
+    _tocBoundEl.removeEventListener('scroll',_tocBoundEl.__tocScroll);
+    _tocBoundEl.__tocScroll=null;
   }
-  _tocScrollBound=false;
+  _tocBoundEl=null;
 }
 
 function _tocScrollTo(idx){
-  const p3c=document.getElementById('p3c');if(!p3c)return;
-  const hs=p3c.querySelectorAll('h1,h2,h3,h4');
+  const scrollEl=_tocScrollEl();if(!scrollEl)return;
+  const hs=scrollEl.querySelectorAll('h1,h2,h3,h4');
   const el=hs[idx];if(!el)return;
   /* Auto-expand if section is collapsed */
   var _cs=el.closest('.col-sec');if(_cs&&_cs.classList.contains('clp'))_colToggle(parseInt(_cs.dataset.idx));
@@ -7993,21 +8198,31 @@ function _tocSetActive(idx){
 }
 
 function _tocToggleSide(){
-  const p3=document.getElementById('p3');if(!p3)return;
-  const goLeft=!p3.classList.contains('toc-left');
-  p3.classList.toggle('toc-left',goLeft);
-  p3.classList.toggle('toc-right',!goLeft);
+  const host=_tocHostEl();if(!host)return;
+  const inModal=ST.noteModal;
+  const goLeft=!(DB.theme&&DB.theme.tocSide==='left');
   if(!DB.theme)DB.theme={};
   DB.theme.tocSide=goLeft?'left':'right';
   persist();
+  if(inModal){
+    host.classList.toggle('toc-left',goLeft);
+    host.classList.toggle('toc-right',!goLeft);
+  }
   /* Update arrow icon in panel header */
   const btn=document.querySelector('.toc-side-btn');
   if(btn)btn.textContent=goLeft?'▶':'◄';
-  /* Move border */
+  /* Move border / position */
   const panel=document.getElementById('toc-panel');
   if(panel){
-    if(goLeft){panel.style.borderLeft='none';panel.style.borderRight='1.5px solid var(--border2)';}
-    else{panel.style.borderRight='none';panel.style.borderLeft='1.5px solid var(--border2)';}
+    panel.classList.toggle('toc-left',goLeft);
+    panel.classList.toggle('toc-right',!goLeft);
+    if(inModal){
+      if(goLeft){panel.style.borderLeft='none';panel.style.borderRight='1.5px solid var(--border2)';}
+      else{panel.style.borderRight='none';panel.style.borderLeft='1.5px solid var(--border2)';}
+    } else {
+      if(goLeft){panel.style.left='0';panel.style.right='auto';panel.style.borderLeft='none';panel.style.borderRight='1.5px solid var(--border2)';panel.style.bottom='0px';}
+      else{panel.style.right='0';panel.style.left='auto';panel.style.borderRight='none';panel.style.borderLeft='1.5px solid var(--border2)';panel.style.bottom='14px';}
+    }
   }
   /* Sync #p3c padding to current panel widths — single source of truth,
      accounts for BOTH panels (previously this set padding using only the
@@ -8015,7 +8230,7 @@ function _tocToggleSide(){
      a pin-panel was also present, causing the note body to render at the
      wrong width after repositioning). */
   _pinPanelInject(); /* pin-panel may need to flip sides too, if it's in 'opposite side' mode */
-  _syncP3CPadding();
+  if(inModal)_syncP3CPadding();else _fwSyncBodyPadding(_fwFocusedAid);
 }
 function _tocStartResize(e){
   if(e.button!==0)return;
@@ -8023,12 +8238,11 @@ function _tocStartResize(e){
   var startX=e.clientX;
   var panel=document.getElementById('toc-panel');if(!panel)return;
   var startW=panel.offsetWidth||212;
-  var p3=document.getElementById('p3');
-  var isLeft=p3&&p3.classList.contains('toc-left');
+  var isLeft=panel.classList.contains('toc-left');
   function onMove(ev){
     var nw=Math.max(120,Math.min(460,isLeft?startW+(ev.clientX-startX):startW-(ev.clientX-startX)));
     panel.style.width=nw+'px';
-    _syncP3CPadding();
+    if(ST.noteModal)_syncP3CPadding();else _fwSyncBodyPadding(_fwFocusedAid);
   }
   function onUp(){
     document.removeEventListener('mousemove',onMove);
@@ -8168,20 +8382,26 @@ function _pinCardHTML(a,isCurrent){
       const snip=strip(a.content||'');
       h+=snip?`<div class="pin-card-snip">${esc(snip)}</div>`:'<div class="pin-card-snip"><em style="color:var(--t3)">No content yet…</em></div>';
     }
-    h+=`<div class="pin-open-row" onclick="event.stopPropagation();tabSelect('${a.id}')">Open note →</div>`;
+    h+=`<div class="pin-open-row" onclick="event.stopPropagation();_pinOpenNote('${a.id}')">Open note →</div>`;
     h+='</div>';
   }
   return h+'</div>';
 }
+function _pinHostEl(){
+  if(ST.noteModal)return document.getElementById('p3');
+  if(_fwFocusedAid)return document.getElementById('fw-'+_fwFocusedAid);
+  return null;
+}
 function _pinPanelInject(){
-  if(!ST.noteModal){document.getElementById('pin-panel')?.remove();return;}
+  const host=_pinHostEl();
+  if(!host){document.getElementById('pin-panel')?.remove();_fwClearAllBodyPadding();return;}
   if(!DB.theme)DB.theme={};
   if(!DB.theme.pinTabIds)DB.theme.pinTabIds=[];
-  const pos=DB.theme.pinPanelPos==='below'?'below':'side'; /* default: side (opposite of TOC) */
-  const tocLeft=document.getElementById('p3')?.classList.contains('toc-left');
+  const inModal=ST.noteModal;
+  const pos=DB.theme.pinPanelPos==='below'?'below':'side'; /* default: side (opposite of TOC in modal mode; plain right in float mode — float windows don't have a TOC panel yet) */
+  const tocLeft=inModal&&document.getElementById('p3')?.classList.contains('toc-left');
   const tocSide=tocLeft?'left':'right';
-  /* 'side' = opposite of wherever TOC currently is; 'below' = same side, stacked under it */
-  const pinSide=pos==='side'?(tocSide==='left'?'right':'left'):tocSide;
+  const pinSide=(!inModal)?'right':(pos==='side'?(tocSide==='left'?'right':'left'):tocSide);
 
   const ids=DB.theme.pinTabIds.filter(id=>DB.articles.some(a=>a.id===id));
   if(ids.length!==DB.theme.pinTabIds.length){DB.theme.pinTabIds=ids;persist();}
@@ -8189,9 +8409,11 @@ function _pinPanelInject(){
   let inner='<div class="pin-hd"><span>📌 Sidepane</span>'
     +`<button class="pin-side-btn" onclick="_pinPanelToggleSide()" title="${pos==='side'?'Move below Contents':'Move to opposite side'}">${pos==='side'?'⬇':'◫'}</button></div>`;
 
-  /* The currently-open note always appears first, so its headings are
-     browsable the same way as pinned notes — deduped if it's ALSO pinned. */
-  const curArt=(ST.article&&ST.article!=='cal')?DB.articles.find(a=>a.id===ST.article):null;
+  /* The currently-open/focused note always appears first — the modal's
+     ST.article when in modal mode, or the focused float window's note
+     when popped out — deduped if it's ALSO pinned. */
+  const curId=inModal?(ST.article&&ST.article!=='cal'?ST.article:null):_fwFocusedAid;
+  const curArt=curId?DB.articles.find(a=>a.id===curId):null;
   if(curArt)inner+=_pinCardHTML(curArt,true);
 
   const others=ids.filter(id=>!curArt||id!==curArt.id);
@@ -8202,7 +8424,7 @@ function _pinPanelInject(){
   }
 
   let panel=document.getElementById('pin-panel');
-  const p3=document.getElementById('p3');
+  const prevHost=panel&&panel.parentElement;
   if(!panel){
     panel=document.createElement('div');
     panel.id='pin-panel';
@@ -8214,24 +8436,54 @@ function _pinPanelInject(){
     const _pic=document.createElement('div');_pic.className='pin-inner';panel.appendChild(_pic);
     const _pw=(DB.theme&&DB.theme.pinPanelWidth)||200;
     panel.style.width=_pw+'px';
-    p3&&p3.appendChild(panel);
   }
+  if(panel.parentElement!==host)host.appendChild(panel);
   panel.classList.toggle('pin-left',pinSide==='left');
   panel.classList.toggle('pin-right',pinSide==='right');
   const _pinInner=panel.querySelector('.pin-inner')||panel;
   _pinInner.innerHTML=inner;
 
-  const p3h=document.getElementById('p3h');
-  const tb=document.getElementById('tab-bar');
-  const baseTop=(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32);
-  if(pos==='below'){
-    const toc=document.getElementById('toc-panel');
-    panel.style.top=(baseTop+(toc?toc.offsetHeight:0))+'px';
+  if(inModal){
+    const p3h=document.getElementById('p3h');
+    const tb=document.getElementById('tab-bar');
+    const baseTop=(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32);
+    if(pos==='below'){
+      const toc=document.getElementById('toc-panel');
+      panel.style.top=(baseTop+(toc?toc.offsetHeight:0))+'px';
+    } else {
+      panel.style.top=baseTop+'px';
+    }
+    panel.style.bottom='8px';
+    _syncP3CPadding();
   } else {
-    panel.style.top=baseTop+'px';
+    const hd=host.querySelector('.fw-hd');
+    panel.style.top=(hd?hd.offsetHeight:34)+'px';
+    panel.style.bottom=(pinSide==='right'?'14px':'0px'); /* leaves the native resize-corner grip clickable */
+    /* Clear padding on whichever window previously hosted the panel
+       (focus may have just moved from one float window to another). */
+    if(prevHost&&prevHost!==host&&prevHost.classList&&prevHost.classList.contains('float-win')){
+      const prevAid=prevHost.id.slice(3);_fwSyncBodyPadding(prevAid);
+    }
+    _fwSyncBodyPadding(_fwFocusedAid);
   }
-  panel.style.bottom='8px';
-  _syncP3CPadding();
+}
+/* Pads the focused float window's body so its title/toolbar/content never
+   render underneath the shared sidepane — mirrors _syncP3CPadding()'s job
+   for the modal, just scoped to one window at a time. */
+function _fwSyncBodyPadding(aid){
+  if(!aid)return;
+  const win=document.getElementById('fw-'+aid);if(!win)return;
+  const body=win.querySelector('.fw-body');if(!body)return;
+  const toc=document.getElementById('toc-panel');
+  const pin=document.getElementById('pin-panel');
+  let left=0,right=0;
+  if(toc&&toc.parentElement===win){ if(toc.classList.contains('toc-left'))left+=toc.offsetWidth; else right+=toc.offsetWidth; }
+  if(pin&&pin.parentElement===win){ if(pin.classList.contains('pin-left'))left+=pin.offsetWidth; else right+=pin.offsetWidth; }
+  body.style.paddingLeft=left?left+'px':'';
+  body.style.paddingRight=right?right+'px':'';
+}
+function _fwClearAllBodyPadding(){
+  document.querySelectorAll('.float-win .fw-body').forEach(b=>{b.style.paddingLeft='';b.style.paddingRight='';});
 }
 function _pinStartResize(e){
   if(e.button!==0)return;
@@ -8243,7 +8495,7 @@ function _pinStartResize(e){
   function onMove(ev){
     var nw=Math.max(150,Math.min(420,isLeft?startW+(ev.clientX-startX):startW-(ev.clientX-startX)));
     panel.style.width=nw+'px';
-    _syncP3CPadding();
+    if(ST.noteModal)_syncP3CPadding();else _fwSyncBodyPadding(_fwFocusedAid);
   }
   function onUp(){
     document.removeEventListener('mousemove',onMove);
@@ -8257,6 +8509,14 @@ function _pinStartResize(e){
 function _pinPanelDestroy(){
   document.getElementById('pin-panel')?.remove();
   _syncP3CPadding();
+}
+/* Sidepane "Open note →": switches the modal's note if the sidepane is
+   currently hosted by the modal, otherwise pops the note out as its own
+   float window (creating it or bringing it to front) — keeps the other
+   pop-outs open rather than hijacking the single global editor. */
+function _pinOpenNote(aid){
+  if(ST.noteModal){tabSelect(aid);return;}
+  popOutNote(aid);
 }
 /* Recompute #p3c side padding from whichever of TOC / Pinned panels are
    currently present — keeps the note body from ever rendering underneath
@@ -11972,7 +12232,8 @@ function _buildArtCtxMain(art,aid){
   const inTab=(DB.tabs||[]).includes(aid);
   const _canModal=window.innerWidth>=900;
   return `<div class="ci" onclick="hideCtx();startRenameArtTitle('${aid}')">✏ Rename title</div>`
-    +(_canModal?`<div class="ci" onclick="hideCtx();popOutNote('${aid}')">⊡ Pop out note</div>`:'') 
+    +(_canModal?`<div class="ci" onclick="hideCtx();popOutNote('${aid}')">⊡ Pop out note</div>`:'')
+    +(_canModal?`<div class="ci" onclick="hideCtx();openNoteAsModal('${aid}')">⛶ Open as resizable panel</div>`:'')
     +`<div class="ci" onclick="openNoteHistory('${aid}')">🕐 Note History</div>`
     +`<div class="ci" onclick="hideCtx();duplicateNote('${aid}')">🗐 Make a copy</div>`
     +`<div class="csep"></div>`
