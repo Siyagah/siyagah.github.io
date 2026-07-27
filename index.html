@@ -10,7 +10,7 @@
      Claude: on every delivery, read this value, bump it per the rule
      above, update it here, and name the downloaded file
      "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.77">
+<meta name="app-version" content="03.78">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -887,9 +887,26 @@ sup.ann-sup:hover{text-decoration:underline}
 @media(max-width:1199px){.p2-new-btn{min-height:38px;font-size:13px!important;padding:7px 12px!important}}
 
 /* ══ Tab bar (pane 3 top strip) ═════════════════════════════════════════════ */
-#tab-bar{display:none;overflow-x:auto;overflow-y:visible;flex-shrink:0;
+/* v03.78 — the bar itself no longer scrolls. Tabs live in .tab-strip so
+   that 📅 Cal and ＋ Add Tab stay pinned and can never be pushed off-screen,
+   and so overflow can be detected and surfaced with ‹ › arrows. Previously
+   #tab-bar was overflow-x:auto with the scrollbar hidden on BOTH engines, so
+   any tab past the pane width silently vanished with no way to reach it. */
+#tab-bar{display:none;overflow:visible;flex-shrink:0;
   padding:5px 6px 0;gap:3px;border-bottom:1px solid var(--border2);
-  background:var(--paper2,var(--paper));scrollbar-width:none;min-height:0}
+  background:var(--paper2,var(--paper));min-height:0;align-items:stretch}
+.tab-strip{display:flex;gap:3px;flex:1;min-width:0;overflow-x:auto;overflow-y:visible;
+  scrollbar-width:none;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+.tab-strip::-webkit-scrollbar{display:none}
+.tab-nav{display:none;flex:0 0 auto;align-self:stretch;border:none;background:none;
+  cursor:pointer;color:var(--t2);font-size:15px;line-height:1;padding:0 4px;
+  font-family:var(--ui);border-radius:4px 4px 0 0}
+.tab-nav.show{display:block}
+.tab-nav:hover{background:var(--hover);color:var(--accent)}
+.tab-more{flex:0 0 auto;align-self:center;font-size:10px;color:var(--t3);
+  padding:0 3px;user-select:none;-webkit-user-select:none;display:none}
+.tab-more.show{display:block}
+.tab-it.tab-flash{box-shadow:0 0 0 2px var(--accent);transition:box-shadow .15s}
 #tab-bar.has-tabs{display:flex}
 #tab-bar.tab-drop-over{background:rgba(99,102,241,.1);box-shadow:inset 0 0 0 2px var(--accent)}
 #tab-bar::-webkit-scrollbar{display:none}
@@ -911,7 +928,9 @@ sup.ann-sup:hover{text-decoration:underline}
 @media(max-width:1199px){
   #tab-bar{padding:6px 8px 0}
   .tab-it{padding:8px 12px 8px;font-size:13px;max-width:180px}
-  .tab-x{font-size:13px;padding:2px 3px}}
+  .tab-x{font-size:13px;padding:2px 3px}
+  .tab-nav{font-size:19px;padding:0 7px}
+  .tab-more{font-size:11px}}
 
 /* ══ Reminder ══════════════════════════════════════════════════════════════ */
 #rem-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;
@@ -4297,7 +4316,7 @@ function renderTabBar(){
     const lbl=(a.title||'Untitled').slice(0,22)+((a.title||'').length>22?'…':'');
     const on=ST.article===id?' on':'';
     const _tbc=a.tabColor||'';
-    return `<div class="tab-it${on}${isOwner?' tab-own':''}" style="${_tbc?`border-bottom:3px solid ${_tbc}`:''}"` +
+    return `<div class="tab-it${on}${isOwner?' tab-own':''}" data-tid="${id}" style="${_tbc?`border-bottom:3px solid ${_tbc}`:''}"` +
            ` draggable="true" ondragstart="pinTabDStart(event,'${id}')"` +
            ` onclick="tabSelect('${id}')" oncontextmenu="event.preventDefault();event.stopPropagation();openTabClrPicker(event,'${id}')"` +
            ` title="${esc(a.title||'Untitled')}${isOwner?' — owns this tab group (✕ closes all its tabs)':''}">`
@@ -4309,9 +4328,66 @@ function renderTabBar(){
   };
   bar.innerHTML=
     '<div class="tab-it'+(ST.article==="cal"?' on':'')+' tab-cal" onclick="_calOpen()" title="Calendar">📅 Cal</div>'
-    +(ownArt?chip(ownArt,true):'')
-    +tabs.map(id=>{const a=DB.articles.find(x=>x.id===id);return a?chip(a,false):'';}).filter(Boolean).join('')
+    +'<button class="tab-nav" id="tab-nav-l" onclick="event.stopPropagation();_tabScroll(-1)" title="Scroll tabs left">‹</button>'
+    +'<div class="tab-strip" id="tab-strip" onscroll="_tabNavSync()">'
+      +(ownArt?chip(ownArt,true):'')
+      +tabs.map(id=>{const a=DB.articles.find(x=>x.id===id);return a?chip(a,false):'';}).filter(Boolean).join('')
+    +'</div>'
+    +'<button class="tab-nav" id="tab-nav-r" onclick="event.stopPropagation();_tabScroll(1)" title="Scroll tabs right">›</button>'
+    +'<span class="tab-more" id="tab-more" title="Tabs hidden off-screen — use ‹ › to reach them"></span>'
     +`<button class="tab-add-btn" onclick="openTabPicker(this)" title="Search & add a note to the Tab bar">＋ Add Tab</button>`;
+  if(tabs.length)_tabNavQueue();
+}
+/* ── Tab strip overflow controls (v03.78) ─────────────────────────────
+   Pure layout — no data touched, no work at load. Everything below runs only
+   when the strip actually overflows the pane. */
+let _tabNavRaf=0;
+function _tabNavSync(){
+  const s=document.getElementById('tab-strip');if(!s)return;
+  const max=s.scrollWidth-s.clientWidth;
+  const over=max>2;
+  const l=document.getElementById('tab-nav-l'),r=document.getElementById('tab-nav-r'),
+        mo=document.getElementById('tab-more');
+  if(l)l.classList.toggle('show',over&&s.scrollLeft>1);
+  if(r)r.classList.toggle('show',over&&s.scrollLeft<max-1);
+  if(mo){
+    /* Count chips fully outside the visible window so hidden tabs are never
+       silent — this is exactly the failure this build fixes. */
+    let hid=0;
+    if(over){
+      const L=s.scrollLeft,R=L+s.clientWidth;
+      for(const el of s.children){
+        const a=el.offsetLeft,b=a+el.offsetWidth;
+        if(b<=L+1||a>=R-1)hid++;
+      }
+    }
+    mo.textContent=hid?'+'+hid:'';
+    mo.classList.toggle('show',hid>0);
+  }
+}
+function _tabNavQueue(){
+  if(_tabNavRaf)return;
+  _tabNavRaf=requestAnimationFrame(()=>{
+    _tabNavRaf=0;
+    if(ST.article&&ST.article!=='cal')_tabScrollIntoView(ST.article,false);
+    _tabNavSync();
+  });
+}
+function _tabScroll(dir){
+  const s=document.getElementById('tab-strip');if(!s)return;
+  s.scrollBy({left:dir*Math.max(140,Math.round(s.clientWidth*0.7)),behavior:'smooth'});
+  setTimeout(_tabNavSync,340);
+}
+/* Bring a tab into view (and optionally flash it) — used when you re-add a
+   note that is already pinned but scrolled out of sight. */
+function _tabScrollIntoView(id,flash){
+  const s=document.getElementById('tab-strip');if(!s)return;
+  const el=s.querySelector('[data-tid="'+id+'"]');if(!el)return;
+  const L=el.offsetLeft,R=L+el.offsetWidth;
+  if(L<s.scrollLeft)s.scrollTo({left:Math.max(0,L-12),behavior:'smooth'});
+  else if(R>s.scrollLeft+s.clientWidth)s.scrollTo({left:R-s.clientWidth+12,behavior:'smooth'});
+  if(flash){el.classList.add('tab-flash');setTimeout(()=>el.classList.remove('tab-flash'),900);}
+  setTimeout(_tabNavSync,340);
 }
 function tabSelect(aid){
   if(ST.article===aid&&!ST.editing)return; /* already viewing */
@@ -4341,6 +4417,7 @@ function toggleTab(aid){
     toast('📑 Removed from tab');
   } else {
     m[host].push(aid);_tabStampAdd(host,aid);ST.tabOwner=host;
+    setTimeout(()=>_tabScrollIntoView(aid,true),0);
     toast('📑 Added to tab');
   }
   persist();renderTabBar();
@@ -4390,10 +4467,11 @@ function tabBarDrop(ev){
   if(aid===host){toast('📑 A note can’t be a tab of itself');return;}
   const m=_tabsMap();
   if(!m[host])m[host]=[];
-  if(m[host].includes(aid)){toast('📑 Already in this note’s Tab bar');return;}
+  if(m[host].includes(aid)){_tabScrollIntoView(aid,true);toast('📑 Already in this note’s Tab bar');return;}
   m[host].push(aid);_tabStampAdd(host,aid);ST.tabOwner=host;
   persist();
   renderTabBar();
+  setTimeout(()=>_tabScrollIntoView(aid,true),0);
   toast('📑 "'+(art.title||'Untitled').slice(0,30)+'" added to Tab bar');
 }
 
@@ -4748,8 +4826,12 @@ function addToTabPicker(aid){
     m[host].push(aid);_tabStampAdd(host,aid);ST.tabOwner=host;
     persist();
     renderTabBar();
+    setTimeout(()=>_tabScrollIntoView(aid,true),0);
+    toast('📑 Added to Tab bar');
+  } else {
+    setTimeout(()=>_tabScrollIntoView(aid,true),0);
+    toast('📑 Already in this note’s Tab bar');
   }
-  toast('📑 Added to Tab bar');
 }
 
 
@@ -6970,7 +7052,7 @@ function _modalResizeTMove(e){
 function _modalResizeTEnd(){ST._mResT=null;document.removeEventListener('mousemove',_modalResizeTMove);document.body.style.cursor='';document.body.style.userSelect='';}
 function _tabBarModalDown(e){
   if(!ST.noteModal||e.button!==0)return;
-  if(e.target.closest('.tab-x,.tab-add-btn'))return;
+  if(e.target.closest('.tab-x,.tab-add-btn,.tab-nav'))return;
   const bar=document.getElementById('tab-bar');if(!bar)return;
   const rect=bar.getBoundingClientRect();
   const isLeft=e.clientX<rect.left+rect.width/2;
@@ -6991,7 +7073,7 @@ function _tabBarModalDown(e){
 function _tabBarCursor(e){
   if(!ST.noteModal)return;
   const bar=e.currentTarget;
-  if(e.target.closest('.tab-x,.tab-add-btn')){bar.style.cursor='';return;}
+  if(e.target.closest('.tab-x,.tab-add-btn,.tab-nav')){bar.style.cursor='';return;}
   const rect=bar.getBoundingClientRect();
   bar.style.cursor=e.clientX<rect.left+rect.width/2?'ns-resize':'grab';
 }
@@ -7476,7 +7558,7 @@ function _modalResizeBLEnd(){ST._mResBL=null;document.removeEventListener('mouse
 
 function _tabBarModalReset(e){
   if(!ST.noteModal)return;
-  if(e.target.closest('.tab-x,.tab-add-btn,.tab-it,.tab-cal'))return;
+  if(e.target.closest('.tab-x,.tab-add-btn,.tab-nav,.tab-it,.tab-cal'))return;
   const p3=document.getElementById('p3');if(!p3)return;
   const vw=window.innerWidth,vh=window.innerHeight;
   const mw=Math.min(700,Math.floor(vw*0.88));
@@ -13642,6 +13724,7 @@ window.addEventListener('resize',()=>{
   _rzLastW=window.innerWidth;
   if(!wChanged&&typing){updateSbToggle();return;}
   renderP2H();renderP3H();adjustP3Layout();updateSbToggle();
+  _tabNavSync(); /* v03.78 — pane width changed, re-evaluate tab overflow */
 });
 document.addEventListener('dragover',ev=>ev.preventDefault());
 document.addEventListener('drop',ev=>ev.preventDefault());
