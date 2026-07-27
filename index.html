@@ -10,7 +10,7 @@
      Claude: on every delivery, read this value, bump it per the rule
      above, update it here, and name the downloaded file
      "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.76">
+<meta name="app-version" content="03.77">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -902,6 +902,9 @@ sup.ann-sup:hover{text-decoration:underline}
 .tab-it.on{background:var(--white,#fff);color:var(--accent);font-weight:600;
   border-bottom:2px solid var(--accent);position:relative;top:1px}
 .tab-lbl{overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.tab-it.tab-own{border-color:var(--accent);border-style:dashed}
+.tab-it.tab-own.on{border-style:solid}
+.tab-own-dot{color:var(--accent);font-size:9px;flex-shrink:0;opacity:.85}
 .tab-x{color:var(--t3);font-size:11px;flex-shrink:0;border:none;background:none;
   cursor:pointer;padding:0 1px;line-height:1;font-family:var(--ui);opacity:.7}
 .tab-x:hover{color:var(--t1);opacity:1}
@@ -1884,7 +1887,7 @@ const SK = 'my-notebook-v1';
 let DB = {folders:[], articles:[], sections:[], trash:[]};
 let HISTORY = [], HIST_POS = -1;
 
-let ST = {folder:null, article:null, exp:{f2:true}, editing:false, etitle:'', efolders:[], etags:[], search:'', tag:null, tagOpen:false, secOpen:{}, pendingSec:null, snippet:false, sfOpen:true, secSF:null, secSFOpen:{}, ntiCatOpen:{}};
+let ST = {folder:null, article:null, exp:{f2:true}, editing:false, etitle:'', efolders:[], etags:[], search:'', tag:null, tagOpen:false, secOpen:{}, pendingSec:null, snippet:false, sfOpen:true, secSF:null, secSFOpen:{}, ntiCatOpen:{}, tabOwner:null};
 
 function loadDB(){
   const el = document.getElementById('nd');
@@ -1921,6 +1924,42 @@ function loadDB(){
     ST.article=DB.theme.lastArticle;
   applyTheme(DB.theme);
   if(!DB.trash)DB.trash=[];
+  /* v03.77 — one-time migration: the flat global tab list (DB.tabs = [aid,...])
+     was shown alongside EVERY note, so pinned tabs followed you onto unrelated
+     and brand-new notes. Tabs are now per-note groups: DB.tabs = {ownerId:[aid]}.
+     The old ids are preserved under DB._tabsV1 — nothing is discarded. */
+  if(Array.isArray(DB.tabs)){ if(DB.tabs.length)DB._tabsV1=DB.tabs.slice(); DB.tabs={}; _save(); }
+  if(!DB.tabs||typeof DB.tabs!=='object')DB.tabs={};
+  /* v03.77 — housekeeping for per-note tab groups + their sync tombstones.
+     Runs once per load (never per render), so it costs nothing at runtime:
+       • drops owners/members whose note no longer exists ANYWHERE (not in
+         DB.articles and not in Trash) — Trash items are kept so restoring a
+         note restores its tab pins;
+       • expires add/close stamps older than 180 days and any stamp whose
+         note is gone, so the two stamp maps can never grow unbounded. */
+  (function _sweepTabs(){
+    const live=new Set(DB.articles.map(a=>a.id));
+    (DB.trash||[]).forEach(t=>{ if(t&&t.item&&t.item.id)live.add(t.item.id); });
+    const m=_tabsMap(); let ch=false;
+    Object.keys(m).forEach(k=>{
+      if(!live.has(k)){delete m[k];ch=true;return;}
+      const cur=m[k]||[];
+      const f=cur.filter(id=>live.has(id)&&id!==k);
+      if(!f.length){delete m[k];ch=true;return;}   /* also clears pre-existing empty keys */
+      if(f.length!==cur.length){m[k]=f;ch=true;}
+    });
+    const cut=Date.now()-180*864e5;
+    ['tabsAt','tabsX'].forEach(key=>{
+      const S=_tabStamps(key);
+      Object.keys(S).forEach(k=>{
+        Object.keys(S[k]).forEach(id=>{
+          if(!(+S[k][id]>cut)||!live.has(k)||!live.has(id)){delete S[k][id];ch=true;}
+        });
+        if(!Object.keys(S[k]).length)delete S[k];
+      });
+    });
+    if(ch)_save();
+  })();
   ensureNoteKinds();
   /* v03.58.01 — one-time migration: folders/sections/noteKinds never had an
      updatedAt field, so mergeDB()'s newest-wins comparison had nothing
@@ -4157,36 +4196,122 @@ function quickNewNote(){
 
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   TAB BAR — pin any note to a persistent strip at the top of pane 3.
-   DB.tabs = [aid, ...] ordered by when added. Persists to Firestore + file.
+   TAB BAR — PER-NOTE tab groups (v03.77).
+   DB.tabs = { ownerNoteId: [aid, ...] }
+   A note dragged/added onto the Tab Bar belongs ONLY to the note that was open
+   when it was added, and stays there until it is closed. Opening an unrelated
+   or brand-new note shows an empty bar. Legacy flat-array data is migrated in
+   loadDB() and kept under DB._tabsV1.
    ══════════════════════════════════════════════════════════════════════════ */
+/* Normalise DB.tabs to the object shape (defensive; never persists). */
+function _tabsMap(){
+  if(!DB.tabs||typeof DB.tabs!=='object'||Array.isArray(DB.tabs)){
+    if(Array.isArray(DB.tabs)&&DB.tabs.length&&!DB._tabsV1)DB._tabsV1=DB.tabs.slice();
+    DB.tabs={};
+  }
+  return DB.tabs;
+}
+/* Owner of the group the bar should currently show, or null.
+   Sticky (ST.tabOwner, session-only): the group stays on screen while you're
+   viewing its owner, any of its tabs, or the Calendar — so clicking a tab
+   never wipes the strip you're working in. Any other note ⇒ empty bar. */
+function _tabOwner(){
+  const m=_tabsMap(), cur=ST.article, so=ST.tabOwner;
+  /* 1. A note that owns tabs ALWAYS shows its own group (highest priority —
+        a note can also be a member of someone else's group, and its own
+        tabs must win, otherwise closeTab would edit the wrong group). */
+  if(cur&&cur!=='cal'&&m[cur]&&m[cur].length){ST.tabOwner=cur;return cur;}
+  /* 2. Sticky: the group stays while you view one of its tabs, or the Calendar. */
+  if(so&&m[so]&&m[so].length&&(cur==='cal'||m[so].indexOf(cur)>-1))return so;
+  /* 3. Else adopt the group this note belongs to (e.g. after a reload). */
+  if(cur&&cur!=='cal'){
+    for(const k in m){
+      if(m[k]&&m[k].indexOf(cur)>-1&&DB.articles.some(a=>a.id===k)){ST.tabOwner=k;return k;}
+    }
+  }
+  ST.tabOwner=null;return null;
+}
+/* Note a NEW tab attaches to: the active group, else the note open in pane 3. */
+function _tabHost(){
+  const o=_tabOwner();
+  if(o)return o;
+  return (ST.article&&ST.article!=='cal'&&DB.articles.some(a=>a.id===ST.article))?ST.article:null;
+}
+function _tabGroup(owner){ return (owner&&_tabsMap()[owner])||[]; }
+/* ── Per-tab sync stamps (v03.77) ─────────────────────────────────────────
+   Union-merging tab groups alone meant a tab you closed on the phone came
+   back the next time a laptop that hadn't synced yet pushed its copy. Every
+   add and every close is now stamped, and the merge lets the NEWER of the
+   two win per (owner, tab) pair — so a close propagates like a real delete
+   while a later re-add still wins over an older close.
+     DB.tabsAt = { ownerId: { tabId: ms } }   last explicit ADD
+     DB.tabsX  = { ownerId: { tabId: ms } }   last explicit CLOSE
+   A pair only ever lives in ONE of the two maps, so they stay tiny. */
+function _tabStamps(k){
+  if(!DB[k]||typeof DB[k]!=='object'||Array.isArray(DB[k]))DB[k]={};
+  return DB[k];
+}
+function _tabStampAdd(o,a){
+  const M=_tabStamps('tabsAt');(M[o]=M[o]||{})[a]=Date.now();
+  const X=_tabStamps('tabsX');
+  if(X[o]){delete X[o][a];if(!Object.keys(X[o]).length)delete X[o];}
+}
+function _tabStampRm(o,a){
+  const X=_tabStamps('tabsX');(X[o]=X[o]||{})[a]=Date.now();
+  const M=_tabStamps('tabsAt');
+  if(M[o]){delete M[o][a];if(!Object.keys(M[o]).length)delete M[o];}
+}
+/* Forget both stamps for a note across every group (used on delete: the
+   article's own tombstone already governs it — no tab tombstone needed, so
+   restoring from Trash brings its pins back). */
+function _tabStampPurge(aid){
+  ['tabsAt','tabsX'].forEach(k=>{
+    const S=_tabStamps(k);delete S[aid];
+    Object.keys(S).forEach(o=>{delete S[o][aid];if(!Object.keys(S[o]).length)delete S[o];});
+  });
+}
+function _tabNoHost(){ toast('📑 Open a note first — tabs attach to the note you’re viewing'); }
+
 function renderTabBar(){
   const bar=document.getElementById('tab-bar');
   if(!bar)return;
-  const _seen=new Set();
-  const tabs=(DB.tabs||[]).filter(id=>{ if(_seen.has(id))return false; _seen.add(id); return DB.articles.some(a=>a.id===id); });
-  /* Sync DB.tabs to remove stale ids AND duplicates (self-heals any past dup corruption) */
-  if(tabs.length!==(DB.tabs||[]).length){DB.tabs=tabs;persist();}
+  const m=_tabsMap(), owner=_tabOwner();
+  let tabs=[];
+  if(owner){
+    const _seen=new Set();
+    tabs=(m[owner]||[]).filter(id=>{
+      if(id===owner||_seen.has(id))return false; _seen.add(id);
+      return DB.articles.some(a=>a.id===id);
+    });
+    /* Self-heal stale ids / duplicates in the ACTIVE group only (cheap) */
+    if(tabs.length!==(m[owner]||[]).length){
+      if(tabs.length)m[owner]=tabs; else {delete m[owner];ST.tabOwner=null;}
+      persist();
+    }
+  }
   bar.style.display='flex'; /* Always visible so ＋ Add button is accessible */
   bar.className=tabs.length?'has-tabs':'';
-  bar.innerHTML=
-    '<div class="tab-it'+(ST.article==="cal"?' on':'')+' tab-cal" onclick="_calOpen()" title="Calendar">📅 Cal</div>'
-    +tabs.map(id=>{
-    const a=DB.articles.find(x=>x.id===id);
-    if(!a)return '';
+  const ownArt=(owner&&tabs.length)?DB.articles.find(x=>x.id===owner):null;
+  const chip=(a,isOwner)=>{
+    const id=a.id;
     const lbl=(a.title||'Untitled').slice(0,22)+((a.title||'').length>22?'…':'');
     const on=ST.article===id?' on':'';
     const _tbc=a.tabColor||'';
-    return `<div class="tab-it${on}" style="${_tbc?`border-bottom:3px solid ${_tbc}`:''}"` +
+    return `<div class="tab-it${on}${isOwner?' tab-own':''}" style="${_tbc?`border-bottom:3px solid ${_tbc}`:''}"` +
            ` draggable="true" ondragstart="pinTabDStart(event,'${id}')"` +
            ` onclick="tabSelect('${id}')" oncontextmenu="event.preventDefault();event.stopPropagation();openTabClrPicker(event,'${id}')"` +
-           ` title="${esc(a.title||'Untitled')}">`
+           ` title="${esc(a.title||'Untitled')}${isOwner?' — owns this tab group (✕ closes all its tabs)':''}">`
+      +(isOwner?'<span class="tab-own-dot">◆</span>':'')
       +`<span class="tab-lbl" ${_tbc?`style="color:${_tbc}"`:''}>${esc(lbl)}</span>`
       +`<button class="tab-x" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();pinTabToPanel('${id}')" title="Pin to sidepane">📌</button>`
-      +`<button class="tab-x" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();closeTab('${id}')" title="Close tab">✕</button>`
+      +`<button class="tab-x" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();${isOwner?`closeTabGroup('${id}')`:`closeTab('${id}')`}" title="${isOwner?'Close all tabs of this note':'Close tab'}">✕</button>`
       +'</div>';
-  }).filter(Boolean).join('')
-  +`<button class="tab-add-btn" onclick="openTabPicker(this)" title="Search & add a note to the Tab bar">＋ Add Tab</button>`;
+  };
+  bar.innerHTML=
+    '<div class="tab-it'+(ST.article==="cal"?' on':'')+' tab-cal" onclick="_calOpen()" title="Calendar">📅 Cal</div>'
+    +(ownArt?chip(ownArt,true):'')
+    +tabs.map(id=>{const a=DB.articles.find(x=>x.id===id);return a?chip(a,false):'';}).filter(Boolean).join('')
+    +`<button class="tab-add-btn" onclick="openTabPicker(this)" title="Search & add a note to the Tab bar">＋ Add Tab</button>`;
 }
 function tabSelect(aid){
   if(ST.article===aid&&!ST.editing)return; /* already viewing */
@@ -4196,27 +4321,47 @@ function tabSelect(aid){
      pin — and if you'd just closed a tab for the note you were currently
      viewing, clicking any other tab immediately re-added it, undoing the
      close. Tabs now only ever change from an explicit action (add/remove/
-     drag), never as a side effect of switching notes. */
+     drag), never as a side effect of switching notes.
+     v03.77 — ST.tabOwner is deliberately NOT touched here: selecting a tab
+     inside the active group must keep that group on screen. */
   ST.article=aid;ST.editing=false;
   if(window.innerWidth<1200)showPane('p3');
   renderP3H();renderP3C();renderTabBar();renderP2C();
 }
 function toggleTab(aid){
-  if(!DB.tabs)DB.tabs=[];
-  const i=DB.tabs.indexOf(aid);
+  const host=_tabHost();
+  if(!host){_tabNoHost();return;}
+  if(aid===host){toast('📑 A note can’t be a tab of itself');return;}
+  const m=_tabsMap();
+  if(!m[host])m[host]=[];
+  const i=m[host].indexOf(aid);
   if(i>-1){
-    DB.tabs.splice(i,1);
+    m[host].splice(i,1);_tabStampRm(host,aid);
+    if(!m[host].length){delete m[host];if(ST.tabOwner===host)ST.tabOwner=null;}
     toast('📑 Removed from tab');
   } else {
-    DB.tabs.push(aid);
+    m[host].push(aid);_tabStampAdd(host,aid);ST.tabOwner=host;
     toast('📑 Added to tab');
   }
   persist();renderTabBar();
 }
 function closeTab(aid){
-  if(!DB.tabs)return;
-  DB.tabs=DB.tabs.filter(x=>x!==aid);
+  const owner=_tabOwner();
+  if(!owner)return;
+  const m=_tabsMap();
+  m[owner]=(m[owner]||[]).filter(x=>x!==aid);
+  _tabStampRm(owner,aid);
+  if(!m[owner].length){delete m[owner];ST.tabOwner=null;}
   persist();renderTabBar();
+}
+function closeTabGroup(owner){
+  const m=_tabsMap();
+  if(!m[owner])return;
+  m[owner].forEach(x=>_tabStampRm(owner,x));
+  delete m[owner];
+  if(ST.tabOwner===owner)ST.tabOwner=null;
+  persist();renderTabBar();
+  toast('📑 Tab group closed');
 }
 /* ── Drag a pane-2 note title straight onto the Tab bar to pin it ─────────
    Reuses the same drag sources already wired up elsewhere: _artDragId (set
@@ -4240,9 +4385,13 @@ function tabBarDrop(ev){
   if(!aid)return;
   const art=DB.articles.find(x=>x.id===aid);
   if(!art)return;
-  if(!DB.tabs)DB.tabs=[];
-  if(DB.tabs.includes(aid)){toast('📑 Already in Tab bar');return;}
-  DB.tabs.push(aid);
+  const host=_tabHost();
+  if(!host){_tabNoHost();return;}
+  if(aid===host){toast('📑 A note can’t be a tab of itself');return;}
+  const m=_tabsMap();
+  if(!m[host])m[host]=[];
+  if(m[host].includes(aid)){toast('📑 Already in this note’s Tab bar');return;}
+  m[host].push(aid);_tabStampAdd(host,aid);ST.tabOwner=host;
   persist();
   renderTabBar();
   toast('📑 "'+(art.title||'Untitled').slice(0,30)+'" added to Tab bar');
@@ -4345,7 +4494,11 @@ function deleteNote(aid){
   /* Remove from articles list */
   DB.articles=DB.articles.filter(a=>a.id!==aid);
   /* Remove from tab bar if pinned */
-  if(DB.tabs)DB.tabs=DB.tabs.filter(t=>t!==aid);
+  /* v03.77 — drop the group this note owned AND remove it from every group */
+  (function(){const m=_tabsMap();delete m[aid];
+    Object.keys(m).forEach(k=>{m[k]=(m[k]||[]).filter(t=>t!==aid);if(!m[k].length)delete m[k];});
+    _tabStampPurge(aid);
+    if(ST.tabOwner&&!m[ST.tabOwner])ST.tabOwner=null;})();
   /* Clear pane 3 if this note was open */
   if(ST.article===aid){ST.article=null;ST.editing=false;}
   persist();
@@ -4553,7 +4706,8 @@ function closeTabPicker(){
 function renderTabPickerList(q){
   const list=document.getElementById('tp-list');
   if(!list)return;
-  const inTabs=new Set(DB.tabs||[]);
+  const _host=_tabHost();
+  const inTabs=new Set(_tabGroup(_host).concat(_host?[_host]:[]));
   const query=(q||'').toLowerCase().trim();
 
   /* Notes NOT already in tabs, filtered by query, sorted by latest edited */
@@ -4584,13 +4738,17 @@ function renderTabPickerList(q){
 }
 
 function addToTabPicker(aid){
-  if(!DB.tabs)DB.tabs=[];
-  if(!DB.tabs.includes(aid)){
-    DB.tabs.push(aid);
+  const host=_tabHost();
+  closeTabPicker();
+  if(!host){_tabNoHost();return;}
+  if(aid===host){toast('📑 A note can’t be a tab of itself');return;}
+  const m=_tabsMap();
+  if(!m[host])m[host]=[];
+  if(!m[host].includes(aid)){
+    m[host].push(aid);_tabStampAdd(host,aid);ST.tabOwner=host;
     persist();
     renderTabBar();
   }
-  closeTabPicker();
   toast('📑 Added to Tab bar');
 }
 
@@ -12246,7 +12404,7 @@ function showArtCtx(ev,aid){
   },0);
 }
 function _buildArtCtxMain(art,aid){
-  const inTab=(DB.tabs||[]).includes(aid);
+  const inTab=_tabGroup(_tabHost()).includes(aid);
   const _canModal=window.innerWidth>=900;
   return `<div class="ci" onclick="hideCtx();startRenameArtTitle('${aid}')">✏ Rename title</div>`
     +(_canModal?`<div class="ci" onclick="hideCtx();popOutNote('${aid}')">⊡ Pop out note</div>`:'')
@@ -13188,6 +13346,43 @@ function _mergeById(localArr, remoteArr, tsKey){
   });
   return out;
 }
+/* v03.77 — merge the {ownerId:{tabId:ms}} stamp maps: newest ms wins per pair. */
+function _mergeTabStamps(a,b){
+  const norm=v=>(v&&typeof v==='object'&&!Array.isArray(v))?v:{};
+  const A=norm(a),B=norm(b),o={};
+  Object.keys(A).forEach(k=>{o[k]=Object.assign({},norm(A[k]));});
+  Object.keys(B).forEach(k=>{
+    const src=norm(B[k]);if(!o[k])o[k]={};
+    Object.keys(src).forEach(id=>{const t=+src[id]||0;if(!(o[k][id]>=t))o[k][id]=t;});
+  });
+  Object.keys(o).forEach(k=>{if(!Object.keys(o[k]).length)delete o[k];});
+  return o;
+}
+/* v03.77 — merge per-note tab groups {ownerId:[aid,...]}. Accepts the legacy
+   flat array on either side and treats it as empty (it is preserved as
+   _tabsV1 by the loadDB migration, so no ids are lost).
+   Union per owner, then apply the close-stamps: a pair whose CLOSE stamp is
+   newer than (or equal to, with no) its ADD stamp is dropped — so closing a
+   tab on one device propagates instead of being resurrected by a device that
+   hadn't synced yet, while a later re-add still beats an older close. */
+function _mergeTabMaps(a,b,at,x){
+  const norm=v=>(v&&typeof v==='object'&&!Array.isArray(v))?v:{};
+  const A=norm(a),B=norm(b),AT=norm(at),X=norm(x),o={};
+  Object.keys(A).forEach(k=>{o[k]=Array.isArray(A[k])?A[k].slice():[];});
+  Object.keys(B).forEach(k=>{
+    if(!o[k])o[k]=[];
+    (Array.isArray(B[k])?B[k]:[]).forEach(v=>{if(o[k].indexOf(v)<0)o[k].push(v);});
+  });
+  Object.keys(o).forEach(k=>{
+    const xk=norm(X[k]),ak=norm(AT[k]);
+    o[k]=o[k].filter(id=>{
+      const xt=+xk[id]||0;
+      return xt?(+ak[id]||0)>xt:true;
+    });
+    if(!o[k].length)delete o[k];
+  });
+  return o;
+}
 function _mergeStrs(a,b){ const o=(a||[]).slice(); (b||[]).forEach(v=>{if(o.indexOf(v)<0)o.push(v);}); return o; }
 function mergeDB(local, remote){
   if(!remote||typeof remote!=="object") return local;
@@ -13198,7 +13393,11 @@ function mergeDB(local, remote){
   out.trash=_mergeById(local.trash, remote.trash, "deletedAt");
   out.tombstones=_mergeById(local.tombstones, remote.tombstones, "deletedAt");
   out.globalTags=_mergeStrs(local.globalTags, remote.globalTags);
-  out.tabs=_mergeStrs(local.tabs, remote.tabs); /* v03.08.01 — tabs are string ids; union-dedupe (were duplicating on every sync via _mergeById) */
+  /* v03.77 — per-note tab groups. Stamps must merge BEFORE the groups: the
+     group merge consumes them to decide add-vs-close per (owner, tab) pair. */
+  out.tabsAt=_mergeTabStamps(local.tabsAt, remote.tabsAt);
+  out.tabsX =_mergeTabStamps(local.tabsX,  remote.tabsX);
+  out.tabs  =_mergeTabMaps(local.tabs, remote.tabs, out.tabsAt, out.tabsX);
   /* reconcile records active on one side but trashed on the other.
      v03.07.01 — key tombstones by the DELETED RECORD id (t.item.id and any
      subtree folder/article ids) instead of the trash entry's own uid, so
