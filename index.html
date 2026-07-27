@@ -10,7 +10,7 @@
      Claude: on every delivery, read this value, bump it per the rule
      above, update it here, and name the downloaded file
      "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.78">
+<meta name="app-version" content="03.79">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2623,6 +2623,16 @@ function _navBtnsHTML(){
 function renderP3H(){
   const el=document.getElementById('p3h');
   const curA=DB.articles.find(a=>a.id===ST.article);
+  /* v03.79 — THE per-note-tabs fix. ST.article is reassigned from ~30 places
+     (selArt, back, selTag, every mkNote/quick-add path, search, journal,
+     contacts, MyWall…) and almost none of them called renderTabBar(), so the
+     strip kept showing the PREVIOUS note's group — which is why tabs appeared
+     on unrelated and brand-new notes. renderP3H() is the one function every
+     one of those paths already calls, so binding the bar to it closes the gap
+     for all of them at once instead of patching ~30 call sites by hand.
+     renderTabBar() is idempotent (see its output-signature guard), so the
+     handful of callers that invoke both still cost only one string compare. */
+  renderTabBar();
   _renderP3SearchBar();
   /* Focus preservation (mobile/tablet keyboard fix):
      if the title input #ti is focused when this header is rebuilt,
@@ -4326,7 +4336,7 @@ function renderTabBar(){
       +`<button class="tab-x" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();${isOwner?`closeTabGroup('${id}')`:`closeTab('${id}')`}" title="${isOwner?'Close all tabs of this note':'Close tab'}">✕</button>`
       +'</div>';
   };
-  bar.innerHTML=
+  const html=
     '<div class="tab-it'+(ST.article==="cal"?' on':'')+' tab-cal" onclick="_calOpen()" title="Calendar">📅 Cal</div>'
     +'<button class="tab-nav" id="tab-nav-l" onclick="event.stopPropagation();_tabScroll(-1)" title="Scroll tabs left">‹</button>'
     +'<div class="tab-strip" id="tab-strip" onscroll="_tabNavSync()">'
@@ -4336,6 +4346,12 @@ function renderTabBar(){
     +'<button class="tab-nav" id="tab-nav-r" onclick="event.stopPropagation();_tabScroll(1)" title="Scroll tabs right">›</button>'
     +'<span class="tab-more" id="tab-more" title="Tabs hidden off-screen — use ‹ › to reach them"></span>'
     +`<button class="tab-add-btn" onclick="openTabPicker(this)" title="Search & add a note to the Tab bar">＋ Add Tab</button>`;
+  /* v03.79 — output-signature guard. The built HTML already encodes owner,
+     membership, active note, titles and colours, so comparing it is an exact
+     dirty-check. Two wins: renderTabBar() is now free to be called from
+     renderP3H() on every navigation, and an unchanged bar is never rewritten —
+     which also stops the scroll strip snapping back to 0 on every re-render. */
+  if(bar._sig!==html){ bar._sig=html; bar.innerHTML=html; }
   if(tabs.length)_tabNavQueue();
 }
 /* ── Tab strip overflow controls (v03.78) ─────────────────────────────
@@ -4652,7 +4668,10 @@ function selSecSF(secId,sfId){
   ST.secSF={secId,sfId};
   ST.folder=null;ST.tag=null;ST.kind=null;ST.article=null;ST.editing=false;
   if(window.innerWidth<1200)showPane('p2');
-  renderTree();renderP2H();renderP2C();
+  /* v03.79 — was the only navigation path that cleared ST.article without
+     refreshing pane 3, so it left the previous note's header, body AND tab
+     strip on screen. Now consistent with selFolder/selTag/selKind. */
+  renderTree();renderP2H();renderP2C();renderP3H();renderP3C();
 }
 
 /* ── Helpers — get all folder IDs in a section's tree ────────────────────── */
