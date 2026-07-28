@@ -1523,7 +1523,7 @@ sup.ann-sup:hover{text-decoration:underline}
    closes a window. Multiple can be open at once, each its own note. */
 .float-win{position:fixed;display:flex;flex-direction:column;
   background:var(--paper);border:1px solid var(--border2);border-radius:10px;
-  box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden;resize:both;
+  box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden;
   min-width:320px;min-height:280px}
 .fw-hd{display:flex;align-items:center;gap:6px;padding:7px 10px;
   background:var(--paper2,var(--paper));border-bottom:1px solid var(--border2);
@@ -1557,8 +1557,14 @@ sup.ann-sup:hover{text-decoration:underline}
   background:var(--paper)!important;
   border-radius:14px!important;
   box-shadow:0 24px 64px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.1)!important;
-  overflow:auto!important;
-  resize:both!important;
+  /* v03.NotePane.P4 — was overflow:auto + resize:both. `auto` made the WHOLE
+     panel scroll, so the header, tab bar and edit toolbar slid out of view —
+     and since the tab bar IS the drag handle, a scrolled panel could no longer
+     be moved at all. It also produced two nested scrollbars. `hidden` restores
+     the base #p3 flex column so only #p3c scrolls; resize:both goes with it,
+     replaced by a real bottom-right handle matching the other seven. */
+  overflow:hidden!important;
+  display:flex!important;flex-direction:column!important;
   min-width:340px!important;min-height:280px!important;
   max-width:96vw!important;max-height:94vh!important;
   animation:p3modal-in .24s cubic-bezier(.22,.8,.3,1)}
@@ -1580,10 +1586,59 @@ sup.ann-sup:hover{text-decoration:underline}
 .modal-corner-tr{top:0;right:0;cursor:nesw-resize;border-radius:0 14px 0 0}
 .modal-corner-tl{top:0;left:0;cursor:nwse-resize;border-radius:14px 0 0 0}
 .modal-corner-bl{bottom:0;left:0;cursor:nesw-resize;border-radius:0 0 0 14px}
+/* v03.NotePane.N7 — find bar + prev/next stepping inside float windows */
+.fw-nav{background:none;border:none;cursor:pointer;color:var(--t2);
+  font-size:15px;line-height:1;padding:0 3px;opacity:.55;flex-shrink:0}
+.fw-nav:hover{opacity:1}
+.fw-find{display:flex;align-items:center;gap:4px;padding:4px 8px;
+  border-bottom:1px solid var(--border2);background:var(--hover);flex-shrink:0}
+.fw-find-q{flex:1;min-width:0;font-size:11.5px;padding:3px 7px;
+  border:1px solid var(--border2);border-radius:6px;
+  background:var(--paper);color:var(--t1)}
+.fw-find-q:focus{outline:none;border-color:var(--accent,#0f766e)}
+.fw-find-n{font-size:10px;color:var(--t3);white-space:nowrap;min-width:38px;
+  text-align:right}
+/* Presentation-only tint for every match. No DOM node is created, so nothing
+   here can ever be written into the note. */
+::highlight(nt-find){background:#ffe58a;color:#111}
+#p3-find{border-bottom:1px solid var(--border2)}
+/* v03.NotePane.E6 — meta strip inside float windows (status, types, tags,
+   folders). Sized down from the Pane 3 equivalents since the window is
+   narrower, and flex-shrink:0 so it never squeezes the editor out. */
+.fw-meta{display:flex;flex-wrap:wrap;gap:4px;align-items:center;
+  padding:4px 10px 0;flex-shrink:0}
+.fw-meta:empty{display:none}
+.fw-meta .bk-nti,.fw-meta .bk-done,.fw-meta .bk-arch{font-size:9.5px;
+  padding:1px 6px;border-radius:8px;color:#fff;white-space:nowrap}
+.fw-meta .bk-done{background:#0f766e}
+.fw-meta .bk-arch{background:#78716c}
+.fw-meta .art-tag{font-size:9.5px;padding:1px 6px;cursor:pointer}
+.fw-fols .ftag{font-size:9.5px;padding:1px 6px;cursor:pointer}
+.float-win .note-dateline{padding:3px 10px;font-size:9.5px;flex-shrink:0}
+.float-win .note-dateline-hr{margin:0 10px;flex-shrink:0}
+.float-win .fld-panel{margin:4px 10px 0;flex-shrink:0}
+.float-win .save-flash{margin-left:auto;margin-right:4px}
+/* v03.NotePane.T4 — without touch-action:none the browser claims these
+   gestures for scrolling/zooming and the drag never reaches our handlers. */
+.modal-resize-r,.modal-resize-b,.modal-resize-l,.modal-corner,
+.fw-hd,.pin-resize-h,#tab-bar.modal-handle{touch-action:none}
+/* v03.NotePane.P4 — real BR grip, replacing the browser's resize:both */
+.modal-corner-br{bottom:0;right:0;cursor:nwse-resize;border-radius:0 0 14px 0}
+#p3.modal-mode .modal-corner-br::after,.float-win .modal-corner-br::after{content:'';position:absolute;
+  right:3px;bottom:3px;width:8px;height:8px;opacity:.45;
+  border-right:2px solid var(--t3);border-bottom:2px solid var(--t3)}
 #tab-bar.modal-handle{position:relative!important}
 .modal-pop-btn{font-size:15px;opacity:.55;padding:3px 6px;flex-shrink:0}
 .modal-pop-btn:hover{opacity:1}
 @media(max-width:899.98px){.modal-pop-btn{display:none}}
+/* v03.NotePane.G5 — "Close all" chip, shown only once a 2nd window is open */
+#fw-closeall{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+  background:var(--paper);color:var(--t1);border:1px solid var(--border2);
+  border-radius:999px;padding:7px 16px;font-size:12px;font-weight:600;
+  cursor:pointer;white-space:nowrap;user-select:none;-webkit-user-select:none;
+  box-shadow:0 6px 20px rgba(0,0,0,.28)}
+#fw-closeall:hover{background:var(--hover)}
+@media(max-width:899.98px){#fw-closeall{display:none!important}}
 
 /* ══ Mobile Edit Bar Groups ═════════════════════════════════════════════════ */
 .eb-mob{justify-content:space-around!important;overflow-x:hidden!important}
@@ -1882,6 +1937,14 @@ sup.ann-sup:hover{text-decoration:underline}
   <div id="tab-bar" class="has-tabs" style="display: flex;" ondragover="tabBarDragOver(event)" ondragleave="tabBarDragLeave(event)" ondrop="tabBarDrop(event)"></div>
   <div id="p3h" class=""></div>
   <div id="p3-srch-bar"></div>
+  <div id="p3-find" class="fw-find" style="display:none">
+    <input class="fw-find-q" id="p3-find-q" placeholder="Find in this note…"
+      oninput="_ntFindRun('p3',this.value)" onkeydown="_ntFindKey(event,'p3')">
+    <span class="fw-find-n" id="p3-find-n"></span>
+    <button class="et" onclick="_ntFindStep('p3',-1)" title="Previous match (Shift+Enter)">▲</button>
+    <button class="et" onclick="_ntFindStep('p3',1)" title="Next match (Enter)">▼</button>
+    <button class="et" onclick="_ntFindClose('p3')" title="Close find (Esc)">✕</button>
+  </div>
   <div id="p3c"></div>
 </div>
 
@@ -2883,9 +2946,13 @@ function renderP3H(){
     /* v03.NotePane.C9 — attached-folder list removed from the title bar; it
        still shows once below the NTI bar in the note body (avoids duplication). */
     h+=`<div style="flex:1;min-width:0"></div>
+      <button class="btn bn bi" onclick="_p3Navigate(-1)" title="Previous note in this folder" style="padding:5px 6px;font-size:15px">‹</button>
+      <button class="btn bn bi" onclick="_p3Navigate(1)" title="Next note in this folder" style="padding:5px 6px;font-size:15px">›</button>
+      <button class="btn bn bi" onclick="_ntFindToggle('p3')" title="Find in this note" style="padding:5px 7px;font-size:13px">🔍</button>
       <button class="btn bn bi" onclick="quickCapture()" title="Quick note (Primary folder)" style="padding:5px 7px;font-size:14px">✚</button>
       <button class="btn" onclick="startEdit()">✏️ Edit</button>
-      <button class="btn bn modal-pop-btn" onclick="popOutNote('${curA.id}')" title="Pop out as floating window (Ctrl+Shift+P)">⊡</button>
+      <button class="btn bn modal-pop-btn" onclick="openNotePopup('${curA.id}','float')" title="Pop out as floating window (Ctrl+Shift+P)">⊡</button>
+      <button class="btn bn modal-pop-btn" onclick="openNotePopup('${curA.id}','panel')" title="Open as resizable panel">⛶</button>
       <button class="btn bn bi" onclick="duplicateNote('${curA.id}')" title="Make a copy">🗐</button>
       <button class="btn bn bi" title="More options" oncontextmenu="event.preventDefault();showArtCtx(event,'${curA.id}')" onclick="showArtCtx({clientX:event.clientX,clientY:event.clientY,preventDefault:()=>{},stopPropagation:()=>{}},curA.id)">⋯</button>
       <button class="btn bd bi" onclick="confirmDel('art','${curA.id}')">🗑</button>`;
@@ -2899,6 +2966,9 @@ function renderP3H(){
 }
 
 function renderP3C(){
+  /* N8 — the pane is about to be rebuilt, so any Ranges held by find now point
+     at nodes that are on their way out. Drop them before that happens. */
+  try{if(_ntFind&&_ntFind.key==='p3')_ntFindClose('p3');}catch(e){}
   const el=document.getElementById('p3c');
   const curA=DB.articles.find(a=>a.id===ST.article);
   if(ST.calManageCats&&!ST.calEditEvt){el.innerHTML=_calRenderCatList();return;}
@@ -3134,7 +3204,7 @@ function goHome(){
   toast('🏠 Home');
 }
 
-function ec(ev,cmd){ev.preventDefault();document.execCommand(cmd,false,null);document.getElementById('ed')?.focus();}
+function ec(ev,cmd){ev.preventDefault();document.execCommand(cmd,false,null);_edActive()?.focus();}
 function _alignBtnsHTML(){
   return '<button class="et" onmousedown="ec(event,\'justifyLeft\')" title="Align left"><span class="al-ic al-l"><span></span><span></span><span></span></span></button>'
     +'<button class="et" onmousedown="ec(event,\'justifyCenter\')" title="Align center"><span class="al-ic al-c"><span></span><span></span><span></span></span></button>'
@@ -3342,14 +3412,59 @@ function fb(ev,tag){
 let _edRange=null;          // last caret position inside #ed
 let _menQStart=null;        // text node + offset where the "@query" began
 
-function _isED(n){const ed=document.getElementById('ed');return ed&&n&&ed.contains(n);}
+/* ══ v03.NotePane.E5 — TARGET-AWARE EDITOR CORE ═══════════════════════════
+   Until now every caret/insert/format helper called getElementById('ed')
+   directly, so they could only ever act on the single Pane-3 editor. That is
+   why float windows shipped with a deliberately reduced toolbar: pointing the
+   Insert, colour, done and boundary tools at a float would have edited the
+   WRONG note. These three functions resolve "the editor the user is actually
+   working in" instead, which lets one implementation serve both surfaces.
+   Panel behaviour is unchanged: when the caret is in #ed, #ed is returned. */
+function _edHost(n){
+  while(n){
+    if(n.nodeType===1&&(n.id==='ed'||(n.classList&&n.classList.contains('fw-ed'))))return n;
+    n=n.parentNode;
+  }
+  return null;
+}
+function _edActive(){
+  const s=window.getSelection();
+  if(s&&s.rangeCount){const h=_edHost(s.anchorNode);if(h)return h;}
+  if(_edRange){const h=_edHost(_edRange.startContainer);if(h&&document.contains(h))return h;}
+  if(typeof _fwFocusedAid!=='undefined'&&_fwFocusedAid){
+    const e=document.getElementById('fw-ed-'+_fwFocusedAid);if(e)return e;
+  }
+  return document.getElementById('ed');
+}
+/* Content changed by script rather than by typing fires no 'input' event, so
+   the owning editor's autosave has to be nudged by hand. */
+function _edTouched(el){
+  if(!el)return;
+  if(el.id==='ed'){try{_edAutoSave();}catch(e){}return;}
+  const m=/^fw-ed-(.+)$/.exec(el.id||'');
+  if(m){try{_fwScheduleAutoSave(m[1]);}catch(e){}}
+}
+function _isED(n){return !!_edHost(n);}
+/* v03.NotePane.E6 — the other half of E5. _edHost() answers "which editor",
+   these answer "which note is in it". The collapse/section machinery needs
+   both, because it reads and writes art.sectionState. */
+function _edAidOf(el){
+  if(!el)return null;
+  if(el.id==='ed')return ST.article;
+  const m=/^fw-ed-(.+)$/.exec(el.id||'');
+  return m?m[1]:null;
+}
+function _edArtOf(el){
+  const id=_edAidOf(el);
+  return id?DB.articles.find(function(a){return a.id===id;}):null;
+}
 document.addEventListener('selectionchange',()=>{
   const s=window.getSelection();
   if(s.rangeCount&&_isED(s.anchorNode))_edRange=s.getRangeAt(0).cloneRange();
 });
 
 function _restoreCaret(){
-  const ed=document.getElementById('ed');if(!ed)return;
+  const ed=_edActive();if(!ed)return;
   ed.focus();
   if(_edRange&&_isED(_edRange.startContainer)){
     const s=window.getSelection();s.removeAllRanges();s.addRange(_edRange);
@@ -3359,7 +3474,7 @@ function insertAtCaret(html){
   _restoreCaret();
   let ok=false;
   try{ok=document.execCommand('insertHTML',false,html);}catch{ok=false;}
-  const ed=document.getElementById('ed');
+  const ed=_edActive();
   if(!ok&&ed){
     /* iOS Safari: execCommand('insertHTML') can fail silently — insert via Range */
     const s=window.getSelection();
@@ -4572,7 +4687,12 @@ function renderTabBar(){
     }
   }
   bar.style.display='flex'; /* Always visible so ＋ Add button is accessible */
-  bar.className=tabs.length?'has-tabs':'';
+  /* v03.NotePane.P7 — this assignment runs unconditionally, AHEAD of the
+     signature guard below, so it used to strip .modal-handle on every single
+     call. That cost the bar its position:relative, which let the ↕/✥ overlay
+     resolve against #p3 instead and tint the entire panel. Preserve it. */
+  const _mh=bar.classList.contains('modal-handle');
+  bar.className=(tabs.length?'has-tabs':'')+(_mh?' modal-handle':'');
   const ownArt=(owner&&tabs.length)?DB.articles.find(x=>x.id===owner):null;
   const chip=(a,isOwner)=>{
     const id=a.id;
@@ -4604,8 +4724,21 @@ function renderTabBar(){
      dirty-check. Two wins: renderTabBar() is now free to be called from
      renderP3H() on every navigation, and an unchanged bar is never rewritten —
      which also stops the scroll strip snapping back to 0 on every re-render. */
-  if(bar._sig!==html){ bar._sig=html; bar.innerHTML=html; }
+  if(bar._sig!==html){ bar._sig=html; bar.innerHTML=html; if(_mh)_tabSplitVizAdd(bar); }
   if(tabs.length)_tabNavQueue();
+}
+/* v03.NotePane.P7 — the ↕ / ✥ half-and-half hint. Lives as a DOM child of
+   #tab-bar, so any innerHTML rewrite above destroys it; both the panel opener
+   and renderTabBar() call this so it can always come straight back. */
+function _tabSplitVizAdd(bar){
+  if(!bar||document.getElementById('tab-split-viz'))return;
+  const viz=document.createElement('div');
+  viz.id='tab-split-viz';
+  viz.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:0;display:flex;align-items:center;background:linear-gradient(to right,rgba(13,148,136,.07) 50%,rgba(99,102,241,.07) 50%)';
+  viz.innerHTML='<span style="flex:1;text-align:center;font-size:10px;color:var(--t3);opacity:.5;pointer-events:none">↕</span>'
+    +'<span style="width:1px;height:55%;background:var(--border2);opacity:.5;flex-shrink:0;pointer-events:none"></span>'
+    +'<span style="flex:1;text-align:center;font-size:10px;color:var(--t3);opacity:.5;pointer-events:none">✥</span>';
+  bar.appendChild(viz);
 }
 /* ── Tab strip overflow controls (v03.78) ─────────────────────────────
    Pure layout — no data touched, no work at load. Everything below runs only
@@ -7118,7 +7251,37 @@ function openTabClrPicker(ev,id){
 }
 
 
-/* \u2550\u2550 NOTE MODAL POP-OUT \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+/* ══ v03.NotePane.P8 — POP-UP GEOMETRY STORE ══════════════════════════════
+   Panel and float positions used to live in DB.theme and be committed with
+   persist() — which is snapshotState() + a full JSON.stringify of the entire
+   DB + scheduleAutoSave() + pushToCloud(). Every window drag therefore wrote
+   the whole notebook to disk, pushed it to the cloud, AND added an undo step,
+   so nudging a window five times buried the user's last real edit five levels
+   deep in the undo stack. Geometry is cosmetic and per-device (DB.theme never
+   synced anyway), so it belongs in its own small localStorage key with a
+   debounced write. Existing saved positions migrate across on first read. */
+var _POPGEO_SK='nb_popgeo_v1', _popGeo=null, _popGeoT=0;
+function _popGeoAll(){
+  if(_popGeo)return _popGeo;
+  try{_popGeo=JSON.parse(localStorage.getItem(_POPGEO_SK))||{};}catch(e){_popGeo={};}
+  if(!_popGeo._m){
+    _popGeo._m=1;
+    try{
+      if(DB.theme&&DB.theme.modalPos)_popGeo.panel=DB.theme.modalPos;
+      if(DB.theme&&DB.theme.fwPos)_popGeo.float=Object.assign({},DB.theme.fwPos);
+    }catch(e){}
+  }
+  if(!_popGeo.float)_popGeo.float={};
+  return _popGeo;
+}
+function _popGeoFlush(){
+  clearTimeout(_popGeoT);
+  _popGeoT=setTimeout(function(){
+    try{localStorage.setItem(_POPGEO_SK,JSON.stringify(_popGeo));}catch(e){}
+  },400);
+}
+
+/* ══ NOTE MODAL POP-OUT ══════════════════════════════════════════════════ */
 let _mDrag=null;
 /* v03.74 — re-opens the original single-note modal pop-up (kept available
    per Smahk, alongside the newer multi-window float pop-outs). Selects the
@@ -7132,13 +7295,17 @@ function openNoteAsModal(aid){
 }
 function openNoteModal(){
   if(window.innerWidth<900)return;
+  closeAllFloats();   /* v03.NotePane.G4 — one pop-up paradigm at a time */
   ST.noteModal=true;
   const p3=document.getElementById('p3');if(!p3)return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  const _saved=DB.theme?.modalPos;
+  const _saved=_popGeoAll().panel;
   if(_saved?.width&&_saved?.height){
-    /* Restore saved position — clamp to current viewport */
-    const mw=Math.min(_saved.width,vw-8),mh=Math.min(_saved.height,vh-8);
+    /* Restore saved position. v03.NotePane.P6 — clamp with the SAME 96vw/94vh
+       the CSS uses. Clamping to vw-8 while the CSS capped at 96vw meant `left`
+       was computed from a width the browser never rendered, so a restored
+       panel reopened up to 4% of the screen away from where it was left. */
+    const mw=Math.min(_saved.width,Math.floor(vw*0.96)),mh=Math.min(_saved.height,Math.floor(vh*0.94));
     p3.style.width=mw+'px';p3.style.height=mh+'px';
     p3.style.left=Math.max(0,Math.min(_saved.left,vw-mw))+'px';
     p3.style.top=Math.max(0,Math.min(_saved.top,vh-mh))+'px';
@@ -7156,48 +7323,40 @@ function openNoteModal(){
   /* Tab bar 50-50: left half=top-resize ↕, right half=drag ✥ */
   const _tbar=document.getElementById('tab-bar');
   if(_tbar&&!_tbar._mhBound){
-    _tbar.addEventListener('mousedown',_tabBarModalDown);
-    _tbar.addEventListener('mousemove',_tabBarCursor);
+    _tbar.addEventListener('pointerdown',_tabBarModalDown);
+    _tbar.addEventListener('pointermove',_tabBarCursor);
     _tbar.addEventListener('dblclick',_tabBarModalReset);
     _tbar.title='Double-click empty area to reset to centre';
     _tbar._mhBound=true;
     _tbar.classList.add('modal-handle');
-    if(!document.getElementById('tab-split-viz')){
-      const viz=document.createElement('div');
-      viz.id='tab-split-viz';
-      viz.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:0;display:flex;align-items:center;background:linear-gradient(to right,rgba(13,148,136,.07) 50%,rgba(99,102,241,.07) 50%)';
-      viz.innerHTML='<span style="flex:1;text-align:center;font-size:10px;color:var(--t3);opacity:.5;pointer-events:none">↕</span>'
-        +'<span style="width:1px;height:55%;background:var(--border2);opacity:.5;flex-shrink:0;pointer-events:none"></span>'
-        +'<span style="flex:1;text-align:center;font-size:10px;color:var(--t3);opacity:.5;pointer-events:none">✥</span>';
-      _tbar.appendChild(viz);
-    }
+    _tabSplitVizAdd(_tbar);
   }
   /* Edge resize handles: right, bottom, left */
   if(!document.getElementById('modal-resize-r')){
     const rr=document.createElement('div');
     rr.id='modal-resize-r';rr.className='modal-resize-r';
-    rr.addEventListener('mousedown',_modalResizeRStart);
+    rr.addEventListener('pointerdown',_modalResizeRStart);
     p3.appendChild(rr);
   }
   if(!document.getElementById('modal-resize-b')){
     const rb=document.createElement('div');
     rb.id='modal-resize-b';rb.className='modal-resize-b';
-    rb.addEventListener('mousedown',_modalResizeBStart);
+    rb.addEventListener('pointerdown',_modalResizeBStart);
     p3.appendChild(rb);
   }
   if(!document.getElementById('modal-resize-l')){
     const rl=document.createElement('div');
     rl.id='modal-resize-l';rl.className='modal-resize-l';
-    rl.addEventListener('mousedown',_modalResizeLStart);
+    rl.addEventListener('pointerdown',_modalResizeLStart);
     p3.appendChild(rl);
   }
   /* Corner handles: TR, TL, BL (BR = CSS resize:both) */
-  const _chMap={tr:_modalResizeTRStart,tl:_modalResizeTLStart,bl:_modalResizeBLStart};
+  const _chMap={tr:_modalResizeTRStart,tl:_modalResizeTLStart,bl:_modalResizeBLStart,br:_modalResizeBRStart};
   Object.entries(_chMap).forEach(([c,fn])=>{
     if(!document.getElementById('modal-corner-'+c)){
       const el=document.createElement('div');
       el.id='modal-corner-'+c;el.className='modal-corner modal-corner-'+c;
-      el.addEventListener('mousedown',fn);
+      el.addEventListener('pointerdown',fn);
       p3.appendChild(el);
     }
   });
@@ -7210,26 +7369,29 @@ function closeNoteModal(){
   const _p3s=document.getElementById('p3');
   if(_p3s&&_p3s.classList.contains('modal-mode')){
     const _r=_p3s.getBoundingClientRect();
-    if(!DB.theme)DB.theme={};
-    DB.theme.modalPos={left:Math.round(_r.left),top:Math.round(_r.top),
+    _popGeoAll().panel={left:Math.round(_r.left),top:Math.round(_r.top),
       width:Math.round(_r.width),height:Math.round(_r.height)};
-    persist();
+    _popGeoFlush();   /* P8 — cosmetic geometry never touches the DB */
   }
+  /* v03.NotePane.F2 — commit whatever is live in #ed BEFORE the pane changes
+     shape. Without this, an auto-close (narrow screen) or an ESC mid-typing
+     lost everything typed since the last 1.2s autosave tick. */
+  try{_flushEd();}catch(e){}
   _tocDestroy();
   _pinPanelDestroy();
-  ST.noteModal=false;_mDrag=null;
-  document.removeEventListener('mousemove',_modalDragMove);
+  ST.noteModal=false;
+  _modalHandlesOff();
   const p3=document.getElementById('p3');
   if(p3){
     p3.classList.remove('modal-mode');
     ['width','height','top','left','transform'].forEach(k=>p3.style.removeProperty(k));
     ['modal-resize-r','modal-resize-b','modal-resize-l','tab-split-viz',
-     'modal-corner-tr','modal-corner-tl','modal-corner-bl']
+     'modal-corner-tr','modal-corner-tl','modal-corner-bl','modal-corner-br']
       .forEach(id=>document.getElementById(id)?.remove());
     const _tb=document.getElementById('tab-bar');
     if(_tb){
-      _tb.removeEventListener('mousedown',_tabBarModalDown);
-      _tb.removeEventListener('mousemove',_tabBarCursor);
+      _tb.removeEventListener('pointerdown',_tabBarModalDown);
+      _tb.removeEventListener('pointermove',_tabBarCursor);
       _tb.removeEventListener('dblclick',_tabBarModalReset);
       _tb.title='';
       _tb._mhBound=false;
@@ -7239,15 +7401,33 @@ function closeNoteModal(){
   }
   document.getElementById('note-modal-bg')?.classList.remove('active');
   renderP3H();
-  if(_fwFocusedAid){_pinPanelInject();_tocInject();} /* hand both panels back to a focused pop-out, if any */
+  if(_fwFocusedAid){_tocInject();_pinPanelInject();} /* hand both panels back to a focused pop-out, if any (Contents first — F9) */
+}
+/* ══ v03.NotePane.T4 — POINTER (mouse + pen + FINGER) GESTURE PLUMBING ═════
+   Every drag/resize in both pop-up systems was bound to mousedown/mousemove/
+   mouseup. The panel is allowed from 900px up, which includes iPad landscape
+   and most Android tablets — so on those devices a pop-up opened but could not
+   be moved or resized by finger at all. Pointer events cover mouse, pen and
+   touch through one path, so this is a rename rather than a second code path.
+   pointercancel matters on touch: the browser can revoke a gesture mid-drag
+   (scroll takeover, a second finger), and without handling it the mover stayed
+   attached — exactly the leak F2 fixed for the mouse path. */
+function _ptrDown(moveFn,endFn){
+  document.addEventListener('pointermove',moveFn);
+  document.addEventListener('pointerup',endFn);
+  document.addEventListener('pointercancel',endFn);
+}
+function _ptrUp(moveFn,endFn){
+  document.removeEventListener('pointermove',moveFn);
+  document.removeEventListener('pointerup',endFn);
+  document.removeEventListener('pointercancel',endFn);
 }
 function _modalDragStart(e){
   if(e.button!==0)return;
   const p3=document.getElementById('p3');if(!p3)return;
   const r=p3.getBoundingClientRect();
   _mDrag={ox:e.clientX-r.left,oy:e.clientY-r.top};
-  document.addEventListener('mousemove',_modalDragMove);
-  document.addEventListener('mouseup',_modalDragEnd,{once:true});
+  _ptrDown(_modalDragMove,_modalDragEnd);
   e.preventDefault();
 }
 function _modalDragMove(e){
@@ -7257,14 +7437,56 @@ function _modalDragMove(e){
   const y=Math.max(0,Math.min(e.clientY-_mDrag.oy,window.innerHeight-p3.offsetHeight));
   p3.style.left=x+'px';p3.style.top=y+'px';
 }
-function _modalDragEnd(){_mDrag=null;document.removeEventListener('mousemove',_modalDragMove);}
+function _modalDragEnd(){_mDrag=null;_ptrUp(_modalDragMove,_modalDragEnd);}
+/* v03.NotePane.F2 — ONE cleanup for all eight drag/resize gestures.
+   closeNoteModal() used to detach only _modalDragMove, so a gesture that was
+   still live when the modal closed (ESC mid-drag, or a mouseup that landed
+   outside the browser window so the {once:true} handler never fired) left its
+   mousemove listener attached AND its ST._mRes* state non-null. The mover then
+   kept passing its own guard and carried on writing width/height/left/top onto
+   a #p3 that was back in the normal 3-pane flex layout — which is why Pane 3
+   would randomly stick at a wrong width until a reload. */
+function _modalHandlesOff(){
+  /* T4 — explicit move/end pairs. An earlier draft derived the End handler by
+     string-munging the mover's .name, which works today but would break the
+     first time anyone renamed a function or ran the file through a minifier.
+     A plain table costs nothing and cannot rot. */
+  const _pairs=[
+    ['_mResR', _modalResizeRMove, _modalResizeREnd],
+    ['_mResB', _modalResizeBMove, _modalResizeBEnd],
+    ['_mResL', _modalResizeLMove, _modalResizeLEnd],
+    ['_mResT', _modalResizeTMove, _modalResizeTEnd],
+    ['_mResTR',_modalResizeTRMove,_modalResizeTREnd],
+    ['_mResTL',_modalResizeTLMove,_modalResizeTLEnd],
+    ['_mResBL',_modalResizeBLMove,_modalResizeBLEnd],
+    ['_mResBR',_modalResizeBRMove,_modalResizeBREnd]
+  ];
+  _pairs.forEach(function(p){ ST[p[0]]=null; _ptrUp(p[1],p[2]); });
+  _mDrag=null;
+  _ptrUp(_modalDragMove,_modalDragEnd);
+  document.body.style.cursor='';
+  document.body.style.userSelect='';
+}
+/* v03.NotePane.F1 — re-clamp the panel into the CURRENT viewport. Geometry is
+   written as fixed pixels at open time only, so shrinking the browser window
+   left the panel hanging off-screen. Uses 96vw/94vh to match the CSS max-width
+   /max-height exactly, so the restored left/top can no longer drift. */
+function _modalClampToViewport(){
+  const p3=document.getElementById('p3');
+  if(!p3||!p3.classList.contains('modal-mode'))return;
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const mw=Math.max(340,Math.min(p3.offsetWidth,Math.floor(vw*0.96)));
+  const mh=Math.max(280,Math.min(p3.offsetHeight,Math.floor(vh*0.94)));
+  p3.style.width=mw+'px';p3.style.height=mh+'px';
+  p3.style.left=Math.max(0,Math.min(parseFloat(p3.style.left)||0,vw-mw))+'px';
+  p3.style.top =Math.max(0,Math.min(parseFloat(p3.style.top) ||0,vh-mh))+'px';
+}
 function _modalResizeRStart(e){
   if(e.button!==0)return;
   const p3=document.getElementById('p3');if(!p3)return;
   const r=p3.getBoundingClientRect();
   ST._mResR={left:r.left,startW:r.width};
-  document.addEventListener('mousemove',_modalResizeRMove);
-  document.addEventListener('mouseup',_modalResizeREnd,{once:true});
+  _ptrDown(_modalResizeRMove,_modalResizeREnd);
   document.body.style.cursor='ew-resize';document.body.style.userSelect='none';
   e.preventDefault();
 }
@@ -7274,14 +7496,13 @@ function _modalResizeRMove(e){
   const nw=Math.max(340,Math.min(e.clientX-ST._mResR.left,window.innerWidth-ST._mResR.left-4));
   p3.style.width=nw+'px';
 }
-function _modalResizeREnd(){ST._mResR=null;document.removeEventListener('mousemove',_modalResizeRMove);document.body.style.cursor='';document.body.style.userSelect='';}
+function _modalResizeREnd(){ST._mResR=null;_ptrUp(_modalResizeRMove,_modalResizeREnd);document.body.style.cursor='';document.body.style.userSelect='';}
 function _modalResizeBStart(e){
   if(e.button!==0)return;
   const p3=document.getElementById('p3');if(!p3)return;
   const r=p3.getBoundingClientRect();
   ST._mResB={startY:e.clientY,startH:r.height,top:r.top};
-  document.addEventListener('mousemove',_modalResizeBMove);
-  document.addEventListener('mouseup',_modalResizeBEnd,{once:true});
+  _ptrDown(_modalResizeBMove,_modalResizeBEnd);
   document.body.style.cursor='ns-resize';document.body.style.userSelect='none';
   e.preventDefault();
 }
@@ -7291,14 +7512,13 @@ function _modalResizeBMove(e){
   const nh=Math.max(280,Math.min(ST._mResB.startH+(e.clientY-ST._mResB.startY),window.innerHeight-ST._mResB.top-8));
   p3.style.height=nh+'px';
 }
-function _modalResizeBEnd(){ST._mResB=null;document.removeEventListener('mousemove',_modalResizeBMove);document.body.style.cursor='';document.body.style.userSelect='';}
+function _modalResizeBEnd(){ST._mResB=null;_ptrUp(_modalResizeBMove,_modalResizeBEnd);document.body.style.cursor='';document.body.style.userSelect='';}
 function _modalResizeLStart(e){
   if(e.button!==0)return;
   const p3=document.getElementById('p3');if(!p3)return;
   const r=p3.getBoundingClientRect();
   ST._mResL={right:r.right,startW:r.width};
-  document.addEventListener('mousemove',_modalResizeLMove);
-  document.addEventListener('mouseup',_modalResizeLEnd,{once:true});
+  _ptrDown(_modalResizeLMove,_modalResizeLEnd);
   document.body.style.cursor='ew-resize';document.body.style.userSelect='none';
   e.preventDefault();
 }
@@ -7309,14 +7529,13 @@ function _modalResizeLMove(e){
   p3.style.width=nw+'px';
   p3.style.left=Math.max(0,ST._mResL.right-nw)+'px';
 }
-function _modalResizeLEnd(){ST._mResL=null;document.removeEventListener('mousemove',_modalResizeLMove);document.body.style.cursor='';document.body.style.userSelect='';}
+function _modalResizeLEnd(){ST._mResL=null;_ptrUp(_modalResizeLMove,_modalResizeLEnd);document.body.style.cursor='';document.body.style.userSelect='';}
 function _modalResizeTStart(e){
   if(e.button!==0)return;
   const p3=document.getElementById('p3');if(!p3)return;
   const r=p3.getBoundingClientRect();
   ST._mResT={startY:e.clientY,startH:r.height,bottom:r.bottom};
-  document.addEventListener('mousemove',_modalResizeTMove);
-  document.addEventListener('mouseup',_modalResizeTEnd,{once:true});
+  _ptrDown(_modalResizeTMove,_modalResizeTEnd);
   document.body.style.cursor='ns-resize';document.body.style.userSelect='none';
   e.preventDefault();
 }
@@ -7328,7 +7547,7 @@ function _modalResizeTMove(e){
   p3.style.height=nh+'px';
   p3.style.top=Math.max(0,ST._mResT.bottom-nh)+'px';
 }
-function _modalResizeTEnd(){ST._mResT=null;document.removeEventListener('mousemove',_modalResizeTMove);document.body.style.cursor='';document.body.style.userSelect='';}
+function _modalResizeTEnd(){ST._mResT=null;_ptrUp(_modalResizeTMove,_modalResizeTEnd);document.body.style.cursor='';document.body.style.userSelect='';}
 function _tabBarModalDown(e){
   if(!ST.noteModal||e.button!==0)return;
   if(e.target.closest('.tab-x,.tab-add-btn,.tab-nav'))return;
@@ -7340,14 +7559,16 @@ function _tabBarModalDown(e){
     if(done)return;
     if(Math.hypot(mv.clientX-sx,mv.clientY-sy)>5){
       done=true;
-      document.removeEventListener('mousemove',onMove);
-      document.removeEventListener('mouseup',onUp,true);
+      document.removeEventListener('pointermove',onMove);
+      document.removeEventListener('pointerup',onUp,true);
+      document.removeEventListener('pointercancel',onUp,true);
       if(isLeft)_modalResizeTStart(e);else _modalDragStart(e);
     }
   };
-  const onUp=()=>{done=true;document.removeEventListener('mousemove',onMove);};
-  document.addEventListener('mousemove',onMove);
-  document.addEventListener('mouseup',onUp,{once:true,capture:true});
+  const onUp=()=>{done=true;document.removeEventListener('pointermove',onMove);};
+  document.addEventListener('pointermove',onMove);
+  document.addEventListener('pointerup',onUp,{once:true,capture:true});
+  document.addEventListener('pointercancel',onUp,{once:true,capture:true});
 }
 function _tabBarCursor(e){
   if(!ST.noteModal)return;
@@ -7417,7 +7638,9 @@ function _p3EditIconsHTML(curA){
     {id:'hist',  icon:'↺',       label:'History'},
   ];
   return _grps.map(g=>`<button class="et eb-grp-btn${_eg===g.id?' on':''}" data-g="${g.id}" onmousedown="togEBGroup('${g.id}')" title="${g.label}">${g.icon}</button>`).join('')
-    +`<button class="et modal-pop-btn" onmousedown="event.preventDefault()" onclick="popOutNote('${curA.id}')" title="Pop out as floating window (Ctrl+Shift+P)">⊡</button>`;
+    +`<button class="et" onmousedown="event.preventDefault()" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>`
+    +`<button class="et modal-pop-btn" onmousedown="event.preventDefault()" onclick="openNotePopup('${curA.id}','float')" title="Pop out as floating window (Ctrl+Shift+P)">⊡</button>`
+    +`<button class="et modal-pop-btn" onmousedown="event.preventDefault()" onclick="openNotePopup('${curA.id}','panel')" title="Open as resizable panel">⛶</button>`;
 }
 function togEBGroup(g){
   const btn=document.querySelector('.eb-grp-btn[data-g="'+g+'"]');
@@ -7535,12 +7758,111 @@ let _fwFocusedAid=null;
 function _fwFocus(aid){
   if(_fwFocusedAid===aid)return;
   _fwFocusedAid=aid;
-  _pinPanelInject();
+  /* v03.NotePane.F9 — Contents FIRST. The sidepane decides its edge by asking
+     whether #toc-panel exists, so injecting it second meant that answer was
+     always "no" and both panels claimed the right edge. */
   _tocInject();
+  _pinPanelInject();
+}
+/* ══ v03.NotePane.G — UNIFIED POP-UP CONTROLLER ═══════════════════════════
+   One entry point for both pop-up modes, so the two systems can never drift
+   apart again. Every launcher — Pane 1 / Pane 2 context menus, the Pane 3
+   header, Ctrl+Shift+P — routes through openNotePopup().
+   Mode is remembered PER NOTE, PER DEVICE in DB.theme.notePop. Geometry in
+   pixels is meaningless across devices (left:1180px is off-screen on a
+   tablet), and writing the mode onto the article record would bump its
+   updatedAt on every open — sync churn for a note you only looked at. */
+function _notePopMode(aid){
+  const m=DB.theme&&DB.theme.notePop&&DB.theme.notePop[aid];
+  return (m==='panel'||m==='float')?m:null;
+}
+/* Written ONLY when the user picks a mode deliberately — never by an automatic
+   conversion, so one accidental window-drag cannot silently change how a note
+   opens from then on. */
+function _rememberNotePop(aid,mode){
+  if(!aid||aid==='cal'||window.innerWidth<900)return;
+  if(!DB.theme)DB.theme={};
+  if(!DB.theme.notePop)DB.theme.notePop={};
+  if(DB.theme.notePop[aid]===mode)return;   /* unchanged — no write, no churn */
+  DB.theme.notePop[aid]=mode;
+  persist();
+}
+/* mode 'panel' | 'float' = a deliberate choice (remembered).
+   mode null/omitted    = "open it however it was last time" (float by default). */
+function openNotePopup(aid,mode){
+  if(!aid||aid==='cal')return;
+  hideCtx();
+  if(window.innerWidth<900){ selArt(aid); if(window.innerWidth<1200)showPane('p3'); return; }
+  const m=mode||_notePopMode(aid)||'float';
+  if(mode)_rememberNotePop(aid,m);
+  if(m==='panel')openNoteAsModal(aid);else popOutNote(aid);
+}
+/* Batch close — one persist + one render pass for the whole set instead of a
+   full renderTree/renderP2C/renderP3C per window, which on five open windows
+   was five complete re-renders back to back. */
+function closeAllFloats(){
+  const wins=Array.from(document.querySelectorAll('.float-win'));
+  if(!wins.length)return;
+  wins.forEach(w=>closeFloatWin(w.id.slice(3),true));
+  persist();renderTree();renderP2C();renderP3H();renderP3C();renderTabBar();
+}
+function closeAllPopouts(){
+  if(ST.noteModal)closeNoteModal();
+  closeAllFloats();
+  _fwSyncCloseAllChip();
+}
+/* A "✕ Close all (n)" chip appears only once a SECOND window is open — with
+   one window the header ✕ is already right there. Self-contained: created and
+   removed on demand, no existing markup touched. */
+function _fwSyncCloseAllChip(){
+  const n=document.querySelectorAll('.float-win').length;
+  let chip=document.getElementById('fw-closeall');
+  if(n<2||window.innerWidth<900){ if(chip)chip.remove(); return; }
+  if(!chip){
+    chip=document.createElement('div');
+    chip.id='fw-closeall';
+    chip.onclick=closeAllPopouts;
+    document.body.appendChild(chip);
+  }
+  chip.title='Close all pop-out windows (Ctrl+Shift+X)';
+  chip.textContent='\u2715 Close all ('+n+')';
+  chip.style.zIndex=(_fwZTop+1);
+}
+/* Automatic panel → float conversion, fired only when the viewport drops out
+   of the desktop tier while a panel is open. Deliberately NOT fired on every
+   shrink: converting on a 10px drag would be constant, pointless churn. */
+function _panelToFloat(){
+  const aid=ST.article;
+  if(!aid||aid==='cal'){closeNoteModal();return;}
+  const p3=document.getElementById('p3');
+  const r=p3?p3.getBoundingClientRect():null;
+  closeNoteModal();          /* flushes #ed first — see F2 */
+  popOutNote(aid);           /* no _rememberNotePop: this was the app's choice */
+  const win=document.getElementById('fw-'+aid);
+  if(win&&r){
+    const vw=window.innerWidth,vh=window.innerHeight;
+    const w=Math.max(320,Math.min(r.width,vw-16));
+    const h=Math.max(240,Math.min(r.height,vh-16));
+    win.style.width=w+'px';win.style.height=h+'px';
+    win.style.left=Math.max(0,Math.min(r.left,vw-w))+'px';
+    win.style.top =Math.max(0,Math.min(r.top, vh-h))+'px';
+    _fwSyncBodyPadding(aid);
+  }
+  try{toast('\u22a1 Panel became a floating window');}catch(e){}
 }
 function popOutNote(aid){
   hideCtx();
   if(window.innerWidth<900){ selArt(aid); if(window.innerWidth<1200)showPane('p3'); return; }
+  /* v03.NotePane.F3 — hand-over, never duplicate. The ⊡ button inside the
+     panel header called this unconditionally, so the same note ended up live
+     in #ed (panel) AND .fw-ed (float) at the same time — both contenteditable,
+     both on the 1.2s debounced autosave. Whichever tick fired last silently
+     overwrote the other, losing typed text. closeNoteModal() flushes #ed first
+     (see F2), so the float below opens from fully-committed content.
+     v03.NotePane.G4 — widened from "same note" to ANY note: one pop-up
+     paradigm at a time. A backdrop-blocking panel sitting behind free-floating
+     windows was visually incoherent and made the z-order impossible to read. */
+  if(ST.noteModal)closeNoteModal();
   const ex=document.getElementById('fw-'+aid);
   if(ex){ _fwZTop++; ex.style.zIndex=_fwZTop; const ed=ex.querySelector('.fw-ed'); if(ed)ed.focus(); _fwFocus(aid); return; }
   _fwCreate(aid);
@@ -7553,7 +7875,7 @@ function _fwCreate(aid){
   win.className='float-win';win.id='fw-'+aid;
   /* v03.74 — restore this note's remembered position/size if it has one
      (clamped to the current viewport), otherwise cascade as before. */
-  const saved=DB.theme&&DB.theme.fwPos&&DB.theme.fwPos[aid];
+  const saved=_popGeoAll().float[aid];
   let w,h,x,y;
   if(saved&&saved.width&&saved.height){
     w=Math.min(saved.width,vw-8);h=Math.min(saved.height,vh-8);
@@ -7565,15 +7887,27 @@ function _fwCreate(aid){
   win.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;z-index:'+(++_fwZTop);
   win.innerHTML=_fwRenderBody(aid);
   document.body.appendChild(win);
-  win.addEventListener('mousedown',()=>{_fwZTop++;win.style.zIndex=_fwZTop;_fwFocus(aid);},{capture:true});
+  win.addEventListener('pointerdown',()=>{_fwZTop++;win.style.zIndex=_fwZTop;_fwFocus(aid);},{capture:true});
   _fwWireDrag(win.querySelector('.fw-hd'),win,aid);
   _fwAddResizeHandles(win,aid);
   const ed=win.querySelector('.fw-ed');
-  if(ed)ed.addEventListener('input',()=>_fwScheduleAutoSave(aid));
+  if(ed){
+    ed.addEventListener('input',()=>_fwScheduleAutoSave(aid));
+    /* E6 — rebuild the fold arrows only when the NUMBER of headings changes,
+       mirroring how Pane 3 does it, so ordinary typing costs nothing. */
+    let _hc=-1;
+    const _syncCol=function(){
+      const n=ed.querySelectorAll('h1,h2,h3,h4').length;
+      if(n!==_hc){_hc=n;try{_edColInit(ed);}catch(e){}}
+    };
+    ed.addEventListener('input',_syncCol);
+    setTimeout(_syncCol,60);
+  }
   const ti=win.querySelector('.fw-ti');
   if(ti)ti.addEventListener('input',()=>_fwScheduleAutoSave(aid));
   _captureNoteHistory(a,'session-start');
   _fwFocus(aid);
+  _fwSyncCloseAllChip();
 }
 /* v03.74 — full edge/corner resize to match the original modal pop-up's
    handle set (R/B/L edges + TR/TL/BL corners; BR is the native CSS
@@ -7597,57 +7931,280 @@ function _fwResizeStart(ev,aid,dir){
     _fwSyncBodyPadding(aid);
   }
   function up(){
-    document.removeEventListener('mousemove',move);
-    document.removeEventListener('mouseup',up);
+    _ptrUp(move,up);
     document.body.style.cursor='';document.body.style.userSelect='';
     _fwSavePos(aid);
   }
-  document.addEventListener('mousemove',move);
-  document.addEventListener('mouseup',up,{once:true});
+  _ptrDown(move,up);
   document.body.style.userSelect='none';
   document.body.style.cursor=dir.length===1?(dir==='l'||dir==='r'?'ew-resize':'ns-resize'):(dir==='tr'||dir==='bl'?'nesw-resize':'nwse-resize');
 }
 function _fwAddResizeHandles(win,aid){
+  /* T4 — 'br' added. The bottom-right used to be the browser's own CSS
+     resize:both grip, which no finger can operate and which ignored our
+     viewport clamps. Now it is a real handle like the other seven. */
   const specs=[['r','modal-resize-r'],['b','modal-resize-b'],['l','modal-resize-l'],
-    ['tr','modal-corner modal-corner-tr'],['tl','modal-corner modal-corner-tl'],['bl','modal-corner modal-corner-bl']];
+    ['tr','modal-corner modal-corner-tr'],['tl','modal-corner modal-corner-tl'],
+    ['bl','modal-corner modal-corner-bl'],['br','modal-corner modal-corner-br']];
   specs.forEach(([dir,cls])=>{
     const el=document.createElement('div');
     el.className=cls;
-    el.addEventListener('mousedown',ev=>_fwResizeStart(ev,aid,dir));
+    el.addEventListener('pointerdown',ev=>_fwResizeStart(ev,aid,dir));
     win.appendChild(el);
   });
 }
-/* Remembers this float window's position/size per-note (DB.theme.fwPos),
-   restored next time the same note is popped out. Debounced via the
+/* Remembers this float window's position/size per-note (P8 geometry store,
+   localStorage — not the DB), restored next time the same note is popped out. Debounced via the
    ResizeObserver below so the native CSS resize:both (bottom-right) grip
    is captured too, not just drag/the new edge handles. */
 function _fwSavePos(aid){
   const win=document.getElementById('fw-'+aid);if(!win)return;
-  if(!DB.theme)DB.theme={};
-  if(!DB.theme.fwPos)DB.theme.fwPos={};
   const r=win.getBoundingClientRect();
-  DB.theme.fwPos[aid]={left:Math.round(r.left),top:Math.round(r.top),width:Math.round(r.width),height:Math.round(r.height)};
-  persist();
+  _popGeoAll().float[aid]={left:Math.round(r.left),top:Math.round(r.top),width:Math.round(r.width),height:Math.round(r.height)};
+  _popGeoFlush();   /* P8 — was a full persist() on every resize-end */
+}
+/* v03.NotePane.E6 — everything Pane 3 shows around a note that float windows
+   were missing: finished/archived state, note types, tags, the folders it
+   belongs to (tap to jump, as in Pane 3), created/updated dates, and the
+   structured-folder field rows. All of it is read-only display or already
+   aid-scoped, so none of it needed the editor plumbing. */
+function _fwMetaHTML(a){
+  if(!a)return '';
+  let h='';
+  const badge=a.finalised?'<span class="bk-done">✓ Finished</span>'
+             :(a.archived?'<span class="bk-arch">📦 Archived</span>':'');
+  const kinds=artKinds(a).map(function(kid){
+    const k=kindById(kid);
+    return '<span class="bk-nti" style="background:'+k.color+'">'+esc(k.name)+'</span>';
+  }).join('');
+  const tags=(a.tags||[]).map(function(t){
+    const c=(DB.tagColors||{})[t];
+    const st=c?' style="background:'+c+'1a;color:'+c+';border-color:'+c+'40"':'';
+    return '<span class="art-tag"'+st+' onclick="selTag(\''+esc(t)+'\')">🏷 '+esc(t)+'</span>';
+  }).join('');
+  const fols=(a.folderIds||[]).map(function(x){
+    const pth=pathOf(x);
+    return pth.length?'<span class="ftag ftag-nav" onclick="selFolder(\''+x+'\')" title="Go to this folder">'
+      +esc(pth.map(function(f){return f.name;}).join(' › '))+'</span>':'';
+  }).join('');
+  if(badge||kinds||tags)h+='<div class="fw-meta">'+badge+kinds+tags+'</div>';
+  if(fols)h+='<div class="fw-meta fw-fols">'+fols+'</div>';
+  h+=_dateLineHTML(a);
+  h+=_fieldsPanelHTML(a);
+  return h;
+}
+/* ══ v03.NotePane.N8 — FIND WITHIN A NOTE (pane 3 AND float windows) ══════
+   Generalised from the float-only version in N7. A "key" identifies the
+   surface: 'p3' for the third pane, or a note id for that note's float window.
+   ONE implementation with two callers, rather than a parallel _p3Find* family
+   that would inevitably drift out of step with this one.
+
+   Deliberately mutates NOTHING. Wrapping matches in <mark> would dirty the
+   contenteditable and get written straight into a.content by the next
+   autosave, permanently polluting the note with search artefacts. Matches are
+   held as Ranges instead: stepping uses the native selection, and the
+   all-matches tint uses the CSS Custom Highlight API where the browser has it.
+   Both are pure presentation, so nothing can ever reach the DB. */
+let _ntFind=null;
+/* Pane 3 has two surfaces — the editor when editing, the rendered article when
+   reading — so find works in both, which is where it is most often wanted. */
+function _findEls(key){
+  if(key==='p3'){
+    const ed=document.getElementById('ed');
+    const scope=(ed&&ST.editing)?ed:document.querySelector('#p3c .av-body');
+    return {scope:scope,
+            bar:document.getElementById('p3-find'),
+            inp:document.getElementById('p3-find-q'),
+            n:document.getElementById('p3-find-n')};
+  }
+  return {scope:document.getElementById('fw-ed-'+key),
+          bar:document.getElementById('fw-find-'+key),
+          inp:document.getElementById('fw-find-q-'+key),
+          n:document.getElementById('fw-find-n-'+key)};
+}
+function _ntFindRanges(scope,q){
+  const out=[];
+  if(!scope||!q)return out;
+  const needle=q.toLowerCase();
+  const w=document.createTreeWalker(scope,NodeFilter.SHOW_TEXT,null);
+  let n;
+  while((n=w.nextNode())){
+    if(n.parentElement&&n.parentElement.closest('.ed-col-preview,.toc-item,.pin-card'))continue;
+    const t=(n.nodeValue||'').toLowerCase();
+    let i=t.indexOf(needle);
+    while(i>-1){
+      const r=document.createRange();
+      r.setStart(n,i);r.setEnd(n,i+needle.length);
+      out.push(r);
+      i=t.indexOf(needle,i+needle.length);
+    }
+  }
+  return out;
+}
+function _ntFindPaint(){
+  try{
+    if(!window.CSS||!CSS.highlights)return;
+    CSS.highlights.delete('nt-find');
+    if(_ntFind&&_ntFind.ranges.length)
+      CSS.highlights.set('nt-find',new Highlight(..._ntFind.ranges));
+  }catch(e){}
+}
+function _ntFindLabel(key,txt){
+  const el=_findEls(key).n;
+  if(el)el.textContent=txt;
+}
+function _ntFindRun(key,q){
+  const scope=_findEls(key).scope;if(!scope)return;
+  const term=(q||'').trim();
+  _ntFind={key:key,q:term,ranges:_ntFindRanges(scope,term),idx:-1};
+  _ntFindPaint();
+  if(!term){_ntFindLabel(key,'');return;}
+  if(!_ntFind.ranges.length){_ntFindLabel(key,'0 / 0');return;}
+  _ntFindStep(key,1);
+}
+function _ntFindStep(key,dir){
+  if(!_ntFind||_ntFind.key!==key||!_ntFind.ranges.length)return;
+  const n=_ntFind.ranges.length;
+  _ntFind.idx=(_ntFind.idx+dir+n)%n;
+  const r=_ntFind.ranges[_ntFind.idx];
+  try{
+    const sel=window.getSelection();
+    sel.removeAllRanges();sel.addRange(r);
+    const el=r.startContainer.parentElement;
+    if(el&&el.scrollIntoView)el.scrollIntoView({block:'center',behavior:'smooth'});
+  }catch(e){}
+  _ntFindLabel(key,(_ntFind.idx+1)+' / '+n);
+}
+function _ntFindToggle(key){
+  const bar=_findEls(key).bar;if(!bar)return;
+  if(bar.style.display!=='none'){_ntFindClose(key);return;}
+  bar.style.display='flex';
+  const inp=_findEls(key).inp;
+  if(inp){inp.value='';inp.focus();}
+  _ntFindLabel(key,'');
+}
+function _ntFindClose(key){
+  const els=_findEls(key);
+  if(els.bar)els.bar.style.display='none';
+  if(_ntFind&&_ntFind.key===key)_ntFind=null;
+  _ntFindPaint();
+  if(els.n)els.n.textContent='';
+}
+function _ntFindKey(ev,key){
+  if(ev.key==='Enter'){ev.preventDefault();_ntFindStep(key,ev.shiftKey?-1:1);}
+  else if(ev.key==='Escape'){
+    ev.preventDefault();_ntFindClose(key);
+    const sc=_findEls(key).scope;
+    if(sc&&sc.isContentEditable)sc.focus();
+  }
+}
+
+/* ══ v03.NotePane.N7 — STEP TO THE PREVIOUS / NEXT NOTE ═══════════════════
+   A float window's identity IS its note: the DOM id, the geometry key, the
+   autosave timer and the save chip are all keyed by aid. Rather than re-key a
+   window mid-flight with a live editor and a pending autosave attached, this
+   closes the window (which flushes and saves through the existing tested
+   path) and opens the target in the very same frame. Same result on screen,
+   none of the risk. */
+/* v03.NotePane.N8 — shared by pane 3 and float windows.
+   ctxFid: the folder you are currently viewing from. A note can sit in several
+   folders, so when pane 3 is showing it from inside one of them, that is the
+   folder ‹ › should walk. Float windows pass nothing and always use the note's
+   first folder, which keeps their ordering stable even when the main app
+   navigates somewhere else. */
+function _noteSiblings(aid,ctxFid){
+  const a=DB.articles.find(function(x){return x.id===aid;});
+  if(!a)return[];
+  const own=a.folderIds||[];
+  const fid=(ctxFid&&own.indexOf(ctxFid)>-1)?ctxFid:own[0];
+  const list=fid?artsIn(fid):DB.articles.filter(function(x){return !(x.folderIds||[]).length;});
+  const ids=list.map(function(x){return x.id;});
+  return ids.indexOf(aid)>-1?ids:[aid].concat(ids);
+}
+/* v03.NotePane.N8 — pane 3's own ‹ ›. Below 1200px pane 2 is not on screen at
+   all, so this is the only quick way to move between notes there. */
+function _p3Navigate(dir){
+  const aid=ST.article;
+  if(!aid||aid==='cal')return;
+  const sibs=_noteSiblings(aid,ST.folder);
+  if(sibs.length<2){try{toast('This note has no neighbours in its folder');}catch(e){}return;}
+  const i=sibs.indexOf(aid);if(i<0)return;
+  try{_flushEd();}catch(e){}    /* commit before leaving, as everywhere else */
+  _ntFindClose('p3');
+  selArt(sibs[(i+dir+sibs.length)%sibs.length]);
+}
+function _fwNavigate(aid,dir){
+  const sibs=_noteSiblings(aid,null);
+  if(sibs.length<2){try{toast('This note has no neighbours in its folder');}catch(e){}return;}
+  const i=sibs.indexOf(aid);if(i<0)return;
+  const tid=sibs[(i+dir+sibs.length)%sibs.length];
+  if(document.getElementById('fw-'+tid)){
+    popOutNote(tid);
+    try{toast('Already open — brought to front');}catch(e){}
+    return;
+  }
+  const win=document.getElementById('fw-'+aid);
+  const r=win?win.getBoundingClientRect():null;
+  _ntFindClose(aid);
+  closeFloatWin(aid,true);          /* flushes + saves; renders held back */
+  if(r){                            /* the next note inherits this exact frame */
+    const g=_popGeoAll();
+    g.float[tid]={left:Math.round(r.left),top:Math.round(r.top),
+                  width:Math.round(r.width),height:Math.round(r.height)};
+    _popGeoFlush();
+  }
+  popOutNote(tid);
+  persist();renderTree();renderP2C();renderP3H();renderP3C();renderTabBar();
+}
+function _fwFlashSaved(aid){
+  const el=document.getElementById('fw-flash-'+aid);
+  if(!el)return;
+  el.classList.add('show');
+  clearTimeout(el._ft);
+  el._ft=setTimeout(function(){el.classList.remove('show');},1100);
 }
 function _fwRenderBody(aid){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return '';
+  /* v03.NotePane.E5 — 'insert' restored. It was the one group Pane 3 had and
+     float windows did not, because every insert tool routed through
+     insertAtCaret() which was hard-wired to #ed. Now that the caret core
+     resolves the active editor, these act on the right note. */
   const _grps=[
-    {id:'text', icon:'<b>Aa</b>',label:'Text style'},
-    {id:'heads',icon:'H',        label:'Headings'},
-    {id:'lists',icon:'≡',        label:'Lists'},
-    {id:'hist', icon:'↺',        label:'History'},
+    {id:'text',  icon:'<b>Aa</b>',label:'Text style'},
+    {id:'heads', icon:'H',        label:'Headings'},
+    {id:'lists', icon:'≡',        label:'Lists'},
+    {id:'insert',icon:'+',        label:'Insert'},
+    {id:'hist',  icon:'↺',        label:'History'},
   ];
   const ebIcons=_grps.map(g=>`<button class="et eb-grp-btn" data-g="${g.id}" onmousedown="_fwTogGroup('${aid}','${g.id}',this)" title="${g.label}">${g.icon}</button>`).join('');
   return '<div class="fw-hd"><span class="fw-drag">⠿</span>'
+    +'<button class="fw-nav" onclick="_fwNavigate(\''+aid+'\',-1)" title="Previous note in this folder">‹</button>'
+    +'<button class="fw-nav" onclick="_fwNavigate(\''+aid+'\',1)" title="Next note in this folder">›</button>'
     +'<span class="fw-title-disp">'+esc(a.title||'Untitled')+'</span>'
+    /* v03.NotePane.E6 — per-window save chip. flashSaved() targets the single
+       #save-flash in Pane 3, so a float had no way to confirm it had saved. */
+    +'<span class="save-flash" id="fw-flash-'+aid+'">✓ Saved</span>'
     +'<button class="fw-close" onclick="closeFloatWin(\''+aid+'\')" title="Close">✕</button></div>'
     +'<div class="fw-body">'
     +'<input class="fw-ti" id="fw-ti-'+aid+'" value="'+esc(a.title||'')+'" placeholder="Title…">'
+    +_fwMetaHTML(a)
     +'<div class="fw-tb">'
     +ebIcons
+    +'<span id="fw-col-wrap-'+aid+'" style="display:none">'
+    +'<button class="et" onmousedown="event.preventDefault()" onclick="toggleEdColPop(event,\''+aid+'\')" title="Section tools: Collapse / Expand / Preview">⋯</button>'
+    +'</span>'
     +'<button class="nti-picker-btn" onclick="openNtiPicker(\''+aid+'\',this)" title="Note types">🏷</button>'
     +'<button class="nti-picker-btn" onclick="openAttachMenu(event,\''+aid+'\')" title="Attach: Folder · Journal · MyDatabase">📎</button>'
+    +'<button class="nti-picker-btn" onclick="_ntFindToggle(\''+aid+'\')" title="Find in this note">🔍</button>'
     +'<button class="nti-picker-btn nti-save" onclick="_fwSave(\''+aid+'\')" title="Save">💾 Save</button>'
+    +'</div>'
+    +'<div class="fw-find" id="fw-find-'+aid+'" style="display:none">'
+    +'<input class="fw-find-q" id="fw-find-q-'+aid+'" placeholder="Find in note…" '
+    +'oninput="_ntFindRun(\''+aid+'\',this.value)" onkeydown="_ntFindKey(event,\''+aid+'\')">'
+    +'<span class="fw-find-n" id="fw-find-n-'+aid+'"></span>'
+    +'<button class="et" onclick="_ntFindStep(\''+aid+'\',-1)" title="Previous match (Shift+Enter)">▲</button>'
+    +'<button class="et" onclick="_ntFindStep(\''+aid+'\',1)" title="Next match (Enter)">▼</button>'
+    +'<button class="et" onclick="_ntFindClose(\''+aid+'\')" title="Close find (Esc)">✕</button>'
     +'</div>'
     +'<div class="fw-ed" id="fw-ed-'+aid+'" contenteditable="true">'+(a.content||'')+'</div>'
     +'</div>';
@@ -7704,6 +8261,9 @@ function _fwBuildEBSub(aid,g){
       `<button class="et" onmousedown="_fwEc(event,'${aid}','underline')" title="Underline"><u>U</u></button>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','strikeThrough')" title="Strikethrough"><s>S</s></button>`,
       `<button class="et" onmousedown="_fwClearFmt(event,'${aid}')" title="Clear formatting (also resets custom text size)">✗A</button>`,
+      `<button class="et" onmousedown="edMarkDone(event)" title="Mark done (toggle)">✓</button>`,
+      `<button class="et" onmousedown="edBoundary(event)" title="Boundary box (toggle)">▢</button>`,
+      `<button class="et" onmousedown="edColorBtn(event)" title="Colour">🎨</button>`,
       `<span class="esep"></span>`,
       `<button class="et" onmousedown="_fwFontStep(event,'${aid}',1)" title="Bigger text (selection, or the whole line at the caret)" style="font-size:15px;font-weight:700;line-height:1">A<sup style="font-size:9px">+</sup></button>`,
       `<button class="et" onmousedown="_fwFontStep(event,'${aid}',-1)" title="Smaller text (selection, or the whole line at the caret)" style="font-size:11px;font-weight:700;line-height:1">A<sup style="font-size:9px">−</sup></button>`,
@@ -7725,6 +8285,13 @@ function _fwBuildEBSub(aid,g){
       `<button class="et" onmousedown="_fwEc(event,'${aid}','insertOrderedList')">1. List</button>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','formatBlock','<blockquote>')" style="font-style:italic">❝</button>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','insertHorizontalRule')">─</button>`,
+    ],
+    insert:[
+      `<button class="et" title="Insert image" onmousedown="edImgPick(event)">🖼</button>`,
+      `<button class="et" title="Insert link" onmousedown="edLink(event)">🔗</button>`,
+      `<button class="et" title="Bookmark card" onmousedown="edBookmarkBtn(event)">🔖</button>`,
+      `<button class="et" title="Mention (@)" onmousedown="edMentionBtn(event)" style="font-weight:700">@</button>`,
+      `<button class="et" title="Quick Phrases" onmousedown="openQuickPhrasesMenu(event)" onclick="event.stopPropagation()">💬</button>`,
     ],
     hist:[
       `<button class="et" onmousedown="_fwEc(event,'${aid}','undo')" title="Undo">↩</button>`,
@@ -7750,18 +8317,17 @@ function _fwWireDrag(handle,win,aid){
     win.style.left=Math.max(0,Math.min(sl+(e.clientX-sx),window.innerWidth-60))+'px';
     win.style.top=Math.max(0,Math.min(st+(e.clientY-sy),window.innerHeight-40))+'px';
   }
-  function up(){document.removeEventListener('mousemove',move);if(aid)_fwSavePos(aid);}
-  handle.addEventListener('mousedown',e=>{
+  function up(){_ptrUp(move,up);if(aid)_fwSavePos(aid);}
+  handle.addEventListener('pointerdown',e=>{
     if(e.target.closest('.fw-close'))return;
     sx=e.clientX;sy=e.clientY;
     const r=win.getBoundingClientRect();sl=r.left;st=r.top;
-    document.addEventListener('mousemove',move);
-    document.addEventListener('mouseup',up,{once:true});
+    _ptrDown(move,up);
     e.preventDefault();
   });
-  /* Catches the native CSS resize:both (bottom-right) grip, which fires no
-     mouseup we can hook directly — a debounced observer is the reliable way
-     to persist that path too, without touching the grip itself. */
+  /* Backstop for any size change that arrives without a gesture we hooked
+     (a browser zoom, a programmatic resize). Debounced, so it costs nothing
+     during an actual drag. */
   if(aid&&typeof ResizeObserver!=='undefined'){
     let _rt;
     new ResizeObserver(()=>{clearTimeout(_rt);_rt=setTimeout(()=>_fwSavePos(aid),400);}).observe(win);
@@ -7799,19 +8365,25 @@ function _fwScheduleAutoSave(aid){
     renderTree();renderP2C();
     const win=document.getElementById('fw-'+aid);
     if(win){const disp=win.querySelector('.fw-title-disp');if(disp)disp.textContent=a.title||'Untitled';}
+    _fwFlashSaved(aid);
   },1200);
 }
-function closeFloatWin(aid){
+/* quiet=true — used by closeAllFloats() to skip the per-window persist +
+   full render pass; the caller does one of each for the whole batch. */
+function closeFloatWin(aid,quiet){
+  _ntFindClose(aid);  /* N8 — drop any highlight ranges pointing into this window */
   clearTimeout(_fwAutoTimer[aid]);
   _fwFlush(aid);
   const a=DB.articles.find(x=>x.id===aid);
-  if(a){_captureNoteHistory(a,'save');persist();renderTree();renderP2C();renderP3H();renderP3C();renderTabBar();}
+  if(a){_captureNoteHistory(a,'save');
+    if(!quiet){persist();renderTree();renderP2C();renderP3H();renderP3C();renderTabBar();}}
   const win=document.getElementById('fw-'+aid);if(win)win.remove();
+  _fwSyncCloseAllChip();
   if(_fwFocusedAid===aid){
     const rest=Array.from(document.querySelectorAll('.float-win'));
     _fwFocusedAid=rest.length?rest.reduce((a,b)=>(+a.style.zIndex>+b.style.zIndex?a:b)).id.slice(3):null;
+    _tocInject();          /* Contents first — F9 */
     _pinPanelInject();
-    _tocInject();
   }
 }
 
@@ -7822,8 +8394,7 @@ function _modalResizeTRStart(e){
   const p3=document.getElementById('p3');if(!p3)return;
   const r=p3.getBoundingClientRect();
   ST._mResTR={startY:e.clientY,startH:r.height,bottom:r.bottom,left:r.left};
-  document.addEventListener('mousemove',_modalResizeTRMove);
-  document.addEventListener('mouseup',_modalResizeTREnd,{once:true});
+  _ptrDown(_modalResizeTRMove,_modalResizeTREnd);
   document.body.style.cursor='nesw-resize';document.body.style.userSelect='none';
   e.preventDefault();
 }
@@ -7837,15 +8408,14 @@ function _modalResizeTRMove(e){
   p3.style.height=nh+'px';
   p3.style.top=Math.max(0,ST._mResTR.bottom-nh)+'px';
 }
-function _modalResizeTREnd(){ST._mResTR=null;document.removeEventListener('mousemove',_modalResizeTRMove);document.body.style.cursor='';document.body.style.userSelect='';}
+function _modalResizeTREnd(){ST._mResTR=null;_ptrUp(_modalResizeTRMove,_modalResizeTREnd);document.body.style.cursor='';document.body.style.userSelect='';}
 
 function _modalResizeTLStart(e){
   if(e.button!==0)return;
   const p3=document.getElementById('p3');if(!p3)return;
   const r=p3.getBoundingClientRect();
   ST._mResTL={startY:e.clientY,startH:r.height,bottom:r.bottom,right:r.right};
-  document.addEventListener('mousemove',_modalResizeTLMove);
-  document.addEventListener('mouseup',_modalResizeTLEnd,{once:true});
+  _ptrDown(_modalResizeTLMove,_modalResizeTLEnd);
   document.body.style.cursor='nwse-resize';document.body.style.userSelect='none';
   e.preventDefault();
 }
@@ -7858,15 +8428,14 @@ function _modalResizeTLMove(e){
   p3.style.width=nw+'px';p3.style.left=Math.max(0,ST._mResTL.right-nw)+'px';
   p3.style.height=nh+'px';p3.style.top=Math.max(0,ST._mResTL.bottom-nh)+'px';
 }
-function _modalResizeTLEnd(){ST._mResTL=null;document.removeEventListener('mousemove',_modalResizeTLMove);document.body.style.cursor='';document.body.style.userSelect='';}
+function _modalResizeTLEnd(){ST._mResTL=null;_ptrUp(_modalResizeTLMove,_modalResizeTLEnd);document.body.style.cursor='';document.body.style.userSelect='';}
 
 function _modalResizeBLStart(e){
   if(e.button!==0)return;
   const p3=document.getElementById('p3');if(!p3)return;
   const r=p3.getBoundingClientRect();
   ST._mResBL={startY:e.clientY,startH:r.height,top:r.top,right:r.right};
-  document.addEventListener('mousemove',_modalResizeBLMove);
-  document.addEventListener('mouseup',_modalResizeBLEnd,{once:true});
+  _ptrDown(_modalResizeBLMove,_modalResizeBLEnd);
   document.body.style.cursor='nesw-resize';document.body.style.userSelect='none';
   e.preventDefault();
 }
@@ -7878,7 +8447,28 @@ function _modalResizeBLMove(e){
   p3.style.width=nw+'px';p3.style.left=Math.max(0,ST._mResBL.right-nw)+'px';
   p3.style.height=nh+'px';
 }
-function _modalResizeBLEnd(){ST._mResBL=null;document.removeEventListener('mousemove',_modalResizeBLMove);document.body.style.cursor='';document.body.style.userSelect='';}
+function _modalResizeBLEnd(){ST._mResBL=null;_ptrUp(_modalResizeBLMove,_modalResizeBLEnd);document.body.style.cursor='';document.body.style.userSelect='';}
+
+/* v03.NotePane.P4 — bottom-right, formerly the browser's own resize:both grip.
+   Same clamps as the other seven, so the panel can no longer be dragged past
+   the viewport edge the way the native grip allowed. */
+function _modalResizeBRStart(e){
+  if(e.button!==0)return;
+  const p3=document.getElementById('p3');if(!p3)return;
+  const r=p3.getBoundingClientRect();
+  ST._mResBR={startY:e.clientY,startH:r.height,top:r.top,left:r.left};
+  _ptrDown(_modalResizeBRMove,_modalResizeBREnd);
+  document.body.style.cursor='nwse-resize';document.body.style.userSelect='none';
+  e.preventDefault();
+}
+function _modalResizeBRMove(e){
+  if(!ST._mResBR)return;
+  const p3=document.getElementById('p3');if(!p3)return;
+  const nw=Math.max(340,Math.min(e.clientX-ST._mResBR.left,window.innerWidth-ST._mResBR.left-4));
+  const nh=Math.max(280,Math.min(ST._mResBR.startH+(e.clientY-ST._mResBR.startY),window.innerHeight-ST._mResBR.top-8));
+  p3.style.width=nw+'px';p3.style.height=nh+'px';
+}
+function _modalResizeBREnd(){ST._mResBR=null;_ptrUp(_modalResizeBRMove,_modalResizeBREnd);document.body.style.cursor='';document.body.style.userSelect='';}
 
 
 function _tabBarModalReset(e){
@@ -7891,8 +8481,8 @@ function _tabBarModalReset(e){
   p3.style.width=mw+'px';p3.style.height=mh+'px';
   p3.style.left=Math.floor((vw-mw)/2)+'px';
   p3.style.top=Math.floor((vh-mh)/2)+'px';
-  if(DB.theme?.modalPos)delete DB.theme.modalPos;
-  persist();
+  delete _popGeoAll().panel;
+  _popGeoFlush();
   toast('⊞ Modal reset to centre');
 }
 
@@ -8983,7 +9573,16 @@ function _pinPanelInject(){
   const pos=DB.theme.pinPanelPos==='below'?'below':'side'; /* default: side (opposite of TOC in modal mode; plain right in float mode — float windows don't have a TOC panel yet) */
   const tocLeft=inModal&&document.getElementById('p3')?.classList.contains('toc-left');
   const tocSide=tocLeft?'left':'right';
-  const pinSide=(!inModal)?'right':(pos==='side'?(tocSide==='left'?'right':'left'):tocSide);
+  /* v03.NotePane.F9 — float windows DO host a Contents panel (_tocHostEl()
+     returns the focused window), so hard-coding 'right' here stacked BOTH
+     panels on the same edge, overlapping each other, with the body padding
+     counting only one of them. Mirror the modal rule instead: the sidepane
+     takes the side opposite Contents whenever Contents is actually showing. */
+  const _tocSideNow=(DB.theme&&DB.theme.tocSide==='left')?'left':'right';
+  const _tocShowing=!!document.getElementById('toc-panel');
+  const pinSide=(!inModal)
+    ? (_tocShowing?(_tocSideNow==='left'?'right':'left'):'right')
+    : (pos==='side'?(tocSide==='left'?'right':'left'):tocSide);
 
   const ids=DB.theme.pinTabIds.filter(id=>DB.articles.some(a=>a.id===id));
   if(ids.length!==DB.theme.pinTabIds.length){DB.theme.pinTabIds=ids;persist();}
@@ -9016,7 +9615,7 @@ function _pinPanelInject(){
     const _rh=document.createElement('div');_rh.className='pin-resize-h';
     _rh.onmousedown=_pinStartResize;panel.appendChild(_rh);
     const _pic=document.createElement('div');_pic.className='pin-inner';panel.appendChild(_pic);
-    const _pw=(DB.theme&&DB.theme.pinPanelWidth)||200;
+    const _pw=_popGeoAll().pinW||(DB.theme&&DB.theme.pinPanelWidth)||200;
     panel.style.width=_pw+'px';
   }
   if(panel.parentElement!==host)host.appendChild(panel);
@@ -9080,13 +9679,14 @@ function _pinStartResize(e){
     if(ST.noteModal)_syncP3CPadding();else _fwSyncBodyPadding(_fwFocusedAid);
   }
   function onUp(){
-    document.removeEventListener('mousemove',onMove);
-    document.removeEventListener('mouseup',onUp);
-    if(!DB.theme)DB.theme={};
-    DB.theme.pinPanelWidth=panel.offsetWidth;persist();
+    _ptrUp(onMove,onUp);
+    /* T4/P8 — the sidepane width was committed with persist() on every single
+       drag-end: a whole-DB write, a cloud push and an undo step, for a number
+       that is pure chrome. Same store as the pop-up geometry now. */
+    _popGeoAll().pinW=panel.offsetWidth;
+    _popGeoFlush();
   }
-  document.addEventListener('mousemove',onMove);
-  document.addEventListener('mouseup',onUp);
+  _ptrDown(onMove,onUp);
 }
 function _pinPanelDestroy(){
   document.getElementById('pin-panel')?.remove();
@@ -9565,7 +10165,7 @@ function _caretXY(){
   if(s.rangeCount){const r=s.getRangeAt(0).cloneRange();r.collapse(true);
     const rect=r.getClientRects()[0]||r.startContainer.parentElement?.getBoundingClientRect();
     if(rect)return{x:rect.left,y:rect.bottom+6};}
-  const ed=document.getElementById('ed');const b=ed?ed.getBoundingClientRect():{left:80,top:120};
+  const ed=_edActive();const b=ed?ed.getBoundingClientRect():{left:80,top:120};
   return{x:b.left+30,y:b.top+60};
 }
 
@@ -9602,7 +10202,7 @@ function showMenDD(){
 }
 function insertMention(a){
   const ctx=_menQStart;closeMenDD();
-  const ed=document.getElementById('ed');if(!ed)return;
+  const ed=_edActive();if(!ed)return;
   if(ctx&&ed.contains(ctx.node)){ // remove the typed "@query"
     const r=document.createRange();r.setStart(ctx.node,ctx.start);r.setEnd(ctx.node,ctx.end);
     const s=window.getSelection();s.removeAllRanges();s.addRange(r);_edRange=r.cloneRange();
@@ -9660,7 +10260,7 @@ function _edAutoSave(){
 }
 /* Block elements inside #ed touched by the current selection/caret. */
 function _edBlocksInSel(){
-  const ed=document.getElementById('ed');if(!ed)return[];
+  const ed=_edActive();if(!ed)return[];
   const sel=window.getSelection();if(!sel||!sel.rangeCount)return[];
   const r=sel.getRangeAt(0);
   const kids=[].slice.call(ed.children);
@@ -9672,24 +10272,24 @@ function _edBlocksInSel(){
 /* Toggle a bordered/framed "boundary box" around the selected line(s)/block(s). Fully reversible. */
 function edBoundary(ev){
   if(ev&&ev.preventDefault)ev.preventDefault();
-  const ed=document.getElementById('ed');if(!ed)return;
+  const ed=_edActive();if(!ed)return;
   const blocks=_edBlocksInSel();
   if(!blocks.length){ed.focus();return;}
   const allBoxed=blocks.every(function(b){return b.classList&&b.classList.contains('tx-boxed');});
   blocks.forEach(function(b){if(b.classList)b.classList.toggle('tx-boxed',!allBoxed);});
   ed.focus();
-  _edAutoSave();
+  _edTouched(ed);
 }
 /* Toggle "done" dimming on the selected line(s)/block(s). Fully reversible. */
 function edMarkDone(ev){
   if(ev&&ev.preventDefault)ev.preventDefault();
-  const ed=document.getElementById('ed');if(!ed)return;
+  const ed=_edActive();if(!ed)return;
   const blocks=_edBlocksInSel();
   if(!blocks.length){ed.focus();return;}
   const allDone=blocks.every(function(b){return b.classList&&b.classList.contains('tx-done');});
   blocks.forEach(function(b){if(b.classList)b.classList.toggle('tx-done',!allDone);});
   ed.focus();
-  _edAutoSave();
+  _edTouched(ed);
 }
 /* Colour popup ───────────────────────────────────────────────────────── */
 const _TX_FG=[['Default',''],['#C0392B','#C0392B'],['#E67E22','#E67E22'],['#27AE60','#27AE60'],['#2980B9','#2980B9'],['#8E44AD','#8E44AD']];
@@ -9697,7 +10297,7 @@ const _TX_BG=[['None','transparent'],['#FFF2A8','#FFF2A8'],['#C9F2C7','#C9F2C7']
 let _clrPop=null;
 function edColorBtn(ev){
   if(ev&&ev.preventDefault)ev.preventDefault();
-  const ed=document.getElementById('ed');if(!ed)return;
+  const ed=_edActive();if(!ed)return;
   const s=window.getSelection();
   if(s&&s.rangeCount&&_isED(s.anchorNode))_edRange=s.getRangeAt(0).cloneRange();
   _openColorPop(ev);
@@ -9742,7 +10342,7 @@ function _openColorPop(ev){
 }
 function _applyColor(ev,kind,val){
   if(ev&&ev.preventDefault)ev.preventDefault();
-  const ed=document.getElementById('ed');if(!ed)return;
+  const ed=_edActive();if(!ed)return;
   _restoreCaret();ed.focus();
   try{document.execCommand('styleWithCSS',false,true);}catch(e){}
   if(kind==='fg'){
@@ -9785,7 +10385,9 @@ function _edColClean(node){
 /* Recompute hidden siblings + preview snippets from art.sectionState. */
 function _edColApply(ed){
   if(!ed)return;
-  const art=DB.articles.find(function(a){return a.id===ST.article;});
+  /* E6 — was always ST.article, so folding a heading in a float window read
+     and wrote the fold state of whatever Pane 3 happened to be showing. */
+  const art=_edArtOf(ed);
   const state=(art&&art.sectionState)||{};
   const prev=DB.theme&&DB.theme.collapsePreview==='preview';
   /* reset */
@@ -9818,7 +10420,10 @@ function _edColInit(ed){
   if(!ed)return;
   ed.querySelectorAll('.ed-col-arr,.ed-col-grip').forEach(function(n){n.remove();});
   const heads=_edColHeads(ed);
-  const tb=document.getElementById('ed-col-wrap');
+  /* E6 — each surface owns its own ⋯ wrapper, so a float showing headings
+     cannot switch on (or off) the panel's button by accident. */
+  const _aid=_edAidOf(ed);
+  const tb=document.getElementById(ed.id==='ed'?'ed-col-wrap':'fw-col-wrap-'+_aid);
   if(tb)tb.style.display=heads.length?'inline-flex':'none';
   if(!heads.length)return;
   heads.forEach(function(h){
@@ -9942,9 +10547,10 @@ function _edBlockDragEnd(){
   toast('Section moved'+(delta?' · level '+(delta>0?'down':'up'):''));
 }
 function _edColToggle(arrEl){
-  const ed=document.getElementById('ed');if(!ed||!arrEl)return;
+  if(!arrEl)return;
+  const ed=_edHost(arrEl);if(!ed)return;
   const idx=parseInt(arrEl.getAttribute('data-sec'));
-  const art=DB.articles.find(function(a){return a.id===ST.article;});
+  const art=_edArtOf(ed);
   if(!art)return;
   if(!art.sectionState)art.sectionState={};
   if(art.sectionState[idx]===true)delete art.sectionState[idx];
@@ -9952,9 +10558,10 @@ function _edColToggle(arrEl){
   _edColApply(ed);
   persist();
 }
-function _edColAll(collapse){
-  const ed=document.getElementById('ed');if(!ed)return;
-  const art=DB.articles.find(function(a){return a.id===ST.article;});
+function _edColAll(collapse,aid){
+  const ed=(aid&&aid!=='ed')?document.getElementById('fw-ed-'+aid):document.getElementById('ed');
+  if(!ed)return;
+  const art=_edArtOf(ed);
   if(!art)return;
   if(!art.sectionState)art.sectionState={};
   _edColHeads(ed).forEach(function(h){
@@ -9966,7 +10573,7 @@ function _edColAll(collapse){
 function _edColPreview(){
   if(!DB.theme)DB.theme={};
   DB.theme.collapsePreview=DB.theme.collapsePreview==='preview'?'compact':'preview';
-  _edColApply(document.getElementById('ed'));
+  _edColApply(_edActive());
   _edColSyncPrevBtn();
   persist();
 }
@@ -9982,13 +10589,14 @@ function _edColToolbarHTML(){
 /* v04.19 — Collapse all / Expand all / Preview moved off their own
    always-reserved row into this overflow popover, opened from the ⋯
    trigger. Same _edColAll()/_edColPreview() logic underneath, unchanged. */
-function toggleEdColPop(ev){
+function toggleEdColPop(ev,aid){
   const btn=ev.currentTarget;
   if(document.getElementById('edcol-pop')?.classList.contains('open')){closeFloatPop('edcol-pop');return;}
   const onPrev=!!(DB.theme&&DB.theme.collapsePreview==='preview');
+  const _t=aid?"'"+aid+"'":'';
   _openFloatPop('edcol-pop',btn,
-    '<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(true)">&#9654; Collapse all</button>'
-    +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(false)">&#9660; Expand all</button>'
+    '<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(true,'+_t+')">&#9654; Collapse all</button>'
+    +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(false,'+_t+')">&#9660; Expand all</button>'
     +'<button class="ed-col-btn'+(onPrev?' on':'')+'" id="ed-col-prev-btn" onmousedown="event.preventDefault()" onclick="_edColPreview()" title="Show a preview line under collapsed sections">&#8801; Preview</button>');
 }
 
@@ -11073,7 +11681,7 @@ function openQuickPhrasesMenu(ev){
 }
 function insertQuickPhrase(pid){
   const p=ensureQuickPhrases().find(x=>x.id===pid);if(!p)return;
-  const ed=document.getElementById('ed');
+  const ed=_edActive();
   if(!ed){toast('Open a note to insert into first');return;}
   ed.focus();
   insertAtCaret(_qpTextToHTML(p.text));
@@ -12798,7 +13406,26 @@ function emptyTrash(){
   if(!confirm('Permanently delete all items in Trash? This cannot be undone.')) return;
   DB.trash.forEach(_tombstoneTrashEntry);
   DB.trash=[];
+  _popCleanupOrphans();
   persist(); renderTrashModal();
+}
+/* v03.NotePane.P3 — drop remembered pop-up mode + geometry for notes that no
+   longer exist, the same self-healing DB.theme.pinTabIds already does. Cheap
+   and only runs on a permanent delete, never at load. */
+function _popCleanupOrphans(){
+  try{
+    const live=new Set(DB.articles.map(a=>a.id));
+    const np=DB.theme&&DB.theme.notePop;
+    if(np){
+      let hit=false;
+      Object.keys(np).forEach(id=>{if(!live.has(id)){delete np[id];hit=true;}});
+      if(hit&&!Object.keys(np).length)delete DB.theme.notePop;
+    }
+    const g=_popGeoAll();
+    let ghit=false;
+    Object.keys(g.float).forEach(id=>{if(!live.has(id)){delete g.float[id];ghit=true;}});
+    if(ghit)_popGeoFlush();
+  }catch(e){}
 }
 
 function updateTrashBtn(){
@@ -12833,8 +13460,8 @@ function _buildArtCtxMain(art,aid){
   const inTab=_tabGroup(_tabHost()).includes(aid);
   const _canModal=window.innerWidth>=900;
   return `<div class="ci" onclick="hideCtx();startRenameArtTitle('${aid}')">✏ Rename title</div>`
-    +(_canModal?`<div class="ci" onclick="hideCtx();popOutNote('${aid}')">⊡ Pop out note</div>`:'')
-    +(_canModal?`<div class="ci" onclick="hideCtx();openNoteAsModal('${aid}')">⛶ Open as resizable panel</div>`:'')
+    +(_canModal?`<div class="ci" onclick="openNotePopup('${aid}','float')">⊡ Pop out note</div>`:'')
+    +(_canModal?`<div class="ci" onclick="openNotePopup('${aid}','panel')">⛶ Open as resizable panel</div>`:'')
     +`<div class="ci" onclick="openNoteHistory('${aid}')">🕐 Note History</div>`
     +`<div class="ci" onclick="hideCtx();duplicateNote('${aid}')">🗐 Make a copy</div>`
     +`<div class="csep"></div>`
@@ -14111,8 +14738,23 @@ document.addEventListener('click',(e)=>{
 document.addEventListener('keydown',ev=>{
   if(ev.key==='Escape'){
     if(document.getElementById('gs-overlay')){closeGlobalSearch();return;}
+    /* N8 — close find before anything else, so Esc dismisses the bar rather
+       than the whole pop-up the user is searching inside. */
+    if(_ntFind||document.getElementById('p3-find')?.style.display==='flex'){
+      _ntFindClose(_ntFind?_ntFind.key:'p3');return;
+    }
     if(ST.noteModal){closeNoteModal();return;}
+    /* v03.NotePane.G5 — ESC now reaches float windows too. Previously the only
+       way to close one was its ✕, so a keyboard user had no exit at all. */
+    if(_fwFocusedAid&&document.getElementById('fw-'+_fwFocusedAid)){closeFloatWin(_fwFocusedAid);return;}
     hideCtx();closeModal();
+  }
+  /* Ctrl+Shift+X — close every pop-up at once. NOT Ctrl+Shift+W: that closes
+     the whole browser window in Chrome at browser level, where preventDefault
+     cannot reach it. */
+  if(ev.key==='X'&&ev.ctrlKey&&ev.shiftKey){
+    ev.preventDefault();
+    closeAllPopouts();
   }
   /* Ctrl+K / ⌘K — Global Search */
   if((ev.ctrlKey||ev.metaKey)&&ev.key==='k'){
@@ -14123,7 +14765,7 @@ document.addEventListener('keydown',ev=>{
   if(ev.key==='P'&&ev.ctrlKey&&ev.shiftKey){
     ev.preventDefault();
     if(ST.article&&ST.article!=='cal'&&window.innerWidth>=900){
-      popOutNote(ST.article);
+      openNotePopup(ST.article);   /* G3 — reopens in whichever mode it was last */
     }
   }
 });
@@ -14178,6 +14820,27 @@ function _normalizePaneState(to){
 }
 
 function _onViewportResize(){
+  /* v03.NotePane.F1 — MUST run before everything else. #p3.modal-mode carries
+     position:fixed!important + z-index:5001!important, so once the viewport
+     fell under the 900px floor the backdrop covered the whole screen and
+     showPane()/_normalizePaneState() could not win against it — the app looked
+     frozen with no reachable way out. Dock the panel back into the normal
+     3-pane layout first, then let the rest of the handler run as before. */
+  if(ST.noteModal){
+    if(window.innerWidth<900){
+      closeNoteModal();
+      try{toast('⛶ Panel closed — screen too narrow');}catch(e){}
+    } else if(_uiTier()!=='desktop'&&_rzTier==='desktop'){
+      /* v03.NotePane.G1 — leaving the desktop tier with a panel open: a
+         backdrop-blocking modal over a tablet-width layout is heavy, so hand
+         the note to a lighter float window at the same spot. Fires only on the
+         tier CROSSING, never on ordinary shrinking. */
+      _panelToFloat();
+    } else {
+      _modalClampToViewport();
+    }
+  }
+  _fwSyncCloseAllChip();
   const ae=document.activeElement;
   const typing=ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'||ae.isContentEditable);
   const wChanged=window.innerWidth!==_rzLastW;
