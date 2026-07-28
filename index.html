@@ -39,6 +39,7 @@
   --fs-h1:calc(var(--fs-content)*1.529);
   --fs-h2:calc(var(--fs-content)*1.235);
   --fs-h3:var(--fs-content);
+  --fs-h4:calc(var(--fs-content)*0.92);
   --fs-list-meta:calc(var(--fs-list)*0.846);
   /* Line-spacing variables — adjusted by Appearance ▸ Line spacing (v04.02) */
   --lh-content:1.6;--pp-gap:12px;
@@ -199,8 +200,10 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
  #ed:empty::before{content:'Start writing here…';color:var(--t3);opacity:.55;font-style:italic;pointer-events:none}
 .av-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px}
 .av-body{font-family:var(--body);font-size:var(--fs-content);line-height:var(--lh-content);color:#2A261E}
+.av-body h1{font-size:var(--fs-h1);font-weight:600;margin:22px 0 8px;color:var(--t1)}
 .av-body h2{font-size:var(--fs-h2);font-weight:600;margin:20px 0 7px;color:var(--t1)}
 .av-body h3{font-size:var(--fs-h3);font-weight:600;margin:15px 0 5px;color:var(--t1)}
+.av-body h4{font-size:var(--fs-h4);font-weight:600;margin:12px 0 4px;color:var(--t1)}
 .av-body p{margin:0 0 var(--pp-gap)}
 .av-body ul,.av-body ol{margin:7px 0 13px;padding-left:22px}
 .av-body li{margin-bottom:4px;line-height:1.75}
@@ -224,8 +227,10 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .al-r span:nth-child(1){width:100%}.al-r span:nth-child(2){width:70%}.al-r span:nth-child(3){width:85%}
 .al-j span{width:100%}
 #ed{flex:1;padding:24px 38px;outline:none;font-family:var(--body);font-size:var(--fs-content);line-height:var(--lh-content);color:#2A261E;overflow-y:auto;max-width:96%;margin:0 auto;width:100%;min-height:0}
+#ed h1{font-size:var(--fs-h1);font-weight:600;margin:18px 0 7px;color:var(--t1)}
 #ed h2{font-size:var(--fs-h2);font-weight:600;margin:16px 0 6px;color:var(--t1)}
 #ed h3{font-size:var(--fs-h3);font-weight:600;margin:12px 0 4px;color:var(--t1)}
+#ed h4{font-size:var(--fs-h4);font-weight:600;margin:10px 0 4px;color:var(--t1)}
 #ed p{margin:0 0 var(--pp-gap)}
 #ed ul,#ed ol{margin:6px 0 11px;padding-left:22px}
  .av-body ol,#ed ol{list-style-type:decimal-leading-zero}
@@ -1537,6 +1542,10 @@ sup.ann-sup:hover{text-decoration:underline}
 .fw-tb .nti-save{margin-left:auto}
 .fw-tb .eb-grp-btn{flex:0 0 auto!important;padding:4px 7px!important;font-size:12px!important}
 .fw-ed{flex:1;overflow-y:auto;padding:10px;outline:none;font-size:13px;line-height:1.6;color:var(--t1)}
+.fw-ed h1{font-size:1.529em;font-weight:600;margin:14px 0 6px;color:var(--t1)}
+.fw-ed h2{font-size:1.235em;font-weight:600;margin:12px 0 5px;color:var(--t1)}
+.fw-ed h3{font-size:1em;font-weight:600;margin:10px 0 4px;color:var(--t1)}
+.fw-ed h4{font-size:.92em;font-weight:600;margin:9px 0 4px;color:var(--t1)}
 @media(max-width:899.98px){.float-win{display:none!important}}
 #note-modal-bg{display:none;position:fixed;inset:0;z-index:5000;
   background:rgba(0,0,0,.45);
@@ -1610,6 +1619,10 @@ sup.ann-sup:hover{text-decoration:underline}
   gap:4px;padding:8px;overflow:auto}
 .fl-pop.open{display:flex}
 .fl-pop .et{min-width:36px;padding:4px 7px;font-size:13px}
+.fl-pop .fl-pop-x{margin-left:auto;border-color:var(--border2);opacity:.7}
+.fl-pop .fl-pop-x:hover{opacity:1}
+.clr-pop .clr-pop-x{float:right;margin:-2px 0 4px 6px;border:1px solid var(--border2);border-radius:5px;
+  background:none;cursor:pointer;font-size:12px;line-height:1;padding:3px 7px;color:var(--t2)}
 @media(max-width:1199.98px){
   .p3h-nav-edit-row{min-height:42px}
   .fl-pop .et{min-width:40px;padding:6px 9px;font-size:14px;min-height:38px}
@@ -3127,6 +3140,126 @@ function _alignBtnsHTML(){
     +'<button class="et" onmousedown="ec(event,\'justifyCenter\')" title="Align center"><span class="al-ic al-c"><span></span><span></span><span></span></span></button>'
     +'<button class="et" onmousedown="ec(event,\'justifyRight\')" title="Align right"><span class="al-ic al-r"><span></span><span></span><span></span></span></button>'
     +'<button class="et" onmousedown="ec(event,\'justifyFull\')" title="Justify"><span class="al-ic al-j"><span></span><span></span><span></span></span></button>';
+}
+/* ══ v04.20 — TEXT SIZE STEPPER (edit bar ▸ Aa group) ════════════════════
+   • Selection  → wrapped in <span class="tx-sz"> and stepped through _TXSZ.
+   • Caret only → the whole block at the caret (h1–h4 / p / li / blockquote).
+   Size is written as `em` computed against the element's OWN natural size,
+   so it keeps scaling with Appearance ▸ Font sizes and stays correct on
+   phone/tablet. dir: +1 bigger · −1 smaller · 0 reset.                     */
+const _TXSZ=[.7,.8,.9,1,1.15,1.3,1.5,1.75,2,2.5,3];
+function _txszStep(el,dir,ed){
+  if(!el||el===ed)return;
+  if(dir===0){el.style.fontSize='';if(!el.getAttribute('style'))el.removeAttribute('style');return;}
+  const prev=el.style.fontSize;
+  el.style.fontSize='';
+  const nat=parseFloat(getComputedStyle(el).fontSize)||16;   /* natural, no inline override */
+  el.style.fontSize=prev;
+  const cur=parseFloat(getComputedStyle(el).fontSize)||nat;
+  const ratio=cur/nat;
+  let i=0;for(let k=1;k<_TXSZ.length;k++)if(Math.abs(_TXSZ[k]-ratio)<Math.abs(_TXSZ[i]-ratio))i=k;
+  i=Math.max(0,Math.min(_TXSZ.length-1,i+dir));
+  const parPx=parseFloat(getComputedStyle(el.parentElement||ed).fontSize)||16;
+  if(_TXSZ[i]===1&&Math.abs(nat-parPx)<0.01){el.style.fontSize='';if(!el.getAttribute('style'))el.removeAttribute('style');return;}
+  el.style.fontSize=((_TXSZ[i]*nat)/parPx).toFixed(4)+'em';
+}
+/* Core stepper — takes ANY editable host, so the main editor (#ed) and every
+   floating note window (.fw-ed) share one implementation and can never drift
+   apart. Returns false if there was nothing to act on. */
+function _txStepIn(ed,dir){
+  const sel=window.getSelection();
+  const inEd=n=>!!(n&&ed.contains(n));
+  const hasSel=!!(sel&&sel.rangeCount&&!sel.getRangeAt(0).collapsed&&inEd(sel.anchorNode));
+  if(hasSel){
+    /* execCommand does the exact, browser-native selection wrapping for us;
+       we immediately swap its <font size="7"> for our own span so nothing
+       else in the app ever has to know about <font> tags. */
+    ed.querySelectorAll('font[size="7"]').forEach(f=>f.setAttribute('data-txpre','1'));
+    try{document.execCommand('styleWithCSS',false,false);}catch(e){}
+    document.execCommand('fontSize',false,'7');
+    const fresh=Array.from(ed.querySelectorAll('font[size="7"]:not([data-txpre])'));
+    ed.querySelectorAll('font[size="7"][data-txpre]').forEach(f=>f.removeAttribute('data-txpre'));
+    if(!fresh.length){toast('Select some text first');return false;}
+    const kept=[];
+    fresh.forEach(f=>{
+      const s=document.createElement('span');
+      s.className='tx-sz';
+      s.innerHTML=f.innerHTML;
+      /* absorb nested tx-sz spans so repeated presses never compound */
+      let base='';
+      s.querySelectorAll('span.tx-sz').forEach(inner=>{
+        if(!base&&inner.style.fontSize)base=inner.style.fontSize;
+        while(inner.firstChild)inner.parentNode.insertBefore(inner.firstChild,inner);
+        inner.remove();
+      });
+      if(base)s.style.fontSize=base;
+      f.parentNode.replaceChild(s,f);
+      _txszStep(s,dir,ed);
+      if(!s.getAttribute('style')){            /* back to 100% → unwrap, leave clean HTML */
+        while(s.firstChild)s.parentNode.insertBefore(s.firstChild,s);
+        s.remove();
+      }else kept.push(s);
+    });
+    /* keep the same text selected so the user can press again immediately */
+    if(kept.length){try{
+      const r=document.createRange();
+      r.setStartBefore(kept[0]);r.setEndAfter(kept[kept.length-1]);
+      const s2=window.getSelection();s2.removeAllRanges();s2.addRange(r);
+    }catch(e){}}
+  }else{
+    let n=(sel&&sel.rangeCount)?sel.getRangeAt(0).startContainer:null;
+    n=(n&&n.nodeType===1)?n:(n&&n.parentElement);
+    const b=(n&&n.closest&&ed.contains(n))?n.closest('h1,h2,h3,h4,p,li,blockquote,div'):null;
+    if(!b||b===ed){toast('Select some text, or click inside a line first');return false;}
+    _txszStep(b,dir,ed);
+  }
+  return true;
+}
+function edFontStep(ev,dir){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  const ed=document.getElementById('ed');if(!ed)return;
+  _restoreCaret();ed.focus();
+  if(!_txStepIn(ed,dir))return;
+  const s=window.getSelection();
+  if(s&&s.rangeCount&&_isED(s.anchorNode))_edRange=s.getRangeAt(0).cloneRange();
+  ed.focus();
+  try{ed.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){}
+}
+/* Clear formatting — native removeFormat leaves inline font-size behind
+   (both our .tx-sz spans and any size pasted in from elsewhere), so we
+   collect the size-carrying nodes BEFORE removeFormat mutates the tree,
+   then strip them and unwrap any span that is left with nothing to do. */
+function _txClearIn(ed){
+  const sel=window.getSelection();
+  const range=(sel&&sel.rangeCount)?sel.getRangeAt(0):null;
+  const hasSel=!!(range&&!range.collapsed&&sel.anchorNode&&ed.contains(sel.anchorNode));
+  const targets=[];
+  const inRange=el=>{try{return !hasSel||range.intersectsNode(el);}catch(e){return true;}};
+  ed.querySelectorAll('span.tx-sz,[style*="font-size"]').forEach(el=>{if(el!==ed&&inRange(el))targets.push(el);});
+  if(!hasSel){
+    let n=range?range.startContainer:null;
+    n=(n&&n.nodeType===1)?n:(n&&n.parentElement);
+    const b=(n&&n.closest&&ed.contains(n))?n.closest('h1,h2,h3,h4,p,li,blockquote,div'):null;
+    if(b&&b!==ed&&targets.indexOf(b)<0)targets.push(b);
+  }
+  document.execCommand('removeFormat',false,null);
+  targets.forEach(el=>{
+    if(!ed.contains(el))return;              /* removeFormat may have dropped it already */
+    el.style.fontSize='';
+    if(el.classList.contains('tx-sz')&&!el.getAttribute('style')){
+      while(el.firstChild)el.parentNode.insertBefore(el.firstChild,el);
+      el.remove();return;
+    }
+    if(!el.getAttribute('style'))el.removeAttribute('style');
+  });
+}
+function edClearFmt(ev){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  const ed=document.getElementById('ed');if(!ed)return;
+  _restoreCaret();ed.focus();
+  _txClearIn(ed);
+  ed.focus();
+  try{ed.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){}
 }
 /* ── Heading level mobility: promote/demote the heading at the caret,
    or every heading in the note at once. Built on the exact same
@@ -7233,20 +7366,38 @@ function _tabBarCursor(e){
    the Collapse/Expand/Preview overflow menu). Same anchor/close pattern as
    openNtiPicker(), so behaviour (mobile bottom-sheet, outside-click close)
    stays consistent with the rest of the app. ══════════════════════════════ */
-function _openFloatPop(id,btn,html){
+function _openFloatPop(id,btn,html,sticky){
   let p=document.getElementById(id);
   if(p&&p.classList.contains('open')){closeFloatPop(id);return null;}
   if(!p){p=document.createElement('div');p.id=id;p.className='fl-pop';document.body.appendChild(p);}
-  p.innerHTML=html;
+  p.innerHTML=html+(sticky?'<button class="et fl-pop-x" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\''+id+'\')" title="Close this menu">\u2715</button>':'');
   const r=btn.getBoundingClientRect(),mob=window.innerWidth<1200;
   if(mob){p.style.cssText='bottom:60px;left:4px;right:4px;top:auto;width:auto';}
   else{const top=Math.min(r.bottom+4,window.innerHeight-320),left=Math.max(4,Math.min(r.left-4,window.innerWidth-268));p.style.cssText=`top:${top}px;left:${left}px;bottom:auto;right:auto`;}
   p.classList.add('open');
-  const _cl=e=>{const pp=document.getElementById(id);if(pp&&!pp.contains(e.target)&&!btn.contains(e.target)){closeFloatPop(id);document.removeEventListener('mousedown',_cl,true);document.removeEventListener('touchstart',_cl,true);}};
+  /* v04.20 — STICKY pops (the edit-bar Aa/H/≡/+/↺ groups) stay open while the
+     user clicks back into the editor to re-select text, or opens a child pop
+     (colour swatches, ctx menus). They close only via their own ✕, their group
+     button, or a click on genuinely unrelated chrome. Non-sticky callers keep
+     the original outside-click behaviour untouched. */
+  const _cl=e=>{
+    const pp=document.getElementById(id);if(!pp)return;
+    if(pp.contains(e.target)||btn.contains(e.target))return;
+    if(sticky&&e.target&&e.target.closest&&e.target.closest('#ed,.fw-ed,.fl-pop,.clr-pop,#ctx,.eb-grp-btn'))return;
+    closeFloatPop(id);document.removeEventListener('mousedown',_cl,true);document.removeEventListener('touchstart',_cl,true);
+  };
   setTimeout(()=>{document.addEventListener('mousedown',_cl,{capture:true});document.addEventListener('touchstart',_cl,{capture:true});},50);
   return p;
 }
 function closeFloatPop(id){const p=document.getElementById(id);if(p)p.classList.remove('open');}
+/* Shared ✕ handler for sticky pops — also clears the group-button state so the
+   bar and the popover can never disagree about what is open. */
+function _closeStickyPop(id){
+  closeFloatPop(id);
+  if(id==='eb-pop')ST.ebGroup=null;
+  if(id==='fw-eb-pop')Object.keys(_fwEbGroup).forEach(k=>{_fwEbGroup[k]=null;});
+  document.querySelectorAll('.eb-grp-btn').forEach(b=>b.classList.remove('on'));
+}
 /* Home (+ Back-to-results) icon buttons — shared by the desktop unified
    toolbar and the tablet/mobile nav+edit row. */
 function _p3HomeBtnHTML(){
@@ -7274,7 +7425,7 @@ function togEBGroup(g){
   if(ST.ebGroup===g){ST.ebGroup=null;closeFloatPop('eb-pop');btn.classList.remove('on');return;}
   ST.ebGroup=g;
   document.querySelectorAll('.eb-grp-btn').forEach(b=>b.classList.toggle('on',b===btn));
-  _openFloatPop('eb-pop',btn,_buildEBSub(g));
+  _openFloatPop('eb-pop',btn,_buildEBSub(g),true);
 }
 function _buildEBSub(g){
   if(!g)return '';
@@ -7287,13 +7438,19 @@ function _buildEBSub(g){
       '<button class="et" onmousedown="edMarkDone(event)" title="Mark done (toggle)">\u2713</button>',
       '<button class="et" onmousedown="edBoundary(event)" title="Boundary box (toggle)">\u25a2</button>',
       '<button class="et" onmousedown="edColorBtn(event)" title="Colour">\ud83c\udfa8</button>',
-      '<button class="et" onmousedown="ec(event,\'removeFormat\')" title="Clear formatting">\u2717A</button>',
+      '<button class="et" onmousedown="edClearFmt(event)" title="Clear formatting (also resets custom text size)">\u2717A</button>',
+      '<span class="esep"></span>',
+      '<button class="et" onmousedown="edFontStep(event,1)" title="Bigger text (selection, or the whole line at the caret)" style="font-size:15px;font-weight:700;line-height:1">A<sup style="font-size:9px">+</sup></button>',
+      '<button class="et" onmousedown="edFontStep(event,-1)" title="Smaller text (selection, or the whole line at the caret)" style="font-size:11px;font-weight:700;line-height:1">A<sup style="font-size:9px">\u2212</sup></button>',
+      '<button class="et" onmousedown="edFontStep(event,0)" title="Reset text size to 100%" style="font-size:12px;font-weight:700;line-height:1">A\u21ba</button>',
+      '<span class="esep"></span>',
       _alignBtnsHTML(),
     ],
     heads:[
       '<button class="et" onmousedown="fb(event,\'h1\')" style="font-size:12px;font-weight:800">H1</button>',
       '<button class="et" onmousedown="fb(event,\'h2\')" style="font-size:11px;font-weight:700">H2</button>',
       '<button class="et" onmousedown="fb(event,\'h3\')" style="font-size:11px;font-weight:700">H3</button>',
+      '<button class="et" onmousedown="fb(event,\'h4\')" style="font-size:10.5px;font-weight:700">H4</button>',
       '<button class="et" onmousedown="fb(event,\'p\')" style="font-size:13px" title="Normal text (remove heading)">¶</button>',
       '<button class="et" onmousedown="shiftHeadingLevel(event,-1)" title="Promote this heading (H3→H2→H1) — Ctrl+[">▲</button>',
       '<button class="et" onmousedown="shiftHeadingLevel(event,1)" title="Demote this heading (H1→H2→H3→H4→text) — Ctrl+]">▼</button>',
@@ -7523,6 +7680,22 @@ function _fwFb(ev,aid,tag){
   ed.focus();
   _fwScheduleAutoSave(aid);
 }
+/* v04.20 — float windows get the same size stepper and size-aware clear as
+   the main edit bar, driven by the shared cores above. */
+function _fwFontStep(ev,aid,dir){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  const ed=document.getElementById('fw-ed-'+aid);if(!ed)return;
+  if(!_txStepIn(ed,dir))return;
+  ed.focus();
+  _fwScheduleAutoSave(aid);
+}
+function _fwClearFmt(ev,aid){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  const ed=document.getElementById('fw-ed-'+aid);if(!ed)return;
+  _txClearIn(ed);
+  ed.focus();
+  _fwScheduleAutoSave(aid);
+}
 function _fwBuildEBSub(aid,g){
   const subs={
     text:[
@@ -7530,7 +7703,12 @@ function _fwBuildEBSub(aid,g){
       `<button class="et" onmousedown="_fwEc(event,'${aid}','italic')" title="Italic"><i>I</i></button>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','underline')" title="Underline"><u>U</u></button>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','strikeThrough')" title="Strikethrough"><s>S</s></button>`,
-      `<button class="et" onmousedown="_fwEc(event,'${aid}','removeFormat')" title="Clear formatting">✗A</button>`,
+      `<button class="et" onmousedown="_fwClearFmt(event,'${aid}')" title="Clear formatting (also resets custom text size)">✗A</button>`,
+      `<span class="esep"></span>`,
+      `<button class="et" onmousedown="_fwFontStep(event,'${aid}',1)" title="Bigger text (selection, or the whole line at the caret)" style="font-size:15px;font-weight:700;line-height:1">A<sup style="font-size:9px">+</sup></button>`,
+      `<button class="et" onmousedown="_fwFontStep(event,'${aid}',-1)" title="Smaller text (selection, or the whole line at the caret)" style="font-size:11px;font-weight:700;line-height:1">A<sup style="font-size:9px">−</sup></button>`,
+      `<button class="et" onmousedown="_fwFontStep(event,'${aid}',0)" title="Reset text size to 100%" style="font-size:12px;font-weight:700;line-height:1">A↺</button>`,
+      `<span class="esep"></span>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','justifyLeft')" title="Align left">⯇</button>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','justifyCenter')" title="Align center">⯃</button>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','justifyRight')" title="Align right">⯈</button>`,
@@ -7539,6 +7717,7 @@ function _fwBuildEBSub(aid,g){
       `<button class="et" onmousedown="_fwFb(event,'${aid}','h1')" style="font-weight:800">H1</button>`,
       `<button class="et" onmousedown="_fwFb(event,'${aid}','h2')" style="font-weight:700">H2</button>`,
       `<button class="et" onmousedown="_fwFb(event,'${aid}','h3')" style="font-weight:700">H3</button>`,
+      `<button class="et" onmousedown="_fwFb(event,'${aid}','h4')" style="font-weight:700;font-size:11px">H4</button>`,
       `<button class="et" onmousedown="_fwFb(event,'${aid}','p')" title="Normal text">¶</button>`,
     ],
     lists:[
@@ -7562,7 +7741,7 @@ function _fwTogGroup(aid,g,btn){
   _fwEbGroup[key]=g;
   const win=document.getElementById('fw-'+aid);
   if(win)win.querySelectorAll('.eb-grp-btn').forEach(b=>b.classList.toggle('on',b===btn));
-  _openFloatPop('fw-eb-pop',btn,_fwBuildEBSub(aid,g));
+  _openFloatPop('fw-eb-pop',btn,_fwBuildEBSub(aid,g),true);
 }
 function _fwWireDrag(handle,win,aid){
   if(!handle)return;
@@ -8995,7 +9174,7 @@ function _applyHeadingStyles(){
   var defs=_dfltHdStyles();var css='';
   ['h1','h2','h3','h4'].forEach(function(tag){
     var s=hs[tag]||defs[tag];
-    css+='.av-body '+tag+',#ed '+tag+'{border-left:3px solid '+s.border+';background:'+s.bg+';padding-left:10px;border-radius:0 4px 4px 0}\n';
+    css+='.av-body '+tag+',#ed '+tag+',.fw-ed '+tag+'{border-left:3px solid '+s.border+';background:'+s.bg+';padding-left:10px;border-radius:0 4px 4px 0}\n';
   });
   var el=document.getElementById('dyn-hs');
   if(!el){el=document.createElement('style');el.id='dyn-hs';document.head.appendChild(el);}
@@ -9523,7 +9702,12 @@ function edColorBtn(ev){
   if(s&&s.rangeCount&&_isED(s.anchorNode))_edRange=s.getRangeAt(0).cloneRange();
   _openColorPop(ev);
 }
-function _clrPopAway(e){if(_clrPop&&!_clrPop.contains(e.target))_closeColorPop();}
+function _clrPopAway(e){
+  if(!_clrPop||_clrPop.contains(e.target))return;
+  /* keep the board up while the caret/selection is moved inside the editor */
+  if(e.target&&e.target.closest&&e.target.closest('#ed,.fw-ed,.fl-pop'))return;
+  _closeColorPop();
+}
 function _closeColorPop(){if(_clrPop){_clrPop.remove();_clrPop=null;document.removeEventListener('mousedown',_clrPopAway,true);}}
 function _openColorPop(ev){
   _closeColorPop();
@@ -9543,7 +9727,8 @@ function _openColorPop(ev){
   const html='<div class="clr-row"><span class="clr-lbl">Text</span>'
     +_TX_FG.map(function(c){return sw(c[0],c[1],'fg');}).join('')+'</div>'
     +'<div class="clr-row"><span class="clr-lbl">Mark</span>'
-    +_TX_BG.map(function(c){return sw(c[0],c[1],'bg');}).join('')+'</div>';
+    +_TX_BG.map(function(c){return sw(c[0],c[1],'bg');}).join('')+'</div>'
+    +'<button type="button" class="clr-pop-x" onmousedown="event.preventDefault()" onclick="_closeColorPop()" title="Close">✕ Close</button>';
   const p=document.createElement('div');
   p.className='clr-pop';p.innerHTML=html;
   document.body.appendChild(p);
@@ -9567,7 +9752,8 @@ function _applyColor(ev,kind,val){
     const c=val||'transparent';
     if(!document.execCommand('hiliteColor',false,c))document.execCommand('backColor',false,c);
   }
-  _closeColorPop();
+  /* v04.20 — stays open: apply several colours / re-select and re-apply without
+     re-opening the swatch board. Closed by its own ✕ or a click on unrelated UI. */
   _edAutoSave();
 }
 
