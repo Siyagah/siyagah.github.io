@@ -14344,8 +14344,13 @@ async function initSync(cfg){
        the cause is the office proxy/firewall's own connection-time limit on
        firestore.googleapis.com, which no client-side setting can work around
        — would need IT to exempt that domain, or syncing from a different
-       network. */
-    try{ _syncFsDb.settings({experimentalForceLongPolling:true, merge:true}); }catch(e){ console.error('Firestore settings():',e); }
+       network.
+       v03.91.04 — experimentalAutoDetectLongPolling defaults to on
+       internally in this SDK build, so merge:true combined it with the new
+       force setting and both ended up true at once, which Firestore
+       rejects ("cannot be used together"). Explicitly turning auto-detect
+       off removes the ambiguity instead of relying on merge. */
+    try{ _syncFsDb.settings({experimentalForceLongPolling:true, experimentalAutoDetectLongPolling:false}); }catch(e){ console.error('Firestore settings():',e); }
     const docRef=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
 
     /* Real-time listener — fires immediately with current cloud state,
