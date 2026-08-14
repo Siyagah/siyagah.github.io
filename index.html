@@ -15879,15 +15879,16 @@ updateSbToggle();
 (async()=>{
   try{
     await initAuth();
-    /* If already signed in, also kick off sync */
-    if(_authInstance){
-      _authInstance.onAuthStateChanged(async user=>{
-        if(user){
-          const _sc=getSyncConfig();
-          if(_sc?.firebaseConfig&&_sc?.notebookId) await initSync(_sc);
-        }
-      },{once:true} /* remove after first call — ongoing changes handled by doLogin/doSignOut */);
-    }
+    /* v03.91.02 — removed a redundant second onAuthStateChanged listener that
+       used to sit here and call initSync() again. initAuth()'s own permanent
+       listener (search "onAuthStateChanged" above) already calls initSync()
+       on sign-in, guarded by !_syncFsDb. Both listeners fired together on
+       every boot for an already-signed-in user, racing to start Firestore
+       twice on the same connection — harmless-looking most of the time, but
+       it opened two competing real-time listeners on every load and was
+       surfaced by the settings() call above throwing "Firestore has already
+       been started". initAuth()'s listener alone is sufficient; nothing here
+       is lost. */
   }catch(e){console.error('Auth/Sync init on boot:',e);}
 })();
 
