@@ -17,8 +17,14 @@
    across devices. Cross-origin requests (Firestore, Firebase SDK loads
    from gstatic.com, Google Auth, etc.) now bypass the service worker
    entirely and go straight to the network, same as a page with no
-   service worker at all would handle them. */
-const VERSION = 'v03.01.04';
+   service worker at all would handle them.
+
+   v03.92.01 — version renumbered to track the app version in
+   <meta name="app-version">, so the cache name and the build it holds can
+   no longer drift apart. Bumping this is what evicts the previous cache;
+   without it, devices keep serving the old index.html for non-navigation
+   requests and never receive a sync fix at all. */
+const VERSION = 'v03.92.01';
 const CACHE   = 'siyagah-' + VERSION;
 const CORE    = ['./', './index.html', './manifest.json'];
 self.addEventListener('install', (e) => {

@@ -10,7 +10,7 @@
      Claude: on every delivery, read this value, bump it per the rule
      above, update it here, and name the downloaded file
      "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.82">
+<meta name="app-version" content="03.92">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1833,7 +1833,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.82</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.92</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button>
       <button class="btn bn bi" onclick="openGlobalSearch()" style="font-size:20px" title="Search (Ctrl+K)">🔍</button>
@@ -2074,10 +2074,24 @@ function loadDB(){
    Catching it here keeps the rest of the persist() chain running (cloud
    sync and file auto-save do not depend on localStorage) and warns the
    user once, clearly, with the action that actually protects their work. */
+/* ── Editor autosave timing (v03.92.01) ───────────────────────────────────
+   _ED_AUTOSAVE_MS      quiet period: commit the editor this long after the
+                        last keystroke.
+   _ED_AUTOSAVE_MAX_MS  hard ceiling: commit at least this often while the
+                        user keeps typing, so a continuous typist's text can
+                        never sit in the DOM uncommitted (and therefore
+                        cannot be pushed to the cloud half-written).
+   Both the main editor and the float-window editors use these.            */
+const _ED_AUTOSAVE_MS     = 1200;
+const _ED_AUTOSAVE_MAX_MS = 2500;
+
 let _lsFail = false;
-function _save(){
+/* `pre` — an already-serialised DB, passed by callers that have just built
+   one (the cloud push). Saves stringifying the whole notebook twice on
+   every push, which is measurable once a notebook is large. */
+function _save(pre){
   try{
-    localStorage.setItem(SK, JSON.stringify(DB));
+    localStorage.setItem(SK, pre!=null?pre:JSON.stringify(DB));
     if(_lsFail){ _lsFail = false; try{ toast('\u2705 Browser storage is working again \u2014 saving normally'); }catch(_){} }
     return true;
   }catch(e){
@@ -8334,14 +8348,19 @@ function _fwWireDrag(handle,win,aid){
 }
 /* Flushes DOM → data only (no save-history/toast) — used both by explicit
    Save and by close, so closing never silently drops an in-progress edit. */
+/* v03.92.01 — see _flushEd(): updatedAt is only stamped on a real change, so
+   a no-op flush can no longer make this device win a merge it should lose. */
 function _fwFlush(aid){
   const ed=document.getElementById('fw-ed-'+aid);
   const ti=document.getElementById('fw-ti-'+aid);
   const a=DB.articles.find(x=>x.id===aid);
   if(!ed||!a)return;
   const c=ed.cloneNode(true);c.querySelectorAll('.ann-inline-card').forEach(x=>x.remove());_edColClean(c);
-  a.content=c.innerHTML;
-  if(ti)a.title=ti.value.trim();
+  const html=c.innerHTML;
+  const title=ti?ti.value.trim():a.title;
+  if(a.content===html && a.title===title) return;
+  a.content=html;
+  a.title=title;
   a.updatedAt=new Date().toISOString();
 }
 function _fwSave(aid){
@@ -8354,9 +8373,18 @@ function _fwSave(aid){
   if(win){const disp=win.querySelector('.fw-title-disp');if(disp)disp.textContent=a.title||'Untitled';}
   toast('💾 Saved');
 }
+/* v03.92.01 — same bounded debounce as the main editor: a float window that
+   is typed into continuously must still commit to DB (and therefore reach
+   the cloud) on a predictable schedule instead of waiting for a pause that
+   a fast typist never gives it. See initRichPaste() for the full rationale. */
+const _fwAutoSince={};
 function _fwScheduleAutoSave(aid){
   clearTimeout(_fwAutoTimer[aid]);
+  const now=Date.now();
+  if(!_fwAutoSince[aid])_fwAutoSince[aid]=now;
+  const d=Math.max(0,Math.min(_ED_AUTOSAVE_MS,_ED_AUTOSAVE_MAX_MS-(now-_fwAutoSince[aid])));
   _fwAutoTimer[aid]=setTimeout(()=>{
+    delete _fwAutoSince[aid];
     _fwFlush(aid);
     const a=DB.articles.find(x=>x.id===aid);if(!a)return;
     _captureNoteHistory(a,'autosave');
@@ -8365,13 +8393,13 @@ function _fwScheduleAutoSave(aid){
     const win=document.getElementById('fw-'+aid);
     if(win){const disp=win.querySelector('.fw-title-disp');if(disp)disp.textContent=a.title||'Untitled';}
     _fwFlashSaved(aid);
-  },1200);
+  },d);
 }
 /* quiet=true — used by closeAllFloats() to skip the per-window persist +
    full render pass; the caller does one of each for the whole batch. */
 function closeFloatWin(aid,quiet){
   _ntFindClose(aid);  /* N8 — drop any highlight ranges pointing into this window */
-  clearTimeout(_fwAutoTimer[aid]);
+  clearTimeout(_fwAutoTimer[aid]); delete _fwAutoSince[aid];
   _fwFlush(aid);
   const a=DB.articles.find(x=>x.id===aid);
   if(a){_captureNoteHistory(a,'save');
@@ -10619,9 +10647,21 @@ function initRichPaste(ed){
   });
   markCards();
   /* v03.NotePane.C4 — debounced auto-save while typing (fires ~1.2s after a
-     pause), so edits/pastes are durably saved and the user sees "✓ Saved". */
-  let _asT=null;
-  ed.addEventListener('input',function(){clearTimeout(_asT);_asT=setTimeout(_edAutoSave,1200);});
+     pause), so edits/pastes are durably saved and the user sees "✓ Saved".
+     v03.92.01 — bounded by a maximum wait. This was a bare debounce, so a
+     continuous typist who never paused a full 1.2s never triggered a save
+     at all: the text existed only in the DOM, DB still held the previous
+     content, and any cloud push in that window uploaded a note ending
+     mid-sentence. The max wait guarantees the editor is committed to DB at
+     least every _ED_AUTOSAVE_MAX_MS while typing, however fast the user is. */
+  let _asT=null,_asSince=0;
+  ed.addEventListener('input',function(){
+    const now=Date.now();
+    if(!_asSince)_asSince=now;
+    clearTimeout(_asT);
+    const d=Math.max(0,Math.min(_ED_AUTOSAVE_MS,_ED_AUTOSAVE_MAX_MS-(now-_asSince)));
+    _asT=setTimeout(function(){_asSince=0;_edAutoSave();},d);
+  });
   /* v03.NotePane.C5 — re-wire fold arrows when the number of headings changes
      (e.g. user types or deletes a heading). Debounced; only re-inits on change
      to avoid disturbing the caret on every keystroke. */
@@ -14349,36 +14389,39 @@ async function initSync(cfg){
        internally in this SDK build, so merge:true combined it with the new
        force setting and both ended up true at once, which Firestore
        rejects ("cannot be used together"). Explicitly turning auto-detect
-       off removes the ambiguity instead of relying on merge. */
-    try{ _syncFsDb.settings({experimentalForceLongPolling:true, experimentalAutoDetectLongPolling:false}); }catch(e){ console.error('Firestore settings():',e); }
+       off removes the ambiguity instead of relying on merge.
+
+       v03.92.01 — forcing long-polling was applied to EVERY device on every
+       network, when it was only ever needed to get around one office
+       proxy. Long-polling delivers remote changes on poll boundaries instead
+       of over the persistent WebChannel stream, so it added seconds of
+       latency to every cross-device update for every user, everywhere —
+       a permanent tax paid by all to work around one firewall.
+       It is now per-device and sticky: auto-detect (the fast streaming
+       path) is the default, and a device only pins itself to forced
+       long-polling after the listener has actually failed repeatedly on
+       this network. The office case still self-heals; nobody else pays. */
+    try{
+      _syncFsDb.settings(_forcedLongPolling()
+        ? {experimentalForceLongPolling:true,  experimentalAutoDetectLongPolling:false}
+        : {experimentalForceLongPolling:false, experimentalAutoDetectLongPolling:true});
+    }catch(e){ console.error('Firestore settings():',e); }
     const docRef=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
 
     /* Real-time listener — fires immediately with current cloud state,
        then again on every remote change */
-    _syncUnsub=docRef.onSnapshot(async snap=>{
+    _syncUnsub=docRef.onSnapshot(snap=>{
       if(!snap.exists){setSyncStatus('live');return;}
-      const md=snap.data(); const remoteT=(md&&md.deviceUpdatedAt)||0;
+      const md=snap.data();
       /* Skip only if this exact version is the one we ourselves just wrote —
          see the comment above _myLastPushVer's declaration for why this
          must be an exact-version check, not a "did I just push" flag. */
       if(md&&md.ver!=null&&md.ver===_myLastPushVer){setSyncStatus('live');return;}
-      try{
-        const remoteDB=await _readCloudDB(docRef, md);
-        if(!remoteDB){setSyncStatus('live');return;}
-        const before=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
-        DB=mergeDB(DB, remoteDB);                  /* MERGE — never replace, so nothing is lost */
-        const after=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
-        _save();
-        _renderPreserveEdit();
-        if(remoteT>_lastSyncTime){_lastSyncTime=remoteT;localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);}
-        if(after>before) toast('☁ Merged entries from another device');
-        setSyncStatus('live');
-        const rc=(remoteDB.articles||[]).length+(remoteDB.folders||[]).length+(remoteDB.trash||[]).length;
-        if(after>rc) pushToCloud();                /* propagate records the cloud is missing */
-      }catch(e){console.error('sync merge:',e);setSyncStatus('live');}
+      _pullRemote(docRef, md);
     },err=>{
       console.error('Sync listener:',err);
       setSyncStatus('err');
+      _noteTransportFailure();
     });
 
     setSyncStatus('live');
@@ -14395,6 +14438,12 @@ async function syncNow(){
   if(!cfg||!_syncFsDb){ toast("☁ Cloud Sync is not connected on this device — open ⚙ → Cloud Sync"); return; }
   try{
     setSyncStatus("busy");
+    /* v03.92.01 — capture the live editors first, so a manual "Sync now"
+       cannot upload a note that is missing the words still sitting in the
+       editor's un-flushed DOM. */
+    _flushAllEditors();
+    /* A manual sync supersedes any debounced push already queued. */
+    clearTimeout(_syncPushTimer); _syncPushTimer=null; _pushPendingSince=0;
     const nb=_syncFsDb.collection("notebooks").doc(cfg.notebookId);
     const main=await nb.get();
     let added=0;
@@ -14403,11 +14452,14 @@ async function syncNow(){
       const before=(DB.articles||[]).length;
       DB=mergeDB(DB, remoteDB);
       added=(DB.articles||[]).length-before;
+      _flushAllEditors();
       _save(); _renderPreserveEdit();
     }
     const now=Date.now();
     _myLastPushVer=now;
-    await _writeCloudDB(nb, now);
+    const json=JSON.stringify(DB);
+    await _writeCloudDB(nb, now, _b64enc(json));
+    _lastPushedSig=_syncSig(json); _pushFailures=0;
     _lastSyncTime=now; localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);
     setSyncStatus("live");
     toast("✅ Synced — "+(DB.articles||[]).length+" notes"+(added>0?(" (+"+added+" merged in)"):" (already up to date)"));
@@ -14582,21 +14634,72 @@ function mergeDB(local, remote){
 function _b64enc(s){ return btoa(unescape(encodeURIComponent(s))); }
 function _b64dec(s){ return decodeURIComponent(escape(atob(s))); }
 var _SYNC_CHUNK=900000;
+function _syncSleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+/* Cheap 32-bit content signature — lets a push skip the network entirely
+   when the notebook has not actually changed since the last successful
+   write. Redundant full-notebook writes were the main source of the
+   "Write stream exhausted maximum allowed queued writes" backlog, which is
+   what turned a two-second sync into a multi-minute one. */
+function _syncSig(s){
+  let h=0x811c9dc5;
+  for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=(h*0x01000193)>>>0; }
+  return s.length+':'+h.toString(36);
+}
+
+/* v03.92.01 — commit every OPEN editor's live DOM into DB before the
+   notebook is serialised for the cloud.
+   Without this, a push serialised whatever _flushEd() had last written,
+   which lags the on-screen text by the editor's 1.2s autosave debounce (and
+   by much more when a push is triggered from some other code path). That is
+   precisely the reported "it only synced a few words, not even the full
+   sentence": the cloud received a genuinely truncated note, so every other
+   device faithfully rendered the truncation. Flushing here makes a push
+   carry exactly what the user can see. */
+function _flushAllEditors(){
+  try{ _flushEd(); }catch(e){ console.error('flush main editor:',e); }
+  try{
+    document.querySelectorAll('.float-win').forEach(w=>{
+      const aid=(w.id||'').slice(3);
+      if(aid){ try{ _fwFlush(aid); }catch(e){ console.error('flush float editor:',e); } }
+    });
+  }catch(e){ console.error('flush editors:',e); }
+}
+
+/* Read the chunk set for a given parent-doc version.
+   v03.92.01 — chunks are now fetched in PARALLEL and a torn read is RETRIED.
+   Previously the loop fetched them one at a time (n serial round-trips) and
+   any inconsistency — a chunk still carrying the previous ver, or one not
+   visible yet — returned null. The snapshot handler treated that null as
+   "nothing to do" and dropped the update on the floor, with no retry: the
+   remote change then stayed invisible until some *other* write happened to
+   produce a fresh snapshot. That is a large part of the multi-minute lag. */
 async function _readCloudDB(nb, md){
   if(!md) return null;
   if(md.n==null && md.db){ try{return JSON.parse(md.db);}catch(e){return null;} } /* legacy single-blob */
-  const n=md.n; if(!n) return null; const ver=md.ver; const parts=[];
-  for(let i=0;i<n;i++){
-    const c=await nb.collection("chunks").doc(String(i)).get();
-    if(!c.exists) return null;
-    const cd=c.data();
-    if(!cd || (ver!=null && cd.ver!=null && cd.ver!==ver)) return null; /* mid-write; wait for next snapshot */
-    parts.push(cd.p||"");
+  const n=md.n; if(!n) return null; const ver=md.ver;
+  for(let attempt=0;attempt<4;attempt++){
+    if(attempt) await _syncSleep(150*attempt);
+    let snaps;
+    try{
+      snaps=await Promise.all(
+        Array.from({length:n},(_,i)=>nb.collection("chunks").doc(String(i)).get())
+      );
+    }catch(e){ console.error('chunk fetch:',e); continue; }
+    const parts=[]; let torn=false;
+    for(const c of snaps){
+      if(!c.exists){ torn=true; break; }
+      const cd=c.data();
+      if(!cd || (ver!=null && cd.ver!=null && cd.ver!==ver)){ torn=true; break; }  /* mid-write */
+      parts.push(cd.p||"");
+    }
+    if(torn) continue;
+    try{ return JSON.parse(_b64dec(parts.join(""))); }
+    catch(e){ /* torn payload — one more attempt may catch the settled write */ }
   }
-  try{ return JSON.parse(_b64dec(parts.join(""))); }catch(e){ return null; }
+  return null;
 }
-async function _writeCloudDB(nb, now){
-  const b64=_b64enc(JSON.stringify(DB));
+async function _writeCloudDB(nb, now, b64){
+  if(b64==null) b64=_b64enc(JSON.stringify(DB));
   const n=Math.ceil(b64.length/_SYNC_CHUNK);
   const batch=_syncFsDb.batch();
   for(let i=0;i<n;i++){ batch.set(nb.collection("chunks").doc(String(i)),{p:b64.slice(i*_SYNC_CHUNK,(i+1)*_SYNC_CHUNK),ver:now}); }
@@ -14604,27 +14707,165 @@ async function _writeCloudDB(nb, now){
   await batch.commit();
   const b2=_syncFsDb.batch(); for(let i=n;i<n+10;i++) b2.delete(nb.collection("chunks").doc(String(i))); try{ await b2.commit(); }catch(e){}
 }
+
+/* ── Push scheduling ──────────────────────────────────────────────────────
+   v03.92.01 — the old scheduler was a plain 3s debounce: every change called
+   clearTimeout() and restarted the full 3s. While someone is actually
+   WRITING, changes never stop arriving for 3s at a stretch (the editor's own
+   autosave alone re-arms it every ~1.2s), so the timer was reset forever and
+   the push simply never fired. A long writing session therefore pushed
+   nothing at all until the user paused for a full three seconds — the
+   reported "5 to 10 minutes to sync".
+
+   The fix is a debounce with a MAXIMUM WAIT. A push still coalesces rapid
+   changes (quiet period), but it can never be starved: once a change has
+   been waiting _PUSH_MAX_MS it goes out regardless of ongoing typing.
+   Overlapping pushes are coalesced into a single trailing write instead of
+   stacking concurrent batch commits on the write stream. */
+const _PUSH_QUIET_MS = 800;    /* fire this long after the last change … */
+const _PUSH_MAX_MS   = 2500;   /* … but never wait longer than this in total */
+let _pushPendingSince=0, _pushInFlight=false, _pushAgain=false;
+let _lastPushedSig='', _pushFailures=0;
+
+async function _doPush(){
+  if(_pushInFlight){ _pushAgain=true; return; }
+  const cfg=getSyncConfig();
+  if(!cfg||!_syncFsDb) return;
+  clearTimeout(_syncPushTimer); _syncPushTimer=null; _pushPendingSince=0;
+  _pushInFlight=true;
+  try{
+    /* Serialise what the user can SEE, not what was last autosaved. */
+    _flushAllEditors();
+    const json=JSON.stringify(DB);
+    const sig=_syncSig(json);
+    if(sig===_lastPushedSig){ setSyncStatus('live'); return; }   /* nothing new */
+    /* The flush above may have pulled text out of the editor that no local
+       save has seen yet, so persist it here too — reusing the string we
+       just built rather than serialising the notebook a second time. */
+    try{ _save(json); }catch(e){}
+    setSyncStatus('busy');
+    const nb=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
+    const now=Date.now();
+    _myLastPushVer=now;
+    await _writeCloudDB(nb, now, _b64enc(json));
+    _lastPushedSig=sig;
+    _pushFailures=0;
+    _lastSyncTime=now;
+    localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);
+    setSyncStatus('live');
+  }catch(e){
+    /* Never leave a failed write believed-delivered: clearing the signature
+       guarantees the retry actually re-sends the payload. */
+    _lastPushedSig='';
+    _pushFailures++;
+    setSyncStatus('err');
+    console.error('Push error:',e);
+    if(_pushFailures===1) toast('☁ Sync push failed — retrying…');
+    else if(_pushFailures===4) toast('☁ Still cannot reach the cloud: '+((e&&e.message)||e), 6000);
+    /* Exponential backoff, capped, so a flaky link recovers on its own. */
+    const wait=Math.min(30000, 1000*Math.pow(2,Math.min(_pushFailures,5)));
+    clearTimeout(_syncPushTimer);
+    _syncPushTimer=setTimeout(()=>{ _pushPendingSince=0; _doPush(); }, wait);
+  }finally{
+    _pushInFlight=false;
+    if(_pushAgain){ _pushAgain=false; pushToCloud(); }
+  }
+}
+
 function pushToCloud(){
   if(!getSyncConfig()||!_syncFsDb)return;
+  const now=Date.now();
+  if(!_pushPendingSince) _pushPendingSince=now;
+  const waited=now-_pushPendingSince;
+  const delay=Math.max(0, Math.min(_PUSH_QUIET_MS, _PUSH_MAX_MS-waited));
   clearTimeout(_syncPushTimer);
-  _syncPushTimer=setTimeout(async()=>{
-    setSyncStatus('busy');
-    try{
-      const cfg=getSyncConfig();
-      if(!cfg||!_syncFsDb)return;
-      const nb=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
-      const now=Date.now();
-      _myLastPushVer=now;
-      await _writeCloudDB(nb, now);
-      _lastSyncTime=now;
-      localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);
-      setSyncStatus('live');
-    }catch(e){
-      setSyncStatus('err');
-      toast('☁ Sync push failed: '+((e&&e.message)||e));
-      console.error('Push error:',e);
+  _syncPushTimer=setTimeout(_doPush, delay);
+}
+
+/* Send anything outstanding RIGHT NOW, skipping the quiet period.
+   Used when the tab is being hidden or closed and when the network returns —
+   see the lifecycle handlers near the end of the file for why waiting on a
+   timer is not an option on mobile. */
+function flushPendingPush(){
+  if(!getSyncConfig()||!_syncFsDb)return;
+  clearTimeout(_syncPushTimer); _syncPushTimer=null;
+  _doPush();
+}
+
+/* ── Pull: apply a remote snapshot ────────────────────────────────────────
+   v03.92.01 — split out of the onSnapshot callback so a failed read can be
+   RETRIED. The old code did the read inline and, on any null result (a torn
+   chunk set, a chunk not yet visible, a transient network blip), simply
+   returned — the remote change was then invisible on this device until some
+   unrelated later write produced a fresh snapshot. Combined with the
+   starved push timer on the sending side, that is how a change could take
+   many minutes to appear, or appear only partially.
+
+   Concurrent snapshots are also serialised now: two overlapping pulls used
+   to each fan out a full chunk-read storm against the same document. */
+const _SYNC_TRANSPORT_SK='siyagah-sync-longpoll';
+let _pullInFlight=false, _pullQueued=null, _pullRetryTimer=null, _pullFailures=0;
+
+function _forcedLongPolling(){
+  try{ return localStorage.getItem(_SYNC_TRANSPORT_SK)==='1'; }catch(e){ return false; }
+}
+/* Pin this device to long-polling only after the streaming channel has
+   genuinely failed several times here — then reconnect on the slow-but-
+   reliable transport. Takes effect on the next connection. */
+function _noteTransportFailure(){
+  if(_forcedLongPolling())return;
+  if(++_pullFailures<3)return;
+  try{ localStorage.setItem(_SYNC_TRANSPORT_SK,'1'); }catch(e){}
+  console.warn('Sync: streaming channel failing on this network — pinning to long-polling.');
+}
+
+const _PULL_MAX_RETRIES=3;
+async function _pullRemote(docRef, md, retry){
+  if(_pullInFlight){ _pullQueued={docRef,md}; return; }
+  _pullInFlight=true;
+  clearTimeout(_pullRetryTimer); _pullRetryTimer=null;
+  try{
+    const remoteT=(md&&md.deviceUpdatedAt)||0;
+    const remoteDB=await _readCloudDB(docRef, md);
+    if(!remoteDB){
+      /* A genuinely empty/legacy document has nothing to retry for; a chunked
+         one that would not assemble is a torn read worth another attempt.
+         Bounded, so a permanently unreadable document cannot leave this
+         device re-reading it forever — the next real snapshot retries. */
+      if(md&&md.n&&(retry||0)<_PULL_MAX_RETRIES){
+        _pullRetryTimer=setTimeout(()=>_pullRemote(docRef, md, (retry||0)+1), 1500);
+        setSyncStatus('busy');
+      }else{
+        if(md&&md.n) console.warn('Sync: could not assemble remote notebook ver',md.ver);
+        setSyncStatus('live');
+      }
+      return;
     }
-  },3000);
+    _pullFailures=0;
+    const before=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
+    DB=mergeDB(DB, remoteDB);                  /* MERGE — never replace, so nothing is lost */
+    const after=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
+    /* If a note is open in an editor, the merge may have replaced its stored
+       content while the live DOM still shows what the user is typing. Commit
+       the visible text straight back so DB and screen never disagree — the
+       on-screen version is the one the user believes is saved. _flushEd /
+       _fwFlush no-op when nothing actually differs, so this is free in the
+       common case and cannot start a feedback loop. */
+    _flushAllEditors();
+    _save();
+    _renderPreserveEdit();
+    if(remoteT>_lastSyncTime){_lastSyncTime=remoteT;localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);}
+    if(after>before) toast('☁ Merged entries from another device');
+    setSyncStatus('live');
+    const rc=(remoteDB.articles||[]).length+(remoteDB.folders||[]).length+(remoteDB.trash||[]).length;
+    if(after>rc) pushToCloud();                /* propagate records the cloud is missing */
+  }catch(e){
+    console.error('sync merge:',e);
+    setSyncStatus('live');
+  }finally{
+    _pullInFlight=false;
+    if(_pullQueued){ const q=_pullQueued; _pullQueued=null; _pullRemote(q.docRef, q.md); }
+  }
 }
 
 /* ── Sync Setup Modal ─────────────────────────────────────────────────── */
@@ -14986,14 +15227,24 @@ function isNagNote(a){ if(!a||a.finalised) return false;
 /* MyWall = every note not yet Finished or Archived */
 function isMyWallNote(a){ return !a.finalised && !a.archived; }
 
+/* v03.92.01 — only stamp updatedAt when the note ACTUALLY changed.
+   This used to bump updatedAt on every flush, including the many no-op
+   flushes fired by autosave ticks, tab switches and pre-push flushes. Since
+   mergeDB resolves conflicts with "newest updatedAt wins", a device that
+   merely had a note OPEN kept re-stamping it and therefore beat a device
+   that had genuinely edited it — the edit was silently discarded on merge.
+   Comparing before writing makes a no-op flush truly a no-op. */
 function _flushEd(){
   if(!ST.editing)return;
   const ed=document.getElementById('ed');
   const a=DB.articles.find(x=>x.id===ST.article);
   if(!ed||!a||ed.dataset.aid!==a.id)return;
   const c=ed.cloneNode(true);c.querySelectorAll('.ann-inline-card').forEach(n=>n.remove());_edColClean(c);
-  a.content=c.innerHTML;
-  if(ST.etitle!=null)a.title=ST.etitle.trim();
+  const html=c.innerHTML;
+  const title=(ST.etitle!=null)?ST.etitle.trim():a.title;
+  if(a.content===html && a.title===title) return;
+  a.content=html;
+  a.title=title;
   a.updatedAt=new Date().toISOString();
 }
 function setNoteKind(aid,kid){ _flushEd();
@@ -15906,12 +16157,48 @@ updateSbToggle();
   }catch(e){console.error('Auth/Sync init on boot:',e);}
 })();
 
-// Save to linked file immediately when user switches away from the tab
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='hidden'&&_fileHandle){
-    clearTimeout(_autoTimer);
-    _writeToFile();
+/* ── Save/sync on the way out ─────────────────────────────────────────────
+   v03.92.01 — this used to flush ONLY to the linked file, and only when a
+   file was linked at all. Nothing committed the editor into DB, and nothing
+   pushed to the cloud.
+
+   That mattered most on exactly the platform where sync was reported
+   broken: when a phone or tablet backgrounds a PWA the browser freezes its
+   JavaScript timers, so a push waiting on a debounce timer never runs. The
+   user typed, switched apps, and the change stayed on the phone — surfacing
+   only when they next opened the app, which is precisely the "5 to 10
+   minutes" (or longer) they saw.
+
+   Now, when the tab is hidden or torn down, we commit the live editors into
+   DB, save locally, write the linked file, and fire the pending cloud push
+   IMMEDIATELY rather than leaving it on a timer that may never tick.       */
+function _flushEverythingOut(){
+  try{ _flushAllEditors(); }catch(e){}
+  try{ _save(); }catch(e){}
+  if(_fileHandle){
+    try{ clearTimeout(_autoTimer); _writeToFile(); }catch(e){}
   }
+  try{ flushPendingPush(); }catch(e){}
+}
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'){
+    _flushEverythingOut();
+  }else{
+    /* Coming back: timers were frozen while hidden, so anything still
+       queued needs a nudge rather than waiting out a stale debounce. */
+    if(_pushPendingSince) flushPendingPush();
+  }
+});
+
+/* pagehide covers the cases visibilitychange does not: iOS Safari tab
+   teardown, bfcache eviction and real navigations away from the app. */
+window.addEventListener('pagehide',()=>{ _flushEverythingOut(); });
+
+/* Losing the network mid-push leaves work queued; send it the moment the
+   connection is back instead of waiting for the next edit to trigger one. */
+window.addEventListener('online',()=>{
+  try{ flushPendingPush(); }catch(e){}
 });
 
 // Warn before unload when there are unsaved changes and no FSA link
