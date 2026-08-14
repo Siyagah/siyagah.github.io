@@ -1789,12 +1789,12 @@ sup.ann-sup:hover{text-decoration:underline}
 .cal-hj-tag{font-size:9px;color:var(--t3);display:block;line-height:1.2}
 .cal-hj-sub{font-size:10px;color:var(--t3);display:block;line-height:1.2;font-weight:400}
 </style>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script><style></style><style id="dyn-hs">.av-body h1,#ed h1{border-left:3px solid #0f766e;background:#f0fdfa;padding-left:10px;border-radius:0 4px 4px 0}
-.av-body h2,#ed h2{border-left:3px solid #4338ca;background:#eef2ff;padding-left:10px;border-radius:0 4px 4px 0}
-.av-body h3,#ed h3{border-left:3px solid #b45309;background:#fffbeb;padding-left:10px;border-radius:0 4px 4px 0}
-.av-body h4,#ed h4{border-left:3px solid #475569;background:#f8fafc;padding-left:10px;border-radius:0 4px 4px 0}
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script><style></style><style id="dyn-hs">.av-body h1,#ed h1,.fw-ed h1{border-left:3px solid #0f766e;background:#f0fdfa;padding-left:10px;border-radius:0 4px 4px 0}
+.av-body h2,#ed h2,.fw-ed h2{border-left:3px solid #4338ca;background:#eef2ff;padding-left:10px;border-radius:0 4px 4px 0}
+.av-body h3,#ed h3,.fw-ed h3{border-left:3px solid #b45309;background:#fffbeb;padding-left:10px;border-radius:0 4px 4px 0}
+.av-body h4,#ed h4,.fw-ed h4{border-left:3px solid #475569;background:#f8fafc;padding-left:10px;border-radius:0 4px 4px 0}
 </style></head>
-<body>
+<body style="">
 
 <!-- ── Login Overlay ──────────────────────────────────────────────────── -->
 <div id="login-overlay" style="display: none;">
@@ -1833,7 +1833,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"></span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.82</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button>
       <button class="btn bn bi" onclick="openGlobalSearch()" style="font-size:20px" title="Search (Ctrl+K)">🔍</button>
@@ -1864,7 +1864,7 @@ sup.ann-sup:hover{text-decoration:underline}
           </div>
           <div class="sb-ms"></div>
           <!-- ─ Trash ─ -->
-          <button id="trash-btn" class="sb-mi" onclick="openTrash();closeSBTools()">🗑 Trash (115)</button>
+          <button id="trash-btn" class="sb-mi" onclick="openTrash();closeSBTools()">🗑 Trash (123)</button>
         </div>
       </div>
       <div class="sb-menu-wrap" id="sb-menu-wrap">
@@ -1905,7 +1905,7 @@ sup.ann-sup:hover{text-decoration:underline}
       <input type="text" id="sq" placeholder="Search notes, folders, tags, types…" oninput="doSearch(this.value)" autocomplete="off">
       <span id="sqx" onclick="clearSearch()" style="color: rgb(74, 90, 76); cursor: pointer; display: none; font-size: 12px;">✕</span>
     </div>
-    <button id="bts-sb" class="btn bn bi" onclick="restoreLastSearch()" title="Back to your last search results" style="display:none;font-size:11.5px;width:100%;margin-top:4px">🔍↺ Back to search results</button>
+    <button id="bts-sb" class="btn bn bi" onclick="restoreLastSearch()" title="Back to your last search results" style="font-size: 11.5px; width: 100%; margin-top: 4px;">🔍↺ Back to search results</button>
   </div>
   <div id="tree"></div>
 
@@ -1915,7 +1915,7 @@ sup.ann-sup:hover{text-decoration:underline}
 </aside>
 
 <!-- Note modal backdrop -->
-<div id="note-modal-bg" onclick="closeNoteModal()"></div>
+<div id="note-modal-bg" onclick="closeNoteModal()" class=""></div>
 
 <!-- Sidebar toggle tab -->
 <button id="sb-toggle" onclick="toggleSB()" title="Collapse sidebar" style="left: 390px;">◀</button>
@@ -1927,32 +1927,31 @@ sup.ann-sup:hover{text-decoration:underline}
 <div id="p2" style="width: 520px;" class="">
   <div id="p2h"></div>
   <div id="p2h-path"></div>
-  <div id="p2-srch-bar"></div>
+  <div id="p2-srch-bar"><div class="mini-srch-row"><button class="btn bn bi" onclick="goHome()" title="Home — reset search/filters and show the folder list" style="font-size:12.5px">🏠 Home</button><button class="btn bn bi" onclick="focusSidebarSearch()" title="Search notes, folders, tags, types…" style="font-size:12.5px">🔍 Search</button><button class="btn bn bi" onclick="restoreLastSearch()" title="Back to search results: 'khutbah'" style="font-size:12.5px">🔍↺ Back to results</button></div></div>
   <div id="p2c"></div>
 </div>
 
 <div id="rsz2" title="Drag to resize panes" class=""></div>
 
-<div id="p3" class="">
-  <div id="tab-bar" class="has-tabs" style="display: flex;" ondragover="tabBarDragOver(event)" ondragleave="tabBarDragLeave(event)" ondrop="tabBarDrop(event)"></div>
-  <div id="p3h" class=""></div>
+<div id="p3" class="toc-right" style="">
+  <div id="tab-bar" class="has-tabs" style="display: flex;" ondragover="tabBarDragOver(event)" ondragleave="tabBarDragLeave(event)" ondrop="tabBarDrop(event)" title=""><div class="tab-it tab-cal" onclick="_calOpen()" title="Calendar">📅 Cal</div><button class="tab-nav" id="tab-nav-l" onclick="event.stopPropagation();_tabScroll(-1)" title="Scroll tabs left">‹</button><div class="tab-strip" id="tab-strip" onscroll="_tabNavSync()"><div class="tab-it on tab-own" data-tid="mss6ln6ugiw" style="" draggable="true" ondragstart="pinTabDStart(event,'mss6ln6ugiw')" onclick="tabSelect('mss6ln6ugiw')" oncontextmenu="event.preventDefault();event.stopPropagation();openTabClrPicker(event,'mss6ln6ugiw')" title="Jumu'a Khutbah - TEMPLATE — owns this tab group (✕ closes all its tabs)"><span class="tab-own-dot">◆</span><span class="tab-lbl">Jumu'a Khutbah - TEMPL…</span><button class="tab-x" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();pinTabToPanel('mss6ln6ugiw')" title="Pin to sidepane">📌</button><button class="tab-x" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();closeTabGroup('mss6ln6ugiw')" title="Close all tabs of this note">✕</button></div><div class="tab-it" data-tid="mscgu6kuhqo" style="" draggable="true" ondragstart="pinTabDStart(event,'mscgu6kuhqo')" onclick="tabSelect('mscgu6kuhqo')" oncontextmenu="event.preventDefault();event.stopPropagation();openTabClrPicker(event,'mscgu6kuhqo')" title="Siyagah FINETUNING"><span class="tab-lbl">Siyagah FINETUNING</span><button class="tab-x" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();pinTabToPanel('mscgu6kuhqo')" title="Pin to sidepane">📌</button><button class="tab-x" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();closeTab('mscgu6kuhqo')" title="Close tab">✕</button></div></div><button class="tab-nav" id="tab-nav-r" onclick="event.stopPropagation();_tabScroll(1)" title="Scroll tabs right">›</button><span class="tab-more" id="tab-more" title="Tabs hidden off-screen — use ‹ › to reach them"></span><button class="tab-add-btn" onclick="openTabPicker(this)" title="Search &amp; add a note to the Tab bar">＋ Add Tab</button></div>
+  <div id="p3h" class="editing"></div>
   <div id="p3-srch-bar"></div>
   <div id="p3-find" class="fw-find" style="display:none">
-    <input class="fw-find-q" id="p3-find-q" placeholder="Find in this note…"
-      oninput="_ntFindRun('p3',this.value)" onkeydown="_ntFindKey(event,'p3')">
+    <input class="fw-find-q" id="p3-find-q" placeholder="Find in this note…" oninput="_ntFindRun('p3',this.value)" onkeydown="_ntFindKey(event,'p3')">
     <span class="fw-find-n" id="p3-find-n"></span>
     <button class="et" onclick="_ntFindStep('p3',-1)" title="Previous match (Shift+Enter)">▲</button>
     <button class="et" onclick="_ntFindStep('p3',1)" title="Next match (Enter)">▼</button>
     <button class="et" onclick="_ntFindClose('p3')" title="Close find (Esc)">✕</button>
   </div>
-  <div id="p3c"></div>
+  <div id="p3c" style=""></div>
 </div>
 
-<div id="ctx" onclick="event.stopPropagation()" style="display: none; left: 1785px; top: 136px;"></div>
+<div id="ctx" onclick="event.stopPropagation()" style="display:none" data-aid="mss6ln6ugiw"></div>
 <div id="ann-bubble" style="display:none"><button class="ann-bub-btn" onmousedown="annBubClick(event)">💬 Comment</button></div>
 <div id="ov" onclick="closeModal()" class=""><div id="mb" onclick="event.stopPropagation()"></div></div>
 <!-- drag ghost label -->
-<div class="drag-hint" id="dgh"></div>
+<div class="drag-hint" id="dgh" style=""></div>
 
 <script>
 /* ── Storage & State ─────────────────────────────────────────────── */
@@ -14329,6 +14328,15 @@ async function initSync(cfg){
     /* Reuse the shared app created by initAuth (or create it here if auth wasn't set up) */
     _syncApp = _getOrCreateFirebaseApp(cfg.firebaseConfig);
     _syncFsDb=firebase.firestore(_syncApp);
+    /* v03.91.01 — office-network fix: some corporate proxies/firewalls mangle
+       Firestore's normal streaming connection (seen as "resource-exhausted:
+       Write stream exhausted maximum allowed queued writes" + "Invalid JSON
+       payload" in console). Auto-detecting long-polling falls back to plain
+       HTTP requests only when the streaming channel is blocked/broken, so
+       unaffected networks are untouched. Must be set before any Firestore
+       call on this instance — placed immediately after creation, before the
+       docRef below issues one. */
+    try{ _syncFsDb.settings({experimentalAutoDetectLongPolling:true}); }catch(e){ console.error('Firestore settings():',e); }
     const docRef=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
 
     /* Real-time listener — fires immediately with current cloud state,
@@ -16172,34 +16180,39 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
 <div id="sync-modal" onclick="if(event.target===this)closeSyncModal()" style="display: none;">
   <div class="sync-box">
     <div id="sync-mb">
-    <div class="mt">☁ Cloud Sync</div>
-    <div class="mm" style="line-height:1.7">
-      Sync is <strong style="color:var(--green)">active</strong>. Your notebook updates in real time across all devices.
-      <br><br>Signed in as: <strong>smahk</strong>
-      <br><br><strong>Notebook ID</strong>
-      <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
-        <input class="mi" value="nb-mriuc27o-f44402" readonly="" style="font-size:11px;font-family:monospace;flex:1">
-        <button class="btn bp" onclick="navigator.clipboard.writeText('nb-mriuc27o-f44402').then(()=&gt;toast('Copied ✓'))">Copy</button>
-      </div>
-      <small style="color:var(--t3);font-size:11px">Use this same ID on every device</small>
+    <div class="mt">☁ Cloud Sync Setup</div>
+    <div class="mm">
+      Connect to <strong>Firebase</strong> (free) for real-time sync on any device — phone, tablet, desktop, any browser.
+      <ol class="sync-steps">
+        <li>Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a></li>
+        <li>Create a project → <em>Add app → Web</em> → copy the <code>firebaseConfig</code> object</li>
+        <li>In your project sidebar: <strong>Build → Firestore Database</strong> → Create in <em>test mode</em></li>
+        <li>Paste the config JSON below → click <strong>Connect</strong></li>
+      </ol>
     </div>
-    <div class="mm" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2)">
-      <div style="font-size:11.5px;font-weight:600;color:var(--t2);margin-bottom:6px">🔄 Migrating from a previous setup?</div>
-      <div style="font-size:11px;color:var(--t3);margin-bottom:8px;line-height:1.5">If your notes were saved under an old Notebook ID, paste it below to import them.</div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <input class="mi" id="migrate-id-inp" placeholder="Old Notebook ID" style="font-size:11px;font-family:monospace;flex:1">
-        <button class="btn bp" onclick="runMigration()">Migrate</button>
-      </div>
-      <div id="migrate-err" style="color:#c00;font-size:11px;margin-top:6px;display:none"></div>
+    <label style="font-size:12px;font-weight:500;color:var(--t2);display:block;margin-bottom:4px">Firebase config (paste JSON)</label>
+    <textarea id="fb-cfg" class="sync-area" rows="7" placeholder="{
+  &quot;apiKey&quot;: &quot;AIzaSy...&quot;,
+  &quot;authDomain&quot;: &quot;yourapp.firebaseapp.com&quot;,
+  &quot;projectId&quot;: &quot;yourapp&quot;,
+  &quot;storageBucket&quot;: &quot;yourapp.appspot.com&quot;,
+  &quot;messagingSenderId&quot;: &quot;123456789&quot;,
+  &quot;appId&quot;: &quot;1:123:web:abc&quot;
+}"></textarea>
+    <label style="font-size:12px;font-weight:500;color:var(--t2);display:block;margin:10px 0 4px">Notebook ID</label>
+    <div style="display:flex;gap:6px;align-items:center">
+      <input class="mi" id="nb-id-inp" value="nb-msrzuilt-gghlh5" placeholder="Paste your Notebook ID here" style="font-size:11px;font-family:monospace;flex:1">
+      <button class="btn" onclick="document.getElementById('nb-id-inp').value=generateNotebookId()" title="Generate new">↻</button>
     </div>
-    <div class="ma" style="flex-wrap:wrap;gap:6px">
-      <button class="btn bp" onclick="syncNow()" title="Pull, merge and push now">🔄 Sync Now</button>
-      <button class="btn bd" onclick="disconnectSync()">Disconnect</button>
-      <button class="btn bp" onclick="closeSyncModal()">Done</button>
+    <div style="font-size:11px;color:var(--t3);margin-top:4px">Keep this ID — same on every device</div>
+    <div id="sync-err" style="color:#c00;font-size:12px;margin-top:8px;display:none"></div>
+    <div class="ma" style="margin-top:14px">
+      <button class="btn" onclick="closeSyncModal()">Cancel</button>
+      <button class="btn bp" onclick="connectSync()">Connect</button>
     </div></div>
   </div>
 </div>
-<grammarly-desktop-integration data-grammarly-shadow-root="true" style="visibility: visible !important;"></grammarly-desktop-integration><grammarly-popups data-grammarly-shadow-root="true" class="dnXmp" style="visibility: visible !important; --rem: 16;"></grammarly-popups><iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1781404983704" name="I0_1781404983704" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.ch0Jz-JlMrQ.O%2Fd%3D1%2Frs%3DAHpOoo_YD4KoV8fTh_kLhktsiThAm3yJ5A%2Fm%3D__features__#id=I0_1781404983704&amp;_gfid=I0_1781404983704&amp;parent=https%3A%2F%2Faaas-notebook.web.app&amp;pfname=&amp;rpctoken=38391774" style="position: absolute; top: -100px; width: 1px; height: 1px;"></iframe><style id="mywall-style">
+<iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1781404983704" name="I0_1781404983704" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.ch0Jz-JlMrQ.O%2Fd%3D1%2Frs%3DAHpOoo_YD4KoV8fTh_kLhktsiThAm3yJ5A%2Fm%3D__features__#id=I0_1781404983704&amp;_gfid=I0_1781404983704&amp;parent=https%3A%2F%2Faaas-notebook.web.app&amp;pfname=&amp;rpctoken=38391774" style="position: absolute; top: -100px; width: 1px; height: 1px;"></iframe><style id="mywall-style">
 .kind-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 16px;padding:9px 11px;background:var(--paper,#fff);border:1px solid var(--border2,#e5e7eb);border-radius:11px}
 .kind-tabs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1;min-width:0}
 .kind-tab{font-size:11.5px;font-weight:600;padding:3px 11px;border:1.4px solid #ccc;border-radius:999px;background:transparent;cursor:pointer;white-space:nowrap;line-height:1.55;transition:filter .12s,box-shadow .12s}
@@ -16386,4 +16399,4 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
     </div>
   </div>
 </div>
-<iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1782051874490" name="I0_1782051874490" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.ch0Jz-JlMrQ.O%2Fd%3D1%2Frs%3DAHpOoo_YD4KoV8fTh_kLhktsiThAm3yJ5A%2Fm%3D__features__#id=I0_1782051874490&amp;_gfid=I0_1782051874490&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=16484655" style="position: absolute; top: -100px; width: 1px; height: 1px;"></iframe><div id="nti-picker" class="" style="inset: 171.5px auto auto 1855.47px;"></div><section id="id-recall-widget-root" style="border-block: initial; border-inline: initial; border-start-start-radius: initial; border-start-end-radius: initial; border-end-start-radius: initial; border-end-end-radius: initial; overflow-block: initial; overflow-inline: initial; overscroll-behavior-block: initial; overscroll-behavior-inline: initial; margin-block: initial; margin-inline: initial; scroll-margin-block: initial; scroll-margin-inline: initial; padding-block: initial; padding-inline: initial; scroll-padding-block: initial; scroll-padding-inline: initial; inset-block: initial; inset-inline: initial; block-size: initial; min-block-size: initial; max-block-size: initial; inline-size: initial; min-inline-size: initial; max-inline-size: initial; contain-intrinsic-block-size: initial; contain-intrinsic-inline-size: initial; background: initial; background-blend-mode: initial; border: initial; border-radius: initial; box-decoration-break: initial; -moz-float-edge: initial; display: initial; position: initial; float: initial; clear: initial; vertical-align: initial; baseline-source: initial; overflow: initial; overflow-anchor: initial; transform: initial; rotate: initial; scale: initial; translate: initial; offset: initial; scroll-behavior: initial; scroll-snap-align: initial; scroll-snap-type: initial; scroll-snap-stop: initial; overscroll-behavior: initial; isolation: initial; break-after: initial; break-before: initial; break-inside: initial; resize: initial; perspective: initial; perspective-origin: initial; backface-visibility: initial; transform-box: initial; transform-style: initial; transform-origin: initial; contain: initial; content-visibility: initial; container: initial; appearance: initial; -moz-orient: initial; will-change: initial; shape-image-threshold: initial; shape-margin: initial; shape-outside: initial; touch-action: initial; -webkit-line-clamp: initial; scrollbar-gutter: initial; zoom: initial; columns: initial; column-fill: initial; column-rule: initial; column-span: initial; content: initial; counter-increment: initial; counter-reset: initial; counter-set: initial; opacity: initial; box-shadow: initial; clip: initial; filter: initial; backdrop-filter: initial; mix-blend-mode: initial; font: initial; font-synthesis: initial; font-palette: initial; math-depth: initial; math-style: initial; visibility: initial; writing-mode: initial; text-orientation: initial; print-color-adjust: initial; image-rendering: initial; image-orientation: initial; dominant-baseline: initial; text-anchor: initial; color-interpolation: initial; color-interpolation-filters: initial; fill: initial; fill-opacity: initial; fill-rule: initial; shape-rendering: initial; stroke: initial; stroke-width: initial; stroke-linecap: initial; stroke-linejoin: initial; stroke-miterlimit: initial; stroke-opacity: initial; stroke-dasharray: initial; stroke-dashoffset: initial; clip-rule: initial; marker: initial; paint-order: initial; border-collapse: initial; empty-cells: initial; caption-side: initial; border-spacing: initial; color: initial; text-transform: initial; hyphens: initial; -moz-text-size-adjust: initial; text-indent: initial; overflow-wrap: initial; word-break: initial; text-justify: initial; text-align-last: initial; text-align: initial; letter-spacing: initial; word-spacing: initial; white-space: initial; text-shadow: initial; text-emphasis: initial; text-emphasis-position: initial; tab-size: initial; line-break: initial; -webkit-text-fill-color: initial; -webkit-text-stroke: initial; ruby-align: initial; ruby-position: initial; text-combine-upright: initial; text-rendering: initial; text-underline-offset: initial; text-underline-position: initial; text-decoration-skip-ink: initial; hyphenate-character: initial; forced-color-adjust: initial; -webkit-text-security: initial; hyphenate-limit-chars: initial; text-wrap: initial; cursor: initial; pointer-events: initial; caret-color: initial; accent-color: initial; color-scheme: initial; scrollbar-color: initial; list-style: initial; quotes: initial; margin: initial; overflow-clip-margin: initial; scroll-margin: initial; outline: initial; outline-offset: initial; padding: initial; scroll-padding: initial; page: initial; inset: initial; z-index: initial; flex-flow: initial; place-content: initial; place-items: initial; flex: initial; place-self: initial; order: initial; height: initial; min-height: initial; max-height: initial; width: initial; min-width: initial; max-width: initial; box-sizing: border-box; object-fit: initial; object-position: initial; grid-area: initial; grid: initial; gap: initial; aspect-ratio: initial; contain-intrinsic-size: initial; vector-effect: initial; stop-color: initial; stop-opacity: initial; flood-color: initial; flood-opacity: initial; lighting-color: initial; mask-type: initial; clip-path: initial; mask: initial; x: initial; y: initial; cx: initial; cy: initial; rx: initial; ry: initial; r: initial; d: initial; table-layout: initial; text-overflow: initial; text-decoration: initial; ime-mode: initial; scrollbar-width: initial; user-select: initial; -moz-window-dragging: initial; -moz-force-broken-image-icon: initial; transition: initial; animation: initial; animation-composition: initial; -moz-box-align: initial; -moz-box-direction: initial; -moz-box-flex: initial; -moz-box-orient: initial; -moz-box-pack: initial; -moz-box-ordinal-group: initial;"></section><iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" style="position: absolute; top: -100px; width: 1px; height: 1px;" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1784841121299" name="I0_1784841121299" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.9vdPKhB0RUg.O%2Fd%3D1%2Frs%3DAHpOoo97anj7zZ432JcN58tqJJp_A6WeOw%2Fm%3D__features__#id=I0_1784841121299&amp;_gfid=I0_1784841121299&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=21953727"></iframe><div id="jrn-picker" style="inset: auto 4px 60px; width: auto;" class=""></div></body></html>
+<iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1782051874490" name="I0_1782051874490" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.ch0Jz-JlMrQ.O%2Fd%3D1%2Frs%3DAHpOoo_YD4KoV8fTh_kLhktsiThAm3yJ5A%2Fm%3D__features__#id=I0_1782051874490&amp;_gfid=I0_1782051874490&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=16484655" style="position: absolute; top: -100px; width: 1px; height: 1px;"></iframe><div id="nti-picker" class="" style="inset: 171.5px auto auto 1855.47px;"></div><iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" style="position: absolute; top: -100px; width: 1px; height: 1px;" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1784841121299" name="I0_1784841121299" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.9vdPKhB0RUg.O%2Fd%3D1%2Frs%3DAHpOoo97anj7zZ432JcN58tqJJp_A6WeOw%2Fm%3D__features__#id=I0_1784841121299&amp;_gfid=I0_1784841121299&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=21953727"></iframe><div id="jrn-picker" style="inset: auto 4px 60px; width: auto;" class=""></div><section id="id-recall-widget-root" style="border-block: initial; border-inline: initial; border-start-start-radius: initial; border-start-end-radius: initial; border-end-start-radius: initial; border-end-end-radius: initial; overflow-block: initial; overflow-inline: initial; overscroll-behavior-block: initial; overscroll-behavior-inline: initial; margin-block: initial; margin-inline: initial; scroll-margin-block: initial; scroll-margin-inline: initial; padding-block: initial; padding-inline: initial; scroll-padding-block: initial; scroll-padding-inline: initial; inset-block: initial; inset-inline: initial; block-size: initial; min-block-size: initial; max-block-size: initial; inline-size: initial; min-inline-size: initial; max-inline-size: initial; contain-intrinsic-block-size: initial; contain-intrinsic-inline-size: initial; background: initial; background-blend-mode: initial; border: initial; border-radius: initial; box-decoration-break: initial; -moz-float-edge: initial; display: initial; position: initial; float: initial; clear: initial; vertical-align: initial; baseline-source: initial; overflow: initial; overflow-anchor: initial; transform: initial; rotate: initial; scale: initial; translate: initial; offset: initial; scroll-behavior: initial; scroll-snap-align: initial; scroll-snap-type: initial; scroll-snap-stop: initial; overscroll-behavior: initial; isolation: initial; break-after: initial; break-before: initial; break-inside: initial; resize: initial; perspective: initial; perspective-origin: initial; backface-visibility: initial; transform-box: initial; transform-style: initial; transform-origin: initial; contain: initial; content-visibility: initial; container: initial; appearance: initial; -moz-orient: initial; will-change: initial; shape-image-threshold: initial; shape-margin: initial; shape-outside: initial; touch-action: initial; -webkit-line-clamp: initial; scrollbar-gutter: initial; zoom: initial; columns: initial; column-fill: initial; column-rule: initial; column-span: initial; content: initial; counter-increment: initial; counter-reset: initial; counter-set: initial; opacity: initial; box-shadow: initial; clip: initial; filter: initial; backdrop-filter: initial; mix-blend-mode: initial; font: initial; font-synthesis: initial; font-palette: initial; math-depth: initial; math-style: initial; visibility: initial; writing-mode: initial; text-orientation: initial; print-color-adjust: initial; image-rendering: initial; image-orientation: initial; dominant-baseline: initial; text-anchor: initial; color-interpolation: initial; color-interpolation-filters: initial; fill: initial; fill-opacity: initial; fill-rule: initial; shape-rendering: initial; stroke: initial; stroke-width: initial; stroke-linecap: initial; stroke-linejoin: initial; stroke-miterlimit: initial; stroke-opacity: initial; stroke-dasharray: initial; stroke-dashoffset: initial; clip-rule: initial; marker: initial; paint-order: initial; border-collapse: initial; empty-cells: initial; caption-side: initial; border-spacing: initial; color: initial; text-transform: initial; hyphens: initial; -moz-text-size-adjust: initial; text-indent: initial; overflow-wrap: initial; word-break: initial; text-justify: initial; text-align-last: initial; text-align: initial; letter-spacing: initial; word-spacing: initial; white-space: initial; text-shadow: initial; text-emphasis: initial; text-emphasis-position: initial; tab-size: initial; line-break: initial; -webkit-text-fill-color: initial; -webkit-text-stroke: initial; ruby-align: initial; ruby-position: initial; text-combine-upright: initial; text-rendering: initial; text-underline-offset: initial; text-underline-position: initial; text-decoration-skip-ink: initial; hyphenate-character: initial; forced-color-adjust: initial; -webkit-text-security: initial; hyphenate-limit-chars: initial; text-wrap: initial; cursor: initial; pointer-events: initial; caret-color: initial; accent-color: initial; color-scheme: initial; scrollbar-color: initial; list-style: initial; quotes: initial; margin: initial; overflow-clip-margin: initial; scroll-margin: initial; outline: initial; outline-offset: initial; padding: initial; scroll-padding: initial; page: initial; inset: initial; z-index: initial; flex-flow: initial; place-content: initial; place-items: initial; flex: initial; place-self: initial; order: initial; height: initial; min-height: initial; max-height: initial; width: initial; min-width: initial; max-width: initial; box-sizing: border-box; object-fit: initial; object-position: initial; grid-area: initial; grid: initial; gap: initial; aspect-ratio: initial; contain-intrinsic-size: initial; vector-effect: initial; stop-color: initial; stop-opacity: initial; flood-color: initial; flood-opacity: initial; lighting-color: initial; mask-type: initial; clip-path: initial; mask: initial; x: initial; y: initial; cx: initial; cy: initial; rx: initial; ry: initial; r: initial; d: initial; table-layout: initial; text-overflow: initial; text-decoration: initial; ime-mode: initial; scrollbar-width: initial; user-select: initial; -moz-window-dragging: initial; -moz-force-broken-image-icon: initial; transition: initial; animation: initial; animation-composition: initial; -moz-box-align: initial; -moz-box-direction: initial; -moz-box-flex: initial; -moz-box-orient: initial; -moz-box-pack: initial; -moz-box-ordinal-group: initial;"></section><iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" style="position: absolute; top: -100px; width: 1px; height: 1px;" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1786654383196" name="I0_1786654383196" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.9vdPKhB0RUg.O%2Fd%3D1%2Frs%3DAHpOoo97anj7zZ432JcN58tqJJp_A6WeOw%2Fm%3D__features__#id=I0_1786654383196&amp;_gfid=I0_1786654383196&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=30546353"></iframe><div id="eb-pop" class="fl-pop" style="inset: 126.75px auto auto 396.1px;"><button class="et" onmousedown="ec(event,'bold')"><b>B</b></button><button class="et" onmousedown="ec(event,'italic')"><i>I</i></button><button class="et" onmousedown="ec(event,'underline')" title="Underline"><u>U</u></button><button class="et" onmousedown="ec(event,'strikeThrough')" title="Strikethrough"><s>S</s></button><button class="et" onmousedown="edMarkDone(event)" title="Mark done (toggle)">✓</button><button class="et" onmousedown="edBoundary(event)" title="Boundary box (toggle)">▢</button><button class="et" onmousedown="edColorBtn(event)" title="Colour">🎨</button><button class="et" onmousedown="edClearFmt(event)" title="Clear formatting (also resets custom text size)">✗A</button><span class="esep"></span><button class="et" onmousedown="edFontStep(event,1)" title="Bigger text (selection, or the whole line at the caret)" style="font-size:15px;font-weight:700;line-height:1">A<sup style="font-size:9px">+</sup></button><button class="et" onmousedown="edFontStep(event,-1)" title="Smaller text (selection, or the whole line at the caret)" style="font-size:11px;font-weight:700;line-height:1">A<sup style="font-size:9px">−</sup></button><button class="et" onmousedown="edFontStep(event,0)" title="Reset text size to 100%" style="font-size:12px;font-weight:700;line-height:1">A↺</button><span class="esep"></span><button class="et" onmousedown="ec(event,'justifyLeft')" title="Align left"><span class="al-ic al-l"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyCenter')" title="Align center"><span class="al-ic al-c"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyRight')" title="Align right"><span class="al-ic al-r"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyFull')" title="Justify"><span class="al-ic al-j"><span></span><span></span><span></span></span></button><button class="et fl-pop-x" onmousedown="event.preventDefault()" onclick="_closeStickyPop('eb-pop')" title="Close this menu">✕</button></div><div id="tab-picker" style="top: 49px; left: 1779.03px; transform: none; bottom: auto;" class=""><div class="tp-hd">Add note to Tab bar<button class="tp-cls" onclick="closeTabPicker()" title="Close">✕</button></div><input class="tp-inp" id="tp-inp" type="text" placeholder="Type to search notes…" oninput="renderTabPickerList(this.value)" onkeydown="if(event.key==='Escape')closeTabPicker()" autocomplete="off"><div class="tp-list" id="tp-list"><div class="tp-it" onclick="addToTabPicker('mss0fvzjzzr')"><span>QuranREVIVAL - PROMPT - FINETUNING v07.00</span><span class="tp-it-sub">📁 (01) QuranRevival APP</span></div><div class="tp-it" onclick="addToTabPicker('mscgu6kuhqo')"><span>Siyagah FINETUNING</span><span class="tp-it-sub">📁 (02.01) Siyagah - FINETUNING ALL</span></div><div class="tp-it" onclick="addToTabPicker('ms6nyi34ffe')"><span>Siyagah - FINETUNING</span><span class="tp-it-sub">📁 (01.01) QuranRevival - PROMTPS - Quran</span></div><div class="tp-it" onclick="addToTabPicker('mrmm212uqrg')"><span>Siyagah - PROMPT - SECOND Pane</span><span class="tp-it-sub">📁 (02.05) Siyagah - SECOND (2nd) Pane Prompt</span></div></div></div></body></html>
