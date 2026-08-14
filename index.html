@@ -14335,8 +14335,17 @@ async function initSync(cfg){
        HTTP requests only when the streaming channel is blocked/broken, so
        unaffected networks are untouched. Must be set before any Firestore
        call on this instance — placed immediately after creation, before the
-       docRef below issues one. */
-    try{ _syncFsDb.settings({experimentalAutoDetectLongPolling:true, merge:true}); }catch(e){ console.error('Firestore settings():',e); }
+       docRef below issues one.
+       v03.91.03 — auto-detect still failed on this network (Write/channel
+       requests hung ~45-51s then got killed with HTTP 400 — a proxy cutting
+       long-lived connections, regardless of transport). Forcing long-polling
+       outright instead of auto-detecting, in case detection itself was
+       misjudging this network. If this network still fails the same way,
+       the cause is the office proxy/firewall's own connection-time limit on
+       firestore.googleapis.com, which no client-side setting can work around
+       — would need IT to exempt that domain, or syncing from a different
+       network. */
+    try{ _syncFsDb.settings({experimentalForceLongPolling:true, merge:true}); }catch(e){ console.error('Firestore settings():',e); }
     const docRef=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
 
     /* Real-time listener — fires immediately with current cloud state,
