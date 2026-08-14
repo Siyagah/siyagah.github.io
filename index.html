@@ -14336,7 +14336,7 @@ async function initSync(cfg){
        unaffected networks are untouched. Must be set before any Firestore
        call on this instance — placed immediately after creation, before the
        docRef below issues one. */
-    try{ _syncFsDb.settings({experimentalAutoDetectLongPolling:true}); }catch(e){ console.error('Firestore settings():',e); }
+    try{ _syncFsDb.settings({experimentalAutoDetectLongPolling:true, merge:true}); }catch(e){ console.error('Firestore settings():',e); }
     const docRef=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
 
     /* Real-time listener — fires immediately with current cloud state,
