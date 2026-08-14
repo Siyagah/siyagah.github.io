@@ -10,7 +10,7 @@
      Claude: on every delivery, read this value, bump it per the rule
      above, update it here, and name the downloaded file
      "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.93">
+<meta name="app-version" content="03.94">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1833,7 +1833,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.93</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.94</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button>
       <button class="btn bn bi" onclick="openGlobalSearch()" style="font-size:20px" title="Search (Ctrl+K)">🔍</button>
@@ -14400,22 +14400,31 @@ async function initSync(cfg){
        rejects ("cannot be used together"). Explicitly turning auto-detect
        off removes the ambiguity instead of relying on merge.
 
-       v03.92.01 — forcing long-polling was applied to EVERY device on every
-       network, when it was only ever needed to get around one office
-       proxy. Long-polling delivers remote changes on poll boundaries instead
-       of over the persistent WebChannel stream, so it added seconds of
-       latency to every cross-device update for every user, everywhere —
-       a permanent tax paid by all to work around one firewall.
-       It is now per-device and sticky: auto-detect (the fast streaming
-       path) is the default, and a device only pins itself to forced
-       long-polling after the listener has actually failed repeatedly on
-       this network. The office case still self-heals; nobody else pays. */
+       v03.92.01 made auto-detect the default and only pinned a device to
+       forced long-polling after three listener ERRORS.
+
+       v03.93.01 reverts that: forced long-polling is the default again.
+       The reasoning behind 03.92.01 — "don't tax every network to work
+       around one firewall" — was wrong for this app. The v03.91.03 note
+       above already recorded what actually happens on these networks: the
+       streaming channel HANGS for 45-51s before dying, which is exactly the
+       ~1 minute sync delay reported after 03.92.01 shipped. Worse, a
+       channel that hangs and then silently recovers never surfaces three
+       errors, so the sticky fallback never engaged and the device stayed on
+       the slow path indefinitely.
+       Long-polling in Firestore is a hanging GET that returns as soon as
+       data changes, not a fixed-interval poll, so it is near-realtime on a
+       healthy network and merely avoids the hang on a hostile one. Set
+       localStorage 'siyagah-sync-stream' = '1' on a device to try the
+       streaming path there instead. */
     try{
-      _syncFsDb.settings(_forcedLongPolling()
-        ? {experimentalForceLongPolling:true,  experimentalAutoDetectLongPolling:false}
-        : {experimentalForceLongPolling:false, experimentalAutoDetectLongPolling:true});
+      _syncFsDb.settings(_preferStreaming()
+        ? {experimentalForceLongPolling:false, experimentalAutoDetectLongPolling:true}
+        : {experimentalForceLongPolling:true,  experimentalAutoDetectLongPolling:false});
     }catch(e){ console.error('Firestore settings():',e); }
     const docRef=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
+    _syncDocRef=docRef;
+    _startReconcile();   /* safety net — see _reconcileNow() */
 
     /* Real-time listener — fires immediately with current cloud state,
        then again on every remote change */
@@ -14747,11 +14756,20 @@ async function _readCloudDB(nb, md){
   for(let attempt=0;attempt<4;attempt++){
     if(attempt) await _syncSleep(150*attempt);
     let snaps;
+    /* v03.93.01 — read chunks from the SERVER, not the SDK's local cache.
+       A plain get() is cache-permissive: when the realtime channel is
+       unhealthy the SDK can keep answering with the chunk bodies it already
+       has, which still carry the PREVIOUS ver. Every retry then sees the
+       same stale data, the version check keeps rejecting it, and the update
+       is dropped for good — a remote change that never arrives, however
+       long you wait. The final attempt falls back to a cache-permissive
+       read so a genuinely offline device can still assemble what it has. */
+    const src=(attempt<3)?'server':'default';
     try{
       snaps=await Promise.all(
-        Array.from({length:n},(_,i)=>nb.collection("chunks").doc(String(i)).get())
+        Array.from({length:n},(_,i)=>nb.collection("chunks").doc(String(i)).get({source:src}))
       );
-    }catch(e){ console.error('chunk fetch:',e); continue; }
+    }catch(e){ console.error('chunk fetch ('+src+'):',e); continue; }
     const parts=[]; let torn=false;
     for(const c of snaps){
       if(!c.exists){ torn=true; break; }
@@ -14870,23 +14888,77 @@ function flushPendingPush(){
 
    Concurrent snapshots are also serialised now: two overlapping pulls used
    to each fan out a full chunk-read storm against the same document. */
-const _SYNC_TRANSPORT_SK='siyagah-sync-longpoll';
+const _SYNC_STREAM_SK='siyagah-sync-stream';
 let _pullInFlight=false, _pullQueued=null, _pullRetryTimer=null, _pullFailures=0;
 
-function _forcedLongPolling(){
-  try{ return localStorage.getItem(_SYNC_TRANSPORT_SK)==='1'; }catch(e){ return false; }
+/* Opt-in escape hatch: try the WebChannel streaming transport on this
+   device. Off by default — see the settings() call in initSync(). */
+function _preferStreaming(){
+  try{ return localStorage.getItem(_SYNC_STREAM_SK)==='1'; }catch(e){ return false; }
 }
-/* Pin this device to long-polling only after the streaming channel has
-   genuinely failed several times here — then reconnect on the slow-but-
-   reliable transport. Takes effect on the next connection. */
+/* A listener error means the realtime channel is unhealthy. The reconcile
+   poll below is what actually keeps sync working through this, so all this
+   needs to do is make sure the poll is running and the listener gets
+   rebuilt. */
 function _noteTransportFailure(){
-  if(_forcedLongPolling())return;
-  if(++_pullFailures<3)return;
-  try{ localStorage.setItem(_SYNC_TRANSPORT_SK,'1'); }catch(e){}
-  console.warn('Sync: streaming channel failing on this network — pinning to long-polling.');
+  _pullFailures++;
+  console.warn('Sync: listener error #'+_pullFailures+' — reconcile poll continues to cover this.');
+  _scheduleListenerRestart();
 }
 
 const _PULL_MAX_RETRIES=3;
+/* ── Reconcile poll: the safety net under the realtime listener ───────────
+   v03.93.01 — until now, a remote change could ONLY arrive via
+   docRef.onSnapshot(). That made the realtime channel a single point of
+   failure, and on a network that stalls or kills long-lived connections it
+   is exactly the thing that breaks: the listener goes quiet, no error is
+   necessarily raised, and updates simply never arrive — "the PC edit never
+   showed on the Tab, even after five minutes".
+
+   This polls the notebook's parent document on a timer and pulls whenever
+   its ver differs from the last version this device actually applied. It
+   costs one small document read per interval and makes delivery
+   self-healing: even with a completely dead listener, every device
+   converges within one interval. Polling is suspended while the tab is
+   hidden (nothing is on screen to update, and mobile freezes timers anyway)
+   and runs immediately on becoming visible again. */
+const _RECONCILE_MS=15000;
+let _syncDocRef=null, _reconcileTimer=null, _lastAppliedVer=0, _listenerRestartTimer=null;
+
+async function _reconcileNow(){
+  if(!_syncDocRef||_pullInFlight)return;
+  try{
+    const snap=await _syncDocRef.get({source:'server'});
+    if(!snap.exists)return;
+    const md=snap.data();
+    const ver=md&&md.ver;
+    if(ver==null)return;
+    if(ver===_myLastPushVer||ver===_lastAppliedVer)return;   /* already current */
+    console.info('Sync: reconcile poll found ver',ver,'(listener had not delivered it)');
+    await _pullRemote(_syncDocRef, md);
+  }catch(e){ /* offline or blocked — the next tick tries again */ }
+}
+function _startReconcile(){
+  clearInterval(_reconcileTimer);
+  _reconcileTimer=setInterval(()=>{
+    if(document.visibilityState==='hidden')return;
+    _reconcileNow();
+  },_RECONCILE_MS);
+}
+/* Rebuild the listener after an error. onSnapshot retries internally, but a
+   channel that died on a hostile proxy may not recover on its own. */
+function _scheduleListenerRestart(){
+  if(_listenerRestartTimer)return;
+  _listenerRestartTimer=setTimeout(()=>{
+    _listenerRestartTimer=null;
+    const cfg=getSyncConfig();
+    if(cfg&&cfg.firebaseConfig&&cfg.notebookId){
+      console.info('Sync: rebuilding realtime listener');
+      initSync(cfg);
+    }
+  },5000);
+}
+
 async function _pullRemote(docRef, md, retry){
   if(_pullInFlight){ _pullQueued={docRef,md}; return; }
   _pullInFlight=true;
@@ -14909,6 +14981,9 @@ async function _pullRemote(docRef, md, retry){
       return;
     }
     _pullFailures=0;
+    /* Record what we actually applied, so the reconcile poll can tell a
+       version it has already handled from one the listener never delivered. */
+    if(md&&md.ver!=null)_lastAppliedVer=md.ver;
     const before=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
     /* v03.92.02 — flush BEFORE the merge, never after.
        Flushing afterwards (as v03.92.01 did) was actively destructive: it
@@ -16262,6 +16337,9 @@ document.addEventListener('visibilitychange',()=>{
     /* Coming back: timers were frozen while hidden, so anything still
        queued needs a nudge rather than waiting out a stale debounce. */
     if(_pushPendingSince) flushPendingPush();
+    /* And pull straight away rather than waiting out a reconcile interval —
+       the listener may have been asleep for the whole time we were hidden. */
+    try{ _reconcileNow(); }catch(e){}
   }
 });
 
