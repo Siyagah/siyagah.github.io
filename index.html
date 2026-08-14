@@ -10,7 +10,7 @@
      Claude: on every delivery, read this value, bump it per the rule
      above, update it here, and name the downloaded file
      "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.92">
+<meta name="app-version" content="03.93">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1833,7 +1833,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.92</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.93</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button>
       <button class="btn bn bi" onclick="openGlobalSearch()" style="font-size:20px" title="Search (Ctrl+K)">🔍</button>
@@ -2084,6 +2084,13 @@ function loadDB(){
    Both the main editor and the float-window editors use these.            */
 const _ED_AUTOSAVE_MS     = 1200;
 const _ED_AUTOSAVE_MAX_MS = 2500;
+/* v03.92.02 — when the user last typed into ANY editor, and how long after
+   that an incoming remote change is allowed to refresh the editor on screen.
+   "Edit mode is open" is not the same as "actively typing": a note can sit
+   open in an editor for hours, and a remote update must still be able to
+   reach it. Only a genuinely active typist is protected from a redraw. */
+let _lastEdInputAt = 0;
+const _ED_REMOTE_GRACE_MS = 2000;
 
 let _lsFail = false;
 /* `pre` — an already-serialised DB, passed by callers that have just built
@@ -8381,6 +8388,7 @@ const _fwAutoSince={};
 function _fwScheduleAutoSave(aid){
   clearTimeout(_fwAutoTimer[aid]);
   const now=Date.now();
+  _lastEdInputAt=now;
   if(!_fwAutoSince[aid])_fwAutoSince[aid]=now;
   const d=Math.max(0,Math.min(_ED_AUTOSAVE_MS,_ED_AUTOSAVE_MAX_MS-(now-_fwAutoSince[aid])));
   _fwAutoTimer[aid]=setTimeout(()=>{
@@ -10657,6 +10665,7 @@ function initRichPaste(ed){
   let _asT=null,_asSince=0;
   ed.addEventListener('input',function(){
     const now=Date.now();
+    _lastEdInputAt=now;
     if(!_asSince)_asSince=now;
     clearTimeout(_asT);
     const d=Math.max(0,Math.min(_ED_AUTOSAVE_MS,_ED_AUTOSAVE_MAX_MS-(now-_asSince)));
@@ -14665,6 +14674,64 @@ function _flushAllEditors(){
   }catch(e){ console.error('flush editors:',e); }
 }
 
+/* The exact HTML _flushEd/_fwFlush would store for this editor, so "is the
+   editor already in step with DB?" is asked the same way it is answered. */
+function _edCleanHTML(ed){
+  const c=ed.cloneNode(true);
+  c.querySelectorAll('.ann-inline-card').forEach(n=>n.remove());
+  try{ _edColClean(c); }catch(e){}
+  return c.innerHTML;
+}
+
+/* v03.92.02 — push a merged remote change INTO an open editor.
+   _renderPreserveEdit() deliberately refuses to rebuild the editor panes so
+   a typist's caret survives a background sync, but it keys off ST.editing —
+   "edit mode is open" — which is not the same as "actively typing". A note
+   left open in an editor could therefore never receive a remote update on
+   screen, which is exactly the reported "the Tab edit never showed up on
+   Mobile". This applies the merged text when the user is demonstrably idle,
+   and leaves an active typist alone (their own edit is newer and has
+   already won the merge, so the editor is correct as it stands). */
+let _edRemoteToastAt=0;
+function _edApplyRemote(){
+  if(Date.now()-_lastEdInputAt < _ED_REMOTE_GRACE_MS) return;   /* still typing */
+  let changed=false;
+  const put=(ed,a)=>{
+    if(!ed||!a)return;
+    /* A focused editor gets a longer grace: the user may simply be pausing
+       mid-thought, and replacing innerHTML drops the caret. */
+    const grace=(document.activeElement===ed)?5000:_ED_REMOTE_GRACE_MS;
+    if(Date.now()-_lastEdInputAt < grace) return;
+    const want=a.content||'';
+    if(_edCleanHTML(ed)===want) return;                          /* already in step */
+    const sc=ed.scrollTop;
+    ed.innerHTML=(typeof _isPlaceholder==='function'&&_isPlaceholder(want))?'':want;
+    ed.scrollTop=sc;
+    /* Listeners live on the editor element itself, not its children, so they
+       survive the swap — initRichPaste must NOT be re-run here or every
+       handler would be bound a second time. Only the per-child fold arrows
+       need rebuilding. */
+    try{ _edColInit(ed); }catch(e){}
+    changed=true;
+  };
+  try{
+    const ed=document.getElementById('ed');
+    if(ST.editing && ed && ed.dataset.aid===ST.article)
+      put(ed, DB.articles.find(x=>x.id===ST.article));
+  }catch(e){ console.error('apply remote to editor:',e); }
+  try{
+    document.querySelectorAll('.float-win').forEach(w=>{
+      const aid=(w.id||'').slice(3); if(!aid)return;
+      put(document.getElementById('fw-ed-'+aid), DB.articles.find(x=>x.id===aid));
+    });
+  }catch(e){ console.error('apply remote to float editor:',e); }
+  /* One notice per burst, not one per open editor. */
+  if(changed && Date.now()-_edRemoteToastAt>4000){
+    _edRemoteToastAt=Date.now();
+    try{ toast('☁ This note was updated on another device'); }catch(e){}
+  }
+}
+
 /* Read the chunk set for a given parent-doc version.
    v03.92.01 — chunks are now fetched in PARALLEL and a torn read is RETRIED.
    Previously the loop fetched them one at a time (n serial round-trips) and
@@ -14843,17 +14910,24 @@ async function _pullRemote(docRef, md, retry){
     }
     _pullFailures=0;
     const before=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
+    /* v03.92.02 — flush BEFORE the merge, never after.
+       Flushing afterwards (as v03.92.01 did) was actively destructive: it
+       re-committed the on-screen DOM over whatever the merge had just
+       accepted and stamped a FRESH updatedAt while doing so. A note merely
+       sitting open in an editor on this device would therefore overwrite a
+       genuine edit from another device and then push the stale text back
+       out, clobbering that edit everywhere. Editing was not required — an
+       open editor was enough.
+       Flushing first instead lets any real local edit enter the merge with
+       an honest timestamp and win or lose on its own merits: an active
+       typist's text is newer and wins, an untouched open note is a no-op
+       flush and correctly loses to the incoming change. */
+    _flushAllEditors();
     DB=mergeDB(DB, remoteDB);                  /* MERGE — never replace, so nothing is lost */
     const after=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
-    /* If a note is open in an editor, the merge may have replaced its stored
-       content while the live DOM still shows what the user is typing. Commit
-       the visible text straight back so DB and screen never disagree — the
-       on-screen version is the one the user believes is saved. _flushEd /
-       _fwFlush no-op when nothing actually differs, so this is free in the
-       common case and cannot start a feedback loop. */
-    _flushAllEditors();
     _save();
     _renderPreserveEdit();
+    _edApplyRemote();   /* let the merged text reach an open, idle editor */
     if(remoteT>_lastSyncTime){_lastSyncTime=remoteT;localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);}
     if(after>before) toast('☁ Merged entries from another device');
     setSyncStatus('live');
