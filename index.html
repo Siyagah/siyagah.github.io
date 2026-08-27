@@ -10,7 +10,7 @@
      Claude: on every delivery, read this value, bump it per the rule
      above, update it here, and name the downloaded file
      "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.95">
+<meta name="app-version" content="03.96">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1833,7 +1833,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.95</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.96</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button>
       <button class="btn bn bi" onclick="openGlobalSearch()" style="font-size:20px" title="Search (Ctrl+K)">🔍</button>
@@ -14403,6 +14403,47 @@ function _loadScript(src){
   });
 }
 
+/* v03.96 — the deepest sync bug found wasn't a race at all: it was
+   silence. Three separate catch blocks below (the realtime listener's
+   error callback, _pullRemote()'s catch, and its retries-exhausted branch)
+   each either logged to a console nobody reads or — worse — called
+   setSyncStatus('live') on the way OUT of a genuine failure, so the tiny
+   toolbar dot confidently said "Live" while sync had not actually
+   delivered anything for however long the underlying problem persisted.
+   A three-device convergence test (realtime listener killed on two of
+   three simulated devices, forcing them onto reconcile-poll-only) showed
+   the push/pull/merge engine itself converges in ~15s even in that
+   worst case — so a real report of "still not synced after 10 minutes"
+   almost certainly means Firestore is actively REJECTING the read/write
+   (most commonly: the "test mode" security rules this app's own setup
+   instructions tell you to create expire automatically after 30 days,
+   after which every request comes back permission-denied) rather than
+   being merely slow. That is exactly the failure this silently
+   swallowed. This surfaces it: one throttled, honest toast naming the
+   actual cause, instead of a red dot nobody is watching. */
+let _syncErrToastAt=0, _syncErrLastCode='', _lastSyncErr=null;
+function _syncErrorToast(err){
+  try{
+    const code=(err&&err.code)||'';
+    _lastSyncErr={code,message:(err&&err.message)||String(err||'unknown'),at:Date.now()};
+    const now=Date.now();
+    /* Always show a NEW kind of failure immediately; otherwise throttle
+       repeats of the same one to once a minute so a persistent outage
+       doesn't spam toasts forever. */
+    if(code===_syncErrLastCode && now-_syncErrToastAt<60000) return;
+    _syncErrLastCode=code; _syncErrToastAt=now;
+    if(code==='permission-denied'){
+      toast('☁ Firebase is REJECTING sync (permission-denied). If this notebook was set up in "test mode", those Firestore rules auto-expire after 30 days — open the Firebase console → Firestore Database → Rules and allow access again.', 12000);
+    }else if(code==='resource-exhausted'){
+      toast('☁ Firebase quota exceeded — sync is paused until the free-tier quota resets (usually within 24h), or upgrade the project plan.', 10000);
+    }else if(code){
+      toast('☁ Sync error ('+code+'): '+((err&&err.message)||'unknown')+' — this device is NOT syncing until it clears.', 9000);
+    }else{
+      toast('☁ Sync error: '+((err&&err.message)||err||'unknown')+' — this device is NOT syncing until it clears.', 9000);
+    }
+  }catch(e){}
+}
+
 async function initSync(cfg){
   setSyncStatus('conn');
   try{
@@ -14483,6 +14524,7 @@ async function initSync(cfg){
     },err=>{
       console.error('Sync listener:',err);
       setSyncStatus('err');
+      _syncErrorToast(err);
       _noteTransportFailure();
     });
 
@@ -14889,7 +14931,7 @@ async function _doPush(){
     _pushFailures++;
     setSyncStatus('err');
     console.error('Push error:',e);
-    if(_pushFailures===1) toast('☁ Sync push failed — retrying…');
+    if(_pushFailures===1) _syncErrorToast(e);
     else if(_pushFailures===4) toast('☁ Still cannot reach the cloud: '+((e&&e.message)||e), 6000);
     /* Exponential backoff, capped, so a flaky link recovers on its own. */
     const wait=Math.min(30000, 1000*Math.pow(2,Math.min(_pushFailures,5)));
@@ -14980,7 +15022,21 @@ async function _reconcileNow(){
     if(ver===_myLastPushVer||ver===_lastAppliedVer)return;   /* already current */
     console.info('Sync: reconcile poll found ver',ver,'(listener had not delivered it)');
     await _pullRemote(_syncDocRef, md);
-  }catch(e){ /* offline or blocked — the next tick tries again */ }
+  }catch(e){
+    /* v03.96 — this used to swallow EVERY error here, including ones that
+       are never going to clear on their own. 'unavailable' (and a bare
+       network TypeError with no .code) really is "offline right now, the
+       next tick tries again" — no need to alarm over that. But
+       'permission-denied' and similar are Firestore actively refusing the
+       request; on a device whose realtime listener is degraded (the exact
+       situation this poll exists to cover), that left the reconcile poll
+       silently failing forever, every 15s, with the toolbar dot never
+       told anything was wrong at all. */
+    if(e&&e.code&&e.code!=='unavailable'){
+      setSyncStatus('err');
+      _syncErrorToast(e);
+    }
+  }
 }
 function _startReconcile(){
   clearInterval(_reconcileTimer);
@@ -15019,8 +15075,20 @@ async function _pullRemote(docRef, md, retry){
         _pullRetryTimer=setTimeout(()=>_pullRemote(docRef, md, (retry||0)+1), 1500);
         setSyncStatus('busy');
       }else{
-        if(md&&md.n) console.warn('Sync: could not assemble remote notebook ver',md.ver);
-        setSyncStatus('live');
+        /* v03.96 — this used to call setSyncStatus('live') here, actively
+           claiming success on the way out of a pull that never actually
+           assembled. A permanently-unreadable notebook (e.g. Firestore
+           denying the chunk reads) then showed a calm green "Live" dot
+           forever, with the only trace being a console.warn nobody was
+           watching. A device that gave up without ever reading this
+           update is not live. */
+        if(md&&md.n){
+          console.warn('Sync: could not assemble remote notebook ver',md.ver);
+          setSyncStatus('err');
+          _syncErrorToast({message:'could not read the notebook from the cloud after several attempts'});
+        }else{
+          setSyncStatus('live');
+        }
       }
       return;
     }
@@ -15053,8 +15121,16 @@ async function _pullRemote(docRef, md, retry){
     const rc=(remoteDB.articles||[]).length+(remoteDB.folders||[]).length+(remoteDB.trash||[]).length;
     if(after>rc) pushToCloud();                /* propagate records the cloud is missing */
   }catch(e){
+    /* v03.96 — this used to call setSyncStatus('live') here too, on the way
+       out of a genuinely failed pull (e.g. Firestore returning
+       permission-denied, or a malformed remote document throwing inside
+       mergeDB). That is precisely how a completely broken sync pipeline
+       could go unnoticed indefinitely: every remote change silently
+       failed to apply, while the toolbar confidently said everything was
+       fine. */
     console.error('sync merge:',e);
-    setSyncStatus('live');
+    setSyncStatus('err');
+    _syncErrorToast(e);
   }finally{
     _pullInFlight=false;
     if(_pullQueued){ const q=_pullQueued; _pullQueued=null; _pullRemote(q.docRef, q.md); }
@@ -15066,6 +15142,42 @@ function generateNotebookId(){
   return 'nb-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
 }
 
+/* v03.96 — answers "is this device's sync actually working, and if not,
+   why" without guessing. Every prior sync bug report across this project's
+   history has ended up needing exactly this information (signed in? last
+   successful push? any errors?) reconstructed by hand from console logs a
+   session later. Putting it in the modal itself means the user can just
+   look, on the exact device that seems stuck, right now. */
+function _syncAgo(ms){
+  if(!ms)return 'never';
+  const s=Math.max(0,Math.round((Date.now()-ms)/1000));
+  if(s<5)return 'just now';
+  if(s<60)return s+'s ago';
+  const m=Math.round(s/60); if(m<60)return m+'m ago';
+  const h=Math.round(m/60); if(h<48)return h+'h ago';
+  return Math.round(h/24)+'d ago';
+}
+function _syncDiagnosticsHTML(){
+  const dotEl=document.getElementById('sync-dot');
+  const statusTxt=dotEl?dotEl.title:'unknown';
+  const rows=[
+    ['Realtime listener', _syncUnsub?('connected — '+statusTxt):'not connected'],
+    ['Reconcile poll (15s safety net)', _reconcileTimer?'running':'not running'],
+    ['Last successful sync', _syncAgo(_lastSyncTime)],
+    ['Push failures since load', String(_pushFailures||0)],
+    ['Pull failures since load', String(_pullFailures||0)],
+  ];
+  let h='<table style="width:100%;font-size:11px;border-collapse:collapse">'
+    +rows.map(([k,v])=>`<tr><td style="padding:2px 8px 2px 0;color:var(--t3);white-space:nowrap">${k}</td><td style="padding:2px 0;font-family:monospace">${esc(String(v))}</td></tr>`).join('')
+    +'</table>';
+  if(_lastSyncErr){
+    h+=`<div style="margin-top:8px;padding:8px;border-radius:6px;background:#c0392b18;color:#c0392b;font-size:11px;line-height:1.5">`
+      +`<strong>Last error</strong> (${_syncAgo(_lastSyncErr.at)}): ${esc(_lastSyncErr.code||'')} ${esc(_lastSyncErr.message||'')}`
+      +(_lastSyncErr.code==='permission-denied'?'<br>This almost always means the Firestore security rules for this project are denying access — if this notebook was set up in "test mode", those rules auto-expire after 30 days. Open the Firebase console → Firestore Database → Rules and allow access again.':'')
+      +`</div>`;
+  }
+  return h;
+}
 function openSyncModal(){
   closeSBMenu();
   const cfg=getSyncConfig();
@@ -15083,6 +15195,10 @@ function openSyncModal(){
         <button class="btn bp" onclick="navigator.clipboard.writeText('${nbId}').then(()=>toast('Copied ✓'))">Copy</button>
       </div>
       <small style="color:var(--t3);font-size:11px">Use this same ID on every device</small>
+    </div>
+    <div class="mm" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2)">
+      <div style="font-size:11.5px;font-weight:600;color:var(--t2);margin-bottom:6px">🩺 Diagnostics — on THIS device</div>
+      ${_syncDiagnosticsHTML()}
     </div>
     <div class="mm" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2)">
       <div style="font-size:11.5px;font-weight:600;color:var(--t2);margin-bottom:6px">🔄 Migrating from a previous setup?</div>
