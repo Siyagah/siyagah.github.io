@@ -10,7 +10,7 @@
      Claude: on every delivery, read this value, bump it per the rule
      above, update it here, and name the downloaded file
      "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.94">
+<meta name="app-version" content="03.95">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1833,7 +1833,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.94</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.95</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button>
       <button class="btn bn bi" onclick="openGlobalSearch()" style="font-size:20px" title="Search (Ctrl+K)">🔍</button>
@@ -2084,6 +2084,26 @@ function loadDB(){
    Both the main editor and the float-window editors use these.            */
 const _ED_AUTOSAVE_MS     = 1200;
 const _ED_AUTOSAVE_MAX_MS = 2500;
+/* v03.95 — root cause of "renamed a note, other devices never saw the new
+   title" (and, worse, "new note synced but stayed Untitled"): the #ti title
+   input only ever did oninput="ST.etitle=this.value" — an in-memory write
+   with no autosave, no persist(), no pushToCloud(). A title-only edit (the
+   overwhelmingly common case right after creating a note, or a quick
+   rename) sat unpersisted until something UNRELATED happened to flush the
+   editor — another keystroke in the body, or navigating away. Floating
+   note windows never had this gap: their #fw-ti-* input has always called
+   _fwScheduleAutoSave() on input (see _fwCreate). This gives the main
+   editor's title field the same debounced autosave, reusing _edAutoSave()
+   (which already commits ST.etitle alongside the body via _flushEd()). */
+let _tiAsT=null,_tiAsSince=0;
+function _tiScheduleAutoSave(){
+  const now=Date.now();
+  _lastEdInputAt=now;
+  if(!_tiAsSince)_tiAsSince=now;
+  clearTimeout(_tiAsT);
+  const d=Math.max(0,Math.min(_ED_AUTOSAVE_MS,_ED_AUTOSAVE_MAX_MS-(now-_tiAsSince)));
+  _tiAsT=setTimeout(function(){_tiAsSince=0;_edAutoSave();},d);
+}
 /* v03.92.02 — when the user last typed into ANY editor, and how long after
    that an incoming remote change is allowed to refresh the editor on screen.
    "Edit mode is open" is not the same as "actively typing": a note can sit
@@ -3011,7 +3031,7 @@ function renderP3C(){
      if(_le&&_le.dataset.aid===curA.id){const _c=_le.cloneNode(true);_c.querySelectorAll('.ann-inline-card').forEach(n=>n.remove());_edColClean(_c);curA.content=_c.innerHTML;if(ST.etitle!=null)curA.title=ST.etitle.trim();}}
     const _mobE2=window.innerWidth<1200;
     el.innerHTML=(_mobE2?kindBarHTML(curA):'')
-      +`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML()}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value"><span id="save-flash" class="save-flash">✓ Saved</span></div>`
+      +`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML()}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span></div>`
       +_versionStripHTML(curA)
       +(_mobE2?_edColToolbarHTML():'')+_dateLineHTML(curA)+_fieldsPanelHTML(curA)+`<div id="ed" data-aid="${curA.id}" contenteditable="true" spellcheck="true"></div>`;
     if(_tiF2){const _tin=document.getElementById('ti');if(_tin){_tin.focus({preventScroll:true});try{_tin.setSelectionRange(_s2,_e2);}catch(e){}}}
@@ -3147,7 +3167,31 @@ function saveArt(){
   /* Contact form mode — save fields directly */
   const _cfa=DB.articles.find(x=>x.id===ST.article);
   if(_cfa?.contactData?.mode==='form'){_saveContactForm(_cfa);return;}
-  const ed=document.getElementById('ed');if(!ed){ST.editing=false;return;}const a=DB.articles.find(x=>x.id===ST.article);if(!a){ST.editing=false;return;}a.title=ST.etitle.trim();const _edc=ed.cloneNode(true);_edc.querySelectorAll('.ann-inline-card').forEach(n=>n.remove());_edColClean(_edc);a.content=_edc.innerHTML;a.folderIds=ST.efolders;a.tags=ST.etags;a.updatedAt=new Date().toISOString();_captureNoteHistory(a,'save');if(!DB.theme)DB.theme={};DB.theme.lastEditedArticle=a.id;persist();ST.editing=false;renderP2C();renderP3H();renderP3C();adjustP3Layout();}
+  const ed=document.getElementById('ed');if(!ed){ST.editing=false;return;}const a=DB.articles.find(x=>x.id===ST.article);if(!a){ST.editing=false;return;}
+  /* v03.95 — same fix as _flushEd()/_fwFlush(): only stamp updatedAt (and
+     therefore only push) when something actually changed. This used to
+     unconditionally re-stamp on EVERY exit from edit mode, including one
+     where the user opened a note, changed nothing, and simply navigated
+     away — a far more common trigger than the autosave ticks _flushEd was
+     originally fixed for, since selArt()/selFolder() call saveArt() on
+     every such exit. That phantom "edit" always carried the newest
+     timestamp of the two devices, so it silently beat and discarded a
+     genuine concurrent edit from another device on the next merge — this
+     is the real explanation for edits (or the correct title) reverting
+     after sync "finished". */
+  const title=ST.etitle.trim();
+  const _edc=ed.cloneNode(true);_edc.querySelectorAll('.ann-inline-card').forEach(n=>n.remove());_edColClean(_edc);
+  const content=_edc.innerHTML;
+  const _sameArr=(x,y)=>JSON.stringify(x||[])===JSON.stringify(y||[]);
+  const _changed=a.title!==title||a.content!==content||!_sameArr(a.folderIds,ST.efolders)||!_sameArr(a.tags,ST.etags);
+  a.title=title;a.content=content;a.folderIds=ST.efolders;a.tags=ST.etags;
+  if(_changed){
+    a.updatedAt=new Date().toISOString();
+    _captureNoteHistory(a,'save');
+    if(!DB.theme)DB.theme={};DB.theme.lastEditedArticle=a.id;
+    persist();
+  }
+  ST.editing=false;renderP2C();renderP3H();renderP3C();adjustP3Layout();}
 /* ══ Search: remember + restore across panes (v03.64.01) ═══════════════════
    Previously, clicking any search result (note/folder/tag/type) cleared the
    search entirely — there was no way back to that same result list without
