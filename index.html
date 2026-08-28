@@ -10,7 +10,7 @@
      Claude: on every delivery, read this value, bump it per the rule
      above, update it here, and name the downloaded file
      "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.96">
+<meta name="app-version" content="03.97">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1833,7 +1833,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.96</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.97</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button>
       <button class="btn bn bi" onclick="openGlobalSearch()" style="font-size:20px" title="Search (Ctrl+K)">🔍</button>
@@ -2058,6 +2058,38 @@ function loadDB(){
       });
     }
     if(touched) _save();
+  })();
+  /* v03.97 — root cause of "browser storage is full" on every device: images
+     are embedded as base64 data: URIs directly in a note's content (see
+     edImgPick()/readAsDataURL), and Note History (below) was storing a FULL
+     copy of that content — image and all — in every snapshot it captures.
+     Its own byte budget (NH_CFG.maxBytes=80000) cannot shrink a note whose
+     SINGLE snapshot already exceeds it on its own; the prune loop stops at
+     one remaining entry (see _pruneNoteHistory's `h.length>1` guard), so a
+     heavily-edited note with one embedded photo could carry up to
+     NH_CFG.maxCount (40) full duplicates of that same image. Cloud sync
+     then faithfully copies that bloat to every other device, which is
+     exactly why the quota warning showed up "on all platforms" together —
+     they were all storing the same oversized notebook.
+     _stripHistoryImages() (defined with Note History below) now keeps
+     future snapshots image-free. This migration runs once to retroactively
+     strip embedded images already sitting in existing history entries —
+     the LIVE note content is never touched, only the historical replay
+     copies, which were always meant to be a lightweight trail, not a photo
+     album. Because this only trims a side-log and never changes what the
+     note currently says, it deliberately does NOT bump updatedAt — see the
+     comment on _stripHistoryImages for why that matters for sync. */
+  (function _migrateStripHistoryImages(){
+    let touched=false;
+    (DB.articles||[]).forEach(a=>{
+      if(!a||!Array.isArray(a.noteHistory)||!a.noteHistory.length)return;
+      a.noteHistory.forEach(v=>{
+        if(!v||!v.content||v.content.indexOf('data:')===-1)return;
+        const stripped=_stripHistoryImages(v.content);
+        if(stripped!==v.content){v.content=stripped;touched=true;}
+      });
+    });
+    if(touched){ _save(); try{pushToCloud();}catch(e){} }
   })();
   snapshotState();
 }
@@ -11464,6 +11496,33 @@ async function tryUnlockFolder(fid){
    count-cap prune that runs after every capture, so one giant note can
    never alone balloon the embedded data block. ────────────────────── */
 const NH_CFG={minGapSec:30,maxCount:40,maxBytes:80000,maxAgeDays:7};
+/* v03.97 — embedded (base64 data:) images made a single note-history
+   snapshot able to blow straight through NH_CFG.maxBytes on its own, which
+   defeats the byte-budget prune below (it can never go under 1 remaining
+   entry) and meant up to maxCount (40) full copies of the same image could
+   pile up in one note's history. History exists to let you read back what
+   a note SAID at an earlier point — not to be a photo archive; the live
+   note (a.content) keeps every image, untouched, always. This strips only
+   the copy going into the snapshot.
+   Deliberately does not affect a.updatedAt: stripping an image from a
+   HISTORICAL snapshot doesn't change what the note currently says, so it
+   must never be treated as an edit that could win — or lose — a sync
+   merge against a genuine content change on another device. */
+function _stripHistoryImages(html){
+  if(!html||html.indexOf('data:')===-1)return html;
+  try{
+    const d=document.createElement('div');
+    d.innerHTML=html;
+    let changed=false;
+    d.querySelectorAll('img[src^="data:"]').forEach(img=>{
+      img.removeAttribute('src');
+      img.setAttribute('data-history-image-omitted','1');
+      img.alt=(img.getAttribute('alt')||'')+' [image omitted from history to save space]';
+      changed=true;
+    });
+    return changed?d.innerHTML:html;
+  }catch(e){ return html; }
+}
 function _captureNoteHistory(a,reason,force){
   if(!a)return;
   if(!a.noteHistory)a.noteHistory=[];
@@ -11474,7 +11533,7 @@ function _captureNoteHistory(a,reason,force){
     if(gapSec<NH_CFG.minGapSec)return;
     if(last.content===(a.content||'')&&last.title===(a.title||''))return;
   }
-  a.noteHistory.push({id:uid(),ts:new Date(nowMs).toISOString(),title:a.title||'',content:a.content||'',reason:reason||'auto'});
+  a.noteHistory.push({id:uid(),ts:new Date(nowMs).toISOString(),title:a.title||'',content:_stripHistoryImages(a.content||''),reason:reason||'auto'});
   _pruneNoteHistory(a);
 }
 function _pruneNoteHistory(a){
