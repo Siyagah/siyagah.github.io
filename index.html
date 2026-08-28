@@ -346,7 +346,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 /* Modal */
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:10000}
 #ov.on{display:flex}
-#mb{background:var(--white);border-radius:13px;padding:22px;width:400px;max-width:93vw}
+#mb{position:relative;background:var(--white);border-radius:13px;padding:22px;width:400px;max-width:93vw}
 .mt{font-size:15px;font-weight:500;margin-bottom:12px;color:var(--t1)}
 .mi{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13.5px;outline:none;font-family:var(--ui);color:var(--t1);background:var(--paper);margin-bottom:14px}
 .mi:focus{border-color:var(--green)}
@@ -359,6 +359,31 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
  .pk-chev{display:inline-block;width:14px;text-align:center;color:var(--t3);cursor:pointer;font-size:11px;flex-shrink:0;user-select:none}
  .pk-chev-sp{cursor:default}
 .pc.on{background:var(--green);border-color:var(--green)}
+.pr.drg{opacity:.35}
+.pr.dob{box-shadow:inset 0 2px 0 0 var(--green)}
+.pr.doa{box-shadow:inset 0 -2px 0 0 var(--green)}
+.pr.doi{background:rgba(27,122,70,.18)!important;border-radius:4px}
+.pr.pk-target{outline:1.5px dashed var(--green);outline-offset:-2px;border-radius:4px}
+.pk-acts{display:flex;gap:2px;margin-left:4px;flex-shrink:0}
+.pk-act{font-size:11px;opacity:.5;cursor:pointer;padding:3px 4px;border-radius:4px;flex-shrink:0}
+.pk-act:hover{opacity:1;background:var(--paper)}
+.pk-rn-inp{flex:1;font-size:13px;padding:2px 5px;border:1px solid var(--green);border-radius:4px;font-family:var(--ui);color:var(--t1);background:var(--white);min-width:0}
+.pk-target-lbl{font-size:11px;color:var(--t3);margin:0 0 6px;display:flex;align-items:center;gap:6px}
+.pk-target-clear{cursor:pointer;opacity:.6}
+.pk-target-clear:hover{opacity:1}
+/* Resizable modal (folder picker) */
+#mb.mb-rsz{display:flex;flex-direction:column;overflow:hidden}
+#mb.mb-rsz>*{flex-shrink:0}
+#mb.mb-rsz>.pl{flex:1;min-height:60px;max-height:none;overflow-y:auto}
+.rsz{position:absolute;z-index:6}
+.rsz-n{top:-5px;left:12px;right:12px;height:9px;cursor:ns-resize}
+.rsz-s{bottom:-5px;left:12px;right:12px;height:9px;cursor:ns-resize}
+.rsz-e{right:-5px;top:12px;bottom:12px;width:9px;cursor:ew-resize}
+.rsz-w{left:-5px;top:12px;bottom:12px;width:9px;cursor:ew-resize}
+.rsz-ne{top:-6px;right:-6px;width:16px;height:16px;cursor:nesw-resize;z-index:7}
+.rsz-nw{top:-6px;left:-6px;width:16px;height:16px;cursor:nwse-resize;z-index:7}
+.rsz-se{bottom:-6px;right:-6px;width:16px;height:16px;cursor:nwse-resize;z-index:7}
+.rsz-sw{bottom:-6px;left:-6px;width:16px;height:16px;cursor:nesw-resize;z-index:7}
 .rn-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .rn-lbl{font-size:11.5px;color:var(--t3);display:block;margin-bottom:4px}
 
@@ -12379,8 +12404,75 @@ function offerAutoNumber(){
 }
 
 /* ── Modals ──────────────────────────────────────────────────────── */
-function showModal(html){document.getElementById('mb').innerHTML=html;document.getElementById('ov').classList.add('on');setTimeout(()=>document.querySelector('#mb .mi')?.focus(),40);}
-function closeModal(){document.getElementById('ov').classList.remove('on');}
+function showModal(html){
+  const mb=document.getElementById('mb');
+  mb.classList.remove('mb-rsz');
+  mb.removeAttribute('style');
+  mb.innerHTML=html;
+  document.getElementById('ov').classList.add('on');
+  setTimeout(()=>document.querySelector('#mb .mi')?.focus(),40);
+}
+function closeModal(){document.getElementById('ov').classList.remove('on');if(_mbRsz)_mbResizeStop();}
+
+/* ── Resizable-modal support (all 8 edges/corners) ─────────────────── */
+const _RSZ_HANDLES_HTML=
+  '<div class="rsz rsz-n" onpointerdown="_mbResizeStart(event,\'n\')"></div>'+
+  '<div class="rsz rsz-s" onpointerdown="_mbResizeStart(event,\'s\')"></div>'+
+  '<div class="rsz rsz-e" onpointerdown="_mbResizeStart(event,\'e\')"></div>'+
+  '<div class="rsz rsz-w" onpointerdown="_mbResizeStart(event,\'w\')"></div>'+
+  '<div class="rsz rsz-ne" onpointerdown="_mbResizeStart(event,\'ne\')"></div>'+
+  '<div class="rsz rsz-nw" onpointerdown="_mbResizeStart(event,\'nw\')"></div>'+
+  '<div class="rsz rsz-se" onpointerdown="_mbResizeStart(event,\'se\')"></div>'+
+  '<div class="rsz rsz-sw" onpointerdown="_mbResizeStart(event,\'sw\')"></div>';
+/** Same as showModal(), but the box is resizable from any edge/corner and
+ *  starts at opts.width/opts.height instead of the default fixed size. */
+function showResizableModal(html,opts){
+  opts=opts||{};
+  showModal(html);
+  const mb=document.getElementById('mb');
+  mb.classList.add('mb-rsz');
+  mb.style.width=opts.width||'440px';
+  mb.style.height=opts.height||'500px';
+  mb.insertAdjacentHTML('beforeend',_RSZ_HANDLES_HTML);
+}
+let _mbRsz=null;
+function _mbResizeStart(ev,dir){
+  ev.preventDefault();ev.stopPropagation();
+  const mb=document.getElementById('mb');if(!mb)return;
+  const rect=mb.getBoundingClientRect();
+  mb.style.position='fixed';
+  mb.style.left=rect.left+'px';
+  mb.style.top=rect.top+'px';
+  mb.style.width=rect.width+'px';
+  mb.style.height=rect.height+'px';
+  mb.style.margin='0';
+  _mbRsz={dir,startX:ev.clientX,startY:ev.clientY,startL:rect.left,startT:rect.top,startW:rect.width,startH:rect.height};
+  document.addEventListener('pointermove',_mbResizeMove);
+  document.addEventListener('pointerup',_mbResizeStop);
+  document.body.style.userSelect='none';
+}
+function _mbResizeMove(ev){
+  if(!_mbRsz)return;
+  const mb=document.getElementById('mb');if(!mb)return;
+  const {dir,startX,startY,startL,startT,startW,startH}=_mbRsz;
+  const dx=ev.clientX-startX,dy=ev.clientY-startY;
+  const minW=300,minH=260;
+  const maxW=window.innerWidth*0.96,maxH=window.innerHeight*0.92;
+  let w=startW,h=startH,l=startL,t=startT;
+  if(dir.includes('e'))w=Math.min(maxW,Math.max(minW,startW+dx));
+  if(dir.includes('s'))h=Math.min(maxH,Math.max(minH,startH+dy));
+  if(dir.includes('w')){w=Math.min(maxW,Math.max(minW,startW-dx));l=startL+(startW-w);}
+  if(dir.includes('n')){h=Math.min(maxH,Math.max(minH,startH-dy));t=startT+(startH-h);}
+  l=Math.max(4,Math.min(l,window.innerWidth-w-4));
+  t=Math.max(4,Math.min(t,window.innerHeight-h-4));
+  mb.style.width=w+'px';mb.style.height=h+'px';mb.style.left=l+'px';mb.style.top=t+'px';
+}
+function _mbResizeStop(){
+  _mbRsz=null;
+  document.removeEventListener('pointermove',_mbResizeMove);
+  document.removeEventListener('pointerup',_mbResizeStop);
+  document.body.style.userSelect='';
+}
 function openModal(type,target){
   if(type==='folder'){
     showModal(`<div class="mt">New folder</div>
@@ -12424,51 +12516,80 @@ function confirmDel(type,id){
     <div class="ma"><button class="btn" onclick="closeModal()">Cancel</button>
     <button class="btn bd" onclick="${type==='art'?'trashArt':'trashFolder'}('${id}');closeModal()">Move to Trash</button></div>`);
 }
+/* Folder-assign picker ("Assign to folders") — resizable from every edge/
+   corner, folders can be renamed / deleted / dragged between layers, and
+   every folder with children is independently collapsible. New folders are
+   created under whichever folder was pinned as the target (📍), defaulting
+   to the root. All actions rebuild #pkList in place (never re-open the
+   modal) so scroll position and input focus never jump. */
+let _pkTarget=null;   // folder id new folders nest under; null = root
+let _pkDragId=null;   // drag source while reparenting inside the picker
+
+function _pkRowHTML(f,d){
+  const s=ST.efolders.includes(f.id);
+  const hasKids=chOf(f.id).length>0;
+  const exp=!!(ST.pickExp&&ST.pickExp[f.id]);
+  const chev=hasKids
+    ?`<span class="pk-chev" onclick="event.stopPropagation();togglePickExp('${f.id}')">${exp?'▾':'▸'}</span>`
+    :`<span class="pk-chev pk-chev-sp"></span>`;
+  const path=pathOf(f.id).map(x=>x.name).join(' › ');
+  return `<div class="pr${_pkTarget===f.id?' pk-target':''}" draggable="true" data-fid="${esc(f.id)}" data-d="${d}" data-parent="${esc(f.parentId||'')}" data-name="${esc((f.name||'').toLowerCase())}" style="padding-left:${8+d*14}px"
+      onclick="togglePick('${f.id}')"
+      ondragstart="pkDStart(event,'${f.id}')" ondragend="pkDEnd(event)"
+      ondragover="pkDOver(event,'${f.id}')" ondragleave="pkDLeave(event)" ondrop="pkDDrop(event,'${f.id}')">`
+    +chev
+    +`<div class="pc${s?' on':''}">${s?'✓':''}</div>`
+    +`<span style="font-size:12px">📁</span>`
+    +`<span class="pk-nm" id="pknm-${esc(f.id)}" style="font-size:13px;color:var(--t1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</span>`
+    +`<span class="pk-path" style="display:none;font-size:10.5px;color:var(--t3);margin-left:6px">${esc(path)}</span>`
+    +`<span class="pk-acts">`
+    +`<span class="pk-act" title="New folders go here" onclick="event.stopPropagation();pkSetTarget('${f.id}')">📍</span>`
+    +`<span class="pk-act" title="Rename" onclick="event.stopPropagation();pkRename('${f.id}')">✏️</span>`
+    +`<span class="pk-act" title="Delete" onclick="event.stopPropagation();pkDelete('${f.id}')">🗑</span>`
+    +`</span>`
+    +`</div>`;
+}
+function _pkTreeHTML(flds,d){return flds.map(f=>_pkRowHTML(f,d)+_pkTreeHTML(chOf(f.id),d+1)).join('');}
 function openPicker(){
-  /* v03.11.00 — searchable, 2-layer folder picker. Full tree rendered once;
-     shows only mother + immediate child by default (deeper levels collapsed
-     behind a chevron), with a search box. Search / expand / select happen
-     in-place (no modal re-render) so the search field keeps focus and stays fast. */
-  function rowHTML(f,d){
-    const s=ST.efolders.includes(f.id);
-    const hasKids=chOf(f.id).length>0;
-    const exp=!!(ST.pickExp&&ST.pickExp[f.id]);
-    const chev=hasKids
-      ?`<span class="pk-chev" onclick="event.stopPropagation();togglePickExp('${f.id}')">${exp?'\u25be':'\u25b8'}</span>`
-      :`<span class="pk-chev pk-chev-sp"></span>`;
-    const path=pathOf(f.id).map(x=>x.name).join(' \u203a ');
-    return `<div class="pr" data-fid="${esc(f.id)}" data-d="${d}" data-parent="${esc(f.parentId||'')}" data-name="${esc((f.name||'').toLowerCase())}" style="padding-left:${8+d*14}px" onclick="togglePick('${f.id}')">`
-      +chev
-      +`<div class="pc${s?' on':''}">${s?'\u2713':''}</div>`
-      +`<span style="font-size:12px">\ud83d\udcc1</span>`
-      +`<span class="pk-nm" style="font-size:13px;color:var(--t1)">${esc(f.name)}</span>`
-      +`<span class="pk-path" style="display:none;font-size:10.5px;color:var(--t3);margin-left:6px">${esc(path)}</span>`
-      +`</div>`;
-  }
-  function tree(flds,d){return flds.map(f=>rowHTML(f,d)+tree(chOf(f.id),d+1)).join('');}
-  showModal(`<div class="mt">Assign to folders</div>
-    <input class="mi" id="pkSearch" placeholder="\ud83d\udd0d Search folders\u2026" style="margin:0 0 8px;width:100%" oninput="_pkFilter(this.value)">
-    <div class="pl" id="pkList">${tree(DB.folders.filter(f=>!f.parentId),0)}</div>
-    <div style="display:flex;gap:6px;margin-top:8px">
-      <input class="mi" id="npf" placeholder="New folder name\u2026" style="flex:1;margin:0;min-width:0" onkeydown="if(event.key==='Enter')createFolderFromPicker('')">
-      <button class="btn" style="flex-shrink:0" onclick="createFolderFromPicker('')">\uff0b New folder</button>
+  _pkTarget=null;
+  showResizableModal(`<div class="mt">Assign to folders</div>
+    <input class="mi" id="pkSearch" placeholder="🔍 Search folders…" style="margin:0 0 8px;width:100%" oninput="_pkFilter(this.value)">
+    <div class="pl" id="pkList">${_pkTreeHTML(DB.folders.filter(f=>!f.parentId),0)}</div>
+    <div class="pk-target-lbl" id="pkTargetLbl">New folder in: 🏠 Root</div>
+    <div style="display:flex;gap:6px;margin-top:0">
+      <input class="mi" id="npf" placeholder="New folder name…" style="flex:1;margin:0;min-width:0" onkeydown="if(event.key==='Enter')createFolderFromPicker('')">
+      <button class="btn" style="flex-shrink:0" onclick="createFolderFromPicker('')">＋ New folder</button>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
       <span style="font-size:12px;color:var(--t3)" id="pkCount">${ST.efolders.length} selected</span>
       <button class="btn bp" onclick="closeModal()">Done</button>
-    </div>`);
+    </div>`,{width:'440px',height:'520px'});
   _pkApplyVis();
   setTimeout(()=>document.getElementById('npf')?.blur(),80);
 }
 function _pkRow(fid){const l=document.getElementById('pkList');if(!l)return null;const sel=(window.CSS&&CSS.escape)?CSS.escape(fid):fid;return l.querySelector('.pr[data-fid="'+sel+'"]');}
+/** Rebuild #pkList from DB.folders in place — preserves scroll position and
+ *  never touches focus, unlike a full openPicker() re-open. */
+function _pkRebuildList(){
+  const list=document.getElementById('pkList');if(!list)return;
+  const scrollTop=list.scrollTop;
+  list.innerHTML=_pkTreeHTML(DB.folders.filter(f=>!f.parentId),0);
+  list.scrollTop=scrollTop;
+  const q=(document.getElementById('pkSearch')||{}).value||'';
+  if(q.trim())_pkFilter(q);else _pkApplyVis();
+}
 function _pkApplyVis(){
   const list=document.getElementById('pkList');if(!list)return;
   list.querySelectorAll('.pr').forEach(r=>{
     const pp=r.querySelector('.pk-path');if(pp)pp.style.display='none';
     const d=+r.dataset.d;
-    if(d<=1){r.style.display='';return;}
+    if(d===0){r.style.display='';return;}
     let vis=true,pr=_pkRow(r.dataset.parent);
-    while(pr){const pd=+pr.dataset.d;if(pd>=1&&!(ST.pickExp&&ST.pickExp[pr.dataset.fid])){vis=false;break;}if(pd===0)break;pr=_pkRow(pr.dataset.parent);}
+    while(pr){
+      if(!(ST.pickExp&&ST.pickExp[pr.dataset.fid])){vis=false;break;}
+      if(+pr.dataset.d===0)break;
+      pr=_pkRow(pr.dataset.parent);
+    }
     r.style.display=vis?'':'none';
   });
 }
@@ -12476,7 +12597,7 @@ function togglePickExp(fid){
   if(!ST.pickExp)ST.pickExp={};
   ST.pickExp[fid]=!ST.pickExp[fid];
   const row=_pkRow(fid);
-  if(row){const ch=row.querySelector('.pk-chev');if(ch&&!ch.classList.contains('pk-chev-sp'))ch.textContent=ST.pickExp[fid]?'\u25be':'\u25b8';}
+  if(row){const ch=row.querySelector('.pk-chev');if(ch&&!ch.classList.contains('pk-chev-sp'))ch.textContent=ST.pickExp[fid]?'▾':'▸';}
   const q=(document.getElementById('pkSearch')||{}).value||'';
   if(q.trim())_pkFilter(q);else _pkApplyVis();
 }
@@ -12497,12 +12618,143 @@ function togglePick(fid){
   else {ST.efolders.push(fid);ST.efolders=_autoLeavePrimary(ST.efolders);}
   const row=_pkRow(fid);
   if(!row){openPicker();return;}
-  const pc=row.querySelector('.pc');const on=ST.efolders.includes(fid);pc.classList.toggle('on',on);pc.textContent=on?'\u2713':'';
+  const pc=row.querySelector('.pc');const on=ST.efolders.includes(fid);pc.classList.toggle('on',on);pc.textContent=on?'✓':'';
   if(_hadPrimaryBefore&&!ST.efolders.includes(_pfidBefore)){
     const pRow=_pkRow(_pfidBefore);
     if(pRow){const ppc=pRow.querySelector('.pc');if(ppc){ppc.classList.remove('on');ppc.textContent='';}}
   }
   const cnt=document.getElementById('pkCount');if(cnt)cnt.textContent=ST.efolders.length+' selected';
+}
+
+/* ── Pin target / rename / delete / drag-reparent inside the picker ── */
+function _pkUpdateTargetLabel(){
+  const el=document.getElementById('pkTargetLbl');if(!el)return;
+  if(_pkTarget){
+    const f=DB.folders.find(x=>x.id===_pkTarget);
+    el.innerHTML=`New folder in: <strong>${f?esc(f.name):'…'}</strong> <span class="pk-target-clear" onclick="pkClearTarget()" title="Create at root instead">✕</span>`;
+  } else {
+    el.textContent='New folder in: 🏠 Root';
+  }
+}
+function pkSetTarget(fid){
+  _pkTarget=fid;
+  const list=document.getElementById('pkList');
+  if(list)list.querySelectorAll('.pr.pk-target').forEach(r=>r.classList.remove('pk-target'));
+  const row=_pkRow(fid);if(row)row.classList.add('pk-target');
+  _pkUpdateTargetLabel();
+}
+function pkClearTarget(){
+  _pkTarget=null;
+  const list=document.getElementById('pkList');
+  if(list)list.querySelectorAll('.pr.pk-target').forEach(r=>r.classList.remove('pk-target'));
+  _pkUpdateTargetLabel();
+}
+function pkRename(fid){
+  const f=DB.folders.find(x=>x.id===fid);if(!f)return;
+  const span=document.getElementById('pknm-'+fid);if(!span)return;
+  span.outerHTML=`<input class="pk-rn-inp" id="pkrn-${fid}" value="${esc(f.name)}" onclick="event.stopPropagation()" onkeydown="event.stopPropagation();if(event.key==='Enter')pkRenameSave('${fid}');else if(event.key==='Escape')pkRenameCancel('${fid}')" onblur="pkRenameSave('${fid}')">`;
+  const inp=document.getElementById('pkrn-'+fid);
+  if(inp){inp.focus();inp.select();}
+}
+function pkRenameSave(fid){
+  const inp=document.getElementById('pkrn-'+fid);
+  if(!inp||inp.dataset.pkSaving)return;   // outerHTML below fires a synchronous
+  inp.dataset.pkSaving='1';               // blur that would re-enter this fn
+  const val=inp.value;
+  const f=DB.folders.find(x=>x.id===fid);
+  if(val&&val.trim()&&f&&val.trim()!==f.name)rnFolder(fid,val);
+  const name=(DB.folders.find(x=>x.id===fid)||{}).name||'';
+  inp.outerHTML=`<span class="pk-nm" id="pknm-${fid}" style="font-size:13px;color:var(--t1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</span>`;
+}
+function pkRenameCancel(fid){
+  const inp=document.getElementById('pkrn-'+fid);
+  if(!inp||inp.dataset.pkSaving)return;
+  inp.dataset.pkSaving='1';
+  const name=(DB.folders.find(x=>x.id===fid)||{}).name||'';
+  inp.outerHTML=`<span class="pk-nm" id="pknm-${fid}" style="font-size:13px;color:var(--t1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</span>`;
+}
+function pkDelete(fid){
+  const f=DB.folders.find(x=>x.id===fid);if(!f)return;
+  const removedIds=descOf(fid);
+  const subCount=removedIds.length-1;
+  const msg=subCount>0
+    ?`Delete folder "${f.name}" and its ${subCount} subfolder${subCount!==1?'s':''}? This moves them to Trash.`
+    :`Delete folder "${f.name}"? This moves it to Trash.`;
+  if(!confirm(msg))return;
+  trashFolder(fid);
+  ST.efolders=ST.efolders.filter(x=>!removedIds.includes(x));
+  if(_pkTarget&&removedIds.includes(_pkTarget))pkClearTarget();
+  _pkRebuildList();
+  const cnt=document.getElementById('pkCount');if(cnt)cnt.textContent=ST.efolders.length+' selected';
+}
+function pkDStart(ev,fid){
+  _pkDragId=fid;
+  ev.dataTransfer.effectAllowed='move';
+  ev.dataTransfer.setData('text',fid);
+  setTimeout(()=>{if(ev.target.classList)ev.target.classList.add('drg');},0);
+}
+function pkDEnd(ev){
+  if(ev.target.classList)ev.target.classList.remove('drg');
+  _pkDragId=null;
+  _pkClearDI();
+}
+function pkDOver(ev,fid){
+  if(!_pkDragId||fid===_pkDragId)return;
+  if(descOf(_pkDragId).slice(1).includes(fid))return;
+  ev.preventDefault();ev.dataTransfer.dropEffect='move';
+  const row=ev.currentTarget;
+  const rect=row.getBoundingClientRect();
+  const y=ev.clientY-rect.top,h=rect.height;
+  _pkClearDI();
+  if(y<h*0.28)row.classList.add('dob');
+  else if(y>h*0.72)row.classList.add('doa');
+  else row.classList.add('doi');
+}
+function pkDLeave(ev){
+  if(!ev.currentTarget.contains(ev.relatedTarget))_pkClearDI(ev.currentTarget);
+}
+function pkDDrop(ev,fid){
+  ev.preventDefault();
+  const row=ev.currentTarget;
+  let pos='inside';
+  if(row.classList.contains('dob'))pos='before';
+  else if(row.classList.contains('doa'))pos='after';
+  _pkClearDI();
+  if(!_pkDragId||fid===_pkDragId||descOf(_pkDragId).slice(1).includes(fid)){_pkDragId=null;return;}
+  pkMoveFolder(_pkDragId,fid,pos);
+  _pkDragId=null;
+}
+function _pkClearDI(el){
+  const list=document.getElementById('pkList');if(!list)return;
+  const rows=el?[el]:list.querySelectorAll('.pr');
+  rows.forEach(r=>r.classList.remove('dob','doa','doi'));
+}
+/** Reparent/reorder a folder from inside the picker without hijacking the
+ *  open modal (doMoveFolder() would pop an auto-numbering confirm dialog
+ *  into the same #mb and lose the picker). Numbering, if this notebook
+ *  uses it, is refreshed silently instead. */
+function pkMoveFolder(fid,targetId,pos){
+  const folder=DB.folders.find(f=>f.id===fid);
+  const target=DB.folders.find(f=>f.id===targetId);
+  if(!folder||!target)return;
+  if(pos==='inside'){
+    folder.parentId=targetId;
+    const existing=chOf(targetId).filter(f=>f.id!==fid);
+    folder.order=existing.length+1;
+    if(!ST.pickExp)ST.pickExp={};
+    ST.pickExp[targetId]=true;
+  } else {
+    folder.parentId=target.parentId;
+    if(!folder.parentId)folder.sectionId=target.sectionId;
+    let sibs=chOf(target.parentId).filter(f=>f.id!==fid);
+    const idx=sibs.findIndex(f=>f.id===targetId);
+    sibs.splice(pos==='before'?idx:idx+1,0,folder);
+    sibs.forEach((f,i)=>{f.order=i+1;});
+  }
+  persist();
+  const hasNums=DB.folders.some(f=>/^\([\d.]+\)/.test(f.name));
+  if(hasNums)autoNumberAll(true);else render();
+  _pkRebuildList();
 }
 
 /* ── Mobile helpers ─────────────────────────────────────────────── */
@@ -13758,7 +14010,8 @@ function createFolderFromPicker(aid){
   const inp=document.getElementById('npf');
   const name=inp?.value;
   if(!name?.trim()){toast('Enter a folder name');return;}
-  const nid=mkFolder(null,name);
+  const parentId=aid?null:_pkTarget;   // nest under the 📍-pinned folder, if any
+  const nid=mkFolder(parentId,name);
   if(!nid)return;
   if(aid){
     const art=DB.articles.find(a=>a.id===aid);
@@ -13772,7 +14025,11 @@ function createFolderFromPicker(aid){
   } else {
     if(!ST.efolders.includes(nid)){ST.efolders.push(nid);ST.efolders=_autoLeavePrimary(ST.efolders);}
     renderP3H();                // refresh 🏷 folder count in edit header
-    openPicker();               // re-open picker with new folder checked
+    if(parentId){if(!ST.pickExp)ST.pickExp={};ST.pickExp[parentId]=true;}
+    inp.value='';
+    _pkRebuildList();           // rebuild in place — keeps scroll & focus put
+    const cnt=document.getElementById('pkCount');if(cnt)cnt.textContent=ST.efolders.length+' selected';
+    inp.focus();                // stay in the New-folder field, no jump to top
   }
   toast('Folder created ✓');
 }
