@@ -12268,6 +12268,7 @@ function _buildFolderCtxMain(fid){
   return `<div class="ci" onclick="hideCtx();openModal('folder','${fid}')">📁 Add subfolder</div>
     <div class="ci" onclick="hideCtx();openModal('art','${fid}')">📄 Add article here</div>
     <div class="ci" onclick="hideCtx();openModal('rename','${fid}')">✏️ Rename folder</div>
+    <div class="ci" onclick="hideCtx();openFolderPopout('${fid}')">🗗 Pop out into window</div>
     ${_topRow}
     <div class="ci" onclick="hideCtx();autoNumberAll()">🔢 Auto-number all folders</div>
     <div class="ci" onclick="hideCtx();offerRenumberManual('${fid}')">↕ Renumber siblings only</div>
@@ -12568,6 +12569,15 @@ function confirmDel(type,id){
    modal) so scroll position and input focus never jump. */
 let _pkTarget=null;   // folder id new folders nest under; null = root
 let _pkDragId=null;   // drag source while reparenting inside the picker
+/* Mode: 'assign' is the note-editor's "Assign to folders" picker (checkboxes,
+ * whole-DB tree, togglePick). 'browse' is a pop-out of one section or one
+ * folder's subtree from the Pane-1 sidebar — no checkboxes, clicking a row
+ * navigates the sidebar there instead. Both share every other control
+ * (rename/delete/drag-reparent/collapsible/note leaves/create). */
+let _pkMode='assign';
+let _pkSectionScope=null;  // section id, when browsing a whole section
+let _pkFolderScope=null;   // folder id, when browsing a single folder's subtree
+let _pkRootLabel='🏠 Root';
 
 /** Notes filed directly in this folder (not its subfolders — those show
  *  their own notes when expanded in turn). */
@@ -12593,12 +12603,14 @@ function _pkRowHTML(f,d){
     ?`<span class="pk-chev" onclick="event.stopPropagation();togglePickExp('${f.id}')">${exp?'▾':'▸'}</span>`
     :`<span class="pk-chev pk-chev-sp"></span>`;
   const path=pathOf(f.id).map(x=>x.name).join(' › ');
+  const rowClick=_pkMode==='browse'?`pkNavigateFolder('${f.id}')`:`togglePick('${f.id}')`;
+  const checkbox=_pkMode==='assign'?`<div class="pc${s?' on':''}">${s?'✓':''}</div>`:'';
   return `<div class="pr${_pkTarget===f.id?' pk-target':''}" draggable="true" data-fid="${esc(f.id)}" data-d="${d}" data-parent="${esc(f.parentId||'')}" data-name="${esc((f.name||'').toLowerCase())}" style="padding-left:${8+d*14}px"
-      onclick="togglePick('${f.id}')"
+      onclick="${rowClick}"
       ondragstart="pkDStart(event,'${f.id}')" ondragend="pkDEnd(event)"
       ondragover="pkDOver(event,'${f.id}')" ondragleave="pkDLeave(event)" ondrop="pkDDrop(event,'${f.id}')">`
     +chev
-    +`<div class="pc${s?' on':''}">${s?'✓':''}</div>`
+    +checkbox
     +`<span style="font-size:12px">📁</span>`
     +`<span class="pk-nm" id="pknm-${esc(f.id)}" style="font-size:13px;color:var(--t1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</span>`
     +`<span class="pk-path" style="display:none;font-size:10.5px;color:var(--t3);margin-left:6px">${esc(path)}</span>`
@@ -12616,6 +12628,7 @@ function _pkTreeHTML(flds,d){
   }).join('');
 }
 function openPicker(){
+  _pkMode='assign';_pkSectionScope=null;_pkFolderScope=null;_pkRootLabel='🏠 Root';
   _pkTarget=null;
   showResizableModal(`<div class="mt">Assign to folders</div>
     <input class="mi" id="pkSearch" placeholder="🔍 Search folders…" style="margin:0 0 8px;width:100%" oninput="_pkFilter(this.value)">
@@ -12632,13 +12645,66 @@ function openPicker(){
   _pkApplyVis();
   setTimeout(()=>document.getElementById('npf')?.blur(),80);
 }
+/** Pop out an entire section (all its root folders + their subtrees + notes)
+ *  from the Pane-1 sidebar into the same floating, resizable, editable
+ *  picker used for "Assign to folders" — minus the checkboxes, plus
+ *  click-a-folder-to-navigate. */
+function openSectionPopout(secId){
+  const sec=DB.sections.find(s=>s.id===secId);if(!sec)return;
+  _pkMode='browse';_pkSectionScope=secId;_pkFolderScope=null;
+  _pkRootLabel=`🏠 Root of "${sec.name}"`;
+  _pkTarget=null;
+  _pkOpenBrowse(`📂 ${esc(sec.name)}`);
+}
+/** Pop out a single folder's own subtree (itself + descendants + notes). */
+function openFolderPopout(fid){
+  const f=DB.folders.find(x=>x.id===fid);if(!f)return;
+  _pkMode='browse';_pkSectionScope=null;_pkFolderScope=fid;
+  _pkRootLabel=`🏠 Root`;
+  _pkTarget=fid;
+  _pkOpenBrowse(`📁 ${esc(f.name)}`);
+}
+function _pkCurrentBrowseRoots(){
+  if(_pkFolderScope){const f=DB.folders.find(x=>x.id===_pkFolderScope);return f?[f]:[];}
+  if(_pkSectionScope)return DB.folders.filter(f=>!f.parentId&&f.sectionId===_pkSectionScope).sort((a,b)=>a.order-b.order);
+  return DB.folders.filter(f=>!f.parentId);
+}
+function _pkOpenBrowse(title){
+  showResizableModal(`<div class="mt">${title}</div>
+    <input class="mi" id="pkSearch" placeholder="🔍 Search…" style="margin:0 0 8px;width:100%" oninput="_pkFilter(this.value)">
+    <div class="pl" id="pkList">${_pkTreeHTML(_pkCurrentBrowseRoots(),0)}</div>
+    <div class="pk-target-lbl" id="pkTargetLbl"></div>
+    <div style="display:flex;gap:6px;margin-top:0">
+      <input class="mi" id="npf" placeholder="New folder name…" style="flex:1;margin:0;min-width:0" onkeydown="if(event.key==='Enter')createFolderFromPicker('')">
+      <button class="btn" style="flex-shrink:0" onclick="createFolderFromPicker('')">＋ New folder</button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:8px">
+      <button class="btn bp" onclick="closeModal()">Close</button>
+    </div>`,{width:'440px',height:'520px'});
+  _pkUpdateTargetLabel();
+  _pkApplyVis();
+  setTimeout(()=>document.getElementById('npf')?.blur(),80);
+}
+function pkNavigateFolder(fid){
+  closeModal();
+  selFolder(fid);
+}
 function _pkRow(fid){const l=document.getElementById('pkList');if(!l)return null;const sel=(window.CSS&&CSS.escape)?CSS.escape(fid):fid;return l.querySelector('.pr[data-fid="'+sel+'"]');}
-/** Rebuild #pkList from DB.folders in place — preserves scroll position and
- *  never touches focus, unlike a full openPicker() re-open. */
+/** Rebuild #pkList in place — preserves scroll position and never touches
+ *  focus, unlike a full openPicker()/openSectionPopout()/openFolderPopout()
+ *  re-open. Reflects whatever DB.folders looks like right now, scoped to
+ *  the current mode (whole tree, one section, or one folder's subtree). */
 function _pkRebuildList(){
   const list=document.getElementById('pkList');if(!list)return;
   const scrollTop=list.scrollTop;
-  list.innerHTML=_pkTreeHTML(DB.folders.filter(f=>!f.parentId),0);
+  const roots=_pkMode==='browse'?_pkCurrentBrowseRoots():DB.folders.filter(f=>!f.parentId);
+  if(_pkMode==='browse'&&_pkFolderScope&&!roots.length){
+    // The folder this pop-out was scoped to no longer exists (deleted from within it).
+    closeModal();
+    toast('That folder was deleted');
+    return;
+  }
+  list.innerHTML=_pkTreeHTML(roots,0);
   list.scrollTop=scrollTop;
   const q=(document.getElementById('pkSearch')||{}).value||'';
   if(q.trim())_pkFilter(q);else _pkApplyVis();
@@ -12707,9 +12773,12 @@ function _pkUpdateTargetLabel(){
   const el=document.getElementById('pkTargetLbl');if(!el)return;
   if(_pkTarget){
     const f=DB.folders.find(x=>x.id===_pkTarget);
-    el.innerHTML=`New folder in: <strong>${f?esc(f.name):'…'}</strong> <span class="pk-target-clear" onclick="pkClearTarget()" title="Create at root instead">✕</span>`;
+    // In a single-folder pop-out, that folder IS the root of this view — no "back to root" to offer.
+    const canClear=_pkTarget!==_pkFolderScope;
+    el.innerHTML=`New folder in: <strong>${f?esc(f.name):'…'}</strong>`
+      +(canClear?` <span class="pk-target-clear" onclick="pkClearTarget()" title="Create at root instead">✕</span>`:'');
   } else {
-    el.textContent='New folder in: 🏠 Root';
+    el.textContent=`New folder in: ${_pkRootLabel}`;
   }
 }
 function pkSetTarget(fid){
@@ -12720,9 +12789,10 @@ function pkSetTarget(fid){
   _pkUpdateTargetLabel();
 }
 function pkClearTarget(){
-  _pkTarget=null;
+  _pkTarget=_pkFolderScope||null;   // a folder pop-out has no "root" above itself
   const list=document.getElementById('pkList');
   if(list)list.querySelectorAll('.pr.pk-target').forEach(r=>r.classList.remove('pk-target'));
+  const row=_pkTarget?_pkRow(_pkTarget):null;if(row)row.classList.add('pk-target');
   _pkUpdateTargetLabel();
 }
 function pkRename(fid){
@@ -13504,6 +13574,7 @@ function _buildSecCtxMain(sid){
     DB.sections.some(s=>s.id!==sid&&!s.id.startsWith('db-')&&!s.id.startsWith('kb-'));
   return `<div class="ci" onclick="hideCtx();addFolderInSec('${sid}')">📁 New folder here</div>`+
     `<div class="ci" onclick="hideCtx();startRenSec('${sid}')">✏️ Rename section</div>`+
+    `<div class="ci" onclick="hideCtx();openSectionPopout('${sid}')">🗗 Pop out into window</div>`+
     `<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px">`+
       `<span class="ctx-clr-lbl">🎨 Section colour</span>`+
       `<div class="ctx-colors">${ctxSecColorSwatches(sid)}</div>`+
@@ -14171,6 +14242,9 @@ function createFolderFromPicker(aid){
   const name=inp?.value;
   if(!name?.trim()){toast('Enter a folder name');return;}
   const parentId=aid?null:_pkTarget;   // nest under the 📍-pinned folder, if any
+  // Section pop-out with nothing pinned: land the new root folder in THAT
+  // section, not wherever the sidebar's active folder happens to be.
+  if(!aid&&!parentId&&_pkMode==='browse'&&_pkSectionScope)ST.pendingSec=_pkSectionScope;
   const nid=mkFolder(parentId,name);
   if(!nid)return;
   if(aid){
@@ -14183,12 +14257,16 @@ function createFolderFromPicker(aid){
     }
     showArtFolderPicker(aid);   // re-open picker with new folder checked
   } else {
-    if(!ST.efolders.includes(nid)){ST.efolders.push(nid);ST.efolders=_autoLeavePrimary(ST.efolders);}
-    renderP3H();                // refresh 🏷 folder count in edit header
+    if(_pkMode==='assign'){
+      if(!ST.efolders.includes(nid)){ST.efolders.push(nid);ST.efolders=_autoLeavePrimary(ST.efolders);}
+      renderP3H();               // refresh 🏷 folder count in edit header
+    }
     if(parentId){if(!ST.pickExp)ST.pickExp={};ST.pickExp[parentId]=true;}
     inp.value='';
     _pkRebuildList();           // rebuild in place — keeps scroll & focus put
-    const cnt=document.getElementById('pkCount');if(cnt)cnt.textContent=ST.efolders.length+' selected';
+    if(_pkMode==='assign'){
+      const cnt=document.getElementById('pkCount');if(cnt)cnt.textContent=ST.efolders.length+' selected';
+    }
     inp.focus();                // stay in the New-folder field, no jump to top
   }
   toast('Folder created ✓');
