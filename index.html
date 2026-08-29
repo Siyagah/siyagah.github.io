@@ -124,6 +124,14 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
   padding:6px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
   color:var(--t3);position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--border)}
 .p2h-tree-hd-btns{display:flex;gap:4px;flex-shrink:0}
+.p2h-sec-nav{display:flex;align-items:center;gap:4px;flex:1;min-width:0}
+.p2h-sec-nav-btn{flex-shrink:0;width:20px;height:20px;display:flex;align-items:center;justify-content:center;
+  border-radius:999px;border:1px solid var(--border2);background:var(--white);color:var(--t2);
+  cursor:pointer;font-size:11px;text-transform:none;letter-spacing:normal;font-weight:400;padding:0}
+.p2h-sec-nav-btn:hover{background:var(--hover)}
+.p2h-sec-sel{flex:1;min-width:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--t3);border:1px solid var(--border2);border-radius:999px;background:var(--white);
+  padding:3px 8px;font-family:var(--ui);cursor:pointer}
 .p2h-tree-node{display:flex;align-items:flex-start;gap:5px;padding:5px 12px;font-size:13px;
   color:var(--t2);cursor:pointer;white-space:normal;word-break:break-word;line-height:1.35}
 .p2h-tree-node:hover{background:var(--hover)}
@@ -12156,12 +12164,48 @@ function _folderDescendantsHTML(fid,depth){
   });
   return h;
 }
+/** ◀ / dropdown / ▶ section-switcher shown in the Full-tree header, so you
+ *  can pull in the next/previous section (or jump straight to one) without
+ *  backing out to Pane 1 and re-opening a folder. */
+function _secNavHTML(curSec){
+  const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
+  const opts=secs.map(s=>`<option value="${esc(s.id)}"${curSec&&s.id===curSec.id?' selected':''}>${esc(s.name)}</option>`).join('');
+  return `<span class="p2h-sec-nav">`
+    +`<button class="p2h-sec-nav-btn" onclick="gotoAdjacentSection(-1)" title="Previous section">◀</button>`
+    +`<select class="p2h-sec-sel" onchange="gotoSection(this.value)" title="Jump to a section">${opts}</select>`
+    +`<button class="p2h-sec-nav-btn" onclick="gotoAdjacentSection(1)" title="Next section">▶</button>`
+    +`</span>`;
+}
+/** First root folder of a section (by order), or null if it has none yet —
+ *  that's what the Full-tree view needs to actually land on the section. */
+function _firstFolderOfSection(secId){
+  return DB.folders.filter(f=>!f.parentId&&f.sectionId===secId).sort((a,b)=>a.order-b.order)[0]||null;
+}
+function gotoSection(secId){
+  const sec=DB.sections.find(s=>s.id===secId);if(!sec)return;
+  const f=_firstFolderOfSection(secId);
+  if(!f){toast(`"${sec.name}" has no folders yet`);renderP2H();return;}   // reset the <select> back
+  selFolder(f.id);
+}
+function gotoAdjacentSection(dir){
+  const curF=DB.folders.find(f=>f.id===ST.folder);if(!curF)return;
+  const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
+  if(secs.length<2)return;
+  let idx=secs.findIndex(s=>s.id===curF.sectionId);
+  if(idx<0)idx=0;
+  for(let i=1;i<=secs.length;i++){
+    const next=secs[((idx+dir*i)%secs.length+secs.length)%secs.length];
+    const f=_firstFolderOfSection(next.id);
+    if(f){selFolder(f.id);return;}
+  }
+  toast('No other sections with folders yet');
+}
 function _folderFullTreeHTML(curF){
   const section=DB.sections.find(s=>s.id===curF.sectionId);
   const ancestors=pathOf(curF.id).slice(0,-1); /* excludes curF itself */
   let h='<div class="p2h-tree-wrap">';
   h+=`<div class="p2h-tree-hd">`
-    +`<span>${esc(section?section.name:'')}</span>`
+    +_secNavHTML(section)
     +`<span class="p2h-tree-hd-btns">`
     +`<button class="p2h-path-new" onclick="p2hTreeExpandAll('${curF.id}')" title="Expand every layer below">⬇ Expand all</button>`
     +`<button class="p2h-path-new" onclick="p2hTreeCollapseAll()" title="Collapse everything back to one level">⬆ Collapse all</button>`
