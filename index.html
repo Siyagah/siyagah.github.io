@@ -371,7 +371,9 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .pk-target-lbl{font-size:11px;color:var(--t3);margin:0 0 6px;display:flex;align-items:center;gap:6px}
 .pk-target-clear{cursor:pointer;opacity:.6}
 .pk-target-clear:hover{opacity:1}
-.pf{display:flex;align-items:center;gap:7px;padding:4px 12px;color:var(--t3)}
+.pf{display:flex;align-items:center;gap:7px;padding:4px 12px;color:var(--t3);cursor:pointer}
+.pf:hover{background:var(--paper);color:var(--t1)}
+.pf.drg{opacity:.35}
 .pf-nm{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 /* Resizable modal (folder picker) */
 #mb.mb-rsz{display:flex;flex-direction:column;overflow:hidden}
@@ -12572,9 +12574,15 @@ let _pkDragId=null;   // drag source while reparenting inside the picker
 function _pkArtsOf(fid){return DB.articles.filter(a=>Array.isArray(a.folderIds)&&a.folderIds.includes(fid));}
 function _pkFileRowHTML(a,parentFid,d){
   const title=a.title||'Untitled';
-  return `<div class="pf" data-d="${d}" data-parent="${esc(parentFid)}" data-name="${esc(title.toLowerCase())}" style="padding-left:${8+d*14+18}px" title="${esc(title)}">`
+  return `<div class="pf" draggable="true" data-d="${d}" data-parent="${esc(parentFid)}" data-name="${esc(title.toLowerCase())}" style="padding-left:${8+d*14+18}px"
+      onclick="pkNoteOpen('${esc(a.id)}')"
+      ondragstart="pkNoteDStart(event,'${esc(a.id)}','${esc(parentFid)}')" ondragend="pkNoteDEnd(event)">`
     +`<span style="font-size:11px;opacity:.55">📄</span>`
-    +`<span class="pf-nm">${esc(title)}</span>`
+    +`<span class="pf-nm" id="pfnm-${esc(a.id)}" title="${esc(title)}">${esc(title)}</span>`
+    +`<span class="pk-acts">`
+    +`<span class="pk-act" title="Rename" onclick="event.stopPropagation();pkNoteRename('${esc(a.id)}')">✏️</span>`
+    +`<span class="pk-act" title="Delete" onclick="event.stopPropagation();pkNoteDelete('${esc(a.id)}')">🗑</span>`
+    +`</span>`
     +`</div>`;
 }
 function _pkRowHTML(f,d){
@@ -12767,6 +12775,13 @@ function pkDEnd(ev){
   _pkClearDI();
 }
 function pkDOver(ev,fid){
+  if(_pkNoteDragId){
+    // A note leaf is being dragged over this folder row — always a plain "drop inside".
+    ev.preventDefault();ev.dataTransfer.dropEffect='move';
+    _pkClearDI();
+    ev.currentTarget.classList.add('doi');
+    return;
+  }
   if(!_pkDragId||fid===_pkDragId)return;
   if(descOf(_pkDragId).slice(1).includes(fid))return;
   ev.preventDefault();ev.dataTransfer.dropEffect='move';
@@ -12783,6 +12798,12 @@ function pkDLeave(ev){
 }
 function pkDDrop(ev,fid){
   ev.preventDefault();
+  if(_pkNoteDragId){
+    _pkClearDI();
+    pkMoveNote(_pkNoteDragId,_pkNoteDragFrom,fid);
+    _pkNoteDragId=null;_pkNoteDragFrom=null;
+    return;
+  }
   const row=ev.currentTarget;
   let pos='inside';
   if(row.classList.contains('dob'))pos='before';
@@ -12822,6 +12843,77 @@ function pkMoveFolder(fid,targetId,pos){
   persist();
   const hasNums=DB.folders.some(f=>/^\([\d.]+\)/.test(f.name));
   if(hasNums)autoNumberAll(true);else render();
+  _pkRebuildList();
+}
+
+/* ── Note leaves: open / rename / delete / drag-move between folders ── */
+let _pkNoteDragId=null;    // article id being dragged
+let _pkNoteDragFrom=null;  // folder id it's being dragged out of
+function pkNoteOpen(aid){
+  closeModal();
+  selArt(aid);
+}
+function pkNoteDStart(ev,aid,fromFid){
+  _pkNoteDragId=aid;_pkNoteDragFrom=fromFid;
+  ev.dataTransfer.effectAllowed='move';
+  ev.dataTransfer.setData('text','note:'+aid);
+  setTimeout(()=>{if(ev.target.classList)ev.target.classList.add('drg');},0);
+}
+function pkNoteDEnd(ev){
+  if(ev.target.classList)ev.target.classList.remove('drg');
+  _pkNoteDragId=null;_pkNoteDragFrom=null;
+  _pkClearDI();
+}
+/** Move a note from one folder to another (removes fromFid, adds toFid) —
+ *  a real move, not the sidebar's copy-style article-onto-folder drop. */
+function pkMoveNote(aid,fromFid,toFid){
+  if(!aid||!toFid||fromFid===toFid)return;
+  const a=DB.articles.find(x=>x.id===aid);if(!a)return;
+  const ids=(a.folderIds||[]).filter(x=>x!==fromFid);
+  if(!ids.includes(toFid))ids.push(toFid);
+  a.folderIds=ids;
+  a.updatedAt=new Date().toISOString();
+  if(ST.article===aid&&ST.editing)ST.efolders=[...ids];   // keep the draft in sync if it's the note being edited
+  persist();
+  renderP2C();renderP3H();renderP3C();
+  if(!ST.pickExp)ST.pickExp={};
+  ST.pickExp[toFid]=true;
+  _pkRebuildList();
+  const f=DB.folders.find(x=>x.id===toFid);
+  toast(`Note moved to "${(f?.name||'').slice(0,28)}" ✓`);
+}
+function pkNoteRename(aid){
+  const a=DB.articles.find(x=>x.id===aid);if(!a)return;
+  const span=document.getElementById('pfnm-'+aid);if(!span)return;
+  span.outerHTML=`<input class="pk-rn-inp" id="pfrn-${aid}" value="${esc(a.title||'')}" onclick="event.stopPropagation()" onkeydown="event.stopPropagation();if(event.key==='Enter')pkNoteRenameSave('${aid}');else if(event.key==='Escape')pkNoteRenameCancel('${aid}')" onblur="pkNoteRenameSave('${aid}')">`;
+  const inp=document.getElementById('pfrn-'+aid);
+  if(inp){inp.focus();inp.select();}
+}
+function pkNoteRenameSave(aid){
+  const inp=document.getElementById('pfrn-'+aid);
+  if(!inp||inp.dataset.pkSaving)return;   // guards the same blur-reentrancy issue as folder rename
+  inp.dataset.pkSaving='1';
+  const val=inp.value;
+  const a=DB.articles.find(x=>x.id===aid);
+  if(val&&val.trim()&&a&&val.trim()!==a.title){
+    a.title=val.trim();a.updatedAt=new Date().toISOString();
+    if(ST.article===aid)ST.etitle=a.title;
+    persist();renderP2C();renderP3H();renderP3C();
+  }
+  const title=(DB.articles.find(x=>x.id===aid)||{}).title||'Untitled';
+  inp.outerHTML=`<span class="pf-nm" id="pfnm-${aid}" title="${esc(title)}">${esc(title)}</span>`;
+}
+function pkNoteRenameCancel(aid){
+  const inp=document.getElementById('pfrn-'+aid);
+  if(!inp||inp.dataset.pkSaving)return;
+  inp.dataset.pkSaving='1';
+  const title=(DB.articles.find(x=>x.id===aid)||{}).title||'Untitled';
+  inp.outerHTML=`<span class="pf-nm" id="pfnm-${aid}" title="${esc(title)}">${esc(title)}</span>`;
+}
+function pkNoteDelete(aid){
+  const a=DB.articles.find(x=>x.id===aid);if(!a)return;
+  if(!confirm(`Delete note "${a.title||'Untitled'}"? This moves it to Trash.`))return;
+  trashArt(aid);
   _pkRebuildList();
 }
 
