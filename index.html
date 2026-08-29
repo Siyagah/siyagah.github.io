@@ -133,9 +133,10 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
   color:var(--t3);border:1px solid var(--border2);border-radius:999px;background:var(--white);
   padding:3px 8px;font-family:var(--ui);cursor:pointer}
 /* Same ◀/dropdown/▶ control, reused in a browse pop-out's own title bar */
-.pk-mt-row{display:flex;align-items:center;gap:8px;justify-content:space-between}
-.pk-mt-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
-.pk-sec-nav{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.pk-mt-row{display:flex;align-items:center;gap:8px}
+.pk-mt-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 50%}
+.pk-sec-nav{display:flex;align-items:center;gap:4px;min-width:0;flex:1 1 50%}
+.pk-sec-sel{flex:1;min-width:0}
 .p2h-tree-node{display:flex;align-items:flex-start;gap:5px;padding:5px 12px;font-size:13px;
   color:var(--t2);cursor:pointer;white-space:normal;word-break:break-word;line-height:1.35}
 .p2h-tree-node:hover{background:var(--hover)}
@@ -12737,7 +12738,7 @@ function _pkSecNavHTML(){
   const opts=secs.map(s=>`<option value="${esc(s.id)}"${s.id===curSecId?' selected':''}>${esc(s.name)}</option>`).join('');
   return `<span class="pk-sec-nav">`
     +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(-1)" title="Previous section">◀</button>`
-    +`<select class="p2h-sec-sel" style="max-width:140px" onclick="event.stopPropagation()" onchange="pkGotoSection(this.value)" title="Jump to a section">${opts}</select>`
+    +`<select class="p2h-sec-sel pk-sec-sel" onclick="event.stopPropagation()" onchange="pkGotoSection(this.value)" title="Jump to a section">${opts}</select>`
     +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(1)" title="Next section">▶</button>`
     +`</span>`;
 }
@@ -12787,7 +12788,7 @@ function _pkOpenBrowse(title){
     </div>
     <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:8px">
       <button class="btn bp" onclick="closeModal()">Close</button>
-    </div>`,{width:'440px',height:'520px'});
+    </div>`,{width:'clamp(420px, 32vw, 900px)',height:'clamp(420px, 82vh, 900px)'});
   _pkUpdateTargetLabel();
   _pkApplyVis();
   setTimeout(()=>document.getElementById('npf')?.blur(),80);
