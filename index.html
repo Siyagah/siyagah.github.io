@@ -388,6 +388,10 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .pf:hover{background:var(--paper);color:var(--t1)}
 .pf.drg{opacity:.35}
 .pf-nm{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.pnav{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer}
+.pnav:hover{background:var(--paper)}
+.pnav-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--t1)}
+.pnav-cnt{font-size:11px;color:var(--t3);flex-shrink:0}
 /* Resizable modal (folder picker) */
 #mb.mb-rsz{display:flex;flex-direction:column;overflow:hidden}
 #mb.mb-rsz>*{flex-shrink:0}
@@ -12627,6 +12631,11 @@ let _pkMode='assign';
 let _pkSectionScope=null;  // section id, when browsing a whole section
 let _pkFolderScope=null;   // folder id, when browsing a single folder's subtree
 let _pkRootLabel='🏠 Root';
+/* What a browse pop-out's #pkList currently shows: the usual folder tree
+ * ('section'), or one of the other three Pane-1 groupings that aren't
+ * folders at all — Smart Views, Tags, Note Types — reachable from the same
+ * ◀/dropdown/▶ nav so the whole sidebar is one navigator. */
+let _pkScopeKind='section';
 
 /** Notes filed directly in this folder (not its subfolders — those show
  *  their own notes when expanded in turn). */
@@ -12700,7 +12709,7 @@ function openPicker(){
  *  click-a-folder-to-navigate. */
 function openSectionPopout(secId){
   const sec=DB.sections.find(s=>s.id===secId);if(!sec)return;
-  _pkMode='browse';_pkSectionScope=secId;_pkFolderScope=null;
+  _pkMode='browse';_pkScopeKind='section';_pkSectionScope=secId;_pkFolderScope=null;
   _pkRootLabel=`🏠 Root of "${sec.name}"`;
   _pkTarget=null;
   _pkOpenBrowse(`📂 ${esc(sec.name)}`);
@@ -12708,7 +12717,7 @@ function openSectionPopout(secId){
 /** Pop out a single folder's own subtree (itself + descendants + notes). */
 function openFolderPopout(fid){
   const f=DB.folders.find(x=>x.id===fid);if(!f)return;
-  _pkMode='browse';_pkSectionScope=null;_pkFolderScope=fid;
+  _pkMode='browse';_pkScopeKind='section';_pkSectionScope=null;_pkFolderScope=fid;
   _pkRootLabel=`🏠 Root`;
   _pkTarget=fid;
   _pkOpenBrowse(`📁 ${esc(f.name)}`);
@@ -12729,18 +12738,43 @@ function _pkCurrentSectionId(){
   }
   return null;
 }
+const _PK_SCOPE_KIND_META={
+  smart:{token:'__smart__',title:'⚡ Smart Views',label:'⚡ Smart Views'},
+  tags:{token:'__tags__',title:'🏷 Tags',label:'🏷 Tags'},
+  kinds:{token:'__kinds__',title:'🔖 Note Types',label:'🔖 Note Types'},
+};
 /** ◀ / dropdown / ▶ — lets a folder OR section pop-out jump straight to a
- *  different section without closing the window, matching the same
- *  control already on the Full-tree header (see _secNavHTML). */
+ *  different section, or to Smart Views / Tags / Note Types, without
+ *  closing the window. Same control already on the Full-tree header (see
+ *  _secNavHTML), plus the three non-folder groupings that live alongside
+ *  sections in Pane 1. */
 function _pkSecNavHTML(){
-  const curSecId=_pkCurrentSectionId();
+  const curSecId=_pkScopeKind==='section'?_pkCurrentSectionId():null;
   const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
-  const opts=secs.map(s=>`<option value="${esc(s.id)}"${s.id===curSecId?' selected':''}>${esc(s.name)}</option>`).join('');
+  const secOpts=secs.map(s=>`<option value="${esc(s.id)}"${s.id===curSecId?' selected':''}>${esc(s.name)}</option>`).join('');
+  const extraOpts=Object.entries(_PK_SCOPE_KIND_META)
+    .map(([kind,m])=>`<option value="${m.token}"${_pkScopeKind===kind?' selected':''}>${m.label}</option>`).join('');
   return `<span class="pk-sec-nav">`
     +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(-1)" title="Previous section">◀</button>`
-    +`<select class="p2h-sec-sel pk-sec-sel" onclick="event.stopPropagation()" onchange="pkGotoSection(this.value)" title="Jump to a section">${opts}</select>`
+    +`<select class="p2h-sec-sel pk-sec-sel" onclick="event.stopPropagation()" onchange="pkGotoSection(this.value)" title="Jump to a section, Smart Views, Tags, or Note Types">`
+    +`<optgroup label="Sections">${secOpts}</optgroup>`
+    +`<optgroup label="Other">${extraOpts}</optgroup>`
+    +`</select>`
     +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(1)" title="Next section">▶</button>`
     +`</span>`;
+}
+/** #pkList content for whichever scope kind is currently selected. */
+function _pkRenderScopeBody(){
+  if(_pkScopeKind==='smart')return _pkSmartListHTML();
+  if(_pkScopeKind==='tags')return _pkTagsListHTML();
+  if(_pkScopeKind==='kinds')return _pkKindsListHTML();
+  return _pkTreeHTML(_pkCurrentBrowseRoots(),0);
+}
+/** Show/hide the folder-only controls (➕ New folder, "New folder in:")
+ *  that don't apply to Smart Views/Tags/Note Types. */
+function _pkSetFolderControlsVisible(on){
+  const lbl=document.getElementById('pkTargetLbl');if(lbl)lbl.style.display=on?'':'none';
+  const row=document.getElementById('pkCreateRow');if(row)row.style.display=on?'flex':'none';
 }
 /** Switch an already-open browse pop-out to a different section in place —
  *  no re-open, so its current size/position (dragged or resized) survives
@@ -12749,30 +12783,102 @@ function _pkSecNavHTML(){
  *  first one right there). */
 function _pkSwitchToSection(secId){
   const sec=DB.sections.find(s=>s.id===secId);if(!sec)return;
-  _pkMode='browse';_pkSectionScope=secId;_pkFolderScope=null;
+  _pkMode='browse';_pkScopeKind='section';_pkSectionScope=secId;_pkFolderScope=null;
   _pkRootLabel=`🏠 Root of "${sec.name}"`;
   _pkTarget=null;
   const titleEl=document.querySelector('#mb .pk-mt-title');
   if(titleEl)titleEl.textContent=`📂 ${sec.name}`;
   _pkRebuildList();
   _pkUpdateTargetLabel();
+  _pkSetFolderControlsVisible(true);
+  _pkRefreshSecNav();
+}
+/** Same idea, but for the three non-folder groupings — no tree, no
+ *  create-folder controls, just a flat clickable list. */
+function _pkSwitchToScopeKind(kind){
+  const meta=_PK_SCOPE_KIND_META[kind];if(!meta)return;
+  _pkMode='browse';_pkScopeKind=kind;_pkSectionScope=null;_pkFolderScope=null;_pkTarget=null;
+  const titleEl=document.querySelector('#mb .pk-mt-title');
+  if(titleEl)titleEl.textContent=meta.title;
+  const list=document.getElementById('pkList');
+  if(list){list.innerHTML=_pkRenderScopeBody();list.scrollTop=0;}
+  const q=(document.getElementById('pkSearch')||{}).value||'';
+  if(q.trim())_pkFilter(q);
+  _pkSetFolderControlsVisible(false);
   _pkRefreshSecNav();
 }
 function _pkRefreshSecNav(){
   const nav=document.querySelector('#mb .pk-sec-nav');
   if(nav)nav.outerHTML=_pkSecNavHTML();
 }
-function pkGotoSection(secId){
-  if(secId===_pkCurrentSectionId())return;
-  _pkSwitchToSection(secId);
+function pkGotoSection(value){
+  const kindEntry=Object.entries(_PK_SCOPE_KIND_META).find(([,m])=>m.token===value);
+  if(kindEntry){
+    if(_pkScopeKind===kindEntry[0])return;
+    _pkSwitchToScopeKind(kindEntry[0]);
+    return;
+  }
+  if(_pkScopeKind==='section'&&value===_pkCurrentSectionId())return;
+  _pkSwitchToSection(value);
+}
+/** One cyclic list of "stops" — every section in order, then the three
+ *  extra groupings — so ◀/▶ can reach everything the dropdown can. */
+function _pkNavStops(){
+  const secs=[...DB.sections].sort((a,b)=>a.order-b.order).map(s=>s.id);
+  return [...secs,...Object.values(_PK_SCOPE_KIND_META).map(m=>m.token)];
 }
 function pkGotoAdjacentSection(dir){
-  const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
-  if(secs.length<2)return;
-  let idx=secs.findIndex(s=>s.id===_pkCurrentSectionId());
+  const stops=_pkNavStops();
+  if(stops.length<2)return;
+  const curStop=_pkScopeKind==='section'?_pkCurrentSectionId():_PK_SCOPE_KIND_META[_pkScopeKind].token;
+  let idx=stops.indexOf(curStop);
   if(idx<0)idx=0;
-  const next=secs[((idx+dir)%secs.length+secs.length)%secs.length];
-  _pkSwitchToSection(next.id);
+  const next=stops[((idx+dir)%stops.length+stops.length)%stops.length];
+  pkGotoSection(next);
+}
+/** Flat, click-to-navigate lists for the three non-folder groupings.
+ *  Not folders, so no rename/delete/drag/checkbox — just jump there. */
+function _pkSmartListHTML(){
+  const items=sfOrdered();
+  if(!items.length)return '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12.5px">No smart views</div>';
+  return items.map(sf=>{
+    const nm=(DB.sfItems&&DB.sfItems[sf.id]&&DB.sfItems[sf.id].name)||sf.name;
+    return `<div class="pnav" data-name="${esc(nm.toLowerCase())}" onclick="pkNavScope('sf','${esc(sf.id)}')">`
+      +`<span style="font-size:14px">${sf.icon}</span>`
+      +`<span class="pnav-nm">${esc(nm)}</span>`
+      +`</div>`;
+  }).join('');
+}
+function _pkTagsListHTML(){
+  const tags=getAllTags();
+  if(!tags.length)return '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12.5px">No tags yet</div>';
+  return tags.map(t=>`<div class="pnav" data-name="${esc(t.tag.toLowerCase())}" onclick="pkNavScope('tag','${esc(t.tag)}')">`
+    +`<span style="font-size:12px">🏷</span>`
+    +`<span class="pnav-nm">#${esc(t.tag)}</span>`
+    +`<span class="pnav-cnt">${t.count}</span>`
+    +`</div>`).join('');
+}
+function _pkKindsListHTML(){
+  const cats=noteKindCats();
+  const kinds=noteKinds();
+  if(!kinds.length)return '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12.5px">No note types</div>';
+  return cats.map(cat=>{
+    const ks=kinds.filter(k=>(k.catId||'cat-general')===cat.id);
+    if(!ks.length)return '';
+    return `<div style="padding:6px 12px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">${cat.icon||''} ${esc(cat.name)}</div>`
+      +ks.map(k=>`<div class="pnav" data-name="${esc(k.name.toLowerCase())}" onclick="pkNavScope('kind','${esc(k.id)}')">`
+        +`<span class="nti-dot" style="background:${k.color}"></span>`
+        +`<span class="pnav-nm">${esc(k.name)}</span>`
+        +`</div>`).join('');
+  }).join('');
+}
+/** Navigate to a smart view / tag / note-type and close the pop-out — same
+ *  as clicking a folder leaf, just for the three non-folder groupings. */
+function pkNavScope(kind,val){
+  closeModal();
+  if(kind==='sf')selFolder(val);
+  else if(kind==='tag')selTag(val);
+  else if(kind==='kind')selKind(val);
 }
 function _pkOpenBrowse(title){
   showResizableModal(`<div class="mt"><div class="pk-mt-row">
@@ -12780,9 +12886,9 @@ function _pkOpenBrowse(title){
       ${_pkSecNavHTML()}
     </div></div>
     <input class="mi" id="pkSearch" placeholder="🔍 Search…" style="margin:0 0 8px;width:100%" oninput="_pkFilter(this.value)">
-    <div class="pl" id="pkList">${_pkTreeHTML(_pkCurrentBrowseRoots(),0)}</div>
+    <div class="pl" id="pkList">${_pkRenderScopeBody()}</div>
     <div class="pk-target-lbl" id="pkTargetLbl"></div>
-    <div style="display:flex;gap:6px;margin-top:0">
+    <div id="pkCreateRow" style="display:flex;gap:6px;margin-top:0">
       <input class="mi" id="npf" placeholder="New folder name…" style="flex:1;margin:0;min-width:0" onkeydown="if(event.key==='Enter')createFolderFromPicker('')">
       <button class="btn" style="flex-shrink:0" onclick="createFolderFromPicker('')">＋ New folder</button>
     </div>
@@ -12842,6 +12948,9 @@ function _pkApplyVis(){
     }
     r.style.display=vis?'':'none';
   });
+  // Smart Views / Tags / Note Types rows are flat — always visible once a
+  // search is cleared (unlike .pr/.pf they have no collapse state of their own).
+  list.querySelectorAll('.pnav').forEach(r=>{r.style.display='';});
 }
 function togglePickExp(fid){
   if(!ST.pickExp)ST.pickExp={};
@@ -12855,7 +12964,7 @@ function _pkFilter(q){
   const list=document.getElementById('pkList');if(!list)return;
   q=(q||'').trim().toLowerCase();
   if(!q){list.querySelectorAll('.pk-path').forEach(e=>e.style.display='none');_pkApplyVis();return;}
-  list.querySelectorAll('.pr,.pf').forEach(r=>{
+  list.querySelectorAll('.pr,.pf,.pnav').forEach(r=>{
     const hit=(r.dataset.name||'').includes(q);
     r.style.display=hit?'':'none';
     const pp=r.querySelector('.pk-path');if(pp)pp.style.display=hit?'':'none';
