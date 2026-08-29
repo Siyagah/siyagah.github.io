@@ -1958,6 +1958,7 @@ sup.ann-sup:hover{text-decoration:underline}
 
   <div class="sb-toolbar" id="sb-toolbar">
     <button class="sb-tb-btn" onclick="quickCapture()" title="New blank page in current folder" style="color:#6DC994">📄 New Page</button>
+    <button class="sb-tb-btn" onclick="openFolderPopupFromToolbar()" title="Open the folder pop-up browser">🗗 Folders</button>
   </div>
 </aside>
 
@@ -12702,6 +12703,18 @@ function openPicker(){
     </div>`,{width:'440px',height:'520px'});
   _pkApplyVis();
   setTimeout(()=>document.getElementById('npf')?.blur(),80);
+}
+/** Sidebar toolbar's "🗗 Folders" button — opens the pop-up browser without
+ *  needing to right-click a specific folder/section first. Pops out
+ *  whichever folder is currently open, or the first section that actually
+ *  has folders (falling back to the very first section) if none is. */
+function openFolderPopupFromToolbar(){
+  const curF=DB.folders.find(f=>f.id===ST.folder);
+  if(curF){openFolderPopout(curF.id);return;}
+  const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
+  if(!secs.length){toast('No sections yet');return;}
+  const withFolders=secs.find(s=>_firstFolderOfSection(s.id));
+  openSectionPopout((withFolders||secs[0]).id);
 }
 /** Pop out an entire section (all its root folders + their subtrees + notes)
  *  from the Pane-1 sidebar into the same floating, resizable, editable
