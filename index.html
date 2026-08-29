@@ -375,6 +375,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 #mb.mb-rsz{display:flex;flex-direction:column;overflow:hidden}
 #mb.mb-rsz>*{flex-shrink:0}
 #mb.mb-rsz>.pl{flex:1;min-height:60px;max-height:none;overflow-y:auto}
+.mb-drag-handle{cursor:move;user-select:none;-webkit-user-select:none;touch-action:none}
 .rsz{position:absolute;z-index:6}
 .rsz-n{top:-5px;left:12px;right:12px;height:9px;cursor:ns-resize}
 .rsz-s{bottom:-5px;left:12px;right:12px;height:9px;cursor:ns-resize}
@@ -12412,7 +12413,7 @@ function showModal(html){
   document.getElementById('ov').classList.add('on');
   setTimeout(()=>document.querySelector('#mb .mi')?.focus(),40);
 }
-function closeModal(){document.getElementById('ov').classList.remove('on');if(_mbRsz)_mbResizeStop();}
+function closeModal(){document.getElementById('ov').classList.remove('on');if(_mbRsz)_mbResizeStop();if(_mbDrag)_mbDragStop();}
 
 /* ── Resizable-modal support (all 8 edges/corners) ─────────────────── */
 const _RSZ_HANDLES_HTML=
@@ -12434,6 +12435,45 @@ function showResizableModal(html,opts){
   mb.style.width=opts.width||'440px';
   mb.style.height=opts.height||'500px';
   mb.insertAdjacentHTML('beforeend',_RSZ_HANDLES_HTML);
+  const mt=mb.querySelector('.mt');
+  if(mt){
+    mt.classList.add('mb-drag-handle');
+    mt.title='Drag to move';
+    mt.addEventListener('pointerdown',_mbDragStart);
+  }
+}
+/* ── Draggable-by-title-bar support ─────────────────────────────────── */
+let _mbDrag=null;
+function _mbDragStart(ev){
+  if(ev.target.closest('button,input,a')) return;   // don't hijack interactive children
+  ev.preventDefault();
+  const mb=document.getElementById('mb');if(!mb)return;
+  const rect=mb.getBoundingClientRect();
+  mb.style.position='fixed';
+  mb.style.left=rect.left+'px';
+  mb.style.top=rect.top+'px';
+  mb.style.width=rect.width+'px';
+  mb.style.height=rect.height+'px';
+  mb.style.margin='0';
+  _mbDrag={startX:ev.clientX,startY:ev.clientY,startL:rect.left,startT:rect.top,w:rect.width,h:rect.height};
+  document.addEventListener('pointermove',_mbDragMove);
+  document.addEventListener('pointerup',_mbDragStop);
+  document.body.style.userSelect='none';
+}
+function _mbDragMove(ev){
+  if(!_mbDrag)return;
+  const mb=document.getElementById('mb');if(!mb)return;
+  const {startX,startY,startL,startT,w,h}=_mbDrag;
+  let l=startL+(ev.clientX-startX),t=startT+(ev.clientY-startY);
+  l=Math.max(4,Math.min(l,window.innerWidth-w-4));
+  t=Math.max(4,Math.min(t,window.innerHeight-h-4));
+  mb.style.left=l+'px';mb.style.top=t+'px';
+}
+function _mbDragStop(){
+  _mbDrag=null;
+  document.removeEventListener('pointermove',_mbDragMove);
+  document.removeEventListener('pointerup',_mbDragStop);
+  document.body.style.userSelect='';
 }
 let _mbRsz=null;
 function _mbResizeStart(ev,dir){
