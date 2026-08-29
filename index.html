@@ -132,6 +132,10 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .p2h-sec-sel{flex:1;min-width:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
   color:var(--t3);border:1px solid var(--border2);border-radius:999px;background:var(--white);
   padding:3px 8px;font-family:var(--ui);cursor:pointer}
+/* Same ◀/dropdown/▶ control, reused in a browse pop-out's own title bar */
+.pk-mt-row{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.pk-mt-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.pk-sec-nav{display:flex;align-items:center;gap:4px;flex-shrink:0}
 .p2h-tree-node{display:flex;align-items:flex-start;gap:5px;padding:5px 12px;font-size:13px;
   color:var(--t2);cursor:pointer;white-space:normal;word-break:break-word;line-height:1.35}
 .p2h-tree-node:hover{background:var(--hover)}
@@ -12494,7 +12498,7 @@ function showResizableModal(html,opts){
 /* ── Draggable-by-title-bar support ─────────────────────────────────── */
 let _mbDrag=null;
 function _mbDragStart(ev){
-  if(ev.target.closest('button,input,a')) return;   // don't hijack interactive children
+  if(ev.target.closest('button,input,a,select')) return;   // don't hijack interactive children
   ev.preventDefault();
   const mb=document.getElementById('mb');if(!mb)return;
   const rect=mb.getBoundingClientRect();
@@ -12713,8 +12717,67 @@ function _pkCurrentBrowseRoots(){
   if(_pkSectionScope)return DB.folders.filter(f=>!f.parentId&&f.sectionId===_pkSectionScope).sort((a,b)=>a.order-b.order);
   return DB.folders.filter(f=>!f.parentId);
 }
+/** The section a browse pop-out is currently showing — its own scope
+ *  section, or (for a single-folder pop-out) the section of that folder's
+ *  root ancestor, since only root folders carry a sectionId directly. */
+function _pkCurrentSectionId(){
+  if(_pkSectionScope)return _pkSectionScope;
+  if(_pkFolderScope){
+    const p=pathOf(_pkFolderScope);
+    return p.length?p[0].sectionId:null;
+  }
+  return null;
+}
+/** ◀ / dropdown / ▶ — lets a folder OR section pop-out jump straight to a
+ *  different section without closing the window, matching the same
+ *  control already on the Full-tree header (see _secNavHTML). */
+function _pkSecNavHTML(){
+  const curSecId=_pkCurrentSectionId();
+  const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
+  const opts=secs.map(s=>`<option value="${esc(s.id)}"${s.id===curSecId?' selected':''}>${esc(s.name)}</option>`).join('');
+  return `<span class="pk-sec-nav">`
+    +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(-1)" title="Previous section">◀</button>`
+    +`<select class="p2h-sec-sel" style="max-width:140px" onclick="event.stopPropagation()" onchange="pkGotoSection(this.value)" title="Jump to a section">${opts}</select>`
+    +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(1)" title="Next section">▶</button>`
+    +`</span>`;
+}
+/** Switch an already-open browse pop-out to a different section in place —
+ *  no re-open, so its current size/position (dragged or resized) survives
+ *  the jump, unlike calling openSectionPopout() fresh. Always lands on the
+ *  section even if it has no folders yet (📍/+New folder can create its
+ *  first one right there). */
+function _pkSwitchToSection(secId){
+  const sec=DB.sections.find(s=>s.id===secId);if(!sec)return;
+  _pkMode='browse';_pkSectionScope=secId;_pkFolderScope=null;
+  _pkRootLabel=`🏠 Root of "${sec.name}"`;
+  _pkTarget=null;
+  const titleEl=document.querySelector('#mb .pk-mt-title');
+  if(titleEl)titleEl.textContent=`📂 ${sec.name}`;
+  _pkRebuildList();
+  _pkUpdateTargetLabel();
+  _pkRefreshSecNav();
+}
+function _pkRefreshSecNav(){
+  const nav=document.querySelector('#mb .pk-sec-nav');
+  if(nav)nav.outerHTML=_pkSecNavHTML();
+}
+function pkGotoSection(secId){
+  if(secId===_pkCurrentSectionId())return;
+  _pkSwitchToSection(secId);
+}
+function pkGotoAdjacentSection(dir){
+  const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
+  if(secs.length<2)return;
+  let idx=secs.findIndex(s=>s.id===_pkCurrentSectionId());
+  if(idx<0)idx=0;
+  const next=secs[((idx+dir)%secs.length+secs.length)%secs.length];
+  _pkSwitchToSection(next.id);
+}
 function _pkOpenBrowse(title){
-  showResizableModal(`<div class="mt">${title}</div>
+  showResizableModal(`<div class="mt"><div class="pk-mt-row">
+      <span class="pk-mt-title">${title}</span>
+      ${_pkSecNavHTML()}
+    </div></div>
     <input class="mi" id="pkSearch" placeholder="🔍 Search…" style="margin:0 0 8px;width:100%" oninput="_pkFilter(this.value)">
     <div class="pl" id="pkList">${_pkTreeHTML(_pkCurrentBrowseRoots(),0)}</div>
     <div class="pk-target-lbl" id="pkTargetLbl"></div>
