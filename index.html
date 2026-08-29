@@ -12484,15 +12484,48 @@ const _RSZ_HANDLES_HTML=
   '<div class="rsz rsz-nw" onpointerdown="_mbResizeStart(event,\'nw\')"></div>'+
   '<div class="rsz rsz-se" onpointerdown="_mbResizeStart(event,\'se\')"></div>'+
   '<div class="rsz rsz-sw" onpointerdown="_mbResizeStart(event,\'sw\')"></div>';
+/** Remembers a resizable modal's last size+position (as % of the viewport,
+ *  so it re-scales sanely if the window/screen changes) across reopens and
+ *  page reloads — device-local, on purpose: window chrome for one screen
+ *  shouldn't be pushed onto a synced device with a different screen size. */
+const _MB_GEOM_KEY='siyagah-mb-popout-geom';
+function _mbSaveGeom(){
+  try{
+    const mb=document.getElementById('mb');if(!mb)return;
+    const r=mb.getBoundingClientRect();
+    localStorage.setItem(_MB_GEOM_KEY,JSON.stringify({
+      wPct:r.width/window.innerWidth*100,   hPct:r.height/window.innerHeight*100,
+      lPct:r.left/window.innerWidth*100,    tPct:r.top/window.innerHeight*100,
+    }));
+  }catch(e){}
+}
+function _mbLoadGeom(){
+  try{
+    const g=JSON.parse(localStorage.getItem(_MB_GEOM_KEY));
+    return (g&&typeof g.wPct==='number'&&typeof g.hPct==='number')?g:null;
+  }catch(e){return null;}
+}
 /** Same as showModal(), but the box is resizable from any edge/corner and
- *  starts at opts.width/opts.height instead of the default fixed size. */
+ *  starts at opts.width/opts.height — or, if the user has already dragged
+ *  or resized one of these before, right back where they left it. */
 function showResizableModal(html,opts){
   opts=opts||{};
   showModal(html);
   const mb=document.getElementById('mb');
   mb.classList.add('mb-rsz');
-  mb.style.width=opts.width||'440px';
-  mb.style.height=opts.height||'500px';
+  const saved=_mbLoadGeom();
+  if(saved){
+    const w=Math.max(300,window.innerWidth*saved.wPct/100);
+    const h=Math.max(260,window.innerHeight*saved.hPct/100);
+    const l=Math.max(4,Math.min(window.innerWidth*saved.lPct/100,window.innerWidth-w-4));
+    const t=Math.max(4,Math.min(window.innerHeight*saved.tPct/100,window.innerHeight-h-4));
+    mb.style.position='fixed';mb.style.margin='0';
+    mb.style.width=w+'px';mb.style.height=h+'px';
+    mb.style.left=l+'px';mb.style.top=t+'px';
+  } else {
+    mb.style.width=opts.width||'440px';
+    mb.style.height=opts.height||'500px';
+  }
   mb.insertAdjacentHTML('beforeend',_RSZ_HANDLES_HTML);
   const mt=mb.querySelector('.mt');
   if(mt){
@@ -12533,6 +12566,7 @@ function _mbDragStop(){
   document.removeEventListener('pointermove',_mbDragMove);
   document.removeEventListener('pointerup',_mbDragStop);
   document.body.style.userSelect='';
+  _mbSaveGeom();
 }
 let _mbRsz=null;
 function _mbResizeStart(ev,dir){
@@ -12571,6 +12605,7 @@ function _mbResizeStop(){
   document.removeEventListener('pointermove',_mbResizeMove);
   document.removeEventListener('pointerup',_mbResizeStop);
   document.body.style.userSelect='';
+  _mbSaveGeom();
 }
 function openModal(type,target){
   if(type==='folder'){
@@ -12710,11 +12745,22 @@ function openPicker(){
  *  has folders (falling back to the very first section) if none is. */
 function openFolderPopupFromToolbar(){
   const curF=DB.folders.find(f=>f.id===ST.folder);
-  if(curF){openFolderPopout(curF.id);return;}
-  const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
-  if(!secs.length){toast('No sections yet');return;}
-  const withFolders=secs.find(s=>_firstFolderOfSection(s.id));
-  openSectionPopout((withFolders||secs[0]).id);
+  // Always land on the FULL section (all its folders), not just the one
+  // folder that happens to be open — openFolderPopout() is for the
+  // right-click "pop out this folder" menu item, a deliberately narrower
+  // single-folder view that doesn't belong here.
+  let secId=null;
+  if(curF){
+    const root=pathOf(curF.id)[0];
+    secId=root?root.sectionId:null;
+  }
+  if(!secId){
+    const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
+    if(!secs.length){toast('No sections yet');return;}
+    const withFolders=secs.find(s=>_firstFolderOfSection(s.id));
+    secId=(withFolders||secs[0]).id;
+  }
+  openSectionPopout(secId);
 }
 /** Pop out an entire section (all its root folders + their subtrees + notes)
  *  from the Pane-1 sidebar into the same floating, resizable, editable
@@ -12907,7 +12953,7 @@ function _pkOpenBrowse(title){
     </div>
     <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:8px">
       <button class="btn bp" onclick="closeModal()">Close</button>
-    </div>`,{width:'clamp(420px, 32vw, 900px)',height:'clamp(420px, 82vh, 900px)'});
+    </div>`,{width:'clamp(420px, 40vw, 1000px)',height:'clamp(420px, 90vh, 1000px)'});
   _pkUpdateTargetLabel();
   _pkApplyVis();
   setTimeout(()=>document.getElementById('npf')?.blur(),80);
