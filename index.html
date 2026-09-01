@@ -12514,6 +12514,19 @@ function showResizableModal(html,opts){
   showModal(html);
   const mb=document.getElementById('mb');
   mb.classList.add('mb-rsz');
+  // Tablet/mobile (same breakpoint the rest of the app already switches
+  // panes on): a floating, resizable window doesn't work well on a small
+  // touch screen, so opt-in callers (the Folder Browser) get a true
+  // full-screen page instead — no resize handles, no drag-to-move, no
+  // remembered size/position to restore or save.
+  if(opts.mobileFullscreen&&window.innerWidth<1200){
+    mb.classList.add('mb-full');
+    mb.style.position='fixed';mb.style.margin='0';mb.style.borderRadius='0';
+    mb.style.left='0';mb.style.top='0';
+    mb.style.width='100vw';mb.style.maxWidth='100vw';
+    mb.style.height='100%';mb.style.maxHeight='100%';
+    return;
+  }
   const saved=_mbLoadGeom();
   if(saved){
     const w=Math.max(300,window.innerWidth*saved.wPct/100);
@@ -13022,7 +13035,7 @@ function _pkOpenBrowse(title){
     </div>
     <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:8px">
       <button class="btn bp" onclick="closeModal()">Close</button>
-    </div>`,{width:'clamp(420px, 40vw, 1000px)',height:'clamp(420px, 90vh, 1000px)'});
+    </div>`,{width:'clamp(420px, 40vw, 1000px)',height:'clamp(420px, 90vh, 1000px)',mobileFullscreen:true});
   _pkUpdateTargetLabel();
   _pkApplyVis();
   setTimeout(()=>document.getElementById('npf')?.blur(),80);
