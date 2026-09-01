@@ -12805,6 +12805,7 @@ function openSectionPopout(secId){
   _pkMode='browse';_pkScopeKind='section';_pkSectionScope=secId;_pkFolderScope=null;
   _pkRootLabel=`🏠 Root of "${sec.name}"`;
   _pkTarget=null;
+  ST.pickExp={};   // always land on a section fully collapsed, never carrying over a prior expand state
   _pkOpenBrowse(`📂 ${esc(sec.name)}`);
 }
 /** Pop out a single folder's own subtree (itself + descendants + notes). */
@@ -12813,6 +12814,7 @@ function openFolderPopout(fid){
   _pkMode='browse';_pkScopeKind='section';_pkSectionScope=null;_pkFolderScope=fid;
   _pkRootLabel=`🏠 Root`;
   _pkTarget=fid;
+  ST.pickExp={};
   _pkOpenBrowse(`📁 ${esc(f.name)}`);
 }
 function _pkCurrentBrowseRoots(){
@@ -12853,11 +12855,11 @@ function _pkSecNavHTML(){
   return `<span class="pk-sec-nav">`
     +`<button class="p2h-sec-nav-btn${_pkScopeKind==='all'?' on':''}" onclick="event.stopPropagation();pkGotoSection('${_PK_SCOPE_KIND_META.all.token}')" title="Show every section at once">🗂</button>`
     +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(-1)" title="Previous section">◀</button>`
+    +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(1)" title="Next section">▶</button>`
     +`<select class="p2h-sec-sel pk-sec-sel" onclick="event.stopPropagation()" onchange="pkGotoSection(this.value)" title="Jump to a section, All Sections, Smart Views, Tags, or Note Types">`
     +`<optgroup label="Sections">${secOpts}</optgroup>`
     +`<optgroup label="Other">${extraOpts}</optgroup>`
     +`</select>`
-    +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(1)" title="Next section">▶</button>`
     +`</span>`;
 }
 /** #pkList content for whichever scope kind is currently selected. */
@@ -12899,6 +12901,7 @@ function _pkSwitchToSection(secId){
   _pkMode='browse';_pkScopeKind='section';_pkSectionScope=secId;_pkFolderScope=null;
   _pkRootLabel=`🏠 Root of "${sec.name}"`;
   _pkTarget=null;
+  ST.pickExp={};   // always land on a section fully collapsed, never carrying over a prior expand state
   const titleEl=document.querySelector('#mb .pk-mt-title');
   if(titleEl)titleEl.textContent=`📂 ${sec.name}`;
   _pkRebuildList();
@@ -12911,6 +12914,7 @@ function _pkSwitchToSection(secId){
 function _pkSwitchToScopeKind(kind){
   const meta=_PK_SCOPE_KIND_META[kind];if(!meta)return;
   _pkMode='browse';_pkScopeKind=kind;_pkSectionScope=null;_pkFolderScope=null;_pkTarget=null;
+  ST.pickExp={};   // "All Sections" renders folder trees too — same fresh-collapsed rule
   const titleEl=document.querySelector('#mb .pk-mt-title');
   if(titleEl)titleEl.textContent=meta.title;
   const list=document.getElementById('pkList');
@@ -13079,12 +13083,13 @@ function togglePickExp(fid){
 function _pkFilter(q){
   const list=document.getElementById('pkList');if(!list)return;
   q=(q||'').trim();
-  // A section/folder pop-out only ever renders ITS OWN scope in #pkList, so
-  // filtering those rows in place would only ever search what's currently
-  // on screen. Search everything instead — every folder and note, any
-  // section — same as the whole-DB "Assign to folders" search already does
-  // by virtue of rendering the whole tree.
-  if(_pkMode==='browse'&&_pkScopeKind==='section'){
+  // A pop-out only ever renders whichever ONE scope it's currently on
+  // (one section, one folder, All Sections, Smart Views, Tags, Note Types)
+  // in #pkList, so filtering those rows in place could only ever search
+  // what's currently on screen. Search everywhere instead — every folder,
+  // note, Smart View, tag, and note type, regardless of which of those
+  // you're actually looking at right now.
+  if(_pkMode==='browse'){
     if(!q){_pkRebuildList();return;}
     list.innerHTML=_pkGlobalSearchHTML(q);
     return;
@@ -13097,20 +13102,30 @@ function _pkFilter(q){
     const pp=r.querySelector('.pk-path');if(pp)pp.style.display=hit?'':'none';
   });
 }
-/** Flat, all-folders-and-notes search results for a browse pop-out — path
- *  breadcrumb under each folder hit, clicking one switches the pop-out
- *  into that folder's own context (rename/delete/subfolders/notes right
- *  there) instead of just filtering whatever happened to be on screen. */
+/** Universal search for a browse pop-out: folders, notes, Smart Views,
+ *  Tags, and Note Types together (same grouping the sidebar's own search
+ *  already uses) — regardless of which one of those the pop-out currently
+ *  happens to be showing. Folder hits carry a path breadcrumb and switch
+ *  the pop-out into that folder's own context on click; Smart View/Tag/
+ *  Note-Type hits close the pop-out and navigate there directly, same as
+ *  clicking them anywhere else in the pop-out. */
 function _pkGlobalSearchHTML(q){
   const words=_searchWords(q);
   const folderHits=DB.folders.filter(f=>_matchesAllWords(f.name,words));
   const noteHits=DB.articles.filter(a=>_matchesAllWords(a.title||'',words));
-  if(!folderHits.length&&!noteHits.length){
+  const smartHits=sfOrdered().filter(sf=>{
+    const nm=(DB.sfItems&&DB.sfItems[sf.id]&&DB.sfItems[sf.id].name)||sf.name;
+    return _matchesAllWords(nm,words);
+  });
+  const tagHits=getAllTags().filter(t=>_matchesAllWords(t.tag,words));
+  const kindHits=noteKinds().filter(k=>_matchesAllWords(k.name,words));
+  if(!folderHits.length&&!noteHits.length&&!smartHits.length&&!tagHits.length&&!kindHits.length){
     return '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">No matches</div>';
   }
+  const grpHd=label=>`<div style="padding:6px 12px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">${label}</div>`;
   let h='';
   if(folderHits.length){
-    h+=folderHits.map(f=>{
+    h+=grpHd('📁 Folders')+folderHits.map(f=>{
       const path=_pkPathWithSection(f.id,false);
       return `<div class="pr" onclick="_pkSwitchToFolder('${esc(f.id)}')" style="padding-left:8px">`
         +`<span style="font-size:12px">📁</span>`
@@ -13119,8 +13134,30 @@ function _pkGlobalSearchHTML(q){
         +`</div>`;
     }).join('');
   }
+  if(smartHits.length){
+    h+=grpHd('⚡ Smart Views')+smartHits.map(sf=>{
+      const nm=(DB.sfItems&&DB.sfItems[sf.id]&&DB.sfItems[sf.id].name)||sf.name;
+      return `<div class="pnav" onclick="pkNavScope('sf','${esc(sf.id)}')" style="padding-left:8px">`
+        +`<span style="font-size:14px">${sf.icon}</span>`
+        +`<span class="pnav-nm">${esc(nm)}</span>`
+        +`</div>`;
+    }).join('');
+  }
+  if(tagHits.length){
+    h+=grpHd('🏷 Tags')+tagHits.map(t=>`<div class="pnav" onclick="pkNavScope('tag','${esc(t.tag)}')" style="padding-left:8px">`
+      +`<span style="font-size:12px">🏷</span>`
+      +`<span class="pnav-nm">#${esc(t.tag)}</span>`
+      +`<span class="pnav-cnt">${t.count}</span>`
+      +`</div>`).join('');
+  }
+  if(kindHits.length){
+    h+=grpHd('🔖 Note Types')+kindHits.map(k=>`<div class="pnav" onclick="pkNavScope('kind','${esc(k.id)}')" style="padding-left:8px">`
+      +`<span class="nti-dot" style="background:${k.color}"></span>`
+      +`<span class="pnav-nm">${esc(k.name)}</span>`
+      +`</div>`).join('');
+  }
   if(noteHits.length){
-    h+=noteHits.map(a=>{
+    h+=grpHd('📄 Notes')+noteHits.map(a=>{
       const parentF=DB.folders.find(f=>(a.folderIds||[]).includes(f.id));
       const path=parentF?_pkPathWithSection(parentF.id,true):'';
       return `<div class="pf" onclick="pkNoteOpen('${esc(a.id)}')" style="padding-left:8px">`
@@ -13151,6 +13188,7 @@ function _pkSwitchToFolder(fid){
   _pkMode='browse';_pkScopeKind='section';_pkSectionScope=null;_pkFolderScope=fid;
   _pkRootLabel='🏠 Root';
   _pkTarget=fid;
+  ST.pickExp={};
   const titleEl=document.querySelector('#mb .pk-mt-title');
   if(titleEl)titleEl.textContent=`📁 ${f.name}`;
   const sEl=document.getElementById('pkSearch');if(sEl)sEl.value='';
