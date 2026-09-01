@@ -129,6 +129,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
   border-radius:999px;border:1px solid var(--border2);background:var(--white);color:var(--t2);
   cursor:pointer;font-size:11px;text-transform:none;letter-spacing:normal;font-weight:400;padding:0}
 .p2h-sec-nav-btn:hover{background:var(--hover)}
+.p2h-sec-nav-btn.on{background:var(--greenlt);color:var(--green2);border-color:var(--green)}
 .p2h-sec-sel{flex:1;min-width:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
   color:var(--t3);border:1px solid var(--border2);border-radius:999px;background:var(--white);
   padding:3px 8px;font-family:var(--ui);cursor:pointer}
@@ -12722,7 +12723,7 @@ function _pkTreeHTML(flds,d){
   }).join('');
 }
 function openPicker(){
-  _pkMode='assign';_pkSectionScope=null;_pkFolderScope=null;_pkRootLabel='🏠 Root';
+  _pkMode='assign';_pkScopeKind='section';_pkSectionScope=null;_pkFolderScope=null;_pkRootLabel='🏠 Root';
   _pkTarget=null;
   showResizableModal(`<div class="mt">Assign to folders</div>
     <input class="mi" id="pkSearch" placeholder="🔍 Search folders…" style="margin:0 0 8px;width:100%" oninput="_pkFilter(this.value)">
@@ -12831,15 +12832,18 @@ function _pkCurrentSectionId(){
   return null;
 }
 const _PK_SCOPE_KIND_META={
+  all:{token:'__all__',title:'🗂 All Sections',label:'🗂 All Sections'},
   smart:{token:'__smart__',title:'⚡ Smart Views',label:'⚡ Smart Views'},
   tags:{token:'__tags__',title:'🏷 Tags',label:'🏷 Tags'},
   kinds:{token:'__kinds__',title:'🔖 Note Types',label:'🔖 Note Types'},
 };
 /** ◀ / dropdown / ▶ — lets a folder OR section pop-out jump straight to a
- *  different section, or to Smart Views / Tags / Note Types, without
- *  closing the window. Same control already on the Full-tree header (see
- *  _secNavHTML), plus the three non-folder groupings that live alongside
- *  sections in Pane 1. */
+ *  different section, to every section at once, or to Smart Views / Tags /
+ *  Note Types, without closing the window. Same control already on the
+ *  Full-tree header (see _secNavHTML), plus the non-folder groupings that
+ *  live alongside sections in Pane 1. The 🗂 button is a one-click
+ *  shortcut into "All Sections" — same destination as picking it from the
+ *  dropdown, just faster to reach. */
 function _pkSecNavHTML(){
   const curSecId=_pkScopeKind==='section'?_pkCurrentSectionId():null;
   const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
@@ -12847,8 +12851,9 @@ function _pkSecNavHTML(){
   const extraOpts=Object.entries(_PK_SCOPE_KIND_META)
     .map(([kind,m])=>`<option value="${m.token}"${_pkScopeKind===kind?' selected':''}>${m.label}</option>`).join('');
   return `<span class="pk-sec-nav">`
+    +`<button class="p2h-sec-nav-btn${_pkScopeKind==='all'?' on':''}" onclick="event.stopPropagation();pkGotoSection('${_PK_SCOPE_KIND_META.all.token}')" title="Show every section at once">🗂</button>`
     +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(-1)" title="Previous section">◀</button>`
-    +`<select class="p2h-sec-sel pk-sec-sel" onclick="event.stopPropagation()" onchange="pkGotoSection(this.value)" title="Jump to a section, Smart Views, Tags, or Note Types">`
+    +`<select class="p2h-sec-sel pk-sec-sel" onclick="event.stopPropagation()" onchange="pkGotoSection(this.value)" title="Jump to a section, All Sections, Smart Views, Tags, or Note Types">`
     +`<optgroup label="Sections">${secOpts}</optgroup>`
     +`<optgroup label="Other">${extraOpts}</optgroup>`
     +`</select>`
@@ -12857,10 +12862,26 @@ function _pkSecNavHTML(){
 }
 /** #pkList content for whichever scope kind is currently selected. */
 function _pkRenderScopeBody(){
+  if(_pkScopeKind==='all')return _pkAllSectionsHTML();
   if(_pkScopeKind==='smart')return _pkSmartListHTML();
   if(_pkScopeKind==='tags')return _pkTagsListHTML();
   if(_pkScopeKind==='kinds')return _pkKindsListHTML();
   return _pkTreeHTML(_pkCurrentBrowseRoots(),0);
+}
+/** Every section's folder tree, one after another with a section-name
+ *  header — same folder rows (rename/delete/drag-reparent/notes) as a
+ *  single-section view, just all of them in one scroll. */
+function _pkAllSectionsHTML(){
+  const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
+  if(!secs.length)return '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">No sections yet</div>';
+  return secs.map(sec=>{
+    const roots=DB.folders.filter(f=>!f.parentId&&f.sectionId===sec.id).sort((a,b)=>a.order-b.order);
+    const body=roots.length
+      ?_pkTreeHTML(roots,0)
+      :'<div style="padding:2px 12px 8px;font-size:11.5px;color:var(--t3);font-style:italic">Empty</div>';
+    return `<div style="padding:6px 12px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">📂 ${esc(sec.name)}</div>`
+      +body;
+  }).join('');
 }
 /** Show/hide the folder-only controls (➕ New folder, "New folder in:")
  *  that don't apply to Smart Views/Tags/Note Types. */
@@ -13003,14 +13024,17 @@ function _pkRow(fid){const l=document.getElementById('pkList');if(!l)return null
 function _pkRebuildList(){
   const list=document.getElementById('pkList');if(!list)return;
   const scrollTop=list.scrollTop;
-  const roots=_pkMode==='browse'?_pkCurrentBrowseRoots():DB.folders.filter(f=>!f.parentId);
-  if(_pkMode==='browse'&&_pkFolderScope&&!roots.length){
+  if(_pkMode==='browse'&&_pkFolderScope&&!DB.folders.some(f=>f.id===_pkFolderScope)){
     // The folder this pop-out was scoped to no longer exists (deleted from within it).
     closeModal();
     toast('That folder was deleted');
     return;
   }
-  list.innerHTML=_pkTreeHTML(roots,0);
+  // Route through the same scope-aware renderer showResizableModal() uses on
+  // open, so a note rename/delete/move triggered from within "All Sections"
+  // (or any other non-plain-tree scope) redraws correctly instead of
+  // silently falling back to a flat, ungrouped folder list.
+  list.innerHTML=_pkMode==='browse'?_pkRenderScopeBody():_pkTreeHTML(DB.folders.filter(f=>!f.parentId),0);
   list.scrollTop=scrollTop;
   const q=(document.getElementById('pkSearch')||{}).value||'';
   if(q.trim())_pkFilter(q);else _pkApplyVis();
