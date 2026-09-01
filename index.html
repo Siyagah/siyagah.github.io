@@ -369,7 +369,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .pr{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer}
 .pr:hover{background:var(--paper)}
 .pc{width:15px;height:15px;border:1.5px solid var(--border2);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}
- .pk-chev{display:inline-block;width:14px;text-align:center;color:var(--t3);cursor:pointer;font-size:11px;flex-shrink:0;user-select:none}
+ .pk-chev{display:inline-block;width:28px;text-align:center;color:var(--t3);cursor:pointer;font-size:22px;line-height:1;flex-shrink:0;user-select:none}
  .pk-chev-sp{cursor:default}
 .pc.on{background:var(--green);border-color:var(--green)}
 .pr.drg{opacity:.35}
@@ -12472,7 +12472,7 @@ function showModal(html){
   document.getElementById('ov').classList.add('on');
   setTimeout(()=>document.querySelector('#mb .mi')?.focus(),40);
 }
-function closeModal(){document.getElementById('ov').classList.remove('on');if(_mbRsz)_mbResizeStop();if(_mbDrag)_mbDragStop();}
+function closeModal(){document.getElementById('ov').classList.remove('on');if(_mbRsz)_mbResizeStop();if(_mbDrag)_mbDragStop();_pkSaveScope();}
 
 /* ── Resizable-modal support (all 8 edges/corners) ─────────────────── */
 const _RSZ_HANDLES_HTML=
@@ -12743,7 +12743,37 @@ function openPicker(){
  *  needing to right-click a specific folder/section first. Pops out
  *  whichever folder is currently open, or the first section that actually
  *  has folders (falling back to the very first section) if none is. */
+/** Remembers which section/folder/view a browse pop-out was showing when
+ *  it was last closed — device-local, alongside its size/position — so the
+ *  generic toolbar button can resume there instead of always guessing from
+ *  whatever's active in the sidebar right now. Explicit opens (right-click
+ *  "pop out this folder/section") always honor their own target and never
+ *  consult this. */
+const _MB_SCOPE_KEY='siyagah-mb-popout-scope';
+function _pkSaveScope(){
+  try{
+    if(_pkMode!=='browse')return;
+    localStorage.setItem(_MB_SCOPE_KEY,JSON.stringify({
+      kind:_pkScopeKind,sectionScope:_pkSectionScope,folderScope:_pkFolderScope,
+    }));
+  }catch(e){}
+}
+function _pkLoadScope(){
+  try{
+    const s=JSON.parse(localStorage.getItem(_MB_SCOPE_KEY));
+    return (s&&s.kind)?s:null;
+  }catch(e){return null;}
+}
 function openFolderPopupFromToolbar(){
+  const saved=_pkLoadScope();
+  if(saved&&saved.folderScope&&DB.folders.some(f=>f.id===saved.folderScope)){
+    openFolderPopout(saved.folderScope);
+    return;
+  }
+  if(saved&&saved.sectionScope&&DB.sections.some(s=>s.id===saved.sectionScope)){
+    openSectionPopout(saved.sectionScope);
+    return;
+  }
   const curF=DB.folders.find(f=>f.id===ST.folder);
   // Always land on the FULL section (all its folders), not just the one
   // folder that happens to be open — openFolderPopout() is for the
@@ -12761,6 +12791,9 @@ function openFolderPopupFromToolbar(){
     secId=(withFolders||secs[0]).id;
   }
   openSectionPopout(secId);
+  if(saved&&(saved.kind==='smart'||saved.kind==='tags'||saved.kind==='kinds')){
+    _pkSwitchToScopeKind(saved.kind);
+  }
 }
 /** Pop out an entire section (all its root folders + their subtrees + notes)
  *  from the Pane-1 sidebar into the same floating, resizable, editable
@@ -13021,13 +13054,86 @@ function togglePickExp(fid){
 }
 function _pkFilter(q){
   const list=document.getElementById('pkList');if(!list)return;
-  q=(q||'').trim().toLowerCase();
+  q=(q||'').trim();
+  // A section/folder pop-out only ever renders ITS OWN scope in #pkList, so
+  // filtering those rows in place would only ever search what's currently
+  // on screen. Search everything instead — every folder and note, any
+  // section — same as the whole-DB "Assign to folders" search already does
+  // by virtue of rendering the whole tree.
+  if(_pkMode==='browse'&&_pkScopeKind==='section'){
+    if(!q){_pkRebuildList();return;}
+    list.innerHTML=_pkGlobalSearchHTML(q);
+    return;
+  }
+  q=q.toLowerCase();
   if(!q){list.querySelectorAll('.pk-path').forEach(e=>e.style.display='none');_pkApplyVis();return;}
   list.querySelectorAll('.pr,.pf,.pnav').forEach(r=>{
     const hit=(r.dataset.name||'').includes(q);
     r.style.display=hit?'':'none';
     const pp=r.querySelector('.pk-path');if(pp)pp.style.display=hit?'':'none';
   });
+}
+/** Flat, all-folders-and-notes search results for a browse pop-out — path
+ *  breadcrumb under each folder hit, clicking one switches the pop-out
+ *  into that folder's own context (rename/delete/subfolders/notes right
+ *  there) instead of just filtering whatever happened to be on screen. */
+function _pkGlobalSearchHTML(q){
+  const words=_searchWords(q);
+  const folderHits=DB.folders.filter(f=>_matchesAllWords(f.name,words));
+  const noteHits=DB.articles.filter(a=>_matchesAllWords(a.title||'',words));
+  if(!folderHits.length&&!noteHits.length){
+    return '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">No matches</div>';
+  }
+  let h='';
+  if(folderHits.length){
+    h+=folderHits.map(f=>{
+      const path=_pkPathWithSection(f.id,false);
+      return `<div class="pr" onclick="_pkSwitchToFolder('${esc(f.id)}')" style="padding-left:8px">`
+        +`<span style="font-size:12px">📁</span>`
+        +`<span class="pk-nm" style="font-size:13px;color:var(--t1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</span>`
+        +(path?`<span class="pk-path" style="font-size:10.5px;color:var(--t3);margin-left:6px;flex-shrink:0;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(path)}</span>`:'')
+        +`</div>`;
+    }).join('');
+  }
+  if(noteHits.length){
+    h+=noteHits.map(a=>{
+      const parentF=DB.folders.find(f=>(a.folderIds||[]).includes(f.id));
+      const path=parentF?_pkPathWithSection(parentF.id,true):'';
+      return `<div class="pf" onclick="pkNoteOpen('${esc(a.id)}')" style="padding-left:8px">`
+        +`<span style="font-size:11px;opacity:.55">📄</span>`
+        +`<span class="pf-nm">${esc(a.title||'Untitled')}</span>`
+        +(path?`<span class="pk-path" style="font-size:10.5px;color:var(--t3);margin-left:6px;flex-shrink:0;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(path)}</span>`:'')
+        +`</div>`;
+    }).join('');
+  }
+  return h;
+}
+/** Breadcrumb for a search result: section name first (only root folders
+ *  carry sectionId directly, so this walks up via pathOf() to find it),
+ *  then folder ancestors — includeSelf appends fid's own name too (used
+ *  for a note's containing folder, distinct from the note's own title
+ *  shown separately; excluded for a folder hit whose name is the row itself). */
+function _pkPathWithSection(fid,includeSelf){
+  const p=pathOf(fid);
+  const sec=p.length?DB.sections.find(s=>s.id===p[0].sectionId):null;
+  const chain=includeSelf?p:p.slice(0,-1);
+  return [sec?sec.name:null,...chain.map(x=>x.name)].filter(Boolean).join(' › ');
+}
+/** Switch an open browse pop-out to a specific folder's own subtree — used
+ *  by global search results to land the user right on what they found,
+ *  with the usual rename/delete/subfolder/note tools available there. */
+function _pkSwitchToFolder(fid){
+  const f=DB.folders.find(x=>x.id===fid);if(!f)return;
+  _pkMode='browse';_pkScopeKind='section';_pkSectionScope=null;_pkFolderScope=fid;
+  _pkRootLabel='🏠 Root';
+  _pkTarget=fid;
+  const titleEl=document.querySelector('#mb .pk-mt-title');
+  if(titleEl)titleEl.textContent=`📁 ${f.name}`;
+  const sEl=document.getElementById('pkSearch');if(sEl)sEl.value='';
+  _pkRebuildList();
+  _pkUpdateTargetLabel();
+  _pkSetFolderControlsVisible(true);
+  _pkRefreshSecNav();
 }
 function togglePick(fid){
   const _pfidBefore=DB.theme&&DB.theme.quickCaptureFolderId;
