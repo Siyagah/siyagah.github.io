@@ -2767,6 +2767,7 @@ function renderP2H(){
       :newBtn);
   el.innerHTML=ham
     +`<div style="flex:1;min-width:0;overflow:hidden" class="tbt">${esc(curF.name)}${curF.journalMode?'<span style="font-size:11px;margin-left:5px;opacity:.65">📓</span>':''}</div>`
+    +`<button class="btn bn bi" onclick="openFolderPopupFromToolbar()" style="font-size:13px;flex-shrink:0" title="Open the folder browser">🗗</button>`
     +_jrnBtn+(curF.journalMode?'':previewBtn)+cls;
   const _pathHost=document.getElementById('p2h-path');
   if(_pathHost)_pathHost.innerHTML=_folderPathRowHTML(curF);
