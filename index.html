@@ -7,10 +7,20 @@
      Format: XX.YY
        XX = Major Features / upgrades (bump this, reset YY to 00)
        YY = Enhancements / fixes (bump this for smaller changes)
-     Claude: on every delivery, read this value, bump it per the rule
-     above, update it here, and name the downloaded file
-     "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.97">
+     Claude: EVERY update bumps this — no change ships on the version that
+     came before it. Read this value, bump it per the rule above, and land
+     the new number in all THREE places that carry it:
+       1. this meta tag — the source of truth everything else reads;
+       2. the " v03.xx" placeholder in the .sb-logo line (search
+          app-version-tag). Boot overwrites it from this meta tag, so it is
+          only the pre-boot paint — but leaving it stale shows the old
+          number for a frame;
+       3. sw.js's VERSION constant, as 'vXX.YY.01'. That string is the
+          cache name; if it does not change, the service worker keeps
+          serving the previous build's files and the update never reaches
+          the device.
+     Then name the downloaded file "Siyagah v{APP_VERSION}.html" -->
+<meta name="app-version" content="03.98">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1881,7 +1891,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.97</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.98</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button>
       <button class="btn bn bi" onclick="openGlobalSearch()" style="font-size:20px" title="Search (Ctrl+K)">🔍</button>
@@ -15046,7 +15056,9 @@ function updateSaveUI(){
    Format XX.YY — XX = Major Features/upgrades, YY = Enhancements/fixes.
    Claude updates that tag (and this stays in sync automatically) on every
    delivery, bumping it from whatever value is already in the file that's
-   deployed on GitHub. ─────────────────────────────────────────────────── */
+   deployed on GitHub. Two other spots carry the number and do NOT follow
+   automatically — the .sb-logo placeholder below and sw.js's VERSION cache
+   name; the comment on the meta tag itself lists all three. ──────────── */
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || '00.00';
 document.addEventListener('DOMContentLoaded',()=>{
   const vt=document.getElementById('app-version-tag');
