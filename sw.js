@@ -24,7 +24,7 @@
    no longer drift apart. Bumping this is what evicts the previous cache;
    without it, devices keep serving the old index.html for non-navigation
    requests and never receive a sync fix at all. */
-const VERSION = 'v04.00.01';
+const VERSION = 'v04.01.01';
 const CACHE   = 'siyagah-' + VERSION;
 const CORE    = ['./', './index.html', './manifest.json'];
 self.addEventListener('install', (e) => {
@@ -51,6 +51,15 @@ self.addEventListener('fetch', (e) => {
   // (and Firebase SDK loads, Google Auth, etc.) must reach the network
   // completely untouched, or the browser's own default handling breaks.
   if (new URL(req.url).origin !== self.location.origin) return;
+  // v04.01 — never touch a frozen build. /legacy/** is sealed: each folder
+  // under it is a complete older version of the app, kept as a permanent
+  // archive and fallback. If those requests went through the cache below,
+  // a future build's cached index.html could end up served at an archive's
+  // URL, or an archive could be pinned to a stale copy of itself. Letting
+  // them fall through to the network means the browser handles them exactly
+  // as it would with no service worker at all — which is what an archive
+  // needs: the same bytes, from the server, every time.
+  if (new URL(req.url).pathname.startsWith('/legacy/')) return;
   const isHTML =
     req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html');

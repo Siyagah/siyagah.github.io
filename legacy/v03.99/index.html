@@ -2,7 +2,7 @@
 <html lang="en" style="--forest: #0D1A12; --green: #1B7A46; --green2: #155F37; --greenlt: #E8F5EE; --gold: #B8873A; --paper: #F7F4ED; --white: #FFFFFF; --border: #E4DFD3; --border2: #CFC9BB; --t1: #1A1612; --t2: #5A544A; --t3: #9A9289; --fs-sidebar: 12.5px; --fs-list: 13px; --fs-content: 17px; --lh-content: 1.6; --pp-gap: 12px;"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Knowledge Notebook</title>
+<title>Siyagah — Legacy App v03.99 (frozen archive)</title>
 <!-- SIYAGAH APP VERSION — single source of truth for the delivery filename.
      Format: XX.YY
        XX = Major Features / upgrades (bump this, reset YY to 00)
@@ -19,21 +19,14 @@
           cache name; if it does not change, the service worker keeps
           serving the previous build's files and the update never reaches
           the device.
-     Then name the downloaded file "Siyagah v{APP_VERSION}.html"
-
-     FROZEN BUILDS — /legacy/**
-     Everything under /legacy/ is a sealed copy of an earlier version, kept
-     as a permanent archive and fallback (v03.99 was sealed on 2 Sep 2026,
-     the day v04.00 began). NOTHING in that folder is ever updated: no
-     feature, no fix, no refactor, and no version bump. The rule above
-     applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.01">
+     Then name the downloaded file "Siyagah v{APP_VERSION}.html" -->
+<meta name="app-version" content="03.99">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Siyagah">
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9Ijg4IiBmaWxsPSIjNjM2NkYxIi8+PHRleHQgeD0iMjU2IiB5PSIzNzAiIGZvbnQtc2l6ZT0iMzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiPiYjeDYzMzs8L3RleHQ+PC9zdmc+">
-<link rel="manifest" href="/manifest.json">
+<!-- manifest link removed in the frozen archive — only the live app is installable -->
 <!--
 ╔═══════════════════════════════════════════════════════════════════╗
 ║  NOTEBOOK DATA — updated automatically when you click Save File   ║
@@ -787,16 +780,6 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .sb-mi:hover{background:var(--paper)}
 .sb-mi.linked{color:#7AC87E;font-weight:600}
 .sb-ms{height:1px;background:var(--border);margin:4px 3px}
-
-/* ── Home dropdown (▾ beside 🏠: frozen archives of older versions) ── */
-.sb-home-cv{font-size:11px!important;padding:2px 3px!important;margin-left:-5px;
-            opacity:.55;align-self:center}
-.sb-home-cv:hover{opacity:1}
-.sb-home-dd{min-width:250px}
-.sb-mi-hd{padding:5px 13px 3px;font-size:10px;font-weight:700;letter-spacing:.06em;
-          text-transform:uppercase;color:var(--t3)}
-.sb-mi-note{padding:2px 13px 7px;font-size:10.5px;line-height:1.5;color:var(--t3);
-            white-space:normal;max-width:250px}
 
 /* ── Tools dropdown (🧰 in header: Undo/Redo, Folder, Sync, Save) ── */
 .sb-tools-dd{min-width:230px}
@@ -1942,19 +1925,9 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.01</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.99</span></div>
     <div style="display:flex;align-items:center;gap:4px">
-      <div class="sb-menu-wrap" id="sb-home-wrap">
-        <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn bn bi sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
-        <div id="sb-home" class="sb-menu-dd sb-home-dd">
-          <div class="sb-mi-hd">Frozen archives</div>
-          <div class="sb-mi" onclick="openLegacyApp('v03.99');closeSBHome()" title="Open the sealed v03.99 build in a new tab — read-only">
-            🕰 Legacy App v03.99
-          </div>
-          <div class="sb-mi-note">The app exactly as it was before v04.00.
-            Opens in a new tab, read-only, on your current notes.</div>
-        </div>
-      </div>
+      <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button>
       <button class="btn bn bi" onclick="openGlobalSearch()" style="font-size:20px" title="Search (Ctrl+K)">🔍</button>
       <div class="sb-menu-wrap" id="sb-tools-wrap">
         <button class="btn bn bi" id="sb-tools-btn" onclick="toggleSBTools(event)" style="font-size:24px" title="Tools — Undo, Redo, Folder, Sync, Save">🧰</button>
@@ -2029,7 +2002,7 @@ sup.ann-sup:hover{text-decoration:underline}
   <div id="tree"></div>
 
   <div class="sb-toolbar" id="sb-toolbar">
-    <button class="sb-tb-btn" onclick="quickCapture()" title="New note — opens in its own pop-out window" style="color:#6DC994">📝 New Note</button>
+    <button class="sb-tb-btn" onclick="quickCapture()" title="New blank page in current folder" style="color:#6DC994">📄 New Page</button>
     <button class="sb-tb-btn" onclick="openFolderPopupFromToolbar()" title="Open the folder pop-up browser">🗗 Folders</button>
   </div>
 </aside>
@@ -2073,6 +2046,47 @@ sup.ann-sup:hover{text-decoration:underline}
 <!-- drag ghost label -->
 <div class="drag-hint" id="dgh" style=""></div>
 
+<!-- ══════════════════════════════════════════════════════════════════════
+     FROZEN LEGACY BUILD — Siyagah v03.99, sealed 2 Sep 2026.
+     DO NOT EDIT ANY PART OF THIS FILE, EVER. It is the permanent record of
+     what the app was on the day v04.00 began. No feature, fix or refactor
+     from any later version may be applied here — that is the entire point
+     of it existing. Work on the live app in /index.html instead.
+     The only code that is not original v03.99 is the read-only guard
+     immediately below and the banner script at the very bottom, both added
+     when the archive was sealed so that this build can never write over
+     data belonging to a newer version.
+     ══════════════════════════════════════════════════════════════════════ -->
+<script>
+/* ══ LEGACY READ-ONLY GUARD (part 1 of 2) ═════════════════════════════════
+   Runs BEFORE the app script, and that ordering is the whole trick.
+   This archive shares an origin with the live app, so it reads the very same
+   localStorage notebook — that is what makes it useful (your real, current
+   notes, in the old layout). But it must never WRITE there: v03.99 code
+   serialises the whole database in the v03.99 shape, so a single save from
+   here would strip whatever v04.00-and-later added, on this device.
+   Boot itself saves (schema migrations call persist()), so a guard installed
+   after the app script would already be too late — hence part 1 sits here.
+   Writes are swallowed silently rather than thrown: the frozen code has no
+   idea it is being archived and must not hit an unhandled error.
+   Reads are untouched. `unlocked` is flipped only by the deliberate
+   "Unlock editing" button in the banner (part 2). */
+window.__SIYAGAH_LEGACY__='03.99';
+(function(){
+  var ls=window.localStorage;
+  var _set=ls.setItem.bind(ls),_rem=ls.removeItem.bind(ls),_clr=ls.clear.bind(ls);
+  window.__legacyStore={unlocked:false,set:_set,remove:_rem,clear:_clr};
+  ls.setItem   =function(k,v){ if(window.__legacyStore.unlocked)return _set(k,v); };
+  ls.removeItem=function(k)  { if(window.__legacyStore.unlocked)return _rem(k);   };
+  ls.clear     =function()   { if(window.__legacyStore.unlocked)return _clr();    };
+  /* The archive never installs or updates a service worker. sw.js also skips
+     every /legacy/ request, so no cache can ever serve newer code at this URL. */
+  try{
+    if(navigator.serviceWorker&&navigator.serviceWorker.register)
+      navigator.serviceWorker.register=function(){return Promise.resolve(undefined);};
+  }catch(e){}
+})();
+</script>
 <script>
 /* ── Storage & State ─────────────────────────────────────────────── */
 const SK = 'my-notebook-v1';
@@ -2746,7 +2760,7 @@ function renderP2H(){
   const curF=DB.folders.find(f=>f.id===ST.folder);
   const _sfDef=!curF&&SF.find(s=>s.id===ST.folder);
   /* Universal new-note button — always visible in every pane-2 state */
-  const newBtn=`<button class="btn bp p2-new-btn" onclick="quickNewNote()" title="New note — opens in its own pop-out window">✚ Note</button>`;
+  const newBtn=`<button class="btn bp p2-new-btn" onclick="quickNewNote()" title="New note">✚ Note</button>`;
   const previewBtn=`<button class="btn bn p2-view-btn" onclick="toggleListView()" title="${ST.snippet?'Title only':'Show preview'}">${ST.snippet?'⊟ Compact':'▤ Preview'}</button>`;
   /* Universal "back to the Folder Browser" button — also always visible.
      Clicking anything in the browser closes it and drops you here in the
@@ -3154,7 +3168,7 @@ function renderP3H(){
       <button class="btn bn bi" onclick="_p3Navigate(-1)" title="Previous note in this folder" style="padding:5px 6px;font-size:15px">‹</button>
       <button class="btn bn bi" onclick="_p3Navigate(1)" title="Next note in this folder" style="padding:5px 6px;font-size:15px">›</button>
       <button class="btn bn bi" onclick="_ntFindToggle('p3')" title="Find in this note" style="padding:5px 7px;font-size:13px">🔍</button>
-      <button class="btn bn bi" onclick="quickCapture()" title="New note (Primary folder) — opens in its own pop-out window" style="padding:5px 7px;font-size:14px">✚</button>
+      <button class="btn bn bi" onclick="quickCapture()" title="Quick note (Primary folder)" style="padding:5px 7px;font-size:14px">✚</button>
       <button class="btn" onclick="startEdit()">✏️ Edit</button>
       <button class="btn bn modal-pop-btn" onclick="openNotePopup('${curA.id}','float')" title="Pop out as floating window (Ctrl+Shift+P)">⊡</button>
       <button class="btn bn modal-pop-btn" onclick="openNotePopup('${curA.id}','panel')" title="Open as resizable panel">⛶</button>
@@ -3164,7 +3178,7 @@ function renderP3H(){
   } else {
     el.classList.remove('editing');
     h+=`<span style="flex:1;color:var(--t3);font-size:13px;font-weight:500">Siyagah</span>`
-      +`<button class="btn bn bi" onclick="quickCapture()" title="New note (Primary folder) — opens in its own pop-out window" style="padding:5px 8px;font-size:15px">✚</button>`;
+      +`<button class="btn bn bi" onclick="quickCapture()" title="Quick note (Primary folder)" style="padding:5px 8px;font-size:15px">✚</button>`;
   }
   el.innerHTML=h;
   /* Restore title-input focus + caret if it was focused before rebuild */
@@ -3421,8 +3435,6 @@ function _renderP3SearchBar(){
 function goHome(){
   closeGlobalSearch();
   hideCtx();
-  closeSBHome();   /* v04.01 — 🏠 sits inside the archives dropdown's wrapper,
-                      so the outside-click handler can't close it for us */
   if(ST.search||ST.lastSearch){
     ST.search='';ST.lastSearch=undefined;
     const i=document.getElementById('sq');if(i)i.value='';
@@ -4816,10 +4828,10 @@ function quickNewNote(){
   const a={id:uid(),title,content:'',
     folderIds:fid?[fid]:[],tags,createdAt:now,updatedAt:now};
   DB.articles.push(a);persist();
-  /* v04.00 — the new note opens as its own pop-out window (see
-     _openNewNoteWindow); no fid passed, so the folder/Smart View the button
-     was pressed in stays on screen behind it. */
-  _openNewNoteWindow(a.id);
+  ST.article=a.id;ST.etitle=title;ST.efolders=fid?[fid]:[];ST.etags=[...tags];
+  ST.editing=true;
+  if(window.innerWidth<1200)showPane('p3');
+  render();
 }
 
 
@@ -6770,9 +6782,10 @@ function newStarredNote(){
   const art={id:aid,title:'',content:'<p></p>',folderIds:fid?[fid]:[],
              tags:[],favourite:true,createdAt:now,updatedAt:now};
   DB.articles.push(art);persist();
-  /* v04.00 — opens in its own pop-out window; no fid passed so the Smart
-     View the user is standing in stays on screen behind it. */
-  _openNewNoteWindow(aid);
+  ST.article=aid;ST.etitle='';ST.efolders=fid?[fid]:[];ST.editing=true;
+  renderP2C();renderP3H();renderP3C();
+  if(window.innerWidth<1200)showPane('p3');
+  setTimeout(()=>{const ti=document.getElementById('ti');if(ti)ti.focus();},80);
   toast('⭐ New note added to Favourites');
 }
 
@@ -6783,9 +6796,10 @@ function newPinnedNote(){
   const art={id:aid,title:'',content:'<p></p>',folderIds:fid?[fid]:[],
              tags:[],pinned:true,createdAt:now,updatedAt:now};
   DB.articles.push(art);persist();
-  /* v04.00 — opens in its own pop-out window; no fid passed so the Smart
-     View the user is standing in stays on screen behind it. */
-  _openNewNoteWindow(aid);
+  ST.article=aid;ST.etitle='';ST.efolders=fid?[fid]:[];ST.editing=true;
+  renderP2C();renderP3H();renderP3C();
+  if(window.innerWidth<1200)showPane('p3');
+  setTimeout(()=>{const ti=document.getElementById('ti');if(ti)ti.focus();},80);
   toast('📌 New note created and pinned');
 }
 
@@ -6796,10 +6810,13 @@ function newNoteWithReminder(){
   const art={id:aid,title:'',content:'<p></p>',folderIds:fid?[fid]:[],
              tags:[],createdAt:now,updatedAt:now};
   DB.articles.push(art);persist();
-  /* v04.00 — pop-out window first, then the reminder dialog on top of it
-     (#ov sits at z-index 10000, well above the 6000-band windows). */
-  _openNewNoteWindow(aid);
-  setTimeout(()=>openReminderModal(aid),380);
+  ST.article=aid;ST.etitle='';ST.efolders=fid?[fid]:[];ST.editing=true;
+  renderP2C();renderP3H();renderP3C();
+  if(window.innerWidth<1200)showPane('p3');
+  setTimeout(()=>{
+    const ti=document.getElementById('ti');if(ti)ti.focus();
+    setTimeout(()=>openReminderModal(aid),300);
+  },80);
 }
 
 function quickJournalEntryFromDB(){
@@ -8093,27 +8110,6 @@ function popOutNote(aid){
   if(ex){ _fwZTop++; ex.style.zIndex=_fwZTop; const ed=ex.querySelector('.fw-ed'); if(ed)ed.focus(); _fwFocus(aid); return; }
   _fwCreate(aid);
 }
-/* ══ v04.00 — SCREEN-PROPORTIONATE DEFAULT WINDOW ═════════════════════════
-   The first time a note is popped out it now opens at a fraction of the
-   SCREEN (≈78% × 88%, centred) instead of the old fixed 440×520 box, so the
-   window fills a 13" laptop and a 27" monitor the same way rather than
-   shrinking to a stamp on the big one. This is only the "no remembered
-   geometry yet" default — once the user drags or resizes a window,
-   _fwSavePos() remembers that exact frame per note and it wins from then on.
-   Extra windows opened while others are up cascade off the centre so they
-   don't land pixel-on-pixel. */
-const _FW_W_RATIO=.78,_FW_H_RATIO=.88;
-function _fwDefaultGeom(n){
-  const vw=window.innerWidth,vh=window.innerHeight;
-  /* Floors match .float-win's min-width/min-height so the clamp can never
-     hand back a box the CSS immediately overrides. */
-  const w=Math.round(Math.max(320,Math.min(vw*_FW_W_RATIO,vw-32)));
-  const h=Math.round(Math.max(280,Math.min(vh*_FW_H_RATIO,vh-32)));
-  const off=Math.max(0,n||0)*26;
-  const x=Math.max(8,Math.min(Math.round((vw-w)/2)+off,Math.max(8,vw-w-8)));
-  const y=Math.max(8,Math.min(Math.round((vh-h)/2)+off,Math.max(8,vh-h-8)));
-  return {w:w,h:h,x:x,y:y};
-}
 function _fwCreate(aid){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return;
   const n=document.querySelectorAll('.float-win').length;
@@ -8121,15 +8117,15 @@ function _fwCreate(aid){
   const win=document.createElement('div');
   win.className='float-win';win.id='fw-'+aid;
   /* v03.74 — restore this note's remembered position/size if it has one
-     (clamped to the current viewport), otherwise the proportionate default. */
+     (clamped to the current viewport), otherwise cascade as before. */
   const saved=_popGeoAll().float[aid];
   let w,h,x,y;
   if(saved&&saved.width&&saved.height){
     w=Math.min(saved.width,vw-8);h=Math.min(saved.height,vh-8);
     x=Math.max(0,Math.min(saved.left,vw-w));y=Math.max(0,Math.min(saved.top,vh-h));
   } else {
-    const d=_fwDefaultGeom(n);
-    w=d.w;h=d.h;x=d.x;y=d.y;
+    w=Math.min(440,vw-40);h=Math.min(520,vh-60);
+    x=Math.min(60+n*28,Math.max(10,vw-w-10));y=Math.min(60+n*28,Math.max(10,vh-h-10));
   }
   win.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;z-index:'+(++_fwZTop);
   win.innerHTML=_fwRenderBody(aid);
@@ -15681,7 +15677,7 @@ function getTimestampedName(){
 /* ── Settings menu ───────────────────────────────────────────────────── */
 function toggleSBMenu(e){
   if(e) e.stopPropagation(); // stop click from bubbling to document (would instantly close)
-  closeSBTools();closeSBHome(); // only one header dropdown open at a time
+  closeSBTools(); // only one header dropdown open at a time
   document.getElementById('sb-menu')?.classList.toggle('open');
 }
 function closeSBMenu(){
@@ -15690,33 +15686,11 @@ function closeSBMenu(){
 /* Tools dropdown (🧰): Undo/Redo · New folder · save label · sync · Save File */
 function toggleSBTools(e){
   if(e) e.stopPropagation(); // stop click from bubbling to document (would instantly close)
-  closeSBMenu();closeSBHome(); // only one header dropdown open at a time
+  closeSBMenu(); // only one header dropdown open at a time
   document.getElementById('sb-tools')?.classList.toggle('open');
 }
 function closeSBTools(){
   document.getElementById('sb-tools')?.classList.remove('open');
-}
-/* Home dropdown (▾ beside 🏠): frozen archives of earlier versions.
-   v04.01 — 🏠 itself still goes Home on click, untouched; the ▾ is a separate
-   button so the everyday action never costs an extra step. */
-function toggleSBHome(e){
-  if(e) e.stopPropagation();
-  closeSBMenu();closeSBTools();   /* one header dropdown open at a time */
-  document.getElementById('sb-home')?.classList.toggle('open');
-}
-function closeSBHome(){
-  document.getElementById('sb-home')?.classList.remove('open');
-}
-/* Opens a sealed build from /legacy/. Those files are frozen forever and are
-   read-only over your live notes — see legacy/README.md.
-   A copy of the app running from a downloaded file (file://) has no /legacy/
-   path of its own, so it goes to the published site instead. */
-function openLegacyApp(ver){
-  const path='/legacy/'+ver+'/';
-  const url=(location.protocol==='http:'||location.protocol==='https:')
-    ? location.origin+path : 'https://siyagah.github.io'+path;
-  window.open(url,'_blank','noopener');
-  toast('🕰 Legacy App '+ver+' opened in a new tab — read-only');
 }
 
 
@@ -15861,48 +15835,6 @@ function _dedupePrimaryFolders(){
   toast('🔧 Merged '+dups.length+' duplicate "Primary" folder'+(dups.length>1?'s':'')+' ('+moved+' note'+(moved!==1?'s':'')+' consolidated)');
   return canonical;
 }
-/* ══ v04.00 — EVERY "NEW NOTE" OPENS AS A POP-OUT WINDOW ══════════════════
-   'New Note' (the sidebar toolbar button, the ✚ quick-note chips in the
-   Pane 3 header, the launch-pad Quick Note card, MyWALL's "New note here",
-   and the Smart View starred / pinned / reminder buttons) all end up here.
-   Instead of taking over Pane 3, the fresh note is handed straight to its
-   own floating window — the same pop-out with the full toolbar, Types,
-   Attach, Find, autosave and Save chip that popOutNote() gives any note —
-   so the rest of the app stays usable behind it.
-   Two deliberate rules:
-     • Pane 3 is left in READ mode on the same note, never in edit mode. A
-       note must never be live in #ed and in .fw-ed at once — both are on the
-       debounced autosave and the later tick silently overwrites the other
-       (the F3 bug). The window is the only editor.
-     • Below 900px float windows don't exist (display:none in CSS), so that
-       tier keeps the original pane-based flow untouched.
-   fid is optional: pass the folder the note landed in when the caller wants
-   the panes to follow it there, omit it to leave the current view (a Smart
-   View) exactly where it is. */
-function _openNewNoteWindow(aid,fid){
-  if(ST.editing){try{saveArt();}catch(e){}}   /* same guard as selArt() */
-  if(fid)ST.folder=fid;
-  ST.article=aid;ST.editing=false;
-  render();
-  if(window.innerWidth<900){
-    if(window.innerWidth<1200)showPane('p3');
-    startEdit();
-    setTimeout(function(){
-      const ti=document.getElementById('ti');
-      if(ti){ti.focus();return;}
-      const ed=document.getElementById('ed');if(ed)ed.focus();
-    },80);
-    return;
-  }
-  popOutNote(aid);
-  /* Title first, so the very next keystroke names the note — exactly what
-     the old Pane 3 flow did with #ti. */
-  setTimeout(function(){
-    const ti=document.getElementById('fw-ti-'+aid);
-    if(ti){ti.focus();return;}
-    const ed=document.getElementById('fw-ed-'+aid);if(ed)ed.focus();
-  },80);
-}
 function quickCapture(){
   /* 1. Get the quick-capture folder — _dedupePrimaryFolders() is the single
      canonical lookup: it finds the folder by name (works across devices,
@@ -15926,8 +15858,19 @@ function quickCapture(){
            tags:[],createdAt:_now,updatedAt:_now};
   DB.articles.push(art);
   persist();
-  /* 3. Open it in its own pop-out window (pane flow below 900px) */
-  _openNewNoteWindow(art.id,pf.id);
+  /* 3. Navigate and enter edit mode immediately */
+  ST.folder=pf.id;
+  ST.article=art.id;ST.editing=false;
+  renderP2C();renderP3H();renderP3C();
+  adjustP3Layout();
+  if(window.innerWidth<1200) showPane('p3');
+  startEdit();
+  /* 4. Focus title input so user can start typing the title straight away */
+  setTimeout(function(){
+    var ti=document.getElementById('ti');
+    if(ti){ti.focus();}
+    else{var ed=document.getElementById('ed');if(ed)ed.focus();}
+  },80);
 }
 /* ── MyWALL "New note under this NTI type" — v03.54.01 ────────────────────
    Same quick-capture mechanics as quickCapture() above, but the new note is
@@ -15952,7 +15895,17 @@ function quickCaptureWithKind(kid){
            tags:[],createdAt:_now,updatedAt:_now,kind:kid,kinds:[kid]};
   DB.articles.push(art);
   persist();
-  _openNewNoteWindow(art.id,pf.id);
+  ST.folder=pf.id;
+  ST.article=art.id;ST.editing=false;
+  renderTree();renderP2C();renderP3H();renderP3C();
+  adjustP3Layout();
+  if(window.innerWidth<1200) showPane('p3');
+  startEdit();
+  setTimeout(function(){
+    var ti=document.getElementById('ti');
+    if(ti){ti.focus();}
+    else{var ed=document.getElementById('ed');if(ed)ed.focus();}
+  },80);
   var k=kindById(kid);
   toast('✚ New note added under '+(k?k.name:'this type'));
 }
@@ -17058,7 +17011,6 @@ document.addEventListener('click',(e)=>{
   hideCtx();
   if(!e.target.closest('#sb-menu-wrap')) closeSBMenu();
   if(!e.target.closest('#sb-tools-wrap')) closeSBTools();
-  if(!e.target.closest('#sb-home-wrap')) closeSBHome();
 });
 document.addEventListener('keydown',ev=>{
   if(ev.key==='Escape'){
@@ -18766,4 +18718,115 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
     </div>
   </div>
 </div>
-<iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1782051874490" name="I0_1782051874490" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.ch0Jz-JlMrQ.O%2Fd%3D1%2Frs%3DAHpOoo_YD4KoV8fTh_kLhktsiThAm3yJ5A%2Fm%3D__features__#id=I0_1782051874490&amp;_gfid=I0_1782051874490&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=16484655" style="position: absolute; top: -100px; width: 1px; height: 1px;"></iframe><div id="nti-picker" class="" style="inset: 171.5px auto auto 1855.47px;"></div><iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" style="position: absolute; top: -100px; width: 1px; height: 1px;" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1784841121299" name="I0_1784841121299" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.9vdPKhB0RUg.O%2Fd%3D1%2Frs%3DAHpOoo97anj7zZ432JcN58tqJJp_A6WeOw%2Fm%3D__features__#id=I0_1784841121299&amp;_gfid=I0_1784841121299&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=21953727"></iframe><div id="jrn-picker" style="inset: auto 4px 60px; width: auto;" class=""></div><section id="id-recall-widget-root" style="border-block: initial; border-inline: initial; border-start-start-radius: initial; border-start-end-radius: initial; border-end-start-radius: initial; border-end-end-radius: initial; overflow-block: initial; overflow-inline: initial; overscroll-behavior-block: initial; overscroll-behavior-inline: initial; margin-block: initial; margin-inline: initial; scroll-margin-block: initial; scroll-margin-inline: initial; padding-block: initial; padding-inline: initial; scroll-padding-block: initial; scroll-padding-inline: initial; inset-block: initial; inset-inline: initial; block-size: initial; min-block-size: initial; max-block-size: initial; inline-size: initial; min-inline-size: initial; max-inline-size: initial; contain-intrinsic-block-size: initial; contain-intrinsic-inline-size: initial; background: initial; background-blend-mode: initial; border: initial; border-radius: initial; box-decoration-break: initial; -moz-float-edge: initial; display: initial; position: initial; float: initial; clear: initial; vertical-align: initial; baseline-source: initial; overflow: initial; overflow-anchor: initial; transform: initial; rotate: initial; scale: initial; translate: initial; offset: initial; scroll-behavior: initial; scroll-snap-align: initial; scroll-snap-type: initial; scroll-snap-stop: initial; overscroll-behavior: initial; isolation: initial; break-after: initial; break-before: initial; break-inside: initial; resize: initial; perspective: initial; perspective-origin: initial; backface-visibility: initial; transform-box: initial; transform-style: initial; transform-origin: initial; contain: initial; content-visibility: initial; container: initial; appearance: initial; -moz-orient: initial; will-change: initial; shape-image-threshold: initial; shape-margin: initial; shape-outside: initial; touch-action: initial; -webkit-line-clamp: initial; scrollbar-gutter: initial; zoom: initial; columns: initial; column-fill: initial; column-rule: initial; column-span: initial; content: initial; counter-increment: initial; counter-reset: initial; counter-set: initial; opacity: initial; box-shadow: initial; clip: initial; filter: initial; backdrop-filter: initial; mix-blend-mode: initial; font: initial; font-synthesis: initial; font-palette: initial; math-depth: initial; math-style: initial; visibility: initial; writing-mode: initial; text-orientation: initial; print-color-adjust: initial; image-rendering: initial; image-orientation: initial; dominant-baseline: initial; text-anchor: initial; color-interpolation: initial; color-interpolation-filters: initial; fill: initial; fill-opacity: initial; fill-rule: initial; shape-rendering: initial; stroke: initial; stroke-width: initial; stroke-linecap: initial; stroke-linejoin: initial; stroke-miterlimit: initial; stroke-opacity: initial; stroke-dasharray: initial; stroke-dashoffset: initial; clip-rule: initial; marker: initial; paint-order: initial; border-collapse: initial; empty-cells: initial; caption-side: initial; border-spacing: initial; color: initial; text-transform: initial; hyphens: initial; -moz-text-size-adjust: initial; text-indent: initial; overflow-wrap: initial; word-break: initial; text-justify: initial; text-align-last: initial; text-align: initial; letter-spacing: initial; word-spacing: initial; white-space: initial; text-shadow: initial; text-emphasis: initial; text-emphasis-position: initial; tab-size: initial; line-break: initial; -webkit-text-fill-color: initial; -webkit-text-stroke: initial; ruby-align: initial; ruby-position: initial; text-combine-upright: initial; text-rendering: initial; text-underline-offset: initial; text-underline-position: initial; text-decoration-skip-ink: initial; hyphenate-character: initial; forced-color-adjust: initial; -webkit-text-security: initial; hyphenate-limit-chars: initial; text-wrap: initial; cursor: initial; pointer-events: initial; caret-color: initial; accent-color: initial; color-scheme: initial; scrollbar-color: initial; list-style: initial; quotes: initial; margin: initial; overflow-clip-margin: initial; scroll-margin: initial; outline: initial; outline-offset: initial; padding: initial; scroll-padding: initial; page: initial; inset: initial; z-index: initial; flex-flow: initial; place-content: initial; place-items: initial; flex: initial; place-self: initial; order: initial; height: initial; min-height: initial; max-height: initial; width: initial; min-width: initial; max-width: initial; box-sizing: border-box; object-fit: initial; object-position: initial; grid-area: initial; grid: initial; gap: initial; aspect-ratio: initial; contain-intrinsic-size: initial; vector-effect: initial; stop-color: initial; stop-opacity: initial; flood-color: initial; flood-opacity: initial; lighting-color: initial; mask-type: initial; clip-path: initial; mask: initial; x: initial; y: initial; cx: initial; cy: initial; rx: initial; ry: initial; r: initial; d: initial; table-layout: initial; text-overflow: initial; text-decoration: initial; ime-mode: initial; scrollbar-width: initial; user-select: initial; -moz-window-dragging: initial; -moz-force-broken-image-icon: initial; transition: initial; animation: initial; animation-composition: initial; -moz-box-align: initial; -moz-box-direction: initial; -moz-box-flex: initial; -moz-box-orient: initial; -moz-box-pack: initial; -moz-box-ordinal-group: initial;"></section><iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" style="position: absolute; top: -100px; width: 1px; height: 1px;" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1786654383196" name="I0_1786654383196" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.9vdPKhB0RUg.O%2Fd%3D1%2Frs%3DAHpOoo97anj7zZ432JcN58tqJJp_A6WeOw%2Fm%3D__features__#id=I0_1786654383196&amp;_gfid=I0_1786654383196&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=30546353"></iframe><div id="eb-pop" class="fl-pop" style="inset: 126.75px auto auto 396.1px;"><button class="et" onmousedown="ec(event,'bold')"><b>B</b></button><button class="et" onmousedown="ec(event,'italic')"><i>I</i></button><button class="et" onmousedown="ec(event,'underline')" title="Underline"><u>U</u></button><button class="et" onmousedown="ec(event,'strikeThrough')" title="Strikethrough"><s>S</s></button><button class="et" onmousedown="edMarkDone(event)" title="Mark done (toggle)">✓</button><button class="et" onmousedown="edBoundary(event)" title="Boundary box (toggle)">▢</button><button class="et" onmousedown="edColorBtn(event)" title="Colour">🎨</button><button class="et" onmousedown="edClearFmt(event)" title="Clear formatting (also resets custom text size)">✗A</button><span class="esep"></span><button class="et" onmousedown="edFontStep(event,1)" title="Bigger text (selection, or the whole line at the caret)" style="font-size:15px;font-weight:700;line-height:1">A<sup style="font-size:9px">+</sup></button><button class="et" onmousedown="edFontStep(event,-1)" title="Smaller text (selection, or the whole line at the caret)" style="font-size:11px;font-weight:700;line-height:1">A<sup style="font-size:9px">−</sup></button><button class="et" onmousedown="edFontStep(event,0)" title="Reset text size to 100%" style="font-size:12px;font-weight:700;line-height:1">A↺</button><span class="esep"></span><button class="et" onmousedown="ec(event,'justifyLeft')" title="Align left"><span class="al-ic al-l"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyCenter')" title="Align center"><span class="al-ic al-c"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyRight')" title="Align right"><span class="al-ic al-r"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyFull')" title="Justify"><span class="al-ic al-j"><span></span><span></span><span></span></span></button><button class="et fl-pop-x" onmousedown="event.preventDefault()" onclick="_closeStickyPop('eb-pop')" title="Close this menu">✕</button></div><div id="tab-picker" style="top: 49px; left: 1779.03px; transform: none; bottom: auto;" class=""><div class="tp-hd">Add note to Tab bar<button class="tp-cls" onclick="closeTabPicker()" title="Close">✕</button></div><input class="tp-inp" id="tp-inp" type="text" placeholder="Type to search notes…" oninput="renderTabPickerList(this.value)" onkeydown="if(event.key==='Escape')closeTabPicker()" autocomplete="off"><div class="tp-list" id="tp-list"><div class="tp-it" onclick="addToTabPicker('mss0fvzjzzr')"><span>QuranREVIVAL - PROMPT - FINETUNING v07.00</span><span class="tp-it-sub">📁 (01) QuranRevival APP</span></div><div class="tp-it" onclick="addToTabPicker('mscgu6kuhqo')"><span>Siyagah FINETUNING</span><span class="tp-it-sub">📁 (02.01) Siyagah - FINETUNING ALL</span></div><div class="tp-it" onclick="addToTabPicker('ms6nyi34ffe')"><span>Siyagah - FINETUNING</span><span class="tp-it-sub">📁 (01.01) QuranRevival - PROMTPS - Quran</span></div><div class="tp-it" onclick="addToTabPicker('mrmm212uqrg')"><span>Siyagah - PROMPT - SECOND Pane</span><span class="tp-it-sub">📁 (02.05) Siyagah - SECOND (2nd) Pane Prompt</span></div></div></div></body></html>
+<iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1782051874490" name="I0_1782051874490" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.ch0Jz-JlMrQ.O%2Fd%3D1%2Frs%3DAHpOoo_YD4KoV8fTh_kLhktsiThAm3yJ5A%2Fm%3D__features__#id=I0_1782051874490&amp;_gfid=I0_1782051874490&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=16484655" style="position: absolute; top: -100px; width: 1px; height: 1px;"></iframe><div id="nti-picker" class="" style="inset: 171.5px auto auto 1855.47px;"></div><iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" style="position: absolute; top: -100px; width: 1px; height: 1px;" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1784841121299" name="I0_1784841121299" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.9vdPKhB0RUg.O%2Fd%3D1%2Frs%3DAHpOoo97anj7zZ432JcN58tqJJp_A6WeOw%2Fm%3D__features__#id=I0_1784841121299&amp;_gfid=I0_1784841121299&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=21953727"></iframe><div id="jrn-picker" style="inset: auto 4px 60px; width: auto;" class=""></div><section id="id-recall-widget-root" style="border-block: initial; border-inline: initial; border-start-start-radius: initial; border-start-end-radius: initial; border-end-start-radius: initial; border-end-end-radius: initial; overflow-block: initial; overflow-inline: initial; overscroll-behavior-block: initial; overscroll-behavior-inline: initial; margin-block: initial; margin-inline: initial; scroll-margin-block: initial; scroll-margin-inline: initial; padding-block: initial; padding-inline: initial; scroll-padding-block: initial; scroll-padding-inline: initial; inset-block: initial; inset-inline: initial; block-size: initial; min-block-size: initial; max-block-size: initial; inline-size: initial; min-inline-size: initial; max-inline-size: initial; contain-intrinsic-block-size: initial; contain-intrinsic-inline-size: initial; background: initial; background-blend-mode: initial; border: initial; border-radius: initial; box-decoration-break: initial; -moz-float-edge: initial; display: initial; position: initial; float: initial; clear: initial; vertical-align: initial; baseline-source: initial; overflow: initial; overflow-anchor: initial; transform: initial; rotate: initial; scale: initial; translate: initial; offset: initial; scroll-behavior: initial; scroll-snap-align: initial; scroll-snap-type: initial; scroll-snap-stop: initial; overscroll-behavior: initial; isolation: initial; break-after: initial; break-before: initial; break-inside: initial; resize: initial; perspective: initial; perspective-origin: initial; backface-visibility: initial; transform-box: initial; transform-style: initial; transform-origin: initial; contain: initial; content-visibility: initial; container: initial; appearance: initial; -moz-orient: initial; will-change: initial; shape-image-threshold: initial; shape-margin: initial; shape-outside: initial; touch-action: initial; -webkit-line-clamp: initial; scrollbar-gutter: initial; zoom: initial; columns: initial; column-fill: initial; column-rule: initial; column-span: initial; content: initial; counter-increment: initial; counter-reset: initial; counter-set: initial; opacity: initial; box-shadow: initial; clip: initial; filter: initial; backdrop-filter: initial; mix-blend-mode: initial; font: initial; font-synthesis: initial; font-palette: initial; math-depth: initial; math-style: initial; visibility: initial; writing-mode: initial; text-orientation: initial; print-color-adjust: initial; image-rendering: initial; image-orientation: initial; dominant-baseline: initial; text-anchor: initial; color-interpolation: initial; color-interpolation-filters: initial; fill: initial; fill-opacity: initial; fill-rule: initial; shape-rendering: initial; stroke: initial; stroke-width: initial; stroke-linecap: initial; stroke-linejoin: initial; stroke-miterlimit: initial; stroke-opacity: initial; stroke-dasharray: initial; stroke-dashoffset: initial; clip-rule: initial; marker: initial; paint-order: initial; border-collapse: initial; empty-cells: initial; caption-side: initial; border-spacing: initial; color: initial; text-transform: initial; hyphens: initial; -moz-text-size-adjust: initial; text-indent: initial; overflow-wrap: initial; word-break: initial; text-justify: initial; text-align-last: initial; text-align: initial; letter-spacing: initial; word-spacing: initial; white-space: initial; text-shadow: initial; text-emphasis: initial; text-emphasis-position: initial; tab-size: initial; line-break: initial; -webkit-text-fill-color: initial; -webkit-text-stroke: initial; ruby-align: initial; ruby-position: initial; text-combine-upright: initial; text-rendering: initial; text-underline-offset: initial; text-underline-position: initial; text-decoration-skip-ink: initial; hyphenate-character: initial; forced-color-adjust: initial; -webkit-text-security: initial; hyphenate-limit-chars: initial; text-wrap: initial; cursor: initial; pointer-events: initial; caret-color: initial; accent-color: initial; color-scheme: initial; scrollbar-color: initial; list-style: initial; quotes: initial; margin: initial; overflow-clip-margin: initial; scroll-margin: initial; outline: initial; outline-offset: initial; padding: initial; scroll-padding: initial; page: initial; inset: initial; z-index: initial; flex-flow: initial; place-content: initial; place-items: initial; flex: initial; place-self: initial; order: initial; height: initial; min-height: initial; max-height: initial; width: initial; min-width: initial; max-width: initial; box-sizing: border-box; object-fit: initial; object-position: initial; grid-area: initial; grid: initial; gap: initial; aspect-ratio: initial; contain-intrinsic-size: initial; vector-effect: initial; stop-color: initial; stop-opacity: initial; flood-color: initial; flood-opacity: initial; lighting-color: initial; mask-type: initial; clip-path: initial; mask: initial; x: initial; y: initial; cx: initial; cy: initial; rx: initial; ry: initial; r: initial; d: initial; table-layout: initial; text-overflow: initial; text-decoration: initial; ime-mode: initial; scrollbar-width: initial; user-select: initial; -moz-window-dragging: initial; -moz-force-broken-image-icon: initial; transition: initial; animation: initial; animation-composition: initial; -moz-box-align: initial; -moz-box-direction: initial; -moz-box-flex: initial; -moz-box-orient: initial; -moz-box-pack: initial; -moz-box-ordinal-group: initial;"></section><iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" style="position: absolute; top: -100px; width: 1px; height: 1px;" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1786654383196" name="I0_1786654383196" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.9vdPKhB0RUg.O%2Fd%3D1%2Frs%3DAHpOoo97anj7zZ432JcN58tqJJp_A6WeOw%2Fm%3D__features__#id=I0_1786654383196&amp;_gfid=I0_1786654383196&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=30546353"></iframe><div id="eb-pop" class="fl-pop" style="inset: 126.75px auto auto 396.1px;"><button class="et" onmousedown="ec(event,'bold')"><b>B</b></button><button class="et" onmousedown="ec(event,'italic')"><i>I</i></button><button class="et" onmousedown="ec(event,'underline')" title="Underline"><u>U</u></button><button class="et" onmousedown="ec(event,'strikeThrough')" title="Strikethrough"><s>S</s></button><button class="et" onmousedown="edMarkDone(event)" title="Mark done (toggle)">✓</button><button class="et" onmousedown="edBoundary(event)" title="Boundary box (toggle)">▢</button><button class="et" onmousedown="edColorBtn(event)" title="Colour">🎨</button><button class="et" onmousedown="edClearFmt(event)" title="Clear formatting (also resets custom text size)">✗A</button><span class="esep"></span><button class="et" onmousedown="edFontStep(event,1)" title="Bigger text (selection, or the whole line at the caret)" style="font-size:15px;font-weight:700;line-height:1">A<sup style="font-size:9px">+</sup></button><button class="et" onmousedown="edFontStep(event,-1)" title="Smaller text (selection, or the whole line at the caret)" style="font-size:11px;font-weight:700;line-height:1">A<sup style="font-size:9px">−</sup></button><button class="et" onmousedown="edFontStep(event,0)" title="Reset text size to 100%" style="font-size:12px;font-weight:700;line-height:1">A↺</button><span class="esep"></span><button class="et" onmousedown="ec(event,'justifyLeft')" title="Align left"><span class="al-ic al-l"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyCenter')" title="Align center"><span class="al-ic al-c"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyRight')" title="Align right"><span class="al-ic al-r"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyFull')" title="Justify"><span class="al-ic al-j"><span></span><span></span><span></span></span></button><button class="et fl-pop-x" onmousedown="event.preventDefault()" onclick="_closeStickyPop('eb-pop')" title="Close this menu">✕</button></div><div id="tab-picker" style="top: 49px; left: 1779.03px; transform: none; bottom: auto;" class=""><div class="tp-hd">Add note to Tab bar<button class="tp-cls" onclick="closeTabPicker()" title="Close">✕</button></div><input class="tp-inp" id="tp-inp" type="text" placeholder="Type to search notes…" oninput="renderTabPickerList(this.value)" onkeydown="if(event.key==='Escape')closeTabPicker()" autocomplete="off"><div class="tp-list" id="tp-list"><div class="tp-it" onclick="addToTabPicker('mss0fvzjzzr')"><span>QuranREVIVAL - PROMPT - FINETUNING v07.00</span><span class="tp-it-sub">📁 (01) QuranRevival APP</span></div><div class="tp-it" onclick="addToTabPicker('mscgu6kuhqo')"><span>Siyagah FINETUNING</span><span class="tp-it-sub">📁 (02.01) Siyagah - FINETUNING ALL</span></div><div class="tp-it" onclick="addToTabPicker('ms6nyi34ffe')"><span>Siyagah - FINETUNING</span><span class="tp-it-sub">📁 (01.01) QuranRevival - PROMTPS - Quran</span></div><div class="tp-it" onclick="addToTabPicker('mrmm212uqrg')"><span>Siyagah - PROMPT - SECOND Pane</span><span class="tp-it-sub">📁 (02.05) Siyagah - SECOND (2nd) Pane Prompt</span></div></div></div>
+<!-- ══ LEGACY BANNER + CLOUD CUT-OFF (part 2 of 2) — added when sealed ══ -->
+<style>
+#lgcy-bar{position:fixed;right:14px;bottom:14px;z-index:99998;display:flex;align-items:center;
+  gap:9px;padding:8px 12px;border-radius:999px;font-family:var(--ui,system-ui),sans-serif;
+  font-size:12px;color:#4A3A1B;background:#FDF3D8;border:1px solid #E0C583;
+  box-shadow:0 6px 24px rgba(0,0,0,.22);max-width:min(560px,94vw);flex-wrap:wrap}
+#lgcy-bar.unlocked{background:#FBE3E3;border-color:#E09A9A;color:#6B2020}
+#lgcy-bar b{font-weight:700}
+#lgcy-bar .lgcy-sub{opacity:.75}
+#lgcy-bar button{font:inherit;cursor:pointer;padding:4px 10px;border-radius:999px;
+  border:1px solid #C9AC6A;background:#fff;color:#4A3A1B}
+#lgcy-bar button:hover{background:#FFFBF0}
+#lgcy-bar .lgcy-min{border:none;background:transparent;padding:2px 4px;font-size:14px;opacity:.6}
+#lgcy-chip{position:fixed;right:14px;bottom:14px;z-index:99998;display:none;cursor:pointer;
+  padding:7px 12px;border-radius:999px;font-family:var(--ui,system-ui),sans-serif;font-size:12px;
+  background:#FDF3D8;border:1px solid #E0C583;color:#4A3A1B;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+/* The archive never signs in — it reads this device's existing notes — so the
+   login overlay must never appear over it. */
+#login-overlay{display:none!important}
+</style>
+<script>
+/* ══ LEGACY READ-ONLY GUARD (part 2 of 2) ═════════════════════════════════
+   Runs after the app script. Part 1 (above the app) already blocked every
+   localStorage write; this half cuts the cloud off and labels the build.
+
+   Why initSync and not initAuth: the app's boot calls initAuth() on its last
+   line, so by the time this script runs that call is already in flight and
+   replacing the function would change nothing. initSync() is different — it
+   is only reached later, from initAuth's onAuthStateChanged callback, so
+   replacing it here lands before it is ever called. With initSync neutered,
+   _syncFsDb stays null, and pushToCloud / _doPush / flushPendingPush all
+   return at their first line on their own. The result: this archive opens no
+   Firestore connection, pushes nothing, and pulls nothing. */
+(function(){
+  /* A top-level `function foo(){}` in a classic script IS window.foo, and the
+     property is writable — so this rewires the very binding the app's own
+     unqualified calls resolve to. Anything declared with const/let has no
+     window property and is skipped: harmless, because a cloud write still
+     cannot happen with _syncFsDb null. */
+  function mute(name){
+    try{ if(typeof window[name]==='function') window[name]=function(){}; }catch(e){}
+  }
+  mute('initSync');mute('pushToCloud');mute('flushPendingPush');mute('_doPush');
+
+  /* Version tag reads "v03.99 · LEGACY" so a screenshot is never ambiguous.
+     The app rewrites that tag from the meta tag on DOMContentLoaded, so this
+     has to run again afterwards. This script sits after the app's, so its
+     listener is registered second and therefore fires second — last word. */
+  function stampTag(){
+    try{
+      var vt=document.getElementById('app-version-tag');
+      if(vt)vt.textContent=' v03.99 · LEGACY';
+    }catch(e){}
+  }
+  stampTag();
+  document.addEventListener('DOMContentLoaded',stampTag);
+  window.addEventListener('load',stampTag);
+
+  var LIVE=(location.protocol==='http:'||location.protocol==='https:')
+    ? location.origin+'/' : 'https://siyagah.github.io/';
+
+  var bar=document.createElement('div');
+  bar.id='lgcy-bar';
+  bar.innerHTML='<span>🕰</span><b>Legacy App v03.99</b>'
+    +'<span class="lgcy-sub" id="lgcy-state">frozen archive · read-only</span>'
+    +'<button id="lgcy-live">Open current app ↗</button>'
+    +'<button id="lgcy-unlock">Unlock editing</button>'
+    +'<button class="lgcy-min" title="Minimise">–</button>';
+  document.body.appendChild(bar);
+
+  var chip=document.createElement('div');
+  chip.id='lgcy-chip';chip.textContent='🕰 v03.99 · LEGACY';
+  document.body.appendChild(chip);
+
+  bar.querySelector('.lgcy-min').onclick=function(){
+    bar.style.display='none';chip.style.display='block';
+  };
+  chip.onclick=function(){chip.style.display='none';bar.style.display='flex';};
+  document.getElementById('lgcy-live').onclick=function(){window.open(LIVE,'_blank','noopener');};
+
+  /* The escape hatch. Local saving only — the cloud stays cut off no matter
+     what, so nothing typed here can ever reach another device. Meant for one
+     situation: the current app is broken and you need the old one working. */
+  document.getElementById('lgcy-unlock').onclick=function(){
+    if(window.__legacyStore.unlocked){
+      window.__legacyStore.unlocked=false;
+      bar.classList.remove('unlocked');
+      document.getElementById('lgcy-state').textContent='frozen archive · read-only';
+      this.textContent='Unlock editing';
+      try{toast('🔒 Legacy App is read-only again');}catch(e){}
+      return;
+    }
+    var ok=confirm(
+      'Unlock editing in the Legacy App v03.99?\n\n'
+     +'This build saves your notebook in the OLD v03.99 format. Anything a '
+     +'newer version added to a note you edit here can be lost — ON THIS '
+     +'DEVICE — when it saves.\n\n'
+     +'Cloud sync stays switched off either way, so nothing typed here can '
+     +'reach your other devices.\n\n'
+     +'Only do this if the current app is broken and you need the old one to '
+     +'work. Otherwise press Cancel.');
+    if(!ok)return;
+    window.__legacyStore.unlocked=true;
+    bar.classList.add('unlocked');
+    document.getElementById('lgcy-state').textContent='EDITING UNLOCKED · saves on this device only';
+    this.textContent='Re-lock';
+    try{toast('⚠ Legacy editing unlocked — this device only, no cloud sync',6000);}catch(e){}
+  };
+})();
+</script>
+</body></html>
