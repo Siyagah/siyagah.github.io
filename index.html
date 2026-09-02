@@ -20,7 +20,7 @@
           serving the previous build's files and the update never reaches
           the device.
      Then name the downloaded file "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.98">
+<meta name="app-version" content="03.99">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -215,6 +215,40 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
  .fld-link-open{flex-shrink:0;text-decoration:none;font-size:13px;padding:2px 6px;border-radius:5px;background:var(--greenlt);color:var(--green2)}
  .fld-chips{display:flex;flex-wrap:wrap;gap:4px;padding:0 12px 8px 34px;margin-top:-4px}
  .fld-chip{font-size:10.5px;color:var(--t2);background:var(--paper);border:1px solid var(--border2);border-radius:999px;padding:1px 8px}
+ /* MyDatabase folder reports — the "expected outcome" a database folder
+    produces from its own entries. Deliberately plain: this is a summary of
+    the notes below it, not a competing card list. */
+ .dbr{background:var(--paper);border:1px solid var(--border2);border-radius:var(--rl,8px);padding:10px 12px;margin:0 0 12px}
+ .dbr-hd{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--t3);margin-bottom:8px}
+ .dbr-hd .dbr-purpose{font-weight:400;text-transform:none;letter-spacing:0;font-size:11.5px;color:var(--t3);font-style:italic}
+ .dbr-empty{font-size:12px;color:var(--t3);font-style:italic}
+ .dbr-tblwrap{overflow-x:auto;max-width:100%}
+ .dbr-tbl{border-collapse:collapse;font-size:12px;width:100%}
+ .dbr-tbl th,.dbr-tbl td{border:1px solid var(--border2);padding:4px 8px;text-align:left;vertical-align:top;white-space:nowrap}
+ .dbr-tbl th{background:var(--greenlt);color:var(--green2);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+ .dbr-tbl td.dbr-num{text-align:right;font-variant-numeric:tabular-nums}
+ .dbr-tbl tr:hover td{background:var(--hover)}
+ .dbr-tbl .dbr-ttl{cursor:pointer;color:var(--green2);font-weight:600}
+ .dbr-bars{display:flex;flex-direction:column;gap:5px}
+ .dbr-bar{display:grid;grid-template-columns:minmax(70px,26%) 1fr auto;align-items:center;gap:8px;font-size:12px}
+ .dbr-bar-lbl{color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .dbr-bar-track{background:var(--border);border-radius:999px;height:9px;overflow:hidden}
+ .dbr-bar-fill{background:var(--green);height:100%;border-radius:999px;min-width:2px}
+ .dbr-bar-cnt{color:var(--t3);font-size:11.5px;font-variant-numeric:tabular-nums}
+ .dbr-stats{display:flex;flex-wrap:wrap;gap:8px}
+ .dbr-stat{flex:1 1 110px;background:var(--white);border:1px solid var(--border2);border-radius:7px;padding:7px 10px}
+ .dbr-stat-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--t3);margin-bottom:2px}
+ .dbr-stat-val{font-size:17px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums}
+ .dbr-stat-sub{font-size:10.5px;color:var(--t3);margin-top:1px}
+ .dbr-grp{margin-bottom:7px}
+ .dbr-grp-hd{font-size:11px;font-weight:700;color:var(--t2);margin-bottom:2px}
+ .dbr-grp-item{font-size:12px;color:var(--t2);padding:1px 0 1px 12px;cursor:pointer}
+ .dbr-grp-item:hover{color:var(--green2);text-decoration:underline}
+ /* Folder-function builder */
+ .dbb-sec{border:1px solid var(--border2);border-radius:8px;padding:9px 11px;margin-bottom:10px;background:var(--paper)}
+ .dbb-sec-hd{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green2);margin-bottom:3px}
+ .dbb-sec-hint{font-size:11.5px;color:var(--t3);margin-bottom:7px;line-height:1.45}
+ .dbb-out{font-size:12px;color:var(--t2);background:var(--greenlt);border-radius:6px;padding:6px 9px;margin-top:7px;line-height:1.45}
  .hd-status-badge{display:inline-block;float:right;font-size:11px;font-weight:600;padding:2px 10px;border-radius:999px;border:1px solid var(--border2);cursor:pointer;vertical-align:middle;user-select:none;-webkit-user-select:none;white-space:nowrap}
  .hd-status-badge:hover{filter:brightness(0.97)}
  .hd-status-unset{color:var(--t3);background:var(--paper);border-style:dashed;font-weight:500;opacity:.75}
@@ -1891,7 +1925,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.98</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.99</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button>
       <button class="btn bn bi" onclick="openGlobalSearch()" style="font-size:20px" title="Search (Ctrl+K)">🔍</button>
@@ -2924,6 +2958,10 @@ function renderP2C(){
     subs.forEach(sf=>{h+=`<div class="sc" onclick="selFolder('${sf.id}')"><div class="sc-nm">📁 ${esc(sf.name)}</div><div class="sc-ct">${cntOf(sf.id)} articles</div></div>`;});
     h+='</div>';
   }
+  /* A database folder's own report, built from the notes below it. Renders
+     nothing for a folder without a usable report, so plain and structured
+     folders alike look exactly as they did. */
+  h+=_dbReportHTML(curF,arts);
   h+=`<div class="slbl">Articles (${arts.length})</div>`;
   /* ── Quick inline title bar ── */
   h+=`<div class="qt-bar">`
@@ -6161,7 +6199,7 @@ function renderDatabaseSection(){
       +'</div>';
   }).join('')+extraFolders.map(f=>trNode(f,0)).join('')+'</div>':'';
   return '<div class="sf-sec db-sec">'
-    +'<div class="sec-hd db-hd-sec" onclick="ST.dbOpen=ST.dbOpen===false;renderTree()">'
+    +'<div class="sec-hd db-hd-sec" onclick="ST.dbOpen=ST.dbOpen===false;renderTree()" oncontextmenu="showDbSecCtx(event)" title="Right-click for new folders and options">'
     +'<span class="sec-tog">'+(open?'▾':'▸')+'</span>'
     +'<span class="sec-nm db-sec-nm">🗂 MyDatabase</span>'
     +'</div>'+body+'</div>';
@@ -11391,12 +11429,8 @@ function _fieldBuilderHTML(f){
 function _fieldRowHTML(fid,fld){
   return `<div class="fb-row" style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
     <input class="mi" style="flex:1;min-width:100px" value="${esc(fld.label)}" placeholder="Field name" onchange="updField('${fid}','${fld.id}','label',this.value)">
-    <select class="mi" style="width:120px" onchange="updField('${fid}','${fld.id}','type',this.value)">
-      <option value="text"${fld.type==='text'?' selected':''}>Text</option>
-      <option value="link"${fld.type==='link'?' selected':''}>Link</option>
-      <option value="select"${fld.type==='select'?' selected':''}>Category</option>
-      <option value="checkbox"${fld.type==='checkbox'?' selected':''}>Checkbox</option>
-      <option value="date"${fld.type==='date'?' selected':''}>Date</option>
+    <select class="mi" style="width:150px" onchange="updField('${fid}','${fld.id}','type',this.value)">
+      ${DBF_TYPES.map(t=>`<option value="${t.v}"${fld.type===t.v?' selected':''}>${esc(t.lbl.split(' — ')[0])}</option>`).join('')}
     </select>
     ${fld.type==='select'?`<input class="mi" style="flex:1;min-width:140px" value="${esc((fld.options||[]).join(', '))}" placeholder="Options, comma-separated" onchange="updField('${fid}','${fld.id}','options',this.value)">`:''}
     <button class="btn bn" onclick="removeFieldRow('${fid}','${fld.id}')" title="Remove field">🗑</button>
@@ -11427,6 +11461,523 @@ function updField(fid,fieldId,key,val){
   if(key==='type')showModal(_fieldBuilderHTML(f)); /* rebuild to show/hide the options input */
   renderP2C();renderP3C();
 }
+/* ══ MyDatabase folder "functions" ════════════════════════════════════════
+   A database folder is just a structured folder (f.structured + f.fields)
+   with two extra things that say what it is FOR and what it should GIVE
+   BACK, so the three questions a folder has to answer are all stored on it:
+
+     PURPOSE  f.purpose  — free text, what the folder is for
+     INPUT    f.fields[] — the existing structured-field list (nature/type)
+     OUTCOME  f.report   — {type, by} — the report its own entries produce
+
+   Nothing here is required: a folder with no f.report behaves exactly like
+   the structured folders that existed before, and a plain folder is
+   untouched. ────────────────────────────────────────────────────────── */
+
+/* Field types, in one place. `num` marks the types a total/average can be
+   computed over, `group` the ones a breakdown can group by. */
+const DBF_TYPES=[
+  {v:'text',    lbl:'Text — a short line'},
+  {v:'longtext',lbl:'Notes — a longer paragraph'},
+  {v:'number',  lbl:'Number — quantity, count, score', num:true},
+  {v:'money',   lbl:'Amount — money / cost', num:true},
+  {v:'select',  lbl:'Category — pick one of a list', group:true},
+  {v:'checkbox',lbl:'Yes / No — done, paid, booked', group:true},
+  {v:'date',    lbl:'Date', date:true},
+  {v:'link',    lbl:'Link — a web address'},
+];
+const DBF_NUM_TYPES=new Set(DBF_TYPES.filter(t=>t.num).map(t=>t.v));
+const DBF_GROUP_TYPES=new Set(DBF_TYPES.filter(t=>t.group).map(t=>t.v));
+const DBF_DATE_TYPES=new Set(DBF_TYPES.filter(t=>t.date).map(t=>t.v));
+
+/* The outcome each report produces, in the folder's own terms. `needs`
+   names the kind of field the report has to be pointed at, if any. */
+const DBF_REPORTS={
+  none     :{lbl:'No report — just the note list',            needs:null,   desc:'The folder lists its notes, with each note’s field values as chips. Same as a plain structured folder.'},
+  table    :{lbl:'Table — every entry, every field',          needs:null,   desc:'One row per note, one column per field. Best when you want to scan or compare all the entries at once.'},
+  breakdown:{lbl:'Breakdown — how many of each',              needs:'group',desc:'Counts the entries under each value of the chosen category, with a bar for each. Best for "how much of what do I have?"'},
+  totals   :{lbl:'Totals — sum and average of the numbers',   needs:'num',  desc:'Totals, averages and the range of every number/amount field, across all entries.'},
+  status   :{lbl:'Progress — how many are done',              needs:'group',desc:'A done / not-done count and percentage for the chosen Yes-No or category field.'},
+  timeline :{lbl:'Timeline — grouped by month',               needs:'date', desc:'Entries grouped under the month of the chosen date field, newest month first.'},
+};
+
+/* Ready-made functions for the kinds of folder this section is actually
+   used for. Picking one fills in the fields and the report in one go; every
+   part stays editable afterwards. */
+const DBF_PRESETS={
+  custom:{lbl:'Custom — I’ll define it myself',purpose:'',fields:[],report:{type:'none'}},
+  collect:{lbl:'Collect & catalogue (resources, links, references)',
+    purpose:'Collect things worth keeping, and be able to find them again by type and topic.',
+    fields:[['Type','select',['Video','PDF','Link','Article','Book','Other']],['Topic','select',[]],['Link','link',[]],['Source','text',[]]],
+    report:{type:'breakdown',by:'Type'}},
+  ideas:{lbl:'Capture & sort ideas',
+    purpose:'Capture ideas as they come, then sort them by how far along they are.',
+    fields:[['Category','select',['Business','Personal','Content','Invention','Other']],['Status','select',['New','Exploring','Shelved','Acted On']],['Priority','select',['Low','Medium','High']]],
+    report:{type:'breakdown',by:'Status'}},
+  plan:{lbl:'Plan & schedule (goals, projects, tasks)',
+    purpose:'Plan work with a target date, and see what is done and what is not.',
+    fields:[['Target Date','date',[]],['Status','select',['Not Started','In Progress','Done']],['Priority','select',['Low','Medium','High']],['Done?','checkbox',[]]],
+    report:{type:'status',by:'Done?'}},
+  spend:{lbl:'Track spending (purchases, costs, budget)',
+    purpose:'Record what things cost, and see the total.',
+    fields:[['Item Category','select',['Household','Electronics','Clothing','Grocery','Other']],['Amount','money',[]],['Purchased?','checkbox',[]],['Link','link',[]]],
+    report:{type:'totals'}},
+  log:{lbl:'Log events over time (diary, memories, visits)',
+    purpose:'Log what happened and when, so it can be read back in order.',
+    fields:[['Date','date',[]],['Category','select',['Family','Travel','Milestone','Everyday']],['Location','text',[]],['People','text',[]]],
+    report:{type:'timeline',by:'Date'}},
+  ask:{lbl:'Questions & answers (queries, follow-ups)',
+    purpose:'Keep track of open questions and whether they have been answered.',
+    fields:[['Status','select',['Open','Answered','Pending']],['Source / Person','text',[]],['Answered?','checkbox',[]]],
+    report:{type:'status',by:'Answered?'}},
+  measure:{lbl:'Measure & compare (readings, scores, prices)',
+    purpose:'Record a number for each entry so they can be totalled and compared.',
+    fields:[['Value','number',[]],['Category','select',[]],['Date','date',[]]],
+    report:{type:'table'}},
+};
+
+function _dbfFields(f){return (f&&f.fields)||[];}
+function _dbfFieldById(f,id){return _dbfFields(f).find(x=>x.id===id)||null;}
+/* Fields a given report can legally be pointed at. */
+function _dbfCandidates(f,needs){
+  if(!needs)return [];
+  const set=needs==='num'?DBF_NUM_TYPES:needs==='date'?DBF_DATE_TYPES:DBF_GROUP_TYPES;
+  return _dbfFields(f).filter(x=>set.has(x.type));
+}
+/* A report is only usable if the field it points at still exists and is
+   still the right type — a field can be deleted or retyped long after the
+   report was set up. */
+function _dbfReportUsable(f){
+  const rep=f&&f.report;
+  if(!rep||!rep.type||rep.type==='none')return false;
+  const meta=DBF_REPORTS[rep.type];if(!meta)return false;
+  if(!meta.needs)return true;
+  if(meta.needs==='num')return _dbfCandidates(f,'num').length>0;
+  const fld=_dbfFieldById(f,rep.by);
+  return !!fld&&_dbfCandidates(f,meta.needs).some(x=>x.id===fld.id);
+}
+function _dbfNum(v){
+  if(v===''||v===null||v===undefined||v===true||v===false)return null;
+  const n=parseFloat(String(v).replace(/[^0-9.\-]/g,''));
+  return isNaN(n)?null:n;
+}
+function _dbfFmt(n,type){
+  const r=Math.round(n*100)/100;
+  const str=r.toLocaleString(undefined,{maximumFractionDigits:2});
+  return type==='money'?str:str;
+}
+/* The display value of one field on one note, as plain text. */
+function _dbfVal(a,fld){
+  const v=(a.fieldValues||{})[fld.id];
+  if(v===undefined||v===null||v==='')return '';
+  if(fld.type==='checkbox')return v?'Yes':'No';
+  return String(v);
+}
+
+/* ── The report itself ─────────────────────────────────────────────────── */
+/** The "expected outcome" panel for a database folder, built from the notes
+ *  already in it. Returns '' for any folder without a usable report, so
+ *  every existing folder renders exactly as it did before. */
+function _dbReportHTML(f,arts){
+  if(!_dbfReportUsable(f))return '';
+  const rep=f.report,meta=DBF_REPORTS[rep.type];
+  const hd=`<div class="dbr-hd">📊 ${esc(meta.lbl.split(' — ')[0])}`
+    +(f.purpose?`<span class="dbr-purpose">· ${esc(f.purpose)}</span>`:'')
+    +`</div>`;
+  const wrap=body=>`<div class="dbr">${hd}${body}</div>`;
+  if(!arts.length)return wrap('<div class="dbr-empty">No entries yet — add a note and fill in its fields to see this report.</div>');
+  if(rep.type==='table')return wrap(_dbrTable(f,arts));
+  if(rep.type==='breakdown')return wrap(_dbrBreakdown(f,arts,rep.by));
+  if(rep.type==='totals')return wrap(_dbrTotals(f,arts));
+  if(rep.type==='status')return wrap(_dbrStatus(f,arts,rep.by));
+  if(rep.type==='timeline')return wrap(_dbrTimeline(f,arts,rep.by));
+  return '';
+}
+function _dbrTable(f,arts){
+  const flds=_dbfFields(f);
+  const head='<tr><th>Note</th>'+flds.map(x=>`<th>${esc(x.label)}</th>`).join('')+'</tr>';
+  const rows=arts.map(a=>{
+    const tds=flds.map(x=>{
+      const v=_dbfVal(a,x);
+      const isNum=DBF_NUM_TYPES.has(x.type)&&v!=='';
+      return `<td${isNum?' class="dbr-num"':''}>${esc(v)}</td>`;
+    }).join('');
+    return `<tr><td class="dbr-ttl" onclick="selArt('${a.id}')">${esc(a.title||'Untitled')}</td>${tds}</tr>`;
+  }).join('');
+  // Totals row, but only when there is actually a number field to total.
+  const numFlds=flds.filter(x=>DBF_NUM_TYPES.has(x.type));
+  let foot='';
+  if(numFlds.length){
+    foot='<tr><th>Total</th>'+flds.map(x=>{
+      if(!DBF_NUM_TYPES.has(x.type))return '<th></th>';
+      const sum=arts.reduce((t,a)=>{const n=_dbfNum((a.fieldValues||{})[x.id]);return t+(n===null?0:n);},0);
+      return `<th class="dbr-num">${esc(_dbfFmt(sum,x.type))}</th>`;
+    }).join('')+'</tr>';
+  }
+  return `<div class="dbr-tblwrap"><table class="dbr-tbl">${head}${rows}${foot}</table></div>`;
+}
+function _dbrBreakdown(f,arts,byId){
+  const fld=_dbfFieldById(f,byId);if(!fld)return '';
+  const counts=new Map();
+  arts.forEach(a=>{
+    const v=_dbfVal(a,fld)||'(not set)';
+    counts.set(v,(counts.get(v)||0)+1);
+  });
+  const rows=[...counts.entries()].sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(...rows.map(r=>r[1]));
+  return `<div class="dbr-bars">`+rows.map(([lbl,n])=>
+    `<div class="dbr-bar"><span class="dbr-bar-lbl" title="${esc(lbl)}">${esc(lbl)}</span>`
+    +`<span class="dbr-bar-track"><span class="dbr-bar-fill" style="width:${Math.round(n/max*100)}%"></span></span>`
+    +`<span class="dbr-bar-cnt">${n}</span></div>`).join('')
+    +`</div><div class="dbr-stat-sub" style="margin-top:7px">${arts.length} entr${arts.length===1?'y':'ies'} by ${esc(fld.label)}</div>`;
+}
+function _dbrTotals(f,arts){
+  const numFlds=_dbfFields(f).filter(x=>DBF_NUM_TYPES.has(x.type));
+  if(!numFlds.length)return '<div class="dbr-empty">No number or amount fields to total.</div>';
+  const cards=numFlds.map(x=>{
+    const ns=arts.map(a=>_dbfNum((a.fieldValues||{})[x.id])).filter(n=>n!==null);
+    if(!ns.length)return `<div class="dbr-stat"><div class="dbr-stat-lbl">${esc(x.label)}</div><div class="dbr-stat-val">—</div><div class="dbr-stat-sub">no values yet</div></div>`;
+    const sum=ns.reduce((t,n)=>t+n,0);
+    return `<div class="dbr-stat"><div class="dbr-stat-lbl">${esc(x.label)}</div>`
+      +`<div class="dbr-stat-val">${esc(_dbfFmt(sum,x.type))}</div>`
+      +`<div class="dbr-stat-sub">avg ${esc(_dbfFmt(sum/ns.length,x.type))} · ${ns.length} of ${arts.length} filled</div></div>`;
+  }).join('');
+  return `<div class="dbr-stats"><div class="dbr-stat"><div class="dbr-stat-lbl">Entries</div><div class="dbr-stat-val">${arts.length}</div></div>${cards}</div>`;
+}
+function _dbrStatus(f,arts,byId){
+  const fld=_dbfFieldById(f,byId);if(!fld)return '';
+  let done=0,notSet=0;
+  const byVal=new Map();
+  arts.forEach(a=>{
+    const raw=(a.fieldValues||{})[fld.id];
+    if(fld.type==='checkbox'){ if(raw)done++; return; }
+    const v=_dbfVal(a,fld);
+    if(!v){notSet++;return;}
+    byVal.set(v,(byVal.get(v)||0)+1);
+    // For a category field, treat the conventional "finished" words as done.
+    if(/^(done|answered|complete|completed|closed|acted on|purchased|booked|yes)$/i.test(v.trim()))done++;
+  });
+  const pct=arts.length?Math.round(done/arts.length*100):0;
+  let h=`<div class="dbr-stats">`
+    +`<div class="dbr-stat"><div class="dbr-stat-lbl">Done</div><div class="dbr-stat-val">${done} / ${arts.length}</div><div class="dbr-stat-sub">by ${esc(fld.label)}</div></div>`
+    +`<div class="dbr-stat"><div class="dbr-stat-lbl">Remaining</div><div class="dbr-stat-val">${arts.length-done}</div>${notSet?`<div class="dbr-stat-sub">${notSet} not set</div>`:''}</div>`
+    +`</div>`;
+  h+=`<div class="dbr-bar" style="margin-top:9px"><span class="dbr-bar-lbl">Progress</span>`
+    +`<span class="dbr-bar-track"><span class="dbr-bar-fill" style="width:${pct}%"></span></span>`
+    +`<span class="dbr-bar-cnt">${pct}%</span></div>`;
+  if(byVal.size)h+=`<div class="dbr-stat-sub" style="margin-top:7px">`
+    +[...byVal.entries()].sort((a,b)=>b[1]-a[1]).map(([v,n])=>`${esc(v)}: ${n}`).join(' · ')+`</div>`;
+  return h;
+}
+function _dbrTimeline(f,arts,byId){
+  const fld=_dbfFieldById(f,byId);if(!fld)return '';
+  const groups=new Map();
+  arts.forEach(a=>{
+    const v=(a.fieldValues||{})[fld.id];
+    const key=(v&&/^\d{4}-\d{2}/.test(String(v)))?String(v).slice(0,7):'(no date)';
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(a);
+  });
+  const keys=[...groups.keys()].sort((a,b)=>{
+    if(a==='(no date)')return 1; if(b==='(no date)')return -1;
+    return b.localeCompare(a);   // newest month first
+  });
+  const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return keys.map(k=>{
+    const label=k==='(no date)'?'No date set':`${MON[+k.slice(5,7)-1]} ${k.slice(0,4)}`;
+    const list=groups.get(k);
+    return `<div class="dbr-grp"><div class="dbr-grp-hd">${esc(label)} · ${list.length}</div>`
+      +list.map(a=>`<div class="dbr-grp-item" onclick="selArt('${a.id}')">${esc(a.title||'Untitled')}</div>`).join('')
+      +`</div>`;
+  }).join('');
+}
+
+/* ── The builder: purpose → input → outcome, in one dialog ─────────────── */
+/** Create a new MyDatabase folder, or edit an existing folder's function.
+ *  Edits are applied straight to the folder as you make them (same as the
+ *  older field builder), so there is no half-saved state to lose; for a NEW
+ *  folder the folder is created up front and removed again if you cancel. */
+let _dbbId=null,_dbbIsNew=false;
+/** Wide, scrollable, and NOT the resizable pop-out: showResizableModal()
+ *  shares a single remembered size/position with the Folder Browser, so
+ *  resizing this dialog would silently resize that window too. #mb has no
+ *  max-height of its own, hence the explicit scroll. */
+function _dbbShow(html){
+  showModal(html);
+  const mb=document.getElementById('mb');
+  if(mb){mb.style.width='min(760px, 94vw)';mb.style.maxHeight='88vh';mb.style.overflowY='auto';}
+}
+function openDbFolderBuilder(fid){
+  hideCtx();
+  const f=DB.folders.find(x=>x.id===fid);if(!f)return;
+  _dbbId=fid;_dbbIsNew=false;
+  _dbbShow(_dbBuilderHTML(f));
+}
+function newDbFolder(){
+  hideCtx();
+  const now=new Date().toISOString();
+  let sec=DB.sections.find(x=>x.id==='db-section');
+  if(!sec){sec={id:'db-section',name:'MyDatabase',order:9999};DB.sections.push(sec);}
+  const sibs=DB.folders.filter(x=>x.sectionId==='db-section'&&!x.parentId);
+  const f={id:uid(),name:'New Database Folder',parentId:null,sectionId:'db-section',
+    order:Math.max(0,...sibs.map(x=>x.order||0))+1,
+    structured:true,fields:[],purpose:'',report:{type:'none'},createdAt:now,updatedAt:now};
+  DB.folders.push(f);persist();renderTree();
+  _dbbId=f.id;_dbbIsNew=true;
+  _dbbShow(_dbBuilderHTML(f));
+  setTimeout(()=>{const n=document.getElementById('dbb-name');if(n){n.focus();n.select();}},90);
+}
+/** Cancel only ever throws away a folder this dialog just created — an
+ *  existing folder's edits are already saved, so cancelling one is simply
+ *  closing the window. */
+function dbBuilderCancel(){
+  if(_dbbIsNew&&_dbbId){
+    const f=DB.folders.find(x=>x.id===_dbbId);
+    const used=DB.articles.some(a=>!a.trash&&(a.folderIds||[]).includes(_dbbId));
+    if(f&&!used){
+      DB.folders=DB.folders.filter(x=>x.id!==_dbbId);
+      if(ST.folder===_dbbId)ST.folder=null;
+      persist();renderTree();renderP2C();
+    }
+  }
+  _dbbId=null;_dbbIsNew=false;
+  closeModal();
+}
+function dbBuilderDone(){
+  const f=DB.folders.find(x=>x.id===_dbbId);
+  const wasNew=_dbbIsNew;
+  _dbbId=null;_dbbIsNew=false;
+  closeModal();
+  if(f){
+    persist();renderTree();
+    if(wasNew){selFolder(f.id);toast('🗂 "'+f.name+'" created');}
+    else{renderP2C();renderP3C();toast('✓ Saved');}
+  }
+}
+function _dbBuilderHTML(f){
+  const rep=f.report||{type:'none'};
+  const meta=DBF_REPORTS[rep.type]||DBF_REPORTS.none;
+  let h=`<div class="mt">🗂 ${_dbbIsNew?'New Database Folder':'Folder Function — '+esc(f.name)}</div>`;
+  h+=`<div style="font-size:12px;color:var(--t3);margin:-4px 0 10px;line-height:1.45">Set what this folder is <b>for</b>, what <b>goes into</b> it, and what it should <b>give back</b>.</div>`;
+
+  h+=`<div style="display:flex;gap:6px;margin-bottom:10px">`
+    +`<input class="mi" id="dbb-name" style="flex:1;margin:0;min-width:0" placeholder="Folder name" value="${esc(f.name)}" oninput="dbbSet('name',this.value)">`
+    +`</div>`;
+
+  /* ① PURPOSE */
+  h+=`<div class="dbb-sec"><div class="dbb-sec-hd">① Purpose — what is this folder for?</div>`
+    +`<div class="dbb-sec-hint">Pick a ready-made function to fill in the rest in one go, or write your own. You can change everything below afterwards.</div>`
+    +`<select class="mi" style="width:100%;margin:0 0 6px" onchange="dbbApplyPreset(this.value);this.selectedIndex=0">`
+    +`<option value="">⚡ Apply a ready-made function…</option>`
+    +Object.entries(DBF_PRESETS).filter(([k])=>k!=='custom').map(([k,p])=>`<option value="${k}">${esc(p.lbl)}</option>`).join('')
+    +`</select>`
+    +`<textarea class="mi" style="width:100%;margin:0;min-height:52px;resize:vertical" placeholder="e.g. Collect every resource worth keeping, so I can find it again by type and topic." oninput="dbbSet('purpose',this.value)">${esc(f.purpose||'')}</textarea>`
+    +`</div>`;
+
+  /* ② INPUT */
+  h+=`<div class="dbb-sec"><div class="dbb-sec-hd">② Input — what data goes into each entry?</div>`
+    +`<div class="dbb-sec-hint">Every note in this folder gets these fields to fill in. The <i>type</i> decides how it is entered — and which reports it can drive.</div>`
+    +`<div id="dbb-fields">${_dbbFieldsHTML(f)}</div>`
+    +`<button class="btn bn" style="margin-top:6px;font-size:12px" onclick="dbbAddField()">➕ Add field</button>`
+    +`</div>`;
+
+  /* ③ OUTCOME */
+  const needs=meta.needs;
+  const cands=_dbfCandidates(f,needs);
+  h+=`<div class="dbb-sec"><div class="dbb-sec-hd">③ Outcome — what report should it produce?</div>`
+    +`<div class="dbb-sec-hint">Built from the entries in the folder and shown above its note list.</div>`
+    +`<select class="mi" style="width:100%;margin:0" onchange="dbbSetReport('type',this.value)">`
+    +Object.entries(DBF_REPORTS).map(([k,m])=>`<option value="${k}"${rep.type===k?' selected':''}>${esc(m.lbl)}</option>`).join('')
+    +`</select>`;
+  if(needs==='num'){
+    h+=cands.length
+      ? `<div class="dbb-out">${esc(meta.desc)}<br>Will total: <b>${esc(cands.map(c=>c.label).join(', '))}</b></div>`
+      : `<div class="dbb-out">⚠ This report needs at least one <b>Number</b> or <b>Amount</b> field. Add one above and it will start working.</div>`;
+  } else if(needs){
+    const kindLbl=needs==='date'?'date field':'Category or Yes/No field';
+    if(!cands.length){
+      h+=`<div class="dbb-out">⚠ This report needs a <b>${esc(kindLbl)}</b>. Add one above and it will start working.</div>`;
+    }else{
+      h+=`<select class="mi" style="width:100%;margin:6px 0 0" onchange="dbbSetReport('by',this.value)">`
+        +`<option value="">— choose the ${esc(kindLbl)} —</option>`
+        +cands.map(c=>`<option value="${esc(c.id)}"${rep.by===c.id?' selected':''}>${esc(c.label)}</option>`).join('')
+        +`</select>`
+        +`<div class="dbb-out">${esc(meta.desc)}${rep.by&&_dbfFieldById(f,rep.by)?'':'<br>⚠ Pick which field it should use.'}</div>`;
+    }
+  } else {
+    h+=`<div class="dbb-out">${esc(meta.desc)}</div>`;
+  }
+  h+=`</div>`;
+
+  h+=`<div style="display:flex;justify-content:space-between;gap:6px;margin-top:6px">`
+    +`<button class="btn bn" onclick="dbBuilderCancel()">Cancel</button>`
+    +`<button class="btn bp" onclick="dbBuilderDone()">${_dbbIsNew?'Create folder':'Done'}</button></div>`;
+  return h;
+}
+function _dbbFieldsHTML(f){
+  const flds=_dbfFields(f);
+  if(!flds.length)return `<div style="font-size:12px;color:var(--t3);padding:4px 0">No fields yet — add one, or apply a ready-made function above.</div>`;
+  return flds.map((fld,i)=>`<div style="display:flex;gap:5px;align-items:center;margin-bottom:5px;flex-wrap:wrap">
+    <input class="mi" style="flex:1;min-width:96px;margin:0" value="${esc(fld.label)}" placeholder="Field name" onchange="dbbUpdField('${fld.id}','label',this.value)">
+    <select class="mi" style="width:158px;margin:0" onchange="dbbUpdField('${fld.id}','type',this.value)">
+      ${DBF_TYPES.map(t=>`<option value="${t.v}"${fld.type===t.v?' selected':''}>${esc(t.lbl)}</option>`).join('')}
+    </select>
+    ${fld.type==='select'?`<input class="mi" style="flex:1;min-width:130px;margin:0" value="${esc((fld.options||[]).join(', '))}" placeholder="Options, comma-separated" onchange="dbbUpdField('${fld.id}','options',this.value)">`:''}
+    <button class="btn bn" style="padding:3px 7px" onclick="dbbMoveField('${fld.id}',-1)" ${i===0?'disabled':''} title="Move up">↑</button>
+    <button class="btn bn" style="padding:3px 7px" onclick="dbbMoveField('${fld.id}',1)" ${i===flds.length-1?'disabled':''} title="Move down">↓</button>
+    <button class="btn bn" style="padding:3px 7px" onclick="dbbRemoveField('${fld.id}')" title="Remove field">🗑</button>
+  </div>`).join('');
+}
+function _dbbFolder(){return DB.folders.find(x=>x.id===_dbbId)||null;}
+/** Redraw the dialog in place, keeping its size/position and scroll. */
+function _dbbRefresh(){
+  const f=_dbbFolder();if(!f)return;
+  const mb=document.getElementById('mb');
+  const sc=mb?mb.scrollTop:0;
+  _dbbShow(_dbBuilderHTML(f));
+  const mb2=document.getElementById('mb');
+  if(mb2)mb2.scrollTop=sc;
+  setTimeout(()=>{const n=document.getElementById('dbb-name');if(n&&document.activeElement===n)n.blur();},60);
+}
+function dbbSet(key,val){
+  const f=_dbbFolder();if(!f)return;
+  if(key==='name'){const t=val.trim();f.name=t||'Untitled folder';}
+  else f[key]=val;
+  f.updatedAt=new Date().toISOString();
+  persist();renderTree();
+}
+function dbbAddField(){
+  const f=_dbbFolder();if(!f)return;
+  if(!f.fields)f.fields=[];
+  f.fields.push({id:uid(),label:'Field '+(f.fields.length+1),type:'text',options:[]});
+  f.updatedAt=new Date().toISOString();persist();_dbbRefresh();
+}
+function dbbRemoveField(fieldId){
+  const f=_dbbFolder();if(!f)return;
+  if(!confirm('Remove this field? Any values already saved for it will no longer be shown.'))return;
+  f.fields=_dbfFields(f).filter(x=>x.id!==fieldId);
+  // A report pointed at the field that just went away would render nothing
+  // and give no clue why; drop the pointer so the dialog re-asks for one.
+  if(f.report&&f.report.by===fieldId)delete f.report.by;
+  f.updatedAt=new Date().toISOString();persist();_dbbRefresh();
+}
+function dbbMoveField(fieldId,dir){
+  const f=_dbbFolder();if(!f)return;
+  const arr=_dbfFields(f),i=arr.findIndex(x=>x.id===fieldId),j=i+dir;
+  if(i<0||j<0||j>=arr.length)return;
+  arr.splice(j,0,arr.splice(i,1)[0]);
+  f.updatedAt=new Date().toISOString();persist();_dbbRefresh();
+}
+function dbbUpdField(fieldId,key,val){
+  const f=_dbbFolder();if(!f)return;
+  const fld=_dbfFieldById(f,fieldId);if(!fld)return;
+  if(key==='options')fld.options=val.split(',').map(x=>x.trim()).filter(Boolean);
+  else fld[key]=val;
+  f.updatedAt=new Date().toISOString();persist();
+  // Retyping a field can make the current report's target invalid (a number
+  // turned into text can no longer be grouped on, and vice versa).
+  if(key==='type'&&f.report&&f.report.by===fieldId&&!_dbfReportUsable(f))delete f.report.by;
+  if(key==='type')_dbbRefresh();
+}
+function dbbSetReport(key,val){
+  const f=_dbbFolder();if(!f)return;
+  if(!f.report)f.report={type:'none'};
+  f.report[key]=val;
+  if(key==='type'){
+    // Auto-pick the only sensible target so the common case needs no second
+    // choice; ambiguous ones still ask.
+    const meta=DBF_REPORTS[val];
+    if(!meta||!meta.needs||meta.needs==='num')delete f.report.by;
+    else{
+      const cands=_dbfCandidates(f,meta.needs);
+      if(!cands.some(c=>c.id===f.report.by))f.report.by=cands.length===1?cands[0].id:undefined;
+    }
+  }
+  f.updatedAt=new Date().toISOString();persist();_dbbRefresh();
+}
+/** Fill purpose + fields + report from a ready-made function. Existing
+ *  fields are kept — the preset's are appended, minus any duplicate label —
+ *  so applying one to a folder you have already set up never loses work. */
+function dbbApplyPreset(key){
+  const p=DBF_PRESETS[key];if(!p)return;
+  const f=_dbbFolder();if(!f)return;
+  if(!f.fields)f.fields=[];
+  if(f.fields.length&&!confirm('Apply "'+p.lbl+'"?\n\nIts fields are added to the ones already here (duplicates skipped), and the purpose and report are replaced.'))return;
+  const have=new Set(f.fields.map(x=>x.label.toLowerCase()));
+  p.fields.forEach(([label,type,options])=>{
+    if(have.has(label.toLowerCase()))return;
+    f.fields.push({id:uid(),label,type,options:options||[]});
+  });
+  f.purpose=p.purpose;
+  // The preset names its report target by LABEL — resolve it to whichever
+  // field now carries that label, whether it came from the preset or was
+  // already there.
+  const rep={type:p.report.type};
+  if(p.report.by){
+    const target=f.fields.find(x=>x.label.toLowerCase()===p.report.by.toLowerCase());
+    if(target)rep.by=target.id;
+  }
+  f.report=rep;
+  if(_dbbIsNew&&/^(New Database Folder|Untitled folder)$/.test(f.name)){
+    /* leave the name alone — the user names it; only the function is seeded */
+  }
+  f.structured=true;
+  f.updatedAt=new Date().toISOString();persist();renderTree();_dbbRefresh();
+}
+
+/* ── MyDatabase section header context menu ───────────────────────────── */
+/** Right-click the "🗂 MyDatabase" header. Until now the header had no menu
+ *  at all, so a new database folder could only appear via the fixed
+ *  starter-folder list in Settings. */
+function showDbSecCtx(ev){
+  ev.preventDefault();ev.stopPropagation();
+  const m=document.getElementById('ctx');
+  const n=DB.folders.filter(f=>f.sectionId==='db-section'&&!f.parentId&&!f.journalMode
+    &&f.id!=='db-fav-folder'&&f.id!=='db-ct-folder').length;
+  m.innerHTML='<div class="ci" onclick="newDbFolder()">➕ New database folder…</div>'
+    +'<div class="ci" onclick="hideCtx();newPlainDbFolder()">📁 New plain folder</div>'
+    +'<div class="csep"></div>'
+    +'<div class="ci" onclick="hideCtx();addStarterMyDatabaseFolders()">🗂 Add the starter folders</div>'
+    +(n?'<div class="ci" onclick="hideCtx();autoNumberDbFolders()">🔢 Auto-number these '+n+' folders</div>':'')
+    +'<div class="csep"></div>'
+    +'<div class="ci" onclick="hideCtx();ST.dbOpen=true;renderTree()">▾ Expand section</div>'
+    +'<div class="ci" onclick="hideCtx();ST.dbOpen=false;renderTree()">▸ Collapse section</div>';
+  m.style.display='block';
+  const vw=window.innerWidth,vh=window.innerHeight;
+  let x=ev.clientX,y=ev.clientY;
+  const mw=m.offsetWidth||190,mh=m.offsetHeight||210;
+  if(x+mw>vw)x=vw-mw-5;if(y+mh>vh)y=vh-mh-5;
+  m.style.left=x+'px';m.style.top=y+'px';
+}
+/** A folder in MyDatabase with no fields and no report — for someone who
+ *  just wants somewhere to put notes, without designing a function first. */
+function newPlainDbFolder(){
+  const nm=prompt('New folder in MyDatabase:','');
+  if(nm===null)return;
+  const t=nm.trim();if(!t)return;
+  let sec=DB.sections.find(x=>x.id==='db-section');
+  if(!sec){sec={id:'db-section',name:'MyDatabase',order:9999};DB.sections.push(sec);}
+  const sibs=DB.folders.filter(x=>x.sectionId==='db-section'&&!x.parentId);
+  const now=new Date().toISOString();
+  const f={id:uid(),name:t,parentId:null,sectionId:'db-section',
+    order:Math.max(0,...sibs.map(x=>x.order||0))+1,createdAt:now,updatedAt:now};
+  DB.folders.push(f);persist();renderTree();selFolder(f.id);
+  toast('📁 "'+t+'" created');
+}
+/** Renumber the MyDatabase folders "(01) …, (02) …" in their current order,
+ *  matching how the starter folders are already labelled. */
+function autoNumberDbFolders(){
+  const fs=DB.folders.filter(f=>f.sectionId==='db-section'&&!f.parentId&&!f.journalMode
+    &&f.id!=='db-fav-folder'&&f.id!=='db-ct-folder').sort((a,b)=>(a.order||0)-(b.order||0));
+  if(!fs.length)return;
+  if(!confirm('Renumber these '+fs.length+' folders as (01), (02), … in their current order?'))return;
+  fs.forEach((f,i)=>{
+    f.name='('+String(i+1).padStart(2,'0')+') '+stripNumPrefix(f.name);
+    f.order=i+1;f.updatedAt=new Date().toISOString();
+  });
+  persist();renderTree();toast('🔢 Renumbered '+fs.length+' folders');
+}
+
 function _structuredFolderOf(a){
   return (a.folderIds||[]).map(id=>DB.folders.find(f=>f.id===id)).find(f=>f&&f.structured)||null;
 }
@@ -11445,6 +11996,12 @@ function fieldInputHTML(aid,f,v){
   }
   if(f.type==='date'){
     return `<input type="date" class="fld-inp" value="${esc(v||'')}" ${onch} onclick="event.stopPropagation()">`;
+  }
+  if(f.type==='number'||f.type==='money'){
+    return `<input type="number" step="any" class="fld-inp" placeholder="${f.type==='money'?'0.00':'0'}" value="${esc(v===undefined||v===null?'':v)}" ${onch} onclick="event.stopPropagation()">`;
+  }
+  if(f.type==='longtext'){
+    return `<textarea class="fld-inp" rows="2" style="resize:vertical" ${onch} onclick="event.stopPropagation()">${esc(v||'')}</textarea>`;
   }
   return `<input type="text" class="fld-inp" value="${esc(v||'')}" ${onch} onclick="event.stopPropagation()">`;
 }
@@ -11475,6 +12032,7 @@ function _fieldChipsHTML(a,folder){
     if(v===undefined||v===''||v===false)return '';
     if(f.type==='checkbox')return `<span class="fld-chip">✓ ${esc(f.label)}</span>`;
     if(f.type==='link')return `<span class="fld-chip">🔗 ${esc(f.label)}</span>`;
+    if(f.type==='money')return `<span class="fld-chip">${esc(f.label)}: ${esc(String(v))}</span>`;
     return `<span class="fld-chip">${esc(f.label)}: ${esc(String(v).slice(0,30))}</span>`;
   }).filter(Boolean).join('');
   return chips?`<div class="fld-chips">${chips}</div>`:'';
@@ -12363,6 +12921,7 @@ function _buildFolderCtxMain(fid){
     <div class="csep"></div>
     <div class="ci" onclick="toggleFolderStructured('${fid}')">${_f&&_f.structured?'🗂 Turn off Structured mode':'🗂 Make Structured Folder'}</div>
     ${_f&&_f.structured?`<div class="ci" onclick="openFieldBuilder('${fid}')">✏ Edit Fields</div>`:''}
+    <div class="ci" onclick="openDbFolderBuilder('${fid}')">📊 Set folder function — purpose, input, report…</div>
     <div class="ci" onclick="${_f&&_f.pinHash?'removeFolderPin':'setFolderPin'}('${fid}')">${_f&&_f.pinHash?'🔓 Remove PIN':'🔒 Set PIN'}</div>
     <div class="csep"></div>
     <div class="ci d" onclick="hideCtx();confirmDel('folder','${fid}')">🗑 Delete folder</div>`;
