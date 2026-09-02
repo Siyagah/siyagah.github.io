@@ -20,7 +20,7 @@
           serving the previous build's files and the update never reaches
           the device.
      Then name the downloaded file "Siyagah v{APP_VERSION}.html" -->
-<meta name="app-version" content="03.99">
+<meta name="app-version" content="04.00">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1925,7 +1925,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v03.99</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.00</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button>
       <button class="btn bn bi" onclick="openGlobalSearch()" style="font-size:20px" title="Search (Ctrl+K)">🔍</button>
@@ -2002,7 +2002,7 @@ sup.ann-sup:hover{text-decoration:underline}
   <div id="tree"></div>
 
   <div class="sb-toolbar" id="sb-toolbar">
-    <button class="sb-tb-btn" onclick="quickCapture()" title="New blank page in current folder" style="color:#6DC994">📄 New Page</button>
+    <button class="sb-tb-btn" onclick="quickCapture()" title="New note — opens in its own pop-out window" style="color:#6DC994">📝 New Note</button>
     <button class="sb-tb-btn" onclick="openFolderPopupFromToolbar()" title="Open the folder pop-up browser">🗗 Folders</button>
   </div>
 </aside>
@@ -2719,7 +2719,7 @@ function renderP2H(){
   const curF=DB.folders.find(f=>f.id===ST.folder);
   const _sfDef=!curF&&SF.find(s=>s.id===ST.folder);
   /* Universal new-note button — always visible in every pane-2 state */
-  const newBtn=`<button class="btn bp p2-new-btn" onclick="quickNewNote()" title="New note">✚ Note</button>`;
+  const newBtn=`<button class="btn bp p2-new-btn" onclick="quickNewNote()" title="New note — opens in its own pop-out window">✚ Note</button>`;
   const previewBtn=`<button class="btn bn p2-view-btn" onclick="toggleListView()" title="${ST.snippet?'Title only':'Show preview'}">${ST.snippet?'⊟ Compact':'▤ Preview'}</button>`;
   /* Universal "back to the Folder Browser" button — also always visible.
      Clicking anything in the browser closes it and drops you here in the
@@ -3127,7 +3127,7 @@ function renderP3H(){
       <button class="btn bn bi" onclick="_p3Navigate(-1)" title="Previous note in this folder" style="padding:5px 6px;font-size:15px">‹</button>
       <button class="btn bn bi" onclick="_p3Navigate(1)" title="Next note in this folder" style="padding:5px 6px;font-size:15px">›</button>
       <button class="btn bn bi" onclick="_ntFindToggle('p3')" title="Find in this note" style="padding:5px 7px;font-size:13px">🔍</button>
-      <button class="btn bn bi" onclick="quickCapture()" title="Quick note (Primary folder)" style="padding:5px 7px;font-size:14px">✚</button>
+      <button class="btn bn bi" onclick="quickCapture()" title="New note (Primary folder) — opens in its own pop-out window" style="padding:5px 7px;font-size:14px">✚</button>
       <button class="btn" onclick="startEdit()">✏️ Edit</button>
       <button class="btn bn modal-pop-btn" onclick="openNotePopup('${curA.id}','float')" title="Pop out as floating window (Ctrl+Shift+P)">⊡</button>
       <button class="btn bn modal-pop-btn" onclick="openNotePopup('${curA.id}','panel')" title="Open as resizable panel">⛶</button>
@@ -3137,7 +3137,7 @@ function renderP3H(){
   } else {
     el.classList.remove('editing');
     h+=`<span style="flex:1;color:var(--t3);font-size:13px;font-weight:500">Siyagah</span>`
-      +`<button class="btn bn bi" onclick="quickCapture()" title="Quick note (Primary folder)" style="padding:5px 8px;font-size:15px">✚</button>`;
+      +`<button class="btn bn bi" onclick="quickCapture()" title="New note (Primary folder) — opens in its own pop-out window" style="padding:5px 8px;font-size:15px">✚</button>`;
   }
   el.innerHTML=h;
   /* Restore title-input focus + caret if it was focused before rebuild */
@@ -4787,10 +4787,10 @@ function quickNewNote(){
   const a={id:uid(),title,content:'',
     folderIds:fid?[fid]:[],tags,createdAt:now,updatedAt:now};
   DB.articles.push(a);persist();
-  ST.article=a.id;ST.etitle=title;ST.efolders=fid?[fid]:[];ST.etags=[...tags];
-  ST.editing=true;
-  if(window.innerWidth<1200)showPane('p3');
-  render();
+  /* v04.00 — the new note opens as its own pop-out window (see
+     _openNewNoteWindow); no fid passed, so the folder/Smart View the button
+     was pressed in stays on screen behind it. */
+  _openNewNoteWindow(a.id);
 }
 
 
@@ -6741,10 +6741,9 @@ function newStarredNote(){
   const art={id:aid,title:'',content:'<p></p>',folderIds:fid?[fid]:[],
              tags:[],favourite:true,createdAt:now,updatedAt:now};
   DB.articles.push(art);persist();
-  ST.article=aid;ST.etitle='';ST.efolders=fid?[fid]:[];ST.editing=true;
-  renderP2C();renderP3H();renderP3C();
-  if(window.innerWidth<1200)showPane('p3');
-  setTimeout(()=>{const ti=document.getElementById('ti');if(ti)ti.focus();},80);
+  /* v04.00 — opens in its own pop-out window; no fid passed so the Smart
+     View the user is standing in stays on screen behind it. */
+  _openNewNoteWindow(aid);
   toast('⭐ New note added to Favourites');
 }
 
@@ -6755,10 +6754,9 @@ function newPinnedNote(){
   const art={id:aid,title:'',content:'<p></p>',folderIds:fid?[fid]:[],
              tags:[],pinned:true,createdAt:now,updatedAt:now};
   DB.articles.push(art);persist();
-  ST.article=aid;ST.etitle='';ST.efolders=fid?[fid]:[];ST.editing=true;
-  renderP2C();renderP3H();renderP3C();
-  if(window.innerWidth<1200)showPane('p3');
-  setTimeout(()=>{const ti=document.getElementById('ti');if(ti)ti.focus();},80);
+  /* v04.00 — opens in its own pop-out window; no fid passed so the Smart
+     View the user is standing in stays on screen behind it. */
+  _openNewNoteWindow(aid);
   toast('📌 New note created and pinned');
 }
 
@@ -6769,13 +6767,10 @@ function newNoteWithReminder(){
   const art={id:aid,title:'',content:'<p></p>',folderIds:fid?[fid]:[],
              tags:[],createdAt:now,updatedAt:now};
   DB.articles.push(art);persist();
-  ST.article=aid;ST.etitle='';ST.efolders=fid?[fid]:[];ST.editing=true;
-  renderP2C();renderP3H();renderP3C();
-  if(window.innerWidth<1200)showPane('p3');
-  setTimeout(()=>{
-    const ti=document.getElementById('ti');if(ti)ti.focus();
-    setTimeout(()=>openReminderModal(aid),300);
-  },80);
+  /* v04.00 — pop-out window first, then the reminder dialog on top of it
+     (#ov sits at z-index 10000, well above the 6000-band windows). */
+  _openNewNoteWindow(aid);
+  setTimeout(()=>openReminderModal(aid),380);
 }
 
 function quickJournalEntryFromDB(){
@@ -8069,6 +8064,27 @@ function popOutNote(aid){
   if(ex){ _fwZTop++; ex.style.zIndex=_fwZTop; const ed=ex.querySelector('.fw-ed'); if(ed)ed.focus(); _fwFocus(aid); return; }
   _fwCreate(aid);
 }
+/* ══ v04.00 — SCREEN-PROPORTIONATE DEFAULT WINDOW ═════════════════════════
+   The first time a note is popped out it now opens at a fraction of the
+   SCREEN (≈78% × 88%, centred) instead of the old fixed 440×520 box, so the
+   window fills a 13" laptop and a 27" monitor the same way rather than
+   shrinking to a stamp on the big one. This is only the "no remembered
+   geometry yet" default — once the user drags or resizes a window,
+   _fwSavePos() remembers that exact frame per note and it wins from then on.
+   Extra windows opened while others are up cascade off the centre so they
+   don't land pixel-on-pixel. */
+const _FW_W_RATIO=.78,_FW_H_RATIO=.88;
+function _fwDefaultGeom(n){
+  const vw=window.innerWidth,vh=window.innerHeight;
+  /* Floors match .float-win's min-width/min-height so the clamp can never
+     hand back a box the CSS immediately overrides. */
+  const w=Math.round(Math.max(320,Math.min(vw*_FW_W_RATIO,vw-32)));
+  const h=Math.round(Math.max(280,Math.min(vh*_FW_H_RATIO,vh-32)));
+  const off=Math.max(0,n||0)*26;
+  const x=Math.max(8,Math.min(Math.round((vw-w)/2)+off,Math.max(8,vw-w-8)));
+  const y=Math.max(8,Math.min(Math.round((vh-h)/2)+off,Math.max(8,vh-h-8)));
+  return {w:w,h:h,x:x,y:y};
+}
 function _fwCreate(aid){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return;
   const n=document.querySelectorAll('.float-win').length;
@@ -8076,15 +8092,15 @@ function _fwCreate(aid){
   const win=document.createElement('div');
   win.className='float-win';win.id='fw-'+aid;
   /* v03.74 — restore this note's remembered position/size if it has one
-     (clamped to the current viewport), otherwise cascade as before. */
+     (clamped to the current viewport), otherwise the proportionate default. */
   const saved=_popGeoAll().float[aid];
   let w,h,x,y;
   if(saved&&saved.width&&saved.height){
     w=Math.min(saved.width,vw-8);h=Math.min(saved.height,vh-8);
     x=Math.max(0,Math.min(saved.left,vw-w));y=Math.max(0,Math.min(saved.top,vh-h));
   } else {
-    w=Math.min(440,vw-40);h=Math.min(520,vh-60);
-    x=Math.min(60+n*28,Math.max(10,vw-w-10));y=Math.min(60+n*28,Math.max(10,vh-h-10));
+    const d=_fwDefaultGeom(n);
+    w=d.w;h=d.h;x=d.x;y=d.y;
   }
   win.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;z-index:'+(++_fwZTop);
   win.innerHTML=_fwRenderBody(aid);
@@ -15794,6 +15810,48 @@ function _dedupePrimaryFolders(){
   toast('🔧 Merged '+dups.length+' duplicate "Primary" folder'+(dups.length>1?'s':'')+' ('+moved+' note'+(moved!==1?'s':'')+' consolidated)');
   return canonical;
 }
+/* ══ v04.00 — EVERY "NEW NOTE" OPENS AS A POP-OUT WINDOW ══════════════════
+   'New Note' (the sidebar toolbar button, the ✚ quick-note chips in the
+   Pane 3 header, the launch-pad Quick Note card, MyWALL's "New note here",
+   and the Smart View starred / pinned / reminder buttons) all end up here.
+   Instead of taking over Pane 3, the fresh note is handed straight to its
+   own floating window — the same pop-out with the full toolbar, Types,
+   Attach, Find, autosave and Save chip that popOutNote() gives any note —
+   so the rest of the app stays usable behind it.
+   Two deliberate rules:
+     • Pane 3 is left in READ mode on the same note, never in edit mode. A
+       note must never be live in #ed and in .fw-ed at once — both are on the
+       debounced autosave and the later tick silently overwrites the other
+       (the F3 bug). The window is the only editor.
+     • Below 900px float windows don't exist (display:none in CSS), so that
+       tier keeps the original pane-based flow untouched.
+   fid is optional: pass the folder the note landed in when the caller wants
+   the panes to follow it there, omit it to leave the current view (a Smart
+   View) exactly where it is. */
+function _openNewNoteWindow(aid,fid){
+  if(ST.editing){try{saveArt();}catch(e){}}   /* same guard as selArt() */
+  if(fid)ST.folder=fid;
+  ST.article=aid;ST.editing=false;
+  render();
+  if(window.innerWidth<900){
+    if(window.innerWidth<1200)showPane('p3');
+    startEdit();
+    setTimeout(function(){
+      const ti=document.getElementById('ti');
+      if(ti){ti.focus();return;}
+      const ed=document.getElementById('ed');if(ed)ed.focus();
+    },80);
+    return;
+  }
+  popOutNote(aid);
+  /* Title first, so the very next keystroke names the note — exactly what
+     the old Pane 3 flow did with #ti. */
+  setTimeout(function(){
+    const ti=document.getElementById('fw-ti-'+aid);
+    if(ti){ti.focus();return;}
+    const ed=document.getElementById('fw-ed-'+aid);if(ed)ed.focus();
+  },80);
+}
 function quickCapture(){
   /* 1. Get the quick-capture folder — _dedupePrimaryFolders() is the single
      canonical lookup: it finds the folder by name (works across devices,
@@ -15817,19 +15875,8 @@ function quickCapture(){
            tags:[],createdAt:_now,updatedAt:_now};
   DB.articles.push(art);
   persist();
-  /* 3. Navigate and enter edit mode immediately */
-  ST.folder=pf.id;
-  ST.article=art.id;ST.editing=false;
-  renderP2C();renderP3H();renderP3C();
-  adjustP3Layout();
-  if(window.innerWidth<1200) showPane('p3');
-  startEdit();
-  /* 4. Focus title input so user can start typing the title straight away */
-  setTimeout(function(){
-    var ti=document.getElementById('ti');
-    if(ti){ti.focus();}
-    else{var ed=document.getElementById('ed');if(ed)ed.focus();}
-  },80);
+  /* 3. Open it in its own pop-out window (pane flow below 900px) */
+  _openNewNoteWindow(art.id,pf.id);
 }
 /* ── MyWALL "New note under this NTI type" — v03.54.01 ────────────────────
    Same quick-capture mechanics as quickCapture() above, but the new note is
@@ -15854,17 +15901,7 @@ function quickCaptureWithKind(kid){
            tags:[],createdAt:_now,updatedAt:_now,kind:kid,kinds:[kid]};
   DB.articles.push(art);
   persist();
-  ST.folder=pf.id;
-  ST.article=art.id;ST.editing=false;
-  renderTree();renderP2C();renderP3H();renderP3C();
-  adjustP3Layout();
-  if(window.innerWidth<1200) showPane('p3');
-  startEdit();
-  setTimeout(function(){
-    var ti=document.getElementById('ti');
-    if(ti){ti.focus();}
-    else{var ed=document.getElementById('ed');if(ed)ed.focus();}
-  },80);
+  _openNewNoteWindow(art.id,pf.id);
   var k=kindById(kid);
   toast('✚ New note added under '+(k?k.name:'this type'));
 }
