@@ -2677,6 +2677,14 @@ function renderP2H(){
   /* Universal new-note button — always visible in every pane-2 state */
   const newBtn=`<button class="btn bp p2-new-btn" onclick="quickNewNote()" title="New note">✚ Note</button>`;
   const previewBtn=`<button class="btn bn p2-view-btn" onclick="toggleListView()" title="${ST.snippet?'Title only':'Show preview'}">${ST.snippet?'⊟ Compact':'▤ Preview'}</button>`;
+  /* Universal "back to the Folder Browser" button — also always visible.
+     Clicking anything in the browser closes it and drops you here in the
+     Title pane, so every one of these headers needs the way back, not just
+     the plain-folder one. openFolderPopupFromToolbar() reopens the browser
+     exactly where it was left — same section/Smart View/Tags/Note Types
+     scope, same expanded rows, same search text, same scroll offset, and
+     (via the geometry it already persists) the same size and position. */
+  const fbBtn=`<button class="btn bn bi" onclick="openFolderPopupFromToolbar()" style="font-size:13px;flex-shrink:0" title="Back to the folder browser">🗗</button>`;
   /* ── Section smart-view header ── */
   if(ST.secSF){
     const _ssec=DB.sections.find(s=>s.id===ST.secSF.secId);
@@ -2685,7 +2693,7 @@ function renderP2H(){
     const cls=window.innerWidth<1200?`<button class="btn bn bi" onclick="closeP2()" style="font-size:14px;flex-shrink:0">◀</button>`:'';
     el.innerHTML=ham
       +`<span class="tbt" style="flex:1;min-width:0;overflow:hidden;font-size:12px">${_ssf?.icon||'📊'} ${esc((_ssf&&(DB.sfItems?.[_ssf.id]?.name||_ssf.name))||'')} <span style="font-weight:400;opacity:.6">· ${esc(_ssec?.name||'')}</span></span>`
-      +newBtn+previewBtn+cls;
+      +fbBtn+newBtn+previewBtn+cls;
     return;
   }
     /* ── Smart-view header — contextual new-note button ── */
@@ -2709,7 +2717,7 @@ function renderP2H(){
       ?`<button class="btn bn p2-new-btn" onclick="addNtiCat()" title="Add a new Note-Type category">📁 Category</button>`:'';
     el.innerHTML=ham
       +`<span class="tbt" style="flex:1;min-width:0;overflow:hidden">${_sfDef.icon} ${esc(_sfDef.name)}</span>`
-      +_sfBtn+_mwCatBtn+previewBtn+cls;
+      +fbBtn+_sfBtn+_mwCatBtn+previewBtn+cls;
     return;
   }
   const ham=window.innerWidth<1200
@@ -2722,7 +2730,7 @@ function renderP2H(){
     el.innerHTML=ham
       +`<span class="nti-dot" style="background:${k.color};margin-left:2px"></span>`
       +`<span class="tbt" style="flex:1;min-width:0;overflow:hidden">${esc(k.name)}</span>`
-      +newBtn+previewBtn
+      +fbBtn+newBtn+previewBtn
       +`<button class="btn bn bi" onclick="backToMyWallCat('${k.catId||'cat-general'}')" style="font-size:12px" title="Back to MyWALL — opens this Note-Type's category">🧱⬅</button>`
       +`<button class="btn bn bi" onclick="selKind(null)" style="font-size:13px" title="Clear type filter">✕</button>`
       +cls;
@@ -2732,7 +2740,7 @@ function renderP2H(){
     el.innerHTML=ham
       +`<span style="font-size:13px;flex-shrink:0">🏷</span>`
       +`<span class="tbt" style="flex:1;min-width:0;overflow:hidden">#${esc(ST.tag)}</span>`
-      +newBtn+previewBtn
+      +fbBtn+newBtn+previewBtn
       +`<button class="btn bn bi" onclick="selTag(null)" style="font-size:13px" title="Clear tag filter">✕</button>`
       +cls;
     return;
@@ -2749,14 +2757,14 @@ function renderP2H(){
              +`<button class="btn bn p2-new-btn" onclick="_calManageCats()" title="Manage categories">⚙</button>`
     };
     const _dbBtn=_dbBtns[ST.folder]||newBtn;
-    el.innerHTML=ham+`<span class="tbt" style="flex:1;min-width:0;overflow:hidden">${_dbNames[ST.folder]||'🗂 MyDatabase'}</span>`+_dbBtn+cls;
+    el.innerHTML=ham+`<span class="tbt" style="flex:1;min-width:0;overflow:hidden">${_dbNames[ST.folder]||'🗂 MyDatabase'}</span>`+fbBtn+_dbBtn+cls;
     return;
   }
   /* ── No folder selected ── */
   if(!curF){
     el.innerHTML=ham
       +'<span style="color:var(--t3);font-size:13px;padding:0 4px;flex:1">Select a folder</span>'
-      +newBtn+cls;
+      +fbBtn+newBtn+cls;
     return;
   }
   /* ── Regular folder header ── */
@@ -2767,7 +2775,7 @@ function renderP2H(){
       :newBtn);
   el.innerHTML=ham
     +`<div style="flex:1;min-width:0;overflow:hidden" class="tbt">${esc(curF.name)}${curF.journalMode?'<span style="font-size:11px;margin-left:5px;opacity:.65">📓</span>':''}</div>`
-    +`<button class="btn bn bi" onclick="openFolderPopupFromToolbar()" style="font-size:13px;flex-shrink:0" title="Open the folder browser">🗗</button>`
+    +fbBtn
     +_jrnBtn+(curF.journalMode?'':previewBtn)+cls;
   const _pathHost=document.getElementById('p2h-path');
   if(_pathHost)_pathHost.innerHTML=_folderPathRowHTML(curF);
@@ -12474,7 +12482,11 @@ function showModal(html){
   document.getElementById('ov').classList.add('on');
   setTimeout(()=>document.querySelector('#mb .mi')?.focus(),40);
 }
-function closeModal(){document.getElementById('ov').classList.remove('on');if(_mbRsz)_mbResizeStop();if(_mbDrag)_mbDragStop();_pkSaveScope();}
+/* _pkSaveScope() runs FIRST, while the overlay is still shown: it reads the
+   folder browser's live scroll offset, and a hidden (display:none) list
+   reports scrollTop 0, which would save the browser as scrolled to the top
+   no matter where it actually was. */
+function closeModal(){_pkSaveScope();document.getElementById('ov').classList.remove('on');if(_mbRsz)_mbResizeStop();if(_mbDrag)_mbDragStop();}
 
 /* ── Resizable-modal support (all 8 edges/corners) ─────────────────── */
 const _RSZ_HANDLES_HTML=
@@ -12768,8 +12780,19 @@ const _MB_SCOPE_KEY='siyagah-mb-popout-scope';
 function _pkSaveScope(){
   try{
     if(_pkMode!=='browse')return;
+    // Only when the browse pop-out itself is what's closing. _pkMode keeps
+    // its last value after the window is gone, so without this guard closing
+    // any other modal later would re-save with an empty scroll/search and
+    // quietly erase the position we're trying to preserve.
+    const list=document.getElementById('pkList');if(!list)return;
+    const srch=document.getElementById('pkSearch');
     localStorage.setItem(_MB_SCOPE_KEY,JSON.stringify({
       kind:_pkScopeKind,sectionScope:_pkSectionScope,folderScope:_pkFolderScope,
+      // Everything else needed to put the window back exactly as it was:
+      // which folder rows were expanded, which "All Sections" groups were
+      // open, what was typed in the search box, and how far it was scrolled.
+      exp:ST.pickExp||{},allSecOpen:ST.pkAllSecOpen||{},
+      q:srch?srch.value:'',scroll:list.scrollTop||0,
     }));
   }catch(e){}
 }
@@ -12779,16 +12802,51 @@ function _pkLoadScope(){
     return (s&&s.kind)?s:null;
   }catch(e){return null;}
 }
+/** Reopen a browse pop-out on the exact state _pkSaveScope() recorded —
+ *  same scope, same expanded rows, same search text, same scroll offset —
+ *  instead of the fresh, fully-collapsed, scrolled-to-top view that
+ *  openSectionPopout()/openFolderPopout()/_pkSwitchToScopeKind() deliberately
+ *  give an explicit "pop out THIS thing" request. Returns false (having
+ *  changed nothing) if the remembered scope no longer exists. */
+function _pkResumeBrowse(saved){
+  if(!saved||!saved.kind)return false;
+  let title;
+  if(saved.kind==='section'){
+    if(saved.folderScope){
+      const f=DB.folders.find(x=>x.id===saved.folderScope);if(!f)return false;
+      _pkScopeKind='section';_pkSectionScope=null;_pkFolderScope=f.id;
+      _pkRootLabel='🏠 Root';_pkTarget=f.id;
+      title=`📁 ${esc(f.name)}`;
+    }else{
+      const sec=DB.sections.find(x=>x.id===saved.sectionScope);if(!sec)return false;
+      _pkScopeKind='section';_pkSectionScope=sec.id;_pkFolderScope=null;
+      _pkRootLabel=`🏠 Root of "${sec.name}"`;_pkTarget=null;
+      title=`📂 ${esc(sec.name)}`;
+    }
+  }else{
+    const meta=_PK_SCOPE_KIND_META[saved.kind];if(!meta)return false;
+    _pkScopeKind=saved.kind;_pkSectionScope=null;_pkFolderScope=null;_pkTarget=null;
+    title=meta.title;
+  }
+  _pkMode='browse';
+  ST.pickExp=(saved.exp&&typeof saved.exp==='object')?Object.assign({},saved.exp):{};
+  ST.pkAllSecOpen=(saved.allSecOpen&&typeof saved.allSecOpen==='object')?Object.assign({},saved.allSecOpen):{};
+  _pkOpenBrowse(title);
+  _pkSetFolderControlsVisible(_pkScopeKind==='section');
+  const srch=document.getElementById('pkSearch');
+  if(srch&&saved.q){srch.value=saved.q;_pkFilter(saved.q);}
+  const list=document.getElementById('pkList');
+  if(list&&saved.scroll){
+    list.scrollTop=saved.scroll;
+    // The window has only just been shown, so its rows may not be laid out
+    // yet and that first assignment can land on a zero-height list.
+    requestAnimationFrame(()=>{const l=document.getElementById('pkList');if(l&&!l.scrollTop)l.scrollTop=saved.scroll;});
+  }
+  return true;
+}
 function openFolderPopupFromToolbar(){
   const saved=_pkLoadScope();
-  if(saved&&saved.folderScope&&DB.folders.some(f=>f.id===saved.folderScope)){
-    openFolderPopout(saved.folderScope);
-    return;
-  }
-  if(saved&&saved.sectionScope&&DB.sections.some(s=>s.id===saved.sectionScope)){
-    openSectionPopout(saved.sectionScope);
-    return;
-  }
+  if(_pkResumeBrowse(saved))return;
   const curF=DB.folders.find(f=>f.id===ST.folder);
   // Always land on the FULL section (all its folders), not just the one
   // folder that happens to be open — openFolderPopout() is for the
@@ -12806,9 +12864,6 @@ function openFolderPopupFromToolbar(){
     secId=(withFolders||secs[0]).id;
   }
   openSectionPopout(secId);
-  if(saved&&(saved.kind==='smart'||saved.kind==='tags'||saved.kind==='kinds')){
-    _pkSwitchToScopeKind(saved.kind);
-  }
 }
 /** Pop out an entire section (all its root folders + their subtrees + notes)
  *  from the Pane-1 sidebar into the same floating, resizable, editable
@@ -12889,9 +12944,10 @@ function _pkRenderScopeBody(){
  *  single-section view, just all of them in one scroll. */
 function _pkAllSectionsHTML(){
   const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
-  if(!secs.length)return '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">No sections yet</div>';
   if(!ST.pkAllSecOpen)ST.pkAllSecOpen={};
-  return secs.map(sec=>{
+  const smart=_pkAllSmartHTML();
+  if(!secs.length)return smart+'<div style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">No sections yet</div>';
+  return smart+secs.map(sec=>{
     const roots=DB.folders.filter(f=>!f.parentId&&f.sectionId===sec.id).sort((a,b)=>a.order-b.order);
     const open=!!ST.pkAllSecOpen[sec.id];
     const chev=roots.length?(open?'▾':'▸'):'';
@@ -12903,6 +12959,20 @@ function _pkAllSectionsHTML(){
       :'<div style="padding:2px 12px 8px;font-size:11.5px;color:var(--t3);font-style:italic">Empty</div>';
     return hd+body;
   }).join('');
+}
+/** Smart Views as one more collapsible group inside "All Sections".
+ *  Pane 1 lists Smart Views above the sections, so this view does too —
+ *  the browser's "everything at once" scope shouldn't be missing a whole
+ *  branch of the sidebar just because it isn't made of folders. Same
+ *  header/chevron as a section group, same rows as the ⚡ Smart Views
+ *  scope, and the same click-to-navigate behaviour. */
+const _PK_SMART_GROUP_KEY='__smart__';
+function _pkAllSmartHTML(){
+  if(!sfOrdered().length)return '';
+  const open=!!ST.pkAllSecOpen[_PK_SMART_GROUP_KEY];
+  const hd=`<div onclick="pkToggleAllSec('${_PK_SMART_GROUP_KEY}')" style="cursor:pointer;display:flex;align-items:center;gap:2px;padding:6px 8px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">`
+    +`<span class="pk-chev" style="font-size:16px;width:20px">${open?'▾':'▸'}</span>⚡ ${esc(DB.sfLabel||'Smart Views')}</div>`;
+  return open?hd+_pkSmartListHTML():hd;   // collapsed by default, like every section group
 }
 function pkToggleAllSec(secId){
   if(!ST.pkAllSecOpen)ST.pkAllSecOpen={};
