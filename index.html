@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.01">
+<meta name="app-version" content="04.02">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -787,6 +787,10 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .sb-mi:hover{background:var(--paper)}
 .sb-mi.linked{color:#7AC87E;font-weight:600}
 .sb-ms{height:1px;background:var(--border);margin:4px 3px}
+
+/* ── Automatic Backups panel ───────────────────────────────────────── */
+.bk-status{margin:10px 0;padding:9px 12px;border-radius:var(--rl);
+           background:var(--greenlt);border:1px solid var(--border2);font-size:12.5px}
 
 /* ── Home dropdown (▾ beside 🏠: frozen archives of older versions) ── */
 .sb-home-cv{font-size:11px!important;padding:2px 3px!important;margin-left:-5px;
@@ -1942,7 +1946,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.01</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.02</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <div class="sb-menu-wrap" id="sb-home-wrap">
         <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn bn bi sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2006,6 +2010,7 @@ sup.ann-sup:hover{text-decoration:underline}
           <div class="sb-mi" onclick="doSignOut();closeSBMenu()" id="signout-menu-item">🔒 Sign Out</div>
           <div class="sb-ms"></div>
           <!-- ─ Backups ─ -->
+          <div class="sb-mi" onclick="openBackupModal();closeSBMenu()" title="Keep a dated copy of the whole app + notes, automatically">🗄 Automatic Backups</div>
           <div class="sb-mi" onclick="importBackup();closeSBMenu()" title="Restore notes from a Siyagah backup HTML file">📥 Import Backup</div>
           <div class="sb-ms"></div>
           <div class="sb-mi" onclick="exportBackupHTML();closeSBMenu()" title="Download all notes as readable HTML — open in browser or print as PDF">📦 Backup Export</div>
@@ -15669,6 +15674,300 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(vt) vt.textContent=' v'+APP_VERSION;
 });
 
+/* ══ v04.02 — AUTOMATIC DATED BACKUPS ═════════════════════════════════════
+   Insurance against the one thing the frozen Legacy App cannot cover: a
+   future storage-format change that leaves an old build unable to read the
+   notebook at all. A backup here is not a data dump — it is the WHOLE app,
+   code and notes together, exactly what 📦 Save File produces. Open one in
+   any browser, years from now, offline, and it runs.
+
+   Where it writes: a folder you choose once, through the File System Access
+   API. The directory handle is kept in IndexedDB (localStorage cannot hold
+   one) and survives restarts, so after that first pick every backup happens
+   on its own with no dialog and no download bar.
+
+   Why the config is per-device localStorage and not DB.theme: a folder
+   handle belongs to one browser on one machine. Syncing "backups are on" to
+   a device that has no handle would claim a safety net that isn't there.
+
+   Browsers without the API (Firefox, Safari, mobile) get the honest version:
+   a one-click dated download, and a nudge when it has been too long. */
+const _BK_CFG_SK = 'siyagah-backup-cfg';
+const _BK_IDB    = 'siyagah-backup';
+const _BK_STORE  = 'handles';
+const _BK_PREFIX = 'Siyagah Backup ';
+/* Only ever matches names this feature itself wrote — nothing else in the
+   chosen folder is looked at, let alone deleted. */
+const _BK_RE     = /^Siyagah Backup (\d{4})-(\d{2})-(\d{2})( \d{2}\.\d{2})?\.html$/;
+const _BK_KEEP   = 30;
+const _BK_HAS_FSA = typeof window!=='undefined' && !!window.showDirectoryPicker;
+
+function _bkCfg(){
+  try{
+    const c=JSON.parse(localStorage.getItem(_BK_CFG_SK));
+    if(c&&typeof c==='object')return c;
+  }catch(e){}
+  return {on:false,every:'daily',lastAt:0,lastName:'',folder:''};
+}
+function _bkSaveCfg(c){
+  try{ localStorage.setItem(_BK_CFG_SK,JSON.stringify(c)); }catch(e){}
+}
+
+/* ── The handle store (IndexedDB) ─────────────────────────────────────── */
+function _bkIdb(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(_BK_IDB,1);
+    r.onupgradeneeded=()=>{ r.result.createObjectStore(_BK_STORE); };
+    r.onsuccess=()=>res(r.result);
+    r.onerror  =()=>rej(r.error);
+  });
+}
+async function _bkPutHandle(h){
+  const db=await _bkIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(_BK_STORE,'readwrite');
+    tx.objectStore(_BK_STORE).put(h,'dir');
+    tx.oncomplete=()=>res(true); tx.onerror=()=>rej(tx.error);
+  });
+}
+async function _bkGetHandle(){
+  try{
+    const db=await _bkIdb();
+    return await new Promise((res,rej)=>{
+      const tx=db.transaction(_BK_STORE,'readonly');
+      const q=tx.objectStore(_BK_STORE).get('dir');
+      q.onsuccess=()=>res(q.result||null); q.onerror=()=>rej(q.error);
+    });
+  }catch(e){ return null; }
+}
+async function _bkClearHandle(){
+  try{
+    const db=await _bkIdb();
+    await new Promise(res=>{
+      const tx=db.transaction(_BK_STORE,'readwrite');
+      tx.objectStore(_BK_STORE).delete('dir'); tx.oncomplete=res; tx.onerror=res;
+    });
+  }catch(e){}
+}
+
+/* ── Naming, scheduling ───────────────────────────────────────────────── */
+function _bkStamp(d){
+  const p=v=>String(v).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+/* Daily and weekly reuse one name per day, so a day's backup overwrites
+   itself rather than piling up; "every launch" carries the time too. */
+function _bkFileName(cfg,d){
+  const p=v=>String(v).padStart(2,'0');
+  const t=(cfg.every==='launch') ? ' '+p(d.getHours())+'.'+p(d.getMinutes()) : '';
+  return _BK_PREFIX+_bkStamp(d)+t+'.html';
+}
+function _bkDue(cfg){
+  if(!cfg.lastAt)return true;
+  const age=Date.now()-cfg.lastAt;
+  if(cfg.every==='launch')return age>5*60*1000;   /* not twice in one sitting */
+  if(cfg.every==='weekly')return age>7*24*3600*1000;
+  return age>20*3600*1000;                        /* daily, with slack for an early start */
+}
+function _bkAgeDays(cfg){
+  if(!cfg.lastAt)return null;
+  return Math.floor((Date.now()-cfg.lastAt)/86400000);
+}
+
+/* ── Retention ────────────────────────────────────────────────────────────
+   Keeps the newest _BK_KEEP backups, and the FIRST backup of every month
+   for good — so a year on you still have a monthly trail, not just the last
+   month. Only files matching _BK_RE exactly are ever considered; anything
+   else in the folder is invisible to this code. */
+async function _bkPrune(dir){
+  const names=[];
+  try{
+    for await (const [name,h] of dir.entries()){
+      if(h.kind==='file'&&_BK_RE.test(name))names.push(name);
+    }
+  }catch(e){ return {kept:0,removed:0}; }
+  names.sort();                                   /* ISO dates sort correctly */
+  const newest=new Set(names.slice(-_BK_KEEP));
+  /* One keeper per calendar month: the earliest name in that month, which
+     after the sort above is simply the first one seen. */
+  const firstOfMonth=new Set(), seen={};
+  names.forEach(n=>{
+    const m=n.match(_BK_RE), key=m[1]+'-'+m[2];
+    if(!seen[key]){ seen[key]=n; firstOfMonth.add(n); }
+  });
+  let removed=0;
+  for(const n of names){
+    if(newest.has(n)||firstOfMonth.has(n))continue;
+    try{ await dir.removeEntry(n); removed++; }catch(e){}
+  }
+  return {kept:names.length-removed,removed};
+}
+
+/* ── Writing one ──────────────────────────────────────────────────────── */
+/** manual=true means a person just clicked, so we may prompt for permission
+    (a permission request needs a user gesture) and may report failures out
+    loud. An automatic run stays silent unless it succeeds. */
+async function runBackupNow(manual){
+  const cfg=_bkCfg();
+  const dir=await _bkGetHandle();
+  if(!dir){ if(manual)return chooseBackupFolder(); return false; }
+  let perm='denied';
+  try{
+    perm=await dir.queryPermission({mode:'readwrite'});
+    if(perm!=='granted'&&manual) perm=await dir.requestPermission({mode:'readwrite'});
+  }catch(e){}
+  if(perm!=='granted'){
+    if(manual)toast('⚠ Backup folder needs permission again — choose it once more');
+    _bkRenderStatus();
+    return false;
+  }
+  try{
+    persist();
+    const html=getExportHTML();
+    const name=_bkFileName(cfg,new Date());
+    const fh=await dir.getFileHandle(name,{create:true});
+    const w=await fh.createWritable();
+    await w.write(new Blob([html],{type:'text/html;charset=utf-8'}));
+    await w.close();
+    const pr=await _bkPrune(dir);
+    cfg.on=true;cfg.lastAt=Date.now();cfg.lastName=name;cfg.folder=dir.name||cfg.folder;
+    _bkSaveCfg(cfg);
+    _bkRenderStatus();
+    toast('🗄 Backed up — '+name+(pr.removed?(' · '+pr.removed+' old backup'+(pr.removed>1?'s':'')+' tidied'):''));
+    return true;
+  }catch(e){
+    if(manual)toast('⚠ Backup failed: '+(e&&e.message?e.message:e));
+    return false;
+  }
+}
+
+/** Pick (or re-pick) the folder. Must be called from a click — the picker
+    and the permission prompt both require a user gesture. */
+async function chooseBackupFolder(){
+  if(!_BK_HAS_FSA){ downloadDatedBackup(); return; }
+  try{
+    const dir=await window.showDirectoryPicker({id:'siyagah-backups',mode:'readwrite',startIn:'documents'});
+    await _bkPutHandle(dir);
+    const cfg=_bkCfg();cfg.on=true;cfg.folder=dir.name||'';_bkSaveCfg(cfg);
+    await runBackupNow(true);
+  }catch(e){
+    if(e&&e.name!=='AbortError')toast('Could not use that folder: '+e.message);
+  }
+}
+
+async function turnOffBackups(){
+  const cfg=_bkCfg();cfg.on=false;_bkSaveCfg(cfg);
+  await _bkClearHandle();
+  _bkRenderStatus();
+  toast('🗄 Automatic backups off — your existing backup files are untouched');
+}
+
+function setBackupEvery(v){
+  const cfg=_bkCfg();cfg.every=v;_bkSaveCfg(cfg);_bkRenderStatus();
+}
+
+/** The universal fallback: a dated copy through the ordinary download path.
+    Same file, same completeness — it just needs a click, because browsers
+    without the File System Access API cannot write to a folder unattended. */
+function downloadDatedBackup(){
+  const cfg=_bkCfg();
+  persist();
+  const html=getExportHTML();
+  const name=_bkFileName({every:'daily'},new Date());
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  cfg.lastAt=Date.now();cfg.lastName=name;_bkSaveCfg(cfg);
+  _fileDirty=false;updateSaveUI();_bkRenderStatus();
+  toast('🗄 '+name+' downloaded — keep it somewhere safe');
+}
+
+/* ── Boot: run one if it is due, and nudge if it cannot ───────────────── */
+/* Deliberately silent about a missing setup on every launch — one nudge
+   when it has genuinely been too long is help; a daily reminder is nagging. */
+async function _bkMaybeAuto(){
+  const cfg=_bkCfg();
+  if(cfg.on&&_BK_HAS_FSA){
+    if(!_bkDue(cfg))return;
+    const dir=await _bkGetHandle();
+    if(!dir)return;
+    let perm='denied';
+    try{ perm=await dir.queryPermission({mode:'readwrite'}); }catch(e){}
+    if(perm==='granted'){ runBackupNow(false); return; }
+    /* Chrome can drop the grant across restarts. Re-asking needs a click,
+       so say so once rather than failing invisibly. */
+    toast('🗄 Backups paused — ⚙ → Automatic Backups to allow the folder again',7000);
+    return;
+  }
+  const age=_bkAgeDays(cfg);
+  if(age===null||age>=14){
+    toast(age===null
+      ? '🗄 No backup yet — ⚙ → Automatic Backups keeps a dated copy safe'
+      : '🗄 Last backup was '+age+' days ago — ⚙ → Automatic Backups',7000);
+  }
+}
+
+/* ── The panel ────────────────────────────────────────────────────────── */
+function _bkStatusHTML(){
+  const cfg=_bkCfg();
+  const age=_bkAgeDays(cfg);
+  const last=cfg.lastAt
+    ? (cfg.lastName||'a backup')+' · '+(age===0?'today':age===1?'yesterday':age+' days ago')
+    : 'never';
+  const sel=v=>cfg.every===v?' selected':'';
+  let h='<div style="line-height:1.7">';
+  h+='<div style="display:flex;gap:8px;align-items:baseline"><span style="color:var(--t3);min-width:74px">Last backup</span><b>'+esc(last)+'</b></div>';
+  if(_BK_HAS_FSA){
+    h+='<div style="display:flex;gap:8px;align-items:baseline"><span style="color:var(--t3);min-width:74px">Folder</span><b>'
+      +(cfg.on&&cfg.folder?esc(cfg.folder):'<span style="color:var(--t3);font-weight:400">not chosen yet</span>')+'</b></div>';
+    h+='<div style="display:flex;gap:8px;align-items:baseline"><span style="color:var(--t3);min-width:74px">How often</span>'
+      +'<select onchange="setBackupEvery(this.value)" style="font:inherit;padding:2px 6px">'
+      +'<option value="daily"'+sel('daily')+'>Once a day</option>'
+      +'<option value="weekly"'+sel('weekly')+'>Once a week</option>'
+      +'<option value="launch"'+sel('launch')+'>Every time I open the app</option>'
+      +'</select></div>';
+  }
+  h+='</div>';
+  return h;
+}
+function _bkRenderStatus(){
+  const el=document.getElementById('bk-status');
+  if(el)el.innerHTML=_bkStatusHTML();
+}
+function openBackupModal(){
+  const cfg=_bkCfg();
+  let body,actions;
+  if(_BK_HAS_FSA){
+    body='<p>A backup is <b>the whole app plus every note in one file</b> — the same file 📦 Save File makes. '
+        +'Open one in any browser, on any machine, even with no internet, and it runs. That is what makes it '
+        +'proof against anything that could ever happen to this app or this site.</p>'
+        +'<p>Choose a folder once. After that Siyagah writes a dated backup into it on its own — no dialog, '
+        +'no download bar. A folder your computer already backs up (OneDrive, iCloud Drive, Dropbox, Google Drive) '
+        +'is the safest choice, because then the copies leave this machine too.</p>'
+        +'<div id="bk-status" class="bk-status">'+_bkStatusHTML()+'</div>'
+        +'<p style="font-size:11.5px;color:var(--t3)">Keeps the newest '+_BK_KEEP+' backups, plus the first backup of '
+        +'every month for good. Only files it wrote itself — named “'+_BK_PREFIX+'YYYY-MM-DD.html” — are ever '
+        +'touched; nothing else in the folder is read or removed.</p>';
+    actions='<button class="btn bp" onclick="chooseBackupFolder()">'+(cfg.on?'📁 Change folder':'📁 Choose backup folder')+'</button>'
+      +(cfg.on?'<button class="btn" onclick="runBackupNow(true)">🗄 Back up now</button>':'')
+      +(cfg.on?'<button class="btn bd" onclick="turnOffBackups()">Turn off</button>':'')
+      +'<button class="btn" onclick="closeModal()">Close</button>';
+  }else{
+    body='<p>A backup is <b>the whole app plus every note in one file</b> — open it in any browser, on any '
+        +'machine, offline, and it runs.</p>'
+        +'<p>This browser cannot write to a folder on its own, so a backup here is a one-click dated download. '
+        +'<b>Chrome or Edge on a computer</b> can do it automatically, if you would rather not remember.</p>'
+        +'<div id="bk-status" class="bk-status">'+_bkStatusHTML()+'</div>';
+    actions='<button class="btn bp" onclick="downloadDatedBackup()">🗄 Save a dated backup</button>'
+      +'<button class="btn" onclick="closeModal()">Close</button>';
+  }
+  showModal('<div class="mt">🗄 Automatic Backups</div>'
+    +'<div class="mm" style="line-height:1.65;max-height:60vh;overflow:auto">'+body+'</div>'
+    +'<div class="ma">'+actions+'</div>');
+}
+
 /* ── Timestamped filename ────────────────────────────────────────────── */
 /** Returns "Siyagah - DD.MM.YY - HH.MM AM/PM.html" — safe on all OSes */
 function getTimestampedName(){
@@ -18194,6 +18493,10 @@ if('serviceWorker' in navigator){
   });
 }
 (()=>{const _cc=DB.theme?.calCountry;if(_cc)_loadCalHols(_cc,new Date().getFullYear());})();
+/* v04.02 — a due backup runs itself a few seconds after start-up. Delayed on
+   purpose: building the file clones the whole document and stringifies the
+   notebook, and that must never land on top of the first paint. */
+setTimeout(()=>{try{_bkMaybeAuto();}catch(e){}},6000);
 (()=>{
   const _sw=localStorage.getItem('siyagah-sb-w');
   const sb=document.getElementById('sb');
