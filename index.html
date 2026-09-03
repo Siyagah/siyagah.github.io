@@ -155,6 +155,26 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .pk-mt-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 50%}
 .pk-sec-nav{display:flex;align-items:center;gap:4px;min-width:0;flex:1 1 50%}
 .pk-sec-sel{flex:1;min-width:0}
+/* The two buttons that aren't just a step sideways — jump-to-everything and
+   the text-style panel — are sized up from the ◀/▶ steppers so they read as
+   controls in their own right (and stay easy to hit on a touch screen). */
+.p2h-sec-nav-btn.pk-big-btn{width:30px;height:30px;font-size:15px}
+/* Folder-text style panel (size / colour / bold) for the pop-out browser.
+   Sits above the modal overlay (#ov, z-index 10000) since it's opened from
+   inside the pop-out's own title bar. */
+.pkf-pop{position:fixed;z-index:10120;background:var(--paper);border:1px solid var(--border2);
+  border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.28);padding:10px 12px;width:270px;font-family:var(--ui)}
+.pkf-hd{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--t1);margin-bottom:6px}
+.pkf-lbl{font-size:11.5px;color:var(--t2);margin:8px 0 4px}
+.pkf-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.pkf-btn{font-size:11px;padding:3px 8px;border:1px solid var(--border2);border-radius:5px;
+  background:var(--white);color:var(--t2);cursor:pointer;font-family:var(--ui)}
+.pkf-btn:hover{background:var(--hover)}
+.pkf-btn.on{background:var(--greenlt);color:var(--green2);border-color:var(--green)}
+.pkf-sw{width:21px;height:21px;border-radius:50%;border:1px solid var(--border2);cursor:pointer;flex-shrink:0;padding:0}
+.pkf-sw.on{box-shadow:0 0 0 2px var(--green)}
+.pkf-nb{width:56px;padding:3px 5px;border:1px solid var(--border2);border-radius:5px;
+  background:var(--white);color:var(--t1);font-size:12px;font-family:var(--ui)}
 .p2h-tree-node{display:flex;align-items:flex-start;gap:5px;padding:5px 12px;font-size:13px;
   color:var(--t2);cursor:pointer;white-space:normal;word-break:break-word;line-height:1.35}
 .p2h-tree-node:hover{background:var(--hover)}
@@ -13351,7 +13371,7 @@ function _pkRowHTML(f,d){
       ondragover="pkDOver(event,'${f.id}')" ondragleave="pkDLeave(event)" ondrop="pkDDrop(event,'${f.id}')">`
     +chev
     +checkbox
-    +`<span style="font-size:12px">📁</span>`
+    +`<span class="pk-ico" style="font-size:12px">📁</span>`
     +`<span class="pk-nm" id="pknm-${esc(f.id)}" style="font-size:13px;color:var(--t1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</span>`
     +`<span class="pk-path" style="display:none;font-size:10.5px;color:var(--t3);margin-left:6px">${esc(path)}</span>`
     +`<span class="pk-acts">`
@@ -13370,6 +13390,7 @@ function _pkTreeHTML(flds,d){
 function openPicker(){
   _pkMode='assign';_pkScopeKind='section';_pkSectionScope=null;_pkFolderScope=null;_pkRootLabel='🏠 Root';
   _pkTarget=null;
+  _pkFontLoad();_pkApplyFont();
   showResizableModal(`<div class="mt">Assign to folders</div>
     <input class="mi" id="pkSearch" placeholder="🔍 Search folders…" style="margin:0 0 8px;width:100%" oninput="_pkFilter(this.value)">
     <div class="pl" id="pkList">${_pkTreeHTML(DB.folders.filter(f=>!f.parentId),0)}</div>
@@ -13521,8 +13542,135 @@ function _pkCurrentSectionId(){
   }
   return null;
 }
+/* ── Folder text styling for the pop-out browser ──────────────────────────
+ *  One 🎨 button in the pop-out's own title bar drives the size, colour and
+ *  weight of every folder row (and the section group headers above them) in
+ *  the list below it. Device-local like the window's geometry and scope: how
+ *  big the names need to be is a property of the screen you're reading them
+ *  on, not of the notebook, so it isn't persisted into DB. */
+const _PK_FONT_KEY='siyagah-pk-font';
+const _PK_FONT_DEF={size:13,color:'',bold:false};
+const _PK_FONT_MIN=9,_PK_FONT_MAX=34;
+let _pkFont={..._PK_FONT_DEF};
+function _pkFontClampSize(v){
+  const n=parseFloat(v);
+  return Math.max(_PK_FONT_MIN,Math.min(_PK_FONT_MAX,isNaN(n)?_PK_FONT_DEF.size:n));
+}
+function _pkFontLoad(){
+  try{
+    const st=JSON.parse(localStorage.getItem(_PK_FONT_KEY));
+    if(st&&typeof st==='object')_pkFont={..._PK_FONT_DEF,...st};
+  }catch(e){}
+  _pkFont.size=_pkFontClampSize(_pkFont.size);
+  _pkFont.color=typeof _pkFont.color==='string'?_pkFont.color:'';
+  _pkFont.bold=!!_pkFont.bold;
+  return _pkFont;
+}
+function _pkFontSave(){try{localStorage.setItem(_PK_FONT_KEY,JSON.stringify(_pkFont));}catch(e){}}
+/** One <style> tag, rewritten in place — cheaper than restyling every row,
+ *  and it survives the list being rebuilt from scratch on every navigation. */
+function _pkApplyFont(){
+  const sz=_pkFontClampSize(_pkFont.size);
+  const col=_pkFont.color?`color:${_pkFont.color}!important;`:'';
+  const bold=_pkFont.bold?'font-weight:700!important;':'';
+  let el=document.getElementById('pkFontCss');
+  if(!el){el=document.createElement('style');el.id='pkFontCss';document.head.appendChild(el);}
+  el.textContent=
+     `#pkList .pk-nm{font-size:${sz}px!important;${col}${bold}}`
+    +`#pkList .pk-ico{font-size:${(sz-1).toFixed(1)}px!important}`
+    +`#pkList .pk-chev{font-size:${(sz+9).toFixed(1)}px!important}`
+    +`#pkList .pk-sec-hd{font-size:${Math.max(_PK_FONT_MIN,sz-2.5).toFixed(1)}px!important;${col}${bold}}`;
+}
+/** Apply a change, keep the open panel's own widgets in sync, and only
+ *  write to storage once the value has settled (slider drags call this on
+ *  every pixel — no reason to hit localStorage that often). */
+function _pkFontSet(patch,commit){
+  Object.assign(_pkFont,patch);
+  _pkFont.size=_pkFontClampSize(_pkFont.size);
+  _pkApplyFont();
+  const lb=document.getElementById('pkfSzLbl');if(lb)lb.textContent=_pkFont.size+'px';
+  const sl=document.getElementById('pkfSzSl');if(sl&&+sl.value!==_pkFont.size)sl.value=_pkFont.size;
+  const nb=document.getElementById('pkfSzNb');if(nb&&+nb.value!==_pkFont.size)nb.value=_pkFont.size;
+  const bb=document.getElementById('pkfBold');if(bb)bb.classList.toggle('on',_pkFont.bold);
+  document.querySelectorAll('#pkf-pop .pkf-sw').forEach(el=>
+    el.classList.toggle('on',(el.dataset.c||'')===(_pkFont.color||'')));
+  const df=document.getElementById('pkfDefClr');if(df)df.classList.toggle('on',!_pkFont.color);
+  document.querySelectorAll('#pkf-pop .pkf-btn[data-sz]').forEach(el=>
+    el.classList.toggle('on',+el.dataset.sz===_pkFont.size));
+  if(commit)_pkFontSave();
+}
+function pkFontSize(v,commit){_pkFontSet({size:v},commit);}
+function pkFontStep(d){_pkFontSet({size:_pkFontClampSize(_pkFont.size)+d},true);}
+function pkFontBold(){_pkFontSet({bold:!_pkFont.bold},true);}
+function pkFontColor(hex){_pkFontSet({color:hex||''},true);}
+/** The shared ✨ Colour Palette, lifted above the modal overlay — it normally
+ *  opens from context menus that sit below one. */
+function pkFontPalette(ev){
+  _showClrPicker(ev,_pkFont.color||'',hex=>pkFontColor(hex));
+  const pk=document.getElementById('clr-pk');if(pk)pk.style.zIndex=10130;
+}
+function pkFontReset(){
+  _pkFont={..._PK_FONT_DEF};
+  _pkApplyFont();_pkFontSave();
+  document.getElementById('pkf-pop')?.remove();
+  toast('↺ Folder text reset');
+}
+const _PK_FONT_SIZES=[11,13,15,18,22,26];
+const _PK_FONT_SWATCHES=[
+  ['Ink','#1f2937'],['Green','#1b7a46'],['Blue','#2563eb'],['Purple','#7c3aed'],
+  ['Red','#b91c1c'],['Amber','#b45309'],['Teal','#0f766e'],['Grey','#6b7280'],
+];
+function pkFontMenu(ev){
+  const open=document.getElementById('pkf-pop');
+  if(open){open.remove();return;}   // same button toggles it shut
+  _pkFontLoad();_pkApplyFont();
+  const sz=_pkFont.size;
+  const pres=_PK_FONT_SIZES.map(n=>
+    `<button class="pkf-btn${n===sz?' on':''}" data-sz="${n}" onclick="pkFontSize(${n},true)">${n}</button>`).join('');
+  const sws=_PK_FONT_SWATCHES.map(([n,h])=>
+    `<button class="pkf-sw${h.toLowerCase()===(_pkFont.color||'').toLowerCase()?' on':''}" data-c="${h}"`
+    +` style="background:${h}" title="${n}" onclick="pkFontColor('${h}')"></button>`).join('');
+  const pop=document.createElement('div');
+  pop.id='pkf-pop';pop.className='pkf-pop';
+  pop.innerHTML=
+     `<div class="pkf-hd">🎨 Folder text`
+      +`<button class="pkf-btn" style="margin-left:auto" onclick="document.getElementById('pkf-pop')?.remove()">✕</button></div>`
+    +`<div class="pkf-lbl">🔠 Size: <b id="pkfSzLbl">${sz}px</b></div>`
+    +`<input id="pkfSzSl" type="range" min="${_PK_FONT_MIN}" max="${_PK_FONT_MAX}" step="1" value="${sz}"`
+      +` style="width:100%;cursor:pointer" oninput="pkFontSize(this.value,false)" onchange="pkFontSize(this.value,true)">`
+    +`<div class="pkf-row" style="margin-top:6px">`
+      +`<input id="pkfSzNb" class="pkf-nb" type="number" min="${_PK_FONT_MIN}" max="${_PK_FONT_MAX}" value="${sz}"`
+        +` oninput="pkFontSize(this.value,false)" onchange="pkFontSize(this.value,true)">`
+      +`<span style="font-size:11px;color:var(--t3)">px</span>`
+      +`<span class="pkf-row" style="margin-left:auto">${pres}</span>`
+    +`</div>`
+    +`<div class="pkf-lbl">🎨 Colour</div>`
+    +`<div class="pkf-row">${sws}`
+      +`<button id="pkfDefClr" class="pkf-btn${_pkFont.color?'':' on'}" onclick="pkFontColor('')">Default</button>`
+      +`<button class="pkf-btn" onclick="pkFontPalette(event)">✨ More…</button>`
+    +`</div>`
+    +`<div class="pkf-row" style="margin-top:10px">`
+      +`<button id="pkfBold" class="pkf-btn${_pkFont.bold?' on':''}" onclick="pkFontBold()"><b>B</b> Bold</button>`
+      +`<button class="pkf-btn" onclick="pkFontStep(-1)">A−</button>`
+      +`<button class="pkf-btn" onclick="pkFontStep(1)">A+</button>`
+      +`<button class="pkf-btn" style="margin-left:auto" onclick="pkFontReset()">↺ Reset</button>`
+    +`</div>`;
+  document.body.appendChild(pop);
+  // Anchor under the 🎨 button, kept inside the viewport.
+  const btn=ev&&ev.currentTarget&&ev.currentTarget.getBoundingClientRect
+    ?ev.currentTarget.getBoundingClientRect():null;
+  const vw=innerWidth,vh=innerHeight,pw=pop.offsetWidth||270,ph=pop.offsetHeight||300;
+  const x=btn?btn.left:(ev&&ev.clientX)||vw/2,y=btn?btn.bottom+6:((ev&&ev.clientY)||100)+6;
+  pop.style.left=Math.max(8,Math.min(x,vw-pw-8))+'px';
+  pop.style.top=Math.max(8,Math.min(y,vh-ph-8))+'px';
+  // Click-away closes, but not while picking from the ✨ palette it opened.
+  setTimeout(()=>document.addEventListener('mousedown',function cl(e){
+    if(pop.contains(e.target)||document.getElementById('clr-pk')?.contains(e.target))return;
+    pop.remove();document.removeEventListener('mousedown',cl,true);
+  },{capture:true}),80);
+}
 const _PK_SCOPE_KIND_META={
-  all:{token:'__all__',title:'🗂 All Sections',label:'🗂 All Sections'},
+  all:{token:'__all__',title:'📚 All Sections',label:'📚 All Sections'},
   smart:{token:'__smart__',title:'⚡ Smart Views',label:'⚡ Smart Views'},
   tags:{token:'__tags__',title:'🏷 Tags',label:'🏷 Tags'},
   kinds:{token:'__kinds__',title:'🔖 Note Types',label:'🔖 Note Types'},
@@ -13541,13 +13689,14 @@ function _pkSecNavHTML(){
   const extraOpts=Object.entries(_PK_SCOPE_KIND_META)
     .map(([kind,m])=>`<option value="${m.token}"${_pkScopeKind===kind?' selected':''}>${m.label}</option>`).join('');
   return `<span class="pk-sec-nav">`
-    +`<button class="p2h-sec-nav-btn${_pkScopeKind==='all'?' on':''}" onclick="event.stopPropagation();pkGotoSection('${_PK_SCOPE_KIND_META.all.token}')" title="Show every section at once">🗂</button>`
+    +`<button class="p2h-sec-nav-btn pk-big-btn${_pkScopeKind==='all'?' on':''}" onclick="event.stopPropagation();pkGotoSection('${_PK_SCOPE_KIND_META.all.token}')" title="Show every section at once">📚</button>`
     +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(-1)" title="Previous section">◀</button>`
     +`<button class="p2h-sec-nav-btn" onclick="event.stopPropagation();pkGotoAdjacentSection(1)" title="Next section">▶</button>`
     +`<select class="p2h-sec-sel pk-sec-sel" onclick="event.stopPropagation()" onchange="pkGotoSection(this.value)" title="Jump to a section, All Sections, Smart Views, Tags, or Note Types">`
     +`<optgroup label="Sections">${secOpts}</optgroup>`
     +`<optgroup label="Other">${extraOpts}</optgroup>`
     +`</select>`
+    +`<button class="p2h-sec-nav-btn pk-big-btn" onclick="event.stopPropagation();pkFontMenu(event)" title="Folder text: size, colour, bold">🎨</button>`
     +`</span>`;
 }
 /** #pkList content for whichever scope kind is currently selected. */
@@ -13570,7 +13719,7 @@ function _pkAllSectionsHTML(){
     const roots=DB.folders.filter(f=>!f.parentId&&f.sectionId===sec.id).sort((a,b)=>a.order-b.order);
     const open=!!ST.pkAllSecOpen[sec.id];
     const chev=roots.length?(open?'▾':'▸'):'';
-    const hd=`<div onclick="pkToggleAllSec('${esc(sec.id)}')" style="cursor:pointer;display:flex;align-items:center;gap:2px;padding:6px 8px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">`
+    const hd=`<div class="pk-sec-hd" onclick="pkToggleAllSec('${esc(sec.id)}')" style="cursor:pointer;display:flex;align-items:center;gap:2px;padding:6px 8px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">`
       +`<span class="pk-chev" style="font-size:16px;width:20px">${chev}</span>📂 ${esc(sec.name)}</div>`;
     if(!open)return hd;   // section starts (and returns to) collapsed — its root folders don't even render until opened
     const body=roots.length
@@ -13589,7 +13738,7 @@ const _PK_SMART_GROUP_KEY='__smart__';
 function _pkAllSmartHTML(){
   if(!sfOrdered().length)return '';
   const open=!!ST.pkAllSecOpen[_PK_SMART_GROUP_KEY];
-  const hd=`<div onclick="pkToggleAllSec('${_PK_SMART_GROUP_KEY}')" style="cursor:pointer;display:flex;align-items:center;gap:2px;padding:6px 8px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">`
+  const hd=`<div class="pk-sec-hd" onclick="pkToggleAllSec('${_PK_SMART_GROUP_KEY}')" style="cursor:pointer;display:flex;align-items:center;gap:2px;padding:6px 8px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">`
     +`<span class="pk-chev" style="font-size:16px;width:20px">${open?'▾':'▸'}</span>⚡ ${esc(DB.sfLabel||'Smart Views')}</div>`;
   return open?hd+_pkSmartListHTML():hd;   // collapsed by default, like every section group
 }
@@ -13712,6 +13861,7 @@ function pkNavScope(kind,val){
   else if(kind==='kind')selKind(val);
 }
 function _pkOpenBrowse(title){
+  _pkFontLoad();_pkApplyFont();
   showResizableModal(`<div class="mt"><div class="pk-mt-row">
       <span class="pk-mt-title">${title}</span>
       ${_pkSecNavHTML()}
