@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.02">
+<meta name="app-version" content="04.03">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1966,7 +1966,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.02</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.03</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <div class="sb-menu-wrap" id="sb-home-wrap">
         <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn bn bi sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2055,7 +2055,7 @@ sup.ann-sup:hover{text-decoration:underline}
 
   <div class="sb-toolbar" id="sb-toolbar">
     <button class="sb-tb-btn" onclick="quickCapture()" title="New note — opens in its own pop-out window" style="color:#6DC994">📝 New Note</button>
-    <button class="sb-tb-btn" onclick="openFolderPopupFromToolbar()" title="Open the folder pop-up browser">🗗 Folders</button>
+    <button class="sb-tb-btn" onclick="openFolderPopupFromToolbar()" title="Open the folder pop-up browser">📚 Folders</button>
   </div>
 </aside>
 
@@ -2780,7 +2780,7 @@ function renderP2H(){
      exactly where it was left — same section/Smart View/Tags/Note Types
      scope, same expanded rows, same search text, same scroll offset, and
      (via the geometry it already persists) the same size and position. */
-  const fbBtn=`<button class="btn bn bi" onclick="openFolderPopupFromToolbar()" style="font-size:13px;flex-shrink:0" title="Back to the folder browser">🗗</button>`;
+  const fbBtn=`<button class="p2h-sec-nav-btn pk-big-btn" onclick="openFolderPopupFromToolbar()" title="Back to the folder browser">📚</button>`;
   /* ── Section smart-view header ── */
   if(ST.secSF){
     const _ssec=DB.sections.find(s=>s.id===ST.secSF.secId);
