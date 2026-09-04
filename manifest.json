@@ -1,0 +1,57 @@
+{
+  "id": "/",
+  "name": "Siyagah — My Knowledge Notebook",
+  "short_name": "Siyagah",
+  "description": "A personal knowledge notebook: folders, rich notes, tags, templates, a calendar and a journal, working offline and syncing across your devices.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F7F4ED",
+  "theme_color": "#6366F1",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["productivity", "education"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/screenshot-wide.png",
+      "type": "image/png",
+      "sizes": "1280x800",
+      "form_factor": "wide",
+      "label": "A note open beside the folder tree and article list"
+    },
+    {
+      "src": "/icons/screenshot-narrow.png",
+      "type": "image/png",
+      "sizes": "720x1280",
+      "form_factor": "narrow",
+      "label": "Reading a note on a phone"
+    }
+  ]
+}
