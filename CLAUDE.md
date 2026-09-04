@@ -8,6 +8,8 @@ a GitHub Pages site from `main`.
 
 ```
 index.html          the entire app
+manifest.json       web app manifest (PWA install metadata)
+icons/              app icons + manifest screenshots
 sw.js               service worker (network-first, cache name = app version)
 legacy/v03.99/      a sealed, frozen build — never edited (see legacy/README.md)
 ```
@@ -102,9 +104,27 @@ render functions, and assert against the live DOM. Watch `pageerror` — a silen
 exception in this codebase usually means a half-rendered pane rather than a
 visible crash. Screenshots catch layout problems that assertions miss.
 
-## Known loose end
+## Icons and the manifest
 
-`index.html` links `/manifest.json` and `sw.js` lists it in `CORE`, but no such
-file exists in the repo. The service worker swallows the failure
-(`addAll(...).catch(() => {})`), so it is harmless today — worth knowing before
-chasing a PWA install issue.
+The app mark is a white Arabic **س** on indigo `#6366F1`. `icons/icon.svg` is
+the master; the PNGs beside it are rasterised from it, and the glyph is stored
+as a **path**, not text, so it renders identically without depending on a font
+being installed. Regenerating them means re-rasterising `icon.svg` at 32, 180,
+192 and 512, plus the full-bleed maskable 512 (its glyph is smaller so it stays
+inside the 80% safe zone once a launcher masks the corners).
+
+`index.html` also keeps an unsized data-URI `apple-touch-icon` alongside the
+real files. That is deliberate: it is the only icon that survives a downloaded
+`file://` copy of the app, where `/icons/` does not resolve.
+
+Two traps when touching this:
+
+- **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if a single entry
+  404s, and the `.catch(() => {})` around it then silently skips the entire
+  precache. Every path listed there must exist.
+- **Declared `sizes` in the manifest must match the real pixels**, or Chrome
+  drops the icon without saying so.
+
+Verify with Chromium's own parser rather than by eye — `Page.getAppManifest`
+and `Page.getInstallabilityErrors` over CDP both return empty arrays when the
+manifest is correct and the app is installable.

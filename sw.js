@@ -24,9 +24,15 @@
    no longer drift apart. Bumping this is what evicts the previous cache;
    without it, devices keep serving the old index.html for non-navigation
    requests and never receive a sync fix at all. */
-const VERSION = 'v04.04.01';
+const VERSION = 'v04.05.01';
 const CACHE   = 'siyagah-' + VERSION;
-const CORE    = ['./', './index.html', './manifest.json'];
+/* addAll() is all-or-nothing, so every entry here must exist — a single
+   404 silently skips the whole precache. */
+const CORE    = ['./', './index.html', './manifest.json',
+                 './icons/icon.svg', './icons/favicon-32.png',
+                 './icons/apple-touch-icon.png',
+                 './icons/icon-192.png', './icons/icon-512.png',
+                 './icons/icon-maskable-512.png'];
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
