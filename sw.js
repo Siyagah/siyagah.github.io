@@ -24,7 +24,7 @@
    no longer drift apart. Bumping this is what evicts the previous cache;
    without it, devices keep serving the old index.html for non-navigation
    requests and never receive a sync fix at all. */
-const VERSION = 'v04.03.01';
+const VERSION = 'v04.04.01';
 const CACHE   = 'siyagah-' + VERSION;
 const CORE    = ['./', './index.html', './manifest.json'];
 self.addEventListener('install', (e) => {

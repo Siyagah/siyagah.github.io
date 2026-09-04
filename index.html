@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.03">
+<meta name="app-version" content="04.04">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1817,6 +1817,108 @@ sup.ann-sup:hover{text-decoration:underline}
   .fl-pop .ed-col-btn{font-size:13px;padding:6px 12px;min-height:38px}
 }
 
+
+/* ══ v04.04 Note Templates — Jumu'a Khutbah & friends ══════════════════════
+   Blocks live inside the note's own HTML, so one rule set has to serve the
+   editor (#ed / .fw-ed) and the read-only view (.av-body) alike. */
+.kt-hdr{border:1px solid var(--border2);border-radius:10px;overflow:hidden;
+  margin:2px 0 14px;background:var(--white)}
+.kt-banner{background:var(--forest);color:#fff;font-weight:600;letter-spacing:.04em;
+  text-align:center;padding:9px 12px;font-size:16px;font-family:var(--body)}
+.kt-meta{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--border)}
+.kt-fld{display:flex;align-items:stretch;flex:1 1 220px;min-width:180px;
+  border-right:1px solid var(--border)}
+.kt-fld:last-child{border-right:none}
+.kt-fld-l{flex:0 0 auto;padding:7px 10px;background:var(--greenlt);color:var(--green2);
+  font-size:11.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;
+  display:flex;align-items:center;white-space:nowrap}
+.kt-fld-v{flex:1 1 auto;padding:7px 10px;font-size:14px;min-height:20px;outline:none}
+.kt-topic{padding:10px 12px}
+.kt-topic-l{font-size:11.5px;font-weight:600;letter-spacing:.06em;color:var(--gold);
+  text-transform:uppercase;margin-bottom:3px}
+.kt-topic-v{font-size:19px;font-weight:600;line-height:1.35;color:var(--t1);
+  min-height:26px;outline:none}
+
+.kt-ayahs{margin:6px 0 14px}
+.kt-ayah{border:1px solid var(--border2);border-left:3px solid var(--green);
+  border-radius:8px;margin:0 0 9px;background:var(--white);overflow:hidden}
+.kt-ayah-bar{display:flex;align-items:center;gap:4px;padding:4px 6px 4px 9px;
+  background:var(--greenlt);border-bottom:1px solid var(--border)}
+.kt-ayah-n{font-size:11.5px;font-weight:700;color:var(--green2);
+  min-width:18px;height:18px;border-radius:9px;background:var(--white);
+  border:1px solid var(--border2);display:inline-flex;align-items:center;
+  justify-content:center;padding:0 5px;line-height:1}
+.kt-ayah-sp{flex:1 1 auto}
+.kt-btn{border:1px solid var(--border2);background:var(--white);color:var(--t2);
+  border-radius:5px;cursor:pointer;font-size:12px;line-height:1;padding:4px 7px;
+  font-family:inherit}
+.kt-btn:hover{background:var(--paper);color:var(--t1)}
+.kt-ayah-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px;
+  padding:8px 10px 6px;font-size:15px;font-weight:600;color:var(--t1);line-height:1.4}
+.kt-ayah-ref{color:var(--green2);outline:none;min-width:40px}
+.kt-ayah-dash{color:var(--t3);white-space:pre}
+.kt-ayah-ttl{outline:none;min-width:40px;flex:1 1 120px}
+.kt-fold{border-top:1px dashed var(--border2)}
+.kt-fold-hd{display:flex;align-items:center;gap:6px;padding:5px 10px;cursor:pointer;
+  user-select:none;-webkit-user-select:none}
+.kt-fold-hd:hover{background:var(--hover,var(--paper))}
+.kt-fold-arr{font-size:9px;color:var(--t3);width:10px;flex:0 0 10px}
+.kt-fold-lbl{font-size:11.5px;font-weight:600;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--t2)}
+.kt-fold[data-open="0"] > .kt-fold-b{display:none}
+.kt-fold-b{padding:4px 12px 10px 26px;outline:none;min-height:24px;
+  font-size:var(--fs-content,16px);line-height:var(--lh-content,1.6)}
+.kt-fold-b[dir="rtl"]{text-align:right;font-size:1.28em;line-height:2}
+.kt-fold-b img{max-width:100%;height:auto;border-radius:6px}
+.kt-add{padding:2px 0 4px}
+.kt-add-btn{border:1px dashed var(--border2);background:none;color:var(--green2);
+  border-radius:7px;cursor:pointer;font-size:12.5px;padding:6px 12px;font-family:inherit}
+.kt-add-btn:hover{background:var(--greenlt);border-color:var(--green)}
+/* Empty slots and fields say what belongs in them */
+.kt-fld-v:empty:before,.kt-topic-v:empty:before,
+.kt-ayah-ref:empty:before,.kt-ayah-ttl:empty:before,
+.kt-fold-b:empty:before{content:attr(data-ph);color:var(--t3);opacity:.75;
+  font-weight:400;font-style:italic;pointer-events:none}
+/* Read-only view: folds still open and blocks still copy, but nothing there
+   can add or delete a block (that edit would have nowhere to be saved). */
+.av-body .kt-del,.av-body .kt-add{display:none}
+@media(max-width:640px){
+  .kt-fld{flex:1 1 100%;border-right:none;border-bottom:1px solid var(--border)}
+  .kt-topic-v{font-size:17px}
+}
+
+/* Template manager / editor modal */
+.kt-hint{font-size:12px;color:var(--t3);margin:-4px 0 12px}
+.kt-hint2{font-size:11.5px;color:var(--t3);margin:0 0 6px}
+.kt-sec{border:1px solid var(--border);border-radius:9px;padding:10px 11px;margin-bottom:10px}
+.kt-sec-t{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--green2);margin-bottom:6px}
+.kt-grid{display:grid;grid-template-columns:118px 1fr;gap:6px 9px;align-items:center}
+.kt-lb{font-size:12px;color:var(--t2)}
+.kt-in{margin-bottom:0!important}
+.kt-ck{font-size:12.5px;color:var(--t2);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.kt-ck-rtl{flex:0 0 auto;white-space:nowrap}
+.kt-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.kt-row .mi{margin-bottom:0}
+/* the text input is the row's elastic column — .mi's width:100% alone gives
+   it an auto (i.e. content-width) flex basis, which collapses it to nothing */
+.kt-row > input[type="text"],.kt-row > .kt-in{flex:1 1 auto;min-width:70px}
+.kt-row-btns{display:flex;gap:3px;flex-shrink:0}
+.kt-row-btns .btn{padding:3px 7px;font-size:11px}
+.kt-lvl{flex:0 0 58px!important;min-width:58px;padding:7px 4px!important}
+.kt-body{flex:0 0 106px!important;min-width:106px;padding:7px 4px!important}
+.kt-cnt{flex:0 0 56px!important;min-width:56px;padding:7px 4px!important}
+.kt-cnt-sp{flex:0 0 56px}
+.kt-row-sec{flex-wrap:wrap;border:1px solid var(--border);border-radius:7px;
+  padding:7px 8px;background:var(--paper);margin-bottom:7px}
+.kt-row-sec > .kt-in{flex:1 1 100%!important;order:-1;margin-bottom:5px!important}
+.kt-row-sec .kt-row-btns{margin-left:auto}
+.kt-mgr-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.kt-mgr-name{flex:1 1 auto;text-align:left;justify-content:flex-start;font-size:13.5px;padding:8px 11px}
+@media(max-width:640px){
+  .kt-grid{grid-template-columns:1fr}
+}
+
 /* ══ v28 Unified Calendar System ════════════ */
 .cal-layer-btn{font-size:13px;padding:2px 5px;border-radius:5px;
   background:var(--hover);border:1px solid var(--border2);
@@ -1966,7 +2068,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.03</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.04</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <div class="sb-menu-wrap" id="sb-home-wrap">
         <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn bn bi sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -7889,6 +7991,7 @@ function _p3EditIconsHTML(curA){
     {id:'hist',  icon:'↺',       label:'History'},
   ];
   return _grps.map(g=>`<button class="et eb-grp-btn${_eg===g.id?' on':''}" data-g="${g.id}" onmousedown="togEBGroup('${g.id}')" title="${g.label}">${g.icon}</button>`).join('')
+    +_ktBtnHTML()
     +`<button class="et" onmousedown="event.preventDefault()" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>`
     +`<button class="et modal-pop-btn" onmousedown="event.preventDefault()" onclick="openNotePopup('${curA.id}','float')" title="Pop out as floating window (Ctrl+Shift+P)">⊡</button>`
     +`<button class="et modal-pop-btn" onmousedown="event.preventDefault()" onclick="openNotePopup('${curA.id}','panel')" title="Open as resizable panel">⛶</button>`;
@@ -8465,6 +8568,7 @@ function _fwRenderBody(aid){
     +'<span id="fw-col-wrap-'+aid+'" style="display:none">'
     +'<button class="et" onmousedown="event.preventDefault()" onclick="toggleEdColPop(event,\''+aid+'\')" title="Section tools: Collapse / Expand / Preview">⋯</button>'
     +'</span>'
+    +_ktBtnHTML()
     +'<button class="nti-picker-btn" onclick="openNtiPicker(\''+aid+'\',this)" title="Note types">🏷</button>'
     +'<button class="nti-picker-btn" onclick="openAttachMenu(event,\''+aid+'\')" title="Attach: Folder · Journal · MyDatabase">📎</button>'
     +'<button class="nti-picker-btn" onclick="_ntFindToggle(\''+aid+'\')" title="Find in this note">🔍</button>'
@@ -10383,6 +10487,7 @@ function refreshBacklinks(){
  * Display-time only — the stored article content is never modified. */
 function upgradeViewCards(box){
   if(!box)return;
+  try{_ktRepair(box);}catch(e){}
   try{
     /* anchors whose href or text is a video URL */
     box.querySelectorAll('a:not(.mention)').forEach(a=>{
@@ -10658,7 +10763,7 @@ function _edColHeads(ed){
   if(!ed)return[];
   const out=[];let idx=0;
   ed.querySelectorAll('h1,h2,h3,h4').forEach(function(el){
-    if(el.closest('.ann-inline-card,.bk-card,.ed-col-preview'))return;
+    if(el.closest('.ann-inline-card,.bk-card,.ed-col-preview,.kt-ayah,.kt-hdr'))return;
     out.push({el:el,idx:idx++,level:parseInt(el.tagName[1])});
   });
   return out;
@@ -10705,6 +10810,7 @@ function _edColApply(ed){
 /* Inject toggle arrows into headings + apply current fold state. */
 function _edColInit(ed){
   if(!ed)return;
+  try{_ktRepair(ed);}catch(e){}
   ed.querySelectorAll('.ed-col-arr,.ed-col-grip').forEach(function(n){n.remove();});
   const heads=_edColHeads(ed);
   /* E6 — each surface owns its own ⋯ wrapper, so a float showing headings
@@ -10759,7 +10865,7 @@ function _edDragPaint(cx,cy){
   const d=_edDrag;if(!d)return;
   const ed=d.ed, edR=ed.getBoundingClientRect();
   const heads=Array.from(ed.querySelectorAll('h1,h2,h3,h4'))
-    .filter(h=>!h.closest('.ann-inline-card,.bk-card,.ed-col-preview')&&d.nodes.indexOf(h)<0);
+    .filter(h=>!h.closest('.ann-inline-card,.bk-card,.ed-col-preview,.kt-ayah,.kt-hdr')&&d.nodes.indexOf(h)<0);
   let bestDist=Infinity,bestBefore=null;
   heads.forEach(h=>{const r=h.getBoundingClientRect();const dd=Math.abs(cy-r.top);if(dd<bestDist){bestDist=dd;bestBefore=h;}});
   const last=ed.lastElementChild;
@@ -12587,6 +12693,540 @@ function moveQuickPhrase(pid,dir){
   const t=phrases[idx];phrases[idx]=phrases[j];phrases[j]=t;
   persist();
   showModal(_qpManagerHTML());
+}
+/* ══ Note Templates (v04.04) ═══════════════════════════════════════════
+   A user-editable library of note skeletons, reachable from the 📋 button
+   on the Note bar (Pane 3's edit toolbar and every float window's toolbar).
+   Picking one drops its structure in at the caret; "⚙ Manage templates…"
+   opens an editor where EVERY part of a template is editable — its banner,
+   its header fields, the topic line, the Ayah-block settings (labels, the
+   image slot, and the list of languages) and the whole heading outline
+   (level, text, and what body each heading gets).
+
+   The shipped default is the Jumu'a Khutbah template. Its Ayah blocks are
+   self-contained units: a ref + title line, an image slot, and one slot per
+   language — each slot opens and closes on its own and starts closed, and
+   the whole block copies to the clipboard with every slot's contents,
+   open or closed, so it can be pasted into another note or another app.
+
+   Definitions live in DB.theme.templates, so they ride the existing
+   localStorage / file / Firestore sync with no new plumbing. */
+
+function _ktDefaultKhutbah(){
+  return {
+    id:'tpl-khutbah',
+    icon:'🕌',
+    name:"Jumu'a Khutbah",
+    banner:"Jumu'a Khutbah",
+    showBanner:true,
+    fields:[{id:uid(),label:'Place'},{id:uid(),label:'Date'}],
+    topicOn:true,
+    topicLabel:'TITLE TOPIC',
+    ayah:{
+      refLabel:'Ayah Ref',
+      titleLabel:'Ayah Title',
+      imageOn:true,
+      imageLabel:'Ayah Image',
+      addLabel:'Add Ayah Block',
+      langs:[
+        {id:uid(),name:'Arabic',rtl:true},
+        {id:uid(),name:'English',rtl:false},
+        {id:uid(),name:'Bangla',rtl:false}
+      ]
+    },
+    sections:[
+      {id:uid(),level:2,text:'1st Khutbah',           body:'none'},
+      {id:uid(),level:3,text:'Ayah Blocks',           body:'ayah',count:5},
+      {id:uid(),level:3,text:'Body',                  body:'text'},
+      {id:uid(),level:4,text:'Point 1',               body:'text'},
+      {id:uid(),level:4,text:'Point 2',               body:'text'},
+      {id:uid(),level:4,text:'Point 3',               body:'text'},
+      {id:uid(),level:3,text:'Dua before sitting',    body:'text'},
+      {id:uid(),level:2,text:'Second Khutbah',        body:'text'},
+      {id:uid(),level:2,text:'Salawat to Rasulullah', body:'text'},
+      {id:uid(),level:2,text:'Dua related to the Khutbah topic',body:'text'},
+      {id:uid(),level:2,text:'Dua — common',          body:'text'}
+    ]
+  };
+}
+function _ktNormalize(t){
+  if(!t.id)t.id=uid();
+  if(!Array.isArray(t.fields))t.fields=[];
+  if(!Array.isArray(t.sections))t.sections=[];
+  if(!t.ayah||typeof t.ayah!=='object')t.ayah={};
+  if(!Array.isArray(t.ayah.langs))t.ayah.langs=[];
+  t.fields.forEach(f=>{if(!f.id)f.id=uid();});
+  t.ayah.langs.forEach(l=>{if(!l.id)l.id=uid();});
+  t.sections.forEach(s=>{
+    if(!s.id)s.id=uid();
+    s.level=Math.max(1,Math.min(4,parseInt(s.level)||2));
+    if(['none','text','ayah'].indexOf(s.body)<0)s.body='text';
+    if(s.body==='ayah')s.count=Math.max(0,Math.min(50,parseInt(s.count)||0));
+  });
+  return t;
+}
+function ensureTemplates(){
+  if(!DB.theme)DB.theme={};
+  if(!Array.isArray(DB.theme.templates)||!DB.theme.templates.length)
+    DB.theme.templates=[_ktDefaultKhutbah()];
+  DB.theme.templates.forEach(_ktNormalize);
+  return DB.theme.templates;
+}
+function _ktGet(tid){return ensureTemplates().find(t=>t.id===tid)||null;}
+
+/* ── HTML the template drops into a note ─────────────────────────────── */
+function _ktFoldHTML(label,ph,cls,rtl){
+  return '<div class="kt-fold" data-open="0">'
+    +'<div class="kt-fold-hd" contenteditable="false">'
+      +'<span class="kt-fold-arr">&#9654;</span>'
+      +'<span class="kt-fold-lbl">'+esc(label)+'</span>'
+    +'</div>'
+    +'<div class="kt-fold-b'+(cls?' '+cls:'')+'"'+(rtl?' dir="rtl"':'')+' data-ph="'+esc(ph)+'"></div>'
+    +'</div>';
+}
+/* The control bar is pure UI chrome: it is stripped on copy (so a block
+   pasted into Word/Docs carries only content) and rebuilt by _ktRepair()
+   on any block that lacks one — including one pasted back into Siyagah. */
+function _ktBarHTML(n){
+  return '<div class="kt-ayah-bar" contenteditable="false">'
+    +'<span class="kt-ayah-n">'+(n||1)+'</span>'
+    +'<span class="kt-ayah-sp"></span>'
+    +'<button type="button" class="kt-btn kt-copy" title="Copy this whole block \u2014 every part, open or closed">&#10697;</button>'
+    +'<button type="button" class="kt-btn kt-foldall" title="Open / close every part of this block">&#8597;</button>'
+    +'<button type="button" class="kt-btn kt-del" title="Delete this Ayah block">&#128465;</button>'
+    +'</div>';
+}
+function _ktAyahHTML(t,n){
+  const a=(t&&t.ayah)||{};
+  let h='<div class="kt-ayah" data-kt="ayah">'+_ktBarHTML(n)
+    +'<div class="kt-ayah-h">'
+      +'<span class="kt-ayah-ref" data-ph="'+esc(a.refLabel||'Ayah Ref')+'"></span>'
+      +'<span class="kt-ayah-dash" contenteditable="false"> — </span>'
+      +'<span class="kt-ayah-ttl" data-ph="'+esc(a.titleLabel||'Ayah Title')+'"></span>'
+    +'</div>';
+  if(a.imageOn!==false)
+    h+=_ktFoldHTML(a.imageLabel||'Ayah Image','Paste or drop the ayah image here…','kt-img',false);
+  (a.langs||[]).forEach(l=>{
+    h+=_ktFoldHTML(l.name||'Text',(l.name||'Text')+' text…','kt-lang',!!l.rtl);
+  });
+  h+='</div>';
+  return h;
+}
+function ktBuildHTML(t){
+  if(!t)return '';
+  let h='<div class="kt-hdr" data-kt="hdr" data-tpl="'+esc(t.id)+'">';
+  if(t.showBanner!==false)
+    h+='<div class="kt-banner">'+esc(t.banner||t.name||'')+'</div>';
+  if((t.fields||[]).length){
+    h+='<div class="kt-meta">';
+    (t.fields||[]).forEach(f=>{
+      h+='<div class="kt-fld"><span class="kt-fld-l" contenteditable="false">'+esc(f.label||'')+'</span>'
+        +'<span class="kt-fld-v" data-ph="…"></span></div>';
+    });
+    h+='</div>';
+  }
+  if(t.topicOn!==false){
+    h+='<div class="kt-topic">'
+      +'<div class="kt-topic-l" contenteditable="false">'+esc(t.topicLabel||'TITLE TOPIC')+'</div>'
+      +'<div class="kt-topic-v" data-ph="Type the topic here…"></div></div>';
+  }
+  h+='</div>';
+  (t.sections||[]).forEach(s=>{
+    const lv=Math.max(1,Math.min(4,s.level||2));
+    h+='<h'+lv+'>'+esc(s.text||'')+'</h'+lv+'>';
+    if(s.body==='ayah'){
+      const n=Math.max(0,Math.min(50,parseInt(s.count)||0));
+      h+='<div class="kt-ayahs" data-kt="ayahs" data-tpl="'+esc(t.id)+'">';
+      for(let i=1;i<=n;i++)h+=_ktAyahHTML(t,i);
+      h+='<div class="kt-add" contenteditable="false"><button type="button" class="kt-add-btn">➕ '
+        +esc((t.ayah&&t.ayah.addLabel)||'Add Ayah Block')+'</button></div>';
+      h+='</div>';
+    } else if(s.body==='text'){
+      h+='<p><br></p>';
+    }
+  });
+  h+='<p><br></p>';
+  return h;
+}
+
+/* ── The 📋 button on the Note bar ───────────────────────────────────── */
+function _ktBtnHTML(){
+  return '<button class="et" onmousedown="openTemplatesMenu(event)" onclick="event.stopPropagation()" title="Templates — insert a ready-made note structure">&#128203;</button>';
+}
+function openTemplatesMenu(ev){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  const tpls=ensureTemplates();
+  const m=document.getElementById('ctx');
+  let h='<div class="ci-nti-hd">📋 Templates · tap to insert at the caret</div>';
+  tpls.forEach(t=>{
+    h+='<div class="ci" onclick="hideCtx();insertTemplate(\''+t.id+'\')">'
+      +esc((t.icon||'📄')+' '+(t.name||'Untitled'))+'</div>';
+  });
+  h+='<div class="csep"></div>';
+  h+='<div class="ci" onclick="hideCtx();openTemplatesManager()">⚙ Manage templates…</div>';
+  m.innerHTML=h;
+  _ctxPos(m,ev);
+}
+function insertTemplate(tid){
+  const t=_ktGet(tid);if(!t)return;
+  const ed=_edActive();
+  if(!ed){toast('Open a note for editing first');return;}
+  ed.focus();
+  insertAtCaret(ktBuildHTML(t));
+  try{_ktRepair(ed);}catch(e){}
+  try{_edColInit(ed);}catch(e){}
+  _edTouched(ed);
+  toast((t.icon||'📋')+' '+(t.name||'Template')+' inserted');
+}
+
+/* ── Live block behaviour (folds, add, delete, copy) ─────────────────── */
+function _ktDirty(el){
+  const host=_edHost(el);
+  if(host)_edTouched(host);
+}
+function _ktToggleFold(f,force){
+  if(!f)return;
+  const open=f.getAttribute('data-open')==='1';
+  const next=(force===undefined)?!open:!!force;
+  f.setAttribute('data-open',next?'1':'0');
+  const a=f.querySelector(':scope > .kt-fold-hd > .kt-fold-arr');
+  if(a)a.innerHTML=next?'&#9660;':'&#9654;';
+}
+function _ktFoldAll(blk){
+  if(!blk)return;
+  const folds=Array.from(blk.querySelectorAll(':scope > .kt-fold'));
+  const anyClosed=folds.some(f=>f.getAttribute('data-open')!=='1');
+  folds.forEach(f=>_ktToggleFold(f,anyClosed));
+  _ktDirty(blk);
+}
+function _ktRenumber(group){
+  if(!group)return;
+  let i=0;
+  group.querySelectorAll(':scope > .kt-ayah').forEach(b=>{
+    i++;
+    const n=b.querySelector(':scope > .kt-ayah-bar > .kt-ayah-n');
+    if(n)n.textContent=String(i);
+  });
+}
+/* Which template definition does this block belong to? Falls back to the
+   first template so a block pasted into a fresh note still rebuilds. */
+function _ktTplFor(el){
+  const host=el&&(el.closest('[data-tpl]')||null);
+  if(host){const t=_ktGet(host.getAttribute('data-tpl'));if(t)return t;}
+  const ed=_edHost(el)||el&&el.closest('.av-body');
+  if(ed){const h=ed.querySelector('[data-tpl]');if(h){const t=_ktGet(h.getAttribute('data-tpl'));if(t)return t;}}
+  return ensureTemplates()[0]||null;
+}
+function _ktAddBlock(group){
+  if(!group)return;
+  const t=_ktTplFor(group);
+  const tpl=document.createElement('template');
+  tpl.innerHTML=_ktAyahHTML(t,0);
+  const node=tpl.content.firstElementChild;if(!node)return;
+  const add=group.querySelector(':scope > .kt-add');
+  if(add)group.insertBefore(node,add);else group.appendChild(node);
+  _ktRenumber(group);
+  _ktDirty(group);
+  toast('➕ Ayah block added');
+}
+function _ktDelBlock(blk){
+  if(!blk)return;
+  const ref=(blk.querySelector('.kt-ayah-ref')?.textContent||'').trim();
+  if(!confirm('Delete this Ayah block'+(ref?' ("'+ref+'")':'')+' and everything in it?'))return;
+  const group=blk.parentElement;
+  blk.remove();
+  if(group&&group.classList.contains('kt-ayahs'))_ktRenumber(group);
+  _ktDirty(group);
+  toast('🗑 Ayah block deleted');
+}
+/* Copy the block whole — every slot's contents, whether it is open or
+   closed — as rich HTML plus a readable plain-text fallback. */
+function _ktBlockText(blk){
+  const ref=(blk.querySelector(':scope > .kt-ayah-h > .kt-ayah-ref')?.textContent||'').trim();
+  const ttl=(blk.querySelector(':scope > .kt-ayah-h > .kt-ayah-ttl')?.textContent||'').trim();
+  let out=[ref,ttl].filter(Boolean).join(' — ');
+  blk.querySelectorAll(':scope > .kt-fold').forEach(f=>{
+    const lbl=(f.querySelector(':scope > .kt-fold-hd > .kt-fold-lbl')?.textContent||'').trim();
+    const bEl=f.querySelector(':scope > .kt-fold-b');
+    let body=(bEl?(bEl.innerText||bEl.textContent||''):'').trim();
+    if(!body&&bEl&&bEl.querySelector('img'))body='[image]';
+    if(!body)return;                       /* an empty slot adds nothing */
+    out+='\n\n'+lbl+':\n'+body;
+  });
+  return out.trim();
+}
+function _ktCopyBlock(blk){
+  if(!blk)return;
+  const c=blk.cloneNode(true);
+  c.querySelectorAll('.kt-ayah-bar').forEach(n=>n.remove());
+  /* everything travels open, so the receiving app shows all of it */
+  c.querySelectorAll('.kt-fold').forEach(f=>{
+    f.setAttribute('data-open','1');
+    const a=f.querySelector(':scope > .kt-fold-hd > .kt-fold-arr');
+    if(a)a.innerHTML='&#9660;';
+  });
+  const html=c.outerHTML;
+  const text=_ktBlockText(blk);
+  const done=()=>toast('⧉ Ayah block copied — paste it anywhere');
+  const fallback=()=>{
+    try{
+      const holder=document.createElement('div');
+      holder.setAttribute('contenteditable','true');
+      holder.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';
+      holder.innerHTML=html;
+      document.body.appendChild(holder);
+      const r=document.createRange();r.selectNodeContents(holder);
+      const s=window.getSelection();const keep=s.rangeCount?s.getRangeAt(0).cloneRange():null;
+      s.removeAllRanges();s.addRange(r);
+      document.execCommand('copy');
+      s.removeAllRanges();if(keep)s.addRange(keep);
+      holder.remove();
+      done();
+    }catch(e){toast('⚠ Could not copy — select the block and use Ctrl+C');}
+  };
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      navigator.clipboard.write([new ClipboardItem({
+        'text/html':new Blob([html],{type:'text/html'}),
+        'text/plain':new Blob([text],{type:'text/plain'})
+      })]).then(done).catch(fallback);
+    } else fallback();
+  }catch(e){fallback();}
+}
+/* Rebuild the control bar on any block that has lost it (a block pasted
+   back in, or content saved by an older build), and keep numbering right. */
+function _ktRepair(root){
+  if(!root)return;
+  root.querySelectorAll('.kt-ayah').forEach(b=>{
+    if(!b.querySelector(':scope > .kt-ayah-bar'))b.insertAdjacentHTML('afterbegin',_ktBarHTML(1));
+  });
+  root.querySelectorAll('.kt-ayahs').forEach(g=>_ktRenumber(g));
+}
+/* One delegated listener covers every surface — Pane 3's editor, float
+   windows, and the read-only view body. Capture phase so a fold header
+   never also toggles the section collapse it sits inside. */
+document.addEventListener('click',function(e){
+  const tgt=e.target;
+  if(!tgt||!tgt.closest)return;
+  const hd=tgt.closest('.kt-fold-hd');
+  if(hd){
+    e.preventDefault();e.stopPropagation();
+    _ktToggleFold(hd.parentElement);
+    _ktDirty(hd);
+    return;
+  }
+  const b=tgt.closest('.kt-btn,.kt-add-btn');
+  if(!b)return;
+  e.preventDefault();e.stopPropagation();
+  if(b.classList.contains('kt-copy'))_ktCopyBlock(b.closest('.kt-ayah'));
+  else if(b.classList.contains('kt-foldall'))_ktFoldAll(b.closest('.kt-ayah'));
+  else if(b.classList.contains('kt-del'))_ktDelBlock(b.closest('.kt-ayah'));
+  else if(b.classList.contains('kt-add-btn'))_ktAddBlock(b.closest('.kt-ayahs'));
+},true);
+
+/* ══ Template manager — every setting above, editable ══════════════════ */
+/* These two modals are wider and taller than the app's 400px default, so
+   they set their own box each time (showModal() clears it on the next open). */
+function _ktShow(html){
+  showModal(html);
+  const mb=document.getElementById('mb');
+  if(mb){mb.style.width='min(640px,94vw)';mb.style.maxHeight='88vh';mb.style.overflowY='auto';}
+}
+function openTemplatesManager(){_ktShow(_ktMgrHTML());}
+function _ktMgrHTML(){
+  const tpls=ensureTemplates();
+  let h='<div class="mt">📋 Templates</div>';
+  h+='<div class="kt-hint">Pick one to edit every part of it — banner, fields, Ayah blocks and the whole heading outline.</div>';
+  h+='<div id="kt-mgr-list">';
+  tpls.forEach((t,i)=>{
+    h+='<div class="kt-mgr-row">'
+      +'<button class="btn bn kt-mgr-name" onclick="openTemplateEditor(\''+t.id+'\')" title="Edit this template">'
+        +esc((t.icon||'📄')+'  '+(t.name||'Untitled'))+'</button>'
+      +'<div class="qp-row-btns" style="flex-direction:row">'
+        +'<button class="btn bn" '+(i===0?'disabled':'')+' onclick="ktMoveTemplate(\''+t.id+'\',-1)" title="Move up">▲</button>'
+        +'<button class="btn bn" '+(i===tpls.length-1?'disabled':'')+' onclick="ktMoveTemplate(\''+t.id+'\',1)" title="Move down">▼</button>'
+        +'<button class="btn bn" onclick="ktDuplicateTemplate(\''+t.id+'\')" title="Duplicate">🗐</button>'
+        +'<button class="btn bn" onclick="ktDeleteTemplate(\''+t.id+'\')" title="Delete">🗑</button>'
+      +'</div></div>';
+  });
+  h+='</div>';
+  h+='<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'
+    +'<button class="btn bn" onclick="ktAddTemplate()">➕ New template</button>'
+    +'<button class="btn bn" onclick="ktRestoreKhutbah()" title="Add a fresh copy of the built-in Jumu\'a Khutbah template">🕌 Restore Jumu\'a Khutbah</button>'
+    +'</div>';
+  h+='<div style="display:flex;justify-content:flex-end;gap:6px;margin-top:14px">'
+    +'<button class="btn bp" onclick="closeModal()">Done</button></div>';
+  return h;
+}
+function ktAddTemplate(){
+  const t=_ktNormalize({id:uid(),icon:'📄',name:'New template',banner:'',showBanner:false,
+    fields:[],topicOn:false,topicLabel:'TITLE TOPIC',
+    ayah:{refLabel:'Ayah Ref',titleLabel:'Ayah Title',imageOn:true,imageLabel:'Ayah Image',
+      addLabel:'Add Ayah Block',langs:[{id:uid(),name:'Arabic',rtl:true},{id:uid(),name:'English',rtl:false}]},
+    sections:[{id:uid(),level:2,text:'Heading',body:'text'}]});
+  ensureTemplates().push(t);
+  persist();
+  openTemplateEditor(t.id);
+}
+function ktRestoreKhutbah(){
+  const t=_ktDefaultKhutbah();
+  t.id=uid();
+  if(ensureTemplates().some(x=>x.name===t.name))t.name=t.name+' (fresh copy)';
+  DB.theme.templates.push(t);
+  persist();
+  _ktShow(_ktMgrHTML());
+  toast('🕌 Built-in Jumu\'a Khutbah template added');
+}
+function ktDuplicateTemplate(tid){
+  const t=_ktGet(tid);if(!t)return;
+  const c=_ktNormalize(JSON.parse(JSON.stringify(t)));
+  c.id=uid();c.name=(t.name||'Template')+' (Copy)';
+  c.fields.forEach(f=>f.id=uid());
+  c.sections.forEach(s=>s.id=uid());
+  c.ayah.langs.forEach(l=>l.id=uid());
+  DB.theme.templates.push(c);
+  persist();_ktShow(_ktMgrHTML());
+}
+function ktDeleteTemplate(tid){
+  const t=_ktGet(tid);if(!t)return;
+  if(!confirm('Delete the template "'+(t.name||'Untitled')+'"? Notes already built from it are not touched.'))return;
+  DB.theme.templates=ensureTemplates().filter(x=>x.id!==tid);
+  persist();_ktShow(_ktMgrHTML());
+}
+function ktMoveTemplate(tid,dir){
+  const l=ensureTemplates();
+  const i=l.findIndex(x=>x.id===tid),j=i+dir;
+  if(i<0||j<0||j>=l.length)return;
+  const t=l[i];l[i]=l[j];l[j]=t;
+  persist();_ktShow(_ktMgrHTML());
+}
+
+/* ── One template's settings ─────────────────────────────────────────── */
+function openTemplateEditor(tid){_ktShow(_ktEdHTML(tid));}
+function _ktEdHTML(tid){
+  const t=_ktGet(tid);
+  if(!t)return _ktMgrHTML();
+  const q="'"+tid+"'";
+  let h='<div class="mt">⚙ '+esc(t.name||'Template')+'</div>';
+  h+='<div class="kt-hint">Every setting here shapes what the template drops into a note. Changes are saved as you make them.</div>';
+
+  /* identity + banner */
+  h+='<div class="kt-sec"><div class="kt-sec-t">Name &amp; banner</div>';
+  h+='<div class="kt-grid">'
+    +'<label class="kt-lb">Icon</label><input class="mi kt-in" value="'+esc(t.icon||'')+'" maxlength="4" onchange="ktSet('+q+',\'icon\',this.value)">'
+    +'<label class="kt-lb">Name</label><input class="mi kt-in" value="'+esc(t.name||'')+'" onchange="ktSet('+q+',\'name\',this.value)">'
+    +'<label class="kt-lb">Banner text</label><input class="mi kt-in" value="'+esc(t.banner||'')+'" onchange="ktSet('+q+',\'banner\',this.value)">'
+    +'<label class="kt-lb">Show banner</label><div><label class="kt-ck"><input type="checkbox" '+(t.showBanner!==false?'checked':'')+' onchange="ktSet('+q+',\'showBanner\',this.checked)"> Put the banner at the top</label></div>'
+    +'</div></div>';
+
+  /* header fields */
+  h+='<div class="kt-sec"><div class="kt-sec-t">Header fields</div>';
+  h+='<div class="kt-hint2">One line each, filled in on the note itself (Place, Date, …).</div>';
+  (t.fields||[]).forEach((f,i)=>{
+    h+='<div class="kt-row">'
+      +'<input class="mi kt-in" value="'+esc(f.label||'')+'" placeholder="Field label" onchange="ktSetField('+q+',\''+f.id+'\',this.value)">'
+      +'<div class="kt-row-btns">'
+        +'<button class="btn bn" '+(i===0?'disabled':'')+' onclick="ktMoveField('+q+',\''+f.id+'\',-1)">▲</button>'
+        +'<button class="btn bn" '+(i===t.fields.length-1?'disabled':'')+' onclick="ktMoveField('+q+',\''+f.id+'\',1)">▼</button>'
+        +'<button class="btn bn" onclick="ktDelField('+q+',\''+f.id+'\')">🗑</button>'
+      +'</div></div>';
+  });
+  h+='<button class="btn bn" onclick="ktAddField('+q+')">➕ Add field</button></div>';
+
+  /* topic */
+  h+='<div class="kt-sec"><div class="kt-sec-t">Topic line</div>';
+  h+='<div class="kt-grid">'
+    +'<label class="kt-lb">Include it</label><div><label class="kt-ck"><input type="checkbox" '+(t.topicOn!==false?'checked':'')+' onchange="ktSet('+q+',\'topicOn\',this.checked)"> Show a topic line under the fields</label></div>'
+    +'<label class="kt-lb">Label</label><input class="mi kt-in" value="'+esc(t.topicLabel||'')+'" onchange="ktSet('+q+',\'topicLabel\',this.value)">'
+    +'</div></div>';
+
+  /* ayah blocks */
+  const a=t.ayah||{};
+  h+='<div class="kt-sec"><div class="kt-sec-t">Ayah blocks</div>';
+  h+='<div class="kt-hint2">Used by any heading below whose body is set to “Ayah blocks”. Each part opens and closes on its own and starts closed.</div>';
+  h+='<div class="kt-grid">'
+    +'<label class="kt-lb">Ref label</label><input class="mi kt-in" value="'+esc(a.refLabel||'')+'" onchange="ktSetAyah('+q+',\'refLabel\',this.value)">'
+    +'<label class="kt-lb">Title label</label><input class="mi kt-in" value="'+esc(a.titleLabel||'')+'" onchange="ktSetAyah('+q+',\'titleLabel\',this.value)">'
+    +'<label class="kt-lb">Image slot</label><div><label class="kt-ck"><input type="checkbox" '+(a.imageOn!==false?'checked':'')+' onchange="ktSetAyah('+q+',\'imageOn\',this.checked)"> Include an image slot</label></div>'
+    +'<label class="kt-lb">Image label</label><input class="mi kt-in" value="'+esc(a.imageLabel||'')+'" onchange="ktSetAyah('+q+',\'imageLabel\',this.value)">'
+    +'<label class="kt-lb">“Add” button</label><input class="mi kt-in" value="'+esc(a.addLabel||'')+'" onchange="ktSetAyah('+q+',\'addLabel\',this.value)">'
+    +'</div>';
+  h+='<div class="kt-hint2" style="margin-top:8px">Text slots — one per language.</div>';
+  (a.langs||[]).forEach((l,i)=>{
+    h+='<div class="kt-row">'
+      +'<input class="mi kt-in" value="'+esc(l.name||'')+'" placeholder="Language" onchange="ktSetLang('+q+',\''+l.id+'\',\'name\',this.value)">'
+      +'<label class="kt-ck kt-ck-rtl"><input type="checkbox" '+(l.rtl?'checked':'')+' onchange="ktSetLang('+q+',\''+l.id+'\',\'rtl\',this.checked)"> RTL</label>'
+      +'<div class="kt-row-btns">'
+        +'<button class="btn bn" '+(i===0?'disabled':'')+' onclick="ktMoveLang('+q+',\''+l.id+'\',-1)">▲</button>'
+        +'<button class="btn bn" '+(i===a.langs.length-1?'disabled':'')+' onclick="ktMoveLang('+q+',\''+l.id+'\',1)">▼</button>'
+        +'<button class="btn bn" onclick="ktDelLang('+q+',\''+l.id+'\')">🗑</button>'
+      +'</div></div>';
+  });
+  h+='<button class="btn bn" onclick="ktAddLang('+q+')">➕ Add language</button></div>';
+
+  /* outline */
+  h+='<div class="kt-sec"><div class="kt-sec-t">Outline</div>';
+  h+='<div class="kt-hint2">Each row is one heading: its level, its text, and what goes under it.</div>';
+  (t.sections||[]).forEach((s,i)=>{
+    h+='<div class="kt-row kt-row-sec">'
+      +'<select class="mi kt-lvl" onchange="ktSetSec('+q+',\''+s.id+'\',\'level\',this.value)">'
+        +[1,2,3,4].map(n=>'<option value="'+n+'"'+(s.level===n?' selected':'')+'>H'+n+'</option>').join('')
+      +'</select>'
+      +'<input class="mi kt-in" value="'+esc(s.text||'')+'" placeholder="Heading text" onchange="ktSetSec('+q+',\''+s.id+'\',\'text\',this.value)">'
+      +'<select class="mi kt-body" onchange="ktSetSec('+q+',\''+s.id+'\',\'body\',this.value)">'
+        +'<option value="text"'+(s.body==='text'?' selected':'')+'>Text</option>'
+        +'<option value="ayah"'+(s.body==='ayah'?' selected':'')+'>Ayah blocks</option>'
+        +'<option value="none"'+(s.body==='none'?' selected':'')+'>Nothing</option>'
+      +'</select>'
+      +(s.body==='ayah'
+        ?'<input class="mi kt-cnt" type="number" min="0" max="50" value="'+(s.count||0)+'" title="How many Ayah blocks" onchange="ktSetSec('+q+',\''+s.id+'\',\'count\',this.value)">'
+        :'<span class="kt-cnt-sp"></span>')
+      +'<div class="kt-row-btns">'
+        +'<button class="btn bn" '+(i===0?'disabled':'')+' onclick="ktMoveSec('+q+',\''+s.id+'\',-1)">▲</button>'
+        +'<button class="btn bn" '+(i===t.sections.length-1?'disabled':'')+' onclick="ktMoveSec('+q+',\''+s.id+'\',1)">▼</button>'
+        +'<button class="btn bn" onclick="ktDelSec('+q+',\''+s.id+'\')">🗑</button>'
+      +'</div></div>';
+  });
+  h+='<button class="btn bn" onclick="ktAddSec('+q+')">➕ Add heading</button></div>';
+
+  h+='<div style="display:flex;justify-content:space-between;gap:6px;margin-top:14px;flex-wrap:wrap">'
+    +'<button class="btn bn" onclick="openTemplatesManager()">‹ All templates</button>'
+    +'<div style="display:flex;gap:6px">'
+      +'<button class="btn bn" onclick="closeModal();insertTemplate('+q+')">📥 Insert into this note</button>'
+      +'<button class="btn bp" onclick="closeModal()">Done</button>'
+    +'</div></div>';
+  return h;
+}
+function _ktRedraw(tid){_ktShow(_ktEdHTML(tid));}
+function ktSet(tid,key,val){const t=_ktGet(tid);if(!t)return;t[key]=val;persist();
+  if(key==='showBanner'||key==='topicOn'||key==='name'||key==='icon')_ktRedraw(tid);}
+function ktSetAyah(tid,key,val){const t=_ktGet(tid);if(!t)return;t.ayah[key]=val;persist();
+  if(key==='imageOn')_ktRedraw(tid);}
+function ktAddField(tid){const t=_ktGet(tid);if(!t)return;t.fields.push({id:uid(),label:''});persist();_ktRedraw(tid);}
+function ktSetField(tid,fid,val){const t=_ktGet(tid);if(!t)return;const f=t.fields.find(x=>x.id===fid);if(f){f.label=val;persist();}}
+function ktDelField(tid,fid){const t=_ktGet(tid);if(!t)return;t.fields=t.fields.filter(x=>x.id!==fid);persist();_ktRedraw(tid);}
+function ktMoveField(tid,fid,d){const t=_ktGet(tid);if(!t)return;_ktMoveIn(t.fields,fid,d);persist();_ktRedraw(tid);}
+function ktAddLang(tid){const t=_ktGet(tid);if(!t)return;t.ayah.langs.push({id:uid(),name:'',rtl:false});persist();_ktRedraw(tid);}
+function ktSetLang(tid,lid,key,val){const t=_ktGet(tid);if(!t)return;const l=t.ayah.langs.find(x=>x.id===lid);if(l){l[key]=val;persist();}}
+function ktDelLang(tid,lid){const t=_ktGet(tid);if(!t)return;t.ayah.langs=t.ayah.langs.filter(x=>x.id!==lid);persist();_ktRedraw(tid);}
+function ktMoveLang(tid,lid,d){const t=_ktGet(tid);if(!t)return;_ktMoveIn(t.ayah.langs,lid,d);persist();_ktRedraw(tid);}
+function ktAddSec(tid){const t=_ktGet(tid);if(!t)return;t.sections.push({id:uid(),level:2,text:'',body:'text'});persist();_ktRedraw(tid);}
+function ktSetSec(tid,sid,key,val){
+  const t=_ktGet(tid);if(!t)return;
+  const s=t.sections.find(x=>x.id===sid);if(!s)return;
+  if(key==='level')s.level=Math.max(1,Math.min(4,parseInt(val)||2));
+  else if(key==='count')s.count=Math.max(0,Math.min(50,parseInt(val)||0));
+  else s[key]=val;
+  if(key==='body'&&val==='ayah'&&!s.count)s.count=5;
+  persist();
+  if(key==='body')_ktRedraw(tid);
+}
+function ktDelSec(tid,sid){const t=_ktGet(tid);if(!t)return;t.sections=t.sections.filter(x=>x.id!==sid);persist();_ktRedraw(tid);}
+function ktMoveSec(tid,sid,d){const t=_ktGet(tid);if(!t)return;_ktMoveIn(t.sections,sid,d);persist();_ktRedraw(tid);}
+function _ktMoveIn(arr,id,dir){
+  const i=arr.findIndex(x=>x.id===id),j=i+dir;
+  if(i<0||j<0||j>=arr.length)return;
+  const t=arr[i];arr[i]=arr[j];arr[j]=t;
 }
 /* ══ Heading Task Status ═══════════════════════════════════════════════
    A small clickable status badge at the right end of every heading
