@@ -138,6 +138,154 @@ const outline = await page.evaluate(() => {
 r.check(!outline.err && outline.heads >= 2, '_edColHeads() runs over the editor headings',
   outline.err || `${outline.heads} headings seen`);
 
+/* ── 6b. v04.07: a line to write on, above and below the note ──────────── */
+/* The gutter is #ed's own padding and leftover height, so a click there
+   lands on #ed itself — for the top, the bottom AND the sides alike. These
+   drive REAL mouse clicks, because the caret is real browser state and a
+   Range assembled in evaluate() is not what the editor is holding. */
+const edSetup = async (html) => {
+  await page.evaluate((h) => {
+    const a = DB.articles.find((x) => x.id === 'a1');
+    a.content = h; a.sectionState = {};
+    ST.article = 'a1'; ST.editing = false; window.render(); window.startEdit();
+  }, html);
+  await page.waitForSelector('#ed');
+  await page.waitForTimeout(150);
+  return page.evaluate(() => {
+    const ed = document.getElementById('ed');
+    const b = ed.getBoundingClientRect();
+    const k = [...ed.children].map((c) => c.getBoundingClientRect()).filter((x) => x.width || x.height);
+    return { left: b.left, right: b.right, top: b.top, bottom: b.bottom,
+      firstTop: k[0].top, lastBottom: k[k.length - 1].bottom };
+  });
+};
+const edShape = () => page.evaluate(() => [...document.getElementById('ed').children]
+  .map((c) => c.tagName + ':' + (c.textContent || '').replace(/[⠿▼▶]/g, '')).join(' | '));
+
+/* BELOW: this used to drop the caret at the END of the last block, so on a
+   note ending in a heading the typing carried on the heading itself. */
+let g = await edSetup('<h2>TOPHEAD</h2><p>middle</p><h2>LASTHEAD</h2>');
+await page.mouse.click(g.left + 120, Math.min(g.bottom - 6, g.lastBottom + 40));
+await page.keyboard.type('BELOWTEXT');
+await page.waitForTimeout(120);
+const below = await page.evaluate(() => {
+  const ed = document.getElementById('ed');
+  const last = ed.lastElementChild;
+  const heads = [...ed.querySelectorAll('h1,h2,h3,h4')];
+  return { tag: last.tagName, text: (last.textContent || '').trim(),
+    headClean: heads.every((h) => !/BELOWTEXT/.test(h.textContent)) };
+});
+r.check(below.tag === 'P' && below.text === 'BELOWTEXT' && below.headClean,
+  'clicking below the last block opens a new line, not the end of the heading',
+  `last is <${below.tag.toLowerCase()}> "${below.text}"`);
+
+/* SIDE: a click beside a block is the browser's business, not ours. */
+const sideBefore = await edShape();
+await page.mouse.click(g.left + 3, (g.firstTop + g.lastBottom) / 2);
+await page.waitForTimeout(120);
+const sideAfter = await edShape();
+r.check(sideBefore === sideAfter, 'clicking beside a block adds nothing',
+  `${(await page.evaluate(() => document.getElementById('ed').children.length))} blocks, unchanged`);
+
+/* ABOVE: a note opening with a heading had nothing in front of it to click
+   into — the caret landed at offset 1 of the <h2>, between the fold grip and
+   the fold arrow. */
+g = await edSetup('<h2>TOPHEAD</h2><p>middle</p>');
+if (g.top >= g.firstTop - 4) {
+  r.pass('top gutter above the first heading', 'no gutter at this size — skipped');
+} else {
+  await page.mouse.click(g.left + 120, (g.top + g.firstTop) / 2);
+  await page.keyboard.type('ABOVETEXT');
+  await page.waitForTimeout(120);
+  const above = await page.evaluate(() => {
+    const ed = document.getElementById('ed');
+    const f = ed.firstElementChild;
+    return { tag: f.tagName, text: (f.textContent || '').trim(),
+      headClean: [...ed.querySelectorAll('h1,h2,h3,h4')].every((h) => !/ABOVETEXT/.test(h.textContent)) };
+  });
+  r.check(above.tag === 'P' && above.text === 'ABOVETEXT' && above.headClean,
+    'clicking above a leading heading opens a line in front of it',
+    `first is <${above.tag.toLowerCase()}> "${above.text}"`);
+}
+
+/* A note that OPENS with a plain paragraph must keep the browser's own
+   behaviour — the caret already lands at the start of that paragraph. */
+g = await edSetup('<p>plainfirst</p><h2>TOPHEAD</h2>');
+const plainBefore = await page.evaluate(() => document.getElementById('ed').children.length);
+if (g.top < g.firstTop - 4) await page.mouse.click(g.left + 120, (g.top + g.firstTop) / 2);
+await page.waitForTimeout(120);
+const plainAfter = await page.evaluate(() => document.getElementById('ed').children.length);
+r.check(plainBefore === plainAfter, 'a note starting with a paragraph is left to the browser',
+  `${plainAfter} blocks, unchanged`);
+
+/* The v03.67.01 "Enter above the first heading" rule tested the caret with
+   pre.toString(), which counts the fold grip and arrow as characters — so it
+   never fired once the chrome existed, and Enter split the heading into a
+   stray chrome-only heading instead. _edPrefixText() strips the chrome. */
+g = await edSetup('<h2>TOPHEAD</h2><p>middle</p>');
+await page.evaluate(() => {
+  const h = document.getElementById('ed').querySelector('h2');
+  const t = [...h.childNodes].find((n) => n.nodeType === 3);
+  const rg = document.createRange(); rg.setStart(t, 0); rg.collapse(true);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(rg);
+  document.getElementById('ed').focus();
+});
+await page.keyboard.press('Enter');
+await page.keyboard.type('ENTERTEXT');
+await page.waitForTimeout(120);
+const ent = await page.evaluate(() => {
+  const ed = document.getElementById('ed');
+  const f = ed.firstElementChild;
+  const heads = [...ed.querySelectorAll('h1,h2,h3,h4')];
+  return { tag: f.tagName, text: (f.textContent || '').trim(),
+    stray: heads.some((h) => !(h.textContent || '').replace(/[⠿▼▶]/g, '').trim()) };
+});
+r.check(ent.tag === 'P' && ent.text === 'ENTERTEXT' && !ent.stray,
+  'Enter at the start of the first heading writes above it, not into it',
+  ent.stray ? 'left a chrome-only empty heading behind' : `first is <${ent.tag.toLowerCase()}> "${ent.text}"`);
+
+/* A click on a heading's left edge landed the caret between the grip and the
+   arrow, so typing went in among the chrome. It belongs at the start of the
+   heading's own text — and the chrome must survive. */
+g = await edSetup('<h2>TOPHEAD</h2><p>middle</p>');
+const arr = await page.evaluate(() => {
+  const a = document.getElementById('ed').querySelector('h2 .ed-col-arr');
+  if (!a) return null;
+  const b = a.getBoundingClientRect();
+  return { x: b.right + 2, y: b.top + b.height / 2 };
+});
+if (!arr) r.fail('caret nudged out of a heading’s fold chrome', 'no .ed-col-arr was injected');
+else {
+  await page.mouse.click(arr.x, arr.y);
+  await page.keyboard.type('Z');
+  await page.waitForTimeout(120);
+  const nudge = await page.evaluate(() => {
+    const h = document.getElementById('ed').querySelector('h2');
+    return { text: (h.textContent || '').replace(/[⠿▼▶]/g, ''),
+      chrome: !!(h.querySelector('.ed-col-grip') && h.querySelector('.ed-col-arr')) };
+  });
+  r.check(nudge.text === 'ZTOPHEAD' && nudge.chrome,
+    'typing at a heading’s left edge writes at the front of the title',
+    `heading reads "${nudge.text}", chrome ${nudge.chrome ? 'intact' : 'LOST'}`);
+}
+
+/* Opening a line and then walking away must not dirty the note by itself —
+   nothing in the gutter path calls _edTouched().
+   The settle wait is not padding: a debounced autosave armed by the TYPING in
+   the checks above outlives its editor (renderP3C() builds a fresh #ed, the
+   old timer still fires and commits whatever #ed holds by then). Without it
+   this check measures that stale timer and reads as a failure that isn't one.
+   _ED_AUTOSAVE_MAX_MS is the ceiling, so wait past it on both sides. */
+g = await edSetup('<h2>TOPHEAD</h2><p>middle</p>');
+await page.waitForTimeout(2800);
+const clean = await page.evaluate(() => ({ before: DB.articles.find((a) => a.id === 'a1').content }));
+await page.mouse.click(g.left + 120, Math.min(g.bottom - 6, g.lastBottom + 40));
+await page.waitForTimeout(2800);
+const stillClean = await page.evaluate((b) => { const c = DB.articles.find((a) => a.id === 'a1').content; return { same: c === b, before: b, after: c }; }, clean.before);
+r.check(stillClean.same, 'opening a line without typing leaves the note untouched in DB',
+  stillClean.same ? 'no autosave fired on a bare click' : `before=${JSON.stringify(stillClean.before)}\nafter =${JSON.stringify(stillClean.after)}`);
+
+
 /* ── 7. The data round-trip — the invariant that matters most ──────────── */
 /* Save File writes the whole notebook into <script id="nd">. If a single id
    fails to survive that trip, notes have been lost silently. */

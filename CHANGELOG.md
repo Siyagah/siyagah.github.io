@@ -118,3 +118,108 @@ sizes and all four risk areas are covered, since each was cheap.
   is driven. Anything on the edit toolbar has to be added in both places, so
   this is a real coverage hole.
 - **`legacy/**` was not touched**, by rule.
+
+---
+
+## v04.07 — a line to write on, above and below the note (10 September 2026)
+
+Two places in every note had no caret you could reach. The owner reported both
+with a marked-up screenshot: a red bar above the first heading, and another
+below the last one.
+
+**What was actually wrong**
+
+Measured in a real browser before anything was changed, on a note shaped like
+the one in the screenshot — heading, text, heading:
+
+- **Above.** A note that opens with a heading has nothing in front of it to
+  click into. A click in the space above it did not do nothing; it landed the
+  caret at *offset 1 of the `<h2>`* — **between the fold grip `⠿` and the fold
+  arrow `▼`** — so typing went in among the heading's own chrome.
+- **Below.** A click anywhere in the empty space under the last block put the
+  caret at the **end of that block**. On a note ending in a heading, typing
+  there carried on the heading, in heading style, instead of starting a new
+  line. On desktop that dead space was 515px tall.
+- **The existing escape hatch was broken.** v03.67.01 had added a rule: press
+  Enter at the very start of the note's first heading and get an empty
+  paragraph above it. It tested the caret with `pre.toString()`, which counts
+  the grip and the arrow as two characters — so once `_edColInit()` started
+  injecting that chrome into every heading, the rule could never fire. What
+  happened instead was worse than nothing: Enter split the heading, leaving a
+  **stray chrome-only heading** `⠿▼` behind, which then sprouted its own fold
+  arrow and TOC entry. Nobody had noticed because the feature simply appeared
+  not to work.
+
+**What now happens**
+
+Clicking the empty band above the first block, or below the last one, opens a
+real empty line there and puts the caret in it. Typing at a heading's left
+edge writes at the front of the title instead of inside the chrome. The Enter
+rule works again, on lists and headings alike.
+
+Details that took the measuring to get right:
+
+- That empty space is the editor's own padding and its leftover height, so a
+  click there lands on the editor element itself — for the top, the bottom
+  **and the sides** alike. Only the top and bottom bands act. Beside a block
+  the browser is already right, and is left alone.
+- A note that **starts with a plain paragraph** is left to the browser too: the
+  caret already lands at the start of that paragraph, and inserting a line
+  there would be an unasked-for edit.
+- An empty paragraph already sitting at the edge **is** the line to write on,
+  so the gutter can be clicked any number of times without stacking blank
+  lines.
+- If the note **ends inside a collapsed section**, that section is opened
+  first. Otherwise the new line is a sibling of hidden content and the next
+  `_edColApply()` would hide it again — the owner would have been typing into
+  a line that vanished on the next render.
+- Bound on `click`, not `mousedown`, so a drag that starts in the gutter to
+  select text still selects text.
+- Delegated from `document`, so Pane 3's `#ed` and every float window's
+  `.fw-ed` get one implementation — the E5 rule. **The float window is covered
+  by this round**, which closes part of the coverage hole v04.06 recorded.
+- Nothing in this path calls `_edTouched()`. Opening a line and walking away
+  without typing must not dirty the note on its own; the moment anything is
+  typed, the editor's existing autosave commits the line with the text.
+
+**Measured**
+
+11/11 ship checks, and app checks up from 33 to **40** — seven new ones, all
+driving real mouse clicks, since the caret is real browser state:
+
+- clicking below the last block opens a new line, not the end of the heading;
+- clicking beside a block adds nothing;
+- clicking above a leading heading opens a line in front of it;
+- a note starting with a paragraph is left to the browser;
+- Enter at the start of the first heading writes above it, not into it, and
+  leaves no chrome-only heading behind;
+- typing at a heading's left edge writes at the front of the title, chrome
+  intact;
+- opening a line without typing leaves the note untouched in `DB`.
+
+Verified separately at all three sizes (390×844, 820×1180, 1440×900) and in a
+float window; the saved content carries no chrome.
+
+**A harness trap this round paid for**
+
+A debounced autosave **outlives the editor that armed it**. Typing arms a timer
+of up to `_ED_AUTOSAVE_MAX_MS` (2.5s); `renderP3C()` then builds a brand-new
+`#ed`, but the old timer still fires and commits whatever `#ed` holds at that
+moment. The "a bare click does not save" check failed on exactly this — it was
+measuring the *previous* check's keystrokes, in code that was fine. Written up
+in `tools/README.md`.
+
+**What was NOT done, and why**
+
+- **No sanitiser, no content migration.** Existing notes are untouched; this
+  round only changes where a click puts the caret.
+- **The stray `⠿▼` headings already sitting in saved notes are not cleaned up.**
+  If the broken Enter rule created any before today, they are still there. A
+  migration that deletes headings is exactly the kind of thing invariant I1
+  forbids doing on a guess, and an empty heading is harmless — it can be
+  deleted by hand. Say the word and it can be done as its own round, with a
+  backup of what it removes.
+- **Lists were left with the browser's own behaviour above them.** The C8 Enter
+  rule already covers writing above a leading list; a gutter click above one
+  now opens a line too, but nothing else about lists was touched.
+- **`legacy/**` was not touched**, by rule.

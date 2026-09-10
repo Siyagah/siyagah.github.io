@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.06">
+<meta name="app-version" content="04.07">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2073,7 +2073,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.06</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.07</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <div class="sb-menu-wrap" id="sb-home-wrap">
         <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn bn bi sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -11006,6 +11006,143 @@ function _rangeAtPoint(x,y){
   if(p){const r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true);return r;}
   return null;
 }
+/* ══ v04.07 — A LINE TO WRITE ON, ABOVE AND BELOW THE NOTE ════════════════
+   Two places in a note had no caret you could reach.
+
+   ABOVE: a note that opens with a heading had nothing in front of it to
+   click into. Measured, a click in the space above it landed the caret at
+   offset 1 of the <h2> — BETWEEN the fold grip and the fold arrow — so
+   typing went in among the chrome.
+   BELOW: a click anywhere in the empty space under the last block put the
+   caret at the END of that block. On a note ending in a heading, typing
+   there carried on the heading, in heading style, instead of starting a
+   new line.
+
+   That empty space is the editor's own padding and its leftover height, so
+   a click there lands on the editor itself — measured: e.target is #ed for
+   the top, the bottom AND the side gutters. Only the top and bottom bands
+   act; beside a block the browser already does the right thing.
+
+   Bound on `click`, not `mousedown`, for two reasons: a drag that started
+   in the gutter to select text still works (we bail on a non-collapsed
+   selection), and focus/keyboard on touch stay the browser's job.
+   Delegated from document, so Pane 3's #ed and every float window's .fw-ed
+   get one implementation — the E5 rule.
+
+   Nothing here calls _edTouched(): a click that opens a line and is then
+   abandoned must not dirty the note by itself. The moment the user types,
+   the editor's own `input` autosave commits the line along with the text. */
+
+/* Children that actually occupy space. A collapsed section's siblings carry
+   .ed-col-hidden (display:none) and have empty rects. */
+function _edVisKids(ed){
+  return Array.from(ed.children).filter(function(c){
+    const r=c.getBoundingClientRect();return r.width>0||r.height>0;
+  });
+}
+/* Is this a block the browser cannot land a usable caret in FRONT of? A
+   plain text block is fine — clicking above it already puts the caret at
+   its start. A heading, widget, image, list or quote is not. */
+function _edNeedsLeadIn(el){
+  if(!el||el.nodeType!==1)return false;
+  if(el.getAttribute('contenteditable')==='false')return true;
+  if(el.tagName==='P'||el.tagName==='DIV')
+    return !!el.querySelector('[contenteditable="false"],img,table');
+  return true;
+}
+/* An empty paragraph already sitting there IS the line to write on — never
+   stack a second one on top of it, however often the gutter is clicked. */
+function _edIsBlankLine(el){
+  return !!el&&el.nodeType===1&&(el.tagName==='P'||el.tagName==='DIV')
+    &&!el.querySelector('img,table,[contenteditable="false"]')
+    &&!(el.textContent||'').trim();
+}
+function _edBlankLine(){const p=document.createElement('p');p.innerHTML='<br>';return p;}
+function _edPutCaret(p){
+  const r=document.createRange();r.setStart(p,0);r.collapse(true);
+  const s=window.getSelection();s.removeAllRanges();s.addRange(r);
+  _edRange=r.cloneRange();
+  try{p.scrollIntoView({block:'nearest'});}catch(e){}
+}
+/* If the note ENDS inside a collapsed section, a paragraph appended at the
+   end would be hidden again by the next _edColApply() — the user would be
+   typing into a line that vanishes on the next render. Open that section
+   first, which is the honest answer to "I want to write here". */
+function _edRevealTail(ed){
+  const heads=_edColHeads(ed);if(!heads.length)return;
+  const art=_edArtOf(ed);if(!art||!art.sectionState)return;
+  const last=heads[heads.length-1];
+  if(art.sectionState[last.idx]!==true)return;
+  art.sectionState[last.idx]=false;
+  _edColApply(ed);
+}
+/* How many of a heading's leading children are display-only fold chrome
+   (the ⠿ grip and the ▼ arrow injected by _edColInit). Everything that asks
+   "is the caret at the start of this heading" has to skip them. */
+function _edHeadChromeEnd(h){
+  let i=0;
+  while(i<h.childNodes.length){
+    const n=h.childNodes[i];
+    if(n.nodeType===1&&n.classList&&(n.classList.contains('ed-col-grip')||n.classList.contains('ed-col-arr'))){i++;continue;}
+    break;
+  }
+  return i;
+}
+/* Text between the start of `el` and the caret, with the fold chrome taken
+   out. `pre.toString()` counted the grip and arrow as characters, which is
+   why the v03.67.01 "Enter above the first heading" rule never fired once
+   the chrome existed — see the CHANGELOG for what that produced instead. */
+function _edPrefixText(el,r){
+  const pre=r.cloneRange();
+  try{pre.selectNodeContents(el);pre.setEnd(r.startContainer,r.startOffset);}
+  catch(e){return 'x';}
+  const frag=pre.cloneContents();
+  frag.querySelectorAll('.ed-col-grip,.ed-col-arr,.ed-col-preview').forEach(function(n){n.remove();});
+  return frag.textContent||'';
+}
+/* A click on a heading's left edge lands the caret inside the fold chrome.
+   Move it to the start of the heading's own text, so "click at the front of
+   the title and type" writes at the front of the title. */
+function _edFixHeadCaret(h){
+  const s=window.getSelection();
+  if(!s||!s.rangeCount||!s.isCollapsed)return;
+  const r=s.getRangeAt(0);
+  if(r.startContainer!==h)return;
+  const end=_edHeadChromeEnd(h);
+  if(!end||r.startOffset>=end)return;
+  const nr=document.createRange();nr.setStart(h,end);nr.collapse(true);
+  s.removeAllRanges();s.addRange(nr);_edRange=nr.cloneRange();
+}
+document.addEventListener('click',function(e){
+  const t=e.target;
+  if(!t||t.nodeType!==1)return;
+  /* Caret nudged out of a heading's fold chrome, wherever the heading is. */
+  const h=t.closest&&t.closest('h1,h2,h3,h4');
+  if(h&&_edHost(h)){_edFixHeadCaret(h);return;}
+  /* Gutter click: only the editor element itself, never one of its blocks. */
+  if(!(t.id==='ed'||(t.classList&&t.classList.contains('fw-ed'))))return;
+  if(t.getAttribute('contenteditable')!=='true')return;
+  const s=window.getSelection();
+  if(s&&s.rangeCount&&!s.isCollapsed)return;   /* a drag-select — leave it be */
+  const kids=_edVisKids(t);
+  if(!kids.length)return;                      /* empty note: the browser copes */
+  const y=e.clientY;
+  let p=null;
+  if(y<kids[0].getBoundingClientRect().top){
+    const first=kids[0];
+    if(!_edNeedsLeadIn(first))return;          /* plain text block: native is right */
+    if(_edIsBlankLine(first))p=first;
+    else{p=_edBlankLine();t.insertBefore(p,first);}
+  }else if(y>kids[kids.length-1].getBoundingClientRect().bottom){
+    _edRevealTail(t);
+    const last=t.lastElementChild;
+    if(_edIsBlankLine(last))p=last;
+    else{p=_edBlankLine();t.appendChild(p);}
+  }else return;                                /* beside a block — not ours */
+  t.focus({preventScroll:true});
+  _edPutCaret(p);
+});
+
 function initRichPaste(ed){
   /* Retrofit cards (incl. ones saved before this feature) so they're draggable
      and carry move handles. Handles only render inside the editor (CSS). */
@@ -11170,8 +11307,7 @@ function initRichPaste(ed){
     if(!list||(list.tagName!=='OL'&&list.tagName!=='UL'))return;
     if(list.firstElementChild!==li)return;               // only the first item
     const r=sel.getRangeAt(0);
-    const pre=r.cloneRange();pre.selectNodeContents(li);pre.setEnd(r.startContainer,r.startOffset);
-    if(pre.toString().length!==0)return;                 // caret not at the very start
+    if(_edPrefixText(li,r).length!==0)return;             // caret not at the very start
     e.preventDefault();
     const p=document.createElement('p');p.innerHTML='<br>';
     list.parentNode.insertBefore(p,list);
@@ -11194,8 +11330,10 @@ function initRichPaste(ed){
     if(!h||!ed.contains(h))return;
     if(ed.firstElementChild!==h)return;                  // only the very first element in the note
     const r=sel.getRangeAt(0);
-    const pre=r.cloneRange();pre.selectNodeContents(h);pre.setEnd(r.startContainer,r.startOffset);
-    if(pre.toString().length!==0)return;                 // caret not at the very start
+    /* v04.07 — was pre.toString(), which counted the fold grip and arrow as
+       characters, so this rule never fired and Enter split the heading into
+       a stray chrome-only heading instead. */
+    if(_edPrefixText(h,r).length!==0)return;              // caret not at the very start
     e.preventDefault();
     const p=document.createElement('p');p.innerHTML='<br>';
     ed.insertBefore(p,h);

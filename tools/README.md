@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 33 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 40 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -49,6 +49,10 @@ or quietly lose the notebook, none of which need a browser:
 - **`mergeDB()` unions both devices** and keeps the newest edit whichever side
   it came from — this is the sync invariant, measured directly;
 - a deleted note still leaves the list and still lands in Trash;
+- **the caret can reach the top and the bottom of a note** — a click in the
+  gutter above a leading heading and below the last block each open a real
+  line to write on, a click beside a block opens nothing, and neither path
+  dirties the note until something is actually typed (v04.07);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -89,6 +93,12 @@ assertions miss.
   making.** The harness matches them against the real failed-request URLs so
   they are not counted, while a genuine 404 (which reads "status of 404")
   still is.
+- **A debounced autosave outlives the editor that armed it.** Typing arms a
+  timer of up to `_ED_AUTOSAVE_MAX_MS` (2.5s); `renderP3C()` then builds a
+  brand-new `#ed`, but the old timer still fires and commits whatever `#ed`
+  holds *at that moment*. So a check that asserts "this action did NOT save"
+  must first wait past that ceiling, or it measures the previous check's
+  keystrokes and reads as a failure in code that is fine.
 - **Firebase must be blocked, not just absent.** With no sync config in
   localStorage, `initAuth()` returns early and the login overlay stays hidden —
   which is why the app is fully drivable here with no sign-in.
