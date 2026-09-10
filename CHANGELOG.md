@@ -521,3 +521,119 @@ Two earlier checks were **updated in place, not deleted**:
   was to tell them apart, not to reduce them.
 - **No sync, storage or export path was touched.** I1–I4 are untouched by a
   round that changes four pieces of button markup and one CSS fold stage.
+
+## v04.11 — one ⋯ for the destructive three, and boxes round every button (10 September 2026)
+
+Four asks and one question, from a screenshot of the note toolbar.
+
+**The question first: what is the `⋯` button for?**
+
+It was for nothing. Its `onclick` passed a **bare `curA.id`** — and `curA` is a
+`const` local to `renderP3H()`, so by the time anyone clicked, the inline
+handler threw `ReferenceError: curA is not defined` and the button did not
+open anything. Right-click on it worked, because `oncontextmenu` interpolated
+the id properly; left-click, which is how anyone would use it, was dead. The
+same bare reference sat on the contact-form header's `⋯`. Both interpolated
+now.
+
+That is a shipped defect nobody had reported, found only because the owner
+asked what the button was for. What it is *for*: Rename title, both pop-ups,
+Note History, Make a copy, NTI Types, Favourites, Pin, Archive, Finish, Add to
+Tab, Add to Journal event, Reminder, Tags, Folders, My Favourites,
+Murāja'ah, practice, and Delete.
+
+**Copy, Archive and Delete under one button**
+
+All three left the row. All three were already in the `⋯` menu, so `⋯` *is*
+the one button — no new control was invented for it. Its tooltip says so now
+("More — copy, archive, delete, rename, history, tags, folders, reminders,
+favourites") instead of the anonymous "More options" it wore while those
+buttons still sat beside it.
+
+`📦 Archive` stays on **edit mode's** toolbar, which has no `⋯` to reach it
+from. The `⋯` palette that the phone folds into mirrors the row, so Copy and
+Delete left it too — one tap further in, through `⋯`. Listing Delete one tap
+from a phone toolbar while claiming it had been tidied away would be the worst
+of both.
+
+**Attach on the bar, Note Type under it**
+
+`📎 Attach` is permanently on the row. `🏷 Types` came off it and is the first
+row of the Attach menu, above a separator: **Note Type (n)** / Folder (n) / My
+Journal / MyDatabase — what the note *is*, then where it *lives*. The note's
+own coloured type chip stays on the row, because the chip is information, not
+a control.
+
+One trap: `openNtiPicker()` positions itself against whatever element it is
+handed, so it is called **before** `hideCtx()` — a hidden menu row measures
+0×0 and the picker would open in the top-left corner.
+
+**Every button in its own rounded box**
+
+The read toolbar's buttons all carry `.bn`, which is
+`background:none!important; border-color:transparent!important` — nine
+floating glyphs with no edges. They now get a white ground, a visible border
+and a 9px radius, scoped to `#p3h:not(.editing)` and nothing else: `.bn` is
+used across the sidebar, the modals and every pane, and bordering it globally
+would redraw half the app. The coloured type chips are left alone — their
+colour is the information.
+
+**What the trimming bought, measured**
+
+Four buttons left the row (`⧉`, `🗑`, `🏷 Types`, `📦`). The full row now wants
+**732px** of Pane 3 with the Multi/Single words on, down from 925px. A 1440
+window gives Pane 3 710px, so the words are still **22px short** there and
+fold to icons; from about a **1465px** window up they show. Not shaved to fit:
+22px would have meant an 11.5px label in a 13px row, and squeezing a control
+to force a fit is what cost this app its type chips in v04.08.
+
+The fold order reverses v04.10's: the words fold **first** again. v04.10 put
+them ahead of the type group because the group was the least-missed thing on
+the row; it no longer is, because `📎 Attach` is what `tight` folds and Attach
+staying on the bar is an explicit instruction.
+
+**Measured**
+
+11/11 ship checks, and app checks from 62 to **67**.
+
+The new ones assert: Copy, Archive and Delete are off the row and all three are
+in `⋯`; `⋯` names what it holds; Attach is on the row, Types is not, and the
+chip still shows; every visible button on the row is drawn in a box; and —
+the one that matters most — **every button on the row is clicked for real and
+must not throw**. That last check was verified by putting the `curA` bug back:
+it fails, naming the button and the error. Section 2's "every inline handler is
+a real function" could never catch it, because the function name was real and
+it was an *argument* that did not exist.
+
+Two earlier checks were **updated in place, not deleted**:
+
+- "the Types picker and Archive still work from the toolbar" clicked
+  `#p3h .kind-arch-btn`, which this round deliberately removed from read mode,
+  and threw. It now opens Attach, opens Note Type from inside it, checks the
+  picker is anchored to the menu row rather than the corner, and archives from
+  `⋯`.
+- "the palettes list the folded buttons" clicked "Make a copy" in the `⋯`
+  palette, which this round deliberately moved. It now goes through `⋯`,
+  asserts copy/archive/delete are all in there, and still makes a real copy.
+
+**Two things the measuring caught**
+
+- **An inline handler can name a real function and still be dead.** The `⋯`
+  button's argument, not its function, was missing. A check that reads the
+  source for handler names cannot see it; only clicking can.
+- **An HTML comment inside the inline `<script>` stops the app booting.**
+  `<!--` puts the HTML parser into its script-escaped state. The note about
+  the `curA` fix was first written as `<!-- ... -->` inside a template literal
+  and the whole app failed to start. It is a `/* */` comment now.
+
+**What was NOT done, and why**
+
+- **The words still do not fit a 1440 laptop**, by 22px. Reported rather than
+  forced.
+- **`⇅` section tools stayed on the row.** It is a per-note view control and
+  was not part of the ask.
+- **Edit mode's toolbar keeps `🏷 Types` and `📦 Archive`** through
+  `kindBarHTML()`'s edit branch. It has no `⋯`, so moving them there would
+  have made both unreachable while editing.
+- **No sync, storage or export path was touched.** I1–I4 are untouched by a
+  round that moves buttons between a row and a menu.

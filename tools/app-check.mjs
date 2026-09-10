@@ -386,19 +386,40 @@ r.check(popBtns.length === 3 && collapsed.clp === 2 && collapsed.hidden && expan
   'Collapse all / Expand all still work from the section-tools popover',
   `${popBtns.length} actions · collapsed ${collapsed.clp} · expanded back to ${expanded}`);
 
-/* Every control that moved must still DO its job from its new home. */
-await page.evaluate(() => document.querySelector('#p3h .nti-picker-btn').click());
+/* Every control that moved must still DO its job from its new home.
+   UPDATED for v04.11, which deliberately moved both controls this asserted:
+   🏷 Types is the first row of the 📎 Attach menu now, and 📦 Archive left the
+   read toolbar for ⋯ More. Clicking `#p3h .kind-arch-btn` threw here — the
+   button is genuinely gone from read mode, which is the change, not a break.
+   What must still hold is that both still WORK, from their new homes. */
+await page.evaluate(() => document.querySelector('#p3h .nti-attach-btn').click());
 await page.waitForTimeout(250);
-const typesOpen = await page.evaluate(() => !!document.getElementById('nti-picker')?.classList.contains('open'));
-await page.evaluate(() => closeNtiPicker());
+const attachRows = await page.evaluate(() => (document.getElementById('ctx')?.textContent || ''));
+await page.evaluate(() => {
+  [...document.querySelectorAll('#ctx .ci')].find((c) => /Note Type/.test(c.textContent))?.click();
+});
+await page.waitForTimeout(300);
+const typesOpen = await page.evaluate(() => {
+  const p = document.getElementById('nti-picker');
+  if (!p || !p.classList.contains('open')) return null;
+  const b = p.getBoundingClientRect();
+  /* It is positioned from the menu row it was clicked on. A row measured
+     after the menu was hidden would be 0×0 and put the picker in the corner. */
+  return { open: true, left: Math.round(b.left), top: Math.round(b.top) };
+});
+await page.evaluate(() => { closeNtiPicker(); hideCtx(); });
 const archBefore = await page.evaluate(() => !!DB.articles.find((a) => a.id === 'a1').archived);
-await page.evaluate(() => document.querySelector('#p3h .kind-arch-btn').click());
+await page.evaluate(() => {
+  window.showArtCtx({ clientX: 40, clientY: 60, preventDefault() {}, stopPropagation() {} }, 'a1');
+  [...document.querySelectorAll('#ctx .ci')].find((c) => /Archive/.test(c.textContent)).click();
+});
 await page.waitForTimeout(300);
 const archAfter = await page.evaluate(() => !!DB.articles.find((a) => a.id === 'a1').archived);
-await page.evaluate((v) => { const a = DB.articles.find((x) => x.id === 'a1'); a.archived = v; }, archBefore);
-r.check(typesOpen && archBefore !== archAfter,
-  'the Types picker and Archive still work from the toolbar',
-  `Types picker opened ${typesOpen} · archive ${archBefore} → ${archAfter}`);
+await page.evaluate((v) => { const a = DB.articles.find((x) => x.id === 'a1'); a.archived = v; window.render(); }, archBefore);
+r.check(/Note Type/.test(attachRows) && /Folder/.test(attachRows)
+  && typesOpen && typesOpen.top > 10 && archBefore !== archAfter,
+  'Note Type opens from the Attach menu, anchored to its row, and Archive works from ⋯',
+  `Attach menu "${attachRows.replace(/\s+/g, ' ').slice(0, 60)}" · picker ${typesOpen ? `at ${typesOpen.left},${typesOpen.top}` : 'DID NOT OPEN'} · archive ${archBefore} → ${archAfter}`);
 
 /* The landing page has no Pane-3 toolbar to carry Home, so it keeps its row. */
 await page.evaluate(() => { ST.article = null; ST.editing = false; window.render(); });
@@ -508,20 +529,34 @@ r.check(phone.minH >= 42 && phone.minW >= 42 && desk.minH >= 34 && desk.minW >= 
       offersPopout: /Pop-Up/i.test(p.textContent),
       minH: Math.min(...[...p.querySelectorAll('.p3h-pal-btn')].map((b) => Math.round(b.getBoundingClientRect().height))) };
   });
+  /* UPDATED for v04.11. This clicked "Make a copy" in the palette; the palette
+     mirrors the row, and Make a copy / Archive / Delete left the row for ⋯
+     More, so that row is gone by design and the click threw. What must still
+     hold is that the palette REACHES them — one tap further in, through ⋯ —
+     and that a copy really gets made at the end of it. */
   const nBefore = await s.page.evaluate(() => DB.articles.length);
-  await s.page.evaluate(() => [...document.querySelectorAll('#p3h-pal .p3h-pal-btn')].find((b) => /Make a copy/.test(b.textContent)).click());
+  await s.page.evaluate(() => [...document.querySelectorAll('#p3h-pal .p3h-pal-btn')].find((b) => /^⋯|More/.test(b.textContent)).click());
+  await s.page.waitForTimeout(300);
+  const more = await s.page.evaluate(() => {
+    const t = document.getElementById('ctx')?.textContent || '';
+    return { copy: /Make a copy/.test(t), arch: /Archive/.test(t), del: /Delete/.test(t) };
+  });
+  await s.page.evaluate(() => [...document.querySelectorAll('#ctx .ci')].find((c) => /Make a copy/.test(c.textContent)).click());
   await s.page.waitForTimeout(500);
   const nAfter = await s.page.evaluate(() => DB.articles.length);
   await s.page.click('#p3h-nti-grp');
   await s.page.waitForTimeout(250);
   const ntiPal = await s.page.evaluate(() => {
     const p = document.getElementById('p3h-pal');
-    return { types: !!p && /Types/.test(p.textContent), attach: !!p && /Attach/.test(p.textContent) };
+    /* 🏷 Types left the bar for the Attach menu in v04.11, so the type palette
+       carries the chips and 📎 Attach — Types is one tap inside Attach. */
+    return { chips: !!p && /No type|nti-chip/.test(p.innerHTML), attach: !!p && /Attach/.test(p.textContent) };
   });
-  r.check(pal.open && pal.labels.length >= 6 && !pal.offersPopout && pal.minH >= 42
-    && nAfter === nBefore + 1 && ntiPal.types && ntiPal.attach,
+  r.check(pal.open && pal.labels.length >= 5 && !pal.offersPopout && pal.minH >= 42
+    && more.copy && more.arch && more.del
+    && nAfter === nBefore + 1 && ntiPal.chips && ntiPal.attach,
     'the palettes list the folded buttons with words, at a tappable size, and they work',
-    `${pal.labels.length} actions (${pal.minH}px tall) · pop-out offered on a phone: ${pal.offersPopout} · copy made ${nBefore}→${nAfter} · type palette has Types ${ntiPal.types} / Attach ${ntiPal.attach}`);
+    `${pal.labels.length} actions (${pal.minH}px tall) · pop-out offered on a phone: ${pal.offersPopout} · ⋯ holds copy ${more.copy}/archive ${more.arch}/delete ${more.del} · copy made ${nBefore}→${nAfter} · type palette chips ${ntiPal.chips} / Attach ${ntiPal.attach}`);
   await s.close();
 }
 
@@ -720,6 +755,113 @@ await app.close();
   r.check(menu.multi && menu.single && !menu.badGlyph,
     'the right-click menu carries both full names, and the 🗐 glyph v04.09 replaced is gone',
     `Multi ${menu.multi} · Single ${menu.single} · 🗐 still there ${menu.badGlyph}`);
+  await s2.close();
+}
+
+/* ── 6f. v04.11: three actions under one button, and boxes round them all ─ */
+{
+  const s2 = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s2.page.evaluate(() => { const a = DB.articles.find((x) => x.id === 'a1');
+    a.content = '<h2>Alpha</h2><p>a</p>'; selArt('a1'); });
+  await s2.page.waitForTimeout(450);
+
+  /* Make a copy, Archive and Delete came off the row. The only acceptable
+     version of that is: gone from the row AND all three present in ⋯ More. */
+  const consolidated = await s2.page.evaluate(() => {
+    const el = document.getElementById('p3h');
+    const vis = (n) => !!n && n.offsetParent !== null;
+    const onRow = [...el.querySelectorAll('button')].filter(vis)
+      .map((b) => (b.title || '') + ' ' + b.textContent).join(' | ');
+    const more = [...el.querySelectorAll('button')].filter(vis).find((b) => /^More/.test(b.title || ''));
+    more?.click();
+    const menu = document.getElementById('ctx')?.textContent || '';
+    return {
+      copyOnRow: /Make a copy/.test(onRow), delOnRow: /🗑/.test(onRow), archOnRow: /Archive|📦/.test(onRow),
+      moreExists: !!more, moreHint: more?.title || '',
+      inMenu: { copy: /Make a copy/.test(menu), arch: /Archive/.test(menu), del: /Delete/.test(menu) },
+    };
+  });
+  await s2.page.evaluate(() => hideCtx());
+  r.check(!consolidated.copyOnRow && !consolidated.delOnRow && !consolidated.archOnRow
+    && consolidated.inMenu.copy && consolidated.inMenu.arch && consolidated.inMenu.del,
+    'Copy, Archive and Delete are off the row and all three sit under ⋯ More',
+    `on the row: copy ${consolidated.copyOnRow} / archive ${consolidated.archOnRow} / delete ${consolidated.delOnRow}` +
+    ` · in ⋯: copy ${consolidated.inMenu.copy} / archive ${consolidated.inMenu.arch} / delete ${consolidated.inMenu.del}`);
+  /* ⋯ was anonymous "More options" while those buttons still sat beside it.
+     Now that it is where they went, it has to say so — the owner asked what
+     the three-dot button was even for. */
+  r.check(/copy/i.test(consolidated.moreHint) && /archive/i.test(consolidated.moreHint)
+    && /delete/i.test(consolidated.moreHint),
+    'the ⋯ button names what it now holds instead of saying "More options"',
+    consolidated.moreHint || '(no title)');
+
+  /* 📎 Attach stays on the row; 🏷 Types is one tap inside it. */
+  const attach = await s2.page.evaluate(() => {
+    const el = document.getElementById('p3h');
+    const vis = (n) => !!n && n.offsetParent !== null;
+    const at = el.querySelector('.nti-attach-btn');
+    return { onRow: vis(at), typesOnRow: !!el.querySelector('#p3h .nti-picker-btn:not(.nti-attach-btn):not(.nti-save)'),
+      chip: vis(el.querySelector('.nti-chip, .nti-no-type')) };
+  });
+  r.check(attach.onRow && !attach.typesOnRow && attach.chip,
+    'Attach is on the row, Types is not, and the note’s own type chip still shows',
+    `Attach on row ${attach.onRow} · a separate Types button ${attach.typesOnRow} · chip visible ${attach.chip}`);
+
+  /* Every button in its own box — the row was nine borderless glyphs. */
+  const boxes = await s2.page.evaluate(() => {
+    const el = document.getElementById('p3h');
+    const vis = (n) => n.offsetParent !== null;
+    const btns = [...el.querySelectorAll('button')].filter(vis);
+    const clear = btns.filter((b) => {
+      const c = getComputedStyle(b);
+      /* transparent / zero-width borders and no background is the old look */
+      return (c.borderTopStyle === 'none' || parseFloat(c.borderTopWidth) < 0.5
+        || c.borderTopColor === 'rgba(0, 0, 0, 0)' || c.borderTopColor === 'transparent')
+        && (c.backgroundColor === 'rgba(0, 0, 0, 0)' || c.backgroundColor === 'transparent');
+    });
+    return { n: btns.length, clear: clear.map((b) => (b.title || b.textContent).trim().slice(0, 18)),
+      radius: getComputedStyle(btns[0]).borderRadius };
+  });
+  r.check(boxes.clear.length === 0,
+    'every button on the row is drawn in its own rounded box',
+    boxes.clear.length ? `still borderless: ${boxes.clear.join(', ')}`
+      : `${boxes.n} buttons, radius ${boxes.radius}`);
+  await s2.close();
+}
+
+/* Every button on the row must actually DO something when clicked.
+   This is the check that would have caught the ⋯ button: its onclick passed a
+   bare `curA.id`, a const local to renderP3H(), so the handler threw
+   ReferenceError and the button was dead. Section 2's "every inline handler is
+   a real function" cannot see this — the function name (showArtCtx) is real;
+   it is an ARGUMENT that does not exist. So click them for real and watch for
+   a page error. Each click re-renders from a clean state first, because some
+   of these buttons navigate or open editors. */
+{
+  const s2 = await openApp({ viewport: { width: 1600, height: 900 }, db: seedDB() });
+  const thrown = [];
+  s2.page.on('pageerror', (e) => thrown.push(String(e).split('\n')[0]));
+  const n = await s2.page.evaluate(() => {
+    selArt('a1');
+    return [...document.querySelectorAll('#p3h button')].filter((b) => b.offsetParent !== null).length;
+  });
+  await s2.page.waitForTimeout(300);
+  const dead = [];
+  for (let i = 0; i < n; i++) {
+    const label = await s2.page.evaluate((idx) => {
+      ST.editing = false; ST.article = 'a1'; window.render();
+      const b = [...document.querySelectorAll('#p3h button')].filter((x) => x.offsetParent !== null)[idx];
+      if (!b) return null;
+      const name = (b.title || b.textContent || '?').trim().slice(0, 22);
+      b.click();
+      return name;
+    }, i);
+    await s2.page.waitForTimeout(120);
+    if (label && thrown.length) { dead.push(`${label} → ${thrown.pop()}`); }
+    await s2.page.evaluate(() => { try { hideCtx(); closeNtiPicker(); closeFloatPop('p3h-pal'); closeAllPopouts(); } catch (e) {} });
+  }
+  r.check(dead.length === 0, `every button on the note toolbar does something when clicked (${n} buttons)`,
+    dead.length ? `these threw and do nothing: ${dead.join(' · ')}` : `${n} clicked, no handler threw`);
   await s2.close();
 }
 

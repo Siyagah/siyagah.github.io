@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.10">
+<meta name="app-version" content="04.11">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1848,6 +1848,29 @@ sup.ann-sup:hover{text-decoration:underline}
   #p3h:not(.editing) .kind-arch-btn{font-size:13px;padding:8px 13px;min-height:42px}
   #p3h:not(.editing) .kind-arch-btn{min-width:42px}
 }
+/* ══ v04.11 — EVERY BUTTON IN ITS OWN ROUNDED BOX ═════════════════════════
+   The read toolbar's buttons all carry .bn, which is
+   `background:none!important; border-color:transparent!important` — so the
+   row was nine floating glyphs with no edges, and nothing said where one
+   button ended and the next began. The owner asked for the outlined buttons
+   from the mock-up, so the row gets them.
+   Scoped to #p3h:not(.editing) and nothing else: .bn is used across the
+   sidebar, the modals and every pane, and giving it a border globally would
+   redraw half the app. ── */
+#p3h:not(.editing) .btn.bn{
+  background:var(--white)!important;
+  border-color:var(--border2)!important;
+  border-radius:9px;
+}
+#p3h:not(.editing) .btn.bn:hover{background:#EDEADF!important;border-color:var(--t3)!important}
+/* Edit keeps its solid green; the two pop-up buttons keep their tint but sit
+   in the same box as everything else, so the row reads as one set. */
+#p3h:not(.editing) .p3h-edit-btn{border-radius:9px}
+#p3h:not(.editing) .nti-chip,#p3h:not(.editing) .nti-picker-btn{border-radius:9px}
+/* The type chips are coloured pills and must not be turned into outlines —
+   they are the one thing on the row that is information rather than a
+   control, and their colour IS the information. */
+
 /* ══ v04.10 — THE TWO POP-UP BUTTONS SAY WHICH IS WHICH ═══════════════════
    They were ⊡ and ⛶: two faint square glyphs sitting next to a third square
    glyph (⧉ Make a copy), telling you nothing without a hover. Now each one
@@ -2189,7 +2212,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.10</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.11</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <div class="sb-menu-wrap" id="sb-home-wrap">
         <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn bn bi sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3405,7 +3428,7 @@ function renderP3H(){
       +`<button class="btn" onclick="logInteraction('${curA.id}')">📋 Log</button>`
       +`<button class="btn" onclick="logContactAction(event,'${curA.id}')">📞 Action</button>`
       +`<button class="btn bp" onclick="startEdit()">✏ Edit</button>`
-      +`<button class="btn bn bi" title="More options" oncontextmenu="event.preventDefault();showArtCtx(event,'${curA.id}')" onclick="showArtCtx({clientX:event.clientX,clientY:event.clientY,preventDefault:()=>{},stopPropagation:()=>{}},curA.id)">⋯</button>`;
+      +`<button class="btn bn bi" title="More options" oncontextmenu="event.preventDefault();showArtCtx(event,'${curA.id}')" onclick="showArtCtx({clientX:event.clientX,clientY:event.clientY,preventDefault:()=>{},stopPropagation:()=>{}},'${curA.id}')">⋯</button>`;
     return;
   } else if(curA){
     el.classList.remove('editing');  /* restore row layout for view mode */
@@ -3426,8 +3449,14 @@ function renderP3H(){
        row exists for. */
     h=_p3HomeBtnHTML()+h;
     h+='<span class="tb-sep"></span><div class="p3h-nti-inline">'+kindBarHTML(curA,true)+'</div>';
-    h+='<button class="btn bn bi p3h-grp" id="p3h-nti-grp" onclick="_p3NtiPalette(event)" title="Note type, attach and archive">🏷<span class="grp-car">▾</span></button>';
+    h+='<button class="btn bn bi p3h-grp" id="p3h-nti-grp" onclick="_p3NtiPalette(event)" title="Note type and attach">🏷<span class="grp-car">▾</span></button>';
     h+=_colToolbarBtnHTML();
+    /* v04.11 — the ⋯ button's onclick below passed a BARE `curA.id`. curA is a
+       const local to renderP3H(), so by the time anyone clicked, the inline
+       handler threw ReferenceError and the button did nothing at all. Right-
+       click worked, because oncontextmenu interpolated the id properly. Found
+       while answering the owner's question "what is the three-dot button for?"
+       — the honest answer was "nothing". Interpolated in both now. */
     h+=`<div class="p3h-spacer"></div>
       <div class="p3h-actions">
       <button class="btn bn bi" onclick="_p3Navigate(-1)" title="Previous note in this folder">‹</button>
@@ -3436,9 +3465,7 @@ function renderP3H(){
       <button class="btn bn bi" onclick="quickCapture()" title="New note (Primary folder) — opens in its own pop-out window">✚</button>
       ${_popBtnHTML(curA.id,'float','btn bn',true)}
       ${_popBtnHTML(curA.id,'panel','btn bn',true)}
-      <button class="btn bn bi" onclick="duplicateNote('${curA.id}')" title="Make a copy">⧉</button>
-      <button class="btn bn bi" title="More options" oncontextmenu="event.preventDefault();showArtCtx(event,'${curA.id}')" onclick="showArtCtx({clientX:event.clientX,clientY:event.clientY,preventDefault:()=>{},stopPropagation:()=>{}},curA.id)">⋯</button>
-      <button class="btn bd bi" onclick="confirmDel('art','${curA.id}')">🗑</button></div>
+      <button class="btn bn bi" title="${esc(_moreBtnHint())}" oncontextmenu="event.preventDefault();showArtCtx(event,'${curA.id}')" onclick="showArtCtx({clientX:event.clientX,clientY:event.clientY,preventDefault:()=>{},stopPropagation:()=>{}},'${curA.id}')">⋯</button></div>
       <button class="btn bn bi p3h-grp" id="p3h-act-grp" onclick="_p3ActPalette(event)" title="Note actions">⋯<span class="grp-car">▾</span></button>
       <button class="btn bp p3h-edit-btn" onclick="startEdit()">✏️ Edit</button>`;
   } else {
@@ -5887,7 +5914,16 @@ function openAttachMenu(ev,aid){
   const inEdit=ST.editing&&ST.article===aid;
   const fCount=_attachCount(a);
   const m=document.getElementById('ctx');
-  m.innerHTML=(inEdit
+  /* v04.11 — Note Type leads this menu. It is what the note IS, where the
+     three rows under it are where the note LIVES, so it gets its own group
+     above the separator. openNtiPicker() positions against whatever element
+     it is handed, so the menu row anchors it exactly as the old bar button
+     did — which is why it is called BEFORE hideCtx(): a hidden row measures
+     0×0 and the picker would open in the top-left corner. */
+  const kindN=artKinds(a).length;
+  m.innerHTML=`<div class="ci" onclick="openNtiPicker('${aid}',this);hideCtx()">🏷 Note Type${kindN?' ('+kindN+')':''}</div>`
+    +`<div class="csep"></div>`
+    +(inEdit
       ?`<div class="ci" onclick="hideCtx();openPicker()">📁 Folder${fCount?' ('+fCount+')':''}</div>`
       :`<div class="ci" style="opacity:.55" onclick="hideCtx();toast('Open this note for editing to change its folders')">📁 Folder${fCount?' ('+fCount+')':''}</div>`)
     +`<div class="ci" onclick="hideCtx();openJournalPicker('${aid}')">📓 My Journal</div>`
@@ -10498,29 +10534,22 @@ function _p3FitToolbar(){
      of that and the action group 312. The order below folds the least-missed
      group first and keeps the note's own type chip visible longest, because
      the chip is information, not just a control. */
-  el.classList.add('p3h-tight');             /* Types / Attach / Archive → 🏷 palette */
-  if(fits())return;
-  /* v04.10 — the two pop-up buttons wear their names ("Multi", "Single"),
-     which cost the row 71px it did not spend before. They fold AFTER the type
-     group and BEFORE anything else, and that position was MEASURED on this
-     row, not guessed: it wants 925px of pane with everything inline and the
-     words on, 854px with the words off, 737px with the words on and the type
-     group behind its 🏷 palette, 710px with both folded.
-     So the words survive from 737px of pane upward — which on the three-pane
-     desktop layout is a window of about 1470px or wider. A 1440 window gives
-     Pane 3 only 710px and falls 27px short, and no pixel-shaving fixes that
-     honestly: squeezing a control to force a fit is exactly what cost this
-     app the type chips in v04.08.
-     Putting the words ahead of the type group is what buys the 737–925px
-     band; below 737px they go, and only then does anything else move, because
-     dropping a word loses nothing — the drawn icon, the tooltip, the ⋯ palette
-     and the right-click menu all still name the thing — while every fold under
-     this one takes a whole group off the row. The trade is a pane of 854–925px,
-     where v04.09 kept the type group inline and this folds it to keep the
-     words: both do not fit, and the words are what was asked for. */
+  /* v04.11 — the words fold FIRST again, reversing v04.10's order. That order
+     put the words ahead of the type group because the group was the least
+     missed thing on the row. It no longer is: 📎 Attach is the one control the
+     owner asked to keep permanently on the bar, and it is what `tight` folds
+     away. A word is still the cheapest thing to lose. */
   el.classList.add('p3h-nolbl');             /* Multi / Single lose their words */
   if(fits())return;
-  el.classList.add('p3h-tighter');           /* ‹ › 🔍 ✚ ⧉ ⋯ 🗑    → ⋯ palette */
+  el.classList.add('p3h-tight');             /* 📎 Attach + status → 🏷 palette */
+  if(fits())return;
+  /* v04.10 — the two pop-up buttons wear their names ("Multi", "Single"),
+     which cost the row 71px it did not spend before. Dropping them loses
+     nothing — the drawn icon, the tooltip, the ⋯ palette and the right-click
+     menu all still name the thing — while every fold under this one takes a
+     whole group off the row. See v04.11's note above for why they now go
+     first rather than after the type group. */
+  el.classList.add('p3h-tighter');           /* ‹ › 🔍 ✚ Multi Single ⋯ → ⋯ palette */
   if(fits())return;
   el.classList.add('p3h-tightest');          /* the type chip itself, last of all */
 }
@@ -10528,6 +10557,13 @@ function _p3FitToolbar(){
 function _p3PalBtn(icon,label,onclick,cls){
   return '<button class="p3h-pal-btn'+(cls?' '+cls:'')+'" onclick="closeFloatPop(\'p3h-pal\');'+onclick+'">'
     +'<span class="pal-ico">'+icon+'</span><span class="pal-lbl">'+label+'</span></button>';
+}
+/* v04.11 — ⋯ is the one button the owner asked for: Make a copy, Archive and
+   Delete came off the bar and live in this menu, which already carried all
+   three. The tooltip has to say so, or ⋯ looks like the same anonymous
+   "more" it was when those buttons were still sitting next to it. */
+function _moreBtnHint(){
+  return 'More — copy, archive, delete, rename, history, tags, folders, reminders, favourites';
 }
 function _p3ActPalette(ev){
   const a=DB.articles.find(x=>x.id===ST.article);if(!a)return;
@@ -10542,9 +10578,12 @@ function _p3ActPalette(ev){
     h+=_p3PalBtn(_popIcoHTML('float'),_popKindLbl('float'),"openNotePopup('"+id+"','float')",'pal-pop pop-multi')
       +_p3PalBtn(_popIcoHTML('panel'),_popKindLbl('panel'),"openNotePopup('"+id+"','panel')",'pal-pop pop-single');
   }
-  h+=_p3PalBtn('\u29C9','Make a copy',"duplicateNote('"+id+"')")
-    +_p3PalBtn('⋯','More options',"showArtCtx({clientX:0,clientY:60,preventDefault:()=>{},stopPropagation:()=>{}},'"+id+"')")
-    +_p3PalBtn('🗑','Delete this note',"confirmDel('art','"+id+"')",'pal-danger');
+  /* v04.11 — this palette exists to hold what folded off the ROW, so it holds
+     what the row holds. Make a copy and Delete are no longer on the row: they
+     are in ⋯ More with Archive, one tap further in, which is the grouping the
+     owner asked for. Listing them here as well would put Delete one tap from
+     a phone toolbar while claiming they had been tidied away. */
+  h+=_p3PalBtn('⋯','More — copy, archive, delete…',"showArtCtx({clientX:0,clientY:60,preventDefault:()=>{},stopPropagation:()=>{}},'"+id+"')");
   _openFloatPop('p3h-pal',ev.currentTarget,h);
 }
 function _p3NtiPalette(ev){
@@ -18934,12 +18973,20 @@ function kindBarHTML(a,bare){
     statusHTML=`<span class="kind-done">✓</span>`
       +`<button class="kind-reopen" onclick="unfinishNote('${a.id}')" title="Re-open">↺</button>`;
   }
-  const archIcon=a.archived
-    ?`<button class="kind-arch-btn archived" onclick="toggleArchive('${a.id}')" title="Unarchive">📤</button>`
-    :`<button class="kind-arch-btn" onclick="toggleArchive('${a.id}')" title="Archive">📦</button>`;
+  /* v04.11 — 📦 Archive left the bar. It sits under ⋯ More with Make a copy
+     and Delete, which is where the owner asked for all three, and where the
+     right-click menu already carried them. Edit mode keeps its own button
+     because that toolbar has no ⋯ to reach it from. */
+  const archIcon=(ST.editing&&ST.article===a.id)
+    ? (a.archived
+      ?`<button class="kind-arch-btn archived" onclick="toggleArchive('${a.id}')" title="Unarchive">📤</button>`
+      :`<button class="kind-arch-btn" onclick="toggleArchive('${a.id}')" title="Archive">📦</button>`)
+    : '';
+  /* v04.11 — 🏷 Types left the bar too, and is the first row of the 📎 Attach
+     menu now: everything that says where a note belongs and what it is, under
+     one button, with 📎 Attach itself permanently on the bar. */
   const inner=`<div class="nti-chips">${chips||'<span class="nti-no-type">No type</span>'}</div>`
-    +`<button class="nti-picker-btn" onclick="openNtiPicker('${a.id}',this)" title="Add / manage NTI types">🏷 Types</button>`
-    +`<button class="nti-picker-btn" onclick="openAttachMenu(event,'${a.id}')" title="Attach: Folder · My Journal · MyDatabase">📎 Attach${_attachCount(a)?' ('+_attachCount(a)+')':''} ▾</button>`
+    +`<button class="nti-picker-btn nti-attach-btn" onclick="openAttachMenu(event,'${a.id}')" title="Note Type · Folder · My Journal · MyDatabase">📎 Attach${_attachCount(a)?' ('+_attachCount(a)+')':''} ▾</button>`
     +((ST.editing&&ST.article===a.id)?`<button class="nti-picker-btn nti-editbtn nti-save" onclick="saveArt()" title="Save note">💾 Save</button>`:'')
     +`<div class="kind-act">${statusHTML}${archIcon}</div>`;
   return bare?inner:`<div class="kind-bar">${inner}</div>`;

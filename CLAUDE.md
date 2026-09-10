@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.10.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.11.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,12 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.11** (10 Sep 2026) — `⧉ Copy`, `📦 Archive` and `🗑 Delete` left the note
+  row for the `⋯` menu that already held them; `📎 Attach` is permanently on the
+  row with `🏷 Note Type` as its first entry; every button is drawn in its own
+  rounded box. The round also found the `⋯` button had been **dead** — its
+  onclick passed a bare `curA.id`, a render-local, so it threw and opened
+  nothing. 67/67 app checks (up from 62) and 11/11 ship checks.
 - **v04.10** (10 Sep 2026) — the note pane's two pop-out buttons stopped being
   two identical grey squares. They are named — **Multi Notes Pop-Up** (its own
   window, several at once) and **Single Note Pop-Up** (one note, everything
@@ -40,9 +46,6 @@ must never accumulate here instead of there.
   Enter-above-first-heading rule, which the fold chrome had silently disabled
   and which was leaving stray `⠿▼` headings behind. 40/40 app checks (up from
   33) and 11/11 ship checks.
-- **v04.06** (4 Sep 2026) — this brief, `CHANGELOG.md`, and `tools/`: the first
-  thing in this repo that measures rather than guesses. No app behaviour
-  changed. 33/33 app checks and 11/11 ship checks pass against v04.05.
 ---
 
 ## What this is
@@ -208,6 +211,22 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **An inline handler can name a real function and still be stone dead.**
+  `onclick="showArtCtx({...},curA.id)"` on the note toolbar's `⋯` button
+  referenced `curA`, a `const` local to `renderP3H()` — so every left-click
+  threw `ReferenceError` and the button opened nothing, for a whole version
+  series, while `oncontextmenu` right beside it worked because it interpolated
+  `${curA.id}` properly. `app-check`'s handler scan cannot see this: the
+  function name is real, the ARGUMENT is not. Inside a render function,
+  interpolate every id into the handler string; never reference a local. The
+  check that catches it clicks every visible button on the row and watches for
+  a page error. Cost: a shipped dead button nobody reported, found only because
+  the owner asked what it was for. Fixed in v04.11.
+- **An HTML comment inside the inline `<script>` stops the app booting.**
+  `<!--` puts the HTML parser into its script-escaped state, so a `<!-- ... -->`
+  note written inside a template literal took the whole app down. Comments in
+  the script are `/* */`, always. Cost: one failed boot in v04.11, caught by
+  the checks immediately.
 - **A fold order is only as good as the width you measured, and last round's
   numbers are not this round's.** v04.10 placed its new fold stage using
   v04.09's published figure for the type group (288px). On the row as it
