@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.07">
+<meta name="app-version" content="04.08">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1799,6 +1799,24 @@ sup.ann-sup:hover{text-decoration:underline}
 .p3h-unified-tb{display:flex;align-items:center;flex-wrap:wrap;gap:4px;
   padding:4px 8px;border-bottom:1px solid var(--border2);flex-shrink:0;background:var(--paper)}
 .p3h-unified-tb .tb-sep{width:1px;align-self:stretch;background:var(--border2);flex-shrink:0;margin:2px 1px}
+/* ── v04.08 — the read view's toolbar now carries Home, the NTI bar and the
+   section-tools button as well. The NTI group is wrapped so it behaves as ONE
+   flex child that may shrink and scroll, instead of half a dozen siblings
+   each fighting the ten buttons on the right for width. ── */
+#p3h:not(.editing){flex-wrap:wrap;padding-top:4px;padding-bottom:4px;gap:4px 6px}
+#p3h>.tb-sep{width:1px;align-self:stretch;background:var(--border2);flex-shrink:0;margin:5px 1px}
+/* The type chips keep their width and force a wrap rather than being squeezed
+   out of existence when Pane 3 is narrow — only the chip STRIP scrolls. */
+.p3h-nti-inline{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.p3h-nti-inline .nti-chips{max-width:34vw}
+.p3h-nti-inline .kind-act{margin-left:2px}
+/* Right-aligned on whichever line it lands on. */
+.p3h-actions{display:flex;align-items:center;gap:2px;margin-left:auto;flex-shrink:0}
+/* The version pills and the dates on one line: versions left, dates hard right.
+   They wrap onto two lines rather than overflow when the pane is narrow. */
+.p3-meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;padding:5px 12px 0}
+.p3-meta-row .ver-strip{padding:0;gap:6px}
+.p3-meta-row .note-dateline{margin-left:auto}
 .p3h-unified-tb .eb-grp-btn,.p3h-nav-edit-row .eb-grp-btn{flex:0 0 auto!important;padding:5px 8px!important;font-size:12.5px!important}
 .p3h-nav-edit-row{display:flex;align-items:center;justify-content:space-between;
   gap:6px;padding:4px 8px;border-bottom:1px solid var(--border2);flex-shrink:0;background:var(--paper)}
@@ -2073,7 +2091,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.07</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.08</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <div class="sb-menu-wrap" id="sb-home-wrap">
         <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn bn bi sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2632,6 +2650,19 @@ function _dateLineHTML(a){
   }
   if(!parts.length)return '';
   return `<div class="note-dateline" contenteditable="false">${parts.join('')}</div><div class="note-dateline-hr" contenteditable="false"></div>`;
+}
+/* v04.08 — the version strip and the date line were two separate full-width
+   rows, one under the other, between the title and the note. Both are note
+   metadata and both are short, so they share a line: versions on the left,
+   the dates pushed to the right end. _dateLineHTML() ships its own rule under
+   itself; the row keeps that rule but puts it below the whole row.
+   View mode only — edit mode still renders each of them where it always did. */
+function _p3MetaRowHTML(a){
+  if(!a)return '';
+  const v=_versionStripHTML(a);
+  const d=_dateLineHTML(a).replace(/<div class="note-dateline-hr"[^>]*><\/div>/,'');
+  if(!v&&!d)return '';
+  return `<div class="p3-meta-row">${v}${d}</div><div class="note-dateline-hr"></div>`;
 }
 /* True when the body has no real content — empty, whitespace-only, or the
    legacy literal placeholder — AND carries no media/structural elements. Used
@@ -3282,7 +3313,24 @@ function renderP3H(){
     el.classList.remove('editing');  /* restore row layout for view mode */
     /* v03.NotePane.C9 — attached-folder list removed from the title bar; it
        still shows once below the NTI bar in the note body (avoids duplication). */
-    h+=`<div style="flex:1;min-width:0"></div>
+    /* v04.08 — the read view's chrome was six stacked rows before the note's
+       first line: this toolbar, a Home row, the NTI bar, the title, the
+       version strip, the section-tools row and the date line. Home, the NTI
+       bar and the section tools fold into THIS row, exactly as edit mode's
+       unified toolbar already does. Home goes first, ahead of the mobile
+       ◀ ≡, matching the order in edit mode's nav-l.
+
+       Fitting is left to flex-wrap, NOT to a window.innerWidth breakpoint.
+       Measured: on a 1215px screen the three-pane layout leaves Pane 3 about
+       490px wide, so a window-width test says "desktop, plenty of room" and
+       the type chips get squeezed to zero width and DISAPPEAR. What matters
+       is the width of this pane, which only the browser knows — so the type
+       group refuses to shrink and the action buttons wrap to a second line
+       when they must, right-aligned there by their own margin-left:auto. */
+    h=_p3HomeBtnHTML()+h;
+    h+='<span class="tb-sep"></span><div class="p3h-nti-inline">'+kindBarHTML(curA,true)+'</div>';
+    h+=_colToolbarBtnHTML();
+    h+=`<div class="p3h-actions">
       <button class="btn bn bi" onclick="_p3Navigate(-1)" title="Previous note in this folder" style="padding:5px 6px;font-size:15px">‹</button>
       <button class="btn bn bi" onclick="_p3Navigate(1)" title="Next note in this folder" style="padding:5px 6px;font-size:15px">›</button>
       <button class="btn bn bi" onclick="_ntFindToggle('p3')" title="Find in this note" style="padding:5px 7px;font-size:13px">🔍</button>
@@ -3292,7 +3340,7 @@ function renderP3H(){
       <button class="btn bn modal-pop-btn" onclick="openNotePopup('${curA.id}','panel')" title="Open as resizable panel">⛶</button>
       <button class="btn bn bi" onclick="duplicateNote('${curA.id}')" title="Make a copy">🗐</button>
       <button class="btn bn bi" title="More options" oncontextmenu="event.preventDefault();showArtCtx(event,'${curA.id}')" onclick="showArtCtx({clientX:event.clientX,clientY:event.clientY,preventDefault:()=>{},stopPropagation:()=>{}},curA.id)">⋯</button>
-      <button class="btn bd bi" onclick="confirmDel('art','${curA.id}')">🗑</button>`;
+      <button class="btn bd bi" onclick="confirmDel('art','${curA.id}')">🗑</button></div>`;
   } else {
     el.classList.remove('editing');
     h+=`<span style="flex:1;color:var(--t3);font-size:13px;font-weight:500">Siyagah</span>`
@@ -3349,16 +3397,17 @@ function renderP3C(){
   if(curA){
     /* v03.NotePane.C10 — folder chips are clickable: tap to jump to that folder. */
     const tags=curA.folderIds.map(x=>{const p=pathOf(x);return p.length?`<span class="ftag ftag-nav" onclick="selFolder('${x}')" title="Go to this folder">${esc(p.map(f=>f.name).join(' › '))}</span>`:''}).join('');
+    /* v04.08 — the NTI bar is rendered inside the Pane-3 toolbar now, at every
+       size (see renderP3H), so it is no longer a row of its own here. */
     el.scrollTop=0;el.innerHTML=`<div class="avw"><div class="av">
-      ${kindBarHTML(curA)}
       <div class="p3h-title-bar p3c-titlebar p3c-vt"><div class="tbt" title="Right-click to edit" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">${esc(curA.title)||'<em style="color:var(--t3)">Untitled</em>'}</div></div>
-      ${_versionStripHTML(curA)}
+      ${_p3MetaRowHTML(curA)}
       ${reminderStripHTML(curA)}
       <div class="av-tags">${tags}</div>
       ${(curA.tags||[]).length
         ?`<div class="art-tags">${(curA.tags||[]).map(t=>{const _tc=(DB.tagColors||{})[t];const _ts=_tc?` style="background:${_tc}1a;color:${_tc};border-color:${_tc}40"`:'';return `<span class="art-tag"${_ts} onclick="selTag('${esc(t)}')" oncontextmenu="event.preventDefault();showTagClrPicker(event,'${esc(t)}')">🏷 ${esc(t)}</span>`;}).join('')}</div>`
         :''}
-      <div class="av-body">${_dateLineHTML(curA)}${_fieldsPanelHTML(curA)}${_injectHeadingStatusBadges(curA.content,curA.id)}</div>
+      <div class="av-body">${_fieldsPanelHTML(curA)}${_injectHeadingStatusBadges(curA.content,curA.id)}</div>
       ${annPanelHTML(curA)}
       ${backlinksHTML(curA)}
     </div></div>`;
@@ -3537,7 +3586,12 @@ function _renderP2SearchBar(){
 }
 function _renderP3SearchBar(){
   const el=document.getElementById('p3-srch-bar');if(!el)return;
-  if(ST.editing){el.innerHTML='';return;}
+  /* v04.08 — a note open in the read view now carries Home (and the "back to
+     results" button, both from _p3HomeBtnHTML) in the Pane-3 toolbar itself,
+     so this row would only repeat it. It still renders everywhere else — the
+     landing page, the calendar — where there is no toolbar to carry them. */
+  const _vA=DB.articles.find(a=>a.id===ST.article);
+  if(ST.editing||_vA){el.innerHTML='';return;}
   const show=!!(ST.lastSearch&&!ST.search);
   el.innerHTML='<div class="mini-srch-row">'
     +'<button class="btn bn bi" onclick="goHome()" title="Home — reset search/filters and show the folder list" style="font-size:12.5px">🏠 Home</button>'
@@ -10177,9 +10231,14 @@ function _applyHeadingStyles(){
   el.textContent=css;
 }
 function _initCollapsible(body){
-  if(!body)return;
+  /* v04.08 — the section tools live in the Pane-3 header now, so this is also
+     what decides whether that button is shown at all: it is the only place
+     that knows whether the note actually has headings. */
+  var w=document.getElementById('col-tb-wrap');
+  if(!body){if(w)w.style.display='none';return;}
   var children=Array.from(body.children);
   var hasH=children.some(function(n){return /^H[1-4]$/.test(n.tagName);});
+  if(w)w.style.display=hasH?'inline-flex':'none';
   if(!hasH)return;
   var art=DB.articles.find(function(a){return a.id===ST.article;});
   var state=(art&&art.sectionState)||{};
@@ -10205,13 +10264,7 @@ function _initCollapsible(body){
     stack.push(level);i++;
   }
   while(stack.length){html+='</div></div>';stack.pop();}
-  var prvAct=prevMode?' col-tb-act':'';
-  var toolbar='<div class="col-toolbar">'
-    +'<button class="col-tb-btn" onclick="_colAll(true)">&#9654; Collapse All</button>'
-    +'<button class="col-tb-btn" onclick="_colAll(false)">&#9660; Expand All</button>'
-    +'<button class="col-tb-btn'+prvAct+'" onclick="_colTogglePreview()" title="Toggle preview line">≡ Preview</button>'
-    +'</div>';
-  body.innerHTML=toolbar+html;
+  body.innerHTML=html;
   var p3c=document.getElementById('p3c');
   if(p3c)p3c.classList.toggle('toc-preview',prevMode);
 }
@@ -10241,6 +10294,30 @@ function _colAll(collapse){
     if(art){if(collapse)art.sectionState[idx]=true;else delete art.sectionState[idx];}
   });
   if(art)persist();
+}
+/* ══ v04.08 — SECTION TOOLS AS AN OVERFLOW BUTTON, IN VIEW MODE ══════════
+   Collapse All / Expand All / Preview had a permanently reserved full-width
+   row of their own between the note's meta and its first line. Edit mode had
+   already lost that row (_edColToolbarHTML + toggleEdColPop); this is the
+   same move for the read view, driving the same _colAll() / _colTogglePreview()
+   underneath, unchanged.
+   The glyph is ⇅, not the ⋯ edit mode uses, because view mode already has a
+   ⋯ "More options" button a few pixels to the right. */
+function _colToolbarBtnHTML(){
+  return '<div id="col-tb-wrap" style="display:none;align-items:center">'
+    +'<button class="btn bn bi" id="col-tb-btn" onclick="toggleColPop(event)"'
+    +' title="Section tools: Collapse all / Expand all / Preview" style="font-size:13px;padding:5px 7px">⇅</button>'
+    +'</div>';
+}
+function toggleColPop(ev){
+  const btn=ev.currentTarget;
+  if(document.getElementById('col-pop')?.classList.contains('open')){closeFloatPop('col-pop');return;}
+  const onPrev=!!(DB.theme&&DB.theme.collapsePreview==='preview');
+  _openFloatPop('col-pop',btn,
+    '<button class="ed-col-btn" onclick="_colAll(true);closeFloatPop(\'col-pop\')">&#9654; Collapse all</button>'
+    +'<button class="ed-col-btn" onclick="_colAll(false);closeFloatPop(\'col-pop\')">&#9660; Expand all</button>'
+    +'<button class="ed-col-btn'+(onPrev?' on':'')+'" onclick="closeFloatPop(\'col-pop\');_colTogglePreview()"'
+    +' title="Show a preview line under collapsed sections">&#8801; Preview</button>');
 }
 function _colTogglePreview(){
   if(!DB.theme)DB.theme={};

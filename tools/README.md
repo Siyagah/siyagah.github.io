@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 40 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 49 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -53,6 +53,12 @@ or quietly lose the notebook, none of which need a browser:
   gutter above a leading heading and below the last block each open a real
   line to write on, a click beside a block opens nothing, and neither path
   dirties the note until something is actually typed (v04.07);
+- **the read view's chrome stays folded into two rows** — no Home row, no type
+  row, no section-tools row; Home, the type chips and the section tools all
+  reachable from the Pane-3 toolbar and still doing their jobs; the version
+  strip and the date line on one line; and the type chips still measurable at
+  a **narrow Pane 3**, which is where a window-width test silently deleted
+  them (v04.08);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -99,6 +105,12 @@ assertions miss.
   holds *at that moment*. So a check that asserts "this action did NOT save"
   must first wait past that ceiling, or it measures the previous check's
   keystrokes and reads as a failure in code that is fine.
+- **`window.innerWidth` is not the width of a pane.** Pane 3 is one column of a
+  three-pane layout: on a 1215px screen it is about 485px wide. A check (or a
+  layout rule) that reads the window width will call that "desktop, plenty of
+  room". Measure the element you actually care about — `getBoundingClientRect()`
+  on the pane — and set a viewport where the panes are squeezed, not only the
+  three in `VIEWPORTS`, which are all single-pane or roomy.
 - **Firebase must be blocked, not just absent.** With no sync config in
   localStorage, `initAuth()` returns early and the login overlay stays hidden —
   which is why the app is fully drivable here with no sign-in.
