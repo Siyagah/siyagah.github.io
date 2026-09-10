@@ -317,3 +317,95 @@ open, which is the case that caught the disappearing chips.
 - **Nothing was removed, only moved.** Every button in the old rows is still
   present and still works — each is measured by name in the checks above.
 - **`legacy/**` was not touched**, by rule.
+
+---
+
+## v04.09 — one row of buttons, bunched by type (10 September 2026)
+
+A phone screenshot: v04.08's toolbar, wrapped into **three rows of buttons**
+before the note began. The ask was one row; if it will not fit, bunch the
+same-type buttons onto a palette; and make the small buttons bigger.
+
+**Why v04.08 wrapped**
+
+v04.08 deliberately replaced a width breakpoint with `flex-wrap`, because a
+breakpoint had squeezed the type chips out of existence. Wrapping never loses
+a button — but on a 390px phone there are sixteen controls, and it turned them
+into three stacked rows. Wrapping was the right fix for the wrong problem.
+
+**What now happens**
+
+The row does not wrap. It **measures itself** (`_p3FitToolbar`) and folds a
+group at a time when the buttons do not fit, in the order that keeps the most
+useful things out longest:
+
+1. **full** — everything inline.
+2. **tight** — `🏷 Types`, `📎 Attach`, `📦` fold behind one `🏷` palette. The
+   note's own type chip stays visible, because the chip is *information*, not
+   just a control.
+3. **tighter** — `‹ › 🔍 ✚ ⊡ ⛶ ⧉ ⋯ 🗑` fold behind one `⋯` palette.
+4. **tightest** — the type chip goes too. It is in the `🏷` palette anyway.
+
+`✏️ Edit` and the navigation keys never fold; they are what the row is for.
+
+Measured on the pane, not the window: the whole row wants **836px**, the type
+group is **288px** of that and the action group **312px**. So a 710px desktop
+Pane 3 folds only the type buttons, a 485px one also folds the actions, and a
+390px phone folds everything into `🏠 ◀ ≡ 🏷▾ ⇅ ⋯▾ ✏️Edit` — seven buttons, one
+row, 44px each.
+
+**Bigger buttons**
+
+The read toolbar's icon buttons were about 27px tall — below any comfortable
+touch target. They are now 36px on desktop and **44px on a phone**, and the
+palette rows are 44px with a real word beside each icon. The archive button
+was 26px *wide*, so it got a minimum in both directions.
+
+**A glyph that was drawing as an empty box**
+
+The phone screenshot showed a `▯` between Edit and `⋯`. By elimination it was
+`🗐` (U+1F5D0 STACKED PAGES) on the duplicate button — a pictograph Android's
+emoji font does not carry. It is now `⧉`, and on a phone it lives in the
+palette where it has the words "Make a copy" beside it regardless.
+
+**Two things the measuring caught**
+
+- **A pane's width is not final when its markup is.** The first fit ran inside
+  `renderP3H()`, where Pane 3 still measures 710px on a layout that settles to
+  485px — so the row folded against a width the pane never has, and sat 39px
+  over. It re-fits after a `requestAnimationFrame`, on resize, and from
+  `adjustP3Layout()`.
+- **`Math.min(width, height)` is not "how big is this button".** A 26×34px
+  archive button reported as "26px" and looked like a CSS rule that was in
+  fact working. The rule was fine; the measurement was wrong.
+
+**Measured**
+
+11/11 ship checks, and app checks from 49 to **54**. The five new ones open a
+real app at five pane widths (390, 820, 1215→485, 1440→710, 1920→1190) and
+assert: one row and nothing clipped at any of them; progressive folding with
+zero overflow; **nothing hidden without a way back** — Edit visible, actions
+and Types reachable inline or by palette, at every width; a 42px minimum touch
+size on a phone; and the palettes measured actually working — a copy really
+made, Types really opened, and pop-out *not* offered below 900px where the app
+would refuse to show it.
+
+One earlier check was **updated in place, not deleted**: v04.08's "the type
+chips survive a narrow Pane 3" asserted the Types button was inline at 485px,
+which this round deliberately changed. It now asserts what must still hold —
+the chip stays visible and Types stays reachable.
+
+**What was NOT done, and why**
+
+- **Edit mode's toolbar was not touched.** It has its own layout and its own
+  wrapping, and the screenshot was of the read view. If the edit toolbar
+  stacks on your phone too, that is the same treatment again — say so.
+- **The fold order is a judgement, not a measurement.** I put Types/Attach
+  ahead of the navigation keys on the grounds that classification is
+  occasional and navigation is constant. If you would rather keep Types out
+  and fold `‹ ›` first, it is two lines.
+- **The `⧉` copy glyph is still a guess for Android.** I cannot test Android's
+  fonts from here. It is far better supported than the box you saw, and on a
+  phone it now carries a text label — but if it draws as a box too, tell me
+  and I will use a plain emoji.
+- **`legacy/**` was not touched**, by rule.

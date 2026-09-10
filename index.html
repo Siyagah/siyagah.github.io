@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.08">
+<meta name="app-version" content="04.09">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1803,15 +1803,63 @@ sup.ann-sup:hover{text-decoration:underline}
    section-tools button as well. The NTI group is wrapped so it behaves as ONE
    flex child that may shrink and scroll, instead of half a dozen siblings
    each fighting the ten buttons on the right for width. ── */
-#p3h:not(.editing){flex-wrap:wrap;padding-top:4px;padding-bottom:4px;gap:4px 6px}
+/* ── v04.09 — the read view's toolbar is ONE row and never wraps. It folds
+   by measurement (_p3FitToolbar) rather than by any width breakpoint: every
+   child refuses to shrink, so an overflow is real and detectable, and only
+   the spacer collapses. ── */
+#p3h:not(.editing){flex-wrap:nowrap;overflow:hidden;padding-top:4px;padding-bottom:4px;gap:4px}
+#p3h:not(.editing)>*{flex-shrink:0}
+#p3h:not(.editing)>.p3h-spacer{flex:1 1 auto;min-width:0}
 #p3h>.tb-sep{width:1px;align-self:stretch;background:var(--border2);flex-shrink:0;margin:5px 1px}
-/* The type chips keep their width and force a wrap rather than being squeezed
-   out of existence when Pane 3 is narrow — only the chip STRIP scrolls. */
 .p3h-nti-inline{display:flex;align-items:center;gap:4px;flex-shrink:0}
-.p3h-nti-inline .nti-chips{max-width:34vw}
+.p3h-nti-inline .nti-chips{max-width:30vw}
 .p3h-nti-inline .kind-act{margin-left:2px}
-/* Right-aligned on whichever line it lands on. */
-.p3h-actions{display:flex;align-items:center;gap:2px;margin-left:auto;flex-shrink:0}
+.p3h-actions{display:flex;align-items:center;gap:2px;flex-shrink:0}
+/* The two group buttons are in the DOM at every width and shown only by the
+   class _p3FitToolbar() adds, so folding costs no re-render. */
+.p3h-grp{display:none!important}
+.p3h-grp .grp-car{font-size:9px;opacity:.6;margin-left:1px}
+#p3h.p3h-tight .p3h-nti-inline .nti-picker-btn,
+#p3h.p3h-tight .p3h-nti-inline .kind-act{display:none}
+#p3h.p3h-tight #p3h-nti-grp{display:inline-flex!important}
+#p3h.p3h-tighter .p3h-actions{display:none}
+#p3h.p3h-tighter #p3h-act-grp{display:inline-flex!important}
+#p3h.p3h-tightest .p3h-nti-inline{display:none}
+#p3h .p3h-edit-btn{font-weight:600}
+/* ── Bigger buttons. The read toolbar's icon buttons were ~27px tall, well
+   under a comfortable touch target; on a phone they go to 44px. ── */
+#p3h:not(.editing) .btn{min-height:36px;padding:6px 10px;font-size:13px}
+#p3h:not(.editing) .btn.bi{min-width:38px;justify-content:center;font-size:17px;padding:6px 8px;gap:0}
+#p3h:not(.editing) .modal-pop-btn{font-size:16px;opacity:.7}
+#p3h:not(.editing) .nti-chip,#p3h:not(.editing) .nti-picker-btn,
+#p3h:not(.editing) .kind-arch-btn{font-size:12px;padding:6px 11px;min-height:36px}
+/* The archive button is a bare icon and was only 26px WIDE — a target, not
+   just a height, so it gets a minimum in both directions. */
+#p3h:not(.editing) .kind-arch-btn{min-width:36px;display:inline-flex;
+  align-items:center;justify-content:center}
+@media(max-width:899.98px){
+  /* Measured: at 390px the folded row wants 392px, so it sat 2px over its own
+     width with no room to spare. The pane's own side padding is the cheapest
+     12px to give back. */
+  #p3h:not(.editing){padding-left:8px;padding-right:8px}
+  #p3h:not(.editing) .btn{min-height:44px;font-size:14px}
+  #p3h:not(.editing) .btn.bi{min-width:44px;font-size:19px}
+  #p3h:not(.editing) .nti-chip,#p3h:not(.editing) .nti-picker-btn,
+  #p3h:not(.editing) .kind-arch-btn{font-size:13px;padding:8px 13px;min-height:42px}
+  #p3h:not(.editing) .kind-arch-btn{min-width:42px}
+}
+/* ── The palettes: one kind of button each, with words, at a tappable size ── */
+.p3h-pal-btn{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;
+  padding:8px 12px;border:1px solid transparent;border-radius:9px;background:none;
+  cursor:pointer;font-family:var(--ui);font-size:14px;color:var(--t1);text-align:left}
+.p3h-pal-btn:hover{background:var(--hover,#f1f1f1);border-color:var(--border2)}
+.p3h-pal-btn .pal-ico{width:22px;text-align:center;font-size:17px;flex-shrink:0}
+.p3h-pal-btn .pal-lbl{flex:1;min-width:0}
+.p3h-pal-btn.pal-danger{color:var(--red,#b91c1c)}
+.p3h-pal-nti{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%}
+.p3h-pal-nti .nti-chips{flex-wrap:wrap;max-width:none;overflow:visible}
+.p3h-pal-nti .nti-chip,.p3h-pal-nti .nti-picker-btn,
+.p3h-pal-nti .kind-arch-btn{font-size:13.5px;padding:9px 14px;min-height:42px}
 /* The version pills and the dates on one line: versions left, dates hard right.
    They wrap onto two lines rather than overflow when the pane is narrow. */
 .p3-meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;padding:5px 12px 0}
@@ -2091,7 +2139,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.08</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.09</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <div class="sb-menu-wrap" id="sb-home-wrap">
         <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn bn bi sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3320,33 +3368,42 @@ function renderP3H(){
        unified toolbar already does. Home goes first, ahead of the mobile
        ◀ ≡, matching the order in edit mode's nav-l.
 
-       Fitting is left to flex-wrap, NOT to a window.innerWidth breakpoint.
-       Measured: on a 1215px screen the three-pane layout leaves Pane 3 about
-       490px wide, so a window-width test says "desktop, plenty of room" and
-       the type chips get squeezed to zero width and DISAPPEAR. What matters
-       is the width of this pane, which only the browser knows — so the type
-       group refuses to shrink and the action buttons wrap to a second line
-       when they must, right-aligned there by their own margin-left:auto. */
+       v04.09 — and it is ONE row now, never a wrapped stack. On a phone the
+       wrap turned into three rows of buttons. The row no longer wraps: it
+       measures itself (_p3FitToolbar) and, when the buttons do not fit, folds
+       them into palettes a group at a time — the same-type bunching the owner
+       asked for. Edit and the navigation keys never fold; they are what the
+       row exists for. */
     h=_p3HomeBtnHTML()+h;
     h+='<span class="tb-sep"></span><div class="p3h-nti-inline">'+kindBarHTML(curA,true)+'</div>';
+    h+='<button class="btn bn bi p3h-grp" id="p3h-nti-grp" onclick="_p3NtiPalette(event)" title="Note type, attach and archive">🏷<span class="grp-car">▾</span></button>';
     h+=_colToolbarBtnHTML();
-    h+=`<div class="p3h-actions">
-      <button class="btn bn bi" onclick="_p3Navigate(-1)" title="Previous note in this folder" style="padding:5px 6px;font-size:15px">‹</button>
-      <button class="btn bn bi" onclick="_p3Navigate(1)" title="Next note in this folder" style="padding:5px 6px;font-size:15px">›</button>
-      <button class="btn bn bi" onclick="_ntFindToggle('p3')" title="Find in this note" style="padding:5px 7px;font-size:13px">🔍</button>
-      <button class="btn bn bi" onclick="quickCapture()" title="New note (Primary folder) — opens in its own pop-out window" style="padding:5px 7px;font-size:14px">✚</button>
-      <button class="btn" onclick="startEdit()">✏️ Edit</button>
+    h+=`<div class="p3h-spacer"></div>
+      <div class="p3h-actions">
+      <button class="btn bn bi" onclick="_p3Navigate(-1)" title="Previous note in this folder">‹</button>
+      <button class="btn bn bi" onclick="_p3Navigate(1)" title="Next note in this folder">›</button>
+      <button class="btn bn bi" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>
+      <button class="btn bn bi" onclick="quickCapture()" title="New note (Primary folder) — opens in its own pop-out window">✚</button>
       <button class="btn bn modal-pop-btn" onclick="openNotePopup('${curA.id}','float')" title="Pop out as floating window (Ctrl+Shift+P)">⊡</button>
       <button class="btn bn modal-pop-btn" onclick="openNotePopup('${curA.id}','panel')" title="Open as resizable panel">⛶</button>
-      <button class="btn bn bi" onclick="duplicateNote('${curA.id}')" title="Make a copy">🗐</button>
+      <button class="btn bn bi" onclick="duplicateNote('${curA.id}')" title="Make a copy">⧉</button>
       <button class="btn bn bi" title="More options" oncontextmenu="event.preventDefault();showArtCtx(event,'${curA.id}')" onclick="showArtCtx({clientX:event.clientX,clientY:event.clientY,preventDefault:()=>{},stopPropagation:()=>{}},curA.id)">⋯</button>
-      <button class="btn bd bi" onclick="confirmDel('art','${curA.id}')">🗑</button></div>`;
+      <button class="btn bd bi" onclick="confirmDel('art','${curA.id}')">🗑</button></div>
+      <button class="btn bn bi p3h-grp" id="p3h-act-grp" onclick="_p3ActPalette(event)" title="Note actions">⋯<span class="grp-car">▾</span></button>
+      <button class="btn bp p3h-edit-btn" onclick="startEdit()">✏️ Edit</button>`;
   } else {
     el.classList.remove('editing');
     h+=`<span style="flex:1;color:var(--t3);font-size:13px;font-weight:500">Siyagah</span>`
       +`<button class="btn bn bi" onclick="quickCapture()" title="New note (Primary folder) — opens in its own pop-out window" style="padding:5px 8px;font-size:15px">✚</button>`;
   }
   el.innerHTML=h;
+  /* v04.09 — the row can only be fitted once it is in the document and laid
+     out, so this runs after innerHTML, not while building the string. It runs
+     TWICE: measured, Pane 3 is still 710px wide at this point on a layout that
+     settles to 485px, so a single pass folds against a width the pane never
+     actually has. The rAF pass re-measures after the panes have settled. */
+  try{_p3FitToolbar();}catch(e){}
+  try{requestAnimationFrame(()=>{try{_p3FitToolbar();}catch(e){}});}catch(e){}
   /* Restore title-input focus + caret if it was focused before rebuild */
 }
 
@@ -10319,6 +10376,65 @@ function toggleColPop(ev){
     +'<button class="ed-col-btn'+(onPrev?' on':'')+'" onclick="closeFloatPop(\'col-pop\');_colTogglePreview()"'
     +' title="Show a preview line under collapsed sections">&#8801; Preview</button>');
 }
+/* ══ v04.09 — ONE ROW OF BUTTONS, BUNCHED BY TYPE WHEN IT WILL NOT FIT ═══
+   On a phone v04.08's wrapping toolbar became three rows of buttons. The row
+   is nowrap now and measures itself instead: if the buttons overflow, the
+   secondary ACTIONS fold behind one ⋯ palette; if that is still not enough,
+   the TYPE controls fold behind one 🏷 palette. Each palette holds buttons of
+   one kind, with words rather than bare icons — which is also how the phone
+   gets a readable label for any glyph its fonts cannot draw.
+
+   Measured, not assumed: `scrollWidth > clientWidth` on this pane. Nothing
+   here reads window.innerWidth — Pane 3 is a column, not the screen (see the
+   standing lesson), and the row's real width is the only thing that answers
+   "does this fit". Every child is flex-shrink:0 so the overflow is REAL and
+   not a silent squeeze; only the spacer collapses. */
+function _p3FitToolbar(){
+  const el=document.getElementById('p3h');
+  if(!el||el.classList.contains('editing'))return;
+  el.classList.remove('p3h-tight','p3h-tighter','p3h-tightest');
+  if(!el.clientWidth)return;                 /* pane is off-screen; nothing to measure */
+  const fits=()=>el.scrollWidth<=el.clientWidth+1;
+  if(fits())return;
+  /* Measured on this pane: the whole row wants 836px; the type group is 288
+     of that and the action group 312. The order below folds the least-missed
+     group first and keeps the note's own type chip visible longest, because
+     the chip is information, not just a control. */
+  el.classList.add('p3h-tight');             /* Types / Attach / Archive → 🏷 palette */
+  if(fits())return;
+  el.classList.add('p3h-tighter');           /* ‹ › 🔍 ✚ ⧉ ⋯ 🗑    → ⋯ palette */
+  if(fits())return;
+  el.classList.add('p3h-tightest');          /* the type chip itself, last of all */
+}
+/* One palette row: a real icon, a real word, and a touch-sized target. */
+function _p3PalBtn(icon,label,onclick,cls){
+  return '<button class="p3h-pal-btn'+(cls?' '+cls:'')+'" onclick="closeFloatPop(\'p3h-pal\');'+onclick+'">'
+    +'<span class="pal-ico">'+icon+'</span><span class="pal-lbl">'+label+'</span></button>';
+}
+function _p3ActPalette(ev){
+  const a=DB.articles.find(x=>x.id===ST.article);if(!a)return;
+  const id=a.id.replace(/'/g,"\\'");
+  let h=_p3PalBtn('\u2039','Previous note',"_p3Navigate(-1)")
+    +_p3PalBtn('\u203A','Next note',"_p3Navigate(1)")
+    +_p3PalBtn('🔍','Find in this note',"_ntFindToggle('p3')")
+    +_p3PalBtn('✚','New note',"quickCapture()");
+  /* Pop-out windows are hidden under 900px by their own CSS rule, so the
+     palette must not offer what the app will not open. */
+  if(window.innerWidth>=900){
+    h+=_p3PalBtn('\u22A1','Pop out as a window',"openNotePopup('"+id+"','float')")
+      +_p3PalBtn('\u26F6','Open as a panel',"openNotePopup('"+id+"','panel')");
+  }
+  h+=_p3PalBtn('\u29C9','Make a copy',"duplicateNote('"+id+"')")
+    +_p3PalBtn('⋯','More options',"showArtCtx({clientX:0,clientY:60,preventDefault:()=>{},stopPropagation:()=>{}},'"+id+"')")
+    +_p3PalBtn('🗑','Delete this note',"confirmDel('art','"+id+"')",'pal-danger');
+  _openFloatPop('p3h-pal',ev.currentTarget,h);
+}
+function _p3NtiPalette(ev){
+  const a=DB.articles.find(x=>x.id===ST.article);if(!a)return;
+  /* Exactly the controls the inline group holds — same call, same handlers,
+     just laid out to be tapped rather than squeezed. */
+  _openFloatPop('p3h-pal',ev.currentTarget,'<div class="p3h-pal-nti">'+kindBarHTML(a,true)+'</div>');
+}
 function _colTogglePreview(){
   if(!DB.theme)DB.theme={};
   DB.theme.collapsePreview=DB.theme.collapsePreview==='preview'?'compact':'preview';
@@ -17097,6 +17213,9 @@ function adjustP3Layout(){
   var h=document.getElementById('p3h');
   var b=document.getElementById('p3c');
   if(!h||!b)return;
+  /* v04.09 — this runs whenever the panes are re-laid-out, which is exactly
+     when the note toolbar's available width can have changed. */
+  try{_p3FitToolbar();}catch(e){}
   ['position','top','left','right','bottom','zIndex',
    'minHeight','boxSizing','flex'].forEach(function(p){h.style[p]=''});
   ['position','top','left','right','bottom','zIndex','overflowY',
@@ -18495,6 +18614,11 @@ function _onViewportResize(){
   _tabNavSync(); /* v03.78 — pane width changed, re-evaluate tab overflow */
 }
 window.addEventListener('resize',_onViewportResize);
+/* v04.09 — the note toolbar folds on the WIDTH OF ITS PANE, which changes when
+   the window resizes, when the sidebar opens or closes, and when the pane
+   dividers are dragged. Re-fitting is a couple of class toggles, so it is
+   cheap enough to run on every one of those. */
+window.addEventListener('resize',()=>{try{_p3FitToolbar();}catch(e){}});
 /* Some mobile browsers fire orientationchange without a dependable resize,
    and report the OLD dimensions synchronously — hence the short delay. */
 window.addEventListener('orientationchange',()=>setTimeout(_onViewportResize,200));

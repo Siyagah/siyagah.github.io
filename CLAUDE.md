@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.08.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.09.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,12 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.09** (10 Sep 2026) — the note toolbar is one row that never wraps. It
+  measures its own pane and folds a group at a time into palettes (type
+  controls first, then actions, then the type chip), so a 390px phone shows
+  seven 44px buttons instead of three stacked rows. Buttons went from ~27px to
+  36px/44px, and the duplicate button's `🗐` — an empty box on Android — became
+  `⧉`. 54/54 app checks (up from 49) and 11/11 ship checks.
 - **v04.08** (10 Sep 2026) — the read view's chrome folded from six rows into
   two: Home, the NTI bar and the section tools moved into the Pane-3 toolbar
   (mirroring edit mode's unified bar), section tools became a `⇅` popover, and
@@ -31,7 +37,6 @@ must never accumulate here instead of there.
   changed. 33/33 app checks and 11/11 ship checks pass against v04.05.
 - **v04.05** (4 Sep 2026) — the web app manifest and real icons, which had been
   missing entirely.
-- **v04.04** (4 Sep 2026) — note templates, starting with Jumu'a Khutbah.
 
 ---
 
@@ -198,6 +203,14 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A toolbar that must fit needs a fold order, not just a fit.** Wrapping
+  never loses a button but turns sixteen controls into three stacked rows on a
+  phone; a breakpoint fits one row but deletes what it cannot show. The answer
+  that works is measure-then-fold: `scrollWidth > clientWidth` on the pane,
+  then collapse whole same-type groups into palettes, least-missed first,
+  never hiding anything without a palette that still reaches it. Cost: v04.08
+  shipped the wrapping version and the owner's phone showed three rows.
+  Fixed in v04.09.
 - **Pane 3 is a column, not the screen.** In the three-pane layout Pane 3 is
   about 485px wide on a 1215px window, so `window.innerWidth` says "desktop,
   plenty of room" about a pane that has none. Layout that must fit inside a

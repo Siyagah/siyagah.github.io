@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 49 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 54 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -59,6 +59,10 @@ or quietly lose the notebook, none of which need a browser:
   strip and the date line on one line; and the type chips still measurable at
   a **narrow Pane 3**, which is where a window-width test silently deleted
   them (v04.08);
+- **the note toolbar is one row at five pane widths**, folds a group at a time
+  as Pane 3 narrows, never overflows, clips nothing, keeps Edit out and every
+  folded control reachable from a palette, and meets a 42px touch size on a
+  phone — with the palettes measured doing the thing they name (v04.09);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -111,6 +115,15 @@ assertions miss.
   room". Measure the element you actually care about — `getBoundingClientRect()`
   on the pane — and set a viewport where the panes are squeezed, not only the
   three in `VIEWPORTS`, which are all single-pane or roomy.
+- **A pane's width is not final when its markup is.** `renderP3H()` writes the
+  toolbar while Pane 3 still measures 710px on a layout that settles to 485px,
+  so anything that measures at render time measures a width the pane never
+  has. Measure again after a `requestAnimationFrame` (and on resize) before
+  trusting the number, or asserting on it.
+- **`Math.min(width, height)` is not "how big is this button".** A 26×34px
+  archive button reads as "26px" and looks like a broken CSS rule that is
+  working perfectly. Assert on the dimension you actually mean — and on both,
+  if what you care about is a touch target.
 - **Firebase must be blocked, not just absent.** With no sync config in
   localStorage, `initAuth()` returns early and the login overlay stays hidden —
   which is why the app is fully drivable here with no sign-in.

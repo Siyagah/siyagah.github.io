@@ -329,27 +329,31 @@ r.check(meta && meta.v && meta.d && meta.sameLine && meta.dateRight,
   'the version strip and the date line share one row, dates to the right',
   meta ? `sameLine ${meta.sameLine} · dates right of versions ${meta.dateRight}` : 'no .p3-meta-row rendered');
 
-/* The bug this round found: fitting was first written against
-   window.innerWidth, but on a 1215px screen the three-pane layout leaves
-   Pane 3 only ~490px wide — so a window-width test read "desktop, plenty of
-   room" and squeezed the type chips to ZERO width, silently removing them.
-   The toolbar wraps instead, so the chips keep their width at any pane width. */
+/* The bug v04.08 found: fitting was first written against window.innerWidth,
+   but on a 1215px screen the three-pane layout leaves Pane 3 only ~485px wide
+   — so a window-width test read "desktop, plenty of room" and squeezed the
+   type chips to ZERO width, silently removing them.
+   UPDATED for v04.09, which deliberately changed half of what this asserted:
+   the row no longer wraps, so at 485px the Types/Attach/Archive buttons are
+   FOLDED into the 🏷 palette on purpose and are 0px wide by design. What must
+   still hold is that nothing is lost — the note's own type chip stays visible,
+   and Types is still reachable, from the palette button if not inline. */
 await page.setViewportSize({ width: 1215, height: 661 });
 await viewNote(null);
 const narrow = await page.evaluate(() => {
+  const vis = (el) => !!el && el.offsetParent !== null;
   const p3 = document.getElementById('p3').getBoundingClientRect();
-  const grp = document.querySelector('#p3h .p3h-nti-inline');
   const chip = document.querySelector('#p3h .p3h-nti-inline .nti-chip, #p3h .p3h-nti-inline .nti-no-type');
-  const types = document.querySelector('#p3h .nti-picker-btn');
+  const types = document.querySelector('#p3h .p3h-nti-inline .nti-picker-btn');
+  const grpBtn = document.getElementById('p3h-nti-grp');
   return { p3w: Math.round(p3.width),
-    grpW: grp ? Math.round(grp.getBoundingClientRect().width) : -1,
-    chipW: chip ? Math.round(chip.getBoundingClientRect().width) : -1,
-    typesW: types ? Math.round(types.getBoundingClientRect().width) : -1,
+    chipW: chip && vis(chip) ? Math.round(chip.getBoundingClientRect().width) : 0,
+    typesInline: vis(types), typesViaPalette: vis(grpBtn),
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
 });
-r.check(narrow.chipW > 0 && narrow.typesW > 0 && narrow.overflow <= 1,
-  'the type chips survive a narrow Pane 3 instead of being squeezed to nothing',
-  `Pane 3 ${narrow.p3w}px · chip ${narrow.chipW}px · Types ${narrow.typesW}px · overflow ${narrow.overflow}px`);
+r.check(narrow.chipW > 0 && (narrow.typesInline || narrow.typesViaPalette) && narrow.overflow <= 1,
+  'at a narrow Pane 3 the type chip stays visible and Types stays reachable',
+  `Pane 3 ${narrow.p3w}px · chip ${narrow.chipW}px · Types inline ${narrow.typesInline} / via palette ${narrow.typesViaPalette} · overflow ${narrow.overflow}px`);
 await page.setViewportSize({ width: 1400, height: 900 });
 await page.waitForTimeout(150);
 
@@ -415,6 +419,103 @@ r.check(editTb.unified && editTb.editing && editTb.dir === 'column',
   `unified bar ${editTb.unified} · #p3h.editing ${editTb.editing} · ${editTb.dir}`);
 await page.evaluate(() => { ST.editing = false; ST.article = 'a1'; window.render(); });
 await page.waitForTimeout(200);
+
+
+/* ── 6d. v04.09: one row of buttons, bunched by type when it will not fit ─ */
+/* On a phone v04.08's wrapping toolbar became THREE rows. The row is nowrap
+   now and folds by measuring itself. These open their own app per size,
+   because the fold depends on the width of Pane 3, not of the window. */
+const TB_SIZES = [
+  { name: 'phone', width: 390, height: 844 },
+  { name: 'tablet', width: 820, height: 1180 },
+  { name: 'narrow Pane 3', width: 1215, height: 661 },
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'wide', width: 1920, height: 1000 },
+];
+const tbRows = [];
+for (const vp of TB_SIZES) {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  await s.page.evaluate(() => { const a = DB.articles.find((x) => x.id === 'a1');
+    a.content = '<h2>Alpha</h2><p>a</p>'; selArt('a1'); });
+  await s.page.waitForTimeout(450);
+  tbRows.push({ vp, m: await s.page.evaluate(() => {
+    const el = document.getElementById('p3h');
+    const r = el.getBoundingClientRect();
+    const vis = (b) => b.offsetParent !== null;
+    const btns = [...el.querySelectorAll('button')].filter(vis);
+    const rowTops = new Set(btns.map((b) => Math.round(b.getBoundingClientRect().top / 8)));
+    return {
+      paneW: el.clientWidth, rowH: Math.round(r.height), rows: rowTops.size,
+      overflow: el.scrollWidth - el.clientWidth,
+      mode: el.classList.contains('p3h-tightest') ? 'tightest'
+          : el.classList.contains('p3h-tighter') ? 'tighter'
+          : el.classList.contains('p3h-tight') ? 'tight' : 'full',
+      minH: Math.min(...btns.map((b) => Math.round(b.getBoundingClientRect().height))),
+      minW: Math.min(...btns.map((b) => Math.round(b.getBoundingClientRect().width))),
+      editVisible: btns.some((b) => /Edit/.test(b.textContent)),
+      /* Everything that can fold must still be REACHABLE — inline or behind
+         its palette button. Nothing may simply disappear. */
+      actionsReachable: !!(el.querySelector('.p3h-actions') && vis(el.querySelector('.p3h-actions')))
+        || vis(document.getElementById('p3h-act-grp')),
+      typesReachable: !!(el.querySelector('.p3h-nti-inline .nti-picker-btn') && vis(el.querySelector('.p3h-nti-inline .nti-picker-btn')))
+        || vis(document.getElementById('p3h-nti-grp')),
+      clipped: btns.filter((b) => b.getBoundingClientRect().right > r.right + 0.5).length,
+    };
+  }) });
+  await s.close();
+}
+const oneRow = tbRows.filter((x) => x.m.rows > 1 || x.m.clipped > 0);
+r.check(oneRow.length === 0, 'the note toolbar is one row at every size, with nothing clipped off it',
+  tbRows.map((x) => `${x.vp.name} ${x.m.paneW}px → ${x.m.rows} row(s), ${x.m.clipped} clipped`).join(' · '));
+
+const folds = tbRows.map((x) => x.m.mode);
+r.check(tbRows.every((x) => x.m.overflow <= 1) && folds.includes('full') && folds.some((f) => f !== 'full'),
+  'it folds progressively as Pane 3 narrows, and never overflows',
+  tbRows.map((x) => `${x.vp.name} ${x.m.paneW}px → ${x.m.mode} (over ${x.m.overflow}px)`).join(' · '));
+
+r.check(tbRows.every((x) => x.m.editVisible && x.m.actionsReachable && x.m.typesReachable),
+  'folding hides nothing — Edit stays out, actions and Types stay reachable',
+  tbRows.map((x) => `${x.vp.name}: edit ${x.m.editVisible}, actions ${x.m.actionsReachable}, types ${x.m.typesReachable}`).join(' · '));
+
+const phone = tbRows.find((x) => x.vp.name === 'phone').m;
+const desk = tbRows.find((x) => x.vp.name === 'wide').m;
+r.check(phone.minH >= 42 && phone.minW >= 42 && desk.minH >= 34 && desk.minW >= 26,
+  'the toolbar buttons are a real touch size — 42px+ on a phone',
+  `phone smallest ${phone.minW}×${phone.minH}px · wide smallest ${desk.minW}×${desk.minH}px`);
+
+/* The palettes must actually DO the things they list. */
+{
+  const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+  await s.page.evaluate(() => { const a = DB.articles.find((x) => x.id === 'a1');
+    a.content = '<h2>Alpha</h2><p>a</p>'; selArt('a1'); });
+  await s.page.waitForTimeout(450);
+  await s.page.click('#p3h-act-grp');
+  await s.page.waitForTimeout(250);
+  const pal = await s.page.evaluate(() => {
+    const p = document.getElementById('p3h-pal');
+    return { open: !!p?.classList.contains('open'),
+      labels: [...p.querySelectorAll('.p3h-pal-btn')].map((b) => b.textContent.trim()),
+      /* Pop-out is hidden under 900px by its own CSS, so the palette must not
+         offer to open something the app will refuse to show. */
+      offersPopout: /Pop out|as a panel/.test(p.textContent),
+      minH: Math.min(...[...p.querySelectorAll('.p3h-pal-btn')].map((b) => Math.round(b.getBoundingClientRect().height))) };
+  });
+  const nBefore = await s.page.evaluate(() => DB.articles.length);
+  await s.page.evaluate(() => [...document.querySelectorAll('#p3h-pal .p3h-pal-btn')].find((b) => /Make a copy/.test(b.textContent)).click());
+  await s.page.waitForTimeout(500);
+  const nAfter = await s.page.evaluate(() => DB.articles.length);
+  await s.page.click('#p3h-nti-grp');
+  await s.page.waitForTimeout(250);
+  const ntiPal = await s.page.evaluate(() => {
+    const p = document.getElementById('p3h-pal');
+    return { types: !!p && /Types/.test(p.textContent), attach: !!p && /Attach/.test(p.textContent) };
+  });
+  r.check(pal.open && pal.labels.length >= 6 && !pal.offersPopout && pal.minH >= 42
+    && nAfter === nBefore + 1 && ntiPal.types && ntiPal.attach,
+    'the palettes list the folded buttons with words, at a tappable size, and they work',
+    `${pal.labels.length} actions (${pal.minH}px tall) · pop-out offered on a phone: ${pal.offersPopout} · copy made ${nBefore}→${nAfter} · type palette has Types ${ntiPal.types} / Attach ${ntiPal.attach}`);
+  await s.close();
+}
 
 
 /* ── 7. The data round-trip — the invariant that matters most ──────────── */
