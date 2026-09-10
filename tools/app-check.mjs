@@ -286,6 +286,137 @@ r.check(stillClean.same, 'opening a line without typing leaves the note untouche
   stillClean.same ? 'no autosave fired on a bare click' : `before=${JSON.stringify(stillClean.before)}\nafter =${JSON.stringify(stillClean.after)}`);
 
 
+/* ── 6c. v04.08: the read view's chrome folded into two rows ───────────── */
+/* The note view used to stack six rows before the note's first line. Home,
+   the type chips and the section tools now live in the Pane-3 toolbar, and
+   the version strip and the date line share one meta row. */
+const viewNote = async (html, aid = 'a1') => {
+  await page.evaluate(({ h, id }) => {
+    const a = DB.articles.find((x) => x.id === id);
+    if (h != null) a.content = h;
+    ST.editing = false; ST.article = id; window.render();
+  }, { h: html, id: aid });
+  await page.waitForTimeout(200);
+};
+
+await viewNote('<h2>ALPHA</h2><p>alpha body</p><h2>BETA</h2><p>beta body</p>');
+const folded = await page.evaluate(() => ({
+  kindRow: !!document.querySelector('#p3c .kind-bar'),
+  colRow: !!document.querySelector('#p3c .col-toolbar'),
+  homeRow: (document.getElementById('p3-srch-bar')?.textContent || '').trim(),
+  homeInTb: !!document.querySelector('#p3h button[onclick="goHome()"]'),
+  chipsInTb: !!document.querySelector('#p3h .p3h-nti-inline .nti-chip, #p3h .p3h-nti-inline .nti-no-type'),
+  typesInTb: !!document.querySelector('#p3h .nti-picker-btn'),
+  colBtn: document.getElementById('col-tb-wrap') ? getComputedStyle(document.getElementById('col-tb-wrap')).display : 'MISSING',
+}));
+r.check(!folded.kindRow && !folded.colRow && !folded.homeRow,
+  'the read view no longer stacks a Home row, a type row and a section-tools row',
+  `kind-bar ${folded.kindRow ? 'STILL THERE' : 'gone'} · col-toolbar ${folded.colRow ? 'STILL THERE' : 'gone'} · Home row ${folded.homeRow ? 'STILL THERE' : 'gone'}`);
+r.check(folded.homeInTb && folded.chipsInTb && folded.typesInTb && folded.colBtn !== 'none',
+  'Home, the type chips and the section tools moved into the Pane-3 toolbar',
+  `home ${folded.homeInTb} · chips ${folded.chipsInTb} · Types ${folded.typesInTb} · section-tools display ${folded.colBtn}`);
+
+/* The version strip and the date line share ONE line when there is room. */
+const meta = await page.evaluate(() => {
+  const row = document.querySelector('#p3c .p3-meta-row');
+  if (!row) return null;
+  const v = row.querySelector('.ver-strip'), d = row.querySelector('.note-dateline');
+  if (!v || !d) return { v: !!v, d: !!d };
+  const vb = v.getBoundingClientRect(), db2 = d.getBoundingClientRect();
+  return { v: true, d: true, sameLine: Math.abs(vb.top - db2.top) < 24, dateRight: db2.left > vb.right };
+});
+r.check(meta && meta.v && meta.d && meta.sameLine && meta.dateRight,
+  'the version strip and the date line share one row, dates to the right',
+  meta ? `sameLine ${meta.sameLine} · dates right of versions ${meta.dateRight}` : 'no .p3-meta-row rendered');
+
+/* The bug this round found: fitting was first written against
+   window.innerWidth, but on a 1215px screen the three-pane layout leaves
+   Pane 3 only ~490px wide — so a window-width test read "desktop, plenty of
+   room" and squeezed the type chips to ZERO width, silently removing them.
+   The toolbar wraps instead, so the chips keep their width at any pane width. */
+await page.setViewportSize({ width: 1215, height: 661 });
+await viewNote(null);
+const narrow = await page.evaluate(() => {
+  const p3 = document.getElementById('p3').getBoundingClientRect();
+  const grp = document.querySelector('#p3h .p3h-nti-inline');
+  const chip = document.querySelector('#p3h .p3h-nti-inline .nti-chip, #p3h .p3h-nti-inline .nti-no-type');
+  const types = document.querySelector('#p3h .nti-picker-btn');
+  return { p3w: Math.round(p3.width),
+    grpW: grp ? Math.round(grp.getBoundingClientRect().width) : -1,
+    chipW: chip ? Math.round(chip.getBoundingClientRect().width) : -1,
+    typesW: types ? Math.round(types.getBoundingClientRect().width) : -1,
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+});
+r.check(narrow.chipW > 0 && narrow.typesW > 0 && narrow.overflow <= 1,
+  'the type chips survive a narrow Pane 3 instead of being squeezed to nothing',
+  `Pane 3 ${narrow.p3w}px · chip ${narrow.chipW}px · Types ${narrow.typesW}px · overflow ${narrow.overflow}px`);
+await page.setViewportSize({ width: 1400, height: 900 });
+await page.waitForTimeout(150);
+
+/* The section-tools button is driven by whether the note HAS headings — that
+   is decided in _initCollapsible(), the only place that knows. */
+await viewNote('<p>no headings at all here</p>');
+const noHead = await page.evaluate(() => getComputedStyle(document.getElementById('col-tb-wrap')).display);
+await viewNote('<h2>ALPHA</h2><p>alpha body</p><h2>BETA</h2><p>beta body</p>');
+const withHead = await page.evaluate(() => getComputedStyle(document.getElementById('col-tb-wrap')).display);
+r.check(noHead === 'none' && withHead !== 'none',
+  'the section-tools button shows only on a note that has headings',
+  `no headings → ${noHead} · with headings → ${withHead}`);
+
+/* Collapse all / Expand all still work, now from the popover. */
+await page.click('#col-tb-btn');
+await page.waitForTimeout(150);
+const popBtns = await page.evaluate(() => [...document.querySelectorAll('#col-pop button')].map((b) => b.textContent.trim()));
+await page.evaluate(() => [...document.querySelectorAll('#col-pop button')].find((b) => /Collapse all/.test(b.textContent)).click());
+await page.waitForTimeout(250);
+const collapsed = await page.evaluate(() => ({
+  clp: document.querySelectorAll('#p3c .col-sec.clp').length,
+  hidden: [...document.querySelectorAll('#p3c .col-body')].every((b) => b.style.display === 'none'),
+}));
+await page.click('#col-tb-btn');
+await page.waitForTimeout(150);
+await page.evaluate(() => [...document.querySelectorAll('#col-pop button')].find((b) => /Expand all/.test(b.textContent)).click());
+await page.waitForTimeout(250);
+const expanded = await page.evaluate(() => document.querySelectorAll('#p3c .col-sec.clp').length);
+r.check(popBtns.length === 3 && collapsed.clp === 2 && collapsed.hidden && expanded === 0,
+  'Collapse all / Expand all still work from the section-tools popover',
+  `${popBtns.length} actions · collapsed ${collapsed.clp} · expanded back to ${expanded}`);
+
+/* Every control that moved must still DO its job from its new home. */
+await page.evaluate(() => document.querySelector('#p3h .nti-picker-btn').click());
+await page.waitForTimeout(250);
+const typesOpen = await page.evaluate(() => !!document.getElementById('nti-picker')?.classList.contains('open'));
+await page.evaluate(() => closeNtiPicker());
+const archBefore = await page.evaluate(() => !!DB.articles.find((a) => a.id === 'a1').archived);
+await page.evaluate(() => document.querySelector('#p3h .kind-arch-btn').click());
+await page.waitForTimeout(300);
+const archAfter = await page.evaluate(() => !!DB.articles.find((a) => a.id === 'a1').archived);
+await page.evaluate((v) => { const a = DB.articles.find((x) => x.id === 'a1'); a.archived = v; }, archBefore);
+r.check(typesOpen && archBefore !== archAfter,
+  'the Types picker and Archive still work from the toolbar',
+  `Types picker opened ${typesOpen} · archive ${archBefore} → ${archAfter}`);
+
+/* The landing page has no Pane-3 toolbar to carry Home, so it keeps its row. */
+await page.evaluate(() => { ST.article = null; ST.editing = false; window.render(); });
+await page.waitForTimeout(250);
+const landing = await page.evaluate(() => (document.getElementById('p3-srch-bar')?.textContent || '').trim());
+r.check(/Home/.test(landing), 'the landing page keeps its own Home row', landing || '(empty)');
+
+/* Edit mode was NOT part of this round and must be exactly as it was. */
+await page.evaluate(() => { ST.article = 'a1'; ST.editing = false; window.render(); window.startEdit(); });
+await page.waitForTimeout(300);
+const editTb = await page.evaluate(() => ({
+  unified: !!document.querySelector('.p3h-unified-tb'),
+  editing: document.getElementById('p3h').classList.contains('editing'),
+  dir: getComputedStyle(document.getElementById('p3h')).flexDirection,
+}));
+r.check(editTb.unified && editTb.editing && editTb.dir === 'column',
+  'edit mode’s own toolbar is untouched by the view-mode rearrangement',
+  `unified bar ${editTb.unified} · #p3h.editing ${editTb.editing} · ${editTb.dir}`);
+await page.evaluate(() => { ST.editing = false; ST.article = 'a1'; window.render(); });
+await page.waitForTimeout(200);
+
+
 /* ── 7. The data round-trip — the invariant that matters most ──────────── */
 /* Save File writes the whole notebook into <script id="nd">. If a single id
    fails to survive that trip, notes have been lost silently. */

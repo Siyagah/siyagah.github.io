@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.07.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.08.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,13 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.08** (10 Sep 2026) — the read view's chrome folded from six rows into
+  two: Home, the NTI bar and the section tools moved into the Pane-3 toolbar
+  (mirroring edit mode's unified bar), section tools became a `⇅` popover, and
+  the version strip and date line share one row. Fitting is done by wrapping,
+  not by a `window.innerWidth` breakpoint — Pane 3 is ~485px on a 1215px
+  screen, and a window-width test squeezed the type chips out of existence.
+  49/49 app checks (up from 40) and 11/11 ship checks.
 - **v04.07** (10 Sep 2026) — a line to write on above the first block and below
   the last. Clicking above a leading heading used to land the caret *between*
   the fold grip and arrow; clicking below the last block landed it at the end
@@ -25,8 +32,6 @@ must never accumulate here instead of there.
 - **v04.05** (4 Sep 2026) — the web app manifest and real icons, which had been
   missing entirely.
 - **v04.04** (4 Sep 2026) — note templates, starting with Jumu'a Khutbah.
-- **v04.03** (3 Sep 2026) — folder text styling in the pop-out browser; its
-  scope button matched to the Title-pane button.
 
 ---
 
@@ -193,6 +198,13 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **Pane 3 is a column, not the screen.** In the three-pane layout Pane 3 is
+  about 485px wide on a 1215px window, so `window.innerWidth` says "desktop,
+  plenty of room" about a pane that has none. Layout that must fit inside a
+  pane belongs to `flex-wrap`, or to a measurement of the pane itself — never
+  to a window-width breakpoint. Cost: the first cut of v04.08 squeezed the
+  note's type chips to zero width and they vanished from the screen while
+  still being present in the DOM. Caught by a screenshot, not by a check.
 - **A heading's first children are chrome, not text.** `_edColInit()` injects a
   `.ed-col-grip` and a `.ed-col-arr` at the front of every `h1`–`h4` in an
   editor. Anything asking "is the caret at the start of this heading" must

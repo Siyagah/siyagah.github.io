@@ -223,3 +223,97 @@ in `tools/README.md`.
   rule already covers writing above a leading list; a gutter click above one
   now opens a line too, but nothing else about lists was touched.
 - **`legacy/**` was not touched**, by rule.
+
+---
+
+## v04.08 — the note view folded into two rows (10 September 2026)
+
+The owner marked up a screenshot of the read view: circles round four groups
+of buttons, every arrow pointing up. Read literally, it says *these rows are
+not worth a row each*.
+
+**What the read view was**
+
+Counted in a real browser: **six rows of chrome** between the top of the pane
+and the note's first line.
+
+1. the Pane-3 toolbar (`‹ › 🔍 ✚ ✏️Edit ⊡ ⛶ 🗐 ⋯ 🗑`) — its whole left half an
+   empty spacer;
+2. a row containing only `🏠 Home`;
+3. the NTI bar — `General` … `🏷 Types` `📎 Attach` `📦`;
+4. the title;
+5. the version strip — `🔀 Start Versioning`;
+6. the section-tools row — `▶ Collapse All  ▼ Expand All  ≡ Preview`;
+7. the date line — `Created … | Updated …`.
+
+On a 1440×900 desktop the first heading did not start until 430px down.
+
+**What settled the reading**
+
+Edit mode had already been through exactly this. Its `p3h-unified-tb` puts
+Home, the format icons, the NTI bar and the section tools on **one** row, and
+its section tools are an overflow popover rather than a reserved row. The
+markup is asking for the read view to catch up with the edit view, so this
+round reuses that structure rather than inventing a second one.
+
+**What now happens**
+
+- **The Pane-3 toolbar carries Home, the type chips, `🏷 Types`, `📎 Attach`,
+  the archive button and the section tools**, alongside the navigation and
+  action buttons it already had. Rows 2 and 3 are gone.
+- **Section tools became a `⇅` button** opening a popover with Collapse all /
+  Expand all / Preview — the same `_colAll()` / `_colTogglePreview()`
+  underneath, unchanged. Row 6 is gone. The glyph is `⇅`, not the `⋯` edit
+  mode uses, because the read view already has a `⋯` "More options" button a
+  few pixels to its right.
+- **The version strip and the date line share one row**, versions left, dates
+  pushed to the right end. Rows 5 and 7 became one.
+- The `⇅` button appears only on a note that actually has headings.
+
+Six rows became two. The first heading now starts 275px down instead of 430px
+on desktop, and 117px instead of 189px on tablet.
+
+**The bug this round found in its own first attempt**
+
+The first version decided what to merge with `window.innerWidth < 1200`, the
+same test edit mode uses. Screenshotting it showed the type chips **had
+vanished entirely** at 1215px. The reason is that Pane 3 is one column of a
+three-pane layout: on a 1215px screen the window is "desktop" but the pane is
+about **485px**. The chips were told they had room, then squeezed to zero
+width by the ten buttons beside them — present in the DOM, invisible on screen.
+
+So the fitting is not a breakpoint at all now. The toolbar wraps: the type
+group refuses to shrink, and the action buttons drop to a second line,
+right-aligned there, when the pane is too narrow to hold everything. One code
+path at every size, and correct at pane widths no breakpoint would have
+predicted. A check pins it at a viewport where Pane 3 is 485px.
+
+**Measured**
+
+11/11 ship checks, and app checks up from 40 to **49**. The nine new ones:
+
+- the read view no longer stacks a Home row, a type row and a section-tools row;
+- Home, the type chips and the section tools are in the Pane-3 toolbar;
+- the version strip and the date line share one row, dates to the right;
+- the type chips survive a narrow Pane 3 instead of being squeezed to nothing;
+- the section-tools button shows only on a note that has headings;
+- Collapse all / Expand all still work from the popover;
+- the Types picker and Archive still work from the toolbar;
+- the landing page keeps its own Home row;
+- edit mode's own toolbar is untouched.
+
+Verified at 390×844, 820×1180, 1440×900 and at 1215×661 with all three panes
+open, which is the case that caught the disappearing chips.
+
+**What was NOT done, and why**
+
+- **Edit mode was not touched.** The markup was on the read view, and edit
+  mode already has its unified toolbar. The one thing it still stacks is the
+  version strip above the date line — the same merge would suit it, but it was
+  not asked for. Say the word and it is a small round.
+- **No note content changed**, and no data shape changed. This is layout only.
+- **The `⇅` glyph is a guess.** It is not one of the app's existing icons; if
+  it reads badly next to `⋯`, it is one string to change.
+- **Nothing was removed, only moved.** Every button in the old rows is still
+  present and still works — each is measured by name in the checks above.
+- **`legacy/**` was not touched**, by rule.
