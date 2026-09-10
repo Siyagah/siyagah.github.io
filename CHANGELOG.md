@@ -409,3 +409,115 @@ the chip stays visible and Types stays reachable.
   phone it now carries a text label — but if it draws as a box too, tell me
   and I will use a plain emoji.
 - **`legacy/**` was not touched**, by rule.
+
+## v04.10 — the two pop-up buttons say which is which (10 September 2026)
+
+A screenshot of two buttons in the note toolbar, and one question: *what do
+these do, why are they separate, and can they be merged?*
+
+They were `⊡` and `⛶`, sitting side by side, both faint grey, both a square —
+next to a third square, `⧉ Make a copy`. Three neighbours, one silhouette.
+
+**They are genuinely two things, and the names now say so**
+
+| Was | Is | What it opens |
+|---|---|---|
+| `⊡` "Pop out as floating window" | **Multi Notes Pop-Up** | Its own window on top of the app. Several open at once, side by side; everything behind stays usable. |
+| `⛶` "Open as resizable panel" | **Single Note Pop-Up** | Lifts this one note into the middle of the screen and dims everything else. One at a time; the dark area closes it. |
+
+The owner chose the names and chose the layout — words on the buttons, from a
+mock-up of three options — after asking whether the two could be merged. They
+cannot, in behaviour: opening either one closes the other (`popOutNote()` and
+`openNoteModal()` each shut the other down, the "one pop-up paradigm at a
+time" rule from v03.NotePane.G4), so they are two settings of one thing, and
+one of them would have to be hidden behind a menu to merge the controls.
+
+**Drawn icons, not typed ones**
+
+`⊡` and `⛶` are font characters. v04.09 already had to swap `🗐` off the
+duplicate button because Android's emoji font does not carry it and drew an
+empty box. Both are now inline `<svg>`, which cannot fail that way and can
+show the difference: **two overlapping windows** for Multi, **one bright card
+on a dimmed screen** for Single. Multi is tinted gold, Single green — glyph
+only, no filled buttons. (`.bn` sets `color: var(--t3)!important`, so the tint
+needs `!important` or it silently does nothing.)
+
+The right-click menu also still carried `🗐 Make a copy` — the exact glyph
+v04.09 replaced on the toolbar for being an empty box. It is `⧉` there now.
+
+**"As long as space permits", measured**
+
+The words cost the row **71px**. `_p3FitToolbar()` gets a new fold stage,
+`p3h-nolbl`, placed **after** the type group and **before** anything else.
+Measured on the real row:
+
+| Pane 3 | State |
+|---|---|
+| **925px+** | everything inline, words on |
+| **737–925px** | words on, type group behind its `🏷` palette |
+| **710–737px** | words off, icons only |
+| below | the existing v04.09 folds, unchanged |
+
+So the words appear from **737px of Pane 3** upward — on the three-pane
+desktop layout, a window of about **1470px or wider**. A 1440 window gives
+Pane 3 710px and falls **27px short**, so a 1440 laptop shows the icons alone.
+That was not shaved to fit: squeezing a control to force a fit is what cost
+this app its type chips in v04.08, and 27px would have meant an 11.5px label
+in a 13px row. Below 900px the buttons do not exist at all — pop-ups are
+`display:none` there and `openNotePopup()` refuses to open one.
+
+Nothing is ever unnamed or unreachable: the `⋯` palette and the right-click
+menu carry both full names plus a line saying what each does, at every width.
+
+**Where the two buttons are defined**
+
+One place now — `_popBtnHTML()` / `_popIcoHTML()` / `POP_KINDS`. The read
+toolbar, the edit toolbar, the `⋯` palette and the right-click menu all come
+through it, because "anything on the edit toolbar belongs in two places" is
+exactly how four copies of a button drift apart.
+
+**Measured**
+
+11/11 ship checks, and app checks from 54 to **62**. The eight new ones assert:
+both buttons are `<svg>` and the two drawings differ; each names itself in its
+tooltip; the words show and the two are tinted apart where the pane can carry
+them; the words never break the one-row rule or overflow the pane at 390, 820,
+1440 or 1920; they fold where the pane cannot carry them; above 900px a folded
+button is still reachable from the `⋯` palette; a folded button is the same
+36px+ target it was in v04.09; and the right-click menu carries both full names
+with the `🗐` glyph gone.
+
+Two earlier checks were **updated in place, not deleted**:
+
+- The v04.09 fold-state reader knew `full / tight / tighter / tightest`. With
+  `nolbl` inserted between two of them, a row folded to `nolbl` read as
+  `full` — the progression check would have been measuring nothing.
+- The phone palette's "does not offer pop-out below 900px" matched
+  `/Pop out|as a panel/`. After the rename that pattern can never match again,
+  so the check would have passed while blind. It matches `/Pop-Up/i` now.
+
+**Two things the measuring caught**
+
+- **The predicted fold widths were wrong by 27px.** The plan said the type
+  group was 288px (v04.09's figure, for a different row) and that the words
+  would therefore fit on a 1440 laptop. Measured on the actual row it is
+  ~188px, and they do not. The fold order was set from the measurement, not
+  the estimate — and it is the measurement that makes the words survive from
+  737px instead of only from 925px.
+- **A check asserting reachability below 900px was a wrong assertion**, not a
+  defect: there is nothing to reach, because the feature is deliberately
+  absent at that width. Investigated before "fixing" the app.
+
+**What was NOT done, and why**
+
+- **The edit toolbar shows the icons without the words.** It has its own
+  crowding and its own fold behaviour, and this round did not widen it. The
+  tooltip and both menus still carry the full name there.
+- **Float windows have no pop-up buttons** and did not gain any — a window is
+  already popped out.
+- **The two were not merged into one button.** The owner asked whether they
+  could be; they can (the app already remembers a per-note preference in
+  `DB.theme.notePop`), but it would hide one mode behind a menu, and the ask
+  was to tell them apart, not to reduce them.
+- **No sync, storage or export path was touched.** I1–I4 are untouched by a
+  round that changes four pieces of button markup and one CSS fold stage.

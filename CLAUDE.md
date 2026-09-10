@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.09.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.10.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,14 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.10** (10 Sep 2026) — the note pane's two pop-out buttons stopped being
+  two identical grey squares. They are named — **Multi Notes Pop-Up** (its own
+  window, several at once) and **Single Note Pop-Up** (one note, everything
+  else dimmed) — and drawn as SVG rather than typed as `⊡`/`⛶`, so no font can
+  turn them into an empty box. The words ride on the buttons from 737px of
+  Pane 3 upward and fold first when the row runs out; both names are always in
+  the `⋯` palette and the right-click menu. 62/62 app checks (up from 54) and
+  11/11 ship checks.
 - **v04.09** (10 Sep 2026) — the note toolbar is one row that never wraps. It
   measures its own pane and folds a group at a time into palettes (type
   controls first, then actions, then the type chip), so a 390px phone shows
@@ -35,9 +43,6 @@ must never accumulate here instead of there.
 - **v04.06** (4 Sep 2026) — this brief, `CHANGELOG.md`, and `tools/`: the first
   thing in this repo that measures rather than guesses. No app behaviour
   changed. 33/33 app checks and 11/11 ship checks pass against v04.05.
-- **v04.05** (4 Sep 2026) — the web app manifest and real icons, which had been
-  missing entirely.
-
 ---
 
 ## What this is
@@ -203,6 +208,15 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A fold order is only as good as the width you measured, and last round's
+  numbers are not this round's.** v04.10 placed its new fold stage using
+  v04.09's published figure for the type group (288px). On the row as it
+  actually stood the group is ~188px, and the plan's conclusion — "the words
+  will fit on a 1440 laptop" — was wrong by 27px in the direction that matters.
+  Re-measure every stage of `_p3FitToolbar()` against the real row before
+  choosing where a new stage goes; the fix is the measurement, never shaving
+  pixels off a control to force the fit. Cost: one wrong assertion that failed
+  the first run, caught before the round shipped.
 - **A toolbar that must fit needs a fold order, not just a fit.** Wrapping
   never loses a button but turns sixteen controls into three stacked rows on a
   phone; a breakpoint fits one row but deletes what it cannot show. The answer

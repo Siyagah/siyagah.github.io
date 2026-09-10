@@ -447,8 +447,13 @@ for (const vp of TB_SIZES) {
     return {
       paneW: el.clientWidth, rowH: Math.round(r.height), rows: rowTops.size,
       overflow: el.scrollWidth - el.clientWidth,
+      /* UPDATED for v04.10, which inserted a fold stage between 'tight' and
+         'tighter': the two pop-up buttons drop their words. Without this arm
+         a row folded to 'nolbl' would read as 'full' and the progression
+         check below would be measuring nothing. */
       mode: el.classList.contains('p3h-tightest') ? 'tightest'
           : el.classList.contains('p3h-tighter') ? 'tighter'
+          : el.classList.contains('p3h-nolbl') ? 'nolbl'
           : el.classList.contains('p3h-tight') ? 'tight' : 'full',
       minH: Math.min(...btns.map((b) => Math.round(b.getBoundingClientRect().height))),
       minW: Math.min(...btns.map((b) => Math.round(b.getBoundingClientRect().width))),
@@ -496,8 +501,11 @@ r.check(phone.minH >= 42 && phone.minW >= 42 && desk.minH >= 34 && desk.minW >= 
     return { open: !!p?.classList.contains('open'),
       labels: [...p.querySelectorAll('.p3h-pal-btn')].map((b) => b.textContent.trim()),
       /* Pop-out is hidden under 900px by its own CSS, so the palette must not
-         offer to open something the app will refuse to show. */
-      offersPopout: /Pop out|as a panel/.test(p.textContent),
+         offer to open something the app will refuse to show.
+         UPDATED for v04.10: these rows are named "Multi Notes Pop-Up" and
+         "Single Note Pop-Up" now — the old /Pop out|as a panel/ could never
+         match again and the check would have passed while blind. */
+      offersPopout: /Pop-Up/i.test(p.textContent),
       minH: Math.min(...[...p.querySelectorAll('.p3h-pal-btn')].map((b) => Math.round(b.getBoundingClientRect().height))) };
   });
   const nBefore = await s.page.evaluate(() => DB.articles.length);
@@ -586,6 +594,134 @@ r.check(del.gone && del.inTrash, 'a deleted note leaves the list and lands in Tr
   `${del.before}→${del.after} notes, trash ${del.trashBefore}→${del.trashAfter}`);
 
 await app.close();
+
+/* ── 6e. v04.10: the two pop-up buttons say which is which ─────────────── */
+/* They were ⊡ and ⛶ — two faint square glyphs beside a third square glyph
+   (⧉ Make a copy), indistinguishable without a hover. Each now carries a
+   drawn icon and, while the row has room, its own word. */
+{
+  /* 1600, not 1440: MEASURED, the row wants 737px of Pane 3 to carry the
+     words with the type group folded, and a 1440 window leaves Pane 3 only
+     710px — 27px short. 1600 gives it 870px. The next check covers what
+     happens at the sizes where they do not fit. */
+  const s2 = await openApp({ viewport: { width: 1600, height: 900 }, db: seedDB() });
+  await s2.page.evaluate(() => { const a = DB.articles.find((x) => x.id === 'a1');
+    a.content = '<h2>Alpha</h2><p>a</p>'; selArt('a1'); });
+  await s2.page.waitForTimeout(450);
+
+  const pop = await s2.page.evaluate(() => {
+    const el = document.getElementById('p3h');
+    const vis = (n) => !!n && n.offsetParent !== null;
+    const m = el.querySelector('.pop-btn.pop-multi'), s = el.querySelector('.pop-btn.pop-single');
+    const dup = [...el.querySelectorAll('button')].find((b) => /Make a copy/.test(b.title || ''));
+    const box = (n) => { const r = n.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; };
+    return {
+      both: !!m && !!s,
+      /* Drawn, not typed — a glyph the device has no font for is an empty box,
+         which is the bug v04.09 paid for with 🗐. An <svg> cannot do that. */
+      drawn: !!m?.querySelector('svg.pop-ico') && !!s?.querySelector('svg.pop-ico'),
+      noGlyph: !/[⊡⛶]/.test((m?.textContent || '') + (s?.textContent || '')),
+      words: [m, s].map((b) => b.querySelector('.pop-lbl')?.textContent.trim()).join('/'),
+      wordsShown: vis(m.querySelector('.pop-lbl')) && vis(s.querySelector('.pop-lbl')),
+      /* The two must not read the same, and must not read like ⧉ next door. */
+      sameShape: JSON.stringify(m.querySelector('svg').innerHTML) === JSON.stringify(s.querySelector('svg').innerHTML),
+      tinted: getComputedStyle(m).color !== getComputedStyle(s).color,
+      titles: [m.title, s.title],
+      dupTitle: dup ? dup.textContent.trim() : '(none)',
+      mW: box(m).w, sW: box(s).w, mH: box(m).h,
+      paneW: el.clientWidth,
+    };
+  });
+  r.check(pop.both && pop.drawn && pop.noGlyph && !pop.sameShape,
+    'the two pop-up buttons are drawn icons, and the two drawings differ',
+    `both present ${pop.both} · svg ${pop.drawn} · no ⊡/⛶ glyph left ${pop.noGlyph} · identical drawing ${pop.sameShape}`);
+  r.check(/Multi Notes Pop-Up/.test(pop.titles[0]) && /Single Note Pop-Up/.test(pop.titles[1]),
+    'each one names itself in its tooltip',
+    pop.titles.join('  ·  '));
+  r.check(pop.wordsShown && pop.words === 'Multi/Single' && pop.tinted,
+    'where the pane can carry them the words are on the buttons, tinted apart',
+    `Pane 3 ${pop.paneW}px · words "${pop.words}" shown ${pop.wordsShown} · different colour ${pop.tinted} · ${pop.mW}×${pop.mH}px`);
+  await s2.close();
+}
+
+/* "As long as space permits" is the whole ask, so it is measured: the words
+   must appear when the pane can carry them, fold away when it cannot, and
+   never push the row into overflowing or into a second line. */
+{
+  const WORD_SIZES = [
+    { name: 'phone', width: 390, height: 844 },
+    { name: 'tablet', width: 820, height: 1180 },
+    { name: 'laptop', width: 1440, height: 900 },
+    { name: 'wide', width: 1920, height: 1000 },
+  ];
+  const rows = [];
+  for (const vp of WORD_SIZES) {
+    const s2 = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+    await s2.page.evaluate(() => { const a = DB.articles.find((x) => x.id === 'a1');
+      a.content = '<h2>Alpha</h2><p>a</p>'; selArt('a1'); });
+    await s2.page.waitForTimeout(450);
+    rows.push({ vp, m: await s2.page.evaluate(() => {
+      const el = document.getElementById('p3h');
+      const vis = (n) => !!n && n.offsetParent !== null;
+      const lbl = el.querySelector('.pop-lbl');
+      const btn = el.querySelector('.pop-btn');
+      const tops = new Set([...el.querySelectorAll('button')].filter(vis)
+        .map((b) => Math.round(b.getBoundingClientRect().top / 8)));
+      return {
+        pane: el.clientWidth,
+        words: vis(lbl),
+        /* Folded or not, the button itself must still be reachable and a real
+           target — unless the whole action group has gone to the ⋯ palette. */
+        btnVisible: vis(btn),
+        btnW: btn && vis(btn) ? Math.round(btn.getBoundingClientRect().width) : 0,
+        actionsFolded: !vis(el.querySelector('.p3h-actions')),
+        popInPalette: vis(document.getElementById('p3h-act-grp')),
+        overflow: el.scrollWidth - el.clientWidth,
+        rows: tops.size,
+      };
+    }) });
+    await s2.close();
+  }
+  const fmt = rows.map((x) => `${x.vp.name} pane ${x.m.pane}px → words ${x.m.words ? 'shown' : 'folded'}, ${x.m.rows} row(s), over ${x.m.overflow}px`).join(' · ');
+  r.check(rows.every((x) => x.m.overflow <= 1 && x.m.rows === 1),
+    'the words never break the one-row rule or push the toolbar over its width', fmt);
+  r.check(rows.some((x) => x.m.words) && rows.some((x) => !x.m.words),
+    'the words show where the pane can carry them and fold away where it cannot', fmt);
+  /* Nothing may simply vanish: wherever the button itself is folded out of the
+     row, the ⋯ palette must be there to reach it.
+     Only above 900px, because below it there is nothing to reach — pop-ups
+     are display:none under 900px and openNotePopup() refuses to open one, so
+     the palette deliberately does not offer them either. Asserting otherwise
+     was a wrong assertion on this checker's part, not a defect in the app. */
+  const lost = rows.filter((x) => x.vp.width >= 900 && !x.m.btnVisible && !x.m.popInPalette);
+  r.check(lost.length === 0, 'above 900px, wherever the pop-up buttons fold away the ⋯ palette reaches them',
+    lost.length ? `unreachable at: ${lost.map((x) => x.vp.name).join(', ')}` : fmt);
+  /* Folded back to icons, the button must be the same target it was before
+     this round — the words are an addition, not a squeeze. */
+  const folded = rows.filter((x) => x.vp.width >= 900 && x.m.btnVisible && !x.m.words);
+  r.check(folded.every((x) => x.m.btnW >= 36),
+    'with the words off, the buttons are the same size target they were in v04.09',
+    folded.map((x) => `${x.vp.name} ${x.m.btnW}px`).join(' · ') || 'no size folded to icons');
+}
+
+/* The full names must be everywhere the button is not: both menus. */
+{
+  const s2 = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s2.page.evaluate(() => { selArt('a1'); });
+  await s2.page.waitForTimeout(400);
+  const menu = await s2.page.evaluate(() => {
+    window.showArtCtx({ clientX: 40, clientY: 60, preventDefault() {}, stopPropagation() {} }, 'a1');
+    const t = document.getElementById('ctx').textContent;
+    return { multi: /Multi Notes Pop-Up/.test(t), single: /Single Note Pop-Up/.test(t),
+      /* v04.09 swapped 🗐 for ⧉ on the toolbar because Android drew it as an
+         empty box, but the right-click menu kept the bad glyph. */
+      badGlyph: /🗐/.test(t), text: t.slice(0, 90) };
+  });
+  r.check(menu.multi && menu.single && !menu.badGlyph,
+    'the right-click menu carries both full names, and the 🗐 glyph v04.09 replaced is gone',
+    `Multi ${menu.multi} · Single ${menu.single} · 🗐 still there ${menu.badGlyph}`);
+  await s2.close();
+}
 
 /* ── 11. Layout at the three real screen sizes ─────────────────────────── */
 for (const vp of VIEWPORTS) {
