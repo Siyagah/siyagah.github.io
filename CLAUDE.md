@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.06.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.07.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,13 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.07** (10 Sep 2026) — a line to write on above the first block and below
+  the last. Clicking above a leading heading used to land the caret *between*
+  the fold grip and arrow; clicking below the last block landed it at the end
+  of that block, so typing carried on the heading. Also repaired the v03.67.01
+  Enter-above-first-heading rule, which the fold chrome had silently disabled
+  and which was leaving stray `⠿▼` headings behind. 40/40 app checks (up from
+  33) and 11/11 ship checks.
 - **v04.06** (4 Sep 2026) — this brief, `CHANGELOG.md`, and `tools/`: the first
   thing in this repo that measures rather than guesses. No app behaviour
   changed. 33/33 app checks and 11/11 ship checks pass against v04.05.
@@ -20,8 +27,6 @@ must never accumulate here instead of there.
 - **v04.04** (4 Sep 2026) — note templates, starting with Jumu'a Khutbah.
 - **v04.03** (3 Sep 2026) — folder text styling in the pop-out browser; its
   scope button matched to the Title-pane button.
-- **v04.02** (2 Sep 2026) — automatic dated backups of the whole app *and* the
-  notes, written to a folder chosen once via the File System Access API.
 
 ---
 
@@ -184,6 +189,14 @@ A failing check is a wrong assertion surprisingly often — investigate before
 
 ## Standing lessons — earned the hard way, do not relearn them
 
-*(Empty by design. This is for rules about the app that cost a shipped defect
-or a wasted round at least once. Add one the moment it is paid for, with what
-it cost. Harness traps belong in `tools/README.md`, not here.)*
+*(This is for rules about the app that cost a shipped defect or a wasted round
+at least once. Add one the moment it is paid for, with what it cost. Harness
+traps belong in `tools/README.md`, not here.)*
+
+- **A heading's first children are chrome, not text.** `_edColInit()` injects a
+  `.ed-col-grip` and a `.ed-col-arr` at the front of every `h1`–`h4` in an
+  editor. Anything asking "is the caret at the start of this heading" must
+  skip them — use `_edPrefixText()`. Cost: the v03.67.01 "Enter writes above
+  the first heading" rule shipped and then silently stopped firing the moment
+  the chrome arrived, and instead split headings into stray `⠿▼` orphans.
+  Nobody noticed for a whole version series. Found in v04.07.
