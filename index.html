@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.09">
+<meta name="app-version" content="04.10">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1848,6 +1848,48 @@ sup.ann-sup:hover{text-decoration:underline}
   #p3h:not(.editing) .kind-arch-btn{font-size:13px;padding:8px 13px;min-height:42px}
   #p3h:not(.editing) .kind-arch-btn{min-width:42px}
 }
+/* ══ v04.10 — THE TWO POP-UP BUTTONS SAY WHICH IS WHICH ═══════════════════
+   They were ⊡ and ⛶: two faint square glyphs sitting next to a third square
+   glyph (⧉ Make a copy), telling you nothing without a hover. Now each one
+   carries its NAME while the row has room for it, and a DRAWN icon that shows
+   what the mode does — two overlapping windows for Multi, one bright card on
+   a dimmed screen for Single.
+
+   Drawn, not typed, on purpose: ⊡ and ⛶ are font characters, and v04.09
+   already had to swap the duplicate button's 🗐 because Android drew it as an
+   empty box. An inline SVG cannot fail that way.
+
+   The words are the FIRST thing to fold (see _p3FitToolbar): when the row
+   runs out of width the labels go and the icons stay, which is what "as long
+   as space permits" has to mean on a 390px phone. The full names are always
+   in the ⋯ palette and the right-click menu, so nothing is ever unreachable
+   or unnamed. ── */
+.pop-ico{width:17px;height:17px;display:block;flex-shrink:0}
+.pop-ico .pi-line{fill:none;stroke:currentColor;stroke-width:1.5}
+.pop-ico .pi-fill{fill:var(--paper)}
+.pop-ico .pi-back{opacity:.5}
+.pop-ico .pi-dim{fill:currentColor;opacity:.2;stroke:none}
+.pop-btn{gap:5px}
+.pop-lbl{font-weight:500}
+/* Tinted glyph only — no filled buttons. Gold reads "more than one window",
+   green "the one note you are on". Both are already in the app's palette. */
+#p3h:not(.editing) .pop-btn{font-size:13px;opacity:1;padding:6px 9px;min-width:0}
+/* !important because .bn sets color:var(--t3)!important — without it both
+   buttons come out the same grey and the tint silently does nothing. */
+#p3h:not(.editing) .pop-btn.pop-multi{color:var(--gold)!important}
+#p3h:not(.editing) .pop-btn.pop-single{color:var(--green)!important}
+/* Folded: the words go, the button falls back to the icon-only footprint it
+   had before this round — same 38px target, nothing else moves. */
+#p3h.p3h-nolbl .pop-lbl{display:none}
+#p3h.p3h-nolbl .pop-btn{padding:6px 8px;min-width:38px;justify-content:center}
+/* Edit mode keeps the icons alone: that toolbar has its own crowding and this
+   round did not widen it. The tooltip and both menus still carry the name. */
+.et.pop-btn .pop-ico{width:15px;height:15px}
+@media(max-width:899.98px){
+  #p3h:not(.editing) .pop-btn{font-size:14px}
+  #p3h:not(.editing) .pop-btn .pop-ico{width:19px;height:19px}
+  #p3h.p3h-nolbl .pop-btn{min-width:44px}
+}
 /* ── The palettes: one kind of button each, with words, at a tappable size ── */
 .p3h-pal-btn{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;
   padding:8px 12px;border:1px solid transparent;border-radius:9px;background:none;
@@ -1856,6 +1898,14 @@ sup.ann-sup:hover{text-decoration:underline}
 .p3h-pal-btn .pal-ico{width:22px;text-align:center;font-size:17px;flex-shrink:0}
 .p3h-pal-btn .pal-lbl{flex:1;min-width:0}
 .p3h-pal-btn.pal-danger{color:var(--red,#b91c1c)}
+/* v04.10 — the pop-up rows carry the full name and a line saying what it does,
+   and the drawn icon needs a flex slot rather than a text-align one. */
+.p3h-pal-btn .pal-sub{display:block;font-size:11.5px;color:var(--t3);margin-top:1px}
+.p3h-pal-btn.pal-pop .pal-ico{display:flex;align-items:center;justify-content:center}
+.p3h-pal-btn.pop-multi .pal-ico{color:var(--gold)}
+.p3h-pal-btn.pop-single .pal-ico{color:var(--green)}
+.ci-pop.pop-multi .pop-ico{color:var(--gold)}
+.ci-pop.pop-single .pop-ico{color:var(--green)}
 .p3h-pal-nti{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%}
 .p3h-pal-nti .nti-chips{flex-wrap:wrap;max-width:none;overflow:visible}
 .p3h-pal-nti .nti-chip,.p3h-pal-nti .nti-picker-btn,
@@ -2139,7 +2189,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.09</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.10</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <div class="sb-menu-wrap" id="sb-home-wrap">
         <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn bn bi sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3384,8 +3434,8 @@ function renderP3H(){
       <button class="btn bn bi" onclick="_p3Navigate(1)" title="Next note in this folder">›</button>
       <button class="btn bn bi" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>
       <button class="btn bn bi" onclick="quickCapture()" title="New note (Primary folder) — opens in its own pop-out window">✚</button>
-      <button class="btn bn modal-pop-btn" onclick="openNotePopup('${curA.id}','float')" title="Pop out as floating window (Ctrl+Shift+P)">⊡</button>
-      <button class="btn bn modal-pop-btn" onclick="openNotePopup('${curA.id}','panel')" title="Open as resizable panel">⛶</button>
+      ${_popBtnHTML(curA.id,'float','btn bn',true)}
+      ${_popBtnHTML(curA.id,'panel','btn bn',true)}
       <button class="btn bn bi" onclick="duplicateNote('${curA.id}')" title="Make a copy">⧉</button>
       <button class="btn bn bi" title="More options" oncontextmenu="event.preventDefault();showArtCtx(event,'${curA.id}')" onclick="showArtCtx({clientX:event.clientX,clientY:event.clientY,preventDefault:()=>{},stopPropagation:()=>{}},curA.id)">⋯</button>
       <button class="btn bd bi" onclick="confirmDel('art','${curA.id}')">🗑</button></div>
@@ -8109,8 +8159,8 @@ function _p3EditIconsHTML(curA){
   return _grps.map(g=>`<button class="et eb-grp-btn${_eg===g.id?' on':''}" data-g="${g.id}" onmousedown="togEBGroup('${g.id}')" title="${g.label}">${g.icon}</button>`).join('')
     +_ktBtnHTML()
     +`<button class="et" onmousedown="event.preventDefault()" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>`
-    +`<button class="et modal-pop-btn" onmousedown="event.preventDefault()" onclick="openNotePopup('${curA.id}','float')" title="Pop out as floating window (Ctrl+Shift+P)">⊡</button>`
-    +`<button class="et modal-pop-btn" onmousedown="event.preventDefault()" onclick="openNotePopup('${curA.id}','panel')" title="Open as resizable panel">⛶</button>`;
+    +_popBtnHTML(curA.id,'float','et',false)
+    +_popBtnHTML(curA.id,'panel','et',false);
 }
 function togEBGroup(g){
   const btn=document.querySelector('.eb-grp-btn[data-g="'+g+'"]');
@@ -8242,6 +8292,54 @@ function _fwFocus(aid){
    pixels is meaningless across devices (left:1180px is off-screen on a
    tablet), and writing the mode onto the article record would bump its
    updatedAt on every open — sync churn for a note you only looked at. */
+/* ══ v04.10 — ONE DEFINITION OF THE TWO POP-UP BUTTONS ════════════════════
+   They are the owner's words now: a "Multi Notes Pop-Up" opens the note in
+   its own window and several can be open at once; a "Single Note Pop-Up"
+   lifts this one note into the middle of the screen and dims everything
+   else. The same name has to appear on the button, in its tooltip, in the ⋯
+   palette and in the right-click menu — and "anything on the edit toolbar
+   belongs in two places", so every caller comes through here instead of
+   repeating the markup and drifting apart.
+   Declared with `function` (hoisted) and a plain object literal, both well
+   before boot calls render(), so there is no order-of-evaluation trap. */
+const POP_KINDS = {
+  float: { name:'Multi Notes Pop-Up', short:'Multi', cls:'pop-multi',
+    hint:'Multi Notes Pop-Up — its own window; several notes open at once (Ctrl+Shift+P)',
+    sub:'Own window · several at once' },
+  panel: { name:'Single Note Pop-Up', short:'Single', cls:'pop-single',
+    hint:'Single Note Pop-Up — this one note, everything else dimmed',
+    sub:'One note · everything else dimmed' }
+};
+/* Drawn, not typed. ⊡ and ⛶ are font characters and can come out as an empty
+   box (v04.09 paid for that lesson with 🗐); an SVG cannot, and it can show
+   the difference: two overlapping windows vs one card on a dimmed screen. */
+function _popIcoHTML(mode){
+  return mode==='panel'
+    ? '<svg class="pop-ico" viewBox="0 0 21 21" aria-hidden="true">'
+      +'<rect class="pi-dim" x="1" y="1" width="19" height="19" rx="3.5"/>'
+      +'<rect class="pi-line pi-fill" x="5.4" y="5.4" width="10.2" height="10.2" rx="2"/></svg>'
+    : '<svg class="pop-ico" viewBox="0 0 21 21" aria-hidden="true">'
+      +'<rect class="pi-line pi-back" x="1.7" y="1.7" width="12" height="12" rx="2"/>'
+      +'<rect class="pi-line pi-fill" x="7.3" y="7.3" width="12" height="12" rx="2"/></svg>';
+}
+/* base — the caller's own button classes ('btn bn' in the read toolbar, 'et'
+   on the edit bar). label — the read toolbar shows the word while the row has
+   room for it; the edit bar never does, it has no width to spare. */
+function _popBtnHTML(aid,mode,base,label){
+  const k=POP_KINDS[mode]||POP_KINDS.float;
+  const id=String(aid).replace(/'/g,"\\'");
+  return '<button class="'+base+' modal-pop-btn pop-btn '+k.cls+'"'
+    +(base.indexOf('et')===0?' onmousedown="event.preventDefault()"':'')
+    +' onclick="openNotePopup(\''+id+'\',\''+mode+'\')" title="'+esc(k.hint)+'">'
+    +_popIcoHTML(mode)
+    +(label?'<span class="pop-lbl">'+k.short+'</span>':'')+'</button>';
+}
+/* The palette and the menus have room for the whole name plus the one line
+   that says what it does — the button in the row does not. */
+function _popKindLbl(mode){
+  const k=POP_KINDS[mode]||POP_KINDS.float;
+  return esc(k.name)+'<span class="pal-sub">'+esc(k.sub)+'</span>';
+}
 function _notePopMode(aid){
   const m=DB.theme&&DB.theme.notePop&&DB.theme.notePop[aid];
   return (m==='panel'||m==='float')?m:null;
@@ -8298,8 +8396,8 @@ function _fwSyncCloseAllChip(){
   chip.textContent='\u2715 Close all ('+n+')';
   chip.style.zIndex=(_fwZTop+1);
 }
-/* Automatic panel → float conversion, fired only when the viewport drops out
-   of the desktop tier while a panel is open. Deliberately NOT fired on every
+/* Automatic Single → Multi conversion, fired only when the viewport drops out
+   of the desktop tier while a Single Note Pop-Up is open. Deliberately NOT fired on every
    shrink: converting on a 10px drag would be constant, pointless churn. */
 function _panelToFloat(){
   const aid=ST.article;
@@ -8318,7 +8416,7 @@ function _panelToFloat(){
     win.style.top =Math.max(0,Math.min(r.top, vh-h))+'px';
     _fwSyncBodyPadding(aid);
   }
-  try{toast('\u22a1 Panel became a floating window');}catch(e){}
+  try{toast('Screen narrowed — now a Multi Notes Pop-Up');}catch(e){}
 }
 function popOutNote(aid){
   hideCtx();
@@ -10392,7 +10490,7 @@ function toggleColPop(ev){
 function _p3FitToolbar(){
   const el=document.getElementById('p3h');
   if(!el||el.classList.contains('editing'))return;
-  el.classList.remove('p3h-tight','p3h-tighter','p3h-tightest');
+  el.classList.remove('p3h-nolbl','p3h-tight','p3h-tighter','p3h-tightest');
   if(!el.clientWidth)return;                 /* pane is off-screen; nothing to measure */
   const fits=()=>el.scrollWidth<=el.clientWidth+1;
   if(fits())return;
@@ -10401,6 +10499,26 @@ function _p3FitToolbar(){
      group first and keeps the note's own type chip visible longest, because
      the chip is information, not just a control. */
   el.classList.add('p3h-tight');             /* Types / Attach / Archive → 🏷 palette */
+  if(fits())return;
+  /* v04.10 — the two pop-up buttons wear their names ("Multi", "Single"),
+     which cost the row 71px it did not spend before. They fold AFTER the type
+     group and BEFORE anything else, and that position was MEASURED on this
+     row, not guessed: it wants 925px of pane with everything inline and the
+     words on, 854px with the words off, 737px with the words on and the type
+     group behind its 🏷 palette, 710px with both folded.
+     So the words survive from 737px of pane upward — which on the three-pane
+     desktop layout is a window of about 1470px or wider. A 1440 window gives
+     Pane 3 only 710px and falls 27px short, and no pixel-shaving fixes that
+     honestly: squeezing a control to force a fit is exactly what cost this
+     app the type chips in v04.08.
+     Putting the words ahead of the type group is what buys the 737–925px
+     band; below 737px they go, and only then does anything else move, because
+     dropping a word loses nothing — the drawn icon, the tooltip, the ⋯ palette
+     and the right-click menu all still name the thing — while every fold under
+     this one takes a whole group off the row. The trade is a pane of 854–925px,
+     where v04.09 kept the type group inline and this folds it to keep the
+     words: both do not fit, and the words are what was asked for. */
+  el.classList.add('p3h-nolbl');             /* Multi / Single lose their words */
   if(fits())return;
   el.classList.add('p3h-tighter');           /* ‹ › 🔍 ✚ ⧉ ⋯ 🗑    → ⋯ palette */
   if(fits())return;
@@ -10421,8 +10539,8 @@ function _p3ActPalette(ev){
   /* Pop-out windows are hidden under 900px by their own CSS rule, so the
      palette must not offer what the app will not open. */
   if(window.innerWidth>=900){
-    h+=_p3PalBtn('\u22A1','Pop out as a window',"openNotePopup('"+id+"','float')")
-      +_p3PalBtn('\u26F6','Open as a panel',"openNotePopup('"+id+"','panel')");
+    h+=_p3PalBtn(_popIcoHTML('float'),_popKindLbl('float'),"openNotePopup('"+id+"','float')",'pal-pop pop-multi')
+      +_p3PalBtn(_popIcoHTML('panel'),_popKindLbl('panel'),"openNotePopup('"+id+"','panel')",'pal-pop pop-single');
   }
   h+=_p3PalBtn('\u29C9','Make a copy',"duplicateNote('"+id+"')")
     +_p3PalBtn('⋯','More options',"showArtCtx({clientX:0,clientY:60,preventDefault:()=>{},stopPropagation:()=>{}},'"+id+"')")
@@ -16378,10 +16496,10 @@ function _buildArtCtxMain(art,aid){
   const inTab=_tabGroup(_tabHost()).includes(aid);
   const _canModal=window.innerWidth>=900;
   return `<div class="ci" onclick="hideCtx();startRenameArtTitle('${aid}')">✏ Rename title</div>`
-    +(_canModal?`<div class="ci" onclick="openNotePopup('${aid}','float')">⊡ Pop out note</div>`:'')
-    +(_canModal?`<div class="ci" onclick="openNotePopup('${aid}','panel')">⛶ Open as resizable panel</div>`:'')
+    +(_canModal?`<div class="ci ci-pop pop-multi" onclick="openNotePopup('${aid}','float')">${_popIcoHTML('float')} ${POP_KINDS.float.name}</div>`:'')
+    +(_canModal?`<div class="ci ci-pop pop-single" onclick="openNotePopup('${aid}','panel')">${_popIcoHTML('panel')} ${POP_KINDS.panel.name}</div>`:'')
     +`<div class="ci" onclick="openNoteHistory('${aid}')">🕐 Note History</div>`
-    +`<div class="ci" onclick="hideCtx();duplicateNote('${aid}')">🗐 Make a copy</div>`
+    +`<div class="ci" onclick="hideCtx();duplicateNote('${aid}')">⧉ Make a copy</div>`
     +`<div class="csep"></div>`
     +`<div class="ci ci-sub" onclick="_ctxSub('${aid}','nti')">🏷 NTI Types<span class="ci-arr">▶</span></div>`
     +`<div class="csep"></div>`
@@ -18514,7 +18632,8 @@ document.addEventListener('keydown',ev=>{
     ev.preventDefault();
     openGlobalSearch();
   }
-  /* Ctrl+Shift+P — pop out current note as a floating window */
+  /* Ctrl+Shift+P — open the current note as a pop-up (whichever mode it
+     was last opened in; a Multi Notes Pop-Up if it has never been popped) */
   if(ev.key==='P'&&ev.ctrlKey&&ev.shiftKey){
     ev.preventDefault();
     if(ST.article&&ST.article!=='cal'&&window.innerWidth>=900){
@@ -18582,7 +18701,7 @@ function _onViewportResize(){
   if(ST.noteModal){
     if(window.innerWidth<900){
       closeNoteModal();
-      try{toast('⛶ Panel closed — screen too narrow');}catch(e){}
+      try{toast('Single Note Pop-Up closed — screen too narrow');}catch(e){}
     } else if(_uiTier()!=='desktop'&&_rzTier==='desktop'){
       /* v03.NotePane.G1 — leaving the desktop tier with a panel open: a
          backdrop-blocking modal over a tablet-width layout is heavy, so hand
