@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.22">
+<meta name="app-version" content="04.23">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2237,6 +2237,25 @@ sup.ann-sup:hover{text-decoration:underline}
   margin:-2px -6px;border-radius:6px;cursor:pointer;white-space:nowrap}
 .dl-flip:hover{background:var(--hover);color:var(--t2)}
 .p3-meta-row #ed-col-wrap{flex-shrink:0;margin-left:6px}
+/* v04.23 — the ⋯ on the versioning bar was a bare glyph beside a grey date
+   pill and read as punctuation, not as a button: the owner asked where the
+   collapse/expand control had gone while looking straight at it. It wears the
+   versioning bar's own pill now, so it belongs to that row and is plainly
+   something to tap. */
+.p3-meta-row #ed-col-btn{border:1px solid var(--border2);border-radius:999px;
+  background:var(--paper);color:var(--t2);font-size:13px;line-height:1;padding:4px 11px;
+  letter-spacing:1px}
+.p3-meta-row #ed-col-btn:hover{background:var(--hover);color:var(--t1)}
+/* 🏷 on the phone's bar, carrying the note's tag count — with the bar closed
+   this is the only thing on screen that says the note is tagged. */
+.eb-tag-btn{position:relative}
+.eb-tag-btn .eb-tag-n{font-size:10px;font-weight:700;margin-left:2px;vertical-align:top;
+  color:var(--green2)}
+.eb-tag-btn.on{background:var(--hover);border-color:var(--t3)}
+.eb-tag-btn.on .eb-tag-n{color:var(--t1)}
+/* ✕ leaves the tag bar for the title row on the phone. Save leaves edit mode
+   as well, and every keystroke is auto-saved, so this is "stop editing". */
+.p3c-stop{flex-shrink:0;margin-left:4px}
 .clr-pop .clr-pop-x{float:right;margin:-2px 0 4px 6px;border:1px solid var(--border2);border-radius:5px;
   background:none;cursor:pointer;font-size:12px;line-height:1;padding:3px 7px;color:var(--t2)}
 @media(max-width:1199.98px){
@@ -2258,7 +2277,10 @@ sup.ann-sup:hover{text-decoration:underline}
    largest that fits the whole row without anything scrolling out of reach. */
 @media(max-width:639.98px){
   .p3h-nav-edit-row{min-height:50px;padding:4px 6px}
-  .p3h-nav-edit-row .nav-l,.p3h-nav-edit-row .nav-r{gap:2px}
+  /* Two buttons: it never needs to shrink, and shrinking is how a strip
+     comes to scroll 1px of itself out of sight. */
+  .p3h-nav-edit-row .nav-l{gap:2px;flex-shrink:0}
+  .p3h-nav-edit-row .nav-r{gap:2px}
   /* No `display` here. .modal-pop-btn is display:none under 900px and setting
      it would bring both pop-out buttons back onto the one row that has no
      width for them — two extra controls, and Save squeezed to 22px. */
@@ -2274,6 +2296,8 @@ sup.ann-sup:hover{text-decoration:underline}
      the 44px the rest of the menu does. */
   .fl-pop .p3h-pal-nti .nti-chip,.fl-pop .p3h-pal-nti .nti-picker-btn{min-height:44px}
   .fl-pop .p3h-pal-nti .kind-arch-btn{width:44px!important;height:44px!important}
+  .p3-meta-row #ed-col-btn{min-height:34px;padding:6px 14px}
+  .p3c-stop{min-width:38px!important;min-height:38px!important}
 }
 
 
@@ -2527,7 +2551,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.22</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.23</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3749,20 +3773,28 @@ function renderP3H(){
     if(_mobE){
       h+='<div class="p3h-nav-edit-row">'
         +'<div class="nav-l">'
-          +_p3HomeBtnHTML()
+          +_p3HomeBtnHTML(_p3OneBar())
           +'<button class="btn bn bi" onclick="openP2()" style="font-size:16px" title="Back to article list">◀</button>'
           +'<button class="btn bn bi" onclick="backFromP3()" style="font-size:20px" title="Open folders">≡</button>'
         +'</div>'
         +'<div class="nav-r">'+_p3EditIconsHTML(curA)+'</div>'
         +'</div>';
     }
-    h+=`<div class="p3h-tag-bar">`
-      +`<span class="tag-ed-lbl">🏷 Tags</span>`
-      +`<div class="tag-editor" id="tag-editor" onclick="document.getElementById('tag-inp')?.focus()"></div>`
-      +`<div class="p3h-eflx"></div>`
-      +`<div class="p3h-tag-bar-acts">`
-      +`<button class="btn bn bi" onclick="cancelEdit()" title="Cancel (Esc)">✕</button>`
-      +'</div></div>';
+    /* v04.23 — on the phone the tag bar is not a permanent row any more. It
+       was the second full row of five, standing there whether or not the note
+       was being tagged. 🏷 on the bar opens it, carries the tag COUNT so a
+       closed bar still says what the note has, and the ✕ that lived on it
+       moves to the title row (Save leaves edit mode too, and every keystroke
+       is auto-saved, so ✕ is "stop editing", not "discard"). */
+    if(!_p3OneBar()||ST.tagBarOpen){
+      h+=`<div class="p3h-tag-bar">`
+        +`<span class="tag-ed-lbl">🏷 Tags</span>`
+        +`<div class="tag-editor" id="tag-editor" onclick="document.getElementById('tag-inp')?.focus()"></div>`
+        +`<div class="p3h-eflx"></div>`
+        +`<div class="p3h-tag-bar-acts">`
+        +`<button class="btn bn bi" onclick="${_p3OneBar()?'togTagBar()':'cancelEdit()'}" title="${_p3OneBar()?'Close the tag bar':'Cancel (Esc)'}">✕</button>`
+        +'</div></div>';
+    }
     if(!_mobE){
       h+='<div class="p3h-unified-tb">'
         +_p3HomeBtnHTML()
@@ -3890,7 +3922,7 @@ function renderP3C(){
        rendered it here at all. And at every size under 1200px the version
        strip, the dates and the section-tools ⋯ are one line now, not three. */
     el.innerHTML=(_mobE2&&!_p3OneBar()?kindBarHTML(curA):'')
-      +`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML(true)}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span></div>`
+      +`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML(true)}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span>${_p3OneBar()?'<button class="btn bn bi p3c-stop" onclick="cancelEdit()" title="Stop editing — everything you typed is already saved">✕</button>':''}</div>`
       +_p3MetaRowHTML(curA,_mobE2)+_fieldsPanelHTML(curA)+`<div id="ed" data-aid="${curA.id}" contenteditable="true" spellcheck="true"></div>`;
     if(_tiF2){const _tin=document.getElementById('ti');if(_tin){_tin.focus({preventScroll:true});try{_tin.setSelectionRange(_s2,_e2);}catch(e){}}}
     const ed=document.getElementById('ed');ed.innerHTML=curA.content;if(_isPlaceholder(curA.content))ed.innerHTML='';initRichPaste(ed);
@@ -8609,9 +8641,18 @@ function _closeStickyPop(id){
 }
 /* Home (+ Back-to-results) icon buttons — shared by the desktop unified
    toolbar and the tablet/mobile nav+edit row. */
-function _p3HomeBtnHTML(){
+/* v04.23 — `oneBar` drops 🏠 from the phone's edit bar. The owner asked
+   whether ≡ beside it does the same thing, and on a phone it very nearly
+   does: backFromP3() calls showPane('sb') and goHome() ends with the same
+   call, having first cleared the search, the tag, the type and the folder.
+   So both land you on the folder pane; ≡ keeps your place and 🏠 wipes the
+   filters. On a bar with room for eight controls that is not worth a slot —
+   ≡ takes you to the sidebar, where the 📚 Siyagah logo IS goHome(). The
+   conditional 🔍↺ stays: it only appears when a search is waiting to be
+   returned to, and losing that would genuinely lose something. */
+function _p3HomeBtnHTML(oneBar){
   const show=!!(ST.lastSearch&&!ST.search);
-  return '<button class="btn bn bi" onclick="goHome()" title="Home — reset search/filters and show the folder list" style="font-size:14px">🏠</button>'
+  return (oneBar?'':'<button class="btn bn bi" onclick="goHome()" title="Home — reset search/filters and show the folder list" style="font-size:14px">🏠</button>')
     +(show?'<button class="btn bn bi" onclick="restoreLastSearch()" title="Back to search results: \''+esc(ST.lastSearch)+'\'" style="font-size:13px">🔍↺</button>':'');
 }
 /* Aa/H/≡/+/↺ format-group icons (+ pop-out, auto-hidden <900px via CSS) —
@@ -8658,7 +8699,21 @@ function _p3EditIconsHTML(curA){
       +`<button class="et" onmousedown="event.preventDefault()" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>`)
     +_popBtnHTML(curA.id,'float','et',false)
     +_popBtnHTML(curA.id,'panel','et',false)
+    +(_mob?_tagBtnHTML():'')
     +(_mob?`<button class="et et-save" onmousedown="event.preventDefault()" onclick="saveArt()" title="Save this note">💾 Save</button>`:'');
+}
+/* The count is the point: with the bar closed, this is the only thing on
+   screen that says the note is tagged at all. */
+function _tagBtnHTML(){
+  const n=(ST.etags||[]).length;
+  return '<button class="et eb-tag-btn'+(ST.tagBarOpen?' on':'')+'" onmousedown="event.preventDefault()"'
+    +' onclick="togTagBar()" title="Tags'+(n?' ('+n+')':'')+' — show or hide the tag bar">\ud83c\udff7'
+    +(n?'<span class="eb-tag-n">'+n+'</span>':'')+'</button>';
+}
+function togTagBar(){
+  ST.tagBarOpen=!ST.tagBarOpen;
+  renderP3H();            /* header only — #ed is in Pane 3 and keeps its caret */
+  if(ST.tagBarOpen)document.getElementById('tag-inp')?.focus({preventScroll:true});
 }
 function togEBGroup(g){
   const btn=document.querySelector('.eb-grp-btn[data-g="'+g+'"]');
@@ -8723,6 +8778,19 @@ function _buildEBSub(g){
      here rather than a second copy of the lists/insert arrays. */
   if(_p3OneBar()){
     const a=DB.articles.find(x=>x.id===ST.article);
+    if(g==='heads'){
+      /* v04.23 — the owner asked where the collapse/expand ⋯ had gone. It is
+         on the versioning bar, where they asked for it in v04.22 — but a bare
+         ⋯ next to a date is not where anyone looks for something about
+         HEADINGS. So the same three actions are here too, under the H group,
+         which is the button that says headings. Same functions, no second
+         implementation. */
+      out+='<div class="fl-pop-hd">All sections in this note</div>'
+        +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(true)">&#9654; Collapse all</button>'
+        +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(false)">&#9660; Expand all</button>'
+        +'<button class="ed-col-btn ed-col-prev'+((DB.theme&&DB.theme.collapsePreview==='preview')?' on':'')
+        +'" onmousedown="event.preventDefault()" onclick="_edColPreview()" title="Show a preview line under collapsed sections">&#8801; Preview</button>';
+    }
     if(g==='lists'){
       out+='<div class="fl-pop-hd">Undo · Redo · Find</div>'
         +(subs.hist||[]).join('')
@@ -11814,9 +11882,13 @@ function _edColPreview(){
   _edColSyncPrevBtn();
   persist();
 }
+/* v04.23 — there are two Preview buttons now (the ⋯ menu on the versioning
+   bar and the H group on the phone's bar), so this syncs every one of them.
+   Asking getElementById for a single id would have left whichever copy was
+   open showing the wrong state. */
 function _edColSyncPrevBtn(){
-  const btn=document.getElementById('ed-col-prev-btn');
-  if(btn)btn.classList.toggle('on',DB.theme&&DB.theme.collapsePreview==='preview');
+  const on=!!(DB.theme&&DB.theme.collapsePreview==='preview');
+  document.querySelectorAll('#ed-col-prev-btn,.ed-col-prev').forEach(b=>b.classList.toggle('on',on));
 }
 function _edColToolbarHTML(){
   return '<div id="ed-col-wrap" style="display:none">'
@@ -11834,7 +11906,7 @@ function toggleEdColPop(ev,aid){
   _openFloatPop('edcol-pop',btn,
     '<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(true,'+_t+')">&#9654; Collapse all</button>'
     +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(false,'+_t+')">&#9660; Expand all</button>'
-    +'<button class="ed-col-btn'+(onPrev?' on':'')+'" id="ed-col-prev-btn" onmousedown="event.preventDefault()" onclick="_edColPreview()" title="Show a preview line under collapsed sections">&#8801; Preview</button>');
+    +'<button class="ed-col-btn ed-col-prev'+(onPrev?' on':'')+'" id="ed-col-prev-btn" onmousedown="event.preventDefault()" onclick="_edColPreview()" title="Show a preview line under collapsed sections">&#8801; Preview</button>');
 }
 
 /* Wire the editor (called from renderP3C each time edit mode opens) */

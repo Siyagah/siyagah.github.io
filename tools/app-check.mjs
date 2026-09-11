@@ -2332,6 +2332,16 @@ await app.close();
       return out;
     });
     const all = new Set(await grab());
+    /* v04.23 — the tag bar is one of the surfaces the phone folds, so it has
+       to be OPENED to be collected, exactly like the group menus. Collecting
+       it closed reported rmTag and the tag input as "lost in the fold" when
+       they are one tap away — the check's blind spot, not the app's. Left
+       shut afterwards, because a later check asserts it starts that way. */
+    if (await pg.evaluate(() => !!document.querySelector('.eb-tag-btn'))) {
+      await pg.click('.eb-tag-btn'); await pg.waitForTimeout(200);
+      (await grab()).forEach((f) => all.add(f));
+      await pg.click('.eb-tag-btn'); await pg.waitForTimeout(200);
+    }
     for (const g of groups) {
       await pg.evaluate((g) => { if (ST.ebGroup) togEBGroup(ST.ebGroup); }, g);
       await pg.waitForTimeout(80);
@@ -2354,16 +2364,19 @@ await app.close();
       .filter((e) => e.offsetParent && e.getBoundingClientRect().height > 0).length;
     const bar = document.querySelector('.p3h-nav-edit-row');
     return { bars: vis('.p3h-nav-edit-row'), tabs: vis('#tab-bar'), kinds: vis('.kind-bar'),
-      tags: vis('.p3h-tag-bar'), meta: vis('.p3-meta-row'),
+      tags: vis('.p3h-tag-bar'), meta: vis('.p3-meta-row'), tagN: vis('.eb-tag-btn'),
       edTop: Math.round(document.getElementById('ed').getBoundingClientRect().top),
       vh: innerHeight,
       barText: (bar ? bar.innerText : '').replace(/\s+/g, ' ').trim(),
       save: !!document.querySelector('.p3h-nav-edit-row .et-save') };
   });
-  r.check(rows.bars === 1 && rows.tabs === 0 && rows.kinds === 0 && rows.save,
+  /* v04.23 — the tag bar joined the rows that are not permanently there. The
+     owner asked why it was still showing; it is behind 🏷 on the bar now, and
+     🏷 carries the tag count so a closed bar still says the note is tagged. */
+  r.check(rows.bars === 1 && rows.tabs === 0 && rows.kinds === 0 && rows.tags === 0 && rows.save,
     'phone: editing a note opens on ONE bar, with Save on it',
     `nav+edit rows ${rows.bars} · tab bar ${rows.tabs} · type/Attach/Save row ${rows.kinds}`
-      + ` · Save on the bar ${rows.save ? 'yes' : 'NO'} · "${rows.barText}"`);
+      + ` · tag bar ${rows.tags} · Save on the bar ${rows.save ? 'yes' : 'NO'} · "${rows.barText}"`);
   /* And the writing starts in the top third of the phone, not halfway down.
      v04.21 measured ~450px of 844 (53%); the budget is a third. */
   r.check(rows.edTop < rows.vh * 0.34,
@@ -2414,11 +2427,64 @@ await app.close();
   const sTb = await editAt(640, 844);
   const tabFns = await reach(sTb.page);
   await sTb.close();
-  const lost = [...tabFns].filter((f) => !phoneFns.has(f));
+  /* v04.23 — goHome is the ONE deliberate exception, and it is exempted here
+     with its reason rather than by loosening the comparison: 🏠 left the
+     phone's bar because ≡ beside it (backFromP3 → showPane('sb')) lands on
+     the same screen, and goHome() itself ends with that same call. It is
+     proved reachable below instead of assumed. */
+  const EXEMPT = ['goHome'];
+  const lost = [...tabFns].filter((f) => !phoneFns.has(f) && !EXEMPT.includes(f));
   r.check(lost.length === 0 && phoneFns.size > 25,
     'phone: every control the unfolded bar reaches, the folded one still reaches',
     lost.length ? `unreachable once folded: ${lost.join(', ')}`
-      : `${phoneFns.size} actions on the phone, ${tabFns.size} at 640px, none lost`);
+      : `${phoneFns.size} actions on the phone, ${tabFns.size} at 640px, none lost`
+        + ` (goHome exempt — see below)`);
+  /* An exemption is only honest if the thing is genuinely still reachable. ≡
+     opens the sidebar, and the 📚 Siyagah logo there IS goHome(). */
+  const homeOk = await sPh.page.evaluate(() => {
+    backFromP3();
+    const logo = document.querySelector('.sb-logo');
+    return { shown: !!(logo && logo.offsetParent),
+      fn: (logo && logo.getAttribute('onclick')) || null };
+  });
+  await sPh.page.evaluate(() => { showPane('p3'); });
+  await sPh.page.waitForTimeout(150);
+  r.check(homeOk.shown && /goHome\(\)/.test(homeOk.fn || ''),
+    'phone: 🏠 Home is still one tap away — ≡ opens the sidebar and its logo is goHome()',
+    homeOk.shown ? `.sb-logo onclick="${homeOk.fn}"` : 'the sidebar logo is not visible after ≡');
+
+  /* 🏷 opens the tag bar and 🏷 says how many tags there are — the whole
+     reason hiding the row is not the same as losing it. */
+  const tagBtn = await sPh.page.evaluate(() =>
+    ({ there: !!document.querySelector('.eb-tag-btn'),
+      count: (document.querySelector('.eb-tag-btn .eb-tag-n') || {}).textContent || '',
+      barBefore: !!document.querySelector('.p3h-tag-bar') }));
+  await sPh.page.click('.eb-tag-btn');
+  await sPh.page.waitForTimeout(250);
+  const tagOpen = await sPh.page.evaluate(() =>
+    ({ bar: !!document.querySelector('.p3h-tag-bar'),
+      input: !!document.getElementById('tag-inp'),
+      chips: document.querySelectorAll('.p3h-tag-bar .tag-chip').length }));
+  await sPh.page.click('.eb-tag-btn');
+  await sPh.page.waitForTimeout(250);
+  const tagShut = await sPh.page.evaluate(() => !!document.querySelector('.p3h-tag-bar'));
+  r.check(tagBtn.there && !tagBtn.barBefore && tagBtn.count === '1'
+    && tagOpen.bar && tagOpen.input && tagOpen.chips === 1 && !tagShut,
+    'phone: the tag bar is behind 🏷, which carries the count and really opens it',
+    `🏷 present ${tagBtn.there}, count "${tagBtn.count}", bar closed at first ${!tagBtn.barBefore}`
+      + ` · a real click opens it with ${tagOpen.chips} chip(s) and an input ${tagOpen.input}`
+      + ` · a second click shuts it ${!tagShut}`);
+
+  /* ✕ left the tag bar with it, so it has to be somewhere the eye lands. */
+  const stop = await sPh.page.evaluate(() => {
+    const b = document.querySelector('.p3c-titlebar .p3c-stop');
+    if (!b || !b.offsetParent) return null;
+    const q = b.getBoundingClientRect();
+    return { fn: b.getAttribute('onclick'), w: Math.round(q.width), h: Math.round(q.height) };
+  });
+  r.check(!!stop && /cancelEdit\(\)/.test(stop.fn) && stop.w >= 38 && stop.h >= 38,
+    'phone: ✕ stop-editing moved onto the title row and can be hit',
+    stop ? `${stop.w}×${stop.h}, onclick="${stop.fn}"` : 'no ✕ on the title row');
 
   /* 3. Save on the bar really saves. A real click, and the typed words are
      read back out of DB — "it did not throw" is not a saved note. */
@@ -2485,6 +2551,46 @@ await app.close();
       `${vp.name}: exactly one section-tools ⋯, ${wantMeta ? 'on the versioning bar after the date' : 'on the unified toolbar'}`,
       `${m.n} #ed-col-wrap · ${m.inMeta ? 'in .p3-meta-row' : m.inTb ? 'in the toolbar' : 'nowhere expected'}`
         + ` · painted ${m.shown} · after the date ${m.afterDate}`);
+  }
+
+  /* 5b. v04.23 — the owner asked where the collapse/expand ⋯ had gone while
+     looking straight at it: a bare glyph beside a grey date pill reads as
+     punctuation. It wears the versioning bar's pill now, it has to OPEN on a
+     real click (the v04.12 rule), and the same three actions are under H too,
+     which is the button that says headings. */
+  {
+    const s = await editAt(390, 844);
+    const box = await s.page.locator('#ed-col-btn').boundingBox();
+    await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await s.page.waitForTimeout(300);
+    const pop = await s.page.evaluate(() => {
+      const p = document.getElementById('edcol-pop');
+      const b = document.getElementById('ed-col-btn');
+      const st = getComputedStyle(b); const q = b.getBoundingClientRect();
+      return { open: !!(p && p.classList.contains('open')),
+        text: p ? (p.innerText || '').replace(/\s+/g, ' ').trim() : '',
+        framed: st.borderStyle !== 'none' && st.borderTopWidth !== '0px',
+        w: Math.round(q.width), h: Math.round(q.height) };
+    });
+    r.check(pop.open && /Collapse all/.test(pop.text) && /Expand all/.test(pop.text)
+      && /Preview/.test(pop.text) && pop.framed && pop.h >= 34,
+      'phone: the ⋯ on the versioning bar looks like a button and opens all three section tools',
+      `${pop.w}×${pop.h}, framed ${pop.framed}, opens "${pop.text || 'NOTHING'}"`);
+    await s.page.evaluate(() => closeFloatPop('edcol-pop'));
+    await s.page.waitForTimeout(120);
+    await s.page.click('.eb-grp-btn[data-g="heads"]');
+    await s.page.waitForTimeout(250);
+    const heads = await s.page.evaluate(() => {
+      const p = document.getElementById('eb-pop');
+      return { open: !!(p && p.classList.contains('open')),
+        fns: [...p.querySelectorAll('button')].map((b) => b.getAttribute('onclick') || '').join(' '),
+        text: (p.innerText || '').replace(/\s+/g, ' ').trim() };
+    });
+    await s.close();
+    r.check(heads.open && /_edColAll\(true\)/.test(heads.fns) && /_edColAll\(false\)/.test(heads.fns)
+      && /_edColPreview\(\)/.test(heads.fns),
+      'phone: the H group carries the same Collapse / Expand / Preview, by the same functions',
+      heads.open ? heads.text.slice(0, 110) : 'the H menu did not open');
   }
 
   /* 6. Geometry — the round's own bug report. A real mouse click on the real
