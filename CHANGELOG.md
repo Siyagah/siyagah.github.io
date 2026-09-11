@@ -1464,3 +1464,120 @@ placeholder both clear 4.5:1 on all five presets.
 - **No sync, storage or export path was touched.** `mkArtTitleOnly()` gained an
   optional third argument and one `apply()` hook that runs before the single
   existing `persist()`. I1–I4 are untouched.
+
+---
+
+## v04.21 — the two header menus, split by what they actually do (11 Sep 2026)
+
+The owner circled the two buttons at the right of the sidebar header — 🧰 and
+⚙ — and named five items sitting in ⚙ Settings:
+
+> 📅 Calendar Country · 📖 Insert Reference · ☪ Hijri Dates · 📚 Sync Knowledge
+> Base · 🗂 Add Starter MyDatabase Folders
+>
+> The above button should be separated from settings, and move to other button.
+> And then, organise both groups of buttons elegant way, the best way you can do.
+
+**The line the split now follows.** Those five are not settings. Each one
+writes something into the notebook or puts something into a note: a country
+for the holidays the calendar draws, a Qurʿan or Hadith reference at the
+caret, Hijri numbers on the calendar, the built-in guide notes, seven starter
+folders. So the rule the two menus now obey is:
+
+- **🧰 Tools — things you do TO the notebook.** Create, insert, view, save.
+- **⚙ Settings — the app itself.** Account, sync, backups, export. Nothing in
+  it writes a note or a folder.
+
+**Every group now has a heading.** Both menus were a run of rows broken by
+hairlines — no way to find a group without reading all of it. Each group now
+carries its name on a `--hover` strip (`--hover` is derived from `--paper` and
+`--t3` is measured against it since v04.19, so the pairing is safe by
+construction, and it was measured anyway):
+
+```
+🧰 TOOLS                          ⚙ SETTINGS
+  [↩ Undo]  [↪ Redo]               [☁ Live]
+  CREATE                           ACCOUNT
+    ➕ New Section                    ☁ Cloud Sync
+    📁 New Folder                     🔒 Sign Out
+    🗂 Add Starter MyDatabase…      APP
+    📚 Sync Knowledge Base            🔄 Refresh App
+  REFERENCE & DATES                  📱 Install App
+    📖 Insert Reference            BACKUP
+    📅 Calendar Country               🗄 Automatic Backups
+    ☪ Hijri Dates                    📥 Import Backup
+  VIEW                               ☁ Backup to Drive
+    🎨 Appearance                  EXPORT
+    ↔ Auto-fit width                  📦 Backup Export
+    🔢 Auto-number all                📄 Export PDF
+    📂 Accordion sections             🚀 Deploy Export
+  SAVE
+    🔗 Enable auto-save
+    ● Unsaved to file
+    [💾 Save File]
+    ────
+    🗑 Trash (n)
+```
+
+Nothing was renamed and nothing was dropped: the same 26 actions, 16 in Tools
+and 11 in Settings (`openSyncModal` is on both — the ☁ Live dot and the Cloud
+Sync row). Settings came down from 509px to 435px on a laptop.
+
+**Two things the reorganisation forced, both measured**
+
+- **The rows are 44px on a phone.** They were 31px — below the touch target
+  the folder pop-out (v04.17) and the Assign window (v04.18) were already held
+  to. That costs height a phone does not have, so the group headings give
+  28px of it back at `max-width:1199.98px`.
+- **A long menu scrolls instead of running off the bottom.** `_sbDDFit()` caps
+  each menu to the space that is actually under its button — measured after
+  opening, because the header folds at narrow widths and the button moves —
+  and the CSS carries a fallback cap for the frame before that runs. A menu
+  that has to scroll says so, with an *inset* bottom fade (an inset shadow
+  stays on the edge instead of scrolling away with the content). On a 390×844
+  phone Tools holds 825px of rows in 774px and scrolls the last two; every
+  other menu at every other size fits whole.
+
+**Measured**
+
+11/11 ship checks, and app checks from 144 to **162**.
+
+The eighteen new ones ask what a screenshot cannot: the five items are in
+Tools **by the function they call**, not by their label, and gone from
+Settings; the full set of 26 actions from v04.20 is still reachable, with
+nothing lost and nothing unexpected added; **every item closes the menu it is
+actually in** — the one defect this round could have shipped is a moved item
+still calling `closeSBMenu()` and leaving the Tools menu hanging open; every
+group has items under it; a **real mouse click** on each button opens a menu
+that is wholly on screen — left edge, right edge and bottom — at phone,
+tablet, and a laptop with the sidebar dragged to both 160px and 540px; a menu
+that scrolls carries the cue; every painted row is 44px on a phone; and all 30
+labels and headings clear 4.5:1 on all five presets (worst 4.6:1, on Ocean).
+
+**The fault this round's own work shipped into the build, and what found it**
+
+**A screenshot, not an assertion.** The menus are anchored `right:0` to their
+button, and that button sits near the LEFT edge of the sidebar. At the
+sidebar width the harness happens to boot with (200px), the widened 238px
+Tools menu hung **88px off the left of the screen** with its labels cut in
+half. Nothing threw and nothing failed — `app-check` had never opened a menu,
+so no check was measuring. `_sbDDFit()` now slides a menu back on screen by
+whatever it is short, and the geometry check opens both menus with a real
+click at two sidebar widths.
+
+**What was NOT done, and why**
+
+- **No label was reworded.** `🗂 Add Starter MyDatabase Folders` is the widest
+  row in either menu and shortening it would have made both narrower — but the
+  owner named these five items by their labels, and renaming what they had
+  just named is how a menu stops being findable.
+- **Trash is still the last row of Tools, and on a phone it is one scroll
+  down.** Moving it up into `CREATE` would put "deleted" under "create";
+  giving it a heading of its own would be a heading repeating its only row.
+- **`📱 Install App` is a one-row group** whenever Chrome is not offering the
+  install, which is most of the time — it is `display:none` then. It sits with
+  `🔄 Refresh App` under `APP` because both are about the app you are running,
+  not about anything in the notebook.
+- **No data, sync, storage or export path was touched.** This round is markup,
+  CSS and one new 14-line function that only ever reads a rectangle and sets
+  `max-height`, `right` and a class. I1–I4 are untouched.

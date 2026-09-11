@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.20">
+<meta name="app-version" content="04.21">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1052,6 +1052,34 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .sb-tools-dd .save-lbl{font-size:11px;min-height:0}
 @media(max-width:1199.98px){.sb-tools-dd .sb-tb-btn{min-height:44px}
                          .sb-tools-dd .sync-dot-tb{min-height:44px}}
+
+/* ── Header dropdowns, reorganised — v04.21 ───────────────────────────────
+   🧰 Tools and ⚙ Settings both carry a heading over every group instead of a
+   bare hairline, so a group can be found without reading all of it. The
+   heading sits on a --hover strip: --hover is derived from --paper (v04.19)
+   and --t3 is measured against it, so this pairing is safe by construction.
+   Both menus are now long enough to run off the bottom of a phone, so they
+   SCROLL rather than overflow — the cap here is the fallback, and
+   _sbDDFit() sets the real one from the space under the button. And a row
+   is 44px on a phone, the target the pop-out windows already use. */
+.sb-menu-dd{overflow-y:auto;overscroll-behavior:contain;
+            max-height:calc(100vh - 96px);scrollbar-width:thin}
+.sb-menu-dd.sb-dd-scroll{box-shadow:0 6px 28px rgba(0,0,0,.18),
+                         inset 0 -22px 16px -16px rgba(0,0,0,.20)}
+.sb-tools-dd,#sb-menu{min-width:238px}
+.sb-mi-hd{margin:8px 3px 3px;padding:4px 10px 3px;border-radius:var(--r);
+          background:var(--hover)}
+.sb-menu-dd>.sb-mi-hd:first-child{margin-top:2px}
+.sb-menu-dd .sb-ms{margin:6px 3px}
+@media(max-width:1199.98px){
+  /* 44px rows cost height a phone does not have — the Tools menu came to
+     801px in 774px of screen, so the group headings give the difference
+     back (measured: 28px across the four). It still scrolls if it has to. */
+  .sb-menu-dd .sb-mi{min-height:44px;font-size:13px}
+  .sb-menu-dd .sb-mi-hd{font-size:10.5px;margin:4px 3px 2px;padding:5px 10px 4px}
+  .sb-menu-dd .sb-ms{margin:4px 3px}
+  .sb-menu-dd .save-lbl{font-size:12px}
+}
 
 /* Article list — snippet / preview mode */
 .ar-snip{font-size:11.5px;color:var(--t2);line-height:1.5;margin-top:4px;
@@ -2450,7 +2478,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.20</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.21</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2465,63 +2493,62 @@ sup.ann-sup:hover{text-decoration:underline}
       </div>
       <button class="btn sb-act" onclick="openGlobalSearch()" title="Search (Ctrl+K)">🔍</button>
       <div class="sb-menu-wrap" id="sb-tools-wrap">
-        <button class="btn sb-act" id="sb-tools-btn" onclick="toggleSBTools(event)" title="Tools — Undo, Redo, Folder, Sync, Save">🧰</button>
+        <button class="btn sb-act" id="sb-tools-btn" onclick="toggleSBTools(event)" title="Tools — create, insert, view, save">🧰</button>
         <div id="sb-tools" class="sb-menu-dd sb-tools-dd">
-          <!-- ─ Undo / Redo ─ -->
+          <!-- 🧰 TOOLS = things you do TO the notebook. ⚙ Settings below is the
+               app itself — account, sync, backups, export. v04.21 moved the five
+               notebook actions (Calendar Country, Insert Reference, Hijri Dates,
+               Sync Knowledge Base, Starter Folders) out of Settings into here,
+               and gave both menus a heading over every group. -->
           <div class="sb-tools-row">
             <button id="undo-btn" class="sb-tb-btn" onclick="undo()" title="Undo (Ctrl+Z)">↩ Undo</button>
             <button id="redo-btn" class="sb-tb-btn" onclick="redo()" title="Redo (Ctrl+Shift+Z)" disabled="">↪ Redo</button>
           </div>
-          <div class="sb-ms"></div>
-          <!-- ─ Content ─ -->
+          <div class="sb-mi-hd">Create</div>
           <div class="sb-mi" onclick="openModal('section',null);closeSBTools()">➕ New Section</div>
           <button class="sb-mi" onclick="addRootFolder();closeSBTools()">📁 New Folder</button>
-          <div class="sb-ms"></div>
-          <!-- ─ Appearance ─ -->
+          <div class="sb-mi" onclick="addStarterMyDatabaseFolders();closeSBTools()" title="Adds MyResources, MyIdeas, MyMemories, MyPlanning, MyBuy-MyShopping, MyQueries, MyTravel under MyDatabase — safe to run more than once">🗂 Add Starter MyDatabase Folders</div>
+          <div class="sb-mi" onclick="syncKnowledgeBase();closeSBTools()" title="Update the built-in guide notes to the latest version">📚 Sync Knowledge Base</div>
+          <div class="sb-mi-hd">Reference &amp; dates</div>
+          <div class="sb-mi" onclick="openCiteModal();closeSBTools()" title="Insert Qurʿan or Hadith reference into note">📖 Insert Reference</div>
+          <div class="sb-mi" onclick="openCalSettings();closeSBTools()" title="Set your country for public holidays">📅 Calendar Country</div>
+          <div class="sb-mi" onclick="toggleHijri();closeSBTools()" title="Toggle Hijri dates in the calendar">☪ Hijri Dates</div>
+          <div class="sb-mi-hd">View</div>
           <div class="sb-mi" onclick="openTheme();closeSBTools()">🎨 Appearance</div>
           <div class="sb-mi" onclick="autoFit();closeSBTools()">↔ Auto-fit width</div>
           <div class="sb-mi" onclick="autoNumberAll();closeSBTools()">🔢 Auto-number all</div>
           <div class="sb-mi" onclick="toggleAccordionSec();closeSBTools()" id="accordion-sec-btn" title="When ON: opening a section closes all others">📂 Accordion sections: <span id="accordion-sec-lbl">OFF</span></div>
-          <div class="sb-ms"></div>
-          <!-- ─ Save ─ -->
+          <div class="sb-mi-hd">Save</div>
           <button id="autosave-btn" class="sb-mi" onclick="enableAutoSave()" title="Data saves to browser storage automatically; use Save File to export">🔗 Enable auto-save</button>
           <div id="save-lbl" class="save-lbl busy" style="text-align:left;padding:4px 13px">● Unsaved to file</div>
           <div class="sb-tools-row">
             <button id="export-btn" class="sb-tb-btn sb-exp-tb dirty" onclick="exportFile();closeSBTools()" title="Download an updated copy of the file">💾 Save File</button>
           </div>
           <div class="sb-ms"></div>
-          <!-- ─ Trash ─ -->
           <button id="trash-btn" class="sb-mi" onclick="openTrash();closeSBTools()">🗑 Trash (123)</button>
         </div>
       </div>
       <div class="sb-menu-wrap" id="sb-menu-wrap">
-        <button class="btn sb-act" id="sb-menu-btn" onclick="toggleSBMenu(event)" title="Settings">⚙</button>
+        <button class="btn sb-act" id="sb-menu-btn" onclick="toggleSBMenu(event)" title="Settings — account, sync, backups, export">⚙</button>
         <div id="sb-menu" class="sb-menu-dd">
-          <!-- ─ Sync status ─ -->
+          <!-- ⚙ SETTINGS = the app itself. Nothing here writes a note or a
+               folder; everything that does lives in 🧰 Tools above. -->
           <div class="sb-tools-row" style="padding:6px 10px 4px">
             <div id="sync-dot" class="sync-dot-tb sd-live" onclick="openSyncModal();closeSBMenu()" title="☁ Live — synced">☁ Live</div>
           </div>
-          <!-- ─ Account ─ -->
-          <div class="sb-mi" onclick="refreshApp();closeSBMenu()" title="Reload the app to get the latest version">🔄 Refresh App</div>
-          <div class="sb-mi" onclick="openCalSettings();closeSBMenu()" title="Set your country for public holidays">📅 Calendar Country</div>
-  <div class="sb-mi" onclick="openCiteModal();closeSBMenu()" title="Insert Qurʿan or Hadith reference into note">📖 Insert Reference</div>
-          <div class="sb-mi" onclick="toggleHijri();closeSBMenu()" title="Toggle Hijri dates in the calendar">☪ Hijri Dates</div>
-          <div id="pwa-install-mi" class="sb-mi" style="display:none" onclick="installPWA();closeSBMenu()" title="Add Siyagah to Home Screen">📱 Install App</div>
-          <div class="sb-mi" onclick="syncKnowledgeBase();closeSBMenu()" title="Update the built-in guide notes to the latest version">📚 Sync Knowledge Base</div>
-          <div class="sb-mi" onclick="addStarterMyDatabaseFolders();closeSBMenu()" title="Adds MyResources, MyIdeas, MyMemories, MyPlanning, MyBuy-MyShopping, MyQueries, MyTravel under MyDatabase — safe to run more than once">🗂 Add Starter MyDatabase Folders</div>
-          <div class="sb-ms"></div>
+          <div class="sb-mi-hd">Account</div>
           <div class="sb-mi" id="sync-menu-item" onclick="openSyncModal();closeSBMenu()">☁ Cloud Sync</div>
           <div class="sb-mi" onclick="doSignOut();closeSBMenu()" id="signout-menu-item">🔒 Sign Out</div>
-          <div class="sb-ms"></div>
-          <!-- ─ Backups ─ -->
+          <div class="sb-mi-hd">App</div>
+          <div class="sb-mi" onclick="refreshApp();closeSBMenu()" title="Reload the app to get the latest version">🔄 Refresh App</div>
+          <div id="pwa-install-mi" class="sb-mi" style="display:none" onclick="installPWA();closeSBMenu()" title="Add Siyagah to Home Screen">📱 Install App</div>
+          <div class="sb-mi-hd">Backup</div>
           <div class="sb-mi" onclick="openBackupModal();closeSBMenu()" title="Keep a dated copy of the whole app + notes, automatically">🗄 Automatic Backups</div>
           <div class="sb-mi" onclick="importBackup();closeSBMenu()" title="Restore notes from a Siyagah backup HTML file">📥 Import Backup</div>
-          <div class="sb-ms"></div>
-          <div class="sb-mi" onclick="exportBackupHTML();closeSBMenu()" title="Download all notes as readable HTML — open in browser or print as PDF">📦 Backup Export</div>
           <div class="sb-mi" onclick="backupToGDrive();closeSBMenu()" title="Save backup to Google Drive">☁ Backup to Drive</div>
+          <div class="sb-mi-hd">Export</div>
+          <div class="sb-mi" onclick="exportBackupHTML();closeSBMenu()" title="Download all notes as readable HTML — open in browser or print as PDF">📦 Backup Export</div>
           <div class="sb-mi" onclick="exportBackupPDF();closeSBMenu()" title="Export all notes as PDF">📄 Export PDF</div>
-          <div class="sb-ms"></div>
-          <!-- ─ Deploy ─ -->
           <div class="sb-mi" onclick="exportDeploy();closeSBMenu()" title="Download a clean shell with no data — for hosting">🚀 Deploy Export</div>
         </div>
       </div>
@@ -17861,20 +17888,49 @@ function getTimestampedName(){
        + ` - ${p(h12)}.${p(n.getMinutes())} ${ampm}.html`;
 }
 
-/* ── Settings menu ───────────────────────────────────────────────────── */
+/* ── Header dropdowns ────────────────────────────────────────────────── */
+/* v04.21 — both header menus are long enough to run past the bottom of a
+   phone, and a menu whose last rows are off screen has silently lost them.
+   So each one is capped to the space that is ACTUALLY under its button and
+   scrolls inside that: measured after opening, because the header folds at
+   narrow widths and the button is not always in the same place. The CSS
+   carries a fallback cap for the frame before this runs. */
+function _sbDDFit(el){
+  if(!el||!el.classList.contains('open')) return;
+  el.style.maxHeight='';el.style.right='';     /* measure it unclamped first */
+  let b=el.getBoundingClientRect();
+  el.style.maxHeight=Math.max(180,Math.round(window.innerHeight-b.top-12))+'px';
+  /* The menu is anchored right:0 to a button that sits near the LEFT edge of
+     a narrow sidebar, so a 238px menu hung off the side of the screen and its
+     labels were cut in half — found by a screenshot in v04.21, on a sidebar
+     the harness had never opened a menu in. Slide it back on screen by
+     whatever it is short, then stop it running off the other side. */
+  b=el.getBoundingClientRect();
+  let shift=0;
+  if(b.left<8) shift=8-b.left;
+  if(b.right+shift>window.innerWidth-8) shift=Math.max(0,window.innerWidth-8-b.right);
+  if(shift) el.style.right=(-Math.round(shift))+'px';
+  /* A menu that scrolls says so — otherwise the last rows are simply gone as
+     far as the owner can tell. Inset, so the fade stays on the bottom edge
+     instead of scrolling away with the content. */
+  el.classList.toggle('sb-dd-scroll',el.scrollHeight>el.clientHeight+1);
+}
+/* Settings (⚙): the app itself — account, sync, backups, export. */
 function toggleSBMenu(e){
   if(e) e.stopPropagation(); // stop click from bubbling to document (would instantly close)
   closeSBTools();closeSBHome(); // only one header dropdown open at a time
-  document.getElementById('sb-menu')?.classList.toggle('open');
+  const el=document.getElementById('sb-menu');
+  el?.classList.toggle('open');_sbDDFit(el);
 }
 function closeSBMenu(){
   document.getElementById('sb-menu')?.classList.remove('open');
 }
-/* Tools dropdown (🧰): Undo/Redo · New folder · save label · sync · Save File */
+/* Tools (🧰): things you do TO the notebook — create, insert, view, save. */
 function toggleSBTools(e){
   if(e) e.stopPropagation(); // stop click from bubbling to document (would instantly close)
   closeSBMenu();closeSBHome(); // only one header dropdown open at a time
-  document.getElementById('sb-tools')?.classList.toggle('open');
+  const el=document.getElementById('sb-tools');
+  el?.classList.toggle('open');_sbDDFit(el);
 }
 function closeSBTools(){
   document.getElementById('sb-tools')?.classList.remove('open');
@@ -17885,7 +17941,8 @@ function closeSBTools(){
 function toggleSBHome(e){
   if(e) e.stopPropagation();
   closeSBMenu();closeSBTools();   /* one header dropdown open at a time */
-  document.getElementById('sb-home')?.classList.toggle('open');
+  const el=document.getElementById('sb-home');
+  el?.classList.toggle('open');_sbDDFit(el);
 }
 function closeSBHome(){
   document.getElementById('sb-home')?.classList.remove('open');

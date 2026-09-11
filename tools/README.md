@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 144 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 162 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -114,6 +114,15 @@ or quietly lose the notebook, none of which need a browser:
   unchanged, Reminders opening `#rem-modal`, Expand/Collapse counted by the
   rows actually painted, a section's view saving inside that section, and the
   bar's touch size, placeholder fit and contrast on all five presets (v04.20);
+- **the two header menus carry what they say, and fit the screen** — the five
+  items that moved out of ⚙ Settings into 🧰 Tools identified by the FUNCTION
+  they call rather than their label, the whole v04.20 action set still
+  reachable with nothing lost, **every item closing the menu it is actually
+  in** (a moved item still calling `closeSBMenu()` is the defect the move
+  invites), no empty group heading, a real mouse click opening each menu
+  wholly on screen at phone, tablet and a laptop with the sidebar at 160px
+  and 540px, a scrolling menu carrying its cue, 44px rows on a phone, and all
+  30 labels and headings at 4.5:1 on five presets (v04.21);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -176,6 +185,14 @@ assertions miss.
   them (six sidebar colours, five pane settings, four states each). It is
   still one command and still the whole gate — just do not expect it back
   instantly, and do not add a sweep colour without asking what it proves.
+- **A check that has never opened a surface is not a check on that surface.**
+  `app-check` reached 144 checks without ever opening the 🧰 or ⚙ dropdown,
+  so every measurement of them — size, position, contrast, touch target —
+  was zero. The v04.15 sidebar sweep even walks `#sb`, which the menus are
+  inside, but a closed menu is `display:none` and contributes nothing, so it
+  reported a clean sweep over a surface it could not see. When a round
+  touches something that opens, open it in the check; and when a sweep says
+  "every element in X", ask which of them existed in the state it ran in.
 - **A pop-out has states, and its parts do not all exist in the same one.**
   The v04.17 geometry probe measured while a search was live, where the
   pop-out has no chevrons and no per-row action icons — so "every icon is
