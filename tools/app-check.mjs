@@ -660,6 +660,11 @@ await app.close();
       wordsShown: vis(m.querySelector('.pop-lbl')) && vis(s.querySelector('.pop-lbl')),
       /* The two must not read the same, and must not read like ⧉ next door. */
       sameShape: JSON.stringify(m.querySelector('svg').innerHTML) === JSON.stringify(s.querySelector('svg').innerHTML),
+      /* v04.12 — Multi is three sheets, and they stand upright. A two-layer or
+         landscape drawing means the redraw silently did not land. */
+      multiLayers: m.querySelectorAll('svg rect').length,
+      multiPortrait: [...m.querySelectorAll('svg rect')]
+        .every((x) => parseFloat(x.getAttribute('height')) > parseFloat(x.getAttribute('width'))),
       tinted: getComputedStyle(m).color !== getComputedStyle(s).color,
       titles: [m.title, s.title],
       dupTitle: dup ? dup.textContent.trim() : '(none)',
@@ -667,9 +672,11 @@ await app.close();
       paneW: el.clientWidth,
     };
   });
-  r.check(pop.both && pop.drawn && pop.noGlyph && !pop.sameShape,
-    'the two pop-up buttons are drawn icons, and the two drawings differ',
-    `both present ${pop.both} · svg ${pop.drawn} · no ⊡/⛶ glyph left ${pop.noGlyph} · identical drawing ${pop.sameShape}`);
+  r.check(pop.both && pop.drawn && pop.noGlyph && !pop.sameShape
+    && pop.multiLayers === 3 && pop.multiPortrait,
+    'the two pop-up buttons are drawn icons, and Multi is three upright sheets',
+    `both present ${pop.both} · svg ${pop.drawn} · no ⊡/⛶ glyph left ${pop.noGlyph}` +
+    ` · identical drawing ${pop.sameShape} · Multi layers ${pop.multiLayers} · all portrait ${pop.multiPortrait}`);
   r.check(/Multi Notes Pop-Up/.test(pop.titles[0]) && /Single Note Pop-Up/.test(pop.titles[1]),
     'each one names itself in its tooltip',
     pop.titles.join('  ·  '));
@@ -862,6 +869,30 @@ await app.close();
   }
   r.check(dead.length === 0, `every button on the note toolbar does something when clicked (${n} buttons)`,
     dead.length ? `these threw and do nothing: ${dead.join(' · ')}` : `${n} clicked, no handler threw`);
+
+  /* v04.12 — "it did not throw" is NOT the same as "it opened", and this is
+     the check that was missing. The ⋯ button handed showArtCtx a synthesised
+     event whose stopPropagation() was a no-op, so the real click carried on
+     to `document.addEventListener('click', () => hideCtx())` and the menu was
+     shut in the same tick it was built. No error, menu populated, nothing on
+     screen — v04.11 read both of those as a pass and shipped it still broken.
+     So: a REAL mouse click through Playwright, then ask whether the menu is
+     still painted a moment later. */
+  await s2.page.evaluate(() => { ST.editing = false; ST.article = 'a1'; window.render(); });
+  await s2.page.waitForTimeout(300);
+  await s2.page.click('#p3h .p3h-actions button:last-child');
+  await s2.page.waitForTimeout(350);
+  const menuAfterClick = await s2.page.evaluate(() => {
+    const c = document.getElementById('ctx');
+    const b = c.getBoundingClientRect();
+    return { display: getComputedStyle(c).display, w: Math.round(b.width), h: Math.round(b.height),
+      rows: c.querySelectorAll('.ci').length,
+      onScreen: b.width > 40 && b.height > 40 && b.left >= 0 && b.top >= 0 };
+  });
+  r.check(menuAfterClick.display !== 'none' && menuAfterClick.onScreen && menuAfterClick.rows >= 10,
+    'the ⋯ menu is still on screen after a real left-click, not closed in the same tick',
+    `display ${menuAfterClick.display} · ${menuAfterClick.w}×${menuAfterClick.h}px · ${menuAfterClick.rows} rows`);
+  await s2.page.evaluate(() => hideCtx());
   await s2.close();
 }
 

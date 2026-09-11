@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.11.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.12.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,12 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.12** (11 Sep 2026) — the `⋯` button opens on a left-click at last. v04.11
+  stopped it throwing but it still did not open: it handed `showArtCtx()` a
+  synthesised event whose `stopPropagation()` was a no-op, so the real click
+  reached the global `document` closer and shut the menu in the same tick.
+  `Multi` is three upright sheets now instead of two squares. 68/68 app checks
+  (up from 67) and 11/11 ship checks.
 - **v04.11** (10 Sep 2026) — `⧉ Copy`, `📦 Archive` and `🗑 Delete` left the note
   row for the `⋯` menu that already held them; `📎 Attach` is permanently on the
   row with `🏷 Note Type` as its first entry; every button is drawn in its own
@@ -39,13 +45,6 @@ must never accumulate here instead of there.
   not by a `window.innerWidth` breakpoint — Pane 3 is ~485px on a 1215px
   screen, and a window-width test squeezed the type chips out of existence.
   49/49 app checks (up from 40) and 11/11 ship checks.
-- **v04.07** (10 Sep 2026) — a line to write on above the first block and below
-  the last. Clicking above a leading heading used to land the caret *between*
-  the fold grip and arrow; clicking below the last block landed it at the end
-  of that block, so typing carried on the heading. Also repaired the v03.67.01
-  Enter-above-first-heading rule, which the fold chrome had silently disabled
-  and which was leaving stray `⠿▼` headings behind. 40/40 app checks (up from
-  33) and 11/11 ship checks.
 ---
 
 ## What this is
@@ -211,6 +210,17 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **"It did not throw" and "the menu is populated" are both true of a menu that
+  was closed in the same tick.** The note toolbar's `⋯` handed `showArtCtx()` a
+  synthesised event — `{clientX, clientY, preventDefault(){}, stopPropagation(){}}`
+  — so the no-op `stopPropagation()` let the real click reach
+  `document.addEventListener('click', () => hideCtx())`, which shut the menu
+  instantly. Never synthesise an event for a handler that calls
+  `stopPropagation()` or `preventDefault()` on it; pass the real `event`. And
+  a check on anything that opens must ask **"is it still painted after a real
+  mouse click"**, never "did the handler survive". Cost: v04.11 reported this
+  button fixed, with two passing checks, and shipped it still broken. Fixed in
+  v04.12.
 - **An inline handler can name a real function and still be stone dead.**
   `onclick="showArtCtx({...},curA.id)"` on the note toolbar's `⋯` button
   referenced `curA`, a `const` local to `renderP3H()` — so every left-click
