@@ -1367,6 +1367,182 @@ await app.close();
   }
 }
 
+/* ── 6k. v04.17: the folder pop-out gets what the sidebar folders got ──── */
+/* The owner asked for the same treatment here. Measured first: the modal
+   inputs had no ::placeholder rule at all, so the browser's own #757575 read
+   4.2:1 on the default paper and 1.9:1 on a derived one; and the controls
+   were 20×20 (◀ ▶), 19×19 (🗑), 22×19, 28×22 and 56×26 — the same sizes on a
+   phone, where this window is full screen. */
+{
+  const POP_COLLECT = (root) => {
+    const out = [];
+    for (const el of document.querySelectorAll(root + ' *')) {
+      if (el.offsetParent === null) continue;
+      const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
+      if (!/[A-Za-z0-9]/.test(own)) continue;
+      const cs = getComputedStyle(el);
+      const stack = [];
+      for (let n = el; n; n = n.parentElement) {
+        const c = getComputedStyle(n).backgroundColor;
+        if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') stack.push(c);
+        if (/^rgb\(/.test(c)) break;
+      }
+      out.push({ sel: el.className || el.tagName, text: own.slice(0, 22), color: cs.color, stack });
+    }
+    /* a placeholder has no text node of its own — it is still text on screen */
+    for (const inp of document.querySelectorAll(root + ' input')) {
+      if (inp.offsetParent === null || !inp.placeholder) continue;
+      const stack = [];
+      for (let n = inp; n; n = n.parentElement) {
+        const c = getComputedStyle(n).backgroundColor;
+        if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') stack.push(c);
+        if (/^rgb\(/.test(c)) break;
+      }
+      out.push({ sel: (inp.className || 'input') + ' ::placeholder', text: inp.placeholder.slice(0, 22),
+        color: getComputedStyle(inp, '::placeholder').color, stack });
+    }
+    return out;
+  };
+  const openPop = async (page) => {
+    await page.evaluate(() => { ST.folder = 'f1'; window.render(); openFolderPopupFromToolbar(); });
+    await page.waitForTimeout(450);
+  };
+
+  for (const [label, custom] of [
+    ['the theme as it ships', null],
+    ['a pane background too dark to read on', { bg: '#16202A' }],
+    ['a mid grey pane background', { bg: '#8A8F8C' }],
+    ['a pale accent colour', { accent: '#F2D06B' }],
+  ]) {
+    const db = seedDB();
+    if (custom) db.theme = { preset: 'forest', custom };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    await openPop(s.page);
+    const rows = [...await s.page.evaluate(POP_COLLECT, '#mb')];
+    await s.page.evaluate(() => { document.querySelectorAll('#pkList .pk-chev').forEach((c) => c.click()); });
+    await s.page.waitForTimeout(350);
+    rows.push(...await s.page.evaluate(POP_COLLECT, '#mb'));   /* the tree open */
+    await s.page.evaluate(() => { const q = document.getElementById('pkSearch'); q.value = 'seed'; _pkFilter('seed'); });
+    await s.page.waitForTimeout(350);
+    rows.push(...await s.page.evaluate(POP_COLLECT, '#mb'));   /* searching */
+    await s.close();
+    const seen = new Set();
+    const scored = [];
+    for (const row of rows) {
+      const key = row.sel + row.color + row.stack.join();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const bg = flatten(row.stack);
+      scored.push({ ...row, c: ratio(over(px(row.color), bg), bg) });
+    }
+    scored.sort((a, b) => a.c - b.c);
+    const low = scored.filter((x) => x.c < 4.5);
+    r.check(low.length === 0 && scored.length > 6,
+      `every word in the folder pop-out reads with ${label}`,
+      low.length ? low.slice(0, 4).map((x) => `${x.c.toFixed(1)}:1 ${x.sel} ${JSON.stringify(x.text)} in ${x.color}`).join(' · ')
+        : `${scored.length} pieces of text across three states, worst ${scored[0].c.toFixed(1)}:1 (${scored[0].sel})`);
+  }
+
+  /* One size, one shape — and a thumb-sized one where there is a thumb. */
+  const geometry = async (width, height, minIcon, minBtn, minRow) => {
+    const s = await openApp({ viewport: { width, height }, db: seedDB() });
+    await openPop(s.page);
+    await s.page.evaluate(() => { document.querySelectorAll('#pkList .pk-chev').forEach((c) => c.click()); });
+    await s.page.waitForTimeout(400);
+    const MEASURE = () => {
+      const box = (e) => { const q = e.getBoundingClientRect(); return { w: Math.round(q.width), h: Math.round(q.height) }; };
+      const vis = (e) => e.offsetParent !== null;
+      return {
+        icons: [...document.querySelectorAll('#mb .pk-act, #mb .pk-chev:not(.pk-chev-sp)')].filter(vis)
+          .map((e) => ({ ...box(e), t: (e.title || e.textContent).trim().slice(0, 10) })),
+        /* the title bar's four squares are ICON buttons and are measured as
+           squares below; these are the ones carrying words */
+        btns: [...document.querySelectorAll('#mb button')].filter(vis)
+          .filter((e) => !e.classList.contains('p2h-sec-nav-btn'))
+          .map((e) => ({ ...box(e), t: (e.title || e.textContent).trim().slice(0, 12) })),
+        nav: [...document.querySelectorAll('#mb .pk-mt-row .p2h-sec-nav-btn')].filter(vis).map((e) => box(e)),
+        rows: [...document.querySelectorAll('#mb .pr, #mb .pnav')].filter(vis).map((e) => box(e)),
+        sel: (() => { const e = document.querySelector('#mb .pk-sec-sel'); return e ? box(e) : null; })(),
+        strip: (() => { const h = document.querySelector('#mb .pk-grp-hd, #mb .pk-sec-hd');
+          const row = document.querySelector('#mb .pr');
+          return h && row ? { hd: getComputedStyle(h).backgroundColor, row: getComputedStyle(row).backgroundColor } : null; })(),
+      };
+    };
+    /* The tree open is where the chevrons and the per-row action icons live;
+       a group heading only exists once something is searched. Both states get
+       measured, or one of them reads as "no icons at all". */
+    const m = await s.page.evaluate(MEASURE);
+    await s.page.evaluate(() => { const q = document.getElementById('pkSearch'); q.value = 'seed'; _pkFilter('seed'); });
+    await s.page.waitForTimeout(350);
+    m.strip = (await s.page.evaluate(MEASURE)).strip;
+    await s.close();
+    return m;
+  };
+
+  {
+    const m = await geometry(1440, 900, 28, 34, 36);
+    const smallIcons = m.icons.filter((x) => x.w < 28 || x.h < 28);
+    const smallBtns = m.btns.filter((x) => x.h < 34);
+    const shortRows = m.rows.filter((x) => x.h < 36);
+    const navSizes = [...new Set(m.nav.map((x) => `${x.w}×${x.h}`))];
+    const smallNav = m.nav.filter((x) => x.w < 32 || x.h < 32);
+    r.check(smallIcons.length === 0 && smallBtns.length === 0 && shortRows.length === 0
+      && navSizes.length === 1 && smallNav.length === 0,
+      'on a laptop every control in the pop-out is one size, and none of them is a speck',
+      [smallIcons.length ? `icons: ${smallIcons.map((x) => `${x.t} ${x.w}×${x.h}`).join(', ')}` : '',
+        smallBtns.length ? `buttons: ${smallBtns.map((x) => `${x.t} ${x.h}px`).join(', ')}` : '',
+        shortRows.length ? `${shortRows.length} rows under 36px` : '',
+        navSizes.length !== 1 ? `title bar: ${navSizes.join(' / ')}` : ''].filter(Boolean).join(' · ')
+        || `${m.icons.length} icons at 28px+, ${m.btns.length} buttons at 34px+, ${m.rows.length} rows, title bar all ${navSizes[0]}`);
+    r.check(!!m.strip && m.strip.hd !== m.strip.row && m.strip.hd !== 'rgba(0, 0, 0, 0)',
+      'a group heading in the pop-out sits on a strip, not on the same ground as its rows',
+      m.strip ? `heading ${m.strip.hd} · row ${m.strip.row}` : 'no group heading rendered');
+    r.check(!!m.sel && m.sel.w >= 142,
+      'the section dropdown is wide enough to say which section you are in',
+      m.sel ? `${m.sel.w}×${m.sel.h}` : 'no section dropdown');
+  }
+  {
+    /* Under 1200px this window is full screen, and every control in it was
+       still laptop-sized — 19×19 delete icons on a phone. */
+    const m = await geometry(390, 844, 38, 44, 44);
+    const small = [...m.icons.filter((x) => x.w < 38 || x.h < 38).map((x) => `${x.t} ${x.w}×${x.h}`),
+      ...m.btns.filter((x) => x.h < 44).map((x) => `${x.t} ${x.h}px`),
+      ...m.nav.filter((x) => x.w < 42 || x.h < 42).map((x) => `a title-bar square at ${x.w}×${x.h}`),
+      ...m.rows.filter((x) => x.h < 44).map((x) => `a row at ${x.h}px`)];
+    r.check(small.length === 0 && m.icons.length > 0 && m.rows.length > 0,
+      'on a phone the pop-out is thumb-sized: 38px icons, 44px buttons and rows',
+      small.length ? small.slice(0, 6).join(' · ')
+        : `${m.icons.length} icons, ${m.btns.length} buttons, ${m.rows.length} rows, dropdown ${m.sel ? m.sel.w + '×' + m.sel.h : '—'}`);
+  }
+
+  /* The title bar wraps instead of squeezing: bigger steppers took the
+     section dropdown from 146px to 118px, which clipped MY NOTEBOOKS. */
+  {
+    const s = await openApp({ viewport: { width: 1600, height: 950 }, db: seedDB() });
+    await openPop(s.page);
+    const widths = [];
+    for (const w of [420, 520, 700, 1000]) {
+      widths.push(await s.page.evaluate(async (width) => {
+        const mb = document.getElementById('mb');
+        mb.style.width = width + 'px'; mb.style.maxWidth = width + 'px';
+        await new Promise((ok) => setTimeout(ok, 220));
+        const row = document.querySelector('.pk-mt-row');
+        const box = row.getBoundingClientRect();
+        const outside = [...row.querySelectorAll('button,select,span')].filter((e) => e.offsetParent !== null)
+          .filter((e) => { const q = e.getBoundingClientRect(); return q.left < box.left - 0.5 || q.right > box.right + 0.5; })
+          .map((e) => (e.title || e.textContent).trim().slice(0, 12));
+        return { width, sel: Math.round(document.querySelector('.pk-sec-sel').getBoundingClientRect().width), outside };
+      }, w));
+    }
+    await s.close();
+    const bad = widths.filter((x) => x.outside.length || x.sel < 142);
+    r.check(bad.length === 0,
+      'the pop-out’s title bar wraps rather than squeezing the section name out',
+      bad.length ? bad.map((x) => `${x.width}px: dropdown ${x.sel}px${x.outside.length ? `, outside the row: ${x.outside.join(', ')}` : ''}`).join(' · ')
+        : widths.map((x) => `${x.width}:${x.sel}px`).join(' '));
+  }
+}
+
 /* ── 11. Layout at the three real screen sizes ─────────────────────────── */
 for (const vp of VIEWPORTS) {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });

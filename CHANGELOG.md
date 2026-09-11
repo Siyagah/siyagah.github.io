@@ -1062,3 +1062,88 @@ Putting `#9A9289` back fails two of them.
   need measuring. Recorded here, not fixed.
 - **No sync, storage or export path was touched.** I1–I4 are untouched by a
   stylesheet, two derivations and a toast.
+
+---
+
+## v04.17 — the folder pop-out, given what the sidebar folders got (11 September 2026)
+
+Fourth round of the same job, this time on the Folder Browser — the window
+`📚 Folders` opens. Measured before anything was touched, and it had both of
+the defects the sidebar had.
+
+**Text**
+
+One failure, but a systemic one: the pop-out's two inputs had **no
+`::placeholder` rule at all**, so `🔍 Search…` and `New folder name…` were
+painted in the browser's own `#757575` — 4.2:1 on the default paper and
+**1.9:1** on a derived one (v04.16 makes the paper follow the owner's chosen
+colour; the browser's grey does not follow anything). They use `--t3` now,
+which does.
+
+Everything else in the window already passed, and passed because of v04.16:
+the rows and paths are `--t1`/`--t2`/`--t3`, which are derived from the pane
+background. Three rounds of tokens paying off in a fourth place.
+
+**Controls**
+
+The same picture the sidebar header had in v04.14, and worse for being
+hidden behind a button most people press rarely:
+
+| | was | now (laptop) | now (phone) |
+|---|---|---|---|
+| `◀` `▶` section steppers | **20×20** | 32×32 | 42×42 |
+| `📚` all sections, `🎨` text style | 30×30 | 32×32 | 42×42 |
+| `📍` `✏️` per-row actions | 22×19 | 28×28 | 38×38 |
+| `🗑` delete a folder | **19×19** | 28×28 | 38×38 |
+| the fold chevron | 28×22 | 28×28 | 38×38 |
+| `Close` | 56×**26** | 56×34 | 56×44 |
+| a folder row | 36px | 42px | 52px |
+| the section dropdown | 146×22 | 142+×32 | 158×42 |
+
+**Every one of those was the same size on a phone as on a laptop**, and under
+1200px this window is full screen — so the 19×19 delete target was a 19×19
+delete target on a 390px phone.
+
+**Group headings sit on a strip**, the way the sidebar's section headings do
+since v04.15 — `📁 FOLDERS`, `🏷 TAGS`, `📄 NOTES` in the search results, and
+the section headings in the browse list. They were three copies of the same
+inline style in `--t3`; they are one class now.
+
+**One thing the round had to fix about itself:** bigger steppers squeezed the
+section dropdown from 146px to 118px, which clipped `MY NOTEBOOKS` to
+`MY NOTEBOC`. The title bar wraps now instead of squeezing — one row from
+520px of window width up, two below it — and the check measures the dropdown
+at four widths so the next control added there cannot quietly eat it again.
+
+**Measured**
+
+11/11 ship checks, and app checks from 96 to **105**.
+
+Four of the nine sweep every word in the pop-out across three states (the
+tree closed, the tree open, a live search) with the theme as it ships, a pane
+background too dark to write on, a mid grey one and a pale accent. Three more
+measure the controls at a laptop and at a phone, and the strip behind a group
+heading. The last one drags the window from 420px to 1000px and asserts the
+section dropdown never goes below 142px and nothing is pushed outside the
+title bar.
+
+**Two wrong assertions, corrected rather than worked around**
+
+The first cut failed three of its own checks. Both causes were in the check,
+not the app: the title bar's four squares are *icon* buttons and were being
+held to the 34px minimum written for buttons carrying words; and the geometry
+probe measured in the search state, where there are no chevrons and no
+per-row actions at all — so it read "0 icons" and called it a pass, then
+"no group heading rendered" and called it a fail. It measures both states now
+and says which state each thing comes from.
+
+**What was NOT done, and why**
+
+- **Only the browse pop-out was swept.** The same modal shell is used by
+  `Assign to folders` (the picker) and by the note-link panels; they share
+  most of these classes and get most of this for free, but they were not
+  measured and are not claimed.
+- **The action icons still only appear on hover on a laptop.** That is how
+  they were; making them permanent is a behaviour change nobody asked for.
+- **No sync, storage or export path was touched.** I1–I4 are untouched by a
+  stylesheet and a class name.
