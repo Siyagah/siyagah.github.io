@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 105 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 113 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -90,6 +90,13 @@ or quietly lose the notebook, none of which need a browser:
   is full screen under 1200px and every control used to stay laptop-sized),
   the strip behind a group heading, and the section dropdown held to 142px as
   the window is dragged from 420px to 1000px (v04.17);
+- **the Assign window reads and can be hit, and both pop-up windows count
+  their notes** — its text under two colour settings, its tick box at a
+  laptop and a phone, every folder row's badge compared against `cntOf()` in
+  both windows, and the phone fold: the three row actions really folded into
+  one ⋯, the whole folder name on screen, a real click opening all three and
+  the menu still painted a tick later, and the laptop keeping its icons
+  (v04.18);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both

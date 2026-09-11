@@ -1543,6 +1543,163 @@ await app.close();
   }
 }
 
+/* ── 6l. v04.18: the Assign window, and a note count on every folder ──── */
+{
+  const openAssign = async (page) => {
+    await page.evaluate(() => { selArt('a1'); });
+    await page.waitForTimeout(350);
+    await page.evaluate(() => openPicker());
+    await page.waitForTimeout(450);
+  };
+  const openBrowse = async (page) => {
+    await page.evaluate(() => { ST.folder = 'f1'; window.render(); openFolderPopupFromToolbar(); });
+    await page.waitForTimeout(450);
+  };
+
+  /* Text: the same net as v04.17's, over the Assign window. It shares its
+     classes with the browse pop-out, so this is a regression net more than a
+     discovery — two colour settings, not five, for what that is worth. */
+  for (const [label, custom] of [['the theme as it ships', null], ['a mid grey pane background', { bg: '#8A8F8C' }]]) {
+    const db = seedDB();
+    if (custom) db.theme = { preset: 'forest', custom };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    await openAssign(s.page);
+    await s.page.evaluate(() => { const row = document.querySelector('#pkList .pr'); if (row) row.click(); });
+    await s.page.waitForTimeout(250);
+    const rows = await s.page.evaluate(() => {
+      const out = [];
+      const stackOf = (el) => { const st = [];
+        for (let n = el; n; n = n.parentElement) { const c = getComputedStyle(n).backgroundColor;
+          if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') st.push(c);
+          if (/^rgb\(/.test(c)) break; } return st; };
+      for (const el of document.querySelectorAll('#mb *')) {
+        if (el.offsetParent === null) continue;
+        const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
+        if (!/[A-Za-z0-9]/.test(own)) continue;
+        out.push({ sel: el.className || el.tagName, text: own.slice(0, 20), color: getComputedStyle(el).color, stack: stackOf(el) });
+      }
+      for (const inp of document.querySelectorAll('#mb input')) {
+        if (inp.offsetParent === null || !inp.placeholder) continue;
+        out.push({ sel: (inp.className || 'input') + ' ::placeholder', text: inp.placeholder.slice(0, 20),
+          color: getComputedStyle(inp, '::placeholder').color, stack: stackOf(inp) });
+      }
+      return out;
+    });
+    await s.close();
+    const seen = new Set();
+    const scored = [];
+    for (const row of rows) {
+      const key = row.sel + row.color + row.stack.join();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const bg = flatten(row.stack);
+      scored.push({ ...row, c: ratio(over(px(row.color), bg), bg) });
+    }
+    scored.sort((a, b) => a.c - b.c);
+    const low = scored.filter((x) => x.c < 4.5);
+    r.check(low.length === 0 && scored.length > 5,
+      `every word in the Assign window reads with ${label}`,
+      low.length ? low.slice(0, 4).map((x) => `${x.c.toFixed(1)}:1 ${x.sel} ${JSON.stringify(x.text)}`).join(' · ')
+        : `${scored.length} pieces of text, worst ${scored[0].c.toFixed(1)}:1 (${scored[0].sel})`);
+  }
+
+  /* The tick box is what this window is FOR, and it was 15×15 on a phone. */
+  for (const [label, w, h, min] of [['a laptop', 1440, 900, 20], ['a phone', 390, 844, 24]]) {
+    const s = await openApp({ viewport: { width: w, height: h }, db: seedDB() });
+    await openAssign(s.page);
+    const box = await s.page.evaluate(() => [...document.querySelectorAll('#mb .pc')]
+      .filter((e) => e.offsetParent !== null).map((e) => { const q = e.getBoundingClientRect();
+        return { w: Math.round(q.width), h: Math.round(q.height) }; }));
+    await s.close();
+    const small = box.filter((x) => x.w < min || x.h < min);
+    r.check(box.length > 0 && small.length === 0,
+      `on ${label} the Assign window's tick box is a box, not the 15×15 speck it was`,
+      box.length ? `${box.length} boxes at ${box[0].w}×${box[0].h} (needs ${min})` : 'no tick boxes rendered');
+  }
+
+  /* The count: the number the sidebar badge shows, on the pop-out rows too. */
+  {
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    const read = () => s.page.evaluate(() => [...document.querySelectorAll('#mb .pr')]
+      .filter((e) => e.offsetParent !== null && e.dataset.fid)
+      .map((row) => ({ fid: row.dataset.fid, shown: row.querySelector('.pk-cnt')?.textContent ?? null,
+        real: cntOf(row.dataset.fid) })));
+    await openAssign(s.page);
+    const assign = await read();
+    await s.page.evaluate(() => closeModal());
+    await s.page.waitForTimeout(250);
+    await openBrowse(s.page);
+    await s.page.evaluate(() => { document.querySelectorAll('#pkList .pk-chev').forEach((c) => c.click()); });
+    await s.page.waitForTimeout(350);
+    const browse = await read();
+    await s.close();
+    const wrong = [...assign, ...browse].filter((x) => (x.real ? String(x.real) : null) !== x.shown);
+    r.check(assign.length > 0 && browse.length > 0 && wrong.length === 0,
+      'every folder row in both pop-up windows carries the same note count the sidebar shows',
+      wrong.length ? wrong.slice(0, 4).map((x) => `${x.fid}: shows ${x.shown}, cntOf says ${x.real}`).join(' · ')
+        : `${assign.length} rows in Assign, ${browse.length} in the browser, all matching cntOf()`);
+  }
+
+  /* On a phone the three row actions fold into one ⋯ — because with them on
+     the row a folder name got about 65px of a 317px row and arrived as
+     "(001) See…". Folded, never hidden: the ⋯ has to really open. */
+  {
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+    const thrown = [];
+    s.page.on('pageerror', (e) => thrown.push(String(e).split('\n')[0]));
+    await openAssign(s.page);
+    const folded = await s.page.evaluate(() => {
+      const row = document.querySelector('#mb .pr');
+      const nm = row.querySelector('.pk-nm');
+      return { acts: [...row.querySelectorAll('.pk-acts .pk-act')].filter((e) => e.offsetParent !== null).length,
+        more: !!row.querySelector('.pk-more') && row.querySelector('.pk-more').offsetParent !== null,
+        nameW: Math.round(nm.getBoundingClientRect().width),
+        /* what actually matters is that the whole name is on screen: the
+           element is clamped to two lines, so anything longer than that
+           overflows and scrollHeight says so */
+        clipped: nm.scrollHeight > nm.clientHeight + 1,
+        whole: nm.textContent === (DB.folders.find((f) => f.id === row.dataset.fid) || {}).name,
+        name: nm.textContent };
+    });
+    await s.page.locator('#mb .pk-more').first().click();
+    await s.page.waitForTimeout(250);
+    const menu = await s.page.evaluate(() => { const m = document.getElementById('ctx');
+      const q = m.getBoundingClientRect();
+      return { painted: getComputedStyle(m).display !== 'none' && q.width > 0 && q.height > 0,
+        text: m.textContent.replace(/\s+/g, ' ').trim() }; });
+    await s.close();
+    /* The first cut of this check demanded 140px of name, a number taken
+       from the browse pop-out — but the Assign window also carries a tick
+       box, so its name box is 122px and shows the whole name anyway. The bar
+       is "the whole name is on screen", with a floor low enough to catch a
+       squeeze and high enough to mean something. */
+    r.check(folded.acts === 0 && folded.more && folded.whole && !folded.clipped && folded.nameW >= 110,
+      'on a phone the row actions fold into one ⋯ and the whole folder name is on screen',
+      `loose icons ${folded.acts} · ⋯ shown ${folded.more} · name ${folded.nameW}px, whole ${folded.whole},`
+      + ` clipped ${folded.clipped} — ${JSON.stringify(folded.name)}`);
+    r.check(menu.painted && /New folders go here/.test(menu.text) && /Rename/.test(menu.text)
+      && /Delete/.test(menu.text) && thrown.length === 0,
+      'a real click on that ⋯ opens all three actions, and the menu is still there a tick later',
+      `painted ${menu.painted} · ${JSON.stringify(menu.text.slice(0, 60))}` + (thrown.length ? ` · threw: ${thrown[0]}` : ''));
+  }
+
+  /* And nothing was taken away from the laptop, where there is room. */
+  {
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    await openAssign(s.page);
+    const laptop = await s.page.evaluate(() => {
+      const row = document.querySelector('#mb .pr');
+      return { acts: [...row.querySelectorAll('.pk-acts .pk-act')].filter((e) => e.offsetParent !== null)
+        .map((e) => e.title.slice(0, 10)),
+        more: (row.querySelector('.pk-more') || {}).offsetParent != null };
+    });
+    await s.close();
+    r.check(laptop.acts.length === 3 && !laptop.more,
+      'on a laptop the three row actions are still on the row, and the ⋯ stays out of the way',
+      `on the row: ${laptop.acts.join(', ') || 'none'} · ⋯ shown ${laptop.more}`);
+  }
+}
+
 /* ── 11. Layout at the three real screen sizes ─────────────────────────── */
 for (const vp of VIEWPORTS) {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
