@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 194 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 196 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -141,7 +141,10 @@ or quietly lose the notebook, none of which need a browser:
   and still could not be found — "present" is not "findable"), the same three
   under `H` by the functions they call, and `🏠` proved still reachable through
   the sidebar logo rather than merely exempted from the nothing-lost
-  comparison (v04.23);
+  comparison (v04.23); and, **with tabs actually seeded**, the editing tab bar
+  carrying tabs and not the two buttons that moved under `+` — the v04.22
+  check only ever ran with an empty bar, which is why it reported a clean
+  fold over a duplication the owner hit on his first tab (v04.24);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -223,6 +226,13 @@ assertions miss.
   reported a clean sweep over a surface it could not see. When a round
   touches something that opens, open it in the check; and when a sweep says
   "every element in X", ask which of them existed in the state it ran in.
+- **A surface that only appears when it has content must be SEEDED with
+  content before it is measured.** The v04.22 check asked "is the tab bar a row
+  while editing on a phone?" and got "no" — because `seedDB()` has no tabs, so
+  the bar did not exist in the only state that check ever ran in. Two buttons
+  were sitting on it, duplicated from the menu they had just been moved to, and
+  the owner found them the first time he opened a tab. Seed the state. The
+  same trap, one shape along, as:
 - **A pop-out has states, and its parts do not all exist in the same one.**
   The v04.17 geometry probe measured while a search was live, where the
   pop-out has no chevrons and no per-row action icons — so "every icon is
