@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.19">
+<meta name="app-version" content="04.20">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -484,13 +484,46 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .mwsub-hd .mw-latest{font-size:10px;font-weight:400;color:var(--t3);margin-left:4px}
 @media(max-width:1199.98px){.mwsub-hd{padding:10px 12px;font-size:14px;min-height:44px}}
 /* ── Quick inline title bar (pane 2) ─────────────────────────────────────── */
-.qt-bar{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border2);background:var(--paper2,var(--paper))}
-.qt-bar input{flex:1;border:none;outline:none;font-size:13px;background:transparent;color:var(--t1);font-family:var(--ui);padding:8px 10px;min-width:0}
+/* ── The quick "new note title" bar (pane 2) ────────────────────────────
+   v04.20 — was a flat, borderless strip the eye slid straight past; now a
+   raised pill that lifts when you are in it. Every colour is a theme
+   variable, so it follows the owner's own accent rather than a hex.
+   The Save pill and the ➕ badge are --green with --on-accent on them —
+   the SAME pair `.bp` uses for `✚ Note`, and the only correct one: the
+   derivation at applyPaneInk() measures --on-accent against --green, NOT
+   against --accent (which is --green2, a darkened copy for use as TEXT).
+   The first cut of this bar wrote --on-accent on --accent and the v04.19
+   sweep scored it at 2.9:1 on a pale accent and 3.3:1 on Amber.
+   The field rides --paper, which is LIGHTER than --hover — the surface
+   --t3 (the placeholder) is measured against — so the placeholder keeps
+   its 4.5:1. */
+.qt-bar{display:flex;align-items:center;gap:8px;margin:0 0 14px;padding:4px 5px 4px 7px;
+  border:1.5px solid var(--border2);border-radius:999px;background:var(--paper);
+  box-shadow:0 1px 2px rgba(0,0,0,.05);
+  transition:border-color .15s,box-shadow .15s,background .15s}
+.qt-bar:focus-within{border-color:var(--green);background:var(--white);
+  box-shadow:0 0 0 3px var(--greenlt),0 2px 10px rgba(0,0,0,.09)}
+.qt-bar input{flex:1;border:none;outline:none;font-size:13px;background:transparent;color:var(--t1);font-family:var(--ui);padding:7px 2px;min-width:0}
 .qt-bar input::placeholder{color:var(--t3);font-style:italic}
-.qt-bar .qt-ic{padding:0 10px;font-size:15px;color:var(--t3);flex-shrink:0;pointer-events:none;line-height:1}
-.qt-bar .qt-go{padding:6px 10px;font-size:12px;border:none;border-left:1px solid var(--border2);background:transparent;color:var(--accent);cursor:pointer;font-family:var(--ui);flex-shrink:0;white-space:nowrap}
-.qt-bar .qt-go:hover{background:rgba(0,0,0,.04)}
-@media(max-width:1199.98px){.qt-bar input{font-size:14px;padding:11px 10px}.qt-bar .qt-go{padding:10px 12px;font-size:13px}}
+.qt-bar .qt-ic{display:flex;align-items:center;justify-content:center;
+  width:25px;height:25px;border-radius:999px;flex-shrink:0;pointer-events:none;
+  font-size:13px;line-height:1;background:var(--green);color:var(--on-accent)}
+.qt-bar .qt-go{padding:7px 16px;font-size:12px;font-weight:700;border:none;border-radius:999px;
+  background:var(--green);color:var(--on-accent);cursor:pointer;font-family:var(--ui);
+  flex-shrink:0;white-space:nowrap;letter-spacing:.02em;transition:filter .12s}
+.qt-bar .qt-go:hover{filter:brightness(1.14)}
+.qt-bar .qt-go:active{filter:brightness(.92)}
+/* Nowhere to save into yet — the bar says so rather than pretending to work. */
+.qt-bar.qt-off{background:transparent;border-style:dashed;box-shadow:none}
+.qt-bar.qt-off .qt-ic{background:var(--border2);color:var(--t1)}
+.qt-bar .qt-msg{flex:1;font-size:12px;color:var(--t2);padding:7px 2px}
+@media(max-width:1199.98px){
+  .qt-bar{padding:5px 6px 5px 8px}
+  .qt-bar input{font-size:14px;padding:10px 2px}
+  .qt-bar .qt-ic{width:31px;height:31px;font-size:15px}
+  /* 42px is the touch target, and padding alone left it at 37px. */
+  .qt-bar .qt-go{padding:11px 18px;font-size:13px;min-height:42px}
+}
 /* ── Image resize bar ─────────────────────────────────────────────────────── */
 #img-rsz-bar{position:fixed;background:var(--white);border:1px solid var(--border2);border-radius:10px;padding:5px 8px;z-index:10005;box-shadow:0 4px 18px rgba(0,0,0,.18);display:flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:94vw}
 #img-rsz-bar .irb-btn{font-size:12px;padding:4px 9px;border-radius:6px;border:1px solid var(--border2);background:var(--paper);cursor:pointer;min-height:32px;color:var(--t1);font-family:var(--ui);white-space:nowrap}
@@ -2417,7 +2450,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.19</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.20</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3254,6 +3287,8 @@ function renderP2H(){
     el.innerHTML=ham
       +`<span class="tbt" style="flex:1;min-width:0;overflow:hidden;font-size:12px">${_ssf?.icon||'📊'} ${esc((_ssf&&(DB.sfItems?.[_ssf.id]?.name||_ssf.name))||'')} <span style="font-weight:400;opacity:.6">· ${esc(_ssec?.name||'')}</span></span>`
       +fbBtn+newBtn+previewBtn+cls;
+    /* v04.20 — the same second row a folder gets, scoped to this section. */
+    if(_pathHost0)_pathHost0.innerHTML=_sfPathRowHTML(ST.secSF.sfId,ST.secSF.secId);
     return;
   }
     /* ── Smart-view header — contextual new-note button ── */
@@ -3278,6 +3313,8 @@ function renderP2H(){
     el.innerHTML=ham
       +`<span class="tbt" style="flex:1;min-width:0;overflow:hidden">${_sfDef.icon} ${esc(_sfDef.name)}</span>`
       +fbBtn+_sfBtn+_mwCatBtn+previewBtn+cls;
+    /* v04.20 — the second row a Smart View never had; see _sfPathRowHTML(). */
+    if(_pathHost0)_pathHost0.innerHTML=_sfPathRowHTML(_sfDef.id,null);
     return;
   }
   const ham=window.innerWidth<1200
@@ -3385,6 +3422,7 @@ function renderP2C(){
     if(grps){
       const tot=getSecSmartArts(secId,sfId).length;
       let h='<div class="fv">'+`<div class="slbl">${_ssf.icon} ${esc(sfName)} <span style="font-weight:400;color:var(--t3);font-size:11px">· ${esc(_ssec.name)}</span> (${tot})</div>`;
+      h+=_sfQtBarHTML(sfId,secId);
       if(!ST.sfGrpOpen)ST.sfGrpOpen={};
       grps.forEach(([gname,garr])=>{
         const gkey='sec-'+secId+'|'+sfId+'|'+gname;
@@ -3397,6 +3435,7 @@ function renderP2C(){
     }
     const arts=getSecSmartArts(secId,sfId);
     let h='<div class="fv">'+`<div class="slbl">${_ssf.icon} ${esc(sfName)} <span style="font-weight:400;color:var(--t3);font-size:11px">· ${esc(_ssec.name)}</span> (${arts.length})</div>`;
+    h+=_sfQtBarHTML(sfId,secId);
     if(!arts.length){
       h+=`<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl);color:var(--t3);font-size:13px;line-height:1.6">No ${esc(sfName.toLowerCase())} in ${esc(_ssec.name)}</div>`;
     }else{h+='<div class="al">';arts.forEach(a=>{h+=artCard(a,ST.article===a.id,true);});h+='</div>';}
@@ -3428,6 +3467,7 @@ function renderP2C(){
       const total=getSmartArts(_sf.id).length;
       const dispName=(DB.sfItems?.[_sf.id]?.name)||_sf.name;
       let h='<div class="fv">'+`<div class="slbl">${_sf.icon} ${esc(dispName)} (${total})</div>`;
+      h+=_sfQtBarHTML(_sf.id,null);
       if(!ST.sfGrpOpen)ST.sfGrpOpen={};
       groups.forEach(([gname,garr])=>{
         const gkey=_sf.id+'|'+gname;
@@ -3450,6 +3490,7 @@ function renderP2C(){
     const arts=getSmartArts(_sf.id);
     const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any article and choose ⭐ Add to Favourites','sf-pinned':'No pinned articles yet — right-click (or hold on mobile) any article and choose 📌 Pin','sf-new':'No articles yet. Create your first article!','sf-recent':'No recently edited articles.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
     let h='<div class="fv">'+`<div class="slbl">${_sf.name} (${arts.length})</div>`;
+    h+=_sfQtBarHTML(_sf.id,null);
     if(!arts.length){
       h+=`<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl);color:var(--t3);font-size:13px;line-height:1.6">${empty[_sf.id]||''}</div>`;
     }else{
@@ -3481,8 +3522,8 @@ function renderP2C(){
   h+=`<div class="slbl">Articles (${arts.length})</div>`;
   /* ── Quick inline title bar ── */
   h+=`<div class="qt-bar">`
-    +`<span class="qt-ic">📄</span>`
-    +`<input type="text" id="qt-inp" placeholder="New note title — press Enter to save…"`
+    +`<span class="qt-ic">✚</span>`
+    +`<input type="text" id="qt-inp" placeholder="New note title — press Enter…"`
     +` onkeydown="qtKey(event,'${curF.id}')" `
     +` onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">`
     +`<button class="qt-go" onclick="qtSave('${curF.id}')" tabindex="-1">Save</button>`
@@ -4818,12 +4859,19 @@ function toggleArchive(aid){
    Creates a note with ONLY the title filled in, keeps all existing title
    attributes (right-click menu: tag, archive, favourite, pin, attach folder).
    Does NOT open edit mode or slide to pane 3 on mobile/tablet.          ─── */
-function mkArtTitleOnly(fid,title){
+function mkArtTitleOnly(fid,title,sfId){
   if(!title?.trim())return;
   const now=new Date().toISOString();
   const a={id:uid(),title:title.trim(),content:'',
     folderIds:fid?[fid]:[],tags:[],createdAt:now,updatedAt:now};
+  /* v04.20 — typed into a Smart View, the note has to actually LAND in the
+     view you typed it in: Favourites stars it, Pinned pins it. Runs before
+     persist() so the one save carries it. Purely additive — an ordinary
+     folder passes no sfId and nothing here touches the note. */
+  const _q=sfId?SF_QUICK[sfId]:null;
+  if(_q&&_q.apply)_q.apply(a);
   DB.articles.push(a);persist();
+  if(fid)_trackLastFolder(fid);
   /* Select note so pane 3 shows it in VIEW mode (not edit mode) */
   ST.article=a.id;ST.etitle=a.title;ST.efolders=[...a.folderIds];ST.etags=[];
   ST.editing=false;                      /* ← key: never enter edit mode */
@@ -4831,22 +4879,25 @@ function mkArtTitleOnly(fid,title){
   if(window.innerWidth>=1200){
     renderP3H();renderP3C();
   }
-  renderP2C();renderTree();
-  /* Re-focus the input for rapid sequential entry */
-  setTimeout(()=>{const i=document.getElementById('qt-inp');if(i)i.focus();},60);
+  renderP2C();renderP2H();renderTree();  /* renderP2H: the counts in the second row */
+  /* Re-focus the input for rapid sequential entry — but not when something
+     else is about to take the focus, or the two fight over it. */
+  if(!(_q&&_q.after))
+    setTimeout(()=>{const i=document.getElementById('qt-inp');if(i)i.focus();},60);
   toast('📄 Title saved — tap to write content anytime');
+  if(_q&&_q.after)_q.after(a.id);
 }
-function qtKey(e,fid){
-  if(e.key==='Enter'){e.preventDefault();qtSave(fid);return;}
+function qtKey(e,fid,sfId){
+  if(e.key==='Enter'){e.preventDefault();qtSave(fid,sfId);return;}
   if(e.key==='Escape'){e.target.value='';e.target.blur();}
 }
-function qtSave(fid){
+function qtSave(fid,sfId){
   const inp=document.getElementById('qt-inp');
   if(!inp)return;
   const v=inp.value.trim();
   if(!v){inp.focus();return;}
   inp.value='';
-  mkArtTitleOnly(fid,v);
+  mkArtTitleOnly(fid,v,sfId);
 }
 
 
@@ -14265,6 +14316,134 @@ function _folderPathRowHTML(curF){
   h+='</div>';
   if(treeOn)h+=_folderFullTreeHTML(curF);
   return h;
+}
+
+/* ══ v04.20 — THE SAME SECOND ROW FOR A SMART VIEW ════════════════════════
+   A folder's pane-2 header carries three rows: the title bar, this path row,
+   and the Home/Search row. A Smart View carried only the first and the third,
+   so it looked like a different, poorer screen — which is what the owner
+   reported.
+
+   The reason it had no path row is real: every button on the folder's row is
+   about a POSITION IN THE FOLDER TREE — up to the parent, down into a child,
+   a new subfolder inside this one, the whole tree, the subfolders as cards.
+   A Smart View has no position in that tree. It is a saved question ("which
+   notes were edited recently?"), so it has no parent, no children, and
+   nothing to put a new subfolder into.
+
+   What it DOES have is an exact analogue of each part, and that is what this
+   row is. Same classes, same pills, same place — so the two screens read as
+   one app:
+
+     folder row                        smart-view row
+     ───────────────────────────────   ─────────────────────────────────────
+     🌳 Full tree  (show everything)   ⬇ Expand all / ⬆ Collapse all
+     🗂 Card View                      — (Preview already sits in row 1)
+     ⬆ <parent folder>                 ⬆ <the folder a new note lands in>
+     📁 <child folder> <count>         <icon> <other Smart View> <count>
+     ➕ New folder                     — (a Smart View cannot hold a folder)
+
+   The sibling chips are the point: from Favourites you can step straight to
+   Pinned or Reminders without going back to the sidebar, exactly the way the
+   folder row lets you step to a sibling folder.                          ── */
+
+/* Smart Views that render their own list rather than the generic grouped one.
+   Their groups are keyed differently (MyWall uses ST.mwCatOpen) or they have
+   no groups at all, so Expand/Collapse would set state nothing reads. */
+const SF_OWN_RENDERER=new Set(['sf-mywall','sf-murajaa','sf-practice','sf-journal']);
+
+/* Where a note typed into a Smart View's quick-add bar actually lands.
+   A Smart View is a filter, not a place — the note has to live in a real
+   folder. Same fallback chain newStarredNote() has used since v04.00, and
+   inside a SECTION smart view it is narrowed to that section's own folders,
+   or the note would be created outside the very view you are standing in. */
+function _sfQtFolder(secId){
+  const last=DB.theme?.lastFolder;
+  if(secId){
+    const ids=getSectionFolderIds(secId);
+    if(last&&ids.includes(last))return DB.folders.find(f=>f.id===last)||null;
+    return DB.folders.find(f=>ids.includes(f.id))||null;
+  }
+  return (last&&DB.folders.find(f=>f.id===last))
+      || DB.folders.filter(f=>!f.id.startsWith('db-'))[0] || null;
+}
+
+function _sfPathRowHTML(sfId,secId){
+  const grps=secId?getSecSmartGroups(secId,sfId):(SF_OWN_RENDERER.has(sfId)?null:getSmartGroups(sfId));
+  let h='<div class="p2h-path-row">';
+  if(grps&&grps.length){
+    h+=`<button class="p2h-path-new" onclick="sfGrpExpandAll('${sfId}','${secId||''}')" title="Open every group in this Smart View">⬇ Expand all</button>`;
+    h+=`<button class="p2h-path-new" onclick="sfGrpCollapseAll('${sfId}','${secId||''}')" title="Close every group back up">⬆ Collapse all</button>`;
+  }
+  /* The Smart View's answer to "⬆ parent": the folder a new note goes into. */
+  const dest=_sfQtFolder(secId);
+  if(dest&&SF_QUICK[sfId])
+    h+=`<button class="p2h-path-up" onclick="selFolder('${dest.id}')" title="New notes typed here are saved into &quot;${esc(dest.name)}&quot; · click to open it">⬆ ${esc(dest.name)}</button>`;
+  const others=sfOrdered().filter(s=>s.id!==sfId);
+  if(others.length&&(grps||dest))h+='<span class="p2h-path-sep">|</span>';
+  others.forEach(s=>{
+    const nm=(DB.sfItems?.[s.id]?.name)||s.name;
+    const cnt=secId?getSecSmartArts(secId,s.id).length:getSmartArts(s.id).length;
+    const go=secId?`selSecSF('${secId}','${s.id}')`:`selFolder('${s.id}')`;
+    h+=`<button class="p2h-path-child" onclick="${go}" oncontextmenu="showSfItemCtx(event,'${s.id}')" title="Open &quot;${esc(nm)}&quot; · right-click for options">${s.icon} ${esc(nm)} <span class="p2h-path-cnt">${cnt}</span></button>`;
+  });
+  h+='</div>';
+  return h;
+}
+
+function _sfGrpKeys(sfId,secId){
+  const grps=secId?getSecSmartGroups(secId,sfId):getSmartGroups(sfId);
+  if(!grps)return [];
+  /* Exactly the keys renderP2C() reads — the section one is prefixed. */
+  return grps.map(([gname])=>(secId?'sec-'+secId+'|':'')+sfId+'|'+gname);
+}
+function sfGrpExpandAll(sfId,secId){
+  if(!ST.sfGrpOpen)ST.sfGrpOpen={};
+  _sfGrpKeys(sfId,secId||'').forEach(k=>{ST.sfGrpOpen[k]=true;});
+  renderP2C();
+}
+function sfGrpCollapseAll(sfId,secId){
+  if(!ST.sfGrpOpen)ST.sfGrpOpen={};
+  _sfGrpKeys(sfId,secId||'').forEach(k=>{ST.sfGrpOpen[k]=false;});
+  renderP2C();
+}
+
+/* ── The quick-add bar in a Smart View ──────────────────────────────────────
+   Which Smart Views can take a note typed straight into the list, and what
+   has to be TRUE of that note for it to appear in the view you typed it in.
+   A view absent from this table gets no bar, on purpose:
+     · sf-arch      a brand-new note that is already archived is a
+                    contradiction, not a feature;
+     · sf-mywall / sf-murajaa / sf-practice / sf-journal each render their own
+                    list and each mean something specific by "belongs here".
+   `apply` runs on the note before it is saved; `after` runs once it is. ── */
+const SF_QUICK={
+  /* Keep `hint` SHORT. The whole placeholder has to fit a 390px phone, where
+     the field is about 230px — roughly 30 characters at the italic 14px it
+     is painted in. The first cut said "New favourite ⭐ — saves into (001)
+     Seeded Folder, press Enter…" and arrived as "…press En". */
+  'sf-new'   :{hint:'New note title'},
+  'sf-recent':{hint:'New note title'},
+  'sf-time'  :{hint:'New note title'},
+  'sf-favs'  :{hint:'New ⭐ favourite', apply:a=>{a.favourite=true;}},
+  'sf-pinned':{hint:'New 📌 pinned note', apply:a=>{a.pinned=true;}},
+  'sf-remind':{hint:'New 🔔 reminder', after:aid=>setTimeout(()=>openReminderModal(aid),260)},
+};
+function _sfQtBarHTML(sfId,secId){
+  const spec=SF_QUICK[sfId];
+  if(!spec)return '';
+  const dest=_sfQtFolder(secId);
+  if(!dest)
+    return '<div class="qt-bar qt-off"><span class="qt-ic">✚</span>'
+      +'<span class="qt-msg">Make a folder first — a new note needs somewhere to live</span></div>';
+  return '<div class="qt-bar">'
+    +'<span class="qt-ic">✚</span>'
+    +`<input type="text" id="qt-inp" placeholder="${esc(spec.hint)} — press Enter…"`
+    +` title="Saved into &quot;${esc(dest.name)}&quot; — the folder named on the row above"`
+    +` onkeydown="qtKey(event,'${dest.id}','${sfId}')"`
+    +' onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">'
+    +`<button class="qt-go" onclick="qtSave('${dest.id}','${sfId}')" tabindex="-1">Save</button>`
+    +'</div>';
 }
 /* One-click creation of the 7 starter MyDatabase folders (MyResources,
    MyIdeas, etc.) — idempotent, safe to run more than once, skips any

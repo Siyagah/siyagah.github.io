@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.19.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.20.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,20 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.20** (11 Sep 2026) — the owner sent two screenshots: a folder's pane 2
+  has a second row of pills and a "new note title" box; a **Smart View has
+  neither**. Row 1 was already identical (`📚`/`✚ Note`/`▤ Preview` are built
+  once). Row 2 was missing for a real reason — every button on it is a
+  POSITION IN THE FOLDER TREE (parent, children, new subfolder), and a Smart
+  View is a saved question, not a place. So it is **translated, not copied**:
+  `⬇ Expand all`/`⬆ Collapse all` for `🌳 Full tree`, every OTHER Smart View
+  with its count as the sibling chips, and `⬆ <folder>` naming where a new
+  note lands. The box now works in the six views a note can honestly go into
+  (`SF_QUICK` makes it true of the view — Favourites stars it, Pinned pins it)
+  and is absent from the five it cannot. It was also restyled: a raised pill
+  with a `✚` badge, a solid `Save` and a lift-to-white on focus. Three faults
+  in this round's own work were caught before shipping — see the lessons
+  below. 144/144 app checks (up from 128) and 11/11 ship checks.
 - **v04.19** (11 Sep 2026) — `--hover` was used 56 times and **defined
   nowhere**, so 56 hover rules were invalid and painted nothing. Swept by
   question rather than by name ("every `var()` with no fallback — does it
@@ -56,17 +70,7 @@ must never accumulate here instead of there.
   becomes, and `--on-accent` / `--green2` are derived from the accent so a
   pale accent stops erasing `✚ Note`, `💾 Save` and `Quick Note`. 96/96 app
   checks (up from 89) and 11/11 ship checks.
-- **v04.15** (11 Sep 2026) — the sidebar list reads on any colour too. The
-  headings, the count badges, the two bottom buttons, the per-section Smart
-  View rows, the search-result labels and the empty-state lines were all fixed
-  colours — several of them paper colours (`var(--t2)`, `var(--green2)`) on a
-  dark surface — measuring 1.1–2.4:1 on the owner's teal. `applySidebarInk()`
-  derives the whole sidebar palette (`--sb-ink`, `--sb-panel`, `--sb-strip`,
-  `--sb-line`…) from the luminance of `--forest` on every theme change, so a
-  PALE sidebar now flips to dark ink and is usable for the first time. Section
-  headings sit on a recessed strip; the two bottom buttons became real boxes.
-  89/89 app checks (up from 80) and 11/11 ship checks — the new ones sweep
-  every word in the sidebar in three states on five sidebar colours.
+
 ---
 
 ## What this is
@@ -243,6 +247,21 @@ traps belong in `tools/README.md`, not here.)*
   question — every `var()` written without a fallback, does it resolve — so it
   also catches the next one. Cost: a whole version series of dead hover states,
   reported by the owner, with two thirds of the fault still unreported.
+- **`--on-accent` is the ink for `--green`. `--accent` is `--green2`, and it
+  is a colour for TEXT, not a background.** Writing
+  `background:var(--accent);color:var(--on-accent)` is the obvious-looking
+  pairing and the wrong one: `applyPaneInk()` derives `--on-accent` against
+  `--green`, so on Amber it scored 3.3:1 and on a pale custom accent 2.9:1 —
+  dark ink on a dark pill. The primary-button pair that has always been right
+  is `.bp`'s: `background:var(--green);color:var(--on-accent)`. Cost: two
+  failing checks in v04.20, caught in build only because v04.19's sweep
+  already existed.
+- **A colour emoji ignores `color`; a themed icon has to be a TEXT glyph.**
+  `➕` on the quick-add badge painted its own colours instead of taking
+  `--on-accent`, and the contrast sweeps skip emoji-only elements by design,
+  so nothing failed — it arrived as a muddy shape on a dark green circle and
+  only a screenshot found it. Use `✚`, `⬆`, `▤`, the glyphs the app already
+  themes. Cost: one round's badge, caught before shipping.
 - **Deriving a colour from the paper means deriving it from the paper it is
   ACTUALLY on.** A surface tint darkens the paper, so it eats the contrast of
   every ink written on it, and `--t3` is the ink on dates and count badges —
