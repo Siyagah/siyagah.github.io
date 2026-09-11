@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 196 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 197 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -142,9 +142,11 @@ or quietly lose the notebook, none of which need a browser:
   under `H` by the functions they call, and `🏠` proved still reachable through
   the sidebar logo rather than merely exempted from the nothing-lost
   comparison (v04.23); and, **with tabs actually seeded**, the editing tab bar
-  carrying tabs and not the two buttons that moved under `+` — the v04.22
-  check only ever ran with an empty bar, which is why it reported a clean
-  fold over a duplication the owner hit on his first tab (v04.24);
+  **gone entirely** — the v04.22 check only ever ran with an empty bar, which
+  is why it reported a clean fold over a duplication the owner hit on his
+  first tab — plus the tabs proved still reachable the only way that counts:
+  three rows under `+` all calling `tabSelect()`, a real click on one, and
+  `ST.article` read back to confirm it really moved (v04.24/v04.25);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both

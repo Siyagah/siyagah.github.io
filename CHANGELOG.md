@@ -1909,3 +1909,52 @@ and has both of them back in read mode and after ✕.
 ### Measured
 
 194 → 196 app checks, and 11/11 ship checks. Tablet and desktop untouched.
+
+---
+
+## v04.25 — the tab bar is a bar (11 Sep 2026)
+
+> Check your work, the bar is still there
+
+Third time asked, and the first two answers were both wrong — not wrong in
+the code, wrong in what they understood the owner to be asking.
+
+| round | what it did | why it was not the answer |
+|---|---|---|
+| v04.22 | hid the tab bar while editing on a phone **when it was empty**, and put 📅 Calendar / ＋ Add Tab under `+` | the owner has tabs, so the bar was never empty and never hidden — and the two buttons were never removed from it, so they were now in two places |
+| v04.24 | took 📅 Cal and ＋ Add Tab **off** the bar while editing | answered "those two buttons should not be there" literally. The bar itself stayed |
+| v04.25 | the bar **does not render at all** while editing on a phone | a tab bar *is* a bar, and the brief was one bar |
+
+The brief has said the same thing throughout and it was read too narrowly
+each time: *"We will accommodate everything on ONE Bar (nav bar) in MOBILE"*,
+then *"should not be there"*, then *"the bar is still there"*.
+
+**What happens now.** While a note is being edited on a phone, `#tab-bar` is
+not rendered — tabs or no tabs. It is back the instant editing ends (💾 Save
+and ✕ both leave edit mode), and read mode is untouched, with 📅 Cal, ＋ Add
+Tab and every chip exactly as before. Tablet and desktop are untouched.
+
+**Nothing became unreachable.** Every open tab is a row under `+`, headed
+`OPEN TABS (n)`, with the note you are in marked `◆` and highlighted. Tapping
+one calls `tabSelect()` — the same function the chip on the bar called, not a
+second implementation.
+
+```
+phone, editing, 3 tabs open
+
+v04.23   📅 Cal ‹ ◆ Note one 📌✕  Note two 📌✕  …  ＋ Add Tab
+v04.24   ◆ Note one 📌✕  Note two 📌✕  Note three 📌✕
+v04.25   (no bar)          →  + ▸ OPEN TABS (3) ▸ ◆ Note one / Note two / Note three
+```
+
+Writing still starts at **165px of 844**.
+
+### Measured
+
+196 → 197 app checks, and 11/11 ship checks. The v04.24 check is updated in
+place rather than replaced — it already seeded three tabs, and it now asserts
+the bar is **gone** (0px, not rendered) instead of "carries tabs and not the
+two buttons". A new check proves the tabs are still reachable the only way
+that counts: it opens `+`, finds three rows all calling `tabSelect()`, clicks
+one with a real click, and reads back that `ST.article` really moved to that
+note and the bar really came back.

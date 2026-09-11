@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.24">
+<meta name="app-version" content="04.25">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2248,6 +2248,9 @@ sup.ann-sup:hover{text-decoration:underline}
 .p3-meta-row #ed-col-btn:hover{background:var(--hover);color:var(--t1)}
 /* 🏷 on the phone's bar, carrying the note's tag count — with the bar closed
    this is the only thing on screen that says the note is tagged. */
+.eb-tab-row{flex:1 0 100%;justify-content:flex-start!important;text-align:left;
+  font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eb-tab-row.on{background:var(--hover);border-color:var(--t3);font-weight:700}
 .eb-tag-btn{position:relative}
 .eb-tag-btn .eb-tag-n{font-size:10px;font-weight:700;margin-left:2px;vertical-align:top;
   color:var(--green2)}
@@ -2551,7 +2554,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.24</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.25</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -5669,12 +5672,18 @@ function renderTabBar(){
      both of them on it — duplicated, and eating the width the tabs need on a
      390px screen. "Both of which now live under the `+` group" was true and
      incomplete: a control that moves has to LEAVE the place it moved from.
-     So while editing on a phone this bar carries tabs and nothing else; 📅
-     Calendar and ＋ Add Tab are reached from `+`, where they were put. Read
-     mode has no `+` group, so it keeps them exactly as before. */
+
+     v04.25 — and THAT was still the wrong answer. The owner's objection was
+     never to the two buttons in isolation: "We will accommodate everything on
+     ONE Bar (nav bar) in MOBILE", then "should not be there", then "the bar is
+     still there". A tab bar IS a second bar. So while editing on a phone it
+     does not render at all, tabs or no tabs. Nothing becomes unreachable:
+     every open tab is a row under `+` (_ebOpenTabsHTML), and the bar is back
+     the instant editing ends. `_lean` still strips 📅 Cal and ＋ Add Tab,
+     because the bar is still BUILT while hidden and the two buttons must not
+     ride back in with it. */
   const _lean=_p3OneBar()&&ST.editing;
-  const _hideTB=_lean&&!tabs.length;
-  bar.style.display=_hideTB?'none':'flex';
+  bar.style.display=_lean?'none':'flex';
   /* v03.NotePane.P7 — this assignment runs unconditionally, AHEAD of the
      signature guard below, so it used to strip .modal-handle on every single
      call. That cost the bar its position:relative, which let the ↕/✥ overlay
@@ -8720,6 +8729,31 @@ function _tagBtnHTML(){
     +' onclick="togTagBar()" title="Tags'+(n?' ('+n+')':'')+' — show or hide the tag bar">\ud83c\udff7'
     +(n?'<span class="eb-tag-n">'+n+'</span>':'')+'</button>';
 }
+/* v04.25 — the tab bar does not render at all while editing on a phone, so
+   every note that was on it is listed here instead. Switching to one goes
+   through tabSelect(), exactly as tapping its chip on the bar did — the same
+   action, not a second implementation of it. */
+function _ebOpenTabsHTML(){
+  const m=_tabsMap(),owner=_tabOwner();
+  if(!owner)return '';
+  const seen=new Set();
+  const ids=(m[owner]||[]).filter(id=>{
+    if(id===owner||seen.has(id))return false;seen.add(id);
+    return DB.articles.some(a=>a.id===id);
+  });
+  if(!ids.length)return '';
+  const row=(a,own)=>{
+    const lbl=(a.title||'Untitled').slice(0,26)+((a.title||'').length>26?'\u2026':'');
+    return '<button class="et eb-tab-row'+(ST.article===a.id?' on':'')+'"'
+      +' onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');tabSelect(\''+a.id+'\')"'
+      +' title="'+esc(a.title||'Untitled')+(own?' \u2014 owns this tab group':'')+'">'
+      +(own?'\u25c6 ':'')+esc(lbl)+'</button>';
+  };
+  const ownArt=DB.articles.find(x=>x.id===owner);
+  return '<div class="fl-pop-hd">Open tabs ('+(ids.length+(ownArt?1:0))+')</div>'
+    +(ownArt?row(ownArt,true):'')
+    +ids.map(id=>{const a=DB.articles.find(x=>x.id===id);return a?row(a,false):'';}).join('');
+}
 function togTagBar(){
   ST.tagBarOpen=!ST.tagBarOpen;
   renderP3H();            /* header only — #ed is in Pane 3 and keeps its caret */
@@ -8811,6 +8845,7 @@ function _buildEBSub(g){
         +'<button class="et" onmousedown="openTemplatesMenu(event)" onclick="event.stopPropagation()" title="Templates — insert a ready-made note structure">📋 Templates</button>'
         +'<button class="et" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');_calOpen()" title="Open the Calendar">📅 Calendar</button>'
         +'<button class="et" onmousedown="event.preventDefault()" onclick="openTabPicker(this)" title="Search & add a note to the Tab bar">＋ Add Tab</button>'
+        +_ebOpenTabsHTML()
         +'<div class="fl-pop-hd">This note</div>'
         +'<div class="p3h-pal-nti">'+kindBarHTML(a,true,true)+'</div>';
     }

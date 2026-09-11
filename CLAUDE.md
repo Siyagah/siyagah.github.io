@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.24.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.25.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,17 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.25** (11 Sep 2026) — "Check your work, the bar is still there." Third
+  time asked, and the first two answers were both wrong in what they took the
+  owner to MEAN. v04.22 hid the tab bar while editing on a phone **only when
+  empty** (the owner has tabs, so never); v04.24 took 📅 Cal and ＋ Add Tab off
+  it and left the bar. A tab bar **is** a bar, and the brief was one bar. So
+  `#tab-bar` does not render at all while editing on a phone now, tabs or no
+  tabs — back the instant editing ends, read mode and tablet/desktop
+  untouched. Nothing unreachable: every open tab is a row under `+` headed
+  `OPEN TABS (n)`, the current one marked `◆`, each calling the same
+  `tabSelect()` the chip did. 197/197 app checks (up from 196) and 11/11 ship
+  checks.
 - **v04.24** (11 Sep 2026) — "Still Calender and '+Add Tab' is still there on
   a bar. should not be there." They were. v04.22 put 📅 Calendar and ＋ Add Tab
   under `+` and **never took them off the tab bar**, then hid that bar while
@@ -74,20 +85,6 @@ must never accumulate here instead of there.
   Tools menu hung **88px off the left of the screen** — found by a screenshot,
   because no check had ever opened a menu. 162/162 app checks (up from 144)
   and 11/11 ship checks.
-- **v04.20** (11 Sep 2026) — the owner sent two screenshots: a folder's pane 2
-  has a second row of pills and a "new note title" box; a **Smart View has
-  neither**. Row 1 was already identical (`📚`/`✚ Note`/`▤ Preview` are built
-  once). Row 2 was missing for a real reason — every button on it is a
-  POSITION IN THE FOLDER TREE (parent, children, new subfolder), and a Smart
-  View is a saved question, not a place. So it is **translated, not copied**:
-  `⬇ Expand all`/`⬆ Collapse all` for `🌳 Full tree`, every OTHER Smart View
-  with its count as the sibling chips, and `⬆ <folder>` naming where a new
-  note lands. The box now works in the six views a note can honestly go into
-  (`SF_QUICK` makes it true of the view — Favourites stars it, Pinned pins it)
-  and is absent from the five it cannot. It was also restyled: a raised pill
-  with a `✚` badge, a solid `Save` and a lift-to-white on focus. Three faults
-  in this round's own work were caught before shipping — see the lessons
-  below. 144/144 app checks (up from 128) and 11/11 ship checks.
 
 ---
 
@@ -269,6 +266,15 @@ traps belong in `tools/README.md`, not here.)*
   surface invisible, read its real size, place it against the real button, and
   clamp — never write a number and hope. Cost: v04.21 caught in build by a
   screenshot; the bottom sheet shipped and the owner reported it in v04.22.
+- **When the owner repeats themselves, the reading is wrong, not the words.**
+  "Everything on ONE bar in MOBILE" was answered three times: hide the tab bar
+  when it is empty (it never is — they have tabs), then take two buttons off
+  it, then finally stop rendering it. Each fix answered the narrowest possible
+  reading of the last sentence instead of the standing instruction, and each
+  one shipped and came back. When a request arrives for the second time, do
+  not re-scope it smaller — re-read the ORIGINAL brief and ask what the whole
+  of it requires; and say plainly which part is being left undone rather than
+  quietly satisfying a fragment. Cost: three rounds on one instruction.
 - **A control that MOVES has to leave where it moved from — and a surface
   that only appears when it has content must be measured with content.** v04.22
   put 📅 Calendar and ＋ Add Tab under the `+` menu and left both of them on the
