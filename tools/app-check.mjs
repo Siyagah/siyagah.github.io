@@ -2109,6 +2109,182 @@ await app.close();
   }
 }
 
+/* ── 6o. v04.21: the two header menus, reorganised ─────────────────────── */
+{
+  /* The owner asked for five items to leave ⚙ Settings for 🧰 Tools, and for
+     both menus to be organised. The risks are all invisible from a
+     screenshot: an item that lands in the other menu but still closes the one
+     it came from, an item quietly lost in the move, and a menu that now runs
+     off the edge of the screen. Each is measured here. */
+
+  /* Every action in a menu, read out of the DOM as the FUNCTION it calls —
+     a label can be reworded, the function is what actually happens. */
+  const MENUS = async (pg) => pg.evaluate(() => {
+    const read = (id) => [...document.querySelectorAll('#' + id + ' [onclick]')].map((el) => {
+      const h = el.getAttribute('onclick');
+      return { fn: (h.match(/^\s*([A-Za-z_$][\w$]*)\s*\(/) || [])[1] || h,
+        closes: (h.match(/close(SBMenu|SBTools|SBHome)\(\)/) || [])[0] || null,
+        text: (el.textContent || '').trim().replace(/\s+/g, ' ') };
+    });
+    const heads = (id) => [...document.querySelectorAll('#' + id + ' .sb-mi-hd')].map((h) => h.textContent.trim());
+    return { tools: read('sb-tools'), menu: read('sb-menu'),
+      toolHeads: heads('sb-tools'), menuHeads: heads('sb-menu') };
+  });
+
+  const s6o = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const m = await MENUS(s6o.page);
+
+  /* 1. The five named items are in Tools and gone from Settings. */
+  const MOVED = ['openCalSettings', 'openCiteModal', 'toggleHijri', 'syncKnowledgeBase', 'addStarterMyDatabaseFolders'];
+  const inTools = MOVED.filter((f) => m.tools.some((x) => x.fn === f));
+  const leftBehind = MOVED.filter((f) => m.menu.some((x) => x.fn === f));
+  r.check(inTools.length === 5 && leftBehind.length === 0,
+    'the five notebook actions moved out of ⚙ Settings into 🧰 Tools',
+    leftBehind.length ? `still in Settings: ${leftBehind.join(', ')}`
+      : `in Tools: ${inTools.join(', ')}`);
+
+  /* 2. Nothing was lost or duplicated in the move. This is the whole set of
+     actions the two menus carried in v04.20, before the reorganisation. */
+  const V0420 = ['undo', 'redo', 'openModal', 'addRootFolder', 'openTheme', 'autoFit', 'autoNumberAll',
+    'toggleAccordionSec', 'enableAutoSave', 'exportFile', 'openTrash', 'openSyncModal', 'refreshApp',
+    'openCalSettings', 'openCiteModal', 'toggleHijri', 'installPWA', 'syncKnowledgeBase',
+    'addStarterMyDatabaseFolders', 'doSignOut', 'openBackupModal', 'importBackup', 'exportBackupHTML',
+    'backupToGDrive', 'exportBackupPDF', 'exportDeploy'];
+  const now = [...m.tools, ...m.menu].map((x) => x.fn);
+  const lost = V0420.filter((f) => !now.includes(f));
+  const added = [...new Set(now)].filter((f) => !V0420.includes(f));
+  r.check(lost.length === 0 && added.length === 0,
+    'every action the two menus had in v04.20 is still on one of them',
+    lost.length || added.length ? `lost: ${lost.join(',') || '—'} · unexpected: ${added.join(',') || '—'}`
+      : `${V0420.length} actions, ${m.tools.length} in Tools and ${m.menu.length} in Settings`);
+
+  /* 3. THE defect this round could ship: a moved item still calling
+     closeSBMenu() would leave the Tools menu open after being clicked. */
+  const wrongTools = m.tools.filter((x) => x.closes && x.closes !== 'closeSBTools()');
+  const wrongMenu = m.menu.filter((x) => x.closes && x.closes !== 'closeSBMenu()');
+  r.check(wrongTools.length === 0 && wrongMenu.length === 0,
+    'every item closes the menu it is actually in, not the one it came from',
+    [...wrongTools, ...wrongMenu].map((x) => `${x.fn} → ${x.closes}`).join(' · ')
+      || `${m.tools.filter((x) => x.closes).length} in Tools, ${m.menu.filter((x) => x.closes).length} in Settings`);
+
+  /* 4. Both menus are organised under headings, and no heading is empty —
+     a heading over nothing is worse than no heading at all. */
+  const grouped = await s6o.page.evaluate(() => {
+    const of = (id) => { const out = [];
+      for (const el of document.getElementById(id).children) {
+        if (el.classList.contains('sb-mi-hd')) out.push({ head: el.textContent.trim(), n: 0 });
+        else if (el.classList.contains('sb-mi') && out.length) out[out.length - 1].n++;
+      } return out; };
+    return { tools: of('sb-tools'), menu: of('sb-menu') };
+  });
+  const empty = [...grouped.tools, ...grouped.menu].filter((g) => g.n === 0);
+  r.check(grouped.tools.length >= 4 && grouped.menu.length >= 4 && empty.length === 0,
+    'both menus are split into named groups and every group has items under it',
+    empty.length ? `empty heading(s): ${empty.map((g) => g.head).join(', ')}`
+      : `Tools: ${grouped.tools.map((g) => `${g.head} (${g.n})`).join(' · ')} | Settings: ${grouped.menu.map((g) => `${g.head} (${g.n})`).join(' · ')}`);
+  await s6o.close();
+
+  /* 5. Geometry. Opened with a REAL mouse click on the real button and looked
+     at again 250ms later (the v04.12 rule), then asked the only question that
+     matters: is the whole menu on the screen? The first cut of this round
+     hung 88px off the LEFT edge — the menu is anchored right:0 to a button
+     near the left edge of a narrow sidebar — and a screenshot found it, not
+     an assertion. So both edges, the bottom, and two sidebar widths. */
+  for (const vp of VIEWPORTS) {
+    for (const sbw of (vp.width >= 1200 ? [160, 540] : [null])) {
+      const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+      if (sbw) { await s.page.evaluate((w) => { document.getElementById('sb').style.width = w + 'px'; }, sbw);
+        await s.page.waitForTimeout(300); }
+      const out = [];
+      for (const [id, btn] of [['sb-tools', '#sb-tools-btn'], ['sb-menu', '#sb-menu-btn']]) {
+        const box = await s.page.locator(btn).boundingBox();
+        await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        await s.page.waitForTimeout(250);
+        out.push(await s.page.evaluate((i) => {
+          const el = document.getElementById(i);
+          const b = el.getBoundingClientRect();
+          /* Only rows that are actually PAINTED: 📱 Install App is
+             display:none until Chrome offers the install, and a hidden row
+             measures 0px, which is not a touch target that failed — it is
+             not a touch target at all. */
+          const rows = [...el.querySelectorAll('.sb-mi')].filter((x) => x.offsetParent)
+            .map((x) => Math.round(x.getBoundingClientRect().height));
+          return { id: i, open: el.classList.contains('open'),
+            left: Math.round(b.left), right: Math.round(b.right), bottom: Math.round(b.bottom),
+            w: Math.round(b.width), h: Math.round(b.height),
+            vw: innerWidth, vh: innerHeight,
+            scrolls: el.scrollHeight > el.clientHeight + 1,
+            cued: el.classList.contains('sb-dd-scroll'),
+            reach: el.scrollHeight, shortest: Math.min(...rows), rows: rows.length };
+        }, id));
+        await s.page.keyboard.press('Escape').catch(() => {});
+        await s.page.evaluate((i) => document.getElementById(i).classList.remove('open'), id);
+      }
+      await s.close();
+      const off = out.filter((o) => !o.open || o.left < 0 || o.right > o.vw || o.bottom > o.vh);
+      r.check(off.length === 0,
+        `${vp.name}${sbw ? ` (sidebar ${sbw}px)` : ''}: a real click opens each header menu fully on screen`,
+        off.length ? off.map((o) => `${o.id}: ${o.open ? '' : 'CLOSED ITSELF · '}${o.left}→${o.right} of ${o.vw}px wide, bottom ${o.bottom} of ${o.vh}`).join(' · ')
+          : out.map((o) => `${o.id} ${o.w}×${o.h} at x${o.left} bottom ${o.bottom}/${o.vh}`).join(' · '));
+      /* A menu too tall for the screen must scroll AND say that it does —
+         rows the owner cannot see are rows that do not exist to them. */
+      const silent = out.filter((o) => o.scrolls && !o.cued);
+      r.check(silent.length === 0,
+        `${vp.name}${sbw ? ` (sidebar ${sbw}px)` : ''}: a menu that has to scroll shows that it does`,
+        silent.length ? silent.map((o) => `${o.id} holds ${o.reach}px in ${o.h}px with no cue`).join(' · ')
+          : out.map((o) => `${o.id} ${o.scrolls ? `scrolls ${o.reach}px, cued` : 'fits whole'}`).join(' · '));
+      /* And on a phone every row is a real touch target — 44px, the size the
+         folder pop-out and the Assign window were held to in v04.17/v04.18. */
+      if (vp.width < 640) {
+        const small = out.filter((o) => o.shortest < 44);
+        r.check(small.length === 0, `${vp.name}: every menu row is a 44px touch target`,
+          small.length ? small.map((o) => `${o.id}: shortest row ${o.shortest}px`).join(' · ')
+            : out.map((o) => `${o.id} ${o.rows} rows, shortest ${o.shortest}px`).join(' · '));
+      }
+    }
+  }
+
+  /* 6. And they have to READ. These menus live inside #sb, so the v04.15
+     sweep walks them — but only ever with both of them CLOSED, which means
+     display:none and nothing measured. The new group headings are the first
+     text this round adds, on a --hover strip, so they are scored here on all
+     five presets along with every item label. */
+  for (const preset of ['forest', 'ocean', 'amber', 'indigo', 'rose']) {
+    const db = seedDB(); db.theme = { preset, custom: {} };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    await s.page.evaluate(() => { toggleSBTools(null); toggleSBMenu(null);
+      /* both at once — only for measuring; the app itself opens one */
+      document.getElementById('sb-tools').classList.add('open'); });
+    await s.page.waitForTimeout(200);
+    const inks = await s.page.evaluate(() => {
+      const stackOf = (el) => { const st = [];
+        for (let n = el; n; n = n.parentElement) { const c = getComputedStyle(n).backgroundColor;
+          if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') st.push(c);
+          if (/^rgb\(/.test(c)) break; } return st; };
+      const out = [];
+      for (const id of ['sb-tools', 'sb-menu']) {
+        for (const el of document.querySelectorAll(`#${id} .sb-mi, #${id} .sb-mi-hd`)) {
+          const words = [...el.childNodes].filter((n) => n.nodeType === 3)
+            .map((n) => n.textContent).join('').replace(/[^\p{L}\p{N}]/gu, '');
+          if (!words) continue;                     /* emoji-only says nothing about colour */
+          if (!el.offsetParent) continue;           /* hidden rows paint nothing */
+          out.push({ what: `${id}:${el.textContent.trim().slice(0, 22)}`,
+            color: getComputedStyle(el).color, stack: stackOf(el) });
+        }
+      }
+      return out;
+    });
+    await s.close();
+    const scored = inks.map((x) => { const bg = flatten(x.stack);
+      return { ...x, c: ratio(over(px(x.color), bg), bg) }; });
+    const low = scored.filter((x) => x.c < 4.5);
+    r.check(scored.length > 20 && low.length === 0,
+      `every word in both header menus reads on ${preset}`,
+      low.length ? low.map((x) => `${x.c.toFixed(1)}:1 ${x.what}`).join(' · ')
+        : `${scored.length} labels and headings, worst ${Math.min(...scored.map((x) => x.c)).toFixed(1)}:1`);
+  }
+}
+
 /* ── 11. Layout at the three real screen sizes ─────────────────────────── */
 for (const vp of VIEWPORTS) {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });

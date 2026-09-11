@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.20.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.21.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,20 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.21** (11 Sep 2026) — the owner circled 🧰 and ⚙ and named five items in
+  Settings that were not settings: each of them writes into the notebook or
+  into a note. So the line is now **🧰 Tools = things you do TO the notebook**
+  (create, insert, view, save) and **⚙ Settings = the app itself** (account,
+  sync, backups, export). Every group in both menus carries a heading on a
+  `--hover` strip instead of a bare hairline. Nothing renamed, nothing lost —
+  the same 26 actions. Rows are **44px on a phone** now (they were 31px,
+  below the bar v04.17/v04.18 set), which costs height, so a menu too tall
+  scrolls inside a cap `_sbDDFit()` measures from the space under its button,
+  with an inset fade saying so. The round's own fault: the menus are anchored
+  `right:0` to a button near the LEFT edge of the sidebar, so the widened
+  Tools menu hung **88px off the left of the screen** — found by a screenshot,
+  because no check had ever opened a menu. 162/162 app checks (up from 144)
+  and 11/11 ship checks.
 - **v04.20** (11 Sep 2026) — the owner sent two screenshots: a folder's pane 2
   has a second row of pills and a "new note title" box; a **Smart View has
   neither**. Row 1 was already identical (`📚`/`✚ Note`/`▤ Preview` are built
@@ -58,18 +72,6 @@ must never accumulate here instead of there.
   laptop, 38 / 42 / 44 / 52 on a phone. Group headings sit on a strip, and the
   title bar wraps rather than squeezing `MY NOTEBOOKS` into `MY NOTEBOC`.
   105/105 app checks (up from 96) and 11/11 ship checks.
-- **v04.16** (11 Sep 2026) — panes 2 and 3, swept the same way. The first
-  finding was not about custom colours: **14 of 36 pieces of text in the panes
-  were below 4.5:1 on the theme as it ships**, all of them `var(--t3)` at
-  2.7–3.1:1 (every date, `🏠 Home`, `▤ Preview`, `🌳 Full tree`,
-  `ARTICLES (n)`, `Set the Status`). `--t3` is `#6B665F` now. The panes did
-  NOT get the sidebar's ink flip — a note's headings carry pale bands baked
-  into the stylesheet, and flipping measured **worse** (1.0:1). Instead: a
-  pane background too dark to write on is lightened to `PANE_MIN_LUM` and the
-  owner told in a toast, the three ink levels are then derived from what it
-  becomes, and `--on-accent` / `--green2` are derived from the accent so a
-  pale accent stops erasing `✚ Note`, `💾 Save` and `Quick Note`. 96/96 app
-  checks (up from 89) and 11/11 ship checks.
 
 ---
 
@@ -236,6 +238,15 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A menu is anchored to its button, and the button is not in the middle of
+  the screen.** Both header dropdowns are `right:0` on a wrap that sits near
+  the LEFT edge of the sidebar, so widening the Tools menu to 238px hung it
+  88px off the left of a 200px sidebar with every label cut in half. Nothing
+  threw; `app-check` had 144 checks and not one of them had ever OPENED a
+  menu, so the whole surface was unmeasured. Anything absolutely positioned
+  has to be measured against the viewport after it opens — and a surface no
+  check has ever opened is a surface with no checks, whatever the total says.
+  Cost: caught in build by a screenshot, in v04.21.
 - **A variable that is used is not a variable that exists — and CSS fails
   silently either way.** `--hover` (56 uses), `--paper2` (7) and `--accent`
   (85) were referenced across the stylesheet and **defined nowhere**: 148
