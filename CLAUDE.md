@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.18.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.19.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,18 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.19** (11 Sep 2026) — `--hover` was used 56 times and **defined
+  nowhere**, so 56 hover rules were invalid and painted nothing. Swept by
+  question rather than by name ("every `var()` with no fallback — does it
+  resolve?"), the same fault turned up twice more: `--paper2` (7) and
+  **`--accent` (85)**, of which 14 read `background:var(--accent);color:#fff`
+  — white text on no background, e.g. `Save` in the quick-add bar. 148 dead
+  references. `--hover`/`--paper2` are now a 6%/3% darken of `--paper`,
+  derived like `--border`; `--accent` is `--green2`. The tint eats contrast,
+  so `--t3` is measured on `--hover` now, not on the paper — which found
+  **Ocean's `--t3` already failing at 4.38:1 with no custom colour at all**
+  (v04.16 fixed only the default preset). 128/128 app checks (up from 113)
+  and 11/11 ship checks.
 - **v04.18** (11 Sep 2026) — the Assign window, and a note count on every
   folder row in **both** pop-up windows (the same `cntOf()` the sidebar badge
   uses — the folder and everything under it). Assign mostly passed already,
@@ -55,17 +67,6 @@ must never accumulate here instead of there.
   headings sit on a recessed strip; the two bottom buttons became real boxes.
   89/89 app checks (up from 80) and 11/11 ship checks — the new ones sweep
   every word in the sidebar in three states on five sidebar colours.
-- **v04.14** (11 Sep 2026) — the sidebar header, rebuilt to read. The version
-  number was a fixed grey (`#6A7F6C`): 4.3:1 on Forest, ~1.2:1 on the custom
-  teal the owner had set, i.e. invisible. Everything in that header is now
-  translucent black or white over whatever `--forest` is — recessed badge and
-  search field, raised buttons. The five buttons (37×36, 14×19, 37×36, 42×40,
-  37×45) became one square at one icon size, 34px desktop / 42px touch, and
-  `🏠 ▾` became a split button with a 26×34 (30×42 phone) chevron. Also found
-  while measuring: at a 200px sidebar the header ran 292px wide and pushed 🧰
-  and ⚙ off the pane — `_sbFitHeader()` now folds it against its own pane
-  width, watched by a `ResizeObserver` on `#sb`. 80/80 app checks (up from 70)
-  and 11/11 ship checks.
 ---
 
 ## What this is
@@ -231,6 +232,27 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A variable that is used is not a variable that exists — and CSS fails
+  silently either way.** `--hover` (56 uses), `--paper2` (7) and `--accent`
+  (85) were referenced across the stylesheet and **defined nowhere**: 148
+  declarations invalid, 56 hover highlights painting nothing, and 14 rules
+  reading `background:var(--accent);color:#fff` — white text on no background
+  at all, which is how `Save` in the quick-add bar came to be invisible rather
+  than merely wrong. Nothing throws, nothing logs, and a screenshot of a
+  not-hovered row looks perfect. The check that catches it asks the general
+  question — every `var()` written without a fallback, does it resolve — so it
+  also catches the next one. Cost: a whole version series of dead hover states,
+  reported by the owner, with two thirds of the fault still unreported.
+- **Deriving a colour from the paper means deriving it from the paper it is
+  ACTUALLY on.** A surface tint darkens the paper, so it eats the contrast of
+  every ink written on it, and `--t3` is the ink on dates and count badges —
+  which is to say, on hovered rows. Targeting 4.8:1 against the plain paper
+  left it at ~4.2:1 the instant a row lit up, and the same held for `--green2`
+  as link text. The rule that works: **the worst ink must clear 4.5:1 on the
+  worst surface it lands on**, not on the surface it was named after. Pointing
+  that at the shipped presets found **Ocean's `--t3` already at 4.38:1 with no
+  tint and no custom colour** — v04.16 fixed the default preset's `--t3` and
+  never checked the other four. Sweep all five, not just the one that ships.
 - **The default theme is not exempt from measurement.** Three rounds of
   colour work all started from "the owner picked an unusual colour" — and
   when the sweep was finally pointed at panes 2 and 3, 14 of 36 pieces of

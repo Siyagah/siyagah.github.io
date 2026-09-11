@@ -1228,3 +1228,119 @@ overflowing its two lines.
   different round.
 - **No sync, storage or export path was touched.** I1–I4 are untouched by a
   stylesheet, a count and a menu.
+
+---
+
+## v04.19 — three colour variables that were used everywhere and defined nowhere (11 Sep 2026)
+
+Reported: `--hover` is used in 56 places but never defined, so 56 hover
+highlights do nothing. Confirmed exactly — 56 bare `var(--hover)`, zero
+definitions. An undefined variable with no fallback makes the whole
+declaration invalid, so those rules painted nothing at all.
+
+**Two more of the same, found by sweeping instead of by name**
+
+Written as a check for `--hover` this round would have fixed one third of it.
+Written as "every `var()` with no fallback, does it resolve", the same sweep
+found two more:
+
+- **`--paper2`** — 7 bare uses. A static off-paper surface: the quick-add bar,
+  a pop-out's top row, the cite block, the TOC hover.
+- **`--accent`** — **85** bare uses, and the sharp end of the bug. 58 are
+  `color:`, 27 are borders and outlines, and **14 are
+  `background:var(--accent);color:#fff`** — white text on no background at
+  all. That is not cosmetic; `Save` in the quick-add bar was simply not there.
+
+148 dead references in total, against the 56 reported.
+
+**What they became**
+
+`--hover` and `--paper2` are a darken of `--paper`, derived like `--border`
+already was, not a fixed grey — `--paper` is owner-settable, and a fixed grey
+is the defect this project has now paid for four rounds running. 6% for
+`--hover` and 3% for `--paper2`; 6% reads 1.14:1 against the paper, which is a
+visible highlight without being a block of colour.
+
+`--accent` is `--green2`, the accent already darkened until it reads **as
+text** — because 58 of its 85 uses are a text colour, and the 14 background
+uses pair it with `#fff`, which wants a dark colour too.
+
+**The measurement that decided the magnitude**
+
+A tint darkens the surface, so it eats the contrast of the ink on it, and
+`--t3` is the ink on dates and count badges — which sit on hovered rows.
+Sweeping the shipped presets first, as the standing lesson says:
+
+| preset | `--t3` on paper | on a 6% tint |
+|---|---|---|
+| Forest | 5.18 | 4.53 |
+| **Ocean** | **4.38** | 3.83 |
+| Amber | 4.86 | 4.26 |
+| Indigo | 6.48 | 5.66 |
+| Rose | 7.19 | 6.32 |
+
+**Ocean's `--t3` was already failing 4.5:1 with no tint and no custom colour
+at all** — v04.16 fixed the default preset's `--t3` and never looked at the
+other four. So the rule became: the worst ink must read on the worst surface
+it lands on. `--t3` is now measured on `--hover`, not on the paper — statically
+for Forest, Ocean and Amber, and in `applyPaneInk()` for a custom background.
+Amber's `--green2` moved for the same reason (4.26:1 on its own hover tint).
+
+`_accentInk()` now clears 4.6:1 on every surface it is written on rather than
+only the pale tint, and `--green2` is re-derived whenever the **paper** is
+custom, not only when the accent is — a preset green on a custom paper was
+sitting at 3.0:1 on `Save`, which is what first turned three older checks red.
+
+**Measured**
+
+11/11 ship checks, and app checks from 113 to **128**.
+
+Seven ask, on five presets and two custom settings, whether every `var()`
+written without a fallback resolves to anything — 41 variables swept, named
+nowhere in the check, so it catches the next undefined one anyone adds. Seven
+score every piece of text painted on `--hover`, `--paper2` or `--accent` at
+4.5:1, pooled over six states and including rules that name their own ink
+(which need no element, and so reach the modals and the calendar that no
+reachable state renders): 30 pieces per theme, worst 4.6:1. One moves a **real
+mouse** onto a **real** row and reads the painted background before and after
+— `rgb(255,255,255) → rgb(232,229,223)`, because a rule that resolves is not a
+rule that shows.
+
+**Three wrong assertions, corrected — one of which made the check useless**
+
+- The variable sweep walked `rule.style[i]` and read each longhand. Chromium
+  expands `background: var(--hover)` into nine longhands and returns `''` for
+  all nine, so the sweep **saw no variable at all** and passed happily with
+  `--hover` deleted. It caught `--accent` only because that is written as
+  `color:`, a real longhand. It reads `rule.style.cssText` now. Proved by
+  deleting `--hover` again and watching it fail.
+- It also recursed on `rule.cssRules` and `continue`d. Every style rule has a
+  truthy (empty) `.cssRules` now that Chromium does CSS nesting, so that read
+  **6 rules out of 1286**.
+- The contrast pass fed a hex to `px()`, whose `/[\d.]+/g` turned `#E2E7F0`
+  into `rgb(2, 7, 0)` — near black — and reported 2.0:1 against text that is
+  perfectly readable. And it scored an element's un-hovered `color` against the
+  hover background, where `.tab-it:hover` restyles its ink in the same rule:
+  1.2:1 on a tab that is fine.
+
+**What was NOT done, and why**
+
+- **Four genuine contrast failures found in passing, and left alone.** A
+  rule-level pass over every opaque background-and-ink pairing put
+  `.mrj-btn-good` (white on `#22C55E`) at **2.28:1**, `.mrj-btn-ok` (white on
+  `#F59E0B`) at **2.15:1**, `.mrj-btn-bad` at 3.76:1 and the journal count
+  `.jrn-cnt` at 3.66:1. These are white-on-mid-tone fixed pairings — the trap
+  already in the standing lessons — not undefined variables, and fixing them
+  is a different round. That pass is therefore **not shipped as an assertion**;
+  shipping it would mean shipping a red gate.
+- **The element-level contrast sweep reaches 7–9 of the 63 tint rules.** The
+  rest live in modals, the calendar, citations and float windows that no
+  reachable state renders. The rule-level pass covers those wherever the rule
+  names its own ink; where it inherits, it is not measured and is not claimed.
+- **A pale sidebar was not re-examined.** None of the 148 dead references are
+  in `#sb`, which has its own `--sb-*` palette; the sidebar is untouched.
+- **No real dark mode.** `--hover` darkens because `_paneSafePaper()`
+  guarantees the paper is never dark. A dark reading page is still a round of
+  its own.
+- **No sync, storage or export path was touched.** I1–I4 are untouched by a
+  stylesheet and two derivations.

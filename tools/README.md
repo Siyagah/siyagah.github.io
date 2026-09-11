@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 113 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 128 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -97,6 +97,14 @@ or quietly lose the notebook, none of which need a browser:
   one ⋯, the whole folder name on screen, a real click opening all three and
   the menu still painted a tick later, and the laptop keeping its icons
   (v04.18);
+- **a colour variable that is used is a colour that exists** — not a check for
+  three names but a sweep: every `var()` written without a fallback anywhere in
+  the stylesheet, asked whether it resolves to anything, on all five presets
+  and two custom settings; plus every piece of text painted on `--hover`,
+  `--paper2` or `--accent` scored at 4.5:1 (including rules that name their own
+  ink, which need no element and so cover the modals and the calendar that no
+  reachable state renders); plus a real mouse moved onto a real row, with the
+  painted background read before and after (v04.19);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -183,6 +191,39 @@ assertions miss.
   archive button reads as "26px" and looks like a broken CSS rule that is
   working perfectly. Assert on the dimension you actually mean — and on both,
   if what you care about is a touch target.
+- **A shorthand holding a `var()` reports NOTHING through its longhands.**
+  Chromium expands `background: var(--hover)` into nine longhands and returns
+  `''` for every one of them — a "pending substitution" — so a sweep that walks
+  `rule.style[i]` and reads `getPropertyValue` sees no variable at all. The
+  v04.19 check was written that way and passed happily with `--hover` deleted,
+  i.e. it was blind to the exact 56 rules it existed to protect; it caught only
+  `--accent`, which is written as `color:`, a real longhand. Read
+  `rule.style.cssText` — the declaration block as authored, nested rules
+  excluded — or ask for the shorthand by name.
+- **Every style rule has a truthy `.cssRules` now that Chromium does CSS
+  nesting.** It is an empty list on an ordinary rule, so
+  `if (rule.cssRules) { walk(...); continue; }` recurses into nothing and then
+  skips the declarations: that read 6 rules out of 1286 and reported zero
+  variables in use. Handle the declarations first, and recurse only on
+  `rule.cssRules.length`.
+- **A custom property comes back AS AUTHORED, not as `rgb()`.**
+  `getPropertyValue('--hover')` returns the literal `#E8E5DF`, and `px()` here
+  parses with `/[\d.]+/g` — which turns that hex into `rgb(2, 7, 0)`, near
+  black. Every dark text then scores about 2:1 and reads as a failure that is
+  not there. Paint the value on a throwaway element and read
+  `getComputedStyle(...).backgroundColor` back, which is always `rgb()`.
+- **A rule that lights a row usually restyles its ink in the same breath.**
+  `.tab-it:hover{background:var(--hover);color:var(--t1)}` flips a white tab to
+  dark text, so scoring the element's un-hovered `color` against the hover
+  background measures a pairing that never appears on screen — 1.2:1 on a tab
+  that is perfectly readable. Where the rule declares its own `color`, that is
+  the colour to score.
+- **Scoring ink against a translucent background measures nothing.** A
+  rule-level pass over "every rule that sets a background and a colour" put
+  `.sb-act` at 1.00:1 — its background is `var(--sb-panel)`, an alpha layer, and
+  the real backdrop is whatever is behind it. Restrict a rule-level check to
+  backgrounds that come back as opaque `rgb(`, or composite the stack as
+  `COLLECT()` does.
 - **Firebase must be blocked, not just absent.** With no sync config in
   localStorage, `initAuth()` returns early and the login overlay stays hidden —
   which is why the app is fully drivable here with no sign-in.
