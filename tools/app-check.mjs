@@ -2553,6 +2553,40 @@ await app.close();
         + ` · painted ${m.shown} · after the date ${m.afterDate}`);
   }
 
+  /* 5a. v04.24 — a control that moves has to LEAVE the place it moved from.
+     v04.22 put 📅 Calendar and ＋ Add Tab under `+` and hid the tab bar while
+     editing — but only when it was EMPTY, and it never took the two buttons
+     off the bar itself. So the first time the owner had a tab open, the bar
+     came back carrying both of them, duplicated, on a 390px screen. The check
+     that missed it only ever ran with no tabs; this one seeds them. */
+  {
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+    await s.page.evaluate(() => { DB.tabs = { a1: ['a2', 'a3'] }; ST.tabOwner = 'a1';
+      ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); });
+    await s.page.waitForTimeout(300);
+    const look = () => s.page.evaluate(() => {
+      const b = document.getElementById('tab-bar');
+      return { shown: getComputedStyle(b).display !== 'none',
+        cal: !!b.querySelector('.tab-cal'), add: !!b.querySelector('.tab-add-btn'),
+        chips: b.querySelectorAll('.tab-strip .tab-it').length };
+    });
+    const rd = await look();
+    await s.page.evaluate(() => window.startEdit());
+    await s.page.waitForTimeout(400);
+    const ed = await look();
+    await s.page.evaluate(() => cancelEdit());
+    await s.page.waitForTimeout(400);
+    const back = await look();
+    await s.close();
+    r.check(ed.shown && ed.chips === 3 && !ed.cal && !ed.add,
+      'phone: with tabs open, the editing tab bar carries tabs and NOT 📅 Cal / ＋ Add Tab',
+      `editing: ${ed.chips} tab(s), 📅 Cal ${ed.cal ? 'STILL THERE' : 'gone'},`
+        + ` ＋ Add Tab ${ed.add ? 'STILL THERE' : 'gone'}`);
+    r.check(rd.cal && rd.add && back.cal && back.add && back.chips === 3,
+      'phone: 📅 Cal and ＋ Add Tab are on the bar in read mode, and come back when editing ends',
+      `read ${rd.cal && rd.add ? 'both present' : 'MISSING'} · after ✕ ${back.cal && back.add ? 'both back' : 'NOT BACK'}`);
+  }
+
   /* 5b. v04.23 — the owner asked where the collapse/expand ⋯ had gone while
      looking straight at it: a bare glyph beside a grey date pill reads as
      punctuation. It wears the versioning bar's pill now, it has to OPEN on a

@@ -1865,3 +1865,47 @@ collected the phone's controls with the tag bar **closed**, and duly reported
 them now, the same way it already opened each group menu — a surface you have
 not opened is a surface you have not measured, and the check fell for that
 itself.
+
+---
+
+## v04.24 — a control that moves has to leave where it moved from (11 Sep 2026)
+
+> Still Calender and '+Add Tab' is still there on a bar. should not be there
+
+They were. v04.22 said 📅 Calendar and ＋ Add Tab "now live under the `+`
+group", and put them there — but **never took them off the tab bar**. It then
+hid that bar while editing on a phone, which concealed the duplication
+completely: with no tabs the bar was gone, so nobody saw the two buttons
+sitting on it.
+
+The moment the owner had a tab open, the bar came back — carrying both buttons
+again, duplicated, eating the width the tab names need on a 390px screen.
+
+**Fix.** While editing on a phone the tab bar carries **tabs and nothing
+else**. 📅 Calendar and ＋ Add Tab are reached from `+`, which is where v04.22
+put them. Read mode has no `+` group, so it keeps both buttons exactly as
+before, and they come straight back the moment editing ends.
+
+```
+phone, editing, with 3 tabs open
+
+v04.23   📅 Cal  ‹  ◆ Seeded note one 📌✕  Seeded note two 📌✕  …  ＋ Add Tab
+v04.24   ◆ Seeded note one 📌✕  Seeded note two 📌✕  Archived seeded note 📌✕
+```
+
+### Why the checks missed it
+
+The v04.22 check asked "is the tab bar a row while editing on a phone?" and
+the answer was no — **because it ran on the default seed, which has no tabs**.
+Every measurement of that bar was taken in the one state where it does not
+exist. The v04.17 lesson about a pop-out having states, and its parts not all
+existing in the same one, applies word for word to a bar whose whole point is
+that it appears when it has something to hold.
+
+The new check seeds three tabs before it looks, and asserts three things: the
+bar carries the tab chips while editing, carries neither 📅 Cal nor ＋ Add Tab,
+and has both of them back in read mode and after ✕.
+
+### Measured
+
+194 → 196 app checks, and 11/11 ship checks. Tablet and desktop untouched.

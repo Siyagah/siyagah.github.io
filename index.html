@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.23">
+<meta name="app-version" content="04.24">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2551,7 +2551,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.23</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.24</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -5662,8 +5662,18 @@ function renderTabBar(){
      carrying no tabs is a whole row spent on two buttons (📅 Cal and ＋ Add Tab),
      both of which now live under the `+` group of the edit bar. It comes
      straight back the moment editing ends, and a bar that is actually holding
-     tabs is never hidden — those are content, not chrome. */
-  const _hideTB=_p3OneBar()&&ST.editing&&!tabs.length;
+     tabs is never hidden — those are content, not chrome.
+
+     v04.24 — but v04.22 only moved those two buttons, it never took them OFF
+     this bar, so the moment the owner had a tab open the bar came back with
+     both of them on it — duplicated, and eating the width the tabs need on a
+     390px screen. "Both of which now live under the `+` group" was true and
+     incomplete: a control that moves has to LEAVE the place it moved from.
+     So while editing on a phone this bar carries tabs and nothing else; 📅
+     Calendar and ＋ Add Tab are reached from `+`, where they were put. Read
+     mode has no `+` group, so it keeps them exactly as before. */
+  const _lean=_p3OneBar()&&ST.editing;
+  const _hideTB=_lean&&!tabs.length;
   bar.style.display=_hideTB?'none':'flex';
   /* v03.NotePane.P7 — this assignment runs unconditionally, AHEAD of the
      signature guard below, so it used to strip .modal-handle on every single
@@ -5688,7 +5698,7 @@ function renderTabBar(){
       +'</div>';
   };
   const html=
-    '<div class="tab-it'+(ST.article==="cal"?' on':'')+' tab-cal" onclick="_calOpen()" title="Calendar">📅 Cal</div>'
+    (_lean?'':'<div class="tab-it'+(ST.article==="cal"?' on':'')+' tab-cal" onclick="_calOpen()" title="Calendar">📅 Cal</div>')
     +'<button class="tab-nav" id="tab-nav-l" onclick="event.stopPropagation();_tabScroll(-1)" title="Scroll tabs left">‹</button>'
     +'<div class="tab-strip" id="tab-strip" onscroll="_tabNavSync()">'
       +(ownArt?chip(ownArt,true):'')
@@ -5696,7 +5706,7 @@ function renderTabBar(){
     +'</div>'
     +'<button class="tab-nav" id="tab-nav-r" onclick="event.stopPropagation();_tabScroll(1)" title="Scroll tabs right">›</button>'
     +'<span class="tab-more" id="tab-more" title="Tabs hidden off-screen — use ‹ › to reach them"></span>'
-    +`<button class="tab-add-btn" onclick="openTabPicker(this)" title="Search & add a note to the Tab bar">＋ Add Tab</button>`;
+    +(_lean?'':`<button class="tab-add-btn" onclick="openTabPicker(this)" title="Search & add a note to the Tab bar">＋ Add Tab</button>`);
   /* v03.79 — output-signature guard. The built HTML already encodes owner,
      membership, active note, titles and colours, so comparing it is an exact
      dirty-check. Two wins: renderTabBar() is now free to be called from

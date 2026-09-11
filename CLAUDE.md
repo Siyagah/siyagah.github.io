@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.23.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.24.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,17 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.24** (11 Sep 2026) — "Still Calender and '+Add Tab' is still there on
+  a bar. should not be there." They were. v04.22 put 📅 Calendar and ＋ Add Tab
+  under `+` and **never took them off the tab bar**, then hid that bar while
+  editing on a phone — which concealed the duplication, because with no tabs
+  there was no bar to see it on. The first tab the owner opened brought the bar
+  back with both buttons on it. While editing on a phone the bar carries
+  **tabs and nothing else** now; read mode keeps both buttons and they return
+  the moment editing ends. The check missed it because it only ever ran on the
+  default seed, which has **no tabs** — every measurement of that bar was taken
+  in the one state where it does not exist. It seeds three tabs now.
+  196/196 app checks (up from 194) and 11/11 ship checks.
 - **v04.23** (11 Sep 2026) — the owner used v04.22's one bar and asked three
   things, two of them faults in that round. **(1)** "Where did you take the
   collapse/expand ⋯?" — nowhere: it was on the versioning bar after the date,
@@ -77,18 +88,6 @@ must never accumulate here instead of there.
   with a `✚` badge, a solid `Save` and a lift-to-white on focus. Three faults
   in this round's own work were caught before shipping — see the lessons
   below. 144/144 app checks (up from 128) and 11/11 ship checks.
-- **v04.19** (11 Sep 2026) — `--hover` was used 56 times and **defined
-  nowhere**, so 56 hover rules were invalid and painted nothing. Swept by
-  question rather than by name ("every `var()` with no fallback — does it
-  resolve?"), the same fault turned up twice more: `--paper2` (7) and
-  **`--accent` (85)**, of which 14 read `background:var(--accent);color:#fff`
-  — white text on no background, e.g. `Save` in the quick-add bar. 148 dead
-  references. `--hover`/`--paper2` are now a 6%/3% darken of `--paper`,
-  derived like `--border`; `--accent` is `--green2`. The tint eats contrast,
-  so `--t3` is measured on `--hover` now, not on the paper — which found
-  **Ocean's `--t3` already failing at 4.38:1 with no custom colour at all**
-  (v04.16 fixed only the default preset). 128/128 app checks (up from 113)
-  and 11/11 ship checks.
 
 ---
 
@@ -270,6 +269,18 @@ traps belong in `tools/README.md`, not here.)*
   surface invisible, read its real size, place it against the real button, and
   clamp — never write a number and hope. Cost: v04.21 caught in build by a
   screenshot; the bottom sheet shipped and the owner reported it in v04.22.
+- **A control that MOVES has to leave where it moved from — and a surface
+  that only appears when it has content must be measured with content.** v04.22
+  put 📅 Calendar and ＋ Add Tab under the `+` menu and left both of them on the
+  tab bar as well. The duplication was invisible for two rounds because the
+  same round hid that bar while editing — but only when it was EMPTY, which is
+  the only state the check ever ran in. The owner opened one tab and the bar
+  came back with both buttons on it. Two rules, both paid for: when you say a
+  control has moved, delete it from its old home in the same edit; and when a
+  surface exists only in a state (a bar with tabs, a menu when open, a picker
+  with results), SEED that state before measuring, or the check is reporting on
+  something that was not there. Cost: reported by the owner in v04.24, one
+  round after being announced as done.
 - **"It is on the screen" is not "the owner can find it".** The section-tools
   `⋯` sat exactly where the owner had asked for it one round earlier — on the
   versioning bar, after the date — as a bare glyph with no border, beside a
