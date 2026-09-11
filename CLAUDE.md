@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.22.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.23.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,26 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.23** (11 Sep 2026) — the owner used v04.22's one bar and asked three
+  things, two of them faults in that round. **(1)** "Where did you take the
+  collapse/expand ⋯?" — nowhere: it was on the versioning bar after the date,
+  exactly as asked. But a **bare `⋯` glyph beside a grey date pill reads as
+  punctuation**, so they asked where it had gone while looking at it. It wears
+  the versioning bar's pill now, and the same three actions are under **`H`**
+  as well — the button that says *headings* is where anyone looks for
+  "collapse every heading", not beside a date. `_edColSyncPrevBtn()` syncs
+  every Preview button now, not one id. **(2)** "Why is the tag bar still
+  showing?" — it is behind **`🏷`** on the bar now, which carries the tag
+  **count** so a closed bar still says the note is tagged; a toggle rather
+  than a popover, because the tag suggestion list is absolutely positioned and
+  a scrolling popover would clip it. Its `✕` moved to the title row — safe,
+  because `saveArt()` also ends edit mode and every keystroke is autosaved, so
+  `✕` is "stop editing", not "discard". **(3)** "Isn't `≡` the same as `🏠`?"
+  — near enough: both end at `showPane('sb')`, `🏠` having first cleared the
+  search, tag, type and folder. `🏠` left the phone's edit bar (the sidebar's
+  📚 logo IS `goHome()`), and `🏷` took the slot. Writing now starts at
+  **165px of 844 (20%)**, from 53% two rounds ago. 194/194 app checks (up from
+  189) and 11/11 ship checks.
 - **v04.22** (11 Sep 2026) — the owner sent a screenshot of a note being edited
   on the phone: **five rows of chrome** before the first line of writing, and
   the note starting about 450px down an 844px screen. The instruction was
@@ -69,16 +89,6 @@ must never accumulate here instead of there.
   **Ocean's `--t3` already failing at 4.38:1 with no custom colour at all**
   (v04.16 fixed only the default preset). 128/128 app checks (up from 113)
   and 11/11 ship checks.
-- **v04.18** (11 Sep 2026) — the Assign window, and a note count on every
-  folder row in **both** pop-up windows (the same `cntOf()` the sidebar badge
-  uses — the folder and everything under it). Assign mostly passed already,
-  inheriting v04.16's tokens and v04.17's sizing; what was left was the tick
-  box, **15×15 on a phone too**, now 20/24. And a folder name was getting
-  ~65px of a 317px phone row, arriving as `(001) See…`: names wrap to two
-  lines like the sidebar's, and the three row actions fold into one `⋯`
-  (a real menu, real event) under 1200px, which gives the name 122–181px.
-  A laptop keeps its three icons. 113/113 app checks (up from 105) and 11/11
-  ship checks.
 
 ---
 
@@ -260,6 +270,15 @@ traps belong in `tools/README.md`, not here.)*
   surface invisible, read its real size, place it against the real button, and
   clamp — never write a number and hope. Cost: v04.21 caught in build by a
   screenshot; the bottom sheet shipped and the owner reported it in v04.22.
+- **"It is on the screen" is not "the owner can find it".** The section-tools
+  `⋯` sat exactly where the owner had asked for it one round earlier — on the
+  versioning bar, after the date — as a bare glyph with no border, beside a
+  grey date pill. They opened the note and asked where it had gone. A check
+  that asks "is it painted, is it the right size, does it open" says yes to
+  all three of a control nobody recognises. Give anything tappable a frame or
+  a word, and put an action where its SUBJECT lives (collapse-all-headings
+  belongs under `H`, not beside a date) — even if that means the same function
+  appearing in two menus. Cost: one round's fix reported as a regression.
 - **A variable that is used is not a variable that exists — and CSS fails
   silently either way.** `--hover` (56 uses), `--paper2` (7) and `--accent`
   (85) were referenced across the stylesheet and **defined nowhere**: 148

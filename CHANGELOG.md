@@ -1757,3 +1757,111 @@ three sizes.
   every row inside it hittable on a phone;
 - every new word — the Save label, the menu headings, the date — scored at
   4.5:1 on all five presets.
+
+---
+
+## v04.23 — three questions about the phone's edit bar (11 Sep 2026)
+
+v04.22 folded the phone's note editor onto one bar. The owner used it and came
+back with three things — two of them faults in that round's own work:
+
+> Where did you take the collapse/expand buttons (3 horizontal dot) (for note
+> headings)?
+> Why Tag bar is still showing?
+> Isn't the 3-line button beside the nav button does the same function as the
+> home button?
+
+### 1. The `⋯` was there, and that is the problem
+
+It had not moved — it sits on the versioning bar after the date, which is
+precisely where the owner asked for it in v04.22. But it was a **bare `⋯`
+glyph beside a grey date pill**, and it reads as punctuation, not as a button.
+The owner asked where it had gone while looking straight at it. That is a
+design fault, not a misunderstanding.
+
+Two changes:
+
+- **It wears the versioning bar's own pill now** — a border, a background, a
+  34px tap target — so it plainly belongs to that row and is plainly something
+  to press.
+- **The same three actions are under `H` as well.** `H` is the button that
+  says *headings*, and "collapse every heading" is a heading thing; nobody
+  looks for it beside a date. Same `_edColAll()` / `_edColPreview()`
+  functions, no second implementation — and `_edColSyncPrevBtn()` now syncs
+  *every* Preview button rather than the single id it used to fetch, so the
+  two copies can never disagree about what is on.
+
+### 2. The tag bar is behind `🏷` now
+
+It was the second of five rows and it survived v04.22 untouched — a permanent
+row standing there whether or not the note was being tagged.
+
+`🏷` on the bar opens and closes it, and **carries the tag count** (`🏷 1`), so
+a closed bar still says the note is tagged — the information stays on screen
+even when the row does not. It is a toggle rather than a popover on purpose: a
+tag suggestion list is absolutely positioned, and inside a scrolling popover
+it would be clipped.
+
+The `✕` that lived on the tag bar went with it, so it moved to the **title
+row**. That is safe: `saveArt()` ends with `ST.editing=false`, so 💾 Save
+leaves edit mode too, and every keystroke is already auto-saved — `✕` is "stop
+editing", not "discard".
+
+### 3. Yes — `≡` and `🏠` land on the same screen
+
+The owner was right. On a phone:
+
+- `≡` → `backFromP3()` → `showPane('sb')`
+- `🏠` → `goHome()` → clears the search, the tag, the type and the folder, then
+  `showPane('sb')`
+
+Different journeys, same destination. `≡` keeps your place; `🏠` wipes the
+filters first. On a bar with room for eight controls, the second is not worth
+a slot — **`🏠` leaves the phone's edit bar**, and `≡` takes you to the sidebar
+where the 📚 Siyagah logo *is* `goHome()`. The conditional `🔍↺ back to search
+results` stays, because it only appears when there is a search waiting and
+losing it would genuinely lose something.
+
+The freed slot is what `🏷` now occupies.
+
+### The phone's edit view, three rounds on
+
+```
+v04.21                      v04.22                     v04.23
+📅 Cal        ＋ Add Tab     🏠 ◀ ≡ Aa H ≡ + 💾 Save    ◀ ≡ Aa H ≡ + 🏷1 💾 Save
+🏠 ◀ ≡ Aa H ≡ + ↺ 📋 🔍      🏷 Tags […]           ✕    Note title            ✕
+🏷 Tags […]             ✕    Note title                 🔀 Start Versioning  Created…  ⋯
+General 📎 Attach 💾 📦      🔀 Start Ver.  Created… ⋯   ┄┄ the note, 165px ┄┄
+◀ ≡ Note title              ┄┄ the note, 220px ┄┄
+🔀 Start Versioning
+⋯
+Created … | Updated …
+┄┄ the note, ~450px ┄┄
+```
+
+Writing starts at **165px of 844** — 20% of the screen, from 53% two rounds
+ago. PC and tablet are still untouched, as asked.
+
+### Measured
+
+189 → 194 app checks, and 11/11 ship checks. Section 6p gained:
+
+- the tag bar is **not** a row at rest; `🏷` is on the bar, shows the count,
+  and a **real click** opens the bar with its chips and its input, and a
+  second click shuts it;
+- `✕` stop-editing on the title row, ≥38px, calling `cancelEdit()`;
+- the `⋯` **framed** and ≥34px, and a real click opening all three section
+  tools — "it is in the DOM" was true of it before, and it still could not be
+  found;
+- the `H` group carrying the same three, identified by the functions they
+  call;
+- `🏠` proved still reachable rather than assumed: the exemption in the
+  nothing-lost comparison is paid for by asserting `.sb-logo` is visible after
+  `≡` and that its handler really is `goHome()`.
+
+And the nothing-lost comparison itself was wrong before it was right: it
+collected the phone's controls with the tag bar **closed**, and duly reported
+`rmTag` and the tag input as lost in the fold. It opens the tag bar to collect
+them now, the same way it already opened each group menu — a surface you have
+not opened is a surface you have not measured, and the check fell for that
+itself.

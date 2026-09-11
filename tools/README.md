@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 189 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 194 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -134,6 +134,14 @@ or quietly lose the notebook, none of which need a browser:
   one `#ed-col-wrap` at each size; and the geometry the round fixed — a real
   mouse click on every edit-bar group, looked at 250ms later, opening against
   its own button, wholly on screen, at all three sizes (v04.22);
+- **and the three things the owner asked about it next** — the tag bar gone as
+  a row but `🏷` on the bar carrying its count and really opening it on a
+  click, `✕` stop-editing landing on the title row, the `⋯` **framed** and
+  opening all three section tools (it was painted, hittable and working before,
+  and still could not be found — "present" is not "findable"), the same three
+  under `H` by the functions they call, and `🏠` proved still reachable through
+  the sidebar logo rather than merely exempted from the nothing-lost
+  comparison (v04.23);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -203,7 +211,10 @@ assertions miss.
   either side of the breakpoint it folds at — every function reachable from
   the whole edit surface at 640px must still be reachable at 390px — so the
   check keeps working as controls come and go. Open every menu to collect
-  them: a closed menu is `display:none` and contributes nothing.
+  them: a closed menu is `display:none` and contributes nothing — and the
+  check paid for that rule itself in v04.23, collecting the phone's controls
+  with the newly-foldable tag bar shut and duly reporting `rmTag` and the tag
+  input as lost.
 - **A check that has never opened a surface is not a check on that surface.**
   `app-check` reached 144 checks without ever opening the 🧰 or ⚙ dropdown,
   so every measurement of them — size, position, contrast, touch target —
