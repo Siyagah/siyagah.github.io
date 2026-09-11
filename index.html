@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.14">
+<meta name="app-version" content="04.15">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -67,6 +67,23 @@
   --lh-content:1.6;--pp-gap:12px;
   /* Search-results text colour — adjusted by Appearance ▸ Custom colours */
   --sr-color:#ffffff;
+  /* ── Sidebar ink (v04.15) ────────────────────────────────────────────
+     The sidebar is the one surface whose colour the owner sets directly
+     (Appearance ▸ Custom colours), so nothing painted on it can be a fixed
+     grey. applySidebarInk() recomputes this whole set from the luminance of
+     --forest on every theme change; the values here are the dark-sidebar
+     case, which is what all five presets are, and they are also what a
+     downloaded copy paints before any script runs.
+       ink / ink-soft / ink-dim  — text, in falling importance
+       panel / panel-hi          — a RAISED layer (buttons)
+       strip / strip-hi          — a RECESSED layer (headings, fields, pills)
+       line / hair               — borders, strong and faint            */
+  --sb-ink:#FFFFFF;--sb-ink-soft:rgba(255,255,255,.92);
+  --sb-ink-dim:rgba(255,255,255,.62);
+  --sb-panel:rgba(255,255,255,.08);--sb-panel-hi:rgba(255,255,255,.17);
+  --sb-strip:rgba(0,0,0,.30);--sb-strip-hi:rgba(0,0,0,.44);
+  --sb-line:rgba(255,255,255,.14);--sb-hair:rgba(255,255,255,.07);
+  --sb-amber:#FFB24D;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:var(--paper);color:var(--t1);font-size:14px}
@@ -83,7 +100,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
    reported. An alpha layer rides any colour the sidebar can take, and the
    text on it stays the white the tree rows already use. */
 .sb-hd{padding:10px 12px;display:flex;align-items:center;gap:8px;
-       border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
+       border-bottom:1px solid var(--sb-hair);flex-shrink:0}
 .sb-hd.hd-stack{flex-wrap:wrap;row-gap:7px;padding-left:8px;padding-right:8px}
 .sb-hd.hd-stack .sb-hd-acts{flex:1 1 100%;flex-wrap:wrap;gap:4px;
                             justify-content:space-between}
@@ -91,7 +108,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
    is how v04.08 lost the note-type chips: they were still in the DOM, still
    "fitting", and 0px wide. Let the row overflow instead — _sbFitHeader()
    measures that overflow and folds a whole part away on purpose. */
-.sb-logo{display:flex;align-items:center;gap:7px;color:#E8F0E6;font-weight:500;
+.sb-logo{display:flex;align-items:center;gap:7px;color:var(--sb-ink);font-weight:500;
          font-size:13.5px;flex:0 0 auto;min-width:0}
 .sb-logo .ico{font-size:16px;flex-shrink:0;line-height:1}
 .sb-logo-name{white-space:nowrap;flex-shrink:0}
@@ -104,8 +121,8 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
    this header, and app-check measures both against the colour behind them. */
 .sb-version-tag{flex-shrink:0;font-weight:600;font-size:10px;letter-spacing:.02em;
                 font-variant-numeric:tabular-nums;line-height:1.35;
-                padding:2px 7px;border-radius:999px;color:#FFFFFF;
-                background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.28)}
+                padding:2px 7px;border-radius:999px;color:var(--sb-ink);
+                background:var(--sb-strip);border:1px solid var(--sb-line)}
 /* One size, one shape, one hover for every button in the header. They were
    37x36, 14x19, 37x36, 42x40 and 37x45, in four different font sizes. */
 .sb-hd-acts{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;
@@ -113,23 +130,23 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .sb-hd .sb-act{width:34px;height:34px;padding:0;gap:0;flex-shrink:0;border-radius:9px;
                display:inline-flex;align-items:center;justify-content:center;
                font-size:17px;line-height:1;
-               background:rgba(255,255,255,.07)!important;
-               border:1px solid rgba(255,255,255,.13)!important;
-               color:#E8F0E6!important;
+               background:var(--sb-panel)!important;
+               border:1px solid var(--sb-line)!important;
+               color:var(--sb-ink)!important;
                transition:background .12s,border-color .12s,transform .08s}
-.sb-hd .sb-act:hover{background:rgba(255,255,255,.17)!important;
-                     border-color:rgba(255,255,255,.30)!important}
+.sb-hd .sb-act:hover{background:var(--sb-panel-hi)!important;
+                     border-color:var(--sb-ink-dim)!important}
 .sb-hd .sb-act:active{transform:scale(.94)}
 /* 🏠 and its ▾ are one split control: the everyday action stays one tap, and
    the chevron is a real target instead of a 14x19px speck. */
 .sb-split{display:inline-flex;align-items:stretch;flex-shrink:0;border-radius:9px;
-          background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13)}
-.sb-split:hover{border-color:rgba(255,255,255,.30)}
+          background:var(--sb-panel);border:1px solid var(--sb-line)}
+.sb-split:hover{border-color:var(--sb-ink-dim)}
 .sb-hd .sb-split .sb-act{background:transparent!important;border:none!important;
                          border-radius:9px 0 0 9px}
-.sb-hd .sb-split .sb-act:hover{background:rgba(255,255,255,.14)!important}
+.sb-hd .sb-split .sb-act:hover{background:var(--sb-panel-hi)!important}
 .sb-hd .sb-home-cv{width:26px;font-size:12px;border-radius:0 9px 9px 0;
-                   box-shadow:inset 1px 0 0 rgba(255,255,255,.16)}
+                   box-shadow:inset 1px 0 0 var(--sb-line)}
 /* Touch sizes on phone and tablet. 42px is the size the note toolbar is
    already held to; the row is tightened by 2px a side to pay for it. */
 @media(max-width:1199.98px){
@@ -141,23 +158,23 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
   .sb-split{border-radius:11px}
 }
 /* Search row — same translucent-white treatment, for the same reason. */
-.sb-s{padding:0 12px 10px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
-.sb-si{display:flex;align-items:center;background:rgba(0,0,0,.22);
-       border:1px solid rgba(255,255,255,.16);border-radius:9px;padding:6px 10px;gap:7px;
+.sb-s{padding:0 12px 10px;border-bottom:1px solid var(--sb-hair);flex-shrink:0}
+.sb-si{display:flex;align-items:center;background:var(--sb-strip);
+       border:1px solid var(--sb-line);border-radius:9px;padding:6px 10px;gap:7px;
        transition:background .12s,border-color .12s}
-.sb-si:focus-within{background:rgba(0,0,0,.30);border-color:rgba(255,255,255,.38)}
+.sb-si:focus-within{background:var(--sb-strip-hi);border-color:var(--sb-ink-dim)}
 .sb-si-ico{font-size:13px;line-height:1;flex-shrink:0;opacity:.9}
 .sb-si-x{font-size:12px;line-height:1;cursor:pointer;flex-shrink:0;
-         color:rgba(255,255,255,.7)}
-.sb-si-x:hover{color:#FFFFFF}
-.sb-si input{background:none;border:none;outline:none;color:#FFFFFF;font-size:12.5px;
+         color:var(--sb-ink-dim)}
+.sb-si-x:hover{color:var(--sb-ink)}
+.sb-si input{background:none;border:none;outline:none;color:var(--sb-ink);font-size:12.5px;
              width:100%;font-family:var(--ui);min-width:0}
-.sb-si input::placeholder{color:rgba(255,255,255,.62)}
+.sb-si input::placeholder{color:var(--sb-ink-dim)}
 .sb-bts{width:100%;margin-top:6px;justify-content:center;font-size:11.5px;
         min-height:32px;border-radius:8px;
-        background:rgba(0,0,0,.20)!important;
-        border:1px solid rgba(255,255,255,.16)!important;color:#FFFFFF!important}
-.sb-bts:hover{background:rgba(0,0,0,.32)!important;border-color:rgba(255,255,255,.30)!important}
+        background:var(--sb-strip)!important;
+        border:1px solid var(--sb-line)!important;color:var(--sb-ink)!important}
+.sb-bts:hover{background:var(--sb-strip-hi)!important;border-color:var(--sb-ink-dim)!important}
 @media(max-width:1199.98px){.sb-bts{min-height:40px;font-size:12.5px}}
 #tree{flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 0}
 .sb-ft{padding:8px 10px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:5px;flex-shrink:0}
@@ -177,22 +194,22 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 #rsz::after{content:'';position:absolute;top:0;bottom:0;left:-4px;right:-4px}
 
 /* Tree rows */
-.tr-row{display:flex;align-items:center;gap:4px;padding:5px 10px;cursor:pointer;border-left:2px solid transparent;color:#ffffff;font-size:var(--fs-sidebar);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;position:relative}
-.tr-row:hover{background:rgba(255,255,255,.04)}
-.tr-row.sel{background:rgba(27,122,70,.15);border-left-color:#4DC87A;color:#B8E8C4}
+.tr-row{display:flex;align-items:center;gap:4px;padding:5px 10px;cursor:pointer;border-left:2px solid transparent;color:var(--sb-ink);font-size:var(--fs-sidebar);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;position:relative}
+.tr-row:hover{background:var(--sb-panel)}
+.tr-row.sel{background:rgba(27,122,70,.18);border-left-color:#4DC87A;color:var(--sb-ink);font-weight:600}
 .tr-row.drg{opacity:.3}
 .tr-row.dob{box-shadow:inset 0 2px 0 0 var(--green)}
 .tr-row.doa{box-shadow:inset 0 -2px 0 0 var(--green)}
 .tr-row.doi{background:rgba(27,122,70,.22)!important;border-radius:4px}
-.tr-tog{width:20px;flex-shrink:0;text-align:center;font-size:22px;color:#4A5A4C;line-height:1}
+.tr-tog{width:20px;flex-shrink:0;text-align:center;font-size:22px;color:var(--sb-ink-dim);line-height:1}
 .tr-ico{font-size:14px;flex-shrink:0;line-height:1}
 .tr-name{flex:1;white-space:normal;word-break:break-word;line-height:1.3}
-.tr-cnt{font-size:10px;background:rgba(255,255,255,.08);padding:1px 5px;border-radius:9px;flex-shrink:0;color:#4A6A4D}
+.tr-cnt{font-size:10px;background:var(--sb-strip);padding:1px 5px;border-radius:9px;flex-shrink:0;color:var(--sb-ink-soft)}
 .drag-hint{position:fixed;top:0;left:0;pointer-events:none;background:var(--forest);color:#B8E8C4;padding:4px 10px;border-radius:20px;font-size:12px;border:1px solid var(--green);opacity:0;transition:opacity .15s;z-index:9000}
 
 /* ── Smart Views panel in sidebar ──────────────────────────────────────── */
-.sf-sec{border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:6px;margin-bottom:6px}
-.sf-hd{font-size:9.5px;font-weight:600;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.1em;padding:7px 12px 3px}
+.sf-sec{border-bottom:1px solid var(--sb-hair);padding-bottom:6px;margin-bottom:6px}
+.sf-hd{font-size:9.5px;font-weight:600;color:var(--sb-ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:7px 12px 3px}
 .sf-hd-sec{cursor:pointer!important}
 .sf-row{opacity:.85}
 .sf-row:hover{opacity:1}
@@ -571,8 +588,8 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .sr{padding:6px 12px;cursor:pointer;font-size:12.5px;color:var(--sr-color,#ffffff);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
 .sr:hover{background:rgba(255,255,255,.04)}
 .sr.on{background:rgba(27,122,70,.15);color:#B8E8C4}
-.srl{padding:4px 12px 5px;font-size:10px;color:#4A5A4C;text-transform:uppercase;letter-spacing:.06em}
-.sr-grp-hd{padding:8px 12px 3px;font-size:10px;color:#4A5A4C;text-transform:uppercase;letter-spacing:.06em;font-weight:700;border-top:1px solid rgba(255,255,255,.06);margin-top:4px}
+.srl{padding:4px 12px 5px;font-size:10px;color:var(--sb-ink);text-transform:uppercase;letter-spacing:.06em}
+.sr-grp-hd{padding:8px 12px 3px;font-size:10px;color:var(--sb-ink);text-transform:uppercase;letter-spacing:.06em;font-weight:700;border-top:1px solid var(--sb-hair);margin-top:4px}
 .sr-grp-hd:first-of-type{border-top:none;margin-top:0}
 #ti{flex:1;font-size:14px;font-weight:500;border:none;outline:none;background:transparent;color:var(--t1);font-family:var(--ui)}
 .toast-err{background:#c0392b!important;}
@@ -592,7 +609,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 
 /* ── Touch-friendly base ────────────────────────────────────────────── */
 .btn,.et,.ci,.sb-btn,.tr-row,.sc,.ar{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
-.tr-dots{font-size:16px;color:#4A5A4C;width:30px;height:30px;display:none;align-items:center;justify-content:center;border-radius:5px;flex-shrink:0;cursor:pointer;margin-left:auto}
+.tr-dots{font-size:16px;color:var(--sb-ink-dim);width:30px;height:30px;display:none;align-items:center;justify-content:center;border-radius:5px;flex-shrink:0;cursor:pointer;margin-left:auto}
 .tr-dots:active{background:rgba(255,255,255,.14)}
 /* Sidebar overlay (mobile + tablet) */
 .mob-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:139}
@@ -780,24 +797,28 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 
 /* ── Sections ────────────────────────────────────────────────────────── */
 .sec{margin-bottom:1px}
-.sec-hd{display:flex;align-items:center;gap:5px;padding:5px 10px 4px;
-        cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;border-radius:6px;transition:background .12s}
-.sec-hd:hover,.sec-hd:hover .sec-acts{background:rgba(255,255,255,.04);opacity:1}
+/* v04.15 — a section heading sits on a recessed strip. It delineates the
+   sections, and it is what lets a heading keep a colour of its own (the
+   amber MyDatabase one) and still read on a mid-tone sidebar. */
+.sec-hd{display:flex;align-items:center;gap:5px;padding:6px 10px 5px;
+        cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;border-radius:6px;transition:background .12s;
+        background:var(--sb-strip)}
+.sec-hd:hover,.sec-hd:hover .sec-acts{background:var(--sb-strip-hi);opacity:1}
 .sec-hd:active{cursor:grabbing}
-.sec-tog{font-size:10px;color:#3A5A3E;flex-shrink:0;cursor:pointer;
+.sec-tog{font-size:10px;color:var(--sb-ink-dim);flex-shrink:0;cursor:pointer;
          width:13px;text-align:center;line-height:1}
 .sec-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
         font-size:calc(var(--fs-sidebar)*0.88);font-weight:700;text-transform:uppercase;letter-spacing:.07em;
-        color:#4A6A4E}
+        color:var(--sb-ink-soft)}
 .sec-acts{display:flex;gap:1px;opacity:0;transition:opacity .12s;flex-shrink:0}
-.sec-act{padding:1px 5px;border-radius:4px;cursor:pointer;color:#3A5A3E;
+.sec-act{padding:1px 5px;border-radius:4px;cursor:pointer;color:var(--sb-ink-dim);
          font-size:12px;line-height:1.6}
-.sec-act:hover{background:rgba(255,255,255,.09);color:#7AC87E}
+.sec-act:hover{background:var(--sb-panel-hi);color:var(--sb-ink)}
 .sec-body{padding-bottom:4px}
 .sec-drop{outline:2px solid rgba(27,122,70,.45);outline-offset:-2px;
           border-radius:6px;background:rgba(27,122,70,.05)}
-.sec-inp{background:rgba(255,255,255,.07);border:1.5px solid rgba(27,122,70,.5);
-         border-radius:4px;color:#D0E8D2;font-size:11px;font-weight:700;
+.sec-inp{background:var(--sb-strip);border:1.5px solid rgba(27,122,70,.5);
+         border-radius:4px;color:var(--sb-ink);font-size:11px;font-weight:700;
          text-transform:uppercase;letter-spacing:.07em;
          outline:none;padding:1px 6px;width:80%;font-family:var(--ui)}
 .sb-sect{background:rgba(100,200,120,.06);border-color:rgba(100,200,120,.2);color:#6aaa72}
@@ -984,8 +1005,8 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .sync-steps a{color:var(--green)}
 
 /* ── Sidebar toolbar ─────────────────────────────────────────────────── */
-.sb-toolbar{display:flex;align-items:center;gap:3px;padding:5px 8px 6px;
-            border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;flex-wrap:wrap;
+.sb-toolbar{display:flex;align-items:center;gap:6px;padding:7px 10px 8px;
+            border-bottom:1px solid var(--sb-hair);flex-shrink:0;flex-wrap:wrap;
             -webkit-touch-callout:none;user-select:none}
 .sb-tb-btn{padding:5px 8px;border-radius:6px;cursor:pointer;font-size:23px;
            font-family:var(--ui);border:1px solid transparent;background:transparent;
@@ -994,8 +1015,27 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
            touch-action:manipulation;padding:8px 12px}
 .sb-tb-btn:hover{background:rgba(255,255,255,.08);color:var(--t1)}
 .sb-tb-btn:disabled{opacity:.32;pointer-events:none}
-.sb-tb-sep{width:1px;height:16px;background:rgba(255,255,255,.1);
+.sb-tb-sep{width:1px;height:16px;background:var(--sb-line);
            margin:0 2px;flex-shrink:0;align-self:center}
+/* v04.15 — the sidebar's own two buttons. They were bare labels in var(--t2),
+   a colour meant for text on paper: 2.4:1 on Forest, 1.4:1 on a teal sidebar.
+   Boxed and inked like the header's buttons, they read on both. The scope is
+   .sb-toolbar on purpose — .sb-tb-btn is also used inside the white 🧰
+   dropdown, where var(--t1) is right and this would be wrong. */
+/* A raised panel LIGHTENS the sidebar colour, which costs a white label its
+   contrast — the same trap the version badge fell into: on the owner's teal
+   this label measured exactly 4.5:1 raised and 8.7:1 recessed. So the rule
+   across this sidebar is: icon buttons ride a panel, buttons carrying WORDS
+   sit on a strip, like the search field and Back to search results. */
+.sb-toolbar .sb-tb-btn{flex:1 1 auto;justify-content:center;font-size:15px;
+        gap:7px;border-radius:9px;min-height:40px;
+        background:var(--sb-strip);border:1px solid var(--sb-line);
+        color:var(--sb-ink);transition:background .12s,border-color .12s}
+.sb-toolbar .sb-tb-btn:hover{background:var(--sb-strip-hi);
+        border-color:var(--sb-ink-dim);color:var(--sb-ink)}
+.sb-toolbar .sb-tb-btn .tb-ico{font-size:19px;line-height:1}
+.sb-toolbar .sb-tb-new{font-weight:600}
+@media(max-width:1199.98px){.sb-toolbar .sb-tb-btn{min-height:46px;font-size:15.5px}}
 .sb-exp-tb{color:#B89050!important}
 .sb-exp-tb.dirty{background:rgba(184,135,58,.1)!important;
                  border-color:rgba(184,135,58,.25)!important}
@@ -1209,19 +1249,21 @@ sup.ann-sup:hover{text-decoration:underline}
 @media(max-width:1199.98px){.mw-rel-date{font-size:11px}.mw-sort-lbl{display:none}}
 
 /* ── Per-Section Smart Views (built-in to each section) ─────────────────── */
+/* These rows sit in the sidebar tree, so they take the sidebar's ink — they
+   were in var(--t2), a colour for text on paper: 1.4:1 on a teal sidebar. */
 .sec-sf-hd{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 13px;
   cursor:pointer;user-select:none;-webkit-user-select:none;font-size:12.5px;
-  color:var(--t2);border-radius:6px;margin:2px 5px 0;transition:background .12s}
-.sec-sf-hd:hover{background:var(--hover)}
-.sec-sf-hd.ssf-active{color:var(--accent);font-weight:600;background:var(--hover)}
+  color:var(--sb-ink);border-radius:6px;margin:2px 5px 0;transition:background .12s}
+.sec-sf-hd:hover{background:var(--sb-panel)}
+.sec-sf-hd.ssf-active{color:var(--sb-ink);font-weight:600;background:var(--sb-panel-hi)}
 .sec-sf-hd .sec-sf-lbl{flex:1;font-style:italic;opacity:.85;font-size:12px}
 .sec-sf-item{display:flex;align-items:center;gap:6px;padding:3px 10px 3px 28px;
-  cursor:pointer;font-size:12px;color:var(--t2);border-radius:5px;margin:1px 5px;
+  cursor:pointer;font-size:12px;color:var(--sb-ink);border-radius:5px;margin:1px 5px;
   transition:background .1s}
-.sec-sf-item:hover{background:var(--hover)}
-.sec-sf-item.sel{background:var(--sel,var(--hover));color:var(--accent);font-weight:600}
-.sec-sf-item .sf-cnt{margin-left:auto;font-size:10.5px;background:var(--hover);
-  padding:1px 5px;border-radius:9px;color:var(--t3)}
+.sec-sf-item:hover{background:var(--sb-panel)}
+.sec-sf-item.sel{background:var(--sb-panel-hi);color:var(--sb-ink);font-weight:600}
+.sec-sf-item .sf-cnt{margin-left:auto;font-size:10.5px;background:var(--sb-strip);
+  padding:1px 5px;border-radius:9px;color:var(--sb-ink-soft)}
 @media(max-width:1199.98px){.sec-sf-hd{padding:7px 12px 7px 16px;font-size:13px;min-height:36px}
   .sec-sf-item{padding:6px 12px 6px 30px;font-size:13px;min-height:36px}}
 
@@ -1552,7 +1594,9 @@ sup.ann-sup:hover{text-decoration:underline}
 /* ── MyDatabase section ─────────────────────────────────────────────────── */
 .db-sec{margin-bottom:2px}
 .db-hd-sec{cursor:pointer}
-.db-sec-nm{color:var(--accent,#ff8000)!important;font-weight:700}
+/* v04.15 — was #ff8000, which reads 2.1:1 on a mid-tone sidebar. Same hue,
+   lifted until it reads on one: 4.6:1 on the owner's teal, 10.7:1 on Forest. */
+.db-sec-nm{color:var(--sb-amber)!important;font-weight:700}
 .db-body{padding-bottom:4px}
 .ci-active{background:var(--hover);font-weight:600}
 
@@ -2292,7 +2336,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.14</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.15</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2380,8 +2424,8 @@ sup.ann-sup:hover{text-decoration:underline}
   <div id="tree"></div>
 
   <div class="sb-toolbar" id="sb-toolbar">
-    <button class="sb-tb-btn" onclick="quickCapture()" title="New note — opens in its own pop-out window" style="color:#6DC994">📝 New Note</button>
-    <button class="sb-tb-btn" onclick="openFolderPopupFromToolbar()" title="Open the folder pop-up browser">📚 Folders</button>
+    <button class="sb-tb-btn sb-tb-new" onclick="quickCapture()" title="New note — opens in its own pop-out window"><span class="tb-ico">📝</span>New Note</button>
+    <button class="sb-tb-btn" onclick="openFolderPopupFromToolbar()" title="Open the folder pop-up browser"><span class="tb-ico">📚</span>Folders</button>
   </div>
 </aside>
 
@@ -2942,7 +2986,7 @@ function renderTree(){
     const total=noteHits.length+folderHits.length+tagHits.length+kindHits.length;
     let h=`<div class="srl">${total} result${total!==1?'s':''}</div>`;
     if(!total){
-      h+='<div class="sr" style="color:#4A5A4C;cursor:default">No results</div>';
+      h+='<div class="sr" style="cursor:default;opacity:.75">No results</div>';
     } else {
       if(folderHits.length){
         h+='<div class="sr-grp-hd">📁 Folders</div>'+folderHits.map(f=>{
@@ -15626,10 +15670,10 @@ function renderNTISection(){
             +`<span class="tr-cnt">${cnt}</span>`
             +`</div>`;
         });
-        if(!kinds.length)body+=`<div style="padding:5px 26px;font-size:11px;color:#3A5A3E;font-style:italic">Empty — tap ＋ to add</div>`;
+        if(!kinds.length)body+=`<div style="padding:5px 26px;font-size:11px;color:var(--sb-ink-soft);font-style:italic">Empty — tap ＋ to add</div>`;
       }
     });
-    body+=`<div class="tr-row" style="padding-left:13px;color:var(--green2);cursor:pointer;-webkit-touch-callout:none;user-select:none" onclick="addNtiCat()"><span class="tr-tog"></span><span class="tr-name">＋ Add group</span></div>`;
+    body+=`<div class="tr-row" style="padding-left:13px;color:var(--sb-ink);cursor:pointer;-webkit-touch-callout:none;user-select:none" onclick="addNtiCat()"><span class="tr-tog"></span><span class="tr-name">＋ Add group</span></div>`;
     body+='</div>';
   }
   return `<div class="sf-sec nti-sec">
@@ -15778,6 +15822,52 @@ function hexLighten(hex,p){
   return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
+/* ── Sidebar ink (v04.15) ─────────────────────────────────────────────
+   --forest is the one colour the owner sets by hand, and every fixed grey
+   painted over it was a grey that worked until they changed it: the version
+   number (v04.14), then the section headings, the count badges and the two
+   toolbar buttons, which measured 1.2–2.4:1 on the teal they had chosen.
+   One measurement settles the whole palette — the relative luminance of the
+   sidebar colour. A dark sidebar takes white ink and recessed strips that go
+   darker; a light one takes near-black ink and strips that go lighter. The
+   defaults in :root are the dark case, so a downloaded copy paints correctly
+   before this ever runs. */
+function _sbLum(colour){
+  let r,g,b;
+  const c=String(colour||'').trim();
+  const rgb=c.match(/rgba?\(([^)]+)\)/);
+  if(rgb){ [r,g,b]=rgb[1].split(',').map(v=>parseFloat(v)); }
+  else {
+    let h=c.replace('#','');
+    if(h.length===3) h=h.split('').map(x=>x+x).join('');
+    if(h.length<6) return 0;            /* unparseable — treat as dark */
+    [r,g,b]=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
+  }
+  const f=(v)=>{v/=255;return v<=0.03928?v/12.92:((v+0.055)/1.055)**2.4;};
+  return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b);
+}
+function applySidebarInk(){
+  const root=document.documentElement;
+  const sb=getComputedStyle(root).getPropertyValue('--forest').trim();
+  /* 0.2 is where white ink and dark ink score the same against a background;
+     above it dark ink wins, below it white does. */
+  const dark=_sbLum(sb)<0.2;
+  const set=(k,v)=>root.style.setProperty(k,v);
+  set('--sb-ink',      dark?'#FFFFFF':'#101A14');
+  /* .92, not .86: at .86 a soft-ink label on a bare mid-tone sidebar
+     measures 4.3:1 — the hierarchy has to come from size and weight, not
+     from dimming past the point where the text stops reading. */
+  set('--sb-ink-soft', dark?'rgba(255,255,255,.92)':'rgba(16,26,20,.90)');
+  set('--sb-ink-dim',  dark?'rgba(255,255,255,.62)':'rgba(16,26,20,.60)');
+  set('--sb-panel',    dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.06)');
+  set('--sb-panel-hi', dark?'rgba(255,255,255,.17)':'rgba(0,0,0,.13)');
+  set('--sb-strip',    dark?'rgba(0,0,0,.30)':'rgba(255,255,255,.55)');
+  set('--sb-strip-hi', dark?'rgba(0,0,0,.44)':'rgba(255,255,255,.75)');
+  set('--sb-line',     dark?'rgba(255,255,255,.14)':'rgba(0,0,0,.16)');
+  set('--sb-hair',     dark?'rgba(255,255,255,.07)':'rgba(0,0,0,.09)');
+  set('--sb-amber',    dark?'#FFB24D':'#7A4100');
+  return dark;
+}
 function applyTheme(themeData){
   const root=document.documentElement;
   const preset=THEMES[themeData.preset]||THEMES.forest;
@@ -15794,7 +15884,11 @@ function applyTheme(themeData){
     root.style.setProperty('--border',hexDarken(cu.bg,.08));
     root.style.setProperty('--border2',hexDarken(cu.bg,.15));
   }
-  if(cu.srColor) root.style.setProperty('--sr-color',cu.srColor);
+  const darkSb=applySidebarInk();  /* v04.15 — after --forest is settled */
+  /* The search-results text colour is the owner's to set; when they have not
+     set one it follows the sidebar's ink, instead of being a fixed white
+     that disappears the moment they choose a pale sidebar. */
+  root.style.setProperty('--sr-color',cu.srColor||(darkSb?'#FFFFFF':'#101A14'));
   // Apply any stored font sizes
   if(themeData.fonts) applyFontSizes(themeData.fonts);
   applyLineSpacing(themeData.lineSpacing||'cozy');
@@ -16002,7 +16096,7 @@ function renderSection(sec){
         <span class="sec-act" onclick="event.stopPropagation();showSecCtx(event,'${sec.id}')">⋯</span>
       </span>
     </div>
-    ${open?`<div class="sec-body">${folders.map(f=>trNode(f,0)).join('')}${!folders.length?'<div style="padding:6px 22px;font-size:11.5px;color:#3A5A3E;font-style:italic">Empty — add a folder with ＋</div>':''}${renderSecSF(sec.id)}</div>`:''}
+    ${open?`<div class="sec-body">${folders.map(f=>trNode(f,0)).join('')}${!folders.length?'<div style="padding:6px 22px;font-size:11.5px;color:var(--sb-ink-soft);font-style:italic">Empty — add a folder with ＋</div>':''}${renderSecSF(sec.id)}</div>`:''}
   </div>`;
 }
 
@@ -19886,7 +19980,7 @@ function renderTagSection(){
       `<span class="tr-cnt">${count}</span>`+
       `</div>`
     ).join('')
-    :`<div style="padding:6px 22px;font-size:11.5px;color:#3A5A3E;font-style:italic">No tags yet — add them while editing</div>`)+
+    :`<div style="padding:6px 22px;font-size:11.5px;color:var(--sb-ink-soft);font-style:italic">No tags yet — add them while editing</div>`)+
     '</div>'
   ):'';
   return `<div class="sf-sec tag-sec">

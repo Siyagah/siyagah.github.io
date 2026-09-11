@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 80 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 89 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -70,6 +70,13 @@ or quietly lose the notebook, none of which need a browser:
   (160–540px); one square and one icon size for every button; the `▾` measured
   on both of its dimensions; and a real mouse click on it that is looked at
   again 250ms later (v04.14);
+- **every word in the sidebar reads on any sidebar colour** — not a list of
+  elements but a sweep: every element in `#sb` carrying a word of its own,
+  its translucent layers composited, scored against a 4.5:1 bar, in three
+  states (all expanded, a folder selected, a live search) on five sidebars
+  including a pale one and a mid grey, plus an empty notebook for the
+  "nothing here yet" lines; and the ink is proved to flip on a pale sidebar
+  (v04.15);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -127,6 +134,13 @@ assertions miss.
   so anything that measures at render time measures a width the pane never
   has. Measure again after a `requestAnimationFrame` (and on resize) before
   trusting the number, or asserting on it.
+- **A contrast check that names elements only proves the elements you thought
+  of.** `COLLECT()` in section 6i takes every element in `#sb` with a word of
+  its own instead, and composites the background stack outward until it hits
+  an opaque colour — an alpha colour scored against nothing is not a
+  measurement. Skip elements whose own text is emoji only: their `color` says
+  nothing about what is painted. And exercise the STATES — expanded, selected,
+  searching, empty — a colour that only reads in the default state is not fixed.
 - **A class toggled on a resize is not applied in the same frame.** The
   sidebar header's fold runs from a `ResizeObserver` on `#sb`, so a check that
   sets `#sb.style.width` and measures after two `requestAnimationFrame`s reads

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.14.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.15.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,17 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.15** (11 Sep 2026) — the sidebar list reads on any colour too. The
+  headings, the count badges, the two bottom buttons, the per-section Smart
+  View rows, the search-result labels and the empty-state lines were all fixed
+  colours — several of them paper colours (`var(--t2)`, `var(--green2)`) on a
+  dark surface — measuring 1.1–2.4:1 on the owner's teal. `applySidebarInk()`
+  derives the whole sidebar palette (`--sb-ink`, `--sb-panel`, `--sb-strip`,
+  `--sb-line`…) from the luminance of `--forest` on every theme change, so a
+  PALE sidebar now flips to dark ink and is usable for the first time. Section
+  headings sit on a recessed strip; the two bottom buttons became real boxes.
+  89/89 app checks (up from 80) and 11/11 ship checks — the new ones sweep
+  every word in the sidebar in three states on five sidebar colours.
 - **v04.14** (11 Sep 2026) — the sidebar header, rebuilt to read. The version
   number was a fixed grey (`#6A7F6C`): 4.3:1 on Forest, ~1.2:1 on the custom
   teal the owner had set, i.e. invisible. Everything in that header is now
@@ -41,14 +52,6 @@ must never accumulate here instead of there.
   rounded box. The round also found the `⋯` button had been **dead** — its
   onclick passed a bare `curA.id`, a render-local, so it threw and opened
   nothing. 67/67 app checks (up from 62) and 11/11 ship checks.
-- **v04.10** (10 Sep 2026) — the note pane's two pop-out buttons stopped being
-  two identical grey squares. They are named — **Multi Notes Pop-Up** (its own
-  window, several at once) and **Single Note Pop-Up** (one note, everything
-  else dimmed) — and drawn as SVG rather than typed as `⊡`/`⛶`, so no font can
-  turn them into an empty box. The words ride on the buttons from 737px of
-  Pane 3 upward and fold first when the row runs out; both names are always in
-  the `⋯` palette and the right-click menu. 62/62 app checks (up from 54) and
-  11/11 ship checks.
 ---
 
 ## What this is
@@ -214,6 +217,24 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A colour meant for paper is not a colour for the sidebar, and a RAISED
+  layer costs a white label its contrast.** Half of what was unreadable in
+  v04.15's sidebar was `var(--t2)` / `var(--green2)` — Pane-2 and Pane-3
+  colours — used on a dark surface, at 1.4:1. And `📝 New Note` measured
+  exactly 4.5:1 on a raised panel (white over the sidebar colour) against
+  8.7:1 on a recessed strip: lightening a mid-tone background and then
+  writing on it in white is the trap, and it is the same one the v04.14 pill
+  fell into. The rule: in the sidebar, icon buttons ride `--sb-panel`,
+  anything carrying WORDS sits on `--sb-strip`, and text uses `--sb-ink*`,
+  never a `--t*` or a hex. Cost: one shipped round that fixed the header and
+  left the list beneath it at 1.2:1.
+- **Name nothing; sweep everything.** The v04.15 check walks every element in
+  `#sb` that carries a word, composites the alpha layers behind it and scores
+  the real contrast, in three states on five sidebar colours. Written that
+  way it found four faults the eye had missed (the per-section Smart View
+  rows, `＋ Add group`, and both search-result labels) and it catches the
+  next fixed colour anyone adds. A check that names elements only proves the
+  elements you already thought of.
 - **A fixed colour in the sidebar is a colour that works until the owner
   changes one setting.** `--forest` is owner-settable (Appearance ▸ Custom
   colours), so the version number's hard-coded `#6A7F6C` measured 4.3:1 on the
