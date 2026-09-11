@@ -889,3 +889,97 @@ was shut in the same tick.
   follow-up.
 - **No sync, storage or export path was touched.** I1–I4 are untouched by a
   stylesheet and one measuring function.
+
+---
+
+## v04.15 — the sidebar list reads on any colour you give it (11 September 2026)
+
+v04.14 fixed the version number and the header. The owner's answer to the
+offer at the end of it was "yes, fix the sidebar list too" — so this round
+does the same job for everything below the header, and does it by measuring
+the whole sidebar at once rather than naming faults one at a time.
+
+**What was wrong**
+
+Everything in the list was painted in a fixed colour chosen for the dark
+green preset — and several of them were colours meant for text on *paper*,
+`var(--t2)` and `var(--green2)`, sitting on a dark sidebar. Measured against
+the teal the owner had actually set:
+
+| | was | on Forest | on the owner's teal |
+|---|---|---|---|
+| section headings (`SMART VIEWS`, `TAGS`) | `#4A6A4E` | 3.0:1 | **1.2:1** |
+| the count badges | `#4A6A4D` | 2.4:1 | **1.3:1** |
+| `📚 Folders`, `📝 New Note` | `var(--t2)`, `#6DC994` | 2.4:1 | **1.4:1** |
+| `🗂 MyDatabase` | `#ff8000` | 7.1:1 | **2.1:1** |
+| per-section Smart Views rows | `var(--t2)` | — | **1.4:1** |
+| `5 results`, `📁 Folders` in search | `#4A5A4C` | — | **1.4:1** |
+| `Empty — add a folder with ＋` | `#3A5A3E` | — | **1.1:1** |
+
+**What it is now**
+
+One measurement decides the whole palette: the relative luminance of
+`--forest`, the colour the owner sets. `applySidebarInk()` runs on every
+theme change and writes a set of CSS variables —
+
+```
+ink / ink-soft / ink-dim    text, in falling importance
+panel / panel-hi            a RAISED layer   (icon buttons)
+strip / strip-hi            a RECESSED layer (headings, fields, pills)
+line / hair                 borders, strong and faint
+```
+
+— and every rule in the sidebar now uses them instead of a hex. A dark
+sidebar takes white ink with strips that go darker; a **pale** one takes
+near-black ink with strips that go lighter, which means a pale sidebar is
+usable for the first time (it used to be white text on cream). The defaults
+sit in `:root`, so a downloaded copy paints correctly before any script runs.
+
+Two visible consequences, both deliberate:
+
+- **A section heading sits on a recessed strip.** It separates the sections,
+  and it is what lets a heading keep a colour of its own — the amber
+  MyDatabase one — and still read on a mid-tone background.
+- **The two buttons at the bottom are buttons.** They were bare labels; they
+  are boxed, inked and 40px tall (46px on a phone).
+
+**The rule this round paid for**
+
+A raised panel *lightens* the sidebar colour, and that **costs** a white
+label its contrast: `📝 New Note` measured exactly 4.5:1 on a raised panel
+and 8.7:1 on a recessed strip. So: icon buttons ride a panel, anything
+carrying words sits on a strip. Same mistake as v04.14's first light pill,
+in a new place, caught by the same check.
+
+**Measured**
+
+11/11 ship checks, and app checks from 80 to **89**.
+
+The nine new ones do not name elements. They walk **every** element in the
+sidebar that carries a word of its own, composite the translucent layers
+behind it, and score the real WCAG contrast — in three states (everything
+expanded, a folder selected, a live search) on five sidebars: Forest, the
+owner's teal, Ocean's navy, a pale cream and a mid grey. 82 pieces of text
+each time. A sixth run does it on an empty notebook, where the "nothing here
+yet" lines live. Plus: the ink flips on a pale sidebar (and the search-results
+colour with it), a heading's strip is not the ground its rows sit on, and the
+two toolbar buttons are boxes with a 40px hit height.
+
+Worst score anywhere, across all six runs: **4.7:1**, against a 4.5:1 bar.
+Putting one of the old greys back fails five of the nine.
+
+The bar is 4.5:1 except where no ink can reach it — a mid grey caps out near
+5:1 whichever way you go — so there the bar is what is actually achievable,
+not a number that cannot be met.
+
+**What was NOT done, and why**
+
+- **Only the sidebar.** Pane 2 and Pane 3 are paper-coloured and have their
+  own settings; nothing there was touched.
+- **The green "＋ Add group" label became plain ink.** No green is light
+  enough to reach 4.5:1 on a mid-tone sidebar — the ＋ carries the meaning.
+- **Dead CSS was left alone** (`.sb-ft`, `.sb-ud`, `.tag-it` and friends
+  render nowhere any more). Deleting them is not this round's job, and a
+  dead rule cannot be measured.
+- **No sync, storage or export path was touched.** I1–I4 are untouched by a
+  stylesheet and one function that reads a colour.

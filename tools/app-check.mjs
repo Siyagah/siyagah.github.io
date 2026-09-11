@@ -10,6 +10,24 @@ import { join } from 'node:path';
 import { ROOT, openApp, report, VIEWPORTS, seedDB } from './harness.mjs';
 
 const r = report('app-check — boot, handlers, panes, views, editor, data round-trip');
+
+/* Relative luminance / contrast, WCAG 2.1. Colours come out of the browser as
+   rgb()/rgba(), so a translucent one is composited over what is behind it
+   before anything is judged — an alpha colour compared against nothing is not
+   a measurement. `stack` is the backgrounds from the element outward, as the
+   page paints them. */
+const px = (c) => { const m = String(c).match(/[\d.]+/g).map(Number);
+  return { r: m[0], g: m[1], b: m[2], a: m.length > 3 ? m[3] : 1 }; };
+const over = (fg, bg) => ({ r: fg.r * fg.a + bg.r * (1 - fg.a),
+  g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a), a: 1 });
+const lum = ({ r, g, b }) => { const f = (v) => { v /= 255;
+  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05); };
+const flatten = (stack) => { let bg = px('rgb(255,255,255)');
+  for (let i = stack.length - 1; i >= 0; i--) bg = over(px(stack[i]), bg);
+  return bg; };
 const html = await readFile(join(ROOT, 'index.html'), 'utf8');
 const app = await openApp();
 const { page } = app;
@@ -956,20 +974,6 @@ await app.close();
 /* Three complaints, one row: the version number was invisible, the buttons
    were four different sizes, and the ▾ beside 🏠 was a 14×19px speck. */
 {
-  /* Relative luminance / contrast, WCAG 2.1. Colours come out of the browser
-     as rgb()/rgba(), so a translucent one is blended over what is behind it
-     before anything is judged — an alpha colour compared against nothing is
-     not a measurement. */
-  const px = (c) => { const m = String(c).match(/[\d.]+/g).map(Number);
-    return { r: m[0], g: m[1], b: m[2], a: m.length > 3 ? m[3] : 1 }; };
-  const over = (fg, bg) => ({ r: fg.r * fg.a + bg.r * (1 - fg.a),
-    g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a), a: 1 });
-  const lum = ({ r, g, b }) => { const f = (v) => { v /= 255;
-    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
-    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
-  const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
-    return (hi + 0.05) / (lo + 0.05); };
-
   /* The sidebar colour is owner-settable (Appearance ▸ Custom colours), so
      the fixed grey #6A7F6C the version tag used to be painted in scored 4.3:1
      on the Forest preset and about 1.2:1 on the teal the owner had actually
@@ -1118,6 +1122,151 @@ await app.close();
       'a real click on the ▾ opens the frozen-archives menu and it is still there a tick later',
       `painted ${dd.painted} · names the legacy build ${dd.legacy}` + (thrown.length ? ` · threw: ${thrown[0]}` : ''));
     await s.close();
+  }
+}
+
+/* ── 6i. v04.15: every word in the sidebar reads, whatever colour it is ── */
+/* v04.14 proved the version badge on two colours. The rest of the sidebar was
+   still painted in fixed greys meant for text on paper — the section
+   headings at 1.2:1 on the owner's teal, the count badges at 1.3:1, the two
+   toolbar buttons at 1.4:1. This sweeps the WHOLE sidebar instead of naming
+   elements one at a time, so a grey added later is caught by the same net. */
+{
+  /* Gathers every element in #sb that carries a word of its own, with the
+     backgrounds stacked behind it. Emoji-only chrome is skipped: its colour
+     property says nothing about what is painted. */
+  const COLLECT = () => {
+    const out = [];
+    for (const el of document.querySelectorAll('#sb *')) {
+      if (el.offsetParent === null) continue;
+      const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
+      if (!/[A-Za-z0-9]/.test(own)) continue;
+      const cs = getComputedStyle(el);
+      const stack = [];
+      for (let n = el; n; n = n.parentElement) {
+        const c = getComputedStyle(n).backgroundColor;
+        if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') stack.push(c);
+        if (/^rgb\(/.test(c)) break;
+      }
+      out.push({ sel: el.className || el.tagName, text: own.slice(0, 22), color: cs.color, fs: cs.fontSize, stack });
+    }
+    return out;
+  };
+
+  /* Five sidebars: the default, the owner's teal, a preset that is not green,
+     a PALE one (where white ink has to flip to dark), and a mid grey — the
+     worst case there is, because neither ink scores well against it. */
+  const COLOURS = [
+    ['the Forest preset', null],
+    ['the owner’s teal', '#0B7A6B'],
+    ['the Ocean preset’s navy', '#0C1E3C'],
+    ['a pale cream sidebar', '#EFE7D2'],
+    ['a mid grey sidebar', '#8A8F8C'],
+  ];
+  for (const [label, colour] of COLOURS) {
+    const db = seedDB();
+    if (colour) db.theme = { preset: 'forest', custom: { sidebar: colour } };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    await s.page.evaluate(() => { document.getElementById('sb').style.width = '390px'; });
+    await s.page.waitForTimeout(300);
+    const rows = [];
+    /* Three states, because a colour that only reads in the default state is
+       not fixed: everything expanded, a folder selected, and a live search
+       (the results list has labels of its own). */
+    await s.page.evaluate(() => { document.querySelectorAll('.sec-hd').forEach((h) => h.click()); });
+    await s.page.waitForTimeout(350);
+    rows.push(...await s.page.evaluate(COLLECT));
+    await s.page.evaluate(() => { ST.folder = 'f1'; window.render(); });
+    await s.page.waitForTimeout(300);
+    rows.push(...await s.page.evaluate(COLLECT));
+    await s.page.fill('#sq', 'seed');
+    await s.page.waitForTimeout(400);
+    rows.push(...await s.page.evaluate(COLLECT));
+    const ink = await s.page.evaluate(() => ({
+      ink: getComputedStyle(document.documentElement).getPropertyValue('--sb-ink').trim(),
+      sb: getComputedStyle(document.getElementById('sb')).backgroundColor,
+    }));
+    await s.close();
+
+    /* The bar is 4.5:1 — except against a background where no ink can reach
+       it. A mid grey caps out around 5:1 whichever way you go, so the bar is
+       what is actually achievable there, not a number that cannot be met. */
+    const sbBg = px(ink.sb);
+    const best = Math.max(ratio(px('rgb(255,255,255)'), sbBg), ratio(px('rgb(16,26,20)'), sbBg));
+    const bar = Math.min(4.5, best * 0.97);
+    const scored = rows.map((row) => { const bg = flatten(row.stack);
+      return { ...row, c: ratio(over(px(row.color), bg), bg) }; }).sort((a, b) => a.c - b.c);
+    const low = scored.filter((x) => x.c < bar);
+    const uniq = [...new Map(low.map((x) => [x.sel + x.color, x])).values()];
+    r.check(low.length === 0 && scored.length > 8,
+      `every word in the sidebar reads on ${label}`,
+      low.length ? uniq.slice(0, 5).map((x) => `${x.c.toFixed(1)}:1 ${x.sel} ${JSON.stringify(x.text)} in ${x.color}`).join(' · ')
+        : `${scored.length} pieces of text, worst ${scored[0].c.toFixed(1)}:1 (${scored[0].sel}), bar ${bar.toFixed(1)}:1, ink ${ink.ink}`);
+  }
+
+  /* An empty notebook paints text nothing else does — "Empty — add a folder
+     with ＋", "No tags yet" — each one written inline in a fixed green that
+     the sweep above never reaches, because the seeded notebook is not empty. */
+  {
+    const db = seedDB();
+    db.folders = []; db.articles = [];
+    db.theme = { preset: 'forest', custom: { sidebar: '#0B7A6B' } };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    await s.page.evaluate(() => { document.getElementById('sb').style.width = '390px';
+      document.querySelectorAll('.sec-hd').forEach((h) => h.click()); });
+    await s.page.waitForTimeout(400);
+    const rows = await s.page.evaluate(COLLECT);
+    const sbBg = await s.page.evaluate(() => getComputedStyle(document.getElementById('sb')).backgroundColor);
+    await s.close();
+    const scored = rows.map((row) => { const bg = flatten(row.stack);
+      return { ...row, c: ratio(over(px(row.color), bg), bg) }; }).sort((a, b) => a.c - b.c);
+    const low = scored.filter((x) => x.c < 4.5);
+    r.check(low.length === 0 && scored.length > 4,
+      'the "nothing here yet" lines read too, on an empty notebook on a teal sidebar',
+      low.length ? low.slice(0, 4).map((x) => `${x.c.toFixed(1)}:1 ${JSON.stringify(x.text)} in ${x.color}`).join(' · ')
+        : `${scored.length} pieces of text over ${sbBg}, worst ${scored[0].c.toFixed(1)}:1 ${JSON.stringify(scored[0].text)}`);
+  }
+
+  /* The mechanism, not just the outcome: the ink flips on a pale sidebar, and
+     a section heading sits on a strip that is not the colour of the rows. */
+  {
+    const dark = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    await dark.page.waitForTimeout(250);
+    const d = await dark.page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--sb-ink').trim());
+    await dark.close();
+    const dbL = seedDB(); dbL.theme = { preset: 'forest', custom: { sidebar: '#EFE7D2' } };
+    const light = await openApp({ viewport: { width: 1440, height: 900 }, db: dbL });
+    await light.page.waitForTimeout(250);
+    const l = await light.page.evaluate(() => ({
+      ink: getComputedStyle(document.documentElement).getPropertyValue('--sb-ink').trim(),
+      sr: getComputedStyle(document.documentElement).getPropertyValue('--sr-color').trim(),
+    }));
+    await light.close();
+    r.check(/^#FFFFFF$/i.test(d) && !/^#FFFFFF$/i.test(l.ink) && !/^#FFFFFF$/i.test(l.sr),
+      'the ink flips to dark when the owner picks a pale sidebar, search results with it',
+      `dark sidebar ink ${d} · pale sidebar ink ${l.ink}, search-results ${l.sr}`);
+  }
+  {
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    await s.page.waitForTimeout(300);
+    const m = await s.page.evaluate(() => {
+      const hd = document.querySelector('.sec-hd');
+      const row = document.querySelector('.tr-row');
+      const btns = [...document.querySelectorAll('.sb-toolbar .sb-tb-btn')].filter((b) => b.offsetParent !== null)
+        .map((b) => { const q = b.getBoundingClientRect(); const c = getComputedStyle(b);
+          return { h: Math.round(q.height), border: c.borderTopWidth, bg: c.backgroundColor,
+            label: b.textContent.trim().slice(0, 12) }; });
+      return { strip: getComputedStyle(hd).backgroundColor, rowBg: getComputedStyle(row).backgroundColor, btns };
+    });
+    await s.close();
+    r.check(m.strip !== 'rgba(0, 0, 0, 0)' && m.strip !== m.rowBg,
+      'a section heading sits on a strip of its own, not on the same ground as its rows',
+      `heading ${m.strip} · row ${m.rowBg}`);
+    const bare = m.btns.filter((b) => b.bg === 'rgba(0, 0, 0, 0)' || parseFloat(b.border) < 0.5 || b.h < 40);
+    r.check(m.btns.length === 2 && bare.length === 0,
+      'the sidebar’s own two buttons are boxes you can hit, not bare labels',
+      bare.length ? bare.map((b) => `${b.label} ${b.h}px bg ${b.bg} border ${b.border}`).join(' · ')
+        : m.btns.map((b) => `${b.label} ${b.h}px`).join(' · '));
   }
 }
 
