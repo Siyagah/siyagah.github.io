@@ -2553,12 +2553,16 @@ await app.close();
         + ` · painted ${m.shown} · after the date ${m.afterDate}`);
   }
 
-  /* 5a. v04.24 — a control that moves has to LEAVE the place it moved from.
-     v04.22 put 📅 Calendar and ＋ Add Tab under `+` and hid the tab bar while
-     editing — but only when it was EMPTY, and it never took the two buttons
-     off the bar itself. So the first time the owner had a tab open, the bar
-     came back carrying both of them, duplicated, on a 390px screen. The check
-     that missed it only ever ran with no tabs; this one seeds them. */
+  /* 5a. v04.24/v04.25 — the tab bar while editing on a phone, measured with
+     tabs actually seeded, because that is the state it exists in.
+     v04.22 put 📅 Calendar and ＋ Add Tab under `+` and hid the bar while
+     editing — but only when EMPTY, and never took the two buttons off it. The
+     first tab the owner opened brought the bar back carrying both.
+     v04.24 stripped the buttons and left the bar. The owner's answer to that
+     was "the bar is still there": a tab bar IS a second bar, and the brief was
+     ONE bar. v04.25 does not render it at all while editing on a phone, and
+     lists every open tab under `+` instead — so this check now asserts the bar
+     is GONE, and that the tabs are still reachable and still switch. */
   {
     const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
     await s.page.evaluate(() => { DB.tabs = { a1: ['a2', 'a3'] }; ST.tabOwner = 'a1';
@@ -2567,6 +2571,7 @@ await app.close();
     const look = () => s.page.evaluate(() => {
       const b = document.getElementById('tab-bar');
       return { shown: getComputedStyle(b).display !== 'none',
+        h: Math.round(b.getBoundingClientRect().height),
         cal: !!b.querySelector('.tab-cal'), add: !!b.querySelector('.tab-add-btn'),
         chips: b.querySelectorAll('.tab-strip .tab-it').length };
     });
@@ -2578,13 +2583,46 @@ await app.close();
     await s.page.waitForTimeout(400);
     const back = await look();
     await s.close();
-    r.check(ed.shown && ed.chips === 3 && !ed.cal && !ed.add,
-      'phone: with tabs open, the editing tab bar carries tabs and NOT 📅 Cal / ＋ Add Tab',
-      `editing: ${ed.chips} tab(s), 📅 Cal ${ed.cal ? 'STILL THERE' : 'gone'},`
-        + ` ＋ Add Tab ${ed.add ? 'STILL THERE' : 'gone'}`);
-    r.check(rd.cal && rd.add && back.cal && back.add && back.chips === 3,
-      'phone: 📅 Cal and ＋ Add Tab are on the bar in read mode, and come back when editing ends',
-      `read ${rd.cal && rd.add ? 'both present' : 'MISSING'} · after ✕ ${back.cal && back.add ? 'both back' : 'NOT BACK'}`);
+    r.check(!ed.shown && ed.h === 0,
+      'phone: with three tabs open, the tab bar is NOT a row while editing',
+      ed.shown ? `still painted, ${ed.h}px tall, ${ed.chips} chip(s),`
+        + ` 📅 Cal ${ed.cal ? 'on it' : 'gone'}, ＋ Add Tab ${ed.add ? 'on it' : 'gone'}`
+        : 'not rendered at all');
+    r.check(rd.cal && rd.add && rd.chips === 3 && back.cal && back.add && back.chips === 3,
+      'phone: the tab bar, 📅 Cal and ＋ Add Tab are all back the moment editing ends',
+      `read ${rd.chips} chips + both buttons ${rd.cal && rd.add} · after ✕ ${back.chips} chips + both ${back.cal && back.add}`);
+  }
+
+  /* 5a-ii. Hiding a bar is only allowed if what was on it is still reachable —
+     and reachable means a real click really switches the note, not that a row
+     with the right words exists. */
+  {
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+    await s.page.evaluate(() => { DB.tabs = { a1: ['a2', 'a3'] }; ST.tabOwner = 'a1';
+      ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); window.startEdit(); });
+    await s.page.waitForTimeout(400);
+    await s.page.click('.eb-grp-btn[data-g="insert"]');
+    await s.page.waitForTimeout(300);
+    const rows = await s.page.evaluate(() => [...document.querySelectorAll('#eb-pop .eb-tab-row')]
+      .map((b) => ({ txt: b.textContent.trim(), fn: b.getAttribute('onclick') || '' })));
+    let switched = null;
+    if (rows.length) {
+      await s.page.evaluate(() => {
+        const b = [...document.querySelectorAll('.eb-tab-row')].find((x) => /note two/i.test(x.textContent));
+        if (b) b.click();
+      });
+      await s.page.waitForTimeout(500);
+      switched = await s.page.evaluate(() => ({ art: ST.article,
+        barBack: getComputedStyle(document.getElementById('tab-bar')).display !== 'none' }));
+    }
+    await s.close();
+    r.check(rows.length === 3 && rows.every((x) => /tabSelect\(/.test(x.fn))
+      && switched && switched.art === 'a2' && switched.barBack,
+      'phone: every open tab is a row under `+`, and a real click on one switches to that note',
+      rows.length ? `${rows.length} rows: ${rows.map((x) => x.txt).join(' · ')}`
+        + ` → clicking one lands on ${switched ? switched.art : '?'},`
+        + ` bar back ${switched ? switched.barBack : '?'}`
+        : 'no tab rows under `+` — the tabs are unreachable while editing');
   }
 
   /* 5b. v04.23 — the owner asked where the collapse/expand ⋯ had gone while
