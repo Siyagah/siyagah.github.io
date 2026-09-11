@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.16.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.17.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,16 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.17** (11 Sep 2026) — the folder pop-out (`📚 Folders`) got what the
+  sidebar got. Its two inputs had **no `::placeholder` rule at all**, so the
+  browser's own `#757575` read 1.9:1 on a derived pane background; they use
+  `--t3` now. Its controls were `◀`/`▶` at **20×20**, `🗑` at **19×19**,
+  actions at 22×19, a 28×22 chevron, a 26px-tall Close and 36px rows —
+  **identical on a phone, where that window is full screen**. All of it is one
+  size now: 28px icons / 32px title squares / 34px buttons / 42px rows on a
+  laptop, 38 / 42 / 44 / 52 on a phone. Group headings sit on a strip, and the
+  title bar wraps rather than squeezing `MY NOTEBOOKS` into `MY NOTEBOC`.
+  105/105 app checks (up from 96) and 11/11 ship checks.
 - **v04.16** (11 Sep 2026) — panes 2 and 3, swept the same way. The first
   finding was not about custom colours: **14 of 36 pieces of text in the panes
   were below 4.5:1 on the theme as it ships**, all of them `var(--t3)` at
@@ -52,12 +62,6 @@ must never accumulate here instead of there.
   FALLBACK type (`toggleNoteKind()` pushes it when the list empties), which is
   why the chip reads `General` on every note that has never been typed. 70/70
   app checks (up from 68) and 11/11 ship checks.
-- **v04.12** (11 Sep 2026) — the `⋯` button opens on a left-click at last. v04.11
-  stopped it throwing but it still did not open: it handed `showArtCtx()` a
-  synthesised event whose `stopPropagation()` was a no-op, so the real click
-  reached the global `document` closer and shut the menu in the same tick.
-  `Multi` is three upright sheets now instead of two squares. 68/68 app checks
-  (up from 67) and 11/11 ship checks.
 ---
 
 ## What this is

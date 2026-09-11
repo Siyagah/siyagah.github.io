@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.16">
+<meta name="app-version" content="04.17">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -252,10 +252,14 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
   color:var(--t3);border:1px solid var(--border2);border-radius:999px;background:var(--white);
   padding:3px 8px;font-family:var(--ui);cursor:pointer}
 /* Same ◀/dropdown/▶ control, reused in a browse pop-out's own title bar */
-.pk-mt-row{display:flex;align-items:center;gap:8px}
-.pk-mt-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 50%}
-.pk-sec-nav{display:flex;align-items:center;gap:4px;min-width:0;flex:1 1 50%}
-.pk-sec-sel{flex:1;min-width:0}
+/* v04.17 — the title bar wraps rather than squeezing the section dropdown:
+   bigger steppers took the select from 146px to 118px, which clipped
+   "MY NOTEBOOKS" to "MY NOTEBOC". A control that names where you are has to
+   be able to say it. */
+.pk-mt-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;row-gap:8px}
+.pk-mt-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 150px}
+.pk-sec-nav{display:flex;align-items:center;gap:5px;min-width:0;flex:1 1 250px;justify-content:flex-end}
+.pk-sec-sel{flex:1 1 auto;min-width:0}
 /* The two buttons that aren't just a step sideways — jump-to-everything and
    the text-style panel — are sized up from the ◀/▶ steppers so they read as
    controls in their own right (and stay easy to hit on a touch screen). */
@@ -535,14 +539,18 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 #mb{position:relative;background:var(--white);border-radius:13px;padding:22px;width:400px;max-width:93vw}
 .mt{font-size:15px;font-weight:500;margin-bottom:12px;color:var(--t1)}
 .mi{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13.5px;outline:none;font-family:var(--ui);color:var(--t1);background:var(--paper);margin-bottom:14px}
+/* v04.17 — no ::placeholder rule at all meant the browser's own #757575:
+   4.2:1 on the default paper and 1.9:1 on a derived one. --t3 follows the
+   pane background (v04.16), so it reads on every one of them. */
+.mi::placeholder{color:var(--t3);opacity:1}
 .mi:focus{border-color:var(--green)}
 .ma{display:flex;gap:8px;justify-content:flex-end}
 .mm{font-size:13.5px;color:var(--t2);margin-bottom:16px;line-height:1.55}
 .pl{max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);margin-bottom:13px}
-.pr{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer}
+.pr{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;min-height:36px}
 .pr:hover{background:var(--paper)}
 .pc{width:15px;height:15px;border:1.5px solid var(--border2);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}
- .pk-chev{display:inline-block;width:28px;text-align:center;color:var(--t3);cursor:pointer;font-size:22px;line-height:1;flex-shrink:0;user-select:none}
+ .pk-chev{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;color:var(--t3);cursor:pointer;font-size:22px;line-height:1;flex-shrink:0;user-select:none;border-radius:6px}
  .pk-chev-sp{cursor:default}
 .pc.on{background:var(--green);border-color:var(--green)}
 .pr.drg{opacity:.35}
@@ -551,20 +559,55 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .pr.doi{background:rgba(27,122,70,.18)!important;border-radius:4px}
 .pr.pk-target{outline:1.5px dashed var(--green);outline-offset:-2px;border-radius:4px}
 .pk-acts{display:flex;gap:2px;margin-left:4px;flex-shrink:0}
-.pk-act{font-size:11px;opacity:.5;cursor:pointer;padding:3px 4px;border-radius:4px;flex-shrink:0}
+/* v04.17 — these were 22×19 and 19×19, the same on a phone as on a laptop.
+   The sidebar's rule applies here too: one size, one shape, and a real touch
+   target where there is a thumb. */
+.pk-act{font-size:12px;opacity:.6;cursor:pointer;border-radius:6px;flex-shrink:0;
+        width:28px;height:28px;display:inline-flex;align-items:center;
+        justify-content:center;line-height:1}
 .pk-act:hover{opacity:1;background:var(--paper)}
 .pk-rn-inp{flex:1;font-size:13px;padding:2px 5px;border:1px solid var(--green);border-radius:4px;font-family:var(--ui);color:var(--t1);background:var(--white);min-width:0}
-.pk-target-lbl{font-size:11px;color:var(--t3);margin:0 0 6px;display:flex;align-items:center;gap:6px}
+.pk-target-lbl{font-size:11.5px;color:var(--t2);margin:0 0 6px;display:flex;align-items:center;gap:6px}
 .pk-target-clear{cursor:pointer;opacity:.6}
 .pk-target-clear:hover{opacity:1}
-.pf{display:flex;align-items:center;gap:7px;padding:4px 12px;color:var(--t3);cursor:pointer}
+.pf{display:flex;align-items:center;gap:7px;padding:5px 12px;color:var(--t2);cursor:pointer;min-height:32px}
 .pf:hover{background:var(--paper);color:var(--t1)}
 .pf.drg{opacity:.35}
 .pf-nm{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
-.pnav{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer}
+.pnav{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;min-height:36px}
 .pnav:hover{background:var(--paper)}
 .pnav-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--t1)}
-.pnav-cnt{font-size:11px;color:var(--t3);flex-shrink:0}
+.pnav-cnt{font-size:11px;color:var(--t2);flex-shrink:0}
+/* A group heading in the pop-out's search results sits on a strip, the way a
+   section heading does in the sidebar — it separates the groups, and it puts
+   the heading on more contrast than the rows under it. Was three identical
+   inline styles in --t3. */
+.pk-grp-hd,.pk-sec-hd{padding:6px 12px 5px;font-size:10.5px;font-weight:700;
+           text-transform:uppercase;letter-spacing:.04em;color:var(--t2);
+           background:var(--paper);border-top:1px solid var(--border);
+           border-bottom:1px solid var(--border)}
+.pk-grp-hd:first-child,.pk-sec-hd:first-child{border-top:none}
+.pk-sec-hd{display:flex;align-items:center;gap:3px;user-select:none;-webkit-user-select:none}
+.pk-sec-hd:hover{background:var(--border)}
+/* The pop-out's own title bar: the two steppers were 20×20 beside two 30×30
+   neighbours and a 22px-tall section dropdown, and every one of them stayed
+   that size on a phone, where this window is full screen. */
+.pk-mt-row .p2h-sec-nav-btn{width:32px;height:32px;font-size:14px;flex-shrink:0;
+           display:inline-flex;align-items:center;justify-content:center;padding:0}
+.pk-mt-row .p2h-sec-nav-btn.pk-big-btn{width:32px;height:32px;font-size:15px}
+.pk-mt-row .pk-sec-sel{height:32px;min-width:142px;padding:3px 10px}
+#mb.mb-rsz .btn{min-height:34px}
+@media(max-width:1199.98px){
+  #mb.mb-rsz .pr,#mb.mb-rsz .pnav{min-height:44px}
+  #mb.mb-rsz .pf{min-height:40px}
+  #mb.mb-rsz .pk-act,#mb.mb-rsz .pk-chev{width:38px;height:38px;font-size:15px}
+  #mb.mb-rsz .pk-chev{font-size:24px}
+  #mb.mb-rsz .btn{min-height:44px}
+  #mb.mb-rsz .mi{min-height:44px}
+  .pk-mt-row .p2h-sec-nav-btn,.pk-mt-row .p2h-sec-nav-btn.pk-big-btn{width:42px;height:42px;font-size:17px}
+  .pk-mt-row .pk-sec-sel{height:42px;min-width:132px;font-size:12px}
+  #mb.mb-rsz .pf-nm{font-size:12.5px}
+}
 /* Resizable modal (folder picker) */
 #mb.mb-rsz{display:flex;flex-direction:column;overflow:hidden}
 #mb.mb-rsz>*{flex-shrink:0}
@@ -2338,7 +2381,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.16</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.17</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -15011,7 +15054,7 @@ function _pkAllSectionsHTML(){
     const roots=DB.folders.filter(f=>!f.parentId&&f.sectionId===sec.id).sort((a,b)=>a.order-b.order);
     const open=!!ST.pkAllSecOpen[sec.id];
     const chev=roots.length?(open?'▾':'▸'):'';
-    const hd=`<div class="pk-sec-hd" onclick="pkToggleAllSec('${esc(sec.id)}')" style="cursor:pointer;display:flex;align-items:center;gap:2px;padding:6px 8px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">`
+    const hd=`<div class="pk-sec-hd" onclick="pkToggleAllSec('${esc(sec.id)}')" style="cursor:pointer">`
       +`<span class="pk-chev" style="font-size:16px;width:20px">${chev}</span>📂 ${esc(sec.name)}</div>`;
     if(!open)return hd;   // section starts (and returns to) collapsed — its root folders don't even render until opened
     const body=roots.length
@@ -15030,7 +15073,7 @@ const _PK_SMART_GROUP_KEY='__smart__';
 function _pkAllSmartHTML(){
   if(!sfOrdered().length)return '';
   const open=!!ST.pkAllSecOpen[_PK_SMART_GROUP_KEY];
-  const hd=`<div class="pk-sec-hd" onclick="pkToggleAllSec('${_PK_SMART_GROUP_KEY}')" style="cursor:pointer;display:flex;align-items:center;gap:2px;padding:6px 8px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">`
+  const hd=`<div class="pk-sec-hd" onclick="pkToggleAllSec('${_PK_SMART_GROUP_KEY}')" style="cursor:pointer">`
     +`<span class="pk-chev" style="font-size:16px;width:20px">${open?'▾':'▸'}</span>⚡ ${esc(DB.sfLabel||'Smart Views')}</div>`;
   return open?hd+_pkSmartListHTML():hd;   // collapsed by default, like every section group
 }
@@ -15137,7 +15180,7 @@ function _pkKindsListHTML(){
   return cats.map(cat=>{
     const ks=kinds.filter(k=>(k.catId||'cat-general')===cat.id);
     if(!ks.length)return '';
-    return `<div style="padding:6px 12px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">${cat.icon||''} ${esc(cat.name)}</div>`
+    return `<div class="pk-grp-hd">${cat.icon||''} ${esc(cat.name)}</div>`
       +ks.map(k=>`<div class="pnav" data-name="${esc(k.name.toLowerCase())}" onclick="pkNavScope('kind','${esc(k.id)}')">`
         +`<span class="nti-dot" style="background:${k.color}"></span>`
         +`<span class="pnav-nm">${esc(k.name)}</span>`
@@ -15278,7 +15321,7 @@ function _pkGlobalSearchHTML(q){
   if(!folderHits.length&&!noteHits.length&&!smartHits.length&&!tagHits.length&&!kindHits.length){
     return '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">No matches</div>';
   }
-  const grpHd=label=>`<div style="padding:6px 12px 2px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3)">${label}</div>`;
+  const grpHd=label=>`<div class="pk-grp-hd">${label}</div>`;
   let h='';
   if(folderHits.length){
     h+=grpHd('📁 Folders')+folderHits.map(f=>{
