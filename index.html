@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="--forest: #0D1A12; --green: #1B7A46; --green2: #155F37; --greenlt: #E8F5EE; --gold: #B8873A; --paper: #F7F4ED; --white: #FFFFFF; --border: #E4DFD3; --border2: #CFC9BB; --t1: #1A1612; --t2: #5A544A; --t3: #9A9289; --fs-sidebar: 12.5px; --fs-list: 13px; --fs-content: 17px; --lh-content: 1.6; --pp-gap: 12px;"><head>
+<html lang="en" style="--forest: #0D1A12; --green: #1B7A46; --green2: #155F37; --greenlt: #E8F5EE; --gold: #B8873A; --paper: #F7F4ED; --white: #FFFFFF; --border: #E4DFD3; --border2: #CFC9BB; --t1: #1A1612; --t2: #5A544A; --t3: #6B665F; --fs-sidebar: 12.5px; --fs-list: 13px; --fs-content: 17px; --lh-content: 1.6; --pp-gap: 12px;"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Knowledge Notebook</title>
@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.15">
+<meta name="app-version" content="04.16">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -53,7 +53,9 @@
   --forest:#0D1A12;--forest2:#172315;--green:#1B7A46;--green2:#155F37;
   --greenlt:#E8F5EE;--gold:#B8873A;--paper:#F7F4ED;--white:#FFFFFF;
   --border:#E4DFD3;--border2:#CFC9BB;
-  --t1:#1A1612;--t2:#5A544A;--t3:#9A9289;
+  --t1:#1A1612;--t2:#5A544A;--t3:#6B665F;   /* v04.16 — #9A9289 read 3.1:1 */
+  --body-ink:#2A261E;  /* the note's own reading/writing colour */
+  --on-accent:#FFFFFF; /* text on the accent colour — flips for a pale accent */
   --r:6px;--rl:10px;
   --ui:'DM Sans',sans-serif;--body:'Crimson Pro',Georgia,serif;
   /* Font-size variables — adjusted by Appearance ▸ Font sizes */
@@ -296,7 +298,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 /* Buttons */
 .btn{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:var(--r);cursor:pointer;font-size:12.5px;border:1px solid var(--border2);background:var(--paper);color:var(--t2);font-family:var(--ui);transition:background .1s;white-space:nowrap}
 .btn:hover{background:#EDEADF}
-.bp{background:var(--green)!important;color:#fff!important;border-color:transparent!important}
+.bp{background:var(--green)!important;color:var(--on-accent)!important;border-color:transparent!important}
 .bp:hover{background:var(--green2)!important}
 .bd{color:#C0392B!important;border-color:#F5C6C2!important;background:none!important}
 .bd:hover{background:#FEF0EE!important}
@@ -383,7 +385,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
  .note-dateline-hr{border:none;border-top:1px solid var(--border);height:0;margin:6px 0 14px}
  #ed:empty::before{content:'Start writing here…';color:var(--t3);opacity:.55;font-style:italic;pointer-events:none}
 .av-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px}
-.av-body{font-family:var(--body);font-size:var(--fs-content);line-height:var(--lh-content);color:#2A261E}
+.av-body{font-family:var(--body);font-size:var(--fs-content);line-height:var(--lh-content);color:var(--body-ink)}
 .av-body h1{font-size:var(--fs-h1);font-weight:600;margin:22px 0 8px;color:var(--t1)}
 .av-body h2{font-size:var(--fs-h2);font-weight:600;margin:20px 0 7px;color:var(--t1)}
 .av-body h3{font-size:var(--fs-h3);font-weight:600;margin:15px 0 5px;color:var(--t1)}
@@ -410,7 +412,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .al-r{align-items:flex-end}
 .al-r span:nth-child(1){width:100%}.al-r span:nth-child(2){width:70%}.al-r span:nth-child(3){width:85%}
 .al-j span{width:100%}
-#ed{flex:1;padding:24px 38px;outline:none;font-family:var(--body);font-size:var(--fs-content);line-height:var(--lh-content);color:#2A261E;overflow-y:auto;max-width:96%;margin:0 auto;width:100%;min-height:0}
+#ed{flex:1;padding:24px 38px;outline:none;font-family:var(--body);font-size:var(--fs-content);line-height:var(--lh-content);color:var(--body-ink);overflow-y:auto;max-width:96%;margin:0 auto;width:100%;min-height:0}
 #ed h1{font-size:var(--fs-h1);font-weight:600;margin:18px 0 7px;color:var(--t1)}
 #ed h2{font-size:var(--fs-h2);font-weight:600;margin:16px 0 6px;color:var(--t1)}
 #ed h3{font-size:var(--fs-h3);font-weight:600;margin:12px 0 4px;color:var(--t1)}
@@ -710,12 +712,12 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .tag-it.on{background:rgba(27,122,70,.15);color:#B8E8C4}
 .tag-ct{font-size:10px;background:rgba(255,255,255,.07);padding:1px 6px;border-radius:9px;flex-shrink:0;color:#4A6A4D;margin-left:6px}
 .art-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
-.art-tag{font-size:11.5px;background:rgba(13,148,136,.07);color:#0d9488;padding:3px 10px;border-radius:12px;cursor:pointer;border:1px solid rgba(13,148,136,.18);font-family:var(--ui);line-height:1.5}
+.art-tag{font-size:11.5px;background:rgba(13,148,136,.07);color:var(--t1);padding:3px 10px;border-radius:12px;cursor:pointer;border:1px solid rgba(13,148,136,.18);font-family:var(--ui);line-height:1.5}
 .art-tag:hover{background:rgba(13,148,136,.16)}
 .tag-ed-row{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0}
 .tag-ed-lbl{font-size:11px;color:var(--t3);white-space:nowrap;flex-shrink:0}
 .tag-editor{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:3px 8px;border:.5px solid var(--border2);border-radius:6px;background:var(--paper);min-height:30px;cursor:text;flex:1;min-width:0}
-.tag-chip{display:inline-flex;align-items:center;background:rgba(13,148,136,.09);color:#0d9488;font-size:11.5px;padding:2px 7px 2px 9px;border-radius:11px;border:1px solid rgba(13,148,136,.2);font-family:var(--ui)}
+.tag-chip{display:inline-flex;align-items:center;background:rgba(13,148,136,.09);color:var(--t1);font-size:11.5px;padding:2px 7px 2px 9px;border-radius:11px;border:1px solid rgba(13,148,136,.2);font-family:var(--ui)}
 .tag-x{cursor:pointer;font-size:15px;line-height:1;opacity:.5;margin-left:3px}
 .tag-x:hover{opacity:1}
 .tag-inp{border:none;outline:none;background:transparent;font-size:12px;color:var(--t1);font-family:var(--ui);min-width:70px;flex:1;padding:1px 0}
@@ -880,7 +882,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
         cursor:pointer;font-size:12.5px;font-weight:600;background:var(--paper);
         color:var(--t2);font-family:var(--ui);line-height:1;transition:all .12s}
 .ls-btn:hover{border-color:var(--green);color:var(--green);background:var(--greenlt)}
-.ls-btn.on{border-color:var(--green);color:#fff;background:var(--green)}
+.ls-btn.on{border-color:var(--green);color:var(--on-accent);background:var(--green)}
 
 /* ── Auto-save UI ───────────────────────────────────────────────────── */
 .sb-autosave{background:rgba(56,189,248,.07);border-color:rgba(56,189,248,.22);color:#6BB8D8}
@@ -952,7 +954,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
     gap:20px;padding:40px 24px;height:100%;box-sizing:border-box;font-family:var(--ui)}
 .lp-qc{display:flex;flex-direction:column;align-items:center;gap:5px;
        padding:22px 52px;font-size:15px;font-weight:600;letter-spacing:.01em;
-       background:var(--green);color:#fff;border:none;border-radius:14px;
+       background:var(--green);color:var(--on-accent);border:none;border-radius:14px;
        cursor:pointer;font-family:var(--ui);min-width:190px;
        box-shadow:0 2px 12px rgba(27,122,70,.28);transition:background .15s,transform .1s}
 .lp-qc:hover{background:var(--green2)}
@@ -1402,7 +1404,7 @@ sup.ann-sup:hover{text-decoration:underline}
 .nti-chip:hover{opacity:.8}
 .nti-chip.on{box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .nti-no-type{font-size:11px;color:var(--t3);font-style:italic;white-space:nowrap;flex-shrink:0}
-/*save-accent*/.nti-save{background:var(--green)!important;border-color:var(--green)!important;color:#fff!important}
+/*save-accent*/.nti-save{background:var(--green)!important;border-color:var(--green)!important;color:var(--on-accent)!important}
 .nti-picker-btn{font-size:11px;font-weight:600;padding:2px 9px;
   border:1.4px dashed var(--border2);border-radius:999px;
   background:transparent;color:var(--t2);cursor:pointer;
@@ -1508,7 +1510,7 @@ sup.ann-sup:hover{text-decoration:underline}
   background:var(--paper);width:100%;position:relative}
 /* v03.NotePane.C4 — Save-flash chip, done-dimming, colour popup */
 .save-flash{position:absolute;right:12px;top:50%;transform:translateY(-50%);
-  font-size:11px;font-weight:600;color:#fff;background:var(--green,#1B7A46);
+  font-size:11px;font-weight:600;color:var(--on-accent);background:var(--green,#1B7A46);
   border-radius:10px;padding:2px 9px;opacity:0;pointer-events:none;
   transition:opacity .25s ease;white-space:nowrap;z-index:3}
 .save-flash.show{opacity:.92}
@@ -1543,7 +1545,7 @@ sup.ann-sup:hover{text-decoration:underline}
 #ed .ed-blk-dragging{opacity:.4}
 @media(max-width:639.98px){#ed .ed-col-grip{width:22px;height:24px;font-size:14px;opacity:.55}}
 #ed-drop-line{display:none}
-#ed-drag-ghost{position:fixed;display:none;z-index:100000;pointer-events:none;background:var(--green);color:#fff;font-size:12px;padding:3px 9px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.28);max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--ui)}
+#ed-drag-ghost{position:fixed;display:none;z-index:100000;pointer-events:none;background:var(--green);color:var(--on-accent);font-size:12px;padding:3px 9px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.28);max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--ui)}
 #ed .ed-col-preview{color:var(--t3);font-size:12px;font-style:italic;opacity:.75;
   padding:2px 0 4px 24px;user-select:none;-webkit-user-select:none}
 @media(max-width:639.98px){.ed-col-btn{padding:5px 10px;font-size:12px}
@@ -2324,7 +2326,7 @@ sup.ann-sup:hover{text-decoration:underline}
 #login-card input{width:100%;box-sizing:border-box;padding:10px 13px;border:1px solid var(--border2);border-radius:var(--r);font-size:14.5px;font-family:var(--ui);color:var(--t1);background:var(--white);outline:none;transition:border-color .15s;}
 #login-card input:focus{border-color:var(--green);}
 #login-err{color:#dc2626;font-size:12px;text-align:center;min-height:16px;margin:-4px 0;}
-#login-btn{width:100%;padding:11px;background:var(--green);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;font-family:var(--ui);transition:background .15s;margin-top:2px;}
+#login-btn{width:100%;padding:11px;background:var(--green);color:var(--on-accent);border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;font-family:var(--ui);transition:background .15s;margin-top:2px;}
 #login-btn:hover{background:var(--green2);}
 #login-btn:disabled{opacity:0.6;cursor:not-allowed;}
 #login-footer{text-align:center;font-size:11px;color:var(--paper);margin-top:4px;}
@@ -2336,7 +2338,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.15</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.16</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -15798,7 +15800,7 @@ function tagInputChanged(ev){
 /* ── Theme system ────────────────────────────────────────────────────── */
 
 const THEMES = {
-  forest:  {name:'Forest',  vars:{'--forest':'#0D1A12','--green':'#1B7A46','--green2':'#155F37','--greenlt':'#E8F5EE','--gold':'#B8873A','--paper':'#F7F4ED','--white':'#FFFFFF','--border':'#E4DFD3','--border2':'#CFC9BB','--t1':'#1A1612','--t2':'#5A544A','--t3':'#9A9289'}},
+  forest:  {name:'Forest',  vars:{'--forest':'#0D1A12','--green':'#1B7A46','--green2':'#155F37','--greenlt':'#E8F5EE','--gold':'#B8873A','--paper':'#F7F4ED','--white':'#FFFFFF','--border':'#E4DFD3','--border2':'#CFC9BB','--t1':'#1A1612','--t2':'#5A544A','--t3':'#6B665F'}},
   ocean:   {name:'Ocean',   vars:{'--forest':'#0C1E3C','--green':'#2563EB','--green2':'#1D4ED8','--greenlt':'#DBEAFE','--gold':'#0EA5E9','--paper':'#F0F6FF','--white':'#FFFFFF','--border':'#BFDBFE','--border2':'#93C5FD','--t1':'#0F172A','--t2':'#334155','--t3':'#64748B'}},
   amber:   {name:'Amber',   vars:{'--forest':'#1C1407','--green':'#D97706','--green2':'#B45309','--greenlt':'#FEF3C7','--gold':'#92400E','--paper':'#FFFBF0','--white':'#FFFEF5','--border':'#FDE68A','--border2':'#FCD34D','--t1':'#1A1207','--t2':'#78350F','--t3':'#B45309'}},
   indigo:  {name:'Indigo',  vars:{'--forest':'#1E1B4B','--green':'#7C3AED','--green2':'#6D28D9','--greenlt':'#EDE9FE','--gold':'#A78BFA','--paper':'#F5F3FF','--white':'#FFFFFF','--border':'#DDD6FE','--border2':'#C4B5FD','--t1':'#1E1B4B','--t2':'#4C1D95','--t3':'#6D28D9'}},
@@ -15868,6 +15870,69 @@ function applySidebarInk(){
   set('--sb-amber',    dark?'#FFB24D':'#7A4100');
   return dark;
 }
+/* ── Pane ink (v04.16) ────────────────────────────────────────────────
+   Panes 2 and 3 sit on two colours the owner sets — Appearance ▸ Pane
+   background and Accent — so they carry the same defect the sidebar had.
+   Measured before anything was changed: a pale accent leaves every white
+   label on an accent button unreadable, and a dark pane background left the
+   note's own title and body at 1.1:1.
+
+   The pane answer is NOT the sidebar's. The sidebar is a plain surface, so
+   its ink can simply flip. A note is not: its headings carry pale bands
+   (#F0FDFA and friends) baked into the stylesheet, its widgets and chips are
+   pale-with-dark-text, and flipping the ink under them turns light text onto
+   light bands — measured at 1.0:1, worse than the problem. A dark reading
+   page is a real dark mode and a round of its own.
+
+   So the content area stays a PAPER surface, and this keeps it one: a chosen
+   pane background is lightened until dark text can live on it, and then the
+   three ink levels are derived from that background rather than inherited
+   from a preset that knew nothing about it. Every colour the picker can
+   produce ends up readable, which is the promise that can actually be kept
+   and measured. The owner is told when their colour was lightened. */
+const PANE_MIN_LUM=0.35;   /* below this, no dark ink reaches 4.5:1 */
+function _paneSafePaper(hex){
+  if(!/^#[0-9a-fA-F]{6}$/.test(hex)) return hex;
+  let c=hex,guard=0;
+  while(_sbLum(c)<PANE_MIN_LUM && guard++<30) c=hexLighten(c,.08);
+  return c;
+}
+/* an ink of the paper's own hue, darkened until it clears `target`:1 on it */
+function _paneInk(paper,target){
+  const lb=_sbLum(paper);
+  let c=paper,guard=0;
+  while(((lb+0.05)/(_sbLum(c)+0.05))<target && guard++<40) c=hexDarken(c,.12);
+  return c;
+}
+/* the accent, darkened until it clears 4.6:1 on the pale tint it is written
+   on — that tint is hexLighten(accent,.87), so it is computed against it */
+function _accentInk(accent){
+  if(!/^#[0-9a-fA-F]{6}$/.test(accent)) return accent;
+  const lb=_sbLum(hexLighten(accent,.87));
+  let c=hexDarken(accent,.15),guard=0;
+  while(((lb+0.05)/(_sbLum(c)+0.05))<4.6 && guard++<40) c=hexDarken(c,.12);
+  return c;
+}
+function applyPaneInk(themeData){
+  const root=document.documentElement;
+  const cs=getComputedStyle(root);
+  const set=(k,v)=>root.style.setProperty(k,v);
+  const accent=cs.getPropertyValue('--green').trim();
+  /* 0.19 is where white text and dark text score the same on a colour. */
+  set('--on-accent', _sbLum(accent)<0.19?'#FFFFFF':'#141210');
+  const bg=(themeData&&themeData.custom&&themeData.custom.bg)||'';
+  if(!/^#[0-9a-fA-F]{6}$/.test(bg)) return '';   /* preset paper — its own inks are right */
+  const paper=_paneSafePaper(bg);
+  set('--paper',paper);
+  set('--white',   hexLighten(paper,.55));
+  set('--border',  hexDarken(paper,.10));
+  set('--border2', hexDarken(paper,.20));
+  set('--t1',      _paneInk(paper,9));
+  set('--t2',      _paneInk(paper,6));
+  set('--t3',      _paneInk(paper,4.8));
+  set('--body-ink',_paneInk(paper,8));
+  return paper;
+}
 function applyTheme(themeData){
   const root=document.documentElement;
   const preset=THEMES[themeData.preset]||THEMES.forest;
@@ -15876,14 +15941,18 @@ function applyTheme(themeData){
   if(cu.sidebar) root.style.setProperty('--forest',cu.sidebar);
   if(cu.accent){
     root.style.setProperty('--green',cu.accent);
-    root.style.setProperty('--green2',hexDarken(cu.accent,.15));
+    /* --green2 is the accent AS TEXT — links, the folder chip under a note
+       title. A flat 15% darken leaves a pale accent at 2:1, so it is darkened
+       until it actually reads on the pane it is written on. */
+    root.style.setProperty('--green2',_accentInk(cu.accent));
     root.style.setProperty('--greenlt',hexLighten(cu.accent,.87));
   }
   if(cu.bg){
+    /* applyPaneInk() below lightens this if it has to and derives the inks
+       from whatever it settles on — see PANE_MIN_LUM. */
     root.style.setProperty('--paper',cu.bg);
-    root.style.setProperty('--border',hexDarken(cu.bg,.08));
-    root.style.setProperty('--border2',hexDarken(cu.bg,.15));
   }
+  applyPaneInk(themeData);         /* v04.16 — after --paper and --green are */
   const darkSb=applySidebarInk();  /* v04.15 — after --forest is settled */
   /* The search-results text colour is the owner's to set; when they have not
      set one it follows the sidebar's ink, instead of being a fixed white
@@ -15907,6 +15976,15 @@ function setCustomColor(key,val){
   if(!DB.theme.custom)DB.theme.custom={};
   DB.theme.custom[key]=val;
   applyTheme(DB.theme);
+  /* v04.16 — a pane background too dark for the note text to live on is
+     lightened rather than applied as chosen (see applyPaneInk). Say so, or
+     the owner is left wondering why the colour they picked is not the colour
+     they got. Once per change, and only when it actually moved. */
+  if(key==='bg'){
+    const got=getComputedStyle(document.documentElement).getPropertyValue('--paper').trim();
+    if(got && got.toLowerCase()!==String(val).toLowerCase())
+      toast('That colour was too dark to read notes on, so it has been lightened to '+got.toUpperCase()+'. A dark reading page needs a full dark mode, which is not built yet.');
+  }
   // Sync the hex input next to this colour picker
   const hex=document.getElementById('hex-'+key);
   if(hex)hex.value=val;

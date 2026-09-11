@@ -10,7 +10,7 @@ Playwright and Chromium are already installed in the Claude Code sandbox and
 
 ```bash
 node tools/ship-check.mjs     # ~1s, no browser. Run before EVERY push.
-node tools/app-check.mjs      # ~30s, real browser. Run before every push too.
+node tools/app-check.mjs      # ~2min, real browser. Run before every push too.
 node tools/probe.mjs --views  # not a test — dumps what the app really renders
 node tools/shot.mjs           # screenshots at phone / tablet / desktop
 ```
@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 89 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 96 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -77,6 +77,13 @@ or quietly lose the notebook, none of which need a browser:
   including a pale one and a mid grey, plus an empty notebook for the
   "nothing here yet" lines; and the ink is proved to flip on a pale sidebar
   (v04.15);
+- **every word in panes 2 and 3 reads at every colour the pickers allow** —
+  the same sweep pointed at `#p2`/`#p3`, in four states (landing, a folder
+  open, a note read, the same note being edited), with the theme as it ships
+  and with the pane-background and accent pickers at their least forgiving;
+  plus the mechanism: a pane background too dark to write on is lightened and
+  the inks re-derived from what it becomes, and white stops being the label
+  colour on a pale accent (v04.16);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -134,6 +141,11 @@ assertions miss.
   so anything that measures at render time measures a width the pane never
   has. Measure again after a `requestAnimationFrame` (and on resize) before
   trusting the number, or asserting on it.
+- **Two full colour sweeps cost about a minute and a half.** `app-check` is
+  no longer a 30-second run: sections 6i and 6j boot eleven browsers between
+  them (six sidebar colours, five pane settings, four states each). It is
+  still one command and still the whole gate — just do not expect it back
+  instantly, and do not add a sweep colour without asking what it proves.
 - **A contrast check that names elements only proves the elements you thought
   of.** `COLLECT()` in section 6i takes every element in `#sb` with a word of
   its own instead, and composites the background stack outward until it hits

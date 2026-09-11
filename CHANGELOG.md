@@ -983,3 +983,82 @@ not a number that cannot be met.
   dead rule cannot be measured.
 - **No sync, storage or export path was touched.** I1–I4 are untouched by a
   stylesheet and one function that reads a colour.
+
+---
+
+## v04.16 — the middle and right panes, measured the same way (11 September 2026)
+
+The third round of the same job. v04.14 did the sidebar header, v04.15 the
+sidebar list; the owner then asked for the panes. The sweep was pointed at
+`#p2` and `#p3` **before** anything was changed, and the first finding was
+not about custom colours at all:
+
+**14 of 36 pieces of text in the panes were below 4.5:1 on the theme as it
+ships.** Every one of them `var(--t3)` at 2.7–3.1:1 — the dates under note
+titles, `🏠 Home`, `▤ Preview`, `🌳 Full tree`, `ARTICLES (1)`, `＋ Add Tab`,
+`🔀 Start Versioning`, `Set the Status`, `🏷 Tags` — plus the tag chips in a
+teal that scored 3.1:1. Nobody had to pick a strange colour for any of that;
+it was the default.
+
+`--t3` is now `#6B665F` instead of `#9A9289` (3.1:1 → 5.7:1 on white), the
+tag chips keep their teal tint and border but write the word itself in the
+pane's ink, and the note's own body colour stopped being a hex — it is
+`--body-ink`, a token, like everything else here.
+
+**Why the panes did NOT get the sidebar's treatment**
+
+The sidebar is a plain surface, so v04.15 could simply flip its ink for a
+dark colour. A note is not a plain surface: its headings carry pale bands
+baked into the stylesheet (`.av-body h1{background:#F0FDFA}` and friends),
+and its chips and widgets are pale-with-dark-text throughout. The first cut
+of this round flipped the pane ink the same way and **measured worse** — the
+note's own `One` and `Sub` headings went to 1.0:1, light text on a light
+band. A dark reading page is a real dark mode, and it is a round of its own.
+
+So the content area stays a paper surface, and the round keeps it one:
+
+- **A pane background too dark to write on is lightened until dark ink can
+  live on it** (`PANE_MIN_LUM = 0.35`), and the owner is told in a toast
+  which colour they actually got and why. `#16202A` becomes `#A1A6A9`.
+- **The three ink levels are then derived from that background**, not
+  inherited from a preset that knew nothing about it: `--t1` at 9:1, `--t2`
+  at 6:1, `--t3` at 4.8:1, `--body-ink` at 8:1, each darkened from the
+  paper's own hue until it clears its target.
+- **`--on-accent`** is white or near-black depending on the accent's
+  luminance, and every white-on-accent label now uses it — a pale accent used
+  to erase `✚ Note`, `✏️ Edit`, `💾 Save`, `✓ Saved` and `Quick Note`.
+- **`--green2` is derived too.** It is the accent *as text* (links, the
+  folder chip under a note title); a flat 15% darken left a pale accent at
+  2.0:1, so it is now darkened until it clears 4.6:1 on the tint it is
+  written on.
+
+**Measured**
+
+11/11 ship checks, and app checks from 89 to **96**.
+
+Five of the seven new ones sweep every word in both panes across four states
+— the landing page, a folder open, a note being read, the same note being
+edited — with: the theme as it ships, a pane background far too dark, a mid
+grey one, a pale accent, and a pale accent on a dark background. 36 pieces of
+text per run, worst score anywhere **4.8:1**. The other two prove the
+mechanism: the dark colour is lightened and the inks re-derived from what it
+becomes (body text 8.0:1, faintest ink 5.0:1), and white stops being the
+label colour on an accent too pale to carry it.
+
+Putting `#9A9289` back fails two of them.
+
+**What was NOT done, and why**
+
+- **A dark reading page is not supported** — it is lightened instead, with a
+  toast that says so. Doing it properly means dark variants for the heading
+  bands, the note widgets, the chips and every pale panel in pane 3. Offered
+  as its own round.
+- **Only what the panes render in those four states was measured.** The
+  calendar, kanban, journal and folder-browser panels have their own colours
+  and were not swept; the same net will catch them when it is pointed at them.
+- **`var(--hover)` is undefined** — 56 rules use it, so 56 hover states do
+  nothing at all. Found while reading; it is a cosmetic defect in a different
+  class from this round's, and defining it changes 56 places that would then
+  need measuring. Recorded here, not fixed.
+- **No sync, storage or export path was touched.** I1–I4 are untouched by a
+  stylesheet, two derivations and a toast.
