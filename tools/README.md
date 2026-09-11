@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 54 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 80 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -63,6 +63,13 @@ or quietly lose the notebook, none of which need a browser:
   as Pane 3 narrows, never overflows, clips nothing, keeps Edit out and every
   folded control reachable from a palette, and meets a 42px touch size on a
   phone — with the palettes measured doing the thing they name (v04.09);
+- **the sidebar header reads on any sidebar colour, and fits its own pane** —
+  real WCAG contrast for the version badge and the search box, each translucent
+  layer blended over the colour behind it, on the Forest preset *and* on a
+  custom one; nothing clipped at any width the sidebar can be dragged to
+  (160–540px); one square and one icon size for every button; the `▾` measured
+  on both of its dimensions; and a real mouse click on it that is looked at
+  again 250ms later (v04.14);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -120,6 +127,12 @@ assertions miss.
   so anything that measures at render time measures a width the pane never
   has. Measure again after a `requestAnimationFrame` (and on resize) before
   trusting the number, or asserting on it.
+- **A class toggled on a resize is not applied in the same frame.** The
+  sidebar header's fold runs from a `ResizeObserver` on `#sb`, so a check that
+  sets `#sb.style.width` and measures after two `requestAnimationFrame`s reads
+  a *transient* — a 200px sidebar measured 122px tall mid-fold and 84px once it
+  settled. Set the width, wait ~250ms, then measure. The same applies to
+  anything `_p3FitToolbar()` folds.
 - **`Math.min(width, height)` is not "how big is this button".** A 26×34px
   archive button reads as "26px" and looks like a broken CSS rule that is
   working perfectly. Assert on the dimension you actually mean — and on both,

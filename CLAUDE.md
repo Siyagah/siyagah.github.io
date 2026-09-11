@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.13.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.14.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,17 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.14** (11 Sep 2026) — the sidebar header, rebuilt to read. The version
+  number was a fixed grey (`#6A7F6C`): 4.3:1 on Forest, ~1.2:1 on the custom
+  teal the owner had set, i.e. invisible. Everything in that header is now
+  translucent black or white over whatever `--forest` is — recessed badge and
+  search field, raised buttons. The five buttons (37×36, 14×19, 37×36, 42×40,
+  37×45) became one square at one icon size, 34px desktop / 42px touch, and
+  `🏠 ▾` became a split button with a 26×34 (30×42 phone) chevron. Also found
+  while measuring: at a 200px sidebar the header ran 292px wide and pushed 🧰
+  and ⚙ off the pane — `_sbFitHeader()` now folds it against its own pane
+  width, watched by a `ResizeObserver` on `#sb`. 80/80 app checks (up from 70)
+  and 11/11 ship checks.
 - **v04.13** (11 Sep 2026) — the note-type chip is a badge, not a delete button.
   It called `toggleNoteKind()`, so one tap on what reads as a label stripped the
   note's type; it opens the type picker now. Also recorded: `general` is the
@@ -38,12 +49,6 @@ must never accumulate here instead of there.
   Pane 3 upward and fold first when the row runs out; both names are always in
   the `⋯` palette and the right-click menu. 62/62 app checks (up from 54) and
   11/11 ship checks.
-- **v04.09** (10 Sep 2026) — the note toolbar is one row that never wraps. It
-  measures its own pane and folds a group at a time into palettes (type
-  controls first, then actions, then the type chip), so a 390px phone shows
-  seven 44px buttons instead of three stacked rows. Buttons went from ~27px to
-  36px/44px, and the duplicate button's `🗐` — an empty box on Android — became
-  `⧉`. 54/54 app checks (up from 49) and 11/11 ship checks.
 ---
 
 ## What this is
@@ -209,6 +214,23 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A fixed colour in the sidebar is a colour that works until the owner
+  changes one setting.** `--forest` is owner-settable (Appearance ▸ Custom
+  colours), so the version number's hard-coded `#6A7F6C` measured 4.3:1 on the
+  Forest preset and about 1.2:1 on the teal the owner actually had — reported
+  as "the version number looks invisible". Paint sidebar chrome in translucent
+  black or white over whatever colour is behind it, and measure the blend, not
+  the swatch: lightening a mid-tone sidebar *lowers* contrast with white text
+  (17% white → 3.8:1) where darkening it raises it (28% black → 8.4:1). Cost:
+  a version number nobody could read for a whole version series. Fixed in
+  v04.14, with contrast measured on two sidebar colours by app-check.
+- **A flex item with `min-width:0` does not overflow — it disappears.** The
+  first cut of the v04.14 header let the logo shrink, so "Siyagah" was squeezed
+  to 0px while still in the DOM and `scrollWidth === clientWidth` said the row
+  fitted. A measure-then-fold function that asks "did this overflow" measures
+  nothing if the parts are allowed to shrink first. Make the row rigid, let it
+  overflow honestly, and fold on the overflow. Cost: caught in build, but it is
+  the same defect as v04.08's zero-width note-type chips, twice now.
 - **"It did not throw" and "the menu is populated" are both true of a menu that
   was closed in the same tick.** The note toolbar's `⋯` handed `showArtCtx()` a
   synthesised event — `{clientX, clientY, preventDefault(){}, stopPropagation(){}}`

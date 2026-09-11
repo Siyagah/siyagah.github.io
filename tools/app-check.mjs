@@ -952,6 +952,175 @@ await app.close();
   await s2.close();
 }
 
+/* ── 6h. v04.14: the sidebar header reads, and fits its own pane ───────── */
+/* Three complaints, one row: the version number was invisible, the buttons
+   were four different sizes, and the ▾ beside 🏠 was a 14×19px speck. */
+{
+  /* Relative luminance / contrast, WCAG 2.1. Colours come out of the browser
+     as rgb()/rgba(), so a translucent one is blended over what is behind it
+     before anything is judged — an alpha colour compared against nothing is
+     not a measurement. */
+  const px = (c) => { const m = String(c).match(/[\d.]+/g).map(Number);
+    return { r: m[0], g: m[1], b: m[2], a: m.length > 3 ? m[3] : 1 }; };
+  const over = (fg, bg) => ({ r: fg.r * fg.a + bg.r * (1 - fg.a),
+    g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a), a: 1 });
+  const lum = ({ r, g, b }) => { const f = (v) => { v /= 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05); };
+
+  /* The sidebar colour is owner-settable (Appearance ▸ Custom colours), so
+     the fixed grey #6A7F6C the version tag used to be painted in scored 4.3:1
+     on the Forest preset and about 1.2:1 on the teal the owner had actually
+     set — invisible, which is what was reported. Measured on both. */
+  for (const [label, sidebar] of [['the Forest preset', null], ['a custom teal sidebar', '#0B7A6B']]) {
+    const db = seedDB();
+    if (sidebar) db.theme = { preset: 'forest', custom: { sidebar } };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    await s.page.evaluate(() => { document.getElementById('sb').style.width = '390px'; });
+    await s.page.waitForTimeout(400);
+    const m = await s.page.evaluate(() => {
+      const tag = document.getElementById('app-version-tag');
+      const input = document.querySelector('.sb-si input');
+      const cs = getComputedStyle(tag);
+      return {
+        sbBg: getComputedStyle(document.getElementById('sb')).backgroundColor,
+        tag: { color: cs.color, bg: cs.backgroundColor, text: tag.textContent.trim(),
+          shown: tag.offsetParent !== null, w: Math.round(tag.getBoundingClientRect().width) },
+        siBg: getComputedStyle(document.querySelector('.sb-si')).backgroundColor,
+        input: getComputedStyle(input).color,
+        placeholder: getComputedStyle(input, '::placeholder').color,
+      };
+    });
+    await s.close();
+    const sbBg = px(m.sbBg);
+    const tagBg = over(px(m.tag.bg), sbBg);
+    const tagC = ratio(over(px(m.tag.color), tagBg), tagBg);
+    r.check(m.tag.shown && m.tag.w > 20 && tagC >= 4.5,
+      `the version badge is legible on ${label}`,
+      `${m.tag.text} — ${tagC.toFixed(1)}:1 against its own pill, ${m.tag.w}px wide, painted ${m.tag.shown}`);
+
+    const siBg = over(px(m.siBg), sbBg);
+    const phC = ratio(over(px(m.placeholder), siBg), siBg);
+    const inC = ratio(over(px(m.input), siBg), siBg);
+    r.check(phC >= 3 && inC >= 4.5,
+      `the search box reads on ${label} too — placeholder and typed text both`,
+      `placeholder ${phC.toFixed(1)}:1 · typed text ${inC.toFixed(1)}:1`);
+  }
+
+  /* The header is a PANE, not the screen: the sidebar is draggable from 160px
+     to 540px, so a 1440px laptop can be showing a 200px one. At 200px the old
+     header ran 292px wide and pushed 🧰 and ⚙ off the edge of the pane, where
+     nothing could reach them. Every width is measured after the layout has
+     settled — a class toggled on a resize is not applied in the same frame. */
+  {
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    const rows = [];
+    for (const w of [160, 200, 240, 280, 330, 390, 460, 540]) {
+      rows.push(await s.page.evaluate(async (width) => {
+        document.getElementById('sb').style.width = width + 'px';
+        await new Promise((ok) => setTimeout(ok, 250));
+        const hd = document.querySelector('.sb-hd');
+        const box = hd.getBoundingClientRect();
+        const vis = [...hd.querySelectorAll('button')].filter((b) => b.offsetParent !== null);
+        const outside = vis.filter((b) => { const q = b.getBoundingClientRect();
+          return q.left < box.left - 0.5 || q.right > box.right + 0.5
+              || q.top < box.top - 0.5 || q.bottom > box.bottom + 0.5; })
+          .map((b) => (b.title || b.textContent).trim().slice(0, 14));
+        const tag = document.getElementById('app-version-tag');
+        return { width, buttons: vis.length, outside,
+          overflow: hd.scrollWidth - hd.clientWidth,
+          badge: tag.offsetParent !== null && tag.getBoundingClientRect().width > 20,
+          name: document.querySelector('.sb-logo-name').offsetParent !== null,
+          rows: Math.round(box.height) };
+      }, w));
+    }
+    await s.close();
+    const bad = rows.filter((x) => x.outside.length || x.overflow > 1 || x.buttons !== 5 || !x.badge);
+    r.check(bad.length === 0,
+      'the header fits the sidebar at every width it can be dragged to, 160px to 540px',
+      bad.length ? bad.map((x) => `${x.width}px: ${x.buttons} buttons, ${x.overflow}px overflow`
+        + `${x.outside.length ? `, outside the header: ${x.outside.join(', ')}` : ''}${x.badge ? '' : ', version badge gone'}`).join(' · ')
+        : rows.map((x) => `${x.width}:${x.rows}px${x.name ? '' : ' (wordmark folded)'}`).join(' '));
+    /* The fold is measured, not guessed: the word "Siyagah" is the first
+       thing to go and it only goes when it genuinely does not fit. */
+    const wide = rows.filter((x) => x.width >= 390);
+    r.check(wide.every((x) => x.name),
+      'at a normal sidebar width the wordmark, the badge and all five buttons share one row',
+      wide.map((x) => `${x.width}px ${x.rows}px tall, wordmark ${x.name}`).join(' · '));
+  }
+
+  /* One size, one shape. The row was 37×36, 14×19, 37×36, 42×40 and 37×45,
+     in four different font sizes. The ▾ is the one deliberate exception: it
+     is the narrow half of a split button, so it is checked on both of its
+     dimensions — Math.min() would call a 26×34 target "26px". */
+  {
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    await s.page.evaluate(() => { document.getElementById('sb').style.width = '390px'; });
+    await s.page.waitForTimeout(400);
+    const m = await s.page.evaluate(() => {
+      const hd = document.querySelector('.sb-hd');
+      const b = [...hd.querySelectorAll('button')].filter((x) => x.offsetParent !== null)
+        .map((x) => { const q = x.getBoundingClientRect(); const c = getComputedStyle(x);
+          return { cv: x.classList.contains('sb-home-cv'), w: Math.round(q.width), h: Math.round(q.height),
+            radius: c.borderTopLeftRadius, fs: c.fontSize, t: (x.title || '').slice(0, 12) }; });
+      return { b };
+    });
+    await s.close();
+    const cv = m.b.find((x) => x.cv);
+    const rest = m.b.filter((x) => !x.cv);
+    const sizes = [...new Set(rest.map((x) => `${x.w}×${x.h}`))];
+    const fonts = [...new Set(rest.map((x) => x.fs))];
+    r.check(sizes.length === 1 && fonts.length === 1 && rest.every((x) => x.w >= 34 && x.h >= 34),
+      'every header button is the same square, in the same icon size',
+      `${rest.length} buttons at ${sizes.join(' / ')}, font ${fonts.join(' / ')}`);
+    r.check(!!cv && cv.w >= 26 && cv.h >= 34,
+      'the ▾ beside 🏠 is a real target, not the 14×19px speck it was',
+      cv ? `${cv.w}×${cv.h}` : 'the ▾ is not in the header at all');
+  }
+
+  /* Phone: the same row has to be thumb-sized. 42px is the size the note
+     toolbar is already held to (v04.09). Both dimensions, per the ▾ lesson. */
+  {
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+    await s.page.waitForTimeout(400);
+    const m = await s.page.evaluate(() => [...document.querySelectorAll('.sb-hd button')]
+      .filter((b) => b.offsetParent !== null)
+      .map((b) => { const q = b.getBoundingClientRect();
+        return { cv: b.classList.contains('sb-home-cv'), t: (b.title || '').slice(0, 12),
+          w: Math.round(q.width), h: Math.round(q.height) }; }));
+    const small = m.filter((x) => (x.cv ? x.w < 30 || x.h < 42 : x.w < 42 || x.h < 42));
+    r.check(m.length >= 5 && small.length === 0,
+      'on a phone every header button is a 42px touch target (the ▾ 30px wide, full height)',
+      small.length ? small.map((x) => `${x.t} ${x.w}×${x.h}`).join(', ')
+        : m.map((x) => `${x.w}×${x.h}`).join(' '));
+    await s.close();
+  }
+
+  /* And it still opens. A handler that survives is not a menu that stays
+     open — v04.11 shipped a ⋯ that passed both of those and was shut in the
+     same tick by the global click-closer. So: a real mouse click, then look
+     again a moment later and see whether the menu is still painted. */
+  {
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    const thrown = [];
+    s.page.on('pageerror', (e) => thrown.push(String(e).split('\n')[0]));
+    await s.page.evaluate(() => { document.getElementById('sb').style.width = '390px'; });
+    await s.page.waitForTimeout(400);
+    await s.page.locator('.sb-home-cv').click();
+    await s.page.waitForTimeout(250);
+    const dd = await s.page.evaluate(() => { const el = document.getElementById('sb-home');
+      const q = el.getBoundingClientRect();
+      return { painted: getComputedStyle(el).display !== 'none' && q.width > 0 && q.height > 0,
+        legacy: /Legacy App/.test(el.textContent) }; });
+    r.check(dd.painted && dd.legacy && thrown.length === 0,
+      'a real click on the ▾ opens the frozen-archives menu and it is still there a tick later',
+      `painted ${dd.painted} · names the legacy build ${dd.legacy}` + (thrown.length ? ` · threw: ${thrown[0]}` : ''));
+    await s.close();
+  }
+}
+
 /* ── 11. Layout at the three real screen sizes ─────────────────────────── */
 for (const vp of VIEWPORTS) {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
