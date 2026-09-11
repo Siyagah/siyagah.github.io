@@ -1270,6 +1270,103 @@ await app.close();
   }
 }
 
+/* ── 6j. v04.16: panes 2 and 3 read, at every colour the pickers allow ── */
+/* Same sweep as the sidebar's, pointed at the panes. It found 14 of 36
+   pieces of text below 4.5:1 at the DEFAULT theme — every date, "Home",
+   "Preview", "Full tree", "Articles (n)", "Set the Status" — all of them
+   var(--t3) at 2.7–3.1:1, before any custom colour was involved. */
+{
+  const PANE_COLLECT = (root) => {
+    const out = [];
+    for (const el of document.querySelectorAll(root + ' *')) {
+      if (el.offsetParent === null) continue;
+      const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
+      if (!/[A-Za-z0-9]/.test(own)) continue;
+      const cs = getComputedStyle(el);
+      const stack = [];
+      for (let n = el; n; n = n.parentElement) {
+        const c = getComputedStyle(n).backgroundColor;
+        if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') stack.push(c);
+        if (/^rgb\(/.test(c)) break;
+      }
+      out.push({ sel: el.className || el.tagName, text: own.slice(0, 22), color: cs.color, fs: cs.fontSize, stack });
+    }
+    return out;
+  };
+
+  /* The two pickers that sit under these panes, at their least forgiving:
+     a pane background far too dark to write on, a mid grey, an accent so
+     pale that white on it is invisible, and both at once. */
+  const SETTINGS = [
+    ['the theme as it ships', null],
+    ['a pane background too dark to read on', { bg: '#16202A' }],
+    ['a mid grey pane background', { bg: '#8A8F8C' }],
+    ['a pale accent colour', { accent: '#F2D06B' }],
+    ['a pale accent on a dark pane background', { bg: '#16202A', accent: '#F2D06B' }],
+  ];
+  for (const [label, custom] of SETTINGS) {
+    const db = seedDB();
+    if (custom) db.theme = { preset: 'forest', custom };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    await s.page.waitForTimeout(300);
+    const rows = [];
+    const grab = async () => { for (const root of ['#p2', '#p3']) rows.push(...(await s.page.evaluate(PANE_COLLECT, root)).map((x) => ({ ...x, root }))); };
+    await grab();                                                    /* the landing page */
+    await s.page.evaluate(() => { ST.folder = 'f1'; window.render(); });
+    await s.page.waitForTimeout(300); await grab();                  /* a folder open */
+    await s.page.evaluate(() => selArt('a1'));
+    await s.page.waitForTimeout(500); await grab();                  /* a note, reading */
+    await s.page.evaluate(() => { if (typeof startEdit === 'function') startEdit(); else { ST.editing = true; window.render(); } });
+    await s.page.waitForTimeout(500); await grab();                  /* the same note, editing */
+    await s.close();
+
+    const seen = new Set();
+    const scored = [];
+    for (const row of rows) {
+      const key = row.root + row.sel + row.color + row.stack.join();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const bg = flatten(row.stack);
+      scored.push({ ...row, c: ratio(over(px(row.color), bg), bg) });
+    }
+    scored.sort((a, b) => a.c - b.c);
+    const low = scored.filter((x) => x.c < 4.5);
+    r.check(low.length === 0 && scored.length > 20,
+      `every word in panes 2 and 3 reads with ${label}`,
+      low.length ? low.slice(0, 5).map((x) => `${x.c.toFixed(1)}:1 ${x.root} ${x.sel} ${JSON.stringify(x.text)} in ${x.color}`).join(' · ')
+        : `${scored.length} pieces of text across four states, worst ${scored[0].c.toFixed(1)}:1 (${scored[0].sel})`);
+  }
+
+  /* The mechanism. A dark pane background is not applied as chosen — the note
+     keeps pale heading bands and pale widgets baked into the stylesheet, so
+     flipping the ink under them measures WORSE (1.0:1) than leaving it. It is
+     lightened until dark ink can live on it, and the owner is told. */
+  {
+    const db = seedDB();
+    db.theme = { preset: 'forest', custom: { bg: '#16202A', accent: '#EFEFEF' } };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    await s.page.waitForTimeout(300);
+    const m = await s.page.evaluate(() => {
+      const cs = getComputedStyle(document.documentElement);
+      return { paper: cs.getPropertyValue('--paper').trim(),
+        body: cs.getPropertyValue('--body-ink').trim(),
+        t3: cs.getPropertyValue('--t3').trim(),
+        onAccent: cs.getPropertyValue('--on-accent').trim() };
+    });
+    await s.close();
+    const paper = px(m.paper.startsWith('#') ? `rgb(${parseInt(m.paper.slice(1, 3), 16)},${parseInt(m.paper.slice(3, 5), 16)},${parseInt(m.paper.slice(5, 7), 16)})` : m.paper);
+    const toRgb = (h) => px(`rgb(${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)})`);
+    const bodyC = ratio(toRgb(m.body), paper);
+    const t3C = ratio(toRgb(m.t3), paper);
+    r.check(m.paper.toLowerCase() !== '#16202a' && lum(paper) >= 0.35 && bodyC >= 4.5 && t3C >= 4.5,
+      'a pane background too dark to read on is lightened, and the inks are re-derived from what it becomes',
+      `#16202A → ${m.paper} · body text ${bodyC.toFixed(1)}:1 · faintest ink ${t3C.toFixed(1)}:1`);
+    r.check(m.onAccent.toLowerCase() !== '#ffffff',
+      'white stops being the label colour on an accent too pale to carry it',
+      `accent #EFEFEF → label ${m.onAccent}`);
+  }
+}
+
 /* ── 11. Layout at the three real screen sizes ─────────────────────────── */
 for (const vp of VIEWPORTS) {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });

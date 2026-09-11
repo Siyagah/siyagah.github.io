@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.15.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.16.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,18 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.16** (11 Sep 2026) — panes 2 and 3, swept the same way. The first
+  finding was not about custom colours: **14 of 36 pieces of text in the panes
+  were below 4.5:1 on the theme as it ships**, all of them `var(--t3)` at
+  2.7–3.1:1 (every date, `🏠 Home`, `▤ Preview`, `🌳 Full tree`,
+  `ARTICLES (n)`, `Set the Status`). `--t3` is `#6B665F` now. The panes did
+  NOT get the sidebar's ink flip — a note's headings carry pale bands baked
+  into the stylesheet, and flipping measured **worse** (1.0:1). Instead: a
+  pane background too dark to write on is lightened to `PANE_MIN_LUM` and the
+  owner told in a toast, the three ink levels are then derived from what it
+  becomes, and `--on-accent` / `--green2` are derived from the accent so a
+  pale accent stops erasing `✚ Note`, `💾 Save` and `Quick Note`. 96/96 app
+  checks (up from 89) and 11/11 ship checks.
 - **v04.15** (11 Sep 2026) — the sidebar list reads on any colour too. The
   headings, the count badges, the two bottom buttons, the per-section Smart
   View rows, the search-result labels and the empty-state lines were all fixed
@@ -46,12 +58,6 @@ must never accumulate here instead of there.
   reached the global `document` closer and shut the menu in the same tick.
   `Multi` is three upright sheets now instead of two squares. 68/68 app checks
   (up from 67) and 11/11 ship checks.
-- **v04.11** (10 Sep 2026) — `⧉ Copy`, `📦 Archive` and `🗑 Delete` left the note
-  row for the `⋯` menu that already held them; `📎 Attach` is permanently on the
-  row with `🏷 Note Type` as its first entry; every button is drawn in its own
-  rounded box. The round also found the `⋯` button had been **dead** — its
-  onclick passed a bare `curA.id`, a render-local, so it threw and opened
-  nothing. 67/67 app checks (up from 62) and 11/11 ship checks.
 ---
 
 ## What this is
@@ -147,7 +153,7 @@ device:
 ```bash
 git fetch origin main          # origin/main goes stale in a fresh session
 node tools/ship-check.mjs      # ~1s, no browser
-node tools/app-check.mjs       # ~30s, drives the real app in Chromium
+node tools/app-check.mjs       # ~2min, drives the real app in Chromium
 node tools/probe.mjs --views   # not a test — dumps what a pane really renders
 node tools/shot.mjs            # screenshots at phone / tablet / desktop
 ```
@@ -217,6 +223,20 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **The default theme is not exempt from measurement.** Three rounds of
+  colour work all started from "the owner picked an unusual colour" — and
+  when the sweep was finally pointed at panes 2 and 3, 14 of 36 pieces of
+  text failed 4.5:1 with NO custom colour set at all: `var(--t3)` (#9A9289)
+  at 2.7–3.1:1 on every date, every secondary button, every list label. Sweep
+  the shipped theme first; the exotic settings come second.
+- **An ink flip is only safe on a plain surface.** It worked for the sidebar
+  (v04.15) and measured WORSE in a note (v04.16): a note's headings carry
+  pale bands baked into the stylesheet, so light text landed on a light band
+  at 1.0:1. Where a surface has decoration of its own, the answer is to keep
+  the surface in the range its decoration assumes — lighten the chosen colour
+  until dark ink lives on it, derive the inks from the result, and tell the
+  owner what happened — not to invert the text and hope. A real dark mode is
+  a round, not a variable.
 - **A colour meant for paper is not a colour for the sidebar, and a RAISED
   layer costs a white label its contrast.** Half of what was unreadable in
   v04.15's sidebar was `var(--t2)` / `var(--green2)` — Pane-2 and Pane-3
