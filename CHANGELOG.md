@@ -1581,3 +1581,179 @@ click at two sidebar widths.
 - **No data, sync, storage or export path was touched.** This round is markup,
   CSS and one new 14-line function that only ever reads a rectangle and sets
   `max-height`, `right` and a class. I1–I4 are untouched.
+
+---
+
+## v04.22 — one bar on a phone, and a menu under its own button (11 Sep 2026)
+
+The owner sent two screenshots of a note being edited on the phone and
+measured the problem in one line:
+
+> Look at it, the notepane edit view: Takes half of the screens for bars and
+> buttons.
+
+It did. Five rows of chrome stood between the top of the screen and the first
+line of writing — the tab bar, the nav+edit bar, the tag bar, the
+type/Attach/Save bar and the title — and then the version strip, a row holding
+one `⋯` button, and a line of two dates. The note itself began about 450px
+down an 844px screen.
+
+The instruction was exact, and this round followed it rather than improvising:
+
+> We will accomodate everything on ONE Bar (nav bar) in MOBILE.
+> Place Calendar, Tab, template, Attach buttons, under the '+'.
+> Place the redo buttons stuff and the search button under the 3-line button.
+> That should make space for save button to be on the nav bar.
+> (PC and Tab will organise later)
+
+### 1. The phone's edit view is one bar
+
+```
+v04.21 (390px)                        v04.22 (390px)
+📅 Cal              ＋ Add Tab         🏠 ◀ ≡   Aa H ≡ +   💾 Save
+🏠 ◀ ≡  Aa H ≡ + ↺ 📋 🔍              🏷 Tags  [add tags…]            ✕
+🏷 Tags [add tags…]             ✕      ◀ ≡  Note title
+General   📎 Attach (1) ▾  💾 Save 📦   🔀 Start Versioning  Created …  ⋯
+◀ ≡  Note title                       ┄┄┄┄┄ the note starts here, 222px ┄┄┄┄┄
+🔀 Start Versioning
+⋯
+Created 7 Sept 26 · 8:41 PM | Updated 8 Sept 26 · 9:42 PM
+┄┄┄┄┄ the note starts here, ~450px ┄┄┄┄┄
+```
+
+- **`+` gains Templates, Calendar, ＋ Add Tab, and the whole "this note" row** —
+  the type chips, 📎 Attach, 📦 Archive and ✓ Finish / ↺ Re-open, under two
+  headings so it does not read as one heap of buttons.
+- **`≡` gains ↩ Undo, ↪ Redo, 🕐 Note History and 🔍 Find.** The `↺` History
+  group and the two loose buttons leave the bar; nothing else moves.
+- **💾 Save sits on the bar**, in the primary-button pair that has always been
+  right (`background:var(--green)` with `var(--on-accent)` ink — *not*
+  `--accent`, which is a colour for text and scored 2.9:1 as a background the
+  last time it was used as one, in v04.20).
+- **One size for everything on it.** The bar's buttons measured 24×28 to
+  34×38, the nav trio smallest of all — survivable as one row of eight, not as
+  the only row. They are 38×40 now. 44px, the size the menus are held to, does
+  not fit eight controls across a 390px phone, and the first attempt at 40×40
+  proved it: the row wanted 392px and silently scrolled 9px of `.nav-l` out of
+  reach. Found by a check, not a screenshot — a scrolling strip looks perfect
+  in one.
+- **The `◀ ≡` pair appears once.** It was on this bar *and* on the title row
+  immediately below — the same two functions (`openP2` / `backFromP3`), one
+  under the other. The title row gives them up on the phone, which also hands
+  the title input the full width.
+- **The tab bar goes away while editing — only when it is empty.** A bar
+  holding real tabs is content, not chrome, and is never hidden; it comes back
+  the moment editing ends.
+
+**This is the phone only, at 640px — not the `<1200px` the nav+edit row itself
+uses.** The owner wrote "(PC and Tab will organise later)", so a tablet keeps
+the bar and the rows it had in v04.21, byte for byte. One function,
+`_p3OneBar()`, decides for all three places that fold together, so they cannot
+drift apart later.
+
+The note now starts at **222px of 844** (26%) instead of about 450 (53%).
+
+### 2. A menu opens under the button that opened it
+
+> Then, any click on the button drops its content at the bottom of the screen,
+> it should be below the button. FIX it.
+
+Under 1200px `_openFloatPop()` pinned every popover to
+`bottom:60px;left:4px;right:4px` — a bottom sheet. Tap `≡` at the top of a
+phone and its list appeared at the **foot** of the screen, half a page from
+the finger, with nothing joining the two.
+
+Desktop was only better by accident: `top:Math.min(r.bottom+4, innerHeight-320)`
+floats the popover *up*, away from its button, on any window shorter than
+about 320px of remaining room — the same disconnect, one short window away.
+
+One placement now serves both sizes: under the button, clamped inside the
+viewport horizontally, flipped *above* it only when there is genuinely more
+room up there, and capped to the space it actually has so a long menu scrolls
+inside itself. It is **measured, not guessed** — the popover is opened
+invisible, its real width and height read, and only then positioned. The
+width is `min(260px,92vw)` in CSS and the height depends on what is inside;
+neither could be assumed. This fixes every caller, not just the edit bar:
+the Collapse/Expand/Preview overflow menu and the Pane-3 palettes all used the
+same function.
+
+### 3. One date, tapped to see the other
+
+> Move the note creation date to the 'versioning bar'. Enable showing only one
+> date (creation). Then, enable clicking on that date to show/flip to show the
+> updated date.
+
+`Created … | Updated …` was two dates, two labels and a divider on a full row
+of the phone's height, for something that is glanced at rather than read. It
+is one date now, on the versioning bar, showing **Created**, and a tap flips
+it to **Updated** and back.
+
+Both strings ride the button as `data-` attributes and the tap swaps them in
+place — **no re-render**, so flipping it mid-sentence cannot rebuild `#ed` and
+cannot cost the caret. `ST.dlShowUpd` remembers the choice for the next render,
+and the swap runs over every `.dl-flip` on screen, because a float window
+shows the same line and two of them disagreeing would read as a bug.
+
+### 4. The `⋯` joins the versioning bar
+
+> The 3 horizontal dot button should be on the same bar-space on the 'start
+> versioning' (after the creation date) as long as there are space before 'new
+> versioning' takes space.
+
+The section-tools `⋯` had a whole row of its own in edit mode, carrying one
+button. It sits on the versioning bar now, after the date, and the row wraps
+rather than overflowing once a note carries several version pills — which is
+the "as long as there is space" the owner asked for.
+
+Edit mode reuses `_p3MetaRowHTML()`, the row the read view has had since
+v04.08, so version strip, date and `⋯` are one line in both. A laptop keeps
+that button on its unified toolbar and does **not** get it here:
+`#ed-col-wrap` is an id, and two of it in the document would leave
+`_edColInit()` forever finding only the first — a check now counts them at all
+three sizes.
+
+### What this round did not do
+
+- **PC and tablet are untouched**, as asked. The tablet still opens on four
+  rows of chrome; only the version/date/`⋯` consolidation reaches it.
+- **The tag bar stays a row of its own.** It holds a text input, not buttons,
+  and folding an input into a popover would make adding a tag a two-tap job.
+- **The title row stays.** It is the note's name, and it is where `◀ ≡` live.
+
+### Measured
+
+162 → 189 app checks, and 11/11 ship checks. The new section 6p covers:
+
+- the phone's edit view is one bar, with Save on it, no tab bar and no
+  type/Attach/Save row, and the note starting in the **top third** of the
+  screen;
+- every control on that bar one size, with **nothing scrolled out of reach** —
+  `.nav-l`/`.nav-r` scroll, so a button that no longer fits is unreachable
+  while the row still looks perfect in a screenshot. This check earned its
+  keep on its first run: at 40px the row wanted 392px of a 390px phone and
+  quietly hid 9px of `.nav-l`. The honest number is **38×40**, up from 24×28
+  to 34×38, and 44px — the bar the menus are held to — is simply not
+  available for eight controls across a 390px screen. Nothing was shaved to
+  pretend otherwise;
+- the `◀` and `≡` nav pair appearing **once**. They were on the edit bar *and*
+  on the title row — the same two functions, one row under the other. The
+  title row gives them up on the phone;
+- **nothing lost in the fold** — not a hand-written list but the same app one
+  pixel the other side of the breakpoint: every function a 640px screen can
+  reach from the whole edit surface (bar, both panes, tab bar and each group
+  menu opened in turn), a 390px screen must still reach. The check maintains
+  itself as controls come and go;
+- 💾 Save on the bar really saves — typed text read back out of `DB` after a
+  real mouse click, not "the handler did not throw";
+- one date, on the versioning bar, saying "Created"; a real click flips it to
+  "Updated" and a second click flips it back; and the flip neither rebuilds
+  `#ed` nor changes `updatedAt`;
+- exactly **one** `#ed-col-wrap` at each of the three sizes, on the versioning
+  bar after the date under 1200px and on the unified toolbar above it;
+- and the geometry, which is what this round broke and fixed: a **real mouse
+  click** on each of the four (or five) group buttons, looked at again 250ms
+  later — the menu still painted, opened **against its own button** rather
+  than adrift, wholly inside the viewport at phone, tablet and desktop, and
+  every row inside it hittable on a phone;
+- every new word — the Save label, the menu headings, the date — scored at
+  4.5:1 on all five presets.
