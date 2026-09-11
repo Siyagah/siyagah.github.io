@@ -716,3 +716,76 @@ fails rather than passing silently.
   owner: leave it, make it read-only, or drop it.
 - **No sync, storage or export path was touched.** I1–I4 are untouched by an
   event argument and an icon.
+
+## v04.13 — the type chip stops deleting things (11 September 2026)
+
+The owner asked whether the `General` chip on the note toolbar earned its
+place. v04.12 answered the question and left the chip alone; this round acts
+on the answer they picked: **keep it as the badge, make it read-only.**
+
+**What it was doing**
+
+```js
+onclick="toggleNoteKind(...)"  title="General · tap to remove"
+```
+
+One tap on something that reads as a label stripped the note's type. That was
+defensible while `🏷 Types` sat on the bar right beside it; once v04.11 moved
+Note Type to its proper home under `📎 Attach`, the chip was a delete button
+wearing a label's clothes and nothing else.
+
+**What it does now**
+
+Tapping it opens the Note Type picker — the place a type is added or removed
+deliberately — anchored under the chip. The tooltip says
+`Note Type: General — tap to change`. Nothing became unreachable: the picker,
+`📎 Attach → Note Type`, and the right-click menu's NTI Types submenu all still
+take a type off.
+
+One trap avoided, because v04.11 already paid for it: the chip also appears
+inside the `🏷` palette on a narrow pane, and that palette has to close behind
+the tap — but the picker positions itself from the element it is handed, and an
+element inside a closed palette measures 0×0 and would put the picker in the
+top-left corner. `_ntiChipTap()` opens first and closes second.
+
+**What "General" actually is**
+
+Worth recording, because it is the real answer to the owner's instinct that the
+chip was not doing anything. `toggleNoteKind()` ends with
+
+```js
+if(!kinds.length) kinds.push('general');
+```
+
+so a note **always** carries at least one type, and `general` is what it falls
+back to. In the picker, `General` sits under a category called **Undecided**.
+So on every note the owner has never typed, the chip reads `General` — which
+is precisely why it looked like it was there for nothing. It was showing "no
+type chosen yet", in a word that does not say so.
+
+**Measured**
+
+11/11 ship checks, and app checks from 68 to **70**.
+
+The two new ones assert that tapping the chip leaves the note's types
+*unchanged*, opens the picker, and anchors it away from the corner — and,
+separately, that a type deliberately added can still be taken off. Putting the
+old `toggleNoteKind` onclick back fails the first with
+`picker opened false · tooltip "General · tap to remove"`.
+
+**A wrong assertion, caught before it became a "fix"**
+
+The removal check first asserted that removing a note's ONLY type reduced the
+count. It failed — and the app was right. `general` is the fallback, so
+stripping the last type substitutes it rather than leaving none. The check adds
+a second type and removes that instead. The brief's rule earned its keep again:
+a failing check is a wrong assertion surprisingly often.
+
+**What was NOT done, and why**
+
+- **The chip still shows `General` on untyped notes.** Hiding it when the type
+  is only the `general` fallback would take the chip off most notes entirely —
+  a bigger change than "make it read-only", and one the owner has not asked
+  for. Offered as a follow-up.
+- **No sync, storage or export path was touched.** I1–I4 are untouched by one
+  onclick.

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.12.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.13.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,12 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.13** (11 Sep 2026) — the note-type chip is a badge, not a delete button.
+  It called `toggleNoteKind()`, so one tap on what reads as a label stripped the
+  note's type; it opens the type picker now. Also recorded: `general` is the
+  FALLBACK type (`toggleNoteKind()` pushes it when the list empties), which is
+  why the chip reads `General` on every note that has never been typed. 70/70
+  app checks (up from 68) and 11/11 ship checks.
 - **v04.12** (11 Sep 2026) — the `⋯` button opens on a left-click at last. v04.11
   stopped it throwing but it still did not open: it handed `showArtCtx()` a
   synthesised event whose `stopPropagation()` was a no-op, so the real click
@@ -38,13 +44,6 @@ must never accumulate here instead of there.
   seven 44px buttons instead of three stacked rows. Buttons went from ~27px to
   36px/44px, and the duplicate button's `🗐` — an empty box on Android — became
   `⧉`. 54/54 app checks (up from 49) and 11/11 ship checks.
-- **v04.08** (10 Sep 2026) — the read view's chrome folded from six rows into
-  two: Home, the NTI bar and the section tools moved into the Pane-3 toolbar
-  (mirroring edit mode's unified bar), section tools became a `⇅` popover, and
-  the version strip and date line share one row. Fitting is done by wrapping,
-  not by a `window.innerWidth` breakpoint — Pane 3 is ~485px on a 1215px
-  screen, and a window-width test squeezed the type chips out of existence.
-  49/49 app checks (up from 40) and 11/11 ship checks.
 ---
 
 ## What this is
