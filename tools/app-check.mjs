@@ -1700,6 +1700,195 @@ await app.close();
   }
 }
 
+/* ── 6m. v04.19: a colour variable that is used is a colour that exists ── */
+/* --hover was referenced 56 times and DEFINED nowhere, so 56 hover rules
+   were invalid and painted nothing; --paper2 (7) and --accent (85) were the
+   same. The 14 `background:var(--accent);color:#fff` rules were the sharp
+   end: white text on no background at all.
+
+   This is deliberately not a check for those three names. It walks every
+   declaration in the stylesheet, takes every var() written WITHOUT a
+   fallback, and asks whether it resolves to anything — so it also catches
+   the next undefined variable anyone adds. */
+{
+  const VARS = () => {
+    const used = new Map();
+    const walk = (list) => { for (const rule of list) {
+      /* Chromium supports CSS nesting, so EVERY style rule has a .cssRules —
+         empty, but truthy. Recursing on it and `continue`-ing skips the
+         declarations and measures 6 rules out of 1286. Read rule.style
+         first, always. */
+      /* rule.style.cssText, NOT the longhands. Chromium expands
+         `background: var(--hover)` into nine longhands and hands back '' for
+         every one of them (a pending substitution), so walking rule.style[i]
+         sees no var at all and the 56 rules this round is about were invisible
+         to this very check. The declaration block's own cssText keeps what was
+         authored, and excludes any nested rule. */
+      if (rule.style && rule.style.cssText) {
+        for (const m of rule.style.cssText.matchAll(/var\(\s*(--[\w-]+)\s*\)/g))
+          if (!used.has(m[1])) used.set(m[1], (rule.selectorText || '') + ' {' + m[1] + '}');
+      }
+      if (rule.cssRules && rule.cssRules.length) walk(rule.cssRules);
+    } };
+    for (const sheet of document.styleSheets) {
+      let rules; try { rules = sheet.cssRules; } catch { continue; }   /* the blocked font sheet */
+      walk(rules);
+    }
+    const root = getComputedStyle(document.documentElement);
+    const dead = [];
+    for (const [name, where] of used) {
+      if (root.getPropertyValue(name).trim()) continue;
+      let live = false;
+      const sel = where.split(' {')[0];
+      if (sel) { try { for (const el of document.querySelectorAll(sel))
+        if (getComputedStyle(el).getPropertyValue(name).trim()) { live = true; break; } } catch { /* :hover etc */ } }
+      if (!live) dead.push(name + ' — ' + where.slice(0, 60));
+    }
+    return { total: used.size, dead };
+  };
+
+  /* Every element painted with one of the two surface tints, scored against
+     that tint. Selectors are matched with their :hover/:active stripped, so
+     a row is found while it is NOT hovered and still measured on the colour
+     it takes when it is. */
+  const ON_TINT = () => {
+    /* A custom property comes back AS AUTHORED — '#E2E7F0', which px()'s
+       /[\d.]+/g reads as rgb(2,7,0), i.e. near-black, and every dark text on
+       it then scores ~2:1 and reads as a failure that is not there. Paint it
+       on a probe element and let the browser hand back rgb(). */
+    const probe = document.createElement('div');
+    document.body.appendChild(probe);
+    const resolve = (name) => { probe.style.backgroundColor = ''; 
+      probe.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      const c = getComputedStyle(probe).backgroundColor;
+      return /^rgba?\(/.test(c) && c !== 'rgba(0, 0, 0, 0)' ? c : ''; };
+    const tints = { '--hover': resolve('--hover'), '--paper2': resolve('--paper2'),
+                    '--accent': resolve('--accent') };
+    /* A rule that lights the row often restyles its INK in the same breath —
+       `.tab-it:hover{background:var(--hover);color:var(--t1)}` flips a white
+       tab to dark text. Scoring the element's un-hovered colour against the
+       hover tint measures a pairing that never exists on screen (1.2:1 on a
+       tab that is perfectly readable). Where the rule sets its own colour,
+       that is the colour to score. */
+    const resolveColor = (v) => { if (!v) return ''; probe.style.color = '';
+      probe.style.color = v; const c = getComputedStyle(probe).color;
+      return /^rgba?\(/.test(c) ? c : ''; };
+    const out = [];
+    const walk = (list) => { for (const rule of list) {
+      if (rule.style && rule.selectorText) {
+        const bg = rule.style.getPropertyValue('background') + ' ' + rule.style.getPropertyValue('background-color');
+        const hit = Object.keys(tints).find((v) => bg.includes('var(' + v + ')'));
+        /* A rule that names its OWN ink needs no element to be judged, and
+           most of these 63 rules live in a modal, the calendar or a citation
+           that no reachable state renders. This is where the sharpest form of
+           the bug sat: 14 rules reading `background:var(--accent);color:#fff`,
+           i.e. white on nothing at all. */
+        if (hit && tints[hit]) {
+          const own = resolveColor(rule.style.getPropertyValue('color'));
+          if (own) out.push({ sel: rule.selectorText.slice(0, 46), v: hit, surface: tints[hit],
+            color: own, text: 'declared ink', via: 'declared' });
+        }
+        if (hit && tints[hit]) {
+          const plain = rule.selectorText.replace(/:(hover|active|focus|focus-visible)\b/g, '');
+          let els = []; try { els = [...document.querySelectorAll(plain)]; } catch { els = []; }
+          for (const el of els) {
+            if (el.offsetParent === null) continue;
+            const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
+            if (!/[A-Za-z0-9]/.test(own)) continue;   /* emoji-only says nothing about colour */
+            const ruleInk = resolveColor(rule.style.getPropertyValue('color'));
+            out.push({ sel: plain.slice(0, 46), v: hit, surface: tints[hit],
+              color: ruleInk || getComputedStyle(el).color, text: own.slice(0, 20),
+              via: ruleInk ? 'the rule\u2019s own colour' : 'inherited' });
+          }
+        }
+      }
+      if (rule.cssRules && rule.cssRules.length) walk(rule.cssRules);
+    } };
+    for (const sheet of document.styleSheets) {
+      let rules; try { rules = sheet.cssRules; } catch { continue; }
+      walk(rules);
+    }
+    probe.remove();
+    return out;
+  };
+
+  const THEMES_ = [['Forest', { preset: 'forest' }], ['Ocean', { preset: 'ocean' }],
+    ['Amber', { preset: 'amber' }], ['Indigo', { preset: 'indigo' }], ['Rose', { preset: 'rose' }],
+    ['a custom pane background', { preset: 'forest', custom: { bg: '#16202A' } }],
+    ['a pale custom accent', { preset: 'forest', custom: { accent: '#F2D06B' } }]];
+
+  for (const [label, theme] of THEMES_) {
+    const db = seedDB();
+    db.theme = { preset: theme.preset, custom: theme.custom || {} };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    await s.page.waitForTimeout(300);
+
+    const v = await s.page.evaluate(VARS);
+    r.check(v.dead.length === 0 && v.total > 20,
+      `on ${label}, every colour variable the stylesheet uses is actually defined`,
+      v.dead.length ? `resolves to nothing: ${v.dead.slice(0, 6).join(' · ')}`
+        : `${v.total} variables used without a fallback, all resolve`);
+
+    /* Most of the 56 rules live in surfaces that only exist in SOME state —
+       the pop-outs, a note, a live search. Measuring the landing page alone
+       scored three pieces of text and would have called a broken palette
+       fine, so each state is visited and the net is pooled. */
+    const rows = [];
+    const grab = async () => { rows.push(...await s.page.evaluate(ON_TINT)); };
+    await s.page.evaluate(() => { ST.folder = 'f1'; window.render(); });
+    await s.page.waitForTimeout(300); await grab();                  /* a folder open */
+    await s.page.evaluate(() => selArt('a1'));
+    await s.page.waitForTimeout(400); await grab();                  /* a note, reading */
+    await s.page.evaluate(() => { if (typeof startEdit === 'function') startEdit(); });
+    await s.page.waitForTimeout(400); await grab();                  /* the same note, editing */
+    await s.page.evaluate(() => { try { openFolderPopupFromToolbar(); } catch {} });
+    await s.page.waitForTimeout(450); await grab();                  /* the folder pop-out */
+    await s.page.evaluate(() => { try { document.querySelectorAll('#pkList .pk-chev').forEach((c) => c.click()); } catch {} });
+    await s.page.waitForTimeout(350); await grab();                  /* its tree open */
+    await s.page.evaluate(() => { try { const q = document.getElementById('pkSearch'); q.value = 'seed'; _pkFilter('seed'); } catch {} });
+    await s.page.waitForTimeout(350); await grab();                  /* searching in it */
+    const scored = [];
+    const seen = new Set();
+    for (const row of rows) {
+      const key = row.sel + row.color + row.surface;
+      if (seen.has(key)) continue; seen.add(key);
+      const bg = px(row.surface);
+      scored.push({ ...row, c: ratio(over(px(row.color), bg), bg) });
+    }
+    scored.sort((a, b) => a.c - b.c);
+    const low = scored.filter((x) => x.c < 4.5);
+    r.check(low.length === 0 && scored.length > 0,
+      `on ${label}, text still reads on a row that is lit up`,
+      scored.length === 0 ? 'measured NOTHING — no element was painted with a tint'
+        : low.length ? low.slice(0, 5).map((x) => `${x.c.toFixed(1)}:1 ${x.sel} ${JSON.stringify(x.text)}`).join(' · ')
+          : `${scored.length} pieces of text on --hover/--paper2, worst ${scored[0].c.toFixed(1)}:1 (${scored[0].sel})`);
+    await s.close();
+  }
+}
+
+/* The proof that a hover actually PAINTS. A rule that resolves is not a rule
+   that shows: this moves a real mouse onto a real row and reads the colour
+   the browser ended up painting, before and after. */
+{
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; window.render(); });
+  await s.page.waitForTimeout(300);
+  const target = s.page.locator('#p2 .p2h-path-up, #p2 .p2h-sec-nav-btn, #mb .pkf-btn, #p2 .gs-result').first();
+  let before = null, after = null, sel = '';
+  if (await target.count()) {
+    sel = await target.evaluate((el) => el.className || el.tagName);
+    before = await target.evaluate((el) => getComputedStyle(el).backgroundColor);
+    await target.hover();
+    await s.page.waitForTimeout(160);
+    after = await target.evaluate((el) => getComputedStyle(el).backgroundColor);
+  }
+  await s.close();
+  r.check(before !== null && after !== null && before !== after,
+    'a real mouse on a real row actually repaints it — the hover highlight is visible',
+    before === null ? 'no hoverable row found to measure'
+      : `${sel}: ${before} → ${after}${before === after ? '  (UNCHANGED — the highlight paints nothing)' : ''}`);
+}
+
 /* ── 11. Layout at the three real screen sizes ─────────────────────────── */
 for (const vp of VIEWPORTS) {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });

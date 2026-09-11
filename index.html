@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="--forest: #0D1A12; --green: #1B7A46; --green2: #155F37; --greenlt: #E8F5EE; --gold: #B8873A; --paper: #F7F4ED; --white: #FFFFFF; --border: #E4DFD3; --border2: #CFC9BB; --t1: #1A1612; --t2: #5A544A; --t3: #6B665F; --fs-sidebar: 12.5px; --fs-list: 13px; --fs-content: 17px; --lh-content: 1.6; --pp-gap: 12px;"><head>
+<html lang="en" style="--forest: #0D1A12; --green: #1B7A46; --green2: #155F37; --greenlt: #E8F5EE; --gold: #B8873A; --paper: #F7F4ED; --white: #FFFFFF; --border: #E4DFD3; --border2: #CFC9BB; --t1: #1A1612; --t2: #5A544A; --t3: #67625B; --fs-sidebar: 12.5px; --fs-list: 13px; --fs-content: 17px; --lh-content: 1.6; --pp-gap: 12px;"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Knowledge Notebook</title>
@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.18">
+<meta name="app-version" content="04.19">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -53,7 +53,21 @@
   --forest:#0D1A12;--forest2:#172315;--green:#1B7A46;--green2:#155F37;
   --greenlt:#E8F5EE;--gold:#B8873A;--paper:#F7F4ED;--white:#FFFFFF;
   --border:#E4DFD3;--border2:#CFC9BB;
-  --t1:#1A1612;--t2:#5A544A;--t3:#6B665F;   /* v04.16 — #9A9289 read 3.1:1 */
+  --t1:#1A1612;--t2:#5A544A;--t3:#67625B;   /* v04.19 — 4.81:1 on --hover */
+  /* ── Surface tints (v04.19) ──────────────────────────────────────
+     --hover is the highlight a row takes under the pointer; --paper2 is
+     a static surface a shade off the paper (bars, headers, cite blocks).
+     Both were USED for a whole version series and never DEFINED, so 56
+     hover rules and 7 surfaces painted nothing at all. They are a darken
+     of --paper, not a fixed grey, because --paper is owner-settable;
+     applyPaneInk() recomputes them, and --t3 with them. */
+  --hover:#E8E5DF;--paper2:#F0EDE6;
+  /* --accent (v04.19) — 85 more references to a variable that was never
+     defined, 14 of them `background:var(--accent);color:#fff`, i.e. white
+     text on nothing. It is --green2, the accent already darkened until it
+     reads AS TEXT, because 58 of the 85 use it as a text colour and the
+     background ones want a dark colour too. */
+  --accent:var(--green2);
   --body-ink:#2A261E;  /* the note's own reading/writing colour */
   --on-accent:#FFFFFF; /* text on the accent colour — flips for a pale accent */
   --r:6px;--rl:10px;
@@ -2403,7 +2417,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.18</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.19</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -15895,11 +15909,11 @@ function tagInputChanged(ev){
 /* ── Theme system ────────────────────────────────────────────────────── */
 
 const THEMES = {
-  forest:  {name:'Forest',  vars:{'--forest':'#0D1A12','--green':'#1B7A46','--green2':'#155F37','--greenlt':'#E8F5EE','--gold':'#B8873A','--paper':'#F7F4ED','--white':'#FFFFFF','--border':'#E4DFD3','--border2':'#CFC9BB','--t1':'#1A1612','--t2':'#5A544A','--t3':'#6B665F'}},
-  ocean:   {name:'Ocean',   vars:{'--forest':'#0C1E3C','--green':'#2563EB','--green2':'#1D4ED8','--greenlt':'#DBEAFE','--gold':'#0EA5E9','--paper':'#F0F6FF','--white':'#FFFFFF','--border':'#BFDBFE','--border2':'#93C5FD','--t1':'#0F172A','--t2':'#334155','--t3':'#64748B'}},
-  amber:   {name:'Amber',   vars:{'--forest':'#1C1407','--green':'#D97706','--green2':'#B45309','--greenlt':'#FEF3C7','--gold':'#92400E','--paper':'#FFFBF0','--white':'#FFFEF5','--border':'#FDE68A','--border2':'#FCD34D','--t1':'#1A1207','--t2':'#78350F','--t3':'#B45309'}},
-  indigo:  {name:'Indigo',  vars:{'--forest':'#1E1B4B','--green':'#7C3AED','--green2':'#6D28D9','--greenlt':'#EDE9FE','--gold':'#A78BFA','--paper':'#F5F3FF','--white':'#FFFFFF','--border':'#DDD6FE','--border2':'#C4B5FD','--t1':'#1E1B4B','--t2':'#4C1D95','--t3':'#6D28D9'}},
-  rose:    {name:'Rose',    vars:{'--forest':'#1C0A10','--green':'#BE185D','--green2':'#9D174D','--greenlt':'#FCE7F3','--gold':'#DB2777','--paper':'#FFF1F5','--white':'#FFFFFF','--border':'#FBCFE8','--border2':'#F9A8D4','--t1':'#1C0A10','--t2':'#831843','--t3':'#9D174D'}},
+  forest:  {name:'Forest',  vars:{'--forest':'#0D1A12','--green':'#1B7A46','--green2':'#155F37','--greenlt':'#E8F5EE','--gold':'#B8873A','--paper':'#F7F4ED','--white':'#FFFFFF','--border':'#E4DFD3','--border2':'#CFC9BB','--t1':'#1A1612','--t2':'#5A544A','--t3':'#67625B','--hover':'#E8E5DF','--paper2':'#F0EDE6'}},
+  ocean:   {name:'Ocean',   vars:{'--forest':'#0C1E3C','--green':'#2563EB','--green2':'#1D4ED8','--greenlt':'#DBEAFE','--gold':'#0EA5E9','--paper':'#F0F6FF','--white':'#FFFFFF','--border':'#BFDBFE','--border2':'#93C5FD','--t1':'#0F172A','--t2':'#334155','--t3':'#58677B','--hover':'#E2E7F0','--paper2':'#E9EFF7'}},
+  amber:   {name:'Amber',   vars:{'--forest':'#1C1407','--green':'#D97706','--green2':'#A64D09','--greenlt':'#FEF3C7','--gold':'#92400E','--paper':'#FFFBF0','--white':'#FFFEF5','--border':'#FDE68A','--border2':'#FCD34D','--t1':'#1A1207','--t2':'#78350F','--t3':'#A64D09','--hover':'#F0ECE2','--paper2':'#F7F3E9'}},
+  indigo:  {name:'Indigo',  vars:{'--forest':'#1E1B4B','--green':'#7C3AED','--green2':'#6D28D9','--greenlt':'#EDE9FE','--gold':'#A78BFA','--paper':'#F5F3FF','--white':'#FFFFFF','--border':'#DDD6FE','--border2':'#C4B5FD','--t1':'#1E1B4B','--t2':'#4C1D95','--t3':'#6D28D9','--hover':'#E6E4F0','--paper2':'#EEECF7'}},
+  rose:    {name:'Rose',    vars:{'--forest':'#1C0A10','--green':'#BE185D','--green2':'#9D174D','--greenlt':'#FCE7F3','--gold':'#DB2777','--paper':'#FFF1F5','--white':'#FFFFFF','--border':'#FBCFE8','--border2':'#F9A8D4','--t1':'#1C0A10','--t2':'#831843','--t3':'#9D174D','--hover':'#F0E3E6','--paper2':'#F7EAEE'}},
 };
 
 const FOLDER_COLORS = [
@@ -16001,11 +16015,18 @@ function _paneInk(paper,target){
 }
 /* the accent, darkened until it clears 4.6:1 on the pale tint it is written
    on — that tint is hexLighten(accent,.87), so it is computed against it */
-function _accentInk(accent){
+function _accentInk(accent,surface){
   if(!/^#[0-9a-fA-F]{6}$/.test(accent)) return accent;
-  const lb=_sbLum(hexLighten(accent,.87));
+  /* v04.19 — it is measured on every surface it is written on, not just the
+     pale tint. --accent resolves to this, and `.tab-nav:hover` and friends
+     write it straight onto --hover, where a 4.6:1-on-the-tint colour was
+     landing at 4.2:1. */
+  const bgs=[hexLighten(accent,.87)];
+  if(/^#[0-9a-fA-F]{6}$/.test(surface||'')) bgs.push(surface);
+  const lbs=bgs.map(_sbLum);
   let c=hexDarken(accent,.15),guard=0;
-  while(((lb+0.05)/(_sbLum(c)+0.05))<4.6 && guard++<40) c=hexDarken(c,.12);
+  const worst=()=>Math.min(...lbs.map(lb=>(lb+0.05)/(_sbLum(c)+0.05)));
+  while(worst()<4.6 && guard++<40) c=hexDarken(c,.12);
   return c;
 }
 function applyPaneInk(themeData){
@@ -16016,15 +16037,35 @@ function applyPaneInk(themeData){
   /* 0.19 is where white text and dark text score the same on a colour. */
   set('--on-accent', _sbLum(accent)<0.19?'#FFFFFF':'#141210');
   const bg=(themeData&&themeData.custom&&themeData.custom.bg)||'';
-  if(!/^#[0-9a-fA-F]{6}$/.test(bg)) return '';   /* preset paper — its own inks are right */
-  const paper=_paneSafePaper(bg);
+  const own=/^#[0-9a-fA-F]{6}$/.test(bg);
+  /* v04.19 — the hover surface is needed for BOTH kinds of paper, because a
+     custom ACCENT on a PRESET paper still gets written onto a hovered row. */
+  const paper=own?_paneSafePaper(bg):cs.getPropertyValue('--paper').trim();
+  const hover=/^#[0-9a-fA-F]{6}$/.test(paper)?hexDarken(paper,.06):'';
+  /* --green2 is the accent AS TEXT, so it belongs to the paper it is written
+     on, not to the preset it came from. Deriving it only for a custom ACCENT
+     left a preset green on a custom PAPER at 3.0:1 (`Save`, v04.19). A plain
+     preset keeps its hand-authored pairing, which is already measured. */
+  const cuAcc=(themeData&&themeData.custom&&themeData.custom.accent)||'';
+  const inkAcc=cuAcc||cs.getPropertyValue('--green').trim();
+  if(hover&&(cuAcc||own)) set('--green2',_accentInk(inkAcc,hover));
+  if(!own) return '';   /* preset paper — its own inks are right */
   set('--paper',paper);
   set('--white',   hexLighten(paper,.55));
   set('--border',  hexDarken(paper,.10));
   set('--border2', hexDarken(paper,.20));
+  /* The two surface tints, derived like --border is. --paper is never dark
+     (see _paneSafePaper), so darkening is always the right direction; a 6%
+     step reads 1.14:1 against the paper, which is a visible highlight
+     without being a block of colour. */
+  set('--hover',  hover);
+  set('--paper2', hexDarken(paper,.03));
   set('--t1',      _paneInk(paper,9));
   set('--t2',      _paneInk(paper,6));
-  set('--t3',      _paneInk(paper,4.8));
+  /* --t3 is measured on --hover, NOT on the paper: it is the ink on dates and
+     count badges, and those sit on hovered rows. Targeting the paper alone
+     (4.8:1) left it at ~4.2:1 the moment a row lit up. */
+  set('--t3',      _paneInk(hover,4.6));
   set('--body-ink',_paneInk(paper,8));
   return paper;
 }
