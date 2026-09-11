@@ -1344,3 +1344,123 @@ rule that shows.
   its own.
 - **No sync, storage or export path was touched.** I1–I4 are untouched by a
   stylesheet and two derivations.
+
+---
+
+## v04.20 — the Smart View gets the same second row, and a way to start a note (11 Sep 2026)
+
+The owner sent two screenshots side by side. A folder's pane 2 carried three
+rows — the title bar, a row of folder pills, `🏠 Home 🔍 Search` — plus an
+`ARTICLES (0)` list you could type a new title straight into. A Smart View
+carried the title bar and `🏠 Home 🔍 Search` and nothing else. *"Why are they
+different? Why can't they be like Image 1?"*
+
+**The row-1 answer is that they already were.** `📚`, `✚ Note` and `▤ Preview`
+are built once in `renderP2H()` as `newBtn` / `previewBtn` / `fbBtn` and every
+branch uses them. What was missing was the row underneath, and the quick-add
+box.
+
+**Why it was missing, and it was a real reason.** Every button on the folder
+row is about a POSITION IN THE FOLDER TREE: up to the parent, down into a
+child, a new subfolder inside this one, the whole tree, the subfolders as
+cards. A Smart View has no position in that tree — it is a saved question
+("which notes were edited recently?"), so it has no parent, no children, and
+nothing to put a subfolder into. `renderP2H()` cleared `#p2h-path` at the top
+and only the plain-folder branch ever filled it back in. Same for the box:
+`qtSave(folderId)` writes the note into a folder, and a Smart View is not a
+place — a note cannot be "put in" Recently Edited.
+
+**So the row is not copied, it is translated.** Same classes, same pills, same
+position, so the two screens read as one app:
+
+| folder row | Smart View row |
+|---|---|
+| `🌳 Full tree` | `⬇ Expand all` / `⬆ Collapse all` (only where the view has groups) |
+| `🗂 Card View` | — `▤ Preview` already sits in row 1 |
+| `⬆ <parent folder>` | `⬆ <the folder a new note lands in>` |
+| `📁 <child folder> <count>` | `<icon> <every other Smart View> <count>` |
+| `➕ New folder` | — a Smart View cannot hold a folder |
+
+The sibling chips are the point. From Favourites you step straight to Pinned
+or Reminders without going back to the sidebar — exactly what the folder row
+does for sibling folders. Each chip carries the same note count the sidebar
+badge shows, and right-click still opens the Smart View's own menu.
+
+**The quick-add box, where a note can honestly go.** A note typed into a Smart
+View lands in `DB.theme.lastFolder` — the same fallback `newStarredNote()` has
+used since v04.00 — and `SF_QUICK` then makes it TRUE of the view you typed it
+in: Favourites stars it, Pinned pins it, Reminders opens the reminder dialog
+next. Inside a **section** Smart View the destination is narrowed to that
+section's own folders, or the note would be created outside the very view you
+are standing in. The `⬆` chip names that folder, and clicking it opens it.
+
+Five views deliberately get **no** box: a brand-new note that is already
+archived is a contradiction, and MyWall, Murājaʿah, In Practice and Daily
+Journals each render their own list and each mean something specific by
+"belongs here". Offering a box that saves a note you then cannot find is worse
+than offering none.
+
+**The box itself.** It was a flat, borderless strip with a 15px `📄`, a
+transparent `Save` and `background:var(--paper2,var(--paper))` — the eye slid
+straight past it. It is now a raised pill: a `✚` badge, a rounded field on
+`--paper`, a solid `Save`, and a lift to white with a green ring on
+`:focus-within`. Every colour is a theme variable, so it follows the owner's
+own accent.
+
+**Measured**
+
+11/11 ship checks, and app checks from 128 to **144**.
+
+The sixteen new ones ask whether the parity is real and does its job, not
+whether the markup exists: all 11 views carry the same `.p2h-path-row` a
+folder does (9–12 chips each); a **real mouse click** on the Favourites chip
+from Recently Edited really lands on `sf-favs`, looked at again 300ms later;
+the box is in the six views it should be in and none of the five it should
+not; a title typed into Favourites comes back `favourite:true`, in a real
+folder, **inside `getSmartArts('sf-favs')` and painted on screen** — and the
+same for Pinned; a folder's own box still saves to that folder and does NOT
+quietly star or pin it; Reminders really opens `#rem-modal`; Expand/Collapse
+are counted by the note rows actually painted, not by the state flag; a
+section's Smart View saves into a folder that is genuinely in that section;
+the bar is 42px tall on a phone and 28px on a laptop; and `Save` and the
+placeholder both clear 4.5:1 on all five presets.
+
+**Three faults in this round's own work, caught by the checks and a screenshot**
+
+- **`--on-accent` is the ink for `--green`, not for `--accent`.** The first cut
+  of the bar wrote `background:var(--accent);color:var(--on-accent)`, which
+  looks like the obvious pairing and is the wrong one: `applyPaneInk()` derives
+  `--on-accent` against `--green`, while `--accent` is `--green2`, a *darkened*
+  copy meant for use as TEXT. v04.19's sweep scored it at **3.3:1 on Amber and
+  2.9:1 on a pale custom accent** — dark ink on a dark pill. It uses `--green`
+  now, the same pair `.bp` has always used for `✚ Note`.
+- **`➕` is a colour emoji and ignores `color`.** Chosen as the badge glyph, it
+  painted itself instead of taking `--on-accent`, and arrived as a muddy shape
+  on a dark green circle. No check saw it; a screenshot did. It is `✚` now —
+  a text glyph, which is what the `✚ Note` button has always used.
+- **The placeholder did not fit the phone.** It read `New favourite ⭐ — saves
+  into (001) Seeded Folder, press Enter…` and arrived as `…press En` in a
+  232px field. The destination is already named by the `⬆` chip one row up, so
+  the placeholder is short now and the tooltip carries the folder name — and
+  the phone check measures the placeholder in the field's own font on a canvas,
+  rather than trusting the eye.
+
+**What was NOT done, and why**
+
+- **The row scrolls sideways on a phone.** Ten sibling chips do not fit 390px,
+  so the row scrolls exactly as the folder row already does. Trimming the list
+  would mean guessing which Smart Views the owner uses; the order is the one
+  they already set in the sidebar, so the most-used sit first.
+- **`🗂 Card View` and `🌳 Full tree` have no Smart View equivalent** beyond
+  Expand/Collapse. Cards show *subfolders*, and a Smart View has none.
+- **The Note-Type, tag and MyDatabase headers still have no second row.** They
+  were not in the report and each needs its own answer to "what is the
+  analogue" — a Note Type's siblings are other Note Types, which is a
+  different list. Left for a round that is asked for.
+- **Four pre-existing `v04.20 —` comments in `index.html`** describe the edit
+  bar's text-size stepper, which shipped under an earlier number and was never
+  logged here. They are mislabels; they are not this round and were left alone
+  rather than rewritten on a guess.
+- **No sync, storage or export path was touched.** `mkArtTitleOnly()` gained an
+  optional third argument and one `apply()` hook that runs before the single
+  existing `persist()`. I1–I4 are untouched.

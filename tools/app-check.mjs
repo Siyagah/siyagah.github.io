@@ -1889,6 +1889,226 @@ await app.close();
       : `${sel}: ${before} → ${after}${before === after ? '  (UNCHANGED — the highlight paints nothing)' : ''}`);
 }
 
+/* ── 6n. v04.20: a Smart View gets the same second row, and a way in ───── */
+{
+  /* The owner's report was "the folder screen has buttons the Smart View
+     screen does not". These check the parity is real and does its job — not
+     that the markup exists, but that a chip navigates, a typed title lands
+     IN the view it was typed in, and the group buttons really fold. */
+  const s6n = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const pg = s6n.page;
+
+  /* Every Smart View has the row, and it is the SAME row a folder gets —
+     same class, so the two screens cannot drift apart in styling. */
+  const rows = await pg.evaluate(() => {
+    const out = [];
+    for (const sf of SF) {
+      selFolder(sf.id);
+      const row = document.querySelector('#p2h-path .p2h-path-row');
+      out.push({ id: sf.id, chips: row ? row.querySelectorAll('button').length : 0 });
+    }
+    selFolder('f1');
+    const frow = document.querySelector('#p2h-path .p2h-path-row');
+    return { views: out, folderRow: !!frow };
+  });
+  const bare = rows.views.filter((v) => v.chips < 9);
+  r.check(bare.length === 0 && rows.folderRow,
+    'every Smart View now carries the same second row a folder does',
+    bare.length ? bare.map((v) => `${v.id}: ${v.chips} chips`).join(' · ')
+      : `${rows.views.length} views, ${rows.views[0].chips}–${Math.max(...rows.views.map((v) => v.chips))} chips each, same .p2h-path-row as a folder`);
+
+  /* A chip is a real button with a real click — not markup that looks right.
+     Clicked for real and looked at again a tick later, per the v04.12 rule. */
+  await pg.evaluate(() => selFolder('sf-recent'));
+  await pg.waitForTimeout(200);
+  const chip = await pg.evaluate(() => {
+    const b = [...document.querySelectorAll('#p2h-path .p2h-path-child')]
+      .find((x) => /Favourites/.test(x.textContent));
+    if (!b) return null;
+    const q = b.getBoundingClientRect();
+    return { x: q.x + q.width / 2, y: q.y + q.height / 2 };
+  });
+  let landed = null;
+  if (chip) {
+    await pg.mouse.click(chip.x, chip.y);
+    await pg.waitForTimeout(300);
+    landed = await pg.evaluate(() => ({ folder: ST.folder,
+      head: document.getElementById('p2h')?.textContent || '' }));
+  }
+  r.check(landed && landed.folder === 'sf-favs' && /Favourites/.test(landed.head),
+    'clicking a Smart View chip really moves you there, without the sidebar',
+    landed ? `ST.folder=${landed.folder} · header ${JSON.stringify(landed.head.slice(0, 40))}` : 'no Favourites chip on the Recently Edited row');
+
+  /* The quick-add bar is present exactly where a new note can honestly go,
+     and absent where it cannot: Archive (a brand-new archived note is a
+     contradiction) and the four views that render their own list. */
+  const bars = await pg.evaluate(() => {
+    const out = {};
+    for (const sf of SF) { selFolder(sf.id);
+      out[sf.id] = !!document.querySelector('#p2c .qt-bar input'); }
+    return out;
+  });
+  const want = ['sf-new', 'sf-recent', 'sf-time', 'sf-favs', 'sf-pinned', 'sf-remind'];
+  const wantNot = ['sf-arch', 'sf-mywall', 'sf-murajaa', 'sf-practice', 'sf-journal'];
+  const missing = want.filter((id) => !bars[id]);
+  const stray = wantNot.filter((id) => bars[id]);
+  r.check(missing.length === 0 && stray.length === 0,
+    'the quick-add bar is in every Smart View a note can honestly go into, and no other',
+    (missing.length || stray.length) ? `missing: ${missing.join(',') || '—'} · stray: ${stray.join(',') || '—'}`
+      : `${want.length} views have it, ${wantNot.length} correctly do not`);
+
+  /* THE check: a title typed into Favourites has to come back as a
+     favourite, in a real folder, and be in the very list you typed it in.
+     A bar that saves a note you then cannot find is worse than no bar. */
+  for (const [view, flag, title] of [['sf-favs', 'favourite', 'Typed into Favourites'],
+                                     ['sf-pinned', 'pinned', 'Typed into Pinned']]) {
+    await pg.evaluate((v) => selFolder(v), view);
+    await pg.waitForTimeout(150);
+    await pg.fill('#p2c #qt-inp', title);
+    await pg.press('#p2c #qt-inp', 'Enter');
+    await pg.waitForTimeout(300);
+    const got = await pg.evaluate(([t, v, f]) => {
+      const a = DB.articles.find((x) => x.title === t);
+      if (!a) return { found: false };
+      return { found: true, flag: a[f] === true, folder: (a.folderIds || [])[0] || null,
+        real: DB.folders.some((fo) => fo.id === (a.folderIds || [])[0]),
+        inView: getSmartArts(v).some((x) => x.id === a.id),
+        onScreen: (document.getElementById('p2c').textContent || '').includes(t) };
+    }, [title, view, flag]);
+    r.check(got.found && got.flag && got.real && got.inView && got.onScreen,
+      `a title typed into ${view} is saved, marked ${flag}, and appears in that very list`,
+      got.found ? `${flag}=${got.flag} · folder=${got.folder} (real:${got.real}) · in the view:${got.inView} · on screen:${got.onScreen}`
+        : 'no note with that title was created at all');
+  }
+
+  /* A folder's own bar must be untouched by the generalisation — same note,
+     same folder, and NOT quietly starred or pinned by the new code path. */
+  await pg.evaluate(() => selFolder('f2'));
+  await pg.waitForTimeout(150);
+  await pg.fill('#p2c #qt-inp', 'Typed into a plain folder');
+  await pg.press('#p2c #qt-inp', 'Enter');
+  await pg.waitForTimeout(300);
+  const plain = await pg.evaluate(() => {
+    const a = DB.articles.find((x) => x.title === 'Typed into a plain folder');
+    return a ? { in: (a.folderIds || [])[0], fav: !!a.favourite, pin: !!a.pinned } : null;
+  });
+  r.check(plain && plain.in === 'f2' && !plain.fav && !plain.pin,
+    "a folder's own quick-add bar still behaves exactly as it did",
+    plain ? `folder=${plain.in} favourite=${plain.fav} pinned=${plain.pin}` : 'nothing was created');
+
+  /* Reminders: the bar promises the reminder dialog next, so it must open. */
+  await pg.evaluate(() => selFolder('sf-remind'));
+  await pg.waitForTimeout(150);
+  await pg.fill('#p2c #qt-inp', 'Typed into Reminders');
+  await pg.press('#p2c #qt-inp', 'Enter');
+  await pg.waitForTimeout(600);
+  const rem = await pg.evaluate(() => {
+    /* NOT offsetParent: #rem-modal is position:fixed, and a fixed element's
+       offsetParent is null whether it is on screen or not. */
+    const m = document.getElementById('rem-modal');
+    const q = m && m.getBoundingClientRect();
+    return { open: !!m && getComputedStyle(m).display !== 'none' && q.height > 0,
+      made: DB.articles.some((x) => x.title === 'Typed into Reminders') };
+  });
+  r.check(rem.made && rem.open,
+    'in Reminders the bar really opens the reminder dialog it promises',
+    `note created:${rem.made} · #rem-modal painted:${rem.open}`);
+  await pg.evaluate(() => closeReminderModal());
+  await pg.waitForTimeout(150);
+
+  /* Expand all / Collapse all — the Smart View's answer to 🌳 Full tree.
+     Counted by the note rows actually painted, not by the state flag. */
+  const fold = await pg.evaluate(() => {
+    selFolder('sf-time');
+    const shown = () => document.querySelectorAll('#p2c .al').length;
+    const hit = (txt) => { const b = [...document.querySelectorAll('#p2h-path .p2h-path-new')]
+      .find((x) => x.textContent.includes(txt)); if (b) b.click(); return !!b; };
+    const start = shown();
+    const gotExpand = hit('Expand all'); const open = shown();
+    const gotCollapse = hit('Collapse all'); const shut = shown();
+    return { start, open, shut, gotExpand, gotCollapse };
+  });
+  r.check(fold.gotExpand && fold.gotCollapse && fold.open > 0 && fold.shut === 0,
+    'Expand all / Collapse all really open and close a Smart View’s groups',
+    `groups painted: ${fold.start} at rest → ${fold.open} expanded → ${fold.shut} collapsed`);
+
+  /* A SECTION smart view is scoped: its bar must save into a folder that is
+     actually inside that section, or the note lands outside the view. */
+  const secScoped = await pg.evaluate(() => {
+    selSecSF('sec-1', 'sf-favs');
+    const inp = document.querySelector('#p2c .qt-bar input');
+    const row = document.querySelector('#p2h-path .p2h-path-row');
+    const dest = (inp?.getAttribute('onkeydown') || '').match(/qtKey\(event,'([^']+)'/);
+    const ids = getSectionFolderIds('sec-1');
+    return { bar: !!inp, row: !!row, dest: dest ? dest[1] : null,
+      inSection: dest ? ids.includes(dest[1]) : false };
+  });
+  r.check(secScoped.bar && secScoped.row && secScoped.inSection,
+    "a section's Smart View gets the row too, and saves inside that section",
+    `bar:${secScoped.bar} row:${secScoped.row} destination:${secScoped.dest} inside the section:${secScoped.inSection}`);
+  await s6n.close();
+
+  /* The bar is the thing the owner asked to look good — so it also has to be
+     hittable. A phone gets a 42px target; both sizes get measured. */
+  for (const [label, w, h, min] of [['a laptop', 1440, 900, 28], ['a phone', 390, 844, 42]]) {
+    const s = await openApp({ viewport: { width: w, height: h }, db: seedDB() });
+    await s.page.evaluate(() => selFolder('sf-favs'));
+    await s.page.waitForTimeout(250);
+    const geo = await s.page.evaluate(() => {
+      const bar = document.querySelector('#p2c .qt-bar');
+      if (!bar) return null;
+      const g = (el) => { const q = el.getBoundingClientRect();
+        return { w: Math.round(q.width), h: Math.round(q.height) }; };
+      /* The placeholder is the bar's only instruction, so it has to FIT.
+         Measured in the field's own font on a canvas — a clipped one looks
+         perfect in the DOM and arrives on the phone as "…press En". */
+      const inp = bar.querySelector('input');
+      const cs = getComputedStyle(inp);
+      const ctx = document.createElement('canvas').getContext('2d');
+      ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      return { bar: g(bar), go: g(bar.querySelector('.qt-go')), ic: g(bar.querySelector('.qt-ic')),
+        radius: getComputedStyle(bar).borderTopLeftRadius,
+        text: inp.placeholder, textW: Math.ceil(ctx.measureText(inp.placeholder).width),
+        fieldW: Math.floor(g(inp).w - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) };
+    });
+    await s.close();
+    const fits = geo && geo.textW <= geo.fieldW;
+    r.check(geo && geo.go.h >= min && geo.ic.h >= min - 14 && parseFloat(geo.radius) > 8 && fits,
+      `on ${label} the quick-add bar is a real, hittable control that says its whole line`,
+      geo ? `bar ${geo.bar.w}×${geo.bar.h} · Save ${geo.go.w}×${geo.go.h} (needs ${min}) · badge ${geo.ic.w}×${geo.ic.h} · radius ${geo.radius} · ${JSON.stringify(geo.text)} needs ${geo.textW}px in ${geo.fieldW}px${fits ? '' : ' — CLIPPED'}`
+        : 'no quick-add bar rendered');
+  }
+
+  /* And it has to READ — on the five presets, both of its own colours, and
+     the placeholder, which is the one word the old flat bar got wrong. */
+  for (const preset of ['forest', 'ocean', 'amber', 'indigo', 'rose']) {
+    const db = seedDB(); db.theme = { preset, custom: {} };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    await s.page.evaluate(() => selFolder('sf-favs'));
+    await s.page.waitForTimeout(250);
+    const inks = await s.page.evaluate(() => {
+      const bar = document.querySelector('#p2c .qt-bar'); if (!bar) return null;
+      const stackOf = (el) => { const st = [];
+        for (let n = el; n; n = n.parentElement) { const c = getComputedStyle(n).backgroundColor;
+          if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') st.push(c);
+          if (/^rgb\(/.test(c)) break; } return st; };
+      const go = bar.querySelector('.qt-go'), inp = bar.querySelector('input');
+      return [
+        { what: 'Save', color: getComputedStyle(go).color, stack: stackOf(go) },
+        { what: 'placeholder', color: getComputedStyle(inp, '::placeholder').color, stack: stackOf(inp) },
+      ];
+    });
+    await s.close();
+    const scored = (inks || []).map((x) => { const bg = flatten(x.stack);
+      return { ...x, c: ratio(over(px(x.color), bg), bg) }; });
+    const low = scored.filter((x) => x.c < 4.5);
+    r.check(scored.length === 2 && low.length === 0,
+      `the quick-add bar reads on ${preset}`,
+      low.length ? low.map((x) => `${x.c.toFixed(1)}:1 ${x.what}`).join(' · ')
+        : scored.map((x) => `${x.what} ${x.c.toFixed(1)}:1`).join(' · '));
+  }
+}
+
 /* ── 11. Layout at the three real screen sizes ─────────────────────────── */
 for (const vp of VIEWPORTS) {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });

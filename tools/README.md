@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 128 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 144 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -105,6 +105,15 @@ or quietly lose the notebook, none of which need a browser:
   ink, which need no element and so cover the modals and the calendar that no
   reachable state renders); plus a real mouse moved onto a real row, with the
   painted background read before and after (v04.19);
+- **a Smart View carries the same second row a folder does, and it works** —
+  all 11 views measured for the row, a **real mouse click** on a sibling chip
+  landing on that view, the quick-add bar present in the six views a note can
+  honestly go into and absent from the five it cannot, a title typed into
+  Favourites coming back `favourite:true` in a real folder and **inside
+  `getSmartArts('sf-favs')` and painted on screen**, a folder's own bar proved
+  unchanged, Reminders opening `#rem-modal`, Expand/Collapse counted by the
+  rows actually painted, a section's view saving inside that section, and the
+  bar's touch size, placeholder fit and contrast on all five presets (v04.20);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -191,6 +200,24 @@ assertions miss.
   archive button reads as "26px" and looks like a broken CSS rule that is
   working perfectly. Assert on the dimension you actually mean — and on both,
   if what you care about is a touch target.
+- **`offsetParent === null` does not mean "not on screen".** It is null for
+  any `position:fixed` element, painted or not — so "is the reminder dialog
+  open" measured against `#rem-modal.offsetParent` reads FAILED on a dialog
+  that is fully visible. For a fixed element ask `getComputedStyle(el).display`
+  and `getBoundingClientRect().height`. (The same trap bites the opposite way
+  in the contrast sweeps, where `offsetParent === null` IS the right test —
+  everything they walk is in normal flow.)
+- **A colour emoji ignores `color`, and no check will tell you.** `➕`, `📄`,
+  `⭐` and friends are emoji-presentation glyphs: they paint their own colours,
+  so `color:var(--on-accent)` does nothing and the contrast sweeps skip them
+  by design ("its own text is emoji only"). A glyph used as a themed ICON has
+  to be a TEXT glyph — `✚`, `⬆`, `▤` — or it will not follow the theme. Only
+  a screenshot catches this.
+- **A placeholder is the only instruction an input carries, so measure that it
+  FITS.** A clipped one is perfect in the DOM and arrives on a 390px phone as
+  `…press En`. Measure it in the field's own font on a canvas
+  (`ctx.measureText`) against the field's content width; the eye and the DOM
+  both say it is fine.
 - **A shorthand holding a `var()` reports NOTHING through its longhands.**
   Chromium expands `background: var(--hover)` into nine longhands and returns
   `''` for every one of them — a "pending substitution" — so a sweep that walks
