@@ -789,3 +789,103 @@ a failing check is a wrong assertion surprisingly often.
   for. Offered as a follow-up.
 - **No sync, storage or export path was touched.** I1–I4 are untouched by one
   onclick.
+
+---
+
+## v04.14 — the sidebar header, rebuilt to read (11 September 2026)
+
+Three things in one screenshot, all of them in the top-left corner of the app:
+the version number was invisible, the row of buttons was four different sizes,
+and the `▾` beside `🏠` was a **14×19px** speck.
+
+**Why the version number vanished**
+
+It was painted in a fixed grey, `#6A7F6C`. On the Forest preset that measures
+4.3:1 against the sidebar — dim but there. The owner had set a custom sidebar
+colour (Appearance ▸ Custom colours), and on that teal the same grey measures
+about **1.2:1**. Invisible, exactly as reported. `--forest` is owner-settable,
+so *any* fixed colour in that header is a colour that works until the owner
+changes one setting.
+
+Everything in the header is now painted in translucent black or white over
+whatever the sidebar colour happens to be, in two layers:
+
+- **recessed** (a dark translucent layer) — the version badge, the search
+  field, the "Back to search results" button;
+- **raised** (a light translucent layer) — the buttons.
+
+Lightening is what killed the contrast: white on a 17%-white pill over that
+teal is 3.8:1, while white on a 28%-black pill is 8.4:1 — and 18.9:1 on
+Forest. The first attempt at this round used a light pill, and **app-check
+failed it at 3.8:1** before it could ship.
+
+**The buttons**
+
+They were `37×36`, `14×19`, `37×36`, `42×40` and `37×45`, in four font sizes,
+with the `▾` tucked under a negative margin. Now every one of them is one
+square in one icon size — 34×34 on desktop, **42×42** on phone and tablet (the
+size the note toolbar has been held to since v04.09) — in its own rounded box
+with one hover.
+
+`🏠` and its `▾` became a **split button**: one pill, a hairline divider, Home
+still one tap on the left, the archives menu on the right. The chevron is
+26×34 on desktop and 30×42 on a phone — the narrow half of a split control,
+which is why it is checked on **both** dimensions and not on the smaller one.
+
+**The header also did not fit its own pane**
+
+Found while measuring, not reported: at a 200px sidebar the header's contents
+ran **292px** wide, so `🧰` and `⚙` were pushed off the edge of the pane with
+nothing able to reach them. The sidebar drags from 160px to 540px, so a 1440px
+laptop can be showing a 200px one — `window.innerWidth` has nothing to say
+about it.
+
+`_sbFitHeader()` measures the header against its own pane and folds one thing
+at a time, the same shape as `_p3FitToolbar()`: first the word "Siyagah" goes
+(`📚` and the version badge stay), then the buttons drop to their own row. A
+`ResizeObserver` on `#sb` runs it, because the sidebar changes width without
+the window changing at all — the drag handle, Auto-fit width and the collapse
+toggle all do it.
+
+Measured at every width the sidebar can be dragged to:
+
+```
+160:122px (wordmark folded)  200:84px  240:84px  280:57px
+330:57px  390:57px  460:57px  540:57px     — nothing clipped, at any of them
+```
+
+**One trap this round paid for**
+
+The first cut let the logo shrink (`flex:1 1 auto; min-width:0`). The word
+"Siyagah" was then squeezed to **0px** — still in the DOM, still "fitting",
+`scrollWidth === clientWidth` — so the fold never fired and the fit function
+measured a header that was silently losing its own contents. This is the v04.08
+note-type-chip failure in a new place. Nothing in that row shrinks now; it
+overflows honestly, and the overflow is what gets measured.
+
+**Measured**
+
+11/11 ship checks, and app checks from 70 to **80**.
+
+The ten new ones compute real WCAG contrast — blending each translucent layer
+over the colour behind it — for the version badge, the search placeholder and
+typed search text, on the Forest preset **and** on the owner's teal; walk the
+sidebar from 160px to 540px asserting nothing is clipped and the badge survives
+every width; assert one square and one icon size for every button; assert the
+`▾` on both dimensions, at desktop and at phone; and click the `▾` with a real
+mouse and look again 250ms later, because v04.11 shipped a menu that opened and
+was shut in the same tick.
+
+**What was NOT done, and why**
+
+- **The word "Siyagah" folds away on a phone.** Keeping it alongside 42px
+  touch targets needs 402px of row inside a 370px phone header; the wordmark
+  is the only part of the row that is decoration, so it is what folds. It
+  returns at a 330px sidebar and on every desktop and tablet layout.
+- **The tree below the header was left alone.** `SMART VIEWS`, `TAGS` and the
+  count badges are painted at 25% white and are faint on a light custom
+  sidebar colour for the same reason the version number was. Same fix, a
+  different part of the app, and not what was asked for — offered as a
+  follow-up.
+- **No sync, storage or export path was touched.** I1–I4 are untouched by a
+  stylesheet and one measuring function.
