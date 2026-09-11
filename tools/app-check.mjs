@@ -896,6 +896,62 @@ await app.close();
   await s2.close();
 }
 
+/* ── 6g. v04.13: the type chip is a badge, not a delete button ──────────── */
+/* It called toggleNoteKind(), so one tap on what reads as a label stripped the
+   note's type. It opens the type picker now. Both halves are asserted: the
+   types must be UNCHANGED by the tap, and the picker must actually open —
+   anchored to the chip, not dumped in the corner. */
+{
+  const s2 = await openApp({ viewport: { width: 1600, height: 900 }, db: seedDB() });
+  await s2.page.evaluate(() => { selArt('a1'); });
+  await s2.page.waitForTimeout(400);
+  const chipTap = await s2.page.evaluate(() => {
+    const before = artKinds(DB.articles.find((a) => a.id === 'a1')).slice();
+    const chip = document.querySelector('#p3h .nti-chip');
+    if (!chip) return { noChip: true };
+    const hint = chip.title;
+    chip.click();
+    const after = artKinds(DB.articles.find((a) => a.id === 'a1')).slice();
+    const p = document.getElementById('nti-picker');
+    const b = p ? p.getBoundingClientRect() : null;
+    return { before, after, hint,
+      kept: JSON.stringify(before) === JSON.stringify(after),
+      opened: !!p && p.classList.contains('open'),
+      anchored: !!b && b.width > 40 && b.top > 10 && b.left > 10 };
+  });
+  await s2.page.evaluate(() => { try { closeNtiPicker(); } catch (e) {} });
+  r.check(!chipTap.noChip && chipTap.kept && chipTap.opened && chipTap.anchored
+    && !/remove/i.test(chipTap.hint),
+    'tapping the note-type chip opens the picker and does NOT strip the type',
+    chipTap.noChip ? 'no chip rendered'
+      : `types ${JSON.stringify(chipTap.before)} → ${JSON.stringify(chipTap.after)}` +
+        ` · picker opened ${chipTap.opened}, anchored ${chipTap.anchored} · tooltip "${chipTap.hint}"`);
+
+  /* A type can still be removed deliberately — from the picker itself.
+     This first asserted that removing the note's ONLY type reduced the count,
+     and failed. That was a wrong assertion, not a defect: toggleNoteKind()
+     ends with `if(!kinds.length)kinds.push('general')`, so "general" is the
+     FALLBACK a note falls back to, and a note always carries at least one
+     type. The real question is whether a type you deliberately added can be
+     taken off again, so the check adds one and removes it. */
+  const stillRemovable = await s2.page.evaluate(() => {
+    const other = noteKinds().map((k) => k.id).find((id) => id !== 'general');
+    if (!other) return { skipped: true };
+    window.toggleNoteKind('a1', other);
+    const withIt = artKinds(DB.articles.find((x) => x.id === 'a1')).slice();
+    window.toggleNoteKind('a1', other);
+    const without = artKinds(DB.articles.find((x) => x.id === 'a1')).slice();
+    return { other, withIt, without,
+      added: withIt.includes(other), removed: !without.includes(other) };
+  });
+  r.check(stillRemovable.skipped || (stillRemovable.added && stillRemovable.removed),
+    'a type can still be added and taken off deliberately, from the picker',
+    stillRemovable.skipped ? 'only one note type exists in the seed'
+      : `"${stillRemovable.other}" on → ${JSON.stringify(stillRemovable.withIt)}` +
+        ` · off → ${JSON.stringify(stillRemovable.without)}`);
+  await s2.close();
+}
+
 /* ── 11. Layout at the three real screen sizes ─────────────────────────── */
 for (const vp of VIEWPORTS) {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });

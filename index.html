@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.12">
+<meta name="app-version" content="04.13">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2216,7 +2216,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn bn bi sb-nav-btn" onclick="openP2()" style="font-size:24px;flex-shrink:0" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.12</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span>Siyagah<span id="app-version-tag" class="sb-version-tag"> v04.13</span></div>
     <div style="display:flex;align-items:center;gap:4px">
       <div class="sb-menu-wrap" id="sb-home-wrap">
         <button class="btn bn bi" onclick="goHome()" style="font-size:20px" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn bn bi sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -5814,6 +5814,16 @@ function addToTabPicker(aid){
 
 /* ═══════════════ NTI PICKER ═══════════════════════════════════════════════ */
 const _NTI_PALETTE=['#6B7280','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EF4444','#EC4899','#F97316','#14B8A6','#6366F1'];
+/* v04.13 — a type chip taps through to the picker. The chip also appears
+   inside the 🏷 palette on a narrow pane, and that palette has to close behind
+   it — but the picker is positioned from the element it is handed, and an
+   element inside a closed palette measures 0×0 and would put the picker in
+   the top-left corner. So: open first, close second. Same trap the Attach
+   menu's Note Type row hit in v04.11. */
+function _ntiChipTap(aid,el){
+  openNtiPicker(aid,el);
+  try{closeFloatPop('p3h-pal');}catch(e){}
+}
 function openNtiPicker(aid,btn){
   let p=document.getElementById('nti-picker');
   if(p&&p.classList.contains('open')&&p.dataset.aid===aid){closeNtiPicker();return;}
@@ -18988,7 +18998,14 @@ function kindBarHTML(a,bare){
   const activeKinds=noteKinds().filter(k=>curKinds.has(k.id));
   const chips=activeKinds.map(k=>{
     const sty=`background:${k.color};border-color:${k.color};color:#fff`;
-    return `<button class="nti-chip on" style="${sty}" onclick="toggleNoteKind('${a.id}','${k.id}')" title="${esc(k.name)} · tap to remove">${esc(k.name)}</button>`;
+    /* v04.13 — the chip is a BADGE now, not a delete button. It used to call
+       toggleNoteKind(), so one tap on what reads as a label silently stripped
+       the note's type — a trap that only got worse once 🏷 Note Type moved to
+       its proper home under 📎 Attach in v04.11. Tapping it opens the type
+       picker instead, which is where a type is added or removed deliberately.
+       Nothing became unreachable: the picker, 📎 Attach → Note Type and the
+       right-click menu's NTI Types submenu all still toggle a type off. */
+    return `<button class="nti-chip on" style="${sty}" onclick="_ntiChipTap('${a.id}',this)" title="Note Type: ${esc(k.name)} — tap to change">${esc(k.name)}</button>`;
   }).join('');
   const hasNag=activeKinds.some(k=>k.nag);
   let statusHTML='';
