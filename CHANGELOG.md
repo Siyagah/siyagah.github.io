@@ -637,3 +637,82 @@ Two earlier checks were **updated in place, not deleted**:
   have made both unreachable while editing.
 - **No sync, storage or export path was touched.** I1–I4 are untouched by a
   round that moves buttons between a row and a menu.
+
+## v04.12 — the ⋯ button finally opens, and Multi becomes a stack of three (11 September 2026)
+
+**The ⋯ button was still broken after v04.11 said it was fixed.**
+
+v04.11 found that its `onclick` passed a bare `curA.id` — a `const` local to
+`renderP3H()` — so the handler threw `ReferenceError` and nothing happened.
+Interpolating the id stopped the throw, and both checks written for it passed.
+The button still did not open on a left-click.
+
+The second fault was underneath the first. The `onclick` handed `showArtCtx()`
+a **synthesised event**:
+
+```js
+showArtCtx({clientX:event.clientX, clientY:event.clientY,
+            preventDefault:()=>{}, stopPropagation:()=>{}}, id)
+```
+
+`showArtCtx()` builds the menu, shows it, and calls `ev.stopPropagation()` to
+keep the click off the document. On that object the call is a no-op, so the
+**real** click carried on bubbling to
+
+```js
+document.addEventListener('click', () => { hideCtx(); ... })
+```
+
+which shut the menu in the same tick it was opened. Right-click was never
+affected: that global closer listens for `click`, not `contextmenu` — which is
+exactly why the button looked half-working for a whole version series.
+
+The fix is to pass the real `event`, as `oncontextmenu` on the same button
+always did. It carries `clientX`/`clientY` and a `stopPropagation()` that stops
+something. There was never a reason to synthesise one.
+
+**Why the v04.11 checks missed it**
+
+Both of them asked the wrong question. One asserted no handler threw; one read
+`#ctx.textContent` and found nineteen rows. Both are *true* of a menu that is
+built, painted and hidden again a millisecond later — the menu really was
+populated, it just was not on screen.
+
+The check that exists now clicks the button with a real Playwright mouse event,
+waits, and asks whether the menu is still painted: `display`, a box bigger than
+40×40, on-screen coordinates, ten rows or more. Reintroducing the synthesised
+event makes it fail with the exact fingerprint of the bug —
+`display none · 0×0px · 19 rows`.
+
+**Multi is three sheets now, standing upright**
+
+The owner asked for a three-layer vertical shape instead of two squares. Three
+portrait pages, painted back to front, each one opaque so the front sheet
+occludes the ones behind — three overlapping outlines at 17px is mush. The two
+behind fade by **stroke opacity only**: fading the whole element would make
+their paper translucent and let the edges underneath show through the sheet in
+front, which is the mush being avoided. Against Single's one card on a dimmed
+screen the two now read apart at a glance, which was the point of v04.10.
+
+**Measured**
+
+11/11 ship checks, and app checks from 67 to **68**.
+
+The new one is the menu-visibility check above. The v04.10 icon check was
+**updated in place** to assert Multi has exactly three `<rect>`s and that every
+one of them is taller than it is wide — a two-layer or landscape drawing now
+fails rather than passing silently.
+
+**What was NOT done, and why**
+
+- **The "General" chip was left exactly as it is.** The owner asked whether it
+  earns its place; that is a question, not an instruction, and removing the
+  only at-a-glance view of a note's type is not a change to make on an
+  inference. What the answer is: it is the note's Note Type, and for a note
+  with ONE type it is the only place that type appears — the note list only
+  shows a `🏷N` badge when a note has two or more. Tapping it **removes** the
+  type (`toggleNoteKind`, tooltip "tap to remove"), which is a hazard now that
+  Note Type has a proper home under 📎 Attach. Three options were put to the
+  owner: leave it, make it read-only, or drop it.
+- **No sync, storage or export path was touched.** I1–I4 are untouched by an
+  event argument and an icon.
