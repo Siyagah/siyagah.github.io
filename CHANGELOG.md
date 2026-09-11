@@ -1147,3 +1147,84 @@ and says which state each thing comes from.
   they were; making them permanent is a behaviour change nobody asked for.
 - **No sync, storage or export path was touched.** I1–I4 are untouched by a
   stylesheet and a class name.
+
+---
+
+## v04.18 — the Assign window, and a note count on every folder (11 September 2026)
+
+Two things the owner asked for together: the same treatment for
+**Assign to folders**, and the note count the sidebar shows on its folders.
+
+**Assign to folders**
+
+Measured first, and most of it already passed — it shares its rows, its
+chevrons and its action icons with the browse pop-out, so v04.17 had already
+sized them and v04.16 had already made their text follow the pane colour.
+Three rounds of tokens and one round of sizing, arriving somewhere nobody
+pointed them at.
+
+What was still wrong was the control the window exists for:
+
+- **The tick box was 15×15** — on a phone as well as on a laptop, and this is
+  the box you tap to file a note. It is 20×20 on a laptop and 24×24 on a
+  phone now. (The whole row was, and still is, the real target; the box now
+  looks like one too.)
+
+**A folder name you can read, on a phone**
+
+With three 38px action icons permanently on every row, a folder name got
+about **65px of a 317px row**, so `(001) Seeded Folder` arrived as
+`(001) See…`. That was true in v04.17's browse pop-out as well — the
+measurement here found it in both.
+
+Two changes, the second because the first was not enough:
+
+1. **Names wrap** instead of being cut, clamped to two lines, exactly as they
+   do in the sidebar. On its own this bought rows of 82px and *still* showed
+   `(001) See…`, because 65px does not fit a name however you wrap it.
+2. **The three row actions fold into one `⋯` under 1200px**, opening as a
+   menu — the same answer the note toolbar reached in v04.09 and v04.11:
+   fold a group, never hide it. The name now gets 122–181px and arrives
+   whole; rows are back to 52px.
+
+On a laptop nothing changed: the three icons are still on the row, and the
+`⋯` stays out of the way.
+
+**The note count**
+
+Every folder row in **both** pop-up windows now carries the count the sidebar
+badge carries, from the same `cntOf()` — the folder and everything under it.
+Checked row by row against `cntOf()` in both windows rather than eyeballed.
+
+**Measured**
+
+11/11 ship checks, and app checks from 105 to **113**.
+
+Two sweep the Assign window's text (two colour settings — it shares its
+classes with the browse pop-out, so this is a regression net, not a
+discovery); two measure the tick box at a laptop and a phone; one compares
+every row's badge against `cntOf()` in both windows; two cover the fold —
+that the actions really are folded and the whole name is on screen, and that
+a **real** click on the `⋯` opens all three and the menu is still painted a
+tick later; and one asserts the laptop kept its three icons.
+
+**A wrong assertion, corrected**
+
+The fold check first demanded 140px of folder name, a number lifted from the
+browse pop-out. The Assign window also carries a tick box, so its name box is
+122px — and shows the whole name anyway. The check asks the real question
+now: is the element's text the folder's whole name, and does it fit without
+overflowing its two lines.
+
+**What was NOT done, and why**
+
+- **Note titles in these windows also wrap to two lines** and are not folded
+  behind anything; their rows carry two actions, not three, and they fit.
+- **`＋ Add group` and the note-link panels** use the same modal shell and
+  pick most of this up, but they were not measured and are not claimed.
+- **The count is notes, not sub-folders** — the same number the sidebar has
+  always shown, including everything in child folders. If the owner wants it
+  to mean "notes directly in this folder", that is a different number and a
+  different round.
+- **No sync, storage or export path was touched.** I1–I4 are untouched by a
+  stylesheet, a count and a menu.

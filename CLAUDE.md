@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.17.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.18.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,16 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.18** (11 Sep 2026) — the Assign window, and a note count on every
+  folder row in **both** pop-up windows (the same `cntOf()` the sidebar badge
+  uses — the folder and everything under it). Assign mostly passed already,
+  inheriting v04.16's tokens and v04.17's sizing; what was left was the tick
+  box, **15×15 on a phone too**, now 20/24. And a folder name was getting
+  ~65px of a 317px phone row, arriving as `(001) See…`: names wrap to two
+  lines like the sidebar's, and the three row actions fold into one `⋯`
+  (a real menu, real event) under 1200px, which gives the name 122–181px.
+  A laptop keeps its three icons. 113/113 app checks (up from 105) and 11/11
+  ship checks.
 - **v04.17** (11 Sep 2026) — the folder pop-out (`📚 Folders`) got what the
   sidebar got. Its two inputs had **no `::placeholder` rule at all**, so the
   browser's own `#757575` read 1.9:1 on a derived pane background; they use
@@ -56,12 +66,6 @@ must never accumulate here instead of there.
   and ⚙ off the pane — `_sbFitHeader()` now folds it against its own pane
   width, watched by a `ResizeObserver` on `#sb`. 80/80 app checks (up from 70)
   and 11/11 ship checks.
-- **v04.13** (11 Sep 2026) — the note-type chip is a badge, not a delete button.
-  It called `toggleNoteKind()`, so one tap on what reads as a label stripped the
-  note's type; it opens the type picker now. Also recorded: `general` is the
-  FALLBACK type (`toggleNoteKind()` pushes it when the list empties), which is
-  why the chip reads `General` on every note that has never been typed. 70/70
-  app checks (up from 68) and 11/11 ship checks.
 ---
 
 ## What this is
