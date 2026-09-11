@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 162 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 189 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -123,6 +123,17 @@ or quietly lose the notebook, none of which need a browser:
   wholly on screen at phone, tablet and a laptop with the sidebar at 160px
   and 540px, a scrolling menu carrying its cue, 44px rows on a phone, and all
   30 labels and headings at 4.5:1 on five presets (v04.21);
+- **the phone's note editor is one bar, and a menu opens under its button** —
+  the edit view measured for the rows it no longer has (no tab bar, no
+  type/Attach/Save row, Save on the nav bar) and for the note starting in the
+  top third of the screen; **nothing lost in the fold**, checked not against a
+  written list but against the same app one pixel the other side of the 640px
+  breakpoint; Save proved by reading the typed words back out of `DB` after a
+  real click; one date on the versioning bar that a real click flips to
+  Updated and back without rebuilding `#ed` or touching `updatedAt`; exactly
+  one `#ed-col-wrap` at each size; and the geometry the round fixed — a real
+  mouse click on every edit-bar group, looked at 250ms later, opening against
+  its own button, wholly on screen, at all three sizes (v04.22);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -185,6 +196,14 @@ assertions miss.
   them (six sidebar colours, five pane settings, four states each). It is
   still one command and still the whole gate — just do not expect it back
   instantly, and do not add a sweep colour without asking what it proves.
+- **"Nothing was lost" is a comparison, not a list.** A fold that hides
+  controls behind menus needs proof that every one of them is still reachable,
+  and a hand-written list of the controls that existed goes stale the week
+  after it is written. v04.22 asks the same app the same question one pixel
+  either side of the breakpoint it folds at — every function reachable from
+  the whole edit surface at 640px must still be reachable at 390px — so the
+  check keeps working as controls come and go. Open every menu to collect
+  them: a closed menu is `display:none` and contributes nothing.
 - **A check that has never opened a surface is not a check on that surface.**
   `app-check` reached 144 checks without ever opening the 🧰 or ⚙ dropdown,
   so every measurement of them — size, position, contrast, touch target —

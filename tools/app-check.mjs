@@ -2285,6 +2285,302 @@ await app.close();
   }
 }
 
+/* ── 6p. v04.22: one bar on a phone, and a menu under its own button ───── */
+{
+  /* The owner measured the phone's edit view with a screenshot: five rows of
+     chrome before the first line of writing, about half the screen. The round
+     folds three of those rows into the one bar (Calendar, Tab, Templates and
+     Attach under `+`; undo/redo and Find under `≡`; Save on the bar itself),
+     and fixes a menu that opened at the FOOT of the screen instead of under
+     the button that opened it.
+     Four things can go wrong here and none of them is visible in a
+     screenshot of a closed menu: a control lost in the fold, a menu that
+     opens and shuts itself in the same tick (the v04.12 defect), a menu that
+     runs off the screen (the v04.21 defect), and a date flip that rebuilds
+     #ed and costs the caret. Each is measured. */
+
+  /* Open a note for editing and hand back the surface, ready to measure. */
+  const editAt = async (w, h) => {
+    const s = await openApp({ viewport: { width: w, height: h }, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render();
+      if (innerWidth < 1200) showPane('p3'); });
+    await s.page.waitForTimeout(250);
+    await s.page.evaluate(() => window.startEdit());
+    await s.page.waitForSelector('#ed');
+    await s.page.waitForTimeout(350);
+    return s;
+  };
+  /* Every action reachable from the whole edit surface, named by the FUNCTION
+     it calls — a label can be reworded, the function is what happens. The
+     group menus are opened one at a time because a closed menu is
+     display:none and contributes nothing (the v04.21 lesson). */
+  const reach = async (pg) => {
+    const groups = await pg.evaluate(() =>
+      [...document.querySelectorAll('.eb-grp-btn')].map((b) => b.dataset.g));
+    const grab = () => pg.evaluate(() => {
+      const out = [];
+      const scan = (root) => { if (!root) return;
+        for (const el of root.querySelectorAll('[onclick],[onmousedown]')) {
+          if (!el.offsetParent && el.id !== 'ed-col-wrap') continue;   /* hidden = unreachable */
+          for (const at of ['onclick', 'onmousedown']) {
+            const h = el.getAttribute(at); if (!h) continue;
+            for (const m of h.matchAll(/([A-Za-z_$][\w$]*)\s*\(/g)) out.push(m[1]);
+          }
+        } };
+      ['tab-bar', 'p3h', 'p3c'].forEach((id) => scan(document.getElementById(id)));
+      scan(document.getElementById('eb-pop'));
+      return out;
+    });
+    const all = new Set(await grab());
+    for (const g of groups) {
+      await pg.evaluate((g) => { if (ST.ebGroup) togEBGroup(ST.ebGroup); }, g);
+      await pg.waitForTimeout(80);
+      await pg.click(`.eb-grp-btn[data-g="${g}"]`);
+      await pg.waitForTimeout(200);
+      (await grab()).forEach((f) => all.add(f));
+    }
+    await pg.evaluate(() => { if (ST.ebGroup) togEBGroup(ST.ebGroup); });
+    await pg.waitForTimeout(80);
+    /* Plumbing, not actions — these say nothing about what the owner can do. */
+    ['event', 'togEBGroup', 'closeFloatPop', '_closeStickyPop', 'toggleEdColPop',
+      'esc', 'String', 'if'].forEach((f) => all.delete(f));
+    return all;
+  };
+
+  /* 1. The phone's edit view is ONE bar of chrome, not five. */
+  const sPh = await editAt(390, 844);
+  const rows = await sPh.page.evaluate(() => {
+    const vis = (sel) => [...document.querySelectorAll(sel)]
+      .filter((e) => e.offsetParent && e.getBoundingClientRect().height > 0).length;
+    const bar = document.querySelector('.p3h-nav-edit-row');
+    return { bars: vis('.p3h-nav-edit-row'), tabs: vis('#tab-bar'), kinds: vis('.kind-bar'),
+      tags: vis('.p3h-tag-bar'), meta: vis('.p3-meta-row'),
+      edTop: Math.round(document.getElementById('ed').getBoundingClientRect().top),
+      vh: innerHeight,
+      barText: (bar ? bar.innerText : '').replace(/\s+/g, ' ').trim(),
+      save: !!document.querySelector('.p3h-nav-edit-row .et-save') };
+  });
+  r.check(rows.bars === 1 && rows.tabs === 0 && rows.kinds === 0 && rows.save,
+    'phone: editing a note opens on ONE bar, with Save on it',
+    `nav+edit rows ${rows.bars} · tab bar ${rows.tabs} · type/Attach/Save row ${rows.kinds}`
+      + ` · Save on the bar ${rows.save ? 'yes' : 'NO'} · "${rows.barText}"`);
+  /* And the writing starts in the top third of the phone, not halfway down.
+     v04.21 measured ~450px of 844 (53%); the budget is a third. */
+  r.check(rows.edTop < rows.vh * 0.34,
+    'phone: the note itself starts in the top third of the screen',
+    `#ed begins at ${rows.edTop}px of ${rows.vh}px (${Math.round(rows.edTop / rows.vh * 100)}%)`);
+
+  /* Every control on that bar is one size, and none of them is pushed off the
+     end. `min-width:0` on a flex item does not overflow — it DISAPPEARS
+     (v04.14), and .nav-l/.nav-r scroll, so a button that no longer fits is
+     simply unreachable while the row still looks perfect. Measured against
+     the viewport, not against the row. */
+  const bar = await sPh.page.evaluate(() => {
+    const btns = [...document.querySelectorAll('.p3h-nav-edit-row button')]
+      .filter((b) => b.offsetParent)
+      .map((b) => { const q = b.getBoundingClientRect();
+        return { what: (b.textContent || b.title || '?').trim().slice(0, 10),
+          w: Math.round(q.width), h: Math.round(q.height),
+          out: q.left < -0.5 || q.right > innerWidth + 0.5 }; });
+    const strips = ['nav-l', 'nav-r'].map((c) => { const e = document.querySelector('.p3h-nav-edit-row .' + c);
+      return { c, over: Math.round(e.scrollWidth - e.clientWidth) }; });
+    return { btns, strips };
+  });
+  const runt = bar.btns.filter((b) => b.w < 38 || b.h < 40);
+  const gone = bar.btns.filter((b) => b.out);
+  const spill = bar.strips.filter((x) => x.over > 1);
+  r.check(runt.length === 0 && gone.length === 0 && spill.length === 0,
+    'phone: every control on the one bar is one size and none is pushed off the end',
+    runt.length ? `undersized: ${runt.map((b) => `${b.what} ${b.w}×${b.h}`).join(', ')}`
+      : gone.length ? `off the viewport: ${gone.map((b) => b.what).join(', ')}`
+        : spill.length ? `scrolls out of reach: ${spill.map((x) => `${x.c} by ${x.over}px`).join(', ')}`
+          : `${bar.btns.length} controls, all 38×40 or bigger, nothing scrolled away`);
+
+  /* The nav pair used to be on this bar AND on the title row — the same two
+     functions, twice, one under the other. */
+  const dups = await sPh.page.evaluate(() => {
+    const n = (fn) => [...document.querySelectorAll('#p3h [onclick],#p3c [onclick]')]
+      .filter((e) => e.offsetParent && (e.getAttribute('onclick') || '').startsWith(fn)).length;
+    return { back: n('openP2'), folders: n('backFromP3') };
+  });
+  r.check(dups.back === 1 && dups.folders === 1,
+    'phone: the ◀ and ≡ nav buttons appear once, not on two rows at the same time',
+    `◀ back-to-list ×${dups.back} · ≡ folders ×${dups.folders}`);
+
+  /* 2. Nothing was lost in the fold. Measured against the SAME app one pixel
+     the other side of the breakpoint, so the check maintains itself: whatever
+     a 640px screen can reach, a 390px screen must still reach too. */
+  const phoneFns = await reach(sPh.page);
+  const sTb = await editAt(640, 844);
+  const tabFns = await reach(sTb.page);
+  await sTb.close();
+  const lost = [...tabFns].filter((f) => !phoneFns.has(f));
+  r.check(lost.length === 0 && phoneFns.size > 25,
+    'phone: every control the unfolded bar reaches, the folded one still reaches',
+    lost.length ? `unreachable once folded: ${lost.join(', ')}`
+      : `${phoneFns.size} actions on the phone, ${tabFns.size} at 640px, none lost`);
+
+  /* 3. Save on the bar really saves. A real click, and the typed words are
+     read back out of DB — "it did not throw" is not a saved note. */
+  await sPh.page.click('#ed');
+  await sPh.page.keyboard.press('Control+End');
+  await sPh.page.keyboard.type(' SAVEDBYBAR');
+  await sPh.page.waitForTimeout(150);
+  await sPh.page.click('.p3h-nav-edit-row .et-save');
+  await sPh.page.waitForTimeout(400);
+  const saved = await sPh.page.evaluate(() =>
+    (DB.articles.find((a) => a.id === 'a1').content || '').includes('SAVEDBYBAR'));
+  r.check(saved, 'phone: 💾 Save on the bar commits the note',
+    saved ? 'typed text is in DB.articles after a real click' : 'the note did NOT save');
+  await sPh.close();
+
+  /* 4. The date line is ONE date, and a tap flips it — without rebuilding the
+     editor underneath, which would cost the caret mid-sentence. */
+  {
+    const s = await editAt(390, 844);
+    const before = await s.page.evaluate(() => {
+      const b = document.querySelectorAll('.p3-meta-row .dl-flip');
+      document.getElementById('ed').dataset.probe = 'same-node';
+      return { n: b.length, text: b[0] ? b[0].textContent.trim() : '',
+        inMeta: !!document.querySelector('.p3-meta-row .dl-flip'),
+        upd: DB.articles.find((a) => a.id === 'a1').updatedAt };
+    });
+    await s.page.click('.dl-flip');
+    await s.page.waitForTimeout(200);
+    const mid = await s.page.evaluate(() => ({
+      text: document.querySelector('.dl-flip').textContent.trim(),
+      sameEd: document.getElementById('ed').dataset.probe === 'same-node',
+      upd: DB.articles.find((a) => a.id === 'a1').updatedAt }));
+    await s.page.click('.dl-flip');
+    await s.page.waitForTimeout(200);
+    const back = await s.page.evaluate(() => document.querySelector('.dl-flip').textContent.trim());
+    r.check(before.n === 1 && before.inMeta && /^Created /.test(before.text),
+      'the note shows ONE date, on the versioning bar, and it is the created one',
+      `${before.n} date element(s) in .p3-meta-row: "${before.text}"`);
+    r.check(/^Updated /.test(mid.text) && /^Created /.test(back),
+      'tapping the date flips it to Updated, and back again',
+      `"${before.text}" → "${mid.text}" → "${back}"`);
+    r.check(mid.sameEd && mid.upd === before.upd,
+      'flipping the date neither rebuilds the editor nor touches the note',
+      `#ed ${mid.sameEd ? 'is the same node' : 'WAS REBUILT'} · updatedAt ${mid.upd === before.upd ? 'unchanged' : 'CHANGED'}`);
+    await s.close();
+  }
+
+  /* 5. The section-tools ⋯ shares the versioning bar, after the date — and
+     #ed-col-wrap is an id, so there must never be two of it. */
+  for (const vp of VIEWPORTS) {
+    const s = await editAt(vp.width, vp.height);
+    const m = await s.page.evaluate(() => {
+      const all = document.querySelectorAll('#ed-col-wrap');
+      const w = document.getElementById('ed-col-wrap');
+      const d = document.querySelector('.p3-meta-row .dl-flip');
+      return { n: all.length, inMeta: !!(w && w.closest('.p3-meta-row')),
+        inTb: !!(w && w.closest('.p3h-unified-tb')),
+        afterDate: !!(w && d && w.getBoundingClientRect().left >= d.getBoundingClientRect().right - 1),
+        shown: !!(w && getComputedStyle(w).display !== 'none') };
+    });
+    await s.close();
+    const wantMeta = vp.width < 1200;
+    r.check(m.n === 1 && m.shown && (wantMeta ? (m.inMeta && m.afterDate) : m.inTb),
+      `${vp.name}: exactly one section-tools ⋯, ${wantMeta ? 'on the versioning bar after the date' : 'on the unified toolbar'}`,
+      `${m.n} #ed-col-wrap · ${m.inMeta ? 'in .p3-meta-row' : m.inTb ? 'in the toolbar' : 'nowhere expected'}`
+        + ` · painted ${m.shown} · after the date ${m.afterDate}`);
+  }
+
+  /* 6. Geometry — the round's own bug report. A real mouse click on the real
+     button, looked at again 250ms later (the v04.12 rule), then asked the
+     question the owner asked: is it under the button, or at the bottom of the
+     screen? Under 1200px it used to be pinned `bottom:60px`, half a page from
+     the finger that opened it. */
+  for (const vp of VIEWPORTS) {
+    const s = await editAt(vp.width, vp.height);
+    const groups = await s.page.evaluate(() =>
+      [...document.querySelectorAll('.eb-grp-btn')].map((b) => b.dataset.g));
+    const out = [];
+    for (const g of groups) {
+      const box = await s.page.locator(`.eb-grp-btn[data-g="${g}"]`).boundingBox();
+      await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await s.page.waitForTimeout(250);
+      out.push(await s.page.evaluate((g) => {
+        const p = document.getElementById('eb-pop');
+        const b = document.querySelector(`.eb-grp-btn[data-g="${g}"]`).getBoundingClientRect();
+        if (!p || !p.classList.contains('open')) return { g, open: false };
+        const q = p.getBoundingClientRect();
+        const its = [...p.querySelectorAll('button')].filter((x) => x.offsetParent)
+          .map((x) => Math.round(x.getBoundingClientRect().height));
+        return { g, open: true,
+          left: Math.round(q.left), right: Math.round(q.right),
+          top: Math.round(q.top), bottom: Math.round(q.bottom),
+          btnBottom: Math.round(b.bottom), btnTop: Math.round(b.top), btnLeft: Math.round(b.left),
+          vw: innerWidth, vh: innerHeight,
+          scrolls: p.scrollHeight > p.clientHeight + 1,
+          shortest: its.length ? Math.min(...its) : 0, n: its.length };
+      }, g));
+      await s.page.evaluate(() => { if (ST.ebGroup) togEBGroup(ST.ebGroup); });
+      await s.page.waitForTimeout(120);
+    }
+    await s.close();
+    const shut = out.filter((o) => !o.open);
+    r.check(shut.length === 0, `${vp.name}: a real click on each edit-bar group leaves its menu open`,
+      shut.length ? `closed itself in the same tick: ${shut.map((o) => o.g).join(', ')}`
+        : `${out.length} menus, all still painted 250ms later`);
+    const live = out.filter((o) => o.open);
+    /* Under the button (within a hair of it) or, when there is genuinely more
+       room above, directly over it. Never floating somewhere else. */
+    const adrift = live.filter((o) => !((o.top >= o.btnBottom - 1 && o.top <= o.btnBottom + 14)
+      || (o.bottom <= o.btnTop + 1 && o.bottom >= o.btnTop - 14)));
+    r.check(adrift.length === 0, `${vp.name}: every edit-bar menu opens against its own button`,
+      adrift.length ? adrift.map((o) => `${o.g}: menu ${o.top}→${o.bottom}, button ${o.btnTop}→${o.btnBottom}`).join(' · ')
+        : live.map((o) => `${o.g} at y${o.top} (button ends ${o.btnBottom})`).join(' · '));
+    const off = live.filter((o) => o.left < 0 || o.right > o.vw || o.top < 0 || o.bottom > o.vh);
+    r.check(off.length === 0, `${vp.name}: every edit-bar menu is wholly on the screen`,
+      off.length ? off.map((o) => `${o.g}: ${o.left}→${o.right} of ${o.vw}, ${o.top}→${o.bottom} of ${o.vh}`).join(' · ')
+        : live.map((o) => `${o.g} ${o.left}→${o.right} of ${o.vw}`).join(' · '));
+    if (vp.width < 640) {
+      const small = live.filter((o) => o.shortest < 44);
+      r.check(small.length === 0, `${vp.name}: every row inside an edit-bar menu can be hit`,
+        small.length ? small.map((o) => `${o.g}: shortest ${o.shortest}px`).join(' · ')
+          : live.map((o) => `${o.g} ${o.n} buttons, shortest ${o.shortest}px`).join(' · '));
+    }
+  }
+
+  /* 7. And the new words have to READ: the Save label on --green (the pair
+     that has always been right is .bp's, never --accent as a background —
+     v04.20 paid for that), and the group headings inside the menus. */
+  for (const preset of ['forest', 'ocean', 'amber', 'indigo', 'rose']) {
+    const db = seedDB(); db.theme = { preset, custom: {} };
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3');
+      window.startEdit(); });
+    await s.page.waitForTimeout(350);
+    await s.page.click('.eb-grp-btn[data-g="insert"]');
+    await s.page.waitForTimeout(250);
+    const inks = await s.page.evaluate(() => {
+      const stackOf = (el) => { const st = [];
+        for (let n = el; n; n = n.parentElement) { const c = getComputedStyle(n).backgroundColor;
+          if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') st.push(c);
+          if (/^rgb\(/.test(c)) break; } return st; };
+      const out = [];
+      for (const el of document.querySelectorAll('.et-save, #eb-pop .fl-pop-hd, #eb-pop button, .p3-meta-row .dl-flip')) {
+        if (!el.offsetParent) continue;
+        const words = [...el.childNodes].filter((n) => n.nodeType === 3)
+          .map((n) => n.textContent).join('').replace(/[^\p{L}\p{N}]/gu, '');
+        if (!words) continue;                /* emoji-only says nothing about colour */
+        out.push({ what: el.textContent.trim().slice(0, 24), color: getComputedStyle(el).color, stack: stackOf(el) });
+      }
+      return out;
+    });
+    await s.close();
+    const scored = inks.map((x) => { const bg = flatten(x.stack);
+      return { ...x, c: ratio(over(px(x.color), bg), bg) }; });
+    const low = scored.filter((x) => x.c < 4.5);
+    r.check(scored.length > 6 && low.length === 0,
+      `every new word on the phone's edit bar reads on ${preset}`,
+      low.length ? low.map((x) => `${x.c.toFixed(1)}:1 "${x.what}"`).join(' · ')
+        : `${scored.length} labels, worst ${Math.min(...scored.map((x) => x.c)).toFixed(1)}:1`);
+  }
+}
+
 /* ── 11. Layout at the three real screen sizes ─────────────────────────── */
 for (const vp of VIEWPORTS) {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.21.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.22.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,23 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.22** (11 Sep 2026) — the owner sent a screenshot of a note being edited
+  on the phone: **five rows of chrome** before the first line of writing, and
+  the note starting about 450px down an 844px screen. The instruction was
+  exact and was followed rather than improvised — everything on **ONE bar**:
+  Calendar, ＋ Add Tab, 📋 Templates and 📎 Attach (with the type chips, 📦
+  Archive and ✓ Finish) fold under `+`; ↩ ↪ 🕐 History and 🔍 Find fold under
+  `≡`; and that frees the room for **💾 Save on the bar**. The empty tab bar
+  hides while editing (a bar holding real tabs never does). This is the
+  **phone only, at 640px** — the owner wrote "PC and Tab will organise later",
+  so a tablet keeps v04.21's bar exactly; `_p3OneBar()` decides for all three
+  places that fold. The note now starts at **222px (26%)**. Also: a popover
+  was pinned `bottom:60px` under 1200px, so tapping a button at the TOP of the
+  phone dropped its menu at the FOOT of the screen — it is measured and placed
+  under its own button now, at every size. The dates are **one date, tapped to
+  flip** (Created ⇄ Updated, swapped in place so `#ed` is never rebuilt), on
+  the versioning bar, with the section-tools `⋯` after it. 189/189 app checks
+  (up from 162) and 11/11 ship checks.
 - **v04.21** (11 Sep 2026) — the owner circled 🧰 and ⚙ and named five items in
   Settings that were not settings: each of them writes into the notebook or
   into a note. So the line is now **🧰 Tools = things you do TO the notebook**
@@ -62,16 +79,6 @@ must never accumulate here instead of there.
   (a real menu, real event) under 1200px, which gives the name 122–181px.
   A laptop keeps its three icons. 113/113 app checks (up from 105) and 11/11
   ship checks.
-- **v04.17** (11 Sep 2026) — the folder pop-out (`📚 Folders`) got what the
-  sidebar got. Its two inputs had **no `::placeholder` rule at all**, so the
-  browser's own `#757575` read 1.9:1 on a derived pane background; they use
-  `--t3` now. Its controls were `◀`/`▶` at **20×20**, `🗑` at **19×19**,
-  actions at 22×19, a 28×22 chevron, a 26px-tall Close and 36px rows —
-  **identical on a phone, where that window is full screen**. All of it is one
-  size now: 28px icons / 32px title squares / 34px buttons / 42px rows on a
-  laptop, 38 / 42 / 44 / 52 on a phone. Group headings sit on a strip, and the
-  title bar wraps rather than squeezing `MY NOTEBOOKS` into `MY NOTEBOC`.
-  105/105 app checks (up from 96) and 11/11 ship checks.
 
 ---
 
@@ -246,7 +253,13 @@ traps belong in `tools/README.md`, not here.)*
   menu, so the whole surface was unmeasured. Anything absolutely positioned
   has to be measured against the viewport after it opens — and a surface no
   check has ever opened is a surface with no checks, whatever the total says.
-  Cost: caught in build by a screenshot, in v04.21.
+  The same fault wears a second costume: a CONSTANT instead of a measurement.
+  `_openFloatPop()` pinned every popover to `bottom:60px` under 1200px, so a
+  button at the top of a phone dropped its menu at the foot of the screen, and
+  the desktop branch floated it off its button on any short window. Open the
+  surface invisible, read its real size, place it against the real button, and
+  clamp — never write a number and hope. Cost: v04.21 caught in build by a
+  screenshot; the bottom sheet shipped and the owner reported it in v04.22.
 - **A variable that is used is not a variable that exists — and CSS fails
   silently either way.** `--hover` (56 uses), `--paper2` (7) and `--accent`
   (85) were referenced across the stylesheet and **defined nowhere**: 148

@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.21">
+<meta name="app-version" content="04.22">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2219,12 +2219,61 @@ sup.ann-sup:hover{text-decoration:underline}
 .fl-pop .et{min-width:36px;padding:4px 7px;font-size:13px}
 .fl-pop .fl-pop-x{margin-left:auto;border-color:var(--border2);opacity:.7}
 .fl-pop .fl-pop-x:hover{opacity:1}
+/* ══ v04.22 — the phone's one edit bar, and the meta line ═════════════════ */
+/* A group heading inside a floating menu, on a strip — the same shape v04.21
+   gave the two header dropdowns, so the `+` and `≡` menus do not read as one
+   undifferentiated heap of buttons once the phone folds three surfaces in. */
+.fl-pop-hd{flex:1 0 100%;font-size:10.5px;font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--t3);background:var(--hover);
+  border-radius:6px;padding:4px 8px;margin:5px 0 1px}
+.fl-pop .p3h-pal-nti{flex:1 0 100%}
+/* Save on that bar. The primary-button pair is .bp's — background:var(--green)
+   with var(--on-accent) ink. NOT --accent, which is a colour for TEXT and
+   scored 2.9:1 as a background the last time it was used as one (v04.20). */
+.et-save{background:var(--green)!important;border-color:var(--green)!important;
+  color:var(--on-accent)!important;font-weight:700;white-space:nowrap}
+/* The single date reads as the text it replaced until it is touched. */
+.dl-flip{font:inherit;color:inherit;background:none;border:0;padding:2px 6px;
+  margin:-2px -6px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.dl-flip:hover{background:var(--hover);color:var(--t2)}
+.p3-meta-row #ed-col-wrap{flex-shrink:0;margin-left:6px}
 .clr-pop .clr-pop-x{float:right;margin:-2px 0 4px 6px;border:1px solid var(--border2);border-radius:5px;
   background:none;cursor:pointer;font-size:12px;line-height:1;padding:3px 7px;color:var(--t2)}
 @media(max-width:1199.98px){
   .p3h-nav-edit-row{min-height:42px}
   .fl-pop .et{min-width:40px;padding:6px 9px;font-size:14px;min-height:38px}
   .fl-pop .ed-col-btn{font-size:13px;padding:6px 12px;min-height:38px}
+  .fl-pop-hd{font-size:11px;padding:6px 10px}
+  .fl-pop .et{min-width:44px;min-height:44px}
+  .fl-pop .ed-col-btn{min-height:44px}
+  .et-save{min-height:38px;padding:6px 11px!important;font-size:13.5px}
+  .dl-flip{font-size:12px;padding:6px 9px;margin:-3px -9px;min-height:30px}
+}
+/* v04.22 — the phone's ONE bar, at one size. Its buttons measured 24×28 to
+   34×38 — the nav trio smallest of all — which was survivable while it was
+   one row of eight; it is not, now that it is the only row. 44px is the bar
+   the menus are held to (v04.17/v04.18) and eight controls at 44px do not fit
+   across 374px of usable width on a 390px phone. So this is the honest
+   number, measured rather than shaved: one size for every control, the
+   largest that fits the whole row without anything scrolling out of reach. */
+@media(max-width:639.98px){
+  .p3h-nav-edit-row{min-height:50px;padding:4px 6px}
+  .p3h-nav-edit-row .nav-l,.p3h-nav-edit-row .nav-r{gap:2px}
+  /* No `display` here. .modal-pop-btn is display:none under 900px and setting
+     it would bring both pop-out buttons back onto the one row that has no
+     width for them — two extra controls, and Save squeezed to 22px. */
+  /* 38 wide, not 40: at 40 the row wanted 392px of a 390px phone and .nav-l
+     quietly scrolled 9px of itself out of reach — measured, not eyeballed,
+     because a scrolling strip looks perfect in a screenshot. 38×40 leaves
+     about 20px spare, which is the margin a longer label needs. */
+  .p3h-nav-edit-row .btn,.p3h-nav-edit-row .et{min-width:38px!important;min-height:40px!important;
+    padding:4px 5px!important;flex-shrink:0!important}
+  .p3h-nav-edit-row .et-save{min-width:0!important;padding:6px 10px!important}
+  /* The type chips, Attach and Archive live inside the `+` menu now, where
+     they are rows to be tapped rather than a strip along a bar — so they meet
+     the 44px the rest of the menu does. */
+  .fl-pop .p3h-pal-nti .nti-chip,.fl-pop .p3h-pal-nti .nti-picker-btn{min-height:44px}
+  .fl-pop .p3h-pal-nti .kind-arch-btn{width:44px!important;height:44px!important}
 }
 
 
@@ -2478,7 +2527,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.21</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.22</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3024,12 +3073,34 @@ function setJrnEntryDate(aid,val){
   renderP2C();renderP3H();renderP3C();
   toast('📓 Entry date set to '+val);
 }
+/* ══ v04.22 — ONE DATE, TAPPED TO SEE THE OTHER ═══════════════════════════
+   "Created … | Updated …" is two dates, two labels and a divider — a full
+   line of the phone's height spent on something that is glanced at, not read.
+   It shows the CREATED date now and flips to Updated on a tap.
+   Both strings ride the button as data attributes and the flip swaps them in
+   place: no re-render, so tapping it mid-edit cannot rebuild #ed and cannot
+   cost the caret. ST.dlShowUpd remembers the choice for the next render, and
+   the swap runs over EVERY .dl-flip on screen — a float window shows the same
+   line, and two of them disagreeing would read as a bug. */
+function _dlFlipDate(ev){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
+  ST.dlShowUpd=!ST.dlShowUpd;
+  document.querySelectorAll('.dl-flip').forEach(b=>{
+    const t=ST.dlShowUpd?b.dataset.upd:b.dataset.crt;
+    if(t)b.textContent=t;
+  });
+}
 function _dateLineHTML(a){
   if(!a)return '';
   const parts=[];
-  if(a.createdAt)parts.push(`<span>Created ${fmtDs(a.createdAt)}</span>`);
-  if(a.createdAt&&a.updatedAt)parts.push(`<span class="dl-div">|</span>`);
-  if(a.updatedAt)parts.push(`<span>Updated ${fmtDs(a.updatedAt)}</span>`);
+  if(a.createdAt||a.updatedAt){
+    const crt='Created '+fmtDs(a.createdAt||a.updatedAt);
+    const upd=a.updatedAt?'Updated '+fmtDs(a.updatedAt):'';
+    const show=(ST.dlShowUpd&&upd)?upd:crt;
+    parts.push(`<button class="dl-flip" data-crt="${esc(crt)}"${upd?` data-upd="${esc(upd)}"`:''}`
+      +` onmousedown="event.preventDefault()" onclick="_dlFlipDate(event)"`
+      +` title="Tap to switch between the created and the last-updated date">${esc(show)}</button>`);
+  }
   if(isJournalNote(a)){
     if(parts.length)parts.push(`<span class="dl-div">|</span>`);
     parts.push(`<span>📓 Entry date: <input type="date" class="jrn-entry-date-inp" value="${jrnEntryDate(a)}" onclick="event.stopPropagation()" onchange="setJrnEntryDate('${a.id}',this.value)"></span>`);
@@ -3043,12 +3114,19 @@ function _dateLineHTML(a){
    the dates pushed to the right end. _dateLineHTML() ships its own rule under
    itself; the row keeps that rule but puts it below the whole row.
    View mode only — edit mode still renders each of them where it always did. */
-function _p3MetaRowHTML(a){
+/* v04.22 — `withCol` puts the section-tools ⋯ on this same line, after the
+   date, which is where the owner asked for it: it had a whole row of its own
+   in edit mode on a phone, carrying one button. It is passed ONLY for the
+   phone/tablet edit view — a laptop renders that button inside the unified
+   toolbar instead, and #ed-col-wrap is an id, so rendering both would put two
+   of it in the document and _edColInit() would only ever find the first. */
+function _p3MetaRowHTML(a,withCol){
   if(!a)return '';
   const v=_versionStripHTML(a);
   const d=_dateLineHTML(a).replace(/<div class="note-dateline-hr"[^>]*><\/div>/,'');
-  if(!v&&!d)return '';
-  return `<div class="p3-meta-row">${v}${d}</div><div class="note-dateline-hr"></div>`;
+  const c=withCol?_edColToolbarHTML():'';
+  if(!v&&!d&&!c)return '';
+  return `<div class="p3-meta-row">${v}${d}${c}</div><div class="note-dateline-hr"></div>`;
 }
 /* True when the body has no real content — empty, whitespace-only, or the
    legacy literal placeholder — AND carries no media/structural elements. Used
@@ -3567,7 +3645,12 @@ function renderP2C(){
 }
 
 /* v03.15.04 — shared nav buttons; ride with the title (below NTI) in edit mode */
-function _navBtnsHTML(){
+/* v04.22 — `dup` is passed by the phone's edit view, where the one bar above
+   already carries these exact two buttons (openP2 / backFromP3). Two copies
+   of the same control, one under the other, is two copies of the same
+   control: the row that is not the nav bar gives them up. */
+function _navBtnsHTML(dup){
+  if(dup&&_p3OneBar())return '';
   if(window.innerWidth<1200)
     return `<button class="btn bn bi" onclick="openP2()" style="font-size:18px;flex-shrink:0" title="Back to article list">◀</button><button class="btn bn bi" onclick="backFromP3()" style="font-size:24px;flex-shrink:0" title="Open folders">≡</button>`;
   if(document.getElementById('sb')?.classList.contains('closed'))
@@ -3799,10 +3882,16 @@ function renderP3C(){
     {const _le=document.getElementById('ed');
      if(_le&&_le.dataset.aid===curA.id){const _c=_le.cloneNode(true);_c.querySelectorAll('.ann-inline-card').forEach(n=>n.remove());_edColClean(_c);curA.content=_c.innerHTML;if(ST.etitle!=null)curA.title=ST.etitle.trim();}}
     const _mobE2=window.innerWidth<1200;
-    el.innerHTML=(_mobE2?kindBarHTML(curA):'')
-      +`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML()}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span></div>`
-      +_versionStripHTML(curA)
-      +(_mobE2?_edColToolbarHTML():'')+_dateLineHTML(curA)+_fieldsPanelHTML(curA)+`<div id="ed" data-aid="${curA.id}" contenteditable="true" spellcheck="true"></div>`;
+    /* v04.22 — the type/Attach/Save row is gone from the PHONE (a tablet
+       keeps it; the owner asked for the phone first). Every control on it is
+       under the `+` group of the one bar above (Attach, the type chips,
+       Archive, Finish/Re-open) or on that bar itself (Save), so nothing
+       became unreachable — the row itself was the cost. A laptop never
+       rendered it here at all. And at every size under 1200px the version
+       strip, the dates and the section-tools ⋯ are one line now, not three. */
+    el.innerHTML=(_mobE2&&!_p3OneBar()?kindBarHTML(curA):'')
+      +`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML(true)}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span></div>`
+      +_p3MetaRowHTML(curA,_mobE2)+_fieldsPanelHTML(curA)+`<div id="ed" data-aid="${curA.id}" contenteditable="true" spellcheck="true"></div>`;
     if(_tiF2){const _tin=document.getElementById('ti');if(_tin){_tin.focus({preventScroll:true});try{_tin.setSelectionRange(_s2,_e2);}catch(e){}}}
     const ed=document.getElementById('ed');ed.innerHTML=curA.content;if(_isPlaceholder(curA.content))ed.innerHTML='';initRichPaste(ed);
     wireAnnEditor(ed,curA);
@@ -5537,7 +5626,13 @@ function renderTabBar(){
       persist();
     }
   }
-  bar.style.display='flex'; /* Always visible so ＋ Add button is accessible */
+  /* v04.22 — while a note is being EDITED on a phone, a tab bar
+     carrying no tabs is a whole row spent on two buttons (📅 Cal and ＋ Add Tab),
+     both of which now live under the `+` group of the edit bar. It comes
+     straight back the moment editing ends, and a bar that is actually holding
+     tabs is never hidden — those are content, not chrome. */
+  const _hideTB=_p3OneBar()&&ST.editing&&!tabs.length;
+  bar.style.display=_hideTB?'none':'flex';
   /* v03.NotePane.P7 — this assignment runs unconditionally, AHEAD of the
      signature guard below, so it used to strip .modal-handle on every single
      call. That cost the bar its position:relative, which let the ↕/✥ overlay
@@ -8457,10 +8552,7 @@ function _openFloatPop(id,btn,html,sticky){
   if(p&&p.classList.contains('open')){closeFloatPop(id);return null;}
   if(!p){p=document.createElement('div');p.id=id;p.className='fl-pop';document.body.appendChild(p);}
   p.innerHTML=html+(sticky?'<button class="et fl-pop-x" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\''+id+'\')" title="Close this menu">\u2715</button>':'');
-  const r=btn.getBoundingClientRect(),mob=window.innerWidth<1200;
-  if(mob){p.style.cssText='bottom:60px;left:4px;right:4px;top:auto;width:auto';}
-  else{const top=Math.min(r.bottom+4,window.innerHeight-320),left=Math.max(4,Math.min(r.left-4,window.innerWidth-268));p.style.cssText=`top:${top}px;left:${left}px;bottom:auto;right:auto`;}
-  p.classList.add('open');
+  _flPopPlace(p,btn);
   /* v04.20 — STICKY pops (the edit-bar Aa/H/≡/+/↺ groups) stay open while the
      user clicks back into the editor to re-select text, or opens a child pop
      (colour swatches, ctx menus). They close only via their own ✕, their group
@@ -8474,6 +8566,37 @@ function _openFloatPop(id,btn,html,sticky){
   };
   setTimeout(()=>{document.addEventListener('mousedown',_cl,{capture:true});document.addEventListener('touchstart',_cl,{capture:true});},50);
   return p;
+}
+/* ══ v04.22 — A MENU OPENS UNDER ITS OWN BUTTON, AT EVERY SIZE ════════════
+   Under 1200px this popover was pinned `bottom:60px;left:4px;right:4px` — a
+   bottom sheet. Tap ≡ at the top of a phone screen and the list appeared at
+   the FOOT of the screen, half a page away from the finger that opened it,
+   with nothing joining the two. The owner reported it as the menu "dropping
+   its content at the bottom of the screen".
+   Desktop was only better by accident: `top:Math.min(r.bottom+4, innerHeight-320)`
+   floats the pop UP off its button whenever the window is shorter than about
+   320px of room, so the same disconnect was one short window away there too.
+   One placement now serves both: directly under the button, clamped inside
+   the viewport horizontally, flipped ABOVE the button only when there is
+   genuinely more room up there, and capped to the space it actually has so a
+   long menu scrolls inside itself instead of running off the screen.
+   Measured, not guessed: the pop is opened invisible, its real size read, and
+   only then positioned — the width is `min(260px,92vw)` in CSS and the height
+   depends on what is in it, so neither can be assumed. */
+function _flPopPlace(p,btn){
+  const M=6,G=6;
+  p.style.cssText='visibility:hidden;top:0;left:0;bottom:auto;right:auto;max-height:none';
+  p.classList.add('open');
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const pr=p.getBoundingClientRect();
+  const w=pr.width||260,need=p.scrollHeight+2;
+  const r=btn.getBoundingClientRect();
+  const below=vh-r.bottom-G-M,above=r.top-G-M;
+  let top,maxh;
+  if(need<=below||below>=above){top=r.bottom+G;maxh=Math.max(120,Math.min(need,below));}
+  else{maxh=Math.max(120,Math.min(need,above));top=Math.max(M,r.top-G-maxh);}
+  const left=Math.max(M,Math.min(r.left,vw-w-M));
+  p.style.cssText=`top:${top}px;left:${left}px;bottom:auto;right:auto;max-height:${maxh}px;visibility:visible`;
 }
 function closeFloatPop(id){const p=document.getElementById(id);if(p)p.classList.remove('open');}
 /* Shared ✕ handler for sticky pops — also clears the group-button state so the
@@ -8493,9 +8616,37 @@ function _p3HomeBtnHTML(){
 }
 /* Aa/H/≡/+/↺ format-group icons (+ pop-out, auto-hidden <900px via CSS) —
    shared by the desktop unified toolbar and the tablet/mobile nav+edit row. */
+/* ══ v04.22 — ONE BAR ON A PHONE ════════════════════════════════
+   Editing a note on a phone opened with FIVE rows of chrome before the first
+   line of writing: the tab bar, this bar, the tag bar, the type/Attach/Save
+   bar, then the title — about half the screen, as the owner measured it with
+   a screenshot. The instruction was exact: everything on ONE bar; Calendar,
+   Tab, Templates and Attach under the `+`; undo/redo and Find under the `≡`;
+   and that frees the room for Save to sit on the bar itself.
+   So under 1200px the bar is 🏠 ◀ ≡ | Aa H ≡ + | 💾 Save — four format groups
+   instead of five, and the two loose buttons (📋 Templates, 🔍 Find) gone
+   from the bar into the group each one belongs to. Nothing is lost: every
+   control is still one tap away, and a laptop keeps the bar it already had,
+   which has the width for all of it.
+   Note the ORDER of the return: the groups, then the pop-out buttons, then
+   Save last, because Save is what the thumb reaches for and the right end of
+   the row is where the nav-r scroll comes to rest. */
+/* The owner asked for the fold on the PHONE and said "PC and Tab will
+   organise later", so this is 640px — the app's own phone breakpoint — and
+   NOT the <1200px that the nav+edit row itself uses. A tablet keeps the bar
+   and the rows it had in v04.21, untouched. Three places fold together
+   (this bar, the two menus it folds into, and the rows renderP3C drops);
+   one function decides for all of them so they cannot drift apart. */
+function _p3OneBar(){return window.innerWidth<640;}
 function _p3EditIconsHTML(curA){
   const _eg=ST.ebGroup||null;
-  const _grps=[
+  const _mob=_p3OneBar();
+  const _grps=_mob?[
+    {id:'text',  icon:'<b>Aa</b>',label:'Text style'},
+    {id:'heads', icon:'H',         label:'Headings'},
+    {id:'lists', icon:'≡',       label:'Lists · Undo/Redo · Find'},
+    {id:'insert',icon:'+',         label:'Insert · Attach · Templates · Calendar · Tabs'},
+  ]:[
     {id:'text',  icon:'<b>Aa</b>',label:'Text style'},
     {id:'heads', icon:'H',         label:'Headings'},
     {id:'lists', icon:'≡',       label:'Lists'},
@@ -8503,10 +8654,11 @@ function _p3EditIconsHTML(curA){
     {id:'hist',  icon:'↺',       label:'History'},
   ];
   return _grps.map(g=>`<button class="et eb-grp-btn${_eg===g.id?' on':''}" data-g="${g.id}" onmousedown="togEBGroup('${g.id}')" title="${g.label}">${g.icon}</button>`).join('')
-    +_ktBtnHTML()
-    +`<button class="et" onmousedown="event.preventDefault()" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>`
+    +(_mob?'':_ktBtnHTML()
+      +`<button class="et" onmousedown="event.preventDefault()" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>`)
     +_popBtnHTML(curA.id,'float','et',false)
-    +_popBtnHTML(curA.id,'panel','et',false);
+    +_popBtnHTML(curA.id,'panel','et',false)
+    +(_mob?`<button class="et et-save" onmousedown="event.preventDefault()" onclick="saveArt()" title="Save this note">💾 Save</button>`:'');
 }
 function togEBGroup(g){
   const btn=document.querySelector('.eb-grp-btn[data-g="'+g+'"]');
@@ -8564,7 +8716,28 @@ function _buildEBSub(g){
       '<button class="et" onmousedown="event.preventDefault();openNoteHistory(ST.article)" title="Note History — restore an earlier version">\ud83d\udd50</button>',
     ],
   };
-  return (subs[g]||[]).join('');
+  let out=(subs[g]||[]).join('');
+  /* v04.22 — the phone folds two top-level buttons and a whole row into these
+     two menus (see _p3EditIconsHTML). A tablet's and a laptop's bar still
+     carry them itself, so neither may get them twice — hence the width test
+     here rather than a second copy of the lists/insert arrays. */
+  if(_p3OneBar()){
+    const a=DB.articles.find(x=>x.id===ST.article);
+    if(g==='lists'){
+      out+='<div class="fl-pop-hd">Undo · Redo · Find</div>'
+        +(subs.hist||[]).join('')
+        +'<button class="et" onmousedown="event.preventDefault()" onclick="_ntFindToggle(\'p3\')" title="Find in this note">🔍</button>';
+    }
+    if(g==='insert'&&a){
+      out+='<div class="fl-pop-hd">Templates · Calendar · Tabs</div>'
+        +'<button class="et" onmousedown="openTemplatesMenu(event)" onclick="event.stopPropagation()" title="Templates — insert a ready-made note structure">📋 Templates</button>'
+        +'<button class="et" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');_calOpen()" title="Open the Calendar">📅 Calendar</button>'
+        +'<button class="et" onmousedown="event.preventDefault()" onclick="openTabPicker(this)" title="Search & add a note to the Tab bar">＋ Add Tab</button>'
+        +'<div class="fl-pop-hd">This note</div>'
+        +'<div class="p3h-pal-nti">'+kindBarHTML(a,true,true)+'</div>';
+    }
+  }
+  return out;
 }
 
 
@@ -19640,7 +19813,7 @@ function renameNoteKind(kid){
 }
 
 /* Character tabs + Finish bar shown at the top of the note view */
-function kindBarHTML(a,bare){
+function kindBarHTML(a,bare,noSave){
   const curKinds=new Set(artKinds(a));
   const activeKinds=noteKinds().filter(k=>curKinds.has(k.id));
   const chips=activeKinds.map(k=>{
@@ -19678,7 +19851,7 @@ function kindBarHTML(a,bare){
      one button, with 📎 Attach itself permanently on the bar. */
   const inner=`<div class="nti-chips">${chips||'<span class="nti-no-type">No type</span>'}</div>`
     +`<button class="nti-picker-btn nti-attach-btn" onclick="openAttachMenu(event,'${a.id}')" title="Note Type · Folder · My Journal · MyDatabase">📎 Attach${_attachCount(a)?' ('+_attachCount(a)+')':''} ▾</button>`
-    +((ST.editing&&ST.article===a.id)?`<button class="nti-picker-btn nti-editbtn nti-save" onclick="saveArt()" title="Save note">💾 Save</button>`:'')
+    +((ST.editing&&ST.article===a.id&&!noSave)?`<button class="nti-picker-btn nti-editbtn nti-save" onclick="saveArt()" title="Save note">💾 Save</button>`:'')
     +`<div class="kind-act">${statusHTML}${archIcon}</div>`;
   return bare?inner:`<div class="kind-bar">${inner}</div>`;
 }
