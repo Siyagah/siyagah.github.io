@@ -2430,3 +2430,121 @@ The five new ones ask the durable questions rather than naming buttons:
   column cannot pass that) and does not scroll;
 - and `⧉ Make a copy` really makes the copy — `DB.articles` counted before and
   after a real click.
+
+---
+
+## v04.32 — the Attach row packs, and the full ⋯ menu stops hanging
+*12 September 2026*
+
+Two screenshots of the phone's READ view, one ask each.
+
+### 1. "Removing 'attached' with the Folder button. (Showing attached number is enough)"
+
+`📁 Folder · 1 attached` was the longest value on the Attach row and said
+nothing the name did not — *Folder · 2* is two folders. The word is gone; the
+count stays. One edit serves both modes: `_ebAttachHTML()` is the read card
+AND the `+` menu, which is the v04.31 lesson applied before it had to be paid
+for again.
+
+**But the word alone would not have done what the owner asked**, and the
+measurement is what said so. Dropping it saves **52px**, measured. With the
+four rows flowing free, three fit the first line from **410px** of screen and
+the fourth needs **537px** — so every common phone (412, 414, 428, 430) lands
+in that gap and strands `🗄 MyDatabase` alone on a line of its own, which is
+exactly the shape in the screenshot. Removing the word moves the boundary; it
+does not close the gap.
+
+So the four wrap as **two pairs** under 640px:
+
+```
+ ATTACH TO THE NOTE
+   [🏷 Note Type · General] [📁 Folder · 1]
+   [📓 My Journal] [🗄 MyDatabase]
+```
+
+Each button is still sized to its own words (v04.29) — only the line *break*
+is decided rather than left to the screen. Above 640px `.eb-pair` is
+`display:contents` and nothing changes at all: the card there is 260px wide
+and a forced pair would ellipsis both of its buttons.
+
+### 2. "Organise the hanging buttons more elegant way"
+
+The full `⋯` menu was the last surface the owner can reach on a phone that
+never got the v04.29 treatment: **21 rows of 155px hanging in a 167px column
+537px long**, a five-letter word like *Finish* at the left of a box with 100px
+of nothing beside it, and **six grey separator lines doing the work six
+headings should do**. They had already grouped these rows; they just never
+said what the groups *were*.
+
+On a phone it is the same card as the `+`, `≡` and `⋯` palettes now — same
+`.fl-pop-hd` heading strips, actions packed and wrapped to their words, edge
+to edge (v04.28), placed by measurement (v04.22). **21 rows on 9 lines
+instead of 21**, 14 distinct widths, 44px each, 629px of an 844px phone with
+no scrolling. The five groups are `THIS NOTE`, `MARK IT`, `PUT IT IN`,
+`REMIND & REVISE`, `REMOVE`. A tablet and a laptop keep the anchored column:
+there `#ctx` is a genuine right-click menu at a cursor, already as wide as its
+longest word.
+
+The markup is **one table rendered two ways** (`_artCtxGroups()`), so the
+phone's card and the desktop's column cannot drift into being different menus.
+
+Two glyph collisions fell out of writing it down, both the v04.26 rule *inside
+one menu*: `🏷` was NTI Types **and** Tags three rows apart — v04.27 already
+settled that one, `🏷` is Note Type and tags take `#` — and `↺` was Reopen
+**and** Remove from practice, now `✂`, the glyph this menu's own sub-panels
+already use for "take this off". `✅` likewise stopped meaning both *in
+favourites* and *mark as done*; practice done is `🌳`. And the favourites row
+now reads `⭐ Favourite` / `✅ In favourites`, the same words the `⋯` card one
+tap above it uses for the same toggle.
+
+### A dead button found on the way
+
+`⋯ All actions` — the row v04.31 added to the `⋯` card — **never worked**.
+It handed `showArtCtx()` a synthesised event
+(`{clientX:0,clientY:60,preventDefault:()=>{},stopPropagation:()=>{}}`), so
+the `ev.stopPropagation()` that keeps the click off the document was a no-op,
+the real click carried on to `document.addEventListener('click',()=>hideCtx())`
+and the menu was shut in the tick it opened. This is the v04.12 defect
+verbatim, on the same button, and it is in `CLAUDE.md` as a standing lesson.
+
+Measured on `origin/main` before touching anything: after a real mouse click
+that row leaves `#ctx` populated with 17 rows and `display:none`. It was dead
+for the whole of v04.31 — on the phones narrow enough to fold the inline `⋯`
+away, which is the only reason the owner could screenshot the menu at all
+(their screen keeps the inline `⋯`, which passes the real event). It takes
+the real `event` now, and the new check opens the menu **by a real mouse
+click and looks at it 250ms later**, which is the only question that catches
+this.
+
+### Not done
+
+- The tablet's and the laptop's right-click menu is untouched, on purpose —
+  it opens at a cursor and is already as wide as its longest word. Asserted
+  both ways, so "wider is fine" cannot quietly stretch it later.
+- The long-press handlers in the sidebar still synthesise their events. They
+  are a different path (there is no real click to pass on a press-and-hold)
+  and nothing was reported about them; left alone rather than rewritten
+  blind.
+- At 537–639px of screen the Attach four would now fit one line and are still
+  paired. Predictable beats clever there, and no phone is that wide.
+
+### Measured
+
+219 → 236 app checks, 11/11 ship checks. No existing check needed updating.
+
+- **the Attach rows at six phone widths** (360 → 600), asked as the owner's
+  own question — *is any row alone on its line?* — plus each still sized to
+  its words and nothing overflowing the card; and the laptop proved NOT
+  paired;
+- the `📁 Folder` row shows a count and does not say "attached";
+- `⋯ All actions` opens the full menu **on a real mouse click, still painted
+  250ms later**;
+- named non-empty groups, and **no visible separator line left over**;
+- the rows really pack — lines at most half the row count — with four or more
+  distinct widths and 30px+ between the widest and narrowest;
+- edge to edge, wholly on screen, 44px rows, no scrolling;
+- **no glyph does two different jobs in that menu**, mapped glyph → the
+  functions its rows call, so the next collision fails too;
+- a sub-panel is re-placed rather than left hanging off the bottom;
+- `hideCtx()` hands `#ctx` back clean — it is shared with four other menus;
+- and a tablet and a laptop keep the anchored column.

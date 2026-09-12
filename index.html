@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.31">
+<meta name="app-version" content="04.32">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1747,6 +1747,36 @@ sup.ann-sup:hover{text-decoration:underline}
 .db-sec-nm{color:var(--sb-amber)!important;font-weight:700}
 .db-body{padding-bottom:4px}
 .ci-active{background:var(--hover);font-weight:600}
+/* ══ v04.32 — the ⋯ full menu as a packed card on a phone ═════════════════
+   Same visual language as the `+`, `≡` and ⋯ palettes, on purpose: it reuses
+   `.fl-pop-hd` for the group strips rather than growing a second heading
+   style that would drift away from them. Only the layout changes — every row
+   is the same `.ci` calling the same function it always did.
+   `flex:0 1 auto`, not `0 0 auto` (v04.29): a row carrying a folder or tag
+   NAME has to shrink and clip rather than push the card past the screen. */
+#ctx.ctx-card{flex-wrap:wrap;align-content:flex-start;gap:5px;padding:8px;
+  border-radius:12px;min-width:0;max-width:none;background:var(--paper);
+  box-shadow:0 8px 28px rgba(0,0,0,.22)}
+#ctx.ctx-card .ci{flex:0 1 auto;min-width:0;max-width:100%;min-height:44px;
+  padding:7px 11px;font-size:12.5px;font-weight:600;border-radius:10px;
+  border:1px solid var(--border2);background:var(--white);
+  white-space:nowrap;overflow:hidden}
+#ctx.ctx-card .ci:hover{background:var(--hover)}
+#ctx.ctx-card .ci.d{border-color:#E6B8B2}
+/* The headings ARE the separators now — six grey lines said the same thing
+   without naming any of it. */
+#ctx.ctx-card .csep{display:none}
+/* A ▶ that was pushed to the far edge of a stretched row sits beside its own
+   word now, which is the only place it means anything. */
+#ctx.ctx-card .ci-sub{justify-content:flex-start!important}
+#ctx.ctx-card .ci-arr{margin-left:1px}
+/* ◀ Back and a sub-panel's own heading take the full width; the choices under
+   them pack like everything else. */
+#ctx.ctx-card .ci-back,#ctx.ctx-card .ci-nti-hd{flex:1 0 100%}
+#ctx.ctx-card .ci-back{min-height:44px;border-radius:10px}
+#ctx.ctx-card .ci-nti{flex:0 1 auto;max-width:100%;min-height:44px;
+  border:1px solid var(--border2);border-radius:10px;padding:7px 11px}
+#ctx.ctx-card .ci-nti .nti-name{flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── My Contacts ─────────────────────────────────────────────────────────── */
 .ct-card{padding:20px 16px;max-width:480px;margin:0 auto}
@@ -2290,6 +2320,13 @@ sup.ann-sup:hover{text-decoration:underline}
 .fl-pop .p3h-pal-nti .nti-chips{flex:0 1 auto;overflow:visible;flex-wrap:wrap}
 .fl-pop .p3h-pal-nti .kind-arch-btn::after{content:attr(title);font-size:12.5px;
   font-weight:600;color:var(--t2);font-family:var(--ui)}
+/* v04.32 — the four Attach rows wrap as two pairs on a phone, and not at all
+   anywhere else: `display:contents` leaves the buttons as direct flex items of
+   the card, so a tablet and a laptop get the exact row they had. */
+.fl-pop .eb-pair{display:contents}
+@media(max-width:639.98px){
+  .fl-pop .eb-pair{display:flex;flex:1 0 100%;gap:5px;min-width:0}
+}
 .eb-tab-row{flex:0 1 auto;max-width:100%;justify-content:flex-start!important;text-align:left;
   font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .eb-tab-row.on{background:var(--hover);border-color:var(--t3);font-weight:700}
@@ -2622,7 +2659,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.31</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.32</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -8941,15 +8978,32 @@ function _ebAttachHTML(a,popId){
     +' onclick="'+onclick+'" title="'+esc(lbl+(sub?' — '+sub:''))+'">'
     +'<span class="eb-act-i">'+ico+'</span><span class="eb-act-l">'+esc(lbl)
     +(sub?'<span class="eb-act-s">'+esc(sub)+'</span>':'')+'</span></button>';
+  /* v04.32 — "removing 'attached' with 'Folder' button. (Showing attached
+     number is enough)". It was the longest value on the row and it said
+     nothing the name did not: \ud83d\udcc1 Folder \u00b7 2 is two folders. The word cost
+     52px, measured. One edit serves both modes — this builder is the read
+     card AND the `+` menu.
+     52px alone would NOT have got \ud83d\uddc4 MyDatabase off its own row, which is
+     what the owner actually asked for, and the measurement says why: with the
+     four free-flowing, three fit the first line from 410px of screen and the
+     fourth needs 537px, so every common phone (412, 414, 428, 430) lands in
+     the gap and strands MyDatabase alone — the very shape in the screenshot.
+     So the four wrap as two PAIRS under 640px. Each button is still sized to
+     its own words (v04.29); it is only the line break that is decided rather
+     than left to the screen. Above 640px `.eb-pair` is `display:contents` and
+     nothing changes at all: the card there is 260px and a forced pair would
+     ellipsis both of its buttons. */
   return '<div class="fl-pop-hd">Attach to the note</div>'
+    +'<div class="eb-pair">'
     +row('\ud83c\udff7','Note Type',"openNtiPicker('"+aid+"',this);"+c+"",
          kinds.length?kinds.join(', '):'none yet')
     +row('\ud83d\udcc1','Folder',inEdit?c+"openPicker()"
          :c+"toast('Open this note for editing to change its folders')",
-         fN?fN+' attached':'none yet')
+         fN?String(fN):'none yet')
+    +'</div><div class="eb-pair">'
     +row('\ud83d\udcd3','My Journal',c+"openJournalPicker('"+aid+"')")
     +row('\ud83d\uddc4','MyDatabase',c+"openMyDatabasePicker('"+aid+"')")
-    ;
+    +'</div>';
 }
 /* v04.30 — \ud83d\udcc5 Calendar, \uff0b Add Tab and the open tabs, written once for the
    two places that offer them: the `+` menu while editing and the \ud83c\udff7 palette
@@ -11447,8 +11501,18 @@ function _p3ActPalette(ev){
      Delete one tap from a phone toolbar would undo that. */
   h+='<div class="fl-pop-hd">More</div>'
     +_p3PalBtn('\u271a','New note',"quickCapture()",'','in the Primary folder')
-    +_p3PalBtn('\u22ef','All actions',
-        "showArtCtx({clientX:0,clientY:60,preventDefault:()=>{},stopPropagation:()=>{}},'"+id+"')",
+    /* v04.32 — the REAL event, not a synthesised one. v04.31 handed showArtCtx
+       `{clientX:0,clientY:60,preventDefault:()=>{},stopPropagation:()=>{}}`,
+       which is the v04.12 defect exactly: showArtCtx opens the menu and then
+       calls ev.stopPropagation() to keep the click off the document — a no-op
+       on a fake event, so the real click carried on to the global
+       `document.addEventListener('click',()=>hideCtx())` and shut the menu in
+       the tick it opened. Measured on origin/main: after a real mouse click
+       this row left #ctx populated with 17 rows and display:none. The row was
+       dead for the whole of v04.31, on the phones narrow enough to fold the
+       inline ⋯ away — which is the only reason the owner could screenshot the
+       menu at all. The lesson is in CLAUDE.md and cost a round once already. */
+    +_p3PalBtn('\u22ef','All actions',"showArtCtx(event,'"+id+"')",
         '','tags, folders, reminders, pin, delete');
   _openFloatPop('p3h-pal',ev.currentTarget,h,true);
 }
@@ -15160,7 +15224,11 @@ function _folderCtxSub(fid,panel){
     m.innerHTML=back+`<div class="ci-nti-hd">↗ Move to section</div>`+rootSectionMoves(fid);
   }
 }
-function hideCtx(){document.getElementById('ctx').style.display='none';}
+/* #ctx is shared with four other menus (folder groups, heading levels, the
+   Attach pulldown, the Note-Type category tools), so closing it puts the
+   element back exactly as it was found: the card class off AND its inline
+   width/height gone, or the next menu to borrow it inherits a 378px card. */
+function hideCtx(){const m=document.getElementById('ctx');m.classList.remove('ctx-card');m.style.cssText='display:none';}
 function moveToMyJournal(fid){
   const f=DB.folders.find(x=>x.id===fid);if(!f)return;
   f.sectionId='db-section';f.parentId=null;f.journalMode=true;
@@ -17720,6 +17788,23 @@ function updateTrashBtn(){
 
 /* ── Article right-click: attach / detach folders ───────────────────── */
 
+/* ══ v04.32 — THE FULL ⋯ MENU, PACKED INSTEAD OF HANGING ═════════════════
+   "Organise the hanging buttons more elegant way." On a phone this menu was
+   twenty-one rows of 155px hanging in a 167px column 537px long — a five-
+   letter word like "Finish" sitting at the left of a box with 100px of
+   nothing beside it, and six separator lines doing the work six headings
+   should do. It is exactly the fault v04.29 fixed in the `+` menu and v04.30
+   and v04.31 fixed in the read view's two cards; this is the last surface the
+   owner can reach on a phone that never got it.
+   So on a phone it is that same card: the `.fl-pop-hd` heading strip, actions
+   sized to their own words, packed and wrapped into a cluster under each
+   heading, edge to edge (v04.28) and placed by measurement (v04.22).
+   A tablet and a laptop keep the anchored column they have always had: there
+   #ctx is a genuine right-click menu opening at a cursor, and it is already
+   as wide as its longest word.
+   One switch, read by the builder and by the placement, so the layout and the
+   markup can never disagree about which of the two this is. */
+function _ctxIsCard(){return window.innerWidth<640;}
 /** Right-click context menu on an article row in pane 2 */
 function showArtCtx(ev,aid){
   if(_artDragId||_dragId)return;
@@ -17727,7 +17812,10 @@ function showArtCtx(ev,aid){
   const art=DB.articles.find(a=>a.id===aid);if(!art)return;
   const m=document.getElementById('ctx');
   m.dataset.aid=aid;
+  const card=_ctxIsCard();
+  m.classList.toggle('ctx-card',card);
   m.innerHTML=_buildArtCtxMain(art,aid);
+  if(card){m.dataset.cy=Math.max(0,ev.clientY||0);_ctxPlaceCard(m);return;}
   m.style.display='block';
   const vw=window.innerWidth,vh=window.innerHeight;
   let x=ev.clientX,y=ev.clientY;
@@ -17738,44 +17826,80 @@ function showArtCtx(ev,aid){
     m.style.left=x+'px';m.style.top=y+'px';
   },0);
 }
-function _buildArtCtxMain(art,aid){
+/* Measured, never assumed (v04.22): the card is opened invisible at its real
+   width FIRST, because its height depends on how the rows wrap at that width
+   (v04.28), and only then placed and clamped to the room it actually has. */
+function _ctxPlaceCard(m){
+  const M=6,vh=window.innerHeight,fw=window.innerWidth-2*M;
+  const base='display:flex;left:'+M+'px;right:auto;bottom:auto;width:'+fw+'px;';
+  m.style.cssText=base+'visibility:hidden;top:0;max-height:none';
+  const need=m.scrollHeight+2;
+  const top=Math.max(M,Math.min(+(m.dataset.cy||M),vh-M-Math.min(need,vh-2*M)));
+  m.style.cssText=base+'top:'+top+'px;max-height:'+Math.max(120,Math.min(need,vh-top-M))+'px;visibility:visible';
+}
+/* Every repaint of this menu changes its height — a sub-panel is shorter than
+   the main list — so each one is re-placed rather than left hanging off the
+   bottom of the screen at the old top. */
+function _ctxRepaint(m){if(_ctxIsCard()&&m.classList.contains('ctx-card'))_ctxPlaceCard(m);}
+/* The menu's contents as five NAMED groups — one table, rendered two ways, so
+   the phone's card and the desktop's column cannot drift into being different
+   menus (the v04.26 rule: render both forms from one table).
+   The separators were already grouping these rows; they just never said what
+   the groups WERE. Naming them is most of what "organise" asks for, and the
+   order of the rows inside each group is the order they were already in.
+   Two glyph collisions fixed on the way, both of them the v04.26 rule ("a
+   glyph does ONE thing per screen") inside a single menu: 🏷 was NTI Types
+   AND Tags three rows apart — v04.27 settled that one, 🏷 is Note Type and
+   tags take # — and ↺ was Reopen AND Remove from practice, which is now ✂,
+   the glyph this menu's own sub-panels already use for "take this off". */
+function _artCtxGroups(art,aid){
   const inTab=_tabGroup(_tabHost()).includes(aid);
   const _canModal=window.innerWidth>=900;
-  return `<div class="ci" onclick="hideCtx();startRenameArtTitle('${aid}')">✏ Rename title</div>`
-    +(_canModal?`<div class="ci ci-pop pop-multi" onclick="openNotePopup('${aid}','float')">${_popIcoHTML('float')} ${POP_KINDS.float.name}</div>`:'')
-    +(_canModal?`<div class="ci ci-pop pop-single" onclick="openNotePopup('${aid}','panel')">${_popIcoHTML('panel')} ${POP_KINDS.panel.name}</div>`:'')
-    +`<div class="ci" onclick="openNoteHistory('${aid}')">🕐 Note History</div>`
-    +`<div class="ci" onclick="hideCtx();duplicateNote('${aid}')">⧉ Make a copy</div>`
-    +`<div class="csep"></div>`
-    +`<div class="ci ci-sub" onclick="_ctxSub('${aid}','nti')">🏷 NTI Types<span class="ci-arr">▶</span></div>`
-    +`<div class="csep"></div>`
-    +`<div class="ci" onclick="hideCtx();toggleFav('${aid}')">${art.favourite?'✅ Remove Favourites':'⭐ Favourites'}</div>`
-    +`<div class="ci" onclick="hideCtx();togglePin('${aid}')">${art.pinned?'📌 Unpin':'📌 Pin'}</div>`
-    +`<div class="ci" onclick="hideCtx();toggleArchive('${aid}')">${art.archived?'📤 Unarchive':'📦 Archive'}</div>`
-    +`<div class="ci" onclick="hideCtx();${art.finalised?'unfinishNote':'finishNote'}('${aid}')">${art.finalised?'↺ Reopen':'✓ Finish'}</div>`
-    +`<div class="ci" onclick="hideCtx();toggleTab('${aid}')">${inTab?'📑 Remove Tab':'📑 Add to Tab'}</div>`
-    +`<div class="ci" onclick="hideCtx();openJournalPicker('${aid}',null)">📓 Add to Journal event</div>`
-    +`<div class="ci ci-sub" onclick="_ctxSub('${aid}','reminder')">🔔 Reminder<span class="ci-arr">▶</span></div>`
-    +`<div class="csep"></div>`
-    +`<div class="ci ci-sub" onclick="_ctxSub('${aid}','tags')">🏷 Tags<span class="ci-arr">▶</span></div>`
-    +`<div class="ci ci-sub" onclick="_ctxSub('${aid}','folders')">📁 Folders<span class="ci-arr">▶</span></div>`
-    +`<div class="ci ci-sub" onclick="_ctxSub('${aid}','favs')">❤️ My Favourites${art.favCat?'<span style="font-size:10px;margin-left:4px;opacity:.6">✓</span>':''}<span class="ci-arr">▶</span></div>`
-    +`<div class="csep"></div>`
-    +`<div class="ci" onclick="hideCtx();mrjToggle('${aid}')">${art.mrjDue?"📖 Remove Murāja'ah":"📖 Add to Murāja'ah"}</div>`
-    +(art.practice==='active'
-      ?`<div class="ci" onclick="hideCtx();practiceToggle('${aid}','done')">✅ Mark as done</div>`
-       +`<div class="ci" onclick="hideCtx();practiceToggle('${aid}',null)">↺ Remove from practice</div>`
-      :art.practice==='done'
-      ?`<div class="ci" onclick="hideCtx();practiceToggle('${aid}','active')">🌱 Still practising</div>`
-       +`<div class="ci" onclick="hideCtx();practiceToggle('${aid}',null)">↺ Remove from practice</div>`
-      :`<div class="ci" onclick="hideCtx();practiceToggle('${aid}','active')">🌱 Start practising</div>`
-    )
-    +`<div class="csep"></div>`
-    +`<div class="ci d" onclick="hideCtx();deleteNote('${aid}')">🗑 Delete</div>`;
+  const sub=(key,ico,lbl,extra)=>`<div class="ci ci-sub" onclick="_ctxSub('${aid}','${key}')">${ico} ${lbl}${extra||''}<span class="ci-arr">▶</span></div>`;
+  return [
+    {hd:'This note',items:[
+      `<div class="ci" onclick="hideCtx();startRenameArtTitle('${aid}')">✏ Rename title</div>`,
+      `<div class="ci" onclick="hideCtx();duplicateNote('${aid}')">⧉ Make a copy</div>`,
+      `<div class="ci" onclick="openNoteHistory('${aid}')">🕐 Note History</div>`,
+      ...(_canModal?[`<div class="ci ci-pop pop-multi" onclick="openNotePopup('${aid}','float')">${_popIcoHTML('float')} ${POP_KINDS.float.name}</div>`,
+        `<div class="ci ci-pop pop-single" onclick="openNotePopup('${aid}','panel')">${_popIcoHTML('panel')} ${POP_KINDS.panel.name}</div>`]:[])]},
+    {hd:'Mark it',items:[
+      `<div class="ci" onclick="hideCtx();toggleFav('${aid}')">${art.favourite?'✅ In favourites':'⭐ Favourite'}</div>`,
+      `<div class="ci" onclick="hideCtx();togglePin('${aid}')">${art.pinned?'📌 Unpin':'📌 Pin'}</div>`,
+      `<div class="ci" onclick="hideCtx();toggleArchive('${aid}')">${art.archived?'📤 Unarchive':'📦 Archive'}</div>`,
+      `<div class="ci" onclick="hideCtx();${art.finalised?'unfinishNote':'finishNote'}('${aid}')">${art.finalised?'↺ Reopen':'✓ Finish'}</div>`]},
+    {hd:'Put it in',items:[
+      sub('nti','🏷','NTI Types'),
+      sub('tags','#','Tags'),
+      sub('folders','📁','Folders'),
+      sub('favs','❤️','My Favourites',art.favCat?'<span style="font-size:10px;margin-left:4px;opacity:.6">✓</span>':''),
+      `<div class="ci" onclick="hideCtx();toggleTab('${aid}')">${inTab?'📑 Remove Tab':'📑 Add to Tab'}</div>`,
+      `<div class="ci" onclick="hideCtx();openJournalPicker('${aid}',null)">📓 Add to Journal event</div>`]},
+    {hd:'Remind &amp; revise',items:[
+      sub('reminder','🔔','Reminder'),
+      `<div class="ci" onclick="hideCtx();mrjToggle('${aid}')">${art.mrjDue?"📖 Remove Murāja'ah":"📖 Add to Murāja'ah"}</div>`,
+      ...(art.practice==='active'
+        ?[`<div class="ci" onclick="hideCtx();practiceToggle('${aid}','done')">🌳 Mark as done</div>`,
+          `<div class="ci" onclick="hideCtx();practiceToggle('${aid}',null)">✂ Remove from practice</div>`]
+        :art.practice==='done'
+        ?[`<div class="ci" onclick="hideCtx();practiceToggle('${aid}','active')">🌱 Still practising</div>`,
+          `<div class="ci" onclick="hideCtx();practiceToggle('${aid}',null)">✂ Remove from practice</div>`]
+        :[`<div class="ci" onclick="hideCtx();practiceToggle('${aid}','active')">🌱 Start practising</div>`])]},
+    {hd:'Remove',items:[
+      `<div class="ci d" onclick="hideCtx();deleteNote('${aid}')">🗑 Delete</div>`]},
+  ].filter(g=>g.items.length);
+}
+function _buildArtCtxMain(art,aid){
+  const card=_ctxIsCard();
+  return _artCtxGroups(art,aid).map((g,i)=>
+    (card?`<div class="fl-pop-hd">${g.hd}</div>`:(i?'<div class="csep"></div>':''))
+    +g.items.join('')).join('');
 }
 function _ctxBack(aid){
   const art=DB.articles.find(a=>a.id===aid);if(!art)return;
-  document.getElementById('ctx').innerHTML=_buildArtCtxMain(art,aid);
+  const m=document.getElementById('ctx');
+  m.innerHTML=_buildArtCtxMain(art,aid);
+  _ctxRepaint(m);
 }
 function _ctxSub(aid,panel){
   const art=DB.articles.find(a=>a.id===aid);if(!art)return;
@@ -17824,6 +17948,7 @@ function _ctxSub(aid,panel){
       +`<div class="ci" onclick="hideCtx();openLinkToNote('${aid}')">🔗 Link to note…</div>`
       +(detach?`<div class="csep"></div>`+detach:'');
   }
+  _ctxRepaint(m);
 }
 
 /** Remove one folder from an article's folderIds */
