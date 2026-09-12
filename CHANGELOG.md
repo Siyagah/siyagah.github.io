@@ -2198,3 +2198,61 @@ The edge-to-edge check is asserted **both ways**: edge to edge on the phone,
 and *still narrow and anchored* on the tablet and the laptop. A rule that only
 ever said "wider is fine" would pass a phone card that never widened at all —
 and would not notice the day a laptop's menu stretched across the screen.
+
+---
+
+## v04.29 — sized to the words, not stretched to a column (12 Sep 2026)
+
+> How easy you can place them closely but organisely instead of spreading all
+> over the screen. Do you understand what i mean in the mark up?
+
+Yes. The marks were drawn at the point where each button's content **ends** —
+everything to the right of them was empty. Every action was
+`flex:1 1 calc(50% - 3px)`, so a five-letter label sat at the left of a 186px
+box with 120px of nothing beside it, `MyDatabase` had a whole 366px row to
+itself, and `✕ Close` took a row of its own. The card ran 726px down an 844px
+screen to hold about fifteen short words. The arrow from `Close` pointed at
+the gap beside `＋ Add Tab` and said: put it there.
+
+**Every action is sized to its own words now, and they pack and wrap** — a
+tight cluster under each heading, which is what the headings were for.
+
+```
+before                                    after
+ [🖼 Image        ][🔗 Link         ]      [🖼 Image][🔗 Link][🔖 Bookmark]
+ [🔖 Bookmark     ][@ Mention       ]      [@ Mention][💬 Phrase][📋 Template]
+ [💬 Phrase       ][📋 Template     ]
+ [🏷 Note Type                      ]      [🏷 Note Type · General][📁 Folder · 1 attached]
+ [   General                        ]      [📓 My Journal][🗄 MyDatabase]
+ [📁 Folder                         ]      [📅 Calendar][＋ Add Tab]
+ [   1 attached                     ]      [◆ Note one][Note two][✕ Close]
+ …
+ [            ✕ Close               ]
+```
+
+Three changes underneath:
+
+- **`flex:0 1 auto`, not `0 0 auto`.** A long note title in the tab list has to
+  be allowed to shrink and ellipsis; `0 0 auto` would push the card wider than
+  the screen the first time someone titled a note properly.
+- **The value moved onto the same line as the name** — `Note Type · General`
+  instead of a second line underneath, which doubled the height of every row
+  that had one.
+- **`✕ Close` packs in beside the last action** rather than claiming a row,
+  exactly where the arrow pointed. It keeps its word and its 44px.
+
+Nothing lost, nothing moved between menus, every touch target still 44px. The
+`+` menu is **545px instead of 726**, and the `≡` menu **314px instead of
+459** — both now fit a phone screen whole, with no scrolling.
+
+### Measured
+
+206 → 208 app checks, and 11/11 ship checks.
+
+The new check does **not** measure a width budget, which would rot the first
+time a label changed. It asks the question the layout is actually about:
+**does the width follow the words?** The button with the longest label must be
+wider than the one with the shortest, and the actions must show at least four
+distinct widths — both false by definition of a stretched grid, whatever width
+that grid happens to use. Plus the outcome the packing is for: the whole `+`
+menu fits the screen without scrolling.

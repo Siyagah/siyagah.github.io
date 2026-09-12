@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.28.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.29.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,24 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.29** (12 Sep 2026) — "place them closely but organisely instead of
+  spreading all over the screen." The marks in the screenshot were drawn where
+  each button's content ENDS; everything right of them was empty. Every action
+  was `flex:1 1 calc(50% - 3px)`, so a five-letter label sat at the left of a
+  186px box with 120px of nothing beside it, `MyDatabase` had a 366px row to
+  itself, and `✕ Close` took a row of its own — 726px of an 844px screen for
+  about fifteen short words. Every action is **sized to its own words** now
+  and they pack and wrap into a tight cluster under each heading.
+  `flex:0 1 auto`, not `0 0 auto` — a long note title in the tab list has to
+  shrink and ellipsis rather than push the card past the screen. The value
+  moved onto the SAME line (`Note Type · General`), and `✕ Close` packs in
+  beside the last action, where the owner's arrow pointed. `+` is **545px
+  instead of 726**, `≡` **314 instead of 459**, both fitting a phone whole.
+  The check asks the only durable question — **does the width follow the
+  words?** (longest label wider than the shortest, four or more distinct
+  widths), which a stretched grid fails whatever width it uses; a pixel budget
+  would have rotted on the next label change. 208/208 app checks (up from 206)
+  and 11/11 ship checks.
 - **v04.28** (12 Sep 2026) — "make the card widen edge to edge", and "place
   the 'add tag' above all the buttons". `.fl-pop` was `width:min(260px,92vw)`
   — a 260px column on a 390px phone, anchored under a button near the right,
@@ -72,17 +90,6 @@ must never accumulate here instead of there.
   `OPEN TABS (n)`, the current one marked `◆`, each calling the same
   `tabSelect()` the chip did. 197/197 app checks (up from 196) and 11/11 ship
   checks.
-- **v04.24** (11 Sep 2026) — "Still Calender and '+Add Tab' is still there on
-  a bar. should not be there." They were. v04.22 put 📅 Calendar and ＋ Add Tab
-  under `+` and **never took them off the tab bar**, then hid that bar while
-  editing on a phone — which concealed the duplication, because with no tabs
-  there was no bar to see it on. The first tab the owner opened brought the bar
-  back with both buttons on it. While editing on a phone the bar carries
-  **tabs and nothing else** now; read mode keeps both buttons and they return
-  the moment editing ends. The check missed it because it only ever ran on the
-  default seed, which has **no tabs** — every measurement of that bar was taken
-  in the one state where it does not exist. It seeds three tabs now.
-  196/196 app checks (up from 194) and 11/11 ship checks.
 
 ---
 

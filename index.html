@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.28">
+<meta name="app-version" content="04.29">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2214,10 +2214,10 @@ sup.ann-sup:hover{text-decoration:underline}
 .fl-pop{display:none;position:fixed;z-index:9200;background:var(--paper);
   border:1px solid var(--border2);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.22);
   width:min(260px,92vw);max-height:min(360px,70vh);flex-wrap:wrap;
-  gap:4px;padding:8px;overflow:auto}
+  gap:5px;padding:8px;overflow:auto;align-content:flex-start}
 .fl-pop.open{display:flex}
 .fl-pop .et{min-width:36px;padding:4px 7px;font-size:13px}
-.fl-pop .fl-pop-x{margin-left:auto;border-color:var(--border2);opacity:.7;gap:7px}
+.fl-pop .fl-pop-x{border-color:var(--border2);opacity:.7;gap:7px}
 .fl-pop .fl-pop-x-l{display:none}
 .fl-pop .fl-pop-x:hover{opacity:1}
 /* ══ v04.22 — the phone's one edit bar, and the meta line ═════════════════ */
@@ -2252,14 +2252,21 @@ sup.ann-sup:hover{text-decoration:underline}
 /* v04.26 — a labelled action in a phone menu: two to a row, icon in a fixed
    column so every label starts on the same x. A menu read by someone who did
    not write it needs words, not a grid of emoji. */
-.fl-pop .eb-act{flex:1 1 calc(50% - 3px);min-width:0;justify-content:flex-start!important;
-  gap:8px;padding:8px 10px!important;text-align:left}
+/* v04.29 — sized to its own words, not stretched to a column. Every action
+   was `flex:1 1 calc(50% - 3px)`, so a five-letter label sat at the left of a
+   186px box with 120px of nothing beside it, and the menu ran 726px down a
+   844px screen. They flow and wrap now — a tight cluster under each heading,
+   which is the whole point of the headings. `flex:0 1 auto` (not `0 0 auto`):
+   a long note title in the tab list may shrink and ellipsis rather than push
+   the card wider than the screen. */
+.fl-pop .eb-act{flex:0 1 auto;min-width:0;max-width:100%;
+  justify-content:flex-start!important;gap:7px;padding:7px 11px!important;text-align:left}
 .fl-pop .eb-act .eb-act-i{flex:0 0 18px;text-align:center;font-size:15px;line-height:1}
 .fl-pop .eb-act .eb-act-l{font-size:12.5px;font-weight:600;color:var(--t2);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fl-pop .eb-act:hover .eb-act-l{color:var(--t1)}
 /* The section tools read as a row of three, not as three separate ideas. */
-.fl-pop .ed-col-btn{flex:1 1 calc(50% - 3px);justify-content:center}
+.fl-pop .ed-col-btn{flex:0 1 auto}
 /* 📦 Archive is emoji-only on the bar, where the row has no width for a
    word. In a menu that is the one bare glyph left, so it borrows its own
    tooltip as its label — which keeps saying the right thing when the button
@@ -2275,21 +2282,21 @@ sup.ann-sup:hover{text-decoration:underline}
 .fl-pop .p3h-pal-nti .nti-chips{flex:0 1 auto;overflow:visible;flex-wrap:wrap}
 .fl-pop .p3h-pal-nti .kind-arch-btn::after{content:attr(title);font-size:12.5px;
   font-weight:600;color:var(--t2);font-family:var(--ui)}
-.eb-tab-row{flex:1 0 100%;justify-content:flex-start!important;text-align:left;
+.eb-tab-row{flex:0 1 auto;max-width:100%;justify-content:flex-start!important;text-align:left;
   font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .eb-tab-row.on{background:var(--hover);border-color:var(--t3);font-weight:700}
 /* v04.27 — a second line under an action's name, for the value it currently
    holds: "Note Type — General", "Folder — 1 attached". It is what the \ud83d\udcce Attach
    button used to hide behind one more tap. */
-.fl-pop .eb-act .eb-act-s{display:block;font-size:11px;font-weight:500;color:var(--t3);
-  margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fl-pop .eb-act{align-items:flex-start}
+/* The value rides the same line as the name — "Note Type · General" — where a
+   second line underneath doubled the height of every row that had one. */
+.fl-pop .eb-act .eb-act-s{font-weight:500;color:var(--t3)}
+.fl-pop .eb-act .eb-act-s::before{content:' · '}
 /* The Attach rows and the note-state rows run the full width. Two-up clipped
    "MyDatabase" to "MyDatab…", and a row whose whole point is to show the value
    it holds cannot afford an ellipsis in its NAME; full-width also puts the
    menu's ✕ on a line of its own instead of beside an action. */
-.fl-pop .eb-wide{flex:1 0 100%}
-.fl-pop .eb-act .eb-act-i{margin-top:1px}
+.fl-pop .eb-act .eb-act-i{margin-top:0}
 /* The tag editor, inside the menu. # is the tag glyph here because \ud83c\udff7 already
    belongs to Note Type one row above, and a Note Type is explicitly not a tag. */
 .fl-pop .eb-tagrow{flex:1 0 100%;display:flex;align-items:center;gap:8px;
@@ -2323,11 +2330,10 @@ sup.ann-sup:hover{text-decoration:underline}
    number, measured rather than shaved: one size for every control, the
    largest that fits the whole row without anything scrolling out of reach. */
 @media(max-width:639.98px){
-  /* Edge to edge (v04.28), a ✕ alone in the bottom-right corner is stranded
-     beside a lot of nothing. It becomes the card's closing bar, and it says
-     the word — a menu is read by someone who did not write it. */
-  .fl-pop .fl-pop-x{flex:1 0 100%;justify-content:center;margin-left:0;margin-top:4px;
-    opacity:1;min-height:44px}
+  /* v04.29 — ✕ Close packs in beside the last action rather than taking a row
+     of its own: the owner's arrow pointed at the empty space next to ＋ Add
+     Tab and said put it there. It keeps its word and its 44px. */
+  .fl-pop .fl-pop-x{flex:0 1 auto;opacity:1;min-height:44px;padding:7px 13px!important}
   .fl-pop .fl-pop-x-l{display:inline;font-size:13px;font-weight:600}
   .p3h-nav-edit-row{min-height:50px;padding:4px 6px}
   /* Two buttons: it never needs to shrink, and shrinking is how a strip
@@ -2604,7 +2610,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.28</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.29</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -8888,7 +8894,7 @@ function _ebAttachHTML(a){
   const aid=a.id;
   const kinds=noteKinds().filter(k=>new Set(artKinds(a)).has(k.id)).map(k=>k.name);
   const fN=_attachCount(a);
-  const row=(ico,lbl,onclick,sub)=>'<button class="et eb-act eb-wide" onmousedown="event.preventDefault()"'
+  const row=(ico,lbl,onclick,sub)=>'<button class="et eb-act" onmousedown="event.preventDefault()"'
     +' onclick="'+onclick+'" title="'+esc(lbl+(sub?' — '+sub:''))+'">'
     +'<span class="eb-act-i">'+ico+'</span><span class="eb-act-l">'+esc(lbl)
     +(sub?'<span class="eb-act-s">'+esc(sub)+'</span>':'')+'</span></button>';
@@ -8916,15 +8922,15 @@ function _ebNoteStateHTML(a){
   const aid=a.id;
   const hasNag=noteKinds().filter(k=>new Set(artKinds(a)).has(k.id)).some(k=>k.nag);
   let h='<div class="fl-pop-hd">This note</div>';
-  h+='<button class="et eb-act eb-wide" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');toggleArchive(\''+aid+'\')"'
+  h+='<button class="et eb-act" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');toggleArchive(\''+aid+'\')"'
     +' title="'+(a.archived?'Bring this note back out of the archive':'Put this note in the archive')+'">'
     +'<span class="eb-act-i">'+(a.archived?'\ud83d\udce4':'\ud83d\udce6')+'</span>'
     +'<span class="eb-act-l">'+(a.archived?'Unarchive':'Archive')+'</span></button>';
   if(a.finalised){
-    h+='<button class="et eb-act eb-wide" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');unfinishNote(\''+aid+'\')"'
+    h+='<button class="et eb-act" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');unfinishNote(\''+aid+'\')"'
       +' title="Re-open this note"><span class="eb-act-i">\u21ba</span><span class="eb-act-l">Re-open</span></button>';
   } else if(hasNag){
-    h+='<button class="et eb-act eb-wide" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');finishNote(\''+aid+'\')"'
+    h+='<button class="et eb-act" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');finishNote(\''+aid+'\')"'
       +' title="Mark this note finished"><span class="eb-act-i">\u2713</span>'
       +'<span class="eb-act-l">Finish<span class="eb-act-s">untouched '+untouchedDays(a)+'d</span></span></button>';
   }
