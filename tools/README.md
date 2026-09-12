@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 206 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 208 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -167,6 +167,12 @@ or quietly lose the notebook, none of which need a browser:
   never widened, and misses the day a laptop's menu stretches across the
   screen. Plus the tag box proved to be the FIRST child of `+`, ahead of every
   heading (v04.28);
+- **the menu actions are sized to their words, not stretched to a column** —
+  asked as a question no pixel budget can answer and no stretched grid can
+  pass: the button with the longest label must be wider than the one with the
+  shortest, and the actions must show four or more distinct widths. Plus the
+  outcome the packing is for — the whole `+` menu fitting a phone screen with
+  no scrolling (v04.29);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
@@ -255,6 +261,12 @@ assertions miss.
   were sitting on it, duplicated from the menu they had just been moved to, and
   the owner found them the first time he opened a tab. Seed the state. The
   same trap, one shape along, as:
+- **A check is SCORED in order; the browser is not still open in order.** The
+  v04.29 packing check measured with a second `page.evaluate()` placed after
+  the block's own `await s.close()` — it read fine top to bottom and threw
+  "Target page, context or browser has been closed" on its first run. Take
+  every measurement a block needs inside the one evaluate that block runs,
+  before it closes its session.
 - **A pop-out has states, and its parts do not all exist in the same one.**
   The v04.17 geometry probe measured while a search was live, where the
   pop-out has no chevrons and no per-row action icons — so "every icon is

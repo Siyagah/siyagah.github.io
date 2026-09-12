@@ -2780,10 +2780,22 @@ await app.close();
         }
       }
       const first = pop.firstElementChild;
+      /* v04.29 — measured HERE, inside the one evaluate this block runs,
+         because the page is closed before the checks below are scored. A
+         second evaluate after s.close() threw "Target page has been closed"
+         on its first run — the checks are read in order, the browser is not
+         still there in order. */
+      const acts = [...pop.querySelectorAll('.eb-act')].filter((b) => b.offsetParent)
+        .map((b) => ({ t: (b.textContent || '').trim(), w: Math.round(b.getBoundingClientRect().width) }));
+      const byLen = [...acts].sort((a, b) => a.t.length - b.t.length);
       return { groups, wide: Math.round(pop.getBoundingClientRect().width),
         tagFirst: !!(first && first.classList.contains('eb-tagrow')),
         tagInput: !!pop.querySelector('.eb-tagrow #tag-inp'),
-        firstWas: first ? (first.className || first.tagName) : 'nothing' };
+        firstWas: first ? (first.className || first.tagName) : 'nothing',
+        fit: acts.length < 4 ? null : { shortest: byLen[0], longest: byLen[byLen.length - 1],
+          widths: new Set(acts.map((b) => b.w)).size, n: acts.length,
+          tall: Math.round(pop.getBoundingClientRect().height), vh: innerHeight,
+          scrolls: pop.scrollHeight > pop.clientHeight + 1 } };
     });
     await s.close();
     const empty = m.groups.filter((g) => g.n === 0);
@@ -2803,6 +2815,23 @@ await app.close();
       'phone: the tag box is the first thing in the `+` menu, above every heading',
       m.tagFirst ? `.eb-tagrow first, with an input ${m.tagInput}`
         : `first child is ${m.firstWas}`);
+    /* v04.29 — "place them closely but organisely instead of spreading all
+       over the screen". The failure mode is a fixed column: every action
+       stretched to the same width with its label at the left and a lot of
+       nothing beside it. So the question is not "is it narrow" but "does the
+       width follow the WORDS" — which is false of a stretched grid by
+       definition, whatever width the grid happens to use. */
+    const fit = m.fit;
+    r.check(fit && fit.longest.w > fit.shortest.w && fit.widths >= 4,
+      'phone: the `+` menu actions are sized to their words, not stretched to a column',
+      fit ? `"${fit.shortest.t}" ${fit.shortest.w}px vs "${fit.longest.t}" ${fit.longest.w}px`
+        + ` · ${fit.widths} distinct widths across ${fit.n} actions`
+        : 'too few actions to measure');
+    /* And the point of packing them: the whole menu fits the screen. */
+    r.check(fit && !fit.scrolls && fit.tall < fit.vh * 0.72,
+      'phone: the whole `+` menu fits on the screen without scrolling',
+      fit ? `${fit.tall}px of ${fit.vh}px (${Math.round(fit.tall / fit.vh * 100)}%),`
+        + ` scrolls ${fit.scrolls}` : 'not measured');
   }
 
   /* 6. Geometry — the round's own bug report. A real mouse click on the real
