@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.26.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.27.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,24 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.27** (12 Sep 2026) — five asks off two screenshots of the phone's
+  menus. **`≡`**: the `↩ ↪ 🕐 🔍` block goes FIRST (it is what you reach for
+  mid-sentence; a list block is a choice made once), `Lists and blocks`
+  second, and **📦 Archive** joins the bottom under `THIS NOTE` with
+  `✓ Finish` / `↺ Re-open` — the note's state, not something attached to it.
+  **`+`**: `📎 Attach (1) ▾` was a button whose only job was to open four more,
+  so it is **spread open** — `🏷 Note Type · General`, `📁 Folder · 1
+  attached`, `📓 My Journal`, `🗄 MyDatabase`, each showing the VALUE it holds,
+  full width because two-up clipped *MyDatabase*. The group is
+  **`ATTACH TO THE NOTE`** now, not "About this note". And the owner's
+  question — "do we need a separate tag button when the + button contains
+  it?" — answered no: **🏷 left the bar and the tag ROW with it**; the tag
+  editor lives in `+`, chips, input and suggestions. v04.23 had made it a
+  toggle because `.fl-pop` is `overflow:auto` and would clip an absolutely
+  positioned suggestion list; `_tagSuggestPlace()` fixes that properly —
+  `position:fixed` is not clipped by an overflow ancestor. 🏷 stays with Note
+  Type, tags take `#`. The bar is seven controls: `◀ 📁 | Aa H ≡ + | 💾 Save`.
+  202/202 app checks (up from 200) and 11/11 ship checks.
 - **v04.26** (12 Sep 2026) — "how about there is two 3 line horizontal button,
   does it make sense?" No. `≡` was **Open folders** in the nav pair AND
   **Lists** in the format pair, three buttons apart on the same 390px row, with
@@ -72,23 +90,6 @@ must never accumulate here instead of there.
   📚 logo IS `goHome()`), and `🏷` took the slot. Writing now starts at
   **165px of 844 (20%)**, from 53% two rounds ago. 194/194 app checks (up from
   189) and 11/11 ship checks.
-- **v04.22** (11 Sep 2026) — the owner sent a screenshot of a note being edited
-  on the phone: **five rows of chrome** before the first line of writing, and
-  the note starting about 450px down an 844px screen. The instruction was
-  exact and was followed rather than improvised — everything on **ONE bar**:
-  Calendar, ＋ Add Tab, 📋 Templates and 📎 Attach (with the type chips, 📦
-  Archive and ✓ Finish) fold under `+`; ↩ ↪ 🕐 History and 🔍 Find fold under
-  `≡`; and that frees the room for **💾 Save on the bar**. The empty tab bar
-  hides while editing (a bar holding real tabs never does). This is the
-  **phone only, at 640px** — the owner wrote "PC and Tab will organise later",
-  so a tablet keeps v04.21's bar exactly; `_p3OneBar()` decides for all three
-  places that fold. The note now starts at **222px (26%)**. Also: a popover
-  was pinned `bottom:60px` under 1200px, so tapping a button at the TOP of the
-  phone dropped its menu at the FOOT of the screen — it is measured and placed
-  under its own button now, at every size. The dates are **one date, tapped to
-  flip** (Created ⇄ Updated, swapped in place so `#ed` is never rebuilt), on
-  the versioning bar, with the section-tools `⋯` after it. 189/189 app checks
-  (up from 162) and 11/11 ship checks.
 
 ---
 

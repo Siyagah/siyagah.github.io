@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 200 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 202 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -152,6 +152,15 @@ or quietly lose the notebook, none of which need a browser:
   glyph-only control in the phone's edit chrome, mapped to the function it
   calls, failing if one glyph has two; plus the `+` menu measured for named,
   non-empty groups and for any action still wearing a bare glyph (v04.26);
+- **the phone's menus hold what they say and in the order asked for** — the
+  tag editor really inside `+`, proved by typing a tag and reading it back out
+  of `ST.etags` rather than out of the DOM; the four Attach rows identified by
+  the FUNCTION each calls, with the `📎` opener proved gone and `📦` Archive
+  proved absent from `+` and present in `≡`; and the `≡` menu's heading ORDER,
+  so "undo first" cannot quietly drift back. Two exemptions in the
+  nothing-lost sweep — `openAttachMenu` (nothing left to open) and
+  `_ntiChipTap` (replaced by the 🏷 Note Type row) — each paid for by asserting
+  what replaced it (v04.27);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
