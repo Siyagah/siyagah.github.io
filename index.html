@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.25">
+<meta name="app-version" content="04.26">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2248,6 +2248,32 @@ sup.ann-sup:hover{text-decoration:underline}
 .p3-meta-row #ed-col-btn:hover{background:var(--hover);color:var(--t1)}
 /* 🏷 on the phone's bar, carrying the note's tag count — with the bar closed
    this is the only thing on screen that says the note is tagged. */
+/* v04.26 — a labelled action in a phone menu: two to a row, icon in a fixed
+   column so every label starts on the same x. A menu read by someone who did
+   not write it needs words, not a grid of emoji. */
+.fl-pop .eb-act{flex:1 1 calc(50% - 3px);min-width:0;justify-content:flex-start!important;
+  gap:8px;padding:8px 10px!important;text-align:left}
+.fl-pop .eb-act .eb-act-i{flex:0 0 18px;text-align:center;font-size:15px;line-height:1}
+.fl-pop .eb-act .eb-act-l{font-size:12.5px;font-weight:600;color:var(--t2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl-pop .eb-act:hover .eb-act-l{color:var(--t1)}
+/* The section tools read as a row of three, not as three separate ideas. */
+.fl-pop .ed-col-btn{flex:1 1 calc(50% - 3px);justify-content:center}
+/* 📦 Archive is emoji-only on the bar, where the row has no width for a
+   word. In a menu that is the one bare glyph left, so it borrows its own
+   tooltip as its label — which keeps saying the right thing when the button
+   flips to Unarchive. */
+/* .nti-chips and .kind-act are siblings on ONE flex line, so a labelled
+   Archive simply pushed the row past the menu and was clipped — measured, not
+   guessed. Give the action group the whole width and it sits on its own row. */
+.fl-pop .p3h-pal-nti .kind-act{flex:1 0 100%;margin-top:2px}
+.fl-pop .p3h-pal-nti .kind-arch-btn{width:auto!important;min-width:44px;
+  height:44px!important;padding:0 12px!important;gap:7px;opacity:1}
+/* The chips stop stretching, so the type and 📎 Attach read as one left-aligned
+   pair instead of being pushed to opposite edges of the menu. */
+.fl-pop .p3h-pal-nti .nti-chips{flex:0 1 auto;overflow:visible;flex-wrap:wrap}
+.fl-pop .p3h-pal-nti .kind-arch-btn::after{content:attr(title);font-size:12.5px;
+  font-weight:600;color:var(--t2);font-family:var(--ui)}
 .eb-tab-row{flex:1 0 100%;justify-content:flex-start!important;text-align:left;
   font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .eb-tab-row.on{background:var(--hover);border-color:var(--t3);font-weight:700}
@@ -2554,7 +2580,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.25</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.26</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3679,7 +3705,7 @@ function renderP2C(){
 function _navBtnsHTML(dup){
   if(dup&&_p3OneBar())return '';
   if(window.innerWidth<1200)
-    return `<button class="btn bn bi" onclick="openP2()" style="font-size:18px;flex-shrink:0" title="Back to article list">◀</button><button class="btn bn bi" onclick="backFromP3()" style="font-size:24px;flex-shrink:0" title="Open folders">≡</button>`;
+    return `<button class="btn bn bi" onclick="openP2()" style="font-size:18px;flex-shrink:0" title="Back to article list">◀</button><button class="btn bn bi" onclick="backFromP3()" style="font-size:19px;flex-shrink:0" title="Folders">📁</button>`;
   if(document.getElementById('sb')?.classList.contains('closed'))
     return `<button class="btn bn bi" onclick="toggleSB()" style="font-size:14px" title="Open sidebar">☰</button>`;
   return '';
@@ -3712,7 +3738,7 @@ function renderP3H(){
     // Mobile/tablet: ◀ = back to the article-list (Title) pane this note belongs to
     h+=`<button class="btn bn bi" onclick="openP2()" style="font-size:18px;flex-shrink:0" title="Back to article list">◀</button>`;
     // ≡ = open folders / sidebar
-    h+=`<button class="btn bn bi" onclick="backFromP3()" style="font-size:24px;flex-shrink:0" title="Open folders">≡</button>`;
+    h+=`<button class="btn bn bi" onclick="backFromP3()" style="font-size:19px;flex-shrink:0" title="Folders">📁</button>`;
   } else if(document.getElementById('sb').classList.contains('closed')){
     // Desktop/tablet with sidebar closed: show hamburger
     h+=`<button class="btn bn bi" onclick="toggleSB()" style="font-size:14px" title="Open sidebar">☰</button>`;
@@ -3757,7 +3783,7 @@ function renderP3H(){
   if(ST.editing&&curA&&curA.contactData?.mode==='form'){
     /* Contact form edit — simple header, no bars */
     el.classList.remove('editing');
-    const _ham=window.innerWidth<1200?`<button class="btn bn bi" onclick="openP2()" style="font-size:18px">◀</button>\n<button class="btn bn bi" onclick="backFromP3()" style="font-size:24px">≡</button>`:'';
+    const _ham=window.innerWidth<1200?`<button class="btn bn bi" onclick="openP2()" style="font-size:18px">◀</button>\n<button class="btn bn bi" onclick="backFromP3()" style="font-size:19px" title="Folders">📁</button>`:'';
     el.innerHTML=_ham
       +`<span class="tbt" style="flex:1;overflow:hidden">${esc(_ctName(curA.contactData)||'New Contact')}</span>`
       +`<button class="btn bp" onclick="_saveContactForm(DB.articles.find(x=>x.id===ST.article))">💾 Save</button>`
@@ -3778,7 +3804,7 @@ function renderP3H(){
         +'<div class="nav-l">'
           +_p3HomeBtnHTML(_p3OneBar())
           +'<button class="btn bn bi" onclick="openP2()" style="font-size:16px" title="Back to article list">◀</button>'
-          +'<button class="btn bn bi" onclick="backFromP3()" style="font-size:20px" title="Open folders">≡</button>'
+          +'<button class="btn bn bi" onclick="backFromP3()" style="font-size:17px" title="Folders">📁</button>'
         +'</div>'
         +'<div class="nav-r">'+_p3EditIconsHTML(curA)+'</div>'
         +'</div>';
@@ -3813,7 +3839,7 @@ function renderP3H(){
     return;
   } else if(curA&&curA.contactData?.mode==='form'){
     el.classList.remove('editing');
-    const _cham=window.innerWidth<1200?`<button class="btn bn bi" onclick="openP2()" style="font-size:18px">◀</button>\n<button class="btn bn bi" onclick="backFromP3()" style="font-size:24px">≡</button>`:'';
+    const _cham=window.innerWidth<1200?`<button class="btn bn bi" onclick="openP2()" style="font-size:18px">◀</button>\n<button class="btn bn bi" onclick="backFromP3()" style="font-size:19px" title="Folders">📁</button>`:'';
     el.innerHTML=_cham
       +`<span class="tbt" style="flex:1;overflow:hidden" oncontextmenu="event.preventDefault();showArtCtx(event,'${curA.id}')">${esc(_ctName(curA.contactData)||curA.title||'Contact')}</span>`
       +`<button class="btn" onclick="logInteraction('${curA.id}')">📋 Log</button>`
@@ -8704,8 +8730,8 @@ function _p3EditIconsHTML(curA){
   const _grps=_mob?[
     {id:'text',  icon:'<b>Aa</b>',label:'Text style'},
     {id:'heads', icon:'H',         label:'Headings'},
-    {id:'lists', icon:'≡',       label:'Lists · Undo/Redo · Find'},
-    {id:'insert',icon:'+',         label:'Insert · Attach · Templates · Calendar · Tabs'},
+    {id:'lists', icon:'≡',       label:'Lists and blocks · Undo/Redo · Find'},
+    {id:'insert',icon:'+',         label:'Insert · About this note · Go to'},
   ]:[
     {id:'text',  icon:'<b>Aa</b>',label:'Text style'},
     {id:'heads', icon:'H',         label:'Headings'},
@@ -8750,7 +8776,7 @@ function _ebOpenTabsHTML(){
       +(own?'\u25c6 ':'')+esc(lbl)+'</button>';
   };
   const ownArt=DB.articles.find(x=>x.id===owner);
-  return '<div class="fl-pop-hd">Open tabs ('+(ids.length+(ownArt?1:0))+')</div>'
+  return '<div class="fl-pop-hd">Open tabs \u00b7 '+(ids.length+(ownArt?1:0))+'</div>'
     +(ownArt?row(ownArt,true):'')
     +ids.map(id=>{const a=DB.articles.find(x=>x.id===id);return a?row(a,false):'';}).join('');
 }
@@ -8766,6 +8792,66 @@ function togEBGroup(g){
   ST.ebGroup=g;
   document.querySelectorAll('.eb-grp-btn').forEach(b=>b.classList.toggle('on',b===btn));
   _openFloatPop('eb-pop',btn,_buildEBSub(g),true);
+}
+/* ══ v04.26 — ONE TABLE, TWO RENDERINGS ════════════════════════
+   Every "put something into the note" action, written once. A laptop's bar
+   has room for a row of bare glyphs; the phone's menu is not short of room
+   and a bare 🔖 says nothing to someone who did not write it — the v04.23
+   lesson, paid for by a ⋯ nobody recognised. So the phone renders the same
+   buttons carrying their NAME, generated from this list rather than from a
+   second copy of the markup that would drift away from it.
+   `stop` is for the two that open a menu of their own: they need a real
+   onclick that stops the click reaching the pop's outside-click closer.
+   `phone` marks 📋 Template, which is a button on the laptop's own bar and
+   so belongs in this menu ONLY where the bar does not carry it. */
+const _EB_INSERT=[
+  {ico:'🖼',lbl:'Image',   md:"edImgPick(event)",            t:'Insert a picture'},
+  {ico:'🔗',lbl:'Link',    md:"edLink(event)",               t:'Insert a link'},
+  {ico:'🔖',lbl:'Bookmark',md:"edBookmarkBtn(event)",        t:'Insert a bookmark card'},
+  {ico:'@',    lbl:'Mention', md:"edMentionBtn(event)",         t:'Mention another note (@)',bold:true},
+  {ico:'💬',lbl:'Phrase',  md:"openQuickPhrasesMenu(event)", t:'Quick Phrases',stop:true},
+  {ico:'📋',lbl:'Template',md:"openTemplatesMenu(event)",    t:'Insert a ready-made note structure',stop:true,phone:true},
+];
+/* The same table shape for the list blocks. ❝ and ─ were the last two bare
+   glyphs left in a phone menu; on a laptop's bar they keep the form they
+   always had, because that row has no width for words. */
+const _EB_LISTS=[
+  {ico:'• List',  lbl:'Bullet list', md:"ec(event,'insertUnorderedList')", t:'Bulleted list'},
+  {ico:'1. List', lbl:'Numbered',    md:"ec(event,'insertOrderedList')",   t:'Numbered list'},
+  {ico:'❝',       lbl:'Quote',       md:"fb(event,'blockquote')",          t:'Quote block', ital:true},
+  {ico:'─',       lbl:'Divider',     md:"ec(event,'insertHorizontalRule')",t:'Horizontal rule'},
+];
+function _ebListsHTML(labelled){
+  return _EB_LISTS.map(a=>
+    '<button class="et'+(labelled?' eb-act':'')+'" title="'+esc(a.t)+'"'
+    +(a.ital?' style="font-style:italic"':'')
+    +' onmousedown="'+a.md+'">'
+    +(labelled?'<span class="eb-act-i">'+(a.ico==='• List'?'•':a.ico==='1. List'?'1.':a.ico)+'</span>'
+       +'<span class="eb-act-l">'+esc(a.lbl)+'</span>'
+     :a.ico)+'</button>').join('');
+}
+function _ebInsertHTML(labelled){
+  return _EB_INSERT.filter(a=>labelled||!a.phone).map(a=>
+    '<button class="et'+(labelled?' eb-act':'')+'" title="'+esc(a.t)+'"'
+    +(a.bold?' style="font-weight:700"':'')
+    +' onmousedown="'+a.md+'"'+(a.stop?' onclick="event.stopPropagation()"':'')+'>'
+    +'<span class="eb-act-i">'+a.ico+'</span>'
+    +(labelled?'<span class="eb-act-l">'+esc(a.lbl)+'</span>':'')+'</button>').join('');
+}
+/* Collapse / Expand / Preview, written once for the two places that offer
+   them: the ⋯ on the versioning bar and the H group on the phone's bar.
+   ▤ Preview, not ≡ Preview — ≡ already had two other jobs on this screen,
+   which is the very thing this round is fixing. */
+function _ebSectionToolsHTML(aid){
+  /* No dangling comma when there is no aid: `_edColAll(true,)` happens to be
+     legal JS, which is exactly why it would have gone unnoticed. */
+  const t=aid?",'"+aid+"'":'';
+  return '<div class="fl-pop-hd">All sections in this note</div>'
+    +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(true'+t+')">&#9654; Collapse all</button>'
+    +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(false'+t+')">&#9660; Expand all</button>'
+    +'<button class="ed-col-btn ed-col-prev'+((DB.theme&&DB.theme.collapsePreview==='preview')?' on':'')
+    +'" onmousedown="event.preventDefault()" onclick="_edColPreview()"'
+    +' title="Show a preview line under collapsed sections">&#9636; Preview</button>';
 }
 function _buildEBSub(g){
   if(!g)return '';
@@ -8796,19 +8882,8 @@ function _buildEBSub(g){
       '<button class="et" onmousedown="shiftHeadingLevel(event,1)" title="Demote this heading (H1→H2→H3→H4→text) — Ctrl+]">▼</button>',
       '<button class="et" onmousedown="shiftAllHeadingsMenu(event)" title="Shift every heading in this note by one level">↕ All</button>',
     ],
-    lists:[
-      '<button class="et" onmousedown="ec(event,\'insertUnorderedList\')">• List</button>',
-      '<button class="et" onmousedown="ec(event,\'insertOrderedList\')">1. List</button>',
-      '<button class="et" onmousedown="fb(event,\'blockquote\')" style="font-style:italic">❝</button>',
-      '<button class="et" onmousedown="ec(event,\'insertHorizontalRule\')">─</button>',
-    ],
-    insert:[
-      '<button class="et" title="Insert image" onmousedown="edImgPick(event)">\ud83d\uddbc</button>',
-      '<button class="et" title="Insert link" onmousedown="edLink(event)">\ud83d\udd17</button>',
-      '<button class="et" title="Bookmark card" onmousedown="edBookmarkBtn(event)">\ud83d\udd16</button>',
-      '<button class="et" title="Mention (@)" onmousedown="edMentionBtn(event)" style="font-weight:700">@</button>',
-      '<button class="et" title="Quick Phrases" onmousedown="openQuickPhrasesMenu(event)" onclick="event.stopPropagation()">\ud83d\udcac</button>',
-    ],
+    lists:[_ebListsHTML(false)],
+    insert:[_ebInsertHTML(false)],
     hist:[
       '<button class="et" onmousedown="ec(event,\'undo\')" title="Undo">\u21a9</button>',
       '<button class="et" onmousedown="ec(event,\'redo\')" title="Redo">\u21aa</button>',
@@ -8817,9 +8892,12 @@ function _buildEBSub(g){
   };
   let out=(subs[g]||[]).join('');
   /* v04.22 — the phone folds two top-level buttons and a whole row into these
-     two menus (see _p3EditIconsHTML). A tablet's and a laptop's bar still
-     carry them itself, so neither may get them twice — hence the width test
-     here rather than a second copy of the lists/insert arrays. */
+     menus (see _p3EditIconsHTML). A tablet's and a laptop's bar still carry
+     them itself, so neither may get them twice — hence the width test here
+     rather than a second copy of the arrays above.
+     v04.26 — and the phone's menus are now ORGANISED rather than appended to:
+     every group carries a heading saying what it is for, and every button
+     carries a word. A menu is read by someone who did not write it. */
   if(_p3OneBar()){
     const a=DB.articles.find(x=>x.id===ST.article);
     if(g==='heads'){
@@ -8827,27 +8905,39 @@ function _buildEBSub(g){
          on the versioning bar, where they asked for it in v04.22 — but a bare
          ⋯ next to a date is not where anyone looks for something about
          HEADINGS. So the same three actions are here too, under the H group,
-         which is the button that says headings. Same functions, no second
-         implementation. */
-      out+='<div class="fl-pop-hd">All sections in this note</div>'
-        +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(true)">&#9654; Collapse all</button>'
-        +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(false)">&#9660; Expand all</button>'
-        +'<button class="ed-col-btn ed-col-prev'+((DB.theme&&DB.theme.collapsePreview==='preview')?' on':'')
-        +'" onmousedown="event.preventDefault()" onclick="_edColPreview()" title="Show a preview line under collapsed sections">&#8801; Preview</button>';
+         which is the button that says headings. */
+      out='<div class="fl-pop-hd">Make this line a heading</div>'+out
+        +_ebSectionToolsHTML();
     }
     if(g==='lists'){
-      out+='<div class="fl-pop-hd">Undo · Redo · Find</div>'
-        +(subs.hist||[]).join('')
-        +'<button class="et" onmousedown="event.preventDefault()" onclick="_ntFindToggle(\'p3\')" title="Find in this note">🔍</button>';
+      out='<div class="fl-pop-hd">Lists and blocks</div>'+_ebListsHTML(true)
+        +'<div class="fl-pop-hd">Undo · Redo · Find</div>'
+        +'<button class="et eb-act" onmousedown="ec(event,\'undo\')" title="Undo">'
+          +'<span class="eb-act-i">\u21a9</span><span class="eb-act-l">Undo</span></button>'
+        +'<button class="et eb-act" onmousedown="ec(event,\'redo\')" title="Redo">'
+          +'<span class="eb-act-i">\u21aa</span><span class="eb-act-l">Redo</span></button>'
+        +'<button class="et eb-act" onmousedown="event.preventDefault();openNoteHistory(ST.article)"'
+          +' title="Note History \u2014 restore an earlier version">'
+          +'<span class="eb-act-i">\ud83d\udd50</span><span class="eb-act-l">History</span></button>'
+        +'<button class="et eb-act" onmousedown="event.preventDefault()" onclick="_ntFindToggle(\'p3\')"'
+          +' title="Find in this note">'
+          +'<span class="eb-act-i">\ud83d\udd0d</span><span class="eb-act-l">Find</span></button>';
     }
     if(g==='insert'&&a){
-      out+='<div class="fl-pop-hd">Templates · Calendar · Tabs</div>'
-        +'<button class="et" onmousedown="openTemplatesMenu(event)" onclick="event.stopPropagation()" title="Templates — insert a ready-made note structure">📋 Templates</button>'
-        +'<button class="et" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');_calOpen()" title="Open the Calendar">📅 Calendar</button>'
-        +'<button class="et" onmousedown="event.preventDefault()" onclick="openTabPicker(this)" title="Search & add a note to the Tab bar">＋ Add Tab</button>'
-        +_ebOpenTabsHTML()
-        +'<div class="fl-pop-hd">This note</div>'
-        +'<div class="p3h-pal-nti">'+kindBarHTML(a,true,true)+'</div>';
+      /* Three groups, and the line between them is WHAT THE ACTION DOES:
+         put something in the note / say what the note is / leave the note.
+         The same line v04.21 drew between \ud83e\uddf0 Tools and \u2699 Settings. */
+      out='<div class="fl-pop-hd">Insert at the cursor</div>'+_ebInsertHTML(true)
+        +'<div class="fl-pop-hd">About this note</div>'
+        +'<div class="p3h-pal-nti">'+kindBarHTML(a,true,true)+'</div>'
+        +'<div class="fl-pop-hd">Go to</div>'
+        +'<button class="et eb-act" onmousedown="event.preventDefault()"'
+          +' onclick="_closeStickyPop(\'eb-pop\');_calOpen()" title="Open the Calendar">'
+          +'<span class="eb-act-i">\ud83d\udcc5</span><span class="eb-act-l">Calendar</span></button>'
+        +'<button class="et eb-act" onmousedown="event.preventDefault()" onclick="openTabPicker(this)"'
+          +' title="Search and add a note to the Tab bar">'
+          +'<span class="eb-act-i">\uff0b</span><span class="eb-act-l">Add Tab</span></button>'
+        +_ebOpenTabsHTML();
     }
   }
   return out;
@@ -11948,10 +12038,7 @@ function toggleEdColPop(ev,aid){
   if(document.getElementById('edcol-pop')?.classList.contains('open')){closeFloatPop('edcol-pop');return;}
   const onPrev=!!(DB.theme&&DB.theme.collapsePreview==='preview');
   const _t=aid?"'"+aid+"'":'';
-  _openFloatPop('edcol-pop',btn,
-    '<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(true,'+_t+')">&#9654; Collapse all</button>'
-    +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(false,'+_t+')">&#9660; Expand all</button>'
-    +'<button class="ed-col-btn ed-col-prev'+(onPrev?' on':'')+'" id="ed-col-prev-btn" onmousedown="event.preventDefault()" onclick="_edColPreview()" title="Show a preview line under collapsed sections">&#8801; Preview</button>');
+  _openFloatPop('edcol-pop',btn,_ebSectionToolsHTML(aid));
 }
 
 /* Wire the editor (called from renderP3C each time edit mode opens) */

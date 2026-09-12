@@ -2665,6 +2665,82 @@ await app.close();
       heads.open ? heads.text.slice(0, 110) : 'the H menu did not open');
   }
 
+  /* 5c. v04.26 — the owner asked two things: organise these menus, and "how
+     about there is two 3 line horizontal button, does it make sense?" It did
+     not: ≡ was Open-folders in the nav pair AND Lists in the format pair, two
+     jobs one glyph, side by side on the same 390px row. The folders button is
+     📁 now. This check does not name those two — it sweeps, so it catches the
+     NEXT collision as well: every visible glyph-only control in the edit
+     chrome, mapped to the function it calls. */
+  {
+    const s = await editAt(390, 844);
+    const clash = await s.page.evaluate(() => {
+      const byGlyph = {};
+      const sel = '.p3h-nav-edit-row button, .p3c-titlebar button,'
+        + ' .p3-meta-row button, .p3h-tag-bar button';
+      for (const b of document.querySelectorAll(sel)) {
+        if (!b.offsetParent) continue;
+        const g = (b.textContent || '').trim();
+        if (!g || [...g].length > 2) continue;          /* a word is not a glyph */
+        const h = b.getAttribute('onclick') || b.getAttribute('onmousedown') || '';
+        const fn = (h.match(/([A-Za-z_$][\w$]*)\s*\(/) || [])[1] || h;
+        (byGlyph[g] = byGlyph[g] || new Set()).add(fn);
+      }
+      return Object.entries(byGlyph).filter(([, v]) => v.size > 1)
+        .map(([k, v]) => `${k} → ${[...v].join(' and ')}`);
+    });
+    await s.close();
+    r.check(clash.length === 0,
+      'phone: no two controls in the edit chrome wear the same glyph for different jobs',
+      clash.length ? `same glyph, different job: ${clash.join(' · ')}` : 'every glyph does one job');
+  }
+
+  /* 5d. v04.26 — the `+` menu, organised. Three groups that split by WHAT THE
+     ACTION DOES (put something in the note / say what the note is / leave the
+     note), every group under a heading, and — the v04.23 lesson — every button
+     carrying a WORD, because a bare 🔖 means nothing to someone who did not
+     write it. */
+  {
+    /* Tabs SEEDED, because the `Open tabs` group exists only when there are
+       tabs — the exact trap v04.24 was reported for, and this check fell into
+       it on its first run, reporting three groups where the fourth simply was
+       not there to be counted. */
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+    await s.page.evaluate(() => { DB.tabs = { a1: ['a2', 'a3'] }; ST.tabOwner = 'a1';
+      ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); window.startEdit(); });
+    await s.page.waitForTimeout(450);
+    await s.page.click('.eb-grp-btn[data-g="insert"]');
+    await s.page.waitForTimeout(300);
+    const m = await s.page.evaluate(() => {
+      const pop = document.getElementById('eb-pop');
+      const groups = []; let cur = null;
+      for (const el of pop.children) {
+        if (el.classList.contains('fl-pop-hd')) { cur = { head: el.textContent.trim(), n: 0, bare: [] }; groups.push(cur); }
+        else if (cur && el.tagName === 'BUTTON' && !el.classList.contains('fl-pop-x')) {
+          cur.n++;
+          const words = (el.textContent || '').replace(/[^\p{L}\p{N}]/gu, '');
+          if (words.length < 3) cur.bare.push((el.textContent || el.title || '?').trim());
+        } else if (cur && el.querySelectorAll) {
+          const inner = [...el.querySelectorAll('button')].filter((b) => b.offsetParent);
+          cur.n += inner.length;
+        }
+      }
+      return { groups, wide: Math.round(pop.getBoundingClientRect().width) };
+    });
+    await s.close();
+    const empty = m.groups.filter((g) => g.n === 0);
+    r.check(m.groups.length === 4 && empty.length === 0,
+      'phone: the `+` menu is split into named groups and every group has items',
+      empty.length ? `empty heading(s): ${empty.map((g) => g.head).join(', ')}`
+        : m.groups.map((g) => `${g.head} (${g.n})`).join(' · '));
+    /* "Insert at the cursor" and "Go to" are the two this round wrote; the
+       type row and the tab rows carry their own names already. */
+    const bare = m.groups.filter((g) => /insert|go to/i.test(g.head)).flatMap((g) => g.bare);
+    r.check(bare.length === 0,
+      'phone: every action in the `+` menu is a word, not a bare glyph',
+      bare.length ? `unlabelled: ${bare.join(', ')}` : 'all labelled');
+  }
+
   /* 6. Geometry — the round's own bug report. A real mouse click on the real
      button, looked at again 250ms later (the v04.12 rule), then asked the
      question the owner asked: is it under the button, or at the bottom of the
@@ -2739,7 +2815,8 @@ await app.close();
           if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') st.push(c);
           if (/^rgb\(/.test(c)) break; } return st; };
       const out = [];
-      for (const el of document.querySelectorAll('.et-save, #eb-pop .fl-pop-hd, #eb-pop button, .p3-meta-row .dl-flip')) {
+      for (const el of document.querySelectorAll('.et-save, #eb-pop .fl-pop-hd, #eb-pop button,'
+        + ' #eb-pop .eb-act-l, #eb-pop .eb-tab-row, .p3-meta-row .dl-flip')) {
         if (!el.offsetParent) continue;
         const words = [...el.childNodes].filter((n) => n.nodeType === 3)
           .map((n) => n.textContent).join('').replace(/[^\p{L}\p{N}]/gu, '');

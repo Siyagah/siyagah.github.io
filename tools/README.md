@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 197 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 200 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -147,6 +147,11 @@ or quietly lose the notebook, none of which need a browser:
   first tab — plus the tabs proved still reachable the only way that counts:
   three rows under `+` all calling `tabSelect()`, a real click on one, and
   `ST.article` read back to confirm it really moved (v04.24/v04.25);
+- **one glyph does one job, and every action in a menu is a word** — not a
+  check on the two `≡` buttons that collided but a sweep: every visible
+  glyph-only control in the phone's edit chrome, mapped to the function it
+  calls, failing if one glyph has two; plus the `+` menu measured for named,
+  non-empty groups and for any action still wearing a bare glyph (v04.26);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
