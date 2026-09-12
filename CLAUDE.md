@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.27.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.28.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,19 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.28** (12 Sep 2026) — "make the card widen edge to edge", and "place
+  the 'add tag' above all the buttons". `.fl-pop` was `width:min(260px,92vw)`
+  — a 260px column on a 390px phone, anchored under a button near the right,
+  so it sat in the right-hand two thirds with a strip of note beside it and
+  every label squeezed into half of that. On a phone it is **6px each side,
+  378px of 390** now; a tablet and a laptop keep the narrow anchored card.
+  The **width is set BEFORE the height is read** in `_flPopPlace()` — measuring
+  `scrollHeight` at 260px and then widening reports a card taller than the one
+  that paints, and the placement is made from a number that was never true.
+  Edge to edge stranded the `✕` in a corner, so it is the card's **✕ Close**
+  bar now, full width. And the tag box is the FIRST child of the `+` menu,
+  above every heading: it is the one thing in there you reach for while still
+  writing. 206/206 app checks (up from 202) and 11/11 ship checks.
 - **v04.27** (12 Sep 2026) — five asks off two screenshots of the phone's
   menus. **`≡`**: the `↩ ↪ 🕐 🔍` block goes FIRST (it is what you reach for
   mid-sentence; a list block is a choice made once), `Lists and blocks`
@@ -70,26 +83,6 @@ must never accumulate here instead of there.
   default seed, which has **no tabs** — every measurement of that bar was taken
   in the one state where it does not exist. It seeds three tabs now.
   196/196 app checks (up from 194) and 11/11 ship checks.
-- **v04.23** (11 Sep 2026) — the owner used v04.22's one bar and asked three
-  things, two of them faults in that round. **(1)** "Where did you take the
-  collapse/expand ⋯?" — nowhere: it was on the versioning bar after the date,
-  exactly as asked. But a **bare `⋯` glyph beside a grey date pill reads as
-  punctuation**, so they asked where it had gone while looking at it. It wears
-  the versioning bar's pill now, and the same three actions are under **`H`**
-  as well — the button that says *headings* is where anyone looks for
-  "collapse every heading", not beside a date. `_edColSyncPrevBtn()` syncs
-  every Preview button now, not one id. **(2)** "Why is the tag bar still
-  showing?" — it is behind **`🏷`** on the bar now, which carries the tag
-  **count** so a closed bar still says the note is tagged; a toggle rather
-  than a popover, because the tag suggestion list is absolutely positioned and
-  a scrolling popover would clip it. Its `✕` moved to the title row — safe,
-  because `saveArt()` also ends edit mode and every keystroke is autosaved, so
-  `✕` is "stop editing", not "discard". **(3)** "Isn't `≡` the same as `🏠`?"
-  — near enough: both end at `showPane('sb')`, `🏠` having first cleared the
-  search, tag, type and folder. `🏠` left the phone's edit bar (the sidebar's
-  📚 logo IS `goHome()`), and `🏷` took the slot. Writing now starts at
-  **165px of 844 (20%)**, from 53% two rounds ago. 194/194 app checks (up from
-  189) and 11/11 ship checks.
 
 ---
 

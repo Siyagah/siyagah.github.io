@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.27">
+<meta name="app-version" content="04.28">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2217,7 +2217,8 @@ sup.ann-sup:hover{text-decoration:underline}
   gap:4px;padding:8px;overflow:auto}
 .fl-pop.open{display:flex}
 .fl-pop .et{min-width:36px;padding:4px 7px;font-size:13px}
-.fl-pop .fl-pop-x{margin-left:auto;border-color:var(--border2);opacity:.7}
+.fl-pop .fl-pop-x{margin-left:auto;border-color:var(--border2);opacity:.7;gap:7px}
+.fl-pop .fl-pop-x-l{display:none}
 .fl-pop .fl-pop-x:hover{opacity:1}
 /* ══ v04.22 — the phone's one edit bar, and the meta line ═════════════════ */
 /* A group heading inside a floating menu, on a strip — the same shape v04.21
@@ -2322,6 +2323,12 @@ sup.ann-sup:hover{text-decoration:underline}
    number, measured rather than shaved: one size for every control, the
    largest that fits the whole row without anything scrolling out of reach. */
 @media(max-width:639.98px){
+  /* Edge to edge (v04.28), a ✕ alone in the bottom-right corner is stranded
+     beside a lot of nothing. It becomes the card's closing bar, and it says
+     the word — a menu is read by someone who did not write it. */
+  .fl-pop .fl-pop-x{flex:1 0 100%;justify-content:center;margin-left:0;margin-top:4px;
+    opacity:1;min-height:44px}
+  .fl-pop .fl-pop-x-l{display:inline;font-size:13px;font-weight:600}
   .p3h-nav-edit-row{min-height:50px;padding:4px 6px}
   /* Two buttons: it never needs to shrink, and shrinking is how a strip
      comes to scroll 1px of itself out of sight. */
@@ -2597,7 +2604,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.27</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.28</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -8645,7 +8652,7 @@ function _openFloatPop(id,btn,html,sticky){
   let p=document.getElementById(id);
   if(p&&p.classList.contains('open')){closeFloatPop(id);return null;}
   if(!p){p=document.createElement('div');p.id=id;p.className='fl-pop';document.body.appendChild(p);}
-  p.innerHTML=html+(sticky?'<button class="et fl-pop-x" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\''+id+'\')" title="Close this menu">\u2715</button>':'');
+  p.innerHTML=html+(sticky?'<button class="et fl-pop-x" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\''+id+'\')" title="Close this menu">\u2715<span class="fl-pop-x-l">Close</span></button>':'');
   _flPopPlace(p,btn);
   /* v04.20 — STICKY pops (the edit-bar Aa/H/≡/+/↺ groups) stay open while the
      user clicks back into the editor to re-select text, or opens a child pop
@@ -8679,9 +8686,19 @@ function _openFloatPop(id,btn,html,sticky){
    depends on what is in it, so neither can be assumed. */
 function _flPopPlace(p,btn){
   const M=6,G=6;
-  p.style.cssText='visibility:hidden;top:0;left:0;bottom:auto;right:auto;max-height:none';
-  p.classList.add('open');
   const vw=window.innerWidth,vh=window.innerHeight;
+  /* v04.28 — on a phone the card runs edge to edge. At `min(260px,92vw)` it
+     was a 260px column on a 390px screen, anchored under a button near the
+     right, so it sat in the right-hand two thirds with a strip of note beside
+     it and every label squeezed into half of that. There is nothing else
+     competing for the width while a menu is open, so it takes all of it.
+     The width is set BEFORE the height is read, because the height depends on
+     it: measuring at 260px and then widening reports a card taller than the
+     one that paints. */
+  const full=vw<640,fw=vw-2*M;
+  p.style.cssText='visibility:hidden;top:0;left:0;bottom:auto;right:auto;max-height:none'
+    +(full?';width:'+fw+'px':'');
+  p.classList.add('open');
   const pr=p.getBoundingClientRect();
   const w=pr.width||260,need=p.scrollHeight+2;
   const r=btn.getBoundingClientRect();
@@ -8689,8 +8706,9 @@ function _flPopPlace(p,btn){
   let top,maxh;
   if(need<=below||below>=above){top=r.bottom+G;maxh=Math.max(120,Math.min(need,below));}
   else{maxh=Math.max(120,Math.min(need,above));top=Math.max(M,r.top-G-maxh);}
-  const left=Math.max(M,Math.min(r.left,vw-w-M));
-  p.style.cssText=`top:${top}px;left:${left}px;bottom:auto;right:auto;max-height:${maxh}px;visibility:visible`;
+  const left=full?M:Math.max(M,Math.min(r.left,vw-w-M));
+  p.style.cssText=`top:${top}px;left:${left}px;bottom:auto;right:auto;max-height:${maxh}px`
+    +(full?`;width:${fw}px`:'')+`;visibility:visible`;
 }
 function closeFloatPop(id){const p=document.getElementById(id);if(p)p.classList.remove('open');}
 /* Shared ✕ handler for sticky pops — also clears the group-button state so the
@@ -8880,7 +8898,14 @@ function _ebAttachHTML(a){
     +row('\ud83d\udcc1','Folder',"_closeStickyPop('eb-pop');openPicker()",fN?fN+' attached':'none yet')
     +row('\ud83d\udcd3','My Journal',"_closeStickyPop('eb-pop');openJournalPicker('"+aid+"')")
     +row('\ud83d\uddc4','MyDatabase',"_closeStickyPop('eb-pop');openMyDatabasePicker('"+aid+"')")
-    +'<div class="eb-tagrow"><span class="eb-tagrow-l">#</span>'
+    ;
+}
+/* v04.28 — the tag box sits ABOVE everything in the `+` menu, where the owner
+   asked for it. It is the one thing in there you reach for while still
+   writing; the rest are decisions. It keeps no heading of its own: it is a
+   labelled input, and a heading over one box is noise. */
+function _ebTagRowHTML(){
+  return '<div class="eb-tagrow"><span class="eb-tagrow-l">#</span>'
     +'<div class="tag-editor" id="tag-editor" onclick="document.getElementById(\'tag-inp\')?.focus()"></div>'
     +'</div>';
 }
@@ -8994,7 +9019,8 @@ function _buildEBSub(g){
       /* Three groups, and the line between them is WHAT THE ACTION DOES:
          put something in the note / say what the note is / leave the note.
          The same line v04.21 drew between \ud83e\uddf0 Tools and \u2699 Settings. */
-      out='<div class="fl-pop-hd">Insert at the cursor</div>'+_ebInsertHTML(true)
+      out=_ebTagRowHTML()
+        +'<div class="fl-pop-hd">Insert at the cursor</div>'+_ebInsertHTML(true)
         +_ebAttachHTML(a)
         +'<div class="fl-pop-hd">Go to</div>'
         +'<button class="et eb-act" onmousedown="event.preventDefault()"'

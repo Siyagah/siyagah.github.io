@@ -2141,3 +2141,60 @@ and the `≡` menu's heading ORDER, so "undo first" cannot quietly drift back.
 Two functions are exempted from the nothing-lost sweep — `openAttachMenu`,
 which now has nothing left to open, and `_ntiChipTap`, replaced by the
 🏷 Note Type row — each exemption paid for by asserting what replaced it.
+
+---
+
+## v04.28 — the card takes the whole width (12 Sep 2026)
+
+> How about make the card widen edge to edge as marked up in image.
+> Then, place the 'add tag' above all the buttons?
+
+### Edge to edge
+
+`.fl-pop` was `width:min(260px,92vw)` — a 260px column on a 390px phone,
+anchored under a button near the right, so the card sat in the right-hand two
+thirds with a useless strip of note beside it and every label squeezed into
+half of that width. Nothing competes for the screen while a menu is open, so
+it takes all of it: **6px gutter each side, 378px of 390**.
+
+This is the phone only (<640px). A tablet and a laptop keep the narrow
+anchored card, because there a 260px popover under its button is exactly
+right and a full-width one would be absurd.
+
+One thing that had to be right, and is the sort of thing that goes wrong
+silently: the **width is set before the height is read**. `_flPopPlace()`
+opens the card invisible and measures `scrollHeight` to decide where it fits;
+measuring that at 260px and then widening reports a card taller than the one
+that actually paints, and the placement is then made from a number that was
+never true.
+
+Edge to edge left the `✕` stranded in the bottom-right corner beside a lot of
+nothing, so it is the card's closing bar now — full width, and it says
+**Close**. A menu is read by someone who did not write it.
+
+### The tag box goes to the top
+
+Above everything, ahead of the first heading:
+
+```
++
+   #  [seed ×]  + tag…
+  INSERT AT THE CURSOR      🖼 Image   🔗 Link …
+  ATTACH TO THE NOTE        🏷 Note Type · General …
+  GO TO                     📅 Calendar   ＋ Add Tab
+  OPEN TABS · 2             ◆ Seeded note one …
+  ✕ Close
+```
+
+It is the one thing in that menu you reach for while **still writing**; the
+rest are decisions. It keeps no heading of its own — it is a labelled input,
+and a heading over a single box is noise.
+
+### Measured
+
+202 → 206 app checks, and 11/11 ship checks.
+
+The edge-to-edge check is asserted **both ways**: edge to edge on the phone,
+and *still narrow and anchored* on the tablet and the laptop. A rule that only
+ever said "wider is fine" would pass a phone card that never widened at all —
+and would not notice the day a laptop's menu stretched across the screen.

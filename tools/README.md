@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 202 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 206 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -161,6 +161,12 @@ or quietly lose the notebook, none of which need a browser:
   nothing-lost sweep — `openAttachMenu` (nothing left to open) and
   `_ntiChipTap` (replaced by the 🏷 Note Type row) — each paid for by asserting
   what replaced it (v04.27);
+- **the menu card's width, asserted BOTH ways** — edge to edge on a phone
+  (6px gutter, nothing narrower) and *still narrow and anchored* on a tablet
+  and a laptop. A rule that only says "wider is fine" passes a phone card that
+  never widened, and misses the day a laptop's menu stretches across the
+  screen. Plus the tag box proved to be the FIRST child of `+`, ahead of every
+  heading (v04.28);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
