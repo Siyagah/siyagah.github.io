@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 255 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 266 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -224,6 +224,22 @@ or quietly lose the notebook, none of which need a browser:
   and 390px neither mode offering a button with `openNotePopup()` proved to
   refuse — the two halves asserted together so neither can drift into
   offering what the app will not open;
+- **the pop-ups on every platform, each in its own shape** (v04.34) — asserted
+  BOTH ways, because a rule that only says "it opens" passes a tablet that
+  quietly became a phone and one that only says "edge to edge" passes a laptop
+  that did: the phone sheet measured for gutters, for being wholly on screen,
+  for **zero** drag/resize affordances and a 44px way out carrying a word; the
+  tablet measured for its five handles, a roomy frame, and a header a finger
+  can hit. Plus a **real tap** on the Single sheet's ✕ Close handing the whole
+  app back; two pop-ups giving a switcher whose chips are words the sheets
+  clear, with a **real tap bringing the buried note forward**; both pop-ups
+  reachable and really opening on the editor in four combinations (phone and
+  tablet × read and edit), each identified by the FUNCTION its control calls
+  and reporting which surface reached it; the sheet proved to be **all note**
+  (no Contents panel, no Pinned Tabs sidepane, no pane-nav button that cannot
+  work under a fixed panel, editor ≥85% of the sheet); and **no remembered
+  frame written from a sheet** — 378×832 is the screen's size, not a choice,
+  and restoring it on the laptop is how a measurement becomes a defect;
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both

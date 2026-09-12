@@ -25,6 +25,7 @@ const lum = ({ r, g, b }) => { const f = (v) => { v /= 255;
   return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
 const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05); };
+const grips_ok = (m) => m.grips >= 4;
 const flatten = (stack) => { let bg = px('rgb(255,255,255)');
   for (let i = stack.length - 1; i >= 0; i--) bg = over(px(stack[i]), bg);
   return bg; };
@@ -539,12 +540,22 @@ r.check(phone.minH >= 42 && phone.minW >= 42 && desk.minH >= 34 && desk.minW >= 
     const p = document.getElementById('p3h-pal');
     return { open: !!p?.classList.contains('open'),
       labels: [...p.querySelectorAll('.p3h-pal-btn')].map((b) => b.textContent.trim()),
-      /* Pop-out is hidden under 900px by its own CSS, so the palette must not
-         offer to open something the app will refuse to show.
+      /* UPDATED for v04.34, and INVERTED. It used to require the opposite —
+         "pop-out is hidden under 900px, so the palette must not offer what
+         the app will refuse to show" — which was true of the app and is no
+         longer true of it: the owner asked for the pop-ups on the phone and
+         the tablet, and this card is the surface that reaches them there,
+         because the phone's read bar has no room for two more buttons. The
+         old assertion is kept as a measurement, with its sense reversed,
+         rather than deleted: if the rows ever fall out of this card again,
+         the phone loses the feature silently.
          UPDATED for v04.10: these rows are named "Multi Notes Pop-Up" and
          "Single Note Pop-Up" now — the old /Pop out|as a panel/ could never
          match again and the check would have passed while blind. */
       offersPopout: /Pop-Up/i.test(p.textContent),
+      popFns: !p ? [] : [...p.querySelectorAll('.p3h-pal-btn')]
+        .map((b) => (b.getAttribute('onclick') || '').match(/openNotePopup\('[^']+','(\w+)'\)/))
+        .filter(Boolean).map((m) => m[1]),
       minH: Math.min(...[...p.querySelectorAll('.p3h-pal-btn')].map((b) => Math.round(b.getBoundingClientRect().height))) };
   });
   /* UPDATED for v04.11. This clicked "Make a copy" in the palette; the palette
@@ -578,11 +589,12 @@ r.check(phone.minH >= 42 && phone.minW >= 42 && desk.minH >= 34 && desk.minW >= 
     return { type: !!p && (/No type|nti-chip/.test(p.innerHTML) || /openNtiPicker\(/.test(fns)),
       attach: !!p && (/Attach/.test(p.textContent) || /openJournalPicker\(/.test(fns)) };
   });
-  r.check(pal.open && pal.labels.length >= 5 && !pal.offersPopout && pal.minH >= 42
+  r.check(pal.open && pal.labels.length >= 5 && pal.offersPopout
+    && pal.popFns.includes('float') && pal.popFns.includes('panel') && pal.minH >= 42
     && more.copy && more.arch && more.del
     && nAfter === nBefore + 1 && ntiPal.type && ntiPal.attach,
     'the palettes list the folded buttons with words, at a tappable size, and they work',
-    `${pal.labels.length} actions (${pal.minH}px tall) · pop-out offered on a phone: ${pal.offersPopout} · ⋯ holds copy ${more.copy}/archive ${more.arch}/delete ${more.del} · copy made ${nBefore}→${nAfter} · type reachable ${ntiPal.type} / attach rows ${ntiPal.attach}`);
+    `${pal.labels.length} actions (${pal.minH}px tall) · pop-out offered on a phone: ${pal.offersPopout} [${pal.popFns.join('/')}] · ⋯ holds copy ${more.copy}/archive ${more.arch}/delete ${more.del} · copy made ${nBefore}→${nAfter} · type reachable ${ntiPal.type} / attach rows ${ntiPal.attach}`);
   await s.close();
 }
 
@@ -3225,27 +3237,281 @@ await app.close();
       + ` · typed words in DB ${m.inDb} · in the pop-up ${m.inFw}`);
   }
 
-  /* The v04.31 lesson, applied before the owner has to ask: an answer given
-     for one MODE is not an answer for the app. Under 900px the pop-ups do not
-     exist — openNotePopup() refuses and .modal-pop-btn is display:none — and
-     that has to be true in read mode AND in edit mode, or one of them offers
-     a button that does nothing. */
+  /* ══ v04.34 — REVERSED, AND SAYING SO ════════════════════════════════════
+     This pair used to assert the OPPOSITE: "neither mode offers a pop-up
+     button, and the app refuses to open one", which was a true description
+     of the app and a wrong description of what the owner wanted. They asked
+     for the pop-ups on the phone and the tablet the round after v04.33
+     reported that gap as deliberate — so the assertion is turned round in
+     place, with the reason recorded, rather than deleted.
+
+     What replaces it is not "is there a button" (a phone deliberately has
+     none on its bar — v04.22 spent three rounds getting that bar to one row)
+     but the question underneath it: **can the owner reach both pop-ups, and
+     does the app really open one?** Reached however that platform reaches it,
+     identified by the FUNCTION each control calls. */
   for (const vp of [{ name: 'tablet', w: 820, h: 1180 }, { name: 'phone', w: 390, h: 844 }]) {
-    const s = await openApp({ viewport: { width: vp.w, height: vp.h }, db: seedDB() });
-    const m = await s.page.evaluate(() => {
-      ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false; window.render(); showPane('p3');
-      const shown = () => [...document.querySelectorAll('#p3h .pop-btn')].filter((b) => b.offsetParent).length;
-      const read = shown();
-      startEdit();
-      const edit = shown();
-      openNotePopup('a1', 'panel');
-      const refused = !ST.noteModal && !document.getElementById('fw-a1');
-      return { read, edit, refused };
-    });
-    await s.close();
-    r.check(m.read === 0 && m.edit === 0 && m.refused,
-      `${vp.name}: neither mode offers a pop-up button, and the app refuses to open one`,
-      `read ${m.read} shown · edit ${m.edit} shown · openNotePopup refused ${m.refused}`);
+    for (const mode of ['read', 'edit']) {
+      const s = await openApp({ viewport: { width: vp.w, height: vp.h }, db: seedDB() });
+      await s.page.evaluate((md) => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+        window.render(); showPane('p3'); if (md === 'edit') startEdit(); }, mode);
+      await s.page.waitForTimeout(400);
+      const m = await s.page.evaluate(() => {
+        /* On the bar, if this platform puts them there… */
+        const fns = (els) => els.map((b) => (b.getAttribute('onclick') || ''))
+          .map((o) => o.match(/openNotePopup\('[^']+','(\w+)'\)/)).filter(Boolean).map((x) => x[1]);
+        let modes = fns([...document.querySelectorAll('#p3h .pop-btn')].filter((b) => b.getClientRects().length));
+        let via = modes.length ? 'the bar' : '';
+        /* …otherwise in the menu this platform folds them into. */
+        if (!modes.length) {
+          const opener = ST.editing
+            ? document.querySelector('#p3h .eb-grp-btn[data-g="insert"]')
+            : document.getElementById('p3h-act-grp');
+          if (opener && opener.getClientRects().length) {
+            if (ST.editing) opener.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            else opener.click();
+            const pop = document.getElementById(ST.editing ? 'eb-pop' : 'p3h-pal');
+            if (pop) {
+              modes = fns([...pop.querySelectorAll('button')].filter((b) => b.getClientRects().length));
+              via = ST.editing ? 'the + menu' : 'the ⋯ card';
+            }
+          }
+        }
+        return { modes: [...new Set(modes)], via };
+      });
+      /* And it really opens — both kinds, on this platform, in this mode. */
+      const opened = await s.page.evaluate(() => {
+        const out = {};
+        openNotePopup('a1', 'float');
+        const w = document.getElementById('fw-a1');
+        out.float = !!(w && w.getClientRects().length && w.querySelector('.fw-ed')?.isContentEditable);
+        closeAllPopouts();
+        openNotePopup('a1', 'panel');
+        out.panel = !!(ST.noteModal && document.getElementById('p3').classList.contains('modal-mode'));
+        out.editing = ST.editing;
+        closeAllPopouts();
+        return out;
+      });
+      await s.close();
+      r.check(m.modes.includes('float') && m.modes.includes('panel')
+        && opened.float && opened.panel && opened.editing,
+        `${vp.name} ${mode} mode: both pop-ups are reachable, and both really open on the editor`,
+        `reached via ${m.via || 'nothing'} [${m.modes.join('/')}]`
+        + ` · Multi opens editable ${opened.float} · Single opens ${opened.panel}, editing ${opened.editing}`);
+    }
+  }
+
+  /* 5a-vii. v04.34 — THE POP-UPS ON EVERY PLATFORM ═══════════════════════
+     "Now do same for the phone and tablet too. Always do all platforms as
+     adaptible." Adaptible is the word that matters: a phone does not get a
+     free-floating 320px window with a 22px drag bar, it gets the same editor
+     as a card pinned to the screen. So the shape is asserted BOTH WAYS —
+     sheet on a phone, real window on a tablet — because a rule that only
+     says "it opens" passes a tablet that quietly became a phone, and one
+     that only says "it is edge to edge" passes a laptop that did. That is
+     the v04.28 lesson (assert the narrow case too) pointed at a shape. */
+  {
+    /* ── A phone: a sheet, with no affordance it cannot honour ── */
+    for (const kind of ['float', 'panel']) {
+      const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+      await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+        window.render(); showPane('p3'); });
+      await s.page.waitForTimeout(350);
+      await s.page.evaluate((k) => openNotePopup('a1', k), kind);
+      /* #p3 carries `transition:left .25s` under 1200px, so a rect read in
+         the same tick is the rect it is travelling THROUGH — measured at 390
+         wide and reported left:390px, width:0, which looked exactly like a
+         broken layout rule and was a measurement taken too early. */
+      await s.page.waitForTimeout(500);
+      const m = await s.page.evaluate((k) => {
+        const el = k === 'float' ? document.getElementById('fw-a1') : document.getElementById('p3');
+        const b = el.getBoundingClientRect();
+        const grips = [...el.querySelectorAll('.modal-resize-r,.modal-resize-b,.modal-resize-l,.modal-corner,.fw-drag')]
+          .filter((g) => g.getClientRects().length).length;
+        const x = k === 'float' ? el.querySelector('.fw-close')
+          : document.querySelector('#p3-sheet-hd .sh-x');
+        const xb = x && x.getBoundingClientRect();
+        const ed = k === 'float' ? el.querySelector('.fw-ed') : document.getElementById('ed');
+        return { left: Math.round(b.left), top: Math.round(b.top), right: Math.round(b.right),
+          bottom: Math.round(b.bottom), vw: innerWidth, vh: innerHeight, grips,
+          editable: !!(ed && ed.isContentEditable),
+          x: xb ? [Math.round(xb.width), Math.round(xb.height)] : null,
+          xWords: x ? /\p{L}/u.test(x.textContent) : false };
+      }, kind);
+      await s.close();
+      r.check(m.left <= 8 && m.top <= 8 && m.right >= m.vw - 8 && m.bottom <= m.vh
+        && m.right <= m.vw && m.top >= 0 && m.grips === 0 && m.editable
+        && m.x && Math.min(...m.x) >= 44,
+        `phone: the ${kind === 'float' ? 'Multi' : 'Single'} pop-up is a sheet — edge to edge, nothing that pretends to drag, and a way out`,
+        `${m.left}→${m.right} of ${m.vw} · ${m.top}→${m.bottom} of ${m.vh}`
+        + ` · drag/resize affordances ${m.grips} · editable ${m.editable}`
+        + ` · close ${m.x ? m.x.join('×') : 'MISSING'}${m.xWords ? ' with a word' : ''}`);
+    }
+
+    /* ── And the way out really works. Edge to edge, #note-modal-bg is a 6px
+       frame, so the panel's own ✕ Close is the only honest exit — asked with
+       a real mouse click and looked at again 250ms later (the v04.12 rule). */
+    {
+      const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+      await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+        window.render(); showPane('p3'); openNotePopup('a1', 'panel'); });
+      await s.page.waitForTimeout(600);
+      const box = await s.page.locator('#p3-sheet-hd .sh-x').boundingBox().catch(() => null);
+      if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await s.page.waitForTimeout(400);
+      const out = await s.page.evaluate(() => ({
+        modal: ST.noteModal, shaped: document.getElementById('p3').classList.contains('modal-mode'),
+        bg: !!document.getElementById('note-modal-bg')?.classList.contains('active'),
+        hd: !!document.getElementById('p3-sheet-hd'),
+        /* and the app is usable again, not left under a dead fixed layer */
+        pane: (() => { const b = document.getElementById('p3').getBoundingClientRect();
+          return [Math.round(b.width), Math.round(b.height)]; })() }));
+      await s.close();
+      r.check(!!box && !out.modal && !out.shaped && !out.bg && !out.hd && out.pane[0] > 300,
+        'phone: a real tap on the Single sheet’s ✕ Close hands the whole app back',
+        `clicked ${!!box} · modal ${out.modal} · modal-mode ${out.shaped} · backdrop ${out.bg}`
+        + ` · sheet header left behind ${out.hd} · pane back to ${out.pane.join('×')}`);
+    }
+
+    /* ── Several at once, on a phone, means a way BACK to the ones underneath.
+       Sheets stack edge to edge, so without the switcher "Multi Notes Pop-Up
+       — several notes open at once" is a claim the phone cannot honour. */
+    {
+      const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+      await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+        window.render(); showPane('p3'); openNotePopup('a1', 'float'); openNotePopup('a2', 'float'); });
+      await s.page.waitForTimeout(500);
+      const before = await s.page.evaluate(() => {
+        const bar = document.getElementById('fw-switch');
+        const chips = bar ? [...bar.querySelectorAll('.fw-sw')] : [];
+        const notes = chips.filter((c) => !c.classList.contains('fw-sw-x'));
+        const bb = bar && bar.getBoundingClientRect();
+        return { bar: !!(bar && bar.getClientRects().length), chipBar: !!document.getElementById('fw-closeall'),
+          notes: notes.map((c) => c.textContent.trim()),
+          words: notes.every((c) => /\p{L}/u.test(c.textContent)),
+          hit: notes.length ? Math.min(...notes.map((c) => Math.round(c.getBoundingClientRect().height))) : 0,
+          onScreen: !!bb && bb.bottom <= innerHeight + 1 && bb.left >= 0 && bb.right <= innerWidth + 1,
+          /* the sheets get out of its way rather than hiding behind it */
+          clears: Math.round(document.getElementById('fw-a1').getBoundingClientRect().bottom) <= Math.round(bb.top) + 1,
+          front: _fwFocusedAid };
+      });
+      /* A real tap on the buried note's chip must bring it to the front. */
+      const chip = await s.page.locator('#fw-switch .fw-sw:not(.fw-sw-x)').first().boundingBox();
+      if (chip) await s.page.mouse.click(chip.x + chip.width / 2, chip.y + chip.height / 2);
+      await s.page.waitForTimeout(350);
+      const after = await s.page.evaluate(() => {
+        const wins = [...document.querySelectorAll('.float-win')];
+        const top = wins.reduce((a, b) => (+b.style.zIndex > +a.style.zIndex ? b : a));
+        return { top: top.id.slice(3), n: wins.length, marked: document.querySelector('#fw-switch .fw-sw.on')?.textContent.trim() };
+      });
+      await s.close();
+      r.check(before.bar && !before.chipBar && before.notes.length === 2 && before.words
+        && before.hit >= 40 && before.onScreen && before.clears
+        && after.top === 'a1' && after.n === 2,
+        'phone: two pop-ups open give a switcher that really brings the buried one forward',
+        `bar ${before.bar} (laptop chip present ${before.chipBar}) · chips ${JSON.stringify(before.notes)}`
+        + ` · shortest ${before.hit}px · on screen ${before.onScreen} · sheets clear it ${before.clears}`
+        + ` · was "${before.front}", tap brought "${after.top}" to the front, ${after.n} still open`);
+    }
+
+    /* ── A tablet keeps the real window. Asserted the other way round on
+       purpose: if the sheet rules ever widen past 640px, a tablet silently
+       loses drag, resize and the ability to see the app beside the note. */
+    for (const kind of ['float', 'panel']) {
+      const s = await openApp({ viewport: { width: 820, height: 1180 }, db: seedDB() });
+      await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+        window.render(); showPane('p3'); });
+      await s.page.waitForTimeout(350);
+      await s.page.evaluate((k) => openNotePopup('a1', k), kind);
+      await s.page.waitForTimeout(500);
+      const m = await s.page.evaluate((k) => {
+        const el = k === 'float' ? document.getElementById('fw-a1') : document.getElementById('p3');
+        const b = el.getBoundingClientRect();
+        const grips = [...el.querySelectorAll('.modal-resize-r,.modal-resize-b,.modal-resize-l,.modal-corner')]
+          .filter((g) => g.getClientRects().length).length;
+        /* Touch drag and resize have been wired since v03.NotePane.T4; what
+           was never sized for a finger is the window's own header. */
+        const hdr = k === 'float'
+          ? [el.querySelector('.fw-close'), ...el.querySelectorAll('.fw-nav')].filter(Boolean)
+            .map((x) => { const r = x.getBoundingClientRect(); return Math.min(Math.round(r.width), Math.round(r.height)); })
+          : [];
+        return { w: Math.round(b.width), h: Math.round(b.height), left: Math.round(b.left),
+          top: Math.round(b.top), vw: innerWidth, vh: innerHeight, grips,
+          sheetHd: !!document.getElementById('p3-sheet-hd'), hdr,
+          switcher: !!document.getElementById('fw-switch') };
+      }, kind);
+      await s.close();
+      const roomy = m.left >= 12 && m.w <= m.vw - 16;
+      r.check(grips_ok(m) && roomy && !m.sheetHd && !m.switcher
+        && (m.hdr.length === 0 || Math.min(...m.hdr) >= 34),
+        `tablet: the ${kind === 'float' ? 'Multi' : 'Single'} pop-up is still a real window, and its header can be hit by a finger`,
+        `${m.w}×${m.h} at ${m.left},${m.top} of ${m.vw}×${m.vh} · drag/resize handles ${m.grips}`
+        + ` · phone sheet header ${m.sheetHd} · phone switcher ${m.switcher}`
+        + ` · header targets ${m.hdr.length ? Math.min(...m.hdr) + 'px' : 'n/a'}`);
+    }
+
+    /* ── The two things that only became reachable because the gate went.
+       Contents and Pinned Tabs are SIDE panels, and a 378px sheet has no
+       side: measured before this was fixed, the sidepane took 184px of 378
+       and the note wrote in a 180px column. Neither had ever been drawn
+       under 900px, because no pop-up existed there to host them — the
+       standing lesson about a surface no round has looked at. And the edit
+       bar's ◀ / 📁 call showPane() on a layout sitting under a fixed z-5001
+       panel, so they change something the owner cannot see. */
+    for (const kind of ['float', 'panel']) {
+      const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+      await s.page.evaluate(() => { const a = DB.articles.find((x) => x.id === 'a1');
+        /* four headings, so Contents would certainly inject if it could */
+        a.content = '<h1>One</h1><p>a</p><h2>Two</h2><p>b</p><h2>Three</h2><p>c</p><h3>Four</h3><p>d</p>';
+        ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false; window.render(); showPane('p3');
+        if (!DB.theme) DB.theme = {}; DB.theme.pinTabIds = ['a2']; });
+      await s.page.waitForTimeout(350);
+      await s.page.evaluate((k) => openNotePopup('a1', k), kind);
+      await s.page.waitForTimeout(600);
+      const m = await s.page.evaluate((k) => {
+        const el = k === 'float' ? document.getElementById('fw-a1') : document.getElementById('p3');
+        const ed = k === 'float' ? el.querySelector('.fw-ed') : document.getElementById('ed');
+        const nav = [...document.querySelectorAll('#p3.modal-mode .p3h-nav-edit-row .nav-l .btn')]
+          .filter((b) => b.getClientRects().length)
+          .map((b) => b.getAttribute('onclick') || '')
+          .filter((o) => /openP2|backFromP3|goHome/.test(o));
+        return { toc: !!document.getElementById('toc-panel'),
+          pin: !!document.getElementById('pin-panel'),
+          edW: Math.round(ed ? ed.getBoundingClientRect().width : 0),
+          sheetW: Math.round(el.getBoundingClientRect().width),
+          deadNav: nav.length };
+      }, kind);
+      await s.close();
+      /* The editor must have essentially the whole sheet: a side panel eats
+         about half, so 85% is a bar nothing can sneak under. */
+      r.check(!m.toc && !m.pin && m.deadNav === 0 && m.edW >= m.sheetW * 0.85,
+        `phone: the ${kind === 'float' ? 'Multi' : 'Single'} sheet is all note — no side panel, no pane button that cannot work`,
+        `Contents panel ${m.toc} · Pinned Tabs panel ${m.pin} · pane-nav buttons ${m.deadNav}`
+        + ` · editor ${m.edW}px of a ${m.sheetW}px sheet`);
+    }
+
+    /* ── A sheet's frame is the SCREEN's, not a choice. If it were written to
+       the geometry store, the next device to pop the same note out would
+       restore a 378×832 box measured on somebody's phone. */
+    {
+      const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+      await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+        window.render(); showPane('p3'); openNotePopup('a1', 'float'); });
+      await s.page.waitForTimeout(500);
+      await s.page.evaluate(() => { _fwSavePos('a1'); closeAllPopouts();
+        openNotePopup('a1', 'panel'); });
+      await s.page.waitForTimeout(500);
+      await s.page.evaluate(() => closeNoteModal());
+      await s.page.waitForTimeout(300);
+      const geo = await s.page.evaluate(() => {
+        let raw = null; try { raw = JSON.parse(localStorage.getItem('nb_popgeo_v1') || '{}'); } catch (e) {}
+        return { float: (raw && raw.float && raw.float.a1) || null, panel: (raw && raw.panel) || null };
+      });
+      await s.close();
+      r.check(!geo.float && !geo.panel,
+        'phone: a sheet never writes a remembered frame for the laptop to restore',
+        `float frame stored ${JSON.stringify(geo.float)} · panel frame stored ${JSON.stringify(geo.panel)}`);
+    }
   }
 
   /* 5b. v04.23 — the owner asked where the collapse/expand ⋯ had gone while
@@ -3364,11 +3630,18 @@ await app.close();
         fit: acts.length < 4 ? null : { shortest: byLen[0], longest: byLen[byLen.length - 1],
           widths: new Set(acts.map((b) => b.w)).size, n: acts.length,
           tall: Math.round(pop.getBoundingClientRect().height), vh: innerHeight,
+          top: Math.round(pop.getBoundingClientRect().top),
+          bottom: Math.round(pop.getBoundingClientRect().bottom),
           scrolls: pop.scrollHeight > pop.clientHeight + 1 } };
     });
     await s.close();
     const empty = m.groups.filter((g) => g.n === 0);
-    r.check(m.groups.length === 4 && empty.length === 0,
+    /* UPDATED for v04.34: four groups became five. "Pop it out" is the phone's
+       only way to the two pop-ups while editing — the bar has no width for
+       them and v04.22 spent three rounds getting it to one row. The number is
+       asserted rather than left open so that a group going MISSING still
+       fails; it moved because this round moved it, and that is written here. */
+    r.check(m.groups.length === 5 && empty.length === 0,
       'phone: the `+` menu is split into named groups and every group has items',
       empty.length ? `empty heading(s): ${empty.map((g) => g.head).join(', ')}`
         : m.groups.map((g) => `${g.head} (${g.n})`).join(' · '));
@@ -3396,11 +3669,19 @@ await app.close();
       fit ? `"${fit.shortest.t}" ${fit.shortest.w}px vs "${fit.longest.t}" ${fit.longest.w}px`
         + ` · ${fit.widths} distinct widths across ${fit.n} actions`
         : 'too few actions to measure');
-    /* And the point of packing them: the whole menu fits the screen. */
-    r.check(fit && !fit.scrolls && fit.tall < fit.vh * 0.72,
+    /* And the point of packing them: the whole menu fits the screen.
+       UPDATED for v04.34. This read `tall < vh * 0.72`, a ratio written when
+       the menu had four groups — so adding a fifth failed it at 74%, while
+       the menu still fitted the screen whole with 215px to spare. That is the
+       pixel-budget trap the v04.29 lesson names: the budget rots on the next
+       change, and it was never the question anyway. The question is the one
+       in the label — is the WHOLE menu on the screen, and does it scroll —
+       so it is asked of the real top and bottom now, which stays true however
+       many groups the menu comes to have. */
+    r.check(fit && !fit.scrolls && fit.top >= 0 && fit.bottom <= fit.vh,
       'phone: the whole `+` menu fits on the screen without scrolling',
-      fit ? `${fit.tall}px of ${fit.vh}px (${Math.round(fit.tall / fit.vh * 100)}%),`
-        + ` scrolls ${fit.scrolls}` : 'not measured');
+      fit ? `${fit.top}→${fit.bottom} of ${fit.vh}px (${fit.tall}px tall,`
+        + ` ${Math.round(fit.tall / fit.vh * 100)}%), scrolls ${fit.scrolls}` : 'not measured');
   }
 
   /* 6. Geometry — the round's own bug report. A real mouse click on the real

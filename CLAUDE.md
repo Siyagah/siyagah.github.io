@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.33.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.34.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,29 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.34** (12 Sep 2026) — "Now do same for the phone and tablet too.
+  *Always do all platforms as adaptible. Don't wait for doing next.*" —
+  which is now **D5**, and a standing lesson. The two pop-ups were gated by
+  `window.innerWidth<900` in EIGHT places plus three
+  `@media(max-width:899.98px){display:none}` rules; the reason was true once
+  and never revisited, so a TABLET — where touch drag and resize were
+  deliberately built in v03.NotePane.T4 — was excluded from a feature nobody
+  had decided to exclude it from. One `_popTier()` decides the SHAPE now and
+  never says no: **`window`** (≥640px) is the floating, draggable,
+  resizable pop-up exactly as it was, and a tablet simply gets it; **`sheet`**
+  (<640px) is the same editor as a card pinned edge to edge, 6px gutters, no
+  drag, no resize, with a 44px ✕ — because the panel's backdrop at that size
+  is a 6px frame and not a way out. Multi's "several at once" is honoured by
+  a **switcher bar**: one chip per open note, the front one marked, `✕ All`
+  at the end, and the sheets shortened so it covers nothing. The buttons stay
+  OFF the phone's bars (v04.22 spent three rounds getting them to one row) and
+  are named rows in the `⋯` card and a new **POP IT OUT** group in the `+`
+  menu, from one builder. Three things the gate had been hiding: Contents and
+  the Pinned Tabs sidepane took **184px of a 378px sheet**, and the edit bar's
+  ◀ / 📁 called `showPane()` under a fixed z-5001 panel. A sheet never writes a
+  remembered frame — 378×832 measured on a phone would otherwise be restored
+  on the laptop. 266/266 app checks (up from 255, with five updated in place
+  and two REVERSED with the reason recorded) and 11/11 ship checks.
 - **v04.33** (12 Sep 2026) — one screenshot of the read bar, two asks.
   **"Let the Multi and single button be present in the edit mode as well"** —
   measured on `origin/main`, they already WERE, since v04.10. What differed
@@ -94,24 +117,6 @@ must never accumulate here instead of there.
   rows in the card. The `⋯` actions palette packs too — **160px instead of
   250**. Tablet and laptop untouched. 213/213 app checks (up from 208) and
   11/11 ship checks.
-- **v04.29** (12 Sep 2026) — "place them closely but organisely instead of
-  spreading all over the screen." The marks in the screenshot were drawn where
-  each button's content ENDS; everything right of them was empty. Every action
-  was `flex:1 1 calc(50% - 3px)`, so a five-letter label sat at the left of a
-  186px box with 120px of nothing beside it, `MyDatabase` had a 366px row to
-  itself, and `✕ Close` took a row of its own — 726px of an 844px screen for
-  about fifteen short words. Every action is **sized to its own words** now
-  and they pack and wrap into a tight cluster under each heading.
-  `flex:0 1 auto`, not `0 0 auto` — a long note title in the tab list has to
-  shrink and ellipsis rather than push the card past the screen. The value
-  moved onto the SAME line (`Note Type · General`), and `✕ Close` packs in
-  beside the last action, where the owner's arrow pointed. `+` is **545px
-  instead of 726**, `≡` **314 instead of 459**, both fitting a phone whole.
-  The check asks the only durable question — **does the width follow the
-  words?** (longest label wider than the shortest, four or more distinct
-  widths), which a stretched grid fails whatever width it uses; a pixel budget
-  would have rotted on the next label change. 208/208 app checks (up from 206)
-  and 11/11 ship checks.
 ---
 
 ## What this is
@@ -167,8 +172,13 @@ is pending, and — always — **what was not done and why**.
 - **Measure, don't guess.** Run `tools/ship-check.mjs` and `tools/app-check.mjs`
   before every push. A screenshot is not a measurement; neither is reading the
   source and reasoning about it.
-- **Must work on phone, tablet and desktop.** The app has three genuinely
-  different layouts (<640px, 640–1199px, 1200px+).
+- **Must work on phone, tablet and desktop — in the SAME round (D5).** The
+  app has three genuinely different layouts (<640px, 640–1199px, 1200px+).
+  "Adaptible", not identical: a phone gets the shape that suits a phone, and
+  the round says what that shape is. **Never ship a feature on one platform
+  and leave the others for later**, and never report a platform gap as
+  deliberate unless the owner decided it — say which shape each layout gets,
+  and build all three.
 
 ## The rules that must never be broken
 
@@ -270,6 +280,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
 | **D2** | **All four invariants I1–I4 are disasters, not annoyances**, and rank equally. Confirmed 4 Sep 2026. |
 | **D3** | **"Never lost" excludes the owner's own deliberate deletion.** Deleting must keep working, through Trash. Confirmed 4 Sep 2026, correcting an over-broad reading of I1. |
 | **D4** | **Every round is measured at all three screen sizes** (390×844, 820×1180, 1440×900) and against all four risk areas. The owner left the choice to Claude; both were cheap, so neither was narrowed. 4 Sep 2026. |
+| **D5** | **Every feature ships on ALL THREE platforms in the round it is built — "always do all platforms as adaptible, don't wait for doing next".** Adapt the SHAPE to the layout (a phone gets a sheet where a laptop gets a floating window); never adapt by omitting the feature. A platform left out is not a scope decision Claude may take on its own. Confirmed 12 Sep 2026, after v04.33 shipped the pop-ups to the desktop only and reported the phone and tablet gap as deliberate. |
 
 ## Standing lessons — earned the hard way, do not relearn them
 
@@ -351,6 +362,24 @@ traps belong in `tools/README.md`, not here.)*
   with results), SEED that state before measuring, or the check is reporting on
   something that was not there. Cost: reported by the owner in v04.24, one
   round after being announced as done.
+- **A platform is not a scope decision. "Not on a phone" is almost always
+  "nobody has decided what the phone shape is" — and the refusal will be
+  copied everywhere.** The two pop-ups were gated by `window.innerWidth<900`
+  in EIGHT places plus three `@media(max-width:899.98px){display:none}`
+  rules, and the reason had been true once (a 320px-minimum window with a
+  22px drag bar is useless on a 390px screen) and was never revisited — so a
+  tablet, where the touch drag and resize had been deliberately built in
+  v03.NotePane.T4, was excluded from a feature nobody had decided to exclude
+  it from, and v04.33 reported the gap to the owner as deliberate. It came
+  straight back as "now do same for the phone and tablet too" (D5).
+  Two rules, both paid for: put the tier in ONE function (`_popTier()`) so a
+  gate cannot be copied eight times and rot in seven of them; and when a
+  feature reaches a platform for the first time, **list every surface it
+  drags in with it** — Contents and the Pinned Tabs sidepane had never been
+  drawn under 900px and took 184px of a 378px sheet the moment they could,
+  and the edit bar's ◀ / 📁 called `showPane()` on a layout sitting under a
+  fixed z-5001 panel. Cost: reported by the owner in v04.34, the round after
+  being told the gap was on purpose.
 - **A control that differs only in TREATMENT between two modes reads as
   absent in the dimmer one — and a CSS rule scoped `:not(.editing)` is a rule
   that exists in one mode only.** Multi and Single had been on the edit bar

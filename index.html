@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.33">
+<meta name="app-version" content="04.34">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1982,7 +1982,48 @@ sup.ann-sup:hover{text-decoration:underline}
 .fw-ed h2{font-size:1.235em;font-weight:600;margin:12px 0 5px;color:var(--t1)}
 .fw-ed h3{font-size:1em;font-weight:600;margin:10px 0 4px;color:var(--t1)}
 .fw-ed h4{font-size:.92em;font-weight:600;margin:9px 0 4px;color:var(--t1)}
-@media(max-width:899.98px){.float-win{display:none!important}}
+/* ══ v04.34 — ON A PHONE A POP-UP IS A SHEET ══════════════════════════════
+   `.float-win{display:none}` under 900px was the whole of the phone and
+   tablet story: the window existed in the DOM and was simply not painted.
+   A tablet gets the real window now (`_ptrDown` has covered touch drag and
+   resize since v03.NotePane.T4, which says so in as many words); a phone
+   gets the same editor as a card pinned to the screen instead, because a
+   320px-minimum window with a 22px drag bar on a 390px screen is a worse
+   note pane than the one the phone already has.
+   `!important` because _fwCreate() writes left/top/width/height inline from
+   the remembered frame — the sheet has to win against a number measured on
+   a laptop, and _fwSavePos() refuses to write one back from here. */
+@media(max-width:639.98px){
+  .float-win{left:6px!important;top:6px!important;right:6px!important;bottom:6px!important;
+    width:auto!important;height:auto!important;min-width:0!important;min-height:0!important;
+    border-radius:12px!important}
+  /* Room for the switcher bar, and only when there IS one. */
+  body.fw-sheets .float-win{bottom:56px!important}
+  /* Nothing here can be dragged or resized, so nothing may LOOK draggable. */
+  .float-win .fw-hd{cursor:default}
+  .float-win .fw-drag{display:none}
+  .float-win .modal-resize-r,.float-win .modal-resize-b,.float-win .modal-resize-l,
+  .float-win .modal-corner{display:none!important}
+}
+/* v04.34 — the float window's own chrome was built for a mouse on a laptop:
+   measured on a tablet, ✕ Close was 26×20 and each ‹ › was 11×15. That was
+   nobody's problem while the window was display:none under 900px; it is now
+   the main way a note is closed on a touch screen, so the header controls get
+   a real target on every tier that has fingers. */
+@media(max-width:1199.98px){
+  .float-win .fw-hd{padding:5px 7px;gap:2px}
+  .float-win .fw-close{min-width:40px;min-height:40px;font-size:16px;opacity:1;
+    display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .float-win .fw-nav{min-width:34px;min-height:40px;font-size:19px;padding:0;opacity:.85;
+    display:inline-flex;align-items:center;justify-content:center}
+  .float-win .fw-ti{padding:11px 10px;font-size:15px}
+}
+@media(max-width:639.98px){
+  .float-win .fw-close{min-width:44px;min-height:44px;font-size:17px}
+  .float-win .fw-nav{min-width:38px;min-height:44px}
+  .float-win .fw-tb .eb-grp-btn{min-width:38px!important;min-height:38px!important}
+  .float-win .fw-tb .nti-picker-btn,.float-win .fw-tb .et{min-height:38px}
+}
 #note-modal-bg{display:none;position:fixed;inset:0;z-index:5000;
   background:rgba(0,0,0,.45);
   backdrop-filter:blur(1px);-webkit-backdrop-filter:blur(1px)}
@@ -2064,9 +2105,49 @@ sup.ann-sup:hover{text-decoration:underline}
   right:3px;bottom:3px;width:8px;height:8px;opacity:.45;
   border-right:2px solid var(--t3);border-bottom:2px solid var(--t3)}
 #tab-bar.modal-handle{position:relative!important}
+/* v04.34 — the Single Note Pop-Up is Pane 3 itself lifted out, so on a phone
+   it becomes the same card the float sheet is. Two things it then needs that
+   a laptop never did: nothing that pretends to be draggable, and a way OUT
+   that is not the backdrop — edge to edge the backdrop is a 6px frame, which
+   is not a tap target. #p3-sheet-hd is that way out, injected on open and
+   removed on close, with the note's own title on it. */
+@media(max-width:639.98px){
+  #p3.modal-mode{left:6px!important;top:6px!important;right:6px!important;bottom:6px!important;
+    width:auto!important;height:auto!important;
+    min-width:0!important;min-height:0!important;
+    max-width:none!important;max-height:none!important;border-radius:12px!important}
+  #p3.modal-mode .modal-resize-r,#p3.modal-mode .modal-resize-b,
+  #p3.modal-mode .modal-resize-l,#p3.modal-mode .modal-corner{display:none!important}
+  #p3.modal-mode #tab-bar.modal-handle{cursor:default}
+}
+/* v04.34 — inside the panel there are no panes to navigate to. Under 1200px
+   the edit bar carries ◀ (article list) and 📁 (folders); in a Single Note
+   Pop-Up both of them call showPane() on a layout that is sitting UNDER a
+   fixed, z-5001 panel, so the tap changes something the owner cannot see and
+   the note does not move. A control that cannot do its job is not left on the
+   bar to be tapped — the panel's own ✕ Close is the way out. */
+#p3.modal-mode .p3h-nav-edit-row .nav-l .btn.bn.bi[onclick*="openP2"],
+#p3.modal-mode .p3h-nav-edit-row .nav-l .btn.bn.bi[onclick*="backFromP3"],
+#p3.modal-mode .p3h-nav-edit-row .nav-l .btn.bn.bi[onclick*="goHome"]{display:none}
+#p3-sheet-hd{display:none}
+@media(max-width:639.98px){
+  #p3.modal-mode #p3-sheet-hd{display:flex;align-items:center;gap:8px;
+    padding:8px 10px;flex-shrink:0;background:var(--paper2,var(--paper));
+    border-bottom:1px solid var(--border2);border-radius:12px 12px 0 0}
+  #p3-sheet-hd .sh-ico{flex:0 0 auto;display:flex;color:var(--green)}
+  #p3-sheet-hd .sh-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;font-size:12.5px;font-weight:600;color:var(--t1)}
+  #p3-sheet-hd .sh-x{flex:0 0 auto;min-height:44px;padding:6px 13px;
+    border:1px solid var(--border2);border-radius:999px;background:var(--paper);
+    color:var(--t1);font-family:var(--ui);font-size:12.5px;font-weight:600;cursor:pointer}
+}
 .modal-pop-btn{font-size:15px;opacity:.55;padding:3px 6px;flex-shrink:0}
 .modal-pop-btn:hover{opacity:1}
-@media(max-width:899.98px){.modal-pop-btn{display:none}}
+/* v04.34 — the bar carries them from 640px up (a tablet's edit row has the
+   width; measured). On a PHONE they stay off the bar and live as named rows
+   in the ⋯ card and the `+` menu instead — v04.22 spent three rounds getting
+   that bar down to one row, and "a bar may be terse; a menu may not". */
+@media(max-width:639.98px){.modal-pop-btn{display:none}}
 /* v03.NotePane.G5 — "Close all" chip, shown only once a 2nd window is open */
 #fw-closeall{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
   background:var(--paper);color:var(--t1);border:1px solid var(--border2);
@@ -2074,7 +2155,21 @@ sup.ann-sup:hover{text-decoration:underline}
   cursor:pointer;white-space:nowrap;user-select:none;-webkit-user-select:none;
   box-shadow:0 6px 20px rgba(0,0,0,.28)}
 #fw-closeall:hover{background:var(--hover)}
-@media(max-width:899.98px){#fw-closeall{display:none!important}}
+/* v04.34 — on a phone this is not a chip but the SWITCHER: with sheets
+   stacked edge to edge, only the top one is visible, so "several notes open
+   at once" is a lie unless there is a way back to the ones underneath. One
+   row per open pop-up, the front one marked, and ✕ All at the end. */
+#fw-switch{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;
+  align-items:center;padding:7px 8px;overflow-x:auto;
+  background:var(--paper);border-top:1px solid var(--border2);
+  box-shadow:0 -4px 18px rgba(0,0,0,.18)}
+#fw-switch .fw-sw{flex:0 1 auto;min-width:0;max-width:46vw;min-height:40px;
+  padding:6px 12px;border:1px solid var(--border2);border-radius:999px;
+  background:var(--paper);color:var(--t1);font-family:var(--ui);font-size:12.5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+#fw-switch .fw-sw.on{border-color:var(--green);color:var(--green);font-weight:600}
+#fw-switch .fw-sw-x{flex:0 0 auto;margin-left:auto;color:var(--red,#b91c1c);
+  border-color:var(--border2);font-weight:600}
 
 /* ══ Mobile Edit Bar Groups ═════════════════════════════════════════════════ */
 .eb-mob{justify-content:space-around!important;overflow-x:hidden!important}
@@ -2314,6 +2409,14 @@ sup.ann-sup:hover{text-decoration:underline}
 .fl-pop .eb-act{flex:0 1 auto;min-width:0;max-width:100%;
   justify-content:flex-start!important;gap:7px;padding:7px 11px!important;text-align:left}
 .fl-pop .eb-act .eb-act-i{flex:0 0 18px;text-align:center;font-size:15px;line-height:1}
+/* v04.34 — the pop-up rows carry the DRAWN icon, not a glyph (⊡/⛶ came out as
+   empty boxes on Android, which is why it is an SVG at all), so the slot has
+   to centre an element rather than a character. The tint is the same gold and
+   green the bar uses, so the row and the button read as the same control. */
+.fl-pop .eb-pop-act .eb-act-i{display:flex;align-items:center;justify-content:center}
+.fl-pop .eb-pop-act .pop-ico{width:16px;height:16px}
+.fl-pop .eb-pop-act.pop-multi{color:var(--gold)}
+.fl-pop .eb-pop-act.pop-single{color:var(--green)}
 .fl-pop .eb-act .eb-act-l{font-size:12.5px;font-weight:600;color:var(--t2);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fl-pop .eb-act:hover .eb-act-l{color:var(--t1)}
@@ -2673,7 +2776,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.33</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.34</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -8448,7 +8551,10 @@ let _mDrag=null;
    the existing #p3 around whatever ST.article currently is. */
 function openNoteAsModal(aid){
   hideCtx();
-  if(window.innerWidth<900){ selArt(aid); if(window.innerWidth<1200)showPane('p3'); return; }
+  /* v04.34 — on a phone and a tablet Pane 3 may not even be the pane on
+     screen, and the panel IS Pane 3 lifted out. Bring it forward first or the
+     backdrop comes up over the folder list with the note behind it. */
+  if(window.innerWidth<1200)showPane('p3');
   selArt(aid);
   /* ══ v04.33 — A POP-UP OPENS READY TO WRITE ══════════════════════════════
      The owner asked for "the pop-up note opens in edit mode when click to
@@ -8474,7 +8580,6 @@ function openNoteAsModal(aid){
   openNoteModal();
 }
 function openNoteModal(){
-  if(window.innerWidth<900)return;
   closeAllFloats();   /* v03.NotePane.G4 — one pop-up paradigm at a time */
   ST.noteModal=true;
   const p3=document.getElementById('p3');if(!p3)return;
@@ -8501,7 +8606,11 @@ function openNoteModal(){
   p3.classList.add('modal-mode');
   document.getElementById('note-modal-bg')?.classList.add('active');
   /* Tab bar 50-50: left half=top-resize ↕, right half=drag ✥ */
-  const _tbar=document.getElementById('tab-bar');
+  /* v04.34 — a sheet cannot be dragged or resized, so the tab bar must not
+     become a grab handle on a phone: a ✥ cursor and a "double-click to reset
+     to centre" tooltip on something that never moves is the same fault as an
+     unlabelled button, one costume along. */
+  const _tbar=_popTier()==='sheet'?null:document.getElementById('tab-bar');
   if(_tbar&&!_tbar._mhBound){
     _tbar.addEventListener('pointerdown',_tabBarModalDown);
     _tbar.addEventListener('pointermove',_tabBarCursor);
@@ -8540,14 +8649,35 @@ function openNoteModal(){
       p3.appendChild(el);
     }
   });
+  _p3SheetHdSync();
   renderP3H();
   setTimeout(_tocInject,60);
   setTimeout(_pinPanelInject,65);
 }
+/* v04.34 — edge to edge, #note-modal-bg is a 6px frame, and a 6px frame is
+   not a way out. The panel carries its own title and ✕ Close on a phone.
+   Built here rather than inside renderP3H() because #p3h is rebuilt on every
+   render and this belongs to the PANEL, not to the note header. */
+function _p3SheetHdSync(){
+  const p3=document.getElementById('p3');
+  let hd=document.getElementById('p3-sheet-hd');
+  if(!p3||!ST.noteModal||_popTier()!=='sheet'){ if(hd)hd.remove(); return; }
+  const a=DB.articles.find(x=>x.id===ST.article);
+  if(!hd){
+    hd=document.createElement('div');
+    hd.id='p3-sheet-hd';
+    p3.insertBefore(hd,p3.firstChild);
+  } else if(hd.parentElement!==p3||p3.firstChild!==hd){
+    p3.insertBefore(hd,p3.firstChild);
+  }
+  hd.innerHTML='<span class="sh-ico">'+_popIcoHTML('panel')+'</span>'
+    +'<span class="sh-t">'+esc((a&&a.title)||'Untitled')+'</span>'
+    +'<button class="sh-x" onclick="closeNoteModal()" title="Close this pop-up">\u2715 Close</button>';
+}
 function closeNoteModal(){
   /* Save position/size so next open restores it */
   const _p3s=document.getElementById('p3');
-  if(_p3s&&_p3s.classList.contains('modal-mode')){
+  if(_p3s&&_p3s.classList.contains('modal-mode')&&_popTier()!=='sheet'){  /* v04.34 — see _fwSavePos */
     const _r=_p3s.getBoundingClientRect();
     _popGeoAll().panel={left:Math.round(_r.left),top:Math.round(_r.top),
       width:Math.round(_r.width),height:Math.round(_r.height)};
@@ -8580,6 +8710,7 @@ function closeNoteModal(){
     }
   }
   document.getElementById('note-modal-bg')?.classList.remove('active');
+  document.getElementById('p3-sheet-hd')?.remove();
   renderP3H();
   if(_fwFocusedAid){_tocInject();_pinPanelInject();} /* hand both panels back to a focused pop-out, if any (Contents first — F9) */
 }
@@ -9065,6 +9196,28 @@ function _ebGoToHTML(popId){
       +'<span class="eb-act-i">\uff0b</span><span class="eb-act-l">Add Tab</span></button>'
     +_ebOpenTabsHTML(popId);
 }
+/* ══ v04.34 — THE TWO POP-UPS AS NAMED ROWS ═══════════════════════════════
+   On a phone the read bar and the edit bar have no width for two more
+   buttons — v04.22 spent three rounds getting the edit bar down to ONE row,
+   and putting them back would undo it. So on a phone they are rows in a
+   menu, and a menu carries WORDS (the v04.26 rule): the full name, not the
+   bar's short "Multi"/"Single". One builder, used by the `+` menu while
+   editing and available to the read card, so the two cannot drift — the
+   v04.30 rule that read and edit render from the same function. */
+function _ebPopHTML(a,popId){
+  if(!a)return '';
+  const c="_closeStickyPop('"+popId+"');";
+  const id=String(a.id).replace(/'/g,"\\'");
+  const row=(mode)=>{
+    const k=POP_KINDS[mode];
+    return '<button class="et eb-act eb-pop-act '+k.cls+'" onmousedown="event.preventDefault()"'
+      +' onclick="'+c+"openNotePopup('"+id+"','"+mode+"')\""
+      +' title="'+esc(k.hint)+'">'
+      +'<span class="eb-act-i">'+_popIcoHTML(mode)+'</span>'
+      +'<span class="eb-act-l">'+esc(k.name)+'</span></button>';
+  };
+  return '<div class="fl-pop-hd">Pop it out</div>'+row('float')+row('panel');
+}
 /* v04.28 — the tag box sits ABOVE everything in the `+` menu, where the owner
    asked for it. It is the one thing in there you reach for while still
    writing; the rest are decisions. It keeps no heading of its own: it is a
@@ -9187,6 +9340,7 @@ function _buildEBSub(g){
       out=_ebTagRowHTML()
         +'<div class="fl-pop-hd">Insert at the cursor</div>'+_ebInsertHTML(true)
         +_ebAttachHTML(a)
+        +_ebPopHTML(a,'eb-pop')
         +_ebGoToHTML('eb-pop');
     }
   }
@@ -9274,6 +9428,22 @@ function _fwFocus(aid){
    repeating the markup and drifting apart.
    Declared with `function` (hoisted) and a plain object literal, both well
    before boot calls render(), so there is no order-of-evaluation trap. */
+/* ══ v04.34 — ONE FUNCTION DECIDES THE SHAPE, AND IT NEVER SAYS "NO" ══════
+   Every pop-up path used to open with `if(window.innerWidth<900){ selArt(aid);
+   … return; }` — eight copies of the same refusal, so on a phone and on a
+   tablet the two buttons did nothing but select the note. The owner asked for
+   the feature on those platforms, and for the standing rule that a feature
+   ships on ALL THREE layouts in the round it is built (see CLAUDE.md, D5).
+
+   So there is no "no" any more, only a SHAPE:
+     'window' (>=640px) — free-floating, draggable, resizable, as it always was;
+     'sheet'  (<640px)  — a full-screen card over the app, no drag, no resize,
+                          because a 320px window with a 22px drag bar on a
+                          390px screen is a worse note pane than the one the
+                          phone already has.
+   Read it here and nowhere else: eight hard-coded 900s is how the tablet came
+   to be excluded from a feature nobody had decided to exclude it from. */
+function _popTier(){ return window.innerWidth<640?'sheet':'window'; }
 const POP_KINDS = {
   float: { name:'Multi Notes Pop-Up', short:'Multi', cls:'pop-multi',
     hint:'Multi Notes Pop-Up — its own window; several notes open at once (Ctrl+Shift+P)',
@@ -9326,7 +9496,7 @@ function _notePopMode(aid){
    conversion, so one accidental window-drag cannot silently change how a note
    opens from then on. */
 function _rememberNotePop(aid,mode){
-  if(!aid||aid==='cal'||window.innerWidth<900)return;
+  if(!aid||aid==='cal')return;
   if(!DB.theme)DB.theme={};
   if(!DB.theme.notePop)DB.theme.notePop={};
   if(DB.theme.notePop[aid]===mode)return;   /* unchanged — no write, no churn */
@@ -9338,7 +9508,6 @@ function _rememberNotePop(aid,mode){
 function openNotePopup(aid,mode){
   if(!aid||aid==='cal')return;
   hideCtx();
-  if(window.innerWidth<900){ selArt(aid); if(window.innerWidth<1200)showPane('p3'); return; }
   const m=mode||_notePopMode(aid)||'float';
   if(mode)_rememberNotePop(aid,m);
   if(m==='panel')openNoteAsModal(aid);else popOutNote(aid);
@@ -9363,7 +9532,34 @@ function closeAllPopouts(){
 function _fwSyncCloseAllChip(){
   const n=document.querySelectorAll('.float-win').length;
   let chip=document.getElementById('fw-closeall');
-  if(n<2||window.innerWidth<900){ if(chip)chip.remove(); return; }
+  const sheet=_popTier()==='sheet';
+  const sw=document.getElementById('fw-switch');
+  if(n<2){ if(chip)chip.remove(); if(sw)sw.remove();
+    document.body.classList.remove('fw-sheets'); return; }
+  /* v04.34 — two different jobs, so two different elements, and whichever one
+     this tier does not use is REMOVED rather than hidden: a stale bar left in
+     the DOM is the v04.24 defect (a control that moves has to leave where it
+     moved from). */
+  if(sheet){
+    if(chip)chip.remove();
+    document.body.classList.add('fw-sheets');
+    let bar=sw;
+    if(!bar){ bar=document.createElement('div'); bar.id='fw-switch'; document.body.appendChild(bar); }
+    const wins=Array.from(document.querySelectorAll('.float-win'));
+    const front=wins.reduce((a,b)=>(+b.style.zIndex>+(a?.style.zIndex||0)?b:a),null);
+    bar.innerHTML=wins.map(w=>{
+      const id=w.id.slice(3);
+      const a=DB.articles.find(x=>x.id===id);
+      const t=(a&&a.title)||'Untitled';
+      return '<button class="fw-sw'+(w===front?' on':'')+'" onclick="popOutNote(\''
+        +String(id).replace(/'/g,"\\'")+'\')" title="'+esc(t)+'">'+esc(t)+'</button>';
+    }).join('')
+      +'<button class="fw-sw fw-sw-x" onclick="closeAllPopouts()" title="Close all pop-ups">\u2715 All</button>';
+    bar.style.zIndex=(_fwZTop+1);
+    return;
+  }
+  if(sw)sw.remove();
+  document.body.classList.remove('fw-sheets');
   if(!chip){
     chip=document.createElement('div');
     chip.id='fw-closeall';
@@ -9378,6 +9574,9 @@ function _fwSyncCloseAllChip(){
    of the desktop tier while a Single Note Pop-Up is open. Deliberately NOT fired on every
    shrink: converting on a 10px drag would be constant, pointless churn. */
 function _panelToFloat(){
+  /* v04.34 — on a phone a panel and a float are the SAME card, so converting
+     one into the other is churn the owner would see as the note blinking. */
+  if(_popTier()==='sheet')return;
   const aid=ST.article;
   if(!aid||aid==='cal'){closeNoteModal();return;}
   const p3=document.getElementById('p3');
@@ -9398,7 +9597,6 @@ function _panelToFloat(){
 }
 function popOutNote(aid){
   hideCtx();
-  if(window.innerWidth<900){ selArt(aid); if(window.innerWidth<1200)showPane('p3'); return; }
   /* v03.NotePane.F3 — hand-over, never duplicate. The ⊡ button inside the
      panel header called this unconditionally, so the same note ended up live
      in #ed (panel) AND .fw-ed (float) at the same time — both contenteditable,
@@ -9548,6 +9746,11 @@ function _fwAddResizeHandles(win,aid){
    ResizeObserver below so the native CSS resize:both (bottom-right) grip
    is captured too, not just drag/the new edge handles. */
 function _fwSavePos(aid){
+  /* v04.34 — a sheet's size is the SCREEN's, not a choice anyone made. The
+     CSS pins it edge to edge with !important, so reading it back would store
+     390x838 as this note's remembered frame and hand that to the laptop the
+     next time it popped the same note out. Sheets remember nothing. */
+  if(_popTier()==='sheet')return;
   const win=document.getElementById('fw-'+aid);if(!win)return;
   const r=win.getBoundingClientRect();
   _popGeoAll().float[aid]={left:Math.round(r.left),top:Math.round(r.top),width:Math.round(r.width),height:Math.round(r.height)};
@@ -10837,6 +11040,20 @@ function _tocItemHTML(h,ns){
 }
 
 function _tocInject(){
+  /* v04.34 — a side panel needs a SIDE. On a phone the pop-up is a 378px
+     sheet, and Contents took 184px of it — the note ended up in a 180px
+     column beside a panel, which is exactly the thing the standing lesson
+     calls "a surface no round has looked at": these two panels had never
+     been drawn under 900px because no pop-up existed there to host them.
+     The phone already HAS a Contents: the ☰ drawer _tocMobileCheck() puts
+     up. So on the sheet tier the panel is removed and the drawer offered. */
+  if(_popTier()==='sheet'){
+    document.getElementById('toc-panel')?.remove();
+    _tocHostEl()?.classList.remove('has-toc');
+    try{_tocUnbindScroll();}catch(e){}
+    try{_tocMobileCheck();}catch(e){}
+    return;
+  }
   const host=_tocHostEl();
   const inModal=ST.noteModal;
   if(!host){document.getElementById('toc-panel')?.remove();_tocUnbindScroll();return;}
@@ -11171,6 +11388,16 @@ function _pinHostEl(){
   return null;
 }
 function _pinPanelInject(){
+  /* v04.34 — see _tocInject. Pinned Tabs is a panel you keep BESIDE the note;
+     on a phone there is no beside, and it took half the sheet. Its own header
+     comment already said "Desktop/tablet only (the pop-out is gated to
+     >=900 already)" — that gate is what this round removed, so the rule it
+     depended on has to be stated here instead of assumed. */
+  if(_popTier()==='sheet'){
+    document.getElementById('pin-panel')?.remove();
+    try{_fwClearAllBodyPadding();}catch(e){}
+    return;
+  }
   const host=_pinHostEl();
   if(!host){document.getElementById('pin-panel')?.remove();_fwClearAllBodyPadding();return;}
   if(!DB.theme)DB.theme={};
@@ -11598,12 +11825,11 @@ function _p3ActPalette(ev){
         "toggleArchive('"+id+"')")
     +_p3PalBtn(a.favourite?'\u2705':'\u2b50',a.favourite?'In favourites':'Favourite',
         "toggleFav('"+id+"')");
-  /* Pop-out windows are hidden under 900px by their own CSS rule, so the
-     palette must not offer what the app will not open. */
-  if(window.innerWidth>=900){
-    h+=_p3PalBtn(_popIcoHTML('float'),_popKindLbl('float'),"openNotePopup('"+id+"','float')",'pal-pop pop-multi')
-      +_p3PalBtn(_popIcoHTML('panel'),_popKindLbl('panel'),"openNotePopup('"+id+"','panel')",'pal-pop pop-single');
-  }
+  /* v04.34 — no width gate. The pop-ups exist on every platform now; on a
+     phone this card IS the surface that reaches them, because the read bar
+     has no room for two more buttons and v04.22 fought to keep it one row. */
+  h+=_p3PalBtn(_popIcoHTML('float'),_popKindLbl('float'),"openNotePopup('"+id+"','float')",'pal-pop pop-multi')
+    +_p3PalBtn(_popIcoHTML('panel'),_popKindLbl('panel'),"openNotePopup('"+id+"','panel')",'pal-pop pop-single');
   /* MORE — and the last row NAMES what is behind it. 🗑 Delete stays in there
      rather than out here: v04.11 took it off the bar deliberately, and a
      Delete one tap from a phone toolbar would undo that. */
@@ -17962,7 +18188,7 @@ function _ctxRepaint(m){if(_ctxIsCard()&&m.classList.contains('ctx-card'))_ctxPl
    the glyph this menu's own sub-panels already use for "take this off". */
 function _artCtxGroups(art,aid){
   const inTab=_tabGroup(_tabHost()).includes(aid);
-  const _canModal=window.innerWidth>=900;
+  const _canModal=true;   /* v04.34 — every platform has both pop-ups now */
   const sub=(key,ico,lbl,extra)=>`<div class="ci ci-sub" onclick="_ctxSub('${aid}','${key}')">${ico} ${lbl}${extra||''}<span class="ci-arr">▶</span></div>`;
   return [
     {hd:'This note',items:[
@@ -18940,16 +19166,7 @@ function _openNewNoteWindow(aid,fid){
   if(fid)ST.folder=fid;
   ST.article=aid;ST.editing=false;
   render();
-  if(window.innerWidth<900){
-    if(window.innerWidth<1200)showPane('p3');
-    startEdit();
-    setTimeout(function(){
-      const ti=document.getElementById('ti');
-      if(ti){ti.focus();return;}
-      const ed=document.getElementById('ed');if(ed)ed.focus();
-    },80);
-    return;
-  }
+  if(window.innerWidth<1200)showPane('p3');
   popOutNote(aid);
   /* Title first, so the very next keystroke names the note — exactly what
      the old Pane 3 flow did with #ti. */
@@ -20146,7 +20363,7 @@ document.addEventListener('keydown',ev=>{
      was last opened in; a Multi Notes Pop-Up if it has never been popped) */
   if(ev.key==='P'&&ev.ctrlKey&&ev.shiftKey){
     ev.preventDefault();
-    if(ST.article&&ST.article!=='cal'&&window.innerWidth>=900){
+    if(ST.article&&ST.article!=='cal'){
       openNotePopup(ST.article);   /* G3 — reopens in whichever mode it was last */
     }
   }
@@ -20209,9 +20426,15 @@ function _onViewportResize(){
      frozen with no reachable way out. Dock the panel back into the normal
      3-pane layout first, then let the rest of the handler run as before. */
   if(ST.noteModal){
-    if(window.innerWidth<900){
-      closeNoteModal();
-      try{toast('Single Note Pop-Up closed — screen too narrow');}catch(e){}
+    /* v04.34 — F1's eviction is gone. It existed because #p3.modal-mode is
+       position:fixed + z-index:5001 with no phone styling, so under 900px the
+       backdrop covered the screen with no reachable way out and the app
+       looked frozen. The phone sheet IS that styling now — edge to edge, with
+       its own ✕ Close bar — so the panel is re-shaped rather than thrown
+       away, and what the owner was reading stays on screen. */
+    if(_popTier()==='sheet'){
+      _p3SheetHdSync();
+      ['width','height','top','left'].forEach(k=>document.getElementById('p3')?.style.removeProperty(k));
     } else if(_uiTier()!=='desktop'&&_rzTier==='desktop'){
       /* v03.NotePane.G1 — leaving the desktop tier with a panel open: a
          backdrop-blocking modal over a tablet-width layout is heavy, so hand
