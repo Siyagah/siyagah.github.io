@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.32.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.33.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,29 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.33** (12 Sep 2026) — one screenshot of the read bar, two asks.
+  **"Let the Multi and single button be present in the edit mode as well"** —
+  measured on `origin/main`, they already WERE, since v04.10. What differed
+  was the treatment, and every rule that made the difference was scoped
+  `#p3h:not(.editing)`: read mode gave them `--gold`/`--green`, opacity 1 and
+  their word; edit mode gave them the bar's grey at .55 with no label, ever.
+  Both modes now, with only the SIZES still differing. The words were `false`
+  on the edit bar since v04.10 for "crowding" that was never measured — they
+  cost 61px and 70px and the bar carries them whole from **1600px**; below
+  that `_p3FitEditBar()` folds them by asking *does carrying them add a line?*,
+  because `.p3h-unified-tb` WRAPS and `scrollWidth>clientWidth` is always
+  false on it. Extending the fit to edit mode also stopped `p3h-nolbl`
+  leaking in from the last READ-mode fold and silently deciding the edit
+  bar's layout. **"Let the pop-up note opens in edit mode"** — the two modes
+  had disagreed since v03.74: a Multi pop-up was always an editor, a Single
+  one opened read-only every time (`selArt()` clears `ST.editing`) and threw
+  you out of edit mode if you were in it. Both open on the editor now, and a
+  new Multi window opens with the caret already in it. And the defect this
+  would have made worse: F3's **"hand-over, never duplicate"** was enforced
+  only for the panel, so popping out of Pane 3's editor left `#ed` and
+  `.fw-ed` both live on one note, both on autosave — measured on
+  `origin/main` at v04.32, fixed here. 255/255 app checks (up from 236) and
+  11/11 ship checks.
 - **v04.32** (12 Sep 2026) — two screenshots of the phone's read view.
   **`📁 Folder · 1 attached`**: the word went, the count stayed — but the word
   alone would NOT have done what was asked, and the measurement said so.
@@ -89,19 +112,6 @@ must never accumulate here instead of there.
   widths), which a stretched grid fails whatever width it uses; a pixel budget
   would have rotted on the next label change. 208/208 app checks (up from 206)
   and 11/11 ship checks.
-- **v04.28** (12 Sep 2026) — "make the card widen edge to edge", and "place
-  the 'add tag' above all the buttons". `.fl-pop` was `width:min(260px,92vw)`
-  — a 260px column on a 390px phone, anchored under a button near the right,
-  so it sat in the right-hand two thirds with a strip of note beside it and
-  every label squeezed into half of that. On a phone it is **6px each side,
-  378px of 390** now; a tablet and a laptop keep the narrow anchored card.
-  The **width is set BEFORE the height is read** in `_flPopPlace()` — measuring
-  `scrollHeight` at 260px and then widening reports a card taller than the one
-  that paints, and the placement is made from a number that was never true.
-  Edge to edge stranded the `✕` in a corner, so it is the card's **✕ Close**
-  bar now, full width. And the tag box is the FIRST child of the `+` menu,
-  above every heading: it is the one thing in there you reach for while still
-  writing. 206/206 app checks (up from 202) and 11/11 ship checks.
 ---
 
 ## What this is
@@ -341,6 +351,20 @@ traps belong in `tools/README.md`, not here.)*
   with results), SEED that state before measuring, or the check is reporting on
   something that was not there. Cost: reported by the owner in v04.24, one
   round after being announced as done.
+- **A control that differs only in TREATMENT between two modes reads as
+  absent in the dimmer one — and a CSS rule scoped `:not(.editing)` is a rule
+  that exists in one mode only.** Multi and Single had been on the edit bar
+  since v04.10; the owner asked for them to "be present in edit mode as well"
+  because read mode gave them gold and green at full opacity with their word
+  beside them, and edit mode gave them the bar's grey at opacity .55 with no
+  label — the same DOM, in two different registers. When a round settles how
+  a control should look, grep the selector you wrote: every `:not(.editing)`
+  (or any other mode scope) is a decision you made for one half of the app
+  without saying so. Its twin: a fit/measure function that RETURNS EARLY for
+  the other mode leaves its class behind, so the mode it skipped is laid out
+  by a measurement taken of a different bar — `p3h-nolbl` had been deciding
+  the edit bar's button widths for a whole version series. Cost: reported by
+  the owner in v04.33, thirteen rounds after the buttons shipped.
 - **"It is on the screen" is not "the owner can find it".** The section-tools
   `⋯` sat exactly where the owner had asked for it one round earlier — on the
   versioning bar, after the date — as a bare glyph with no border, beside a

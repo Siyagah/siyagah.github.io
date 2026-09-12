@@ -2548,3 +2548,134 @@ this.
 - a sub-panel is re-placed rather than left hanging off the bottom;
 - `hideCtx()` hands `#ctx` back clean — it is shared with four other menus;
 - and a tablet and a laptop keep the anchored column.
+
+---
+
+## v04.33 — the two pop-up buttons in edit mode, and a pop-up that opens ready to write
+*12 September 2026*
+
+One screenshot of the note's READ bar, and two asks off it.
+
+### 1. "Let the Multi and single button be present in the edit mode as well."
+
+Measured on `origin/main` before touching anything: **they already were.**
+`_p3EditIconsHTML()` has rendered both on the edit bar since v04.10. So the
+question "is it rendered" — the one the obvious check asks — says yes about a
+control the owner has been looking straight through, which is the standing
+lesson *"It is on the screen" is not "the owner can find it"*, paid for a
+second time.
+
+What differed was the **treatment**, and every rule that made the difference
+was scoped `#p3h:not(.editing)`:
+
+| | read bar | edit bar (before) |
+|---|---|---|
+| colour | `--gold` / `--green` | `rgb(90,84,74)` — the bar's grey |
+| opacity | 1 | .55 |
+| the word | "Multi" / "Single" | none, ever (`label` was `false`) |
+
+Two gold-and-green named buttons in one mode; two anonymous grey ghosts among
+fifteen other icons in the other. Every one of those rules applies to both
+modes now, and only the SIZES still differ, because the edit bar's buttons are
+`.et` and the read bar's are `.btn`.
+
+The words were `false` on the edit bar since v04.10 with the reason "that
+toolbar has its own crowding" — which was never measured. On the row they
+cost 61px and 70px, and the unified toolbar carries them whole from **1600px**
+of screen. Below that `_p3FitEditBar()` folds them off, and it folds by
+measuring rather than by a breakpoint.
+
+The edit bar could not borrow the read bar's fold: `.p3h-unified-tb` is
+`flex-wrap:wrap`, so `scrollWidth > clientWidth` is *always false* on it and
+would have reported "fits" about a toolbar that had quietly become three rows.
+The question that does answer it is the one the words actually cost — **does
+carrying them add a line?** — read as the row's own height with them and again
+without. Between 900px and 1199px the same buttons sit in `.nav-r`, which is
+nowrap with `overflow-x:auto`; there a scroll *is* the overflow, and a button
+scrolled off the right of a strip is exactly as unfindable as an unlabelled
+one. Both tiers are asked; either one folds the words.
+
+Extending `_p3FitToolbar()` to the edit bar fixed a second thing nobody had
+reported. It used to return early on `editing`, which left `p3h-nolbl` on
+`#p3h` **from the last read-mode fold** — so the edit bar's layout was being
+decided by a measurement taken of a different bar. Measured on `origin/main`:
+the edit pop buttons came out 29px wide at 1920px and 38px at 1440px for no
+reason of their own. Both modes clear the class and re-measure now.
+
+### 2. "Let the pop-up note opens in edit mode when click to pop-up."
+
+The two modes disagreed with each other, and had since v03.74:
+
+- a **Multi Notes Pop-Up** has always been an editor — `.fw-ed` is
+  `contenteditable` from the moment `_fwCreate()` builds it;
+- a **Single Note Pop-Up** opened **read-only every time**, because
+  `openNoteAsModal()` goes through `selArt()`, which sets `ST.editing=false`
+  unconditionally. Popping a note up *while you were editing it* threw you out
+  of edit mode.
+
+One paradigm, as G4 already decided for the z-order: both open on the editor.
+`startEdit()` runs **before** `openNoteModal()`, because `openNoteModal()` ends
+on `renderP3H()` and the TOC/pin injections — the other way round rebuilt the
+header underneath them. Safe for **I1**: `selArt()` saves the outgoing note on
+its way past and `closeNoteModal()` calls `_flushEd()` before the pane changes
+shape, both asserted by reading typed words back out of `DB` after a close.
+
+And the Multi window now opens with the **caret already in it**. Re-opening an
+existing one always focused `.fw-ed` (see `popOutNote`); a brand-new one left
+the focus on `<body>`, so the window opened on an editor you still had to
+click into.
+
+### 3. The defect this round would otherwise have made worse
+
+`popOutNote()`'s F3 comment states the rule — *"hand-over, never duplicate"* —
+and enforced it only for the **panel**. Pane 3's own editor was never asked to
+let go. Measured on `origin/main` at v04.32, before this round began: from edit
+mode, `popOutNote('a1')` left `#ed` **and** `.fw-ed` both live on the same
+note, both `contenteditable`, both on the debounced autosave — the exact
+defect F3 describes, *"whichever tick fired last silently overwrote the other,
+losing typed text"*.
+
+It was already reachable. This round adds two more ways in (a Single Note
+Pop-Up now opens on the editor, and `_panelToFloat()` converts one when the
+screen narrows), so it is fixed here rather than left to be found by losing a
+paragraph. `_flushEd()` runs **first** — it returns early on `!ST.editing`, so
+clearing the flag before committing would have thrown the text away.
+`openNoteAsModal()` gained the mirror of it: `closeAllFloats()` before
+`startEdit()`, so `#ed` cannot be built from content a float has not written
+back yet.
+
+### Not done
+
+- **Under 900px there are still no pop-up buttons, in either mode.** That is
+  not an oversight: `.modal-pop-btn` is `display:none` below 900px and
+  `openNotePopup()` refuses there, because a "window" on a 390px phone is the
+  whole screen. Both halves are now asserted together, so neither mode can
+  drift into offering a button the app will not honour.
+- **On a laptop at 1440px the words fold on the edit bar** — Pane 3 is 710px
+  there and they would add a second row of chrome above the writing, which is
+  what v04.22 fought. The read bar folds them at exactly the same width and
+  always has; the gold and green now tell them apart in both. From 1600px of
+  screen, both bars carry both words.
+- The `⋯` action palette is still read-mode only. It exists because
+  `_p3FitToolbar()` folds the read bar's actions away; the edit bar folds only
+  the two words, so nothing is behind a palette there to reach.
+
+### Measured
+
+236 → 255 app checks, 11/11 ship checks. No existing check needed updating.
+
+- **the edit bar at ten widths** (2200 → 900): both buttons present, and
+  wearing their word exactly where it costs no line — a single width cannot
+  tell a measured fold from one that never folds, or one that always does;
+- **edit mode paints them as read mode does** — the two modes' computed
+  colours compared against *each other*, not against a hex, so the day the
+  palette changes the comparison still holds;
+- a **real mouse click** on the edit bar's Single button leaves `ST.editing`
+  true with `#ed` bound to that note, and the pane still shaped as a panel
+  with its backdrop and all its grips;
+- words typed into that pop-up are **in the note after it closes** (I1);
+- the Multi pop-up opens editable with the caret in it;
+- **one editor per note** on both routes into the hand-over, with the typed
+  words proved to arrive in `DB` *and* in the pop-up;
+- and at 820px and 390px neither mode offers a button and `openNotePopup()`
+  refuses.

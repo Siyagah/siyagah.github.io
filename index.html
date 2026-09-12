@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.32">
+<meta name="app-version" content="04.33">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2198,17 +2198,31 @@ sup.ann-sup:hover{text-decoration:underline}
 .pop-lbl{font-weight:500}
 /* Tinted glyph only — no filled buttons. Gold reads "more than one window",
    green "the one note you are on". Both are already in the app's palette. */
-#p3h:not(.editing) .pop-btn{font-size:13px;opacity:1;padding:6px 9px;min-width:0}
+/* ══ v04.33 — THE SAME TWO BUTTONS IN EDIT MODE ═══════════════════════════
+   The owner asked for Multi and Single to "be present in the edit mode as
+   well". Measured on origin/main, they already WERE: _p3EditIconsHTML() has
+   rendered both since v04.10. What they were not, was findable. In read mode
+   each one is 13px, opacity 1, gold or green, with its word beside it; in
+   edit mode the same button measured opacity .55 in rgb(90,84,74) grey with
+   no label at all — two anonymous ghosts among fifteen other icons. That is
+   the standing lesson verbatim: "It is on the screen" is not "the owner can
+   find it". So every rule below that used to be scoped `:not(.editing)` now
+   applies to both modes, and only the SIZES still differ, because the edit
+   bar's buttons are .et and the read bar's are .btn. ── */
+#p3h .pop-btn{opacity:1}
+#p3h:not(.editing) .pop-btn{font-size:13px;padding:6px 9px;min-width:0}
+#p3h.editing .pop-btn{font-size:12.5px;padding:4px 8px;min-width:0}
 /* !important because .bn sets color:var(--t3)!important — without it both
    buttons come out the same grey and the tint silently does nothing. */
-#p3h:not(.editing) .pop-btn.pop-multi{color:var(--gold)!important}
-#p3h:not(.editing) .pop-btn.pop-single{color:var(--green)!important}
+#p3h .pop-btn.pop-multi{color:var(--gold)!important}
+#p3h .pop-btn.pop-single{color:var(--green)!important}
 /* Folded: the words go, the button falls back to the icon-only footprint it
    had before this round — same 38px target, nothing else moves. */
 #p3h.p3h-nolbl .pop-lbl{display:none}
-#p3h.p3h-nolbl .pop-btn{padding:6px 8px;min-width:38px;justify-content:center}
-/* Edit mode keeps the icons alone: that toolbar has its own crowding and this
-   round did not widen it. The tooltip and both menus still carry the name. */
+#p3h:not(.editing).p3h-nolbl .pop-btn{padding:6px 8px;min-width:38px;justify-content:center}
+/* Folded on the edit bar it is an .et among .et's, so it keeps their 30px
+   footprint rather than growing to the read bar's 38. */
+#p3h.editing.p3h-nolbl .pop-btn{min-width:30px;justify-content:center}
 .et.pop-btn .pop-ico{width:15px;height:15px}
 @media(max-width:899.98px){
   #p3h:not(.editing) .pop-btn{font-size:14px}
@@ -2659,7 +2673,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.32</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.33</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3915,6 +3929,11 @@ function renderP3H(){
     }
     el.innerHTML=h;
     renderTagEditor();
+    /* v04.33 — same two passes the read bar takes, and for the same reason:
+       Pane 3 is still 710px wide at this point on a layout that settles to
+       485px, so one pass folds against a width the pane never has. */
+    try{_p3FitToolbar();}catch(e){}
+    try{requestAnimationFrame(()=>{try{_p3FitToolbar();}catch(e){}});}catch(e){}
     return;
   } else if(curA&&curA.contactData?.mode==='form'){
     el.classList.remove('editing');
@@ -8431,6 +8450,27 @@ function openNoteAsModal(aid){
   hideCtx();
   if(window.innerWidth<900){ selArt(aid); if(window.innerWidth<1200)showPane('p3'); return; }
   selArt(aid);
+  /* ══ v04.33 — A POP-UP OPENS READY TO WRITE ══════════════════════════════
+     The owner asked for "the pop-up note opens in edit mode when click to
+     pop-up". Measured on origin/main, the two modes disagreed with each
+     other: a Multi Notes Pop-Up has ALWAYS been an editor (.fw-ed is
+     contenteditable from the moment _fwCreate() builds it), while a Single
+     Note Pop-Up opened read-only every time — selArt() sets ST.editing=false
+     unconditionally, so popping a note up while you were editing it even
+     threw you OUT of edit mode. One paradigm, as G4 already decided for the
+     z-order: both pop-ups now open on the editor.
+     Safe for I1: selArt() saves the outgoing note on its way past, and
+     closeNoteModal() calls _flushEd() before the pane changes shape, so
+     nothing typed in here can be lost by closing it. startEdit() runs BEFORE
+     openNoteModal() because openNoteModal() ends on renderP3H() and the
+     TOC/pin injections — doing it the other way round rebuilt the header
+     underneath them. */
+  /* Before #ed reads this note's content, any float still holding it has to
+     have written back — closeFloatWin() flushes on the way out, and
+     openNoteModal() would otherwise do this AFTER startEdit(), so #ed would
+     be built from content the float had not committed yet. */
+  closeAllFloats();
+  startEdit();
   openNoteModal();
 }
 function openNoteModal(){
@@ -8856,8 +8896,13 @@ function _p3EditIconsHTML(curA){
   return _grps.map(g=>`<button class="et eb-grp-btn${_eg===g.id?' on':''}" data-g="${g.id}" onmousedown="togEBGroup('${g.id}')" title="${g.label}">${g.icon}</button>`).join('')
     +(_mob?'':_ktBtnHTML()
       +`<button class="et" onmousedown="event.preventDefault()" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>`)
-    +_popBtnHTML(curA.id,'float','et',false)
-    +_popBtnHTML(curA.id,'panel','et',false)
+    /* v04.33 — the words, on the edit bar too. They were `false` here since
+       v04.10 ("the edit bar never has width to spare"), which was never
+       measured: on this row they cost 61px and 70px, and the unified toolbar
+       carries them whole from 1600px of screen. Below that _p3FitEditBar()
+       folds them off by MEASURING the row rather than by assuming it. */
+    +_popBtnHTML(curA.id,'float','et',true)
+    +_popBtnHTML(curA.id,'panel','et',true)
     +(_mob?`<button class="et et-save" onmousedown="event.preventDefault()" onclick="saveArt()" title="Save this note">💾 Save</button>`:'');
 }
 /* The count is the point: with the bar closed, this is the only thing on
@@ -9364,6 +9409,23 @@ function popOutNote(aid){
      paradigm at a time. A backdrop-blocking panel sitting behind free-floating
      windows was visually incoherent and made the z-order impossible to read. */
   if(ST.noteModal)closeNoteModal();
+  /* ══ v04.33 — F3's HAND-OVER, EXTENDED TO PANE 3 ═════════════════════════
+     F3 above only ever handed over from the PANEL. Pane 3's own editor was
+     never asked to let go, so clicking Multi while editing a note left #ed
+     and .fw-ed both live on the same note, both contenteditable, both on the
+     debounced autosave — the exact defect F3 describes, "whichever tick fired
+     last silently overwrote the other, losing typed text".
+     Measured on origin/main at v04.32, before this round touched anything:
+     from edit mode, popOutNote('a1') left both editors alive. It was already
+     reachable; this round adds two more ways in (a Single Note Pop-Up now
+     opens on the editor, and _panelToFloat() converts one on a narrowing
+     screen), so it is fixed here rather than left to be found by losing a
+     paragraph. _flushEd() FIRST — it returns early on !ST.editing, so
+     clearing the flag before committing would throw the text away. */
+  if(ST.editing&&ST.article===aid){
+    try{_flushEd();}catch(e){}
+    ST.editing=false;renderP3H();renderP3C();adjustP3Layout();
+  }
   const ex=document.getElementById('fw-'+aid);
   if(ex){ _fwZTop++; ex.style.zIndex=_fwZTop; const ed=ex.querySelector('.fw-ed'); if(ed)ed.focus(); _fwFocus(aid); return; }
   _fwCreate(aid);
@@ -9430,6 +9492,12 @@ function _fwCreate(aid){
   _captureNoteHistory(a,'session-start');
   _fwFocus(aid);
   _fwSyncCloseAllChip();
+  /* v04.33 — and the caret is IN it. Re-opening an existing window already
+     focused .fw-ed (see popOutNote); a brand-new one left the focus on
+     <body>, so the window opened on an editor you still had to click into.
+     preventScroll because the window is absolutely positioned over the app
+     and focusing it must not scroll the page behind it. */
+  try{if(ed)ed.focus({preventScroll:true});}catch(e){}
 }
 /* v03.74 — full edge/corner resize to match the original modal pop-up's
    handle set (R/B/L edges + TR/TL/BL corners; BR is the native CSS
@@ -11422,7 +11490,14 @@ function toggleColPop(ev){
    not a silent squeeze; only the spacer collapses. */
 function _p3FitToolbar(){
   const el=document.getElementById('p3h');
-  if(!el||el.classList.contains('editing'))return;
+  if(!el)return;
+  /* v04.33 — the edit bar measures itself too now. It used to fall out here,
+     which had a second, invisible consequence: p3h-nolbl was left on #p3h
+     from the LAST read-mode fold and silently decided the edit bar's layout.
+     Measured on origin/main, the edit buttons came out 29px wide at 1920px
+     and 38px at 1440px for no reason of their own. Both modes now clear the
+     class and re-measure, so neither inherits the other's answer. */
+  if(el.classList.contains('editing'))return _p3FitEditBar(el);
   el.classList.remove('p3h-nolbl','p3h-tight','p3h-tighter','p3h-tightest');
   if(!el.clientWidth)return;                 /* pane is off-screen; nothing to measure */
   const fits=()=>el.scrollWidth<=el.clientWidth+1;
@@ -11449,6 +11524,39 @@ function _p3FitToolbar(){
   el.classList.add('p3h-tighter');           /* ‹ › 🔍 ✚ Multi Single ⋯ → ⋯ palette */
   if(fits())return;
   el.classList.add('p3h-tightest');          /* the type chip itself, last of all */
+}
+/* ══ v04.33 — THE EDIT BAR FOLDS ONE THING: THE TWO POP-UP WORDS ══════════
+   The edit bar is not the read bar and must not borrow its fold order: it
+   WRAPS (`.p3h-unified-tb{flex-wrap:wrap}`) rather than overflowing, so
+   `scrollWidth > clientWidth` is always false on it and would report "fits"
+   about a toolbar that has quietly become three rows. The question that does
+   answer it is the one the words actually cost: **does carrying them add a
+   line?** Measured by taking the row's height with them and again without,
+   on the real row, rather than against a pixel budget that rots on the next
+   label change (the v04.29 lesson).
+
+   Between 900px and 1199px the same buttons sit in `.nav-r`, which is
+   nowrap with overflow-x:auto — there a scroll IS the overflow, and a
+   button scrolled off the right of a strip is exactly as unfindable as an
+   unlabelled one. Both tiers are asked, and either one folds the words.
+
+   Under 900px there is nothing to fold: .modal-pop-btn is display:none and
+   openNotePopup() refuses below that width, in both modes. */
+function _p3FitEditBar(el){
+  el.classList.remove('p3h-nolbl');
+  if(!el.clientWidth||!el.querySelector('.pop-btn'))return;
+  let over=false;
+  const tb=el.querySelector('.p3h-unified-tb');
+  if(tb){
+    const withWords=tb.getBoundingClientRect().height;
+    el.classList.add('p3h-nolbl');
+    const without=tb.getBoundingClientRect().height;
+    el.classList.remove('p3h-nolbl');
+    over=withWords>without+1;
+  }
+  if(!over)el.querySelectorAll('.p3h-nav-edit-row .nav-l,.p3h-nav-edit-row .nav-r')
+    .forEach(n=>{if(n.scrollWidth>n.clientWidth+1)over=true;});
+  if(over)el.classList.add('p3h-nolbl');
 }
 /* One palette row: a real icon, a real word, and a touch-sized target. */
 function _p3PalBtn(icon,label,onclick,cls,sub){
