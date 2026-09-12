@@ -2779,7 +2779,11 @@ await app.close();
           cur.n += inner.length;
         }
       }
-      return { groups, wide: Math.round(pop.getBoundingClientRect().width) };
+      const first = pop.firstElementChild;
+      return { groups, wide: Math.round(pop.getBoundingClientRect().width),
+        tagFirst: !!(first && first.classList.contains('eb-tagrow')),
+        tagInput: !!pop.querySelector('.eb-tagrow #tag-inp'),
+        firstWas: first ? (first.className || first.tagName) : 'nothing' };
     });
     await s.close();
     const empty = m.groups.filter((g) => g.n === 0);
@@ -2793,6 +2797,12 @@ await app.close();
     r.check(bare.length === 0,
       'phone: every action in the `+` menu is a word, not a bare glyph',
       bare.length ? `unlabelled: ${bare.join(', ')}` : 'all labelled');
+    /* v04.28 — "place the 'add tag' above all the buttons". Above ALL of them,
+       so it is the FIRST child of the menu, ahead of the first heading. */
+    r.check(m.tagFirst && m.tagInput,
+      'phone: the tag box is the first thing in the `+` menu, above every heading',
+      m.tagFirst ? `.eb-tagrow first, with an input ${m.tagInput}`
+        : `first child is ${m.firstWas}`);
   }
 
   /* 6. Geometry — the round's own bug report. A real mouse click on the real
@@ -2840,6 +2850,22 @@ await app.close();
     r.check(adrift.length === 0, `${vp.name}: every edit-bar menu opens against its own button`,
       adrift.length ? adrift.map((o) => `${o.g}: menu ${o.top}→${o.bottom}, button ${o.btnTop}→${o.btnBottom}`).join(' · ')
         : live.map((o) => `${o.g} at y${o.top} (button ends ${o.btnBottom})`).join(' · '));
+    /* v04.28 — on a phone the card runs edge to edge. At min(260px,92vw) it
+       was a 260px column on a 390px screen with a strip of note beside it and
+       every label squeezed into half of that. A tablet and a laptop keep the
+       narrow anchored card, so this is asserted BOTH ways — a rule that only
+       ever says "wider is fine" would pass a phone card that never widened. */
+    const gutter = live.filter((o) => o.left > 8 || o.right < o.vw - 8);
+    if (vp.width < 640) {
+      r.check(gutter.length === 0, `${vp.name}: every edit-bar menu runs edge to edge`,
+        gutter.length ? gutter.map((o) => `${o.g}: ${o.left}→${o.right} of ${o.vw}`).join(' · ')
+          : live.map((o) => `${o.g} ${o.left}→${o.right} of ${o.vw}`).join(' · '));
+    } else {
+      const stretched = live.filter((o) => o.right - o.left > 300);
+      r.check(stretched.length === 0, `${vp.name}: the edit-bar menus stay narrow and anchored`,
+        stretched.length ? stretched.map((o) => `${o.g} is ${o.right - o.left}px wide`).join(' · ')
+          : live.map((o) => `${o.g} ${o.right - o.left}px at x${o.left}`).join(' · '));
+    }
     const off = live.filter((o) => o.left < 0 || o.right > o.vw || o.top < 0 || o.bottom > o.vh);
     r.check(off.length === 0, `${vp.name}: every edit-bar menu is wholly on the screen`,
       off.length ? off.map((o) => `${o.g}: ${o.left}→${o.right} of ${o.vw}, ${o.top}→${o.bottom} of ${o.vh}`).join(' · ')
