@@ -2679,3 +2679,151 @@ back yet.
   words proved to arrive in `DB` *and* in the pop-up;
 - and at 820px and 390px neither mode offers a button and `openNotePopup()`
   refuses.
+
+---
+
+## v04.34 — the pop-ups reach the phone and the tablet, each in the shape that fits
+*12 September 2026*
+
+> "Now do same for the phone and tablet too.
+> ***Always do all platforms as adaptible. Don't wait for doing next.***"
+
+The second sentence is the bigger half. It is **D5** in `CLAUDE.md` now, and a
+standing lesson, because v04.33 had just reported the phone and tablet gap to
+the owner as deliberate and it came straight back — which is the
+"when the owner repeats themselves, the reading is wrong" pattern.
+
+### What was actually in the way
+
+Not one gate but **eleven**: `window.innerWidth<900` in eight functions
+(`openNotePopup`, `openNoteAsModal`, `openNoteModal`, `popOutNote`,
+`_rememberNotePop`, `_fwSyncCloseAllChip`, `_openNewNoteWindow`, the
+Ctrl+Shift+P handler), plus `_canModal` in the context menu, the `⋯` palette's
+own `>=900`, and three
+`@media(max-width:899.98px){…display:none}` rules.
+
+The reason had been true **once** — a 320px-minimum window with a 22px drag
+bar is a worse note pane than the one a 390px phone already has. It was never
+revisited, and it swept up the TABLET, where touch drag and resize had been
+deliberately built in v03.NotePane.T4, whose own comment says *"the panel is
+allowed from 900px up, which includes iPad landscape and most Android
+tablets"*. Nobody ever decided a tablet should not have this.
+
+### One function decides the shape, and it never says no
+
+```
+_popTier()  →  'window'  (>=640px)   free-floating, draggable, resizable
+               'sheet'   (<640px)    a card pinned edge to edge, no drag, no resize
+```
+
+- **Tablet** gets the real window, unchanged: measured at 820×1180 the Multi
+  window is 640×1038 with all five drag/resize handles, and the Single panel
+  787×820 with its backdrop. Both are asserted *the other way round* as well —
+  if the sheet rules ever widen past 640px a tablet silently loses drag,
+  resize, and the ability to see the app beside the note.
+- **Phone** gets the sheet: 6px gutters, `378×832` of a 390×844 screen,
+  nothing that pretends to drag, and the editor gets **376px of the 378**.
+
+### The three things the gate had been hiding
+
+None of these were defects while the pop-ups were `display:none` under 900px.
+All three appeared the moment they were not:
+
+1. **Contents and the Pinned Tabs sidepane took 184px of a 378px sheet** — the
+   note wrote in a 180px column beside a panel. `_pinPanelInject`'s own header
+   comment said *"Desktop/tablet only (the pop-out is gated to >=900
+   already)"*: a rule that depended on the gate this round removed. Both are
+   skipped on the sheet tier, and the phone's `☰ Contents` drawer is offered
+   instead, so nothing is lost.
+2. **The edit bar's ◀ and 📁 call `showPane()`** — on a layout sitting under a
+   fixed, z-5001 panel. The tap changed something the owner could not see and
+   the note did not move. Gone inside the panel, at every width.
+3. **The window header was built for a mouse.** On a tablet ✕ Close measured
+   **26×20** and each ‹ › **11×15**. They are 40px from 1199px down and 44px
+   on a phone.
+
+### Several at once, on a phone, means a way back
+
+Sheets stack edge to edge, so only the top one is visible and *"Multi Notes
+Pop-Up — several notes open at once"* would have been a claim the phone could
+not honour. `#fw-closeall` becomes a **switcher bar** below 640px: one chip per
+open note, the front one marked, `✕ All` at the end, 40px rows, and
+`body.fw-sheets` lifts the sheets to `bottom:56px` so it covers nothing. A real
+tap on a buried note's chip brings it forward, which is what the check
+measures. A laptop and a tablet keep the plain `✕ Close all (n)` chip, and
+whichever element the tier does not use is **removed**, not hidden — v04.24.
+
+### Reaching them on a phone
+
+The two buttons stay **off** the phone's read and edit bars. v04.22 spent three
+rounds getting that bar to one row and putting them back would undo it; and
+*"a bar may be terse; a menu may not"*. So they are named rows:
+
+- **read** — the `⋯` card, which already carried them behind a `>=900` gate;
+- **edit** — a new **POP IT OUT** group in the `+` menu, from `_ebPopHTML()`,
+  one builder for both surfaces so they cannot drift (v04.30's rule).
+
+Both carry the full name, the drawn icon, and the gold/green tint, at 44px.
+Measured: the `+` menu is five groups now and still fits a 390×844 phone
+whole, `6→384`, no scrolling.
+
+A tablet's bars **do** have the width — measured at 640, 700, 768, 820, 899 and
+1000: the edit bar carries both words at 64px and 73px with no overflow at any
+of them, and the read bar folds them into the `⋯` card below 768 exactly as its
+own measurement says it should.
+
+### And what a sheet must never do
+
+**Write down its frame.** `378×832` is the screen's size, not a choice anyone
+made, and `_fwSavePos()` would have stored it as that note's remembered window
+and handed it to the laptop the next time the same note was popped out.
+Sheets remember nothing — asserted by opening both kinds on a phone, closing
+them, and reading the geometry store back empty.
+
+The v03.NotePane.F1 eviction is also gone: the panel used to CLOSE itself with
+a toast when the viewport fell under 900px, because `#p3.modal-mode` had no
+phone styling and the backdrop covered the screen with no way out. The sheet
+is that styling. The panel re-shapes instead, and what the owner was reading
+stays on screen.
+
+### Not done
+
+- **The float window's inner toolbar is still the dense laptop one** on a
+  phone, beyond minimum 38px targets. It works and it is reachable; laying it
+  out for a phone the way v04.22–v04.32 did for Pane 3 is a round of its own,
+  not a line in this one.
+- **A phone's Multi and Single differ less than a laptop's** — both are the
+  same card. What still differs is real: Single is Pane 3 itself with
+  everything behind it dimmed, one at a time; Multi is independent editors,
+  several open, switchable. `_panelToFloat()` is skipped on a phone for that
+  reason — converting one into the other there is churn the owner would see as
+  the note blinking.
+- The Pinned Tabs sidepane has **no phone form**. It is skipped rather than
+  redesigned; it is a keep-it-beside-the-note panel and a phone has no beside.
+
+### Measured
+
+255 → 266 app checks, 11/11 ship checks. **Five existing checks were updated in
+place with the reason recorded, two of them REVERSED** — they asserted
+"neither mode offers a pop-up button, and the app refuses to open one", which
+was a true description of the app and a wrong description of what the owner
+wanted.
+
+- both pop-ups **reachable and really opening on the editor**, at phone and
+  tablet, in read mode and in edit mode — four combinations, each identified
+  by the FUNCTION the control calls and told which surface reached it;
+- the phone sheet **edge to edge, wholly on screen, zero drag/resize
+  affordances, a 44px way out carrying a word**, for both kinds;
+- a **real tap** on the Single sheet's ✕ Close handing the whole app back —
+  no `modal-mode`, no backdrop, no header left behind, the pane back to 390px;
+- two open giving a switcher whose chips are words at 40px, on screen, with
+  the sheets clearing it — and a **real tap bringing the buried note forward**;
+- a tablet proved to keep the real window, its handles, and a header a finger
+  can hit;
+- the sheet **all note**: no Contents panel, no sidepane, no pane-nav button
+  that cannot work, editor ≥85% of the sheet;
+- **no remembered frame written from a sheet**;
+- and the `+` menu's fifth group, with its fit assertion changed from a
+  `< 72% of the screen` ratio — which failed at 74% while the menu still fitted
+  whole with 215px to spare — to the question its own label asks: is the whole
+  menu on screen, and does it scroll.
