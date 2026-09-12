@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 208 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 213 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -173,6 +173,12 @@ or quietly lose the notebook, none of which need a browser:
   shortest, and the actions must show four or more distinct widths. Plus the
   outcome the packing is for — the whole `+` menu fitting a phone screen with
   no scrolling (v04.29);
+- **the READ view's card, and both ways into it** — the 🏷 palette spreading
+  all four Attach rows open with no 📎 middleman, `📎 Attach` itself landing on
+  that same card, `📅 Calendar` / `＋ Add Tab` / the open tabs inside it, the
+  card edge to edge with 44px rows, and a tablet proved to keep the bar and
+  the old chip palette it always had — every row identified by the FUNCTION it
+  calls, so a relabel cannot fake it (v04.30);
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both

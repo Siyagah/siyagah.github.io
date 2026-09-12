@@ -567,14 +567,22 @@ r.check(phone.minH >= 42 && phone.minW >= 42 && desk.minH >= 34 && desk.minW >= 
   const ntiPal = await s.page.evaluate(() => {
     const p = document.getElementById('p3h-pal');
     /* 🏷 Types left the bar for the Attach menu in v04.11, so the type palette
-       carries the chips and 📎 Attach — Types is one tap inside Attach. */
-    return { chips: !!p && /No type|nti-chip/.test(p.innerHTML), attach: !!p && /Attach/.test(p.textContent) };
+       carried the chips and 📎 Attach — Types one tap inside Attach.
+       v04.30 — on a PHONE that palette is the spread-open card: the type is a
+       `🏷 Note Type · General` row calling openNtiPicker directly, and there
+       is deliberately no 📎 middleman. So the question is asked as "can the
+       type be changed from this palette", by the function, rather than as
+       "is there chip markup in it" — which was only ever one way of being
+       true. A tablet and a laptop still get the chip card. */
+    const fns = !p ? '' : [...p.querySelectorAll('button')].map((b) => b.getAttribute('onclick') || '').join(' ');
+    return { type: !!p && (/No type|nti-chip/.test(p.innerHTML) || /openNtiPicker\(/.test(fns)),
+      attach: !!p && (/Attach/.test(p.textContent) || /openJournalPicker\(/.test(fns)) };
   });
   r.check(pal.open && pal.labels.length >= 5 && !pal.offersPopout && pal.minH >= 42
     && more.copy && more.arch && more.del
-    && nAfter === nBefore + 1 && ntiPal.chips && ntiPal.attach,
+    && nAfter === nBefore + 1 && ntiPal.type && ntiPal.attach,
     'the palettes list the folded buttons with words, at a tappable size, and they work',
-    `${pal.labels.length} actions (${pal.minH}px tall) · pop-out offered on a phone: ${pal.offersPopout} · ⋯ holds copy ${more.copy}/archive ${more.arch}/delete ${more.del} · copy made ${nBefore}→${nAfter} · type palette chips ${ntiPal.chips} / Attach ${ntiPal.attach}`);
+    `${pal.labels.length} actions (${pal.minH}px tall) · pop-out offered on a phone: ${pal.offersPopout} · ⋯ holds copy ${more.copy}/archive ${more.arch}/delete ${more.del} · copy made ${nBefore}→${nAfter} · type reachable ${ntiPal.type} / attach rows ${ntiPal.attach}`);
   await s.close();
 }
 
@@ -2642,9 +2650,13 @@ await app.close();
       ed.shown ? `still painted, ${ed.h}px tall, ${ed.chips} chip(s),`
         + ` 📅 Cal ${ed.cal ? 'on it' : 'gone'}, ＋ Add Tab ${ed.add ? 'on it' : 'gone'}`
         : 'not rendered at all');
-    r.check(rd.cal && rd.add && rd.chips === 3 && back.cal && back.add && back.chips === 3,
-      'phone: the tab bar, 📅 Cal and ＋ Add Tab are all back the moment editing ends',
-      `read ${rd.chips} chips + both buttons ${rd.cal && rd.add} · after ✕ ${back.chips} chips + both ${back.cal && back.add}`);
+    /* v04.30 — updated in place, not worked around: the owner asked for the
+       bar to go from the READ view too ("bar is not required"), so it no
+       longer comes back when editing ends. What it carried is asserted
+       reachable from the 🏷 palette instead, a few checks below. */
+    r.check(!rd.shown && !back.shown,
+      'phone: the tab bar does not render in read mode either, before or after an edit',
+      `read ${rd.shown ? 'STILL PAINTED' : 'not rendered'} · after ✕ ${back.shown ? 'STILL PAINTED' : 'not rendered'}`);
   }
 
   /* 5a-ii. Hiding a bar is only allowed if what was on it is still reachable —
@@ -2666,17 +2678,100 @@ await app.close();
         if (b) b.click();
       });
       await s.page.waitForTimeout(500);
-      switched = await s.page.evaluate(() => ({ art: ST.article,
-        barBack: getComputedStyle(document.getElementById('tab-bar')).display !== 'none' }));
+      /* v04.30 — the tab bar no longer comes back on a phone when editing
+         ends (the owner asked for it gone from the read view too), so what
+         this asserts is the thing that actually matters: the click really
+         moved the app to that note, and it really left edit mode. */
+      switched = await s.page.evaluate(() => ({ art: ST.article, editing: ST.editing }));
     }
     await s.close();
     r.check(rows.length === 3 && rows.every((x) => /tabSelect\(/.test(x.fn))
-      && switched && switched.art === 'a2' && switched.barBack,
+      && switched && switched.art === 'a2' && !switched.editing,
       'phone: every open tab is a row under `+`, and a real click on one switches to that note',
       rows.length ? `${rows.length} rows: ${rows.map((x) => x.txt).join(' · ')}`
         + ` → clicking one lands on ${switched ? switched.art : '?'},`
-        + ` bar back ${switched ? switched.barBack : '?'}`
+        + ` editing ${switched ? switched.editing : '?'}`
         : 'no tab rows under `+` — the tabs are unreachable while editing');
+  }
+
+  /* 5a-iii. v04.30 — "Now, do same in view mode too. Move n Place Cal n add
+     tab to the attach button (bar is not required) n spread-open them on the
+     pallet with the attach buttons as well spread-open."
+     The read view's 🏷 palette held two controls, one of which (📎 Attach) only
+     opened four MORE — two taps to reach 📓 My Journal. It is the same
+     spread-open card the `+` menu carries now, from the same builders, and it
+     absorbs what the tab bar used to hold. Measured by the FUNCTIONS the rows
+     call, so a relabel cannot fake it. */
+  {
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+    await s.page.evaluate(() => { DB.tabs = { a1: ['a2', 'a3'] }; ST.tabOwner = 'a1';
+      ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); });
+    await s.page.waitForTimeout(450);
+    const open = async (sel) => { await s.page.evaluate(() => closeFloatPop('p3h-pal'));
+      await s.page.waitForTimeout(120);
+      await s.page.evaluate((q) => document.querySelector(q).click(), sel);
+      await s.page.waitForTimeout(300);
+      return s.page.evaluate(() => {
+        const p = document.getElementById('p3h-pal');
+        if (!p || !p.classList.contains('open')) return { open: false };
+        const fns = [...p.querySelectorAll('button')].map((b) => b.getAttribute('onclick') || '').join(' ');
+        const b = p.getBoundingClientRect();
+        const rows = [...p.querySelectorAll('button')].filter((x) => x.offsetParent)
+          .map((x) => Math.round(x.getBoundingClientRect().height));
+        return { open: true, fns,
+          heads: [...p.querySelectorAll('.fl-pop-hd')].map((h) => h.textContent.trim()),
+          middleman: !!p.querySelector('.nti-attach-btn'),
+          left: Math.round(b.left), right: Math.round(b.right), vw: innerWidth,
+          shortest: rows.length ? Math.min(...rows) : 0 };
+      });
+    };
+    const viaGrp = await open('#p3h-nti-grp');
+    const viaAttach = await open('#p3h .nti-attach-btn');
+    await s.close();
+    const spread = (o) => o.open && !o.middleman
+      && /openNtiPicker\(/.test(o.fns) && /openJournalPicker\(/.test(o.fns)
+      && /openMyDatabasePicker\(/.test(o.fns)
+      && /openPicker\(|Open this note for editing/.test(o.fns);
+    r.check(spread(viaGrp),
+      'phone read mode: the 🏷 palette spreads all four Attach rows open, with no 📎 middleman',
+      viaGrp.open ? `headings: ${viaGrp.heads.join(' | ')} · 📎 opener still there ${viaGrp.middleman}`
+        : 'the palette did not open');
+    /* Both ways in must land on the same card — the toolbar folds the type
+       group behind 🏷 only when it does not fit, so 📎 Attach is sometimes the
+       button the owner actually taps. */
+    r.check(spread(viaAttach),
+      'phone read mode: tapping 📎 Attach lands on that same spread-open card',
+      viaAttach.open ? `headings: ${viaAttach.heads.join(' | ')}` : 'it opened something else');
+    /* And it carries what the tab bar used to. */
+    r.check(viaGrp.open && /_calOpen\(/.test(viaGrp.fns) && /openTabPicker\(/.test(viaGrp.fns)
+      && /tabSelect\(/.test(viaGrp.fns) && viaGrp.heads.some((h) => /go to/i.test(h)),
+      'phone read mode: 📅 Calendar, ＋ Add Tab and the open tabs are in that card',
+      viaGrp.open ? `Calendar ${/_calOpen\(/.test(viaGrp.fns)} · Add Tab ${/openTabPicker\(/.test(viaGrp.fns)}`
+        + ` · tabs ${/tabSelect\(/.test(viaGrp.fns)} · ${viaGrp.heads.join(' | ')}` : 'not measured');
+    r.check(viaGrp.open && viaGrp.left <= 8 && viaGrp.right >= viaGrp.vw - 8 && viaGrp.shortest >= 44,
+      'phone read mode: that card runs edge to edge and every row can be hit',
+      viaGrp.open ? `${viaGrp.left}→${viaGrp.right} of ${viaGrp.vw}, shortest row ${viaGrp.shortest}px` : 'not measured');
+  }
+
+  /* And a tablet keeps the palette it had — that card exists because the
+     toolbar folded, and the tab bar is still there to carry Calendar. */
+  {
+    const s = await openApp({ viewport: { width: 820, height: 1180 }, db: seedDB() });
+    await s.page.evaluate(() => { DB.tabs = { a1: ['a2'] }; ST.tabOwner = 'a1';
+      ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); });
+    await s.page.waitForTimeout(450);
+    const m = await s.page.evaluate(() => {
+      const bar = document.getElementById('tab-bar');
+      _p3NtiPalette({ currentTarget: document.getElementById('p3h-nti-grp') });
+      const p = document.getElementById('p3h-pal');
+      return { barShown: getComputedStyle(bar).display !== 'none',
+        oldStyle: !!p.querySelector('.p3h-pal-nti'),
+        spread: !!p.querySelector('.eb-act') };
+    });
+    await s.close();
+    r.check(m.barShown && m.oldStyle && !m.spread,
+      'tablet: the tab bar and the old 🏷 palette are both untouched',
+      `tab bar painted ${m.barShown} · palette is the kindBar card ${m.oldStyle} · spread-open ${m.spread}`);
   }
 
   /* 5b. v04.23 — the owner asked where the collapse/expand ⋯ had gone while
