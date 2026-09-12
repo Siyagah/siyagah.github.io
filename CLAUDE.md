@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.25.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.26.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,24 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.26** (12 Sep 2026) — "how about there is two 3 line horizontal button,
+  does it make sense?" No. `≡` was **Open folders** in the nav pair AND
+  **Lists** in the format pair, three buttons apart on the same 390px row, with
+  a third `≡` on `≡ Preview` inside the `⋯`. The folders button is **📁**
+  (titled *Folders*) in all five places Pane 3 renders it, Preview is **▤**,
+  and `≡` is left with one job. The check names neither button — it sweeps
+  every glyph-only control in the edit chrome and fails if one glyph calls two
+  functions. And the three menus are organised: `+` is now **INSERT AT THE
+  CURSOR / ABOUT THIS NOTE / GO TO / OPEN TABS**, split by *what the action
+  does* (the same line v04.21 drew between 🧰 and ⚙), and **every button
+  carries a word** — `❝ Quote`, `─ Divider`, `↩ Undo`, `🔖 Bookmark`, and 📦
+  Archive borrowing its own `title` through CSS so it still reads right when
+  it flips to Unarchive. Written once, rendered twice: `_EB_INSERT` /
+  `_EB_LISTS` / `_ebSectionToolsHTML()` generate the bare-glyph form for a
+  laptop's bar and the labelled form for the phone's menu, so the two cannot
+  drift. 🏷 stays a toggle (a tag suggestion list is absolutely positioned and
+  a scrolling popover would clip it). 200/200 app checks (up from 197) and
+  11/11 ship checks.
 - **v04.25** (11 Sep 2026) — "Check your work, the bar is still there." Third
   time asked, and the first two answers were both wrong in what they took the
   owner to MEAN. v04.22 hid the tab bar while editing on a phone **only when
@@ -71,20 +89,6 @@ must never accumulate here instead of there.
   flip** (Created ⇄ Updated, swapped in place so `#ed` is never rebuilt), on
   the versioning bar, with the section-tools `⋯` after it. 189/189 app checks
   (up from 162) and 11/11 ship checks.
-- **v04.21** (11 Sep 2026) — the owner circled 🧰 and ⚙ and named five items in
-  Settings that were not settings: each of them writes into the notebook or
-  into a note. So the line is now **🧰 Tools = things you do TO the notebook**
-  (create, insert, view, save) and **⚙ Settings = the app itself** (account,
-  sync, backups, export). Every group in both menus carries a heading on a
-  `--hover` strip instead of a bare hairline. Nothing renamed, nothing lost —
-  the same 26 actions. Rows are **44px on a phone** now (they were 31px,
-  below the bar v04.17/v04.18 set), which costs height, so a menu too tall
-  scrolls inside a cap `_sbDDFit()` measures from the space under its button,
-  with an inset fade saying so. The round's own fault: the menus are anchored
-  `right:0` to a button near the LEFT edge of the sidebar, so the widened
-  Tools menu hung **88px off the left of the screen** — found by a screenshot,
-  because no check had ever opened a menu. 162/162 app checks (up from 144)
-  and 11/11 ship checks.
 
 ---
 
@@ -266,6 +270,17 @@ traps belong in `tools/README.md`, not here.)*
   surface invisible, read its real size, place it against the real button, and
   clamp — never write a number and hope. Cost: v04.21 caught in build by a
   screenshot; the bottom sheet shipped and the owner reported it in v04.22.
+- **One glyph, one job — and a bare glyph is not a label.** `≡` was Open
+  folders in the nav pair and Lists in the format pair, three buttons apart on
+  the same phone row, with a third `≡` on `≡ Preview` inside the `⋯` menu.
+  Nothing was broken; it was simply unreadable, and the owner asked whether it
+  made sense. Two rules: a glyph does ONE thing per screen (the guard is a
+  sweep — every glyph-only control mapped to the function it calls, so it
+  catches the next collision too), and anything in a MENU carries a word,
+  because a menu is read by someone who did not write it (`🔖` alone, `❝`
+  alone, `📦` alone). A bar may be terse; a menu may not. Render both forms
+  from one table so they cannot drift. Cost: raised by the owner in v04.26,
+  after `⋯` had already cost a round for the same reason.
 - **When the owner repeats themselves, the reading is wrong, not the words.**
   "Everything on ONE bar in MOBILE" was answered three times: hide the tab bar
   when it is empty (it never is — they have tabs), then take two buttons off

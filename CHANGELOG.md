@@ -1958,3 +1958,98 @@ two buttons". A new check proves the tabs are still reachable the only way
 that counts: it opens `+`, finds three rows all calling `tabSelect()`, clicks
 one with a real click, and reads back that `ST.article` really moved to that
 note and the bar really came back.
+
+---
+
+## v04.26 — one glyph, one job; and three menus organised (12 Sep 2026)
+
+> now organise the buttons under +, three horizontal button and the tag icon
+> the most elegantly you skilled,
+> Then, how about there is two 3 line horizontal button, does it make sense?
+
+### The second question first: no, it did not make sense
+
+`≡` was doing two different jobs, three buttons apart, on the same 390px row:
+
+```
+◀  ≡  |  Aa  H  ≡  +  🏷  💾 Save
+   ↑           ↑
+   open        bulleted
+   folders     lists
+```
+
+And a third `≡` was inside the `⋯` menu, on `≡ Preview`.
+
+- The folders button is **📁** now, titled *Folders* — it says where it goes,
+  which a hamburger never did. Changed in all five places Pane 3 renders it,
+  so read mode and edit mode agree.
+- `▤ Preview` replaces `≡ Preview`, matching `▤` everywhere else in the app.
+- `≡` is left with exactly one job: lists.
+
+The check that guards this **names neither button**. It sweeps every visible
+glyph-only control in the edit chrome, maps each glyph to the function it
+calls, and fails if one glyph has two jobs — so it catches the next collision
+as well as this one.
+
+### The menus, organised
+
+The `+` menu was a bare row of five emoji, then a heading lumping three
+unrelated things together, then two more groups. It is three groups now, and
+the line between them is **what the action does**:
+
+```
++
+ INSERT AT THE CURSOR
+   🖼 Image      🔗 Link
+   🔖 Bookmark   @ Mention
+   💬 Phrase     📋 Template
+ ABOUT THIS NOTE
+   [General]   📎 Attach (1)
+   📦 Archive
+ GO TO
+   📅 Calendar   ＋ Add Tab
+ OPEN TABS · 3
+   ◆ Seeded note one
+   Seeded note two
+   Archived seeded note
+```
+
+Same line v04.21 drew between 🧰 Tools and ⚙ Settings: put something *in* the
+note / say what the note *is* / *leave* the note.
+
+**Every button carries a word.** That is the v04.23 lesson applied before it
+was paid for again: a bare 🔖 or ❝ means nothing to someone who did not write
+it. So `≡` gained `Lists and blocks` with `❝ Quote` and `─ Divider` spelled
+out, `↩ Undo / ↪ Redo / 🕐 History / 🔍 Find` are words now, and 📦 Archive
+borrows its own `title` as its label through CSS — which keeps saying the
+right thing when it flips to *Unarchive*.
+
+**Written once, rendered twice.** The insert actions and the list blocks are
+each a small table now (`_EB_INSERT`, `_EB_LISTS`), and `_ebInsertHTML(labelled)`
+/ `_ebListsHTML(labelled)` render the bare-glyph form for a laptop's bar and
+the labelled form for the phone's menu. A second copy of the markup would have
+drifted; this cannot. `_ebSectionToolsHTML()` does the same for Collapse /
+Expand / Preview, which appear both under `H` and on the versioning bar's `⋯`.
+
+**🏷 is unchanged and deliberately so.** It is a toggle rather than a menu
+because the tag suggestion list is absolutely positioned and would be clipped
+inside a scrolling popover. It already carries the tag count.
+
+Two faults in this round's own work, both caught by measurement rather than by
+reading the code:
+
+- a labelled 📦 Archive pushed the type row past the menu edge and was clipped
+  — `.nti-chips` and `.kind-act` are siblings on one flex line, so the row
+  could not wrap. The action group takes the whole width now;
+- `_ebSectionToolsHTML()` with no note id emitted `_edColAll(true,)`. A
+  trailing comma in a call is **legal JavaScript**, which is precisely why it
+  would never have been noticed.
+
+### Measured
+
+197 → 200 app checks, and 11/11 ship checks. Tablet and desktop untouched.
+
+The group check also failed on its first run, counting three groups where
+there are four — because `seedDB()` has no tabs and `OPEN TABS` only exists
+when there are. That is the v04.24 lesson, one round old, caught here by
+running the check rather than trusting it.
