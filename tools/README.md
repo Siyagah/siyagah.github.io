@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 219 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 236 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -192,6 +192,21 @@ or quietly lose the notebook, none of which need a browser:
   proved still behind the full menu, 44px rows, four or more distinct widths
   (which a stretched column cannot show), no scrolling — and `⧉ Make a copy`
   counted through `DB.articles`;
+- **the Attach rows pair up, and the full ⋯ menu stops hanging** (v04.32) —
+  the Attach group asked the owner's own question at six phone widths
+  (360→600): *is any row alone on its line?*, which is the one a single width
+  cannot answer (three rows fit the first line from 410px and the fourth needs
+  537px, so only the range shows the gap every real phone falls into), with a
+  laptop proved NOT paired so the narrow card stays as it was; and the full ⋯
+  menu opened **by a real mouse click and looked at again 250ms later** — the
+  v04.12 question, which is what found `⋯ All actions` dead on arrival in
+  v04.31 — then measured for named non-empty groups with no separator line
+  left over, rows packing onto at most half as many lines as there are rows,
+  four or more distinct widths, 44px, edge to edge, wholly on screen, no
+  scrolling, a sub-panel re-placed rather than left hanging, `#ctx` handed
+  back clean for the four other menus that borrow it, **no glyph doing two
+  different jobs** (mapped glyph → the functions its rows call), and a tablet
+  and a laptop keeping the anchored column;
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both

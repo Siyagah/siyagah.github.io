@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.31.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.32.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,29 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.32** (12 Sep 2026) — two screenshots of the phone's read view.
+  **`📁 Folder · 1 attached`**: the word went, the count stayed — but the word
+  alone would NOT have done what was asked, and the measurement said so.
+  Dropping it saves 52px; with the four Attach rows flowing free, three fit
+  the first line from **410px** of screen and the fourth needs **537px**, so
+  every common phone (412, 414, 428, 430) lands in the gap and strands
+  `🗄 MyDatabase` alone — the shape in the screenshot. They wrap as two
+  **pairs** under 640px, each button still sized to its own words; above
+  640px `.eb-pair` is `display:contents` and the 260px card is untouched.
+  **The full `⋯` menu** was the last phone surface that never got v04.29:
+  21 rows of 155px hanging in a 167px column, and six grey separator lines
+  doing the work six headings should do. It is the same card as the other
+  palettes now — `THIS NOTE` / `MARK IT` / `PUT IT IN` / `REMIND & REVISE` /
+  `REMOVE`, **21 rows on 9 lines**, 14 distinct widths, 44px, 629px of an
+  844px phone, no scrolling — built from **one table rendered two ways**
+  (`_artCtxGroups()`) so the phone's card and the laptop's column cannot
+  become different menus. Three glyph collisions inside that one menu fell
+  out of writing it down (`🏷` was NTI Types and Tags, `↺` was Reopen and
+  Remove-from-practice, `✅` was In-favourites and Mark-as-done). **And
+  `⋯ All actions` — the row v04.31 added — never worked**: a synthesised
+  event again, the v04.12 defect verbatim, measured dead on `origin/main`
+  before anything was touched. 236/236 app checks (up from 219) and 11/11
+  ship checks.
 - **v04.31** (12 Sep 2026) — three questions off one screenshot of the phone's
   read bar. **🏠 vs 📁**: they do land in the same place (`goHome()` ends on
   `showPane('sb')`, `backFromP3()` is only that call) — and v04.23 had already
@@ -79,25 +102,6 @@ must never accumulate here instead of there.
   bar now, full width. And the tag box is the FIRST child of the `+` menu,
   above every heading: it is the one thing in there you reach for while still
   writing. 206/206 app checks (up from 202) and 11/11 ship checks.
-- **v04.27** (12 Sep 2026) — five asks off two screenshots of the phone's
-  menus. **`≡`**: the `↩ ↪ 🕐 🔍` block goes FIRST (it is what you reach for
-  mid-sentence; a list block is a choice made once), `Lists and blocks`
-  second, and **📦 Archive** joins the bottom under `THIS NOTE` with
-  `✓ Finish` / `↺ Re-open` — the note's state, not something attached to it.
-  **`+`**: `📎 Attach (1) ▾` was a button whose only job was to open four more,
-  so it is **spread open** — `🏷 Note Type · General`, `📁 Folder · 1
-  attached`, `📓 My Journal`, `🗄 MyDatabase`, each showing the VALUE it holds,
-  full width because two-up clipped *MyDatabase*. The group is
-  **`ATTACH TO THE NOTE`** now, not "About this note". And the owner's
-  question — "do we need a separate tag button when the + button contains
-  it?" — answered no: **🏷 left the bar and the tag ROW with it**; the tag
-  editor lives in `+`, chips, input and suggestions. v04.23 had made it a
-  toggle because `.fl-pop` is `overflow:auto` and would clip an absolutely
-  positioned suggestion list; `_tagSuggestPlace()` fixes that properly —
-  `position:fixed` is not clipped by an overflow ancestor. 🏷 stays with Note
-  Type, tags take `#`. The bar is seven controls: `◀ 📁 | Aa H ≡ + | 💾 Save`.
-  202/202 app checks (up from 200) and 11/11 ship checks.
-
 ---
 
 ## What this is
@@ -263,6 +267,27 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **The owner's suggested FIX is a description of the problem, not a spec —
+  measure whether it actually gets them what they asked for.** "Database can
+  be moved up by removing 'attached' from the Folder button" was a correct
+  diagnosis and an insufficient fix: the word is worth 52px, and with the four
+  Attach rows flowing free, three fit the first line from 410px of screen
+  while the fourth needs 537px. Every common phone lands in that gap, so
+  removing the word MOVES the boundary and strands the same row. Shipping the
+  literal instruction would have come back as "I asked for this already",
+  which is the three-round pattern below. Do the thing they asked for, then
+  measure the OUTCOME they described — across the range, not at one width,
+  because a single width cannot show a gap. Cost: caught in build in v04.32,
+  only because the range was measured before the change was called done.
+- **A surface that was fixed everywhere else is still broken where no round
+  has looked.** v04.29 sized the `+` menu's actions to their words, v04.30 did
+  the read view's card, v04.31 the `⋯` card — and the full `⋯` menu behind
+  them was still 21 rows of 155px hanging in a 167px column, because it is the
+  one the owner reaches LAST. When a round establishes a layout rule, list
+  every surface that layout rule applies to and say which ones this round did
+  not do; "the menus are packed now" was true of three menus out of four for
+  three rounds. Cost: reported by the owner in v04.32, three rounds after the
+  rule was set.
 - **A menu is anchored to its button, and the button is not in the middle of
   the screen.** Both header dropdowns are `right:0` on a wrap that sits near
   the LEFT edge of the sidebar, so widening the Tools menu to 238px hung it

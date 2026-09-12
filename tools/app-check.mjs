@@ -2887,6 +2887,186 @@ await app.close();
       `goHome buttons on the tablet read bar: ${sweep.home}`);
   }
 
+  /* 5a-v. v04.32 — TWO SCREENSHOTS, TWO QUESTIONS ════════════════════════
+     (1) "Easily database can be moved to up by removing 'attached' with
+     'Folder' button." The four Attach rows flowed free, so the fourth was
+     stranded on a line of its own with the rest of that line empty.
+     Asked across the whole phone range rather than at one width, because the
+     measurement is what made the answer bigger than the owner's suggestion:
+     dropping the word saves 52px, three rows fit the first line from 410px
+     of screen and the fourth needs 537px, so every common phone lands in the
+     gap and strands MyDatabase exactly as the screenshot shows. The rows pair
+     up now, so the question the check asks is the owner's: is any Attach row
+     alone on its line? */
+  {
+    for (const w of [360, 390, 412, 430, 480, 600]) {
+      const s = await openApp({ viewport: { width: w, height: 844 }, db: seedDB() });
+      await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); });
+      await s.page.waitForTimeout(400);
+      const m = await s.page.evaluate(() => {
+        /* Either way in — the toolbar folds the type group behind 🏷 only when
+           it does not fit, so on a wider phone 📎 Attach is the real button. */
+        const b = document.getElementById('p3h-nti-grp') || document.querySelector('#p3h .nti-attach-btn');
+        if (!b || !b.offsetParent) return { reached: false };
+        b.click();
+        const p = document.getElementById('p3h-pal');
+        if (!p || !p.classList.contains('open')) return { reached: false };
+        /* The Attach four are the rows this group builds — identified by the
+           FUNCTION each calls, so a relabel cannot fake the measurement. */
+        const want = ['openNtiPicker\\(', 'openPicker\\(|editing to change', 'openJournalPicker\\(', 'openMyDatabasePicker\\('];
+        const rows = [...p.querySelectorAll('.eb-act')].filter((x) => x.offsetParent)
+          .filter((x) => want.some((f) => new RegExp(f).test(x.getAttribute('onclick') || '')));
+        const lines = {};
+        rows.forEach((x) => { const t = Math.round(x.getBoundingClientRect().top);
+          (lines[t] = lines[t] || []).push(x.textContent.trim().replace(/\s+/g, ' ')); });
+        const pr = p.getBoundingClientRect();
+        return { reached: true, n: rows.length,
+          per: Object.values(lines).map((v) => v.length),
+          alone: Object.values(lines).filter((v) => v.length === 1).map((v) => v[0]),
+          widths: new Set(rows.map((x) => Math.round(x.getBoundingClientRect().width))).size,
+          over: rows.filter((x) => x.getBoundingClientRect().right > pr.right - 6).length,
+          folder: rows.map((x) => x.textContent.trim().replace(/\s+/g, ' ')).find((t) => /Folder/.test(t)) || '' };
+      });
+      await s.close();
+      r.check(m.reached && m.n === 4 && m.alone.length === 0 && m.over === 0 && m.widths >= 3,
+        `phone ${w}px: no Attach row is stranded alone on its line, and each is sized to its words`,
+        m.reached ? `rows per line ${JSON.stringify(m.per)} · alone: ${m.alone.join(', ') || 'none'}`
+          + ` · ${m.widths} distinct widths · overflowing ${m.over}` : 'the Attach card could not be opened');
+      /* And the word itself: the count stays, "attached" goes. */
+      if (w === 390) {
+        r.check(/Folder/.test(m.folder) && /\d/.test(m.folder) && !/attached/i.test(m.folder),
+          'the 📁 Folder row shows the count without the word "attached"', `reads “${m.folder}”`);
+      }
+    }
+    /* A tablet and a laptop never see the pairing: `.eb-pair` is
+       display:contents there, and the card is 260px — a forced pair would
+       ellipsis both of its buttons. */
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    const pair = await s.page.evaluate(() => {
+      const a = DB.articles.find((x) => x.id === 'a1');
+      const p = document.createElement('div'); p.className = 'fl-pop open';
+      p.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden';
+      p.innerHTML = _ebAttachHTML(a, 'x'); document.body.appendChild(p);
+      const d = getComputedStyle(p.querySelector('.eb-pair')).display;
+      p.remove(); return d;
+    });
+    await s.close();
+    r.check(pair === 'contents', 'laptop: the Attach rows are not paired — the narrow card is untouched',
+      `.eb-pair display is ${pair}`);
+  }
+
+  /* (2) "Organise the hanging buttons more elegant way." The full ⋯ menu was
+     twenty-one rows of 155px hanging in a 167px column. Opened the way the
+     owner opens it — a REAL mouse click, looked at again 250ms later, which
+     is the v04.12 rule and the check that catches a menu closed in the tick
+     it opened. */
+  {
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); });
+    await s.page.waitForTimeout(450);
+    await s.page.click('#p3h-act-grp');
+    await s.page.waitForTimeout(300);
+    const at = await s.page.evaluate(() => { const b = [...document.querySelectorAll('#p3h-pal .p3h-pal-btn')]
+      .find((x) => /All actions/.test(x.textContent)).getBoundingClientRect();
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; });
+    await s.page.mouse.click(at.x, at.y);
+    await s.page.waitForTimeout(250);
+    const card = await s.page.evaluate(() => {
+      const m = document.getElementById('ctx');
+      const painted = getComputedStyle(m).display !== 'none';
+      const rows = [...m.querySelectorAll('.ci')].filter((x) => x.offsetParent);
+      const lines = {};
+      rows.forEach((x) => { const t = Math.round(x.getBoundingClientRect().top);
+        (lines[t] = lines[t] || []).push(x); });
+      const groups = []; let cur = null;
+      for (const el of m.children) {
+        if (el.classList.contains('fl-pop-hd')) { cur = { head: el.textContent.trim(), n: 0 }; groups.push(cur); }
+        else if (cur && el.classList.contains('ci')) cur.n++;
+      }
+      /* v04.26, inside one surface: no glyph may do two different jobs here. */
+      const jobs = {};
+      rows.forEach((x) => { const g = (x.textContent.trim().match(/^\S+/) || [''])[0];
+        const fn = ((x.getAttribute('onclick') || '').match(/(\w+)\(/g) || []).join(',');
+        (jobs[g] = jobs[g] || new Set()).add(fn); });
+      const b = m.getBoundingClientRect();
+      const w = rows.map((x) => Math.round(x.getBoundingClientRect().width));
+      return { painted, card: m.classList.contains('ctx-card'), groups,
+        rows: rows.length, lines: Object.keys(lines).length,
+        seps: [...m.querySelectorAll('.csep')].filter((x) => x.offsetParent).length,
+        shortest: Math.min(...rows.map((x) => Math.round(x.getBoundingClientRect().height))),
+        widths: new Set(w).size, span: Math.max(...w) - Math.min(...w),
+        left: Math.round(b.left), right: Math.round(b.right), top: Math.round(b.top),
+        bottom: Math.round(b.bottom), vw: innerWidth, vh: innerHeight,
+        scrolls: m.scrollHeight > m.clientHeight + 1,
+        twoJobs: Object.entries(jobs).filter(([, v]) => v.size > 1).map(([k]) => k) };
+    });
+    /* The sub-panels are a different height, so each repaint is re-placed —
+       a card left at the old top hangs off the bottom of the screen. */
+    await s.page.evaluate(() => _ctxSub('a1', 'folders'));
+    await s.page.waitForTimeout(200);
+    const sub = await s.page.evaluate(() => { const m = document.getElementById('ctx');
+      const b = m.getBoundingClientRect();
+      return { top: Math.round(b.top), bottom: Math.round(b.bottom), vh: innerHeight,
+        back: !!m.querySelector('.ci-back'), left: Math.round(b.left) }; });
+    /* And #ctx is shared with four other menus, so closing it must hand the
+       element back exactly as it was found. */
+    const clean = await s.page.evaluate(() => { hideCtx(); const m = document.getElementById('ctx');
+      return { cls: m.className, width: m.style.width }; });
+    await s.close();
+
+    r.check(card.painted && card.card,
+      'phone: ⋯ All actions really opens the full menu — still painted 250ms after a real click',
+      `painted ${card.painted} · card layout ${card.card} (v04.31 handed showArtCtx a fake event and`
+      + ' the document closer shut it in the same tick)');
+    const empty = card.groups.filter((g) => g.n === 0);
+    r.check(card.groups.length >= 4 && empty.length === 0 && card.seps === 0,
+      'phone: the full ⋯ menu is split into named groups, with no unnamed separator lines left',
+      card.groups.map((g) => `${g.head} (${g.n})`).join(' · ') + ` · visible separators ${card.seps}`);
+    /* 1.5, not 2. The first cut of this check demanded an average of exactly
+       two rows a line and failed at 17 rows on 9 lines — which is a cluster,
+       not a column, and would flip back and forth on any label change. The
+       durable bar is the one a column can never clear whatever its labels
+       say: a column is 1.0 rows a line by definition, so half again as dense
+       is already proof of packing. */
+    r.check(card.rows >= card.lines * 1.5 && card.widths >= 4 && card.span > 30,
+      'phone: those rows pack into a cluster and each is sized to its own words',
+      `${card.rows} rows on ${card.lines} lines · ${card.widths} distinct widths,`
+      + ` ${card.span}px between the widest and the narrowest`);
+    r.check(card.shortest >= 44 && card.left <= 8 && card.right >= card.vw - 8
+      && card.top >= 0 && card.bottom <= card.vh && !card.scrolls,
+      'phone: the full ⋯ menu runs edge to edge, fits the screen, and every row can be hit',
+      `${card.left}→${card.right} of ${card.vw} · ${card.top}→${card.bottom} of ${card.vh}`
+      + ` · shortest row ${card.shortest}px · scrolls ${card.scrolls}`);
+    r.check(card.twoJobs.length === 0,
+      'phone: in the full ⋯ menu no glyph does two different jobs',
+      card.twoJobs.length ? `used for two things: ${card.twoJobs.join(', ')}` : 'every glyph is one job');
+    r.check(sub.back && sub.top >= 0 && sub.bottom <= sub.vh && sub.left <= 8,
+      'phone: a sub-panel of that menu is re-placed, not left hanging off the screen',
+      `◀ Back ${sub.back} · ${sub.top}→${sub.bottom} of ${sub.vh}`);
+    r.check(!/ctx-card/.test(clean.cls) && !clean.width,
+      'closing the menu hands #ctx back clean for the four other menus that borrow it',
+      `class “${clean.cls}” · inline width “${clean.width}”`);
+  }
+
+  /* And a tablet and a laptop keep the anchored column: there #ctx is a real
+     right-click menu at a cursor, already as wide as its longest word. */
+  for (const vp of [{ name: 'tablet', w: 820, h: 1180 }, { name: 'laptop', w: 1440, h: 900 }]) {
+    const s = await openApp({ viewport: { width: vp.w, height: vp.h }, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render(); });
+    await s.page.waitForTimeout(400);
+    const m = await s.page.evaluate(() => {
+      showArtCtx({ clientX: 40, clientY: 40, preventDefault() {}, stopPropagation() {} }, 'a1');
+      const m = document.getElementById('ctx');
+      return { card: m.classList.contains('ctx-card'), heads: m.querySelectorAll('.fl-pop-hd').length,
+        seps: m.querySelectorAll('.csep').length, rows: m.querySelectorAll('.ci').length,
+        wide: Math.round(m.getBoundingClientRect().width) };
+    });
+    await s.close();
+    r.check(!m.card && m.heads === 0 && m.seps >= 4 && m.rows >= 15 && m.wide <= 240,
+      `${vp.name}: the right-click menu is the anchored column it has always been`,
+      `card ${m.card} · ${m.rows} rows, ${m.seps} separators, ${m.wide}px wide`);
+  }
+
   /* 5b. v04.23 — the owner asked where the collapse/expand ⋯ had gone while
      looking straight at it: a bare glyph beside a grey date pill reads as
      punctuation. It wears the versioning bar's pill now, it has to OPEN on a
