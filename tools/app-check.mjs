@@ -2432,7 +2432,12 @@ await app.close();
      phone's bar because ≡ beside it (backFromP3 → showPane('sb')) lands on
      the same screen, and goHome() itself ends with that same call. It is
      proved reachable below instead of assumed. */
-  const EXEMPT = ['goHome'];
+  /* v04.27 — two more, both paid for below rather than waved through.
+     openAttachMenu was a button whose only job was to open four more; those
+     four are in the `+` menu directly now, so the opener has nothing left to
+     do. _ntiChipTap was "tap the type chip to change the type"; the phone has
+     a 🏷 Note Type row that calls openNtiPicker itself. */
+  const EXEMPT = ['goHome', 'openAttachMenu', '_ntiChipTap'];
   const lost = [...tabFns].filter((f) => !phoneFns.has(f) && !EXEMPT.includes(f));
   r.check(lost.length === 0 && phoneFns.size > 25,
     'phone: every control the unfolded bar reaches, the folded one still reaches',
@@ -2453,27 +2458,76 @@ await app.close();
     'phone: 🏠 Home is still one tap away — ≡ opens the sidebar and its logo is goHome()',
     homeOk.shown ? `.sb-logo onclick="${homeOk.fn}"` : 'the sidebar logo is not visible after ≡');
 
-  /* 🏷 opens the tag bar and 🏷 says how many tags there are — the whole
-     reason hiding the row is not the same as losing it. */
-  const tagBtn = await sPh.page.evaluate(() =>
-    ({ there: !!document.querySelector('.eb-tag-btn'),
-      count: (document.querySelector('.eb-tag-btn .eb-tag-n') || {}).textContent || '',
-      barBefore: !!document.querySelector('.p3h-tag-bar') }));
-  await sPh.page.click('.eb-tag-btn');
-  await sPh.page.waitForTimeout(250);
-  const tagOpen = await sPh.page.evaluate(() =>
-    ({ bar: !!document.querySelector('.p3h-tag-bar'),
-      input: !!document.getElementById('tag-inp'),
-      chips: document.querySelectorAll('.p3h-tag-bar .tag-chip').length }));
-  await sPh.page.click('.eb-tag-btn');
-  await sPh.page.waitForTimeout(250);
-  const tagShut = await sPh.page.evaluate(() => !!document.querySelector('.p3h-tag-bar'));
-  r.check(tagBtn.there && !tagBtn.barBefore && tagBtn.count === '1'
-    && tagOpen.bar && tagOpen.input && tagOpen.chips === 1 && !tagShut,
-    'phone: the tag bar is behind 🏷, which carries the count and really opens it',
-    `🏷 present ${tagBtn.there}, count "${tagBtn.count}", bar closed at first ${!tagBtn.barBefore}`
-      + ` · a real click opens it with ${tagOpen.chips} chip(s) and an input ${tagOpen.input}`
-      + ` · a second click shuts it ${!tagShut}`);
+  /* v04.27 — 🏷 left the bar and the tag ROW went with it: the owner asked
+     "do we need a separate tag button when the + button contains it?" and once
+     📎 Attach was spread open, it did not. So the check changes from "🏷 opens
+     the row" to "the `+` menu really holds the editor, and typing in it really
+     tags the note" — measured through DB, not through the DOM. */
+  await sPh.page.click('.eb-grp-btn[data-g="insert"]');
+  await sPh.page.waitForTimeout(300);
+  const tagIn = await sPh.page.evaluate(() =>
+    ({ btnGone: !document.querySelector('.eb-tag-btn'),
+      rowGone: !document.querySelector('.p3h-tag-bar'),
+      editor: !!document.querySelector('#eb-pop .eb-tagrow #tag-editor'),
+      input: !!document.querySelector('#eb-pop #tag-inp'),
+      chips: document.querySelectorAll('#eb-pop .tag-chip').length }));
+  if (tagIn.input) {
+    await sPh.page.click('#eb-pop #tag-inp');
+    await sPh.page.keyboard.type('viacheck');
+    await sPh.page.keyboard.press('Enter');
+    await sPh.page.waitForTimeout(300);
+  }
+  const tagLanded = await sPh.page.evaluate(() => (ST.etags || []).includes('viacheck'));
+  await sPh.page.evaluate(() => { ST.etags = (ST.etags || []).filter((t) => t !== 'viacheck');
+    if (ST.ebGroup) togEBGroup(ST.ebGroup); });
+  await sPh.page.waitForTimeout(200);
+  r.check(tagIn.btnGone && tagIn.rowGone && tagIn.editor && tagIn.input
+    && tagIn.chips === 1 && tagLanded,
+    'phone: the tag editor is inside the `+` menu, and typing in it really tags the note',
+    `separate 🏷 gone ${tagIn.btnGone} · tag row gone ${tagIn.rowGone}`
+      + ` · editor in the menu ${tagIn.editor} with ${tagIn.chips} existing chip(s)`
+      + ` · a typed tag reached ST.etags ${tagLanded}`);
+
+  /* The four rows that were behind 📎 Attach, in the menu itself — and the
+     opener gone, because a control that moves has to leave where it was
+     (v04.24). Named by the FUNCTION each row calls. */
+  await sPh.page.click('.eb-grp-btn[data-g="insert"]');
+  await sPh.page.waitForTimeout(300);
+  const att = await sPh.page.evaluate(() => {
+    const pop = document.getElementById('eb-pop');
+    const fns = [...pop.querySelectorAll('button')]
+      .map((b) => b.getAttribute('onclick') || '').join(' ');
+    const heads = [...pop.querySelectorAll('.fl-pop-hd')].map((h) => h.textContent.trim());
+    return { heads, opener: !!pop.querySelector('.nti-attach-btn'),
+      nti: /openNtiPicker\(/.test(fns), folder: /openPicker\(/.test(fns),
+      jrn: /openJournalPicker\(/.test(fns), mdb: /openMyDatabasePicker\(/.test(fns),
+      arch: /toggleArchive\(/.test(fns) };
+  });
+  await sPh.page.evaluate(() => { if (ST.ebGroup) togEBGroup(ST.ebGroup); });
+  await sPh.page.waitForTimeout(200);
+  r.check(att.nti && att.folder && att.jrn && att.mdb && !att.opener
+    && att.heads.some((h) => /attach to the note/i.test(h)) && !att.arch,
+    'phone: the four Attach rows are spread open in `+`, the opener is gone, Archive is not',
+    `Note Type ${att.nti} · Folder ${att.folder} · Journal ${att.jrn} · MyDatabase ${att.mdb}`
+      + ` · 📎 opener still there ${att.opener} · Archive still here ${att.arch}`
+      + ` · headings: ${att.heads.join(' | ')}`);
+
+  /* And the ≡ menu: undo block first, then lists, then 📦 Archive — the order
+     the owner asked for, measured by where the headings actually fall. */
+  await sPh.page.click('.eb-grp-btn[data-g="lists"]');
+  await sPh.page.waitForTimeout(300);
+  const lm = await sPh.page.evaluate(() => {
+    const pop = document.getElementById('eb-pop');
+    return { heads: [...pop.querySelectorAll('.fl-pop-hd')].map((h) => h.textContent.trim()),
+      arch: [...pop.querySelectorAll('button')].some((b) => /toggleArchive\(/.test(b.getAttribute('onclick') || '')) };
+  });
+  await sPh.page.evaluate(() => { if (ST.ebGroup) togEBGroup(ST.ebGroup); });
+  await sPh.page.waitForTimeout(200);
+  const iUndo = lm.heads.findIndex((h) => /undo/i.test(h));
+  const iList = lm.heads.findIndex((h) => /lists/i.test(h));
+  r.check(iUndo === 0 && iList > iUndo && lm.arch,
+    'phone: the ≡ menu puts Undo·Redo·Find first, Lists second, and carries 📦 Archive',
+    `${lm.heads.join(' → ')} · Archive here ${lm.arch}`);
 
   /* ✕ left the tag bar with it, so it has to be somewhere the eye lands. */
   const stop = await sPh.page.evaluate(() => {

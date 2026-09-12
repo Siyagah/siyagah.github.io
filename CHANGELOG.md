@@ -2053,3 +2053,91 @@ The group check also failed on its first run, counting three groups where
 there are four — because `seedDB()` has no tabs and `OPEN TABS` only exists
 when there are. That is the v04.24 lesson, one round old, caught here by
 running the check rather than trusting it.
+
+---
+
+## v04.27 — Attach spread open, and the tag button retired (12 Sep 2026)
+
+Five things, from two screenshots of the phone's menus.
+
+### 1. `≡` — the undo block goes first
+
+> Move undo block above, (image1) The other one below.
+
+`↩ Undo · ↪ Redo · 🕐 History · 🔍 Find` is what you reach for **mid-sentence**;
+a list block is a choice you make once. So the undo group is first and
+`Lists and blocks` second.
+
+### 2. `+` — 📎 Attach is spread open
+
+> Spread-open the 'Attach' buttons.
+
+`📎 Attach (1) ▾` was a button whose only job was to open four more buttons —
+a tap spent just to find out what is under it. There is room, so it costs
+nothing now:
+
+```
+ATTACH TO THE NOTE
+  🏷 Note Type      General
+  📁 Folder         1 attached
+  📓 My Journal
+  🗄 MyDatabase
+  #  [seed ×]  + tag…
+```
+
+Each row shows the **value it currently holds** under its name, which the
+button never could. They run the full width: two-up clipped *MyDatabase* to
+*MyDatab…*, and a row whose whole point is to show a value cannot afford an
+ellipsis in its name.
+
+### 3. The group is called what it does
+
+> Name the block title (rename 'About this note' to Attach to the note',)
+
+Done — `ABOUT THIS NOTE` → `ATTACH TO THE NOTE`.
+
+### 4. 📦 Archive moved to `≡`
+
+> Archive button should move to 3line.
+
+It sits at the bottom of the `≡` menu under a `THIS NOTE` heading, with
+`✓ Finish` / `↺ Re-open` beside it when the note's type calls for them — they
+are the same kind of thing, the note's **state**, not something attached to
+it. It is gone from `+`, because a control that moves has to leave where it
+moved from (v04.24, paid for once already).
+
+### 5. No, we did not need a separate tag button
+
+> Do we need a seperate tag button when the + button contains it?
+
+Not once Attach is spread open. **🏷 left the bar and the tag row went with
+it** — the tag editor itself lives in the `+` menu now: chips, input,
+suggestions, all of it. The bar is down to seven controls:
+
+```
+◀  📁  |  Aa  H  ≡  +  |  💾 Save
+```
+
+The reason it was a separate toggle in v04.23 was that a tag suggestion list
+is absolutely positioned and a menu clips its own overflow (`.fl-pop` is
+`overflow:auto`), so the list would be cut off at the menu's edge. That is
+fixed properly rather than worked around: `position:fixed` is **not** clipped
+by an overflow ancestor, so `_tagSuggestPlace()` lifts the list out of the box
+and places it against the input's real rectangle. Off a menu, nothing changes.
+
+`🏷` stays with **Note Type** and tags take **`#`** — one glyph, one job
+(v04.26), and a Note Type is explicitly not a tag in this app's own
+vocabulary.
+
+### Measured
+
+200 → 202 app checks, and 11/11 ship checks. Tablet and desktop untouched —
+they keep their own bar, their own tag row and `📎 Attach` as it was.
+
+The new checks: the tag editor really inside `+` with a typed tag read back out
+of `ST.etags` (not out of the DOM); the four Attach rows identified by the
+FUNCTION each calls, with the opener proved gone and Archive proved absent;
+and the `≡` menu's heading ORDER, so "undo first" cannot quietly drift back.
+Two functions are exempted from the nothing-lost sweep — `openAttachMenu`,
+which now has nothing left to open, and `_ntiChipTap`, replaced by the
+🏷 Note Type row — each exemption paid for by asserting what replaced it.

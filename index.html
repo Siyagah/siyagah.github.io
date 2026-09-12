@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.26">
+<meta name="app-version" content="04.27">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2277,11 +2277,28 @@ sup.ann-sup:hover{text-decoration:underline}
 .eb-tab-row{flex:1 0 100%;justify-content:flex-start!important;text-align:left;
   font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .eb-tab-row.on{background:var(--hover);border-color:var(--t3);font-weight:700}
-.eb-tag-btn{position:relative}
-.eb-tag-btn .eb-tag-n{font-size:10px;font-weight:700;margin-left:2px;vertical-align:top;
-  color:var(--green2)}
-.eb-tag-btn.on{background:var(--hover);border-color:var(--t3)}
-.eb-tag-btn.on .eb-tag-n{color:var(--t1)}
+/* v04.27 — a second line under an action's name, for the value it currently
+   holds: "Note Type — General", "Folder — 1 attached". It is what the \ud83d\udcce Attach
+   button used to hide behind one more tap. */
+.fl-pop .eb-act .eb-act-s{display:block;font-size:11px;font-weight:500;color:var(--t3);
+  margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl-pop .eb-act{align-items:flex-start}
+/* The Attach rows and the note-state rows run the full width. Two-up clipped
+   "MyDatabase" to "MyDatab…", and a row whose whole point is to show the value
+   it holds cannot afford an ellipsis in its NAME; full-width also puts the
+   menu's ✕ on a line of its own instead of beside an action. */
+.fl-pop .eb-wide{flex:1 0 100%}
+.fl-pop .eb-act .eb-act-i{margin-top:1px}
+/* The tag editor, inside the menu. # is the tag glyph here because \ud83c\udff7 already
+   belongs to Note Type one row above, and a Note Type is explicitly not a tag. */
+.fl-pop .eb-tagrow{flex:1 0 100%;display:flex;align-items:center;gap:8px;
+  border:1px solid var(--border2);border-radius:10px;padding:6px 10px;min-height:44px;
+  background:var(--paper)}
+.fl-pop .eb-tagrow-l{flex:0 0 18px;text-align:center;font-size:15px;font-weight:800;
+  color:var(--t3);line-height:1}
+.fl-pop .eb-tagrow .tag-editor{flex:1;min-width:0;display:flex;flex-wrap:wrap;
+  align-items:center;gap:4px}
+.fl-pop .eb-tagrow .tag-inp{min-width:60px;font-size:13px}
 /* ✕ leaves the tag bar for the title row on the phone. Save leaves edit mode
    as well, and every keystroke is auto-saved, so this is "stop editing". */
 .p3c-stop{flex-shrink:0;margin-left:4px}
@@ -2580,7 +2597,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.26</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.27</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3815,13 +3832,13 @@ function renderP3H(){
        closed bar still says what the note has, and the ✕ that lived on it
        moves to the title row (Save leaves edit mode too, and every keystroke
        is auto-saved, so ✕ is "stop editing", not "discard"). */
-    if(!_p3OneBar()||ST.tagBarOpen){
+    if(!_p3OneBar()){
       h+=`<div class="p3h-tag-bar">`
         +`<span class="tag-ed-lbl">🏷 Tags</span>`
         +`<div class="tag-editor" id="tag-editor" onclick="document.getElementById('tag-inp')?.focus()"></div>`
         +`<div class="p3h-eflx"></div>`
         +`<div class="p3h-tag-bar-acts">`
-        +`<button class="btn bn bi" onclick="${_p3OneBar()?'togTagBar()':'cancelEdit()'}" title="${_p3OneBar()?'Close the tag bar':'Cancel (Esc)'}">✕</button>`
+        +`<button class="btn bn bi" onclick="cancelEdit()" title="Cancel (Esc)">✕</button>`
         +'</div></div>';
     }
     if(!_mobE){
@@ -8744,17 +8761,15 @@ function _p3EditIconsHTML(curA){
       +`<button class="et" onmousedown="event.preventDefault()" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>`)
     +_popBtnHTML(curA.id,'float','et',false)
     +_popBtnHTML(curA.id,'panel','et',false)
-    +(_mob?_tagBtnHTML():'')
     +(_mob?`<button class="et et-save" onmousedown="event.preventDefault()" onclick="saveArt()" title="Save this note">💾 Save</button>`:'');
 }
 /* The count is the point: with the bar closed, this is the only thing on
    screen that says the note is tagged at all. */
-function _tagBtnHTML(){
-  const n=(ST.etags||[]).length;
-  return '<button class="et eb-tag-btn'+(ST.tagBarOpen?' on':'')+'" onmousedown="event.preventDefault()"'
-    +' onclick="togTagBar()" title="Tags'+(n?' ('+n+')':'')+' — show or hide the tag bar">\ud83c\udff7'
-    +(n?'<span class="eb-tag-n">'+n+'</span>':'')+'</button>';
-}
+/* v04.27 — 🏷 left the bar. The owner asked "do we need a separate tag
+   button when the + button contains it?" — and once 📎 Attach was spread open
+   into `+`, the honest answer was no: the tag editor itself lives in that
+   menu now, chips, input, suggestions and all. The phone's tag ROW went with
+   it; a tablet and a laptop keep theirs untouched. */
 /* v04.25 — the tab bar does not render at all while editing on a phone, so
    every note that was on it is listed here instead. Switching to one goes
    through tabSelect(), exactly as tapping its chip on the bar did — the same
@@ -8780,11 +8795,6 @@ function _ebOpenTabsHTML(){
     +(ownArt?row(ownArt,true):'')
     +ids.map(id=>{const a=DB.articles.find(x=>x.id===id);return a?row(a,false):'';}).join('');
 }
-function togTagBar(){
-  ST.tagBarOpen=!ST.tagBarOpen;
-  renderP3H();            /* header only — #ed is in Pane 3 and keeps its caret */
-  if(ST.tagBarOpen)document.getElementById('tag-inp')?.focus({preventScroll:true});
-}
 function togEBGroup(g){
   const btn=document.querySelector('.eb-grp-btn[data-g="'+g+'"]');
   if(!btn)return;
@@ -8792,6 +8802,10 @@ function togEBGroup(g){
   ST.ebGroup=g;
   document.querySelectorAll('.eb-grp-btn').forEach(b=>b.classList.toggle('on',b===btn));
   _openFloatPop('eb-pop',btn,_buildEBSub(g),true);
+  /* The tag editor is markup the menu carries but renderTagEditor() fills —
+     a no-op when #tag-editor is not in the document, so this is simply where
+     "the document now has one" happens on a phone. */
+  try{renderTagEditor();}catch(e){}
 }
 /* ══ v04.26 — ONE TABLE, TWO RENDERINGS ════════════════════════
    Every "put something into the note" action, written once. A laptop's bar
@@ -8842,6 +8856,55 @@ function _ebInsertHTML(labelled){
    them: the ⋯ on the versioning bar and the H group on the phone's bar.
    ▤ Preview, not ≡ Preview — ≡ already had two other jobs on this screen,
    which is the very thing this round is fixing. */
+/* v04.27 — the four rows that were behind 📎 Attach, spread open in the `+`
+   menu itself. A button whose only job is to open four more buttons is a tap
+   the owner has to spend to find out what is under it; there is room here for
+   all four, so there is no reason to charge for it.
+   🏷 stays with NOTE TYPE, which is where this app has always put it, and
+   tags take `#` — one glyph one job (v04.26), and "Note Type" is explicitly
+   not a tag in this app's own vocabulary.
+   openNtiPicker() anchors against the element it is handed, so the pop is
+   closed AFTER it opens, never before: a hidden row measures 0×0 and the
+   picker lands in the top-left corner. */
+function _ebAttachHTML(a){
+  const aid=a.id;
+  const kinds=noteKinds().filter(k=>new Set(artKinds(a)).has(k.id)).map(k=>k.name);
+  const fN=_attachCount(a);
+  const row=(ico,lbl,onclick,sub)=>'<button class="et eb-act eb-wide" onmousedown="event.preventDefault()"'
+    +' onclick="'+onclick+'" title="'+esc(lbl+(sub?' — '+sub:''))+'">'
+    +'<span class="eb-act-i">'+ico+'</span><span class="eb-act-l">'+esc(lbl)
+    +(sub?'<span class="eb-act-s">'+esc(sub)+'</span>':'')+'</span></button>';
+  return '<div class="fl-pop-hd">Attach to the note</div>'
+    +row('\ud83c\udff7','Note Type',"openNtiPicker('"+aid+"',this);_closeStickyPop('eb-pop')",
+         kinds.length?kinds.join(', '):'none yet')
+    +row('\ud83d\udcc1','Folder',"_closeStickyPop('eb-pop');openPicker()",fN?fN+' attached':'none yet')
+    +row('\ud83d\udcd3','My Journal',"_closeStickyPop('eb-pop');openJournalPicker('"+aid+"')")
+    +row('\ud83d\uddc4','MyDatabase',"_closeStickyPop('eb-pop');openMyDatabasePicker('"+aid+"')")
+    +'<div class="eb-tagrow"><span class="eb-tagrow-l">#</span>'
+    +'<div class="tag-editor" id="tag-editor" onclick="document.getElementById(\'tag-inp\')?.focus()"></div>'
+    +'</div>';
+}
+/* \ud83d\udce6 Archive left the `+` menu for the ≡ one, where the owner asked for it.
+   ✓ Finish / ↺ Re-open go with it: they are the same kind of thing — the
+   note's STATE, not something attached to it. */
+function _ebNoteStateHTML(a){
+  const aid=a.id;
+  const hasNag=noteKinds().filter(k=>new Set(artKinds(a)).has(k.id)).some(k=>k.nag);
+  let h='<div class="fl-pop-hd">This note</div>';
+  h+='<button class="et eb-act eb-wide" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');toggleArchive(\''+aid+'\')"'
+    +' title="'+(a.archived?'Bring this note back out of the archive':'Put this note in the archive')+'">'
+    +'<span class="eb-act-i">'+(a.archived?'\ud83d\udce4':'\ud83d\udce6')+'</span>'
+    +'<span class="eb-act-l">'+(a.archived?'Unarchive':'Archive')+'</span></button>';
+  if(a.finalised){
+    h+='<button class="et eb-act eb-wide" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');unfinishNote(\''+aid+'\')"'
+      +' title="Re-open this note"><span class="eb-act-i">\u21ba</span><span class="eb-act-l">Re-open</span></button>';
+  } else if(hasNag){
+    h+='<button class="et eb-act eb-wide" onmousedown="event.preventDefault()" onclick="_closeStickyPop(\'eb-pop\');finishNote(\''+aid+'\')"'
+      +' title="Mark this note finished"><span class="eb-act-i">\u2713</span>'
+      +'<span class="eb-act-l">Finish<span class="eb-act-s">untouched '+untouchedDays(a)+'d</span></span></button>';
+  }
+  return h;
+}
 function _ebSectionToolsHTML(aid){
   /* No dangling comma when there is no aid: `_edColAll(true,)` happens to be
      legal JS, which is exactly why it would have gone unnoticed. */
@@ -8910,8 +8973,10 @@ function _buildEBSub(g){
         +_ebSectionToolsHTML();
     }
     if(g==='lists'){
-      out='<div class="fl-pop-hd">Lists and blocks</div>'+_ebListsHTML(true)
-        +'<div class="fl-pop-hd">Undo · Redo · Find</div>'
+      /* v04.27 — undo/redo/find FIRST, as the owner asked: they are what you
+         reach for mid-sentence, where the list blocks are a deliberate choice
+         made once. \ud83d\udce6 Archive joins the bottom of this menu, out of `+`. */
+      out='<div class="fl-pop-hd">Undo · Redo · Find</div>'
         +'<button class="et eb-act" onmousedown="ec(event,\'undo\')" title="Undo">'
           +'<span class="eb-act-i">\u21a9</span><span class="eb-act-l">Undo</span></button>'
         +'<button class="et eb-act" onmousedown="ec(event,\'redo\')" title="Redo">'
@@ -8921,15 +8986,16 @@ function _buildEBSub(g){
           +'<span class="eb-act-i">\ud83d\udd50</span><span class="eb-act-l">History</span></button>'
         +'<button class="et eb-act" onmousedown="event.preventDefault()" onclick="_ntFindToggle(\'p3\')"'
           +' title="Find in this note">'
-          +'<span class="eb-act-i">\ud83d\udd0d</span><span class="eb-act-l">Find</span></button>';
+          +'<span class="eb-act-i">\ud83d\udd0d</span><span class="eb-act-l">Find</span></button>'
+        +'<div class="fl-pop-hd">Lists and blocks</div>'+_ebListsHTML(true)
+        +(a?_ebNoteStateHTML(a):'');
     }
     if(g==='insert'&&a){
       /* Three groups, and the line between them is WHAT THE ACTION DOES:
          put something in the note / say what the note is / leave the note.
          The same line v04.21 drew between \ud83e\uddf0 Tools and \u2699 Settings. */
       out='<div class="fl-pop-hd">Insert at the cursor</div>'+_ebInsertHTML(true)
-        +'<div class="fl-pop-hd">About this note</div>'
-        +'<div class="p3h-pal-nti">'+kindBarHTML(a,true,true)+'</div>'
+        +_ebAttachHTML(a)
         +'<div class="fl-pop-hd">Go to</div>'
         +'<button class="et eb-act" onmousedown="event.preventDefault()"'
           +' onclick="_closeStickyPop(\'eb-pop\');_calOpen()" title="Open the Calendar">'
@@ -16433,6 +16499,21 @@ function showTagSuggest(query){
   if(!matches.length){box.style.display='none';box.innerHTML='';return;}
   box.innerHTML=matches.map(t=>`<div class="tag-sg-item" onmousedown="event.preventDefault();_pickTagSuggestion('${esc(t)}')">${esc(t)}</div>`).join('');
   box.style.display='block';
+  _tagSuggestPlace(box);
+}
+/* v04.27 — the tag editor lives inside the `+` menu on a phone, and a menu
+   clips its own overflow (.fl-pop is overflow:auto), so an absolutely
+   positioned list would simply be cut off at the menu's edge. position:fixed
+   is NOT clipped by an overflow ancestor, so the list steps outside the box
+   and is placed against the input's real rect. Off a menu, nothing changes. */
+function _tagSuggestPlace(box){
+  const inp=document.getElementById('tag-inp');
+  if(!inp||!box.closest||!box.closest('.fl-pop'))return;
+  const r=inp.getBoundingClientRect(),w=Math.min(240,window.innerWidth-12);
+  box.style.position='fixed';
+  box.style.left=Math.max(6,Math.min(r.left,window.innerWidth-w-6))+'px';
+  box.style.top=(r.bottom+4)+'px';
+  box.style.zIndex='9400';
 }
 function hideTagSuggest(){
   const box=document.getElementById('tag-suggest');if(box){box.style.display='none';box.innerHTML='';}
