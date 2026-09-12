@@ -3067,6 +3067,187 @@ await app.close();
       `card ${m.card} · ${m.rows} rows, ${m.seps} separators, ${m.wide}px wide`);
   }
 
+  /* 5a-vi. v04.33 — THE SAME TWO BUTTONS, IN BOTH MODES, ON THE EDITOR ═════
+     "Let the Multi and single button be present in the edit mode as well" and
+     "Let the pop-up note opens in edit mode when click to pop-up".
+
+     Measured on origin/main before anything was touched, BOTH buttons were
+     already on the edit bar — so "is it rendered" is exactly the question
+     that says yes about a control the owner cannot find, and it is not the
+     question asked here. What differed was the treatment: read mode gave
+     them 13px, opacity 1, gold and green, with their word; edit mode gave
+     them opacity .55 in rgb(90,84,74) grey with no label. So the check
+     compares the two MODES against each other rather than naming a colour —
+     the day the palette changes, the comparison still holds and a hard-coded
+     hex would have to be rewritten.
+
+     And the fold is asked as an OUTCOME, at ten widths rather than one:
+     the words may only be on the bar where they cost no extra line, and they
+     must be on it everywhere they do. A single width cannot tell a measured
+     fold from a fold that never folds (or one that always does). */
+  {
+    const modeCol = {};
+    for (const w of [2200, 1920, 1600, 1440, 1366, 1280, 1200, 1100, 1000, 900]) {
+      const s = await openApp({ viewport: { width: w, height: 900 }, db: seedDB() });
+      const m = await s.page.evaluate(() => {
+        ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false; window.render(); showPane('p3');
+        const look = (b) => ({ t: b.innerText.trim(), vis: !!b.offsetParent,
+          color: getComputedStyle(b).color, op: getComputedStyle(b).opacity,
+          kind: b.classList.contains('pop-multi') ? 'multi' : 'single' });
+        const read = [...document.querySelectorAll('#p3h .pop-btn')].map(look);
+        startEdit();
+        /* Two frames: the first fold runs against a Pane 3 that has not
+           settled yet, exactly as it does in the read bar. */
+        return new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(() => {
+          const el = document.getElementById('p3h');
+          const tb = el.querySelector('.p3h-unified-tb');
+          const nav = [...el.querySelectorAll('.p3h-nav-edit-row .nav-l,.p3h-nav-edit-row .nav-r')];
+          const edit = [...el.querySelectorAll('#p3h .pop-btn')].map(look);
+          /* What the app chose, then what each choice would actually cost —
+             the row's own height and the strip's own overflow, read twice. */
+          const chose = el.classList.contains('p3h-nolbl');
+          const cost = () => [tb ? Math.round(tb.getBoundingClientRect().height) : 0,
+            Math.max(0, ...nav.map((n) => n.scrollWidth - n.clientWidth))];
+          el.classList.remove('p3h-nolbl');
+          const [hWords, oWords] = cost();
+          el.classList.add('p3h-nolbl');
+          const [hBare, oBare] = cost();
+          if (!chose) el.classList.remove('p3h-nolbl');
+          res({ read, edit, chose, free: hWords <= hBare + 1 && oWords <= oBare + 1,
+            over: chose ? oBare : oWords, hWords, hBare });
+        })));
+      });
+      await s.close();
+      const vis = m.edit.filter((b) => b.vis);
+      const worded = vis.filter((b) => /\S/.test(b.t));
+      if (w === 1440 || w === 1000) modeCol[w] = m;
+      r.check(vis.length === 2 && (worded.length === 2) === m.free && m.over <= 1,
+        `edit bar at ${w}px: both pop-up buttons are there, and wear their word wherever it costs no line`,
+        `${vis.length} visible, ${worded.length} worded · the words are free here: ${m.free}`
+        + ` (row ${m.hWords}px with them, ${m.hBare}px without) · overflow ${m.over}px`);
+    }
+    /* The comparison the round is actually about: edit mode must give these
+       two buttons the SAME ink read mode gives them, and stop dimming them. */
+    for (const w of [1440, 1000]) {
+      const m = modeCol[w]; if (!m) continue;
+      const same = ['multi', 'single'].map((k) => {
+        const rd = m.read.find((b) => b.kind === k), ed = m.edit.find((b) => b.kind === k);
+        return { k, rd: rd && rd.color, ed: ed && ed.color, op: ed && ed.op };
+      });
+      const ok = same.every((x) => x.rd && x.ed && x.rd === x.ed && x.op === '1')
+        && same[0].ed !== same[1].ed;
+      r.check(ok, `${w}px: edit mode paints Multi and Single exactly as read mode does`,
+        same.map((x) => `${x.k} read ${x.rd} / edit ${x.ed} @${x.op}`).join(' · '));
+    }
+  }
+
+  /* And the thing the buttons are FOR. A Multi Notes Pop-Up has always been
+     an editor; a Single Note Pop-Up opened read-only, and opened read-only
+     even when you were editing the note at the time — selArt() clears
+     ST.editing unconditionally. Asked with a real mouse click on the real
+     button (the v04.12 rule), and then asked the only question that matters
+     for I1: does what you type in there survive closing it? */
+  {
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false; window.render(); startEdit(); });
+    await s.page.waitForTimeout(400);
+    const box = await s.page.locator('#p3h .pop-btn.pop-single').boundingBox();
+    if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await s.page.waitForTimeout(250);
+    const panel = await s.page.evaluate(() => ({
+      modal: ST.noteModal, editing: ST.editing, aid: document.getElementById('ed')?.dataset.aid,
+      shaped: document.getElementById('p3').classList.contains('modal-mode'),
+      dimmed: !!document.getElementById('note-modal-bg')?.classList.contains('active'),
+      grips: ['modal-resize-r', 'modal-resize-b', 'modal-resize-l', 'modal-corner-tr']
+        .every((i) => !!document.getElementById(i)),
+    }));
+    r.check(!!box && panel.modal && panel.editing && panel.aid === 'a1' && panel.shaped && panel.dimmed && panel.grips,
+      'a real click on the edit bar’s Single Note Pop-Up opens it ON the editor, still shaped as a panel',
+      `modal ${panel.modal} · editing ${panel.editing} · #ed holds ${panel.aid}`
+      + ` · modal-mode ${panel.shaped} · backdrop ${panel.dimmed} · grips ${panel.grips}`);
+    /* I1 — typed into the pop-up, then closed. closeNoteModal() flushes #ed;
+       if it ever stops doing so, this is where it shows. */
+    await s.page.click('#ed');
+    await s.page.keyboard.type(' PopupTypedHere');
+    await s.page.waitForTimeout(120);
+    await s.page.evaluate(() => closeNoteModal());
+    await s.page.waitForTimeout(250);
+    const kept = await s.page.evaluate(() => {
+      const a = DB.articles.find((x) => x.id === 'a1');
+      return { typed: a.content.includes('PopupTypedHere'), modal: ST.noteModal,
+        shaped: document.getElementById('p3').classList.contains('modal-mode') };
+    });
+    r.check(kept.typed && !kept.modal && !kept.shaped,
+      'words typed into the Single Note Pop-Up are in the note after it closes',
+      `kept ${kept.typed} · modal closed ${!kept.modal} · pane un-shaped ${!kept.shaped}`);
+    /* Multi: the same paradigm, and the caret already in it. */
+    const multi = await s.page.evaluate(() => {
+      closeAllPopouts(); ST.editing = false; window.render();
+      openNotePopup('a1', 'float');
+      const ed = document.querySelector('#fw-a1 .fw-ed');
+      return { win: !!document.getElementById('fw-a1'), editable: !!ed && ed.isContentEditable,
+        focused: document.activeElement === ed };
+    });
+    await s.close();
+    r.check(multi.win && multi.editable && multi.focused,
+      'the Multi Notes Pop-Up opens on the editor with the caret already in it',
+      `window ${multi.win} · editable ${multi.editable} · focused ${multi.focused}`);
+  }
+
+  /* ONE EDITOR PER NOTE. F3 in index.html says the rule — "hand-over, never
+     duplicate" — and enforced it only for the panel, so popping a note out of
+     PANE 3's editor left #ed and .fw-ed both live on the same note, both on
+     the debounced autosave. Measured on origin/main at v04.32 before this
+     round began; this round adds two more routes into it, so it is fixed and
+     fenced here. Typing first, because the question is not only "is there one
+     editor" but "did the words make it across". */
+  for (const route of ['float', 'panel-then-float']) {
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false; window.render(); startEdit(); });
+    await s.page.waitForTimeout(300);
+    await s.page.click('#ed');
+    await s.page.keyboard.type(' HandOverWords');
+    await s.page.waitForTimeout(120);
+    const m = await s.page.evaluate((r) => {
+      if (r === 'panel-then-float') { openNotePopup('a1', 'panel'); _panelToFloat(); }
+      else openNotePopup('a1', 'float');
+      const ed = document.getElementById('ed');
+      const fw = document.querySelector('#fw-a1 .fw-ed');
+      const a = DB.articles.find((x) => x.id === 'a1');
+      return { p3: !!(ed && ed.dataset.aid === 'a1' && ed.isContentEditable),
+        fw: !!(fw && fw.isContentEditable), editing: ST.editing,
+        inDb: a.content.includes('HandOverWords'), inFw: !!fw && fw.innerText.includes('HandOverWords') };
+    }, route);
+    await s.close();
+    r.check(m.fw && !m.p3 && !m.editing && m.inDb && m.inFw,
+      `popping a note out via ${route} hands the editor over — one live editor, and the words come with it`,
+      `float editor ${m.fw} · pane-3 editor still live ${m.p3} · ST.editing ${m.editing}`
+      + ` · typed words in DB ${m.inDb} · in the pop-up ${m.inFw}`);
+  }
+
+  /* The v04.31 lesson, applied before the owner has to ask: an answer given
+     for one MODE is not an answer for the app. Under 900px the pop-ups do not
+     exist — openNotePopup() refuses and .modal-pop-btn is display:none — and
+     that has to be true in read mode AND in edit mode, or one of them offers
+     a button that does nothing. */
+  for (const vp of [{ name: 'tablet', w: 820, h: 1180 }, { name: 'phone', w: 390, h: 844 }]) {
+    const s = await openApp({ viewport: { width: vp.w, height: vp.h }, db: seedDB() });
+    const m = await s.page.evaluate(() => {
+      ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false; window.render(); showPane('p3');
+      const shown = () => [...document.querySelectorAll('#p3h .pop-btn')].filter((b) => b.offsetParent).length;
+      const read = shown();
+      startEdit();
+      const edit = shown();
+      openNotePopup('a1', 'panel');
+      const refused = !ST.noteModal && !document.getElementById('fw-a1');
+      return { read, edit, refused };
+    });
+    await s.close();
+    r.check(m.read === 0 && m.edit === 0 && m.refused,
+      `${vp.name}: neither mode offers a pop-up button, and the app refuses to open one`,
+      `read ${m.read} shown · edit ${m.edit} shown · openNotePopup refused ${m.refused}`);
+  }
+
   /* 5b. v04.23 — the owner asked where the collapse/expand ⋯ had gone while
      looking straight at it: a bare glyph beside a grey date pill reads as
      punctuation. It wears the versioning bar's pill now, it has to OPEN on a

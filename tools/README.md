@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 236 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 255 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -207,6 +207,23 @@ or quietly lose the notebook, none of which need a browser:
   back clean for the four other menus that borrow it, **no glyph doing two
   different jobs** (mapped glyph → the functions its rows call), and a tablet
   and a laptop keeping the anchored column;
+- **the same two pop-up buttons in both modes, and a pop-up that opens ready
+  to write** (v04.33) — not "are they rendered", which says yes about a
+  control nobody can find (both were already on the edit bar): the two MODES
+  are compared against *each other*, so the day the palette changes the
+  comparison still holds and no hex has to be rewritten; the fold is asked at
+  **ten widths** (2200 → 900), as *do they wear their word exactly where it
+  costs no line?* — a single width cannot tell a measured fold from one that
+  never folds or one that always does, and the edit bar WRAPS, so
+  `scrollWidth > clientWidth` is always false on it and answers nothing; a
+  **real mouse click** on the edit bar's Single button leaving `ST.editing`
+  true with `#ed` on that note and the pane still shaped as a panel with its
+  backdrop and grips; the typed words read back out of `DB` after the pop-up
+  closes (I1); **one editor per note** on both routes into the hand-over,
+  with the words proved to arrive in `DB` *and* in the pop-up; and at 820px
+  and 390px neither mode offering a button with `openNotePopup()` proved to
+  refuse — the two halves asserted together so neither can drift into
+  offering what the app will not open;
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both
