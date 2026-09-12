@@ -2774,6 +2774,119 @@ await app.close();
       `tab bar painted ${m.barShown} · palette is the kindBar card ${m.oldStyle} · spread-open ${m.spread}`);
   }
 
+  /* 5a-iv. v04.31 — THE READ BAR'S THREE QUESTIONS ═══════════════════════
+     The owner asked, of the phone's read view: 🏠 and 📁 do the same thing —
+     is the folder icon still needed? what is "General" doing there? and what
+     do the buttons at the bottom of the ⋯ card do? Three claims come out of
+     the answers, and each is measured as a question rather than as a list. */
+  {
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); });
+    await s.page.waitForTimeout(450);
+    /* (1) 🏠 and 📁 both end on showPane('sb'), so one of them goes — the same
+       answer v04.23 gave the phone's EDIT bar, which is why the question came
+       back: it was only ever applied to half the app. Asked by the FUNCTION,
+       not the glyph: nothing visible on the read bar may call goHome(), and it
+       must still be reachable from the card and from the sidebar logo. */
+    const bar = await s.page.evaluate(() => {
+      const el = document.getElementById('p3h');
+      const on = [...el.querySelectorAll('button')].filter((b) => b.offsetParent);
+      return { home: on.filter((b) => /goHome\(/.test(b.getAttribute('onclick') || '')).length,
+        folders: on.filter((b) => /backFromP3\(/.test(b.getAttribute('onclick') || '')).length,
+        logo: /goHome\(/.test(document.querySelector('.sb-logo')?.getAttribute('onclick') || ''),
+        labels: on.map((b) => b.textContent.trim()).join(' ') };
+    });
+    await s.page.click('#p3h-act-grp');
+    await s.page.waitForTimeout(300);
+    const card = await s.page.evaluate(() => {
+      const p = document.getElementById('p3h-pal');
+      const rows = [...p.querySelectorAll('.p3h-pal-btn')].filter((b) => b.offsetParent);
+      const fn = (b) => b.getAttribute('onclick') || '';
+      return { open: !!p.classList.contains('open'),
+        fns: rows.map(fn).join(' '),
+        heads: [...p.querySelectorAll('.fl-pop-hd')].map((h) => h.textContent.trim()),
+        /* A menu is read by someone who did not write it (v04.26): every row
+           carries a word, and no row trails off into an unnamed menu. */
+        wordless: rows.filter((b) => !/[A-Za-z]{3,}/.test(b.querySelector('.pal-lbl')?.textContent || '')).length,
+        ellipsis: rows.filter((b) => /…\s*$/.test(b.textContent.trim())).length,
+        shortest: Math.min(...rows.map((b) => Math.round(b.getBoundingClientRect().height))),
+        widths: new Set(rows.map((b) => Math.round(b.getBoundingClientRect().width))).size,
+        scrolls: p.scrollHeight > p.clientHeight + 1,
+        /* 🗑 Delete stays one tap further in, where v04.11 deliberately put it. */
+        deleteOut: rows.some((b) => /deleteNote\(/.test(fn(b))),
+        rows: rows.map((b) => b.textContent.trim().replace(/\s+/g, ' ')) };
+    });
+    r.check(bar.home === 0 && bar.folders === 1 && bar.logo && /goHome\(/.test(card.fns),
+      'phone read mode: 🏠 is off the bar (📁 keeps your place), and Home is still one tap away',
+      `bar: ${bar.labels} · goHome on the bar ${bar.home}, in the ⋯ card ${/goHome\(/.test(card.fns)}, on the sidebar logo ${bar.logo}`);
+    /* (3) The card's bottom row was `⋯ More — copy, archive, delete…`: a row
+       whose only job was to open a twenty-item menu, which is what the owner
+       was asking about. The four actions that menu is opened for are rows
+       now, identified by the function each calls. */
+    const spread = ['startRenameArtTitle(', 'duplicateNote(', 'openNoteHistory(', 'toggleArchive(']
+      .filter((f) => card.fns.includes(f));
+    r.check(card.open && spread.length === 4 && /showArtCtx\(/.test(card.fns) && !card.deleteOut
+      && card.heads.length >= 3 && card.heads.every((h) => h.length > 2)
+      && card.wordless === 0 && card.ellipsis === 0,
+      'phone read mode: the ⋯ card spreads the four actions open under named headings, and names what is left',
+      `${card.heads.join(' | ')} · spread ${spread.length}/4 · wordless rows ${card.wordless}`
+      + ` · rows trailing off ${card.ellipsis} · Delete still behind the full menu ${!card.deleteOut}`);
+    r.check(card.open && card.shortest >= 44 && card.widths >= 4 && !card.scrolls,
+      'phone read mode: every ⋯ row is tappable, sized to its own words, and the card fits the screen',
+      `shortest ${card.shortest}px · ${card.widths} distinct widths · scrolls ${card.scrolls} · ${card.rows.length} rows`);
+    /* And the rows do the thing they name — one of them, all the way through. */
+    const nBefore = await s.page.evaluate(() => DB.articles.length);
+    await s.page.evaluate(() => [...document.querySelectorAll('#p3h-pal .p3h-pal-btn')]
+      .find((b) => /Make a copy/.test(b.textContent)).click());
+    await s.page.waitForTimeout(500);
+    const nAfter = await s.page.evaluate(() => DB.articles.length);
+    r.check(nAfter === nBefore + 1,
+      'phone read mode: ⧉ Make a copy in that card really makes the copy',
+      `${nBefore} → ${nAfter} notes`);
+    await s.close();
+  }
+
+  /* (2) "What is General doing there?" — a value with nothing saying what it
+     is the value OF. Asked as a sweep rather than as a check on one bar: any
+     note-type value painted anywhere must have the word Type beside it, so
+     the next surface that renders the chips cannot quietly drop it. A tablet
+     is the size that paints them in all three places at once (the read bar,
+     the 🏷 palette, and the edit row renderP3C keeps above 640px). */
+  {
+    const s = await openApp({ viewport: { width: 820, height: 1180 }, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); });
+    await s.page.waitForTimeout(450);
+    const sweep = await s.page.evaluate(() => {
+      const seen = [];
+      const scan = (where) => {
+        for (const v of document.querySelectorAll('.nti-chip, .nti-no-type')) {
+          if (!v.offsetParent) continue;
+          const grp = v.closest('.kind-bar, .p3h-nti-inline, .p3h-pal-nti');
+          const lbl = grp && grp.querySelector('.nti-lbl');
+          seen.push({ where, value: v.textContent.trim(),
+            labelled: !!(lbl && lbl.offsetParent && /type/i.test(lbl.textContent)) });
+        }
+      };
+      scan('read bar');
+      _p3NtiPalette({ currentTarget: document.getElementById('p3h-nti-grp') });
+      scan('🏷 palette');
+      closeFloatPop('p3h-pal');
+      startEdit();
+      scan('edit row');
+      return { seen, home: [...document.querySelectorAll('#p3h button')].filter((b) => b.offsetParent
+        && /goHome\(/.test(b.getAttribute('onclick') || '')).length };
+    });
+    await s.close();
+    const bare = sweep.seen.filter((x) => !x.labelled);
+    r.check(sweep.seen.length >= 3 && bare.length === 0,
+      'no note-type value is painted without the word that says what it is',
+      `${sweep.seen.length} values swept (${[...new Set(sweep.seen.map((x) => x.where))].join(', ')})`
+      + ` · unlabelled ${bare.length}${bare.length ? ': ' + bare.map((x) => x.where + ' “' + x.value + '”').join(', ') : ''}`);
+    /* The round is the PHONE's: a tablet's row has the width for 🏠 and keeps it. */
+    r.check(sweep.home >= 1, 'tablet: the read bar keeps its 🏠 — this round is the phone’s',
+      `goHome buttons on the tablet read bar: ${sweep.home}`);
+  }
+
   /* 5b. v04.23 — the owner asked where the collapse/expand ⋯ had gone while
      looking straight at it: a bare glyph beside a grey date pill reads as
      punctuation. It wears the versioning bar's pill now, it has to OPEN on a

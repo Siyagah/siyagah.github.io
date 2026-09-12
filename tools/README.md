@@ -34,7 +34,7 @@ or quietly lose the notebook, none of which need a browser:
   icon without saying so;
 - `legacy/**` is byte-identical to `origin/main`.
 
-**`app-check.mjs`** — 213 checks against a booted app, with Firebase blocked:
+**`app-check.mjs`** — 219 checks against a booted app, with Firebase blocked:
 
 - boot is silent (no exception, no console error) and paints the version;
 - **every inline `onclick`/`on*` handler in the file resolves to a real
@@ -179,6 +179,19 @@ or quietly lose the notebook, none of which need a browser:
   card edge to edge with 44px rows, and a tablet proved to keep the bar and
   the old chip palette it always had — every row identified by the FUNCTION it
   calls, so a relabel cannot fake it (v04.30);
+- **the read bar's three questions** (v04.31) — asked as questions, not as a
+  list of buttons: nothing visible on the phone's read bar calls `goHome()`
+  while Home is still reachable from the `⋯` card and the sidebar logo, with
+  the tablet's 🏠 asserted still present so "this round is the phone's" cannot
+  quietly stop being true; **no note-type value is painted anywhere without
+  the word that says what it is** — a sweep over every visible chip in the
+  three places a tablet paints them, so the next surface to render the chips
+  cannot drop the label; and the `⋯` card measured for named non-empty
+  headings, a word on every row, no row trailing off into an unnamed menu, the
+  four spread-open actions identified by the FUNCTION each calls, 🗑 Delete
+  proved still behind the full menu, 44px rows, four or more distinct widths
+  (which a stretched column cannot show), no scrolling — and `⧉ Make a copy`
+  counted through `DB.articles`;
 - at phone, tablet and desktop: no sideways scroll, no visible pane collapsed
   to zero, no exception, and no failed request other than the ones we blocked;
 - Chromium's own `Page.getAppManifest` and `Page.getInstallabilityErrors` both

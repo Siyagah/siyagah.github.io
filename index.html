@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.30">
+<meta name="app-version" content="04.31">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1544,6 +1544,12 @@ sup.ann-sup:hover{text-decoration:underline}
 .nti-chip:hover{opacity:.8}
 .nti-chip.on{box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .nti-no-type{font-size:11px;color:var(--t3);font-style:italic;white-space:nowrap;flex-shrink:0}
+/* v04.31 — the word in front of the type chips (see kindBarHTML). It is a
+   LABEL, not a control: no border, no hover, nothing that invites a tap, and
+   it is the first thing to be hidden when the group folds away entirely. */
+.nti-lbl{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--t3);white-space:nowrap;flex-shrink:0;align-self:center}
+#p3h:not(.editing) .nti-lbl{font-size:10.5px}
 /*save-accent*/.nti-save{background:var(--green)!important;border-color:var(--green)!important;color:var(--on-accent)!important}
 .nti-picker-btn{font-size:11px;font-weight:600;padding:2px 9px;
   border:1.4px dashed var(--border2);border-radius:999px;
@@ -2190,6 +2196,8 @@ sup.ann-sup:hover{text-decoration:underline}
 /* v04.10 — the pop-up rows carry the full name and a line saying what it does,
    and the drawn icon needs a flex slot rather than a text-align one. */
 .p3h-pal-btn .pal-sub{display:block;font-size:11.5px;color:var(--t3);margin-top:1px}
+.p3h-pal-btn .pal-s{font-size:11.5px;font-weight:500;color:var(--t3)}
+.p3h-pal-btn .pal-s::before{content:' · '}
 .p3h-pal-btn.pal-pop .pal-ico{display:flex;align-items:center;justify-content:center}
 .p3h-pal-btn.pop-multi .pal-ico{color:var(--gold)}
 .p3h-pal-btn.pop-single .pal-ico{color:var(--green)}
@@ -2614,7 +2622,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.30</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.31</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3898,7 +3906,16 @@ function renderP3H(){
        them into palettes a group at a time — the same-type bunching the owner
        asked for. Edit and the navigation keys never fold; they are what the
        row exists for. */
-    h=_p3HomeBtnHTML()+h;
+    /* v04.31 — 🏠 leaves the PHONE's read bar, as it left the phone's edit
+       bar in v04.23: the owner asked the same question about this row, which
+       means the answer never reached the half of the app they were looking
+       at. goHome() and backFromP3() both end on showPane('sb'), so 🏠 and 📁
+       landed on the same pane one button apart; 📁 is the one that keeps your
+       place (goHome clears the search, the tag, the type and the folder), and
+       the pane it takes you to carries 📚 Siyagah, which IS goHome(). 🏠 is a
+       named row in the ⋯ card as well, so nothing costs more than one tap.
+       A tablet and a laptop keep the button: their rows have the width. */
+    h=_p3HomeBtnHTML(_p3OneBar())+h;
     h+='<span class="tb-sep"></span><div class="p3h-nti-inline">'+kindBarHTML(curA,true)+'</div>';
     h+='<button class="btn bn bi p3h-grp" id="p3h-nti-grp" onclick="_p3NtiPalette(event)" title="Note type and attach">🏷<span class="grp-car">▾</span></button>';
     h+=_colToolbarBtnHTML();
@@ -11380,9 +11397,14 @@ function _p3FitToolbar(){
   el.classList.add('p3h-tightest');          /* the type chip itself, last of all */
 }
 /* One palette row: a real icon, a real word, and a touch-sized target. */
-function _p3PalBtn(icon,label,onclick,cls){
-  return '<button class="p3h-pal-btn'+(cls?' '+cls:'')+'" onclick="closeFloatPop(\'p3h-pal\');'+onclick+'">'
-    +'<span class="pal-ico">'+icon+'</span><span class="pal-lbl">'+label+'</span></button>';
+function _p3PalBtn(icon,label,onclick,cls,sub){
+  /* The pop-out rows pass HTML in `label` (_popKindLbl carries its own
+     .pal-sub span), so the tooltip is built from the words, not the markup. */
+  const t=String(label).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+  return '<button class="p3h-pal-btn'+(cls?' '+cls:'')+'" title="'+esc(t+(sub?' — '+sub:''))+'"'
+    +' onclick="closeFloatPop(\'p3h-pal\');'+onclick+'">'
+    +'<span class="pal-ico">'+icon+'</span><span class="pal-lbl">'+label
+    +(sub?'<span class="pal-s">'+esc(sub)+'</span>':'')+'</span></button>';
 }
 /* v04.11 — ⋯ is the one button the owner asked for: Make a copy, Archive and
    Delete came off the bar and live in this menu, which already carried all
@@ -11394,23 +11416,41 @@ function _moreBtnHint(){
 function _p3ActPalette(ev){
   const a=DB.articles.find(x=>x.id===ST.article);if(!a)return;
   const id=a.id.replace(/'/g,"\\'");
-  let h=_p3PalBtn('\u2039','Previous note',"_p3Navigate(-1)")
+  /* GO TO — leave this note. 🏠 Home is here because it left the phone's bar
+     this round (renderP3H): it landed on the same pane 📁 does. */
+  let h='<div class="fl-pop-hd">Go to</div>'
+    +_p3PalBtn('\u2039','Previous note',"_p3Navigate(-1)")
     +_p3PalBtn('\u203A','Next note',"_p3Navigate(1)")
-    +_p3PalBtn('🔍','Find in this note',"_ntFindToggle('p3')")
-    +_p3PalBtn('✚','New note',"quickCapture()");
+    +(window.innerWidth<1200?_p3PalBtn('\ud83c\udfe0','Home',"goHome()",'',
+        'the folder list, with the search and filters cleared'):'');
+  /* THIS NOTE — act on the note you are reading. These four are what the ⋯
+     context menu was actually being opened for, so they are rows, not a tap
+     spent finding out what is under a row. */
+  h+='<div class="fl-pop-hd">This note</div>'
+    +_p3PalBtn('\ud83d\udd0d','Find in this note',"_ntFindToggle('p3')")
+    +_p3PalBtn('\u270f','Rename title',"startRenameArtTitle('"+id+"')")
+    +_p3PalBtn('\u29c9','Make a copy',"duplicateNote('"+id+"')")
+    +_p3PalBtn('\ud83d\udd50','History',"openNoteHistory('"+id+"')",'',
+        'restore an earlier version')
+    +_p3PalBtn(a.archived?'\ud83d\udce4':'\ud83d\udce6',a.archived?'Unarchive':'Archive',
+        "toggleArchive('"+id+"')")
+    +_p3PalBtn(a.favourite?'\u2705':'\u2b50',a.favourite?'In favourites':'Favourite',
+        "toggleFav('"+id+"')");
   /* Pop-out windows are hidden under 900px by their own CSS rule, so the
      palette must not offer what the app will not open. */
   if(window.innerWidth>=900){
     h+=_p3PalBtn(_popIcoHTML('float'),_popKindLbl('float'),"openNotePopup('"+id+"','float')",'pal-pop pop-multi')
       +_p3PalBtn(_popIcoHTML('panel'),_popKindLbl('panel'),"openNotePopup('"+id+"','panel')",'pal-pop pop-single');
   }
-  /* v04.11 — this palette exists to hold what folded off the ROW, so it holds
-     what the row holds. Make a copy and Delete are no longer on the row: they
-     are in ⋯ More with Archive, one tap further in, which is the grouping the
-     owner asked for. Listing them here as well would put Delete one tap from
-     a phone toolbar while claiming they had been tidied away. */
-  h+=_p3PalBtn('⋯','More — copy, archive, delete…',"showArtCtx({clientX:0,clientY:60,preventDefault:()=>{},stopPropagation:()=>{}},'"+id+"')");
-  _openFloatPop('p3h-pal',ev.currentTarget,h);
+  /* MORE — and the last row NAMES what is behind it. 🗑 Delete stays in there
+     rather than out here: v04.11 took it off the bar deliberately, and a
+     Delete one tap from a phone toolbar would undo that. */
+  h+='<div class="fl-pop-hd">More</div>'
+    +_p3PalBtn('\u271a','New note',"quickCapture()",'','in the Primary folder')
+    +_p3PalBtn('\u22ef','All actions',
+        "showArtCtx({clientX:0,clientY:60,preventDefault:()=>{},stopPropagation:()=>{}},'"+id+"')",
+        '','tags, folders, reminders, pin, delete');
+  _openFloatPop('p3h-pal',ev.currentTarget,h,true);
 }
 function _p3NtiPalette(ev){
   const a=DB.articles.find(x=>x.id===ST.article);if(!a)return;
@@ -20216,7 +20256,15 @@ function kindBarHTML(a,bare,noSave){
   /* v04.11 — 🏷 Types left the bar too, and is the first row of the 📎 Attach
      menu now: everything that says where a note belongs and what it is, under
      one button, with 📎 Attach itself permanently on the bar. */
-  const inner=`<div class="nti-chips">${chips||'<span class="nti-no-type">No type</span>'}</div>`
+  /* v04.31 — the chips carry a word. On the read bar the note's type was a
+     bare dark pill reading "General", and the owner asked what it was doing
+     there: a value with nothing saying what it is the value OF. The label is
+     not a button — tapping the chip still opens the picker — and it renders
+     everywhere kindBarHTML does, so the bar, the 🏷 card and the edit row all
+     say the same word. "No type" becomes "not set", which is what it now
+     reads as after the label: "Type · not set". */
+  const inner=`<span class="nti-lbl" title="Note Type — what kind of note this is">Type</span>`
+    +`<div class="nti-chips">${chips||'<span class="nti-no-type">not set</span>'}</div>`
     +`<button class="nti-picker-btn nti-attach-btn" onclick="openAttachMenu(event,'${a.id}')" title="Note Type · Folder · My Journal · MyDatabase">📎 Attach${_attachCount(a)?' ('+_attachCount(a)+')':''} ▾</button>`
     +((ST.editing&&ST.article===a.id&&!noSave)?`<button class="nti-picker-btn nti-editbtn nti-save" onclick="saveArt()" title="Save note">💾 Save</button>`:'')
     +`<div class="kind-act">${statusHTML}${archIcon}</div>`;
