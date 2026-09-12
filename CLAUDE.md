@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.30.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.31.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,24 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.31** (12 Sep 2026) — three questions off one screenshot of the phone's
+  read bar. **🏠 vs 📁**: they do land in the same place (`goHome()` ends on
+  `showPane('sb')`, `backFromP3()` is only that call) — and v04.23 had already
+  taken 🏠 off the phone's EDIT bar for this reason and left the read bar
+  alone, which is why the question came back. 🏠 goes; **📁 stays**, because it
+  keeps your place where 🏠 clears the search, tag, type and folder, and the
+  pane it lands on carries 📚 Siyagah, which IS `goHome()`. Home is a named row
+  in the `⋯` card. **"General"** was a value with nothing saying what it was
+  the value of: the chips carry **`TYPE`** now, written once in `kindBarHTML()`
+  so the bar, the 🏷 card and the tablet's edit row cannot disagree (the label
+  costs ~34px on a self-measuring row; 🏠 leaving freed 44, so the chip has
+  more headroom than before, not less). And the **`⋯` card's bottom row** —
+  `⋯ More — copy, archive, delete…`, a tap spent to find out what was under it
+  — is spread open: **GO TO / THIS NOTE / MORE**, with Rename, Make a copy,
+  History and Archive as rows, and the last row NAMING what is left
+  (`⋯ All actions · tags, folders, reminders, pin, delete`). 🗑 Delete stays
+  one tap further in, as v04.11 decided. 219/219 app checks (up from 213) and
+  11/11 ship checks.
 - **v04.30** (12 Sep 2026) — "Now, do same in view mode too. Move n Place Cal
   n add tab to the attach button (bar is not required) n spread-open them on
   the pallet with the attach buttons as well spread-open." The read view had
@@ -79,24 +97,6 @@ must never accumulate here instead of there.
   `position:fixed` is not clipped by an overflow ancestor. 🏷 stays with Note
   Type, tags take `#`. The bar is seven controls: `◀ 📁 | Aa H ≡ + | 💾 Save`.
   202/202 app checks (up from 200) and 11/11 ship checks.
-- **v04.26** (12 Sep 2026) — "how about there is two 3 line horizontal button,
-  does it make sense?" No. `≡` was **Open folders** in the nav pair AND
-  **Lists** in the format pair, three buttons apart on the same 390px row, with
-  a third `≡` on `≡ Preview` inside the `⋯`. The folders button is **📁**
-  (titled *Folders*) in all five places Pane 3 renders it, Preview is **▤**,
-  and `≡` is left with one job. The check names neither button — it sweeps
-  every glyph-only control in the edit chrome and fails if one glyph calls two
-  functions. And the three menus are organised: `+` is now **INSERT AT THE
-  CURSOR / ABOUT THIS NOTE / GO TO / OPEN TABS**, split by *what the action
-  does* (the same line v04.21 drew between 🧰 and ⚙), and **every button
-  carries a word** — `❝ Quote`, `─ Divider`, `↩ Undo`, `🔖 Bookmark`, and 📦
-  Archive borrowing its own `title` through CSS so it still reads right when
-  it flips to Unarchive. Written once, rendered twice: `_EB_INSERT` /
-  `_EB_LISTS` / `_ebSectionToolsHTML()` generate the bare-glyph form for a
-  laptop's bar and the labelled form for the phone's menu, so the two cannot
-  drift. 🏷 stays a toggle (a tag suggestion list is absolutely positioned and
-  a scrolling popover would clip it). 200/200 app checks (up from 197) and
-  11/11 ship checks.
 
 ---
 
@@ -298,6 +298,12 @@ traps belong in `tools/README.md`, not here.)*
   not re-scope it smaller — re-read the ORIGINAL brief and ask what the whole
   of it requires; and say plainly which part is being left undone rather than
   quietly satisfying a fragment. Cost: three rounds on one instruction.
+  **Its twin: an answer applied to one MODE is not applied to the app.** v04.23
+  took 🏠 off the phone's EDIT bar because it landed on the same pane as the
+  folder button; the READ bar kept both, and the owner asked the identical
+  question about it in v04.31, eight rounds later. When a round settles a
+  question about a control, ask it of every mode that renders that control, in
+  the same round — and where the answer differs by mode, say so.
 - **A control that MOVES has to leave where it moved from — and a surface
   that only appears when it has content must be measured with content.** v04.22
   put 📅 Calendar and ＋ Add Tab under the `+` menu and left both of them on the

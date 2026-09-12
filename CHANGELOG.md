@@ -2327,3 +2327,106 @@ Two existing checks described what this round deliberately changed and were
   `openNtiPicker` directly. The question is asked as *can the type be changed
   from this palette* — by the function — rather than as one particular way of
   being true. A tablet still gets the chip card, and that is asserted too.
+
+---
+
+## v04.31 — three questions about the read bar (12 Sep 2026)
+
+Three questions off one screenshot of the phone's read view, with three things
+circled on it:
+
+> 1. Home button n 'Folder' icon does the same function. Do we need the folder
+>    icon yet?
+> 2. What 'general' is doing there? Rename it with 'Type'.
+> 3. What's the functions of the buttons at the bottom of the card?
+>    Organise all the button in a most elegant way you're skilled with.
+
+### 1. 🏠 and 📁 — and why the question came back
+
+They do land in the same place. `goHome()` clears the search, the tag, the
+type and the folder and then calls `showPane('sb')`; `backFromP3()` calls
+`showPane('sb')` and nothing else. Two buttons, one destination, one button
+apart.
+
+**This was already answered — for the other half of the app.** v04.23 took 🏠
+off the phone's EDIT bar for exactly this reason, and left the read bar alone.
+So the owner was looking at a row that still had both, and asked again. The
+read bar matches now.
+
+**📁 is the one that stays**, not 🏠 — the owner's question leaned the other
+way, so this is the round's one design call and it is a one-line flip if it is
+wrong. The reasoning: 📁 keeps your place, where 🏠 throws the folder away and
+you land on the pane with nothing selected; and the pane you land on carries
+📚 **Siyagah**, which *is* `goHome()`. Home did not simply go: it is a named
+row, **🏠 Home · the folder list, with the search and filters cleared**, in the
+`⋯` card. A tablet and a laptop keep the button — their rows have the width.
+
+### 2. "General" was a value with nothing saying what it was
+
+The dark pill on the bar showed the note's type and nothing else, so it read
+as a stray word. It carries the word now — **`TYPE  General`** — written once
+in `kindBarHTML()`, so the read bar, the `🏷` card and the tablet's edit row
+all say it. The label is not a button; tapping the chip still opens the type
+picker. *No type* became *not set*, because after the label it reads as
+"Type · not set".
+
+It is not free on a phone: the label costs about 34px on a row that measures
+itself and folds. 🏠 leaving freed 44, so the row has **10px more headroom
+than before this round** — any phone that showed the chip still shows it, now
+labelled. On a 390px phone the chip was already folded away before this round
+and still is; there the `🏷` card spells out `🏷 Note Type · General`.
+
+### 3. The card's bottom row was a tap spent finding out what was under it
+
+```
+  ‹ Previous note      › Next note
+  🔍 Find in this note  ✚ New note
+  ⋯ More — copy, archive, delete…          ← the row that was circled
+```
+
+That last row opened a twenty-item context menu, and named three of the items
+before trailing off. Same fault v04.27 fixed in the `+` menu and v04.30 in the
+`🏷` one. The four actions that menu is actually opened for are rows now, the
+card is split by **what the action does**, and the last row **names what is
+still behind it**:
+
+```
+ GO TO
+   [‹ Previous note] [› Next note] [🏠 Home · the folder list, …]
+ THIS NOTE
+   [🔍 Find in this note] [✏ Rename title] [⧉ Make a copy]
+   [🕐 History · restore an earlier version] [📦 Archive] [⭐ Favourite]
+ MORE
+   [✚ New note · in the Primary folder]
+   [⋯ All actions · tags, folders, reminders, pin, delete]  [✕ Close]
+```
+
+**🗑 Delete stays one tap further in**, deliberately: v04.11 took it off the
+bar, and a Delete one tap from a phone toolbar would undo that. The rows pack
+and wrap to their own words (v04.29) and the card is **559px of an 844px
+phone with no scrolling** — measured, not guessed.
+
+### Measured
+
+213 → 219 app checks, and 11/11 ship checks. No existing check needed
+updating: the v04.09 palette check asks whether the `⋯` row still reaches
+copy/archive/delete and makes a real copy, which is still true of the row that
+now says *All actions*.
+
+The five new ones ask the durable questions rather than naming buttons:
+
+- nothing visible on the phone's read bar calls `goHome()`, and it is still
+  reachable — from the card and from the sidebar logo — with 📁 still on the
+  bar and the tablet's 🏠 asserted still there, so "this round is the phone's"
+  cannot quietly stop being true;
+- **no note-type value is painted anywhere without the word that says what it
+  is** — a sweep over every visible chip in all three places a tablet paints
+  them, not a check on one bar;
+- the `⋯` card's rows carry words, no row trails off into an unnamed menu, its
+  headings are named and non-empty, the four spread-open actions are
+  identified by the FUNCTION each calls, and Delete is proved still behind the
+  full menu;
+- every row is 44px, the card shows four or more distinct widths (a stretched
+  column cannot pass that) and does not scroll;
+- and `⧉ Make a copy` really makes the copy — `DB.articles` counted before and
+  after a real click.
