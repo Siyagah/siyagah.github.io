@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.29.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.30.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,24 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.30** (12 Sep 2026) — "Now, do same in view mode too. Move n Place Cal
+  n add tab to the attach button (bar is not required) n spread-open them on
+  the pallet with the attach buttons as well spread-open." The read view had
+  not moved in five rounds: on a phone its `🏷` palette held **two** controls,
+  one of which (`📎 Attach`) only opened **four more** — two taps to reach
+  `📓 My Journal` — and the tab bar still sat above everything. That palette is
+  the spread-open card now, built by `_ebAttachHTML()` and the new
+  `_ebGoToHTML()` — **the same builders the `+` menu uses**, so read and edit
+  cannot drift. They learned two things: which pop is holding them (the rows
+  took the pop id instead of closing `eb-pop` by name), and read mode (the
+  `📁 Folder` row cannot call `openPicker()` — `ST.efolders` only exists while
+  editing — so it says so, as the old Attach menu did). `openAttachMenu()`
+  opens the same card on a phone, because the toolbar folds the type group
+  behind `🏷` only when it does not fit. **The tab bar does not render on a
+  phone in EITHER mode** now; `📅 Calendar`, `＋ Add Tab` and every open tab are
+  rows in the card. The `⋯` actions palette packs too — **160px instead of
+  250**. Tablet and laptop untouched. 213/213 app checks (up from 208) and
+  11/11 ship checks.
 - **v04.29** (12 Sep 2026) — "place them closely but organisely instead of
   spreading all over the screen." The marks in the screenshot were drawn where
   each button's content ENDS; everything right of them was empty. Every action
@@ -79,17 +97,6 @@ must never accumulate here instead of there.
   drift. 🏷 stays a toggle (a tag suggestion list is absolutely positioned and
   a scrolling popover would clip it). 200/200 app checks (up from 197) and
   11/11 ship checks.
-- **v04.25** (11 Sep 2026) — "Check your work, the bar is still there." Third
-  time asked, and the first two answers were both wrong in what they took the
-  owner to MEAN. v04.22 hid the tab bar while editing on a phone **only when
-  empty** (the owner has tabs, so never); v04.24 took 📅 Cal and ＋ Add Tab off
-  it and left the bar. A tab bar **is** a bar, and the brief was one bar. So
-  `#tab-bar` does not render at all while editing on a phone now, tabs or no
-  tabs — back the instant editing ends, read mode and tablet/desktop
-  untouched. Nothing unreachable: every open tab is a row under `+` headed
-  `OPEN TABS (n)`, the current one marked `◆`, each calling the same
-  `tabSelect()` the chip did. 197/197 app checks (up from 196) and 11/11 ship
-  checks.
 
 ---
 

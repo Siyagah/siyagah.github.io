@@ -2256,3 +2256,74 @@ wider than the one with the shortest, and the actions must show at least four
 distinct widths — both false by definition of a stretched grid, whatever width
 that grid happens to use. Plus the outcome the packing is for: the whole `+`
 menu fits the screen without scrolling.
+
+---
+
+## v04.30 — the read view gets the same card (12 Sep 2026)
+
+> Now, do same in view mode too.
+> Move n Place Cal n add tab to the attach button (bar is not required) n
+> spread-open them on the pallet with the attach buttons as well spread-open.
+
+The edit view has had five rounds of this. The read view had not moved: on a
+phone its `🏷` palette was a card holding **two** controls, one of which
+(`📎 Attach`) only opened **four more** — two taps to reach `📓 My Journal` —
+and the tab bar still sat above everything with `📅 Cal` and `＋ Add Tab` on it.
+
+### One card, built by the same functions
+
+```
+🏷  (read mode, phone)
+ ATTACH TO THE NOTE
+   [🏷 Note Type · General] [📁 Folder · 1 attached]
+   [📓 My Journal] [🗄 MyDatabase]
+ GO TO
+   [📅 Calendar] [＋ Add Tab]
+ OPEN TABS · 3
+   [◆ Seeded note one] [Seeded note two] [Archived seeded note]
+ [✕ Close]
+```
+
+It is `_ebAttachHTML()` and the new `_ebGoToHTML()` — **the same builders the
+`+` menu uses while editing**, so read mode and edit mode cannot drift apart.
+Two things they had to learn:
+
+- **which pop is holding them.** The rows closed `eb-pop` by name; they take
+  the id now, so the same row works in `p3h-pal`.
+- **read mode.** `openPicker()` edits `ST.efolders`, which only exists while
+  editing — so the `📁 Folder` row keeps the existing Attach menu's behaviour
+  and says *"Open this note for editing to change its folders"*.
+
+**Both ways in land on the same card.** The toolbar folds the type group
+behind `🏷` only when it does not fit, so `📎 Attach` is sometimes the button
+actually tapped — `openAttachMenu()` opens the card too on a phone, rather
+than the old four-item list.
+
+### The tab bar is gone from the phone entirely
+
+v04.25 stopped rendering it while editing. It does not render on a phone in
+**either** mode now — "bar is not required" — and everything it carried is in
+the card: `📅 Calendar`, `＋ Add Tab` and every open tab, marked `◆` for the one
+you are in. A tablet and a laptop keep the bar exactly as it was.
+
+### And the `⋯` actions palette packs
+
+The read view's other card was five full-width rows for five short phrases.
+Same treatment as v04.29: sized to the words, packed, framed. **160px instead
+of 250.**
+
+### Measured
+
+208 → 213 app checks, and 11/11 ship checks.
+
+Two existing checks described what this round deliberately changed and were
+**updated in place with the reason**, not worked around:
+
+- "the tab bar comes back the moment editing ends" became "it does not render
+  in read mode either" — with what it carried asserted reachable from the card
+  instead;
+- the v04.09 palette check asked whether the type palette contained **chip
+  markup**. On a phone it now contains a `🏷 Note Type · General` row calling
+  `openNtiPicker` directly. The question is asked as *can the type be changed
+  from this palette* — by the function — rather than as one particular way of
+  being true. A tablet still gets the chip card, and that is asserted too.
