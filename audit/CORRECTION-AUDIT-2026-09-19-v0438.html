@@ -141,6 +141,11 @@ All suites green.</code></pre>
 <ul><li><strong><code>make origin/main reachable for the comparison checks</code></strong> — so <code>ship-check</code> really performed the version-bump and <code>legacy/**</code> seal (I6) comparisons instead of silently skipping them;</li><li><strong><code>prove the harness can actually reach Playwright before running anything</code></strong> — so the browser suites genuinely measured the app. This is the exact failure that once reported 58 checks as if they were 589.</li></ul>
 <p>Corroborating: the <code>feature-matrix</code> artifact is <strong>89,534 bytes</strong>, against v04.37's 87,876 and the broken run's 65,136.</p>
 <p><code>audit-all</code> exits non-zero on any FAIL, so a <code>success</code> conclusion on that step is itself the "0 FAIL" assertion.</p>
+<h3>The branch head after this</h3>
+<p><code>b5ed9d1</code> is the commit that carries <strong>all of this round's application code</strong> — <code>index.html</code>, <code>sw.js</code> and <code>tools/audit-j-recovery.mjs</code>. Everything pushed after it on this branch is <strong>documentation only</strong> and changes no application code, which <code>git diff --stat b5ed9d1..HEAD -- index.html sw.js tools/</code> shows as empty.</p>
+<p>Those documentation commits are nevertheless run through the same CI, because a report that says "CI is green" ought to be true of the commit a reader actually checks out:</p>
+<ul><li><code>8dd31d6</code> (recording the runs above) — push <a href="https://github.com/Siyagah/siyagah.github.io/actions/runs/35429783097">35429783097</a> and pull_request <a href="https://github.com/Siyagah/siyagah.github.io/actions/runs/35429785115">35429785115</a>, <strong>both <code>success</code></strong>.</li></ul>
+<p>Every run on this branch is listed on PR <a href="https://github.com/Siyagah/siyagah.github.io/pull/41">#41</a>. This file is the last commit of the round; its own run appears there too, and since it edits only this Markdown file and its HTML rendering, it cannot change any result above.</p>
 <hr>
 <h2>9. Session-change report</h2>
 <h3>Can this session safely continue?</h3>

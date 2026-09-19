@@ -322,6 +322,30 @@ v04.37's 87,876 and the broken run's 65,136.
 `audit-all` exits non-zero on any FAIL, so a `success` conclusion on that step
 is itself the "0 FAIL" assertion.
 
+### The branch head after this
+
+`b5ed9d1` is the commit that carries **all of this round's application code**
+— `index.html`, `sw.js` and `tools/audit-j-recovery.mjs`. Everything pushed
+after it on this branch is **documentation only** and changes no application
+code, which `git diff --stat b5ed9d1..HEAD -- index.html sw.js tools/` shows
+as empty.
+
+Those documentation commits are nevertheless run through the same CI, because
+a report that says "CI is green" ought to be true of the commit a reader
+actually checks out:
+
+- `8dd31d6` (recording the runs above) — push
+  [35429783097](https://github.com/Siyagah/siyagah.github.io/actions/runs/35429783097)
+  and pull_request
+  [35429785115](https://github.com/Siyagah/siyagah.github.io/actions/runs/35429785115),
+  **both `success`**.
+
+Every run on this branch is listed on PR
+[#41](https://github.com/Siyagah/siyagah.github.io/pull/41). This file is the
+last commit of the round; its own run appears there too, and since it edits
+only this Markdown file and its HTML rendering, it cannot change any result
+above.
+
 ---
 
 ## 9. Session-change report
