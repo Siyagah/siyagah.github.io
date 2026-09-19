@@ -37,53 +37,60 @@ const JS_LINE0 = SRC.slice(0, OPEN + 10).split('\n').length;   /* 1-based line o
    classifies every character, and everything downstream reads the mask.      */
 function maskCode(s) {
   const m = new Uint8Array(s.length);      /* 1 = real code, 0 = literal/comment */
-  let i = 0;
-  const tmplStack = [];                    /* brace depth at each ${ we are inside */
-  let depth = 0;
-  while (i < s.length) {
-    const c = s[i], d = s[i + 1];
-    if (c === '/' && d === '/') { while (i < s.length && s[i] !== '\n') i++; continue; }
-    if (c === '/' && d === '*') { i += 2; while (i < s.length && !(s[i] === '*' && s[i + 1] === '/')) i++; i += 2; continue; }
-    if (c === '"' || c === "'") {
-      const q = c; i++;
-      while (i < s.length && s[i] !== q) { if (s[i] === '\\') i++; i++; }
-      i++; continue;
-    }
-    if (c === '`') {
-      i++;
-      while (i < s.length) {
-        if (s[i] === '\\') { i += 2; continue; }
-        if (s[i] === '`') { i++; break; }
-        if (s[i] === '$' && s[i + 1] === '{') {       /* ${ ... } IS code */
-          m[i] = 0; m[i + 1] = 0; i += 2;
-          tmplStack.push(depth);
-          let sub = 0;
-          while (i < s.length) {
-            /* recurse by hand: mark code, stop at the matching } */
-            const cc = s[i], dd = s[i + 1];
-            if (cc === '/' && dd === '/') { while (i < s.length && s[i] !== '\n') i++; continue; }
-            if (cc === '/' && dd === '*') { i += 2; while (i < s.length && !(s[i] === '*' && s[i + 1] === '/')) i++; i += 2; continue; }
-            if (cc === '"' || cc === "'" || cc === '`') {
-              const q2 = cc; i++;
-              if (q2 === '`') { let td = 0; while (i < s.length) { if (s[i] === '\\') { i += 2; continue; } if (s[i] === '{' ) td++; if (s[i] === '`' && td === 0) { i++; break; } if (s[i] === '}' && td > 0) td--; i++; } }
-              else { while (i < s.length && s[i] !== q2) { if (s[i] === '\\') i++; i++; } i++; }
-              continue;
-            }
-            if (cc === '{') sub++;
-            if (cc === '}') { if (sub === 0) { i++; break; } sub--; }
-            m[i] = 1; i++;
-          }
-          tmplStack.pop();
-          continue;
-        }
-        i++;
+  /* One recursive scanner with exactly two modes. Two earlier cuts of this
+     were wrong in opposite directions and both were silent about it:
+       • keeping template depth by hand desynced on a nested `${`}`}`, after
+         which every block comment in the rest of the file scored as CODE —
+         `back()`, a function with no caller anywhere, came back "reachable"
+         on the strength of eleven mentions in prose;
+       • then applying the CODE rules inside a template literal, where `//`
+         is part of a URL and `'` is part of `class='x'` — that ate past
+         closing backticks and found 254 functions instead of 1,052.
+     Inside a template only three things mean anything: a backslash, a
+     backtick, and `${`. */
+  function scan(i, mode) {
+    while (i < s.length) {
+      const c = s[i], d = s[i + 1];
+      if (mode === 'tmpl') {
+        if (c === '\\') { i += 2; continue; }
+        if (c === '`') return i;
+        if (c === '$' && d === '{') { i = scan(i + 2, 'code'); if (s[i] === '}') i++; continue; }
+        i++; continue;
       }
-      continue;
+      if (c === '}') return i;
+      if (c === '/' && d === '/') { while (i < s.length && s[i] !== '\n') i++; continue; }
+      if (c === '/' && d === '*') { i += 2; while (i < s.length && !(s[i] === '*' && s[i + 1] === '/')) i++; i += 2; continue; }
+      if (c === '"' || c === "'") { const q = c; i++;
+        while (i < s.length && s[i] !== q) { if (s[i] === '\\') i++; i++; } i++; continue; }
+      /* A REGEX LITERAL. Leaving this out is what collapsed the count to 15:
+         `/['"]/` opens a string on its own quote, the scanner eats forward to
+         the next one in some unrelated line, and everything after it is
+         misclassified. A `/` is a regex when the last meaningful character
+         before it cannot end an expression. */
+      if (c === '/') {
+        let k = i - 1; while (k >= 0 && /\s/.test(s[k])) k--;
+        const prev = k >= 0 ? s[k] : '';
+        if (prev === '' || '(,=:[!&|?+-*%~^{};'.includes(prev) || /[\s]/.test(prev)) {
+          let j = i + 1, cls = false;
+          while (j < s.length) {
+            if (s[j] === '\\') { j += 2; continue; }
+            if (s[j] === '[') cls = true;
+            else if (s[j] === ']') cls = false;
+            else if (s[j] === '/' && !cls) break;
+            else if (s[j] === '\n') { j = -1; break; }
+            j++;
+          }
+          if (j > 0) { i = j + 1; continue; }     /* a real regex literal */
+        }
+        m[i] = 1; i++; continue;                  /* division */
+      }
+      if (c === '`') { i = scan(i + 1, 'tmpl'); if (s[i] === '`') i++; continue; }
+      if (c === '{') { m[i] = 1; i = scan(i + 1, 'code'); if (s[i] === '}') { m[i] = 1; i++; } continue; }
+      m[i] = 1; i++;
     }
-    if (c === '{') depth++;
-    if (c === '}') depth--;
-    m[i] = 1; i++;
+    return i;
   }
+  scan(0, 'code');
   return m;
 }
 const MASK = maskCode(JS);
@@ -181,10 +188,25 @@ const functions = decls.map((f) => {
   let callers = 0, refs = 0, mm;
   const rxCall = new RegExp('\\b' + esc0 + '\\s*\\(', 'g');
   while ((mm = rxCall.exec(JS))) { if (MASK[mm.index] && (mm.index < f.start || mm.index > f.end)) callers++; }
+  /* A bare reference only counts when the name is being PASSED — the
+     `addEventListener('mousemove', _drag)` shape. Counting every bare
+     mention makes a common word look alive: `back` has ten, and all ten are
+     local `const back = ` variables inside unrelated menu builders, while
+     the function itself is called from nowhere at all. */
   const rxRef = new RegExp('(?<![\\w$.])' + esc0 + '(?![\\w$])', 'g');
-  while ((mm = rxRef.exec(JS))) { if (MASK[mm.index] && (mm.index < f.start || mm.index > f.end)) refs++; }
-  /* markup handlers live inside template literals, which MASK excludes */
-  const inHandlers = [...SRC.matchAll(new RegExp('\\b' + esc0 + '\\s*\\(', 'g'))].length - (callers + 1);
+  while ((mm = rxRef.exec(JS))) {
+    if (!MASK[mm.index] || (mm.index >= f.start && mm.index <= f.end)) continue;
+    let a = mm.index - 1; while (a >= 0 && /\s/.test(JS[a])) a--;
+    let b = mm.index + f.name.length; while (b < JS.length && /\s/.test(JS[b])) b++;
+    if ('(,['.includes(JS[a]) && ')],'.includes(JS[b])) refs++;
+  }
+  /* Markup handlers live inside template literals, which MASK excludes — so
+     they are counted against the raw file. Against the RAW file, though,
+     `\bback\s*\(` also matches the words "back (measured: 28px…)" in a CSS
+     comment, which reported a function with no caller as reachable. Count
+     only names that appear inside an actual on*= attribute. */
+  const inHandlers = [...SRC.matchAll(/\bon[a-z]+\s*=\s*(["'])([\s\S]*?)\1/g)]
+    .filter((h) => new RegExp('(?<![\\w$.])' + esc0 + '\\s*\\(').test(h[2])).length;
   /* a handler name can be COMPOSED rather than written:
      onclick="${cond?'removeFolderPin':'setFolderPin'}('${fid}')" — the name and
      its `(` never touch, so no call-shaped search can see it. This is also a
@@ -236,7 +258,14 @@ const summary = {
   scriptLines: JS.split('\n').length,
   functions: functions.length,
   reachable: functions.filter((f) => f.reachable).length,
-  unreferenced: functions.filter((f) => !f.reachable).map((f) => f.name),
+  /* Final, independent confirmation. Every heuristic above can be wrong in
+     both directions, so a name is only reported dead once the RAW file is
+     asked the simplest possible question: does `name(` appear anywhere other
+     than the declaration itself? That one grep is the ground truth, and it
+     has overruled three different versions of the clever answer. */
+  unreferenced: functions.filter((f) => !f.reachable).map((f) => f.name)
+    .filter((n) => ![...new Set(controls.flatMap((c) => c.calls))].includes(n))
+    .filter((n) => [...JS.matchAll(new RegExp('(?<![\\w$.])' + n.replace(/\$/g, '\\$') + '\\s*\\(', 'g'))].length <= 1),
   mutateModel: functions.filter((f) => f.mutatesModel).length,
   persist: functions.filter((f) => f.persists).length,
   destructive: functions.filter((f) => f.destructive).length,

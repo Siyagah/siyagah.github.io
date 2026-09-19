@@ -3115,3 +3115,60 @@ it. Damaged fixtures now arrive through `addInitScript` as raw bytes
 
 **43/43** new shell/startup checks, on top of 286/286 app, 11/11 ship, 24/24
 journeys and 6/6 persistence — all re-run and green on v04.36.
+
+### Phase 3 — import, export, backup and privacy
+
+**Decision 4, implemented.** `⬆ Import data from JSON backup` replaced the
+whole notebook on one click before v04.35, which gave it a count, a
+confirmation and a recovery copy. It was still **replace-only**. It now offers
+the same choice the HTML importer has offered for a version series — `OK =
+Merge`, `Cancel = Replace All` — with Merge as the OK answer because it is the
+one that cannot lose anything, `Replace` behind a second explicit confirmation
+naming both counts, and a `📦 Save File` recovery copy written **before either
+path**. Merge goes through `mergeDB()`, so the same newest-wins union that
+keeps two devices honest is what brings a file in.
+
+And the reverse gap, which was the more dangerous of the two: **`importBackup()`'s
+Replace All had no recovery copy at all**, although it wipes sections, folders,
+notes and trash together. Both importers now take one, through a single shared
+`_recoveryCopyOrAsk()`, and both run the incoming file through `_repairDB()` —
+a file off someone's disk is no better-formed than a damaged localStorage, and
+it never went through `loadDB()`.
+
+**A real folder name was still reaching the Deploy Export.** Finding 2's fix
+asked the general question about body's *children* and stopped there;
+everything rendered *inside* the shell was still handled by a hand-written list
+of seven ids in `getExportHTML()` — `['tree','p2h','p2c','p3h','p3c','ctx','mb']`
+— and **`#p2h-path` is not one of them**. It is a sibling of `#p2h` inside
+`#p2`, and it carries
+`title="New subfolder inside &quot;<the folder's real name>&quot;"`. So the
+file whose own comment promises that "visitors who view the page source see no
+private data" was publishing a folder name. Exactly the rot the audit
+predicted: *"Every allow-list entry named residue someone had already been
+bitten by."*
+
+The fix is the general question, asked of the inside as well: record what every
+**leaf** id'd container holds and restore the shell from that. Two things had
+to be right about it, and both cost a measurement. It is taken
+**synchronously while the script is still parsing**, not from
+`DOMContentLoaded` — `_snapshotShell()` runs *after* the first render, and
+`tree` was already **8,215 bytes of real folder names** by the time it did, so
+a snapshot taken there is a snapshot of the leak. And only **leaves** are
+recorded: `#p3` holds `#p3h` and `#p3c`, so blanking an ancestor destroys the
+descendants the restore is about to write into, and the restore then puts the
+saved markup onto nodes that are no longer in the document — **the live editor
+among them**, during a Save File taken while the owner is typing.
+
+A new canary sweep runs a 120-note notebook full of malformed content with a
+note title, a folder name, a notebook id, an API key, an invented popover and a
+foreign iframe planted in it, and requires **none of the six** to appear in the
+shell. `mergeDB()` is asked eight adversarial questions with no network at all
+— union, newest-wins from either side, a device a day fast (the same answer
+whichever way the merge runs), identical timestamps, a tombstone versus a stale
+device, an edit made *after* a delete, merging a notebook with itself, and a
+damaged remote side. **44/44**, and `app-check` is **288/288** with the
+`importJSON` recovery-copy check **updated in place**: the copy moved into a
+shared helper, so a grep for a literal `exportFile()` inside `importJSON` now
+fails on a round that made the guarantee stronger and wider. It follows the
+indirection instead, and two new rows cover `importBackup()`'s copy and the
+merge option.

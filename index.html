@@ -3256,9 +3256,44 @@ const _EXPORT_STYLE_ID_OK  = /^(mywall-style|dyn-hs|jcss-)/;
    thought to close. An id list would have rotted the same way; this cannot,
    because it never names anything. */
 let _SHELL_BODY = null;
+let _SHELL_HTML = null;   /* v04.36 — {id: innerHTML} as the document LOADED */
+/* v04.36 — the SECOND half of v04.35's idea. That round asked the general
+   question about body's CHILDREN and stopped there; everything the app
+   renders INSIDE the shell was still handled by a hand-written list of seven
+   ids in getExportHTML(). The list had no `#p2h-path` in it — a sibling of
+   `#p2h`, inside `#p2` — so a Deploy Export carried
+   `title="New subfolder inside &quot;<a real folder name>&quot;"`, on a
+   public URL, in the file whose own comment promises that "visitors who view
+   the page source see no private data".
+
+   This is taken SYNCHRONOUSLY, here, while the script is still parsing.
+   `_snapshotShell()` runs from DOMContentLoaded, which is AFTER the first
+   render — measured: `tree` was already 8,215 bytes of the owner's real
+   folder names by the time it ran, so a snapshot taken there is a snapshot
+   of the leak. The app's own markup is above this script in the same body,
+   and nothing has rendered yet, so here it is genuinely pristine.
+
+   Only LEAF containers are recorded. `#p3` holds `#p3h` and `#p3c`; blanking
+   an ancestor destroys the descendants the restore is about to write into,
+   and the restore then puts the old innerHTML onto nodes no longer in the
+   document — the live editor among them. render() writes to the leaves, so
+   the leaves are enough. */
+(function _snapshotShellMarkup(){
+  try{
+    if(!document.body) return;                     /* defensive: keeps the old path */
+    const map={};
+    document.body.querySelectorAll('[id]').forEach(el=>{
+      if(el.id==='nd') return;                     /* the data slot — set deliberately */
+      if(el.querySelector('[id]')) return;         /* leaves only */
+      map[el.id]=el.innerHTML;
+    });
+    _SHELL_HTML=map;
+  }catch(e){ _SHELL_HTML=null; console.error('shell markup snapshot failed:', e); }
+})();
 function _snapshotShell(){
   try{ _SHELL_BODY = new WeakSet(Array.prototype.slice.call(document.body.children)); }
   catch(e){ _SHELL_BODY = null; console.error('shell snapshot failed:', e); }
+
 }
 function _cleanExportRoot(){
   let root;
@@ -3345,11 +3380,20 @@ function getExportHTML(ndOverride){
   document.getElementById('paste-pop')?.remove();
   document.getElementById('men-dd')?.remove();
   document.getElementById('item-menu')?.remove();
-  const ids=['tree','p2h','p2c','p3h','p3c','ctx','mb'];
-  const saved=ids.map(id=>document.getElementById(id).innerHTML);
-  ids.forEach(id=>document.getElementById(id).innerHTML='');
+  /* v04.36 — restore EVERY id'd element to what the document loaded with,
+     not seven of them by name. The old list read
+     ['tree','p2h','p2c','p3h','p3c','ctx','mb'] and had no '#p2h-path' in
+     it, so a real folder name rode into the Deploy Export inside a button's
+     title attribute. `_SHELL_HTML` is taken at DOMContentLoaded, before the
+     app has rendered a thing, so restoring from it is restoring the shipped
+     shell — which is exactly what a deploy shell is. The fallback keeps the
+     old behaviour if the snapshot could not be taken. */
+  const _ids = _SHELL_HTML ? Object.keys(_SHELL_HTML) : ['tree','p2h','p2c','p3h','p3c','ctx','mb'];
+  const _els = _ids.map(id=>document.getElementById(id)).filter(Boolean);
+  const saved = _els.map(el=>el.innerHTML);
+  _els.forEach(el=>{ el.innerHTML = _SHELL_HTML ? (_SHELL_HTML[el.id]||'') : ''; });
   const html='<!DOCTYPE html>\n'+_cleanExportRoot();   /* v03.80 — sanitised clone, live DOM untouched */
-  ids.forEach((id,i)=>document.getElementById(id).innerHTML=saved[i]);
+  _els.forEach((el,i)=>{ el.innerHTML = saved[i]; });
   if(ndOverride!==undefined)document.getElementById('nd').textContent=JSON.stringify(DB); // restore live data
   return html;
 }
@@ -3399,6 +3443,23 @@ function exportJSON(){const blob=new Blob([JSON.stringify(DB,null,2)],{type:'app
    back" (I4) and needs no new storage and no new screen.
    NOTE for the owner: importBackup() also offers MERGE. Whether this one
    should too is a product decision and is left alone here. */
+/* v04.36 — one recovery copy, used by BOTH importers. `importJSON()` wrote
+   one and `importBackup()`'s Replace path did not, although it is the more
+   destructive of the two (it wipes sections, folders, notes and trash in one
+   go). Returns true when the copy was written; the caller decides what to do
+   about a false, and neither of them presses on quietly. */
+function _preImportRecoveryCopy(){
+  try{ exportFile(); return true; }
+  catch(err){ console.error('pre-import recovery copy failed:',err); return false; }
+}
+function _recoveryCopyOrAsk(){
+  if(_preImportRecoveryCopy()) return true;
+  return confirm(
+    '\u26a0 The safety copy could NOT be saved.\n\n'+
+    'If you continue, your current notes will be changed with no backup.\n\n'+
+    'OK to continue anyway, Cancel to stop.');
+}
+
 function importJSON(){
   const inp=document.createElement('input');inp.type='file';inp.accept='.json';
   inp.onchange=e=>{
@@ -3410,31 +3471,50 @@ function importJSON(){
       catch(err){ toast('\u26a0 Could not read that file \u2014 it is not valid JSON'); return; }
       if(!d||!Array.isArray(d.folders)||!Array.isArray(d.articles)){
         toast('\u26a0 That file is not a Siyagah data backup \u2014 nothing was changed'); return; }
+      /* v04.36 — a file from someone else's disk is exactly as likely to be
+         damaged as one from this device's storage, and it arrives without
+         having been through loadDB(). Repair it before it can reach
+         mergeDB(), where a collection that is not a list used to throw. */
+      const _ri=_repairDB(d,'imported'); d=_ri.db||d;
       const nA=d.articles.length, nF=d.folders.length, nS=(d.sections||[]).length;
       const cA=DB.articles.length, cF=DB.folders.length, cS=(DB.sections||[]).length;
-      if(!confirm(
-        '\u26a0 Replace EVERYTHING in this notebook?\n\n'+
+      /* v04.36 — MERGE or REPLACE, the same choice the HTML importer has
+         offered for a version series. This button used to replace the whole
+         notebook on one click; v04.35 gave it a count, a confirmation and a
+         recovery copy, and this round gives it the other half — a way to take
+         the file's notes WITHOUT losing your own. Merge is the OK (default)
+         answer, because it is the one that cannot lose anything. */
+      const _merge=confirm(
+        '\ud83d\udce5 Import from JSON backup\n\n'+
         'File: '+file.name+'\n'+
         'The file holds:  '+nA+' notes \u00b7 '+nF+' folders \u00b7 '+nS+' sections\n'+
-        'You have now:    '+cA+' notes \u00b7 '+cF+' folders \u00b7 '+cS+' sections\n\n'+
-        'Your current notes will be REPLACED, not merged, and the change syncs\n'+
-        'to your other devices.\n\n'+
-        'A \ud83d\udce6 Save File copy of what you have now will be downloaded first,\n'+
-        'so you can always get back to it.\n\n'+
+        'You have now:    '+cA+' notes \u00b7 '+cF+' folders \u00b7 '+cS+' sections\n'+
+        (_ri.fixes.length?'\nThe file needed repair on the way in: '+_ri.fixes.join(', ')+'\n':'')+
+        '\nChoose how to bring it in:\n'+
+        '  OK     = Merge  (keep everything you have, add what the file has,\n'+
+        '           newest edit wins where the same note is in both)\n'+
+        '  Cancel = Replace All  (your current notes are REPLACED)\n\n'+
+        'Either way the change syncs to your other devices, and a\n'+
+        '\ud83d\udce6 Save File copy of what you have now is downloaded first.'
+      );
+      if(!_merge && !confirm(
+        '\u26a0 Replace EVERYTHING in this notebook?\n\n'+
+        'Your '+cA+' notes and '+cF+' folders will be REPLACED by the file\'s\n'+
+        nA+' notes and '+nF+' folders. This is not a merge.\n\n'+
         'OK to replace, Cancel to stop.'
       )){ toast('Import cancelled \u2014 nothing was changed'); return; }
-      /* Recovery copy BEFORE anything is touched. If it cannot be written,
-         say so and let the owner decide rather than pressing on. */
-      let saved=false;
-      try{ exportFile(); saved=true; }
-      catch(err){ console.error('pre-import backup failed:',err); }
-      if(!saved && !confirm(
-        '\u26a0 The safety copy could NOT be saved.\n\n'+
-        'If you continue, your current notes will be replaced with no backup.\n\n'+
-        'OK to continue anyway, Cancel to stop.'
-      )){ toast('Import cancelled \u2014 nothing was changed'); return; }
-      DB=d; persist(); render();
-      toast('\u2705 Imported '+nA+' notes \u00b7 '+nF+' folders'+(saved?' \u2014 your previous notebook was saved to a file first':''), 7000);
+      /* Recovery copy BEFORE anything is touched, on BOTH paths. If it cannot
+         be written, say so and let the owner decide rather than pressing on. */
+      if(!_recoveryCopyOrAsk()){ toast('Import cancelled \u2014 nothing was changed'); return; }
+      if(_merge){
+        const _before=DB.articles.length, _bf=DB.folders.length;
+        DB=mergeDB(DB,d); persist(); render();
+        toast('\u2705 Merged \u2014 '+(DB.articles.length-_before)+' new notes and '+
+              (DB.folders.length-_bf)+' new folders added, nothing removed', 7000);
+      }else{
+        DB=d; persist(); render();
+        toast('\u2705 Replaced \u2014 '+nA+' notes \u00b7 '+nF+' folders. Your previous notebook was saved to a file first.', 7000);
+      }
     };
     fr.onerror=()=>toast('\u26a0 Could not read that file');
     fr.readAsText(file);
@@ -4441,7 +4521,14 @@ function selArt(id){
   adjustP3Layout();
   if(window.innerWidth<1200) showPane('p3');
 }
-function back(){ST.article=null;ST.editing=false;renderP3H();renderP3C();}
+/* v04.36 — every other way out of a note flushes first (selArt, selFolder),
+   and this one did not: typing in Pane 3 and leaving through here discarded
+   the edit outright, because renderP3C() rebuilds #ed and the pending
+   autosave then commits an editor that no longer holds the text (I1).
+   Measured dead — nothing in the app currently calls back() — so this was a
+   trap set for whoever wired it to a control next, not a live defect. It is
+   fixed rather than deleted for exactly that reason. */
+function back(){if(ST.editing)saveArt();ST.article=null;ST.editing=false;renderP3H();renderP3C();}
 function togExp(ev,id){
   ev.stopPropagation();
   if(ST.exp[id]) collapseFolder(id); // close this + all nested
@@ -7184,7 +7271,10 @@ function importBackup(){
         toast('⚠ No importable data found.\n\nMake sure you are using a Siyagah Backup HTML file from v25 or later.\nOlder backup files are readable but cannot be imported.');
         return;
       }
-      const bk=JSON.parse(dataEl.textContent);
+      let bk=JSON.parse(dataEl.textContent);
+      /* v04.36 — same repair the JSON importer got: a backup file is not a
+         trusted shape just because it came out of this app once. */
+      const _rb=_repairDB(bk,'backup'); bk=_rb.db||bk;
       const artCount=(bk.articles||[]).filter(a=>!a.id?.startsWith('kb-')).length;
       const folCount=(bk.folders||[]).filter(f=>!f.id?.startsWith('kb-')).length;
       const secCount=(bk.sections||[]).filter(s=>!s.id?.startsWith('kb-')).length;
@@ -7202,9 +7292,17 @@ function importBackup(){
       } else {
         if(!confirm(
           '⚠ Replace ALL your current notes with this backup?\n\n'+
-          'This cannot be undone. Your current notes will be permanently replaced.\n\n'+
+          'Your '+DB.articles.length+' notes and '+DB.folders.length+' folders will be\n'+
+          'permanently replaced by the backup\'s '+artCount+' notes and '+folCount+' folders,\n'+
+          'and the change syncs to your other devices.\n\n'+
+          'A 📦 Save File copy of what you have now will be downloaded first.\n\n'+
           'OK to replace, Cancel to go back.'
         ))return;
+        /* v04.36 — this path had NO recovery copy, although it is the more
+           destructive of the two importers: it wipes sections, folders, notes
+           and trash together. The JSON importer has written one since v04.35;
+           now both do. */
+        if(!_recoveryCopyOrAsk()){ toast('Import cancelled — nothing was changed'); return; }
         _replaceWithBackup(bk);
       }
     }catch(e){

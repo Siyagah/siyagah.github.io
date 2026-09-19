@@ -3943,11 +3943,35 @@ for (const vp of VIEWPORTS) {
   /* (d) A WHOLE-NOTEBOOK REPLACE IS NEVER SILENT. importJSON() replaced
          every note on one click with no count, no confirmation and no way
          back, and persist() pushed the result to the other devices. */
-  const src = html.slice(html.indexOf('function importJSON'), html.indexOf('function importJSON') + 4000);
+  const src = html.slice(html.indexOf('function importJSON'), html.indexOf('function importJSON') + 6000);
   r.check(/confirm\(/.test(src), 'importJSON() asks before replacing the notebook',
     /confirm\(/.test(src) ? 'confirmation present' : 'NO CONFIRMATION — one click replaces everything');
-  r.check(/exportFile\(\)/.test(src), 'importJSON() writes a recovery copy before replacing',
-    /exportFile\(\)/.test(src) ? 'Save File copy taken first' : 'NO BACKUP before a destructive replace');
+  /* v04.36 — UPDATED IN PLACE, with the reason recorded (CLAUDE.md). The
+     recovery copy moved out of importJSON() into `_recoveryCopyOrAsk()`,
+     because importBackup()'s Replace path had NO copy at all and the two now
+     share one. Grepping importJSON() for a literal `exportFile()` therefore
+     failed on a round that made the guarantee stronger and wider. The check
+     follows the indirection instead of naming the call: whatever the import
+     path reaches for, it must end at a Save File copy. The behaviour itself
+     — a copy really written, on merge AND on replace, and NOT written when
+     the owner cancels — is measured for real in tools/audit-g-data.mjs. */
+  const helper = html.slice(html.indexOf('function _recoveryCopyOrAsk'), html.indexOf('function _recoveryCopyOrAsk') + 600)
+    + html.slice(html.indexOf('function _preImportRecoveryCopy'), html.indexOf('function _preImportRecoveryCopy') + 400);
+  const takesCopy = /exportFile\(\)/.test(src) || (/_recoveryCopyOrAsk\(\)/.test(src) && /exportFile\(\)/.test(helper));
+  r.check(takesCopy, 'importJSON() writes a recovery copy before changing anything',
+    takesCopy ? 'Save File copy taken first (via _recoveryCopyOrAsk)' : 'NO BACKUP before a destructive import');
+  /* …and the half that was missing until v04.36: the HTML importer's
+     Replace path wipes sections, folders, notes and trash together and had
+     no recovery copy of its own. */
+  const bsrc = html.slice(html.indexOf('function importBackup'), html.indexOf('function importBackup') + 4000);
+  const bCopy = /_recoveryCopyOrAsk\(\)/.test(bsrc) || /exportFile\(\)/.test(bsrc);
+  r.check(bCopy, 'importBackup() writes a recovery copy before Replace All',
+    bCopy ? 'Save File copy taken first' : 'NO BACKUP before the more destructive of the two importers');
+  /* MERGE is the half that cannot lose anything, and the Master Plan of
+     2026-09-19 settled that the JSON importer must offer it (Decision 4). */
+  const offersMerge = /Merge/.test(src) && /mergeDB\(/.test(src);
+  r.check(offersMerge, 'importJSON() offers MERGE as well as Replace (Decision 4)',
+    offersMerge ? 'merge path present and reaches mergeDB()' : 'REPLACE-ONLY — one mis-click still costs the notebook');
 }
 
 /* ── 12. Chromium's own verdict on the manifest ────────────────────────── */
