@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.34">
+<meta name="app-version" content="04.35">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2776,7 +2776,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.34</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.35</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3167,11 +3167,51 @@ const persist = () => { snapshotState(); _save(); scheduleAutoSave(); pushToClou
    legitimately owns; anything else is treated as session residue. */
 const _EXPORT_SCRIPT_ALLOW = 'https://www.gstatic.com/firebasejs/';
 const _EXPORT_STYLE_ID_OK  = /^(mywall-style|dyn-hs|jcss-)/;
+/* ══ v04.35 — THE SHELL SNAPSHOT ═══════════════════════════════════════════
+   The allow-lists above name the residue they already knew about, and every
+   one of them was paid for by a leak. The general question is the one they
+   were each a special case of: *was this element part of the document the
+   browser loaded, or did something put it there during the session?*
+   Everything in the second group — every pop-up, picker, float window, the
+   Google sign-in iframe, a browser extension's widget — is residue, whether
+   or not anyone has thought of it yet. Captured once, after the document is
+   parsed and before the app builds any chrome of its own.
+   This is what the shipped index.html needed and did not have: it reached
+   GitHub Pages carrying four sign-in iframes and a #tab-picker holding four
+   REAL note titles, real note ids and real folder names — the exact leak
+   rule 5 below says "must never be serialised", through a door nobody had
+   thought to close. An id list would have rotted the same way; this cannot,
+   because it never names anything. */
+let _SHELL_BODY = null;
+function _snapshotShell(){
+  try{ _SHELL_BODY = new WeakSet(Array.prototype.slice.call(document.body.children)); }
+  catch(e){ _SHELL_BODY = null; console.error('shell snapshot failed:', e); }
+}
 function _cleanExportRoot(){
   let root;
   try{ root = document.documentElement.cloneNode(true); }
   catch(e){ console.error('export clone failed:', e); return document.documentElement.outerHTML; }
   try{
+    /* 0 ─ v04.35 — every body child the document did NOT load with: pop-ups,
+           pickers, float windows, the Google sign-in iframe, an extension's
+           widget. This runs FIRST and nothing before it may touch the clone:
+           it pairs child i of the live body with child i of the clone, and
+           any earlier removal would shift that pairing and quietly sweep the
+           wrong element (it did — an id-only extension node survived while
+           the alignment was off by the <script> tags rules 1-2 had removed).
+           <style> and <script> are left to rules 1-2, which keep the app's
+           own (dyn-hs, jcss-*, the Firebase SDK). */
+    if(_SHELL_BODY){
+      const liveKids = Array.prototype.slice.call(document.body.children);
+      const cloneBody = root.querySelector('body');
+      const cloneKids = cloneBody ? Array.prototype.slice.call(cloneBody.children) : [];
+      for(let i = liveKids.length - 1; i >= 0; i--){
+        const n = liveKids[i], t = n.tagName;
+        if(t === 'STYLE' || t === 'SCRIPT') continue;
+        if(_SHELL_BODY.has(n)) continue;
+        if(cloneKids[i]) cloneKids[i].remove();
+      }
+    }
     /* 1 ─ External scripts: keep only the Firebase SDK. Inline scripts have
            no src, so the app itself and the #nd data tag are never touched. */
     root.querySelectorAll('script[src]').forEach(function(el){
@@ -3205,6 +3245,15 @@ function _cleanExportRoot(){
     if(cx) cx.setAttribute('style','display:none');
     const jp = root.querySelector('#jrn-style-pop');
     if(jp) jp.remove();
+    /* 7 ─ v04.35 — any cross-origin iframe, wherever it sits. The sign-in
+           iframe loader is named at the top of this block as residue, but
+           rule 1 only ever removed <script src>, so four of them rode into
+           the deployed file. A note's own embed (YouTube, Vimeo) is real
+           content and lives inside .embed-wrap, so it is kept. */
+    root.querySelectorAll('iframe[src]').forEach(function(el){
+      const src = el.getAttribute('src') || '';
+      if(/^https?:\/\//i.test(src) && src.indexOf(location.origin) !== 0 && !el.closest('.embed-wrap')) el.remove();
+    });
   }catch(e){ console.error('export sanitise failed:', e); }
   return root.outerHTML;
 }
@@ -3263,7 +3312,62 @@ function exportDeploy(){
   toast('🚀 Deploy file ready — upload to Firebase Hosting / GitHub Pages');
 }
 function exportJSON(){const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='notebook-backup.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);toast('Backup downloaded ✓');}
-function importJSON(){const inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.onchange=e=>{const fr=new FileReader();fr.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.folders&&d.articles){DB=d;persist();render();toast('Data imported ✓');}else toast('Invalid file');}catch{toast('Could not read file');}};fr.readAsText(e.target.files[0]);};inp.click();}
+/* ── Import from a JSON backup ──────────────────────────────────────────
+   v04.35 — this replaced the ENTIRE notebook on one click, with no count,
+   no confirmation and no way back: pick a file, and every note, folder and
+   section was gone and `persist()` had already pushed the empty result to
+   the cloud, so the other devices lost them too. That is I1 ("no note,
+   folder or section is ever lost"), and D3 does not cover it — it is not a
+   deliberate deletion, it is a file-picker mis-click.
+   Its sibling importBackup() has always done this properly: it counts what
+   is in the file, says what will happen and asks twice before replacing.
+   This now matches that standard, and writes a complete recovery copy
+   first — a 📦 Save File export, which is the app's own answer to "get it
+   back" (I4) and needs no new storage and no new screen.
+   NOTE for the owner: importBackup() also offers MERGE. Whether this one
+   should too is a product decision and is left alone here. */
+function importJSON(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=e=>{
+    const file=e.target.files&&e.target.files[0]; if(!file)return;
+    const fr=new FileReader();
+    fr.onload=ev=>{
+      let d;
+      try{ d=JSON.parse(ev.target.result); }
+      catch(err){ toast('\u26a0 Could not read that file \u2014 it is not valid JSON'); return; }
+      if(!d||!Array.isArray(d.folders)||!Array.isArray(d.articles)){
+        toast('\u26a0 That file is not a Siyagah data backup \u2014 nothing was changed'); return; }
+      const nA=d.articles.length, nF=d.folders.length, nS=(d.sections||[]).length;
+      const cA=DB.articles.length, cF=DB.folders.length, cS=(DB.sections||[]).length;
+      if(!confirm(
+        '\u26a0 Replace EVERYTHING in this notebook?\n\n'+
+        'File: '+file.name+'\n'+
+        'The file holds:  '+nA+' notes \u00b7 '+nF+' folders \u00b7 '+nS+' sections\n'+
+        'You have now:    '+cA+' notes \u00b7 '+cF+' folders \u00b7 '+cS+' sections\n\n'+
+        'Your current notes will be REPLACED, not merged, and the change syncs\n'+
+        'to your other devices.\n\n'+
+        'A \ud83d\udce6 Save File copy of what you have now will be downloaded first,\n'+
+        'so you can always get back to it.\n\n'+
+        'OK to replace, Cancel to stop.'
+      )){ toast('Import cancelled \u2014 nothing was changed'); return; }
+      /* Recovery copy BEFORE anything is touched. If it cannot be written,
+         say so and let the owner decide rather than pressing on. */
+      let saved=false;
+      try{ exportFile(); saved=true; }
+      catch(err){ console.error('pre-import backup failed:',err); }
+      if(!saved && !confirm(
+        '\u26a0 The safety copy could NOT be saved.\n\n'+
+        'If you continue, your current notes will be replaced with no backup.\n\n'+
+        'OK to continue anyway, Cancel to stop.'
+      )){ toast('Import cancelled \u2014 nothing was changed'); return; }
+      DB=d; persist(); render();
+      toast('\u2705 Imported '+nA+' notes \u00b7 '+nF+' folders'+(saved?' \u2014 your previous notebook was saved to a file first':''), 7000);
+    };
+    fr.onerror=()=>toast('\u26a0 Could not read that file');
+    fr.readAsText(file);
+  };
+  inp.click();
+}
 
 /* ── Toast ───────────────────────────────────────────────────────── */
 function toast(msg,dur=2800){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},dur);}
@@ -4291,13 +4395,53 @@ function updateSbToggle(){
   const targetLeft=closed?0:parseInt(sb.style.width)||sb.offsetWidth||262;
   btn.style.left=targetLeft+'px';
 }
-function startEdit(){const a=DB.articles.find(x=>x.id===ST.article);if(!a)return;_captureNoteHistory(a,'session-start');ST.etitle=a.title;ST.efolders=[...a.folderIds];ST.etags=[...(a.tags||[])];ST.editing=true;renderP3H();renderP3C();adjustP3Layout();}
+/* ══ v04.35 — F3's HAND-OVER, IN THE REVERSE DIRECTION ═══════════════════
+   popOutNote() hands Pane 3's editor over to a float window. Nothing did the
+   opposite: Pane 3 would happily open a SECOND editor on a note a float
+   window already owned. That is reachable in three real clicks, because
+   since v04.00 every new note opens as its own pop-out:
+     ✚ Note  →  the note opens in a pop-up (content still empty)
+     ✏ Edit  →  Pane 3 builds #ed on the SAME note, correctly empty
+     type    →  the text goes to the pop-up and is saved
+     click a folder → selFolder() calls saveArt(), which commits the STALE
+                      empty #ed over the live note and wipes it, silently.
+   Measured with real mouse clicks on origin/main at v04.34: note emptied at
+   tablet (820) and desktop (1440). The phone only escapes because its sheet
+   covers the ✏ Edit button — occlusion, not a decision.
+   This is I1 ("no note is ever silently changed"), so the rule F3 states for
+   one direction is enforced for BOTH: one owner per note, whichever way the
+   note got there. _fwRaise() is the three lines popOutNote() already ran for
+   an existing window, extracted so the two routes cannot drift apart. */
+function _fwOwns(aid){ return !!(aid && document.getElementById('fw-'+aid)); }
+function _fwRaise(aid){
+  const ex=document.getElementById('fw-'+aid); if(!ex)return false;
+  _fwZTop++; ex.style.zIndex=_fwZTop;
+  const ed=ex.querySelector('.fw-ed'); if(ed)ed.focus();
+  _fwFocus(aid); return true;
+}
+function startEdit(){const a=DB.articles.find(x=>x.id===ST.article);if(!a)return;
+  /* One owner per note: the pop-up already has this note open, so bring it
+     forward rather than opening a rival editor behind it. */
+  if(_fwOwns(a.id)){_fwRaise(a.id);return;}
+  _captureNoteHistory(a,'session-start');ST.etitle=a.title;ST.efolders=[...a.folderIds];ST.etags=[...(a.tags||[])];ST.editing=true;renderP3H();renderP3C();adjustP3Layout();}
 function cancelEdit(){ST.editing=false;renderP3H();renderP3C();adjustP3Layout();}
 function saveArt(){
   /* Contact form mode — save fields directly */
   const _cfa=DB.articles.find(x=>x.id===ST.article);
   if(_cfa?.contactData?.mode==='form'){_saveContactForm(_cfa);return;}
   const ed=document.getElementById('ed');if(!ed){ST.editing=false;return;}const a=DB.articles.find(x=>x.id===ST.article);if(!a){ST.editing=false;return;}
+  /* v04.35 — defence in depth for the wipe described above startEdit(). Even
+     if some other route leaves ST.editing true while a float window owns the
+     note, #ed must never be the editor that gets committed: flush the OWNER
+     instead, so navigating away still saves what is actually on screen.
+     _fwFlush() writes only when something changed, so a look-and-leave visit
+     still stamps nothing (the v03.95 no-phantom-update property). */
+  if(_fwOwns(a.id)){
+    const _c0=a.content,_t0=a.title;
+    try{_fwFlush(a.id);}catch(e){console.error('hand-back flush failed:',e);}
+    if(a.content!==_c0||a.title!==_t0)persist();
+    ST.editing=false;renderP3H();renderP3C();adjustP3Layout();return;
+  }
   /* v03.95 — same fix as _flushEd()/_fwFlush(): only stamp updatedAt (and
      therefore only push) when something actually changed. This used to
      unconditionally re-stamp on EVERY exit from edit mode, including one
@@ -9624,8 +9768,7 @@ function popOutNote(aid){
     try{_flushEd();}catch(e){}
     ST.editing=false;renderP3H();renderP3C();adjustP3Layout();
   }
-  const ex=document.getElementById('fw-'+aid);
-  if(ex){ _fwZTop++; ex.style.zIndex=_fwZTop; const ed=ex.querySelector('.fw-ed'); if(ed)ed.focus(); _fwFocus(aid); return; }
+  if(_fwOwns(aid)){ _fwRaise(aid); return; }   /* v04.35 — one raise, two callers */
   _fwCreate(aid);
 }
 /* ══ v04.00 — SCREEN-PROPORTIONATE DEFAULT WINDOW ═════════════════════════
@@ -18619,6 +18762,7 @@ function updateSaveUI(){
    name; the comment on the meta tag itself lists all three. ──────────── */
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || '00.00';
 document.addEventListener('DOMContentLoaded',()=>{
+  _snapshotShell();   /* v04.35 — before any pop-up, picker or window exists */
   const vt=document.getElementById('app-version-tag');
   /* v04.14 — the tag is a badge now, so no leading space inside the pill. */
   if(vt) vt.textContent='v'+APP_VERSION;
@@ -21884,40 +22028,10 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
 </div>
 <div id="sync-modal" onclick="if(event.target===this)closeSyncModal()" style="display: none;">
   <div class="sync-box">
-    <div id="sync-mb">
-    <div class="mt">☁ Cloud Sync Setup</div>
-    <div class="mm">
-      Connect to <strong>Firebase</strong> (free) for real-time sync on any device — phone, tablet, desktop, any browser.
-      <ol class="sync-steps">
-        <li>Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a></li>
-        <li>Create a project → <em>Add app → Web</em> → copy the <code>firebaseConfig</code> object</li>
-        <li>In your project sidebar: <strong>Build → Firestore Database</strong> → Create in <em>test mode</em></li>
-        <li>Paste the config JSON below → click <strong>Connect</strong></li>
-      </ol>
-    </div>
-    <label style="font-size:12px;font-weight:500;color:var(--t2);display:block;margin-bottom:4px">Firebase config (paste JSON)</label>
-    <textarea id="fb-cfg" class="sync-area" rows="7" placeholder="{
-  &quot;apiKey&quot;: &quot;AIzaSy...&quot;,
-  &quot;authDomain&quot;: &quot;yourapp.firebaseapp.com&quot;,
-  &quot;projectId&quot;: &quot;yourapp&quot;,
-  &quot;storageBucket&quot;: &quot;yourapp.appspot.com&quot;,
-  &quot;messagingSenderId&quot;: &quot;123456789&quot;,
-  &quot;appId&quot;: &quot;1:123:web:abc&quot;
-}"></textarea>
-    <label style="font-size:12px;font-weight:500;color:var(--t2);display:block;margin:10px 0 4px">Notebook ID</label>
-    <div style="display:flex;gap:6px;align-items:center">
-      <input class="mi" id="nb-id-inp" value="nb-msrzuilt-gghlh5" placeholder="Paste your Notebook ID here" style="font-size:11px;font-family:monospace;flex:1">
-      <button class="btn" onclick="document.getElementById('nb-id-inp').value=generateNotebookId()" title="Generate new">↻</button>
-    </div>
-    <div style="font-size:11px;color:var(--t3);margin-top:4px">Keep this ID — same on every device</div>
-    <div id="sync-err" style="color:#c00;font-size:12px;margin-top:8px;display:none"></div>
-    <div class="ma" style="margin-top:14px">
-      <button class="btn" onclick="closeSyncModal()">Cancel</button>
-      <button class="btn bp" onclick="connectSync()">Connect</button>
-    </div></div>
+    <div id="sync-mb"><!-- filled by openSyncModal() --></div>
   </div>
 </div>
-<iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1781404983704" name="I0_1781404983704" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.ch0Jz-JlMrQ.O%2Fd%3D1%2Frs%3DAHpOoo_YD4KoV8fTh_kLhktsiThAm3yJ5A%2Fm%3D__features__#id=I0_1781404983704&amp;_gfid=I0_1781404983704&amp;parent=https%3A%2F%2Faaas-notebook.web.app&amp;pfname=&amp;rpctoken=38391774" style="position: absolute; top: -100px; width: 1px; height: 1px;"></iframe><style id="mywall-style">
+<style id="mywall-style">
 .kind-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 16px;padding:9px 11px;background:var(--paper,#fff);border:1px solid var(--border2,#e5e7eb);border-radius:11px}
 .kind-tabs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1;min-width:0}
 .kind-tab{font-size:11.5px;font-weight:600;padding:3px 11px;border:1.4px solid #ccc;border-radius:999px;background:transparent;cursor:pointer;white-space:nowrap;line-height:1.55;transition:filter .12s,box-shadow .12s}
@@ -22104,4 +22218,5 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
     </div>
   </div>
 </div>
-<iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1782051874490" name="I0_1782051874490" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.ch0Jz-JlMrQ.O%2Fd%3D1%2Frs%3DAHpOoo_YD4KoV8fTh_kLhktsiThAm3yJ5A%2Fm%3D__features__#id=I0_1782051874490&amp;_gfid=I0_1782051874490&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=16484655" style="position: absolute; top: -100px; width: 1px; height: 1px;"></iframe><div id="nti-picker" class="" style="inset: 171.5px auto auto 1855.47px;"></div><iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" style="position: absolute; top: -100px; width: 1px; height: 1px;" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1784841121299" name="I0_1784841121299" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.9vdPKhB0RUg.O%2Fd%3D1%2Frs%3DAHpOoo97anj7zZ432JcN58tqJJp_A6WeOw%2Fm%3D__features__#id=I0_1784841121299&amp;_gfid=I0_1784841121299&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=21953727"></iframe><div id="jrn-picker" style="inset: auto 4px 60px; width: auto;" class=""></div><section id="id-recall-widget-root" style="border-block: initial; border-inline: initial; border-start-start-radius: initial; border-start-end-radius: initial; border-end-start-radius: initial; border-end-end-radius: initial; overflow-block: initial; overflow-inline: initial; overscroll-behavior-block: initial; overscroll-behavior-inline: initial; margin-block: initial; margin-inline: initial; scroll-margin-block: initial; scroll-margin-inline: initial; padding-block: initial; padding-inline: initial; scroll-padding-block: initial; scroll-padding-inline: initial; inset-block: initial; inset-inline: initial; block-size: initial; min-block-size: initial; max-block-size: initial; inline-size: initial; min-inline-size: initial; max-inline-size: initial; contain-intrinsic-block-size: initial; contain-intrinsic-inline-size: initial; background: initial; background-blend-mode: initial; border: initial; border-radius: initial; box-decoration-break: initial; -moz-float-edge: initial; display: initial; position: initial; float: initial; clear: initial; vertical-align: initial; baseline-source: initial; overflow: initial; overflow-anchor: initial; transform: initial; rotate: initial; scale: initial; translate: initial; offset: initial; scroll-behavior: initial; scroll-snap-align: initial; scroll-snap-type: initial; scroll-snap-stop: initial; overscroll-behavior: initial; isolation: initial; break-after: initial; break-before: initial; break-inside: initial; resize: initial; perspective: initial; perspective-origin: initial; backface-visibility: initial; transform-box: initial; transform-style: initial; transform-origin: initial; contain: initial; content-visibility: initial; container: initial; appearance: initial; -moz-orient: initial; will-change: initial; shape-image-threshold: initial; shape-margin: initial; shape-outside: initial; touch-action: initial; -webkit-line-clamp: initial; scrollbar-gutter: initial; zoom: initial; columns: initial; column-fill: initial; column-rule: initial; column-span: initial; content: initial; counter-increment: initial; counter-reset: initial; counter-set: initial; opacity: initial; box-shadow: initial; clip: initial; filter: initial; backdrop-filter: initial; mix-blend-mode: initial; font: initial; font-synthesis: initial; font-palette: initial; math-depth: initial; math-style: initial; visibility: initial; writing-mode: initial; text-orientation: initial; print-color-adjust: initial; image-rendering: initial; image-orientation: initial; dominant-baseline: initial; text-anchor: initial; color-interpolation: initial; color-interpolation-filters: initial; fill: initial; fill-opacity: initial; fill-rule: initial; shape-rendering: initial; stroke: initial; stroke-width: initial; stroke-linecap: initial; stroke-linejoin: initial; stroke-miterlimit: initial; stroke-opacity: initial; stroke-dasharray: initial; stroke-dashoffset: initial; clip-rule: initial; marker: initial; paint-order: initial; border-collapse: initial; empty-cells: initial; caption-side: initial; border-spacing: initial; color: initial; text-transform: initial; hyphens: initial; -moz-text-size-adjust: initial; text-indent: initial; overflow-wrap: initial; word-break: initial; text-justify: initial; text-align-last: initial; text-align: initial; letter-spacing: initial; word-spacing: initial; white-space: initial; text-shadow: initial; text-emphasis: initial; text-emphasis-position: initial; tab-size: initial; line-break: initial; -webkit-text-fill-color: initial; -webkit-text-stroke: initial; ruby-align: initial; ruby-position: initial; text-combine-upright: initial; text-rendering: initial; text-underline-offset: initial; text-underline-position: initial; text-decoration-skip-ink: initial; hyphenate-character: initial; forced-color-adjust: initial; -webkit-text-security: initial; hyphenate-limit-chars: initial; text-wrap: initial; cursor: initial; pointer-events: initial; caret-color: initial; accent-color: initial; color-scheme: initial; scrollbar-color: initial; list-style: initial; quotes: initial; margin: initial; overflow-clip-margin: initial; scroll-margin: initial; outline: initial; outline-offset: initial; padding: initial; scroll-padding: initial; page: initial; inset: initial; z-index: initial; flex-flow: initial; place-content: initial; place-items: initial; flex: initial; place-self: initial; order: initial; height: initial; min-height: initial; max-height: initial; width: initial; min-width: initial; max-width: initial; box-sizing: border-box; object-fit: initial; object-position: initial; grid-area: initial; grid: initial; gap: initial; aspect-ratio: initial; contain-intrinsic-size: initial; vector-effect: initial; stop-color: initial; stop-opacity: initial; flood-color: initial; flood-opacity: initial; lighting-color: initial; mask-type: initial; clip-path: initial; mask: initial; x: initial; y: initial; cx: initial; cy: initial; rx: initial; ry: initial; r: initial; d: initial; table-layout: initial; text-overflow: initial; text-decoration: initial; ime-mode: initial; scrollbar-width: initial; user-select: initial; -moz-window-dragging: initial; -moz-force-broken-image-icon: initial; transition: initial; animation: initial; animation-composition: initial; -moz-box-align: initial; -moz-box-direction: initial; -moz-box-flex: initial; -moz-box-orient: initial; -moz-box-pack: initial; -moz-box-ordinal-group: initial;"></section><iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" style="position: absolute; top: -100px; width: 1px; height: 1px;" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1786654383196" name="I0_1786654383196" src="https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA&amp;appName=siyagah-main&amp;v=9.23.0&amp;eid=p&amp;usegapi=1&amp;jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.9vdPKhB0RUg.O%2Fd%3D1%2Frs%3DAHpOoo97anj7zZ432JcN58tqJJp_A6WeOw%2Fm%3D__features__#id=I0_1786654383196&amp;_gfid=I0_1786654383196&amp;parent=https%3A%2F%2Fsiyagah.github.io&amp;pfname=&amp;rpctoken=30546353"></iframe><div id="eb-pop" class="fl-pop" style="inset: 126.75px auto auto 396.1px;"><button class="et" onmousedown="ec(event,'bold')"><b>B</b></button><button class="et" onmousedown="ec(event,'italic')"><i>I</i></button><button class="et" onmousedown="ec(event,'underline')" title="Underline"><u>U</u></button><button class="et" onmousedown="ec(event,'strikeThrough')" title="Strikethrough"><s>S</s></button><button class="et" onmousedown="edMarkDone(event)" title="Mark done (toggle)">✓</button><button class="et" onmousedown="edBoundary(event)" title="Boundary box (toggle)">▢</button><button class="et" onmousedown="edColorBtn(event)" title="Colour">🎨</button><button class="et" onmousedown="edClearFmt(event)" title="Clear formatting (also resets custom text size)">✗A</button><span class="esep"></span><button class="et" onmousedown="edFontStep(event,1)" title="Bigger text (selection, or the whole line at the caret)" style="font-size:15px;font-weight:700;line-height:1">A<sup style="font-size:9px">+</sup></button><button class="et" onmousedown="edFontStep(event,-1)" title="Smaller text (selection, or the whole line at the caret)" style="font-size:11px;font-weight:700;line-height:1">A<sup style="font-size:9px">−</sup></button><button class="et" onmousedown="edFontStep(event,0)" title="Reset text size to 100%" style="font-size:12px;font-weight:700;line-height:1">A↺</button><span class="esep"></span><button class="et" onmousedown="ec(event,'justifyLeft')" title="Align left"><span class="al-ic al-l"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyCenter')" title="Align center"><span class="al-ic al-c"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyRight')" title="Align right"><span class="al-ic al-r"><span></span><span></span><span></span></span></button><button class="et" onmousedown="ec(event,'justifyFull')" title="Justify"><span class="al-ic al-j"><span></span><span></span><span></span></span></button><button class="et fl-pop-x" onmousedown="event.preventDefault()" onclick="_closeStickyPop('eb-pop')" title="Close this menu">✕</button></div><div id="tab-picker" style="top: 49px; left: 1779.03px; transform: none; bottom: auto;" class=""><div class="tp-hd">Add note to Tab bar<button class="tp-cls" onclick="closeTabPicker()" title="Close">✕</button></div><input class="tp-inp" id="tp-inp" type="text" placeholder="Type to search notes…" oninput="renderTabPickerList(this.value)" onkeydown="if(event.key==='Escape')closeTabPicker()" autocomplete="off"><div class="tp-list" id="tp-list"><div class="tp-it" onclick="addToTabPicker('mss0fvzjzzr')"><span>QuranREVIVAL - PROMPT - FINETUNING v07.00</span><span class="tp-it-sub">📁 (01) QuranRevival APP</span></div><div class="tp-it" onclick="addToTabPicker('mscgu6kuhqo')"><span>Siyagah FINETUNING</span><span class="tp-it-sub">📁 (02.01) Siyagah - FINETUNING ALL</span></div><div class="tp-it" onclick="addToTabPicker('ms6nyi34ffe')"><span>Siyagah - FINETUNING</span><span class="tp-it-sub">📁 (01.01) QuranRevival - PROMTPS - Quran</span></div><div class="tp-it" onclick="addToTabPicker('mrmm212uqrg')"><span>Siyagah - PROMPT - SECOND Pane</span><span class="tp-it-sub">📁 (02.05) Siyagah - SECOND (2nd) Pane Prompt</span></div></div></div></body></html>
+</body>
+</html>

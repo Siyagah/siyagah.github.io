@@ -2827,3 +2827,201 @@ wanted.
   `< 72% of the screen` ratio — which failed at 74% while the menu still fitted
   whole with 215px to spare — to the question its own label asks: is the whole
   menu on screen, and does it scroll.
+
+---
+
+## v04.35 — three defects found by an independent-audit sweep (18 Sep 2026)
+
+Not a feature round. The owner asked for Siyagah to be prepared for an outside
+architecture/quality/usability audit by ChatGPT, which meant reading the app
+cold and measuring it against its own stated rules rather than against a new
+request. Three defects came out of that, all reproduced mechanically before
+anything was touched, and all of them in places no check had ever looked.
+`origin/main` was green at the time — 266/266 app checks and 11/11 ship checks
+— which is the point worth keeping: every one of these lived in a gap in what
+the harness asked, not in something it asked and got wrong.
+
+### 1. A note open in a pop-up could be silently emptied (I1)
+
+The worst of the three. Since **v04.00** every new note opens as its own
+pop-out window, so Pane 3 sits visible behind it with its `✏ Edit` button on
+screen. Four real clicks:
+
+```
+✚ Note   → the note opens in a pop-up, content still empty
+✏ Edit   → Pane 3 builds #ed on the SAME note — correctly empty, because
+           at that instant the note IS empty
+type     → the text goes into the pop-up and is saved to DB correctly
+a folder → selFolder() calls saveArt(), which commits the STALE empty #ed
+           over the live note
+```
+
+The note's content becomes `""`. No error, no warning, and `persist()` pushes
+the empty result to every other device. Measured with real mouse clicks on
+`origin/main` at v04.34: **emptied at tablet (820) and desktop (1440)**. The
+phone escapes only because its sheet covers the `✏ Edit` button — occlusion,
+not a decision, which is exactly the kind of accidental platform difference
+D5 exists to stop anyone reporting as deliberate.
+
+This is F3's **"hand-over, never duplicate"** rule, which `popOutNote()` has
+enforced since v03.NotePane.F3 and v04.33 extended to Pane 3 — but only in one
+direction. Pane 3 was never stopped from opening a rival editor on a note a
+pop-up already owned. The rule is now enforced **both ways**: `startEdit()`
+raises the existing pop-up instead of building a second editor, and
+`_fwRaise()` is the three lines `popOutNote()` already ran for that case,
+extracted so the two routes cannot drift apart. `saveArt()` carries the same
+rule as defence in depth — if any other route ever leaves `ST.editing` true
+while a window owns the note, it flushes the **owner** rather than `#ed`, so
+navigating away still saves what is actually on screen, and `_fwFlush()`'s
+write-only-when-changed keeps v03.95's no-phantom-update property intact.
+
+**A product decision left to the owner:** `✏ Edit` now brings the pop-up
+forward. It could instead close the pop-up and edit in Pane 3. Both are
+coherent; this round took the one that matches F3's existing precedent and
+never moves the text the owner is typing.
+
+### 2. The deployed file was carrying private note titles
+
+`_cleanExportRoot()` exists (v03.80) precisely so that "foreign DOM" is never
+baked into a saved file, and its own rule 5 says the drag ghost must be
+cleared because **"it holds a REAL note title, which leaked private content
+into Deploy Export files that are meant to be empty shells."**
+
+The shipped `index.html` was carrying, at the end of `<body>`:
+
+- **four Google sign-in iframes** pointing at `aaas-notebook.firebaseapp.com`
+  with the Firebase API key in the query string — hidden iframes that every
+  visitor's browser actually loads;
+- a serialised **`#tab-picker`** holding **four real note titles, four real
+  note ids and two real folder names** (not repeated here — restating them
+  would continue the very leak this round closed; they are recoverable from
+  the pre-v04.35 file in git history if they are ever needed);
+- the owner's **real notebook id** baked into `#sync-mb` as an input value —
+  dead markup, since `openSyncModal()` overwrites that node, but readable by
+  anyone who viewed source;
+- `#nti-picker`, `#jrn-picker`, a fully-populated `#eb-pop`, and a browser
+  extension's `<section id="id-recall-widget-root">` carrying a 5 KB inline
+  style.
+
+13,805 bytes of it, on a public GitHub Pages site and in the public repo.
+
+The allow-lists in `_cleanExportRoot()` each named the residue someone had
+already been bitten by, and each was paid for by a leak. Rule 1 removed
+`<script src>` but not `<iframe src>`, so the sign-in iframes — named in that
+very function's comment as residue — rode straight through. Rule 4 removed
+`[class*="recall-"]`, and the extension's node had an **id** and no class.
+Nothing removed the pickers at all, because they are appended to `<body>` and
+`getExportHTML()` only clears `tree/p2h/p2c/p3h/p3c/ctx/mb`.
+
+A longer id list would have rotted the same way, so the fix asks the general
+question instead: **was this element part of the document the browser loaded,
+or did something put it there during the session?** `_snapshotShell()` records
+`document.body`'s children once at `DOMContentLoaded`, before the app builds
+any chrome of its own; the export drops every body child that is not in that
+set. It names nothing, so it covers the pickers, the float windows, the
+sign-in iframe, an extension's widget, and whatever gets added next. `<style>`
+and `<script>` are left to the existing rules, which keep the app's own
+(`dyn-hs`, `jcss-*`, the Firebase SDK). A second rule drops any cross-origin
+iframe wherever it sits, while a note's own YouTube/Vimeo embed — real
+content, inside `.embed-wrap` — is kept.
+
+That sweep runs **first**, before anything else touches the clone: it pairs
+child *i* of the live body with child *i* of the clone, and an earlier removal
+shifts that pairing. It did, during this round — the id-only extension node
+survived while the alignment was off by the `<script>` tags rules 1–2 had
+already removed — which is a small instance of the harness's own standing
+warning that a check is scored in order and the DOM is not.
+
+The already-committed residue was deleted from `index.html` in the same
+change. **The API key and the notebook id are in the public git history and a
+new commit does not remove them** — see the note to the owner below.
+
+### 3. Importing a JSON backup replaced everything, silently
+
+`importJSON()` — a visible button, `⬆ Import data from JSON backup` — did
+this and only this:
+
+```js
+if(d.folders&&d.articles){DB=d;persist();render();toast('Data imported ✓');}
+```
+
+No count of what was in the file, no confirmation, no merge option, no way
+back — and `persist()` pushes the replacement to every other device. One
+mis-click in a file picker and the notebook is gone. That is I1, and **D3 does
+not cover it**: D3 exempts the owner's own deliberate deletion through Trash,
+and this is neither deliberate nor via Trash.
+
+Its sibling `importBackup()` has always done it properly — counts, a
+merge-or-replace choice, and a second confirmation before replacing — so the
+standard was already set in the same file. `importJSON()` now matches it:
+validates the shape, shows what the file holds against what the notebook holds
+now, says plainly that this replaces rather than merges and that it syncs, and
+writes a complete **📦 Save File** recovery copy before touching anything —
+which is the app's own answer to "get it back" (I4) and needs no new storage
+and no new screen. If that copy cannot be written it says so and asks again.
+
+**A product decision left to the owner:** `importBackup()` offers Merge;
+`importJSON()` still does not. Whether it should is a real choice and was not
+made here.
+
+### What was measured
+
+266 → **286 app checks**, 11/11 ship checks. The 20 new ones assert each
+defect the way it was actually reproduced, not the way it was described:
+
+- the ownership journey driven by **real mouse clicks** at all three sizes,
+  with the note read back **out of `DB`** rather than off the screen, and the
+  phone asserted too so that "the phone is fine" cannot quietly stop being
+  true;
+- the export sweep asked as the general question — residue of five kinds put
+  into the live page, **including a popover the check invents that the app has
+  never heard of**, all required gone from both exports, while a note's own
+  embed is required to **survive**, so the rule cannot pass by deleting
+  everything;
+- the shipped `index.html` asked **directly** whether it still carries a
+  sign-in iframe, an API key, a serialised tab picker or a notebook id — the
+  leak that already happened, which no check of the export path would catch;
+- `importJSON()` asserted to ask before replacing and to take a recovery copy
+  first;
+- and **every modal and overlay asserted to be a direct child of `<body>`** —
+  a check this round paid for itself. Stripping the committed residue dropped
+  one `</div>`, which left `#sync-modal` unclosed, made `#rem-modal` its CHILD
+  and gave it the parent's `display:none`. Nothing threw; the element was
+  present, carried the right class and reported the right computed `display`,
+  and the only symptom was an unrelated v04.20 check failing for a reason that
+  made no sense. An unbalanced tag in the static shell is invisible until it
+  is not, so it is now asked directly.
+
+Two journey suites were also run outside `app-check` and are kept as evidence
+under `audit/`: the notebook journeys (create, type, format, tables, search,
+navigation, Save File round-trip, delete-to-Trash) at phone and desktop,
+**24/24**; and persistence across a real reload, **6/6**. The second needed
+`db:null` — `openApp()` seeds localStorage through `ctx.addInitScript`, which
+re-runs on every navigation, so a reload overwrites what the test just saved
+and reads as a note that vanished when nothing touched it. That trap cost two
+false "CONTENT LOST" readings before it was spotted.
+
+### Not done, and why
+
+- **The live site was never loaded.** `siyagah.github.io` is blocked by this
+  environment's egress policy (`403 CONNECT`), so everything here was measured
+  against the repository working copy in a local Chromium. Nothing was merged
+  or deployed.
+- **Firestore's security rules were not inspected** — no access, and the
+  setup dialog still tells the owner to create the database in *test mode*,
+  which is world-readable. Raised with the owner rather than changed.
+- **The git history still contains** the leaked API key, notebook id and note
+  titles. Removing them is a history rewrite, which CLAUDE.md requires the
+  owner to confirm.
+- **`legacy/v03.99/index.html` still carries the whole leak** — four sign-in
+  iframes, four API-key occurrences, the notebook id and one real note title —
+  and is served publicly at `/legacy/v03.99/`. **I6 seals that folder** ("no
+  feature, no fix, no refactor, ever"; `ship-check` enforces it byte-for-byte),
+  and `legacy/README.md` says a bug in a frozen build "is part of the record and
+  stays". So the leak is closed in the live app and still open one directory
+  away. Removing private data is arguably not the kind of change I6 was written
+  to forbid — that rule exists to preserve BEHAVIOUR and guarantee a fallback,
+  neither of which a stray iframe serves — but that is a reading of the rule,
+  not the rule, so **nothing under `legacy/` was touched** and the choice is the
+  owner's: leave it, strip only the residue, or stop publishing the build.
+  Recorded as Finding 2b in `audit/AUDIT-2026-09-18.md`.

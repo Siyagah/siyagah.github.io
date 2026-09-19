@@ -1,0 +1,24 @@
+
+================ phone (390x844) ================
+  1. clicked new-note  → pop-up open for note mu7mq0xoy6y
+  2. Edit button present but not clickable: TimeoutError: elementHandle.click: Timeout 4000ms exceeded.
+  3. typed into pop-up → DB: "MY IMPORTANT NOTE TEXT"
+  4. moved to folder 2 → DB: "MY IMPORTANT NOTE TEXT"
+  VERDICT: note intact
+  console errors: none
+
+================ tablet (820x1180) ================
+  1. clicked new-note  → pop-up open for note mu7mq8dnsdy
+  2. clicked ✏ Edit    → #ed aid=(none)
+  3. typed into pop-up → DB: "MY IMPORTANT NOTE TEXT"
+  4. moved to folder 2 → DB: "MY IMPORTANT NOTE TEXT"
+  VERDICT: note intact
+  console errors: none
+
+================ desktop (1440x900) ================
+  1. clicked new-note  → pop-up open for note mu7mqcxk70v
+  2. clicked ✏ Edit    → #ed aid=(none)
+  3. typed into pop-up → DB: "MY IMPORTANT NOTE TEXT"
+  4. moved to folder 2 → DB: "MY IMPORTANT NOTE TEXT"
+  VERDICT: note intact
+  console errors: none
