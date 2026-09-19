@@ -272,6 +272,209 @@ await section(V, 'the recovery copy is real', async () => {
   await app.close();
 });
 
+/* ── J4b. The two recovery defects of the 2026-09-19 review ──────────────
+   Both were reproduced against 817da3c (v04.37) before v04.38 touched
+   anything, and both asserted on PERSISTED bytes and on whether a cloud
+   push was scheduled — never on the return value of the call under test,
+   which is the thing that was wrong in the first place. */
+await section(V, 'a restore with no undo copy changes nothing', async () => {
+  const app = await openApp({ db: seedDB() });
+  const p = app.page;
+
+  /* (1) The undo copy is a PRECONDITION. With the store denied, a restore
+         must leave DB, localStorage and the cloud queue exactly as they were.
+         On v04.37 this replaced a 1-note notebook with a 3-note one, rewrote
+         localStorage and scheduled a push, with nothing thrown. */
+  const denied = await p.evaluate(async () => {
+    const good = await _recoverySave('three notes');
+    DB.articles = DB.articles.slice(0, 1); persist();
+    const beforeRaw = localStorage.getItem('my-notebook-v1');
+    let pushes = 0; const realPush = window.pushToCloud;
+    window.pushToCloud = function () { pushes++; return realPush.apply(this, arguments); };
+    const realOpen = indexedDB.open.bind(indexedDB);
+    let opens = 0;
+    indexedDB.open = function () { opens++; if (opens >= 2) throw new Error('denied by policy'); return realOpen.apply(indexedDB, arguments); };
+    let name = null, msg = null;
+    try { await _recoveryRestore(good.id); } catch (e) { name = e && e.name; msg = String(e && e.message || e); }
+    indexedDB.open = realOpen; window.pushToCloud = realPush;
+    return { name, msg, notes: DB.articles.length, pushes,
+      storageUnchanged: localStorage.getItem('my-notebook-v1') === beforeRaw,
+      storageNotes: (JSON.parse(localStorage.getItem('my-notebook-v1') || '{}').articles || []).length };
+  });
+  m.row(V, 'a restore whose undo copy cannot be written changes NOTHING that is persisted',
+    denied.notes === 1 && denied.storageNotes === 1 && denied.storageUnchanged,
+    `${denied.storageNotes} notes in storage, bytes ${denied.storageUnchanged ? 'identical' : 'REWRITTEN'}`);
+  m.row(V, '…and schedules no cloud push, so the other devices never see it',
+    denied.pushes === 0, `${denied.pushes} pushes`);
+  m.row(C, '…and says so, with an error the caller can offer a choice on',
+    denied.name === 'RecoveryUndoError' && /could not be made/.test(denied.msg || ''), denied.msg);
+
+  /* (2) Proceeding without an undo copy stays POSSIBLE, but only when it is
+         asked for explicitly — never as a silent fallback. */
+  const explicit = await p.evaluate(async () => {
+    /* Self-contained: the block above deliberately leaves the notebook at one
+       note, so a snapshot taken here without resetting would hold ONE note and
+       "restored to 3" would fail for a reason that has nothing to do with the
+       thing under test. */
+    DB.articles = [
+      { id: 'x1', title: 'one', content: '<p>1</p>', folderIds: ['f1'], tags: [], updatedAt: new Date().toISOString() },
+      { id: 'x2', title: 'two', content: '<p>2</p>', folderIds: ['f1'], tags: [], updatedAt: new Date().toISOString() },
+      { id: 'x3', title: 'three', content: '<p>3</p>', folderIds: ['f1'], tags: [], updatedAt: new Date().toISOString() }];
+    persist();
+    const good = await _recoverySave('three notes again');
+    DB.articles = DB.articles.slice(0, 1); persist();
+    const realOpen = indexedDB.open.bind(indexedDB);
+    let opens = 0;
+    indexedDB.open = function () { opens++; if (opens >= 2) throw new Error('denied by policy'); return realOpen.apply(indexedDB, arguments); };
+    let rec = null, err = null;
+    try { rec = await _recoveryRestore(good.id, { allowNoUndo: true }); } catch (e) { err = String(e && e.message || e); }
+    indexedDB.open = realOpen;
+    return { err, undoOk: rec && rec.undoOk, notes: DB.articles.length };
+  });
+  m.row(C, 'restoring without an undo copy works when it is explicitly chosen, and reports that it had none',
+    !explicit.err && explicit.notes === 3 && explicit.undoOk === false,
+    explicit.err || `restored to ${explicit.notes} notes, undoOk=${explicit.undoOk}`);
+  await app.close();
+});
+
+await section(V, 'the save gate hashes the bytes it read back', async () => {
+  const app = await openApp({ db: seedDB() });
+  const p = app.page;
+  /* A payload that comes back CHANGED at the same length, with its stored
+     bytes/hash metadata untouched. On v04.37 this reported ok:true: the gate
+     compared metadata against metadata and never hashed back.json, so the
+     save path certified a snapshot the restore path would later refuse. */
+  const corrupt = await p.evaluate(async () => {
+    const realTx = window._recoveryTx;
+    window._recoveryTx = async function (db, mode, fn) {
+      const out = await realTx(db, mode, fn);
+      if (mode === 'readonly' && out && typeof out.json === 'string' && out.json.length > 2) {
+        const j = out.json;
+        return Object.assign({}, out, { json: j.slice(0, -1) + (j.endsWith('X') ? 'Y' : 'X') });
+      }
+      return out;
+    };
+    const s = await _recoverySave('corrupted on the way back');
+    window._recoveryTx = realTx;
+    return { ok: s.ok, err: s.err || null, sameLength: true };
+  });
+  m.row(V, 'a same-length changed payload with intact metadata is REFUSED by the save gate',
+    corrupt.ok === false && /read back differently/.test(corrupt.err || ''), corrupt.err || 'reported ok:true');
+
+  /* And the honest case still passes, so the gate is not simply refusing. */
+  const honest = await p.evaluate(async () => { const s = await _recoverySave('an honest copy');
+    return { ok: s.ok, err: s.err || null, bytes: s.bytes }; });
+  m.row(V, '…while an untampered copy still passes it', honest.ok === true, honest.err || `${honest.bytes} bytes verified`);
+  await app.close();
+});
+
+await section(C, 'every way out of the restore dialogs changes nothing', async () => {
+  const app = await openApp({ db: seedDB() });
+  const p = app.page;
+  /* Each path is driven through restoreRecovery(), the function the button
+     actually calls, and judged on PERSISTED bytes — not on what it returned. */
+  const setup = `
+    DB.articles=[{id:'y1',title:'one',content:'<p>1</p>',folderIds:['f1'],tags:[],updatedAt:new Date().toISOString()},
+                 {id:'y2',title:'two',content:'<p>2</p>',folderIds:['f1'],tags:[],updatedAt:new Date().toISOString()}];
+    persist();`;
+
+  /* (a) Cancel at the first confirm() */
+  const first = await p.evaluate(async (setupSrc) => {
+    eval(setupSrc);
+    const snap = await _recoverySave('a copy to restore');
+    DB.articles = DB.articles.slice(0, 1); persist();
+    const beforeRaw = localStorage.getItem('my-notebook-v1');
+    let pushes = 0; const realPush = window.pushToCloud;
+    window.pushToCloud = function () { pushes++; return realPush.apply(this, arguments); };
+    const realConfirm = window.confirm; window.confirm = () => false;      /* the owner says no */
+    await restoreRecovery(snap.id);
+    window.confirm = realConfirm; window.pushToCloud = realPush;
+    return { notes: DB.articles.length, pushes, unchanged: localStorage.getItem('my-notebook-v1') === beforeRaw };
+  }, setup);
+  m.row(C, 'Cancel at the restore confirmation leaves the notebook and storage untouched',
+    first.notes === 1 && first.unchanged && first.pushes === 0,
+    `${first.notes} note, storage ${first.unchanged ? 'identical' : 'REWRITTEN'}, ${first.pushes} pushes`);
+
+  /* (b) "Stop — change nothing" on the no-undo-copy choice, by a REAL click
+         on the button the owner would press. */
+  const stopped = await p.evaluate(async (setupSrc) => {
+    eval(setupSrc);
+    const snap = await _recoverySave('another copy');
+    DB.articles = DB.articles.slice(0, 1); persist();
+    const beforeRaw = localStorage.getItem('my-notebook-v1');
+    let pushes = 0; const realPush = window.pushToCloud;
+    window.pushToCloud = function () { pushes++; return realPush.apply(this, arguments); };
+    const realConfirm = window.confirm; window.confirm = () => true;
+    const realOpen = indexedDB.open.bind(indexedDB);
+    let opens = 0;
+    indexedDB.open = function () { opens++; if (opens >= 2) throw new Error('denied by policy'); return realOpen.apply(indexedDB, arguments); };
+    const done = restoreRecovery(snap.id);
+    /* wait for the choice card, then press Stop the way a person would */
+    let btn = null;
+    for (let i = 0; i < 60 && !btn; i++) { await new Promise((r) => setTimeout(r, 25));
+      btn = document.querySelector('#mb [data-choice="cancel"]'); }
+    const offered = !!btn;
+    if (btn) btn.click();
+    await done;
+    indexedDB.open = realOpen; window.confirm = realConfirm; window.pushToCloud = realPush;
+    return { offered, notes: DB.articles.length, pushes,
+      unchanged: localStorage.getItem('my-notebook-v1') === beforeRaw };
+  }, setup);
+  m.row(C, 'a failed undo copy offers a real choice rather than silently proceeding or dead-ending',
+    stopped.offered, stopped.offered ? 'the choice card was shown' : 'NO choice was offered');
+  m.row(C, '…and pressing "Stop — change nothing" changes nothing that is persisted',
+    stopped.notes === 1 && stopped.unchanged && stopped.pushes === 0,
+    `${stopped.notes} note, storage ${stopped.unchanged ? 'identical' : 'REWRITTEN'}, ${stopped.pushes} pushes`);
+  await app.close();
+});
+
+await section(V, 'a successful restore leaves an undo that really works', async () => {
+  const app = await openApp({ db: seedDB() });
+  const r = await app.page.evaluate(async () => {
+    const out = {};
+    const good = await _recoverySave('three notes');
+    DB.articles = DB.articles.slice(0, 1); persist();
+    out.damaged = DB.articles.length;
+    const r1 = await _recoveryRestore(good.id);
+    out.undoOk = r1.undoOk; out.restored = DB.articles.length;
+    const undo = (await _recoveryList()).find((x) => x.label === 'before restoring a safety copy');
+    out.undoListed = !!undo;
+    if (undo) { await _recoveryRestore(undo.id);
+      out.afterUndo = DB.articles.length;
+      out.inStorage = (JSON.parse(localStorage.getItem('my-notebook-v1') || '{}').articles || []).length; }
+    return out;
+  });
+  m.row(V, 'restoring a copy takes a VERIFIED undo copy first', r.undoOk === true && r.undoListed);
+  m.row(V, 'restoring that undo puts the previous notebook back, in storage as well as in memory',
+    r.restored === 3 && r.afterUndo === 1 && r.inStorage === 1,
+    `3 → ${r.damaged} → ${r.restored} → ${r.afterUndo} notes (${r.inStorage} in storage)`);
+  await app.close();
+});
+
+await section(C, 'the Safety Copies screen states its own limits', async () => {
+  /* v04.38 — the review asked for the limits to be stated where the owner
+     reads them, not only in a changelog. Asserted on the RENDERED text, so a
+     rewrite that drops a limit fails here rather than being noticed later. */
+  const app = await openApp({ db: seedDB() });
+  const r = await app.page.evaluate(async () => {
+    await _recoverySave('a copy so the list is not empty');
+    await openRecoveryModal();
+    const t = (document.getElementById('mb') || document.body).textContent.replace(/\s+/g, ' ');
+    return {
+      thisBrowserOnly: /in this browser on this device only/i.test(t),
+      notOtherDevices: /not on your other devices/i.test(t),
+      clearingRemoves: /clearing/i.test(t) && /remove them/i.test(t),
+      keepCount: /only the last \d+ are kept/i.test(t),
+      cannotConfirmDownload: /cannot confirm your browser finished saving it/i.test(t),
+      noRawTemplate: !t.includes('${'),
+    };
+  });
+  const missing = Object.entries(r).filter(([, v]) => !v).map(([k]) => k);
+  m.row(C, 'the Safety Copies screen says where the copies live and how they can be lost',
+    missing.length === 0, missing.length ? `MISSING: ${missing.join(', ')}` : 'browser-only, not synced, cleared by site data, keep-count, download unverifiable');
+  await app.close();
+});
+
 /* ── J5. The sanitiser, adversarially ──────────────────────────────────── */
 await section(S, 'adversarial sanitiser', async () => {
   const app = await openApp({ db: seedDB() });

@@ -1,9 +1,9 @@
 {
   "generated": "2026-09-19",
-  "appVersion": "04.37",
-  "scriptLines": 19680,
-  "functions": 1300,
-  "reachable": 1270,
+  "appVersion": "04.38",
+  "scriptLines": 19745,
+  "functions": 1302,
+  "reachable": 1272,
   "unreferenced": [
     "_wordSnippet",
     "newJournalEntry",
@@ -77,7 +77,7 @@
   },
   "domIds": 252,
   "domains": {
-    "other / helpers": 565,
+    "other / helpers": 567,
     "cloud sync / auth": 32,
     "calendar / journal / contacts / database": 85,
     "theme / appearance": 27,

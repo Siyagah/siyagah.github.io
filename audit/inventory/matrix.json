@@ -277,7 +277,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "500 notes / 40 folders, tree 9349b, 672ms incl. browser launch"
+  "detail": "500 notes / 40 folders, tree 9349b, 710ms incl. browser launch"
  },
  {
   "domain": "A shell/navigation",
@@ -285,7 +285,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "2000 notes / 120 folders, tree 9352b, 822ms incl. browser launch"
+  "detail": "2000 notes / 120 folders, tree 9352b, 864ms incl. browser launch"
  },
  {
   "domain": "A shell/navigation",
@@ -325,7 +325,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 5:11 AM / (001) F /  / body"
+  "detail": "Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 7:14 AM / (001) F /  / body"
  },
  {
   "domain": "A shell/navigation",
@@ -333,7 +333,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "app v04.37, cache v04.37.01"
+  "detail": "app v04.38, cache v04.38.01"
  },
  {
   "domain": "A shell/navigation",
@@ -717,7 +717,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "540007b held, 540068 chars painted, 324ms"
+  "detail": "540007b held, 540068 chars painted, 299ms"
  },
  {
   "domain": "D find/smart views",
@@ -1365,7 +1365,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1600261 bytes"
+  "detail": "1605485 bytes"
  },
  {
   "domain": "G data/export/import",
@@ -1405,7 +1405,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1234932 bytes"
+  "detail": "1240156 bytes"
  },
  {
   "domain": "G data/export/import",
@@ -1833,7 +1833,7 @@
  },
  {
   "domain": "I security/privacy",
-  "feature": "no shipped artifact carries private residue (54 files scanned, shipped ones judged)",
+  "feature": "no shipped artifact carries private residue (63 files scanned, shipped ones judged)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
@@ -1965,7 +1965,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 667ms · render 15ms · search 8ms · persist 5ms · merge 1ms · export 15ms"
+  "detail": "boot 666ms · render 14ms · search 8ms · persist 4ms · merge 1ms · export 13ms"
  },
  {
   "domain": "I performance/PWA",
@@ -1981,7 +1981,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 855ms · render 27ms · search 25ms · persist 18ms · merge 3ms · export 26ms"
+  "detail": "boot 824ms · render 26ms · search 23ms · persist 18ms · merge 3ms · export 25ms"
  },
  {
   "domain": "I performance/PWA",
@@ -1997,7 +1997,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 2505ms · render 99ms · search 115ms · persist 99ms · merge 15ms · export 87ms"
+  "detail": "boot 2258ms · render 101ms · search 117ms · persist 103ms · merge 13ms · export 89ms"
  },
  {
   "domain": "I performance/PWA",
@@ -2037,7 +2037,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "app v04.37, cache v04.37.01"
+  "detail": "app v04.38, cache v04.38.01"
  },
  {
   "domain": "I performance/PWA",
@@ -2304,6 +2304,102 @@
   "detail": "that safety copy is damaged and was NOT used — notebook still holds 3 notes"
  },
  {
+  "domain": "J data preservation",
+  "feature": "a restore whose undo copy cannot be written changes NOTHING that is persisted",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 notes in storage, bytes identical"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "…and schedules no cloud push, so the other devices never see it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 pushes"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "…and says so, with an error the caller can offer a choice on",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "a safety copy of what you have now could not be made (this browser would not open the safety store: Error: denied by policy), so nothing was changed"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "restoring without an undo copy works when it is explicitly chosen, and reports that it had none",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "restored to 3 notes, undoOk=false"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a same-length changed payload with intact metadata is REFUSED by the save gate",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "the safety copy read back differently from what was written"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "…while an untampered copy still passes it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3030 bytes verified"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "Cancel at the restore confirmation leaves the notebook and storage untouched",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 note, storage identical, 0 pushes"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "a failed undo copy offers a real choice rather than silently proceeding or dead-ending",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "the choice card was shown"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "…and pressing \"Stop — change nothing\" changes nothing that is persisted",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 note, storage identical, 0 pushes"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "restoring a copy takes a VERIFIED undo copy first",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "restoring that undo puts the previous notebook back, in storage as well as in memory",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 → 1 → 3 → 1 notes (1 in storage)"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "the Safety Copies screen says where the copies live and how they can be lost",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "browser-only, not synced, cleared by site data, keep-count, download unverifiable"
+ },
+ {
   "domain": "J sanitiser (adversarial)",
   "feature": "every one of 20 adversarial vectors is neutralised",
   "viewport": "desktop",
@@ -2485,6 +2581,6 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "const VERSION = 'v04.37.01' · v04.34 (what is live today): const VERSION = 'v04.34.01' · v04.35 (the previous candidate): const VERSION = 'v04.35.01'"
+  "detail": "const VERSION = 'v04.38.01' · v04.34 (what is live today): const VERSION = 'v04.34.01' · v04.35 (the previous candidate): const VERSION = 'v04.35.01'"
  }
 ]

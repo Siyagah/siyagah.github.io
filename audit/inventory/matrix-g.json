@@ -5,7 +5,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1600261 bytes"
+  "detail": "1605485 bytes"
  },
  {
   "domain": "G data/export/import",
@@ -45,7 +45,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1234932 bytes"
+  "detail": "1240156 bytes"
  },
  {
   "domain": "G data/export/import",

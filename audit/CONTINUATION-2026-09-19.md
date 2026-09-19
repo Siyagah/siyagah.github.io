@@ -7,11 +7,11 @@ For whoever picks this up next, human or otherwise.
 | | |
 |---|---|
 | Branch | `claude/elegant-maxwell-8maykf` |
-| Commit | see `git rev-parse HEAD` — the delivery commit is recorded in `audit/CORRECTION-AUDIT-2026-09-19-v0437.md` §front-matter |
-| Version | **v04.37** (meta tag, `.sb-logo`, `sw.js` — all three) |
+| Commit | see `git rev-parse HEAD` — the delivery commit is recorded in `audit/CORRECTION-AUDIT-2026-09-19-v0438.md` §8 |
+| Version | **v04.38** (meta tag, `.sb-logo`, `sw.js` — all three) |
 | Pull request | [#41](https://github.com/Siyagah/siyagah.github.io/pull/41) — a **merge candidate**, deliberately not merged |
 | Base it was cut from | `b56e403` (v04.35), which was cut from `ba6c70f` (v04.34 = `origin/main` = what is live) |
-| Gate | `node tools/audit-all.mjs` — 642 checks, 15 suites, 311 matrix rows, 0 FAIL |
+| Gate | `node tools/audit-all.mjs` — see `audit/CORRECTION-AUDIT-2026-09-19-v0438.md` §6 for the v04.38 totals |
 | CI | `.github/workflows/checks.yml`, a **candidate**: it reports, it does not block. Verified green: [run 35423490609](https://github.com/Siyagah/siyagah.github.io/actions/runs/35423490609), 642 checks, both jobs |
 
 ## The documents, in the order they were written
@@ -21,10 +21,16 @@ For whoever picks this up next, human or otherwise.
 3. `audit/RELEASE-AUDIT-2026-09-19.md` — the v04.36 programme report.
    **Its release recommendation is superseded**; three of its claims were too
    strong and are corrected in (4).
-4. `audit/CORRECTION-AUDIT-2026-09-19-v0437.md` — **read this one first.**
-5. `audit/FEATURE-MATRIX.md` — generated, never written by hand.
-6. `audit/DEFECT-REGISTER.md`, `audit/DECISION-REGISTER.md`,
-   `audit/inventory/FUNCTION-INVENTORY.md`.
+4. `audit/CORRECTION-AUDIT-2026-09-19-v0437.md` — the first correction round.
+5. `audit/CORRECTION-AUDIT-2026-09-19-v0438.md` — **read this one first.**
+   A second independent review of `817da3c` found two defects *inside*
+   v04.37's own safety feature: Restore proceeded when the undo copy had
+   failed, and the save gate compared a record's metadata against itself
+   instead of hashing the bytes it read back. Both reproduced on `817da3c`
+   before anything was changed, both fixed, `audit-j-recovery` 41 → 45.
+6. `audit/FEATURE-MATRIX.md` — generated, never written by hand.
+7. `audit/DEFECT-REGISTER.md` (C1–C3 are the v04.38 rows),
+   `audit/DECISION-REGISTER.md`, `audit/inventory/FUNCTION-INVENTORY.md`.
 
 ## What is blocked, and on whom
 

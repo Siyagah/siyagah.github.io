@@ -1,0 +1,70 @@
+
+▶ ship-check — version, #nd, precache, manifest, legacy seal
+11/11 passed
+
+▶ inventory — the Function Inventory, regenerated
+
+▶ app-check — boot, handlers, panes, views, editor, exports, colour
+290/290 passed
+
+▶ audit A — shell, startup, corruption recovery, breakpoints
+43/43 passed
+
+▶ audit B — editor ownership, autosave flushing, note lifecycle
+47/47 passed
+
+▶ audit C/D — organisation, search, all 11 Smart Views
+49/49 passed
+
+▶ audit E/F — calendar, journal, contacts, database, reminders, review
+31/31 passed
+
+▶ audit G/H — export fidelity, import safety, privacy, merge
+44/44 passed
+
+▶ audit I — accessibility, security, privacy, scale, PWA
+46/46 passed
+
+▶ audit J — salvage across merges, a real choice, a verified recovery copy
+45/45 passed
+
+▶ audit K — rollback: older builds against a newer notebook
+18/18 passed
+
+▶ journeys — 24 principal journeys, real clicks
+24/24 passed
+
+▶ persistence — what the app writes survives a real reload
+6/6 passed
+
+▶ repro — Finding 1, the note-wipe, at three sizes
+  VERDICT: note intact
+  VERDICT: note intact
+  VERDICT: note intact
+
+▶ repro — Finding 2, private residue in both exports
+DEPLOY EXPORT (must be an empty shell): {
+  "gapiIframe": false,
+  "recallSection": false,
+  "privateTitle": false,
+  "privateFolder": false,
+  "noteIdLeak": false,
+  "ntiPicker": false,
+  "jrnPicker": false,
+  "ebPop": false
+SAVE FILE EXPORT: {
+  "gapiIframe": false,
+  "recallSection": false,
+  "privateTitle": false,
+  "privateFolder": false,
+  "noteIdLeak": false,
+  "ntiPicker": false,
+  "jrnPicker": false,
+  "ebPop": false
+
+================================================================
+654 checks across 15 suites · 323 matrix rows
+PASS: 317 · BLOCKED—ENVIRONMENT: 4 · BLOCKED—OWNER: 2
+
+All suites green.
+audit/FEATURE-MATRIX.md written.

@@ -277,7 +277,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "500 notes / 40 folders, tree 9349b, 672ms incl. browser launch"
+  "detail": "500 notes / 40 folders, tree 9349b, 710ms incl. browser launch"
  },
  {
   "domain": "A shell/navigation",
@@ -285,7 +285,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "2000 notes / 120 folders, tree 9352b, 822ms incl. browser launch"
+  "detail": "2000 notes / 120 folders, tree 9352b, 864ms incl. browser launch"
  },
  {
   "domain": "A shell/navigation",
@@ -325,7 +325,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 5:11 AM / (001) F /  / body"
+  "detail": "Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 7:14 AM / (001) F /  / body"
  },
  {
   "domain": "A shell/navigation",
@@ -333,7 +333,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "app v04.37, cache v04.37.01"
+  "detail": "app v04.38, cache v04.38.01"
  },
  {
   "domain": "A shell/navigation",

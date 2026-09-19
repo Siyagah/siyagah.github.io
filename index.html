@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.37">
+<meta name="app-version" content="04.38">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2802,7 +2802,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.37</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.38</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2961,8 +2961,14 @@ let ST = {folder:null, article:null, exp:{f2:true}, editing:false, etitle:'', ef
 
    The rules are chosen so that I1 is literally true, not approximately:
      • a collection that is not an array is REPLACED by an empty one, and the
-       original value is kept verbatim under DB._salvage so nothing is
-       discarded and a later session can still look at it;
+       original value is kept under DB._salvage so a later session can still
+       look at it. v04.38 — "verbatim" was too strong a word for what this
+       does, and an independent review was right to say so: salvage is
+       BOUNDED (see _SALVAGE_* below), so a single entry over 64 KB is kept
+       only up to that much, and an older entry can be pruned down to its
+       metadata when the whole store would otherwise grow past 256 KB. The
+       owner is told when a value was truncated. What is guaranteed is that
+       nothing is discarded SILENTLY — not that every original byte survives;
      • an entry that is null or not an object carries no record, so it goes;
      • an entry with no id KEEPS ALL ITS CONTENT and is given one, because a
        record the app cannot address is a record the owner cannot open;
@@ -3802,7 +3808,22 @@ async function _recoverySave(label){
     /* read back in a NEW transaction — the whole point */
     const back=await _recoveryTx(db,'readonly',st=>st.get(rec.id));
     if(!back) return {ok:false, err:'the safety copy could not be read back'};
-    if(back.bytes!==rec.bytes||back.hash!==rec.hash||back.json.length!==json.length)
+    /* v04.38 — verify the BYTES, not the label on the bytes. This compared
+       back.bytes against rec.bytes and back.hash against rec.hash — both
+       sides of which are metadata that was written in the same put() as the
+       payload. A payload that came back changed at the same LENGTH, with its
+       metadata intact, passed the gate untouched; _recoveryRestore() then
+       refused the same snapshot later, because it is the only place that ever
+       hashed the actual string. So the save gate could certify a copy that
+       the restore path already knew was unusable — and a destructive import
+       was allowed to proceed on the strength of it.
+       Reproduced on 817da3c before this change: a same-length corrupted
+       read-back reported ok:true with no error.
+       The digest is now recomputed FROM back.json, and the full string is
+       compared as well; either one failing refuses the snapshot. */
+    if(typeof back.json!=='string')
+      return {ok:false, err:'the safety copy read back without its contents'};
+    if(back.json.length!==json.length||back.json!==json||_fnv1a(back.json)!==rec.hash||back.bytes!==rec.bytes||back.hash!==rec.hash)
       return {ok:false, err:'the safety copy read back differently from what was written'};
     const all=await _recoveryTx(db,'readonly',st=>st.getAll());
     const old=(all||[]).sort((a,b)=>String(b.at).localeCompare(String(a.at))).slice(_RECOVERY_KEEP);
@@ -3818,18 +3839,42 @@ async function _recoveryList(){
     return (all||[]).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
   }catch(e){ return []; }
 }
-async function _recoveryRestore(id){
+/* Thrown when the pre-restore undo copy could not be written. Carries its own
+   name so the caller can offer the owner a separate, explicit choice instead
+   of treating it as a generic failure. */
+function _RecoveryUndoError(why){ const e=new Error(why); e.name='RecoveryUndoError'; return e; }
+async function _recoveryRestore(id,opts){
   const db=await _recoveryOpen();
   const rec=await _recoveryTx(db,'readonly',st=>st.get(id));
   try{db.close();}catch(e){}
   if(!rec) throw new Error('that safety copy is no longer here');
   if(_fnv1a(rec.json)!==rec.hash) throw new Error('that safety copy is damaged and was NOT used');
   const parsed=JSON.parse(rec.json);
-  /* Undo needs an Undo: snapshot what is here before replacing it. */
-  await _recoverySave('before restoring a safety copy');
+  /* ══ v04.38 — the undo copy is a PRECONDITION, not a courtesy ═══════════
+     This awaited _recoverySave() and then ignored what it said. When the
+     store was full, locked, or denied by policy, the copy silently did not
+     happen and the restore replaced the notebook anyway — while the
+     confirmation the owner had just read promised "a fresh safety copy of
+     what you have now is taken first, so this can be undone". The owner was
+     told the way back existed at the exact moment it stopped existing, and
+     persist() then pushed the replacement to the other devices.
+     Reproduced on 817da3c before this change: with the store denied, a
+     3-note notebook replaced a 1-note one, localStorage was rewritten and a
+     cloud push was scheduled, with nothing thrown.
+     Now: no verified undo copy, no restore. Proceeding anyway is still
+     possible, but only as a SEPARATE explicit choice made by the owner
+     (see restoreRecovery), never as a silent fallback. */
+  let undo=null;
+  try{ undo=await _recoverySave('before restoring a safety copy'); }
+  catch(e){ undo={ok:false, err:String(e&&e.message||e)}; }
+  if(!undo||!undo.ok){
+    if(!(opts&&opts.allowNoUndo))
+      throw _RecoveryUndoError('a safety copy of what you have now could not be made'
+        +(undo&&undo.err?' ('+undo.err+')':'')+', so nothing was changed');
+  }
   const rp=_repairDB(parsed,'recovery');
   DB=rp.db||parsed; persist(); render();
-  return rec;
+  return Object.assign({}, rec, {undoOk:!!(undo&&undo.ok)});
 }
 async function openRecoveryModal(){
   const list=await _recoveryList();
@@ -3839,15 +3884,35 @@ async function openRecoveryModal(){
     </div>`).join('')
     :'<p style="opacity:.75">There are no safety copies yet. One is taken automatically before any import that changes your notes.</p>';
   showModal(`<div class="mt">🛡 Safety copies</div>
-    <p style="margin:.2em 0 .8em;font-size:13px;opacity:.85">A safety copy is taken inside this browser before an import replaces or merges your notes, and it is checked after being written. Restoring one takes a fresh copy of what you have now first, so you can always come back.</p>
+    <p style="margin:.2em 0 .6em;font-size:13px;opacity:.85">A safety copy is taken inside this browser before an import replaces or merges your notes, and it is read back and checked after being written. Restoring one takes a fresh copy of what you have now first — and if that copy cannot be made, nothing is changed and you are asked what to do.</p>
+    <p style="margin:.2em 0 .8em;font-size:12.5px;opacity:.8;border-left:3px solid var(--border2,#e5e7eb);padding-left:9px">
+      <strong>Where these live, and how they can be lost.</strong> They are stored <strong>in this browser on this device only</strong>. They are <strong>not</strong> on your other devices and they are <strong>not</strong> in the cloud. Clearing this site's data, clearing your browsing data, using a private window, or switching to a different browser or computer profile will <strong>remove them</strong>. Only the last ${_RECOVERY_KEEP} are kept — an older one is deleted when a new one is made.<br>
+      For a copy that survives all of that, use <strong>📦 Save File</strong>, which downloads the whole app with your notes inside it. Siyagah hands that file to your browser but <strong>cannot confirm your browser finished saving it</strong>, so check your downloads folder yourself.
+    </p>
     ${rows}
     <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="closeModal()">Close</button></div>`);
 }
 async function restoreRecovery(id){
-  if(!confirm('Restore this safety copy?\n\nWhat you have now will be replaced by it — and a fresh safety copy of what you have now is taken first, so this can be undone.'))return;
-  try{ const rec=await _recoveryRestore(id); closeModal();
-    toast('↩ Restored the copy from '+new Date(rec.at).toLocaleString()+' — '+rec.notes+' notes', 7000); }
-  catch(e){ toast('⚠ Could not restore: '+(e&&e.message||e), 7000); }
+  if(!confirm('Restore this safety copy?\n\nWhat you have now will be replaced by it. A fresh safety copy of what you have now is taken first — and if that copy cannot be made, nothing will be changed and you will be asked what to do.'))return;
+  const done=rec=>{ closeModal();
+    toast('↩ Restored the copy from '+new Date(rec.at).toLocaleString()+' — '+rec.notes+' notes'
+      +(rec.undoOk?'':' — WITHOUT an undo copy, as you chose'), 7000); };
+  try{ done(await _recoveryRestore(id)); return; }
+  catch(e){
+    /* v04.38 — a failed undo copy is a decision for the owner, not a silent
+       fallback and not a dead end. Everything else is still just an error. */
+    if(!e||e.name!=='RecoveryUndoError'){ toast('⚠ Could not restore: '+(e&&e.message||e), 7000); return; }
+    const go=await _choiceModal('⚠ No undo copy could be made',
+      '<p>Your notes have <strong>not</strong> been changed.</p>'
+      +'<p style="font-size:13px;opacity:.9">'+esc(String(e.message||e))+'</p>'
+      +'<p style="font-size:13px;opacity:.9">You can still restore this copy, but if you do there will be '
+      +'<strong>no way back</strong> to what you have right now.</p>',
+      [{value:'cancel',label:'Stop — change nothing'},
+       {value:'go',label:'Restore anyway, with no way back',danger:true}]);
+    if(go!=='go'){ toast('Nothing was changed'); return; }
+    try{ done(await _recoveryRestore(id,{allowNoUndo:true})); }
+    catch(e2){ toast('⚠ Could not restore: '+(e2&&e2.message||e2), 7000); }
+  }
 }
 
 /* ── A choice is three buttons, not one OK and one Cancel (v04.37) ────────

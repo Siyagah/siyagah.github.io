@@ -3357,3 +3357,137 @@ and the salvaged bytes still being there afterwards.
 4 `BLOCKED—ENVIRONMENT`, 2 `BLOCKED—OWNER`, 0 FAIL. Five `app-check` rows and
 one whole `audit-g` block were **updated in place with the reason recorded**,
 because this round deliberately replaced the dialog they were written against.
+
+---
+
+## v04.38 — the two recovery defects the v04.37 review found (19 Sep 2026)
+
+A second correction round on the same feature, from a second independent
+review of the pushed head `817da3c`. Both defects were in the code v04.37
+added to make destructive operations safe, and both were reproduced against
+`817da3c` before anything here was written. The review was right on both
+counts, and its reading of the mechanism was right too — which is worth
+saying, because the last two rounds have each had to correct a claim that
+sounded right and measured wrong.
+
+### 1. Restore replaced the notebook when the undo copy had NOT been made
+
+`_recoveryRestore(id)` awaited `_recoverySave('before restoring a safety
+copy')` and then **ignored what it returned**. `_recoverySave` is careful and
+honest — it returns `{ok:false, err}` when the store is full, locked or denied
+by policy — and nothing read it. So on exactly the devices where a safety copy
+matters most, the restore went ahead without one.
+
+Worse than the missing copy is what the owner had just been told. The
+confirmation said *"a fresh safety copy of what you have now is taken first,
+so this can be undone"*. The promise was printed at the moment it stopped
+being true, and `persist()` then pushed the replacement to every other device.
+
+Reproduced on `817da3c` with the store denied from the second `open()` onward:
+
+```
+notes in DB      : 1 -> 3        (replaced)
+notes in storage : 1 -> 3        (localStorage rewritten)
+cloud pushes     : 1             (the other devices told)
+threw            : nothing
+```
+
+The undo copy is a **precondition** now, not a courtesy. No verified copy, no
+restore: `DB`, `localStorage` and the cloud queue are left exactly as they
+were, and the failure is thrown as a named `RecoveryUndoError` so the caller
+can do something useful with it. Proceeding anyway is still possible — an
+owner who has just been told there is no way back may still want to go
+forward — but only as a **separate, explicit choice**, on a card that says
+plainly that their notes have *not* been changed, that there will be **no way
+back**, and with `Stop — change nothing` focused. Never as a silent fallback.
+The toast afterwards says `WITHOUT an undo copy, as you chose`, because a
+restore that had no undo must not read like one that did.
+
+After:
+
+```
+notes in DB      : 1 -> 1        (unchanged)
+notes in storage : 1 -> 1        (bytes identical)
+cloud pushes     : 0
+threw            : a safety copy of what you have now could not be made
+                   (this browser would not open the safety store: …),
+                   so nothing was changed
+```
+
+### 2. The save gate checked the label on the bytes, not the bytes
+
+`_recoverySave` writes the snapshot, then reads it back **in a separate
+transaction** — which is the right idea, and was the whole point of v04.37's
+fix. But the comparison was:
+
+```js
+if(back.bytes!==rec.bytes || back.hash!==rec.hash || back.json.length!==json.length)
+```
+
+`back.bytes` and `back.hash` are *metadata written in the same `put()` as the
+payload*. Comparing them against `rec.bytes` and `rec.hash` compares the
+record's description of itself with itself. The only thing measured about the
+actual payload was its **length**. A payload that came back changed at the
+same length, with its metadata intact, passed the gate reporting `ok:true` and
+no error — and `_recoveryRestore()` would then refuse that very snapshot,
+because it is the only place that ever hashed the real string. The save path
+could certify a copy the restore path already knew was unusable, and a
+destructive import was allowed to proceed on the strength of it.
+
+The digest is now recomputed **from `back.json`** and compared against the
+original, and the full string is compared as well; either failing refuses the
+snapshot. An untampered copy is asserted to still pass, so the gate cannot
+be "fixed" by refusing everything.
+
+### The wording the review asked for
+
+- **The Safety Copies screen now states its own limits**, where the owner
+  reads them rather than in a changelog: the copies are in **this browser on
+  this device only**, they are **not** on other devices and **not** in the
+  cloud, and clearing site data, clearing browsing data, a private window or a
+  different browser profile **removes them**; only the last 5 are kept. For a
+  copy that survives all of that, `📦 Save File` — which Siyagah hands to the
+  browser but **cannot confirm the browser finished saving**, so the owner is
+  told to check their downloads themselves.
+- **The salvage comment stopped overclaiming.** It said the original value is
+  kept "verbatim … so nothing is discarded". Salvage is bounded: a single
+  entry over 64 KB is kept only to that much, and an older entry can be pruned
+  to its metadata when the store would pass 256 KB. What is guaranteed is that
+  nothing is discarded **silently** — not that every original byte survives.
+  The owner-facing message already named the truncation; the claim above it
+  did not.
+
+### What was measured
+
+`audit-j-recovery` goes 41 → **45 rows**, every one asserted on **persisted
+bytes** or on whether a **cloud push was scheduled** — never on the return
+value of the call under test, which is precisely what was wrong in defect 1:
+
+- a denied store during Restore leaves `DB`, `localStorage` (compared as raw
+  bytes, not note counts) and the push queue unchanged, and reports a
+  `RecoveryUndoError`;
+- restoring **without** an undo copy still works when explicitly chosen, and
+  reports `undoOk:false` so the toast cannot claim otherwise;
+- a same-length changed read-back with intact metadata is refused, **and** an
+  untampered copy still passes;
+- a successful restore leaves a verified undo, and restoring that undo returns
+  the previous notebook — in storage as well as in memory;
+- `Cancel` at the confirmation, and a **real click** on `Stop — change
+  nothing`, each leave the stored bytes identical and schedule no push;
+- the Safety Copies screen is asserted on its **rendered text**, so a rewrite
+  that drops one of the limits fails here.
+
+One of those checks failed on its first run for a reason that was **not** the
+app: the block before it deliberately leaves the notebook at one note, so the
+snapshot it took held one note and "restored to 3" could never be true. It is
+the harness's own standing trap — a check that measures the previous check's
+leftovers — and the block is self-contained now.
+
+### Not done, and why
+
+- **`legacy/v03.99/` still carries the v04.35 residue.** Unchanged, still
+  Decision 1, still the owner's.
+- **Live Firestore rules, real two-device sync and the deployed PWA remain
+  unverified**, as the review requires them to be described. This environment
+  denies `siyagah.github.io`, and none of the three can be measured from here.
+- **Nothing merged, nothing deployed, no production Firebase data touched.**

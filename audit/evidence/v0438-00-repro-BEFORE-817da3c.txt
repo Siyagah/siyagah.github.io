@@ -1,0 +1,30 @@
+### Evidence captured against the REVIEWED head 817da3c (v04.37), before v04.38 changed anything
+#
+# READ D3 WITH CARE. The "D3 ... *** the undo does not round-trip ***" line
+# below is NOT a third defect in v04.37. D3 reads `undoOk` off the object
+# _recoveryRestore() returns, and that field did not EXIST until v04.38 added
+# it — so on this head it is `undefined` and the assertion cannot pass. The
+# restore/undo mechanics themselves were not shown to be broken here.
+# Only C1 (the ignored {ok:false}) and C2 (metadata compared with metadata)
+# are claimed as defects of v04.37, and both are visible above D3.
+
+=== D1: Restore when the undo copy cannot be written ===
+  notes in DB      : 1 -> 3
+  notes in storage : 1 -> 3
+  cloud pushes     : 1
+  threw            : (nothing — it went ahead)
+  VERDICT          : *** DEFECT: the notebook was replaced with no undo copy ***
+
+=== D2: read-back bytes changed, metadata intact ===
+  save reported ok : true
+  error            : (none)
+  VERDICT          : *** DEFECT: a corrupted copy passed the save gate ***
+
+console errors: none
+
+=== D3: successful restore, then restore the undo ===
+  3 notes -> damaged to 1 -> restored to 3 -> undo restored to 1 (1 in storage)
+  undo copy reported verified: undefined · listed: true
+  VERDICT: *** the undo does not round-trip ***
+
+console errors: none

@@ -141,6 +141,6 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "const VERSION = 'v04.37.01' · v04.34 (what is live today): const VERSION = 'v04.34.01' · v04.35 (the previous candidate): const VERSION = 'v04.35.01'"
+  "detail": "const VERSION = 'v04.38.01' · v04.34 (what is live today): const VERSION = 'v04.34.01' · v04.35 (the previous candidate): const VERSION = 'v04.35.01'"
  }
 ]

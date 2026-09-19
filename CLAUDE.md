@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.37.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.38.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,33 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.38** (19 Sep 2026) — a SECOND correction round on the SAME feature,
+  from a second independent review of the pushed head `817da3c`. Both defects
+  were inside the code v04.37 added to make destructive work safe, and both
+  were reproduced before anything was written. **Restore replaced the notebook
+  when the undo copy had NOT been made**: `_recoveryRestore()` awaited
+  `_recoverySave()` and ignored its `{ok:false}`, so on exactly the devices
+  where a safety copy matters — full, locked, policy-denied store — the
+  restore went ahead without one, rewrote `localStorage` and pushed to the
+  other devices, while the confirmation the owner had just read promised the
+  undo existed. The copy is a **precondition** now: no verified copy, no
+  restore, nothing persisted, nothing pushed, and a named `RecoveryUndoError`
+  so the caller can offer a **separate explicit choice** (`Stop — change
+  nothing` focused; the toast says `WITHOUT an undo copy, as you chose`).
+  **And the save gate checked the label on the bytes**: it compared
+  `back.bytes`/`back.hash` — metadata written in the same `put()` as the
+  payload — against the original's, so the only thing ever measured about the
+  payload was its LENGTH. A same-length changed read-back passed reporting
+  `ok:true`, and `_recoveryRestore()` would then refuse that same snapshot,
+  because it is the only place that hashed the real string. The digest is
+  recomputed FROM `back.json` now, with the untampered case asserted to still
+  pass. Plus the wording: the Safety Copies screen states its own limits
+  (this browser, this device, gone if site data is cleared, not synced, last 5
+  only, and `📦 Save File` handed to the browser but **not confirmable**), and
+  the salvage comment stopped saying "verbatim … nothing is discarded" when
+  salvage is bounded at 64 KB an entry and 256 KB in total. `audit-j-recovery`
+  41 → **45 rows**, every one on persisted bytes or on whether a cloud push
+  was scheduled.
 - **v04.37** (19 Sep 2026) — a CORRECTION round. An independent review of
   v04.36 returned **DO NOT MERGE OR DEPLOY** with four blockers, and was right
   about all four; two of them were **safety claims I had made and not
@@ -132,29 +159,7 @@ must never accumulate here instead of there.
   remembered frame — 378×832 measured on a phone would otherwise be restored
   on the laptop. 266/266 app checks (up from 255, with five updated in place
   and two REVERSED with the reason recorded) and 11/11 ship checks.
-- **v04.33** (12 Sep 2026) — one screenshot of the read bar, two asks.
-  **"Let the Multi and single button be present in the edit mode as well"** —
-  measured on `origin/main`, they already WERE, since v04.10. What differed
-  was the treatment, and every rule that made the difference was scoped
-  `#p3h:not(.editing)`: read mode gave them `--gold`/`--green`, opacity 1 and
-  their word; edit mode gave them the bar's grey at .55 with no label, ever.
-  Both modes now, with only the SIZES still differing. The words were `false`
-  on the edit bar since v04.10 for "crowding" that was never measured — they
-  cost 61px and 70px and the bar carries them whole from **1600px**; below
-  that `_p3FitEditBar()` folds them by asking *does carrying them add a line?*,
-  because `.p3h-unified-tb` WRAPS and `scrollWidth>clientWidth` is always
-  false on it. Extending the fit to edit mode also stopped `p3h-nolbl`
-  leaking in from the last READ-mode fold and silently deciding the edit
-  bar's layout. **"Let the pop-up note opens in edit mode"** — the two modes
-  had disagreed since v03.74: a Multi pop-up was always an editor, a Single
-  one opened read-only every time (`selArt()` clears `ST.editing`) and threw
-  you out of edit mode if you were in it. Both open on the editor now, and a
-  new Multi window opens with the caret already in it. And the defect this
-  would have made worse: F3's **"hand-over, never duplicate"** was enforced
-  only for the panel, so popping out of Pane 3's editor left `#ed` and
-  `.fw-ed` both live on one note, both on autosave — measured on
-  `origin/main` at v04.32, fixed here. 255/255 app checks (up from 236) and
-  11/11 ship checks.
+
 ---
 
 ## What this is
@@ -333,6 +338,35 @@ A failing check is a wrong assertion surprisingly often — investigate before
 *(This is for rules about the app that cost a shipped defect or a wasted round
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
+
+- **A function that returns `{ok:false}` is only careful if somebody reads it
+  — and the sentence you print to the owner is a claim you have to keep.**
+  `_recoverySave()` was written to be honest about failure, and
+  `_recoveryRestore()` awaited it and threw the answer away, so a restore on a
+  full or locked store replaced the notebook with no undo, rewrote storage and
+  told the other devices — one line after the owner read "a fresh safety copy
+  of what you have now is taken first, so this can be undone". Two rules, both
+  paid for in the same defect: `await` on something that reports success is a
+  **branch you have not written yet**, and any promise made in a dialog is a
+  **precondition to assert**, not a description of intent. When a safety step
+  cannot be completed, the safe default is to change NOTHING; going ahead is a
+  separate, explicit choice with wording that matches what actually happened
+  (`WITHOUT an undo copy, as you chose`). Cost: found by the second
+  independent review of v04.37, inside the code v04.37 added to make this kind
+  of thing safe.
+- **Verifying a write means hashing what came BACK, not re-reading the label
+  you wrote beside it.** v04.37's read-back-and-compare was the right idea,
+  and it compared `back.bytes` against `rec.bytes` and `back.hash` against
+  `rec.hash` — metadata written in the same `put()` as the payload, so the
+  record was being asked to confirm its own description. The only property of
+  the payload it ever measured was LENGTH. A same-length changed payload
+  certified clean at save time and was refused at restore time by the one
+  function that hashed the real string — so the two halves of the same feature
+  disagreed about whether the copy was usable, and the destructive path
+  trusted the half that had not looked. Recompute the digest from the bytes
+  you read back, compare the content itself, and assert the honest case still
+  passes so the gate cannot be "fixed" by refusing everything. Cost: reported
+  in the v04.37 review; fixed in v04.38.
 
 - **A safety claim is a measurement or it is nothing — and the path you
   happened to test is not the only path.** "Nothing was discarded" was

@@ -121,7 +121,7 @@
  },
  {
   "domain": "I security/privacy",
-  "feature": "no shipped artifact carries private residue (54 files scanned, shipped ones judged)",
+  "feature": "no shipped artifact carries private residue (63 files scanned, shipped ones judged)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
@@ -253,7 +253,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 667ms · render 15ms · search 8ms · persist 5ms · merge 1ms · export 15ms"
+  "detail": "boot 666ms · render 14ms · search 8ms · persist 4ms · merge 1ms · export 13ms"
  },
  {
   "domain": "I performance/PWA",
@@ -269,7 +269,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 855ms · render 27ms · search 25ms · persist 18ms · merge 3ms · export 26ms"
+  "detail": "boot 824ms · render 26ms · search 23ms · persist 18ms · merge 3ms · export 25ms"
  },
  {
   "domain": "I performance/PWA",
@@ -285,7 +285,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 2505ms · render 99ms · search 115ms · persist 99ms · merge 15ms · export 87ms"
+  "detail": "boot 2258ms · render 101ms · search 117ms · persist 103ms · merge 13ms · export 89ms"
  },
  {
   "domain": "I performance/PWA",
@@ -325,7 +325,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "app v04.37, cache v04.37.01"
+  "detail": "app v04.38, cache v04.38.01"
  },
  {
   "domain": "I performance/PWA",

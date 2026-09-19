@@ -7,10 +7,10 @@ check that ran; none of them can be written by hand. "Present in code",
 
 | | |
 |---|---|
-| App version | v04.37 |
-| Generated | 2026-09-19 05:14 UTC |
-| Matrix rows | **311** |
-| PASS | 305 |
+| App version | v04.38 |
+| Generated | 2026-09-19 07:18 UTC |
+| Matrix rows | **323** |
+| PASS | 317 |
 | BLOCKED—ENVIRONMENT | 4 |
 | BLOCKED—OWNER | 2 |
 
@@ -19,22 +19,22 @@ check that ran; none of them can be written by hand. "Present in code",
 | Suite | Result | Time |
 |---|---|---:|
 | ship-check — version, #nd, precache, manifest, legacy seal | **11/11** | 0.2s |
-| inventory — the Function Inventory, regenerated | **pass** | 7.7s |
-| app-check — boot, handlers, panes, views, editor, exports, colour | **290/290** | 250.9s |
-| audit A — shell, startup, corruption recovery, breakpoints | **43/43** | 14.5s |
-| audit B — editor ownership, autosave flushing, note lifecycle | **47/47** | 99.0s |
-| audit C/D — organisation, search, all 11 Smart Views | **49/49** | 10.0s |
+| inventory — the Function Inventory, regenerated | **pass** | 7.8s |
+| app-check — boot, handlers, panes, views, editor, exports, colour | **290/290** | 253.7s |
+| audit A — shell, startup, corruption recovery, breakpoints | **43/43** | 14.7s |
+| audit B — editor ownership, autosave flushing, note lifecycle | **47/47** | 99.2s |
+| audit C/D — organisation, search, all 11 Smart Views | **49/49** | 9.9s |
 | audit E/F — calendar, journal, contacts, database, reminders, review | **31/31** | 4.7s |
-| audit G/H — export fidelity, import safety, privacy, merge | **44/44** | 22.6s |
-| audit I — accessibility, security, privacy, scale, PWA | **46/46** | 19.9s |
-| audit J — salvage across merges, a real choice, a verified recovery copy | **33/33** | 15.3s |
-| audit K — rollback: older builds against a newer notebook | **18/18** | 4.6s |
+| audit G/H — export fidelity, import safety, privacy, merge | **44/44** | 22.5s |
+| audit I — accessibility, security, privacy, scale, PWA | **46/46** | 19.6s |
+| audit J — salvage across merges, a real choice, a verified recovery copy | **45/45** | 18.8s |
+| audit K — rollback: older builds against a newer notebook | **18/18** | 4.7s |
 | journeys — 24 principal journeys, real clicks | **24/24** | 21.7s |
-| persistence — what the app writes survives a real reload | **6/6** | 10.3s |
+| persistence — what the app writes survives a real reload | **6/6** | 10.2s |
 | repro — Finding 1, the note-wipe, at three sizes | **pass** | 22.3s |
 | repro — Finding 2, private residue in both exports | **pass** | 1.3s |
 
-**Total checks: 642** across 15 suites.
+**Total checks: 654** across 15 suites.
 
 
 ## A shell/navigation
@@ -75,14 +75,14 @@ check that ran; none of them can be written by hand. "Present in code",
 | corrupt notebook "arrayRoot" — the app still boots and paints | desktop | PASS | 0 folders / 0 notes in DB, tree 7197b |
 | corrupt notebook "arrayRoot" — boot throws no exception | desktop | PASS | silent |
 | corrupt notebook "arrayRoot" — keeps every record that was readable (I1) | desktop | PASS | payload had 0 folders / 0 notes; app holds 0 / 0 |
-| boots a 500-note synthetic notebook | desktop | PASS | 500 notes / 40 folders, tree 9349b, 672ms incl. browser launch |
-| boots a 2000-note synthetic notebook | desktop | PASS | 2000 notes / 120 folders, tree 9352b, 822ms incl. browser launch |
+| boots a 500-note synthetic notebook | desktop | PASS | 500 notes / 40 folders, tree 9349b, 710ms incl. browser launch |
+| boots a 2000-note synthetic notebook | desktop | PASS | 2000 notes / 120 folders, tree 9352b, 864ms incl. browser launch |
 | crossing every breakpoint in both directions throws nothing | desktop | PASS | silent |
 | no sideways scroll and no zero-width visible pane at any breakpoint edge | desktop | PASS | 8 widths incl. 639/640 and 1199/1200 |
 | opening a note records it as the last-viewed note | desktop | PASS | DB.theme.lastArticle = aX |
 | reload reopens the note that was open | desktop | PASS | ST.article = aX, 1 notes |
-| the reopened note actually paints its body | desktop | PASS | Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 5:11 AM / (001) F /  / body |
-| the service-worker cache name carries the app version (I3) | desktop | PASS | app v04.37, cache v04.37.01 |
+| the reopened note actually paints its body | desktop | PASS | Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 7:14 AM / (001) F /  / body |
+| the service-worker cache name carries the app version (I3) | desktop | PASS | app v04.38, cache v04.38.01 |
 | the service worker is network-first, so a stale cache cannot win | desktop | PASS | fetch + caches.open present |
 
 ## B notes/editor
@@ -135,7 +135,7 @@ check that ran; none of them can be written by hand. "Present in code",
 | restore — a trashed note comes back whole | desktop | PASS | back in the list, 0 left in trash |
 | empty trash — the note is gone and a tombstone remains so it cannot resurrect on sync (I2) | desktop | PASS | 0 in trash, 1 tombstones |
 | the whole lifecycle throws nothing | desktop | PASS | silent |
-| a ~540 KB note saves and paints without throwing | desktop | PASS | 540007b held, 540068 chars painted, 324ms |
+| a ~540 KB note saves and paints without throwing | desktop | PASS | 540007b held, 540068 chars painted, 299ms |
 
 ## D find/smart views
 
@@ -241,12 +241,12 @@ check that ran; none of them can be written by hand. "Present in code",
 
 | Feature | Viewport | Status | Evidence |
 |---|---|---|---|
-| Save File exports the whole application, not just the data (I4) | desktop | PASS | 1600261 bytes |
+| Save File exports the whole application, not just the data (I4) | desktop | PASS | 1605485 bytes |
 | Save File round-trips every note id at 800 notes | desktop | PASS | 800 of 800 ids |
 | Save File round-trips every folder id | desktop | PASS | 60 of 60 |
 | Save File round-trips every byte of note content, Bangla and Arabic included | desktop | PASS | 148745 vs 148745 bytes |
 | exporting does not disturb the live notebook | desktop | PASS | 800 notes still held |
-| the Deploy Export shell could be built at all | desktop | PASS | 1234932 bytes |
+| the Deploy Export shell could be built at all | desktop | PASS | 1240156 bytes |
 | the Deploy Export leaks no note title, folder name, notebook id, key, session chrome or foreign iframe | desktop | PASS | 6 canaries, none present |
 | the Deploy Export carries an empty #nd, and it still parses (I7) | desktop | PASS | {"folders":[],"articles":[],"sections":[],"trash":[]} |
 | JSON import offers MERGE, and merging keeps every existing note (I1) | desktop | PASS | 3 → 4 notes, seed note still present: true |
@@ -310,7 +310,7 @@ check that ran; none of them can be written by hand. "Present in code",
 | every target="_blank" link in the shipped markup carries rel="noopener" (5 links) | desktop | PASS | all safe |
 | a target="_blank" link pasted into a NOTE is given rel="noopener" | desktop | PASS | 2 links checked |
 | a javascript: link pasted into a note is neutralised | desktop | PASS | none present |
-| no shipped artifact carries private residue (54 files scanned, shipped ones judged) | desktop | PASS | clean |
+| no shipped artifact carries private residue (63 files scanned, shipped ones judged) | desktop | PASS | clean |
 | the sealed legacy/v03.99/ build still carries private residue at a public URL | — | **BLOCKED—OWNER** | legacy/v03.99/index.html: 4 × a Google API key · legacy/v03.99/index.html: 4 × a Google sign-in iframe · legacy/v03.99/index.html: 1 × a serialised tab picker (holds real note titl |
 
 ## I accessibility
@@ -336,16 +336,16 @@ check that ran; none of them can be written by hand. "Present in code",
 
 | Feature | Viewport | Status | Evidence |
 |---|---|---|---|
-| 500 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 667ms · render 15ms · search 8ms · persist 5ms · merge 1ms · export 15ms |
+| 500 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 666ms · render 14ms · search 8ms · persist 4ms · merge 1ms · export 13ms |
 | 500 notes: every measured operation is inside its budget | desktop | PASS | budgets: render ≤2500 search ≤1500 persist ≤2500 merge ≤4000 |
-| 2,000 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 855ms · render 27ms · search 25ms · persist 18ms · merge 3ms · export 26ms |
+| 2,000 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 824ms · render 26ms · search 23ms · persist 18ms · merge 3ms · export 25ms |
 | 2,000 notes: every measured operation is inside its budget | desktop | PASS | budgets: render ≤2500 search ≤1500 persist ≤2500 merge ≤4000 |
-| 10,000 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 2505ms · render 99ms · search 115ms · persist 99ms · merge 15ms · export 87ms |
+| 10,000 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 2258ms · render 101ms · search 117ms · persist 103ms · merge 13ms · export 89ms |
 | 10,000 notes: every measured operation is inside its budget | desktop | PASS | budgets: render ≤2500 search ≤1500 persist ≤2500 merge ≤4000 |
 | 25 open/close pop-out cycles leave no windows behind | desktop | PASS | 0 float windows |
 | 25 open/close pop-out cycles do not grow the DOM without bound | desktop | PASS | 409 → 409 nodes |
 | 25 open/close pop-out cycles are silent | desktop | PASS | silent |
-| the service-worker cache name carries this build's version, so an update reaches the device (I3) | desktop | PASS | app v04.37, cache v04.37.01 |
+| the service-worker cache name carries this build's version, so an update reaches the device (I3) | desktop | PASS | app v04.38, cache v04.38.01 |
 | old caches are deleted on activate, so a device does not accumulate every build | desktop | PASS | keys() + delete() present |
 | the service worker claims open clients, so the new build applies without a second reload | desktop | PASS | clients.claim() present |
 | a navigation falls back to the cache when the network is gone (I3) | desktop | PASS | caches.match in a catch path |
@@ -373,6 +373,12 @@ check that ran; none of them can be written by hand. "Present in code",
 | restoring takes a fresh snapshot first, so the undo has an undo | desktop | PASS | 2 snapshots held |
 | a recovery copy that could NOT be stored reports failure rather than success | desktop | PASS | "this browser would not open the safety store: Error: denied by policy" |
 | a DAMAGED recovery snapshot is refused and the notebook is left alone | desktop | PASS | that safety copy is damaged and was NOT used — notebook still holds 3 notes |
+| a restore whose undo copy cannot be written changes NOTHING that is persisted | desktop | PASS | 1 notes in storage, bytes identical |
+| …and schedules no cloud push, so the other devices never see it | desktop | PASS | 0 pushes |
+| a same-length changed payload with intact metadata is REFUSED by the save gate | desktop | PASS | the safety copy read back differently from what was written |
+| …while an untampered copy still passes it | desktop | PASS | 3030 bytes verified |
+| restoring a copy takes a VERIFIED undo copy first | desktop | PASS |  |
+| restoring that undo puts the previous notebook back, in storage as well as in memory | desktop | PASS | 3 → 1 → 3 → 1 notes (1 in storage) |
 
 ## J destructive-path consent
 
@@ -389,6 +395,12 @@ check that ran; none of them can be written by hand. "Present in code",
 | MERGE took a recovery snapshot that can be listed afterwards | desktop | PASS | 1 snapshot(s) in the store |
 | REPLACE really replaces | desktop | PASS | 1 notes, imported present: true, seed kept: false |
 | REPLACE took a recovery snapshot that can be listed afterwards | desktop | PASS | 1 snapshot(s) in the store |
+| …and says so, with an error the caller can offer a choice on | desktop | PASS | a safety copy of what you have now could not be made (this browser would not open the safety store: Error: denied by policy), so nothing was changed |
+| restoring without an undo copy works when it is explicitly chosen, and reports that it had none | desktop | PASS | restored to 3 notes, undoOk=false |
+| Cancel at the restore confirmation leaves the notebook and storage untouched | desktop | PASS | 1 note, storage identical, 0 pushes |
+| a failed undo copy offers a real choice rather than silently proceeding or dead-ending | desktop | PASS | the choice card was shown |
+| …and pressing "Stop — change nothing" changes nothing that is persisted | desktop | PASS | 1 note, storage identical, 0 pushes |
+| the Safety Copies screen says where the copies live and how they can be lost | desktop | PASS | browser-only, not synced, cleared by site data, keep-count, download unverifiable |
 
 ## J sanitiser (adversarial)
 
@@ -421,14 +433,14 @@ check that ran; none of them can be written by hand. "Present in code",
 | v04.35 (the previous candidate) → v04.37: an edit made on the OLD build survives the round trip (I1) | desktop | PASS | "<p>edited on the OLD build after a rollback</p>" |
 | v04.35 (the previous candidate) → v04.37: the salvaged malformed bytes are still there after the round trip | desktop | PASS | 2 entries: ["CORRUPT-REMOTE-BYTES","CORRUPT-IMPORTED-BYTES"] |
 | v04.35 (the previous candidate) → v04.37: the round trip is silent | desktop | PASS | silent |
-| every build in the rollback path has a DIFFERENT service-worker cache name (I3) | desktop | PASS | const VERSION = 'v04.37.01' · v04.34 (what is live today): const VERSION = 'v04.34.01' · v04.35 (the previous candidate): const VERSION = 'v04.35.01' |
+| every build in the rollback path has a DIFFERENT service-worker cache name (I3) | desktop | PASS | const VERSION = 'v04.38.01' · v04.34 (what is live today): const VERSION = 'v04.34.01' · v04.35 (the previous candidate): const VERSION = 'v04.35.01' |
 
 ## Function Inventory
 
 Generated mechanically from `index.html` — see `audit/inventory/FUNCTION-INVENTORY.md`.
 
-- **Application-defined functions:** 1300
-- **Reachable:** 1270
+- **Application-defined functions:** 1302
+- **Reachable:** 1272
 - **Referenced nowhere at all:** 25
 - **That mutate the data model:** 380
 - **That reach a persistence boundary:** 273
