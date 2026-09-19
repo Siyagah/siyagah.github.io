@@ -3025,3 +3025,93 @@ false "CONTENT LOST" readings before it was spotted.
   not the rule, so **nothing under `legacy/` was touched** and the choice is the
   owner's: leave it, strip only the residue, or stop publishing the build.
   Recorded as Finding 2b in `audit/AUDIT-2026-09-18.md`.
+
+---
+
+## v04.36 — a damaged notebook stops taking the app down with it
+
+*19 September 2026. Phase 2 of the Master Audit and Continuous Build Plan
+(2026-09-19). Continuation branch `claude/elegant-maxwell-8maykf`, cut from the
+v04.35 audit candidate `b56e403`.*
+
+### Phase 0 — the baseline was verified, not believed
+
+The v04.35 report was re-measured before anything was touched. All four gates
+reproduce on the candidate: **11/11** ship, **286/286** app, **24/24**
+journeys, **6/6** reload-persistence, zero `FAIL` lines. Findings 1 and 2 were
+then reproduced on **both sides** of the fix — a detached worktree at the
+v04.34 baseline `ba6c70f` shows the note **silently emptied** on tablet and
+desktop and **8 of 8** residue kinds in both exports; the same scripts on
+v04.35 show `note intact` at all three sizes and **0 of 8**. The report is
+honest. Evidence: `audit/phase0/BASELINE.md`.
+
+### Phase 1 — the inventory is generated, not written
+
+`tools/inventory.mjs` extracts the ledgers mechanically from `index.html`, so
+they cannot go stale: **1,052 application-defined functions**, 1,040 reachable,
+**12 referenced nowhere at all**, 37 classified destructive, 11
+privacy-sensitive, 13 touching the network, **1,077 inline `on*` handlers**
+across 1,367 DOM ids. Writing it cost two defects **in the tool itself**, both
+worth recording because both are the same mistake in different clothes: an
+arrow with no braces (`const inEd = n => !!(…)`) has no `{` to match, so
+reaching for the next one swallowed hundreds of lines and reported four live
+helpers as dead code with their only caller inside the bogus body; and a
+handler name can be **composed** rather than written —
+`onclick="${f.pinHash?'removeFolderPin':'setFolderPin'}('${fid}')"` — where the
+name and its `(` never touch, so no call-shaped search can see it. That second
+one is a standing risk, not just a tool bug: **`app-check`'s handler scan
+cannot resolve those controls either**, so they sit outside the check that
+exists to catch dead buttons.
+
+### Phase 2 — what happens when the stored notebook is not the shape the app expects
+
+`seedDB()` is always well-formed, so every check in this repository — all 286
+of them — had only ever measured a happy boot. `tools/audit-a-shell.mjs` boots
+the app against **ten shapes of damage** (truncated, not JSON, null
+collections, wrong types, missing keys, duplicate ids, orphan folder
+references, a null note, a note with no id, an array at the root), an **empty**
+notebook, **500-** and **2,000-note** synthetic ones, and every breakpoint edge
+in both directions. Three defects, each from a different place:
+
+- **`articles` as a string** → `localArr.forEach is not a function` in
+  `_mergeById`, the **whole boot aborted**, the screen painted **empty** — and
+  the app then wrote that empty notebook back over **three folders that were
+  still perfectly readable**. That is I1, broken outright. The same throw
+  aborts a **sync pull** carrying a malformed remote document, which leaves the
+  device stuck on a stale notebook with nothing the owner can see (I2).
+- **a `null` in `DB.articles`** → `reading 'id' of null` in `loadDB`'s
+  `_sweepTabs`; tree rendered **0 bytes** — a dead screen over intact data.
+- **a note with no `id`** → `reading 'some' of undefined` in `cntOf()`, which
+  the folder tree calls once per folder, so **one** damaged note blanked the
+  whole sidebar.
+
+**`_repairDB()`** now runs on every side of every merge — stored, embedded and
+**remote** — and the rules are chosen so I1 is literally true rather than
+approximately: a collection that is not a list is replaced by an empty one
+**with the original kept verbatim under `DB._salvage`**, so nothing is
+discarded; entries that are `null` go, because they carry no record; a record
+with **no id keeps all its content** and is given one, because a record the app
+cannot address is a record the owner cannot open. `_mergeById` asks
+`Array.isArray` instead of `||[]`, which catches null and undefined and nothing
+else. `cntOf()` and `artsIn()` treat a missing list as an empty one rather than
+a throw. And the repair is **not silent** — a toast names what was repaired,
+because the owner cannot read code and a notebook that arrived damaged is
+something they should be told about.
+
+### Two of this round's own failures were the check being wrong, not the app
+
+Recorded because the Master Plan asks for it and because both are cheap to
+repeat. A pane below 1200px is an off-canvas slide-over: `#sb.closed` is
+`width:0!important` at `left:-100%` and is `display:flex` the entire time, so
+"visible but 0px wide" was the check misreading a pane doing exactly its job —
+a pane is *showing* when its box actually intersects the viewport. And the
+corrupt-notebook sweep first wrote the damage with `setItem` and reloaded;
+every case came back `0 folders / 0 notes` because **the app's own unload flush
+had rewritten localStorage from the empty DB it was still holding**. That read
+precisely like "the app wipes a damaged notebook", and it was the test wiping
+it. Damaged fixtures now arrive through `addInitScript` as raw bytes
+(`openApp({ rawDB })`), which is the only way to hand over damage that
+`JSON.stringify` would otherwise repair on the way in.
+
+**43/43** new shell/startup checks, on top of 286/286 app, 11/11 ship, 24/24
+journeys and 6/6 persistence — all re-run and green on v04.36.

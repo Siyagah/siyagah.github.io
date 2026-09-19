@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.35">
+<meta name="app-version" content="04.36">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2776,7 +2776,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.35</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.36</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2915,6 +2915,68 @@ let HISTORY = [], HIST_POS = -1;
 
 let ST = {folder:null, article:null, exp:{f2:true}, editing:false, etitle:'', efolders:[], etags:[], search:'', tag:null, tagOpen:false, secOpen:{}, pendingSec:null, snippet:false, sfOpen:true, secSF:null, secSFOpen:{}, ntiCatOpen:{}, tabOwner:null};
 
+/* ── _repairDB — make a damaged notebook holdable, without losing a byte ──
+   v04.36. Everything that reads the notebook assumes a shape: `articles` is
+   an array, every entry is an object with an `id`, `folderIds` is an array.
+   Nothing had ever checked. Three shapes of damage were measured taking the
+   app down at boot, each from a different place:
+
+     articles: "nope"     → _mergeById: localArr.forEach is not a function
+                            …and the app then painted an EMPTY SCREEN and
+                            wrote that empty notebook back over the three
+                            folders that were still perfectly readable (I1).
+     articles: [ …, null] → loadDB/_sweepTabs: reading 'id' of null
+     a note with no id    → cntOf: reading 'some' of undefined
+
+   A notebook arrives damaged from a full disk, a tab killed mid-write, a
+   hand-edited file, or a sync that handed back something unexpected — so
+   this runs on EVERY side of every merge, local, embedded and remote alike.
+
+   The rules are chosen so that I1 is literally true, not approximately:
+     • a collection that is not an array is REPLACED by an empty one, and the
+       original value is kept verbatim under DB._salvage so nothing is
+       discarded and a later session can still look at it;
+     • an entry that is null or not an object carries no record, so it goes;
+     • an entry with no id KEEPS ALL ITS CONTENT and is given one, because a
+       record the app cannot address is a record the owner cannot open;
+     • folderIds / tags that are not arrays become arrays.
+   It reports what it changed rather than repairing in silence — the owner
+   cannot read code, and a notebook that needed repair is something they
+   should be told about. */
+const _DB_ARRAYS = ['folders','articles','sections','trash','tombstones','calEvents','calCategories',
+  'noteKinds','noteKindCats','myFavCats','folderGroups','globalTags'];
+function _repairDB(db, where){
+  if(!db || typeof db!=='object' || Array.isArray(db)) return { db:null, fixes:[] };
+  const fixes=[];
+  _DB_ARRAYS.forEach(k=>{
+    if(db[k]==null) return;                       /* absent is fine — defaults fill it */
+    if(!Array.isArray(db[k])){
+      db._salvage=db._salvage||{};
+      db._salvage[where+'.'+k]=db[k];             /* nothing is thrown away */
+      db[k]=[];
+      fixes.push(k+' was not a list');
+      return;
+    }
+    const before=db[k].length;
+    db[k]=db[k].filter(x=>x!=null && typeof x==='object');
+    if(db[k].length!==before) fixes.push((before-db[k].length)+' empty entries in '+k);
+  });
+  let minted=0;
+  ['folders','articles','sections'].forEach(k=>{
+    (db[k]||[]).forEach(x=>{
+      if(x.id==null||x.id===''){ x.id='rep-'+k+'-'+(++minted)+'-'+Date.now().toString(36); }
+    });
+  });
+  if(minted) fixes.push(minted+' records had no id');
+  let listFix=0;
+  (db.articles||[]).forEach(a=>{
+    if(!Array.isArray(a.folderIds)){ a.folderIds = a.folderIds==null?[]:[].concat(a.folderIds).filter(v=>typeof v==='string'); listFix++; }
+    if(!Array.isArray(a.tags)){ a.tags = a.tags==null?[]:[].concat(a.tags).filter(v=>typeof v==='string'); listFix++; }
+  });
+  if(listFix) fixes.push(listFix+' notes had a damaged folder or tag list');
+  return { db, fixes };
+}
+
 function loadDB(){
   const el = document.getElementById('nd');
   let emb = null;
@@ -2929,6 +2991,11 @@ function loadDB(){
   // either side.
   let _stored=null;
   try{_stored=JSON.parse(localStorage.getItem(SK));}catch{}
+  /* v04.36 — repair BOTH sides before they meet. A damaged side used to take
+     mergeDB() down with it, and the app then booted to a blank screen. */
+  const _rs=_repairDB(_stored,'stored'), _re=_repairDB(emb,'embedded');
+  _stored=_rs.db; emb=_re.db;
+  const _repairs=[..._rs.fixes,..._re.fixes];
   if(_stored?.folders&&emb?.folders){DB=mergeDB(_stored,emb);}
   else if(emb?.folders){DB=JSON.parse(JSON.stringify(emb));}
   else if(_stored?.folders){DB=JSON.parse(JSON.stringify(_stored));}
@@ -2942,6 +3009,12 @@ function loadDB(){
   const _fs=[...DB.sections].sort((a,b)=>a.order-b.order);
   const _def=_fs[0]?.id;
   if(_def) DB.folders.filter(f=>!f.parentId&&!f.sectionId).forEach(f=>f.sectionId=_def);
+  if(_repairs.length){
+    /* Not a silent repair. The owner cannot read code, so a notebook that
+       arrived damaged is something they are told about, once, in words. */
+    DB._repairedAt=new Date().toISOString(); DB._repairedWhat=_repairs.slice(0,8);
+    setTimeout(()=>{ try{ toast('Notebook repaired on open — '+_repairs.join(', ')+'. Nothing was deleted.', 7000); }catch{} }, 1200);
+  }
   if(!DB.theme) DB.theme={preset:'forest',custom:{}};
   if(!DB.theme.fonts) DB.theme.fonts={global:100,sidebar:100,list:100,content:100};
   if(DB.theme.listView==='snippet') ST.snippet=true;
@@ -2964,7 +3037,7 @@ function loadDB(){
        • expires add/close stamps older than 180 days and any stamp whose
          note is gone, so the two stamp maps can never grow unbounded. */
   (function _sweepTabs(){
-    const live=new Set(DB.articles.map(a=>a.id));
+    const live=new Set(DB.articles.filter(Boolean).map(a=>a.id));
     (DB.trash||[]).forEach(t=>{ if(t&&t.item&&t.item.id)live.add(t.item.id); });
     const m=_tabsMap(); let ch=false;
     Object.keys(m).forEach(k=>{
@@ -3494,8 +3567,13 @@ function _isPlaceholder(html){
 function chOf(pid){return DB.folders.filter(f=>f.parentId===pid).sort((a,b)=>a.order-b.order);}
 function descOf(fid){const ids=[fid];function go(p){chOf(p).forEach(c=>{ids.push(c.id);go(c.id);});}go(fid);return ids;}
 function pathOf(fid){const p=[];let id=fid;while(id){const f=DB.folders.find(x=>x.id===id);if(!f)break;p.unshift(f);id=f.parentId;}return p;}
-function cntOf(fid){const ids=descOf(fid);return DB.articles.filter(a=>a.folderIds.some(x=>ids.includes(x))).length;}
-function artsIn(fid){return DB.articles.filter(a=>a.folderIds.includes(fid));}
+/* v04.36 — `a.folderIds` is repaired at load, but these two run against
+   anything the app is holding, including a note handed over by an import or
+   a sync mid-flight. A missing list is an empty list here, never a throw:
+   cntOf() is called from the folder tree, so one damaged note used to blank
+   the whole sidebar. */
+function cntOf(fid){const ids=descOf(fid);return DB.articles.filter(a=>a&&(a.folderIds||[]).some(x=>ids.includes(x))).length;}
+function artsIn(fid){return DB.articles.filter(a=>a&&(a.folderIds||[]).includes(fid));}
 /* Once a note is deliberately filed into a real folder (or journal event),
    it should leave the 'Primary' quick-capture catch-all automatically —
    Primary is meant to be a temporary inbox, not a permanent home. Looks up
@@ -19744,7 +19822,11 @@ async function syncNow(){
 }
 /* ── Merge-based sync core: union by id, newest edit wins, no data loss ── */
 function _mergeById(localArr, remoteArr, tsKey){
-  localArr=localArr||[]; remoteArr=remoteArr||[];
+  /* v04.36 — `||[]` catches null and undefined and nothing else, so a
+     collection that arrived as a string or a number reached .forEach and
+     threw, taking the whole boot (and every sync that carried it) with it.
+     Array.isArray is the question that was meant. */
+  localArr=Array.isArray(localArr)?localArr:[]; remoteArr=Array.isArray(remoteArr)?remoteArr:[];
   const out=[], idx={};
   localArr.forEach(x=>{ if(x&&x.id!=null){idx[x.id]=out.length;} out.push(x); });
   remoteArr.forEach(x=>{
@@ -20279,7 +20361,13 @@ async function _pullRemote(docRef, md, retry){
        typist's text is newer and wins, an untouched open note is a no-op
        flush and correctly loses to the incoming change. */
     _flushAllEditors();
-    DB=mergeDB(DB, remoteDB);                  /* MERGE — never replace, so nothing is lost */
+    /* v04.36 — repair the REMOTE side too (I2). A cloud document whose
+       `articles` came back as anything but a list used to throw inside
+       _mergeById, abort the pull, and leave the device stuck on a stale
+       notebook with no error the owner could see. */
+    const _rr=_repairDB(remoteDB,'remote');
+    if(_rr.fixes.length) console.warn('Sync: repaired the remote notebook on arrival —', _rr.fixes.join(', '));
+    DB=mergeDB(DB, _rr.db||remoteDB);           /* MERGE — never replace, so nothing is lost */
     const after=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
     _save();
     _renderPreserveEdit();
