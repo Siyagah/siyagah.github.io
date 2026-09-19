@@ -2170,13 +2170,22 @@ await app.close();
     'openCalSettings', 'openCiteModal', 'toggleHijri', 'installPWA', 'syncKnowledgeBase',
     'addStarterMyDatabaseFolders', 'doSignOut', 'openBackupModal', 'importBackup', 'exportBackupHTML',
     'backupToGDrive', 'exportBackupPDF', 'exportDeploy'];
+  /* v04.37 — UPDATED IN PLACE, with the reason recorded (CLAUDE.md). A round
+     that deliberately ADDS a menu row is not a round that lost one, but an
+     addition still has to be declared here rather than widening the check to
+     "anything new is fine" — which would stop it noticing the next
+     accidental duplicate. */
+  const SINCE_V0420 = {
+    openRecoveryModal: 'v04.37 — 🛟 Safety Copies, the restore route for the verified pre-import snapshot. '
+      + 'A recovery copy nobody can restore from is not a recovery copy.',
+  };
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
   const lost = V0420.filter((f) => !now.includes(f));
-  const added = [...new Set(now)].filter((f) => !V0420.includes(f));
+  const added = [...new Set(now)].filter((f) => !V0420.includes(f) && !SINCE_V0420[f]);
   r.check(lost.length === 0 && added.length === 0,
-    'every action the two menus had in v04.20 is still on one of them',
-    lost.length || added.length ? `lost: ${lost.join(',') || '—'} · unexpected: ${added.join(',') || '—'}`
-      : `${V0420.length} actions, ${m.tools.length} in Tools and ${m.menu.length} in Settings`);
+    'every action the two menus had in v04.20 is still on one of them, plus only the additions this file declares',
+    lost.length || added.length ? `lost: ${lost.join(',') || '—'} · undeclared: ${added.join(',') || '—'}`
+      : `${V0420.length} original actions + ${Object.keys(SINCE_V0420).length} declared since, ${m.tools.length} in Tools and ${m.menu.length} in Settings`);
 
   /* 3. THE defect this round could ship: a moved item still calling
      closeSBMenu() would leave the Tools menu open after being clicked. */
@@ -3944,34 +3953,57 @@ for (const vp of VIEWPORTS) {
          every note on one click with no count, no confirmation and no way
          back, and persist() pushed the result to the other devices. */
   const src = html.slice(html.indexOf('function importJSON'), html.indexOf('function importJSON') + 6000);
-  r.check(/confirm\(/.test(src), 'importJSON() asks before replacing the notebook',
-    /confirm\(/.test(src) ? 'confirmation present' : 'NO CONFIRMATION — one click replaces everything');
-  /* v04.36 — UPDATED IN PLACE, with the reason recorded (CLAUDE.md). The
-     recovery copy moved out of importJSON() into `_recoveryCopyOrAsk()`,
-     because importBackup()'s Replace path had NO copy at all and the two now
-     share one. Grepping importJSON() for a literal `exportFile()` therefore
-     failed on a round that made the guarantee stronger and wider. The check
-     follows the indirection instead of naming the call: whatever the import
-     path reaches for, it must end at a Save File copy. The behaviour itself
-     — a copy really written, on merge AND on replace, and NOT written when
-     the owner cancels — is measured for real in tools/audit-g-data.mjs. */
-  const helper = html.slice(html.indexOf('function _recoveryCopyOrAsk'), html.indexOf('function _recoveryCopyOrAsk') + 600)
-    + html.slice(html.indexOf('function _preImportRecoveryCopy'), html.indexOf('function _preImportRecoveryCopy') + 400);
-  const takesCopy = /exportFile\(\)/.test(src) || (/_recoveryCopyOrAsk\(\)/.test(src) && /exportFile\(\)/.test(helper));
-  r.check(takesCopy, 'importJSON() writes a recovery copy before changing anything',
-    takesCopy ? 'Save File copy taken first (via _recoveryCopyOrAsk)' : 'NO BACKUP before a destructive import');
-  /* …and the half that was missing until v04.36: the HTML importer's
-     Replace path wipes sections, folders, notes and trash together and had
-     no recovery copy of its own. */
+  const flow = html.slice(html.indexOf('async function _runImport'), html.indexOf('async function _runImport') + 4000);
+  const flowSrc = flow;
+  /* v04.37 — UPDATED IN PLACE. The question moved out of importJSON() into
+     `_runImport()`'s three-button dialog, because a native confirm() could
+     only offer two answers and the second one was Replace All. Grepping
+     importJSON() for `confirm(` therefore failed on the round that made the
+     choice safe. Ask it of the flow the importer actually reaches. */
+  const asks = /_runImport\(/.test(src) && /_choiceModal\(/.test(flowSrc) && /value:'replace'/.test(flowSrc);
+  r.check(asks, 'importJSON() asks before replacing the notebook',
+    asks ? 'the choice dialog is reached through _runImport()' : 'NO CONFIRMATION — one click replaces everything');
+  /* v04.37 — UPDATED IN PLACE AGAIN, with the reason recorded (CLAUDE.md).
+     v04.36 moved the recovery copy into a shared helper and this check
+     followed the indirection to `exportFile()`. An independent review showed
+     that was proving the wrong thing: `exportFile()` clicks an anchor and
+     revokes the object URL in the same call, so "it did not throw" says
+     nothing about whether a file was saved. The copy is now a snapshot that
+     is READ BACK before anything destructive proceeds, so what this check
+     asks is that the import path reaches the VERIFIED one. The behaviour is
+     measured for real in tools/audit-j-recovery.mjs. */
+  const save = html.slice(html.indexOf('async function _recoverySave'), html.indexOf('async function _recoverySave') + 2200);
+  const takesCopy = /_takeRecoveryCopy\(/.test(flow) && /_recoverySave\(/.test(html)
+    && /readonly/.test(save) && /read back/i.test(save);
+  r.check(takesCopy, 'the import flow takes a recovery copy it has READ BACK before changing anything',
+    takesCopy ? 'verified snapshot (_recoverySave reads back in a separate transaction)'
+              : 'the import path does not reach a verified recovery copy');
+  /* Both importers must go through that one flow — the HTML importer's
+     Replace All had no copy at all until v04.36. */
+  const jsrc = html.slice(html.indexOf('function importJSON'), html.indexOf('function importJSON') + 4000);
   const bsrc = html.slice(html.indexOf('function importBackup'), html.indexOf('function importBackup') + 4000);
-  const bCopy = /_recoveryCopyOrAsk\(\)/.test(bsrc) || /exportFile\(\)/.test(bsrc);
-  r.check(bCopy, 'importBackup() writes a recovery copy before Replace All',
-    bCopy ? 'Save File copy taken first' : 'NO BACKUP before the more destructive of the two importers');
-  /* MERGE is the half that cannot lose anything, and the Master Plan of
-     2026-09-19 settled that the JSON importer must offer it (Decision 4). */
-  const offersMerge = /Merge/.test(src) && /mergeDB\(/.test(src);
-  r.check(offersMerge, 'importJSON() offers MERGE as well as Replace (Decision 4)',
-    offersMerge ? 'merge path present and reaches mergeDB()' : 'REPLACE-ONLY — one mis-click still costs the notebook');
+  r.check(/_runImport\(/.test(jsrc) && /_runImport\(/.test(bsrc),
+    'both importers go through the same guarded flow',
+    `importJSON: ${/_runImport\(/.test(jsrc)}, importBackup: ${/_runImport\(/.test(bsrc)}`);
+  /* CANCEL MUST BE CANCEL. v04.36 asked `OK = Merge, Cancel = Replace All`
+     in a native confirm(), so the instinctive way out of a dialog nobody
+     understood was wired to the one action that cannot be undone. */
+  /* Searching the whole file for "Cancel = Replace" matched the COMMENTS
+     describing the defect that was just fixed — a check failing on its own
+     documentation. Ask it of the strings the app actually shows: no
+     confirm() or dialog text anywhere may offer Cancel as the destructive
+     answer. Comments are stripped first. */
+  const noComments = html.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const offersCancelAsReplace = /Cancel\s*=\s*Replace/i.test(noComments);
+  r.check(!offersCancelAsReplace, 'no import offers "Cancel = Replace All" (a Cancel that destroys the notebook)',
+    offersCancelAsReplace ? 'A CANCEL STILL LEADS TO REPLACE ALL' : 'no dialog wires Cancel to a destructive branch');
+  const threeWay = /value:'cancel'/.test(flow) && /value:'merge'/.test(flow) && /value:'replace'/.test(flow);
+  r.check(threeWay, 'the import choice offers Merge, Replace All and Cancel as separate buttons (Decision 4)',
+    threeWay ? 'three named choices' : 'not a three-way choice');
+  /* and the owner can actually get back */
+  r.check(/function openRecoveryModal/.test(html) && /onclick="openRecoveryModal\(\)/.test(html),
+    'the safety copies can be restored from a menu, not just written',
+    'openRecoveryModal is defined and reachable from the ⚙ menu');
 }
 
 /* ── 12. Chromium's own verdict on the manifest ────────────────────────── */

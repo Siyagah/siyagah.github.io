@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.36">
+<meta name="app-version" content="04.37">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2802,7 +2802,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.36</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.37</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2869,6 +2869,7 @@ sup.ann-sup:hover{text-decoration:underline}
           <div class="sb-mi-hd">Backup</div>
           <div class="sb-mi" onclick="openBackupModal();closeSBMenu()" title="Keep a dated copy of the whole app + notes, automatically">🗄 Automatic Backups</div>
           <div class="sb-mi" onclick="importBackup();closeSBMenu()" title="Restore notes from a Siyagah backup HTML file">📥 Import Backup</div>
+          <div class="sb-mi" onclick="openRecoveryModal();closeSBMenu()" title="Undo an import — restore the safety copy taken just before it">🛟 Safety Copies</div>
           <div class="sb-mi" onclick="backupToGDrive();closeSBMenu()" title="Save backup to Google Drive">☁ Backup to Drive</div>
           <div class="sb-mi-hd">Export</div>
           <div class="sb-mi" onclick="exportBackupHTML();closeSBMenu()" title="Download all notes as readable HTML — open in browser or print as PDF">📦 Backup Export</div>
@@ -2969,6 +2970,76 @@ let ST = {folder:null, article:null, exp:{f2:true}, editing:false, etitle:'', ef
    It reports what it changed rather than repairing in silence — the owner
    cannot read code, and a notebook that needed repair is something they
    should be told about. */
+/* ── Salvage: the record that survives everything (v04.37) ───────────────
+   v04.36 replaced a malformed collection with an empty one and kept the
+   original at `db._salvage[where+'.'+k]`, and the release report called that
+   "nothing was discarded". An independent review proved it wrong, and the
+   reproduction is unambiguous: `mergeDB(local, remote)` starts from
+   `Object.assign({}, local)` and merges a named list of collections, so
+   `remote._salvage` is simply never carried. Measured on v04.36 — the
+   salvage is on the input object and `null` in `DB` and in localStorage one
+   merge later. The same held for an imported file merged into a notebook.
+   So the promise was true only for the one path (stored) that happened to be
+   the local side.
+
+   Three things had to change, and only the first is the bug:
+     • `_mergeSalvage()` unions BOTH sides, and `mergeDB()` calls it;
+     • keys are collision-safe — `where.collection@<iso>#<hash>` — because
+       two devices repairing the same collection would otherwise write the
+       same key and one would silently win;
+     • it is BOUNDED, because salvage is raw malformed bytes and a notebook
+       that repairs itself weekly would grow without limit. Bounding means
+       dropping, and dropping is the thing this exists to prevent — so what
+       is dropped is the VALUE, never the RECORD: the entry keeps its size,
+       its hash, its timestamp and a `prunedAt`, so the owner is never told
+       something survived when it did not. */
+const _SALVAGE_MAX_ENTRIES = 24;
+const _SALVAGE_MAX_BYTES   = 262144;   /* 256 KB of malformed bytes, in total */
+const _SALVAGE_ENTRY_BYTES = 65536;    /* 64 KB of any single one */
+function _fnv1a(str){
+  let h=0x811c9dc5;
+  for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; }
+  return h.toString(36);
+}
+function _salvageEntry(where,key,value){
+  let raw; try{ raw=typeof value==='string'?value:JSON.stringify(value); }catch(e){ raw=String(value); }
+  if(raw==null) raw=String(value);
+  const bytes=raw.length, hash=_fnv1a(raw);
+  const truncated=bytes>_SALVAGE_ENTRY_BYTES;
+  return { at:new Date().toISOString(), where, key, bytes, hash,
+           truncated, value: truncated?raw.slice(0,_SALVAGE_ENTRY_BYTES):raw };
+}
+function _salvageKey(e){ return e.where+'.'+e.key+'@'+e.at+'#'+e.hash; }
+/* Prune to the caps, oldest first, by emptying the VALUE and leaving the
+   record — so "we could not keep these bytes" is itself recorded rather than
+   being the silent absence of an entry. */
+function _salvagePrune(map){
+  const keys=Object.keys(map).sort((a,b)=>String(map[a].at).localeCompare(String(map[b].at)));
+  let total=keys.reduce((n,k)=>n+((map[k].value||'').length),0);
+  for(const k of keys){
+    const live=keys.filter(x=>map[x].value!=null).length;
+    if(total<=_SALVAGE_MAX_BYTES && live<=_SALVAGE_MAX_ENTRIES) break;
+    if(map[k].value==null) continue;
+    total-=map[k].value.length;
+    map[k]={...map[k], value:null, prunedAt:new Date().toISOString()};
+  }
+  return map;
+}
+function _mergeSalvage(a,b){
+  const out={};
+  for(const src of [a,b]){
+    if(!src||typeof src!=='object') continue;
+    for(const k of Object.keys(src)){
+      const e=src[k];
+      if(!e||typeof e!=='object'){ out[k]={ at:'', where:'legacy', key:k, bytes:String(e||'').length,
+        hash:_fnv1a(String(e||'')), truncated:false, value:String(e||'') }; continue; }
+      /* same key from both sides: keep the one that still HAS its bytes */
+      if(!out[k] || (out[k].value==null && e.value!=null)) out[k]=e;
+    }
+  }
+  return _salvagePrune(out);
+}
+
 const _DB_ARRAYS = ['folders','articles','sections','trash','tombstones','calEvents','calCategories',
   'noteKinds','noteKindCats','myFavCats','folderGroups','globalTags'];
 /* ── The paste / import sanitisation policy (v04.36) ──────────────────────
@@ -2996,25 +3067,95 @@ const _DB_ARRAYS = ['folders','articles','sections','trash','tombstones','calEve
    — is kept, because an import that quietly drops content is I1 all over
    again. */
 const _EMBED_HOSTS = /^(www\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com|player\.vimeo\.com|vimeo\.com|docs\.google\.com|drive\.google\.com)$/i;
+/* v04.37 — an independent review asked for stronger adversarial evidence
+   than "we remove certain tags and attributes". The first cut removed
+   `on*`, `<script>`, `javascript:` hrefs and foreign iframes, and kept
+   everything else — which left, at minimum:
+     <iframe srcdoc="...">            a whole document, attribute-encoded
+     <a href="java&#115;cript:...">    an entity that the parser decodes back
+     <a href="java\tscript:...">       a tab inside the scheme, which URL
+                                       parsing ignores and the browser honours
+     <form action="javascript:...">    a submit is a navigation
+     <base href="//evil">              re-points every relative URL on the page
+     <meta http-equiv="refresh">       navigates away on its own
+     <object>/<embed>                  loads whatever it is pointed at
+     <svg><use xlink:href="...">       a remote fragment
+     style="background:url(javascript:…)"
+     <link rel=stylesheet>             loads and applies foreign CSS
+   The list is not the mechanism — an allow-list of dangerous things rots
+   exactly the way the export residue list did. So the rule is inverted:
+   an ELEMENT is kept only if its tag is on a short allow-list of things a
+   note is made of, and an ATTRIBUTE is kept only if it is on a short
+   allow-list too. Anything unrecognised is unwrapped (its children and text
+   are kept — the content survives, the element does not), which means a tag
+   invented after this was written is handled on the day it appears. */
+const _SAFE_TAGS = new Set(['A','ABBR','B','BLOCKQUOTE','BR','CAPTION','CODE','COL','COLGROUP','DD','DEL','DETAILS','DFN','DIV','DL','DT','EM','FIGCAPTION','FIGURE','H1','H2','H3','H4','H5','H6','HR','I','IMG','INS','KBD','LI','MARK','OL','P','PRE','Q','S','SAMP','SMALL','SPAN','STRONG','SUB','SUMMARY','SUP','TABLE','TBODY','TD','TFOOT','TH','THEAD','TR','U','UL','VAR','WBR','IFRAME','VIDEO','AUDIO','SOURCE','TIME','BDI','BDO','RUBY','RT','RP']);
+/* Dropped ENTIRELY, children and all — their content is their payload. */
+const _KILL_TAGS = new Set(['SCRIPT','STYLE','LINK','BASE','META','OBJECT','EMBED','APPLET','FRAME','FRAMESET','NOSCRIPT','TEMPLATE','SVG','MATH','FORM','INPUT','BUTTON','SELECT','TEXTAREA','OPTION','LABEL','FIELDSET','LEGEND','DIALOG','PORTAL','SLOT']);
+const _SAFE_ATTRS = new Set(['href','src','alt','title','colspan','rowspan','span','width','height','start','reversed','datetime','dir','lang','open','cite','type','controls','poster','loop','muted','playsinline','frameborder','allowfullscreen','class','id','contenteditable','data-aid','data-id','data-kind','align','border','cellpadding','cellspacing']);
+/* A URL is safe when, after entities and control characters are removed, its
+   scheme is one a note legitimately uses. Everything else — including
+   anything with no scheme we recognise — is dropped. */
+function _safeURL(raw){
+  let v=String(raw==null?'':raw);
+  /* decode entities the HTML parser would decode anyway */
+  try{ const t=document.createElement('textarea'); t.innerHTML=v; v=t.value; }catch(e){}
+  /* strip every space-like and control character the parser would ignore — written with codePoints rather than escapes so the source cannot be mangled in transit */
+  v=v.split('').filter(function(ch){var c=ch.charCodeAt(0);return !(c<33||c===160||c===5760||(c>=8192&&c<=8207)||c===8232||c===8233||c===8239||c===8287||c===12288||c===65279);}).join('');
+  if(/^[a-z][a-z0-9+.-]*:/i.test(v)){
+    return /^(https?|mailto|tel|ftp):/i.test(v);
+  }
+  if(/^data:/i.test(v)) return false;           /* handled separately for images */
+  return true;                                   /* relative, #fragment, //host */
+}
+function _safeImgSrc(raw){
+  const v=String(raw==null?'':raw).trim();
+  if(/^data:image\/(png|jpe?g|gif|webp|avif|bmp);base64,/i.test(v)) return true;
+  if(/^data:/i.test(v)) return false;
+  return _safeURL(v);
+}
 function _sanitiseForeignHTML(html){
   if(typeof html!=='string'||!html) return html;
   let doc;
   try{ doc=new DOMParser().parseFromString('<div id="_sx">'+html+'</div>','text/html'); }
   catch(e){ return html; }
   const root=doc.getElementById('_sx'); if(!root) return html;
-  root.querySelectorAll('script').forEach(n=>n.remove());
+  /* 1 — elements whose very content is the payload go, children and all */
+  root.querySelectorAll([..._KILL_TAGS].join(',')).forEach(n=>{ try{ n.remove(); }catch(e){} });
+  /* 2 — walk what is left. An unknown element is UNWRAPPED, never deleted:
+         a note's words must survive a sanitiser, or the cure is I1. */
+  let guard=0;
+  for(;;){
+    const unknown=[...root.querySelectorAll('*')].find(el=>!_SAFE_TAGS.has(el.tagName));
+    if(!unknown||guard++>5000) break;
+    const par=unknown.parentNode; if(!par){ break; }
+    while(unknown.firstChild) par.insertBefore(unknown.firstChild, unknown);
+    par.removeChild(unknown);
+  }
+  /* 3 — attributes */
   root.querySelectorAll('*').forEach(el=>{
     [...el.attributes].forEach(at=>{
       const n=at.name.toLowerCase(), v=String(at.value||'');
-      if(n.startsWith('on')) el.removeAttribute(at.name);
-      else if((n==='href'||n==='src'||n==='xlink:href'||n==='action'||n==='formaction')
-              && /^\s*(javascript|vbscript|data:text\/html)/i.test(v)) el.removeAttribute(at.name);
+      if(n==='style'){
+        /* keep plain styling, drop anything that can fetch or execute */
+        if(/url\s*\(|expression\s*\(|javascript\s*:|@import|behavior\s*:|-moz-binding/i.test(v)) el.removeAttribute(at.name);
+        return;
+      }
+      if(!_SAFE_ATTRS.has(n)){ el.removeAttribute(at.name); return; }
+      if(n==='href'||n==='cite'||n==='poster'){ if(!_safeURL(v)) el.removeAttribute(at.name); return; }
+      if(n==='src'){
+        if(el.tagName==='IMG'){ if(!_safeImgSrc(v)) el.removeAttribute(at.name); return; }
+        if(!_safeURL(v)||/^data:/i.test(v.trim())) el.removeAttribute(at.name);
+      }
     });
     if(el.tagName==='IFRAME'){
       let host=''; try{ host=new URL(el.getAttribute('src')||'', location.href).hostname; }catch(e){}
       if(!el.closest('.embed-wrap') || !_EMBED_HOSTS.test(host)) el.remove();
     }
-    if(el.tagName==='A' && (el.getAttribute('target')||'')==='_blank') el.setAttribute('rel','noopener noreferrer');
+    if(el.tagName==='A'){
+      if((el.getAttribute('target')||'')==='_blank') el.setAttribute('rel','noopener noreferrer');
+      else if(el.hasAttribute('href')) el.setAttribute('rel','noopener noreferrer');
+    }
   });
   return root.innerHTML;
 }
@@ -3056,9 +3197,11 @@ function _repairDB(db, where){
     if(db[k]==null) return;                       /* absent is fine — defaults fill it */
     if(!Array.isArray(db[k])){
       db._salvage=db._salvage||{};
-      db._salvage[where+'.'+k]=db[k];             /* nothing is thrown away */
+      const _e=_salvageEntry(where,k,db[k]);
+      db._salvage[_salvageKey(_e)]=_e;            /* collision-safe, and it survives a merge */
       db[k]=[];
-      fixes.push(k+' was not a list');
+      fixes.push(k+' was not a list'+(_e.truncated?' (too large to keep whole — the first '
+        +Math.round(_SALVAGE_ENTRY_BYTES/1024)+'KB of '+_e.bytes+' bytes was kept)':''));
       return;
     }
     const before=db[k].length;
@@ -3117,7 +3260,18 @@ function loadDB(){
     /* Not a silent repair. The owner cannot read code, so a notebook that
        arrived damaged is something they are told about, once, in words. */
     DB._repairedAt=new Date().toISOString(); DB._repairedWhat=_repairs.slice(0,8);
-    setTimeout(()=>{ try{ toast('Notebook repaired on open — '+_repairs.join(', ')+'. Nothing was deleted.', 7000); }catch{} }, 1200);
+    /* v04.37 — say what is actually true of THIS repair. "Nothing was
+       deleted" was printed unconditionally and was not true on every path;
+       now the message is built from what the salvage map really holds. */
+    const _sv=DB._salvage||{}, _svKeys=Object.keys(_sv);
+    const _whole=_svKeys.filter(k=>_sv[k] && _sv[k].value!=null && !_sv[k].truncated).length;
+    const _part =_svKeys.filter(k=>_sv[k] && _sv[k].value!=null &&  _sv[k].truncated).length;
+    const _gone =_svKeys.filter(k=>_sv[k] && _sv[k].value==null).length;
+    const _tail = !_svKeys.length ? ' No note or folder was removed.'
+      : ' The original was kept'+(_whole?' in full':'')
+        +(_part?', '+_part+' item(s) only in part (too large)':'')
+        +(_gone?', and '+_gone+' older item(s) are recorded but no longer held':'')+'.';
+    setTimeout(()=>{ try{ toast('Notebook repaired on open — '+_repairs.join(', ')+'.'+_tail, 8000); }catch{} }, 1200);
   }
   if(!DB.theme) DB.theme={preset:'forest',custom:{}};
   if(!DB.theme.fonts) DB.theme.fonts={global:100,sidebar:100,list:100,content:100};
@@ -3547,21 +3701,196 @@ function exportJSON(){const blob=new Blob([JSON.stringify(DB,null,2)],{type:'app
    back" (I4) and needs no new storage and no new screen.
    NOTE for the owner: importBackup() also offers MERGE. Whether this one
    should too is a product decision and is left alone here. */
-/* v04.36 — one recovery copy, used by BOTH importers. `importJSON()` wrote
-   one and `importBackup()`'s Replace path did not, although it is the more
-   destructive of the two (it wipes sections, folders, notes and trash in one
-   go). Returns true when the copy was written; the caller decides what to do
-   about a false, and neither of them presses on quietly. */
-function _preImportRecoveryCopy(){
-  try{ exportFile(); return true; }
-  catch(err){ console.error('pre-import recovery copy failed:',err); return false; }
+/* ── One import flow, used by both importers (v04.37) ────────────────────
+   Every exit from here is explicit, and the two that change the notebook
+   both go through a recovery copy that has been READ BACK before anything
+   is touched. Cancel at any point writes nothing — not to DB, not to
+   localStorage, not to the cloud. */
+async function _runImport(o){
+  const summary=`<div style="font-size:13px;line-height:1.75">
+      <div><strong>File:</strong> ${esc(o.fileName||'(a file)')}</div>
+      <div><strong>The file holds:</strong> ${o.nA} notes · ${o.nF} folders · ${o.nS} sections</div>
+      <div><strong>You have now:</strong> ${o.cA} notes · ${o.cF} folders · ${o.cS} sections</div>
+      ${(o.repaired&&o.repaired.length)?`<div style="margin-top:6px;opacity:.8">The file needed repair on the way in: ${esc(o.repaired.join(', '))}</div>`:''}
+      <div style="margin-top:10px"><strong>Merge</strong> keeps everything you have and adds what the file has. Where the same note is in both, the newest edit wins. Nothing is removed.</div>
+      <div style="margin-top:4px"><strong>Replace All</strong> throws away your ${o.cA} notes and ${o.cF} folders and uses the file instead. This syncs to your other devices.</div>
+      <div style="margin-top:8px;opacity:.8">A safety copy is taken and checked before either one, and you can undo from ⚙ ▸ Backup ▸ Safety Copies.</div>
+    </div>`;
+  const pick=await _choiceModal(o.title, summary, [
+    {value:'cancel', label:'Cancel'},
+    {value:'merge',  label:'➕ Merge', primary:true},
+    {value:'replace',label:'⚠ Replace All', danger:true},
+  ]);
+  if(pick==='cancel'){ toast('Import cancelled — nothing was changed'); return 'cancel'; }
+
+  if(pick==='replace'){
+    const sure=await _choiceModal('⚠ Replace everything?',
+      `<div style="font-size:13px;line-height:1.75">Your <strong>${o.cA} notes</strong> and <strong>${o.cF} folders</strong> will be replaced by the file's
+       <strong>${o.nA} notes</strong> and <strong>${o.nF} folders</strong>. This is not a merge, and it syncs to your other devices.</div>`,
+      [{value:'cancel',label:'Cancel'},{value:'replace',label:'⚠ Yes, replace everything',danger:true}]);
+    if(sure!=='replace'){ toast('Import cancelled — nothing was changed'); return 'cancel'; }
+  }
+
+  const copy=await _takeRecoveryCopy(pick==='replace'?'before an import replaced everything':'before an import merged a file');
+  if(!copy.ok){
+    const go=await _choiceModal('⚠ The safety copy could not be made',
+      `<div style="font-size:13px;line-height:1.75">Siyagah could not store a copy it was able to check: <em>${esc((copy.snapshot&&copy.snapshot.err)||'unknown reason')}</em>.
+       ${copy.downloaded?'A file was sent to your downloads, but Siyagah cannot confirm your browser saved it.':'No downloaded file was produced either.'}
+       <div style="margin-top:8px">If you continue, this change may not be undoable.</div></div>`,
+      [{value:'cancel',label:'Stop — change nothing'},{value:'go',label:'Continue without a safety copy',danger:true}]);
+    if(go!=='go'){ toast('Import cancelled — nothing was changed'); return 'cancel'; }
+  }
+  const msg=(pick==='merge'?o.merge:o.replace)();
+  toast('✅ '+msg+(copy.ok?' — a checked safety copy was taken first (⚙ ▸ Backup ▸ Safety Copies)':' — WITHOUT a checked safety copy'), 8000);
+  return pick;
 }
-function _recoveryCopyOrAsk(){
-  if(_preImportRecoveryCopy()) return true;
-  return confirm(
-    '\u26a0 The safety copy could NOT be saved.\n\n'+
-    'If you continue, your current notes will be changed with no backup.\n\n'+
-    'OK to continue anyway, Cancel to stop.');
+
+/* ── A recovery copy you can actually check, and actually use (v04.37) ────
+   v04.36 called `exportFile()` and returned true when it did not throw. An
+   independent review was right that this proves nothing: `exportFile()`
+   builds a Blob, clicks an anchor and revokes the object URL in the same
+   call. The browser may refuse the download, put it somewhere the owner
+   never finds, or be interrupted — and none of that raises an exception
+   here. "A safety copy was taken" was a claim about an action, not about a
+   file, and it was made immediately before wiping the notebook.
+
+   What replaces it is a snapshot that can be VERIFIED and RESTORED:
+     • written to IndexedDB (not localStorage, which already holds the
+       notebook and would double its size against the same quota);
+     • read back in a SEPARATE transaction and compared by length and hash
+       before anything destructive is allowed to proceed;
+     • listed and restorable from the menu, because a recovery copy nobody
+       can restore from is not a recovery copy;
+     • last 5 kept, and restoring one takes a snapshot of the current state
+       first, so Undo has an Undo.
+   The downloaded file is still offered, because an off-device copy is worth
+   having — but it is described as what it is, and nothing depends on it. */
+const _RECOVERY_DB='siyagah-recovery', _RECOVERY_STORE='snapshots', _RECOVERY_KEEP=5;
+function _recoveryOpen(){
+  return new Promise((res,rej)=>{
+    let rq; try{ rq=indexedDB.open(_RECOVERY_DB,1); }catch(e){ return rej(e); }
+    rq.onupgradeneeded=()=>{ const db=rq.result;
+      if(!db.objectStoreNames.contains(_RECOVERY_STORE)) db.createObjectStore(_RECOVERY_STORE,{keyPath:'id'}); };
+    rq.onsuccess=()=>res(rq.result);
+    rq.onerror=()=>rej(rq.error||new Error('indexedDB.open failed'));
+    rq.onblocked=()=>rej(new Error('indexedDB blocked'));
+  });
+}
+function _recoveryTx(db,mode,fn){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(_RECOVERY_STORE,mode), st=tx.objectStore(_RECOVERY_STORE);
+    let out; try{ out=fn(st); }catch(e){ return rej(e); }
+    tx.oncomplete=()=>res(out&&out.result!==undefined?out.result:out);
+    tx.onerror=()=>rej(tx.error||new Error('transaction failed'));
+    tx.onabort=()=>rej(tx.error||new Error('transaction aborted'));
+  });
+}
+/* Returns {ok, id, bytes, hash, err}. `ok` is true ONLY after the bytes have
+   been read back out of a separate transaction and matched. */
+async function _recoverySave(label){
+  let json;
+  try{ json=JSON.stringify(DB); }catch(e){ return {ok:false, err:'the notebook could not be serialised: '+e}; }
+  const rec={ id:'rec-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),
+              at:new Date().toISOString(), label:label||'before a change',
+              appVersion:(typeof APP_VERSION!=='undefined'?APP_VERSION:''),
+              notes:(DB.articles||[]).length, folders:(DB.folders||[]).length,
+              bytes:json.length, hash:_fnv1a(json), json };
+  let db;
+  try{ db=await _recoveryOpen(); }catch(e){ return {ok:false, err:'this browser would not open the safety store: '+e}; }
+  try{
+    await _recoveryTx(db,'readwrite',st=>st.put(rec));
+    /* read back in a NEW transaction — the whole point */
+    const back=await _recoveryTx(db,'readonly',st=>st.get(rec.id));
+    if(!back) return {ok:false, err:'the safety copy could not be read back'};
+    if(back.bytes!==rec.bytes||back.hash!==rec.hash||back.json.length!==json.length)
+      return {ok:false, err:'the safety copy read back differently from what was written'};
+    const all=await _recoveryTx(db,'readonly',st=>st.getAll());
+    const old=(all||[]).sort((a,b)=>String(b.at).localeCompare(String(a.at))).slice(_RECOVERY_KEEP);
+    if(old.length) await _recoveryTx(db,'readwrite',st=>{ old.forEach(o=>st.delete(o.id)); });
+    return {ok:true, id:rec.id, bytes:rec.bytes, hash:rec.hash, at:rec.at};
+  }catch(e){ return {ok:false, err:String(e&&e.name==='QuotaExceededError'?'there is not enough room in this browser to store it':e)}; }
+  finally{ try{db.close();}catch(e){} }
+}
+async function _recoveryList(){
+  try{ const db=await _recoveryOpen();
+    const all=await _recoveryTx(db,'readonly',st=>st.getAll());
+    try{db.close();}catch(e){}
+    return (all||[]).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  }catch(e){ return []; }
+}
+async function _recoveryRestore(id){
+  const db=await _recoveryOpen();
+  const rec=await _recoveryTx(db,'readonly',st=>st.get(id));
+  try{db.close();}catch(e){}
+  if(!rec) throw new Error('that safety copy is no longer here');
+  if(_fnv1a(rec.json)!==rec.hash) throw new Error('that safety copy is damaged and was NOT used');
+  const parsed=JSON.parse(rec.json);
+  /* Undo needs an Undo: snapshot what is here before replacing it. */
+  await _recoverySave('before restoring a safety copy');
+  const rp=_repairDB(parsed,'recovery');
+  DB=rp.db||parsed; persist(); render();
+  return rec;
+}
+async function openRecoveryModal(){
+  const list=await _recoveryList();
+  const rows=list.length?list.map(r=>`<div class="ci" style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+      <span><strong>${esc(r.label||'copy')}</strong><br><span style="opacity:.7;font-size:12px">${esc(new Date(r.at).toLocaleString())} · ${r.notes} notes · ${r.folders} folders · v${esc(r.appVersion||'?')}</span></span>
+      <button class="btn bp" onclick="restoreRecovery('${esc(r.id)}')">↩ Restore this</button>
+    </div>`).join('')
+    :'<p style="opacity:.75">There are no safety copies yet. One is taken automatically before any import that changes your notes.</p>';
+  showModal(`<div class="mt">🛡 Safety copies</div>
+    <p style="margin:.2em 0 .8em;font-size:13px;opacity:.85">A safety copy is taken inside this browser before an import replaces or merges your notes, and it is checked after being written. Restoring one takes a fresh copy of what you have now first, so you can always come back.</p>
+    ${rows}
+    <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="closeModal()">Close</button></div>`);
+}
+async function restoreRecovery(id){
+  if(!confirm('Restore this safety copy?\n\nWhat you have now will be replaced by it — and a fresh safety copy of what you have now is taken first, so this can be undone.'))return;
+  try{ const rec=await _recoveryRestore(id); closeModal();
+    toast('↩ Restored the copy from '+new Date(rec.at).toLocaleString()+' — '+rec.notes+' notes', 7000); }
+  catch(e){ toast('⚠ Could not restore: '+(e&&e.message||e), 7000); }
+}
+
+/* ── A choice is three buttons, not one OK and one Cancel (v04.37) ────────
+   v04.36 asked "OK = Merge, Cancel = Replace All" in a native confirm().
+   An independent review was right that this is unsafe for a non-programmer:
+   **Cancel did not cancel** — it took the owner into the destructive branch.
+   The instinctive way out of a dialog you do not understand was wired to the
+   only action that cannot be undone. A three-button dialog has no such
+   reading: Cancel is Cancel, and it is the escape key, the backdrop click
+   and the initially-focused button as well. */
+let _choiceResolve=null;
+function _choiceModal(title, bodyHTML, choices){
+  return new Promise(res=>{
+    let done=false;
+    const finish=v=>{ if(done)return; done=true; _choiceResolve=null;
+      document.removeEventListener('keydown',onKey,true);
+      try{obs.disconnect();}catch(e){}
+      closeModal(); res(v); };
+    const onKey=e=>{ if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); finish('cancel'); } };
+    _choiceResolve=finish;
+    document.addEventListener('keydown',onKey,true);
+    const btns=choices.map(c=>`<button class="btn${c.primary?' bp':''}" data-choice="${esc(c.value)}"
+        style="${c.danger?'border-color:#b3261e;color:#b3261e;':''}min-height:40px"
+        onclick="_choicePick('${esc(c.value)}')">${c.label}</button>`).join('');
+    showModal(`<div class="mt">${title}</div>${bodyHTML}
+      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:14px">${btns}</div>`);
+    /* Cancel takes the focus, so Enter on a dialog nobody read does nothing. */
+    setTimeout(()=>{ const c=document.querySelector('#mb [data-choice="cancel"]'); if(c&&c.focus)c.focus(); },50);
+    /* any other way the modal closes is a cancel */
+    const ov=document.getElementById('ov');
+    const obs=new MutationObserver(()=>{ if(!ov.classList.contains('on')) finish('cancel'); });
+    setTimeout(()=>{ try{ obs.observe(ov,{attributes:true,attributeFilter:['class']}); }catch(e){} },80);
+  });
+}
+function _choicePick(v){ if(_choiceResolve)_choiceResolve(v); }
+
+/* Takes the verified snapshot and, separately, offers the downloaded file.
+   Returns {ok, snapshot, downloaded} — `ok` means a copy was VERIFIED. */
+async function _takeRecoveryCopy(label){
+  const snap=await _recoverySave(label);
+  let downloaded=false;
+  try{ exportFile(); downloaded=true; }catch(e){ console.error('recovery download failed:',e); }
+  return { ok:snap.ok, snapshot:snap, downloaded };
 }
 
 function importJSON(){
@@ -3582,43 +3911,16 @@ function importJSON(){
       const _ri=_repairDB(d,'imported'); d=_ri.db||d;
       const nA=d.articles.length, nF=d.folders.length, nS=(d.sections||[]).length;
       const cA=DB.articles.length, cF=DB.folders.length, cS=(DB.sections||[]).length;
-      /* v04.36 — MERGE or REPLACE, the same choice the HTML importer has
-         offered for a version series. This button used to replace the whole
-         notebook on one click; v04.35 gave it a count, a confirmation and a
-         recovery copy, and this round gives it the other half — a way to take
-         the file's notes WITHOUT losing your own. Merge is the OK (default)
-         answer, because it is the one that cannot lose anything. */
-      const _merge=confirm(
-        '\ud83d\udce5 Import from JSON backup\n\n'+
-        'File: '+file.name+'\n'+
-        'The file holds:  '+nA+' notes \u00b7 '+nF+' folders \u00b7 '+nS+' sections\n'+
-        'You have now:    '+cA+' notes \u00b7 '+cF+' folders \u00b7 '+cS+' sections\n'+
-        (_ri.fixes.length?'\nThe file needed repair on the way in: '+_ri.fixes.join(', ')+'\n':'')+
-        '\nChoose how to bring it in:\n'+
-        '  OK     = Merge  (keep everything you have, add what the file has,\n'+
-        '           newest edit wins where the same note is in both)\n'+
-        '  Cancel = Replace All  (your current notes are REPLACED)\n\n'+
-        'Either way the change syncs to your other devices, and a\n'+
-        '\ud83d\udce6 Save File copy of what you have now is downloaded first.'
-      );
-      if(!_merge && !confirm(
-        '\u26a0 Replace EVERYTHING in this notebook?\n\n'+
-        'Your '+cA+' notes and '+cF+' folders will be REPLACED by the file\'s\n'+
-        nA+' notes and '+nF+' folders. This is not a merge.\n\n'+
-        'OK to replace, Cancel to stop.'
-      )){ toast('Import cancelled \u2014 nothing was changed'); return; }
-      /* Recovery copy BEFORE anything is touched, on BOTH paths. If it cannot
-         be written, say so and let the owner decide rather than pressing on. */
-      if(!_recoveryCopyOrAsk()){ toast('Import cancelled \u2014 nothing was changed'); return; }
-      if(_merge){
-        const _before=DB.articles.length, _bf=DB.folders.length;
-        DB=mergeDB(DB,d); persist(); render();
-        toast('\u2705 Merged \u2014 '+(DB.articles.length-_before)+' new notes and '+
-              (DB.folders.length-_bf)+' new folders added, nothing removed', 7000);
-      }else{
-        DB=d; persist(); render();
-        toast('\u2705 Replaced \u2014 '+nA+' notes \u00b7 '+nF+' folders. Your previous notebook was saved to a file first.', 7000);
-      }
+      _runImport({
+        title:'📥 Import from JSON backup',
+        fileName:file.name, nA, nF, nS, cA, cF, cS,
+        repaired:_ri.fixes,
+        merge:()=>{ const b=DB.articles.length, bf=DB.folders.length;
+          DB=mergeDB(DB,d); persist(); render();
+          return 'Merged — '+(DB.articles.length-b)+' new notes and '+(DB.folders.length-bf)+' new folders added, nothing removed'; },
+        replace:()=>{ DB=d; persist(); render();
+          return 'Replaced — '+nA+' notes · '+nF+' folders'; },
+      });
     };
     fr.onerror=()=>toast('\u26a0 Could not read that file');
     fr.readAsText(file);
@@ -7393,33 +7695,19 @@ function importBackup(){
       const artCount=(bk.articles||[]).filter(a=>!a.id?.startsWith('kb-')).length;
       const folCount=(bk.folders||[]).filter(f=>!f.id?.startsWith('kb-')).length;
       const secCount=(bk.sections||[]).filter(s=>!s.id?.startsWith('kb-')).length;
-      /* Ask: Merge or Replace? */
-      const merge=confirm(
-        `📥 Import Backup\n\n`+
-        `Found: ${artCount} notes · ${folCount} folders · ${secCount} sections\n`+
-        `File: ${file.name}\n\n`+
-        `Choose restore mode:\n`+
-        `  OK     = Merge  (add notes not already in your app)\n`+
-        `  Cancel = Replace All  (wipe current data, restore backup)`
-      );
-      if(merge){
-        _mergeBackup(bk);
-      } else {
-        if(!confirm(
-          '⚠ Replace ALL your current notes with this backup?\n\n'+
-          'Your '+DB.articles.length+' notes and '+DB.folders.length+' folders will be\n'+
-          'permanently replaced by the backup\'s '+artCount+' notes and '+folCount+' folders,\n'+
-          'and the change syncs to your other devices.\n\n'+
-          'A 📦 Save File copy of what you have now will be downloaded first.\n\n'+
-          'OK to replace, Cancel to go back.'
-        ))return;
-        /* v04.36 — this path had NO recovery copy, although it is the more
-           destructive of the two importers: it wipes sections, folders, notes
-           and trash together. The JSON importer has written one since v04.35;
-           now both do. */
-        if(!_recoveryCopyOrAsk()){ toast('Import cancelled — nothing was changed'); return; }
-        _replaceWithBackup(bk);
-      }
+      /* v04.37 — was `OK = Merge, Cancel = Replace All` in a native
+         confirm(), so Cancel took the owner into the destructive branch.
+         Three named buttons now, and Cancel is Cancel. */
+      _runImport({
+        title:'📥 Import Backup',
+        fileName:file.name, nA:artCount, nF:folCount, nS:secCount,
+        cA:DB.articles.length, cF:DB.folders.length, cS:(DB.sections||[]).length,
+        repaired:_rb.fixes,
+        merge:()=>{ const b=DB.articles.length; _mergeBackup(bk);
+          return 'Merged — '+(DB.articles.length-b)+' new notes added, nothing removed'; },
+        replace:()=>{ _replaceWithBackup(bk);
+          return 'Replaced — '+artCount+' notes · '+folCount+' folders'; },
+      });
     }catch(e){
       toast('⚠ Import failed: '+(e.message||e));
       console.error('Import error:',e);
@@ -20197,6 +20485,15 @@ function mergeDB(local, remote){
   out.trash=_mergeById(local.trash, remote.trash, "deletedAt");
   out.tombstones=_mergeById(local.tombstones, remote.tombstones, "deletedAt");
   out.globalTags=_mergeStrs(local.globalTags, remote.globalTags);
+  /* v04.37 — the malformed bytes a repair set aside. `Object.assign({},local)`
+     above carries the LOCAL side only, so a repaired remote or imported
+     notebook used to lose its salvage on the very next merge. */
+  const _sv=_mergeSalvage(local._salvage, remote._salvage);
+  if(Object.keys(_sv).length) out._salvage=_sv; else delete out._salvage;
+  const _rw=[...new Set([...(local._repairedWhat||[]), ...(remote._repairedWhat||[])])];
+  if(_rw.length) out._repairedWhat=_rw.slice(0,16);
+  const _ra=[local._repairedAt, remote._repairedAt].filter(Boolean).sort().pop();
+  if(_ra) out._repairedAt=_ra;
   /* v03.81 — Smart-View settings and per-tag colours. Object maps, not
      arrays, so they use the dedicated helpers above. tagColors is resolved
      by its companion stamp map, which must be read from the ORIGINAL sides. */

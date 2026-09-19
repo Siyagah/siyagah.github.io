@@ -28,6 +28,9 @@ r.check(swv && swv.startsWith(meta + '.'), "sw.js VERSION is 'v<meta>.NN' — th
   swv && swv.startsWith(meta + '.') ? `v${swv}` : `sw.js has v${swv}, expected v${meta}.NN — devices keep serving the old build`);
 
 /* Every round bumps. A build identical in version to main has not shipped. */
+/* v04.37 — an explicit escape hatch, because a silent one is what this round
+   is fixing. It has to be asked for by name, and it says so in the output. */
+const NO_MAIN = process.env.SHIP_CHECK_NO_MAIN === '1';
 const mainHtml = git('git show origin/main:index.html 2>/dev/null');
 if (mainHtml) {
   const mainV = mainHtml.match(/<meta name="app-version" content="([^"]+)">/)?.[1];
@@ -37,7 +40,15 @@ if (mainHtml) {
   if (changed) r.check(meta !== mainV, 'version bumped past origin/main',
     meta !== mainV ? `v${mainV} → v${meta}` : `still v${meta} with changes in: ${changed.split('\n').join(', ')}`);
   else r.pass('version bumped past origin/main', 'nothing changed yet — nothing to bump');
-} else r.pass('version bumped past origin/main', 'skipped: no origin/main to compare against');
+} else if (NO_MAIN) r.pass('version bumped past origin/main', 'SKIPPED on purpose (SHIP_CHECK_NO_MAIN=1) — this comparison did NOT run');
+else r.fail('version bumped past origin/main',
+  'NO origin/main TO COMPARE AGAINST — this check did not run.\n'
+  + 'A check that cannot make its comparison has not passed; it has been skipped, and\n'
+  + 'reporting a skip as 11/11 is how an independent reviewer was handed a green tick for\n'
+  + 'a comparison that never happened (19 Sep 2026). Fetch the ref and run again:\n'
+  + '  git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main\n'
+  + 'If this really is a context with no main branch, set SHIP_CHECK_NO_MAIN=1 to turn\n'
+  + 'these two rows into explicit, visible skips.');
 
 /* ── 2. The notebook data tag ──────────────────────────────────────────── */
 const nd = html.match(/<script id="nd" type="application\/json">([\s\S]*?)<\/script>/)?.[1];
@@ -97,7 +108,11 @@ r.check(missingLinked.length === 0, 'every /icons/ path linked from index.html e
 
 /* ── 5. legacy/** is sealed ────────────────────────────────────────────── */
 const legacyTouched = git('git diff --name-only origin/main -- legacy 2>/dev/null');
-if (legacyTouched === null) r.pass('legacy/** untouched since origin/main', 'skipped: no origin/main to compare against');
+if (legacyTouched === null && NO_MAIN) r.pass('legacy/** untouched since origin/main', 'SKIPPED on purpose (SHIP_CHECK_NO_MAIN=1) — the I6 seal was NOT verified');
+else if (legacyTouched === null) r.fail('legacy/** untouched since origin/main',
+  'NO origin/main TO COMPARE AGAINST — the legacy seal (I6) was NOT verified.\n'
+  + 'This is the check that proves the sealed build is byte-identical; it cannot be\n'
+  + 'satisfied by not running. Fetch the ref, or set SHIP_CHECK_NO_MAIN=1 to skip visibly.');
 else r.check(!legacyTouched.trim(), 'legacy/** untouched since origin/main',
   legacyTouched.trim() ? `EDITED: ${legacyTouched.trim().split('\n').join(', ')} — frozen builds are never changed` : 'clean');
 

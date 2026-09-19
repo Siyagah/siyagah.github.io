@@ -7,10 +7,10 @@ check that ran; none of them can be written by hand. "Present in code",
 
 | | |
 |---|---|
-| App version | v04.36 |
-| Generated | 2026-09-19 01:56 UTC |
-| Matrix rows | **260** |
-| PASS | 254 |
+| App version | v04.37 |
+| Generated | 2026-09-19 05:14 UTC |
+| Matrix rows | **311** |
+| PASS | 305 |
 | BLOCKED—ENVIRONMENT | 4 |
 | BLOCKED—OWNER | 2 |
 
@@ -19,20 +19,22 @@ check that ran; none of them can be written by hand. "Present in code",
 | Suite | Result | Time |
 |---|---|---:|
 | ship-check — version, #nd, precache, manifest, legacy seal | **11/11** | 0.2s |
-| inventory — the Function Inventory, regenerated | **pass** | 6.2s |
-| app-check — boot, handlers, panes, views, editor, exports, colour | **288/288** | 240.5s |
-| audit A — shell, startup, corruption recovery, breakpoints | **43/43** | 13.2s |
-| audit B — editor ownership, autosave flushing, note lifecycle | **47/47** | 96.4s |
-| audit C/D — organisation, search, all 11 Smart Views | **49/49** | 8.9s |
-| audit E/F — calendar, journal, contacts, database, reminders, review | **31/31** | 4.2s |
-| audit G/H — export fidelity, import safety, privacy, merge | **44/44** | 15.9s |
-| audit I — accessibility, security, privacy, scale, PWA | **46/46** | 17.5s |
-| journeys — 24 principal journeys, real clicks | **24/24** | 21.3s |
-| persistence — what the app writes survives a real reload | **6/6** | 9.9s |
-| repro — Finding 1, the note-wipe, at three sizes | **pass** | 22.0s |
-| repro — Finding 2, private residue in both exports | **pass** | 1.1s |
+| inventory — the Function Inventory, regenerated | **pass** | 7.7s |
+| app-check — boot, handlers, panes, views, editor, exports, colour | **290/290** | 250.9s |
+| audit A — shell, startup, corruption recovery, breakpoints | **43/43** | 14.5s |
+| audit B — editor ownership, autosave flushing, note lifecycle | **47/47** | 99.0s |
+| audit C/D — organisation, search, all 11 Smart Views | **49/49** | 10.0s |
+| audit E/F — calendar, journal, contacts, database, reminders, review | **31/31** | 4.7s |
+| audit G/H — export fidelity, import safety, privacy, merge | **44/44** | 22.6s |
+| audit I — accessibility, security, privacy, scale, PWA | **46/46** | 19.9s |
+| audit J — salvage across merges, a real choice, a verified recovery copy | **33/33** | 15.3s |
+| audit K — rollback: older builds against a newer notebook | **18/18** | 4.6s |
+| journeys — 24 principal journeys, real clicks | **24/24** | 21.7s |
+| persistence — what the app writes survives a real reload | **6/6** | 10.3s |
+| repro — Finding 1, the note-wipe, at three sizes | **pass** | 22.3s |
+| repro — Finding 2, private residue in both exports | **pass** | 1.3s |
 
-**Total checks: 589** across 13 suites.
+**Total checks: 642** across 15 suites.
 
 
 ## A shell/navigation
@@ -73,14 +75,14 @@ check that ran; none of them can be written by hand. "Present in code",
 | corrupt notebook "arrayRoot" — the app still boots and paints | desktop | PASS | 0 folders / 0 notes in DB, tree 7197b |
 | corrupt notebook "arrayRoot" — boot throws no exception | desktop | PASS | silent |
 | corrupt notebook "arrayRoot" — keeps every record that was readable (I1) | desktop | PASS | payload had 0 folders / 0 notes; app holds 0 / 0 |
-| boots a 500-note synthetic notebook | desktop | PASS | 500 notes / 40 folders, tree 9349b, 593ms incl. browser launch |
-| boots a 2000-note synthetic notebook | desktop | PASS | 2000 notes / 120 folders, tree 9352b, 722ms incl. browser launch |
+| boots a 500-note synthetic notebook | desktop | PASS | 500 notes / 40 folders, tree 9349b, 672ms incl. browser launch |
+| boots a 2000-note synthetic notebook | desktop | PASS | 2000 notes / 120 folders, tree 9352b, 822ms incl. browser launch |
 | crossing every breakpoint in both directions throws nothing | desktop | PASS | silent |
 | no sideways scroll and no zero-width visible pane at any breakpoint edge | desktop | PASS | 8 widths incl. 639/640 and 1199/1200 |
 | opening a note records it as the last-viewed note | desktop | PASS | DB.theme.lastArticle = aX |
 | reload reopens the note that was open | desktop | PASS | ST.article = aX, 1 notes |
-| the reopened note actually paints its body | desktop | PASS | Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 1:53 AM / (001) F /  / body |
-| the service-worker cache name carries the app version (I3) | desktop | PASS | app v04.36, cache v04.36.01 |
+| the reopened note actually paints its body | desktop | PASS | Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 5:11 AM / (001) F /  / body |
+| the service-worker cache name carries the app version (I3) | desktop | PASS | app v04.37, cache v04.37.01 |
 | the service worker is network-first, so a stale cache cannot win | desktop | PASS | fetch + caches.open present |
 
 ## B notes/editor
@@ -133,7 +135,7 @@ check that ran; none of them can be written by hand. "Present in code",
 | restore — a trashed note comes back whole | desktop | PASS | back in the list, 0 left in trash |
 | empty trash — the note is gone and a tombstone remains so it cannot resurrect on sync (I2) | desktop | PASS | 0 in trash, 1 tombstones |
 | the whole lifecycle throws nothing | desktop | PASS | silent |
-| a ~540 KB note saves and paints without throwing | desktop | PASS | 540007b held, 540068 chars painted, 217ms |
+| a ~540 KB note saves and paints without throwing | desktop | PASS | 540007b held, 540068 chars painted, 324ms |
 
 ## D find/smart views
 
@@ -239,37 +241,37 @@ check that ran; none of them can be written by hand. "Present in code",
 
 | Feature | Viewport | Status | Evidence |
 |---|---|---|---|
-| Save File exports the whole application, not just the data (I4) | desktop | PASS | 1580708 bytes |
+| Save File exports the whole application, not just the data (I4) | desktop | PASS | 1600261 bytes |
 | Save File round-trips every note id at 800 notes | desktop | PASS | 800 of 800 ids |
 | Save File round-trips every folder id | desktop | PASS | 60 of 60 |
 | Save File round-trips every byte of note content, Bangla and Arabic included | desktop | PASS | 148745 vs 148745 bytes |
 | exporting does not disturb the live notebook | desktop | PASS | 800 notes still held |
-| the Deploy Export shell could be built at all | desktop | PASS | 1215379 bytes |
+| the Deploy Export shell could be built at all | desktop | PASS | 1234932 bytes |
 | the Deploy Export leaks no note title, folder name, notebook id, key, session chrome or foreign iframe | desktop | PASS | 6 canaries, none present |
 | the Deploy Export carries an empty #nd, and it still parses (I7) | desktop | PASS | {"folders":[],"articles":[],"sections":[],"trash":[]} |
 | JSON import offers MERGE, and merging keeps every existing note (I1) | desktop | PASS | 3 → 4 notes, seed note still present: true |
-| JSON import writes a recovery copy before merging | desktop | PASS | 1 Save File copies written |
-| JSON import REPLACE needs a second, explicit confirmation | desktop | PASS | 2 confirmations asked |
+| JSON import takes a VERIFIED recovery snapshot before merging | desktop | PASS | 1 snapshot(s) readable back out of the store |
+| JSON import REPLACE needs a second, explicit confirmation | desktop | PASS | second dialog: "⚠ Replace everything?", notebook still 3 notes |
 | JSON import REPLACE really replaces | desktop | PASS | 1 notes, seed gone: true |
-| JSON import writes a recovery copy before replacing | desktop | PASS | 1 Save File copies written |
-| cancelling the JSON import changes nothing at all (I1) | desktop | PASS | 3 notes, imported note present: false |
-| a cancelled import does not write a stray recovery file | desktop | PASS | 0 files written |
-| a hostile import file (not JSON at all) never leaves the notebook emptier than it found it (I1) | desktop | PASS | 3 notes, 3 folders after |
+| JSON import takes a VERIFIED recovery snapshot before replacing | desktop | PASS | 1 snapshot(s) |
+| cancelling the JSON import changes nothing at all (I1) | desktop | PASS | 3 notes, storage byte-identical: true |
+| a cancelled import writes no recovery file either | desktop | PASS | 0 files written |
+| a hostile import file (not JSON at all) never leaves the notebook in an unreadable state (I1) | desktop | PASS | 3 notes, 3 folders after (rejected before the dialog) |
 | a hostile import file (not JSON at all) throws no unhandled exception | desktop | PASS | silent |
 | a hostile import file (not JSON at all) does not execute script from the file | desktop | PASS | no script ran |
-| a hostile import file (an array at the root) never leaves the notebook emptier than it found it (I1) | desktop | PASS | 3 notes, 3 folders after |
+| a hostile import file (an array at the root) never leaves the notebook in an unreadable state (I1) | desktop | PASS | 3 notes, 3 folders after (rejected before the dialog) |
 | a hostile import file (an array at the root) throws no unhandled exception | desktop | PASS | silent |
 | a hostile import file (an array at the root) does not execute script from the file | desktop | PASS | no script ran |
-| a hostile import file (a JSON object with no collections) never leaves the notebook emptier than it found it (I1) | desktop | PASS | 3 notes, 3 folders after |
+| a hostile import file (a JSON object with no collections) never leaves the notebook in an unreadable state (I1) | desktop | PASS | 3 notes, 3 folders after (rejected before the dialog) |
 | a hostile import file (a JSON object with no collections) throws no unhandled exception | desktop | PASS | silent |
 | a hostile import file (a JSON object with no collections) does not execute script from the file | desktop | PASS | no script ran |
-| a hostile import file (articles as a string) never leaves the notebook emptier than it found it (I1) | desktop | PASS | 3 notes, 3 folders after |
+| a hostile import file (articles as a string) never leaves the notebook in an unreadable state (I1) | desktop | PASS | 3 notes, 3 folders after (rejected before the dialog) |
 | a hostile import file (articles as a string) throws no unhandled exception | desktop | PASS | silent |
 | a hostile import file (articles as a string) does not execute script from the file | desktop | PASS | no script ran |
-| a hostile import file (a null in the articles list) never leaves the notebook emptier than it found it (I1) | desktop | PASS | 0 notes, 0 folders after |
+| a hostile import file (a null in the articles list) never leaves the notebook in an unreadable state (I1) | desktop | PASS | 0 notes, 0 folders after (the dialog was offered) |
 | a hostile import file (a null in the articles list) throws no unhandled exception | desktop | PASS | silent |
 | a hostile import file (a null in the articles list) does not execute script from the file | desktop | PASS | no script ran |
-| a hostile import file (a note with a script in its body) never leaves the notebook emptier than it found it (I1) | desktop | PASS | 1 notes, 0 folders after |
+| a hostile import file (a note with a script in its body) never leaves the notebook in an unreadable state (I1) | desktop | PASS | 1 notes, 0 folders after (the dialog was offered) |
 | a hostile import file (a note with a script in its body) throws no unhandled exception | desktop | PASS | silent |
 | a hostile import file (a note with a script in its body) does not execute script from the file | desktop | PASS | no script ran |
 | the deployed site at siyagah.github.io matches this repository | — | **BLOCKED—ENVIRONMENT** | curl to siyagah.github.io returns "CONNECT tunnel failed, response 403" — the sandbox egress policy denies it. |
@@ -308,7 +310,7 @@ check that ran; none of them can be written by hand. "Present in code",
 | every target="_blank" link in the shipped markup carries rel="noopener" (5 links) | desktop | PASS | all safe |
 | a target="_blank" link pasted into a NOTE is given rel="noopener" | desktop | PASS | 2 links checked |
 | a javascript: link pasted into a note is neutralised | desktop | PASS | none present |
-| no shipped artifact carries private residue (48 files scanned, shipped ones judged) | desktop | PASS | clean |
+| no shipped artifact carries private residue (54 files scanned, shipped ones judged) | desktop | PASS | clean |
 | the sealed legacy/v03.99/ build still carries private residue at a public URL | — | **BLOCKED—OWNER** | legacy/v03.99/index.html: 4 × a Google API key · legacy/v03.99/index.html: 4 × a Google sign-in iframe · legacy/v03.99/index.html: 1 × a serialised tab picker (holds real note titl |
 
 ## I accessibility
@@ -334,32 +336,103 @@ check that ran; none of them can be written by hand. "Present in code",
 
 | Feature | Viewport | Status | Evidence |
 |---|---|---|---|
-| 500 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 576ms · render 11ms · search 6ms · persist 3ms · merge 1ms · export 11ms |
+| 500 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 667ms · render 15ms · search 8ms · persist 5ms · merge 1ms · export 15ms |
 | 500 notes: every measured operation is inside its budget | desktop | PASS | budgets: render ≤2500 search ≤1500 persist ≤2500 merge ≤4000 |
-| 2,000 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 703ms · render 19ms · search 17ms · persist 12ms · merge 2ms · export 19ms |
+| 2,000 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 855ms · render 27ms · search 25ms · persist 18ms · merge 3ms · export 26ms |
 | 2,000 notes: every measured operation is inside its budget | desktop | PASS | budgets: render ≤2500 search ≤1500 persist ≤2500 merge ≤4000 |
-| 10,000 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 1854ms · render 73ms · search 82ms · persist 65ms · merge 9ms · export 79ms |
+| 10,000 notes: render, search, persist, merge and export all complete | desktop | PASS | boot 2505ms · render 99ms · search 115ms · persist 99ms · merge 15ms · export 87ms |
 | 10,000 notes: every measured operation is inside its budget | desktop | PASS | budgets: render ≤2500 search ≤1500 persist ≤2500 merge ≤4000 |
 | 25 open/close pop-out cycles leave no windows behind | desktop | PASS | 0 float windows |
-| 25 open/close pop-out cycles do not grow the DOM without bound | desktop | PASS | 408 → 408 nodes |
+| 25 open/close pop-out cycles do not grow the DOM without bound | desktop | PASS | 409 → 409 nodes |
 | 25 open/close pop-out cycles are silent | desktop | PASS | silent |
-| the service-worker cache name carries this build's version, so an update reaches the device (I3) | desktop | PASS | app v04.36, cache v04.36.01 |
+| the service-worker cache name carries this build's version, so an update reaches the device (I3) | desktop | PASS | app v04.37, cache v04.37.01 |
 | old caches are deleted on activate, so a device does not accumulate every build | desktop | PASS | keys() + delete() present |
 | the service worker claims open clients, so the new build applies without a second reload | desktop | PASS | clients.claim() present |
 | a navigation falls back to the cache when the network is gone (I3) | desktop | PASS | caches.match in a catch path |
-| a downloaded copy needs no local .js or .css file beside it to open (I4) | desktop | PASS | 14 relative refs, none of them code |
+| a downloaded copy needs no local .js or .css file beside it to open (I4) | desktop | PASS | 17 relative refs, none of them code |
 | a downloaded copy still carries its own data tag (I4, I7) | desktop | PASS | script#nd present |
+
+## J data preservation
+
+| Feature | Viewport | Status | Evidence |
+|---|---|---|---|
+| a repaired REMOTE notebook keeps its salvaged bytes through the merge (I1) | desktop | PASS | ["CORRUPT-REMOTE"] |
+| …and they are in localStorage, not just in memory | desktop | PASS | ["CORRUPT-REMOTE"] |
+| a repaired IMPORTED file keeps its salvaged bytes through the merge (I1) | desktop | PASS | ["CORRUPT-IMPORTED","CORRUPT-REMOTE"] |
+| …and they reach a Save File export as well (I4) | desktop | PASS | ["CORRUPT-IMPORTED","CORRUPT-REMOTE"] |
+| two devices salvaging the SAME collection keep both, not one (collision-safe keys) | desktop | PASS | 2 entries: ["DEVICE-A","DEVICE-B"] |
+| merging salvage twice adds nothing, and the order of the two sides does not matter | desktop | PASS | idempotent:true order-free:true |
+| the records that WERE readable on both sides survive beside the salvage (I1) | desktop | PASS |  |
+| a salvage payload too large to keep whole is truncated, not dropped, and says its real size | desktop | PASS | kept 65536 of 300000 bytes |
+| …and the owner is told it was only kept in part | desktop | PASS |  |
+| sixty repairs do not grow the notebook without bound | desktop | PASS | 60 entries, 24 still holding bytes, 144240 bytes |
+| an entry whose bytes had to be dropped still keeps its size, hash and the fact it was pruned | desktop | PASS | no silent disappearance |
+| a recovery snapshot is written and READ BACK before it is called a copy | desktop | PASS | 3030 bytes, verified by length and hash |
+| the snapshot can be listed — the owner has something to restore from | desktop | PASS | 1 listed |
+| restoring a snapshot really puts the notes back, in storage as well as in memory | desktop | PASS | 3 → 1 → 3 notes (3 in storage) |
+| restoring takes a fresh snapshot first, so the undo has an undo | desktop | PASS | 2 snapshots held |
+| a recovery copy that could NOT be stored reports failure rather than success | desktop | PASS | "this browser would not open the safety store: Error: denied by policy" |
+| a DAMAGED recovery snapshot is refused and the notebook is left alone | desktop | PASS | that safety copy is damaged and was NOT used — notebook still holds 3 notes |
+
+## J destructive-path consent
+
+| Feature | Viewport | Status | Evidence |
+|---|---|---|---|
+| Cancel via the Cancel button on the choice dialog leaves the notebook byte-identical (I1) | desktop | PASS | 3 notes, storage unchanged, 0 writes |
+| Cancel via the Escape key on the choice dialog leaves the notebook byte-identical (I1) | desktop | PASS | 3 notes, storage unchanged, 0 writes |
+| Cancel via Cancel on the SECOND confirmation, after choosing Replace All leaves the notebook byte-identical (I1) | desktop | PASS | 3 notes, storage unchanged, 0 writes |
+| the import choice is three separate buttons — Merge, Replace All and Cancel | desktop | PASS | Cancel \| ➕ Merge \| ⚠ Replace All |
+| no choice is expressed as "Cancel = Replace All" (the review's blocker 2) | desktop | PASS | Cancel \| ➕ Merge \| ⚠ Replace All |
+| Cancel holds the focus, so Enter on a dialog nobody read does nothing | desktop | PASS | focus on "cancel" |
+| every choice is a real <button>, so it is reachable by keyboard | desktop | PASS |  |
+| MERGE really merges and keeps the existing notes | desktop | PASS | 4 notes, imported present: true, seed kept: true |
+| MERGE took a recovery snapshot that can be listed afterwards | desktop | PASS | 1 snapshot(s) in the store |
+| REPLACE really replaces | desktop | PASS | 1 notes, imported present: true, seed kept: false |
+| REPLACE took a recovery snapshot that can be listed afterwards | desktop | PASS | 1 snapshot(s) in the store |
+
+## J sanitiser (adversarial)
+
+| Feature | Viewport | Status | Evidence |
+|---|---|---|---|
+| every one of 20 adversarial vectors is neutralised | desktop | PASS | no handler, no script scheme, no srcdoc, no fetching CSS, none of the killed tags |
+| an UNKNOWN element is unwrapped, so the words inside it survive (I1) | desktop | PASS | "<p>KEEP THIS TEXT</p>" |
+| everything a note legitimately contains survives the sanitiser (I1) | desktop | PASS | all 12 kinds kept (449 bytes) |
+| a hostile file leaves NO inline handler and NO script in PERSISTED note content | desktop | PASS | 120 bytes stored |
+| …and the words that came with it are still there (I1) | desktop | PASS |  |
+
+## K rollback
+
+| Feature | Viewport | Status | Evidence |
+|---|---|---|---|
+| a notebook that v04.37 has repaired, merged and written can be produced for the test | desktop | PASS | 4 notes, 4 folders, 2 salvage entries, 3844 bytes |
+| v04.34 (what is live today): boots on a notebook v04.37 repaired and merged | desktop | PASS | v04.34, tree 6551b |
+| v04.34 (what is live today): reads every note, including the one written after the upgrade (I1) | desktop | PASS | 4 of 4 notes, the v04.37 note present: true |
+| v04.34 (what is live today): reads the folder that came in from an imported file | desktop | PASS | folders: 4 |
+| v04.34 (what is live today): boots silently on it | desktop | PASS | silent |
+| v04.34 (what is live today) → v04.37: the note written on the OLD build comes back (I1) | desktop | PASS | 5 notes, the old build's note present: true |
+| v04.34 (what is live today) → v04.37: an edit made on the OLD build survives the round trip (I1) | desktop | PASS | "<p>edited on the OLD build after a rollback</p>" |
+| v04.34 (what is live today) → v04.37: the salvaged malformed bytes are still there after the round trip | desktop | PASS | 2 entries: ["CORRUPT-REMOTE-BYTES","CORRUPT-IMPORTED-BYTES"] |
+| v04.34 (what is live today) → v04.37: the round trip is silent | desktop | PASS | silent |
+| v04.35 (the previous candidate): boots on a notebook v04.37 repaired and merged | desktop | PASS | v04.35, tree 6551b |
+| v04.35 (the previous candidate): reads every note, including the one written after the upgrade (I1) | desktop | PASS | 4 of 4 notes, the v04.37 note present: true |
+| v04.35 (the previous candidate): reads the folder that came in from an imported file | desktop | PASS | folders: 4 |
+| v04.35 (the previous candidate): boots silently on it | desktop | PASS | silent |
+| v04.35 (the previous candidate) → v04.37: the note written on the OLD build comes back (I1) | desktop | PASS | 5 notes, the old build's note present: true |
+| v04.35 (the previous candidate) → v04.37: an edit made on the OLD build survives the round trip (I1) | desktop | PASS | "<p>edited on the OLD build after a rollback</p>" |
+| v04.35 (the previous candidate) → v04.37: the salvaged malformed bytes are still there after the round trip | desktop | PASS | 2 entries: ["CORRUPT-REMOTE-BYTES","CORRUPT-IMPORTED-BYTES"] |
+| v04.35 (the previous candidate) → v04.37: the round trip is silent | desktop | PASS | silent |
+| every build in the rollback path has a DIFFERENT service-worker cache name (I3) | desktop | PASS | const VERSION = 'v04.37.01' · v04.34 (what is live today): const VERSION = 'v04.34.01' · v04.35 (the previous candidate): const VERSION = 'v04.35.01' |
 
 ## Function Inventory
 
 Generated mechanically from `index.html` — see `audit/inventory/FUNCTION-INVENTORY.md`.
 
-- **Application-defined functions:** 1282
-- **Reachable:** 1252
+- **Application-defined functions:** 1300
+- **Reachable:** 1270
 - **Referenced nowhere at all:** 25
-- **That mutate the data model:** 378
-- **That reach a persistence boundary:** 272
-- **Classified destructive:** 41
+- **That mutate the data model:** 380
+- **That reach a persistence boundary:** 273
+- **Classified destructive:** 42
 - **Privacy-sensitive:** 13
 - **That touch the network:** 17
-- **Inline on* handlers in markup:** 1078
+- **Inline on* handlers in markup:** 1082

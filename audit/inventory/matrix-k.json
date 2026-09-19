@@ -1,0 +1,146 @@
+[
+ {
+  "domain": "K rollback",
+  "feature": "a notebook that v04.37 has repaired, merged and written can be produced for the test",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "4 notes, 4 folders, 2 salvage entries, 3844 bytes"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today): boots on a notebook v04.37 repaired and merged",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "v04.34, tree 6551b"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today): reads every note, including the one written after the upgrade (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "4 of 4 notes, the v04.37 note present: true"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today): reads the folder that came in from an imported file",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "folders: 4"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today): boots silently on it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today) → v04.37: the note written on the OLD build comes back (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "5 notes, the old build's note present: true"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today) → v04.37: an edit made on the OLD build survives the round trip (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "\"<p>edited on the OLD build after a rollback</p>\""
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today) → v04.37: the salvaged malformed bytes are still there after the round trip",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 entries: [\"CORRUPT-REMOTE-BYTES\",\"CORRUPT-IMPORTED-BYTES\"]"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today) → v04.37: the round trip is silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate): boots on a notebook v04.37 repaired and merged",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "v04.35, tree 6551b"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate): reads every note, including the one written after the upgrade (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "4 of 4 notes, the v04.37 note present: true"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate): reads the folder that came in from an imported file",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "folders: 4"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate): boots silently on it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate) → v04.37: the note written on the OLD build comes back (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "5 notes, the old build's note present: true"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate) → v04.37: an edit made on the OLD build survives the round trip (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "\"<p>edited on the OLD build after a rollback</p>\""
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate) → v04.37: the salvaged malformed bytes are still there after the round trip",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 entries: [\"CORRUPT-REMOTE-BYTES\",\"CORRUPT-IMPORTED-BYTES\"]"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate) → v04.37: the round trip is silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "every build in the rollback path has a DIFFERENT service-worker cache name (I3)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "const VERSION = 'v04.37.01' · v04.34 (what is live today): const VERSION = 'v04.34.01' · v04.35 (the previous candidate): const VERSION = 'v04.35.01'"
+ }
+]

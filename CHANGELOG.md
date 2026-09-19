@@ -3249,3 +3249,111 @@ sealed `legacy/v03.99/` build (I6 forbids touching it; recommendation is to
 strip only the residue and record a named exception), and the live Firestore
 Rules, which are in their console and decide whether the notebook is private at
 all.
+
+---
+
+## v04.37 — four blockers from an independent review, and the claims that were too strong
+
+*19 September 2026. A correction round, not a feature round. An independent
+review of v04.36 (`5aaaa26`) returned **DO NOT MERGE OR DEPLOY YET** with four
+release blockers. All four were reproduced against v04.36 before anything was
+changed, and all four are fixed with regression tests that assert **persisted
+or exported data** and **cancellation invariants** — never a transient object,
+which is exactly how the first of them got through.*
+
+### 1 — "nothing was discarded" was not true of three paths out of four
+
+`_repairDB()` set a malformed collection aside at `db._salvage[...]` and v04.36
+called that "nothing was discarded". `mergeDB(local, remote)` starts from
+`Object.assign({}, local)` and merges a named list of collections, so
+**`remote._salvage` was never carried**. Measured on v04.36: the salvaged bytes
+are on the input object and `null` in `DB` and in `localStorage` one merge
+later. The same held for an imported file. The promise was true only for the
+one path — stored — that happened to be the local side.
+
+`_mergeSalvage()` now unions both sides and `mergeDB()` calls it. Keys became
+collision-safe (`where.collection@<iso>#<hash>`), because two devices repairing
+the same collection in the same second wrote the same key and one won silently.
+And it is **bounded**, because salvage is raw malformed bytes and a notebook
+that repairs itself weekly would grow without limit — but bounding means
+dropping, and dropping is the thing this exists to prevent, so what is dropped
+is the **value**, never the **record**: a pruned entry keeps its size, its hash,
+its timestamp and a `prunedAt`. The repair toast is built from what the salvage
+map really holds instead of printing "Nothing was deleted" unconditionally.
+
+### 2 — Cancel was wired to Replace All
+
+Both importers asked `OK = Merge, Cancel = Replace All` in a native `confirm()`.
+**Cancel did not cancel** — the instinctive way out of a dialog nobody
+understands was the one action that cannot be undone. There is now a real
+three-button dialog: **Merge**, **Replace All** and **Cancel** as separate
+buttons, Cancel holding the focus so Enter does nothing, Escape and a backdrop
+click both resolving to Cancel, and Replace behind a second explicit
+confirmation. Every exit is measured on **storage**: after a cancel the stored
+bytes are compared and must be identical.
+
+### 3 — the recovery copy was an action, not a file
+
+`_preImportRecoveryCopy()` called `exportFile()` and returned `true` if nothing
+threw. `exportFile()` builds a Blob, clicks an anchor and revokes the object URL
+in the same call; the browser may refuse the download or be interrupted and
+none of it raises. "A safety copy was taken" was said immediately before wiping
+the notebook, and it was a claim about a function call.
+
+The copy is now a snapshot written to **IndexedDB and read back in a separate
+transaction**, compared by length and by hash, before anything destructive is
+allowed to proceed. If it cannot be stored, the app says so and the owner has to
+choose to continue without one. Crucially it can be **used**: `🛟 Safety Copies`
+in the ⚙ menu lists them and restores one — taking a fresh snapshot first, so
+the undo has an undo — and a snapshot whose hash does not match is refused
+rather than restored. The downloaded file is still offered and is described as
+what it is: unverifiable.
+
+### 4 — the CI workflow could not run the browser suite, and had been failing
+
+`npx --yes playwright@latest install` downloads a browser and installs **no
+importable package**. Runs
+[1](https://github.com/Siyagah/siyagah.github.io/actions/runs/35414435398) and
+[2](https://github.com/Siyagah/siyagah.github.io/actions/runs/35414852252) both
+downloaded 300 MB of Chromium and then failed every browser suite at
+`import playwright` — **58 checks instead of 589**, reported as 35 separate
+"the check itself threw" rows that looked like 35 app defects. A pinned global
+install now goes where `harness.mjs` actually looks, the browser comes from that
+same pinned package, and a one-line step proves the harness can reach Playwright
+**before** anything else runs.
+
+Two things fell out of that failure that matter more than the fix. `audit-all`
+still **wrote a plausible 90-row matrix** from a run in which nothing was
+measured; a suite that never started is now named as `NEVER RAN`, its stale
+matrix fragment is deleted first, and the matrix carries a banner saying it is
+not a measurement. And `ship-check` **passed 11/11 in a clone with no
+`origin/main`**, silently skipping the version-bump and legacy-seal comparisons
+— which is how the reviewer was handed a green tick for a comparison that never
+happened. It now fails, loudly, unless `SHIP_CHECK_NO_MAIN=1` asks for the skip
+by name.
+
+### Also in this round
+
+**The sanitiser was an allow-list of dangerous things, which rots.** The review
+asked for stronger adversarial evidence, and it was right to: `srcdoc`, an
+entity-encoded `java&#115;cript:`, a tab inside the scheme, `<form action>`,
+`<base>`, `<meta http-equiv=refresh>`, `<object>`, `<embed>`, `<svg><use>`,
+`style="url(…)"`, `@import` and a `data:text/html` anchor all survived it. The
+rule is inverted now: an element is kept only if its tag is on a short list of
+things a note is made of, an attribute only if it is on a short list too, and
+**an unrecognised element is unwrapped rather than deleted** — so a tag invented
+after this was written is handled on the day it appears, and the words inside it
+still survive. **20 adversarial vectors**, all neutralised, with the 12 things a
+note legitimately contains proved still present.
+
+**Rollback is evidenced, not asserted.** v04.36 said older builds "ignore
+`_salvage`" and called a rollback self-correcting. `tools/audit-k-rollback.mjs`
+runs the **real v04.34 and v04.35 builds out of git** against a notebook v04.37
+has repaired and merged, then brings what those builds wrote back to v04.37 —
+18 checks, both directions, including an edit made on the old build surviving
+and the salvaged bytes still being there afterwards.
+
+**642 checks across 15 suites** (up from 589), **311 matrix rows** — 305 PASS,
+4 `BLOCKED—ENVIRONMENT`, 2 `BLOCKED—OWNER`, 0 FAIL. Five `app-check` rows and
+one whole `audit-g` block were **updated in place with the reason recorded**,
+because this round deliberately replaced the dialog they were written against.

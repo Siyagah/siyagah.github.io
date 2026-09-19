@@ -11,7 +11,7 @@
    node tools/audit-all.mjs --fast   the checks that need no browser
 */
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT } from './harness.mjs';
 
@@ -26,11 +26,18 @@ const SUITES = [
   { file: 'tools/audit-e-modules.mjs', name: 'audit E/F — calendar, journal, contacts, database, reminders, review', matrix: 'matrix-e.json' },
   { file: 'tools/audit-g-data.mjs', name: 'audit G/H — export fidelity, import safety, privacy, merge', matrix: 'matrix-g.json' },
   { file: 'tools/audit-i-quality.mjs', name: 'audit I — accessibility, security, privacy, scale, PWA', matrix: 'matrix-i.json' },
+  { file: 'tools/audit-j-recovery.mjs', name: 'audit J — salvage across merges, a real choice, a verified recovery copy', matrix: 'matrix-j.json' },
+  { file: 'tools/audit-k-rollback.mjs', name: 'audit K — rollback: older builds against a newer notebook', matrix: 'matrix-k.json' },
   { file: 'audit/repro/journeys.mjs', name: 'journeys — 24 principal journeys, real clicks' },
   { file: 'audit/repro/persistence-reload.mjs', name: 'persistence — what the app writes survives a real reload' },
   { file: 'audit/repro/note-wipe-real-clicks.mjs', name: 'repro — Finding 1, the note-wipe, at three sizes', noCount: true },
   { file: 'audit/repro/export-residue.mjs', name: 'repro — Finding 2, private residue in both exports', noCount: true },
 ];
+
+/* v04.37 — delete last run's matrix fragments FIRST. A suite that dies before
+   it writes one would otherwise leave the previous run's rows in place, and
+   the assembled matrix would describe a run that did not happen. */
+for (const s of SUITES) if (s.matrix) { try { rmSync(join(ROOT, 'audit', 'inventory', s.matrix)); } catch {} }
 
 const results = [];
 for (const s of SUITES) {
@@ -42,11 +49,23 @@ for (const s of SUITES) {
   if (!s.quiet) process.stdout.write(out.split('\n').filter((l) => /^ FAIL|passed|VERDICT|EXPORT|^\s{2}"/.test(l)).join('\n') + '\n');
   const tally = (out.match(/(\d+)\/(\d+) passed/g) || []).pop();
   const [pass, total] = tally ? tally.match(/(\d+)\/(\d+)/).slice(1).map(Number) : [null, null];
-  results.push({ ...s, code: run.status, pass, total, ms: Date.now() - t0,
+  /* A suite that could not even start is NOT a suite that failed some checks.
+     CI run 35414852252 had no importable Playwright, so every browser suite
+     threw at its first import and reported "the check itself threw" once per
+     section — 35 rows that looked like 35 app defects, over an app nothing
+     had measured. Name that state; do not let it read as coverage. */
+    const neverRan = /Playwright could not be imported|Cannot find package 'playwright'|ERR_MODULE_NOT_FOUND/.test(out)
+      || (run.status !== 0 && total === null && !s.noCount);
+  results.push({ ...s, code: run.status, pass, total, ms: Date.now() - t0, neverRan,
     fails: (out.match(/^ FAIL .*/gm) || []) });
+  if (neverRan) {
+    console.log('  ⚠ THIS SUITE NEVER RAN — it failed before measuring anything.');
+    console.log('    ' + out.split('\n').filter((l) => l.trim()).slice(-6).join('\n    '));
+  }
 }
 
 /* ── assemble the matrix ─────────────────────────────────────────────────── */
+const dead = results.filter((r) => r.neverRan);
 const rows = [];
 for (const s of SUITES) {
   if (!s.matrix) continue;
@@ -80,10 +99,10 @@ ${Object.entries(byStatus).map(([k, v]) => `| ${k} | ${v} |`).join('\n')}
 
 | Suite | Result | Time |
 |---|---|---:|
-${results.map((r) => `| ${esc(r.name)} | ${r.code === 0 ? (r.total ? `**${r.pass}/${r.total}**` : '**pass**') : `**FAILED**${r.total ? ` (${r.pass}/${r.total})` : ''}`} | ${(r.ms / 1000).toFixed(1)}s |`).join('\n')}
+${results.map((r) => `| ${esc(r.name)} | ${r.neverRan ? '**NEVER RAN**' : r.code === 0 ? (r.total ? `**${r.pass}/${r.total}**` : '**pass**') : `**FAILED**${r.total ? ` (${r.pass}/${r.total})` : ''}`} | ${(r.ms / 1000).toFixed(1)}s |`).join('\n')}
 
 **Total checks: ${results.reduce((n, r) => n + (r.total || 0), 0)}** across ${results.length} suites.
-${results.some((r) => r.code !== 0) ? '\n> **Some suites FAILED.** See the failing rows below.\n' : ''}
+${dead.length ? `\n> ## ⚠ THIS MATRIX IS NOT A MEASUREMENT\n>\n> **${dead.length} suite(s) never ran at all** — they failed before measuring\n> anything, so every feature they cover is UNTESTED in this run, not passing:\n>\n${dead.map((r) => `> - \`${r.file}\``).join('\n')}\n>\n> Fix the environment and re-run before reading anything below as coverage.\n` : ''}${!dead.length && results.some((r) => r.code !== 0) ? '\n> **Some suites FAILED.** See the failing rows below.\n' : ''}
 `;
 
 for (const [dom, rs] of Object.entries(byDomain)) {
@@ -108,6 +127,11 @@ const failed = results.filter((r) => r.code !== 0);
 console.log('\n' + '='.repeat(64));
 console.log(`${results.reduce((n, r) => n + (r.total || 0), 0)} checks across ${results.length} suites · ${rows.length} matrix rows`);
 console.log(Object.entries(byStatus).map(([k, v]) => `${k}: ${v}`).join(' · '));
+if (dead.length) {
+  console.log(`\n⚠ ${dead.length} SUITE(S) NEVER RAN — nothing they cover was measured:`);
+  for (const d of dead) console.log(`    ${d.file}`);
+  console.log('  This is an ENVIRONMENT failure, not a set of app defects. The matrix says so.');
+}
 console.log(failed.length ? `\nFAILED SUITES: ${failed.map((f) => f.file).join(', ')}` : '\nAll suites green.');
 console.log('audit/FEATURE-MATRIX.md written.');
 process.exit(failed.length ? 1 : 0);

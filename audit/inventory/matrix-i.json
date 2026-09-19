@@ -121,7 +121,7 @@
  },
  {
   "domain": "I security/privacy",
-  "feature": "no shipped artifact carries private residue (48 files scanned, shipped ones judged)",
+  "feature": "no shipped artifact carries private residue (54 files scanned, shipped ones judged)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
@@ -253,7 +253,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 576ms · render 11ms · search 6ms · persist 3ms · merge 1ms · export 11ms"
+  "detail": "boot 667ms · render 15ms · search 8ms · persist 5ms · merge 1ms · export 15ms"
  },
  {
   "domain": "I performance/PWA",
@@ -269,7 +269,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 703ms · render 19ms · search 17ms · persist 12ms · merge 2ms · export 19ms"
+  "detail": "boot 855ms · render 27ms · search 25ms · persist 18ms · merge 3ms · export 26ms"
  },
  {
   "domain": "I performance/PWA",
@@ -285,7 +285,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 1854ms · render 73ms · search 82ms · persist 65ms · merge 9ms · export 79ms"
+  "detail": "boot 2505ms · render 99ms · search 115ms · persist 99ms · merge 15ms · export 87ms"
  },
  {
   "domain": "I performance/PWA",
@@ -309,7 +309,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "408 → 408 nodes"
+  "detail": "409 → 409 nodes"
  },
  {
   "domain": "I performance/PWA",
@@ -325,7 +325,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "app v04.36, cache v04.36.01"
+  "detail": "app v04.37, cache v04.37.01"
  },
  {
   "domain": "I performance/PWA",
@@ -357,7 +357,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "14 relative refs, none of them code"
+  "detail": "17 relative refs, none of them code"
  },
  {
   "domain": "I performance/PWA",

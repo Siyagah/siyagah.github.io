@@ -20,6 +20,20 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  # Pinned, and pinned in ONE place. The first cut of this workflow ran
+  # `npx --yes playwright@latest install --with-deps chromium`, which downloads
+  # a browser but installs no importable package — `npx` fetches into its own
+  # cache, and tools/harness.mjs imports `playwright` from the project or from
+  # `npm root -g`, neither of which npx populates. Runs 1 and 2 therefore
+  # downloaded 300 MB of Chromium and then failed every browser suite at
+  # `import playwright`, reporting "the check itself threw" 35 times:
+  #   https://github.com/Siyagah/siyagah.github.io/actions/runs/35414435398
+  #   https://github.com/Siyagah/siyagah.github.io/actions/runs/35414852252
+  # A global install puts it exactly where the harness looks, and the browser
+  # is installed by that same pinned package so the two cannot drift.
+  PLAYWRIGHT_VERSION: '1.56.1'
+
 jobs:
   fast:
     # ~5 seconds, no browser. Catches the things that make an update fail to
@@ -33,14 +47,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      # ship-check REFUSES to pass when it cannot reach origin/main, rather
+      # than silently skipping the comparison it exists to make, so the ref
+      # has to be here before it runs.
+      - name: make origin/main reachable for the comparison checks
+        run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
       - run: node tools/ship-check.mjs
       - run: node tools/inventory.mjs > /dev/null
-      # NOT `git diff --exit-code` on audit/inventory: the generator stamps
-      # today's date into its own output, so that gate would go red on the
-      # first day nobody touched the repository and stay red — a check that
-      # fails for a reason unrelated to the code is a check people learn to
-      # ignore. The inventory is regenerated here and uploaded by the `full`
-      # job instead; what IS asserted is that it describes THIS build.
       - name: the committed inventory describes this build
         run: |
           V=$(grep -o 'name="app-version" content="[0-9.]*"' index.html | grep -o '[0-9][0-9.]*')
@@ -58,8 +71,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: install Playwright's Chromium
-        run: npx --yes playwright@latest install --with-deps chromium
+      - name: make origin/main reachable for the comparison checks
+        run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+      - name: install Playwright where the harness imports it from
+        run: |
+          npm install -g "playwright@${PLAYWRIGHT_VERSION}"
+          npx --no-install playwright install --with-deps chromium
+      - name: prove the harness can actually reach Playwright before running anything
+        # Without this, a missing package shows up as 35 separate
+        # "the check itself threw" rows and looks like 35 app defects.
+        run: node -e "import('./tools/harness.mjs').then(h=>h.playwright()).then(p=>console.log('playwright', p.chromium?'OK':'MISSING'))"
       - run: node tools/audit-all.mjs
       - name: keep the matrix as an artifact whether it passed or not
         if: always()

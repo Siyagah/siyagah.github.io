@@ -5,7 +5,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1580708 bytes"
+  "detail": "1600261 bytes"
  },
  {
   "domain": "G data/export/import",
@@ -45,7 +45,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1215379 bytes"
+  "detail": "1234932 bytes"
  },
  {
   "domain": "G data/export/import",
@@ -73,11 +73,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "JSON import writes a recovery copy before merging",
+  "feature": "JSON import takes a VERIFIED recovery snapshot before merging",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1 Save File copies written"
+  "detail": "1 snapshot(s) readable back out of the store"
  },
  {
   "domain": "G data/export/import",
@@ -85,7 +85,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "2 confirmations asked"
+  "detail": "second dialog: \"⚠ Replace everything?\", notebook still 3 notes"
  },
  {
   "domain": "G data/export/import",
@@ -97,11 +97,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "JSON import writes a recovery copy before replacing",
+  "feature": "JSON import takes a VERIFIED recovery snapshot before replacing",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1 Save File copies written"
+  "detail": "1 snapshot(s)"
  },
  {
   "domain": "G data/export/import",
@@ -109,11 +109,11 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 notes, imported note present: false"
+  "detail": "3 notes, storage byte-identical: true"
  },
  {
   "domain": "G data/export/import",
-  "feature": "a cancelled import does not write a stray recovery file",
+  "feature": "a cancelled import writes no recovery file either",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
@@ -121,11 +121,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (not JSON at all) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (not JSON at all) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 notes, 3 folders after"
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
  },
  {
   "domain": "G data/export/import",
@@ -145,11 +145,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (an array at the root) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (an array at the root) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 notes, 3 folders after"
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
  },
  {
   "domain": "G data/export/import",
@@ -169,11 +169,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (a JSON object with no collections) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (a JSON object with no collections) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 notes, 3 folders after"
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
  },
  {
   "domain": "G data/export/import",
@@ -193,11 +193,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (articles as a string) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (articles as a string) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 notes, 3 folders after"
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
  },
  {
   "domain": "G data/export/import",
@@ -217,11 +217,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (a null in the articles list) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (a null in the articles list) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "0 notes, 0 folders after"
+  "detail": "0 notes, 0 folders after (the dialog was offered)"
  },
  {
   "domain": "G data/export/import",
@@ -241,11 +241,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (a note with a script in its body) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (a note with a script in its body) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1 notes, 0 folders after"
+  "detail": "1 notes, 0 folders after (the dialog was offered)"
  },
  {
   "domain": "G data/export/import",

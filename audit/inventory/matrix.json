@@ -277,7 +277,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "500 notes / 40 folders, tree 9349b, 593ms incl. browser launch"
+  "detail": "500 notes / 40 folders, tree 9349b, 672ms incl. browser launch"
  },
  {
   "domain": "A shell/navigation",
@@ -285,7 +285,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "2000 notes / 120 folders, tree 9352b, 722ms incl. browser launch"
+  "detail": "2000 notes / 120 folders, tree 9352b, 822ms incl. browser launch"
  },
  {
   "domain": "A shell/navigation",
@@ -325,7 +325,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 1:53 AM / (001) F /  / body"
+  "detail": "Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 5:11 AM / (001) F /  / body"
  },
  {
   "domain": "A shell/navigation",
@@ -333,7 +333,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "app v04.36, cache v04.36.01"
+  "detail": "app v04.37, cache v04.37.01"
  },
  {
   "domain": "A shell/navigation",
@@ -717,7 +717,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "540007b held, 540068 chars painted, 217ms"
+  "detail": "540007b held, 540068 chars painted, 324ms"
  },
  {
   "domain": "D find/smart views",
@@ -1365,7 +1365,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1580708 bytes"
+  "detail": "1600261 bytes"
  },
  {
   "domain": "G data/export/import",
@@ -1405,7 +1405,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1215379 bytes"
+  "detail": "1234932 bytes"
  },
  {
   "domain": "G data/export/import",
@@ -1433,11 +1433,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "JSON import writes a recovery copy before merging",
+  "feature": "JSON import takes a VERIFIED recovery snapshot before merging",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1 Save File copies written"
+  "detail": "1 snapshot(s) readable back out of the store"
  },
  {
   "domain": "G data/export/import",
@@ -1445,7 +1445,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "2 confirmations asked"
+  "detail": "second dialog: \"⚠ Replace everything?\", notebook still 3 notes"
  },
  {
   "domain": "G data/export/import",
@@ -1457,11 +1457,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "JSON import writes a recovery copy before replacing",
+  "feature": "JSON import takes a VERIFIED recovery snapshot before replacing",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1 Save File copies written"
+  "detail": "1 snapshot(s)"
  },
  {
   "domain": "G data/export/import",
@@ -1469,11 +1469,11 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 notes, imported note present: false"
+  "detail": "3 notes, storage byte-identical: true"
  },
  {
   "domain": "G data/export/import",
-  "feature": "a cancelled import does not write a stray recovery file",
+  "feature": "a cancelled import writes no recovery file either",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
@@ -1481,11 +1481,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (not JSON at all) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (not JSON at all) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 notes, 3 folders after"
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
  },
  {
   "domain": "G data/export/import",
@@ -1505,11 +1505,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (an array at the root) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (an array at the root) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 notes, 3 folders after"
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
  },
  {
   "domain": "G data/export/import",
@@ -1529,11 +1529,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (a JSON object with no collections) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (a JSON object with no collections) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 notes, 3 folders after"
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
  },
  {
   "domain": "G data/export/import",
@@ -1553,11 +1553,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (articles as a string) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (articles as a string) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 notes, 3 folders after"
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
  },
  {
   "domain": "G data/export/import",
@@ -1577,11 +1577,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (a null in the articles list) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (a null in the articles list) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "0 notes, 0 folders after"
+  "detail": "0 notes, 0 folders after (the dialog was offered)"
  },
  {
   "domain": "G data/export/import",
@@ -1601,11 +1601,11 @@
  },
  {
   "domain": "G data/export/import",
-  "feature": "a hostile import file (a note with a script in its body) never leaves the notebook emptier than it found it (I1)",
+  "feature": "a hostile import file (a note with a script in its body) never leaves the notebook in an unreadable state (I1)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "1 notes, 0 folders after"
+  "detail": "1 notes, 0 folders after (the dialog was offered)"
  },
  {
   "domain": "G data/export/import",
@@ -1833,7 +1833,7 @@
  },
  {
   "domain": "I security/privacy",
-  "feature": "no shipped artifact carries private residue (48 files scanned, shipped ones judged)",
+  "feature": "no shipped artifact carries private residue (54 files scanned, shipped ones judged)",
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
@@ -1965,7 +1965,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 576ms · render 11ms · search 6ms · persist 3ms · merge 1ms · export 11ms"
+  "detail": "boot 667ms · render 15ms · search 8ms · persist 5ms · merge 1ms · export 15ms"
  },
  {
   "domain": "I performance/PWA",
@@ -1981,7 +1981,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 703ms · render 19ms · search 17ms · persist 12ms · merge 2ms · export 19ms"
+  "detail": "boot 855ms · render 27ms · search 25ms · persist 18ms · merge 3ms · export 26ms"
  },
  {
   "domain": "I performance/PWA",
@@ -1997,7 +1997,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "boot 1854ms · render 73ms · search 82ms · persist 65ms · merge 9ms · export 79ms"
+  "detail": "boot 2505ms · render 99ms · search 115ms · persist 99ms · merge 15ms · export 87ms"
  },
  {
   "domain": "I performance/PWA",
@@ -2021,7 +2021,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "408 → 408 nodes"
+  "detail": "409 → 409 nodes"
  },
  {
   "domain": "I performance/PWA",
@@ -2037,7 +2037,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "app v04.36, cache v04.36.01"
+  "detail": "app v04.37, cache v04.37.01"
  },
  {
   "domain": "I performance/PWA",
@@ -2069,7 +2069,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "14 relative refs, none of them code"
+  "detail": "17 relative refs, none of them code"
  },
  {
   "domain": "I performance/PWA",
@@ -2078,5 +2078,413 @@
   "status": "PASS",
   "ok": true,
   "detail": "script#nd present"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a repaired REMOTE notebook keeps its salvaged bytes through the merge (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "[\"CORRUPT-REMOTE\"]"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "…and they are in localStorage, not just in memory",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "[\"CORRUPT-REMOTE\"]"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a repaired IMPORTED file keeps its salvaged bytes through the merge (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "[\"CORRUPT-IMPORTED\",\"CORRUPT-REMOTE\"]"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "…and they reach a Save File export as well (I4)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "[\"CORRUPT-IMPORTED\",\"CORRUPT-REMOTE\"]"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "two devices salvaging the SAME collection keep both, not one (collision-safe keys)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 entries: [\"DEVICE-A\",\"DEVICE-B\"]"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "merging salvage twice adds nothing, and the order of the two sides does not matter",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "idempotent:true order-free:true"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "the records that WERE readable on both sides survive beside the salvage (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a salvage payload too large to keep whole is truncated, not dropped, and says its real size",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "kept 65536 of 300000 bytes"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "…and the owner is told it was only kept in part",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "sixty repairs do not grow the notebook without bound",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "60 entries, 24 still holding bytes, 144240 bytes"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "an entry whose bytes had to be dropped still keeps its size, hash and the fact it was pruned",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "no silent disappearance"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "Cancel via the Cancel button on the choice dialog leaves the notebook byte-identical (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes, storage unchanged, 0 writes"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "Cancel via the Escape key on the choice dialog leaves the notebook byte-identical (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes, storage unchanged, 0 writes"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "Cancel via Cancel on the SECOND confirmation, after choosing Replace All leaves the notebook byte-identical (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes, storage unchanged, 0 writes"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "the import choice is three separate buttons — Merge, Replace All and Cancel",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "Cancel | ➕ Merge | ⚠ Replace All"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "no choice is expressed as \"Cancel = Replace All\" (the review's blocker 2)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "Cancel | ➕ Merge | ⚠ Replace All"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "Cancel holds the focus, so Enter on a dialog nobody read does nothing",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "focus on \"cancel\""
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "every choice is a real <button>, so it is reachable by keyboard",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "MERGE really merges and keeps the existing notes",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "4 notes, imported present: true, seed kept: true"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "MERGE took a recovery snapshot that can be listed afterwards",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 snapshot(s) in the store"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "REPLACE really replaces",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 notes, imported present: true, seed kept: false"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "REPLACE took a recovery snapshot that can be listed afterwards",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 snapshot(s) in the store"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a recovery snapshot is written and READ BACK before it is called a copy",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3030 bytes, verified by length and hash"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "the snapshot can be listed — the owner has something to restore from",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 listed"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "restoring a snapshot really puts the notes back, in storage as well as in memory",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 → 1 → 3 notes (3 in storage)"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "restoring takes a fresh snapshot first, so the undo has an undo",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 snapshots held"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a recovery copy that could NOT be stored reports failure rather than success",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "\"this browser would not open the safety store: Error: denied by policy\""
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a DAMAGED recovery snapshot is refused and the notebook is left alone",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "that safety copy is damaged and was NOT used — notebook still holds 3 notes"
+ },
+ {
+  "domain": "J sanitiser (adversarial)",
+  "feature": "every one of 20 adversarial vectors is neutralised",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "no handler, no script scheme, no srcdoc, no fetching CSS, none of the killed tags"
+ },
+ {
+  "domain": "J sanitiser (adversarial)",
+  "feature": "an UNKNOWN element is unwrapped, so the words inside it survive (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "\"<p>KEEP THIS TEXT</p>\""
+ },
+ {
+  "domain": "J sanitiser (adversarial)",
+  "feature": "everything a note legitimately contains survives the sanitiser (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "all 12 kinds kept (449 bytes)"
+ },
+ {
+  "domain": "J sanitiser (adversarial)",
+  "feature": "a hostile file leaves NO inline handler and NO script in PERSISTED note content",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "120 bytes stored"
+ },
+ {
+  "domain": "J sanitiser (adversarial)",
+  "feature": "…and the words that came with it are still there (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "K rollback",
+  "feature": "a notebook that v04.37 has repaired, merged and written can be produced for the test",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "4 notes, 4 folders, 2 salvage entries, 3844 bytes"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today): boots on a notebook v04.37 repaired and merged",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "v04.34, tree 6551b"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today): reads every note, including the one written after the upgrade (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "4 of 4 notes, the v04.37 note present: true"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today): reads the folder that came in from an imported file",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "folders: 4"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today): boots silently on it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today) → v04.37: the note written on the OLD build comes back (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "5 notes, the old build's note present: true"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today) → v04.37: an edit made on the OLD build survives the round trip (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "\"<p>edited on the OLD build after a rollback</p>\""
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today) → v04.37: the salvaged malformed bytes are still there after the round trip",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 entries: [\"CORRUPT-REMOTE-BYTES\",\"CORRUPT-IMPORTED-BYTES\"]"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.34 (what is live today) → v04.37: the round trip is silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate): boots on a notebook v04.37 repaired and merged",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "v04.35, tree 6551b"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate): reads every note, including the one written after the upgrade (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "4 of 4 notes, the v04.37 note present: true"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate): reads the folder that came in from an imported file",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "folders: 4"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate): boots silently on it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate) → v04.37: the note written on the OLD build comes back (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "5 notes, the old build's note present: true"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate) → v04.37: an edit made on the OLD build survives the round trip (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "\"<p>edited on the OLD build after a rollback</p>\""
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate) → v04.37: the salvaged malformed bytes are still there after the round trip",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 entries: [\"CORRUPT-REMOTE-BYTES\",\"CORRUPT-IMPORTED-BYTES\"]"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "v04.35 (the previous candidate) → v04.37: the round trip is silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "K rollback",
+  "feature": "every build in the rollback path has a DIFFERENT service-worker cache name (I3)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "const VERSION = 'v04.37.01' · v04.34 (what is live today): const VERSION = 'v04.34.01' · v04.35 (the previous candidate): const VERSION = 'v04.35.01'"
  }
 ]

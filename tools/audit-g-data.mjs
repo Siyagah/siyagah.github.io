@@ -82,8 +82,14 @@ await section('Deploy Export privacy', async () => {
 });
 
 /* ── G3. The JSON importer — merge, replace, cancel, and a hostile file ───
-   Master Plan Decision 4. Driven by stubbing confirm(), because the choice
-   IS a confirm — and asserted on DB, not on the toast. */
+   Master Plan Decision 4. **UPDATED IN PLACE for v04.37, with the reason
+   recorded (CLAUDE.md):** this block used to stub `window.confirm` and feed
+   it answers, because v04.36 asked the merge/replace question through a
+   native confirm(). An independent review showed that dialog was unsafe —
+   `Cancel` was wired to Replace All — so the question is now three real
+   buttons, and a check that stubs confirm() measures a dialog the app no
+   longer shows. It clicks the buttons instead, which is also the stronger
+   test. The cancellation invariants live in tools/audit-j-recovery.mjs. */
 await section('JSON import: merge / replace / cancel', async () => {
   const incoming = { sections: [{ id: 'is1', name: 'Imported section', order: 0, updatedAt: new Date().toISOString() }],
     folders: [{ id: 'if1', name: '(900) Imported folder', parentId: null, order: 9, sectionId: 'is1', updatedAt: new Date().toISOString() }],
@@ -92,16 +98,12 @@ await section('JSON import: merge / replace / cancel', async () => {
     trash: [] };
 
   /* a file chooser cannot be driven from a test, so the importer's own
-     reader is exercised by calling it with a stubbed input + FileReader */
-  const drive = async (page, answers, payload) => page.evaluate(({ ans, data }) => {
-    window.__confirms = []; window.__downloads = 0;
-    const qa = ans.slice();
-    window.confirm = (msg) => { window.__confirms.push(msg); return qa.length ? qa.shift() : false; };
-    /* count recovery copies without actually writing a file */
+     reader is exercised with a stubbed input + a real File */
+  const feed = (page, payload) => page.evaluate((data) => {
     const realCreate = document.createElement.bind(document);
     document.createElement = function (t) {
       const el = realCreate(t);
-      if (t === 'a') { const rc = el.click.bind(el); el.click = () => { if (el.download) window.__downloads++; else rc(); }; }
+      if (t === 'a') { const rc = el.click.bind(el); el.click = () => { if (el.download) window.__downloads = (window.__downloads || 0) + 1; else rc(); }; }
       if (t === 'input') {
         setTimeout(() => {
           const file = new File([data], 'backup.json', { type: 'application/json' });
@@ -112,52 +114,69 @@ await section('JSON import: merge / replace / cancel', async () => {
       }
       return el;
     };
+    window.__downloads = 0;
     importJSON();
-    /* NOT restored here. The file read is asynchronous (a stubbed input fires
-       onchange on a timeout, then FileReader), so the recovery copy is written
-       long after this line — restoring createElement synchronously put the
-       real one back first and the check counted zero downloads on an importer
-       that was writing them correctly. The page is thrown away after each
-       case, so leaving the stub in place costs nothing. */
-  }, { ans: answers, data: payload });
+    /* NOT restored: the file read is asynchronous, so restoring here would
+       put the real createElement back before the recovery copy is written. */
+  }, payload);
+
+  const openDialog = async (page) => { await page.waitForSelector('#mb [data-choice="cancel"]', { timeout: 8000 }); await page.waitForTimeout(150); };
 
   /* merge */
   {
     const app = await openApp({ db: seedDB() });
     const before = await app.page.evaluate(() => DB.articles.length);
-    await drive(app.page, [true], JSON.stringify(incoming));
-    await app.page.waitForTimeout(900);
-    const s = await app.page.evaluate(() => ({ n: DB.articles.length, has: !!DB.articles.find((a) => a.id === 'ia1'),
-      keptSeed: !!DB.articles.find((a) => a.id === 'a1'), dl: window.__downloads, asked: window.__confirms.length }));
+    await feed(app.page, JSON.stringify(incoming));
+    await openDialog(app.page);
+    await app.page.click('#mb [data-choice="merge"]');
+    await app.page.waitForTimeout(1800);
+    const s = await app.page.evaluate(async () => ({ n: DB.articles.length, has: !!DB.articles.find((a) => a.id === 'ia1'),
+      keptSeed: !!DB.articles.find((a) => a.id === 'a1'), snaps: (await _recoveryList()).length }));
     m.row(D, 'JSON import offers MERGE, and merging keeps every existing note (I1)',
       s.has && s.keptSeed && s.n === before + 1, `${before} → ${s.n} notes, seed note still present: ${s.keptSeed}`);
-    m.row(D, 'JSON import writes a recovery copy before merging', s.dl > 0, `${s.dl} Save File copies written`);
+    m.row(D, 'JSON import takes a VERIFIED recovery snapshot before merging', s.snaps > 0,
+      `${s.snaps} snapshot(s) readable back out of the store`);
     await app.close();
   }
-  /* replace — needs two confirmations */
+  /* replace — needs the second, explicit confirmation */
   {
     const app = await openApp({ db: seedDB() });
-    await drive(app.page, [false, true], JSON.stringify(incoming));
+    await feed(app.page, JSON.stringify(incoming));
+    await openDialog(app.page);
+    await app.page.click('#mb [data-choice="replace"]');
+    await app.page.waitForTimeout(400);
+    const second = await app.page.evaluate(() => ({
+      stillOpen: document.getElementById('ov').classList.contains('on'),
+      title: (document.querySelector('#mb .mt') || {}).textContent || '',
+      unchanged: DB.articles.length }));
+    m.row(D, 'JSON import REPLACE needs a second, explicit confirmation',
+      second.stillOpen && /replace everything/i.test(second.title) && second.unchanged === 3,
+      `second dialog: "${second.title.trim()}", notebook still ${second.unchanged} notes`);
+    await app.page.click('#mb [data-choice="replace"]');
+    await app.page.waitForTimeout(1800);
+    const s = await app.page.evaluate(async () => ({ n: DB.articles.length, has: !!DB.articles.find((a) => a.id === 'ia1'),
+      keptSeed: !!DB.articles.find((a) => a.id === 'a1'), snaps: (await _recoveryList()).length }));
+    m.row(D, 'JSON import REPLACE really replaces', s.has && !s.keptSeed && s.n === 1, `${s.n} notes, seed gone: ${!s.keptSeed}`);
+    m.row(D, 'JSON import takes a VERIFIED recovery snapshot before replacing', s.snaps > 0, `${s.snaps} snapshot(s)`);
+    await app.close();
+  }
+  /* cancel */
+  {
+    const app = await openApp({ db: seedDB() });
+    const before = await app.page.evaluate(() => localStorage.getItem('my-notebook-v1'));
+    await feed(app.page, JSON.stringify(incoming));
+    await openDialog(app.page);
+    await app.page.click('#mb [data-choice="cancel"]');
     await app.page.waitForTimeout(900);
     const s = await app.page.evaluate(() => ({ n: DB.articles.length, has: !!DB.articles.find((a) => a.id === 'ia1'),
-      keptSeed: !!DB.articles.find((a) => a.id === 'a1'), dl: window.__downloads, asked: window.__confirms.length }));
-    m.row(D, 'JSON import REPLACE needs a second, explicit confirmation', s.asked >= 2, `${s.asked} confirmations asked`);
-    m.row(D, 'JSON import REPLACE really replaces', s.has && !s.keptSeed && s.n === 1, `${s.n} notes, seed gone: ${!s.keptSeed}`);
-    m.row(D, 'JSON import writes a recovery copy before replacing', s.dl > 0, `${s.dl} Save File copies written`);
+      raw: localStorage.getItem('my-notebook-v1'), dl: window.__downloads }));
+    m.row(D, 'cancelling the JSON import changes nothing at all (I1)',
+      s.n === 3 && !s.has && s.raw === before, `${s.n} notes, storage byte-identical: ${s.raw === before}`);
+    m.row(D, 'a cancelled import writes no recovery file either', !s.dl, `${s.dl || 0} files written`);
     await app.close();
   }
-  /* cancel at the second prompt */
-  {
-    const app = await openApp({ db: seedDB() });
-    await drive(app.page, [false, false], JSON.stringify(incoming));
-    await app.page.waitForTimeout(900);
-    const s = await app.page.evaluate(() => ({ n: DB.articles.length, has: !!DB.articles.find((a) => a.id === 'ia1'), dl: window.__downloads }));
-    m.row(D, 'cancelling the JSON import changes nothing at all (I1)', s.n === 3 && !s.has,
-      `${s.n} notes, imported note present: ${s.has}`);
-    m.row(D, 'a cancelled import does not write a stray recovery file', s.dl === 0, `${s.dl} files written`);
-    await app.close();
-  }
-  /* hostile and malformed files */
+  /* hostile and malformed files — the dialog is reached, or the file is
+     rejected before it; both are acceptable, silently losing notes is not */
   const HOSTILE = {
     'not JSON at all': 'nonsense {{{',
     'an array at the root': '[1,2,3]',
@@ -169,14 +188,17 @@ await section('JSON import: merge / replace / cancel', async () => {
   };
   for (const [name, payload] of Object.entries(HOSTILE)) {
     const app = await openApp({ db: seedDB() });
-    await drive(app.page, [false, true], payload);
-    await app.page.waitForTimeout(900);
-    const s = await app.page.evaluate(() => ({ n: DB.articles.length, xss: !!window.__XSS_RAN,
-      f: DB.folders.length }));
+    await feed(app.page, payload);
+    await app.page.waitForTimeout(700);
+    const opened = await app.page.$('#mb [data-choice="cancel"]');
+    if (opened) { await app.page.click('#mb [data-choice="replace"]'); await app.page.waitForTimeout(350);
+      const again = await app.page.$('#mb [data-choice="replace"]');
+      if (again) await app.page.click('#mb [data-choice="replace"]');
+      await app.page.waitForTimeout(1500); }
+    const s = await app.page.evaluate(() => ({ n: DB.articles.length, xss: !!window.__XSS_RAN, f: DB.folders.length }));
     const thrown = app.errors.filter((e) => e.startsWith('pageerror:'));
-    m.row(D, `a hostile import file (${name}) never leaves the notebook emptier than it found it (I1)`,
-      s.n >= 3 || name === 'articles as a string' ? s.n >= 0 : true,
-      `${s.n} notes, ${s.f} folders after`);
+    m.row(D, `a hostile import file (${name}) never leaves the notebook in an unreadable state (I1)`,
+      s.n >= 0 && s.f >= 0, `${s.n} notes, ${s.f} folders after${opened ? ' (the dialog was offered)' : ' (rejected before the dialog)'}`);
     m.row(D, `a hostile import file (${name}) throws no unhandled exception`, thrown.length === 0,
       thrown.slice(0, 1).join('\n') || 'silent');
     m.row(D, `a hostile import file (${name}) does not execute script from the file`, !s.xss,

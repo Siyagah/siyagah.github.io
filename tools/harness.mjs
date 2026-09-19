@@ -16,10 +16,27 @@ export const ROOT = resolve(new URL('..', import.meta.url).pathname);
 let _pw = null;
 export async function playwright() {
   if (_pw) return _pw;
+  const tried = [];
   try { _pw = await import('playwright'); }
-  catch {
-    const g = execSync('npm root -g').toString().trim();
-    _pw = await import(pathToFileURL(join(g, 'playwright', 'index.js')).href);
+  catch (e1) {
+    tried.push(`project/node_modules: ${e1.code || e1.message}`);
+    try {
+      const g = execSync('npm root -g').toString().trim();
+      _pw = await import(pathToFileURL(join(g, 'playwright', 'index.js')).href);
+    } catch (e2) {
+      tried.push(`npm root -g: ${e2.code || e2.message}`);
+      /* v04.37 — say what is actually wrong. A bare module-resolution error
+         surfaces once per section and reads as "the check itself threw",
+         which is how a CI run with no importable Playwright reported 35
+         separate app defects and none of them was real:
+         https://github.com/Siyagah/siyagah.github.io/actions/runs/35414852252 */
+      throw new Error(
+        'Playwright could not be imported, so NOTHING in this file measured the app.\n'
+        + tried.map((t) => '  tried ' + t).join('\n')
+        + '\nInstall it where this harness looks:\n'
+        + '  npm install -g playwright@1.56.1 && npx --no-install playwright install --with-deps chromium\n'
+        + '(Downloading a browser with `npx playwright install` does NOT install an importable package.)');
+    }
   }
   _pw = _pw.default ?? _pw;
   return _pw;
