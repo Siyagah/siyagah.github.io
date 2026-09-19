@@ -412,3 +412,68 @@ assertions miss.
 - **Firebase must be blocked, not just absent.** With no sync config in
   localStorage, `initAuth()` returns early and the login overlay stays hidden —
   which is why the app is fully drivable here with no sign-in.
+
+## Traps in this harness — round 2 (v04.36, the audit programme)
+
+- **`openApp({ db })` re-seeds on EVERY navigation**, so a reload restores the
+  fixture over whatever the app just saved. `audit/repro/persistence-reload.mjs`
+  documents this; the trap has a second face. Passing `db:null`, writing
+  localStorage yourself with `setItem` and then reloading does **not** measure
+  the app either: the app's own unload flush rewrites storage from the DB it is
+  still holding, so a fixture you wrote by hand is gone before the reload
+  reads it. Every case came back "0 folders / 0 notes", which reads exactly
+  like "the app wipes a damaged notebook" and was the test wiping it. A
+  damaged fixture goes in through `openApp({ rawDB: '<the bytes>' })`, which
+  seeds it through `addInitScript` as a STRING — an object would be repaired by
+  `JSON.stringify` on the way in, which is the whole thing you are testing.
+- **`display !== 'none'` is not "on screen".** Below 1200px the panes are
+  off-canvas slide-overs: `#sb.closed` is `width:0!important` at `left:-100%`
+  and is `display:flex` the entire time. Judging that as "visible but 0px wide"
+  is the check misreading a pane doing exactly its job. A pane is SHOWING when
+  its `getBoundingClientRect()` actually intersects the viewport.
+- **Slice the text you assert on and you will assert on the chrome.** `#p3c`
+  opens with the title, the versioning bar, the created date and the folder
+  crumb — about 70 characters before the note body starts. A 60-character
+  slice reported a perfectly painted note as blank.
+- **Check the arity before you blame the feature.** `logContactAction(ev, aid)`
+  takes two arguments; passing the id first leaves `aid` undefined, the
+  function returns at its own guard, no modal is built, and the check reports a
+  working feature as storing nothing. Same class: the starter My Database
+  folders are identified by their `sectionId`, not an id prefix — asking for
+  `id.startsWith('db-')` counted zero of seven correctly-created folders.
+- **A modal moves focus on a TIMER.** Asking `document.activeElement` in the
+  same tick as `openReminderModal()` reads what was focused *before* the
+  dialog opened, which looks precisely like "focus never entered the dialog".
+  Wait ~350ms.
+- **The app's own `console.error` is not a crash.** A deliberate report — e.g.
+  `Local save failed: QuotaExceededError` — is the app doing its job. Count
+  `pageerror:` entries when you mean "did anything throw", and the app's
+  reports separately when you mean "did it tell anyone".
+- **A full-screen overlay intercepts every click.** Stubbing
+  `Storage.prototype.setItem` to throw makes the app open a real out-of-space
+  modal, and `#ov` then swallows the `elementHandle.click()` the test was about
+  to make — the check times out on its own success. Put the caret in first,
+  then break the thing you are testing.
+- **Restore a stub AFTER the async work it is stubbing.** Counting recovery
+  copies by patching `document.createElement` and restoring it right after
+  `importJSON()` returns counts zero: the file read is asynchronous (stubbed
+  input → `onchange` → `FileReader`), so the copy is written long after the
+  restore. The page is thrown away per case; leave the stub in.
+- **`getExportHTML(ndOverride)` takes the JSON STRING to embed, not a flag.**
+  Passing `true` bakes the literal text `true` into `#nd` and measures
+  something else entirely.
+- **One section throwing must not take the other eight with it.** Every audit
+  suite wraps its sections in a `section()` guard that records the throw as a
+  failed row. An audit that stops at the first surprise reports on what ran
+  before the surprise and says nothing at all about the rest.
+- **`tools/inventory.mjs` is a parser, and a parser is wrong silently.** Four
+  separate cuts of its code/literal mask were confidently wrong: an
+  expression-bodied arrow (`const inEd = n => !!(…)`) has no `{` to match;
+  hand-kept template depth desyncs on a nested `` `${`}`} `` and then scores
+  every later block comment as CODE; applying code rules *inside* a template
+  (where `//` is part of a URL and `'` is part of `class='x'`) eats past
+  closing backticks; and omitting regex literals lets `/['"]/` open a string
+  on its own quote. Counts of 1052, 254 and 15 all looked plausible. It now
+  ends by asking the raw file whether `name(` appears anywhere but the
+  declaration — one grep, which has overruled three versions of the clever
+  answer. **If you change that mask, check the total moved the way you meant.**

@@ -21,7 +21,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "6348/341/105/250/198"
+  "detail": "7197/341/105/250/198"
  },
  {
   "domain": "A shell/navigation",
@@ -37,7 +37,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "0 folders / 0 notes in DB, tree 6348b"
+  "detail": "0 folders / 0 notes in DB, tree 7197b"
  },
  {
   "domain": "A shell/navigation",
@@ -61,7 +61,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "0 folders / 0 notes in DB, tree 6348b"
+  "detail": "0 folders / 0 notes in DB, tree 7197b"
  },
  {
   "domain": "A shell/navigation",
@@ -85,7 +85,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "0 folders / 0 notes in DB, tree 6348b"
+  "detail": "0 folders / 0 notes in DB, tree 7197b"
  },
  {
   "domain": "A shell/navigation",
@@ -109,7 +109,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 folders / 0 notes in DB, tree 6348b"
+  "detail": "3 folders / 0 notes in DB, tree 7197b"
  },
  {
   "domain": "A shell/navigation",
@@ -133,7 +133,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "0 folders / 0 notes in DB, tree 6348b"
+  "detail": "0 folders / 0 notes in DB, tree 7197b"
  },
  {
   "domain": "A shell/navigation",
@@ -157,7 +157,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 folders / 4 notes in DB, tree 6551b"
+  "detail": "3 folders / 4 notes in DB, tree 7400b"
  },
  {
   "domain": "A shell/navigation",
@@ -181,7 +181,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 folders / 3 notes in DB, tree 6551b"
+  "detail": "3 folders / 3 notes in DB, tree 7400b"
  },
  {
   "domain": "A shell/navigation",
@@ -205,7 +205,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 folders / 3 notes in DB, tree 6551b"
+  "detail": "3 folders / 3 notes in DB, tree 7400b"
  },
  {
   "domain": "A shell/navigation",
@@ -229,7 +229,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "3 folders / 4 notes in DB, tree 6551b"
+  "detail": "3 folders / 4 notes in DB, tree 7400b"
  },
  {
   "domain": "A shell/navigation",
@@ -253,7 +253,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "0 folders / 0 notes in DB, tree 6348b"
+  "detail": "0 folders / 0 notes in DB, tree 7197b"
  },
  {
   "domain": "A shell/navigation",
@@ -277,7 +277,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "500 notes / 40 folders, tree 8222b, 563ms incl. browser launch"
+  "detail": "500 notes / 40 folders, tree 9349b, 593ms incl. browser launch"
  },
  {
   "domain": "A shell/navigation",
@@ -285,7 +285,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "2000 notes / 120 folders, tree 8225b, 683ms incl. browser launch"
+  "detail": "2000 notes / 120 folders, tree 9352b, 722ms incl. browser launch"
  },
  {
   "domain": "A shell/navigation",
@@ -325,7 +325,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 12:51 AM / (001) F /  / body"
+  "detail": "Reopen me / 🔀 Start Versioning / Created Sep 19, 26 · 1:53 AM / (001) F /  / body"
  },
  {
   "domain": "A shell/navigation",
@@ -333,7 +333,7 @@
   "viewport": "desktop",
   "status": "PASS",
   "ok": true,
-  "detail": "app v04.35, cache v04.35.01"
+  "detail": "app v04.36, cache v04.36.01"
  },
  {
   "domain": "A shell/navigation",

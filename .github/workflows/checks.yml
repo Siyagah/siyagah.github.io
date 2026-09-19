@@ -1,0 +1,71 @@
+# Siyagah — verification workflow (CANDIDATE)
+#
+# Master Plan 2026-09-19, Phase 1: "add CI locally as a candidate workflow but
+# do not enable branch protection without owner authority."
+#
+# This file makes the checks RUN on every push and pull request. It does not
+# make them BLOCK anything: turning a check into a required status is a
+# repository setting, and it is the owner's to make, not a builder's.
+#
+# To make these blocking, the owner goes to:
+#   Settings ▸ Branches ▸ Add branch protection rule ▸ main
+#   ▸ "Require status checks to pass before merging" ▸ tick "fast" and "full"
+# Nothing else is needed; the jobs below already report their status.
+
+name: checks
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  fast:
+    # ~5 seconds, no browser. Catches the things that make an update fail to
+    # reach a device, or quietly lose the notebook.
+    name: fast (version, #nd, precache, manifest, legacy seal)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # ship-check compares the version against origin/main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tools/ship-check.mjs
+      - run: node tools/inventory.mjs > /dev/null
+      # NOT `git diff --exit-code` on audit/inventory: the generator stamps
+      # today's date into its own output, so that gate would go red on the
+      # first day nobody touched the repository and stay red — a check that
+      # fails for a reason unrelated to the code is a check people learn to
+      # ignore. The inventory is regenerated here and uploaded by the `full`
+      # job instead; what IS asserted is that it describes THIS build.
+      - name: the committed inventory describes this build
+        run: |
+          V=$(grep -o 'name="app-version" content="[0-9.]*"' index.html | grep -o '[0-9][0-9.]*')
+          grep -q "v$V" audit/inventory/FUNCTION-INVENTORY.md \
+            || (echo "::error::audit/inventory/FUNCTION-INVENTORY.md is from an older version than index.html (v$V) — run 'node tools/inventory.mjs' and commit it" && exit 1)
+
+  full:
+    # ~12 minutes, real Chromium. The whole matrix.
+    name: full (the whole matrix, in a real browser)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: install Playwright's Chromium
+        run: npx --yes playwright@latest install --with-deps chromium
+      - run: node tools/audit-all.mjs
+      - name: keep the matrix as an artifact whether it passed or not
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-matrix
+          path: |
+            audit/FEATURE-MATRIX.md
+            audit/inventory/

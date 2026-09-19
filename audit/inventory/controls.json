@@ -1,7 +1,7 @@
 [
  {
   "event": "onkeydown",
-  "line": 2748,
+  "line": 2774,
   "calls": [
    "getElementById",
    "focus"
@@ -9,70 +9,70 @@
  },
  {
   "event": "onkeydown",
-  "line": 2749,
+  "line": 2775,
   "calls": [
    "doLogin"
   ]
  },
  {
   "event": "onclick",
-  "line": 2751,
+  "line": 2777,
   "calls": [
    "doLogin"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 2753,
-  "calls": [
-   "loginResetSync"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 2773,
-  "calls": [
-   "closeP2"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 2774,
-  "calls": [
-   "toggleSB"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 2778,
-  "calls": [
-   "openP2"
   ]
  },
  {
   "event": "onclick",
   "line": 2779,
   "calls": [
-   "goHome"
+   "loginResetSync"
   ]
  },
  {
   "event": "onclick",
-  "line": 2782,
+  "line": 2799,
+  "calls": [
+   "closeP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2800,
+  "calls": [
+   "toggleSB"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2804,
+  "calls": [
+   "openP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2805,
   "calls": [
    "goHome"
   ]
  },
  {
   "event": "onclick",
-  "line": 2782,
+  "line": 2808,
+  "calls": [
+   "goHome"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2808,
   "calls": [
    "toggleSBHome"
   ]
  },
  {
   "event": "onclick",
-  "line": 2785,
+  "line": 2811,
   "calls": [
    "openLegacyApp",
    "closeSBHome"
@@ -80,35 +80,35 @@
  },
  {
   "event": "onclick",
-  "line": 2792,
+  "line": 2818,
   "calls": [
    "openGlobalSearch"
   ]
  },
  {
   "event": "onclick",
-  "line": 2794,
+  "line": 2820,
   "calls": [
    "toggleSBTools"
   ]
  },
  {
   "event": "onclick",
-  "line": 2802,
+  "line": 2828,
   "calls": [
    "undo"
   ]
  },
  {
   "event": "onclick",
-  "line": 2803,
+  "line": 2829,
   "calls": [
    "redo"
   ]
  },
  {
   "event": "onclick",
-  "line": 2806,
+  "line": 2832,
   "calls": [
    "openModal",
    "closeSBTools"
@@ -116,7 +116,7 @@
  },
  {
   "event": "onclick",
-  "line": 2807,
+  "line": 2833,
   "calls": [
    "addRootFolder",
    "closeSBTools"
@@ -124,7 +124,7 @@
  },
  {
   "event": "onclick",
-  "line": 2808,
+  "line": 2834,
   "calls": [
    "addStarterMyDatabaseFolders",
    "closeSBTools"
@@ -132,7 +132,7 @@
  },
  {
   "event": "onclick",
-  "line": 2809,
+  "line": 2835,
   "calls": [
    "syncKnowledgeBase",
    "closeSBTools"
@@ -140,7 +140,7 @@
  },
  {
   "event": "onclick",
-  "line": 2811,
+  "line": 2837,
   "calls": [
    "openCiteModal",
    "closeSBTools"
@@ -148,7 +148,7 @@
  },
  {
   "event": "onclick",
-  "line": 2812,
+  "line": 2838,
   "calls": [
    "openCalSettings",
    "closeSBTools"
@@ -156,7 +156,7 @@
  },
  {
   "event": "onclick",
-  "line": 2813,
+  "line": 2839,
   "calls": [
    "toggleHijri",
    "closeSBTools"
@@ -164,7 +164,7 @@
  },
  {
   "event": "onclick",
-  "line": 2815,
+  "line": 2841,
   "calls": [
    "openTheme",
    "closeSBTools"
@@ -172,7 +172,7 @@
  },
  {
   "event": "onclick",
-  "line": 2816,
+  "line": 2842,
   "calls": [
    "autoFit",
    "closeSBTools"
@@ -180,7 +180,7 @@
  },
  {
   "event": "onclick",
-  "line": 2817,
+  "line": 2843,
   "calls": [
    "autoNumberAll",
    "closeSBTools"
@@ -188,7 +188,7 @@
  },
  {
   "event": "onclick",
-  "line": 2818,
+  "line": 2844,
   "calls": [
    "toggleAccordionSec",
    "closeSBTools"
@@ -196,14 +196,14 @@
  },
  {
   "event": "onclick",
-  "line": 2820,
+  "line": 2846,
   "calls": [
    "enableAutoSave"
   ]
  },
  {
   "event": "onclick",
-  "line": 2823,
+  "line": 2849,
   "calls": [
    "exportFile",
    "closeSBTools"
@@ -211,7 +211,7 @@
  },
  {
   "event": "onclick",
-  "line": 2826,
+  "line": 2852,
   "calls": [
    "openTrash",
    "closeSBTools"
@@ -219,14 +219,14 @@
  },
  {
   "event": "onclick",
-  "line": 2830,
+  "line": 2856,
   "calls": [
    "toggleSBMenu"
   ]
  },
  {
   "event": "onclick",
-  "line": 2835,
+  "line": 2861,
   "calls": [
    "openSyncModal",
    "closeSBMenu"
@@ -234,7 +234,7 @@
  },
  {
   "event": "onclick",
-  "line": 2838,
+  "line": 2864,
   "calls": [
    "openSyncModal",
    "closeSBMenu"
@@ -242,7 +242,7 @@
  },
  {
   "event": "onclick",
-  "line": 2839,
+  "line": 2865,
   "calls": [
    "doSignOut",
    "closeSBMenu"
@@ -250,7 +250,7 @@
  },
  {
   "event": "onclick",
-  "line": 2841,
+  "line": 2867,
   "calls": [
    "refreshApp",
    "closeSBMenu"
@@ -258,7 +258,7 @@
  },
  {
   "event": "onclick",
-  "line": 2842,
+  "line": 2868,
   "calls": [
    "installPWA",
    "closeSBMenu"
@@ -266,7 +266,7 @@
  },
  {
   "event": "onclick",
-  "line": 2844,
+  "line": 2870,
   "calls": [
    "openBackupModal",
    "closeSBMenu"
@@ -274,7 +274,7 @@
  },
  {
   "event": "onclick",
-  "line": 2845,
+  "line": 2871,
   "calls": [
    "importBackup",
    "closeSBMenu"
@@ -282,7 +282,7 @@
  },
  {
   "event": "onclick",
-  "line": 2846,
+  "line": 2872,
   "calls": [
    "backupToGDrive",
    "closeSBMenu"
@@ -290,7 +290,7 @@
  },
  {
   "event": "onclick",
-  "line": 2848,
+  "line": 2874,
   "calls": [
    "exportBackupHTML",
    "closeSBMenu"
@@ -298,7 +298,7 @@
  },
  {
   "event": "onclick",
-  "line": 2849,
+  "line": 2875,
   "calls": [
    "exportBackupPDF",
    "closeSBMenu"
@@ -306,7 +306,7 @@
  },
  {
   "event": "onclick",
-  "line": 2850,
+  "line": 2876,
   "calls": [
    "exportDeploy",
    "closeSBMenu"
@@ -314,98 +314,98 @@
  },
  {
   "event": "oninput",
-  "line": 2858,
+  "line": 2884,
   "calls": [
    "doSearch"
   ]
  },
  {
   "event": "onclick",
-  "line": 2859,
+  "line": 2885,
   "calls": [
    "clearSearch"
   ]
  },
  {
   "event": "onclick",
-  "line": 2861,
+  "line": 2887,
   "calls": [
    "restoreLastSearch"
   ]
  },
  {
   "event": "onclick",
-  "line": 2866,
+  "line": 2892,
   "calls": [
    "quickCapture"
   ]
  },
  {
   "event": "onclick",
-  "line": 2867,
+  "line": 2893,
   "calls": [
    "openFolderPopupFromToolbar"
   ]
  },
  {
   "event": "onclick",
-  "line": 2872,
+  "line": 2898,
   "calls": [
    "closeNoteModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 2875,
+  "line": 2901,
   "calls": [
    "toggleSB"
   ]
  },
  {
   "event": "onclick",
-  "line": 2884,
+  "line": 2910,
   "calls": [
    "goHome"
   ]
  },
  {
   "event": "onclick",
-  "line": 2884,
+  "line": 2910,
   "calls": [
    "focusSidebarSearch"
   ]
  },
  {
   "event": "onclick",
-  "line": 2884,
+  "line": 2910,
   "calls": [
    "restoreLastSearch"
   ]
  },
  {
   "event": "ondragover",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "tabBarDragOver"
   ]
  },
  {
   "event": "ondrop",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "tabBarDrop"
   ]
  },
  {
   "event": "onclick",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "_calOpen"
   ]
  },
  {
   "event": "onclick",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "stopPropagation",
    "_tabScroll"
@@ -413,21 +413,21 @@
  },
  {
   "event": "ondragstart",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "pinTabDStart"
   ]
  },
  {
   "event": "onclick",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "tabSelect"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "preventDefault",
    "stopPropagation",
@@ -436,14 +436,14 @@
  },
  {
   "event": "onmousedown",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "stopPropagation",
    "pinTabToPanel"
@@ -451,14 +451,14 @@
  },
  {
   "event": "onmousedown",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "stopPropagation",
    "closeTabGroup"
@@ -466,21 +466,21 @@
  },
  {
   "event": "ondragstart",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "pinTabDStart"
   ]
  },
  {
   "event": "onclick",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "tabSelect"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "preventDefault",
    "stopPropagation",
@@ -489,14 +489,14 @@
  },
  {
   "event": "onmousedown",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "stopPropagation",
    "pinTabToPanel"
@@ -504,14 +504,14 @@
  },
  {
   "event": "onmousedown",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "stopPropagation",
    "closeTab"
@@ -519,7 +519,7 @@
  },
  {
   "event": "onclick",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "stopPropagation",
    "_tabScroll"
@@ -527,82 +527,87 @@
  },
  {
   "event": "onclick",
-  "line": 2891,
+  "line": 2917,
   "calls": [
    "openTabPicker"
   ]
  },
  {
   "event": "oninput",
-  "line": 2895,
+  "line": 2921,
   "calls": [
    "_ntFindRun"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 2895,
+  "line": 2921,
   "calls": [
    "_ntFindKey"
   ]
  },
  {
   "event": "onclick",
-  "line": 2897,
+  "line": 2923,
   "calls": [
    "_ntFindStep"
   ]
  },
  {
   "event": "onclick",
-  "line": 2898,
+  "line": 2924,
   "calls": [
    "_ntFindStep"
   ]
  },
  {
   "event": "onclick",
-  "line": 2899,
+  "line": 2925,
   "calls": [
    "_ntFindClose"
   ]
  },
  {
   "event": "onclick",
-  "line": 2904,
+  "line": 2930,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 2905,
+  "line": 2931,
   "calls": [
    "annBubClick"
   ]
  },
  {
   "event": "onclick",
-  "line": 2906,
+  "line": 2932,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 2906,
+  "line": 2932,
   "calls": [
    "stopPropagation"
   ]
  },
  {
+  "event": "onerror",
+  "line": 2982,
+  "calls": []
+ },
+ {
   "event": "oninput",
-  "line": 3148,
+  "line": 3252,
   "calls": []
  },
  {
   "event": "onclick",
-  "line": 3214,
+  "line": 3318,
   "calls": [
    "closeModal",
    "openTrash"
@@ -610,7 +615,7 @@
  },
  {
   "event": "onclick",
-  "line": 3215,
+  "line": 3319,
   "calls": [
    "closeModal",
    "exportFile"
@@ -618,35 +623,35 @@
  },
  {
   "event": "onmousedown",
-  "line": 3527,
+  "line": 3711,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 3527,
+  "line": 3711,
   "calls": [
    "_dlFlipDate"
   ]
  },
  {
   "event": "onclick",
-  "line": 3532,
+  "line": 3716,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onchange",
-  "line": 3532,
+  "line": 3716,
   "calls": [
    "setJrnEntryDate"
   ]
  },
  {
   "event": "onclick",
-  "line": 3645,
+  "line": 3835,
   "calls": [
    "clearSearch",
    "selFolder"
@@ -654,7 +659,7 @@
  },
  {
   "event": "onclick",
-  "line": 3650,
+  "line": 3840,
   "calls": [
    "clearSearch",
    "selTag",
@@ -663,7 +668,7 @@
  },
  {
   "event": "onclick",
-  "line": 3655,
+  "line": 3845,
   "calls": [
    "clearSearch",
    "selKind"
@@ -671,84 +676,84 @@
  },
  {
   "event": "onclick",
-  "line": 3659,
+  "line": 3849,
   "calls": [
    "selArt"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 3659,
+  "line": 3849,
   "calls": [
    "showArtCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 3678,
+  "line": 3868,
   "calls": [
    "selFolder"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 3679,
+  "line": 3869,
   "calls": [
    "showCtx"
   ]
  },
  {
   "event": "ondragstart",
-  "line": 3680,
+  "line": 3870,
   "calls": [
    "dStart"
   ]
  },
  {
   "event": "ondragend",
-  "line": 3681,
+  "line": 3871,
   "calls": [
    "dEnd"
   ]
  },
  {
   "event": "ondragover",
-  "line": 3682,
+  "line": 3872,
   "calls": [
    "dOver"
   ]
  },
  {
   "event": "ondrop",
-  "line": 3684,
+  "line": 3874,
   "calls": [
    "dDrop"
   ]
  },
  {
   "event": "onclick",
-  "line": 3685,
+  "line": 3875,
   "calls": [
    "togExp"
   ]
  },
  {
   "event": "onclick",
-  "line": 3721,
+  "line": 3911,
   "calls": [
    "togFolderGroup"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 3722,
+  "line": 3912,
   "calls": [
    "showFolderGroupCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 3743,
+  "line": 3933,
   "calls": [
    "hideCtx",
    "addFolderGroup"
@@ -756,7 +761,7 @@
  },
  {
   "event": "onclick",
-  "line": 3744,
+  "line": 3934,
   "calls": [
    "hideCtx",
    "renameFolderGroup"
@@ -764,7 +769,7 @@
  },
  {
   "event": "onclick",
-  "line": 3745,
+  "line": 3935,
   "calls": [
    "hideCtx",
    "deleteFolderGroup"
@@ -772,161 +777,161 @@
  },
  {
   "event": "onclick",
-  "line": 3807,
+  "line": 3997,
   "calls": [
    "quickNewNote"
   ]
  },
  {
   "event": "onclick",
-  "line": 3808,
+  "line": 3998,
   "calls": [
    "toggleListView"
   ]
  },
  {
   "event": "onclick",
-  "line": 3816,
+  "line": 4006,
   "calls": [
    "openFolderPopupFromToolbar"
   ]
  },
  {
   "event": "onclick",
-  "line": 3821,
+  "line": 4011,
   "calls": [
    "showPane"
   ]
  },
  {
   "event": "onclick",
-  "line": 3822,
+  "line": 4012,
   "calls": [
    "closeP2"
   ]
  },
  {
   "event": "onclick",
-  "line": 3833,
+  "line": 4023,
   "calls": [
    "showPane"
   ]
  },
  {
   "event": "onclick",
-  "line": 3836,
+  "line": 4026,
   "calls": [
    "closeP2"
   ]
  },
  {
   "event": "onclick",
-  "line": 3840,
+  "line": 4030,
   "calls": [
    "newStarredNote"
   ]
  },
  {
   "event": "onclick",
-  "line": 3841,
+  "line": 4031,
   "calls": [
    "newPinnedNote"
   ]
  },
  {
   "event": "onclick",
-  "line": 3842,
+  "line": 4032,
   "calls": [
    "newNoteWithReminder"
   ]
  },
  {
   "event": "onclick",
-  "line": 3843,
+  "line": 4033,
   "calls": [
    "quickCapture"
   ]
  },
  {
   "event": "onclick",
-  "line": 3844,
+  "line": 4034,
   "calls": [
    "mrjStart"
   ]
  },
  {
   "event": "onclick",
-  "line": 3848,
+  "line": 4038,
   "calls": [
    "addNtiCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 3857,
+  "line": 4047,
   "calls": [
    "showPane"
   ]
  },
  {
   "event": "onclick",
-  "line": 3859,
+  "line": 4049,
   "calls": [
    "closeP2"
   ]
  },
  {
   "event": "onclick",
-  "line": 3867,
+  "line": 4057,
   "calls": [
    "backToMyWallCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 3868,
+  "line": 4058,
   "calls": [
    "selKind"
   ]
  },
  {
   "event": "onclick",
-  "line": 3877,
+  "line": 4067,
   "calls": [
    "selTag"
   ]
  },
  {
   "event": "onclick",
-  "line": 3885,
+  "line": 4075,
   "calls": [
    "newContact"
   ]
  },
  {
   "event": "onclick",
-  "line": 3886,
+  "line": 4076,
   "calls": [
    "newJournalFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 3887,
+  "line": 4077,
   "calls": [
    "quickJournalEntryFromDB"
   ]
  },
  {
   "event": "onclick",
-  "line": 3888,
+  "line": 4078,
   "calls": [
    "newFavEntry"
   ]
  },
  {
   "event": "onclick",
-  "line": 3889,
+  "line": 4079,
   "calls": [
    "_calNewEvent",
    "todayStr"
@@ -934,28 +939,28 @@
  },
  {
   "event": "onclick",
-  "line": 3890,
+  "line": 4080,
   "calls": [
    "_calManageCats"
   ]
  },
  {
   "event": "onclick",
-  "line": 3905,
+  "line": 4095,
   "calls": [
    "quickJournalEntry"
   ]
  },
  {
   "event": "onclick",
-  "line": 3907,
+  "line": 4097,
   "calls": [
    "openModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 3966,
+  "line": 4156,
   "calls": [
    "togSfGrp",
    "esc"
@@ -963,7 +968,7 @@
  },
  {
   "event": "onclick",
-  "line": 4011,
+  "line": 4201,
   "calls": [
    "togSfGrp",
    "esc"
@@ -971,140 +976,140 @@
  },
  {
   "event": "onclick",
-  "line": 4051,
+  "line": 4241,
   "calls": [
    "selFolder"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 4063,
+  "line": 4253,
   "calls": [
    "qtKey"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 4064,
+  "line": 4254,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "ontouchstart",
-  "line": 4064,
+  "line": 4254,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 4065,
+  "line": 4255,
   "calls": [
    "qtSave"
   ]
  },
  {
   "event": "onclick",
-  "line": 4068,
+  "line": 4258,
   "calls": [
    "openModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 4086,
+  "line": 4276,
   "calls": [
    "openP2"
   ]
  },
  {
   "event": "onclick",
-  "line": 4086,
+  "line": 4276,
   "calls": [
    "backFromP3"
   ]
  },
  {
   "event": "onclick",
-  "line": 4088,
+  "line": 4278,
   "calls": [
    "toggleSB"
   ]
  },
  {
   "event": "onclick",
-  "line": 4117,
+  "line": 4307,
   "calls": [
    "openP2"
   ]
  },
  {
   "event": "onclick",
-  "line": 4119,
+  "line": 4309,
   "calls": [
    "backFromP3"
   ]
  },
  {
   "event": "onclick",
-  "line": 4122,
+  "line": 4312,
   "calls": [
    "toggleSB"
   ]
  },
  {
   "event": "onclick",
-  "line": 4126,
+  "line": 4316,
   "calls": [
    "showPane"
   ]
  },
  {
   "event": "onclick",
-  "line": 4127,
+  "line": 4317,
   "calls": [
    "closeP2"
   ]
  },
  {
   "event": "onclick",
-  "line": 4131,
+  "line": 4321,
   "calls": [
    "mrjNext"
   ]
  },
  {
   "event": "onclick",
-  "line": 4132,
+  "line": 4322,
   "calls": [
    "mrjEnd"
   ]
  },
  {
   "event": "onclick",
-  "line": 4138,
+  "line": 4328,
   "calls": [
    "showPane"
   ]
  },
  {
   "event": "onclick",
-  "line": 4139,
+  "line": 4329,
   "calls": [
    "closeP2"
   ]
  },
  {
   "event": "onclick",
-  "line": 4142,
+  "line": 4332,
   "calls": [
    "_calAddCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 4143,
+  "line": 4333,
   "calls": [
    "renderP3H",
    "renderP3C"
@@ -1112,28 +1117,28 @@
  },
  {
   "event": "onclick",
-  "line": 4150,
+  "line": 4340,
   "calls": [
    "showPane"
   ]
  },
  {
   "event": "onclick",
-  "line": 4151,
+  "line": 4341,
   "calls": [
    "closeP2"
   ]
  },
  {
   "event": "onclick",
-  "line": 4154,
+  "line": 4344,
   "calls": [
    "_calSaveEvent"
   ]
  },
  {
   "event": "onclick",
-  "line": 4155,
+  "line": 4345,
   "calls": [
    "renderP3H",
    "renderP3C"
@@ -1141,21 +1146,21 @@
  },
  {
   "event": "onclick",
-  "line": 4164,
+  "line": 4354,
   "calls": [
    "openP2"
   ]
  },
  {
   "event": "onclick",
-  "line": 4164,
+  "line": 4354,
   "calls": [
    "backFromP3"
   ]
  },
  {
   "event": "onclick",
-  "line": 4167,
+  "line": 4357,
   "calls": [
    "_saveContactForm",
    "find"
@@ -1163,28 +1168,28 @@
  },
  {
   "event": "onclick",
-  "line": 4168,
+  "line": 4358,
   "calls": [
    "cancelEdit"
   ]
  },
  {
   "event": "onclick",
-  "line": 4184,
+  "line": 4374,
   "calls": [
    "openP2"
   ]
  },
  {
   "event": "onclick",
-  "line": 4185,
+  "line": 4375,
   "calls": [
    "backFromP3"
   ]
  },
  {
   "event": "onclick",
-  "line": 4199,
+  "line": 4389,
   "calls": [
    "getElementById",
    "focus"
@@ -1192,28 +1197,28 @@
  },
  {
   "event": "onclick",
-  "line": 4202,
+  "line": 4392,
   "calls": [
    "cancelEdit"
   ]
  },
  {
   "event": "onclick",
-  "line": 4225,
+  "line": 4415,
   "calls": [
    "openP2"
   ]
  },
  {
   "event": "onclick",
-  "line": 4225,
+  "line": 4415,
   "calls": [
    "backFromP3"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 4227,
+  "line": 4417,
   "calls": [
    "preventDefault",
    "showArtCtx"
@@ -1221,28 +1226,28 @@
  },
  {
   "event": "onclick",
-  "line": 4228,
+  "line": 4418,
   "calls": [
    "logInteraction"
   ]
  },
  {
   "event": "onclick",
-  "line": 4229,
+  "line": 4419,
   "calls": [
    "logContactAction"
   ]
  },
  {
   "event": "onclick",
-  "line": 4230,
+  "line": 4420,
   "calls": [
    "startEdit"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 4231,
+  "line": 4421,
   "calls": [
    "preventDefault",
    "showArtCtx"
@@ -1250,49 +1255,49 @@
  },
  {
   "event": "onclick",
-  "line": 4231,
+  "line": 4421,
   "calls": [
    "showArtCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 4261,
+  "line": 4451,
   "calls": [
    "_p3NtiPalette"
   ]
  },
  {
   "event": "onclick",
-  "line": 4288,
+  "line": 4478,
   "calls": [
    "_p3Navigate"
   ]
  },
  {
   "event": "onclick",
-  "line": 4289,
+  "line": 4479,
   "calls": [
    "_p3Navigate"
   ]
  },
  {
   "event": "onclick",
-  "line": 4290,
+  "line": 4480,
   "calls": [
    "_ntFindToggle"
   ]
  },
  {
   "event": "onclick",
-  "line": 4291,
+  "line": 4481,
   "calls": [
    "quickCapture"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 4294,
+  "line": 4484,
   "calls": [
    "preventDefault",
    "showArtCtx"
@@ -1300,56 +1305,56 @@
  },
  {
   "event": "onclick",
-  "line": 4294,
+  "line": 4484,
   "calls": [
    "showArtCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 4295,
+  "line": 4485,
   "calls": [
    "_p3ActPalette"
   ]
  },
  {
   "event": "onclick",
-  "line": 4296,
+  "line": 4486,
   "calls": [
    "startEdit"
   ]
  },
  {
   "event": "onclick",
-  "line": 4300,
+  "line": 4490,
   "calls": [
    "quickCapture"
   ]
  },
  {
   "event": "oninput",
-  "line": 4346,
+  "line": 4536,
   "calls": [
    "_tiScheduleAutoSave"
   ]
  },
  {
   "event": "onclick",
-  "line": 4346,
+  "line": 4536,
   "calls": [
    "cancelEdit"
   ]
  },
  {
   "event": "onclick",
-  "line": 4365,
+  "line": 4555,
   "calls": [
    "selFolder"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 4369,
+  "line": 4559,
   "calls": [
    "preventDefault",
    "stopPropagation",
@@ -1358,7 +1363,7 @@
  },
  {
   "event": "onclick",
-  "line": 4374,
+  "line": 4564,
   "calls": [
    "selTag",
    "esc"
@@ -1366,7 +1371,7 @@
  },
  {
   "event": "oncontextmenu",
-  "line": 4374,
+  "line": 4564,
   "calls": [
    "preventDefault",
    "showTagClrPicker",
@@ -1375,84 +1380,84 @@
  },
  {
   "event": "onclick",
-  "line": 4398,
+  "line": 4589,
   "calls": [
    "selArt"
   ]
  },
  {
   "event": "onclick",
-  "line": 4405,
+  "line": 4596,
   "calls": [
    "quickCapture"
   ]
  },
  {
   "event": "onclick",
-  "line": 4588,
+  "line": 4786,
   "calls": [
    "goHome"
   ]
  },
  {
   "event": "onclick",
-  "line": 4589,
+  "line": 4787,
   "calls": [
    "focusSidebarSearch"
   ]
  },
  {
   "event": "onclick",
-  "line": 4590,
+  "line": 4788,
   "calls": [
    "restoreLastSearch"
   ]
  },
  {
   "event": "onclick",
-  "line": 4603,
+  "line": 4801,
   "calls": [
    "goHome"
   ]
  },
  {
   "event": "onclick",
-  "line": 4604,
+  "line": 4802,
   "calls": [
    "restoreLastSearch"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 4632,
+  "line": 4830,
   "calls": [
    "ec"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 4633,
+  "line": 4831,
   "calls": [
    "ec"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 4634,
+  "line": 4832,
   "calls": [
    "ec"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 4635,
+  "line": 4833,
   "calls": [
    "ec"
   ]
  },
  {
   "event": "onclick",
-  "line": 4793,
+  "line": 4991,
   "calls": [
    "hideCtx",
    "shiftAllHeadings"
@@ -1460,7 +1465,7 @@
  },
  {
   "event": "onclick",
-  "line": 4794,
+  "line": 4992,
   "calls": [
    "hideCtx",
    "shiftAllHeadings"
@@ -1468,45 +1473,45 @@
  },
  {
   "event": "onclick",
-  "line": 4963,
+  "line": 5161,
   "calls": [
    "bkMove"
   ]
  },
  {
   "event": "onclick",
-  "line": 4963,
+  "line": 5161,
   "calls": [
    "bkMove"
   ]
  },
  {
   "event": "onclick",
-  "line": 4963,
+  "line": 5161,
   "calls": [
    "bkItemMenu"
   ]
  },
  {
   "event": "onerror",
-  "line": 4967,
+  "line": 5165,
   "calls": []
  },
  {
   "event": "onerror",
-  "line": 4981,
+  "line": 5179,
   "calls": []
  },
  {
   "event": "onclick",
-  "line": 5401,
+  "line": 5599,
   "calls": [
    "togMwSubCat"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 5401,
+  "line": 5599,
   "calls": [
    "preventDefault",
    "showNtiCatMenu"
@@ -1514,63 +1519,63 @@
  },
  {
   "event": "onclick",
-  "line": 5413,
+  "line": 5611,
   "calls": [
    "togMwSubGrp"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 5413,
+  "line": 5611,
   "calls": [
    "showWallKindCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 5534,
+  "line": 5732,
   "calls": [
    "toggleNoteLink"
   ]
  },
  {
   "event": "oninput",
-  "line": 5550,
+  "line": 5748,
   "calls": [
    "ltnSearch"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 5550,
+  "line": 5748,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 5552,
+  "line": 5750,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 5572,
+  "line": 5770,
   "calls": [
    "toggleNoteLink"
   ]
  },
  {
   "event": "onclick",
-  "line": 5674,
+  "line": 5872,
   "calls": [
    "_cancelAnn"
   ]
  },
  {
   "event": "onclick",
-  "line": 5675,
+  "line": 5873,
   "calls": [
    "_confirmAnn",
    "esc",
@@ -1579,84 +1584,84 @@
  },
  {
   "event": "onclick",
-  "line": 5726,
+  "line": 5924,
   "calls": [
    "toggleAnnMode"
   ]
  },
  {
   "event": "onclick",
-  "line": 5751,
+  "line": 5949,
   "calls": [
    "showAnnReplyEdit"
   ]
  },
  {
   "event": "onclick",
-  "line": 5757,
+  "line": 5955,
   "calls": [
    "scrollToAnnMark"
   ]
  },
  {
   "event": "onclick",
-  "line": 5758,
+  "line": 5956,
   "calls": [
    "showAnnEditBox"
   ]
  },
  {
   "event": "onclick",
-  "line": 5759,
+  "line": 5957,
   "calls": [
    "showAnnReplyBox"
   ]
  },
  {
   "event": "onclick",
-  "line": 5760,
+  "line": 5958,
   "calls": [
    "confirmDeleteAnnotation"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 5796,
+  "line": 5994,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "ontouchstart",
-  "line": 5796,
+  "line": 5994,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 5798,
+  "line": 5996,
   "calls": [
    "submitAnnReply"
   ]
  },
  {
   "event": "onclick",
-  "line": 5799,
+  "line": 5997,
   "calls": [
    "getElementById"
   ]
  },
  {
   "event": "onclick",
-  "line": 5837,
+  "line": 6035,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 5838,
+  "line": 6036,
   "calls": [
    "deleteAnnotation",
    "closeModal"
@@ -1664,112 +1669,112 @@
  },
  {
   "event": "onmousedown",
-  "line": 5908,
+  "line": 6106,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 5908,
+  "line": 6106,
   "calls": [
    "showAnnReplyEdit"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 5914,
+  "line": 6112,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 5914,
+  "line": 6112,
   "calls": [
    "showAnnEditBox"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 5915,
+  "line": 6113,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 5915,
+  "line": 6113,
   "calls": [
    "showAnnReplyBox"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 5916,
+  "line": 6114,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 5916,
+  "line": 6114,
   "calls": [
    "confirmDeleteAnnotation"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 5936,
+  "line": 6134,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "ontouchstart",
-  "line": 5936,
+  "line": 6134,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 5938,
+  "line": 6136,
   "calls": [
    "saveAnnEdit"
   ]
  },
  {
   "event": "onclick",
-  "line": 5939,
+  "line": 6137,
   "calls": [
    "cancelAnnEdit"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 5970,
+  "line": 6168,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "ontouchstart",
-  "line": 5970,
+  "line": 6168,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 5972,
+  "line": 6170,
   "calls": [
    "saveAnnReplyEdit"
   ]
  },
  {
   "event": "onclick",
-  "line": 5973,
+  "line": 6171,
   "calls": [
    "_refreshAnnPanel",
    "find",
@@ -1778,21 +1783,21 @@
  },
  {
   "event": "ondragstart",
-  "line": 6164,
+  "line": 6362,
   "calls": [
    "pinTabDStart"
   ]
  },
  {
   "event": "onclick",
-  "line": 6165,
+  "line": 6363,
   "calls": [
    "tabSelect"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 6165,
+  "line": 6363,
   "calls": [
    "preventDefault",
    "stopPropagation",
@@ -1801,14 +1806,14 @@
  },
  {
   "event": "onmousedown",
-  "line": 6169,
+  "line": 6367,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 6169,
+  "line": 6367,
   "calls": [
    "stopPropagation",
    "pinTabToPanel"
@@ -1816,14 +1821,14 @@
  },
  {
   "event": "onmousedown",
-  "line": 6170,
+  "line": 6368,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 6170,
+  "line": 6368,
   "calls": [
    "stopPropagation",
    "closeTabGroup",
@@ -1832,14 +1837,14 @@
  },
  {
   "event": "onclick",
-  "line": 6174,
+  "line": 6372,
   "calls": [
    "_calOpen"
   ]
  },
  {
   "event": "onclick",
-  "line": 6175,
+  "line": 6373,
   "calls": [
    "stopPropagation",
    "_tabScroll"
@@ -1847,7 +1852,7 @@
  },
  {
   "event": "onclick",
-  "line": 6180,
+  "line": 6378,
   "calls": [
    "stopPropagation",
    "_tabScroll"
@@ -1855,98 +1860,98 @@
  },
  {
   "event": "onclick",
-  "line": 6182,
+  "line": 6380,
   "calls": [
    "openTabPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 6369,
+  "line": 6567,
   "calls": [
    "openReminderModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 6370,
+  "line": 6568,
   "calls": [
    "clearReminder"
   ]
  },
  {
   "event": "onclick",
-  "line": 6482,
+  "line": 6684,
   "calls": [
    "togSecSF"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 6482,
+  "line": 6684,
   "calls": [
    "showSmartViewCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 6494,
+  "line": 6696,
   "calls": [
    "selSecSF"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 6494,
+  "line": 6696,
   "calls": [
    "showSfItemCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 6608,
+  "line": 6810,
   "calls": [
    "closeTabPicker"
   ]
  },
  {
   "event": "oninput",
-  "line": 6610,
+  "line": 6812,
   "calls": [
    "renderTabPickerList"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 6611,
+  "line": 6813,
   "calls": [
    "closeTabPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 6677,
+  "line": 6879,
   "calls": [
    "addToTabPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 6735,
+  "line": 6937,
   "calls": [
    "closeNtiPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 6739,
+  "line": 6941,
   "calls": [
    "togNtiCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 6745,
+  "line": 6947,
   "calls": [
    "stopPropagation",
    "addKindInCat"
@@ -1954,7 +1959,7 @@
  },
  {
   "event": "onclick",
-  "line": 6746,
+  "line": 6948,
   "calls": [
    "stopPropagation",
    "showNtiCatMenu"
@@ -1962,14 +1967,14 @@
  },
  {
   "event": "onclick",
-  "line": 6750,
+  "line": 6952,
   "calls": [
    "toggleNoteKind"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 6750,
+  "line": 6952,
   "calls": [
    "preventDefault",
    "showNtiKindMenu"
@@ -1977,35 +1982,35 @@
  },
  {
   "event": "onclick",
-  "line": 6755,
+  "line": 6957,
   "calls": [
    "addNtiCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 6783,
+  "line": 6985,
   "calls": [
    "closeJournalPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 6786,
+  "line": 6988,
   "calls": [
    "toggleNoteJournal"
   ]
  },
  {
   "event": "onclick",
-  "line": 6791,
+  "line": 6993,
   "calls": [
    "newJournalEventForNote"
   ]
  },
  {
   "event": "onclick",
-  "line": 6853,
+  "line": 7055,
   "calls": [
    "openNtiPicker",
    "hideCtx"
@@ -2013,7 +2018,7 @@
  },
  {
   "event": "onclick",
-  "line": 6856,
+  "line": 7058,
   "calls": [
    "hideCtx",
    "openPicker"
@@ -2021,7 +2026,7 @@
  },
  {
   "event": "onclick",
-  "line": 6857,
+  "line": 7059,
   "calls": [
    "hideCtx",
    "toast"
@@ -2029,7 +2034,7 @@
  },
  {
   "event": "onclick",
-  "line": 6858,
+  "line": 7060,
   "calls": [
    "hideCtx",
    "openJournalPicker"
@@ -2037,7 +2042,7 @@
  },
  {
   "event": "onclick",
-  "line": 6859,
+  "line": 7061,
   "calls": [
    "hideCtx",
    "openMyDatabasePicker"
@@ -2045,63 +2050,63 @@
  },
  {
   "event": "onclick",
-  "line": 6883,
+  "line": 7085,
   "calls": [
    "closeMyDatabasePicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 6886,
+  "line": 7088,
   "calls": [
    "toggleNoteDbFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 6929,
+  "line": 7131,
   "calls": [
    "renNtiCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 6929,
+  "line": 7131,
   "calls": [
    "openCatClrPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 6929,
+  "line": 7131,
   "calls": [
    "toggleNtiCatBold"
   ]
  },
  {
   "event": "onclick",
-  "line": 6929,
+  "line": 7131,
   "calls": [
    "setNtiCatSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 6929,
+  "line": 7131,
   "calls": [
    "setNtiCatSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 6929,
+  "line": 7131,
   "calls": [
    "setNtiCatSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 6929,
+  "line": 7131,
   "calls": [
    "hideCtx",
    "addKindInCat"
@@ -2109,7 +2114,7 @@
  },
  {
   "event": "onclick",
-  "line": 6929,
+  "line": 7131,
   "calls": [
    "hideCtx",
    "addNtiCat"
@@ -2117,28 +2122,28 @@
  },
  {
   "event": "onclick",
-  "line": 6929,
+  "line": 7131,
   "calls": [
    "delNtiCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 6937,
+  "line": 7139,
   "calls": [
    "renNtiSectionLabel"
   ]
  },
  {
   "event": "onclick",
-  "line": 6938,
+  "line": 7140,
   "calls": [
    "openNtiSectionClrPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 6940,
+  "line": 7142,
   "calls": [
    "hideCtx",
    "addNtiCat"
@@ -2146,7 +2151,7 @@
  },
  {
   "event": "onclick",
-  "line": 6942,
+  "line": 7144,
   "calls": [
    "hideCtx",
    "ntiSbToggleAllCats"
@@ -2154,126 +2159,126 @@
  },
  {
   "event": "onclick",
-  "line": 6972,
+  "line": 7174,
   "calls": [
    "moveKindToCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 6972,
+  "line": 7174,
   "calls": [
    "renNtiKind"
   ]
  },
  {
   "event": "onclick",
-  "line": 6972,
+  "line": 7174,
   "calls": [
    "openKindClrPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 6972,
+  "line": 7174,
   "calls": [
    "delNtiKind"
   ]
  },
  {
   "event": "onclick",
-  "line": 7073,
+  "line": 7275,
   "calls": [
    "print"
   ]
  },
  {
   "event": "onclick",
-  "line": 7073,
+  "line": 7275,
   "calls": [
    "close"
   ]
  },
  {
   "event": "onclick",
-  "line": 7272,
+  "line": 7485,
   "calls": [
    "addExistingNoteToEvent"
   ]
  },
  {
   "event": "oninput",
-  "line": 7276,
+  "line": 7489,
   "calls": [
    "_aneFilter"
   ]
  },
  {
   "event": "onclick",
-  "line": 7278,
+  "line": 7491,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 7326,
+  "line": 7539,
   "calls": [
    "setJrnGroupBy"
   ]
  },
  {
   "event": "onclick",
-  "line": 7327,
+  "line": 7540,
   "calls": [
    "setJrnGroupBy"
   ]
  },
  {
   "event": "onclick",
-  "line": 7345,
+  "line": 7558,
   "calls": [
    "togJrnGrp"
   ]
  },
  {
   "event": "onclick",
-  "line": 7353,
+  "line": 7566,
   "calls": [
    "togJrnGrp"
   ]
  },
  {
   "event": "onclick",
-  "line": 7362,
+  "line": 7575,
   "calls": [
    "togJrnGrp"
   ]
  },
  {
   "event": "onclick",
-  "line": 7375,
+  "line": 7588,
   "calls": [
    "quickJournalEntry"
   ]
  },
  {
   "event": "onclick",
-  "line": 7382,
+  "line": 7595,
   "calls": [
    "newJournalFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 7395,
+  "line": 7608,
   "calls": [
    "togJrnGrp"
   ]
  },
  {
   "event": "onclick",
-  "line": 7399,
+  "line": 7612,
   "calls": [
    "stopPropagation",
    "quickJournalEntry"
@@ -2281,7 +2286,7 @@
  },
  {
   "event": "onclick",
-  "line": 7400,
+  "line": 7613,
   "calls": [
    "stopPropagation",
    "openAddNoteToEvent"
@@ -2289,7 +2294,7 @@
  },
  {
   "event": "onclick",
-  "line": 7401,
+  "line": 7614,
   "calls": [
    "stopPropagation",
    "moveJrnEvent"
@@ -2297,7 +2302,7 @@
  },
  {
   "event": "onclick",
-  "line": 7402,
+  "line": 7615,
   "calls": [
    "stopPropagation",
    "moveJrnEvent"
@@ -2305,7 +2310,7 @@
  },
  {
   "event": "onclick",
-  "line": 7403,
+  "line": 7616,
   "calls": [
    "stopPropagation",
    "_jrnStyleMenu"
@@ -2313,7 +2318,7 @@
  },
  {
   "event": "onclick",
-  "line": 7404,
+  "line": 7617,
   "calls": [
    "stopPropagation",
    "confirmDel"
@@ -2321,56 +2326,56 @@
  },
  {
   "event": "onclick",
-  "line": 7415,
+  "line": 7628,
   "calls": [
    "togJrnGrp"
   ]
  },
  {
   "event": "onclick",
-  "line": 7418,
+  "line": 7631,
   "calls": [
    "quickNewNote"
   ]
  },
  {
   "event": "onclick",
-  "line": 7480,
+  "line": 7693,
   "calls": [
    "selDbItem"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 7481,
+  "line": 7694,
   "calls": [
    "showDbItemCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 7489,
+  "line": 7702,
   "calls": [
    "renderTree"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 7489,
+  "line": 7702,
   "calls": [
    "showDbSecCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 7557,
+  "line": 7770,
   "calls": [
    "_jrnSizeCommit"
   ]
  },
  {
   "event": "onclick",
-  "line": 7559,
+  "line": 7772,
   "calls": [
    "getElementById",
    "remove",
@@ -2379,49 +2384,49 @@
  },
  {
   "event": "onclick",
-  "line": 7560,
+  "line": 7773,
   "calls": [
    "pickJrnColor"
   ]
  },
  {
   "event": "onclick",
-  "line": 7561,
+  "line": 7774,
   "calls": [
    "pickJrnColor"
   ]
  },
  {
   "event": "oninput",
-  "line": 7564,
+  "line": 7777,
   "calls": [
    "_jrnSizeLive"
   ]
  },
  {
   "event": "onchange",
-  "line": 7564,
+  "line": 7777,
   "calls": [
    "_jrnSizeCommit"
   ]
  },
  {
   "event": "oninput",
-  "line": 7566,
+  "line": 7779,
   "calls": [
    "_jrnSizeLive"
   ]
  },
  {
   "event": "onchange",
-  "line": 7566,
+  "line": 7779,
   "calls": [
    "_jrnSizeCommit"
   ]
  },
  {
   "event": "onclick",
-  "line": 7570,
+  "line": 7783,
   "calls": [
    "getElementById",
    "remove",
@@ -2430,28 +2435,28 @@
  },
  {
   "event": "onclick",
-  "line": 7584,
+  "line": 7797,
   "calls": [
    "newFavEntry"
   ]
  },
  {
   "event": "onclick",
-  "line": 7585,
+  "line": 7798,
   "calls": [
    "addFavCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 7594,
+  "line": 7807,
   "calls": [
    "togJrnGrp"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 7594,
+  "line": 7807,
   "calls": [
    "preventDefault",
    "showFavCatCtx"
@@ -2459,14 +2464,14 @@
  },
  {
   "event": "onclick",
-  "line": 7611,
+  "line": 7824,
   "calls": [
    "togJrnGrp"
   ]
  },
  {
   "event": "onclick",
-  "line": 7634,
+  "line": 7847,
   "calls": [
    "hideCtx",
    "renameFavCat"
@@ -2474,7 +2479,7 @@
  },
  {
   "event": "onclick",
-  "line": 7635,
+  "line": 7848,
   "calls": [
    "hideCtx",
    "deleteFavCat"
@@ -2482,70 +2487,70 @@
  },
  {
   "event": "onclick",
-  "line": 7756,
+  "line": 7969,
   "calls": [
    "remove"
   ]
  },
  {
   "event": "onclick",
-  "line": 7787,
+  "line": 8000,
   "calls": [
    "toggleCTMode"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 7789,
+  "line": 8002,
   "calls": [
    "showArtCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 7810,
+  "line": 8023,
   "calls": [
    "toggleCTNameMode"
   ]
  },
  {
   "event": "onclick",
-  "line": 7826,
+  "line": 8039,
   "calls": [
    "remove"
   ]
  },
  {
   "event": "onclick",
-  "line": 7828,
+  "line": 8041,
   "calls": [
    "addCTPhone"
   ]
  },
  {
   "event": "onclick",
-  "line": 7837,
+  "line": 8050,
   "calls": [
    "toggleCTMode"
   ]
  },
  {
   "event": "onclick",
-  "line": 7849,
+  "line": 8062,
   "calls": [
    "newContact"
   ]
  },
  {
   "event": "onclick",
-  "line": 7850,
+  "line": 8063,
   "calls": [
    "newContact"
   ]
  },
  {
   "event": "onclick",
-  "line": 7874,
+  "line": 8087,
   "calls": [
    "hideCtx",
    "selDbItem"
@@ -2553,7 +2558,7 @@
  },
  {
   "event": "onclick",
-  "line": 7876,
+  "line": 8089,
   "calls": [
    "hideCtx",
    "newContact"
@@ -2561,7 +2566,7 @@
  },
  {
   "event": "onclick",
-  "line": 7877,
+  "line": 8090,
   "calls": [
    "hideCtx",
    "newContact"
@@ -2569,7 +2574,7 @@
  },
  {
   "event": "onclick",
-  "line": 7879,
+  "line": 8092,
   "calls": [
    "hideCtx",
    "selDbItem"
@@ -2577,14 +2582,14 @@
  },
  {
   "event": "onclick",
-  "line": 7881,
+  "line": 8094,
   "calls": [
    "openDbItemClrPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 7883,
+  "line": 8096,
   "calls": [
    "hideCtx",
    "selDbItem"
@@ -2592,7 +2597,7 @@
  },
  {
   "event": "onclick",
-  "line": 7885,
+  "line": 8098,
   "calls": [
    "hideCtx",
    "selDbItem"
@@ -2600,14 +2605,14 @@
  },
  {
   "event": "onclick",
-  "line": 7887,
+  "line": 8100,
   "calls": [
    "openDbItemClrPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 7889,
+  "line": 8102,
   "calls": [
    "hideCtx",
    "selDbItem"
@@ -2615,7 +2620,7 @@
  },
  {
   "event": "onclick",
-  "line": 7891,
+  "line": 8104,
   "calls": [
    "hideCtx",
    "_calNewEvent",
@@ -2624,14 +2629,14 @@
  },
  {
   "event": "onclick",
-  "line": 7893,
+  "line": 8106,
   "calls": [
    "openDbItemClrPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 7895,
+  "line": 8108,
   "calls": [
    "hideCtx",
    "selDbItem"
@@ -2639,7 +2644,7 @@
  },
  {
   "event": "onclick",
-  "line": 7897,
+  "line": 8110,
   "calls": [
    "hideCtx",
    "newFavEntry"
@@ -2647,7 +2652,7 @@
  },
  {
   "event": "onclick",
-  "line": 7898,
+  "line": 8111,
   "calls": [
    "hideCtx",
    "addFavCat"
@@ -2655,56 +2660,56 @@
  },
  {
   "event": "onclick",
-  "line": 7900,
+  "line": 8113,
   "calls": [
    "openDbItemClrPicker"
   ]
  },
  {
   "event": "oninput",
-  "line": 7922,
+  "line": 8135,
   "calls": [
    "_whoSearch"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 7922,
+  "line": 8135,
   "calls": [
    "_whoClear"
   ]
  },
  {
   "event": "onclick",
-  "line": 7923,
+  "line": 8136,
   "calls": [
    "_whoClear"
   ]
  },
  {
   "event": "onclick",
-  "line": 7936,
+  "line": 8149,
   "calls": [
    "newContact"
   ]
  },
  {
   "event": "onclick",
-  "line": 7944,
+  "line": 8157,
   "calls": [
    "_whoSelect"
   ]
  },
  {
   "event": "onclick",
-  "line": 8003,
+  "line": 8216,
   "calls": [
    "logInteraction"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 8094,
+  "line": 8307,
   "calls": [
    "preventDefault",
    "getElementById",
@@ -2713,134 +2718,126 @@
  },
  {
   "event": "oninput",
-  "line": 8096,
+  "line": 8309,
   "calls": [
    "njfFilter"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 8096,
+  "line": 8309,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 8099,
+  "line": 8312,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 8100,
+  "line": 8313,
   "calls": [
    "createNewJournalFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 8106,
-  "calls": [
-   "njfSelect"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 8116,
-  "calls": [
-   "njfSelect"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 8188,
-  "calls": [
-   "closeModal"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 8191,
-  "calls": [
-   "_jrnScopeSetMode"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 8194,
-  "calls": [
-   "_jrnScopeSetMode"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 8200,
-  "calls": [
-   "_jrnScopeSetOne"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 8205,
-  "calls": [
-   "_jrnScopeToggle"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 8209,
-  "calls": [
-   "closeModal"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 8318,
-  "calls": [
-   "showPane"
-  ]
- },
- {
-  "event": "onclick",
   "line": 8319,
   "calls": [
-   "closeP2"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 8321,
-  "calls": [
-   "_calNav"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 8326,
-  "calls": [
-   "_calNav"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 8327,
-  "calls": [
-   "_calToday"
+   "njfSelect"
   ]
  },
  {
   "event": "onclick",
   "line": 8329,
   "calls": [
-   "renderP3H",
-   "renderP3C"
+   "njfSelect"
   ]
  },
  {
   "event": "onclick",
-  "line": 8330,
+  "line": 8401,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8404,
+  "calls": [
+   "_jrnScopeSetMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8407,
+  "calls": [
+   "_jrnScopeSetMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8413,
+  "calls": [
+   "_jrnScopeSetOne"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8418,
+  "calls": [
+   "_jrnScopeToggle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8422,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8531,
+  "calls": [
+   "showPane"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8532,
+  "calls": [
+   "closeP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8534,
+  "calls": [
+   "_calNav"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8539,
+  "calls": [
+   "_calNav"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8540,
+  "calls": [
+   "_calToday"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8542,
   "calls": [
    "renderP3H",
    "renderP3C"
@@ -2848,7 +2845,7 @@
  },
  {
   "event": "onclick",
-  "line": 8331,
+  "line": 8543,
   "calls": [
    "renderP3H",
    "renderP3C"
@@ -2856,7 +2853,15 @@
  },
  {
   "event": "onclick",
-  "line": 8332,
+  "line": 8544,
+  "calls": [
+   "renderP3H",
+   "renderP3C"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8545,
   "calls": [
    "now",
    "renderP3H",
@@ -2865,49 +2870,49 @@
  },
  {
   "event": "onclick",
-  "line": 8335,
+  "line": 8548,
   "calls": [
    "togCalLayer"
   ]
  },
  {
   "event": "onclick",
-  "line": 8336,
+  "line": 8549,
   "calls": [
    "togCalLayer"
   ]
  },
  {
   "event": "onclick",
-  "line": 8337,
+  "line": 8550,
   "calls": [
    "togCalLayer"
   ]
  },
  {
   "event": "onclick",
-  "line": 8338,
+  "line": 8551,
   "calls": [
    "togCalLayer"
   ]
  },
  {
   "event": "onclick",
-  "line": 8339,
+  "line": 8552,
   "calls": [
    "togCalLayer"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 8339,
+  "line": 8552,
   "calls": [
    "openJrnCalScope"
   ]
  },
  {
   "event": "onclick",
-  "line": 8404,
+  "line": 8617,
   "calls": [
    "querySelector",
    "remove",
@@ -2916,7 +2921,7 @@
  },
  {
   "event": "onclick",
-  "line": 8409,
+  "line": 8622,
   "calls": [
    "querySelector",
    "remove",
@@ -2925,28 +2930,28 @@
  },
  {
   "event": "onclick",
-  "line": 8413,
+  "line": 8626,
   "calls": [
    "_calNewNote"
   ]
  },
  {
   "event": "onclick",
-  "line": 8415,
+  "line": 8628,
   "calls": [
    "_calNewJournal"
   ]
  },
  {
   "event": "onclick",
-  "line": 8417,
+  "line": 8630,
   "calls": [
    "_calViewNotes"
   ]
  },
  {
   "event": "onclick",
-  "line": 8419,
+  "line": 8632,
   "calls": [
    "querySelector",
    "remove",
@@ -2955,42 +2960,42 @@
  },
  {
   "event": "onclick",
-  "line": 8494,
+  "line": 8707,
   "calls": [
    "_calSelectDate"
   ]
  },
  {
   "event": "onclick",
-  "line": 8534,
+  "line": 8747,
   "calls": [
    "_calSelectDate"
   ]
  },
  {
   "event": "onclick",
-  "line": 8537,
+  "line": 8750,
   "calls": [
    "tabSelect"
   ]
  },
  {
   "event": "onclick",
-  "line": 8538,
+  "line": 8751,
   "calls": [
    "tabSelect"
   ]
  },
  {
   "event": "onclick",
-  "line": 8539,
+  "line": 8752,
   "calls": [
    "_calEditEvent"
   ]
  },
  {
   "event": "onclick",
-  "line": 8553,
+  "line": 8766,
   "calls": [
    "renderP3H",
    "renderP3C"
@@ -2998,28 +3003,28 @@
  },
  {
   "event": "onmouseenter",
-  "line": 8605,
+  "line": 8818,
   "calls": [
    "_clrHover"
   ]
  },
  {
   "event": "onclick",
-  "line": 8607,
+  "line": 8820,
   "calls": [
    "_clrPick"
   ]
  },
  {
   "event": "onclick",
-  "line": 8613,
+  "line": 8826,
   "calls": [
    "togClrFam"
   ]
  },
  {
   "event": "onclick",
-  "line": 8623,
+  "line": 8836,
   "calls": [
    "getElementById",
    "remove"
@@ -3027,14 +3032,14 @@
  },
  {
   "event": "onclick",
-  "line": 8627,
+  "line": 8840,
   "calls": [
    "_clrPick"
   ]
  },
  {
   "event": "onclick",
-  "line": 8629,
+  "line": 8842,
   "calls": [
    "getElementById",
    "remove"
@@ -3042,84 +3047,84 @@
  },
  {
   "event": "onclick",
-  "line": 8897,
+  "line": 9110,
   "calls": [
    "closeNoteModal"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 9127,
+  "line": 9340,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9127,
+  "line": 9340,
   "calls": [
    "_closeStickyPop"
   ]
  },
  {
   "event": "onclick",
-  "line": 9207,
+  "line": 9420,
   "calls": [
    "goHome"
   ]
  },
  {
   "event": "onclick",
-  "line": 9208,
+  "line": 9421,
   "calls": [
    "restoreLastSearch"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 9249,
+  "line": 9462,
   "calls": [
    "togEBGroup"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 9251,
+  "line": 9464,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9251,
+  "line": 9464,
   "calls": [
    "_ntFindToggle"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 9259,
+  "line": 9472,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9259,
+  "line": 9472,
   "calls": [
    "saveArt"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 9285,
+  "line": 9498,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9285,
+  "line": 9498,
   "calls": [
    "_closeStickyPop",
    "tabSelect"
@@ -3127,76 +3132,76 @@
  },
  {
   "event": "onmousedown",
-  "line": 9338,
+  "line": 9551,
   "calls": []
  },
  {
   "event": "onmousedown",
-  "line": 9347,
+  "line": 9560,
   "calls": []
  },
  {
   "event": "onclick",
-  "line": 9347,
+  "line": 9560,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 9375,
+  "line": 9588,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9376,
+  "line": 9589,
   "calls": []
  },
  {
   "event": "onmousedown",
-  "line": 9413,
+  "line": 9626,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9414,
+  "line": 9627,
   "calls": [
    "_calOpen"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 9416,
+  "line": 9629,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9416,
+  "line": 9629,
   "calls": [
    "openTabPicker"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 9435,
+  "line": 9648,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9436,
+  "line": 9649,
   "calls": []
  },
  {
   "event": "onclick",
-  "line": 9449,
+  "line": 9662,
   "calls": [
    "getElementById",
    "focus"
@@ -3204,14 +3209,14 @@
  },
  {
   "event": "onmousedown",
-  "line": 9459,
+  "line": 9672,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9459,
+  "line": 9672,
   "calls": [
    "_closeStickyPop",
    "toggleArchive"
@@ -3219,14 +3224,14 @@
  },
  {
   "event": "onmousedown",
-  "line": 9464,
+  "line": 9677,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9464,
+  "line": 9677,
   "calls": [
    "_closeStickyPop",
    "unfinishNote"
@@ -3234,14 +3239,14 @@
  },
  {
   "event": "onmousedown",
-  "line": 9467,
+  "line": 9680,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9467,
+  "line": 9680,
   "calls": [
    "_closeStickyPop",
    "finishNote"
@@ -3249,254 +3254,254 @@
  },
  {
   "event": "onmousedown",
-  "line": 9478,
+  "line": 9691,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9478,
+  "line": 9691,
   "calls": [
    "_edColAll"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 9479,
+  "line": 9692,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9479,
+  "line": 9692,
   "calls": [
    "_edColAll"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 9481,
+  "line": 9694,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9481,
+  "line": 9694,
   "calls": [
    "_edColPreview"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 9488,
+  "line": 9701,
   "calls": [
    "ec"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9489,
-  "calls": [
-   "ec"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9490,
-  "calls": [
-   "ec"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9491,
-  "calls": [
-   "ec"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9492,
-  "calls": [
-   "edMarkDone"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9493,
-  "calls": [
-   "edBoundary"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9494,
-  "calls": [
-   "edColorBtn"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9495,
-  "calls": [
-   "edClearFmt"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9497,
-  "calls": [
-   "edFontStep"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9498,
-  "calls": [
-   "edFontStep"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9499,
-  "calls": [
-   "edFontStep"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9504,
-  "calls": [
-   "fb"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9505,
-  "calls": [
-   "fb"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9506,
-  "calls": [
-   "fb"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9507,
-  "calls": [
-   "fb"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9508,
-  "calls": [
-   "fb"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9509,
-  "calls": [
-   "shiftHeadingLevel"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9510,
-  "calls": [
-   "shiftHeadingLevel"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9511,
-  "calls": [
-   "shiftAllHeadingsMenu"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9516,
-  "calls": [
-   "ec"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9517,
-  "calls": [
-   "ec"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9518,
-  "calls": [
-   "preventDefault",
-   "openNoteHistory"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9545,
-  "calls": [
-   "ec"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9547,
-  "calls": [
-   "ec"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9549,
-  "calls": [
-   "preventDefault",
-   "openNoteHistory"
-  ]
- },
- {
-  "event": "onmousedown",
-  "line": 9552,
-  "calls": [
-   "preventDefault"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 9552,
-  "calls": [
-   "_ntFindToggle"
   ]
  },
  {
   "event": "onmousedown",
   "line": 9702,
   "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9703,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9704,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9705,
+  "calls": [
+   "edMarkDone"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9706,
+  "calls": [
+   "edBoundary"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9707,
+  "calls": [
+   "edColorBtn"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9708,
+  "calls": [
+   "edClearFmt"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9710,
+  "calls": [
+   "edFontStep"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9711,
+  "calls": [
+   "edFontStep"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9712,
+  "calls": [
+   "edFontStep"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9717,
+  "calls": [
+   "fb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9718,
+  "calls": [
+   "fb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9719,
+  "calls": [
+   "fb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9720,
+  "calls": [
+   "fb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9721,
+  "calls": [
+   "fb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9722,
+  "calls": [
+   "shiftHeadingLevel"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9723,
+  "calls": [
+   "shiftHeadingLevel"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9724,
+  "calls": [
+   "shiftAllHeadingsMenu"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9729,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9730,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9731,
+  "calls": [
+   "preventDefault",
+   "openNoteHistory"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9758,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9760,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9762,
+  "calls": [
+   "preventDefault",
+   "openNoteHistory"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9765,
+  "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 9703,
+  "line": 9765,
+  "calls": [
+   "_ntFindToggle"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9915,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9916,
   "calls": [
    "openNotePopup"
   ]
  },
  {
   "event": "onclick",
-  "line": 9776,
+  "line": 9989,
   "calls": [
    "popOutNote",
    "String",
@@ -3505,14 +3510,14 @@
  },
  {
   "event": "onclick",
-  "line": 9779,
+  "line": 9992,
   "calls": [
    "closeAllPopouts"
   ]
  },
  {
   "event": "onclick",
-  "line": 9997,
+  "line": 10210,
   "calls": [
    "selTag",
    "esc"
@@ -3520,425 +3525,425 @@
  },
  {
   "event": "onclick",
-  "line": 10001,
+  "line": 10214,
   "calls": [
    "selFolder"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10193,
+  "line": 10406,
   "calls": [
    "_fwTogGroup"
   ]
  },
  {
   "event": "onclick",
-  "line": 10195,
+  "line": 10408,
   "calls": [
    "_fwNavigate"
   ]
  },
  {
   "event": "onclick",
-  "line": 10196,
+  "line": 10409,
   "calls": [
    "_fwNavigate"
   ]
  },
  {
   "event": "onclick",
-  "line": 10201,
+  "line": 10414,
   "calls": [
    "closeFloatWin"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10208,
+  "line": 10421,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 10208,
+  "line": 10421,
   "calls": [
    "toggleEdColPop"
   ]
  },
  {
   "event": "onclick",
-  "line": 10211,
+  "line": 10424,
   "calls": [
    "openNtiPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 10212,
+  "line": 10425,
   "calls": [
    "openAttachMenu"
   ]
  },
  {
   "event": "onclick",
-  "line": 10213,
+  "line": 10426,
   "calls": [
    "_ntFindToggle"
   ]
  },
  {
   "event": "onclick",
-  "line": 10214,
+  "line": 10427,
   "calls": [
    "_fwSave"
   ]
  },
  {
   "event": "oninput",
-  "line": 10218,
+  "line": 10431,
   "calls": [
    "_ntFindRun"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 10218,
+  "line": 10431,
   "calls": [
    "_ntFindKey"
   ]
  },
  {
   "event": "onclick",
-  "line": 10220,
+  "line": 10433,
   "calls": [
    "_ntFindStep"
   ]
  },
  {
   "event": "onclick",
-  "line": 10221,
+  "line": 10434,
   "calls": [
    "_ntFindStep"
   ]
  },
  {
   "event": "onclick",
-  "line": 10222,
+  "line": 10435,
   "calls": [
    "_ntFindClose"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10274,
+  "line": 10487,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10275,
+  "line": 10488,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10276,
+  "line": 10489,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10277,
+  "line": 10490,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10278,
+  "line": 10491,
   "calls": [
    "_fwClearFmt"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10279,
+  "line": 10492,
   "calls": [
    "edMarkDone"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10280,
+  "line": 10493,
   "calls": [
    "edBoundary"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10281,
+  "line": 10494,
   "calls": [
    "edColorBtn"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10283,
+  "line": 10496,
   "calls": [
    "_fwFontStep"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10284,
+  "line": 10497,
   "calls": [
    "_fwFontStep"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10285,
+  "line": 10498,
   "calls": [
    "_fwFontStep"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10287,
+  "line": 10500,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10288,
+  "line": 10501,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10289,
+  "line": 10502,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10292,
+  "line": 10505,
   "calls": [
    "_fwFb"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10293,
+  "line": 10506,
   "calls": [
    "_fwFb"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10294,
+  "line": 10507,
   "calls": [
    "_fwFb"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10295,
+  "line": 10508,
   "calls": [
    "_fwFb"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10296,
+  "line": 10509,
   "calls": [
    "_fwFb"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10299,
+  "line": 10512,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10300,
+  "line": 10513,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10301,
+  "line": 10514,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10302,
+  "line": 10515,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10305,
+  "line": 10518,
   "calls": [
    "edImgPick"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10306,
+  "line": 10519,
   "calls": [
    "edLink"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10307,
+  "line": 10520,
   "calls": [
    "edBookmarkBtn"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10308,
+  "line": 10521,
   "calls": [
    "edMentionBtn"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10309,
+  "line": 10522,
   "calls": [
    "openQuickPhrasesMenu"
   ]
  },
  {
   "event": "onclick",
-  "line": 10309,
+  "line": 10522,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10312,
+  "line": 10525,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10313,
+  "line": 10526,
   "calls": [
    "_fwEc"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 10314,
+  "line": 10527,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 10314,
+  "line": 10527,
   "calls": [
    "openNoteHistory"
   ]
  },
  {
   "event": "onchange",
-  "line": 10612,
+  "line": 10825,
   "calls": [
    "_calUpdateFormAllDay"
   ]
  },
  {
   "event": "onclick",
-  "line": 10624,
+  "line": 10837,
   "calls": [
    "_calDelEvent"
   ]
  },
  {
   "event": "onclick",
-  "line": 10667,
+  "line": 10880,
   "calls": [
    "_calEditEvent"
   ]
  },
  {
   "event": "onclick",
-  "line": 10677,
+  "line": 10890,
   "calls": [
    "tabSelect"
   ]
  },
  {
   "event": "onclick",
-  "line": 10683,
+  "line": 10896,
   "calls": [
    "tabSelect"
   ]
  },
  {
   "event": "onclick",
-  "line": 10709,
+  "line": 10922,
   "calls": [
    "_calEditEvent"
   ]
  },
  {
   "event": "onclick",
-  "line": 10717,
+  "line": 10930,
   "calls": [
    "renderP2C"
   ]
  },
  {
   "event": "onclick",
-  "line": 10720,
+  "line": 10933,
   "calls": [
    "_calEditEvent"
   ]
  },
  {
   "event": "onclick",
-  "line": 10766,
+  "line": 10979,
   "calls": [
    "renderP2C"
   ]
  },
  {
   "event": "onclick",
-  "line": 10782,
+  "line": 10995,
   "calls": []
  },
  {
   "event": "onchange",
-  "line": 10824,
+  "line": 11037,
   "calls": [
    "_calSaveCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 10827,
+  "line": 11040,
   "calls": [
    "_calSaveCat",
    "getElementById"
@@ -3946,105 +3951,105 @@
  },
  {
   "event": "onclick",
-  "line": 10828,
+  "line": 11041,
   "calls": [
    "_calDelCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 10847,
+  "line": 11060,
   "calls": [
    "closeGlobalSearch"
   ]
  },
  {
   "event": "onclick",
-  "line": 10905,
+  "line": 11118,
   "calls": [
    "_gsOpen"
   ]
  },
  {
   "event": "onclick",
-  "line": 11061,
+  "line": 11274,
   "calls": [
    "mrjRate"
   ]
  },
  {
   "event": "onclick",
-  "line": 11062,
+  "line": 11275,
   "calls": [
    "mrjRate"
   ]
  },
  {
   "event": "onclick",
-  "line": 11063,
+  "line": 11276,
   "calls": [
    "mrjRate"
   ]
  },
  {
   "event": "onclick",
-  "line": 11196,
+  "line": 11409,
   "calls": [
    "closeCiteModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 11199,
+  "line": 11412,
   "calls": [
    "setCiteType"
   ]
  },
  {
   "event": "onclick",
-  "line": 11200,
+  "line": 11413,
   "calls": [
    "setCiteType"
   ]
  },
  {
   "event": "onclick",
-  "line": 11227,
+  "line": 11440,
   "calls": [
    "closeCiteModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 11228,
+  "line": 11441,
   "calls": [
    "insertCite"
   ]
  },
  {
   "event": "onclick",
-  "line": 11260,
+  "line": 11473,
   "calls": [
    "ScrollTo"
   ]
  },
  {
   "event": "onclick",
-  "line": 11294,
+  "line": 11507,
   "calls": [
    "_tocToggleSide"
   ]
  },
  {
   "event": "onclick",
-  "line": 11296,
+  "line": 11509,
   "calls": [
    "togTocTitle"
   ]
  },
  {
   "event": "onclick",
-  "line": 11575,
+  "line": 11788,
   "calls": [
    "stopPropagation",
    "togPinHeadExpand"
@@ -4052,14 +4057,14 @@
  },
  {
   "event": "onclick",
-  "line": 11585,
+  "line": 11798,
   "calls": [
    "togPinExpand"
   ]
  },
  {
   "event": "onclick",
-  "line": 11588,
+  "line": 11801,
   "calls": [
    "stopPropagation",
    "unpinTab"
@@ -4067,7 +4072,7 @@
  },
  {
   "event": "onclick",
-  "line": 11593,
+  "line": 11806,
   "calls": [
    "stopPropagation",
    "togPinCardMode"
@@ -4075,7 +4080,7 @@
  },
  {
   "event": "onclick",
-  "line": 11601,
+  "line": 11814,
   "calls": [
    "stopPropagation",
    "_pinOpenNote"
@@ -4083,35 +4088,35 @@
  },
  {
   "event": "onclick",
-  "line": 11645,
+  "line": 11858,
   "calls": [
    "_pinPanelToggleSide"
   ]
  },
  {
   "event": "onclick",
-  "line": 11795,
+  "line": 12008,
   "calls": [
    "_tocCloseMobile"
   ]
  },
  {
   "event": "onclick",
-  "line": 11865,
+  "line": 12078,
   "calls": [
    "_colToggle"
   ]
  },
  {
   "event": "onclick",
-  "line": 11912,
+  "line": 12125,
   "calls": [
    "toggleColPop"
   ]
  },
  {
   "event": "onclick",
-  "line": 11921,
+  "line": 12134,
   "calls": [
    "_colAll",
    "closeFloatPop"
@@ -4119,7 +4124,7 @@
  },
  {
   "event": "onclick",
-  "line": 11922,
+  "line": 12135,
   "calls": [
    "_colAll",
    "closeFloatPop"
@@ -4127,7 +4132,7 @@
  },
  {
   "event": "onclick",
-  "line": 11923,
+  "line": 12136,
   "calls": [
    "closeFloatPop",
    "_colTogglePreview"
@@ -4135,42 +4140,42 @@
  },
  {
   "event": "onclick",
-  "line": 12015,
+  "line": 12228,
   "calls": [
    "closeFloatPop"
   ]
  },
  {
   "event": "onclick",
-  "line": 12117,
+  "line": 12330,
   "calls": [
    "closeHeadingStylesModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 12121,
+  "line": 12334,
   "calls": [
    "resetHeadingStyles"
   ]
  },
  {
   "event": "onclick",
-  "line": 12123,
+  "line": 12336,
   "calls": [
    "closeHeadingStylesModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 12124,
+  "line": 12337,
   "calls": [
    "saveHeadingStyles"
   ]
  },
  {
   "event": "onclick",
-  "line": 12318,
+  "line": 12531,
   "calls": [
    "selArt",
    "esc"
@@ -4178,7 +4183,7 @@
  },
  {
   "event": "onclick",
-  "line": 12324,
+  "line": 12537,
   "calls": [
    "selArt",
    "esc"
@@ -4186,224 +4191,224 @@
  },
  {
   "event": "onmousedown",
-  "line": 12569,
+  "line": 12782,
   "calls": [
    "_applyColor"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 12577,
+  "line": 12790,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 12577,
+  "line": 12790,
   "calls": [
    "_closeColorPop"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 12837,
+  "line": 13050,
   "calls": [
    "preventDefault"
   ]
  },
  {
   "event": "onclick",
-  "line": 12837,
+  "line": 13050,
   "calls": [
    "toggleEdColPop"
   ]
  },
  {
   "event": "onclick",
-  "line": 13004,
+  "line": 13217,
   "calls": [
    "bkItemMenu"
   ]
  },
  {
   "event": "onclick",
-  "line": 13529,
+  "line": 13776,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 13530,
+  "line": 13777,
   "calls": [
    "doRenumber"
   ]
  },
  {
   "event": "onclick",
-  "line": 13593,
+  "line": 13840,
   "calls": [
    "addFieldRow"
   ]
  },
  {
   "event": "onclick",
-  "line": 13595,
+  "line": 13842,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onchange",
-  "line": 13600,
+  "line": 13847,
   "calls": [
    "updField"
   ]
  },
  {
   "event": "onchange",
-  "line": 13601,
+  "line": 13848,
   "calls": [
    "updField"
   ]
  },
  {
   "event": "onchange",
-  "line": 13604,
+  "line": 13851,
   "calls": [
    "updField"
   ]
  },
  {
   "event": "onclick",
-  "line": 13605,
+  "line": 13852,
   "calls": [
    "removeFieldRow"
   ]
  },
  {
   "event": "onclick",
-  "line": 13774,
+  "line": 14021,
   "calls": [
    "selArt"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 13859,
-  "calls": [
-   "selArt"
-  ]
- },
- {
-  "event": "oninput",
-  "line": 13933,
-  "calls": [
-   "dbbSet"
-  ]
- },
- {
-  "event": "onchange",
-  "line": 13939,
-  "calls": [
-   "dbbApplyPreset"
-  ]
- },
- {
-  "event": "oninput",
-  "line": 13943,
-  "calls": [
-   "dbbSet"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 13950,
-  "calls": [
-   "dbbAddField"
-  ]
- },
- {
-  "event": "onchange",
-  "line": 13958,
-  "calls": [
-   "dbbSetReport"
-  ]
- },
- {
-  "event": "onchange",
-  "line": 13970,
-  "calls": [
-   "dbbSetReport"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 13982,
-  "calls": [
-   "dbBuilderCancel"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 13983,
-  "calls": [
-   "dbBuilderDone"
-  ]
- },
- {
-  "event": "onchange",
-  "line": 13990,
-  "calls": [
-   "dbbUpdField"
-  ]
- },
- {
-  "event": "onchange",
-  "line": 13991,
-  "calls": [
-   "dbbUpdField"
-  ]
- },
- {
-  "event": "onchange",
-  "line": 13994,
-  "calls": [
-   "dbbUpdField"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 13995,
-  "calls": [
-   "dbbMoveField"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 13996,
-  "calls": [
-   "dbbMoveField"
-  ]
- },
- {
-  "event": "onclick",
-  "line": 13997,
-  "calls": [
-   "dbbRemoveField"
   ]
  },
  {
   "event": "onclick",
   "line": 14106,
   "calls": [
+   "selArt"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 14180,
+  "calls": [
+   "dbbSet"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14186,
+  "calls": [
+   "dbbApplyPreset"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 14190,
+  "calls": [
+   "dbbSet"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14197,
+  "calls": [
+   "dbbAddField"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14205,
+  "calls": [
+   "dbbSetReport"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14217,
+  "calls": [
+   "dbbSetReport"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14229,
+  "calls": [
+   "dbBuilderCancel"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14230,
+  "calls": [
+   "dbBuilderDone"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14237,
+  "calls": [
+   "dbbUpdField"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14238,
+  "calls": [
+   "dbbUpdField"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14241,
+  "calls": [
+   "dbbUpdField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14242,
+  "calls": [
+   "dbbMoveField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14243,
+  "calls": [
+   "dbbMoveField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14244,
+  "calls": [
+   "dbbRemoveField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14353,
+  "calls": [
    "newDbFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 14107,
+  "line": 14354,
   "calls": [
    "hideCtx",
    "newPlainDbFolder"
@@ -4411,7 +4416,7 @@
  },
  {
   "event": "onclick",
-  "line": 14109,
+  "line": 14356,
   "calls": [
    "hideCtx",
    "addStarterMyDatabaseFolders"
@@ -4419,7 +4424,7 @@
  },
  {
   "event": "onclick",
-  "line": 14110,
+  "line": 14357,
   "calls": [
    "hideCtx",
    "autoNumberDbFolders"
@@ -4427,7 +4432,7 @@
  },
  {
   "event": "onclick",
-  "line": 14112,
+  "line": 14359,
   "calls": [
    "hideCtx",
    "renderTree"
@@ -4435,7 +4440,7 @@
  },
  {
   "event": "onclick",
-  "line": 14113,
+  "line": 14360,
   "calls": [
    "hideCtx",
    "renderTree"
@@ -4443,168 +4448,168 @@
  },
  {
   "event": "onchange",
-  "line": 14154,
+  "line": 14401,
   "calls": [
    "saveFieldValue"
   ]
  },
  {
   "event": "onclick",
-  "line": 14156,
+  "line": 14403,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 14157,
+  "line": 14404,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 14161,
+  "line": 14408,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 14164,
+  "line": 14411,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 14167,
+  "line": 14414,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 14170,
+  "line": 14417,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 14173,
+  "line": 14420,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 14175,
+  "line": 14422,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 14253,
+  "line": 14500,
   "calls": [
    "tryUnlockFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 14254,
+  "line": 14501,
   "calls": [
    "tryUnlockFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 14434,
+  "line": 14681,
   "calls": [
    "closeNoteHistory"
   ]
  },
  {
   "event": "onclick",
-  "line": 14439,
+  "line": 14686,
   "calls": [
    "_nhBack"
   ]
  },
  {
   "event": "onclick",
-  "line": 14441,
+  "line": 14688,
   "calls": [
    "_nhSetMode"
   ]
  },
  {
   "event": "onclick",
-  "line": 14442,
+  "line": 14689,
   "calls": [
    "_nhSetMode"
   ]
  },
  {
   "event": "onclick",
-  "line": 14457,
+  "line": 14704,
   "calls": [
    "restoreNoteHistory"
   ]
  },
  {
   "event": "onclick",
-  "line": 14465,
+  "line": 14712,
   "calls": [
    "previewNoteHistory"
   ]
  },
  {
   "event": "onclick",
-  "line": 14505,
+  "line": 14752,
   "calls": [
    "startVersioning"
   ]
  },
  {
   "event": "onclick",
-  "line": 14510,
+  "line": 14757,
   "calls": [
    "selArt"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 14510,
+  "line": 14757,
   "calls": [
    "showVersionCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 14513,
+  "line": 14760,
   "calls": [
    "addNewVersion"
   ]
  },
  {
   "event": "onclick",
-  "line": 14556,
+  "line": 14803,
   "calls": [
    "renameVersion"
   ]
  },
  {
   "event": "onclick",
-  "line": 14557,
+  "line": 14804,
   "calls": [
    "setVersionIcon"
   ]
  },
  {
   "event": "onclick",
-  "line": 14559,
+  "line": 14806,
   "calls": [
    "hideCtx",
    "unlinkVersion"
@@ -4612,7 +4617,7 @@
  },
  {
   "event": "onclick",
-  "line": 14561,
+  "line": 14808,
   "calls": [
    "hideCtx",
    "confirmDel"
@@ -4620,7 +4625,7 @@
  },
  {
   "event": "onclick",
-  "line": 14620,
+  "line": 14867,
   "calls": [
    "hideCtx",
    "insertQuickPhrase"
@@ -4628,7 +4633,7 @@
  },
  {
   "event": "onclick",
-  "line": 14624,
+  "line": 14871,
   "calls": [
    "hideCtx",
    "openQuickPhrasesManager"
@@ -4636,63 +4641,63 @@
  },
  {
   "event": "onchange",
-  "line": 14645,
+  "line": 14892,
   "calls": [
    "updQuickPhrase"
   ]
  },
  {
   "event": "onclick",
-  "line": 14647,
+  "line": 14894,
   "calls": [
    "moveQuickPhrase"
   ]
  },
  {
   "event": "onclick",
-  "line": 14648,
+  "line": 14895,
   "calls": [
    "moveQuickPhrase"
   ]
  },
  {
   "event": "onclick",
-  "line": 14649,
+  "line": 14896,
   "calls": [
    "deleteQuickPhrase"
   ]
  },
  {
   "event": "onclick",
-  "line": 14654,
+  "line": 14901,
   "calls": [
    "addQuickPhrase"
   ]
  },
  {
   "event": "onclick",
-  "line": 14656,
+  "line": 14903,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 14847,
+  "line": 15094,
   "calls": [
    "openTemplatesMenu"
   ]
  },
  {
   "event": "onclick",
-  "line": 14847,
+  "line": 15094,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 14855,
+  "line": 15102,
   "calls": [
    "hideCtx",
    "insertTemplate"
@@ -4700,7 +4705,7 @@
  },
  {
   "event": "onclick",
-  "line": 14859,
+  "line": 15106,
   "calls": [
    "hideCtx",
    "openTemplatesManager"
@@ -4708,280 +4713,280 @@
  },
  {
   "event": "onclick",
-  "line": 15036,
+  "line": 15283,
   "calls": [
    "openTemplateEditor"
   ]
  },
  {
   "event": "onclick",
-  "line": 15039,
+  "line": 15286,
   "calls": [
    "ktMoveTemplate"
   ]
  },
  {
   "event": "onclick",
-  "line": 15040,
+  "line": 15287,
   "calls": [
    "ktMoveTemplate"
   ]
  },
  {
   "event": "onclick",
-  "line": 15041,
+  "line": 15288,
   "calls": [
    "ktDuplicateTemplate"
   ]
  },
  {
   "event": "onclick",
-  "line": 15042,
+  "line": 15289,
   "calls": [
    "ktDeleteTemplate"
   ]
  },
  {
   "event": "onclick",
-  "line": 15047,
+  "line": 15294,
   "calls": [
    "ktAddTemplate"
   ]
  },
  {
   "event": "onclick",
-  "line": 15048,
+  "line": 15295,
   "calls": [
    "ktRestoreKhutbah"
   ]
  },
  {
   "event": "onclick",
-  "line": 15051,
+  "line": 15298,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onchange",
-  "line": 15109,
+  "line": 15356,
   "calls": [
    "ktSet"
   ]
  },
  {
   "event": "onchange",
-  "line": 15110,
+  "line": 15357,
   "calls": [
    "ktSet"
   ]
  },
  {
   "event": "onchange",
-  "line": 15111,
+  "line": 15358,
   "calls": [
    "ktSet"
   ]
  },
  {
   "event": "onchange",
-  "line": 15112,
+  "line": 15359,
   "calls": [
    "ktSet"
   ]
  },
  {
   "event": "onchange",
-  "line": 15120,
+  "line": 15367,
   "calls": [
    "ktSetField"
   ]
  },
  {
   "event": "onclick",
-  "line": 15122,
+  "line": 15369,
   "calls": [
    "ktMoveField"
   ]
  },
  {
   "event": "onclick",
-  "line": 15123,
+  "line": 15370,
   "calls": [
    "ktMoveField"
   ]
  },
  {
   "event": "onclick",
-  "line": 15124,
+  "line": 15371,
   "calls": [
    "ktDelField"
   ]
  },
  {
   "event": "onclick",
-  "line": 15127,
+  "line": 15374,
   "calls": [
    "ktAddField"
   ]
  },
  {
   "event": "onchange",
-  "line": 15132,
+  "line": 15379,
   "calls": [
    "ktSet"
   ]
  },
  {
   "event": "onchange",
-  "line": 15133,
+  "line": 15380,
   "calls": [
    "ktSet"
   ]
  },
  {
   "event": "onchange",
-  "line": 15141,
+  "line": 15388,
   "calls": [
    "ktSetAyah"
   ]
  },
  {
   "event": "onchange",
-  "line": 15142,
+  "line": 15389,
   "calls": [
    "ktSetAyah"
   ]
  },
  {
   "event": "onchange",
-  "line": 15143,
+  "line": 15390,
   "calls": [
    "ktSetAyah"
   ]
  },
  {
   "event": "onchange",
-  "line": 15144,
+  "line": 15391,
   "calls": [
    "ktSetAyah"
   ]
  },
  {
   "event": "onchange",
-  "line": 15145,
+  "line": 15392,
   "calls": [
    "ktSetAyah"
   ]
  },
  {
   "event": "onchange",
-  "line": 15150,
+  "line": 15397,
   "calls": [
    "ktSetLang"
   ]
  },
  {
   "event": "onchange",
-  "line": 15151,
+  "line": 15398,
   "calls": [
    "ktSetLang"
   ]
  },
  {
   "event": "onclick",
-  "line": 15153,
+  "line": 15400,
   "calls": [
    "ktMoveLang"
   ]
  },
  {
   "event": "onclick",
-  "line": 15154,
+  "line": 15401,
   "calls": [
    "ktMoveLang"
   ]
  },
  {
   "event": "onclick",
-  "line": 15155,
+  "line": 15402,
   "calls": [
    "ktDelLang"
   ]
  },
  {
   "event": "onclick",
-  "line": 15158,
+  "line": 15405,
   "calls": [
    "ktAddLang"
   ]
  },
  {
   "event": "onchange",
-  "line": 15165,
+  "line": 15412,
   "calls": [
    "ktSetSec"
   ]
  },
  {
   "event": "onchange",
-  "line": 15168,
+  "line": 15415,
   "calls": [
    "ktSetSec"
   ]
  },
  {
   "event": "onchange",
-  "line": 15169,
+  "line": 15416,
   "calls": [
    "ktSetSec"
   ]
  },
  {
   "event": "onchange",
-  "line": 15175,
+  "line": 15422,
   "calls": [
    "ktSetSec"
   ]
  },
  {
   "event": "onclick",
-  "line": 15178,
+  "line": 15425,
   "calls": [
    "ktMoveSec"
   ]
  },
  {
   "event": "onclick",
-  "line": 15179,
+  "line": 15426,
   "calls": [
    "ktMoveSec"
   ]
  },
  {
   "event": "onclick",
-  "line": 15180,
+  "line": 15427,
   "calls": [
    "ktDelSec"
   ]
  },
  {
   "event": "onclick",
-  "line": 15183,
+  "line": 15430,
   "calls": [
    "ktAddSec"
   ]
  },
  {
   "event": "onclick",
-  "line": 15186,
+  "line": 15433,
   "calls": [
    "openTemplatesManager"
   ]
  },
  {
   "event": "onclick",
-  "line": 15188,
+  "line": 15435,
   "calls": [
    "closeModal",
    "insertTemplate"
@@ -4989,14 +4994,14 @@
  },
  {
   "event": "onclick",
-  "line": 15189,
+  "line": 15436,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 15278,
+  "line": 15525,
   "calls": [
    "setHeadingStatus",
    "decodeURIComponent",
@@ -5005,7 +5010,7 @@
  },
  {
   "event": "onclick",
-  "line": 15282,
+  "line": 15529,
   "calls": [
    "promptCustomHeadingStatus",
    "decodeURIComponent",
@@ -5014,7 +5019,7 @@
  },
  {
   "event": "onclick",
-  "line": 15283,
+  "line": 15530,
   "calls": [
    "clearHeadingStatus",
    "decodeURIComponent",
@@ -5023,119 +5028,119 @@
  },
  {
   "event": "onclick",
-  "line": 15342,
+  "line": 15589,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 15343,
+  "line": 15590,
   "calls": [
    "saveContactAction"
   ]
  },
  {
   "event": "onclick",
-  "line": 15369,
+  "line": 15616,
   "calls": [
    "logContactAction"
   ]
  },
  {
   "event": "onclick",
-  "line": 15378,
+  "line": 15625,
   "calls": [
    "toggleActionDone"
   ]
  },
  {
   "event": "onclick",
-  "line": 15379,
+  "line": 15626,
   "calls": [
    "deleteContactAction"
   ]
  },
  {
   "event": "ondragstart",
-  "line": 15433,
+  "line": 15680,
   "calls": [
    "dStart"
   ]
  },
  {
   "event": "ondragend",
-  "line": 15433,
+  "line": 15680,
   "calls": [
    "dEnd"
   ]
  },
  {
   "event": "ondragover",
-  "line": 15434,
+  "line": 15681,
   "calls": [
    "dOver"
   ]
  },
  {
   "event": "ondrop",
-  "line": 15434,
+  "line": 15681,
   "calls": [
    "dDrop"
   ]
  },
  {
   "event": "onclick",
-  "line": 15435,
+  "line": 15682,
   "calls": [
    "selFolder"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 15435,
+  "line": 15682,
   "calls": [
    "showCtx"
   ]
  },
  {
   "event": "ondragstart",
-  "line": 15448,
+  "line": 15695,
   "calls": [
    "dStart"
   ]
  },
  {
   "event": "ondragend",
-  "line": 15448,
+  "line": 15695,
   "calls": [
    "dEnd"
   ]
  },
  {
   "event": "ondragover",
-  "line": 15449,
+  "line": 15696,
   "calls": [
    "dOver"
   ]
  },
  {
   "event": "ondrop",
-  "line": 15449,
+  "line": 15696,
   "calls": [
    "dDrop"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 15450,
+  "line": 15697,
   "calls": [
    "showCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 15451,
+  "line": 15698,
   "calls": [
    "stopPropagation",
    "togP2HTreeNode"
@@ -5143,152 +5148,152 @@
  },
  {
   "event": "onclick",
-  "line": 15452,
+  "line": 15699,
   "calls": [
    "selFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 15465,
+  "line": 15712,
   "calls": [
    "gotoAdjacentSection"
   ]
  },
  {
   "event": "onchange",
-  "line": 15466,
+  "line": 15713,
   "calls": [
    "gotoSection"
   ]
  },
  {
   "event": "onclick",
-  "line": 15467,
+  "line": 15714,
   "calls": [
    "gotoAdjacentSection"
   ]
  },
  {
   "event": "onclick",
-  "line": 15501,
+  "line": 15748,
   "calls": [
    "p2hTreeExpandAll"
   ]
  },
  {
   "event": "onclick",
-  "line": 15502,
+  "line": 15749,
   "calls": [
    "p2hTreeCollapseAll"
   ]
  },
  {
   "event": "onclick",
-  "line": 15515,
+  "line": 15762,
   "calls": [
    "toggleP2HTreeMode"
   ]
  },
  {
   "event": "onclick",
-  "line": 15516,
+  "line": 15763,
   "calls": [
    "toggleP2HCardView"
   ]
  },
  {
   "event": "onclick",
-  "line": 15519,
+  "line": 15766,
   "calls": [
    "selFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 15523,
+  "line": 15770,
   "calls": [
    "selFolder"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 15523,
+  "line": 15770,
   "calls": [
    "showCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 15526,
+  "line": 15773,
   "calls": [
    "openModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 15586,
+  "line": 15833,
   "calls": [
    "sfGrpExpandAll"
   ]
  },
  {
   "event": "onclick",
-  "line": 15587,
+  "line": 15834,
   "calls": [
    "sfGrpCollapseAll"
   ]
  },
  {
   "event": "onclick",
-  "line": 15592,
+  "line": 15839,
   "calls": [
    "selFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 15599,
+  "line": 15846,
   "calls": []
  },
  {
   "event": "oncontextmenu",
-  "line": 15599,
+  "line": 15846,
   "calls": [
    "showSfItemCtx"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 15654,
+  "line": 15901,
   "calls": [
    "qtKey"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 15655,
+  "line": 15902,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "ontouchstart",
-  "line": 15655,
+  "line": 15902,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 15656,
+  "line": 15903,
   "calls": [
    "qtSave"
   ]
  },
  {
   "event": "onclick",
-  "line": 15728,
+  "line": 15975,
   "calls": [
    "hideCtx",
    "moveFolderToTop"
@@ -5296,7 +5301,7 @@
  },
  {
   "event": "onclick",
-  "line": 15731,
+  "line": 15978,
   "calls": [
    "hideCtx",
    "openModal"
@@ -5304,7 +5309,7 @@
  },
  {
   "event": "onclick",
-  "line": 15732,
+  "line": 15979,
   "calls": [
    "hideCtx",
    "openModal"
@@ -5312,7 +5317,7 @@
  },
  {
   "event": "onclick",
-  "line": 15733,
+  "line": 15980,
   "calls": [
    "hideCtx",
    "openModal"
@@ -5320,7 +5325,7 @@
  },
  {
   "event": "onclick",
-  "line": 15734,
+  "line": 15981,
   "calls": [
    "hideCtx",
    "openFolderPopout"
@@ -5328,7 +5333,7 @@
  },
  {
   "event": "onclick",
-  "line": 15736,
+  "line": 15983,
   "calls": [
    "hideCtx",
    "autoNumberAll"
@@ -5336,7 +5341,7 @@
  },
  {
   "event": "onclick",
-  "line": 15737,
+  "line": 15984,
   "calls": [
    "hideCtx",
    "offerRenumberManual"
@@ -5344,7 +5349,7 @@
  },
  {
   "event": "onclick",
-  "line": 15746,
+  "line": 15993,
   "calls": [
    "hideCtx",
    "moveFolderToGroup"
@@ -5352,7 +5357,7 @@
  },
  {
   "event": "onclick",
-  "line": 15747,
+  "line": 15994,
   "calls": [
    "hideCtx",
    "addFolderGroupThenMove"
@@ -5360,14 +5365,14 @@
  },
  {
   "event": "onclick",
-  "line": 15748,
+  "line": 15995,
   "calls": [
    "_folderCtxSub"
   ]
  },
  {
   "event": "onclick",
-  "line": 15749,
+  "line": 15996,
   "calls": [
    "hideCtx",
    "convertFolderToSection"
@@ -5375,7 +5380,7 @@
  },
  {
   "event": "onclick",
-  "line": 15750,
+  "line": 15997,
   "calls": [
    "hideCtx",
    "toggleJournalMode"
@@ -5383,7 +5388,7 @@
  },
  {
   "event": "onclick",
-  "line": 15751,
+  "line": 15998,
   "calls": [
    "hideCtx",
    "moveToMyJournal"
@@ -5391,33 +5396,33 @@
  },
  {
   "event": "onclick",
-  "line": 15753,
+  "line": 16000,
   "calls": [
    "toggleFolderStructured"
   ]
  },
  {
   "event": "onclick",
-  "line": 15754,
+  "line": 16001,
   "calls": [
    "openFieldBuilder"
   ]
  },
  {
   "event": "onclick",
-  "line": 15755,
+  "line": 16002,
   "calls": [
    "openDbFolderBuilder"
   ]
  },
  {
   "event": "onclick",
-  "line": 15756,
+  "line": 16003,
   "calls": []
  },
  {
   "event": "onclick",
-  "line": 15758,
+  "line": 16005,
   "calls": [
    "hideCtx",
    "confirmDel"
@@ -5425,21 +5430,21 @@
  },
  {
   "event": "onclick",
-  "line": 15777,
+  "line": 16024,
   "calls": [
    "_folderCtxBack"
   ]
  },
  {
   "event": "onclick",
-  "line": 15875,
+  "line": 16122,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 15876,
+  "line": 16123,
   "calls": [
    "autoNumberAll",
    "closeModal"
@@ -5447,63 +5452,63 @@
  },
  {
   "event": "onpointerdown",
-  "line": 15897,
+  "line": 16161,
   "calls": [
    "_mbResizeStart"
   ]
  },
  {
   "event": "onpointerdown",
-  "line": 15898,
+  "line": 16162,
   "calls": [
    "_mbResizeStart"
   ]
  },
  {
   "event": "onpointerdown",
-  "line": 15899,
+  "line": 16163,
   "calls": [
    "_mbResizeStart"
   ]
  },
  {
   "event": "onpointerdown",
-  "line": 15900,
+  "line": 16164,
   "calls": [
    "_mbResizeStart"
   ]
  },
  {
   "event": "onpointerdown",
-  "line": 15901,
+  "line": 16165,
   "calls": [
    "_mbResizeStart"
   ]
  },
  {
   "event": "onpointerdown",
-  "line": 15902,
+  "line": 16166,
   "calls": [
    "_mbResizeStart"
   ]
  },
  {
   "event": "onpointerdown",
-  "line": 15903,
+  "line": 16167,
   "calls": [
    "_mbResizeStart"
   ]
  },
  {
   "event": "onpointerdown",
-  "line": 15904,
+  "line": 16168,
   "calls": [
    "_mbResizeStart"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 16044,
+  "line": 16308,
   "calls": [
    "mkFolder",
    "closeModal"
@@ -5511,14 +5516,14 @@
  },
  {
   "event": "onclick",
-  "line": 16045,
+  "line": 16309,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 16046,
+  "line": 16310,
   "calls": [
    "mkFolder",
    "getElementById",
@@ -5527,7 +5532,7 @@
  },
  {
   "event": "onkeydown",
-  "line": 16049,
+  "line": 16313,
   "calls": [
    "mkArt",
    "closeModal"
@@ -5535,14 +5540,14 @@
  },
  {
   "event": "onclick",
-  "line": 16050,
+  "line": 16314,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 16051,
+  "line": 16315,
   "calls": [
    "mkArt",
    "getElementById",
@@ -5551,7 +5556,7 @@
  },
  {
   "event": "onkeydown",
-  "line": 16055,
+  "line": 16319,
   "calls": [
    "rnFolder",
    "closeModal"
@@ -5559,14 +5564,14 @@
  },
  {
   "event": "onclick",
-  "line": 16056,
+  "line": 16320,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 16057,
+  "line": 16321,
   "calls": [
    "rnFolder",
    "getElementById",
@@ -5575,7 +5580,7 @@
  },
  {
   "event": "onclick",
-  "line": 16062,
+  "line": 16326,
   "calls": [
    "exportJSON",
    "closeModal"
@@ -5583,7 +5588,7 @@
  },
  {
   "event": "onclick",
-  "line": 16063,
+  "line": 16327,
   "calls": [
    "importJSON",
    "closeModal"
@@ -5591,14 +5596,14 @@
  },
  {
   "event": "onclick",
-  "line": 16064,
+  "line": 16328,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 16069,
+  "line": 16333,
   "calls": [
    "mkSection",
    "getElementById",
@@ -5607,14 +5612,14 @@
  },
  {
   "event": "onclick",
-  "line": 16071,
+  "line": 16335,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 16072,
+  "line": 16336,
   "calls": [
    "mkSection",
    "getElementById",
@@ -5623,21 +5628,21 @@
  },
  {
   "event": "onclick",
-  "line": 16081,
+  "line": 16345,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 16082,
+  "line": 16346,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 16113,
+  "line": 16377,
   "calls": [
    "pkNoteOpen",
    "esc"
@@ -5645,7 +5650,7 @@
  },
  {
   "event": "ondragstart",
-  "line": 16114,
+  "line": 16378,
   "calls": [
    "pkNoteDStart",
    "esc"
@@ -5653,14 +5658,14 @@
  },
  {
   "event": "ondragend",
-  "line": 16114,
+  "line": 16378,
   "calls": [
    "pkNoteDEnd"
   ]
  },
  {
   "event": "onclick",
-  "line": 16118,
+  "line": 16382,
   "calls": [
    "stopPropagation",
    "pkNoteRename",
@@ -5669,7 +5674,7 @@
  },
  {
   "event": "onclick",
-  "line": 16119,
+  "line": 16383,
   "calls": [
    "stopPropagation",
    "pkNoteDelete",
@@ -5678,7 +5683,7 @@
  },
  {
   "event": "onclick",
-  "line": 16121,
+  "line": 16385,
   "calls": [
    "stopPropagation",
    "pkNoteRowMenu",
@@ -5687,7 +5692,7 @@
  },
  {
   "event": "onclick",
-  "line": 16130,
+  "line": 16394,
   "calls": [
    "stopPropagation",
    "togglePickExp"
@@ -5695,40 +5700,40 @@
  },
  {
   "event": "onclick",
-  "line": 16136,
+  "line": 16400,
   "calls": []
  },
  {
   "event": "ondragstart",
-  "line": 16137,
+  "line": 16401,
   "calls": [
    "pkDStart"
   ]
  },
  {
   "event": "ondragend",
-  "line": 16137,
+  "line": 16401,
   "calls": [
    "pkDEnd"
   ]
  },
  {
   "event": "ondragover",
-  "line": 16138,
+  "line": 16402,
   "calls": [
    "pkDOver"
   ]
  },
  {
   "event": "ondrop",
-  "line": 16138,
+  "line": 16402,
   "calls": [
    "pkDDrop"
   ]
  },
  {
   "event": "onclick",
-  "line": 16146,
+  "line": 16410,
   "calls": [
    "stopPropagation",
    "pkSetTarget"
@@ -5736,7 +5741,7 @@
  },
  {
   "event": "onclick",
-  "line": 16147,
+  "line": 16411,
   "calls": [
    "stopPropagation",
    "pkRename"
@@ -5744,7 +5749,7 @@
  },
  {
   "event": "onclick",
-  "line": 16148,
+  "line": 16412,
   "calls": [
    "stopPropagation",
    "pkDelete"
@@ -5752,7 +5757,7 @@
  },
  {
   "event": "onclick",
-  "line": 16153,
+  "line": 16417,
   "calls": [
    "stopPropagation",
    "pkRowMenu"
@@ -5760,49 +5765,49 @@
  },
  {
   "event": "oninput",
-  "line": 16167,
+  "line": 16431,
   "calls": [
    "_pkFilter"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 16171,
+  "line": 16435,
   "calls": [
    "createFolderFromPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 16172,
+  "line": 16436,
   "calls": [
    "createFolderFromPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 16176,
+  "line": 16440,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 16401,
+  "line": 16665,
   "calls": [
    "pkFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 16404,
+  "line": 16668,
   "calls": [
    "pkFontColor"
   ]
  },
  {
   "event": "onclick",
-  "line": 16409,
+  "line": 16673,
   "calls": [
    "getElementById",
    "remove"
@@ -5810,77 +5815,77 @@
  },
  {
   "event": "oninput",
-  "line": 16412,
+  "line": 16676,
   "calls": [
    "pkFontSize"
   ]
  },
  {
   "event": "onchange",
-  "line": 16412,
+  "line": 16676,
   "calls": [
    "pkFontSize"
   ]
  },
  {
   "event": "oninput",
-  "line": 16415,
+  "line": 16679,
   "calls": [
    "pkFontSize"
   ]
  },
  {
   "event": "onchange",
-  "line": 16415,
+  "line": 16679,
   "calls": [
    "pkFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 16421,
+  "line": 16685,
   "calls": [
    "pkFontColor"
   ]
  },
  {
   "event": "onclick",
-  "line": 16422,
+  "line": 16686,
   "calls": [
    "pkFontPalette"
   ]
  },
  {
   "event": "onclick",
-  "line": 16425,
+  "line": 16689,
   "calls": [
    "pkFontBold"
   ]
  },
  {
   "event": "onclick",
-  "line": 16426,
+  "line": 16690,
   "calls": [
    "pkFontStep"
   ]
  },
  {
   "event": "onclick",
-  "line": 16427,
+  "line": 16691,
   "calls": [
    "pkFontStep"
   ]
  },
  {
   "event": "onclick",
-  "line": 16428,
+  "line": 16692,
   "calls": [
    "pkFontReset"
   ]
  },
  {
   "event": "onclick",
-  "line": 16464,
+  "line": 16728,
   "calls": [
    "stopPropagation",
    "pkGotoSection"
@@ -5888,7 +5893,7 @@
  },
  {
   "event": "onclick",
-  "line": 16465,
+  "line": 16729,
   "calls": [
    "stopPropagation",
    "pkGotoAdjacentSection"
@@ -5896,7 +5901,7 @@
  },
  {
   "event": "onclick",
-  "line": 16466,
+  "line": 16730,
   "calls": [
    "stopPropagation",
    "pkGotoAdjacentSection"
@@ -5904,21 +5909,21 @@
  },
  {
   "event": "onclick",
-  "line": 16467,
+  "line": 16731,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onchange",
-  "line": 16467,
+  "line": 16731,
   "calls": [
    "pkGotoSection"
   ]
  },
  {
   "event": "onclick",
-  "line": 16471,
+  "line": 16735,
   "calls": [
    "stopPropagation",
    "pkFontMenu"
@@ -5926,7 +5931,7 @@
  },
  {
   "event": "onclick",
-  "line": 16494,
+  "line": 16758,
   "calls": [
    "pkToggleAllSec",
    "esc"
@@ -5934,14 +5939,14 @@
  },
  {
   "event": "onclick",
-  "line": 16513,
+  "line": 16777,
   "calls": [
    "pkToggleAllSec"
   ]
  },
  {
   "event": "onclick",
-  "line": 16598,
+  "line": 16862,
   "calls": [
    "pkNavScope",
    "esc"
@@ -5949,7 +5954,7 @@
  },
  {
   "event": "onclick",
-  "line": 16607,
+  "line": 16871,
   "calls": [
    "pkNavScope",
    "esc"
@@ -5957,7 +5962,7 @@
  },
  {
   "event": "onclick",
-  "line": 16621,
+  "line": 16885,
   "calls": [
    "pkNavScope",
    "esc"
@@ -5965,35 +5970,35 @@
  },
  {
   "event": "oninput",
-  "line": 16641,
+  "line": 16905,
   "calls": [
    "_pkFilter"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 16645,
+  "line": 16909,
   "calls": [
    "createFolderFromPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 16646,
+  "line": 16910,
   "calls": [
    "createFolderFromPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 16649,
+  "line": 16913,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 16766,
+  "line": 17030,
   "calls": [
    "_pkSwitchToFolder",
    "esc"
@@ -6001,7 +6006,7 @@
  },
  {
   "event": "onclick",
-  "line": 16776,
+  "line": 17040,
   "calls": [
    "pkNavScope",
    "esc"
@@ -6009,7 +6014,7 @@
  },
  {
   "event": "onclick",
-  "line": 16783,
+  "line": 17047,
   "calls": [
    "pkNavScope",
    "esc"
@@ -6017,7 +6022,7 @@
  },
  {
   "event": "onclick",
-  "line": 16790,
+  "line": 17054,
   "calls": [
    "pkNavScope",
    "esc"
@@ -6025,7 +6030,7 @@
  },
  {
   "event": "onclick",
-  "line": 16799,
+  "line": 17063,
   "calls": [
    "pkNoteOpen",
    "esc"
@@ -6033,14 +6038,14 @@
  },
  {
   "event": "onclick",
-  "line": 16859,
+  "line": 17123,
   "calls": [
    "pkClearTarget"
   ]
  },
  {
   "event": "onclick",
-  "line": 16874,
+  "line": 17138,
   "calls": [
    "hideCtx",
    "pkSetTarget"
@@ -6048,7 +6053,7 @@
  },
  {
   "event": "onclick",
-  "line": 16875,
+  "line": 17139,
   "calls": [
    "hideCtx",
    "pkRename"
@@ -6056,7 +6061,7 @@
  },
  {
   "event": "onclick",
-  "line": 16876,
+  "line": 17140,
   "calls": [
    "hideCtx",
    "pkDelete"
@@ -6064,7 +6069,7 @@
  },
  {
   "event": "onclick",
-  "line": 16883,
+  "line": 17147,
   "calls": [
    "hideCtx",
    "pkNoteRename"
@@ -6072,7 +6077,7 @@
  },
  {
   "event": "onclick",
-  "line": 16884,
+  "line": 17148,
   "calls": [
    "hideCtx",
    "pkNoteDelete"
@@ -6080,14 +6085,14 @@
  },
  {
   "event": "onclick",
-  "line": 16904,
+  "line": 17168,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 16904,
+  "line": 17168,
   "calls": [
    "stopPropagation",
    "pkRenameSave",
@@ -6096,21 +6101,21 @@
  },
  {
   "event": "onblur",
-  "line": 16904,
+  "line": 17168,
   "calls": [
    "pkRenameSave"
   ]
  },
  {
   "event": "onclick",
-  "line": 17061,
+  "line": 17326,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 17061,
+  "line": 17326,
   "calls": [
    "stopPropagation",
    "pkNoteRenameSave",
@@ -6119,28 +6124,28 @@
  },
  {
   "event": "onblur",
-  "line": 17061,
+  "line": 17326,
   "calls": [
    "pkNoteRenameSave"
   ]
  },
  {
   "event": "onclick",
-  "line": 17158,
+  "line": 17423,
   "calls": [
    "togNtiCatSB"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 17158,
+  "line": 17423,
   "calls": [
    "showNtiCatMenu"
   ]
  },
  {
   "event": "onclick",
-  "line": 17163,
+  "line": 17428,
   "calls": [
    "stopPropagation",
    "addKindInCat"
@@ -6148,7 +6153,7 @@
  },
  {
   "event": "onclick",
-  "line": 17164,
+  "line": 17429,
   "calls": [
    "stopPropagation",
    "showNtiCatMenu"
@@ -6156,14 +6161,14 @@
  },
  {
   "event": "onclick",
-  "line": 17171,
+  "line": 17436,
   "calls": [
    "selKind"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 17171,
+  "line": 17436,
   "calls": [
    "preventDefault",
    "showNtiKindMenu"
@@ -6171,28 +6176,28 @@
  },
  {
   "event": "onclick",
-  "line": 17181,
+  "line": 17446,
   "calls": [
    "addNtiCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 17185,
+  "line": 17450,
   "calls": [
    "toggleNtiSection"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 17185,
+  "line": 17450,
   "calls": [
    "showNtiSectionMenu"
   ]
  },
  {
   "event": "onclick",
-  "line": 17189,
+  "line": 17454,
   "calls": [
    "stopPropagation",
    "ntiSbToggleAllCats"
@@ -6200,7 +6205,7 @@
  },
  {
   "event": "onclick",
-  "line": 17190,
+  "line": 17455,
   "calls": [
    "stopPropagation",
    "addNtiCat"
@@ -6208,7 +6213,7 @@
  },
  {
   "event": "onclick",
-  "line": 17210,
+  "line": 17475,
   "calls": [
    "selTag",
    "esc"
@@ -6216,7 +6221,7 @@
  },
  {
   "event": "oncontextmenu",
-  "line": 17222,
+  "line": 17487,
   "calls": [
    "preventDefault",
    "showTagClrPicker",
@@ -6225,7 +6230,7 @@
  },
  {
   "event": "onclick",
-  "line": 17223,
+  "line": 17488,
   "calls": [
    "rmTag",
    "esc"
@@ -6233,28 +6238,28 @@
  },
  {
   "event": "onkeydown",
-  "line": 17227,
+  "line": 17492,
   "calls": [
    "tagKey"
   ]
  },
  {
   "event": "oninput",
-  "line": 17227,
+  "line": 17492,
   "calls": [
    "tagInputChanged"
   ]
  },
  {
   "event": "onblur",
-  "line": 17227,
+  "line": 17492,
   "calls": [
    "setTimeout"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 17245,
+  "line": 17510,
   "calls": [
    "preventDefault",
    "_pickTagSuggestion",
@@ -6263,63 +6268,63 @@
  },
  {
   "event": "onclick",
-  "line": 17573,
+  "line": 17838,
   "calls": [
    "applyPreset"
   ]
  },
  {
   "event": "onclick",
-  "line": 17601,
+  "line": 17866,
   "calls": [
    "openThemeClrPicker"
   ]
  },
  {
   "event": "oninput",
-  "line": 17602,
+  "line": 17867,
   "calls": [
    "setCustomColorHex"
   ]
  },
  {
   "event": "onclick",
-  "line": 17623,
+  "line": 17888,
   "calls": [
    "setFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 17625,
+  "line": 17890,
   "calls": [
    "setFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 17629,
+  "line": 17894,
   "calls": [
    "resetFontSizes"
   ]
  },
  {
   "event": "onclick",
-  "line": 17640,
+  "line": 17905,
   "calls": [
    "setLineSpacing"
   ]
  },
  {
   "event": "onclick",
-  "line": 17652,
+  "line": 17917,
   "calls": [
    "setMwFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 17661,
+  "line": 17926,
   "calls": [
    "closeTheme",
    "openHeadingStylesModal"
@@ -6327,77 +6332,77 @@
  },
  {
   "event": "onclick",
-  "line": 17665,
+  "line": 17930,
   "calls": [
    "resetTheme"
   ]
  },
  {
   "event": "onclick",
-  "line": 17675,
+  "line": 17940,
   "calls": [
    "openFolClrPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 17676,
+  "line": 17941,
   "calls": [
    "setFolderColor"
   ]
  },
  {
   "event": "onclick",
-  "line": 17677,
+  "line": 17942,
   "calls": [
    "setFolderBold"
   ]
  },
  {
   "event": "ondragover",
-  "line": 17706,
+  "line": 17971,
   "calls": [
    "secDOver"
   ]
  },
  {
   "event": "ondrop",
-  "line": 17708,
+  "line": 17973,
   "calls": [
    "secDDrop"
   ]
  },
  {
   "event": "ondragstart",
-  "line": 17711,
+  "line": 17976,
   "calls": [
    "secDStart"
   ]
  },
  {
   "event": "ondragend",
-  "line": 17712,
+  "line": 17977,
   "calls": [
    "secDEnd"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 17713,
+  "line": 17978,
   "calls": [
    "showSecCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 17714,
+  "line": 17979,
   "calls": [
    "toggleSection"
   ]
  },
  {
   "event": "ondblclick",
-  "line": 17716,
+  "line": 17981,
   "calls": [
    "stopPropagation",
    "startRenSec"
@@ -6405,7 +6410,7 @@
  },
  {
   "event": "onclick",
-  "line": 17718,
+  "line": 17983,
   "calls": [
    "stopPropagation",
    "addFolderInSec"
@@ -6413,7 +6418,7 @@
  },
  {
   "event": "onclick",
-  "line": 17719,
+  "line": 17984,
   "calls": [
    "stopPropagation",
    "showSecCtx"
@@ -6421,49 +6426,49 @@
  },
  {
   "event": "onclick",
-  "line": 17757,
+  "line": 18022,
   "calls": [
    "openSecClrPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 17758,
+  "line": 18023,
   "calls": [
    "setSectionColor"
   ]
  },
  {
   "event": "onclick",
-  "line": 17759,
+  "line": 18024,
   "calls": [
    "setSectionBold"
   ]
  },
  {
   "event": "onclick",
-  "line": 17787,
+  "line": 18052,
   "calls": [
    "setSmartViewColor"
   ]
  },
  {
   "event": "onclick",
-  "line": 17788,
+  "line": 18053,
   "calls": [
    "setSmartViewBold"
   ]
  },
  {
   "event": "onclick",
-  "line": 17791,
+  "line": 18056,
   "calls": [
    "setSmartViewColor"
   ]
  },
  {
   "event": "onclick",
-  "line": 17808,
+  "line": 18073,
   "calls": [
    "hideCtx",
    "startRenSmartViews"
@@ -6471,14 +6476,14 @@
  },
  {
   "event": "onblur",
-  "line": 17830,
+  "line": 18095,
   "calls": [
    "finRenSmartViews"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 17831,
+  "line": 18096,
   "calls": [
    "finRenSmartViews",
    "renderTree"
@@ -6486,7 +6491,7 @@
  },
  {
   "event": "onclick",
-  "line": 17846,
+  "line": 18111,
   "calls": [
    "hideCtx",
    "addFolderInSec"
@@ -6494,7 +6499,7 @@
  },
  {
   "event": "onclick",
-  "line": 17847,
+  "line": 18112,
   "calls": [
    "hideCtx",
    "startRenSec"
@@ -6502,7 +6507,7 @@
  },
  {
   "event": "onclick",
-  "line": 17848,
+  "line": 18113,
   "calls": [
    "hideCtx",
    "openSectionPopout"
@@ -6510,14 +6515,14 @@
  },
  {
   "event": "onclick",
-  "line": 17854,
+  "line": 18119,
   "calls": [
    "_secCtxSub"
   ]
  },
  {
   "event": "onclick",
-  "line": 17855,
+  "line": 18120,
   "calls": [
    "hideCtx",
    "delSection"
@@ -6525,21 +6530,21 @@
  },
  {
   "event": "onclick",
-  "line": 17873,
+  "line": 18138,
   "calls": [
    "_secCtxBack"
   ]
  },
  {
   "event": "onblur",
-  "line": 17885,
+  "line": 18150,
   "calls": [
    "finRenSec"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 17886,
+  "line": 18151,
   "calls": [
    "finRenSec",
    "renderTree"
@@ -6547,7 +6552,7 @@
  },
  {
   "event": "onclick",
-  "line": 17932,
+  "line": 18197,
   "calls": [
    "hideCtx",
    "moveFolderToSec"
@@ -6555,35 +6560,35 @@
  },
  {
   "event": "onkeydown",
-  "line": 17962,
+  "line": 18227,
   "calls": [
    "_moveNotesThenConvert"
   ]
  },
  {
   "event": "onclick",
-  "line": 17963,
+  "line": 18228,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 17964,
+  "line": 18229,
   "calls": [
    "_moveNotesThenConvert"
   ]
  },
  {
   "event": "onclick",
-  "line": 17971,
+  "line": 18236,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 17972,
+  "line": 18237,
   "calls": [
    "_doFolderToSection",
    "closeModal"
@@ -6591,7 +6596,7 @@
  },
  {
   "event": "onclick",
-  "line": 18013,
+  "line": 18278,
   "calls": [
    "hideCtx",
    "confirmSectionToFolder"
@@ -6599,14 +6604,14 @@
  },
  {
   "event": "onclick",
-  "line": 18022,
+  "line": 18287,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 18023,
+  "line": 18288,
   "calls": [
    "_doSectionToFolder",
    "closeModal"
@@ -6614,28 +6619,28 @@
  },
  {
   "event": "onclick",
-  "line": 18243,
+  "line": 18508,
   "calls": [
    "restoreItem"
   ]
  },
  {
   "event": "onclick",
-  "line": 18244,
+  "line": 18509,
   "calls": [
    "permDeleteItem"
   ]
  },
  {
   "event": "onclick",
-  "line": 18413,
+  "line": 18678,
   "calls": [
    "_ctxSub"
   ]
  },
  {
   "event": "onclick",
-  "line": 18416,
+  "line": 18681,
   "calls": [
    "hideCtx",
    "startRenameArtTitle"
@@ -6643,7 +6648,7 @@
  },
  {
   "event": "onclick",
-  "line": 18417,
+  "line": 18682,
   "calls": [
    "hideCtx",
    "duplicateNote"
@@ -6651,28 +6656,28 @@
  },
  {
   "event": "onclick",
-  "line": 18418,
+  "line": 18683,
   "calls": [
    "openNoteHistory"
   ]
  },
  {
   "event": "onclick",
-  "line": 18419,
+  "line": 18684,
   "calls": [
    "openNotePopup"
   ]
  },
  {
   "event": "onclick",
-  "line": 18420,
+  "line": 18685,
   "calls": [
    "openNotePopup"
   ]
  },
  {
   "event": "onclick",
-  "line": 18422,
+  "line": 18687,
   "calls": [
    "hideCtx",
    "toggleFav"
@@ -6680,7 +6685,7 @@
  },
  {
   "event": "onclick",
-  "line": 18423,
+  "line": 18688,
   "calls": [
    "hideCtx",
    "togglePin"
@@ -6688,7 +6693,7 @@
  },
  {
   "event": "onclick",
-  "line": 18424,
+  "line": 18689,
   "calls": [
    "hideCtx",
    "toggleArchive"
@@ -6696,14 +6701,14 @@
  },
  {
   "event": "onclick",
-  "line": 18425,
+  "line": 18690,
   "calls": [
    "hideCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 18431,
+  "line": 18696,
   "calls": [
    "hideCtx",
    "toggleTab"
@@ -6711,7 +6716,7 @@
  },
  {
   "event": "onclick",
-  "line": 18432,
+  "line": 18697,
   "calls": [
    "hideCtx",
    "openJournalPicker"
@@ -6719,7 +6724,7 @@
  },
  {
   "event": "onclick",
-  "line": 18435,
+  "line": 18700,
   "calls": [
    "hideCtx",
    "mrjToggle"
@@ -6727,7 +6732,7 @@
  },
  {
   "event": "onclick",
-  "line": 18437,
+  "line": 18702,
   "calls": [
    "hideCtx",
    "practiceToggle"
@@ -6735,7 +6740,7 @@
  },
  {
   "event": "onclick",
-  "line": 18438,
+  "line": 18703,
   "calls": [
    "hideCtx",
    "practiceToggle"
@@ -6743,7 +6748,7 @@
  },
  {
   "event": "onclick",
-  "line": 18440,
+  "line": 18705,
   "calls": [
    "hideCtx",
    "practiceToggle"
@@ -6751,7 +6756,7 @@
  },
  {
   "event": "onclick",
-  "line": 18441,
+  "line": 18706,
   "calls": [
    "hideCtx",
    "practiceToggle"
@@ -6759,7 +6764,7 @@
  },
  {
   "event": "onclick",
-  "line": 18442,
+  "line": 18707,
   "calls": [
    "hideCtx",
    "practiceToggle"
@@ -6767,7 +6772,7 @@
  },
  {
   "event": "onclick",
-  "line": 18444,
+  "line": 18709,
   "calls": [
    "hideCtx",
    "deleteNote"
@@ -6775,14 +6780,14 @@
  },
  {
   "event": "onclick",
-  "line": 18462,
+  "line": 18727,
   "calls": [
    "_ctxBack"
   ]
  },
  {
   "event": "onclick",
-  "line": 18467,
+  "line": 18732,
   "calls": [
    "toggleNoteKind",
    "_ctxSub"
@@ -6790,7 +6795,7 @@
  },
  {
   "event": "onclick",
-  "line": 18476,
+  "line": 18741,
   "calls": [
    "hideCtx",
    "openReminderModal"
@@ -6798,7 +6803,7 @@
  },
  {
   "event": "onclick",
-  "line": 18477,
+  "line": 18742,
   "calls": [
    "hideCtx",
    "clearReminder"
@@ -6806,7 +6811,7 @@
  },
  {
   "event": "onclick",
-  "line": 18480,
+  "line": 18745,
   "calls": [
    "hideCtx",
    "removeArtTag",
@@ -6816,7 +6821,7 @@
  },
  {
   "event": "onclick",
-  "line": 18483,
+  "line": 18748,
   "calls": [
    "hideCtx",
    "promptAddArtTag"
@@ -6824,21 +6829,21 @@
  },
  {
   "event": "onclick",
-  "line": 18489,
+  "line": 18754,
   "calls": [
    "setNoteFavCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 18494,
+  "line": 18759,
   "calls": [
    "setNoteFavCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 18499,
+  "line": 18764,
   "calls": [
    "hideCtx",
    "detachArt"
@@ -6846,7 +6851,7 @@
  },
  {
   "event": "onclick",
-  "line": 18502,
+  "line": 18767,
   "calls": [
    "hideCtx",
    "openAttachArt"
@@ -6854,7 +6859,7 @@
  },
  {
   "event": "onclick",
-  "line": 18503,
+  "line": 18768,
   "calls": [
    "hideCtx",
    "openLinkToNote"
@@ -6862,154 +6867,154 @@
  },
  {
   "event": "onclick",
-  "line": 18517,
+  "line": 18782,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 18540,
+  "line": 18805,
   "calls": [
    "toggleArtFolder"
   ]
  },
  {
   "event": "oninput",
-  "line": 18552,
+  "line": 18817,
   "calls": [
    "fpFilter"
   ]
  },
  {
   "event": "onmousedown",
-  "line": 18552,
+  "line": 18817,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 18555,
+  "line": 18820,
   "calls": [
    "createFolderFromPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 18556,
+  "line": 18821,
   "calls": [
    "createFolderFromPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 18560,
+  "line": 18825,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 18615,
+  "line": 18880,
   "calls": [
    "toggleArtFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 18630,
+  "line": 18895,
   "calls": [
    "toggleArtFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 18752,
+  "line": 19017,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onchange",
-  "line": 19098,
+  "line": 19363,
   "calls": [
    "setBackupEvery"
   ]
  },
  {
   "event": "onclick",
-  "line": 19125,
+  "line": 19390,
   "calls": [
    "chooseBackupFolder"
   ]
  },
  {
   "event": "onclick",
-  "line": 19126,
+  "line": 19391,
   "calls": [
    "runBackupNow"
   ]
  },
  {
   "event": "onclick",
-  "line": 19127,
+  "line": 19392,
   "calls": [
    "turnOffBackups"
   ]
  },
  {
   "event": "onclick",
-  "line": 19128,
+  "line": 19393,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 19135,
+  "line": 19400,
   "calls": [
    "downloadDatedBackup"
   ]
  },
  {
   "event": "onclick",
-  "line": 19136,
+  "line": 19401,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "ondragstart",
-  "line": 19246,
+  "line": 19511,
   "calls": [
    "artDStart"
   ]
  },
  {
   "event": "ondragend",
-  "line": 19247,
+  "line": 19512,
   "calls": [
    "artDEnd"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 19247,
+  "line": 19512,
   "calls": [
    "showArtCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 19248,
+  "line": 19513,
   "calls": [
    "selArt"
   ]
  },
  {
   "event": "onclick",
-  "line": 19253,
+  "line": 19518,
   "calls": [
    "stopPropagation",
    "toggleFav"
@@ -7017,7 +7022,7 @@
  },
  {
   "event": "onclick",
-  "line": 19254,
+  "line": 19519,
   "calls": [
    "stopPropagation",
    "togglePin"
@@ -7025,7 +7030,7 @@
  },
  {
   "event": "onclick",
-  "line": 20452,
+  "line": 20717,
   "calls": [
    "writeText",
    "then",
@@ -7034,35 +7039,35 @@
  },
  {
   "event": "onclick",
-  "line": 20465,
+  "line": 20730,
   "calls": [
    "runMigration"
   ]
  },
  {
   "event": "onclick",
-  "line": 20470,
+  "line": 20735,
   "calls": [
    "syncNow"
   ]
  },
  {
   "event": "onclick",
-  "line": 20471,
+  "line": 20736,
   "calls": [
    "disconnectSync"
   ]
  },
  {
   "event": "onclick",
-  "line": 20472,
+  "line": 20737,
   "calls": [
    "closeSyncModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 20489,
+  "line": 20754,
   "calls": [
    "getElementById",
    "generateNotebookId"
@@ -7070,112 +7075,112 @@
  },
  {
   "event": "onclick",
-  "line": 20494,
+  "line": 20759,
   "calls": [
    "closeSyncModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 20495,
+  "line": 20760,
   "calls": [
    "connectSync"
   ]
  },
  {
   "event": "onclick",
-  "line": 20923,
+  "line": 21188,
   "calls": [
    "_ntiChipTap"
   ]
  },
  {
   "event": "onclick",
-  "line": 20930,
+  "line": 21195,
   "calls": [
    "finishNote"
   ]
  },
  {
   "event": "onclick",
-  "line": 20933,
+  "line": 21198,
   "calls": [
    "unfinishNote"
   ]
  },
  {
   "event": "onclick",
-  "line": 20941,
+  "line": 21206,
   "calls": [
    "toggleArchive"
   ]
  },
  {
   "event": "onclick",
-  "line": 20942,
+  "line": 21207,
   "calls": [
    "toggleArchive"
   ]
  },
  {
   "event": "onclick",
-  "line": 20956,
+  "line": 21221,
   "calls": [
    "openAttachMenu"
   ]
  },
  {
   "event": "onclick",
-  "line": 20957,
+  "line": 21222,
   "calls": [
    "saveArt"
   ]
  },
  {
   "event": "onclick",
-  "line": 21006,
+  "line": 21271,
   "calls": [
    "mwToggleAllCats"
   ]
  },
  {
   "event": "onclick",
-  "line": 21007,
+  "line": 21272,
   "calls": [
    "mwToggleViewMode"
   ]
  },
  {
   "event": "ondragstart",
-  "line": 21037,
+  "line": 21302,
   "calls": [
    "wallCatDStart"
   ]
  },
  {
   "event": "ondragend",
-  "line": 21038,
+  "line": 21303,
   "calls": [
    "wallCatDEnd"
   ]
  },
  {
   "event": "ondragover",
-  "line": 21039,
+  "line": 21304,
   "calls": [
    "wallCatDOver"
   ]
  },
  {
   "event": "ondrop",
-  "line": 21041,
+  "line": 21306,
   "calls": [
    "wallCatDDrop"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 21042,
+  "line": 21307,
   "calls": [
    "preventDefault",
    "showNtiCatMenu"
@@ -7183,63 +7188,63 @@
  },
  {
   "event": "onclick",
-  "line": 21043,
+  "line": 21308,
   "calls": [
    "togMwCat"
   ]
  },
  {
   "event": "onclick",
-  "line": 21057,
+  "line": 21322,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "ontouchstart",
-  "line": 21058,
+  "line": 21323,
   "calls": [
    "showWallKindCtx"
   ]
  },
  {
   "event": "ondragstart",
-  "line": 21063,
+  "line": 21328,
   "calls": [
    "wallGrpDStart"
   ]
  },
  {
   "event": "ondragend",
-  "line": 21064,
+  "line": 21329,
   "calls": [
    "wallGrpDEnd"
   ]
  },
  {
   "event": "ondragover",
-  "line": 21065,
+  "line": 21330,
   "calls": [
    "wallGrpDOver"
   ]
  },
  {
   "event": "ondrop",
-  "line": 21067,
+  "line": 21332,
   "calls": [
    "wallGrpDDrop"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 21068,
+  "line": 21333,
   "calls": [
    "showWallKindCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 21069,
+  "line": 21334,
   "calls": [
    "togSfGrp",
    "esc"
@@ -7247,14 +7252,14 @@
  },
  {
   "event": "onclick",
-  "line": 21292,
+  "line": 21557,
   "calls": [
    "quickCaptureWithKind"
   ]
  },
  {
   "event": "onclick",
-  "line": 21294,
+  "line": 21559,
   "calls": [
    "hideCtx",
    "renameNoteKind"
@@ -7262,14 +7267,14 @@
  },
  {
   "event": "onclick",
-  "line": 21295,
+  "line": 21560,
   "calls": [
    "openKindClrPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 21296,
+  "line": 21561,
   "calls": [
    "hideCtx",
    "addNoteKindTab"
@@ -7277,21 +7282,21 @@
  },
  {
   "event": "onclick",
-  "line": 21298,
+  "line": 21563,
   "calls": [
    "moveWallKind"
   ]
  },
  {
   "event": "onclick",
-  "line": 21299,
+  "line": 21564,
   "calls": [
    "moveWallKind"
   ]
  },
  {
   "event": "onclick",
-  "line": 21301,
+  "line": 21566,
   "calls": [
    "hideCtx",
    "openTheme"
@@ -7299,42 +7304,42 @@
  },
  {
   "event": "onclick",
-  "line": 21303,
+  "line": 21568,
   "calls": [
    "delNtiKind"
   ]
  },
  {
   "event": "onclick",
-  "line": 21361,
+  "line": 21626,
   "calls": [
    "selFolder"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 21361,
+  "line": 21626,
   "calls": [
    "showSfItemCtx"
   ]
  },
  {
   "event": "oncontextmenu",
-  "line": 21370,
+  "line": 21635,
   "calls": [
    "showSmartViewCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 21371,
+  "line": 21636,
   "calls": [
    "toggleSmartViews"
   ]
  },
  {
   "event": "ondblclick",
-  "line": 21374,
+  "line": 21639,
   "calls": [
    "stopPropagation",
    "startRenSmartViews"
@@ -7342,7 +7347,7 @@
  },
  {
   "event": "onclick",
-  "line": 21376,
+  "line": 21641,
   "calls": [
    "stopPropagation",
    "showSmartViewCtx"
@@ -7350,7 +7355,7 @@
  },
  {
   "event": "onclick",
-  "line": 21429,
+  "line": 21694,
   "calls": [
    "tagPickerApply",
    "replace"
@@ -7358,7 +7363,7 @@
  },
  {
   "event": "onclick",
-  "line": 21439,
+  "line": 21704,
   "calls": [
    "tagPickerApply",
    "replace"
@@ -7366,14 +7371,14 @@
  },
  {
   "event": "oninput",
-  "line": 21453,
+  "line": 21718,
   "calls": [
    "tagPickerRender"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 21453,
+  "line": 21718,
   "calls": [
    "tagPickerApply",
    "getElementById"
@@ -7381,21 +7386,21 @@
  },
  {
   "event": "onmousedown",
-  "line": 21453,
+  "line": 21718,
   "calls": [
    "stopPropagation"
   ]
  },
  {
   "event": "onclick",
-  "line": 21455,
+  "line": 21720,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 21468,
+  "line": 21733,
   "calls": [
    "tagPickerApply",
    "replace"
@@ -7403,7 +7408,7 @@
  },
  {
   "event": "onclick",
-  "line": 21478,
+  "line": 21743,
   "calls": [
    "tagPickerApply",
    "replace"
@@ -7411,7 +7416,7 @@
  },
  {
   "event": "onclick",
-  "line": 21518,
+  "line": 21783,
   "calls": [
    "hideCtx",
    "renameSfItem"
@@ -7419,21 +7424,21 @@
  },
  {
   "event": "onclick",
-  "line": 21519,
+  "line": 21784,
   "calls": [
    "moveSfItem"
   ]
  },
  {
   "event": "onclick",
-  "line": 21520,
+  "line": 21785,
   "calls": [
    "moveSfItem"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 21536,
+  "line": 21801,
   "calls": [
    "finRenameSfItem",
    "closeModal"
@@ -7441,14 +7446,14 @@
  },
  {
   "event": "onclick",
-  "line": 21538,
+  "line": 21803,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 21539,
+  "line": 21804,
   "calls": [
    "finRenameSfItem",
    "getElementById",
@@ -7457,28 +7462,28 @@
  },
  {
   "event": "onclick",
-  "line": 21557,
+  "line": 21822,
   "calls": [
    "openSfClrPicker"
   ]
  },
  {
   "event": "onclick",
-  "line": 21558,
+  "line": 21823,
   "calls": [
    "setSfItemColor"
   ]
  },
  {
   "event": "onclick",
-  "line": 21559,
+  "line": 21824,
   "calls": [
    "setSfItemBold"
   ]
  },
  {
   "event": "onclick",
-  "line": 21584,
+  "line": 21849,
   "calls": [
    "hideCtx",
    "promptAddGlobalTag"
@@ -7486,7 +7491,7 @@
  },
  {
   "event": "onclick",
-  "line": 21586,
+  "line": 21851,
   "calls": [
    "hideCtx",
    "renameTagSection"
@@ -7494,28 +7499,28 @@
  },
  {
   "event": "onclick",
-  "line": 21599,
+  "line": 21864,
   "calls": [
    "setTagSecColor"
   ]
  },
  {
   "event": "onclick",
-  "line": 21601,
+  "line": 21866,
   "calls": [
    "setTagSecColor"
   ]
  },
  {
   "event": "onblur",
-  "line": 21614,
+  "line": 21879,
   "calls": [
    "finRenTagSec"
   ]
  },
  {
   "event": "onkeydown",
-  "line": 21615,
+  "line": 21880,
   "calls": [
    "finRenTagSec",
    "renderTree"
@@ -7523,7 +7528,7 @@
  },
  {
   "event": "onkeydown",
-  "line": 21629,
+  "line": 21894,
   "calls": [
    "addGlobalTag",
    "closeModal"
@@ -7531,14 +7536,14 @@
  },
  {
   "event": "onclick",
-  "line": 21631,
+  "line": 21896,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 21632,
+  "line": 21897,
   "calls": [
    "addGlobalTag",
    "getElementById",
@@ -7547,7 +7552,7 @@
  },
  {
   "event": "onclick",
-  "line": 21646,
+  "line": 21911,
   "calls": [
    "hideCtx",
    "renameTag",
@@ -7556,7 +7561,7 @@
  },
  {
   "event": "onclick",
-  "line": 21648,
+  "line": 21913,
   "calls": [
    "hideCtx",
    "deleteTag",
@@ -7565,7 +7570,7 @@
  },
  {
   "event": "onclick",
-  "line": 21701,
+  "line": 21966,
   "calls": [
    "selTag",
    "esc"
@@ -7573,7 +7578,7 @@
  },
  {
   "event": "oncontextmenu",
-  "line": 21701,
+  "line": 21966,
   "calls": [
    "showTagCtx",
    "esc"
@@ -7581,21 +7586,21 @@
  },
  {
   "event": "oncontextmenu",
-  "line": 21714,
+  "line": 21979,
   "calls": [
    "showTagSecCtx"
   ]
  },
  {
   "event": "onclick",
-  "line": 21715,
+  "line": 21980,
   "calls": [
    "toggleTagSection"
   ]
  },
  {
   "event": "onclick",
-  "line": 21719,
+  "line": 21984,
   "calls": [
    "stopPropagation",
    "showTagSecCtx"
@@ -7603,7 +7608,7 @@
  },
  {
   "event": "onkeydown",
-  "line": 21729,
+  "line": 21994,
   "calls": [
    "finRenameArtTitle",
    "closeModal"
@@ -7611,14 +7616,14 @@
  },
  {
   "event": "onclick",
-  "line": 21731,
+  "line": 21996,
   "calls": [
    "closeModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 21732,
+  "line": 21997,
   "calls": [
    "finRenameArtTitle",
    "getElementById",
@@ -7627,210 +7632,210 @@
  },
  {
   "event": "onclick",
-  "line": 22015,
+  "line": 22325,
   "calls": [
    "closeTheme"
   ]
  },
  {
   "event": "onclick",
-  "line": 22019,
+  "line": 22329,
   "calls": [
    "closeTheme"
   ]
  },
  {
   "event": "onclick",
-  "line": 22021,
+  "line": 22331,
   "calls": [
    "applyPreset"
   ]
  },
  {
   "event": "onclick",
-  "line": 22030,
+  "line": 22340,
   "calls": [
    "applyPreset"
   ]
  },
  {
   "event": "onclick",
-  "line": 22039,
+  "line": 22349,
   "calls": [
    "applyPreset"
   ]
  },
  {
   "event": "onclick",
-  "line": 22048,
+  "line": 22358,
   "calls": [
    "applyPreset"
   ]
  },
  {
   "event": "onclick",
-  "line": 22057,
+  "line": 22367,
   "calls": [
    "applyPreset"
   ]
  },
  {
   "event": "oninput",
-  "line": 22068,
+  "line": 22378,
   "calls": [
    "setCustomColor"
   ]
  },
  {
   "event": "oninput",
-  "line": 22069,
+  "line": 22379,
   "calls": [
    "setCustomColorHex"
   ]
  },
  {
   "event": "oninput",
-  "line": 22072,
+  "line": 22382,
   "calls": [
    "setCustomColor"
   ]
  },
  {
   "event": "oninput",
-  "line": 22073,
+  "line": 22383,
   "calls": [
    "setCustomColorHex"
   ]
  },
  {
   "event": "oninput",
-  "line": 22076,
+  "line": 22386,
   "calls": [
    "setCustomColor"
   ]
  },
  {
   "event": "oninput",
-  "line": 22077,
+  "line": 22387,
   "calls": [
    "setCustomColorHex"
   ]
  },
  {
   "event": "onclick",
-  "line": 22081,
+  "line": 22391,
   "calls": [
    "setFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 22083,
+  "line": 22393,
   "calls": [
    "setFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 22087,
+  "line": 22397,
   "calls": [
    "setFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 22089,
+  "line": 22399,
   "calls": [
    "setFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 22093,
+  "line": 22403,
   "calls": [
    "setFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 22095,
+  "line": 22405,
   "calls": [
    "setFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 22099,
+  "line": 22409,
   "calls": [
    "setFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 22101,
+  "line": 22411,
   "calls": [
    "setFontSize"
   ]
  },
  {
   "event": "onclick",
-  "line": 22102,
+  "line": 22412,
   "calls": [
    "resetFontSizes"
   ]
  },
  {
   "event": "onclick",
-  "line": 22102,
+  "line": 22412,
   "calls": [
    "resetTheme"
   ]
  },
  {
   "event": "onclick",
-  "line": 22105,
+  "line": 22415,
   "calls": [
    "closeTrash"
   ]
  },
  {
   "event": "onclick",
-  "line": 22110,
+  "line": 22420,
   "calls": [
    "emptyTrash"
   ]
  },
  {
   "event": "onclick",
-  "line": 22111,
+  "line": 22421,
   "calls": [
    "closeTrash"
   ]
  },
  {
   "event": "onclick",
-  "line": 22117,
+  "line": 22427,
   "calls": [
    "closeSyncModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 22288,
+  "line": 22598,
   "calls": [
    "closeReminderModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 22304,
+  "line": 22614,
   "calls": [
    "closeReminderModal"
   ]
  },
  {
   "event": "onclick",
-  "line": 22305,
+  "line": 22615,
   "calls": [
    "saveReminder"
   ]

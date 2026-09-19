@@ -1,0 +1,370 @@
+[
+ {
+  "domain": "I security/privacy",
+  "feature": "an imported file has its inline event handlers stripped",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 notes had code stripped out of them on the way in"
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "an imported file has its <script> tags stripped",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "an imported file has its javascript: URLs stripped",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "an imported file has its foreign <iframe> removed",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "sanitising an import keeps the TEXT — it cleans, it does not drop content (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "all three marker strings survived"
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "a note's own video embed survives the sanitiser",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "contenteditable=\"false\" widget chrome survives the sanitiser",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "headings and structure survive the sanitiser",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "a paste carrying an inline handler does not leave that handler in the note",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "stripped on the way in"
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "a paste carrying an inline handler keeps the text that came with it (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "the pasted words are present"
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "content ALREADY in the notebook still renders raw, which is the decision CLAUDE.md records",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "178 chars painted — widgets and saved notes are untouched by the boundary policy"
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "…and even then a <script> in stored content never executes",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "every target=\"_blank\" link in the shipped markup carries rel=\"noopener\" (5 links)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "all safe"
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "a target=\"_blank\" link pasted into a NOTE is given rel=\"noopener\"",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 links checked"
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "a javascript: link pasted into a note is neutralised",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "none present"
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "no shipped artifact carries private residue (48 files scanned, shipped ones judged)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "clean"
+ },
+ {
+  "domain": "I security/privacy",
+  "feature": "the sealed legacy/v03.99/ build still carries private residue at a public URL",
+  "viewport": "—",
+  "status": "BLOCKED—OWNER",
+  "ok": true,
+  "detail": "legacy/v03.99/index.html: 4 × a Google API key\nlegacy/v03.99/index.html: 4 × a Google sign-in iframe\nlegacy/v03.99/index.html: 1 × a serialised tab picker (holds real note titles)\nlegacy/v03.99/index.html: 1 × a browser extension's widget\n→ owner Decision 1. I6 seals legacy/** absolutely; this session did not touch it."
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "every visible control has a name a screen reader can read (72 controls on the landing view)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "all named"
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "the document declares a language",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "lang=\"en\""
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "the app exposes landmark regions a screen reader can jump between",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 landmark elements"
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "the document has a title",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "\"My Knowledge Notebook\""
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "every visible control can be reached with the Tab key (55 controls)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "all focusable"
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "pressing Tab moves focus off the body",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "DIV"
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "closing a dialog gives focus back to where it came from",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "focus returned to sq"
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "the reminder dialog opens",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "opening a dialog moves focus into it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "focus is inside the dialog"
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "a dialog announces itself as a dialog",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "role=\"dialog\" / aria-modal present"
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "phone: no visible control is smaller than 24×24 (WCAG 2.2 SC 2.5.8, two named exceptions)",
+  "viewport": "phone",
+  "status": "PASS",
+  "ok": true,
+  "detail": "55 controls"
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "tablet: no visible control is smaller than 24×24 (WCAG 2.2 SC 2.5.8, two named exceptions)",
+  "viewport": "tablet",
+  "status": "PASS",
+  "ok": true,
+  "detail": "57 controls"
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "desktop: no visible control is smaller than 24×24 (WCAG 2.2 SC 2.5.8, two named exceptions)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "53 controls"
+ },
+ {
+  "domain": "I accessibility",
+  "feature": "at 200% text size nothing is pushed off the side of the screen",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0px of sideways scroll"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "500 notes: render, search, persist, merge and export all complete",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "boot 576ms · render 11ms · search 6ms · persist 3ms · merge 1ms · export 11ms"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "500 notes: every measured operation is inside its budget",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "budgets: render ≤2500 search ≤1500 persist ≤2500 merge ≤4000"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "2,000 notes: render, search, persist, merge and export all complete",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "boot 703ms · render 19ms · search 17ms · persist 12ms · merge 2ms · export 19ms"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "2,000 notes: every measured operation is inside its budget",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "budgets: render ≤2500 search ≤1500 persist ≤2500 merge ≤4000"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "10,000 notes: render, search, persist, merge and export all complete",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "boot 1854ms · render 73ms · search 82ms · persist 65ms · merge 9ms · export 79ms"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "10,000 notes: every measured operation is inside its budget",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "budgets: render ≤2500 search ≤1500 persist ≤2500 merge ≤4000"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "25 open/close pop-out cycles leave no windows behind",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 float windows"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "25 open/close pop-out cycles do not grow the DOM without bound",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "408 → 408 nodes"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "25 open/close pop-out cycles are silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "the service-worker cache name carries this build's version, so an update reaches the device (I3)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "app v04.36, cache v04.36.01"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "old caches are deleted on activate, so a device does not accumulate every build",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "keys() + delete() present"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "the service worker claims open clients, so the new build applies without a second reload",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "clients.claim() present"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "a navigation falls back to the cache when the network is gone (I3)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "caches.match in a catch path"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "a downloaded copy needs no local .js or .css file beside it to open (I4)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "14 relative refs, none of them code"
+ },
+ {
+  "domain": "I performance/PWA",
+  "feature": "a downloaded copy still carries its own data tag (I4, I7)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "script#nd present"
+ }
+]

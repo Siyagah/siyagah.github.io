@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.35.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.36.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,38 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.36** (19 Sep 2026) — not a feature round: Phases 0–10 of the owner's
+  **Master Audit and Continuous Build Plan**. v04.35's report was re-measured
+  rather than believed — a detached worktree at `ba6c70f` shows the note
+  **emptied** on tablet and desktop and **8/8** residue kinds in both exports,
+  against `note intact` and **0/8** on the candidate — and then seven more
+  defects came out, every one in a state no check had ever put the app in.
+  **A damaged notebook took the whole app down and overwrote what was still
+  readable**: `seedDB()` is always well-formed, so all 286 checks had only
+  measured a happy boot; `articles` arriving as a string threw in
+  `_mergeById`, aborted boot, painted an empty screen and saved *that* over
+  three intact folders (and aborts a sync pull the same way, I2). `_repairDB()`
+  now runs on every side of every merge — stored, embedded, **remote** — and
+  discards nothing: a non-list collection is kept verbatim under `DB._salvage`,
+  and a record with no id keeps all its content and is *given* one.
+  **A real folder name still reached the Deploy Export**: v04.35 generalised
+  body's CHILDREN and left the inside on a seven-id list with no `#p2h-path`
+  in it. Now every LEAF container's markup is snapshotted **during script
+  parse** (the existing snapshot runs AFTER the first render — `tree` was
+  already 8,215 bytes of real folder names) and only leaves, because blanking
+  an ancestor destroys the descendants the restore writes into, **the live
+  editor among them**. **A folder could be moved inside its own descendant** —
+  the guard was written down four times in callers and never in either mover —
+  making a RING from which three folders and their notes vanish, and
+  `pathOf()` spins forever. Plus: `importBackup()`'s Replace All took **no**
+  recovery copy; `importJSON()` gained **Merge** (owner Decision 4); paste and
+  import are now a **sanitisation boundary** (stored content still renders
+  raw, by design); and **30 of 55 controls could only be reached with a
+  mouse** — two delegated rules fix that everywhere at once. **589 checks**
+  (up from 327) across 13 suites, a 260-row Feature Coverage Matrix and a
+  1,282-function Inventory, both **generated, never written**. Reports:
+  `audit/RELEASE-AUDIT-2026-09-19.md`. **Still the owner's to decide:** the
+  sealed `legacy/v03.99/` residue (I6), and the live Firestore Rules.
 - **v04.35** (18 Sep 2026) — not a feature round: the owner asked for Siyagah
   to be prepared for an independent audit, so the app was read cold and
   measured against its OWN rules. `origin/main` was green — 266/266 and 11/11
@@ -112,25 +144,6 @@ must never accumulate here instead of there.
   event again, the v04.12 defect verbatim, measured dead on `origin/main`
   before anything was touched. 236/236 app checks (up from 219) and 11/11
   ship checks.
-- **v04.31** (12 Sep 2026) — three questions off one screenshot of the phone's
-  read bar. **🏠 vs 📁**: they do land in the same place (`goHome()` ends on
-  `showPane('sb')`, `backFromP3()` is only that call) — and v04.23 had already
-  taken 🏠 off the phone's EDIT bar for this reason and left the read bar
-  alone, which is why the question came back. 🏠 goes; **📁 stays**, because it
-  keeps your place where 🏠 clears the search, tag, type and folder, and the
-  pane it lands on carries 📚 Siyagah, which IS `goHome()`. Home is a named row
-  in the `⋯` card. **"General"** was a value with nothing saying what it was
-  the value of: the chips carry **`TYPE`** now, written once in `kindBarHTML()`
-  so the bar, the 🏷 card and the tablet's edit row cannot disagree (the label
-  costs ~34px on a self-measuring row; 🏠 leaving freed 44, so the chip has
-  more headroom than before, not less). And the **`⋯` card's bottom row** —
-  `⋯ More — copy, archive, delete…`, a tap spent to find out what was under it
-  — is spread open: **GO TO / THIS NOTE / MORE**, with Rename, Make a copy,
-  History and Archive as rows, and the last row NAMING what is left
-  (`⋯ All actions · tags, folders, reminders, pin, delete`). 🗑 Delete stays
-  one tap further in, as v04.11 decided. 219/219 app checks (up from 213) and
-  11/11 ship checks.
-
 ---
 
 ## What this is
@@ -146,6 +159,7 @@ manifest.json       web app manifest (PWA install metadata)
 icons/              app icons + manifest screenshots
 sw.js               service worker (network-first, cache name = app version)
 tools/              the verification harness — see tools/README.md
+audit/              audit reports, the four ledgers, and the repro scripts
 legacy/v03.99/      a sealed, frozen build — never edited
 CHANGELOG.md        the full history
 ```
@@ -232,9 +246,16 @@ device:
 git fetch origin main          # origin/main goes stale in a fresh session
 node tools/ship-check.mjs      # ~1s, no browser
 node tools/app-check.mjs       # ~2min, drives the real app in Chromium
+node tools/audit-all.mjs       # ~12min, EVERY gate + writes the Feature Matrix
 node tools/probe.mjs --views   # not a test — dumps what a pane really renders
 node tools/shot.mjs            # screenshots at phone / tablet / desktop
+node tools/inventory.mjs       # regenerates the Function Inventory from the app
 ```
+
+`audit-all.mjs` is the whole gate in one command and it **assembles
+`audit/FEATURE-MATRIX.md` from the checks that actually ran** — a matrix row
+cannot be written by hand. The individual suites (`tools/audit-*.mjs`) are
+still runnable on their own while iterating.
 
 Both check files exit non-zero on failure. `tools/README.md` says what each one
 proves and carries the harness's own traps — **read it before touching the
@@ -302,6 +323,70 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A check that has only ever run on a well-formed fixture has never
+  measured the state where the invariant is actually at risk.** `seedDB()` is
+  always valid, so 286 passing checks had only ever measured a HAPPY boot.
+  Ten shapes of damaged localStorage found three defects in one afternoon,
+  the worst of which painted an **empty screen** and then wrote that empty
+  notebook back over three folders that were still perfectly readable — I1,
+  broken outright, under a fully green gate. Generate the bad states as
+  deliberately as the good one (`corruptDBs()`, `synthDB({malformed:true})`),
+  and remember that the same malformed shape arrives from a SYNC and an
+  IMPORT too, not just from storage. Cost: found in v04.36; reachable for
+  every round before it.
+- **A rule written in the callers is a rule that is not in the code.** The
+  "don't move a folder into its own descendant" guard existed **four times**
+  — both drag handlers in the tree and both in the picker — and **not once**
+  in `doMoveFolder()` or `pkMoveFolder()`, the two functions that actually
+  perform the move. One direct call makes a RING, from which no folder has a
+  root: three folders and every note in them vanish from the sidebar and
+  `pathOf()`'s bare `while(id)` spins forever, with nothing thrown and
+  nothing deleted. Same shape as v04.34's eight copies of
+  `innerWidth<900`. When you find a guard, grep for the operation it
+  guards, and put the rule where the operation is. Cost: caught in build in
+  v04.36, but it had been reachable since the picker was written.
+- **A general fix is only general up to the boundary you drew.** v04.35
+  replaced the export's residue allow-list with the general question — but
+  asked it of `<body>`'s CHILDREN only, and everything the app renders
+  *inside* the shell stayed on a seven-id list. `#p2h-path` was not on it, so
+  a real folder name kept riding out in a button's `title` into the file
+  whose own comment promises visitors see no private data. When a round
+  replaces a list with a principle, say out loud what the principle does NOT
+  cover, and check that sentence. Two measurements paid for the second cut:
+  the existing snapshot runs from `DOMContentLoaded`, which is **after** the
+  first render (`tree` was already 8,215 bytes of real folder names), so it
+  had to move into script parse; and it must record **leaves only**, because
+  blanking an ancestor destroys the descendants the restore writes into —
+  the live editor among them, during a Save File taken while the owner is
+  typing. Cost: reported one round after Finding 2 was called fixed.
+- **When a check fails, the first question is what the CHECK did.** Five of
+  this round's first failures were the check, not the app: a pane below
+  1200px is an off-canvas slide-over (`#sb.closed` is `width:0!important` at
+  `left:-100%`, `display:flex` throughout), so "visible but 0px wide" was a
+  pane doing its job; writing a damaged fixture with `setItem` and reloading
+  measured **the app's own unload flush** rewriting storage from the DB it
+  still held, which reads exactly like "the app wipes a damaged notebook";
+  a 60-character slice of `#p3c` cut off before the note body began;
+  `logContactAction(ev,aid)` takes two arguments and passing the id first
+  returns at its own guard; and the starter database folders are identified
+  by their SECTION, not an id prefix. Every one would have produced a "fix"
+  to working code. The app is usually right; the new check usually is not.
+- **A deliberate decision about the owner's own content is not a decision
+  about content from a file.** "Note content is raw HTML with no sanitiser"
+  is true and stays true — widgets depend on it. It was never a statement
+  about HTML arriving through an IMPORT or a PASTE, and those two doors had
+  nothing on them: an `<img onerror>` fires. Sanitise at the BOUNDARY, never
+  at render (which would rewrite the owner's own notes and break the widget
+  design), harden links where they are PAINTED (which stores nothing), and
+  divert a paste only when the clipboard really carries code so ordinary
+  pasting is untouched. Cost: found in v04.36; the doors had always been open.
+- **Most of this app is wired as `onclick` on a `<div>`, and a `<div>` has no
+  keyboard.** 30 of 55 visible controls on the landing view could only be
+  operated with a mouse. The fix is not to touch the hundreds of places that
+  build that markup — it is two delegated rules (a MutationObserver that adds
+  `tabindex`/`role`, and one keydown handler that turns Enter and Space into a
+  click), so nothing can forget. The same shape as every other lesson here:
+  when the answer has to be repeated in N places, it belongs in one.
 - **A green harness means "nothing it asks is broken", never "nothing is
   broken" — and the app's own comments are the best list of what it forgot to
   ask.** `origin/main` was 266/266 and 11/11 when an audit read the app cold

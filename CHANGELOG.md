@@ -3172,3 +3172,80 @@ shared helper, so a grep for a literal `exportFile()` inside `importJSON` now
 fails on a round that made the guarantee stronger and wider. It follows the
 indirection instead, and two new rows cover `importBackup()`'s copy and the
 merge option.
+
+### Phases 4–8 — organisation, the secondary modules, accessibility, security and scale
+
+**A folder could be moved inside its own descendant.** `doMoveFolder('A','C','inside')`
+on a three-deep tree produced `A:C B:A C:B` — a **ring**. Nothing throws and
+nothing is deleted, which is why nobody had noticed: no folder in that ring has
+a root any more, so all three of them and every note inside them simply
+**disappear from the sidebar**, and `pathOf()` — a bare `while(id)` — walks it
+forever. The guard was written down **four times** (both drag handlers in the
+tree, both in the picker) and **not once** in either of the two functions that
+actually perform the move. It lives in the movers now; `pathOf()` and
+`descOf()` are bounded as well, so a ring arriving from an older saved file
+cannot hang the app instead of merely looking odd.
+
+All **11 Smart Views** are opened at three populations — many, exactly one, and
+**empty** — with the six that are pure filters counted against a truth
+**recomputed in the check**, never against the app's own filter. Search is run
+in Latin, **Bangla** and **Arabic**, with punctuation, with a string that
+matches nothing, and empty. Multi-folder membership is asserted both ways:
+removing a note from one folder leaves it in the others, and removing it from
+its **last** folder does not delete the note. The calendar, contacts, My
+Database (every preset, and every report on an **empty** folder — the state
+that divides by zero), reminders in three states, Murāja'ah's scheduler and In
+Practice's three states are each driven and read back out of the model.
+
+**Paste and import are now a boundary.** CLAUDE.md's "note content is raw HTML
+with no sanitiser" is a deliberate decision about what the *owner* writes and
+it stands — widgets depend on it. It was never a decision about HTML arriving
+from a **file** or a **clipboard**, and neither door had anything on it: an
+`<img onerror>` in imported content fires. `_sanitiseForeignHTML()` now cleans
+an imported file and a paste that really carries code (an ordinary paste is
+untouched), while `_hardenLinks()` neutralises `javascript:` hrefs and adds
+`rel="noopener noreferrer"` **where note content is painted** — rewriting no
+stored byte. Asserted both ways: the hostile attributes go, and the video
+embed, the `contenteditable="false"` chrome, the headings and all the text
+stay, because an import that quietly drops content is I1 again.
+
+**The app was close to unusable with a keyboard.** 30 of 55 visible controls on
+the landing view could only be operated with a mouse, because most of this UI
+is `onclick` on a `<div>`. Fixed in two delegated rules rather than in the
+hundreds of places that build that markup: a `MutationObserver` gives every
+`onclick` element that is not already a control `tabindex="0"` and
+`role="button"` as it appears, and one keydown handler turns Enter and Space
+into a click. Dialogs take focus, say they are dialogs, and **give focus back
+to where it came from**. Eleven controls were raised to the 24×24 minimum; two
+stay below it and are **named in the stylesheet with their reasons**, so a new
+small target still fails.
+
+**Scale is not this app's problem.** On a synthetic 10,000-note notebook: boot
+**2.2s**, render **75ms**, search **86ms**, persist **62ms**, merge **10ms**,
+export **82ms**. Twenty-five open/close pop-out cycles leave no windows behind
+and grow the DOM by nothing.
+
+### Phases 9–10 — one command, a matrix that cannot be written by hand, and the reports
+
+`node tools/audit-all.mjs` runs every gate in order and **assembles
+`audit/FEATURE-MATRIX.md` from the checks that actually ran** — which is the
+only way the Master Plan's rule ("present in code is not a PASS") stays true.
+**589 checks across 13 suites**, up from 327; **260 matrix rows** — 254 PASS, 4
+`BLOCKED—ENVIRONMENT`, 2 `BLOCKED—OWNER`, **0 FAIL**.
+`.github/workflows/checks.yml` is a **candidate**: it reports on every push and
+pull request and blocks nothing, because branch protection is the owner's
+setting. Reports: `audit/RELEASE-AUDIT-2026-09-19.md` and `.html`.
+
+**Five of this round's first failures were the check, not the app** — a pane
+below 1200px is an off-canvas slide-over, a damaged fixture written with
+`setItem` loses to the app's own unload flush, a 60-character slice of `#p3c`
+stops before the note body starts, `logContactAction(ev,aid)` takes two
+arguments, and the starter database folders are identified by their section
+rather than an id prefix. Every one would have produced a "fix" to working
+code. They are all in `tools/README.md` now.
+
+**Still the owner's to decide, and only theirs:** the private residue in the
+sealed `legacy/v03.99/` build (I6 forbids touching it; recommendation is to
+strip only the residue and record a named exception), and the live Firestore
+Rules, which are in their console and decide whether the notebook is private at
+all.

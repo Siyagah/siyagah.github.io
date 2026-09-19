@@ -2731,6 +2731,32 @@ sup.ann-sup:hover{text-decoration:underline}
 .cal-today .cal-hj-num{color:var(--forest,#22863a)}
 .cal-hj-tag{font-size:9px;color:var(--t3);display:block;line-height:1.2}
 .cal-hj-sub{font-size:10px;color:var(--t3);display:block;line-height:1.2;font-weight:400}
+
+/* ── v04.36 — touch targets (WCAG 2.2 SC 2.5.8, 24×24 minimum) ───────────
+   Measured, not guessed: thirteen visible controls were under 24px in at
+   least one dimension at all three sizes. These are the ones that can be
+   raised without changing what the screen looks like — every one of them is
+   1–4px short, and the sidebar's density is untouched at that scale. Three
+   are deliberately NOT raised and are named in tools/audit-i-quality.mjs so
+   a new small target still fails the check:
+     • #sb-toggle (18×52) — the sidebar's own drag grip. Its width IS the
+       divider; 24px is a visibly heavy rule down the middle of the app, and
+       SC 2.5.8 exempts a target whose size is essential to the presentation.
+     • .ac-badge (14×12) — the ⭐ and 📌 markers on a list row. They are not
+       the row's target; the ROW is, and it is full width. Raising them
+       pushes the note title around on a phone for a shortcut that has a
+       named row in the ⋯ menu.
+   Anything else that appears under 24px is a defect, not an exception. */
+.sec-act{min-width:24px;min-height:24px}
+.sec-hd{min-height:24px}
+.sb-logo{min-height:24px}
+.p2h-path-new{min-height:24px}
+.p2h-path-row .btn,.p2h-tbt .btn{min-height:24px}
+/* The two on the Pane-2 header that the sweep still found: `▤ Preview`
+   (71×21) and the `◀` back arrow (23×28). Both are real, frequently-used
+   controls on the list header, and both are 1–3px short in one dimension
+   only, so this costs nothing visually. */
+#p2h .btn{min-height:24px;min-width:24px}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script><style></style><style id="dyn-hs">.av-body h1,#ed h1,.fw-ed h1{border-left:3px solid #0f766e;background:#f0fdfa;padding-left:10px;border-radius:0 4px 4px 0}
 .av-body h2,#ed h2,.fw-ed h2{border-left:3px solid #4338ca;background:#eef2ff;padding-left:10px;border-radius:0 4px 4px 0}
@@ -2855,7 +2881,7 @@ sup.ann-sup:hover{text-decoration:underline}
   <div class="sb-s">
     <div class="sb-si">
       <span class="sb-si-ico">🔍</span>
-      <input type="text" id="sq" placeholder="Search notes, folders, tags, types…" oninput="doSearch(this.value)" autocomplete="off">
+      <input type="text" id="sq" aria-label="Search your notes, folders, tags and types" placeholder="Search notes, folders, tags, types…" oninput="doSearch(this.value)" autocomplete="off">
       <span id="sqx" class="sb-si-x" onclick="clearSearch()" style="display: none;">✕</span>
     </div>
     <button id="bts-sb" class="btn sb-bts" onclick="restoreLastSearch()" title="Back to your last search results">🔍↺ Back to search results</button>
@@ -2945,9 +2971,87 @@ let ST = {folder:null, article:null, exp:{f2:true}, editing:false, etitle:'', ef
    should be told about. */
 const _DB_ARRAYS = ['folders','articles','sections','trash','tombstones','calEvents','calCategories',
   'noteKinds','noteKindCats','myFavCats','folderGroups','globalTags'];
+/* ── The paste / import sanitisation policy (v04.36) ──────────────────────
+   CLAUDE.md is explicit that "note content is raw HTML with no sanitiser" and
+   that interactive widgets live inside notes. That is a deliberate decision
+   about what the OWNER writes in their own notebook, and it stays.
+
+   It was never a decision about HTML that arrives from somewhere ELSE. Two
+   doors let foreign markup in — an imported file and a paste from a web page
+   — and neither had anything on it. Measured on v04.35: an
+   `<img src="x" onerror="…">` in note content FIRES, so a note pasted from a
+   page, or a backup file from anywhere, could run code in the notebook and
+   reach every note in it.
+
+   So the policy is a BOUNDARY, not a filter on rendering:
+     • content arriving from an imported file or a hostile paste is cleaned;
+     • content already in the notebook renders exactly as it always has, so
+       no widget, no `contenteditable="false"` chrome and no saved note
+       changes behaviour;
+     • links are hardened wherever note content is PAINTED, which touches no
+       stored byte (I1) and costs nothing.
+   What is removed: <script>, every `on*` attribute, `javascript:` and
+   `vbscript:` URLs, and cross-origin <iframe> that is not inside the app's
+   own `.embed-wrap`. Everything else — all text, all structure, all styling
+   — is kept, because an import that quietly drops content is I1 all over
+   again. */
+const _EMBED_HOSTS = /^(www\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com|player\.vimeo\.com|vimeo\.com|docs\.google\.com|drive\.google\.com)$/i;
+function _sanitiseForeignHTML(html){
+  if(typeof html!=='string'||!html) return html;
+  let doc;
+  try{ doc=new DOMParser().parseFromString('<div id="_sx">'+html+'</div>','text/html'); }
+  catch(e){ return html; }
+  const root=doc.getElementById('_sx'); if(!root) return html;
+  root.querySelectorAll('script').forEach(n=>n.remove());
+  root.querySelectorAll('*').forEach(el=>{
+    [...el.attributes].forEach(at=>{
+      const n=at.name.toLowerCase(), v=String(at.value||'');
+      if(n.startsWith('on')) el.removeAttribute(at.name);
+      else if((n==='href'||n==='src'||n==='xlink:href'||n==='action'||n==='formaction')
+              && /^\s*(javascript|vbscript|data:text\/html)/i.test(v)) el.removeAttribute(at.name);
+    });
+    if(el.tagName==='IFRAME'){
+      let host=''; try{ host=new URL(el.getAttribute('src')||'', location.href).hostname; }catch(e){}
+      if(!el.closest('.embed-wrap') || !_EMBED_HOSTS.test(host)) el.remove();
+    }
+    if(el.tagName==='A' && (el.getAttribute('target')||'')==='_blank') el.setAttribute('rel','noopener noreferrer');
+  });
+  return root.innerHTML;
+}
+function _sanitiseDBContent(db){
+  if(!db||typeof db!=='object') return 0;
+  let n=0;
+  (Array.isArray(db.articles)?db.articles:[]).forEach(a=>{
+    if(!a||typeof a.content!=='string') return;
+    const clean=_sanitiseForeignHTML(a.content);
+    if(clean!==a.content){ a.content=clean; n++; }
+  });
+  return n;
+}
+/* Painted, not stored. Runs after note content reaches the DOM, so a link the
+   owner saved years ago is safe to click without a single byte of their
+   notebook being rewritten. */
+function _hardenLinks(root){
+  if(!root||!root.querySelectorAll) return;
+  try{
+    root.querySelectorAll('a[href]').forEach(a=>{
+      const h=a.getAttribute('href')||'';
+      if(/^\s*(javascript|vbscript):/i.test(h)){ a.removeAttribute('href'); a.setAttribute('data-blocked-href','1'); a.title='This link was blocked because it runs code rather than opening a page'; return; }
+      if((a.getAttribute('target')||'')==='_blank') a.setAttribute('rel','noopener noreferrer');
+    });
+  }catch(e){}
+}
+
 function _repairDB(db, where){
   if(!db || typeof db!=='object' || Array.isArray(db)) return { db:null, fixes:[] };
   const fixes=[];
+  /* v04.36 — a file is the one source whose HTML nobody in this notebook
+     wrote. `stored`, `embedded` and `remote` are all the owner's own content
+     and are left exactly as they are. */
+  if(where==='imported'||where==='backup'){
+    const n=_sanitiseDBContent(db);
+    if(n) fixes.push(n+' notes had code stripped out of them on the way in');
+  }
   _DB_ARRAYS.forEach(k=>{
     if(db[k]==null) return;                       /* absent is fine — defaults fill it */
     if(!Array.isArray(db[k])){
@@ -3645,8 +3749,14 @@ function _isPlaceholder(html){
   return t===''||t==='Start writing here...';
 }
 function chOf(pid){return DB.folders.filter(f=>f.parentId===pid).sort((a,b)=>a.order-b.order);}
-function descOf(fid){const ids=[fid];function go(p){chOf(p).forEach(c=>{ids.push(c.id);go(c.id);});}go(fid);return ids;}
-function pathOf(fid){const p=[];let id=fid;while(id){const f=DB.folders.find(x=>x.id===id);if(!f)break;p.unshift(f);id=f.parentId;}return p;}
+/* v04.36 — unbounded recursion for the same reason pathOf() was an unbounded
+   loop. A ring makes this recurse until the stack gives out. */
+function descOf(fid){const ids=[fid],seen=new Set([fid]);function go(p){chOf(p).forEach(c=>{if(seen.has(c.id))return;seen.add(c.id);ids.push(c.id);go(c.id);});}go(fid);return ids;}
+/* v04.36 — `while(id)` with no guard: one ring in the folder tree and this
+   spins forever with the tab frozen. The guard above stops a ring being made;
+   this stops an existing one (from an older file, or a sync from a device
+   that predates the guard) taking the app down instead of merely looking odd. */
+function pathOf(fid){const p=[];let id=fid,seen=new Set();while(id&&!seen.has(id)){seen.add(id);const f=DB.folders.find(x=>x.id===id);if(!f)break;p.unshift(f);id=f.parentId;}return p;}
 /* v04.36 — `a.folderIds` is repaired at load, but these two run against
    anything the app is holding, including a note handed over by an import or
    a sync mid-flight. A missing list is an empty list here, never a throw:
@@ -4139,7 +4249,7 @@ function renderP2C(){
   /* ── Quick inline title bar ── */
   h+=`<div class="qt-bar">`
     +`<span class="qt-ic">✚</span>`
-    +`<input type="text" id="qt-inp" placeholder="New note title — press Enter…"`
+    +`<input type="text" id="qt-inp" aria-label="Title for a new note" placeholder="New note title — press Enter…"`
     +` onkeydown="qtKey(event,'${curF.id}')" `
     +` onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">`
     +`<button class="qt-go" onclick="qtSave('${curF.id}')" tabindex="-1">Save</button>`
@@ -4458,6 +4568,7 @@ function renderP3C(){
       ${backlinksHTML(curA)}
     </div></div>`;
     _initCollapsible(el.querySelector('.av-body'));
+    _hardenLinks(el);          /* v04.36 — painted, never stored */
     upgradeViewCards(el.querySelector('.av-body'));
     el.querySelectorAll('mark.ann-mk,sup.ann-sup').forEach(n=>{
       n.onclick=e=>{e.stopPropagation();scrollToAnnComment(parseInt(n.dataset.ann));};
@@ -6461,6 +6572,7 @@ function reminderStripHTML(a){
 function openReminderModal(aid){
   const art=DB.articles.find(a=>a.id===aid);if(!art)return;
   _remAid=aid;
+  _remReturnFocus=document.activeElement;   /* v04.36 — give it back on close */
   const r=art.reminder||{};
   /* pre-fill */
   const dateEl=document.getElementById('rem-date');
@@ -6477,12 +6589,15 @@ function openReminderModal(aid){
   }
   msgEl.value=r.msg||'';
   document.getElementById('rem-modal').classList.add('open');
-  setTimeout(()=>dateEl.focus(),120);
+  setTimeout(()=>dateEl.focus(),120);   /* v04.36 — focus enters the dialog; closeReminderModal() gives it back */
 }
 function closeReminderModal(){
   document.getElementById('rem-modal').classList.remove('open');
   _remAid=null;
+  try{ if(_remReturnFocus&&document.contains(_remReturnFocus))_remReturnFocus.focus(); }catch(e){}
+  _remReturnFocus=null;
 }
+let _remReturnFocus=null;
 function saveReminder(){
   const art=DB.articles.find(a=>a.id===_remAid);if(!art)return;
   const dateVal=document.getElementById('rem-date').value;
@@ -13151,6 +13266,17 @@ function initRichPaste(ed){
         const s=window.getSelection();
         if(s&&!s.isCollapsed&&isURL(txt)){document.execCommand('createLink',false,url);return;} // pasted over selection → linkify
         const p=_caretXY();openPastePop(p.x,p.y,url,txt);return;}
+      /* v04.36 — a paste from a web page is the second door foreign HTML
+         comes through. An ordinary paste is left completely alone: this
+         diverts ONLY when the clipboard really carries an inline handler, a
+         <script>, or a javascript: URL, so normal pasting keeps every bit of
+         its existing behaviour and a hostile one never reaches the editor. */
+      {const _h=cd.getData('text/html');
+      if(_h && /(<script\b|\son[a-z]+\s*=|javascript\s*:|vbscript\s*:)/i.test(_h)){
+        e.preventDefault();
+        insertAtCaret(_sanitiseForeignHTML(_h));
+        toast('Pasted \u2014 code in the copied content was removed', 4000);
+        return;}}
       // Smart Paste: check for structured HTML
       {const clipHtml=cd.getData('text/html');const clipTxt=cd.getData('text/plain');
       if(clipHtml&&_pasteHasStructure(clipHtml)){
@@ -13542,10 +13668,33 @@ function clearDI(el){
   rows.forEach(r=>{r.classList.remove('dob','doa','doi');});
 }
 
+/* v04.36 — one place to ask "would this move swallow the folder's own
+   parent?". The answer was already written down FOUR times — at the two drag
+   handlers in the tree and the two in the move picker — and nowhere in the
+   two functions that actually perform the move. A caller that forgets it (or
+   a fifth caller added later) sets `A.parentId = <a descendant of A>` and the
+   tree becomes a RING: A → C → B → A. Nothing throws and nothing is deleted,
+   but no folder in that ring has a root any more, so all three of them and
+   every note inside them disappear from the sidebar, and `pathOf()` — a bare
+   `while(id)` — walks the ring forever.
+   Measured: doMoveFolder('A','C','inside') on a three-deep tree produced
+   `A:C B:A C:B` in v04.35. The drag handlers were and remain correct; this is
+   the rule living where it cannot be forgotten. */
+function _moveWouldCycle(fid,targetId,pos){
+  if(!fid||!targetId||fid===targetId) return fid===targetId;
+  const target=DB.folders.find(f=>f.id===targetId);
+  /* 'before'/'after' re-parent to the TARGET's parent, not the target */
+  const newParent = pos==='inside' ? targetId : (target?target.parentId:null);
+  if(!newParent) return false;                 /* moving to a root is always safe */
+  const inside=descOf(fid);                    /* fid plus everything under it */
+  return inside.includes(newParent);
+}
+
 function doMoveFolder(fid,targetId,pos){
   const folder=DB.folders.find(f=>f.id===fid);
   const target=DB.folders.find(f=>f.id===targetId);
   if(!folder||!target)return;
+  if(_moveWouldCycle(fid,targetId,pos)){ toast('A folder cannot be moved inside itself \u2014 nothing was changed'); return; }
 
   if(pos==='inside'){
     // Nest inside target
@@ -15976,19 +16125,36 @@ function offerAutoNumber(){
 }
 
 /* ── Modals ──────────────────────────────────────────────────────── */
+/* v04.36 — a dialog now says it is one, and takes the focus.
+   Measured on v04.35: focus stayed on whatever was behind the overlay, so a
+   keyboard user tabbed straight through the page underneath a dialog they
+   could not see they were in, and a screen reader never announced it. The
+   element that had focus is remembered and given it back on close, which is
+   the half people notice — landing back where you were, not at the top. */
+let _modalReturnFocus=null;
 function showModal(html){
   const mb=document.getElementById('mb');
+  _modalReturnFocus=document.activeElement;
   mb.classList.remove('mb-rsz');
   mb.removeAttribute('style');
   mb.innerHTML=html;
+  mb.setAttribute('role','dialog');
+  mb.setAttribute('aria-modal','true');
+  const ttl=mb.querySelector('.mt');
+  if(ttl) mb.setAttribute('aria-label',(ttl.textContent||'Dialog').trim().slice(0,80));
   document.getElementById('ov').classList.add('on');
-  setTimeout(()=>document.querySelector('#mb .mi')?.focus(),40);
+  setTimeout(()=>{
+    const first=mb.querySelector('.mi, input, select, textarea, button');
+    if(first&&first.focus) first.focus();
+  },40);
 }
 /* _pkSaveScope() runs FIRST, while the overlay is still shown: it reads the
    folder browser's live scroll offset, and a hidden (display:none) list
    reports scrollTop 0, which would save the browser as scrolled to the top
    no matter where it actually was. */
-function closeModal(){_pkSaveScope();document.getElementById('ov').classList.remove('on');if(_mbRsz)_mbResizeStop();if(_mbDrag)_mbDragStop();}
+function closeModal(){_pkSaveScope();document.getElementById('ov').classList.remove('on');if(_mbRsz)_mbResizeStop();if(_mbDrag)_mbDragStop();
+  try{ if(_modalReturnFocus&&document.contains(_modalReturnFocus))_modalReturnFocus.focus(); }catch(e){}
+  _modalReturnFocus=null;}
 
 /* ── Resizable-modal support (all 8 edges/corners) ─────────────────── */
 const _RSZ_HANDLES_HTML=
@@ -17097,6 +17263,7 @@ function pkMoveFolder(fid,targetId,pos){
   const folder=DB.folders.find(f=>f.id===fid);
   const target=DB.folders.find(f=>f.id===targetId);
   if(!folder||!target)return;
+  if(_moveWouldCycle(fid,targetId,pos)){ toast('A folder cannot be moved inside itself \u2014 nothing was changed'); return; }
   if(pos==='inside'){
     folder.parentId=targetId;
     const existing=chOf(targetId).filter(f=>f.id!==fid);
@@ -17258,8 +17425,8 @@ function renderNTISection(){
         +`<span class="tr-ico" style="font-size:11px">${esc(cat.icon||'📝')}</span>`
         +`<span class="tr-name" style="${catTextStyle(cat)}">${esc(cat.name)}</span>`
         +`<span class="sec-acts">`
-        +`<span class="sec-act" onclick="event.stopPropagation();addKindInCat('','${cat.id}')" title="Add type">＋</span>`
-        +`<span class="sec-act" onclick="event.stopPropagation();showNtiCatMenu(event,'${cat.id}','')" title="Options">⋯</span>`
+        +`<span class="sec-act" aria-label="Section options" onclick="event.stopPropagation();addKindInCat('','${cat.id}')" title="Add type">＋</span>`
+        +`<span class="sec-act" aria-label="Section options" onclick="event.stopPropagation();showNtiCatMenu(event,'${cat.id}','')" title="Options">⋯</span>`
         +`</span></div>`;
       if(co){
         kinds.forEach(k=>{
@@ -17284,8 +17451,8 @@ function renderNTISection(){
       <span class="sec-tog">${open?'▾':'▸'}</span>
       <span class="sec-nm" style="${sectionColor?`color:${sectionColor}`:''}">${esc(sectionLabel)}</span>
       <span class="sec-acts">
-        <span class="sec-act" onclick="event.stopPropagation();ntiSbToggleAllCats()" title="Expand/collapse all categories">⇅</span>
-        <span class="sec-act" onclick="event.stopPropagation();addNtiCat()" title="Add group">＋</span>
+        <span class="sec-act" aria-label="Section options" onclick="event.stopPropagation();ntiSbToggleAllCats()" title="Expand/collapse all categories">⇅</span>
+        <span class="sec-act" aria-label="Section options" onclick="event.stopPropagation();addNtiCat()" title="Add group">＋</span>
       </span>
     </div>
     ${body}
@@ -17813,8 +17980,8 @@ function renderSection(sec){
       <span class="sec-tog">${open?'▾':'▸'}</span>
       <span class="sec-nm" ondblclick="event.stopPropagation();startRenSec('${sec.id}')" ${(sec.color||sec.bold)?`style="${sec.color?`color:${sec.color};`:''}${sec.bold?'font-weight:700':''}"`:''} >${esc(sec.name)}</span>
       <span class="sec-acts">
-        <span class="sec-act" onclick="event.stopPropagation();addFolderInSec('${sec.id}')" title="New folder in this section">＋</span>
-        <span class="sec-act" onclick="event.stopPropagation();showSecCtx(event,'${sec.id}')">⋯</span>
+        <span class="sec-act" aria-label="Section options" onclick="event.stopPropagation();addFolderInSec('${sec.id}')" title="New folder in this section">＋</span>
+        <span class="sec-act" aria-label="Section options" onclick="event.stopPropagation();showSecCtx(event,'${sec.id}')">⋯</span>
       </span>
     </div>
     ${open?`<div class="sec-body">${folders.map(f=>trNode(f,0)).join('')}${!folders.length?'<div style="padding:6px 22px;font-size:11.5px;color:var(--sb-ink-soft);font-style:italic">Empty — add a folder with ＋</div>':''}${renderSecSF(sec.id)}</div>`:''}
@@ -20573,7 +20740,7 @@ function openSyncModal(){
     <div class="mm">
       Connect to <strong>Firebase</strong> (free) for real-time sync on any device — phone, tablet, desktop, any browser.
       <ol class="sync-steps">
-        <li>Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a></li>
+        <li>Go to <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer">console.firebase.google.com</a></li>
         <li>Create a project → <em>Add app → Web</em> → copy the <code>firebaseConfig</code> object</li>
         <li>In your project sidebar: <strong>Build → Firestore Database</strong> → Create in <em>test mode</em></li>
         <li>Paste the config JSON below → click <strong>Connect</strong></li>
@@ -21471,7 +21638,7 @@ function renderSmartSection(){
       <span class="sec-nm" data-smart-nm="1" style="${clr}"
           ondblclick="event.stopPropagation();startRenSmartViews()">${esc(label)}</span>
       <span class="sec-acts">
-        <span class="sec-act" onclick="event.stopPropagation();showSmartViewCtx(event)">⋯</span>
+        <span class="sec-act" aria-label="Section options" onclick="event.stopPropagation();showSmartViewCtx(event)">⋯</span>
       </span>
     </div>
     ${body}
@@ -21814,7 +21981,7 @@ function renderTagSection(){
       <span class="sec-tog">${open?'▾':'▸'}</span>
       <span class="sec-nm" style="${clr}">${esc(label)}</span>
       <span class="sec-acts">
-        <span class="sec-act" onclick="event.stopPropagation();showTagSecCtx(event)">⋯</span>
+        <span class="sec-act" aria-label="Section options" onclick="event.stopPropagation();showTagSecCtx(event)">⋯</span>
       </span>
     </div>
     ${body}
@@ -22106,6 +22273,51 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
     if(e.target.closest('[data-aid]')) e.preventDefault();
   });
 })();
+
+/* ── v04.36 — a mouse is not the only way in ──────────────────────────────
+   This app wires most of its UI as `onclick` on a <div>: folder rows, section
+   headers, the logo, list rows, menu items. A <div> is not focusable and does
+   not respond to Enter, so 30 of 55 visible controls on the landing view
+   could only be operated with a mouse — measured, not assumed.
+
+   Two rules, both delegated, so nothing has to be added to the hundreds of
+   places that build this markup and none of them can forget:
+     • anything carrying an `onclick` that is not already a real control is
+       given `tabindex="0"` and `role="button"` as it appears;
+     • Enter and Space on such an element click it, exactly as they would on a
+       real button — and Space does not also scroll the page.
+   Native controls are left alone: the browser already does this for them,
+   and a second handler would fire them twice. */
+function _a11yWireClickables(root){
+  try{
+    (root||document).querySelectorAll('[onclick]').forEach(el=>{
+      if(el.matches('button, a[href], input, select, textarea, [role="button"], [tabindex]')) return;
+      el.setAttribute('tabindex','0');
+      el.setAttribute('role','button');
+    });
+  }catch(e){}
+}
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' '&&e.key!=='Spacebar') return;
+  const el=document.activeElement;
+  if(!el||el===document.body) return;
+  if(el.isContentEditable) return;
+  if(el.matches('button, a[href], input, select, textarea, option')) return;
+  if(!el.hasAttribute('onclick')&&el.getAttribute('role')!=='button') return;
+  e.preventDefault();
+  el.click();
+});
+/* Re-wire as the app repaints. The panes are rebuilt by innerHTML, so a
+   one-off pass at boot would cover the first paint and nothing after it. */
+const _a11yObs=new MutationObserver(muts=>{
+  for(const mu of muts) for(const n of mu.addedNodes)
+    if(n.nodeType===1){ _a11yWireClickables(n); if(n.hasAttribute&&n.hasAttribute('onclick')) _a11yWireClickables(n.parentNode); }
+});
+document.addEventListener('DOMContentLoaded',()=>{
+  _a11yWireClickables(document);
+  try{ _a11yObs.observe(document.body,{childList:true,subtree:true}); }catch(e){}
+});
+
 </script>
 
 
@@ -22383,7 +22595,7 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
 .pin-head-body{font-size:11px;color:var(--t3);line-height:1.45;padding:2px 0 4px 14px;white-space:normal;word-break:break-word}
 </style>
 <!-- ── Reminder Modal ─────────────────────────────────────────────────────── -->
-<div id="rem-modal" onclick="if(event.target===this)closeReminderModal()">
+<div id="rem-modal" role="dialog" aria-modal="true" aria-label="Reminder" onclick="if(event.target===this)closeReminderModal()">
   <div id="rem-box">
     <div class="rem-title">🔔 Set Reminder</div>
     <div>
