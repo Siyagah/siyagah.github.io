@@ -151,6 +151,28 @@ one-line step that **proves the harness can reach Playwright before anything
 else runs**. `harness.playwright()` now throws an actionable message instead of
 a bare module error.
 
+**Verified in GitHub Actions, not locally** — the review asked for the run URL
+and the final status, because a local green run does not verify CI:
+
+| Run | Commit | Result |
+|---|---|---|
+| [35423490609](https://github.com/Siyagah/siyagah.github.io/actions/runs/35423490609) | `01ee709` (v04.37) | **success** |
+
+Both jobs green. The `full` job's own output:
+
+```
+642 checks across 15 suites · 311 matrix rows
+PASS: 305 · BLOCKED—ENVIRONMENT: 4 · BLOCKED—OWNER: 2
+All suites green.
+```
+
+Identical to the local run and to the clean-clone run. The `fast` job's
+`ship-check` step passed **with `origin/main` actually fetched**, so the
+version-bump and `legacy/**` seal comparisons really ran rather than being
+skipped. The pre-flight probe reported `playwright OK` before the suite
+started, and the uploaded matrix artifact is 87,876 bytes against the broken
+run's 65,136 — the difference between a matrix and a matrix-shaped artefact.
+
 **Two things that failure exposed are more important than the fix:**
 
 - **`audit-all` wrote a plausible 90-row matrix from a run that measured
@@ -222,7 +244,8 @@ produced by this round.
 | **Total** | **589** | **642** |
 
 **Feature Coverage Matrix:** 311 rows — **305 PASS**, 4 `BLOCKED—ENVIRONMENT`,
-2 `BLOCKED—OWNER`, **0 FAIL**. Re-run green from a clean clone.
+2 `BLOCKED—OWNER`, **0 FAIL**. Re-run green from a clean clone, **and green in
+GitHub Actions** — [run 35423490609](https://github.com/Siyagah/siyagah.github.io/actions/runs/35423490609), both jobs.
 
 ## 8. Release decision
 

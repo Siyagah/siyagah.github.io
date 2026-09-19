@@ -12,7 +12,7 @@ For whoever picks this up next, human or otherwise.
 | Pull request | [#41](https://github.com/Siyagah/siyagah.github.io/pull/41) — a **merge candidate**, deliberately not merged |
 | Base it was cut from | `b56e403` (v04.35), which was cut from `ba6c70f` (v04.34 = `origin/main` = what is live) |
 | Gate | `node tools/audit-all.mjs` — 642 checks, 15 suites, 311 matrix rows, 0 FAIL |
-| CI | `.github/workflows/checks.yml`, a **candidate**: it reports, it does not block |
+| CI | `.github/workflows/checks.yml`, a **candidate**: it reports, it does not block. Verified green: [run 35423490609](https://github.com/Siyagah/siyagah.github.io/actions/runs/35423490609), 642 checks, both jobs |
 
 ## The documents, in the order they were written
 
