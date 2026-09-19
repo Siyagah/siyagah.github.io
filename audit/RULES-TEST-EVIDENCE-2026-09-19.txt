@@ -1,0 +1,96 @@
+Siyagah — Firestore rules test evidence
+Generated 19 Sep 2026 by audit/rules-check.mjs + audit/edge-check.mjs
+Firestore emulator cloud-firestore-emulator-v1.19.8.jar
+Node v22.22.2  @firebase/rules-unit-testing 3.x
+OWNER_UID placeholder substituted with the test uid 'owner-uid-0001'.
+
+RUN 1 of 3 — the rule live in the project today (audit/firestore.rules.current).
+Expectations below are the PROPOSED rules' expectations, so every 'XX' row
+is a thing the live rule permits that it should not.
+
+=== CURRENT LIVE RULE (evidence of the hole) ===
+   PRINCIPAL          OPERATION                                   PATH                                    EXPECT            GOT
+----------------------------------------------------------------------------------------------------------------------------------------
+ok owner              get notebook doc                            notebooks/nb-m1x2y3z-a4b5c6             ALLOW             ALLOW
+ok owner              update notebook doc (_writeCloudDB shape)   notebooks/nb-m1x2y3z-a4b5c6             ALLOW             ALLOW
+ok owner              get chunk                                   notebooks/nb-m1x2y3z-a4b5c6/chunks/0    ALLOW             ALLOW
+ok owner              set chunk                                   notebooks/nb-m1x2y3z-a4b5c6/chunks/0    ALLOW             ALLOW
+ok owner              delete chunk (tidy-up)                      notebooks/nb-m1x2y3z-a4b5c6/chunks/7    ALLOW             ALLOW
+ok owner              create notebook at UID-named id             notebooks/owner-uid-0001                ALLOW             ALLOW
+ok owner              legacy single-blob write {db}               notebooks/nb-m1x2y3z-a4b5c6             ALLOW             ALLOW
+ok owner              migration copy (_migrateNotebook set)       notebooks/owner-uid-0001                ALLOW             ALLOW
+XX owner              DELETE notebook doc (app never does this)   notebooks/nb-m1x2y3z-a4b5c6             DENY              ALLOW  << Expected request to fail, but it succeeded.
+XX owner              write outside /notebooks                    users/owner-uid-0001                    DENY              ALLOW  << Expected request to fail, but it succeeded.
+XX owner              read outside /notebooks                     secrets/any                             DENY              ALLOW  << Expected request to fail, but it succeeded.
+XX other user         get owner notebook doc                      notebooks/nb-m1x2y3z-a4b5c6             DENY              ALLOW  << Expected request to fail, but it succeeded.
+XX other user         overwrite owner notebook doc                notebooks/nb-m1x2y3z-a4b5c6             DENY              ALLOW  << Expected request to fail, but it succeeded.
+XX other user         get owner chunk (the note text)             notebooks/nb-m1x2y3z-a4b5c6/chunks/0    DENY              ALLOW  << Expected request to fail, but it succeeded.
+XX other user         overwrite owner chunk                       notebooks/nb-m1x2y3z-a4b5c6/chunks/0    DENY              ALLOW  << Expected request to fail, but it succeeded.
+XX other user         delete owner chunk                          notebooks/nb-m1x2y3z-a4b5c6/chunks/0    DENY              ALLOW  << Expected request to fail, but it succeeded.
+XX other user         delete owner notebook doc                   notebooks/owner-uid-0001                DENY              ALLOW  << Expected request to fail, but it succeeded.
+XX other user         list the notebooks collection               notebooks/                              DENY              ALLOW  << Expected request to fail, but it succeeded.
+XX other user         create their own notebook                   notebooks/intruder-uid-9999             DENY              ALLOW  << Expected request to fail, but it succeeded.
+ok signed out         get owner notebook doc                      notebooks/nb-m1x2y3z-a4b5c6             DENY              DENY
+ok signed out         get owner chunk                             notebooks/nb-m1x2y3z-a4b5c6/chunks/0    DENY              DENY
+ok signed out         overwrite owner notebook doc                notebooks/nb-m1x2y3z-a4b5c6             DENY              DENY
+ok signed out         overwrite owner chunk                       notebooks/nb-m1x2y3z-a4b5c6/chunks/0    DENY              DENY
+ok signed out         list the notebooks collection               notebooks/                              DENY              DENY
+ok owner (2 devices)  push from A (1 chunk(s)) then pull on B     notebooks/nb-m1x2y3z-a4b5c6             payload round-tripidentical
+----------------------------------------------------------------------------------------------------------------------------------------
+14 passed, 11 failed   (sync round-trip: round-trip identical)
+
+
+RUN 2 of 3 — the proposed rules (firestore.rules).
+
+=== PROPOSED RULES ===
+   PRINCIPAL          OPERATION                                   PATH                                    EXPECT            GOT
+----------------------------------------------------------------------------------------------------------------------------------------
+ok owner              get notebook doc                            notebooks/nb-m1x2y3z-a4b5c6             ALLOW             ALLOW
+ok owner              update notebook doc (_writeCloudDB shape)   notebooks/nb-m1x2y3z-a4b5c6             ALLOW             ALLOW
+ok owner              get chunk                                   notebooks/nb-m1x2y3z-a4b5c6/chunks/0    ALLOW             ALLOW
+ok owner              set chunk                                   notebooks/nb-m1x2y3z-a4b5c6/chunks/0    ALLOW             ALLOW
+ok owner              delete chunk (tidy-up)                      notebooks/nb-m1x2y3z-a4b5c6/chunks/7    ALLOW             ALLOW
+ok owner              create notebook at UID-named id             notebooks/owner-uid-0001                ALLOW             ALLOW
+ok owner              legacy single-blob write {db}               notebooks/nb-m1x2y3z-a4b5c6             ALLOW             ALLOW
+ok owner              migration copy (_migrateNotebook set)       notebooks/owner-uid-0001                ALLOW             ALLOW
+ok owner              DELETE notebook doc (app never does this)   notebooks/nb-m1x2y3z-a4b5c6             DENY              DENY
+ok owner              write outside /notebooks                    users/owner-uid-0001                    DENY              DENY
+ok owner              read outside /notebooks                     secrets/any                             DENY              DENY
+ok other user         get owner notebook doc                      notebooks/nb-m1x2y3z-a4b5c6             DENY              DENY
+ok other user         overwrite owner notebook doc                notebooks/nb-m1x2y3z-a4b5c6             DENY              DENY
+ok other user         get owner chunk (the note text)             notebooks/nb-m1x2y3z-a4b5c6/chunks/0    DENY              DENY
+ok other user         overwrite owner chunk                       notebooks/nb-m1x2y3z-a4b5c6/chunks/0    DENY              DENY
+ok other user         delete owner chunk                          notebooks/nb-m1x2y3z-a4b5c6/chunks/0    DENY              DENY
+ok other user         delete owner notebook doc                   notebooks/owner-uid-0001                DENY              DENY
+ok other user         list the notebooks collection               notebooks/                              DENY              DENY
+ok other user         create their own notebook                   notebooks/intruder-uid-9999             DENY              DENY
+ok signed out         get owner notebook doc                      notebooks/nb-m1x2y3z-a4b5c6             DENY              DENY
+ok signed out         get owner chunk                             notebooks/nb-m1x2y3z-a4b5c6/chunks/0    DENY              DENY
+ok signed out         overwrite owner notebook doc                notebooks/nb-m1x2y3z-a4b5c6             DENY              DENY
+ok signed out         overwrite owner chunk                       notebooks/nb-m1x2y3z-a4b5c6/chunks/0    DENY              DENY
+ok signed out         list the notebooks collection               notebooks/                              DENY              DENY
+ok owner (2 devices)  push from A (1 chunk(s)) then pull on B     notebooks/nb-m1x2y3z-a4b5c6             payload round-tripidentical
+----------------------------------------------------------------------------------------------------------------------------------------
+25 passed, 0 failed   (sync round-trip: round-trip identical)
+
+
+RUN 3 of 3 — deployment-risk edge cases (audit/edge-check.mjs).
+
+=== E1 — the naive doc-id rule, against the owner's real notebook id ===
+
+ok  naive rule: owner writing notebooks/nb-m1x2y3z-a4b5c6  -> DENY
+       This is the id generateNotebookId() actually produces. DENY here = the owner is locked out of their own notebook.
+ok  naive rule: owner writing notebooks/owner-uid-0001  -> ALLOW
+       Only works if the owner happened to paste their raw UID into the Notebook ID box.
+
+=== E2 — a multi-chunk notebook through the PROPOSED rules ===
+
+ok  owner push of a 1.81 MB payload as 3 chunks -> ALLOW
+       The real _writeCloudDB batch: n chunk docs + the parent doc, one commit.
+ok  owner tidy-up batch deleting chunks 3..12 -> ALLOW
+       The second batch _writeCloudDB commits after every push.
+ok  device B reassembled 3 chunks -> byte-identical
+       I2: a change on one device reaches another, through the proposed rules.
+
+5 passed, 0 failed
+

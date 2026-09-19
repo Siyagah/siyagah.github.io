@@ -1,0 +1,112 @@
+rules_version = '2';
+
+/* ============================================================================
+   Siyagah — proposed Firestore security rules            PROPOSED, NOT DEPLOYED
+   Drafted 19 Sep 2026 for Master Architect review. Do not publish until the
+   OWNER_UID below has been filled in and the owner has re-read the notes.
+
+   WHAT THIS REPLACES
+   ------------------
+   The rule live in the project today is:
+
+       match /{document=**} { allow read, write: if request.auth != null; }
+
+   That grants EVERY signed-in Google account on the internet full read and
+   write over EVERY document in the project. Firebase sign-in is open to any
+   Google account by default, so "signed in" is not a restriction: anyone who
+   learns the project's apiKey (it ships in the page source of a public site)
+   can sign in with their own Google account and read, overwrite or wipe the
+   owner's notebook. That is an I1 ("no note is ever lost") and a privacy
+   breach, not a hardening opportunity.
+
+   WHAT THIS GRANTS
+   ----------------
+   Exactly one Google account — the owner's — and only over the two path
+   shapes the app actually uses. Everything else, for everyone, is denied.
+
+   WHY IT PINS THE UID INSTEAD OF MATCHING THE DOCUMENT ID
+   ------------------------------------------------------
+   The obvious rule is `nbId == request.auth.uid`. It is WRONG for this app,
+   and shipping it would stop the owner's sync dead.
+
+   index.html:19349 carries the comment "UID = private Notebook ID", but no
+   code ever assigns the UID to the notebook id. `cfg.notebookId` is read from
+   localStorage ('siyagah-sync-v1'), and it was written by connectSync()
+   (index.html:20298) from a free-text input whose default is
+   generateNotebookId() -> 'nb-<base36>-<random>' (index.html:20166). The
+   owner's live notebook is therefore at /notebooks/nb-xxxxx unless they
+   happened to paste their raw UID into that box.
+
+   runMigration() does copy /notebooks/{oldId} -> /notebooks/{uid}, but it
+   never updates the stored notebookId, so after a migration the app keeps
+   syncing to the OLD id. Either way the document id cannot be assumed equal
+   to the UID.
+
+   Pinning on request.auth.uid is correct regardless of what the notebook id
+   turns out to be, and it matches D1 ("one user, one Google account").
+
+   BEFORE DEPLOYING
+   ----------------
+   Replace OWNER_UID below with the owner's real Google UID. To find it:
+   Firebase console -> Build -> Authentication -> Users -> the "User UID"
+   column, or in the app's browser console while signed in:
+       firebase.app('siyagah-main').auth().currentUser.uid
+   A wrong or unreplaced value locks the owner out of their own notebook.
+   ========================================================================= */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* The single account that owns this notebook. */
+    function ownerUid() {
+      return 'OWNER_UID';
+    }
+
+    function isOwner() {
+      return request.auth != null && request.auth.uid == ownerUid();
+    }
+
+    /* ---- /notebooks/{nbId} -----------------------------------------------
+       The parent document. Written by _writeCloudDB() (index.html:19899) as
+       {n, ver, deviceUpdatedAt, updatedAt} and by _migrateNotebook()
+       (index.html:6776) as a copy of an older document, which may still carry
+       the legacy single-blob `db` field. Read by the onSnapshot listener,
+       syncNow() and _reconcileNow().
+
+       Delete is denied on purpose: no code path in either the live build or
+       the sealed legacy/v03.99 build ever deletes this document, so denying
+       it costs nothing and puts one more lock between a stray call and I1.
+       Chunk deletes stay allowed — the app really does delete those. */
+    match /notebooks/{nbId} {
+      allow get, list: if isOwner();
+      allow create, update: if isOwner();
+      allow delete: if false;
+
+      /* ---- /notebooks/{nbId}/chunks/{chunkId} ---------------------------
+         The chunked payload that gets around Firestore's 1 MiB per-document
+         limit. Written as {p, ver}; read one id at a time (never queried);
+         indices n..n+9 are deleted after each push to tidy up a previously
+         longer chunk set (index.html:19901-19904). */
+      match /chunks/{chunkId} {
+        allow read, write: if isOwner();
+      }
+
+      /* No other subcollection is matched, so every other path under a
+         notebook is denied by default. Note for the reviewer: a nested
+         `allow ... : if false` would NOT add protection here — Firestore ORs
+         its allow rules and has no deny that overrides one — so the absence
+         of a match IS the deny, and nothing is written out for it. */
+    }
+
+    /* ---- Everything else --------------------------------------------------
+       The catch-all, written out only because it is the line that REPLACES
+       `allow read, write: if request.auth != null`. It grants nothing:
+       unmatched paths are already denied, and `if false` cannot revoke an
+       allow granted above. It is here so that the diff against the live rule
+       is a change of condition rather than a deletion, and so that the file
+       says plainly what the default is. */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
