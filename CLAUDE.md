@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.36.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.37.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,40 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.37** (19 Sep 2026) — a CORRECTION round. An independent review of
+  v04.36 returned **DO NOT MERGE OR DEPLOY** with four blockers, and was right
+  about all four; two of them were **safety claims I had made and not
+  proved**. **"Nothing was discarded" was true of one path out of four**:
+  `_repairDB()` sets malformed bytes aside at `db._salvage`, but
+  `mergeDB(local,remote)` starts `Object.assign({},local)` and merges a named
+  list, so `remote._salvage` was never carried — measured, the bytes are on
+  the input object and `null` in `DB` and localStorage one merge later, and
+  the same for an imported file. `_mergeSalvage()` unions both sides now,
+  keys are collision-safe (`where.collection@<iso>#<hash>`, because two
+  devices wrote the same key), and bounding drops the **value** while keeping
+  the **record** (size, hash, `prunedAt`) — because silently losing an entry
+  is the fault the mechanism exists to prevent. **Cancel was wired to Replace
+  All**: both importers asked `OK = Merge, Cancel = Replace All` in a native
+  `confirm()`, so the instinctive way out of a dialog was the one action that
+  cannot be undone. Three separate buttons now, Cancel focused, Escape and
+  backdrop cancelling, Replace behind a second confirm — every exit measured
+  on **storage bytes**. **The recovery copy was an action, not a file**:
+  `exportFile()` clicks an anchor and revokes the URL in the same call, so
+  "a safety copy was taken" proved nothing, and was said immediately before
+  wiping the notebook. It is an IndexedDB snapshot **read back in a separate
+  transaction** now, compared by length and hash, restorable from `🛟 Safety
+  Copies`, with a hash-mismatched snapshot refused. **CI had been failing
+  since it was added** — `npx playwright install` installs no importable
+  package, so both runs measured **58 checks instead of 589** and reported 35
+  import failures as app defects. Two worse things behind it: `audit-all`
+  **wrote a plausible 90-row matrix from a run that measured nothing**, and
+  `ship-check` **passed 11/11 while silently skipping** the version and I6
+  comparisons. Both now say so. Plus the sanitiser inverted to an allow-list
+  of what a note is MADE OF (12 vectors had got past the old one; 20 tested
+  now, unknown elements **unwrapped not deleted**), and **rollback evidenced**
+  by running the real v04.34 and v04.35 builds out of git against a v04.37
+  notebook, both directions. **642 checks** across 15 suites, 311 matrix rows,
+  0 FAIL. Report: `audit/CORRECTION-AUDIT-2026-09-19-v0437.md`.
 - **v04.36** (19 Sep 2026) — not a feature round: Phases 0–10 of the owner's
   **Master Audit and Continuous Build Plan**. v04.35's report was re-measured
   rather than believed — a detached worktree at `ba6c70f` shows the note
@@ -121,29 +155,6 @@ must never accumulate here instead of there.
   `.fw-ed` both live on one note, both on autosave — measured on
   `origin/main` at v04.32, fixed here. 255/255 app checks (up from 236) and
   11/11 ship checks.
-- **v04.32** (12 Sep 2026) — two screenshots of the phone's read view.
-  **`📁 Folder · 1 attached`**: the word went, the count stayed — but the word
-  alone would NOT have done what was asked, and the measurement said so.
-  Dropping it saves 52px; with the four Attach rows flowing free, three fit
-  the first line from **410px** of screen and the fourth needs **537px**, so
-  every common phone (412, 414, 428, 430) lands in the gap and strands
-  `🗄 MyDatabase` alone — the shape in the screenshot. They wrap as two
-  **pairs** under 640px, each button still sized to its own words; above
-  640px `.eb-pair` is `display:contents` and the 260px card is untouched.
-  **The full `⋯` menu** was the last phone surface that never got v04.29:
-  21 rows of 155px hanging in a 167px column, and six grey separator lines
-  doing the work six headings should do. It is the same card as the other
-  palettes now — `THIS NOTE` / `MARK IT` / `PUT IT IN` / `REMIND & REVISE` /
-  `REMOVE`, **21 rows on 9 lines**, 14 distinct widths, 44px, 629px of an
-  844px phone, no scrolling — built from **one table rendered two ways**
-  (`_artCtxGroups()`) so the phone's card and the laptop's column cannot
-  become different menus. Three glyph collisions inside that one menu fell
-  out of writing it down (`🏷` was NTI Types and Tags, `↺` was Reopen and
-  Remove-from-practice, `✅` was In-favourites and Mark-as-done). **And
-  `⋯ All actions` — the row v04.31 added — never worked**: a synthesised
-  event again, the v04.12 defect verbatim, measured dead on `origin/main`
-  before anything was touched. 236/236 app checks (up from 219) and 11/11
-  ship checks.
 ---
 
 ## What this is
@@ -323,6 +334,59 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A safety claim is a measurement or it is nothing — and the path you
+  happened to test is not the only path.** "Nothing was discarded" was
+  written about `_repairDB()`'s salvage and was true of exactly one of the
+  four routes it travels, because `mergeDB()` starts `Object.assign({},
+  local)` and the other three arrive as the REMOTE side. The check that
+  "proved" it asserted on the transient input object, which is the one place
+  the value always exists. Assert on what is PERSISTED or EXPORTED, and list
+  every route a value takes before writing a sentence about all of them.
+  Cost: an independent reviewer found it in v04.37, one round after the claim
+  shipped in a release report.
+- **A destructive branch must never be the Cancel branch.** Both importers
+  asked `OK = Merge, Cancel = Replace All` through a native `confirm()`,
+  because a confirm can only carry two answers and the second action had to
+  go somewhere. So the instinctive way out of a dialog nobody understands —
+  Escape, Cancel, click-away — was wired to the only thing that cannot be
+  undone. When a question has three answers it needs three buttons; and the
+  safe one takes the focus, so Enter on an unread dialog does nothing. Cost:
+  shipped in v04.36, caught by review before the owner ever pressed it.
+- **"It did not throw" is not "it worked" when the work is in another
+  process.** `exportFile()` builds a Blob, clicks an anchor and revokes the
+  object URL in the same call; the browser may refuse the download or be
+  interrupted and nothing raises. v04.36 called that a recovery copy and said
+  so immediately before wiping the notebook. If a guarantee is needed before
+  a destructive step, the artefact has to be WRITTEN AND READ BACK somewhere
+  you control — and it has to be restorable, because a recovery copy nobody
+  can restore from is not one. Cost: found in review, v04.37.
+- **A check that cannot do its job must FAIL, never skip quietly.**
+  `ship-check` reported **11/11** in a clone with no `origin/main`, having
+  silently skipped both the version-bump and the `legacy/**` seal (I6) — the
+  two comparisons it exists to make — because they were written as
+  `r.pass(..., 'skipped')`. An independent reviewer was handed that green tick
+  for a comparison that never happened. Its twin, the same day: `audit-all`
+  assembled a normal-looking **90-row matrix** out of a CI run in which every
+  browser suite had died at `import playwright` and nothing had been measured
+  at all. A skip must be loud, opted into by name, and visible in the output;
+  a run that measured nothing must say so in large letters. Cost: two false
+  green signals in one round, both found by review rather than by us.
+- **Run the CI you wrote.** The workflow added in v04.36 failed on its first
+  run and its second, and nobody looked — `npx --yes playwright@latest
+  install` downloads a browser and installs no importable package, which is
+  invisible until something imports it. A workflow that has never gone green
+  is a plan, not a gate. Add a step that proves the environment before the
+  suite runs, so a missing dependency reads as one failure and not as 35 app
+  defects.
+- **An allow-list of dangerous things rots; an allow-list of what the thing
+  IS does not.** The v04.36 sanitiser named `on*`, `<script>`, `javascript:`
+  and foreign iframes — and `srcdoc`, `java&#115;cript:`, a tab inside the
+  scheme, `<form action>`, `<base>`, `<meta refresh>`, `<object>`, `<embed>`,
+  `<svg><use>`, `style="url()"`, `@import` and `data:text/html` all walked
+  past it. Inverted, it keeps only the tags and attributes a note is made of
+  — and **unwraps** anything it does not recognise instead of deleting it, so
+  the words inside survive (I1) and a tag invented tomorrow is handled today.
+  It is the same lesson as the export residue list, paid for twice.
 - **A check that has only ever run on a well-formed fixture has never
   measured the state where the invariant is actually at risk.** `seedDB()` is
   always valid, so 286 passing checks had only ever measured a HAPPY boot.

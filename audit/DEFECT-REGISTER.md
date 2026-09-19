@@ -16,6 +16,22 @@ independently re-measured in Phase 0 of this programme:
 | F5 | Medium | No continuous integration | open | — | Phase 9 |
 | F6 | Low/Info | Firestore may be in test mode | **BLOCKED—OWNER** (Decision 2) | — | Phase 6 |
 
+## Found by the independent review of v04.36 (19 Sep 2026)
+
+Every one reproduced against v04.36 **before** any change, and every fix
+asserted on persisted or exported data, or on a cancellation invariant.
+
+| # | Severity | Defect | Status | Version | Regression test |
+|---|---|---|---|---|---|
+| **B1** | **High** (I1) | `_repairDB()` set malformed bytes aside at `db._salvage[...]` and v04.36 called it "nothing was discarded". `mergeDB(local, remote)` starts from `Object.assign({}, local)` and merges a named list, so **`remote._salvage` was never carried**. Measured: the bytes are on the input object and `null` in `DB` and in `localStorage` one merge later. Same for an imported file. The promise held only for the one path that happened to be the local side. | **FAIL—FIXED** — `_mergeSalvage()` unions both sides; keys are collision-safe; bounding drops the VALUE and keeps the RECORD | v04.37 | `audit-j-recovery` J1 ×6, J2 ×4 — asserted in `DB`, in `localStorage` and in the export |
+| **B2** | **High** (I1) | Both importers asked `OK = Merge, Cancel = Replace All` in a native `confirm()`. **Cancel did not cancel** — the instinctive way out of a dialog was wired to the one action that cannot be undone. | **FAIL—FIXED** — three separate buttons, Cancel focused, Escape and backdrop both cancelling, Replace behind a second confirmation | v04.37 | `audit-j-recovery` J3 ×9, every cancel compared on **storage bytes** |
+| **B3** | **High** | `_preImportRecoveryCopy()` called `exportFile()` and returned `true` if nothing threw. `exportFile()` clicks an anchor and revokes the object URL in the same call — it proves no file was saved. The claim was made immediately before wiping the notebook. | **FAIL—FIXED** — an IndexedDB snapshot **read back in a separate transaction** and compared by length and hash, restorable from `🛟 Safety Copies`, with a hash-mismatched snapshot refused | v04.37 | `audit-j-recovery` J4 ×6, including a denied store and a damaged snapshot |
+| **B4** | Medium | The CI workflow ran `npx --yes playwright@latest install`, which installs **no importable package**. Both runs downloaded 300 MB of Chromium and then failed every browser suite at `import playwright`: **58 checks instead of 589**, reported as 35 "the check itself threw" rows that looked like app defects. | **FAIL—FIXED** — pinned global install where `harness.mjs` looks, plus a pre-flight probe | v04.37 | the workflow itself; `harness.playwright()` now throws an actionable error |
+| **B4a** | **High** (process) | `audit-all` **still wrote a plausible 90-row matrix** from the run in which nothing was measured. A broken environment produced a document that reads like coverage. | **FAIL—FIXED** — stale matrix fragments deleted first; a suite that never started is named `NEVER RAN`; the matrix carries a banner saying it is not a measurement | v04.37 | `audit-all` marks and reports it |
+| **B4b** | **High** (process) | `ship-check` **passed 11/11 in a clone with no `origin/main`**, silently skipping the version-bump and legacy-seal (I6) comparisons — which is how the reviewer was handed a green tick for a comparison that never happened. | **FAIL—FIXED** — it now fails loudly unless `SHIP_CHECK_NO_MAIN=1` asks for the skip by name | v04.37 | verified in a single-branch clone: 9/11, 2 FAILED |
+| **B5** | Medium (security) | The v04.36 sanitiser was an allow-list of dangerous things, which rots. `srcdoc`, `java&#115;cript:`, a tab inside the scheme, `<form action>`, `<base>`, `<meta http-equiv=refresh>`, `<object>`, `<embed>`, `<svg><use>`, `style="url(…)"`, `@import` and a `data:text/html` anchor all survived it. | **FAIL—FIXED** — inverted to an allow-list of what a note is *made of*, with unknown elements **unwrapped, not deleted** | v04.37 | `audit-j-recovery` J5: 20 adversarial vectors, plus 12 legitimate kinds proved kept |
+| **B6** | Medium | "Older builds ignore `_salvage`, so a rollback is self-correcting" was an assertion with no evidence behind it. | **FAIL—FIXED** — replaced by evidence | v04.37 | `audit-k-rollback`: the real v04.34 and v04.35 builds run out of git against a v04.37-repaired notebook, and their writes brought back — 18 checks, both directions |
+
 ## Found by this programme
 
 | # | Severity | Defect | Found by | Status | Version | Regression test |

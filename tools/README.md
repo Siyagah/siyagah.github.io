@@ -477,3 +477,49 @@ assertions miss.
   ends by asking the raw file whether `name(` appears anywhere but the
   declaration — one grep, which has overruled three versions of the clever
   answer. **If you change that mask, check the total moved the way you meant.**
+
+## Traps in this harness — round 3 (v04.37, the correction round)
+
+- **Assert on what is PERSISTED, not on the object you passed in.** The v04.36
+  salvage check read `rr.db._salvage` — the transient input — which is the one
+  place the value always exists. The value was gone from `DB` and from
+  `localStorage` one `mergeDB()` later, and the check said it was fine. If a
+  claim is about data surviving, read it back out of `localStorage`, out of the
+  export, and after a reload.
+- **A check that cannot make its comparison must FAIL.** `ship-check` wrote
+  `r.pass(..., 'skipped: no origin/main')` and reported 11/11 in a
+  single-branch clone, silently dropping the version-bump and `legacy/**` seal
+  comparisons. Skips are now opted into by name (`SHIP_CHECK_NO_MAIN=1`) and
+  say so in the output. Never write a skip as a pass.
+- **A run that measured nothing must not produce a results document.**
+  `audit-all` assembled a plausible 90-row matrix from a CI run where every
+  browser suite died at `import playwright`. It now deletes last run's matrix
+  fragments first, marks such suites `NEVER RAN`, and puts a banner on the
+  matrix. When you add a suite, make sure its failure mode is distinguishable
+  from its checks failing.
+- **`npx playwright install` installs a BROWSER, not a PACKAGE.** `harness.mjs`
+  imports `playwright` from the project or from `npm root -g`; `npx` populates
+  neither. CI downloaded 300 MB of Chromium twice and then failed at the first
+  import. Install it where the harness looks, pin it, and prove it is reachable
+  in its own step before the suite runs.
+- **Stubbing `window.confirm` measures a dialog the app may no longer show.**
+  When a round replaces a native `confirm()` with a real dialog, every check
+  that fed answers to `confirm` silently passes or silently fails for the wrong
+  reason. Click the buttons: `page.click('#mb [data-choice="merge"]')`.
+- **A modal that resolves a promise needs its observer armed AFTER it opens.**
+  `_choiceModal()` watches `#ov` losing its `on` class to treat any other close
+  as a cancel — armed synchronously, it fires on the class change `showModal()`
+  itself causes and the dialog resolves before it is on screen.
+- **Check the arity, and check the key.** `logContactAction(ev, aid)` takes two
+  arguments; note history lives at `a.noteHistory`, not `a.history`; the
+  starter My Database folders are identified by `sectionId`, not an id prefix.
+  Three separate "the feature is broken" reports in this programme, all three
+  the check being wrong.
+- **An HTML block comment inside a JS block comment ends it early.** Writing
+  "every `/* */` comment" inside a `/* ... */` explanation in `inventory.mjs`
+  closed the comment at the inner `*/` and the file stopped parsing. Say "block
+  comment".
+- **Unicode escapes do not always survive a heredoc.** A regex written as
+  `/[\u0000-  …]/` through a shell heredoc arrived in `index.html` as
+  real control characters and the app stopped parsing. For character ranges in
+  generated code, use `charCodeAt` comparisons instead of `\u` escapes.
