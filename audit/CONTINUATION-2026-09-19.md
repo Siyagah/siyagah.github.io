@@ -12,7 +12,7 @@ For whoever picks this up next, human or otherwise.
 | Pull request | [#41](https://github.com/Siyagah/siyagah.github.io/pull/41) — a **merge candidate**, deliberately not merged |
 | Base it was cut from | `b56e403` (v04.35), which was cut from `ba6c70f` (v04.34 = `origin/main` = what is live) |
 | Gate | `node tools/audit-all.mjs` — see `audit/CORRECTION-AUDIT-2026-09-19-v0438.md` §6 for the v04.38 totals |
-| CI | `.github/workflows/checks.yml`, a **candidate**: it reports, it does not block. Verified green: [run 35423490609](https://github.com/Siyagah/siyagah.github.io/actions/runs/35423490609), 642 checks, both jobs |
+| CI | `.github/workflows/checks.yml`, a **candidate**: it reports, it does not block. Verified green on the v04.38 head `b5ed9d1`: [run 35429336608](https://github.com/Siyagah/siyagah.github.io/actions/runs/35429336608) (push) and [35429338062](https://github.com/Siyagah/siyagah.github.io/actions/runs/35429338062) (PR) — the log prints `654 checks across 15 suites · 323 matrix rows · All suites green` |
 
 ## The documents, in the order they were written
 

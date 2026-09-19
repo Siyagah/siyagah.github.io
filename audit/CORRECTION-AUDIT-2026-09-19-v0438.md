@@ -281,4 +281,115 @@ Unchanged by this round, and stated as the review requires:
 
 ## 8. The delivered head, and the CI run
 
-*(Filled in after the final push — see the end of this file.)*
+| | |
+|---|---|
+| **Branch** | `claude/elegant-maxwell-8maykf` |
+| **Delivered commit (full SHA)** | **`b5ed9d1d1b6464c0e634fb2517522dbfab6169ca`** |
+| **Parent (the reviewed head)** | `817da3c08df0edd7b9a8e6e1377adf149fd64721` (v04.37) |
+| **Version** | **v04.38** — `<meta name="app-version">`, `.sb-logo` pre-boot tag, `sw.js` `VERSION = 'v04.38.01'` |
+| **Pull request** | [#41](https://github.com/Siyagah/siyagah.github.io/pull/41), updated by this push — still a **merge candidate**, still not merged |
+| **`main`** | unchanged at `ba6c70f` (v04.34) — what is live |
+
+**CI, on this exact commit — both runs `success`:**
+
+- push: [run 35429336608](https://github.com/Siyagah/siyagah.github.io/actions/runs/35429336608)
+- pull_request: [run 35429338062](https://github.com/Siyagah/siyagah.github.io/actions/runs/35429338062)
+
+The `full` job's own output, read out of the run log rather than asserted:
+
+```
+654 checks across 15 suites · 323 matrix rows
+PASS: 317 · BLOCKED—ENVIRONMENT: 4 · BLOCKED—OWNER: 2
+
+All suites green.
+```
+
+— identical to the local run in §6.
+
+The two steps that made the last round's CI a false signal are individually
+green here, and are named because "the job passed" was not enough last time:
+
+- **`make origin/main reachable for the comparison checks`** — so `ship-check`
+  really performed the version-bump and `legacy/**` seal (I6) comparisons
+  instead of silently skipping them;
+- **`prove the harness can actually reach Playwright before running anything`**
+  — so the browser suites genuinely measured the app. This is the exact
+  failure that once reported 58 checks as if they were 589.
+
+Corroborating: the `feature-matrix` artifact is **89,534 bytes**, against
+v04.37's 87,876 and the broken run's 65,136.
+
+`audit-all` exits non-zero on any FAIL, so a `success` conclusion on that step
+is itself the "0 FAIL" assertion.
+
+---
+
+## 9. Session-change report
+
+### Can this session safely continue?
+
+**Yes, technically** — nothing is half-finished. The two defects are fixed and
+proved fixed, the version is bumped in all three places, the full gate is
+green locally, the branch is pushed, and every document is updated.
+
+### Is a fresh session advisable?
+
+**Yes, and the review already said so.** Two independent reasons:
+
+1. **This session started on a different round.** It was opened for the
+   v04.35 audit, has the whole of that audit in its history, and then picked
+   up a review of v04.37 written against work done by two *other* sessions in
+   between. It has been carrying context it does not need and lacking context
+   it had to re-derive from the repository. That worked — but it is not the
+   cheapest way to run the next round.
+2. **Everything a successor needs is now written down**, in
+   `audit/CONTINUATION-2026-09-19.md`, this file, the defect register and
+   `CLAUDE.md`. Nothing of value lives only in this transcript.
+
+### Exact handover prompt
+
+> Bismillah. Continue Siyagah from `claude/elegant-maxwell-8maykf` at the head
+> recorded in `audit/CORRECTION-AUDIT-2026-09-19-v0438.md` §8.
+>
+> **State:** version **v04.38**. Full gate green locally — `node
+> tools/audit-all.mjs` → **654 checks across 15 suites, 323 matrix rows, 0
+> FAIL**. CI status for the delivered commit is recorded in §8 of that file.
+> PR [#41](https://github.com/Siyagah/siyagah.github.io/pull/41) is a **merge
+> candidate, deliberately not merged**; `main` is still v04.34, which is what
+> is live.
+>
+> **Read first, in this order:** `CLAUDE.md` (invariants I1–I8, decisions
+> D1–D5, standing lessons) → `audit/CONTINUATION-2026-09-19.md` →
+> `audit/CORRECTION-AUDIT-2026-09-19-v0438.md` → `audit/DEFECT-REGISTER.md`
+> (rows C1–C3 are this round) → `tools/README.md` before touching the harness.
+>
+> **What v04.38 did:** fixed the two defects a second independent review found
+> inside v04.37's own Safety Copies feature — Restore proceeded when the undo
+> copy had failed, and the save gate compared a record's metadata against
+> itself instead of hashing the bytes it read back. Both reproduced on
+> `817da3c` first; `audit/repro/recovery-undo-precondition.mjs` runs both.
+> `audit-j-recovery` went 41 → 45 rows.
+>
+> **Nothing is outstanding that does not depend on an owner decision.** The
+> two open items are both the owner's: the **live Firestore Rules** (the most
+> important — nothing in the repository can compensate for permissive rules),
+> and the **private residue in the sealed `legacy/v03.99/` build** at a public
+> URL, where I6 forbids the edit. Recommendation on the second is unchanged:
+> strip only the residue, leave every line of application code, record a named
+> exception.
+>
+> **Environment blocker:** `siyagah.github.io` and all Google hosts are denied
+> by this sandbox's egress policy, so the live site, real Firestore rules,
+> real two-device sync and the deployed PWA **cannot be measured here** and
+> must stay marked unverified.
+>
+> Do not merge, deploy, modify `legacy/`, or touch production Firebase data.
+> Ask before any of those; continue independent work otherwise.
+
+### For the Master Architect
+
+This delivery answers the two required corrections, the regression evidence
+each one was specified with, the wording and limits, the version increment and
+the full gate. The three "keep unverified until measured" items are stated as
+unverified in §7 and carried as `BLOCKED—ENVIRONMENT` / `BLOCKED—OWNER` rows
+in the feature matrix rather than as passes.

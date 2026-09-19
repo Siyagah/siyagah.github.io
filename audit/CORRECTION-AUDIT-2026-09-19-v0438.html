@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Siyagah — Correction Round, v04.38</title>
+<style>
+  :root { --ink:#1a1a1a; --dim:#5a5a5a; --line:#e3e0da; --paper:#fffdf8; --panel:#f6f3ec;
+           --accent:#2f5d50; --warn:#9a3412; --ok:#166534; --code:#f3f1ec; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --ink:#e9e6e0; --dim:#a9a49c; --line:#33312e; --paper:#171613; --panel:#201e1a;
+    --accent:#7fb3a1; --warn:#f0a070; --ok:#7bc08a; --code:#23211d; } }
+  :root[data-theme="dark"] { --ink:#e9e6e0; --dim:#a9a49c; --line:#33312e; --paper:#171613;
+    --panel:#201e1a; --accent:#7fb3a1; --warn:#f0a070; --ok:#7bc08a; --code:#23211d; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); padding:0 16px 96px;
+    font:16px/1.65 ui-serif,Georgia,'Times New Roman',serif; }
+  main { max-width:860px; margin:0 auto; }
+  h1,h2,h3,h4 { font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+    line-height:1.25; margin:2.2em 0 .6em; }
+  h1 { font-size:2em; margin-top:1.4em; letter-spacing:-.02em; }
+  h2 { font-size:1.45em; padding-bottom:.3em; border-bottom:2px solid var(--line); color:var(--accent); }
+  h3 { font-size:1.15em; } h4 { font-size:1em; color:var(--dim); }
+  p { margin:.9em 0; }
+  a { color:var(--accent); }
+  code { background:var(--code); padding:.12em .38em; border-radius:4px;
+    font:.86em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; word-break:break-word; }
+  pre { background:var(--code); border:1px solid var(--line); border-radius:8px;
+    padding:14px 16px; overflow-x:auto; }
+  pre code { background:none; padding:0; font-size:.84em; }
+  table { border-collapse:collapse; width:100%; margin:1.2em 0; font-size:.93em;
+    display:block; overflow-x:auto; }
+  th,td { border:1px solid var(--line); padding:8px 11px; text-align:left; vertical-align:top; }
+  th { background:var(--panel); font-family:ui-sans-serif,system-ui,sans-serif; font-size:.92em; }
+  tr:nth-child(even) td { background:color-mix(in srgb, var(--panel) 45%, transparent); }
+  blockquote { margin:1.2em 0; padding:.9em 1.2em; border-left:4px solid var(--accent);
+    background:var(--panel); border-radius:0 8px 8px 0; }
+  hr { border:0; border-top:1px solid var(--line); margin:2.4em 0; }
+  ul,ol { padding-left:1.4em; } li { margin:.35em 0; }
+  .banner { background:var(--panel); border:1px solid var(--line); border-left:5px solid var(--accent);
+    border-radius:8px; padding:14px 18px; margin:24px 0 0; font-size:.92em;
+    font-family:ui-sans-serif,system-ui,sans-serif; color:var(--dim); }
+  @media (max-width:640px) { body { font-size:15px; } h1 { font-size:1.6em; } }
+</style></head><body><main>
+<div class="banner">Generated 2026-09-19 from
+<code>audit/CORRECTION-AUDIT-2026-09-19-v0438.md</code> · the Markdown file is the source of truth.</div>
+<h1>Siyagah — Correction Round, v04.38</h1>
+<p><strong>Date:</strong> 19 September 2026 <strong>Branch:</strong> <code>claude/elegant-maxwell-8maykf</code> <strong>Reviewed head (the state this round corrects):</strong> <code>817da3c08df0edd7b9a8e6e1377adf149fd64721</code> (v04.37) <strong>Delivered head:</strong> see §8 — recorded after the final push, with the real SHA <strong>Review acted on:</strong> <em>Siyagah v04.37 — Master Architect review</em>, 19 September 2026 <strong>Merged / deployed:</strong> <strong>no</strong> — and nothing in <code>legacy/</code>, and no production Firebase data touched</p>
+<hr>
+<h2>1. For the owner, in plain language</h2>
+<p>Your architect reviewed the "Safety Copies" feature that the last round built, and found two faults in it. <strong>Both were real. I reproduced both before changing anything, and both are now fixed and proved fixed.</strong></p>
+<p>What the feature is for: before anything replaces your notes — an import, or restoring an older copy — Siyagah takes a <strong>safety copy</strong> first, so there is always a way back.</p>
+<p><strong>Fault 1 — the way back could be missing at the exact moment you were told it existed.</strong> When you restore a safety copy, Siyagah is supposed to save a fresh copy of what you have <em>now</em> first, so you can undo the restore. It tried, and if that save failed — no room left, or the browser refusing — <strong>it carried on anyway and replaced your notes.</strong> The message you had just read said "a fresh safety copy of what you have now is taken first, so this can be undone". It said that at the moment it stopped being true, and the replacement was then sent to your other devices.</p>
+<blockquote>Now: if the safety copy cannot be made, <strong>nothing is changed at all</strong> — not your notes, not this browser's storage, and nothing is sent to your other devices. You are told why, and asked what you want to do. You can still go ahead if you want to, but you have to say so, and the message afterwards says plainly that it was done <em>without</em> a way back.</blockquote>
+<p><strong>Fault 2 — the check on the copy was checking the wrong thing.</strong> After writing a safety copy, Siyagah reads it back to make sure it arrived intact. It was comparing the copy's <em>description of itself</em> — its recorded size and fingerprint — instead of re-examining the actual contents. A copy that came back damaged, but at the same size, passed as good. It would then be refused later, when you actually tried to restore it, because that step <em>does</em> look at the contents. So the app could tell you a copy was verified and then refuse the same copy afterwards.</p>
+<blockquote>Now: the fingerprint is recalculated from the bytes that came back, and the contents are compared in full. A damaged copy is refused straight away. An undamaged copy is separately proved to still pass, so the check cannot be "fixed" by simply refusing everything.</blockquote>
+<p><strong>And the wording.</strong> Your architect asked for the limits of this feature to be stated where you would actually read them. The Safety Copies screen now says that these copies live <strong>in this browser on this device only</strong>, that they are <strong>not</strong> on your other devices and <strong>not</strong> in the cloud, that clearing your browsing data or using a different browser or profile <strong>removes them</strong>, and that only the last 5 are kept. For a copy that survives all of that, it points you to <strong>📦 Save File</strong> — and says honestly that Siyagah hands that file to your browser but <strong>cannot confirm your browser finished saving it</strong>, so you should check your downloads yourself.</p>
+<p><strong>You do not need to test any of this.</strong> Everything above is checked automatically, every time.</p>
+<hr>
+<h2>2. Defect C1 — Restore went ahead when the undo copy had not been made</h2>
+<p><strong>Severity: High. Invariant I1</strong> ("no note, folder or section is ever lost or silently changed"). <strong>D3 does not excuse it</strong> — this is not a deliberate deletion through Trash.</p>
+<h3>The code, as reviewed</h3>
+<pre><code>/* Undo needs an Undo: snapshot what is here before replacing it. */
+await _recoverySave(&#x27;before restoring a safety copy&#x27;);
+const rp=_repairDB(parsed,&#x27;recovery&#x27;);
+DB=rp.db||parsed; persist(); render();</code></pre>
+<p><code>_recoverySave()</code> is careful: it returns <code>{ok:false, err}</code> when the store is full, locked, or denied by policy, rather than throwing. Nothing read it. The review's description of the mechanism was exactly right.</p>
+<h3>Reproduced on <code>817da3c</code>, before any change</h3>
+<p><code>audit/repro/recovery-undo-precondition.mjs</code> — the store is allowed to serve the restore's own read and denied from the second <code>open()</code> onward, which is what a full or locked store does to the undo copy:</p>
+<pre><code>=== D1: Restore when the undo copy cannot be written ===
+  notes in DB      : 1 -&gt; 3
+  notes in storage : 1 -&gt; 3
+  cloud pushes     : 1
+  threw            : (nothing — it went ahead)
+  VERDICT          : *** DEFECT: the notebook was replaced with no undo copy ***</code></pre>
+<p>Three separate harms in one line: the notebook replaced, <code>localStorage</code> rewritten, and a push scheduled so the other devices receive it.</p>
+<h3>The fix</h3>
+<p>The undo copy is a <strong>precondition</strong>, not a courtesy.</p>
+<ul><li><code>_recoveryRestore()</code> reads what <code>_recoverySave()</code> returned. No verified copy → it throws a <strong>named</strong> <code>RecoveryUndoError</code> and touches nothing.</li><li>Proceeding is still possible — an owner told there is no way back may still want to go forward — but only via <code>_recoveryRestore(id, {allowNoUndo:true})</code>, reached through a <strong>separate explicit choice</strong>: a card stating that their notes have <strong>not</strong> been changed, that there will be <strong>no way back</strong>, with <code>Stop — change nothing</code> focused, Escape and backdrop both cancelling.</li><li>The result carries <code>undoOk</code>, and the toast says <code>WITHOUT an undo copy, as you chose</code> — a restore with no undo must not read like one that had one.</li><li>The first confirmation no longer promises what it cannot guarantee: it now says that if the copy cannot be made, nothing will change and you will be asked.</li></ul>
+<h3>After</h3>
+<pre><code>  notes in DB      : 1 -&gt; 1
+  notes in storage : 1 -&gt; 1        (compared as raw bytes, not note counts)
+  cloud pushes     : 0
+  threw            : a safety copy of what you have now could not be made
+                     (this browser would not open the safety store: …),
+                     so nothing was changed
+  VERDICT          : HELD — nothing changed</code></pre>
+<hr>
+<h2>3. Defect C2 — The save gate compared metadata with metadata</h2>
+<p><strong>Severity: High.</strong></p>
+<h3>The code, as reviewed</h3>
+<pre><code>const back=await _recoveryTx(db,&#x27;readonly&#x27;,st=&gt;st.get(rec.id));
+if(!back) return {ok:false, err:&#x27;the safety copy could not be read back&#x27;};
+if(back.bytes!==rec.bytes||back.hash!==rec.hash||back.json.length!==json.length)
+  return {ok:false, err:&#x27;the safety copy read back differently from what was written&#x27;};</code></pre>
+<p>Reading back in a separate transaction is the right idea and was the point of v04.37's fix. But <code>back.bytes</code> and <code>back.hash</code> are <strong>metadata written in the same <code>put()</code> as the payload</strong> — comparing them against <code>rec.bytes</code>/<code>rec.hash</code> asks the record to confirm its own description. The only property of the payload itself that was ever measured is its <strong>length</strong>.</p>
+<p>The sharpest way to see it: <code>_recoveryRestore()</code> <em>does</em> hash the real string (<code>_fnv1a(rec.json)!==rec.hash</code>). So the two halves of the same feature disagreed about whether a copy was usable — and the destructive path trusted the half that had not looked.</p>
+<h3>Reproduced on <code>817da3c</code></h3>
+<p>A payload corrupted <strong>on the way back</strong> at the same length, metadata intact:</p>
+<pre><code>=== D2: read-back bytes changed, metadata intact ===
+  save reported ok : true
+  error            : (none)
+  VERDICT          : *** DEFECT: a corrupted copy passed the save gate ***</code></pre>
+<h3>The fix</h3>
+<pre><code>if(typeof back.json!==&#x27;string&#x27;)
+  return {ok:false, err:&#x27;the safety copy read back without its contents&#x27;};
+if(back.json.length!==json.length||back.json!==json||_fnv1a(back.json)!==rec.hash
+   ||back.bytes!==rec.bytes||back.hash!==rec.hash)
+  return {ok:false, err:&#x27;the safety copy read back differently from what was written&#x27;};</code></pre>
+<p>The digest is recomputed <strong>from <code>back.json</code></strong> and the full string compared. After: <code>save reported ok : false</code>. And the honest case is asserted separately to still pass, so the gate cannot be satisfied by refusing everything.</p>
+<hr>
+<h2>4. C3 — Claims brought back to what the code does</h2>
+<table><thead><tr><th>Claim</th><th>Before</th><th>Now</th></tr></thead><tbody><tr><td>Where safety copies live</td><td>not stated</td><td>"in this browser on this device only", <strong>not</strong> on other devices, <strong>not</strong> in the cloud</td></tr><tr><td>How they can be lost</td><td>not stated</td><td>clearing site data, clearing browsing data, a private window, or a different browser/profile <strong>removes them</strong></td></tr><tr><td>How many are kept</td><td>not stated</td><td>"only the last 5 are kept — an older one is deleted when a new one is made"</td></tr><tr><td>The downloaded file</td><td>offered</td><td>offered, <strong>and</strong> "Siyagah hands that file to your browser but cannot confirm your browser finished saving it, so check your downloads folder yourself"</td></tr><tr><td>Restore's promise</td><td>"a fresh safety copy … is taken first, so this can be undone"</td><td>"…and if that copy cannot be made, nothing will be changed and you will be asked what to do"</td></tr><tr><td>Salvage</td><td>"kept <strong>verbatim</strong> … so nothing is discarded"</td><td>bounded — 64 KB per entry, 256 KB in total, older entries pruned to metadata; the guarantee restated as <em>nothing is discarded <strong>silently</strong></em>, not <em>every byte survives</em></td></tr></tbody></table>
+<p>The Safety Copies wording is asserted on the <strong>rendered text</strong>, so a later rewrite that drops one of these limits fails a check rather than being noticed by a reviewer.</p>
+<hr>
+<h2>5. The regression evidence the review asked for</h2>
+<p>The review specified four scenarios. All four are permanent checks in <code>tools/audit-j-recovery.mjs</code>, which goes <strong>41 → 45 rows</strong>. Every one asserts on <strong>persisted bytes</strong> or on <strong>whether a cloud push was scheduled</strong> — never on the return value of the call under test, which is precisely what defect C1 was.</p>
+<table><thead><tr><th>The review asked for</th><th>Check</th><th>Result</th></tr></thead><tbody><tr><td>"Simulate a denied/quota write on Restore and assert storage bytes and sync scheduling are unchanged"</td><td><code>a restore whose undo copy cannot be written changes NOTHING that is persisted</code> (raw-byte comparison of <code>localStorage</code>) + <code>…and schedules no cloud push</code> (push counter) + <code>…and says so, with an error the caller can offer a choice on</code></td><td>✅ ×3</td></tr><tr><td>"Simulate same-length corruption of read-back JSON while keeping metadata unchanged and assert the copy fails"</td><td><code>a same-length changed payload with intact metadata is REFUSED by the save gate</code> + <code>…while an untampered copy still passes it</code></td><td>✅ ×2</td></tr><tr><td>"Verify a successful Restore creates a working undo copy, and that restoring the undo returns the previous notebook"</td><td><code>restoring a copy takes a VERIFIED undo copy first</code> + <code>restoring that undo puts the previous notebook back, in storage as well as in memory</code> (<code>3 → 1 → 3 → 1</code>)</td><td>✅ ×2</td></tr><tr><td>"…and all cancellation paths"</td><td><code>Cancel at the restore confirmation leaves the notebook and storage untouched</code> + <code>a failed undo copy offers a real choice rather than silently proceeding or dead-ending</code> + <code>…and pressing "Stop — change nothing" changes nothing that is persisted</code> (a <strong>real click</strong> on the button)</td><td>✅ ×3</td></tr><tr><td>(beyond the ask)</td><td><code>restoring without an undo copy works when it is explicitly chosen, and reports that it had none</code></td><td>✅</td></tr><tr><td>(beyond the ask)</td><td><code>the Safety Copies screen says where the copies live and how they can be lost</code></td><td>✅</td></tr></tbody></table>
+<p><strong>One of these failed on its first run, and it was the check that was wrong, not the app.</strong> The block before it deliberately leaves the notebook at one note, so the snapshot it took held one note and "restored to 3" could never be true. That is the harness's own standing trap — a check measuring the previous check's leftovers — and the block is self-contained now. It is recorded here because a suite that is only ever reported green teaches nobody anything.</p>
+<hr>
+<h2>6. Full gate</h2>
+<p><code>node tools/audit-all.mjs</code>, run locally on the delivered tree — <strong>exit 0</strong>, raw output in <code>audit/evidence/v0438-03-audit-all-AFTER.txt</code>:</p>
+<table><thead><tr><th>Suite</th><th>v04.37</th><th>v04.38</th></tr></thead><tbody><tr><td><code>ship-check</code> — version, <code>#nd</code>, precache, manifest, <code>legacy/**</code> seal</td><td>11/11</td><td><strong>11/11</strong></td></tr><tr><td><code>app-check</code> — boot, handlers, panes, views, editor, exports, colour</td><td>290/290</td><td><strong>290/290</strong></td></tr><tr><td>audit A — shell, startup, corruption recovery, breakpoints</td><td>43</td><td><strong>43</strong></td></tr><tr><td>audit B — editor ownership, autosave flushing, note lifecycle</td><td>47</td><td><strong>47</strong></td></tr><tr><td>audit C/D — organisation, search, all 11 Smart Views</td><td>49</td><td><strong>49</strong></td></tr><tr><td>audit E/F — calendar, journal, contacts, database, reminders, review</td><td>31</td><td><strong>31</strong></td></tr><tr><td>audit G/H — export fidelity, import safety, privacy, merge</td><td>44</td><td><strong>44</strong></td></tr><tr><td>audit I — accessibility, security, privacy, scale, PWA</td><td>46</td><td><strong>46</strong></td></tr><tr><td><strong>audit J — salvage, consent, the verified recovery copy</strong></td><td>41</td><td><strong>45</strong></td></tr><tr><td>audit K — rollback, both directions</td><td>18</td><td><strong>18</strong></td></tr><tr><td>journeys — 24 principal journeys, real clicks</td><td>24/24</td><td><strong>24/24</strong></td></tr><tr><td>persistence — what the app writes survives a real reload</td><td>6/6</td><td><strong>6/6</strong></td></tr><tr><td><strong>Total</strong></td><td>642</td><td><strong>654 checks across 15 suites</strong></td></tr></tbody></table>
+<p><strong>Feature matrix: 323 rows — 317 PASS, 4 <code>BLOCKED—ENVIRONMENT</code>, 2 <code>BLOCKED—OWNER</code>, 0 FAIL.</strong> The matrix is assembled by <code>audit-all</code> from the checks that actually ran, so no row can be written by hand, and a suite that never started is named <code>NEVER RAN</code> rather than silently omitted.</p>
+<p>Only audit J changed. Every other suite is identical to v04.37, which is the result this round wanted: a correction that fixes what the review found and moves nothing else.</p>
+<p>Version bumped <strong>v04.37 → v04.38</strong> in all three required places (<code>&lt;meta name="app-version"&gt;</code>, the <code>.sb-logo</code> pre-boot tag, and <code>sw.js</code>'s <code>VERSION</code>, which is the cache name — without it the update never reaches a device).</p>
+<hr>
+<h2>7. Still unverified, and still the owner's</h2>
+<p>Unchanged by this round, and stated as the review requires:</p>
+<ul><li><strong>Live Firestore security rules — NOT VERIFIED.</strong> No access from here. This remains the single most important owner item.</li><li><strong>Real two-device sync — NOT VERIFIED.</strong> Cannot be measured in this environment.</li><li><strong>The deployed PWA — NOT VERIFIED.</strong> This sandbox's egress policy denies <code>siyagah.github.io</code> (<code>403</code> on <code>CONNECT</code>), so the live site cannot be loaded.</li><li><strong><code>legacy/v03.99/</code> still carries the v04.35 residue</strong> — the sign-in iframes, the API key, the notebook ID and one real note title, at a public URL. I6 seals that folder, so nothing in it was touched. Decision 1, still open. The standing recommendation is unchanged: remove only the residue and record the exception.</li></ul>
+<hr>
+<h2>8. The delivered head, and the CI run</h2>
+<table><thead><tr><th></th><th></th></tr></thead><tbody><tr><td><strong>Branch</strong></td><td><code>claude/elegant-maxwell-8maykf</code></td></tr><tr><td><strong>Delivered commit (full SHA)</strong></td><td><strong><code>b5ed9d1d1b6464c0e634fb2517522dbfab6169ca</code></strong></td></tr><tr><td><strong>Parent (the reviewed head)</strong></td><td><code>817da3c08df0edd7b9a8e6e1377adf149fd64721</code> (v04.37)</td></tr><tr><td><strong>Version</strong></td><td><strong>v04.38</strong> — <code>&lt;meta name="app-version"&gt;</code>, <code>.sb-logo</code> pre-boot tag, <code>sw.js</code> <code>VERSION = 'v04.38.01'</code></td></tr><tr><td><strong>Pull request</strong></td><td><a href="https://github.com/Siyagah/siyagah.github.io/pull/41">#41</a>, updated by this push — still a <strong>merge candidate</strong>, still not merged</td></tr><tr><td><strong><code>main</code></strong></td><td>unchanged at <code>ba6c70f</code> (v04.34) — what is live</td></tr></tbody></table>
+<p><strong>CI, on this exact commit — both runs <code>success</code>:</strong></p>
+<ul><li>push: <a href="https://github.com/Siyagah/siyagah.github.io/actions/runs/35429336608">run 35429336608</a></li><li>pull_request: <a href="https://github.com/Siyagah/siyagah.github.io/actions/runs/35429338062">run 35429338062</a></li></ul>
+<p>The <code>full</code> job's own output, read out of the run log rather than asserted:</p>
+<pre><code>654 checks across 15 suites · 323 matrix rows
+PASS: 317 · BLOCKED—ENVIRONMENT: 4 · BLOCKED—OWNER: 2
+
+All suites green.</code></pre>
+<p>— identical to the local run in §6.</p>
+<p>The two steps that made the last round's CI a false signal are individually green here, and are named because "the job passed" was not enough last time:</p>
+<ul><li><strong><code>make origin/main reachable for the comparison checks</code></strong> — so <code>ship-check</code> really performed the version-bump and <code>legacy/**</code> seal (I6) comparisons instead of silently skipping them;</li><li><strong><code>prove the harness can actually reach Playwright before running anything</code></strong> — so the browser suites genuinely measured the app. This is the exact failure that once reported 58 checks as if they were 589.</li></ul>
+<p>Corroborating: the <code>feature-matrix</code> artifact is <strong>89,534 bytes</strong>, against v04.37's 87,876 and the broken run's 65,136.</p>
+<p><code>audit-all</code> exits non-zero on any FAIL, so a <code>success</code> conclusion on that step is itself the "0 FAIL" assertion.</p>
+<hr>
+<h2>9. Session-change report</h2>
+<h3>Can this session safely continue?</h3>
+<p><strong>Yes, technically</strong> — nothing is half-finished. The two defects are fixed and proved fixed, the version is bumped in all three places, the full gate is green locally, the branch is pushed, and every document is updated.</p>
+<h3>Is a fresh session advisable?</h3>
+<p><strong>Yes, and the review already said so.</strong> Two independent reasons:</p>
+<ol><li><strong>This session started on a different round.</strong> It was opened for the v04.35 audit, has the whole of that audit in its history, and then picked up a review of v04.37 written against work done by two <em>other</em> sessions in between. It has been carrying context it does not need and lacking context it had to re-derive from the repository. That worked — but it is not the cheapest way to run the next round.</li><li><strong>Everything a successor needs is now written down</strong>, in <code>audit/CONTINUATION-2026-09-19.md</code>, this file, the defect register and <code>CLAUDE.md</code>. Nothing of value lives only in this transcript.</li></ol>
+<h3>Exact handover prompt</h3>
+<blockquote>Bismillah. Continue Siyagah from <code>claude/elegant-maxwell-8maykf</code> at the head recorded in <code>audit/CORRECTION-AUDIT-2026-09-19-v0438.md</code> §8.</blockquote>
+<p>&gt;</p>
+<blockquote><strong>State:</strong> version <strong>v04.38</strong>. Full gate green locally — <code>node tools/audit-all.mjs</code> → <strong>654 checks across 15 suites, 323 matrix rows, 0 FAIL</strong>. CI status for the delivered commit is recorded in §8 of that file. PR <a href="https://github.com/Siyagah/siyagah.github.io/pull/41">#41</a> is a <strong>merge candidate, deliberately not merged</strong>; <code>main</code> is still v04.34, which is what is live.</blockquote>
+<p>&gt;</p>
+<blockquote><strong>Read first, in this order:</strong> <code>CLAUDE.md</code> (invariants I1–I8, decisions D1–D5, standing lessons) → <code>audit/CONTINUATION-2026-09-19.md</code> → <code>audit/CORRECTION-AUDIT-2026-09-19-v0438.md</code> → <code>audit/DEFECT-REGISTER.md</code> (rows C1–C3 are this round) → <code>tools/README.md</code> before touching the harness.</blockquote>
+<p>&gt;</p>
+<blockquote><strong>What v04.38 did:</strong> fixed the two defects a second independent review found inside v04.37's own Safety Copies feature — Restore proceeded when the undo copy had failed, and the save gate compared a record's metadata against itself instead of hashing the bytes it read back. Both reproduced on <code>817da3c</code> first; <code>audit/repro/recovery-undo-precondition.mjs</code> runs both. <code>audit-j-recovery</code> went 41 → 45 rows.</blockquote>
+<p>&gt;</p>
+<blockquote><strong>Nothing is outstanding that does not depend on an owner decision.</strong> The two open items are both the owner's: the <strong>live Firestore Rules</strong> (the most important — nothing in the repository can compensate for permissive rules), and the <strong>private residue in the sealed <code>legacy/v03.99/</code> build</strong> at a public URL, where I6 forbids the edit. Recommendation on the second is unchanged: strip only the residue, leave every line of application code, record a named exception.</blockquote>
+<p>&gt;</p>
+<blockquote><strong>Environment blocker:</strong> <code>siyagah.github.io</code> and all Google hosts are denied by this sandbox's egress policy, so the live site, real Firestore rules, real two-device sync and the deployed PWA <strong>cannot be measured here</strong> and must stay marked unverified.</blockquote>
+<p>&gt;</p>
+<blockquote>Do not merge, deploy, modify <code>legacy/</code>, or touch production Firebase data. Ask before any of those; continue independent work otherwise.</blockquote>
+<h3>For the Master Architect</h3>
+<p>This delivery answers the two required corrections, the regression evidence each one was specified with, the wording and limits, the version increment and the full gate. The three "keep unverified until measured" items are stated as unverified in §7 and carried as <code>BLOCKED—ENVIRONMENT</code> / <code>BLOCKED—OWNER</code> rows in the feature matrix rather than as passes.</p>
+</main></body></html>
