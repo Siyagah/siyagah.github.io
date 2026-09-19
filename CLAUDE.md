@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.34.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.35.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,27 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.35** (19 Sep 2026) — not a feature round. The live Firestore rule is
+  `match /{document=**}{allow read,write: if request.auth != null}`, and
+  `request.auth != null` is every Google account on earth, because the
+  project's sign-in is public: a signed-in stranger could read, overwrite and
+  **delete** the whole notebook, and enumerate `/notebooks` to find it. Owner-
+  specific rules are drafted, tested and handed over in
+  `audit/firestore-rules/` — **not published, not merged, not deployed**, as
+  asked. The surface is two paths (`notebooks/{id}` and its `chunks/{i}`), the
+  same two in `legacy/v03.99/`, so ONE ruleset covers both builds and neither
+  file needs a change. Neither build ever queries, so `list` is denied outright;
+  nothing deletes the notebook document, so that is denied too (I1). The design
+  turned on one measurement: **the notebook id is NOT the UID** (see the
+  standing lesson below), so `uid == notebookId` would have locked the owner out
+  of their own notes. 48/48 emulator checks — owner allowed, a second signed-in
+  Google account denied on all 11, signed-out denied on all 6, and sync proven
+  end to end (3-chunk payload, the shrink-and-tail-delete, two devices
+  converging through a live listener). An over-validated variant is kept
+  BECAUSE it fails: a `delete` rule that reads `resource` dies on the chunks
+  `n…n+9` that do not exist, and batches being atomic that kills the whole push
+  silently. `audit/CONTINUATION-2026-09-19.md`, named in the brief, does not
+  exist in this repository and never has. 11/11 ship checks.
 - **v04.34** (12 Sep 2026) — "Now do same for the phone and tablet too.
   *Always do all platforms as adaptible. Don't wait for doing next.*" —
   which is now **D5**, and a standing lesson. The two pop-ups were gated by
@@ -98,24 +119,6 @@ must never accumulate here instead of there.
   History and Archive as rows, and the last row NAMING what is left
   (`⋯ All actions · tags, folders, reminders, pin, delete`). 🗑 Delete stays
   one tap further in, as v04.11 decided. 219/219 app checks (up from 213) and
-  11/11 ship checks.
-- **v04.30** (12 Sep 2026) — "Now, do same in view mode too. Move n Place Cal
-  n add tab to the attach button (bar is not required) n spread-open them on
-  the pallet with the attach buttons as well spread-open." The read view had
-  not moved in five rounds: on a phone its `🏷` palette held **two** controls,
-  one of which (`📎 Attach`) only opened **four more** — two taps to reach
-  `📓 My Journal` — and the tab bar still sat above everything. That palette is
-  the spread-open card now, built by `_ebAttachHTML()` and the new
-  `_ebGoToHTML()` — **the same builders the `+` menu uses**, so read and edit
-  cannot drift. They learned two things: which pop is holding them (the rows
-  took the pop id instead of closing `eb-pop` by name), and read mode (the
-  `📁 Folder` row cannot call `openPicker()` — `ST.efolders` only exists while
-  editing — so it says so, as the old Attach menu did). `openAttachMenu()`
-  opens the same card on a phone, because the toolbar folds the type group
-  behind `🏷` only when it does not fit. **The tab bar does not render on a
-  phone in EITHER mode** now; `📅 Calendar`, `＋ Add Tab` and every open tab are
-  rows in the card. The `⋯` actions palette packs too — **160px instead of
-  250**. Tablet and laptop untouched. 213/213 app checks (up from 208) and
   11/11 ship checks.
 ---
 
@@ -288,6 +291,26 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **The Notebook ID is NOT the Google UID, whatever the comment beside it
+  says — and the cloud notebook is reachable by any signed-in Google
+  account.** `index.html:19348` reads
+  `/* UID = private Notebook ID — each Google account gets its own isolated
+  notebook */`, and no line of either build ever assigns `user.uid` to
+  `notebookId`: `connectSync()` takes it from a text input, falling back to
+  `generateNotebookId()` → `nb-<base36>-<rand>`, and the owner's live notebook
+  really is in that form. Anything that reasons about ownership from the
+  document id — Firestore rules above all — would deny the owner their own
+  notes, which is an I1 event dressed as a security fix. The two paths are
+  `notebooks/{id}` and `notebooks/{id}/chunks/{i}`, identical in
+  `legacy/v03.99/`, and NEITHER build ever queries a collection. Two further
+  things measured in v04.35 and left standing: `runMigration()` copies the data
+  to `notebooks/{uid}` but never repoints the local config, so the app keeps
+  syncing to the old id; and the live rules are still
+  `allow read, write: if request.auth != null`, so **treat the cloud notebook
+  as readable and deletable by any signed-in stranger until
+  `audit/firestore-rules/` is approved and published.** Cost: none yet —
+  written down the round it was found, before the obvious fix could be shipped
+  as a lockout.
 - **The owner's suggested FIX is a description of the problem, not a spec —
   measure whether it actually gets them what they asked for.** "Database can
   be moved up by removing 'attached' from the Folder button" was a correct

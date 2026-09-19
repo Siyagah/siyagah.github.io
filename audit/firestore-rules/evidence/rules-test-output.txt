@@ -1,0 +1,79 @@
+Siyagah — Firestore rules test evidence
+========================================================================
+run at            2026-09-19T21:27:46.369Z
+node              v22.22.2
+emulator          Firestore emulator via firebase-tools 15.30.2, 127.0.0.1:8080
+client sdk        firebase 12.19.0 / @firebase/rules-unit-testing 5.0.2
+app under test    index.html v04.34  +  legacy/v03.99 (identical paths)
+rulesets          firestore.current.rules | firestore.rules | firestore.strict.rules
+owner fixture     ownerUid00000000000000000000
+notebook id       nb-msrzuilt-gghlh5   (deliberately NOT a UID — see PATHS.md § 3)
+
+── 1. The rule that is LIVE today — demonstrating the exposure ─────────
+  PASS  LIVE: a stranger (any signed-in Google account) READS the whole notebook
+  PASS  LIVE: a stranger READS the note payload chunks
+  PASS  LIVE: a stranger OVERWRITES the notebook
+  PASS  LIVE: a stranger DELETES the notebook document
+  PASS  LIVE: a stranger ENUMERATES every notebook in the project
+  PASS  LIVE: a stranger writes anywhere else in the database
+  PASS  LIVE: signed-out access is refused (the one thing it does do)
+  PASS  LIVE: the owner can reach their own notebook
+
+── 2a. THE OWNER — every operation the two builds actually perform ─────
+  PASS  owner: get notebook  (initSync onSnapshot / syncNow / _reconcileNow)
+  PASS  owner: get a payload chunk  (_readCloudDB)
+  PASS  owner: update the notebook  (_writeCloudDB, every push)
+  PASS  owner: write a payload chunk
+  PASS  owner: delete an EXISTING tail chunk
+  PASS  owner: delete a NON-EXISTENT tail chunk  (§ tail delete — batch 2)
+  PASS  owner: create a notebook from scratch  (first push, fresh project)
+  PASS  owner: real-time listener attaches and delivers  (onSnapshot)
+  PASS  owner: a notebook id that IS their uid also works  (future doc-id scheme)
+  PASS  owner: the legacy v03.99 single-blob shape can still be written
+
+── 2b. THE OWNER — operations neither build performs, denied on purpose 
+  PASS  owner: CANNOT list /notebooks  (no enumeration surface at all)
+  PASS  owner: CANNOT list the chunks subcollection
+  PASS  owner: CANNOT delete the notebook document  (I1 — one call cannot erase it)
+  PASS  owner: CANNOT write outside /notebooks  (no blanket match)
+
+── 2c. ANOTHER SIGNED-IN GOOGLE USER — the hole the live rule leaves open 
+  PASS  stranger: CANNOT read the notebook
+  PASS  stranger: CANNOT read a payload chunk
+  PASS  stranger: CANNOT overwrite the notebook
+  PASS  stranger: CANNOT update a single field of it
+  PASS  stranger: CANNOT write a payload chunk
+  PASS  stranger: CANNOT delete the notebook
+  PASS  stranger: CANNOT delete a payload chunk
+  PASS  stranger: CANNOT enumerate /notebooks
+  PASS  stranger: CANNOT create a notebook of their own  (D1 — one tenant)
+  PASS  stranger: CANNOT attach a real-time listener
+  PASS  stranger: CANNOT write anywhere else in the database
+
+── 2d. SIGNED OUT — no token at all ────────────────────────────────────
+  PASS  signed-out: CANNOT read the notebook
+  PASS  signed-out: CANNOT read a payload chunk
+  PASS  signed-out: CANNOT write the notebook
+  PASS  signed-out: CANNOT write a payload chunk
+  PASS  signed-out: CANNOT delete anything
+  PASS  signed-out: CANNOT enumerate /notebooks
+
+── 2e. SYNC STILL WORKS — the real _writeCloudDB / _readCloudDB, under the rules 
+  PASS  small notebook: push then read back, byte-identical  (1 chunk)
+        └ 22 notes, 1 chunk, round-tripped byte-identical
+  PASS  large notebook: push then read back, byte-identical  (multi-chunk, >900 KB)
+        └ 1840 KB of base64 split across 3 chunks, all written and read back under the rules
+  PASS  shrinking notebook: 2 chunks → 1, the tail delete commits  (§ tail delete)
+        └ chunks 1…10 deleted by batch 2; no stale tail left behind
+  PASS  two devices converge: phone pushes, laptop's listener receives it  (I2)
+  PASS  legacy v03.99 single-blob notebook is still readable  (I1 / I4)
+  PASS  the migration path still works: read notebooks/{old} → write notebooks/{uid}
+
+── 3. The STRICT variant — over-validation, proven to break sync ───────
+  PASS  STRICT: a plain push of a small notebook is REJECTED
+        └ denied as predicted: 7 PERMISSION_DENIED: evaluation error at L50:26 for 'delete' @ L50, evaluation error at L50:26 for 'delete' @ 
+  PASS  STRICT: the tail delete of a NON-EXISTENT chunk is denied  (fault 1)
+  PASS  STRICT: the legacy single-blob shape can never be written again  (fault 2)
+
+========================================================================
+48 passed, 0 failed

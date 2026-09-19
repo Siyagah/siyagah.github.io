@@ -2827,3 +2827,135 @@ wanted.
   `< 72% of the screen` ratio — which failed at 74% while the menu still fitted
   whole with 215px to spare — to the question its own label asks: is the whole
   menu on screen, and does it scroll.
+
+---
+
+## v04.35 — the Firestore rules, drafted and proven, not published
+
+**19 September 2026.** Not a feature round. The live Firestore security rule is
+
+```
+match /{document=**} { allow read, write: if request.auth != null; }
+```
+
+and `request.auth != null` is every Google account on earth, because the
+project's sign-in is public. The ask was to inspect every Firestore path the app
+uses, draft owner-specific rules for them, test all three actors, prove sync
+still works, and hand the result to the Master Architect **without publishing,
+merging or deploying**. Everything below is in `audit/firestore-rules/`; not one
+line of it is deployed, and the app does not read any of it.
+
+### The brief referenced a file that does not exist
+
+`audit/CONTINUATION-2026-09-19.md` is not in this repository — not on `main`,
+not on any branch, and `audit/` has never been tracked in any commit. The rest
+of the brief was self-contained, so the round went ahead on the app itself,
+which is the primary source anyway. Recorded here so nobody looks for it twice.
+
+### The surface is two paths, and the app never lists either
+
+Measured by reading every `collection(…)` / `.doc(…)` call in both builds:
+
+| Path | Operations |
+|---|---|
+| `notebooks/{notebookId}` | `get` (listener, `syncNow`, reconcile poll, migration), `set` |
+| `notebooks/{notebookId}/chunks/{i}` | `get`, `set`, `delete` |
+
+`legacy/v03.99/` uses the identical two paths, so **one ruleset covers both
+builds and neither file needs a change** — which is what lets the sealed build
+stay sealed (I6) and honours the owner's decision to keep the data in it.
+
+No query, anywhere: every read is a document read by known id. So `list` is
+denied outright, and with it the whole enumeration surface. `delete` of the
+notebook document is denied too, because nothing in either build deletes it —
+which means no client bug and no stolen token can erase the notebook in one
+call (I1). Deleting *notes* is untouched: that is Trash, inside the payload,
+and never a Firestore delete (D3).
+
+### The finding that decided the design: the notebook id is not the UID
+
+The obvious Firebase idiom is `request.auth.uid == notebookId`, and it is wrong
+here. `connectSync()` takes the id from a text input, falling back to
+`generateNotebookId()` → `nb-<base36>-<rand>`. **Nothing anywhere assigns
+`user.uid` to `notebookId`** — the comment at index.html:19348 saying
+`UID = private Notebook ID` describes an intent the code never implemented, and
+the owner's live notebook really is in the `nb-…` form (index.html:21909 carries
+a captured copy of the owner's own sync modal with the id in it). Shipping the
+idiom would have denied the owner access to their own notebook until the
+document was copied to a new id — a data move, an I1 exposure, for no security
+gain.
+
+So the rules pin the owner's UID instead. No migration, no application change,
+both builds keep working byte-for-byte — and a uid-named document still works if
+the app ever adopts one, which is tested so that change needs no rules change.
+
+### Tested against the real emulator, 48 checks, 48 passing
+
+`npm test` in `audit/firestore-rules/` runs the Firestore emulator and evaluates
+the rules files **as they sit on disk** — the suite substitutes the single
+`OWNER_UID` placeholder for a fixture and refuses to run if the placeholder has
+gone, so the tested ruleset cannot drift from the proposed one. The sync tests
+are not mock-ups: `writeCloudDB` / `readCloudDB` are transcribed from
+index.html 19860–19906, batch shape included.
+
+- **Owner** — 10 checks: every operation both builds perform, allowed.
+- **Owner, denied on purpose** — 4: list, chunk list, notebook delete, writes
+  outside `/notebooks`.
+- **Another signed-in Google user** — 11: read, overwrite, field update, chunk
+  read/write, delete, enumerate, attach a listener, create a notebook of their
+  own, write elsewhere. All denied.
+- **Signed out** — 6, all denied.
+- **Sync still works** — 6: a 1-chunk round trip; 1840 KB of base64 across 3
+  chunks; a shrink from 2 chunks to 1 with the tail delete committing; two
+  devices converging through a live `onSnapshot` (I2); the legacy single-blob
+  shape still readable (I1/I4); and the old→uid migration read and write.
+
+The first run of the suite reported the owner passing nothing, because the
+`OWNER_UID` placeholder was never substituted — the tests were measuring a rule
+that could not match anybody. The second reported `expected 2 chunks, got 3`,
+which was a wrong assertion: base64 expands by four thirds, so a 1400 KB
+notebook is three chunks, not two. Both were fixed in the harness, not worked
+around in the rules.
+
+### The variant that was tested and rejected, and why it is kept
+
+`firestore.strict.rules` adds the payload validation that looks like the
+obvious next hardening step. It is kept **because the suite proves it breaks
+sync**, so nobody proposes it again from first principles.
+
+`_writeCloudDB()` deletes chunks `n … n+9` on every push, and those documents
+normally do not exist. On a missing document `resource` is null, so
+`resource.data.ver != null` raises an evaluation error and denies — the
+emulator's own words, from the transcript:
+
+```
+7 PERMISSION_DENIED: evaluation error at L50:26 for 'delete' @ L50
+```
+
+Firestore batches are atomic, so that one denied delete fails the whole push.
+And the app swallows it (`try{ await b2.commit(); }catch(e){}`), so there would
+have been no visible failure — just stale chunks accumulating until a growing
+payload crossed the stale boundary and a read came back torn. Its second fault
+makes the legacy single-blob shape (`db`, still read at 19865) permanently
+unwritable, which is a direct I1 risk.
+
+### What was NOT done, and why
+
+- **Nothing was published, deployed or merged**, as instructed. The rules carry
+  an `OWNER_UID` placeholder; publishing means pasting the owner's real UID from
+  the Firebase console, re-running the suite, and publishing from the console.
+  `PROPOSAL.md § 6` has the steps and the rollback.
+- **`legacy/v03.99/` was not touched**, and ship-check confirms it.
+- **Two defects were found and left alone**, recorded in `PATHS.md § 5` because
+  neither is a rules problem and fixing them mid-audit would have widened the
+  round: `runMigration()` copies `notebooks/{old}` to `notebooks/{uid}` but never
+  writes the new id back into the local config, so the app keeps syncing to the
+  old one and the migrated copy is written once and never read again; and
+  `index.html` carries captured live DOM from line 21885 to the end of the file
+  — the owner's sync modal with a real Notebook ID, four real note titles, and
+  three dead `aaas-notebook.firebaseapp.com` auth iframes shipped to every
+  device.
+- **No app behaviour changed.** The only edits to shipped files are the three
+  version numbers, because the standing rule is that every round bumps (I5).
+
+11/11 ship checks, and app-check unchanged at 266/266.

@@ -1,0 +1,87 @@
+rules_version = '2';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Siyagah — PROPOSED Firestore security rules              (NOT YET PUBLISHED)
+
+   Replaces the live rule, which is:
+
+       match /{document=**} { allow read, write: if request.auth != null; }
+
+   That rule lets ANY signed-in Google account — every Google account on
+   earth, since the project's sign-in is public — read, overwrite and delete
+   the whole notebook. These rules narrow it to the one account that owns it.
+
+   ── Before publishing ─────────────────────────────────────────────────────
+   Replace OWNER_UID below with the owner's real Firebase UID:
+       Firebase console → project `aaas-notebook` → Build → Authentication
+       → Users → the row for the owner's Google account → copy "User UID".
+   It is a 28-character string. It is NOT the Notebook ID (`nb-…`), and it is
+   NOT the email address.
+
+   ── Why ownership is pinned to a UID and not to the document id ───────────
+   The obvious Firebase idiom is `request.auth.uid == notebookId`. It does
+   not apply here: `notebookId` is a free-form string the owner typed or
+   generated (`generateNotebookId()` → `nb-<base36>-<rand>`), and the live
+   notebook's id is of that form. Requiring uid == notebookId would deny the
+   owner access to their own existing notebook — an I1 ("no note is ever
+   lost") event — unless the document were first copied to a new id.
+
+   Pinning the UID needs no data migration and no application change, so both
+   `index.html` (v04.34) and the sealed `legacy/v03.99/` build keep working
+   byte-for-byte as they do today. The owner may keep the `nb-…` id, or move
+   to a uid-named document later; these rules allow either.
+
+   ── What the application actually does (measured, see PATHS.md) ───────────
+     notebooks/{id}            get, onSnapshot, set          — never listed,
+                                                               never deleted
+     notebooks/{id}/chunks/{i} get, set, delete              — never listed
+
+   D1 (one user, one Google account) is enforced literally: there is no
+   second tenant, so no other signed-in account gets a notebook of its own.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* The single account this notebook belongs to. */
+    function ownerUid() {
+      return 'OWNER_UID';
+    }
+
+    function isOwner() {
+      return request.auth != null && request.auth.uid == ownerUid();
+    }
+
+    /* ── The notebook document ────────────────────────────────────────────
+       get     — initSync()'s onSnapshot, syncNow(), _reconcileNow()
+       create  — the first push on a fresh project
+       update  — every push (_writeCloudDB writes n / ver / deviceUpdatedAt
+                 / updatedAt in a batch)
+       list    — never used by either build; denied so the collection cannot
+                 be enumerated even by the owner
+       delete  — never used by either build; denied, so no client bug and no
+                 stolen token can erase the notebook in one call (I1)        */
+    match /notebooks/{notebookId} {
+      allow get, create, update: if isOwner();
+      allow list, delete: if false;
+
+      /* ── The chunked payload ───────────────────────────────────────────
+         The notebook is base64'd and split into ≤900,000-character slices to
+         stay under Firestore's 1 MiB document ceiling.
+
+         delete MUST NOT read `resource`: _writeCloudDB() unconditionally
+         deletes chunks n … n+9 to clear the tail of a previously longer
+         payload, and those documents usually do not exist. On a missing
+         document `resource` is null, so any condition touching
+         `resource.data` evaluates to an error and denies — which would fail
+         the whole batch. See tests/rules.test.mjs § "tail delete".          */
+      match /chunks/{chunkId} {
+        allow get, create, update, delete: if isOwner();
+        allow list: if false;
+      }
+    }
+
+    /* Everything else is denied by omission: an unmatched path has no
+       allow rule, so the default deny applies. No `match /{document=**}`. */
+  }
+}

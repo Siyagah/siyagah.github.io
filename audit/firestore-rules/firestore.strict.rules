@@ -1,0 +1,55 @@
+rules_version = '2';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Siyagah — STRICT variant, TESTED AND NOT RECOMMENDED.
+
+   This is the "also validate the payload shape" ruleset that looks like the
+   obvious next step in hardening. It is kept here because the test suite
+   runs it and PROVES it breaks sync, so nobody proposes it again from
+   first principles. See EVIDENCE.md § 3.
+
+   It adds three things to the recommended rules, and each one is a fault:
+
+     1. `allow delete: if isOwner() && resource.data.ver != null` on chunks.
+        _writeCloudDB() deletes chunks n … n+9, which normally do not exist.
+        `resource` is null there, so the condition errors and denies, and the
+        batch commit fails.
+
+     2. `keys().hasOnly([...])` on the notebook document. The legacy
+        single-blob shape written by older builds carries `db` instead of
+        `n`, and _readCloudDB() still reads it (index.html:19865). A notebook
+        still in that shape could never be rewritten.
+
+     3. `request.resource.data.n is int`. Correct today, but it pins the rule
+        to a field type the application may change, and a mismatch is a
+        silent permission-denied rather than a visible error.
+
+   Keep it as evidence, not as a candidate.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function ownerUid() { return 'OWNER_UID'; }
+    function isOwner()  { return request.auth != null && request.auth.uid == ownerUid(); }
+
+    match /notebooks/{notebookId} {
+      allow get: if isOwner();
+      allow create, update: if isOwner()
+        && request.resource.data.keys().hasOnly(['n', 'ver', 'deviceUpdatedAt', 'updatedAt'])
+        && request.resource.data.n is int
+        && request.resource.data.n > 0
+        && request.resource.data.ver is int;
+      allow list, delete: if false;
+
+      match /chunks/{chunkId} {
+        allow get: if isOwner();
+        allow create, update: if isOwner()
+          && request.resource.data.keys().hasOnly(['p', 'ver'])
+          && request.resource.data.p.size() <= 900000;
+        allow delete: if isOwner() && resource.data.ver != null;
+        allow list: if false;
+      }
+    }
+  }
+}
