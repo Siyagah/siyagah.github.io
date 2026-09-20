@@ -1,0 +1,578 @@
+
+app-check — boot, handlers, panes, views, editor, data round-trip
+=================================================================
+  ok   boots with no exception and no console error
+         silent
+  ok   boot paints the version from the meta tag
+         v04.35 vs meta 04.35
+  ok   no sign-in overlay blocks the app when Firebase is unreachable
+         login-overlay display: none
+  ok   the seeded notebook is what loadDB() actually loaded
+         3 folders, 3 notes
+  ok   every pane rendered something
+         tree:6551 p2h:439 p2c:948 p3h:250 p3c:198
+  ok   every inline event handler is a real function (449 names)
+         all resolve
+  ok   all 11 Smart Views render
+         sf-new:1820 sf-recent:1829 sf-favs:1063 sf-pinned:1066 sf-time:1073 sf-journal:816 sf-arch:235 sf-mywall:1113 sf-remind:918 sf-murajaa:366 sf-practice:369
+  ok   all 3 folders open without throwing
+         clean
+  ok   a note renders in read mode
+         #p3c 1992 chars
+  ok   typing into the Pane 3 editor reaches the note body
+         #ed 516 chars
+  ok   insertAtCaret() lands content in the Pane 3 editor
+         #ed now 538 chars
+  ok   _edTouched() commits an editor change into DB
+         a1.content 120 chars
+  ok   _edColHeads() runs over the editor headings
+         2 headings seen
+  ok   clicking below the last block opens a new line, not the end of the heading
+         last is <p> "BELOWTEXT"
+  ok   clicking beside a block adds nothing
+         4 blocks, unchanged
+  ok   clicking above a leading heading opens a line in front of it
+         first is <p> "ABOVETEXT"
+  ok   a note starting with a paragraph is left to the browser
+         2 blocks, unchanged
+  ok   Enter at the start of the first heading writes above it, not into it
+         first is <p> "ENTERTEXT"
+  ok   typing at a heading’s left edge writes at the front of the title
+         heading reads "ZTOPHEAD", chrome intact
+  ok   opening a line without typing leaves the note untouched in DB
+         no autosave fired on a bare click
+  ok   the read view no longer stacks a Home row, a type row and a section-tools row
+         kind-bar gone · col-toolbar gone · Home row gone
+  ok   Home, the type chips and the section tools moved into the Pane-3 toolbar
+         home true · chips true · Types true · section-tools display flex
+  ok   the version strip and the date line share one row, dates to the right
+         sameLine true · dates right of versions true
+  ok   at a narrow Pane 3 the type chip stays visible and Types stays reachable
+         Pane 3 485px · chip 69px · Types inline false / via palette true · overflow 0px
+  ok   the section-tools button shows only on a note that has headings
+         no headings → none · with headings → flex
+  ok   Collapse all / Expand all still work from the section-tools popover
+         3 actions · collapsed 2 · expanded back to 0
+  ok   Note Type opens from the Attach menu, anchored to its row, and Archive works from ⋯
+         Attach menu "🏷 Note Type (1)📁 Folder (1)📓 My Journal🗄 MyDatabase" · picker at 4,38 · archive false → true
+  ok   the landing page keeps its own Home row
+         🏠 Home
+  ok   edit mode’s own toolbar is untouched by the view-mode rearrangement
+         unified bar true · #p3h.editing true · column
+  ok   the note toolbar is one row at every size, with nothing clipped off it
+         phone 390px → 1 row(s), 0 clipped · tablet 820px → 1 row(s), 0 clipped · narrow Pane 3 485px → 1 row(s), 0 clipped · desktop 710px → 1 row(s), 0 clipped · wide 1190px → 1 row(s), 0 clipped
+  ok   it folds progressively as Pane 3 narrows, and never overflows
+         phone 390px → tightest (over 0px) · tablet 820px → nolbl (over 0px) · narrow Pane 3 485px → tighter (over 0px) · desktop 710px → nolbl (over 0px) · wide 1190px → full (over 0px)
+  ok   folding hides nothing — Edit stays out, actions and Types stay reachable
+         phone: edit true, actions true, types true · tablet: edit true, actions true, types true · narrow Pane 3: edit true, actions true, types true · desktop: edit true, actions true, types true · wide: edit true, actions true, types true
+  ok   the toolbar buttons are a real touch size — 42px+ on a phone
+         phone smallest 44×44px · wide smallest 38×36px
+  ok   the palettes list the folded buttons with words, at a tappable size, and they work
+         13 actions (44px tall) · pop-out offered on a phone: true [float/panel] · ⋯ holds copy true/archive true/delete true · copy made 3→4 · type reachable true / attach rows true
+  ok   Save File round-trip keeps every folder and every note
+         3 folders + 3 notes survived, 1165 KB
+  ok   the exported file is the whole app, not just the data
+         carries the version tag and the app script
+  ok   exporting does not disturb the live notebook
+         DB unchanged
+  ok   mergeDB() unions both devices instead of picking a winner
+         folders L1,R1 · notes la,ra
+  ok   mergeDB() keeps the newest edit whichever side it came from
+         remote-newer → <p>new</p> · local-newer → <p>new</p>
+  ok   a deleted note leaves the list and lands in Trash
+         3→2 notes, trash 0→1
+  ok   the two pop-up buttons are drawn icons, and Multi is three upright sheets
+         both present true · svg true · no ⊡/⛶ glyph left true · identical drawing false · Multi layers 3 · all portrait true
+  ok   each one names itself in its tooltip
+         Multi Notes Pop-Up — its own window; several notes open at once (Ctrl+Shift+P)  ·  Single Note Pop-Up — this one note, everything else dimmed
+  ok   where the pane can carry them the words are on the buttons, tinted apart
+         Pane 3 870px · words "Multi/Single" shown true · different colour true · 69×36px
+  ok   the words never break the one-row rule or push the toolbar over its width
+         phone pane 390px → words folded, 1 row(s), over 0px · tablet pane 820px → words folded, 1 row(s), over 0px · laptop pane 710px → words folded, 1 row(s), over 0px · wide pane 1190px → words shown, 1 row(s), over 0px
+  ok   the words show where the pane can carry them and fold away where it cannot
+         phone pane 390px → words folded, 1 row(s), over 0px · tablet pane 820px → words folded, 1 row(s), over 0px · laptop pane 710px → words folded, 1 row(s), over 0px · wide pane 1190px → words shown, 1 row(s), over 0px
+  ok   above 900px, wherever the pop-up buttons fold away the ⋯ palette reaches them
+         phone pane 390px → words folded, 1 row(s), over 0px · tablet pane 820px → words folded, 1 row(s), over 0px · laptop pane 710px → words folded, 1 row(s), over 0px · wide pane 1190px → words shown, 1 row(s), over 0px
+  ok   with the words off, the buttons are the same size target they were in v04.09
+         laptop 38px
+  ok   the right-click menu carries both full names, and the 🗐 glyph v04.09 replaced is gone
+         Multi true · Single true · 🗐 still there false
+  ok   Copy, Archive and Delete are off the row and all three sit under ⋯ More
+         on the row: copy false / archive false / delete false · in ⋯: copy true / archive true / delete true
+  ok   the ⋯ button names what it now holds instead of saying "More options"
+         More — copy, archive, delete, rename, history, tags, folders, reminders, favourites
+  ok   Attach is on the row, Types is not, and the note’s own type chip still shows
+         Attach on row true · a separate Types button false · chip visible true
+  ok   every button on the row is drawn in its own rounded box
+         12 buttons, radius 9px
+  ok   every button on the note toolbar does something when clicked (12 buttons)
+         12 clicked, no handler threw
+  ok   the ⋯ menu is still on screen after a real left-click, not closed in the same tick
+         display block · 168×592px · 19 rows
+  ok   tapping the note-type chip opens the picker and does NOT strip the type
+         types ["general"] → ["general"] · picker opened true, anchored true · tooltip "Note Type: General — tap to change"
+  ok   a type can still be added and taken off deliberately, from the picker
+         "quick" on → ["general","quick"] · off → ["general"]
+  ok   the version badge is legible on the Forest preset
+         v04.35 — 19.0:1 against its own pill, 48px wide, painted true
+  ok   the search box reads on the Forest preset too — placeholder and typed text both
+         placeholder 7.6:1 · typed text 19.0:1
+  ok   the version badge is legible on a custom teal sidebar
+         v04.35 — 8.7:1 against its own pill, 48px wide, painted true
+  ok   the search box reads on a custom teal sidebar too — placeholder and typed text both
+         placeholder 4.4:1 · typed text 8.7:1
+  ok   the header fits the sidebar at every width it can be dragged to, 160px to 540px
+         160:122px (wordmark folded) 200:84px (wordmark folded) 240:84px (wordmark folded) 280:57px (wordmark folded) 330:57px 390:57px 460:57px 540:57px
+  ok   at a normal sidebar width the wordmark, the badge and all five buttons share one row
+         390px 57px tall, wordmark true · 460px 57px tall, wordmark true · 540px 57px tall, wordmark true
+  ok   every header button is the same square, in the same icon size
+         4 buttons at 34×34, font 17px
+  ok   the ▾ beside 🏠 is a real target, not the 14×19px speck it was
+         26×34
+  ok   on a phone every header button is a 42px touch target (the ▾ 30px wide, full height)
+         42×42 42×42 30×42 42×42 42×42 42×42
+  ok   a real click on the ▾ opens the frozen-archives menu and it is still there a tick later
+         painted true · names the legacy build true
+  ok   every word in the sidebar reads on the Forest preset
+         82 pieces of text, worst 10.6:1 (sec-nm db-sec-nm), bar 4.5:1, ink #FFFFFF
+  ok   every word in the sidebar reads on the owner’s teal
+         82 pieces of text, worst 4.8:1 (sec-nm db-sec-nm), bar 4.5:1, ink #FFFFFF
+  ok   every word in the sidebar reads on the Ocean preset’s navy
+         82 pieces of text, worst 10.2:1 (sec-nm db-sec-nm), bar 4.5:1, ink #FFFFFF
+  ok   every word in the sidebar reads on a pale cream sidebar
+         82 pieces of text, worst 7.4:1 (sec-nm db-sec-nm), bar 4.5:1, ink #101A14
+  ok   every word in the sidebar reads on a mid grey sidebar
+         82 pieces of text, worst 4.9:1 (tr-name), bar 4.5:1, ink #101A14
+  ok   the "nothing here yet" lines read too, on an empty notebook on a teal sidebar
+         30 pieces of text over rgb(11, 122, 107), worst 4.7:1 "Empty — add a folder w"
+  ok   the ink flips to dark when the owner picks a pale sidebar, search results with it
+         dark sidebar ink #FFFFFF · pale sidebar ink #101A14, search-results #101A14
+  ok   a section heading sits on a strip of its own, not on the same ground as its rows
+         heading rgba(0, 0, 0, 0.3) · row rgba(0, 0, 0, 0)
+  ok   the sidebar’s own two buttons are boxes you can hit, not bare labels
+         📝New Note 40px · 📚Folders 40px
+  ok   every word in panes 2 and 3 reads with the theme as it ships
+         38 pieces of text across four states, worst 4.8:1 (nti-chip on)
+  ok   every word in panes 2 and 3 reads with a pane background too dark to read on
+         38 pieces of text across four states, worst 4.8:1 (nti-chip on)
+  ok   every word in panes 2 and 3 reads with a mid grey pane background
+         38 pieces of text across four states, worst 4.8:1 (nti-chip on)
+  ok   every word in panes 2 and 3 reads with a pale accent colour
+         38 pieces of text across four states, worst 4.8:1 (nti-chip on)
+  ok   every word in panes 2 and 3 reads with a pale accent on a dark pane background
+         38 pieces of text across four states, worst 4.8:1 (nti-chip on)
+  ok   a pane background too dark to read on is lightened, and the inks are re-derived from what it becomes
+         #16202A → #a1a6a9 · body text 8.0:1 · faintest ink 5.4:1
+  ok   white stops being the label colour on an accent too pale to carry it
+         accent #EFEFEF → label #141210
+  ok   every word in the folder pop-out reads with the theme as it ships
+         12 pieces of text across three states, worst 5.4:1 (btn bp)
+  ok   every word in the folder pop-out reads with a pane background too dark to read on
+         12 pieces of text across three states, worst 5.4:1 (mi ::placeholder)
+  ok   every word in the folder pop-out reads with a mid grey pane background
+         12 pieces of text across three states, worst 5.4:1 (btn bp)
+  ok   every word in the folder pop-out reads with a pale accent colour
+         12 pieces of text across three states, worst 5.5:1 (mi ::placeholder)
+  ok   on a laptop every control in the pop-out is one size, and none of them is a speck
+         18 icons at 28px+, 2 buttons at 34px+, 3 rows, title bar all 32×32
+  ok   a group heading in the pop-out sits on a strip, not on the same ground as its rows
+         heading rgb(247, 244, 237) · row rgba(0, 0, 0, 0)
+  ok   the section dropdown is wide enough to say which section you are in
+         164×32
+  ok   on a phone the pop-out is thumb-sized: 38px icons, 44px buttons and rows
+         9 icons, 2 buttons, 3 rows, dropdown 158×42
+  ok   the pop-out’s title bar wraps rather than squeezing the section name out
+         420:228px 520:142px 700:226px 1000:376px
+  ok   every word in the Assign window reads with the theme as it ships
+         8 pieces of text, worst 5.4:1 (btn bp)
+  ok   every word in the Assign window reads with a mid grey pane background
+         8 pieces of text, worst 5.4:1 (btn bp)
+  ok   on a laptop the Assign window's tick box is a box, not the 15×15 speck it was
+         2 boxes at 20×20 (needs 20)
+  ok   on a phone the Assign window's tick box is a box, not the 15×15 speck it was
+         2 boxes at 24×24 (needs 24)
+  ok   every folder row in both pop-up windows carries the same note count the sidebar shows
+         2 rows in Assign, 3 in the browser, all matching cntOf()
+  ok   on a phone the row actions fold into one ⋯ and the whole folder name is on screen
+         loose icons 0 · ⋯ shown true · name 122px, whole true, clipped false — "(001) Seeded Folder"
+  ok   a real click on that ⋯ opens all three actions, and the menu is still there a tick later
+         painted true · "📍 New folders go here✏️ Rename🗑 Delete"
+  ok   on a laptop the three row actions are still on the row, and the ⋯ stays out of the way
+         on the row: New folder, Rename, Delete · ⋯ shown false
+  ok   on Forest, every colour variable the stylesheet uses is actually defined
+         41 variables used without a fallback, all resolve
+  ok   on Forest, text still reads on a row that is lit up
+         34 pieces of text on --hover/--paper2, worst 4.8:1 (.p2h-path-up, .p2h-path-child, .p2h-path-new)
+  ok   on Ocean, every colour variable the stylesheet uses is actually defined
+         41 variables used without a fallback, all resolve
+  ok   on Ocean, text still reads on a row that is lit up
+         34 pieces of text on --hover/--paper2, worst 4.6:1 (.p2h-path-up, .p2h-path-child, .p2h-path-new)
+  ok   on Amber, every colour variable the stylesheet uses is actually defined
+         41 variables used without a fallback, all resolve
+  ok   on Amber, text still reads on a row that is lit up
+         34 pieces of text on --hover/--paper2, worst 4.8:1 (.p2h-path-up, .p2h-path-child, .p2h-path-new)
+  ok   on Indigo, every colour variable the stylesheet uses is actually defined
+         41 variables used without a fallback, all resolve
+  ok   on Indigo, text still reads on a row that is lit up
+         34 pieces of text on --hover/--paper2, worst 5.7:1 (.p2h-path-up, .p2h-path-child, .p2h-path-new)
+  ok   on Rose, every colour variable the stylesheet uses is actually defined
+         41 variables used without a fallback, all resolve
+  ok   on Rose, text still reads on a row that is lit up
+         34 pieces of text on --hover/--paper2, worst 6.3:1 (.p2h-path-up, .p2h-path-child, .p2h-path-new)
+  ok   on a custom pane background, every colour variable the stylesheet uses is actually defined
+         41 variables used without a fallback, all resolve
+  ok   on a custom pane background, text still reads on a row that is lit up
+         34 pieces of text on --hover/--paper2, worst 4.7:1 (.p2h-path-up, .p2h-path-child, .p2h-path-new)
+  ok   on a pale custom accent, every colour variable the stylesheet uses is actually defined
+         41 variables used without a fallback, all resolve
+  ok   on a pale custom accent, text still reads on a row that is lit up
+         34 pieces of text on --hover/--paper2, worst 4.8:1 (.p2h-path-up, .p2h-path-child, .p2h-path-new)
+  ok   a real mouse on a real row actually repaints it — the hover highlight is visible
+         p2h-sec-nav-btn pk-big-btn: rgb(255, 255, 255) → rgb(232, 229, 223)
+  ok   every Smart View now carries the same second row a folder does
+         11 views, 10–12 chips each, same .p2h-path-row as a folder
+  ok   clicking a Smart View chip really moves you there, without the sidebar
+         ST.folder=sf-favs · header "⭐ (03) Favourites📚⭐ Note▤ Preview"
+  ok   the quick-add bar is in every Smart View a note can honestly go into, and no other
+         6 views have it, 5 correctly do not
+  ok   a title typed into sf-favs is saved, marked favourite, and appears in that very list
+         favourite=true · folder=f1 (real:true) · in the view:true · on screen:true
+  ok   a title typed into sf-pinned is saved, marked pinned, and appears in that very list
+         pinned=true · folder=f1 (real:true) · in the view:true · on screen:true
+  ok   a folder's own quick-add bar still behaves exactly as it did
+         folder=f2 favourite=false pinned=false
+  ok   in Reminders the bar really opens the reminder dialog it promises
+         note created:true · #rem-modal painted:true
+  ok   Expand all / Collapse all really open and close a Smart View’s groups
+         groups painted: 0 at rest → 2 expanded → 0 collapsed
+  ok   a section's Smart View gets the row too, and saves inside that section
+         bar:true row:true destination:f2 inside the section:true
+  ok   on a laptop the quick-add bar is a real, hittable control that says its whole line
+         bar 479×39 · Save 61×28 (needs 28) · badge 25×25 · radius 999px · "New ⭐ favourite — press Enter…" needs 199px in 359px
+  ok   on a phone the quick-add bar is a real, hittable control that says its whole line
+         bar 366×54 · Save 67×42 (needs 42) · badge 31×31 · radius 999px · "New ⭐ favourite — press Enter…" needs 214px in 232px
+  ok   the quick-add bar reads on forest
+         Save 5.4:1 · placeholder 5.5:1
+  ok   the quick-add bar reads on ocean
+         Save 5.2:1 · placeholder 5.3:1
+  ok   the quick-add bar reads on amber
+         Save 5.9:1 · placeholder 5.5:1
+  ok   the quick-add bar reads on indigo
+         Save 5.7:1 · placeholder 6.5:1
+  ok   the quick-add bar reads on rose
+         Save 6.0:1 · placeholder 7.2:1
+  ok   the five notebook actions moved out of ⚙ Settings into 🧰 Tools
+         in Tools: openCalSettings, openCiteModal, toggleHijri, syncKnowledgeBase, addStarterMyDatabaseFolders
+  ok   every action the two menus had in v04.20 is still on one of them
+         26 actions, 16 in Tools and 11 in Settings
+  ok   every item closes the menu it is actually in, not the one it came from
+         13 in Tools, 11 in Settings
+  ok   both menus are split into named groups and every group has items under it
+         Tools: Create (4) · Reference & dates (3) · View (4) · Save (2) | Settings: Account (2) · App (2) · Backup (3) · Export (3)
+  ok   phone: a real click opens each header menu fully on screen
+         sb-tools 243×774 at x91 bottom 832/844 · sb-menu 238×545 at x142 bottom 603/844
+  ok   phone: a menu that has to scroll shows that it does
+         sb-tools scrolls 825px, cued · sb-menu fits whole
+  ok   phone: every menu row is a 44px touch target
+         sb-tools 13 rows, shortest 44px · sb-menu 9 rows, shortest 44px
+  ok   tablet: a real click opens each header menu fully on screen
+         sb-tools 243×827 at x521 bottom 885/1180 · sb-menu 238×545 at x572 bottom 603/1180
+  ok   tablet: a menu that has to scroll shows that it does
+         sb-tools fits whole · sb-menu fits whole
+  ok   desktop (sidebar 160px): a real click opens each header menu fully on screen
+         sb-tools 238×657 at x8 bottom 735/900 · sb-menu 238×435 at x8 bottom 552/900
+  ok   desktop (sidebar 160px): a menu that has to scroll shows that it does
+         sb-tools fits whole · sb-menu fits whole
+  ok   desktop (sidebar 540px): a real click opens each header menu fully on screen
+         sb-tools 238×657 at x251 bottom 708/900 · sb-menu 238×435 at x290 bottom 486/900
+  ok   desktop (sidebar 540px): a menu that has to scroll shows that it does
+         sb-tools fits whole · sb-menu fits whole
+  ok   every word in both header menus reads on forest
+         30 labels and headings, worst 4.8:1
+  ok   every word in both header menus reads on ocean
+         30 labels and headings, worst 4.6:1
+  ok   every word in both header menus reads on amber
+         30 labels and headings, worst 4.8:1
+  ok   every word in both header menus reads on indigo
+         30 labels and headings, worst 5.7:1
+  ok   every word in both header menus reads on rose
+         30 labels and headings, worst 6.3:1
+  ok   phone: editing a note opens on ONE bar, with Save on it
+         nav+edit rows 1 · tab bar 0 · type/Attach/Save row 0 · tag bar 0 · Save on the bar yes · "◀ 📁 Aa H ≡ + 💾 Save"
+  ok   phone: the note itself starts in the top third of the screen
+         #ed begins at 165px of 844px (20%)
+  ok   phone: every control on the one bar is one size and none is pushed off the end
+         7 controls, all 38×40 or bigger, nothing scrolled away
+  ok   phone: the ◀ and ≡ nav buttons appear once, not on two rows at the same time
+         ◀ back-to-list ×1 · ≡ folders ×1
+  ok   phone: every control the unfolded bar reaches, the folded one still reaches
+         38 actions on the phone, 35 at 640px, none lost (goHome exempt — see below)
+  ok   phone: 🏠 Home is still one tap away — ≡ opens the sidebar and its logo is goHome()
+         .sb-logo onclick="goHome()"
+  ok   phone: the tag editor is inside the `+` menu, and typing in it really tags the note
+         separate 🏷 gone true · tag row gone true · editor in the menu true with 1 existing chip(s) · a typed tag reached ST.etags true
+  ok   phone: the four Attach rows are spread open in `+`, the opener is gone, Archive is not
+         Note Type true · Folder true · Journal true · MyDatabase true · 📎 opener still there false · Archive still here false · headings: Insert at the cursor | Attach to the note | Pop it out | Go to
+  ok   phone: the ≡ menu puts Undo·Redo·Find first, Lists second, and carries 📦 Archive
+         Undo · Redo · Find → Lists and blocks → This note · Archive here true
+  ok   phone: ✕ stop-editing moved onto the title row and can be hit
+         38×38, onclick="cancelEdit()"
+  ok   phone: 💾 Save on the bar commits the note
+         typed text is in DB.articles after a real click
+  ok   the note shows ONE date, on the versioning bar, and it is the created one
+         1 date element(s) in .p3-meta-row: "Created Sep 18, 26 · 11:56 PM"
+  ok   tapping the date flips it to Updated, and back again
+         "Created Sep 18, 26 · 11:56 PM" → "Updated Sep 18, 26 · 11:56 PM" → "Created Sep 18, 26 · 11:56 PM"
+  ok   flipping the date neither rebuilds the editor nor touches the note
+         #ed is the same node · updatedAt unchanged
+  ok   phone: exactly one section-tools ⋯, on the versioning bar after the date
+         1 #ed-col-wrap · in .p3-meta-row · painted true · after the date true
+  ok   tablet: exactly one section-tools ⋯, on the versioning bar after the date
+         1 #ed-col-wrap · in .p3-meta-row · painted true · after the date true
+  ok   desktop: exactly one section-tools ⋯, on the unified toolbar
+         1 #ed-col-wrap · in the toolbar · painted true · after the date false
+  ok   phone: with three tabs open, the tab bar is NOT a row while editing
+         not rendered at all
+  ok   phone: the tab bar does not render in read mode either, before or after an edit
+         read not rendered · after ✕ not rendered
+  ok   phone: every open tab is a row under `+`, and a real click on one switches to that note
+         3 rows: ◆ Seeded note one · Seeded note two · Archived seeded note → clicking one lands on a2, editing false
+  ok   phone read mode: the 🏷 palette spreads all four Attach rows open, with no 📎 middleman
+         headings: Attach to the note | Go to | Open tabs · 3 · 📎 opener still there false
+  ok   phone read mode: tapping 📎 Attach lands on that same spread-open card
+         headings: Attach to the note | Go to | Open tabs · 3
+  ok   phone read mode: 📅 Calendar, ＋ Add Tab and the open tabs are in that card
+         Calendar true · Add Tab true · tabs true · Attach to the note | Go to | Open tabs · 3
+  ok   phone read mode: that card runs edge to edge and every row can be hit
+         6→384 of 390, shortest row 44px
+  ok   tablet: the tab bar and the old 🏷 palette are both untouched
+         tab bar painted true · palette is the kindBar card true · spread-open false
+  ok   phone read mode: 🏠 is off the bar (📁 keeps your place), and Home is still one tap away
+         bar: ◀ 📁 🏷▾ ⇅ ⋯▾ ✏️ Edit · goHome on the bar 0, in the ⋯ card true, on the sidebar logo true
+  ok   phone read mode: the ⋯ card spreads the four actions open under named headings, and names what is left
+         Go to | This note | More · spread 4/4 · wordless rows 0 · rows trailing off 0 · Delete still behind the full menu true
+  ok   phone read mode: every ⋯ row is tappable, sized to its own words, and the card fits the screen
+         shortest 44px · 12 distinct widths · scrolls false · 13 rows
+  ok   phone read mode: ⧉ Make a copy in that card really makes the copy
+         3 → 4 notes
+  ok   no note-type value is painted without the word that says what it is
+         4 values swept (read bar, 🏷 palette, edit row) · unlabelled 0
+  ok   tablet: the read bar keeps its 🏠 — this round is the phone’s
+         goHome buttons on the tablet read bar: 1
+  ok   phone 360px: no Attach row is stranded alone on its line, and each is sized to its words
+         rows per line [2,2] · alone: none · 4 distinct widths · overflowing 0
+  ok   phone 390px: no Attach row is stranded alone on its line, and each is sized to its words
+         rows per line [2,2] · alone: none · 4 distinct widths · overflowing 0
+  ok   the 📁 Folder row shows the count without the word "attached"
+         reads “📁Folder1”
+  ok   phone 412px: no Attach row is stranded alone on its line, and each is sized to its words
+         rows per line [2,2] · alone: none · 4 distinct widths · overflowing 0
+  ok   phone 430px: no Attach row is stranded alone on its line, and each is sized to its words
+         rows per line [2,2] · alone: none · 4 distinct widths · overflowing 0
+  ok   phone 480px: no Attach row is stranded alone on its line, and each is sized to its words
+         rows per line [2,2] · alone: none · 4 distinct widths · overflowing 0
+  ok   phone 600px: no Attach row is stranded alone on its line, and each is sized to its words
+         rows per line [2,2] · alone: none · 4 distinct widths · overflowing 0
+  ok   laptop: the Attach rows are not paired — the narrow card is untouched
+         .eb-pair display is contents
+  ok   phone: ⋯ All actions really opens the full menu — still painted 250ms after a real click
+         painted true · card layout true (v04.31 handed showArtCtx a fake event and the document closer shut it in the same tick)
+  ok   phone: the full ⋯ menu is split into named groups, with no unnamed separator lines left
+         This note (5) · Mark it (4) · Put it in (6) · Remind & revise (3) · Remove (1) · visible separators 0
+  ok   phone: those rows pack into a cluster and each is sized to its own words
+         19 rows on 10 lines · 16 distinct widths, 92px between the widest and the narrowest
+  ok   phone: the full ⋯ menu runs edge to edge, fits the screen, and every row can be hit
+         6→384 of 390 · 160→838 of 844 · shortest row 44px · scrolls false
+  ok   phone: in the full ⋯ menu no glyph does two different jobs
+         every glyph is one job
+  ok   phone: a sub-panel of that menu is re-placed, not left hanging off the screen
+         ◀ Back true · 584→744 of 844
+  ok   closing the menu hands #ctx back clean for the four other menus that borrow it
+         class “” · inline width “”
+  ok   tablet: the right-click menu is the anchored column it has always been
+         card false · 19 rows, 4 separators, 168px wide
+  ok   laptop: the right-click menu is the anchored column it has always been
+         card false · 19 rows, 4 separators, 168px wide
+  ok   edit bar at 2200px: both pop-up buttons are there, and wear their word wherever it costs no line
+         2 visible, 2 worded · the words are free here: true (row 37px with them, 37px without) · overflow 0px
+  ok   edit bar at 1920px: both pop-up buttons are there, and wear their word wherever it costs no line
+         2 visible, 2 worded · the words are free here: true (row 37px with them, 37px without) · overflow 0px
+  ok   edit bar at 1600px: both pop-up buttons are there, and wear their word wherever it costs no line
+         2 visible, 2 worded · the words are free here: true (row 37px with them, 37px without) · overflow 0px
+  ok   edit bar at 1440px: both pop-up buttons are there, and wear their word wherever it costs no line
+         2 visible, 0 worded · the words are free here: false (row 62px with them, 37px without) · overflow 0px
+  ok   edit bar at 1366px: both pop-up buttons are there, and wear their word wherever it costs no line
+         2 visible, 0 worded · the words are free here: false (row 67px with them, 62px without) · overflow 0px
+  ok   edit bar at 1280px: both pop-up buttons are there, and wear their word wherever it costs no line
+         2 visible, 2 worded · the words are free here: true (row 67px with them, 67px without) · overflow 0px
+  ok   edit bar at 1200px: both pop-up buttons are there, and wear their word wherever it costs no line
+         2 visible, 2 worded · the words are free here: true (row 67px with them, 67px without) · overflow 0px
+  ok   edit bar at 1100px: both pop-up buttons are there, and wear their word wherever it costs no line
+         2 visible, 2 worded · the words are free here: true (row 0px with them, 0px without) · overflow 0px
+  ok   edit bar at 1000px: both pop-up buttons are there, and wear their word wherever it costs no line
+         2 visible, 2 worded · the words are free here: true (row 0px with them, 0px without) · overflow 0px
+  ok   edit bar at 900px: both pop-up buttons are there, and wear their word wherever it costs no line
+         2 visible, 2 worded · the words are free here: true (row 0px with them, 0px without) · overflow 0px
+  ok   1440px: edit mode paints Multi and Single exactly as read mode does
+         multi read rgb(184, 135, 58) / edit rgb(184, 135, 58) @1 · single read rgb(27, 122, 70) / edit rgb(27, 122, 70) @1
+  ok   1000px: edit mode paints Multi and Single exactly as read mode does
+         multi read rgb(184, 135, 58) / edit rgb(184, 135, 58) @1 · single read rgb(27, 122, 70) / edit rgb(27, 122, 70) @1
+  ok   a real click on the edit bar’s Single Note Pop-Up opens it ON the editor, still shaped as a panel
+         modal true · editing true · #ed holds a1 · modal-mode true · backdrop true · grips true
+  ok   words typed into the Single Note Pop-Up are in the note after it closes
+         kept true · modal closed true · pane un-shaped true
+  ok   the Multi Notes Pop-Up opens on the editor with the caret already in it
+         window true · editable true · focused true
+  ok   popping a note out via float hands the editor over — one live editor, and the words come with it
+         float editor true · pane-3 editor still live false · ST.editing false · typed words in DB true · in the pop-up true
+  ok   popping a note out via panel-then-float hands the editor over — one live editor, and the words come with it
+         float editor true · pane-3 editor still live false · ST.editing false · typed words in DB true · in the pop-up true
+  ok   tablet read mode: both pop-ups are reachable, and both really open on the editor
+         reached via the bar [float/panel] · Multi opens editable true · Single opens true, editing true
+  ok   tablet edit mode: both pop-ups are reachable, and both really open on the editor
+         reached via the bar [float/panel] · Multi opens editable true · Single opens true, editing true
+  ok   phone read mode: both pop-ups are reachable, and both really open on the editor
+         reached via the ⋯ card [float/panel] · Multi opens editable true · Single opens true, editing true
+  ok   phone edit mode: both pop-ups are reachable, and both really open on the editor
+         reached via the + menu [float/panel] · Multi opens editable true · Single opens true, editing true
+  ok   phone: the Multi pop-up is a sheet — edge to edge, nothing that pretends to drag, and a way out
+         6→384 of 390 · 6→838 of 844 · drag/resize affordances 0 · editable true · close 44×44
+  ok   phone: the Single pop-up is a sheet — edge to edge, nothing that pretends to drag, and a way out
+         6→384 of 390 · 6→838 of 844 · drag/resize affordances 0 · editable true · close 77×44 with a word
+  ok   phone: a real tap on the Single sheet’s ✕ Close hands the whole app back
+         clicked true · modal false · modal-mode false · backdrop false · sheet header left behind false · pane back to 390×844
+  ok   phone: two pop-ups open give a switcher that really brings the buried one forward
+         bar true (laptop chip present false) · chips ["Seeded note one","Seeded note two"] · shortest 40px · on screen true · sheets clear it true · was "a2", tap brought "a1" to the front, 2 still open
+  ok   tablet: the Multi pop-up is still a real window, and its header can be hit by a finger
+         640×1038 at 90,71 of 820×1180 · drag/resize handles 7 · phone sheet header false · phone switcher false · header targets 34px
+  ok   tablet: the Single pop-up is still a real window, and its header can be hit by a finger
+         787×820 at 60,180 of 820×1180 · drag/resize handles 7 · phone sheet header false · phone switcher false · header targets n/a
+  ok   phone: the Multi sheet is all note — no side panel, no pane button that cannot work
+         Contents panel false · Pinned Tabs panel false · pane-nav buttons 0 · editor 376px of a 378px sheet
+  ok   phone: the Single sheet is all note — no side panel, no pane button that cannot work
+         Contents panel false · Pinned Tabs panel false · pane-nav buttons 0 · editor 363px of a 378px sheet
+  ok   phone: a sheet never writes a remembered frame for the laptop to restore
+         float frame stored null · panel frame stored null
+  ok   phone: the ⋯ on the versioning bar looks like a button and opens all three section tools
+         44×34, framed true, opens "ALL SECTIONS IN THIS NOTE ▶ Collapse all ▼ Expand all ▤ Preview"
+  ok   phone: the H group carries the same Collapse / Expand / Preview, by the same functions
+         MAKE THIS LINE A HEADING H1 H2 H3 H4 ¶ ▲ ▼ ↕ All ALL SECTIONS IN THIS NOTE ▶ Collapse all ▼ Expand all ▤ Previ
+  ok   phone: no two controls in the edit chrome wear the same glyph for different jobs
+         every glyph does one job
+  ok   phone: the `+` menu is split into named groups and every group has items
+         Insert at the cursor (6) · Attach to the note (4) · Pop it out (2) · Go to (2) · Open tabs · 3 (3)
+  ok   phone: every action in the `+` menu is a word, not a bare glyph
+         all labelled
+  ok   phone: the tag box is the first thing in the `+` menu, above every heading
+         .eb-tagrow first, with an input true
+  ok   phone: the `+` menu actions are sized to their words, not stretched to a column
+         "🔗Link" 76px vs "Single Note Pop-Up" 166px · 12 distinct widths across 14 actions
+  ok   phone: the whole `+` menu fits on the screen without scrolling
+         51→680 of 844px (629px tall, 75%), scrolls false
+  ok   phone: a real click on each edit-bar group leaves its menu open
+         4 menus, all still painted 250ms later
+  ok   phone: every edit-bar menu opens against its own button
+         text at y51 (button ends 45) · heads at y51 (button ends 45) · lists at y51 (button ends 45) · insert at y51 (button ends 45)
+  ok   phone: every edit-bar menu runs edge to edge
+         text 6→384 of 390 · heads 6→384 of 390 · lists 6→384 of 390 · insert 6→384 of 390
+  ok   phone: every edit-bar menu is wholly on the screen
+         text 6→384 of 390 · heads 6→384 of 390 · lists 6→384 of 390 · insert 6→384 of 390
+  ok   phone: every row inside an edit-bar menu can be hit
+         text 16 buttons, shortest 44px · heads 12 buttons, shortest 44px · lists 10 buttons, shortest 44px · insert 15 buttons, shortest 44px
+  ok   tablet: a real click on each edit-bar group leaves its menu open
+         5 menus, all still painted 250ms later
+  ok   tablet: every edit-bar menu opens against its own button
+         text at y89 (button ends 83) · heads at y89 (button ends 83) · lists at y89 (button ends 83) · insert at y89 (button ends 83) · hist at y89 (button ends 83)
+  ok   tablet: the edit-bar menus stay narrow and anchored
+         text 260px at x377 · heads 260px at x417 · lists 260px at x457 · insert 260px at x497 · hist 260px at x537
+  ok   tablet: every edit-bar menu is wholly on the screen
+         text 377→637 of 820 · heads 417→677 of 820 · lists 457→717 of 820 · insert 497→757 of 820 · hist 537→797 of 820
+  ok   desktop: a real click on each edit-bar group leaves its menu open
+         5 menus, all still painted 250ms later
+  ok   desktop: every edit-bar menu opens against its own button
+         text at y116 (button ends 110) · heads at y116 (button ends 110) · lists at y116 (button ends 110) · insert at y116 (button ends 110) · hist at y116 (button ends 110)
+  ok   desktop: the edit-bar menus stay narrow and anchored
+         text 260px at x792 · heads 260px at x830 · lists 260px at x861 · insert 260px at x891 · hist 260px at x921
+  ok   desktop: every edit-bar menu is wholly on the screen
+         text 792→1052 of 1440 · heads 830→1090 of 1440 · lists 861→1121 of 1440 · insert 891→1151 of 1440 · hist 921→1181 of 1440
+  ok   every new word on the phone's edit bar reads on forest
+         20 labels, worst 4.8:1
+  ok   every new word on the phone's edit bar reads on ocean
+         20 labels, worst 4.6:1
+  ok   every new word on the phone's edit bar reads on amber
+         20 labels, worst 4.8:1
+  ok   every new word on the phone's edit bar reads on indigo
+         20 labels, worst 5.7:1
+  ok   every new word on the phone's edit bar reads on rose
+         20 labels, worst 6.0:1
+  ok   phone 390×844: page does not scroll sideways
+         390px in 390px
+  ok   phone: no visible pane has collapsed to nothing
+         sb 390×844 · p2 390×844 · p3 390×844
+  ok   phone: boots with no exception
+         silent
+  ok   phone: every request the app makes succeeds
+         4 Firebase/font requests blocked on purpose
+  ok   tablet 820×1180: page does not scroll sideways
+         820px in 820px
+  ok   tablet: no visible pane has collapsed to nothing
+         sb 820×1180 · p2 820×1180 · p3 820×1180
+  ok   tablet: boots with no exception
+         silent
+  ok   tablet: every request the app makes succeeds
+         4 Firebase/font requests blocked on purpose
+  ok   desktop 1440×900: page does not scroll sideways
+         1440px in 1440px
+  ok   desktop: no visible pane has collapsed to nothing
+         sb 200×900 · p2 520×900 · p3 710×900
+  ok   desktop: boots with no exception
+         silent
+  ok   desktop: every request the app makes succeeds
+         4 Firebase/font requests blocked on purpose
+  ok   phone: ✚ Note opens the new note in its own pop-up
+         mu7md034pzt
+  ok   phone: Pane 3 opens no rival editor on a note a pop-up owns
+         Edit not reachable behind the sheet
+  ok   phone: typing in a pop-up survives navigating away (I1)
+         note intact in DB
+  ok   phone: pop-up ownership journey is silent
+         silent
+  ok   tablet: ✚ Note opens the new note in its own pop-up
+         mu7md6u5yxr
+  ok   tablet: Pane 3 opens no rival editor on a note a pop-up owns
+         pop-up kept sole ownership
+  ok   tablet: typing in a pop-up survives navigating away (I1)
+         note intact in DB
+  ok   tablet: pop-up ownership journey is silent
+         silent
+  ok   desktop: ✚ Note opens the new note in its own pop-up
+         mu7mdb2gqgv
+  ok   desktop: Pane 3 opens no rival editor on a note a pop-up owns
+         pop-up kept sole ownership
+  ok   desktop: typing in a pop-up survives navigating away (I1)
+         note intact in DB
+  ok   desktop: pop-up ownership journey is silent
+         silent
+  ok   Deploy Export carries no session residue
+         clean, including a popover this check invented
+  ok   Save File carries no session residue
+         clean
+  ok   a note's own embed survives the sweep
+         YouTube embed kept as content
+  ok   the export is still the whole app with its data tag
+         app-version + #nd present
+  ok   the shipped index.html carries no session residue or private data
+         clean
+  ok   every modal and overlay is a direct child of <body>
+         all top-level
+  ok   importJSON() asks before replacing the notebook
+         confirmation present
+  ok   importJSON() writes a recovery copy before replacing
+         Save File copy taken first
+  ok   Chromium parses manifest.json with no errors
+         clean
+  ok   Chromium reports the app as installable
+         installable
+
+286/286 passed
+

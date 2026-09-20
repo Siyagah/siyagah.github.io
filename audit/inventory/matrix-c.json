@@ -1,0 +1,394 @@
+[
+ {
+  "domain": "D find/smart views",
+  "feature": "a notebook with MANY notes: all 11 Smart Views open without throwing",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "sf-new:300 sf-recent:20 sf-favs:18 sf-pinned:14 sf-time:58 sf-journal:0 sf-arch:10 sf-mywall:290 sf-remind:0 sf-murajaa:0 sf-practice:0"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "a notebook with MANY notes: every Smart View paints a pane, even with nothing in it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "11 panes painted"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "a notebook with MANY notes: the six filter views count what the notebook actually holds",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "checked against 300 notes"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "a notebook with MANY notes: opening every Smart View is silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "an EMPTY notebook: all 11 Smart Views open without throwing",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "sf-new:0 sf-recent:0 sf-favs:0 sf-pinned:0 sf-time:0 sf-journal:0 sf-arch:0 sf-mywall:0 sf-remind:0 sf-murajaa:0 sf-practice:0"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "an EMPTY notebook: every Smart View paints a pane, even with nothing in it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "11 panes painted"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "an EMPTY notebook: the six filter views count what the notebook actually holds",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "checked against 0 notes"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "an EMPTY notebook: opening every Smart View is silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "a Smart View holding exactly ONE note shows exactly one note",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "filter says 1, 1 rows painted"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "search for a Latin word does not throw and repaints the tree",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "ST.search=\"Unique Latin Needle\", 1 notes match, tree 181b"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "search for a Latin word finds what is really there",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 matches, expected 1"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "search for Bangla text does not throw and repaints the tree",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "ST.search=\"অনন্য\", 1 notes match, tree 177b"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "search for Bangla text finds what is really there",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 matches, expected 1"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "search for Arabic text does not throw and repaints the tree",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "ST.search=\"فريدة\", 1 notes match, tree 172b"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "search for Arabic text finds what is really there",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 matches, expected 1"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "search for punctuation does not throw and repaints the tree",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "ST.search=\"(brackets)\", 1 notes match, tree 200b"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "search for punctuation finds what is really there",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 matches, expected 1"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "search for a string that matches nothing does not throw and repaints the tree",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "ST.search=\"zzzzz-no-such-note-zzzzz\", 0 notes match, tree 99b"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "search for a string that matches nothing finds what is really there",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 matches, expected 0"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "search for an empty query does not throw and repaints the tree",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "ST.search=\"\", cleared, tree 8508b"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "searching in three scripts is silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "a nested folder tree reports its own descendants and path",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "descOf(A)=A,B,Cc, pathOf(C)=A,B,Cc"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "a parent folder counts the notes in its children",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "cntOf(A)=1"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "moving a folder INTO ITS OWN DESCENDANT never creates a cycle",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "tree still walks: A:null B:A Cc:B D:null"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "…and the refused move leaves the tree exactly as it was",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "A:null B:A Cc:B D:null  →  A:null B:A Cc:B D:null"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "the move PICKER refuses the same impossible move",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "A:null B:A Cc:B D:null  →  A:null B:A Cc:B D:null"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "a folder tree that ALREADY contains a ring does not hang or blow the stack",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "pathOf=A,B,Cc, descOf=A,B,Cc, 0ms"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "…and loses neither the folders nor the note inside them (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "4 folders, note present: true"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "a legal folder move carries its whole subtree with it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "B→D, C still under B, 4 folders"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "moving a folder does not change which folders a note is filed in",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "note.folderIds = Cc"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "the folder operations are silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "removing a note from ONE folder leaves it in the others (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "f1,f2,f3 → f1,f3"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "…and the folder it left really no longer lists it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "f1:1 f2:0 f3:1"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "removing a note from its LAST folder does not delete the note (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "note kept, folderIds = [\"f3\"]"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "a note carries several tags and is findable by any of them",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "alpha,beta"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "the same tag cannot be added twice",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "C organisation",
+  "feature": "favouriting a note puts it in the Favourites view, and un-favouriting takes it out",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "added:true in view:true reversible:true"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "a Note Type is single-select — setting one clears the last (terminology: NTI, not a tag)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "6 types defined"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "archiving marks the note and never removes it (I1), and it is reversible",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "kept:true in view:true reversible:true"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "selecting a pinned tab really moves to that note",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "ST.article = after select"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "a pinned tab whose note is gone does not break the tab bar",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "rendered"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "selecting a pinned tab whose note is gone does not throw or lose notes",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes still held"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "the pinned-tab paths are silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "every handler whose NAME is composed at render time resolves to a real function",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "setFolderPin, removeFolderPin"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "deleting a FOLDER puts it in Trash with what was inside it, and deletes nothing outright (D3)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 folders, 3 notes, 1 trash entries"
+ },
+ {
+  "domain": "C organisation",
+  "feature": "restoring a deleted folder brings the folder back",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 folders, 3 notes after restore"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "phone: every Smart View renders and nothing scrolls sideways",
+  "viewport": "phone",
+  "status": "PASS",
+  "ok": true,
+  "detail": "11/11 views, 0px overflow"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "tablet: every Smart View renders and nothing scrolls sideways",
+  "viewport": "tablet",
+  "status": "PASS",
+  "ok": true,
+  "detail": "11/11 views, 0px overflow"
+ },
+ {
+  "domain": "D find/smart views",
+  "feature": "desktop: every Smart View renders and nothing scrolls sideways",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "11/11 views, 0px overflow"
+ }
+]

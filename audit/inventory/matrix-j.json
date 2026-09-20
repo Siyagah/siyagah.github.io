@@ -1,0 +1,362 @@
+[
+ {
+  "domain": "J data preservation",
+  "feature": "a repaired REMOTE notebook keeps its salvaged bytes through the merge (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "[\"CORRUPT-REMOTE\"]"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "…and they are in localStorage, not just in memory",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "[\"CORRUPT-REMOTE\"]"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a repaired IMPORTED file keeps its salvaged bytes through the merge (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "[\"CORRUPT-IMPORTED\",\"CORRUPT-REMOTE\"]"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "…and they reach a Save File export as well (I4)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "[\"CORRUPT-IMPORTED\",\"CORRUPT-REMOTE\"]"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "two devices salvaging the SAME collection keep both, not one (collision-safe keys)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 entries: [\"DEVICE-A\",\"DEVICE-B\"]"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "merging salvage twice adds nothing, and the order of the two sides does not matter",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "idempotent:true order-free:true"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "the records that WERE readable on both sides survive beside the salvage (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a salvage payload too large to keep whole is truncated, not dropped, and says its real size",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "kept 65536 of 300000 bytes"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "…and the owner is told it was only kept in part",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "sixty repairs do not grow the notebook without bound",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "60 entries, 24 still holding bytes, 144240 bytes"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "an entry whose bytes had to be dropped still keeps its size, hash and the fact it was pruned",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "no silent disappearance"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "Cancel via the Cancel button on the choice dialog leaves the notebook byte-identical (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes, storage unchanged, 0 writes"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "Cancel via the Escape key on the choice dialog leaves the notebook byte-identical (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes, storage unchanged, 0 writes"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "Cancel via Cancel on the SECOND confirmation, after choosing Replace All leaves the notebook byte-identical (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes, storage unchanged, 0 writes"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "the import choice is three separate buttons — Merge, Replace All and Cancel",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "Cancel | ➕ Merge | ⚠ Replace All"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "no choice is expressed as \"Cancel = Replace All\" (the review's blocker 2)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "Cancel | ➕ Merge | ⚠ Replace All"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "Cancel holds the focus, so Enter on a dialog nobody read does nothing",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "focus on \"cancel\""
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "every choice is a real <button>, so it is reachable by keyboard",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "MERGE really merges and keeps the existing notes",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "4 notes, imported present: true, seed kept: true"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "MERGE took a recovery snapshot that can be listed afterwards",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 snapshot(s) in the store"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "REPLACE really replaces",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 notes, imported present: true, seed kept: false"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "REPLACE took a recovery snapshot that can be listed afterwards",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 snapshot(s) in the store"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a recovery snapshot is written and READ BACK before it is called a copy",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3030 bytes, verified by length and hash"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "the snapshot can be listed — the owner has something to restore from",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 listed"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "restoring a snapshot really puts the notes back, in storage as well as in memory",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 → 1 → 3 notes (3 in storage)"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "restoring takes a fresh snapshot first, so the undo has an undo",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 snapshots held"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a recovery copy that could NOT be stored reports failure rather than success",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "\"this browser would not open the safety store: Error: denied by policy\""
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a DAMAGED recovery snapshot is refused and the notebook is left alone",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "that safety copy is damaged and was NOT used — notebook still holds 3 notes"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a restore whose undo copy cannot be written changes NOTHING that is persisted",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 notes in storage, bytes identical"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "…and schedules no cloud push, so the other devices never see it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 pushes"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "…and says so, with an error the caller can offer a choice on",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "a safety copy of what you have now could not be made (this browser would not open the safety store: Error: denied by policy), so nothing was changed"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "restoring without an undo copy works when it is explicitly chosen, and reports that it had none",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "restored to 3 notes, undoOk=false"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "a same-length changed payload with intact metadata is REFUSED by the save gate",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "the safety copy read back differently from what was written"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "…while an untampered copy still passes it",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3030 bytes verified"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "Cancel at the restore confirmation leaves the notebook and storage untouched",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 note, storage identical, 0 pushes"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "a failed undo copy offers a real choice rather than silently proceeding or dead-ending",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "the choice card was shown"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "…and pressing \"Stop — change nothing\" changes nothing that is persisted",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 note, storage identical, 0 pushes"
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "restoring a copy takes a VERIFIED undo copy first",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "J data preservation",
+  "feature": "restoring that undo puts the previous notebook back, in storage as well as in memory",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 → 1 → 3 → 1 notes (1 in storage)"
+ },
+ {
+  "domain": "J destructive-path consent",
+  "feature": "the Safety Copies screen says where the copies live and how they can be lost",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "browser-only, not synced, cleared by site data, keep-count, download unverifiable"
+ },
+ {
+  "domain": "J sanitiser (adversarial)",
+  "feature": "every one of 20 adversarial vectors is neutralised",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "no handler, no script scheme, no srcdoc, no fetching CSS, none of the killed tags"
+ },
+ {
+  "domain": "J sanitiser (adversarial)",
+  "feature": "an UNKNOWN element is unwrapped, so the words inside it survive (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "\"<p>KEEP THIS TEXT</p>\""
+ },
+ {
+  "domain": "J sanitiser (adversarial)",
+  "feature": "everything a note legitimately contains survives the sanitiser (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "all 12 kinds kept (449 bytes)"
+ },
+ {
+  "domain": "J sanitiser (adversarial)",
+  "feature": "a hostile file leaves NO inline handler and NO script in PERSISTED note content",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "120 bytes stored"
+ },
+ {
+  "domain": "J sanitiser (adversarial)",
+  "feature": "…and the words that came with it are still there (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ }
+]

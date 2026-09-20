@@ -1,0 +1,346 @@
+[
+ {
+  "domain": "A shell/navigation",
+  "feature": "boots on an EMPTY notebook with no exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "an empty notebook is given a default section rather than none",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 sections"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "every pane still paints something when there is nothing to show",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "7197/341/105/250/198"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "an empty notebook invents no notes or folders",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 folders, 0 notes"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"truncated\" — the app still boots and paints",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 folders / 0 notes in DB, tree 7197b"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"truncated\" — boot throws no exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"truncated\" — keeps every record that was readable (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "payload had 0 folders / 0 notes; app holds 0 / 0"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"notJSON\" — the app still boots and paints",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 folders / 0 notes in DB, tree 7197b"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"notJSON\" — boot throws no exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"notJSON\" — keeps every record that was readable (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "payload had 0 folders / 0 notes; app holds 0 / 0"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"nullCollections\" — the app still boots and paints",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 folders / 0 notes in DB, tree 7197b"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"nullCollections\" — boot throws no exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"nullCollections\" — keeps every record that was readable (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "payload had 0 folders / 0 notes; app holds 0 / 0"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"wrongTypes\" — the app still boots and paints",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 folders / 0 notes in DB, tree 7197b"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"wrongTypes\" — boot throws no exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"wrongTypes\" — keeps every record that was readable (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "payload had 3 folders / 0 notes; app holds 3 / 0"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"missingKeys\" — the app still boots and paints",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 folders / 0 notes in DB, tree 7197b"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"missingKeys\" — boot throws no exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"missingKeys\" — keeps every record that was readable (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "payload had 0 folders / 0 notes; app holds 0 / 0"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"duplicateIds\" — the app still boots and paints",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 folders / 4 notes in DB, tree 7400b"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"duplicateIds\" — boot throws no exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"duplicateIds\" — keeps every record that was readable (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "payload had 3 folders / 4 notes; app holds 3 / 4"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"orphanFolderRef\" — the app still boots and paints",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 folders / 3 notes in DB, tree 7400b"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"orphanFolderRef\" — boot throws no exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"orphanFolderRef\" — keeps every record that was readable (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "payload had 3 folders / 3 notes; app holds 3 / 3"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"nullNote\" — the app still boots and paints",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 folders / 3 notes in DB, tree 7400b"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"nullNote\" — boot throws no exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"nullNote\" — keeps every record that was readable (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "payload had 3 folders / 3 notes; app holds 3 / 3"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"noteWithoutId\" — the app still boots and paints",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 folders / 4 notes in DB, tree 7400b"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"noteWithoutId\" — boot throws no exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"noteWithoutId\" — keeps every record that was readable (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "payload had 3 folders / 4 notes; app holds 3 / 4"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"arrayRoot\" — the app still boots and paints",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 folders / 0 notes in DB, tree 7197b"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"arrayRoot\" — boot throws no exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "corrupt notebook \"arrayRoot\" — keeps every record that was readable (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "payload had 0 folders / 0 notes; app holds 0 / 0"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "boots a 500-note synthetic notebook",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "500 notes / 40 folders, tree 9349b, 577ms incl. browser launch"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "boots a 2000-note synthetic notebook",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2000 notes / 120 folders, tree 9352b, 666ms incl. browser launch"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "crossing every breakpoint in both directions throws nothing",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "no sideways scroll and no zero-width visible pane at any breakpoint edge",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "8 widths incl. 639/640 and 1199/1200"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "opening a note records it as the last-viewed note",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "DB.theme.lastArticle = aX"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "reload reopens the note that was open",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "ST.article = aX, 1 notes"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "the reopened note actually paints its body",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "Reopen me / 🔀 Start Versioning / Created Sep 20, 26 · 9:14 PM / (001) F /  / body"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "the service-worker cache name carries the app version (I3)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "app v04.38, cache v04.38.01"
+ },
+ {
+  "domain": "A shell/navigation",
+  "feature": "the service worker is network-first, so a stale cache cannot win",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "fetch + caches.open present"
+ }
+]

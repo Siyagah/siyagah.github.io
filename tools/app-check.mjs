@@ -2170,13 +2170,22 @@ await app.close();
     'openCalSettings', 'openCiteModal', 'toggleHijri', 'installPWA', 'syncKnowledgeBase',
     'addStarterMyDatabaseFolders', 'doSignOut', 'openBackupModal', 'importBackup', 'exportBackupHTML',
     'backupToGDrive', 'exportBackupPDF', 'exportDeploy'];
+  /* v04.37 — UPDATED IN PLACE, with the reason recorded (CLAUDE.md). A round
+     that deliberately ADDS a menu row is not a round that lost one, but an
+     addition still has to be declared here rather than widening the check to
+     "anything new is fine" — which would stop it noticing the next
+     accidental duplicate. */
+  const SINCE_V0420 = {
+    openRecoveryModal: 'v04.37 — 🛟 Safety Copies, the restore route for the verified pre-import snapshot. '
+      + 'A recovery copy nobody can restore from is not a recovery copy.',
+  };
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
   const lost = V0420.filter((f) => !now.includes(f));
-  const added = [...new Set(now)].filter((f) => !V0420.includes(f));
+  const added = [...new Set(now)].filter((f) => !V0420.includes(f) && !SINCE_V0420[f]);
   r.check(lost.length === 0 && added.length === 0,
-    'every action the two menus had in v04.20 is still on one of them',
-    lost.length || added.length ? `lost: ${lost.join(',') || '—'} · unexpected: ${added.join(',') || '—'}`
-      : `${V0420.length} actions, ${m.tools.length} in Tools and ${m.menu.length} in Settings`);
+    'every action the two menus had in v04.20 is still on one of them, plus only the additions this file declares',
+    lost.length || added.length ? `lost: ${lost.join(',') || '—'} · undeclared: ${added.join(',') || '—'}`
+      : `${V0420.length} original actions + ${Object.keys(SINCE_V0420).length} declared since, ${m.tools.length} in Tools and ${m.menu.length} in Settings`);
 
   /* 3. THE defect this round could ship: a moved item still calling
      closeSBMenu() would leave the Tools menu open after being clicked. */
@@ -3816,6 +3825,185 @@ for (const vp of VIEWPORTS) {
   r.check(s.failed.length === 0, `${vp.name}: every request the app makes succeeds`,
     s.failed.length ? `failed: ${[...new Set(s.failed)].join(', ')}` : `${s.blocked.length} Firebase/font requests blocked on purpose`);
   await s.close();
+}
+
+/* ── 11b. v04.35 — the three defects the audit of 18 Sep 2026 found ──────
+   Each is asserted the way it was actually reproduced, not the way it was
+   described: a real click where a real click found it, and the note read
+   back out of DB rather than off the screen. */
+{
+  /* (a) ONE OWNER PER NOTE. Since v04.00 every new note opens as its own
+         pop-out, so a person can reach ✏ Edit in Pane 3 behind it. That used
+         to build a second, EMPTY #ed on the same note; typing went to the
+         pop-up, and the next selFolder() committed the stale empty editor
+         over the live note and wiped it, silently. Asserted at the two sizes
+         where the button is reachable — and the phone is asserted too, so
+         "the phone is fine" cannot quietly stop being true. */
+  for (const vp of VIEWPORTS) {
+    const s = await openApp({ viewport: { width: vp.width, height: vp.height } });
+    const pg = s.page;
+    await pg.evaluate(() => selFolder('f1'));
+    await pg.waitForTimeout(250);
+    if (vp.width < 1200) { await pg.evaluate(() => openP2()); await pg.waitForTimeout(250); }
+    const addBtn = await pg.$('.p2-new-btn, [onclick="quickNewNote()"]');
+    if (!addBtn) { r.fail(`${vp.name}: a new note can be created from the list`, 'no ✚ Note button'); await s.close(); continue; }
+    await addBtn.click();
+    await pg.waitForTimeout(600);
+    const aid = await pg.evaluate(() => { const w = document.querySelector('.float-win'); return w ? w.id.replace(/^fw-/, '') : null; });
+    r.check(!!aid, `${vp.name}: ✚ Note opens the new note in its own pop-up`, aid || 'no pop-up opened');
+    if (!aid) { await s.close(); continue; }
+    /* Reach for Pane 3's Edit the way a person would. On the phone the sheet
+       covers it, and that is a pass for this check — what must never happen
+       is a SECOND editor on the note, however the button was reached. */
+    let reached = false;
+    const editBtn = await pg.$('#p3h .p3h-edit-btn, #p3h [onclick="startEdit()"], #p3 [onclick="startEdit()"]');
+    if (editBtn && await editBtn.boundingBox()) {
+      try { await editBtn.click({ timeout: 3000 }); reached = true; } catch { reached = false; }
+    }
+    await pg.waitForTimeout(400);
+    const rival = await pg.evaluate((id) => { const e = document.getElementById('ed');
+      return e ? (e.dataset.aid === id) : false; }, aid);
+    r.check(!rival, `${vp.name}: Pane 3 opens no rival editor on a note a pop-up owns`,
+      reached ? (rival ? 'BOTH #ed and .fw-ed live on one note' : 'pop-up kept sole ownership') : 'Edit not reachable behind the sheet');
+    const fwEd = await pg.$('#fw-ed-' + aid);
+    await fwEd.click();
+    await pg.keyboard.type('OWNERSHIP MARKER');
+    await pg.waitForTimeout(2800);
+    await pg.evaluate(() => selFolder('f2'));
+    await pg.waitForTimeout(600);
+    const kept = await pg.evaluate((id) => ((DB.articles.find((a) => a.id === id) || {}).content || ''), aid);
+    r.check(kept.includes('OWNERSHIP MARKER'),
+      `${vp.name}: typing in a pop-up survives navigating away (I1)`,
+      kept.includes('OWNERSHIP MARKER') ? 'note intact in DB' : `NOTE EMPTIED — DB holds ${JSON.stringify(kept).slice(0, 40)}`);
+    r.check(s.errors.length === 0, `${vp.name}: pop-up ownership journey is silent`, s.errors.slice(0, 2).join(' | ') || 'silent');
+    await s.close();
+  }
+}
+{
+  /* (b) NOTHING THE SESSION ADDED IS EVER EXPORTED. Asked as the general
+         question, not as a list of the five ids that leaked: put residue of
+         every kind into the live page, export, and require it all gone —
+         while a note's own embed, which is real content, is required to
+         SURVIVE, so the rule cannot pass by deleting everything.
+         The shipped index.html reached GitHub Pages carrying four sign-in
+         iframes and a #tab-picker holding four real note titles. */
+  const s = await openApp();
+  const m = await s.page.evaluate(() => {
+    const mk = (tag, id, html, attrs) => { const el = document.createElement(tag); el.id = id;
+      if (html) el.innerHTML = html; if (attrs) for (const k in attrs) el.setAttribute(k, attrs[k]);
+      document.body.appendChild(el); return el; };
+    mk('iframe', 'I0_probe', '', { src: 'https://aaas-notebook.firebaseapp.com/__/auth/iframe?apiKey=LEAKMARKER' });
+    mk('section', 'id-recall-widget-root', '');                       /* id only, no class */
+    mk('div', 'tab-picker', '<span>PRIVATE_TITLE_MARKER</span>');      /* real note titles */
+    mk('div', 'nti-picker', 'NTI_MARKER');
+    mk('div', 'some-future-popover-nobody-has-written-yet', 'FUTURE_MARKER');
+    /* A note's own embed is CONTENT and must survive the sweep. */
+    const a = DB.articles.find((x) => x.id === 'a1');
+    a.content = '<div class="embed-wrap" contenteditable="false"><iframe src="https://www.youtube-nocookie.com/embed/KEEPME"></iframe></div>';
+    selArt('a1');
+    const deploy = getExportHTML(JSON.stringify({ folders: [], articles: [], sections: [], trash: [] }));
+    const save = getExportHTML();
+    const leaks = (h) => ['LEAKMARKER', 'id-recall-widget-root', 'PRIVATE_TITLE_MARKER', 'NTI_MARKER', 'FUTURE_MARKER']
+      .filter((k) => h.includes(k));
+    return { deployLeaks: leaks(deploy), saveLeaks: leaks(save),
+             embedKept: save.includes('KEEPME'), deployEmpty: !deploy.includes('KEEPME') || true,
+             stillWholeApp: save.includes('<meta name="app-version"') && save.includes('id="nd"') };
+  });
+  r.check(m.deployLeaks.length === 0, 'Deploy Export carries no session residue',
+    m.deployLeaks.length ? `LEAKED: ${m.deployLeaks.join(', ')}` : 'clean, including a popover this check invented');
+  r.check(m.saveLeaks.length === 0, 'Save File carries no session residue',
+    m.saveLeaks.length ? `LEAKED: ${m.saveLeaks.join(', ')}` : 'clean');
+  r.check(m.embedKept, "a note's own embed survives the sweep",
+    m.embedKept ? 'YouTube embed kept as content' : 'CONTENT DELETED by the residue sweep');
+  r.check(m.stillWholeApp, 'the export is still the whole app with its data tag', m.stillWholeApp ? 'app-version + #nd present' : 'EXPORT BROKEN');
+  await s.close();
+}
+{
+  /* (c) THE SHIPPED FILE ITSELF. The leak above is only half the defect —
+         the other half is already committed, so the file is asked directly. */
+  const banned = [[/aaas-notebook\.firebaseapp\.com/, 'a Google sign-in iframe'],
+                  [/AIzaSy[A-Za-z0-9_-]{10,}/, 'a Firebase API key'],
+                  [/id="tab-picker"/, 'a serialised tab picker (holds real note titles)'],
+                  [/id-recall-widget-root/, 'a browser extension widget'],
+                  [/nb-[a-z0-9]{8}-[a-z0-9]{5}/, "the owner's notebook id"]];
+  const found = banned.filter(([re]) => re.test(html)).map(([, what]) => what);
+  r.check(found.length === 0, 'the shipped index.html carries no session residue or private data',
+    found.length ? `FOUND: ${found.join('; ')}` : 'clean');
+}
+{
+  /* (c2) THE STATIC SHELL'S TAGS BALANCE. Stripping the committed residue in
+          v04.35 dropped one </div>, which left #sync-modal unclosed — so
+          #rem-modal became its CHILD and inherited display:none, and the
+          Reminders dialog opened at zero height. Nothing threw; the element
+          was present, had the right class and the right computed display.
+          A modal is a top-level overlay by definition, so ask that directly:
+          it catches any future unbalanced tag in the static shell, which is
+          otherwise invisible until some unrelated check fails for a reason
+          that makes no sense. */
+  const s = await openApp();
+  const bad = await s.page.evaluate(() => [...document.querySelectorAll('[id$="-modal"], [id$="-overlay"]')]
+    .filter((el) => el.parentElement !== document.body)
+    .map((el) => `#${el.id} is inside ${el.parentElement.tagName.toLowerCase()}#${el.parentElement.id || '(no id)'}`));
+  r.check(bad.length === 0, 'every modal and overlay is a direct child of <body>',
+    bad.length ? `NESTED (unbalanced tag in the static shell): ${bad.join('; ')}` : 'all top-level');
+  await s.close();
+}
+{
+  /* (d) A WHOLE-NOTEBOOK REPLACE IS NEVER SILENT. importJSON() replaced
+         every note on one click with no count, no confirmation and no way
+         back, and persist() pushed the result to the other devices. */
+  const src = html.slice(html.indexOf('function importJSON'), html.indexOf('function importJSON') + 6000);
+  const flow = html.slice(html.indexOf('async function _runImport'), html.indexOf('async function _runImport') + 4000);
+  const flowSrc = flow;
+  /* v04.37 — UPDATED IN PLACE. The question moved out of importJSON() into
+     `_runImport()`'s three-button dialog, because a native confirm() could
+     only offer two answers and the second one was Replace All. Grepping
+     importJSON() for `confirm(` therefore failed on the round that made the
+     choice safe. Ask it of the flow the importer actually reaches. */
+  const asks = /_runImport\(/.test(src) && /_choiceModal\(/.test(flowSrc) && /value:'replace'/.test(flowSrc);
+  r.check(asks, 'importJSON() asks before replacing the notebook',
+    asks ? 'the choice dialog is reached through _runImport()' : 'NO CONFIRMATION — one click replaces everything');
+  /* v04.37 — UPDATED IN PLACE AGAIN, with the reason recorded (CLAUDE.md).
+     v04.36 moved the recovery copy into a shared helper and this check
+     followed the indirection to `exportFile()`. An independent review showed
+     that was proving the wrong thing: `exportFile()` clicks an anchor and
+     revokes the object URL in the same call, so "it did not throw" says
+     nothing about whether a file was saved. The copy is now a snapshot that
+     is READ BACK before anything destructive proceeds, so what this check
+     asks is that the import path reaches the VERIFIED one. The behaviour is
+     measured for real in tools/audit-j-recovery.mjs. */
+  const save = html.slice(html.indexOf('async function _recoverySave'), html.indexOf('async function _recoverySave') + 2200);
+  const takesCopy = /_takeRecoveryCopy\(/.test(flow) && /_recoverySave\(/.test(html)
+    && /readonly/.test(save) && /read back/i.test(save);
+  r.check(takesCopy, 'the import flow takes a recovery copy it has READ BACK before changing anything',
+    takesCopy ? 'verified snapshot (_recoverySave reads back in a separate transaction)'
+              : 'the import path does not reach a verified recovery copy');
+  /* Both importers must go through that one flow — the HTML importer's
+     Replace All had no copy at all until v04.36. */
+  const jsrc = html.slice(html.indexOf('function importJSON'), html.indexOf('function importJSON') + 4000);
+  const bsrc = html.slice(html.indexOf('function importBackup'), html.indexOf('function importBackup') + 4000);
+  r.check(/_runImport\(/.test(jsrc) && /_runImport\(/.test(bsrc),
+    'both importers go through the same guarded flow',
+    `importJSON: ${/_runImport\(/.test(jsrc)}, importBackup: ${/_runImport\(/.test(bsrc)}`);
+  /* CANCEL MUST BE CANCEL. v04.36 asked `OK = Merge, Cancel = Replace All`
+     in a native confirm(), so the instinctive way out of a dialog nobody
+     understood was wired to the one action that cannot be undone. */
+  /* Searching the whole file for "Cancel = Replace" matched the COMMENTS
+     describing the defect that was just fixed — a check failing on its own
+     documentation. Ask it of the strings the app actually shows: no
+     confirm() or dialog text anywhere may offer Cancel as the destructive
+     answer. Comments are stripped first. */
+  const noComments = html.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const offersCancelAsReplace = /Cancel\s*=\s*Replace/i.test(noComments);
+  r.check(!offersCancelAsReplace, 'no import offers "Cancel = Replace All" (a Cancel that destroys the notebook)',
+    offersCancelAsReplace ? 'A CANCEL STILL LEADS TO REPLACE ALL' : 'no dialog wires Cancel to a destructive branch');
+  const threeWay = /value:'cancel'/.test(flow) && /value:'merge'/.test(flow) && /value:'replace'/.test(flow);
+  r.check(threeWay, 'the import choice offers Merge, Replace All and Cancel as separate buttons (Decision 4)',
+    threeWay ? 'three named choices' : 'not a three-way choice');
+  /* and the owner can actually get back */
+  r.check(/function openRecoveryModal/.test(html) && /onclick="openRecoveryModal\(\)/.test(html),
+    'the safety copies can be restored from a menu, not just written',
+    'openRecoveryModal is defined and reachable from the ⚙ menu');
 }
 
 /* ── 12. Chromium's own verdict on the manifest ────────────────────────── */

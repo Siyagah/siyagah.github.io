@@ -1,13 +1,13 @@
 Siyagah — Firestore rules test evidence
 ========================================================================
-run at            2026-09-19T21:27:46.369Z
+run at            2026-09-20T21:09:41.106Z
 node              v22.22.2
 emulator          Firestore emulator via firebase-tools 15.30.2, 127.0.0.1:8080
 client sdk        firebase 12.19.0 / @firebase/rules-unit-testing 5.0.2
-app under test    index.html v04.34  +  legacy/v03.99 (identical paths)
+app under test    index.html v04.38 (candidate f891b52) + legacy/v03.99 (identical paths)
 rulesets          firestore.current.rules | firestore.rules | firestore.strict.rules
 owner fixture     ownerUid00000000000000000000
-notebook id       nb-msrzuilt-gghlh5   (deliberately NOT a UID — see PATHS.md § 3)
+notebook id       nb-mtest000-fixt01   (synthetic, real shape, deliberately NOT a UID — see PATHS.md § 3)
 
 ── 1. The rule that is LIVE today — demonstrating the exposure ─────────
   PASS  LIVE: a stranger (any signed-in Google account) READS the whole notebook

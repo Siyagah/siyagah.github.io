@@ -1,0 +1,54 @@
+
+Audit journey tests — 2026-09-19
+================================
+  ok   phone: J1 create a note
+         3 → 4 articles
+  ok   phone: J2 typing reaches DB (.float-win .fw-ed)
+         Audit journey body text
+  ok   phone: J3 bold formatting persists
+         <b>Audit journey body text</b>
+  ok   phone: J4 a table lands in the editor
+         {"inDom":true,"text":true,"via":".float-win .fw-ed"}
+  ok   phone: J4 table content persists to DB
+         cell text in DB
+  ok   phone: J5 search finds a note
+         true
+  ok   phone: J6 every folder and Smart View opens
+         all clean
+  ok   phone: J8 Save File keeps every note and folder id
+         1195001 bytes
+  ok   phone: J8 Save File exports the whole app
+         has app-version meta
+  ok   phone: J9 deleted note leaves the list
+         true
+  ok   phone: J9 deleted note lands in Trash
+         true
+  ok   phone: no console errors across all journeys
+         silent
+  ok   desktop: J1 create a note
+         3 → 4 articles
+  ok   desktop: J2 typing reaches DB (.float-win .fw-ed)
+         Audit journey body text
+  ok   desktop: J3 bold formatting persists
+         <b>Audit journey body text</b>
+  ok   desktop: J4 a table lands in the editor
+         {"inDom":true,"text":true,"via":".float-win .fw-ed"}
+  ok   desktop: J4 table content persists to DB
+         cell text in DB
+  ok   desktop: J5 search finds a note
+         true
+  ok   desktop: J6 every folder and Smart View opens
+         all clean
+  ok   desktop: J8 Save File keeps every note and folder id
+         1195203 bytes
+  ok   desktop: J8 Save File exports the whole app
+         has app-version meta
+  ok   desktop: J9 deleted note leaves the list
+         true
+  ok   desktop: J9 deleted note lands in Trash
+         true
+  ok   desktop: no console errors across all journeys
+         silent
+
+24/24 passed
+

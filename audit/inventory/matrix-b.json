@@ -1,0 +1,378 @@
+[
+ {
+  "domain": "B notes/editor",
+  "feature": "one editor per note — pop out, then press Edit in Pane 3",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "live editors: fw-ed-n1"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "no exception — pop out, then press Edit in Pane 3",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "one editor per note — press Edit in Pane 3, then pop out",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "live editors: fw-ed-n1"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "no exception — press Edit in Pane 3, then pop out",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "one editor per note — pop out twice",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "live editors: fw-ed-n1"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "no exception — pop out twice",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "one editor per note — pop out, then open the same note as a panel",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "live editors: #ed"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "no exception — pop out, then open the same note as a panel",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "one editor per note — panel, then pop out as a window",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "live editors: fw-ed-n1"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "no exception — panel, then pop out as a window",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "one editor per note — edit in Pane 3, navigate away and back, then pop out",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "live editors: fw-ed-n1"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "no exception — edit in Pane 3, navigate away and back, then pop out",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "one editor per note — pop out, select the note in the list, then Edit",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "live editors: fw-ed-n1"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "no exception — pop out, select the note in the list, then Edit",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "pop-up: typing survives clicking another folder (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "pop-up: typing survives opening a Smart View (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "pop-up: typing survives going Home (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "pop-up: typing survives pressing Back out of the note (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "pop-up: typing survives switching to the article-list pane (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "pop-up: typing survives closing the pop-up (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "pop-up: typing survives a real page reload (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "Pane 3: typing survives clicking another folder (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "Pane 3: typing survives opening a Smart View (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "Pane 3: typing survives going Home (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "Pane 3: typing survives pressing Back out of the note (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "Pane 3: typing survives switching to the article-list pane (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "Pane 3: typing survives closing the pop-up (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "Pane 3: typing survives a real page reload (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "in DB (41b) and in storage"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "a full localStorage is actually exercised by this check",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 rejected writes"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "a full localStorage does not damage the in-memory notebook (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 notes, content 34b"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "a full localStorage is reported to the owner, not swallowed",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "a modal or toast is on screen"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "a full localStorage throws no unhandled exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent (the app logged 1 deliberate report(s))"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "editing a note records a history entry",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 entries held"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "restoring from history puts the earlier text back",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "now \"<p>original</p>\""
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "restoring from history does NOT lose the version being replaced (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 versions held, the replaced one among them"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "Bangla text round-trips through the editor into storage byte for byte",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "stored 55b"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "Arabic text round-trips through the editor into storage byte for byte",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "stored 55b"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "create — a new note really lands in the model",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 → 2"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "rename — the new title is what the model holds",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "Renamed note"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "duplicate — one more note, and the original is untouched",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 → 3"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "archive — the note is marked, not removed (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "archived=true, 3 notes"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "unarchive — fully reversible",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "archived=false"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "delete — the note leaves the list and lands in Trash, never nowhere (D3)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "2 notes, 1 in trash"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "restore — a trashed note comes back whole",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "back in the list, 0 left in trash"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "empty trash — the note is gone and a tombstone remains so it cannot resurrect on sync (I2)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 in trash, 1 tombstones"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "the whole lifecycle throws nothing",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "B notes/editor",
+  "feature": "a ~540 KB note saves and paints without throwing",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "540007b held, 540068 chars painted, 188ms"
+ }
+]

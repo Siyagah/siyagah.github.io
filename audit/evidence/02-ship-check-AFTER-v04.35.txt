@@ -1,0 +1,28 @@
+
+ship-check — version, data tag, service worker, manifest, legacy
+================================================================
+  ok   index.html carries a <meta name="app-version">
+         v04.35
+  ok   .sb-logo pre-boot tag matches the meta tag
+         both v04.35
+  ok   sw.js VERSION is 'v<meta>.NN' — the cache name
+         v04.35.01
+  ok   version bumped past origin/main
+         v04.34 → v04.35
+  ok   <script id="nd"> is intact and parses
+         valid JSON, 0 folders / 0 notes
+  ok   sw.js declares a CORE precache list
+         9 entries
+  ok   every sw.js CORE path exists on disk
+         all 9 present
+  ok   manifest icon sizes match the real pixels
+         4 icons checked
+  ok   manifest screenshots exist at their declared sizes
+         2 screenshots checked
+  ok   every /icons/ path linked from index.html exists
+         3 links checked
+  ok   legacy/** untouched since origin/main
+         clean
+
+11/11 passed
+

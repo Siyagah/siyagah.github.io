@@ -2830,132 +2830,780 @@ wanted.
 
 ---
 
-## v04.35 — the Firestore rules, drafted and proven, not published
+## v04.35 — three defects found by an independent-audit sweep (18 Sep 2026)
 
-**19 September 2026.** Not a feature round. The live Firestore security rule is
+Not a feature round. The owner asked for Siyagah to be prepared for an outside
+architecture/quality/usability audit by ChatGPT, which meant reading the app
+cold and measuring it against its own stated rules rather than against a new
+request. Three defects came out of that, all reproduced mechanically before
+anything was touched, and all of them in places no check had ever looked.
+`origin/main` was green at the time — 266/266 app checks and 11/11 ship checks
+— which is the point worth keeping: every one of these lived in a gap in what
+the harness asked, not in something it asked and got wrong.
 
-```
-match /{document=**} { allow read, write: if request.auth != null; }
-```
+### 1. A note open in a pop-up could be silently emptied (I1)
 
-and `request.auth != null` is every Google account on earth, because the
-project's sign-in is public. The ask was to inspect every Firestore path the app
-uses, draft owner-specific rules for them, test all three actors, prove sync
-still works, and hand the result to the Master Architect **without publishing,
-merging or deploying**. Everything below is in `audit/firestore-rules/`; not one
-line of it is deployed, and the app does not read any of it.
-
-### The brief referenced a file that does not exist
-
-`audit/CONTINUATION-2026-09-19.md` is not in this repository — not on `main`,
-not on any branch, and `audit/` has never been tracked in any commit. The rest
-of the brief was self-contained, so the round went ahead on the app itself,
-which is the primary source anyway. Recorded here so nobody looks for it twice.
-
-### The surface is two paths, and the app never lists either
-
-Measured by reading every `collection(…)` / `.doc(…)` call in both builds:
-
-| Path | Operations |
-|---|---|
-| `notebooks/{notebookId}` | `get` (listener, `syncNow`, reconcile poll, migration), `set` |
-| `notebooks/{notebookId}/chunks/{i}` | `get`, `set`, `delete` |
-
-`legacy/v03.99/` uses the identical two paths, so **one ruleset covers both
-builds and neither file needs a change** — which is what lets the sealed build
-stay sealed (I6) and honours the owner's decision to keep the data in it.
-
-No query, anywhere: every read is a document read by known id. So `list` is
-denied outright, and with it the whole enumeration surface. `delete` of the
-notebook document is denied too, because nothing in either build deletes it —
-which means no client bug and no stolen token can erase the notebook in one
-call (I1). Deleting *notes* is untouched: that is Trash, inside the payload,
-and never a Firestore delete (D3).
-
-### The finding that decided the design: the notebook id is not the UID
-
-The obvious Firebase idiom is `request.auth.uid == notebookId`, and it is wrong
-here. `connectSync()` takes the id from a text input, falling back to
-`generateNotebookId()` → `nb-<base36>-<rand>`. **Nothing anywhere assigns
-`user.uid` to `notebookId`** — the comment at index.html:19348 saying
-`UID = private Notebook ID` describes an intent the code never implemented, and
-the owner's live notebook really is in the `nb-…` form (index.html:21909 carries
-a captured copy of the owner's own sync modal with the id in it). Shipping the
-idiom would have denied the owner access to their own notebook until the
-document was copied to a new id — a data move, an I1 exposure, for no security
-gain.
-
-So the rules pin the owner's UID instead. No migration, no application change,
-both builds keep working byte-for-byte — and a uid-named document still works if
-the app ever adopts one, which is tested so that change needs no rules change.
-
-### Tested against the real emulator, 48 checks, 48 passing
-
-`npm test` in `audit/firestore-rules/` runs the Firestore emulator and evaluates
-the rules files **as they sit on disk** — the suite substitutes the single
-`OWNER_UID` placeholder for a fixture and refuses to run if the placeholder has
-gone, so the tested ruleset cannot drift from the proposed one. The sync tests
-are not mock-ups: `writeCloudDB` / `readCloudDB` are transcribed from
-index.html 19860–19906, batch shape included.
-
-- **Owner** — 10 checks: every operation both builds perform, allowed.
-- **Owner, denied on purpose** — 4: list, chunk list, notebook delete, writes
-  outside `/notebooks`.
-- **Another signed-in Google user** — 11: read, overwrite, field update, chunk
-  read/write, delete, enumerate, attach a listener, create a notebook of their
-  own, write elsewhere. All denied.
-- **Signed out** — 6, all denied.
-- **Sync still works** — 6: a 1-chunk round trip; 1840 KB of base64 across 3
-  chunks; a shrink from 2 chunks to 1 with the tail delete committing; two
-  devices converging through a live `onSnapshot` (I2); the legacy single-blob
-  shape still readable (I1/I4); and the old→uid migration read and write.
-
-The first run of the suite reported the owner passing nothing, because the
-`OWNER_UID` placeholder was never substituted — the tests were measuring a rule
-that could not match anybody. The second reported `expected 2 chunks, got 3`,
-which was a wrong assertion: base64 expands by four thirds, so a 1400 KB
-notebook is three chunks, not two. Both were fixed in the harness, not worked
-around in the rules.
-
-### The variant that was tested and rejected, and why it is kept
-
-`firestore.strict.rules` adds the payload validation that looks like the
-obvious next hardening step. It is kept **because the suite proves it breaks
-sync**, so nobody proposes it again from first principles.
-
-`_writeCloudDB()` deletes chunks `n … n+9` on every push, and those documents
-normally do not exist. On a missing document `resource` is null, so
-`resource.data.ver != null` raises an evaluation error and denies — the
-emulator's own words, from the transcript:
+The worst of the three. Since **v04.00** every new note opens as its own
+pop-out window, so Pane 3 sits visible behind it with its `✏ Edit` button on
+screen. Four real clicks:
 
 ```
-7 PERMISSION_DENIED: evaluation error at L50:26 for 'delete' @ L50
+✚ Note   → the note opens in a pop-up, content still empty
+✏ Edit   → Pane 3 builds #ed on the SAME note — correctly empty, because
+           at that instant the note IS empty
+type     → the text goes into the pop-up and is saved to DB correctly
+a folder → selFolder() calls saveArt(), which commits the STALE empty #ed
+           over the live note
 ```
 
-Firestore batches are atomic, so that one denied delete fails the whole push.
-And the app swallows it (`try{ await b2.commit(); }catch(e){}`), so there would
-have been no visible failure — just stale chunks accumulating until a growing
-payload crossed the stale boundary and a read came back torn. Its second fault
-makes the legacy single-blob shape (`db`, still read at 19865) permanently
-unwritable, which is a direct I1 risk.
+The note's content becomes `""`. No error, no warning, and `persist()` pushes
+the empty result to every other device. Measured with real mouse clicks on
+`origin/main` at v04.34: **emptied at tablet (820) and desktop (1440)**. The
+phone escapes only because its sheet covers the `✏ Edit` button — occlusion,
+not a decision, which is exactly the kind of accidental platform difference
+D5 exists to stop anyone reporting as deliberate.
 
-### What was NOT done, and why
+This is F3's **"hand-over, never duplicate"** rule, which `popOutNote()` has
+enforced since v03.NotePane.F3 and v04.33 extended to Pane 3 — but only in one
+direction. Pane 3 was never stopped from opening a rival editor on a note a
+pop-up already owned. The rule is now enforced **both ways**: `startEdit()`
+raises the existing pop-up instead of building a second editor, and
+`_fwRaise()` is the three lines `popOutNote()` already ran for that case,
+extracted so the two routes cannot drift apart. `saveArt()` carries the same
+rule as defence in depth — if any other route ever leaves `ST.editing` true
+while a window owns the note, it flushes the **owner** rather than `#ed`, so
+navigating away still saves what is actually on screen, and `_fwFlush()`'s
+write-only-when-changed keeps v03.95's no-phantom-update property intact.
 
-- **Nothing was published, deployed or merged**, as instructed. The rules carry
-  an `OWNER_UID` placeholder; publishing means pasting the owner's real UID from
-  the Firebase console, re-running the suite, and publishing from the console.
-  `PROPOSAL.md § 6` has the steps and the rollback.
-- **`legacy/v03.99/` was not touched**, and ship-check confirms it.
-- **Two defects were found and left alone**, recorded in `PATHS.md § 5` because
-  neither is a rules problem and fixing them mid-audit would have widened the
-  round: `runMigration()` copies `notebooks/{old}` to `notebooks/{uid}` but never
-  writes the new id back into the local config, so the app keeps syncing to the
-  old one and the migrated copy is written once and never read again; and
-  `index.html` carries captured live DOM from line 21885 to the end of the file
-  — the owner's sync modal with a real Notebook ID, four real note titles, and
-  three dead `aaas-notebook.firebaseapp.com` auth iframes shipped to every
-  device.
-- **No app behaviour changed.** The only edits to shipped files are the three
-  version numbers, because the standing rule is that every round bumps (I5).
+**A product decision left to the owner:** `✏ Edit` now brings the pop-up
+forward. It could instead close the pop-up and edit in Pane 3. Both are
+coherent; this round took the one that matches F3's existing precedent and
+never moves the text the owner is typing.
 
-11/11 ship checks, and app-check unchanged at 266/266.
+### 2. The deployed file was carrying private note titles
+
+`_cleanExportRoot()` exists (v03.80) precisely so that "foreign DOM" is never
+baked into a saved file, and its own rule 5 says the drag ghost must be
+cleared because **"it holds a REAL note title, which leaked private content
+into Deploy Export files that are meant to be empty shells."**
+
+The shipped `index.html` was carrying, at the end of `<body>`:
+
+- **four Google sign-in iframes** pointing at `aaas-notebook.firebaseapp.com`
+  with the Firebase API key in the query string — hidden iframes that every
+  visitor's browser actually loads;
+- a serialised **`#tab-picker`** holding **four real note titles, four real
+  note ids and two real folder names** (not repeated here — restating them
+  would continue the very leak this round closed; they are recoverable from
+  the pre-v04.35 file in git history if they are ever needed);
+- the owner's **real notebook id** baked into `#sync-mb` as an input value —
+  dead markup, since `openSyncModal()` overwrites that node, but readable by
+  anyone who viewed source;
+- `#nti-picker`, `#jrn-picker`, a fully-populated `#eb-pop`, and a browser
+  extension's `<section id="id-recall-widget-root">` carrying a 5 KB inline
+  style.
+
+13,805 bytes of it, on a public GitHub Pages site and in the public repo.
+
+The allow-lists in `_cleanExportRoot()` each named the residue someone had
+already been bitten by, and each was paid for by a leak. Rule 1 removed
+`<script src>` but not `<iframe src>`, so the sign-in iframes — named in that
+very function's comment as residue — rode straight through. Rule 4 removed
+`[class*="recall-"]`, and the extension's node had an **id** and no class.
+Nothing removed the pickers at all, because they are appended to `<body>` and
+`getExportHTML()` only clears `tree/p2h/p2c/p3h/p3c/ctx/mb`.
+
+A longer id list would have rotted the same way, so the fix asks the general
+question instead: **was this element part of the document the browser loaded,
+or did something put it there during the session?** `_snapshotShell()` records
+`document.body`'s children once at `DOMContentLoaded`, before the app builds
+any chrome of its own; the export drops every body child that is not in that
+set. It names nothing, so it covers the pickers, the float windows, the
+sign-in iframe, an extension's widget, and whatever gets added next. `<style>`
+and `<script>` are left to the existing rules, which keep the app's own
+(`dyn-hs`, `jcss-*`, the Firebase SDK). A second rule drops any cross-origin
+iframe wherever it sits, while a note's own YouTube/Vimeo embed — real
+content, inside `.embed-wrap` — is kept.
+
+That sweep runs **first**, before anything else touches the clone: it pairs
+child *i* of the live body with child *i* of the clone, and an earlier removal
+shifts that pairing. It did, during this round — the id-only extension node
+survived while the alignment was off by the `<script>` tags rules 1–2 had
+already removed — which is a small instance of the harness's own standing
+warning that a check is scored in order and the DOM is not.
+
+The already-committed residue was deleted from `index.html` in the same
+change. **The API key and the notebook id are in the public git history and a
+new commit does not remove them** — see the note to the owner below.
+
+### 3. Importing a JSON backup replaced everything, silently
+
+`importJSON()` — a visible button, `⬆ Import data from JSON backup` — did
+this and only this:
+
+```js
+if(d.folders&&d.articles){DB=d;persist();render();toast('Data imported ✓');}
+```
+
+No count of what was in the file, no confirmation, no merge option, no way
+back — and `persist()` pushes the replacement to every other device. One
+mis-click in a file picker and the notebook is gone. That is I1, and **D3 does
+not cover it**: D3 exempts the owner's own deliberate deletion through Trash,
+and this is neither deliberate nor via Trash.
+
+Its sibling `importBackup()` has always done it properly — counts, a
+merge-or-replace choice, and a second confirmation before replacing — so the
+standard was already set in the same file. `importJSON()` now matches it:
+validates the shape, shows what the file holds against what the notebook holds
+now, says plainly that this replaces rather than merges and that it syncs, and
+writes a complete **📦 Save File** recovery copy before touching anything —
+which is the app's own answer to "get it back" (I4) and needs no new storage
+and no new screen. If that copy cannot be written it says so and asks again.
+
+**A product decision left to the owner:** `importBackup()` offers Merge;
+`importJSON()` still does not. Whether it should is a real choice and was not
+made here.
+
+### What was measured
+
+266 → **286 app checks**, 11/11 ship checks. The 20 new ones assert each
+defect the way it was actually reproduced, not the way it was described:
+
+- the ownership journey driven by **real mouse clicks** at all three sizes,
+  with the note read back **out of `DB`** rather than off the screen, and the
+  phone asserted too so that "the phone is fine" cannot quietly stop being
+  true;
+- the export sweep asked as the general question — residue of five kinds put
+  into the live page, **including a popover the check invents that the app has
+  never heard of**, all required gone from both exports, while a note's own
+  embed is required to **survive**, so the rule cannot pass by deleting
+  everything;
+- the shipped `index.html` asked **directly** whether it still carries a
+  sign-in iframe, an API key, a serialised tab picker or a notebook id — the
+  leak that already happened, which no check of the export path would catch;
+- `importJSON()` asserted to ask before replacing and to take a recovery copy
+  first;
+- and **every modal and overlay asserted to be a direct child of `<body>`** —
+  a check this round paid for itself. Stripping the committed residue dropped
+  one `</div>`, which left `#sync-modal` unclosed, made `#rem-modal` its CHILD
+  and gave it the parent's `display:none`. Nothing threw; the element was
+  present, carried the right class and reported the right computed `display`,
+  and the only symptom was an unrelated v04.20 check failing for a reason that
+  made no sense. An unbalanced tag in the static shell is invisible until it
+  is not, so it is now asked directly.
+
+Two journey suites were also run outside `app-check` and are kept as evidence
+under `audit/`: the notebook journeys (create, type, format, tables, search,
+navigation, Save File round-trip, delete-to-Trash) at phone and desktop,
+**24/24**; and persistence across a real reload, **6/6**. The second needed
+`db:null` — `openApp()` seeds localStorage through `ctx.addInitScript`, which
+re-runs on every navigation, so a reload overwrites what the test just saved
+and reads as a note that vanished when nothing touched it. That trap cost two
+false "CONTENT LOST" readings before it was spotted.
+
+### Not done, and why
+
+- **The live site was never loaded.** `siyagah.github.io` is blocked by this
+  environment's egress policy (`403 CONNECT`), so everything here was measured
+  against the repository working copy in a local Chromium. Nothing was merged
+  or deployed.
+- **Firestore's security rules were not inspected** — no access, and the
+  setup dialog still tells the owner to create the database in *test mode*,
+  which is world-readable. Raised with the owner rather than changed.
+- **The git history still contains** the leaked API key, notebook id and note
+  titles. Removing them is a history rewrite, which CLAUDE.md requires the
+  owner to confirm.
+- **`legacy/v03.99/index.html` still carries the whole leak** — four sign-in
+  iframes, four API-key occurrences, the notebook id and one real note title —
+  and is served publicly at `/legacy/v03.99/`. **I6 seals that folder** ("no
+  feature, no fix, no refactor, ever"; `ship-check` enforces it byte-for-byte),
+  and `legacy/README.md` says a bug in a frozen build "is part of the record and
+  stays". So the leak is closed in the live app and still open one directory
+  away. Removing private data is arguably not the kind of change I6 was written
+  to forbid — that rule exists to preserve BEHAVIOUR and guarantee a fallback,
+  neither of which a stray iframe serves — but that is a reading of the rule,
+  not the rule, so **nothing under `legacy/` was touched** and the choice is the
+  owner's: leave it, strip only the residue, or stop publishing the build.
+  Recorded as Finding 2b in `audit/AUDIT-2026-09-18.md`.
+
+---
+
+## v04.36 — a damaged notebook stops taking the app down with it
+
+*19 September 2026. Phase 2 of the Master Audit and Continuous Build Plan
+(2026-09-19). Continuation branch `claude/elegant-maxwell-8maykf`, cut from the
+v04.35 audit candidate `b56e403`.*
+
+### Phase 0 — the baseline was verified, not believed
+
+The v04.35 report was re-measured before anything was touched. All four gates
+reproduce on the candidate: **11/11** ship, **286/286** app, **24/24**
+journeys, **6/6** reload-persistence, zero `FAIL` lines. Findings 1 and 2 were
+then reproduced on **both sides** of the fix — a detached worktree at the
+v04.34 baseline `ba6c70f` shows the note **silently emptied** on tablet and
+desktop and **8 of 8** residue kinds in both exports; the same scripts on
+v04.35 show `note intact` at all three sizes and **0 of 8**. The report is
+honest. Evidence: `audit/phase0/BASELINE.md`.
+
+### Phase 1 — the inventory is generated, not written
+
+`tools/inventory.mjs` extracts the ledgers mechanically from `index.html`, so
+they cannot go stale: **1,052 application-defined functions**, 1,040 reachable,
+**12 referenced nowhere at all**, 37 classified destructive, 11
+privacy-sensitive, 13 touching the network, **1,077 inline `on*` handlers**
+across 1,367 DOM ids. Writing it cost two defects **in the tool itself**, both
+worth recording because both are the same mistake in different clothes: an
+arrow with no braces (`const inEd = n => !!(…)`) has no `{` to match, so
+reaching for the next one swallowed hundreds of lines and reported four live
+helpers as dead code with their only caller inside the bogus body; and a
+handler name can be **composed** rather than written —
+`onclick="${f.pinHash?'removeFolderPin':'setFolderPin'}('${fid}')"` — where the
+name and its `(` never touch, so no call-shaped search can see it. That second
+one is a standing risk, not just a tool bug: **`app-check`'s handler scan
+cannot resolve those controls either**, so they sit outside the check that
+exists to catch dead buttons.
+
+### Phase 2 — what happens when the stored notebook is not the shape the app expects
+
+`seedDB()` is always well-formed, so every check in this repository — all 286
+of them — had only ever measured a happy boot. `tools/audit-a-shell.mjs` boots
+the app against **ten shapes of damage** (truncated, not JSON, null
+collections, wrong types, missing keys, duplicate ids, orphan folder
+references, a null note, a note with no id, an array at the root), an **empty**
+notebook, **500-** and **2,000-note** synthetic ones, and every breakpoint edge
+in both directions. Three defects, each from a different place:
+
+- **`articles` as a string** → `localArr.forEach is not a function` in
+  `_mergeById`, the **whole boot aborted**, the screen painted **empty** — and
+  the app then wrote that empty notebook back over **three folders that were
+  still perfectly readable**. That is I1, broken outright. The same throw
+  aborts a **sync pull** carrying a malformed remote document, which leaves the
+  device stuck on a stale notebook with nothing the owner can see (I2).
+- **a `null` in `DB.articles`** → `reading 'id' of null` in `loadDB`'s
+  `_sweepTabs`; tree rendered **0 bytes** — a dead screen over intact data.
+- **a note with no `id`** → `reading 'some' of undefined` in `cntOf()`, which
+  the folder tree calls once per folder, so **one** damaged note blanked the
+  whole sidebar.
+
+**`_repairDB()`** now runs on every side of every merge — stored, embedded and
+**remote** — and the rules are chosen so I1 is literally true rather than
+approximately: a collection that is not a list is replaced by an empty one
+**with the original kept verbatim under `DB._salvage`**, so nothing is
+discarded; entries that are `null` go, because they carry no record; a record
+with **no id keeps all its content** and is given one, because a record the app
+cannot address is a record the owner cannot open. `_mergeById` asks
+`Array.isArray` instead of `||[]`, which catches null and undefined and nothing
+else. `cntOf()` and `artsIn()` treat a missing list as an empty one rather than
+a throw. And the repair is **not silent** — a toast names what was repaired,
+because the owner cannot read code and a notebook that arrived damaged is
+something they should be told about.
+
+### Two of this round's own failures were the check being wrong, not the app
+
+Recorded because the Master Plan asks for it and because both are cheap to
+repeat. A pane below 1200px is an off-canvas slide-over: `#sb.closed` is
+`width:0!important` at `left:-100%` and is `display:flex` the entire time, so
+"visible but 0px wide" was the check misreading a pane doing exactly its job —
+a pane is *showing* when its box actually intersects the viewport. And the
+corrupt-notebook sweep first wrote the damage with `setItem` and reloaded;
+every case came back `0 folders / 0 notes` because **the app's own unload flush
+had rewritten localStorage from the empty DB it was still holding**. That read
+precisely like "the app wipes a damaged notebook", and it was the test wiping
+it. Damaged fixtures now arrive through `addInitScript` as raw bytes
+(`openApp({ rawDB })`), which is the only way to hand over damage that
+`JSON.stringify` would otherwise repair on the way in.
+
+**43/43** new shell/startup checks, on top of 286/286 app, 11/11 ship, 24/24
+journeys and 6/6 persistence — all re-run and green on v04.36.
+
+### Phase 3 — import, export, backup and privacy
+
+**Decision 4, implemented.** `⬆ Import data from JSON backup` replaced the
+whole notebook on one click before v04.35, which gave it a count, a
+confirmation and a recovery copy. It was still **replace-only**. It now offers
+the same choice the HTML importer has offered for a version series — `OK =
+Merge`, `Cancel = Replace All` — with Merge as the OK answer because it is the
+one that cannot lose anything, `Replace` behind a second explicit confirmation
+naming both counts, and a `📦 Save File` recovery copy written **before either
+path**. Merge goes through `mergeDB()`, so the same newest-wins union that
+keeps two devices honest is what brings a file in.
+
+And the reverse gap, which was the more dangerous of the two: **`importBackup()`'s
+Replace All had no recovery copy at all**, although it wipes sections, folders,
+notes and trash together. Both importers now take one, through a single shared
+`_recoveryCopyOrAsk()`, and both run the incoming file through `_repairDB()` —
+a file off someone's disk is no better-formed than a damaged localStorage, and
+it never went through `loadDB()`.
+
+**A real folder name was still reaching the Deploy Export.** Finding 2's fix
+asked the general question about body's *children* and stopped there;
+everything rendered *inside* the shell was still handled by a hand-written list
+of seven ids in `getExportHTML()` — `['tree','p2h','p2c','p3h','p3c','ctx','mb']`
+— and **`#p2h-path` is not one of them**. It is a sibling of `#p2h` inside
+`#p2`, and it carries
+`title="New subfolder inside &quot;<the folder's real name>&quot;"`. So the
+file whose own comment promises that "visitors who view the page source see no
+private data" was publishing a folder name. Exactly the rot the audit
+predicted: *"Every allow-list entry named residue someone had already been
+bitten by."*
+
+The fix is the general question, asked of the inside as well: record what every
+**leaf** id'd container holds and restore the shell from that. Two things had
+to be right about it, and both cost a measurement. It is taken
+**synchronously while the script is still parsing**, not from
+`DOMContentLoaded` — `_snapshotShell()` runs *after* the first render, and
+`tree` was already **8,215 bytes of real folder names** by the time it did, so
+a snapshot taken there is a snapshot of the leak. And only **leaves** are
+recorded: `#p3` holds `#p3h` and `#p3c`, so blanking an ancestor destroys the
+descendants the restore is about to write into, and the restore then puts the
+saved markup onto nodes that are no longer in the document — **the live editor
+among them**, during a Save File taken while the owner is typing.
+
+A new canary sweep runs a 120-note notebook full of malformed content with a
+note title, a folder name, a notebook id, an API key, an invented popover and a
+foreign iframe planted in it, and requires **none of the six** to appear in the
+shell. `mergeDB()` is asked eight adversarial questions with no network at all
+— union, newest-wins from either side, a device a day fast (the same answer
+whichever way the merge runs), identical timestamps, a tombstone versus a stale
+device, an edit made *after* a delete, merging a notebook with itself, and a
+damaged remote side. **44/44**, and `app-check` is **288/288** with the
+`importJSON` recovery-copy check **updated in place**: the copy moved into a
+shared helper, so a grep for a literal `exportFile()` inside `importJSON` now
+fails on a round that made the guarantee stronger and wider. It follows the
+indirection instead, and two new rows cover `importBackup()`'s copy and the
+merge option.
+
+### Phases 4–8 — organisation, the secondary modules, accessibility, security and scale
+
+**A folder could be moved inside its own descendant.** `doMoveFolder('A','C','inside')`
+on a three-deep tree produced `A:C B:A C:B` — a **ring**. Nothing throws and
+nothing is deleted, which is why nobody had noticed: no folder in that ring has
+a root any more, so all three of them and every note inside them simply
+**disappear from the sidebar**, and `pathOf()` — a bare `while(id)` — walks it
+forever. The guard was written down **four times** (both drag handlers in the
+tree, both in the picker) and **not once** in either of the two functions that
+actually perform the move. It lives in the movers now; `pathOf()` and
+`descOf()` are bounded as well, so a ring arriving from an older saved file
+cannot hang the app instead of merely looking odd.
+
+All **11 Smart Views** are opened at three populations — many, exactly one, and
+**empty** — with the six that are pure filters counted against a truth
+**recomputed in the check**, never against the app's own filter. Search is run
+in Latin, **Bangla** and **Arabic**, with punctuation, with a string that
+matches nothing, and empty. Multi-folder membership is asserted both ways:
+removing a note from one folder leaves it in the others, and removing it from
+its **last** folder does not delete the note. The calendar, contacts, My
+Database (every preset, and every report on an **empty** folder — the state
+that divides by zero), reminders in three states, Murāja'ah's scheduler and In
+Practice's three states are each driven and read back out of the model.
+
+**Paste and import are now a boundary.** CLAUDE.md's "note content is raw HTML
+with no sanitiser" is a deliberate decision about what the *owner* writes and
+it stands — widgets depend on it. It was never a decision about HTML arriving
+from a **file** or a **clipboard**, and neither door had anything on it: an
+`<img onerror>` in imported content fires. `_sanitiseForeignHTML()` now cleans
+an imported file and a paste that really carries code (an ordinary paste is
+untouched), while `_hardenLinks()` neutralises `javascript:` hrefs and adds
+`rel="noopener noreferrer"` **where note content is painted** — rewriting no
+stored byte. Asserted both ways: the hostile attributes go, and the video
+embed, the `contenteditable="false"` chrome, the headings and all the text
+stay, because an import that quietly drops content is I1 again.
+
+**The app was close to unusable with a keyboard.** 30 of 55 visible controls on
+the landing view could only be operated with a mouse, because most of this UI
+is `onclick` on a `<div>`. Fixed in two delegated rules rather than in the
+hundreds of places that build that markup: a `MutationObserver` gives every
+`onclick` element that is not already a control `tabindex="0"` and
+`role="button"` as it appears, and one keydown handler turns Enter and Space
+into a click. Dialogs take focus, say they are dialogs, and **give focus back
+to where it came from**. Eleven controls were raised to the 24×24 minimum; two
+stay below it and are **named in the stylesheet with their reasons**, so a new
+small target still fails.
+
+**Scale is not this app's problem.** On a synthetic 10,000-note notebook: boot
+**2.2s**, render **75ms**, search **86ms**, persist **62ms**, merge **10ms**,
+export **82ms**. Twenty-five open/close pop-out cycles leave no windows behind
+and grow the DOM by nothing.
+
+### Phases 9–10 — one command, a matrix that cannot be written by hand, and the reports
+
+`node tools/audit-all.mjs` runs every gate in order and **assembles
+`audit/FEATURE-MATRIX.md` from the checks that actually ran** — which is the
+only way the Master Plan's rule ("present in code is not a PASS") stays true.
+**589 checks across 13 suites**, up from 327; **260 matrix rows** — 254 PASS, 4
+`BLOCKED—ENVIRONMENT`, 2 `BLOCKED—OWNER`, **0 FAIL**.
+`.github/workflows/checks.yml` is a **candidate**: it reports on every push and
+pull request and blocks nothing, because branch protection is the owner's
+setting. Reports: `audit/RELEASE-AUDIT-2026-09-19.md` and `.html`.
+
+**Five of this round's first failures were the check, not the app** — a pane
+below 1200px is an off-canvas slide-over, a damaged fixture written with
+`setItem` loses to the app's own unload flush, a 60-character slice of `#p3c`
+stops before the note body starts, `logContactAction(ev,aid)` takes two
+arguments, and the starter database folders are identified by their section
+rather than an id prefix. Every one would have produced a "fix" to working
+code. They are all in `tools/README.md` now.
+
+**Still the owner's to decide, and only theirs:** the private residue in the
+sealed `legacy/v03.99/` build (I6 forbids touching it; recommendation is to
+strip only the residue and record a named exception), and the live Firestore
+Rules, which are in their console and decide whether the notebook is private at
+all.
+
+---
+
+## v04.37 — four blockers from an independent review, and the claims that were too strong
+
+*19 September 2026. A correction round, not a feature round. An independent
+review of v04.36 (`5aaaa26`) returned **DO NOT MERGE OR DEPLOY YET** with four
+release blockers. All four were reproduced against v04.36 before anything was
+changed, and all four are fixed with regression tests that assert **persisted
+or exported data** and **cancellation invariants** — never a transient object,
+which is exactly how the first of them got through.*
+
+### 1 — "nothing was discarded" was not true of three paths out of four
+
+`_repairDB()` set a malformed collection aside at `db._salvage[...]` and v04.36
+called that "nothing was discarded". `mergeDB(local, remote)` starts from
+`Object.assign({}, local)` and merges a named list of collections, so
+**`remote._salvage` was never carried**. Measured on v04.36: the salvaged bytes
+are on the input object and `null` in `DB` and in `localStorage` one merge
+later. The same held for an imported file. The promise was true only for the
+one path — stored — that happened to be the local side.
+
+`_mergeSalvage()` now unions both sides and `mergeDB()` calls it. Keys became
+collision-safe (`where.collection@<iso>#<hash>`), because two devices repairing
+the same collection in the same second wrote the same key and one won silently.
+And it is **bounded**, because salvage is raw malformed bytes and a notebook
+that repairs itself weekly would grow without limit — but bounding means
+dropping, and dropping is the thing this exists to prevent, so what is dropped
+is the **value**, never the **record**: a pruned entry keeps its size, its hash,
+its timestamp and a `prunedAt`. The repair toast is built from what the salvage
+map really holds instead of printing "Nothing was deleted" unconditionally.
+
+### 2 — Cancel was wired to Replace All
+
+Both importers asked `OK = Merge, Cancel = Replace All` in a native `confirm()`.
+**Cancel did not cancel** — the instinctive way out of a dialog nobody
+understands was the one action that cannot be undone. There is now a real
+three-button dialog: **Merge**, **Replace All** and **Cancel** as separate
+buttons, Cancel holding the focus so Enter does nothing, Escape and a backdrop
+click both resolving to Cancel, and Replace behind a second explicit
+confirmation. Every exit is measured on **storage**: after a cancel the stored
+bytes are compared and must be identical.
+
+### 3 — the recovery copy was an action, not a file
+
+`_preImportRecoveryCopy()` called `exportFile()` and returned `true` if nothing
+threw. `exportFile()` builds a Blob, clicks an anchor and revokes the object URL
+in the same call; the browser may refuse the download or be interrupted and
+none of it raises. "A safety copy was taken" was said immediately before wiping
+the notebook, and it was a claim about a function call.
+
+The copy is now a snapshot written to **IndexedDB and read back in a separate
+transaction**, compared by length and by hash, before anything destructive is
+allowed to proceed. If it cannot be stored, the app says so and the owner has to
+choose to continue without one. Crucially it can be **used**: `🛟 Safety Copies`
+in the ⚙ menu lists them and restores one — taking a fresh snapshot first, so
+the undo has an undo — and a snapshot whose hash does not match is refused
+rather than restored. The downloaded file is still offered and is described as
+what it is: unverifiable.
+
+### 4 — the CI workflow could not run the browser suite, and had been failing
+
+`npx --yes playwright@latest install` downloads a browser and installs **no
+importable package**. Runs
+[1](https://github.com/Siyagah/siyagah.github.io/actions/runs/35414435398) and
+[2](https://github.com/Siyagah/siyagah.github.io/actions/runs/35414852252) both
+downloaded 300 MB of Chromium and then failed every browser suite at
+`import playwright` — **58 checks instead of 589**, reported as 35 separate
+"the check itself threw" rows that looked like 35 app defects. A pinned global
+install now goes where `harness.mjs` actually looks, the browser comes from that
+same pinned package, and a one-line step proves the harness can reach Playwright
+**before** anything else runs.
+
+Two things fell out of that failure that matter more than the fix. `audit-all`
+still **wrote a plausible 90-row matrix** from a run in which nothing was
+measured; a suite that never started is now named as `NEVER RAN`, its stale
+matrix fragment is deleted first, and the matrix carries a banner saying it is
+not a measurement. And `ship-check` **passed 11/11 in a clone with no
+`origin/main`**, silently skipping the version-bump and legacy-seal comparisons
+— which is how the reviewer was handed a green tick for a comparison that never
+happened. It now fails, loudly, unless `SHIP_CHECK_NO_MAIN=1` asks for the skip
+by name.
+
+### Also in this round
+
+**The sanitiser was an allow-list of dangerous things, which rots.** The review
+asked for stronger adversarial evidence, and it was right to: `srcdoc`, an
+entity-encoded `java&#115;cript:`, a tab inside the scheme, `<form action>`,
+`<base>`, `<meta http-equiv=refresh>`, `<object>`, `<embed>`, `<svg><use>`,
+`style="url(…)"`, `@import` and a `data:text/html` anchor all survived it. The
+rule is inverted now: an element is kept only if its tag is on a short list of
+things a note is made of, an attribute only if it is on a short list too, and
+**an unrecognised element is unwrapped rather than deleted** — so a tag invented
+after this was written is handled on the day it appears, and the words inside it
+still survive. **20 adversarial vectors**, all neutralised, with the 12 things a
+note legitimately contains proved still present.
+
+**Rollback is evidenced, not asserted.** v04.36 said older builds "ignore
+`_salvage`" and called a rollback self-correcting. `tools/audit-k-rollback.mjs`
+runs the **real v04.34 and v04.35 builds out of git** against a notebook v04.37
+has repaired and merged, then brings what those builds wrote back to v04.37 —
+18 checks, both directions, including an edit made on the old build surviving
+and the salvaged bytes still being there afterwards.
+
+**642 checks across 15 suites** (up from 589), **311 matrix rows** — 305 PASS,
+4 `BLOCKED—ENVIRONMENT`, 2 `BLOCKED—OWNER`, 0 FAIL. Five `app-check` rows and
+one whole `audit-g` block were **updated in place with the reason recorded**,
+because this round deliberately replaced the dialog they were written against.
+
+---
+
+## v04.38 — the two recovery defects the v04.37 review found (19 Sep 2026)
+
+A second correction round on the same feature, from a second independent
+review of the pushed head `817da3c`. Both defects were in the code v04.37
+added to make destructive operations safe, and both were reproduced against
+`817da3c` before anything here was written. The review was right on both
+counts, and its reading of the mechanism was right too — which is worth
+saying, because the last two rounds have each had to correct a claim that
+sounded right and measured wrong.
+
+### 1. Restore replaced the notebook when the undo copy had NOT been made
+
+`_recoveryRestore(id)` awaited `_recoverySave('before restoring a safety
+copy')` and then **ignored what it returned**. `_recoverySave` is careful and
+honest — it returns `{ok:false, err}` when the store is full, locked or denied
+by policy — and nothing read it. So on exactly the devices where a safety copy
+matters most, the restore went ahead without one.
+
+Worse than the missing copy is what the owner had just been told. The
+confirmation said *"a fresh safety copy of what you have now is taken first,
+so this can be undone"*. The promise was printed at the moment it stopped
+being true, and `persist()` then pushed the replacement to every other device.
+
+Reproduced on `817da3c` with the store denied from the second `open()` onward:
+
+```
+notes in DB      : 1 -> 3        (replaced)
+notes in storage : 1 -> 3        (localStorage rewritten)
+cloud pushes     : 1             (the other devices told)
+threw            : nothing
+```
+
+The undo copy is a **precondition** now, not a courtesy. No verified copy, no
+restore: `DB`, `localStorage` and the cloud queue are left exactly as they
+were, and the failure is thrown as a named `RecoveryUndoError` so the caller
+can do something useful with it. Proceeding anyway is still possible — an
+owner who has just been told there is no way back may still want to go
+forward — but only as a **separate, explicit choice**, on a card that says
+plainly that their notes have *not* been changed, that there will be **no way
+back**, and with `Stop — change nothing` focused. Never as a silent fallback.
+The toast afterwards says `WITHOUT an undo copy, as you chose`, because a
+restore that had no undo must not read like one that did.
+
+After:
+
+```
+notes in DB      : 1 -> 1        (unchanged)
+notes in storage : 1 -> 1        (bytes identical)
+cloud pushes     : 0
+threw            : a safety copy of what you have now could not be made
+                   (this browser would not open the safety store: …),
+                   so nothing was changed
+```
+
+### 2. The save gate checked the label on the bytes, not the bytes
+
+`_recoverySave` writes the snapshot, then reads it back **in a separate
+transaction** — which is the right idea, and was the whole point of v04.37's
+fix. But the comparison was:
+
+```js
+if(back.bytes!==rec.bytes || back.hash!==rec.hash || back.json.length!==json.length)
+```
+
+`back.bytes` and `back.hash` are *metadata written in the same `put()` as the
+payload*. Comparing them against `rec.bytes` and `rec.hash` compares the
+record's description of itself with itself. The only thing measured about the
+actual payload was its **length**. A payload that came back changed at the
+same length, with its metadata intact, passed the gate reporting `ok:true` and
+no error — and `_recoveryRestore()` would then refuse that very snapshot,
+because it is the only place that ever hashed the real string. The save path
+could certify a copy the restore path already knew was unusable, and a
+destructive import was allowed to proceed on the strength of it.
+
+The digest is now recomputed **from `back.json`** and compared against the
+original, and the full string is compared as well; either failing refuses the
+snapshot. An untampered copy is asserted to still pass, so the gate cannot
+be "fixed" by refusing everything.
+
+### The wording the review asked for
+
+- **The Safety Copies screen now states its own limits**, where the owner
+  reads them rather than in a changelog: the copies are in **this browser on
+  this device only**, they are **not** on other devices and **not** in the
+  cloud, and clearing site data, clearing browsing data, a private window or a
+  different browser profile **removes them**; only the last 5 are kept. For a
+  copy that survives all of that, `📦 Save File` — which Siyagah hands to the
+  browser but **cannot confirm the browser finished saving**, so the owner is
+  told to check their downloads themselves.
+- **The salvage comment stopped overclaiming.** It said the original value is
+  kept "verbatim … so nothing is discarded". Salvage is bounded: a single
+  entry over 64 KB is kept only to that much, and an older entry can be pruned
+  to its metadata when the store would pass 256 KB. What is guaranteed is that
+  nothing is discarded **silently** — not that every original byte survives.
+  The owner-facing message already named the truncation; the claim above it
+  did not.
+
+### What was measured
+
+`audit-j-recovery` goes 41 → **45 rows**, every one asserted on **persisted
+bytes** or on whether a **cloud push was scheduled** — never on the return
+value of the call under test, which is precisely what was wrong in defect 1:
+
+- a denied store during Restore leaves `DB`, `localStorage` (compared as raw
+  bytes, not note counts) and the push queue unchanged, and reports a
+  `RecoveryUndoError`;
+- restoring **without** an undo copy still works when explicitly chosen, and
+  reports `undoOk:false` so the toast cannot claim otherwise;
+- a same-length changed read-back with intact metadata is refused, **and** an
+  untampered copy still passes;
+- a successful restore leaves a verified undo, and restoring that undo returns
+  the previous notebook — in storage as well as in memory;
+- `Cancel` at the confirmation, and a **real click** on `Stop — change
+  nothing`, each leave the stored bytes identical and schedule no push;
+- the Safety Copies screen is asserted on its **rendered text**, so a rewrite
+  that drops one of the limits fails here.
+
+One of those checks failed on its first run for a reason that was **not** the
+app: the block before it deliberately leaves the notebook at one note, so the
+snapshot it took held one note and "restored to 3" could never be true. It is
+the harness's own standing trap — a check that measures the previous check's
+leftovers — and the block is self-contained now.
+
+### Not done, and why
+
+- **`legacy/v03.99/` still carries the v04.35 residue.** Unchanged, still
+  Decision 1, still the owner's.
+- **Live Firestore rules, real two-device sync and the deployed PWA remain
+  unverified**, as the review requires them to be described. This environment
+  denies `siyagah.github.io`, and none of the three can be measured from here.
+- **Nothing merged, nothing deployed, no production Firebase data touched.**
+
+---
+
+## v04.38 + rules — owner-specific Firestore rules, approved and proven (20 Sep 2026)
+
+**No version bump, and no application file changed.** The Master Architect
+approved the design drafted the day before and directed that only the rules
+proposal, its tests and its evidence be carried onto the v04.38 release
+candidate — so `index.html`, `sw.js`, `manifest.json`, `icons/`, `tools/` and
+`legacy/**` here are the candidate's, byte for byte. The version stays v04.38
+because bumping it would edit `index.html`, which the instruction excluded;
+`ship-check` still passes its "moved past origin/main" comparison on
+v04.34 → v04.38.
+
+### What was carried, and onto what
+
+Candidate: **`f891b52`** — v04.38, `claude/elegant-maxwell-8maykf`, PR #41.
+Everything new lives in `audit/firestore-rules/`: the rules, a strict variant
+kept as counter-evidence, the live rule reproduced for comparison, a 48-check
+emulator suite, and the transcripts.
+
+A first draft had been built on v04.34 and carried a v04.35 version bump of its
+own, which would have collided with the *other* v04.35 already in the
+candidate's history (`b56e403`). That is why it was not merged wholesale. The
+candidate was merged into this branch instead and every conflict resolved to
+the candidate, so the diff against `f891b52` is exactly the eleven new files
+plus this entry and one standing lesson.
+
+### The correction that matters
+
+The v04.34 draft reported that `audit/CONTINUATION-2026-09-19.md` "does not
+exist in this repository and never has". That was true of `main` and of the
+branch it was written on, and **wrong about the repository**: the file is on the
+v04.38 candidate, where it names Firestore Rules as the first of only two open
+items and calls it "the most important open item". A file absent from the branch
+in hand is not a file that does not exist — fetch every branch before saying so.
+
+### Re-measured on the candidate, not carried over on trust
+
+v04.36–v04.38 added recovery, import and rollback work, so every call site was
+found again on `f891b52` rather than assumed:
+
+- the surface is still exactly two paths — `notebooks/{id}` and
+  `notebooks/{id}/chunks/{i}` — with the same operations and the same document
+  shapes, and the same two in the sealed `legacy/v03.99/`;
+- every `collection(…)` literal in the file: `notebooks` ×5, `chunks` ×3, and
+  nothing else;
+- `collectionGroup`, `runTransaction`, `getDocs`, `.where(`, `.orderBy(`,
+  `.limit(`: **no matches**. Neither build ever queries, so `list` is denied
+  outright;
+- nothing deletes the notebook document, so that is denied too (I1);
+- `notebookId` still has exactly one assignment (21157, a text input), so the
+  finding that decides the design holds: **the notebook id is not the UID**, and
+  `uid == notebookId` would have locked the owner out of their own notes.
+
+### The four decisions, as ruled
+
+UID pin **approved**; notebook-document delete **denied** **approved**;
+single-owner, no second tenant (D1) **approved**; an additional
+`sign_in_provider` restriction **not wanted**, so that clause is absent from the
+file rather than merely commented out. The rules are final in design; the one
+edit left before publishing is the `OWNER_UID` placeholder.
+
+### Evidence
+
+48/48 emulator checks on this tree: the owner allowed on all ten operations
+both builds perform and denied on the four neither performs; a second signed-in
+Google account denied on all eleven; signed-out denied on all six; and sync
+proven end to end — a 1-chunk round trip, 1840 KB across 3 chunks, the shrink
+from 2 chunks to 1 with the tail delete committing, two devices converging
+through a live `onSnapshot` (I2), the legacy single-blob shape still readable
+(I1/I4), and the old→uid migration.
+
+The strict variant is kept **because it fails**: a `delete` rule that reads
+`resource` dies on the chunks `n…n+9` that do not exist, and Firestore batches
+being atomic, that kills the whole push — silently, since the app catches it.
+
+### The residue check — answered, and the answer is not "clean"
+
+Asked to confirm the captured notebook ID and note titles are absent from the
+candidate's shipped `index.html`. Measured: the notebook ID, the
+`aaas-notebook` auth iframes and the real API key are **gone**. **Two real note
+titles are not** — line 2918 carries a captured tab bar with
+`Jumu'a Khutbah - TEMPLATE` and `Siyagah FINETUNING` and their note ids, and
+line 2931 carries `data-aid="mss6ln6ugiw"`. Reported, not fixed: removing it
+edits `index.html`, which this round was told not to do, and it is unrelated to
+the rules — no Firestore rule can reach a note title sitting in a public file.
+
+### Not done, and why
+
+- **Nothing published, deployed or merged**, as instructed.
+- **`legacy/v03.99/` untouched**; `ship-check` confirms it byte-identical to
+  `origin/main`.
+- **No version bump**, per the instruction to carry only the audit work.
+- **`runMigration()` still never repoints the local config** after copying to
+  `notebooks/{uid}` — re-checked on `f891b52`, unchanged. Recorded in
+  `audit/firestore-rules/PATHS.md` § 5.1; it is the reason the uid-as-document-id
+  scheme cannot simply be adopted, and it is a separate round.
+
+### The gate caught one thing, and it was ours
+
+`audit-all` regenerates `audit/inventory/`, and its privacy row moved from
+"63 files scanned" to "71" — it had begun scanning the files added by this
+round. That is what surfaced it: the first cut of `tests/rules.test.mjs`
+hard-coded the owner's **real Notebook ID** as its fixture. Under the rule that
+is live today that id is the only thing between a signed-in stranger and the
+notebook, and this is a public repository — so the test would have
+re-introduced, while fixing the exposure, the exact value the candidate had
+just finished removing from `index.html`. It is a synthetic id of the same
+shape now; the shape is what the rules must accommodate, the value is not. The
+suite was re-run after the scrub: still 48/48, and the full gate re-run: still
+654 checks, all suites green.
+
+The regenerated `audit/inventory/` and `audit/FEATURE-MATRIX.md` are committed
+as the run produced them rather than reverted to the candidate's copies, so the
+committed matrix describes the committed tree.

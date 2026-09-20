@@ -1,0 +1,92 @@
+
+audit J — salvage across merges, a real choice, a verified recovery copy
+========================================================================
+  ok   [J data preservation] a repaired REMOTE notebook keeps its salvaged bytes through the merge (I1) (desktop)
+         ["CORRUPT-REMOTE"]
+  ok   [J data preservation] …and they are in localStorage, not just in memory (desktop)
+         ["CORRUPT-REMOTE"]
+  ok   [J data preservation] a repaired IMPORTED file keeps its salvaged bytes through the merge (I1) (desktop)
+         ["CORRUPT-IMPORTED","CORRUPT-REMOTE"]
+  ok   [J data preservation] …and they reach a Save File export as well (I4) (desktop)
+         ["CORRUPT-IMPORTED","CORRUPT-REMOTE"]
+  ok   [J data preservation] two devices salvaging the SAME collection keep both, not one (collision-safe keys) (desktop)
+         2 entries: ["DEVICE-A","DEVICE-B"]
+  ok   [J data preservation] merging salvage twice adds nothing, and the order of the two sides does not matter (desktop)
+         idempotent:true order-free:true
+  ok   [J data preservation] the records that WERE readable on both sides survive beside the salvage (I1) (desktop)
+  ok   [J data preservation] a salvage payload too large to keep whole is truncated, not dropped, and says its real size (desktop)
+         kept 65536 of 300000 bytes
+  ok   [J data preservation] …and the owner is told it was only kept in part (desktop)
+  ok   [J data preservation] sixty repairs do not grow the notebook without bound (desktop)
+         60 entries, 24 still holding bytes, 144240 bytes
+  ok   [J data preservation] an entry whose bytes had to be dropped still keeps its size, hash and the fact it was pruned (desktop)
+         no silent disappearance
+  ok   [J destructive-path consent] Cancel via the Cancel button on the choice dialog leaves the notebook byte-identical (I1) (desktop)
+         3 notes, storage unchanged, 0 writes
+  ok   [J destructive-path consent] Cancel via the Escape key on the choice dialog leaves the notebook byte-identical (I1) (desktop)
+         3 notes, storage unchanged, 0 writes
+  ok   [J destructive-path consent] Cancel via Cancel on the SECOND confirmation, after choosing Replace All leaves the notebook byte-identical (I1) (desktop)
+         3 notes, storage unchanged, 0 writes
+  ok   [J destructive-path consent] the import choice is three separate buttons — Merge, Replace All and Cancel (desktop)
+         Cancel | ➕ Merge | ⚠ Replace All
+  ok   [J destructive-path consent] no choice is expressed as "Cancel = Replace All" (the review's blocker 2) (desktop)
+         Cancel | ➕ Merge | ⚠ Replace All
+  ok   [J destructive-path consent] Cancel holds the focus, so Enter on a dialog nobody read does nothing (desktop)
+         focus on "cancel"
+  ok   [J destructive-path consent] every choice is a real <button>, so it is reachable by keyboard (desktop)
+  ok   [J destructive-path consent] MERGE really merges and keeps the existing notes (desktop)
+         4 notes, imported present: true, seed kept: true
+  ok   [J destructive-path consent] MERGE took a recovery snapshot that can be listed afterwards (desktop)
+         1 snapshot(s) in the store
+  ok   [J destructive-path consent] REPLACE really replaces (desktop)
+         1 notes, imported present: true, seed kept: false
+  ok   [J destructive-path consent] REPLACE took a recovery snapshot that can be listed afterwards (desktop)
+         1 snapshot(s) in the store
+  ok   [J data preservation] a recovery snapshot is written and READ BACK before it is called a copy (desktop)
+         3030 bytes, verified by length and hash
+  ok   [J data preservation] the snapshot can be listed — the owner has something to restore from (desktop)
+         1 listed
+  ok   [J data preservation] restoring a snapshot really puts the notes back, in storage as well as in memory (desktop)
+         3 → 1 → 3 notes (3 in storage)
+  ok   [J data preservation] restoring takes a fresh snapshot first, so the undo has an undo (desktop)
+         2 snapshots held
+  ok   [J data preservation] a recovery copy that could NOT be stored reports failure rather than success (desktop)
+         "this browser would not open the safety store: Error: denied by policy"
+  ok   [J data preservation] a DAMAGED recovery snapshot is refused and the notebook is left alone (desktop)
+         that safety copy is damaged and was NOT used — notebook still holds 3 notes
+  ok   [J data preservation] a restore whose undo copy cannot be written changes NOTHING that is persisted (desktop)
+         1 notes in storage, bytes identical
+  ok   [J data preservation] …and schedules no cloud push, so the other devices never see it (desktop)
+         0 pushes
+  ok   [J destructive-path consent] …and says so, with an error the caller can offer a choice on (desktop)
+         a safety copy of what you have now could not be made (this browser would not open the safety store: Error: denied by policy), so nothing was changed
+  ok   [J destructive-path consent] restoring without an undo copy works when it is explicitly chosen, and reports that it had none (desktop)
+         restored to 3 notes, undoOk=false
+  ok   [J data preservation] a same-length changed payload with intact metadata is REFUSED by the save gate (desktop)
+         the safety copy read back differently from what was written
+  ok   [J data preservation] …while an untampered copy still passes it (desktop)
+         3030 bytes verified
+  ok   [J destructive-path consent] Cancel at the restore confirmation leaves the notebook and storage untouched (desktop)
+         1 note, storage identical, 0 pushes
+  ok   [J destructive-path consent] a failed undo copy offers a real choice rather than silently proceeding or dead-ending (desktop)
+         the choice card was shown
+  ok   [J destructive-path consent] …and pressing "Stop — change nothing" changes nothing that is persisted (desktop)
+         1 note, storage identical, 0 pushes
+  ok   [J data preservation] restoring a copy takes a VERIFIED undo copy first (desktop)
+  ok   [J data preservation] restoring that undo puts the previous notebook back, in storage as well as in memory (desktop)
+         3 → 1 → 3 → 1 notes (1 in storage)
+  ok   [J destructive-path consent] the Safety Copies screen says where the copies live and how they can be lost (desktop)
+         browser-only, not synced, cleared by site data, keep-count, download unverifiable
+  ok   [J sanitiser (adversarial)] every one of 20 adversarial vectors is neutralised (desktop)
+         no handler, no script scheme, no srcdoc, no fetching CSS, none of the killed tags
+  ok   [J sanitiser (adversarial)] an UNKNOWN element is unwrapped, so the words inside it survive (I1) (desktop)
+         "<p>KEEP THIS TEXT</p>"
+  ok   [J sanitiser (adversarial)] everything a note legitimately contains survives the sanitiser (I1) (desktop)
+         all 12 kinds kept (449 bytes)
+  ok   [J sanitiser (adversarial)] a hostile file leaves NO inline handler and NO script in PERSISTED note content (desktop)
+         120 bytes stored
+  ok   [J sanitiser (adversarial)] …and the words that came with it are still there (I1) (desktop)
+
+45/45 passed
+PASS: 45
+

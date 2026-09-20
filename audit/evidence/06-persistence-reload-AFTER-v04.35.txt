@@ -1,0 +1,18 @@
+
+Persistence across a reload — real localStorage, no re-seed
+===========================================================
+  ok   phone: a new note is written into browser storage
+         present in localStorage
+  ok   phone: the note is byte-identical after a real reload
+         18 bytes unchanged, 1 notes
+  ok   phone: reload is silent
+         silent
+  ok   desktop: a new note is written into browser storage
+         present in localStorage
+  ok   desktop: the note is byte-identical after a real reload
+         18 bytes unchanged, 1 notes
+  ok   desktop: reload is silent
+         silent
+
+6/6 passed
+

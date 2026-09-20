@@ -1,0 +1,354 @@
+[
+ {
+  "domain": "G data/export/import",
+  "feature": "Save File exports the whole application, not just the data (I4)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1605485 bytes"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "Save File round-trips every note id at 800 notes",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "800 of 800 ids"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "Save File round-trips every folder id",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "60 of 60"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "Save File round-trips every byte of note content, Bangla and Arabic included",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "148745 vs 148745 bytes"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "exporting does not disturb the live notebook",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "800 notes still held"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "the Deploy Export shell could be built at all",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1240156 bytes"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "the Deploy Export leaks no note title, folder name, notebook id, key, session chrome or foreign iframe",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "6 canaries, none present"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "the Deploy Export carries an empty #nd, and it still parses (I7)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "{\"folders\":[],\"articles\":[],\"sections\":[],\"trash\":[]}"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "JSON import offers MERGE, and merging keeps every existing note (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 → 4 notes, seed note still present: true"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "JSON import takes a VERIFIED recovery snapshot before merging",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 snapshot(s) readable back out of the store"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "JSON import REPLACE needs a second, explicit confirmation",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "second dialog: \"⚠ Replace everything?\", notebook still 3 notes"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "JSON import REPLACE really replaces",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 notes, seed gone: true"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "JSON import takes a VERIFIED recovery snapshot before replacing",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 snapshot(s)"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "cancelling the JSON import changes nothing at all (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes, storage byte-identical: true"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a cancelled import writes no recovery file either",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 files written"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (not JSON at all) never leaves the notebook in an unreadable state (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (not JSON at all) throws no unhandled exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (not JSON at all) does not execute script from the file",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "no script ran"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (an array at the root) never leaves the notebook in an unreadable state (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (an array at the root) throws no unhandled exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (an array at the root) does not execute script from the file",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "no script ran"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (a JSON object with no collections) never leaves the notebook in an unreadable state (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (a JSON object with no collections) throws no unhandled exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (a JSON object with no collections) does not execute script from the file",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "no script ran"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (articles as a string) never leaves the notebook in an unreadable state (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 notes, 3 folders after (rejected before the dialog)"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (articles as a string) throws no unhandled exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (articles as a string) does not execute script from the file",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "no script ran"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (a null in the articles list) never leaves the notebook in an unreadable state (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 notes, 0 folders after (the dialog was offered)"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (a null in the articles list) throws no unhandled exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (a null in the articles list) does not execute script from the file",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "no script ran"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (a note with a script in its body) never leaves the notebook in an unreadable state (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 notes, 0 folders after (the dialog was offered)"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (a note with a script in its body) throws no unhandled exception",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "a hostile import file (a note with a script in its body) does not execute script from the file",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "no script ran"
+ },
+ {
+  "domain": "H cloud/merge",
+  "feature": "mergeDB unions both devices — neither side loses what the other never saw (I2)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "H cloud/merge",
+  "feature": "mergeDB keeps the newest edit whichever device made it (I2)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "remote-newer:true local-newer:true"
+ },
+ {
+  "domain": "H cloud/merge",
+  "feature": "a clock-skewed device gives the SAME answer whichever way the merge runs",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "winner both ways: FAST-DEVICE"
+ },
+ {
+  "domain": "H cloud/merge",
+  "feature": "two edits with an identical timestamp resolve stably, not at random",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "H cloud/merge",
+  "feature": "a deletion is not resurrected by a device that had not synced it (I2)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "H cloud/merge",
+  "feature": "an edit made AFTER a deletion still survives the merge (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "H cloud/merge",
+  "feature": "merging a notebook with itself changes nothing",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "H cloud/merge",
+  "feature": "a DAMAGED remote notebook no longer takes the merge down with it (v04.36, I2)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "merged, local side intact"
+ },
+ {
+  "domain": "H cloud/merge",
+  "feature": "Firestore Rules restrict notebooks/{uid} to that signed-in owner",
+  "viewport": "—",
+  "status": "BLOCKED—OWNER",
+  "ok": true,
+  "detail": "The rules text lives in the owner's Firebase console, not in this repository. Decision 2."
+ },
+ {
+  "domain": "H cloud/merge",
+  "feature": "real Google sign-in, real Firestore chunking, two real devices",
+  "viewport": "—",
+  "status": "BLOCKED—ENVIRONMENT",
+  "ok": true,
+  "detail": "This sandbox denies every googleapis / gstatic / firebaseapp host, and the harness blocks them deliberately so the app is drivable at all. Synthetic merge coverage is above; it is not a substitute and is not reported as one."
+ },
+ {
+  "domain": "G data/export/import",
+  "feature": "the deployed site at siyagah.github.io matches this repository",
+  "viewport": "—",
+  "status": "BLOCKED—ENVIRONMENT",
+  "ok": true,
+  "detail": "curl to siyagah.github.io returns \"CONNECT tunnel failed, response 403\" — the sandbox egress policy denies it."
+ }
+]

@@ -1,0 +1,7874 @@
+[
+ {
+  "event": "onkeydown",
+  "line": 2774,
+  "calls": [
+   "getElementById",
+   "focus"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 2775,
+  "calls": [
+   "doLogin"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2777,
+  "calls": [
+   "doLogin"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2779,
+  "calls": [
+   "loginResetSync"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2799,
+  "calls": [
+   "closeP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2800,
+  "calls": [
+   "toggleSB"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2804,
+  "calls": [
+   "openP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2805,
+  "calls": [
+   "goHome"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2808,
+  "calls": [
+   "goHome"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2808,
+  "calls": [
+   "toggleSBHome"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2811,
+  "calls": [
+   "openLegacyApp",
+   "closeSBHome"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2818,
+  "calls": [
+   "openGlobalSearch"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2820,
+  "calls": [
+   "toggleSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2828,
+  "calls": [
+   "undo"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2829,
+  "calls": [
+   "redo"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2832,
+  "calls": [
+   "openModal",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2833,
+  "calls": [
+   "addRootFolder",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2834,
+  "calls": [
+   "addStarterMyDatabaseFolders",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2835,
+  "calls": [
+   "syncKnowledgeBase",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2837,
+  "calls": [
+   "openCiteModal",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2838,
+  "calls": [
+   "openCalSettings",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2839,
+  "calls": [
+   "toggleHijri",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2841,
+  "calls": [
+   "openTheme",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2842,
+  "calls": [
+   "autoFit",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2843,
+  "calls": [
+   "autoNumberAll",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2844,
+  "calls": [
+   "toggleAccordionSec",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2846,
+  "calls": [
+   "enableAutoSave"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2849,
+  "calls": [
+   "exportFile",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2852,
+  "calls": [
+   "openTrash",
+   "closeSBTools"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2856,
+  "calls": [
+   "toggleSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2861,
+  "calls": [
+   "openSyncModal",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2864,
+  "calls": [
+   "openSyncModal",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2865,
+  "calls": [
+   "doSignOut",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2867,
+  "calls": [
+   "refreshApp",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2868,
+  "calls": [
+   "installPWA",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2870,
+  "calls": [
+   "openBackupModal",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2871,
+  "calls": [
+   "importBackup",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2872,
+  "calls": [
+   "openRecoveryModal",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2873,
+  "calls": [
+   "backupToGDrive",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2875,
+  "calls": [
+   "exportBackupHTML",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2876,
+  "calls": [
+   "exportBackupPDF",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2877,
+  "calls": [
+   "exportDeploy",
+   "closeSBMenu"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 2885,
+  "calls": [
+   "doSearch"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2886,
+  "calls": [
+   "clearSearch"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2888,
+  "calls": [
+   "restoreLastSearch"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2893,
+  "calls": [
+   "quickCapture"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2894,
+  "calls": [
+   "openFolderPopupFromToolbar"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2899,
+  "calls": [
+   "closeNoteModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2902,
+  "calls": [
+   "toggleSB"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2911,
+  "calls": [
+   "goHome"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2911,
+  "calls": [
+   "focusSidebarSearch"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2911,
+  "calls": [
+   "restoreLastSearch"
+  ]
+ },
+ {
+  "event": "ondragover",
+  "line": 2918,
+  "calls": [
+   "tabBarDragOver"
+  ]
+ },
+ {
+  "event": "ondrop",
+  "line": 2918,
+  "calls": [
+   "tabBarDrop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2918,
+  "calls": [
+   "_calOpen"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2918,
+  "calls": [
+   "stopPropagation",
+   "_tabScroll"
+  ]
+ },
+ {
+  "event": "ondragstart",
+  "line": 2918,
+  "calls": [
+   "pinTabDStart"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2918,
+  "calls": [
+   "tabSelect"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 2918,
+  "calls": [
+   "preventDefault",
+   "stopPropagation",
+   "openTabClrPicker"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 2918,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2918,
+  "calls": [
+   "stopPropagation",
+   "pinTabToPanel"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 2918,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2918,
+  "calls": [
+   "stopPropagation",
+   "closeTabGroup"
+  ]
+ },
+ {
+  "event": "ondragstart",
+  "line": 2918,
+  "calls": [
+   "pinTabDStart"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2918,
+  "calls": [
+   "tabSelect"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 2918,
+  "calls": [
+   "preventDefault",
+   "stopPropagation",
+   "openTabClrPicker"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 2918,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2918,
+  "calls": [
+   "stopPropagation",
+   "pinTabToPanel"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 2918,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2918,
+  "calls": [
+   "stopPropagation",
+   "closeTab"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2918,
+  "calls": [
+   "stopPropagation",
+   "_tabScroll"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2918,
+  "calls": [
+   "openTabPicker"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 2922,
+  "calls": [
+   "_ntFindRun"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 2922,
+  "calls": [
+   "_ntFindKey"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2924,
+  "calls": [
+   "_ntFindStep"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2925,
+  "calls": [
+   "_ntFindStep"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2926,
+  "calls": [
+   "_ntFindClose"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2931,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 2932,
+  "calls": [
+   "annBubClick"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2933,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 2933,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onerror",
+  "line": 3059,
+  "calls": []
+ },
+ {
+  "event": "oninput",
+  "line": 3412,
+  "calls": []
+ },
+ {
+  "event": "onclick",
+  "line": 3478,
+  "calls": [
+   "closeModal",
+   "openTrash"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 3479,
+  "calls": [
+   "closeModal",
+   "exportFile"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 3883,
+  "calls": [
+   "restoreRecovery",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 3893,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 3939,
+  "calls": [
+   "_choicePick",
+   "esc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 4078,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4078,
+  "calls": [
+   "_dlFlipDate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4083,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 4083,
+  "calls": [
+   "setJrnEntryDate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4202,
+  "calls": [
+   "clearSearch",
+   "selFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4207,
+  "calls": [
+   "clearSearch",
+   "selTag",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4212,
+  "calls": [
+   "clearSearch",
+   "selKind"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4216,
+  "calls": [
+   "selArt"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 4216,
+  "calls": [
+   "showArtCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4235,
+  "calls": [
+   "selFolder"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 4236,
+  "calls": [
+   "showCtx"
+  ]
+ },
+ {
+  "event": "ondragstart",
+  "line": 4237,
+  "calls": [
+   "dStart"
+  ]
+ },
+ {
+  "event": "ondragend",
+  "line": 4238,
+  "calls": [
+   "dEnd"
+  ]
+ },
+ {
+  "event": "ondragover",
+  "line": 4239,
+  "calls": [
+   "dOver"
+  ]
+ },
+ {
+  "event": "ondrop",
+  "line": 4241,
+  "calls": [
+   "dDrop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4242,
+  "calls": [
+   "togExp"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4278,
+  "calls": [
+   "togFolderGroup"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 4279,
+  "calls": [
+   "showFolderGroupCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4300,
+  "calls": [
+   "hideCtx",
+   "addFolderGroup"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4301,
+  "calls": [
+   "hideCtx",
+   "renameFolderGroup"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4302,
+  "calls": [
+   "hideCtx",
+   "deleteFolderGroup"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4364,
+  "calls": [
+   "quickNewNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4365,
+  "calls": [
+   "toggleListView"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4373,
+  "calls": [
+   "openFolderPopupFromToolbar"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4378,
+  "calls": [
+   "showPane"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4379,
+  "calls": [
+   "closeP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4390,
+  "calls": [
+   "showPane"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4393,
+  "calls": [
+   "closeP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4397,
+  "calls": [
+   "newStarredNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4398,
+  "calls": [
+   "newPinnedNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4399,
+  "calls": [
+   "newNoteWithReminder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4400,
+  "calls": [
+   "quickCapture"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4401,
+  "calls": [
+   "mrjStart"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4405,
+  "calls": [
+   "addNtiCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4414,
+  "calls": [
+   "showPane"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4416,
+  "calls": [
+   "closeP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4424,
+  "calls": [
+   "backToMyWallCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4425,
+  "calls": [
+   "selKind"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4434,
+  "calls": [
+   "selTag"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4442,
+  "calls": [
+   "newContact"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4443,
+  "calls": [
+   "newJournalFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4444,
+  "calls": [
+   "quickJournalEntryFromDB"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4445,
+  "calls": [
+   "newFavEntry"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4446,
+  "calls": [
+   "_calNewEvent",
+   "todayStr"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4447,
+  "calls": [
+   "_calManageCats"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4462,
+  "calls": [
+   "quickJournalEntry"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4464,
+  "calls": [
+   "openModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4523,
+  "calls": [
+   "togSfGrp",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4568,
+  "calls": [
+   "togSfGrp",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4608,
+  "calls": [
+   "selFolder"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 4620,
+  "calls": [
+   "qtKey"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 4621,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "ontouchstart",
+  "line": 4621,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4622,
+  "calls": [
+   "qtSave"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4625,
+  "calls": [
+   "openModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4643,
+  "calls": [
+   "openP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4643,
+  "calls": [
+   "backFromP3"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4645,
+  "calls": [
+   "toggleSB"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4674,
+  "calls": [
+   "openP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4676,
+  "calls": [
+   "backFromP3"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4679,
+  "calls": [
+   "toggleSB"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4683,
+  "calls": [
+   "showPane"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4684,
+  "calls": [
+   "closeP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4688,
+  "calls": [
+   "mrjNext"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4689,
+  "calls": [
+   "mrjEnd"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4695,
+  "calls": [
+   "showPane"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4696,
+  "calls": [
+   "closeP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4699,
+  "calls": [
+   "_calAddCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4700,
+  "calls": [
+   "renderP3H",
+   "renderP3C"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4707,
+  "calls": [
+   "showPane"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4708,
+  "calls": [
+   "closeP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4711,
+  "calls": [
+   "_calSaveEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4712,
+  "calls": [
+   "renderP3H",
+   "renderP3C"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4721,
+  "calls": [
+   "openP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4721,
+  "calls": [
+   "backFromP3"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4724,
+  "calls": [
+   "_saveContactForm",
+   "find"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4725,
+  "calls": [
+   "cancelEdit"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4741,
+  "calls": [
+   "openP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4742,
+  "calls": [
+   "backFromP3"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4756,
+  "calls": [
+   "getElementById",
+   "focus"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4759,
+  "calls": [
+   "cancelEdit"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4782,
+  "calls": [
+   "openP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4782,
+  "calls": [
+   "backFromP3"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 4784,
+  "calls": [
+   "preventDefault",
+   "showArtCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4785,
+  "calls": [
+   "logInteraction"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4786,
+  "calls": [
+   "logContactAction"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4787,
+  "calls": [
+   "startEdit"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 4788,
+  "calls": [
+   "preventDefault",
+   "showArtCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4788,
+  "calls": [
+   "showArtCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4818,
+  "calls": [
+   "_p3NtiPalette"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4845,
+  "calls": [
+   "_p3Navigate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4846,
+  "calls": [
+   "_p3Navigate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4847,
+  "calls": [
+   "_ntFindToggle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4848,
+  "calls": [
+   "quickCapture"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 4851,
+  "calls": [
+   "preventDefault",
+   "showArtCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4851,
+  "calls": [
+   "showArtCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4852,
+  "calls": [
+   "_p3ActPalette"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4853,
+  "calls": [
+   "startEdit"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4857,
+  "calls": [
+   "quickCapture"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 4903,
+  "calls": [
+   "_tiScheduleAutoSave"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4903,
+  "calls": [
+   "cancelEdit"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4922,
+  "calls": [
+   "selFolder"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 4926,
+  "calls": [
+   "preventDefault",
+   "stopPropagation",
+   "startEdit"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4931,
+  "calls": [
+   "selTag",
+   "esc"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 4931,
+  "calls": [
+   "preventDefault",
+   "showTagClrPicker",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4956,
+  "calls": [
+   "selArt"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 4963,
+  "calls": [
+   "quickCapture"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 5153,
+  "calls": [
+   "goHome"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 5154,
+  "calls": [
+   "focusSidebarSearch"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 5155,
+  "calls": [
+   "restoreLastSearch"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 5168,
+  "calls": [
+   "goHome"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 5169,
+  "calls": [
+   "restoreLastSearch"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 5197,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 5198,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 5199,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 5200,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 5358,
+  "calls": [
+   "hideCtx",
+   "shiftAllHeadings"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 5359,
+  "calls": [
+   "hideCtx",
+   "shiftAllHeadings"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 5528,
+  "calls": [
+   "bkMove"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 5528,
+  "calls": [
+   "bkMove"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 5528,
+  "calls": [
+   "bkItemMenu"
+  ]
+ },
+ {
+  "event": "onerror",
+  "line": 5532,
+  "calls": []
+ },
+ {
+  "event": "onerror",
+  "line": 5546,
+  "calls": []
+ },
+ {
+  "event": "onclick",
+  "line": 5966,
+  "calls": [
+   "togMwSubCat"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 5966,
+  "calls": [
+   "preventDefault",
+   "showNtiCatMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 5978,
+  "calls": [
+   "togMwSubGrp"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 5978,
+  "calls": [
+   "showWallKindCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6099,
+  "calls": [
+   "toggleNoteLink"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 6115,
+  "calls": [
+   "ltnSearch"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 6115,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6117,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6137,
+  "calls": [
+   "toggleNoteLink"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6239,
+  "calls": [
+   "_cancelAnn"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6240,
+  "calls": [
+   "_confirmAnn",
+   "esc",
+   "replace"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6291,
+  "calls": [
+   "toggleAnnMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6316,
+  "calls": [
+   "showAnnReplyEdit"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6322,
+  "calls": [
+   "scrollToAnnMark"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6323,
+  "calls": [
+   "showAnnEditBox"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6324,
+  "calls": [
+   "showAnnReplyBox"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6325,
+  "calls": [
+   "confirmDeleteAnnotation"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 6361,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "ontouchstart",
+  "line": 6361,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6363,
+  "calls": [
+   "submitAnnReply"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6364,
+  "calls": [
+   "getElementById"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6402,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6403,
+  "calls": [
+   "deleteAnnotation",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 6473,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6473,
+  "calls": [
+   "showAnnReplyEdit"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 6479,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6479,
+  "calls": [
+   "showAnnEditBox"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 6480,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6480,
+  "calls": [
+   "showAnnReplyBox"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 6481,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6481,
+  "calls": [
+   "confirmDeleteAnnotation"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 6501,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "ontouchstart",
+  "line": 6501,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6503,
+  "calls": [
+   "saveAnnEdit"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6504,
+  "calls": [
+   "cancelAnnEdit"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 6535,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "ontouchstart",
+  "line": 6535,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6537,
+  "calls": [
+   "saveAnnReplyEdit"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6538,
+  "calls": [
+   "_refreshAnnPanel",
+   "find",
+   "getElementById"
+  ]
+ },
+ {
+  "event": "ondragstart",
+  "line": 6729,
+  "calls": [
+   "pinTabDStart"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6730,
+  "calls": [
+   "tabSelect"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 6730,
+  "calls": [
+   "preventDefault",
+   "stopPropagation",
+   "openTabClrPicker"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 6734,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6734,
+  "calls": [
+   "stopPropagation",
+   "pinTabToPanel"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 6735,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6735,
+  "calls": [
+   "stopPropagation",
+   "closeTabGroup",
+   "closeTab"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6739,
+  "calls": [
+   "_calOpen"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6740,
+  "calls": [
+   "stopPropagation",
+   "_tabScroll"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6745,
+  "calls": [
+   "stopPropagation",
+   "_tabScroll"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6747,
+  "calls": [
+   "openTabPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6934,
+  "calls": [
+   "openReminderModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 6935,
+  "calls": [
+   "clearReminder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7051,
+  "calls": [
+   "togSecSF"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 7051,
+  "calls": [
+   "showSmartViewCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7063,
+  "calls": [
+   "selSecSF"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 7063,
+  "calls": [
+   "showSfItemCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7177,
+  "calls": [
+   "closeTabPicker"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 7179,
+  "calls": [
+   "renderTabPickerList"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 7180,
+  "calls": [
+   "closeTabPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7246,
+  "calls": [
+   "addToTabPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7304,
+  "calls": [
+   "closeNtiPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7308,
+  "calls": [
+   "togNtiCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7314,
+  "calls": [
+   "stopPropagation",
+   "addKindInCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7315,
+  "calls": [
+   "stopPropagation",
+   "showNtiCatMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7319,
+  "calls": [
+   "toggleNoteKind"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 7319,
+  "calls": [
+   "preventDefault",
+   "showNtiKindMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7324,
+  "calls": [
+   "addNtiCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7352,
+  "calls": [
+   "closeJournalPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7355,
+  "calls": [
+   "toggleNoteJournal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7360,
+  "calls": [
+   "newJournalEventForNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7422,
+  "calls": [
+   "openNtiPicker",
+   "hideCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7425,
+  "calls": [
+   "hideCtx",
+   "openPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7426,
+  "calls": [
+   "hideCtx",
+   "toast"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7427,
+  "calls": [
+   "hideCtx",
+   "openJournalPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7428,
+  "calls": [
+   "hideCtx",
+   "openMyDatabasePicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7452,
+  "calls": [
+   "closeMyDatabasePicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7455,
+  "calls": [
+   "toggleNoteDbFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7498,
+  "calls": [
+   "renNtiCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7498,
+  "calls": [
+   "openCatClrPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7498,
+  "calls": [
+   "toggleNtiCatBold"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7498,
+  "calls": [
+   "setNtiCatSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7498,
+  "calls": [
+   "setNtiCatSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7498,
+  "calls": [
+   "setNtiCatSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7498,
+  "calls": [
+   "hideCtx",
+   "addKindInCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7498,
+  "calls": [
+   "hideCtx",
+   "addNtiCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7498,
+  "calls": [
+   "delNtiCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7506,
+  "calls": [
+   "renNtiSectionLabel"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7507,
+  "calls": [
+   "openNtiSectionClrPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7509,
+  "calls": [
+   "hideCtx",
+   "addNtiCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7511,
+  "calls": [
+   "hideCtx",
+   "ntiSbToggleAllCats"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7541,
+  "calls": [
+   "moveKindToCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7541,
+  "calls": [
+   "renNtiKind"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7541,
+  "calls": [
+   "openKindClrPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7541,
+  "calls": [
+   "delNtiKind"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7642,
+  "calls": [
+   "print"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7642,
+  "calls": [
+   "close"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7838,
+  "calls": [
+   "addExistingNoteToEvent"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 7842,
+  "calls": [
+   "_aneFilter"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7844,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7892,
+  "calls": [
+   "setJrnGroupBy"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7893,
+  "calls": [
+   "setJrnGroupBy"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7911,
+  "calls": [
+   "togJrnGrp"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7919,
+  "calls": [
+   "togJrnGrp"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7928,
+  "calls": [
+   "togJrnGrp"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7941,
+  "calls": [
+   "quickJournalEntry"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7948,
+  "calls": [
+   "newJournalFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7961,
+  "calls": [
+   "togJrnGrp"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7965,
+  "calls": [
+   "stopPropagation",
+   "quickJournalEntry"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7966,
+  "calls": [
+   "stopPropagation",
+   "openAddNoteToEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7967,
+  "calls": [
+   "stopPropagation",
+   "moveJrnEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7968,
+  "calls": [
+   "stopPropagation",
+   "moveJrnEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7969,
+  "calls": [
+   "stopPropagation",
+   "_jrnStyleMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7970,
+  "calls": [
+   "stopPropagation",
+   "confirmDel"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7981,
+  "calls": [
+   "togJrnGrp"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 7984,
+  "calls": [
+   "quickNewNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8046,
+  "calls": [
+   "selDbItem"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 8047,
+  "calls": [
+   "showDbItemCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8055,
+  "calls": [
+   "renderTree"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 8055,
+  "calls": [
+   "showDbSecCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8123,
+  "calls": [
+   "_jrnSizeCommit"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8125,
+  "calls": [
+   "getElementById",
+   "remove",
+   "renameJrnEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8126,
+  "calls": [
+   "pickJrnColor"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8127,
+  "calls": [
+   "pickJrnColor"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 8130,
+  "calls": [
+   "_jrnSizeLive"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 8130,
+  "calls": [
+   "_jrnSizeCommit"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 8132,
+  "calls": [
+   "_jrnSizeLive"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 8132,
+  "calls": [
+   "_jrnSizeCommit"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8136,
+  "calls": [
+   "getElementById",
+   "remove",
+   "resetJrnStyle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8150,
+  "calls": [
+   "newFavEntry"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8151,
+  "calls": [
+   "addFavCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8160,
+  "calls": [
+   "togJrnGrp"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 8160,
+  "calls": [
+   "preventDefault",
+   "showFavCatCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8177,
+  "calls": [
+   "togJrnGrp"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8200,
+  "calls": [
+   "hideCtx",
+   "renameFavCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8201,
+  "calls": [
+   "hideCtx",
+   "deleteFavCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8322,
+  "calls": [
+   "remove"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8353,
+  "calls": [
+   "toggleCTMode"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 8355,
+  "calls": [
+   "showArtCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8376,
+  "calls": [
+   "toggleCTNameMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8392,
+  "calls": [
+   "remove"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8394,
+  "calls": [
+   "addCTPhone"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8403,
+  "calls": [
+   "toggleCTMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8415,
+  "calls": [
+   "newContact"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8416,
+  "calls": [
+   "newContact"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8440,
+  "calls": [
+   "hideCtx",
+   "selDbItem"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8442,
+  "calls": [
+   "hideCtx",
+   "newContact"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8443,
+  "calls": [
+   "hideCtx",
+   "newContact"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8445,
+  "calls": [
+   "hideCtx",
+   "selDbItem"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8447,
+  "calls": [
+   "openDbItemClrPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8449,
+  "calls": [
+   "hideCtx",
+   "selDbItem"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8451,
+  "calls": [
+   "hideCtx",
+   "selDbItem"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8453,
+  "calls": [
+   "openDbItemClrPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8455,
+  "calls": [
+   "hideCtx",
+   "selDbItem"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8457,
+  "calls": [
+   "hideCtx",
+   "_calNewEvent",
+   "todayStr"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8459,
+  "calls": [
+   "openDbItemClrPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8461,
+  "calls": [
+   "hideCtx",
+   "selDbItem"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8463,
+  "calls": [
+   "hideCtx",
+   "newFavEntry"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8464,
+  "calls": [
+   "hideCtx",
+   "addFavCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8466,
+  "calls": [
+   "openDbItemClrPicker"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 8488,
+  "calls": [
+   "_whoSearch"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 8488,
+  "calls": [
+   "_whoClear"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8489,
+  "calls": [
+   "_whoClear"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8502,
+  "calls": [
+   "newContact"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8510,
+  "calls": [
+   "_whoSelect"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8569,
+  "calls": [
+   "logInteraction"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 8660,
+  "calls": [
+   "preventDefault",
+   "getElementById",
+   "focus"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 8662,
+  "calls": [
+   "njfFilter"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 8662,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8665,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8666,
+  "calls": [
+   "createNewJournalFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8672,
+  "calls": [
+   "njfSelect"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8682,
+  "calls": [
+   "njfSelect"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8754,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8757,
+  "calls": [
+   "_jrnScopeSetMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8760,
+  "calls": [
+   "_jrnScopeSetMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8766,
+  "calls": [
+   "_jrnScopeSetOne"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8771,
+  "calls": [
+   "_jrnScopeToggle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8775,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8884,
+  "calls": [
+   "showPane"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8885,
+  "calls": [
+   "closeP2"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8887,
+  "calls": [
+   "_calNav"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8892,
+  "calls": [
+   "_calNav"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8893,
+  "calls": [
+   "_calToday"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8895,
+  "calls": [
+   "renderP3H",
+   "renderP3C"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8896,
+  "calls": [
+   "renderP3H",
+   "renderP3C"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8897,
+  "calls": [
+   "renderP3H",
+   "renderP3C"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8898,
+  "calls": [
+   "now",
+   "renderP3H",
+   "renderP3C"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8901,
+  "calls": [
+   "togCalLayer"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8902,
+  "calls": [
+   "togCalLayer"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8903,
+  "calls": [
+   "togCalLayer"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8904,
+  "calls": [
+   "togCalLayer"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8905,
+  "calls": [
+   "togCalLayer"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 8905,
+  "calls": [
+   "openJrnCalScope"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8970,
+  "calls": [
+   "querySelector",
+   "remove",
+   "_calEditEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8975,
+  "calls": [
+   "querySelector",
+   "remove",
+   "tabSelect"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8979,
+  "calls": [
+   "_calNewNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8981,
+  "calls": [
+   "_calNewJournal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8983,
+  "calls": [
+   "_calViewNotes"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 8985,
+  "calls": [
+   "querySelector",
+   "remove",
+   "_calNewEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9060,
+  "calls": [
+   "_calSelectDate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9100,
+  "calls": [
+   "_calSelectDate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9103,
+  "calls": [
+   "tabSelect"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9104,
+  "calls": [
+   "tabSelect"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9105,
+  "calls": [
+   "_calEditEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9119,
+  "calls": [
+   "renderP3H",
+   "renderP3C"
+  ]
+ },
+ {
+  "event": "onmouseenter",
+  "line": 9171,
+  "calls": [
+   "_clrHover"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9173,
+  "calls": [
+   "_clrPick"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9179,
+  "calls": [
+   "togClrFam"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9189,
+  "calls": [
+   "getElementById",
+   "remove"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9193,
+  "calls": [
+   "_clrPick"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9195,
+  "calls": [
+   "getElementById",
+   "remove"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9463,
+  "calls": [
+   "closeNoteModal"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9693,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9693,
+  "calls": [
+   "_closeStickyPop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9773,
+  "calls": [
+   "goHome"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9774,
+  "calls": [
+   "restoreLastSearch"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9815,
+  "calls": [
+   "togEBGroup"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9817,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9817,
+  "calls": [
+   "_ntFindToggle"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9825,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9825,
+  "calls": [
+   "saveArt"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9851,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9851,
+  "calls": [
+   "_closeStickyPop",
+   "tabSelect"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9904,
+  "calls": []
+ },
+ {
+  "event": "onmousedown",
+  "line": 9913,
+  "calls": []
+ },
+ {
+  "event": "onclick",
+  "line": 9913,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9941,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9942,
+  "calls": []
+ },
+ {
+  "event": "onmousedown",
+  "line": 9979,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9980,
+  "calls": [
+   "_calOpen"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 9982,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 9982,
+  "calls": [
+   "openTabPicker"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10001,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10002,
+  "calls": []
+ },
+ {
+  "event": "onclick",
+  "line": 10015,
+  "calls": [
+   "getElementById",
+   "focus"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10025,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10025,
+  "calls": [
+   "_closeStickyPop",
+   "toggleArchive"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10030,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10030,
+  "calls": [
+   "_closeStickyPop",
+   "unfinishNote"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10033,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10033,
+  "calls": [
+   "_closeStickyPop",
+   "finishNote"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10044,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10044,
+  "calls": [
+   "_edColAll"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10045,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10045,
+  "calls": [
+   "_edColAll"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10047,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10047,
+  "calls": [
+   "_edColPreview"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10054,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10055,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10056,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10057,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10058,
+  "calls": [
+   "edMarkDone"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10059,
+  "calls": [
+   "edBoundary"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10060,
+  "calls": [
+   "edColorBtn"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10061,
+  "calls": [
+   "edClearFmt"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10063,
+  "calls": [
+   "edFontStep"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10064,
+  "calls": [
+   "edFontStep"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10065,
+  "calls": [
+   "edFontStep"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10070,
+  "calls": [
+   "fb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10071,
+  "calls": [
+   "fb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10072,
+  "calls": [
+   "fb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10073,
+  "calls": [
+   "fb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10074,
+  "calls": [
+   "fb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10075,
+  "calls": [
+   "shiftHeadingLevel"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10076,
+  "calls": [
+   "shiftHeadingLevel"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10077,
+  "calls": [
+   "shiftAllHeadingsMenu"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10082,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10083,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10084,
+  "calls": [
+   "preventDefault",
+   "openNoteHistory"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10111,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10113,
+  "calls": [
+   "ec"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10115,
+  "calls": [
+   "preventDefault",
+   "openNoteHistory"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10118,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10118,
+  "calls": [
+   "_ntFindToggle"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10268,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10269,
+  "calls": [
+   "openNotePopup"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10342,
+  "calls": [
+   "popOutNote",
+   "String",
+   "replace"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10345,
+  "calls": [
+   "closeAllPopouts"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10563,
+  "calls": [
+   "selTag",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10567,
+  "calls": [
+   "selFolder"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10759,
+  "calls": [
+   "_fwTogGroup"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10761,
+  "calls": [
+   "_fwNavigate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10762,
+  "calls": [
+   "_fwNavigate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10767,
+  "calls": [
+   "closeFloatWin"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10774,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10774,
+  "calls": [
+   "toggleEdColPop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10777,
+  "calls": [
+   "openNtiPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10778,
+  "calls": [
+   "openAttachMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10779,
+  "calls": [
+   "_ntFindToggle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10780,
+  "calls": [
+   "_fwSave"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 10784,
+  "calls": [
+   "_ntFindRun"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 10784,
+  "calls": [
+   "_ntFindKey"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10786,
+  "calls": [
+   "_ntFindStep"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10787,
+  "calls": [
+   "_ntFindStep"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10788,
+  "calls": [
+   "_ntFindClose"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10840,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10841,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10842,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10843,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10844,
+  "calls": [
+   "_fwClearFmt"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10845,
+  "calls": [
+   "edMarkDone"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10846,
+  "calls": [
+   "edBoundary"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10847,
+  "calls": [
+   "edColorBtn"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10849,
+  "calls": [
+   "_fwFontStep"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10850,
+  "calls": [
+   "_fwFontStep"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10851,
+  "calls": [
+   "_fwFontStep"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10853,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10854,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10855,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10858,
+  "calls": [
+   "_fwFb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10859,
+  "calls": [
+   "_fwFb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10860,
+  "calls": [
+   "_fwFb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10861,
+  "calls": [
+   "_fwFb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10862,
+  "calls": [
+   "_fwFb"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10865,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10866,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10867,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10868,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10871,
+  "calls": [
+   "edImgPick"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10872,
+  "calls": [
+   "edLink"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10873,
+  "calls": [
+   "edBookmarkBtn"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10874,
+  "calls": [
+   "edMentionBtn"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10875,
+  "calls": [
+   "openQuickPhrasesMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10875,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10878,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10879,
+  "calls": [
+   "_fwEc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 10880,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 10880,
+  "calls": [
+   "openNoteHistory"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 11178,
+  "calls": [
+   "_calUpdateFormAllDay"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11190,
+  "calls": [
+   "_calDelEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11233,
+  "calls": [
+   "_calEditEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11243,
+  "calls": [
+   "tabSelect"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11249,
+  "calls": [
+   "tabSelect"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11275,
+  "calls": [
+   "_calEditEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11283,
+  "calls": [
+   "renderP2C"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11286,
+  "calls": [
+   "_calEditEvent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11332,
+  "calls": [
+   "renderP2C"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11348,
+  "calls": []
+ },
+ {
+  "event": "onchange",
+  "line": 11390,
+  "calls": [
+   "_calSaveCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11393,
+  "calls": [
+   "_calSaveCat",
+   "getElementById"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11394,
+  "calls": [
+   "_calDelCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11413,
+  "calls": [
+   "closeGlobalSearch"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11471,
+  "calls": [
+   "_gsOpen"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11627,
+  "calls": [
+   "mrjRate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11628,
+  "calls": [
+   "mrjRate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11629,
+  "calls": [
+   "mrjRate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11762,
+  "calls": [
+   "closeCiteModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11765,
+  "calls": [
+   "setCiteType"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11766,
+  "calls": [
+   "setCiteType"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11793,
+  "calls": [
+   "closeCiteModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11794,
+  "calls": [
+   "insertCite"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11826,
+  "calls": [
+   "ScrollTo"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11860,
+  "calls": [
+   "_tocToggleSide"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 11862,
+  "calls": [
+   "togTocTitle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12141,
+  "calls": [
+   "stopPropagation",
+   "togPinHeadExpand"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12151,
+  "calls": [
+   "togPinExpand"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12154,
+  "calls": [
+   "stopPropagation",
+   "unpinTab"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12159,
+  "calls": [
+   "stopPropagation",
+   "togPinCardMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12167,
+  "calls": [
+   "stopPropagation",
+   "_pinOpenNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12211,
+  "calls": [
+   "_pinPanelToggleSide"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12361,
+  "calls": [
+   "_tocCloseMobile"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12431,
+  "calls": [
+   "_colToggle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12478,
+  "calls": [
+   "toggleColPop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12487,
+  "calls": [
+   "_colAll",
+   "closeFloatPop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12488,
+  "calls": [
+   "_colAll",
+   "closeFloatPop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12489,
+  "calls": [
+   "closeFloatPop",
+   "_colTogglePreview"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12581,
+  "calls": [
+   "closeFloatPop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12683,
+  "calls": [
+   "closeHeadingStylesModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12687,
+  "calls": [
+   "resetHeadingStyles"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12689,
+  "calls": [
+   "closeHeadingStylesModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12690,
+  "calls": [
+   "saveHeadingStyles"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12884,
+  "calls": [
+   "selArt",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 12890,
+  "calls": [
+   "selArt",
+   "esc"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 13135,
+  "calls": [
+   "_applyColor"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 13143,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 13143,
+  "calls": [
+   "_closeColorPop"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 13403,
+  "calls": [
+   "preventDefault"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 13403,
+  "calls": [
+   "toggleEdColPop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 13570,
+  "calls": [
+   "bkItemMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14129,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14130,
+  "calls": [
+   "doRenumber"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14193,
+  "calls": [
+   "addFieldRow"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14195,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14200,
+  "calls": [
+   "updField"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14201,
+  "calls": [
+   "updField"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14204,
+  "calls": [
+   "updField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14205,
+  "calls": [
+   "removeFieldRow"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14374,
+  "calls": [
+   "selArt"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14459,
+  "calls": [
+   "selArt"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 14533,
+  "calls": [
+   "dbbSet"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14539,
+  "calls": [
+   "dbbApplyPreset"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 14543,
+  "calls": [
+   "dbbSet"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14550,
+  "calls": [
+   "dbbAddField"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14558,
+  "calls": [
+   "dbbSetReport"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14570,
+  "calls": [
+   "dbbSetReport"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14582,
+  "calls": [
+   "dbBuilderCancel"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14583,
+  "calls": [
+   "dbBuilderDone"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14590,
+  "calls": [
+   "dbbUpdField"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14591,
+  "calls": [
+   "dbbUpdField"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14594,
+  "calls": [
+   "dbbUpdField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14595,
+  "calls": [
+   "dbbMoveField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14596,
+  "calls": [
+   "dbbMoveField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14597,
+  "calls": [
+   "dbbRemoveField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14706,
+  "calls": [
+   "newDbFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14707,
+  "calls": [
+   "hideCtx",
+   "newPlainDbFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14709,
+  "calls": [
+   "hideCtx",
+   "addStarterMyDatabaseFolders"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14710,
+  "calls": [
+   "hideCtx",
+   "autoNumberDbFolders"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14712,
+  "calls": [
+   "hideCtx",
+   "renderTree"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14713,
+  "calls": [
+   "hideCtx",
+   "renderTree"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 14754,
+  "calls": [
+   "saveFieldValue"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14756,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14757,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14761,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14764,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14767,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14770,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14773,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14775,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 14853,
+  "calls": [
+   "tryUnlockFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 14854,
+  "calls": [
+   "tryUnlockFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15034,
+  "calls": [
+   "closeNoteHistory"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15039,
+  "calls": [
+   "_nhBack"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15041,
+  "calls": [
+   "_nhSetMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15042,
+  "calls": [
+   "_nhSetMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15057,
+  "calls": [
+   "restoreNoteHistory"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15065,
+  "calls": [
+   "previewNoteHistory"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15105,
+  "calls": [
+   "startVersioning"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15110,
+  "calls": [
+   "selArt"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 15110,
+  "calls": [
+   "showVersionCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15113,
+  "calls": [
+   "addNewVersion"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15156,
+  "calls": [
+   "renameVersion"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15157,
+  "calls": [
+   "setVersionIcon"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15159,
+  "calls": [
+   "hideCtx",
+   "unlinkVersion"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15161,
+  "calls": [
+   "hideCtx",
+   "confirmDel"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15220,
+  "calls": [
+   "hideCtx",
+   "insertQuickPhrase"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15224,
+  "calls": [
+   "hideCtx",
+   "openQuickPhrasesManager"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15245,
+  "calls": [
+   "updQuickPhrase"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15247,
+  "calls": [
+   "moveQuickPhrase"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15248,
+  "calls": [
+   "moveQuickPhrase"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15249,
+  "calls": [
+   "deleteQuickPhrase"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15254,
+  "calls": [
+   "addQuickPhrase"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15256,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 15447,
+  "calls": [
+   "openTemplatesMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15447,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15455,
+  "calls": [
+   "hideCtx",
+   "insertTemplate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15459,
+  "calls": [
+   "hideCtx",
+   "openTemplatesManager"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15636,
+  "calls": [
+   "openTemplateEditor"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15639,
+  "calls": [
+   "ktMoveTemplate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15640,
+  "calls": [
+   "ktMoveTemplate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15641,
+  "calls": [
+   "ktDuplicateTemplate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15642,
+  "calls": [
+   "ktDeleteTemplate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15647,
+  "calls": [
+   "ktAddTemplate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15648,
+  "calls": [
+   "ktRestoreKhutbah"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15651,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15709,
+  "calls": [
+   "ktSet"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15710,
+  "calls": [
+   "ktSet"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15711,
+  "calls": [
+   "ktSet"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15712,
+  "calls": [
+   "ktSet"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15720,
+  "calls": [
+   "ktSetField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15722,
+  "calls": [
+   "ktMoveField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15723,
+  "calls": [
+   "ktMoveField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15724,
+  "calls": [
+   "ktDelField"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15727,
+  "calls": [
+   "ktAddField"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15732,
+  "calls": [
+   "ktSet"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15733,
+  "calls": [
+   "ktSet"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15741,
+  "calls": [
+   "ktSetAyah"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15742,
+  "calls": [
+   "ktSetAyah"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15743,
+  "calls": [
+   "ktSetAyah"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15744,
+  "calls": [
+   "ktSetAyah"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15745,
+  "calls": [
+   "ktSetAyah"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15750,
+  "calls": [
+   "ktSetLang"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15751,
+  "calls": [
+   "ktSetLang"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15753,
+  "calls": [
+   "ktMoveLang"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15754,
+  "calls": [
+   "ktMoveLang"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15755,
+  "calls": [
+   "ktDelLang"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15758,
+  "calls": [
+   "ktAddLang"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15765,
+  "calls": [
+   "ktSetSec"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15768,
+  "calls": [
+   "ktSetSec"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15769,
+  "calls": [
+   "ktSetSec"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 15775,
+  "calls": [
+   "ktSetSec"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15778,
+  "calls": [
+   "ktMoveSec"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15779,
+  "calls": [
+   "ktMoveSec"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15780,
+  "calls": [
+   "ktDelSec"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15783,
+  "calls": [
+   "ktAddSec"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15786,
+  "calls": [
+   "openTemplatesManager"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15788,
+  "calls": [
+   "closeModal",
+   "insertTemplate"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15789,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15878,
+  "calls": [
+   "setHeadingStatus",
+   "decodeURIComponent",
+   "encodeURIComponent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15882,
+  "calls": [
+   "promptCustomHeadingStatus",
+   "decodeURIComponent",
+   "encodeURIComponent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15883,
+  "calls": [
+   "clearHeadingStatus",
+   "decodeURIComponent",
+   "encodeURIComponent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15942,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15943,
+  "calls": [
+   "saveContactAction"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15969,
+  "calls": [
+   "logContactAction"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15978,
+  "calls": [
+   "toggleActionDone"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 15979,
+  "calls": [
+   "deleteContactAction"
+  ]
+ },
+ {
+  "event": "ondragstart",
+  "line": 16033,
+  "calls": [
+   "dStart"
+  ]
+ },
+ {
+  "event": "ondragend",
+  "line": 16033,
+  "calls": [
+   "dEnd"
+  ]
+ },
+ {
+  "event": "ondragover",
+  "line": 16034,
+  "calls": [
+   "dOver"
+  ]
+ },
+ {
+  "event": "ondrop",
+  "line": 16034,
+  "calls": [
+   "dDrop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16035,
+  "calls": [
+   "selFolder"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 16035,
+  "calls": [
+   "showCtx"
+  ]
+ },
+ {
+  "event": "ondragstart",
+  "line": 16048,
+  "calls": [
+   "dStart"
+  ]
+ },
+ {
+  "event": "ondragend",
+  "line": 16048,
+  "calls": [
+   "dEnd"
+  ]
+ },
+ {
+  "event": "ondragover",
+  "line": 16049,
+  "calls": [
+   "dOver"
+  ]
+ },
+ {
+  "event": "ondrop",
+  "line": 16049,
+  "calls": [
+   "dDrop"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 16050,
+  "calls": [
+   "showCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16051,
+  "calls": [
+   "stopPropagation",
+   "togP2HTreeNode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16052,
+  "calls": [
+   "selFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16065,
+  "calls": [
+   "gotoAdjacentSection"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 16066,
+  "calls": [
+   "gotoSection"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16067,
+  "calls": [
+   "gotoAdjacentSection"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16101,
+  "calls": [
+   "p2hTreeExpandAll"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16102,
+  "calls": [
+   "p2hTreeCollapseAll"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16115,
+  "calls": [
+   "toggleP2HTreeMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16116,
+  "calls": [
+   "toggleP2HCardView"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16119,
+  "calls": [
+   "selFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16123,
+  "calls": [
+   "selFolder"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 16123,
+  "calls": [
+   "showCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16126,
+  "calls": [
+   "openModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16186,
+  "calls": [
+   "sfGrpExpandAll"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16187,
+  "calls": [
+   "sfGrpCollapseAll"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16192,
+  "calls": [
+   "selFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16199,
+  "calls": []
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 16199,
+  "calls": [
+   "showSfItemCtx"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 16254,
+  "calls": [
+   "qtKey"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 16255,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "ontouchstart",
+  "line": 16255,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16256,
+  "calls": [
+   "qtSave"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16328,
+  "calls": [
+   "hideCtx",
+   "moveFolderToTop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16331,
+  "calls": [
+   "hideCtx",
+   "openModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16332,
+  "calls": [
+   "hideCtx",
+   "openModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16333,
+  "calls": [
+   "hideCtx",
+   "openModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16334,
+  "calls": [
+   "hideCtx",
+   "openFolderPopout"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16336,
+  "calls": [
+   "hideCtx",
+   "autoNumberAll"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16337,
+  "calls": [
+   "hideCtx",
+   "offerRenumberManual"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16346,
+  "calls": [
+   "hideCtx",
+   "moveFolderToGroup"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16347,
+  "calls": [
+   "hideCtx",
+   "addFolderGroupThenMove"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16348,
+  "calls": [
+   "_folderCtxSub"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16349,
+  "calls": [
+   "hideCtx",
+   "convertFolderToSection"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16350,
+  "calls": [
+   "hideCtx",
+   "toggleJournalMode"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16351,
+  "calls": [
+   "hideCtx",
+   "moveToMyJournal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16353,
+  "calls": [
+   "toggleFolderStructured"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16354,
+  "calls": [
+   "openFieldBuilder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16355,
+  "calls": [
+   "openDbFolderBuilder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16356,
+  "calls": []
+ },
+ {
+  "event": "onclick",
+  "line": 16358,
+  "calls": [
+   "hideCtx",
+   "confirmDel"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16377,
+  "calls": [
+   "_folderCtxBack"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16475,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16476,
+  "calls": [
+   "autoNumberAll",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onpointerdown",
+  "line": 16514,
+  "calls": [
+   "_mbResizeStart"
+  ]
+ },
+ {
+  "event": "onpointerdown",
+  "line": 16515,
+  "calls": [
+   "_mbResizeStart"
+  ]
+ },
+ {
+  "event": "onpointerdown",
+  "line": 16516,
+  "calls": [
+   "_mbResizeStart"
+  ]
+ },
+ {
+  "event": "onpointerdown",
+  "line": 16517,
+  "calls": [
+   "_mbResizeStart"
+  ]
+ },
+ {
+  "event": "onpointerdown",
+  "line": 16518,
+  "calls": [
+   "_mbResizeStart"
+  ]
+ },
+ {
+  "event": "onpointerdown",
+  "line": 16519,
+  "calls": [
+   "_mbResizeStart"
+  ]
+ },
+ {
+  "event": "onpointerdown",
+  "line": 16520,
+  "calls": [
+   "_mbResizeStart"
+  ]
+ },
+ {
+  "event": "onpointerdown",
+  "line": 16521,
+  "calls": [
+   "_mbResizeStart"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 16661,
+  "calls": [
+   "mkFolder",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16662,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16663,
+  "calls": [
+   "mkFolder",
+   "getElementById",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 16666,
+  "calls": [
+   "mkArt",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16667,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16668,
+  "calls": [
+   "mkArt",
+   "getElementById",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 16672,
+  "calls": [
+   "rnFolder",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16673,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16674,
+  "calls": [
+   "rnFolder",
+   "getElementById",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16679,
+  "calls": [
+   "exportJSON",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16680,
+  "calls": [
+   "importJSON",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16681,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 16686,
+  "calls": [
+   "mkSection",
+   "getElementById",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16688,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16689,
+  "calls": [
+   "mkSection",
+   "getElementById",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16698,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16699,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16730,
+  "calls": [
+   "pkNoteOpen",
+   "esc"
+  ]
+ },
+ {
+  "event": "ondragstart",
+  "line": 16731,
+  "calls": [
+   "pkNoteDStart",
+   "esc"
+  ]
+ },
+ {
+  "event": "ondragend",
+  "line": 16731,
+  "calls": [
+   "pkNoteDEnd"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16735,
+  "calls": [
+   "stopPropagation",
+   "pkNoteRename",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16736,
+  "calls": [
+   "stopPropagation",
+   "pkNoteDelete",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16738,
+  "calls": [
+   "stopPropagation",
+   "pkNoteRowMenu",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16747,
+  "calls": [
+   "stopPropagation",
+   "togglePickExp"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16753,
+  "calls": []
+ },
+ {
+  "event": "ondragstart",
+  "line": 16754,
+  "calls": [
+   "pkDStart"
+  ]
+ },
+ {
+  "event": "ondragend",
+  "line": 16754,
+  "calls": [
+   "pkDEnd"
+  ]
+ },
+ {
+  "event": "ondragover",
+  "line": 16755,
+  "calls": [
+   "pkDOver"
+  ]
+ },
+ {
+  "event": "ondrop",
+  "line": 16755,
+  "calls": [
+   "pkDDrop"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16763,
+  "calls": [
+   "stopPropagation",
+   "pkSetTarget"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16764,
+  "calls": [
+   "stopPropagation",
+   "pkRename"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16765,
+  "calls": [
+   "stopPropagation",
+   "pkDelete"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16770,
+  "calls": [
+   "stopPropagation",
+   "pkRowMenu"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 16784,
+  "calls": [
+   "_pkFilter"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 16788,
+  "calls": [
+   "createFolderFromPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16789,
+  "calls": [
+   "createFolderFromPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 16793,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17018,
+  "calls": [
+   "pkFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17021,
+  "calls": [
+   "pkFontColor"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17026,
+  "calls": [
+   "getElementById",
+   "remove"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 17029,
+  "calls": [
+   "pkFontSize"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 17029,
+  "calls": [
+   "pkFontSize"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 17032,
+  "calls": [
+   "pkFontSize"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 17032,
+  "calls": [
+   "pkFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17038,
+  "calls": [
+   "pkFontColor"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17039,
+  "calls": [
+   "pkFontPalette"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17042,
+  "calls": [
+   "pkFontBold"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17043,
+  "calls": [
+   "pkFontStep"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17044,
+  "calls": [
+   "pkFontStep"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17045,
+  "calls": [
+   "pkFontReset"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17081,
+  "calls": [
+   "stopPropagation",
+   "pkGotoSection"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17082,
+  "calls": [
+   "stopPropagation",
+   "pkGotoAdjacentSection"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17083,
+  "calls": [
+   "stopPropagation",
+   "pkGotoAdjacentSection"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17084,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 17084,
+  "calls": [
+   "pkGotoSection"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17088,
+  "calls": [
+   "stopPropagation",
+   "pkFontMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17111,
+  "calls": [
+   "pkToggleAllSec",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17130,
+  "calls": [
+   "pkToggleAllSec"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17215,
+  "calls": [
+   "pkNavScope",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17224,
+  "calls": [
+   "pkNavScope",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17238,
+  "calls": [
+   "pkNavScope",
+   "esc"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 17258,
+  "calls": [
+   "_pkFilter"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 17262,
+  "calls": [
+   "createFolderFromPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17263,
+  "calls": [
+   "createFolderFromPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17266,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17383,
+  "calls": [
+   "_pkSwitchToFolder",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17393,
+  "calls": [
+   "pkNavScope",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17400,
+  "calls": [
+   "pkNavScope",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17407,
+  "calls": [
+   "pkNavScope",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17416,
+  "calls": [
+   "pkNoteOpen",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17476,
+  "calls": [
+   "pkClearTarget"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17491,
+  "calls": [
+   "hideCtx",
+   "pkSetTarget"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17492,
+  "calls": [
+   "hideCtx",
+   "pkRename"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17493,
+  "calls": [
+   "hideCtx",
+   "pkDelete"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17500,
+  "calls": [
+   "hideCtx",
+   "pkNoteRename"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17501,
+  "calls": [
+   "hideCtx",
+   "pkNoteDelete"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17521,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 17521,
+  "calls": [
+   "stopPropagation",
+   "pkRenameSave",
+   "pkRenameCancel"
+  ]
+ },
+ {
+  "event": "onblur",
+  "line": 17521,
+  "calls": [
+   "pkRenameSave"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17679,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 17679,
+  "calls": [
+   "stopPropagation",
+   "pkNoteRenameSave",
+   "pkNoteRenameCancel"
+  ]
+ },
+ {
+  "event": "onblur",
+  "line": 17679,
+  "calls": [
+   "pkNoteRenameSave"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17776,
+  "calls": [
+   "togNtiCatSB"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 17776,
+  "calls": [
+   "showNtiCatMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17781,
+  "calls": [
+   "stopPropagation",
+   "addKindInCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17782,
+  "calls": [
+   "stopPropagation",
+   "showNtiCatMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17789,
+  "calls": [
+   "selKind"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 17789,
+  "calls": [
+   "preventDefault",
+   "showNtiKindMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17799,
+  "calls": [
+   "addNtiCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17803,
+  "calls": [
+   "toggleNtiSection"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 17803,
+  "calls": [
+   "showNtiSectionMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17807,
+  "calls": [
+   "stopPropagation",
+   "ntiSbToggleAllCats"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17808,
+  "calls": [
+   "stopPropagation",
+   "addNtiCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17828,
+  "calls": [
+   "selTag",
+   "esc"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 17840,
+  "calls": [
+   "preventDefault",
+   "showTagClrPicker",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 17841,
+  "calls": [
+   "rmTag",
+   "esc"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 17845,
+  "calls": [
+   "tagKey"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 17845,
+  "calls": [
+   "tagInputChanged"
+  ]
+ },
+ {
+  "event": "onblur",
+  "line": 17845,
+  "calls": [
+   "setTimeout"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 17863,
+  "calls": [
+   "preventDefault",
+   "_pickTagSuggestion",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18191,
+  "calls": [
+   "applyPreset"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18219,
+  "calls": [
+   "openThemeClrPicker"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 18220,
+  "calls": [
+   "setCustomColorHex"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18241,
+  "calls": [
+   "setFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18243,
+  "calls": [
+   "setFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18247,
+  "calls": [
+   "resetFontSizes"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18258,
+  "calls": [
+   "setLineSpacing"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18270,
+  "calls": [
+   "setMwFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18279,
+  "calls": [
+   "closeTheme",
+   "openHeadingStylesModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18283,
+  "calls": [
+   "resetTheme"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18293,
+  "calls": [
+   "openFolClrPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18294,
+  "calls": [
+   "setFolderColor"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18295,
+  "calls": [
+   "setFolderBold"
+  ]
+ },
+ {
+  "event": "ondragover",
+  "line": 18324,
+  "calls": [
+   "secDOver"
+  ]
+ },
+ {
+  "event": "ondrop",
+  "line": 18326,
+  "calls": [
+   "secDDrop"
+  ]
+ },
+ {
+  "event": "ondragstart",
+  "line": 18329,
+  "calls": [
+   "secDStart"
+  ]
+ },
+ {
+  "event": "ondragend",
+  "line": 18330,
+  "calls": [
+   "secDEnd"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 18331,
+  "calls": [
+   "showSecCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18332,
+  "calls": [
+   "toggleSection"
+  ]
+ },
+ {
+  "event": "ondblclick",
+  "line": 18334,
+  "calls": [
+   "stopPropagation",
+   "startRenSec"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18336,
+  "calls": [
+   "stopPropagation",
+   "addFolderInSec"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18337,
+  "calls": [
+   "stopPropagation",
+   "showSecCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18375,
+  "calls": [
+   "openSecClrPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18376,
+  "calls": [
+   "setSectionColor"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18377,
+  "calls": [
+   "setSectionBold"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18405,
+  "calls": [
+   "setSmartViewColor"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18406,
+  "calls": [
+   "setSmartViewBold"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18409,
+  "calls": [
+   "setSmartViewColor"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18426,
+  "calls": [
+   "hideCtx",
+   "startRenSmartViews"
+  ]
+ },
+ {
+  "event": "onblur",
+  "line": 18448,
+  "calls": [
+   "finRenSmartViews"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 18449,
+  "calls": [
+   "finRenSmartViews",
+   "renderTree"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18464,
+  "calls": [
+   "hideCtx",
+   "addFolderInSec"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18465,
+  "calls": [
+   "hideCtx",
+   "startRenSec"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18466,
+  "calls": [
+   "hideCtx",
+   "openSectionPopout"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18472,
+  "calls": [
+   "_secCtxSub"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18473,
+  "calls": [
+   "hideCtx",
+   "delSection"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18491,
+  "calls": [
+   "_secCtxBack"
+  ]
+ },
+ {
+  "event": "onblur",
+  "line": 18503,
+  "calls": [
+   "finRenSec"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 18504,
+  "calls": [
+   "finRenSec",
+   "renderTree"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18550,
+  "calls": [
+   "hideCtx",
+   "moveFolderToSec"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 18580,
+  "calls": [
+   "_moveNotesThenConvert"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18581,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18582,
+  "calls": [
+   "_moveNotesThenConvert"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18589,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18590,
+  "calls": [
+   "_doFolderToSection",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18631,
+  "calls": [
+   "hideCtx",
+   "confirmSectionToFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18640,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18641,
+  "calls": [
+   "_doSectionToFolder",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18861,
+  "calls": [
+   "restoreItem"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 18862,
+  "calls": [
+   "permDeleteItem"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19031,
+  "calls": [
+   "_ctxSub"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19034,
+  "calls": [
+   "hideCtx",
+   "startRenameArtTitle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19035,
+  "calls": [
+   "hideCtx",
+   "duplicateNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19036,
+  "calls": [
+   "openNoteHistory"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19037,
+  "calls": [
+   "openNotePopup"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19038,
+  "calls": [
+   "openNotePopup"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19040,
+  "calls": [
+   "hideCtx",
+   "toggleFav"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19041,
+  "calls": [
+   "hideCtx",
+   "togglePin"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19042,
+  "calls": [
+   "hideCtx",
+   "toggleArchive"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19043,
+  "calls": [
+   "hideCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19049,
+  "calls": [
+   "hideCtx",
+   "toggleTab"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19050,
+  "calls": [
+   "hideCtx",
+   "openJournalPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19053,
+  "calls": [
+   "hideCtx",
+   "mrjToggle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19055,
+  "calls": [
+   "hideCtx",
+   "practiceToggle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19056,
+  "calls": [
+   "hideCtx",
+   "practiceToggle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19058,
+  "calls": [
+   "hideCtx",
+   "practiceToggle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19059,
+  "calls": [
+   "hideCtx",
+   "practiceToggle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19060,
+  "calls": [
+   "hideCtx",
+   "practiceToggle"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19062,
+  "calls": [
+   "hideCtx",
+   "deleteNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19080,
+  "calls": [
+   "_ctxBack"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19085,
+  "calls": [
+   "toggleNoteKind",
+   "_ctxSub"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19094,
+  "calls": [
+   "hideCtx",
+   "openReminderModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19095,
+  "calls": [
+   "hideCtx",
+   "clearReminder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19098,
+  "calls": [
+   "hideCtx",
+   "removeArtTag",
+   "decodeURIComponent",
+   "encodeURIComponent"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19101,
+  "calls": [
+   "hideCtx",
+   "promptAddArtTag"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19107,
+  "calls": [
+   "setNoteFavCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19112,
+  "calls": [
+   "setNoteFavCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19117,
+  "calls": [
+   "hideCtx",
+   "detachArt"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19120,
+  "calls": [
+   "hideCtx",
+   "openAttachArt"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19121,
+  "calls": [
+   "hideCtx",
+   "openLinkToNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19135,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19158,
+  "calls": [
+   "toggleArtFolder"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 19170,
+  "calls": [
+   "fpFilter"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 19170,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 19173,
+  "calls": [
+   "createFolderFromPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19174,
+  "calls": [
+   "createFolderFromPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19178,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19233,
+  "calls": [
+   "toggleArtFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19248,
+  "calls": [
+   "toggleArtFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19370,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onchange",
+  "line": 19716,
+  "calls": [
+   "setBackupEvery"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19743,
+  "calls": [
+   "chooseBackupFolder"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19744,
+  "calls": [
+   "runBackupNow"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19745,
+  "calls": [
+   "turnOffBackups"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19746,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19753,
+  "calls": [
+   "downloadDatedBackup"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19754,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "ondragstart",
+  "line": 19864,
+  "calls": [
+   "artDStart"
+  ]
+ },
+ {
+  "event": "ondragend",
+  "line": 19865,
+  "calls": [
+   "artDEnd"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 19865,
+  "calls": [
+   "showArtCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19866,
+  "calls": [
+   "selArt"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19871,
+  "calls": [
+   "stopPropagation",
+   "toggleFav"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 19872,
+  "calls": [
+   "stopPropagation",
+   "togglePin"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21079,
+  "calls": [
+   "writeText",
+   "then",
+   "toast"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21092,
+  "calls": [
+   "runMigration"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21097,
+  "calls": [
+   "syncNow"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21098,
+  "calls": [
+   "disconnectSync"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21099,
+  "calls": [
+   "closeSyncModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21116,
+  "calls": [
+   "getElementById",
+   "generateNotebookId"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21121,
+  "calls": [
+   "closeSyncModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21122,
+  "calls": [
+   "connectSync"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21550,
+  "calls": [
+   "_ntiChipTap"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21557,
+  "calls": [
+   "finishNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21560,
+  "calls": [
+   "unfinishNote"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21568,
+  "calls": [
+   "toggleArchive"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21569,
+  "calls": [
+   "toggleArchive"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21583,
+  "calls": [
+   "openAttachMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21584,
+  "calls": [
+   "saveArt"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21633,
+  "calls": [
+   "mwToggleAllCats"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21634,
+  "calls": [
+   "mwToggleViewMode"
+  ]
+ },
+ {
+  "event": "ondragstart",
+  "line": 21664,
+  "calls": [
+   "wallCatDStart"
+  ]
+ },
+ {
+  "event": "ondragend",
+  "line": 21665,
+  "calls": [
+   "wallCatDEnd"
+  ]
+ },
+ {
+  "event": "ondragover",
+  "line": 21666,
+  "calls": [
+   "wallCatDOver"
+  ]
+ },
+ {
+  "event": "ondrop",
+  "line": 21668,
+  "calls": [
+   "wallCatDDrop"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 21669,
+  "calls": [
+   "preventDefault",
+   "showNtiCatMenu"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21670,
+  "calls": [
+   "togMwCat"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21684,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "ontouchstart",
+  "line": 21685,
+  "calls": [
+   "showWallKindCtx"
+  ]
+ },
+ {
+  "event": "ondragstart",
+  "line": 21690,
+  "calls": [
+   "wallGrpDStart"
+  ]
+ },
+ {
+  "event": "ondragend",
+  "line": 21691,
+  "calls": [
+   "wallGrpDEnd"
+  ]
+ },
+ {
+  "event": "ondragover",
+  "line": 21692,
+  "calls": [
+   "wallGrpDOver"
+  ]
+ },
+ {
+  "event": "ondrop",
+  "line": 21694,
+  "calls": [
+   "wallGrpDDrop"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 21695,
+  "calls": [
+   "showWallKindCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21696,
+  "calls": [
+   "togSfGrp",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21919,
+  "calls": [
+   "quickCaptureWithKind"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21921,
+  "calls": [
+   "hideCtx",
+   "renameNoteKind"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21922,
+  "calls": [
+   "openKindClrPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21923,
+  "calls": [
+   "hideCtx",
+   "addNoteKindTab"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21925,
+  "calls": [
+   "moveWallKind"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21926,
+  "calls": [
+   "moveWallKind"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21928,
+  "calls": [
+   "hideCtx",
+   "openTheme"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21930,
+  "calls": [
+   "delNtiKind"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21988,
+  "calls": [
+   "selFolder"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 21988,
+  "calls": [
+   "showSfItemCtx"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 21997,
+  "calls": [
+   "showSmartViewCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 21998,
+  "calls": [
+   "toggleSmartViews"
+  ]
+ },
+ {
+  "event": "ondblclick",
+  "line": 22001,
+  "calls": [
+   "stopPropagation",
+   "startRenSmartViews"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22003,
+  "calls": [
+   "stopPropagation",
+   "showSmartViewCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22056,
+  "calls": [
+   "tagPickerApply",
+   "replace"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22066,
+  "calls": [
+   "tagPickerApply",
+   "replace"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 22080,
+  "calls": [
+   "tagPickerRender"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 22080,
+  "calls": [
+   "tagPickerApply",
+   "getElementById"
+  ]
+ },
+ {
+  "event": "onmousedown",
+  "line": 22080,
+  "calls": [
+   "stopPropagation"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22082,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22095,
+  "calls": [
+   "tagPickerApply",
+   "replace"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22105,
+  "calls": [
+   "tagPickerApply",
+   "replace"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22145,
+  "calls": [
+   "hideCtx",
+   "renameSfItem"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22146,
+  "calls": [
+   "moveSfItem"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22147,
+  "calls": [
+   "moveSfItem"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 22163,
+  "calls": [
+   "finRenameSfItem",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22165,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22166,
+  "calls": [
+   "finRenameSfItem",
+   "getElementById",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22184,
+  "calls": [
+   "openSfClrPicker"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22185,
+  "calls": [
+   "setSfItemColor"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22186,
+  "calls": [
+   "setSfItemBold"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22211,
+  "calls": [
+   "hideCtx",
+   "promptAddGlobalTag"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22213,
+  "calls": [
+   "hideCtx",
+   "renameTagSection"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22226,
+  "calls": [
+   "setTagSecColor"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22228,
+  "calls": [
+   "setTagSecColor"
+  ]
+ },
+ {
+  "event": "onblur",
+  "line": 22241,
+  "calls": [
+   "finRenTagSec"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 22242,
+  "calls": [
+   "finRenTagSec",
+   "renderTree"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 22256,
+  "calls": [
+   "addGlobalTag",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22258,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22259,
+  "calls": [
+   "addGlobalTag",
+   "getElementById",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22273,
+  "calls": [
+   "hideCtx",
+   "renameTag",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22275,
+  "calls": [
+   "hideCtx",
+   "deleteTag",
+   "esc"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22328,
+  "calls": [
+   "selTag",
+   "esc"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 22328,
+  "calls": [
+   "showTagCtx",
+   "esc"
+  ]
+ },
+ {
+  "event": "oncontextmenu",
+  "line": 22341,
+  "calls": [
+   "showTagSecCtx"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22342,
+  "calls": [
+   "toggleTagSection"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22346,
+  "calls": [
+   "stopPropagation",
+   "showTagSecCtx"
+  ]
+ },
+ {
+  "event": "onkeydown",
+  "line": 22356,
+  "calls": [
+   "finRenameArtTitle",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22358,
+  "calls": [
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22359,
+  "calls": [
+   "finRenameArtTitle",
+   "getElementById",
+   "closeModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22687,
+  "calls": [
+   "closeTheme"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22691,
+  "calls": [
+   "closeTheme"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22693,
+  "calls": [
+   "applyPreset"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22702,
+  "calls": [
+   "applyPreset"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22711,
+  "calls": [
+   "applyPreset"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22720,
+  "calls": [
+   "applyPreset"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22729,
+  "calls": [
+   "applyPreset"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 22740,
+  "calls": [
+   "setCustomColor"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 22741,
+  "calls": [
+   "setCustomColorHex"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 22744,
+  "calls": [
+   "setCustomColor"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 22745,
+  "calls": [
+   "setCustomColorHex"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 22748,
+  "calls": [
+   "setCustomColor"
+  ]
+ },
+ {
+  "event": "oninput",
+  "line": 22749,
+  "calls": [
+   "setCustomColorHex"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22753,
+  "calls": [
+   "setFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22755,
+  "calls": [
+   "setFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22759,
+  "calls": [
+   "setFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22761,
+  "calls": [
+   "setFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22765,
+  "calls": [
+   "setFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22767,
+  "calls": [
+   "setFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22771,
+  "calls": [
+   "setFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22773,
+  "calls": [
+   "setFontSize"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22774,
+  "calls": [
+   "resetFontSizes"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22774,
+  "calls": [
+   "resetTheme"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22777,
+  "calls": [
+   "closeTrash"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22782,
+  "calls": [
+   "emptyTrash"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22783,
+  "calls": [
+   "closeTrash"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22789,
+  "calls": [
+   "closeSyncModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22960,
+  "calls": [
+   "closeReminderModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22976,
+  "calls": [
+   "closeReminderModal"
+  ]
+ },
+ {
+  "event": "onclick",
+  "line": 22977,
+  "calls": [
+   "saveReminder"
+  ]
+ }
+]

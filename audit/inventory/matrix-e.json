@@ -1,0 +1,250 @@
+[
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "the calendar new-event form paints its fields",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "cef-title present"
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "saving a calendar event puts it in the model with its date",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "{\"t\":\"AUDIT EVENT\",\"d\":\"2026-02-28\"}"
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "editing an event changes it in place rather than adding a second one",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 event(s), title \"AUDIT EVENT EDITED\""
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "deleting an event removes exactly that event",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "0 events left"
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "the calendar paths are silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "a date survives the round trip on month ends, a leap day, a year end and both DST weekends",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "7 boundary dates, none shifted"
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "every month of a year renders without throwing",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "12 months"
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "the Murāja'ah scheduler never schedules a review in the past",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "the Murāja'ah interval never goes to zero or negative",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "a contact can be created in both free-text and structured modes",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "3 → 5 notes, modes form,text"
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "creating a contact builds the MyDatabase section and My Contacts folder it needs",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "section:true folder:true filed:true"
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "an action logged against a contact is stored on that contact and can be removed again",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 logged, 0 after delete"
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "the contact paths are silent",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "silent"
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "the starter MyDatabase folders can be created, each with its own field schema",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "7 folders in the MyDatabase section, 7 carrying fields"
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "every My Database preset applies without throwing (8 presets)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "custom:0f collect:0f ideas:0f plan:0f spend:0f log:0f ask:0f measure:0f"
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "every My Database report renders on an EMPTY folder (6 reports)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "none:0b table:0b breakdown:0b totals:0b status:0b timeline:0b"
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "the reminder dialog really opens (a fixed element, measured by size not offsetParent)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "a saved reminder carries its date, time and message into the model",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "{\"dt\":\"2026-09-23T09:30\",\"msg\":\"AUDIT REMINDER\"}"
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "a note with a reminder appears in the Reminders view",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "an overdue reminder is still listed rather than silently dropped",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "1 overdue"
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "reminders are listed soonest first",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "clearing a reminder removes it and leaves the note alone",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "adding a note to Murāja'ah enrols it due today with the standard first interval",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "\"remembered\" grows the interval",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "\"forgot\" resets to one day and the ease factor never falls below its floor",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "removing a note from Murāja'ah clears every field it added",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "In Practice carries three states and cycles cleanly between them",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "active:true done:true removed:true"
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "done notes sort after active ones in the In Practice view",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": "done"
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "none of the review paths ever removes a note (I1)",
+  "viewport": "desktop",
+  "status": "PASS",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "domain": "E calendar/journal/contacts/database",
+  "feature": "public-holiday lookup for the calendar",
+  "viewport": "—",
+  "status": "BLOCKED—ENVIRONMENT",
+  "ok": true,
+  "detail": "_loadCalHols() fetches a public holiday feed; every outbound host is denied by this sandbox and blocked deliberately by the harness. The failure PATH is covered — the calendar renders all twelve months with no holiday data at all."
+ },
+ {
+  "domain": "F reminders/review",
+  "feature": "a real notification actually firing for a due reminder",
+  "viewport": "—",
+  "status": "BLOCKED—ENVIRONMENT",
+  "ok": true,
+  "detail": "Notifications need a granted permission and a real service-worker registration on a real origin. The stored reminder, its states and its ordering are measured above; the delivery is not, and is not reported as if it were."
+ }
+]

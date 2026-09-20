@@ -7,8 +7,9 @@
      firestore.strict.rules    the over-validated variant, kept as evidence
 
    The sync tests are not mock-ups: _writeCloudDB / _readCloudDB below are
-   transcribed from index.html (v04.34, lines 19860-19906) so that what the
-   emulator sees is what the application sends, batch shape included.
+   transcribed from index.html (v04.38 candidate f891b52, lines 20716-20758)
+   so that what the emulator sees is what the application sends, batch shape
+   included.
 
    Run:  npm test          (from audit/firestore-rules/)
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -39,10 +40,13 @@ const ROOT = join(HERE, '..');
    publishing. A real Firebase UID is 28 characters; so is this. */
 const OWNER_UID   = 'ownerUid00000000000000000000';
 const STRANGER    = 'strangerUid000000000000000000';
-/* The live notebook's id really is of this shape — index.html carries a
-   captured copy of the owner's sync modal at line 21909. It is deliberately
-   NOT the owner's UID: that is the whole reason the rules pin a UID. */
-const NB          = 'nb-msrzuilt-gghlh5';
+/* A SYNTHETIC notebook id, in the exact shape generateNotebookId() produces
+   ('nb-' + base36 ms + '-' + 6 random base36 chars). The owner's real id is
+   deliberately NOT reproduced here: under the rule that is live today it is
+   the only thing between a signed-in stranger and the notebook, and this is a
+   public repository. The shape is what the rules must accommodate; the value
+   is not. It is deliberately NOT a UID — that is the whole reason for § 3. */
+const NB          = 'nb-mtest000-fixt01';
 const NB_AS_UID   = OWNER_UID;   /* the alternative doc id, if ever adopted */
 
 /* ── reporting ──────────────────────────────────────────────────────────── */
@@ -63,7 +67,7 @@ const SYNC_CHUNK = 900000;
 const b64enc = (s) => Buffer.from(s, 'utf8').toString('base64');
 const b64dec = (s) => Buffer.from(s, 'base64').toString('utf8');
 
-/* index.html:19896 — _writeCloudDB(). Two batches: the payload, then the
+/* index.html:20750 — _writeCloudDB(). Two batches: the payload, then the
    unconditional delete of the tail chunks n … n+9. */
 async function writeCloudDB(db, nbId, now, b64) {
   const nb = doc(db, 'notebooks', nbId);
@@ -82,10 +86,10 @@ async function writeCloudDB(db, nbId, now, b64) {
   return n;
 }
 
-/* index.html:19863 — _readCloudDB(). */
+/* index.html:20716 — _readCloudDB(). */
 async function readCloudDB(db, nbId, md) {
   if (!md) return null;
-  if (md.n == null && md.db) { try { return JSON.parse(md.db); } catch { return null; } }
+  if (md.n == null && md.db) { try { return JSON.parse(md.db); } catch { return null; } }   /* index.html:20718 */
   const n = md.n; if (!n) return null;
   const ver = md.ver;
   const snaps = await Promise.all(Array.from({ length: n }, (_, i) =>
@@ -382,10 +386,10 @@ const head = [
   `node              ${process.version}`,
   `emulator          Firestore emulator via firebase-tools ${await ver('firebase-tools')}, 127.0.0.1:8080`,
   `client sdk        firebase ${await ver('firebase')} / @firebase/rules-unit-testing ${await ver('@firebase/rules-unit-testing')}`,
-  `app under test    index.html v04.34  +  legacy/v03.99 (identical paths)`,
+  `app under test    index.html v04.38 (candidate f891b52) + legacy/v03.99 (identical paths)`,
   `rulesets          firestore.current.rules | firestore.rules | firestore.strict.rules`,
   `owner fixture     ${OWNER_UID}`,
-  `notebook id       ${NB}   (deliberately NOT a UID — see PATHS.md § 3)`,
+  `notebook id       ${NB}   (synthetic, real shape, deliberately NOT a UID — see PATHS.md § 3)`,
 ];
 const tail = ['', '='.repeat(72), `${pass} passed, ${fail} failed`, ''];
 const out = [...head, ...log, ...tail].join('\n');

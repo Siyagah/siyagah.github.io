@@ -1,0 +1,21 @@
+
+=== D1: Restore when the undo copy cannot be written ===
+  notes in DB      : 1 -> 1
+  notes in storage : 1 -> 1
+  cloud pushes     : 0
+  threw            : a safety copy of what you have now could not be made (this browser would not open the safety store: Error: denied by policy), so nothing was changed
+  VERDICT          : HELD — nothing changed
+
+=== D2: read-back bytes changed, metadata intact ===
+  save reported ok : false
+  error            : the safety copy read back differently from what was written
+  VERDICT          : HELD — the copy was refused
+
+console errors: none
+
+=== D3: successful restore, then restore the undo ===
+  3 notes -> damaged to 1 -> restored to 3 -> undo restored to 1 (1 in storage)
+  undo copy reported verified: true · listed: true
+  VERDICT: HELD — the undo round-trips
+
+console errors: none
