@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.42.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.43.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,36 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.43** (21 Sep 2026) — three lessons about running the builder,
+  written down. No app change; `ARCHITECT.md` only, plus the version bump the
+  rule requires (I5). v04.42 was correct on its first attempt and still cost
+  three builder runs, none of them about what was being built. **A run can
+  report `success` and leave nothing behind** — three did, twelve to fifteen
+  minutes each, `num_turns` far short of the 250 limit, no commit and no
+  branch, because the builder ended its own turn part-way down its checklist;
+  step 3 of the loop now says to look at the branch and the PR, never at the
+  green tick. **Push before measuring, and say so in the issue** — a new
+  section, *Writing an issue the builder can finish*, puts the order
+  (implement → bump and changelog → push → checks → push → verify → push →
+  PR) and "if you run short, push what you have and say where you stopped"
+  into every issue; it also says to write **one** stash and **one** run
+  rather than "each new assertion", which reads as one full two-minute
+  `app-check` per assertion, and to report a new check that passes even while
+  stashed instead of deleting it. **When the builder stops at the same step
+  twice, take that step off it rather than say it louder** — all three stops
+  were at the same unpatched-code verification; the third attempt was given
+  four numbered steps with "push" as step 3 and "do not verify, I will", and
+  finished. That is not a lowered standard when the step is a measurement,
+  because the Architect re-runs it in review anyway, and did (293/299, the
+  six expected failures, recorded on the PR before merging). And the one that
+  started it: **a "not done" recorded in a round is backlog work nobody has
+  written down** — v04.40 filed `theme.custom` in a changelog entry and
+  nowhere else, the backlog read *empty* through all of v04.41, and the real
+  gap was every object-valued theme key. Three items now filed properly, one
+  marked a watch item and not work. Not done: no way yet to run one section
+  of `app-check`, so a round pays for all 299 twice — filed with "measure
+  first" rather than built. D5 does not apply. 11/11 ship checks, 299/299 app
+  checks (`index.html`'s version string changed, so it was re-run in full).
 - **v04.42** (21 Sep 2026) — a theme setting inside a sub-object still does
   not sync between devices. v04.40 resolved `DB.theme` per top-level key
   against `DB.themeAt` and recorded one gap: `theme.custom` merges as one
@@ -130,23 +160,6 @@ must never accumulate here instead of there.
   app checks 266 → 284 (18 new, driven by a real `filechooser` file pick,
   real Escape/backdrop/click events, and `localStorage` read-backs, never a
   JS variable).
-- **v04.38** (21 Sep 2026) — ship-check's "nothing to bump" is blind to a new
-  file. No app change beyond the version string. `tools/ship-check.mjs`'s
-  version-bump check asked "did anything change" with `git diff --name-only
-  origin/main` alone, and `git diff` never lists untracked files — so a round
-  whose entire deliverable is a NEW file (`ARCHITECT.md` in v04.37, any new
-  `tools/*.mjs`, a new icon) read "nothing changed yet — nothing to bump" and
-  passed with the version unbumped, the one check standing between that round
-  and I5. Measured on a clean `origin/main` checkout at v04.37: one untracked
-  file, still 11/11, exit 0. The check now unions `git diff --name-only
-  origin/main` with `git ls-files --others --exclude-standard`, which
-  respects `.gitignore` on its own, so `tools/shots/` and `node_modules/`
-  stay invisible — verified, not assumed. A genuinely clean tree still passes,
-  now saying so plainly rather than "nothing to bump". The trap is recorded in
-  `tools/README.md`, where harness traps live; the `ARCHITECT.md` backlog item
-  open since v04.35 is ticked. D5 does not apply — no markup, CSS or app
-  JavaScript touched. 11/11 ship checks, 266/266 app checks (`index.html`'s
-  version string changed, so it was re-run in full).
 ---
 
 ## What this is

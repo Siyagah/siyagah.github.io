@@ -3665,3 +3665,77 @@ Patched: **299/299 (295 → 299, 4 new)**. Unpatched-code verification of the
 four stamping checks recorded by the Architect on the PR.
 
 11/11 ship checks.
+
+---
+
+## v04.43 — three lessons about running the builder, written down (21 Sep 2026)
+
+No app change. `ARCHITECT.md` only, plus the version bump the rule requires
+(I5 — `sw.js`'s cache name is the only thing that evicts a stale build, so a
+docs-only round bumps too).
+
+v04.42 cost three builder runs to ship a change that was correct on the
+first attempt. None of the three failures were about what was being built.
+All three were about how the round was run, and none of the three lessons
+was written anywhere.
+
+### The builder can report `success` and leave nothing behind
+
+Three runs ended with `conclusion: success`, twelve to fifteen minutes spent,
+`num_turns` nowhere near the 250 limit — and no commit, no branch, no PR.
+The builder ended its own turn part-way down its checklist each time. The
+Architect had been treating the green tick as evidence a round happened; it
+is not. `ARCHITECT.md` step 3 now says to look at the branch, the commits and
+the PR, and never at the conclusion.
+
+### Push before measuring, and say so in the issue
+
+The first run's work was lost because nothing in the spec told it to commit
+before the slow part. The second attempt was given an explicit order of work
+— implement → bump and changelog → **push** → checks → **push** → verify →
+**push** → PR — and lost nothing. That order, and the sentence *"if you run
+short of time or turns, push what you have and say where you stopped"*, now
+belong in **every** issue the Architect writes, under a new section,
+*Writing an issue the builder can finish*.
+
+### When it stops at the same step twice, take the step off it
+
+All three stops were at the same place: the unpatched-code verification, a
+second full `app-check` run. Restating the instruction louder spent another
+run. The third attempt was given four numbered steps with "push" as step 3
+and *"do not run the verification — I will run it myself"*, and it finished.
+This is not a lowered standard when the step is a **measurement**: the
+Architect re-runs it in review anyway, and did — 293/299 with the six
+expected failures, recorded on the PR before merging. Also recorded: the
+builder's real tool list, since two of its calls were refused for using a
+bare `Bash(cat …)` and each refusal costs a turn.
+
+### And the one that started it
+
+`Keeping the builder busy` now says that **a "not done" recorded in a round
+is backlog work nobody has written down**. Every round says what it did not
+do; saying it in a `CHANGELOG.md` entry files it nowhere. v04.40 recorded
+`theme.custom` as not done, the Architect's backlog read *empty* through the
+whole of v04.41, and when the entry was finally read the gap was far wider
+than the one key named — every object-valued theme key. A backlog that says
+"empty" while a known defect sits in a changelog entry is worse than no
+backlog, because it ends the work. Three items are now filed there properly,
+including one marked explicitly as a watch item and not work.
+
+### Not done
+
+- The harness still has no way to run one section of `app-check`, so proving
+  a round's own new checks means paying for all 299 twice. Filed on the
+  backlog with "measure first" attached, not built — the saving might not be
+  worth the complexity, and that is a measurement nobody has taken.
+
+### D5
+
+Does not apply — no markup, CSS or app JavaScript touched. `index.html`
+changed only in its two version strings.
+
+### Measured
+
+11/11 ship checks, 299/299 app checks. `index.html` changed — only its two
+version strings, but v04.38's rule is that a changed `index.html` gets the
+full run, so it got one rather than an argument for skipping it.
