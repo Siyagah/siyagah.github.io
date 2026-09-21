@@ -2889,21 +2889,34 @@ started run `35560474931`, a bot triggering itself.
 event type it listens to (`issues`, `issue_comment`,
 `pull_request_review_comment`, `pull_request_review`):
 
-1. **the trigger text** — `@claude` in the issue body/title, the comment
-   body, or the review body, matching the event that fired (unchanged from
-   v04.35);
-2. **`github.event.sender.type != 'Bot'`** — blocks any GitHub App or bot
+1. **`github.event.sender.type != 'Bot'`** — blocks any GitHub App or bot
    account from starting a run, including the builder replying to its own
    issue or PR;
-3. **`author_association` is `OWNER`, `MEMBER` or `COLLABORATOR`** — read
-   from `github.event.issue`, `github.event.comment` or `github.event.review`
-   depending on the event, so only someone with real standing on the repo
-   can trigger a run, not any account that can merely open an issue or leave
-   a comment.
+2. **`github.event.sender.login == 'AAAsapp'`** — the run must be started by
+   the owner's own account;
+3. **the trigger text** — `@claude` in the issue body/title, the comment
+   body, or the review body, matching the event that fired (unchanged from
+   v04.35).
+
+**`author_association` was considered for guard 2 and dropped.** Testing it
+for `OWNER`/`MEMBER`/`COLLABORATOR` is the obvious-looking gate and the wrong
+one: GitHub reports members of a **private** org as `CONTRIBUTOR` or `NONE`,
+so that test would have locked the owner out of their own builder. Matching
+the sender's login directly cannot misreport.
 
 The header comment above the `on:` block now states in plain language where
 each of the three guards lives, instead of describing a gate that was never
 actually coded.
+
+### Applied by the owner, not the builder
+
+The Action's builder could not push this file. The Claude GitHub App's
+installation has no `workflows` scope, so GitHub rejects any push from its
+token that touches `.github/workflows/**` — the builder reverted the file to
+get the rest of the round pushed (`6405aea`) and put the intended change in
+the PR body. It was applied from the owner's Claude Code web session, which
+pushes with different credentials. Recorded in `CLAUDE.md` under *The
+Architect loop*.
 
 ### Standing lesson
 
