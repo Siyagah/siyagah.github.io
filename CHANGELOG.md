@@ -3237,3 +3237,193 @@ and let it fall through to a no-op close; and never print a success message
 for a write that was not read back and compared, because the sentence
 "a copy was kept" is the one people act on later, when it is too late to
 find out it was never true.
+
+---
+
+## v04.40 — mergeDB silently drops every top-level key it was not told about (21 Sep 2026)
+
+An app round, in `mergeDB()`. Found by the owner's audit of PR #41 against
+`main` — that PR's own finding (a lost `_salvage` key) doesn't exist on this
+code, but the mechanism underneath is real and was measured in a booted
+browser at v04.38.
+
+### The defect
+
+`mergeDB(local, remote)` opens with `const out=Object.assign({},local)`, then
+resolves a named list of keys against `remote` — articles, folders, sections,
+trash, tombstones, tags, tab groups, and a handful more. Everything on that
+list gets a real merge. **Everything not on it keeps `local`'s value
+unconditionally**, because `Object.assign` already put it there and nothing
+ever looks at `remote`'s copy again.
+
+Of a live `DB`'s 20 top-level keys, 19 were on the list. `theme` was not.
+Confirmed by calling the real `mergeDB()` with a note and a settings change
+both made on one device: the note merged correctly (I1 was never at risk),
+but the other device's theme change was discarded in **both** call
+directions — whichever side was passed as `local` kept its own settings,
+always, regardless of which one had actually changed more recently. That is
+an I2 gap, not an I1 one: a preference set on the phone never reaches the
+laptop, or the reverse, and it stays wrong forever because nothing about it
+looks like an error — no throw, no dropped note, just a setting that quietly
+never travels.
+
+`CLAUDE.md` also said the wrong thing about it: "`DB.theme` is a free-form
+bag — new settings ride the existing localStorage / file-export / Firestore
+plumbing with nothing new to add." True for the first two. False for
+Firestore, for as long as `mergeDB` has had an allow-list — every setting
+ever added to `theme` inherited this silently.
+
+### The fix
+
+**`mergeDB()`** now resolves `theme` the same way it already resolved
+`tagColors` — a per-key merge against a companion stamp map, `DB.themeAt`,
+via the existing `_mergeValMap()` / `_mergeStampMap()` helpers (no second
+mechanism invented). Per-KEY of `theme`, not the whole object as one blob:
+two devices changing two different settings — a preset on one, a font size
+on the other — now both survive a merge, which a whole-object swap could
+never do. An unstamped key (every notebook that predates this round; nothing
+in `theme` has ever carried a timestamp) ties at 0 against anything, and
+`_mergeValMap` keeps `local`'s value on a tie — so the very first merge after
+upgrading cannot blank a device's existing settings just because neither
+side has stamps yet. Nothing about `theme`'s existing shape changes, so
+there is nothing to back up the way `DB._tabsV1` backs up the old tab shape
+(I8) — `themeAt` is new, additive metadata sitting beside it, not a
+replacement for anything.
+
+**Where do the stamps come from?** `DB.theme` is written from roughly sixty
+scattered call sites — a colour picker, a font-size slider, a dozen small
+per-feature toggles — never through one setter a stamp could be bolted onto.
+Routing all sixty through a new setter was the literal reading of "find
+where it's assigned and make that the one place", but with that many sites
+the real risk moves to the *next* one: a future call site that writes
+`DB.theme.foo=val` directly and never learns it was supposed to call a
+setter would silently reintroduce this exact bug for one key at a time,
+and nothing would fail to say so. Instead, a new `_stampThemeTouches()`
+diffs `DB.theme` against a snapshot taken the last time it ran, every time
+`_save()` or `_doPush()` runs — the one place **every** write already
+funnels through today (the sole `localStorage.setItem(SK,…)` in the app) and
+the one place a brand new setting tomorrow will *also* have to funnel
+through to be saved at all. Only keys whose value actually changed get
+`DB.themeAt[key]=Date.now()`; nothing else does, so an untouched setting is
+never falsely re-stamped into looking like a fresh edit that could beat a
+genuinely newer one from another device.
+
+Two edges of that got caught in build, both the same class of mistake
+v03.92.02 already paid for once (there, flushing an idle editor *after* a
+merge re-committed stale text over what the merge had just decided):
+
+- The very first `_save()` after a fresh page load would otherwise diff
+  against *nothing*, which reads as "every key just changed" and stamps the
+  whole notebook's settings with the boot timestamp — an untouched setting
+  would then wrongly outrank a real edit made on another device minutes
+  earlier. The first call now only seeds the snapshot and stamps nothing;
+  there is no prior state in this session to compare against.
+- After `DB=mergeDB(DB, remoteDB)` (both `syncNow()` and the background
+  reconcile path), the merge has *already* produced the correct per-key
+  stamps. Without an explicit reseed, the next `_save()` would diff the
+  merged theme against the **pre-merge** snapshot, see the keys mergeDB just
+  resolved from the remote side as "changed", and re-stamp them with a fresh
+  local `Date.now()` — silently overwriting an honest remote timestamp with
+  a fabricated local one. Both merge call sites now call `_seedThemeSnap()`
+  immediately after reassigning `DB`, before their own `_save()` can run.
+- `_doPush()` builds its own `json = JSON.stringify(DB)` and reuses that
+  exact string for both the local save and the cloud write, to avoid
+  serialising twice. Stamping only inside `_save()` would have stamped `DB`
+  *after* that string was already built — the value pushed to the cloud
+  would be right, its timestamp would not, and a later merge would treat a
+  just-made edit as older than it is. `_stampThemeTouches()` is called in
+  `_doPush()` before `json` is built; the call inside `_save()` is then a
+  harmless no-op for the same change.
+
+**Any top-level key present on `remote` and absent from `out` entirely** —
+data written by a build newer than whatever this device is running — is now
+copied over at the end of `mergeDB()`, `if(!(k in out)) out[k]=remote[k]`.
+Every key already named above, and every key already present on `local`,
+is untouched by this line; it only rescues a key **neither** side's existing
+rules ever look at. The standing lesson below is what this line is for.
+
+**`CLAUDE.md`** now says Firestore sync is the exception to "nothing new to
+add" — a new setting needs no special plumbing of its own, it only needs to
+actually reach `_save()`/`persist()` like every other write already does.
+
+### Not done
+
+- Theme changes made through the theme modal (`applyPreset`, `setCustomColor`,
+  `resetTheme`) still have **no explicit `persist()` call of their own** —
+  that was already true before this round, is unrelated to the I2 gap this
+  issue is about, and is unchanged by it. They reach `_save()`/the cloud
+  push at the same points every other unsaved change already does (tab
+  hidden, page hide, or any other action that calls `persist()`), just as
+  before. What was broken — and is now fixed — is what happens once that
+  save actually runs.
+- `theme.custom` (the colour-picker's own sub-object: sidebar/accent/bg/
+  search-result colour) is merged as **one** key, on one stamp, matching
+  "per key inside theme" as the issue scoped it. Two devices changing two
+  *different* custom colours in the same sync window will not both survive —
+  one whole `custom` blob wins. Every other theme setting (preset, fonts,
+  line spacing, ToC width, the calendar/journal prefs, quick-capture folder,
+  templates, quick phrases, and the rest) is its own independent key and
+  does not have this limitation. Deeper per-swatch merging inside `custom`
+  would be a reasonable follow-up if two devices routinely recolour
+  different swatches between syncs, but nothing in this issue asked for it
+  and it was not built speculatively.
+
+### D5
+
+Data-only round — `mergeDB()` runs identically regardless of screen size,
+and nothing about this fix has a visual surface. Nothing platform-specific
+to build. `app-check` still ran in full, at all three viewports, because
+this round's code executes on every one of them.
+
+### Measured
+
+Five new checks beside the existing `mergeDB()` ones, calling the real
+function with realistic shapes (a plain object for `theme`, not a string —
+the probe that reported `sfItems`/`tabs`/`tagColors`/`uiAt` as "dropped" in
+the original audit was feeding them the wrong shape, not finding a second
+bug):
+
+- a settings change on the remote side reaches the merged result — **fails
+  on unpatched `mergeDB()`, passes after**;
+- the same call structure with local holding the newer edit — passes both
+  before and after, confirming the fix does not just flip which side always
+  wins;
+- two different settings changed on two different devices both survive one
+  merge (preset from one side, `fonts.global` from the other) — **fails on
+  unpatched code**, which can only ever keep one side's `theme` in full;
+- a `theme`/`themeAt` pair with no stamps at all (an upgrading notebook)
+  keeps its own settings through a merge against an equally-unstamped
+  remote — passed even before this round, by the same "local always wins"
+  bug that broke the sync case; kept as a real regression guard, not
+  claimed as newly fixed;
+- an unknown top-level key present only on `remote` reaches the merged
+  result — **fails on unpatched code** (nothing copied it at all).
+
+Confirmed by literally reverting the `index.html`/`sw.js`/`CLAUDE.md` changes
+(`git stash`) and re-running: 3 of the 5 new checks failed on today's `main`,
+exactly the three called out above; all 5 pass on the finished code. The
+existing "mergeDB never drops a side" and "newest edit wins" checks (§8–9)
+were re-run unchanged and still pass — this round did not touch, and does
+not weaken, the notes/folders/sections merge path.
+
+11/11 ship checks. App checks: 284 → 289 (5 new — `index.html`'s version
+string changed, so the whole suite reran, not just the new section). All 289
+passed on the finished code.
+
+### Standing lesson
+
+**An allow-list merge is a list that is correct until the next key, and
+nothing fails when it is wrong.** `mergeDB()` had named 19 of `DB`'s 20
+top-level keys across a dozen rounds of "oh, and this one too" — sfItems in
+v03.81, tagColors and folderGroups the same round, the five `uiAt` scalars
+in v03.82, tab groups in v03.77 — each one added because somebody noticed
+the specific key was missing, never because something CAUGHT a key being
+missing. `theme` sat unmerged through every one of those rounds, silently,
+because an allow-list only ever grows by someone remembering to extend it,
+and a forgotten key doesn't throw, doesn't fail a test that isn't looking
+for it, and doesn't even look wrong in a screenshot — it looks like the
+device's own settings, because that is exactly what it is. The fix is not
+"remember better next time" — it is the one line at the end of `mergeDB()`
+that copies over anything `remote` has that `out` doesn't: a general answer
+to "what did we forget to name", not a specific one to "we forgot `theme`".
+The next key this happens to will not need a round of its own to be found.
