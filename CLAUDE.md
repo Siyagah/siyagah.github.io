@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.35.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.36.** Live at `siyagah.github.io`, served from `main`.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +12,19 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.36** (20 Sep 2026) — close the trigger gate. No app change. v04.35's
+  `if:` only checked for the text `@claude`; anything that could post a
+  comment containing that word could start the builder, including the
+  builder's own PR/issue comments — and one did, run `35560474931`, the round
+  after v04.35 had told the owner "bots cannot" trigger it. The `if:` in
+  `.github/workflows/claude.yml` now requires all three: `@claude` in the
+  triggering text (per event type, as before); `github.event.sender.type !=
+  'Bot'`; and `author_association` of the comment/review/issue being `OWNER`,
+  `MEMBER` or `COLLABORATOR`. The header comment says exactly where each
+  guard lives. Also recorded: the `CLAUDE_CODE_OAUTH_TOKEN` secret and the
+  Claude GitHub App, both flagged "Not done" in v04.35, were confirmed in
+  place on 20 Sep 2026 — test issue #43 answered at v04.35. 11/11 ship checks;
+  no app code touched, so `app-check` was not re-run.
 - **v04.35** (20 Sep 2026) — the Architect loop. No app change. A
   `@claude` issue now starts the builder on a GitHub runner
   (`.github/workflows/claude.yml`, Playwright + Chromium installed there);
@@ -86,24 +99,6 @@ must never accumulate here instead of there.
   event again, the v04.12 defect verbatim, measured dead on `origin/main`
   before anything was touched. 236/236 app checks (up from 219) and 11/11
   ship checks.
-- **v04.31** (12 Sep 2026) — three questions off one screenshot of the phone's
-  read bar. **🏠 vs 📁**: they do land in the same place (`goHome()` ends on
-  `showPane('sb')`, `backFromP3()` is only that call) — and v04.23 had already
-  taken 🏠 off the phone's EDIT bar for this reason and left the read bar
-  alone, which is why the question came back. 🏠 goes; **📁 stays**, because it
-  keeps your place where 🏠 clears the search, tag, type and folder, and the
-  pane it lands on carries 📚 Siyagah, which IS `goHome()`. Home is a named row
-  in the `⋯` card. **"General"** was a value with nothing saying what it was
-  the value of: the chips carry **`TYPE`** now, written once in `kindBarHTML()`
-  so the bar, the 🏷 card and the tablet's edit row cannot disagree (the label
-  costs ~34px on a self-measuring row; 🏠 leaving freed 44, so the chip has
-  more headroom than before, not less). And the **`⋯` card's bottom row** —
-  `⋯ More — copy, archive, delete…`, a tap spent to find out what was under it
-  — is spread open: **GO TO / THIS NOTE / MORE**, with Rename, Make a copy,
-  History and Archive as rows, and the last row NAMING what is left
-  (`⋯ All actions · tags, folders, reminders, pin, delete`). 🗑 Delete stays
-  one tap further in, as v04.11 decided. 219/219 app checks (up from 213) and
-  11/11 ship checks.
 ---
 
 ## What this is
@@ -556,3 +551,13 @@ traps belong in `tools/README.md`, not here.)*
   the first heading" rule shipped and then silently stopped firing the moment
   the chrome arrived, and instead split headings into stray `⠿▼` orphans.
   Nobody noticed for a whole version series. Found in v04.07.
+- **A trigger guard is only a guard if it is in the `if:`.** v04.35's header
+  comment claimed "bots cannot" trigger the builder, but nothing in the
+  workflow's `if:` checked who or what had posted the triggering text — only
+  whether it contained `@claude`. The claim was false the round it was
+  written: the builder's own reply started run `35560474931`. A rule described
+  in a comment, a brief, or a changelog entry constrains nothing; only a
+  condition actually evaluated by the runner does. Cost: one round shipped
+  believing a gate existed that had never been coded. Fixed in v04.36, which
+  put `github.event.sender.type != 'Bot'` and an `author_association` check
+  into the `if:` itself.

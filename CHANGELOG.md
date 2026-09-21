@@ -2859,3 +2859,58 @@ and `ship-check` compares the whole repo, docs and workflows included.
   the **Claude GitHub App** installed on the repo; both are owner-only steps
   on GitHub and cannot be done from a commit.
 - `app-check` was not re-run: no app code changed. `ship-check` passes.
+
+---
+
+## v04.36 — close the trigger gate (20 Sep 2026)
+
+**No change to the app.** The number moves only because every round bumps
+(I5).
+
+### What was confirmed
+
+v04.35 listed the **`CLAUDE_CODE_OAUTH_TOKEN`** secret and the **Claude
+GitHub App** installation as "Not done" — owner-only steps it could not do
+from a commit. Both were confirmed in place on 20 Sep 2026: test issue #43
+was opened and answered, by the v04.35 build. This supersedes that "Not
+done" entry; nothing further is owed there.
+
+### What was wrong
+
+v04.35's header comment claimed bots could not trigger the builder. Nothing
+enforced that: the job's `if:` checked only whether the triggering text
+contained `@claude`, with no check of who — or what — had posted it. The
+claim was false the same round it was written — the builder's own reply
+started run `35560474931`, a bot triggering itself.
+
+### The fix
+
+`.github/workflows/claude.yml`'s `if:` now requires all three, for every
+event type it listens to (`issues`, `issue_comment`,
+`pull_request_review_comment`, `pull_request_review`):
+
+1. **the trigger text** — `@claude` in the issue body/title, the comment
+   body, or the review body, matching the event that fired (unchanged from
+   v04.35);
+2. **`github.event.sender.type != 'Bot'`** — blocks any GitHub App or bot
+   account from starting a run, including the builder replying to its own
+   issue or PR;
+3. **`author_association` is `OWNER`, `MEMBER` or `COLLABORATOR`** — read
+   from `github.event.issue`, `github.event.comment` or `github.event.review`
+   depending on the event, so only someone with real standing on the repo
+   can trigger a run, not any account that can merely open an issue or leave
+   a comment.
+
+The header comment above the `on:` block now states in plain language where
+each of the three guards lives, instead of describing a gate that was never
+actually coded.
+
+### Standing lesson
+
+Recorded in `CLAUDE.md`: **a trigger guard is only a guard if it is in the
+`if:`.** A claim in a comment, a brief, or a changelog constrains nothing by
+itself.
+
+### Measured
+
+11/11 ship checks. No app code touched, so `app-check` was not re-run.
