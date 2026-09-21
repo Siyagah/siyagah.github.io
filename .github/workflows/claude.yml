@@ -2,8 +2,16 @@ name: Builder (Claude Code)
 
 # The Architect opens an issue or comments with "@claude" -> this job wakes
 # Claude Code on a GitHub runner, which builds the round on a branch, runs the
-# checks, and opens a pull request. Only people with write access to the repo
-# can trigger it, and bots cannot, so it cannot loop on its own comments.
+# checks, and opens a pull request.
+#
+# THREE GUARDS, all in the job's if: below, and all required to start a run:
+#   1. No bots. github.event.sender.type != 'Bot', so the builder's own
+#      replies cannot start another run. One did, in v04.35: run 35560474931.
+#   2. Sender must be the owner. github.event.sender.login == 'AAAsapp'.
+#   3. "@claude" in the triggering text, matched against the event that fired.
+#
+# author_association is deliberately NOT one of them: GitHub reports private
+# org members as CONTRIBUTOR or NONE, which would lock the owner out.
 
 on:
   issues:
@@ -23,10 +31,14 @@ concurrency:
 jobs:
   build:
     if: |
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+      github.event.sender.type != 'Bot' &&
+      github.event.sender.login == 'AAAsapp' &&
+      (
+        (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))) ||
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
