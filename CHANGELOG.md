@@ -3886,8 +3886,12 @@ at 390×844, 820×1180 and 1440×900.
 - all three layouts: the indicator and the storage rows are on screen and
   ≥44px tall where required.
 
-11/11 ship checks. App checks: 299 → &lt;pending&gt; (&lt;N&gt; new).
-Unpatched-code verification: one `git stash` of this round's `index.html`/
-`sw.js` change, one `app-check` run — &lt;pending&gt; of the new checks
-failed against v04.43, confirming they test the actual fix rather than
-something already true.
+A pre-existing regression check from v04.21 (`every action the two menus
+had in v04.20 is still on one of them` — a frozen allow-list of every
+`onclick` handler in 🧰 Tools and ⚙ Settings) failed the moment `#save-lbl`
+gained its own `onclick`, the one genuinely new menu action this round
+adds. Extended in place with the reason recorded, per the standing rule —
+not deleted, not worked around.
+
+11/11 ship checks. App checks: 299 → 322 (23 new). Unpatched-code
+verification below.

@@ -3214,9 +3214,13 @@ function _save(pre){
        _lsFail is true. The full explanation (openStorageWarnDetails(), near
        _storageSectionHTML()) only opens when the owner taps one of those,
        never on its own. */
+    const wasFailing = _lsFail;
+    _lsFail = true;
+    /* _lsFail has to flip BEFORE updateSaveUI() runs, or the very first
+       failure of the session \u2014 the one time this matters most \u2014 renders
+       with the old, not-yet-failing state and shows nothing. */
     try{ _fileDirty = true; updateSaveUI(); }catch(_){}
-    if(!_lsFail){
-      _lsFail = true;
+    if(!wasFailing){
       try{
         toast(quota
           ? '\u26a0 Browser storage is FULL \u2014 changes are not being saved on this device. Tap the \u26a0 badge near \ud83e\uddf0 for details.'

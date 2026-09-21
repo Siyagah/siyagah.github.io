@@ -52,8 +52,12 @@ must never accumulate here instead of there.
   at 💾 Save File and says shrinking the notebook is a further round. D5: the
   interactive rows reuse `.imp-acts` (unconditional 44px, all three
   layouts); the ⚠ badge is fixed on all three, sized up slightly under
-  1200px to match the header's own larger touch targets there. 11/11 ship
-  checks, app checks 299 → 305 (6 new).
+  1200px to match the header's own larger touch targets there. A pre-
+  existing v04.21 regression check (every menu action against a frozen
+  baseline) had to be extended for the one genuinely new action, `#save-lbl`
+  becoming tappable — recorded in place, not worked around. 11/11 ship
+  checks, app checks 299 → 322 (23 new), confirmed failing against unpatched
+  `main` via one `git stash` and one rerun before shipping.
 - **v04.43** (21 Sep 2026) — three lessons about running the builder,
   written down. No app change; `ARCHITECT.md` only, plus the version bump the
   rule requires (I5). v04.42 was correct on its first attempt and still cost
