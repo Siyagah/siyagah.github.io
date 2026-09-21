@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.44.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.45.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -412,6 +412,24 @@ traps belong in `tools/README.md`, not here.)*
   not do; "the menus are packed now" was true of three menus out of four for
   three rounds. Cost: reported by the owner in v04.32, three rounds after the
   rule was set.
+- **A check that opens a surface by calling its function proves nothing
+  about whether the owner can reach it.** `⚙ Backup & Restore` — the panel
+  holding Export JSON, Import JSON and v04.39's `↩ Restore last recovery
+  copy` — had **zero** call sites for `openModal('settings')` anywhere in
+  the app. No button, no menu item, no shortcut. v04.39 therefore shipped
+  its whole recovery-restore feature **unreachable**, and its `CHANGELOG.md`
+  entry recorded it as delivered; five rounds passed before an unrelated
+  round tripped over it. `app-check` had a section covering that modal and
+  it passed the entire time, because it opened the modal the only way
+  nothing else could — by calling `openModal('settings')` directly. This is
+  the twin of "a surface no check has ever opened is a surface with no
+  checks": the surface HAD a check, and the check had no path to it. When a
+  round adds to a panel, dialog or menu, prove the owner can GET there —
+  click the real control from a booted app, or assert the control exists —
+  before measuring anything inside it. And when a feature is announced as
+  shipped, the announcement means reachable. Cost: one dead feature for five
+  rounds, found only because v04.44 needed to put something in the same
+  panel. Fixed in v04.44; the lesson recorded in v04.45.
 - **A menu is anchored to its button, and the button is not in the middle of
   the screen.** Both header dropdowns are `right:0` on a wrap that sits near
   the LEFT edge of the sidebar, so widening the Tools menu to 238px hung it

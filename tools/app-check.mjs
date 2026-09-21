@@ -4226,6 +4226,24 @@ for (const vp of VIEWPORTS) {
    drives the real indicator/modal/remove flow with real clicks, reading
    localStorage back rather than trusting a JS variable. */
 const BIG_NOTE_CONTENT = '<p>' + 'x'.repeat(6_000_000) + '</p>';
+/* v04.45 — tapping or waiting for an element THIS ROUND introduced must not
+   abort the suite when it is absent. Playwright's click()/waitForSelector()
+   throw after a 30s default, and one throw here ends all 322 checks with no
+   report at all — which is exactly what happened when v04.44's checks were
+   run against main's index.html to verify they were meaningful: the run died
+   at the first missing badge and reported nothing. These wait briefly and
+   return false instead, so the check that follows FAILS and the rest of the
+   suite still runs. Never use these for an element that predates the round
+   being verified — there, a missing element IS a real error. */
+async function tapIfPresent(page, sel, timeout = 4000) {
+  try { await page.click(sel, { timeout }); return true; } catch { return false; }
+}
+async function awaitIfPresent(page, sel, timeout = 4000) {
+  try { await page.waitForSelector(sel, { timeout }); return true; } catch { return false; }
+}
+async function awaitFnOrFalse(page, fn, timeout = 4000) {
+  try { await page.waitForFunction(fn, null, { timeout }); return true; } catch { return false; }
+}
 async function growDBInMemory(page) {
   await page.evaluate((content) => {
     DB.articles.push({ id: 'bignote', title: 'Big note', content,
@@ -4255,7 +4273,13 @@ async function forceNotebookWriteFail(page) {
   const modalOpen = await s.page.evaluate(() => document.getElementById('ov').classList.contains('on'));
   r.check(!modalOpen, 'no dialog opens on its own after a failed save — the old auto-popup is gone',
     modalOpen ? 'a modal opened unprompted' : 'stayed closed');
-  const dotVisible = await s.page.evaluate(() => getComputedStyle(document.getElementById('save-warn-dot')).display !== 'none');
+  /* v04.45 — null-SAFE on purpose. On code without this round's badge,
+     getComputedStyle(null) THROWS, and a throw here aborts the whole
+     suite instead of failing this one check — which is exactly what
+     happened when the v04.44 verification was run against main: 322
+     checks reported nothing at all. A check must fail, not explode. */
+  const dotVisible = await s.page.evaluate(() => { const d = document.getElementById('save-warn-dot');
+    return !!d && getComputedStyle(d).display !== 'none'; });
   r.check(dotVisible, 'the quiet ⚠ indicator appears instead', dotVisible ? 'visible' : 'hidden');
   await s.close();
 }
@@ -4266,8 +4290,8 @@ async function forceNotebookWriteFail(page) {
   await growDBInMemory(s.page);
   await forceNotebookWriteFail(s.page);
   await s.page.evaluate(() => window._save());
-  await s.page.click('#save-warn-dot');
-  await s.page.waitForFunction(() => document.getElementById('ov').classList.contains('on'));
+  await tapIfPresent(s.page, '#save-warn-dot');
+  await awaitFnOrFalse(s.page, () => document.getElementById('ov').classList.contains('on'));
   const title = await s.page.evaluate(() => document.querySelector('#mb .mt')?.textContent || '');
   r.check(/can no longer save locally/.test(title), 'tapping the ⚠ indicator opens the full explanation', title);
   await s.close();
@@ -4282,11 +4306,12 @@ async function forceNotebookWriteFail(page) {
   await growDBInMemory(s.page);
   await forceNotebookWriteFail(s.page);
   await s.page.evaluate(() => window._save());
-  await s.page.click('#save-warn-dot');
-  await s.page.waitForSelector('#stor-notebook');
+  await tapIfPresent(s.page, '#save-warn-dot');
+  await awaitIfPresent(s.page, '#stor-notebook');
   const m = await s.page.evaluate(() => {
-    const br = window._storageBreakdown();
-    return { live: br.notebookLive, real: JSON.stringify(DB).length, text: document.getElementById('stor-notebook').textContent };
+    const br = window._storageBreakdown ? window._storageBreakdown() : null;
+    const el = document.getElementById('stor-notebook');
+    return { live: br ? br.notebookLive : null, real: JSON.stringify(DB).length, text: el ? el.textContent : null };
   });
   r.check(m.live > 1_000_000, 'the notebook figure is real and non-zero for a notebook grown in memory', m.live);
   const pctOff = Math.abs(m.live - m.real) / m.real * 100;
@@ -4336,12 +4361,12 @@ async function forceNotebookWriteFail(page) {
 
   const closeVia = async (how) => {
     await s.page.evaluate(() => window.openModal('settings'));
-    await s.page.click('#mb button[onclick*="_confirmRemoveRecovery"]');
+    await tapIfPresent(s.page, '#mb button[onclick*="_confirmRemoveRecovery"]');
     await s.page.waitForSelector('#rmrec-cancel');
     if (how === 'cancel') await s.page.click('#rmrec-cancel');
     else if (how === 'escape') await s.page.keyboard.press('Escape');
     else await s.page.click('#ov', { position: { x: 5, y: 5 } });
-    await s.page.waitForFunction(() => !document.getElementById('ov').classList.contains('on'));
+    await awaitFnOrFalse(s.page, () => !document.getElementById('ov').classList.contains('on'));
     return s.page.evaluate(() => !!localStorage.getItem('siyagah-recovery-latest-key'));
   };
   r.check(await closeVia('cancel'), 'Cancel leaves the recovery copy in place', 'checked');
@@ -4349,7 +4374,7 @@ async function forceNotebookWriteFail(page) {
   r.check(await closeVia('backdrop'), 'a click on the backdrop leaves the recovery copy in place', 'checked');
 
   await s.page.evaluate(() => window.openModal('settings'));
-  await s.page.click('#mb button[onclick*="_confirmRemoveRecovery"]');
+  await tapIfPresent(s.page, '#mb button[onclick*="_confirmRemoveRecovery"]');
   await s.page.waitForSelector('#rmrec-cancel');
   await s.page.click('#mb .imp-acts button.bd');
   await s.page.waitForTimeout(200);
@@ -4360,7 +4385,8 @@ async function forceNotebookWriteFail(page) {
 
   const lsFailNow = await s.page.evaluate(() => _lsFail);
   r.check(lsFailNow === false, 'the retried save succeeded once the recovery copy was gone — _lsFail cleared', lsFailNow);
-  const warnGone = await s.page.evaluate(() => getComputedStyle(document.getElementById('save-warn-dot')).display === 'none');
+  const warnGone = await s.page.evaluate(() => { const d = document.getElementById('save-warn-dot');
+    return !d || getComputedStyle(d).display === 'none'; });
   r.check(warnGone, 'the ⚠ indicator clears once saving works again', warnGone);
 
   await s.close();

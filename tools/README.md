@@ -420,3 +420,22 @@ assertions miss.
   diff` — already respects `.gitignore`, so `tools/shots/` and
   `node_modules/` stay invisible and don't force a bump on every screenshot
   or `npm install`. Found in `ship-check.mjs`'s version-bump check, v04.38.
+- **A check that THROWS aborts every other check; a check that FAILS does
+  not.** `app-check` is sequential top-level code with no per-check
+  isolation, so one uncaught exception ends the run with **no report at
+  all** — not a failing line, not a total. v04.44's new checks read
+  `getComputedStyle(document.getElementById('save-warn-dot'))` and clicked
+  `#save-warn-dot` directly; run against a build without that badge — which
+  is exactly what the "do these new checks actually fail on unpatched code"
+  verification does — `getComputedStyle(null)` threw at the first one and
+  all 322 checks reported nothing. The verification could not be produced
+  at all. Any check written for an element or function **the same round
+  introduces** must be null-safe and must wait with a short timeout, so its
+  absence FAILS that check and the suite carries on: `tapIfPresent()`,
+  `awaitIfPresent()` and `awaitFnOrFalse()` in `app-check.mjs` exist for
+  this. Do NOT use them for an element that predates the round under test —
+  there a missing element is a genuine error and should be loud. Also note
+  the cost of getting this wrong twice over: Playwright's `click()` and
+  `waitForSelector()` default to a **30 second** timeout, so an unguarded
+  wait on an absent element does not fail fast, it hangs first. Found in
+  v04.45, paid for in v04.44.
