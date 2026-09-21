@@ -795,6 +795,75 @@ r.check(!leafMerge.mismatchErr && leafMerge.mismatchFonts === 130,
   leafMerge.mismatchErr ? `threw: ${leafMerge.mismatchErr}`
     : `fonts → ${JSON.stringify(leafMerge.mismatchFonts)} (remote's scalar, newer stamp, replaced the local object whole)`);
 
+/* ── 13. _stampThemeTouches() itself writes the dotted stamp ────────────── */
+/* Check 12 proves mergeDB() reads a dotted stamp correctly — but every one of
+   those stamps was hand-written straight into the test (`{ 'fonts.sidebar':
+   1000 }`), so it proves nothing about whether _stampThemeTouches() ever
+   actually produces one. Reverting only the stamping half back to
+   DB.themeAt[k]=now leaves check 12 fully green while every real device goes
+   back to losing a setting, because no dotted stamp is ever written and
+   every sub-key falls through to the parent stamp. These checks drive
+   _stampThemeTouches() itself, not a literal standing in for it. */
+const stampFn = await page.evaluate(() => {
+  const snapshot = () => JSON.parse(JSON.stringify(DB.theme));
+
+  DB.theme = { fonts: { global: 100, sidebar: 100, list: 100, content: 100 } };
+  DB.themeAt = {};
+  _seedThemeSnap();
+  DB.theme.fonts = Object.assign({}, DB.theme.fonts, { sidebar: 120 });
+  _stampThemeTouches();
+  const subKey = { dotted: DB.themeAt['fonts.sidebar'], parent: DB.themeAt.fonts };
+
+  DB.theme = { preset: 'forest' };
+  DB.themeAt = {};
+  _seedThemeSnap();
+  DB.theme.preset = 'sand';
+  _stampThemeTouches();
+  const scalar = { whole: DB.themeAt.preset, keys: Object.keys(DB.themeAt) };
+
+  DB.theme = { pinTabIds: ['a', 'b'] };
+  DB.themeAt = {};
+  _seedThemeSnap();
+  DB.theme.pinTabIds = ['a', 'b', 'c'];
+  _stampThemeTouches();
+  const arr = { whole: DB.themeAt.pinTabIds, keys: Object.keys(DB.themeAt) };
+
+  const now0 = Date.now();
+  DB.theme = { fonts: { global: 100, sidebar: 100, list: 100, content: 100 } };
+  DB.themeAt = {};
+  _seedThemeSnap();
+  DB.theme.fonts = Object.assign({}, DB.theme.fonts, { sidebar: 120 });
+  _stampThemeTouches();
+  DB.themeAt['fonts.sidebar'] = now0;
+  const deviceA = { folders: [], sections: [], trash: [], articles: [], theme: snapshot(), themeAt: JSON.parse(JSON.stringify(DB.themeAt)) };
+
+  DB.theme = { fonts: { global: 100, sidebar: 100, list: 100, content: 100 } };
+  DB.themeAt = {};
+  _seedThemeSnap();
+  DB.theme.fonts = Object.assign({}, DB.theme.fonts, { content: 130 });
+  _stampThemeTouches();
+  DB.themeAt['fonts.content'] = now0 + 1000;
+  const deviceB = { folders: [], sections: [], trash: [], articles: [], theme: snapshot(), themeAt: JSON.parse(JSON.stringify(DB.themeAt)) };
+
+  const e2e = window.mergeDB(deviceA, deviceB);
+  return {
+    subKey, scalar, arr,
+    e2eSidebar: e2e.theme.fonts.sidebar, e2eContent: e2e.theme.fonts.content,
+  };
+});
+r.check(stampFn.subKey.dotted !== undefined && stampFn.subKey.parent === undefined,
+  '_stampThemeTouches() stamps a changed theme.fonts sub-key under a dotted path, and writes nothing for the parent key',
+  `themeAt['fonts.sidebar'] → ${JSON.stringify(stampFn.subKey.dotted)} · themeAt['fonts'] → ${JSON.stringify(stampFn.subKey.parent)} (wanted a dotted stamp and no parent stamp)`);
+r.check(stampFn.scalar.whole !== undefined && stampFn.scalar.keys.every((k) => !k.includes('.')),
+  '_stampThemeTouches() still stamps a scalar theme key (preset) whole, never as a dotted key',
+  `themeAt keys → ${JSON.stringify(stampFn.scalar.keys)} (wanted ["preset"], no dot)`);
+r.check(stampFn.arr.whole !== undefined && stampFn.arr.keys.every((k) => !k.includes('.')),
+  '_stampThemeTouches() still stamps an array theme key (pinTabIds) whole, never as a dotted key',
+  `themeAt keys → ${JSON.stringify(stampFn.arr.keys)} (wanted ["pinTabIds"], no dot)`);
+r.check(stampFn.e2eSidebar === 120 && stampFn.e2eContent === 130,
+  'end-to-end: two devices stamped by _stampThemeTouches() itself, merged, both sub-key changes survive',
+  `fonts.sidebar (device A) → ${stampFn.e2eSidebar} · fonts.content (device B) → ${stampFn.e2eContent} (wanted 120 and 130 — the whole point of a real stamping function feeding a real merge)`);
+
 await app.close();
 
 /* ── 6e. v04.10: the two pop-up buttons say which is which ─────────────── */
