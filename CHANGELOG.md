@@ -2927,3 +2927,92 @@ itself.
 ### Measured
 
 11/11 ship checks. No app code touched, so `app-check` was not re-run.
+
+---
+
+## v04.37 — the Architect's brief, written down (21 Sep 2026)
+
+**No app change.** Version 04.36 → 04.37 in all three required places (I5).
+
+### The gap
+
+v04.35 built a loop with three roles in it, and wrote a file for two of them.
+`CLAUDE.md` is the **builder's** standing brief — it says what the app is,
+what may never break, and how a round is verified. The **owner's** part needs
+no file; they give jobs and decide design questions. The **Architect** — the
+Claude Code session with this repo attached, which turns a job into rounds,
+opens the issues, watches the runs, reviews the PRs by measurement and merges
+them — had no file at all. Its instructions lived in a chat message, which is
+to say they lived nowhere: a new session started blind, and the only record of
+how the loop is supposed to run was four bullet points inside the builder's
+brief describing it from the builder's side.
+
+### What was added
+
+`ARCHITECT.md` at the repository root. It deliberately does **not** restate
+`CLAUDE.md` — it opens by binding itself to it and then says only what differs
+by role:
+
+- **Who does what** — a three-row table. The owner gives jobs, decides design
+  questions, checks the finished app, and is not involved between "here is a
+  job" and "the job is done" except for a real decision. The Architect turns a
+  job into rounds, runs the builder, reviews, merges, reports. The builder
+  builds one round per issue, opens the PR and stops.
+- **The loop, for every job** — six steps: plan (split into rounds that each
+  satisfy D5), assign (one issue per round, one at a time, body starting
+  `@claude`, posted as `AAAsapp` because the v04.36 gate requires it),
+  monitor the Actions run, **review by measurement** (fetch the branch, read
+  the whole diff, run both checks and `tools/shot.mjs` yourself — not read the
+  builder's report), reassign or merge, and report to the owner **when the job
+  is done, not after each round**.
+- **When to stop and ask** — only a real decision: ambiguity, a genuine "which
+  approach", something that changes what the app is, anything destructive
+  (I1, D3), or a conflict with a rule in `CLAUDE.md`. Asked as one short
+  question with a recommendation, while everything not depending on the answer
+  keeps moving.
+- **Keeping the builder busy** — an **Architect's backlog** of defects, check
+  gaps and standing-lesson sweeps to work through between jobs, with one hard
+  limit: never start a NEW feature from it, because features come from the
+  owner. Anything a review finds that is out of scope for the round in hand
+  gets added to it. Three stop conditions are named (backlog empty, usage
+  limit reached, or three rounds failing review for the same reason — which
+  means the spec or the approach is wrong, and says so).
+- **Limits you must know** — the three that actually bite, each paid for: the
+  Action's builder cannot push `.github/workflows/**` (v04.36), the trigger
+  gate starts a run only for `AAAsapp` and never for a bot so any other
+  identity is silently skipped as a `skipped` run with no error (v04.36), and
+  one round at a time or two builders edit `index.html` against a stale base.
+
+`CLAUDE.md` gained one line in its opening block — **"The Architect's brief is
+`ARCHITECT.md`"** — so a session that reads the builder's brief first still
+finds the other one. The pointer is in the top block, not in *The Architect
+loop* section, because the point is to be seen before work starts.
+
+### Why a docs-only round still bumps the version
+
+I5 has no exception for "nothing in the app changed". `sw.js`'s `VERSION`
+string is the cache name, and bumping it is the only thing that evicts the
+previous build from a device — so a round that ships a file at all ships
+through the same pipe. It costs one cache miss and removes a whole class of
+"which build is this" question. The same reasoning applied in v04.35 and
+v04.36, both of which also touched no app code.
+
+### Done by the Architect, not the builder
+
+This round was written directly, without opening an issue. It is documentation
+of the Architect's own role, produced in the session that performs it; routing
+it through a builder would have meant one agent writing another agent's
+description of a third. The rule it does not break: `main` is still not pushed
+to directly — the round went to a branch, through a pull request, and was
+merged with a merge commit like any other.
+
+### Not done
+
+The **Architect's backlog** item carried in `ARCHITECT.md` — `ship-check`
+reading green for a round that forgot to bump but touched nothing else — is
+left open here on purpose. It is the next round's subject, and it is being run
+through the builder as the first end-to-end proof of the loop.
+
+### Measured
+
+11/11 ship checks. No app code touched, so `app-check` was not re-run.
