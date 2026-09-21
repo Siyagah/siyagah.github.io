@@ -32,11 +32,19 @@ const mainHtml = git('git show origin/main:index.html 2>/dev/null');
 if (mainHtml) {
   const mainV = mainHtml.match(/<meta name="app-version" content="([^"]+)">/)?.[1];
   /* The standing rule is that EVERY round bumps — a docs- or tools-only
-     round still ships a new number — so this compares the whole repo. */
-  const changed = git('git diff --name-only origin/main')?.trim();
+     round still ships a new number — so this compares the whole repo.
+     `git diff` alone only sees tracked files: a round whose entire
+     deliverable is a NEW file (a doc, a new tools/*.mjs, an icon) is
+     invisible to it, so untracked files are unioned in via `git
+     ls-files --others --exclude-standard` — which, like `git diff`,
+     already respects .gitignore, so tools/shots/ and node_modules/
+     stay invisible. */
+  const trackedChanged = git('git diff --name-only origin/main')?.trim();
+  const untracked = git('git ls-files --others --exclude-standard')?.trim();
+  const changed = [trackedChanged, untracked].filter(Boolean).join('\n').trim();
   if (changed) r.check(meta !== mainV, 'version bumped past origin/main',
     meta !== mainV ? `v${mainV} → v${meta}` : `still v${meta} with changes in: ${changed.split('\n').join(', ')}`);
-  else r.pass('version bumped past origin/main', 'nothing changed yet — nothing to bump');
+  else r.pass('version bumped past origin/main', 'tree is genuinely clean against origin/main — nothing to bump');
 } else r.pass('version bumped past origin/main', 'skipped: no origin/main to compare against');
 
 /* ── 2. The notebook data tag ──────────────────────────────────────────── */

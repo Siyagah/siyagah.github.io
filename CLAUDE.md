@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.37.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.38.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,23 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.38** (21 Sep 2026) — ship-check's "nothing to bump" is blind to a new
+  file. No app change beyond the version string. `tools/ship-check.mjs`'s
+  version-bump check asked "did anything change" with `git diff --name-only
+  origin/main` alone, and `git diff` never lists untracked files — so a round
+  whose entire deliverable is a NEW file (`ARCHITECT.md` in v04.37, any new
+  `tools/*.mjs`, a new icon) read "nothing changed yet — nothing to bump" and
+  passed with the version unbumped, the one check standing between that round
+  and I5. Measured on a clean `origin/main` checkout at v04.37: one untracked
+  file, still 11/11, exit 0. The check now unions `git diff --name-only
+  origin/main` with `git ls-files --others --exclude-standard`, which
+  respects `.gitignore` on its own, so `tools/shots/` and `node_modules/`
+  stay invisible — verified, not assumed. A genuinely clean tree still passes,
+  now saying so plainly rather than "nothing to bump". The trap is recorded in
+  `tools/README.md`, where harness traps live; the `ARCHITECT.md` backlog item
+  open since v04.35 is ticked. D5 does not apply — no markup, CSS or app
+  JavaScript touched. 11/11 ship checks, 266/266 app checks (`index.html`'s
+  version string changed, so it was re-run in full).
 - **v04.37** (21 Sep 2026) — the Architect's brief, written down. No app
   change. The loop v04.35 built had three roles in it and only two of them
   had a file: `CLAUDE.md` is the builder's standing brief, and the
@@ -77,29 +94,6 @@ must never accumulate here instead of there.
   remembered frame — 378×832 measured on a phone would otherwise be restored
   on the laptop. 266/266 app checks (up from 255, with five updated in place
   and two REVERSED with the reason recorded) and 11/11 ship checks.
-- **v04.33** (12 Sep 2026) — one screenshot of the read bar, two asks.
-  **"Let the Multi and single button be present in the edit mode as well"** —
-  measured on `origin/main`, they already WERE, since v04.10. What differed
-  was the treatment, and every rule that made the difference was scoped
-  `#p3h:not(.editing)`: read mode gave them `--gold`/`--green`, opacity 1 and
-  their word; edit mode gave them the bar's grey at .55 with no label, ever.
-  Both modes now, with only the SIZES still differing. The words were `false`
-  on the edit bar since v04.10 for "crowding" that was never measured — they
-  cost 61px and 70px and the bar carries them whole from **1600px**; below
-  that `_p3FitEditBar()` folds them by asking *does carrying them add a line?*,
-  because `.p3h-unified-tb` WRAPS and `scrollWidth>clientWidth` is always
-  false on it. Extending the fit to edit mode also stopped `p3h-nolbl`
-  leaking in from the last READ-mode fold and silently deciding the edit
-  bar's layout. **"Let the pop-up note opens in edit mode"** — the two modes
-  had disagreed since v03.74: a Multi pop-up was always an editor, a Single
-  one opened read-only every time (`selArt()` clears `ST.editing`) and threw
-  you out of edit mode if you were in it. Both open on the editor now, and a
-  new Multi window opens with the caret already in it. And the defect this
-  would have made worse: F3's **"hand-over, never duplicate"** was enforced
-  only for the panel, so popping out of Pane 3's editor left `#ed` and
-  `.fw-ed` both live on one note, both on autosave — measured on
-  `origin/main` at v04.32, fixed here. 255/255 app checks (up from 236) and
-  11/11 ship checks.
 ---
 
 ## What this is

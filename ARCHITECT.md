@@ -80,6 +80,8 @@ review for the same reason (the spec or the approach is wrong — say so).
 
 ## Architect's backlog
 
-- [ ] `ship-check` passes when nothing has changed ("nothing to bump"), so a
+- [x] `ship-check` passes when nothing has changed ("nothing to bump"), so a
       round that forgot to bump but touched nothing else reads green — decide
       whether that is acceptable and record it (found v04.35).
+      Resolved v04.38: the clean-tree pass is correct and stays; the
+      untracked blindness was a defect and is fixed.
