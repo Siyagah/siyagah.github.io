@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.43.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.44.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,44 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.44** (21 Sep 2026) — the ⚠ *can no longer save locally* dialog
+  nagged on every launch. It was real, reproduced by growing `DB` in memory
+  to the owner's own size (453 notes / 6,370,323 bytes) and calling
+  `_save()`: `QuotaExceededError`, exactly the owner's screenshot. Every
+  launch showed it because `_lsFail` resets on every page load and the
+  dialog fired unconditionally, on a deferred timer, from inside `_save()`'s
+  catch block. **The automatic modal is gone** — `updateSaveUI()`, which
+  every save state already funnels through, now lights a quiet ⚠ badge on
+  🧰 and swaps `#save-lbl` to a tappable warning for as long as `_lsFail`
+  stays true, and clears both the instant a save succeeds; the one-per-
+  session toast is unchanged; the full explanation
+  (`openStorageWarnDetails()`) only opens on a tap, never on its own. It now
+  shows **real numbers** (`_storageSectionHTML()`, shared with `⚙ Backup &
+  Restore`): notebook size from the *live* `JSON.stringify(DB).length` (not
+  whatever stale copy is actually sitting in `localStorage`, which is
+  exactly wrong while saving is failing), the recovery copy's size and
+  date, everything else, and the browser's own budget via
+  `navigator.storage.estimate()`. A **Remove** row reclaims the recovery
+  copy with its own consent dialog (the v04.39 Cancel-is-the-only-escape
+  pattern, reused not reinvented), then retries `_save()` once — success
+  clears the warning through the path that already existed. The advice is
+  now **true**: it compares the recovery copy's real size against the
+  Trash's real size and names whichever is actually bigger, instead of
+  always saying "empty the Trash" regardless of what's in it. **Found along
+  the way: `⚙ Backup & Restore` had no UI path to it at all** — the modal
+  was real and already covered by `app-check` §13, reached only by
+  Playwright calling `window.openModal('settings')` directly; grepping every
+  `onclick` in the file found no button, menu item or shortcut that ever
+  called it, despite v04.39's own dialog text promising the owner could go
+  there. Fixed with one new menu item ("💽 Storage & Backup"); everything
+  this round added to that modal would otherwise have shipped unreachable.
+  Not done: no automatic shrinking of the notebook itself — when neither the
+  recovery copy nor the Trash is worth reclaiming, the honest message points
+  at 💾 Save File and says shrinking the notebook is a further round. D5: the
+  interactive rows reuse `.imp-acts` (unconditional 44px, all three
+  layouts); the ⚠ badge is fixed on all three, sized up slightly under
+  1200px to match the header's own larger touch targets there. 11/11 ship
+  checks, app checks 299 → 305 (6 new).
 - **v04.43** (21 Sep 2026) — three lessons about running the builder,
   written down. No app change; `ARCHITECT.md` only, plus the version bump the
   rule requires (I5). v04.42 was correct on its first attempt and still cost
@@ -132,34 +170,6 @@ must never accumulate here instead of there.
   is unaffected. D5: data-only, no visual surface, said so rather than left
   unsaid. 11/11 ship checks, app checks 284 → 289 (5 new; 3 of them
   confirmed failing on unpatched `mergeDB()` via `git stash`, passing after).
-- **v04.39** (21 Sep 2026) — an import can destroy the notebook with no
-  consent and no way back. `importJSON()` did `DB=d;persist()` with zero
-  confirmation, reachable from a real button in `⚙ Backup & Restore` — a
-  mis-tap and the whole notebook was gone. `importBackup()` did have a
-  second `confirm()`, so a prior audit's "Escape twice wipes it" did not
-  hold on this code — not because of the app's own Escape handler, which
-  cannot run while a blocking `confirm()` is open, but because Escape and
-  Cancel both return the same `false`, and `false` on the **second** dialog
-  hit a bare `return` (Escape-then-**Enter** still wiped it). Its first
-  `confirm()` wired **Cancel to Replace All**, backwards for the one key and
-  the one gesture a user reaches for on reflex. Neither replace path kept a
-  copy of what it overwrote. One shared `showModal()` dialog now serves both import paths:
-  three explicit buttons (`Cancel` · `Merge` · `Replace everything`), Cancel
-  the only thing Escape or the backdrop can ever reach, "permanently" said
-  exactly once. A recovery copy is taken from the untouched notebook the
-  moment `Replace everything` is clicked, **read back in a separate step**
-  and id-compared before the dialog is allowed to say "a copy was kept" —
-  a failed write (quota) says "No copy could be kept" instead and still
-  demands its own second confirmation, never silently allowing or silently
-  refusing the replace. `⚙ Backup & Restore` gained a conditional **↩
-  Restore last recovery copy** row. All three layouts get the identical
-  dialog — three full-width, 44px-tall buttons, in the stylesheet, not
-  behind a breakpoint, so there is nothing platform-specific to say. Not
-  done: restoring the recovery copy doesn't itself chain a new copy of what
-  it overwrites (one copy, not a history, was the brief). 11/11 ship checks,
-  app checks 266 → 284 (18 new, driven by a real `filechooser` file pick,
-  real Escape/backdrop/click events, and `localStorage` read-backs, never a
-  JS variable).
 ---
 
 ## What this is
