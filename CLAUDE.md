@@ -21,11 +21,13 @@ must never accumulate here instead of there.
   confirmation, reachable from a real button in `⚙ Backup & Restore` — a
   mis-tap and the whole notebook was gone. `importBackup()` did have a
   second `confirm()`, so a prior audit's "Escape twice wipes it" did not
-  hold on this code (the global Escape handler already fell through to a
-  no-op `closeModal()`) — but its first `confirm()` wired **Cancel to
-  Replace All**, backwards for the one key and the one gesture a user
-  reaches for on reflex. Neither replace path kept a copy of what it
-  overwrote. One shared `showModal()` dialog now serves both import paths:
+  hold on this code — not because of the app's own Escape handler, which
+  cannot run while a blocking `confirm()` is open, but because Escape and
+  Cancel both return the same `false`, and `false` on the **second** dialog
+  hit a bare `return` (Escape-then-**Enter** still wiped it). Its first
+  `confirm()` wired **Cancel to Replace All**, backwards for the one key and
+  the one gesture a user reaches for on reflex. Neither replace path kept a
+  copy of what it overwrote. One shared `showModal()` dialog now serves both import paths:
   three explicit buttons (`Cancel` · `Merge` · `Replace everything`), Cancel
   the only thing Escape or the backdrop can ever reach, "permanently" said
   exactly once. A recovery copy is taken from the untouched notebook the

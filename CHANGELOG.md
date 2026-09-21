@@ -3104,12 +3104,19 @@ An app round (issue #49). I1 and D3.
    option.** `OK = Merge`, `Cancel = Replace All`. There genuinely was a
    second confirmation before the replace ran, so — as the issue asked to
    verify rather than assume — Escape-twice was **not** the one-key wipe a
-   prior audit (#41) had claimed against this code: the app's global Escape
-   handler already fell through to a plain `closeModal()` with nothing
-   destructive wired to it. What was real: Escape, the backdrop, and the
-   browser's own "go away" gesture all landed on *Replace All* rather than
-   *do nothing*, which is backwards for a universal escape key regardless of
-   the second gate behind it.
+   prior audit (#41) had claimed against this code, but not for the reason
+   first written here. `confirm()` is synchronous and blocks the JavaScript
+   event loop for as long as it is open, so the app's own `keydown` listener
+   cannot run at all while it is up — the browser handles Escape itself and
+   the call returns `false`, the same value Cancel returns. That `false` is
+   what selected *Replace All* on the first dialog, and what hit the bare
+   `return` on the second — Escape-twice landed on "do nothing" only because
+   the second dialog's safe branch happened to be the one `false` selects.
+   Escape then **Enter** (or a real click on the second dialog's OK) still
+   wiped the notebook. What was real, and stands on its own regardless of
+   that second gate: `confirm()`'s one dismiss value — Cancel, Escape, or the
+   browser's own close gesture — was wired to *Replace All* on the first
+   dialog, which is backwards for a control nobody reaches for on purpose.
 3. **Neither replace path kept a recovery copy.** `_replaceWithBackup()`
    overwrote `DB.sections/folders/articles/trash` outright and `importJSON()`
    did `DB=d` — once `persist()` ran, nothing on the device could get back
