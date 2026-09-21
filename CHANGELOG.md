@@ -2827,3 +2827,35 @@ wanted.
   `< 72% of the screen` ratio — which failed at 74% while the menu still fitted
   whole with 215px to spare — to the question its own label asks: is the whole
   menu on screen, and does it scroll.
+
+---
+
+## v04.35 — the Architect loop (20 Sep 2026)
+
+**Asked:** "Set up an automation using GitHub so that I don't have to relay
+(copy-paste) things between you both" — the Architect (Claude in the owner's
+claude.ai project) and the builder (Claude Code).
+
+**No change to the app.** The number moves only because every round bumps (I5),
+and `ship-check` compares the whole repo, docs and workflows included.
+
+### What changed
+
+- **`.github/workflows/claude.yml`** — a GitHub Action. An issue or comment
+  mentioning `@claude` starts Claude Code on a GitHub runner. The runner
+  installs Playwright and Chromium first, because `tools/app-check.mjs` needs
+  a real browser and a runner, unlike the Claude Code sandbox, has none.
+  One round runs at a time (`concurrency`), so two builders never edit
+  `index.html` at once. Only accounts with write access can trigger it, and
+  bots cannot, so it cannot loop on its own comments.
+- **`CLAUDE.md`** — the builder now **stops at the pull request**. The owner
+  chose (20 Sep 2026) that the Architect reviews the diff, re-runs both checks
+  and merges, because `main` is the live site. New section *The Architect
+  loop* describes the four steps.
+
+### Not done, and why
+
+- The workflow needs the **`CLAUDE_CODE_OAUTH_TOKEN`** repository secret and
+  the **Claude GitHub App** installed on the repo; both are owner-only steps
+  on GitHub and cannot be done from a commit.
+- `app-check` was not re-run: no app code changed. `ship-check` passes.
