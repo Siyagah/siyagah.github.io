@@ -4263,7 +4263,7 @@ async function forceNotebookWriteFail(page) {
 
 /* 14a — an oversized DB + a genuinely failing write: _save() returns
    false, and — unlike the old code — no dialog opens on its own. */
-{
+{ try {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
   await forceNotebookWriteFail(s.page);
@@ -4282,10 +4282,11 @@ async function forceNotebookWriteFail(page) {
     return !!d && getComputedStyle(d).display !== 'none'; });
   r.check(dotVisible, 'the quiet ⚠ indicator appears instead', dotVisible ? 'visible' : 'hidden');
   await s.close();
+} catch (e) { r.check(false, '§14 storage/indicator — this block could not run against this build', String(e).split('\n')[0]); }
 }
 
 /* 14b — tapping the ⚠ indicator opens the full explanation. */
-{
+{ try {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
   await forceNotebookWriteFail(s.page);
@@ -4295,13 +4296,14 @@ async function forceNotebookWriteFail(page) {
   const title = await s.page.evaluate(() => document.querySelector('#mb .mt')?.textContent || '');
   r.check(/can no longer save locally/.test(title), 'tapping the ⚠ indicator opens the full explanation', title);
   await s.close();
+} catch (e) { r.check(false, '§14 storage/indicator — this block could not run against this build', String(e).split('\n')[0]); }
 }
 
 /* 14c — the storage section reports non-zero, REAL byte counts, and the
    notebook figure tracks the live in-memory DB — not whatever stale copy
    is sitting in localStorage, which is exactly the wrong number while
    saving is failing. */
-{
+{ try {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
   await forceNotebookWriteFail(s.page);
@@ -4319,13 +4321,14 @@ async function forceNotebookWriteFail(page) {
     `${pctOff.toFixed(2)}% off (shown ${m.live} vs actual ${m.real})`);
   r.check(/\d/.test(m.text), 'the notebook size is actually rendered in the storage section, not just computed', m.text);
   await s.close();
+} catch (e) { r.check(false, '§14 storage/indicator — this block could not run against this build', String(e).split('\n')[0]); }
 }
 
 /* 14d — a seeded recovery copy: shown with its real date/size, Remove asks
    first (Cancel/Escape/backdrop all leave it in place), a CONFIRMED Remove
    deletes the key — read back, never assumed — and the retried save that
    follows succeeds once the thing that was failing it is gone. */
-{
+{ try {
   const s = await openApp({ db: seedDB() });
   const recResult = await s.page.evaluate(() => window._saveRecoveryCopy(DB));
   r.check(!!recResult?.ok, 'setup: a real, verified recovery copy could be created', JSON.stringify(recResult));
@@ -4391,12 +4394,13 @@ async function forceNotebookWriteFail(page) {
   r.check(warnGone, 'the ⚠ indicator clears once saving works again', warnGone);
 
   await s.close();
+} catch (e) { r.check(false, '§14 storage/indicator — this block could not run against this build', String(e).split('\n')[0]); }
 }
 
 /* 14e — the three real screen sizes: the storage rows are on screen, the
    Restore/Remove actions clear 44px, and the ⚠ indicator is visible and
    does not collide with the ⚙ button it sits beside. */
-for (const vp of VIEWPORTS) {
+for (const vp of VIEWPORTS) { try {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
   await s.page.evaluate(() => window._saveRecoveryCopy(DB));
   await s.page.evaluate(() => window.openModal('settings'));
@@ -4425,6 +4429,7 @@ for (const vp of VIEWPORTS) {
     `${vp.name} ${vp.width}×${vp.height}: the ⚠ indicator is visible and does not collide with the ⚙ button beside it`,
     `${dot.w}×${dot.h}, collides: ${dot.collidesWithSettings}`);
   await s.close();
+} catch (e) { r.check(false, '§14 storage/indicator — this block could not run against this build', String(e).split('\n')[0]); }
 }
 
 process.exit(r.finish() ? 1 : 0);
