@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.38">
+<meta name="app-version" content="04.39">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -593,6 +593,12 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .mi:focus{border-color:var(--green)}
 .ma{display:flex;gap:8px;justify-content:flex-end}
 .mm{font-size:13.5px;color:var(--t2);margin-bottom:16px;line-height:1.55}
+/* v04.39 — the import-consent dialogs (#mb, same on phone/tablet/desktop):
+   three explicit actions stacked full-width so each clears a 44px touch
+   target without a breakpoint, since a destructive-data choice deserves the
+   same generous target everywhere, not just where a phone forces it. */
+.ma.imp-acts{flex-direction:column;align-items:stretch}
+.imp-acts .btn{min-height:44px;justify-content:center}
 .pl{max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);margin-bottom:13px}
 .pr{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;min-height:36px}
 .pr:hover{background:var(--paper)}
@@ -2776,7 +2782,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.38</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.39</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3263,7 +3269,10 @@ function exportDeploy(){
   toast('🚀 Deploy file ready — upload to Firebase Hosting / GitHub Pages');
 }
 function exportJSON(){const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='notebook-backup.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);toast('Backup downloaded ✓');}
-function importJSON(){const inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.onchange=e=>{const fr=new FileReader();fr.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.folders&&d.articles){DB=d;persist();render();toast('Data imported ✓');}else toast('Invalid file');}catch{toast('Could not read file');}};fr.readAsText(e.target.files[0]);};inp.click();}
+/* v04.39 — this used to be DB=d;persist() with no question asked (I1). It now
+   routes through the same consent dialog as importBackup() below, since both
+   are "replace my notebook with a file" and neither should skip asking. */
+function importJSON(){const inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.onchange=e=>{const file=e.target.files[0];if(!file)return;const fr=new FileReader();fr.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.folders&&d.articles){_showImportConsent(d,file.name);}else toast('Invalid file');}catch{toast('Could not read file');}};fr.readAsText(file);};inp.click();}
 
 /* ── Toast ───────────────────────────────────────────────────────── */
 function toast(msg,dur=2800){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},dur);}
@@ -6963,34 +6972,83 @@ function importBackup(){
         return;
       }
       const bk=JSON.parse(dataEl.textContent);
-      const artCount=(bk.articles||[]).filter(a=>!a.id?.startsWith('kb-')).length;
-      const folCount=(bk.folders||[]).filter(f=>!f.id?.startsWith('kb-')).length;
-      const secCount=(bk.sections||[]).filter(s=>!s.id?.startsWith('kb-')).length;
-      /* Ask: Merge or Replace? */
-      const merge=confirm(
-        `📥 Import Backup\n\n`+
-        `Found: ${artCount} notes · ${folCount} folders · ${secCount} sections\n`+
-        `File: ${file.name}\n\n`+
-        `Choose restore mode:\n`+
-        `  OK     = Merge  (add notes not already in your app)\n`+
-        `  Cancel = Replace All  (wipe current data, restore backup)`
-      );
-      if(merge){
-        _mergeBackup(bk);
-      } else {
-        if(!confirm(
-          '⚠ Replace ALL your current notes with this backup?\n\n'+
-          'This cannot be undone. Your current notes will be permanently replaced.\n\n'+
-          'OK to replace, Cancel to go back.'
-        ))return;
-        _replaceWithBackup(bk);
-      }
+      _showImportConsent(bk,file.name);
     }catch(e){
       toast('⚠ Import failed: '+(e.message||e));
       console.error('Import error:',e);
     }
   };
   inp.click();
+}
+
+/* v04.39 — ONE consent dialog for both import paths (importJSON() above and
+   importBackup() here): a silent DB=d;persist() and a confirm() whose Cancel
+   picked the destructive branch were both I1 violations (issue #49). Three
+   explicit buttons, no option reached by NOT choosing, and Cancel is the
+   default — it is what closeModal() already does (the ✕-less escape hatch:
+   Escape and a backdrop click both already call plain closeModal(), so
+   leaving this dialog's Cancel button wired to closeModal() too, and never
+   wiring Replace to either of those, is what keeps Escape/backdrop safe). */
+function _importCounts(src){
+  return {
+    a:(src?.articles||[]).filter(x=>!x.id?.startsWith('kb-')).length,
+    f:(src?.folders ||[]).filter(x=>!x.id?.startsWith('kb-')).length,
+    s:(src?.sections||[]).filter(x=>!x.id?.startsWith('kb-')).length,
+  };
+}
+let _pendingImport=null;      // {data, fileName} between the two consent steps
+let _pendingImportRecovery=null; // result of _saveRecoveryCopy(), taken before the 2nd dialog
+
+function _showImportConsent(data,fileName){
+  _pendingImport={data,fileName};
+  const inc=_importCounts(data), cur=_importCounts(DB);
+  showModal(`<div class="mt">📥 Import data</div>
+    <div class="mm">
+      File: <strong>${esc(fileName)}</strong><br><br>
+      In the file: ${inc.a} notes · ${inc.f} folders · ${inc.s} sections<br>
+      In your notebook now: ${cur.a} notes · ${cur.f} folders · ${cur.s} sections<br><br>
+      <strong>Merge</strong> adds anything from the file you don't already have — nothing is removed.<br>
+      <strong>Replace everything</strong> deletes your current notebook and puts the file's content in its place.
+    </div>
+    <div class="ma imp-acts">
+      <button class="btn" id="imp-cancel-1" onclick="_cancelImport()">Cancel</button>
+      <button class="btn bp" onclick="_confirmMergeImport()">Merge</button>
+      <button class="btn bd" onclick="_confirmReplaceImport()">Replace everything</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('imp-cancel-1')?.focus(),50);
+}
+function _cancelImport(){_pendingImport=null;_pendingImportRecovery=null;closeModal();}
+function _confirmMergeImport(){
+  const data=_pendingImport?.data; _pendingImport=null;_pendingImportRecovery=null;
+  closeModal();
+  if(data)_mergeBackup(data);
+}
+function _confirmReplaceImport(){
+  const fileName=_pendingImport?.fileName;
+  /* The recovery copy is taken NOW, against the still-untouched DB, before
+     the owner even sees the second dialog — so the dialog can tell the truth
+     about whether one exists rather than promise one it hasn't tried yet. */
+  const rec=_saveRecoveryCopy(DB);
+  _pendingImportRecovery=rec;
+  const safeMsg=rec.ok
+    ? `A copy of your current notebook has been saved on this device — restore it from ⚙ Backup & Restore if anything goes wrong.`
+    : `⚠ No copy could be kept (${esc(rec.reason)}). If you replace now, your current notebook cannot be recovered on this device.`;
+  showModal(`<div class="mt">⚠ Replace everything?</div>
+    <div class="mm">
+      This <strong>permanently</strong> replaces every note, folder and section in your notebook with the contents of "${esc(fileName||'this file')}".<br><br>
+      ${safeMsg}
+    </div>
+    <div class="ma imp-acts">
+      <button class="btn" id="imp-cancel-2" onclick="_cancelImport()">Cancel</button>
+      <button class="btn bd" onclick="_doReplaceImport()">Replace everything</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('imp-cancel-2')?.focus(),50);
+}
+function _doReplaceImport(){
+  const data=_pendingImport?.data; const rec=_pendingImportRecovery;
+  _pendingImport=null;_pendingImportRecovery=null;
+  closeModal();
+  if(data)_replaceWithBackup(data,rec);
 }
 
 function _mergeBackup(bk){
@@ -7005,7 +7063,7 @@ function _mergeBackup(bk){
   toast(`✓ Merge complete — ${added} items restored. Syncing to cloud…`);
 }
 
-function _replaceWithBackup(bk){
+function _replaceWithBackup(bk,rec){
   /* Block incoming Firestore snapshot for a moment so restored data wins */
   _lastSyncTime=Date.now()+30000;
   DB.sections=(bk.sections||[]).filter(s=>!s.id?.startsWith('kb-'));
@@ -7018,8 +7076,83 @@ function _replaceWithBackup(bk){
   /* Re-add KB notes so user keeps the guide */
   syncKnowledgeBase&&syncKnowledgeBase();
   persist(); renderTree(); renderP2C(); renderP3H(); renderP3C();
-  toast('✓ Backup restored — '+DB.articles.filter(a=>!a.id?.startsWith('kb-')).length+' notes recovered. Syncing to cloud…');
+  const copyMsg=rec?(rec.ok?' A copy of what you had before is saved on this device.':' No recovery copy could be kept.'):'';
+  toast('✓ Backup restored — '+DB.articles.filter(a=>!a.id?.startsWith('kb-')).length+' notes recovered.'+copyMsg+' Syncing to cloud…');
   setTimeout(()=>{_lastSyncTime=Date.now();},31000);
+}
+
+/* ══ RECOVERY COPY (v04.39) ═══════════════════════════════════════════════
+   One copy — the most recent replace only, never a history — kept under its
+   own localStorage key so it can never be confused with the live notebook
+   ('my-notebook-v1'). Never trust a write: read it back in a SEPARATE step
+   and compare every id against what was actually there, because a promise of
+   safety that was never verified is worse than no promise (issue #49). */
+const _RECOVERY_PREFIX='siyagah-recovery-v1-';
+const _RECOVERY_LATEST_KEY='siyagah-recovery-latest-key';
+function _saveRecoveryCopy(db){
+  const ts=Date.now();
+  const key=_RECOVERY_PREFIX+ts;
+  const snapshot={
+    sections:db.sections||[], folders:db.folders||[], articles:db.articles||[], trash:db.trash||[],
+    savedAt:ts,
+  };
+  let json;
+  try{ json=JSON.stringify(snapshot); }
+  catch(e){ return {ok:false,reason:'the notebook could not be serialised'}; }
+  try{ localStorage.setItem(key,json); }
+  catch(e){ return {ok:false,reason:'this device is out of storage space'}; }
+  /* Read-back, in a step separate from the write above — a check that only
+     asks "did setItem throw" would have called this a copy on the strength
+     of an unread write. */
+  let readBack=null;
+  try{ readBack=JSON.parse(localStorage.getItem(key)); }
+  catch(e){ readBack=null; }
+  const idsOf=arr=>(arr||[]).map(x=>x.id).slice().sort().join(',');
+  const matches=readBack
+    &&idsOf(readBack.sections)===idsOf(snapshot.sections)
+    &&idsOf(readBack.folders)===idsOf(snapshot.folders)
+    &&idsOf(readBack.articles)===idsOf(snapshot.articles);
+  if(!matches){
+    try{localStorage.removeItem(key);}catch(e){}
+    return {ok:false,reason:'the saved copy did not read back correctly'};
+  }
+  /* One copy only — drop any older recovery snapshot now that this one is
+     verified good. */
+  try{
+    Object.keys(localStorage).forEach(k=>{if(k.startsWith(_RECOVERY_PREFIX)&&k!==key)localStorage.removeItem(k);});
+    localStorage.setItem(_RECOVERY_LATEST_KEY,key);
+  }catch(e){ return {ok:false,reason:'could not record the new copy as the latest'}; }
+  return {ok:true,key,savedAt:ts};
+}
+function _readRecoveryCopy(){
+  try{
+    const key=localStorage.getItem(_RECOVERY_LATEST_KEY);
+    if(!key)return null;
+    const snap=JSON.parse(localStorage.getItem(key));
+    return snap&&Array.isArray(snap.articles)?snap:null;
+  }catch(e){ return null; }
+}
+function _confirmRestoreRecovery(){
+  const snap=_readRecoveryCopy();
+  if(!snap){toast('⚠ No recovery copy found on this device');closeModal();return;}
+  const c=_importCounts(snap);
+  showModal(`<div class="mt">↩ Restore last recovery copy?</div>
+    <div class="mm">
+      Saved automatically on ${new Date(snap.savedAt).toLocaleString()}, before your last "Replace everything":
+      ${c.a} notes · ${c.f} folders · ${c.s} sections.<br><br>
+      This <strong>permanently</strong> replaces your current notebook with that copy.
+    </div>
+    <div class="ma imp-acts">
+      <button class="btn" id="rec-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn bd" onclick="_doRestoreRecovery()">Restore this copy</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('rec-cancel')?.focus(),50);
+}
+function _doRestoreRecovery(){
+  const snap=_readRecoveryCopy();
+  closeModal();
+  if(!snap){toast('⚠ No recovery copy found on this device');return;}
+  _replaceWithBackup(snap);
 }
 
 
@@ -15835,11 +15968,13 @@ function openModal(type,target){
       <div class="ma"><button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn bp" onclick="rnFolder('${target}',document.getElementById('inp').value);closeModal()">Save</button></div>`);
   } else if(type==='settings'){
+    const hasRec=!!_readRecoveryCopy();
     showModal(`<div class="mt">⚙ Backup & Restore</div>
       <div class="mm">Export a JSON backup, or restore from one.</div>
       <div class="ma" style="flex-direction:column;gap:8px;align-items:stretch">
         <button class="btn bp" onclick="exportJSON();closeModal()">⬇ Export data as JSON backup</button>
         <button class="btn" onclick="importJSON();closeModal()">⬆ Import data from JSON backup</button>
+        ${hasRec?'<button class="btn" onclick="_confirmRestoreRecovery()">↩ Restore last recovery copy</button>':''}
         <button class="btn" onclick="closeModal()">Close</button>
       </div>`);
   } else if(type==='section'){

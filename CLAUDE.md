@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.38.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.39.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,32 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.39** (21 Sep 2026) — an import can destroy the notebook with no
+  consent and no way back. `importJSON()` did `DB=d;persist()` with zero
+  confirmation, reachable from a real button in `⚙ Backup & Restore` — a
+  mis-tap and the whole notebook was gone. `importBackup()` did have a
+  second `confirm()`, so a prior audit's "Escape twice wipes it" did not
+  hold on this code (the global Escape handler already fell through to a
+  no-op `closeModal()`) — but its first `confirm()` wired **Cancel to
+  Replace All**, backwards for the one key and the one gesture a user
+  reaches for on reflex. Neither replace path kept a copy of what it
+  overwrote. One shared `showModal()` dialog now serves both import paths:
+  three explicit buttons (`Cancel` · `Merge` · `Replace everything`), Cancel
+  the only thing Escape or the backdrop can ever reach, "permanently" said
+  exactly once. A recovery copy is taken from the untouched notebook the
+  moment `Replace everything` is clicked, **read back in a separate step**
+  and id-compared before the dialog is allowed to say "a copy was kept" —
+  a failed write (quota) says "No copy could be kept" instead and still
+  demands its own second confirmation, never silently allowing or silently
+  refusing the replace. `⚙ Backup & Restore` gained a conditional **↩
+  Restore last recovery copy** row. All three layouts get the identical
+  dialog — three full-width, 44px-tall buttons, in the stylesheet, not
+  behind a breakpoint, so there is nothing platform-specific to say. Not
+  done: restoring the recovery copy doesn't itself chain a new copy of what
+  it overwrites (one copy, not a history, was the brief). 11/11 ship checks,
+  app checks 266 → 284 (18 new, driven by a real `filechooser` file pick,
+  real Escape/backdrop/click events, and `localStorage` read-backs, never a
+  JS variable).
 - **v04.38** (21 Sep 2026) — ship-check's "nothing to bump" is blind to a new
   file. No app change beyond the version string. `tools/ship-check.mjs`'s
   version-bump check asked "did anything change" with `git diff --name-only
@@ -71,29 +97,6 @@ must never accumulate here instead of there.
   (`.github/workflows/claude.yml`, Playwright + Chromium installed there);
   the builder **opens the PR and stops**, and the Architect reviews, re-runs
   both checks and merges — the owner's choice, because `main` is live.
-- **v04.34** (12 Sep 2026) — "Now do same for the phone and tablet too.
-  *Always do all platforms as adaptible. Don't wait for doing next.*" —
-  which is now **D5**, and a standing lesson. The two pop-ups were gated by
-  `window.innerWidth<900` in EIGHT places plus three
-  `@media(max-width:899.98px){display:none}` rules; the reason was true once
-  and never revisited, so a TABLET — where touch drag and resize were
-  deliberately built in v03.NotePane.T4 — was excluded from a feature nobody
-  had decided to exclude it from. One `_popTier()` decides the SHAPE now and
-  never says no: **`window`** (≥640px) is the floating, draggable,
-  resizable pop-up exactly as it was, and a tablet simply gets it; **`sheet`**
-  (<640px) is the same editor as a card pinned edge to edge, 6px gutters, no
-  drag, no resize, with a 44px ✕ — because the panel's backdrop at that size
-  is a 6px frame and not a way out. Multi's "several at once" is honoured by
-  a **switcher bar**: one chip per open note, the front one marked, `✕ All`
-  at the end, and the sheets shortened so it covers nothing. The buttons stay
-  OFF the phone's bars (v04.22 spent three rounds getting them to one row) and
-  are named rows in the `⋯` card and a new **POP IT OUT** group in the `+`
-  menu, from one builder. Three things the gate had been hiding: Contents and
-  the Pinned Tabs sidepane took **184px of a 378px sheet**, and the edit bar's
-  ◀ / 📁 called `showPane()` under a fixed z-5001 panel. A sheet never writes a
-  remembered frame — 378×832 measured on a phone would otherwise be restored
-  on the laptop. 266/266 app checks (up from 255, with five updated in place
-  and two REVERSED with the reason recorded) and 11/11 ship checks.
 ---
 
 ## What this is

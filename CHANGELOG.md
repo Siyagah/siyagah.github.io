@@ -3087,3 +3087,146 @@ was re-run in full, not skipped.
 Not applicable. This round touches no markup, no CSS and no JavaScript the
 app runs — only `tools/ship-check.mjs`, `tools/README.md` and
 `ARCHITECT.md`. The three layouts are unaffected.
+
+## v04.39 — an import can destroy the notebook with no consent and no way back (21 Sep 2026)
+
+An app round (issue #49). I1 and D3.
+
+### The three defects, measured on `main` at v04.38
+
+1. **`importJSON()` replaced the whole notebook with zero confirmation.**
+   `DB=d;persist();render();toast('Data imported ✓')` — no `confirm()`, no
+   modal, no Trash. Reachable from a real button one row above `Close` in
+   `⚙ Backup & Restore`. A mis-tap or the wrong file picked and every note,
+   folder and section was gone from `localStorage`, with the next sync
+   pushing the replacement everywhere else.
+2. **`importBackup()`'s native `confirm()` wired Cancel to the destructive
+   option.** `OK = Merge`, `Cancel = Replace All`. There genuinely was a
+   second confirmation before the replace ran, so — as the issue asked to
+   verify rather than assume — Escape-twice was **not** the one-key wipe a
+   prior audit (#41) had claimed against this code: the app's global Escape
+   handler already fell through to a plain `closeModal()` with nothing
+   destructive wired to it. What was real: Escape, the backdrop, and the
+   browser's own "go away" gesture all landed on *Replace All* rather than
+   *do nothing*, which is backwards for a universal escape key regardless of
+   the second gate behind it.
+3. **Neither replace path kept a recovery copy.** `_replaceWithBackup()`
+   overwrote `DB.sections/folders/articles/trash` outright and `importJSON()`
+   did `DB=d` — once `persist()` ran, nothing on the device could get back
+   what was replaced.
+
+### What changed
+
+**One shared consent dialog**, `_showImportConsent(data, fileName)`, used by
+both `importJSON()` and `importBackup()` (`index.html`, near `_mergeBackup`/
+`_replaceWithBackup`) — they differ only in how they get a parsed object with
+`.sections/.folders/.articles`, and that object is now handed to the same
+dialog either way. It is built with `showModal()`, the pattern the rest of
+the app already uses, not `confirm()`:
+
+- names what will happen, and shows the count of notes/folders/sections
+  **in the file** against what is **in the notebook now**;
+- three explicit buttons — `Cancel` · `Merge` · `Replace everything` — no
+  option reached by *not* choosing;
+- **Cancel is the default and the only thing Escape or the backdrop can
+  reach**, in both this dialog and the "permanently" one behind
+  *Replace everything* — neither button is ever wired to `Escape` or `#ov`'s
+  click handler, both of which already call plain `closeModal()` and nothing
+  else. That is the fix for defect 2: not a new gate, but never connecting
+  the destructive path to the universal escape route in the first place.
+- `Replace everything` opens a second dialog where "permanently" appears
+  exactly once, and that dialog's own text is decided by whether the recovery
+  copy (below) actually succeeded.
+
+**A verified recovery copy**, taken from the *still-untouched* `DB` the
+moment `Replace everything` is clicked in dialog 1 — before the owner even
+sees dialog 2, so dialog 2 can tell the truth about it:
+
+- `_saveRecoveryCopy(db)` writes one JSON snapshot to its own
+  `siyagah-recovery-v1-<timestamp>` key (never `my-notebook-v1`, the live
+  key), then **reads it back in a separate step** and compares every
+  section/folder/article id against what was actually there. Only a matching
+  read-back is reported as success; a thrown `setItem` (quota) or a mismatched
+  read-back both return `{ok:false, reason}` and the write is rolled back.
+  One copy only, by design (not a history) — the previous copy's key is
+  deleted once the new one is verified good.
+- Dialog 2 reads that result: success says *"a copy of your current notebook
+  has been saved on this device"*; failure says *"⚠ No copy could be kept
+  (…)"* and still requires the same explicit second click — replacing with
+  no safety net is something the owner can still choose, having been told so
+  first, not something the app silently forbids or silently allows.
+- `⚙ Backup & Restore` gained a conditional row, **↩ Restore last recovery
+  copy** (only shown when `_readRecoveryCopy()` finds one), with its own
+  "permanently replaces" confirmation — same dialog shape, same Cancel-is-safe
+  rule.
+
+**Not done, and why:** restoring the recovery copy does not itself take a
+fresh recovery copy of whatever it is about to overwrite — the issue asked
+for "one copy — the most recent — not a history", and chaining a copy onto
+the restore path would start turning that one copy into a two-deep stack.
+If the owner wants a way back from a restore too, that is a follow-up, not
+this round. The other ~26 `confirm()` calls in the file are untouched, as
+asked — this round is the two import paths only.
+
+### D5
+
+All three layouts get the **same shape**, deliberately: `.ma.imp-acts` stacks
+the three buttons full-width (`flex-direction:column`) and gives every one of
+them `min-height:44px`, in the stylesheet, not behind a breakpoint. A
+destructive-data choice gets the same generous touch target on a 1440px
+laptop as on a 390px phone rather than only where a phone forces it — so
+there is nothing to say about phone vs. tablet vs. desktop here beyond "all
+three get exactly the same dialog". Measured directly at 390×844, 820×1180
+and 1440×900: three buttons, none under 44px tall, the dialog never
+overflowing the viewport at any of the three (`tools/app-check.mjs` §13e).
+
+### Measured
+
+`tools/app-check.mjs` gained a new section (§13), driven by real clicks and
+real keyboard/mouse events against the actual dialog, asserting on
+`localStorage` rather than a JS variable throughout:
+
+- `importJSON()` opened through a **real file** picked via Playwright's
+  `filechooser` event: the notebook is unchanged the instant the dialog
+  opens, still unchanged after the first "Replace everything" click, and
+  only actually replaced after the **second** real click — with the ids in
+  `localStorage['my-notebook-v1']` proving each step;
+- a **real** `Escape` key and a **real** click on the backdrop, from *both*
+  dialogs, each leave the notebook byte-identical;
+- `Merge` adds the file's ids without removing any pre-existing one;
+- the recovery copy's ids are read back **in a separate `page.evaluate()`**
+  and compared against what the notebook held before the replace; restoring
+  it through its own `⚙ Backup & Restore` row and confirmation returns every
+  original id;
+- the quota path — `Storage.prototype.setItem` stubbed to throw for
+  `siyagah-recovery-v1-*` keys only, so the live notebook still persists
+  normally — proves the dialog says "No copy could be kept", still demands
+  its own second confirmation, and that no recovery key is ever recorded for
+  a copy that did not actually succeed;
+- the three-viewport button measurement described under D5.
+
+11/11 ship checks. App checks: 266 → 284 (18 new: §13a seven, §13b three,
+§13c one, §13d four, §13e three — `index.html`'s version bump means the
+whole suite reran, not just the new section). All 284 passed on the first
+run against the finished code.
+
+### Standing lesson
+
+**A dialog whose Cancel performs the destructive branch, and a "your data is
+safe" message that was never read back, are the same defect wearing two
+faces — a promise nobody checked.** `confirm()`'s two buttons are OK and
+Cancel; nothing forces the *safe* meaning onto Cancel, so `Cancel = Replace
+All` compiles, looks like a normal restore prompt, and is backwards for the
+one key (Escape) and the one gesture (backdrop / "go away") a user reaches
+for on reflex. And `DB.sections=…;DB.folders=…;persist()` immediately
+followed by a toast claiming a copy was kept is the same shape of lie the
+whole "safety copy" feature exists to fix: a `localStorage.setItem()` that
+did not throw is not evidence of anything by itself — it is evidence the
+call returned, and a size-limited store can accept a write and evict it, or
+never had room for it in the first place on some browsers. Treat both the
+same way: never let *what a button is labelled* decide what Escape or a
+backdrop does — wire the safe path there explicitly, or wire nothing at all
+and let it fall through to a no-op close; and never print a success message
+for a write that was not read back and compared, because the sentence
+"a copy was kept" is the one people act on later, when it is too late to
+find out it was never true.
