@@ -2367,7 +2367,11 @@ await app.close();
     'toggleAccordionSec', 'enableAutoSave', 'exportFile', 'openTrash', 'openSyncModal', 'refreshApp',
     'openCalSettings', 'openCiteModal', 'toggleHijri', 'installPWA', 'syncKnowledgeBase',
     'addStarterMyDatabaseFolders', 'doSignOut', 'openBackupModal', 'importBackup', 'exportBackupHTML',
-    'backupToGDrive', 'exportBackupPDF', 'exportDeploy'];
+    'backupToGDrive', 'exportBackupPDF', 'exportDeploy',
+    /* v04.44 (issue #58) — #save-lbl (already in 🧰 Tools) is now tappable
+       when it is showing the storage warning; the only genuinely new action
+       either menu has gained since this baseline was written. */
+    '_saveLblTap'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
   const lost = V0420.filter((f) => !now.includes(f));
   const added = [...new Set(now)].filter((f) => !V0420.includes(f));
@@ -4208,6 +4212,191 @@ for (const vp of VIEWPORTS) {
   r.check(m.btns.length === 3 && short.length === 0 && m.mbLeft >= 0 && m.mbRight <= m.vw,
     `${vp.name} ${vp.width}×${vp.height}: all 3 import actions clear 44px and stay on screen`,
     `${m.btns.length} buttons ${m.btns.map((b) => `${b.w}×${b.h}`).join(', ')} · dialog ${Math.round(m.mbLeft)}–${Math.round(m.mbRight)} in ${m.vw}px`);
+  await s.close();
+}
+
+/* ── 14. Storage warning — real numbers, no more nagging modal ──────────
+   Issue #58: the ⚠ "can no longer save locally" dialog fired unconditionally
+   on a 400ms deferred timer inside _save()'s catch, every single launch
+   where the first save of the session failed. Storage.prototype.setItem is
+   stubbed to force that catch deterministically — the same technique §13d
+   already uses for the recovery-write failure, far more reliable across
+   browsers/CI than actually filling a real ~5MB quota — while DB is grown
+   in memory the way the owner's own notebook grew, and every check below
+   drives the real indicator/modal/remove flow with real clicks, reading
+   localStorage back rather than trusting a JS variable. */
+const BIG_NOTE_CONTENT = '<p>' + 'x'.repeat(6_000_000) + '</p>';
+async function growDBInMemory(page) {
+  await page.evaluate((content) => {
+    DB.articles.push({ id: 'bignote', title: 'Big note', content,
+      folderIds: ['f1'], tags: [], createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(), kind: 'general' });
+  }, BIG_NOTE_CONTENT);
+}
+async function forceNotebookWriteFail(page) {
+  await page.evaluate(() => {
+    const orig = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+      if (k === 'my-notebook-v1') { const e = new Error('quota exceeded (stubbed for this check)'); e.name = 'QuotaExceededError'; throw e; }
+      return orig.call(this, k, v);
+    };
+  });
+}
+
+/* 14a — an oversized DB + a genuinely failing write: _save() returns
+   false, and — unlike the old code — no dialog opens on its own. */
+{
+  const s = await openApp({ db: seedDB() });
+  await growDBInMemory(s.page);
+  await forceNotebookWriteFail(s.page);
+  const ok = await s.page.evaluate(() => window._save());
+  r.check(ok === false, '_save() returns false when the notebook write genuinely fails', ok);
+  await s.page.waitForTimeout(600);   // the old code's own deferred delay was 400ms
+  const modalOpen = await s.page.evaluate(() => document.getElementById('ov').classList.contains('on'));
+  r.check(!modalOpen, 'no dialog opens on its own after a failed save — the old auto-popup is gone',
+    modalOpen ? 'a modal opened unprompted' : 'stayed closed');
+  const dotVisible = await s.page.evaluate(() => getComputedStyle(document.getElementById('save-warn-dot')).display !== 'none');
+  r.check(dotVisible, 'the quiet ⚠ indicator appears instead', dotVisible ? 'visible' : 'hidden');
+  await s.close();
+}
+
+/* 14b — tapping the ⚠ indicator opens the full explanation. */
+{
+  const s = await openApp({ db: seedDB() });
+  await growDBInMemory(s.page);
+  await forceNotebookWriteFail(s.page);
+  await s.page.evaluate(() => window._save());
+  await s.page.click('#save-warn-dot');
+  await s.page.waitForFunction(() => document.getElementById('ov').classList.contains('on'));
+  const title = await s.page.evaluate(() => document.querySelector('#mb .mt')?.textContent || '');
+  r.check(/can no longer save locally/.test(title), 'tapping the ⚠ indicator opens the full explanation', title);
+  await s.close();
+}
+
+/* 14c — the storage section reports non-zero, REAL byte counts, and the
+   notebook figure tracks the live in-memory DB — not whatever stale copy
+   is sitting in localStorage, which is exactly the wrong number while
+   saving is failing. */
+{
+  const s = await openApp({ db: seedDB() });
+  await growDBInMemory(s.page);
+  await forceNotebookWriteFail(s.page);
+  await s.page.evaluate(() => window._save());
+  await s.page.click('#save-warn-dot');
+  await s.page.waitForSelector('#stor-notebook');
+  const m = await s.page.evaluate(() => {
+    const br = window._storageBreakdown();
+    return { live: br.notebookLive, real: JSON.stringify(DB).length, text: document.getElementById('stor-notebook').textContent };
+  });
+  r.check(m.live > 1_000_000, 'the notebook figure is real and non-zero for a notebook grown in memory', m.live);
+  const pctOff = Math.abs(m.live - m.real) / m.real * 100;
+  r.check(pctOff < 5, 'the notebook figure is within a few percent of JSON.stringify(DB).length',
+    `${pctOff.toFixed(2)}% off (shown ${m.live} vs actual ${m.real})`);
+  r.check(/\d/.test(m.text), 'the notebook size is actually rendered in the storage section, not just computed', m.text);
+  await s.close();
+}
+
+/* 14d — a seeded recovery copy: shown with its real date/size, Remove asks
+   first (Cancel/Escape/backdrop all leave it in place), a CONFIRMED Remove
+   deletes the key — read back, never assumed — and the retried save that
+   follows succeeds once the thing that was failing it is gone. */
+{
+  const s = await openApp({ db: seedDB() });
+  const recResult = await s.page.evaluate(() => window._saveRecoveryCopy(DB));
+  r.check(!!recResult?.ok, 'setup: a real, verified recovery copy could be created', JSON.stringify(recResult));
+
+  /* Fails the notebook write ONLY while the recovery copy still exists, so
+     removing it is what actually lets the retried save through — a direct
+     stand-in for "this device reclaimed enough space". */
+  await s.page.evaluate(() => {
+    const orig = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+      if (k === 'my-notebook-v1' && localStorage.getItem('siyagah-recovery-latest-key')) {
+        const e = new Error('quota exceeded (stubbed for this check)'); e.name = 'QuotaExceededError'; throw e;
+      }
+      return orig.call(this, k, v);
+    };
+  });
+  const failedFirst = await s.page.evaluate(() => window._save());
+  r.check(failedFirst === false, 'setup: the notebook write is genuinely failing before the recovery copy is removed', failedFirst);
+
+  await s.page.evaluate(() => window.openModal('settings'));
+  const rowsEl = await s.page.waitForSelector('#stor-rows');
+  const rowText = await rowsEl.textContent();
+  const recKey = await s.page.evaluate(() => localStorage.getItem('siyagah-recovery-latest-key'));
+  const recBytes = await s.page.evaluate((k) => (localStorage.getItem(k) || '').length, recKey);
+  /* Formatted in the BROWSER, not in Node — Chromium's locale/ICU data can
+     format the same timestamp differently than the Node process running
+     this file, so the expected string has to come from the same runtime
+     that rendered it. */
+  const expectedDate = await s.page.evaluate((ts) => new Date(ts).toLocaleDateString(), recResult.savedAt);
+  r.check(/Recovery copy/.test(rowText) && rowText.includes(expectedDate),
+    'the storage section shows the recovery copy with its real date', rowText.replace(/\s+/g, ' '));
+  r.check(recBytes > 0, 'the recovery copy has a real, non-zero size', recBytes);
+
+  const closeVia = async (how) => {
+    await s.page.evaluate(() => window.openModal('settings'));
+    await s.page.click('#mb button[onclick*="_confirmRemoveRecovery"]');
+    await s.page.waitForSelector('#rmrec-cancel');
+    if (how === 'cancel') await s.page.click('#rmrec-cancel');
+    else if (how === 'escape') await s.page.keyboard.press('Escape');
+    else await s.page.click('#ov', { position: { x: 5, y: 5 } });
+    await s.page.waitForFunction(() => !document.getElementById('ov').classList.contains('on'));
+    return s.page.evaluate(() => !!localStorage.getItem('siyagah-recovery-latest-key'));
+  };
+  r.check(await closeVia('cancel'), 'Cancel leaves the recovery copy in place', 'checked');
+  r.check(await closeVia('escape'), 'Escape leaves the recovery copy in place', 'checked');
+  r.check(await closeVia('backdrop'), 'a click on the backdrop leaves the recovery copy in place', 'checked');
+
+  await s.page.evaluate(() => window.openModal('settings'));
+  await s.page.click('#mb button[onclick*="_confirmRemoveRecovery"]');
+  await s.page.waitForSelector('#rmrec-cancel');
+  await s.page.click('#mb .imp-acts button.bd');
+  await s.page.waitForTimeout(200);
+  const keyGone = await s.page.evaluate((k) => localStorage.getItem(k) === null, recKey);
+  const pointerGone = await s.page.evaluate(() => localStorage.getItem('siyagah-recovery-latest-key') === null);
+  r.check(keyGone && pointerGone, 'a confirmed Remove actually deletes the recovery copy — read back, never assumed',
+    `key present: ${!keyGone}, pointer present: ${!pointerGone}`);
+
+  const lsFailNow = await s.page.evaluate(() => _lsFail);
+  r.check(lsFailNow === false, 'the retried save succeeded once the recovery copy was gone — _lsFail cleared', lsFailNow);
+  const warnGone = await s.page.evaluate(() => getComputedStyle(document.getElementById('save-warn-dot')).display === 'none');
+  r.check(warnGone, 'the ⚠ indicator clears once saving works again', warnGone);
+
+  await s.close();
+}
+
+/* 14e — the three real screen sizes: the storage rows are on screen, the
+   Restore/Remove actions clear 44px, and the ⚠ indicator is visible and
+   does not collide with the ⚙ button it sits beside. */
+for (const vp of VIEWPORTS) {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  await s.page.evaluate(() => window._saveRecoveryCopy(DB));
+  await s.page.evaluate(() => window.openModal('settings'));
+  await s.page.waitForSelector('#stor-rows');
+  const m = await s.page.evaluate(() => {
+    const mb = document.getElementById('mb').getBoundingClientRect();
+    const btns = [...document.querySelectorAll('#mb .imp-acts .btn')].map((b) => b.getBoundingClientRect());
+    const rows = document.getElementById('stor-rows').getBoundingClientRect();
+    return { mbLeft: mb.left, mbRight: mb.right, vw: window.innerWidth,
+      btns: btns.map((b) => ({ h: Math.round(b.height), w: Math.round(b.width) })),
+      rowsVisible: rows.width > 0 && rows.height > 0 };
+  });
+  const short = m.btns.filter((b) => b.h < 44);
+  r.check(m.rowsVisible && m.btns.length >= 2 && short.length === 0 && m.mbLeft >= 0 && m.mbRight <= m.vw,
+    `${vp.name} ${vp.width}×${vp.height}: storage rows visible, Restore/Remove clear 44px and stay on screen`,
+    `rows visible: ${m.rowsVisible} · ${m.btns.length} buttons ${m.btns.map((b) => `${b.w}×${b.h}`).join(', ')} · dialog ${Math.round(m.mbLeft)}–${Math.round(m.mbRight)} in ${m.vw}px`);
+
+  await s.page.evaluate(() => { _lsFail = true; updateSaveUI(); });
+  const dot = await s.page.evaluate(() => {
+    const d = document.getElementById('save-warn-dot').getBoundingClientRect();
+    const settingsBtn = document.getElementById('sb-menu-btn').getBoundingClientRect();
+    return { w: Math.round(d.width), h: Math.round(d.height), visible: d.width > 0 && d.height > 0,
+      collidesWithSettings: d.right > settingsBtn.left };
+  });
+  r.check(dot.visible && !dot.collidesWithSettings,
+    `${vp.name} ${vp.width}×${vp.height}: the ⚠ indicator is visible and does not collide with the ⚙ button beside it`,
+    `${dot.w}×${dot.h}, collides: ${dot.collidesWithSettings}`);
   await s.close();
 }
 

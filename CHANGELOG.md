@@ -3739,3 +3739,159 @@ changed only in its two version strings.
 11/11 ship checks, 299/299 app checks. `index.html` changed — only its two
 version strings, but v04.38's rule is that a changed `index.html` gets the
 full run, so it got one rather than an argument for skipping it.
+
+---
+
+## v04.44 — the "can no longer save locally" dialog nagged on every launch (21 Sep 2026)
+
+An app round (issue #58). I3, D5.
+
+### Reproduced, not a false alarm
+
+The owner has no storage problem in the everyday sense — their device has
+plenty of free disk. `localStorage` has a fixed per-site budget of roughly
+5 MB that has nothing to do with free disk, and the notebook had outgrown it.
+Driving the real app: grew `DB` in memory to 453 notes / 6,370,323 bytes (the
+owner's own Smart View counts — 425 New, 411 MyWall, 123 Timeline, 68
+Journal), called `_save()`, and got exactly the owner's report — `_save()`
+returned `false`, `localStorage.setItem` threw `QuotaExceededError`, and the
+`⚠ This device can no longer save locally` dialog appeared via `_save()`'s
+`setTimeout(...,400)`. Every launch = one dialog, because `_lsFail` is a
+module-level `let` that resets on every page load, and the first failed save
+of a session always tripped it. The serious part the old dialog never said:
+if every write is failing, these devices hold **no local copy of the
+notebook at all** — an I3 risk, not just an annoyance.
+
+### What was wrong, beyond "it nags"
+
+- **The advice was often false.** The dialog always said "empty the Trash",
+  regardless of whether the Trash held anything. If the notebook itself was
+  over budget and the Trash was nearly empty, the owner would follow the
+  advice and see nothing change.
+- **Nobody could tell what was actually using the space.** v04.39's recovery
+  copy (`siyagah-recovery-v1-*`) writes one full duplicate of
+  `sections`/`folders`/`articles`/`trash` on every "Replace everything" and
+  never expires it — if the owner had ever used that button, a second whole
+  notebook could be sitting in `localStorage` permanently, doubling the
+  usage, and nothing said so.
+- **`⚙ Backup & Restore` (`openModal('settings')`) had no way to reach it.**
+  Grepped every `onclick` in the file: the modal is real, titled exactly
+  that, and even referenced by name in `_confirmReplaceImport()`'s own copy
+  ("restore it from ⚙ Backup & Restore if anything goes wrong") — but no
+  button, menu item or keyboard shortcut anywhere in the app ever called
+  `openModal('settings')`. `app-check` reached it only by calling
+  `window.openModal('settings')` directly from Playwright, which is exactly
+  the gap the "it is on the screen is not the owner can find it" standing
+  lesson describes, just with "on the screen" replaced by "in the code": a
+  feature nobody could ever tap. Everything this round adds to that modal
+  would have been just as unreachable without fixing this too.
+
+### What changed
+
+**The automatic modal is gone.** `_save()`'s catch block no longer calls
+`showModal()` on a deferred timer. In its place, a quiet indicator that
+`updateSaveUI()` — the one function every save state already funnels
+through — keeps lit for as long as `_lsFail` is true and clears the instant
+a save succeeds again:
+
+- a small ⚠ badge (`#save-warn-dot`) on the 🧰 Tools button itself, visible
+  without opening any menu, positioned so it adds no width to the header row
+  (the v04.14 `min-width:0` lesson);
+- `#save-lbl` (inside the 🧰 dropdown, next to Undo/Redo and Save File)
+  swaps to "⚠ Storage full — tap for details" / "⚠ Storage error — tap for
+  details" and becomes tappable itself (`_saveLblTap()`);
+- the one toast per session is unchanged;
+- tapping either one opens `openStorageWarnDetails()` — the full
+  explanation, now built from real numbers, and now the *only* way this
+  information appears. Nothing shows it unprompted.
+
+**Real numbers, not guesses**, in a new storage section shared by
+`openStorageWarnDetails()` and `⚙ Backup & Restore`
+(`_storageSectionHTML()`, so the two places can never show different
+figures): notebook size measured from `JSON.stringify(DB).length` — the
+*live* in-memory notebook, not whatever stale copy is actually sitting under
+`localStorage['my-notebook-v1']`, because when saving is failing those two
+numbers are exactly the ones that differ — recovery-copy size and the date
+it was taken, everything else the app keeps in `localStorage`, and the
+browser's own budget/usage from `navigator.storage.estimate()` where it
+exists, filled in asynchronously after the section renders.
+
+**One tap to reclaim space, with consent.** When a recovery copy exists, a
+row now offers both `↩ Restore last recovery copy` (unchanged) and
+`🗑 Remove recovery copy — reclaim <size>`. Remove opens its own
+`showModal()` confirmation — Cancel is the only thing Escape or the backdrop
+can reach, the exact v04.39 pattern reused rather than a second dialog
+shape invented — says plainly that it is removing the pre-"Replace
+everything" safety copy and not the notebook, and states the real byte
+count it will free. After a confirmed removal, `_save()` is retried once;
+if space was the whole problem, `_save()`'s own existing success path
+clears `_lsFail`, toasts "✅ Browser storage is working again", and the ⚠
+indicator disappears — no new code needed for that half, it was already
+there.
+
+**Truthful advice.** `_storageAdviceHTML()` compares the recovery copy's
+real size against the Trash's real size (`JSON.stringify(DB.trash).length`)
+and names whichever is actually bigger, with a direct action attached —
+never "empty the Trash" when the Trash is nearly empty. When neither is
+worth reclaiming, it says so honestly: 💾 Save File is the protection, and
+shrinking the notebook itself is a further round, not a promise this one
+doesn't keep.
+
+**`⚙ Backup & Restore` is now reachable** — "💽 Storage & Backup" added to
+the ⚙ menu's Backup section, opening the same `openModal('settings')` that
+already existed and was already covered by `app-check` §13.
+
+### Not done
+
+- No automatic shrinking or compression of the notebook itself. If the
+  recovery copy is empty and the Trash is empty and the notebook is still
+  over budget, the honest message points at 💾 Save File and says a further
+  round is needed — nothing here trims note content, images, or history.
+- The advice compares exactly two reclaimable things (recovery copy, Trash).
+  A deeper breakdown of "everything else" (Note History, backup-folder
+  handles in IndexedDB, sync config) was not itemised — it is reported as
+  one combined "everything else" figure, real and measured, just not split
+  further. If that figure turns out to be the large one on a real device,
+  splitting it is a follow-up.
+- `navigator.storage.estimate()` is unsupported or return `{quota:0}` on
+  some browsers (notably older Safari); the section says so honestly
+  ("not reported") rather than showing a fabricated number.
+
+### D5
+
+All three layouts get the identical shape, following the v04.39 precedent:
+the storage section's interactive rows (Restore / Remove, and the Remove
+confirmation's own two buttons) reuse `.imp-acts` — full-width,
+`min-height:44px`, unconditional in the stylesheet rather than gated to a
+breakpoint — so a 1440px laptop gets the same generous target as a 390px
+phone. The ⚠ indicator is a fixed absolute badge on the 🧰 button at every
+width, sized up slightly under 1200px (18px vs 15px) to match the header's
+own larger touch targets there. Nothing about this round's surfaces is
+phone/tablet/desktop-specific beyond that one size bump — measured directly
+at 390×844, 820×1180 and 1440×900.
+
+### Measured
+
+`tools/app-check.mjs` extended, driving the real app:
+
+- an oversized `DB` in memory makes `_save()` return `false` **with no
+  dialog appearing on its own** — the ⚠ indicator appears instead;
+- tapping the indicator opens `openStorageWarnDetails()`;
+- the storage section reports non-zero, real byte counts, and its notebook
+  figure is within a few percent of `JSON.stringify(DB).length`;
+- a seeded recovery copy shows with the right date and size; Remove asks
+  first; Cancel, Escape and the backdrop all leave it in place;
+  `localStorage` is read back after a confirmed Remove to prove the key is
+  actually gone, and a retried save succeeds where it previously failed;
+- all three layouts: the indicator and the storage rows are on screen and
+  ≥44px tall where required.
+
+A pre-existing regression check from v04.21 (`every action the two menus
+had in v04.20 is still on one of them` — a frozen allow-list of every
+`onclick` handler in 🧰 Tools and ⚙ Settings) failed the moment `#save-lbl`
+gained its own `onclick`, the one genuinely new menu action this round
+adds. Extended in place with the reason recorded, per the standing rule —
+not deleted, not worked around.
+
+11/11 ship checks. App checks: 299 → 322 (23 new). Unpatched-code
+verification below.

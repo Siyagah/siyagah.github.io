@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.43">
+<meta name="app-version" content="04.44">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1011,6 +1011,22 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
           color:var(--t3);letter-spacing:.01em;transition:color .2s}
 .save-lbl.ok{color:#5CAA6F}
 .save-lbl.busy{color:#B89050}
+.save-lbl.err{color:#C0392B;cursor:pointer;font-weight:600}
+.save-lbl.err:hover{opacity:.8}
+/* v04.44 — quiet persistent ⚠, replaces the old modal-on-every-launch
+   (issue #58): lit by updateSaveUI() for as long as local saving is
+   failing, cleared the instant a save succeeds again. Positioned on the
+   🧰 button itself (.sb-menu-wrap already position:relative) so it is
+   visible without opening any menu, and never adds width to the header row
+   it sits on top of — see the v04.14 min-width:0 lesson on that row. */
+.save-warn-dot{position:absolute;top:-3px;right:-3px;width:15px;height:15px;
+               border-radius:50%;background:#C0392B;color:#fff;font-size:9.5px;
+               font-weight:700;line-height:15px;text-align:center;cursor:pointer;
+               box-shadow:0 0 0 2px var(--forest);z-index:2}
+.save-warn-dot:hover{opacity:.85}
+@media(max-width:1199.98px){
+  .save-warn-dot{width:18px;height:18px;font-size:11px;line-height:18px;top:-4px;right:-4px}
+}
 .sb-exp-btn.dirty{border-color:rgba(184,135,58,.45)!important;
                   color:#B89050!important}
 .sb-exp-btn.dirty::before{content:'● ';font-size:8px;vertical-align:middle}
@@ -2782,7 +2798,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.43</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.44</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2798,6 +2814,7 @@ sup.ann-sup:hover{text-decoration:underline}
       <button class="btn sb-act" onclick="openGlobalSearch()" title="Search (Ctrl+K)">🔍</button>
       <div class="sb-menu-wrap" id="sb-tools-wrap">
         <button class="btn sb-act" id="sb-tools-btn" onclick="toggleSBTools(event)" title="Tools — create, insert, view, save">🧰</button>
+        <span id="save-warn-dot" class="save-warn-dot" style="display:none" title="This device can no longer save locally — tap for details" onclick="event.stopPropagation();openStorageWarnDetails()">⚠</span>
         <div id="sb-tools" class="sb-menu-dd sb-tools-dd">
           <!-- 🧰 TOOLS = things you do TO the notebook. ⚙ Settings below is the
                app itself — account, sync, backups, export. v04.21 moved the five
@@ -2824,7 +2841,7 @@ sup.ann-sup:hover{text-decoration:underline}
           <div class="sb-mi" onclick="toggleAccordionSec();closeSBTools()" id="accordion-sec-btn" title="When ON: opening a section closes all others">📂 Accordion sections: <span id="accordion-sec-lbl">OFF</span></div>
           <div class="sb-mi-hd">Save</div>
           <button id="autosave-btn" class="sb-mi" onclick="enableAutoSave()" title="Data saves to browser storage automatically; use Save File to export">🔗 Enable auto-save</button>
-          <div id="save-lbl" class="save-lbl busy" style="text-align:left;padding:4px 13px">● Unsaved to file</div>
+          <div id="save-lbl" class="save-lbl busy" style="text-align:left;padding:4px 13px" onclick="_saveLblTap()">● Unsaved to file</div>
           <div class="sb-tools-row">
             <button id="export-btn" class="sb-tb-btn sb-exp-tb dirty" onclick="exportFile();closeSBTools()" title="Download an updated copy of the file">💾 Save File</button>
           </div>
@@ -2847,6 +2864,7 @@ sup.ann-sup:hover{text-decoration:underline}
           <div class="sb-mi" onclick="refreshApp();closeSBMenu()" title="Reload the app to get the latest version">🔄 Refresh App</div>
           <div id="pwa-install-mi" class="sb-mi" style="display:none" onclick="installPWA();closeSBMenu()" title="Add Siyagah to Home Screen">📱 Install App</div>
           <div class="sb-mi-hd">Backup</div>
+          <div class="sb-mi" onclick="openModal('settings');closeSBMenu()" title="Export/import JSON, see how much storage the notebook is using, and manage the recovery copy">💽 Storage &amp; Backup</div>
           <div class="sb-mi" onclick="openBackupModal();closeSBMenu()" title="Keep a dated copy of the whole app + notes, automatically">🗄 Automatic Backups</div>
           <div class="sb-mi" onclick="importBackup();closeSBMenu()" title="Restore notes from a Siyagah backup HTML file">📥 Import Backup</div>
           <div class="sb-mi" onclick="backupToGDrive();closeSBMenu()" title="Save backup to Google Drive">☁ Backup to Drive</div>
@@ -3107,6 +3125,7 @@ let _lastEdInputAt = 0;
 const _ED_REMOTE_GRACE_MS = 2000;
 
 let _lsFail = false;
+let _lsFailQuota = false;
 /* v04.40 — DB.theme is written from ~60 scattered call sites (a colour
    picker, a font-size slider, a layout toggle...), never through one setter
    a stamp could be added to. Rather than touch every site — and rely on
@@ -3173,44 +3192,40 @@ function _save(pre){
   _stampThemeTouches();
   try{
     localStorage.setItem(SK, pre!=null?pre:JSON.stringify(DB));
-    if(_lsFail){ _lsFail = false; try{ toast('\u2705 Browser storage is working again \u2014 saving normally'); }catch(_){} }
+    if(_lsFail){
+      _lsFail = false; _lsFailQuota = false;
+      try{ updateSaveUI(); }catch(_){}
+      try{ toast('\u2705 Browser storage is working again \u2014 saving normally'); }catch(_){}
+    }
     return true;
   }catch(e){
     console.error('Local save failed:', e);
     const quota = !!e && (e.name === 'QuotaExceededError'
                        || e.name === 'NS_ERROR_DOM_QUOTA_REACHED'
                        || e.code === 22 || e.code === 1014);
-    /* Surface it in the save indicator as well as the toast */
+    _lsFailQuota = quota;
+    /* v04.44 \u2014 this used to also pop a showModal() explanation on a 400ms
+       deferred timer, on EVERY launch where the first save of the session
+       failed (issue #58: the owner's notebook had genuinely outgrown the
+       ~5MB localStorage budget, so this fired every single time they
+       opened the app). updateSaveUI() below is now the ONLY automatic
+       reaction \u2014 it lights the \u26a0 badge next to \ud83e\uddf0 and swaps
+       #save-lbl to a tappable warning, and both stay lit for as long as
+       _lsFail is true. The full explanation (openStorageWarnDetails(), near
+       _storageSectionHTML()) only opens when the owner taps one of those,
+       never on its own. */
+    const wasFailing = _lsFail;
+    _lsFail = true;
+    /* _lsFail has to flip BEFORE updateSaveUI() runs, or the very first
+       failure of the session \u2014 the one time this matters most \u2014 renders
+       with the old, not-yet-failing state and shows nothing. */
     try{ _fileDirty = true; updateSaveUI(); }catch(_){}
-    if(!_lsFail){
-      _lsFail = true;
+    if(!wasFailing){
       try{
         toast(quota
-          ? '\u26a0 Browser storage is FULL \u2014 changes are not being saved on this device. Click \ud83d\udce6 Save File now.'
-          : '\u26a0 Local save failed \u2014 click \ud83d\udce6 Save File now.', 9000);
+          ? '\u26a0 Browser storage is FULL \u2014 changes are not being saved on this device. Tap the \u26a0 badge near \ud83e\uddf0 for details.'
+          : '\u26a0 Local save failed \u2014 tap the \u26a0 badge near \ud83e\uddf0 for details.', 9000);
       }catch(_){}
-      /* Deferred so it can never fire mid-boot inside loadDB() */
-      setTimeout(function(){
-        try{
-          showModal('<div class="mt">\u26a0 This device can no longer save locally</div>'
-            + '<div class="mm" style="line-height:1.65">'
-            + (quota
-                ? 'Your browser\u2019s storage for this app is <b>full</b>.'
-                : 'Your browser <b>refused</b> to write to local storage.')
-            + '<br><br><b>Your work is not lost.</b> '
-            + 'Cloud Sync and file auto-save are still running normally \u2014 only this '
-            + 'browser\u2019s built-in storage is affected.'
-            + '<br><br><b>Do this now:</b><br>'
-            + '1. Click <b>\ud83d\udce6 Save File</b> to download a full copy.<br>'
-            + '2. Empty the <b>\ud83d\uddd1 Trash</b> to reclaim space.<br>'
-            + '3. Reload the app.'
-            + '</div>'
-            + '<div class="ma">'
-            + '<button class="btn" onclick="closeModal();openTrash()">\ud83d\uddd1 Open Trash</button>'
-            + '<button class="btn bp" onclick="closeModal();exportFile()">\ud83d\udce6 Save File</button>'
-            + '</div>');
-        }catch(_){}
-      }, 400);
     }
     return false;
   }
@@ -7216,6 +7231,158 @@ function _doRestoreRecovery(){
   if(!snap){toast('⚠ No recovery copy found on this device');return;}
   _replaceWithBackup(snap);
 }
+
+/* ══ STORAGE MEASUREMENT (v04.44) ═══════════════════════════════════════
+   Issue #58: the owner's notebook had genuinely outgrown localStorage's
+   ~5MB-per-origin budget, and the old dialog neither said how big anything
+   actually was nor whether emptying the Trash (its own advice) would help.
+   Every figure here is measured from real string lengths — never guessed
+   from note counts — in the same unit (JS string length / UTF-16 code
+   units) localStorage's own budget is measured in, so a number here lines
+   up with what setItem() is actually working against. */
+function _fmtBytes(n){
+  n=n||0;
+  if(n>=1024*1024) return (n/(1024*1024)).toFixed(2)+' MB';
+  if(n>=1024) return (n/1024).toFixed(1)+' KB';
+  return n+' B';
+}
+/** notebookLive is measured from the LIVE in-memory DB, not from what is
+ *  actually sitting under SK — when saving is failing, SK holds a stale
+ *  (smaller, possibly empty) copy, and the figure that matters here is
+ *  what the notebook actually needs to fit, not what last fit. */
+function _storageBreakdown(){
+  let notebookStored=0, recovery=0, other=0;
+  try{
+    const recKey=localStorage.getItem(_RECOVERY_LATEST_KEY);
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      const v=localStorage.getItem(k)||'';
+      const len=(k?k.length:0)+v.length;
+      if(k===SK) notebookStored+=len;
+      else if(recKey && k===recKey) recovery+=len;
+      else other+=len;
+    }
+  }catch(e){}
+  let notebookLive=notebookStored;
+  try{ notebookLive=JSON.stringify(DB).length; }catch(e){}
+  return {notebookStored,notebookLive,recovery,other};
+}
+/** Names the single largest thing the owner could actually reclaim, with
+ *  the real byte count behind it — never the old dialog's "empty the
+ *  Trash" when the Trash is nearly empty and the notebook itself is what's
+ *  over budget. Honest when nothing reclaimable is worth the tap. */
+function _storageAdviceHTML(br,recSnap){
+  let trashBytes=0; try{ trashBytes=JSON.stringify(DB.trash||[]).length; }catch(e){}
+  const trashCount=(DB.trash||[]).length;
+  const cands=[];
+  if(recSnap) cands.push({label:'the recovery copy from '+new Date(recSnap.savedAt).toLocaleDateString(),
+    bytes:br.recovery, html:'Tap <strong>Remove recovery copy</strong> below.'});
+  if(trashCount) cands.push({label:trashCount+' item'+(trashCount>1?'s':'')+' in Trash',
+    bytes:trashBytes, html:'<button class="btn" style="margin-top:4px" onclick="closeModal();openTrash()">🗑 Open Trash</button>'});
+  cands.sort((a,b)=>b.bytes-a.bytes);
+  const top=cands[0];
+  if(top && top.bytes>1024){
+    return '<div class="mm" style="margin-top:10px;font-size:12.5px">Biggest thing you can reclaim: <strong>'
+      +esc(top.label)+'</strong> — about '+_fmtBytes(top.bytes)+'. '+top.html+'</div>';
+  }
+  return '<div class="mm" style="margin-top:10px;font-size:12.5px">Nothing here is worth reclaiming right now. '
+    +'<strong>💾 Save File</strong> keeps a full copy safe either way — if the notebook itself has outgrown '
+    +'this device’s storage, shrinking it needs a further round.</div>';
+}
+/** Shared by the ⚙ Backup & Restore modal and openStorageWarnDetails() — one
+ *  block, so the numbers can never drift between the two places they show. */
+function _storageSectionHTML(){
+  const br=_storageBreakdown();
+  const recSnap=_readRecoveryCopy();
+  let h='<div class="mm" style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">';
+  h+='<div style="font-weight:600;margin-bottom:6px">💽 Storage on this device</div>';
+  h+='<div id="stor-rows" style="font-size:12.5px;line-height:1.9">';
+  h+='Notebook: <strong id="stor-notebook">'+_fmtBytes(br.notebookLive)+'</strong><br>';
+  if(recSnap) h+='Recovery copy ('+esc(new Date(recSnap.savedAt).toLocaleDateString())+'): <strong>'+_fmtBytes(br.recovery)+'</strong><br>';
+  h+='Everything else Siyagah keeps: <strong>'+_fmtBytes(br.other)+'</strong><br>';
+  h+='<span id="stor-quota">Checking the browser’s storage budget…</span>';
+  h+='</div>';
+  h+=_storageAdviceHTML(br,recSnap);
+  if(recSnap){
+    h+='<div class="ma imp-acts" style="margin-top:8px">'
+      +'<button class="btn" onclick="_confirmRestoreRecovery()">↩ Restore last recovery copy</button>'
+      +'<button class="btn bd" onclick="_confirmRemoveRecovery()">🗑 Remove recovery copy — reclaim '+_fmtBytes(br.recovery)+'</button>'
+      +'</div>';
+  }
+  h+='</div>';
+  return h;
+}
+/** navigator.storage.estimate() is async, so the section above renders with
+ *  a placeholder and this fills it in once the browser answers. */
+function _refreshStorageQuota(){
+  const el=document.getElementById('stor-quota');
+  if(!el) return;
+  if(navigator.storage && navigator.storage.estimate){
+    navigator.storage.estimate().then(function(est){
+      const el2=document.getElementById('stor-quota'); if(!el2) return;
+      const usage=est.usage||0, quota=est.quota||0;
+      el2.textContent=quota
+        ? ('Browser budget: about '+_fmtBytes(usage)+' of about '+_fmtBytes(quota)+' used (all of this app’s storage, not just notes)')
+        : 'Browser storage budget: not reported';
+    }).catch(function(){
+      const el3=document.getElementById('stor-quota'); if(el3) el3.textContent='Browser storage budget: unavailable';
+    });
+  } else {
+    el.textContent='Browser storage budget: not reported by this browser';
+  }
+}
+function _confirmRemoveRecovery(){
+  const snap=_readRecoveryCopy();
+  if(!snap){toast('⚠ No recovery copy found on this device');return;}
+  const br=_storageBreakdown();
+  showModal(`<div class="mt">Remove recovery copy?</div>
+    <div class="mm">
+      This removes the safety copy saved on ${esc(new Date(snap.savedAt).toLocaleString())}, from before your
+      last "Replace everything" — it is <strong>not</strong> your notebook, only the backup of what it replaced,
+      and frees about ${esc(_fmtBytes(br.recovery))}.<br><br>
+      This cannot be undone.
+    </div>
+    <div class="ma imp-acts">
+      <button class="btn" id="rmrec-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn bd" onclick="_doRemoveRecovery()">Remove it</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('rmrec-cancel')?.focus(),50);
+}
+function _doRemoveRecovery(){
+  const key=localStorage.getItem(_RECOVERY_LATEST_KEY);
+  try{
+    if(key)localStorage.removeItem(key);
+    localStorage.removeItem(_RECOVERY_LATEST_KEY);
+  }catch(e){ toast('⚠ Could not remove the recovery copy'); return; }
+  toast('🗑 Recovery copy removed');
+  /* Retry the save once now that space has (maybe) been freed — _save()
+     itself already toasts "working again" and clears the ⚠ indicator when
+     _lsFail flips back to false, exactly the path a normal save takes. */
+  _save();
+  openModal('settings');
+}
+/** The full explanation, opened only when the owner taps the ⚠ indicator or
+ *  the warning #save-lbl — never on its own (see _save()). */
+function openStorageWarnDetails(){
+  const quota=_lsFailQuota;
+  showModal(`<div class="mt">⚠ This device can no longer save locally</div>
+    <div class="mm" style="line-height:1.65">
+      ${quota
+        ? 'Your browser’s storage for this app is <b>full</b>.'
+        : 'Your browser <b>refused</b> to write to local storage.'}
+      <br><br><b>Your work is not lost.</b> Cloud Sync and file auto-save are still running normally —
+      only this browser’s built-in storage is affected.
+    </div>
+    ${_storageSectionHTML()}
+    <div class="ma" style="margin-top:10px;flex-direction:column;gap:8px;align-items:stretch">
+      <button class="btn bp" onclick="closeModal();exportFile()">💾 Save File</button>
+      <button class="btn" onclick="closeModal()">Close</button>
+    </div>`);
+  _refreshStorageQuota();
+}
+/** #save-lbl already reports several unrelated save states; only act on a
+ *  tap while it is actually showing the storage warning. */
+function _saveLblTap(){ if(_lsFail) openStorageWarnDetails(); }
 
 
 /* ══ JOURNAL MODE ═══════════════════════════════════════════════════════════ */
@@ -16030,15 +16197,17 @@ function openModal(type,target){
       <div class="ma"><button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn bp" onclick="rnFolder('${target}',document.getElementById('inp').value);closeModal()">Save</button></div>`);
   } else if(type==='settings'){
-    const hasRec=!!_readRecoveryCopy();
     showModal(`<div class="mt">⚙ Backup & Restore</div>
       <div class="mm">Export a JSON backup, or restore from one.</div>
       <div class="ma" style="flex-direction:column;gap:8px;align-items:stretch">
         <button class="btn bp" onclick="exportJSON();closeModal()">⬇ Export data as JSON backup</button>
         <button class="btn" onclick="importJSON();closeModal()">⬆ Import data from JSON backup</button>
-        ${hasRec?'<button class="btn" onclick="_confirmRestoreRecovery()">↩ Restore last recovery copy</button>':''}
+      </div>
+      ${_storageSectionHTML()}
+      <div class="ma" style="margin-top:10px">
         <button class="btn" onclick="closeModal()">Close</button>
       </div>`);
+    _refreshStorageQuota();
   } else if(type==='section'){
     showModal(`<div class="mt">New section</div>
       <input class="mi" id="inp" placeholder="e.g. Islamic Studies" autofocus
@@ -18773,11 +18942,14 @@ function scheduleAutoSave(){
   _autoTimer=setTimeout(()=>_writeToFile(), 2500);
 }
 
-/** Refresh the auto-save button label and the export-button dirty indicator. */
+/** Refresh the auto-save button label, the export-button dirty indicator,
+ *  and (v04.44) the quiet ⚠ storage-warning indicator — see _save(). */
 function updateSaveUI(){
   const ab=document.getElementById('autosave-btn');
   const eb=document.getElementById('export-btn');
   const sl=document.getElementById('save-lbl');
+  const wd=document.getElementById('save-warn-dot');
+  if(wd) wd.style.display=_lsFail?'flex':'none';
   if(ab){
     if(_fileHandle){
       ab.textContent='🔗 Auto-save ON';
@@ -18793,7 +18965,10 @@ function updateSaveUI(){
   }
   if(eb) eb.classList.toggle('dirty', _fileDirty && !_fileHandle);
   if(sl){
-    if(_fileHandle && !_fileDirty){
+    if(_lsFail){
+      sl.textContent=(_lsFailQuota?'⚠ Storage full':'⚠ Storage error')+' — tap for details';
+      sl.className='save-lbl err';
+    } else if(_fileHandle && !_fileDirty){
       sl.textContent='✓ File saved'; sl.className='save-lbl ok';
     } else if(_fileHandle && _fileDirty){
       sl.textContent='● Saving…'; sl.className='save-lbl busy';
