@@ -3,7 +3,11 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.36.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.37.** Live at `siyagah.github.io`, served from `main`.
+
+**The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
+becomes rounds, and when to stop and ask the owner. Everything in this file
+binds the Architect too.
 
 **The round-by-round build log lives in `CHANGELOG.md`.** Open it only when you
 need the background of one specific feature. The five most recent rounds are
@@ -12,6 +16,25 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.37** (21 Sep 2026) — the Architect's brief, written down. No app
+  change. The loop v04.35 built had three roles in it and only two of them
+  had a file: `CLAUDE.md` is the builder's standing brief, and the
+  **Architect** — the Claude Code session that turns a job into rounds, opens
+  the issues, reviews the PRs and merges them — was carried in a chat
+  message, which is to say nowhere. `ARCHITECT.md` at the repo root is now
+  that role's brief: who does what (owner gives jobs and decides design
+  questions; Architect plans, assigns, reviews by MEASUREMENT and merges;
+  builder builds one round per issue and stops at the PR), the six-step loop
+  for every job, the short list of things worth interrupting the owner for,
+  the standing **Architect's backlog** that keeps the builder busy between
+  jobs, and the three limits that bite: the Action's builder cannot push
+  `.github/workflows/**`, the v04.36 gate starts a run only for `AAAsapp`,
+  and one round at a time or two builders edit `index.html` against a stale
+  base. It does not restate `CLAUDE.md`; it says only what differs by role,
+  and `CLAUDE.md` now points at it in its first lines. The version moved
+  because the rule is that it always does — `sw.js`'s cache name is the only
+  thing that evicts a stale build, so a docs-only round bumps too (I5).
+  11/11 ship checks; no app code touched, so `app-check` was not re-run.
 - **v04.36** (20 Sep 2026) — close the trigger gate. No app change. v04.35's
   `if:` only checked for the text `@claude`; anything that could post a
   comment containing that word could start the builder, including the
@@ -77,29 +100,6 @@ must never accumulate here instead of there.
   `.fw-ed` both live on one note, both on autosave — measured on
   `origin/main` at v04.32, fixed here. 255/255 app checks (up from 236) and
   11/11 ship checks.
-- **v04.32** (12 Sep 2026) — two screenshots of the phone's read view.
-  **`📁 Folder · 1 attached`**: the word went, the count stayed — but the word
-  alone would NOT have done what was asked, and the measurement said so.
-  Dropping it saves 52px; with the four Attach rows flowing free, three fit
-  the first line from **410px** of screen and the fourth needs **537px**, so
-  every common phone (412, 414, 428, 430) lands in the gap and strands
-  `🗄 MyDatabase` alone — the shape in the screenshot. They wrap as two
-  **pairs** under 640px, each button still sized to its own words; above
-  640px `.eb-pair` is `display:contents` and the 260px card is untouched.
-  **The full `⋯` menu** was the last phone surface that never got v04.29:
-  21 rows of 155px hanging in a 167px column, and six grey separator lines
-  doing the work six headings should do. It is the same card as the other
-  palettes now — `THIS NOTE` / `MARK IT` / `PUT IT IN` / `REMIND & REVISE` /
-  `REMOVE`, **21 rows on 9 lines**, 14 distinct widths, 44px, 629px of an
-  844px phone, no scrolling — built from **one table rendered two ways**
-  (`_artCtxGroups()`) so the phone's card and the laptop's column cannot
-  become different menus. Three glyph collisions inside that one menu fell
-  out of writing it down (`🏷` was NTI Types and Tags, `↺` was Reopen and
-  Remove-from-practice, `✅` was In-favourites and Mark-as-done). **And
-  `⋯ All actions` — the row v04.31 added — never worked**: a synthesised
-  event again, the v04.12 defect verbatim, measured dead on `origin/main`
-  before anything was touched. 236/236 app checks (up from 219) and 11/11
-  ship checks.
 ---
 
 ## What this is
