@@ -24,10 +24,16 @@ click, or for a relay. Do the whole loop yourself.
 2. **Assign.** Open one GitHub issue per round, one at a time, body starting
    `@claude`. The issue is the spec: what to build, the shape on each of the
    three layouts, what to measure, "open the PR and STOP — do not merge".
-   You post as `AAAsapp`, which the workflow's gate requires.
+   You post as `AAAsapp`, which the workflow's gate requires. **Every issue
+   also carries the push rule and the order of work** — see *Writing an issue
+   the builder can finish* below. An issue that does not is an issue that can
+   cost a whole run.
 3. **Monitor.** Watch the Actions run for that issue until it finishes, and
-   find the PR it opened (branch `claude/issue-N-…`). If the run fails, read
-   its log, fix the cause (spec, environment, or workflow) and re-run.
+   find the PR it opened (branch `claude/issue-N-…`). **A run that says
+   `success` has not necessarily done anything** — see *The builder stops
+   without saying so*. Check the branch and the PR, never the green tick. If
+   the run fails, or finishes having produced nothing, read its log, fix the
+   cause (spec, environment, or workflow) and re-run.
 4. **Review — by measurement, not by reading the report.**
    - fetch the PR branch; `git diff origin/main...` it in full;
    - `node tools/ship-check.mjs` and `node tools/app-check.mjs` yourself;
@@ -40,6 +46,58 @@ click, or for a relay. Do the whole loop yourself.
 6. **Report** to the owner when the JOB is done (not after each round), in
    the shape set out under *Reporting to the owner* below. Update the pinned
    status issue after EVERY step, not just at the end — see *Handover*.
+
+## Writing an issue the builder can finish
+
+A correct spec that the builder cannot get to the end of buys nothing. Two
+things belong in **every** issue, and both were paid for in v04.42.
+
+**Push before measuring.** Say it in the issue, in the order of work:
+implement → bump the version and write the `CHANGELOG.md` entry → **commit
+and push** → add the checks → **push** → verify → **push** → open the PR.
+A branch carrying the change and an imperfect PR body is recoverable; a
+runner that ended is not. Add: *"if you run short of time or turns, push what
+you have and say in a comment exactly where you stopped — never end a run
+with work only in the workspace."*
+
+**Say how much measuring you mean.** "Each new assertion must be shown
+failing on unpatched code" reads as *one full `app-check` run per assertion*.
+At about two minutes a run that is enough to end the round. Write **one**
+stash, **one** run, one set of totals, and say what to report: both totals
+plus which new assertions failed while stashed. Add that **a new check which
+passes even while stashed must be reported and explained, never deleted** —
+a check that cannot fail proves nothing, and knowing which ones those are is
+worth having.
+
+Also worth naming in the issue: the builder has `Bash(node *)`,
+`Bash(npx playwright *)`, `Bash(git *)`, `Bash(gh pr *)`, `Bash(gh issue *)`,
+`Read`, `Edit`, `Write`, `Glob`, `Grep`. A bare `Bash(cat …)`, `Bash(ls …)`
+or `Bash(grep …)` is refused, and each refusal costs a turn.
+
+## The builder stops without saying so
+
+**A run can report `success`, cost twelve minutes, and leave nothing behind.**
+In v04.42 this happened three times: the builder did the work, ended its own
+turn part-way down its checklist, and never committed — so the branch was
+never created and the whole run was lost. The job's `conclusion` was
+`success` every time; `num_turns` was nowhere near the 250 limit. Never take
+the green tick as evidence that a round happened. Look at the branch, the
+commits and the PR.
+
+When it does stop short, **notice WHERE**. All three stops were at the same
+step — the expensive unpatched-code verification. Restating an instruction
+that has already failed twice just spends another run. The rule that works:
+
+> **When the builder stops at the same step twice, take that step off it
+> rather than say it louder.**
+
+Doing that is not a lowering of standards when the step is a *measurement*,
+because re-running the measurement is the Architect's job in review anyway.
+In v04.42 the third attempt was given four numbered steps with "push" as
+step 3 and an explicit *"do not run the verification — I will run it myself
+and record it on the PR"*, and it finished. Record the result you measured
+as a PR comment, and tell the builder to write exactly that in
+`CHANGELOG.md`/`CLAUDE.md` rather than a number it has not measured.
 
 ## When to stop and ask the owner
 
@@ -56,6 +114,17 @@ When a job is finished and reported, carry on without being asked with the
 anything that makes the existing app more correct. Never start a NEW feature
 from the backlog: new features come from the owner. Add to the backlog
 whenever a review finds something out of scope for the round in hand.
+
+**A "not done" recorded in a round is backlog work that nobody has written
+down.** Every round says what it did not do — that is the rule in
+`CLAUDE.md` — but saying it in a `CHANGELOG.md` entry files it nowhere. When
+a round records something as not done, **put it on the backlog below in the
+same step**, or decide out loud that it is not worth doing and say why.
+Cost: the v04.40 entry recorded `theme.custom` as not done, the backlog
+below read *empty* for the whole of v04.41, and the gap turned out to be far
+wider than the one key that had been named — every object-valued theme key,
+not just `custom`. A backlog that says "empty" while a known defect sits in
+a changelog entry is worse than no backlog, because it ends the work.
 
 Stop and report instead of continuing when: the backlog is empty, the Max
 usage limit is reached (say when it resets), or three rounds in a row fail
@@ -134,3 +203,23 @@ Every report follows one shape:
       whether that is acceptable and record it (found v04.35).
       Resolved v04.38: the clean-tree pass is correct and stays; the
       untracked blindness was a defect and is fixed.
+- [x] `theme.custom` merges as a single key, so two devices recolouring two
+      different swatches keep only one (recorded as not done by v04.40, and
+      never filed here — the omission this file's new rule exists to stop).
+      Resolved v04.43 by the round it prompted: v04.42 fixed it generally, at
+      the leaf, for every object-valued theme key rather than the one named.
+- [ ] Nesting deeper than one level inside a `DB.theme` sub-object is not
+      resolved per leaf — `_mergeThemeObjKey()` goes exactly one level down
+      (recorded as not done by v04.42). **Not a defect today:** no theme
+      setting nests a map inside a map, so nothing can currently lose a
+      value this way. Filed as a watch item, not work: if a future setting
+      ever nests one, the same pattern has to be applied at that level, and
+      this line is the reminder. Do not build it speculatively.
+- [ ] `app-check` now runs 299 checks in about two and a half minutes, and
+      every round re-runs it several times. Nothing is wrong with it — but
+      the unpatched-code verification means a second full run, and that
+      second run is what ended three builder attempts in v04.42. Worth
+      deciding whether the harness should grow a way to run one section
+      (`node tools/app-check.mjs --only 12,13`) so a round can prove its own
+      new checks without paying for all 299 twice. Measure first: if the
+      saving is small, say so and close this.
