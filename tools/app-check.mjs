@@ -712,6 +712,158 @@ r.check(themeMerge.noStampsPreset === 'sand' && themeMerge.noStampsFonts === 111
 r.check(themeMerge.unknownKey === 1, 'an unknown/new top-level key on remote reaches the merged result instead of being silently dropped',
   `futureFeature.x → ${themeMerge.unknownKey}`);
 
+/* ── 12. mergeDB() resolves DB.theme sub-objects at the LEAF — the v04.42 defect ── */
+/* v04.40 resolved theme per TOP-LEVEL key, which is still too coarse for the
+   several theme values that are themselves object maps written one sub-key
+   at a time (fonts, custom, dbColors, headingStyles, calLayers, templates,
+   calState, accordionSec, mwCatDefaultOpen, fwPos, modalPos, pinPanelPos):
+   the whole object travelled on whichever device's stamp was newer, so a
+   sidebar-font change on the phone and a content-font change on the laptop
+   could not both survive one sync. _mergeThemeVals()/_mergeThemeObjKey()
+   now resolve a key that is a plain object on both sides sub-key by
+   sub-key, via the dotted stamps _stampThemeTouches() now writes
+   (DB.themeAt['fonts.sidebar']), falling back to the parent's top-level
+   stamp for a pre-v04.42 notebook that has never written one. */
+const leafMerge = await page.evaluate(() => {
+  const base = (theme, themeAt) => ({ folders: [], sections: [], trash: [], articles: [], theme, themeAt });
+  const fontsBoth = window.mergeDB(
+    base({ fonts: { global: 100, sidebar: 120, list: 100, content: 100 } }, { 'fonts.sidebar': 1000 }),
+    base({ fonts: { global: 100, sidebar: 100, list: 100, content: 130 } }, { 'fonts.content': 2000 }),
+  );
+  const customBoth = window.mergeDB(
+    base({ custom: { forest: '#111111' } }, { 'custom.forest': 1000 }),
+    base({ custom: { sand: '#222222' } }, { 'custom.sand': 2000 }),
+  );
+  const sameKeyFwd = window.mergeDB(
+    base({ fonts: { sidebar: 100 } }, { 'fonts.sidebar': 1000 }),
+    base({ fonts: { sidebar: 130 } }, { 'fonts.sidebar': 2000 }),
+  );
+  const sameKeyRev = window.mergeDB(
+    base({ fonts: { sidebar: 130 } }, { 'fonts.sidebar': 2000 }),
+    base({ fonts: { sidebar: 100 } }, { 'fonts.sidebar': 1000 }),
+  );
+  const unstampedRemote = window.mergeDB(
+    base({ fonts: { sidebar: 130 } }, { 'fonts.sidebar': 1000 }),
+    base({ fonts: { sidebar: 100 } }, {}),
+  );
+  const unstampedLocal = window.mergeDB(
+    base({ fonts: { sidebar: 100 } }, {}),
+    base({ fonts: { sidebar: 130 } }, { 'fonts.sidebar': 1000 }),
+  );
+  const arrFwd = window.mergeDB(
+    base({ pinTabIds: ['a', 'b'] }, { pinTabIds: 1000 }),
+    base({ pinTabIds: ['c'] }, { pinTabIds: 2000 }),
+  );
+  const arrRev = window.mergeDB(
+    base({ pinTabIds: ['c'] }, { pinTabIds: 2000 }),
+    base({ pinTabIds: ['a', 'b'] }, { pinTabIds: 1000 }),
+  );
+  let mismatchErr = null, mismatchFonts;
+  try {
+    const mismatch = window.mergeDB(
+      base({ fonts: { global: 100 } }, { fonts: 1000 }),
+      base({ fonts: 130 }, { fonts: 2000 }),
+    );
+    mismatchFonts = mismatch.theme.fonts;
+  } catch (e) { mismatchErr = String(e); }
+  return {
+    fontsSidebar: fontsBoth.theme.fonts.sidebar, fontsContent: fontsBoth.theme.fonts.content,
+    customForest: customBoth.theme.custom.forest, customSand: customBoth.theme.custom.sand,
+    sameKeyFwd: sameKeyFwd.theme.fonts.sidebar, sameKeyRev: sameKeyRev.theme.fonts.sidebar,
+    unstampedRemote: unstampedRemote.theme.fonts.sidebar, unstampedLocal: unstampedLocal.theme.fonts.sidebar,
+    arrFwd: arrFwd.theme.pinTabIds, arrRev: arrRev.theme.pinTabIds,
+    mismatchErr, mismatchFonts,
+  };
+});
+r.check(leafMerge.fontsSidebar === 120 && leafMerge.fontsContent === 130,
+  'two different sub-keys of theme.fonts changed on two devices both survive one merge',
+  `fonts.sidebar (local, newer) → ${leafMerge.fontsSidebar} · fonts.content (remote, newer) → ${leafMerge.fontsContent} (wanted 120 and 130 — a whole-object swap could only ever keep one)`);
+r.check(leafMerge.customForest === '#111111' && leafMerge.customSand === '#222222',
+  'two different swatches of theme.custom changed on two devices both survive one merge',
+  `custom.forest (local only) → ${leafMerge.customForest} · custom.sand (remote only) → ${leafMerge.customSand}`);
+r.check(leafMerge.sameKeyFwd === 130 && leafMerge.sameKeyRev === 130,
+  'the same theme.fonts sub-key changed on both sides resolves to the newer stamp, deterministically whichever side it came from',
+  `local-older → ${leafMerge.sameKeyFwd} · local-newer → ${leafMerge.sameKeyRev} (wanted 130, the newer value, both times)`);
+r.check(leafMerge.unstampedRemote === 130 && leafMerge.unstampedLocal === 130,
+  'an unstamped, pre-v04.40-shape side is never blanked, and never wrongly overrides a stamped side, in either direction',
+  `stamped local (130) vs unstamped remote (100) → ${leafMerge.unstampedRemote} · unstamped local (100) vs stamped remote (130) → ${leafMerge.unstampedLocal} (wanted 130 both times — the stamped value)`);
+r.check(JSON.stringify(leafMerge.arrFwd) === '["c"]' && JSON.stringify(leafMerge.arrRev) === '["c"]',
+  'an array-valued theme key (pinTabIds) still merges as one whole value, never per index',
+  `local-older → ${JSON.stringify(leafMerge.arrFwd)} · local-newer → ${JSON.stringify(leafMerge.arrRev)} (wanted ["c"], the newer array, both times — never an interleaved result)`);
+r.check(!leafMerge.mismatchErr && leafMerge.mismatchFonts === 130,
+  'a theme key that is a plain object on one side and a scalar on the other does not throw, and falls back to the whole-key comparison',
+  leafMerge.mismatchErr ? `threw: ${leafMerge.mismatchErr}`
+    : `fonts → ${JSON.stringify(leafMerge.mismatchFonts)} (remote's scalar, newer stamp, replaced the local object whole)`);
+
+/* ── 13. _stampThemeTouches() itself writes the dotted stamp ────────────── */
+/* Check 12 proves mergeDB() reads a dotted stamp correctly — but every one of
+   those stamps was hand-written straight into the test (`{ 'fonts.sidebar':
+   1000 }`), so it proves nothing about whether _stampThemeTouches() ever
+   actually produces one. Reverting only the stamping half back to
+   DB.themeAt[k]=now leaves check 12 fully green while every real device goes
+   back to losing a setting, because no dotted stamp is ever written and
+   every sub-key falls through to the parent stamp. These checks drive
+   _stampThemeTouches() itself, not a literal standing in for it. */
+const stampFn = await page.evaluate(() => {
+  const snapshot = () => JSON.parse(JSON.stringify(DB.theme));
+
+  DB.theme = { fonts: { global: 100, sidebar: 100, list: 100, content: 100 } };
+  DB.themeAt = {};
+  _seedThemeSnap();
+  DB.theme.fonts = Object.assign({}, DB.theme.fonts, { sidebar: 120 });
+  _stampThemeTouches();
+  const subKey = { dotted: DB.themeAt['fonts.sidebar'], parent: DB.themeAt.fonts };
+
+  DB.theme = { preset: 'forest' };
+  DB.themeAt = {};
+  _seedThemeSnap();
+  DB.theme.preset = 'sand';
+  _stampThemeTouches();
+  const scalar = { whole: DB.themeAt.preset, keys: Object.keys(DB.themeAt) };
+
+  DB.theme = { pinTabIds: ['a', 'b'] };
+  DB.themeAt = {};
+  _seedThemeSnap();
+  DB.theme.pinTabIds = ['a', 'b', 'c'];
+  _stampThemeTouches();
+  const arr = { whole: DB.themeAt.pinTabIds, keys: Object.keys(DB.themeAt) };
+
+  const now0 = Date.now();
+  DB.theme = { fonts: { global: 100, sidebar: 100, list: 100, content: 100 } };
+  DB.themeAt = {};
+  _seedThemeSnap();
+  DB.theme.fonts = Object.assign({}, DB.theme.fonts, { sidebar: 120 });
+  _stampThemeTouches();
+  DB.themeAt['fonts.sidebar'] = now0;
+  const deviceA = { folders: [], sections: [], trash: [], articles: [], theme: snapshot(), themeAt: JSON.parse(JSON.stringify(DB.themeAt)) };
+
+  DB.theme = { fonts: { global: 100, sidebar: 100, list: 100, content: 100 } };
+  DB.themeAt = {};
+  _seedThemeSnap();
+  DB.theme.fonts = Object.assign({}, DB.theme.fonts, { content: 130 });
+  _stampThemeTouches();
+  DB.themeAt['fonts.content'] = now0 + 1000;
+  const deviceB = { folders: [], sections: [], trash: [], articles: [], theme: snapshot(), themeAt: JSON.parse(JSON.stringify(DB.themeAt)) };
+
+  const e2e = window.mergeDB(deviceA, deviceB);
+  return {
+    subKey, scalar, arr,
+    e2eSidebar: e2e.theme.fonts.sidebar, e2eContent: e2e.theme.fonts.content,
+  };
+});
+r.check(stampFn.subKey.dotted !== undefined && stampFn.subKey.parent === undefined,
+  '_stampThemeTouches() stamps a changed theme.fonts sub-key under a dotted path, and writes nothing for the parent key',
+  `themeAt['fonts.sidebar'] → ${JSON.stringify(stampFn.subKey.dotted)} · themeAt['fonts'] → ${JSON.stringify(stampFn.subKey.parent)} (wanted a dotted stamp and no parent stamp)`);
+r.check(stampFn.scalar.whole !== undefined && stampFn.scalar.keys.every((k) => !k.includes('.')),
+  '_stampThemeTouches() still stamps a scalar theme key (preset) whole, never as a dotted key',
+  `themeAt keys → ${JSON.stringify(stampFn.scalar.keys)} (wanted ["preset"], no dot)`);
+r.check(stampFn.arr.whole !== undefined && stampFn.arr.keys.every((k) => !k.includes('.')),
+  '_stampThemeTouches() still stamps an array theme key (pinTabIds) whole, never as a dotted key',
+  `themeAt keys → ${JSON.stringify(stampFn.arr.keys)} (wanted ["pinTabIds"], no dot)`);
+r.check(stampFn.e2eSidebar === 120 && stampFn.e2eContent === 130,
+  'end-to-end: two devices stamped by _stampThemeTouches() itself, merged, both sub-key changes survive',
+  `fonts.sidebar (device A) → ${stampFn.e2eSidebar} · fonts.content (device B) → ${stampFn.e2eContent} (wanted 120 and 130 — the whole point of a real stamping function feeding a real merge)`);
+
 await app.close();
 
 /* ── 6e. v04.10: the two pop-up buttons say which is which ─────────────── */

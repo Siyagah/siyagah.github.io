@@ -3521,3 +3521,147 @@ rots.
 ### Measured
 
 11/11 ship checks.
+
+---
+
+## v04.42 — a theme setting inside a sub-object still does not sync between devices (21 Sep 2026)
+
+An app round, in `mergeDB()` and `_stampThemeTouches()`. v04.40 fixed
+`DB.theme` being dropped wholesale and resolved it per top-level key against
+`DB.themeAt`, but recorded one thing as not done: `theme.custom` merges as a
+single key, so two devices recolouring two different swatches keep only one.
+This round is that gap — and, on inspection, it was wider than `custom`.
+
+### The defect
+
+`DB.theme` holds scalars (`preset`, `lineSpacing`, `tocWidth`, …) alongside
+several values that are themselves object maps, written one sub-key at a
+time from a scattered call site each: `fonts` (`global`/`sidebar`/`list`/
+`content`, `_fsBump()`), `custom` (per-swatch colours, the colour picker),
+and by inspection also `dbColors`, `headingStyles`, `calLayers`, `templates`,
+`calState`, `accordionSec`, `mwCatDefaultOpen`, `fwPos`, `modalPos` and
+`pinPanelPos`. v04.40's `_stampThemeTouches()` stamped the whole top-level
+key the instant *any* sub-key changed, and `mergeDB()`'s `_mergeValMap()`
+resolved that whole key against the single stamp. So: enlarge the sidebar
+font on the phone, enlarge the note font on the laptop, sync — the entire
+`fonts` object from whichever device stamped last wins, and the other
+device's change is gone. No throw, no lost note (I1 holds), a setting that
+silently never travels — the exact shape of failure v04.40 was about, one
+level down.
+
+### The fix
+
+Resolved at the **leaf**, generally, not by naming `custom` and `fonts` —
+the v04.40 standing lesson is explicit that an allow-list is "correct until
+the next key."
+
+- **Stamping.** `_stampThemeTouches()` (`index.html`, `_isPlainObj()` /
+  `_stampThemeTouches()`) now checks, per changed top-level key, whether the
+  value is a plain object on **both** the current and the previous snapshot.
+  If so it stamps only the sub-keys that actually changed, under a dotted
+  path — `DB.themeAt['fonts.sidebar']=now` — and writes nothing for the
+  parent key at all. A scalar, an array, or a key whose shape differs
+  between the two snapshots still stamps the whole key exactly as v04.40
+  did. Arrays are deliberately excluded from leaf treatment: `pinTabIds` is
+  an ordered list, not a keyed map, and merging it per index would scramble
+  order, not merge content — it stays a single stamped, single merged value.
+- **Merging.** A new `_mergeThemeVals()` replaces the direct `_mergeValMap()`
+  call for `DB.theme`. Where a key is a plain object on both `local` and
+  `remote`, `_mergeThemeObjKey()` resolves it sub-key by sub-key: a sub-key
+  on only one side is kept, both sides' sub-key wins by comparing
+  `_themeLeafStamp()` (below), a tie keeps local. Everything else — scalars,
+  arrays, and a key that is an object on one side only — falls back to
+  today's whole-key comparison unchanged, so it cannot throw on a mismatched
+  shape; it just never takes the leaf path.
+- **Backwards compatibility (I8).** `_themeLeafStamp(stampMap, topKey,
+  subKey)` reads the dotted stamp (`'fonts.sidebar'`) if one has ever been
+  written, and falls back to the parent's top-level stamp (`'fonts'`)
+  otherwise. Every notebook that predates this round has only the top-level
+  stamp `_stampThemeTouches()` wrote under v04.40 — the sub-key resolution
+  for it reads exactly that value, so an upgrading device merges precisely
+  as it did before this round, never blanked by a remote that also has no
+  dotted stamp yet. Nothing existing is deleted or rewritten; dotted stamps
+  are purely additive alongside the top-level ones.
+- `_mergeStampMap(local.themeAt, remote.themeAt)` needed no change at all —
+  it already merges an arbitrary flat map of `key → timestamp` by taking the
+  newer per key, and a dotted key like `'fonts.sidebar'` is just another
+  string key to it.
+- The v04.40 closing rule — any top-level key present on `remote` and wholly
+  absent from `local` survives the merge — is untouched and still runs last.
+
+### Not done
+
+- Nesting deeper than one level inside a `theme` sub-object (there is none
+  today) was not built for — `_mergeThemeObjKey()` resolves exactly one
+  level of sub-keys. If a future setting nests a map inside a map, it would
+  need this pattern applied again at that level, the same way this round
+  applied it below the top level.
+- No change to how `theme.custom` or `theme.fonts` are *written* — the ~60
+  call sites still assign directly to `DB.theme.foo.bar=val` with no shared
+  setter, exactly as `CLAUDE.md` already describes; this round only changed
+  how the existing writes get stamped and merged.
+
+### D5
+
+Data-only round, like v04.40 — `mergeDB()` and `_stampThemeTouches()` run
+identically regardless of screen size, and nothing about this fix has a
+visual surface. `tools/shot.mjs` was still run at all three sizes to confirm
+nothing moved; `app-check` ran in full because this round's code executes on
+every viewport.
+
+### Measured
+
+Six new checks, calling the real `mergeDB()`/`_stampThemeTouches()` with
+realistic shapes:
+
+- two different sub-keys of `theme.fonts` changed on two simulated devices
+  → both survive one merge;
+- two different swatches of `theme.custom` changed on two devices → both
+  survive;
+- the same sub-key changed on both sides → the newer stamp wins,
+  deterministically (checked both directions);
+- an unstamped (pre-v04.40-shape) remote does not blank a stamped local,
+  and a stamped remote is not blanked by an unstamped local;
+- `theme.pinTabIds` (an array) changed on both sides still merges as one
+  whole value, never per index;
+- a plain-object key on one side and a scalar on the other does not throw
+  and falls back to the whole-key comparison.
+
+Verified against unpatched code with a single revert of `index.html`/`sw.js`
+to their pre-round content, one `app-check` run, then restore (git-stash
+would have needed the fix to still be uncommitted; it was already committed
+by this point, so the same one-run discipline was applied by checking out
+`origin/main`'s copy of the two files, running once, and checking them back
+out from this branch's `HEAD`): **patched 295/295 (289 → 295, 6 new);
+unpatched 291/295, with 4 of the 6 new checks failing** — the two sub-key
+survival checks (`fonts`, `custom`), the same-sub-key-newer-wins check, and
+the unstamped-side check. **The other two new checks pass on both patched
+and unpatched code, and that is correct, not a weak test:** the array
+(`pinTabIds`) and mismatched-shape (object vs scalar) cases were never
+routed through the whole-object-swap bug in the first place — v04.40's
+per-top-level-key `_mergeValMap()` already handled a key that isn't an
+object on both sides exactly the way this round's fallback branch does, so
+neither case could have failed before. Kept as real regression guards
+against this round ever changing that fallback path, not claimed as newly
+fixed.
+
+### Follow-up — the stamping half had no check of its own
+
+Caught in review: all six checks above hand-wrote their stamps straight into
+`mergeDB()` (`{ 'fonts.sidebar': 1000 }`), so they proved the *merge* half
+reads a dotted stamp correctly and nothing about whether
+`_stampThemeTouches()` ever produces one. Reverting only the stamping change
+back to `DB.themeAt[k]=now` — this round's own defect, restored — left all
+six checks green, because no dotted stamp was ever written and every
+sub-key fell through to the parent stamp. Four more checks now call
+`_stampThemeTouches()` directly rather than a literal standing in for it: a
+sub-key change writes a dotted stamp and writes nothing for the parent key;
+a scalar change (`preset`) and an array change (`pinTabIds`) still stamp
+whole, producing no dotted key; and an end-to-end check builds two devices
+whose stamps are produced by `_stampThemeTouches()` itself, merges them, and
+confirms both sub-key changes survive.
+
+Patched: **299/299 (295 → 299, 4 new)**. Unpatched-code verification of the
+four stamping checks recorded by the Architect on the PR.
+
+11/11 ship checks.

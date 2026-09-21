@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.41">
+<meta name="app-version" content="04.42">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2782,7 +2782,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.41</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.42</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3127,6 +3127,11 @@ let _lsFail = false;
    paid for once already, with editor flushes instead of theme stamps. */
 let _themeSnap;
 function _seedThemeSnap(){ try{ _themeSnap=JSON.stringify((DB&&DB.theme)||{}); }catch(_){} }
+/* v04.42 — a plain-object test shared by the stamping below and by
+   mergeDB's leaf resolution. Arrays fail this on purpose: pinTabIds is an
+   ordered list, not a keyed map, and merging it per index would scramble it,
+   not merge it — arrays are always stamped and merged as one whole value. */
+function _isPlainObj(v){ return !!v && typeof v==='object' && !Array.isArray(v); }
 function _stampThemeTouches(){
   try{
     const cur=(DB&&DB.theme)||{};
@@ -3137,7 +3142,27 @@ function _stampThemeTouches(){
     if(!DB.themeAt||typeof DB.themeAt!=='object')DB.themeAt={};
     const now=Date.now();
     const keys=new Set(Object.keys(cur).concat(Object.keys(prev)));
-    keys.forEach(k=>{ if(JSON.stringify(cur[k])!==JSON.stringify(prev[k])) DB.themeAt[k]=now; });
+    /* v04.42 — several DB.theme values (fonts, custom, dbColors, headingStyles,
+       calLayers, templates, calState, accordionSec, mwCatDefaultOpen, fwPos,
+       modalPos, pinPanelPos) are object maps written one sub-key at a time.
+       Stamping the whole top-level key made whichever device touched it LAST
+       win the entire object on merge, silently discarding the other device's
+       unrelated sub-key. When both the current and previous snapshot have a
+       plain object at this key, stamp only the sub-keys that actually
+       changed, under a dotted path (DB.themeAt['fonts.sidebar']=now) —
+       nothing is written for the parent key itself in that case. A scalar,
+       an array, or a key whose shape changed (object on one snapshot, not
+       the other) still stamps the whole key, exactly as before. */
+    keys.forEach(k=>{
+      const cv=cur[k], pv=prev[k];
+      if(JSON.stringify(cv)===JSON.stringify(pv)) return;
+      if(_isPlainObj(cv) && _isPlainObj(pv)){
+        const subKeys=new Set(Object.keys(cv).concat(Object.keys(pv)));
+        subKeys.forEach(sk=>{ if(JSON.stringify(cv[sk])!==JSON.stringify(pv[sk])) DB.themeAt[k+'.'+sk]=now; });
+      } else {
+        DB.themeAt[k]=now;
+      }
+    });
     _themeSnap=curStr;
   }catch(_){}
 }
@@ -19869,6 +19894,52 @@ function _mergeValMap(a,b,sa,sb){
   });
   return o;
 }
+/* v04.42 — a sub-key's effective stamp for LEAF theme resolution: the dotted
+   stamp if this round (or a later one) ever wrote it, else the parent's
+   top-level stamp. That fallback is what lets a pre-04.42 notebook — which
+   only ever has themeAt['fonts'], never themeAt['fonts.sidebar'] — resolve
+   exactly as v04.40 already did, rather than reading every sub-key as
+   unstamped (0) and losing to any remote that has a real timestamp. */
+function _themeLeafStamp(stampMap,topKey,subKey){
+  const sm=(stampMap&&typeof stampMap==='object')?stampMap:{};
+  const dotted=topKey+'.'+subKey;
+  if(Object.prototype.hasOwnProperty.call(sm,dotted)) return +sm[dotted]||0;
+  return +sm[topKey]||0;
+}
+/* One DB.theme key that is a plain object on BOTH sides: resolve sub-key by
+   sub-key, newest stamp wins (via _themeLeafStamp above), a sub-key present
+   on only one side is kept, a tie keeps local — the same rules _mergeValMap
+   already applies to whole theme keys, one level deeper. */
+function _mergeThemeObjKey(topKey,av,bv,SA,SB){
+  const out=Object.assign({},av);
+  const subKeys=new Set(Object.keys(av).concat(Object.keys(bv)));
+  subKeys.forEach(sk=>{
+    if(!(sk in av)){ out[sk]=bv[sk]; return; }
+    if(!(sk in bv)) return;
+    const ta=_themeLeafStamp(SA,topKey,sk), tb=_themeLeafStamp(SB,topKey,sk);
+    if(tb>ta) out[sk]=bv[sk];
+  });
+  return out;
+}
+/* v04.42 — DB.theme resolved generally at the LEAF level rather than naming
+   the object-shaped keys (fonts, custom, ...): whichever top-level keys turn
+   out to be plain objects on BOTH sides are merged sub-key by sub-key;
+   everything else (scalars, arrays, and a key whose shape differs between
+   the two sides, which cannot throw here because it just falls through to
+   the whole-key branch) keeps the v04.40 whole-key behaviour, newest
+   TOP-LEVEL stamp wins, tie keeps local. */
+function _mergeThemeVals(local,remote,sa,sb){
+  const A=_isPlainObj(local)?local:{}, B=_isPlainObj(remote)?remote:{};
+  const SA=_isPlainObj(sa)?sa:{}, SB=_isPlainObj(sb)?sb:{};
+  const out=Object.assign({},A);
+  Object.keys(B).forEach(k=>{
+    if(!(k in out)){ out[k]=B[k]; return; }
+    const av=out[k], bv=B[k];
+    if(_isPlainObj(av) && _isPlainObj(bv)){ out[k]=_mergeThemeObjKey(k,av,bv,SA,SB); return; }
+    if((+SB[k]||0)>(+SA[k]||0)) out[k]=bv;
+  });
+  return out;
+}
 function mergeDB(local, remote){
   if(!remote||typeof remote!=="object") return local;
   if(!local||typeof local!=="object") return remote;
@@ -19888,14 +19959,20 @@ function mergeDB(local, remote){
   /* v04.40 — DB.theme was never in the key list above, so Object.assign's
      opening copy meant local's settings always won outright and remote's
      were thrown away, in both directions — a colour, a font size, any
-     preference, never reached the other device. Resolved exactly like
-     tagColors/tagColorsAt just above: one stamp per TOP-LEVEL key of theme
-     (not the whole object, so two devices changing two different settings
-     both survive), read from the ORIGINAL sides' stamps. A device with no
-     stamps at all (every notebook that predates this round) ties at 0 and
-     _mergeValMap keeps local's value on a tie — an upgrading device is never
-     blanked by an equally-unstamped remote. */
-  out.theme   = _mergeValMap(local.theme, remote.theme, local.themeAt, remote.themeAt);
+     preference, never reached the other device.
+     v04.42 — resolving that per TOP-LEVEL key was still too coarse: several
+     theme keys (fonts, custom, dbColors, headingStyles, calLayers, templates,
+     calState, accordionSec, mwCatDefaultOpen, fwPos, modalPos, pinPanelPos)
+     are themselves object maps written one sub-key at a time, so the whole
+     object travelled on whichever device's stamp was newer and the other
+     device's unrelated sub-key vanished. _mergeThemeVals resolves any key
+     that is a plain object on BOTH sides sub-key by sub-key instead — see
+     _mergeThemeObjKey / _themeLeafStamp above — and falls back to this same
+     whole-key behaviour for scalars and arrays (pinTabIds). A device with no
+     stamps at all (every notebook that predates v04.40) ties at 0 and keeps
+     local's value on a tie — an upgrading device is never blanked by an
+     equally-unstamped remote. */
+  out.theme   = _mergeThemeVals(local.theme, remote.theme, local.themeAt, remote.themeAt);
   out.themeAt = _mergeStampMap(local.themeAt, remote.themeAt);
   /* v03.82 — the five sidebar section-header scalars. Bare values with no
      home for a timestamp, so they are resolved by the DB.uiAt stamp map.

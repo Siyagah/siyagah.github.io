@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.41.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.42.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,41 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.42** (21 Sep 2026) — a theme setting inside a sub-object still does
+  not sync between devices. v04.40 resolved `DB.theme` per top-level key
+  against `DB.themeAt` and recorded one gap: `theme.custom` merges as one
+  key, so two devices recolouring two different swatches keep only one. On
+  inspection the gap was wider — `fonts`, `dbColors`, `headingStyles`,
+  `calLayers`, `templates`, `calState`, `accordionSec`, `mwCatDefaultOpen`,
+  `fwPos`, `modalPos` and `pinPanelPos` are all object maps written one
+  sub-key at a time, and the whole object travelled on whichever device's
+  stamp was newer — enlarge the sidebar font on the phone, the note font on
+  the laptop, sync, and the phone's change is gone. Fixed at the **leaf**,
+  generally, per the standing lesson that an allow-list is "correct until the
+  next key": `_stampThemeTouches()` now stamps a changed sub-key under a
+  dotted path (`DB.themeAt['fonts.sidebar']=now`) whenever a top-level value
+  is a plain object on both the current and previous snapshot, instead of
+  stamping the whole parent key; a new `_mergeThemeVals()`/
+  `_mergeThemeObjKey()`/`_themeLeafStamp()` resolve any `theme` key that is a
+  plain object on both sides sub-key by sub-key, with a sub-key that has no
+  dotted stamp of its own falling back to its parent's top-level stamp so a
+  pre-v04.42 notebook resolves exactly as it did under v04.40 (I8). Arrays
+  (`pinTabIds`) and scalars are unaffected — stamped and merged whole, as
+  before; deliberately not treated as leaves, since merging an array per
+  index would scramble order rather than merge content. `CLAUDE.md`'s theme
+  paragraph corrected to describe leaf resolution rather than per-top-level-
+  key. Not done: nesting deeper than one level inside a `theme` sub-object.
+  D5: data-only, no visual surface, said so rather than left unsaid.
+  **Review found the first six checks all hand-wrote their stamps straight
+  into `mergeDB()`, proving the merge half reads a dotted stamp and nothing
+  about whether `_stampThemeTouches()` ever writes one** — reverting only
+  the stamping change left every check green. Four more checks now drive
+  `_stampThemeTouches()` itself: a sub-key change writes a dotted stamp and
+  nothing for the parent key, a scalar and an array still stamp whole, and
+  an end-to-end check merges two devices whose stamps came from the function
+  itself. 11/11 ship checks, app checks 289 → 295 → **299** (6 then 4 more
+  new); unpatched-code verification of the four stamping checks recorded by
+  the Architect on the PR.
 - **v04.41** (21 Sep 2026) — Handover, and how the owner is told. No app
   change. Two gaps that were costing the owner directly. **The chat was the
   Architect's memory**: a session that ended, or was summarised, took the
@@ -112,25 +147,6 @@ must never accumulate here instead of there.
   open since v04.35 is ticked. D5 does not apply — no markup, CSS or app
   JavaScript touched. 11/11 ship checks, 266/266 app checks (`index.html`'s
   version string changed, so it was re-run in full).
-- **v04.37** (21 Sep 2026) — the Architect's brief, written down. No app
-  change. The loop v04.35 built had three roles in it and only two of them
-  had a file: `CLAUDE.md` is the builder's standing brief, and the
-  **Architect** — the Claude Code session that turns a job into rounds, opens
-  the issues, reviews the PRs and merges them — was carried in a chat
-  message, which is to say nowhere. `ARCHITECT.md` at the repo root is now
-  that role's brief: who does what (owner gives jobs and decides design
-  questions; Architect plans, assigns, reviews by MEASUREMENT and merges;
-  builder builds one round per issue and stops at the PR), the six-step loop
-  for every job, the short list of things worth interrupting the owner for,
-  the standing **Architect's backlog** that keeps the builder busy between
-  jobs, and the three limits that bite: the Action's builder cannot push
-  `.github/workflows/**`, the v04.36 gate starts a run only for `AAAsapp`,
-  and one round at a time or two builders edit `index.html` against a stale
-  base. It does not restate `CLAUDE.md`; it says only what differs by role,
-  and `CLAUDE.md` now points at it in its first lines. The version moved
-  because the rule is that it always does — `sw.js`'s cache name is the only
-  thing that evicts a stale build, so a docs-only round bumps too (I5).
-  11/11 ship checks; no app code touched, so `app-check` was not re-run.
 ---
 
 ## What this is
@@ -277,14 +293,25 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `DB.theme` is a free-form bag — new settings ride the existing localStorage
   and file-export plumbing with nothing new to add. **Firestore sync is
   different: a new setting needs its stamp.** `mergeDB()` resolves `DB.theme`
-  per key, last-write-wins, against the companion stamp map `DB.themeAt`
-  (same pattern as `tagColors`/`tagColorsAt`) — but the stamps themselves are
-  set once, centrally, by `_stampThemeTouches()` (called from `_save()` and
-  `_doPush()`, diffing `DB.theme` against its last-seen snapshot), not by
-  each of the ~60 call sites that write a `DB.theme.*` key. A brand new
-  setting therefore needs nothing extra to sync correctly; it only needs to
-  actually go through `_save()`/`persist()` like everything else already
-  does. See v04.40.
+  at the **leaf**, last-write-wins, against the companion stamp map
+  `DB.themeAt` (same pattern as `tagColors`/`tagColorsAt`): a scalar or an
+  array (`pinTabIds`) is resolved and stamped as one whole top-level key, but
+  a value that is a plain object on both sides — `fonts`, `custom`,
+  `dbColors`, `headingStyles`, `calLayers`, `templates`, `calState`,
+  `accordionSec`, `mwCatDefaultOpen`, `fwPos`, `modalPos`, `pinPanelPos` — is
+  resolved sub-key by sub-key via `_mergeThemeVals()`/`_mergeThemeObjKey()`,
+  so two devices changing two different sub-keys of the same setting both
+  survive a merge. A sub-key with no dotted stamp of its own (every notebook
+  before v04.42) falls back to its parent's top-level stamp via
+  `_themeLeafStamp()`, so an upgrading device resolves exactly as it did
+  before. The stamps themselves are set once, centrally, by
+  `_stampThemeTouches()` (called from `_save()` and `_doPush()`, diffing
+  `DB.theme` against its last-seen snapshot — dotted, per sub-key, when a
+  changed value is a plain object on both snapshots), not by each of the
+  ~60 call sites that write a `DB.theme.*` key. A brand new setting
+  therefore needs nothing extra to sync correctly; it only needs to actually
+  go through `_save()`/`persist()` like everything else already does. See
+  v04.40, v04.42.
 - **Panes** — `renderTree()` (sidebar), `renderP2H()` / `renderP2C()` (article
   list), `renderP3H()` / `renderP3C()` (note header and body). `render()` calls
   them all. Most changes end with some subset of these.
