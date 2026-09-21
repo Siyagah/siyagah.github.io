@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.39">
+<meta name="app-version" content="04.40">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2782,7 +2782,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.39</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.40</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2950,6 +2950,8 @@ function loadDB(){
   if(_def) DB.folders.filter(f=>!f.parentId&&!f.sectionId).forEach(f=>f.sectionId=_def);
   if(!DB.theme) DB.theme={preset:'forest',custom:{}};
   if(!DB.theme.fonts) DB.theme.fonts={global:100,sidebar:100,list:100,content:100};
+  if(!DB.themeAt||typeof DB.themeAt!=='object') DB.themeAt={};  /* v04.40 — an existing notebook has no stamps yet; mergeDB treats that as tying in its favour, never as blank */
+  _seedThemeSnap();  /* v04.40 — baseline is whatever loadDB() just settled on (including any merge above), so the first real _save() only stamps keys the user actually touches this session */
   if(DB.theme.listView==='snippet') ST.snippet=true;
   /* Restore last-viewed article so pane 3 shows content on load */
   if(DB.theme.lastArticle&&DB.articles.find(a=>a.id===DB.theme.lastArticle))
@@ -3105,10 +3107,45 @@ let _lastEdInputAt = 0;
 const _ED_REMOTE_GRACE_MS = 2000;
 
 let _lsFail = false;
+/* v04.40 — DB.theme is written from ~60 scattered call sites (a colour
+   picker, a font-size slider, a layout toggle...), never through one setter
+   a stamp could be added to. Rather than touch every site — and rely on
+   every FUTURE site remembering to — this diffs DB.theme against the last
+   snapshot every time _save() runs, which is the one place ALL of them
+   already funnel through (the sole localStorage.setItem(SK,...) in the
+   app). Any key whose value actually changed gets DB.themeAt[key]=now; nothing
+   else does, so unrelated keys are never falsely re-stamped.
+   The first call after a fresh page load seeds the snapshot and stamps
+   nothing — there is no prior state in this session to compare against, and
+   stamping every key "now" at boot would make an untouched setting look
+   freshly edited and let it wrongly beat a real edit from another device.
+   The same reasoning applies after DB=mergeDB(...): that call already
+   produced the correct per-key stamps (see mergeDB), so its callers reseed
+   the snapshot immediately, before their own _save() can re-diff a stale
+   pre-merge snapshot against the merge result and overwrite an honest
+   remote stamp with a fabricated local "now" — the exact mistake v03.92.02
+   paid for once already, with editor flushes instead of theme stamps. */
+let _themeSnap;
+function _seedThemeSnap(){ try{ _themeSnap=JSON.stringify((DB&&DB.theme)||{}); }catch(_){} }
+function _stampThemeTouches(){
+  try{
+    const cur=(DB&&DB.theme)||{};
+    const curStr=JSON.stringify(cur);
+    if(_themeSnap===undefined){ _themeSnap=curStr; return; }
+    if(curStr===_themeSnap) return;
+    const prev=JSON.parse(_themeSnap||'{}');
+    if(!DB.themeAt||typeof DB.themeAt!=='object')DB.themeAt={};
+    const now=Date.now();
+    const keys=new Set(Object.keys(cur).concat(Object.keys(prev)));
+    keys.forEach(k=>{ if(JSON.stringify(cur[k])!==JSON.stringify(prev[k])) DB.themeAt[k]=now; });
+    _themeSnap=curStr;
+  }catch(_){}
+}
 /* `pre` — an already-serialised DB, passed by callers that have just built
    one (the cloud push). Saves stringifying the whole notebook twice on
    every push, which is measurable once a notebook is large. */
 function _save(pre){
+  _stampThemeTouches();
   try{
     localStorage.setItem(SK, pre!=null?pre:JSON.stringify(DB));
     if(_lsFail){ _lsFail = false; try{ toast('\u2705 Browser storage is working again \u2014 saving normally'); }catch(_){} }
@@ -19715,6 +19752,7 @@ async function syncNow(){
     if(remoteDB){
       const before=(DB.articles||[]).length;
       DB=mergeDB(DB, remoteDB);
+      _seedThemeSnap();  /* v04.40 — mergeDB already resolved DB.theme correctly; reseed so the next _save() doesn't re-diff against the pre-merge snapshot and overwrite an honest remote stamp with a fresh local "now" */
       added=(DB.articles||[]).length-before;
       _flushAllEditors();
       _save(); _renderPreserveEdit();
@@ -19847,6 +19885,18 @@ function mergeDB(local, remote){
   out.sfItems     = _mergeMapById(local.sfItems, remote.sfItems);
   out.tagColors   = _mergeValMap(local.tagColors, remote.tagColors, local.tagColorsAt, remote.tagColorsAt);
   out.tagColorsAt = _mergeStampMap(local.tagColorsAt, remote.tagColorsAt);
+  /* v04.40 — DB.theme was never in the key list above, so Object.assign's
+     opening copy meant local's settings always won outright and remote's
+     were thrown away, in both directions — a colour, a font size, any
+     preference, never reached the other device. Resolved exactly like
+     tagColors/tagColorsAt just above: one stamp per TOP-LEVEL key of theme
+     (not the whole object, so two devices changing two different settings
+     both survive), read from the ORIGINAL sides' stamps. A device with no
+     stamps at all (every notebook that predates this round) ties at 0 and
+     _mergeValMap keeps local's value on a tie — an upgrading device is never
+     blanked by an equally-unstamped remote. */
+  out.theme   = _mergeValMap(local.theme, remote.theme, local.themeAt, remote.themeAt);
+  out.themeAt = _mergeStampMap(local.themeAt, remote.themeAt);
   /* v03.82 — the five sidebar section-header scalars. Bare values with no
      home for a timestamp, so they are resolved by the DB.uiAt stamp map.
      Compares the ORIGINAL sides' stamps, never the merged map — the merged
@@ -19892,6 +19942,14 @@ function mergeDB(local, remote){
   (out.articles||[]).forEach(a=>{ if(a&&a.id!=null) activeMap[a.id]=1; });
   (out.folders ||[]).forEach(f=>{ if(f&&f.id!=null) activeMap[f.id]=1; });
   out.trash=(out.trash||[]).filter(t=>{ if(!t) return true; const rid=t.item&&t.item.id!=null?t.item.id:t.id; return !activeMap[rid]; });
+  /* v04.40 — the list above is an allow-list, and an allow-list is correct
+     only until the next key. A top-level key that exists on remote and not
+     on local at all — data written by a newer build than this device is
+     running — used to be discarded with no warning, because nothing here
+     was watching for it. Any key already named above, or already present on
+     local, is untouched by this: it keeps whatever that key's own rule
+     decided. This only rescues a key BOTH sides don't already resolve. */
+  Object.keys(remote).forEach(k=>{ if(!(k in out)) out[k]=remote[k]; });
   return out;
 }
 /* ── Chunked cloud storage: bypass Firestore's 1 MiB per-document limit ── */
@@ -20067,6 +20125,15 @@ async function _doPush(){
   try{
     /* Serialise what the user can SEE, not what was last autosaved. */
     _flushAllEditors();
+    /* v04.40 — stamp any changed DB.theme key BEFORE building json below,
+       not after: _save(json) further down reuses this exact string rather
+       than re-serialising, so a stamp applied only inside _save() would
+       land in DB but miss the string that is actually sent to the cloud —
+       the pushed theme value would carry no timestamp, and a later merge
+       would then treat it as older than it is and let a real edit lose to
+       a stale one. Calling it again inside _save() below is a harmless
+       no-op once this has already run. */
+    _stampThemeTouches();
     const json=JSON.stringify(DB);
     const sig=_syncSig(json);
     if(sig===_lastPushedSig){ setSyncStatus('live'); return; }   /* nothing new */
@@ -20271,6 +20338,7 @@ async function _pullRemote(docRef, md, retry){
        flush and correctly loses to the incoming change. */
     _flushAllEditors();
     DB=mergeDB(DB, remoteDB);                  /* MERGE — never replace, so nothing is lost */
+    _seedThemeSnap();  /* v04.40 — see the identical call in syncNow() above */
     const after=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
     _save();
     _renderPreserveEdit();

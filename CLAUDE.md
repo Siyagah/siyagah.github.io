@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.39.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.40.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,32 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.40** (21 Sep 2026) — mergeDB silently dropped every top-level key it
+  was not told about. `mergeDB()` opened `out=Object.assign({},local)` and
+  then resolved only a named list of keys against `remote` — 19 of `DB`'s 20
+  top-level keys. `theme` was not on the list, so a colour, a font size, any
+  preference — changed on one device — never reached another, in either
+  direction, silently: no throw, no lost note (I1 held), just a setting that
+  never travelled (I2 gap). Fixed the same way `tagColors` already was: a
+  per-KEY merge of `theme` against a new companion stamp map, `DB.themeAt`,
+  via the existing `_mergeValMap()`/`_mergeStampMap()` helpers — so two
+  devices changing two different settings both survive, and an unstamped
+  key (every notebook before this round) ties in local's favour rather than
+  blanking anything (I8). `theme` is written from ~60 scattered call sites
+  with no shared setter, so the stamp is applied centrally instead: a new
+  `_stampThemeTouches()` diffs `theme` against its last-seen snapshot inside
+  `_save()`/`_doPush()`, the one place every write already funnels through —
+  a future setting needs nothing extra to sync. Also added: any top-level
+  key present on `remote` and wholly absent from `local` now survives the
+  merge too, a general answer to "what did we forget to name" rather than a
+  fix specific to `theme`. `CLAUDE.md`'s "nothing new to add" sentence about
+  `DB.theme` corrected — true for localStorage/file-export, was never true
+  for Firestore sync. Not done: `theme.custom` (the colour picker's own
+  sub-object) merges as one key, so two devices recolouring two *different*
+  swatches in the same window still only keep one; every other theme setting
+  is unaffected. D5: data-only, no visual surface, said so rather than left
+  unsaid. 11/11 ship checks, app checks 284 → 289 (5 new; 3 of them
+  confirmed failing on unpatched `mergeDB()` via `git stash`, passing after).
 - **v04.39** (21 Sep 2026) — an import can destroy the notebook with no
   consent and no way back. `importJSON()` did `DB=d;persist()` with zero
   confirmation, reachable from a real button in `⚙ Backup & Restore` — a
@@ -94,11 +120,6 @@ must never accumulate here instead of there.
   Claude GitHub App, both flagged "Not done" in v04.35, were confirmed in
   place on 20 Sep 2026 — test issue #43 answered at v04.35. 11/11 ship checks;
   no app code touched, so `app-check` was not re-run.
-- **v04.35** (20 Sep 2026) — the Architect loop. No app change. A
-  `@claude` issue now starts the builder on a GitHub runner
-  (`.github/workflows/claude.yml`, Playwright + Chromium installed there);
-  the builder **opens the PR and stops**, and the Architect reviews, re-runs
-  both checks and merges — the owner's choice, because `main` is live.
 ---
 
 ## What this is
@@ -242,8 +263,17 @@ A failing check is a wrong assertion surprisingly often — investigate before
 
 - **Data** lives in a global `DB` (`folders`, `articles`, `sections`, `trash`,
   plus `DB.theme` for settings); UI state in `ST`. `persist()` saves.
-  `DB.theme` is a free-form bag — new settings ride the existing localStorage /
-  file-export / Firestore plumbing with nothing new to add.
+  `DB.theme` is a free-form bag — new settings ride the existing localStorage
+  and file-export plumbing with nothing new to add. **Firestore sync is
+  different: a new setting needs its stamp.** `mergeDB()` resolves `DB.theme`
+  per key, last-write-wins, against the companion stamp map `DB.themeAt`
+  (same pattern as `tagColors`/`tagColorsAt`) — but the stamps themselves are
+  set once, centrally, by `_stampThemeTouches()` (called from `_save()` and
+  `_doPush()`, diffing `DB.theme` against its last-seen snapshot), not by
+  each of the ~60 call sites that write a `DB.theme.*` key. A brand new
+  setting therefore needs nothing extra to sync correctly; it only needs to
+  actually go through `_save()`/`persist()` like everything else already
+  does. See v04.40.
 - **Panes** — `renderTree()` (sidebar), `renderP2H()` / `renderP2C()` (article
   list), `renderP3H()` / `renderP3C()` (note header and body). `render()` calls
   them all. Most changes end with some subset of these.
@@ -569,3 +599,18 @@ traps belong in `tools/README.md`, not here.)*
   `COLLABORATOR` and looks like the right gate, but GitHub reports members of
   a PRIVATE org as `CONTRIBUTOR` or `NONE` — it would have locked the owner
   out of their own builder. Match the login.
+- **An allow-list merge is a list that is correct until the next key, and
+  nothing fails when it is wrong.** `mergeDB()` named 19 of `DB`'s 20
+  top-level keys across a dozen rounds — each one added because somebody
+  happened to notice that specific key was missing, never because anything
+  caught a key being missing in general. `theme` sat unmerged through every
+  one of those rounds: no throw, no failing check, no wrong-looking
+  screenshot, because a key that silently keeps `local`'s value looks
+  exactly like that device's own settings, since that is exactly what it
+  is — the very shape of failure a glance, or even most tests, cannot see.
+  "Remember to extend the list" is not a fix; it is the bug's precondition,
+  repeated. The real fix is a closing rule with no name in it: after
+  everything explicit is resolved, copy over any key `remote` has that
+  `local` doesn't, so the next key this happens to needs no round of its
+  own to be found. Cost: `DB.theme` never synced between devices for as
+  long as `mergeDB` has had an allow-list. Fixed in v04.40.

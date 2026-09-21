@@ -667,6 +667,51 @@ const del = await page.evaluate(() => {
 r.check(del.gone && del.inTrash, 'a deleted note leaves the list and lands in Trash',
   `${del.before}→${del.after} notes, trash ${del.trashBefore}→${del.trashAfter}`);
 
+/* ── 11. mergeDB() resolves DB.theme per key — the v04.40 defect ────────── */
+/* theme was the one top-level key missing from mergeDB's explicit list, so
+   Object.assign({},local) at the top of the function left it there
+   untouched — local's settings always won outright, remote's were thrown
+   away, whichever side was passed as which argument. Fixed by merging theme
+   per key against a companion themeAt stamp map, same pattern as
+   tagColors/tagColorsAt just above it in mergeDB. */
+const themeMerge = await page.evaluate(() => {
+  const base = (theme, themeAt) => ({ folders: [], sections: [], trash: [], articles: [], theme, themeAt });
+  const t0 = 1000, t1 = 2000;
+  const fwd = window.mergeDB(base({ preset: 'forest' }, { preset: t0 }), base({ preset: 'sand' }, { preset: t1 }));
+  const rev = window.mergeDB(base({ preset: 'sand' }, { preset: t1 }), base({ preset: 'forest' }, { preset: t0 }));
+  const both = window.mergeDB(
+    base({ preset: 'sand', fonts: { global: 100 } }, { preset: t1, fonts: t0 }),
+    base({ preset: 'forest', fonts: { global: 120 } }, { preset: t0, fonts: t1 }),
+  );
+  const noStamps = window.mergeDB(
+    base({ preset: 'sand', fonts: { global: 111 } }, {}),
+    base({ preset: 'forest', fonts: { global: 100 } }, {}),
+  );
+  const unknownKey = window.mergeDB(
+    { folders: [], sections: [], trash: [] },
+    { folders: [], sections: [], trash: [], futureFeature: { x: 1 } },
+  );
+  return {
+    fwd: fwd.theme.preset,
+    rev: rev.theme.preset,
+    bothPreset: both.theme.preset, bothFonts: both.theme.fonts.global,
+    noStampsPreset: noStamps.theme.preset, noStampsFonts: noStamps.theme.fonts.global,
+    unknownKey: unknownKey.futureFeature && unknownKey.futureFeature.x,
+  };
+});
+r.check(themeMerge.fwd === 'sand', 'a settings change on the remote side reaches the merged result',
+  `preset → ${themeMerge.fwd} (wanted the remote, newer, "sand")`);
+r.check(themeMerge.rev === 'sand', 'the same holds in reverse — a newer local setting is not overwritten by a stale remote one',
+  `preset → ${themeMerge.rev} (wanted the local, newer, "sand")`);
+r.check(themeMerge.bothPreset === 'sand' && themeMerge.bothFonts === 120,
+  'two different settings changed on two different devices both survive — not a whole-object swap',
+  `preset (local, newer) → ${themeMerge.bothPreset} · fonts.global (remote, newer) → ${themeMerge.bothFonts}`);
+r.check(themeMerge.noStampsPreset === 'sand' && themeMerge.noStampsFonts === 111,
+  'a notebook whose theme carries no stamps at all (an existing device upgrading) keeps its own settings, nothing blanked',
+  `preset → ${themeMerge.noStampsPreset} · fonts.global → ${themeMerge.noStampsFonts} (wanted local’s own "sand"/111, unchanged)`);
+r.check(themeMerge.unknownKey === 1, 'an unknown/new top-level key on remote reaches the merged result instead of being silently dropped',
+  `futureFeature.x → ${themeMerge.unknownKey}`);
+
 await app.close();
 
 /* ── 6e. v04.10: the two pop-up buttons say which is which ─────────────── */
