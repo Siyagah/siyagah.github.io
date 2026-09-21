@@ -3016,3 +3016,74 @@ through the builder as the first end-to-end proof of the loop.
 ### Measured
 
 11/11 ship checks. No app code touched, so `app-check` was not re-run.
+
+## v04.38 — ship-check's "nothing to bump" is blind to a new file (21 Sep 2026)
+
+**No app change** beyond the version string itself. Version 04.37 → 04.38 in
+all three required places (I5). A harness round: `tools/ship-check.mjs` only.
+
+### The gap
+
+`tools/ship-check.mjs`'s version-bump check asked "did anything change" with
+`git diff --name-only origin/main` alone. `git diff` never lists untracked
+files, so a round whose entire deliverable is a *new* file — `ARCHITECT.md`
+in v04.37, any new `tools/*.mjs`, a new icon — read "nothing changed yet —
+nothing to bump" and passed with the version unbumped. Measured on a clean
+checkout of `main` at v04.37: adding one untracked file and running the check
+still showed 11/11, exit 0. That is the one check standing between a round
+and I5; a real round in that shape would have shipped no new `sw.js` cache
+name, and every device would have kept serving the previous build.
+
+This item was carried in `ARCHITECT.md`'s backlog since v04.35, and its two
+halves are not the same defect: a genuinely clean tree reading green is
+correct and was never in question; the blindness to untracked files is the
+part that is a defect and is what this round fixes.
+
+### What changed
+
+`tools/ship-check.mjs`'s version-bump check now unions `git diff --name-only
+origin/main` (tracked, staged and modified files) with `git ls-files
+--others --exclude-standard` (untracked files not covered by `.gitignore`).
+The second command already respects `.gitignore` on its own, the same way
+`git diff` does, so `tools/shots/` and `node_modules/` stay invisible —
+verified directly rather than assumed (see *Measured* below). The clean-tree
+pass message changed from "nothing changed yet — nothing to bump" to "tree
+is genuinely clean against origin/main — nothing to bump", so it says
+plainly that the tree really is clean rather than reading like a shrug.
+
+`tools/README.md` gained one paragraph in its traps section: `git diff` does
+not list untracked files, so a check that asks "did anything change" with
+`git diff` alone is blind to exactly the rounds that add a file — that is
+where harness traps live, not `CLAUDE.md`'s standing lessons.
+
+`ARCHITECT.md`'s backlog line is ticked, with the resolution recorded inline:
+the clean-tree pass is correct and stays; the untracked blindness was a
+defect and is fixed.
+
+### Measured
+
+Five scenarios, run by hand against the fixed check:
+
+1. **new untracked file, no bump** → FAILS (`still v04.37 with changes in:
+   ..., NEWFILE-TEST.md`), exit 1 — the defect this round fixes.
+2. **new untracked file, with a bump** → passes (`v04.37 → v04.38`) even
+   though the tree still carries untracked files.
+3. **modified tracked file, no bump** → still fails (`still v04.37 with
+   changes in: tools/ship-check.mjs`) — the case that already worked, not
+   regressed.
+4. **an ignored file only** (`tools/shots/phone.png`, gitignored) → does not
+   appear in the changed-files list; only the round's real tracked edit did.
+5. **genuinely clean tree** (verified by stashing this round's own diff) →
+   passes with the corrected message, `tree is genuinely clean against
+   origin/main — nothing to bump`.
+
+11/11 ship checks (this round's own change is what makes the version-bump
+check fail without the bump, and pass with it — proof and fix are the same
+diff). 266/266 app checks — `index.html`'s two version strings changed, so it
+was re-run in full, not skipped.
+
+### D5
+
+Not applicable. This round touches no markup, no CSS and no JavaScript the
+app runs — only `tools/ship-check.mjs`, `tools/README.md` and
+`ARCHITECT.md`. The three layouts are unaffected.

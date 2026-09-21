@@ -412,3 +412,11 @@ assertions miss.
 - **Firebase must be blocked, not just absent.** With no sync config in
   localStorage, `initAuth()` returns early and the login overlay stays hidden —
   which is why the app is fully drivable here with no sign-in.
+- **`git diff` does not list untracked files.** A check asking "did anything
+  change" with `git diff --name-only origin/main` alone is blind to exactly
+  the rounds that ADD a file — a new doc, a new `tools/*.mjs`, a new icon —
+  and reads "nothing to bump" on a round that shipped no new cache name.
+  Union in `git ls-files --others --exclude-standard`, which — like `git
+  diff` — already respects `.gitignore`, so `tools/shots/` and
+  `node_modules/` stay invisible and don't force a bump on every screenshot
+  or `npm install`. Found in `ship-check.mjs`'s version-bump check, v04.38.
