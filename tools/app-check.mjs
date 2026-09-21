@@ -5,8 +5,9 @@
    cannot be asked to click through a long list, so anything a check can
    prove must not be left to "please test this". */
 
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { ROOT, openApp, report, VIEWPORTS, seedDB } from './harness.mjs';
 
 const r = report('app-check — boot, handlers, panes, views, editor, data round-trip');
@@ -3829,6 +3830,187 @@ for (const vp of VIEWPORTS) {
   const ie = inst.installabilityErrors ?? [];
   r.check(ie.length === 0, 'Chromium reports the app as installable',
     ie.map((e) => e.errorId).join('; ') || 'installable');
+  await s.close();
+}
+
+/* ── 13. Import consent — no destructive action without a real click ────
+   Issue #49: importJSON() used to do DB=d;persist() with NO confirmation at
+   all, and importBackup()'s confirm() wired Cancel to the destructive
+   branch. These checks drive the REAL dialog with REAL clicks (and real
+   Escape / backdrop) and assert on localStorage, not a JS variable — a
+   variable can lie about what actually got written, localStorage cannot. */
+const REPLACEMENT_DATA = {
+  sections: [{ id: 'zsec1', name: 'Replacement section', order: 0, updatedAt: new Date().toISOString() }],
+  folders: [{ id: 'zf1', name: 'Replacement folder', parentId: null, order: 1, updatedAt: new Date().toISOString() }],
+  articles: [{ id: 'za1', title: 'Replacement note', content: '<p>from file</p>', folderIds: ['zf1'], tags: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }],
+  trash: [],
+};
+const idsOfRaw = (raw) => ({
+  s: (raw?.sections || []).map((x) => x.id).sort(),
+  f: (raw?.folders || []).map((x) => x.id).sort(),
+  a: (raw?.articles || []).map((x) => x.id).sort(),
+});
+const readDB = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('my-notebook-v1') || 'null'));
+
+/* 13a — importJSON(), driven by a REAL file through a REAL <input>, leaves
+   the notebook untouched right up to a REAL click on "Replace everything"
+   in BOTH dialogs; the recovery copy it took is read back in a separate
+   step, and restoring it returns every original id. */
+{
+  const s = await openApp({ db: seedDB() });
+  const tmpFile = join(tmpdir(), `siyagah-import-check-${Date.now()}.json`);
+  await writeFile(tmpFile, JSON.stringify(REPLACEMENT_DATA));
+
+  const before = idsOfRaw(await readDB(s.page));
+  const chooser = s.page.waitForEvent('filechooser');
+  await s.page.evaluate(() => window.importJSON());
+  (await chooser).setFiles(tmpFile);
+  await s.page.waitForSelector('#imp-cancel-1');
+
+  const untouched = idsOfRaw(await readDB(s.page));
+  r.check(JSON.stringify(untouched) === JSON.stringify(before),
+    'importJSON(): the notebook is unchanged the moment the consent dialog opens',
+    JSON.stringify(untouched));
+
+  await s.page.click('#mb .imp-acts button.bd');           // dialog 1 → "Replace everything"
+  await s.page.waitForSelector('#imp-cancel-2');
+  const dialog2Text = await s.page.evaluate(() => document.getElementById('mb').textContent);
+  r.check(/copy of your current notebook has been saved/.test(dialog2Text),
+    'the 2nd dialog reports a VERIFIED recovery copy before anything is replaced',
+    dialog2Text.replace(/\s+/g, ' ').slice(0, 160));
+
+  const stillUntouched = idsOfRaw(await readDB(s.page));
+  r.check(JSON.stringify(stillUntouched) === JSON.stringify(before),
+    'the notebook is STILL unchanged after "Replace everything" in dialog 1 — only the 2nd real click may replace it',
+    JSON.stringify(stillUntouched));
+
+  await s.page.click('#mb .imp-acts button.bd');           // dialog 2 → "Replace everything" (final)
+  await s.page.waitForFunction(() => !document.getElementById('ov').classList.contains('on'));
+  const after = idsOfRaw(await readDB(s.page));
+  r.check(after.a.join() === 'za1' && after.f.join() === 'zf1',
+    'a REAL click on "Replace everything" in BOTH dialogs is what actually replaces the notebook',
+    JSON.stringify(after));
+
+  const recKey = await s.page.evaluate(() => localStorage.getItem('siyagah-recovery-latest-key'));
+  const recSnap = await s.page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), recKey);
+  const recIds = idsOfRaw(recSnap);
+  r.check(!!recKey && JSON.stringify(recIds) === JSON.stringify(before),
+    'the recovery copy holds every id the notebook had BEFORE the replace, read back in a separate step',
+    `key ${recKey}: ${JSON.stringify(recIds)}`);
+
+  await s.page.evaluate(() => window.openModal('settings'));
+  const hasRow = await s.page.evaluate(() => !!document.querySelector('#mb button[onclick*="_confirmRestoreRecovery"]'));
+  r.check(hasRow, '⚙ Backup & Restore offers "Restore last recovery copy" once one exists', hasRow);
+  await s.page.click('#mb button[onclick*="_confirmRestoreRecovery"]');
+  await s.page.waitForSelector('#rec-cancel');
+  await s.page.click('#mb .imp-acts button.bd');
+  await s.page.waitForFunction(() => !document.getElementById('ov').classList.contains('on'));
+  const restored = idsOfRaw(await readDB(s.page));
+  r.check(JSON.stringify(restored) === JSON.stringify(before),
+    'restoring the recovery copy (its own confirmation) returns every original id',
+    JSON.stringify(restored));
+
+  await s.close();
+}
+
+/* 13b — Escape and a backdrop click, from EITHER dialog, leave the notebook
+   byte-identical: never the destructive branch by accident. */
+{
+  const s = await openApp({ db: seedDB() });
+  const before = await s.page.evaluate(() => localStorage.getItem('my-notebook-v1'));
+
+  await s.page.evaluate((d) => window._showImportConsent(d, 'escape-test.json'), REPLACEMENT_DATA);
+  await s.page.waitForSelector('#imp-cancel-1');
+  await s.page.keyboard.press('Escape');
+  await s.page.waitForFunction(() => !document.getElementById('ov').classList.contains('on'));
+  const afterEscape = await s.page.evaluate(() => localStorage.getItem('my-notebook-v1'));
+  r.check(afterEscape === before, 'Escape on the 1st import dialog leaves the notebook byte-identical',
+    afterEscape === before ? 'unchanged' : 'CHANGED');
+
+  await s.page.evaluate((d) => window._showImportConsent(d, 'backdrop-test.json'), REPLACEMENT_DATA);
+  await s.page.waitForSelector('#imp-cancel-1');
+  await s.page.click('#ov', { position: { x: 5, y: 5 } });
+  await s.page.waitForFunction(() => !document.getElementById('ov').classList.contains('on'));
+  const afterBackdrop = await s.page.evaluate(() => localStorage.getItem('my-notebook-v1'));
+  r.check(afterBackdrop === before, 'a click on the backdrop leaves the notebook byte-identical',
+    afterBackdrop === before ? 'unchanged' : 'CHANGED');
+
+  await s.page.evaluate((d) => window._showImportConsent(d, 'escape2-test.json'), REPLACEMENT_DATA);
+  await s.page.click('#mb .imp-acts button.bd');
+  await s.page.waitForSelector('#imp-cancel-2');
+  await s.page.keyboard.press('Escape');
+  await s.page.waitForFunction(() => !document.getElementById('ov').classList.contains('on'));
+  const afterEscapeDialog2 = await s.page.evaluate(() => localStorage.getItem('my-notebook-v1'));
+  r.check(afterEscapeDialog2 === before, 'Escape from the 2nd ("permanently") dialog still leaves the notebook byte-identical',
+    afterEscapeDialog2 === before ? 'unchanged' : 'CHANGED');
+
+  await s.close();
+}
+
+/* 13c — Merge adds without removing. */
+{
+  const s = await openApp({ db: seedDB() });
+  const before = idsOfRaw(await readDB(s.page));
+  await s.page.evaluate((d) => window._showImportConsent(d, 'merge-test.json'), REPLACEMENT_DATA);
+  await s.page.waitForSelector('#imp-cancel-1');
+  await s.page.click('#mb .imp-acts button.bp');
+  await s.page.waitForFunction(() => !document.getElementById('ov').classList.contains('on'));
+  const after = idsOfRaw(await readDB(s.page));
+  const keptAll = before.a.every((id) => after.a.includes(id)) && before.f.every((id) => after.f.includes(id)) && before.s.every((id) => after.s.includes(id));
+  const addedNew = after.a.includes('za1') && after.f.includes('zf1') && after.s.includes('zsec1');
+  r.check(keptAll && addedNew, 'Merge adds the file’s content without removing anything pre-existing',
+    `before ${JSON.stringify(before)} → after ${JSON.stringify(after)}`);
+  await s.close();
+}
+
+/* 13d — the quota path: the recovery write fails, and the dialog must say
+   so plainly rather than claim a copy that was never actually kept. */
+{
+  const s = await openApp({ db: seedDB() });
+  await s.page.evaluate(() => {
+    const orig = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+      if (k.startsWith('siyagah-recovery-v1-')) throw new Error('quota exceeded (stubbed for this check)');
+      return orig.call(this, k, v);
+    };
+  });
+  await s.page.evaluate((d) => window._showImportConsent(d, 'quota-test.json'), REPLACEMENT_DATA);
+  await s.page.waitForSelector('#imp-cancel-1');
+  await s.page.click('#mb .imp-acts button.bd');
+  await s.page.waitForSelector('#imp-cancel-2');
+  const text = await s.page.evaluate(() => document.getElementById('mb').textContent);
+  r.check(/No copy could be kept/.test(text), 'when the recovery write fails, the dialog says so plainly — never "a copy was kept"',
+    text.replace(/\s+/g, ' ').slice(0, 160));
+  const stillNeedsConfirm = await s.page.evaluate(() => !!document.querySelector('#mb .imp-acts button.bd'));
+  r.check(stillNeedsConfirm, 'a failed copy still requires its own real 2nd confirmation before replacing', stillNeedsConfirm);
+
+  await s.page.click('#mb .imp-acts button.bd');
+  await s.page.waitForFunction(() => !document.getElementById('ov').classList.contains('on'));
+  const after = idsOfRaw(await readDB(s.page));
+  r.check(after.a.join() === 'za1', 'the owner can still choose to replace with no safety net, having been told so first',
+    JSON.stringify(after));
+  const recKey = await s.page.evaluate(() => localStorage.getItem('siyagah-recovery-latest-key'));
+  r.check(!recKey, 'no recovery key is ever recorded when the copy did not actually succeed',
+    recKey ? `latest key wrongly claims ${recKey}` : 'none recorded');
+  await s.close();
+}
+
+/* 13e — the three real screen sizes: three actions fit and each clears the
+   44px touch target, or the dialog stacks rather than losing one. */
+for (const vp of VIEWPORTS) {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  await s.page.evaluate((d) => window._showImportConsent(d, 'size-test.json'), REPLACEMENT_DATA);
+  await s.page.waitForSelector('#imp-cancel-1');
+  const m = await s.page.evaluate(() => {
+    const mb = document.getElementById('mb').getBoundingClientRect();
+    const btns = [...document.querySelectorAll('#mb .imp-acts .btn')].map((b) => b.getBoundingClientRect());
+    return { mbLeft: mb.left, mbRight: mb.right, vw: window.innerWidth,
+      btns: btns.map((b) => ({ h: Math.round(b.height), w: Math.round(b.width) })) };
+  });
+  const short = m.btns.filter((b) => b.h < 44);
+  r.check(m.btns.length === 3 && short.length === 0 && m.mbLeft >= 0 && m.mbRight <= m.vw,
+    `${vp.name} ${vp.width}×${vp.height}: all 3 import actions clear 44px and stay on screen`,
+    `${m.btns.length} buttons ${m.btns.map((b) => `${b.w}×${b.h}`).join(', ')} · dialog ${Math.round(m.mbLeft)}–${Math.round(m.mbRight)} in ${m.vw}px`);
   await s.close();
 }
 
