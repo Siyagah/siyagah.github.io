@@ -41,8 +41,9 @@ must never accumulate here instead of there.
   paragraph corrected to describe leaf resolution rather than per-top-level-
   key. Not done: nesting deeper than one level inside a `theme` sub-object.
   D5: data-only, no visual surface, said so rather than left unsaid. 11/11
-  ship checks, app checks 295 → 301 (6 new; all 6 confirmed failing on
-  unpatched code via one `git stash` / `app-check` run, passing after).
+  ship checks, app checks 289 → 295 (6 new; 4 confirmed failing on unpatched
+  `index.html`/`sw.js` via one `app-check` run, passing after — the other 2
+  pass on both, correctly, since that path predates this round unchanged).
 - **v04.41** (21 Sep 2026) — Handover, and how the owner is told. No app
   change. Two gaps that were costing the owner directly. **The chat was the
   Architect's memory**: a session that ended, or was summarised, took the

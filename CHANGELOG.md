@@ -3627,5 +3627,22 @@ realistic shapes:
 - a plain-object key on one side and a scalar on the other does not throw
   and falls back to the whole-key comparison.
 
-[MEASURED-PLACEHOLDER — filled in after tools/app-check.mjs and the
-git-stash verification actually run]
+Verified against unpatched code with a single revert of `index.html`/`sw.js`
+to their pre-round content, one `app-check` run, then restore (git-stash
+would have needed the fix to still be uncommitted; it was already committed
+by this point, so the same one-run discipline was applied by checking out
+`origin/main`'s copy of the two files, running once, and checking them back
+out from this branch's `HEAD`): **patched 295/295 (289 → 295, 6 new);
+unpatched 291/295, with 4 of the 6 new checks failing** — the two sub-key
+survival checks (`fonts`, `custom`), the same-sub-key-newer-wins check, and
+the unstamped-side check. **The other two new checks pass on both patched
+and unpatched code, and that is correct, not a weak test:** the array
+(`pinTabIds`) and mismatched-shape (object vs scalar) cases were never
+routed through the whole-object-swap bug in the first place — v04.40's
+per-top-level-key `_mergeValMap()` already handled a key that isn't an
+object on both sides exactly the way this round's fallback branch does, so
+neither case could have failed before. Kept as real regression guards
+against this round ever changing that fallback path, not claimed as newly
+fixed.
+
+11/11 ship checks.
