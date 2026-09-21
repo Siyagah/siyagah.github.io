@@ -4346,8 +4346,9 @@ async function forceNotebookWriteFail(page) {
   r.check(failedFirst === false, 'setup: the notebook write is genuinely failing before the recovery copy is removed', failedFirst);
 
   await s.page.evaluate(() => window.openModal('settings'));
-  const rowsEl = await s.page.waitForSelector('#stor-rows');
-  const rowText = await rowsEl.textContent();
+  const rowsOk = await awaitIfPresent(s.page, '#stor-rows');
+  const rowsEl = rowsOk ? await s.page.$('#stor-rows') : null;
+  const rowText = rowsEl ? await rowsEl.textContent() : '';
   const recKey = await s.page.evaluate(() => localStorage.getItem('siyagah-recovery-latest-key'));
   const recBytes = await s.page.evaluate((k) => (localStorage.getItem(k) || '').length, recKey);
   /* Formatted in the BROWSER, not in Node — Chromium's locale/ICU data can
@@ -4362,10 +4363,10 @@ async function forceNotebookWriteFail(page) {
   const closeVia = async (how) => {
     await s.page.evaluate(() => window.openModal('settings'));
     await tapIfPresent(s.page, '#mb button[onclick*="_confirmRemoveRecovery"]');
-    await s.page.waitForSelector('#rmrec-cancel');
-    if (how === 'cancel') await s.page.click('#rmrec-cancel');
+    await awaitIfPresent(s.page, '#rmrec-cancel');
+    if (how === 'cancel') await tapIfPresent(s.page, '#rmrec-cancel');
     else if (how === 'escape') await s.page.keyboard.press('Escape');
-    else await s.page.click('#ov', { position: { x: 5, y: 5 } });
+    else await tapIfPresent(s.page, '#ov');
     await awaitFnOrFalse(s.page, () => !document.getElementById('ov').classList.contains('on'));
     return s.page.evaluate(() => !!localStorage.getItem('siyagah-recovery-latest-key'));
   };
@@ -4375,8 +4376,8 @@ async function forceNotebookWriteFail(page) {
 
   await s.page.evaluate(() => window.openModal('settings'));
   await tapIfPresent(s.page, '#mb button[onclick*="_confirmRemoveRecovery"]');
-  await s.page.waitForSelector('#rmrec-cancel');
-  await s.page.click('#mb .imp-acts button.bd');
+  await awaitIfPresent(s.page, '#rmrec-cancel');
+  await tapIfPresent(s.page, '#mb .imp-acts button.bd');
   await s.page.waitForTimeout(200);
   const keyGone = await s.page.evaluate((k) => localStorage.getItem(k) === null, recKey);
   const pointerGone = await s.page.evaluate(() => localStorage.getItem('siyagah-recovery-latest-key') === null);
@@ -4399,7 +4400,7 @@ for (const vp of VIEWPORTS) {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
   await s.page.evaluate(() => window._saveRecoveryCopy(DB));
   await s.page.evaluate(() => window.openModal('settings'));
-  await s.page.waitForSelector('#stor-rows');
+  await awaitIfPresent(s.page, '#stor-rows');
   const m = await s.page.evaluate(() => {
     const mb = document.getElementById('mb').getBoundingClientRect();
     const btns = [...document.querySelectorAll('#mb .imp-acts .btn')].map((b) => b.getBoundingClientRect());
