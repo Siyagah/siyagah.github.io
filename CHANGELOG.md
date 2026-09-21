@@ -3645,4 +3645,23 @@ neither case could have failed before. Kept as real regression guards
 against this round ever changing that fallback path, not claimed as newly
 fixed.
 
+### Follow-up — the stamping half had no check of its own
+
+Caught in review: all six checks above hand-wrote their stamps straight into
+`mergeDB()` (`{ 'fonts.sidebar': 1000 }`), so they proved the *merge* half
+reads a dotted stamp correctly and nothing about whether
+`_stampThemeTouches()` ever produces one. Reverting only the stamping change
+back to `DB.themeAt[k]=now` — this round's own defect, restored — left all
+six checks green, because no dotted stamp was ever written and every
+sub-key fell through to the parent stamp. Four more checks now call
+`_stampThemeTouches()` directly rather than a literal standing in for it: a
+sub-key change writes a dotted stamp and writes nothing for the parent key;
+a scalar change (`preset`) and an array change (`pinTabIds`) still stamp
+whole, producing no dotted key; and an end-to-end check builds two devices
+whose stamps are produced by `_stampThemeTouches()` itself, merges them, and
+confirms both sub-key changes survive.
+
+Patched: **299/299 (295 → 299, 4 new)**. Unpatched-code verification of the
+four stamping checks recorded by the Architect on the PR.
+
 11/11 ship checks.

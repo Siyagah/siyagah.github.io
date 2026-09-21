@@ -40,10 +40,17 @@ must never accumulate here instead of there.
   index would scramble order rather than merge content. `CLAUDE.md`'s theme
   paragraph corrected to describe leaf resolution rather than per-top-level-
   key. Not done: nesting deeper than one level inside a `theme` sub-object.
-  D5: data-only, no visual surface, said so rather than left unsaid. 11/11
-  ship checks, app checks 289 → 295 (6 new; 4 confirmed failing on unpatched
-  `index.html`/`sw.js` via one `app-check` run, passing after — the other 2
-  pass on both, correctly, since that path predates this round unchanged).
+  D5: data-only, no visual surface, said so rather than left unsaid.
+  **Review found the first six checks all hand-wrote their stamps straight
+  into `mergeDB()`, proving the merge half reads a dotted stamp and nothing
+  about whether `_stampThemeTouches()` ever writes one** — reverting only
+  the stamping change left every check green. Four more checks now drive
+  `_stampThemeTouches()` itself: a sub-key change writes a dotted stamp and
+  nothing for the parent key, a scalar and an array still stamp whole, and
+  an end-to-end check merges two devices whose stamps came from the function
+  itself. 11/11 ship checks, app checks 289 → 295 → **299** (6 then 4 more
+  new); unpatched-code verification of the four stamping checks recorded by
+  the Architect on the PR.
 - **v04.41** (21 Sep 2026) — Handover, and how the owner is told. No app
   change. Two gaps that were costing the owner directly. **The chat was the
   Architect's memory**: a session that ended, or was summarised, took the
