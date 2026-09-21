@@ -16,6 +16,36 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.45** (22 Sep 2026) — a check must fail, not explode. No app change
+  beyond the version strings. `app-check` is sequential top-level code with
+  no isolation between checks, so **one uncaught exception ends the run with
+  no report at all**. v04.44's new checks read `getComputedStyle(
+  document.getElementById('save-warn-dot'))` and clicked `#save-warn-dot` /
+  `#stor-rows` / `#rmrec-cancel` directly; run against a build without those
+  elements — exactly what the "do these new checks fail on unpatched code"
+  verification does — it threw at the first one and all 322 checks reported
+  nothing, so **v04.44's verification could not be produced at all**. The
+  first fix attempt guarded the call sites that had crashed, one at a time,
+  and each guard revealed the next — this project's own allow-list lesson,
+  re-learned in the harness. What shipped is the general form: **every block
+  in §14 wrapped in its own `try`/`catch`, a throw recorded as a failed
+  check** rather than killing the run, plus `tapIfPresent()` /
+  `awaitIfPresent()` / `awaitFnOrFalse()`, because Playwright's `click()` and
+  `waitForSelector()` default to a 30-second timeout and an unguarded wait
+  hangs before it throws. Also records the standing lesson v04.44 paid for
+  and did not write down: **a check that opens a surface by calling its
+  function proves nothing about whether the owner can reach it** —
+  `openModal('settings')` had zero call sites anywhere in the app, so v04.39
+  shipped `↩ Restore last recovery copy` unreachable and recorded it as
+  delivered, while `app-check` covered that modal and passed for five rounds
+  by opening it the one way nothing else could. Harness trap in
+  `tools/README.md`. Not done: only §14 is isolated — the other three hundred
+  checks still share one failure domain, and making isolation the default is
+  a round of its own. D5 does not apply. 11/11 ship checks, **322/322**
+  patched (unchanged by the guards); the verification that previously
+  crashed with no report now returns **307/319, 12 FAILED** against
+  pre-v04.44 app code, every one of the twelve a check that should fail
+  there.
 - **v04.44** (21 Sep 2026) — the ⚠ *can no longer save locally* dialog
   nagged on every launch. It was real, reproduced by growing `DB` in memory
   to the owner's own size (453 notes / 6,370,323 bytes) and calling
@@ -148,32 +178,6 @@ must never accumulate here instead of there.
   detail lives in `CHANGELOG.md`. The loop's step 6 was rewritten to point at
   the new section rather than keep its own competing list. 11/11 ship checks;
   no app code touched, so `app-check` was not re-run.
-- **v04.40** (21 Sep 2026) — mergeDB silently dropped every top-level key it
-  was not told about. `mergeDB()` opened `out=Object.assign({},local)` and
-  then resolved only a named list of keys against `remote` — 19 of `DB`'s 20
-  top-level keys. `theme` was not on the list, so a colour, a font size, any
-  preference — changed on one device — never reached another, in either
-  direction, silently: no throw, no lost note (I1 held), just a setting that
-  never travelled (I2 gap). Fixed the same way `tagColors` already was: a
-  per-KEY merge of `theme` against a new companion stamp map, `DB.themeAt`,
-  via the existing `_mergeValMap()`/`_mergeStampMap()` helpers — so two
-  devices changing two different settings both survive, and an unstamped
-  key (every notebook before this round) ties in local's favour rather than
-  blanking anything (I8). `theme` is written from ~60 scattered call sites
-  with no shared setter, so the stamp is applied centrally instead: a new
-  `_stampThemeTouches()` diffs `theme` against its last-seen snapshot inside
-  `_save()`/`_doPush()`, the one place every write already funnels through —
-  a future setting needs nothing extra to sync. Also added: any top-level
-  key present on `remote` and wholly absent from `local` now survives the
-  merge too, a general answer to "what did we forget to name" rather than a
-  fix specific to `theme`. `CLAUDE.md`'s "nothing new to add" sentence about
-  `DB.theme` corrected — true for localStorage/file-export, was never true
-  for Firestore sync. Not done: `theme.custom` (the colour picker's own
-  sub-object) merges as one key, so two devices recolouring two *different*
-  swatches in the same window still only keep one; every other theme setting
-  is unaffected. D5: data-only, no visual surface, said so rather than left
-  unsaid. 11/11 ship checks, app checks 284 → 289 (5 new; 3 of them
-  confirmed failing on unpatched `mergeDB()` via `git stash`, passing after).
 ---
 
 ## What this is

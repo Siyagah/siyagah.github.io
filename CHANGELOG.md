@@ -3895,3 +3895,91 @@ not deleted, not worked around.
 
 11/11 ship checks. App checks: 299 → 322 (23 new). Unpatched-code
 verification below.
+
+---
+
+## v04.45 — a check must fail, not explode (22 Sep 2026)
+
+No app change beyond the version strings. `tools/app-check.mjs`,
+`tools/README.md` and `CLAUDE.md`.
+
+### The defect
+
+`app-check` is sequential top-level code with no isolation between checks, so
+**one uncaught exception ends the whole run with no report at all** — not a
+failing line, not a total, not an exit summary.
+
+v04.44's new checks read `getComputedStyle(document.getElementById(
+'save-warn-dot'))` and clicked `#save-warn-dot`, `#stor-rows`, `#rmrec-cancel`
+directly. Run against a build without those elements — which is *exactly* what
+the "do these new checks actually fail on unpatched code" verification does —
+`getComputedStyle(null)` threw at the first one and all 322 checks reported
+nothing. **The verification v04.44 was supposed to produce could not be
+produced**, and the round shipped with that step recorded as deferred.
+
+### The fix, and the false start worth recording
+
+The first attempt guarded the individual call sites that had crashed:
+`save-warn-dot`, then `stor-notebook`, then `stor-rows`, then
+`getBoundingClientRect` on a null. **Three rounds of whack-a-mole, each one
+revealing the next site** — which is this project's own standing lesson about
+allow-lists, being re-learned in the harness: a list of the sites that
+happened to crash is correct until the next one.
+
+The general fix, and what shipped: **each block in §14 is wrapped in its own
+`try`/`catch`, and a throw is recorded as a failed check rather than killing
+the run.** Whatever the next missing element turns out to be, the block that
+touches it fails, names itself, and the other three hundred checks still run
+and still report. The per-site guards were kept as well — `tapIfPresent()`,
+`awaitIfPresent()`, `awaitFnOrFalse()` — because Playwright's `click()` and
+`waitForSelector()` default to a **30 second** timeout, so an unguarded wait
+on an absent element does not just throw, it hangs for half a minute first.
+
+### The standing lesson this round records
+
+`CLAUDE.md` gains the one v04.44 paid for and did not write down: **a check
+that opens a surface by calling its function proves nothing about whether the
+owner can reach it.** `⚙ Backup & Restore` — Export JSON, Import JSON, and
+v04.39's `↩ Restore last recovery copy` — had **zero** call sites for
+`openModal('settings')` anywhere in the app. v04.39 shipped its whole
+recovery-restore feature unreachable and recorded it as delivered; five rounds
+passed. `app-check` covered that modal the entire time, and passed, because it
+opened it the one way nothing else could — by calling `openModal('settings')`
+directly. It is the twin of "a surface no check has ever opened is a surface
+with no checks": here the surface *had* a check, and the check had no path to
+it. The harness trap itself is recorded in `tools/README.md`, where harness
+traps live.
+
+### Not done
+
+- Only §14's blocks are isolated. The other three hundred checks still share
+  one failure domain, so a throw anywhere else still ends the run. Making
+  isolation the default for every section is the right end state and is a
+  round of its own — doing it here would have meant touching every check in
+  the file to fix a defect in one section.
+- A block that throws stops at that point, so the checks after the throw
+  inside the same block do not run and are not counted. That is why the
+  unpatched total below is 319 and not 322. The alternative — isolating every
+  individual check — is the round above.
+- The browser opened by a block that throws is not closed (`s.close()` sits
+  after the throwing line). Harmless for a run that is about to end, and not
+  worth a `finally` per block until the point above is done properly.
+
+### D5
+
+Does not apply — no markup, CSS or app JavaScript touched. `index.html`
+changed only in its two version strings.
+
+### Measured
+
+11/11 ship checks. Patched: **322/322**, unchanged by the guards — they
+weaken nothing when the elements are present.
+
+The verification that could not run before: `index.html`/`sw.js` swapped for
+pre-v04.44 (`b361ed2`), v04.45's checks kept. **Before this round: a crash,
+no report, zero checks counted. After: `307/319 passed, 12 FAILED`** — the
+storage-section, ⚠-indicator, recovery-remove and retried-save checks all
+failing as they should against code that has none of those things, three
+blocks reporting "this block could not run against this build", and the
+v04.20 menu-inventory check failing because v04.44 added `💽 Storage &
+Backup` to it. Every one of the twelve is a check that *should* fail there.
