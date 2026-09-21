@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.40.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.41.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,31 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.41** (21 Sep 2026) — Handover, and how the owner is told. No app
+  change. Two gaps that were costing the owner directly. **The chat was the
+  Architect's memory**: a session that ended, or was summarised, took the
+  state of the job with it, and `ARCHITECT.md` said nothing about where the
+  record should live instead. There is now a pinned status issue — `📋
+  Siyagah — what's happening now` — carrying Job / Now / Done so far / Next /
+  Waiting on you, plus the in-flight issue and PR numbers, open decisions,
+  and anything learned that has not yet reached this brief. It is updated
+  after EVERY step, not at the end of a job, and it must be enough on its own
+  for a fresh session to continue without reading a word of chat. A new
+  session reads `ARCHITECT.md`, `CLAUDE.md` and that issue first and posts
+  `Architect session changed, continuing from: …` before doing anything else;
+  at the end of a finished job the Architect checks its own state and asks
+  for a fresh session when it has run long or been summarised. Two traps
+  recorded with it: the status issue must never contain `@claude`, and
+  **opening any issue briefly occupies the builder's queue** even when the
+  run then skips — editing one does not, because the workflow fires on
+  `opened`/`assigned` only. **And reports to the owner carried code words** —
+  file names, PR numbers, `confirm()` — at a non-coder who cannot read them.
+  A report now carries no technical words at all and follows one shape:
+  what's fixed or new (what they will notice) · what's next · anything needed
+  from them · what to check, at most two things and exactly where to tap; the
+  detail lives in `CHANGELOG.md`. The loop's step 6 was rewritten to point at
+  the new section rather than keep its own competing list. 11/11 ship checks;
+  no app code touched, so `app-check` was not re-run.
 - **v04.40** (21 Sep 2026) — mergeDB silently dropped every top-level key it
   was not told about. `mergeDB()` opened `out=Object.assign({},local)` and
   then resolved only a named list of keys against `remote` — 19 of `DB`'s 20
@@ -106,20 +131,6 @@ must never accumulate here instead of there.
   because the rule is that it always does — `sw.js`'s cache name is the only
   thing that evicts a stale build, so a docs-only round bumps too (I5).
   11/11 ship checks; no app code touched, so `app-check` was not re-run.
-- **v04.36** (20 Sep 2026) — close the trigger gate. No app change. v04.35's
-  `if:` only checked for the text `@claude`; anything that could post a
-  comment containing that word could start the builder, including the
-  builder's own PR/issue comments — and one did, run `35560474931`, the round
-  after v04.35 had told the owner "bots cannot" trigger it. The `if:` in
-  `.github/workflows/claude.yml` now requires all three: `@claude` in the
-  triggering text (per event type, as before); `github.event.sender.type !=
-  'Bot'`; and `github.event.sender.login == 'AAAsapp'`. The header comment
-  says exactly where each guard lives. **`author_association` was dropped** —
-  GitHub reports private org members as `CONTRIBUTOR`/`NONE`, so testing for
-  `OWNER`/`MEMBER`/`COLLABORATOR` would have locked the owner out. Also recorded: the `CLAUDE_CODE_OAUTH_TOKEN` secret and the
-  Claude GitHub App, both flagged "Not done" in v04.35, were confirmed in
-  place on 20 Sep 2026 — test issue #43 answered at v04.35. 11/11 ship checks;
-  no app code touched, so `app-check` was not re-run.
 ---
 
 ## What this is

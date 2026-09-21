@@ -3427,3 +3427,97 @@ device's own settings, because that is exactly what it is. The fix is not
 that copies over anything `remote` has that `out` doesn't: a general answer
 to "what did we forget to name", not a specific one to "we forgot `theme`".
 The next key this happens to will not need a round of its own to be found.
+
+---
+
+## v04.41 — Handover, and how the owner is told (21 Sep 2026)
+
+**No app change.** Version 04.40 → 04.41 in all three required places (I5).
+Both gaps this round closes were costing the owner directly, and neither was
+in the app.
+
+### The chat was the Architect's memory
+
+`ARCHITECT.md` (v04.37) described the loop, the review, the backlog and the
+limits — and said nothing about where the *state of a job* lives. In practice
+it lived in the chat session: which round was in flight, what a review had
+caught, what the owner had decided, what had been learned but not yet written
+into `CLAUDE.md`. A session that ended or was summarised took all of it. The
+owner would then have to re-explain their own job to the next session, which
+is exactly the position the brief exists to prevent.
+
+The record now lives in a **pinned status issue**, `📋 Siyagah — what's
+happening now`, written in plain words for a non-coder and updated after
+**every step** — not at the end of a job. Its description carries **Job**,
+**Now** (and whether the Builder or the Architect is acting), **Done so far**
+(one line per finished piece, in terms of what changed for the owner in the
+app), **Next**, and **Waiting on you** — "Nothing", or the owner's decision
+put as a question. Alongside those: the in-flight issue and PR numbers, any
+open decisions, and anything learned that has not yet reached `CLAUDE.md`.
+The test it has to pass is stated in the brief: **enough on its own for a
+fresh session to continue without reading a word of chat.**
+
+Around it, two habits:
+
+- At the end of every finished job the Architect checks its own state, and if
+  the session has run long, has been summarised, or it has caught itself
+  forgetting something, it ends the report by asking for a fresh session and
+  giving the exact text to paste.
+- A new session's **first** act is to read `ARCHITECT.md`, `CLAUDE.md` and the
+  status issue, and post `Architect session changed, continuing from: …` on
+  that issue before doing anything else.
+
+Two traps are recorded with it, both real:
+
+- **The status issue must never contain `@claude`** — the v04.36 gate fires on
+  that string, and a status page that started the builder every time it was
+  written would be worse than no status page.
+- **Opening any issue briefly occupies the builder's queue**, even one not
+  addressed to it. Creating this round's status page queued a run that then
+  skipped, and in doing so displaced another queued run. *Editing* an issue
+  does not fire the workflow at all — it triggers on `opened` and `assigned`
+  only — so keeping the page current is free. Only creating one costs a slot.
+
+### Reports to the owner carried words the owner cannot read
+
+`CLAUDE.md` has said since the beginning that the owner is a non-coder and
+that reports should be in plain language. Reports were nonetheless going out
+with file names, PR numbers, `confirm()`, pixel counts and storage terms in
+them — true, precise, and unreadable by the person they were addressed to.
+Precision in the wrong vocabulary is not precision; it is a report that does
+not arrive.
+
+A report now carries **no technical words at all** and follows one shape:
+
+- **What's fixed or new** — what the owner will actually notice.
+- **What's next.**
+- **Anything you need from them.**
+- **What to check** — at most two things, saying exactly where to tap.
+
+All of the detail keeps going into `CHANGELOG.md` and the status issue, which
+is where it belongs and where it stays available.
+
+### Also corrected
+
+*The loop, for every job* step 6 carried its own four-bullet report format,
+written in v04.37. Leaving it there would have meant `ARCHITECT.md`
+contradicting itself on the same page from the day this round landed, so step
+6 now points at the new *Reporting to the owner* section instead of competing
+with it. This is the small version of the fault the round is about: a rule
+written in two places drifts, and the one nobody re-reads is the one that
+rots.
+
+### Not done
+
+- The status issue **could not be pinned by the Architect**. Pinning is a
+  GraphQL mutation that none of the available tools expose, and the one
+  credential-shaped route to it was correctly refused. The owner pins it in
+  one click; until they do, the page works exactly the same, it simply does
+  not sit at the top of the issue list. Recorded here rather than quietly
+  dropped, because the brief calls it *the pinned status issue*.
+- No app code was touched, so `app-check` was not re-run. `ship-check` covers
+  everything this round can break.
+
+### Measured
+
+11/11 ship checks.
