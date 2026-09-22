@@ -215,11 +215,31 @@ Every report follows one shape:
       value this way. Filed as a watch item, not work: if a future setting
       ever nests one, the same pattern has to be applied at that level, and
       this line is the reminder. Do not build it speculatively.
-- [ ] `app-check` now runs 299 checks in about two and a half minutes, and
+- [ ] `app-check` now runs 322+ checks in about two and a half minutes, and
       every round re-runs it several times. Nothing is wrong with it — but
       the unpatched-code verification means a second full run, and that
       second run is what ended three builder attempts in v04.42. Worth
       deciding whether the harness should grow a way to run one section
       (`node tools/app-check.mjs --only 12,13`) so a round can prove its own
-      new checks without paying for all 299 twice. Measure first: if the
+      new checks without paying for all 322 twice. Measure first: if the
       saving is small, say so and close this.
+      **Dependency satisfied by v04.46**: every check now runs inside a
+      named `r.block(id, fn)`, so `--only` has real, unique ids to select
+      on — that is the whole reason v04.46 gave every block a unique id
+      rather than leaving the file as loosely-numbered sections. `--only`
+      itself is still not built; this line is not resolved by v04.46, only
+      unblocked.
+- [ ] `r.block()` (v04.46) isolates a throw to one block, but not the STATE
+      that block leaves behind. Blocks from roughly `§6d` onward each open
+      their own `openApp()`, so an abort there costs only itself, cleanly —
+      but `§1`–`§6c` and the first `§7`–`§13` still all drive the ONE shared
+      `app`/`page` opened once near the top of `app-check.mjs`, exactly as
+      they did before this round. A block aborting partway through that
+      shared session can leave it in a shape the later blocks sharing it
+      never expected, so their failures become suspects, not independent
+      findings — recorded as v04.46's own remaining limit, in
+      `tools/README.md` and in its changelog entry, not just here. Splitting
+      that shared session into one `openApp()` per early block would remove
+      the limit entirely; not attempted this round because it is a much
+      larger, riskier change than wrapping, and the round in hand was
+      explicitly a wrap.

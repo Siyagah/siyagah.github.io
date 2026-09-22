@@ -129,16 +129,60 @@ export const VIEWPORTS = [
    reads the same and a failure is always countable, never prose. */
 export function report(title) {
   const rows = [];
+  const blockIds = new Set();
+  const aborted = [];
   const add = (ok, label, detail = '') => { rows.push({ ok, label, detail }); return ok; };
   return {
     pass: (l, d) => add(true, l, d),
     fail: (l, d) => add(false, l, d),
     check: (cond, l, d) => add(!!cond, l, d),
+    /* Runs `fn`, isolating whatever it does from every OTHER block in the
+       file — v04.45 wrapped §14 by hand, five identical catches; this is the
+       general form. A throw anywhere inside `fn` records ONE failed row
+       naming the block, how many of its own checks ran before it died, and
+       the error's first line — and the run carries on to the next block,
+       instead of v04.45's defect: one uncaught exception silencing all 322
+       checks with no report at all.
+       `expectThrow: true` inverts the scoring — a throw is the block's own
+       PASS, no throw is its FAIL — for the one permanent self-check in
+       app-check.mjs that proves this mechanism works; nothing else should
+       ever set it. `String(e)`, never `e.message` — a non-Error throw (a
+       bare string, a Playwright rejection) has no `.message` and must still
+       read in the report.
+       IMPORTANT (see tools/README.md): this isolates FAILURES, not STATE.
+       Every block from roughly §6d onward opens its own `openApp()`, so an
+       abort there costs only that block. The early blocks (§1–§6c and the
+       first §7–§13) all still drive the one `app`/`page` opened at the top
+       of app-check.mjs — if one of THOSE aborts partway through, it can
+       leave that shared session in a shape later blocks never expected, and
+       their failures become suspects, not independent findings. */
+    async block(id, fn, { expectThrow = false } = {}) {
+      if (blockIds.has(id)) add(false, `block id "${id}" is used more than once`,
+        'every r.block() id must be unique — see tools/README.md');
+      else blockIds.add(id);
+      const before = rows.length;
+      try {
+        await fn();
+        if (expectThrow) add(false, `block "${id}" was declared expectThrow and did not throw`, '');
+        return { threw: false };
+      } catch (e) {
+        const msg = String(e).split('\n')[0];
+        if (expectThrow) {
+          add(true, `block "${id}" threw as expected`, msg);
+        } else {
+          const ran = rows.length - before;
+          aborted.push(id);
+          add(false, `block "${id}" aborted — a throw ended it after ${ran} of its own check(s) had already run`, msg);
+        }
+        return { threw: true };
+      }
+    },
     finish() {
       const bad = rows.filter((r) => !r.ok);
       console.log(`\n${title}`);
       console.log('='.repeat(title.length));
       for (const r of rows) console.log(`${r.ok ? '  ok  ' : ' FAIL '} ${r.label}${r.detail ? `\n         ${String(r.detail).split('\n').join('\n         ')}` : ''}`);
+      if (aborted.length) console.log(`\n${aborted.length} block(s) aborted: ${aborted.join(', ')}`);
       console.log(`\n${rows.length - bad.length}/${rows.length} passed${bad.length ? `, ${bad.length} FAILED` : ''}\n`);
       return bad.length;
     },

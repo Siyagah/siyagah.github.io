@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.45.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.46.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,48 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.46** (22 Sep 2026) — a throw in ANY block must cost that block, not
+  the whole run. Harness only — `tools/harness.mjs`, `tools/app-check.mjs`,
+  `tools/README.md`, `ARCHITECT.md` — no app change. v04.45 recorded this as
+  not done in its own words: only §14 was isolated, and the other three
+  hundred checks still shared one failure domain. `report()` grows
+  `r.block(id, fn, { expectThrow })`: a throw inside `fn` records one failed
+  row naming the block, how many of its own checks had already run, and the
+  error's first line, then the suite carries on; `expectThrow: true` inverts
+  the scoring for one permanent self-check that proves the mechanism (a
+  block deliberately throws, scores a PASS because it was expected to, and
+  an ordinary check straight after it reads `block()`'s own return value and
+  confirms the line still ran). A duplicate block id is now itself a failed
+  check. **Every check in `app-check.mjs` runs inside `r.block(...)`** — 85
+  call sites, matched to the sub-block that already existed rather than the
+  section: §6p (1490 lines, a third of the file, ~68 checks in one failure
+  domain) becomes 22 blocks, §6h/6i/6j/6k/6l/6n/6o split into their existing
+  named parts, and §14's five hand-copied `try`/`catch` blocks are replaced
+  by the general mechanism (`tapIfPresent()`/`awaitIfPresent()`/
+  `awaitFnOrFalse()` untouched — different problem). Sections with no
+  internal grouping (§1–§6, §6b, §6c, §7–§10, the theme-stamp section) stay
+  one block each, since manufacturing a boundary in genuinely flat code
+  would be exactly the allow-list mistake this project keeps re-learning.
+  **No binding needed hoisting anywhere**: wrapping is pure insertion around
+  each range, so a block nested inside a section's own pre-existing bare
+  `{ }` keeps reading that section's shared helpers through ordinary JS
+  closure, unmoved. Three duplicate section numbers (`§11`, `§12`, `§13`,
+  each used twice because the file does not run in numeric order) got
+  distinguishing block ids; the banner comments themselves, which carry the
+  version a reader finds a section by, were left alone. The honest limit,
+  written down rather than glossed: `r.block()` isolates a **failure**, not
+  the **state** a block leaves behind — §1–§6c and the first §7–§13 still
+  share ONE `app`/`page` opened once near the top of the file, so a block
+  that aborts part-way through there can leave later blocks sharing that
+  session looking at a shape they never expected, filed as its own backlog
+  item rather than left only in this entry. Not done: `--only` (running one
+  named section) — this round makes it possible by giving every check a
+  real, unique id, but building it is the next round, and the existing
+  backlog line's dependency is ticked, not the line itself. D5 does not
+  apply — no visual surface, said plainly. 11/11 ship checks, **324/324**
+  app checks (322 pre-existing plus the two the permanent self-check adds),
+  0 aborted blocks — every pre-existing check still asserts exactly what it
+  asserted before.
 - **v04.45** (22 Sep 2026) — a check must fail, not explode. No app change
   beyond the version strings. `app-check` is sequential top-level code with
   no isolation between checks, so **one uncaught exception ends the run with
@@ -153,31 +195,6 @@ must never accumulate here instead of there.
   itself. 11/11 ship checks, app checks 289 → 295 → **299** (6 then 4 more
   new); unpatched-code verification of the four stamping checks recorded by
   the Architect on the PR.
-- **v04.41** (21 Sep 2026) — Handover, and how the owner is told. No app
-  change. Two gaps that were costing the owner directly. **The chat was the
-  Architect's memory**: a session that ended, or was summarised, took the
-  state of the job with it, and `ARCHITECT.md` said nothing about where the
-  record should live instead. There is now a pinned status issue — `📋
-  Siyagah — what's happening now` — carrying Job / Now / Done so far / Next /
-  Waiting on you, plus the in-flight issue and PR numbers, open decisions,
-  and anything learned that has not yet reached this brief. It is updated
-  after EVERY step, not at the end of a job, and it must be enough on its own
-  for a fresh session to continue without reading a word of chat. A new
-  session reads `ARCHITECT.md`, `CLAUDE.md` and that issue first and posts
-  `Architect session changed, continuing from: …` before doing anything else;
-  at the end of a finished job the Architect checks its own state and asks
-  for a fresh session when it has run long or been summarised. Two traps
-  recorded with it: the status issue must never contain `@claude`, and
-  **opening any issue briefly occupies the builder's queue** even when the
-  run then skips — editing one does not, because the workflow fires on
-  `opened`/`assigned` only. **And reports to the owner carried code words** —
-  file names, PR numbers, `confirm()` — at a non-coder who cannot read them.
-  A report now carries no technical words at all and follows one shape:
-  what's fixed or new (what they will notice) · what's next · anything needed
-  from them · what to check, at most two things and exactly where to tap; the
-  detail lives in `CHANGELOG.md`. The loop's step 6 was rewritten to point at
-  the new section rather than keep its own competing list. 11/11 ship checks;
-  no app code touched, so `app-check` was not re-run.
 ---
 
 ## What this is
