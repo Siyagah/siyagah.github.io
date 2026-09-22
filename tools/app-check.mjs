@@ -31,11 +31,11 @@ const flatten = (stack) => { let bg = px('rgb(255,255,255)');
   for (let i = stack.length - 1; i >= 0; i--) bg = over(px(stack[i]), bg);
   return bg; };
 const html = await readFile(join(ROOT, 'index.html'), 'utf8');
-const app = await openApp();
-const { page } = app;
 
 /* ── 1. A clean boot ───────────────────────────────────────────────────── */
 await r.block('1-boot', async () => {
+const app = await openApp();
+const { page } = app;
 r.check(app.errors.length === 0, 'boots with no exception and no console error',
   app.errors.length ? app.errors.slice(0, 6).join('\n') : 'silent');
 
@@ -57,10 +57,13 @@ r.check(painted.folders === 3 && painted.articles === 3, 'the seeded notebook is
 const emptyPanes = painted.panes.filter(([, len]) => len === 0).map(([id]) => id);
 r.check(emptyPanes.length === 0, 'every pane rendered something',
   emptyPanes.length ? `empty: ${emptyPanes.join(', ')}` : painted.panes.map(([id, n]) => `${id}:${n}`).join(' '));
+await app.close();
 });
 
 /* ── 2. Every inline handler resolves to a real function ───────────────── */
 await r.block('2-handlers', async () => {
+const app = await openApp();
+const { page } = app;
 /* A renamed or mistyped handler is the app's most common silent defect:
    the button looks fine and does nothing. This is the check that catches
    it without anyone clicking anything. */
@@ -70,10 +73,13 @@ const handlers = [...new Set([...html.matchAll(/\bon[a-z]+=\\?["']\s*([A-Za-z_$]
 const undefinedHandlers = await page.evaluate((names) => names.filter((n) => typeof window[n] !== 'function'), handlers);
 r.check(undefinedHandlers.length === 0, `every inline event handler is a real function (${handlers.length} names)`,
   undefinedHandlers.length ? `no such function: ${undefinedHandlers.join(', ')} — those controls do nothing when clicked` : 'all resolve');
+await app.close();
 });
 
 /* ── 3. Every Smart View opens ─────────────────────────────────────────── */
 await r.block('3-smart-views', async () => {
+const app = await openApp();
+const { page } = app;
 const viewResults = await page.evaluate(() => {
   const out = [];
   for (const sf of SF) {
@@ -88,10 +94,13 @@ const viewResults = await page.evaluate(() => {
 const brokenViews = viewResults.filter((v) => v.err || v.len === 0);
 r.check(brokenViews.length === 0, `all ${viewResults.length} Smart Views render`,
   brokenViews.length ? brokenViews.map((v) => `${v.name}: ${v.err || 'rendered nothing'}`).join('\n') : viewResults.map((v) => `${v.id}:${v.len}`).join(' '));
+await app.close();
 });
 
 /* ── 4. Every real folder opens ────────────────────────────────────────── */
 await r.block('4-folders', async () => {
+const app = await openApp();
+const { page } = app;
 const folderResults = await page.evaluate(() => {
   const out = [];
   for (const f of DB.folders) {
@@ -106,10 +115,13 @@ const folderResults = await page.evaluate(() => {
 const brokenFolders = folderResults.filter((f) => f.err);
 r.check(brokenFolders.length === 0, `all ${folderResults.length} folders open without throwing`,
   brokenFolders.length ? brokenFolders.map((f) => `${f.id}: ${f.err}`).join('\n') : 'clean');
+await app.close();
 });
 
 /* ── 5. Opening a note, and editing it ─────────────────────────────────── */
 await r.block('5-open-and-edit', async () => {
+const app = await openApp();
+const { page } = app;
 const readLen = await page.evaluate(() => {
   ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
   window.render();
@@ -157,10 +169,10 @@ const saved = await page.evaluate(async () => {
   return { ins: (art.content || '').includes('INSERTEDBYCHECK'), len: (art.content || '').length };
 });
 r.check(saved.ins, '_edTouched() commits an editor change into DB', `a1.content ${saved.len} chars`);
-});
 
-/* ── 6. Outline: headings drive fold arrows ────────────────────────────── */
-await r.block('6-outline', async () => {
+/* Outline: headings drive fold arrows. Folded into this block (not its own
+   session) because it has no setup of its own — it rides on #ed already
+   being open on a1 in edit mode, which this block just did above. */
 const outline = await page.evaluate(() => {
   try { window._edColHeads?.(); } catch (e) { return { err: String(e) }; }
   const ed = document.getElementById('ed');
@@ -168,10 +180,13 @@ const outline = await page.evaluate(() => {
 });
 r.check(!outline.err && outline.heads >= 2, '_edColHeads() runs over the editor headings',
   outline.err || `${outline.heads} headings seen`);
+await app.close();
 });
 
 /* ── 6b. v04.07: a line to write on, above and below the note ──────────── */
 await r.block('6b-gutter-lines', async () => {
+const app = await openApp();
+const { page } = app;
 /* The gutter is #ed's own padding and leftover height, so a click there
    lands on #ed itself — for the top, the bottom AND the sides alike. These
    drive REAL mouse clicks, because the caret is real browser state and a
@@ -318,10 +333,13 @@ const stillClean = await page.evaluate((b) => { const c = DB.articles.find((a) =
 r.check(stillClean.same, 'opening a line without typing leaves the note untouched in DB',
   stillClean.same ? 'no autosave fired on a bare click' : `before=${JSON.stringify(stillClean.before)}\nafter =${JSON.stringify(stillClean.after)}`);
 
+await app.close();
 });
 
 /* ── 6c. v04.08: the read view's chrome folded into two rows ───────────── */
 await r.block('6c-read-chrome', async () => {
+const app = await openApp();
+const { page } = app;
 /* The note view used to stack six rows before the note's first line. Home,
    the type chips and the section tools now live in the Pane-3 toolbar, and
    the version strip and the date line share one meta row. */
@@ -476,6 +494,7 @@ r.check(editTb.unified && editTb.editing && editTb.dir === 'column',
 await page.evaluate(() => { ST.editing = false; ST.article = 'a1'; window.render(); });
 await page.waitForTimeout(200);
 
+await app.close();
 });
 
 /* ── 6d. v04.09: one row of buttons, bunched by type when it will not fit ─ */
@@ -622,6 +641,8 @@ await r.block('6d-2-palettes-do-things', async () => {
 
 /* ── 7. The data round-trip — the invariant that matters most ──────────── */
 await r.block('7-data-roundtrip', async () => {
+const app = await openApp();
+const { page } = app;
 /* Save File writes the whole notebook into <script id="nd">. If a single id
    fails to survive that trip, notes have been lost silently. */
 const trip = await page.evaluate(() => {
@@ -649,9 +670,12 @@ r.check(trip.hasScript, 'the exported file is the whole app, not just the data',
   trip.hasScript ? 'carries the version tag and the app script' : 'export is missing the app script — a saved copy would not run');
 r.check(trip.liveIntact, 'exporting does not disturb the live notebook', trip.liveIntact ? 'DB unchanged' : 'DB changed during export');
 
+await app.close();
 });
 /* ── 8. mergeDB never drops a side ─────────────────────────────────────── */
 await r.block('8-mergeDB-union', async () => {
+const app = await openApp();
+const { page } = app;
 /* Cross-device sync runs through mergeDB(local, remote). A union that drops
    either side is how a note "vanishes after syncing". */
 const merged = await page.evaluate(() => {
@@ -665,9 +689,12 @@ r.check(merged.f.join() === 'L1,R1' && merged.a.join() === 'la,ra',
   'mergeDB() unions both devices instead of picking a winner',
   `folders ${merged.f.join(',')} · notes ${merged.a.join(',')}`);
 
+await app.close();
 });
 /* ── 9. A newer edit wins, an older one does not overwrite it ──────────── */
 await r.block('9-newer-edit-wins', async () => {
+const app = await openApp();
+const { page } = app;
 const newest = await page.evaluate(() => {
   const old = new Date(Date.now() - 6e5).toISOString(), fresh = new Date().toISOString();
   const base = (t, txt) => ({ folders: [], sections: [], trash: [], articles: [{ id: 'x', title: 'x', content: txt, folderIds: [], createdAt: old, updatedAt: t }] });
@@ -680,9 +707,12 @@ r.check(newest.remoteNewer === '<p>new</p>' && newest.localNewer === '<p>new</p>
   'mergeDB() keeps the newest edit whichever side it came from',
   `remote-newer → ${newest.remoteNewer} · local-newer → ${newest.localNewer}`);
 
+await app.close();
 });
 /* ── 10. Deleting is still possible ────────────────────────────────────── */
 await r.block('10-delete', async () => {
+const app = await openApp();
+const { page } = app;
 /* "Nothing is ever lost" must not become "nothing can be deleted" — the
    owner's own deletions have to work, through Trash. */
 const del = await page.evaluate(() => {
@@ -694,9 +724,12 @@ const del = await page.evaluate(() => {
 r.check(del.gone && del.inTrash, 'a deleted note leaves the list and lands in Trash',
   `${del.before}→${del.after} notes, trash ${del.trashBefore}→${del.trashAfter}`);
 
+await app.close();
 });
 /* ── 11. mergeDB() resolves DB.theme per key — the v04.40 defect ────────── */
 await r.block('11-theme-perkey', async () => {
+const app = await openApp();
+const { page } = app;
 /* theme was the one top-level key missing from mergeDB's explicit list, so
    Object.assign({},local) at the top of the function left it there
    untouched — local's settings always won outright, remote's were thrown
@@ -741,9 +774,12 @@ r.check(themeMerge.noStampsPreset === 'sand' && themeMerge.noStampsFonts === 111
 r.check(themeMerge.unknownKey === 1, 'an unknown/new top-level key on remote reaches the merged result instead of being silently dropped',
   `futureFeature.x → ${themeMerge.unknownKey}`);
 
+await app.close();
 });
 /* ── 12. mergeDB() resolves DB.theme sub-objects at the LEAF — the v04.42 defect ── */
 await r.block('12-theme-leaf-merge', async () => {
+const app = await openApp();
+const { page } = app;
 /* v04.40 resolved theme per TOP-LEVEL key, which is still too coarse for the
    several theme values that are themselves object maps written one sub-key
    at a time (fonts, custom, dbColors, headingStyles, calLayers, templates,
@@ -826,9 +862,12 @@ r.check(!leafMerge.mismatchErr && leafMerge.mismatchFonts === 130,
   leafMerge.mismatchErr ? `threw: ${leafMerge.mismatchErr}`
     : `fonts → ${JSON.stringify(leafMerge.mismatchFonts)} (remote's scalar, newer stamp, replaced the local object whole)`);
 
+await app.close();
 });
 /* ── 13. _stampThemeTouches() itself writes the dotted stamp ────────────── */
 await r.block('13-stampThemeTouches', async () => {
+const app = await openApp();
+const { page } = app;
 /* Check 12 proves mergeDB() reads a dotted stamp correctly — but every one of
    those stamps was hand-written straight into the test (`{ 'fonts.sidebar':
    1000 }`), so it proves nothing about whether _stampThemeTouches() ever

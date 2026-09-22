@@ -4210,3 +4210,72 @@ misalignment, at all three.
 324 pre-existing checks, minus none, plus 12 new (`15a`–`15d`); one
 pre-existing check (`6i-4-section-strip`) updated in place for the reason
 above, everything else asserts exactly what it asserted before.
+
+---
+
+## v04.48 — the last shared app-check session gets its own openApp() per block
+
+Harness only — `tools/app-check.mjs`, plus `tools/README.md` and
+`ARCHITECT.md` to close out the backlog line this round resolves. No
+`index.html` change, no app behaviour change.
+
+v04.46 gave every check its own `r.block()`, so a throw in one block no
+longer kills the whole run, and recorded honestly what that fixed and what
+it did not: **isolating a block's FAILURE is not the same as isolating its
+STATE**. Blocks from roughly `§6d` onward already opened their own
+`openApp()` and were fully independent, but `§1`–`§6c` and the first
+`§7`–`§13` — fifteen blocks (`1-boot` through `6c-read-chrome`,
+`7-data-roundtrip` through `13-stampThemeTouches`) — all still drove the
+ONE `app`/`page` opened once near the top of the file, with block
+`13-stampThemeTouches` closing it at the end. A throw partway through one
+of those fifteen could leave that shared page in a shape the next block
+sharing it never expected, turning its own failure into a suspect rather
+than an independent finding.
+
+**Fourteen of the fifteen were a pure wrap**: each now opens its own
+`const app = await openApp(); const { page } = app;` at the top of its
+block and `await app.close();` at the bottom — the same pattern `§6d`
+onward already used. No check's assertion changed; this only changes how
+many browser sessions it takes to reach the state each one measures.
+
+**`6-outline` was the one genuine dependency.** It calls
+`window._edColHeads()` and reads `#ed` directly with no setup of its own —
+it was riding on `#ed` being open on note `a1` in edit mode, left behind by
+`5-open-and-edit`. Rather than give it a redundant three-line copy of that
+same setup in a session of its own, its check was folded into
+`5-open-and-edit`'s block, right after the autosave check it already
+followed — same session, same state, no new `openApp()`. Its `r.check()`
+call is unchanged.
+
+The now-unused top-level `const app = await openApp(); const { page } =
+app;` (just above `1-boot`) is gone, so nothing leaves a browser open for
+the whole run; the `await app.close();` that used to dangle at the end of
+`13-stampThemeTouches` now correctly closes that block's own local
+session, since every block declares its own `app` in its own scope.
+
+`tools/README.md`'s v04.46 trap entry is updated in place to say the gap
+it named is closed, and states the general principle for any future block
+that might want to share a session: safe only between sub-checks that are
+read-only with respect to each other and never abort partway leaving state
+a later one depends on — default to a block's own `openApp()`, and fold a
+genuinely dependent check into its setup block's session, as `6-outline`
+was here, rather than duplicate the setup. The matching `ARCHITECT.md`
+backlog line is ticked, with what changed recorded in place rather than
+just checked off.
+
+**D5 does not apply** — no visual surface, no app behaviour changed.
+
+**What was NOT done, and why**
+
+- **`--only` (running one named section) was not built.** A separate,
+  already-filed backlog item; this round only had to leave it alone, not
+  advance it.
+- **Nothing from `§6d` onward was touched** — those blocks already opened
+  their own sessions and were out of scope.
+
+**Measured**
+
+11/11 ship checks. `app-check.mjs`: **336/336 passed, 0 aborted blocks** —
+the same total as `main` before this round; no check was added, removed,
+or had its assertion changed, only how many sessions it takes to reach the
+state each one measures.
