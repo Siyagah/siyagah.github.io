@@ -4095,3 +4095,118 @@ rather than left unsaid.
 322 pre-existing checks plus the two the permanent self-check adds. Every
 check that existed before this round still exists and still asserts exactly
 what it asserted before; none were lost in the wrap.
+
+---
+
+## v04.47 — sidebar sections default collapsed, no stray search bar on boot, counts always show
+
+Three small, independent sidebar fixes, all confirmed by reading the code
+before the round started. `index.html` and `tools/app-check.mjs` only.
+
+**1. Smart Views and MyDatabase now start collapsed, like every other section.**
+`renderSection(sec)` has always tested `ST.secOpen[sec.id]===true` against a
+default of `{}` — correctly closed on a fresh boot. `renderSmartSection()`
+and `renderDatabaseSection()` instead tested `ST.sfOpen!==false` /
+`ST.dbOpen!==false`, against a default of `true` / `undefined` — both read
+as "open" on every single launch, unlike everything else in the sidebar.
+Both now match the `secOpen` pattern: `ST.sfOpen===true` /
+`ST.dbOpen===true`. `ST.sfOpen`'s own declared default had to change too —
+the literal instruction to only touch the render-time condition would have
+left it reading `sfOpen:true` forever, so Smart Views would still have
+opened on boot with the new condition just as it did with the old one; it
+is now `sfOpen:false`. **MyDatabase's own click handler needed the matching
+fix, not just its render condition**: it read
+`ST.dbOpen=ST.dbOpen===false`, which flips correctly only under the OLD
+"open unless false" default (`undefined`/`true` = open, `false` = closed).
+Under the NEW "closed unless true" default that expression can only ever
+set `dbOpen` from `undefined` to `false` — never to `true` — so the section
+could never actually be opened by clicking it, once its default changed.
+Fixed to `ST.dbOpen=ST.dbOpen!==true`, the same flip `secOpen`'s own toggle
+already uses. Neither fix changes how an *already-opened* section behaves,
+and no individual folder's own expand/collapse state (`ST.exp`) is part of
+this change beyond the item below.
+
+Separately, `ST.exp` started as `{f2:true}` — a specific hard-coded folder
+id left over from early development, force-expanded on every boot
+regardless of what folder that id is in the owner's real notebook. Now
+`exp:{}`.
+
+**2. "Back to search results" no longer shows on a fresh launch.** `#bts-sb`
+and its Pane 2 / Pane 3 mirrors are only meant to show when `ST.lastSearch`
+is set and `ST.search` is not — exactly what `_updateSearchAccessUI()`
+computes — but that function was only ever called from `doSearch()` and
+`clearSearch()`, never during boot, and `#bts-sb`'s static markup has no
+inline `display:none`. So on a fresh launch, before any search, the button
+showed by whatever its CSS default was, with nothing to go back to.
+`render()` now calls `_updateSearchAccessUI()` itself, alongside
+`renderP2H()`/`renderP3H()`, which turned out to already call their own
+`_renderP2SearchBar()`/`_renderP3SearchBar()` mirrors on every render —
+so those two surfaces were never actually broken on boot, only `#bts-sb`
+was; all three are checked regardless, per the issue's ask.
+
+**3. Folder, section and Smart View note counts always show, including
+"0".** Two of the five `.tr-cnt` badge sites (Note-Type kind rows, Tags)
+already rendered unconditionally. `trNode()` (plain folders),
+`renderDatabaseSection()` (MyDatabase's 4 virtual items) and
+`renderSmartSection()` (Smart Views) all hid the badge entirely at 0 —
+which is why folders (mostly near-empty right now) looked bare while Smart
+Views (mostly real matches) looked normal, same code, different-looking
+result. All three now always render the badge, matching the two that
+already did.
+
+**What to measure — new app-check coverage**
+
+`tools/app-check.mjs` gets §15, four new blocks: fresh boot with Smart
+Views/MyDatabase/a plain section all closed, nothing under them rendered,
+and `ST.exp` carrying no truthy key — then each header is clicked and
+confirmed it still opens exactly as before (`15a`); `#bts-sb` and both
+mirrors read `getComputedStyle(...).display`, confirmed hidden on boot,
+shown after a search is made and cleared, and a click on it genuinely
+restoring the search (`15b`); a folder with no notes (added inline, since
+`seedDB()`'s three folders already have at least one note between them and
+their descendants, and other checks depend on that shape unmodified), a
+Smart View with zero matches (found dynamically, not hard-coded) and
+MyDatabase's My Contacts (already zero in the seeded notebook) all show an
+explicit "0" (`15c`); and a regression guard that "New Articles" still
+shows its real, nonzero count (`15d`).
+
+**A pre-existing check broken by fixing the actual bug, found and updated
+in place, not worked around**: `6i-4-section-strip` read `.tr-row` with
+nothing opened, relying on Smart Views being open by default — the very
+defect item 1 fixes — to have any row on screen to measure. With that
+default corrected, the check threw (`getComputedStyle` on `null`) and
+aborted before recording a single check of its own. Recorded here per the
+project rule that a check describing what a round deliberately changed
+gets updated in place with the reason recorded: it now clicks the first
+section header (Smart Views) before measuring, the same "seed the state
+before measuring" lesson v04.24 paid for.
+
+**D4 / D5**
+
+One shared render path used at all three breakpoints — there is no
+separate mobile/tablet/desktop version of this code to diverge, so there is
+no different *shape* to build three times. Measured with `tools/shot.mjs`
+at 390×844, 820×1180 and 1440×900: the sidebar reads collapsed, the search
+bar is not showing, and a zero-count folder shows "0" without crowding or
+misalignment, at all three.
+
+**What was NOT done, and why**
+
+- **No general "collapse every folder" feature.** Only the two top-level
+  sections (Smart Views, MyDatabase) changed default; individual folders'
+  own remembered expand/collapse state (`ST.exp`, beyond removing the one
+  stray hard-coded key) is untouched.
+- **No unpatched-code comparison was run**, per the issue's own
+  instruction — these are plain bug fixes proven by testing the actual new
+  behaviour, not by reproducing the old bug.
+- **No sync, storage or export path was touched.** I1–I4 are untouched by
+  three render-condition fixes, one default value, one boot-time function
+  call and three template strings.
+- **`legacy/**` was not touched**, by rule.
+
+**Measured**
+
+11/11 ship checks. `app-check.mjs`: **336/336 passed, 0 aborted blocks** —
+324 pre-existing checks, minus none, plus 12 new (`15a`–`15d`); one
+pre-existing check (`6i-4-section-strip`) updated in place for the reason
+above, everything else asserts exactly what it asserted before.

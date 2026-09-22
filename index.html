@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.46">
+<meta name="app-version" content="04.47">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2798,7 +2798,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.46</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.47</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2937,7 +2937,7 @@ const SK = 'my-notebook-v1';
 let DB = {folders:[], articles:[], sections:[], trash:[]};
 let HISTORY = [], HIST_POS = -1;
 
-let ST = {folder:null, article:null, exp:{f2:true}, editing:false, etitle:'', efolders:[], etags:[], search:'', tag:null, tagOpen:false, secOpen:{}, pendingSec:null, snippet:false, sfOpen:true, secSF:null, secSFOpen:{}, ntiCatOpen:{}, tabOwner:null};
+let ST = {folder:null, article:null, exp:{}, editing:false, etitle:'', efolders:[], etags:[], search:'', tag:null, tagOpen:false, secOpen:{}, pendingSec:null, snippet:false, sfOpen:false, secSF:null, secSFOpen:{}, ntiCatOpen:{}, tabOwner:null};
 
 function loadDB(){
   const el = document.getElementById('nd');
@@ -3499,7 +3499,7 @@ function _autoLeavePrimary(folderIdsArr){
 }
 
 /* ── Render ──────────────────────────────────────────────────────── */
-function render(){renderTree();renderP2H();renderP2C();renderP3H();renderP3C();renderTabBar();updateTrashBtn();adjustP3Layout();_applyHeadingStyles();}
+function render(){renderTree();renderP2H();renderP2C();renderP3H();renderP3C();renderTabBar();updateTrashBtn();adjustP3Layout();_applyHeadingStyles();_updateSearchAccessUI();}
 /* v03.12.01 — render triggered by background cloud-sync must NOT rebuild the
    live editor (that reset the caret to the top mid-typing). When actively
    editing, refresh everything except the editor panes so the caret is kept. */
@@ -3589,7 +3589,7 @@ function trNode(f,depth){
     <span class="tr-tog" onclick="togExp(event,'${f.id}')">${kids.length?(open?'▾':'▸'):''}</span>
     <span class="tr-ico">${open&&kids.length?'📂':'📁'}</span>
     ${f.color?`<span class="f-dot" style="background:${f.color}"></span>`:''}
-    <span class="tr-name" ${(f.color||f.bold)?`style="${f.color?`color:${f.color};`:''}${f.bold?'font-weight:700':''}"`:''} >${esc(f.name)}</span>    ${cnt?`<span class="tr-cnt">${cnt}</span>`:''}
+    <span class="tr-name" ${(f.color||f.bold)?`style="${f.color?`color:${f.color};`:''}${f.bold?'font-weight:700':''}"`:''} >${esc(f.name)}</span>    <span class="tr-cnt">${cnt}</span>
   </div>${open?trGroupedKids(f.id,depth+1):''}`;
 }
 
@@ -7596,7 +7596,7 @@ function selDbItem(id){
   render();
 }
 function renderDatabaseSection(){
-  const open=ST.dbOpen!==false;
+  const open=ST.dbOpen===true;
   const jrnCnt=getSmartArts('sf-journal').length;
   const favCnt=DB.articles.filter(a=>!a.trash&&a.favCat).length;
   const ctCnt=DB.articles.filter(a=>!a.trash&&a.contactData).length;
@@ -7622,11 +7622,11 @@ function renderDatabaseSection(){
       +'<span class="tr-tog"></span>'
       +'<span class="tr-ico">'+it.icon+'</span>'
       +'<span class="tr-name"'+(DB.theme?.dbColors?.[it.id]?' style="color:'+DB.theme.dbColors[it.id]+'"':'')+'>'+esc(it.name)+'</span>'
-      +(it.cnt?'<span class="tr-cnt">'+it.cnt+'</span>':'')
+      +'<span class="tr-cnt">'+it.cnt+'</span>'
       +'</div>';
   }).join('')+extraFolders.map(f=>trNode(f,0)).join('')+'</div>':'';
   return '<div class="sf-sec db-sec">'
-    +'<div class="sec-hd db-hd-sec" onclick="ST.dbOpen=ST.dbOpen===false;renderTree()" oncontextmenu="showDbSecCtx(event)" title="Right-click for new folders and options">'
+    +'<div class="sec-hd db-hd-sec" onclick="ST.dbOpen=ST.dbOpen!==true;renderTree()" oncontextmenu="showDbSecCtx(event)" title="Right-click for new folders and options">'
     +'<span class="sec-tog">'+(open?'▾':'▸')+'</span>'
     +'<span class="sec-nm db-sec-nm">🗂 MyDatabase</span>'
     +'</div>'+body+'</div>';
@@ -21572,7 +21572,7 @@ function getSmartArts(sfId){
 }
 
 function renderSmartSection(){
-  const open=ST.sfOpen!==false;
+  const open=ST.sfOpen===true;
   const label=DB.sfLabel||'Smart Views';
   const clr=(DB.sfColor?`color:${DB.sfColor};`:'')+(DB.sfBold?'font-weight:700':'');
   const body=open?('<div class="sec-body">'+sfOrdered().map(sf=>{
@@ -21585,7 +21585,7 @@ function renderSmartSection(){
         +`<span class="tr-tog"></span>`
         +`<span class="tr-ico">${sf.icon}</span>`
         +`<span class="tr-name" ${sfClr?`style="${sfClr}"`:''}>${esc(sfName)}</span>`
-        +(cnt?`<span class="tr-cnt">${cnt}</span>`:'')
+        +`<span class="tr-cnt">${cnt}</span>`
         +'</div>';
     }).join('')+'</div>'):'';
   return `<div class="sf-sec">
