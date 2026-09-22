@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.48.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.49.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,42 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.49** (22 Sep 2026) — `app-check.mjs` grows `--only`, now that v04.46
+  and v04.48 made every block a genuinely independent unit. Harness only —
+  `tools/harness.mjs`, `tools/app-check.mjs`, `tools/README.md`,
+  `ARCHITECT.md`, plus new `tools/only-check.mjs` — no app change. Filed as
+  "measure first, close it if the saving is small": v04.48 made every block
+  open its own session, the right tradeoff for correctness, but it also
+  moved `app-check.mjs`'s wall-clock from ~2:30–2:45 to **4m32s**, raising
+  the real cost of iterating on one new check while building it. `report()`
+  in `harness.mjs` now **registers** blocks via `r.block(id, fn, opts)`
+  instead of running them inline — every existing call site keeps its exact
+  shape — and a new `r.run(onlyPrefixes)`, called once at the file's end,
+  actually executes them: all of them, in file order, with no filter (same
+  behaviour, same output, as before this round), or only those whose id
+  matches one of `onlyPrefixes` via `blockIdMatches(id, prefix)`. A block id
+  matches a prefix exactly, or if it continues past the prefix with anything
+  but another digit — a digit continuing means the number itself keeps going
+  (`10-delete`/`11-theme-perkey` are not `1`), a letter or hyphen continuing
+  means the number is complete and what follows is a named sub-block of it
+  (`15a-…`/`15b-…`/`15c-…`/`15d-…` are all `15`). A filter matching nothing
+  throws instead of silently reporting "0/0 passed"; a filtered run's own
+  report says plainly it is partial (`N/M blocks run (--only=…) — this is
+  NOT the full suite`). The one self-check that proves block isolation had
+  to be restructured, not just moved: it used to read the throwing block's
+  outcome off `block()`'s own return value, which now resolves at
+  registration time, before anything has run — fixed by exposing `results`
+  (a `Map`, filled in by `run()` as each block actually executes) and
+  splitting it into the original throwing block plus a new follow-up block
+  that reads the Map. New `tools/only-check.mjs` tests the mechanism itself,
+  browser-free, and caught the first (wrong) version of `blockIdMatches()`
+  before it ever reached the real suite. Known limitation left as found, not
+  fixed: three numeric prefixes (`11`, `12`, `13`) are each reused by two
+  unrelated original sections since the file doesn't run in numeric order
+  (v04.46), so `--only 11` runs both; documented in `tools/README.md`, not
+  renamed. D5 does not apply — no visual surface. 11/11 ship checks, **the
+  unfiltered total is unchanged at 336/336, 0 aborted** — no check added,
+  removed, or reworded — plus `only-check.mjs`'s own 11/11.
 - **v04.48** (22 Sep 2026) — the last shared `app-check` session gets its own
   `openApp()` per block. Harness only — `tools/app-check.mjs`,
   `tools/README.md`, `ARCHITECT.md` — no app change. v04.46 isolated a
@@ -138,48 +174,6 @@ must never accumulate here instead of there.
   crashed with no report now returns **307/319, 12 FAILED** against
   pre-v04.44 app code, every one of the twelve a check that should fail
   there.
-- **v04.44** (21 Sep 2026) — the ⚠ *can no longer save locally* dialog
-  nagged on every launch. It was real, reproduced by growing `DB` in memory
-  to the owner's own size (453 notes / 6,370,323 bytes) and calling
-  `_save()`: `QuotaExceededError`, exactly the owner's screenshot. Every
-  launch showed it because `_lsFail` resets on every page load and the
-  dialog fired unconditionally, on a deferred timer, from inside `_save()`'s
-  catch block. **The automatic modal is gone** — `updateSaveUI()`, which
-  every save state already funnels through, now lights a quiet ⚠ badge on
-  🧰 and swaps `#save-lbl` to a tappable warning for as long as `_lsFail`
-  stays true, and clears both the instant a save succeeds; the one-per-
-  session toast is unchanged; the full explanation
-  (`openStorageWarnDetails()`) only opens on a tap, never on its own. It now
-  shows **real numbers** (`_storageSectionHTML()`, shared with `⚙ Backup &
-  Restore`): notebook size from the *live* `JSON.stringify(DB).length` (not
-  whatever stale copy is actually sitting in `localStorage`, which is
-  exactly wrong while saving is failing), the recovery copy's size and
-  date, everything else, and the browser's own budget via
-  `navigator.storage.estimate()`. A **Remove** row reclaims the recovery
-  copy with its own consent dialog (the v04.39 Cancel-is-the-only-escape
-  pattern, reused not reinvented), then retries `_save()` once — success
-  clears the warning through the path that already existed. The advice is
-  now **true**: it compares the recovery copy's real size against the
-  Trash's real size and names whichever is actually bigger, instead of
-  always saying "empty the Trash" regardless of what's in it. **Found along
-  the way: `⚙ Backup & Restore` had no UI path to it at all** — the modal
-  was real and already covered by `app-check` §13, reached only by
-  Playwright calling `window.openModal('settings')` directly; grepping every
-  `onclick` in the file found no button, menu item or shortcut that ever
-  called it, despite v04.39's own dialog text promising the owner could go
-  there. Fixed with one new menu item ("💽 Storage & Backup"); everything
-  this round added to that modal would otherwise have shipped unreachable.
-  Not done: no automatic shrinking of the notebook itself — when neither the
-  recovery copy nor the Trash is worth reclaiming, the honest message points
-  at 💾 Save File and says shrinking the notebook is a further round. D5: the
-  interactive rows reuse `.imp-acts` (unconditional 44px, all three
-  layouts); the ⚠ badge is fixed on all three, sized up slightly under
-  1200px to match the header's own larger touch targets there. A pre-
-  existing v04.21 regression check (every menu action against a frozen
-  baseline) had to be extended for the one genuinely new action, `#save-lbl`
-  becoming tappable — recorded in place, not worked around. 11/11 ship
-  checks, app checks 299 → 322 (23 new), confirmed failing against unpatched
-  `main` via one `git stash` and one rerun before shipping.
 ---
 
 ## What this is

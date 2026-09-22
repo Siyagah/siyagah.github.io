@@ -10,13 +10,60 @@ Playwright and Chromium are already installed in the Claude Code sandbox and
 
 ```bash
 node tools/ship-check.mjs     # ~1s, no browser. Run before EVERY push.
-node tools/app-check.mjs      # ~2min, real browser. Run before every push too.
+node tools/app-check.mjs      # ~4.5min, real browser. Run before every push too.
+node tools/app-check.mjs --only 15   # runs only registered blocks whose id starts with 15
+node tools/only-check.mjs     # ~1s, no browser — tests the --only mechanism itself
 node tools/probe.mjs --views  # not a test — dumps what the app really renders
 node tools/shot.mjs           # screenshots at phone / tablet / desktop
 ```
 
 Both check files exit non-zero when anything fails, so `node tools/ship-check.mjs
 && node tools/app-check.mjs` is the whole gate.
+
+### `--only` — for iterating on ONE check, never for the number on a PR
+
+`app-check.mjs` runs its checks in two phases (v04.49): every `r.block(id,
+fn)` call **registers** a block, and only at the very end does `r.run()`
+actually execute what got registered, all of it and in file order, unless
+`--only` narrows that set. `--only 15` (or `--only=15`, or comma-separated
+`--only 6h,15b`) runs every registered block whose id matches one of the
+given values via `blockIdMatches()` in `harness.mjs` — the whole id, or the
+id continuing past the value with a letter or hyphen (a **named sub-block**
+of the same number: `15a-…`/`15b-…`/`15c-…`/`15d-…` are all `15`), never
+with another **digit** (`10-delete`/`11-theme-perkey` are not `1`). A value
+matching nothing throws — a clear error naming the value and exits non-zero
+— rather than silently reporting "0/0 passed".
+
+**A filtered run's own console output says so, plainly**: `finish()` prints
+`N/M blocks run (--only=…) — this is NOT the full suite` whenever a filter
+was used, and prints nothing extra, and the same `N/N passed` line it
+always has, on an unfiltered run.
+
+**This is for iterating while writing a check.** Since v04.43, an
+unpatched-code comparison happens once, by the Architect, in review — it is
+never something a round needs to run twice locally — so `--only` is not
+about avoiding a doubled run. What it IS for: `app-check.mjs` now takes
+about 4.5 minutes end to end (v04.48 gave every block its own browser
+session, which is correct but not free), and re-running all of it just to
+see whether the one new block you are writing passes is real, paid time.
+`--only` runs just that block, or its whole numbered group, in a few
+seconds instead. **The number that belongs on a PR — here, or quoted by the
+Architect in review — must always come from a full, unfiltered run.** A
+`--only` run's total is a subset by construction and must never be reported
+as if it were the whole suite.
+
+**Known limitation, not fixed**: three numeric prefixes — `11`, `12`, `13`
+— are each reused by two unrelated original sections, because the file does
+not run in numeric order (v04.46 gave the colliding ids distinguishing full
+names rather than renumbering the banner comments they sit under). `--only
+11` therefore runs BOTH `11-theme-perkey` and `11-layout-three-sizes` (and
+likewise for 12 and 13) — there is no way to select only one of them by
+number alone. Match the fuller id instead, e.g. `--only 11-theme-perkey`,
+to get just one.
+
+`tools/only-check.mjs` tests this mechanism directly — `blockIdMatches()`
+and a small fake suite run through the real `report()`/`block()`/`run()` —
+with no browser, because it is testing the harness, not the app.
 
 ## What each one actually proves
 
@@ -466,3 +513,33 @@ assertions miss.
   is rare enough that a new block should default to its own `openApp()`,
   and fold a genuinely dependent check into its setup block's session (as
   `6-outline` was, here) rather than build it a redundant setup of its own.
+- **A "prefix match" that requires a hyphen breaks the file's own most common
+  id shape.** The first version of `blockIdMatches()` (v04.49, for `--only`)
+  required whatever followed the matched prefix to be non-alphanumeric — a
+  hyphen — modelled on the wrong half of v04.46's own disambiguation. Most
+  sub-block ids in this file are `<number><letter>-<words>`
+  (`15a-sections-collapsed-on-boot`, `15b-…`, `6h-1-…`), so `--only 15`
+  under that rule matched NOTHING: `15a-…` continues past `15` with the
+  letter `a`, which the hyphen-only rule rejected. `only-check.mjs` — a
+  small browser-free script built for exactly this — caught it before it
+  ever reached `app-check.mjs`. The rule that actually matches the file's
+  own ids: a prefix match is broken only by another DIGIT continuing the
+  number (`10-delete` is not `1`, because `0` continues `1` into a longer
+  number); a letter or a hyphen continuing it means the number is already
+  complete and what follows is a named sub-block of it. Test disambiguation
+  rules against the file's real ids, not against the abstract description of
+  the rule that motivated them — a v04.46 sentence about hyphens described
+  ONE example (`1` vs `10`/`11`), not the general shape.
+- **A return value that resolves at REGISTRATION time is not the same as one
+  that resolves after the block actually ran.** v04.49 turned `r.block()`
+  from "run `fn` now" into "record `fn` for later, resolve immediately" — so
+  the one call site that used to read a block's outcome off `await
+  r.block(...)`'s return value (the block-isolation self-check) silently
+  stopped proving anything the moment `block()` ran, since that value now
+  carries no information about execution that hasn't happened yet. Fixed by
+  exposing `results` (a `Map`, filled in by `run()` as each block actually
+  executes, in the same file order) on the report object, and reading a
+  PRIOR block's outcome from a later, separately-registered block instead of
+  from a local variable. Any future mechanism check that inspects "what did
+  block X do" has to read it off `results` after `run()`, never off
+  `block()`'s own return.

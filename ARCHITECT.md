@@ -215,7 +215,7 @@ Every report follows one shape:
       value this way. Filed as a watch item, not work: if a future setting
       ever nests one, the same pattern has to be applied at that level, and
       this line is the reminder. Do not build it speculatively.
-- [ ] `app-check` now runs 322+ checks in about two and a half minutes, and
+- [x] `app-check` now runs 322+ checks in about two and a half minutes, and
       every round re-runs it several times. Nothing is wrong with it — but
       the unpatched-code verification means a second full run, and that
       second run is what ended three builder attempts in v04.42. Worth
@@ -229,6 +229,27 @@ Every report follows one shape:
       rather than leaving the file as loosely-numbered sections. `--only`
       itself is still not built; this line is not resolved by v04.46, only
       unblocked.
+      **Resolved v04.49, measured first as asked**: the original reason
+      (avoiding a doubled full run) was already gone by process, since
+      v04.43 moved the unpatched-code verification to the Architect,
+      running it once, in review. What decided it instead: v04.48 made the
+      full run take **4m32s**, up from ~2:30–2:45, because every block now
+      opens its own session — correct, but it made the thing `--only`
+      actually helps (re-running everything just to see if the ONE new
+      block being written passes) cost real time. Built as collect-then-run:
+      `r.block()` now registers a block instead of running it, and a new
+      `r.run(onlyPrefixes)` at the file's end executes all of them
+      unfiltered, or only those matching a prefix. Every one of the 88
+      existing `r.block()` call sites needed no change in shape. `--only 15`
+      runs the four `15*` sub-blocks; a bad value throws instead of
+      reporting "0/0 passed"; a filtered run's own output says it is partial.
+      `tools/only-check.mjs` (new, browser-free) tests the mechanism itself
+      and caught a wrong first draft of the prefix-matching rule before it
+      reached the real suite. One known, undone limitation, recorded rather
+      than fixed: `11`/`12`/`13` are each reused by two unrelated sections
+      (v04.46's own doing), so `--only 11` runs both — documented in
+      `tools/README.md`, not renamed, since renaming 89 ids was not this
+      round's ask.
 - [x] `r.block()` (v04.46) isolates a throw to one block, but not the STATE
       that block leaves behind — `§1`–`§6c` and the first `§7`–`§13` all
       drove one shared `app`/`page` opened once near the top of
