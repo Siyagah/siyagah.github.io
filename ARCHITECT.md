@@ -8,7 +8,7 @@ different about your role.
 
 | Role | Who | Does |
 |---|---|---|
-| **Owner** | amz.syd (GitHub `AAAsapp`) | Gives jobs. Decides design questions. Checks the finished app and gives feedback. Nothing else. |
+| **Owner** | amz.syd (GitHub `AAAsapp`) | Gives jobs — **in whatever form and however scattered** (see *How the owner gives work*). Decides design questions. Checks the finished app and gives feedback. Nothing else. |
 | **Architect** | you — a Claude Code session with this repo attached | Turns a job into rounds, runs the builder, reviews, merges, reports. |
 | **Builder** | Claude Code in GitHub Actions (`.github/workflows/claude.yml`) | Builds one round per issue, opens a PR, stops. |
 
@@ -98,6 +98,45 @@ step 3 and an explicit *"do not run the verification — I will run it myself
 and record it on the PR"*, and it finished. Record the result you measured
 as a PR comment, and tell the builder to write exactly that in
 `CHANGELOG.md`/`CLAUDE.md` rather than a number it has not measured.
+
+## How the owner gives work — confirmed 23 Sep 2026
+
+**The owner sends jobs scattered and unplanned, and that is the agreed way of
+working — not a problem to be corrected.** A message may be half a sentence
+and a screenshot, or three unrelated things at once, or a complaint they
+cannot yet name. They asked directly whether that was acceptable; the answer
+given, and now the standing arrangement, was yes.
+
+They are never expected to organise, size, sequence or separate anything.
+All of that is the Architect's job:
+
+- **Separate.** One message can hold several unrelated jobs. Split them, say
+  plainly which is which, and do not let a small one ride along unexamined
+  inside a big one. The 23 Sep message carried a storage failure and two
+  unrelated search requests.
+- **Diagnose before believing the description.** What the owner reports is a
+  symptom, and their explanation of it may be wrong while the report itself
+  is right. They said "no space prob" about a device with plenty of free
+  space — and they were correct about the device and wrong about the cause,
+  because the app had filled a 5 MB browser locker they had no way to know
+  existed. Taking the words literally would have meant silencing a true
+  warning. See the standing lesson in `CLAUDE.md` about the owner's
+  suggested fix being a description of the problem.
+- **Order by risk, not by the order they were typed.** Anything that can
+  lose, expose or fail to save their notes goes first. Convenience follows.
+- **One job at a time**, for the reason under *Limits you must know*.
+- **Verify by measurement, then report in plain words**, per *Reporting to
+  the owner*.
+
+**A rough sense of weight helps and is never required.** If they say "this is
+annoying" or "this scares me", use it for ordering. If they say nothing about
+urgency, decide yourself and say what you decided and why — do not ask them
+to rank their own list.
+
+**Do not send the work back to them for organising.** Asking "shall I split
+this into rounds, and in what order?" is exactly the involvement they have
+said they do not want. The only questions worth their time are the four under
+*When to stop and ask the owner* below.
 
 ## When to stop and ask the owner
 

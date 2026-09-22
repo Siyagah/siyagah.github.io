@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.49.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.51.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,35 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.51** (23 Sep 2026) — how the owner gives work, written into the
+  brief. No app change beyond the version strings; `ARCHITECT.md` only. The
+  owner asked whether it was acceptable to send jobs "scattered, on-the-go,
+  without an organised plan" and have the Architect plan, assign, review and
+  report. The answer was yes — that is the division of labour `ARCHITECT.md`
+  already described — but the agreement lived **only in a chat message**,
+  the precise failure v04.41 existed to stop: the next session starts blank
+  and may answer differently, or start asking the owner to organise their own
+  requests. A new section, *How the owner gives work*, now states that
+  scattered, unplanned, multi-topic messages are **the agreed working method
+  and not a problem to be corrected**, and what the Architect owes in return:
+  **separate** (one message can hold several unrelated jobs — the 23 Sep one
+  carried a storage failure and two unrelated search requests); **diagnose
+  before believing the description** (the owner said "no space prob" about a
+  device with gigabytes free, and was right about the device and wrong about
+  the cause — the notebook had filled a ~5 MB browser locker they had no way
+  to know existed, so taking the words literally would have silenced a true
+  warning); **order by risk, not by the order they were typed**; one job at a
+  time; verify by measurement then report in plain words. Two failure modes
+  named explicitly: a sense of urgency from the owner helps but is never
+  required — with no steer the Architect decides and says what it decided
+  rather than asking them to rank their own list — and **never send the work
+  back for organising**, because "shall I split this into rounds?" is exactly
+  the involvement they have said they do not want. The *Who does what* table's
+  Owner row now reads "Gives jobs — in whatever form and however scattered".
+  Not done: nothing in `CLAUDE.md` itself, since this governs how the
+  Architect receives work and the builder's input is an already-organised
+  issue — two copies would drift. D5 does not apply. 11/11 ship checks,
+  336/336 app checks.
 - **v04.49** (22 Sep 2026) — `app-check.mjs` grows `--only`, now that v04.46
   and v04.48 made every block a genuinely independent unit. Harness only —
   `tools/harness.mjs`, `tools/app-check.mjs`, `tools/README.md`,
@@ -157,36 +186,6 @@ must never accumulate here instead of there.
   app checks (322 pre-existing plus the two the permanent self-check adds),
   0 aborted blocks — every pre-existing check still asserts exactly what it
   asserted before.
-- **v04.45** (22 Sep 2026) — a check must fail, not explode. No app change
-  beyond the version strings. `app-check` is sequential top-level code with
-  no isolation between checks, so **one uncaught exception ends the run with
-  no report at all**. v04.44's new checks read `getComputedStyle(
-  document.getElementById('save-warn-dot'))` and clicked `#save-warn-dot` /
-  `#stor-rows` / `#rmrec-cancel` directly; run against a build without those
-  elements — exactly what the "do these new checks fail on unpatched code"
-  verification does — it threw at the first one and all 322 checks reported
-  nothing, so **v04.44's verification could not be produced at all**. The
-  first fix attempt guarded the call sites that had crashed, one at a time,
-  and each guard revealed the next — this project's own allow-list lesson,
-  re-learned in the harness. What shipped is the general form: **every block
-  in §14 wrapped in its own `try`/`catch`, a throw recorded as a failed
-  check** rather than killing the run, plus `tapIfPresent()` /
-  `awaitIfPresent()` / `awaitFnOrFalse()`, because Playwright's `click()` and
-  `waitForSelector()` default to a 30-second timeout and an unguarded wait
-  hangs before it throws. Also records the standing lesson v04.44 paid for
-  and did not write down: **a check that opens a surface by calling its
-  function proves nothing about whether the owner can reach it** —
-  `openModal('settings')` had zero call sites anywhere in the app, so v04.39
-  shipped `↩ Restore last recovery copy` unreachable and recorded it as
-  delivered, while `app-check` covered that modal and passed for five rounds
-  by opening it the one way nothing else could. Harness trap in
-  `tools/README.md`. Not done: only §14 is isolated — the other three hundred
-  checks still share one failure domain, and making isolation the default is
-  a round of its own. D5 does not apply. 11/11 ship checks, **322/322**
-  patched (unchanged by the guards); the verification that previously
-  crashed with no report now returns **307/319, 12 FAILED** against
-  pre-v04.44 app code, every one of the twelve a check that should fail
-  there.
 ---
 
 ## What this is
