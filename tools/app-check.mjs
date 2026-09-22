@@ -35,6 +35,7 @@ const app = await openApp();
 const { page } = app;
 
 /* ── 1. A clean boot ───────────────────────────────────────────────────── */
+await r.block('1-boot', async () => {
 r.check(app.errors.length === 0, 'boots with no exception and no console error',
   app.errors.length ? app.errors.slice(0, 6).join('\n') : 'silent');
 
@@ -56,8 +57,10 @@ r.check(painted.folders === 3 && painted.articles === 3, 'the seeded notebook is
 const emptyPanes = painted.panes.filter(([, len]) => len === 0).map(([id]) => id);
 r.check(emptyPanes.length === 0, 'every pane rendered something',
   emptyPanes.length ? `empty: ${emptyPanes.join(', ')}` : painted.panes.map(([id, n]) => `${id}:${n}`).join(' '));
+});
 
 /* ── 2. Every inline handler resolves to a real function ───────────────── */
+await r.block('2-handlers', async () => {
 /* A renamed or mistyped handler is the app's most common silent defect:
    the button looks fine and does nothing. This is the check that catches
    it without anyone clicking anything. */
@@ -67,8 +70,10 @@ const handlers = [...new Set([...html.matchAll(/\bon[a-z]+=\\?["']\s*([A-Za-z_$]
 const undefinedHandlers = await page.evaluate((names) => names.filter((n) => typeof window[n] !== 'function'), handlers);
 r.check(undefinedHandlers.length === 0, `every inline event handler is a real function (${handlers.length} names)`,
   undefinedHandlers.length ? `no such function: ${undefinedHandlers.join(', ')} — those controls do nothing when clicked` : 'all resolve');
+});
 
 /* ── 3. Every Smart View opens ─────────────────────────────────────────── */
+await r.block('3-smart-views', async () => {
 const viewResults = await page.evaluate(() => {
   const out = [];
   for (const sf of SF) {
@@ -83,8 +88,10 @@ const viewResults = await page.evaluate(() => {
 const brokenViews = viewResults.filter((v) => v.err || v.len === 0);
 r.check(brokenViews.length === 0, `all ${viewResults.length} Smart Views render`,
   brokenViews.length ? brokenViews.map((v) => `${v.name}: ${v.err || 'rendered nothing'}`).join('\n') : viewResults.map((v) => `${v.id}:${v.len}`).join(' '));
+});
 
 /* ── 4. Every real folder opens ────────────────────────────────────────── */
+await r.block('4-folders', async () => {
 const folderResults = await page.evaluate(() => {
   const out = [];
   for (const f of DB.folders) {
@@ -99,8 +106,10 @@ const folderResults = await page.evaluate(() => {
 const brokenFolders = folderResults.filter((f) => f.err);
 r.check(brokenFolders.length === 0, `all ${folderResults.length} folders open without throwing`,
   brokenFolders.length ? brokenFolders.map((f) => `${f.id}: ${f.err}`).join('\n') : 'clean');
+});
 
 /* ── 5. Opening a note, and editing it ─────────────────────────────────── */
+await r.block('5-open-and-edit', async () => {
 const readLen = await page.evaluate(() => {
   ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
   window.render();
@@ -148,8 +157,10 @@ const saved = await page.evaluate(async () => {
   return { ins: (art.content || '').includes('INSERTEDBYCHECK'), len: (art.content || '').length };
 });
 r.check(saved.ins, '_edTouched() commits an editor change into DB', `a1.content ${saved.len} chars`);
+});
 
 /* ── 6. Outline: headings drive fold arrows ────────────────────────────── */
+await r.block('6-outline', async () => {
 const outline = await page.evaluate(() => {
   try { window._edColHeads?.(); } catch (e) { return { err: String(e) }; }
   const ed = document.getElementById('ed');
@@ -157,8 +168,10 @@ const outline = await page.evaluate(() => {
 });
 r.check(!outline.err && outline.heads >= 2, '_edColHeads() runs over the editor headings',
   outline.err || `${outline.heads} headings seen`);
+});
 
 /* ── 6b. v04.07: a line to write on, above and below the note ──────────── */
+await r.block('6b-gutter-lines', async () => {
 /* The gutter is #ed's own padding and leftover height, so a click there
    lands on #ed itself — for the top, the bottom AND the sides alike. These
    drive REAL mouse clicks, because the caret is real browser state and a
@@ -305,8 +318,10 @@ const stillClean = await page.evaluate((b) => { const c = DB.articles.find((a) =
 r.check(stillClean.same, 'opening a line without typing leaves the note untouched in DB',
   stillClean.same ? 'no autosave fired on a bare click' : `before=${JSON.stringify(stillClean.before)}\nafter =${JSON.stringify(stillClean.after)}`);
 
+});
 
 /* ── 6c. v04.08: the read view's chrome folded into two rows ───────────── */
+await r.block('6c-read-chrome', async () => {
 /* The note view used to stack six rows before the note's first line. Home,
    the type chips and the section tools now live in the Pane-3 toolbar, and
    the version strip and the date line share one meta row. */
@@ -461,8 +476,10 @@ r.check(editTb.unified && editTb.editing && editTb.dir === 'column',
 await page.evaluate(() => { ST.editing = false; ST.article = 'a1'; window.render(); });
 await page.waitForTimeout(200);
 
+});
 
 /* ── 6d. v04.09: one row of buttons, bunched by type when it will not fit ─ */
+await r.block('6d-1-fold-progression', async () => {
 /* On a phone v04.08's wrapping toolbar became THREE rows. The row is nowrap
    now and folds by measuring itself. These open their own app per size,
    because the fold depends on the width of Pane 3, not of the window. */
@@ -529,7 +546,9 @@ r.check(phone.minH >= 42 && phone.minW >= 42 && desk.minH >= 34 && desk.minW >= 
   'the toolbar buttons are a real touch size — 42px+ on a phone',
   `phone smallest ${phone.minW}×${phone.minH}px · wide smallest ${desk.minW}×${desk.minH}px`);
 
+});
 /* The palettes must actually DO the things they list. */
+await r.block('6d-2-palettes-do-things', async () => {
 {
   const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
   await s.page.evaluate(() => { const a = DB.articles.find((x) => x.id === 'a1');
@@ -598,9 +617,11 @@ r.check(phone.minH >= 42 && phone.minW >= 42 && desk.minH >= 34 && desk.minW >= 
     `${pal.labels.length} actions (${pal.minH}px tall) · pop-out offered on a phone: ${pal.offersPopout} [${pal.popFns.join('/')}] · ⋯ holds copy ${more.copy}/archive ${more.arch}/delete ${more.del} · copy made ${nBefore}→${nAfter} · type reachable ${ntiPal.type} / attach rows ${ntiPal.attach}`);
   await s.close();
 }
+});
 
 
 /* ── 7. The data round-trip — the invariant that matters most ──────────── */
+await r.block('7-data-roundtrip', async () => {
 /* Save File writes the whole notebook into <script id="nd">. If a single id
    fails to survive that trip, notes have been lost silently. */
 const trip = await page.evaluate(() => {
@@ -628,7 +649,9 @@ r.check(trip.hasScript, 'the exported file is the whole app, not just the data',
   trip.hasScript ? 'carries the version tag and the app script' : 'export is missing the app script — a saved copy would not run');
 r.check(trip.liveIntact, 'exporting does not disturb the live notebook', trip.liveIntact ? 'DB unchanged' : 'DB changed during export');
 
+});
 /* ── 8. mergeDB never drops a side ─────────────────────────────────────── */
+await r.block('8-mergeDB-union', async () => {
 /* Cross-device sync runs through mergeDB(local, remote). A union that drops
    either side is how a note "vanishes after syncing". */
 const merged = await page.evaluate(() => {
@@ -642,7 +665,9 @@ r.check(merged.f.join() === 'L1,R1' && merged.a.join() === 'la,ra',
   'mergeDB() unions both devices instead of picking a winner',
   `folders ${merged.f.join(',')} · notes ${merged.a.join(',')}`);
 
+});
 /* ── 9. A newer edit wins, an older one does not overwrite it ──────────── */
+await r.block('9-newer-edit-wins', async () => {
 const newest = await page.evaluate(() => {
   const old = new Date(Date.now() - 6e5).toISOString(), fresh = new Date().toISOString();
   const base = (t, txt) => ({ folders: [], sections: [], trash: [], articles: [{ id: 'x', title: 'x', content: txt, folderIds: [], createdAt: old, updatedAt: t }] });
@@ -655,7 +680,9 @@ r.check(newest.remoteNewer === '<p>new</p>' && newest.localNewer === '<p>new</p>
   'mergeDB() keeps the newest edit whichever side it came from',
   `remote-newer → ${newest.remoteNewer} · local-newer → ${newest.localNewer}`);
 
+});
 /* ── 10. Deleting is still possible ────────────────────────────────────── */
+await r.block('10-delete', async () => {
 /* "Nothing is ever lost" must not become "nothing can be deleted" — the
    owner's own deletions have to work, through Trash. */
 const del = await page.evaluate(() => {
@@ -667,7 +694,9 @@ const del = await page.evaluate(() => {
 r.check(del.gone && del.inTrash, 'a deleted note leaves the list and lands in Trash',
   `${del.before}→${del.after} notes, trash ${del.trashBefore}→${del.trashAfter}`);
 
+});
 /* ── 11. mergeDB() resolves DB.theme per key — the v04.40 defect ────────── */
+await r.block('11-theme-perkey', async () => {
 /* theme was the one top-level key missing from mergeDB's explicit list, so
    Object.assign({},local) at the top of the function left it there
    untouched — local's settings always won outright, remote's were thrown
@@ -712,7 +741,9 @@ r.check(themeMerge.noStampsPreset === 'sand' && themeMerge.noStampsFonts === 111
 r.check(themeMerge.unknownKey === 1, 'an unknown/new top-level key on remote reaches the merged result instead of being silently dropped',
   `futureFeature.x → ${themeMerge.unknownKey}`);
 
+});
 /* ── 12. mergeDB() resolves DB.theme sub-objects at the LEAF — the v04.42 defect ── */
+await r.block('12-theme-leaf-merge', async () => {
 /* v04.40 resolved theme per TOP-LEVEL key, which is still too coarse for the
    several theme values that are themselves object maps written one sub-key
    at a time (fonts, custom, dbColors, headingStyles, calLayers, templates,
@@ -795,7 +826,9 @@ r.check(!leafMerge.mismatchErr && leafMerge.mismatchFonts === 130,
   leafMerge.mismatchErr ? `threw: ${leafMerge.mismatchErr}`
     : `fonts → ${JSON.stringify(leafMerge.mismatchFonts)} (remote's scalar, newer stamp, replaced the local object whole)`);
 
+});
 /* ── 13. _stampThemeTouches() itself writes the dotted stamp ────────────── */
+await r.block('13-stampThemeTouches', async () => {
 /* Check 12 proves mergeDB() reads a dotted stamp correctly — but every one of
    those stamps was hand-written straight into the test (`{ 'fonts.sidebar':
    1000 }`), so it proves nothing about whether _stampThemeTouches() ever
@@ -865,11 +898,13 @@ r.check(stampFn.e2eSidebar === 120 && stampFn.e2eContent === 130,
   `fonts.sidebar (device A) → ${stampFn.e2eSidebar} · fonts.content (device B) → ${stampFn.e2eContent} (wanted 120 and 130 — the whole point of a real stamping function feeding a real merge)`);
 
 await app.close();
+});
 
 /* ── 6e. v04.10: the two pop-up buttons say which is which ─────────────── */
 /* They were ⊡ and ⛶ — two faint square glyphs beside a third square glyph
    (⧉ Make a copy), indistinguishable without a hover. Each now carries a
    drawn icon and, while the row has room, its own word. */
+await r.block('6e-1-popup-icons', async () => {
 {
   /* 1600, not 1440: MEASURED, the row wants 737px of Pane 3 to carry the
      words with the type group folded, and a 1440 window leaves Pane 3 only
@@ -921,10 +956,12 @@ await app.close();
     `Pane 3 ${pop.paneW}px · words "${pop.words}" shown ${pop.wordsShown} · different colour ${pop.tinted} · ${pop.mW}×${pop.mH}px`);
   await s2.close();
 }
+});
 
 /* "As long as space permits" is the whole ask, so it is measured: the words
    must appear when the pane can carry them, fold away when it cannot, and
    never push the row into overflowing or into a second line. */
+await r.block('6e-2-popup-words-fold', async () => {
 {
   const WORD_SIZES = [
     { name: 'phone', width: 390, height: 844 },
@@ -981,8 +1018,10 @@ await app.close();
     'with the words off, the buttons are the same size target they were in v04.09',
     folded.map((x) => `${x.vp.name} ${x.m.btnW}px`).join(' · ') || 'no size folded to icons');
 }
+});
 
 /* The full names must be everywhere the button is not: both menus. */
+await r.block('6e-3-popup-names-in-menus', async () => {
 {
   const s2 = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
   await s2.page.evaluate(() => { selArt('a1'); });
@@ -1000,8 +1039,10 @@ await app.close();
     `Multi ${menu.multi} · Single ${menu.single} · 🗐 still there ${menu.badGlyph}`);
   await s2.close();
 }
+});
 
 /* ── 6f. v04.11: three actions under one button, and boxes round them all ─ */
+await r.block('6f-consolidated-actions', async () => {
 {
   const s2 = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
   await s2.page.evaluate(() => { const a = DB.articles.find((x) => x.id === 'a1');
@@ -1071,6 +1112,7 @@ await app.close();
       : `${boxes.n} buttons, radius ${boxes.radius}`);
   await s2.close();
 }
+});
 
 /* Every button on the row must actually DO something when clicked.
    This is the check that would have caught the ⋯ button: its onclick passed a
@@ -1137,6 +1179,7 @@ await app.close();
    note's type. It opens the type picker now. Both halves are asserted: the
    types must be UNCHANGED by the tap, and the picker must actually open —
    anchored to the chip, not dumped in the corner. */
+await r.block('6g-type-chip-badge', async () => {
 {
   const s2 = await openApp({ viewport: { width: 1600, height: 900 }, db: seedDB() });
   await s2.page.evaluate(() => { selArt('a1'); });
@@ -1187,11 +1230,13 @@ await app.close();
         ` · off → ${JSON.stringify(stillRemovable.without)}`);
   await s2.close();
 }
+});
 
 /* ── 6h. v04.14: the sidebar header reads, and fits its own pane ───────── */
 /* Three complaints, one row: the version number was invisible, the buttons
    were four different sizes, and the ▾ beside 🏠 was a 14×19px speck. */
 {
+await r.block('6h-1-version-badge-legible', async () => {
   /* The sidebar colour is owner-settable (Appearance ▸ Custom colours), so
      the fixed grey #6A7F6C the version tag used to be painted in scored 4.3:1
      on the Forest preset and about 1.2:1 on the teal the owner had actually
@@ -1230,12 +1275,14 @@ await app.close();
       `the search box reads on ${label} too — placeholder and typed text both`,
       `placeholder ${phC.toFixed(1)}:1 · typed text ${inC.toFixed(1)}:1`);
   }
+});
 
   /* The header is a PANE, not the screen: the sidebar is draggable from 160px
      to 540px, so a 1440px laptop can be showing a 200px one. At 200px the old
      header ran 292px wide and pushed 🧰 and ⚙ off the edge of the pane, where
      nothing could reach them. Every width is measured after the layout has
      settled — a class toggled on a resize is not applied in the same frame. */
+await r.block('6h-2-header-fits-pane', async () => {
   {
     const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
     const rows = [];
@@ -1272,11 +1319,13 @@ await app.close();
       'at a normal sidebar width the wordmark, the badge and all five buttons share one row',
       wide.map((x) => `${x.width}px ${x.rows}px tall, wordmark ${x.name}`).join(' · '));
   }
+});
 
   /* One size, one shape. The row was 37×36, 14×19, 37×36, 42×40 and 37×45,
      in four different font sizes. The ▾ is the one deliberate exception: it
      is the narrow half of a split button, so it is checked on both of its
      dimensions — Math.min() would call a 26×34 target "26px". */
+await r.block('6h-3-one-size-one-shape', async () => {
   {
     const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
     await s.page.evaluate(() => { document.getElementById('sb').style.width = '390px'; });
@@ -1301,9 +1350,11 @@ await app.close();
       'the ▾ beside 🏠 is a real target, not the 14×19px speck it was',
       cv ? `${cv.w}×${cv.h}` : 'the ▾ is not in the header at all');
   }
+});
 
   /* Phone: the same row has to be thumb-sized. 42px is the size the note
      toolbar is already held to (v04.09). Both dimensions, per the ▾ lesson. */
+await r.block('6h-4-phone-touch-size', async () => {
   {
     const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
     await s.page.waitForTimeout(400);
@@ -1319,11 +1370,13 @@ await app.close();
         : m.map((x) => `${x.w}×${x.h}`).join(' '));
     await s.close();
   }
+});
 
   /* And it still opens. A handler that survives is not a menu that stays
      open — v04.11 shipped a ⋯ that passed both of those and was shut in the
      same tick by the global click-closer. So: a real mouse click, then look
      again a moment later and see whether the menu is still painted. */
+await r.block('6h-5-legacy-menu-opens', async () => {
   {
     const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
     const thrown = [];
@@ -1341,6 +1394,7 @@ await app.close();
       `painted ${dd.painted} · names the legacy build ${dd.legacy}` + (thrown.length ? ` · threw: ${thrown[0]}` : ''));
     await s.close();
   }
+});
 }
 
 /* ── 6i. v04.15: every word in the sidebar reads, whatever colour it is ── */
@@ -1371,6 +1425,7 @@ await app.close();
     return out;
   };
 
+await r.block('6i-1-sidebar-sweep', async () => {
   /* Five sidebars: the default, the owner's teal, a preset that is not green,
      a PALE one (where white ink has to flip to dark), and a mid grey — the
      worst case there is, because neither ink scores well against it. */
@@ -1421,10 +1476,12 @@ await app.close();
       low.length ? uniq.slice(0, 5).map((x) => `${x.c.toFixed(1)}:1 ${x.sel} ${JSON.stringify(x.text)} in ${x.color}`).join(' · ')
         : `${scored.length} pieces of text, worst ${scored[0].c.toFixed(1)}:1 (${scored[0].sel}), bar ${bar.toFixed(1)}:1, ink ${ink.ink}`);
   }
+});
 
   /* An empty notebook paints text nothing else does — "Empty — add a folder
      with ＋", "No tags yet" — each one written inline in a fixed green that
      the sweep above never reaches, because the seeded notebook is not empty. */
+await r.block('6i-2-empty-notebook', async () => {
   {
     const db = seedDB();
     db.folders = []; db.articles = [];
@@ -1444,9 +1501,11 @@ await app.close();
       low.length ? low.slice(0, 4).map((x) => `${x.c.toFixed(1)}:1 ${JSON.stringify(x.text)} in ${x.color}`).join(' · ')
         : `${scored.length} pieces of text over ${sbBg}, worst ${scored[0].c.toFixed(1)}:1 ${JSON.stringify(scored[0].text)}`);
   }
+});
 
   /* The mechanism, not just the outcome: the ink flips on a pale sidebar, and
      a section heading sits on a strip that is not the colour of the rows. */
+await r.block('6i-3-ink-flip', async () => {
   {
     const dark = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
     await dark.page.waitForTimeout(250);
@@ -1464,6 +1523,8 @@ await app.close();
       'the ink flips to dark when the owner picks a pale sidebar, search results with it',
       `dark sidebar ink ${d} · pale sidebar ink ${l.ink}, search-results ${l.sr}`);
   }
+});
+await r.block('6i-4-section-strip', async () => {
   {
     const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
     await s.page.waitForTimeout(300);
@@ -1486,6 +1547,7 @@ await app.close();
       bare.length ? bare.map((b) => `${b.label} ${b.h}px bg ${b.bg} border ${b.border}`).join(' · ')
         : m.btns.map((b) => `${b.label} ${b.h}px`).join(' · '));
   }
+});
 }
 
 /* ── 6j. v04.16: panes 2 and 3 read, at every colour the pickers allow ── */
@@ -1512,6 +1574,7 @@ await app.close();
     return out;
   };
 
+await r.block('6j-1-panes-sweep', async () => {
   /* The two pickers that sit under these panes, at their least forgiving:
      a pane background far too dark to write on, a mid grey, an accent so
      pale that white on it is invisible, and both at once. */
@@ -1554,11 +1617,13 @@ await app.close();
       low.length ? low.slice(0, 5).map((x) => `${x.c.toFixed(1)}:1 ${x.root} ${x.sel} ${JSON.stringify(x.text)} in ${x.color}`).join(' · ')
         : `${scored.length} pieces of text across four states, worst ${scored[0].c.toFixed(1)}:1 (${scored[0].sel})`);
   }
+});
 
   /* The mechanism. A dark pane background is not applied as chosen — the note
      keeps pale heading bands and pale widgets baked into the stylesheet, so
      flipping the ink under them measures WORSE (1.0:1) than leaving it. It is
      lightened until dark ink can live on it, and the owner is told. */
+await r.block('6j-2-dark-pane-mechanism', async () => {
   {
     const db = seedDB();
     db.theme = { preset: 'forest', custom: { bg: '#16202A', accent: '#EFEFEF' } };
@@ -1583,6 +1648,7 @@ await app.close();
       'white stops being the label colour on an accent too pale to carry it',
       `accent #EFEFEF → label ${m.onAccent}`);
   }
+});
 }
 
 /* ── 6k. v04.17: the folder pop-out gets what the sidebar folders got ──── */
@@ -1626,6 +1692,7 @@ await app.close();
     await page.waitForTimeout(450);
   };
 
+await r.block('6k-1-folder-popout-sweep', async () => {
   for (const [label, custom] of [
     ['the theme as it ships', null],
     ['a pane background too dark to read on', { bg: '#16202A' }],
@@ -1660,6 +1727,7 @@ await app.close();
       low.length ? low.slice(0, 4).map((x) => `${x.c.toFixed(1)}:1 ${x.sel} ${JSON.stringify(x.text)} in ${x.color}`).join(' · ')
         : `${scored.length} pieces of text across three states, worst ${scored[0].c.toFixed(1)}:1 (${scored[0].sel})`);
   }
+});
 
   /* One size, one shape — and a thumb-sized one where there is a thumb. */
   const geometry = async (width, height, minIcon, minBtn, minRow) => {
@@ -1697,6 +1765,7 @@ await app.close();
     return m;
   };
 
+await r.block('6k-2-laptop-geometry', async () => {
   {
     const m = await geometry(1440, 900, 28, 34, 36);
     const smallIcons = m.icons.filter((x) => x.w < 28 || x.h < 28);
@@ -1719,6 +1788,8 @@ await app.close();
       'the section dropdown is wide enough to say which section you are in',
       m.sel ? `${m.sel.w}×${m.sel.h}` : 'no section dropdown');
   }
+});
+await r.block('6k-3-phone-geometry', async () => {
   {
     /* Under 1200px this window is full screen, and every control in it was
        still laptop-sized — 19×19 delete icons on a phone. */
@@ -1732,9 +1803,11 @@ await app.close();
       small.length ? small.slice(0, 6).join(' · ')
         : `${m.icons.length} icons, ${m.btns.length} buttons, ${m.rows.length} rows, dropdown ${m.sel ? m.sel.w + '×' + m.sel.h : '—'}`);
   }
+});
 
   /* The title bar wraps instead of squeezing: bigger steppers took the
      section dropdown from 146px to 118px, which clipped MY NOTEBOOKS. */
+await r.block('6k-4-title-bar-wraps', async () => {
   {
     const s = await openApp({ viewport: { width: 1600, height: 950 }, db: seedDB() });
     await openPop(s.page);
@@ -1759,6 +1832,7 @@ await app.close();
       bad.length ? bad.map((x) => `${x.width}px: dropdown ${x.sel}px${x.outside.length ? `, outside the row: ${x.outside.join(', ')}` : ''}`).join(' · ')
         : widths.map((x) => `${x.width}:${x.sel}px`).join(' '));
   }
+});
 }
 
 /* ── 6l. v04.18: the Assign window, and a note count on every folder ──── */
@@ -1774,6 +1848,7 @@ await app.close();
     await page.waitForTimeout(450);
   };
 
+await r.block('6l-1-assign-window-sweep', async () => {
   /* Text: the same net as v04.17's, over the Assign window. It shares its
      classes with the browse pop-out, so this is a regression net more than a
      discovery — two colour settings, not five, for what that is worth. */
@@ -1820,7 +1895,9 @@ await app.close();
       low.length ? low.slice(0, 4).map((x) => `${x.c.toFixed(1)}:1 ${x.sel} ${JSON.stringify(x.text)}`).join(' · ')
         : `${scored.length} pieces of text, worst ${scored[0].c.toFixed(1)}:1 (${scored[0].sel})`);
   }
+});
 
+await r.block('6l-2-tick-box-size', async () => {
   /* The tick box is what this window is FOR, and it was 15×15 on a phone. */
   for (const [label, w, h, min] of [['a laptop', 1440, 900, 20], ['a phone', 390, 844, 24]]) {
     const s = await openApp({ viewport: { width: w, height: h }, db: seedDB() });
@@ -1834,8 +1911,10 @@ await app.close();
       `on ${label} the Assign window's tick box is a box, not the 15×15 speck it was`,
       box.length ? `${box.length} boxes at ${box[0].w}×${box[0].h} (needs ${min})` : 'no tick boxes rendered');
   }
+});
 
   /* The count: the number the sidebar badge shows, on the pop-out rows too. */
+await r.block('6l-3-note-count', async () => {
   {
     const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
     const read = () => s.page.evaluate(() => [...document.querySelectorAll('#mb .pr')]
@@ -1857,7 +1936,9 @@ await app.close();
       wrong.length ? wrong.slice(0, 4).map((x) => `${x.fid}: shows ${x.shown}, cntOf says ${x.real}`).join(' · ')
         : `${assign.length} rows in Assign, ${browse.length} in the browser, all matching cntOf()`);
   }
+});
 
+await r.block('6l-4-phone-fold', async () => {
   /* On a phone the three row actions fold into one ⋯ — because with them on
      the row a folder name got about 65px of a 317px row and arrived as
      "(001) See…". Folded, never hidden: the ⋯ has to really open. */
@@ -1900,7 +1981,9 @@ await app.close();
       'a real click on that ⋯ opens all three actions, and the menu is still there a tick later',
       `painted ${menu.painted} · ${JSON.stringify(menu.text.slice(0, 60))}` + (thrown.length ? ` · threw: ${thrown[0]}` : ''));
   }
+});
 
+await r.block('6l-5-laptop-untouched', async () => {
   /* And nothing was taken away from the laptop, where there is room. */
   {
     const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
@@ -1916,6 +1999,7 @@ await app.close();
       'on a laptop the three row actions are still on the row, and the ⋯ stays out of the way',
       `on the row: ${laptop.acts.join(', ') || 'none'} · ⋯ shown ${laptop.more}`);
   }
+});
 }
 
 /* ── 6m. v04.19: a colour variable that is used is a colour that exists ── */
@@ -1929,6 +2013,7 @@ await app.close();
    fallback, and asks whether it resolves to anything — so it also catches
    the next undefined variable anyone adds. */
 {
+await r.block('6m-1-vars-and-hover-tint', async () => {
   const VARS = () => {
     const used = new Map();
     const walk = (list) => { for (const rule of list) {
@@ -2082,11 +2167,13 @@ await app.close();
           : `${scored.length} pieces of text on --hover/--paper2, worst ${scored[0].c.toFixed(1)}:1 (${scored[0].sel})`);
     await s.close();
   }
+});
 }
 
 /* The proof that a hover actually PAINTS. A rule that resolves is not a rule
    that shows: this moves a real mouse onto a real row and reads the colour
    the browser ended up painting, before and after. */
+await r.block('6m-2-hover-paints', async () => {
 {
   const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
   await s.page.evaluate(() => { ST.folder = 'f1'; window.render(); });
@@ -2106,9 +2193,11 @@ await app.close();
     before === null ? 'no hoverable row found to measure'
       : `${sel}: ${before} → ${after}${before === after ? '  (UNCHANGED — the highlight paints nothing)' : ''}`);
 }
+});
 
 /* ── 6n. v04.20: a Smart View gets the same second row, and a way in ───── */
 {
+await r.block('6n-1-smart-view-parity', async () => {
   /* The owner's report was "the folder screen has buttons the Smart View
      screen does not". These check the parity is real and does its job — not
      that the markup exists, but that a chip navigates, a typed title lands
@@ -2265,7 +2354,9 @@ await app.close();
     "a section's Smart View gets the row too, and saves inside that section",
     `bar:${secScoped.bar} row:${secScoped.row} destination:${secScoped.dest} inside the section:${secScoped.inSection}`);
   await s6n.close();
+});
 
+await r.block('6n-2-quickadd-geometry', async () => {
   /* The bar is the thing the owner asked to look good — so it also has to be
      hittable. A phone gets a 42px target; both sizes get measured. */
   for (const [label, w, h, min] of [['a laptop', 1440, 900, 28], ['a phone', 390, 844, 42]]) {
@@ -2296,7 +2387,9 @@ await app.close();
       geo ? `bar ${geo.bar.w}×${geo.bar.h} · Save ${geo.go.w}×${geo.go.h} (needs ${min}) · badge ${geo.ic.w}×${geo.ic.h} · radius ${geo.radius} · ${JSON.stringify(geo.text)} needs ${geo.textW}px in ${geo.fieldW}px${fits ? '' : ' — CLIPPED'}`
         : 'no quick-add bar rendered');
   }
+});
 
+await r.block('6n-3-quickadd-colours', async () => {
   /* And it has to READ — on the five presets, both of its own colours, and
      the placeholder, which is the one word the old flat bar got wrong. */
   for (const preset of ['forest', 'ocean', 'amber', 'indigo', 'rose']) {
@@ -2325,10 +2418,12 @@ await app.close();
       low.length ? low.map((x) => `${x.c.toFixed(1)}:1 ${x.what}`).join(' · ')
         : scored.map((x) => `${x.what} ${x.c.toFixed(1)}:1`).join(' · '));
   }
+});
 }
 
 /* ── 6o. v04.21: the two header menus, reorganised ─────────────────────── */
 {
+await r.block('6o-1-menu-reorg', async () => {
   /* The owner asked for five items to leave ⚙ Settings for 🧰 Tools, and for
      both menus to be organised. The risks are all invisible from a
      screenshot: an item that lands in the other menu but still closes the one
@@ -2405,7 +2500,9 @@ await app.close();
     empty.length ? `empty heading(s): ${empty.map((g) => g.head).join(', ')}`
       : `Tools: ${grouped.tools.map((g) => `${g.head} (${g.n})`).join(' · ')} | Settings: ${grouped.menu.map((g) => `${g.head} (${g.n})`).join(' · ')}`);
   await s6o.close();
+});
 
+await r.block('6o-2-menu-geometry', async () => {
   /* 5. Geometry. Opened with a REAL mouse click on the real button and looked
      at again 250ms later (the v04.12 rule), then asked the only question that
      matters: is the whole menu on the screen? The first cut of this round
@@ -2465,7 +2562,9 @@ await app.close();
       }
     }
   }
+});
 
+await r.block('6o-3-menu-colours', async () => {
   /* 6. And they have to READ. These menus live inside #sb, so the v04.15
      sweep walks them — but only ever with both of them CLOSED, which means
      display:none and nothing measured. The new group headings are the first
@@ -2505,6 +2604,7 @@ await app.close();
       low.length ? low.map((x) => `${x.c.toFixed(1)}:1 ${x.what}`).join(' · ')
         : `${scored.length} labels and headings, worst ${Math.min(...scored.map((x) => x.c)).toFixed(1)}:1`);
   }
+});
 }
 
 /* ── 6p. v04.22: one bar on a phone, and a menu under its own button ───── */
@@ -2579,6 +2679,7 @@ await app.close();
     return all;
   };
 
+await r.block('6p-01-phone-one-bar', async () => {
   /* 1. The phone's edit view is ONE bar of chrome, not five. */
   const sPh = await editAt(390, 844);
   const rows = await sPh.page.evaluate(() => {
@@ -2775,9 +2876,11 @@ await app.close();
   r.check(saved, 'phone: 💾 Save on the bar commits the note',
     saved ? 'typed text is in DB.articles after a real click' : 'the note did NOT save');
   await sPh.close();
+});
 
   /* 4. The date line is ONE date, and a tap flips it — without rebuilding the
      editor underneath, which would cost the caret mid-sentence. */
+await r.block('6p-02-date-flip', async () => {
   {
     const s = await editAt(390, 844);
     const before = await s.page.evaluate(() => {
@@ -2807,7 +2910,9 @@ await app.close();
       `#ed ${mid.sameEd ? 'is the same node' : 'WAS REBUILT'} · updatedAt ${mid.upd === before.upd ? 'unchanged' : 'CHANGED'}`);
     await s.close();
   }
+});
 
+await r.block('6p-03-section-tools-dots', async () => {
   /* 5. The section-tools ⋯ shares the versioning bar, after the date — and
      #ed-col-wrap is an id, so there must never be two of it. */
   for (const vp of VIEWPORTS) {
@@ -2828,7 +2933,9 @@ await app.close();
       `${m.n} #ed-col-wrap · ${m.inMeta ? 'in .p3-meta-row' : m.inTb ? 'in the toolbar' : 'nowhere expected'}`
         + ` · painted ${m.shown} · after the date ${m.afterDate}`);
   }
+});
 
+await r.block('6p-04-tab-bar-while-editing', async () => {
   /* 5a. v04.24/v04.25 — the tab bar while editing on a phone, measured with
      tabs actually seeded, because that is the state it exists in.
      v04.22 put 📅 Calendar and ＋ Add Tab under `+` and hid the bar while
@@ -2872,7 +2979,9 @@ await app.close();
       'phone: the tab bar does not render in read mode either, before or after an edit',
       `read ${rd.shown ? 'STILL PAINTED' : 'not rendered'} · after ✕ ${back.shown ? 'STILL PAINTED' : 'not rendered'}`);
   }
+});
 
+await r.block('6p-05-tabs-still-reachable', async () => {
   /* 5a-ii. Hiding a bar is only allowed if what was on it is still reachable —
      and reachable means a real click really switches the note, not that a row
      with the right words exists. */
@@ -2907,7 +3016,9 @@ await app.close();
         + ` editing ${switched ? switched.editing : '?'}`
         : 'no tab rows under `+` — the tabs are unreachable while editing');
   }
+});
 
+await r.block('6p-06-read-mode-palette', async () => {
   /* 5a-iii. v04.30 — "Now, do same in view mode too. Move n Place Cal n add
      tab to the attach button (bar is not required) n spread-open them on the
      pallet with the attach buttons as well spread-open."
@@ -2966,7 +3077,9 @@ await app.close();
       'phone read mode: that card runs edge to edge and every row can be hit',
       viaGrp.open ? `${viaGrp.left}→${viaGrp.right} of ${viaGrp.vw}, shortest row ${viaGrp.shortest}px` : 'not measured');
   }
+});
 
+await r.block('6p-07-tablet-keeps-palette', async () => {
   /* And a tablet keeps the palette it had — that card exists because the
      toolbar folded, and the tab bar is still there to carry Calendar. */
   {
@@ -2987,7 +3100,9 @@ await app.close();
       'tablet: the tab bar and the old 🏷 palette are both untouched',
       `tab bar painted ${m.barShown} · palette is the kindBar card ${m.oldStyle} · spread-open ${m.spread}`);
   }
+});
 
+await r.block('6p-08-read-bar-home-and-more', async () => {
   /* 5a-iv. v04.31 — THE READ BAR'S THREE QUESTIONS ═══════════════════════
      The owner asked, of the phone's read view: 🏠 and 📁 do the same thing —
      is the folder icon still needed? what is "General" doing there? and what
@@ -3059,7 +3174,9 @@ await app.close();
       `${nBefore} → ${nAfter} notes`);
     await s.close();
   }
+});
 
+await r.block('6p-09-note-type-labelled', async () => {
   /* (2) "What is General doing there?" — a value with nothing saying what it
      is the value OF. Asked as a sweep rather than as a check on one bar: any
      note-type value painted anywhere must have the word Type beside it, so
@@ -3100,7 +3217,9 @@ await app.close();
     r.check(sweep.home >= 1, 'tablet: the read bar keeps its 🏠 — this round is the phone’s',
       `goHome buttons on the tablet read bar: ${sweep.home}`);
   }
+});
 
+await r.block('6p-10-attach-rows-pairing', async () => {
   /* 5a-v. v04.32 — TWO SCREENSHOTS, TWO QUESTIONS ════════════════════════
      (1) "Easily database can be moved to up by removing 'attached' with
      'Folder' button." The four Attach rows flowed free, so the fourth was
@@ -3168,7 +3287,9 @@ await app.close();
     r.check(pair === 'contents', 'laptop: the Attach rows are not paired — the narrow card is untouched',
       `.eb-pair display is ${pair}`);
   }
+});
 
+await r.block('6p-11-full-menu-organised', async () => {
   /* (2) "Organise the hanging buttons more elegant way." The full ⋯ menu was
      twenty-one rows of 155px hanging in a 167px column. Opened the way the
      owner opens it — a REAL mouse click, looked at again 250ms later, which
@@ -3261,7 +3382,9 @@ await app.close();
       'closing the menu hands #ctx back clean for the four other menus that borrow it',
       `class “${clean.cls}” · inline width “${clean.width}”`);
   }
+});
 
+await r.block('6p-12-tablet-laptop-anchored-menu', async () => {
   /* And a tablet and a laptop keep the anchored column: there #ctx is a real
      right-click menu at a cursor, already as wide as its longest word. */
   for (const vp of [{ name: 'tablet', w: 820, h: 1180 }, { name: 'laptop', w: 1440, h: 900 }]) {
@@ -3280,7 +3403,9 @@ await app.close();
       `${vp.name}: the right-click menu is the anchored column it has always been`,
       `card ${m.card} · ${m.rows} rows, ${m.seps} separators, ${m.wide}px wide`);
   }
+});
 
+await r.block('6p-13-edit-bar-mode-parity', async () => {
   /* 5a-vi. v04.33 — THE SAME TWO BUTTONS, IN BOTH MODES, ON THE EDITOR ═════
      "Let the Multi and single button be present in the edit mode as well" and
      "Let the pop-up note opens in edit mode when click to pop-up".
@@ -3354,7 +3479,9 @@ await app.close();
         same.map((x) => `${x.k} read ${x.rd} / edit ${x.ed} @${x.op}`).join(' · '));
     }
   }
+});
 
+await r.block('6p-14-popups-are-for-editing', async () => {
   /* And the thing the buttons are FOR. A Multi Notes Pop-Up has always been
      an editor; a Single Note Pop-Up opened read-only, and opened read-only
      even when you were editing the note at the time — selArt() clears
@@ -3407,7 +3534,9 @@ await app.close();
       'the Multi Notes Pop-Up opens on the editor with the caret already in it',
       `window ${multi.win} · editable ${multi.editable} · focused ${multi.focused}`);
   }
+});
 
+await r.block('6p-15-one-editor-per-note', async () => {
   /* ONE EDITOR PER NOTE. F3 in index.html says the rule — "hand-over, never
      duplicate" — and enforced it only for the panel, so popping a note out of
      PANE 3's editor left #ed and .fw-ed both live on the same note, both on
@@ -3438,7 +3567,9 @@ await app.close();
       `float editor ${m.fw} · pane-3 editor still live ${m.p3} · ST.editing ${m.editing}`
       + ` · typed words in DB ${m.inDb} · in the pop-up ${m.inFw}`);
   }
+});
 
+await r.block('6p-16-popups-reachable-every-mode', async () => {
   /* ══ v04.34 — REVERSED, AND SAYING SO ════════════════════════════════════
      This pair used to assert the OPPOSITE: "neither mode offers a pop-up
      button, and the app refuses to open one", which was a true description
@@ -3502,7 +3633,9 @@ await app.close();
         + ` · Multi opens editable ${opened.float} · Single opens ${opened.panel}, editing ${opened.editing}`);
     }
   }
+});
 
+await r.block('6p-17-popups-every-platform', async () => {
   /* 5a-vii. v04.34 — THE POP-UPS ON EVERY PLATFORM ═══════════════════════
      "Now do same for the phone and tablet too. Always do all platforms as
      adaptible." Adaptible is the word that matters: a phone does not get a
@@ -3715,7 +3848,9 @@ await app.close();
         `float frame stored ${JSON.stringify(geo.float)} · panel frame stored ${JSON.stringify(geo.panel)}`);
     }
   }
+});
 
+await r.block('6p-18-collapse-menu-on-versioning-bar', async () => {
   /* 5b. v04.23 — the owner asked where the collapse/expand ⋯ had gone while
      looking straight at it: a bare glyph beside a grey date pill reads as
      punctuation. It wears the versioning bar's pill now, it has to OPEN on a
@@ -3755,7 +3890,9 @@ await app.close();
       'phone: the H group carries the same Collapse / Expand / Preview, by the same functions',
       heads.open ? heads.text.slice(0, 110) : 'the H menu did not open');
   }
+});
 
+await r.block('6p-19-no-glyph-collision', async () => {
   /* 5c. v04.26 — the owner asked two things: organise these menus, and "how
      about there is two 3 line horizontal button, does it make sense?" It did
      not: ≡ was Open-folders in the nav pair AND Lists in the format pair, two
@@ -3785,7 +3922,9 @@ await app.close();
       'phone: no two controls in the edit chrome wear the same glyph for different jobs',
       clash.length ? `same glyph, different job: ${clash.join(' · ')}` : 'every glyph does one job');
   }
+});
 
+await r.block('6p-20-plus-menu-organised', async () => {
   /* 5d. v04.26 — the `+` menu, organised. Three groups that split by WHAT THE
      ACTION DOES (put something in the note / say what the note is / leave the
      note), every group under a heading, and — the v04.23 lesson — every button
@@ -3885,7 +4024,9 @@ await app.close();
       fit ? `${fit.top}→${fit.bottom} of ${fit.vh}px (${fit.tall}px tall,`
         + ` ${Math.round(fit.tall / fit.vh * 100)}%), scrolls ${fit.scrolls}` : 'not measured');
   }
+});
 
+await r.block('6p-21-edit-bar-menu-geometry', async () => {
   /* 6. Geometry — the round's own bug report. A real mouse click on the real
      button, looked at again 250ms later (the v04.12 rule), then asked the
      question the owner asked: is it under the button, or at the bottom of the
@@ -3958,7 +4099,9 @@ await app.close();
           : live.map((o) => `${o.g} ${o.n} buttons, shortest ${o.shortest}px`).join(' · '));
     }
   }
+});
 
+await r.block('6p-22-edit-bar-menu-colours', async () => {
   /* 7. And the new words have to READ: the Save label on --green (the pair
      that has always been right is .bp's, never --accent as a background —
      v04.20 paid for that), and the group headings inside the menus. */
@@ -3995,9 +4138,11 @@ await app.close();
       low.length ? low.map((x) => `${x.c.toFixed(1)}:1 "${x.what}"`).join(' · ')
         : `${scored.length} labels, worst ${Math.min(...scored.map((x) => x.c)).toFixed(1)}:1`);
   }
+});
 }
 
 /* ── 11. Layout at the three real screen sizes ─────────────────────────── */
+await r.block('11-layout-three-sizes', async () => {
 for (const vp of VIEWPORTS) {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
   const m = await s.page.evaluate(() => ({
@@ -4019,8 +4164,10 @@ for (const vp of VIEWPORTS) {
     s.failed.length ? `failed: ${[...new Set(s.failed)].join(', ')}` : `${s.blocked.length} Firebase/font requests blocked on purpose`);
   await s.close();
 }
+});
 
 /* ── 12. Chromium's own verdict on the manifest ────────────────────────── */
+await r.block('12-manifest-installable', async () => {
 {
   const s = await openApp();
   const cdp = await s.ctx.newCDPSession(s.page);
@@ -4033,6 +4180,7 @@ for (const vp of VIEWPORTS) {
     ie.map((e) => e.errorId).join('; ') || 'installable');
   await s.close();
 }
+});
 
 /* ── 13. Import consent — no destructive action without a real click ────
    Issue #49: importJSON() used to do DB=d;persist() with NO confirmation at
@@ -4053,6 +4201,7 @@ const idsOfRaw = (raw) => ({
 });
 const readDB = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('my-notebook-v1') || 'null'));
 
+await r.block('13-import-a-consent', async () => {
 /* 13a — importJSON(), driven by a REAL file through a REAL <input>, leaves
    the notebook untouched right up to a REAL click on "Replace everything"
    in BOTH dialogs; the recovery copy it took is read back in a separate
@@ -4113,7 +4262,9 @@ const readDB = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('my
 
   await s.close();
 }
+});
 
+await r.block('13-import-b-escape-and-backdrop', async () => {
 /* 13b — Escape and a backdrop click, from EITHER dialog, leave the notebook
    byte-identical: never the destructive branch by accident. */
 {
@@ -4147,7 +4298,9 @@ const readDB = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('my
 
   await s.close();
 }
+});
 
+await r.block('13-import-c-merge', async () => {
 /* 13c — Merge adds without removing. */
 {
   const s = await openApp({ db: seedDB() });
@@ -4163,7 +4316,9 @@ const readDB = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('my
     `before ${JSON.stringify(before)} → after ${JSON.stringify(after)}`);
   await s.close();
 }
+});
 
+await r.block('13-import-d-quota-path', async () => {
 /* 13d — the quota path: the recovery write fails, and the dialog must say
    so plainly rather than claim a copy that was never actually kept. */
 {
@@ -4195,7 +4350,9 @@ const readDB = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('my
     recKey ? `latest key wrongly claims ${recKey}` : 'none recorded');
   await s.close();
 }
+});
 
+await r.block('13-import-e-three-sizes', async () => {
 /* 13e — the three real screen sizes: three actions fit and each clears the
    44px touch target, or the dialog stacks rather than losing one. */
 for (const vp of VIEWPORTS) {
@@ -4214,6 +4371,7 @@ for (const vp of VIEWPORTS) {
     `${m.btns.length} buttons ${m.btns.map((b) => `${b.w}×${b.h}`).join(', ')} · dialog ${Math.round(m.mbLeft)}–${Math.round(m.mbRight)} in ${m.vw}px`);
   await s.close();
 }
+});
 
 /* ── 14. Storage warning — real numbers, no more nagging modal ──────────
    Issue #58: the ⚠ "can no longer save locally" dialog fired unconditionally
@@ -4263,7 +4421,7 @@ async function forceNotebookWriteFail(page) {
 
 /* 14a — an oversized DB + a genuinely failing write: _save() returns
    false, and — unlike the old code — no dialog opens on its own. */
-{ try {
+await r.block('14a-failed-write-indicator', async () => {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
   await forceNotebookWriteFail(s.page);
@@ -4282,11 +4440,10 @@ async function forceNotebookWriteFail(page) {
     return !!d && getComputedStyle(d).display !== 'none'; });
   r.check(dotVisible, 'the quiet ⚠ indicator appears instead', dotVisible ? 'visible' : 'hidden');
   await s.close();
-} catch (e) { r.check(false, '§14 storage/indicator — this block could not run against this build', String(e).split('\n')[0]); }
-}
+});
 
 /* 14b — tapping the ⚠ indicator opens the full explanation. */
-{ try {
+await r.block('14b-tap-opens-explanation', async () => {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
   await forceNotebookWriteFail(s.page);
@@ -4296,14 +4453,13 @@ async function forceNotebookWriteFail(page) {
   const title = await s.page.evaluate(() => document.querySelector('#mb .mt')?.textContent || '');
   r.check(/can no longer save locally/.test(title), 'tapping the ⚠ indicator opens the full explanation', title);
   await s.close();
-} catch (e) { r.check(false, '§14 storage/indicator — this block could not run against this build', String(e).split('\n')[0]); }
-}
+});
 
 /* 14c — the storage section reports non-zero, REAL byte counts, and the
    notebook figure tracks the live in-memory DB — not whatever stale copy
    is sitting in localStorage, which is exactly the wrong number while
    saving is failing. */
-{ try {
+await r.block('14c-real-byte-counts', async () => {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
   await forceNotebookWriteFail(s.page);
@@ -4321,14 +4477,13 @@ async function forceNotebookWriteFail(page) {
     `${pctOff.toFixed(2)}% off (shown ${m.live} vs actual ${m.real})`);
   r.check(/\d/.test(m.text), 'the notebook size is actually rendered in the storage section, not just computed', m.text);
   await s.close();
-} catch (e) { r.check(false, '§14 storage/indicator — this block could not run against this build', String(e).split('\n')[0]); }
-}
+});
 
 /* 14d — a seeded recovery copy: shown with its real date/size, Remove asks
    first (Cancel/Escape/backdrop all leave it in place), a CONFIRMED Remove
    deletes the key — read back, never assumed — and the retried save that
    follows succeeds once the thing that was failing it is gone. */
-{ try {
+await r.block('14d-recovery-copy-remove', async () => {
   const s = await openApp({ db: seedDB() });
   const recResult = await s.page.evaluate(() => window._saveRecoveryCopy(DB));
   r.check(!!recResult?.ok, 'setup: a real, verified recovery copy could be created', JSON.stringify(recResult));
@@ -4394,13 +4549,13 @@ async function forceNotebookWriteFail(page) {
   r.check(warnGone, 'the ⚠ indicator clears once saving works again', warnGone);
 
   await s.close();
-} catch (e) { r.check(false, '§14 storage/indicator — this block could not run against this build', String(e).split('\n')[0]); }
-}
+});
 
 /* 14e — the three real screen sizes: the storage rows are on screen, the
    Restore/Remove actions clear 44px, and the ⚠ indicator is visible and
    does not collide with the ⚙ button it sits beside. */
-for (const vp of VIEWPORTS) { try {
+for (const vp of VIEWPORTS) {
+await r.block(`14e-screen-sizes-${vp.name}`, async () => {
   const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
   await s.page.evaluate(() => window._saveRecoveryCopy(DB));
   await s.page.evaluate(() => window.openModal('settings'));
@@ -4429,7 +4584,19 @@ for (const vp of VIEWPORTS) { try {
     `${vp.name} ${vp.width}×${vp.height}: the ⚠ indicator is visible and does not collide with the ⚙ button beside it`,
     `${dot.w}×${dot.h}, collides: ${dot.collidesWithSettings}`);
   await s.close();
-} catch (e) { r.check(false, '§14 storage/indicator — this block could not run against this build', String(e).split('\n')[0]); }
+});
 }
+
+/* Proves the isolation mechanism itself, permanently, rather than trusting a
+   one-off manual run: a block that throws must cost only that block, and
+   report() must say so — read back from block()'s own return value, not
+   assumed. Declared expectThrow so the deliberate throw scores a PASS, not a
+   FAIL — otherwise a fully working app-check would read "321/322" forever. */
+const selfCheck = await r.block('self-check-block-isolation', async () => {
+  throw new Error('deliberate — proves one block’s throw does not end the run');
+}, { expectThrow: true });
+r.check(selfCheck.threw === true,
+  'the isolation self-check block threw and was caught, and this line still ran after it',
+  JSON.stringify(selfCheck));
 
 process.exit(r.finish() ? 1 : 0);

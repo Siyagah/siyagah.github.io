@@ -3983,3 +3983,115 @@ failing as they should against code that has none of those things, three
 blocks reporting "this block could not run against this build", and the
 v04.20 menu-inventory check failing because v04.44 added `💽 Storage &
 Backup` to it. Every one of the twelve is a check that *should* fail there.
+
+## v04.46 — a throw in ANY block must cost that block, not the whole run (22 Sep 2026)
+
+Harness only — `tools/harness.mjs`, `tools/app-check.mjs`, `tools/README.md`,
+`ARCHITECT.md`. No `index.html` change, no app behaviour change; the round v04.45
+recorded as not done in its own words: *"only §14 is isolated — the other
+three hundred checks still share one failure domain."*
+
+`report()` in `harness.mjs` grows one new method, `r.block(id, fn,
+{ expectThrow })`. It runs `fn`, and if `fn` throws it records ONE failed row
+naming the block, how many of that block's own checks had already run before
+it died, and `String(e)`'s first line (never `e.message` — a bare string or a
+Playwright rejection has no `.message` and still has to read) — then the
+suite continues. `expectThrow: true` inverts the scoring, for one thing only:
+the permanent self-check this round adds (below). `finish()` prints one line
+naming every aborted block, immediately above the existing totals line, only
+when at least one aborted; the totals line's shape (`N/N passed`) is
+unchanged, since both `ship-check`'s own tooling and every past changelog
+entry parse it. A duplicate block id is itself now a failed check, not a
+silent collision.
+
+**Every check in `app-check.mjs` now runs inside `r.block(...)`** — 85 call
+sites (one runs three times, once per `VIEWPORTS` entry, with a name-suffixed
+id each time), replacing what was sequential top-level code sharing one
+failure domain. Granularity is the sub-block that already existed, not the
+section: §6p (1490 lines, ~68 checks — a third of the file) is now 22 blocks
+instead of one, matched to the bare `{ }` groups and comment-titled parts the
+file already used to keep its own reused variable names (`s`, `m`, `rows`)
+from colliding; §6h/6i/6j/6k/6l/6n/6o are similarly split into their existing
+named parts. Sections with no internal grouping at all — §1–§6, §6b, §6c,
+§7–§10, and the `_stampThemeTouches()` section — stay one block each, because
+manufacturing a boundary inside genuinely flat code is exactly the kind of
+"correct until the next edit" surgery the allow-list lesson warns against,
+and they were never the size problem in the first place.
+
+**No binding needed hoisting, anywhere.** Wrapping is pure insertion —
+`await r.block(id, async () => {` before a range, `});` after it — so a
+block nested inside a section's own pre-existing bare `{ }` (§6e onward
+almost all have one) keeps reading that section's shared helpers
+(`editAt`/`reach` in §6p; `COLLECT`/`PANE_COLLECT`/`POP_COLLECT`/`openPop`/
+`geometry`/`openAssign`/`openBrowse`/`MENUS` in §6i/§6j/§6k/§6l/§6o) through
+ordinary JS closure, exactly as it did before this round — the outer bare
+brace was never touched, only wrapped around from outside. Verified by
+scanning every top-level `const`/`let` for reads outside its own section, per
+the Architect's own pre-round measurement; every apparent hit was confirmed a
+false positive (a property name or an independent redeclaration) before any
+line was moved, and in the end none needed moving.
+
+**§14's five hand-copied catches are gone** — `{ try { … } catch (e) {
+r.check(false, '§14 storage/indicator — …') } }`, identical five times,
+replaced by `r.block('14a-…', …)` through `14e-…`. `tapIfPresent()` /
+`awaitIfPresent()` / `awaitFnOrFalse()` are untouched: they solve Playwright's
+30-second default timeout hanging before it throws, which `r.block()` does
+not solve and was never meant to.
+
+**Every block id is unique.** The file had three numbers used twice — `§11`,
+`§12`, `§13` each appear once in the mergeDB/theme sequence and again later
+(layout, manifest, import-consent) — because the file does not run in numeric
+order. Renamed to `11-theme-perkey` / `11-layout-three-sizes`,
+`12-theme-leaf-merge` / `12-manifest-installable`, `13-stampThemeTouches` /
+`13-import-a` … `13-import-e`. The banner comments in the file (`── 11.
+Layout at the three real screen sizes ──`) are untouched — a reader still
+finds a section by its version, only the block **id** had to be unique, not
+the prose. `harness.mjs` now fails the run if any id repeats, so this cannot
+come back unnoticed.
+
+**The mechanism proves itself, permanently.** One block
+(`self-check-block-isolation`) deliberately throws, declared `expectThrow:
+true` so the throw scores a PASS rather than leaving a fully working
+`app-check` permanently one check red; one ordinary check straight after it
+asserts `block()`'s own return value (`{ threw: true }`) and that the line
+itself executed — proof the run continued past an aborted block, read back
+from the harness, not asserted on faith. Costs two rows and a few
+milliseconds; no future round needs to re-verify isolation by hand.
+
+### The honest limit — written down, not glossed
+
+`r.block()` isolates a **failure**, not the **state** a block leaves behind.
+From roughly §6d on, almost every block opens its own `openApp()`, so an
+abort there costs only that block, cleanly. But §1–§6c and the first
+§7–§13 all still drive the ONE shared `app`/`page` opened once near the top
+of `app-check.mjs` — exactly as before this round. A block that aborts
+part-way through that shared session can leave it in a shape the later
+blocks sharing it never expected, and their failures become suspects
+pointing at the aborted block, not independent findings. Recorded in
+`tools/README.md` beside the existing v04.45 trap, and filed as its own
+backlog item in `ARCHITECT.md` rather than left only here.
+
+### Not done
+
+- `--only` (running one named section) is not built. This round makes it
+  possible — every check now has a real, unique id to select on — but
+  building it is explicitly the next round, filed in `ARCHITECT.md` with the
+  existing backlog line's dependency ticked.
+- The shared-session limit above. Splitting §1–§6c/§7–§13 so each block owns
+  its own `openApp()` would remove it entirely; not attempted here because it
+  is materially larger and riskier than a wrap, and this round was scoped as
+  a wrap.
+- Not one check's assertion was changed, deleted, reworded or added to —
+  this round is isolation only.
+
+### D5
+
+Does not apply — no visual surface, no markup or CSS touched, said plainly
+rather than left unsaid.
+
+### Measured
+
+11/11 ship checks. `app-check.mjs`: **324/324 passed, 0 aborted blocks** —
+322 pre-existing checks plus the two the permanent self-check adds. Every
+check that existed before this round still exists and still asserts exactly
+what it asserted before; none were lost in the wrap.

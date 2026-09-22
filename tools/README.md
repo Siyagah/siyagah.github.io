@@ -420,22 +420,39 @@ assertions miss.
   diff` — already respects `.gitignore`, so `tools/shots/` and
   `node_modules/` stay invisible and don't force a bump on every screenshot
   or `npm install`. Found in `ship-check.mjs`'s version-bump check, v04.38.
-- **A check that THROWS aborts every other check; a check that FAILS does
-  not.** `app-check` is sequential top-level code with no per-check
-  isolation, so one uncaught exception ends the run with **no report at
+- **A check that THROWS used to abort every other check; a check that FAILS
+  never did.** `app-check` was sequential top-level code with no per-check
+  isolation, so one uncaught exception ended the run with **no report at
   all** — not a failing line, not a total. v04.44's new checks read
   `getComputedStyle(document.getElementById('save-warn-dot'))` and clicked
   `#save-warn-dot` directly; run against a build without that badge — which
   is exactly what the "do these new checks actually fail on unpatched code"
   verification does — `getComputedStyle(null)` threw at the first one and
   all 322 checks reported nothing. The verification could not be produced
-  at all. Any check written for an element or function **the same round
-  introduces** must be null-safe and must wait with a short timeout, so its
-  absence FAILS that check and the suite carries on: `tapIfPresent()`,
-  `awaitIfPresent()` and `awaitFnOrFalse()` in `app-check.mjs` exist for
-  this. Do NOT use them for an element that predates the round under test —
-  there a missing element is a genuine error and should be loud. Also note
-  the cost of getting this wrong twice over: Playwright's `click()` and
-  `waitForSelector()` default to a **30 second** timeout, so an unguarded
-  wait on an absent element does not fail fast, it hangs first. Found in
-  v04.45, paid for in v04.44.
+  at all. v04.45 fixed §14 alone, by hand, with the same catch copied five
+  times; **v04.46 made it the general shape of the file**: every check now
+  runs inside `r.block(id, fn)` (`harness.mjs`), which isolates a throw to
+  that one block, records it as a single failed row naming how many of the
+  block's own checks had already run, and lets the rest of the suite carry
+  on. Any check written for an element or function **the same round
+  introduces** should still prefer `tapIfPresent()` / `awaitIfPresent()` /
+  `awaitFnOrFalse()` over a bare `click()`/`waitForSelector()` — those two
+  default to a **30 second** timeout, so an unguarded wait on an absent
+  element does not fail fast, it hangs first, and a hung block still costs
+  wall-clock time even though it no longer costs the other 300-odd checks.
+  Do NOT use them for an element that predates the round under test — there
+  a missing element is a genuine error and should be loud. Found in v04.45,
+  paid for in v04.44; generalised in v04.46.
+- **Isolating a block's FAILURE is not the same as isolating its STATE.**
+  `r.block()` (v04.46) guarantees that a throw inside one block cannot
+  silence the other ~320 checks in the file — that is all it guarantees.
+  Blocks from roughly §6d onward each open their own `openApp()`, so one
+  aborting costs only itself, cleanly. But §1–§6c and the first §7–§13 all
+  still drive the ONE shared `app`/`page` created once near the top of
+  `app-check.mjs`, exactly as they did before this round: if one of THOSE
+  blocks aborts partway through — say, half-way through a sequence of
+  clicks — it can leave that shared page in a shape none of the later
+  blocks sharing it were written to expect, and their failures become
+  suspects pointing at the aborted block, not independent findings. A block
+  aborting in that early range is a reason to look at the block it aborted
+  in first, before trusting any block after it in the same shared session.
