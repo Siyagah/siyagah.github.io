@@ -229,17 +229,16 @@ Every report follows one shape:
       rather than leaving the file as loosely-numbered sections. `--only`
       itself is still not built; this line is not resolved by v04.46, only
       unblocked.
-- [ ] `r.block()` (v04.46) isolates a throw to one block, but not the STATE
-      that block leaves behind. Blocks from roughly `§6d` onward each open
-      their own `openApp()`, so an abort there costs only itself, cleanly —
-      but `§1`–`§6c` and the first `§7`–`§13` still all drive the ONE shared
-      `app`/`page` opened once near the top of `app-check.mjs`, exactly as
-      they did before this round. A block aborting partway through that
-      shared session can leave it in a shape the later blocks sharing it
-      never expected, so their failures become suspects, not independent
-      findings — recorded as v04.46's own remaining limit, in
-      `tools/README.md` and in its changelog entry, not just here. Splitting
-      that shared session into one `openApp()` per early block would remove
-      the limit entirely; not attempted this round because it is a much
-      larger, riskier change than wrapping, and the round in hand was
-      explicitly a wrap.
+- [x] `r.block()` (v04.46) isolates a throw to one block, but not the STATE
+      that block leaves behind — `§1`–`§6c` and the first `§7`–`§13` all
+      drove one shared `app`/`page` opened once near the top of
+      `app-check.mjs`. **v04.48**: every one of those 15 blocks now opens
+      its own `openApp()` and closes it before the next block starts, the
+      same pattern `§6d` onward already used; the top-level shared
+      `app`/`page` and its dangling `app.close()` are gone. `6-outline` had
+      no setup of its own (it read `#ed` left open by `5-open-and-edit`),
+      so it was folded into that block's session rather than given a
+      redundant setup of its own — its check is unchanged. Every block in
+      `app-check.mjs` now owns its whole session, state included, not just
+      its own failure; see `tools/README.md`'s v04.46 trap entry, updated in
+      place.

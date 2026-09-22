@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.47.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.48.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,30 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.48** (22 Sep 2026) — the last shared `app-check` session gets its own
+  `openApp()` per block. Harness only — `tools/app-check.mjs`,
+  `tools/README.md`, `ARCHITECT.md` — no app change. v04.46 isolated a
+  throw to one `r.block()` but recorded, honestly, what that did not fix:
+  isolating a block's FAILURE is not isolating its STATE. Fifteen blocks
+  (`1-boot` through `6c-read-chrome`, `7-data-roundtrip` through
+  `13-stampThemeTouches`) still drove one `app`/`page` opened once near the
+  top of the file, so a throw partway through one could leave that shared
+  page in a shape the next block sharing it never expected, and its failure
+  became a suspect rather than an independent finding. Fourteen of the
+  fifteen were a pure wrap — each now opens and closes its own `openApp()`,
+  same pattern `§6d` onward already used, no assertion changed. The one
+  genuine dependency, `6-outline`, had no setup of its own — it read `#ed`
+  left open by `5-open-and-edit` — so it was folded into that block's
+  session instead of given a redundant setup of its own; its check is
+  unchanged. The unused top-level shared `app`/`page` and its dangling
+  `app.close()` are gone. `tools/README.md`'s v04.46 trap entry updated in
+  place to say the gap is closed, and states the general rule for any
+  future block: default to its own session, share one only between
+  sub-checks that are read-only with respect to each other and never abort
+  leaving state a later one depends on. `ARCHITECT.md`'s matching backlog
+  line ticked. D5 does not apply — no visual surface. 11/11 ship checks,
+  **336/336** app checks — the same total as before, no check added,
+  removed, or reworded.
 - **v04.47** (22 Sep 2026) — three independent sidebar fixes. Smart Views and
   MyDatabase now start collapsed on boot like every other section:
   `renderSmartSection()`/`renderDatabaseSection()` tested `!==false` against
@@ -156,36 +180,6 @@ must never accumulate here instead of there.
   becoming tappable — recorded in place, not worked around. 11/11 ship
   checks, app checks 299 → 322 (23 new), confirmed failing against unpatched
   `main` via one `git stash` and one rerun before shipping.
-- **v04.43** (21 Sep 2026) — three lessons about running the builder,
-  written down. No app change; `ARCHITECT.md` only, plus the version bump the
-  rule requires (I5). v04.42 was correct on its first attempt and still cost
-  three builder runs, none of them about what was being built. **A run can
-  report `success` and leave nothing behind** — three did, twelve to fifteen
-  minutes each, `num_turns` far short of the 250 limit, no commit and no
-  branch, because the builder ended its own turn part-way down its checklist;
-  step 3 of the loop now says to look at the branch and the PR, never at the
-  green tick. **Push before measuring, and say so in the issue** — a new
-  section, *Writing an issue the builder can finish*, puts the order
-  (implement → bump and changelog → push → checks → push → verify → push →
-  PR) and "if you run short, push what you have and say where you stopped"
-  into every issue; it also says to write **one** stash and **one** run
-  rather than "each new assertion", which reads as one full two-minute
-  `app-check` per assertion, and to report a new check that passes even while
-  stashed instead of deleting it. **When the builder stops at the same step
-  twice, take that step off it rather than say it louder** — all three stops
-  were at the same unpatched-code verification; the third attempt was given
-  four numbered steps with "push" as step 3 and "do not verify, I will", and
-  finished. That is not a lowered standard when the step is a measurement,
-  because the Architect re-runs it in review anyway, and did (293/299, the
-  six expected failures, recorded on the PR before merging). And the one that
-  started it: **a "not done" recorded in a round is backlog work nobody has
-  written down** — v04.40 filed `theme.custom` in a changelog entry and
-  nowhere else, the backlog read *empty* through all of v04.41, and the real
-  gap was every object-valued theme key. Three items now filed properly, one
-  marked a watch item and not work. Not done: no way yet to run one section
-  of `app-check`, so a round pays for all 299 twice — filed with "measure
-  first" rather than built. D5 does not apply. 11/11 ship checks, 299/299 app
-  checks (`index.html`'s version string changed, so it was re-run in full).
 ---
 
 ## What this is

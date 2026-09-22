@@ -445,14 +445,24 @@ assertions miss.
   paid for in v04.44; generalised in v04.46.
 - **Isolating a block's FAILURE is not the same as isolating its STATE.**
   `r.block()` (v04.46) guarantees that a throw inside one block cannot
-  silence the other ~320 checks in the file — that is all it guarantees.
-  Blocks from roughly §6d onward each open their own `openApp()`, so one
-  aborting costs only itself, cleanly. But §1–§6c and the first §7–§13 all
-  still drive the ONE shared `app`/`page` created once near the top of
-  `app-check.mjs`, exactly as they did before this round: if one of THOSE
-  blocks aborts partway through — say, half-way through a sequence of
-  clicks — it can leave that shared page in a shape none of the later
-  blocks sharing it were written to expect, and their failures become
-  suspects pointing at the aborted block, not independent findings. A block
-  aborting in that early range is a reason to look at the block it aborted
-  in first, before trusting any block after it in the same shared session.
+  silence the other checks in the file — that is all it guarantees. A block
+  that shares its `page` with a sibling can still leave that page in a
+  shape the sibling never expected, turning the sibling's failure into a
+  suspect rather than an independent finding. v04.46 left exactly this gap
+  open in `§1`–`§6c` and the first `§7`–`§13`, which all drove one shared
+  `app`/`page` opened once near the top of the file. **v04.48 closed it**:
+  every one of those blocks now opens its own `openApp()` and closes it
+  before the next block starts, the same pattern `§6d` onward already used
+  — so every block in `app-check.mjs` now owns its whole session, state
+  included, not just its own failure. `6-outline` had no setup of its own
+  (it read `#ed` left open by `5-open-and-edit`), so it was folded into
+  `5-open-and-edit`'s block rather than given a redundant three-line setup
+  of its own; its check still runs, unchanged. Every block in the file now
+  opens and closes its own session — there is currently no block in
+  `app-check.mjs` that deliberately shares one. The general principle still
+  stands for any block written after this one: a shared session is only
+  safe between sub-checks that are read-only with respect to each other AND
+  never abort partway through leaving state a later one depends on — which
+  is rare enough that a new block should default to its own `openApp()`,
+  and fold a genuinely dependent check into its setup block's session (as
+  `6-outline` was, here) rather than build it a redundant setup of its own.
