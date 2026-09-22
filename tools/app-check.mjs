@@ -1160,8 +1160,16 @@ await r.block('6f-consolidated-actions', async () => {
    a real function" cannot see this — the function name (showArtCtx) is real;
    it is an ARGUMENT that does not exist. So click them for real and watch for
    a page error. Each click re-renders from a clean state first, because some
-   of these buttons navigate or open editors. */
-{
+   of these buttons navigate or open editors.
+   v04.49: this was a bare top-level `{ }`, not an `r.block()` — the one gap
+   in v04.46's "every check runs inside r.block()" sweep, invisible before
+   this round because a block's fn used to run inline anyway, at the exact
+   file position it sat in, whether wrapped or not. Under v04.49's
+   collect-then-run, unwrapped code has no registration to defer: it would
+   run immediately as the file loads, ahead of every registered block
+   (including `1-boot`), for every invocation regardless of --only. Wrapped
+   now so it defers, filters and reports like everything else. */
+await r.block('6f-2-toolbar-buttons-live', async () => {
   const s2 = await openApp({ viewport: { width: 1600, height: 900 }, db: seedDB() });
   const thrown = [];
   s2.page.on('pageerror', (e) => thrown.push(String(e).split('\n')[0]));
@@ -1211,7 +1219,7 @@ await r.block('6f-consolidated-actions', async () => {
     `display ${menuAfterClick.display} · ${menuAfterClick.w}×${menuAfterClick.h}px · ${menuAfterClick.rows} rows`);
   await s2.page.evaluate(() => hideCtx());
   await s2.close();
-}
+});
 
 /* ── 6g. v04.13: the type chip is a badge, not a delete button ──────────── */
 /* It called toggleNoteKind(), so one tap on what reads as a label stripped the
@@ -4769,14 +4777,50 @@ await r.block('15d-nonzero-count-unchanged', async () => {
 
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
-   report() must say so — read back from block()'s own return value, not
-   assumed. Declared expectThrow so the deliberate throw scores a PASS, not a
-   FAIL — otherwise a fully working app-check would read "321/322" forever. */
-const selfCheck = await r.block('self-check-block-isolation', async () => {
+   report() must say so. Declared expectThrow so the deliberate throw scores
+   a PASS, not a FAIL — otherwise a fully working app-check would read
+   "335/336" forever. Two blocks, not one (v04.49): now that r.block() only
+   REGISTERS and the real run happens later via r.run(), a call site can no
+   longer read the throwing block's outcome off `await r.block(...)`'s
+   return value the way it could when block() ran `fn` inline — that value
+   now resolves the instant the block is recorded, before anything has
+   executed. The follow-up block reads `r.results`, which run() fills in as
+   each block actually executes, in the same file order, so this still
+   proves the throw did not stop the next block from running. */
+await r.block('self-check-block-isolation', async () => {
   throw new Error('deliberate — proves one block’s throw does not end the run');
 }, { expectThrow: true });
-r.check(selfCheck.threw === true,
-  'the isolation self-check block threw and was caught, and this line still ran after it',
-  JSON.stringify(selfCheck));
+await r.block('self-check-block-isolation-followup', async () => {
+  const prior = r.results.get('self-check-block-isolation');
+  r.check(prior?.threw === true,
+    'the isolation self-check block threw and was caught, and this block still ran after it',
+    JSON.stringify(prior));
+});
 
-process.exit(r.finish() ? 1 : 0);
+/* ── run everything registered above, or a --only subset ─────────────────
+   v04.49: every r.block() call above this line only REGISTERED a block —
+   nothing has actually run yet. With no --only, every registered block runs
+   in file order, exactly as before this round. `--only 15` (or
+   `--only 6h,15b`, comma-separated, prefix-matched by blockIdMatches() —
+   see harness.mjs) narrows the run to one section for cheap iteration while
+   writing a check; a value matching nothing throws rather than silently
+   reporting "0/0 passed". The number that belongs on a PR is always the
+   UNFILTERED total — see tools/README.md — and finish() labels a filtered
+   run's own output as partial so it can't be mistaken for the full suite. */
+function parseOnlyArg(argv) {
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--only') return (argv[i + 1] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (a.startsWith('--only=')) return a.slice('--only='.length).split(',').map((s) => s.trim()).filter(Boolean);
+  }
+  return null;
+}
+
+let runInfo;
+try {
+  runInfo = await r.run(parseOnlyArg(process.argv.slice(2)));
+} catch (e) {
+  console.error(String(e?.message ?? e));
+  process.exit(1);
+}
+process.exit(r.finish(runInfo) ? 1 : 0);
