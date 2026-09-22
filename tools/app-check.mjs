@@ -4471,15 +4471,51 @@ async function forceNotebookWriteFail(page) {
     };
   });
 }
+/* v04.50 — from this round IndexedDB, not localStorage, is the notebook's
+   system of record, so failing ONLY the localStorage write no longer is a
+   failed save (§16a proves that deliberately). The §14 checks below are
+   about what happens when saving GENUINELY fails, so they now fail BOTH
+   stores: localStorage as before, and the IndexedDB write _save() fires.
+   `onlyWhile` (a function evaluated in the page) lets §14d fail the write
+   only while some condition holds, exactly as its localStorage stub does.
+   A no-op on code without _idbPut, so these checks still run unpatched. */
+async function forceIDBWriteFail(page, onlyWhileRecovery = false) {
+  await page.evaluate((only) => {
+    if (typeof window._idbPut !== 'function') return;
+    const orig = window._idbPut;
+    window._idbPut = function (k, v) {
+      if (k === 'notebook' && (!only || localStorage.getItem('siyagah-recovery-latest-key'))) {
+        const e = new Error('quota exceeded (stubbed for this check)'); e.name = 'QuotaExceededError';
+        return Promise.reject(e);
+      }
+      return orig.call(this, k, v);
+    };
+  }, onlyWhileRecovery);
+}
+async function forceEveryNotebookWriteFail(page) {
+  await forceNotebookWriteFail(page);
+  await forceIDBWriteFail(page);
+}
+/* Waits for the failure to be RECORDED. From v04.50 the IndexedDB write
+   rejects asynchronously, after _save() has already returned. */
+const awaitSaveFailure = (page) => awaitFnOrFalse(page, () => { try { return _lsFail === true; } catch { return false; } });
 
-/* 14a — an oversized DB + a genuinely failing write: _save() returns
-   false, and — unlike the old code — no dialog opens on its own. */
+/* 14a — an oversized DB + a genuinely failing write: the failure is
+   recorded, and — unlike the old code — no dialog opens on its own. */
 await r.block('14a-failed-write-indicator', async () => {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
-  await forceNotebookWriteFail(s.page);
-  const ok = await s.page.evaluate(() => window._save());
-  r.check(ok === false, '_save() returns false when the notebook write genuinely fails', ok);
+  await forceEveryNotebookWriteFail(s.page);
+  /* Updated in place, v04.50: this asserted `_save() === false`. _save()
+     keeps a synchronous boolean for its callers while the IndexedDB write
+     completes later, so it now returns true and the failure arrives
+     asynchronously through _lsFail — the same flag that drives the ⚠
+     indicator. What the check protects (a genuine failure is reported, not
+     swallowed) is unchanged; the signal it reads is the one that now
+     carries it. */
+  await s.page.evaluate(() => window._save());
+  const failed = await awaitSaveFailure(s.page);
+  r.check(failed, 'a genuinely failing notebook write is recorded as a failure (IndexedDB and localStorage both rejecting)', failed);
   await s.page.waitForTimeout(600);   // the old code's own deferred delay was 400ms
   const modalOpen = await s.page.evaluate(() => document.getElementById('ov').classList.contains('on'));
   r.check(!modalOpen, 'no dialog opens on its own after a failed save — the old auto-popup is gone',
@@ -4499,8 +4535,9 @@ await r.block('14a-failed-write-indicator', async () => {
 await r.block('14b-tap-opens-explanation', async () => {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
-  await forceNotebookWriteFail(s.page);
+  await forceEveryNotebookWriteFail(s.page);
   await s.page.evaluate(() => window._save());
+  await awaitSaveFailure(s.page);
   await tapIfPresent(s.page, '#save-warn-dot');
   await awaitFnOrFalse(s.page, () => document.getElementById('ov').classList.contains('on'));
   const title = await s.page.evaluate(() => document.querySelector('#mb .mt')?.textContent || '');
@@ -4515,8 +4552,9 @@ await r.block('14b-tap-opens-explanation', async () => {
 await r.block('14c-real-byte-counts', async () => {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
-  await forceNotebookWriteFail(s.page);
+  await forceEveryNotebookWriteFail(s.page);
   await s.page.evaluate(() => window._save());
+  await awaitSaveFailure(s.page);
   await tapIfPresent(s.page, '#save-warn-dot');
   await awaitIfPresent(s.page, '#stor-notebook');
   const m = await s.page.evaluate(() => {
@@ -4553,8 +4591,13 @@ await r.block('14d-recovery-copy-remove', async () => {
       return orig.call(this, k, v);
     };
   });
-  const failedFirst = await s.page.evaluate(() => window._save());
-  r.check(failedFirst === false, 'setup: the notebook write is genuinely failing before the recovery copy is removed', failedFirst);
+  /* v04.50 — the IndexedDB write fails under the same condition; updated
+     in place for the same reason as §14a: the failure is now read from
+     _lsFail, not from _save()'s synchronous return. */
+  await forceIDBWriteFail(s.page, true);
+  await s.page.evaluate(() => window._save());
+  const failedFirst = await awaitSaveFailure(s.page);
+  r.check(failedFirst, 'setup: the notebook write is genuinely failing before the recovery copy is removed', failedFirst);
 
   await s.page.evaluate(() => window.openModal('settings'));
   const rowsOk = await awaitIfPresent(s.page, '#stor-rows');
@@ -4595,6 +4638,8 @@ await r.block('14d-recovery-copy-remove', async () => {
   r.check(keyGone && pointerGone, 'a confirmed Remove actually deletes the recovery copy — read back, never assumed',
     `key present: ${!keyGone}, pointer present: ${!pointerGone}`);
 
+  /* v04.50 — the retried save's IndexedDB write resolves asynchronously. */
+  await awaitFnOrFalse(s.page, () => _lsFail === false);
   const lsFailNow = await s.page.evaluate(() => _lsFail);
   r.check(lsFailNow === false, 'the retried save succeeded once the recovery copy was gone — _lsFail cleared', lsFailNow);
   const warnGone = await s.page.evaluate(() => { const d = document.getElementById('save-warn-dot');
@@ -4999,6 +5044,62 @@ await r.block('16g-reclaim-not-enough', async () => {
   r.check(/Trash/i.test(advice),
     'the biggest reclaimable thing is still named alongside that honesty',
     advice);
+  await s.close();
+});
+
+/* 16h — boot became async this round: loadDB() awaits IndexedDB, and until
+   it resolves DB is still the EMPTY placeholder it is declared as. The
+   pagehide/visibilitychange listeners call _save(), and they are registered
+   synchronously — so switching away from the app during a slow start would
+   write that empty notebook over the real one in localStorage (I1). Here
+   IndexedDB's open is held back 1.5s (a slow phone, a 5 MB notebook) and a
+   pagehide fires inside that window; localStorage is read back at that
+   exact moment, from the init script, before boot can legitimately rewrite
+   it. */
+await r.block('16h-no-save-before-the-notebook-loads', async () => {
+  const s = await openApp({ db: seedDB(), initScript: () => {
+    const f = window.IDBFactory && IDBFactory.prototype;
+    if (f) {
+      const orig = f.open;
+      f.open = function (...a) {
+        const real = orig.apply(this, a);
+        const fake = {};
+        real.onupgradeneeded = (e) => { fake.result = real.result; if (fake.onupgradeneeded) fake.onupgradeneeded(e); };
+        real.onsuccess = (e) => setTimeout(() => { fake.result = real.result; if (fake.onsuccess) fake.onsuccess(e); }, 1500);
+        real.onerror = (e) => { if (fake.onerror) fake.onerror(e); };
+        return fake;
+      };
+    }
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => {
+      window.__bootedAtPagehide = window.__appBooted === true;
+      window.dispatchEvent(new Event('pagehide'));
+      window.__lsAfterEarlyPagehide = localStorage.getItem('my-notebook-v1');
+    }, 300));
+  } });
+  const m = await s.page.evaluate(() => {
+    let d = null; try { d = JSON.parse(window.__lsAfterEarlyPagehide); } catch {}
+    return { bootedAtPagehide: window.__bootedAtPagehide,
+      articles: d?.articles?.length ?? null, folders: d?.folders?.length ?? null };
+  });
+  r.check(m.bootedAtPagehide === false, 'setup: the pagehide really fired before boot had finished', JSON.stringify(m));
+  r.check(m.articles === 3 && m.folders === 3,
+    'a pagehide during a slow start leaves the saved notebook intact — the empty pre-load placeholder is never written over it',
+    JSON.stringify(m));
+  await s.close();
+});
+
+/* 16i — boot is async now, so the window's load event can fire before the
+   line that used to wait for it; a listener added after load never fires,
+   the service worker never registers, and new versions stop reaching the
+   device (I3). No check had ever asked whether it registers at all. */
+await r.block('16i-service-worker-registers', async () => {
+  const s = await openApp({ db: seedDB() });
+  const registered = await awaitFnOrFalse(s.page, () => {
+    if (!navigator.serviceWorker) return false;
+    navigator.serviceWorker.getRegistration().then((reg) => { window.__swReg = !!reg; });
+    return window.__swReg === true;
+  }, 8000);
+  r.check(registered, 'the service worker registers after boot, so a new version can reach the device', registered);
   await s.close();
 });
 

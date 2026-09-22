@@ -80,7 +80,7 @@ export function seedDB(now = new Date().toISOString()) {
    needs to judge whether the boot was clean. `errors` collects BOTH thrown
    exceptions and console errors — in this codebase a silent exception
    usually means a half-rendered pane, not a visible crash. */
-export async function openApp({ viewport = { width: 1400, height: 900 }, db = seedDB(), path = '/', disableIndexedDB = false } = {}) {
+export async function openApp({ viewport = { width: 1400, height: 900 }, db = seedDB(), path = '/', disableIndexedDB = false, initScript = null } = {}) {
   const pw = await playwright();
   const srv = await serve();
   const browser = await pw.chromium.launch();
@@ -95,6 +95,10 @@ export async function openApp({ viewport = { width: 1400, height: 900 }, db = se
   if (disableIndexedDB) await ctx.addInitScript(() => {
     try { Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true }); } catch {}
   });
+  /* v04.50 — a check that must act BEFORE boot finishes (openApp() itself
+     only returns once it has) passes a function to run at document start,
+     before the app's own script. */
+  if (initScript) await ctx.addInitScript(initScript);
   if (db) await ctx.addInitScript((d) => {
     try { localStorage.setItem('my-notebook-v1', JSON.stringify(d)); } catch {}
   }, db);
