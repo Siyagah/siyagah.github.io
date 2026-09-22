@@ -4416,3 +4416,147 @@ moved into the new `6f-2-toolbar-buttons-live` block were already counted
 in 336; this round only gave them a home). `only-check.mjs`: **11/11
 passed**. A sample `node tools/app-check.mjs --only 15` run: **4 of 92
 blocks** run (12 of 336 checks), reported partial in its own output.
+
+## v04.50 — the notebook has outgrown localStorage: the local copy moves to IndexedDB, the storage panel stops reassuring while saving fails
+
+**Why.** The owner sent the storage figures v04.44 had asked for (issue
+#69): their real notebook is **~5.00 MB**, `localStorage`'s per-origin cap
+is about 5 MB, and the notebook had crossed it. The panel v04.44 shipped
+was reading `navigator.storage.estimate()` — the **origin-wide** budget
+(IndexedDB, Cache Storage, everything, about 10 GB) — and printing "about
+2.56 MB of about 10242.56 MB used" on the same screen as a warning that
+saving had failed. A number that is honest about what it measured and
+wrong about the question being asked is worse than no number: it read as
+"you have ten gigabytes spare" while the device could not save. And the
+Trash — 36.5 KB — was offered as the fix for a 5 MB shortfall it could
+never have closed.
+
+**The fix: IndexedDB becomes the system of record for the local copy of
+`DB`.** The browser was already offering ~10 GB through the exact API
+v04.44 was reading. `localStorage` stays as a best-effort fast path and as
+the migration source — deliberately **not** deleted or cleaned up this
+round (I8: additive, never discard the old shape; removing it is a later
+round).
+
+- **`loadDB()` now reads IndexedDB first.** If it already holds a migrated
+  notebook, it is authoritative and `localStorage` is not consulted at all
+  beyond the usual embedded-file merge — a stale or hand-edited
+  `localStorage` entry on a second boot can never leak back in and undo
+  what IndexedDB already has. A device that has never run this version
+  (IndexedDB empty) falls straight through to the exact
+  `localStorage`/embedded logic this file has always used.
+- **Migration runs once, on boot**, only when IndexedDB wasn't already
+  authoritative: the fully-settled `DB` (after every other boot-time
+  migration has run) is written to IndexedDB and read straight back to
+  confirm it actually landed — the same "never trust a write" discipline
+  `_saveRecoveryCopy()` already uses (v04.39) — and only a verified match
+  flips IndexedDB to authoritative for the rest of the session. A fresh
+  install with nothing in either store also passes through here, correctly:
+  it has nothing to migrate but still ends the boot on IndexedDB, same as
+  every other device from this version on.
+- **`_save()` keeps its synchronous boolean contract** — `persist()`,
+  `_doPush()` and autosave all still call it expecting `true`/`false` back
+  immediately, and IndexedDB's API is not synchronous. Once IndexedDB is
+  authoritative, `_save()` still attempts the `localStorage` write as a
+  best-effort fast path (a failure there is now only logged, not treated
+  as a failure), fires the IndexedDB write, and returns `true` without
+  waiting for it. **What this means honestly, stated plainly per the
+  issue's ask: a write still in flight when the tab is torn down can be
+  lost silently.** This is no different in kind from a debounced cloud push
+  or a file write being interrupted the same way — Siyagah has always had
+  save paths that can be cut off mid-flight — but it is worth saying once
+  rather than leaving it implied: the round that gives `_save()` a
+  genuinely awaited contract, if that is ever wanted, is a round of its
+  own, not this one. A write that fails once it actually resolves —
+  same as a `localStorage` failure always did — through the same
+  `_lsFail`/`updateSaveUI()` path, refactored out of `_save()`'s old
+  `catch` block into two small shared functions (`_markSaveFailure()`,
+  `_clearSaveFailureIfNeeded()`) so a failure or recovery arriving
+  *asynchronously* drives the exact same ⚠ badge and toast a synchronous
+  `localStorage` failure always has.
+- **Fallback stays intact**: with IndexedDB unavailable, or its one
+  migration attempt failing, `_save()` behaves exactly as it always has —
+  `localStorage` is the system of record and a failed write **is** the
+  failure, with the same ⚠ indicator and toast as before this round.
+
+**The panel now tells the truth.** `_storageSectionHTML()` names the store
+actually in use next to the notebook figure ("— saved to IndexedDB" / "—
+saved to browser storage (localStorage)"). `_refreshStorageQuota()` only
+shows the origin-wide estimate while IndexedDB is genuinely where the
+notebook lives — now the right comparison, which it was not before — and
+on the `localStorage`-only fallback path shows the real ~5 MB cap
+(`_LS_CAP_BYTES`) against real byte counts instead. `_storageAdviceHTML()`
+computes a `shortfall` (only meaningful on the fallback path — while
+IndexedDB is authoritative there is essentially never a shortfall) and,
+when the biggest reclaimable thing on the device is smaller than the
+shortfall, says so explicitly — "that will not be enough to close the
+gap" — instead of offering it as the fix. The ⚠ badge behaviour from
+v04.44 (lights quietly, no auto-popup, clears itself the moment a save
+succeeds) is unchanged, and now genuinely does clear once IndexedDB is
+what a save actually depends on.
+
+**Harness change required to keep testing this at all.** `loadDB()` is now
+`async` — boot no longer finishes in one synchronous tick. `openApp()` in
+`tools/harness.mjs` used to wait on `typeof window.render === 'function'`,
+which is true the instant the script is *parsed* (function declarations
+hoist) and proves nothing about whether boot actually finished; it now
+waits on a new `window.__appBooted` flag that `index.html` sets only after
+`loadDB()` has resolved and `render()` has actually run. `openApp()` also
+grows a `disableIndexedDB` option — the only way to genuinely exercise the
+IndexedDB-unavailable fallback path in a real browser: it deletes
+`window.indexedDB` via an init script before the app's own script runs, so
+`_idbOpen()`'s own `if(!window.indexedDB)` check takes the branch a
+browser that never shipped IndexedDB would.
+
+**New app-check section, 16a–16g, 26 checks** (targeted run, `--only 16`:
+26/26 passed) drives the real app for every behaviour the issue asked to
+be measured: an oversized notebook saves via IndexedDB where the
+`localStorage` write genuinely fails, where it returned `false` before
+this round; a reload returns the same notebook, read from IndexedDB and
+`localStorage` directly (never a JS variable) — proven by growing the
+notebook while `localStorage`'s write is stubbed to keep failing, so if
+the note reappears after reload it can only have come from IndexedDB;
+the migration runs once — a decoy notebook written straight into
+`localStorage` after the first boot never appears in `DB` or in IndexedDB
+after a second boot, proving IndexedDB is read first and `localStorage` is
+not re-consulted; with IndexedDB unavailable the app still boots from
+`localStorage` and a failing write still lights the ⚠ indicator, exactly
+as before this round; a genuine IndexedDB write failure (stubbing
+`_idbPut` itself, not `localStorage.setItem`) lights the same ⚠ indicator
+and clears it once a write actually succeeds again; the panel names the
+real store in use on both paths, and the fallback path's budget line
+mentions the real ~5 MB cap and never GB; a trivial reclaimable amount
+(a couple of KB of Trash against a multi-hundred-KB shortfall) is reported
+as not enough, never as the fix. One bug was caught and fixed in the
+checks themselves while writing them, not in the app: `_idbReady` and
+`_lsFail` are `let`-declared at the top level of the inline script, so —
+unlike a function declaration — they never become properties of `window`;
+the first draft read `window._idbReady`/`window._lsFail` from
+`page.evaluate()` and always got `undefined` back. Fixed to the bare
+identifier, which resolves through the realm's shared global lexical scope
+the same way this file's pre-existing checks already read
+`_lsFail`/`DB`/`ST`.
+
+**Layouts (D5).** Data and one existing panel, all three sizes get the
+same shape, said plainly per the issue: nothing new is gated behind a
+breakpoint, `#stor-store`'s text and the rewritten budget line are just
+new text inside the storage rows the pre-existing `14e-screen-sizes-*`
+check (unchanged this round) already measures at 390×844 / 820×1180 /
+1440×900, and `.imp-acts`' unconditional 44px targets are untouched.
+
+**What this round deliberately did not do**, per the issue: `localStorage`
+is not deleted or cleaned up — it stays as the fast path and the way back,
+by design (I1); removing it is a later round. Nothing about `_save()`'s
+synchronous contract was rewritten to genuinely await the IndexedDB write
+— every caller still gets an immediate boolean, with the in-flight-write
+caveat above stated rather than hidden.
+
+**Measured**
+
+`totals recorded by the Architect on the PR` — this round's own targeted
+run was `node tools/app-check.mjs --only 16`: **26/26 passed**. Per the
+Architect's instruction on issue #69, the full `app-check` suite, the
+unpatched-code verification (`git stash` + one run), `ship-check` and
+`shot.mjs` were run by the Architect directly rather than in this round's
+own session, after an earlier attempt at this same issue stopped mid-run
+without committing its new checks.

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.49.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.50.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,53 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.50** (22 Sep 2026) — the notebook has outgrown `localStorage`: the
+  local copy moves to IndexedDB, the storage panel stops reassuring while
+  saving fails. Issue #69: the owner's real notebook (~5.00 MB) had crossed
+  `localStorage`'s ~5 MB-per-origin cap, and v04.44's panel was printing
+  `navigator.storage.estimate()` — the origin-wide budget, about 10 GB —
+  on the same screen as a warning that saving had failed: "about 2.56 MB
+  of about 10242.56 MB used" read as "you have ten gigabytes spare" while
+  the device could not save, and the 36.5 KB Trash was offered as the fix
+  for a 5 MB shortfall it could never close. IndexedDB — the very API
+  v04.44 was already reading — becomes the system of record for the local
+  copy of `DB`; `localStorage` stays as a best-effort fast path and the
+  migration source, **deliberately not deleted or cleaned up this round**
+  (I8) — it is the way back, and removing it is a later round. `loadDB()`
+  reads IndexedDB first and is now `async`; a device that has never run
+  this version falls straight through to the exact `localStorage`/embedded
+  logic this file has always used. Migration runs once, on boot, verified
+  by reading the write back before IndexedDB is trusted (the v04.39
+  discipline). `_save()` keeps its synchronous boolean contract for
+  `persist()`/`_doPush()`/autosave — it fires the IndexedDB write without
+  awaiting it, so **a write still in flight when the tab closes can be
+  lost silently**, stated plainly rather than left implied; a write that
+  fails once it resolves surfaces through the same `_lsFail`/
+  `updateSaveUI()` ⚠-badge path a `localStorage` failure always used,
+  refactored into two shared functions so an asynchronous failure or
+  recovery drives it identically. With IndexedDB unavailable, `_save()`
+  behaves exactly as before this round. The panel now names the real store
+  in use, compares against the real ~5 MB cap on the fallback path instead
+  of the ~10 GB origin estimate, and says plainly when the biggest
+  reclaimable thing on the device is too small to close the gap. Harness:
+  `openApp()` now waits on a new `window.__appBooted` flag rather than
+  `typeof window.render === 'function'` (true the instant the script
+  parses, proves nothing about whether boot finished), and grows a
+  `disableIndexedDB` option — the only way to genuinely exercise the
+  IndexedDB-unavailable fallback in a real browser. New app-check section
+  16a–16g, 26 checks, targeted run (`--only 16`) **26/26 passed**; one bug
+  caught in the checks themselves, not the app — `_idbReady`/`_lsFail` are
+  `let`-declared, so unlike a function declaration they never attach to
+  `window`, and the first draft's `window._idbReady` reads were always
+  `undefined`. D5: data and one existing panel, same shape at all three
+  sizes, nothing gated behind a breakpoint, said plainly — the pre-existing
+  `14e-screen-sizes-*` check already covers the storage rows' real fit and
+  is unchanged. This round's work was split across two sessions after an
+  earlier attempt stopped mid-run without committing its new checks; the
+  full `app-check` suite, the unpatched-code verification, `ship-check` and
+  `shot.mjs` were run by the Architect directly on the PR rather than in
+  this session — see `CHANGELOG.md` for the reason. Totals: **recorded by
+  the Architect on the PR**; this round's own targeted run was 26/26.
 - **v04.49** (22 Sep 2026) — `app-check.mjs` grows `--only`, now that v04.46
   and v04.48 made every block a genuinely independent unit. Harness only —
   `tools/harness.mjs`, `tools/app-check.mjs`, `tools/README.md`,
@@ -157,36 +204,6 @@ must never accumulate here instead of there.
   app checks (322 pre-existing plus the two the permanent self-check adds),
   0 aborted blocks — every pre-existing check still asserts exactly what it
   asserted before.
-- **v04.45** (22 Sep 2026) — a check must fail, not explode. No app change
-  beyond the version strings. `app-check` is sequential top-level code with
-  no isolation between checks, so **one uncaught exception ends the run with
-  no report at all**. v04.44's new checks read `getComputedStyle(
-  document.getElementById('save-warn-dot'))` and clicked `#save-warn-dot` /
-  `#stor-rows` / `#rmrec-cancel` directly; run against a build without those
-  elements — exactly what the "do these new checks fail on unpatched code"
-  verification does — it threw at the first one and all 322 checks reported
-  nothing, so **v04.44's verification could not be produced at all**. The
-  first fix attempt guarded the call sites that had crashed, one at a time,
-  and each guard revealed the next — this project's own allow-list lesson,
-  re-learned in the harness. What shipped is the general form: **every block
-  in §14 wrapped in its own `try`/`catch`, a throw recorded as a failed
-  check** rather than killing the run, plus `tapIfPresent()` /
-  `awaitIfPresent()` / `awaitFnOrFalse()`, because Playwright's `click()` and
-  `waitForSelector()` default to a 30-second timeout and an unguarded wait
-  hangs before it throws. Also records the standing lesson v04.44 paid for
-  and did not write down: **a check that opens a surface by calling its
-  function proves nothing about whether the owner can reach it** —
-  `openModal('settings')` had zero call sites anywhere in the app, so v04.39
-  shipped `↩ Restore last recovery copy` unreachable and recorded it as
-  delivered, while `app-check` covered that modal and passed for five rounds
-  by opening it the one way nothing else could. Harness trap in
-  `tools/README.md`. Not done: only §14 is isolated — the other three hundred
-  checks still share one failure domain, and making isolation the default is
-  a round of its own. D5 does not apply. 11/11 ship checks, **322/322**
-  patched (unchanged by the guards); the verification that previously
-  crashed with no report now returns **307/319, 12 FAILED** against
-  pre-v04.44 app code, every one of the twelve a check that should fail
-  there.
 ---
 
 ## What this is
