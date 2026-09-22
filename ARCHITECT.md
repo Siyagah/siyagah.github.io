@@ -239,17 +239,30 @@ Every report follows one shape:
       block being written passes) cost real time. Built as collect-then-run:
       `r.block()` now registers a block instead of running it, and a new
       `r.run(onlyPrefixes)` at the file's end executes all of them
-      unfiltered, or only those matching a prefix. Every one of the 88
+      unfiltered, or only those matching a prefix. Every one of the
       existing `r.block()` call sites needed no change in shape. `--only 15`
       runs the four `15*` sub-blocks; a bad value throws instead of
       reporting "0/0 passed"; a filtered run's own output says it is partial.
       `tools/only-check.mjs` (new, browser-free) tests the mechanism itself
       and caught a wrong first draft of the prefix-matching rule before it
-      reached the real suite. One known, undone limitation, recorded rather
-      than fixed: `11`/`12`/`13` are each reused by two unrelated sections
-      (v04.46's own doing), so `--only 11` runs both — documented in
-      `tools/README.md`, not renamed, since renaming 89 ids was not this
-      round's ask.
+      reached the real suite. **A real gap surfaced by actually running the
+      flag, not by reading the file**: two checks sat in a bare top-level
+      `{ }` between `6f-consolidated-actions` and `6g-type-chip-badge`,
+      never wrapped in `r.block()` at all — v04.46's "every check runs
+      inside r.block()" had one exception. It cost nothing before this round
+      (an unwrapped block ran at its file position regardless); under
+      collect-then-run it would have run immediately as the file loaded,
+      ahead of EVERY registered block, on every invocation regardless of
+      `--only` — which is exactly what the first `--only 15` run showed:
+      both checks printed at the top, before any `15*` check. Fixed by
+      wrapping them as `6f-2-toolbar-buttons-live`; a full-file scan (every
+      `r.check`/`r.pass`/`r.fail` call site checked against which block
+      frame, if any, currently held it open) confirmed it was the only such
+      gap. 92 blocks register in total now (336 checks, unchanged). One
+      known, undone limitation, recorded rather than fixed: `11`/`12`/`13`
+      are each reused by two unrelated sections (v04.46's own doing), so
+      `--only 11` runs both — documented in `tools/README.md`, not renamed,
+      since renaming the file's ids was not this round's ask.
 - [x] `r.block()` (v04.46) isolates a throw to one block, but not the STATE
       that block leaves behind — `§1`–`§6c` and the first `§7`–`§13` all
       drove one shared `app`/`page` opened once near the top of

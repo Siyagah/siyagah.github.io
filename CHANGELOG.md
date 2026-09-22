@@ -4295,17 +4295,21 @@ new check while building it). v04.46 already gave every check a unique
 `r.block(id, fn)` id, and v04.48 made every block open and close its own
 `openApp()`, with zero remaining cross-block state dependencies anywhere in
 the file — confirmed directly for this round by grepping every `r.block(`
-call site: all 88 (89 including the new one below) are top-level statements,
-none nested inside another block's function body, so nothing currently
-depends on another block having already registered. The hard part was
-already done; what was left was collect-then-run.
+call site: all of them are top-level statements, none nested inside
+another block's function body, so nothing currently depends on another
+block having already registered. The hard part was already done; what was
+left was collect-then-run (plus one gap that surfaced only once the flag
+was actually run — see below).
 
 **The mechanism.** `report()` in `harness.mjs` used to run `fn` the instant
 `r.block(id, fn, opts)` was called. It now only **registers** `{id, fn,
-opts}` and returns immediately — every one of `app-check.mjs`'s 88 existing
-call sites keeps the exact shape it always had, `await r.block(id, fn,
-opts)`, because the returned promise resolves the moment the block is
-recorded, not when it finishes. The actual execution moved to a new
+opts}` and returns immediately — every one of `app-check.mjs`'s existing
+`r.block()` call sites keeps the exact shape it always had, `await
+r.block(id, fn, opts)`, because the returned promise resolves the moment
+the block is recorded, not when it finishes (one call site is a `for`
+loop over `VIEWPORTS` registering three `14e-screen-sizes-*` blocks off one
+template-literal id; 92 blocks register in total, from 90 static call
+sites). The actual execution moved to a new
 `r.run(onlyPrefixes)`, called once at the very end of `app-check.mjs`: with
 no filter it runs every registered block in file order — the same order,
 same blocks, same output shape as before this round — and only then does
@@ -4331,6 +4335,31 @@ only when a filter was used: `N/M blocks run (--only=...) — this is NOT the
 full suite`. An unfiltered run prints nothing extra and reports the same
 `N/N passed` line shape it always has.
 
+**A genuine gap in v04.46's "every check runs inside r.block()" turned up
+while measuring this round, not assumed.** Two checks — "every button on the
+note toolbar does something when clicked" and "the ⋯ menu is still on
+screen after a real left-click" — sat in a bare top-level `{ ... }` between
+`6f-consolidated-actions` and `6g-type-chip-badge`, never wrapped in
+`r.block()` at all. It cost nothing before this round: `block()` used to run
+`fn` inline, so wrapped or not, code ran at the exact file position it sat
+in. Under collect-then-run it costs real correctness: unregistered code has
+nothing to defer, so it runs immediately as the file loads — ahead of EVERY
+registered block, including `1-boot` — for every invocation, filter or not.
+The first `--only 15` run made this concrete: its own output showed those
+two unrelated checks at the top, before any `15*` check, because they had
+already run by the time `r.run(['15'])` was even called. Found by running
+the flag, not by reading the file — a full-file scan afterward
+(`await r.block(` occurrences vs. `r.check(`/`r.pass(`/`r.fail(` call sites,
+tracked against which frame currently held an open block) confirmed this
+was the ONLY such gap in the file; everywhere else a bare top-level `{ }` is
+a scoping wrapper around several already-wrapped `r.block()` calls (used to
+share a local `const` helper, e.g. `COLLECT()` across `6i-1`–`6i-4`), which
+is harmless under the new model since block-scoping doesn't affect when
+`r.block()`'s own registration happens. Fixed by wrapping the orphan pair
+in a new `6f-2-toolbar-buttons-live` block; no assertion changed, and the
+unfiltered total and order are unaffected (336/336, same as before — this
+round only regrouped two pre-existing checks, it didn't add any).
+
 **Known limitation, left as found, not fixed here**: three numeric prefixes
 — `11`, `12`, `13` — are each reused by two unrelated original sections
 (`11-theme-perkey` / `11-layout-three-sizes`, `12-theme-leaf-merge` /
@@ -4338,8 +4367,8 @@ full suite`. An unfiltered run prints nothing extra and reports the same
 blocks), because the file does not run in numeric order (recorded honestly
 by v04.46 when it gave them distinguishing full ids rather than renumbering
 the banner comments). `--only 11` therefore runs both unrelated groups that
-happen to share the leading number. Renaming 89 ids to remove the ambiguity
-was not part of this round's ask and was not done; `tools/README.md` says
+happen to share the leading number. Renaming the file's 92 block ids to
+remove the ambiguity was not part of this round's ask and was not done; `tools/README.md` says
 this plainly and points at the fix (match the fuller id, e.g. `--only
 11-theme-perkey`, to select just one).
 
@@ -4380,8 +4409,10 @@ measurement that decided it, not just checked off.
 
 **Measured**
 
-11/11 ship checks. `app-check.mjs` unfiltered: **336/336 passed, 0 aborted
-blocks** — same total as before this round, same order, nothing added,
-removed or reworded. `only-check.mjs`: **11/11 passed**. A sample `node
-tools/app-check.mjs --only 15` run: 4 of 336 blocks run, reported partial
-in its own output.
+11/11 ship checks. `app-check.mjs` unfiltered: **336/336 checks passed, 0
+aborted blocks**, across all 92 registered blocks — same totals as before
+this round, same order, nothing added, removed or reworded (the two checks
+moved into the new `6f-2-toolbar-buttons-live` block were already counted
+in 336; this round only gave them a home). `only-check.mjs`: **11/11
+passed**. A sample `node tools/app-check.mjs --only 15` run: **4 of 92
+blocks** run (12 of 336 checks), reported partial in its own output.

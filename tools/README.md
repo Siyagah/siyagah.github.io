@@ -543,3 +543,35 @@ assertions miss.
   from a local variable. Any future mechanism check that inspects "what did
   block X do" has to read it off `results` after `run()`, never off
   `block()`'s own return.
+- **An unwrapped check costs nothing until something starts DEFERRING the
+  wrapped ones.** Two checks in `app-check.mjs` — the note-toolbar click
+  sweep and the ⋯-menu-stays-open check — sat in a bare top-level `{ }`
+  between `6f-consolidated-actions` and `6g-type-chip-badge`, never inside
+  an `r.block()` at all, the one gap in v04.46's "every check runs inside
+  `r.block()`". It was invisible for two whole rounds (v04.46, v04.48)
+  because `block()` used to run `fn` the instant it was called — wrapped or
+  not, code ran at the exact file position it sat in, so an orphan looked
+  identical to a wrapped block in every measurement anyone took. v04.49's
+  collect-then-run changed that: a registered block's execution is deferred
+  to `r.run()` at the file's end, but unregistered code has nothing to
+  defer — it runs immediately as the file loads, during the "collect" pass,
+  ahead of EVERY registered block including `1-boot`. The first `--only 15`
+  run made this concrete, not theoretical: its own output printed those two
+  unrelated checks at the top, before any `15*` check, because they had
+  already run by the time `r.run(['15'])` was even reached. Found this way —
+  by actually running the new flag and reading its output for something
+  that looked wrong — not by auditing the file first. A full-file scan
+  afterward (every `r.check`/`r.pass`/`r.fail` call site, checked against
+  whether any currently-open brace frame was an `r.block()`'s own arrow-
+  function body) confirmed it was the only one; every other bare top-level
+  `{ }` in the file is a scoping wrapper with no direct checks of its own,
+  used only to share a local `const` helper (`COLLECT()`, `PANE_COLLECT()`,
+  `POP_COLLECT()`, `openAssign()`) across several already-wrapped
+  `r.block()` calls, which is harmless under the new model since plain
+  block-scoping doesn't change when `r.block()` itself registers. **Any
+  future mechanism that changes WHEN wrapped code runs relative to
+  unwrapped code needs this same check repeated**: grep isn't enough on its
+  own (a naive scan through a template-literal id's own `${...}`
+  interpolation braces produces false positives — confirmed while building
+  this one), actually running a filtered subset and reading its output for
+  anything that shouldn't be there is what caught the real gap.

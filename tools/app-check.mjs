@@ -1160,8 +1160,16 @@ await r.block('6f-consolidated-actions', async () => {
    a real function" cannot see this — the function name (showArtCtx) is real;
    it is an ARGUMENT that does not exist. So click them for real and watch for
    a page error. Each click re-renders from a clean state first, because some
-   of these buttons navigate or open editors. */
-{
+   of these buttons navigate or open editors.
+   v04.49: this was a bare top-level `{ }`, not an `r.block()` — the one gap
+   in v04.46's "every check runs inside r.block()" sweep, invisible before
+   this round because a block's fn used to run inline anyway, at the exact
+   file position it sat in, whether wrapped or not. Under v04.49's
+   collect-then-run, unwrapped code has no registration to defer: it would
+   run immediately as the file loads, ahead of every registered block
+   (including `1-boot`), for every invocation regardless of --only. Wrapped
+   now so it defers, filters and reports like everything else. */
+await r.block('6f-2-toolbar-buttons-live', async () => {
   const s2 = await openApp({ viewport: { width: 1600, height: 900 }, db: seedDB() });
   const thrown = [];
   s2.page.on('pageerror', (e) => thrown.push(String(e).split('\n')[0]));
@@ -1211,7 +1219,7 @@ await r.block('6f-consolidated-actions', async () => {
     `display ${menuAfterClick.display} · ${menuAfterClick.w}×${menuAfterClick.h}px · ${menuAfterClick.rows} rows`);
   await s2.page.evaluate(() => hideCtx());
   await s2.close();
-}
+});
 
 /* ── 6g. v04.13: the type chip is a badge, not a delete button ──────────── */
 /* It called toggleNoteKind(), so one tap on what reads as a label stripped the

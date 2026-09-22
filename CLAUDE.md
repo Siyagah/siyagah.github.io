@@ -45,13 +45,26 @@ must never accumulate here instead of there.
   splitting it into the original throwing block plus a new follow-up block
   that reads the Map. New `tools/only-check.mjs` tests the mechanism itself,
   browser-free, and caught the first (wrong) version of `blockIdMatches()`
-  before it ever reached the real suite. Known limitation left as found, not
+  before it ever reached the real suite. **Also found this way, not by
+  reading the file**: two checks (the note-toolbar click sweep and the ⋯
+  menu-stays-open check) sat in a bare top-level `{ }` between
+  `6f-consolidated-actions` and `6g-type-chip-badge`, never wrapped in
+  `r.block()` — the one gap in v04.46's "every check runs inside r.block()".
+  Harmless before this round (an unwrapped block ran inline at its file
+  position same as a wrapped one); under collect-then-run it would have run
+  immediately as the file loaded, ahead of every registered block including
+  `1-boot`, on every invocation regardless of `--only` — confirmed exactly
+  this way when the first `--only 15` run showed both at the top of its
+  output. Wrapped now as `6f-2-toolbar-buttons-live`; a full-file scan
+  confirmed it was the only such gap. Known limitation left as found, not
   fixed: three numeric prefixes (`11`, `12`, `13`) are each reused by two
   unrelated original sections since the file doesn't run in numeric order
   (v04.46), so `--only 11` runs both; documented in `tools/README.md`, not
   renamed. D5 does not apply — no visual surface. 11/11 ship checks, **the
-  unfiltered total is unchanged at 336/336, 0 aborted** — no check added,
-  removed, or reworded — plus `only-check.mjs`'s own 11/11.
+  unfiltered total is unchanged at 336/336 checks passed, 0 aborted, across
+  all 92 registered blocks** — no check added, removed, or reworded, only
+  two pre-existing ones given a block of their own — plus `only-check.mjs`'s
+  own 11/11.
 - **v04.48** (22 Sep 2026) — the last shared `app-check` session gets its own
   `openApp()` per block. Harness only — `tools/app-check.mjs`,
   `tools/README.md`, `ARCHITECT.md` — no app change. v04.46 isolated a
