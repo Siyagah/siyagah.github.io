@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.46.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.47.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,32 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.47** (22 Sep 2026) — three independent sidebar fixes. Smart Views and
+  MyDatabase now start collapsed on boot like every other section:
+  `renderSmartSection()`/`renderDatabaseSection()` tested `!==false` against
+  a default of `true`/`undefined`, unlike `renderSection()`'s correct
+  `===true` against `{}`; both now match it, and `ST.sfOpen`'s own default
+  had to change too (`true`→`false`) or the render-condition fix alone would
+  have changed nothing. **MyDatabase's click handler needed fixing too, not
+  just its render condition**: `ST.dbOpen=ST.dbOpen===false` only flips
+  correctly under the OLD "open unless false" default — under the NEW
+  "closed unless true" one it could only ever set `dbOpen` from `undefined`
+  to `false`, never to `true`, so the section could never be opened by
+  clicking it; fixed to `ST.dbOpen=ST.dbOpen!==true`, matching `secOpen`'s
+  own toggle. Separately, `ST.exp`'s stray `{f2:true}` — a hard-coded folder
+  id force-expanded on every boot — is now `{}`. `#bts-sb` ("back to search
+  results") showed on a fresh launch because `_updateSearchAccessUI()` was
+  only ever called from `doSearch()`/`clearSearch()`, never at boot;
+  `render()` calls it now (Pane 2/3's own mirrors were already fine — they
+  call their own copies on every render already). Three of five `.tr-cnt`
+  badge sites (plain folders, MyDatabase items, Smart Views) hid the badge
+  at 0 where the other two never did; all five now always show it. A
+  pre-existing check (`6i-4-section-strip`) relied on Smart Views being open
+  by default — the very bug fixed here — to have a row to measure; updated
+  in place to open one first, per the "seed the state before measuring"
+  lesson. D5: one shared render path at all three breakpoints, no shape to
+  diverge, said plainly. 11/11 ship checks, app checks 324 → **336** (12
+  new), no unpatched-code comparison run (plain bug fixes, per the issue).
 - **v04.46** (22 Sep 2026) — a throw in ANY block must cost that block, not
   the whole run. Harness only — `tools/harness.mjs`, `tools/app-check.mjs`,
   `tools/README.md`, `ARCHITECT.md` — no app change. v04.45 recorded this as
@@ -160,41 +186,6 @@ must never accumulate here instead of there.
   of `app-check`, so a round pays for all 299 twice — filed with "measure
   first" rather than built. D5 does not apply. 11/11 ship checks, 299/299 app
   checks (`index.html`'s version string changed, so it was re-run in full).
-- **v04.42** (21 Sep 2026) — a theme setting inside a sub-object still does
-  not sync between devices. v04.40 resolved `DB.theme` per top-level key
-  against `DB.themeAt` and recorded one gap: `theme.custom` merges as one
-  key, so two devices recolouring two different swatches keep only one. On
-  inspection the gap was wider — `fonts`, `dbColors`, `headingStyles`,
-  `calLayers`, `templates`, `calState`, `accordionSec`, `mwCatDefaultOpen`,
-  `fwPos`, `modalPos` and `pinPanelPos` are all object maps written one
-  sub-key at a time, and the whole object travelled on whichever device's
-  stamp was newer — enlarge the sidebar font on the phone, the note font on
-  the laptop, sync, and the phone's change is gone. Fixed at the **leaf**,
-  generally, per the standing lesson that an allow-list is "correct until the
-  next key": `_stampThemeTouches()` now stamps a changed sub-key under a
-  dotted path (`DB.themeAt['fonts.sidebar']=now`) whenever a top-level value
-  is a plain object on both the current and previous snapshot, instead of
-  stamping the whole parent key; a new `_mergeThemeVals()`/
-  `_mergeThemeObjKey()`/`_themeLeafStamp()` resolve any `theme` key that is a
-  plain object on both sides sub-key by sub-key, with a sub-key that has no
-  dotted stamp of its own falling back to its parent's top-level stamp so a
-  pre-v04.42 notebook resolves exactly as it did under v04.40 (I8). Arrays
-  (`pinTabIds`) and scalars are unaffected — stamped and merged whole, as
-  before; deliberately not treated as leaves, since merging an array per
-  index would scramble order rather than merge content. `CLAUDE.md`'s theme
-  paragraph corrected to describe leaf resolution rather than per-top-level-
-  key. Not done: nesting deeper than one level inside a `theme` sub-object.
-  D5: data-only, no visual surface, said so rather than left unsaid.
-  **Review found the first six checks all hand-wrote their stamps straight
-  into `mergeDB()`, proving the merge half reads a dotted stamp and nothing
-  about whether `_stampThemeTouches()` ever writes one** — reverting only
-  the stamping change left every check green. Four more checks now drive
-  `_stampThemeTouches()` itself: a sub-key change writes a dotted stamp and
-  nothing for the parent key, a scalar and an array still stamp whole, and
-  an end-to-end check merges two devices whose stamps came from the function
-  itself. 11/11 ship checks, app checks 289 → 295 → **299** (6 then 4 more
-  new); unpatched-code verification of the four stamping checks recorded by
-  the Architect on the PR.
 ---
 
 ## What this is

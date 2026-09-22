@@ -1527,6 +1527,12 @@ await r.block('6i-3-ink-flip', async () => {
 await r.block('6i-4-section-strip', async () => {
   {
     const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    /* v04.47 — Smart Views now starts collapsed like every other section, so
+       there is no `.tr-row` to measure until something is opened; click the
+       first section header (Smart Views, first in DOM order) to seed the
+       state this check needs, the way v04.24's "seed it before measuring"
+       lesson requires. */
+    await s.page.click('.sec-hd');
     await s.page.waitForTimeout(300);
     const m = await s.page.evaluate(() => {
       const hd = document.querySelector('.sec-hd');
@@ -4586,6 +4592,141 @@ await r.block(`14e-screen-sizes-${vp.name}`, async () => {
   await s.close();
 });
 }
+
+/* ── 15. v04.47: sidebar sections default collapsed, no stray search bar on
+   boot, counts always show ──────────────────────────────────────────────
+   Three independent defects, confirmed by reading the code before the
+   round: renderSmartSection()/renderDatabaseSection() tested `!==false`
+   against a default of `true`/`undefined`, so Smart Views and MyDatabase
+   opened on every fresh boot — unlike every renderSection(), which
+   correctly tests `===true` against a default of `{}`. Matching that
+   pattern also meant MyDatabase's own toggle handler had to change: it
+   read `ST.dbOpen=ST.dbOpen===false`, written for the OLD "open unless
+   false" default — under the NEW "closed unless true" default that could
+   only ever set dbOpen from undefined to false and never reach true again,
+   so the section could never be opened by clicking it. Fixed to
+   `ST.dbOpen=ST.dbOpen!==true`, the same flip secOpen's own toggle already
+   uses. ST.exp's stray `{f2:true}` force-expanded whatever folder happened
+   to own that id. `_updateSearchAccessUI()` was only ever called from
+   doSearch()/clearSearch(), never from render(), so #bts-sb's static
+   markup (no inline display:none) showed on a fresh boot with no search to
+   go back to — render() calls it now, alongside renderP2H()/renderP3H(),
+   which already called their own mirrors on every render and so were never
+   actually broken on boot. And three of the five `.tr-cnt` sites hid the
+   badge at a real 0 where the other two never did. */
+
+await r.block('15a-sections-collapsed-on-boot', async () => {
+  const s = await openApp({ db: seedDB() });
+  const boot = await s.page.evaluate(() => ({
+    sfOpen: ST.sfOpen, dbOpen: ST.dbOpen, secOpen: ST.secOpen['sec-1'],
+    expKeys: Object.keys(ST.exp), expTruthy: Object.values(ST.exp).some(Boolean),
+    sfRows: document.querySelectorAll('[data-sfid]').length,
+    dbRows: document.querySelectorAll('[onclick^="selDbItem("]').length,
+    secRows: document.querySelectorAll('.sec[data-sid="sec-1"] .tr-row').length,
+  }));
+  r.check(boot.sfOpen !== true && boot.dbOpen !== true && boot.secOpen !== true,
+    'Smart Views, MyDatabase and a plain section all start closed on a fresh boot',
+    JSON.stringify({ sfOpen: boot.sfOpen, dbOpen: boot.dbOpen, secOpen: boot.secOpen }));
+  r.check(boot.sfRows === 0 && boot.dbRows === 0 && boot.secRows === 0,
+    'nothing under any of the three is actually rendered until its header is clicked',
+    JSON.stringify({ sfRows: boot.sfRows, dbRows: boot.dbRows, secRows: boot.secRows }));
+  r.check(!boot.expTruthy, 'no folder starts pre-expanded — ST.exp has no truthy key on boot',
+    JSON.stringify(boot.expKeys));
+
+  await s.page.click('.sf-hd-sec');
+  await s.page.click('.db-hd-sec');
+  await s.page.click('.sec[data-sid="sec-1"] > .sec-hd');
+  const opened = await s.page.evaluate(() => ({
+    sfRows: document.querySelectorAll('[data-sfid]').length,
+    dbRows: document.querySelectorAll('[onclick^="selDbItem("]').length,
+    secRows: document.querySelectorAll('.sec[data-sid="sec-1"] .tr-row').length,
+  }));
+  r.check(opened.sfRows > 0 && opened.dbRows > 0 && opened.secRows > 0,
+    'clicking each header still opens it, exactly as before this round',
+    JSON.stringify(opened));
+  await s.close();
+});
+
+/* 15b — the "back to search results" bar (the sidebar's own #bts-sb, plus
+   its Pane 2 and Pane 3 mirrors) must not show with nothing to go back to,
+   must show once a search has been made and cleared, and must actually
+   restore that search when tapped. */
+await r.block('15b-search-bar-not-stray', async () => {
+  const s = await openApp({ db: seedDB() });
+  const hiddenOnBoot = await s.page.evaluate(() => ({
+    bts: getComputedStyle(document.getElementById('bts-sb')).display,
+    p2: (document.getElementById('p2-srch-bar')?.innerHTML || '').includes('restoreLastSearch'),
+    p3: (document.getElementById('p3-srch-bar')?.innerHTML || '').includes('restoreLastSearch'),
+  }));
+  r.check(hiddenOnBoot.bts === 'none' && !hiddenOnBoot.p2 && !hiddenOnBoot.p3,
+    'on a fresh boot, with no search made yet, all three "back to search results" surfaces are hidden',
+    JSON.stringify(hiddenOnBoot));
+
+  await s.page.evaluate(() => { doSearch('Seeded'); clearSearch(); });
+  const afterClear = await s.page.evaluate(() => ({
+    bts: getComputedStyle(document.getElementById('bts-sb')).display,
+    p2: (document.getElementById('p2-srch-bar')?.innerHTML || '').includes('restoreLastSearch'),
+    p3: (document.getElementById('p3-srch-bar')?.innerHTML || '').includes('restoreLastSearch'),
+  }));
+  r.check(afterClear.bts !== 'none' && afterClear.p2 && afterClear.p3,
+    'after a search is made and cleared, all three surfaces correctly show',
+    JSON.stringify(afterClear));
+
+  await s.page.click('#bts-sb');
+  const restored = await s.page.evaluate(() => ({ search: ST.search, inputVal: document.getElementById('sq')?.value }));
+  r.check(restored.search === 'Seeded' && restored.inputVal === 'Seeded',
+    'tapping "back to search results" actually restores the search',
+    JSON.stringify(restored));
+  await s.close();
+});
+
+/* 15c — a folder with no notes, a Smart View with no matches, and a
+   MyDatabase item with a real zero all show an explicit "0" instead of an
+   empty badge. seedDB()'s three folders all have at least one note between
+   them and their descendants, so an empty one is added inline here rather
+   than changing seedDB() itself, which other checks rely on unmodified. */
+await r.block('15c-zero-count-badges', async () => {
+  const db = seedDB();
+  db.folders.push({ id: 'f3', name: '(003) Empty Folder', parentId: null, order: 3, sectionId: 'sec-1', updatedAt: new Date().toISOString() });
+  const s = await openApp({ db });
+  const counts = await s.page.evaluate(() => {
+    const zeroSf = SF.find((sf) => !sf.hidden && getSmartArts(sf.id).length === 0);
+    return { zeroSfId: zeroSf?.id ?? null, folderReal: cntOf('f3'),
+      dbContactsReal: DB.articles.filter((a) => !a.trash && a.contactData).length };
+  });
+  r.check(counts.zeroSfId !== null, 'setup: at least one Smart View has zero matches in the seeded notebook', JSON.stringify(counts));
+  r.check(counts.folderReal === 0, 'setup: the new folder really has zero notes', counts.folderReal);
+  r.check(counts.dbContactsReal === 0, 'setup: My Contacts really has zero matches in the seeded notebook', counts.dbContactsReal);
+
+  await s.page.click('.sf-hd-sec');
+  await s.page.click('.db-hd-sec');
+  await s.page.click('.sec[data-sid="sec-1"] > .sec-hd');
+  const badges = await s.page.evaluate((zeroSfId) => {
+    const folder = document.querySelector('.tr-row[data-fid="f3"] .tr-cnt')?.textContent ?? null;
+    const smartView = document.querySelector(`[data-sfid="${zeroSfId}"] .tr-cnt`)?.textContent ?? null;
+    const contactsRow = [...document.querySelectorAll('.db-sec .sf-row')].find((row) => row.textContent.includes('My Contacts'));
+    const myContacts = contactsRow?.querySelector('.tr-cnt')?.textContent ?? null;
+    return { folder, smartView, myContacts };
+  }, counts.zeroSfId);
+  r.check(badges.folder === '0' && badges.smartView === '0' && badges.myContacts === '0',
+    'a zero-count folder, Smart View and MyDatabase item all show an explicit "0"',
+    JSON.stringify(badges));
+  await s.close();
+});
+
+/* 15d — regression guard: an existing NONZERO count still shows its real
+   number, unchanged — "always show the badge" must not turn into "always
+   show it wrong". */
+await r.block('15d-nonzero-count-unchanged', async () => {
+  const s = await openApp({ db: seedDB() });
+  await s.page.click('.sf-hd-sec');
+  const real = await s.page.evaluate(() => getSmartArts('sf-new').length);
+  const shown = await s.page.evaluate(() => document.querySelector('[data-sfid="sf-new"] .tr-cnt')?.textContent ?? null);
+  r.check(real > 0 && shown === String(real),
+    '"New Articles" still shows its real, nonzero count',
+    `real ${real}, shown ${shown}`);
+  await s.close();
+});
 
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
