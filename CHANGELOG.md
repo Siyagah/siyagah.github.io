@@ -4884,6 +4884,9 @@ padding `#ed` already uses at that width.
 
 **Measured**
 - `ship-check`: **11/11**.
-- `app-check --only 18`: **(measured in review)**.
+- `app-check --only 18`: **11/11**, and also checked to genuinely fail
+  against the pre-fix CSS — 6 of the 11 FAIL there, reproducing every
+  defect in the issue's table (font, heading sizes, paragraph gap, list
+  padding, `ol` counter, blockquote, and the grip/arrow chrome) exactly.
 - Full `app-check` and the unpatched-code verification: **(measured in
   review)** — per the issue, the Architect runs both and posts the numbers.

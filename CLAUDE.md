@@ -43,8 +43,10 @@ must never accumulate here instead of there.
     styles between `#ed` and `#fw-ed-<id>` at all three sizes, a
     marker-clipping measurement, heading-chrome parity, and owner-setting
     propagation.
-  - 11/11 ship checks. `app-check --only 18`, full `app-check`, and the
-    unpatched-code verification: **(measured in review)**.
+  - 11/11 ship checks, `app-check --only 18` **11/11** (also confirmed to
+    fail 6/11 against the pre-fix CSS, reproducing the issue's own table).
+    Full `app-check` and the unpatched-code verification: **(measured in
+    review)**.
 - **v04.52** (23 Sep 2026) — a spreadsheet inside a note, round 1 of 3.
   Built by the Architect directly.
   - **＋ Insert → ▦ Spreadsheet**, in Pane 3's `+` group and the Multi
