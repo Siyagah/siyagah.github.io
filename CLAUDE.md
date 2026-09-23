@@ -33,6 +33,8 @@ must never accumulate here instead of there.
     sheet.
   - **`.sg` was already the subfolder grid**, so the root class is `.sgx`.
   - 23 new checks (`17a`–`17g`). Rounds 2–3 are on the backlog.
+  - 11/11 ship checks, **389/389 app checks twice**. Unpatched: 369/381,
+    all 12 failures in section 17.
 - **v04.51** (23 Sep 2026) — how the owner gives work, written into the
   brief. No app change beyond the version strings; `ARCHITECT.md` only. The
   owner asked whether it was acceptable to send jobs "scattered, on-the-go,

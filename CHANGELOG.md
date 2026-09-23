@@ -4811,3 +4811,15 @@ Also not done:
   are not planned unless asked for.
 - No macros and no pivot tables.
 - Limits: 500 rows × 52 columns per sheet.
+
+**Measured**
+- `ship-check`: **11/11**.
+- `app-check`: **389/389 on two consecutive full runs**; 366 of those were
+  already on `main`, and 23 are new.
+- **Unpatched verification:** `main`'s v04.51 app with this round's checks,
+  one run: **369/381, 12 FAILED**. All 12 are section 17. Every one of the
+  366 pre-existing checks still passes. The three `17a` "no page errors"
+  checks pass on `main` by design, because nothing is inserted there, so
+  nothing can throw.
+- Screenshots at 390×844, 820×1180 and 1440×900: the sheet spans the note at
+  all three.
