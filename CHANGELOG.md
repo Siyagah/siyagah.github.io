@@ -4924,6 +4924,11 @@ as the edit-bar buttons already remember it), and ✕ close — which gains the
 word "Close" on the phone tier, for both pop-ups, matching what
 `#p3-sheet-hd` used to say only for Single. Every control carries a `title`
 and a stable `data-pf="grip|ico|prev|next|title|saved|switch|close"`.
+`.fw-hd`'s own vertical padding drops from 7px to 4px — measured, not
+guessed: at 1440 the desktop-tier controls are icon-sized (~20px), and 7px
+top and bottom made the bar 35px against a check that (per the issue) wants
+the frame's height within 1.5× its tallest control; 4px brings it to 29px.
+Multi's bar gets this too, since both read the one rule.
 
 **Single gets the frame at every tier**, not just the phone `_p3SheetHdSync()`
 was limited to. `_popFrameSync()` builds it as the first child of `#p3`
@@ -4994,6 +4999,6 @@ with the reason recorded inline; none were deleted.
 
 **Measured**
 - `ship-check`: **11/11**.
-- `app-check --only 19`: **(filled in below once green)**.
+- `app-check --only 19`: **14/14**.
 - Full `app-check` and the unpatched-code verification: **(measured in
   review)** — per the issue, the Architect runs both and posts the numbers.

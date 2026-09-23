@@ -66,9 +66,8 @@ must never accumulate here instead of there.
     asserted `#p3-sheet-hd`/`.sh-x` were updated in place, not deleted.
   - Also this round: filled in v04.53's `(measured in review)` placeholders
     below and in `CHANGELOG.md`, with the Architect's PR #74 numbers.
-  - 11/11 ship checks, `app-check --only 19` **(measured in review)**. Full
-    `app-check` and the unpatched-code verification: **(measured in
-    review)**.
+  - 11/11 ship checks, `app-check --only 19` **14/14**. Full `app-check` and
+    the unpatched-code verification: **(measured in review)**.
 - **v04.53** (23 Sep 2026) — pop-ups made alike, round (a): the note looks
   the same inside Multi as inside Single. Issue #73, round 1 of 4 in "make
   the two pop-ups (Multi and Single) look and work the same" — this round is

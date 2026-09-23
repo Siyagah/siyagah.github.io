@@ -5461,6 +5461,281 @@ await r.block('18d-owner-settings-follow', async () => {
   await s.close();
 });
 
+/* ── 19. v04.54: pop-ups made alike, round (b) — one shared frame ────────
+   _popFrameHTML(aid,mode) builds Multi's `.fw-hd` and Single's frame from
+   the same code, so every check here compares the two rather than trusting
+   either one in isolation. `seedDB()` puts only one note per folder, so a
+   ‹›-inside-Single check needs a real neighbour — siblingDB() adds one. */
+function siblingDB() {
+  const db = seedDB();
+  const now = db.articles[0].updatedAt;
+  db.articles.push({ id: 'a4', title: 'Sibling note', content: '<p>sibling</p>',
+    folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general' });
+  return db;
+}
+/* The ordered, VISIBLE data-pf list plus enough geometry to judge "one row,
+   nothing clipped, no horizontal overflow" and the title's real width —
+   containerSel is `#fw-<aid>` for Multi or `#p3` for Single (the frame is a
+   `.fw-hd` inside either). */
+async function frameSnapshot(page, containerSel) {
+  return page.evaluate((containerSel) => {
+    const host = document.querySelector(containerSel);
+    const frame = host ? host.querySelector('.fw-hd') : null;
+    if (!frame) return null;
+    const visible = (el) => el.getClientRects().length > 0;
+    const controls = [...frame.querySelectorAll('[data-pf]')].filter(visible);
+    const fr = frame.getBoundingClientRect();
+    const titleEl = frame.querySelector('[data-pf="title"]');
+    return {
+      items: controls.map((el) => el.getAttribute('data-pf')),
+      frameH: Math.round(fr.height),
+      tallest: Math.round(Math.max(...controls.map((el) => el.getBoundingClientRect().height))),
+      titleW: titleEl ? Math.round(titleEl.getBoundingClientRect().width) : 0,
+      noHOverflow: frame.scrollWidth <= frame.clientWidth + 1,
+      noVOverflow: frame.scrollHeight <= frame.clientHeight + 1,
+    };
+  }, containerSel);
+}
+async function openBothFrames(vpOpts) {
+  const s = await openApp({ viewport: vpOpts, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); });
+  await s.page.waitForTimeout(300);
+  await s.page.evaluate(() => openNotePopup('a1', 'float'));
+  await s.page.waitForTimeout(400);
+  const multi = await frameSnapshot(s.page, '#fw-a1');
+  await s.page.evaluate(() => closeAllPopouts());
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => openNotePopup('a1', 'panel'));
+  await s.page.waitForTimeout(400);
+  const single = await frameSnapshot(s.page, '#p3');
+  await s.close();
+  return { multi, single };
+}
+
+for (const vp of VIEWPORTS) {
+await r.block(`19a-same-frame-${vp.name}`, async () => {
+  const { multi, single } = await openBothFrames({ width: vp.width, height: vp.height });
+  const sameOrder = !!multi && !!single && JSON.stringify(multi.items) === JSON.stringify(single.items);
+  const oneRow = (snap) => !!snap && snap.frameH <= snap.tallest * 1.5 && snap.noHOverflow && snap.noVOverflow;
+  const titleOk = vp.name !== 'phone' || (multi.titleW >= 80 && single.titleW >= 80);
+  r.check(sameOrder && oneRow(multi) && oneRow(single) && titleOk,
+    `${vp.name}: Multi and Single show the identical ordered set of visible frame controls, each a single unclipped row`,
+    JSON.stringify({ multi, single }));
+});
+}
+
+await r.block('19a-title-min-width-360', async () => {
+  /* D4 measures 390/820/1440; 360 is the narrowest common phone width and
+     the one the issue names explicitly for the title-width floor. */
+  const { multi, single } = await openBothFrames({ width: 360, height: 780 });
+  r.check(!!multi && !!single && multi.titleW >= 80 && single.titleW >= 80,
+    'at 360px wide, the frame title stays at least 80px wide in both pop-ups',
+    JSON.stringify({ multiTitleW: multi?.titleW, singleTitleW: single?.titleW }));
+});
+
+await r.block('19b-single-nav-in-place', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: siblingDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); openNotePopup('a1', 'panel'); });
+  await s.page.waitForTimeout(400);
+  await s.page.click('#ed');
+  await s.page.keyboard.press('End');
+  await s.page.keyboard.type(' TYPEDBEFORESWITCH');
+  await s.page.waitForTimeout(150);
+  const box = await s.page.locator('#p3-frame-modal [data-pf="next"]').boundingBox();
+  if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await s.page.waitForTimeout(400);
+  const out = await s.page.evaluate(() => ({
+    modalMode: document.getElementById('p3').classList.contains('modal-mode'),
+    article: ST.article, editing: ST.editing,
+    saved: (DB.articles.find((a) => a.id === 'a1').content || '').includes('TYPEDBEFORESWITCH'),
+  }));
+  await s.close();
+  r.check(!!box && out.modalMode && out.article === 'a4' && out.editing && out.saved,
+    'Single’s › moves to the neighbouring note inside Single, stays in edit mode, and saves the note being left (I1)',
+    JSON.stringify(out));
+});
+
+await r.block('19c-switch-both-ways', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); openNotePopup('a1', 'float'); });
+  await s.page.waitForTimeout(400);
+  await s.page.click('#fw-ed-a1');
+  await s.page.keyboard.press('End');
+  await s.page.keyboard.type(' MULTITYPED');
+  await s.page.waitForTimeout(150);
+  const box1 = await s.page.locator('#fw-a1 [data-pf="switch"]').boundingBox();
+  if (box1) await s.page.mouse.click(box1.x + box1.width / 2, box1.y + box1.height / 2);
+  await s.page.waitForTimeout(400);
+  const toSingle = await s.page.evaluate(() => ({
+    modalMode: document.getElementById('p3').classList.contains('modal-mode'),
+    article: ST.article, noMulti: !document.getElementById('fw-a1'),
+    saved: (DB.articles.find((a) => a.id === 'a1').content || '').includes('MULTITYPED'),
+    mode: DB.theme.notePop && DB.theme.notePop.a1,
+  }));
+  await s.page.click('#ed');
+  await s.page.keyboard.press('End');
+  await s.page.keyboard.type(' SINGLETYPED');
+  await s.page.waitForTimeout(150);
+  const box2 = await s.page.locator('#p3-frame-modal [data-pf="switch"]').boundingBox();
+  if (box2) await s.page.mouse.click(box2.x + box2.width / 2, box2.y + box2.height / 2);
+  await s.page.waitForTimeout(400);
+  const toMulti = await s.page.evaluate(() => ({
+    modalMode: document.getElementById('p3').classList.contains('modal-mode'),
+    hasWin: !!document.getElementById('fw-a1'),
+    saved: (DB.articles.find((a) => a.id === 'a1').content || '').includes('SINGLETYPED'),
+    mode: DB.theme.notePop && DB.theme.notePop.a1,
+  }));
+  await s.close();
+  r.check(!!box1 && toSingle.modalMode && toSingle.article === 'a1' && toSingle.noMulti
+    && toSingle.saved && toSingle.mode === 'panel',
+    'Multi → Single: a real click on the switch opens the same note in Single, closes the Multi window, keeps the typed text, and remembers the mode',
+    JSON.stringify(toSingle));
+  r.check(!!box2 && !toMulti.modalMode && toMulti.hasWin && toMulti.saved && toMulti.mode === 'float',
+    'Single → Multi: a real click on the switch opens the same note in Multi, closes modal-mode, keeps the typed text, and remembers the mode',
+    JSON.stringify(toMulti));
+});
+
+await r.block('19d-close-button-closes', async () => {
+  for (const kind of ['float', 'panel']) {
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    await s.page.evaluate((k) => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+      window.render(); openNotePopup('a1', k); }, kind);
+    await s.page.waitForTimeout(400);
+    const sel = kind === 'float' ? '#fw-a1 [data-pf="close"]' : '#p3-frame-modal [data-pf="close"]';
+    const box = await s.page.locator(sel).boundingBox();
+    if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await s.page.waitForTimeout(250);
+    const closed = await s.page.evaluate((k) => (k === 'float'
+      ? !document.getElementById('fw-a1')
+      : !document.getElementById('p3').classList.contains('modal-mode')), kind);
+    await s.close();
+    r.check(!!box && closed,
+      `${kind === 'float' ? 'Multi' : 'Single'}: a real click on ✕ closes it, and it is still closed 250ms later`,
+      JSON.stringify({ clicked: !!box, closed }));
+  }
+});
+
+await r.block('19e-one-saved-one-close', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); startEdit(); });
+  await s.page.waitForTimeout(300);
+  const normalPopBtn = await s.page.evaluate(() =>
+    [...document.querySelectorAll('.modal-pop-btn')].some((e) => e.getClientRects().length > 0));
+  await s.page.evaluate(() => openNotePopup('a1', 'panel'));
+  await s.page.waitForTimeout(400);
+  const inModal = await s.page.evaluate(() => {
+    const vis = (el) => el.getClientRects().length > 0;
+    const saved = [...document.querySelectorAll('#p3 .save-flash')].filter(vis);
+    const closes = [...document.querySelectorAll('#p3 button, #p3 span')]
+      .filter((e) => vis(e) && e.textContent.trim().startsWith('✕'));
+    const popBtn = [...document.querySelectorAll('#p3 .modal-pop-btn')].filter(vis);
+    return { saved: saved.length, closes: closes.length, popBtn: popBtn.length };
+  });
+  await s.close();
+  r.check(normalPopBtn, 'normal Pane 3 editing at 1440 still shows .modal-pop-btn', normalPopBtn);
+  r.check(inModal.saved === 1 && inModal.closes === 1 && inModal.popBtn === 0,
+    'inside Single, exactly one visible ✓ Saved and one visible ✕, and .modal-pop-btn is not shown',
+    JSON.stringify(inModal));
+});
+
+await r.block('19f-sb-toggle-never-wins', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); openNotePopup('a1', 'float'); });
+  await s.page.waitForTimeout(400);
+  /* "placed over #sb-toggle's centre" — positioned explicitly rather than
+     trusting default geometry to land there, since that depends on the
+     sidebar's exact current width. */
+  await s.page.evaluate(() => {
+    const b = document.getElementById('sb-toggle').getBoundingClientRect();
+    const win = document.getElementById('fw-a1');
+    win.style.left = Math.max(0, Math.round(b.left - 60)) + 'px';
+    win.style.top = Math.max(0, Math.round(b.top - 60)) + 'px';
+  });
+  const overMulti = await s.page.evaluate(() => {
+    const b = document.getElementById('sb-toggle').getBoundingClientRect();
+    const el = document.elementFromPoint(Math.round(b.left + b.width / 2), Math.round(b.top + b.height / 2));
+    return !!(el && el.closest('.float-win'));
+  });
+  await s.page.evaluate(() => closeAllPopouts());
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => openNotePopup('a1', 'panel'));
+  await s.page.waitForTimeout(400);
+  await s.page.evaluate(() => {
+    const b = document.getElementById('sb-toggle').getBoundingClientRect();
+    const p3 = document.getElementById('p3');
+    p3.style.left = Math.max(0, Math.round(b.left - 60)) + 'px';
+    p3.style.top = Math.max(0, Math.round(b.top - 60)) + 'px';
+  });
+  const overSingle = await s.page.evaluate(() => {
+    const b = document.getElementById('sb-toggle').getBoundingClientRect();
+    const el = document.elementFromPoint(Math.round(b.left + b.width / 2), Math.round(b.top + b.height / 2));
+    return !!(el && el.closest('#p3.modal-mode'));
+  });
+  await s.close();
+  r.check(overMulti && overSingle,
+    'at 1440, #sb-toggle’s centre resolves inside the pop-up placed over it — the Multi window, then the Single panel',
+    JSON.stringify({ overMulti, overSingle }));
+});
+
+await r.block('19g-single-drags-by-frame', async () => {
+  {
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+      window.render(); openNotePopup('a1', 'panel'); });
+    await s.page.waitForTimeout(400);
+    const before = await s.page.evaluate(() => {
+      const b = document.getElementById('p3').getBoundingClientRect(); return { left: b.left, top: b.top };
+    });
+    const box = await s.page.locator('#p3-frame-modal [data-pf="title"]').boundingBox();
+    if (box) {
+      const sx = box.x + box.width / 2, sy = box.y + box.height / 2;
+      await s.page.mouse.move(sx, sy);
+      await s.page.mouse.down();
+      await s.page.mouse.move(sx + 60, sy + 40, { steps: 8 });
+      await s.page.mouse.up();
+    }
+    await s.page.waitForTimeout(200);
+    const after = await s.page.evaluate(() => {
+      const b = document.getElementById('p3').getBoundingClientRect(); return { left: b.left, top: b.top };
+    });
+    await s.close();
+    const dx = after.left - before.left, dy = after.top - before.top;
+    r.check(!!box && Math.abs(dx - 60) <= 4 && Math.abs(dy - 40) <= 4,
+      'at 1440, a mouse drag on the frame’s title moves the Single panel by the drag distance',
+      JSON.stringify({ before, after, dx, dy }));
+  }
+  {
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+      window.render(); showPane('p3'); openNotePopup('a1', 'panel'); });
+    await s.page.waitForTimeout(500);
+    const before = await s.page.evaluate(() => {
+      const b = document.getElementById('p3').getBoundingClientRect(); return { left: b.left, top: b.top };
+    });
+    const box = await s.page.locator('#p3-frame-modal [data-pf="title"]').boundingBox();
+    if (box) {
+      const sx = box.x + box.width / 2, sy = box.y + box.height / 2;
+      await s.page.mouse.move(sx, sy);
+      await s.page.mouse.down();
+      await s.page.mouse.move(sx + 60, sy + 40, { steps: 8 });
+      await s.page.mouse.up();
+    }
+    await s.page.waitForTimeout(200);
+    const after = await s.page.evaluate(() => {
+      const b = document.getElementById('p3').getBoundingClientRect(); return { left: b.left, top: b.top };
+    });
+    await s.close();
+    r.check(!!box && Math.abs(after.left - before.left) <= 1 && Math.abs(after.top - before.top) <= 1,
+      'at 390, the same drag on the frame’s title does not move the sheet',
+      JSON.stringify({ before, after }));
+  }
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
