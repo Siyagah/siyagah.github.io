@@ -91,8 +91,8 @@ must never accumulate here instead of there.
       inset). 15 of their 21 fail on the first cut. The 6 per-pop-up
       inset checks pass there only because the first cut had no rows to
       compare.
-  - 11/11 ship checks, **ALLTOTAL**. Unpatched (this `tools/` against
-    v04.54's `index.html`): **UNPTOTAL**.
+  - 11/11 ship checks, **457/457 app checks, twice in a row**. Unpatched (this `tools/` against
+    v04.54's `index.html`): **428/439, all 11 failures in section 20** (aborted blocks run fewer checks, hence the smaller total).
 - **v04.54** (23 Sep 2026) — pop-ups made alike, round (b): one shared frame
   (title, ‹ ›, ✕, Multi⇄Single switch). Issue #75, round 2 of 4 — this round
   is the bar across the top only; the toolbar underneath is round (c).

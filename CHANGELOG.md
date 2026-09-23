@@ -5268,5 +5268,5 @@ exercises for these particular rows.
     that pass are the per-pop-up inset checks: the first cut had no
     `.pop-row`s, so there was only the title to compare. The
     between-pop-ups inset check does catch it.
-- Full `app-check`: **ALLTOTAL**. Unpatched (this round's `tools/` against
-  v04.54's `index.html`): **UNPTOTAL**.
+- Full `app-check`: **457/457 app checks, twice in a row**. Unpatched (this round's `tools/` against
+  v04.54's `index.html`): **428/439, all 11 failures in section 20** (aborted blocks run fewer checks, hence the smaller total).
