@@ -61,8 +61,21 @@ must never accumulate here instead of there.
   earlier attempt stopped mid-run without committing its new checks; the
   full `app-check` suite, the unpatched-code verification, `ship-check` and
   `shot.mjs` were run by the Architect directly on the PR rather than in
-  this session — see `CHANGELOG.md` for the reason. Totals: **recorded by
-  the Architect on the PR**; this round's own targeted run was 26/26.
+  this session — see `CHANGELOG.md` for the reason. The builder's own targeted run was 26/26.
+  **Completed by the Architect in review**, which found three defects the
+  async boot introduced and fixed each with a check that fails on the
+  builder's code:
+  - a `pagehide` during start-up wrote the EMPTY placeholder `DB` over the
+    saved notebook (I1). Now guarded by `_dbLoaded`;
+  - the service worker never registered (I3);
+  - the sidebar was auto-fitted to an empty tree.
+  `window.__appBooted` now means "settled", which made the suite
+  deterministic again.
+  The one check that had stayed flaky exposed a real contrast defect:
+  "Multi"/"Single" were painted in the swatches (1.04:1 at worst). They now
+  use text inks (`--green2`, new `--gold-ink`), guarded by new check `16j`.
+  11/11 ship checks, **366/366 app checks twice in a row**. Unpatched
+  verification: 340/353, all 13 failures this round's own checks.
 - **v04.49** (22 Sep 2026) — `app-check.mjs` grows `--only`, now that v04.46
   and v04.48 made every block a genuinely independent unit. Harness only —
   `tools/harness.mjs`, `tools/app-check.mjs`, `tools/README.md`,
