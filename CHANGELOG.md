@@ -5702,5 +5702,54 @@ fixed here.
 - Extra self-check, since `.fw-editarea` touches shared structure the find
   bar and the phone's folded `≡`/`+` menus depend on: `app-check --only
   22`: **18/18**.
-- Full `app-check`: **(measured in review)**.
+- Full `app-check`, measured in review: **504/504, twice in a row**. Unpatched
+  (v04.59's `tools/` against v04.58's `index.html`): **493/504, all 11
+  failures in section 23**.
+
+---
+
+## v04.60 — the last note titles out of the public file; Contents without heading chrome (23 Sep 2026)
+
+Built by the Architect directly.
+
+**The part v04.58 missed.** v04.58 removed the live-page debris it had
+been shown: the tab *picker* filled with note titles, the auth iframes
+and the extension root. The v04.59 builder then found that the static
+`#tab-bar` right beside it still held **two real note titles** ("Jumu'a
+Khutbah - TEMPLATE", "Siyagah FINETUNING") as fully rendered chips, with
+their ids in `data-tid`, `tabSelect()`, `pinTabToPanel()` and the other
+chip handlers. `#ctx` also carried a real `data-aid`. It is the same
+serialized session, in a place v04.58's named patterns did not look.
+
+**Changed.**
+
+- The static `#tab-bar` is now empty: no chips, no `has-tabs` class, no
+  inline `display`, and its drag/drop handlers kept. `renderTabBar()`
+  rebuilds it completely on the first render, because `bar._sig` starts
+  undefined, so nothing depends on the static content.
+- `#ctx` loses the `data-aid` attribute.
+- The remaining static markup (everything outside `<script>` and
+  `<style>`) was scanned in full for literal note ids and note text:
+  nothing else was found, and the sidebar, list and note panes are empty.
+- ship-check check 6 now also fails on any literal note id in a
+  `data-tid`/`data-aid`, and on a tab-bar handler (`tabSelect`,
+  `pinTabToPanel`, `closeTab`, `closeTabGroup`, `openTabClrPicker`,
+  `pinTabDStart`) called with a literal id. The source only ever
+  interpolates one. It fails on v04.59's file.
+- **Contents entries read the heading's words.** `_tocScan()` took
+  `el.textContent`. In an editor, `_edColInit()` puts a `⠿` grip and a `▼`
+  arrow at the front of every h1–h4, so Single's Contents read `⠿▼One`.
+  Multi's happened to be built before its chrome arrived. `_tocScan()` now
+  reads a clone with `.ed-col-grip`, `.ed-col-arr` and `.ed-col-preview`
+  removed. This was pre-existing, and found in the v04.59 review.
+- New app-check `24a` in both pop-ups: Contents lists `One`, `Two`, `Three`
+  exactly. On v04.59's `index.html`, Single fails and Multi passes.
+
+**Not done, and why:** as in v04.58, the same markup in
+`legacy/v03.99/index.html` (sealed, I6) and in git history is the owner's
+decision.
+
+**Measured**
+- `ship-check`: **12/12**; check 6 fails on v04.59's `index.html`.
+- Full `app-check`: **APPTOTAL**.
 
