@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.55.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.56.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,47 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.56** (23 Sep 2026) — tags and folders lost on backgrounding before a
+  save (I1). Issue #80, found by the Architect in review of v04.55 and
+  reproduced unchanged on v04.54, ahead of pop-ups round (c2) because it is
+  data loss. `ST.etags`/`ST.efolders` are staged copies of a note's tags and
+  folder assignment while it is being edited — the tag box and 📎 Attach →
+  Folder both write to `ST`, exactly like `ST.etitle` does for the title —
+  and only `saveArt()` ever committed them. Every other exit from editing
+  (the autosave tick, `_flushEd()`, `_flushEverythingOut()` — what
+  `pagehide`/`visibilitychange` call when the app is backgrounded or killed
+  — and `cancelEdit()`, the phone's "Stop editing") committed content and
+  title only, so putting the app away mid-edit kept the typed text and
+  silently dropped a tag or folder change made in the same session. Multi
+  was not affected (v04.55).
+  - **Fix: a baseline, not a blind commit.** `_seedEditBaseline(aid)`
+    snapshots `ST.etags`/`ST.efolders` the moment editing begins for an
+    article; `_flushEd()` now diffs the live value against that snapshot and
+    commits only what actually changed in THIS session, moving the baseline
+    to what it just wrote. A field still matching its baseline is left
+    alone — the guard that keeps a merged remote change safe (I2): if
+    another device changes this note's tags while it is open here and the
+    tag box was never touched, the stale local snapshot is never written
+    back over the newer merged value. Seeded in `startEdit()` and every
+    note-creation path that opens straight into edit. `cancelEdit()` now
+    calls `_flushEd()` before dropping `ST.editing`, which it previously did
+    not. Two existing external writers that already sync the live
+    `ST.efolders` draft when they touch `a.folderIds` directly
+    (`pkMoveNote()`, `pkDelete()`) now move the baseline in step too, so the
+    next flush doesn't mistake an already-committed change for a fresh local
+    edit and re-stamp `updatedAt` for nothing.
+  - **Other `ST.e*` fields checked**: `ST.etitle` already handled by
+    `_flushEd()`; `ST.ebGroup` is UI state, not a staged note field; nothing
+    else stages part of a note. Two narrower, pre-existing gaps were found
+    and left alone as out of this round's scope — full account in
+    `CHANGELOG.md`.
+  - New app-check section 21 (`21a`–`21f`): a tag/folder change survives
+    backgrounding, Stop editing, and closing Single; a merged remote tag
+    change nobody touched here survives a flush with no phantom
+    `updatedAt` stamp; a genuine no-op flush stamps nothing, run twice.
+  - 11/11 ship checks, `app-check --only 21` (measured in review),
+    `app-check --only 16` (measured in review). Full `app-check`: (measured
+    in review).
 - **v04.55** (23 Sep 2026) — pop-ups made alike, round (c1): the same
   controls, with the same words, in the same order. Issue #77, round 1 of 2
   of round (c) — this round is which controls sit between the frame and the
@@ -207,36 +248,6 @@ must never accumulate here instead of there.
   - 23 new checks (`17a`–`17g`). Rounds 2–3 are on the backlog.
   - 11/11 ship checks, **389/389 app checks twice**. Unpatched: 369/381,
     all 12 failures in section 17.
-- **v04.51** (23 Sep 2026) — how the owner gives work, written into the
-  brief. No app change beyond the version strings; `ARCHITECT.md` only. The
-  owner asked whether it was acceptable to send jobs "scattered, on-the-go,
-  without an organised plan" and have the Architect plan, assign, review and
-  report. The answer was yes — that is the division of labour `ARCHITECT.md`
-  already described — but the agreement lived **only in a chat message**,
-  the precise failure v04.41 existed to stop: the next session starts blank
-  and may answer differently, or start asking the owner to organise their own
-  requests. A new section, *How the owner gives work*, now states that
-  scattered, unplanned, multi-topic messages are **the agreed working method
-  and not a problem to be corrected**, and what the Architect owes in return:
-  **separate** (one message can hold several unrelated jobs — the 23 Sep one
-  carried a storage failure and two unrelated search requests); **diagnose
-  before believing the description** (the owner said "no space prob" about a
-  device with gigabytes free, and was right about the device and wrong about
-  the cause — the notebook had filled a ~5 MB browser locker they had no way
-  to know existed, so taking the words literally would have silenced a true
-  warning); **order by risk, not by the order they were typed**; one job at a
-  time; verify by measurement then report in plain words. Two failure modes
-  named explicitly: a sense of urgency from the owner helps but is never
-  required — with no steer the Architect decides and says what it decided
-  rather than asking them to rank their own list — and **never send the work
-  back for organising**, because "shall I split this into rounds?" is exactly
-  the involvement they have said they do not want. The *Who does what* table's
-  Owner row now reads "Gives jobs — in whatever form and however scattered".
-  Not done: nothing in `CLAUDE.md` itself, since this governs how the
-  Architect receives work and the builder's input is an already-organised
-  issue — two copies would drift. D5 does not apply. 11/11 ship checks;
-  366/366 app checks,
-  measured after rebasing onto v04.50.
 ---
 
 ## What this is
@@ -459,6 +470,28 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A field staged in `ST` is a field autosave does not know about, unless it
+  is told.** `ST.etitle` had `_flushEd()` committing it from the day the
+  autosave tick was written; `ST.etags` and `ST.efolders` were staged into
+  `ST` the same way, by the tag box and 📎 Attach → Folder, and NOTHING
+  committed them except `saveArt()` — not the autosave tick, not
+  `_flushEd()` itself, not `cancelEdit()`, not the `pagehide`/
+  `visibilitychange` path that exists specifically because a backgrounded or
+  killed phone tab never gets to run a debounced save. Every one of those
+  paths faithfully saved the typed TEXT and silently dropped a tag or folder
+  change made in the same session, because "the note is being saved" was
+  true of one field and assumed true of the rest. A field that only reaches
+  the note through one named function is a field every OTHER save path has
+  to be individually checked against, and the checking has to happen when
+  the field is ADDED, not discovered by an owner losing a real tag on a real
+  phone. The fix is a baseline snapshotted when editing begins, so a generic
+  flush can tell "touched in this session" from "just what the note already
+  had" without guessing — the same shape protects a merged remote change
+  nobody touched locally from being overwritten by a stale snapshot (I2).
+  Cost: found by the Architect in review of v04.55, one step from shipping a
+  real tag/folder loss to the owner's phone on the very next backgrounded
+  session — traced back to code that had been wrong since tags/folders were
+  first staged in `ST`. Fixed in v04.56.
 - **Making boot asynchronous opens a window where the app runs on the
   placeholder `DB` — and every listener registered at parse time can fire
   in it.** v04.50 made `loadDB()` await IndexedDB. Until it resolved, `DB`

@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.55">
+<meta name="app-version" content="04.56">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2956,7 +2956,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.55</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.56</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3095,7 +3095,7 @@ const SK = 'my-notebook-v1';
 let DB = {folders:[], articles:[], sections:[], trash:[]};
 let HISTORY = [], HIST_POS = -1;
 
-let ST = {folder:null, article:null, exp:{}, editing:false, etitle:'', efolders:[], etags:[], search:'', tag:null, tagOpen:false, secOpen:{}, pendingSec:null, snippet:false, sfOpen:false, secSF:null, secSFOpen:{}, ntiCatOpen:{}, tabOwner:null};
+let ST = {folder:null, article:null, exp:{}, editing:false, etitle:'', efolders:[], etags:[], eBaselineAid:null, etagsBaseline:[], efoldersBaseline:[], search:'', tag:null, tagOpen:false, secOpen:{}, pendingSec:null, snippet:false, sfOpen:false, secSF:null, secSFOpen:{}, ntiCatOpen:{}, tabOwner:null};
 
 /* ── IndexedDB local store (v04.50) ──────────────────────────────────────
    Issue #69: the owner's notebook (~5.00 MB) had crossed localStorage's
@@ -4752,8 +4752,22 @@ function updateSbToggle(){
   const targetLeft=closed?0:parseInt(sb.style.width)||sb.offsetWidth||262;
   btn.style.left=targetLeft+'px';
 }
-function startEdit(){const a=DB.articles.find(x=>x.id===ST.article);if(!a)return;_captureNoteHistory(a,'session-start');ST.etitle=a.title;ST.efolders=[...a.folderIds];ST.etags=[...(a.tags||[])];ST.editing=true;renderP3H();renderP3C();adjustP3Layout();}
-function cancelEdit(){ST.editing=false;renderP3H();renderP3C();adjustP3Layout();}
+/* v04.56 — ST.etags/ST.efolders are staged fields, exactly like ST.etitle,
+   but nothing committed them except saveArt() — so backgrounding the app
+   (pagehide/visibilitychange), the phone's "Stop editing", and closing
+   Single all dropped a tag or folder change even though the typed TEXT
+   survived (I1). This snapshots what the two fields were AT THE MOMENT
+   editing began for this article, so _flushEd() can tell "the user
+   touched this here" from "this is just what the note already had" and
+   never overwrite a merged remote change nobody touched in this session
+   (I2). Call at every place that seeds ST.etags/ST.efolders. */
+function _seedEditBaseline(aid){
+  ST.eBaselineAid=aid;
+  ST.etagsBaseline=[...ST.etags];
+  ST.efoldersBaseline=[...ST.efolders];
+}
+function startEdit(){const a=DB.articles.find(x=>x.id===ST.article);if(!a)return;_captureNoteHistory(a,'session-start');ST.etitle=a.title;ST.efolders=[...a.folderIds];ST.etags=[...(a.tags||[])];ST.editing=true;_seedEditBaseline(a.id);renderP3H();renderP3C();adjustP3Layout();}
+function cancelEdit(){try{_flushEd();}catch(e){}ST.editing=false;renderP3H();renderP3C();adjustP3Layout();}
 function saveArt(){
   /* Contact form mode — save fields directly */
   const _cfa=DB.articles.find(x=>x.id===ST.article);
@@ -5684,7 +5698,7 @@ function newJournalEntry(){
     folderIds:[],tags:['journal'],createdAt:iso,updatedAt:iso};
   DB.articles.push(a);
   persist();
-  ST.article=a.id;ST.etitle=a.title;ST.efolders=[];ST.etags=['journal'];ST.editing=true;
+  ST.article=a.id;ST.etitle=a.title;ST.efolders=[];ST.etags=['journal'];ST.editing=true;_seedEditBaseline(a.id);
   /* On mobile/tablet: slide to pane 3 */
   if(window.innerWidth<1200)showPane('p3');
   render();
@@ -5721,7 +5735,7 @@ function mkArtTitleOnly(fid,title,sfId){
   DB.articles.push(a);persist();
   if(fid)_trackLastFolder(fid);
   /* Select note so pane 3 shows it in VIEW mode (not edit mode) */
-  ST.article=a.id;ST.etitle=a.title;ST.efolders=[...a.folderIds];ST.etags=[];
+  ST.article=a.id;ST.etitle=a.title;ST.efolders=[...a.folderIds];ST.etags=[];_seedEditBaseline(a.id);
   ST.editing=false;                      /* ← key: never enter edit mode */
   /* Desktop: update pane 3 in view mode; Mobile/tablet: stay in pane 2 */
   if(window.innerWidth>=1200){
@@ -7822,7 +7836,7 @@ function quickJournalEntry(fid){
   const iso=now.toISOString();
   const art={id:uid(),title,content:'<p></p>',folderIds:[fid],tags:['journal'],createdAt:iso,updatedAt:iso};
   DB.articles.push(art);persist();
-  ST.article=art.id;ST.etitle=art.title;ST.efolders=[fid];ST.editing=true;
+  ST.article=art.id;ST.etitle=art.title;ST.efolders=[fid];ST.editing=true;_seedEditBaseline(art.id);
   renderP2C();renderP3H();renderP3C();
   if(window.innerWidth<1200)showPane('p3');
   setTimeout(()=>{const ed=document.getElementById('ed');if(ed)ed.focus();},80);
@@ -8245,7 +8259,7 @@ function newFavEntry(){
   const art={id:uid(),title:'',content:'<p></p>',folderIds:['db-fav-folder'],
              tags:[],favCat:cat.id,createdAt:now,updatedAt:now};
   DB.articles.push(art);persist();
-  ST.article=art.id;ST.etitle='';ST.efolders=['db-fav-folder'];ST.editing=true;
+  ST.article=art.id;ST.etitle='';ST.efolders=['db-fav-folder'];ST.editing=true;_seedEditBaseline(art.id);
   renderP2C();renderP3H();renderP3C();
   if(window.innerWidth<1200)showPane('p3');
   setTimeout(()=>{const ti=document.getElementById('ti');if(ti)ti.focus();},80);
@@ -8275,7 +8289,7 @@ function newContact(useForm){
              createdAt:now,updatedAt:now};
   DB.articles.push(art);persist();
   ST.article=art.id;ST.etitle=art.title;
-  ST.efolders=['db-ct-folder'];ST.editing=true;
+  ST.efolders=['db-ct-folder'];ST.editing=true;_seedEditBaseline(art.id);
   renderP2C();renderP3H();renderP3C();
   if(window.innerWidth<1200)showPane('p3');
   setTimeout(()=>{
@@ -9001,7 +9015,7 @@ function _calNewNote(ds){
   const now=new Date(ds+'T09:00:00.000Z').toISOString();
   const art={id:uid(),title,content:'<p></p>',folderIds:fid?[fid]:[],tags:[],createdAt:now,updatedAt:now};
   DB.articles.push(art);persist();
-  ST.article=art.id;ST.etitle=art.title;ST.efolders=fid?[fid]:[];ST.editing=true;
+  ST.article=art.id;ST.etitle=art.title;ST.efolders=fid?[fid]:[];ST.editing=true;_seedEditBaseline(art.id);
   renderP2C();renderP3H();renderP3C();renderTabBar();
   if(window.innerWidth<1200)showPane('p3');
   setTimeout(()=>{const ed=document.getElementById('ed');if(ed)ed.focus();},80);
@@ -9016,7 +9030,7 @@ function _calNewJournal(ds){
   const now=new Date(ds+'T09:00:00.000Z').toISOString();
   const art={id:uid(),title,content:'<p></p>',folderIds:[target.id],tags:['journal'],entryDate:ds,createdAt:now,updatedAt:now};
   DB.articles.push(art);persist();
-  ST.article=art.id;ST.etitle=art.title;ST.efolders=[jFols[0].id];ST.editing=true;
+  ST.article=art.id;ST.etitle=art.title;ST.efolders=[jFols[0].id];ST.editing=true;_seedEditBaseline(art.id);
   renderP2C();renderP3H();renderP3C();renderTabBar();
   if(window.innerWidth<1200)showPane('p3');
   setTimeout(()=>{const ed=document.getElementById('ed');if(ed)ed.focus();},80);
@@ -16446,7 +16460,7 @@ function mkFolder(pid,name){
 }
 function rnFolder(id,name){if(!name?.trim())return;const f=DB.folders.find(x=>x.id===id);if(f){f.name=name.trim();f.updatedAt=new Date().toISOString();persist();render();}}
 function rmFolder(id){trashFolder(id);}
-function mkArt(fid,title){if(!title?.trim())return;const now=new Date().toISOString();const a={id:uid(),title:title.trim(),content:'',folderIds:fid?[fid]:[],tags:[],createdAt:now,updatedAt:now};DB.articles.push(a);persist();ST.article=a.id;ST.etitle=a.title;ST.efolders=[...a.folderIds];ST.editing=true;render();}
+function mkArt(fid,title){if(!title?.trim())return;const now=new Date().toISOString();const a={id:uid(),title:title.trim(),content:'',folderIds:fid?[fid]:[],tags:[],createdAt:now,updatedAt:now};DB.articles.push(a);persist();ST.article=a.id;ST.etitle=a.title;ST.efolders=[...a.folderIds];ST.editing=true;_seedEditBaseline(a.id);render();}
 function rmArt(id){trashArt(id);}
 
 /* ── Context menu ────────────────────────────────────────────────── */
@@ -17664,6 +17678,11 @@ function pkDelete(fid){
   if(!confirm(msg))return;
   trashFolder(fid);
   ST.efolders=ST.efolders.filter(x=>!removedIds.includes(x));
+  /* v04.56 — trashFolder() already stripped the deleted id from every
+     a.folderIds, including the note being edited; move the baseline the
+     same way so the next flush doesn't mistake this cleanup for a local
+     tag/folder edit and re-stamp updatedAt for nothing. */
+  if(ST.editing&&ST.eBaselineAid===ST.article)ST.efoldersBaseline=ST.efoldersBaseline.filter(x=>!removedIds.includes(x));
   if(_pkTarget&&removedIds.includes(_pkTarget))pkClearTarget();
   _pkRebuildList();
   const cnt=document.getElementById('pkCount');if(cnt)cnt.textContent=ST.efolders.length+' selected';
@@ -17778,7 +17797,7 @@ function pkMoveNote(aid,fromFid,toFid){
   if(!ids.includes(toFid))ids.push(toFid);
   a.folderIds=ids;
   a.updatedAt=new Date().toISOString();
-  if(ST.article===aid&&ST.editing)ST.efolders=[...ids];   // keep the draft in sync if it's the note being edited
+  if(ST.article===aid&&ST.editing){ST.efolders=[...ids];ST.efoldersBaseline=[...ids];}   // keep the draft AND its baseline in sync — a.folderIds is already committed above, so the next flush must not treat this as a local edit and re-stamp updatedAt for nothing (v04.56)
   persist();
   renderP2C();renderP3H();renderP3C();
   if(!ST.pickExp)ST.pickExp={};
@@ -21739,9 +21758,23 @@ function _flushEd(){
   const c=ed.cloneNode(true);c.querySelectorAll('.ann-inline-card').forEach(n=>n.remove());_edColClean(c);
   const html=c.innerHTML;
   const title=(ST.etitle!=null)?ST.etitle.trim():a.title;
-  if(a.content===html && a.title===title) return;
+  const _sameArr=(x,y)=>JSON.stringify(x||[])===JSON.stringify(y||[]);
+  /* v04.56 — tags/folders are staged fields too (see _seedEditBaseline).
+     Only commit them when THIS session's baseline shows they were actually
+     touched here — if the baseline was never seeded for this article (a
+     missed seed site would be a bug elsewhere), assume nothing was touched
+     rather than risk overwriting a merged remote value (I2). Either way the
+     baseline is (re)established so the next flush compares against what was
+     just committed. */
+  const _blOk=ST.eBaselineAid===a.id;
+  const _tagsTouched=_blOk && !_sameArr(ST.etags,ST.etagsBaseline);
+  const _foldersTouched=_blOk && !_sameArr(ST.efolders,ST.efoldersBaseline);
+  if(!_blOk)_seedEditBaseline(a.id);
+  if(a.content===html && a.title===title && !_tagsTouched && !_foldersTouched) return;
   a.content=html;
   a.title=title;
+  if(_tagsTouched){a.tags=[...ST.etags];ST.etagsBaseline=[...ST.etags];}
+  if(_foldersTouched){a.folderIds=[...ST.efolders];ST.efoldersBaseline=[...ST.efolders];}
   a.updatedAt=new Date().toISOString();
 }
 function setNoteKind(aid,kid){ _flushEd();

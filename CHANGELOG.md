@@ -5270,3 +5270,108 @@ exercises for these particular rows.
     between-pop-ups inset check does catch it.
 - Full `app-check`: **457/457 app checks, twice in a row**. Unpatched (this round's `tools/` against
   v04.54's `index.html`): **428/439, all 11 failures in section 20** (aborted blocks run fewer checks, hence the smaller total).
+
+## v04.56 — tags and folders lost on backgrounding before a save (I1) (23 Sep 2026)
+
+Issue #80, ahead of pop-ups round (c2) because it is a data-loss fix. Found by
+the Architect in review of v04.55, reproduced unchanged on v04.54 too, so this
+had been live since well before either round.
+
+**The defect.** `ST.etags` and `ST.efolders` are staged copies of a note's
+tags and folder assignment while it is being edited in Pane 3 (Single *is*
+Pane 3) — the tag box and 📎 Attach → Folder both write to `ST`, not to the
+note, exactly like `ST.etitle` does for the title. Only `saveArt()` ever
+committed them (`a.tags=ST.etags; a.folderIds=ST.efolders`). Every OTHER exit
+from editing — the autosave tick, `_flushEd()` itself,
+`_flushEverythingOut()` (what `pagehide`/`visibilitychange` call when the app
+is backgrounded or the OS kills it), and `cancelEdit()` (the phone's "✕ Stop
+editing — everything you typed is already saved") — committed content and
+title only. Putting the app away mid-edit, which is the ordinary way a phone
+session ends, kept the typed text and silently dropped a tag or folder change
+made in the same session. Multi was not affected: its tag box (v04.55) writes
+straight to the note.
+
+**The fix — a baseline, not a blind commit.** `_flushEd()` now commits
+`ST.etags`/`ST.efolders` too, but only the ones actually touched in THIS
+editing session, never blindly copying the field over: `_seedEditBaseline(aid)`
+snapshots both fields the moment editing begins, and `_flushEd()` diffs the
+live value against that snapshot. A field that still matches its baseline is
+left alone — this is what keeps a merged remote change safe (I2): if another
+device changes this note's tags while it is open here and the tag box was
+never touched, the baseline still matches, so the flush does not write the
+stale local snapshot back over the newer merged value. A field that differs
+is committed, and the baseline moves to what was just written, so the next
+flush is a true no-op again. `_seedEditBaseline()` is called everywhere
+`ST.etags`/`ST.efolders` is seeded for an editing session — `startEdit()` and
+every note-creation path that opens straight into edit
+(`newJournalEntry`/`mkArtTitleOnly`/`quickJournalEntry`/`newFavEntry`/
+`newContact`/`_calNewNote`/`_calNewJournal`/`mkArt`). If the baseline was
+somehow never seeded for the article being flushed (a missed seed site would
+be a bug elsewhere), `_flushEd()` treats that as "nothing touched" and just
+establishes the baseline, rather than risk overwriting a value it has no
+basis to compare.
+
+`cancelEdit()` now calls `_flushEd()` before dropping `ST.editing` — it
+previously did nothing at all, trusting autosave to have already saved
+everything, which was true for content and false for tags/folders.
+`_flushEverythingOut()` → `_flushAllEditors()` → `_flushEd()` and
+`closeNoteModal()` → `_flushEd()` needed no changes beyond `_flushEd()`
+itself, since both already called it.
+
+**Two existing external writers needed the same baseline courtesy.**
+`pkMoveNote()` (drag a note to a different folder) and `pkDelete()` (delete a
+folder) each already write `a.folderIds` directly AND sync the live
+`ST.efolders` draft so an open editor doesn't go stale — but under the new
+baseline model, leaving the baseline behind would make the next flush think
+the user had touched folders in the editor, re-committing the same value and
+re-stamping `updatedAt` for nothing (a phantom stamp is exactly what
+`mergeDB`'s newest-wins rule makes dangerous — see the v03.92.01/v03.95
+lessons this round extends). Both now move `ST.efoldersBaseline` in step with
+`ST.efolders`, since the underlying `a.folderIds` write already committed the
+same value moments earlier.
+
+**Other `ST.e*` fields checked.** `ST.etitle` was already handled by
+`_flushEd()`. `ST.ebGroup` exists but is UI state (which edit-bar popover
+group is open), not a staged note field. Nothing else under `ST.e*` stages
+part of a note. Two adjacent, pre-existing gaps were found and left alone as
+out of this round's scope, both narrower than the reported defect and neither
+a regression from this fix: `quickJournalEntry`/`newFavEntry`/`newContact`/
+`mkArt` seed `ST.efolders` but never reset `ST.etags` to the new note's own
+tags, so the tag box can show a stale carry-over from whichever note was
+edited previously until `startEdit()` runs again (a display issue — the
+baseline design means a flush still can't write that stale value over the new
+note's real tags, since editing never actually happens without the box
+having been touched); and `imgAttachTag()` / the image context menu's
+"🏷 Attach tag to this note" write straight to `a.tags` while the same note
+may be open for editing, which — like `saveArt()`'s own unconditional
+overwrite, unchanged this round — can still be overwritten by a later save
+in the editor. Both pre-date this round.
+
+`saveArt()`'s own behaviour is unchanged, as instructed.
+
+**Checks: new app-check section `21` (`21a`–`21f`)**, at 390 and 1440:
+- `21a` — start editing `a1`, add a tag through the real input (via the `+`
+  menu at 390) and type text; fire `visibilitychange`→hidden and `pagehide`,
+  reload with the same IndexedDB context — the note has both the tag and the
+  text. Repeated for removing a tag with its `×`.
+- `21b` — the same, adding a folder through the real 📎 Attach → Folder menu.
+- `21c` — at 390, add a tag, tap the real "✕ Stop editing" button, `DB` has
+  the tag.
+- `21d` — at 1440, in Single, add a tag, close with the frame's ✕, `DB` has
+  the tag.
+- `21e` — start editing `a1`, don't touch tags, set
+  `DB.articles[a1].tags=['seed','remote']` directly (simulating a merged
+  remote change), run `_flushEd()` then `_flushEverythingOut()` — `DB` still
+  has `remote`, `updatedAt` was not re-stamped.
+- `21f` — start editing, change nothing, run `_flushEd()` twice, `updatedAt`
+  is unchanged.
+
+**Standing lesson added to `CLAUDE.md`** (and the v04.51 five-rounds entry
+dropped to make room): a field staged in `ST` is a field autosave does not
+know about unless it is told.
+
+**Measured**
+- `ship-check`: **11/11**.
+- `app-check --only 21`: (measured in review)
+- `app-check --only 16`: (measured in review)
+- Full `app-check`: (measured in review)
