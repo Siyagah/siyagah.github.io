@@ -4698,3 +4698,128 @@ changed only in its two version strings.
 Built on the v04.49 base: 11/11 ship checks, 336/336 app checks. Rebased by the
 Architect onto v04.50 (the app file taken from `main` with only its three
 version strings changed): **11/11 ship checks, 366/366 app checks**.
+
+## v04.52 — a spreadsheet inside a note (round 1 of 3) (23 Sep 2026)
+
+**Why.** The owner asked, marked urgent, for "a full MS Excel-type table in a
+note with all standard Excel functions". A standalone demo was built and sent
+first. The owner approved it ("build as you recommended"). This is round 1:
+everything in the demo, living inside a real note.
+
+**Built by the Architect directly.** Six builder runs in a row had stopped
+before pushing their checks (v04.50). A working, tested engine already
+existed in the demo. `ARCHITECT.md`'s rule is to take a step off the builder
+when it stops at the same step twice; this round took the whole round.
+
+**What the owner gets.** In any note being edited, **＋ Insert → ▦
+Spreadsheet** puts a live grid at the cursor. It is in Pane 3's `+` group
+(bar and phone menu, from the `_EB_INSERT` table) and in the Multi pop-up's
+own `+` group. The grid offers:
+- **113 functions**, browsable under **ƒx Functions** with a one-line
+  explanation each. Name suggestions appear as you type, and the argument
+  hint shows inside a call.
+- Live recalculation.
+- Click or drag cells to put references into a formula.
+- `$` absolute references.
+- Errors shown as values, with an explanation on hover.
+- A missing `)` added automatically.
+- Sort (it skips a bold header row and a "Total" row).
+- Insert and delete rows and columns; references are rewritten, and deleted
+  ones become `#REF!`.
+- Fill down and fill right.
+- Copy and cut, and paste from Excel or Google Sheets. Formulas move
+  relatively when pasted within the sheet.
+- Bold, italic and alignment; number formats (1,234.00, $, %, date); four
+  fills; column resizing.
+- Undo and redo per sheet.
+- A Sum/Average/Count bar for a selection.
+- A two-tap **Remove**.
+
+The read view shows the sheet recomputed and read-only: you can select cells
+and see the formulas and totals, but there is no toolbar.
+
+**How it is stored (the part that protects I1–I4).**
+- A sheet is `<div class="sgx" contenteditable="false" data-sg="{JSON}">`
+  around a **snapshot** `<table class="sg-static">` of its values. It lives
+  in the note's own HTML, so there is **no new `DB` key**. It saves, syncs
+  (per note, newest wins), goes out in Save File and opens offline exactly
+  like the note's text. Search, Pane 2 snippets and any older build see
+  real values.
+- **The snapshot is rebuilt only when the sheet is edited, never on load.** A
+  sheet using `TODAY()` or `RAND()` would otherwise make an untouched note
+  look newer every time it was opened. A newer `updatedAt` wins `mergeDB()`
+  against a real edit made on another device (I2).
+- Check `17d` proves that opening and editing around such a sheet leaves
+  `a.content` and `updatedAt` byte-for-byte unchanged. Writing that check
+  caught a real case: `_sgCanon()` re-added `contenteditable` at the end of
+  the attribute list, which made the stored string differ. It now keeps
+  attributes in place.
+- `_edColClean()`, the one function every save path already runs, calls
+  `_sgCanon()` to strip the live grid back to the stored shape.
+- `_edColInit()` mounts sheets editable; `upgradeViewCards()` mounts them
+  read-only.
+- New sheets are built with DOM calls, not `insertAtCaret()`, because
+  `execCommand('insertHTML')` sanitises what it inserts, and the data
+  attribute carries the whole sheet.
+- Key, clipboard, input and composition events stop at the sheet. Enter,
+  Tab, Backspace and Ctrl+Z in a cell never reach the note editor or the
+  document-level undo. Check `17c` proves the note text around the sheet is
+  unchanged by them.
+- **Class name `.sgx`, not `.sg`:** `.sg` is already the subfolder grid. The
+  first cut used it, and the grid collapsed to one column (it inherited
+  `display:grid`); the sheet's border rule would also have landed on every
+  subfolder grid. Caught by a screenshot, then measured.
+
+**Layouts (D5).** Same feature on all three; the shape differs only in how
+you type:
+- **Phone (<640px):** you edit in the formula bar above the grid, and a key
+  row appears (= ( ) , : + − × ÷ " $ SUM ✓ Enter) so symbols are one tap
+  away. The toolbar scrolls sideways inside the sheet, and the grid scrolls
+  inside the note. The `+` menu closes itself after inserting (it had sat
+  on top of the new sheet; caught in build).
+- **Tablet and laptop:** you type straight into the cell, with the same
+  formula bar above.
+- **Both pop-ups:** Single is Pane 3, so it works there as is; Multi has its
+  own `+` group.
+
+**Checks: new section 17, 23 checks.**
+- `17a` (×3 sizes): reachable by the real ＋ → ▦ buttons; the sheet spans
+  the note, stays on screen, the menu closes, and there are no page errors.
+- `17b`: typed formulas compute; the stored shape is clean and carries the
+  value; after a reload the read view is recomputed and read-only, and
+  editing brings it back editable.
+- `17c`: keys stay in the sheet.
+- `17d`: opening a sheet does not change the note.
+- `17e`: inserting and saving from a Multi pop-up.
+- `17f`: paste from another spreadsheet; the phone's formula bar and key row.
+- `17g`: the engine gives Excel's answers on 16 known cases, and the library
+  has 110+ functions.
+
+**Not done (rounds 2 and 3, filed on the backlog):**
+- drag-to-fill handle, frozen header row, merged cells, borders, colour
+  rules, filters;
+- several sheets per table, and CSV in/out;
+- more functions (about 150);
+- charts, and .xlsx import/export.
+
+Also not done:
+- A sheet copied from one note and pasted into another through the note
+  editor (not the grid) goes through `execCommand`'s sanitiser. Whether the
+  data attribute survives is **not measured**; at worst it pastes as the
+  plain values table.
+- Excel has about 500 functions; the obscure engineering and statistics ones
+  are not planned unless asked for.
+- No macros and no pivot tables.
+- Limits: 500 rows × 52 columns per sheet.
+
+**Measured**
+- `ship-check`: **11/11**.
+- `app-check`: **389/389 on two consecutive full runs**; 366 of those were
+  already on `main`, and 23 are new.
+- **Unpatched verification:** `main`'s v04.51 app with this round's checks,
+  one run: **369/381, 12 FAILED**. All 12 are section 17. Every one of the
+  366 pre-existing checks still passes. The three `17a` "no page errors"
+  checks pass on `main` by design, because nothing is inserted there, so
+  nothing can throw.
+- Screenshots at 390×844, 820×1180 and 1440×900: the sheet spans the note at
+  all three.

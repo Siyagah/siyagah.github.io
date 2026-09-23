@@ -315,3 +315,13 @@ Every report follows one shape:
       `app-check.mjs` now owns its whole session, state included, not just
       its own failure; see `tools/README.md`'s v04.46 trap entry, updated in
       place.
+- [ ] **Spreadsheet rounds 2 and 3** (owner-approved 23 Sep 2026; round 1
+      shipped as v04.52). Round 2: drag-to-fill handle, frozen header row,
+      merged cells, borders, colour rules, filters, several sheets per
+      table, CSV in/out, and ~150 functions. Round 3: charts from a table,
+      and .xlsx import/export.
+- [ ] **A sheet copied through the note editor** (select text around it,
+      copy, paste into another note) passes through `execCommand`'s
+      sanitiser. Whether `data-sg` survives is **not measured** (v04.52).
+      The worst case is a plain values table, not data loss, but it should
+      be measured and, if needed, repaired on paste.
