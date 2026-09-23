@@ -5521,4 +5521,69 @@ except where noted:
 - `app-check --only 22`: **18/18**.
 - `app-check --only 20`: **31/31**.
 - `app-check --only 6`: **233/233**.
-- Full `app-check`: (measured in review)
+- Full `app-check`, measured in review: **493/493, twice in a row**. Unpatched
+  (v04.57's `tools/` against v04.56's `index.html`): **475/491, all 16
+  failures in section 22**.
+
+---
+
+## v04.58 — note titles taken out of the public app file (23 Sep 2026)
+
+Built by the Architect directly. No behaviour change.
+
+**What was found.** The builder found this while working on v04.57 (PR #83)
+and flagged it rather than touching it. `index.html`'s last line was not
+source. It was debris from a **running page** whose DOM had been saved over
+the file, and it had been there since PR #9 on 4 Sep. It contained:
+
+- `#tab-picker` already filled with four real note titles and their folder
+  names from the owner's notebook;
+- two Firebase auth iframes;
+- `#id-recall-widget-root`, a browser extension's widget;
+- stale copies of `#nti-picker`, `#jrn-picker` and `#eb-pop`, carrying the
+  same ids the app itself uses.
+
+A third auth iframe sat at the start of line 24015, glued to the front of
+the genuine `<style id="mywall-style">`. The site serves this file
+publicly.
+
+**Why removing it is safe.** Every element in it is one the app builds on
+demand:
+
+- `#tab-picker` in `openTabPicker()`;
+- `#nti-picker` and `#jrn-picker` via `createElement` when absent;
+- `#eb-pop` via `_openFloatPop()`;
+- the iframes by Firebase itself.
+
+Nothing in the source reads them before creating them. `<script id="nd">`
+is untouched (I7).
+
+**Changed.**
+
+- The last line becomes `</body></html>`.
+- The iframe before `mywall-style` is removed, and the style block stays.
+- New `ship-check` check 6 (so ship-check is now 12 checks): *index.html
+  carries no markup captured from a running page*. It flags:
+  - an `ng-non-bindable` iframe;
+  - a Firebase auth iframe URL;
+  - the extension root;
+  - a tab-picker row calling `addToTabPicker('<literal id>')`. The source
+    only ever writes `${a.id}`.
+
+  Run against v04.57's file, it fails and names all four.
+
+**Not done, and why.**
+
+- The same debris is in `legacy/v03.99/index.html`. That build is sealed
+  (I6), and changing it is the owner's decision, which is already waiting
+  on the status issue.
+- Every earlier commit of `index.html` in git history still contains it.
+  Removing it from history is a rewrite (destructive, owner's decision).
+- The Firebase web API key in the iframe URLs is public by design. The
+  notebook's real protection is the Firestore security rules, already the
+  top item waiting on the owner.
+
+**Measured**
+- `ship-check`: **12/12**; the new check fails on v04.57's `index.html`.
+- Full `app-check`: **493/493 app checks, twice in a row** (unchanged from v04.57 — no app behaviour changed).
+

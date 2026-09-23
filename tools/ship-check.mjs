@@ -109,4 +109,22 @@ if (legacyTouched === null) r.pass('legacy/** untouched since origin/main', 'ski
 else r.check(!legacyTouched.trim(), 'legacy/** untouched since origin/main',
   legacyTouched.trim() ? `EDITED: ${legacyTouched.trim().split('\n').join(', ')} — frozen builds are never changed` : 'clean');
 
+/* ── 6. no live-page debris serialized into the source (v04.58) ─────────
+   index.html was at some point saved from a RUNNING page's DOM, and two
+   pieces of that session rode along for three weeks: Firebase's hidden
+   auth iframes, a browser extension's widget root, and the tab picker
+   ALREADY FILLED with real note titles from the owner's notebook — served
+   publicly with the app. Every element involved is one the app creates on
+   demand, so none of it belongs in the file. Nothing threw; only a reader
+   found it. The patterns are the fingerprints of runtime-only markup, not
+   of anything the source ever writes itself. */
+const debris = [
+  [/<iframe[^>]*ng-non-bindable/, 'a Google/Firebase auth iframe (injected at runtime)'],
+  [/firebaseapp\.com\/__\/auth\/iframe/, 'a Firebase auth iframe URL'],
+  [/id="id-recall-widget-root"/, "a browser extension's widget root"],
+  [/addToTabPicker\('[a-z0-9]{6,}'\)/, 'a tab-picker row with a REAL note id (the source only ever writes ${a.id})'],
+].filter(([re]) => re.test(html)).map(([, what]) => what);
+r.check(debris.length === 0, 'index.html carries no markup captured from a running page',
+  debris.length ? `found: ${debris.join('; ')}` : 'clean');
+
 process.exit(r.finish() ? 1 : 0);
