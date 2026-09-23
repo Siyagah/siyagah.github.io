@@ -4888,5 +4888,182 @@ padding `#ed` already uses at that width.
   against the pre-fix CSS — 6 of the 11 FAIL there, reproducing every
   defect in the issue's table (font, heading sizes, paragraph gap, list
   padding, `ol` counter, blockquote, and the grip/arrow chrome) exactly.
+- Full `app-check`, run by the Architect in review: **400/400, twice in a
+  row**. Unpatched (v04.53's `tools/` against v04.52's `index.html`):
+  **394/400**, all 6 failures in section 18 — the other 5 section-18 checks
+  pass there because they are guards (no page errors ×3, both editors render
+  the grip/arrow, the setting really moved `#ed`), not the parity assertion
+  itself. Built by the builder unassisted.
+
+## v04.54 — pop-ups made alike, round (b): one shared frame (title, ‹ ›, ✕, Multi⇄Single switch) (23 Sep 2026)
+
+Issue #75, round 2 of 4 in "make the two pop-ups (Multi and Single) look and
+work the same". Round (a) (v04.53) did the note's content; this round does the
+bar across the top. The toolbar underneath is round (c).
+
+**What was there.** Multi's `.fw-hd` had a drag grip, ‹ ›, a title, a
+`✓ Saved` chip and ✕ — and no way to reach Single. Single had a phone-only
+bar (`#p3-sheet-hd`, built by `_p3SheetHdSync()`) with an icon, a title and
+`✕ Close`; on a tablet or a desktop it had **no frame at all** — it was
+dragged by the tab bar, had no ‹ ›, and its only ✕ was `cancelEdit()`
+"Cancel (Esc)", which stops editing rather than closing anything. Its switch
+to Multi was the `Multi`/`Single` pair on the edit bar. And `#sb-toggle`
+(`z-index:9999`) painted on top of both pop-ups at 1440×900, above
+`.float-win` (6000+) and `#p3.modal-mode` (5001) alike.
+
+**The fix.** One function, `_popFrameHTML(aid, mode)`, builds the whole bar
+for both pop-ups — Multi's `.fw-hd` and Single's frame are its output, so
+they cannot drift apart the way they just had. Left to right: a drag grip
+(window tier only, hidden by the same CSS that already hid Multi's on a
+phone), the pop-up's own icon, ‹ › to the neighbouring note, the title
+(min-width 80px — a flex item with `overflow:hidden` defaults to a
+shrink-to-zero minimum, the same fault v04.14's header paid for), the
+`✓ Saved` chip, a switch to the *other* mode (its icon and short word,
+calling `openNotePopup(aid, otherMode)` so the choice is remembered exactly
+as the edit-bar buttons already remember it), and ✕ close — which gains the
+word "Close" on the phone tier, for both pop-ups, matching what
+`#p3-sheet-hd` used to say only for Single. Every control carries a `title`
+and a stable `data-pf="grip|ico|prev|next|title|saved|switch|close"`.
+`.fw-hd`'s own vertical padding drops from 7px to 4px — measured, not
+guessed: at 1440 the desktop-tier controls are icon-sized (~20px), and 7px
+top and bottom made the bar 35px against a check that (per the issue) wants
+the frame's height within 1.5× its tallest control; 4px brings it to 29px.
+Multi's bar gets this too, since both read the one rule.
+
+**Single gets the frame at every tier**, not just the phone `_p3SheetHdSync()`
+was limited to. `_popFrameSync()` builds it as the first child of `#p3`
+while `modal-mode` is on, called from `openNoteModal()` on open and from
+`renderP3H()` on every note change (tab switch, `‹ ›`, `openNotePopup`) —
+`renderP3H()` is the one function every such path already calls (see the
+per-note-tabs comment right above it), so nothing new had to be threaded
+through the ~30 places that reassign `ST.article`. `closeNoteModal()` removes
+it. On the window tier the frame is also a drag handle: `_wireModalFrameDrag()`
+calls the modal's own `_modalDragStart()` on `pointerdown` — the existing
+mover, not a second one — exactly the pattern `_fwWireDrag()` already used for
+Multi. The tab bar's own drag is untouched. `_p3SheetHdSync()` and
+`#p3-sheet-hd` are deleted, not left dead.
+
+**Single's ‹ ›** (`_panelNavigate()`) is `_p3Navigate()` plus one line:
+`selArt()` already saves the outgoing note if it was being edited (I1) and
+moves `ST.article`; the added `startEdit()` re-enters edit mode for the note
+just switched to, because Single never leaves edit mode any more (see the
+next paragraph) the way Multi never has.
+
+**`✓ Saved` in Single is the frame's own chip.** `flashSaved()` now also
+calls `_popFrameFlash()` whenever `ST.noteModal`, which updates the frame's
+title text in place (mirroring how Multi's autosave already touches
+`.fw-title-disp` without a full rebuild) and flashes the chip; Pane 3's own
+`#save-flash` is hidden inside `#p3.modal-mode` so only one is ever visible.
+
+**Three removals, one CSS rule each.** `.modal-pop-btn` is hidden inside
+`#p3.modal-mode` (it stays on normal Pane 3's own bars, where there is no
+frame to replace it). Every `cancelEdit()` ✕ is hidden inside
+`#p3.modal-mode`, matched by `[onclick="cancelEdit()"]` rather than by class,
+so all three existing call sites (the contact-form header, the phone tag
+bar, and the one-bar phone title row) are covered by one rule and a fourth
+added later needs no new one — Multi has never had a stop-editing control
+(it is always an editor) and closing already flushes (`closeNoteModal()` →
+`_flushEd()`), so nothing typed is lost. `#p3-sheet-hd`/`_p3SheetHdSync()` are
+gone, replaced by the frame.
+
+**`#sb-toggle` never paints over a pop-up any more** — `z-index:9999` (above
+everything) is now `z-index:400` (above ordinary pane chrome, below both
+`#p3.modal-mode` at 5001 and every `.float-win` at 6000+). It still works
+exactly as before whenever no pop-up covers it.
+
+**Shape on each layout (D5).** Desktop and tablet: a draggable one-row frame
+on both pop-ups; the switch gets the same ≥40px height the close/nav controls
+already have under 1200px. Phone (and 360px): the sheet — no grip, `✕ Close`
+with its word, the switch drops to icon-only (keeping its `title`) so the
+title keeps its 80px. One function, one set of tier rules (`_popTier()`), so
+none of this can be copied unevenly across platforms the way the pop-ups
+themselves once were (v04.34's lesson).
+
+**Also this round**, per the issue: filled in v04.53's `(measured in review)`
+placeholders in `CLAUDE.md` and here, with the Architect's PR #74 numbers.
+
+**Checks: new section 19 (`19a`–`19g`), `--only 19`.** Same frame at 390/820/
+1440 (ordered visible `data-pf` list identical, one row, title ≥80px at 390
+and 360); Single's `‹ ›` stays in Single, stays editing, saves the outgoing
+note; the switch both ways with real clicks (note follows, no stray Multi
+window, `DB.theme.notePop` stamped); a real click on ✕ closes each pop-up and
+it stays closed; exactly one `✓ Saved` and one ✕ inside Single, with
+`.modal-pop-btn` still visible on normal Pane 3 at 1440; `#sb-toggle`'s centre
+resolves inside whichever pop-up covers it; a mouse drag on the frame's title
+moves the panel at 1440 and does not at 390.
+
+Three pre-existing checks in `tools/app-check.mjs` (block
+`6p-17-popups-every-platform`) asserted `#p3-sheet-hd`/`.sh-x` directly —
+updated in place to read the shared frame's `.fw-close`/`.fw-drag` instead,
+with the reason recorded inline; none were deleted.
+
+**Review fix, same round, no version bump.** The Architect's review of the PR
+found Single's new ✕ unreachable at 820×1180 and 1000×1180: `#p3`'s measured
+rect was 787px wide at an 820px-wide viewport (right edge 847, 27px past the
+screen), so the frame's ✕ — and the right end of the tab bar and toolbar —
+hung off-screen. **Cause**: `@media(min-width:640px) and (max-width:1199.98px)`
+(the tablet off-canvas layout, pre-dating this round) sets
+`#p3{width:100%!important}`. `openNoteModal()` sets the modal's width as a
+plain inline style, and Single's `#p3.modal-mode` rule never declared its own
+`width` — so that pre-existing `!important` beat the inline px width outright
+(an `!important` stylesheet rule always wins over inline style, whatever the
+specificity), regardless of what `openNoteModal()` had asked for. Not a `vw`
+math error; the requested width (`min(700, 88vw)` = 700px at 820) was correct
+throughout. **Fix**: split `width:100%!important` onto its own
+`#p3:not(.modal-mode)` rule inside that media query, so it no longer applies
+once `modal-mode` is on — every other property that rule sets is already
+re-declared, `!important`, on `#p3.modal-mode` itself, so nothing else moved.
+`.float-win` (Multi) was never affected — that off-canvas rule only ever
+targeted the `#p3` id. Desktop (no such rule) and phone (already guarded by
+its own higher-specificity `#p3.modal-mode{width:auto!important}` override)
+are unchanged — measured, not assumed. As defence in depth, `openNoteModal()`
+now also reads the panel's real laid-out rect one frame after applying
+`modal-mode` and clamps it inside the viewport
+(`requestAnimationFrame(...)`→`_modalClampToViewport()`), so a future
+conflict this round didn't anticipate strands the panel for one frame instead
+of leaving it there; `_modalClampToViewport()` now no-ops on the sheet tier,
+which sizes `#p3` with its own `!important` edge-to-edge CSS and needs no JS
+geometry at all.
+
+**Also fixed, same push**: the frame's phone-only "✕ Close" wording and its
+grip/switch-word visibility were baked into `_popFrameHTML()`'s output at
+build time, and nothing re-ran it on a plain resize. Single re-syncs via
+`renderP3H()` on every note change, but `_renderPreserveEdit()` skips
+`renderP3H()` whenever the pop-up is open and editing — the only state v04.54
+ever leaves it in — and Multi's open windows had no resync path at all, so a
+rotation crossing 640px with no note change left both frames showing the
+wrong tier's wording. `_onViewportResize()` now tracks `_popTier()` (the
+640px sheet/window split) separately from the existing `_rzTier`
+(`_uiTier()`'s 640/1200 split, which doesn't change the frame's markup at
+1200px) via a new `_rzPopTier`, and on a crossing calls `_popFrameSync()` for
+Single and a new `_fwFrameResyncAll()` for every open Multi window.
+`_fwWireDrag()` split into `_fwWireDragHandle()` (the pointer-drag wiring,
+now re-run on each rebuilt `.fw-hd`) and its own `ResizeObserver` set-up
+(left at `_fwCreate()` time only, so a rebuild never stacks a second
+observer on the same window).
+
+**Checks (update in place, per the issue): section 19 grows to `19a`–`19i`.**
+`19d` (✕ really closes) now runs at all three `VIEWPORTS` sizes plus
+1000×1180, not just 1440 — this is the check that would have caught the
+blocker, since it clicks the real screen coordinates rather than querying the
+DOM. New `19h`: at 820×1180 and 1000×1180, for both pop-ups, the whole panel's
+rect lies inside the viewport and `elementFromPoint` at the centre of every
+visible `data-pf` control resolves back to that control (the `✓ Saved` chip
+is `pointer-events:none` by design — a status toast, not a button — so it is
+excluded from the hit test, not required to pass it). Confirmed failing
+against the pre-fix `index.html` with this round's own `tools/app-check.mjs`:
+Single failed at both tablet widths (2/4 passed), matching the Architect's
+measured rects exactly (`right:847` at 820, `right:1110` at 1000); Multi
+passed throughout, confirming it was never affected. New `19i`: opens each
+pop-up at 820, resizes to 390 and checks the frame reads "✕ Close" with no
+grip and an icon-only switch, resizes back to 820 and checks the grip and the
+switch's word are back — for both Single and Multi.
+
+**Measured**
+- `ship-check`: **11/11**.
+- `app-check --only 19`: **26/26** (was 14/14; `19d` widened, `19h`/`19i`
+  added).
+- `app-check --only 6p`: **104/104** (regression spot-check — the surface the
+  width fix touches).
 - Full `app-check` and the unpatched-code verification: **(measured in
   review)** — per the issue, the Architect runs both and posts the numbers.

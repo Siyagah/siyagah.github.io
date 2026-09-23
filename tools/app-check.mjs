@@ -3716,8 +3716,10 @@ await r.block('6p-17-popups-every-platform', async () => {
         const b = el.getBoundingClientRect();
         const grips = [...el.querySelectorAll('.modal-resize-r,.modal-resize-b,.modal-resize-l,.modal-corner,.fw-drag')]
           .filter((g) => g.getClientRects().length).length;
-        const x = k === 'float' ? el.querySelector('.fw-close')
-          : document.querySelector('#p3-sheet-hd .sh-x');
+        /* v04.54 — both pop-ups' frames are the SAME markup now (_popFrameHTML),
+           so ✕ close is `.fw-close` inside either container; #p3-sheet-hd and
+           its `.sh-x` are retired. */
+        const x = el.querySelector('.fw-close');
         const xb = x && x.getBoundingClientRect();
         const ed = k === 'float' ? el.querySelector('.fw-ed') : document.getElementById('ed');
         return { left: Math.round(b.left), top: Math.round(b.top), right: Math.round(b.right),
@@ -3744,13 +3746,15 @@ await r.block('6p-17-popups-every-platform', async () => {
       await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
         window.render(); showPane('p3'); openNotePopup('a1', 'panel'); });
       await s.page.waitForTimeout(600);
-      const box = await s.page.locator('#p3-sheet-hd .sh-x').boundingBox().catch(() => null);
+      /* v04.54 — the phone's way out is the shared frame's ✕ now (#p3-sheet-hd
+         is retired; see _popFrameHTML/_popFrameSync). */
+      const box = await s.page.locator('#p3-frame-modal .fw-close').boundingBox().catch(() => null);
       if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
       await s.page.waitForTimeout(400);
       const out = await s.page.evaluate(() => ({
         modal: ST.noteModal, shaped: document.getElementById('p3').classList.contains('modal-mode'),
         bg: !!document.getElementById('note-modal-bg')?.classList.contains('active'),
-        hd: !!document.getElementById('p3-sheet-hd'),
+        hd: !!document.getElementById('p3-frame-modal'),
         /* and the app is usable again, not left under a dead fixed layer */
         pane: (() => { const b = document.getElementById('p3').getBoundingClientRect();
           return [Math.round(b.width), Math.round(b.height)]; })() }));
@@ -3819,22 +3823,24 @@ await r.block('6p-17-popups-every-platform', async () => {
           .filter((g) => g.getClientRects().length).length;
         /* Touch drag and resize have been wired since v03.NotePane.T4; what
            was never sized for a finger is the window's own header. */
-        const hdr = k === 'float'
-          ? [el.querySelector('.fw-close'), ...el.querySelectorAll('.fw-nav')].filter(Boolean)
-            .map((x) => { const r = x.getBoundingClientRect(); return Math.min(Math.round(r.width), Math.round(r.height)); })
-          : [];
+        /* v04.54 — both pop-ups share one frame (_popFrameHTML), so this is no
+           longer a Multi-only measurement: a tablet must give Single's frame
+           the same real, drag-grip-bearing window header, not the phone's
+           #p3-sheet-hd (retired) or no frame at all (the pre-v04.54 gap). */
+        const hdr = [el.querySelector('.fw-close'), ...el.querySelectorAll('.fw-nav')].filter(Boolean)
+          .map((x) => { const r = x.getBoundingClientRect(); return Math.min(Math.round(r.width), Math.round(r.height)); });
+        const grip = !!el.querySelector('.fw-drag')?.getClientRects().length;
         return { w: Math.round(b.width), h: Math.round(b.height), left: Math.round(b.left),
-          top: Math.round(b.top), vw: innerWidth, vh: innerHeight, grips,
-          sheetHd: !!document.getElementById('p3-sheet-hd'), hdr,
+          top: Math.round(b.top), vw: innerWidth, vh: innerHeight, grips, grip, hdr,
           switcher: !!document.getElementById('fw-switch') };
       }, kind);
       await s.close();
       const roomy = m.left >= 12 && m.w <= m.vw - 16;
-      r.check(grips_ok(m) && roomy && !m.sheetHd && !m.switcher
+      r.check(grips_ok(m) && roomy && m.grip && !m.switcher
         && (m.hdr.length === 0 || Math.min(...m.hdr) >= 34),
-        `tablet: the ${kind === 'float' ? 'Multi' : 'Single'} pop-up is still a real window, and its header can be hit by a finger`,
+        `tablet: the ${kind === 'float' ? 'Multi' : 'Single'} pop-up is still a real window, with a drag grip and a header that can be hit by a finger`,
         `${m.w}×${m.h} at ${m.left},${m.top} of ${m.vw}×${m.vh} · drag/resize handles ${m.grips}`
-        + ` · phone sheet header ${m.sheetHd} · phone switcher ${m.switcher}`
+        + ` · frame drag grip ${m.grip} · phone switcher ${m.switcher}`
         + ` · header targets ${m.hdr.length ? Math.min(...m.hdr) + 'px' : 'n/a'}`);
     }
 
@@ -5453,6 +5459,388 @@ await r.block('18d-owner-settings-follow', async () => {
     'a non-default content size and line spacing set through the app’s own setting functions reaches the Multi editor’s root exactly as it reaches #ed',
     JSON.stringify({ ed, fw }));
   await s.close();
+});
+
+/* ── 19. v04.54: pop-ups made alike, round (b) — one shared frame ────────
+   _popFrameHTML(aid,mode) builds Multi's `.fw-hd` and Single's frame from
+   the same code, so every check here compares the two rather than trusting
+   either one in isolation. `seedDB()` puts only one note per folder, so a
+   ‹›-inside-Single check needs a real neighbour — siblingDB() adds one. */
+function siblingDB() {
+  const db = seedDB();
+  const now = db.articles[0].updatedAt;
+  db.articles.push({ id: 'a4', title: 'Sibling note', content: '<p>sibling</p>',
+    folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general' });
+  return db;
+}
+/* The ordered, VISIBLE data-pf list plus enough geometry to judge "one row,
+   nothing clipped, no horizontal overflow" and the title's real width —
+   containerSel is `#fw-<aid>` for Multi or `#p3` for Single (the frame is a
+   `.fw-hd` inside either). */
+async function frameSnapshot(page, containerSel) {
+  return page.evaluate((containerSel) => {
+    const host = document.querySelector(containerSel);
+    const frame = host ? host.querySelector('.fw-hd') : null;
+    if (!frame) return null;
+    const visible = (el) => el.getClientRects().length > 0;
+    const controls = [...frame.querySelectorAll('[data-pf]')].filter(visible);
+    const fr = frame.getBoundingClientRect();
+    const titleEl = frame.querySelector('[data-pf="title"]');
+    return {
+      items: controls.map((el) => el.getAttribute('data-pf')),
+      frameH: Math.round(fr.height),
+      tallest: Math.round(Math.max(...controls.map((el) => el.getBoundingClientRect().height))),
+      titleW: titleEl ? Math.round(titleEl.getBoundingClientRect().width) : 0,
+      noHOverflow: frame.scrollWidth <= frame.clientWidth + 1,
+      noVOverflow: frame.scrollHeight <= frame.clientHeight + 1,
+    };
+  }, containerSel);
+}
+async function openBothFrames(vpOpts) {
+  const s = await openApp({ viewport: vpOpts, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); });
+  await s.page.waitForTimeout(300);
+  await s.page.evaluate(() => openNotePopup('a1', 'float'));
+  await s.page.waitForTimeout(400);
+  const multi = await frameSnapshot(s.page, '#fw-a1');
+  await s.page.evaluate(() => closeAllPopouts());
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => openNotePopup('a1', 'panel'));
+  await s.page.waitForTimeout(400);
+  const single = await frameSnapshot(s.page, '#p3');
+  await s.close();
+  return { multi, single };
+}
+
+for (const vp of VIEWPORTS) {
+await r.block(`19a-same-frame-${vp.name}`, async () => {
+  const { multi, single } = await openBothFrames({ width: vp.width, height: vp.height });
+  const sameOrder = !!multi && !!single && JSON.stringify(multi.items) === JSON.stringify(single.items);
+  const oneRow = (snap) => !!snap && snap.frameH <= snap.tallest * 1.5 && snap.noHOverflow && snap.noVOverflow;
+  const titleOk = vp.name !== 'phone' || (multi.titleW >= 80 && single.titleW >= 80);
+  r.check(sameOrder && oneRow(multi) && oneRow(single) && titleOk,
+    `${vp.name}: Multi and Single show the identical ordered set of visible frame controls, each a single unclipped row`,
+    JSON.stringify({ multi, single }));
+});
+}
+
+await r.block('19a-title-min-width-360', async () => {
+  /* D4 measures 390/820/1440; 360 is the narrowest common phone width and
+     the one the issue names explicitly for the title-width floor. */
+  const { multi, single } = await openBothFrames({ width: 360, height: 780 });
+  r.check(!!multi && !!single && multi.titleW >= 80 && single.titleW >= 80,
+    'at 360px wide, the frame title stays at least 80px wide in both pop-ups',
+    JSON.stringify({ multiTitleW: multi?.titleW, singleTitleW: single?.titleW }));
+});
+
+await r.block('19b-single-nav-in-place', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: siblingDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); openNotePopup('a1', 'panel'); });
+  await s.page.waitForTimeout(400);
+  await s.page.click('#ed');
+  await s.page.keyboard.press('End');
+  await s.page.keyboard.type(' TYPEDBEFORESWITCH');
+  await s.page.waitForTimeout(150);
+  const box = await s.page.locator('#p3-frame-modal [data-pf="next"]').boundingBox();
+  if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await s.page.waitForTimeout(400);
+  const out = await s.page.evaluate(() => ({
+    modalMode: document.getElementById('p3').classList.contains('modal-mode'),
+    article: ST.article, editing: ST.editing,
+    saved: (DB.articles.find((a) => a.id === 'a1').content || '').includes('TYPEDBEFORESWITCH'),
+  }));
+  await s.close();
+  r.check(!!box && out.modalMode && out.article === 'a4' && out.editing && out.saved,
+    'Single’s › moves to the neighbouring note inside Single, stays in edit mode, and saves the note being left (I1)',
+    JSON.stringify(out));
+});
+
+await r.block('19c-switch-both-ways', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); openNotePopup('a1', 'float'); });
+  await s.page.waitForTimeout(400);
+  await s.page.click('#fw-ed-a1');
+  await s.page.keyboard.press('End');
+  await s.page.keyboard.type(' MULTITYPED');
+  await s.page.waitForTimeout(150);
+  const box1 = await s.page.locator('#fw-a1 [data-pf="switch"]').boundingBox();
+  if (box1) await s.page.mouse.click(box1.x + box1.width / 2, box1.y + box1.height / 2);
+  await s.page.waitForTimeout(400);
+  const toSingle = await s.page.evaluate(() => ({
+    modalMode: document.getElementById('p3').classList.contains('modal-mode'),
+    article: ST.article, noMulti: !document.getElementById('fw-a1'),
+    saved: (DB.articles.find((a) => a.id === 'a1').content || '').includes('MULTITYPED'),
+    mode: DB.theme.notePop && DB.theme.notePop.a1,
+  }));
+  await s.page.click('#ed');
+  await s.page.keyboard.press('End');
+  await s.page.keyboard.type(' SINGLETYPED');
+  await s.page.waitForTimeout(150);
+  const box2 = await s.page.locator('#p3-frame-modal [data-pf="switch"]').boundingBox();
+  if (box2) await s.page.mouse.click(box2.x + box2.width / 2, box2.y + box2.height / 2);
+  await s.page.waitForTimeout(400);
+  const toMulti = await s.page.evaluate(() => ({
+    modalMode: document.getElementById('p3').classList.contains('modal-mode'),
+    hasWin: !!document.getElementById('fw-a1'),
+    saved: (DB.articles.find((a) => a.id === 'a1').content || '').includes('SINGLETYPED'),
+    mode: DB.theme.notePop && DB.theme.notePop.a1,
+  }));
+  await s.close();
+  r.check(!!box1 && toSingle.modalMode && toSingle.article === 'a1' && toSingle.noMulti
+    && toSingle.saved && toSingle.mode === 'panel',
+    'Multi → Single: a real click on the switch opens the same note in Single, closes the Multi window, keeps the typed text, and remembers the mode',
+    JSON.stringify(toSingle));
+  r.check(!!box2 && !toMulti.modalMode && toMulti.hasWin && toMulti.saved && toMulti.mode === 'float',
+    'Single → Multi: a real click on the switch opens the same note in Multi, closes modal-mode, keeps the typed text, and remembers the mode',
+    JSON.stringify(toMulti));
+});
+
+/* v04.54, review fix — was 1440 only. Round (b)'s review found Single's ✕
+   unreachable at 820/1000 wide (the width:100%!important conflict fixed
+   above this round), and this is the check that would have caught it: a
+   REAL click, at the tablet width the panel actually breaks at, not just a
+   DOM query. 1000×1180 is the review's own extra data point between the
+   820 tablet width and the 1440 desktop one. */
+const CLOSE_VIEWPORTS = [...VIEWPORTS, { name: 'tablet1000', width: 1000, height: 1180 }];
+await r.block('19d-close-button-closes', async () => {
+  for (const vp of CLOSE_VIEWPORTS) {
+    for (const kind of ['float', 'panel']) {
+      const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+      await s.page.evaluate((k) => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+        window.render(); openNotePopup('a1', k); }, kind);
+      await s.page.waitForTimeout(400);
+      const sel = kind === 'float' ? '#fw-a1 [data-pf="close"]' : '#p3-frame-modal [data-pf="close"]';
+      const box = await s.page.locator(sel).boundingBox();
+      if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await s.page.waitForTimeout(250);
+      const closed = await s.page.evaluate((k) => (k === 'float'
+        ? !document.getElementById('fw-a1')
+        : !document.getElementById('p3').classList.contains('modal-mode')), kind);
+      await s.close();
+      r.check(!!box && closed,
+        `${vp.name} (${vp.width}×${vp.height}), ${kind === 'float' ? 'Multi' : 'Single'}: a real click on ✕ closes it, and it is still closed 250ms later`,
+        JSON.stringify({ clicked: !!box, closed }));
+    }
+  }
+});
+
+/* v04.54, review fix — new. The pre-fix bug (`#p3.modal-mode` inheriting the
+   off-canvas `#p3{width:100%!important}` at 640–1199.98px) hung Single's
+   frame — and the right end of its tab bar and toolbar — off the right edge
+   of the viewport at 820 and 1000 wide, unreachable however correctly it
+   was painted. `boundingBox()` alone would not have caught this (it reports
+   the element's OWN geometry, not whether it is actually on screen); this
+   checks the pop-up's rect against the viewport and asks the browser, via
+   elementFromPoint, what a real tap at each control's centre would actually
+   hit. Run with `--only 19h` against the pre-fix index.html (git show
+   HEAD~2:index.html or similar) to see it fail. */
+await r.block('19h-frame-inside-viewport', async () => {
+  for (const vp of [{ name: 'tablet', width: 820, height: 1180 }, { name: 'tablet1000', width: 1000, height: 1180 }]) {
+    for (const kind of ['float', 'panel']) {
+      const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+      await s.page.evaluate((k) => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+        window.render(); openNotePopup('a1', k); }, kind);
+      await s.page.waitForTimeout(500);
+      const hostSel = kind === 'float' ? '#fw-a1' : '#p3';
+      const out = await s.page.evaluate((hostSel) => {
+        const host = document.querySelector(hostSel);
+        const hb = host.getBoundingClientRect();
+        const inside = hb.left >= -0.5 && hb.top >= -0.5
+          && hb.right <= window.innerWidth + 0.5 && hb.bottom <= window.innerHeight + 0.5;
+        const frame = host.querySelector('.fw-hd');
+        const controls = [...frame.querySelectorAll('[data-pf]')].filter((el) => el.getClientRects().length > 0);
+        const hits = controls.map((el) => {
+          const pf = el.getAttribute('data-pf');
+          /* "saved" is the ✓ Saved toast: opacity:0 until flashed and
+             pointer-events:none always (see .save-flash CSS), on purpose —
+             it is a status chip, not a control, so a tap through it hitting
+             whatever sits behind it is correct, not a containment failure. */
+          if (getComputedStyle(el).pointerEvents === 'none') return { pf, ok: true, skipped: true };
+          const b = el.getBoundingClientRect();
+          const cx = Math.round(b.left + b.width / 2), cy = Math.round(b.top + b.height / 2);
+          const hit = document.elementFromPoint(cx, cy);
+          return { pf, ok: !!hit && (hit === el || el.contains(hit)) };
+        });
+        return { rect: { left: Math.round(hb.left), top: Math.round(hb.top),
+          right: Math.round(hb.right), bottom: Math.round(hb.bottom) }, inside, hits };
+      }, hostSel);
+      await s.close();
+      const allHit = out.hits.length > 0 && out.hits.every((h) => h.ok);
+      r.check(out.inside && allHit,
+        `${vp.name} (${vp.width}×${vp.height}), ${kind === 'float' ? 'Multi' : 'Single'}: the pop-up's rect lies wholly inside the viewport, and elementFromPoint at the centre of every data-pf button returns that button`,
+        JSON.stringify(out));
+    }
+  }
+});
+
+/* v04.54, review fix — new. _popFrameHTML() bakes the phone tier's "✕
+   Close" word, and the grip/switch-word visibility, into the frame's HTML
+   at BUILD time — nothing re-renders it on a plain resize. Single re-syncs
+   via renderP3H() on every note change, but _renderPreserveEdit() skips
+   renderP3H() whenever the pop-up is open and editing (the only state
+   v04.54 leaves it in), and Multi's open windows had no resync path at
+   all — so a rotation with no note change left both frames stale until
+   this round's _rzPopTier tracking in _onViewportResize(). */
+await r.block('19i-frame-resyncs-on-tier-cross', async () => {
+  async function frameState(page, sel) {
+    return page.evaluate((sel) => {
+      const hd = document.querySelector(sel);
+      if (!hd) return null;
+      const close = hd.querySelector('[data-pf="close"]');
+      const grip = hd.querySelector('[data-pf="grip"]');
+      const sw = hd.querySelector('[data-pf="switch"]');
+      return {
+        closeText: close ? close.textContent.trim() : null,
+        gripVisible: !!grip && grip.getClientRects().length > 0,
+        switchHasWord: !!sw && !!sw.querySelector('.pf-switch-lbl'),
+      };
+    }, sel);
+  }
+  const cases = [
+    { label: 'Single', kind: 'panel', frameSel: '#p3-frame-modal' },
+    { label: 'Multi',  kind: 'float', frameSel: '#fw-a1 .fw-hd' },
+  ];
+  for (const c of cases) {
+    const s = await openApp({ viewport: { width: 820, height: 1180 }, db: seedDB() });
+    await s.page.evaluate((k) => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+      window.render(); openNotePopup('a1', k); }, c.kind);
+    await s.page.waitForTimeout(400);
+    const wide = await frameState(s.page, c.frameSel);
+    await s.page.setViewportSize({ width: 390, height: 844 });
+    await s.page.waitForTimeout(300);
+    const narrow = await frameState(s.page, c.frameSel);
+    await s.page.setViewportSize({ width: 820, height: 1180 });
+    await s.page.waitForTimeout(300);
+    const wideAgain = await frameState(s.page, c.frameSel);
+    await s.close();
+    r.check(!!wide && !!narrow && !!wideAgain
+      && wide.closeText === '✕' && wide.switchHasWord && wide.gripVisible
+      && narrow.closeText === '✕ Close' && !narrow.switchHasWord && !narrow.gripVisible
+      && wideAgain.closeText === '✕' && wideAgain.switchHasWord && wideAgain.gripVisible,
+      `${c.label}: the frame re-syncs across a _popTier() crossing (820→390→820) — ✕ gains/drops "Close" and the grip/switch word follow, in both directions`,
+      JSON.stringify({ wide, narrow, wideAgain }));
+  }
+});
+
+await r.block('19e-one-saved-one-close', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); startEdit(); });
+  await s.page.waitForTimeout(300);
+  const normalPopBtn = await s.page.evaluate(() =>
+    [...document.querySelectorAll('.modal-pop-btn')].some((e) => e.getClientRects().length > 0));
+  await s.page.evaluate(() => openNotePopup('a1', 'panel'));
+  await s.page.waitForTimeout(400);
+  const inModal = await s.page.evaluate(() => {
+    const vis = (el) => el.getClientRects().length > 0;
+    const saved = [...document.querySelectorAll('#p3 .save-flash')].filter(vis);
+    const closes = [...document.querySelectorAll('#p3 button, #p3 span')]
+      .filter((e) => vis(e) && e.textContent.trim().startsWith('✕'));
+    const popBtn = [...document.querySelectorAll('#p3 .modal-pop-btn')].filter(vis);
+    return { saved: saved.length, closes: closes.length, popBtn: popBtn.length };
+  });
+  await s.close();
+  r.check(normalPopBtn, 'normal Pane 3 editing at 1440 still shows .modal-pop-btn', normalPopBtn);
+  r.check(inModal.saved === 1 && inModal.closes === 1 && inModal.popBtn === 0,
+    'inside Single, exactly one visible ✓ Saved and one visible ✕, and .modal-pop-btn is not shown',
+    JSON.stringify(inModal));
+});
+
+await r.block('19f-sb-toggle-never-wins', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); openNotePopup('a1', 'float'); });
+  await s.page.waitForTimeout(400);
+  /* "placed over #sb-toggle's centre" — positioned explicitly rather than
+     trusting default geometry to land there, since that depends on the
+     sidebar's exact current width. */
+  await s.page.evaluate(() => {
+    const b = document.getElementById('sb-toggle').getBoundingClientRect();
+    const win = document.getElementById('fw-a1');
+    win.style.left = Math.max(0, Math.round(b.left - 60)) + 'px';
+    win.style.top = Math.max(0, Math.round(b.top - 60)) + 'px';
+  });
+  const overMulti = await s.page.evaluate(() => {
+    const b = document.getElementById('sb-toggle').getBoundingClientRect();
+    const el = document.elementFromPoint(Math.round(b.left + b.width / 2), Math.round(b.top + b.height / 2));
+    return !!(el && el.closest('.float-win'));
+  });
+  await s.page.evaluate(() => closeAllPopouts());
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => openNotePopup('a1', 'panel'));
+  await s.page.waitForTimeout(400);
+  await s.page.evaluate(() => {
+    const b = document.getElementById('sb-toggle').getBoundingClientRect();
+    const p3 = document.getElementById('p3');
+    p3.style.left = Math.max(0, Math.round(b.left - 60)) + 'px';
+    p3.style.top = Math.max(0, Math.round(b.top - 60)) + 'px';
+  });
+  const overSingle = await s.page.evaluate(() => {
+    const b = document.getElementById('sb-toggle').getBoundingClientRect();
+    const el = document.elementFromPoint(Math.round(b.left + b.width / 2), Math.round(b.top + b.height / 2));
+    return !!(el && el.closest('#p3.modal-mode'));
+  });
+  await s.close();
+  r.check(overMulti && overSingle,
+    'at 1440, #sb-toggle’s centre resolves inside the pop-up placed over it — the Multi window, then the Single panel',
+    JSON.stringify({ overMulti, overSingle }));
+});
+
+await r.block('19g-single-drags-by-frame', async () => {
+  {
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+      window.render(); openNotePopup('a1', 'panel'); });
+    await s.page.waitForTimeout(400);
+    const before = await s.page.evaluate(() => {
+      const b = document.getElementById('p3').getBoundingClientRect(); return { left: b.left, top: b.top };
+    });
+    const box = await s.page.locator('#p3-frame-modal [data-pf="title"]').boundingBox();
+    if (box) {
+      const sx = box.x + box.width / 2, sy = box.y + box.height / 2;
+      await s.page.mouse.move(sx, sy);
+      await s.page.mouse.down();
+      await s.page.mouse.move(sx + 60, sy + 40, { steps: 8 });
+      await s.page.mouse.up();
+    }
+    await s.page.waitForTimeout(200);
+    const after = await s.page.evaluate(() => {
+      const b = document.getElementById('p3').getBoundingClientRect(); return { left: b.left, top: b.top };
+    });
+    await s.close();
+    const dx = after.left - before.left, dy = after.top - before.top;
+    r.check(!!box && Math.abs(dx - 60) <= 4 && Math.abs(dy - 40) <= 4,
+      'at 1440, a mouse drag on the frame’s title moves the Single panel by the drag distance',
+      JSON.stringify({ before, after, dx, dy }));
+  }
+  {
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+      window.render(); showPane('p3'); openNotePopup('a1', 'panel'); });
+    await s.page.waitForTimeout(500);
+    const before = await s.page.evaluate(() => {
+      const b = document.getElementById('p3').getBoundingClientRect(); return { left: b.left, top: b.top };
+    });
+    const box = await s.page.locator('#p3-frame-modal [data-pf="title"]').boundingBox();
+    if (box) {
+      const sx = box.x + box.width / 2, sy = box.y + box.height / 2;
+      await s.page.mouse.move(sx, sy);
+      await s.page.mouse.down();
+      await s.page.mouse.move(sx + 60, sy + 40, { steps: 8 });
+      await s.page.mouse.up();
+    }
+    await s.page.waitForTimeout(200);
+    const after = await s.page.evaluate(() => {
+      const b = document.getElementById('p3').getBoundingClientRect(); return { left: b.left, top: b.top };
+    });
+    await s.close();
+    r.check(!!box && Math.abs(after.left - before.left) <= 1 && Math.abs(after.top - before.top) <= 1,
+      'at 390, the same drag on the frame’s title does not move the sheet',
+      JSON.stringify({ before, after }));
+  }
 });
 
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
