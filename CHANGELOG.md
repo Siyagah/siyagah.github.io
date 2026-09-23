@@ -5587,3 +5587,120 @@ is untouched (I7).
 - `ship-check`: **12/12**; the new check fails on v04.57's `index.html`.
 - Full `app-check`: **493/493 app checks, twice in a row** (unchanged from v04.57 — no app behaviour changed).
 
+---
+
+## v04.59 — pop-ups made alike, round (d1): the Sidepane and Contents panels, same side and same place (23 Sep 2026)
+
+Issue #85, round (d1) of "make the two pop-ups (Multi and Single) look and
+work the same". Merged so far: (a) v04.53 content, (b) v04.54 frame, (c1)
+v04.55 strip, (c2) v04.57 formatting row. This round is the two side
+panels — 📌 Sidepane (`_pinPanelInject()`) and Contents (`_tocInject()`).
+The tab bar inside Single was explicitly out of scope (round d2's own
+question).
+
+**Measured on `main` at v04.58, seed note `a1`.** Single's Sidepane sat on
+the **left** (opposite `DB.theme.tocSide`, default right) whether or not
+Contents was showing, and started **below the formatting row**, beside the
+note body only. Multi's sat on the **right** whenever Contents was hidden
+but flipped to the opposite side of Contents the instant a note gained its
+third heading — because float mode's rule was "opposite Contents while
+Contents is actually drawn, else plain right", not the modal's stable
+"opposite the *configured* side, always". Multi's panel also started
+**directly under the frame**, overlapping the title, metadata strip and
+formatting row, because its top was measured from `.fw-hd` alone. And Multi
+had **no way at all** to pin a note into its Sidepane: the empty-state text
+said "drag a tab here (or tap 📌 on a tab)", and Multi has never had a tab
+bar.
+
+**One side rule, both pop-ups — `_popPanelSides()`.** Contents sits on
+`DB.theme.tocSide`; the Sidepane sits on the opposite side, whether or not
+Contents is currently showing — the stable rule Single already had. Float
+mode's old "opposite Contents only while it's drawn, else right" special
+case is gone, so a Multi window's Sidepane can no longer swing sides
+mid-session just because a note crossed the 3-heading threshold that shows
+Contents. `pinPanelPos==='below'` (Sidepane stacked under Contents, same
+side) now applies in float mode too — it was modal-only before.
+
+**One vertical placement, both pop-ups — `_popPanelTop(host,inModal)`.**
+Modal already measured its own header stack (frame + `#p3h` + tab bar);
+float mode now measures the analogous stack inside a window — `.fw-hd` +
+`.fw-ti` + `.pop-meta-strip` + `.fw-tb.pop-fmt-row` — instead of `.fw-hd`
+alone. Both `_tocInject()` and `_pinPanelInject()` call the one function,
+so the two panels can never disagree about where "below the formatting
+row" is again.
+
+**The title/strip/formatting row keep the window's full width in Multi.**
+`_fwSyncBodyPadding()` used to pad `.fw-body` — every child, including the
+rows drawn above the editor — so a side panel squeezed the whole column
+down to its own width. `_fwRenderBody()` now wraps the find bar and editor
+in their own `.fw-editarea`, and only that gets padded, mirroring how
+Single's padding has always landed on `#p3c` and never on `#p3h`.
+
+**Pinning without tabs.** The Sidepane gets a visible `📌 Pin a note…`
+button in both pop-ups, opening a searchable note picker. Rather than a
+second search, the existing Tab-bar picker (`#tab-picker`/`#tp-list`) is
+generalised: `_openNotePicker(btn,mode,title)` and `renderTabPickerList()`
+now branch on a `mode` ('tab' or 'pin') for which notes are excluded and
+what a click does (`addToTabPicker`/`addToPinPicker`, the latter calling
+the existing `pinTabToPanel()`) — one markup, one search, two doors in.
+The empty-state text is now true in both: Multi's never mentions tabs
+(it has none); Single's still offers drag-a-tab and tap-📌-on-a-tab
+alongside the new button.
+
+**Phone reachability (D5).** Neither pop-up draws a side panel on a phone
+(unchanged, v04.34), so `📌 Pin a note…` also rides the `⋯` Section tools
+menu — already open at every tier in both pop-ups — as a new "Sidepane"
+group. Guarded to popup contexts only (`aid` truthy for Multi, or
+`ST.noteModal` for Single) so normal (non-modal) Pane 3's own `⋯` menu,
+which has no Sidepane to reach, is untouched — `20g`'s control-list guard
+does not scan `#edcol-pop` at all, so this needed no change there, but the
+guard on the row itself keeps normal Pane 3's *behaviour* unchanged too.
+
+**Normal Pane 3 unaffected.** It never hosts either side panel
+(`_pinHostEl()`/`_tocHostEl()` return non-null only in modal mode or with a
+focused float window), so its own Contents/Sidepane behaviour, if any, did
+not change.
+
+**Also this round, found while testing 23c.** The Sidepane's own ⬇/◫
+toggle (`_pinPanelToggleSide()`) compared the stored `DB.theme.pinPanelPos`
+against the literal string `'side'` — but the value starts `undefined`, so
+the very first click ever made on a fresh notebook wrote `'side'` over
+`'side'`, a silent no-op the button's own tooltip ("Move below Contents")
+promised would move the panel. Every click after the first alternated
+correctly; pre-existing on `main`, not introduced by this round, but it sat
+directly under the toggle this round's issue asked to verify works in
+both pop-ups, so it is fixed here rather than left for the check to paper
+over: the comparison now goes through `_popPanelSides()`'s own default the
+same way everything else that reads `pos` already does.
+
+**New app-check section 23** (`23a`–`23f`): the Sidepane's side is
+identical in Single and Multi and stable across a 2-heading vs 3-heading
+note, and opposite Contents with no overlap when Contents shows; both
+panels start at/below the formatting row's bottom edge, and in Multi the
+row's width still equals the strip's; a real click on Contents' side
+toggle and the Sidepane's own ⬇/◫ toggle move both panels in both
+pop-ups; a real click on `📌 Pin a note…`, search, pick `a2` reaches
+`DB.theme.pinTabIds` and shows its card, in both pop-ups; Multi's empty
+Sidepane text never mentions tabs; at 390px neither pop-up draws a side
+panel and `📌 Pin a note…` is still reachable via `⋯`. Guard: `20g`
+passes unchanged.
+
+**Not done, and why.** A pre-existing, unrelated finding: `index.html`'s
+static `#tab-bar` markup still carries real, baked-in note titles and ids
+(`data-tid`, `pinTabToPanel(...)`, `tabSelect(...)`) — the same class of
+bug v04.58 removed, in a place its new ship-check guard does not look
+(that guard only matches `addToTabPicker('<id>')` rows, not the tab bar's
+own persisted DOM). This round's issue explicitly said not to touch the
+tab bar inside Single, so it was flagged to the Architect/owner instead of
+fixed here.
+
+**Measured**
+- `ship-check`: **12/12**.
+- `app-check --only 23`: **11/11**.
+- `app-check --only 20`: **31/31**.
+- `app-check --only 6p`: **104/104**.
+- Extra self-check, since `.fw-editarea` touches shared structure the find
+  bar and the phone's folded `≡`/`+` menus depend on: `app-check --only
+  22`: **18/18**.
+- Full `app-check`: **(measured in review)**.
+

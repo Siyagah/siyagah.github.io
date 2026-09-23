@@ -6678,6 +6678,188 @@ await r.block('22e-single-stays-editing-on-version-switch', async () => {
     JSON.stringify(after));
 });
 
+/* ══ v04.59 — round (d1): THE SIDE PANELS, SAME SIDE, SAME PLACE ══════════
+   Issue #85. Before this round: Single's Sidepane sat opposite the
+   CONFIGURED Contents side always; Multi's sat opposite Contents only
+   while Contents was actually drawn, else plain right — so a Multi
+   window's Sidepane swung sides the instant a note crossed the 3-heading
+   threshold that shows Contents. And Multi's panel started directly under
+   the frame (measuring only `.fw-hd`), overlapping the title/strip/
+   formatting row that Single's own `#p3h` stack was already excluded
+   from. `_popPanelSides()`/`_popPanelTop()` are the one-function fixes;
+   these checks measure the RESULT, not the functions by name. */
+async function popPanelGeom(page, containerSel) {
+  return page.evaluate((containerSel) => {
+    const host = document.querySelector(containerSel);
+    const hostRect = host.getBoundingClientRect();
+    const mid = hostRect.left + hostRect.width / 2;
+    const pin = document.getElementById('pin-panel');
+    const toc = document.getElementById('toc-panel');
+    const row = host.querySelector('.fw-tb.pop-fmt-row,.p3h-unified-tb.pop-fmt-row');
+    const strip = host.querySelector('.pop-meta-strip');
+    const box = (el) => (el && el.getClientRects().length)
+      ? (({ left, top, right, bottom, width }) => ({ left: Math.round(left), top: Math.round(top),
+          right: Math.round(right), bottom: Math.round(bottom), width: Math.round(width) }))(el.getBoundingClientRect())
+      : null;
+    const sideOf = (el) => { const b = box(el); return b ? ((b.left + b.right) / 2 < mid ? 'left' : 'right') : null; };
+    return { pinSide: sideOf(pin), tocSide: sideOf(toc), pinBox: box(pin), tocBox: box(toc),
+      rowBox: box(row), stripBox: box(strip), hasPin: !!pin, hasToc: !!toc };
+  }, containerSel);
+}
+async function openPopupMeasured(vp, content) {
+  const db = seedDB();
+  if (content) db.articles[0].content = content;
+  const s = await openApp({ viewport: vp, db });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); });
+  await s.page.waitForTimeout(300);
+  await s.page.evaluate(() => openNotePopup('a1', 'float'));
+  await s.page.waitForTimeout(400);
+  const multi = await popPanelGeom(s.page, '#fw-a1');
+  await s.page.evaluate(() => closeAllPopouts());
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => openNotePopup('a1', 'panel'));
+  await s.page.waitForTimeout(400);
+  const single = await popPanelGeom(s.page, '#p3');
+  await s.close();
+  return { multi, single };
+}
+const HEADS_3 = '<h1>One</h1><p>a</p><h2>Two</h2><p>b</p><h3>Three</h3><p>c</p>';
+
+for (const vp of [VIEWPORTS[1], VIEWPORTS[2]]) {
+await r.block(`23a-same-side-${vp.name}`, async () => {
+  const two = await openPopupMeasured(vp, null);       /* seedDB's a1: h1+h2, Contents hidden */
+  const three = await openPopupMeasured(vp, HEADS_3);  /* h1+h2+h3, Contents showing */
+  const sameSideBoth = two.multi.pinSide === two.single.pinSide && three.multi.pinSide === three.single.pinSide;
+  const stableAcrossHeadings = two.multi.pinSide === three.multi.pinSide && two.single.pinSide === three.single.pinSide;
+  const noOverlap = (g) => !g.pinBox || !g.tocBox || g.pinBox.right <= g.tocBox.left || g.tocBox.right <= g.pinBox.left;
+  const opposite = (g) => g.hasToc && g.hasPin && g.pinSide !== g.tocSide && noOverlap(g);
+  const oppositeOk = opposite(three.multi) && opposite(three.single);
+  r.check(sameSideBoth && stableAcrossHeadings && oppositeOk,
+    `${vp.name}: the Sidepane’s side is identical in Single and Multi, and does not change between a 2- and 3-heading note`,
+    JSON.stringify({ twoHead: { multi: two.multi.pinSide, single: two.single.pinSide },
+      threeHead: { multi: three.multi.pinSide, single: three.single.pinSide },
+      threeHeadBoxes: { multi: { pin: three.multi.pinBox, toc: three.multi.tocBox },
+        single: { pin: three.single.pinBox, toc: three.single.tocBox } } }));
+});
+}
+
+for (const vp of [VIEWPORTS[1], VIEWPORTS[2]]) {
+await r.block(`23b-same-top-${vp.name}`, async () => {
+  const { multi, single } = await openPopupMeasured(vp, HEADS_3);
+  const belowRow = (g) => (!g.pinBox || (g.rowBox && g.pinBox.top >= g.rowBox.bottom - 2))
+    && (!g.tocBox || (g.rowBox && g.tocBox.top >= g.rowBox.bottom - 2));
+  const rowMatchesStrip = !multi.rowBox || !multi.stripBox || Math.abs(multi.rowBox.width - multi.stripBox.width) <= 2;
+  r.check(belowRow(multi) && belowRow(single) && rowMatchesStrip,
+    `${vp.name}: both side panels start at/below the formatting row’s bottom edge in both pop-ups, and Multi’s row keeps the strip’s width`,
+    JSON.stringify({ multi, single }));
+});
+}
+
+for (const mode of ['float', 'panel']) {
+await r.block(`23c-toggles-work-${mode}`, async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: (() => { const db = seedDB(); db.articles[0].content = HEADS_3; return db; })() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); });
+  await s.page.waitForTimeout(300);
+  await s.page.evaluate((k) => openNotePopup('a1', k), mode);
+  await s.page.waitForTimeout(400);
+  const containerSel = mode === 'float' ? '#fw-a1' : '#p3';
+  const before = await popPanelGeom(s.page, containerSel);
+  const tocBtn = await s.page.locator(`${containerSel} .toc-side-btn`).boundingBox();
+  if (tocBtn) await s.page.mouse.click(tocBtn.x + tocBtn.width / 2, tocBtn.y + tocBtn.height / 2);
+  await s.page.waitForTimeout(250);
+  const afterToc = await popPanelGeom(s.page, containerSel);
+  const pinBtn = await s.page.locator(`${containerSel} .pin-side-btn`).boundingBox();
+  if (pinBtn) await s.page.mouse.click(pinBtn.x + pinBtn.width / 2, pinBtn.y + pinBtn.height / 2);
+  await s.page.waitForTimeout(250);
+  const pinBelow = await s.page.evaluate(() => (DB.theme && DB.theme.pinPanelPos) === 'below');
+  await s.close();
+  const tocMoved = before.tocSide !== afterToc.tocSide;
+  const pinMoved = before.pinSide !== afterToc.pinSide;
+  r.check(!!tocBtn && !!pinBtn && tocMoved && pinMoved && pinBelow,
+    `${mode === 'float' ? 'Multi' : 'Single'}: a real click on Contents’ side toggle moves both panels, and the Sidepane’s own ⬇/◫ toggle moves it too`,
+    JSON.stringify({ before: { pin: before.pinSide, toc: before.tocSide },
+      afterToc: { pin: afterToc.pinSide, toc: afterToc.tocSide }, pinBelow }));
+});
+}
+
+for (const mode of ['float', 'panel']) {
+await r.block(`23d-pin-without-tabs-${mode}`, async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); });
+  await s.page.waitForTimeout(300);
+  await s.page.evaluate((k) => openNotePopup('a1', k), mode);
+  await s.page.waitForTimeout(400);
+  const containerSel = mode === 'float' ? '#fw-a1' : '#p3';
+  const addBtn = await s.page.locator(`${containerSel} .pin-add-btn`).boundingBox();
+  if (addBtn) await s.page.mouse.click(addBtn.x + addBtn.width / 2, addBtn.y + addBtn.height / 2);
+  await s.page.waitForTimeout(250);
+  const opened = await s.page.evaluate(() => document.getElementById('tab-picker')?.classList.contains('open') === true
+    && document.getElementById('tab-picker')?.dataset.mode === 'pin');
+  await s.page.fill('#tp-inp', 'Seeded note two').catch(() => {});
+  await s.page.waitForTimeout(200);
+  const row = await s.page.locator('#tp-list .tp-it').first().boundingBox().catch(() => null);
+  if (row) await s.page.mouse.click(row.x + row.width / 2, row.y + row.height / 2);
+  await s.page.waitForTimeout(300);
+  const res = await s.page.evaluate(() => ({ pinTabIds: (DB.theme && DB.theme.pinTabIds) || [],
+    cardShown: (document.getElementById('pin-panel')?.textContent || '').includes('Seeded note two') }));
+  await s.close();
+  r.check(!!addBtn && opened && !!row && res.pinTabIds.includes('a2') && res.cardShown,
+    `${mode === 'float' ? 'Multi' : 'Single'}: a real click on 📌 Pin a note…, then search and pick a2, adds it to DB.theme.pinTabIds and shows its card`,
+    JSON.stringify({ addBtnFound: !!addBtn, opened, rowFound: !!row, res }));
+});
+}
+
+await r.block('23e-pin-empty-text-true', async () => {
+  const sM = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await sM.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); openNotePopup('a1', 'float'); });
+  await sM.page.waitForTimeout(400);
+  const multiTxt = await sM.page.evaluate(() => document.querySelector('#pin-panel .pin-empty')?.textContent || '');
+  await sM.close();
+  const sS = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await sS.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); openNotePopup('a1', 'panel'); });
+  await sS.page.waitForTimeout(400);
+  const singleTxt = await sS.page.evaluate(() => document.querySelector('#pin-panel .pin-empty')?.textContent || '');
+  await sS.close();
+  r.check(multiTxt.length > 0 && !/tab/i.test(multiTxt) && /pin a note/i.test(multiTxt),
+    'Multi’s empty Sidepane text names 📌 Pin a note… and never mentions tabs (Single may — it has a tab bar)',
+    JSON.stringify({ multiTxt, singleTxt }));
+});
+
+for (const mode of ['float', 'panel']) {
+await r.block(`23f-phone-${mode}`, async () => {
+  const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); });
+  await s.page.waitForTimeout(300);
+  await s.page.evaluate((k) => openNotePopup('a1', k), mode);
+  await s.page.waitForTimeout(500);
+  const noPanel = await s.page.evaluate(() => !document.getElementById('pin-panel') && !document.getElementById('toc-panel'));
+  const dotsSel = mode === 'float' ? '#fw-col-wrap-a1 .et' : '#ed-col-btn';
+  const dotsBtn = await s.page.locator(dotsSel).boundingBox();
+  let pinReachable = false, pinRowFound = false;
+  if (dotsBtn) {
+    await s.page.mouse.click(dotsBtn.x + dotsBtn.width / 2, dotsBtn.y + dotsBtn.height / 2);
+    await s.page.waitForTimeout(250);
+    const pinRow = await s.page.locator('#edcol-pop button:has-text("Pin a note")').boundingBox().catch(() => null);
+    pinRowFound = !!pinRow;
+    if (pinRow) {
+      await s.page.mouse.click(pinRow.x + pinRow.width / 2, pinRow.y + pinRow.height / 2);
+      await s.page.waitForTimeout(250);
+      pinReachable = await s.page.evaluate(() => document.getElementById('tab-picker')?.classList.contains('open') === true);
+    }
+  }
+  await s.close();
+  r.check(noPanel && !!dotsBtn && pinRowFound && pinReachable,
+    `phone: the ${mode === 'float' ? 'Multi' : 'Single'} pop-up draws no side panel, and 📌 Pin a note… is reachable via a real click on ⋯`,
+    JSON.stringify({ noPanel, dotsFound: !!dotsBtn, pinRowFound, pinReachable }));
+});
+}
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores

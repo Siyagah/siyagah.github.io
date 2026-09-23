@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.58">
+<meta name="app-version" content="04.59">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2030,6 +2030,10 @@ sup.ann-sup:hover{text-decoration:underline}
 .pf-ico.pop-multi,.pf-switch.pop-multi{color:var(--gold-ink)}
 .pf-ico.pop-single,.pf-switch.pop-single{color:var(--green2)}
 .fw-body{flex:1;display:flex;flex-direction:column;min-height:0}
+/* v04.59 — round (d1): the piece _fwSyncBodyPadding() pads for the shared
+   side panels — find bar + editor only, so the title/strip/formatting row
+   above keep the window's full width (see _fwRenderBody). */
+.fw-editarea{flex:1;display:flex;flex-direction:column;min-height:0}
 .fw-ti{border:none;border-bottom:1px solid var(--border2);padding:8px 10px;
   font-size:14px;font-weight:600;background:transparent;color:var(--t1);
   outline:none;flex-shrink:0}
@@ -2979,7 +2983,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.58</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.59</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6881,21 +6885,27 @@ function getSecSmartGroups(secId,sfId){
 
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   TAB PICKER — floating search panel to add existing notes to the Tab bar.
-   Opens when the user clicks "＋ Add" in the tab bar.
+   NOTE PICKER — one floating search panel, two jobs: add a note to the Tab
+   bar (opens from "＋ Add" in the tab bar), or pin a note into a pop-up's
+   Sidepane (opens from 📌 Pin a note…, v04.59 round (d1) — Multi has no tab
+   bar to drag from, so this is its only way in). Same markup/search either
+   way (#tab-picker/#tp-list/.tp-it) — `mode` on the panel's own dataset
+   picks which notes are excluded and what a click does, so there is only
+   ever one search to maintain.
    ════════════════════════════════════════════════════════════════════════════ */
 
-function openTabPicker(btn){
+function _openNotePicker(btn,mode,title){
   const picker=document.getElementById('tab-picker');
-  /* Toggle: click again while open → close */
-  if(picker&&picker.classList.contains('open')){closeTabPicker();return;}
+  /* Toggle: click again while open (same mode) → close */
+  if(picker&&picker.classList.contains('open')&&picker.dataset.mode===mode){closeTabPicker();return;}
 
   /* Build picker panel (once) */
   let p=picker||document.createElement('div');
   p.id='tab-picker';
   if(!picker)document.body.appendChild(p);
+  p.dataset.mode=mode;
   p.innerHTML=
-    `<div class="tp-hd">Add note to Tab bar`
+    `<div class="tp-hd">${esc(title)}`
     +`<button class="tp-cls" onclick="closeTabPicker()" title="Close">✕</button></div>`
     +`<input class="tp-inp" id="tp-inp" type="text" placeholder="Type to search notes…"`
     +` oninput="renderTabPickerList(this.value)"`
@@ -6932,6 +6942,10 @@ function openTabPicker(btn){
     document.addEventListener('touchstart',_outside,{capture:true});
   },60);
 }
+function openTabPicker(btn){_openNotePicker(btn,'tab','Add note to Tab bar');}
+/* v04.59 — round (d1): the Sidepane's own picker, reusing this same search
+   rather than a second one — see the note above. */
+function openPinPicker(btn){_openNotePicker(btn,'pin','Pin a note to the Sidepane');}
 
 function closeTabPicker(){
   const p=document.getElementById('tab-picker');
@@ -6941,13 +6955,17 @@ function closeTabPicker(){
 function renderTabPickerList(q){
   const list=document.getElementById('tp-list');
   if(!list)return;
-  const _host=_tabHost();
-  const inTabs=new Set(_tabGroup(_host).concat(_host?[_host]:[]));
+  const mode=document.getElementById('tab-picker')?.dataset.mode||'tab';
+  const isPin=mode==='pin';
+  const excl=isPin
+    ?new Set((DB.theme&&DB.theme.pinTabIds)||[])
+    :(()=>{const _host=_tabHost();return new Set(_tabGroup(_host).concat(_host?[_host]:[]));})();
   const query=(q||'').toLowerCase().trim();
 
-  /* Notes NOT already in tabs, filtered by query, sorted by latest edited */
+  /* Notes not already added (to tabs, or to the Sidepane), filtered by
+     query, sorted by latest edited */
   const notes=[...DB.articles]
-    .filter(a=>!inTabs.has(a.id))
+    .filter(a=>!excl.has(a.id))
     .filter(a=>!query||(a.title||'').toLowerCase().includes(query)||
                (a.content||'').toLowerCase().includes(query))
     .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
@@ -6955,17 +6973,18 @@ function renderTabPickerList(q){
   if(!notes.length){
     const msg=query
       ?`No notes match "<strong>${esc(query)}</strong>"`
-      :(DB.articles.length===inTabs.size?'All notes are already in tabs':'No notes yet');
+      :(DB.articles.length===excl.size?(isPin?'All notes are already pinned':'All notes are already in tabs'):'No notes yet');
     list.innerHTML=`<div class="tp-empty">${msg}</div>`;
     return;
   }
 
+  const pickFn=isPin?'addToPinPicker':'addToTabPicker';
   list.innerHTML=notes.slice(0,60).map(a=>{
     /* Show first matching folder as context */
     const fid=a.folderIds?.[0];
     const folder=fid&&DB.folders.find(f=>f.id===fid);
     const sub=folder?esc(folder.name):'';
-    return `<div class="tp-it" onclick="addToTabPicker('${a.id}')">`
+    return `<div class="tp-it" onclick="${pickFn}('${a.id}')">`
       +`<span>${esc(a.title||'Untitled')}</span>`
       +(sub?`<span class="tp-it-sub">📁 ${sub}</span>`:'')
       +'</div>';
@@ -6989,6 +7008,13 @@ function addToTabPicker(aid){
     setTimeout(()=>_tabScrollIntoView(aid,true),0);
     toast('📑 Already in this note’s Tab bar');
   }
+}
+/* v04.59 — round (d1): pins straight into the Sidepane — the same DB.theme.
+   pinTabIds list dragging a tab or tapping 📌 on one already writes to
+   (pinTabToPanel), just reached without a tab bar. */
+function addToPinPicker(aid){
+  closeTabPicker();
+  pinTabToPanel(aid);
 }
 
 
@@ -10104,12 +10130,26 @@ function _ebSectionToolsHTML(aid){
   /* No dangling comma when there is no aid: `_edColAll(true,)` happens to be
      legal JS, which is exactly why it would have gone unnoticed. */
   const t=aid?",'"+aid+"'":'';
-  return '<div class="fl-pop-hd">All sections in this note</div>'
+  let out='<div class="fl-pop-hd">All sections in this note</div>'
     +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(true'+t+')">&#9654; Collapse all</button>'
     +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="_edColAll(false'+t+')">&#9660; Expand all</button>'
     +'<button class="ed-col-btn ed-col-prev'+((DB.theme&&DB.theme.collapsePreview==='preview')?' on':'')
     +'" onmousedown="event.preventDefault()" onclick="_edColPreview()"'
     +' title="Show a preview line under collapsed sections">&#9636; Preview</button>';
+  /* v04.59 — round (d1): on a phone neither pop-up draws the Sidepane at
+     all (v04.34), so 📌 Pin a note… — the Sidepane's only way in without a
+     tab to drag (Multi has never had a tab bar) — needs a reachable spot
+     everywhere the panel itself is not drawn. ⋯ is already open at every
+     tier in both pop-ups (section 20f), so it carries this row too rather
+     than a phone-only surface of its own. `aid` truthy is a Multi window;
+     `!aid && ST.noteModal` is Single — normal (non-modal) Pane 3 has no
+     Sidepane of its own and 20g guards its control list unchanged, so this
+     row is left out of that case. */
+  if(aid||ST.noteModal){
+    out+='<div class="fl-pop-hd">Sidepane</div>'
+      +'<button class="ed-col-btn" onmousedown="event.preventDefault()" onclick="closeFloatPop(\'edcol-pop\');openPinPicker(this)">📌 Pin a note…</button>';
+  }
+  return out;
 }
 /* v04.57 — round (c2): the phone-folded Undo/Redo/History/Find block, one
    builder for both pop-ups' `≡` menu. aid falsy is Pane 3/Single (ec()/
@@ -10991,12 +11031,18 @@ function _fwRenderBody(aid){
      same controls".
      v04.57 — round (c2): the row itself is _popFormatRowHTML(aid,a) now,
      the one builder that also renders Single's modal formatting row — see
-     that function for the shared order/fold this round settled on. */
+     that function for the shared order/fold this round settled on.
+     v04.59 — round (d1): the find bar and editor are wrapped in their own
+     `.fw-editarea` now — the piece _fwSyncBodyPadding() pads for the shared
+     side panels, so the title/strip/formatting-row above keep the window's
+     full width instead of being squeezed by a panel's own width, exactly as
+     Single's #p3h always has (padding there lands on #p3c, not #p3h). */
   return _popFrameHTML(aid,'float')
     +'<div class="fw-body">'
     +'<input class="fw-ti" id="fw-ti-'+aid+'" data-ps="title" value="'+esc(a.title||'')+'" placeholder="Title…">'
     +_popMetaStripHTML(a,aid)
     +_popFormatRowHTML(aid,a)
+    +'<div class="fw-editarea">'
     +'<div class="fw-find" id="fw-find-'+aid+'" style="display:none">'
     +'<input class="fw-find-q" id="fw-find-q-'+aid+'" placeholder="Find in note…" '
     +'oninput="_ntFindRun(\''+aid+'\',this.value)" onkeydown="_ntFindKey(event,\''+aid+'\')">'
@@ -11006,6 +11052,7 @@ function _fwRenderBody(aid){
     +'<button class="et" onclick="_ntFindClose(\''+aid+'\')" title="Close find (Esc)">✕</button>'
     +'</div>'
     +'<div class="fw-ed" id="fw-ed-'+aid+'" contenteditable="true">'+(a.content||'')+'</div>'
+    +'</div>'
     +'</div>';
 }
 /* v03.73 fix — the v03.57 "pop from anywhere" rewrite gave float windows their
@@ -12139,18 +12186,17 @@ function _tocInject(){
       _tocUnbindScroll();
     }
     host.appendChild(panel);
+    /* v04.59 — round (d1): _popPanelTop() replaces two hand-measured copies
+       of the same header stack — this one, and the pin-panel's own — so the
+       two side panels can never disagree about where "below the formatting
+       row" is. */
+    panel.style.top=_popPanelTop(host,inModal)+'px';
     if(inModal){
-      const p3h=document.getElementById('p3h');
-      const tb=document.getElementById('tab-bar');
-      const pf=document.getElementById('p3-frame-modal');   /* v04.54 — the frame sits ABOVE both */
-      panel.style.top=((pf?pf.offsetHeight:0)+(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32))+'px';
       panel.style.bottom='';panel.style.left='';panel.style.right='';panel.style.borderLeft='';panel.style.borderRight='';
       host.classList.add('has-toc');
       host.classList.toggle('toc-left',_side==='left');
       host.classList.toggle('toc-right',_side==='right');
     } else {
-      const hd=host.querySelector('.fw-hd');
-      panel.style.top=(hd?hd.offsetHeight:34)+'px';
       panel.style.bottom=(_side==='left'?'0px':'14px'); /* leaves the resize-corner grip clickable when on the right */
       if(_side==='left'){panel.style.left='0';panel.style.right='auto';panel.style.borderLeft='none';panel.style.borderRight='1.5px solid var(--border2)';}
       else{panel.style.right='0';panel.style.left='auto';panel.style.borderRight='none';panel.style.borderLeft='1.5px solid var(--border2)';}
@@ -12345,7 +12391,15 @@ function unpinTab(aid){
 }
 function _pinPanelToggleSide(){
   if(!DB.theme)DB.theme={};
-  DB.theme.pinPanelPos=(DB.theme.pinPanelPos==='side')?'below':'side';
+  /* v04.59 review fix — compare against _popPanelSides()'s OWN default
+     ('side' when DB.theme.pinPanelPos is anything but 'below'), not the
+     literal string 'side': the stored value starts undefined and this used
+     to check `DB.theme.pinPanelPos==='side'`, which was false on that first
+     read, so the very first click just wrote 'side' over 'side' — a no-op
+     the button's own label ("⬇ Move below Contents") promised would move
+     it. Every click after the first alternated correctly; only the first
+     one silently did nothing. */
+  DB.theme.pinPanelPos=(_popPanelSides().pos==='side')?'below':'side';
   persist();
   _pinPanelInject();
 }
@@ -12427,6 +12481,39 @@ function _pinHostEl(){
   if(_fwFocusedAid)return document.getElementById('fw-'+_fwFocusedAid);
   return null;
 }
+/* v04.59 — round (d1): ONE side rule for both pop-ups. Before this round,
+   modal mode put the Sidepane opposite the CONFIGURED Contents side
+   (DB.theme.tocSide) always, while float mode put it opposite Contents only
+   while Contents was actually SHOWING — so a Multi window's Sidepane swung
+   to the other edge the instant its note gained a third heading. Modal's
+   rule is the stable one (it never depends on whether Contents happens to
+   be drawn); both pop-ups use it now, via one function so it cannot drift
+   apart again. */
+function _popPanelSides(){
+  const tocSide=(DB.theme&&DB.theme.tocSide==='left')?'left':'right';
+  const pos=(DB.theme&&DB.theme.pinPanelPos==='below')?'below':'side';
+  const pinSide=pos==='side'?(tocSide==='left'?'right':'left'):tocSide;
+  return {tocSide,pos,pinSide};
+}
+/* v04.59 — round (d1): ONE vertical placement, both pop-ups — the panels
+   start below the title, metadata strip AND formatting row, beside the note
+   body only, exactly as the modal already measured its own header stack.
+   Float mode used to measure only `.fw-hd` (the frame), so a Multi window's
+   panel sat directly under the frame, overlapping the title/strip/row that
+   are drawn above the editor inside `.fw-body` — see _fwRenderBody(). */
+function _popPanelTop(host,inModal){
+  if(inModal){
+    const p3h=document.getElementById('p3h');
+    const tb=document.getElementById('tab-bar');
+    const pf=document.getElementById('p3-frame-modal');   /* the frame sits ABOVE both */
+    return (pf?pf.offsetHeight:0)+(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32);
+  }
+  const hd=host.querySelector('.fw-hd');
+  const ti=host.querySelector('.fw-ti');
+  const strip=host.querySelector('.pop-meta-strip');
+  const row=host.querySelector('.fw-tb.pop-fmt-row');
+  return (hd?hd.offsetHeight:34)+(ti?ti.offsetHeight:0)+(strip?strip.offsetHeight:0)+(row?row.offsetHeight:0);
+}
 function _pinPanelInject(){
   /* v04.34 — see _tocInject. Pinned Tabs is a panel you keep BESIDE the note;
      on a phone there is no beside, and it took half the sheet. Its own header
@@ -12443,25 +12530,14 @@ function _pinPanelInject(){
   if(!DB.theme)DB.theme={};
   if(!DB.theme.pinTabIds)DB.theme.pinTabIds=[];
   const inModal=ST.noteModal;
-  const pos=DB.theme.pinPanelPos==='below'?'below':'side'; /* default: side (opposite of TOC in modal mode; plain right in float mode — float windows don't have a TOC panel yet) */
-  const tocLeft=inModal&&document.getElementById('p3')?.classList.contains('toc-left');
-  const tocSide=tocLeft?'left':'right';
-  /* v03.NotePane.F9 — float windows DO host a Contents panel (_tocHostEl()
-     returns the focused window), so hard-coding 'right' here stacked BOTH
-     panels on the same edge, overlapping each other, with the body padding
-     counting only one of them. Mirror the modal rule instead: the sidepane
-     takes the side opposite Contents whenever Contents is actually showing. */
-  const _tocSideNow=(DB.theme&&DB.theme.tocSide==='left')?'left':'right';
-  const _tocShowing=!!document.getElementById('toc-panel');
-  const pinSide=(!inModal)
-    ? (_tocShowing?(_tocSideNow==='left'?'right':'left'):'right')
-    : (pos==='side'?(tocSide==='left'?'right':'left'):tocSide);
+  const {pos,pinSide}=_popPanelSides();
 
   const ids=DB.theme.pinTabIds.filter(id=>DB.articles.some(a=>a.id===id));
   if(ids.length!==DB.theme.pinTabIds.length){DB.theme.pinTabIds=ids;persist();}
 
   let inner='<div class="pin-hd"><span>📌 Sidepane</span>'
-    +`<button class="pin-side-btn" onclick="_pinPanelToggleSide()" title="${pos==='side'?'Move below Contents':'Move to opposite side'}">${pos==='side'?'⬇':'◫'}</button></div>`;
+    +`<button class="pin-side-btn" onclick="_pinPanelToggleSide()" title="${pos==='side'?'Move below Contents':'Move to opposite side'}">${pos==='side'?'⬇':'◫'}</button></div>`
+    +`<button class="pin-add-btn" onclick="openPinPicker(this)" title="Search &amp; pin a note to this Sidepane">📌 Pin a note…</button>`;
 
   /* The currently-open/focused note always appears first — the modal's
      ST.article when in modal mode, or the focused float window's note
@@ -12472,7 +12548,15 @@ function _pinPanelInject(){
 
   const others=ids.filter(id=>!curArt||id!==curArt.id);
   if(!others.length){
-    inner+='<div class="pin-empty">Drag a tab here (or tap 📌 on a tab) to pin it alongside this note</div>';
+    /* v04.59 — round (d1): Multi has no tab bar (that is round d2's own
+       question), so telling it to "drag a tab here" described a control it
+       does not have — there was no way at all to pin a note into Multi's
+       Sidepane before this round added 📌 Pin a note… above. The text now
+       names the control that is ACTUALLY there in both, and mentions tabs
+       only where a tab bar exists (Single, for now). */
+    inner+=inModal
+      ?'<div class="pin-empty">Use 📌 Pin a note… above, drag a tab here, or tap 📌 on a tab, to add a note alongside this one</div>'
+      :'<div class="pin-empty">Use 📌 Pin a note… above to add a note alongside this one</div>';
   } else {
     others.forEach(id=>{const a=DB.articles.find(x=>x.id===id);if(a)inner+=_pinCardHTML(a,false);});
   }
@@ -12497,22 +12581,17 @@ function _pinPanelInject(){
   const _pinInner=panel.querySelector('.pin-inner')||panel;
   _pinInner.innerHTML=inner;
 
+  const baseTop=_popPanelTop(host,inModal);
+  if(pos==='below'){
+    const toc=document.getElementById('toc-panel');
+    panel.style.top=(baseTop+(toc?toc.offsetHeight:0))+'px';
+  } else {
+    panel.style.top=baseTop+'px';
+  }
   if(inModal){
-    const p3h=document.getElementById('p3h');
-    const tb=document.getElementById('tab-bar');
-    const pf=document.getElementById('p3-frame-modal');   /* v04.54 — the frame sits ABOVE both */
-    const baseTop=(pf?pf.offsetHeight:0)+(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32);
-    if(pos==='below'){
-      const toc=document.getElementById('toc-panel');
-      panel.style.top=(baseTop+(toc?toc.offsetHeight:0))+'px';
-    } else {
-      panel.style.top=baseTop+'px';
-    }
     panel.style.bottom='8px';
     _syncP3CPadding();
   } else {
-    const hd=host.querySelector('.fw-hd');
-    panel.style.top=(hd?hd.offsetHeight:34)+'px';
     panel.style.bottom=(pinSide==='right'?'14px':'0px'); /* leaves the native resize-corner grip clickable */
     /* Clear padding on whichever window previously hosted the panel
        (focus may have just moved from one float window to another). */
@@ -12522,13 +12601,17 @@ function _pinPanelInject(){
     _fwSyncBodyPadding(_fwFocusedAid);
   }
 }
-/* Pads the focused float window's body so its title/toolbar/content never
-   render underneath the shared sidepane — mirrors _syncP3CPadding()'s job
-   for the modal, just scoped to one window at a time. */
+/* Pads the focused float window's EDITOR REGION so it never renders
+   underneath the shared sidepane — mirrors _syncP3CPadding()'s job for the
+   modal (which pads #p3c, not #p3h), just scoped to one window at a time.
+   v04.59 — round (d1): pads `.fw-editarea` (find bar + editor, see
+   _fwRenderBody), not the whole `.fw-body` — before this round the title,
+   strip and formatting row were squeezed by the panel's width too, instead
+   of keeping the window's full width the way Single's #p3h always has. */
 function _fwSyncBodyPadding(aid){
   if(!aid)return;
   const win=document.getElementById('fw-'+aid);if(!win)return;
-  const body=win.querySelector('.fw-body');if(!body)return;
+  const body=win.querySelector('.fw-editarea');if(!body)return;
   const toc=document.getElementById('toc-panel');
   const pin=document.getElementById('pin-panel');
   let left=0,right=0;
@@ -12538,7 +12621,7 @@ function _fwSyncBodyPadding(aid){
   body.style.paddingRight=right?right+'px':'';
 }
 function _fwClearAllBodyPadding(){
-  document.querySelectorAll('.float-win .fw-body').forEach(b=>{b.style.paddingLeft='';b.style.paddingRight='';});
+  document.querySelectorAll('.float-win .fw-editarea').forEach(b=>{b.style.paddingLeft='';b.style.paddingRight='';});
 }
 function _pinStartResize(e){
   if(e.button!==0)return;
@@ -24246,6 +24329,12 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
 #pin-panel.pin-drop-over{background:rgba(99,102,241,.06)}
 #pin-panel .pin-hd{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;padding:12px 14px 8px;border-bottom:1px solid var(--border2);margin-bottom:4px}
 #pin-panel .pin-side-btn{background:none;border:none;cursor:pointer;color:var(--t3);font-size:12px;padding:2px 4px;border-radius:4px;line-height:1;flex-shrink:0}
+/* v04.59 — round (d1): the only way to pin a note into EITHER pop-up's
+   Sidepane without a tab to drag — Multi has never had a tab bar. */
+#pin-panel .pin-add-btn{display:block;width:calc(100% - 20px);margin:8px 10px;padding:7px 10px;
+  font-size:12px;text-align:left;background:var(--paper2,var(--paper));color:var(--t1);
+  border:1.5px dashed var(--border2);border-radius:var(--rl);cursor:pointer}
+#pin-panel .pin-add-btn:hover{background:var(--hover)}
 #pin-panel .pin-empty{padding:16px 14px;font-size:12px;color:var(--t3);text-align:center;line-height:1.5;border:1.5px dashed var(--border2);border-radius:var(--rl);margin:0 10px}
 .pin-card{margin:0 8px 8px;border:1px solid var(--border2);border-radius:var(--rl);background:var(--white);transition:box-shadow .12s,border-color .12s}
 .pin-card:hover{border-color:var(--accent)}
