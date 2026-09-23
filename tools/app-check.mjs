@@ -6164,6 +6164,207 @@ await r.block(`20h-20i-20j-strip-geometry-${vp.name}`, async () => {
 });
 }
 
+/* ── 21. v04.56: tags and folders staged in ST are committed on every flush
+   path (I1) ──────────────────────────────────────────────────────────────
+   ST.etags/ST.efolders were only ever committed by saveArt(); every other
+   exit from editing — the autosave tick, _flushEd() itself,
+   _flushEverythingOut() (what pagehide/visibilitychange call when the app
+   is backgrounded or killed) and cancelEdit() (the phone's "Stop editing")
+   — saved content and title only, silently dropping a tag or folder change
+   made in the same session. Checks run at 390 (the tag box is in the `+`
+   menu, v04.27) and 1440 (the permanent tag-bar row) — the two widths the
+   issue named, since the tag/folder controls have only those two shapes.
+   Both widths share id="tag-editor"/id="tag-inp" (only one is ever mounted
+   at a time, v04.55), so one selector reaches either. */
+async function openEditAt(w, h, db) {
+  const s = await openApp({ viewport: { width: w, height: h }, db: db || seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render();
+    if (innerWidth < 1200) showPane('p3'); });
+  await s.page.waitForTimeout(250);
+  await s.page.evaluate(() => window.startEdit());
+  await s.page.waitForSelector('#ed');
+  await s.page.waitForTimeout(350);
+  return s;
+}
+/* Types real text into #ed, like a person — never assembled in evaluate(). */
+async function typeIntoEd(page, text) {
+  await page.click('#ed');
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type(text);
+  await page.waitForTimeout(150);
+}
+async function addTagReal(page, width, text) {
+  if (width < 640) { await page.click('.eb-grp-btn[data-g="insert"]'); await page.waitForTimeout(200); }
+  await page.click('#tag-editor .tag-inp');
+  await page.keyboard.type(text);
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(200);
+}
+async function removeTagReal(page, width, tagText) {
+  if (width < 640) { await page.click('.eb-grp-btn[data-g="insert"]'); await page.waitForTimeout(200); }
+  await page.click(`#tag-editor .tag-chip:has-text("${tagText}") .tag-x`);
+  await page.waitForTimeout(200);
+}
+/* The real 📎 Attach → Folder path: on a phone it is spread open in the `+`
+   menu (v04.29/v04.30), on a tablet/desktop it is the Attach button on the
+   edit toolbar — either way it opens the same assign-mode folder picker
+   (openPicker()), and f2 (not yet on a1) is toggled on by a real click on
+   its row. */
+async function attachFolderReal(page, width) {
+  if (width < 640) {
+    await page.click('.eb-grp-btn[data-g="insert"]');
+    await page.waitForTimeout(200);
+    await page.click('#eb-pop .eb-act:has-text("Folder")');
+  } else {
+    await page.click('.nti-attach-btn');
+    await page.waitForTimeout(200);
+    await page.click('#ctx .ci:has-text("Folder")');
+  }
+  await page.waitForTimeout(300);
+  await page.click('#pkList .pr[data-fid="f2"]');
+  await page.waitForTimeout(200);
+}
+/* The issue's own reproduction: visibilitychange→hidden, THEN pagehide —
+   both call _flushEverythingOut(), which is what a backgrounded or killed
+   phone tab actually fires. document.visibilityState is read-only, so it is
+   overridden before the event is dispatched. A reload in the SAME context
+   (same origin, same browser) reads back whatever IndexedDB/localStorage
+   boot actually persisted — the strongest proof available, the same one
+   16b/16c already rely on. */
+async function backgroundAndReload(page) {
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.waitForTimeout(50);
+  await page.evaluate(() => { window.dispatchEvent(new Event('pagehide')); });
+  await page.waitForTimeout(400);   /* the IndexedDB put _save() kicks off is async */
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__appBooted === true);
+  await page.waitForTimeout(300);
+}
+
+for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '1440', width: 1440, height: 900 }]) {
+await r.block(`21a-tag-survives-backgrounding-${vp.name}`, async () => {
+  /* Adding a tag */
+  {
+    const s = await openEditAt(vp.width, vp.height);
+    await addTagReal(s.page, vp.width, 'bgaddtag');
+    await typeIntoEd(s.page, ' BGTEXTCHECK');
+    await backgroundAndReload(s.page);
+    const got = await s.page.evaluate(() => {
+      const a = DB.articles.find((x) => x.id === 'a1');
+      return { tags: a.tags, hasText: (a.content || '').includes('BGTEXTCHECK') };
+    });
+    await s.close();
+    r.check(got.tags.includes('bgaddtag') && got.tags.includes('seed') && got.hasText,
+      `${vp.name}: a tag added through the real input, and typed text, both survive visibilitychange+pagehide and a reload`,
+      JSON.stringify(got));
+  }
+  /* Removing a tag */
+  {
+    const s = await openEditAt(vp.width, vp.height);
+    await removeTagReal(s.page, vp.width, 'seed');
+    await typeIntoEd(s.page, ' BGTEXTCHECK2');
+    await backgroundAndReload(s.page);
+    const got = await s.page.evaluate(() => {
+      const a = DB.articles.find((x) => x.id === 'a1');
+      return { tags: a.tags, hasText: (a.content || '').includes('BGTEXTCHECK2') };
+    });
+    await s.close();
+    r.check(!got.tags.includes('seed') && got.hasText,
+      `${vp.name}: removing a tag with its × also survives visibilitychange+pagehide and a reload`,
+      JSON.stringify(got));
+  }
+});
+}
+
+for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '1440', width: 1440, height: 900 }]) {
+await r.block(`21b-folder-survives-backgrounding-${vp.name}`, async () => {
+  const s = await openEditAt(vp.width, vp.height);
+  await attachFolderReal(s.page, vp.width);
+  await typeIntoEd(s.page, ' BGFOLDERCHECK');
+  await backgroundAndReload(s.page);
+  const got = await s.page.evaluate(() => {
+    const a = DB.articles.find((x) => x.id === 'a1');
+    return { folderIds: a.folderIds, hasText: (a.content || '').includes('BGFOLDERCHECK') };
+  });
+  await s.close();
+  r.check(got.folderIds.includes('f2') && got.folderIds.includes('f1') && got.hasText,
+    `${vp.name}: a folder attached through the real 📎 Attach → Folder menu survives visibilitychange+pagehide and a reload`,
+    JSON.stringify(got));
+});
+}
+
+await r.block('21c-stop-editing-keeps-tags', async () => {
+  const s = await openEditAt(390, 844);
+  await addTagReal(s.page, 390, 'stopedittag');
+  await s.page.click('.p3c-stop');
+  await s.page.waitForTimeout(250);
+  const got = await s.page.evaluate(() => DB.articles.find((x) => x.id === 'a1').tags);
+  await s.close();
+  r.check(got.includes('stopedittag') && got.includes('seed'),
+    'at 390, a tag added then a real tap on the phone’s "✕ Stop editing" button — DB has the tag',
+    JSON.stringify(got));
+});
+
+await r.block('21d-single-closes-with-tags', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); openNotePopup('a1', 'panel'); });
+  await s.page.waitForTimeout(400);
+  await s.page.click('#p3 .pop-meta-strip .tag-editor .tag-inp');
+  await s.page.keyboard.type('singleclosetag');
+  await s.page.keyboard.press('Enter');
+  await s.page.waitForTimeout(250);
+  const box = await s.page.locator('#p3-frame-modal [data-pf="close"]').boundingBox();
+  if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await s.page.waitForTimeout(300);
+  const got = await s.page.evaluate(() => DB.articles.find((x) => x.id === 'a1').tags);
+  await s.close();
+  r.check(!!box && got.includes('singleclosetag') && got.includes('seed'),
+    'at 1440, in Single, a tag added then the frame’s real ✕ click — DB has the tag',
+    JSON.stringify({ clicked: !!box, tags: got }));
+});
+
+/* I2: a merged remote change nobody touched HERE must never be overwritten
+   by a stale local snapshot. Simulates the merge directly on DB (mergeDB()
+   itself is proved elsewhere, in section 16) — what matters here is what
+   _flushEd() does with the result. */
+await r.block('21e-no-stale-overwrite-of-remote-change', async () => {
+  const s = await openEditAt(1440, 900);
+  const setup = await s.page.evaluate(() => ({ baselineOk: ST.eBaselineAid === 'a1' }));
+  const stampBefore = await s.page.evaluate(() => DB.articles.find((x) => x.id === 'a1').updatedAt);
+  await s.page.evaluate(() => { DB.articles.find((x) => x.id === 'a1').tags = ['seed', 'remote']; });
+  await s.page.evaluate(() => window._flushEd());
+  await s.page.evaluate(() => window._flushEverythingOut());
+  await s.page.waitForTimeout(250);
+  const after = await s.page.evaluate(() => {
+    const a = DB.articles.find((x) => x.id === 'a1');
+    return { tags: a.tags, updatedAt: a.updatedAt };
+  });
+  await s.close();
+  r.check(setup.baselineOk, 'setup: the baseline was seeded for a1 when editing began', JSON.stringify(setup));
+  r.check(after.tags.includes('remote') && after.tags.includes('seed'),
+    'a merged remote tag change nobody touched in THIS session survives _flushEd() then _flushEverythingOut()',
+    JSON.stringify(after));
+  r.check(after.updatedAt === stampBefore,
+    'updatedAt was not re-stamped by a flush that committed nothing of its own',
+    JSON.stringify({ stampBefore, after: after.updatedAt }));
+});
+
+await r.block('21f-no-phantom-stamp-on-noop-flush', async () => {
+  const s = await openEditAt(1440, 900);
+  const stampBefore = await s.page.evaluate(() => DB.articles.find((x) => x.id === 'a1').updatedAt);
+  await s.page.evaluate(() => { window._flushEd(); window._flushEd(); });
+  await s.page.waitForTimeout(100);
+  const stampAfter = await s.page.evaluate(() => DB.articles.find((x) => x.id === 'a1').updatedAt);
+  await s.close();
+  r.check(stampBefore === stampAfter,
+    'start editing, change nothing, run _flushEd() twice — updatedAt is unchanged',
+    JSON.stringify({ stampBefore, stampAfter }));
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
