@@ -6193,17 +6193,24 @@ async function typeIntoEd(page, text) {
   await page.keyboard.type(text);
   await page.waitForTimeout(150);
 }
+/* On a phone the tag box lives inside the `+` popover, which stays OPEN
+   after adding/removing a tag (only the Attach rows self-close, via their
+   own _closeStickyPop) — a `position:fixed` popover reports offsetParent
+   null even while genuinely on screen (see tools/README.md's own trap), so
+   it silently intercepts the next click on #ed unless it is closed first. */
 async function addTagReal(page, width, text) {
   if (width < 640) { await page.click('.eb-grp-btn[data-g="insert"]'); await page.waitForTimeout(200); }
   await page.click('#tag-editor .tag-inp');
   await page.keyboard.type(text);
   await page.keyboard.press('Enter');
   await page.waitForTimeout(200);
+  if (width < 640) { await page.evaluate(() => { if (ST.ebGroup) togEBGroup(ST.ebGroup); }); await page.waitForTimeout(150); }
 }
 async function removeTagReal(page, width, tagText) {
   if (width < 640) { await page.click('.eb-grp-btn[data-g="insert"]'); await page.waitForTimeout(200); }
   await page.click(`#tag-editor .tag-chip:has-text("${tagText}") .tag-x`);
   await page.waitForTimeout(200);
+  if (width < 640) { await page.evaluate(() => { if (ST.ebGroup) togEBGroup(ST.ebGroup); }); await page.waitForTimeout(150); }
 }
 /* The real 📎 Attach → Folder path: on a phone it is spread open in the `+`
    menu (v04.29/v04.30), on a tablet/desktop it is the Attach button on the
@@ -6223,6 +6230,8 @@ async function attachFolderReal(page, width) {
   await page.waitForTimeout(300);
   await page.click('#pkList .pr[data-fid="f2"]');
   await page.waitForTimeout(200);
+  await page.evaluate(() => window.closeModal());
+  await page.waitForTimeout(150);
 }
 /* The issue's own reproduction: visibilitychange→hidden, THEN pagehide —
    both call _flushEverythingOut(), which is what a backgrounded or killed
