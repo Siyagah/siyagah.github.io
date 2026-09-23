@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.54.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.55.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,71 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.55** (23 Sep 2026) — pop-ups made alike, round (c1): the same
+  controls, with the same words, in the same order. Issue #77, round 1 of 2
+  of round (c) — this round is which controls sit between the frame and the
+  note and their order; c2 (next round) is the formatting row's (Aa H ≡ +
+  ↺ 📋 🔍 ⋯) own grouping and fold, untouched here.
+  - Measured on `main` at v04.54, same note `a1`: Multi lacked the tag box
+    (read-only, no add/remove), the `Type` label/chip, `📎 Attach` with its
+    word and count, `🔀 Start Versioning` and `📦` Archive. Single lacked
+    the folder chip and `⋯` on desktop. `🏷` meant two things in Multi (tags
+    prefix and its own Note Types button — Pane 3 has meant only tags by it
+    since v04.11). Single carried `🏠`/`◀`/`📁`, which navigate panes under
+    the modal (the v04.34 fault, on this row). The two pop-ups disagreed on
+    order: Single put its toolbar above the title, Multi put the title
+    first.
+  - **One strip, one order, both pop-ups, every size**: title → Type/
+    Attach/Archive → Tags → Folders → Versions → Date, built once by
+    `_popMetaStripHTML(a,host)`. `kindBarHTML()` gains a `forceEdit` param
+    (Multi's note is never `ST.article`, so its old editing test was always
+    false there) instead of a copy. Tags — `renderTagEditor()` and its
+    whole family — gain a `host` param: falsy is Single's `ST.etags`
+    exactly as before; a Multi window's id writes straight to `a.tags` and
+    persists immediately (no editing-scratch state the way Pane 3 has).
+    Every mount for the same host repaints together (`.tag-editor[data-
+    tag-host]`), since a phone's `+` menu can carry its own mount (kept
+    working, v04.27) alongside the new strip's. Tag chips gain the `🏷`
+    prefix the editable view never carried, so `🏷` now means one thing
+    everywhere. Folders: `_folderChipsHTML()`, one implementation for what
+    Pane 3's read view and Multi's old `_fwMetaHTML()` each built
+    separately. Versions: `_versionStripHTML(a,host)` — a Multi host hands
+    the WINDOW over to the clicked sibling (`_fwHandTo()`, pulled out of
+    `_fwNavigate()`'s existing hand-over) instead of `selArt()`-ing it into
+    Pane 3; `startVersioning()`/`addNewVersion()` gain the same param so
+    starting/adding a version from Multi stays in that window too.
+  - **Removed**: Multi's toolbar `🏷` button and bare `📎` (both reached
+    through the strip's Type chip/Attach now, as Pane 3's own row has since
+    v04.11 — removing the bare `📎` too was a judgment call for "the same
+    controls", not a literal instruction) and its old `.fw-meta` badge;
+    Single's `🏠`/`◀`/`📁` while `ST.noteModal` (normal Pane 3 keeps all
+    three unchanged).
+  - **Where it sits in Single**: `#p3h` renders above `#p3c`, so title+strip
+    move INTO `#p3h` (a new early-return `if(ST.noteModal)` branch in
+    `renderP3H()`) and `#p3c` keeps only the editor. The formatting row
+    below reuses the EXISTING `.p3h-nav-edit-row`/`.p3h-unified-tb` markup
+    verbatim, so `_p3FitToolbar()`/`_p3FitEditBar()` (hard-wired to `#p3h`)
+    keep folding it exactly as before — c2's job, untouched. An explicit
+    Save is added to the tablet/desktop formatting row, since kindBar's own
+    Save (their only source before) is suppressed in the strip (`noSave`)
+    and Multi's toolbar has always carried its own. Normal Pane 3's own
+    branch is never entered in modal mode and is otherwise unchanged.
+  - `⋯` Section tools was already built for every tier
+    (`_edColToolbarHTML()`); the modal branch now calls it unconditionally
+    at every width rather than relying on whatever the desktop measurement
+    had been catching.
+  - Also this round: filled in v04.54's `(measured in review)` placeholder
+    and pre-fix `14/14`, below and in `CHANGELOG.md`, with the Architect's
+    PR #76 numbers.
+  - New app-check section 20 (`20a`–`20g`): same ordered `data-ps` strip in
+    both pop-ups at every size; tags really work in Multi (through `DB`);
+    a Multi version pill stays in the window; one meaning for `🏷`; nothing
+    inside `#p3.modal-mode` navigates a background pane while normal Pane 3
+    still can; `⋯` reachable everywhere; normal Pane 3's own control list
+    unchanged from `main`. No pre-existing check needed updating.
+  - 11/11 ship checks, `app-check --only 20` **10/10**, `--only 6` (the
+    Pane 3 toolbar/read-chrome guard) **233/233**. Full `app-check` and the
+    unpatched-code verification: **(measured in review)**, per the issue.
 - **v04.54** (23 Sep 2026) — pop-ups made alike, round (b): one shared frame
   (title, ‹ ›, ✕, Multi⇄Single switch). Issue #75, round 2 of 4 — this round
   is the bar across the top only; the toolbar underneath is round (c).
@@ -66,8 +131,15 @@ must never accumulate here instead of there.
     asserted `#p3-sheet-hd`/`.sh-x` were updated in place, not deleted.
   - Also this round: filled in v04.53's `(measured in review)` placeholders
     below and in `CHANGELOG.md`, with the Architect's PR #74 numbers.
-  - 11/11 ship checks, `app-check --only 19` **14/14**. Full `app-check` and
-    the unpatched-code verification: **(measured in review)**.
+  - 11/11 ship checks, `app-check --only 19` **14/14** (before a review fix
+    that widened one check and added two more — **26/26** after). Full
+    `app-check`, measured by the Architect in review on PR #76: **426/426,
+    twice in a row**. Unpatched (v04.54's `tools/` against v04.53's
+    `index.html`): **398/415, 17 failures**, all in the three updated
+    `6p-17-popups-every-platform` checks and section 19. Review also found
+    Single's ✕ off-screen at 820/1000×1180 (`#p3{width:100%!important}` in
+    the 640–1199 off-canvas rule beating the modal's inline width) — fixed
+    same round, see `CHANGELOG.md`.
 - **v04.53** (23 Sep 2026) — pop-ups made alike, round (a): the note looks
   the same inside Multi as inside Single. Issue #73, round 1 of 4 in "make
   the two pop-ups (Multi and Single) look and work the same" — this round is
@@ -153,66 +225,6 @@ must never accumulate here instead of there.
   issue — two copies would drift. D5 does not apply. 11/11 ship checks;
   366/366 app checks,
   measured after rebasing onto v04.50.
-- **v04.50** (22 Sep 2026) — the notebook has outgrown `localStorage`: the
-  local copy moves to IndexedDB, the storage panel stops reassuring while
-  saving fails. Issue #69: the owner's real notebook (~5.00 MB) had crossed
-  `localStorage`'s ~5 MB-per-origin cap, and v04.44's panel was printing
-  `navigator.storage.estimate()` — the origin-wide budget, about 10 GB —
-  on the same screen as a warning that saving had failed: "about 2.56 MB
-  of about 10242.56 MB used" read as "you have ten gigabytes spare" while
-  the device could not save, and the 36.5 KB Trash was offered as the fix
-  for a 5 MB shortfall it could never close. IndexedDB — the very API
-  v04.44 was already reading — becomes the system of record for the local
-  copy of `DB`; `localStorage` stays as a best-effort fast path and the
-  migration source, **deliberately not deleted or cleaned up this round**
-  (I8) — it is the way back, and removing it is a later round. `loadDB()`
-  reads IndexedDB first and is now `async`; a device that has never run
-  this version falls straight through to the exact `localStorage`/embedded
-  logic this file has always used. Migration runs once, on boot, verified
-  by reading the write back before IndexedDB is trusted (the v04.39
-  discipline). `_save()` keeps its synchronous boolean contract for
-  `persist()`/`_doPush()`/autosave — it fires the IndexedDB write without
-  awaiting it, so **a write still in flight when the tab closes can be
-  lost silently**, stated plainly rather than left implied; a write that
-  fails once it resolves surfaces through the same `_lsFail`/
-  `updateSaveUI()` ⚠-badge path a `localStorage` failure always used,
-  refactored into two shared functions so an asynchronous failure or
-  recovery drives it identically. With IndexedDB unavailable, `_save()`
-  behaves exactly as before this round. The panel now names the real store
-  in use, compares against the real ~5 MB cap on the fallback path instead
-  of the ~10 GB origin estimate, and says plainly when the biggest
-  reclaimable thing on the device is too small to close the gap. Harness:
-  `openApp()` now waits on a new `window.__appBooted` flag rather than
-  `typeof window.render === 'function'` (true the instant the script
-  parses, proves nothing about whether boot finished), and grows a
-  `disableIndexedDB` option — the only way to genuinely exercise the
-  IndexedDB-unavailable fallback in a real browser. New app-check section
-  16a–16g, 26 checks, targeted run (`--only 16`) **26/26 passed**; one bug
-  caught in the checks themselves, not the app — `_idbReady`/`_lsFail` are
-  `let`-declared, so unlike a function declaration they never attach to
-  `window`, and the first draft's `window._idbReady` reads were always
-  `undefined`. D5: data and one existing panel, same shape at all three
-  sizes, nothing gated behind a breakpoint, said plainly — the pre-existing
-  `14e-screen-sizes-*` check already covers the storage rows' real fit and
-  is unchanged. This round's work was split across two sessions after an
-  earlier attempt stopped mid-run without committing its new checks; the
-  full `app-check` suite, the unpatched-code verification, `ship-check` and
-  `shot.mjs` were run by the Architect directly on the PR rather than in
-  this session — see `CHANGELOG.md` for the reason. The builder's own targeted run was 26/26.
-  **Completed by the Architect in review**, which found three defects the
-  async boot introduced and fixed each with a check that fails on the
-  builder's code:
-  - a `pagehide` during start-up wrote the EMPTY placeholder `DB` over the
-    saved notebook (I1). Now guarded by `_dbLoaded`;
-  - the service worker never registered (I3);
-  - the sidebar was auto-fitted to an empty tree.
-  `window.__appBooted` now means "settled", which made the suite
-  deterministic again.
-  The one check that had stayed flaky exposed a real contrast defect:
-  "Multi"/"Single" were painted in the swatches (1.04:1 at worst). They now
-  use text inks (`--green2`, new `--gold-ink`), guarded by new check `16j`.
-  11/11 ship checks, **366/366 app checks twice in a row**. Unpatched
-  verification: 340/353, all 13 failures this round's own checks.
 ---
 
 ## What this is

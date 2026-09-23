@@ -5062,8 +5062,184 @@ switch's word are back — for both Single and Multi.
 **Measured**
 - `ship-check`: **11/11**.
 - `app-check --only 19`: **26/26** (was 14/14; `19d` widened, `19h`/`19i`
-  added).
+  added) — this is the number after the review fix above; the builder's own
+  pre-fix run was 14/14.
 - `app-check --only 6p`: **104/104** (regression spot-check — the surface the
   width fix touches).
+- Full `app-check`, measured by the Architect in review on PR #76: **426/426,
+  twice in a row**. Unpatched (v04.54's `tools/` against v04.53's
+  `index.html`): **398/415, 17 failures** — all of them the three
+  `6p-17-popups-every-platform` checks updated in place this round and the
+  whole of new section 19, exactly as expected of code that predates the
+  frame.
+
+---
+
+## v04.55 — pop-ups made alike, round (c1): the same controls, with the same words, in the same order
+
+Issue #77, round 1 of 2 of round (c) of "make the two pop-ups (Multi and
+Single) look and work the same" — (a) v04.53 was the note's content, (b)
+v04.54 was one shared frame. This round decides *which* controls sit between
+the frame and the note, what they are called, and their order; c2 (next
+round) is the formatting button row's (Aa H ≡ + ↺ 📋 🔍 ⋯) own grouping and
+fold — untouched here, deliberately.
+
+**Measured on `main` at v04.54** (the issue's own table, same note `a1`):
+Multi lacked the tag box (read-only tags, no add/remove), the `Type` label
+and chip, `📎 Attach` with its word and count, `🔀 Start Versioning`, and
+`📦` Archive. Single lacked the folder chip and `⋯` Section tools on
+desktop. `🏷` meant two different things in Multi — the tags prefix on its
+chips and the Note Types button on its toolbar (Pane 3 has meant only tags
+by it since v04.11). Single carried `🏠`/`◀`/`📁`, three controls that
+navigate panes sitting *under* the modal — the same fault v04.34 already
+fixed on the edit row. And the two pop-ups disagreed on order: Single put
+its toolbar above the title, Multi put the title first.
+
+**One strip, one order, both pop-ups, every size**: title → Type/Attach/
+Archive → Tags → Folders → Versions → Date (+ fields), then the formatting-
+only row below it. Built once, by `_popMetaStripHTML(a,host)`
+(`index.html`), and used by both:
+
+- **`kindBarHTML(a,bare,noSave,forceEdit)`** gains one parameter rather than
+  a second copy. It already tested `ST.editing&&ST.article===a.id` to decide
+  whether to show Save/Archive/Finish — true for Single always, because
+  `openNoteAsModal()` already calls `startEdit()` before the modal opens
+  (and Single never leaves edit mode, per v04.54). It is never true for
+  Multi, whose note is never `ST.article`, so `forceEdit` lets a pop-up ask
+  for the editing treatment directly. `data-ps="type"`/`"attach"`/`"archive"`
+  land on the existing label/button/archive-button themselves — no new
+  wrapping element, so `.kind-bar`'s internal flex layout (and every
+  existing check that measures it) is untouched.
+- **Tags**: `renderTagEditor()`/`tagKey()`/`rmTag()`/`addTag()`/
+  `tagInputChanged()`/`showTagSuggest()`/`_pickTagSuggestion()`/
+  `hideTagSuggest()`/`_tagSuggestPlace()` all gain a `host` parameter — one
+  implementation, not a second copy, per the issue. Falsy/omitted `host`
+  reads and writes `ST.etags` exactly as before (Single/Pane 3's editing
+  scratch, applied to `a.tags` on save); a Multi window passes its own note
+  id, and every mutation writes straight to `a.tags` and calls `persist()`
+  immediately — a float window has no editing scratch the way Pane 3 does
+  (title and content already commit straight to the note), and a tag is a
+  discrete action (an Enter, a `×`), not continuous typing, so there is no
+  debounce worth having. Every handler now takes the actual clicked/typed
+  element (`this`, `this.closest('.tag-editor')` — the pattern kindBarHTML's
+  own chips already used) instead of a fixed id, because there can be MORE
+  than one mount for the same host at once: a phone's `+` menu still carries
+  its own tag row (kept working, v04.27) at the same time as this round's
+  new strip. Every mutation repaints every mount for that host
+  (`.tag-editor[data-tag-host="…"]`) and refocuses only the one that was
+  actually typed in. The two pre-existing mounts (the tablet/desktop
+  `.p3h-tag-bar` row and the phone `+` menu's row) keep their literal
+  `id="tag-editor"`/`id="tag-inp"` — needed by `6p-01`/`6p-20`'s own
+  selectors, and safe now that nothing in this file calls `getElementById`
+  on either id any more. Tag chips gain the `🏷` prefix they never carried
+  in the editable view (only the read-only one did) — the round's `20d`
+  check needs `🏷` to mean exactly one thing, and it is now always "this is
+  a tag".
+- **Folders**: `_folderChipsHTML(a)` is the one implementation Pane 3's read
+  view and `_fwMetaHTML()` used to each build separately; both now call it.
+- **Versions**: `_versionStripHTML(a,host)` — falsy `host` is `selArt()`,
+  exactly as before. A Multi host hands the WINDOW over to the sibling
+  instead: `_fwHandTo(aid,tid)` is `_fwNavigate()`'s existing hand-over logic
+  (bring an already-open window forward; otherwise flush-and-close this one,
+  hand the target the same frame, reopen) pulled out into its own function
+  so the version pills can reuse it for an arbitrary target, not just a
+  folder-sibling. `startVersioning(aid,host)` and `addNewVersion(aid,host)`
+  also gain the parameter: the first only needed its window's strip
+  repainted afterward (`_fwRefreshMeta()`, new — replaces just
+  `.pop-meta-strip` in place rather than rebuilding the whole window and
+  losing focus); the second used to call `selArt(nv.id)` unconditionally,
+  which would have opened the brand-new version in Pane 3 instead of the
+  Multi window that created it — a bug this round would otherwise have
+  introduced by giving Multi a working version strip for the first time.
+- **Date + fields**: unchanged markup (`_dateLineHTML`/`_fieldsPanelHTML`),
+  only the position in the strip changes.
+
+**Removed, in the same edit** (a control that moves has to leave where it
+moved from): Multi's toolbar `🏷` Note Types button and its bare `📎`
+Attach button — both are reached through the strip's Type chip and
+`📎 Attach` now, exactly as Pane 3's own formatting row has never carried
+either since v04.11; keeping the bare `📎` too was not asked for explicitly,
+but leaving it would have meant the same job reachable two ways on Multi and
+one way on Single, the opposite of "the same controls" this round is named
+for — recorded here as a judgment call, not a literal instruction. Multi's
+old `.fw-meta` badge (the finalised/archived text badge and the plain
+type-name pills) is gone with it — kindBarHTML's own status/Finish/Reopen
+and Archive controls say the same thing now that Multi renders it too.
+Single's `🏠` (desktop) and `◀`/`📁` (tablet, from the title row's
+`_navBtnsHTML()`) are left out of the modal branch entirely — not hidden by
+CSS, simply never built — while normal Pane 3 keeps all three exactly as
+before.
+
+**Where the strip sits in Single.** `#p3h` always renders above `#p3c`, so
+title+strip move INTO `#p3h` (a brand-new `if(ST.noteModal)` branch inside
+`renderP3H()`, returned early, never falling into the normal-Pane-3 code
+below it) and `#p3c` is left with only the editor
+(`renderP3C()`'s own `if(ST.noteModal)` branch). The formatting-only row
+below the strip reuses the EXISTING `.p3h-nav-edit-row`/`.p3h-unified-tb`
+markup and `_p3EditIconsHTML()`/`_edColToolbarHTML()` verbatim, so
+`_p3FitToolbar()`/`_p3FitEditBar()` — both hard-wired to `#p3h` — keep
+folding it exactly as they always have; nothing about HOW it folds changes
+this round. Because Multi's toolbar has always carried an unconditional
+`💾 Save` and Pane 3's own formatting row only does on the phone (kindBar's
+own Save covered tablet/desktop, and kindBar's Save is suppressed in the
+strip via `noSave`), the modal branch adds an explicit Save button to the
+tablet/desktop formatting row rather than let Save quietly disappear there.
+Normal (non-modal) Pane 3 is untouched: its own `.p3h-tag-bar` row is now
+also skipped while `ST.noteModal` (defence in depth — the early return above
+already means that whole branch never runs in modal mode) but otherwise
+nothing in `renderP3H()`/`renderP3C()`'s non-modal path changed.
+
+**CSS**: one new block, `.pop-meta-strip` — plain block stacking, not flex
+(`kind-bar` is flex internally regardless of its parent; the tag box's own
+`flex:1` is simply inert outside a flex parent, not harmful). `.float-win
+.note-dateline`/`.note-dateline-hr`/`.fld-panel` gain `#p3.modal-mode` in
+their existing selector list (the v04.54/v04.53 pattern — extend, never
+duplicate), so Single's date line and fields panel are sized identically to
+Multi's inside the strip rather than falling back to Pane 3's read-view
+sizing.
+
+**`⋯` Section tools** was already built for every tier in the desktop
+unified-tb (`_edColToolbarHTML()`, toggled by `_edColInit()` on heading
+count, same as Multi's own `#fw-col-wrap-<aid>`) — the modal branch keeps
+calling it unconditionally in the formatting row at every width, so it is
+now provably present on all three tiers rather than relying on whatever the
+Architect's desktop measurement had caught.
+
+**Also this round**: replaced v04.54's `(measured in review)` placeholder
+and the pre-fix `14/14` with the Architect's PR #76 numbers, in both
+`CLAUDE.md` and above.
+
+**Checks: new app-check section `20` (`20a`–`20g`)**, on a note with a type,
+two tags, one folder and headings:
+- `20a` — at 390/820/1440, the ordered list of *visible* `data-ps` values
+  (`title|type|attach|archive|tags|folders|versions|date`) is identical
+  between Single and Multi, every one present, `Type` and `Attach` visible
+  as text.
+- `20b` — in Multi, typing a tag and pressing Enter, then clicking `×` on an
+  existing chip, both reach `DB` for that note after the window's flush; the
+  same two actions in Single still work.
+- `20c` — given a version sibling, clicking the sibling's pill in Multi
+  keeps it in the same window (or its successor); Pane 3 never opens, no
+  second window is created.
+- `20d` — in both pop-ups, no visible button's text is bare `🏷`, and every
+  visible element starting with `🏷` is a tag chip.
+- `20e` — at 820/1440, inside `#p3.modal-mode`, no visible control calls
+  `goHome`/`openP2`/`backFromP3`/`showPane`/`openFolderPop`; normal Pane 3 at
+  the same sizes still has `🏠`/`◀`/`📁`.
+- `20f` — `⋯` is visible in both pop-ups at 390/820/1440 for a note with
+  headings, and a real click opens it.
+- `20g` — normal Pane 3's own ordered list of visible control labels at
+  1440/820, editing, matches the list recorded from untouched `main` before
+  this round's changes — the guard for "normal Pane 3 unchanged".
+
+No pre-existing check was deleted; none needed updating in place — this
+round's reordering is scoped to `ST.noteModal`, which no existing check
+exercises for these particular rows.
+
+**Measured**
+- `ship-check`: **11/11**.
+- `app-check --only 20`: **10/10**.
+- `app-check --only 6`: **233/233** — the guard for "normal Pane 3
+  unchanged".
 - Full `app-check` and the unpatched-code verification: **(measured in
   review)** — per the issue, the Architect runs both and posts the numbers.

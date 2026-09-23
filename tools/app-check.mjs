@@ -5843,6 +5843,278 @@ await r.block('19g-single-drags-by-frame', async () => {
   }
 });
 
+/* ── 20. v04.55: pop-ups made alike, round (c1) — the same controls, the
+   same words, the same order ─────────────────────────────────────────────
+   _popMetaStripHTML(a,host) builds the metadata strip (Type/Attach/Archive,
+   Tags, Folders, Versions, Date) for both pop-ups from one function, so
+   every check here compares Single against Multi rather than trusting
+   either in isolation — the discipline section 19 already established for
+   the frame that sits above this strip. richDB() gives the seeded note a1 a
+   SECOND tag and a version sibling: the base seedDB() note has only one of
+   each, and 20b/20c need a real tag to remove and a real sibling to switch
+   to. */
+function richDB() {
+  const db = seedDB();
+  const now = db.articles[0].updatedAt;
+  db.articles[0].tags = ['seed', 'second'];
+  db.articles[0].versionGroupId = 'vg1'; db.articles[0].versionLabel = 'Draft 1'; db.articles[0].versionOrder = 0;
+  db.articles.push({ id: 'a5', title: 'Version sibling', content: '<p>v2</p>',
+    folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general',
+    versionGroupId: 'vg1', versionLabel: 'Draft 2', versionOrder: 1 });
+  return db;
+}
+/* The ordered, VISIBLE data-ps list inside a pop-up's OWN metadata strip.
+   containerSel is `#fw-<aid>` for Multi or `#p3` for Single — the strip
+   sits inside either (`.pop-meta-strip`), and the title sits just outside
+   it as that container's own first `[data-ps="title"]`. */
+async function stripSnapshot(page, containerSel) {
+  return page.evaluate((containerSel) => {
+    const host = document.querySelector(containerSel);
+    const strip = host ? host.querySelector('.pop-meta-strip') : null;
+    if (!strip) return null;
+    const visible = (el) => el.getClientRects().length > 0;
+    const items = [...strip.querySelectorAll('[data-ps]')].filter(visible).map((el) => el.getAttribute('data-ps'));
+    const titleEl = host.querySelector('[data-ps="title"]');
+    if (titleEl && visible(titleEl)) items.unshift('title');
+    return {
+      items,
+      typeTxt: (strip.querySelector('[data-ps="type"]')?.textContent || '').trim(),
+      attachTxt: (strip.querySelector('[data-ps="attach"]')?.textContent || '').trim(),
+    };
+  }, containerSel);
+}
+async function openBothStrips(vpOpts) {
+  const s = await openApp({ viewport: vpOpts, db: richDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); });
+  await s.page.waitForTimeout(300);
+  await s.page.evaluate(() => openNotePopup('a1', 'float'));
+  await s.page.waitForTimeout(400);
+  const multi = await stripSnapshot(s.page, '#fw-a1');
+  await s.page.evaluate(() => closeAllPopouts());
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => openNotePopup('a1', 'panel'));
+  await s.page.waitForTimeout(400);
+  const single = await stripSnapshot(s.page, '#p3');
+  await s.close();
+  return { multi, single };
+}
+
+for (const vp of VIEWPORTS) {
+await r.block(`20a-same-strip-${vp.name}`, async () => {
+  const { multi, single } = await openBothStrips({ width: vp.width, height: vp.height });
+  const want = ['title', 'type', 'attach', 'archive', 'tags', 'folders', 'versions', 'date'];
+  const hasAll = (snap) => !!snap && want.every((w) => snap.items.includes(w));
+  const sameOrder = !!multi && !!single && JSON.stringify(multi.items) === JSON.stringify(single.items);
+  r.check(sameOrder && hasAll(multi) && hasAll(single)
+      && /Type/i.test(multi?.typeTxt || '') && /Type/i.test(single?.typeTxt || '')
+      && /Attach/i.test(multi?.attachTxt || '') && /Attach/i.test(single?.attachTxt || ''),
+    `${vp.name}: Multi and Single show the identical ordered set of visible strip rows, every one present, Type/Attach worded`,
+    JSON.stringify({ multi, single }));
+});
+}
+
+await r.block('20b-tags-work-in-multi-and-single', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: richDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); openNotePopup('a1', 'float'); });
+  await s.page.waitForTimeout(400);
+  await s.page.click('#fw-a1 .pop-meta-strip .tag-editor .tag-inp');
+  await s.page.keyboard.type('multicheck');
+  await s.page.keyboard.press('Enter');
+  await s.page.waitForTimeout(250);
+  const addedMulti = await s.page.evaluate(() => DB.articles.find((a) => a.id === 'a1').tags.includes('multicheck'));
+  await s.page.click('#fw-a1 .pop-meta-strip .tag-chip .tag-x');
+  await s.page.waitForTimeout(250);
+  const removedMulti = await s.page.evaluate(() => !DB.articles.find((a) => a.id === 'a1').tags.includes('seed'));
+  await s.page.evaluate(() => closeAllPopouts());
+  await s.page.waitForTimeout(200);
+
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); openNoteAsModal('a1'); });
+  await s.page.waitForTimeout(400);
+  await s.page.click('#p3 .pop-meta-strip .tag-editor .tag-inp');
+  await s.page.keyboard.type('singlecheck');
+  await s.page.keyboard.press('Enter');
+  await s.page.waitForTimeout(250);
+  const addedSingle = await s.page.evaluate(() => (ST.etags || []).includes('singlecheck'));
+  await s.page.click('#p3 .pop-meta-strip .tag-chip .tag-x');
+  await s.page.waitForTimeout(250);
+  const removedSingle = await s.page.evaluate(() => !(ST.etags || []).includes('second'));
+  await s.close();
+  r.check(addedMulti && removedMulti && addedSingle && removedSingle,
+    'typing a tag and removing one both work in Multi (straight to DB, that note only) and in Single (ST.etags)',
+    JSON.stringify({ addedMulti, removedMulti, addedSingle, removedSingle }));
+});
+
+await r.block('20c-multi-version-switch-stays-in-window', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: richDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); openNotePopup('a1', 'float'); });
+  await s.page.waitForTimeout(400);
+  await s.page.click('#fw-a1 .pop-meta-strip .ver-strip .ver-pill:not(.on):not(.ver-add)');
+  await s.page.waitForTimeout(500);
+  const after = await s.page.evaluate(() => ({
+    windows: [...document.querySelectorAll('.float-win')].map((w) => w.id),
+    p3Article: ST.article, noteModal: !!ST.noteModal,
+  }));
+  await s.close();
+  r.check(after.windows.length === 1 && after.windows[0] === 'fw-a5'
+      && after.p3Article === 'a1' && !after.noteModal,
+    'clicking a version sibling’s pill inside Multi hands the SAME window over to it — Pane 3 stays on the note it had, no second window opens',
+    JSON.stringify(after));
+});
+
+await r.block('20d-one-meaning-for-tag-emoji', async () => {
+  const snapshot = async (pg, sel) => pg.evaluate((sel) => {
+    const root = document.querySelector(sel); if (!root) return null;
+    const visible = (el) => el.offsetParent;
+    const bareBtn = [...root.querySelectorAll('button')].some((b) => visible(b) && b.textContent.trim() === '🏷');
+    const ownText = (el) => { let t = ''; el.childNodes.forEach((n) => { if (n.nodeType === 3) t += n.textContent; }); return t.trim(); };
+    const offenders = [...root.querySelectorAll('*')]
+      .filter((el) => visible(el) && ownText(el).startsWith('🏷') && !el.classList.contains('tag-chip'))
+      .map((el) => el.className);
+    return { bareBtn, offenders };
+  }, sel);
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: richDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); openNotePopup('a1', 'float'); });
+  await s.page.waitForTimeout(400);
+  const multi = await snapshot(s.page, '#fw-a1');
+  await s.page.evaluate(() => closeAllPopouts());
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); openNoteAsModal('a1'); });
+  await s.page.waitForTimeout(400);
+  const single = await snapshot(s.page, '#p3');
+  await s.close();
+  r.check(!multi.bareBtn && !single.bareBtn && multi.offenders.length === 0 && single.offenders.length === 0,
+    'in both pop-ups, no visible button reads bare 🏷, and every visible element starting with 🏷 is a tag chip',
+    JSON.stringify({ multi, single }));
+});
+
+await r.block('20e-no-pane-nav-inside-single-modal', async () => {
+  const NAV_FNS = ['goHome', 'openP2', 'backFromP3', 'showPane', 'openFolderPop'];
+  const out = [];
+  for (const vp of [{ width: 820, height: 1180 }, { width: 1440, height: 900 }]) {
+    const s = await openApp({ viewport: vp, db: seedDB() });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render();
+      showPane('p3'); openNoteAsModal('a1'); });
+    await s.page.waitForTimeout(400);
+    const inModal = await s.page.evaluate((fns) => {
+      const hits = [];
+      document.querySelectorAll('#p3.modal-mode [onclick],#p3.modal-mode [onmousedown]').forEach((el) => {
+        if (!el.offsetParent) return;
+        for (const at of ['onclick', 'onmousedown']) {
+          const h = el.getAttribute(at); if (!h) continue;
+          if (fns.some((f) => h.includes(f + '('))) hits.push(h);
+        }
+      });
+      return hits;
+    }, NAV_FNS);
+    await s.page.evaluate(() => { closeNoteModal(); renderP3H(); renderP3C(); });
+    await s.page.waitForTimeout(200);
+    const normal = await s.page.evaluate(() => {
+      const has = (fn) => [...document.querySelectorAll('#p3h [onclick],#p3c [onclick]')]
+        .some((el) => el.offsetParent && (el.getAttribute('onclick') || '').includes(fn + '('));
+      return { home: has('goHome'), back: has('openP2'), folders: has('backFromP3') };
+    });
+    await s.close();
+    const wantNormal = vp.width === 820 ? (normal.home && normal.back && normal.folders) : normal.home;
+    out.push({ vp: `${vp.width}x${vp.height}`, inModal, normal, ok: inModal.length === 0 && wantNormal });
+  }
+  r.check(out.every((o) => o.ok),
+    'inside #p3.modal-mode no visible control navigates a background pane, and normal Pane 3 at the same sizes still can (🏠 at both, ◀/📁 at 820 only)',
+    JSON.stringify(out));
+});
+
+await r.block('20f-section-tools-everywhere', async () => {
+  /* Two fresh sessions per size, not one reused for both pop-ups:
+     toggleEdColPop() TOGGLES `#edcol-pop` — opening Multi's copy and never
+     closing it (only the float window closes) left it "open" for Single's
+     later click to toggle straight back OFF, failing the check on the
+     harness's own state leak rather than anything the app got wrong. */
+  const out = [];
+  for (const vp of VIEWPORTS) {
+    const sM = await openApp({ viewport: vp, db: seedDB() });
+    await sM.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+      window.render(); if (innerWidth < 1200) showPane('p3'); openNotePopup('a1', 'float'); });
+    await sM.page.waitForTimeout(400);
+    const multi = await sM.page.evaluate(() => {
+      const btn = document.getElementById('fw-col-wrap-a1')?.querySelector('.et');
+      const visible = !!(btn && btn.offsetParent);
+      if (visible) btn.click();
+      return { visible, opened: visible && document.getElementById('edcol-pop')?.classList.contains('open') };
+    });
+    await sM.close();
+
+    const sS = await openApp({ viewport: vp, db: seedDB() });
+    await sS.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render(); showPane('p3'); openNoteAsModal('a1'); });
+    await sS.page.waitForTimeout(400);
+    const single = await sS.page.evaluate(() => {
+      const btn = document.getElementById('ed-col-btn');
+      const visible = !!(btn && btn.offsetParent);
+      if (visible) btn.click();
+      return { visible, opened: visible && document.getElementById('edcol-pop')?.classList.contains('open') };
+    });
+    await sS.close();
+    out.push({ vp: vp.name, multi, single, ok: multi.visible && multi.opened && single.visible && single.opened });
+  }
+  r.check(out.every((o) => o.ok),
+    '⋯ Section tools is visible in both pop-ups at every size for a note with headings, and a real click opens it',
+    JSON.stringify(out));
+});
+
+/* v04.55 — the guard for "normal Pane 3 unchanged": the ordered list of
+   visible control labels (textContent, else placeholder, else title) in
+   NORMAL (non-modal) Pane 3 while editing, at 1440 and 820, recorded from
+   UNTOUCHED `main` before this round's changes — per the issue's own order
+   of work ("measure 20g's expected list on untouched main first"). The
+   date is a moving target (today's timestamp) so it is normalised to
+   `[date]` rather than compared literally, the same way `frameSnapshot()`
+   above never compares anything time-based. A leading `🏷 ` is stripped
+   before comparing: this round deliberately adds that prefix to the
+   editable tag chip everywhere (see 20d and CHANGELOG.md v04.55) — a
+   content change this round MEANT to make, not a layout change to guard
+   against, and out of scope for THIS check the same way v04.53's shared
+   `#ed`/`.fw-ed` CSS was out of scope for the checks it did not touch. */
+const P3_UNCHANGED_1440 = ["seed×","×","[+ tag…]","✕","🏠","Aa","H","≡","+","↺","📋","🔍","Multi","Single","General","📎 Attach (1) ▾","💾 Save","📦","⋯","[Article title…]","🔀 Start Versioning","[date]","▼","▼"];
+const P3_UNCHANGED_820 = ["🏠","◀","📁","Aa","H","≡","+","↺","📋","🔍","Multi","Single","seed×","×","[+ tag…]","✕","General","📎 Attach (1) ▾","💾 Save","📦","◀","📁","[Article title…]","🔀 Start Versioning","[date]","⋯","▼","▼"];
+async function p3ControlLabels(page) {
+  return page.evaluate(() => {
+    const out = [];
+    const scan = (r) => {
+      if (!r) return;
+      r.querySelectorAll('button,input,[onclick]').forEach((el) => {
+        if (!el.offsetParent) return;
+        if (el.classList.contains('dl-flip')) { out.push('[date]'); return; }
+        let label = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        label = label.replace(/^🏷\s*/, '');
+        if (!label && el.tagName === 'INPUT') label = '[' + (el.placeholder || el.id || 'input') + ']';
+        if (!label) label = el.getAttribute('title') || el.className || el.tagName;
+        out.push(label);
+      });
+    };
+    scan(document.getElementById('p3h'));
+    scan(document.getElementById('p3c'));
+    return out;
+  });
+}
+for (const [vpw, vph, want] of [[1440, 900, P3_UNCHANGED_1440], [820, 1180, P3_UNCHANGED_820]]) {
+await r.block(`20g-normal-pane3-unchanged-${vpw}`, async () => {
+  const s = await openApp({ viewport: { width: vpw, height: vph }, db: seedDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render();
+    if (innerWidth < 1200) showPane('p3'); });
+  await s.page.waitForTimeout(250);
+  await s.page.evaluate(() => window.startEdit());
+  await s.page.waitForSelector('#ed');
+  await s.page.waitForTimeout(350);
+  const got = await p3ControlLabels(s.page);
+  await s.close();
+  r.check(JSON.stringify(got) === JSON.stringify(want),
+    `${vpw}: normal Pane 3's editing control list is unchanged from main`,
+    JSON.stringify({ got, want }));
+});
+}
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores

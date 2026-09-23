@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.54">
+<meta name="app-version" content="04.55">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2163,10 +2163,23 @@ sup.ann-sup:hover{text-decoration:underline}
 .fw-meta .bk-arch{background:#78716c}
 .fw-meta .art-tag{font-size:9.5px;padding:1px 6px;cursor:pointer}
 .fw-fols .ftag{font-size:9.5px;padding:1px 6px;cursor:pointer}
-.float-win .note-dateline{padding:3px 10px;font-size:9.5px;flex-shrink:0}
-.float-win .note-dateline-hr{margin:0 10px;flex-shrink:0}
-.float-win .fld-panel{margin:4px 10px 0;flex-shrink:0}
+.float-win .note-dateline,#p3.modal-mode .note-dateline{padding:3px 10px;font-size:9.5px;flex-shrink:0}
+.float-win .note-dateline-hr,#p3.modal-mode .note-dateline-hr{margin:0 10px;flex-shrink:0}
+.float-win .fld-panel,#p3.modal-mode .fld-panel{margin:4px 10px 0;flex-shrink:0}
 .float-win .save-flash,#p3.modal-mode .save-flash{margin-left:auto;margin-right:4px}
+/* v04.55 — ONE metadata strip, styled once, used by both pop-ups (round
+   (c1) of "make the two pop-ups alike"): Type/Attach/Archive, Tags,
+   Folders, Versions, Date — see _popMetaStripHTML(). Plain block stacking
+   rather than flex: kindBarHTML's own `.kind-bar` is flex INTERNALLY, and
+   the tag box's `flex:1` is meaningless (and harmless) outside a flex
+   parent, so nothing about either has to change to sit in here. `.kind-bar`
+   loses its sticky/margin — both were for the read view's scrolling note
+   body, which this is not. */
+.pop-meta-strip{padding:6px 0}
+.pop-meta-strip>div{margin:0 0 6px}
+.pop-meta-strip>div:last-child{margin-bottom:0}
+.pop-meta-strip .kind-bar{position:static}
+.pop-meta-strip .tag-editor{margin:0 10px 6px}
 /* v03.NotePane.T4 — without touch-action:none the browser claims these
    gestures for scrolling/zooming and the drag never reaches our handlers. */
 .modal-resize-r,.modal-resize-b,.modal-resize-l,.modal-corner,
@@ -2921,7 +2934,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.54</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.55</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3712,6 +3725,39 @@ function _p3MetaRowHTML(a,withCol){
   if(!v&&!d&&!c)return '';
   return `<div class="p3-meta-row">${v}${d}${c}</div><div class="note-dateline-hr"></div>`;
 }
+/* The folder chips a note belongs to — tap to jump there. Shared by Pane 3's
+   own read view and (v04.55) the pop-up metadata strip, so Single and Multi
+   show identically-built chips rather than two markup strings that could
+   drift apart (Multi's _fwMetaHTML used to build its own copy). */
+function _folderChipsHTML(a){
+  if(!a)return '';
+  return (a.folderIds||[]).map(x=>{
+    const p=pathOf(x);
+    return p.length?`<span class="ftag ftag-nav" onclick="selFolder('${x}')" title="Go to this folder">${esc(p.map(f=>f.name).join(' › '))}</span>`:'';
+  }).join('');
+}
+/* ══ v04.55 — ONE METADATA STRIP FOR BOTH POP-UPS (round (c1) of "make the
+   two pop-ups alike") ═══════════════════════════════════════════════════
+   Everything between the frame and the note's own formatting-button row:
+   Type/Attach/Archive, Tags, Folders, Versions, then the date line and the
+   structured-fields panel — in that order, at every size, in both pop-ups.
+   `host` is null/omitted for Single (Pane 3's own note — ST.etags, ST.article)
+   or a Multi window's aid (that window's own note, tags written straight to
+   it). Each row is tagged `data-ps` so a check can read the visible order
+   back and compare it between the two pop-ups (20a). Not used by normal
+   Pane 3 at all — its own read/edit layouts are unchanged this round. */
+function _popMetaStripHTML(a,host){
+  if(!a)return '';
+  let h='<div class="pop-meta-strip">';
+  h+=kindBarHTML(a,true,true,!!host);
+  h+=`<div class="tag-editor" data-ps="tags" data-tag-host="${host||''}" onclick="this.querySelector('.tag-inp')?.focus()"></div>`;
+  const fols=_folderChipsHTML(a);
+  if(fols)h+=`<div class="fw-meta fw-fols" data-ps="folders">${fols}</div>`;
+  h+=_versionStripHTML(a,host);
+  h+=`<div data-ps="date">${_dateLineHTML(a)}${_fieldsPanelHTML(a)}</div>`;
+  h+='</div>';
+  return h;
+}
 /* True when the body has no real content — empty, whitespace-only, or the
    legacy literal placeholder — AND carries no media/structural elements. Used
    to blank #ed so the CSS placeholder shows and disappears once the user types. */
@@ -4329,6 +4375,44 @@ function renderP3H(){
   }
   if(ST.editing&&curA){
     el.classList.add('editing');  /* scopes flex-direction:column to edit mode */
+    /* ══ v04.55 — SINGLE'S OWN STRIP (round (c1) of "make the two pop-ups
+       alike") ═══════════════════════════════════════════════════════════
+       A Single Note Pop-Up gets a completely different build here rather
+       than the normal-Pane-3 branch below with bits hidden: the title, the
+       metadata strip (Type/Attach/Archive, Tags, Folders, Versions, Date)
+       and the formatting-only row need to swap which one comes FIRST, and
+       #p3h always renders above #p3c — so the title and the strip move
+       INTO #p3h (this function), and #p3c (renderP3C) is left with only the
+       editor. 🏠/◀/📁 are left out entirely (they navigate panes sitting
+       UNDER the modal — the v04.34 fault on the edit row, same shape here),
+       and kindBarHTML's Type/Attach/Archive moves into the strip, so it is
+       not asked for a second time in the formatting row below. The
+       formatting row itself reuses the EXACT existing .p3h-nav-edit-row /
+       .p3h-unified-tb markup and _p3EditIconsHTML()/_edColToolbarHTML(), so
+       _p3FitToolbar()/_p3FitEditBar() (both hard-wired to #p3h) keep folding
+       it exactly as they always have — nothing about HOW that row folds
+       changes this round (that is c2's job); only what stands above it. */
+    if(ST.noteModal){
+      const _mobM=window.innerWidth<1200;
+      /* Multi's toolbar has always carried its own unconditional 💾 Save;
+         Pane 3's _p3EditIconsHTML() only does on the phone (_p3OneBar()) —
+         tablet/desktop have relied on kindBarHTML's OWN Save button, which
+         the strip below suppresses (noSave). So the button row gains an
+         explicit Save wherever _p3EditIconsHTML() would not already carry
+         one, rather than Save quietly disappearing on those two tiers. */
+      const _saveBtn=_p3OneBar()?'':'<button class="et et-save" onclick="saveArt()" title="Save this note">💾 Save</button>';
+      let hm=`<div class="p3h-title-bar p3c-titlebar" data-ps="title"><input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span></div>`;
+      hm+=_popMetaStripHTML(curA,null);
+      hm+=_mobM
+        ? '<div class="p3h-nav-edit-row"><div class="nav-l"></div><div class="nav-r">'+_p3EditIconsHTML(curA)+_edColToolbarHTML()+_saveBtn+'</div></div>'
+        : '<div class="p3h-unified-tb">'+_p3EditIconsHTML(curA)+_edColToolbarHTML()+_saveBtn+'</div>';
+      el.innerHTML=hm;
+      if(_tiFoc){const _tin=document.getElementById('ti');if(_tin){_tin.focus({preventScroll:true});try{_tin.setSelectionRange(_selS,_selE);}catch(e){}}}
+      renderTagEditor();
+      try{_p3FitToolbar();}catch(e){}
+      try{requestAnimationFrame(()=>{try{_p3FitToolbar();}catch(e){}});}catch(e){}
+      return;
+    }
     const fc=ST.efolders.length;
     const _mobE=window.innerWidth<1200;
     /* v04.19 — Home + Edit-bar + NTI bar merged per the top-bar restructure:
@@ -4352,10 +4436,13 @@ function renderP3H(){
        closed bar still says what the note has, and the ✕ that lived on it
        moves to the title row (Save leaves edit mode too, and every keystroke
        is auto-saved, so ✕ is "stop editing", not "discard"). */
-    if(!_p3OneBar()){
+    /* v04.55 — this row is Pane 3's own; a Single Note Pop-Up's tags live in
+       the new metadata strip instead (see the ST.noteModal branch below), so
+       this permanent row is suppressed there rather than shown twice. */
+    if(!_p3OneBar()&&!ST.noteModal){
       h+=`<div class="p3h-tag-bar">`
         +`<span class="tag-ed-lbl">🏷 Tags</span>`
-        +`<div class="tag-editor" id="tag-editor" onclick="document.getElementById('tag-inp')?.focus()"></div>`
+        +`<div class="tag-editor" id="tag-editor" data-tag-host="" onclick="this.querySelector('.tag-inp')?.focus()"></div>`
         +`<div class="p3h-eflx"></div>`
         +`<div class="p3h-tag-bar-acts">`
         +`<button class="btn bn bi" onclick="cancelEdit()" title="Cancel (Esc)">✕</button>`
@@ -4494,16 +4581,23 @@ function renderP3C(){
     {const _le=document.getElementById('ed');
      if(_le&&_le.dataset.aid===curA.id){const _c=_le.cloneNode(true);_c.querySelectorAll('.ann-inline-card').forEach(n=>n.remove());_edColClean(_c);curA.content=_c.innerHTML;if(ST.etitle!=null)curA.title=ST.etitle.trim();}}
     const _mobE2=window.innerWidth<1200;
-    /* v04.22 — the type/Attach/Save row is gone from the PHONE (a tablet
-       keeps it; the owner asked for the phone first). Every control on it is
-       under the `+` group of the one bar above (Attach, the type chips,
-       Archive, Finish/Re-open) or on that bar itself (Save), so nothing
-       became unreachable — the row itself was the cost. A laptop never
-       rendered it here at all. And at every size under 1200px the version
-       strip, the dates and the section-tools ⋯ are one line now, not three. */
-    el.innerHTML=(_mobE2&&!_p3OneBar()?kindBarHTML(curA):'')
-      +`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML(true)}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span>${_p3OneBar()?'<button class="btn bn bi p3c-stop" onclick="cancelEdit()" title="Stop editing — everything you typed is already saved">✕</button>':''}</div>`
-      +_p3MetaRowHTML(curA,_mobE2)+_fieldsPanelHTML(curA)+`<div id="ed" data-aid="${curA.id}" contenteditable="true" spellcheck="true"></div>`;
+    /* v04.55 — a Single Note Pop-Up's title/strip now live in #p3h instead
+       (see renderP3H()'s ST.noteModal branch), so #p3c is left with only
+       the editor itself — nothing here to duplicate #ti or the strip. */
+    if(ST.noteModal){
+      el.innerHTML=`<div id="ed" data-aid="${curA.id}" contenteditable="true" spellcheck="true"></div>`;
+    } else {
+      /* v04.22 — the type/Attach/Save row is gone from the PHONE (a tablet
+         keeps it; the owner asked for the phone first). Every control on it is
+         under the `+` group of the one bar above (Attach, the type chips,
+         Archive, Finish/Re-open) or on that bar itself (Save), so nothing
+         became unreachable — the row itself was the cost. A laptop never
+         rendered it here at all. And at every size under 1200px the version
+         strip, the dates and the section-tools ⋯ are one line now, not three. */
+      el.innerHTML=(_mobE2&&!_p3OneBar()?kindBarHTML(curA):'')
+        +`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML(true)}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span>${_p3OneBar()?'<button class="btn bn bi p3c-stop" onclick="cancelEdit()" title="Stop editing — everything you typed is already saved">✕</button>':''}</div>`
+        +_p3MetaRowHTML(curA,_mobE2)+_fieldsPanelHTML(curA)+`<div id="ed" data-aid="${curA.id}" contenteditable="true" spellcheck="true"></div>`;
+    }
     if(_tiF2){const _tin=document.getElementById('ti');if(_tin){_tin.focus({preventScroll:true});try{_tin.setSelectionRange(_s2,_e2);}catch(e){}}}
     const ed=document.getElementById('ed');ed.innerHTML=curA.content;if(_isPlaceholder(curA.content))ed.innerHTML='';initRichPaste(ed);
     wireAnnEditor(ed,curA);
@@ -9317,6 +9411,19 @@ function openNoteModal(){
   });
   _popFrameSync();
   renderP3H();
+  /* v04.55 — #p3c's shape now depends on ST.noteModal too (bare editor only,
+     once the title/strip move into #p3h — see renderP3H()'s modal branch),
+     where before this round it never needed to change between the two.
+     startEdit() (called just before this function, from openNoteAsModal())
+     already rendered #p3c ONCE with ST.noteModal still false, so without
+     this call the panel would open on the pre-modal editing view — with the
+     title/strip duplicated where the modal frame and #p3h just put them a
+     second time — until the next unrelated re-render happened to paper over
+     it. renderP3C()'s own "preserve unsaved live edits" guard at its top
+     makes this call safe to repeat: nothing typed since startEdit() is
+     lost, and rebuilding with the SAME content is a no-op the owner never
+     sees. */
+  renderP3C();
   setTimeout(_tocInject,60);
   setTimeout(_pinPanelInject,65);
   /* v04.54, review fix — the width/height/left/top set above are a REQUEST, not a
@@ -9886,7 +9993,7 @@ function _ebPopHTML(a,popId){
    labelled input, and a heading over one box is noise. */
 function _ebTagRowHTML(){
   return '<div class="eb-tagrow"><span class="eb-tagrow-l">#</span>'
-    +'<div class="tag-editor" id="tag-editor" onclick="document.getElementById(\'tag-inp\')?.focus()"></div>'
+    +'<div class="tag-editor" id="tag-editor" data-tag-host="" onclick="this.querySelector(\'.tag-inp\')?.focus()"></div>'
     +'</div>';
 }
 /* \ud83d\udce6 Archive left the `+` menu for the ≡ one, where the owner asked for it.
@@ -10331,6 +10438,7 @@ function _fwCreate(aid){
   win.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;z-index:'+(++_fwZTop);
   win.innerHTML=_fwRenderBody(aid);
   document.body.appendChild(win);
+  renderTagEditor(aid);   /* paint the metadata strip's tag box — its container starts empty */
   win.addEventListener('pointerdown',()=>{_fwZTop++;win.style.zIndex=_fwZTop;_fwFocus(aid);},{capture:true});
   _fwWireDrag(win.querySelector('.fw-hd'),win,aid);
   _fwAddResizeHandles(win,aid);
@@ -10420,34 +10528,11 @@ function _fwSavePos(aid){
 }
 /* v03.NotePane.E6 — everything Pane 3 shows around a note that float windows
    were missing: finished/archived state, note types, tags, the folders it
-   belongs to (tap to jump, as in Pane 3), created/updated dates, and the
-   structured-folder field rows. All of it is read-only display or already
-   aid-scoped, so none of it needed the editor plumbing. */
-function _fwMetaHTML(a){
-  if(!a)return '';
-  let h='';
-  const badge=a.finalised?'<span class="bk-done">✓ Finished</span>'
-             :(a.archived?'<span class="bk-arch">📦 Archived</span>':'');
-  const kinds=artKinds(a).map(function(kid){
-    const k=kindById(kid);
-    return '<span class="bk-nti" style="background:'+k.color+'">'+esc(k.name)+'</span>';
-  }).join('');
-  const tags=(a.tags||[]).map(function(t){
-    const c=(DB.tagColors||{})[t];
-    const st=c?' style="background:'+c+'1a;color:'+c+';border-color:'+c+'40"':'';
-    return '<span class="art-tag"'+st+' onclick="selTag(\''+esc(t)+'\')">🏷 '+esc(t)+'</span>';
-  }).join('');
-  const fols=(a.folderIds||[]).map(function(x){
-    const pth=pathOf(x);
-    return pth.length?'<span class="ftag ftag-nav" onclick="selFolder(\''+x+'\')" title="Go to this folder">'
-      +esc(pth.map(function(f){return f.name;}).join(' › '))+'</span>':'';
-  }).join('');
-  if(badge||kinds||tags)h+='<div class="fw-meta">'+badge+kinds+tags+'</div>';
-  if(fols)h+='<div class="fw-meta fw-fols">'+fols+'</div>';
-  h+=_dateLineHTML(a);
-  h+=_fieldsPanelHTML(a);
-  return h;
-}
+   belongs to, created/updated dates, and the structured-folder field rows.
+   v04.55 — retired. This was Multi's own read-only version of exactly what
+   _popMetaStripHTML() now builds for BOTH pop-ups (working tags and all),
+   so keeping it too would have meant the same information rendered twice,
+   once live and once not. */
 /* ══ v03.NotePane.N8 — FIND WITHIN A NOTE (pane 3 AND float windows) ══════
    Generalised from the float-only version in N7. A "key" identifies the
    surface: 'p3' for the third pane, or a note id for that note's float window.
@@ -10588,11 +10673,12 @@ function _p3Navigate(dir){
   _ntFindClose('p3');
   selArt(sibs[(i+dir+sibs.length)%sibs.length]);
 }
-function _fwNavigate(aid,dir){
-  const sibs=_noteSiblings(aid,null);
-  if(sibs.length<2){try{toast('This note has no neighbours in its folder');}catch(e){}return;}
-  const i=sibs.indexOf(aid);if(i<0)return;
-  const tid=sibs[(i+dir+sibs.length)%sibs.length];
+/* v04.55 — extracted out of _fwNavigate() so the version strip's "switch to
+   this sibling" pills can hand a window over to an ARBITRARY target note
+   (not just the next/previous sibling) without a second implementation of
+   the same hand-over: bring an already-open window forward, or close this
+   one (flushing first) and reopen the target inheriting its exact frame. */
+function _fwHandTo(aid,tid){
   if(document.getElementById('fw-'+tid)){
     popOutNote(tid);
     try{toast('Already open — brought to front');}catch(e){}
@@ -10610,6 +10696,24 @@ function _fwNavigate(aid,dir){
   }
   popOutNote(tid);
   persist();renderTree();renderP2C();renderP3H();renderP3C();renderTabBar();
+}
+function _fwNavigate(aid,dir){
+  const sibs=_noteSiblings(aid,null);
+  if(sibs.length<2){try{toast('This note has no neighbours in its folder');}catch(e){}return;}
+  const i=sibs.indexOf(aid);if(i<0)return;
+  const tid=sibs[(i+dir+sibs.length)%sibs.length];
+  _fwHandTo(aid,tid);
+}
+/* Repaints just this window's metadata strip — used after an action that
+   changes the note's own data (starting versioning) without switching which
+   note the window shows, so it must not rebuild the title/editor and lose
+   focus or an in-progress keystroke the way a full _fwRenderBody() would. */
+function _fwRefreshMeta(aid){
+  const win=document.getElementById('fw-'+aid);if(!win)return;
+  const a=DB.articles.find(x=>x.id===aid);if(!a)return;
+  const old=win.querySelector('.pop-meta-strip');
+  if(old)old.outerHTML=_popMetaStripHTML(a,aid);
+  renderTagEditor(aid);
 }
 function _fwFlashSaved(aid){
   const el=document.getElementById('fw-flash-'+aid);
@@ -10738,18 +10842,23 @@ function _fwRenderBody(aid){
     {id:'hist',  icon:'↺',        label:'History'},
   ];
   const ebIcons=_grps.map(g=>`<button class="et eb-grp-btn" data-g="${g.id}" onmousedown="_fwTogGroup('${aid}','${g.id}',this)" title="${g.label}">${g.icon}</button>`).join('');
+  /* v04.55 — 🏷 Note Types and the bare 📎 Attach left this row (round (c1)
+     of "make the two pop-ups alike"): both are reached through the Type
+     chip and 📎 Attach INSIDE the metadata strip below now, exactly as Pane
+     3 has done since v04.11 — Pane 3's own formatting row has never carried
+     either. Keeping them here too would have meant the same job reachable
+     two ways on Multi and one way on Single, which is the opposite of "the
+     same controls". */
   return _popFrameHTML(aid,'float')
     +'<div class="fw-body">'
-    +'<input class="fw-ti" id="fw-ti-'+aid+'" value="'+esc(a.title||'')+'" placeholder="Title…">'
-    +_fwMetaHTML(a)
+    +'<input class="fw-ti" id="fw-ti-'+aid+'" data-ps="title" value="'+esc(a.title||'')+'" placeholder="Title…">'
+    +_popMetaStripHTML(a,aid)
     +'<div class="fw-tb">'
     +ebIcons
     +'<span id="fw-col-wrap-'+aid+'" style="display:none">'
     +'<button class="et" onmousedown="event.preventDefault()" onclick="toggleEdColPop(event,\''+aid+'\')" title="Section tools: Collapse / Expand / Preview">⋯</button>'
     +'</span>'
     +_ktBtnHTML()
-    +'<button class="nti-picker-btn" onclick="openNtiPicker(\''+aid+'\',this)" title="Note types">🏷</button>'
-    +'<button class="nti-picker-btn" onclick="openAttachMenu(event,\''+aid+'\')" title="Attach: Folder · Journal · MyDatabase">📎</button>'
     +'<button class="nti-picker-btn" onclick="_ntFindToggle(\''+aid+'\')" title="Find in this note">🔍</button>'
     +'<button class="nti-picker-btn nti-save" onclick="_fwSave(\''+aid+'\')" title="Save">💾 Save</button>'
     +'</div>'
@@ -15082,23 +15191,32 @@ function _versionSiblings(a){
   return DB.articles.filter(x=>x.versionGroupId===a.versionGroupId)
     .sort((x,y)=>(x.versionOrder||0)-(y.versionOrder||0));
 }
-function _versionStripHTML(a){
+/* v04.55 — `host` (round (c1)): falsy means Single/Pane 3, where switching
+   version has always meant selArt(); a Multi Notes Pop-Up passes its own
+   window's note id instead, and switching there hands the WINDOW over to
+   the sibling (_fwHandTo, the same mechanism _fwNavigate already used for
+   ‹ › — see below) rather than selArt()-ing it into Pane 3, which would
+   have opened the sibling in the wrong pop-up entirely. */
+function _versionStripHTML(a,host){
   if(!a)return '';
   const sibs=_versionSiblings(a);
   if(!sibs.length){
-    return `<div class="ver-strip"><button class="ver-pill ver-add" onclick="startVersioning('${a.id}')" title="Turn this into the first version of a set">🔀 Start Versioning</button></div>`;
+    const go=host?`startVersioning('${a.id}','${host}')`:`startVersioning('${a.id}')`;
+    return `<div class="ver-strip" data-ps="versions"><button class="ver-pill ver-add" onclick="${go}" title="Turn this into the first version of a set">🔀 Start Versioning</button></div>`;
   }
-  let h='<div class="ver-strip">';
+  let h='<div class="ver-strip" data-ps="versions">';
   sibs.forEach(v=>{
     const cur=v.id===a.id;
-    h+=`<button class="ver-pill${cur?' on':''}" onclick="${cur?'':`selArt('${v.id}')`}" oncontextmenu="showVersionCtx(event,'${v.id}')" title="${cur?'Current version':'Switch to this version'}">`
+    const go=cur?'':(host?`_fwHandTo('${host}','${v.id}')`:`selArt('${v.id}')`);
+    h+=`<button class="ver-pill${cur?' on':''}" onclick="${go}" oncontextmenu="showVersionCtx(event,'${v.id}')" title="${cur?'Current version':'Switch to this version'}">`
       +`${esc(v.versionIcon||'📝')} ${esc(v.versionLabel||'Version')}${cur?' <span class=\"ver-here\">●</span>':''}</button>`;
   });
-  h+=`<button class="ver-pill ver-add" onclick="addNewVersion('${a.id}')" title="Add a new version, starting from this one">➕</button>`;
+  const goAdd=host?`addNewVersion('${a.id}','${host}')`:`addNewVersion('${a.id}')`;
+  h+=`<button class="ver-pill ver-add" onclick="${goAdd}" title="Add a new version, starting from this one">➕</button>`;
   h+='</div>';
   return h;
 }
-function startVersioning(aid){
+function startVersioning(aid,host){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return;
   const label=prompt('Label for this first version (e.g. "Draft 1"):','Draft 1');
   if(!label?.trim())return;
@@ -15106,10 +15224,10 @@ function startVersioning(aid){
   a.versionLabel=label.trim();
   a.versionOrder=0;
   persist();
-  renderP3H();renderP3C();
+  if(host)_fwRefreshMeta(host);else{renderP3H();renderP3C();}
   toast('🔀 Versioning started — tap ➕ to add another version any time');
 }
-function addNewVersion(aid){
+function addNewVersion(aid,host){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return;
   const label=prompt('Label for the new version (e.g. "Developing", "Final — public"):');
   if(!label?.trim())return;
@@ -15130,7 +15248,7 @@ function addNewVersion(aid){
   };
   DB.articles.push(nv);
   persist();
-  selArt(nv.id);
+  if(host)_fwHandTo(host,nv.id);else selArt(nv.id);
   toast('➕ New version "'+label.trim()+'" created from "'+(a.versionLabel||'this version')+'"');
 }
 function showVersionCtx(ev,aid){
@@ -17800,20 +17918,53 @@ function renderTagPanel(){
   ).join('');
 }
 
-function renderTagEditor(){
-  const el=document.getElementById('tag-editor');
-  if(!el)return;
+/* v04.55 — ONE tag editor, parameterised by `host` (round (c1) of "make the
+   two pop-ups alike"): falsy/omitted means Single/Pane 3, reading and
+   writing ST.etags exactly as before; a Multi Notes Pop-Up passes its OWN
+   note id, and every mutation writes straight to that note's a.tags and
+   persists immediately — a float window has no "editing scratch" the way
+   Pane 3's ST.etags is, every other field on it (title, content) already
+   commits straight to the note, and tags are a discrete action (an Enter, a
+   ×), not continuous typing, so there is no debounce to buy by delaying it.
+   There can be more than one mount for the SAME host at once — a phone's
+   `+` menu tag row (kept working, v04.27) can be open at the same time as
+   this round's new strip — so every mutation repaints ALL of them
+   (`.tag-editor[data-tag-host="…"]`), and every handler is passed the
+   actual input/chip element (`this`, already this codebase's pattern —
+   see kindBarHTML's `_ntiChipTap('${a.id}',this)`) rather than a fixed id,
+   so refocus lands on the mount the owner was actually typing in. The one
+   exception is the `+` menu's own mount and the permanent tablet/desktop
+   tag-bar row: both keep their pre-existing `id="tag-editor"`/`id="tag-inp"`
+   for 6p-01/6p-20's sake, which is safe precisely because nothing here ever
+   calls `getElementById` on them any more. */
+function _tagsGet(host){
+  if(!host)return ST.etags;
+  const a=DB.articles.find(x=>x.id===host);
+  return (a&&a.tags)||[];
+}
+function _tagsSet(host,arr){
+  if(!host){ST.etags=arr;return;}
+  const a=DB.articles.find(x=>x.id===host);if(!a)return;
+  a.tags=arr;a.updatedAt=new Date().toISOString();
+  persist();renderTree();renderP2C();
+}
+function renderTagEditor(host){
+  document.querySelectorAll('.tag-editor[data-tag-host="'+(host||'')+'"]').forEach(el=>_paintTagEditor(el,host));
+}
+function _paintTagEditor(el,host){
+  const tags=_tagsGet(host);
+  const legacy=el.id==='tag-editor';   /* the two pre-existing mounts — see above */
   el.innerHTML=
-    ST.etags.map(t=>{
+    tags.map(t=>{
       const _tc=DB.tagColors?.[t];
       const _ts=_tc?` style="background:${_tc}1a;color:${_tc};border-color:${_tc}40"`:'';
       return `<span class="tag-chip"${_ts} oncontextmenu="event.preventDefault();showTagClrPicker(event,'${esc(t)}')">` +
-             `${esc(t)}<span class="tag-x" onclick="rmTag('${esc(t)}')">×</span></span>`;
+             `🏷 ${esc(t)}<span class="tag-x" onclick="rmTag('${esc(t)}','${host||''}',this.closest('.tag-editor'))">×</span></span>`;
     }).join('')+
-    `<span class="tag-inp-wrap"><input class="tag-inp" id="tag-inp" `+
-    `placeholder="${ST.etags.length?'+ tag…':'add tags…'}" `+
-    `onkeydown="tagKey(event)" oninput="tagInputChanged(event)" onblur="setTimeout(hideTagSuggest,150)" autocomplete="off" spellcheck="false">`+
-    `<div id="tag-suggest" class="tag-suggest"></div></span>`;
+    `<span class="tag-inp-wrap"><input class="tag-inp"${legacy?' id="tag-inp"':''} `+
+    `placeholder="${tags.length?'+ tag…':'add tags…'}" `+
+    `onkeydown="tagKey(event,'${host||''}')" oninput="tagInputChanged(event,'${host||''}')" onblur="setTimeout(()=>hideTagSuggest(this),150)" autocomplete="off" spellcheck="false">`+
+    `<div class="tag-suggest"></div></span>`;
 }
 
 /* All tags used anywhere (excluding trashed notes), for the autocomplete
@@ -17824,23 +17975,24 @@ function _allTags(){
   DB.articles.forEach(a=>{ if(!a.trash) (a.tags||[]).forEach(t=>set.add(t)); });
   return Array.from(set).sort((a,b)=>a.localeCompare(b));
 }
-function showTagSuggest(query){
-  const box=document.getElementById('tag-suggest');if(!box)return;
+function showTagSuggest(query,host,inputEl){
+  const box=inputEl&&inputEl.closest('.tag-inp-wrap')?.querySelector('.tag-suggest');
+  if(!box)return;
   const q=query.trim().toLowerCase();
   if(!q){box.style.display='none';box.innerHTML='';return;}
-  const matches=_allTags().filter(t=>!ST.etags.includes(t)&&t.toLowerCase().includes(q)).slice(0,6);
+  const cur=_tagsGet(host);
+  const matches=_allTags().filter(t=>!cur.includes(t)&&t.toLowerCase().includes(q)).slice(0,6);
   if(!matches.length){box.style.display='none';box.innerHTML='';return;}
-  box.innerHTML=matches.map(t=>`<div class="tag-sg-item" onmousedown="event.preventDefault();_pickTagSuggestion('${esc(t)}')">${esc(t)}</div>`).join('');
+  box.innerHTML=matches.map(t=>`<div class="tag-sg-item" onmousedown="event.preventDefault();_pickTagSuggestion('${esc(t)}','${host||''}',this.closest('.tag-inp-wrap').querySelector('.tag-inp'))">${esc(t)}</div>`).join('');
   box.style.display='block';
-  _tagSuggestPlace(box);
+  _tagSuggestPlace(box,inputEl);
 }
 /* v04.27 — the tag editor lives inside the `+` menu on a phone, and a menu
    clips its own overflow (.fl-pop is overflow:auto), so an absolutely
    positioned list would simply be cut off at the menu's edge. position:fixed
    is NOT clipped by an overflow ancestor, so the list steps outside the box
    and is placed against the input's real rect. Off a menu, nothing changes. */
-function _tagSuggestPlace(box){
-  const inp=document.getElementById('tag-inp');
+function _tagSuggestPlace(box,inp){
   if(!inp||!box.closest||!box.closest('.fl-pop'))return;
   const r=inp.getBoundingClientRect(),w=Math.min(240,window.innerWidth-12);
   box.style.position='fixed';
@@ -17848,40 +18000,46 @@ function _tagSuggestPlace(box){
   box.style.top=(r.bottom+4)+'px';
   box.style.zIndex='9400';
 }
-function hideTagSuggest(){
-  const box=document.getElementById('tag-suggest');if(box){box.style.display='none';box.innerHTML='';}
+function hideTagSuggest(refEl){
+  const box=refEl&&refEl.closest&&refEl.closest('.tag-inp-wrap')?.querySelector('.tag-suggest');
+  if(box){box.style.display='none';box.innerHTML='';}
 }
-function _pickTagSuggestion(tag){
-  addTag(tag);
-  const inp=document.getElementById('tag-inp');
-  if(inp){inp.value='';inp.focus();}
-  hideTagSuggest();
+function _pickTagSuggestion(tag,host,inputEl){
+  addTag(tag,host,inputEl);
+  hideTagSuggest(inputEl);
 }
 
-function addTag(raw){
+function addTag(raw,host,srcInput){
   // Strip leading # and commas, allow spaces for multi-word tags
   const tag=raw.trim().replace(/^[#,]+/,'').replace(/,+$/,'').trim()
     .replace(/[^a-zA-Z0-9\-_. ]/g,'').replace(/\s{2,}/g,' ');
-  if(!tag||ST.etags.includes(tag))return;
-  ST.etags.push(tag);renderTagEditor();
-  /* Fix: renderTagEditor() rebuilds the input from scratch (innerHTML=),
+  const cur=_tagsGet(host);
+  if(!tag||cur.includes(tag))return;
+  _tagsSet(host,[...cur,tag]);
+  const srcRoot=srcInput?srcInput.closest('.tag-editor'):null;
+  renderTagEditor(host);
+  /* Fix: renderTagEditor() rebuilds every mount from scratch (innerHTML=),
      which drops focus every time — previously required a manual re-click
-     to add a second tag. Re-focus here, same fix rmTag() already had. */
-  document.getElementById('tag-inp')?.focus();
+     to add a second tag. Re-focus the mount that was actually typed in,
+     same fix rmTag() already had. */
+  srcRoot?.querySelector('.tag-inp')?.focus();
 }
 
-function rmTag(tag){
-  ST.etags=ST.etags.filter(t=>t!==tag);
-  renderTagEditor();
-  document.getElementById('tag-inp')?.focus();
+function rmTag(tag,host,srcRoot){
+  _tagsSet(host,_tagsGet(host).filter(t=>t!==tag));
+  renderTagEditor(host);
+  srcRoot?.querySelector('.tag-inp')?.focus();
 }
 
-function tagKey(ev){
+function tagKey(ev,host){
   const v=ev.target.value;
   if(ev.key==='Enter'||ev.key===','){
-    ev.preventDefault();if(v.trim())addTag(v);ev.target.value='';hideTagSuggest();
+    ev.preventDefault();if(v.trim())addTag(v,host,ev.target);ev.target.value='';hideTagSuggest(ev.target);
   }
-  if(ev.key==='Backspace'&&!v&&ST.etags.length) rmTag(ST.etags[ST.etags.length-1]);
+  if(ev.key==='Backspace'&&!v){
+    const cur=_tagsGet(host);
+    if(cur.length)rmTag(cur[cur.length-1],host,ev.target.closest('.tag-editor'));
+  }
 }
 /* Mobile/tablet fallback: virtual keyboards frequently don't fire keydown
    with a reliable 'key' value for punctuation like comma, so tagKey()
@@ -17889,17 +18047,17 @@ function tagKey(ev){
    The 'input' event, checked here, fires consistently on every platform —
    so if the field's value now ends with a comma, treat it the same way:
    commit everything before it as a tag and clear the field. */
-function tagInputChanged(ev){
+function tagInputChanged(ev,host){
   const el=ev.target;
   const v=el.value;
   if(v.endsWith(',')){
     const tag=v.slice(0,-1);
-    if(tag.trim())addTag(tag);
+    if(tag.trim())addTag(tag,host,el);
     el.value='';
-    hideTagSuggest();
+    hideTagSuggest(el);
     return;
   }
-  showTagSuggest(v);
+  showTagSuggest(v,host,el);
 }
 
 
@@ -21616,7 +21774,14 @@ function renameNoteKind(kid){
 }
 
 /* Character tabs + Finish bar shown at the top of the note view */
-function kindBarHTML(a,bare,noSave){
+/* v04.55 — `forceEdit` lets a Multi Notes Pop-Up ask for the editing
+   treatment (Save/Archive/status controls) for a note that is not
+   ST.article — a float window is always an editor, but it is never Pane 3's
+   current note, so the old `ST.editing&&ST.article===a.id` test was always
+   false there. Single stays on that test unchanged: openNoteAsModal() calls
+   startEdit() before the modal ever opens, so it is already true. */
+function kindBarHTML(a,bare,noSave,forceEdit){
+  const isEditingThis=forceEdit||(ST.editing&&ST.article===a.id);
   const curKinds=new Set(artKinds(a));
   const activeKinds=noteKinds().filter(k=>curKinds.has(k.id));
   const chips=activeKinds.map(k=>{
@@ -21644,10 +21809,10 @@ function kindBarHTML(a,bare,noSave){
      and Delete, which is where the owner asked for all three, and where the
      right-click menu already carried them. Edit mode keeps its own button
      because that toolbar has no ⋯ to reach it from. */
-  const archIcon=(ST.editing&&ST.article===a.id)
+  const archIcon=isEditingThis
     ? (a.archived
-      ?`<button class="kind-arch-btn archived" onclick="toggleArchive('${a.id}')" title="Unarchive">📤</button>`
-      :`<button class="kind-arch-btn" onclick="toggleArchive('${a.id}')" title="Archive">📦</button>`)
+      ?`<button class="kind-arch-btn archived" data-ps="archive" onclick="toggleArchive('${a.id}')" title="Unarchive">📤</button>`
+      :`<button class="kind-arch-btn" data-ps="archive" onclick="toggleArchive('${a.id}')" title="Archive">📦</button>`)
     : '';
   /* v04.11 — 🏷 Types left the bar too, and is the first row of the 📎 Attach
      menu now: everything that says where a note belongs and what it is, under
@@ -21659,10 +21824,10 @@ function kindBarHTML(a,bare,noSave){
      everywhere kindBarHTML does, so the bar, the 🏷 card and the edit row all
      say the same word. "No type" becomes "not set", which is what it now
      reads as after the label: "Type · not set". */
-  const inner=`<span class="nti-lbl" title="Note Type — what kind of note this is">Type</span>`
+  const inner=`<span class="nti-lbl" data-ps="type" title="Note Type — what kind of note this is">Type</span>`
     +`<div class="nti-chips">${chips||'<span class="nti-no-type">not set</span>'}</div>`
-    +`<button class="nti-picker-btn nti-attach-btn" onclick="openAttachMenu(event,'${a.id}')" title="Note Type · Folder · My Journal · MyDatabase">📎 Attach${_attachCount(a)?' ('+_attachCount(a)+')':''} ▾</button>`
-    +((ST.editing&&ST.article===a.id&&!noSave)?`<button class="nti-picker-btn nti-editbtn nti-save" onclick="saveArt()" title="Save note">💾 Save</button>`:'')
+    +`<button class="nti-picker-btn nti-attach-btn" data-ps="attach" onclick="openAttachMenu(event,'${a.id}')" title="Note Type · Folder · My Journal · MyDatabase">📎 Attach${_attachCount(a)?' ('+_attachCount(a)+')':''} ▾</button>`
+    +((isEditingThis&&!noSave)?`<button class="nti-picker-btn nti-editbtn nti-save" onclick="saveArt()" title="Save note">💾 Save</button>`:'')
     +`<div class="kind-act">${statusHTML}${archIcon}</div>`;
   return bare?inner:`<div class="kind-bar">${inner}</div>`;
 }
