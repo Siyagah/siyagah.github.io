@@ -54,9 +54,8 @@ must never accumulate here instead of there.
     backgrounding, Stop editing, and closing Single; a merged remote tag
     change nobody touched here survives a flush with no phantom
     `updatedAt` stamp; a genuine no-op flush stamps nothing, run twice.
-  - 11/11 ship checks, `app-check --only 21` (measured in review),
-    `app-check --only 16` (measured in review). Full `app-check`: (measured
-    in review).
+  - 11/11 ship checks, `app-check --only 21` **12/12**, `app-check --only
+    16` **30/30**. Full `app-check`: (measured in review).
 - **v04.55** (23 Sep 2026) — pop-ups made alike, round (c1): the same
   controls, with the same words, in the same order. Issue #77, round 1 of 2
   of round (c) — this round is which controls sit between the frame and the

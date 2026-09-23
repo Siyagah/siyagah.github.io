@@ -5372,6 +5372,6 @@ know about unless it is told.
 
 **Measured**
 - `ship-check`: **11/11**.
-- `app-check --only 21`: (measured in review)
-- `app-check --only 16`: (measured in review)
+- `app-check --only 21`: **12/12**.
+- `app-check --only 16`: **30/30**.
 - Full `app-check`: (measured in review)
