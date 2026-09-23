@@ -5598,23 +5598,130 @@ await r.block('19c-switch-both-ways', async () => {
     JSON.stringify(toMulti));
 });
 
+/* v04.54, review fix — was 1440 only. Round (b)'s review found Single's ✕
+   unreachable at 820/1000 wide (the width:100%!important conflict fixed
+   above this round), and this is the check that would have caught it: a
+   REAL click, at the tablet width the panel actually breaks at, not just a
+   DOM query. 1000×1180 is the review's own extra data point between the
+   820 tablet width and the 1440 desktop one. */
+const CLOSE_VIEWPORTS = [...VIEWPORTS, { name: 'tablet1000', width: 1000, height: 1180 }];
 await r.block('19d-close-button-closes', async () => {
-  for (const kind of ['float', 'panel']) {
-    const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  for (const vp of CLOSE_VIEWPORTS) {
+    for (const kind of ['float', 'panel']) {
+      const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+      await s.page.evaluate((k) => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+        window.render(); openNotePopup('a1', k); }, kind);
+      await s.page.waitForTimeout(400);
+      const sel = kind === 'float' ? '#fw-a1 [data-pf="close"]' : '#p3-frame-modal [data-pf="close"]';
+      const box = await s.page.locator(sel).boundingBox();
+      if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await s.page.waitForTimeout(250);
+      const closed = await s.page.evaluate((k) => (k === 'float'
+        ? !document.getElementById('fw-a1')
+        : !document.getElementById('p3').classList.contains('modal-mode')), kind);
+      await s.close();
+      r.check(!!box && closed,
+        `${vp.name} (${vp.width}×${vp.height}), ${kind === 'float' ? 'Multi' : 'Single'}: a real click on ✕ closes it, and it is still closed 250ms later`,
+        JSON.stringify({ clicked: !!box, closed }));
+    }
+  }
+});
+
+/* v04.54, review fix — new. The pre-fix bug (`#p3.modal-mode` inheriting the
+   off-canvas `#p3{width:100%!important}` at 640–1199.98px) hung Single's
+   frame — and the right end of its tab bar and toolbar — off the right edge
+   of the viewport at 820 and 1000 wide, unreachable however correctly it
+   was painted. `boundingBox()` alone would not have caught this (it reports
+   the element's OWN geometry, not whether it is actually on screen); this
+   checks the pop-up's rect against the viewport and asks the browser, via
+   elementFromPoint, what a real tap at each control's centre would actually
+   hit. Run with `--only 19h` against the pre-fix index.html (git show
+   HEAD~2:index.html or similar) to see it fail. */
+await r.block('19h-frame-inside-viewport', async () => {
+  for (const vp of [{ name: 'tablet', width: 820, height: 1180 }, { name: 'tablet1000', width: 1000, height: 1180 }]) {
+    for (const kind of ['float', 'panel']) {
+      const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+      await s.page.evaluate((k) => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+        window.render(); openNotePopup('a1', k); }, kind);
+      await s.page.waitForTimeout(500);
+      const hostSel = kind === 'float' ? '#fw-a1' : '#p3';
+      const out = await s.page.evaluate((hostSel) => {
+        const host = document.querySelector(hostSel);
+        const hb = host.getBoundingClientRect();
+        const inside = hb.left >= -0.5 && hb.top >= -0.5
+          && hb.right <= window.innerWidth + 0.5 && hb.bottom <= window.innerHeight + 0.5;
+        const frame = host.querySelector('.fw-hd');
+        const controls = [...frame.querySelectorAll('[data-pf]')].filter((el) => el.getClientRects().length > 0);
+        const hits = controls.map((el) => {
+          const pf = el.getAttribute('data-pf');
+          /* "saved" is the ✓ Saved toast: opacity:0 until flashed and
+             pointer-events:none always (see .save-flash CSS), on purpose —
+             it is a status chip, not a control, so a tap through it hitting
+             whatever sits behind it is correct, not a containment failure. */
+          if (getComputedStyle(el).pointerEvents === 'none') return { pf, ok: true, skipped: true };
+          const b = el.getBoundingClientRect();
+          const cx = Math.round(b.left + b.width / 2), cy = Math.round(b.top + b.height / 2);
+          const hit = document.elementFromPoint(cx, cy);
+          return { pf, ok: !!hit && (hit === el || el.contains(hit)) };
+        });
+        return { rect: { left: Math.round(hb.left), top: Math.round(hb.top),
+          right: Math.round(hb.right), bottom: Math.round(hb.bottom) }, inside, hits };
+      }, hostSel);
+      await s.close();
+      const allHit = out.hits.length > 0 && out.hits.every((h) => h.ok);
+      r.check(out.inside && allHit,
+        `${vp.name} (${vp.width}×${vp.height}), ${kind === 'float' ? 'Multi' : 'Single'}: the pop-up's rect lies wholly inside the viewport, and elementFromPoint at the centre of every data-pf button returns that button`,
+        JSON.stringify(out));
+    }
+  }
+});
+
+/* v04.54, review fix — new. _popFrameHTML() bakes the phone tier's "✕
+   Close" word, and the grip/switch-word visibility, into the frame's HTML
+   at BUILD time — nothing re-renders it on a plain resize. Single re-syncs
+   via renderP3H() on every note change, but _renderPreserveEdit() skips
+   renderP3H() whenever the pop-up is open and editing (the only state
+   v04.54 leaves it in), and Multi's open windows had no resync path at
+   all — so a rotation with no note change left both frames stale until
+   this round's _rzPopTier tracking in _onViewportResize(). */
+await r.block('19i-frame-resyncs-on-tier-cross', async () => {
+  async function frameState(page, sel) {
+    return page.evaluate((sel) => {
+      const hd = document.querySelector(sel);
+      if (!hd) return null;
+      const close = hd.querySelector('[data-pf="close"]');
+      const grip = hd.querySelector('[data-pf="grip"]');
+      const sw = hd.querySelector('[data-pf="switch"]');
+      return {
+        closeText: close ? close.textContent.trim() : null,
+        gripVisible: !!grip && grip.getClientRects().length > 0,
+        switchHasWord: !!sw && !!sw.querySelector('.pf-switch-lbl'),
+      };
+    }, sel);
+  }
+  const cases = [
+    { label: 'Single', kind: 'panel', frameSel: '#p3-frame-modal' },
+    { label: 'Multi',  kind: 'float', frameSel: '#fw-a1 .fw-hd' },
+  ];
+  for (const c of cases) {
+    const s = await openApp({ viewport: { width: 820, height: 1180 }, db: seedDB() });
     await s.page.evaluate((k) => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
-      window.render(); openNotePopup('a1', k); }, kind);
+      window.render(); openNotePopup('a1', k); }, c.kind);
     await s.page.waitForTimeout(400);
-    const sel = kind === 'float' ? '#fw-a1 [data-pf="close"]' : '#p3-frame-modal [data-pf="close"]';
-    const box = await s.page.locator(sel).boundingBox();
-    if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    await s.page.waitForTimeout(250);
-    const closed = await s.page.evaluate((k) => (k === 'float'
-      ? !document.getElementById('fw-a1')
-      : !document.getElementById('p3').classList.contains('modal-mode')), kind);
+    const wide = await frameState(s.page, c.frameSel);
+    await s.page.setViewportSize({ width: 390, height: 844 });
+    await s.page.waitForTimeout(300);
+    const narrow = await frameState(s.page, c.frameSel);
+    await s.page.setViewportSize({ width: 820, height: 1180 });
+    await s.page.waitForTimeout(300);
+    const wideAgain = await frameState(s.page, c.frameSel);
     await s.close();
-    r.check(!!box && closed,
-      `${kind === 'float' ? 'Multi' : 'Single'}: a real click on ✕ closes it, and it is still closed 250ms later`,
-      JSON.stringify({ clicked: !!box, closed }));
+    r.check(!!wide && !!narrow && !!wideAgain
+      && wide.closeText === '✕' && wide.switchHasWord && wide.gripVisible
+      && narrow.closeText === '✕ Close' && !narrow.switchHasWord && !narrow.gripVisible
+      && wideAgain.closeText === '✕' && wideAgain.switchHasWord && wideAgain.gripVisible,
+      `${c.label}: the frame re-syncs across a _popTier() crossing (820→390→820) — ✕ gains/drops "Close" and the grip/switch word follow, in both directions`,
+      JSON.stringify({ wide, narrow, wideAgain }));
   }
 });
 

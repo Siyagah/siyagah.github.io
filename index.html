@@ -755,12 +755,22 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
       z-index:80;border-right:none;overflow:hidden;
       transition:left .25s ease}
   #p2.mob-open{left:0}
-  /* Pane 3: off-screen right, slides in over pane 2 */
+  /* Pane 3: off-screen right, slides in over pane 2.
+     v04.54, review fix — width:100%!important used to sit on the shared #p3 selector
+     below, so it beat the modal's own inline px width outright (an
+     !important stylesheet rule always wins over an inline style, whatever
+     the specificity) and Single's pop-up rendered wider than the panel it
+     asked for — up to 787px on an 820px-wide screen, hanging its frame's ✕
+     off the right edge. Split onto its own #p3:not(.modal-mode) rule so the
+     pop-up's own px width, set in openNoteModal()/the resize handlers,
+     applies once modal-mode is on; the sliding off-canvas pane (not a
+     pop-up) is unaffected. */
   #p3{position:fixed!important;top:0;left:100%;bottom:0;
-      width:100%!important;z-index:120;
+      z-index:120;
       display:flex!important;flex-direction:column!important;
       overflow:hidden!important;
       transition:left .25s ease}
+  #p3:not(.modal-mode){width:100%!important}
   #p3.mob-open{left:0}
   #p3h{flex:0 0 auto!important;min-height:50px!important;
        overflow:hidden!important;background:#fff!important;
@@ -9309,6 +9319,13 @@ function openNoteModal(){
   renderP3H();
   setTimeout(_tocInject,60);
   setTimeout(_pinPanelInject,65);
+  /* v04.54, review fix — the width/height/left/top set above are a REQUEST, not a
+     guarantee of what actually rendered (see the #p3:not(.modal-mode) fix
+     above this round paid for). Read the real laid-out rect on the next
+     frame and clamp it inside the viewport, so a future conflict this
+     round didn't anticipate strands the panel off-screen for one frame
+     instead of leaving it there. */
+  requestAnimationFrame(()=>{if(ST.noteModal)_modalClampToViewport();});
 }
 /* v04.54 — retired. The phone-only #p3-sheet-hd this used to build, and the
    sync function itself, are both gone: _popFrameSync() now builds ONE frame
@@ -9424,6 +9441,11 @@ function _modalHandlesOff(){
 function _modalClampToViewport(){
   const p3=document.getElementById('p3');
   if(!p3||!p3.classList.contains('modal-mode'))return;
+  /* v04.54, review fix — the sheet tier sizes/positions #p3 with its own !important
+     left/top/right/bottom:6px CSS (no JS geometry at all); writing a
+     conflicting inline width/left here would be a no-op at best and a
+     confusing read at worst. */
+  if(_popTier()==='sheet')return;
   const vw=window.innerWidth,vh=window.innerHeight;
   const mw=Math.max(340,Math.min(p3.offsetWidth,Math.floor(vw*0.96)));
   const mh=Math.max(280,Math.min(p3.offsetHeight,Math.floor(vh*0.94)));
@@ -10845,6 +10867,21 @@ function _fwTogGroup(aid,g,btn){
   _openFloatPop('fw-eb-pop',btn,_fwBuildEBSub(aid,g),true);
 }
 function _fwWireDrag(handle,win,aid){
+  _fwWireDragHandle(handle,win,aid);
+  /* Backstop for any size change that arrives without a gesture we hooked
+     (a browser zoom, a programmatic resize). Debounced, so it costs nothing
+     during an actual drag. Watches the WINDOW, not the header, so it belongs
+     here rather than in _fwWireDragHandle — that one is re-run every time a
+     tier crossing rebuilds .fw-hd (v04.54, review fix, see _fwFrameResyncAll()), and a
+     second ResizeObserver on the same win each time would pile up. */
+  if(aid&&typeof ResizeObserver!=='undefined'){
+    let _rt;
+    new ResizeObserver(()=>{clearTimeout(_rt);_rt=setTimeout(()=>_fwSavePos(aid),400);}).observe(win);
+  }
+}
+/* Just the pointerdown→drag wiring, split out of _fwWireDrag() so a rebuilt
+   .fw-hd (tier crossing) can be re-wired without a second ResizeObserver. */
+function _fwWireDragHandle(handle,win,aid){
   if(!handle)return;
   let sx,sy,sl,st;
   function move(e){
@@ -10859,13 +10896,24 @@ function _fwWireDrag(handle,win,aid){
     _ptrDown(move,up);
     e.preventDefault();
   });
-  /* Backstop for any size change that arrives without a gesture we hooked
-     (a browser zoom, a programmatic resize). Debounced, so it costs nothing
-     during an actual drag. */
-  if(aid&&typeof ResizeObserver!=='undefined'){
-    let _rt;
-    new ResizeObserver(()=>{clearTimeout(_rt);_rt=setTimeout(()=>_fwSavePos(aid),400);}).observe(win);
-  }
+}
+/* v04.54, review fix — "Also" item from the round (b) review: _popFrameHTML() bakes the
+   phone tier's "✕ Close" word and icon-only switch into the frame's HTML at
+   build time, so nothing updates them when a rotation crosses 640px without
+   the note itself changing. Single already re-syncs via renderP3H() on
+   every ST.article reassignment; Multi's open windows had no such path
+   (they only rebuild via _fwRenderBody() at _fwCreate() time), so this walks
+   every open .float-win and rebuilds just its .fw-hd. Called from
+   _onViewportResize() only on a _popTier() CROSSING (see _rzPopTier), not on
+   every resize tick. */
+function _fwFrameResyncAll(){
+  document.querySelectorAll('.float-win').forEach(win=>{
+    const aid=win.id.slice(3);   /* win.id is always 'fw-'+aid, see _fwCreate() */
+    const oldHd=win.querySelector('.fw-hd');
+    if(!oldHd)return;
+    oldHd.outerHTML=_popFrameHTML(aid,'float');
+    _fwWireDragHandle(win.querySelector('.fw-hd'),win,aid);
+  });
 }
 /* Flushes DOM → data only (no save-history/toast) — used both by explicit
    Save and by close, so closing never silently drops an in-progress edit. */
@@ -21247,6 +21295,11 @@ var _sbUserCollapsed=false;   /* v03.82 — set by toggleSB() on desktop only */
    portrait (800px) is tablet and landscape (1280px) is desktop. */
 function _uiTier(){ const w=window.innerWidth; return w>=1200?'desktop':(w>=640?'tablet':'mobile'); }
 let _rzTier=_uiTier();
+/* v04.54, review fix — tracks _popTier() (the 640px sheet/window split) separately from
+   _rzTier (_uiTier()'s 640/1200 split) so a pop-up frame rebuild fires
+   exactly on the boundary that actually changes its markup — see
+   _onViewportResize(). */
+let _rzPopTier=_popTier();
 
 /* Pane visibility is expressed with classes that mean DIFFERENT things per
    tier: #sb.closed is `width:0` on desktop but `left:-100%` on tablet and
@@ -21297,6 +21350,22 @@ function _onViewportResize(){
     } else {
       _modalClampToViewport();
     }
+  }
+  /* v04.54, review fix — "Also" item from the round (b) review: _popFrameHTML() bakes
+     the phone tier's "✕ Close" word and icon-only switch into the frame's
+     HTML at build time. Single re-syncs its frame via renderP3H() on every
+     note change, but _renderPreserveEdit() (below) skips renderP3H()
+     whenever the pop-up is open and editing — which v04.54 made the ONLY
+     state Single's pop-up is ever in — so a rotation with no note change
+     left a stale frame; Multi's open windows had no resync path at all.
+     Only on the _popTier() boundary itself (640px), not every resize tick
+     or the separate 1200px _uiTier() boundary, which doesn't change the
+     frame's markup. */
+  const _newPopTier=_popTier();
+  if(_newPopTier!==_rzPopTier){
+    _rzPopTier=_newPopTier;
+    if(ST.noteModal)_popFrameSync();
+    _fwFrameResyncAll();
   }
   _fwSyncCloseAllChip();
   const ae=document.activeElement;

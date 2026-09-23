@@ -4997,8 +4997,73 @@ Three pre-existing checks in `tools/app-check.mjs` (block
 updated in place to read the shared frame's `.fw-close`/`.fw-drag` instead,
 with the reason recorded inline; none were deleted.
 
+**Review fix, same round, no version bump.** The Architect's review of the PR
+found Single's new ✕ unreachable at 820×1180 and 1000×1180: `#p3`'s measured
+rect was 787px wide at an 820px-wide viewport (right edge 847, 27px past the
+screen), so the frame's ✕ — and the right end of the tab bar and toolbar —
+hung off-screen. **Cause**: `@media(min-width:640px) and (max-width:1199.98px)`
+(the tablet off-canvas layout, pre-dating this round) sets
+`#p3{width:100%!important}`. `openNoteModal()` sets the modal's width as a
+plain inline style, and Single's `#p3.modal-mode` rule never declared its own
+`width` — so that pre-existing `!important` beat the inline px width outright
+(an `!important` stylesheet rule always wins over inline style, whatever the
+specificity), regardless of what `openNoteModal()` had asked for. Not a `vw`
+math error; the requested width (`min(700, 88vw)` = 700px at 820) was correct
+throughout. **Fix**: split `width:100%!important` onto its own
+`#p3:not(.modal-mode)` rule inside that media query, so it no longer applies
+once `modal-mode` is on — every other property that rule sets is already
+re-declared, `!important`, on `#p3.modal-mode` itself, so nothing else moved.
+`.float-win` (Multi) was never affected — that off-canvas rule only ever
+targeted the `#p3` id. Desktop (no such rule) and phone (already guarded by
+its own higher-specificity `#p3.modal-mode{width:auto!important}` override)
+are unchanged — measured, not assumed. As defence in depth, `openNoteModal()`
+now also reads the panel's real laid-out rect one frame after applying
+`modal-mode` and clamps it inside the viewport
+(`requestAnimationFrame(...)`→`_modalClampToViewport()`), so a future
+conflict this round didn't anticipate strands the panel for one frame instead
+of leaving it there; `_modalClampToViewport()` now no-ops on the sheet tier,
+which sizes `#p3` with its own `!important` edge-to-edge CSS and needs no JS
+geometry at all.
+
+**Also fixed, same push**: the frame's phone-only "✕ Close" wording and its
+grip/switch-word visibility were baked into `_popFrameHTML()`'s output at
+build time, and nothing re-ran it on a plain resize. Single re-syncs via
+`renderP3H()` on every note change, but `_renderPreserveEdit()` skips
+`renderP3H()` whenever the pop-up is open and editing — the only state v04.54
+ever leaves it in — and Multi's open windows had no resync path at all, so a
+rotation crossing 640px with no note change left both frames showing the
+wrong tier's wording. `_onViewportResize()` now tracks `_popTier()` (the
+640px sheet/window split) separately from the existing `_rzTier`
+(`_uiTier()`'s 640/1200 split, which doesn't change the frame's markup at
+1200px) via a new `_rzPopTier`, and on a crossing calls `_popFrameSync()` for
+Single and a new `_fwFrameResyncAll()` for every open Multi window.
+`_fwWireDrag()` split into `_fwWireDragHandle()` (the pointer-drag wiring,
+now re-run on each rebuilt `.fw-hd`) and its own `ResizeObserver` set-up
+(left at `_fwCreate()` time only, so a rebuild never stacks a second
+observer on the same window).
+
+**Checks (update in place, per the issue): section 19 grows to `19a`–`19i`.**
+`19d` (✕ really closes) now runs at all three `VIEWPORTS` sizes plus
+1000×1180, not just 1440 — this is the check that would have caught the
+blocker, since it clicks the real screen coordinates rather than querying the
+DOM. New `19h`: at 820×1180 and 1000×1180, for both pop-ups, the whole panel's
+rect lies inside the viewport and `elementFromPoint` at the centre of every
+visible `data-pf` control resolves back to that control (the `✓ Saved` chip
+is `pointer-events:none` by design — a status toast, not a button — so it is
+excluded from the hit test, not required to pass it). Confirmed failing
+against the pre-fix `index.html` with this round's own `tools/app-check.mjs`:
+Single failed at both tablet widths (2/4 passed), matching the Architect's
+measured rects exactly (`right:847` at 820, `right:1110` at 1000); Multi
+passed throughout, confirming it was never affected. New `19i`: opens each
+pop-up at 820, resizes to 390 and checks the frame reads "✕ Close" with no
+grip and an icon-only switch, resizes back to 820 and checks the grip and the
+switch's word are back — for both Single and Multi.
+
 **Measured**
 - `ship-check`: **11/11**.
-- `app-check --only 19`: **14/14**.
+- `app-check --only 19`: **26/26** (was 14/14; `19d` widened, `19h`/`19i`
+  added).
+- `app-check --only 6p`: **104/104** (regression spot-check — the surface the
+  width fix touches).
 - Full `app-check` and the unpatched-code verification: **(measured in
   review)** — per the issue, the Architect runs both and posts the numbers.
