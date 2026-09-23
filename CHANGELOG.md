@@ -5411,4 +5411,114 @@ know about unless it is told.
 - `ship-check`: **11/11**.
 - `app-check --only 21`: **18/18** (12 first cut + 6 from the review fix).
 - `app-check --only 16`: **30/30**.
+- Full `app-check`, measured by the Architect in review: **475/475, twice in a
+  row**. Unpatched (v04.56's `tools/` against v04.55's `index.html`):
+  **462/475, 13 failures, all in section 21**.
+
+---
+
+## v04.57 — 23 September 2026 · pop-ups made alike, round (c2): one
+formatting row, same buttons, same order, one line at every size
+
+Round (c2) of "make the two pop-ups (Multi and Single) look and work the
+same" — (a) v04.53 the note's content, (b) v04.54 the frame, (c1) v04.55 the
+metadata strip, v04.56 an I1 fix. This round is the **formatting button row**
+under the strip. Normal Pane 3 does not change — `20g` guards its exact
+editing control list and passes unchanged.
+
+**Measured on `main` at v04.56** (the issue's own table): Single's row was
+built by `_p3EditIconsHTML()` wrapped in `.p3h-nav-edit-row` (phone/tablet,
+right-aligned via `.nav-r`) or `.p3h-unified-tb` (desktop, left-aligned) —
+already in the right ORDER (`Aa H ≡ + ↺ 📋 🔍 ⋯ 💾 Save`) at every size except
+the phone, where 💾 Save landed before ⋯ instead of after it. Multi's own
+`.fw-tb` had ⋯ Section tools BEFORE 📋 Template and 🔍 Find (wrong order,
+every size), wrapped to two rows on a phone (nothing folded there the way
+Pane 3's own phone bar does), and its own 8px inset never matched the strip's
+14px (v04.55) above it.
+
+**One builder, both pop-ups.** `_popFormatRowHTML(host,curA)` — host falsy is
+Single (wraps `_p3EditIconsHTML(curA,true)`, the SAME function normal Pane 3
+uses, with a new `noSave` param so the row can place its own 💾 Save once, at
+the very end, rather than `_p3EditIconsHTML`'s own phone-only inline Save
+landing before ⋯); a Multi window's aid renders the new `_fwEditIconsHTML(aid)`
+instead — Multi's own group buttons, Template and Find, keyed to that
+window's `_fwTogGroup`/`#fw-eb-pop` the way Single's are keyed to
+`togEBGroup`/`#eb-pop`. Both branches then get `_edColToolbarHTML(host)` (⋯,
+now parameterised the same way instead of a hand-copied literal inside
+`_fwRenderBody`) and one 💾 Save, always last. `_p3EditIconsHTML`'s and
+`_edColToolbarHTML`'s existing no-argument call sites — normal Pane 3's own —
+are untouched, byte-identical output (the two new params default to falsy).
+Multi's `_fwRenderBody()` and Single's modal branch in `renderP3H()` both
+call `_popFormatRowHTML()` now instead of building the row inline.
+
+**Phone folding, both pop-ups.** `_p3OneBar()` drops the History group from
+the row (`Aa H ≡ +` only) and folds Undo/Redo/History/Find into `≡` and
+Template into `+`, exactly as Pane 3's own phone bar already did — now via
+one shared function, `_ebFoldedHistHTML(aid)`, called from both Pane 3's
+`_buildEBSub('lists')` (aid falsy, byte-identical output to what was
+hand-written there before) and Multi's new `_fwBuildEBSub('lists')` phone
+branch (aid set, `_fwEc`/`openNoteHistory(aid)`/`_ntFindToggle(aid)`).
+Multi's `insert` group is now `_ebInsertHTML(_p3OneBar())` — Pane 3's own
+`_EB_INSERT` table — rather than a second hand-written array: every one of
+Multi's six insert buttons already called the exact same host-generic
+handler Pane 3's `+` menu does (`edImgPick`/`edLink`/`edBookmarkBtn`/
+`edMentionBtn`/`openQuickPhrasesMenu`/`insertSheet` all resolve `_edActive()`
+themselves), so the two lists could only ever drift, never actually differ.
+Labelled, and carrying 📋 Template, only once the row itself has folded to
+the phone shape — a laptop still reaches Template through its own toolbar
+button.
+
+**One line, same inset, every size.** `.pop-fmt-row` — a second class both
+rows now carry alongside their existing one (`.fw-tb` for Multi, `.p3h-
+unified-tb` for Single, now rendered unconditionally in modal mode instead of
+switching to `.p3h-nav-edit-row` under 1200px) — sets `flex-wrap:nowrap` and
+a 14px inset matching the strip above it (Multi's own padding; Single's
+zeroed out, relying on `#p3h`'s existing 14px the way the strip already
+does), with 💾 Save pushed to the row's right end via `margin-left:auto`.
+Keeping the legacy class names means section 20's existing geometry checks
+(`20h`–`20j`, which already query `.fw-tb` / `.p3h-unified-tb, .p3h-nav-edit-
+row`) needed no changes. Every control is ≥38px tall under 1200px
+(`.pop-fmt-row .et,.pop-fmt-row .eb-grp-btn{min-height:38px}`).
+
+**Also this round**
+
+- **Single's version pills stay in edit mode.** `_versionStripHTML(a,host)`'s
+  pill click was `selArt('${v.id}')` for Single, which sets `ST.editing=false`
+  — dropping the pop-up to the read view mid-edit, found in the v04.55
+  review. Since v04.54 ("Single never leaves it any more") Single is always
+  in edit mode once open, so the fix is unconditional there:
+  `ST.noteModal?` `` `selArt('${v.id}');startEdit()` `` `:` `` `selArt('${v.id}')` ``
+  — the same `selArt()` then `startEdit()` pair `_panelNavigate()` already
+  uses for `‹ ›`. Normal Pane 3's own read-view version strip (`ST.noteModal`
+  false there) is unaffected.
+- **v04.56's review totals recorded** in `CHANGELOG.md` and `CLAUDE.md` (see
+  above): full `app-check` 475/475 twice in a row; unpatched 462/475, 13
+  failures, all in section 21.
+
+**Checks: new app-check section `22` (`22a`–`22e`)**, at 360/390/820/1440
+except where noted:
+- `22a` — the ordered, visible `data-tb` list on the row is identical in
+  Single and Multi at every size, and matches the order the issue specified
+  for that size.
+- `22b` — all visible row controls share one line (vertical centres within
+  ±6px); the row's first control's left edge equals the strip's inset (±2px);
+  💾 Save is the rightmost control; nothing is clipped
+  (`scrollWidth<=clientWidth`); every control is ≥38px tall under 1200px.
+- `22c` — at 390, in both pop-ups: a real click on `≡` shows named Undo/
+  Redo/Find rows and a real click on Find opens that window's own find bar;
+  a real click on `+` shows a named Template row; a real click on Undo after
+  typing reverts the typing in that window's own editor.
+- `22d` — every action reachable from the 1440 row is reachable from the 390
+  row or its menus, in both pop-ups (same `onclick`/`onmousedown` target
+  function).
+- `22e` — give `a1` a version sibling, open Single, click the sibling's pill
+  with a real click — `ST.noteModal` is still true, `ST.article` is the
+  sibling, `ST.editing` is true, `#ed` holds the sibling's content.
+- **Guard**: `20g` (normal Pane 3's editing control list) passes unchanged.
+
+**Measured**
+- `ship-check`: **11/11**.
+- `app-check --only 22`: (measured below)
+- `app-check --only 20`: (measured below)
+- `app-check --only 6`: (measured below)
 - Full `app-check`: (measured in review)

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.56.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.57.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,61 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.57** (23 Sep 2026) — pop-ups made alike, round (c2): one formatting
+  row, same buttons, same order, one line at every size. Issue #82, round 2
+  of 2 of round (c) — the formatting row under the metadata strip c1 (v04.55)
+  built; normal Pane 3 does not change, `20g` guards its exact editing
+  control list unchanged.
+  - Measured on `main` at v04.56: Single's row (`_p3EditIconsHTML()`, wrapped
+    in `.p3h-nav-edit-row` under 1200px or `.p3h-unified-tb` above it) was
+    already in the right order — `Aa H ≡ + ↺ 📋 🔍 ⋯ 💾 Save` — except on the
+    phone, where 💾 Save landed BEFORE ⋯ instead of after it. Multi's own
+    `.fw-tb` had ⋯ before 📋/🔍 (wrong order, every size), wrapped to two rows
+    on a phone (nothing folded the way Pane 3's own phone bar does), and its
+    own 8px inset never matched the strip's 14px (v04.55) above it.
+  - **One builder, both pop-ups: `_popFormatRowHTML(host,curA)`.** Host
+    falsy (Single) wraps `_p3EditIconsHTML(curA,true)` — the SAME function
+    normal Pane 3 uses, now taking a `noSave` param so the row can place its
+    own 💾 Save once, at the very end, instead of `_p3EditIconsHTML`'s
+    phone-only inline Save landing before ⋯. A Multi window's aid renders
+    the new `_fwEditIconsHTML(aid)` — Multi's own group buttons/Template/
+    Find, keyed to that window's `_fwTogGroup`/`#fw-eb-pop` the way Single's
+    are keyed to `togEBGroup`/`#eb-pop`. Both then get `_edColToolbarHTML
+    (host)` (⋯, now parameterised instead of a hand-copied literal inside
+    `_fwRenderBody`) and one 💾 Save, always last. Normal Pane 3's own
+    no-argument call sites are untouched — byte-identical output, the new
+    params default to falsy.
+  - **Phone folding, one shared block.** `_p3OneBar()` drops the History
+    group from the row and folds Undo/Redo/History/Find into `≡` and
+    Template into `+`, exactly as Pane 3's phone bar already did — now via
+    `_ebFoldedHistHTML(aid)`, called from both Pane 3's `_buildEBSub('lists')`
+    (aid falsy, byte-identical to what was hand-written there before) and
+    Multi's new `_fwBuildEBSub('lists')` phone branch. Multi's `insert` group
+    is now `_ebInsertHTML(_p3OneBar())` — Pane 3's own `_EB_INSERT` table —
+    rather than a second hand-written array: all six of Multi's insert
+    buttons already called the exact same host-generic handler Pane 3's `+`
+    menu does, so the two lists could only ever drift, never actually differ.
+  - **One line, same inset, every size.** `.pop-fmt-row`, a second class both
+    rows now carry alongside their existing one (`.fw-tb` / `.p3h-unified-tb`,
+    the latter now rendered unconditionally in modal mode instead of
+    switching to `.p3h-nav-edit-row` under 1200px), sets `flex-wrap:nowrap`
+    and the strip's own 14px inset, with 💾 Save pushed right via
+    `margin-left:auto`. Keeping the legacy class names meant section 20's
+    existing geometry checks (`20h`–`20j`) needed no changes.
+  - **Also this round**: Single's version pills stay in edit mode on switch
+    (`selArt()` alone set `ST.editing=false`; now `startEdit()` follows it
+    whenever `ST.noteModal`, the same pair `‹ ›`/`_panelNavigate()` already
+    uses — found in the v04.55 review). v04.56's review totals recorded
+    above and in `CHANGELOG.md`.
+  - New app-check section 22 (`22a`–`22e`): the same ordered `data-tb` row in
+    both pop-ups at every size; one line, same inset, nothing clipped, ≥38px
+    tall under 1200px; the folded phone actions really work, in both
+    pop-ups; nothing on the 1440 row is unreachable from the 390 shape;
+    Single stays editing across a version switch. No pre-existing check
+    needed updating beyond `20g`, unchanged.
+  - 11/11 ship checks, `app-check --only 22` (measured in review), `--only
+    20` (measured in review), `--only 6` (measured in review). Full
+    `app-check`: (measured in review).
 - **v04.56** (23 Sep 2026) — tags and folders lost on backgrounding before a
   save (I1). Issue #80, found by the Architect in review of v04.55 and
   reproduced unchanged on v04.54, ahead of pop-ups round (c2) because it is
@@ -55,7 +110,9 @@ must never accumulate here instead of there.
     change nobody touched here survives a flush with no phantom
     `updatedAt` stamp; a genuine no-op flush stamps nothing, run twice.
   - 11/11 ship checks, `app-check --only 21` **12/12**, `app-check --only
-    16` **30/30**. Full `app-check`: (measured in review).
+    16` **30/30**. Full `app-check`, measured by the Architect in review:
+    **475/475, twice in a row**. Unpatched (v04.56's `tools/` against
+    v04.55's `index.html`): **462/475, 13 failures, all in section 21**.
 - **v04.55** (23 Sep 2026) — pop-ups made alike, round (c1): the same
   controls, with the same words, in the same order. Issue #77, round 1 of 2
   of round (c) — this round is which controls sit between the frame and the
@@ -228,25 +285,6 @@ must never accumulate here instead of there.
     errors ×3, both editors render the grip/arrow, the setting really moved
     `#ed`), not the parity assertion itself. Built by the builder
     unassisted.
-- **v04.52** (23 Sep 2026) — a spreadsheet inside a note, round 1 of 3.
-  Built by the Architect directly.
-  - **＋ Insert → ▦ Spreadsheet**, in Pane 3's `+` group and the Multi
-    pop-up's own. It offers 113 functions, live recalc, point-and-drag
-    references, sort, insert/delete rows and columns, fill, and paste from
-    Excel. On phones you type in the formula bar with a key row of symbols.
-  - **Stored in the note's own HTML** as `<div class="sgx" data-sg=JSON>`
-    around a snapshot `<table class="sg-static">`. There is no new `DB` key,
-    so I1–I4 ride the note.
-  - **The snapshot is rebuilt only on edit.** `TODAY()`/`RAND()` never make
-    an untouched note look newer (I2). `17d` guards this; writing it caught
-    an attribute-order change in the stored string.
-  - `_edColClean()` canonicalises the sheet; `_edColInit()` and
-    `upgradeViewCards()` mount it. Key and clipboard events stop at the
-    sheet.
-  - **`.sg` was already the subfolder grid**, so the root class is `.sgx`.
-  - 23 new checks (`17a`–`17g`). Rounds 2–3 are on the backlog.
-  - 11/11 ship checks, **389/389 app checks twice**. Unpatched: 369/381,
-    all 12 failures in section 17.
 ---
 
 ## What this is
