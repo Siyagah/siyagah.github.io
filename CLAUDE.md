@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.57.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.58.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,32 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.58** (23 Sep 2026) — note titles taken out of the public app file.
+  Built by the Architect directly. No behaviour change.
+  - The builder found this while working on v04.57. `index.html` had been
+    saved, at some point, from a **running** page, and since PR #9 (4 Sep)
+    it carried debris from that session:
+    - the tab picker already filled with **four real note titles and
+      their folders**;
+    - three Firebase auth iframes;
+    - a browser extension's widget root;
+    - stale copies of `#nti-picker`, `#jrn-picker` and `#eb-pop`.
+    The site serves this file publicly.
+  - Every one of those elements is created by the app on demand. Removed:
+    - the file's last line (it becomes `</body></html>`);
+    - one iframe glued to the front of `<style id="mywall-style">`.
+  - New ship-check guard (`ship-check` is now 12 checks): no auth iframe,
+    no extension root, no tab-picker row with a literal note id. It fails
+    on v04.57's file, naming all four.
+  - **Not done, and the owner's call:**
+    - the same debris sits in `legacy/v03.99/index.html` (sealed, I6);
+    - every past commit of `index.html` still holds it in git history.
+      Removing that means a history rewrite, which is destructive and
+      needs the owner's decision.
+  - The Firebase web API key in those URLs is public by design. The
+    notebook's real protection is the Firestore security rules, which is
+    already the top item waiting on the owner.
+  - 12/12 ship checks, **APPTOTAL**.
 - **v04.57** (23 Sep 2026) — pop-ups made alike, round (c2): one formatting
   row, same buttons, same order, one line at every size. Issue #82, round 2
   of 2 of round (c) — the formatting row under the metadata strip c1 (v04.55)
@@ -69,8 +95,9 @@ must never accumulate here instead of there.
     Single stays editing across a version switch. No pre-existing check
     needed updating beyond `20g`, unchanged.
   - 11/11 ship checks, `app-check --only 22` **18/18**, `--only 20`
-    **31/31**, `--only 6` **233/233**. Full `app-check`: (measured in
-    review).
+    **31/31**, `--only 6` **233/233**. Measured in review: full
+    `app-check` **493/493 twice**; unpatched 475/491, all 16 failures in
+    section 22.
 - **v04.56** (23 Sep 2026) — tags and folders lost on backgrounding before a
   save (I1). Issue #80, found by the Architect in review of v04.55 and
   reproduced unchanged on v04.54, ahead of pop-ups round (c2) because it is
@@ -249,42 +276,7 @@ must never accumulate here instead of there.
     Single's ✕ off-screen at 820/1000×1180 (`#p3{width:100%!important}` in
     the 640–1199 off-canvas rule beating the modal's inline width) — fixed
     same round, see `CHANGELOG.md`.
-- **v04.53** (23 Sep 2026) — pop-ups made alike, round (a): the note looks
-  the same inside Multi as inside Single. Issue #73, round 1 of 4 in "make
-  the two pop-ups (Multi and Single) look and work the same" — this round is
-  the note's content only; frame and toolbar are rounds (b)/(c).
-  - Single's editor **is** `#ed` (Pane 3 lifted out); Multi's is the
-    separate `.fw-ed`, and its content CSS had drifted to its own older
-    set: fixed 13px `DM Sans` instead of `var(--fs-content)`/`var(--body)`,
-    headings in fixed `em` off that 13px, no `--pp-gap` on paragraphs,
-    **`padding-left:0` on every list** (why numbers and nested bullets
-    looked clipped/missing), plain `ol` counters instead of
-    `decimal-leading-zero`, a blockquote with no gold rule, and the
-    heading fold arrow/grip unstyled instead of 16–18px boxes.
-  - **One set of content rules now serves both**: every `#ed <selector>`
-    rule that styles note content gained `.fw-ed <selector>` in its
-    existing selector list — never duplicated, so they cannot drift again.
-    `.fw-ed`'s root now shares `#ed`'s font/size/line-height/ink; it keeps
-    its own layout and a **14px** padding (the value `#ed` already uses on
-    a phone) because a pop-up window is narrower than Pane 3. The old
-    separate `.fw-ed h1`–`h4` rules are deleted. No rule scoped
-    `.editing`/`:not(.editing)`. Owner font settings reach `.fw-ed` for
-    free — `applyFontSizes()`/`applyLineSpacing()` already write to
-    `document.documentElement`.
-  - Same change on all three layouts, no breakpoint gates it.
-  - New app-check section 18 (`18a`–`18d`): a parity sweep of computed
-    styles between `#ed` and `#fw-ed-<id>` at all three sizes, a
-    marker-clipping measurement, heading-chrome parity, and owner-setting
-    propagation.
-  - 11/11 ship checks, `app-check --only 18` **11/11** (also confirmed to
-    fail 6/11 against the pre-fix CSS, reproducing the issue's own table).
-    Full `app-check`, measured by the Architect in review on PR #74:
-    **400/400, twice in a row**. Unpatched (v04.53's `tools/` against
-    v04.52's `index.html`): **394/400**, all 6 failures in section 18 — the
-    other 5 section-18 checks pass there because they are guards (no page
-    errors ×3, both editors render the grip/arrow, the setting really moved
-    `#ed`), not the parity assertion itself. Built by the builder
-    unassisted.
+
 ---
 
 ## What this is
@@ -529,6 +521,15 @@ traps belong in `tools/README.md`, not here.)*
   real tag/folder loss to the owner's phone on the very next backgrounded
   session — traced back to code that had been wrong since tags/folders were
   first staged in `ST`. Fixed in v04.56.
+- **The source file is not a place to save a running page.** Somebody
+  saved `index.html` from a live browser tab. It kept working, and it also
+  kept that session: the tab picker full of real note titles, Firebase's
+  auth iframes, and an extension's widget. All of it was served publicly
+  for three weeks, from 4 Sep (PR #9) to v04.58. Nothing threw, and no
+  check looked, because every check asks what the app DOES and none asked
+  what the file CONTAINS. Edit the source; never replace it with a saved
+  page. `ship-check` now fails on the fingerprints. Cost: private note
+  titles on a public web address, found by chance in a builder's review.
 - **Making boot asynchronous opens a window where the app runs on the
   placeholder `DB` — and every listener registered at parse time can fire
   in it.** v04.50 made `loadDB()` await IndexedDB. Until it resolved, `DB`
