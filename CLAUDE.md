@@ -68,9 +68,9 @@ must never accumulate here instead of there.
     pop-ups; nothing on the 1440 row is unreachable from the 390 shape;
     Single stays editing across a version switch. No pre-existing check
     needed updating beyond `20g`, unchanged.
-  - 11/11 ship checks, `app-check --only 22` (measured in review), `--only
-    20` (measured in review), `--only 6` (measured in review). Full
-    `app-check`: (measured in review).
+  - 11/11 ship checks, `app-check --only 22` **18/18**, `--only 20`
+    **31/31**, `--only 6` **233/233**. Full `app-check`: (measured in
+    review).
 - **v04.56** (23 Sep 2026) — tags and folders lost on backgrounding before a
   save (I1). Issue #80, found by the Architect in review of v04.55 and
   reproduced unchanged on v04.54, ahead of pop-ups round (c2) because it is

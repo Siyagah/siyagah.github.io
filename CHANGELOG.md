@@ -5518,7 +5518,7 @@ except where noted:
 
 **Measured**
 - `ship-check`: **11/11**.
-- `app-check --only 22`: (measured below)
-- `app-check --only 20`: (measured below)
-- `app-check --only 6`: (measured below)
+- `app-check --only 22`: **18/18**.
+- `app-check --only 20`: **31/31**.
+- `app-check --only 6`: **233/233**.
 - Full `app-check`: (measured in review)
