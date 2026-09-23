@@ -5585,5 +5585,5 @@ is untouched (I7).
 
 **Measured**
 - `ship-check`: **12/12**; the new check fails on v04.57's `index.html`.
-- Full `app-check`: **APPTOTAL**.
+- Full `app-check`: **493/493 app checks, twice in a row** (unchanged from v04.57 — no app behaviour changed).
 

@@ -41,7 +41,7 @@ must never accumulate here instead of there.
   - The Firebase web API key in those URLs is public by design. The
     notebook's real protection is the Firestore security rules, which is
     already the top item waiting on the owner.
-  - 12/12 ship checks, **APPTOTAL**.
+  - 12/12 ship checks, **493/493 app checks, twice in a row** (unchanged from v04.57 — no app behaviour changed).
 - **v04.57** (23 Sep 2026) — pop-ups made alike, round (c2): one formatting
   row, same buttons, same order, one line at every size. Issue #82, round 2
   of 2 of round (c) — the formatting row under the metadata strip c1 (v04.55)
