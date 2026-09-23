@@ -52,6 +52,7 @@
 :root{
   --forest:#0D1A12;--forest2:#172315;--green:#1B7A46;--green2:#155F37;
   --greenlt:#E8F5EE;--gold:#B8873A;--paper:#F7F4ED;--white:#FFFFFF;
+  --gold-ink:#7B5A26;   /* v04.50 — --gold AS TEXT; applyPaneInk() re-derives it per paper */
   --border:#E4DFD3;--border2:#CFC9BB;
   --t1:#1A1612;--t2:#5A544A;--t3:#67625B;   /* v04.19 — 4.81:1 on --hover */
   /* ── Surface tints (v04.19) ──────────────────────────────────────
@@ -2331,8 +2332,13 @@ sup.ann-sup:hover{text-decoration:underline}
 #p3h.editing .pop-btn{font-size:12.5px;padding:4px 8px;min-width:0}
 /* !important because .bn sets color:var(--t3)!important — without it both
    buttons come out the same grey and the tint silently does nothing. */
-#p3h .pop-btn.pop-multi{color:var(--gold)!important}
-#p3h .pop-btn.pop-single{color:var(--green)!important}
+/* v04.50 — the TEXT inks, not the swatches. --gold measured ~3:1 on the
+   shipped paper and --green 1.4:1 once the owner picks a pale accent; the
+   words only escaped the contrast sweep because they happened to be folded
+   away at the moment it looked. --green2 is the accent as text (v04.19);
+   --gold-ink is gold's equivalent, derived the same way in applyPaneInk(). */
+#p3h .pop-btn.pop-multi{color:var(--gold-ink)!important}
+#p3h .pop-btn.pop-single{color:var(--green2)!important}
 /* Folded: the words go, the button falls back to the icon-only footprint it
    had before this round — same 38px target, nothing else moves. */
 #p3h.p3h-nolbl .pop-lbl{display:none}
@@ -2437,8 +2443,8 @@ sup.ann-sup:hover{text-decoration:underline}
    green the bar uses, so the row and the button read as the same control. */
 .fl-pop .eb-pop-act .eb-act-i{display:flex;align-items:center;justify-content:center}
 .fl-pop .eb-pop-act .pop-ico{width:16px;height:16px}
-.fl-pop .eb-pop-act.pop-multi{color:var(--gold)}
-.fl-pop .eb-pop-act.pop-single{color:var(--green)}
+.fl-pop .eb-pop-act.pop-multi{color:var(--gold-ink)}
+.fl-pop .eb-pop-act.pop-single{color:var(--green2)}
 .fl-pop .eb-act .eb-act-l{font-size:12.5px;font-weight:600;color:var(--t2);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fl-pop .eb-act:hover .eb-act-l{color:var(--t1)}
@@ -12307,7 +12313,14 @@ function _p3FitToolbar(){
    Under 900px there is nothing to fold: .modal-pop-btn is display:none and
    openNotePopup() refuses below that width, in both modes. */
 function _p3FitEditBar(el){
-  el.classList.remove('p3h-nolbl');
+  /* v04.50 — the READ bar's folds too. v04.33 said both modes clear what
+     the other left behind, but this only ever removed p3h-nolbl, so a read
+     fit that ran last (a render's deferred rAF pass landing after
+     startEdit()) could leave p3h-tight/p3h-tighter on the edit bar, hiding
+     its inline type controls and deciding the words' fold against a row
+     that was not the edit bar's own. Found as a check that failed 2 runs in
+     4 under load on the v04.50 branch and never on main. */
+  el.classList.remove('p3h-nolbl','p3h-tight','p3h-tighter','p3h-tightest');
   if(!el.clientWidth||!el.querySelector('.pop-btn'))return;
   let over=false;
   const tb=el.querySelector('.p3h-unified-tb');
@@ -17778,6 +17791,10 @@ function applyPaneInk(themeData){
   const cuAcc=(themeData&&themeData.custom&&themeData.custom.accent)||'';
   const inkAcc=cuAcc||cs.getPropertyValue('--green').trim();
   if(hover&&(cuAcc||own)) set('--green2',_accentInk(inkAcc,hover));
+  /* v04.50 — gold never had a text ink at all: "Multi" was written in the
+     swatch itself, ~3:1 on the shipped paper. Derived for every paper,
+     preset included, since no preset's gold was measured as text. */
+  if(hover) set('--gold-ink',_accentInk(cs.getPropertyValue('--gold').trim(),hover));
   if(!own) return '';   /* preset paper — its own inks are right */
   set('--paper',paper);
   set('--white',   hexLighten(paper,.55));
@@ -21101,6 +21118,24 @@ window.addEventListener('resize',_onViewportResize);
    dividers are dragged. Re-fitting is a couple of class toggles, so it is
    cheap enough to run on every one of those. */
 window.addEventListener('resize',()=>{try{_p3FitToolbar();}catch(e){}});
+/* v04.50 — Pane 3's header re-fits whenever ITS OWN width changes, not only
+   when the window's does. A fit taken while the pane is still settling (the
+   710px → 485px case the render comment describes) used to stand until the
+   next render; with boot now async that window is no longer reliably
+   covered by the render's own rAF pass. Width only: the fit itself changes
+   the row's HEIGHT (it folds words to save a line), and re-fitting on that
+   would chase its own tail. */
+(function(){
+  const el=document.getElementById('p3h');
+  if(!el||!window.ResizeObserver)return;
+  let w=-1;
+  new ResizeObserver(function(){
+    const cw=el.clientWidth;
+    if(cw===w)return;
+    w=cw;
+    requestAnimationFrame(function(){try{_p3FitToolbar();}catch(e){}});
+  }).observe(el);
+})();
 /* v04.14 — the sidebar header folds on the width of ITS OWN PANE, never on
    window width: the sidebar is draggable from 160px to 540px, so a 1440px
    laptop can still be showing a 200px sidebar — which is exactly where the

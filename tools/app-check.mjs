@@ -5088,6 +5088,44 @@ await r.block('16h-no-save-before-the-notebook-loads', async () => {
   await s.close();
 });
 
+/* 16j — the words "Multi" and "Single" read, whenever they are shown.
+   They were painted in the SWATCHES (--gold, --green): ~3:1 on the shipped
+   paper and 1.4:1 on a pale accent. The §6j sweep never caught it on main
+   because the toolbar happened to have folded the words away at the moment
+   it looked; on this branch the fold landed later and the sweep failed 2
+   runs in 4. So this check does not wait for a fold to decide: it forces the
+   words into view and measures them, in both modes, at every setting §6j
+   uses. */
+await r.block('16j-pop-words-contrast', async () => {
+  const SETTINGS = [null, { bg: '#16202A' }, { bg: '#8A8F8C' }, { accent: '#F2D06B' }, { bg: '#16202A', accent: '#F2D06B' }];
+  const worst = [];
+  for (const custom of SETTINGS) {
+    const db = seedDB(); if (custom) db.theme = { preset: 'forest', custom };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    for (const mode of ['read', 'edit']) {
+      await s.page.evaluate((m) => { if (m === 'read') selArt('a1'); else startEdit(); }, mode);
+      await s.page.waitForTimeout(300);
+      const got = await s.page.evaluate(() => {
+        const el = document.getElementById('p3h'); el.classList.remove('p3h-nolbl', 'p3h-tight', 'p3h-tighter', 'p3h-tightest');
+        const rgb = (c) => (c.match(/[\d.]+/g) || []).map(Number);
+        const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+        return [...el.querySelectorAll('.pop-lbl')].filter((l) => l.offsetParent !== null).map((l) => {
+          let bg = null; for (let n = l; n && !bg; n = n.parentElement) { const c = rgb(getComputedStyle(n).backgroundColor); if (c.length === 3 || (c.length === 4 && c[3] === 1)) bg = c.slice(0, 3); }
+          bg = bg || [255, 255, 255];
+          const a = lum(rgb(getComputedStyle(l).color)), b = lum(bg);
+          return { t: l.textContent, c: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) };
+        });
+      });
+      for (const g of got) worst.push({ ...g, mode, set: JSON.stringify(custom) });
+    }
+    await s.close();
+  }
+  worst.sort((a, b) => a.c - b.c);
+  r.check(worst.length >= 20 && worst[0].c >= 4.5,
+    'the words "Multi" and "Single" clear 4.5:1 in read and edit mode at every colour setting',
+    `${worst.length} measured, worst ${worst[0] ? worst[0].c.toFixed(2) + ':1 ' + worst[0].t + ' (' + worst[0].mode + ', ' + worst[0].set + ')' : 'none'}`);
+});
+
 /* 16i — boot is async now, so the window's load event can fire before the
    line that used to wait for it; a listener added after load never fires,
    the service worker never registers, and new versions stop reaching the
