@@ -5320,6 +5320,141 @@ await r.block('17g-sheet-engine-matches-excel', async () => {
   await s.close();
 });
 
+/* ── 18. v04.53: pop-ups made alike, round (a) — note content parity ─────
+   Single is Pane 3 lifted out, so its editor IS #ed. Multi's is the fully
+   decoupled #fw-ed-<id> (see popOutNote's own comment — it never touches
+   ST.article/#ed). Every check compares REAL computed styles between the
+   two editors, never the source CSS, because the whole point is that they
+   must resolve identically. One note carries h1–h4, a paragraph with
+   bold/link/code, a 3-level nested ul, a 10-item ol and a blockquote. */
+const SG_PARITY_CONTENT = '<h1>Heading One</h1><h2>Heading Two</h2><h3>Heading Three</h3><h4>Heading Four</h4>'
+  + '<p>A paragraph with <strong>bold</strong>, <a href="https://example.com">a link</a> and <code>inline code</code>.</p>'
+  + '<ul><li>Level one item'
+  +   '<ul><li>Level two item'
+  +     '<ul><li>Level three item</li></ul>'
+  +   '</li></ul>'
+  + '</li></ul>'
+  + '<ol><li>One</li><li>Two</li><li>Three</li><li>Four</li><li>Five</li><li>Six</li><li>Seven</li><li>Eight</li><li>Nine</li><li>Ten</li></ol>'
+  + '<blockquote>A quoted line of text.</blockquote>';
+function parityDB() {
+  const db = seedDB();
+  db.articles[0].content = SG_PARITY_CONTENT;
+  return db;
+}
+/* root, h1–h4, p, ul (all 3 nesting levels), ol, li, blockquote — the exact
+   set the issue asks for. */
+const PARITY_SELECTORS = ['', 'h1', 'h2', 'h3', 'h4', 'p', 'ul', 'ul ul', 'ul ul ul', 'ol', 'li', 'blockquote'];
+async function paritySnapshot(page, hostSel) {
+  return page.evaluate(({ hostSel, selectors }) => {
+    const PROPS = ['fontFamily', 'fontSize', 'lineHeight', 'color', 'marginTop', 'marginBottom', 'paddingLeft', 'listStyleType', 'fontStyle', 'borderLeftWidth'];
+    const host = document.querySelector(hostSel);
+    const out = {};
+    for (const sel of selectors) {
+      const el = sel === '' ? host : host.querySelector(sel);
+      const key = sel || 'root';
+      if (!el) { out[key] = null; continue; }
+      const cs = getComputedStyle(el);
+      const rec = {};
+      for (const p of PROPS) { if (sel === '' && p === 'paddingLeft') continue; rec[p] = cs[p]; }
+      out[key] = rec;
+    }
+    return out;
+  }, { hostSel, selectors: PARITY_SELECTORS });
+}
+function diffParity(edSnap, fwSnap) {
+  const mism = [];
+  for (const key of Object.keys(edSnap)) {
+    const ea = edSnap[key], eb = fwSnap[key];
+    if (!ea || !eb) { if (ea || eb) mism.push(`${key}: present in one editor only (ed=${!!ea} fw=${!!eb})`); continue; }
+    for (const p of Object.keys(ea)) if (ea[p] !== eb[p]) mism.push(`${key}.${p}: ed=${ea[p]} fw=${eb[p]}`);
+  }
+  return mism;
+}
+async function edChrome(page, hostSel) {
+  return page.evaluate((hostSel) => {
+    const rd = (el) => el ? (({ display, width, height }) => ({ display, width, height }))(getComputedStyle(el)) : null;
+    const host = document.querySelector(hostSel);
+    return { grip: rd(host && host.querySelector('.ed-col-grip')), arr: rd(host && host.querySelector('.ed-col-arr')) };
+  }, hostSel);
+}
+
+for (const vp of VIEWPORTS) {
+await r.block(`18a-parity-sweep-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: parityDB() });
+  await s.page.evaluate(() => { selArt('a1'); startEdit(); });
+  await s.page.waitForTimeout(400);
+  const edSnap = await paritySnapshot(s.page, '#ed');
+  await s.page.evaluate(() => { ST.editing = false; window.render(); });
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => popOutNote('a1'));
+  await s.page.waitForTimeout(400);
+  const fwSnap = await paritySnapshot(s.page, '#fw-ed-a1');
+  const mism = diffParity(edSnap, fwSnap);
+  r.check(mism.length === 0,
+    `${vp.name}: #ed and the Multi editor compute identical font/size/line-height/colour/margins/padding/list-style/font-style/border-left for root, h1–h4, p, ul (3 levels), ol, li, blockquote`,
+    mism.length ? mism.join(' · ') : 'all match');
+  r.check(s.errors.length === 0, `${vp.name}: no page errors opening the note in both editors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+await r.block('18b-markers-not-clipped', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: parityDB() });
+  await s.page.evaluate(() => popOutNote('a1'));
+  await s.page.waitForTimeout(400);
+  const gaps = await s.page.evaluate(() => {
+    const ed = document.getElementById('fw-ed-a1');
+    const cs = getComputedStyle(ed);
+    const rect = ed.getBoundingClientRect();
+    const contentLeft = rect.left + parseFloat(cs.paddingLeft || '0') + parseFloat(cs.borderLeftWidth || '0');
+    return [...ed.querySelectorAll('li')].map((li) => Math.round(li.getBoundingClientRect().left - contentLeft));
+  });
+  const bad = gaps.filter((g) => g < 16);
+  r.check(gaps.length === 13 && bad.length === 0,
+    'every li in the Multi editor (all 3 nested-ul levels + the 10-item ol) sits at least 16px inside the editor’s content-box left edge, so numbers and bullets have room',
+    JSON.stringify(gaps));
+  await s.close();
+});
+
+await r.block('18c-heading-chrome-parity', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: parityDB() });
+  await s.page.evaluate(() => { selArt('a1'); startEdit(); });
+  await s.page.waitForTimeout(400);
+  const ed = await edChrome(s.page, '#ed');
+  await s.page.evaluate(() => { ST.editing = false; window.render(); });
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => popOutNote('a1'));
+  await s.page.waitForTimeout(400);
+  const fw = await edChrome(s.page, '#fw-ed-a1');
+  r.check(!!ed.grip && !!ed.arr && !!fw.grip && !!fw.arr,
+    'both editors render the heading fold grip and arrow', JSON.stringify({ ed, fw }));
+  r.check(JSON.stringify(ed.grip) === JSON.stringify(fw.grip) && JSON.stringify(ed.arr) === JSON.stringify(fw.arr),
+    '.ed-col-grip and .ed-col-arr compute the same display/width/height in both editors — not unstyled boxes in one of them',
+    JSON.stringify({ ed, fw }));
+  await s.close();
+});
+
+await r.block('18d-owner-settings-follow', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: parityDB() });
+  await s.page.evaluate(() => { setFontSize('content', 3); setLineSpacing('relaxed'); });
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => { selArt('a1'); startEdit(); });
+  await s.page.waitForTimeout(400);
+  const ed = await s.page.evaluate(() => { const cs = getComputedStyle(document.getElementById('ed')); return { fs: cs.fontSize, lh: cs.lineHeight }; });
+  await s.page.evaluate(() => { ST.editing = false; window.render(); });
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => popOutNote('a1'));
+  await s.page.waitForTimeout(400);
+  const fw = await s.page.evaluate(() => { const cs = getComputedStyle(document.getElementById('fw-ed-a1')); return { fs: cs.fontSize, lh: cs.lineHeight }; });
+  r.check(ed.fs !== '17px' && ed.lh !== '1.6',
+    'the owner\'s setFontSize()/setLineSpacing() actually moved #ed off its defaults, so this check is testing a real change',
+    JSON.stringify(ed));
+  r.check(ed.fs === fw.fs && ed.lh === fw.lh,
+    'a non-default content size and line spacing set through the app’s own setting functions reaches the Multi editor’s root exactly as it reaches #ed',
+    JSON.stringify({ ed, fw }));
+  await s.close();
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
