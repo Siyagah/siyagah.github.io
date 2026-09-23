@@ -2175,11 +2175,33 @@ sup.ann-sup:hover{text-decoration:underline}
    parent, so nothing about either has to change to sit in here. `.kind-bar`
    loses its sticky/margin — both were for the read view's scrolling note
    body, which this is not. */
+/* v04.55 review fix — the rows are real flex rows now, not stacked blocks.
+   kindBarHTML(a,true,…) hands back its children WITHOUT the .kind-bar
+   wrapper, so as plain blocks Type, the chip, Attach and 📦 each took a
+   line of their own (the strip measured ~310px tall on a phone). `.pop-row`
+   is the strip's own wrapper, deliberately NOT .kind-bar, whose
+   `flex-wrap:nowrap!important` belongs to Pane 3's read bar. And one inset
+   for every row in both pop-ups: 14px from the pop-up's edge, the same
+   value as #p3h's own side padding, with the rows' own inner paddings
+   zeroed so each row's first thing starts exactly there. */
 .pop-meta-strip{padding:6px 0}
-.pop-meta-strip>div{margin:0 0 6px}
-.pop-meta-strip>div:last-child{margin-bottom:0}
-.pop-meta-strip .kind-bar{position:static}
-.pop-meta-strip .tag-editor{margin:0 10px 6px}
+.float-win .pop-meta-strip{padding:6px 14px}
+.pop-meta-strip>.pop-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0 0 6px}
+.pop-meta-strip>.pop-row:last-child{margin-bottom:0}
+.pop-meta-strip .pop-row>*{margin-left:0;margin-right:0}
+.pop-meta-strip .tag-editor{flex:1 1 100%;margin:0}
+.pop-meta-strip .fw-fols,.pop-meta-strip .ver-strip{padding:0;margin:0}
+#p3 .pop-meta-strip .note-dateline,.float-win .pop-meta-strip .note-dateline{padding-left:0;padding-right:0}
+.pop-meta-strip .note-dateline-hr{margin:4px 0 0}
+.pop-meta-strip .fld-panel{margin:4px 0 0}
+.pop-meta-strip .kind-act{display:inline-flex;align-items:center;gap:6px}
+/* The title lines up with the rows below it: Multi's input drops its own
+   10px text inset for the same 14px margin; Single's title bar drops its
+   10px so #ti sits on #p3h's 14px, which modal-mode also pins at phone
+   width (normally 12px there). */
+.float-win .fw-ti{margin:0 14px;padding-left:0;padding-right:0}
+#p3.modal-mode #p3h{padding-left:14px!important;padding-right:14px!important}
+#p3.modal-mode #p3h .p3h-title-bar{padding-left:0;padding-right:0}
 /* v03.NotePane.T4 — without touch-action:none the browser claims these
    gestures for scrolling/zooming and the drag never reaches our handlers. */
 .modal-resize-r,.modal-resize-b,.modal-resize-l,.modal-corner,
@@ -3749,12 +3771,16 @@ function _folderChipsHTML(a){
 function _popMetaStripHTML(a,host){
   if(!a)return '';
   let h='<div class="pop-meta-strip">';
-  h+=kindBarHTML(a,true,true,!!host);
-  h+=`<div class="tag-editor" data-ps="tags" data-tag-host="${host||''}" onclick="this.querySelector('.tag-inp')?.focus()"></div>`;
+  /* v04.55 review fix — four rows, each a .pop-row flex row: Type · chip ·
+     Attach · 📦 on one, the tag box on the next, folders and versions
+     sharing a third (both are short), the date last. Order unchanged. */
+  h+='<div class="pop-row pop-kind-row">'+kindBarHTML(a,true,true,!!host)+'</div>';
+  h+=`<div class="pop-row"><div class="tag-editor" data-ps="tags" data-tag-host="${host||''}" onclick="this.querySelector('.tag-inp')?.focus()"></div></div>`;
   const fols=_folderChipsHTML(a);
-  if(fols)h+=`<div class="fw-meta fw-fols" data-ps="folders">${fols}</div>`;
-  h+=_versionStripHTML(a,host);
-  h+=`<div data-ps="date">${_dateLineHTML(a)}${_fieldsPanelHTML(a)}</div>`;
+  h+='<div class="pop-row pop-fv-row">'
+    +(fols?`<div class="fw-meta fw-fols" data-ps="folders">${fols}</div>`:'')
+    +_versionStripHTML(a,host)+'</div>';
+  h+=`<div class="pop-row" data-ps="date">${_dateLineHTML(a)}${_fieldsPanelHTML(a)}</div>`;
   h+='</div>';
   return h;
 }

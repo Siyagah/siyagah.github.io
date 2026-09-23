@@ -6115,6 +6115,55 @@ await r.block(`20g-normal-pane3-unchanged-${vpw}`, async () => {
 });
 }
 
+/* v04.55 review fix — the strip's GEOMETRY, not just its order. The first
+   cut rendered every data-ps element as a block of its own: Type, the chip,
+   Attach and 📦 on four lines, the strip ~310px tall on a phone, and Multi's
+   Type row flush against the window edge while every other row was inset.
+   20a's order check passed throughout, which is exactly why these exist. */
+async function stripGeom(page, containerSel, barSel) {
+  return page.evaluate(([containerSel, barSel]) => {
+    const host = document.querySelector(containerSel);
+    const strip = host.querySelector('.pop-meta-strip');
+    const L = host.getBoundingClientRect().left;
+    const box = (el) => { if (!el || !el.getClientRects().length) return null; const r = el.getBoundingClientRect();
+      return { left: Math.round(r.left - L), mid: Math.round(r.top + r.height / 2), top: Math.round(r.top), bottom: Math.round(r.bottom) }; };
+    const q = (sel) => box(strip.querySelector(sel));
+    const title = box(host.querySelector('[data-ps="title"]'));
+    const bar = box(host.querySelector(barSel));
+    /* each row's FIRST visible thing — a row is a .pop-row, plus the title */
+    const rowLefts = [title && title.left, ...[...strip.querySelectorAll(':scope>.pop-row')].map((row) => {
+      const kids = [...row.querySelectorAll('[data-ps]'), row].map(box).filter(Boolean);
+      return Math.min(...kids.map((k) => k.left)); })].filter((x) => x != null);
+    return { type: q('[data-ps="type"]'), attach: q('[data-ps="attach"]'), archive: q('.kind-arch-btn'),
+      folders: q('[data-ps="folders"]'), versions: q('[data-ps="versions"]'),
+      gap: title && bar ? bar.top - title.bottom : null, rowLefts };
+  }, [containerSel, barSel]);
+}
+for (const vp of VIEWPORTS) {
+await r.block(`20h-20i-20j-strip-geometry-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: richDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false; window.render(); showPane('p3'); openNotePopup('a1', 'float'); });
+  await s.page.waitForTimeout(400);
+  const m = await stripGeom(s.page, '#fw-a1', '.fw-tb');
+  await s.page.evaluate(() => closeAllPopouts()); await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => openNotePopup('a1', 'panel')); await s.page.waitForTimeout(400);
+  const g = await stripGeom(s.page, '#p3', '#p3h .p3h-unified-tb, #p3h .p3h-nav-edit-row');
+  await s.close();
+  /* centres, not tops: the TYPE label is 9px text beside a 26px chip */
+  const oneRow = (a, ...rest) => !!a && rest.every((b) => !!b && Math.abs(b.mid - a.mid) <= 6);
+  for (const [name, x] of [['Multi', m], ['Single', g]]) {
+    r.check(oneRow(x.type, x.attach, x.archive) && oneRow(x.folders, x.versions),
+      `${vp.name} ${name}: Type · Attach · 📦 share one row, and so do folders · versions (20h)`, JSON.stringify(x));
+    r.check(x.gap != null && x.gap <= 190,
+      `${vp.name} ${name}: title to formatting row is ≤ 190px (20i)`, `${x.gap}px`);
+    const spread = Math.max(...x.rowLefts) - Math.min(...x.rowLefts);
+    r.check(spread <= 2, `${vp.name} ${name}: every strip row starts at the same inset (20j)`, JSON.stringify(x.rowLefts));
+  }
+  r.check(Math.abs(Math.min(...m.rowLefts) - Math.min(...g.rowLefts)) <= 2,
+    `${vp.name}: the strip's inset is the same in Multi and Single (20j)`, `${m.rowLefts[0]} vs ${g.rowLefts[0]}`);
+});
+}
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores

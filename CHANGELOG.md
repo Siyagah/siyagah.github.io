@@ -5241,5 +5241,32 @@ exercises for these particular rows.
 - `app-check --only 20`: **10/10**.
 - `app-check --only 6`: **233/233** — the guard for "normal Pane 3
   unchanged".
-- Full `app-check` and the unpatched-code verification: **(measured in
-  review)** — per the issue, the Architect runs both and posts the numbers.
+- **Review fix, by the Architect** (PR #78's builder fix run ended without
+  pushing, so this was made on the Architect's branch as PR #79):
+  - `kindBarHTML(a,true,…)` returns its children with no `.kind-bar`
+    wrapper, so in the strip `Type`, the chip, `📎 Attach` and `📦` were
+    block elements on four lines. The strip measured ~310px from title to
+    toolbar on a phone.
+  - Each strip row is now a `.pop-row` flex row: Type · chip · Attach · 📦
+    on one, the tag box on the next, folders and versions sharing one, the
+    date last. `data-ps` order is unchanged, so `20a` is untouched.
+  - One inset, 14px from the pop-up's edge, for every row and the title
+    in both pop-ups:
+    - Multi's `.fw-ti` trades its 10px text padding for a 14px margin;
+    - Single's `#p3h` is pinned at 14px in modal mode (12px at phone
+      width otherwise), and its title bar's own 10px goes;
+    - the rows' inner paddings (`.fw-fols`, `.ver-strip`, the date line)
+      are zeroed inside the strip.
+  - Title to formatting row, measured: phone 183/144px, tablet 179/144px,
+    desktop 142/126px (Single/Multi), all under the 190px bound.
+  - New checks `20h` (Type · Attach · 📦 on one row, folders · versions on
+    one row; by vertical centre ±6px, since the `Type` label is 9px text
+    beside a 26px chip), `20i` (title → toolbar ≤190px) and `20j` (every
+    row starts at the same inset within a pop-up, ±2px, and the same
+    between Multi and Single). All three run at 390/820/1440 in both
+    pop-ups: 21 checks. On the first cut's `index.html` 15 fail. The 6
+    that pass are the per-pop-up inset checks: the first cut had no
+    `.pop-row`s, so there was only the title to compare. The
+    between-pop-ups inset check does catch it.
+- Full `app-check`: **ALLTOTAL**. Unpatched (this round's `tools/` against
+  v04.54's `index.html`): **UNPTOTAL**.

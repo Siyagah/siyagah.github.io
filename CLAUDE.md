@@ -78,9 +78,21 @@ must never accumulate here instead of there.
     inside `#p3.modal-mode` navigates a background pane while normal Pane 3
     still can; `⋯` reachable everywhere; normal Pane 3's own control list
     unchanged from `main`. No pre-existing check needed updating.
-  - 11/11 ship checks, `app-check --only 20` **10/10**, `--only 6` (the
-    Pane 3 toolbar/read-chrome guard) **233/233**. Full `app-check` and the
-    unpatched-code verification: **(measured in review)**, per the issue.
+  - **Finished by the Architect in review.** The first cut had the right
+    order, but `kindBarHTML(a,true,…)` returns no `.kind-bar` wrapper, so
+    Type, the chip, Attach and 📦 stacked on four lines. The strip was
+    ~310px tall on a phone, and Multi's Type row sat flush on the window
+    edge. The builder's fix run ended **without pushing** (the v04.42
+    failure again). The Architect made the fix on its own branch:
+    - `.pop-row` flex rows: Type · Attach · 📦 on one, folders · versions
+      on one;
+    - one 14px inset for every row and the title, in both pop-ups;
+    - checks `20h`/`20i`/`20j` (one row, title-to-toolbar ≤190px, same
+      inset). 15 of their 21 fail on the first cut. The 6 per-pop-up
+      inset checks pass there only because the first cut had no rows to
+      compare.
+  - 11/11 ship checks, **ALLTOTAL**. Unpatched (this `tools/` against
+    v04.54's `index.html`): **UNPTOTAL**.
 - **v04.54** (23 Sep 2026) — pop-ups made alike, round (b): one shared frame
   (title, ‹ ›, ✕, Multi⇄Single switch). Issue #75, round 2 of 4 — this round
   is the bar across the top only; the toolbar underneath is round (c).

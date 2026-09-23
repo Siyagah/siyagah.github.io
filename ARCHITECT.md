@@ -69,6 +69,17 @@ passes even while stashed must be reported and explained, never deleted** —
 a check that cannot fail proves nothing, and knowing which ones those are is
 worth having.
 
+**Review totals ride the next round.** A commit that only records numbers
+still changes `CHANGELOG.md`/`CLAUDE.md`, and `ship-check` then demands a
+version bump. So the numbers the Architect measures in review of round N are
+written into the record by round N+1's builder, quoted exactly in its issue,
+unless the Architect finishes round N on its own branch and can write them
+before merging.
+
+**Name every size in every "a real click does X" check.** v04.54's issue
+asked for "✕ closes" without sizes. The builder tested it at 1440 only, and a
+tablet overflow that made ✕ unreachable slipped past its checks.
+
 Also worth naming in the issue: the builder has `Bash(node *)`,
 `Bash(npx playwright *)`, `Bash(git *)`, `Bash(gh pr *)`, `Bash(gh issue *)`,
 `Read`, `Edit`, `Write`, `Glob`, `Grep`. A bare `Bash(cat …)`, `Bash(ls …)`
@@ -320,6 +331,13 @@ Every report follows one shape:
       merged cells, borders, colour rules, filters, several sheets per
       table, CSV in/out, and ~150 functions. Round 3: charts from a table,
       and .xlsx import/export.
+- [ ] **Tags added while editing are not committed by autosave or on
+      leaving the app (I1).** Found in the v04.55 review and measured on
+      v04.54: `ST.etags` reaches `DB` only via `saveArt()`, and
+      `_flushEd()`/`_flushEverythingOut()` skip it. So backgrounding the
+      app loses the tag while the typed text survives. Check `ST.efolders`
+      and every other staged field the same way. **Next round, ahead of
+      (c2).**
 - [ ] **A sheet copied through the note editor** (select text around it,
       copy, paste into another note) passes through `execCommand`'s
       sanitiser. Whether `data-sg` survives is **not measured** (v04.52).
