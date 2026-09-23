@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.56">
+<meta name="app-version" content="04.57">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2202,6 +2202,29 @@ sup.ann-sup:hover{text-decoration:underline}
 .float-win .fw-ti{margin:0 14px;padding-left:0;padding-right:0}
 #p3.modal-mode #p3h{padding-left:14px!important;padding-right:14px!important}
 #p3.modal-mode #p3h .p3h-title-bar{padding-left:0;padding-right:0}
+/* ══ v04.57 — ONE FORMATTING ROW, BOTH POP-UPS (round (c2)) ═══════════════
+   _popFormatRowHTML() gives Multi's .fw-tb and Single's (now unconditional,
+   in modal mode) .p3h-unified-tb a second class, .pop-fmt-row, rather than a
+   new class of its own — so section 20's existing geometry checks, which
+   already query those two legacy selectors, need no update, while this
+   round's own rules only ever touch pop-up rows (.pop-fmt-row never appears
+   on normal Pane 3, whose own .p3h-unified-tb keeps flex-wrap:wrap and its
+   own 8px padding exactly as before). Compound selectors so these rules win
+   over the plain .fw-tb/.p3h-unified-tb ones above regardless of source
+   order. One line, never wraps — the row now has few enough controls at
+   every tier to fit without folding (phone drops the History group and
+   folds Template/Find into `≡`/`+`, matching Pane 3's own phone shape) — and
+   the same 14px inset as the strip above it: Multi's own 8px and the
+   zeroed-out padding relying on #p3h's 14px for Single. */
+.fw-tb.pop-fmt-row,
+#p3.modal-mode #p3h .p3h-unified-tb.pop-fmt-row{
+  flex-wrap:nowrap;overflow:hidden;padding:5px 8px 5px 14px;gap:3px}
+#p3.modal-mode #p3h .p3h-unified-tb.pop-fmt-row{padding-left:0;padding-right:0}
+.pop-fmt-row .et-save{margin-left:auto;flex-shrink:0}
+.pop-fmt-row .eb-grp-btn,.pop-fmt-row .et{flex-shrink:0}
+@media(max-width:1199.98px){
+  .pop-fmt-row .et,.pop-fmt-row .eb-grp-btn{min-height:38px}
+}
 /* v03.NotePane.T4 — without touch-action:none the browser claims these
    gestures for scrolling/zooming and the drag never reaches our handlers. */
 .modal-resize-r,.modal-resize-b,.modal-resize-l,.modal-corner,
@@ -2956,7 +2979,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.56</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.57</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4419,19 +4442,13 @@ function renderP3H(){
        it exactly as they always have — nothing about HOW that row folds
        changes this round (that is c2's job); only what stands above it. */
     if(ST.noteModal){
-      const _mobM=window.innerWidth<1200;
-      /* Multi's toolbar has always carried its own unconditional 💾 Save;
-         Pane 3's _p3EditIconsHTML() only does on the phone (_p3OneBar()) —
-         tablet/desktop have relied on kindBarHTML's OWN Save button, which
-         the strip below suppresses (noSave). So the button row gains an
-         explicit Save wherever _p3EditIconsHTML() would not already carry
-         one, rather than Save quietly disappearing on those two tiers. */
-      const _saveBtn=_p3OneBar()?'':'<button class="et et-save" onclick="saveArt()" title="Save this note">💾 Save</button>';
+      /* v04.57 — round (c2): the formatting row is _popFormatRowHTML(null,
+         curA) now, ONE row at every size instead of the phone/tablet
+         nav-edit-row vs desktop unified-tb split this branch used to make —
+         see that function for the shared order/fold both pop-ups now use. */
       let hm=`<div class="p3h-title-bar p3c-titlebar" data-ps="title"><input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span></div>`;
       hm+=_popMetaStripHTML(curA,null);
-      hm+=_mobM
-        ? '<div class="p3h-nav-edit-row"><div class="nav-l"></div><div class="nav-r">'+_p3EditIconsHTML(curA)+_edColToolbarHTML()+_saveBtn+'</div></div>'
-        : '<div class="p3h-unified-tb">'+_p3EditIconsHTML(curA)+_edColToolbarHTML()+_saveBtn+'</div>';
+      hm+=_popFormatRowHTML(null,curA);
       el.innerHTML=hm;
       if(_tiFoc){const _tin=document.getElementById('ti');if(_tin){_tin.focus({preventScroll:true});try{_tin.setSelectionRange(_selS,_selE);}catch(e){}}}
       renderTagEditor();
@@ -9838,7 +9855,12 @@ function _p3HomeBtnHTML(oneBar){
    (this bar, the two menus it folds into, and the rows renderP3C drops);
    one function decides for all of them so they cannot drift apart. */
 function _p3OneBar(){return window.innerWidth<640;}
-function _p3EditIconsHTML(curA){
+/* v04.57 — noSave (round (c2)): normal Pane 3's two call sites pass nothing,
+   so this is byte-identical to before (20g guards it). The pop-up formatting
+   row (_popFormatRowHTML) passes true — it places its own 💾 Save at the
+   row's very right end, after ⋯ Section tools, on every tier; the phone's
+   inline Save here would otherwise land BEFORE ⋯ instead of after it. */
+function _p3EditIconsHTML(curA,noSave){
   const _eg=ST.ebGroup||null;
   const _mob=_p3OneBar();
   const _grps=_mob?[
@@ -9853,9 +9875,9 @@ function _p3EditIconsHTML(curA){
     {id:'insert',icon:'+',         label:'Insert'},
     {id:'hist',  icon:'↺',       label:'History'},
   ];
-  return _grps.map(g=>`<button class="et eb-grp-btn${_eg===g.id?' on':''}" data-g="${g.id}" onmousedown="togEBGroup('${g.id}')" title="${g.label}">${g.icon}</button>`).join('')
+  return _grps.map(g=>`<button class="et eb-grp-btn${_eg===g.id?' on':''}" data-g="${g.id}" data-tb="${g.id}" onmousedown="togEBGroup('${g.id}')" title="${g.label}">${g.icon}</button>`).join('')
     +(_mob?'':_ktBtnHTML()
-      +`<button class="et" onmousedown="event.preventDefault()" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>`)
+      +`<button class="et" data-tb="find" onmousedown="event.preventDefault()" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>`)
     /* v04.33 — the words, on the edit bar too. They were `false` here since
        v04.10 ("the edit bar never has width to spare"), which was never
        measured: on this row they cost 61px and 70px, and the unified toolbar
@@ -9863,7 +9885,7 @@ function _p3EditIconsHTML(curA){
        folds them off by MEASURING the row rather than by assuming it. */
     +_popBtnHTML(curA.id,'float','et',true)
     +_popBtnHTML(curA.id,'panel','et',true)
-    +(_mob?`<button class="et et-save" onmousedown="event.preventDefault()" onclick="saveArt()" title="Save this note">💾 Save</button>`:'');
+    +((_mob&&!noSave)?`<button class="et et-save" data-tb="save" onmousedown="event.preventDefault()" onclick="saveArt()" title="Save this note">💾 Save</button>`:'');
 }
 /* The count is the point: with the bar closed, this is the only thing on
    screen that says the note is tagged at all. */
@@ -10089,6 +10111,30 @@ function _ebSectionToolsHTML(aid){
     +'" onmousedown="event.preventDefault()" onclick="_edColPreview()"'
     +' title="Show a preview line under collapsed sections">&#9636; Preview</button>';
 }
+/* v04.57 — round (c2): the phone-folded Undo/Redo/History/Find block, one
+   builder for both pop-ups' `≡` menu. aid falsy is Pane 3/Single (ec()/
+   openNoteHistory(ST.article)/_ntFindToggle('p3') — exactly what was
+   hand-written inline here before this round); a Multi window's aid targets
+   that window's own editor (_fwEc(...,aid,...)/openNoteHistory(aid)/
+   _ntFindToggle(aid)). Pane 3's own phone `≡` menu (_buildEBSub below) and
+   Multi's (_fwBuildEBSub) both call this now, rather than carrying two
+   copies of the same three rows that could drift apart — the issue's own
+   instruction ("make them one") for exactly this folded content. */
+function _ebFoldedHistHTML(aid){
+  const undoMd=aid?`_fwEc(event,'${aid}','undo')`:`ec(event,'undo')`;
+  const redoMd=aid?`_fwEc(event,'${aid}','redo')`:`ec(event,'redo')`;
+  const histAid=aid?`'${aid}'`:'ST.article';
+  const findKey=aid?`'${aid}'`:"'p3'";
+  return '<div class="fl-pop-hd">Undo · Redo · Find</div>'
+    +'<button class="et eb-act" onmousedown="'+undoMd+'" title="Undo">'
+      +'<span class="eb-act-i">↩</span><span class="eb-act-l">Undo</span></button>'
+    +'<button class="et eb-act" onmousedown="'+redoMd+'" title="Redo">'
+      +'<span class="eb-act-i">↪</span><span class="eb-act-l">Redo</span></button>'
+    +'<button class="et eb-act" onmousedown="event.preventDefault();openNoteHistory('+histAid+')" title="Note History — restore an earlier version">'
+      +'<span class="eb-act-i">🕐</span><span class="eb-act-l">History</span></button>'
+    +'<button class="et eb-act" onmousedown="event.preventDefault()" onclick="_ntFindToggle('+findKey+')" title="Find in this note">'
+      +'<span class="eb-act-i">🔍</span><span class="eb-act-l">Find</span></button>';
+}
 function _buildEBSub(g){
   if(!g)return '';
   const subs={
@@ -10149,17 +10195,7 @@ function _buildEBSub(g){
       /* v04.27 — undo/redo/find FIRST, as the owner asked: they are what you
          reach for mid-sentence, where the list blocks are a deliberate choice
          made once. \ud83d\udce6 Archive joins the bottom of this menu, out of `+`. */
-      out='<div class="fl-pop-hd">Undo · Redo · Find</div>'
-        +'<button class="et eb-act" onmousedown="ec(event,\'undo\')" title="Undo">'
-          +'<span class="eb-act-i">\u21a9</span><span class="eb-act-l">Undo</span></button>'
-        +'<button class="et eb-act" onmousedown="ec(event,\'redo\')" title="Redo">'
-          +'<span class="eb-act-i">\u21aa</span><span class="eb-act-l">Redo</span></button>'
-        +'<button class="et eb-act" onmousedown="event.preventDefault();openNoteHistory(ST.article)"'
-          +' title="Note History \u2014 restore an earlier version">'
-          +'<span class="eb-act-i">\ud83d\udd50</span><span class="eb-act-l">History</span></button>'
-        +'<button class="et eb-act" onmousedown="event.preventDefault()" onclick="_ntFindToggle(\'p3\')"'
-          +' title="Find in this note">'
-          +'<span class="eb-act-i">\ud83d\udd0d</span><span class="eb-act-l">Find</span></button>'
+      out=_ebFoldedHistHTML(null)
         +'<div class="fl-pop-hd">Lists and blocks</div>'+_ebListsHTML(true)
         +(a?_ebNoteStateHTML(a):'');
     }
@@ -10889,40 +10925,78 @@ function _popFrameFlash(msg){
   clearTimeout(el._ft);
   el._ft=setTimeout(function(){el.classList.remove('show');},1100);
 }
+/* ══ v04.57 — ONE FORMATTING ROW, BOTH POP-UPS (round (c2) of "make the two
+   pop-ups alike") ══════════════════════════════════════════════════════════
+   Group buttons + Template + Find (tablet/desktop) or the same buttons with
+   Template/Find/History folded into `≡`/`+` (phone, _p3OneBar()) — the
+   Multi-window mirror of _p3EditIconsHTML(). Kept as a separate function
+   (rather than teaching _p3EditIconsHTML about a Multi window's aid)
+   because Multi's group toggler (_fwTogGroup) and menu builder
+   (_fwBuildEBSub) are keyed by aid, while Pane 3/Single's (togEBGroup/
+   _buildEBSub) act on the single global #ed/#eb-pop — two real DOM targets,
+   one shared TABLE of which groups exist and how they fold, exactly the
+   v04.26 "one table, two renderings" pattern. Never renders 💾 Save itself —
+   _popFormatRowHTML() below places that once, at the row's right end. */
+function _fwEditIconsHTML(aid){
+  const mob=_p3OneBar();
+  const key='fw-'+aid;
+  const _grps=mob?[
+    {id:'text',  icon:'<b>Aa</b>',label:'Text style'},
+    {id:'heads', icon:'H',         label:'Headings'},
+    {id:'lists', icon:'≡',       label:'Lists and blocks · Undo/Redo · Find'},
+    {id:'insert',icon:'+',         label:'Insert · Template'},
+  ]:[
+    {id:'text',  icon:'<b>Aa</b>',label:'Text style'},
+    {id:'heads', icon:'H',         label:'Headings'},
+    {id:'lists', icon:'≡',       label:'Lists'},
+    {id:'insert',icon:'+',         label:'Insert'},
+    {id:'hist',  icon:'↺',       label:'History'},
+  ];
+  return _grps.map(g=>`<button class="et eb-grp-btn${_fwEbGroup[key]===g.id?' on':''}" data-g="${g.id}" data-tb="${g.id}" onmousedown="_fwTogGroup('${aid}','${g.id}',this)" title="${g.label}">${g.icon}</button>`).join('')
+    +(mob?'':_ktBtnHTML()
+      +`<button class="et" data-tb="find" onmousedown="event.preventDefault()" onclick="_ntFindToggle('${aid}')" title="Find in this note">🔍</button>`);
+}
+/* host falsy → Single/Pane 3's #ed (curA is ST.article, exactly what
+   _p3EditIconsHTML already renders for normal Pane 3 — reused here with
+   noSave, not duplicated); host → a Multi window's aid. Order, every size:
+   the group buttons, then (tablet/desktop only) 📋 Template and 🔍 Find,
+   then ⋯ Section tools, then 💾 Save pinned to the row's right end always —
+   never the phone's mid-row Save either pop-up carried before this round.
+   Replaces Multi's inline .fw-tb markup and Single's modal-branch use of
+   _p3EditIconsHTML(); normal (non-modal) Pane 3 never calls this — it keeps
+   _p3EditIconsHTML()/kindBarHTML()/_edColToolbarHTML() directly, unchanged
+   (20g guards that). The row keeps its host's own legacy class (.fw-tb /
+   .p3h-unified-tb) alongside the new .pop-fmt-row — so section 20's
+   existing geometry checks, which already query those two selectors,
+   need no update — plus data-ps="toolbar" for anything that wants the
+   pop-up's own child list, the way the strip above it already does. */
+function _popFormatRowHTML(host,curA){
+  const icons=host?_fwEditIconsHTML(host):_p3EditIconsHTML(curA,true);
+  const sect=_edColToolbarHTML(host);
+  const cls=host?'fw-tb':'p3h-unified-tb';
+  const saveOn=host?`_fwSave('${host}')`:'saveArt()';
+  return '<div class="'+cls+' pop-fmt-row" data-ps="toolbar">'
+    +icons+sect
+    +'<button class="et et-save" data-tb="save" onmousedown="event.preventDefault()" onclick="'+saveOn+'" title="Save this note">💾 Save</button>'
+    +'</div>';
+}
 function _fwRenderBody(aid){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return '';
-  /* v03.NotePane.E5 — 'insert' restored. It was the one group Pane 3 had and
-     float windows did not, because every insert tool routed through
-     insertAtCaret() which was hard-wired to #ed. Now that the caret core
-     resolves the active editor, these act on the right note. */
-  const _grps=[
-    {id:'text',  icon:'<b>Aa</b>',label:'Text style'},
-    {id:'heads', icon:'H',        label:'Headings'},
-    {id:'lists', icon:'≡',        label:'Lists'},
-    {id:'insert',icon:'+',        label:'Insert'},
-    {id:'hist',  icon:'↺',        label:'History'},
-  ];
-  const ebIcons=_grps.map(g=>`<button class="et eb-grp-btn" data-g="${g.id}" onmousedown="_fwTogGroup('${aid}','${g.id}',this)" title="${g.label}">${g.icon}</button>`).join('');
   /* v04.55 — 🏷 Note Types and the bare 📎 Attach left this row (round (c1)
      of "make the two pop-ups alike"): both are reached through the Type
      chip and 📎 Attach INSIDE the metadata strip below now, exactly as Pane
      3 has done since v04.11 — Pane 3's own formatting row has never carried
      either. Keeping them here too would have meant the same job reachable
      two ways on Multi and one way on Single, which is the opposite of "the
-     same controls". */
+     same controls".
+     v04.57 — round (c2): the row itself is _popFormatRowHTML(aid,a) now,
+     the one builder that also renders Single's modal formatting row — see
+     that function for the shared order/fold this round settled on. */
   return _popFrameHTML(aid,'float')
     +'<div class="fw-body">'
     +'<input class="fw-ti" id="fw-ti-'+aid+'" data-ps="title" value="'+esc(a.title||'')+'" placeholder="Title…">'
     +_popMetaStripHTML(a,aid)
-    +'<div class="fw-tb">'
-    +ebIcons
-    +'<span id="fw-col-wrap-'+aid+'" style="display:none">'
-    +'<button class="et" onmousedown="event.preventDefault()" onclick="toggleEdColPop(event,\''+aid+'\')" title="Section tools: Collapse / Expand / Preview">⋯</button>'
-    +'</span>'
-    +_ktBtnHTML()
-    +'<button class="nti-picker-btn" onclick="_ntFindToggle(\''+aid+'\')" title="Find in this note">🔍</button>'
-    +'<button class="nti-picker-btn nti-save" onclick="_fwSave(\''+aid+'\')" title="Save">💾 Save</button>'
-    +'</div>'
+    +_popFormatRowHTML(aid,a)
     +'<div class="fw-find" id="fw-find-'+aid+'" style="display:none">'
     +'<input class="fw-find-q" id="fw-find-q-'+aid+'" placeholder="Find in note…" '
     +'oninput="_ntFindRun(\''+aid+'\',this.value)" onkeydown="_ntFindKey(event,\''+aid+'\')">'
@@ -11011,21 +11085,28 @@ function _fwBuildEBSub(aid,g){
       `<button class="et" onmousedown="_fwEc(event,'${aid}','formatBlock','<blockquote>')" style="font-style:italic">❝</button>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','insertHorizontalRule')">─</button>`,
     ],
-    insert:[
-      `<button class="et" title="Insert image" onmousedown="edImgPick(event)">🖼</button>`,
-      `<button class="et" title="Insert link" onmousedown="edLink(event)">🔗</button>`,
-      `<button class="et" title="Bookmark card" onmousedown="edBookmarkBtn(event)">🔖</button>`,
-      `<button class="et" title="Mention (@)" onmousedown="edMentionBtn(event)" style="font-weight:700">@</button>`,
-      `<button class="et" title="Quick Phrases" onmousedown="openQuickPhrasesMenu(event)" onclick="event.stopPropagation()">💬</button>`,
-      `<button class="et" title="Insert a spreadsheet: formulas, totals, sorting" onmousedown="insertSheet(event)">▦</button>`,
-    ],
+    /* v04.57 — the SAME table Pane 3's own `+` menu builds from (_EB_INSERT/
+       _ebInsertHTML), not a second hand-written list: every handler here was
+       already host-generic (edImgPick/edLink/edBookmarkBtn/edMentionBtn/
+       openQuickPhrasesMenu/insertSheet all resolve _edActive() themselves),
+       which is exactly why Multi's own copy always matched Pane 3's one
+       button for one button. Labelled (and carrying 📋 Template, which a
+       laptop reaches via its own toolbar button instead) only when this
+       window's own row has folded onto the phone shape. */
+    insert:[_ebInsertHTML(_p3OneBar())],
     hist:[
       `<button class="et" onmousedown="_fwEc(event,'${aid}','undo')" title="Undo">↩</button>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','redo')" title="Redo">↪</button>`,
       `<button class="et" onmousedown="event.preventDefault()" onclick="openNoteHistory('${aid}')" title="Note History — restore an earlier version">🕐</button>`,
     ],
   };
-  return (subs[g]||[]).join('');
+  let out=(subs[g]||[]).join('');
+  /* v04.57 — round (c2): on the phone the row itself drops the History
+     group (see _fwEditIconsHTML), so Undo/Redo/Find fold into `≡` here —
+     the same _ebFoldedHistHTML() block Pane 3's own phone `≡` menu builds
+     from (_buildEBSub), not a second copy that could drift from it. */
+  if(_p3OneBar()&&g==='lists')out=_ebFoldedHistHTML(aid)+'<div class="fl-pop-hd">Lists and blocks</div>'+out;
+  return out;
 }
 const _fwEbGroup={};
 function _fwTogGroup(aid,g,btn){
@@ -13586,10 +13667,19 @@ function _edColSyncPrevBtn(){
   const on=!!(DB.theme&&DB.theme.collapsePreview==='preview');
   document.querySelectorAll('#ed-col-prev-btn,.ed-col-prev').forEach(b=>b.classList.toggle('on',on));
 }
-function _edColToolbarHTML(){
-  return '<div id="ed-col-wrap" style="display:none">'
-    +'<button class="et" id="ed-col-btn" onmousedown="event.preventDefault()" onclick="toggleEdColPop(event)" title="Section tools: Collapse / Expand / Preview">⋯</button>'
+/* v04.57 — aid (round (c2)): falsy is Pane 3/Single, unchanged from before;
+   a Multi window's aid renders the same button wrapped for that window's own
+   #fw-col-wrap-<aid> (previously a hand-copied literal inside _fwRenderBody,
+   now the one place this markup is written). _edColInit() already looks for
+   either id by name (see its `ed.id==='ed'?'ed-col-wrap':'fw-col-wrap-'+aid`
+   switch), so nothing there had to change. */
+function _edColToolbarHTML(aid){
+  if(!aid)return '<div id="ed-col-wrap" style="display:none">'
+    +'<button class="et" id="ed-col-btn" data-tb="sect" onmousedown="event.preventDefault()" onclick="toggleEdColPop(event)" title="Section tools: Collapse / Expand / Preview">⋯</button>'
     +'</div>';
+  return '<span id="fw-col-wrap-'+aid+'" style="display:none">'
+    +'<button class="et" data-tb="sect" onmousedown="event.preventDefault()" onclick="toggleEdColPop(event,\''+aid+'\')" title="Section tools: Collapse / Expand / Preview">⋯</button>'
+    +'</span>';
 }
 /* v04.19 — Collapse all / Expand all / Preview moved off their own
    always-reserved row into this overflow popover, opened from the ⋯
@@ -15268,7 +15358,13 @@ function _versionStripHTML(a,host){
   let h='<div class="ver-strip" data-ps="versions">';
   sibs.forEach(v=>{
     const cur=v.id===a.id;
-    const go=cur?'':(host?`_fwHandTo('${host}','${v.id}')`:`selArt('${v.id}')`);
+    /* v04.57 — Single stays in edit mode on a version switch, the way ‹ ›
+       already does (_panelNavigate). selArt() alone sets ST.editing=false,
+       so it dropped Single to the read view mid-edit; ST.noteModal is only
+       ever true here for Single (Multi hands the window over via
+       _fwHandTo instead, unaffected), and Single never leaves edit mode any
+       more since v04.54, so this is unconditional once inside it. */
+    const go=cur?'':(host?`_fwHandTo('${host}','${v.id}')`:(ST.noteModal?`selArt('${v.id}');startEdit()`:`selArt('${v.id}')`));
     h+=`<button class="ver-pill${cur?' on':''}" onclick="${go}" oncontextmenu="showVersionCtx(event,'${v.id}')" title="${cur?'Current version':'Switch to this version'}">`
       +`${esc(v.versionIcon||'📝')} ${esc(v.versionLabel||'Version')}${cur?' <span class=\"ver-here\">●</span>':''}</button>`;
   });
@@ -15607,7 +15703,7 @@ function ktBuildHTML(t){
 
 /* ── The 📋 button on the Note bar ───────────────────────────────────── */
 function _ktBtnHTML(){
-  return '<button class="et" onmousedown="openTemplatesMenu(event)" onclick="event.stopPropagation()" title="Templates — insert a ready-made note structure">&#128203;</button>';
+  return '<button class="et" data-tb="tpl" onmousedown="openTemplatesMenu(event)" onclick="event.stopPropagation()" title="Templates — insert a ready-made note structure">&#128203;</button>';
 }
 function openTemplatesMenu(ev){
   if(ev&&ev.preventDefault)ev.preventDefault();

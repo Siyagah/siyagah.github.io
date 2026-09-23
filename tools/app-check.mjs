@@ -6439,6 +6439,245 @@ await r.block('21h-saveArt-keeps-users-own-edit', async () => {
     JSON.stringify(after));
 });
 
+/* ── 22. v04.57: pop-ups made alike, round (c2) — one formatting row, same
+   buttons, same order, one line at every size ────────────────────────────
+   _popFormatRowHTML(host,curA) builds the formatting row for both pop-ups,
+   so every check here compares Single against Multi rather than trusting
+   either in isolation — the same discipline section 20 already established
+   for the metadata strip above this row. SIZES_22 adds 360 to the three
+   VIEWPORTS sizes, since the issue's own table is measured at all four. */
+const SIZES_22 = [{ name: '360', width: 360, height: 780 }, ...VIEWPORTS];
+const ROW_ORDER_MOBILE = ['text', 'heads', 'lists', 'insert', 'sect', 'save'];
+const ROW_ORDER_WIDE = ['text', 'heads', 'lists', 'insert', 'hist', 'tpl', 'find', 'sect', 'save'];
+
+/* The ordered, visible data-tb list plus the geometry 22b needs, read off
+   ONE pop-up's own row+strip in one pass — containerSel is `#fw-<aid>` for
+   Multi or `#p3` for Single, exactly the convention stripSnapshot() (20a)
+   already uses. */
+async function rowSnapshot(page, containerSel) {
+  return page.evaluate((containerSel) => {
+    const host = document.querySelector(containerSel);
+    const row = host ? host.querySelector('.pop-fmt-row') : null;
+    if (!row) return null;
+    const visible = (el) => el.getClientRects().length > 0;
+    const kids = [...row.querySelectorAll('[data-tb]')].filter(visible);
+    const items = kids.map((el) => el.getAttribute('data-tb'));
+    const rects = kids.map((el) => el.getBoundingClientRect());
+    const hostBox = host.getBoundingClientRect();
+    const strip = host.querySelector('.pop-meta-strip');
+    const stripLefts = strip
+      ? [...strip.querySelectorAll('[data-ps]')].filter(visible).map((el) => el.getBoundingClientRect().left)
+      : [];
+    const stripInset = stripLefts.length ? Math.round(Math.min(...stripLefts) - hostBox.left) : null;
+    const tops = rects.map((r) => Math.round(r.top + r.height / 2));
+    const heights = rects.map((r) => Math.round(r.height));
+    return {
+      items,
+      firstLeft: rects.length ? Math.round(rects[0].left - hostBox.left) : null,
+      stripInset,
+      lastIsSave: items.length ? items[items.length - 1] === 'save' : false,
+      oneLine: tops.length ? Math.max(...tops) - Math.min(...tops) <= 6 : true,
+      scrollWidth: Math.round(row.scrollWidth), clientWidth: Math.round(row.clientWidth),
+      minHeight: heights.length ? Math.min(...heights) : null,
+    };
+  }, containerSel);
+}
+async function openBothRows(vpOpts) {
+  const s = await openApp({ viewport: vpOpts, db: richDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); });
+  await s.page.waitForTimeout(300);
+  await s.page.evaluate(() => openNotePopup('a1', 'float'));
+  await s.page.waitForTimeout(400);
+  const multi = await rowSnapshot(s.page, '#fw-a1');
+  await s.page.evaluate(() => closeAllPopouts());
+  await s.page.waitForTimeout(200);
+  await s.page.evaluate(() => openNotePopup('a1', 'panel'));
+  await s.page.waitForTimeout(400);
+  const single = await rowSnapshot(s.page, '#p3');
+  await s.close();
+  return { multi, single };
+}
+
+for (const vp of SIZES_22) {
+await r.block(`22a-same-row-${vp.name}`, async () => {
+  const { multi, single } = await openBothRows({ width: vp.width, height: vp.height });
+  const want = vp.width < 640 ? ROW_ORDER_MOBILE : ROW_ORDER_WIDE;
+  const sameAsEachOther = !!multi && !!single && JSON.stringify(multi.items) === JSON.stringify(single.items);
+  const matchesWant = JSON.stringify(multi?.items) === JSON.stringify(want);
+  r.check(sameAsEachOther && matchesWant,
+    `${vp.name}: Multi and Single show the identical ordered data-tb row, matching the order this size wants`,
+    JSON.stringify({ multi: multi?.items, single: single?.items, want }));
+});
+}
+
+for (const vp of SIZES_22) {
+await r.block(`22b-one-line-same-inset-${vp.name}`, async () => {
+  const { multi, single } = await openBothRows({ width: vp.width, height: vp.height });
+  for (const [name, x] of [['Multi', multi], ['Single', single]]) {
+    const insetOk = x && x.stripInset != null && x.firstLeft != null && Math.abs(x.firstLeft - x.stripInset) <= 2;
+    const notClipped = !!x && x.scrollWidth <= x.clientWidth + 1;
+    const tallEnough = vp.width >= 1200 || (!!x && x.minHeight != null && x.minHeight >= 37);
+    r.check(!!x && x.oneLine && insetOk && x.lastIsSave && notClipped && tallEnough,
+      `${vp.name} ${name}: the row is one line, starts at the strip's own inset, 💾 Save is rightmost, nothing is clipped, and every control is ≥38px tall under 1200px`,
+      JSON.stringify(x));
+  }
+});
+}
+
+/* The named-row content and real functional behaviour of the phone's folded
+   `≡`/`+` menus — a fresh session per assertion (the 6p/20f lesson: a sticky
+   popover left open by one assertion can silently intercept the next
+   click). mode is 'float' (Multi) or 'panel' (Single); findId is each
+   pop-up's own find-bar id (Multi: `fw-find-<aid>`; Single: Pane 3's own
+   `p3-find`, since Single IS Pane 3 lifted out — see _findEls()). */
+async function openPop390(mode) {
+  const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+  await s.page.evaluate((mode) => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); showPane('p3'); openNotePopup('a1', mode); }, mode);
+  await s.page.waitForTimeout(400);
+  return s;
+}
+for (const [mode, label, findId] of [['float', 'Multi', 'fw-find-a1'], ['panel', 'Single', 'p3-find']]) {
+await r.block(`22c-folded-actions-${mode}`, async () => {
+  const containerSel = mode === 'float' ? '#fw-a1' : '#p3';
+  const edSel = mode === 'float' ? '#fw-ed-a1' : '#ed';
+
+  let namedLists, namedInsert;
+  {
+    const s = await openPop390(mode);
+    await s.page.click(`${containerSel} .pop-fmt-row .eb-grp-btn[data-g="lists"]`);
+    await s.page.waitForTimeout(250);
+    namedLists = await s.page.evaluate(() => [...document.querySelectorAll('.eb-act')]
+      .filter((el) => el.offsetParent).map((el) => el.textContent.trim()));
+    await s.close();
+  }
+  {
+    const s = await openPop390(mode);
+    await s.page.click(`${containerSel} .pop-fmt-row .eb-grp-btn[data-g="insert"]`);
+    await s.page.waitForTimeout(250);
+    namedInsert = await s.page.evaluate(() => [...document.querySelectorAll('.eb-act')]
+      .filter((el) => el.offsetParent).map((el) => el.textContent.trim()));
+    await s.close();
+  }
+  const has = (list, word) => list.some((t) => t.includes(word));
+  r.check(has(namedLists, 'Undo') && has(namedLists, 'Redo') && has(namedLists, 'Find') && has(namedInsert, 'Template'),
+    `${label} at 390: a real click on ≡ shows named Undo/Redo/Find rows, and on + a named Template row`,
+    JSON.stringify({ namedLists, namedInsert }));
+
+  let findOk;
+  {
+    const s = await openPop390(mode);
+    await s.page.click(`${containerSel} .pop-fmt-row .eb-grp-btn[data-g="lists"]`);
+    await s.page.waitForTimeout(250);
+    await s.page.locator('.eb-act', { hasText: 'Find' }).first().click();
+    await s.page.waitForTimeout(250);
+    findOk = await s.page.evaluate((findId) => {
+      const el = document.getElementById(findId);
+      return !!el && getComputedStyle(el).display !== 'none';
+    }, findId);
+    await s.close();
+  }
+  let undoOk;
+  {
+    const s = await openPop390(mode);
+    await s.page.click(edSel);
+    await s.page.keyboard.press('Control+End');
+    await s.page.keyboard.type(' UNDOTESTTEXT');
+    await s.page.waitForTimeout(200);
+    await s.page.click(`${containerSel} .pop-fmt-row .eb-grp-btn[data-g="lists"]`);
+    await s.page.waitForTimeout(250);
+    await s.page.locator('.eb-act', { hasText: 'Undo' }).first().dispatchEvent('mousedown');
+    await s.page.waitForTimeout(250);
+    const text = await s.page.evaluate((edSel) => document.querySelector(edSel)?.textContent || '', edSel);
+    undoOk = !/UNDOTESTTEXT/.test(text);
+    await s.close();
+  }
+  r.check(findOk && undoOk,
+    `${label} at 390: a real click on Find opens that window's own find bar, and Undo after typing reverts the typing in that window's own editor`,
+    JSON.stringify({ findOk, undoOk }));
+});
+}
+
+/* Every function name (identifier before `(`) any visible onclick/
+   onmousedown in the selector resolves to — the same shape the app's own
+   handler-resolution sweep (section 2) uses to prove a handler is real,
+   pointed here at "is the same handler reachable from BOTH shapes". */
+async function collectFns(page, sel) {
+  return page.evaluate((sel) => {
+    const out = new Set();
+    document.querySelectorAll(sel).forEach((el) => {
+      if (!el.offsetParent) return;
+      ['onclick', 'onmousedown'].forEach((at) => {
+        const v = el.getAttribute(at);
+        if (!v) return;
+        [...v.matchAll(/([A-Za-z_$][\w$]*)\(/g)].forEach((m) => { if (m[1] !== 'event') out.add(m[1]); });
+      });
+    });
+    return [...out];
+  }, sel);
+}
+await r.block('22d-nothing-unreachable', async () => {
+  const out = [];
+  for (const [mode, label] of [['float', 'Multi'], ['panel', 'Single']]) {
+    const containerSel = mode === 'float' ? '#fw-a1' : '#p3';
+    const popSel = mode === 'float' ? '#fw-eb-pop' : '#eb-pop';
+
+    const s1440 = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+    await s1440.page.evaluate((mode) => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+      window.render(); openNotePopup('a1', mode); }, mode);
+    await s1440.page.waitForTimeout(400);
+    const wideRow = await collectFns(s1440.page,
+      `${containerSel} .pop-fmt-row [data-tb="tpl"],${containerSel} .pop-fmt-row [data-tb="find"],`
+      + `${containerSel} .pop-fmt-row [data-tb="sect"],${containerSel} .pop-fmt-row [data-tb="save"]`);
+    await s1440.page.click(`${containerSel} .pop-fmt-row .eb-grp-btn[data-g="hist"]`);
+    await s1440.page.waitForTimeout(250);
+    const histFns = await collectFns(s1440.page, `${popSel} button`);
+    await s1440.close();
+    const wideFns = [...new Set([...wideRow, ...histFns])];
+
+    const s390 = await openPop390(mode);
+    const narrowRow = await collectFns(s390.page,
+      `${containerSel} .pop-fmt-row [data-tb="sect"],${containerSel} .pop-fmt-row [data-tb="save"]`);
+    await s390.page.click(`${containerSel} .pop-fmt-row .eb-grp-btn[data-g="lists"]`);
+    await s390.page.waitForTimeout(250);
+    const listsFns = await collectFns(s390.page, `${popSel} button`);
+    await s390.close();
+
+    const s390b = await openPop390(mode);
+    const narrowRowB = await collectFns(s390b.page,
+      `${containerSel} .pop-fmt-row [data-tb="sect"],${containerSel} .pop-fmt-row [data-tb="save"]`);
+    await s390b.page.click(`${containerSel} .pop-fmt-row .eb-grp-btn[data-g="insert"]`);
+    await s390b.page.waitForTimeout(250);
+    const insertFns = await collectFns(s390b.page, `${popSel} button`);
+    await s390b.close();
+
+    const narrowFns = new Set([...narrowRow, ...listsFns, ...narrowRowB, ...insertFns]);
+    const missing = wideFns.filter((f) => !narrowFns.has(f));
+    out.push({ label, wideFns, narrowFns: [...narrowFns], missing, ok: missing.length === 0 });
+  }
+  r.check(out.every((o) => o.ok),
+    'every action reachable from the 1440 row (including the hist group’s own submenu) is reachable from the 390 row or its ≡/+ menus, in both pop-ups',
+    JSON.stringify(out));
+});
+
+await r.block('22e-single-stays-editing-on-version-switch', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: richDB() });
+  await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
+    window.render(); openNotePopup('a1', 'panel'); });
+  await s.page.waitForTimeout(400);
+  await s.page.click('#p3 .pop-meta-strip .ver-strip .ver-pill:not(.on):not(.ver-add)');
+  await s.page.waitForTimeout(400);
+  const after = await s.page.evaluate(() => ({
+    noteModal: !!ST.noteModal, article: ST.article, editing: ST.editing,
+    edText: document.getElementById('ed')?.textContent || '',
+  }));
+  await s.close();
+  r.check(after.noteModal && after.article === 'a5' && after.editing === true && /v2/.test(after.edText),
+    'clicking a version sibling’s pill inside Single hands it the sibling and stays in the pop-up, in edit mode, showing the sibling’s content',
+    JSON.stringify(after));
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
