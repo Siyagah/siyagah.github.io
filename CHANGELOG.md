@@ -4627,3 +4627,74 @@ Measured by the Architect on the final head:
   defects the async boot introduced. The five updated `§14` checks describe
   failing-save behaviour both builds share.
 - `shot.mjs` at 390×844, 820×1180 and 1440×900: all three render normally.
+
+---
+
+## v04.51 — how the owner gives work, written into the brief (23 Sep 2026)
+
+No app change beyond the version strings. `ARCHITECT.md` only.
+
+### Why
+
+The owner asked, in as many words, whether it was acceptable to send jobs
+"scattered, on-the-go, without an organised plan" and have the Architect do
+the planning, assigning, reviewing and reporting. The answer was yes — that
+is exactly the division of labour `ARCHITECT.md` already described. But the
+agreement lived **only in a chat message**, which is the precise failure
+v04.41 existed to stop: a session ends or is summarised, and the next one
+starts from a blank slate and may quite reasonably answer the same question
+differently, or worse, start asking the owner to organise their own requests.
+
+The owner then confirmed it should be written down. This round writes it.
+
+### What was added
+
+A new section, *How the owner gives work — confirmed 23 Sep 2026*, stating
+that scattered, unplanned, multi-topic messages are **the agreed working
+method and not a problem to be corrected**, and listing what the Architect
+owes in return:
+
+- **Separate** — one message can hold several unrelated jobs. The 23 Sep
+  message carried a storage failure and two unrelated search requests.
+- **Diagnose before believing the description** — the owner's report is a
+  symptom, and their explanation can be wrong while the report is right.
+  Recorded with the case that proved it: they said "no space prob" about a
+  device with gigabytes free, and were correct about the device and wrong
+  about the cause, because the notebook had filled a ~5 MB browser locker
+  they had no way to know existed. Taking the words literally would have
+  meant silencing a true warning.
+- **Order by risk, not by the order they were typed** — anything that can
+  lose, expose or fail to save notes goes first.
+- **One job at a time**, and **verify by measurement, then report in plain
+  words**, both pointing at the existing sections rather than restating them.
+
+Two things it says explicitly because they are the failure modes:
+
+- **A rough sense of weight helps and is never required.** With no steer on
+  urgency, the Architect decides and says what it decided — it does not ask
+  the owner to rank their own list.
+- **Do not send the work back to them for organising.** "Shall I split this
+  into rounds, and in what order?" is exactly the involvement the owner has
+  said they do not want.
+
+The *Who does what* table's Owner row now reads "Gives jobs — **in whatever
+form and however scattered**", pointing at the new section, so the rule is
+visible from the first table a fresh session reads.
+
+### Not done
+
+- Nothing in `CLAUDE.md` changed. This is a rule about how the Architect
+  receives work, and `CLAUDE.md` is the builder's brief — the builder's input
+  is an issue written by the Architect, which is already organised by the
+  time it arrives. Putting it in both files would be two copies to drift.
+
+### D5
+
+Does not apply — no markup, CSS or app JavaScript touched. `index.html`
+changed only in its two version strings.
+
+### Measured
+
+Built on the v04.49 base: 11/11 ship checks, 336/336 app checks. Rebased by the
+Architect onto v04.50 (the app file taken from `main` with only its three
+version strings changed): **11/11 ship checks, 366/366 app checks**.

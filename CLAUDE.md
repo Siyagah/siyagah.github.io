@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.50.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.51.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,36 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.51** (23 Sep 2026) — how the owner gives work, written into the
+  brief. No app change beyond the version strings; `ARCHITECT.md` only. The
+  owner asked whether it was acceptable to send jobs "scattered, on-the-go,
+  without an organised plan" and have the Architect plan, assign, review and
+  report. The answer was yes — that is the division of labour `ARCHITECT.md`
+  already described — but the agreement lived **only in a chat message**,
+  the precise failure v04.41 existed to stop: the next session starts blank
+  and may answer differently, or start asking the owner to organise their own
+  requests. A new section, *How the owner gives work*, now states that
+  scattered, unplanned, multi-topic messages are **the agreed working method
+  and not a problem to be corrected**, and what the Architect owes in return:
+  **separate** (one message can hold several unrelated jobs — the 23 Sep one
+  carried a storage failure and two unrelated search requests); **diagnose
+  before believing the description** (the owner said "no space prob" about a
+  device with gigabytes free, and was right about the device and wrong about
+  the cause — the notebook had filled a ~5 MB browser locker they had no way
+  to know existed, so taking the words literally would have silenced a true
+  warning); **order by risk, not by the order they were typed**; one job at a
+  time; verify by measurement then report in plain words. Two failure modes
+  named explicitly: a sense of urgency from the owner helps but is never
+  required — with no steer the Architect decides and says what it decided
+  rather than asking them to rank their own list — and **never send the work
+  back for organising**, because "shall I split this into rounds?" is exactly
+  the involvement they have said they do not want. The *Who does what* table's
+  Owner row now reads "Gives jobs — in whatever form and however scattered".
+  Not done: nothing in `CLAUDE.md` itself, since this governs how the
+  Architect receives work and the builder's input is an already-organised
+  issue — two copies would drift. D5 does not apply. 11/11 ship checks;
+  366/366 app checks,
+  measured after rebasing onto v04.50.
 - **v04.50** (22 Sep 2026) — the notebook has outgrown `localStorage`: the
   local copy moves to IndexedDB, the storage panel stops reassuring while
   saving fails. Issue #69: the owner's real notebook (~5.00 MB) had crossed
@@ -175,48 +205,6 @@ must never accumulate here instead of there.
   lesson. D5: one shared render path at all three breakpoints, no shape to
   diverge, said plainly. 11/11 ship checks, app checks 324 → **336** (12
   new), no unpatched-code comparison run (plain bug fixes, per the issue).
-- **v04.46** (22 Sep 2026) — a throw in ANY block must cost that block, not
-  the whole run. Harness only — `tools/harness.mjs`, `tools/app-check.mjs`,
-  `tools/README.md`, `ARCHITECT.md` — no app change. v04.45 recorded this as
-  not done in its own words: only §14 was isolated, and the other three
-  hundred checks still shared one failure domain. `report()` grows
-  `r.block(id, fn, { expectThrow })`: a throw inside `fn` records one failed
-  row naming the block, how many of its own checks had already run, and the
-  error's first line, then the suite carries on; `expectThrow: true` inverts
-  the scoring for one permanent self-check that proves the mechanism (a
-  block deliberately throws, scores a PASS because it was expected to, and
-  an ordinary check straight after it reads `block()`'s own return value and
-  confirms the line still ran). A duplicate block id is now itself a failed
-  check. **Every check in `app-check.mjs` runs inside `r.block(...)`** — 85
-  call sites, matched to the sub-block that already existed rather than the
-  section: §6p (1490 lines, a third of the file, ~68 checks in one failure
-  domain) becomes 22 blocks, §6h/6i/6j/6k/6l/6n/6o split into their existing
-  named parts, and §14's five hand-copied `try`/`catch` blocks are replaced
-  by the general mechanism (`tapIfPresent()`/`awaitIfPresent()`/
-  `awaitFnOrFalse()` untouched — different problem). Sections with no
-  internal grouping (§1–§6, §6b, §6c, §7–§10, the theme-stamp section) stay
-  one block each, since manufacturing a boundary in genuinely flat code
-  would be exactly the allow-list mistake this project keeps re-learning.
-  **No binding needed hoisting anywhere**: wrapping is pure insertion around
-  each range, so a block nested inside a section's own pre-existing bare
-  `{ }` keeps reading that section's shared helpers through ordinary JS
-  closure, unmoved. Three duplicate section numbers (`§11`, `§12`, `§13`,
-  each used twice because the file does not run in numeric order) got
-  distinguishing block ids; the banner comments themselves, which carry the
-  version a reader finds a section by, were left alone. The honest limit,
-  written down rather than glossed: `r.block()` isolates a **failure**, not
-  the **state** a block leaves behind — §1–§6c and the first §7–§13 still
-  share ONE `app`/`page` opened once near the top of the file, so a block
-  that aborts part-way through there can leave later blocks sharing that
-  session looking at a shape they never expected, filed as its own backlog
-  item rather than left only in this entry. Not done: `--only` (running one
-  named section) — this round makes it possible by giving every check a
-  real, unique id, but building it is the next round, and the existing
-  backlog line's dependency is ticked, not the line itself. D5 does not
-  apply — no visual surface, said plainly. 11/11 ship checks, **324/324**
-  app checks (322 pre-existing plus the two the permanent self-check adds),
-  0 aborted blocks — every pre-existing check still asserts exactly what it
-  asserted before.
 ---
 
 ## What this is
