@@ -575,3 +575,28 @@ assertions miss.
   interpolation braces produces false positives — confirmed while building
   this one), actually running a filtered subset and reading its output for
   anything that shouldn't be there is what caught the real gap.
+
+- **`window.__appBooted` means "settled", not "render() returned" (v04.50).**
+  Boot became async when `loadDB()` started awaiting IndexedDB, and the
+  flag was first set straight after `render()`, before fonts loaded and the
+  post-render fit passes ran. The fixed 300 ms settle in `openApp()` then
+  landed at a variable point, and the suite stopped being deterministic:
+  9 failures, then 12 in a *different* set when the settle was raised to
+  1500 ms. Waiting longer only moves which checks lose the race. The flag
+  is now set after `document.fonts.ready` and two frames. A future change
+  to boot must keep that meaning, or the suite goes back to depending on
+  the clock.
+- **A check that must act DURING boot uses `openApp({ initScript })`.**
+  `openApp()` returns only once boot has finished, so anything that has to
+  happen inside the async window (a `pagehide` while IndexedDB is still
+  opening, as `16h` does) goes in an init script. Read the result back from
+  a `window.__…` value the init script wrote *at that moment*. Reading the
+  store after `openApp()` returns sees what boot legitimately wrote later.
+- **A contrast sweep only measures what is on screen at the moment it
+  looks.** `6j-1` passed on `main` for sixteen rounds while "Multi" and
+  "Single" were painted at ~3:1 (1.04:1 on a pale accent over a dark
+  pane), because the toolbar had folded those words away whenever the
+  sweep ran. It began failing intermittently the round a timing change
+  delayed the fold. When a surface can hide its own text (fold classes,
+  palettes, collapsed menus), a sweep says nothing about the hidden text.
+  Force it into view and measure it, as `16j` does.

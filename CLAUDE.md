@@ -421,6 +421,22 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **Making boot asynchronous opens a window where the app runs on the
+  placeholder `DB` — and every listener registered at parse time can fire
+  in it.** v04.50 made `loadDB()` await IndexedDB. Until it resolved, `DB`
+  was still `{folders:[],articles:[],…}`, while `pagehide`/
+  `visibilitychange` (registered synchronously) called `_save()`. Switching
+  away from the app during a slow start wrote an EMPTY notebook over the
+  real one: 0 notes, measured. The same move silently stopped the service
+  worker registering, because its `load` listener was now added after
+  `load` had fired (I3). Neither threw, and the builder's 26 new checks
+  passed. The guard is `_dbLoaded`: `_save()`/`persist()` refuse to write
+  before the real notebook is in `DB`. Checks `16h`/`16i` hold IndexedDB
+  back and fire `pagehide` inside the window. **Any future change that
+  moves work later in boot must list every parse-time listener and ask
+  what it does if it fires first.** Cost: caught in the Architect's review
+  of v04.50, one step from shipping a notebook-wiping race to the owner's
+  phone.
 - **The owner's suggested FIX is a description of the problem, not a spec —
   measure whether it actually gets them what they asked for.** "Database can
   be moved up by removing 'attached' from the Folder button" was a correct

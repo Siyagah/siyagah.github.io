@@ -22196,6 +22196,7 @@ function startRenameArtTitle(aid){
      settle land at a variable point and the suite non-deterministic (see
      CHANGELOG v04.50). Not awaited — nothing in the app waits on it. */
   Promise.resolve(document.fonts&&document.fonts.ready).catch(()=>{})
+    .then(()=>{try{autoFit(true);}catch(e){}})   /* the sidebar fit — see the note where it used to live */
     .then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))
     .then(()=>{ window.__appBooted=true; });
   /* PWA SW. v04.50 — boot is async now, so on a fast load the window's
@@ -22317,12 +22318,12 @@ document.addEventListener('keydown', function(ev){
   }
 });
 
-// Auto-fit sidebar width on open — wait for fonts so text measurement is accurate
-if(document.fonts && document.fonts.ready){
-  document.fonts.ready.then(()=>autoFit(true));
-} else {
-  setTimeout(()=>autoFit(true), 300);
-}
+/* Auto-fit sidebar width on open — v04.50: moved INTO _boot(), after render().
+   It used to be registered here, at parse time, on document.fonts.ready, and
+   boot was synchronous so the tree was always built by then. With loadDB()
+   now awaiting IndexedDB, fonts could be ready first, and the sidebar was
+   fitted to the EMPTY placeholder tree, measured as Pane 3 coming out 680px
+   on one run and 870px on the next at the same window size. */
 
 /* ── Long-press → context menu (mobile & tablet) ──────────────────────────
    600 ms hold on any folder row or section header triggers the same context
