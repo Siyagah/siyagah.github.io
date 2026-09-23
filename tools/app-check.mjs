@@ -6374,6 +6374,71 @@ await r.block('21f-no-phantom-stamp-on-noop-flush', async () => {
     JSON.stringify({ stampBefore, stampAfter }));
 });
 
+/* Architect review of v04.56 (PR #81): saveArt() still did
+   `a.folderIds=ST.efolders;a.tags=ST.etags` UNCONDITIONALLY, and it runs on
+   every exit from a note (selArt() calls it) — so 21e's protection held for
+   _flushEd() and broke one step later, the moment the note was actually
+   closed. Same reproduction as 21e, carried one step further into saveArt(). */
+await r.block('21g-saveArt-no-stale-overwrite-of-remote-change', async () => {
+  const s = await openEditAt(1440, 900);
+  const setup = await s.page.evaluate(() => ({ baselineOk: ST.eBaselineAid === 'a1' }));
+  const stampBefore = await s.page.evaluate(() => DB.articles.find((x) => x.id === 'a1').updatedAt);
+  await s.page.evaluate(() => {
+    const a = DB.articles.find((x) => x.id === 'a1');
+    a.tags = ['seed', 'remote'];
+    a.folderIds = ['f1', 'f2'];
+  });
+  await s.page.evaluate(() => window._flushEd());
+  const afterFlush = await s.page.evaluate(() => {
+    const a = DB.articles.find((x) => x.id === 'a1');
+    return { tags: a.tags, folderIds: a.folderIds };
+  });
+  await s.page.evaluate(() => window.saveArt());
+  await s.page.waitForTimeout(150);
+  const after = await s.page.evaluate(() => {
+    const a = DB.articles.find((x) => x.id === 'a1');
+    return { tags: a.tags, folderIds: a.folderIds, updatedAt: a.updatedAt };
+  });
+  await s.close();
+  r.check(setup.baselineOk, 'setup: the baseline was seeded for a1 when editing began', JSON.stringify(setup));
+  r.check(afterFlush.tags.includes('remote') && afterFlush.folderIds.includes('f2'),
+    'setup: _flushEd() left the merged remote change alone (21e)', JSON.stringify(afterFlush));
+  r.check(after.tags.includes('remote') && after.tags.includes('seed')
+    && after.folderIds.includes('f1') && after.folderIds.includes('f2'),
+    'saveArt() also leaves a merged remote tag/folder change nobody touched in THIS session alone (I2)',
+    JSON.stringify(after));
+  r.check(after.updatedAt === stampBefore,
+    'saveArt() did not re-stamp updatedAt for fields it did not write',
+    JSON.stringify({ stampBefore, after: after.updatedAt }));
+});
+
+/* The positive case still works: a field the user genuinely touched in this
+   session wins whole-field, even though the SAME note also picked up an
+   untouched remote change to both fields in the meantime. No per-tag merge
+   is attempted — this is the documented rule, not a gap. */
+await r.block('21h-saveArt-keeps-users-own-edit', async () => {
+  const s = await openEditAt(1440, 900);
+  await addTagReal(s.page, 1440, 'local');
+  await s.page.evaluate(() => {
+    const a = DB.articles.find((x) => x.id === 'a1');
+    a.tags = ['seed', 'remote'];
+    a.folderIds = ['f1', 'f2'];
+  });
+  await s.page.evaluate(() => window.saveArt());
+  await s.page.waitForTimeout(150);
+  const after = await s.page.evaluate(() => {
+    const a = DB.articles.find((x) => x.id === 'a1');
+    return { tags: a.tags, folderIds: a.folderIds };
+  });
+  await s.close();
+  r.check(after.tags.includes('local') && after.tags.includes('seed') && !after.tags.includes('remote'),
+    'a tag added through the real input this session still wins whole-field on saveArt(), even though the same note picked up an untouched remote tag change in the meantime',
+    JSON.stringify(after));
+  r.check(after.folderIds.includes('f1') && after.folderIds.includes('f2'),
+    'folders were never touched in this session, so saveArt() leaves the untouched remote folder change alone',
+    JSON.stringify(after));
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores

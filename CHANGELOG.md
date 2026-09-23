@@ -5347,9 +5347,39 @@ may be open for editing, which — like `saveArt()`'s own unconditional
 overwrite, unchanged this round — can still be overwritten by a later save
 in the editor. Both pre-date this round.
 
-`saveArt()`'s own behaviour is unchanged, as instructed.
+**Review fix (same round, before merge): `saveArt()` had the identical
+defect, one step later.** The instruction for the first cut was "`saveArt()`'s
+own behaviour does not change" — wrong, and it left the baseline's I2
+protection undone the moment a note was actually closed. `saveArt()` still
+did `a.folderIds=ST.efolders; a.tags=ST.etags` unconditionally, and unlike
+`_flushEd()` it runs on **every** exit from a note, since `selArt()` calls it.
+Measured on the pre-fix branch: seed `a1`, start editing, let a merged remote
+change land directly on `DB.articles.a1` (`tags:['seed','remote']`,
+`folderIds:['f1','f2']`), run `_flushEd()` — the remote change survives, as
+21e proves — then run `saveArt()`, which is what actually happens when the
+note is closed — and the remote change is gone, back to `['seed']`/`['f1']`.
+A tag added on the phone while the laptop has the same note open is deleted
+the moment the laptop leaves the note. That is I2, and it is data loss (I1).
 
-**Checks: new app-check section `21` (`21a`–`21f`)**, at 390 and 1440:
+The fix pulls the baseline-diff logic in `_flushEd()` out into one shared
+`_commitEditedFields(a)` — the single place, now, that decides whether
+`ST.etags`/`ST.efolders` were touched this session and, if so, writes them
+and moves the baseline. `_flushEd()` and `saveArt()` both call it instead of
+each writing the unconditional overwrite; a field left untouched this session
+is left exactly as it stood (including a value a merge wrote into it since
+editing began), and only a field actually written by the helper counts toward
+`saveArt()`'s existing `_changed`/`updatedAt` gate (v03.95) — a merge nobody
+touched here no longer fools `saveArt()` into re-stamping `updatedAt` either.
+
+**This is still whole-field, last-writer-wins per field — no per-tag merge.**
+If the SAME field is touched here (say, the tag box gets a new tag added) while
+a remote change to that same field also lands mid-session, the local session's
+whole tag list wins on save, exactly as the tag box has always behaved; only a
+field genuinely untouched in this session is protected from being overwritten.
+Two devices editing the SAME field concurrently is not something this fix (or
+`_flushEd()`'s) attempts to reconcile down to individual tags.
+
+**Checks: new app-check section `21` (`21a`–`21h`)**, at 390 and 1440:
 - `21a` — start editing `a1`, add a tag through the real input (via the `+`
   menu at 390) and type text; fire `visibilitychange`→hidden and `pagehide`,
   reload with the same IndexedDB context — the note has both the tag and the
@@ -5365,6 +5395,13 @@ in the editor. Both pre-date this round.
   has `remote`, `updatedAt` was not re-stamped.
 - `21f` — start editing, change nothing, run `_flushEd()` twice, `updatedAt`
   is unchanged.
+- `21g` (review fix) — the reproduction above: a merged remote change to both
+  fields, untouched here, survives `_flushEd()` **and then `saveArt()`**, with
+  `updatedAt` unstamped by either.
+- `21h` (review fix) — the positive case: a tag added through the real input
+  this session still wins whole-field on `saveArt()`, even though the same
+  note picked up an untouched remote change to both fields in the meantime;
+  the untouched folder field is left alone.
 
 **Standing lesson added to `CLAUDE.md`** (and the v04.51 five-rounds entry
 dropped to make room): a field staged in `ST` is a field autosave does not
@@ -5372,6 +5409,6 @@ know about unless it is told.
 
 **Measured**
 - `ship-check`: **11/11**.
-- `app-check --only 21`: **12/12**.
+- `app-check --only 21`: **18/18** (12 first cut + 6 from the review fix).
 - `app-check --only 16`: **30/30**.
 - Full `app-check`: (measured in review)

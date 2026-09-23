@@ -4766,6 +4766,27 @@ function _seedEditBaseline(aid){
   ST.etagsBaseline=[...ST.etags];
   ST.efoldersBaseline=[...ST.efolders];
 }
+/* v04.56 review fix — the ONE place that decides whether ST.etags/
+   ST.efolders were touched in this editing session and, if so, commits
+   them and moves the baseline. _flushEd() and saveArt() both call this
+   instead of each writing `a.tags=ST.etags;a.folderIds=ST.efolders`
+   unconditionally, which was saveArt()'s original fault: it ran on EVERY
+   exit from a note (selArt() calls it too) and overwrote a field nobody
+   touched here with this session's stale snapshot, discarding a remote
+   change merged into `a` while the note sat open (I2). A field left
+   untouched is left alone; only a field that differs from its baseline is
+   written, and only that write can count toward whether anything changed
+   for updatedAt purposes (v03.95). */
+function _commitEditedFields(a){
+  const _sameArr=(x,y)=>JSON.stringify(x||[])===JSON.stringify(y||[]);
+  const _blOk=ST.eBaselineAid===a.id;
+  const tagsTouched=_blOk && !_sameArr(ST.etags,ST.etagsBaseline);
+  const foldersTouched=_blOk && !_sameArr(ST.efolders,ST.efoldersBaseline);
+  if(!_blOk)_seedEditBaseline(a.id);
+  if(tagsTouched){a.tags=[...ST.etags];ST.etagsBaseline=[...ST.etags];}
+  if(foldersTouched){a.folderIds=[...ST.efolders];ST.efoldersBaseline=[...ST.efolders];}
+  return {tagsTouched,foldersTouched};
+}
 function startEdit(){const a=DB.articles.find(x=>x.id===ST.article);if(!a)return;_captureNoteHistory(a,'session-start');ST.etitle=a.title;ST.efolders=[...a.folderIds];ST.etags=[...(a.tags||[])];ST.editing=true;_seedEditBaseline(a.id);renderP3H();renderP3C();adjustP3Layout();}
 function cancelEdit(){try{_flushEd();}catch(e){}ST.editing=false;renderP3H();renderP3C();adjustP3Layout();}
 function saveArt(){
@@ -4787,9 +4808,9 @@ function saveArt(){
   const title=ST.etitle.trim();
   const _edc=ed.cloneNode(true);_edc.querySelectorAll('.ann-inline-card').forEach(n=>n.remove());_edColClean(_edc);
   const content=_edc.innerHTML;
-  const _sameArr=(x,y)=>JSON.stringify(x||[])===JSON.stringify(y||[]);
-  const _changed=a.title!==title||a.content!==content||!_sameArr(a.folderIds,ST.efolders)||!_sameArr(a.tags,ST.etags);
-  a.title=title;a.content=content;a.folderIds=ST.efolders;a.tags=ST.etags;
+  const {tagsTouched,foldersTouched}=_commitEditedFields(a);
+  const _changed=a.title!==title||a.content!==content||tagsTouched||foldersTouched;
+  a.title=title;a.content=content;
   if(_changed){
     a.updatedAt=new Date().toISOString();
     _captureNoteHistory(a,'save');
@@ -21758,23 +21779,14 @@ function _flushEd(){
   const c=ed.cloneNode(true);c.querySelectorAll('.ann-inline-card').forEach(n=>n.remove());_edColClean(c);
   const html=c.innerHTML;
   const title=(ST.etitle!=null)?ST.etitle.trim():a.title;
-  const _sameArr=(x,y)=>JSON.stringify(x||[])===JSON.stringify(y||[]);
-  /* v04.56 — tags/folders are staged fields too (see _seedEditBaseline).
-     Only commit them when THIS session's baseline shows they were actually
-     touched here — if the baseline was never seeded for this article (a
-     missed seed site would be a bug elsewhere), assume nothing was touched
-     rather than risk overwriting a merged remote value (I2). Either way the
-     baseline is (re)established so the next flush compares against what was
-     just committed. */
-  const _blOk=ST.eBaselineAid===a.id;
-  const _tagsTouched=_blOk && !_sameArr(ST.etags,ST.etagsBaseline);
-  const _foldersTouched=_blOk && !_sameArr(ST.efolders,ST.efoldersBaseline);
-  if(!_blOk)_seedEditBaseline(a.id);
-  if(a.content===html && a.title===title && !_tagsTouched && !_foldersTouched) return;
+  /* v04.56 — tags/folders are staged fields too; _commitEditedFields()
+     (see _seedEditBaseline) commits only what THIS session's baseline shows
+     was actually touched here, never a field nobody touched, so a merged
+     remote value nobody touched in this session survives (I2). */
+  const {tagsTouched,foldersTouched}=_commitEditedFields(a);
+  if(a.content===html && a.title===title && !tagsTouched && !foldersTouched) return;
   a.content=html;
   a.title=title;
-  if(_tagsTouched){a.tags=[...ST.etags];ST.etagsBaseline=[...ST.etags];}
-  if(_foldersTouched){a.folderIds=[...ST.efolders];ST.efoldersBaseline=[...ST.efolders];}
   a.updatedAt=new Date().toISOString();
 }
 function setNoteKind(aid,kid){ _flushEd();
