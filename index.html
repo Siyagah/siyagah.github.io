@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.52">
+<meta name="app-version" content="04.53">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -402,7 +402,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
  .hd-status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
  .note-dateline .dl-div{opacity:.45}
  .note-dateline-hr{border:none;border-top:1px solid var(--border);height:0;margin:6px 0 14px}
- #ed:empty::before{content:'Start writing here…';color:var(--t3);opacity:.55;font-style:italic;pointer-events:none}
+ #ed:empty::before,.fw-ed:empty::before{content:'Start writing here…';color:var(--t3);opacity:.55;font-style:italic;pointer-events:none}
 .av-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px}
 .av-body{font-family:var(--body);font-size:var(--fs-content);line-height:var(--lh-content);color:var(--body-ink)}
 .av-body h1{font-size:var(--fs-h1);font-weight:600;margin:22px 0 8px;color:var(--t1)}
@@ -432,17 +432,17 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .al-r span:nth-child(1){width:100%}.al-r span:nth-child(2){width:70%}.al-r span:nth-child(3){width:85%}
 .al-j span{width:100%}
 #ed{flex:1;padding:24px 38px;outline:none;font-family:var(--body);font-size:var(--fs-content);line-height:var(--lh-content);color:var(--body-ink);overflow-y:auto;max-width:96%;margin:0 auto;width:100%;min-height:0}
-#ed h1{font-size:var(--fs-h1);font-weight:600;margin:18px 0 7px;color:var(--t1)}
-#ed h2{font-size:var(--fs-h2);font-weight:600;margin:16px 0 6px;color:var(--t1)}
-#ed h3{font-size:var(--fs-h3);font-weight:600;margin:12px 0 4px;color:var(--t1)}
-#ed h4{font-size:var(--fs-h4);font-weight:600;margin:10px 0 4px;color:var(--t1)}
-#ed p{margin:0 0 var(--pp-gap)}
-#ed ul,#ed ol{margin:6px 0 11px;padding-left:22px}
- .av-body ol,#ed ol{list-style-type:decimal-leading-zero}
-#ed blockquote{border-left:3px solid var(--gold);padding:2px 0 2px 15px;margin:13px 0;color:var(--t2);font-style:italic}
+#ed h1,.fw-ed h1{font-size:var(--fs-h1);font-weight:600;margin:18px 0 7px;color:var(--t1)}
+#ed h2,.fw-ed h2{font-size:var(--fs-h2);font-weight:600;margin:16px 0 6px;color:var(--t1)}
+#ed h3,.fw-ed h3{font-size:var(--fs-h3);font-weight:600;margin:12px 0 4px;color:var(--t1)}
+#ed h4,.fw-ed h4{font-size:var(--fs-h4);font-weight:600;margin:10px 0 4px;color:var(--t1)}
+#ed p,.fw-ed p{margin:0 0 var(--pp-gap)}
+#ed ul,#ed ol,.fw-ed ul,.fw-ed ol{margin:6px 0 11px;padding-left:22px}
+ .av-body ol,#ed ol,.fw-ed ol{list-style-type:decimal-leading-zero}
+#ed blockquote,.fw-ed blockquote{border-left:3px solid var(--gold);padding:2px 0 2px 15px;margin:13px 0;color:var(--t2);font-style:italic}
 
 /* Rich paste: images / bookmarks / mentions / embeds */
-#ed img.ed-img,.av-body img.ed-img{max-width:100%;height:auto;border-radius:8px;display:block;margin:12px auto;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+#ed img.ed-img,.av-body img.ed-img,.fw-ed img.ed-img{max-width:100%;height:auto;border-radius:8px;display:block;margin:12px auto;box-shadow:0 2px 10px rgba(0,0,0,.12)}
 .bk-card{display:flex;align-items:center;gap:11px;padding:11px 14px;margin:12px 0;border:1px solid var(--border2);border-radius:9px;background:var(--white);cursor:pointer;text-decoration:none;color:inherit;max-width:560px}
 .bk-card:hover{background:var(--paper)}
 .bk-fav{width:26px;height:26px;border-radius:6px;flex-shrink:0}
@@ -451,14 +451,14 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .bk-u{font-size:11.5px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vid-card .bk-thumb{width:84px;height:54px;object-fit:cover;border-radius:6px;flex-shrink:0;background:#000}
 .bk-mv{display:none;flex-direction:column;gap:3px;margin-left:6px;flex-shrink:0}
-#ed .bk-mv{display:flex}
+#ed .bk-mv,.fw-ed .bk-mv{display:flex}
 .bk-mv button{border:1px solid var(--border2);background:var(--paper);border-radius:4px;cursor:pointer;font-size:9px;line-height:1;padding:3px 5px;color:var(--t2)}
 .bk-mv button:active{background:var(--border)}
 .bk-grab{cursor:grab;color:var(--t3);font-size:13px;text-align:center;line-height:1;padding:2px 0;user-select:none;-webkit-user-select:none;touch-action:none}
 .bk-grab:active{cursor:grabbing;color:var(--t1)}
 @media(max-width:1199.98px){.bk-grab{font-size:17px;padding:5px 0}}
 @media(max-width:1199.98px){.bk-mv button{padding:7px 9px;font-size:11px}}
-#ed .bk-card{cursor:grab}
+#ed .bk-card,.fw-ed .bk-card{cursor:grab}
 .bk-dragging{opacity:.45}
 .mention{display:inline-flex;align-items:center;gap:3px;padding:1px 8px;border-radius:11px;background:var(--greenlt);color:var(--forest);font-size:.85em;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}
 .mention:hover{filter:brightness(.95)}
@@ -560,7 +560,8 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 }
 /* Suppress iOS's native link/image callout on long-press inside the editor
    so it doesn't fight the app's own item menu */
-#ed .bk-card,#ed img.ed-img,#ed .mention,#ed .embed-wrap,#ed a{-webkit-touch-callout:none}
+#ed .bk-card,#ed img.ed-img,#ed .mention,#ed .embed-wrap,#ed a,
+.fw-ed .bk-card,.fw-ed img.ed-img,.fw-ed .mention,.fw-ed .embed-wrap,.fw-ed a{-webkit-touch-callout:none}
 .vid-mention{background:var(--paper);border:1px solid var(--border2);color:var(--t2)}
 .vid-mention .bk-t{font-size:inherit;font-weight:600;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
 #backlinks{margin:28px 0 12px;padding-top:14px;border-top:2px solid var(--border2)}
@@ -1703,22 +1704,22 @@ sup.ann-sup:hover{text-decoration:underline}
   background:var(--white,#fff);color:var(--t2);cursor:pointer;line-height:1.4;font-family:var(--ui)}
 .ed-col-btn:hover{background:var(--hover,#f0f0f0)}
 .ed-col-btn.on{background:var(--accent,#7C3AED);color:#fff;border-color:transparent}
-#ed .ed-col-arr{display:inline-flex;width:18px;height:18px;margin-right:6px;align-items:center;
+#ed .ed-col-arr,.fw-ed .ed-col-arr{display:inline-flex;width:18px;height:18px;margin-right:6px;align-items:center;
   justify-content:center;border:none;background:transparent;color:var(--t3);cursor:pointer;
   font-size:10px;vertical-align:middle;user-select:none;-webkit-user-select:none;border-radius:4px;padding:0}
-#ed .ed-col-arr:hover{background:var(--hover,#eee);color:var(--t1)}
-#ed .ed-col-hidden{display:none!important}
-#ed .ed-col-grip{display:inline-flex;width:16px;height:18px;margin-right:1px;align-items:center;justify-content:center;color:var(--t3);cursor:grab;font-size:12px;line-height:1;vertical-align:middle;user-select:none;-webkit-user-select:none;touch-action:none;opacity:.4}
-#ed .ed-col-grip:hover{opacity:1;color:var(--green2)}
-#ed .ed-col-grip:active{cursor:grabbing}
-#ed .ed-blk-dragging{opacity:.4}
-@media(max-width:639.98px){#ed .ed-col-grip{width:22px;height:24px;font-size:14px;opacity:.55}}
+#ed .ed-col-arr:hover,.fw-ed .ed-col-arr:hover{background:var(--hover,#eee);color:var(--t1)}
+#ed .ed-col-hidden,.fw-ed .ed-col-hidden{display:none!important}
+#ed .ed-col-grip,.fw-ed .ed-col-grip{display:inline-flex;width:16px;height:18px;margin-right:1px;align-items:center;justify-content:center;color:var(--t3);cursor:grab;font-size:12px;line-height:1;vertical-align:middle;user-select:none;-webkit-user-select:none;touch-action:none;opacity:.4}
+#ed .ed-col-grip:hover,.fw-ed .ed-col-grip:hover{opacity:1;color:var(--green2)}
+#ed .ed-col-grip:active,.fw-ed .ed-col-grip:active{cursor:grabbing}
+#ed .ed-blk-dragging,.fw-ed .ed-blk-dragging{opacity:.4}
+@media(max-width:639.98px){#ed .ed-col-grip,.fw-ed .ed-col-grip{width:22px;height:24px;font-size:14px;opacity:.55}}
 #ed-drop-line{display:none}
 #ed-drag-ghost{position:fixed;display:none;z-index:100000;pointer-events:none;background:var(--green);color:var(--on-accent);font-size:12px;padding:3px 9px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.28);max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--ui)}
-#ed .ed-col-preview{color:var(--t3);font-size:12px;font-style:italic;opacity:.75;
+#ed .ed-col-preview,.fw-ed .ed-col-preview{color:var(--t3);font-size:12px;font-style:italic;opacity:.75;
   padding:2px 0 4px 24px;user-select:none;-webkit-user-select:none}
 @media(max-width:639.98px){.ed-col-btn{padding:5px 10px;font-size:12px}
-  #ed .ed-col-arr{width:24px;height:24px;font-size:12px}}
+  #ed .ed-col-arr,.fw-ed .ed-col-arr{width:24px;height:24px;font-size:12px}}
 .p3h-title-bar #ti{flex:1;width:0;font-size:15px;border:none;
   background:transparent;outline:none;font-family:var(--ui);
   font-weight:600;padding:2px 0;color:var(--t1)}
@@ -2000,11 +2001,7 @@ sup.ann-sup:hover{text-decoration:underline}
   flex-shrink:0;flex-wrap:wrap;align-items:center}
 .fw-tb .nti-save{margin-left:auto}
 .fw-tb .eb-grp-btn{flex:0 0 auto!important;padding:4px 7px!important;font-size:12px!important}
-.fw-ed{flex:1;overflow-y:auto;padding:10px;outline:none;font-size:13px;line-height:1.6;color:var(--t1)}
-.fw-ed h1{font-size:1.529em;font-weight:600;margin:14px 0 6px;color:var(--t1)}
-.fw-ed h2{font-size:1.235em;font-weight:600;margin:12px 0 5px;color:var(--t1)}
-.fw-ed h3{font-size:1em;font-weight:600;margin:10px 0 4px;color:var(--t1)}
-.fw-ed h4{font-size:.92em;font-weight:600;margin:9px 0 4px;color:var(--t1)}
+.fw-ed{flex:1;overflow-y:auto;padding:14px;outline:none;font-family:var(--body);font-size:var(--fs-content);line-height:var(--lh-content);color:var(--body-ink)}
 /* ══ v04.34 — ON A PHONE A POP-UP IS A SHEET ══════════════════════════════
    `.float-win{display:none}` under 900px was the whole of the phone and
    tablet story: the window existed in the DOM and was simply not painted.
@@ -2871,7 +2868,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.52</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.53</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>

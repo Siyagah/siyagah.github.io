@@ -4823,3 +4823,70 @@ Also not done:
   nothing can throw.
 - Screenshots at 390×844, 820×1180 and 1440×900: the sheet spans the note at
   all three.
+
+---
+
+## v04.53 — pop-ups made alike, round (a): the note looks the same inside Multi as inside Single (23 Sep 2026)
+
+Round (a) of four in "make the two pop-ups (Multi and Single) look and work
+the same" (issue #73). This round covers the note's own content only — the
+frame and the toolbar are rounds (b) and (c).
+
+**The defect.** Single is Pane 3 lifted out, so its editor *is* `#ed`. Multi's
+editor is a separate element, `.fw-ed`, and its content rules had drifted from
+`#ed`'s: a fixed 13px `DM Sans` instead of `var(--fs-content)`/`var(--body)`,
+headings in `em` off that 13px instead of `--fs-h1..4`, paragraphs with no
+`--pp-gap`, lists at `padding-left:0` (which is why numbers and nested bullets
+looked clipped or missing), a plain `ol` counter instead of
+`decimal-leading-zero`, a blockquote with no gold rule, and the heading fold
+arrow/grip rendering as unstyled inline glyphs instead of styled 16–18px boxes.
+
+**The fix.** Every `#ed <selector>` rule that styles note content — headings,
+`p`, `ul`/`ol` and their `list-style-type`, `blockquote`, `img.ed-img`,
+`.bk-mv`, `.bk-card`, the `-webkit-touch-callout` line, `.ed-col-arr`,
+`.ed-col-grip` (with `:hover`, `:active` and the phone media rule),
+`.ed-col-hidden`, `.ed-blk-dragging`, `.ed-col-preview`, and the
+`:empty::before` placeholder — now also selects `.fw-ed <selector>`, added to
+the existing selector list rather than duplicated, so the two sets cannot
+drift apart again. `.fw-ed`'s own root rule now carries the same
+`font-family:var(--body)`, `font-size:var(--fs-content)`,
+`line-height:var(--lh-content)`, `color:var(--body-ink)` as `#ed`; it keeps its
+own layout (`flex`, `overflow-y`) and its own, deliberately compact, `14px`
+padding — the same value `#ed` itself uses on a phone, because a pop-up window
+is narrower than Pane 3. The old separate `.fw-ed h1`–`h4` rules (fixed `em`
+sizes off 13px) are deleted; the shared rules replace them. No rule is scoped
+`.editing`/`:not(.editing)` — Multi is always an editor. Owner font settings
+(`--fs-content`, `--lh-content`, `--pp-gap`, set by `applyFontSizes()` /
+`applyLineSpacing()`) already write to `document.documentElement`, so they
+reach `.fw-ed` the same way they reach `#ed`, with nothing new to wire up.
+
+**Layouts (D5).** One change, no breakpoint gates it. Desktop and tablet:
+Multi is a floating window, content matches Pane 3/Single, compact padding.
+Phone: Multi is the full-screen sheet (v04.34), same content, same 14px
+padding `#ed` already uses at that width.
+
+**Checks: new section 18, run with `--only 18`.**
+- `18a` parity sweep (×3 sizes): seeds one note with h1–h4, a paragraph, a
+  3-level nested `ul`, a 10-item `ol`, a blockquote, bold/link/code; opens it
+  in Pane 3 (`selArt`+`startEdit`) and again via `popOutNote`; compares
+  `font-family`, `font-size`, `line-height`, `color`, `margin-top`,
+  `margin-bottom`, `padding-left`, `list-style-type`, `font-style` and
+  `border-left-width` between `#ed` and `#fw-ed-<id>` for root, h1–h4, p, ul,
+  ul ul, ul ul ul, ol, li, blockquote.
+- `18b`: every `li` in the Multi editor, including the third nesting level,
+  has its left edge at least 16px inside the editor's content-box — the
+  marker-clipping defect, measured directly.
+- `18c`: `.ed-col-grip`/`.ed-col-arr` computed `display`/`width`/`height`
+  match between the two editors.
+- `18d`: a non-default content size and line spacing set through
+  `applyFontSizes()`/`applyLineSpacing()` reaches the Multi editor's root
+  `font-size`/`line-height`.
+
+**Measured**
+- `ship-check`: **11/11**.
+- `app-check --only 18`: **11/11**, and also checked to genuinely fail
+  against the pre-fix CSS — 6 of the 11 FAIL there, reproducing every
+  defect in the issue's table (font, heading sizes, paragraph gap, list
+  padding, `ol` counter, blockquote, and the grip/arrow chrome) exactly.
+- Full `app-check` and the unpatched-code verification: **(measured in
+  review)** — per the issue, the Architect runs both and posts the numbers.
