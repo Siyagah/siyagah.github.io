@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.58.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.59.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,71 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.59** (23 Sep 2026) — pop-ups made alike, round (d1): the Sidepane
+  and Contents panels, same side and same place. Issue #85, round (d1) of
+  "make the two pop-ups look and work the same" — round (d2), the tab bar
+  inside Single, is out of scope here on purpose.
+  - Measured on `main` at v04.58, seed note `a1`: Single's Sidepane sat on
+    the left (opposite `DB.theme.tocSide`, default right) whether or not
+    Contents showed, and started below the formatting row, beside the note
+    body only. Multi's sat on the right whenever Contents was hidden but
+    **flipped sides the instant a note gained its third heading**, because
+    float mode's rule was "opposite Contents while Contents is actually
+    drawn", not the modal's stable "opposite the configured side, always".
+    Multi's panel also started directly under the frame, overlapping the
+    title/strip/formatting row, because its top was measured from `.fw-hd`
+    alone. And Multi had **no way at all** to pin a note into its
+    Sidepane — the empty-state text said "drag a tab here (or tap 📌 on a
+    tab)", and Multi has never had a tab bar.
+  - **One side rule, `_popPanelSides()`**: the Sidepane sits opposite
+    `DB.theme.tocSide` regardless of whether Contents is currently drawn —
+    Single's already-stable rule, now shared, so a Multi panel can no
+    longer swing sides mid-session. `pinPanelPos==='below'` now works in
+    float mode too (was modal-only).
+  - **One vertical placement, `_popPanelTop(host,inModal)`**: float mode now
+    measures its own header stack (`.fw-hd` + `.fw-ti` + `.pop-meta-strip` +
+    `.fw-tb.pop-fmt-row`) the way modal always measured `#p3h` + the tab
+    bar + the frame — one function, called by both `_tocInject()` and
+    `_pinPanelInject()`, so the two panels can't disagree.
+  - **Multi's title/strip/formatting row keep the window's full width now.**
+    `_fwSyncBodyPadding()` padded all of `.fw-body` before (title and all);
+    `_fwRenderBody()` now wraps the find bar and editor in their own
+    `.fw-editarea`, and only that gets padded — mirroring Single, whose
+    padding has always landed on `#p3c`, never `#p3h`.
+  - **Pinning without tabs**: a `📌 Pin a note…` button in both Sidepanes
+    opens a searchable picker. Not a second search — the existing Tab-bar
+    picker (`#tab-picker`) is generalised with a `mode` ('tab'/'pin')
+    picking what's excluded and what a click does
+    (`addToTabPicker`/`addToPinPicker`, the latter calling the existing
+    `pinTabToPanel()`). Empty-state text is true in both now: Multi's never
+    mentions tabs, Single's still offers drag-a-tab too.
+  - **Phone (D5)**: no side panel in either pop-up, unchanged (v04.34) —
+    `📌 Pin a note…` rides the `⋯` Section tools menu instead, already open
+    at every tier in both pop-ups, gated to popup contexts only so normal
+    (non-modal) Pane 3's own `⋯` is untouched.
+  - New app-check section 23 (`23a`–`23f`): same side in both pop-ups,
+    stable across a 2- vs 3-heading note, opposite Contents with no
+    overlap; both panels start at/below the formatting row, Multi's row
+    width still equals the strip's; the Contents side toggle and the
+    Sidepane's own ⬇/◫ toggle really move both panels in both pop-ups; a
+    real click on `📌 Pin a note…` → search → pick reaches
+    `DB.theme.pinTabIds` and shows the card, in both; Multi's empty text
+    never says "tab"; at 390px no panel is drawn and pinning is still
+    reachable. Guard: `20g` unchanged.
+  - **Also found while testing 23c**: `_pinPanelToggleSide()` compared the
+    stored `pinPanelPos` against the literal `'side'`, so the very first
+    click ever made on a fresh notebook was a silent no-op (the value
+    starts `undefined`, not `'side'`) — pre-existing on `main`, fixed here
+    since it sat directly under the toggle this round had to verify.
+  - **Not done, flagged instead of fixed**: found by chance while reading
+    the tab bar's markup (told not to touch it this round) — `index.html`'s
+    static `#tab-bar` still carries real, baked-in note titles and ids.
+    Same class of bug as v04.58, in a place its new ship-check guard
+    doesn't look (it only matches `addToTabPicker('<id>')` rows, not the
+    tab bar's own persisted DOM). Left for the Architect/owner.
+  - 12/12 ship checks, `app-check --only 23` **(measured in review)**,
+    `--only 20` **(measured in review)**, `--only 6p`
+    **(measured in review)**. Full `app-check`, **(measured in review)**.
 - **v04.58** (23 Sep 2026) — note titles taken out of the public app file.
   Built by the Architect directly. No behaviour change.
   - The builder found this while working on v04.57. `index.html` had been
@@ -217,66 +282,6 @@ must never accumulate here instead of there.
       compare.
   - 11/11 ship checks, **457/457 app checks, twice in a row**. Unpatched (this `tools/` against
     v04.54's `index.html`): **428/439, all 11 failures in section 20** (aborted blocks run fewer checks, hence the smaller total).
-- **v04.54** (23 Sep 2026) — pop-ups made alike, round (b): one shared frame
-  (title, ‹ ›, ✕, Multi⇄Single switch). Issue #75, round 2 of 4 — this round
-  is the bar across the top only; the toolbar underneath is round (c).
-  - Measured on `main` at v04.53: Multi's `.fw-hd` had a grip, ‹ ›, a title,
-    `✓ Saved` and ✕, and no way to reach Single. Single had a phone-only bar
-    (`#p3-sheet-hd`) and **no frame at all** on a tablet or desktop — dragged
-    by the tab bar, no ‹ ›, its only ✕ was `cancelEdit()` (stops editing, does
-    not close). `#sb-toggle` (`z-index:9999`) painted over both pop-ups at
-    1440×900.
-  - **One function, `_popFrameHTML(aid,mode)`, builds both frames** — Multi's
-    `.fw-hd` and Single's frame are its output, so they cannot drift apart
-    again. Left to right: drag grip (window tier only), the pop-up's own
-    icon, ‹ ›, the title (`min-width:80px`, guarding against the flex/
-    `overflow:hidden` shrink-to-zero fault v04.14 paid for), `✓ Saved`, a
-    switch to the *other* mode (calling `openNotePopup(aid,otherMode)`, so
-    the choice is remembered exactly as before), and ✕ — which gains the
-    word "Close" on the phone tier for **both** pop-ups now, not just
-    Single. Every control carries a `title` and a stable
-    `data-pf="grip|ico|prev|next|title|saved|switch|close"`.
-  - **Single gets the frame at every tier**, not just the phone.
-    `_popFrameSync()` builds it as the first child of `#p3` while
-    `modal-mode` is on; called from `openNoteModal()` and from `renderP3H()`
-    on every note change, so no new call site had to be threaded through the
-    ~30 places that reassign `ST.article`. On the window tier the frame is
-    also a drag handle, reusing `_modalDragStart()` — not a second mover.
-    `#p3-sheet-hd`/`_p3SheetHdSync()` are deleted.
-  - **Single's ‹ ›** (`_panelNavigate()`) is `_p3Navigate()` plus one line:
-    `selArt()` already saves the outgoing note (I1); the added `startEdit()`
-    re-enters edit mode, since Single never leaves it any more (next point).
-  - **Three removals, one CSS rule each**: `.modal-pop-btn` hidden inside
-    `#p3.modal-mode` (stays on normal Pane 3); every `cancelEdit()` ✕ hidden
-    by matching `[onclick="cancelEdit()"]` rather than a class, so all three
-    existing call sites are covered by one rule with nothing to update if a
-    fourth is added — Multi has never had a stop-editing control and closing
-    already flushes, so nothing is lost; `#p3-sheet-hd` is gone.
-  - **`✓ Saved` in Single is the frame's own chip** — `flashSaved()` now also
-    calls `_popFrameFlash()` while `ST.noteModal`; Pane 3's `#save-flash` is
-    hidden inside `#p3.modal-mode` so only one is ever visible.
-  - **`#sb-toggle`'s `z-index` is 400**, not 9999 — below `#p3.modal-mode`
-    (5001) and every `.float-win` (6000+), so a pop-up always covers it.
-  - Same frame, one set of tier rules (`_popTier()`), on all three layouts;
-    the switch drops its word only on the phone, keeping the title's 80px.
-  - New app-check section 19 (`19a`–`19g`): frame parity across sizes,
-    Single's in-place `‹ ›`, the switch both ways, ✕ closing each pop-up,
-    exactly one Saved/one ✕ inside Single, the `◀` handle never winning
-    against a pop-up, and the frame dragging the panel only above the phone
-    tier. Three pre-existing checks (`6p-17-popups-every-platform`) that
-    asserted `#p3-sheet-hd`/`.sh-x` were updated in place, not deleted.
-  - Also this round: filled in v04.53's `(measured in review)` placeholders
-    below and in `CHANGELOG.md`, with the Architect's PR #74 numbers.
-  - 11/11 ship checks, `app-check --only 19` **14/14** (before a review fix
-    that widened one check and added two more — **26/26** after). Full
-    `app-check`, measured by the Architect in review on PR #76: **426/426,
-    twice in a row**. Unpatched (v04.54's `tools/` against v04.53's
-    `index.html`): **398/415, 17 failures**, all in the three updated
-    `6p-17-popups-every-platform` checks and section 19. Review also found
-    Single's ✕ off-screen at 820/1000×1180 (`#p3{width:100%!important}` in
-    the 640–1199 off-canvas rule beating the modal's inline width) — fixed
-    same round, see `CHANGELOG.md`.
-
 ---
 
 ## What this is
