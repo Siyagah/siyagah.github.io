@@ -4551,12 +4551,79 @@ synchronous contract was rewritten to genuinely await the IndexedDB write
 — every caller still gets an immediate boolean, with the in-flight-write
 caveat above stated rather than hidden.
 
+**Completed by the Architect, in review (six builder runs had stopped at
+the measuring step; `ARCHITECT.md`'s three-strikes rule applied).** Reviewing
+the async boot found three defects that the builder's 26 new checks did not
+cover. Each is now guarded by a check shown to fail on the builder's code:
+
+- **I1: a switch-away during start-up wiped the saved notebook.** Until
+  `loadDB()` resolves, `DB` is the empty placeholder, but the `pagehide`/
+  `visibilitychange` listeners that call `_save()` are registered at parse
+  time. New `16h` holds IndexedDB's open back 1.5 s and fires `pagehide`
+  inside that window. On the builder's code, localStorage read back at that
+  moment held **0 notes, 0 folders**. Fix: `_dbLoaded`, set the moment `DB`
+  holds the real notebook; `_save()` and `persist()` refuse to run before it.
+- **I3: the service worker never registered.** Its `load` listener was added
+  after boot's `await`, by which point `load` had already fired. New `16i`
+  found no registration on the builder's code. Fix: register directly when
+  `document.readyState==='complete'`.
+- **The sidebar was fitted to an empty tree.** `autoFit(true)` ran on
+  `document.fonts.ready`, registered at parse time, which could now land
+  before the tree was built. Pane 3 measured 680px on one run and 870px on
+  the next at the same window size. It now runs inside `_boot()` after
+  `render()`.
+
+**The suite is deterministic again.** `window.__appBooted` is now set after
+`document.fonts.ready`, the sidebar fit and two frames, not straight after
+`render()`. The first full run on the builder's branch had 9 failures; a
+second, with a longer settle, had 12 in a different set.
+
+**One "flaky" check was a real defect it only sometimes saw.** `6j-1` failed
+2 runs in 4 under load on this branch and never on `main`. The cause: the
+words "Multi" and "Single" were painted in the swatches `--gold` (~3:1 on
+the shipped paper) and `--green` (**1.04:1** on a pale accent over a dark
+pane). `main` passed only because the toolbar had folded the words away
+whenever the sweep looked. Fixes:
+
+- The words now use text inks: `--green2`, and a new `--gold-ink` derived
+  per paper in `applyPaneInk()` with `_accentInk()`.
+- `_p3FitEditBar()` now clears the read bar's fold classes, which a late
+  read fit could leave on the edit bar.
+- `#p3h` re-fits when its own width changes.
+- New `16j` forces the words into view and measures all 20 cases: worst
+  1.04:1 before the fix, all ≥ 4.5:1 after.
+
+**Five `§14` checks were updated in place**, as the review asked. They forced
+only a `localStorage` failure and expected a warning, which is exactly what
+this round changed. They now fail **both** stores (new `forceIDBWriteFail()`)
+and read the failure from `_lsFail`, because `_save()` returns `true` while
+the IndexedDB write is still in flight. Each carries the reason inline.
+
+**Not done:**
+- Removing the `localStorage` copy (deliberate; a later round).
+- Awaiting the IndexedDB write in `_save()`.
+- A frozen build opened on the same site after migration writes only
+  `localStorage`, which this build no longer reads once IndexedDB holds
+  the notebook. Cloud sync still carries those edits across. Recorded
+  here, not fixed.
+
 **Measured**
 
-`totals recorded by the Architect on the PR` — this round's own targeted
-run was `node tools/app-check.mjs --only 16`: **26/26 passed**. Per the
-Architect's instruction on issue #69, the full `app-check` suite, the
-unpatched-code verification (`git stash` + one run), `ship-check` and
-`shot.mjs` were run by the Architect directly rather than in this round's
-own session, after an earlier attempt at this same issue stopped mid-run
-without committing its new checks.
+Measured by the Architect on the final head:
+- `ship-check` **11/11**.
+- `app-check` **366/366 twice in a row**, 102 blocks, 0 aborted. The
+  builder's head had 327/336 on one run and 324/336 on the next.
+- Under load, the three previously timing-dependent groups (`6e`, `6j-1`,
+  `16`) ran four at once: **43/43 on 4 of 4**.
+- **Unpatched verification:** `main`'s `index.html` with this round's checks,
+  one run, the only change being `window.__appBooted=true` after `render()`,
+  since the harness now waits on that flag: **340/353, 13 FAILED**. All 13
+  are this round's own checks: `16a`–`16e` (IndexedDB), the four `16f`
+  panel checks, `16g`, `16h`'s setup (`main` has no async window to fire
+  into) and `16j`.
+- Four new checks pass on `main` **by design**, because they guard
+  behaviour `main` already had right: `16h`'s notebook-intact check and
+  `16i` (service worker registers) are regression guards for the two
+  defects the async boot introduced. The five updated `§14` checks describe
+  failing-save behaviour both builds share.
+- `shot.mjs` at 390×844, 820×1180 and 1440×900: all three render normally.
