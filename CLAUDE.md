@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.51.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.52.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,23 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.52** (23 Sep 2026) — a spreadsheet inside a note, round 1 of 3.
+  Built by the Architect directly.
+  - **＋ Insert → ▦ Spreadsheet**, in Pane 3's `+` group and the Multi
+    pop-up's own. It offers 113 functions, live recalc, point-and-drag
+    references, sort, insert/delete rows and columns, fill, and paste from
+    Excel. On phones you type in the formula bar with a key row of symbols.
+  - **Stored in the note's own HTML** as `<div class="sgx" data-sg=JSON>`
+    around a snapshot `<table class="sg-static">`. There is no new `DB` key,
+    so I1–I4 ride the note.
+  - **The snapshot is rebuilt only on edit.** `TODAY()`/`RAND()` never make
+    an untouched note look newer (I2). `17d` guards this; writing it caught
+    an attribute-order change in the stored string.
+  - `_edColClean()` canonicalises the sheet; `_edColInit()` and
+    `upgradeViewCards()` mount it. Key and clipboard events stop at the
+    sheet.
+  - **`.sg` was already the subfolder grid**, so the root class is `.sgx`.
+  - 23 new checks (`17a`–`17g`). Rounds 2–3 are on the backlog.
 - **v04.51** (23 Sep 2026) — how the owner gives work, written into the
   brief. No app change beyond the version strings; `ARCHITECT.md` only. The
   owner asked whether it was acceptable to send jobs "scattered, on-the-go,
@@ -179,32 +196,6 @@ must never accumulate here instead of there.
   line ticked. D5 does not apply — no visual surface. 11/11 ship checks,
   **336/336** app checks — the same total as before, no check added,
   removed, or reworded.
-- **v04.47** (22 Sep 2026) — three independent sidebar fixes. Smart Views and
-  MyDatabase now start collapsed on boot like every other section:
-  `renderSmartSection()`/`renderDatabaseSection()` tested `!==false` against
-  a default of `true`/`undefined`, unlike `renderSection()`'s correct
-  `===true` against `{}`; both now match it, and `ST.sfOpen`'s own default
-  had to change too (`true`→`false`) or the render-condition fix alone would
-  have changed nothing. **MyDatabase's click handler needed fixing too, not
-  just its render condition**: `ST.dbOpen=ST.dbOpen===false` only flips
-  correctly under the OLD "open unless false" default — under the NEW
-  "closed unless true" one it could only ever set `dbOpen` from `undefined`
-  to `false`, never to `true`, so the section could never be opened by
-  clicking it; fixed to `ST.dbOpen=ST.dbOpen!==true`, matching `secOpen`'s
-  own toggle. Separately, `ST.exp`'s stray `{f2:true}` — a hard-coded folder
-  id force-expanded on every boot — is now `{}`. `#bts-sb` ("back to search
-  results") showed on a fresh launch because `_updateSearchAccessUI()` was
-  only ever called from `doSearch()`/`clearSearch()`, never at boot;
-  `render()` calls it now (Pane 2/3's own mirrors were already fine — they
-  call their own copies on every render already). Three of five `.tr-cnt`
-  badge sites (plain folders, MyDatabase items, Smart Views) hid the badge
-  at 0 where the other two never did; all five now always show it. A
-  pre-existing check (`6i-4-section-strip`) relied on Smart Views being open
-  by default — the very bug fixed here — to have a row to measure; updated
-  in place to open one first, per the "seed the state before measuring"
-  lesson. D5: one shared render path at all three breakpoints, no shape to
-  diverge, said plainly. 11/11 ship checks, app checks 324 → **336** (12
-  new), no unpatched-code comparison run (plain bug fixes, per the issue).
 ---
 
 ## What this is
@@ -386,6 +377,11 @@ A failing check is a wrong assertion surprisingly often — investigate before
   the read-only view. Widgets containing heading-like lines need styled divs or
   an entry in those functions' exclusion lists, or they sprout arrows, grips,
   TOC entries and status badges inside themselves.
+- **A spreadsheet lives in the note's content** as `.sgx[data-sg]` around a
+  snapshot `.sg-static` table (v04.52). The live grid is mounted at display
+  time and stripped by `_edColClean()`. Never write live chrome into
+  `a.content`, and never recompute the snapshot except on an edit to the
+  sheet itself.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
