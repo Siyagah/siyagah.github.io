@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.49">
+<meta name="app-version" content="04.50">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -52,6 +52,7 @@
 :root{
   --forest:#0D1A12;--forest2:#172315;--green:#1B7A46;--green2:#155F37;
   --greenlt:#E8F5EE;--gold:#B8873A;--paper:#F7F4ED;--white:#FFFFFF;
+  --gold-ink:#7B5A26;   /* v04.50 — --gold AS TEXT; applyPaneInk() re-derives it per paper */
   --border:#E4DFD3;--border2:#CFC9BB;
   --t1:#1A1612;--t2:#5A544A;--t3:#67625B;   /* v04.19 — 4.81:1 on --hover */
   /* ── Surface tints (v04.19) ──────────────────────────────────────
@@ -2331,8 +2332,13 @@ sup.ann-sup:hover{text-decoration:underline}
 #p3h.editing .pop-btn{font-size:12.5px;padding:4px 8px;min-width:0}
 /* !important because .bn sets color:var(--t3)!important — without it both
    buttons come out the same grey and the tint silently does nothing. */
-#p3h .pop-btn.pop-multi{color:var(--gold)!important}
-#p3h .pop-btn.pop-single{color:var(--green)!important}
+/* v04.50 — the TEXT inks, not the swatches. --gold measured ~3:1 on the
+   shipped paper and --green 1.4:1 once the owner picks a pale accent; the
+   words only escaped the contrast sweep because they happened to be folded
+   away at the moment it looked. --green2 is the accent as text (v04.19);
+   --gold-ink is gold's equivalent, derived the same way in applyPaneInk(). */
+#p3h .pop-btn.pop-multi{color:var(--gold-ink)!important}
+#p3h .pop-btn.pop-single{color:var(--green2)!important}
 /* Folded: the words go, the button falls back to the icon-only footprint it
    had before this round — same 38px target, nothing else moves. */
 #p3h.p3h-nolbl .pop-lbl{display:none}
@@ -2437,8 +2443,8 @@ sup.ann-sup:hover{text-decoration:underline}
    green the bar uses, so the row and the button read as the same control. */
 .fl-pop .eb-pop-act .eb-act-i{display:flex;align-items:center;justify-content:center}
 .fl-pop .eb-pop-act .pop-ico{width:16px;height:16px}
-.fl-pop .eb-pop-act.pop-multi{color:var(--gold)}
-.fl-pop .eb-pop-act.pop-single{color:var(--green)}
+.fl-pop .eb-pop-act.pop-multi{color:var(--gold-ink)}
+.fl-pop .eb-pop-act.pop-single{color:var(--green2)}
 .fl-pop .eb-act .eb-act-l{font-size:12.5px;font-weight:600;color:var(--t2);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fl-pop .eb-act:hover .eb-act-l{color:var(--t1)}
@@ -2798,7 +2804,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.49</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.50</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -2939,7 +2945,81 @@ let HISTORY = [], HIST_POS = -1;
 
 let ST = {folder:null, article:null, exp:{}, editing:false, etitle:'', efolders:[], etags:[], search:'', tag:null, tagOpen:false, secOpen:{}, pendingSec:null, snippet:false, sfOpen:false, secSF:null, secSFOpen:{}, ntiCatOpen:{}, tabOwner:null};
 
-function loadDB(){
+/* ── IndexedDB local store (v04.50) ──────────────────────────────────────
+   Issue #69: the owner's notebook (~5.00 MB) had crossed localStorage's
+   ~5 MB-per-origin cap, and _save() (below) had nothing bigger to fall
+   back to. The browser already offers ~10 GB through IndexedDB — the very
+   API _refreshStorageQuota() was reading all along — so IndexedDB becomes
+   the system of record for the local copy of DB. localStorage is kept as a
+   best-effort fast path and as the migration source (I8 — additive, never
+   discard the old shape); it is NOT deleted or cleaned up this round.
+   One key ('notebook') in one object store holds the whole DB, exactly the
+   shape localStorage[SK] always held. */
+const IDB_NAME='siyagah-local-v1', IDB_STORE='kv', IDB_KEY='notebook';
+let _idbReady=false;          /* true once IndexedDB actually holds the authoritative copy */
+/* v04.50 — false until loadDB() has put the REAL notebook into DB. Before
+   this round loadDB() was synchronous, so nothing could run between the
+   script starting and DB being loaded. Now loadDB() awaits IndexedDB, and
+   in that gap DB is still the empty placeholder declared above — while
+   the visibilitychange/pagehide listeners (registered synchronously further
+   down) call _save(). Switching away from the app during a slow start
+   would have written that EMPTY notebook over the real one in
+   localStorage (I1). _save() and persist() refuse to run until this is
+   true. */
+let _dbLoaded=false;
+let _idbOpenPromise=null;
+function _idbOpen(){
+  if(_idbOpenPromise) return _idbOpenPromise;
+  _idbOpenPromise=new Promise((resolve)=>{
+    if(!window.indexedDB){ resolve(null); return; }
+    let req;
+    try{ req=indexedDB.open(IDB_NAME,1); }catch(e){ resolve(null); return; }
+    req.onupgradeneeded=()=>{ try{ req.result.createObjectStore(IDB_STORE); }catch(e){} };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>resolve(null);
+    req.onblocked=()=>resolve(null);
+  });
+  return _idbOpenPromise;
+}
+function _idbGet(key){
+  return _idbOpen().then(db=>new Promise(resolve=>{
+    if(!db){ resolve(undefined); return; }
+    try{
+      const rq=db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
+      rq.onsuccess=()=>resolve(rq.result);
+      rq.onerror=()=>resolve(undefined);
+    }catch(e){ resolve(undefined); }
+  }));
+}
+function _idbPut(key,val){
+  return _idbOpen().then(db=>new Promise((resolve,reject)=>{
+    if(!db){ reject(new Error('IndexedDB unavailable')); return; }
+    try{
+      const tx=db.transaction(IDB_STORE,'readwrite');
+      tx.objectStore(IDB_STORE).put(val,key);
+      tx.oncomplete=()=>resolve(true);
+      tx.onerror=()=>reject(tx.error||new Error('IndexedDB write failed'));
+      tx.onabort=()=>reject(tx.error||new Error('IndexedDB write aborted'));
+    }catch(e){ reject(e); }
+  }));
+}
+function _idbIdSet(arr){ return (arr||[]).map(x=>x&&x.id).slice().sort().join(','); }
+/** Copies `db` into IndexedDB and reads it straight back to confirm the
+ *  write actually landed — the same "never trust a write" discipline
+ *  _saveRecoveryCopy() uses (v04.39, issue #49). Only on a verified match
+ *  does IndexedDB become authoritative for this session. */
+async function _idbMigrateFrom(db){
+  try{
+    await _idbPut(IDB_KEY, db);
+    const back=await _idbGet(IDB_KEY);
+    if(!back) return false;
+    return _idbIdSet(back.folders)===_idbIdSet(db.folders)
+        && _idbIdSet(back.articles)===_idbIdSet(db.articles)
+        && _idbIdSet(back.sections)===_idbIdSet(db.sections);
+  }catch(e){ return false; }
+}
+
+async function loadDB(){
   const el = document.getElementById('nd');
   let emb = null;
   try { emb = el ? JSON.parse(el.textContent) : null; } catch{}
@@ -2953,10 +3033,25 @@ function loadDB(){
   // either side.
   let _stored=null;
   try{_stored=JSON.parse(localStorage.getItem(SK));}catch{}
-  if(_stored?.folders&&emb?.folders){DB=mergeDB(_stored,emb);}
+  /* v04.50 — IndexedDB is read FIRST. If it already holds a migrated
+     notebook, it is authoritative and localStorage is not consulted at all
+     (beyond the embedded-file merge every load already does) — a stale or
+     hand-edited localStorage entry from a second boot must never leak back
+     in and undo what IndexedDB already has. A device that has never run
+     this version (IndexedDB empty) falls straight through to the exact
+     localStorage/embedded logic this file has always used. */
+  let _idb=null;
+  try{ _idb=await _idbGet(IDB_KEY); }catch(e){ _idb=null; }
+  if(_idb&&_idb.folders){
+    _idbReady=true;
+    if(emb?.folders){DB=mergeDB(_idb,emb);}
+    else{DB=JSON.parse(JSON.stringify(_idb));}
+  }
+  else if(_stored?.folders&&emb?.folders){DB=mergeDB(_stored,emb);}
   else if(emb?.folders){DB=JSON.parse(JSON.stringify(emb));}
   else if(_stored?.folders){DB=JSON.parse(JSON.stringify(_stored));}
   else{DB=mkDefaults();}
+  _dbLoaded=true;
   const roots = DB.folders.filter(f=>!f.parentId).sort((a,b)=>a.order-b.order);
   if(roots.length) ST.folder = roots[0].id;
   // Section migration: ensure every root folder has a sectionId
@@ -3071,6 +3166,22 @@ function loadDB(){
     });
     if(touched){ _save(); try{pushToCloud();}catch(e){} }
   })();
+  /* v04.50 — migrate to IndexedDB once, on boot: it wasn't already
+     authoritative (checked at the top of this function) and there is a
+     real notebook to migrate. Migrating the fully-settled DB (after every
+     migration above) rather than the raw localStorage read means the copy
+     IndexedDB gets is exactly what this boot's first _save() would also
+     write to localStorage — the two stay identical by id right away,
+     instead of drifting until the next save. A fresh install with nothing
+     in either store also lands here (DB is mkDefaults()'s starter set),
+     which is correct: it has nothing to "migrate" but should still end this
+     boot on IndexedDB as the system of record, same as every other device
+     from this version on. Runs once: the next boot finds IndexedDB already
+     holding a notebook (the branch at the top of this function) and never
+     reaches this code path again. */
+  if(!_idbReady){
+    try{ _idbReady=await _idbMigrateFrom(DB); }catch(e){ _idbReady=false; }
+  }
   snapshotState();
 }
 /* ── Local-save guard (v03.80) ────────────────────────────────────────
@@ -3185,52 +3296,73 @@ function _stampThemeTouches(){
     _themeSnap=curStr;
   }catch(_){}
 }
-/* `pre` — an already-serialised DB, passed by callers that have just built
-   one (the cloud push). Saves stringifying the whole notebook twice on
-   every push, which is measurable once a notebook is large. */
-function _save(pre){
-  _stampThemeTouches();
-  try{
-    localStorage.setItem(SK, pre!=null?pre:JSON.stringify(DB));
-    if(_lsFail){
-      _lsFail = false; _lsFailQuota = false;
-      try{ updateSaveUI(); }catch(_){}
-      try{ toast('\u2705 Browser storage is working again \u2014 saving normally'); }catch(_){}
-    }
-    return true;
-  }catch(e){
-    console.error('Local save failed:', e);
-    const quota = !!e && (e.name === 'QuotaExceededError'
-                       || e.name === 'NS_ERROR_DOM_QUOTA_REACHED'
-                       || e.code === 22 || e.code === 1014);
-    _lsFailQuota = quota;
-    /* v04.44 \u2014 this used to also pop a showModal() explanation on a 400ms
-       deferred timer, on EVERY launch where the first save of the session
-       failed (issue #58: the owner's notebook had genuinely outgrown the
-       ~5MB localStorage budget, so this fired every single time they
-       opened the app). updateSaveUI() below is now the ONLY automatic
-       reaction \u2014 it lights the \u26a0 badge next to \ud83e\uddf0 and swaps
-       #save-lbl to a tappable warning, and both stay lit for as long as
-       _lsFail is true. The full explanation (openStorageWarnDetails(), near
-       _storageSectionHTML()) only opens when the owner taps one of those,
-       never on its own. */
-    const wasFailing = _lsFail;
-    _lsFail = true;
-    /* _lsFail has to flip BEFORE updateSaveUI() runs, or the very first
-       failure of the session \u2014 the one time this matters most \u2014 renders
-       with the old, not-yet-failing state and shows nothing. */
-    try{ _fileDirty = true; updateSaveUI(); }catch(_){}
-    if(!wasFailing){
-      try{
-        toast(quota
-          ? '\u26a0 Browser storage is FULL \u2014 changes are not being saved on this device. Tap the \u26a0 badge near \ud83e\uddf0 for details.'
-          : '\u26a0 Local save failed \u2014 tap the \u26a0 badge near \ud83e\uddf0 for details.', 9000);
-      }catch(_){}
-    }
-    return false;
+/** Shared by both the localStorage-only path and the async IndexedDB path
+ *  below (v04.50) — factored out of _save()'s old catch block so a write
+ *  that fails or recovers ASYNCHRONOUSLY (IndexedDB) drives the exact same
+ *  ⚠ badge and toast a synchronous localStorage failure always has. */
+function _clearSaveFailureIfNeeded(){
+  if(!_lsFail) return;
+  _lsFail = false; _lsFailQuota = false;
+  try{ updateSaveUI(); }catch(_){}
+  try{ toast('✅ Browser storage is working again — saving normally'); }catch(_){}
+}
+function _markSaveFailure(e){
+  console.error('Local save failed:', e);
+  const quota = !!e && (e.name === 'QuotaExceededError'
+                     || e.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+                     || e.code === 22 || e.code === 1014);
+  _lsFailQuota = quota;
+  const wasFailing = _lsFail;
+  _lsFail = true;
+  /* _lsFail has to flip BEFORE updateSaveUI() runs, or the very first
+     failure of the session — the one time this matters most — renders
+     with the old, not-yet-failing state and shows nothing. */
+  try{ _fileDirty = true; updateSaveUI(); }catch(_){}
+  if(!wasFailing){
+    try{
+      toast(quota
+        ? '⚠ Browser storage is FULL — changes are not being saved on this device. Tap the ⚠ badge near 🧰 for details.'
+        : '⚠ Local save failed — tap the ⚠ badge near 🧰 for details.', 9000);
+    }catch(_){}
   }
 }
-const persist = () => { snapshotState(); _save(); scheduleAutoSave(); pushToCloud(); };
+/* `pre` — an already-serialised DB, passed by callers that have just built
+   one (the cloud push). Saves stringifying the whole notebook twice on
+   every push, which is measurable once a notebook is large.
+
+   v04.50 — IndexedDB, not localStorage, is now the system of record once
+   `_idbReady` (set by loadDB(), above) is true: localStorage is still
+   written as a best-effort fast path, but a write that fails there no
+   longer flips _lsFail — only a failed IndexedDB write does. Every caller
+   of _save() (persist(), _doPush(), autosave) expects a synchronous
+   boolean back, and IndexedDB's API is not synchronous, so the IndexedDB
+   write is FIRED from here but not awaited; its actual pass/fail arrives
+   later and surfaces through the exact same _lsFail/updateSaveUI() path a
+   localStorage failure always has. This means a write still in flight when
+   the tab is torn down can be lost silently — no different in kind from a
+   debounced cloud push or file write being interrupted the same way, and
+   recorded here rather than left unsaid (see CHANGELOG v04.50). Before
+   IndexedDB has ever become ready (unavailable, or its one migration
+   attempt this session failed), _save() behaves exactly as it always has:
+   localStorage is the system of record and a failed write IS the failure. */
+function _save(pre){
+  if(!_dbLoaded) return false;   /* never write the pre-load placeholder over the real notebook — see _dbLoaded */
+  _stampThemeTouches();
+  const json = pre!=null?pre:JSON.stringify(DB);
+  let lsErr=null;
+  try{ localStorage.setItem(SK, json); }catch(e){ lsErr=e; }
+
+  if(_idbReady){
+    _idbPut(IDB_KEY, DB).then(_clearSaveFailureIfNeeded).catch(_markSaveFailure);
+    if(lsErr) console.error('localStorage best-effort save failed (IndexedDB is authoritative):', lsErr);
+    return true;
+  }
+
+  if(!lsErr){ _clearSaveFailureIfNeeded(); return true; }
+  _markSaveFailure(lsErr);
+  return false;
+}
+const persist = () => { if(!_dbLoaded) return; snapshotState(); _save(); scheduleAutoSave(); pushToCloud(); };
 
 /* ── Export hygiene: never bake foreign DOM into a saved file (v03.80) ──
    getExportHTML() serialises the LIVE document, so anything that landed in
@@ -7246,6 +7378,13 @@ function _fmtBytes(n){
   if(n>=1024) return (n/1024).toFixed(1)+' KB';
   return n+' B';
 }
+/* v04.50 — localStorage's real per-origin cap (issue #69's own numbers: a
+   5.00 MB notebook was already over it). Used only on the fallback path,
+   when IndexedDB never became this device's system of record — while
+   IndexedDB IS in use, the real, measured origin budget from
+   navigator.storage.estimate() is the right comparison (see
+   _refreshStorageQuota() below), not a hardcoded guess. */
+const _LS_CAP_BYTES = 5*1024*1024;
 /** notebookLive is measured from the LIVE in-memory DB, not from what is
  *  actually sitting under SK — when saving is failing, SK holds a stale
  *  (smaller, possibly empty) copy, and the figure that matters here is
@@ -7281,6 +7420,24 @@ function _storageAdviceHTML(br,recSnap){
     bytes:trashBytes, html:'<button class="btn" style="margin-top:4px" onclick="closeModal();openTrash()">🗑 Open Trash</button>'});
   cands.sort((a,b)=>b.bytes-a.bytes);
   const top=cands[0];
+  /* v04.50 — a reclaimable amount is only ever offered as THE FIX when it
+     can actually close the gap. Issue #69: 36.5 KB of Trash against a
+     5.00 MB notebook that had crossed localStorage's ~5 MB cap was shown
+     as "the" thing to reclaim, and it could never have been enough — a
+     shortfall that size needed a bigger store, not a smaller Trash.
+     `shortfall` is only meaningful on the localStorage-only fallback path
+     (while IndexedDB is in use its real ~10 GB budget is compared
+     separately, in _refreshStorageQuota() below, and is essentially never
+     tight) — there it is genuinely 0 for almost every device, and this
+     reduces to the original "biggest thing you can reclaim" wording. */
+  const shortfall=_idbReady?0:Math.max(0,br.notebookLive-_LS_CAP_BYTES);
+  if(shortfall>0 && (!top || top.bytes<shortfall)){
+    const named=top?(esc(top.label)+' — about '+_fmtBytes(top.bytes)):'nothing reclaimable found on this device';
+    return '<div class="mm" style="margin-top:10px;font-size:12.5px">The notebook itself (<strong>'+_fmtBytes(br.notebookLive)
+      +'</strong>) is over this device’s ~5 MB local storage limit by about <strong>'+_fmtBytes(shortfall)+'</strong>. '
+      +'Biggest thing you can reclaim: '+named+' — <strong>that will not be enough to close the gap</strong>. '
+      +(top?top.html+' ':'')+'<strong>💾 Save File</strong> keeps a full copy safe either way.</div>';
+  }
   if(top && top.bytes>1024){
     return '<div class="mm" style="margin-top:10px;font-size:12.5px">Biggest thing you can reclaim: <strong>'
       +esc(top.label)+'</strong> — about '+_fmtBytes(top.bytes)+'. '+top.html+'</div>';
@@ -7297,7 +7454,11 @@ function _storageSectionHTML(){
   let h='<div class="mm" style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">';
   h+='<div style="font-weight:600;margin-bottom:6px">💽 Storage on this device</div>';
   h+='<div id="stor-rows" style="font-size:12.5px;line-height:1.9">';
-  h+='Notebook: <strong id="stor-notebook">'+_fmtBytes(br.notebookLive)+'</strong><br>';
+  /* v04.50 — names the store actually in use (issue #69: the panel used to
+     show an origin-wide ~10 GB estimate that had nothing to do with the
+     ~5 MB localStorage cap the notebook had actually crossed). */
+  h+='Notebook: <strong id="stor-notebook">'+_fmtBytes(br.notebookLive)+'</strong>'
+    +' <span id="stor-store">— saved to '+(_idbReady?'IndexedDB':'browser storage (localStorage)')+'</span><br>';
   if(recSnap) h+='Recovery copy ('+esc(new Date(recSnap.savedAt).toLocaleDateString())+'): <strong>'+_fmtBytes(br.recovery)+'</strong><br>';
   h+='Everything else Siyagah keeps: <strong>'+_fmtBytes(br.other)+'</strong><br>';
   h+='<span id="stor-quota">Checking the browser’s storage budget…</span>';
@@ -7313,22 +7474,42 @@ function _storageSectionHTML(){
   return h;
 }
 /** navigator.storage.estimate() is async, so the section above renders with
- *  a placeholder and this fills it in once the browser answers. */
+ *  a placeholder and this fills it in once the browser answers.
+ *
+ *  v04.50 — issue #69: this used to print navigator.storage.estimate()
+ *  unconditionally — the ORIGIN-wide budget (IndexedDB + Cache Storage +
+ *  everything, about 10 GB) — while the store that was actually failing,
+ *  localStorage, is capped at about 5 MB and has nothing to do with that
+ *  number. "About 2.56 MB of about 10242.56 MB used" read as "you have ten
+ *  gigabytes spare" on the same screen as a warning that saving had failed.
+ *  Now: while IndexedDB is this device's system of record (_idbReady), the
+ *  origin estimate genuinely IS the right comparison — the notebook lives
+ *  there — so it's shown, but labelled with the store it's measuring. On
+ *  the localStorage-only fallback path (IndexedDB never became ready this
+ *  session), the estimate is not shown at all; the ~5 MB figure that
+ *  actually applies is computed from real byte counts instead. */
 function _refreshStorageQuota(){
   const el=document.getElementById('stor-quota');
   if(!el) return;
-  if(navigator.storage && navigator.storage.estimate){
-    navigator.storage.estimate().then(function(est){
-      const el2=document.getElementById('stor-quota'); if(!el2) return;
-      const usage=est.usage||0, quota=est.quota||0;
-      el2.textContent=quota
-        ? ('Browser budget: about '+_fmtBytes(usage)+' of about '+_fmtBytes(quota)+' used (all of this app’s storage, not just notes)')
-        : 'Browser storage budget: not reported';
-    }).catch(function(){
-      const el3=document.getElementById('stor-quota'); if(el3) el3.textContent='Browser storage budget: unavailable';
-    });
+  if(_idbReady){
+    if(navigator.storage && navigator.storage.estimate){
+      navigator.storage.estimate().then(function(est){
+        const el2=document.getElementById('stor-quota'); if(!el2) return;
+        const usage=est.usage||0, quota=est.quota||0;
+        el2.textContent=quota
+          ? ('Browser budget (IndexedDB, where this notebook lives): about '+_fmtBytes(usage)+' of about '+_fmtBytes(quota)+' used')
+          : 'Browser storage budget: not reported';
+      }).catch(function(){
+        const el3=document.getElementById('stor-quota'); if(el3) el3.textContent='Browser storage budget: unavailable';
+      });
+    } else {
+      el.textContent='Browser storage budget: not reported by this browser';
+    }
   } else {
-    el.textContent='Browser storage budget: not reported by this browser';
+    const br=_storageBreakdown();
+    const used=br.notebookStored+br.recovery+br.other;
+    el.textContent='Browser budget (localStorage, the store this device is actually saving to): about '
+      +_fmtBytes(used)+' of about '+_fmtBytes(_LS_CAP_BYTES)+' used';
   }
 }
 function _confirmRemoveRecovery(){
@@ -12132,7 +12313,14 @@ function _p3FitToolbar(){
    Under 900px there is nothing to fold: .modal-pop-btn is display:none and
    openNotePopup() refuses below that width, in both modes. */
 function _p3FitEditBar(el){
-  el.classList.remove('p3h-nolbl');
+  /* v04.50 — the READ bar's folds too. v04.33 said both modes clear what
+     the other left behind, but this only ever removed p3h-nolbl, so a read
+     fit that ran last (a render's deferred rAF pass landing after
+     startEdit()) could leave p3h-tight/p3h-tighter on the edit bar, hiding
+     its inline type controls and deciding the words' fold against a row
+     that was not the edit bar's own. Found as a check that failed 2 runs in
+     4 under load on the v04.50 branch and never on main. */
+  el.classList.remove('p3h-nolbl','p3h-tight','p3h-tighter','p3h-tightest');
   if(!el.clientWidth||!el.querySelector('.pop-btn'))return;
   let over=false;
   const tb=el.querySelector('.p3h-unified-tb');
@@ -17603,6 +17791,10 @@ function applyPaneInk(themeData){
   const cuAcc=(themeData&&themeData.custom&&themeData.custom.accent)||'';
   const inkAcc=cuAcc||cs.getPropertyValue('--green').trim();
   if(hover&&(cuAcc||own)) set('--green2',_accentInk(inkAcc,hover));
+  /* v04.50 — gold never had a text ink at all: "Multi" was written in the
+     swatch itself, ~3:1 on the shipped paper. Derived for every paper,
+     preset included, since no preset's gold was measured as text. */
+  if(hover) set('--gold-ink',_accentInk(cs.getPropertyValue('--gold').trim(),hover));
   if(!own) return '';   /* preset paper — its own inks are right */
   set('--paper',paper);
   set('--white',   hexLighten(paper,.55));
@@ -20926,6 +21118,24 @@ window.addEventListener('resize',_onViewportResize);
    dividers are dragged. Re-fitting is a couple of class toggles, so it is
    cheap enough to run on every one of those. */
 window.addEventListener('resize',()=>{try{_p3FitToolbar();}catch(e){}});
+/* v04.50 — Pane 3's header re-fits whenever ITS OWN width changes, not only
+   when the window's does. A fit taken while the pane is still settling (the
+   710px → 485px case the render comment describes) used to stand until the
+   next render; with boot now async that window is no longer reliably
+   covered by the render's own rAF pass. Width only: the fit itself changes
+   the row's HEIGHT (it folds words to save a line), and re-fitting on that
+   would chase its own tail. */
+(function(){
+  const el=document.getElementById('p3h');
+  if(!el||!window.ResizeObserver)return;
+  let w=-1;
+  new ResizeObserver(function(){
+    const cw=el.clientWidth;
+    if(cw===w)return;
+    w=cw;
+    requestAnimationFrame(function(){try{_p3FitToolbar();}catch(e){}});
+  }).observe(el);
+})();
 /* v04.14 — the sidebar header folds on the width of ITS OWN PANE, never on
    window width: the sidebar is draggable from 160px to 540px, so a 1440px
    laptop can still be showing a 200px sidebar — which is exactly where the
@@ -21956,47 +22166,73 @@ function startRenameArtTitle(aid){
     </div>`);
 }
 
-loadDB();
-if(!DB.calEvents)DB.calEvents=[];
-if(!DB.calCategories||!DB.calCategories.length)DB.calCategories=[
-  {id:'cc-school',name:'School',icon:'🏫',color:'#10B981',order:0},
-  {id:'cc-exams', name:'Exams', icon:'📋',color:'#EF4444',order:1},
-  {id:'cc-health',name:'Health',icon:'❤️',color:'#EC4899',order:2},
-  {id:'cc-family',name:'Family',icon:'👨‍👩‍👧',color:'#F59E0B',order:3},
-  {id:'cc-work',  name:'Work',  icon:'💼',color:'#6366F1',order:4},
-];
-if(!DB.theme)DB.theme={};
-if(!DB.theme.calLayers)DB.theme.calLayers={notes:true,publicHols:true,schoolHols:true,personal:true,journal:true};
-render();
-/* PWA SW */
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/sw.js').then(reg=>{
-      reg.addEventListener('updatefound',()=>{
-        const sw=reg.installing;
-        sw.addEventListener('statechange',()=>{
-          if(sw.state==='installed'&&navigator.serviceWorker.controller)
-            toast('🔄 App updated — reload to apply');
+/* v04.50 — loadDB() now reads IndexedDB first (async), so the boot
+   sequence that depends on DB being settled — the calendar defaults,
+   render(), and everything below that reads DB — has to wait for it.
+   window.__appBooted flags the moment render() has actually run, since
+   `typeof render === 'function'` is true the instant this script is
+   PARSED (function declarations hoist) and proves nothing about whether
+   loadDB() has resolved — tools/harness.mjs's openApp() waits on this flag
+   rather than on that stale check. Event-listener registrations further
+   down this file (visibilitychange, pagehide, keydown, …) stay outside
+   this wrapper: they only touch DB from inside a callback that fires much
+   later, never at registration time, so they don't need to wait. */
+(async function _boot(){
+  await loadDB();
+  if(!DB.calEvents)DB.calEvents=[];
+  if(!DB.calCategories||!DB.calCategories.length)DB.calCategories=[
+    {id:'cc-school',name:'School',icon:'🏫',color:'#10B981',order:0},
+    {id:'cc-exams', name:'Exams', icon:'📋',color:'#EF4444',order:1},
+    {id:'cc-health',name:'Health',icon:'❤️',color:'#EC4899',order:2},
+    {id:'cc-family',name:'Family',icon:'👨‍👩‍👧',color:'#F59E0B',order:3},
+    {id:'cc-work',  name:'Work',  icon:'💼',color:'#6366F1',order:4},
+  ];
+  if(!DB.theme)DB.theme={};
+  if(!DB.theme.calLayers)DB.theme.calLayers={notes:true,publicHols:true,schoolHols:true,personal:true,journal:true};
+  render();
+  /* v04.50 — the flag means "settled", not "render() returned": fonts
+     loaded and two frames laid out, so the post-render fit/measure passes
+     have run. Setting it straight after render() made the harness's fixed
+     settle land at a variable point and the suite non-deterministic (see
+     CHANGELOG v04.50). Not awaited — nothing in the app waits on it. */
+  Promise.resolve(document.fonts&&document.fonts.ready).catch(()=>{})
+    .then(()=>{try{autoFit(true);}catch(e){}})   /* the sidebar fit — see the note where it used to live */
+    .then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))
+    .then(()=>{ window.__appBooted=true; });
+  /* PWA SW. v04.50 — boot is async now, so on a fast load the window's
+     `load` event can fire BEFORE this line runs; a listener added after it
+     never fires, the service worker never registers, and updates stop
+     reaching the device (I3). Register directly if load has already
+     happened. */
+  if('serviceWorker' in navigator){
+    const _regSW=()=>{
+      navigator.serviceWorker.register('/sw.js').then(reg=>{
+        reg.addEventListener('updatefound',()=>{
+          const sw=reg.installing;
+          sw.addEventListener('statechange',()=>{
+            if(sw.state==='installed'&&navigator.serviceWorker.controller)
+              toast('🔄 App updated — reload to apply');
+          });
         });
-      });
-    }).catch(()=>{});
-  });
-}
-(()=>{const _cc=DB.theme?.calCountry;if(_cc)_loadCalHols(_cc,new Date().getFullYear());})();
-/* v04.02 — a due backup runs itself a few seconds after start-up. Delayed on
-   purpose: building the file clones the whole document and stringifies the
-   notebook, and that must never land on top of the first paint. */
-setTimeout(()=>{try{_bkMaybeAuto();}catch(e){}},6000);
-(()=>{
-  const _sw=localStorage.getItem('siyagah-sb-w');
-  const sb=document.getElementById('sb');
-  if(_sw&&sb){sb.style.width=_sw;}
-})();
-updateSbToggle();
+      }).catch(()=>{});
+    };
+    if(document.readyState==='complete') _regSW();
+    else window.addEventListener('load',_regSW);
+  }
+  (()=>{const _cc=DB.theme?.calCountry;if(_cc)_loadCalHols(_cc,new Date().getFullYear());})();
+  /* v04.02 — a due backup runs itself a few seconds after start-up. Delayed on
+     purpose: building the file clones the whole document and stringifies the
+     notebook, and that must never land on top of the first paint. */
+  setTimeout(()=>{try{_bkMaybeAuto();}catch(e){}},6000);
+  (()=>{
+    const _sw=localStorage.getItem('siyagah-sb-w');
+    const sb=document.getElementById('sb');
+    if(_sw&&sb){sb.style.width=_sw;}
+  })();
+  updateSbToggle();
 
-/* Initialise Firebase Auth (shows login overlay if not signed in),
-   then start cloud sync once authenticated */
-(async()=>{
+  /* Initialise Firebase Auth (shows login overlay if not signed in),
+     then start cloud sync once authenticated */
   try{
     await initAuth();
     /* v03.91.02 — removed a redundant second onAuthStateChanged listener that
@@ -22082,12 +22318,12 @@ document.addEventListener('keydown', function(ev){
   }
 });
 
-// Auto-fit sidebar width on open — wait for fonts so text measurement is accurate
-if(document.fonts && document.fonts.ready){
-  document.fonts.ready.then(()=>autoFit(true));
-} else {
-  setTimeout(()=>autoFit(true), 300);
-}
+/* Auto-fit sidebar width on open — v04.50: moved INTO _boot(), after render().
+   It used to be registered here, at parse time, on document.fonts.ready, and
+   boot was synchronous so the tree was always built by then. With loadDB()
+   now awaiting IndexedDB, fonts could be ready first, and the sidebar was
+   fitted to the EMPTY placeholder tree, measured as Pane 3 coming out 680px
+   on one run and 870px on the next at the same window size. */
 
 /* ── Long-press → context menu (mobile & tablet) ──────────────────────────
    600 ms hold on any folder row or section header triggers the same context

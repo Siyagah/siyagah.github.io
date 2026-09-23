@@ -4471,15 +4471,51 @@ async function forceNotebookWriteFail(page) {
     };
   });
 }
+/* v04.50 — from this round IndexedDB, not localStorage, is the notebook's
+   system of record, so failing ONLY the localStorage write no longer is a
+   failed save (§16a proves that deliberately). The §14 checks below are
+   about what happens when saving GENUINELY fails, so they now fail BOTH
+   stores: localStorage as before, and the IndexedDB write _save() fires.
+   `onlyWhile` (a function evaluated in the page) lets §14d fail the write
+   only while some condition holds, exactly as its localStorage stub does.
+   A no-op on code without _idbPut, so these checks still run unpatched. */
+async function forceIDBWriteFail(page, onlyWhileRecovery = false) {
+  await page.evaluate((only) => {
+    if (typeof window._idbPut !== 'function') return;
+    const orig = window._idbPut;
+    window._idbPut = function (k, v) {
+      if (k === 'notebook' && (!only || localStorage.getItem('siyagah-recovery-latest-key'))) {
+        const e = new Error('quota exceeded (stubbed for this check)'); e.name = 'QuotaExceededError';
+        return Promise.reject(e);
+      }
+      return orig.call(this, k, v);
+    };
+  }, onlyWhileRecovery);
+}
+async function forceEveryNotebookWriteFail(page) {
+  await forceNotebookWriteFail(page);
+  await forceIDBWriteFail(page);
+}
+/* Waits for the failure to be RECORDED. From v04.50 the IndexedDB write
+   rejects asynchronously, after _save() has already returned. */
+const awaitSaveFailure = (page) => awaitFnOrFalse(page, () => { try { return _lsFail === true; } catch { return false; } });
 
-/* 14a — an oversized DB + a genuinely failing write: _save() returns
-   false, and — unlike the old code — no dialog opens on its own. */
+/* 14a — an oversized DB + a genuinely failing write: the failure is
+   recorded, and — unlike the old code — no dialog opens on its own. */
 await r.block('14a-failed-write-indicator', async () => {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
-  await forceNotebookWriteFail(s.page);
-  const ok = await s.page.evaluate(() => window._save());
-  r.check(ok === false, '_save() returns false when the notebook write genuinely fails', ok);
+  await forceEveryNotebookWriteFail(s.page);
+  /* Updated in place, v04.50: this asserted `_save() === false`. _save()
+     keeps a synchronous boolean for its callers while the IndexedDB write
+     completes later, so it now returns true and the failure arrives
+     asynchronously through _lsFail — the same flag that drives the ⚠
+     indicator. What the check protects (a genuine failure is reported, not
+     swallowed) is unchanged; the signal it reads is the one that now
+     carries it. */
+  await s.page.evaluate(() => window._save());
+  const failed = await awaitSaveFailure(s.page);
+  r.check(failed, 'a genuinely failing notebook write is recorded as a failure (IndexedDB and localStorage both rejecting)', failed);
   await s.page.waitForTimeout(600);   // the old code's own deferred delay was 400ms
   const modalOpen = await s.page.evaluate(() => document.getElementById('ov').classList.contains('on'));
   r.check(!modalOpen, 'no dialog opens on its own after a failed save — the old auto-popup is gone',
@@ -4499,8 +4535,9 @@ await r.block('14a-failed-write-indicator', async () => {
 await r.block('14b-tap-opens-explanation', async () => {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
-  await forceNotebookWriteFail(s.page);
+  await forceEveryNotebookWriteFail(s.page);
   await s.page.evaluate(() => window._save());
+  await awaitSaveFailure(s.page);
   await tapIfPresent(s.page, '#save-warn-dot');
   await awaitFnOrFalse(s.page, () => document.getElementById('ov').classList.contains('on'));
   const title = await s.page.evaluate(() => document.querySelector('#mb .mt')?.textContent || '');
@@ -4515,8 +4552,9 @@ await r.block('14b-tap-opens-explanation', async () => {
 await r.block('14c-real-byte-counts', async () => {
   const s = await openApp({ db: seedDB() });
   await growDBInMemory(s.page);
-  await forceNotebookWriteFail(s.page);
+  await forceEveryNotebookWriteFail(s.page);
   await s.page.evaluate(() => window._save());
+  await awaitSaveFailure(s.page);
   await tapIfPresent(s.page, '#save-warn-dot');
   await awaitIfPresent(s.page, '#stor-notebook');
   const m = await s.page.evaluate(() => {
@@ -4553,8 +4591,13 @@ await r.block('14d-recovery-copy-remove', async () => {
       return orig.call(this, k, v);
     };
   });
-  const failedFirst = await s.page.evaluate(() => window._save());
-  r.check(failedFirst === false, 'setup: the notebook write is genuinely failing before the recovery copy is removed', failedFirst);
+  /* v04.50 — the IndexedDB write fails under the same condition; updated
+     in place for the same reason as §14a: the failure is now read from
+     _lsFail, not from _save()'s synchronous return. */
+  await forceIDBWriteFail(s.page, true);
+  await s.page.evaluate(() => window._save());
+  const failedFirst = await awaitSaveFailure(s.page);
+  r.check(failedFirst, 'setup: the notebook write is genuinely failing before the recovery copy is removed', failedFirst);
 
   await s.page.evaluate(() => window.openModal('settings'));
   const rowsOk = await awaitIfPresent(s.page, '#stor-rows');
@@ -4595,6 +4638,8 @@ await r.block('14d-recovery-copy-remove', async () => {
   r.check(keyGone && pointerGone, 'a confirmed Remove actually deletes the recovery copy — read back, never assumed',
     `key present: ${!keyGone}, pointer present: ${!pointerGone}`);
 
+  /* v04.50 — the retried save's IndexedDB write resolves asynchronously. */
+  await awaitFnOrFalse(s.page, () => _lsFail === false);
   const lsFailNow = await s.page.evaluate(() => _lsFail);
   r.check(lsFailNow === false, 'the retried save succeeded once the recovery copy was gone — _lsFail cleared', lsFailNow);
   const warnGone = await s.page.evaluate(() => { const d = document.getElementById('save-warn-dot');
@@ -4772,6 +4817,327 @@ await r.block('15d-nonzero-count-unchanged', async () => {
   r.check(real > 0 && shown === String(real),
     '"New Articles" still shows its real, nonzero count',
     `real ${real}, shown ${shown}`);
+  await s.close();
+});
+
+/* ── 16. v04.50: the local copy moves to IndexedDB, the storage panel stops
+   reassuring while saving fails ─────────────────────────────────────────
+   Issue #69: the owner's real notebook (~5.00 MB) had crossed localStorage's
+   ~5 MB-per-origin cap, and _refreshStorageQuota() was printing the
+   ORIGIN-wide navigator.storage.estimate() (~10 GB) on the same screen as a
+   warning that saving had failed — "about 2.56 MB of about 10242.56 MB
+   used" read as "you have ten gigabytes spare". IndexedDB is now the system
+   of record for the local copy; localStorage stays as a best-effort fast
+   path and the migration source, deliberately not cleaned up this round.
+   These checks drive the real app exactly like §13/§14 already do: read
+   the store back (IndexedDB via _idbGet(), localStorage via readDB()),
+   never trust a JS variable. */
+const readIDB = (page) => page.evaluate(() => window._idbGet('notebook'));
+
+await r.block('16a-oversized-notebook-now-saves', async () => {
+  /* Setup: a normal boot with a small seeded notebook migrates cleanly —
+     this is the precondition every check below this one assumes. */
+  const s = await openApp({ db: seedDB() });
+  const idbReadyAfterBoot = await s.page.evaluate(() => _idbReady);
+  r.check(idbReadyAfterBoot === true,
+    'setup: a normal boot migrates the seeded notebook into IndexedDB and IndexedDB becomes authoritative',
+    idbReadyAfterBoot);
+
+  await growDBInMemory(s.page);
+  await forceNotebookWriteFail(s.page);
+  const ok = await s.page.evaluate(() => window._save());
+  r.check(ok === true,
+    '_save() now succeeds via IndexedDB even though the localStorage write genuinely fails (this returned false before this round)',
+    ok);
+
+  await s.page.waitForTimeout(500);   // the IndexedDB write _save() fires is async
+  const idb = await readIDB(s.page);
+  const hasBigNote = !!idb && (idb.articles || []).some((a) => a.id === 'bignote');
+  r.check(hasBigNote, 'the oversized note actually landed in IndexedDB, read back from the store — not assumed from a JS variable',
+    JSON.stringify({ found: hasBigNote, articleCount: idb?.articles?.length }));
+
+  const lsFailNow = await s.page.evaluate(() => _lsFail);
+  r.check(lsFailNow === false,
+    'no ⚠ failure is recorded — the localStorage write failing no longer matters once IndexedDB is authoritative',
+    lsFailNow);
+  await s.close();
+});
+
+await r.block('16b-reload-returns-same-notebook', async () => {
+  const s = await openApp({ db: seedDB() });
+  await growDBInMemory(s.page);
+  await forceNotebookWriteFail(s.page);   // localStorage keeps rejecting the write for the rest of this session
+  await s.page.evaluate(() => window._save());
+  await s.page.waitForTimeout(500);
+
+  /* localStorage never received the oversized note (its write kept
+     throwing) — so if it reappears after a reload, it can only have come
+     from IndexedDB. This is the strongest possible proof of "read from the
+     store", not a variable: two independent stores are checked, and they
+     must disagree. */
+  const lsBeforeReload = await readDB(s.page);
+  const lsHasBigNote = !!lsBeforeReload && (lsBeforeReload.articles || []).some((a) => a.id === 'bignote');
+  r.check(!lsHasBigNote, 'setup: localStorage genuinely never got the oversized note — its write kept failing', lsHasBigNote);
+
+  await s.page.reload({ waitUntil: 'domcontentloaded' });
+  await s.page.waitForFunction(() => window.__appBooted === true);
+  await s.page.waitForTimeout(300);
+
+  const domAfterReload = await s.page.evaluate(() => (DB.articles || []).some((a) => a.id === 'bignote'));
+  r.check(domAfterReload, 'after a reload the note is back — note for note — sourced from IndexedDB, the store it actually reached',
+    domAfterReload);
+  const idbAfterReload = await readIDB(s.page);
+  const idbHasBigNote = !!idbAfterReload && (idbAfterReload.articles || []).some((a) => a.id === 'bignote');
+  r.check(idbHasBigNote, 'confirmed independently by reading IndexedDB directly, not the in-memory DB variable', idbHasBigNote);
+  await s.close();
+});
+
+await r.block('16c-migration-runs-once', async () => {
+  const db = seedDB();
+  const s = await openApp({ db });
+
+  const lsAfterFirst = await readDB(s.page);
+  const idbAfterFirst = await readIDB(s.page);
+  const lsIds = idsOfRaw(lsAfterFirst), idbIds = idsOfRaw(idbAfterFirst);
+  r.check(JSON.stringify(lsIds) === JSON.stringify(idbIds),
+    'after the first boot, localStorage and IndexedDB hold the same notebook, identical by id',
+    JSON.stringify({ lsIds, idbIds }));
+
+  /* Mutate localStorage directly to a DIFFERENT notebook a re-migration
+     would wrongly pick up — a decoy article/folder that shares no ids with
+     the real notebook. If the second boot re-migrates from localStorage,
+     the decoy ends up in both DB and IndexedDB; if it correctly treats
+     IndexedDB as already authoritative, the decoy never appears anywhere. */
+  await s.page.evaluate(() => {
+    const decoy = {
+      sections: [{ id: 'decoy-sec', name: 'Decoy Section', order: 0, updatedAt: new Date().toISOString() }],
+      folders: [{ id: 'decoy-f', name: 'Decoy', parentId: null, order: 0, sectionId: 'decoy-sec', updatedAt: new Date().toISOString() }],
+      articles: [{ id: 'decoy-a', title: 'Decoy', content: '<p>decoy</p>', folderIds: ['decoy-f'], tags: [],
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), kind: 'general' }],
+      trash: [],
+    };
+    localStorage.setItem('my-notebook-v1', JSON.stringify(decoy));
+  });
+
+  await s.page.reload({ waitUntil: 'domcontentloaded' });
+  await s.page.waitForFunction(() => window.__appBooted === true);
+  await s.page.waitForTimeout(300);
+
+  const domAfterSecond = await s.page.evaluate(() => (DB.articles || []).map((a) => a.id));
+  const idbAfterSecond = await readIDB(s.page);
+  const idbIdsAfterSecond = idsOfRaw(idbAfterSecond);
+  r.check(!domAfterSecond.includes('decoy-a'),
+    'the second boot never absorbed the decoy — it read IndexedDB, not the mutated localStorage',
+    JSON.stringify(domAfterSecond));
+  r.check(JSON.stringify(idbIdsAfterSecond) === JSON.stringify(idbIds),
+    'IndexedDB itself is unchanged by the second boot — the migration genuinely ran only once',
+    JSON.stringify({ before: idbIds, after: idbIdsAfterSecond }));
+  await s.close();
+});
+
+await r.block('16d-fallback-no-indexeddb', async () => {
+  const s = await openApp({ db: seedDB(), disableIndexedDB: true });
+  const idbReady = await s.page.evaluate(() => _idbReady);
+  r.check(idbReady === false, 'with IndexedDB unavailable, the app does not claim it as ready', idbReady);
+
+  const bootFolderIds = await s.page.evaluate(() => (DB.folders || []).map((f) => f.id));
+  r.check(bootFolderIds.includes('f1') && bootFolderIds.includes('f2'),
+    'the app still boots normally from localStorage when IndexedDB is unavailable — exactly as it always has',
+    JSON.stringify(bootFolderIds));
+
+  await growDBInMemory(s.page);
+  await forceNotebookWriteFail(s.page);
+  const ok = await s.page.evaluate(() => window._save());
+  r.check(ok === false,
+    'without IndexedDB to fall back to, a genuinely failing localStorage write still fails exactly as before this round',
+    ok);
+  await s.page.waitForTimeout(600);
+  const dotVisible = await s.page.evaluate(() => {
+    const d = document.getElementById('save-warn-dot');
+    return !!d && getComputedStyle(d).display !== 'none';
+  });
+  r.check(dotVisible, 'and the ⚠ indicator still lights honestly, with no IndexedDB to hide the failure behind', dotVisible);
+  await s.close();
+});
+
+/* 16e — a genuine IndexedDB write failure (not a localStorage one) must
+   still light the ⚠ indicator, and it must clear once a write actually
+   succeeds again — the same contract localStorage failures always had,
+   now honoured by the store that is actually authoritative. _idbPut is a
+   plain global function in this non-module script, so overwriting
+   window._idbPut redirects _save()'s own unqualified call to it — the
+   same technique this file already relies on for Storage.prototype.setItem. */
+await r.block('16e-idb-write-failure-then-recovery-clears-badge', async () => {
+  const s = await openApp({ db: seedDB() });
+  const idbReady = await s.page.evaluate(() => _idbReady);
+  r.check(idbReady === true, 'setup: IndexedDB is this session’s system of record on a normal boot', idbReady);
+
+  await growDBInMemory(s.page);
+  await s.page.evaluate(() => { window._idbPut = () => Promise.reject(new Error('stubbed IndexedDB write failure')); });
+  const ok1 = await s.page.evaluate(() => window._save());
+  r.check(ok1 === true, '_save() still returns true synchronously — the IndexedDB failure surfaces only later, asynchronously', ok1);
+
+  await s.page.waitForTimeout(500);
+  const failedNow = await s.page.evaluate(() => _lsFail);
+  r.check(failedNow === true, 'the async IndexedDB failure flips _lsFail once it actually rejects', failedNow);
+  const dotVisible1 = await s.page.evaluate(() => {
+    const d = document.getElementById('save-warn-dot');
+    return !!d && getComputedStyle(d).display !== 'none';
+  });
+  r.check(dotVisible1, 'and the ⚠ indicator is actually visible while the IndexedDB write is failing', dotVisible1);
+
+  await s.page.evaluate(() => { window._idbPut = () => Promise.resolve(true); });
+  await s.page.evaluate(() => window._save());
+  await s.page.waitForTimeout(500);
+  const clearedNow = await s.page.evaluate(() => _lsFail);
+  r.check(clearedNow === false, 'the ⚠ state clears once the IndexedDB write succeeds again', clearedNow);
+  const dotVisible2 = await s.page.evaluate(() => {
+    const d = document.getElementById('save-warn-dot');
+    return !!d && getComputedStyle(d).display !== 'none';
+  });
+  r.check(!dotVisible2, 'and the ⚠ indicator is actually hidden again, not just flagged internally', dotVisible2);
+  await s.close();
+});
+
+/* 16f — the panel names the store actually in use, on both paths, and the
+   fallback path compares against the real ~5 MB cap rather than the
+   origin-wide ~10 GB estimate that has nothing to do with it. */
+await r.block('16f-panel-names-real-store', async () => {
+  const s1 = await openApp({ db: seedDB() });
+  await s1.page.evaluate(() => window.openModal('settings'));
+  await awaitIfPresent(s1.page, '#stor-store');
+  const store1 = await s1.page.evaluate(() => document.getElementById('stor-store')?.textContent || '');
+  r.check(/IndexedDB/.test(store1), 'while IndexedDB is in use, the panel says so, not "browser storage"', store1);
+  await s1.page.waitForTimeout(500);   // navigator.storage.estimate() resolves async
+  const quota1 = await s1.page.evaluate(() => document.getElementById('stor-quota')?.textContent || '');
+  r.check(/IndexedDB/.test(quota1), 'the budget line names IndexedDB as the store it is actually measuring', quota1);
+  await s1.close();
+
+  const s2 = await openApp({ db: seedDB(), disableIndexedDB: true });
+  await s2.page.evaluate(() => window.openModal('settings'));
+  await awaitIfPresent(s2.page, '#stor-store');
+  const store2 = await s2.page.evaluate(() => document.getElementById('stor-store')?.textContent || '');
+  r.check(/localStorage/.test(store2), 'while on the localStorage-only fallback path, the panel says so honestly', store2);
+  const quota2 = await s2.page.evaluate(() => document.getElementById('stor-quota')?.textContent || '');
+  r.check(/localStorage/.test(quota2) && quota2.includes('5.00 MB') && !/GB/.test(quota2),
+    'the fallback budget line compares against the real ~5 MB cap, never the ~10 GB origin estimate',
+    quota2);
+  await s2.close();
+});
+
+/* 16g — a reclaimable amount that cannot close the gap is reported as
+   insufficient, never dressed up as the fix. Only meaningful on the
+   localStorage-only fallback path — while IndexedDB is authoritative there
+   is essentially never a shortfall to report. */
+await r.block('16g-reclaim-not-enough', async () => {
+  const s = await openApp({ db: seedDB(), disableIndexedDB: true });
+  await growDBInMemory(s.page);   // pushes the live notebook well past the ~5 MB cap
+  await s.page.evaluate(() => {
+    DB.trash.push({ id: 'trashed-1', title: 'Old note', content: '<p>' + 'y'.repeat(2000) + '</p>', deletedAt: new Date().toISOString() });
+  });
+  await s.page.evaluate(() => window.openModal('settings'));
+  await awaitIfPresent(s.page, '#stor-rows');
+  const advice = (await s.page.evaluate(() => document.getElementById('mb')?.textContent || '')).replace(/\s+/g, ' ');
+  r.check(/will not be enough to close the gap/i.test(advice),
+    'a trivial reclaimable amount (a few KB of Trash against a multi-MB shortfall) is reported as NOT enough, never as the fix',
+    advice);
+  r.check(/Trash/i.test(advice),
+    'the biggest reclaimable thing is still named alongside that honesty',
+    advice);
+  await s.close();
+});
+
+/* 16h — boot became async this round: loadDB() awaits IndexedDB, and until
+   it resolves DB is still the EMPTY placeholder it is declared as. The
+   pagehide/visibilitychange listeners call _save(), and they are registered
+   synchronously — so switching away from the app during a slow start would
+   write that empty notebook over the real one in localStorage (I1). Here
+   IndexedDB's open is held back 1.5s (a slow phone, a 5 MB notebook) and a
+   pagehide fires inside that window; localStorage is read back at that
+   exact moment, from the init script, before boot can legitimately rewrite
+   it. */
+await r.block('16h-no-save-before-the-notebook-loads', async () => {
+  const s = await openApp({ db: seedDB(), initScript: () => {
+    const f = window.IDBFactory && IDBFactory.prototype;
+    if (f) {
+      const orig = f.open;
+      f.open = function (...a) {
+        const real = orig.apply(this, a);
+        const fake = {};
+        real.onupgradeneeded = (e) => { fake.result = real.result; if (fake.onupgradeneeded) fake.onupgradeneeded(e); };
+        real.onsuccess = (e) => setTimeout(() => { fake.result = real.result; if (fake.onsuccess) fake.onsuccess(e); }, 1500);
+        real.onerror = (e) => { if (fake.onerror) fake.onerror(e); };
+        return fake;
+      };
+    }
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => {
+      window.__bootedAtPagehide = window.__appBooted === true;
+      window.dispatchEvent(new Event('pagehide'));
+      window.__lsAfterEarlyPagehide = localStorage.getItem('my-notebook-v1');
+    }, 300));
+  } });
+  const m = await s.page.evaluate(() => {
+    let d = null; try { d = JSON.parse(window.__lsAfterEarlyPagehide); } catch {}
+    return { bootedAtPagehide: window.__bootedAtPagehide,
+      articles: d?.articles?.length ?? null, folders: d?.folders?.length ?? null };
+  });
+  r.check(m.bootedAtPagehide === false, 'setup: the pagehide really fired before boot had finished', JSON.stringify(m));
+  r.check(m.articles === 3 && m.folders === 3,
+    'a pagehide during a slow start leaves the saved notebook intact — the empty pre-load placeholder is never written over it',
+    JSON.stringify(m));
+  await s.close();
+});
+
+/* 16j — the words "Multi" and "Single" read, whenever they are shown.
+   They were painted in the SWATCHES (--gold, --green): ~3:1 on the shipped
+   paper and 1.4:1 on a pale accent. The §6j sweep never caught it on main
+   because the toolbar happened to have folded the words away at the moment
+   it looked; on this branch the fold landed later and the sweep failed 2
+   runs in 4. So this check does not wait for a fold to decide: it forces the
+   words into view and measures them, in both modes, at every setting §6j
+   uses. */
+await r.block('16j-pop-words-contrast', async () => {
+  const SETTINGS = [null, { bg: '#16202A' }, { bg: '#8A8F8C' }, { accent: '#F2D06B' }, { bg: '#16202A', accent: '#F2D06B' }];
+  const worst = [];
+  for (const custom of SETTINGS) {
+    const db = seedDB(); if (custom) db.theme = { preset: 'forest', custom };
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    for (const mode of ['read', 'edit']) {
+      await s.page.evaluate((m) => { if (m === 'read') selArt('a1'); else startEdit(); }, mode);
+      await s.page.waitForTimeout(300);
+      const got = await s.page.evaluate(() => {
+        const el = document.getElementById('p3h'); el.classList.remove('p3h-nolbl', 'p3h-tight', 'p3h-tighter', 'p3h-tightest');
+        const rgb = (c) => (c.match(/[\d.]+/g) || []).map(Number);
+        const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+        return [...el.querySelectorAll('.pop-lbl')].filter((l) => l.offsetParent !== null).map((l) => {
+          let bg = null; for (let n = l; n && !bg; n = n.parentElement) { const c = rgb(getComputedStyle(n).backgroundColor); if (c.length === 3 || (c.length === 4 && c[3] === 1)) bg = c.slice(0, 3); }
+          bg = bg || [255, 255, 255];
+          const a = lum(rgb(getComputedStyle(l).color)), b = lum(bg);
+          return { t: l.textContent, c: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) };
+        });
+      });
+      for (const g of got) worst.push({ ...g, mode, set: JSON.stringify(custom) });
+    }
+    await s.close();
+  }
+  worst.sort((a, b) => a.c - b.c);
+  r.check(worst.length >= 20 && worst[0].c >= 4.5,
+    'the words "Multi" and "Single" clear 4.5:1 in read and edit mode at every colour setting',
+    `${worst.length} measured, worst ${worst[0] ? worst[0].c.toFixed(2) + ':1 ' + worst[0].t + ' (' + worst[0].mode + ', ' + worst[0].set + ')' : 'none'}`);
+});
+
+/* 16i — boot is async now, so the window's load event can fire before the
+   line that used to wait for it; a listener added after load never fires,
+   the service worker never registers, and new versions stop reaching the
+   device (I3). No check had ever asked whether it registers at all. */
+await r.block('16i-service-worker-registers', async () => {
+  const s = await openApp({ db: seedDB() });
+  const registered = await awaitFnOrFalse(s.page, () => {
+    if (!navigator.serviceWorker) return false;
+    navigator.serviceWorker.getRegistration().then((reg) => { window.__swReg = !!reg; });
+    return window.__swReg === true;
+  }, 8000);
+  r.check(registered, 'the service worker registers after boot, so a new version can reach the device', registered);
   await s.close();
 });
 

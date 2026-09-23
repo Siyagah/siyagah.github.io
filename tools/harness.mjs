@@ -80,12 +80,25 @@ export function seedDB(now = new Date().toISOString()) {
    needs to judge whether the boot was clean. `errors` collects BOTH thrown
    exceptions and console errors — in this codebase a silent exception
    usually means a half-rendered pane, not a visible crash. */
-export async function openApp({ viewport = { width: 1400, height: 900 }, db = seedDB(), path = '/' } = {}) {
+export async function openApp({ viewport = { width: 1400, height: 900 }, db = seedDB(), path = '/', disableIndexedDB = false, initScript = null } = {}) {
   const pw = await playwright();
   const srv = await serve();
   const browser = await pw.chromium.launch();
   const ctx = await browser.newContext({ viewport });
   for (const pattern of BLOCKED) await ctx.route(pattern, (r) => r.abort());
+  /* v04.50 — the ONLY way to genuinely exercise index.html's IndexedDB-
+     unavailable fallback path in a real browser: delete window.indexedDB
+     before the app's own script runs, so its own `if(!window.indexedDB)`
+     check (see _idbOpen()) takes the same branch a browser that never
+     shipped IndexedDB would. Registered before the db-seeding init script
+     below so it runs first on every navigation, including a reload. */
+  if (disableIndexedDB) await ctx.addInitScript(() => {
+    try { Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true }); } catch {}
+  });
+  /* v04.50 — a check that must act BEFORE boot finishes (openApp() itself
+     only returns once it has) passes a function to run at document start,
+     before the app's own script. */
+  if (initScript) await ctx.addInitScript(initScript);
   if (db) await ctx.addInitScript((d) => {
     try { localStorage.setItem('my-notebook-v1', JSON.stringify(d)); } catch {}
   }, db);
@@ -108,7 +121,13 @@ export async function openApp({ viewport = { width: 1400, height: 900 }, db = se
     errors.push(`console: ${m.text()}`);
   });
   await page.goto(srv.base + path, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => typeof window.render === 'function' && !!document.getElementById('tree'));
+  /* v04.50 — loadDB() reads IndexedDB first and is now async, so boot no
+     longer finishes in one synchronous tick. `typeof window.render ===
+     'function'` is true the instant the script is PARSED (function
+     declarations hoist) and proves nothing about whether render() has
+     actually RUN — window.__appBooted is set by index.html only after
+     loadDB() resolves and render() has been called. */
+  await page.waitForFunction(() => window.__appBooted === true && !!document.getElementById('tree'));
   await page.waitForTimeout(300);
 
   return {
