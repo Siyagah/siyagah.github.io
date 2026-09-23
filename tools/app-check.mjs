@@ -3716,8 +3716,10 @@ await r.block('6p-17-popups-every-platform', async () => {
         const b = el.getBoundingClientRect();
         const grips = [...el.querySelectorAll('.modal-resize-r,.modal-resize-b,.modal-resize-l,.modal-corner,.fw-drag')]
           .filter((g) => g.getClientRects().length).length;
-        const x = k === 'float' ? el.querySelector('.fw-close')
-          : document.querySelector('#p3-sheet-hd .sh-x');
+        /* v04.54 — both pop-ups' frames are the SAME markup now (_popFrameHTML),
+           so ✕ close is `.fw-close` inside either container; #p3-sheet-hd and
+           its `.sh-x` are retired. */
+        const x = el.querySelector('.fw-close');
         const xb = x && x.getBoundingClientRect();
         const ed = k === 'float' ? el.querySelector('.fw-ed') : document.getElementById('ed');
         return { left: Math.round(b.left), top: Math.round(b.top), right: Math.round(b.right),
@@ -3744,13 +3746,15 @@ await r.block('6p-17-popups-every-platform', async () => {
       await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
         window.render(); showPane('p3'); openNotePopup('a1', 'panel'); });
       await s.page.waitForTimeout(600);
-      const box = await s.page.locator('#p3-sheet-hd .sh-x').boundingBox().catch(() => null);
+      /* v04.54 — the phone's way out is the shared frame's ✕ now (#p3-sheet-hd
+         is retired; see _popFrameHTML/_popFrameSync). */
+      const box = await s.page.locator('#p3-frame-modal .fw-close').boundingBox().catch(() => null);
       if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
       await s.page.waitForTimeout(400);
       const out = await s.page.evaluate(() => ({
         modal: ST.noteModal, shaped: document.getElementById('p3').classList.contains('modal-mode'),
         bg: !!document.getElementById('note-modal-bg')?.classList.contains('active'),
-        hd: !!document.getElementById('p3-sheet-hd'),
+        hd: !!document.getElementById('p3-frame-modal'),
         /* and the app is usable again, not left under a dead fixed layer */
         pane: (() => { const b = document.getElementById('p3').getBoundingClientRect();
           return [Math.round(b.width), Math.round(b.height)]; })() }));
@@ -3819,22 +3823,24 @@ await r.block('6p-17-popups-every-platform', async () => {
           .filter((g) => g.getClientRects().length).length;
         /* Touch drag and resize have been wired since v03.NotePane.T4; what
            was never sized for a finger is the window's own header. */
-        const hdr = k === 'float'
-          ? [el.querySelector('.fw-close'), ...el.querySelectorAll('.fw-nav')].filter(Boolean)
-            .map((x) => { const r = x.getBoundingClientRect(); return Math.min(Math.round(r.width), Math.round(r.height)); })
-          : [];
+        /* v04.54 — both pop-ups share one frame (_popFrameHTML), so this is no
+           longer a Multi-only measurement: a tablet must give Single's frame
+           the same real, drag-grip-bearing window header, not the phone's
+           #p3-sheet-hd (retired) or no frame at all (the pre-v04.54 gap). */
+        const hdr = [el.querySelector('.fw-close'), ...el.querySelectorAll('.fw-nav')].filter(Boolean)
+          .map((x) => { const r = x.getBoundingClientRect(); return Math.min(Math.round(r.width), Math.round(r.height)); });
+        const grip = !!el.querySelector('.fw-drag')?.getClientRects().length;
         return { w: Math.round(b.width), h: Math.round(b.height), left: Math.round(b.left),
-          top: Math.round(b.top), vw: innerWidth, vh: innerHeight, grips,
-          sheetHd: !!document.getElementById('p3-sheet-hd'), hdr,
+          top: Math.round(b.top), vw: innerWidth, vh: innerHeight, grips, grip, hdr,
           switcher: !!document.getElementById('fw-switch') };
       }, kind);
       await s.close();
       const roomy = m.left >= 12 && m.w <= m.vw - 16;
-      r.check(grips_ok(m) && roomy && !m.sheetHd && !m.switcher
+      r.check(grips_ok(m) && roomy && m.grip && !m.switcher
         && (m.hdr.length === 0 || Math.min(...m.hdr) >= 34),
-        `tablet: the ${kind === 'float' ? 'Multi' : 'Single'} pop-up is still a real window, and its header can be hit by a finger`,
+        `tablet: the ${kind === 'float' ? 'Multi' : 'Single'} pop-up is still a real window, with a drag grip and a header that can be hit by a finger`,
         `${m.w}×${m.h} at ${m.left},${m.top} of ${m.vw}×${m.vh} · drag/resize handles ${m.grips}`
-        + ` · phone sheet header ${m.sheetHd} · phone switcher ${m.switcher}`
+        + ` · frame drag grip ${m.grip} · phone switcher ${m.switcher}`
         + ` · header targets ${m.hdr.length ? Math.min(...m.hdr) + 'px' : 'n/a'}`);
     }
 

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.53.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.54.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,59 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.54** (23 Sep 2026) — pop-ups made alike, round (b): one shared frame
+  (title, ‹ ›, ✕, Multi⇄Single switch). Issue #75, round 2 of 4 — this round
+  is the bar across the top only; the toolbar underneath is round (c).
+  - Measured on `main` at v04.53: Multi's `.fw-hd` had a grip, ‹ ›, a title,
+    `✓ Saved` and ✕, and no way to reach Single. Single had a phone-only bar
+    (`#p3-sheet-hd`) and **no frame at all** on a tablet or desktop — dragged
+    by the tab bar, no ‹ ›, its only ✕ was `cancelEdit()` (stops editing, does
+    not close). `#sb-toggle` (`z-index:9999`) painted over both pop-ups at
+    1440×900.
+  - **One function, `_popFrameHTML(aid,mode)`, builds both frames** — Multi's
+    `.fw-hd` and Single's frame are its output, so they cannot drift apart
+    again. Left to right: drag grip (window tier only), the pop-up's own
+    icon, ‹ ›, the title (`min-width:80px`, guarding against the flex/
+    `overflow:hidden` shrink-to-zero fault v04.14 paid for), `✓ Saved`, a
+    switch to the *other* mode (calling `openNotePopup(aid,otherMode)`, so
+    the choice is remembered exactly as before), and ✕ — which gains the
+    word "Close" on the phone tier for **both** pop-ups now, not just
+    Single. Every control carries a `title` and a stable
+    `data-pf="grip|ico|prev|next|title|saved|switch|close"`.
+  - **Single gets the frame at every tier**, not just the phone.
+    `_popFrameSync()` builds it as the first child of `#p3` while
+    `modal-mode` is on; called from `openNoteModal()` and from `renderP3H()`
+    on every note change, so no new call site had to be threaded through the
+    ~30 places that reassign `ST.article`. On the window tier the frame is
+    also a drag handle, reusing `_modalDragStart()` — not a second mover.
+    `#p3-sheet-hd`/`_p3SheetHdSync()` are deleted.
+  - **Single's ‹ ›** (`_panelNavigate()`) is `_p3Navigate()` plus one line:
+    `selArt()` already saves the outgoing note (I1); the added `startEdit()`
+    re-enters edit mode, since Single never leaves it any more (next point).
+  - **Three removals, one CSS rule each**: `.modal-pop-btn` hidden inside
+    `#p3.modal-mode` (stays on normal Pane 3); every `cancelEdit()` ✕ hidden
+    by matching `[onclick="cancelEdit()"]` rather than a class, so all three
+    existing call sites are covered by one rule with nothing to update if a
+    fourth is added — Multi has never had a stop-editing control and closing
+    already flushes, so nothing is lost; `#p3-sheet-hd` is gone.
+  - **`✓ Saved` in Single is the frame's own chip** — `flashSaved()` now also
+    calls `_popFrameFlash()` while `ST.noteModal`; Pane 3's `#save-flash` is
+    hidden inside `#p3.modal-mode` so only one is ever visible.
+  - **`#sb-toggle`'s `z-index` is 400**, not 9999 — below `#p3.modal-mode`
+    (5001) and every `.float-win` (6000+), so a pop-up always covers it.
+  - Same frame, one set of tier rules (`_popTier()`), on all three layouts;
+    the switch drops its word only on the phone, keeping the title's 80px.
+  - New app-check section 19 (`19a`–`19g`): frame parity across sizes,
+    Single's in-place `‹ ›`, the switch both ways, ✕ closing each pop-up,
+    exactly one Saved/one ✕ inside Single, the `◀` handle never winning
+    against a pop-up, and the frame dragging the panel only above the phone
+    tier. Three pre-existing checks (`6p-17-popups-every-platform`) that
+    asserted `#p3-sheet-hd`/`.sh-x` were updated in place, not deleted.
+  - Also this round: filled in v04.53's `(measured in review)` placeholders
+    below and in `CHANGELOG.md`, with the Architect's PR #74 numbers.
+  - 11/11 ship checks, `app-check --only 19` **(measured in review)**. Full
+    `app-check` and the unpatched-code verification: **(measured in
+    review)**.
 - **v04.53** (23 Sep 2026) — pop-ups made alike, round (a): the note looks
   the same inside Multi as inside Single. Issue #73, round 1 of 4 in "make
   the two pop-ups (Multi and Single) look and work the same" — this round is
@@ -45,8 +98,13 @@ must never accumulate here instead of there.
     propagation.
   - 11/11 ship checks, `app-check --only 18` **11/11** (also confirmed to
     fail 6/11 against the pre-fix CSS, reproducing the issue's own table).
-    Full `app-check` and the unpatched-code verification: **(measured in
-    review)**.
+    Full `app-check`, measured by the Architect in review on PR #74:
+    **400/400, twice in a row**. Unpatched (v04.53's `tools/` against
+    v04.52's `index.html`): **394/400**, all 6 failures in section 18 — the
+    other 5 section-18 checks pass there because they are guards (no page
+    errors ×3, both editors render the grip/arrow, the setting really moved
+    `#ed`), not the parity assertion itself. Built by the builder
+    unassisted.
 - **v04.52** (23 Sep 2026) — a spreadsheet inside a note, round 1 of 3.
   Built by the Architect directly.
   - **＋ Insert → ▦ Spreadsheet**, in Pane 3's `+` group and the Multi
@@ -156,55 +214,6 @@ must never accumulate here instead of there.
   use text inks (`--green2`, new `--gold-ink`), guarded by new check `16j`.
   11/11 ship checks, **366/366 app checks twice in a row**. Unpatched
   verification: 340/353, all 13 failures this round's own checks.
-- **v04.49** (22 Sep 2026) — `app-check.mjs` grows `--only`, now that v04.46
-  and v04.48 made every block a genuinely independent unit. Harness only —
-  `tools/harness.mjs`, `tools/app-check.mjs`, `tools/README.md`,
-  `ARCHITECT.md`, plus new `tools/only-check.mjs` — no app change. Filed as
-  "measure first, close it if the saving is small": v04.48 made every block
-  open its own session, the right tradeoff for correctness, but it also
-  moved `app-check.mjs`'s wall-clock from ~2:30–2:45 to **4m32s**, raising
-  the real cost of iterating on one new check while building it. `report()`
-  in `harness.mjs` now **registers** blocks via `r.block(id, fn, opts)`
-  instead of running them inline — every existing call site keeps its exact
-  shape — and a new `r.run(onlyPrefixes)`, called once at the file's end,
-  actually executes them: all of them, in file order, with no filter (same
-  behaviour, same output, as before this round), or only those whose id
-  matches one of `onlyPrefixes` via `blockIdMatches(id, prefix)`. A block id
-  matches a prefix exactly, or if it continues past the prefix with anything
-  but another digit — a digit continuing means the number itself keeps going
-  (`10-delete`/`11-theme-perkey` are not `1`), a letter or hyphen continuing
-  means the number is complete and what follows is a named sub-block of it
-  (`15a-…`/`15b-…`/`15c-…`/`15d-…` are all `15`). A filter matching nothing
-  throws instead of silently reporting "0/0 passed"; a filtered run's own
-  report says plainly it is partial (`N/M blocks run (--only=…) — this is
-  NOT the full suite`). The one self-check that proves block isolation had
-  to be restructured, not just moved: it used to read the throwing block's
-  outcome off `block()`'s own return value, which now resolves at
-  registration time, before anything has run — fixed by exposing `results`
-  (a `Map`, filled in by `run()` as each block actually executes) and
-  splitting it into the original throwing block plus a new follow-up block
-  that reads the Map. New `tools/only-check.mjs` tests the mechanism itself,
-  browser-free, and caught the first (wrong) version of `blockIdMatches()`
-  before it ever reached the real suite. **Also found this way, not by
-  reading the file**: two checks (the note-toolbar click sweep and the ⋯
-  menu-stays-open check) sat in a bare top-level `{ }` between
-  `6f-consolidated-actions` and `6g-type-chip-badge`, never wrapped in
-  `r.block()` — the one gap in v04.46's "every check runs inside r.block()".
-  Harmless before this round (an unwrapped block ran inline at its file
-  position same as a wrapped one); under collect-then-run it would have run
-  immediately as the file loaded, ahead of every registered block including
-  `1-boot`, on every invocation regardless of `--only` — confirmed exactly
-  this way when the first `--only 15` run showed both at the top of its
-  output. Wrapped now as `6f-2-toolbar-buttons-live`; a full-file scan
-  confirmed it was the only such gap. Known limitation left as found, not
-  fixed: three numeric prefixes (`11`, `12`, `13`) are each reused by two
-  unrelated original sections since the file doesn't run in numeric order
-  (v04.46), so `--only 11` runs both; documented in `tools/README.md`, not
-  renamed. D5 does not apply — no visual surface. 11/11 ship checks, **the
-  unfiltered total is unchanged at 336/336 checks passed, 0 aborted, across
-  all 92 registered blocks** — no check added, removed, or reworded, only
-  two pre-existing ones given a block of their own — plus `only-check.mjs`'s
-  own 11/11.
 ---
 
 ## What this is

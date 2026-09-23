@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.53">
+<meta name="app-version" content="04.54">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1222,16 +1222,21 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 
 
 /* ── Sidebar collapse/expand toggle tab ─────────────────────────────────
-   Single persistent button positioned at the sidebar's right edge.
-   Always visible, always on top (z-index:9999), follows the sidebar.
+   Single persistent button positioned at the sidebar's right edge, above
+   ordinary pane content, but below both pop-ups.
    On mobile/tablet the sidebar uses a different nav model, so hidden there.
+   v04.54 — was z-index:9999, which sat ABOVE #p3.modal-mode (5001) and every
+   .float-win (dynamic, starting at 6000): at 1440×900 the button painted on
+   top of a Multi window or the Single panel sitting right over it, so a
+   click meant to reach the pop-up toggled the sidebar underneath it
+   instead. 400 clears every pane's own chrome and still loses to both.
 ──────────────────────────────────────────────────────────────────────── */
 #sb-toggle{
   position:fixed;
   top:50%;
   left:262px; /* updated by JS to match actual sidebar width */
   transform:translateY(-50%);
-  z-index:9999;
+  z-index:400;
   width:18px;height:52px;
   display:flex;align-items:center;justify-content:center;
   background:#1A2B1D;
@@ -1989,10 +1994,31 @@ sup.ann-sup:hover{text-decoration:underline}
   background:var(--paper2,var(--paper));border-bottom:1px solid var(--border2);
   cursor:move;flex-shrink:0;font-size:12px;font-weight:600;color:var(--t1)}
 .fw-drag{opacity:.4}
-.fw-title-disp{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* v04.54 — min-width:80px, not the flex-item default of 0 an overflow:hidden
+   item gets: without it a narrow frame (a phone, or the switch/close taking
+   more room) can shrink the title to nothing while it stays in the DOM, the
+   same fault v04.14's header paid for. Shared by both pop-ups (see
+   _popFrameHTML), so the guarantee applies to Multi's title too. */
+.fw-title-disp{flex:1;min-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fw-close{border:none;background:none;cursor:pointer;font-size:14px;opacity:.6;
-  padding:2px 7px;border-radius:5px;color:var(--t1)}
+  padding:2px 7px;border-radius:5px;color:var(--t1);display:inline-flex;
+  align-items:center;gap:4px;white-space:nowrap;flex-shrink:0}
 .fw-close:hover{background:var(--hover);opacity:1}
+/* v04.54 — the pop-up frame's own icon, and its switch to the OTHER pop-up
+   mode. Coloured like every other Multi/Single control (.pop-multi/
+   .pop-single — see v04.50's contrast fix for why these are text inks, not
+   painted colour). One rule set, since _popFrameHTML() builds Multi's
+   `.fw-hd` and Single's frame from the same markup. */
+.pf-ico{display:inline-flex;align-items:center;flex-shrink:0;opacity:.75}
+.pf-ico .pop-ico{width:14px;height:14px}
+.pf-switch{display:inline-flex;align-items:center;gap:4px;background:none;
+  border:none;cursor:pointer;font-family:var(--ui);font-size:11.5px;
+  font-weight:600;opacity:.75;padding:3px 8px;border-radius:6px;flex-shrink:0}
+.pf-switch:hover{opacity:1;background:var(--hover)}
+.pf-switch .pop-ico{width:14px;height:14px}
+.pf-switch-lbl{white-space:nowrap}
+.pf-ico.pop-multi,.pf-switch.pop-multi{color:var(--gold-ink)}
+.pf-ico.pop-single,.pf-switch.pop-single{color:var(--green2)}
 .fw-body{flex:1;display:flex;flex-direction:column;min-height:0}
 .fw-ti{border:none;border-bottom:1px solid var(--border2);padding:8px 10px;
   font-size:14px;font-weight:600;background:transparent;color:var(--t1);
@@ -2019,9 +2045,13 @@ sup.ann-sup:hover{text-decoration:underline}
     border-radius:12px!important}
   /* Room for the switcher bar, and only when there IS one. */
   body.fw-sheets .float-win{bottom:56px!important}
-  /* Nothing here can be dragged or resized, so nothing may LOOK draggable. */
-  .float-win .fw-hd{cursor:default}
-  .float-win .fw-drag{display:none}
+  /* Nothing here can be dragged or resized, so nothing may LOOK draggable.
+     v04.54 — #p3.modal-mode .fw-hd/.fw-drag added: Single's frame is the
+     SAME markup as Multi's now, and on a phone it is the sheet's own header,
+     not draggable either (the tab bar underneath it already carries this
+     same "cursor:default" — see #p3.modal-mode #tab-bar.modal-handle). */
+  .float-win .fw-hd,#p3.modal-mode .fw-hd{cursor:default}
+  .float-win .fw-drag,#p3.modal-mode .fw-drag{display:none}
   .float-win .modal-resize-r,.float-win .modal-resize-b,.float-win .modal-resize-l,
   .float-win .modal-corner{display:none!important}
 }
@@ -2031,18 +2061,30 @@ sup.ann-sup:hover{text-decoration:underline}
    the main way a note is closed on a touch screen, so the header controls get
    a real target on every tier that has fingers. */
 @media(max-width:1199.98px){
-  .float-win .fw-hd{padding:5px 7px;gap:2px}
-  .float-win .fw-close{min-width:40px;min-height:40px;font-size:16px;opacity:1;
+  .float-win .fw-hd,#p3.modal-mode .fw-hd{padding:5px 7px;gap:2px}
+  .float-win .fw-close,#p3.modal-mode .fw-close{min-width:40px;min-height:40px;font-size:16px;opacity:1;
     display:inline-flex;align-items:center;justify-content:center;padding:0}
-  .float-win .fw-nav{min-width:34px;min-height:40px;font-size:19px;padding:0;opacity:.85;
+  .float-win .fw-nav,#p3.modal-mode .fw-nav{min-width:34px;min-height:40px;font-size:19px;padding:0;opacity:.85;
     display:inline-flex;align-items:center;justify-content:center}
   .float-win .fw-ti{padding:11px 10px;font-size:15px}
+  /* v04.54 — the switch gets the same ≥40px target as ‹›/✕ under 1200px. */
+  .float-win .pf-switch,#p3.modal-mode .pf-switch{min-height:40px;padding:0 10px;font-size:13px;opacity:1}
 }
 @media(max-width:639.98px){
-  .float-win .fw-close{min-width:44px;min-height:44px;font-size:17px}
-  .float-win .fw-nav{min-width:38px;min-height:44px}
+  /* v04.54 — on the phone sheet ✕ carries the word "Close" (both pop-ups —
+     see _popFrameHTML's closeLbl), so it can no longer be a fixed-size icon
+     box; width follows the text, height keeps the touch target. */
+  .float-win .fw-close,#p3.modal-mode .fw-close{min-width:0;width:auto;min-height:44px;
+    padding:0 12px;font-size:13px;border:1px solid var(--border2);border-radius:999px;
+    background:var(--paper2,var(--paper))}
+  .float-win .fw-nav,#p3.modal-mode .fw-nav{min-width:38px;min-height:44px}
   .float-win .fw-tb .eb-grp-btn{min-width:38px!important;min-height:38px!important}
   .float-win .fw-tb .nti-picker-btn,.float-win .fw-tb .et{min-height:38px}
+  /* The switch drops its word on the phone (a bar may be terse — the title
+     keeps the room instead), matching the icon-only markup _popFrameHTML()
+     already renders at this tier. */
+  .float-win .pf-switch,#p3.modal-mode .pf-switch{min-width:44px;min-height:44px;
+    justify-content:center;padding:0}
 }
 #note-modal-bg{display:none;position:fixed;inset:0;z-index:5000;
   background:rgba(0,0,0,.45);
@@ -2114,7 +2156,7 @@ sup.ann-sup:hover{text-decoration:underline}
 .float-win .note-dateline{padding:3px 10px;font-size:9.5px;flex-shrink:0}
 .float-win .note-dateline-hr{margin:0 10px;flex-shrink:0}
 .float-win .fld-panel{margin:4px 10px 0;flex-shrink:0}
-.float-win .save-flash{margin-left:auto;margin-right:4px}
+.float-win .save-flash,#p3.modal-mode .save-flash{margin-left:auto;margin-right:4px}
 /* v03.NotePane.T4 — without touch-action:none the browser claims these
    gestures for scrolling/zooming and the drag never reaches our handlers. */
 .modal-resize-r,.modal-resize-b,.modal-resize-l,.modal-corner,
@@ -2126,11 +2168,10 @@ sup.ann-sup:hover{text-decoration:underline}
   border-right:2px solid var(--t3);border-bottom:2px solid var(--t3)}
 #tab-bar.modal-handle{position:relative!important}
 /* v04.34 — the Single Note Pop-Up is Pane 3 itself lifted out, so on a phone
-   it becomes the same card the float sheet is. Two things it then needs that
-   a laptop never did: nothing that pretends to be draggable, and a way OUT
-   that is not the backdrop — edge to edge the backdrop is a 6px frame, which
-   is not a tap target. #p3-sheet-hd is that way out, injected on open and
-   removed on close, with the note's own title on it. */
+   it becomes the same card the float sheet is. It needs one thing a laptop
+   never did: nothing that pretends to be draggable (the way OUT is now the
+   shared frame's own ✕ Close — see _popFrameHTML, v04.54 — present at every
+   tier, not just the phone sheet #p3-sheet-hd used to be limited to). */
 @media(max-width:639.98px){
   #p3.modal-mode{left:6px!important;top:6px!important;right:6px!important;bottom:6px!important;
     width:auto!important;height:auto!important;
@@ -2149,18 +2190,6 @@ sup.ann-sup:hover{text-decoration:underline}
 #p3.modal-mode .p3h-nav-edit-row .nav-l .btn.bn.bi[onclick*="openP2"],
 #p3.modal-mode .p3h-nav-edit-row .nav-l .btn.bn.bi[onclick*="backFromP3"],
 #p3.modal-mode .p3h-nav-edit-row .nav-l .btn.bn.bi[onclick*="goHome"]{display:none}
-#p3-sheet-hd{display:none}
-@media(max-width:639.98px){
-  #p3.modal-mode #p3-sheet-hd{display:flex;align-items:center;gap:8px;
-    padding:8px 10px;flex-shrink:0;background:var(--paper2,var(--paper));
-    border-bottom:1px solid var(--border2);border-radius:12px 12px 0 0}
-  #p3-sheet-hd .sh-ico{flex:0 0 auto;display:flex;color:var(--green)}
-  #p3-sheet-hd .sh-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
-    white-space:nowrap;font-size:12.5px;font-weight:600;color:var(--t1)}
-  #p3-sheet-hd .sh-x{flex:0 0 auto;min-height:44px;padding:6px 13px;
-    border:1px solid var(--border2);border-radius:999px;background:var(--paper);
-    color:var(--t1);font-family:var(--ui);font-size:12.5px;font-weight:600;cursor:pointer}
-}
 .modal-pop-btn{font-size:15px;opacity:.55;padding:3px 6px;flex-shrink:0}
 .modal-pop-btn:hover{opacity:1}
 /* v04.34 — the bar carries them from 640px up (a tablet's edit row has the
@@ -2168,6 +2197,20 @@ sup.ann-sup:hover{text-decoration:underline}
    in the ⋯ card and the `+` menu instead — v04.22 spent three rounds getting
    that bar down to one row, and "a bar may be terse; a menu may not". */
 @media(max-width:639.98px){.modal-pop-btn{display:none}}
+/* ══ v04.54 — three removals, one edit each (round (b), "one shared frame")
+   ════════════════════════════════════════════════════════════════════════
+   The frame's own switch replaces .modal-pop-btn inside a pop-up (it stays
+   on normal Pane 3's edit/read bars, where there is no frame); the frame's
+   own ✕ replaces every cancelEdit() ✕ inside modal-mode — Multi has never
+   had a stop-editing control (it is always an editor) and closing already
+   flushes, so nothing typed is lost by removing Single's; and Pane 3's own
+   #save-flash is hidden so the frame's chip is the only "✓ Saved" showing
+   (flashSaved() now flashes both — see JS). The attribute selector matches
+   every cancelEdit() button regardless of which of the three call sites
+   rendered it, so a fourth one added later needs no new rule here. */
+#p3.modal-mode .modal-pop-btn,
+#p3.modal-mode #save-flash,
+#p3.modal-mode [onclick="cancelEdit()"]{display:none}
 /* v03.NotePane.G5 — "Close all" chip, shown only once a 2nd window is open */
 #fw-closeall{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
   background:var(--paper);color:var(--t1);border:1px solid var(--border2);
@@ -2868,7 +2911,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.53</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.54</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4191,6 +4234,12 @@ function _navBtnsHTML(dup){
 function renderP3H(){
   const el=document.getElementById('p3h');
   const curA=DB.articles.find(a=>a.id===ST.article);
+  /* v04.54 — Single's frame lives outside #p3h (it is the first child of
+     #p3 itself, above the tab bar), so nothing else rebuilds it when the
+     note being shown in the modal changes. renderP3H() is the one function
+     already called on every such path (see the tabs comment right below),
+     so it is synced from here rather than threaded through every caller. */
+  try{_popFrameSync();}catch(e){}
   /* v03.79 — THE per-note-tabs fix. ST.article is reassigned from ~30 places
      (selArt, back, selTag, every mkNote/quick-add path, search, journal,
      contacts, MyWall…) and almost none of them called renderTabBar(), so the
@@ -9256,31 +9305,14 @@ function openNoteModal(){
       p3.appendChild(el);
     }
   });
-  _p3SheetHdSync();
+  _popFrameSync();
   renderP3H();
   setTimeout(_tocInject,60);
   setTimeout(_pinPanelInject,65);
 }
-/* v04.34 — edge to edge, #note-modal-bg is a 6px frame, and a 6px frame is
-   not a way out. The panel carries its own title and ✕ Close on a phone.
-   Built here rather than inside renderP3H() because #p3h is rebuilt on every
-   render and this belongs to the PANEL, not to the note header. */
-function _p3SheetHdSync(){
-  const p3=document.getElementById('p3');
-  let hd=document.getElementById('p3-sheet-hd');
-  if(!p3||!ST.noteModal||_popTier()!=='sheet'){ if(hd)hd.remove(); return; }
-  const a=DB.articles.find(x=>x.id===ST.article);
-  if(!hd){
-    hd=document.createElement('div');
-    hd.id='p3-sheet-hd';
-    p3.insertBefore(hd,p3.firstChild);
-  } else if(hd.parentElement!==p3||p3.firstChild!==hd){
-    p3.insertBefore(hd,p3.firstChild);
-  }
-  hd.innerHTML='<span class="sh-ico">'+_popIcoHTML('panel')+'</span>'
-    +'<span class="sh-t">'+esc((a&&a.title)||'Untitled')+'</span>'
-    +'<button class="sh-x" onclick="closeNoteModal()" title="Close this pop-up">\u2715 Close</button>';
-}
+/* v04.54 — retired. The phone-only #p3-sheet-hd this used to build, and the
+   sync function itself, are both gone: _popFrameSync() now builds ONE frame
+   present at every tier, so a phone no longer needs a bar of its own. */
 function closeNoteModal(){
   /* Save position/size so next open restores it */
   const _p3s=document.getElementById('p3');
@@ -9317,7 +9349,7 @@ function closeNoteModal(){
     }
   }
   document.getElementById('note-modal-bg')?.classList.remove('active');
-  document.getElementById('p3-sheet-hd')?.remove();
+  document.getElementById('p3-frame-modal')?.remove();
   renderP3H();
   if(_fwFocusedAid){_tocInject();_pinPanelInject();} /* hand both panels back to a focused pop-out, if any (Contents first — F9) */
 }
@@ -10564,6 +10596,112 @@ function _fwFlashSaved(aid){
   clearTimeout(el._ft);
   el._ft=setTimeout(function(){el.classList.remove('show');},1100);
 }
+/* ══ v04.54 — ONE FRAME FOR BOTH POP-UPS (round (b) of "make the two pop-ups
+   look and work the same") ═══════════════════════════════════════════════
+   Multi's `.fw-hd` and Single's frame (see _popFrameSync()) are BOTH just
+   this function's output with a different `mode` — so the bar across the
+   top can never drift apart again the way it did before this round (Multi
+   had a drag grip, ‹›, a save chip and ✕; Single had nothing on a tablet or
+   desktop, and a different phone-only bar built by the now-retired
+   _p3SheetHdSync()). Left to right: grip (window tier only — hidden by the
+   same CSS that already hid it for Multi's own phone sheet), this pop-up's
+   own icon, ‹ › to the neighbouring note, the title, the ✓ Saved chip, a
+   switch to the OTHER mode (remembered exactly as the edit-bar buttons
+   already remember it), and ✕ close — which gains the word "Close" on the
+   phone tier for both modes, matching what #p3-sheet-hd used to say only
+   for Single. Every control carries a title and a stable data-pf so a check
+   can compare the two frames control-for-control. */
+function _popFrameHTML(aid,mode,elId){
+  const a=DB.articles.find(x=>x.id===aid);
+  const title=esc((a&&a.title)||'Untitled');
+  const tier=_popTier();
+  const otherMode=mode==='panel'?'float':'panel';
+  const k=POP_KINDS[mode]||POP_KINDS.float,ok=POP_KINDS[otherMode];
+  const idAttr=String(aid).replace(/'/g,"\\'");
+  const savedId=mode==='panel'?'p3-frame-flash':('fw-flash-'+aid);
+  const closeCall=mode==='panel'?'closeNoteModal()':("closeFloatWin('"+idAttr+"')");
+  const closeLbl=tier==='sheet'?' Close':'';
+  const switchLbl=tier==='sheet'?'':'<span class="pf-switch-lbl">'+esc(ok.short)+'</span>';
+  return '<div class="fw-hd"'+(elId?' id="'+elId+'"':'')+' data-mode="'+mode+'">'
+    +'<span class="fw-drag" data-pf="grip" title="Drag to move">⠿</span>'
+    +'<span class="pf-ico '+k.cls+'" data-pf="ico" title="'+esc(k.name)+'">'+_popIcoHTML(mode)+'</span>'
+    +'<button class="fw-nav" data-pf="prev" onclick="_popNav(\''+idAttr+'\',-1,\''+mode+'\')" title="Previous note in this folder">‹</button>'
+    +'<button class="fw-nav" data-pf="next" onclick="_popNav(\''+idAttr+'\',1,\''+mode+'\')" title="Next note in this folder">›</button>'
+    +'<span class="fw-title-disp" data-pf="title" title="'+title+'">'+title+'</span>'
+    +'<span class="save-flash" data-pf="saved" id="'+savedId+'">✓ Saved</span>'
+    +'<button class="pf-switch '+ok.cls+'" data-pf="switch" onclick="openNotePopup(\''+idAttr+'\',\''+otherMode+'\')" title="Switch to '+esc(ok.name)+'">'
+    +_popIcoHTML(otherMode)+switchLbl+'</button>'
+    +'<button class="fw-close" data-pf="close" onclick="'+closeCall+'" title="Close">✕'+closeLbl+'</button>'
+    +'</div>';
+}
+/* Multi's nav keeps its own hand-over-the-whole-window implementation
+   (_fwNavigate — a window is keyed by aid, see v03.NotePane.N7); Single
+   stays in Single and stays IN the panel, so it needs its own. One button
+   handler dispatches to whichever the frame's `mode` calls for. */
+function _popNav(aid,dir,mode){
+  if(mode==='panel')_panelNavigate(dir);
+  else _fwNavigate(aid,dir);
+}
+/* v04.54 — Single's ‹ ›. selArt() already does exactly what leaving a note
+   safely requires (saves the outgoing note if it was being edited, via
+   saveArt() — I1), so this is _p3Navigate() with one line added: the panel
+   never left edit mode in the first place (Multi never has either — see the
+   removal of the cancelEdit() ✕ from modal-mode below), so re-entering it
+   for the note just switched to is the only thing _p3Navigate() does not
+   already do. */
+function _panelNavigate(dir){
+  const aid=ST.article;
+  if(!aid||aid==='cal')return;
+  const sibs=_noteSiblings(aid,ST.folder);
+  if(sibs.length<2){try{toast('This note has no neighbours in this folder');}catch(e){}return;}
+  const i=sibs.indexOf(aid);if(i<0)return;
+  try{_flushEd();}catch(e){}
+  _ntFindClose('p3');
+  selArt(sibs[(i+dir+sibs.length)%sibs.length]);
+  startEdit();
+}
+/* Builds/updates/removes Single's frame — the first child of #p3 while
+   modal-mode is on, at every tier (not just the phone sheet the retired
+   _p3SheetHdSync() was limited to). Rebuilt wholesale (not patched in
+   place) whenever the note it describes might have changed, since aid is
+   baked into every one of its onclick handlers; a plain save/keystroke
+   instead goes through _popFrameFlash() below, which only touches the two
+   pieces that actually change on a save. */
+function _popFrameSync(){
+  const p3=document.getElementById('p3');
+  let hd=document.getElementById('p3-frame-modal');
+  if(!p3||!ST.noteModal||!ST.article||ST.article==='cal'){ if(hd)hd.remove(); return; }
+  const html=_popFrameHTML(ST.article,'panel','p3-frame-modal');
+  if(hd)hd.outerHTML=html; else p3.insertAdjacentHTML('afterbegin',html);
+  _wireModalFrameDrag(document.getElementById('p3-frame-modal'));
+}
+/* The frame IS a drag handle on the window tier — reuses the modal's own
+   drag mover (_modalDragStart/_modalDragMove/_modalDragEnd) rather than a
+   second implementation; the tab bar's own drag (_tabBarModalDown) is
+   untouched and still works exactly as before. */
+function _wireModalFrameDrag(hd){
+  if(!hd)return;
+  hd.addEventListener('pointerdown',e=>{
+    if(_popTier()==='sheet')return;
+    if(e.target.closest('.fw-close'))return;
+    _modalDragStart(e);
+  });
+}
+/* Companion to _fwFlashSaved() — flashes the frame's OWN "✓ Saved" chip
+   (flashSaved() calls this whenever ST.noteModal, see below) and refreshes
+   the title text in place, the same two things Multi's autosave paths
+   already do to .fw-title-disp/#fw-flash-<aid> without a full frame
+   rebuild. */
+function _popFrameFlash(msg){
+  const hd=document.getElementById('p3-frame-modal');if(!hd)return;
+  const disp=hd.querySelector('.fw-title-disp');
+  if(disp){const a=DB.articles.find(x=>x.id===ST.article);if(a){disp.textContent=a.title||'Untitled';disp.title=a.title||'Untitled';}}
+  const el=document.getElementById('p3-frame-flash');if(!el)return;
+  el.textContent=msg||'✓ Saved';
+  el.classList.add('show');
+  clearTimeout(el._ft);
+  el._ft=setTimeout(function(){el.classList.remove('show');},1100);
+}
 function _fwRenderBody(aid){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return '';
   /* v03.NotePane.E5 — 'insert' restored. It was the one group Pane 3 had and
@@ -10578,14 +10716,7 @@ function _fwRenderBody(aid){
     {id:'hist',  icon:'↺',        label:'History'},
   ];
   const ebIcons=_grps.map(g=>`<button class="et eb-grp-btn" data-g="${g.id}" onmousedown="_fwTogGroup('${aid}','${g.id}',this)" title="${g.label}">${g.icon}</button>`).join('');
-  return '<div class="fw-hd"><span class="fw-drag">⠿</span>'
-    +'<button class="fw-nav" onclick="_fwNavigate(\''+aid+'\',-1)" title="Previous note in this folder">‹</button>'
-    +'<button class="fw-nav" onclick="_fwNavigate(\''+aid+'\',1)" title="Next note in this folder">›</button>'
-    +'<span class="fw-title-disp">'+esc(a.title||'Untitled')+'</span>'
-    /* v03.NotePane.E6 — per-window save chip. flashSaved() targets the single
-       #save-flash in Pane 3, so a float had no way to confirm it had saved. */
-    +'<span class="save-flash" id="fw-flash-'+aid+'">✓ Saved</span>'
-    +'<button class="fw-close" onclick="closeFloatWin(\''+aid+'\')" title="Close">✕</button></div>'
+  return _popFrameHTML(aid,'float')
     +'<div class="fw-body">'
     +'<input class="fw-ti" id="fw-ti-'+aid+'" value="'+esc(a.title||'')+'" placeholder="Title…">'
     +_fwMetaHTML(a)
@@ -11712,7 +11843,8 @@ function _tocInject(){
     if(inModal){
       const p3h=document.getElementById('p3h');
       const tb=document.getElementById('tab-bar');
-      panel.style.top=((p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32))+'px';
+      const pf=document.getElementById('p3-frame-modal');   /* v04.54 — the frame sits ABOVE both */
+      panel.style.top=((pf?pf.offsetHeight:0)+(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32))+'px';
       panel.style.bottom='';panel.style.left='';panel.style.right='';panel.style.borderLeft='';panel.style.borderRight='';
       host.classList.add('has-toc');
       host.classList.toggle('toc-left',_side==='left');
@@ -12069,7 +12201,8 @@ function _pinPanelInject(){
   if(inModal){
     const p3h=document.getElementById('p3h');
     const tb=document.getElementById('tab-bar');
-    const baseTop=(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32);
+    const pf=document.getElementById('p3-frame-modal');   /* v04.54 — the frame sits ABOVE both */
+    const baseTop=(pf?pf.offsetHeight:0)+(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32);
     if(pos==='below'){
       const toc=document.getElementById('toc-panel');
       panel.style.top=(baseTop+(toc?toc.offsetHeight:0))+'px';
@@ -12876,6 +13009,11 @@ function edMentionBtn(ev){ev.preventDefault();insertAtCaret('@');showMenDD();}
 /* Brief "✓ Saved" confirmation near the title. Pure CSS fade; ~0 cost. */
 let _flashT=null;
 function flashSaved(msg){
+  /* v04.54 — Single's own "✓ Saved" is now the frame's chip, not #save-flash
+     (that one is hidden inside #p3.modal-mode — see the CSS — so two chips
+     never show at once). Both are driven from here so a caller never has to
+     know or care which pop-up, if any, is open. */
+  if(ST.noteModal)_popFrameFlash(msg);
   const el=document.getElementById('save-flash');
   if(!el)return;
   if(msg)el.textContent=msg;
@@ -21149,7 +21287,6 @@ function _onViewportResize(){
        its own ✕ Close bar — so the panel is re-shaped rather than thrown
        away, and what the owner was reading stays on screen. */
     if(_popTier()==='sheet'){
-      _p3SheetHdSync();
       ['width','height','top','left'].forEach(k=>document.getElementById('p3')?.style.removeProperty(k));
     } else if(_uiTier()!=='desktop'&&_rzTier==='desktop'){
       /* v03.NotePane.G1 — leaving the desktop tier with a panel open: a
