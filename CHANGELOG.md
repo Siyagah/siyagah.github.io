@@ -5695,9 +5695,12 @@ tab bar inside Single, so it was flagged to the Architect/owner instead of
 fixed here.
 
 **Measured**
-- `ship-check`: **(measured in review)**.
-- `app-check --only 23`: **(measured in review)**.
-- `app-check --only 20`: **(measured in review)**.
-- `app-check --only 6p`: **(measured in review)**.
+- `ship-check`: **12/12**.
+- `app-check --only 23`: **11/11**.
+- `app-check --only 20`: **31/31**.
+- `app-check --only 6p`: **104/104**.
+- Extra self-check, since `.fw-editarea` touches shared structure the find
+  bar and the phone's folded `≡`/`+` menus depend on: `app-check --only
+  22`: **18/18**.
 - Full `app-check`: **(measured in review)**.
 

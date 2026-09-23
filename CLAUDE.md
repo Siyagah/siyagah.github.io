@@ -78,9 +78,9 @@ must never accumulate here instead of there.
     Same class of bug as v04.58, in a place its new ship-check guard
     doesn't look (it only matches `addToTabPicker('<id>')` rows, not the
     tab bar's own persisted DOM). Left for the Architect/owner.
-  - 12/12 ship checks, `app-check --only 23` **(measured in review)**,
-    `--only 20` **(measured in review)**, `--only 6p`
-    **(measured in review)**. Full `app-check`, **(measured in review)**.
+  - 12/12 ship checks, `app-check --only 23` **11/11**, `--only 20`
+    **31/31**, `--only 6p` **104/104**. Full `app-check`,
+    **(measured in review)**.
 - **v04.58** (23 Sep 2026) — note titles taken out of the public app file.
   Built by the Architect directly. No behaviour change.
   - The builder found this while working on v04.57. `index.html` had been
