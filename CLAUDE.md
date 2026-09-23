@@ -38,7 +38,7 @@ must never accumulate here instead of there.
     v04.59 for Single.
   - Still the owner's call: the same markup in `legacy/v03.99/` and in
     git history.
-  - 12/12 ship checks, **APPTOTAL**.
+  - 12/12 ship checks, **506/506 app checks, twice in a row**.
 - **v04.59** (23 Sep 2026) — pop-ups made alike, round (d1): the Sidepane
   and Contents panels, same side and same place. Issue #85, round (d1) of
   "make the two pop-ups look and work the same" — round (d2), the tab bar

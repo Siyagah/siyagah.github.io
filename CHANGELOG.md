@@ -5751,5 +5751,5 @@ decision.
 
 **Measured**
 - `ship-check`: **12/12**; check 6 fails on v04.59's `index.html`.
-- Full `app-check`: **APPTOTAL**.
+- Full `app-check`: **506/506 app checks, twice in a row**.
 
