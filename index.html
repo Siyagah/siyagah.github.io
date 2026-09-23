@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.51">
+<meta name="app-version" content="04.52">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2759,6 +2759,73 @@ sup.ann-sup:hover{text-decoration:underline}
 .cal-today .cal-hj-num{color:var(--forest,#22863a)}
 .cal-hj-tag{font-size:9px;color:var(--t3);display:block;line-height:1.2}
 .cal-hj-sub{font-size:10px;color:var(--t3);display:block;line-height:1.2;font-weight:400}
+/* ══ v04.52 — spreadsheets inside a note (see SGE / _sgMount) ══════════ */
+.sgx{margin:12px 0;max-width:100%;border:1px solid var(--border2);border-radius:10px;background:var(--white);overflow:hidden;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;line-height:1.4;color:var(--t1);user-select:none;-webkit-user-select:none}
+.sg-static{border-collapse:collapse;width:auto;max-width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+.sgx>.sg-static{display:block;overflow-x:auto}
+.sg-static td{border:1px solid var(--border);padding:4px 8px;white-space:nowrap;min-width:48px}
+.sg-static[hidden]{display:none!important}
+.sg-tb{display:flex;gap:4px;align-items:center;padding:6px;border-bottom:1px solid var(--border);background:var(--paper2,var(--paper));overflow-x:auto;scrollbar-width:thin}
+.sg-sep{width:1px;height:22px;background:var(--border2);margin:0 3px;flex:none}
+.sg-b{font:500 12.5px/1 'DM Sans',system-ui,sans-serif;color:var(--t1);background:var(--white);border:1px solid var(--border2);border-radius:7px;height:30px;min-width:30px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;flex:none;white-space:nowrap}
+.sg-b:hover{border-color:var(--t3)}
+.sg-b.on{background:var(--greenlt);border-color:var(--green);color:var(--green2)}
+.sg-b.sg-fxb{background:var(--green);border-color:var(--green);color:var(--on-accent)}
+.sg-b.sg-del{color:#9B1C1C}
+.sg-b.sg-del.armed{background:#9B1C1C;border-color:#9B1C1C;color:#FFFFFF}
+select.sg-b{padding-right:6px}
+.sg-sw{width:18px;height:18px;border-radius:5px;border:1px solid var(--border2);cursor:pointer;flex:none;padding:0;background:var(--white)}
+.sg-sw[data-bg=""]{background:linear-gradient(135deg,#FFFFFF 45%,#C0392B 46%,#C0392B 54%,#FFFFFF 55%)}
+.sg-fxbar{display:flex;align-items:stretch;border-bottom:1px solid var(--border);background:var(--white)}
+.sg-name{font:500 12.5px/1 ui-monospace,Menlo,monospace;min-width:60px;padding:0 10px;display:flex;align-items:center;border-right:1px solid var(--border);color:var(--t2)}
+.sg-fxi{font:italic 600 14px/1 Georgia,serif;color:var(--green2);padding:0 8px;display:flex;align-items:center;border-right:1px solid var(--border)}
+.sg-fx{flex:1;min-width:0;border:0;background:transparent;font:13px/1.2 ui-monospace,Menlo,monospace;color:var(--t1);padding:8px 10px;outline:none;user-select:text;-webkit-user-select:text}
+.sg-fx:focus{background:var(--white)}
+.sg-hint{font-size:12px;color:var(--t2);padding:5px 10px;border-bottom:1px solid var(--border);background:var(--paper);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sg-hint[hidden],.sg-keys[hidden]{display:none}
+.sg-hint code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--t1)}
+.sg-sg{font:500 12px/1 ui-monospace,Menlo,monospace;background:var(--white);color:var(--t1);border:1px solid var(--border2);border-radius:6px;padding:4px 7px;cursor:pointer}
+.sg-sg:first-of-type{border-color:var(--green);color:var(--green2)}
+.sg-gw{position:relative;overflow:auto;max-height:min(60vh,460px);overscroll-behavior:contain;outline:none}
+.sg-gw:focus-visible{box-shadow:inset 0 0 0 2px var(--greenlt)}
+table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-variant-numeric:tabular-nums;width:max-content;margin:0}
+.sg-g th,.sg-g td{border-right:1px solid var(--border);border-bottom:1px solid var(--border);height:27px;padding:0 7px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t1)}
+.sg-g thead th{position:sticky;top:0;z-index:3;background:var(--paper);font-weight:500;color:var(--t2);font-size:12px;text-align:center}
+.sg-g th.sg-rh{position:sticky;left:0;z-index:2;background:var(--paper);font-weight:500;color:var(--t2);font-size:12px;text-align:center}
+.sg-g thead th.sg-corner{left:0;z-index:4}
+.sg-g th.sg-hl{background:var(--greenlt);color:var(--green2)}
+.sg-g td{background:var(--white);cursor:cell;position:relative}
+.sg-g td.sg-r{text-align:right}.sg-g td.sg-c{text-align:center}.sg-g td.sg-l{text-align:left}
+.sg-g td.sg-bo{font-weight:700}.sg-g td.sg-it{font-style:italic}
+.sg-g td.sg-er{color:#9B1C1C;text-align:center;font-weight:500}
+.sg-g td.sg-sel{background-image:linear-gradient(rgba(27,122,70,.12),rgba(27,122,70,.12))}
+.sg-g td.sg-act{box-shadow:inset 0 0 0 2px var(--green)}
+.sg-g td.sg-rf0{box-shadow:inset 0 0 0 2px #2563EB}.sg-g td.sg-rf1{box-shadow:inset 0 0 0 2px #C2410C}.sg-g td.sg-rf2{box-shadow:inset 0 0 0 2px #7C3AED}
+.sg-g td.sg-rf3{box-shadow:inset 0 0 0 2px #0E7490}.sg-g td.sg-rf4{box-shadow:inset 0 0 0 2px #BE185D}
+.sg-rz{position:absolute;right:-3px;top:0;width:7px;height:100%;cursor:col-resize;z-index:5}
+.sg-ced{position:absolute;z-index:6;border:2px solid var(--green);background:var(--white);font:13px/1 'DM Sans',system-ui,sans-serif;padding:0 6px;outline:none;box-shadow:0 4px 14px -6px rgba(0,0,0,.35);color:var(--t1);user-select:text;-webkit-user-select:text}
+.sg-keys{display:flex;gap:4px;padding:6px;border-top:1px solid var(--border);background:var(--paper);overflow-x:auto}
+.sg-keys .sg-b{font-family:ui-monospace,Menlo,monospace;height:40px;min-width:40px}
+.sg-keys .sg-ok{background:var(--green);color:var(--on-accent);border-color:var(--green)}
+.sg-status{display:flex;gap:14px;justify-content:flex-end;flex-wrap:wrap;font-size:12px;color:var(--t2);padding:5px 10px;border-top:1px solid var(--border);background:var(--paper)}
+.sg-status b{color:var(--t1);font-weight:500}
+.sg-read .sg-g td{cursor:default}
+.sg-menu{position:fixed;z-index:9000;background:var(--white);border:1px solid var(--border2);border-radius:10px;box-shadow:0 14px 34px -12px rgba(30,20,0,.35);padding:5px;min-width:210px;font:13px 'DM Sans',system-ui,sans-serif;color:var(--t1)}
+.sg-menu[hidden],.sg-fnp[hidden]{display:none}
+.sg-menu button{display:flex;width:100%;text-align:left;gap:10px;border:0;background:none;padding:8px 10px;border-radius:7px;font:inherit;color:var(--t1);cursor:pointer;min-height:36px;align-items:center}
+.sg-menu button:hover{background:var(--greenlt)}
+.sg-menu hr{border:0;border-top:1px solid var(--border);margin:4px 2px}
+.sg-menu .k{margin-left:auto;color:var(--t3);font-size:11.5px}
+.sg-fnp{position:fixed;z-index:9000;background:var(--white);border:1px solid var(--border2);border-radius:12px;box-shadow:0 20px 50px -18px rgba(30,20,0,.45);width:min(440px,calc(100vw - 16px));max-height:min(70vh,560px);display:flex;flex-direction:column;font:13px 'DM Sans',system-ui,sans-serif;color:var(--t1)}
+.sg-fh{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid var(--border)}
+.sg-fnq{flex:1;min-width:0;border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font:14px 'DM Sans',system-ui,sans-serif;background:var(--white);color:var(--t1)}
+.sg-fl{overflow:auto;padding:4px 6px 10px}
+.sg-fl h4{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);margin:10px 6px 4px}
+.sg-fi{display:block;width:100%;text-align:left;border:0;background:none;padding:6px 8px;border-radius:7px;cursor:pointer;color:var(--t1)}
+.sg-fi:hover{background:var(--greenlt)}
+.sg-fi code{font:500 12.5px ui-monospace,Menlo,monospace}
+.sg-fi span{display:block;font-size:12px;color:var(--t2)}
+.sg-fnone{padding:10px;color:var(--t2)}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script><style></style><style id="dyn-hs">.av-body h1,#ed h1,.fw-ed h1{border-left:3px solid #0f766e;background:#f0fdfa;padding-left:10px;border-radius:0 4px 4px 0}
 .av-body h2,#ed h2,.fw-ed h2{border-left:3px solid #4338ca;background:#eef2ff;padding-left:10px;border-radius:0 4px 4px 0}
@@ -2804,7 +2871,7 @@ sup.ann-sup:hover{text-decoration:underline}
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.51</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.52</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -9641,6 +9708,7 @@ const _EB_INSERT=[
   {ico:'🔖',lbl:'Bookmark',md:"edBookmarkBtn(event)",        t:'Insert a bookmark card'},
   {ico:'@',    lbl:'Mention', md:"edMentionBtn(event)",         t:'Mention another note (@)',bold:true},
   {ico:'💬',lbl:'Phrase',  md:"openQuickPhrasesMenu(event)", t:'Quick Phrases',stop:true},
+  {ico:'▦',lbl:'Spreadsheet',md:"insertSheet(event)",       t:'Insert a spreadsheet: formulas, totals, sorting (v04.52)'},
   {ico:'📋',lbl:'Template',md:"openTemplatesMenu(event)",    t:'Insert a ready-made note structure',stop:true,phone:true},
 ];
 /* The same table shape for the list blocks. ❝ and ─ were the last two bare
@@ -10629,6 +10697,7 @@ function _fwBuildEBSub(aid,g){
       `<button class="et" title="Bookmark card" onmousedown="edBookmarkBtn(event)">🔖</button>`,
       `<button class="et" title="Mention (@)" onmousedown="edMentionBtn(event)" style="font-weight:700">@</button>`,
       `<button class="et" title="Quick Phrases" onmousedown="openQuickPhrasesMenu(event)" onclick="event.stopPropagation()">💬</button>`,
+      `<button class="et" title="Insert a spreadsheet: formulas, totals, sorting" onmousedown="insertSheet(event)">▦</button>`,
     ],
     hist:[
       `<button class="et" onmousedown="_fwEc(event,'${aid}','undo')" title="Undo">↩</button>`,
@@ -12671,6 +12740,7 @@ function refreshBacklinks(){
 function upgradeViewCards(box){
   if(!box)return;
   try{_ktRepair(box);}catch(e){}
+  try{_sgHydrateAll(box,false);}catch(e){console.error('sheet mount',e);}
   try{
     /* anchors whose href or text is a video URL */
     box.querySelectorAll('a:not(.mention)').forEach(a=>{
@@ -12954,6 +13024,7 @@ function _edColHeads(ed){
 /* Strip all C5 display-only artefacts from a (cloned) node before saving. */
 function _edColClean(node){
   if(!node)return;
+  try{_sgCanon(node);}catch(e){}   /* v04.52 — a live spreadsheet goes back to its stored shape */
   node.querySelectorAll('.ed-col-arr,.ed-col-grip,.ed-col-preview').forEach(function(n){n.remove();});
   node.querySelectorAll('.ed-col-hidden').forEach(function(n){n.classList.remove('ed-col-hidden');if(n.getAttribute('class')==='')n.removeAttribute('class');});
 }
@@ -12994,6 +13065,7 @@ function _edColApply(ed){
 function _edColInit(ed){
   if(!ed)return;
   try{_ktRepair(ed);}catch(e){}
+  try{_sgHydrateAll(ed,true);}catch(e){console.error('sheet mount',e);}
   ed.querySelectorAll('.ed-col-arr,.ed-col-grip').forEach(function(n){n.remove();});
   const heads=_edColHeads(ed);
   /* E6 — each surface owns its own ⋯ wrapper, so a float showing headings
@@ -22164,6 +22236,899 @@ function startRenameArtTitle(aid){
       <button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn bp" onclick="finRenameArtTitle('${aid}',document.getElementById('art-ren-inp').value);closeModal()">Rename</button>
     </div>`);
+}
+
+/* ══ v04.52 — SPREADSHEETS INSIDE A NOTE ═════════════════════════════════
+   A full formula grid that lives in a note's own HTML, so it saves, syncs,
+   travels in a Save File copy and opens offline exactly like the note's text
+   (I1–I4) — nothing new in DB, no library, no network.
+
+   STORED SHAPE (what a note's content holds):
+     <div class="sgx" contenteditable="false" data-sg="{…state JSON…}">
+       <table class="sg-static">…the values as last computed…</table>
+     </div>
+   The static table is a SNAPSHOT, rebuilt only when the sheet is edited —
+   never recomputed on load. That matters for sync (I2): a sheet using
+   TODAY() or RAND() must not make a note look "changed" just by being
+   opened, or an untouched copy would carry a newer updatedAt and win a merge
+   against a real edit made elsewhere. It also means search, Pane 2 snippets,
+   a copy/paste into another app and any older build all see real values.
+
+   LIVE SHAPE: _sgHydrateAll() hides the snapshot and mounts the grid beside
+   it (editable in an editor, read-only in the read view); _edColClean() —
+   the one function every save path already runs — strips the grid back off
+   and un-hides the snapshot, so no live chrome ever reaches a.content.
+   The engine is one shared formula evaluator; each mounted sheet owns its own
+   state, selection and undo stack. Keyboard, clipboard and input events stop
+   at the sheet, so the note editor's own shortcuts (Enter rules, Ctrl+Z on
+   the document) never act on a keystroke meant for a cell. */
+const SGE=(function(){
+  let S=null,cache=new Map();const BUSY={};const astCache=new Map();
+  const colName=c=>{let s='';c++;while(c>0){const m=(c-1)%26;s=String.fromCharCode(65+m)+s;c=Math.floor((c-1)/26);}return s;};
+  const colIndex=s=>{let n=0;for(const ch of s.toUpperCase())n=n*26+(ch.charCodeAt(0)-64);return n-1;};
+  const addr=(r,c)=>colName(c)+(r+1);
+  function parseRef(s){const m=/^(\$?)([A-Za-z]{1,3})(\$?)(\d+)$/.exec(s);if(!m)return null;return{c:colIndex(m[2]),r:parseInt(m[4],10)-1,ac:!!m[1],ar:!!m[3]};}
+  const refText=x=>(x.ac?'$':'')+colName(x.c)+(x.ar?'$':'')+(x.r+1);
+  const K=(r,c)=>r+','+c;
+  const ERR=e=>({err:e});
+  const isErr=x=>x!==null&&typeof x==='object'&&'err' in x;
+  const isM=x=>x!==null&&typeof x==='object'&&'m' in x;
+  const EPOCH=Date.UTC(1899,11,30);
+  const serial=(y,m,d)=>Math.round((Date.UTC(y,m,d)-EPOCH)/864e5);
+  const fromSerial=s=>new Date(EPOCH+Math.floor(s)*864e5);
+  function todaySerial(){const d=new Date();return serial(d.getFullYear(),d.getMonth(),d.getDate());}
+  function literal(raw){
+    const s=String(raw).trim();if(s==='')return null;
+    if(s[0]==="'")return s.slice(1);
+    if(/^(true|false)$/i.test(s))return s.toUpperCase()==='TRUE';
+    if(/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(s))return parseFloat(s);
+    if(/^[-+]?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s))return parseFloat(s.replace(/,/g,''));
+    let m=/^(-?)\$\s?(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?$/.exec(s);if(m)return (m[1]?-1:1)*parseFloat(m[2].replace(/,/g,'')+(m[3]||''));
+    m=/^([-+]?(?:\d+\.?\d*|\.\d+))%$/.exec(s);if(m)return parseFloat(m[1])/100;
+    m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);if(m)return serial(+m[3],+m[2]-1,+m[1]);
+    m=/^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);if(m)return serial(+m[1],+m[2]-1,+m[3]);
+    return s;
+  }
+  function autoFmt(raw){const s=String(raw).trim();if(/^-?\$/.test(s))return'currency';if(/%$/.test(s))return'percent';if(/^\d{1,2}\/\d{1,2}\/\d{4}$|^\d{4}-\d{1,2}-\d{1,2}$/.test(s))return'date';return null;}
+  function gen(x){if(Number.isInteger(x)&&Math.abs(x)<1e15)return String(x);const a=Math.abs(x);if(a!==0&&(a<1e-9||a>=1e15))return x.toExponential(4);return String(parseFloat(x.toPrecision(10)));}
+  function str(v){if(v===null||v===undefined)return'';if(typeof v==='boolean')return v?'TRUE':'FALSE';if(typeof v==='number')return gen(v);return String(v);}
+  function num(v){if(isErr(v))return v;if(v===null||v==='')return 0;if(typeof v==='number')return v;if(typeof v==='boolean')return v?1:0;const l=literal(v);return typeof l==='number'?l:ERR('#VALUE!');}
+  function bool(v){if(isErr(v))return v;if(v===null)return false;if(typeof v==='boolean')return v;if(typeof v==='number')return v!==0;const s=String(v).toUpperCase();if(s==='TRUE')return true;if(s==='FALSE')return false;return ERR('#VALUE!');}
+  const sc=x=>isM(x)?(x.m[0]&&x.m[0].length?x.m[0][0]:null):x;
+  const rank=v=>typeof v==='number'?0:typeof v==='string'?1:typeof v==='boolean'?2:0;
+  function cmp(a,b){
+    if(a===null)a=typeof b==='string'?'':typeof b==='boolean'?false:0;
+    if(b===null)b=typeof a==='string'?'':typeof a==='boolean'?false:0;
+    const ra=rank(a),rb=rank(b);if(ra!==rb)return ra-rb;
+    if(ra===1){const x=a.toLowerCase(),y=b.toLowerCase();return x<y?-1:x>y?1:0;}
+    return a<b?-1:a>b?1:0;
+  }
+  const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAY=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const isDateP=p=>/[dy]/i.test(p)||/^m{1,4}$/i.test(p);
+  function fmtDate(x,p){
+    const d=fromSerial(x),Y=d.getUTCFullYear(),M=d.getUTCMonth(),D=d.getUTCDate(),W=d.getUTCDay();
+    return p.replace(/yyyy|yy|mmmm|mmm|mm|m|dddd|ddd|dd|d/gi,t=>{switch(t.toLowerCase()){
+      case'yyyy':return Y;case'yy':return String(Y).slice(-2);case'mmmm':return MON[M];case'mmm':return MON[M].slice(0,3);
+      case'mm':return String(M+1).padStart(2,'0');case'm':return M+1;case'dddd':return DAY[W];case'ddd':return DAY[W].slice(0,3);
+      case'dd':return String(D).padStart(2,'0');default:return D;}});
+  }
+  function fmtPattern(x,p){
+    if(isDateP(p))return fmtDate(x,p);
+    let pct=false;if(p.includes('%')){pct=true;x*=100;}
+    const dm=/\.([0#]+)/.exec(p),dec=dm?dm[1].length:0,comma=p.includes(','),cur=p.includes('$');
+    const neg=x<0&&Math.abs(x).toFixed(dec)!==(0).toFixed(dec);let s=Math.abs(x).toFixed(dec);
+    if(comma){const [i,f]=s.split('.');s=i.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(f?'.'+f:'');}
+    return(neg?'-':'')+(cur?'$':'')+s+(pct?'%':'');
+  }
+  const PRESET={number:'#,##0.00',currency:'$#,##0.00',percent:'0.0%',date:'dd/mm/yyyy'};
+  function display(v,fmt){
+    if(isErr(v))return v.err;if(v===null)return'';
+    if(typeof v==='boolean')return v?'TRUE':'FALSE';
+    if(typeof v==='number'){if(!isFinite(v))return'#NUM!';return fmt&&PRESET[fmt]?fmtPattern(v,PRESET[fmt]):gen(v);}
+    return String(v);
+  }
+  function perr(code){const e=new Error(code);e.code=code;return e;}
+  function tokenize(s){
+    const t=[];let i=0;
+    while(i<s.length){
+      const ch=s[i];
+      if(/\s/.test(ch)){i++;continue;}
+      if(ch==='"'){let j=i+1,out='';for(;;){if(j>=s.length)throw perr('#ERROR!');if(s[j]==='"'){if(s[j+1]==='"'){out+='"';j+=2;continue;}break;}out+=s[j++];}t.push({k:'str',v:out});i=j+1;continue;}
+      const rest=s.slice(i);let m;
+      if((m=/^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/i.exec(rest))){t.push({k:'num',v:parseFloat(m[0])});i+=m[0].length;continue;}
+      if((m=/^#(DIV\/0!|N\/A|NAME\?|REF!|VALUE!|NUM!|NULL!|CIRC!)/.exec(rest))){t.push({k:'err',v:m[0]});i+=m[0].length;continue;}
+      if((m=/^(\$?[A-Za-z]{1,3}\$?\d+)(?::(\$?[A-Za-z]{1,3}\$?\d+))?(?![A-Za-z0-9_(.])/.exec(rest))){
+        const a=parseRef(m[1]);
+        if(m[2]){const b=parseRef(m[2]);t.push({k:'range',r1:Math.min(a.r,b.r),c1:Math.min(a.c,b.c),r2:Math.max(a.r,b.r),c2:Math.max(a.c,b.c)});}
+        else t.push({k:'ref',r:a.r,c:a.c});
+        i+=m[0].length;continue;
+      }
+      if((m=/^[A-Za-z_][A-Za-z0-9_.]*/.exec(rest))){t.push({k:'id',v:m[0].toUpperCase()});i+=m[0].length;continue;}
+      if((m=/^(<>|<=|>=|[-+*\/^&=<>%(),])/.exec(rest))){t.push({k:'op',v:m[0]});i+=m[0].length;continue;}
+      throw perr('#ERROR!');
+    }
+    return t;
+  }
+  const BIN={'=':1,'<>':1,'<':1,'>':1,'<=':1,'>=':1,'&':2,'+':3,'-':3,'*':4,'/':4,'^':5};
+  function parse(tokens){
+    let p=0;const peek=()=>tokens[p],next=()=>tokens[p++];
+    const isOp=(t,v)=>t&&t.k==='op'&&t.v===v;
+    function expr(min){
+      let left=unary();
+      for(;;){const t=peek();if(!t||t.k!=='op')break;const pr=BIN[t.v];if(pr===undefined||pr<min)break;next();left={t:'bin',op:t.v,a:left,b:expr(pr+1)};}
+      return left;
+    }
+    function unary(){const t=peek();if(isOp(t,'-')||isOp(t,'+')){next();return{t:'un',op:t.v,a:unary()};}return postfix(primary());}
+    function postfix(n){while(isOp(peek(),'%')){next();n={t:'pct',a:n};}return n;}
+    function primary(){
+      const t=next();if(!t)throw perr('#ERROR!');
+      switch(t.k){
+        case'num':return{t:'num',v:t.v};case'str':return{t:'str',v:t.v};case'err':return{t:'err',v:t.v};
+        case'ref':return{t:'ref',r:t.r,c:t.c};case'range':return{t:'range',r1:t.r1,c1:t.c1,r2:t.r2,c2:t.c2};
+        case'id':
+          if(isOp(peek(),'(')){
+            next();const args=[];
+            if(isOp(peek(),')')){next();return{t:'fn',name:t.v,args};}
+            for(;;){
+              if(isOp(peek(),',')||isOp(peek(),')'))args.push({t:'blank'});else args.push(expr(1));
+              const s=next();if(!s)throw perr('#ERROR!');
+              if(isOp(s,')'))break;if(!isOp(s,','))throw perr('#ERROR!');
+            }
+            return{t:'fn',name:t.v,args};
+          }
+          if(t.v==='TRUE'||t.v==='FALSE')return{t:'bool',v:t.v==='TRUE'};
+          return{t:'name',v:t.v};
+        case'op':if(t.v==='('){const e=expr(1);if(!isOp(next(),')'))throw perr('#ERROR!');return e;}
+      }
+      throw perr('#ERROR!');
+    }
+    const e=expr(1);if(p<tokens.length)throw perr('#ERROR!');return e;
+  }
+  function cellValue(r,c){
+    if(r<0||c<0||r>=S.rows||c>=S.cols)return ERR('#REF!');
+    const k=K(r,c);
+    if(cache.has(k)){const v=cache.get(k);return v===BUSY?ERR('#CIRC!'):v;}
+    const o=S.cells[k];if(!o||!o.raw){cache.set(k,null);return null;}
+    cache.set(k,BUSY);
+    const v=(o.raw[0]==='='&&o.raw.length>1)?evalFormula(o.raw.slice(1)):literal(o.raw);
+    cache.set(k,v);return v;
+  }
+  function evalFormula(src){
+    let ast=astCache.get(src);
+    if(ast===undefined){try{ast=parse(tokenize(src));}catch(e){ast={t:'err',v:e.code||'#ERROR!'};}if(astCache.size>5000)astCache.clear();astCache.set(src,ast);}
+    let v;try{v=ev(ast);}catch(e){v=ERR(e.code||'#VALUE!');}
+    v=sc(v);if(v===null)v=0;
+    if(typeof v==='number'&&!isFinite(v))v=ERR('#NUM!');
+    return v;
+  }
+  function ev(n){
+    switch(n.t){
+      case'num':case'str':case'bool':return n.v;
+      case'blank':return null;
+      case'err':return ERR(n.v);
+      case'name':return ERR('#NAME?');
+      case'ref':return cellValue(n.r,n.c);
+      case'range':{if(n.r2>=S.rows||n.c2>=S.cols)return ERR('#REF!');const m=[];for(let r=n.r1;r<=n.r2;r++){const row=[];for(let c=n.c1;c<=n.c2;c++)row.push(cellValue(r,c));m.push(row);}return{m};}
+      case'un':{const v=num(sc(ev(n.a)));if(isErr(v))return v;return n.op==='-'?-v:v;}
+      case'pct':{const v=num(sc(ev(n.a)));if(isErr(v))return v;return v/100;}
+      case'bin':return bin(n.op,sc(ev(n.a)),sc(ev(n.b)));
+      case'fn':{
+        const f=FN[n.name];if(!f)return ERR('#NAME?');
+        if(n.args.length<f.min||(f.max>=0&&n.args.length>f.max))return ERR('#N/A');
+        if(f.lazy)return f.fn(n.args.map(a=>()=>ev(a)));
+        return f.fn(n.args.map(ev));
+      }
+    }
+    return ERR('#ERROR!');
+  }
+  function bin(op,a,b){
+    if(isErr(a))return a;if(isErr(b))return b;
+    if(op==='&')return str(a)+str(b);
+    if(op.length===1&&'+-*/^'.includes(op)){
+      const x=num(a),y=num(b);if(isErr(x))return x;if(isErr(y))return y;
+      switch(op){case'+':return x+y;case'-':return x-y;case'*':return x*y;case'/':return y===0?ERR('#DIV/0!'):x/y;case'^':return Math.pow(x,y);}
+    }
+    const c=cmp(a,b);
+    switch(op){case'=':return c===0;case'<>':return c!==0;case'<':return c<0;case'>':return c>0;case'<=':return c<=0;case'>=':return c>=0;}
+    return ERR('#VALUE!');
+  }
+  const FN={};
+  function def(cat,name,min,max,sig,desc,fn,lazy){FN[name]={cat,min,max,sig,desc,fn,lazy:!!lazy};}
+  function flat(args){const out=[];for(const a of args){if(isM(a))for(const row of a.m)for(const v of row)out.push({v,rng:true});else out.push({v:a,rng:false});}return out;}
+  function nums(args){const out=[];for(const {v,rng} of flat(args)){if(isErr(v))return v;if(rng){if(typeof v==='number')out.push(v);}else{if(v===null)continue;const x=num(v);if(isErr(x))return x;out.push(x);}}return out;}
+  const asM=x=>isM(x)?x:{m:[[x]]};
+  const cells=x=>{const m=asM(x).m;const out=[];for(const r of m)for(const v of r)out.push(v);return out;};
+  const N=(v,d)=>{if(v===undefined||v===null)return d;return num(sc(v));};
+  const agg=f=>a=>{const n=nums(a);if(isErr(n))return n;return f(n);};
+  const sum=n=>n.reduce((s,x)=>s+x,0);
+  function roundTo(x,d,mode){const p=Math.pow(10,d);const y=Number((Math.abs(x)*p).toPrecision(15));const r=mode==='up'?Math.ceil(y):mode==='down'?Math.floor(y):Math.round(y);return Math.sign(x)*r/p;}
+  function variance(n,sample){if(n.length<(sample?2:1))return ERR('#DIV/0!');const m=sum(n)/n.length;return n.reduce((s,x)=>s+(x-m)*(x-m),0)/(n.length-(sample?1:0));}
+  function mkCrit(c){
+    c=sc(c);
+    if(typeof c==='number'||typeof c==='boolean')return v=>v!==null&&cmp(v,c)===0&&rank(v)===rank(c);
+    const s=c===null?'':String(c);const m=/^(<=|>=|<>|<|>|=)?([\s\S]*)$/.exec(s);const op=m[1]||'=',rhs=m[2];
+    const n=rhs.trim()!==''&&!isNaN(Number(rhs))?Number(rhs):null;
+    const test=(o,d)=>o==='='?d===0:o==='<>'?d!==0:o==='<'?d<0:o==='>'?d>0:o==='<='?d<=0:d>=0;
+    if(n!==null)return v=>{if(typeof v!=='number')return op==='<>';return test(op,v<n?-1:v>n?1:0);};
+    const re=new RegExp('^'+rhs.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.')+'$','i');
+    if(op==='=')return v=>rhs===''?(v===null||v===''):(typeof v==='string'&&re.test(v));
+    if(op==='<>')return v=>rhs===''?!(v===null||v===''):!(typeof v==='string'&&re.test(v));
+    return v=>typeof v==='string'&&test(op,cmp(v,rhs));
+  }
+  function ifs(sumArg,pairs,reduce){
+    const ranges=[],crits=[];
+    for(let i=0;i<pairs.length;i+=2){ranges.push(asM(pairs[i]).m);crits.push(mkCrit(pairs[i+1]));}
+    const R=ranges[0].length,C=ranges[0][0].length;
+    for(const r of ranges)if(r.length!==R||r[0].length!==C)return ERR('#VALUE!');
+    const sm=sumArg?asM(sumArg).m:ranges[0];const hits=[];
+    for(let i=0;i<R;i++)for(let j=0;j<C;j++){
+      let ok=true;for(let k=0;k<ranges.length&&ok;k++)ok=crits[k](ranges[k][i][j]);
+      if(ok){const v=sm[i]&&sm[i][j];if(isErr(v))return v;hits.push(v);}
+    }
+    return reduce(hits);
+  }
+  const onlyNums=a=>a.filter(v=>typeof v==='number');
+  function lookupEq(a,b){if(typeof a==='string'&&typeof b==='string'&&/[*?]/.test(b))return mkCrit(b)(a);return rank(a)===rank(b)&&cmp(a,b)===0;}
+  function vec(x){const m=asM(x).m;if(m.length===1)return m[0];return m.map(r=>r[0]);}
+  function toDate(v){const x=num(sc(v));return isErr(x)?x:fromSerial(x);}
+  function textOf(v){v=sc(v);return isErr(v)?v:str(v);}
+  const has=(a,i)=>a[i]!==undefined&&a[i]!==null;
+  def('Maths','SUM',1,-1,'number1, [number2], …','Adds numbers or a range',agg(sum));
+  def('Maths','PRODUCT',1,-1,'number1, [number2], …','Multiplies numbers together',agg(n=>n.reduce((s,x)=>s*x,1)));
+  def('Maths','ROUND',1,2,'number, [digits]','Rounds to a number of decimal places',a=>{const x=N(a[0]),d=N(a[1],0);return isErr(x)?x:isErr(d)?d:roundTo(x,Math.trunc(d));});
+  def('Maths','ROUNDUP',1,2,'number, [digits]','Rounds away from zero',a=>{const x=N(a[0]),d=N(a[1],0);return isErr(x)?x:roundTo(x,Math.trunc(d),'up');});
+  def('Maths','ROUNDDOWN',1,2,'number, [digits]','Rounds towards zero',a=>{const x=N(a[0]),d=N(a[1],0);return isErr(x)?x:roundTo(x,Math.trunc(d),'down');});
+  def('Maths','INT',1,1,'number','Rounds down to the whole number below',a=>{const x=N(a[0]);return isErr(x)?x:Math.floor(x);});
+  def('Maths','TRUNC',1,2,'number, [digits]','Cuts off decimals without rounding',a=>{const x=N(a[0]),d=N(a[1],0);return isErr(x)?x:roundTo(x,Math.trunc(d),'down');});
+  def('Maths','MOD',2,2,'number, divisor','Remainder after dividing',a=>{const x=N(a[0]),d=N(a[1]);if(isErr(x))return x;if(isErr(d))return d;if(d===0)return ERR('#DIV/0!');return x-d*Math.floor(x/d);});
+  def('Maths','ABS',1,1,'number','The number without its sign',a=>{const x=N(a[0]);return isErr(x)?x:Math.abs(x);});
+  def('Maths','SQRT',1,1,'number','Square root',a=>{const x=N(a[0]);return isErr(x)?x:x<0?ERR('#NUM!'):Math.sqrt(x);});
+  def('Maths','POWER',2,2,'number, power','Raises a number to a power',a=>{const x=N(a[0]),y=N(a[1]);return isErr(x)?x:isErr(y)?y:Math.pow(x,y);});
+  def('Maths','CEILING',1,2,'number, [significance]','Rounds up to the nearest multiple',a=>{const x=N(a[0]),s=N(a[1],1);if(isErr(x))return x;if(!s)return 0;return Math.ceil(x/s)*s;});
+  def('Maths','FLOOR',1,2,'number, [significance]','Rounds down to the nearest multiple',a=>{const x=N(a[0]),s=N(a[1],1);if(isErr(x))return x;if(!s)return ERR('#DIV/0!');return Math.floor(x/s)*s;});
+  def('Maths','MROUND',2,2,'number, multiple','Rounds to the nearest multiple',a=>{const x=N(a[0]),s=N(a[1]);if(isErr(x))return x;if(!s)return 0;return roundTo(x/s,0)*s;});
+  def('Maths','SIGN',1,1,'number','1, 0 or -1 depending on the sign',a=>{const x=N(a[0]);return isErr(x)?x:Math.sign(x);});
+  def('Maths','PI',0,0,'','The number π',()=>Math.PI);
+  def('Maths','EXP',1,1,'number','e raised to a power',a=>{const x=N(a[0]);return isErr(x)?x:Math.exp(x);});
+  def('Maths','LN',1,1,'number','Natural logarithm',a=>{const x=N(a[0]);return isErr(x)?x:x<=0?ERR('#NUM!'):Math.log(x);});
+  def('Maths','LOG',1,2,'number, [base]','Logarithm (base 10 unless given)',a=>{const x=N(a[0]),b=N(a[1],10);return isErr(x)?x:x<=0?ERR('#NUM!'):Math.log(x)/Math.log(b);});
+  def('Maths','LOG10',1,1,'number','Base-10 logarithm',a=>{const x=N(a[0]);return isErr(x)?x:x<=0?ERR('#NUM!'):Math.log10(x);});
+  def('Maths','RAND',0,0,'','A random number between 0 and 1',()=>Math.random());
+  def('Maths','RANDBETWEEN',2,2,'bottom, top','A random whole number in a range',a=>{const x=N(a[0]),y=N(a[1]);return isErr(x)?x:Math.floor(Math.random()*(Math.floor(y)-Math.ceil(x)+1))+Math.ceil(x);});
+  def('Maths','SUMPRODUCT',1,-1,'array1, [array2], …','Multiplies matching items and adds the results',a=>{const ms=a.map(x=>asM(x).m);const R=ms[0].length,C=ms[0][0].length;for(const m of ms)if(m.length!==R||m[0].length!==C)return ERR('#VALUE!');let s=0;for(let i=0;i<R;i++)for(let j=0;j<C;j++){let p=1;for(const m of ms){const v=m[i][j];if(isErr(v))return v;p*=typeof v==='number'?v:0;}s+=p;}return s;});
+  def('Maths','SUMSQ',1,-1,'number1, [number2], …','Adds the squares of numbers',agg(n=>n.reduce((s,x)=>s+x*x,0)));
+  def('Statistics','AVERAGE',1,-1,'number1, [number2], …','The mean of the numbers',agg(n=>n.length?sum(n)/n.length:ERR('#DIV/0!')));
+  def('Statistics','MEDIAN',1,-1,'number1, [number2], …','The middle number',agg(n=>{if(!n.length)return ERR('#NUM!');const s=[...n].sort((x,y)=>x-y),h=s.length>>1;return s.length%2?s[h]:(s[h-1]+s[h])/2;}));
+  def('Statistics','MODE',1,-1,'number1, [number2], …','The most frequent number',agg(n=>{const f=new Map();let best=null,bc=1;for(const x of n){const c=(f.get(x)||0)+1;f.set(x,c);if(c>bc){bc=c;best=x;}}return best===null?ERR('#N/A'):best;}));
+  def('Statistics','MIN',1,-1,'number1, [number2], …','The smallest number',agg(n=>n.length?Math.min(...n):0));
+  def('Statistics','MAX',1,-1,'number1, [number2], …','The largest number',agg(n=>n.length?Math.max(...n):0));
+  def('Statistics','COUNT',1,-1,'value1, [value2], …','How many cells hold numbers',a=>flat(a).filter(x=>typeof x.v==='number').length);
+  def('Statistics','COUNTA',1,-1,'value1, [value2], …','How many cells are not empty',a=>flat(a).filter(x=>x.v!==null&&x.v!=='').length);
+  def('Statistics','COUNTBLANK',1,1,'range','How many cells are empty',a=>cells(a[0]).filter(v=>v===null||v==='').length);
+  def('Statistics','LARGE',2,2,'array, k','The k-th largest number',a=>{const n=onlyNums(cells(a[0])).sort((x,y)=>y-x),k=N(a[1]);return k>=1&&k<=n.length?n[Math.floor(k)-1]:ERR('#NUM!');});
+  def('Statistics','SMALL',2,2,'array, k','The k-th smallest number',a=>{const n=onlyNums(cells(a[0])).sort((x,y)=>x-y),k=N(a[1]);return k>=1&&k<=n.length?n[Math.floor(k)-1]:ERR('#NUM!');});
+  def('Statistics','RANK',2,3,'number, range, [ascending]','Position of a number in a list (1 = largest)',a=>{const x=N(a[0]),n=onlyNums(cells(a[1])),asc=N(a[2],0);if(isErr(x))return x;if(!n.includes(x))return ERR('#N/A');return 1+n.filter(v=>asc?v<x:v>x).length;});
+  def('Statistics','STDEV',1,-1,'number1, [number2], …','Standard deviation of a sample',agg(n=>{const v=variance(n,true);return isErr(v)?v:Math.sqrt(v);}));
+  def('Statistics','STDEVP',1,-1,'number1, [number2], …','Standard deviation of a whole population',agg(n=>{const v=variance(n,false);return isErr(v)?v:Math.sqrt(v);}));
+  def('Statistics','VAR',1,-1,'number1, [number2], …','Variance of a sample',agg(n=>variance(n,true)));
+  def('Statistics','VARP',1,-1,'number1, [number2], …','Variance of a whole population',agg(n=>variance(n,false)));
+  def('Conditional','SUMIF',2,3,'range, criteria, [sum_range]','Adds the cells that meet a condition',a=>ifs(has(a,2)?a[2]:a[0],[a[0],a[1]],h=>sum(onlyNums(h))));
+  def('Conditional','SUMIFS',3,-1,'sum_range, range1, criteria1, …','Adds cells that meet several conditions',a=>ifs(a[0],a.slice(1),h=>sum(onlyNums(h))));
+  def('Conditional','COUNTIF',2,2,'range, criteria','Counts the cells that meet a condition',a=>ifs(null,[a[0],a[1]],h=>h.length));
+  def('Conditional','COUNTIFS',2,-1,'range1, criteria1, …','Counts cells that meet several conditions',a=>ifs(null,a,h=>h.length));
+  def('Conditional','AVERAGEIF',2,3,'range, criteria, [average_range]','Average of the cells that meet a condition',a=>ifs(has(a,2)?a[2]:a[0],[a[0],a[1]],h=>{const n=onlyNums(h);return n.length?sum(n)/n.length:ERR('#DIV/0!');}));
+  def('Conditional','AVERAGEIFS',3,-1,'average_range, range1, criteria1, …','Average with several conditions',a=>ifs(a[0],a.slice(1),h=>{const n=onlyNums(h);return n.length?sum(n)/n.length:ERR('#DIV/0!');}));
+  def('Conditional','MAXIFS',3,-1,'max_range, range1, criteria1, …','Largest value that meets conditions',a=>ifs(a[0],a.slice(1),h=>{const n=onlyNums(h);return n.length?Math.max(...n):0;}));
+  def('Conditional','MINIFS',3,-1,'min_range, range1, criteria1, …','Smallest value that meets conditions',a=>ifs(a[0],a.slice(1),h=>{const n=onlyNums(h);return n.length?Math.min(...n):0;}));
+  def('Logic','IF',1,3,'test, [if_true], [if_false]','One result if a test is true, another if false',a=>{const t=bool(sc(a[0]()));if(isErr(t))return t;return t?(a[1]?a[1]():true):(a[2]?a[2]():false);},true);
+  def('Logic','IFS',2,-1,'test1, value1, [test2, value2], …','The value for the first test that is true',a=>{for(let i=0;i+1<a.length;i+=2){const t=bool(sc(a[i]()));if(isErr(t))return t;if(t)return a[i+1]();}return ERR('#N/A');},true);
+  def('Logic','IFERROR',2,2,'value, value_if_error','A fallback when a formula gives an error',a=>{const v=sc(a[0]());return isErr(v)?a[1]():v;},true);
+  def('Logic','IFNA',2,2,'value, value_if_na','A fallback when a lookup finds nothing',a=>{const v=sc(a[0]());return isErr(v)&&v.err==='#N/A'?a[1]():v;},true);
+  def('Logic','AND',1,-1,'test1, [test2], …','TRUE if every test is true',a=>{let any=false;for(const {v,rng} of flat(a)){if(isErr(v))return v;if(rng&&typeof v!=='number'&&typeof v!=='boolean')continue;const b=bool(v);if(isErr(b))return b;any=true;if(!b)return false;}return any?true:ERR('#VALUE!');});
+  def('Logic','OR',1,-1,'test1, [test2], …','TRUE if any test is true',a=>{let any=false,res=false;for(const {v,rng} of flat(a)){if(isErr(v))return v;if(rng&&typeof v!=='number'&&typeof v!=='boolean')continue;const b=bool(v);if(isErr(b))return b;any=true;if(b)res=true;}return any?res:ERR('#VALUE!');});
+  def('Logic','XOR',1,-1,'test1, [test2], …','TRUE if an odd number of tests are true',a=>{let c=0;for(const {v} of flat(a)){if(isErr(v))return v;if(typeof v==='number'||typeof v==='boolean')if(bool(v))c++;}return c%2===1;});
+  def('Logic','NOT',1,1,'test','Flips TRUE and FALSE',a=>{const b=bool(sc(a[0]));return isErr(b)?b:!b;});
+  def('Logic','TRUE',0,0,'','The value TRUE',()=>true);
+  def('Logic','FALSE',0,0,'','The value FALSE',()=>false);
+  def('Logic','SWITCH',3,-1,'value, match1, result1, …, [default]','Picks the result whose match equals the value',a=>{const v=sc(a[0]());if(isErr(v))return v;let i=1;for(;i+1<a.length;i+=2){const m=sc(a[i]());if(rank(m)===rank(v)&&cmp(m,v)===0)return a[i+1]();}return i<a.length?a[i]():ERR('#N/A');},true);
+  def('Logic','CHOOSE',2,-1,'index, value1, [value2], …','Picks a value by its position',a=>{const i=num(sc(a[0]()));if(isErr(i))return i;const k=Math.floor(i);return k>=1&&k<a.length?a[k]():ERR('#VALUE!');},true);
+  def('Lookup','VLOOKUP',3,4,'value, table, column, [approximate]','Finds a value in the first column and returns one from the same row',a=>{
+    const v=sc(a[0]);if(isErr(v))return v;const m=asM(a[1]).m;const col=N(a[2]);if(isErr(col))return col;if(col<1||col>m[0].length)return ERR('#REF!');
+    const approx=has(a,3)?bool(sc(a[3])):true;
+    if(!approx){for(const r of m)if(lookupEq(r[0],v))return r[col-1];return ERR('#N/A');}
+    let hit=-1;for(let i=0;i<m.length;i++){const x=m[i][0];if(x===null)continue;if(rank(x)===rank(v)&&cmp(x,v)<=0)hit=i;else if(rank(x)===rank(v))break;}
+    return hit<0?ERR('#N/A'):m[hit][col-1];});
+  def('Lookup','HLOOKUP',3,4,'value, table, row, [approximate]','Like VLOOKUP, but searches across the top row',a=>{
+    const v=sc(a[0]);if(isErr(v))return v;const m=asM(a[1]).m;const row=N(a[2]);if(isErr(row))return row;if(row<1||row>m.length)return ERR('#REF!');
+    const approx=has(a,3)?bool(sc(a[3])):true;const top=m[0];
+    if(!approx){for(let j=0;j<top.length;j++)if(lookupEq(top[j],v))return m[row-1][j];return ERR('#N/A');}
+    let hit=-1;for(let j=0;j<top.length;j++){const x=top[j];if(x===null)continue;if(rank(x)===rank(v)&&cmp(x,v)<=0)hit=j;else if(rank(x)===rank(v))break;}
+    return hit<0?ERR('#N/A'):m[row-1][hit];});
+  def('Lookup','XLOOKUP',3,5,'value, lookup_range, return_range, [if_not_found], [match_mode]','Finds a value and returns the matching item — the modern lookup',a=>{
+    const v=sc(a[0]);if(isErr(v))return v;const look=vec(a[1]),ret=vec(a[2]);if(look.length!==ret.length)return ERR('#VALUE!');
+    const mode=N(a[4],0);let i=look.findIndex(x=>lookupEq(x,v));
+    if(i<0&&(mode===-1||mode===1)){let best=-1;for(let k=0;k<look.length;k++){const x=look[k];if(x===null||rank(x)!==rank(v))continue;const d=cmp(x,v);if(mode===-1&&d<0&&(best<0||cmp(x,look[best])>0))best=k;if(mode===1&&d>0&&(best<0||cmp(x,look[best])<0))best=k;}i=best;}
+    if(i<0)return has(a,3)?sc(a[3]):ERR('#N/A');return ret[i];});
+  def('Lookup','INDEX',2,3,'range, row, [column]','The value at a given row and column of a range',a=>{
+    const m=asM(a[0]).m;let r=N(a[1]),c=N(a[2],0);if(isErr(r))return r;if(isErr(c))return c;
+    if(m.length===1&&!c){c=r;r=1;}if(!c)c=1;if(r<1||c<1||r>m.length||c>m[0].length)return ERR('#REF!');return m[r-1][c-1];});
+  def('Lookup','MATCH',2,3,'value, range, [match_type]','The position of a value in a list',a=>{
+    const v=sc(a[0]);if(isErr(v))return v;const l=vec(a[1]);const t=N(a[2],1);
+    if(t===0){const i=l.findIndex(x=>lookupEq(x,v));return i<0?ERR('#N/A'):i+1;}
+    let hit=-1;for(let i=0;i<l.length;i++){const x=l[i];if(x===null||rank(x)!==rank(v))continue;const d=cmp(x,v);if(t>0?d<=0:d>=0)hit=i;else break;}
+    return hit<0?ERR('#N/A'):hit+1;});
+  def('Lookup','ROWS',1,1,'range','How many rows a range has',a=>asM(a[0]).m.length);
+  def('Lookup','COLUMNS',1,1,'range','How many columns a range has',a=>asM(a[0]).m[0].length);
+  def('Text','CONCAT',1,-1,'text1, [text2], …','Joins text together',a=>{let s='';for(const {v} of flat(a)){if(isErr(v))return v;s+=str(v);}return s;});
+  def('Text','CONCATENATE',1,-1,'text1, [text2], …','Joins text together (older name)',a=>FN.CONCAT.fn(a));
+  def('Text','TEXTJOIN',3,-1,'delimiter, ignore_empty, text1, …','Joins text with a separator between each item',a=>{const d=textOf(a[0]),ig=bool(sc(a[1]));if(isErr(d))return d;const parts=[];for(const {v} of flat(a.slice(2))){if(isErr(v))return v;const s=str(v);if(ig&&s==='')continue;parts.push(s);}return parts.join(d);});
+  def('Text','LEFT',1,2,'text, [count]','The first characters of text',a=>{const s=textOf(a[0]),n=N(a[1],1);return isErr(s)?s:s.slice(0,Math.max(0,n));});
+  def('Text','RIGHT',1,2,'text, [count]','The last characters of text',a=>{const s=textOf(a[0]),n=N(a[1],1);return isErr(s)?s:n<=0?'':s.slice(-n);});
+  def('Text','MID',3,3,'text, start, count','Characters from the middle of text',a=>{const s=textOf(a[0]),st=N(a[1]),n=N(a[2]);if(isErr(s))return s;if(st<1)return ERR('#VALUE!');return s.substr(st-1,Math.max(0,n));});
+  def('Text','LEN',1,1,'text','How many characters',a=>{const s=textOf(a[0]);return isErr(s)?s:s.length;});
+  def('Text','UPPER',1,1,'text','CAPITALS',a=>{const s=textOf(a[0]);return isErr(s)?s:s.toUpperCase();});
+  def('Text','LOWER',1,1,'text','lower case',a=>{const s=textOf(a[0]);return isErr(s)?s:s.toLowerCase();});
+  def('Text','PROPER',1,1,'text','Capitalises Each Word',a=>{const s=textOf(a[0]);return isErr(s)?s:s.toLowerCase().replace(/(^|[^A-Za-z'])([a-z])/g,(m,p,c)=>p+c.toUpperCase());});
+  def('Text','TRIM',1,1,'text','Removes extra spaces',a=>{const s=textOf(a[0]);return isErr(s)?s:s.trim().replace(/ {2,}/g,' ');});
+  def('Text','SUBSTITUTE',3,4,'text, old, new, [which]','Replaces old text with new text',a=>{const s=textOf(a[0]),o=textOf(a[1]),n=textOf(a[2]);if(isErr(s))return s;if(o==='')return s;
+    if(!has(a,3))return s.split(o).join(n);const w=N(a[3]);let i=-1;for(let k=0;k<w;k++){i=s.indexOf(o,i+1);if(i<0)return s;}return s.slice(0,i)+n+s.slice(i+o.length);});
+  def('Text','REPLACE',4,4,'text, start, count, new_text','Replaces characters at a position',a=>{const s=textOf(a[0]),st=N(a[1]),n=N(a[2]),t=textOf(a[3]);if(isErr(s))return s;return s.slice(0,st-1)+t+s.slice(st-1+n);});
+  def('Text','FIND',2,3,'find, within, [start]','Position of text (matches capitals exactly)',a=>{const f=textOf(a[0]),s=textOf(a[1]),st=N(a[2],1);if(isErr(s))return s;const i=s.indexOf(f,st-1);return i<0?ERR('#VALUE!'):i+1;});
+  def('Text','SEARCH',2,3,'find, within, [start]','Position of text (ignores capitals, allows * and ?)',a=>{const f=textOf(a[0]),s=textOf(a[1]),st=N(a[2],1);if(isErr(s))return s;
+    const re=new RegExp(String(f).replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.'),'i');const m=re.exec(s.slice(st-1));return m?m.index+st:ERR('#VALUE!');});
+  def('Text','REPT',2,2,'text, times','Repeats text',a=>{const s=textOf(a[0]),n=N(a[1]);return isErr(s)?s:n<0?ERR('#VALUE!'):s.repeat(Math.min(1000,Math.floor(n)));});
+  def('Text','TEXT',2,2,'value, format','Formats a number as text — e.g. "0.00", "$#,##0", "dd mmm yyyy"',a=>{const v=sc(a[0]),f=textOf(a[1]);if(isErr(v))return v;const x=num(v);if(isErr(x))return str(v);return fmtPattern(x,f);});
+  def('Text','VALUE',1,1,'text','Turns text that looks like a number into a number',a=>{const v=sc(a[0]);if(typeof v==='number')return v;const l=literal(str(v));return typeof l==='number'?l:ERR('#VALUE!');});
+  def('Text','EXACT',2,2,'text1, text2','TRUE if two texts match exactly',a=>textOf(a[0])===textOf(a[1]));
+  def('Text','CHAR',1,1,'number','The character for a code',a=>{const n=N(a[0]);return isErr(n)?n:String.fromCharCode(n);});
+  def('Text','CODE',1,1,'text','The code of the first character',a=>{const s=textOf(a[0]);return isErr(s)?s:s?s.charCodeAt(0):ERR('#VALUE!');});
+  def('Information','ISNUMBER',1,1,'value','TRUE if the value is a number',a=>typeof sc(a[0])==='number');
+  def('Information','ISTEXT',1,1,'value','TRUE if the value is text',a=>typeof sc(a[0])==='string');
+  def('Information','ISBLANK',1,1,'value','TRUE if the cell is empty',a=>sc(a[0])===null);
+  def('Information','ISERROR',1,1,'value','TRUE if the value is any error',a=>isErr(sc(a[0])));
+  def('Information','ISNA',1,1,'value','TRUE if the value is #N/A',a=>{const v=sc(a[0]);return isErr(v)&&v.err==='#N/A';});
+  def('Information','ISLOGICAL',1,1,'value','TRUE if the value is TRUE or FALSE',a=>typeof sc(a[0])==='boolean');
+  def('Information','ISEVEN',1,1,'number','TRUE if the number is even',a=>{const x=N(a[0]);return isErr(x)?x:Math.trunc(x)%2===0;});
+  def('Information','ISODD',1,1,'number','TRUE if the number is odd',a=>{const x=N(a[0]);return isErr(x)?x:Math.abs(Math.trunc(x)%2)===1;});
+  def('Information','N',1,1,'value','Turns a value into a number',a=>{const v=sc(a[0]);return typeof v==='number'?v:typeof v==='boolean'?+v:isErr(v)?v:0;});
+  def('Date','TODAY',0,0,'','Today’s date',()=>todaySerial());
+  def('Date','NOW',0,0,'','The date and time now',()=>{const d=new Date();return todaySerial()+(d.getHours()*3600+d.getMinutes()*60+d.getSeconds())/86400;});
+  def('Date','DATE',3,3,'year, month, day','Builds a date',a=>{const y=N(a[0]),m=N(a[1]),d=N(a[2]);for(const x of[y,m,d])if(isErr(x))return x;return serial(y,m-1,d);});
+  def('Date','YEAR',1,1,'date','The year of a date',a=>{const d=toDate(a[0]);return isErr(d)?d:d.getUTCFullYear();});
+  def('Date','MONTH',1,1,'date','The month of a date (1–12)',a=>{const d=toDate(a[0]);return isErr(d)?d:d.getUTCMonth()+1;});
+  def('Date','DAY',1,1,'date','The day of the month',a=>{const d=toDate(a[0]);return isErr(d)?d:d.getUTCDate();});
+  def('Date','WEEKDAY',1,2,'date, [type]','Day of the week (1 = Sunday)',a=>{const d=toDate(a[0]),t=N(a[1],1);if(isErr(d))return d;const w=d.getUTCDay();return t===2?(w+6)%7+1:t===3?(w+6)%7:w+1;});
+  def('Date','EDATE',2,2,'date, months','The same day some months later',a=>{const d=toDate(a[0]),m=N(a[1]);if(isErr(d))return d;const y=d.getUTCFullYear(),mo=d.getUTCMonth()+Math.trunc(m);const last=new Date(Date.UTC(y,mo+1,0)).getUTCDate();return serial(y,mo,Math.min(d.getUTCDate(),last));});
+  def('Date','EOMONTH',2,2,'date, months','The last day of the month, some months away',a=>{const d=toDate(a[0]),m=N(a[1]);if(isErr(d))return d;return serial(d.getUTCFullYear(),d.getUTCMonth()+Math.trunc(m)+1,0);});
+  def('Date','DAYS',2,2,'end_date, start_date','Days between two dates',a=>{const e=N(a[0]),s=N(a[1]);return isErr(e)?e:isErr(s)?s:Math.floor(e)-Math.floor(s);});
+  def('Date','DATEDIF',3,3,'start, end, unit ("Y","M","D")','Whole years, months or days between dates',a=>{
+    const s=toDate(a[0]),e=toDate(a[1]),u=String(textOf(a[2])).toUpperCase();if(isErr(s))return s;if(isErr(e))return e;if(e<s)return ERR('#NUM!');
+    let mo=(e.getUTCFullYear()-s.getUTCFullYear())*12+e.getUTCMonth()-s.getUTCMonth();if(e.getUTCDate()<s.getUTCDate())mo--;
+    if(u==='Y')return Math.floor(mo/12);if(u==='M')return mo;if(u==='D')return Math.round((e-s)/864e5);return ERR('#NUM!');});
+  def('Date','NETWORKDAYS',2,2,'start, end','Working days (Mon–Fri) between dates',a=>{const s=N(a[0]),e=N(a[1]);if(isErr(s))return s;if(isErr(e))return e;let n=0;const st=Math.min(s,e),en=Math.max(s,e);if(en-st>40000)return ERR('#NUM!');for(let x=Math.floor(st);x<=en;x++){const w=fromSerial(x).getUTCDay();if(w&&w<6)n++;}return e<s?-n:n;});
+  def('Date','DATEVALUE',1,1,'text','Turns a date written as text into a date',a=>{const l=literal(textOf(a[0]));return typeof l==='number'?l:ERR('#VALUE!');});
+  const fin=(a,i,d)=>N(a[i],d);
+  def('Finance','PMT',3,5,'rate, periods, present_value, [future_value], [type]','The repayment each period for a loan',a=>{const r=fin(a,0),n=fin(a,1),pv=fin(a,2),fv=fin(a,3,0),t=fin(a,4,0);if(!n)return ERR('#NUM!');if(r===0)return-(pv+fv)/n;const q=Math.pow(1+r,n);return-(r*(fv+pv*q))/((1+r*t)*(q-1));});
+  def('Finance','FV',3,5,'rate, periods, payment, [present_value], [type]','What an investment will be worth',a=>{const r=fin(a,0),n=fin(a,1),p=fin(a,2),pv=fin(a,3,0),t=fin(a,4,0);if(r===0)return-(pv+p*n);const q=Math.pow(1+r,n);return-(pv*q+p*(1+r*t)*(q-1)/r);});
+  def('Finance','PV',3,5,'rate, periods, payment, [future_value], [type]','What future payments are worth today',a=>{const r=fin(a,0),n=fin(a,1),p=fin(a,2),fv=fin(a,3,0),t=fin(a,4,0);if(r===0)return-(fv+p*n);const q=Math.pow(1+r,n);return-(fv+p*(1+r*t)*(q-1)/r)/q;});
+  def('Finance','NPV',2,-1,'rate, value1, [value2], …','Net present value of future cash flows',a=>{const r=N(a[0]);const n=nums(a.slice(1));if(isErr(n))return n;return n.reduce((s,x,i)=>s+x/Math.pow(1+r,i+1),0);});
+  const ERRTXT={'#DIV/0!':'Divided by zero: the bottom number is 0 or empty.','#NAME?':'Unknown function or name. Check the spelling, or put text in "quotes".',
+    '#REF!':'Points at a cell that no longer exists.','#VALUE!':'Wrong kind of value, e.g. text where a number is needed.','#N/A':'Not found: the value isn’t in the list.',
+    '#CIRC!':'This formula depends on its own result.','#NUM!':'The number is out of range.','#ERROR!':'The formula can’t be read. Check the brackets, commas and quotes.'};
+  const REFRE=/("(?:[^"]|"")*")|(\$?[A-Za-z]{1,3}\$?\d+)(?::(\$?[A-Za-z]{1,3}\$?\d+))?(?![A-Za-z0-9_(.])/g;
+  function mapRefs(raw,fnRef,fnRange){
+    if(!raw||raw[0]!=='=')return raw;
+    return raw.replace(REFRE,(m,s,a,b,off,whole)=>{
+      if(s)return m;const prev=whole[off-1];if(prev&&/[A-Za-z0-9_.]/.test(prev))return m;
+      const A=parseRef(a);if(!A)return m;
+      if(b){const B=parseRef(b);if(!B)return m;const res=fnRange?fnRange(A,B):(()=>{const x=fnRef(A),y=fnRef(B);return x&&y?[x,y]:null;})();return res?refText(res[0])+':'+refText(res[1]):'#REF!';}
+      const res=fnRef(A);return res?refText(res):'#REF!';
+    });
+  }
+  const shiftF=(raw,dr,dc)=>mapRefs(raw,x=>{const r=x.ar?x.r:x.r+dr,c=x.ac?x.c:x.c+dc;return r<0||c<0?null:Object.assign({},x,{r,c});});
+  function axisOp(raw,axis,at,n){
+    const g=x=>axis==='r'?x.r:x.c,s=(x,v)=>Object.assign({},x,axis==='r'?{r:v}:{c:v});
+    if(n>0)return mapRefs(raw,x=>g(x)>=at?s(x,g(x)+n):x);
+    const k=-n,end=at+k-1;
+    return mapRefs(raw,x=>{const v=g(x);if(v<at)return x;if(v<=end)return null;return s(x,v-k);},(A,B)=>{
+      let a=g(A),b=g(B);if(a>=at&&b<=end)return null;
+      a=a<at?a:a<=end?at:a-k;b=b<at?b:b<=end?at-1:b-k;if(b<a)return null;return[s(A,a),s(B,b)];});
+  }
+  function refsIn(t){
+    if(!t||t[0]!=='=')return[];const out=[];let m;const re=new RegExp(REFRE.source,'g');
+    while((m=re.exec(t))){if(m[1])continue;const prev=t[m.index-1];if(prev&&/[A-Za-z0-9_.]/.test(prev))continue;const a=parseRef(m[2]),b=m[3]?parseRef(m[3]):a;if(a&&b)out.push({r1:Math.min(a.r,b.r),c1:Math.min(a.c,b.c),r2:Math.max(a.r,b.r),c2:Math.max(a.c,b.c)});}
+    return out;
+  }
+  /* Evaluates every cell of `state` fresh; returns a getter. One state at a
+     time — the engine is synchronous, so a shared S/cache is safe. */
+  function evaluate(state){S=state;cache=new Map();return (r,c)=>{const prev=S;S=state;const v=cellValue(r,c);S=prev;return v;};}
+  return {evaluate,display,literal,autoFmt,shiftF,axisOp,refsIn,cmp,sum,fmtPattern,colName,addr,parseRef,isErr,FN,ERRTXT,
+    evalFormula:(state,src)=>{S=state;cache=new Map();return evalFormula(src);}};
+})();
+
+const _SG_MAX_ROWS=500,_SG_MAX_COLS=52;
+function _sgNew(){return{v:1,rows:12,cols:6,cells:{},colW:{}};}
+function _sgParse(el){try{const d=JSON.parse(el.getAttribute('data-sg')||'');if(d&&d.cells&&d.rows&&d.cols)return d;}catch(e){}return null;}
+/* The snapshot a note's content carries: the used range only, as values. */
+function _sgStaticHTML(state){
+  const get=SGE.evaluate(state);
+  let r2=-1,c2=-1;
+  for(const k in state.cells){const [r,c]=k.split(',').map(Number);const o=state.cells[k];if(o&&(o.raw||o.bg)){if(r>r2)r2=r;if(c>c2)c2=c;}}
+  if(r2<0){r2=Math.min(2,state.rows-1);c2=Math.min(2,state.cols-1);}
+  let h='<table class="sg-static"><tbody>';
+  for(let r=0;r<=r2;r++){h+='<tr>';for(let c=0;c<=c2;c++){
+    const o=state.cells[r+','+c]||{};const v=get(r,c);const t=SGE.display(v,o.fmt);
+    const al=o.al||(typeof v==='number'?'r':typeof v==='boolean'||SGE.isErr(v)?'c':'');
+    const st=[];if(o.b)st.push('font-weight:700');if(o.i)st.push('font-style:italic');if(o.bg)st.push('background:'+o.bg);
+    if(al==='r')st.push('text-align:right');else if(al==='c')st.push('text-align:center');
+    h+='<td'+(st.length?' style="'+st.join(';')+'"':'')+'>'+esc(t)+'</td>';}h+='</tr>';}
+  return h+'</tbody></table>';
+}
+/* Called by _edColClean() on every save path: strip the live grid back to the
+   stored shape. Works on a CLONE, never on the live editor. */
+function _sgCanon(node){
+  if(!node||!node.querySelectorAll)return;
+  node.querySelectorAll('.sgx').forEach(function(el){
+    const st=el.querySelector(':scope > .sg-static');
+    const snap=st?st.outerHTML:(function(){const d=_sgParse(el);return d?_sgStaticHTML(d):'';})();
+    /* Attribute ORDER matters: a.content is compared as a string, so re-adding
+       one in a new position would make an untouched note look edited. */
+    [...el.attributes].forEach(function(a){if(a.name!=='class'&&a.name!=='data-sg'&&a.name!=='contenteditable')el.removeAttribute(a.name);});
+    el.className='sgx';el.setAttribute('contenteditable','false');
+    el.innerHTML=snap;
+    const t=el.querySelector('.sg-static');if(t)t.removeAttribute('hidden');
+  });
+}
+function _sgHydrateAll(root,editable){
+  if(!root||!root.querySelectorAll)return;
+  root.querySelectorAll('.sgx').forEach(function(el){
+    if(el._sg){ if(el._sg.editable===!!editable)return; el._sg.destroy(); }
+    const d=_sgParse(el);if(!d)return;
+    _sgMount(el,d,!!editable);
+  });
+}
+/* ＋ Insert → ▦ Spreadsheet. Built with DOM calls rather than
+   insertAtCaret(): execCommand('insertHTML') sanitises what it inserts, and
+   a data attribute that carries the whole sheet is exactly what must not be
+   lost on the way in. */
+function insertSheet(ev){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  try{hideCtx();}catch(e){}
+  /* The phone's `+` menu is a sticky pop that would otherwise sit on top of
+     the table it just inserted. */
+  try{_closeStickyPop('eb-pop');}catch(e){}
+  _restoreCaret();
+  const ed=_edActive();
+  if(!ed||!ed.isContentEditable){toast('Open a note for editing first');return;}
+  const s=window.getSelection();
+  let blk=(s&&s.rangeCount&&_isED(s.anchorNode))?s.anchorNode:null;
+  while(blk&&blk.parentNode!==ed)blk=blk.parentNode;
+  if(blk&&blk.nodeType===1&&blk.closest&&blk.closest('.sgx'))blk=blk.closest('.sgx');
+  const d=_sgNew();
+  const el=document.createElement('div');
+  el.className='sgx';el.setAttribute('contenteditable','false');el.setAttribute('data-sg',JSON.stringify(d));
+  el.innerHTML=_sgStaticHTML(d);
+  const after=document.createElement('p');after.innerHTML='<br>';
+  const emptyBlock=blk&&blk.nodeType===1&&blk.tagName!=='DIV'&&!(blk.textContent||'').trim()&&!blk.querySelector('img,table,[contenteditable="false"]');
+  if(emptyBlock)ed.replaceChild(el,blk);
+  else if(blk)blk.after(el);
+  else ed.appendChild(el);
+  el.after(after);
+  _sgMount(el,d,true);
+  _edTouched(ed);
+  try{el._sg.focusGrid();}catch(e){}
+  toast('▦ Spreadsheet inserted: type in a cell, start a formula with =');
+}
+
+/* One menu, one function list, one drag — shared by every mounted sheet. */
+let _sgCur=null,_sgDragS=null;
+function _sgMenuEl(){let m=document.getElementById('sg-menu');if(!m){m=document.createElement('div');m.id='sg-menu';m.className='sg-menu';m.hidden=true;m.setAttribute('role','menu');document.body.appendChild(m);
+  m.addEventListener('mousedown',function(e){e.preventDefault();});
+  m.addEventListener('click',function(e){const b=e.target.closest('button');if(!b||!_sgCur)return;m.hidden=true;_sgCur.act(b.dataset.m);});}return m;}
+function _sgFnEl(){let p=document.getElementById('sg-fnp');if(!p){p=document.createElement('div');p.id='sg-fnp';p.className='sg-fnp';p.hidden=true;
+  p.innerHTML='<div class="sg-fh"><input class="sg-fnq" placeholder="Search functions — e.g. lookup, date, round" autocomplete="off"><button type="button" class="sg-b sg-fnx" title="Close">✕</button></div><div class="sg-fl"></div>';
+  document.body.appendChild(p);
+  const q=p.querySelector('.sg-fnq'),l=p.querySelector('.sg-fl');
+  const draw=()=>{const s=q.value.trim().toLowerCase();const cats={};
+    for(const k of Object.keys(SGE.FN).sort()){const f=SGE.FN[k];if(s&&!(k.toLowerCase().includes(s)||f.desc.toLowerCase().includes(s)||f.cat.toLowerCase().includes(s)))continue;(cats[f.cat]||(cats[f.cat]=[])).push(k);}
+    let h='';for(const c of['Maths','Statistics','Conditional','Logic','Lookup','Text','Date','Finance','Information'])if(cats[c])h+='<h4>'+c+'</h4>'+cats[c].map(k=>'<button type="button" class="sg-fi" data-fn="'+k+'"><code>'+k+'('+esc(SGE.FN[k].sig)+')</code><span>'+esc(SGE.FN[k].desc)+'</span></button>').join('');
+    l.innerHTML=h||'<p class="sg-fnone">No function matches that. Try a shorter word.</p>';};
+  p._draw=draw;q.addEventListener('input',draw);
+  p.querySelector('.sg-fnx').addEventListener('click',function(){p.hidden=true;});
+  p.addEventListener('keydown',function(e){e.stopPropagation();if(e.key==='Escape')p.hidden=true;});
+  l.addEventListener('mousedown',function(e){if(e.target.closest('[data-fn]'))e.preventDefault();});
+  l.addEventListener('click',function(e){const b=e.target.closest('[data-fn]');if(!b||!_sgCur)return;p.hidden=true;_sgCur.insertFn(b.dataset.fn);});}
+  return p;}
+document.addEventListener('mousemove',function(e){if(_sgDragS)_sgDragS.onDrag(e);});
+document.addEventListener('mouseup',function(){if(_sgDragS){const s=_sgDragS;_sgDragS=null;s.onDragEnd();}});
+document.addEventListener('mousedown',function(e){
+  const m=document.getElementById('sg-menu');if(m&&!m.hidden&&!m.contains(e.target))m.hidden=true;
+  const p=document.getElementById('sg-fnp');if(p&&!p.hidden&&!p.contains(e.target)&&!(e.target.closest&&e.target.closest('[data-a="fn"]')))p.hidden=true;
+  if(_sgCur&&_sgCur.editing()&&!_sgCur.root.contains(e.target)&&!(p&&p.contains(e.target)))_sgCur.commit();
+},true);
+
+function _sgMount(root,state,editable){
+  const S0=state;let S=state;
+  const self={root,editable};root._sg=self;
+  let A={r:0,c:0},SEL={r1:0,c1:0,r2:0,c2:0},E=null,drag=null,clip=null,lastPtr='mouse',TD=[],sugg=[],get=null;
+  const U=[],R=[];
+  const K=(r,c)=>r+','+c;
+  const cellO=(r,c)=>S.cells[K(r,c)];
+  const rawOf=(r,c)=>{const o=cellO(r,c);return o&&o.raw!=null?o.raw:'';};
+  const tidy=k=>{const o=S.cells[k];if(o&&!o.raw&&!o.b&&!o.i&&!o.al&&!o.fmt&&!o.bg)delete S.cells[k];};
+  const setRaw=(r,c,raw)=>{const k=K(r,c);S.cells[k]=Object.assign(S.cells[k]||{},{raw});tidy(k);};
+  const setProp=(r,c,p,v)=>{const k=K(r,c);const o=S.cells[k]||(S.cells[k]={raw:''});if(v===undefined||v===''||v===false)delete o[p];else o[p]=v;tidy(k);};
+  const norm=s=>({r1:Math.min(s.r1,s.r2),c1:Math.min(s.c1,s.c2),r2:Math.max(s.r1,s.r2),c2:Math.max(s.c1,s.c2)});
+  const narrow=()=>window.innerWidth<640;
+  const {colName,addr}=SGE;
+
+  /* ── DOM ── */
+  let st=root.querySelector(':scope > .sg-static');
+  if(!st){root.insertAdjacentHTML('afterbegin',_sgStaticHTML(S));st=root.querySelector(':scope > .sg-static');}
+  st.setAttribute('hidden','');
+  const ui=document.createElement('div');ui.className='sg-ui'+(editable?' sg-edit':' sg-read');
+  ui.innerHTML=(editable?'<div class="sg-tb">'
+      +'<button type="button" class="sg-b" data-a="undo" title="Undo (Ctrl+Z)">↶</button>'
+      +'<button type="button" class="sg-b" data-a="redo" title="Redo (Ctrl+Y)">↷</button><span class="sg-sep"></span>'
+      +'<button type="button" class="sg-b sg-bB" data-a="bold" title="Bold (Ctrl+B)"><b>B</b></button>'
+      +'<button type="button" class="sg-b sg-bI" data-a="ital" title="Italic (Ctrl+I)"><i>I</i></button>'
+      +'<button type="button" class="sg-b sg-bL" data-a="al-l" title="Align left">⇤</button>'
+      +'<button type="button" class="sg-b sg-bC" data-a="al-c" title="Align centre">↔</button>'
+      +'<button type="button" class="sg-b sg-bR" data-a="al-r" title="Align right">⇥</button>'
+      +'<select class="sg-b sg-fmt" title="Number format" aria-label="Number format"><option value="">General</option><option value="number">1,234.00</option><option value="currency">$ Currency</option><option value="percent">% Percent</option><option value="date">Date</option></select>'
+      +'<button type="button" class="sg-sw" data-bg="" title="No fill"></button>'
+      +'<button type="button" class="sg-sw" data-bg="#E3F1E7" title="Green fill" style="background:#E3F1E7"></button>'
+      +'<button type="button" class="sg-sw" data-bg="#F6EAD2" title="Gold fill" style="background:#F6EAD2"></button>'
+      +'<button type="button" class="sg-sw" data-bg="#FBE3E3" title="Rose fill" style="background:#FBE3E3"></button><span class="sg-sep"></span>'
+      +'<button type="button" class="sg-b" data-a="sortA" title="Sort A→Z / smallest first">↑ Sort</button>'
+      +'<button type="button" class="sg-b" data-a="sortZ" title="Sort Z→A / largest first">↓ Sort</button>'
+      +'<button type="button" class="sg-b" data-a="rc" title="Insert or delete rows and columns">Rows &amp; columns ▾</button>'
+      +'<button type="button" class="sg-b" data-a="fill" title="Fill down (Ctrl+D)">Fill down</button><span class="sg-sep"></span>'
+      +'<button type="button" class="sg-b sg-fxb" data-a="fn" title="Browse every function">ƒx Functions</button>'
+      +'<button type="button" class="sg-b sg-del" data-a="del" title="Remove this spreadsheet from the note">Remove</button>'
+      +'</div>':'')
+    +'<div class="sg-fxbar"><div class="sg-name">A1</div><div class="sg-fxi">ƒx</div><input class="sg-fx" autocomplete="off" spellcheck="false" aria-label="Formula bar"'+(editable?'':' readonly')+'></div>'
+    +'<div class="sg-hint" hidden></div>'
+    +'<div class="sg-gw" tabindex="0"><table class="sg-g"></table><input class="sg-ced" hidden autocomplete="off" spellcheck="false" aria-label="Cell editor"></div>'
+    +'<div class="sg-keys" hidden></div>'
+    +'<div class="sg-status"></div>';
+  root.appendChild(ui);
+  const q=s=>ui.querySelector(s);
+  const grid=q('.sg-g'),gw=q('.sg-gw'),fx=q('.sg-fx'),ced=q('.sg-ced'),nameBox=q('.sg-name'),hint=q('.sg-hint'),keys=q('.sg-keys'),statusEl=q('.sg-status');
+
+  /* Everything typed, pasted or clicked in here is the sheet's business, not
+     the note editor's (its Enter rules, its document-level Ctrl+Z, its input
+     → autosave). */
+  ['keydown','keypress','keyup','input','beforeinput','paste','copy','cut','compositionstart','compositionend','drop','dragstart'].forEach(function(t){
+    ui.addEventListener(t,function(e){e.stopPropagation();if(t==='drop'||t==='dragstart')e.preventDefault();});
+  });
+
+  function changed(){
+    const json=JSON.stringify(S);
+    if(root.getAttribute('data-sg')===json)return;
+    root.setAttribute('data-sg',json);
+    const fresh=document.createElement('div');fresh.innerHTML=_sgStaticHTML(S);
+    const nt=fresh.firstChild;nt.setAttribute('hidden','');st.replaceWith(nt);st=nt;
+    const host=_edHost(root);if(host)_edTouched(host);
+  }
+  function snap(){U.push(JSON.stringify(S));if(U.length>100)U.shift();R.length=0;}
+  function undo(){if(!U.length)return toast('Nothing to undo in this table');R.push(JSON.stringify(S));S=JSON.parse(U.pop());after();}
+  function redo(){if(!R.length)return toast('Nothing to redo in this table');U.push(JSON.stringify(S));S=JSON.parse(R.pop());after();}
+  function after(){clampSel();renderGrid();changed();}
+  function clampSel(){A.r=Math.min(A.r,S.rows-1);A.c=Math.min(A.c,S.cols-1);SEL={r1:Math.min(SEL.r1,S.rows-1),c1:Math.min(SEL.c1,S.cols-1),r2:Math.min(SEL.r2,S.rows-1),c2:Math.min(SEL.c2,S.cols-1)};}
+  const val=(r,c)=>get?get(r,c):null;
+
+  function renderGrid(){
+    let h='<colgroup><col style="width:40px">';
+    for(let c=0;c<S.cols;c++)h+='<col style="width:'+((S.colW&&S.colW[c])||96)+'px">';
+    h+='</colgroup><thead><tr><th class="sg-corner" title="Select all"></th>';
+    for(let c=0;c<S.cols;c++)h+='<th class="sg-ch" data-c="'+c+'">'+colName(c)+(editable?'<span class="sg-rz" data-c="'+c+'"></span>':'')+'</th>';
+    h+='</tr></thead><tbody>';
+    for(let r=0;r<S.rows;r++){h+='<tr><th class="sg-rh" data-r="'+r+'">'+(r+1)+'</th>';for(let c=0;c<S.cols;c++)h+='<td data-r="'+r+'" data-c="'+c+'"></td>';h+='</tr>';}
+    grid.innerHTML=h+'</tbody>';
+    TD=[];grid.querySelectorAll('td').forEach(td=>{const r=+td.dataset.r;(TD[r]||(TD[r]=[]))[+td.dataset.c]=td;});
+    refresh();
+  }
+  function refresh(){
+    get=SGE.evaluate(S);
+    for(let r=0;r<S.rows;r++)for(let c=0;c<S.cols;c++){
+      const td=TD[r][c],o=cellO(r,c),v=get(r,c);
+      const txt=SGE.display(v,o&&o.fmt);
+      let cls=SGE.isErr(v)?'sg-er':'sg-'+((o&&o.al)||(typeof v==='number'?'r':typeof v==='boolean'?'c':'l'));
+      if(o&&o.b)cls+=' sg-bo';if(o&&o.i)cls+=' sg-it';
+      td.className=cls;td.textContent=txt;td.style.backgroundColor=o&&o.bg?o.bg:'';
+      td.title=SGE.isErr(v)?(SGE.ERRTXT[v.err]||''):(txt.length>14?txt:'');
+    }
+    paint();
+  }
+  function paint(){
+    const s=norm(SEL);const refs=E?SGE.refsIn(inputEl().value):[];
+    for(let r=0;r<S.rows;r++)for(let c=0;c<S.cols;c++){
+      const td=TD[r][c];const inS=r>=s.r1&&r<=s.r2&&c>=s.c1&&c<=s.c2;
+      td.classList.toggle('sg-sel',inS&&!(s.r1===s.r2&&s.c1===s.c2));
+      td.classList.toggle('sg-act',r===A.r&&c===A.c);
+      for(let k=0;k<5;k++)td.classList.remove('sg-rf'+k);
+    }
+    refs.forEach((x,i)=>{for(let r=x.r1;r<=Math.min(x.r2,S.rows-1);r++)for(let c=x.c1;c<=Math.min(x.c2,S.cols-1);c++)if(TD[r]&&TD[r][c])TD[r][c].classList.add('sg-rf'+(i%5));});
+    grid.querySelectorAll('th.sg-ch').forEach(th=>th.classList.toggle('sg-hl',+th.dataset.c>=s.c1&&+th.dataset.c<=s.c2));
+    grid.querySelectorAll('th.sg-rh').forEach(th=>th.classList.toggle('sg-hl',+th.dataset.r>=s.r1&&+th.dataset.r<=s.r2));
+    nameBox.textContent=(s.r1===s.r2&&s.c1===s.c2)?addr(A.r,A.c):addr(s.r1,s.c1)+':'+addr(s.r2,s.c2);
+    if(!E)fx.value=rawOf(A.r,A.c);
+    if(editable){const o=cellO(A.r,A.c)||{};
+      q('.sg-bB').classList.toggle('on',!!o.b);q('.sg-bI').classList.toggle('on',!!o.i);
+      q('.sg-bL').classList.toggle('on',o.al==='l');q('.sg-bC').classList.toggle('on',o.al==='c');q('.sg-bR').classList.toggle('on',o.al==='r');
+      q('.sg-fmt').value=o.fmt||'';}
+    status();
+  }
+  function status(){
+    const s=norm(SEL);const n=[];let cnt=0;
+    for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1;c<=s.c2;c++){const v=val(r,c);if(v!==null&&v!=='')cnt++;if(typeof v==='number')n.push(v);}
+    if((s.r1===s.r2&&s.c1===s.c2)||!cnt){statusEl.innerHTML='<span>'+(editable?'Select several cells to see their total':'Read only: tap Edit to change this table')+'</span>';return;}
+    const f=x=>SGE.fmtPattern(x,'#,##0.##');
+    statusEl.innerHTML=(n.length?'<span>Sum <b>'+f(SGE.sum(n))+'</b></span><span>Average <b>'+f(SGE.sum(n)/n.length)+'</b></span>':'')+'<span>Count <b>'+cnt+'</b></span>';
+  }
+  function scrollIntoCell(r,c){const td=TD[r]&&TD[r][c];if(!td)return;const tr=td.getBoundingClientRect(),g=gw.getBoundingClientRect();
+    const lw=40,hh=27;if(tr.left<g.left+lw)gw.scrollLeft-=g.left+lw-tr.left;else if(tr.right>g.right)gw.scrollLeft+=tr.right-g.right+2;
+    if(tr.top<g.top+hh)gw.scrollTop-=g.top+hh-tr.top;else if(tr.bottom>g.bottom)gw.scrollTop+=tr.bottom-g.bottom+2;}
+  function select(r,c,extend){r=Math.max(0,Math.min(S.rows-1,r));c=Math.max(0,Math.min(S.cols-1,c));
+    if(extend){SEL.r2=r;SEL.c2=c;}else{A={r,c};SEL={r1:r,c1:c,r2:r,c2:c};}paint();scrollIntoCell(extend?r:A.r,extend?c:A.c);}
+  function move(dr,dc,extend,jump){
+    let r=extend?SEL.r2:A.r,c=extend?SEL.c2:A.c;
+    if(jump){const hasV=(y,x)=>rawOf(y,x)!=='';const cur=hasV(r,c);let y=r,x=c;
+      for(;;){const ny=y+dr,nx=x+dc;if(ny<0||nx<0||ny>=S.rows||nx>=S.cols)break;y=ny;x=nx;if(!cur&&hasV(y,x))break;if(cur&&!hasV(y+dr,x+dc))break;}r=y;c=x;}
+    else{r+=dr;c+=dc;}
+    /* Walking off the bottom or right edge of a small sheet grows it, the way
+       a note grows when you keep typing. */
+    if(editable&&!extend&&!jump){if(r>=S.rows&&S.rows<_SG_MAX_ROWS){S.rows++;renderGrid();changed();}if(c>=S.cols&&S.cols<_SG_MAX_COLS){S.cols++;renderGrid();changed();}}
+    select(r,c,extend);
+  }
+
+  /* ── editing ── */
+  const inputEl=()=>E&&E.via==='bar'?fx:ced;
+  function startEdit(text,keep,via){
+    if(!editable)return;
+    via=via||(narrow()?'bar':'cell');
+    E={r:A.r,c:A.c,via,mode:keep?'edit':'enter',pt:null};_sgCur=self;
+    const v=keep?rawOf(A.r,A.c):(text||'');
+    fx.value=v;ced.value=v;
+    if(via==='cell'){placeEditor();ced.hidden=false;ced.focus({preventScroll:true});}else{ced.hidden=true;fx.focus({preventScroll:true});}
+    inputEl().setSelectionRange(v.length,v.length);
+    keys.hidden=!narrow();if(!keys.hidden)renderKeys();
+    onEditInput();
+  }
+  function placeEditor(){if(!E)return;const td=TD[E.r][E.c];ced.style.left=td.offsetLeft+'px';ced.style.top=td.offsetTop+'px';ced.style.height=td.offsetHeight+'px';
+    ced.style.minWidth=td.offsetWidth+'px';ced.style.width=Math.max(td.offsetWidth,Math.min(420,(ced.value.length+2)*8))+'px';}
+  function commit(){
+    if(!E)return;let v=inputEl().value;const {r,c}=E;
+    if(v[0]==='='){let d=0,qq=false;for(const ch of v){if(ch==='"')qq=!qq;else if(!qq){if(ch==='(')d++;else if(ch===')')d--;}}if(d>0&&!qq)v+=')'.repeat(d);}
+    E=null;ced.hidden=true;keys.hidden=true;hint.hidden=true;
+    if(v!==rawOf(r,c)){snap();setRaw(r,c,v);const f=SGE.autoFmt(v);if(f&&!(cellO(r,c)||{}).fmt)setProp(r,c,'fmt',f);refresh();changed();}
+    else paint();
+    gw.focus({preventScroll:true});
+  }
+  function cancel(){if(!E)return;E=null;ced.hidden=true;keys.hidden=true;hint.hidden=true;paint();gw.focus({preventScroll:true});}
+  function onEditInput(src){
+    if(!E)return;const v=(src||inputEl()).value;
+    if(src===fx)ced.value=v;else fx.value=v;
+    if(E.via==='cell')placeEditor();
+    showHint();paint();
+  }
+  function pointable(){if(!E)return false;const el=inputEl(),v=el.value;if(v[0]!=='=')return false;const pos=el.selectionStart;
+    if(E.pt&&pos===E.pt.start+E.pt.len)return true;const before=v.slice(0,pos).replace(/\s+$/,'');return /[=(,+\-*\/^&<>:]$/.test(before);}
+  function insertAtCaretSg(t){const el=inputEl();const s=el.selectionStart,e=el.selectionEnd;const v=el.value;el.value=v.slice(0,s)+t+v.slice(e);const p=s+t.length;el.setSelectionRange(p,p);el.focus({preventScroll:true});onEditInput(el);}
+  function pointAt(r1,c1,r2,c2){const el=inputEl();const t=r2==null||(r1===r2&&c1===c2)?addr(r1,c1):addr(Math.min(r1,r2),Math.min(c1,c2))+':'+addr(Math.max(r1,r2),Math.max(c1,c2));
+    const v=el.value;let s0=el.selectionStart;
+    if(E.pt&&s0===E.pt.start+E.pt.len){el.value=v.slice(0,E.pt.start)+t+v.slice(s0);s0=E.pt.start;}else{el.value=v.slice(0,s0)+t+v.slice(el.selectionEnd);}
+    E.pt={start:s0,len:t.length};el.setSelectionRange(s0+t.length,s0+t.length);onEditInput(el);}
+  function fnContext(){const el=inputEl();const v=el.value.slice(0,el.selectionStart);if(v[0]!=='=')return null;
+    const stack=[];let qq=false;for(let i=0;i<v.length;i++){const ch=v[i];if(ch==='"'){qq=!qq;continue;}if(qq)continue;
+      if(ch==='('){const m=/([A-Za-z][A-Za-z0-9_.]*)\s*$/.exec(v.slice(0,i));stack.push(m?m[1].toUpperCase():null);}else if(ch===')')stack.pop();}
+    const partial=/(?:^=|[=(,+\-*\/^&<>:\s])([A-Za-z][A-Za-z0-9.]*)$/.exec(v);
+    return{fn:stack.length?stack[stack.length-1]:null,partial:partial?partial[1].toUpperCase():null};}
+  function showHint(){
+    const ctx=fnContext();sugg=[];let h='';
+    if(ctx&&ctx.partial&&!/^[A-Z]{1,3}\d/.test(ctx.partial)){sugg=Object.keys(SGE.FN).filter(k=>k.startsWith(ctx.partial)&&k!==ctx.partial).slice(0,6);
+      if(sugg.length)h+=sugg.map(k=>'<button type="button" class="sg-sg" data-fn="'+k+'" title="'+esc(SGE.FN[k].desc)+'">'+k+'</button>').join('')+'<span>Tab picks the first</span>';}
+    if(!h&&ctx&&ctx.fn&&SGE.FN[ctx.fn]){const f=SGE.FN[ctx.fn];h='<code>'+ctx.fn+'('+esc(f.sig)+')</code><span>· '+esc(f.desc)+'</span>';}
+    if(!h&&E&&inputEl().value[0]==='='&&pointable())h='<span>Click or drag over cells to put them in the formula</span>';
+    hint.innerHTML=h;hint.hidden=!h;
+  }
+  function acceptSugg(name){const el=inputEl();const v=el.value,p=el.selectionStart;const m=/([A-Za-z][A-Za-z0-9.]*)$/.exec(v.slice(0,p));const s0=m?p-m[1].length:p;
+    el.value=v.slice(0,s0)+name+'('+v.slice(p);const np=s0+name.length+1;el.setSelectionRange(np,np);el.focus({preventScroll:true});onEditInput(el);}
+  function renderKeys(){const K2=[['=','='],['(','('],[')',')'],[',',','],[':',':'],['+','+'],['−','-'],['×','*'],['÷','/'],['"','"'],['$','$'],['SUM','SUM(']];
+    keys.innerHTML=K2.map(k=>'<button type="button" class="sg-b" data-k="'+k[1].replace(/"/g,'&quot;')+'">'+k[0]+'</button>').join('')+'<button type="button" class="sg-b sg-ok" data-k="⏎">✓ Enter</button>';}
+
+  /* ── actions ── */
+  function forSel(f){const s=norm(SEL);for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1;c<=s.c2;c++)f(r,c);}
+  function styleSel(p,v){snap();const o=cellO(A.r,A.c)||{};const nv=(p==='b'||p==='i')?!o[p]:(o[p]===v&&p==='al'?undefined:v);forSel((r,c)=>setProp(r,c,p,nv));refresh();changed();}
+  function clearSel(){snap();forSel((r,c)=>setRaw(r,c,''));refresh();changed();}
+  function copyCell(r0,c0,r,c){const o=cellO(r0,c0);const k=K(r,c);if(!o){delete S.cells[k];return;}const n=JSON.parse(JSON.stringify(o));n.raw=SGE.shiftF(n.raw,r-r0,c-c0);S.cells[k]=n;tidy(k);}
+  function fillDown(){const s=norm(SEL);snap();
+    if(s.r1===s.r2){if(s.r1===0)return;for(let c=s.c1;c<=s.c2;c++)copyCell(s.r1-1,c,s.r1,c);}
+    else for(let c=s.c1;c<=s.c2;c++)for(let r=s.r1+1;r<=s.r2;r++)copyCell(s.r1,c,r,c);
+    refresh();changed();}
+  function fillRight(){const s=norm(SEL);snap();
+    if(s.c1===s.c2){if(s.c1===0)return;for(let r=s.r1;r<=s.r2;r++)copyCell(r,s.c1-1,r,s.c1);}
+    else for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1+1;c<=s.c2;c++)copyCell(r,s.c1,r,c);refresh();changed();}
+  function doCopy(cut){const s=norm(SEL);const rows=[];const text=[];
+    for(let r=s.r1;r<=s.r2;r++){const row=[],t=[];for(let c=s.c1;c<=s.c2;c++){const o=cellO(r,c);row.push(o?JSON.parse(JSON.stringify(o)):null);t.push(SGE.display(val(r,c),o&&o.fmt));}rows.push(row);text.push(t.join('\t'));}
+    clip={s,rows,text:text.join('\n'),cut:!!cut&&editable};
+    try{navigator.clipboard.writeText(clip.text).catch(()=>{});}catch(e){}
+    toast(cut&&editable?'Cut: choose where to paste':'Copied '+(s.r2-s.r1+1)*(s.c2-s.c1+1)+' cells');
+    return clip.text;}
+  function doPaste(text){
+    if(!editable)return;
+    snap();
+    if(clip&&(text==null||text.replace(/\r/g,'')===clip.text)){
+      const {s,rows}=clip;
+      rows.forEach((row,i)=>row.forEach((o,j)=>{const r=A.r+i,c=A.c+j;if(r>=S.rows||c>=S.cols)return;const k=K(r,c);
+        if(!o){delete S.cells[k];return;}const n=JSON.parse(JSON.stringify(o));n.raw=SGE.shiftF(n.raw,r-(s.r1+i),c-(s.c1+j));S.cells[k]=n;}));
+      if(clip.cut){rows.forEach((row,i)=>row.forEach((o,j)=>{const r=s.r1+i,c=s.c1+j;if(r<A.r||r>=A.r+rows.length||c<A.c||c>=A.c+row.length)delete S.cells[K(r,c)];}));clip=null;}
+      SEL={r1:A.r,c1:A.c,r2:Math.min(S.rows-1,A.r+rows.length-1),c2:Math.min(S.cols-1,A.c+rows[0].length-1)};
+      refresh();changed();return;
+    }
+    if(text==null)return;
+    const lines=text.replace(/\r/g,'').replace(/\n$/,'').split('\n').map(l=>l.split('\t'));
+    const needR=Math.min(_SG_MAX_ROWS,A.r+lines.length),needC=Math.min(_SG_MAX_COLS,A.c+Math.max(...lines.map(l=>l.length)));
+    if(needR>S.rows)S.rows=needR;if(needC>S.cols)S.cols=needC;
+    lines.forEach((l,i)=>l.forEach((v,j)=>{const r=A.r+i,c=A.c+j;if(r>=S.rows||c>=S.cols)return;setRaw(r,c,v.trim());const f=SGE.autoFmt(v);if(f)setProp(r,c,'fmt',f);}));
+    SEL={r1:A.r,c1:A.c,r2:needR-1,c2:Math.min(needC-1,A.c+lines[0].length-1)};
+    renderGrid();changed();toast('Pasted '+lines.length+' row'+(lines.length>1?'s':''));
+  }
+  function rekey(axis,at,n){
+    const out={};for(const k in S.cells){let [r,c]=k.split(',').map(Number);let v=axis==='r'?r:c;
+      if(n<0&&v>=at&&v<at-n)continue;if(v>=at)v+=n;if(axis==='r')r=v;else c=v;out[K(r,c)]=S.cells[k];}
+    for(const k in out)out[k].raw=SGE.axisOp(out[k].raw,axis,at,n);
+    S.cells=out;
+    if(axis==='c'){const w={};for(const k in (S.colW||{})){let c=+k;if(n<0&&c>=at&&c<at-n)continue;if(c>=at)c+=n;w[c]=S.colW[k];}S.colW=w;}
+  }
+  function insRow(below){const s=norm(SEL);const n=s.r2-s.r1+1;if(S.rows+n>_SG_MAX_ROWS)return toast('A table can have up to '+_SG_MAX_ROWS+' rows');snap();const at=below?s.r2+1:s.r1;rekey('r',at,n);S.rows+=n;if(!below){A.r+=n;SEL.r1+=n;SEL.r2+=n;}after();}
+  function delRow(){const s=norm(SEL);const n=s.r2-s.r1+1;if(n>=S.rows)return toast('A table needs at least one row');snap();rekey('r',s.r1,-n);S.rows-=n;SEL={r1:s.r1,c1:s.c1,r2:s.r1,c2:s.c1};A={r:s.r1,c:s.c1};after();}
+  function insCol(right){const s=norm(SEL);const n=s.c2-s.c1+1;if(S.cols+n>_SG_MAX_COLS)return toast('A table can have up to '+_SG_MAX_COLS+' columns');snap();const at=right?s.c2+1:s.c1;rekey('c',at,n);S.cols+=n;if(!right){A.c+=n;SEL.c1+=n;SEL.c2+=n;}after();}
+  function delCol(){const s=norm(SEL);const n=s.c2-s.c1+1;if(n>=S.cols)return toast('A table needs at least one column');snap();rekey('c',s.c1,-n);S.cols-=n;SEL={r1:s.r1,c1:s.c1,r2:s.r1,c2:s.c1};A={r:s.r1,c:s.c1};after();}
+  function sortBy(desc){
+    const s=norm(SEL);let r1=s.r1,r2=s.r2;const col=A.c;
+    if(r1===r2){r1=r2=A.r;while(r1>0&&rawOf(r1-1,col)!=='')r1--;while(r2<S.rows-1&&rawOf(r2+1,col)!=='')r2++;
+      if(r1<r2&&[...Array(S.cols).keys()].some(c=>(cellO(r1,c)||{}).b))r1++;
+      while(r2>r1&&/^\s*total/i.test(rawOf(r2,0)))r2--;}
+    if(r2<=r1)return toast('Nothing to sort here');
+    snap();const g=SGE.evaluate(S);
+    const rows=[];for(let r=r1;r<=r2;r++){const cs=[];for(let c=0;c<S.cols;c++){const o=cellO(r,c);cs.push(o?JSON.parse(JSON.stringify(o)):null);}rows.push({r,key:g(r,col),cs});}
+    rows.sort((x,y)=>{const a=x.key,b=y.key;if(a===null&&b===null)return 0;if(a===null)return 1;if(b===null)return-1;const d=SGE.cmp(a,b);return desc?-d:d;});
+    rows.forEach((row,i)=>{const nr=r1+i;row.cs.forEach((o,c)=>{const k=K(nr,c);if(!o){delete S.cells[k];return;}o.raw=SGE.shiftF(o.raw,nr-row.r,0);S.cells[k]=o;});});
+    SEL={r1,c1:s.c1,r2,c2:s.c2};refresh();changed();toast('Sorted rows '+(r1+1)+'–'+(r2+1)+' by column '+colName(col));
+  }
+  let delArm=0;
+  function removeSheet(btn){
+    if(Date.now()-delArm>4000){delArm=Date.now();btn.textContent='Tap again to remove';btn.classList.add('armed');setTimeout(()=>{btn.textContent='Remove';btn.classList.remove('armed');},4000);return;}
+    const host=_edHost(root);self.destroy();root.remove();if(host)_edTouched(host);toast('Spreadsheet removed. Note History can bring it back');
+  }
+  function openMenu(x,y,items){
+    _sgCur=self;const m=_sgMenuEl();
+    m.innerHTML=items.map(it=>it==='-'?'<hr>':'<button type="button" data-m="'+it[0]+'">'+it[1]+(it[2]?'<span class="k">'+it[2]+'</span>':'')+'</button>').join('');
+    m.hidden=false;const w=m.offsetWidth,h=m.offsetHeight;
+    m.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-h-8))+'px';
+  }
+  const rcItems=()=>[['insRowA','Insert row above'],['insRowB','Insert row below'],['delRow','Delete row'],'-',['insColL','Insert column left'],['insColR','Insert column right'],['delCol','Delete column']];
+  const cellItems=()=>editable?[['cut','Cut','Ctrl+X'],['copy','Copy','Ctrl+C'],['pasteH','Paste','Ctrl+V'],'-',...rcItems(),'-',['sortA','Sort A→Z'],['sortZ','Sort Z→A'],['clear','Clear contents','Del']]:[['copy','Copy','Ctrl+C']];
+  const ACT={insRowA:()=>insRow(false),insRowB:()=>insRow(true),delRow,insColL:()=>insCol(false),insColR:()=>insCol(true),delCol,
+    cut:()=>doCopy(true),copy:()=>doCopy(false),pasteH:()=>{if(clip)doPaste(null);else toast('Press Ctrl+V to paste from another app');},
+    sortA:()=>sortBy(false),sortZ:()=>sortBy(true),clear:clearSel};
+  self.act=k=>{(ACT[k]||(()=>{}))();gw.focus({preventScroll:true});};
+  self.editing=()=>!!E;
+  self.commit=commit;
+  self.focusGrid=()=>{gw.focus({preventScroll:true});paint();};
+  self.insertFn=name=>{if(!editable)return;if(!E)startEdit('=',false);const el=inputEl();if(el.value==='')el.value='=';insertAtCaretSg(name+'(');};
+  self.state=()=>S;
+  self.destroy=()=>{if(_sgCur===self)_sgCur=null;ui.remove();st.removeAttribute('hidden');delete root._sg;};
+
+  /* ── events ── */
+  const tdFrom=e=>{const t=e.target.closest&&e.target.closest('td');return t&&grid.contains(t)?t:null;};
+  ui.addEventListener('pointerdown',e=>{lastPtr=e.pointerType||'mouse';},true);
+  gw.addEventListener('mousedown',e=>{
+    if(e.button!==0)return;_sgCur=self;
+    if(editable&&e.target.classList.contains('sg-rz')){const c=+e.target.dataset.c;drag={t:'rz',c,x0:e.clientX,w0:(S.colW&&S.colW[c])||96};_sgDragS=self;e.preventDefault();return;}
+    const th=e.target.closest('th');
+    if(th){if(E)commit();e.preventDefault();gw.focus({preventScroll:true});
+      if(th.classList.contains('sg-corner')){A={r:0,c:0};SEL={r1:0,c1:0,r2:S.rows-1,c2:S.cols-1};paint();return;}
+      if(th.classList.contains('sg-ch')){const c=+th.dataset.c;if(e.shiftKey)SEL={r1:0,c1:SEL.c1,r2:S.rows-1,c2:c};else{A={r:0,c};SEL={r1:0,c1:c,r2:S.rows-1,c2:c};}drag={t:'col'};_sgDragS=self;paint();return;}
+      if(th.classList.contains('sg-rh')){const r=+th.dataset.r;if(e.shiftKey)SEL={r1:SEL.r1,c1:0,r2:r,c2:S.cols-1};else{A={r,c:0};SEL={r1:r,c1:0,r2:r,c2:S.cols-1};}drag={t:'row'};_sgDragS=self;paint();return;}
+    }
+    const td=tdFrom(e);if(!td)return;const r=+td.dataset.r,c=+td.dataset.c;
+    if(E&&!(E.r===r&&E.c===c)&&pointable()){e.preventDefault();drag={t:'pt',r,c};_sgDragS=self;pointAt(r,c);return;}
+    if(E&&E.r===r&&E.c===c)return;
+    if(E)commit();
+    e.preventDefault();gw.focus({preventScroll:true});
+    if(editable&&lastPtr==='touch'&&A.r===r&&A.c===c&&SEL.r1===SEL.r2&&SEL.c1===SEL.c2){startEdit('',true);return;}
+    if(e.shiftKey){SEL.r2=r;SEL.c2=c;paint();}else select(r,c,false);
+    drag={t:'sel'};_sgDragS=self;
+  });
+  self.onDrag=e=>{
+    if(!drag)return;
+    if(drag.t==='rz'){const w=Math.max(36,drag.w0+e.clientX-drag.x0);if(!S.colW)S.colW={};S.colW[drag.c]=w;const col=grid.querySelectorAll('col')[drag.c+1];if(col)col.style.width=w+'px';return;}
+    const el=document.elementFromPoint(e.clientX,e.clientY);if(!el||!grid.contains(el))return;
+    if(drag.t==='col'){const th=el.closest('th.sg-ch');if(th){SEL.c2=+th.dataset.c;paint();}return;}
+    if(drag.t==='row'){const th=el.closest('th.sg-rh');if(th){SEL.r2=+th.dataset.r;paint();}return;}
+    const td=el.closest('td');if(!td)return;const r=+td.dataset.r,c=+td.dataset.c;
+    if(drag.t==='pt'){pointAt(drag.r,drag.c,r,c);return;}
+    if(drag.t==='sel'&&(SEL.r2!==r||SEL.c2!==c)){SEL.r2=r;SEL.c2=c;paint();}
+  };
+  self.onDragEnd=()=>{if(drag&&drag.t==='rz')changed();drag=null;};
+  gw.addEventListener('dblclick',e=>{const td=tdFrom(e);if(!td||!editable)return;select(+td.dataset.r,+td.dataset.c,false);startEdit('',true);});
+  gw.addEventListener('contextmenu',e=>{
+    const td=tdFrom(e),th=e.target.closest('th');if(!td&&!th)return;e.preventDefault();e.stopPropagation();if(E)commit();
+    if(td){const r=+td.dataset.r,c=+td.dataset.c;const s=norm(SEL);if(!(r>=s.r1&&r<=s.r2&&c>=s.c1&&c<=s.c2))select(r,c,false);openMenu(e.clientX,e.clientY,cellItems());return;}
+    if(!editable)return;
+    if(th.classList.contains('sg-rh')){const r=+th.dataset.r;const s=norm(SEL);if(!(r>=s.r1&&r<=s.r2)){A={r,c:0};SEL={r1:r,c1:0,r2:r,c2:S.cols-1};paint();}openMenu(e.clientX,e.clientY,rcItems().slice(0,3).concat(['-',['sortA','Sort A→Z'],['sortZ','Sort Z→A'],['clear','Clear contents']]));}
+    else if(th.classList.contains('sg-ch')){const c=+th.dataset.c;const s=norm(SEL);if(!(c>=s.c1&&c<=s.c2)){A={r:0,c};SEL={r1:0,c1:c,r2:S.rows-1,c2:c};paint();}openMenu(e.clientX,e.clientY,rcItems().slice(4).concat(['-',['clear','Clear contents']]));}
+  });
+  gw.addEventListener('keydown',e=>{
+    if(e.target!==gw)return;
+    _sgCur=self;
+    const ctrl=e.ctrlKey||e.metaKey,k=e.key;
+    const nav={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
+    if(nav[k]){e.preventDefault();move(nav[k][0],nav[k][1],e.shiftKey,ctrl);return;}
+    if(k==='Enter'){e.preventDefault();if(e.altKey||ctrl)return;move(e.shiftKey?-1:1,0,false);return;}
+    if(k==='Tab'){e.preventDefault();move(0,e.shiftKey?-1:1,false);return;}
+    if(k==='Home'){e.preventDefault();select(ctrl?0:A.r,0,e.shiftKey);return;}
+    if(k==='Escape'){if(clip&&clip.cut){clip=null;toast('Cut cancelled');}return;}
+    if(ctrl){const l=k.toLowerCase();
+      if(l==='c'||l==='x'||l==='v')return;   /* the copy/cut/paste events below do the work */
+      const map=editable?{z:undo,y:redo,b:()=>styleSel('b'),i:()=>styleSel('i'),d:fillDown,r:fillRight,a:()=>{SEL={r1:0,c1:0,r2:S.rows-1,c2:S.cols-1};paint();}}
+        :{a:()=>{SEL={r1:0,c1:0,r2:S.rows-1,c2:S.cols-1};paint();}};
+      if(l==='z'&&e.shiftKey&&editable){e.preventDefault();redo();return;}
+      if(map[l]){e.preventDefault();map[l]();}
+      return;}
+    if(!editable)return;
+    if(k==='F2'){e.preventDefault();startEdit('',true);return;}
+    if(k==='Delete'||k==='Backspace'){e.preventDefault();clearSel();return;}
+    if(k.length===1&&!e.altKey){e.preventDefault();startEdit(k,false);}
+  });
+  gw.addEventListener('copy',e=>{if(e.target!==gw)return;e.preventDefault();const t=doCopy(false);try{e.clipboardData.setData('text/plain',t);}catch(x){}});
+  gw.addEventListener('cut',e=>{if(e.target!==gw)return;e.preventDefault();const t=doCopy(true);try{e.clipboardData.setData('text/plain',t);}catch(x){}});
+  gw.addEventListener('paste',e=>{if(e.target!==gw||!editable)return;e.preventDefault();doPaste((e.clipboardData||window.clipboardData).getData('text'));});
+  function editorKey(e){
+    if(!E)return;const k=e.key;
+    const dir={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]}[k];
+    if(k==='Enter'){e.preventDefault();const up=e.shiftKey;commit();move(up?-1:1,0,false);return;}
+    if(k==='Tab'){e.preventDefault();if(sugg.length){acceptSugg(sugg[0]);return;}const b=e.shiftKey;commit();move(0,b?-1:1,false);return;}
+    if(k==='Escape'){e.preventDefault();cancel();return;}
+    if(k==='F2'){e.preventDefault();E.mode=E.mode==='edit'?'enter':'edit';return;}
+    if(dir&&E.via==='cell'&&E.mode==='enter'&&!pointable()&&ced.value[0]!=='='){e.preventDefault();commit();move(dir[0],dir[1],false);return;}
+    if(dir&&E.via==='cell'&&E.mode==='enter'&&pointable()){e.preventDefault();
+      const base=E.ptCell||{r:E.r,c:E.c};const r=Math.max(0,Math.min(S.rows-1,base.r+dir[0])),c=Math.max(0,Math.min(S.cols-1,base.c+dir[1]));E.ptCell={r,c};pointAt(r,c);return;}
+    if(E.pt&&!dir&&k!=='Shift'){E.pt=null;E.ptCell=null;}
+  }
+  ced.addEventListener('keydown',editorKey);
+  fx.addEventListener('keydown',e=>{if(!E){if(e.key==='Enter'){e.preventDefault();gw.focus({preventScroll:true});}return;}editorKey(e);});
+  ced.addEventListener('input',()=>onEditInput(ced));
+  const barEdit=()=>{if(!editable||E)return;E={r:A.r,c:A.c,via:'bar',mode:'edit',pt:null};_sgCur=self;fx.value=rawOf(A.r,A.c);keys.hidden=!narrow();if(!keys.hidden)renderKeys();showHint();};
+  fx.addEventListener('focus',barEdit);
+  fx.addEventListener('input',()=>{if(!E){const v=fx.value;barEdit();fx.value=v;}onEditInput(fx);});
+  ['keyup','click'].forEach(t=>{ced.addEventListener(t,()=>E&&showHint());fx.addEventListener(t,()=>E&&showHint());});
+  hint.addEventListener('mousedown',e=>{const b=e.target.closest('[data-fn]');if(!b)return;e.preventDefault();acceptSugg(b.dataset.fn);});
+  keys.addEventListener('mousedown',e=>e.preventDefault());
+  keys.addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(!b||!E)return;const k=b.dataset.k;if(k==='⏎'){commit();move(1,0,false);return;}insertAtCaretSg(k);});
+  if(editable){
+    const tb=q('.sg-tb');
+    tb.addEventListener('mousedown',e=>{if(e.target.closest('button'))e.preventDefault();});
+    tb.addEventListener('click',e=>{
+      const b=e.target.closest('button');if(!b)return;_sgCur=self;
+      if(b.dataset.bg!==undefined){if(E)commit();styleSel('bg',b.dataset.bg||undefined);return;}
+      const a=b.dataset.a;if(E&&a!=='fn')commit();
+      switch(a){case'undo':undo();break;case'redo':redo();break;case'bold':styleSel('b');break;case'ital':styleSel('i');break;
+        case'al-l':styleSel('al','l');break;case'al-c':styleSel('al','c');break;case'al-r':styleSel('al','r');break;
+        case'sortA':sortBy(false);break;case'sortZ':sortBy(true);break;case'fill':fillDown();break;case'del':removeSheet(b);break;
+        case'fn':{const p=_sgFnEl();p._draw();p.querySelector('.sg-fnq').value='';p._draw();p.hidden=false;const rr=root.getBoundingClientRect();
+          p.style.left=Math.max(8,Math.min(rr.right-p.offsetWidth,innerWidth-p.offsetWidth-8))+'px';
+          p.style.top=Math.max(8,Math.min(rr.top+70,innerHeight-p.offsetHeight-8))+'px';p.querySelector('.sg-fnq').focus({preventScroll:true});break;}
+        case'rc':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,rcItems());break;}}
+    });
+    q('.sg-fmt').addEventListener('change',e=>{if(E)commit();snap();const v=e.target.value||undefined;forSel((r,c)=>setProp(r,c,'fmt',v));refresh();changed();gw.focus({preventScroll:true});});
+  }
+  renderGrid();
+  return self;
 }
 
 /* v04.50 — loadDB() now reads IndexedDB first (async), so the boot

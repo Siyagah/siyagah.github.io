@@ -5141,6 +5141,185 @@ await r.block('16i-service-worker-registers', async () => {
   await s.close();
 });
 
+/* ── 17. v04.52: a spreadsheet inside a note ──────────────────────────
+   Every check reaches the sheet the way the owner does: the real `+`/Insert
+   button, then the real ▦ Spreadsheet button (the v04.45 lesson — a check
+   that calls insertSheet() directly proves nothing about reachability).
+   Content is read back from a.content after a real flush, never from the
+   live DOM, because the live grid and the stored shape are deliberately
+   different things. */
+async function sgInsertViaMenu(page, scope = '#p3h') {
+  const btn = await page.$$(scope === '#p3h' ? '#p3h button' : `${scope} .eb-grp-btn[data-g="insert"]`);
+  let opened = false;
+  for (const b of btn) {
+    const t = await b.evaluate((e) => (e.title || '') + '|' + (e.dataset.g || ''));
+    if ((/^Insert/.test(t) || /\|insert$/.test(t)) && await b.isVisible()) {
+      await b.click().catch(() => {}); opened = true; break;
+    }
+  }
+  if (!opened) return false;
+  await page.waitForTimeout(250);
+  const sheetBtn = await page.$('button[title^="Insert a spreadsheet"]:visible');
+  if (!sheetBtn) return false;
+  await sheetBtn.click().catch(() => {});
+  await page.waitForTimeout(300);
+  return true;
+}
+const sgCell = (root, r, c) => `${root} .sgx td[data-r="${r}"][data-c="${c}"]`;
+async function sgEditA1(page) {
+  await page.evaluate(() => { selArt('a1'); startEdit(); });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { const ed = document.getElementById('ed'); ed.focus();
+    const r = document.createRange(); r.selectNodeContents(ed.querySelector('p') || ed); r.collapse(false);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
+}
+const sgStored = (page, aid = 'a1') => page.evaluate((id) => DB.articles.find((a) => a.id === id).content, aid);
+
+for (const vp of VIEWPORTS) {
+await r.block(`17a-sheet-reachable-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  await sgEditA1(s.page);
+  const ok = await sgInsertViaMenu(s.page);
+  const m = await s.page.evaluate(() => {
+    const el = document.querySelector('#ed .sgx .sg-ui'); if (!el) return null;
+    const r = el.getBoundingClientRect(), host = document.getElementById('ed').getBoundingClientRect();
+    const pop = document.getElementById('eb-pop');
+    return { w: Math.round(r.width), hostW: Math.round(host.width), right: Math.round(r.right), vw: innerWidth,
+      popOpen: !!pop && pop.classList.contains('open') };
+  });
+  r.check(ok && !!m, `${vp.name}: ＋ Insert → ▦ Spreadsheet puts a live sheet in the note`, JSON.stringify(m));
+  r.check(!!m && m.w >= m.hostW * 0.8 && m.right <= m.vw + 1 && !m.popOpen,
+    `${vp.name}: the sheet spans the note (not squeezed), stays on screen, and the menu that inserted it closes`,
+    JSON.stringify(m));
+  r.check(s.errors.length === 0, `${vp.name}: no page errors while inserting a sheet`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+await r.block('17b-sheet-formulas-save-and-reload', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await sgEditA1(s.page);
+  await sgInsertViaMenu(s.page);
+  await s.page.click(sgCell('#ed', 0, 0)); await s.page.keyboard.type('5'); await s.page.keyboard.press('Enter');
+  await s.page.keyboard.type('7'); await s.page.keyboard.press('Enter');
+  await s.page.keyboard.type('=SUM(A1:A2)*2'); await s.page.keyboard.press('Enter');
+  const shown = await s.page.textContent(sgCell('#ed', 2, 0));
+  r.check(shown === '24', 'a typed formula computes live in the grid (=SUM(A1:A2)*2 → 24)', shown);
+  await s.page.evaluate(() => { _flushEd(); persist(); });
+  const c = await sgStored(s.page);
+  r.check(/class="sgx"/.test(c) && /data-sg=/.test(c) && /sg-static/.test(c) && !/sg-ui|sg-tb|sg-ced|sg-gw/.test(c),
+    'the note stores the sheet as data + a snapshot table, with none of the live grid in it',
+    c.slice(0, 160));
+  r.check(/>24</.test(c), 'the stored snapshot carries the computed value, so search and older copies see 24', /24/.test(c));
+  await s.page.waitForTimeout(500);
+  await s.page.reload({ waitUntil: 'domcontentloaded' });
+  await s.page.waitForFunction(() => window.__appBooted === true);
+  await s.page.evaluate(() => selArt('a1'));
+  await s.page.waitForTimeout(500);
+  const rd = await s.page.evaluate(() => { const g = document.querySelector('#p3c .sgx .sg-ui');
+    return { read: !!g && g.classList.contains('sg-read'), a3: document.querySelector('#p3c .sgx td[data-r="2"][data-c="0"]')?.textContent,
+      tb: !!document.querySelector('#p3c .sgx .sg-tb') }; });
+  r.check(rd.read && rd.a3 === '24' && !rd.tb, 'after a reload the read view shows the sheet, recomputed, read-only (no edit toolbar)', JSON.stringify(rd));
+  await s.page.evaluate(() => startEdit()); await s.page.waitForTimeout(400);
+  const ed = await s.page.evaluate(() => !!document.querySelector('#ed .sgx .sg-ui.sg-edit'));
+  r.check(ed, 'editing the note again brings the sheet back editable', ed);
+  await s.close();
+});
+
+await r.block('17c-sheet-keys-stay-in-the-sheet', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await sgEditA1(s.page);
+  await sgInsertViaMenu(s.page);
+  const before = await s.page.evaluate(() => { const ed = document.getElementById('ed'); const c = ed.cloneNode(true); c.querySelectorAll('.sgx').forEach((n) => n.remove()); return c.innerHTML; });
+  await s.page.click(sgCell('#ed', 0, 0));
+  for (const k of ['1', 'Enter', '2', 'Enter', 'Enter', 'Tab', 'x', 'Enter', 'Backspace']) await s.page.keyboard.press(k);
+  await s.page.keyboard.press('Control+z');
+  const after = await s.page.evaluate(() => { const ed = document.getElementById('ed'); const c = ed.cloneNode(true); c.querySelectorAll('.sgx').forEach((n) => n.remove()); return c.innerHTML; });
+  r.check(before === after, 'Enter, Tab, Backspace and Ctrl+Z typed in the grid never change the note text around it',
+    before === after ? 'note text unchanged' : `changed: ${before.length} → ${after.length} chars`);
+  const a1 = await s.page.textContent(sgCell('#ed', 0, 0));
+  r.check(a1 === '1', 'the keystrokes landed in the sheet instead', a1);
+  await s.close();
+});
+
+await r.block('17d-sheet-opening-does-not-change-the-note', async () => {
+  /* I2: a sheet using RAND()/TODAY() must not make an untouched note look
+     edited — a newer updatedAt would win a merge against a real edit made on
+     another device. The stored snapshot is only rebuilt when the sheet
+     itself is edited. */
+  const db = seedDB();
+  const data = { v: 1, rows: 3, cols: 2, cells: { '0,0': { raw: '=RAND()' }, '0,1': { raw: '=TODAY()', fmt: 'date' } }, colW: {} };
+  const esc = (x) => x.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  db.articles[0].content = '<p>Before</p><div class="sgx" contenteditable="false" data-sg="' + esc(JSON.stringify(data)) + '"><table class="sg-static"><tbody><tr><td>0.5</td><td>01/01/2026</td></tr></tbody></table></div><p>After</p>';
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+  const c0 = await sgStored(s.page); const u0 = await s.page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  await s.page.evaluate(() => selArt('a1')); await s.page.waitForTimeout(300);
+  await s.page.evaluate(() => startEdit()); await s.page.waitForTimeout(400);
+  const live = await s.page.evaluate(() => !!document.querySelector('#ed .sgx .sg-ui'));
+  await s.page.evaluate(() => { _flushEd(); });
+  const c1 = await sgStored(s.page); const u1 = await s.page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  r.check(live && c1 === c0 && u1 === u0, 'opening and editing around a RAND()/TODAY() sheet leaves the stored note byte-for-byte unchanged',
+    `live ${live} · content same ${c1 === c0} · updatedAt same ${u1 === u0}`);
+  await s.close();
+});
+
+await r.block('17e-sheet-in-a-multi-popup', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  await s.page.evaluate(() => popOutNote('a1')); await s.page.waitForTimeout(400);
+  await s.page.evaluate(() => { const ed = document.getElementById('fw-ed-a1'); ed.focus();
+    const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
+  const ok = await sgInsertViaMenu(s.page, '#fw-a1');
+  const mounted = await s.page.evaluate(() => !!document.querySelector('#fw-ed-a1 .sgx .sg-ui.sg-edit'));
+  r.check(ok && mounted, 'the Multi pop-up’s own + group inserts a live sheet into its note', `${ok} ${mounted}`);
+  if (mounted) {
+    await s.page.click(sgCell('#fw-ed-a1', 0, 0)); await s.page.keyboard.type('=2+3'); await s.page.keyboard.press('Enter');
+    await s.page.evaluate(() => _fwFlush('a1'));
+    const c = await sgStored(s.page);
+    r.check(/sg-static/.test(c) && />5</.test(c) && !/sg-ui/.test(c), 'saving from the pop-up stores the same clean shape, value included', c.slice(0, 120));
+  }
+  await s.close();
+});
+
+await r.block('17f-sheet-paste-and-phone-keys', async () => {
+  const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+  await sgEditA1(s.page);
+  await sgInsertViaMenu(s.page);
+  await s.page.click(sgCell('#ed', 0, 0));
+  await s.page.evaluate(() => { const gw = document.querySelector('#ed .sgx .sg-gw');
+    const dt = new DataTransfer(); dt.setData('text/plain', 'Item\tCost\nTea\t4.5\nBread\t3\nTotal\t=SUM(B2:B3)');
+    gw.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); });
+  await s.page.waitForTimeout(200);
+  const b4 = await s.page.textContent(sgCell('#ed', 3, 1));
+  r.check(b4 === '7.5', 'rows pasted from another spreadsheet land in the grid, formulas working (=SUM → 7.5)', b4);
+  await s.page.click(sgCell('#ed', 5, 0)); await s.page.keyboard.type('=');
+  const phone = await s.page.evaluate(() => { const k = document.querySelector('#ed .sgx .sg-keys'); const fx = document.querySelector('#ed .sgx .sg-fx');
+    return { keys: !!k && !k.hidden && k.getBoundingClientRect().height > 30, bar: document.activeElement === fx, n: k ? k.querySelectorAll('button').length : 0 }; });
+  r.check(phone.keys && phone.bar && phone.n >= 12, 'on a phone a formula is typed in the bar above the grid, with the = ( ) : + − × ÷ SUM key row showing', JSON.stringify(phone));
+  await s.close();
+});
+
+await r.block('17g-sheet-engine-matches-excel', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const got = await s.page.evaluate(() => {
+    const st = { rows: 10, cols: 4, cells: { '0,0': { raw: 'Rent' }, '0,1': { raw: '2200' }, '1,0': { raw: 'Food' }, '1,1': { raw: '650' }, '2,0': { raw: 'Petrol' }, '2,1': { raw: '220' } } };
+    const F = (f) => { const v = SGE.evalFormula(st, f); return v && v.err ? v.err : v; };
+    return {
+      '-2^2': F('-2^2'), '2^3^2': F('2^3^2'), 'ROUND(2.675,2)': F('ROUND(2.675,2)'), 'ROUND(-2.5,0)': F('ROUND(-2.5,0)'), 'MOD(-3,2)': F('MOD(-3,2)'),
+      'VLOOKUP': F('VLOOKUP("Petrol",A1:B3,2,FALSE)'), 'XLOOKUP': F('XLOOKUP("Food",A1:A3,B1:B3)'), 'SUMIF': F('SUMIF(B1:B3,">500")'),
+      'COUNTIF wildcard': F('COUNTIF(A1:A3,"F*")'), 'PMT': F('ROUND(PMT(0.05/12,360,300000),2)'), 'TEXT': F('TEXT(1234.5,"$#,##0.00")'),
+      'EOMONTH': F('TEXT(EOMONTH(DATE(2026,2,10),0),"yyyy-mm-dd")'), 'IFERROR': F('IFERROR(1/0,"x")'), '1/0': F('1/0'), 'unknown': F('FOO(1)'),
+      'STDEV': F('ROUND(STDEV(2,4,4,4,5,5,7,9),4)'), 'fnCount': Object.keys(SGE.FN).length,
+    };
+  });
+  const want = { '-2^2': 4, '2^3^2': 64, 'ROUND(2.675,2)': 2.68, 'ROUND(-2.5,0)': -3, 'MOD(-3,2)': 1, 'VLOOKUP': 220, 'XLOOKUP': 650, 'SUMIF': 2850,
+    'COUNTIF wildcard': 1, 'PMT': -1610.46, 'TEXT': '$1,234.50', 'EOMONTH': '2026-02-28', 'IFERROR': 'x', '1/0': '#DIV/0!', 'unknown': '#NAME?', 'STDEV': 2.1381 };
+  const bad = Object.keys(want).filter((k) => got[k] !== want[k]);
+  r.check(bad.length === 0, `the formula engine gives Excel's answers on ${Object.keys(want).length} known cases`,
+    bad.length ? bad.map((k) => `${k}: got ${got[k]} want ${want[k]}`).join(' · ') : 'all match');
+  r.check(got.fnCount >= 110, 'the function library carries 110+ functions', got.fnCount);
+  await s.close();
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
