@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.52.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.53.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,35 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.53** (23 Sep 2026) — pop-ups made alike, round (a): the note looks
+  the same inside Multi as inside Single. Issue #73, round 1 of 4 in "make
+  the two pop-ups (Multi and Single) look and work the same" — this round is
+  the note's content only; frame and toolbar are rounds (b)/(c).
+  - Single's editor **is** `#ed` (Pane 3 lifted out); Multi's is the
+    separate `.fw-ed`, and its content CSS had drifted to its own older
+    set: fixed 13px `DM Sans` instead of `var(--fs-content)`/`var(--body)`,
+    headings in fixed `em` off that 13px, no `--pp-gap` on paragraphs,
+    **`padding-left:0` on every list** (why numbers and nested bullets
+    looked clipped/missing), plain `ol` counters instead of
+    `decimal-leading-zero`, a blockquote with no gold rule, and the
+    heading fold arrow/grip unstyled instead of 16–18px boxes.
+  - **One set of content rules now serves both**: every `#ed <selector>`
+    rule that styles note content gained `.fw-ed <selector>` in its
+    existing selector list — never duplicated, so they cannot drift again.
+    `.fw-ed`'s root now shares `#ed`'s font/size/line-height/ink; it keeps
+    its own layout and a **14px** padding (the value `#ed` already uses on
+    a phone) because a pop-up window is narrower than Pane 3. The old
+    separate `.fw-ed h1`–`h4` rules are deleted. No rule scoped
+    `.editing`/`:not(.editing)`. Owner font settings reach `.fw-ed` for
+    free — `applyFontSizes()`/`applyLineSpacing()` already write to
+    `document.documentElement`.
+  - Same change on all three layouts, no breakpoint gates it.
+  - New app-check section 18 (`18a`–`18d`): a parity sweep of computed
+    styles between `#ed` and `#fw-ed-<id>` at all three sizes, a
+    marker-clipping measurement, heading-chrome parity, and owner-setting
+    propagation.
+  - 11/11 ship checks. `app-check --only 18`, full `app-check`, and the
+    unpatched-code verification: **(measured in review)**.
 - **v04.52** (23 Sep 2026) — a spreadsheet inside a note, round 1 of 3.
   Built by the Architect directly.
   - **＋ Insert → ▦ Spreadsheet**, in Pane 3's `+` group and the Multi
@@ -174,30 +203,6 @@ must never accumulate here instead of there.
   all 92 registered blocks** — no check added, removed, or reworded, only
   two pre-existing ones given a block of their own — plus `only-check.mjs`'s
   own 11/11.
-- **v04.48** (22 Sep 2026) — the last shared `app-check` session gets its own
-  `openApp()` per block. Harness only — `tools/app-check.mjs`,
-  `tools/README.md`, `ARCHITECT.md` — no app change. v04.46 isolated a
-  throw to one `r.block()` but recorded, honestly, what that did not fix:
-  isolating a block's FAILURE is not isolating its STATE. Fifteen blocks
-  (`1-boot` through `6c-read-chrome`, `7-data-roundtrip` through
-  `13-stampThemeTouches`) still drove one `app`/`page` opened once near the
-  top of the file, so a throw partway through one could leave that shared
-  page in a shape the next block sharing it never expected, and its failure
-  became a suspect rather than an independent finding. Fourteen of the
-  fifteen were a pure wrap — each now opens and closes its own `openApp()`,
-  same pattern `§6d` onward already used, no assertion changed. The one
-  genuine dependency, `6-outline`, had no setup of its own — it read `#ed`
-  left open by `5-open-and-edit` — so it was folded into that block's
-  session instead of given a redundant setup of its own; its check is
-  unchanged. The unused top-level shared `app`/`page` and its dangling
-  `app.close()` are gone. `tools/README.md`'s v04.46 trap entry updated in
-  place to say the gap is closed, and states the general rule for any
-  future block: default to its own session, share one only between
-  sub-checks that are read-only with respect to each other and never abort
-  leaving state a later one depends on. `ARCHITECT.md`'s matching backlog
-  line ticked. D5 does not apply — no visual surface. 11/11 ship checks,
-  **336/336** app checks — the same total as before, no check added,
-  removed, or reworded.
 ---
 
 ## What this is
