@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.59.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.60.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,29 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.60** (23 Sep 2026) — the last note titles out of the public file,
+  and Contents without heading chrome. Built by the Architect directly.
+  - **v04.58 missed some.** It named the tab *picker*, but the static
+    `#tab-bar` beside it still held two real note titles as rendered
+    chips, and `#ctx` held a real `data-aid`. The v04.59 builder flagged
+    it.
+  - The static `#tab-bar` is now empty. `renderTabBar()` fills it on the
+    first render (`bar._sig` starts undefined).
+  - `#ctx` loses the `data-aid`.
+  - A full scan of the remaining static markup (outside `<script>` and
+    `<style>`) found nothing else. The sidebar, list and note panes are
+    empty.
+  - ship-check check 6 also fails on any literal note id in a `data-tid`
+    or `data-aid`, or in a tab-bar handler call. That is the general
+    fingerprint, where v04.58's was a named one. It fails on v04.59's file.
+  - **Also:** `_tocScan()` read `textContent`, so in an editor the heading's
+    injected `⠿`/`▼` chrome was part of each Contents entry. Single read
+    `⠿▼One`. Pre-existing, found in the v04.59 review. It now reads a
+    clone with the chrome removed. New check `24a` (both pop-ups) fails on
+    v04.59 for Single.
+  - Still the owner's call: the same markup in `legacy/v03.99/` and in
+    git history.
+  - 12/12 ship checks, **506/506 app checks, twice in a row**.
 - **v04.59** (23 Sep 2026) — pop-ups made alike, round (d1): the Sidepane
   and Contents panels, same side and same place. Issue #85, round (d1) of
   "make the two pop-ups look and work the same" — round (d2), the tab bar
@@ -79,8 +102,9 @@ must never accumulate here instead of there.
     doesn't look (it only matches `addToTabPicker('<id>')` rows, not the
     tab bar's own persisted DOM). Left for the Architect/owner.
   - 12/12 ship checks, `app-check --only 23` **11/11**, `--only 20`
-    **31/31**, `--only 6p` **104/104**. Full `app-check`,
-    **(measured in review)**.
+    **31/31**, `--only 6p` **104/104**. Measured in review: full
+    `app-check` **504/504 twice**; unpatched 493/504, all 11 failures in
+    section 23.
 - **v04.58** (23 Sep 2026) — note titles taken out of the public app file.
   Built by the Architect directly. No behaviour change.
   - The builder found this while working on v04.57. `index.html` had been
@@ -205,83 +229,7 @@ must never accumulate here instead of there.
     16` **30/30**. Full `app-check`, measured by the Architect in review:
     **475/475, twice in a row**. Unpatched (v04.56's `tools/` against
     v04.55's `index.html`): **462/475, 13 failures, all in section 21**.
-- **v04.55** (23 Sep 2026) — pop-ups made alike, round (c1): the same
-  controls, with the same words, in the same order. Issue #77, round 1 of 2
-  of round (c) — this round is which controls sit between the frame and the
-  note and their order; c2 (next round) is the formatting row's (Aa H ≡ +
-  ↺ 📋 🔍 ⋯) own grouping and fold, untouched here.
-  - Measured on `main` at v04.54, same note `a1`: Multi lacked the tag box
-    (read-only, no add/remove), the `Type` label/chip, `📎 Attach` with its
-    word and count, `🔀 Start Versioning` and `📦` Archive. Single lacked
-    the folder chip and `⋯` on desktop. `🏷` meant two things in Multi (tags
-    prefix and its own Note Types button — Pane 3 has meant only tags by it
-    since v04.11). Single carried `🏠`/`◀`/`📁`, which navigate panes under
-    the modal (the v04.34 fault, on this row). The two pop-ups disagreed on
-    order: Single put its toolbar above the title, Multi put the title
-    first.
-  - **One strip, one order, both pop-ups, every size**: title → Type/
-    Attach/Archive → Tags → Folders → Versions → Date, built once by
-    `_popMetaStripHTML(a,host)`. `kindBarHTML()` gains a `forceEdit` param
-    (Multi's note is never `ST.article`, so its old editing test was always
-    false there) instead of a copy. Tags — `renderTagEditor()` and its
-    whole family — gain a `host` param: falsy is Single's `ST.etags`
-    exactly as before; a Multi window's id writes straight to `a.tags` and
-    persists immediately (no editing-scratch state the way Pane 3 has).
-    Every mount for the same host repaints together (`.tag-editor[data-
-    tag-host]`), since a phone's `+` menu can carry its own mount (kept
-    working, v04.27) alongside the new strip's. Tag chips gain the `🏷`
-    prefix the editable view never carried, so `🏷` now means one thing
-    everywhere. Folders: `_folderChipsHTML()`, one implementation for what
-    Pane 3's read view and Multi's old `_fwMetaHTML()` each built
-    separately. Versions: `_versionStripHTML(a,host)` — a Multi host hands
-    the WINDOW over to the clicked sibling (`_fwHandTo()`, pulled out of
-    `_fwNavigate()`'s existing hand-over) instead of `selArt()`-ing it into
-    Pane 3; `startVersioning()`/`addNewVersion()` gain the same param so
-    starting/adding a version from Multi stays in that window too.
-  - **Removed**: Multi's toolbar `🏷` button and bare `📎` (both reached
-    through the strip's Type chip/Attach now, as Pane 3's own row has since
-    v04.11 — removing the bare `📎` too was a judgment call for "the same
-    controls", not a literal instruction) and its old `.fw-meta` badge;
-    Single's `🏠`/`◀`/`📁` while `ST.noteModal` (normal Pane 3 keeps all
-    three unchanged).
-  - **Where it sits in Single**: `#p3h` renders above `#p3c`, so title+strip
-    move INTO `#p3h` (a new early-return `if(ST.noteModal)` branch in
-    `renderP3H()`) and `#p3c` keeps only the editor. The formatting row
-    below reuses the EXISTING `.p3h-nav-edit-row`/`.p3h-unified-tb` markup
-    verbatim, so `_p3FitToolbar()`/`_p3FitEditBar()` (hard-wired to `#p3h`)
-    keep folding it exactly as before — c2's job, untouched. An explicit
-    Save is added to the tablet/desktop formatting row, since kindBar's own
-    Save (their only source before) is suppressed in the strip (`noSave`)
-    and Multi's toolbar has always carried its own. Normal Pane 3's own
-    branch is never entered in modal mode and is otherwise unchanged.
-  - `⋯` Section tools was already built for every tier
-    (`_edColToolbarHTML()`); the modal branch now calls it unconditionally
-    at every width rather than relying on whatever the desktop measurement
-    had been catching.
-  - Also this round: filled in v04.54's `(measured in review)` placeholder
-    and pre-fix `14/14`, below and in `CHANGELOG.md`, with the Architect's
-    PR #76 numbers.
-  - New app-check section 20 (`20a`–`20g`): same ordered `data-ps` strip in
-    both pop-ups at every size; tags really work in Multi (through `DB`);
-    a Multi version pill stays in the window; one meaning for `🏷`; nothing
-    inside `#p3.modal-mode` navigates a background pane while normal Pane 3
-    still can; `⋯` reachable everywhere; normal Pane 3's own control list
-    unchanged from `main`. No pre-existing check needed updating.
-  - **Finished by the Architect in review.** The first cut had the right
-    order, but `kindBarHTML(a,true,…)` returns no `.kind-bar` wrapper, so
-    Type, the chip, Attach and 📦 stacked on four lines. The strip was
-    ~310px tall on a phone, and Multi's Type row sat flush on the window
-    edge. The builder's fix run ended **without pushing** (the v04.42
-    failure again). The Architect made the fix on its own branch:
-    - `.pop-row` flex rows: Type · Attach · 📦 on one, folders · versions
-      on one;
-    - one 14px inset for every row and the title, in both pop-ups;
-    - checks `20h`/`20i`/`20j` (one row, title-to-toolbar ≤190px, same
-      inset). 15 of their 21 fail on the first cut. The 6 per-pop-up
-      inset checks pass there only because the first cut had no rows to
-      compare.
-  - 11/11 ship checks, **457/457 app checks, twice in a row**. Unpatched (this `tools/` against
-    v04.54's `index.html`): **428/439, all 11 failures in section 20** (aborted blocks run fewer checks, hence the smaller total).
+
 ---
 
 ## What this is
@@ -535,6 +483,11 @@ traps belong in `tools/README.md`, not here.)*
   what the file CONTAINS. Edit the source; never replace it with a saved
   page. `ship-check` now fails on the fingerprints. Cost: private note
   titles on a public web address, found by chance in a builder's review.
+  **Its twin, paid for one round later:** v04.58's clean-up looked for the
+  surfaces it had been shown (the tab picker) and missed the tab bar right
+  beside it, which held two more titles. When cleaning a class of leak,
+  sweep for the class (any literal note id where the source only
+  interpolates one), not for the instances you were shown. v04.60.
 - **Making boot asynchronous opens a window where the app runs on the
   placeholder `DB` — and every listener registered at parse time can fire
   in it.** v04.50 made `loadDB()` await IndexedDB. Until it resolved, `DB`

@@ -6860,6 +6860,22 @@ await r.block(`23f-phone-${mode}`, async () => {
 });
 }
 
+/* ── 24. v04.60: Contents lists a heading's words, not its chrome ──────────
+   _tocScan() read textContent, which in an editor includes the ⠿ grip and
+   ▼ arrow _edColInit() injects at the front of every h1–h4 — Single's
+   Contents read "⠿▼One". Both pop-ups, where Contents is drawn. */
+for (const mode of ['panel', 'float']) {
+await r.block(`24a-toc-text-${mode}`, async () => {
+  const db = seedDB(); db.articles[0].content = '<h1>One</h1><p>a</p><h2>Two</h2><p>b</p><h2>Three</h2><p>c</p>';
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+  await s.page.evaluate((m) => openNotePopup('a1', m), mode); await s.page.waitForTimeout(900);
+  const items = await s.page.evaluate(() => [...document.querySelectorAll('#toc-panel .toc-item')].map((e) => e.textContent.trim()));
+  await s.close();
+  r.check(JSON.stringify(items) === JSON.stringify(['One', 'Two', 'Three']),
+    `${mode === 'panel' ? 'Single' : 'Multi'}: Contents lists the headings' own words, with no ⠿/▼ chrome`, JSON.stringify(items));
+});
+}
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores

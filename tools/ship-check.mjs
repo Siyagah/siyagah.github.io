@@ -123,6 +123,12 @@ const debris = [
   [/firebaseapp\.com\/__\/auth\/iframe/, 'a Firebase auth iframe URL'],
   [/id="id-recall-widget-root"/, "a browser extension's widget root"],
   [/addToTabPicker\('[a-z0-9]{6,}'\)/, 'a tab-picker row with a REAL note id (the source only ever writes ${a.id})'],
+  /* v04.60 — v04.58 named the tab PICKER and missed the tab BAR beside it:
+     the static #tab-bar still held two real note titles as rendered chips,
+     and #ctx a real data-aid. The general fingerprint is any literal note
+     id where the source only ever interpolates one. */
+  [/data-(tid|aid)="[a-z0-9]{6,}"/, 'a data-tid/data-aid holding a REAL note id'],
+  [/(tabSelect|pinTabToPanel|closeTabGroup|closeTab|openTabClrPicker)\('[a-z0-9]{6,}'\)|pinTabDStart\(event,'[a-z0-9]{6,}'\)/, 'a tab-bar chip calling a handler with a REAL note id'],
 ].filter(([re]) => re.test(html)).map(([, what]) => what);
 r.check(debris.length === 0, 'index.html carries no markup captured from a running page',
   debris.length ? `found: ${debris.join('; ')}` : 'clean');
