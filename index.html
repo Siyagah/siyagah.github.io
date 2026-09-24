@@ -2929,6 +2929,11 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 /* v04.61 — the drag-to-fill handle. The visible dot is small; the touch hit
    box around it (sized in JS per tier) is not, so a phone finger can find
    it without the box swallowing a tap on the cell body next to it. */
+/* v04.61 — from 640px up the sheet toolbar wraps instead of scrolling: at
+   1440 it was 1221px of controls in a 604px strip, and a thin (on a Mac,
+   invisible) scrollbar hid Freeze, Borders, Fill down, ƒx and Remove. The
+   phone keeps its sideways scroll. */
+@media(min-width:640px){.sg-tb{flex-wrap:wrap;overflow-x:visible}}
 .sg-fill{position:absolute;z-index:7;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:crosshair;background:transparent}
 .sg-fill[hidden]{display:none}
 .sg-fill-dot{background:var(--green);border-radius:1px;pointer-events:none}
@@ -23534,7 +23539,14 @@ function _sgMount(root,state,editable){
     fillEl.style.left=Math.round(td.offsetLeft+td.offsetWidth-hit/2)+'px';
     fillEl.style.top=Math.round(td.offsetTop+td.offsetHeight-hit/2)+'px';
     fillDot.style.width=vis+'px';fillDot.style.height=vis+'px';
-    fillEl.hidden=false;
+    /* Hide it while its centre is behind the sticky parts of the grid (the
+       column-letter row, the row-number column and, when frozen, row 1):
+       at z-index 7 it would otherwise paint on top of them. */
+    const cx=td.offsetLeft+td.offsetWidth,cy=td.offsetTop+td.offsetHeight;
+    const hd=grid.tHead?grid.tHead.offsetHeight:27,rh=grid.querySelector('th.sg-rh');
+    const r1=S.frz&&s.r2>0&&TD[0]&&TD[0][0]?TD[0][0].offsetHeight:0;
+    const under=cy<gw.scrollTop+hd+r1||cx<gw.scrollLeft+(rh?rh.offsetWidth:40);
+    fillEl.hidden=under;
   }
   function status(){
     const s=norm(SEL);const n=[];let cnt=0;
@@ -23675,7 +23687,11 @@ function _sgMount(root,state,editable){
     for(let k=0;k<n;k++){
       const srcIdx=k%len,src=cells[srcIdx];const tgt=shift(k,src.r,src.c);
       if(tgt.r<0||tgt.c<0||tgt.r>=S.rows||tgt.c>=S.cols)continue;
-      const raw=mode==='formula'?SGE.shiftF(raws[srcIdx],tgt.r-src.r,tgt.c-src.c):seriesRaw(mode,raws,k);
+      /* A formula always shifts relatively, whatever the line's mode: a
+         mixed source (`x`, `=B2`) repeats as a pattern, and its formula
+         must still move with it (=B4, =B6), as in Excel. */
+      const isF=String(raws[srcIdx]||'')[0]==='=';
+      const raw=(mode==='formula'||isF)?SGE.shiftF(raws[srcIdx],tgt.r-src.r,tgt.c-src.c):seriesRaw(mode,raws,k);
       const o=Object.assign(JSON.parse(JSON.stringify(objs[srcIdx])),{raw});
       S.cells[K(tgt.r,tgt.c)]=o;tidy(K(tgt.r,tgt.c));
     }
@@ -23919,6 +23935,7 @@ function _sgMount(root,state,editable){
         case'bd':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,bdItems());break;}}
     });
     q('.sg-fmt').addEventListener('change',e=>{if(E)commit();snap();const v=e.target.value||undefined;forSel((r,c)=>setProp(r,c,'fmt',v));refresh();changed();gw.focus({preventScroll:true});});
+    gw.addEventListener('scroll',()=>{if(!fillDrag)updateFillHandle();},{passive:true});
     fillEl.addEventListener('pointerdown',e=>{
       if(e.pointerType==='mouse'&&e.button!==0)return;
       e.preventDefault();e.stopPropagation();

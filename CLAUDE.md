@@ -16,7 +16,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
-- **v04.61** (23 Sep 2026) — spreadsheet round 2a: drag-to-fill handle,
+- **v04.61** (24 Sep 2026) — spreadsheet round 2a: drag-to-fill handle,
   frozen top row, cell borders. Issue #88, round 2a of 3 of the spreadsheet
   backlog (round 1 shipped as v04.52; 2b — merged cells, colour rules,
   filters — and 2c come later).

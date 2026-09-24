@@ -5755,7 +5755,7 @@ decision.
 
 ---
 
-## v04.61 — spreadsheet round 2a: drag-to-fill handle, frozen top row, cell borders (23 Sep 2026)
+## v04.61 — spreadsheet round 2a: drag-to-fill handle, frozen top row, cell borders (24 Sep 2026)
 
 Issue #88, round 2a of the spreadsheet backlog the owner approved on 23 Sep
 2026 (round 1 shipped as v04.52; round 2b — merged cells, colour rules,
