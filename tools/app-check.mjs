@@ -7503,6 +7503,281 @@ await r.block('25i-handle-hides-under-header', async () => {
   }
 });
 
+/* ── 26. v04.62 — the cloud sync write is batched under Firestore's 10 MiB
+   request ceiling. Issue #91: `_writeCloudDB()` used to put every chunk PLUS
+   the main doc in one `batch.commit()`, so any notebook whose base64 payload
+   passed ~7.3 MB failed on every push, on every device, forever (I2).
+   Firestore itself is blocked in this harness (BLOCKED in harness.mjs), so
+   these checks build an in-memory fake with the same shape the app calls —
+   collection().doc(), .collection('chunks').doc(i), batch() with set/
+   delete/commit, get({source}) — that enforces the SAME two Firestore
+   limits: commit() rejects over 10 MiB summed, set() rejects a single
+   document over 1 MiB. Pointing `_syncFsDb` at the fake and calling
+   `_writeCloudDB`/`_readCloudDB` directly (not through a button) is a
+   data-path check — nothing in the UI can produce a 12 MB note through a
+   click, and the issue calls this data-path exception out explicitly. */
+async function installFakeFs(page) {
+  await page.evaluate(() => {
+    function makeFakeFs() {
+      const MAX_DOC = 1024 * 1024, MAX_REQ = 10 * 1024 * 1024;
+      const store = new Map();
+      const commits = [];
+      let failIn = null;
+      const size = (o) => new Blob([JSON.stringify(o)]).size;
+      function docRef(path) {
+        return {
+          _path: path,
+          collection: (name) => collRef(path + '/' + name),
+          get: async () => { const d = store.get(path);
+            return { exists: d !== undefined, data: () => (d ? JSON.parse(JSON.stringify(d)) : undefined) }; },
+        };
+      }
+      function collRef(path) { return { doc: (id) => docRef(path + '/' + id) }; }
+      function batch() {
+        const ops = [];
+        return {
+          set: (ref, data) => ops.push({ type: 'set', ref, data }),
+          delete: (ref) => ops.push({ type: 'delete', ref }),
+          commit: async () => {
+            let total = 0;
+            for (const o of ops) {
+              if (o.type !== 'set') continue;
+              const s = size(o.data);
+              if (s > MAX_DOC) throw new Error('fake Firestore: doc over 1 MiB at ' + o.ref._path + ' (' + s + ' bytes)');
+              total += s;
+            }
+            if (total > MAX_REQ) throw new Error('fake Firestore: commit over 10 MiB (' + total + ' bytes)');
+            if (failIn != null && --failIn === 0) {
+              failIn = null;
+              commits.push({ paths: ops.map((o) => o.ref._path + ':' + o.type), total, failed: true });
+              throw new Error('fake Firestore: simulated batch failure');
+            }
+            for (const o of ops) { if (o.type === 'set') store.set(o.ref._path, o.data); else store.delete(o.ref._path); }
+            commits.push({ paths: ops.map((o) => o.ref._path + ':' + o.type), total, failed: false });
+          },
+        };
+      }
+      return {
+        collection: (name) => collRef(name), batch, _store: store, _commits: commits,
+        _armFail: (n) => { failIn = n; },
+      };
+    }
+    window.__fakeFs = makeFakeFs();
+    /* _syncFsDb is a top-level `let` in index.html, so it is NOT a property
+       of window — window._syncFsDb=... would silently create an unrelated
+       property and leave _writeCloudDB() reading the real (null) binding.
+       A bare assignment resolves through the shared global lexical scope
+       instead, the same way DB/ST/mergeDB are read directly elsewhere in
+       this file. */
+    _syncFsDb = window.__fakeFs;
+    /* The real firebase-*-compat.js scripts are gstatic.com and blocked by
+       BLOCKED in harness.mjs, so `firebase` (a plain global the CDN script
+       sets) does not exist here — _writeCloudDB()'s only other dependency
+       besides _syncFsDb is firebase.firestore.FieldValue.serverTimestamp(). */
+    window.firebase = window.firebase || {};
+    window.firebase.firestore = window.firebase.firestore || {};
+    window.firebase.firestore.FieldValue = window.firebase.firestore.FieldValue || { serverTimestamp: () => 'FAKE_SERVER_TS' };
+  });
+}
+
+await r.block('26a-writes-over-10mib-round-trip', async () => {
+  const app = await openApp();
+  const { page } = app;
+  await installFakeFs(page);
+  const out = await page.evaluate(async () => {
+    const big = 'x'.repeat(2000000);
+    const original = {
+      sections: [{ id: 'sec-1', name: 'Sec', order: 0, updatedAt: '2026-01-01T00:00:00Z' }],
+      folders: [{ id: 'f1', name: 'F1', parentId: null, order: 1, sectionId: 'sec-1', updatedAt: '2026-01-01T00:00:00Z' }],
+      articles: Array.from({ length: 6 }, (_, i) => ({
+        id: 'big' + i, title: 'Big note ' + i, content: '<p>' + big + '</p>',
+        folderIds: ['f1'], tags: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', kind: 'general',
+      })),
+      trash: [], theme: { preset: 'forest', custom: {} },
+    };
+    const json = JSON.stringify(original);
+    const b64 = window._b64enc(json);
+    const nb = window.__fakeFs.collection('notebooks').doc('nb-26a');
+    let err = null;
+    try { await window._writeCloudDB(nb, Date.now(), b64); } catch (e) { err = String(e); }
+    const main = await nb.get();
+    const remoteDB = (!err && main.exists) ? await window._readCloudDB(nb, main.data()) : null;
+    return {
+      err, jsonLen: json.length, b64Len: b64.length,
+      origCount: original.articles.length,
+      remoteCount: remoteDB ? remoteDB.articles.length : -1,
+      idsMatch: remoteDB ? JSON.stringify(remoteDB.articles.map((a) => a.id)) === JSON.stringify(original.articles.map((a) => a.id)) : false,
+      deepEqual: remoteDB ? JSON.stringify(remoteDB) === JSON.stringify(original) : false,
+    };
+  });
+  r.check(out.jsonLen > 11000000, 'the seeded notebook really is about 12 MB of JSON — over the old single-commit ceiling',
+    `${out.jsonLen} bytes JSON, ${out.b64Len} bytes base64`);
+  r.check(!out.err, '_writeCloudDB() of a ~12 MB notebook does not reject', out.err || 'no error');
+  r.check(out.deepEqual, '_readCloudDB() of what was written is deep-equal to the original — same note count, same ids, same content lengths',
+    `${out.origCount} → ${out.remoteCount} articles, ids match: ${out.idsMatch}`);
+  await app.close();
+});
+
+await r.block('26b-main-doc-committed-last', async () => {
+  const app = await openApp();
+  const { page } = app;
+  await installFakeFs(page);
+  const out = await page.evaluate(async () => {
+    const big = 'y'.repeat(2000000);
+    const original = {
+      sections: [], folders: [],
+      articles: Array.from({ length: 6 }, (_, i) => ({
+        id: 'b' + i, title: 't' + i, content: '<p>' + big + '</p>', folderIds: [], tags: [],
+        createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', kind: 'general',
+      })),
+      trash: [], theme: {},
+    };
+    const b64 = window._b64enc(JSON.stringify(original));
+    const nb = window.__fakeFs.collection('notebooks').doc('nb-26b');
+    await window._writeCloudDB(nb, Date.now(), b64);
+    const commits = window.__fakeFs._commits;
+    /* The stale-chunk cleanup batch (unchanged this round) also writes only
+       to /chunks/ paths, as deletes, and runs AFTER the main doc — so it has
+       to be told apart from the chunk-writing batches this check cares
+       about, or it reads as a chunk batch that landed "after" the main doc. */
+    const chunkWriteIdxs = commits.map((c, i) => (c.paths.every((p) => p.includes('/chunks/') && p.endsWith(':set')) ? i : -1)).filter((i) => i >= 0);
+    const mainIdx = commits.findIndex((c) => c.paths.some((p) => p.startsWith('notebooks/nb-26b:')));
+    return {
+      count: commits.length, maxTotal: Math.max(...commits.map((c) => c.total)),
+      mainIdx, lastChunkWriteIdx: Math.max(...chunkWriteIdxs),
+    };
+  });
+  r.check(out.count >= 2, 'the write took more than one batch commit', JSON.stringify(out));
+  r.check(out.mainIdx > out.lastChunkWriteIdx,
+    'the main doc is committed after every chunk-writing batch, in the commit log order', JSON.stringify(out));
+  r.check(out.maxTotal <= 10 * 1024 * 1024, 'no single commit exceeds 10 MiB', `max ${out.maxTotal} bytes`);
+  await app.close();
+});
+
+/* If a chunk batch fails, _writeCloudDB() never reaches the main-doc batch,
+   so the main doc keeps pointing at whichever version was last written
+   completely. Readers already retry a chunk whose `ver` differs from the
+   main doc's own `ver` (torn-read detection, pre-existing) — but that only
+   protects a READ THAT HAPPENS WHILE A WRITE IS STILL IN FLIGHT. If the
+   write never finishes at all (this check), and an EARLIER chunk batch of
+   the SAME failed write already committed, the low-numbered chunks it
+   touched now carry the NEW (failed write's) `ver`, so a read against the
+   unchanged main doc's OLD `ver` correctly refuses to reassemble them —
+   it fails safe to null rather than returning wrong data, but it does not
+   necessarily replay the previous notebook instantly. It recovers the
+   moment the next write (the existing retry/debounce path) succeeds. This
+   check proves both halves: nothing is ever returned except the untouched
+   previous notebook or null, and a subsequent successful write fully
+   restores it. */
+await r.block('26c-failed-batch-does-not-publish-main-doc', async () => {
+  const app = await openApp();
+  const { page } = app;
+  await installFakeFs(page);
+  const out = await page.evaluate(async () => {
+    const small = {
+      sections: [], folders: [],
+      articles: [{ id: 'p1', title: 'Prev', content: '<p>prev</p>', folderIds: [], tags: [],
+        createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', kind: 'general' }],
+      trash: [], theme: {},
+    };
+    const smallB64 = window._b64enc(JSON.stringify(small));
+    const nb = window.__fakeFs.collection('notebooks').doc('nb-26c');
+    await window._writeCloudDB(nb, Date.now(), smallB64);
+    const prevData = (await nb.get()).data();
+
+    const big = 'z'.repeat(2000000);
+    const bigOriginal = {
+      sections: [], folders: [],
+      articles: Array.from({ length: 8 }, (_, i) => ({
+        id: 'q' + i, title: 't' + i, content: '<p>' + big + '</p>', folderIds: [], tags: [],
+        createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', kind: 'general',
+      })),
+      trash: [], theme: {},
+    };
+    const bigB64 = window._b64enc(JSON.stringify(bigOriginal));
+    window.__fakeFs._armFail(2);
+    let err = null;
+    try { await window._writeCloudDB(nb, Date.now() + 1, bigB64); } catch (e) { err = String(e); }
+    const afterData = (await nb.get()).data();
+    const readBack = await window._readCloudDB(nb, afterData);
+
+    await window._writeCloudDB(nb, Date.now() + 2, bigB64);
+    const retryDB = await window._readCloudDB(nb, (await nb.get()).data());
+
+    return {
+      err,
+      mainUnchanged: afterData.n === prevData.n && afterData.ver === prevData.ver,
+      readBackSafe: readBack === null || JSON.stringify(readBack) === JSON.stringify(small),
+      retryOk: !!retryDB && JSON.stringify(retryDB) === JSON.stringify(bigOriginal),
+    };
+  });
+  r.check(!!out.err, '_writeCloudDB() rejects when a chunk batch fails', out.err || 'did not reject');
+  r.check(out.mainUnchanged, 'the main doc still holds the previous n/ver — the failed write never published as complete', JSON.stringify(out));
+  r.check(out.readBackSafe, '_readCloudDB() never returns anything other than the untouched previous notebook or null — never a torn one', JSON.stringify(out));
+  r.check(out.retryOk, 'a subsequent successful write fully recovers the notebook', JSON.stringify(out));
+  await app.close();
+});
+
+await r.block('26d-small-notebook-round-trips', async () => {
+  const app = await openApp();
+  const { page } = app;
+  await installFakeFs(page);
+  const out = await page.evaluate(async () => {
+    const original = {
+      sections: [{ id: 's1', name: 'S', order: 0, updatedAt: '2026-01-01T00:00:00Z' }], folders: [],
+      articles: [{ id: 'sm1', title: 'Small', content: '<p>hello</p>', folderIds: [], tags: [],
+        createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', kind: 'general' }],
+      trash: [], theme: { preset: 'forest' },
+    };
+    const b64 = window._b64enc(JSON.stringify(original));
+    const nb = window.__fakeFs.collection('notebooks').doc('nb-26d');
+    await window._writeCloudDB(nb, Date.now(), b64);
+    const remoteDB = await window._readCloudDB(nb, (await nb.get()).data());
+    const commits = window.__fakeFs._commits;
+    const chunkWriteIdxs = commits.map((c, i) => (c.paths.every((p) => p.includes('/chunks/') && p.endsWith(':set')) ? i : -1)).filter((i) => i >= 0);
+    const mainIdx = commits.findIndex((c) => c.paths.some((p) => p.startsWith('notebooks/nb-26d:')));
+    return {
+      deepEqual: JSON.stringify(remoteDB) === JSON.stringify(original),
+      chunkWriteBatches: chunkWriteIdxs.length,
+      mainAfterChunkWrite: mainIdx > Math.max(...chunkWriteIdxs),
+    };
+  });
+  r.check(out.deepEqual, 'a small (single-chunk-batch) notebook still writes and round-trips correctly', JSON.stringify(out));
+  r.check(out.chunkWriteBatches === 1, 'a notebook under one batch takes exactly one chunk-writing batch', `${out.chunkWriteBatches} chunk-writing batches`);
+  r.check(out.mainAfterChunkWrite, 'the main doc is still committed after that one chunk batch, even for a small write', JSON.stringify(out));
+  await app.close();
+});
+
+await r.block('26e-stored-format-unchanged', async () => {
+  const app = await openApp();
+  const { page } = app;
+  await installFakeFs(page);
+  const out = await page.evaluate(async () => {
+    const original = {
+      sections: [], folders: [],
+      articles: [{ id: 'e1', title: 'E', content: '<p>e</p>', folderIds: [], tags: [],
+        createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', kind: 'general' }],
+      trash: [], theme: {},
+    };
+    const b64 = window._b64enc(JSON.stringify(original));
+    const nb = window.__fakeFs.collection('notebooks').doc('nb-26e');
+    await window._writeCloudDB(nb, Date.now(), b64);
+    const store = window.__fakeFs._store;
+    const mainKeys = Object.keys(store.get('notebooks/nb-26e')).sort();
+    const chunkKeys = Object.keys(store.get('notebooks/nb-26e/chunks/0')).sort();
+    const remoteDB = await window._readCloudDB(nb, (await nb.get()).data());
+    return { mainKeys, chunkKeys, deepEqual: JSON.stringify(remoteDB) === JSON.stringify(original) };
+  });
+  r.check(JSON.stringify(out.mainKeys) === JSON.stringify(['deviceUpdatedAt', 'n', 'updatedAt', 'ver']),
+    'the main doc has exactly the keys _readCloudDB() (and an older build\'s reader) expect — n, ver, deviceUpdatedAt, updatedAt',
+    JSON.stringify(out.mainKeys));
+  r.check(JSON.stringify(out.chunkKeys) === JSON.stringify(['p', 'ver']),
+    'a chunk doc has exactly the keys _readCloudDB() expects — p, ver', JSON.stringify(out.chunkKeys));
+  r.check(out.deepEqual, 'the UNCHANGED _readCloudDB() reassembles a batched write correctly — the reader needed no changes this round',
+    String(out.deepEqual));
+  await app.close();
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
