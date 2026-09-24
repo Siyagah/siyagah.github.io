@@ -6234,4 +6234,140 @@ shared code path.
 - `app-check --only 27`: **83/83**.
 - `app-check --only 25`: **106/106**.
 - `app-check --only 17`: **23/23**.
+- Full `app-check` (Architect, on `5034af0`): **711/711, twice in a row**.
+- Unpatched (v04.62's app with this round's tools), `--only 27,25,17`: **136/153, 17 FAILED, all in section 27**:
+  - 7 blocks aborted (`27a` ×3, `27b`, `27c`, `27d`, `27e`);
+  - 9 `27f` fill-up/left assertions failed;
+  - `27g` aborted after 1 check.
+
+  `27h` passes on both versions, by design (a guard). Every `25*` and `17*` check passed on v04.62.
+
+---
+
+## v04.64 — spreadsheet round 2b2: colour rules (conditional formatting) (24 Sep 2026)
+
+Issue #95, round 2b2 of the spreadsheet backlog the owner approved on 23 Sep
+2026 (round 1: v04.52, round 2a: v04.61, round 2b1: v04.63; round 2b3 —
+filters — and round 2c come later, out of scope here on purpose). Everything
+lives in `_sgMount()` and its neighbours (`index.html`, from about line
+23370).
+
+**Record fix carried from v04.63's review.** The armed `Merge cells` label
+(`Tap again to merge — keeps only the top-left value`) is 340px wide, past
+the phone's own sideways-scrolling toolbar at 390px. The button's own label
+is now `Tap again: keeps top-left only`; the toast it also shows keeps the
+full sentence unchanged, since the toast isn't constrained by the toolbar's
+width. New check: at 390 the armed button is no wider than 240px. Section
+27's own `27a` asserted the old label text and now asserts the new one, with
+the reason recorded in place.
+
+**What the owner gets.** A new toolbar button, `Colour rules ▾` (words, not
+a glyph), opening a small panel anchored to the button and clamped on
+screen — the same shape `Borders ▾` and `ƒx Functions` already use, one
+shared instance (`_sgCrEl()`) reused by every mounted sheet, exactly like
+`_sgMenuEl`/`_sgFnEl`. The panel has two parts:
+- **Add a rule for the selected cells**: a condition select (greater than,
+  less than, equal to, between, text contains, is empty, is not empty), one
+  or two value fields (the second only for "between"), four colour choices
+  — green, gold and rose fill, or red text for negatives — and an `Add`
+  button.
+- **Rules on this selection**: every rule overlapping the current selection,
+  in words (`B2:B20 · greater than 100 · green`), each with its own
+  `✕ Remove`. A one-line note says "When rules overlap, the first one added
+  wins."
+
+**Stored as a new top-level key, `cr`.** An array of `{rng:[r1,c1,r2,c2],
+op, v1, v2?, fill?, ink?}`, in the order the rules were added; the key is
+left off a sheet with no rules.
+
+**How rules apply.** `_sgCrFor(state,r,c,v)` (top-level, shared by the
+snapshot and the live grid) walks `state.cr` in order and returns the FIRST
+rule whose range covers `(r,c)` and whose condition matches the cell's
+CURRENT COMPUTED value `v` — never its raw text, so a formula is coloured by
+what it currently shows. A match's colour overrides how the cell is DRAWN
+only: `refresh()` (the live grid, in both edit and read-mode mounts) and
+`_sgStaticHTML()` (the snapshot) both compute `bg = rule.fill||o.bg` and an
+extra `color:` when the rule carries `ink` — the cell's own stored `bg` is
+never written by a match, proved directly (`28c`): a cell with its own gold
+fill shows the rule's colour while it matches and its own gold the moment it
+stops, and `bg` in `data-sg` never changes either way. Number comparisons
+coerce the way `SGE.cmp` already does elsewhere in the sheet; `text
+contains` lower-cases both sides.
+
+**The snapshot.** `_sgStaticHTML()`'s used-range scan now also covers every
+`cr` rule's full range, the same way v04.63 already covers a merge's range —
+a rule that colours an otherwise-empty cell (`is empty`) isn't pushed out of
+the saved snapshot at the sheet's edge. The snapshot is still rebuilt only on
+edit, never on load (`17d`/`25g`/`27h`'s rule, extended to `cr` by `28g`), so
+a rule sitting on a volatile formula (`TODAY()`) goes stale in the snapshot
+between edits — the same trade-off v04.52 already made for values themselves.
+
+**Moves with the grid.** `rekeyMerges()`'s shift math is now factored into
+one shared helper, `rekeyRange(range,axis,at,n)`, that moves, grows, shrinks
+or drops a single `[r1,c1,r2,c2]` range — an insertion strictly inside it
+grows it, at/before its top-left edge carries it along, a deletion collapses
+an edge to the deletion point, and when both edges collapse to the same
+point the range is gone. A new `rekeyColorRules()` calls the same helper for
+every `cr` rule, from the same `rekey()` that already calls `rekeyMerges()`
+— proved not to have disturbed `27c`, the merge insert/delete suite, which
+stayed green unchanged. The one difference between the two callers: a merge
+that collapses to a single cell is also dropped (a merge needs two cells); a
+colour rule that collapses to a single cell is a perfectly normal rule and
+stays. Sorting never calls `rekey()` at all, so a rule's range is untouched
+by a sort — it colours by POSITION, exactly what Excel does.
+
+**Merges.** A rule over a merge applies to the anchor — no special-casing
+needed: a merge's covered cells are already skipped in both `_sgStaticHTML`'s
+render loop and hidden (`display:none`) in the live grid, so a match on a
+covered position is simply never drawn.
+
+**Undo.** Adding and removing a rule are each one `snap()`, so each is one
+undo step, the same shape as every other sheet mutation.
+
+**The read view and Multi** show the colours from the same `refresh()`/
+`_sgStaticHTML()` every mode already shares — proved in `28f` (Multi) and
+`28a` (a reload into the read view), not assumed.
+
+**Layouts (D5).**
+| | Phone (<640px) | Tablet | Laptop |
+|---|---|---|---|
+| `Colour rules ▾` | in the sideways-scrolling toolbar | wrapped, fully visible (`25h` stays green) | same |
+| Panel | full width minus 16px each side (`_sgCrPosition()` sets `width:calc(100vw - 16px)` under 640px), fields wrap to two per line, every field/swatch/button at least 44×44px | anchored to the button, clamped inside the viewport | anchored, clamped |
+
+Proved directly, not assumed: `28a` runs at all three sizes and checks the
+panel's own bounding box lies fully inside the viewport at each, and at 390
+that every interactive control measures 44px or more in both dimensions.
+
+**Not done, per the issue's own scope:**
+- colour scales, data bars and icon sets;
+- rules written as formulas (`=A1>B1`);
+- font styling from rules beyond the one red-text option;
+- filters (round 2b3) and round 2c.
+
+**Checks: new section 28, `28a`–`28h`.** Real input only — the real
+`Colour rules ▾` button, the real panel's fields and swatches, real clicks —
+never `crAdd`/`crRemove`/`_sgCrFor` called directly, and every check id
+names its size where the round's layout differs by size. `28a` (×3 sizes):
+values 50/150/250 in B2:B4, a real *greater than 100 · green* rule added
+through the panel — B3/B4 turn green and B2 doesn't, typing 500 into B2
+turns it green, a save carries the colour into `.sg-static`, a reload shows
+it in the read view, and the panel's own box/tap-target sizing. `28b`
+(1440): one match and one non-match for every condition, driven through the
+panel — between, less than, equal to, text contains (case-insensitive), is
+empty, is not empty, and red text. `28c` (1440): two overlapping rules —
+the first added wins; a cell with its own gold fill shows the rule colour
+while it matches and its gold once it stops; `bg` in `data-sg` never
+changes. `28d` (1440): the real `Rows & columns ▾` menu — an insert inside a
+rule's range grows it, deleting its column drops it, a sort leaves it alone.
+`28e` (820): `✕ Remove` removes a rule; one Ctrl+Z restores it. `28f`
+(1440): adding a rule in a real Multi window, then saving. `28g`: opening a
+note whose sheet already has `cr` (plus `mg`, `frz` and `bd`) changes
+nothing. `28h`: the record fix above, at 390. `17*`, `25*` and `27*` all
+stay green, re-run in full, not assumed from the shared code path.
+
+**Measured**
+- `ship-check`: **12/12**.
+- `app-check --only 28`: **51/51**.
+- `app-check --only 27,25,17`: **212/212** (`27a`'s armed-label assertion
+  updated in place for the record fix above; every other check unchanged).
 - Full `app-check`: run by the Architect in review.

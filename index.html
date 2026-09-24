@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.63">
+<meta name="app-version" content="04.64">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2964,6 +2964,33 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 .sg-fi code{font:500 12.5px ui-monospace,Menlo,monospace}
 .sg-fi span{display:block;font-size:12px;color:var(--t2)}
 .sg-fnone{padding:10px;color:var(--t2)}
+/* v04.64 — colour rules (conditional formatting). Anchored/clamped like
+   .sg-fnp; from 640px up it keeps a fixed width beside the button, and
+   under 640px _sgCrPosition() widens it to the viewport minus 16px each
+   side instead, per the phone layout the issue asked for. */
+.sg-crp{position:fixed;z-index:9000;background:var(--white);border:1px solid var(--border2);border-radius:12px;box-shadow:0 20px 50px -18px rgba(30,20,0,.45);width:320px;max-height:min(70vh,520px);display:flex;flex-direction:column;font:13px 'DM Sans',system-ui,sans-serif;color:var(--t1)}
+.sg-crp[hidden]{display:none}
+.sg-crp .sg-fh{justify-content:space-between}
+.sg-crbody{overflow:auto;padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px}
+.sg-cr-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sg-cr-op,.sg-cr-v1,.sg-cr-v2{border:1px solid var(--border2);border-radius:8px;padding:6px 8px;font:13px 'DM Sans',system-ui,sans-serif;background:var(--white);color:var(--t1);height:32px}
+.sg-cr-op{width:100%}
+.sg-cr-v1,.sg-cr-v2{flex:1;min-width:70px}
+.sg-cr-colorrow{gap:6px}
+.sg-cr-sw{width:26px;height:26px;border-radius:7px;border:2px solid var(--border2);cursor:pointer;padding:0}
+.sg-cr-sw.on{border-color:var(--t1)}
+.sg-cr-swtxt{background:var(--white);color:#C0392B;font-weight:700}
+.sg-cr-note{font-size:11.5px;color:var(--t3);margin:0}
+.sg-cr-h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);margin-top:4px}
+.sg-cr-list{display:flex;flex-direction:column;gap:4px}
+.sg-cr-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12.5px}
+.sg-cr-item button{border:0;background:none;color:#9B1C1C;cursor:pointer;font:inherit;padding:2px 4px}
+.sg-cr-empty{color:var(--t3);font-size:12px;padding:2px}
+@media(max-width:639.98px){
+  .sg-cr-op,.sg-cr-v1,.sg-cr-v2,.sg-cr-addbtn,.sg-crx,.sg-cr-item button{min-height:44px;min-width:44px}
+  .sg-cr-sw{width:44px;height:44px}
+  .sg-cr-v1,.sg-cr-v2{flex:1 1 45%}
+}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script><style></style><style id="dyn-hs">.av-body h1,#ed h1,.fw-ed h1{border-left:3px solid #0f766e;background:#f0fdfa;padding-left:10px;border-radius:0 4px 4px 0}
 .av-body h2,#ed h2,.fw-ed h2{border-left:3px solid #4338ca;background:#eef2ff;padding-left:10px;border-radius:0 4px 4px 0}
@@ -3009,7 +3036,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.63</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.64</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -23344,16 +23371,53 @@ function _sgParse(el){try{const d=JSON.parse(el.getAttribute('data-sg')||'');if(
    edit nor pushed out of the saved snapshot. See CLAUDE.md's mergeDB()
    allow-list lesson — same shape of bug, same fix. */
 function _sgCellHasContent(o){return !!o&&Object.keys(o).some(function(k){return o[k];});}
+/* v04.64 — colour rules (conditional formatting), stored as the top-level
+   `cr` key: an array of {rng:[r1,c1,r2,c2], op, v1, v2?, fill?, ink?}, in
+   the order they were added — the FIRST rule in the array that matches a
+   cell wins, never the most specific or the most recent. Evaluated against
+   each cell's COMPUTED value, never its raw text, so a formula is coloured
+   by what it currently shows — including a volatile one (TODAY()), whose
+   snapshot then goes stale between edits exactly the way v04.52 already
+   accepted for values themselves. A rule's colour only ever overrides how a
+   cell is DRAWN (_sgStaticHTML below, and refresh() in _sgMount); the
+   cell's own stored `bg` is never written by a match. Shared by the
+   snapshot and the live grid so read view, Single and Multi agree. */
+const _SG_CR_OPS=[['gt','greater than'],['lt','less than'],['eq','equal to'],['between','between'],['contains','text contains'],['empty','is empty'],['notEmpty','is not empty']];
+const _SG_CR_FILLS={green:'#E3F1E7',gold:'#F6EAD2',rose:'#FBE3E3'};
+const _SG_CR_RED='#C0392B';
+function _sgCrInRange(rule,r,c){const g=rule.rng;return r>=g[0]&&r<=g[2]&&c>=g[1]&&c<=g[3];}
+function _sgCrMatchVal(rule,v){
+  if(rule.op==='empty')return v===null||v==='';
+  if(rule.op==='notEmpty')return !(v===null||v==='');
+  if(SGE.isErr(v))return false;
+  if(rule.op==='contains')return v!==null&&String(v).toLowerCase().includes(String(rule.v1==null?'':rule.v1).toLowerCase());
+  const rv1=SGE.literal(String(rule.v1==null?'':rule.v1));
+  if(rule.op==='between'){const rv2=SGE.literal(String(rule.v2==null?'':rule.v2));return SGE.cmp(v,rv1)>=0&&SGE.cmp(v,rv2)<=0;}
+  const d=SGE.cmp(v,rv1);
+  if(rule.op==='gt')return d>0;
+  if(rule.op==='lt')return d<0;
+  if(rule.op==='eq')return d===0;
+  return false;
+}
+function _sgCrFor(state,r,c,v){
+  if(!state.cr)return null;
+  for(let i=0;i<state.cr.length;i++){const rule=state.cr[i];if(_sgCrInRange(rule,r,c)&&_sgCrMatchVal(rule,v))return rule;}
+  return null;
+}
 /* The snapshot a note's content carries: the used range only, as values.
    v04.63 — a merge's full extent counts as used even when every cell in it
    is empty, and the anchor gets a real colspan/rowspan with the covered
    cells omitted, so the snapshot (Save File, search, an older build) sees a
-   genuinely merged table, not a values-only approximation. */
+   genuinely merged table, not a values-only approximation. v04.64 — a
+   colour rule's range counts as used the same way, so a rule that colours
+   an otherwise-empty cell (e.g. "is empty") isn't pushed out of the
+   snapshot at the sheet's edge. */
 function _sgStaticHTML(state){
   const get=SGE.evaluate(state);
   let r2=-1,c2=-1;
   for(const k in state.cells){const [r,c]=k.split(',').map(Number);if(_sgCellHasContent(state.cells[k])){if(r>r2)r2=r;if(c>c2)c2=c;}}
   for(const m of (state.mg||[])){if(m[2]>r2)r2=m[2];if(m[3]>c2)c2=m[3];}
+  for(const rule of (state.cr||[])){if(rule.rng[2]>r2)r2=rule.rng[2];if(rule.rng[3]>c2)c2=rule.rng[3];}
   if(r2<0){r2=Math.min(2,state.rows-1);c2=Math.min(2,state.cols-1);}
   const mgAnchor={},mgCov={};
   for(const m of (state.mg||[])){mgAnchor[m[0]+','+m[1]]=m;
@@ -23362,8 +23426,11 @@ function _sgStaticHTML(state){
   for(let r=0;r<=r2;r++){h+='<tr>';for(let c=0;c<=c2;c++){
     if(mgCov[r+','+c])continue;
     const o=state.cells[r+','+c]||{};const v=get(r,c);const t=SGE.display(v,o.fmt);
+    const cr=_sgCrFor(state,r,c,v);
     const al=o.al||(typeof v==='number'?'r':typeof v==='boolean'||SGE.isErr(v)?'c':'');
-    const st=[];if(o.b)st.push('font-weight:700');if(o.i)st.push('font-style:italic');if(o.bg)st.push('background:'+o.bg);
+    const st=[];if(o.b)st.push('font-weight:700');if(o.i)st.push('font-style:italic');
+    const bg=cr&&cr.fill?cr.fill:o.bg;if(bg)st.push('background:'+bg);
+    if(cr&&cr.ink)st.push('color:'+cr.ink);
     if(al==='r')st.push('text-align:right');else if(al==='c')st.push('text-align:center');
     if(o.bd){if(o.bd.includes('t'))st.push('border-top:1px solid var(--t1)');if(o.bd.includes('b'))st.push('border-bottom:1px solid var(--t1)');
       if(o.bd.includes('l'))st.push('border-left:1px solid var(--t1)');if(o.bd.includes('r'))st.push('border-right:1px solid var(--t1)');}
@@ -23446,12 +23513,77 @@ function _sgFnEl(){let p=document.getElementById('sg-fnp');if(!p){p=document.cre
   l.addEventListener('mousedown',function(e){if(e.target.closest('[data-fn]'))e.preventDefault();});
   l.addEventListener('click',function(e){const b=e.target.closest('[data-fn]');if(!b||!_sgCur)return;p.hidden=true;_sgCur.insertFn(b.dataset.fn);});}
   return p;}
+/* v04.64 — Colour rules ▾. Anchored to the button and clamped like sg-fnp
+   above; under 640px it widens to fill the viewport (minus 16px each side)
+   instead, per the issue's phone layout. One instance, shared by every
+   mounted sheet, exactly like _sgMenuEl/_sgFnEl — it always acts on
+   whichever sheet is _sgCur at the moment it was opened. */
+function _sgCrPosition(p,btnRect){
+  if(window.innerWidth<640){p.style.width='calc(100vw - 16px)';p.style.left='8px';}
+  else{p.style.width='320px';p.style.left=Math.max(8,Math.min(btnRect.left,window.innerWidth-320-8))+'px';}
+  p.style.top=Math.max(8,Math.min(btnRect.bottom+6,window.innerHeight-p.offsetHeight-8))+'px';
+}
+function _sgCrEl(){
+  let p=document.getElementById('sg-crp');if(p)return p;
+  p=document.createElement('div');p.id='sg-crp';p.className='sg-crp';p.hidden=true;
+  p.innerHTML=
+      '<div class="sg-fh"><b>Colour rules</b><button type="button" class="sg-b sg-crx" title="Close">✕</button></div>'
+    +'<div class="sg-crbody">'
+      +'<div class="sg-cr-row">When value is</div>'
+      +'<div class="sg-cr-row"><select class="sg-cr-op" aria-label="Condition">'+_SG_CR_OPS.map(o=>'<option value="'+o[0]+'">'+o[1]+'</option>').join('')+'</select></div>'
+      +'<div class="sg-cr-row sg-cr-vals"><input class="sg-cr-v1" placeholder="Value" aria-label="Value"><input class="sg-cr-v2" placeholder="and…" aria-label="Second value" hidden></div>'
+      +'<div class="sg-cr-row sg-cr-colorrow"><span>Colour</span>'
+        +'<button type="button" class="sg-cr-sw on" data-fill="green" style="background:#E3F1E7" title="Green fill" aria-label="Green fill"></button>'
+        +'<button type="button" class="sg-cr-sw" data-fill="gold" style="background:#F6EAD2" title="Gold fill" aria-label="Gold fill"></button>'
+        +'<button type="button" class="sg-cr-sw" data-fill="rose" style="background:#FBE3E3" title="Rose fill" aria-label="Rose fill"></button>'
+        +'<button type="button" class="sg-cr-sw sg-cr-swtxt" data-fill="redtext" title="Red text" aria-label="Red text">A</button>'
+      +'</div>'
+      +'<button type="button" class="sg-b sg-cr-addbtn">Add</button>'
+      +'<p class="sg-cr-note">When rules overlap, the first one added wins.</p>'
+      +'<div class="sg-cr-h2">Rules on this selection</div>'
+      +'<div class="sg-cr-list"></div>'
+    +'</div>';
+  document.body.appendChild(p);
+  const opSel=p.querySelector('.sg-cr-op'),v1=p.querySelector('.sg-cr-v1'),v2=p.querySelector('.sg-cr-v2'),list=p.querySelector('.sg-cr-list');
+  let curFill='green';
+  function syncVals(){const op=opSel.value;v1.hidden=(op==='empty'||op==='notEmpty');v2.hidden=op!=='between';}
+  opSel.addEventListener('change',syncVals);
+  p.querySelectorAll('.sg-cr-sw').forEach(function(sw){
+    sw.addEventListener('click',function(){p.querySelectorAll('.sg-cr-sw').forEach(function(x){x.classList.remove('on');});sw.classList.add('on');curFill=sw.dataset.fill;});
+  });
+  function renderList(){
+    if(!_sgCur){list.innerHTML='';return;}
+    const rows=_sgCur.crRulesFor();
+    list.innerHTML=rows.length?rows.map(function(x){return '<div class="sg-cr-item"><span>'+esc(x.text)+'</span><button type="button" data-i="'+x.i+'">✕ Remove</button></div>';}).join('')
+      :'<div class="sg-cr-empty">No colour rules on this selection.</div>';
+  }
+  list.addEventListener('click',function(e){const b=e.target.closest('button[data-i]');if(!b||!_sgCur)return;_sgCur.crRemove(+b.dataset.i);renderList();});
+  p.querySelector('.sg-cr-addbtn').addEventListener('click',function(){
+    if(!_sgCur)return;
+    const op=opSel.value,val1=v1.hidden?'':v1.value.trim(),val2=v2.hidden?'':v2.value.trim();
+    if(!v1.hidden&&val1===''){toast('Enter a value first');return;}
+    if(op==='between'&&val2===''){toast('Enter both values first');return;}
+    const fill=curFill==='redtext'?undefined:_SG_CR_FILLS[curFill];
+    const ink=curFill==='redtext'?_SG_CR_RED:undefined;
+    _sgCur.crAdd(op,val1,val2,fill,ink);
+    v1.value='';v2.value='';renderList();
+  });
+  p.querySelector('.sg-crx').addEventListener('click',function(){p.hidden=true;});
+  p.addEventListener('keydown',function(e){e.stopPropagation();if(e.key==='Escape')p.hidden=true;});
+  p._open=function(){
+    opSel.value='gt';syncVals();v1.value='';v2.value='';
+    curFill='green';p.querySelectorAll('.sg-cr-sw').forEach(function(sw){sw.classList.toggle('on',sw.dataset.fill==='green');});
+    renderList();
+  };
+  return p;
+}
 document.addEventListener('mousemove',function(e){if(_sgDragS)_sgDragS.onDrag(e);});
 document.addEventListener('mouseup',function(){if(_sgDragS){const s=_sgDragS;_sgDragS=null;s.onDragEnd();}});
 document.addEventListener('mousedown',function(e){
   const m=document.getElementById('sg-menu');if(m&&!m.hidden&&!m.contains(e.target))m.hidden=true;
   const p=document.getElementById('sg-fnp');if(p&&!p.hidden&&!p.contains(e.target)&&!(e.target.closest&&e.target.closest('[data-a="fn"]')))p.hidden=true;
-  if(_sgCur&&_sgCur.editing()&&!_sgCur.root.contains(e.target)&&!(p&&p.contains(e.target)))_sgCur.commit();
+  const cp=document.getElementById('sg-crp');if(cp&&!cp.hidden&&!cp.contains(e.target)&&!(e.target.closest&&e.target.closest('[data-a="cr"]')))cp.hidden=true;
+  if(_sgCur&&_sgCur.editing()&&!_sgCur.root.contains(e.target)&&!(p&&p.contains(e.target))&&!(cp&&cp.contains(e.target)))_sgCur.commit();
 },true);
 
 function _sgMount(root,state,editable){
@@ -23525,6 +23657,7 @@ function _sgMount(root,state,editable){
       +'<button type="button" class="sg-b" data-a="frz" title="Keep row 1 visible while the grid scrolls">❄ Freeze top row</button>'
       +'<button type="button" class="sg-b" data-a="bd" title="Add or remove cell borders">Borders ▾</button>'
       +'<button type="button" class="sg-b" data-a="merge" title="Merge the selected cells into one">Merge cells</button><span class="sg-sep"></span>'
+      +'<button type="button" class="sg-b" data-a="cr" title="Colour cells based on their value">Colour rules ▾</button><span class="sg-sep"></span>'
       +'<button type="button" class="sg-b sg-fxb" data-a="fn" title="Browse every function">ƒx Functions</button>'
       +'<button type="button" class="sg-b sg-del" data-a="del" title="Remove this spreadsheet from the note">Remove</button>'
       +'</div>':'')
@@ -23595,7 +23728,10 @@ function _sgMount(root,state,editable){
       let cls=SGE.isErr(v)?'sg-er':'sg-'+((o&&o.al)||(typeof v==='number'?'r':typeof v==='boolean'?'c':'l'));
       if(o&&o.b)cls+=' sg-bo';if(o&&o.i)cls+=' sg-it';
       if(o&&o.bd){if(o.bd.includes('t'))cls+=' sg-bt';if(o.bd.includes('b'))cls+=' sg-bb';if(o.bd.includes('l'))cls+=' sg-bl';if(o.bd.includes('r'))cls+=' sg-br';}
-      td.className=cls;td.textContent=txt;td.style.backgroundColor=o&&o.bg?o.bg:'';
+      const cr=_sgCrFor(S,r,c,v);
+      td.className=cls;td.textContent=txt;
+      td.style.backgroundColor=cr&&cr.fill?cr.fill:(o&&o.bg?o.bg:'');
+      td.style.color=cr&&cr.ink?cr.ink:'';
       td.title=SGE.isErr(v)?(SGE.ERRTXT[v.err]||''):(txt.length>14?txt:'');
     }
     paint();
@@ -23970,33 +24106,54 @@ function _sgMount(root,state,editable){
     SEL={r1:A.r,c1:A.c,r2:needR-1,c2:Math.min(needC-1,A.c+lines[0].length-1)};
     renderGrid();changed();toast('Pasted '+lines.length+' row'+(lines.length>1?'s':''));
   }
-  /* Move/resize/drop every mg range the same way a deletion collapses a
-     contiguous run of rows/cols to a shorter contiguous run: an edge
-     WITHIN the removed block collapses to the deletion point ('at' for the
-     top/left edge, 'at-1' for the bottom/right edge — the two meet exactly
-     when the whole merge was removed, which is what makes r1>r2 the drop
-     signal below, with no separate "fully deleted" branch needed). An
-     insertion strictly inside the merge's span grows it; at or before its
-     top/left edge just carries it along, unrown. */
+  /* Move/resize/drop one [r1,c1,r2,c2] range the same way a deletion
+     collapses a contiguous run of rows/cols to a shorter contiguous run: an
+     edge WITHIN the removed block collapses to the deletion point ('at' for
+     the top/left edge, 'at-1' for the bottom/right edge — the two meet
+     exactly when the whole range was removed, which is what makes r1>r2 the
+     drop signal below, with no separate "fully deleted" branch needed). An
+     insertion strictly inside the range's span grows it; at or before its
+     top/left edge just carries it along, unshrunk. v04.64 — factored out of
+     rekeyMerges so rekeyColorRules (cr ranges) shares the exact same shift
+     math rather than a second copy of it; a merge additionally drops when
+     it collapses to one cell (below), a cr rule does not. */
+  function rekeyRange(range,axis,at,n){
+    let [r1,c1,r2,c2]=range;
+    const shiftPair=(a,b)=>{
+      if(n>0){if(at<=a)return[a+n,b+n];if(at<=b)return[a,b+n];return[a,b];}
+      const k=-n;
+      const start=v=>v<at?v:v<at+k?at:v-k;
+      const end=v=>v<at?v:v<at+k?at-1:v-k;
+      return[start(a),end(b)];
+    };
+    if(axis==='r'){const [nr1,nr2]=shiftPair(r1,r2);r1=nr1;r2=nr2;}
+    else{const [nc1,nc2]=shiftPair(c1,c2);c1=nc1;c2=nc2;}
+    if(r1>r2||c1>c2)return null;
+    return[r1,c1,r2,c2];
+  }
   function rekeyMerges(axis,at,n){
     if(!S.mg)return;
     const out=[];
     for(const m of S.mg){
-      let [r1,c1,r2,c2]=m;
-      const shiftPair=(a,b)=>{
-        if(n>0){if(at<=a)return[a+n,b+n];if(at<=b)return[a,b+n];return[a,b];}
-        const k=-n;
-        const start=v=>v<at?v:v<at+k?at:v-k;
-        const end=v=>v<at?v:v<at+k?at-1:v-k;
-        return[start(a),end(b)];
-      };
-      if(axis==='r'){const [nr1,nr2]=shiftPair(r1,r2);r1=nr1;r2=nr2;}
-      else{const [nc1,nc2]=shiftPair(c1,c2);c1=nc1;c2=nc2;}
-      if(r1>r2||c1>c2)continue;
-      if(r1===r2&&c1===c2)continue;
-      out.push([r1,c1,r2,c2]);
+      const r=rekeyRange(m,axis,at,n);
+      if(!r)continue;
+      if(r[0]===r[2]&&r[1]===r[3])continue;
+      out.push(r);
     }
     S.mg=out.length?out:undefined;
+  }
+  /* A colour rule's range moves the same way a merge does, but a rule that
+     collapses to a single cell stays — unlike a merge, one cell is a
+     perfectly normal rule range. */
+  function rekeyColorRules(axis,at,n){
+    if(!S.cr)return;
+    const out=[];
+    for(const rule of S.cr){
+      const r=rekeyRange(rule.rng,axis,at,n);
+      if(!r)continue;
+      out.push(Object.assign({},rule,{rng:r}));
+    }
+    S.cr=out.length?out:undefined;
   }
   function rekey(axis,at,n){
     const out={};for(const k in S.cells){let [r,c]=k.split(',').map(Number);let v=axis==='r'?r:c;
@@ -24005,6 +24162,7 @@ function _sgMount(root,state,editable){
     S.cells=out;
     if(axis==='c'){const w={};for(const k in (S.colW||{})){let c=+k;if(n<0&&c>=at&&c<at-n)continue;if(c>=at)c+=n;w[c]=S.colW[k];}S.colW=w;}
     rekeyMerges(axis,at,n);
+    rekeyColorRules(axis,at,n);
   }
   function insRow(below){const s=norm(SEL);const n=s.r2-s.r1+1;if(S.rows+n>_SG_MAX_ROWS)return toast('A table can have up to '+_SG_MAX_ROWS+' rows');snap();const at=below?s.r2+1:s.r1;rekey('r',at,n);S.rows+=n;if(!below){A.r+=n;SEL.r1+=n;SEL.r2+=n;}after();}
   function delRow(){const s=norm(SEL);const n=s.r2-s.r1+1;if(n>=S.rows)return toast('A table needs at least one row');snap();rekey('r',s.r1,-n);S.rows-=n;SEL={r1:s.r1,c1:s.c1,r2:s.r1,c2:s.c1};A={r:s.r1,c:s.c1};after();}
@@ -24059,13 +24217,54 @@ function _sgMount(root,state,editable){
       if(Date.now()-mergeArm<4000){mergeArm=0;mergeRange(s);if(btn){btn.textContent=mergeBtnLabel();btn.classList.remove('armed');}return;}
       mergeArm=Date.now();
       toast('Tap again to merge — keeps only the top-left value');
-      if(btn){btn.textContent='Tap again to merge — keeps only the top-left value';btn.classList.add('armed');
+      /* v04.64 — the full toast sentence is 340px wide, past the phone's
+         sideways-scrolling toolbar at 390px; the button's own armed label
+         only needs to fit the toolbar, so it's shorter. */
+      if(btn){btn.textContent='Tap again: keeps top-left only';btn.classList.add('armed');
         setTimeout(()=>{if(Date.now()-mergeArm>=4000){btn.textContent=mergeBtnLabel();btn.classList.remove('armed');}},4000);}
       return;
     }
     mergeRange(s);
     if(btn){btn.textContent=mergeBtnLabel();btn.classList.remove('armed');}
   }
+  /* ── v04.64: colour rules (conditional formatting) ──────────────────────
+     S.cr is [{rng:[r1,c1,r2,c2], op, v1, v2?, fill?, ink?}, …], in the
+     order the owner added them — _sgCrFor (top-level, shared with
+     _sgStaticHTML) walks the array and the FIRST match wins. These three
+     methods are the panel's only way into a sheet's internals — it never
+     reaches S/SEL/snap directly, the same shape self.act/self.insertFn
+     already use for the toolbar and the function browser. */
+  function crRuleText(rule){
+    const a1=addr(rule.rng[0],rule.rng[1]),a2=addr(rule.rng[2],rule.rng[3]);
+    const rngTxt=a1===a2?a1:a1+':'+a2;
+    const opLabel=(_SG_CR_OPS.find(o=>o[0]===rule.op)||['',rule.op])[1];
+    let condTxt=opLabel;
+    if(rule.op==='between')condTxt=opLabel+' '+rule.v1+' and '+rule.v2;
+    else if(rule.op==='contains')condTxt=opLabel+' "'+rule.v1+'"';
+    else if(rule.op!=='empty'&&rule.op!=='notEmpty')condTxt=opLabel+' '+rule.v1;
+    const colTxt=rule.ink?'red text':(Object.keys(_SG_CR_FILLS).find(k=>_SG_CR_FILLS[k]===rule.fill)||'colour');
+    return rngTxt+' · '+condTxt+' · '+colTxt;
+  }
+  self.crRulesFor=()=>{
+    const s=norm(SEL);
+    return (S.cr||[]).map((rule,i)=>({rule,i})).filter(x=>rangesOverlap(x.rule.rng,[s.r1,s.c1,s.r2,s.c2])).map(x=>({i:x.i,rule:x.rule,text:crRuleText(x.rule)}));
+  };
+  self.crAdd=(op,v1,v2,fill,ink)=>{
+    const s=norm(SEL);snap();
+    if(!S.cr)S.cr=[];
+    const rule={rng:[s.r1,s.c1,s.r2,s.c2],op};
+    if(op==='between'){rule.v1=v1;rule.v2=v2;}
+    else if(op!=='empty'&&op!=='notEmpty')rule.v1=v1;
+    if(fill)rule.fill=fill;
+    if(ink)rule.ink=ink;
+    S.cr.push(rule);
+    refresh();changed();
+  };
+  self.crRemove=i=>{
+    snap();
+    S.cr.splice(i,1);if(!S.cr.length)S.cr=undefined;
+    refresh();changed();
+  };
   let delArm=0;
   function removeSheet(btn){
     if(Date.now()-delArm>4000){delArm=Date.now();btn.textContent='Tap again to remove';btn.classList.add('armed');setTimeout(()=>{btn.textContent='Remove';btn.classList.remove('armed');},4000);return;}
@@ -24200,7 +24399,8 @@ function _sgMount(root,state,editable){
           p.style.left=Math.max(8,Math.min(rr.right-p.offsetWidth,innerWidth-p.offsetWidth-8))+'px';
           p.style.top=Math.max(8,Math.min(rr.top+70,innerHeight-p.offsetHeight-8))+'px';p.querySelector('.sg-fnq').focus({preventScroll:true});break;}
         case'rc':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,rcItems());break;}
-        case'bd':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,bdItems());break;}}
+        case'bd':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,bdItems());break;}
+        case'cr':{const p=_sgCrEl();p.hidden=false;p._open();_sgCrPosition(p,b.getBoundingClientRect());break;}}
     });
     q('.sg-fmt').addEventListener('change',e=>{if(E)commit();snap();const v=e.target.value||undefined;forSel((r,c)=>setProp(r,c,'fmt',v));refresh();changed();gw.focus({preventScroll:true});});
     gw.addEventListener('scroll',()=>{if(!fillDrag)updateFillHandle();},{passive:true});
