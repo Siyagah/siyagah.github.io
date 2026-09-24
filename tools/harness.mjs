@@ -80,11 +80,11 @@ export function seedDB(now = new Date().toISOString()) {
    needs to judge whether the boot was clean. `errors` collects BOTH thrown
    exceptions and console errors — in this codebase a silent exception
    usually means a half-rendered pane, not a visible crash. */
-export async function openApp({ viewport = { width: 1400, height: 900 }, db = seedDB(), path = '/', disableIndexedDB = false, initScript = null } = {}) {
+export async function openApp({ viewport = { width: 1400, height: 900 }, db = seedDB(), path = '/', disableIndexedDB = false, initScript = null, hasTouch = false } = {}) {
   const pw = await playwright();
   const srv = await serve();
   const browser = await pw.chromium.launch();
-  const ctx = await browser.newContext({ viewport });
+  const ctx = await browser.newContext(hasTouch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
   for (const pattern of BLOCKED) await ctx.route(pattern, (r) => r.abort());
   /* v04.50 — the ONLY way to genuinely exercise index.html's IndexedDB-
      unavailable fallback path in a real browser: delete window.indexedDB
@@ -134,6 +134,23 @@ export async function openApp({ viewport = { width: 1400, height: 900 }, db = se
     page, browser, ctx, base: srv.base, errors, blocked, failed,
     close: async () => { await browser.close(); await srv.close(); },
   };
+}
+
+/* A REAL touch drag through CDP `Input.dispatchTouchEvent` — Playwright's own
+   `page.touchscreen` only taps, it has no drag. Needs a context opened with
+   `hasTouch: true` (see openApp above), or Chromium ignores the events.
+   `points` is an array of {x,y} in CSS pixels; the first is touchstart, the
+   rest are touchmove, and touchend fires with no points (finger lifted). */
+export async function touchDrag(page, points, { stepMs = 16 } = {}) {
+  const cdp = await page.context().newCDPSession(page);
+  const send = (type, p) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: p ? [{ x: p.x, y: p.y }] : [] });
+  await send('touchStart', points[0]);
+  for (let i = 1; i < points.length; i++) {
+    await new Promise((r) => setTimeout(r, stepMs));
+    await send('touchMove', points[i]);
+  }
+  await new Promise((r) => setTimeout(r, stepMs));
+  await send('touchEnd', null);
 }
 
 /* The three sizes the app has genuinely different layouts for — the CSS

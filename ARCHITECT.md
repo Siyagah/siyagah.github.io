@@ -121,6 +121,11 @@ given, and now the standing arrangement, was yes.
 They are never expected to organise, size, sequence or separate anything.
 All of that is the Architect's job:
 
+- **Write the owner's actual words down the moment they arrive.** Put each
+  job, in their words, on the pinned status issue before planning anything.
+  A job recorded as "two search requests" with no content is a job that
+  cannot be built, and it cost the owner having to repeat themselves
+  (23 Sep 2026).
 - **Separate.** One message can hold several unrelated jobs. Split them, say
   plainly which is which, and do not let a small one ride along unexamined
   inside a big one. The 23 Sep message carried a storage failure and two

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.60.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.61.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,71 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.61** (23 Sep 2026) — spreadsheet round 2a: drag-to-fill handle,
+  frozen top row, cell borders. Issue #88, round 2a of 3 of the spreadsheet
+  backlog (round 1 shipped as v04.52; 2b — merged cells, colour rules,
+  filters — and 2c come later).
+  - **Fill handle**: a green square at the bottom-right corner of the
+    selection, edit mode only, pointer events with `setPointerCapture` and
+    `touch-action:none`. Dragging down/right (up/left do nothing this
+    round) fills per column/row: formula shifts relatively, a date steps by
+    its own gap, text ending in a whole number counts up keeping
+    zero-padding, two+ plain numbers extend a linear series, anything else
+    (including a single plain cell) copies — a multi-cell source with no
+    matching rule repeats its whole pattern (`a,b`→`a,b,a,b`). One `snap()`
+    per drag. No auto-growing; auto-scrolls `.sg-gw` near its edges. Touch
+    hit box 32×32px on phone/tablet, 12×12px min on a mouse laptop (visible
+    square ~12px/~7px), anchored at the selection's corner so it can't
+    swallow a tap on the active cell.
+  - **Found while building, not shipping**: the first cut of the
+    text-ending-in-a-number rule also matched a *plain* number (empty
+    prefix), so a single `7` incremented instead of copying. Fixed by
+    excluding anything `SGE.literal()` already reads as a number.
+  - **Freeze top row**: `❄ Freeze top row` toolbar button, stored as `frz:1`
+    (a number, not boolean, for future multi-row freezing). Row 1 sticks
+    under the header (`top:27px`, the same `hh` `scrollIntoCell()` uses) in
+    both edit and read view, since the grid markup/CSS is shared between
+    them. `scrollIntoCell()`'s header-height guard doubles when frozen so
+    arrowing into row 2 isn't hidden under row 1. Undoable; row insert/
+    delete never touches `frz`.
+  - **Cell borders**: `Borders ▾` menu (All/Outside/Top/Bottom/Left/Right/No
+    borders), stored per cell as `bd` (letters `t`/`b`/`l`/`r`). Drawn with
+    real CSS borders on specific sides, **never `box-shadow`** — the active
+    ring and formula-reference highlights are already inset box-shadows on
+    the same cells. `_sgStaticHTML()` writes `bd` as inline `border-*`
+    styles. Borders ride along through sort/copy/paste/fill/insert/delete
+    for free, since `bd` is just another cell property and every one of
+    those paths already clones/rekeys the whole object.
+  - **`tidy()` generalised**: it used to delete a cell unless it had one of
+    six named properties — the same allow-list shape as `mergeDB()`'s
+    `DB.theme` lesson below. A `bd`-only cell (and anything 2b/2c adds)
+    would have been silently dropped on the next edit. `tidy()` and
+    `_sgStaticHTML()`'s used-range scan (same fault: a bordered empty edge
+    cell fell outside the snapshot) now both call one function,
+    `_sgCellHasContent(o)`, that asks "any truthy property", naming none.
+    `refresh()`'s class list and `_sgStaticHTML()`'s style list still name
+    properties one at a time by necessity (each maps to a different CSS
+    rule); `setProp`/`copyCell`/`rekey`/`doCopy`/`doPaste`/`sortBy` were
+    already generic and needed no change.
+  - **Layouts (D5)**: the sheet's own toolbar already scrolled sideways, so
+    the two new buttons needed no phone-specific fold; `Borders ▾` reuses
+    `openMenu()`, already viewport-clamped. Both pop-ups: `_sgMount()` is
+    the same code regardless of host, so Multi got all three for free —
+    proved in app-check `25f`, not assumed.
+  - **Not done**: dragging the handle up/left (down/right only, matches the
+    issue's scope); a v04.52–v04.60 device will still drop a border-only
+    cell on save until it gets this update, via the service worker (I3);
+    rounds 2b/2c.
+  - `tools/harness.mjs` gained `openApp({hasTouch:true})` and a real
+    `touchDrag()` helper (CDP `Input.dispatchTouchEvent`) for the new
+    section 25's touch checks — no synthetic events, per the
+    `⚙ Backup & Restore` lesson below.
+  - New app-check section 25 (`25a`–`25g`): fill by real mouse and real
+    touch at every tier; freeze scroll/reload/arrow-key behaviour; borders
+    drawn, surviving sort/insert/copy, undo, menu on-screen; nothing
+    dropped (a `bd`-only cell, an unknown-key cell, a genuinely empty cell
+    still tidied); Multi gets all three; opening a sheet that already has
+    `frz`/`bd` changes nothing (`17d`'s rule, extended).
 - **v04.60** (23 Sep 2026) — the last note titles out of the public file,
   and Contents without heading chrome. Built by the Architect directly.
   - **v04.58 missed some.** It named the tab *picker*, but the static
@@ -187,49 +252,6 @@ must never accumulate here instead of there.
     **31/31**, `--only 6` **233/233**. Measured in review: full
     `app-check` **493/493 twice**; unpatched 475/491, all 16 failures in
     section 22.
-- **v04.56** (23 Sep 2026) — tags and folders lost on backgrounding before a
-  save (I1). Issue #80, found by the Architect in review of v04.55 and
-  reproduced unchanged on v04.54, ahead of pop-ups round (c2) because it is
-  data loss. `ST.etags`/`ST.efolders` are staged copies of a note's tags and
-  folder assignment while it is being edited — the tag box and 📎 Attach →
-  Folder both write to `ST`, exactly like `ST.etitle` does for the title —
-  and only `saveArt()` ever committed them. Every other exit from editing
-  (the autosave tick, `_flushEd()`, `_flushEverythingOut()` — what
-  `pagehide`/`visibilitychange` call when the app is backgrounded or killed
-  — and `cancelEdit()`, the phone's "Stop editing") committed content and
-  title only, so putting the app away mid-edit kept the typed text and
-  silently dropped a tag or folder change made in the same session. Multi
-  was not affected (v04.55).
-  - **Fix: a baseline, not a blind commit.** `_seedEditBaseline(aid)`
-    snapshots `ST.etags`/`ST.efolders` the moment editing begins for an
-    article; `_flushEd()` now diffs the live value against that snapshot and
-    commits only what actually changed in THIS session, moving the baseline
-    to what it just wrote. A field still matching its baseline is left
-    alone — the guard that keeps a merged remote change safe (I2): if
-    another device changes this note's tags while it is open here and the
-    tag box was never touched, the stale local snapshot is never written
-    back over the newer merged value. Seeded in `startEdit()` and every
-    note-creation path that opens straight into edit. `cancelEdit()` now
-    calls `_flushEd()` before dropping `ST.editing`, which it previously did
-    not. Two existing external writers that already sync the live
-    `ST.efolders` draft when they touch `a.folderIds` directly
-    (`pkMoveNote()`, `pkDelete()`) now move the baseline in step too, so the
-    next flush doesn't mistake an already-committed change for a fresh local
-    edit and re-stamp `updatedAt` for nothing.
-  - **Other `ST.e*` fields checked**: `ST.etitle` already handled by
-    `_flushEd()`; `ST.ebGroup` is UI state, not a staged note field; nothing
-    else stages part of a note. Two narrower, pre-existing gaps were found
-    and left alone as out of this round's scope — full account in
-    `CHANGELOG.md`.
-  - New app-check section 21 (`21a`–`21f`): a tag/folder change survives
-    backgrounding, Stop editing, and closing Single; a merged remote tag
-    change nobody touched here survives a flush with no phantom
-    `updatedAt` stamp; a genuine no-op flush stamps nothing, run twice.
-  - 11/11 ship checks, `app-check --only 21` **12/12**, `app-check --only
-    16` **30/30**. Full `app-check`, measured by the Architect in review:
-    **475/475, twice in a row**. Unpatched (v04.56's `tools/` against
-    v04.55's `index.html`): **462/475, 13 failures, all in section 21**.
-
 ---
 
 ## What this is
@@ -415,7 +437,16 @@ A failing check is a wrong assertion surprisingly often — investigate before
   snapshot `.sg-static` table (v04.52). The live grid is mounted at display
   time and stripped by `_edColClean()`. Never write live chrome into
   `a.content`, and never recompute the snapshot except on an edit to the
-  sheet itself.
+  sheet itself. A cell object's properties are `raw`, `b`, `i`, `al`,
+  `fmt`, `bg`, `bd` (borders, v04.61) — do not add a new one to a
+  named list anywhere in `_sgMount`; `tidy()` and `_sgStaticHTML()`'s
+  used-range scan both call `_sgCellHasContent(o)` instead, which asks
+  "does this cell have any truthy property" without naming one, so a
+  future property (2b/2c) is neither dropped on the next edit nor pushed
+  out of the saved snapshot. The sheet's top-level state also carries
+  `frz` (v04.61, `1`/absent — a frozen top row; a number, not a boolean,
+  so more rows can be frozen later with no migration) alongside `v`,
+  `rows`, `cols`, `cells`, `colW`.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
