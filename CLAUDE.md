@@ -59,8 +59,18 @@ must never accumulate here instead of there.
     doc last; the stored keys and the unchanged `_readCloudDB()` prove the
     format didn't move. `26a`/`26b` are expected to fail on v04.61 (one
     commit over 10 MiB).
-  - `ship-check` **12/12**. `app-check --only 26` and the full `app-check`
-    totals are in `CHANGELOG.md`.
+  - **Architect review:** the first cut split EVERY write, so even a small
+    notebook (the owner's today) lost the single-commit atomicity: a failed
+    main-doc batch left readers with `null` instead of the previous notebook.
+    A notebook that fits in one request (`n <= _SYNC_CHUNK_BATCH`) is now
+    written exactly as in v04.61, in one atomic commit. Only larger ones take
+    the multi-batch path. `26d` was rewritten in place and `26f` added; both
+    fail on the first cut. Not done: two devices pushing a notebook larger
+    than one request at once can interleave chunks (readers get `null` until
+    the next push). Per-note sync removes this.
+  - 12/12 ship checks, `--only 26` **16/16**, full `app-check`
+    **@@FULL@@**. Unpatched (v04.61 app, this round's tools): `--only 26`
+    **7/11, 4 FAILED**.
 - **v04.61** (24 Sep 2026) — spreadsheet round 2a: drag-to-fill handle,
   frozen top row, cell borders. Issue #88, round 2a of 3 of the spreadsheet
   backlog (round 1 shipped as v04.52; 2b — merged cells, colour rules,

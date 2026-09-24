@@ -21241,6 +21241,19 @@ async function _writeCloudDB(nb, now, b64){
      chunk batch throws, the main doc is never written, the error
      propagates to the caller exactly as before, and every device keeps
      assembling the previous complete version. */
+  /* Architect review (v04.62): a notebook that FITS in one request is still
+     written exactly as before — every chunk and the main doc in ONE atomic
+     commit — so a failed push leaves the previous version whole and
+     readable. The multi-batch path below can't promise that (a failure after
+     the first batch leaves low chunks carrying the new ver, and readers get
+     null until the next successful push), so it is used only past the size
+     where the single commit would be refused outright. */
+  if(n<=_SYNC_CHUNK_BATCH){
+    const batch=_syncFsDb.batch();
+    for(let i=0;i<n;i++){ batch.set(nb.collection("chunks").doc(String(i)),{p:b64.slice(i*_SYNC_CHUNK,(i+1)*_SYNC_CHUNK),ver:now}); }
+    batch.set(nb,{ n:n, ver:now, deviceUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
+    await batch.commit();
+  } else {
   for(let i=0;i<n;i+=_SYNC_CHUNK_BATCH){
     const batch=_syncFsDb.batch();
     const end=Math.min(i+_SYNC_CHUNK_BATCH,n);
@@ -21250,6 +21263,7 @@ async function _writeCloudDB(nb, now, b64){
   const mainBatch=_syncFsDb.batch();
   mainBatch.set(nb,{ n:n, ver:now, deviceUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
   await mainBatch.commit();
+  }
   const b2=_syncFsDb.batch(); for(let i=n;i<n+10;i++) b2.delete(nb.collection("chunks").doc(String(i))); try{ await b2.commit(); }catch(e){}
 }
 

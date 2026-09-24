@@ -7718,7 +7718,14 @@ await r.block('26c-failed-batch-does-not-publish-main-doc', async () => {
   await app.close();
 });
 
-await r.block('26d-small-notebook-round-trips', async () => {
+/* Rewritten in Architect review (v04.62). The first cut split EVERY write
+   into chunk batches plus a separate main-doc batch, so even a small
+   notebook lost the old single-commit atomicity: a push that failed on the
+   main-doc batch left the chunks carrying the new ver and readers got null
+   instead of the previous notebook. A notebook that fits in one request
+   (n <= _SYNC_CHUNK_BATCH chunks) is now written exactly as v04.61 wrote it
+   — chunks and main doc in ONE commit — and 26d/26f prove both halves. */
+await r.block('26d-small-notebook-one-atomic-commit', async () => {
   const app = await openApp();
   const { page } = app;
   await installFakeFs(page);
@@ -7733,18 +7740,53 @@ await r.block('26d-small-notebook-round-trips', async () => {
     const nb = window.__fakeFs.collection('notebooks').doc('nb-26d');
     await window._writeCloudDB(nb, Date.now(), b64);
     const remoteDB = await window._readCloudDB(nb, (await nb.get()).data());
-    const commits = window.__fakeFs._commits;
-    const chunkWriteIdxs = commits.map((c, i) => (c.paths.every((p) => p.includes('/chunks/') && p.endsWith(':set')) ? i : -1)).filter((i) => i >= 0);
-    const mainIdx = commits.findIndex((c) => c.paths.some((p) => p.startsWith('notebooks/nb-26d:')));
+    const writes = window.__fakeFs._commits.filter((c) => c.paths.some((p) => p.endsWith(':set')));
     return {
       deepEqual: JSON.stringify(remoteDB) === JSON.stringify(original),
-      chunkWriteBatches: chunkWriteIdxs.length,
-      mainAfterChunkWrite: mainIdx > Math.max(...chunkWriteIdxs),
+      writeCommits: writes.length,
+      bothInOne: writes.length === 1 && writes[0].paths.some((p) => p.includes('/chunks/')) && writes[0].paths.some((p) => p === 'notebooks/nb-26d:set'),
     };
   });
-  r.check(out.deepEqual, 'a small (single-chunk-batch) notebook still writes and round-trips correctly', JSON.stringify(out));
-  r.check(out.chunkWriteBatches === 1, 'a notebook under one batch takes exactly one chunk-writing batch', `${out.chunkWriteBatches} chunk-writing batches`);
-  r.check(out.mainAfterChunkWrite, 'the main doc is still committed after that one chunk batch, even for a small write', JSON.stringify(out));
+  r.check(out.deepEqual, 'a small notebook still writes and round-trips correctly', JSON.stringify(out));
+  r.check(out.bothInOne, 'a notebook that fits in one request is written in ONE commit carrying its chunks AND the main doc (atomic, as before v04.62)', JSON.stringify(out));
+  await app.close();
+});
+
+await r.block('26f-small-notebook-failed-push-keeps-previous', async () => {
+  const app = await openApp();
+  const { page } = app;
+  await installFakeFs(page);
+  const out = await page.evaluate(async () => {
+    const mk = (id, text) => ({ sections: [], folders: [], trash: [], theme: {},
+      articles: [{ id, title: id, content: '<p>' + text + '</p>', folderIds: [], tags: [],
+        createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', kind: 'general' }] });
+    const prev = mk('prev', 'x'.repeat(1500000)), next = mk('next', 'y'.repeat(1500000));
+    const nb = window.__fakeFs.collection('notebooks').doc('nb-26f');
+    await window._writeCloudDB(nb, Date.now(), window._b64enc(JSON.stringify(prev)));
+    /* Fail whichever commit of the next push carries the MAIN doc. On the
+       first cut that is a separate batch that runs after the chunk batch has
+       already landed; with the fix it is the one atomic commit. */
+    const before = window.__fakeFs._commits.length;
+    const realBatch = window.__fakeFs.batch;
+    let armed = true;
+    window.__fakeFs.batch = () => {
+      const b = realBatch(); const refs = [];
+      const set0 = b.set; b.set = (ref, data) => { refs.push(ref._path); return set0(ref, data); };
+      const commit0 = b.commit;
+      b.commit = async () => {
+        if (armed && refs.includes('notebooks/nb-26f')) { armed = false; throw new Error('fake Firestore: simulated failure of the main-doc commit'); }
+        return commit0();
+      };
+      return b;
+    };
+    let err = null;
+    try { await window._writeCloudDB(nb, Date.now() + 1, window._b64enc(JSON.stringify(next))); } catch (e) { err = String(e); }
+    window.__fakeFs.batch = realBatch;
+    const nWrites = window.__fakeFs._commits.slice(before).length;
+    const readBack = await window._readCloudDB(nb, (await nb.get()).data());
+    return { err: !!err || nWrites < 2, prevIntact: !!readBack && readBack.articles[0].id === 'prev' && JSON.stringify(readBack) === JSON.stringify(prev) };
+  });
+  r.check(out.prevIntact, 'when a push of a notebook that fits in one request fails, every device can still read the previous notebook whole (not null)', JSON.stringify(out));
   await app.close();
 });
 
