@@ -69,7 +69,7 @@ must never accumulate here instead of there.
     than one request at once can interleave chunks (readers get `null` until
     the next push). Per-note sync removes this.
   - 12/12 ship checks, `--only 26` **16/16**, full `app-check`
-    **@@FULL@@**. Unpatched (v04.61 app, this round's tools): `--only 26`
+    **628/628, twice in a row**. Unpatched (v04.61 app, this round's tools): `--only 26`
     **7/11, 4 FAILED**.
 - **v04.61** (24 Sep 2026) — spreadsheet round 2a: drag-to-fill handle,
   frozen top row, cell borders. Issue #88, round 2a of 3 of the spreadsheet

@@ -6066,7 +6066,7 @@ the import job, removes it entirely.
 **Measured** (by the Architect)
 - `ship-check`: **12/12**.
 - `app-check --only 26`: **16/16**.
-- Full `app-check`: **@@FULL@@**.
+- Full `app-check`: **628/628, twice in a row**.
 - **Unpatched:**
   - v04.61's app with this round's `tools/`: `--only 26` **7/11, 4 FAILED**
     (`26a` ×2 and the `26b`/`26c` blocks, each refused at 10 MiB);
