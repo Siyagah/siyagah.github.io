@@ -5928,5 +5928,5 @@ Every new or rewritten assertion was run against the code it guards:
 **Measured**
 - `ship-check`: **12/12**.
 - `app-check --only 25`: **106/106**.
-- Full `app-check`: **612/612** (second run pending).
+- Full `app-check`: **612/612, twice in a row**.
 

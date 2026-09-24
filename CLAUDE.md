@@ -95,8 +95,8 @@ must never accumulate here instead of there.
     Every new assertion fails on the code it guards.
   - First build: 599/599. Unpatched (v04.60 app, this round's tools):
     **515/529, 14 FAILED, all in section 25**. After review: 12/12 ship
-    checks, `--only 25` **106/106**, full `app-check` **612/612** (second run
-    pending).
+    checks, `--only 25` **106/106**, full `app-check` **612/612, twice
+    in a row**.
 - **v04.60** (23 Sep 2026) — the last note titles out of the public file,
   and Contents without heading chrome. Built by the Architect directly.
   - **v04.58 missed some.** It named the tab *picker*, but the static
