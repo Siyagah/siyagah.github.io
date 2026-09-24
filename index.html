@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.61">
+<meta name="app-version" content="04.62">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3008,7 +3008,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.61</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.62</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -21219,13 +21219,37 @@ async function _readCloudDB(nb, md){
   }
   return null;
 }
+/* v04.62 — Firestore rejects any single request over 10 MiB. A notebook
+   past ~7.3 MB of JSON used to blow that limit in one batch.commit() that
+   carried every chunk AND the main doc, and every push then failed on
+   every device forever (I2). _SYNC_CHUNK_BATCH caps each batch at 8 chunk
+   docs: 8 × 900,000 chars ≈ 7.2 MB of payload, leaving headroom under the
+   10 MiB request ceiling for field names and gRPC/HTTP overhead. */
+const _SYNC_CHUNK_BATCH = 8;
 async function _writeCloudDB(nb, now, b64){
   if(b64==null) b64=_b64enc(JSON.stringify(DB));
   const n=Math.ceil(b64.length/_SYNC_CHUNK);
-  const batch=_syncFsDb.batch();
-  for(let i=0;i<n;i++){ batch.set(nb.collection("chunks").doc(String(i)),{p:b64.slice(i*_SYNC_CHUNK,(i+1)*_SYNC_CHUNK),ver:now}); }
-  batch.set(nb,{ n:n, ver:now, deviceUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
-  await batch.commit();
+  /* Chunks go out first, in as many batches as needed, each well under the
+     10 MiB request limit. The main doc — the thing readers actually watch
+     for changes — is written LAST, in its own final batch, only after
+     every chunk batch has committed. _readCloudDB() already treats a chunk
+     whose ver differs from the main doc's ver as torn and retries; while
+     the chunk batches are still landing the main doc still shows the
+     PREVIOUS ver, so a reader that catches the write mid-flight simply
+     fails that check and gets fired again when the new main doc lands.
+     That is what makes this non-atomic, multi-batch write safe. If any
+     chunk batch throws, the main doc is never written, the error
+     propagates to the caller exactly as before, and every device keeps
+     assembling the previous complete version. */
+  for(let i=0;i<n;i+=_SYNC_CHUNK_BATCH){
+    const batch=_syncFsDb.batch();
+    const end=Math.min(i+_SYNC_CHUNK_BATCH,n);
+    for(let j=i;j<end;j++){ batch.set(nb.collection("chunks").doc(String(j)),{p:b64.slice(j*_SYNC_CHUNK,(j+1)*_SYNC_CHUNK),ver:now}); }
+    await batch.commit();
+  }
+  const mainBatch=_syncFsDb.batch();
+  mainBatch.set(nb,{ n:n, ver:now, deviceUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
+  await mainBatch.commit();
   const b2=_syncFsDb.batch(); for(let i=n;i<n+10;i++) b2.delete(nb.collection("chunks").doc(String(i))); try{ await b2.commit(); }catch(e){}
 }
 
