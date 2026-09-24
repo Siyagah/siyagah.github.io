@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.62">
+<meta name="app-version" content="04.63">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2885,6 +2885,7 @@ sup.ann-sup:hover{text-decoration:underline}
 .sg-b.sg-fxb{background:var(--green);border-color:var(--green);color:var(--on-accent)}
 .sg-b.sg-del{color:#9B1C1C}
 .sg-b.sg-del.armed{background:#9B1C1C;border-color:#9B1C1C;color:#FFFFFF}
+.sg-b[data-a="merge"].armed{background:#F6EAD2;border-color:var(--gold);color:var(--gold-ink)}
 select.sg-b{padding-right:6px}
 .sg-sw{width:18px;height:18px;border-radius:5px;border:1px solid var(--border2);cursor:pointer;flex:none;padding:0;background:var(--white)}
 .sg-sw[data-bg=""]{background:linear-gradient(135deg,#FFFFFF 45%,#C0392B 46%,#C0392B 54%,#FFFFFF 55%)}
@@ -3008,7 +3009,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.62</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.63</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -23343,21 +23344,31 @@ function _sgParse(el){try{const d=JSON.parse(el.getAttribute('data-sg')||'');if(
    edit nor pushed out of the saved snapshot. See CLAUDE.md's mergeDB()
    allow-list lesson — same shape of bug, same fix. */
 function _sgCellHasContent(o){return !!o&&Object.keys(o).some(function(k){return o[k];});}
-/* The snapshot a note's content carries: the used range only, as values. */
+/* The snapshot a note's content carries: the used range only, as values.
+   v04.63 — a merge's full extent counts as used even when every cell in it
+   is empty, and the anchor gets a real colspan/rowspan with the covered
+   cells omitted, so the snapshot (Save File, search, an older build) sees a
+   genuinely merged table, not a values-only approximation. */
 function _sgStaticHTML(state){
   const get=SGE.evaluate(state);
   let r2=-1,c2=-1;
   for(const k in state.cells){const [r,c]=k.split(',').map(Number);if(_sgCellHasContent(state.cells[k])){if(r>r2)r2=r;if(c>c2)c2=c;}}
+  for(const m of (state.mg||[])){if(m[2]>r2)r2=m[2];if(m[3]>c2)c2=m[3];}
   if(r2<0){r2=Math.min(2,state.rows-1);c2=Math.min(2,state.cols-1);}
+  const mgAnchor={},mgCov={};
+  for(const m of (state.mg||[])){mgAnchor[m[0]+','+m[1]]=m;
+    for(let r=m[0];r<=m[2];r++)for(let c=m[1];c<=m[3];c++){if(r===m[0]&&c===m[1])continue;mgCov[r+','+c]=true;}}
   let h='<table class="sg-static"><tbody>';
   for(let r=0;r<=r2;r++){h+='<tr>';for(let c=0;c<=c2;c++){
+    if(mgCov[r+','+c])continue;
     const o=state.cells[r+','+c]||{};const v=get(r,c);const t=SGE.display(v,o.fmt);
     const al=o.al||(typeof v==='number'?'r':typeof v==='boolean'||SGE.isErr(v)?'c':'');
     const st=[];if(o.b)st.push('font-weight:700');if(o.i)st.push('font-style:italic');if(o.bg)st.push('background:'+o.bg);
     if(al==='r')st.push('text-align:right');else if(al==='c')st.push('text-align:center');
     if(o.bd){if(o.bd.includes('t'))st.push('border-top:1px solid var(--t1)');if(o.bd.includes('b'))st.push('border-bottom:1px solid var(--t1)');
       if(o.bd.includes('l'))st.push('border-left:1px solid var(--t1)');if(o.bd.includes('r'))st.push('border-right:1px solid var(--t1)');}
-    h+='<td'+(st.length?' style="'+st.join(';')+'"':'')+'>'+esc(t)+'</td>';}h+='</tr>';}
+    const mm=mgAnchor[r+','+c];const span=mm?(' colspan="'+(mm[3]-mm[1]+1)+'" rowspan="'+(mm[2]-mm[0]+1)+'"'):'';
+    h+='<td'+span+(st.length?' style="'+st.join(';')+'"':'')+'>'+esc(t)+'</td>';}h+='</tr>';}
   return h+'</tbody></table>';
 }
 /* Called by _edColClean() on every save path: strip the live grid back to the
@@ -23455,7 +23466,36 @@ function _sgMount(root,state,editable){
   const tidy=k=>{if(!_sgCellHasContent(S.cells[k]))delete S.cells[k];};
   const setRaw=(r,c,raw)=>{const k=K(r,c);S.cells[k]=Object.assign(S.cells[k]||{},{raw});tidy(k);};
   const setProp=(r,c,p,v)=>{const k=K(r,c);const o=S.cells[k]||(S.cells[k]={raw:''});if(v===undefined||v===''||v===false)delete o[p];else o[p]=v;tidy(k);};
+  /* ── v04.63: merged cells ──────────────────────────────────────────────
+     S.mg is [[r1,c1,r2,c2],…], value lives at the top-left (the "anchor"),
+     covered cells hold nothing. mergeAt/anchorOf/boxTD let every box-reading
+     or box-writing call site (selection paint, scrollIntoCell, the fill
+     handle/preview) resolve a covered position to its anchor's real box —
+     the anchor carries the live grid's actual rowSpan/colSpan, so its own
+     offsetWidth/Height already IS the merged box. norm() grows a raw
+     selection to cover any merge it touches, so every existing norm(SEL)
+     call site (paint, forSel, status, updateFillHandle, sortBy, …) sees the
+     Excel-like "selecting any part selects the whole merge" behaviour for
+     free, with no per-call-site change. */
+  const mergeAt=(r,c)=>{if(!S.mg)return null;for(const m of S.mg)if(r>=m[0]&&r<=m[2]&&c>=m[1]&&c<=m[3])return m;return null;};
+  const anchorOf=(r,c)=>{const m=mergeAt(r,c);return m?{r:m[0],c:m[1]}:{r,c};};
+  const boxTD=(r,c)=>{const a=anchorOf(r,c);return TD[a.r]&&TD[a.r][a.c];};
+  const rangesOverlap=(m,s)=>m[0]<=s[2]&&m[2]>=s[0]&&m[1]<=s[3]&&m[3]>=s[1];
+  const mergeCrossesFreeze=m=>m[0]===0&&m[2]>=1;
+  const growToMerges=s=>{let cur={r1:s.r1,c1:s.c1,r2:s.r2,c2:s.c2},grew=true;
+    while(grew){grew=false;if(!S.mg)break;for(const m of S.mg)if(rangesOverlap(m,[cur.r1,cur.c1,cur.r2,cur.c2])){
+      if(m[0]<cur.r1){cur.r1=m[0];grew=true;}if(m[2]>cur.r2){cur.r2=m[2];grew=true;}
+      if(m[1]<cur.c1){cur.c1=m[1];grew=true;}if(m[3]>cur.c2){cur.c2=m[3];grew=true;}}}
+    return cur;};
   const norm=s=>({r1:Math.min(s.r1,s.r2),c1:Math.min(s.c1,s.c2),r2:Math.max(s.r1,s.r2),c2:Math.max(s.c1,s.c2)});
+  /* The Excel-like "grows to cover a merge it touches" reading, used for
+     cell-body selections (paint's highlight box, cell-styling iteration,
+     the sum/avg/count status, the fill handle) — NOT for a row/column
+     HEADER selection, which must stay exactly the row/col picked or
+     "insert a row inside a merge" (landing strictly between its edges)
+     could never be expressed; rekeyMerges resolves grow/shrink/drop from
+     wherever the real insertion point falls, grown selection or not. */
+  const normM=s=>growToMerges(norm(s));
   const narrow=()=>window.innerWidth<640;
   const touchTier=()=>window.innerWidth<1200;
   const {colName,addr}=SGE;
@@ -23483,7 +23523,8 @@ function _sgMount(root,state,editable){
       +'<button type="button" class="sg-b" data-a="rc" title="Insert or delete rows and columns">Rows &amp; columns ▾</button>'
       +'<button type="button" class="sg-b" data-a="fill" title="Fill down (Ctrl+D)">Fill down</button><span class="sg-sep"></span>'
       +'<button type="button" class="sg-b" data-a="frz" title="Keep row 1 visible while the grid scrolls">❄ Freeze top row</button>'
-      +'<button type="button" class="sg-b" data-a="bd" title="Add or remove cell borders">Borders ▾</button><span class="sg-sep"></span>'
+      +'<button type="button" class="sg-b" data-a="bd" title="Add or remove cell borders">Borders ▾</button>'
+      +'<button type="button" class="sg-b" data-a="merge" title="Merge the selected cells into one">Merge cells</button><span class="sg-sep"></span>'
       +'<button type="button" class="sg-b sg-fxb" data-a="fn" title="Browse every function">ƒx Functions</button>'
       +'<button type="button" class="sg-b sg-del" data-a="del" title="Remove this spreadsheet from the note">Remove</button>'
       +'</div>':'')
@@ -23530,7 +23571,21 @@ function _sgMount(root,state,editable){
     for(let r=0;r<S.rows;r++){h+='<tr><th class="sg-rh" data-r="'+r+'">'+(r+1)+'</th>';for(let c=0;c<S.cols;c++)h+='<td data-r="'+r+'" data-c="'+c+'"></td>';h+='</tr>';}
     grid.innerHTML=h+'</tbody>';
     TD=[];grid.querySelectorAll('td').forEach(td=>{const r=+td.dataset.r;(TD[r]||(TD[r]=[]))[+td.dataset.c]=td;});
+    applyMergesToGrid();
     refresh();
+  }
+  /* The anchor gets the live grid's real rowSpan/colSpan (so its own box IS
+     the merged box — see boxTD above); covered cells stay in TD[r][c] (so
+     that lookup never has to special-case a merge) but display:none, which
+     removes them from the table's column layout entirely, so the anchor's
+     span lands exactly where a hand-written merged <table> would put it. */
+  function applyMergesToGrid(){
+    if(!S.mg)return;
+    for(const m of S.mg){
+      const [r1,c1,r2,c2]=m;const anchor=TD[r1]&&TD[r1][c1];if(!anchor)continue;
+      anchor.rowSpan=r2-r1+1;anchor.colSpan=c2-c1+1;
+      for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++){if(r===r1&&c===c1)continue;const td=TD[r]&&TD[r][c];if(td)td.style.display='none';}
+    }
   }
   function refresh(){
     get=SGE.evaluate(S);
@@ -23546,7 +23601,7 @@ function _sgMount(root,state,editable){
     paint();
   }
   function paint(){
-    const s=norm(SEL);const refs=E?SGE.refsIn(inputEl().value):[];
+    const s=normM(SEL);const refs=E?SGE.refsIn(inputEl().value):[];
     for(let r=0;r<S.rows;r++)for(let c=0;c<S.cols;c++){
       const td=TD[r][c];const inS=r>=s.r1&&r<=s.r2&&c>=s.c1&&c<=s.c2;
       td.classList.toggle('sg-sel',inS&&!(s.r1===s.r2&&s.c1===s.c2));
@@ -23562,16 +23617,17 @@ function _sgMount(root,state,editable){
       q('.sg-bB').classList.toggle('on',!!o.b);q('.sg-bI').classList.toggle('on',!!o.i);
       q('.sg-bL').classList.toggle('on',o.al==='l');q('.sg-bC').classList.toggle('on',o.al==='c');q('.sg-bR').classList.toggle('on',o.al==='r');
       q('.sg-fmt').value=o.fmt||'';
-      const frzBtn=q('[data-a="frz"]');if(frzBtn)frzBtn.classList.toggle('on',!!S.frz);}
+      const frzBtn=q('[data-a="frz"]');if(frzBtn)frzBtn.classList.toggle('on',!!S.frz);
+      const mergeBtn=q('[data-a="merge"]');if(mergeBtn&&!mergeBtn.classList.contains('armed'))mergeBtn.textContent=mergeBtnLabel();}
     updateFillHandle();
     status();
   }
   function updateFillHandle(){
     if(!editable){fillEl.hidden=true;return;}
-    const s=norm(SEL);
+    const s=normM(SEL);
     const fullRow=s.c1===0&&s.c2===S.cols-1,fullCol=s.r1===0&&s.r2===S.rows-1;
     if(E||fullRow||fullCol){fillEl.hidden=true;return;}
-    const td=TD[s.r2]&&TD[s.r2][s.c2];if(!td){fillEl.hidden=true;return;}
+    const td=boxTD(s.r2,s.c2);if(!td){fillEl.hidden=true;return;}
     const hit=touchTier()?32:12,vis=touchTier()?12:7;
     fillEl.style.width=hit+'px';fillEl.style.height=hit+'px';
     fillEl.style.left=Math.round(td.offsetLeft+td.offsetWidth-hit/2)+'px';
@@ -23587,23 +23643,35 @@ function _sgMount(root,state,editable){
     fillEl.hidden=under;
   }
   function status(){
-    const s=norm(SEL);const n=[];let cnt=0;
+    const s=normM(SEL);const n=[];let cnt=0;
     for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1;c<=s.c2;c++){const v=val(r,c);if(v!==null&&v!=='')cnt++;if(typeof v==='number')n.push(v);}
     if((s.r1===s.r2&&s.c1===s.c2)||!cnt){statusEl.innerHTML='<span>'+(editable?'Select several cells to see their total':'Read only: tap Edit to change this table')+'</span>';return;}
     const f=x=>SGE.fmtPattern(x,'#,##0.##');
     statusEl.innerHTML=(n.length?'<span>Sum <b>'+f(SGE.sum(n))+'</b></span><span>Average <b>'+f(SGE.sum(n)/n.length)+'</b></span>':'')+'<span>Count <b>'+cnt+'</b></span>';
   }
-  function scrollIntoCell(r,c){const td=TD[r]&&TD[r][c];if(!td)return;const tr=td.getBoundingClientRect(),g=gw.getBoundingClientRect();
+  function scrollIntoCell(r,c){const td=boxTD(r,c);if(!td)return;const tr=td.getBoundingClientRect(),g=gw.getBoundingClientRect();
     const lw=40,hh=27;const topGuard=(S.frz&&r>0)?hh*2:hh;
     if(tr.left<g.left+lw)gw.scrollLeft-=g.left+lw-tr.left;else if(tr.right>g.right)gw.scrollLeft+=tr.right-g.right+2;
     if(tr.top<g.top+topGuard)gw.scrollTop-=g.top+topGuard-tr.top;else if(tr.bottom>g.bottom)gw.scrollTop+=tr.bottom-g.bottom+2;}
+  /* A click/tap anywhere in a merge selects the whole merge, anchored at its
+     top-left — Excel's own rule, and the reason typing/formulas/keyboard
+     nav below never need to ask "is this cell covered": A is always kept at
+     a real, content-bearing position. */
   function select(r,c,extend){r=Math.max(0,Math.min(S.rows-1,r));c=Math.max(0,Math.min(S.cols-1,c));
-    if(extend){SEL.r2=r;SEL.c2=c;}else{A={r,c};SEL={r1:r,c1:c,r2:r,c2:c};}paint();scrollIntoCell(extend?r:A.r,extend?c:A.c);}
+    if(extend){SEL.r2=r;SEL.c2=c;}
+    else{const m=mergeAt(r,c);if(m){A={r:m[0],c:m[1]};SEL={r1:m[0],c1:m[1],r2:m[2],c2:m[3]};}else{A={r,c};SEL={r1:r,c1:c,r2:r,c2:c};}}
+    paint();scrollIntoCell(extend?r:A.r,extend?c:A.c);}
   function move(dr,dc,extend,jump){
     let r=extend?SEL.r2:A.r,c=extend?SEL.c2:A.c;
     if(jump){const hasV=(y,x)=>rawOf(y,x)!=='';const cur=hasV(r,c);let y=r,x=c;
       for(;;){const ny=y+dr,nx=x+dc;if(ny<0||nx<0||ny>=S.rows||nx>=S.cols)break;y=ny;x=nx;if(!cur&&hasV(y,x))break;if(cur&&!hasV(y+dr,x+dc))break;}r=y;c=x;}
-    else{r+=dr;c+=dc;}
+    else{
+      /* Arrow keys, Tab and Enter step OVER a merge as one cell: leave from
+         whichever of its edges faces the direction of travel. */
+      const cur=mergeAt(r,c);
+      if(cur){const stepR=dr>0?cur[2]:dr<0?cur[0]:r,stepC=dc>0?cur[3]:dc<0?cur[1]:c;r=stepR+dr;c=stepC+dc;}
+      else{r+=dr;c+=dc;}
+    }
     /* Walking off the bottom or right edge of a small sheet grows it, the way
        a note grows when you keep typing. */
     if(editable&&!extend&&!jump){if(r>=S.rows&&S.rows<_SG_MAX_ROWS){S.rows++;renderGrid();changed();}if(c>=S.cols&&S.cols<_SG_MAX_COLS){S.cols++;renderGrid();changed();}}
@@ -23623,7 +23691,7 @@ function _sgMount(root,state,editable){
     keys.hidden=!narrow();if(!keys.hidden)renderKeys();
     onEditInput();
   }
-  function placeEditor(){if(!E)return;const td=TD[E.r][E.c];ced.style.left=td.offsetLeft+'px';ced.style.top=td.offsetTop+'px';ced.style.height=td.offsetHeight+'px';
+  function placeEditor(){if(!E)return;const td=boxTD(E.r,E.c);ced.style.left=td.offsetLeft+'px';ced.style.top=td.offsetTop+'px';ced.style.height=td.offsetHeight+'px';
     ced.style.minWidth=td.offsetWidth+'px';ced.style.width=Math.max(td.offsetWidth,Math.min(420,(ced.value.length+2)*8))+'px';}
   function commit(){
     if(!E)return;let v=inputEl().value;const {r,c}=E;
@@ -23666,15 +23734,23 @@ function _sgMount(root,state,editable){
     keys.innerHTML=K2.map(k=>'<button type="button" class="sg-b" data-k="'+k[1].replace(/"/g,'&quot;')+'">'+k[0]+'</button>').join('')+'<button type="button" class="sg-b sg-ok" data-k="⏎">✓ Enter</button>';}
 
   /* ── actions ── */
-  function forSel(f){const s=norm(SEL);for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1;c<=s.c2;c++)f(r,c);}
+  /* Skips a merge's covered cells: per-cell styling (bold, borders, fill
+     colour, Clear contents…) lands on the anchor only, which is exactly what
+     "covered cells hold nothing" requires and what makes a border on a
+     merge draw as one box around the anchor's own spanned <td>. */
+  function forSel(f){const s=normM(SEL);for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1;c<=s.c2;c++){const m=mergeAt(r,c);if(m&&(m[0]!==r||m[1]!==c))continue;f(r,c);}}
   function styleSel(p,v){snap();const o=cellO(A.r,A.c)||{};const nv=(p==='b'||p==='i')?!o[p]:(o[p]===v&&p==='al'?undefined:v);forSel((r,c)=>setProp(r,c,p,nv));refresh();changed();}
   function clearSel(){snap();forSel((r,c)=>setRaw(r,c,''));refresh();changed();}
   function copyCell(r0,c0,r,c){const o=cellO(r0,c0);const k=K(r,c);if(!o){delete S.cells[k];return;}const n=JSON.parse(JSON.stringify(o));n.raw=SGE.shiftF(n.raw,r-r0,c-c0);S.cells[k]=n;tidy(k);}
-  function fillDown(){const s=norm(SEL);snap();
+  function fillDown(){const s=norm(SEL);const srcRow=s.r1===s.r2?s.r1-1:s.r1;
+    if(srcRow>=0&&(S.mg||[]).some(m=>m[0]<=s.r2&&m[2]>=srcRow&&m[1]<=s.c2&&m[3]>=s.c1))return toast('Cannot fill across a merged cell — unmerge it first');
+    snap();
     if(s.r1===s.r2){if(s.r1===0)return;for(let c=s.c1;c<=s.c2;c++)copyCell(s.r1-1,c,s.r1,c);}
     else for(let c=s.c1;c<=s.c2;c++)for(let r=s.r1+1;r<=s.r2;r++)copyCell(s.r1,c,r,c);
     refresh();changed();}
-  function fillRight(){const s=norm(SEL);snap();
+  function fillRight(){const s=norm(SEL);const srcCol=s.c1===s.c2?s.c1-1:s.c1;
+    if(srcCol>=0&&(S.mg||[]).some(m=>m[0]<=s.r2&&m[2]>=s.r1&&m[1]<=s.c2&&m[3]>=srcCol))return toast('Cannot fill across a merged cell — unmerge it first');
+    snap();
     if(s.c1===s.c2){if(s.c1===0)return;for(let r=s.r1;r<=s.r2;r++)copyCell(r,s.c1-1,r,s.c1);}
     else for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1+1;c<=s.c2;c++)copyCell(r,s.c1,r,c);refresh();changed();}
 
@@ -23717,6 +23793,34 @@ function _sgMount(root,state,editable){
     }
     return raws[idx%n];
   }
+  /* v04.63 — the same four rules, continued BACKWARD (up/left). m is 1 for
+     the cell nearest the selection, counting away from it. A linear series
+     (number/textnum/date) extrapolates from the source's FIRST value — the
+     end nearest the new cells — rather than its last. textnum never prints
+     a negative: past zero it mirrors and keeps counting by absolute value,
+     matching Excel (…Item 2, Item 1, Item 0, Item 1, Item 2…). */
+  function seriesRawBack(mode,raws,m){
+    const n=raws.length;
+    if(mode==='number'){
+      if(n===1)return fmtSeriesNum(SGE.literal(raws[0])-m);
+      const vals=raws.map(x=>SGE.literal(x));const step=(vals[n-1]-vals[0])/(n-1);
+      return fmtSeriesNum(vals[0]-step*m);
+    }
+    if(mode==='textnum'){
+      const mm=raws.map(x=>TRAIL_NUM.exec(String(x).trim()));
+      const prefix=mm[0][1];const nums=mm.map(x=>parseInt(x[2],10));
+      const width=mm[0][2].length,padded=mm[0][2][0]==='0';
+      const step=n===1?1:(nums[n-1]-nums[0])/(n-1);
+      const v=Math.abs(Math.round(nums[0]-step*m));
+      return prefix+(padded?String(v).padStart(width,'0'):String(v));
+    }
+    if(mode==='date'){
+      const pat=/^\d{4}-\d{1,2}-\d{1,2}$/.test(String(raws[0]).trim())?'yyyy-mm-dd':'dd/mm/yyyy';
+      const vals=raws.map(x=>SGE.literal(x));const step=n===1?1:(vals[n-1]-vals[0])/(n-1);
+      return SGE.fmtPattern(Math.round(vals[0]-step*m),pat);
+    }
+    return raws[(n-(m%n))%n];
+  }
   function fillLine(cells,n,shift){
     /* cells: [{r,c}] source positions in order, along the axis being filled.
        shift(k, srcR, srcC) -> {r,c} of the k-th new cell (0-based). */
@@ -23734,6 +23838,22 @@ function _sgMount(root,state,editable){
       S.cells[K(tgt.r,tgt.c)]=o;tidy(K(tgt.r,tgt.c));
     }
   }
+  /* cells: [{r,c}] source positions FAR to NEAR the selection edge being
+     filled from. shift(k) -> {r,c} of the k-th new cell (0-based, k=0
+     nearest the selection). */
+  function fillLineBack(cells,n,shift){
+    const raws=cells.map(p=>rawOf(p.r,p.c)),objs=cells.map(p=>cellO(p.r,p.c)||{});
+    const mode=seriesLineMode(raws,objs);const len=cells.length;
+    for(let k=0;k<n;k++){
+      const m=k+1;const tgt=shift(k);
+      if(tgt.r<0||tgt.c<0||tgt.r>=S.rows||tgt.c>=S.cols)continue;
+      const srcIdx=(len-(m%len))%len,src=cells[srcIdx];
+      const isF=String(raws[srcIdx]||'')[0]==='=';
+      const raw=(mode==='formula'||isF)?SGE.shiftF(raws[srcIdx],tgt.r-src.r,tgt.c-src.c):seriesRawBack(mode,raws,m);
+      const o=Object.assign(JSON.parse(JSON.stringify(objs[srcIdx])),{raw});
+      S.cells[K(tgt.r,tgt.c)]=o;tidy(K(tgt.r,tgt.c));
+    }
+  }
   function fillDownDrag(sel,n){
     for(let c=sel.c1;c<=sel.c2;c++){
       const cells=[];for(let r=sel.r1;r<=sel.r2;r++)cells.push({r,c});
@@ -23746,22 +23866,44 @@ function _sgMount(root,state,editable){
       fillLine(cells,n,(k,srcR,srcC)=>({r:srcR,c:sel.c2+1+k}));
     }
   }
+  function fillUpDrag(sel,n){
+    for(let c=sel.c1;c<=sel.c2;c++){
+      const cells=[];for(let r=sel.r1;r<=sel.r2;r++)cells.push({r,c});
+      fillLineBack(cells,n,k=>({r:sel.r1-1-k,c}));
+    }
+  }
+  function fillLeftDrag(sel,n){
+    for(let r=sel.r1;r<=sel.r2;r++){
+      const cells=[];for(let c=sel.c1;c<=sel.c2;c++)cells.push({r,c});
+      fillLineBack(cells,n,k=>({r,c:sel.c1-1-k}));
+    }
+  }
   function doFillDrag(axis,sel,n){
     snap();
-    if(axis==='down')fillDownDrag(sel,n);else fillRightDrag(sel,n);
+    if(axis==='down')fillDownDrag(sel,n);
+    else if(axis==='right')fillRightDrag(sel,n);
+    else if(axis==='up')fillUpDrag(sel,n);
+    else fillLeftDrag(sel,n);
     if(axis==='down')SEL={r1:sel.r1,c1:sel.c1,r2:Math.min(S.rows-1,sel.r2+n),c2:sel.c2};
-    else SEL={r1:sel.r1,c1:sel.c1,r2:sel.r2,c2:Math.min(S.cols-1,sel.c2+n)};
+    else if(axis==='right')SEL={r1:sel.r1,c1:sel.c1,r2:sel.r2,c2:Math.min(S.cols-1,sel.c2+n)};
+    else if(axis==='up')SEL={r1:Math.max(0,sel.r1-n),c1:sel.c1,r2:sel.r2,c2:sel.c2};
+    else SEL={r1:sel.r1,c1:Math.max(0,sel.c1-n),r2:sel.r2,c2:sel.c2};
     A={r:sel.r1,c:sel.c1};
     refresh();changed();
   }
+  /* The combined box (original selection + new cells), either direction —
+     down/right always included the source range in this box, so up/left
+     keep that convention rather than returning only the new part. */
   function fillTargetRange(d){
     if(d.dr>0)return{r1:d.r1,c1:d.c1,r2:Math.min(S.rows-1,d.r2+d.dr),c2:d.c2};
+    if(d.dr<0)return{r1:Math.max(0,d.r1+d.dr),c1:d.c1,r2:d.r2,c2:d.c2};
     if(d.dc>0)return{r1:d.r1,c1:d.c1,r2:d.r2,c2:Math.min(S.cols-1,d.c2+d.dc)};
+    if(d.dc<0)return{r1:d.r1,c1:Math.max(0,d.c1+d.dc),r2:d.r2,c2:d.c2};
     return null;
   }
   function showFillPreview(){
     const t=fillTargetRange(fillDrag);if(!t){fillPrev.hidden=true;return;}
-    const td1=TD[t.r1]&&TD[t.r1][t.c1],td2=TD[t.r2]&&TD[t.r2][t.c2];if(!td1||!td2){fillPrev.hidden=true;return;}
+    const td1=boxTD(t.r1,t.c1),td2=boxTD(t.r2,t.c2);if(!td1||!td2){fillPrev.hidden=true;return;}
     fillPrev.style.left=td1.offsetLeft+'px';fillPrev.style.top=td1.offsetTop+'px';
     fillPrev.style.width=(td2.offsetLeft+td2.offsetWidth-td1.offsetLeft)+'px';
     fillPrev.style.height=(td2.offsetTop+td2.offsetHeight-td1.offsetTop)+'px';
@@ -23777,7 +23919,7 @@ function _sgMount(root,state,editable){
 
   /* ── v04.61: cell borders ── */
   function applyBorders(kind){
-    const s=norm(SEL);snap();
+    const s=normM(SEL);snap();
     if(kind==='all'){forSel((r,c)=>setProp(r,c,'bd','tblr'));}
     else if(kind==='none'){forSel((r,c)=>setProp(r,c,'bd',undefined));}
     else if(kind==='outside'){
@@ -23793,7 +23935,7 @@ function _sgMount(root,state,editable){
     }
     refresh();changed();
   }
-  function doCopy(cut){const s=norm(SEL);const rows=[];const text=[];
+  function doCopy(cut){const s=normM(SEL);const rows=[];const text=[];
     for(let r=s.r1;r<=s.r2;r++){const row=[],t=[];for(let c=s.c1;c<=s.c2;c++){const o=cellO(r,c);row.push(o?JSON.parse(JSON.stringify(o)):null);t.push(SGE.display(val(r,c),o&&o.fmt));}rows.push(row);text.push(t.join('\t'));}
     clip={s,rows,text:text.join('\n'),cut:!!cut&&editable};
     try{navigator.clipboard.writeText(clip.text).catch(()=>{});}catch(e){}
@@ -23801,9 +23943,16 @@ function _sgMount(root,state,editable){
     return clip.text;}
   function doPaste(text){
     if(!editable)return;
-    snap();
+    /* Merge overlap is checked BEFORE any snap()/mutation, in either branch,
+       so a refused paste really leaves nothing changed and adds no undo
+       step (CLAUDE.md's refusal rule) — merges are not carried by copy/paste
+       this round (Not done); only the overlap check needs to know about
+       them here. */
     if(clip&&(text==null||text.replace(/\r/g,'')===clip.text)){
       const {s,rows}=clip;
+      const r2=Math.min(S.rows-1,A.r+rows.length-1),c2=Math.min(S.cols-1,A.c+(rows[0]?rows[0].length:1)-1);
+      if((S.mg||[]).some(m=>m[0]<=r2&&m[2]>=A.r&&m[1]<=c2&&m[3]>=A.c))return toast('Cannot paste onto a merged cell — unmerge it first');
+      snap();
       rows.forEach((row,i)=>row.forEach((o,j)=>{const r=A.r+i,c=A.c+j;if(r>=S.rows||c>=S.cols)return;const k=K(r,c);
         if(!o){delete S.cells[k];return;}const n=JSON.parse(JSON.stringify(o));n.raw=SGE.shiftF(n.raw,r-(s.r1+i),c-(s.c1+j));S.cells[k]=n;}));
       if(clip.cut){rows.forEach((row,i)=>row.forEach((o,j)=>{const r=s.r1+i,c=s.c1+j;if(r<A.r||r>=A.r+rows.length||c<A.c||c>=A.c+row.length)delete S.cells[K(r,c)];}));clip=null;}
@@ -23813,10 +23962,41 @@ function _sgMount(root,state,editable){
     if(text==null)return;
     const lines=text.replace(/\r/g,'').replace(/\n$/,'').split('\n').map(l=>l.split('\t'));
     const needR=Math.min(_SG_MAX_ROWS,A.r+lines.length),needC=Math.min(_SG_MAX_COLS,A.c+Math.max(...lines.map(l=>l.length)));
+    const r2b=Math.min(needR,A.r+lines.length)-1,c2b=Math.min(needC,A.c+Math.max(...lines.map(l=>l.length)))-1;
+    if((S.mg||[]).some(m=>m[0]<=r2b&&m[2]>=A.r&&m[1]<=c2b&&m[3]>=A.c))return toast('Cannot paste onto a merged cell — unmerge it first');
+    snap();
     if(needR>S.rows)S.rows=needR;if(needC>S.cols)S.cols=needC;
     lines.forEach((l,i)=>l.forEach((v,j)=>{const r=A.r+i,c=A.c+j;if(r>=S.rows||c>=S.cols)return;setRaw(r,c,v.trim());const f=SGE.autoFmt(v);if(f)setProp(r,c,'fmt',f);}));
     SEL={r1:A.r,c1:A.c,r2:needR-1,c2:Math.min(needC-1,A.c+lines[0].length-1)};
     renderGrid();changed();toast('Pasted '+lines.length+' row'+(lines.length>1?'s':''));
+  }
+  /* Move/resize/drop every mg range the same way a deletion collapses a
+     contiguous run of rows/cols to a shorter contiguous run: an edge
+     WITHIN the removed block collapses to the deletion point ('at' for the
+     top/left edge, 'at-1' for the bottom/right edge — the two meet exactly
+     when the whole merge was removed, which is what makes r1>r2 the drop
+     signal below, with no separate "fully deleted" branch needed). An
+     insertion strictly inside the merge's span grows it; at or before its
+     top/left edge just carries it along, unrown. */
+  function rekeyMerges(axis,at,n){
+    if(!S.mg)return;
+    const out=[];
+    for(const m of S.mg){
+      let [r1,c1,r2,c2]=m;
+      const shiftPair=(a,b)=>{
+        if(n>0){if(at<=a)return[a+n,b+n];if(at<=b)return[a,b+n];return[a,b];}
+        const k=-n;
+        const start=v=>v<at?v:v<at+k?at:v-k;
+        const end=v=>v<at?v:v<at+k?at-1:v-k;
+        return[start(a),end(b)];
+      };
+      if(axis==='r'){const [nr1,nr2]=shiftPair(r1,r2);r1=nr1;r2=nr2;}
+      else{const [nc1,nc2]=shiftPair(c1,c2);c1=nc1;c2=nc2;}
+      if(r1>r2||c1>c2)continue;
+      if(r1===r2&&c1===c2)continue;
+      out.push([r1,c1,r2,c2]);
+    }
+    S.mg=out.length?out:undefined;
   }
   function rekey(axis,at,n){
     const out={};for(const k in S.cells){let [r,c]=k.split(',').map(Number);let v=axis==='r'?r:c;
@@ -23824,6 +24004,7 @@ function _sgMount(root,state,editable){
     for(const k in out)out[k].raw=SGE.axisOp(out[k].raw,axis,at,n);
     S.cells=out;
     if(axis==='c'){const w={};for(const k in (S.colW||{})){let c=+k;if(n<0&&c>=at&&c<at-n)continue;if(c>=at)c+=n;w[c]=S.colW[k];}S.colW=w;}
+    rekeyMerges(axis,at,n);
   }
   function insRow(below){const s=norm(SEL);const n=s.r2-s.r1+1;if(S.rows+n>_SG_MAX_ROWS)return toast('A table can have up to '+_SG_MAX_ROWS+' rows');snap();const at=below?s.r2+1:s.r1;rekey('r',at,n);S.rows+=n;if(!below){A.r+=n;SEL.r1+=n;SEL.r2+=n;}after();}
   function delRow(){const s=norm(SEL);const n=s.r2-s.r1+1;if(n>=S.rows)return toast('A table needs at least one row');snap();rekey('r',s.r1,-n);S.rows-=n;SEL={r1:s.r1,c1:s.c1,r2:s.r1,c2:s.c1};A={r:s.r1,c:s.c1};after();}
@@ -23835,11 +24016,55 @@ function _sgMount(root,state,editable){
       if(r1<r2&&[...Array(S.cols).keys()].some(c=>(cellO(r1,c)||{}).b))r1++;
       while(r2>r1&&/^\s*total/i.test(rawOf(r2,0)))r2--;}
     if(r2<=r1)return toast('Nothing to sort here');
+    if((S.mg||[]).some(m=>m[0]<=r2&&m[2]>=r1))return toast('Cannot sort a range containing a merged cell — unmerge it first');
     snap();const g=SGE.evaluate(S);
     const rows=[];for(let r=r1;r<=r2;r++){const cs=[];for(let c=0;c<S.cols;c++){const o=cellO(r,c);cs.push(o?JSON.parse(JSON.stringify(o)):null);}rows.push({r,key:g(r,col),cs});}
     rows.sort((x,y)=>{const a=x.key,b=y.key;if(a===null&&b===null)return 0;if(a===null)return 1;if(b===null)return-1;const d=SGE.cmp(a,b);return desc?-d:d;});
     rows.forEach((row,i)=>{const nr=r1+i;row.cs.forEach((o,c)=>{const k=K(nr,c);if(!o){delete S.cells[k];return;}o.raw=SGE.shiftF(o.raw,nr-row.r,0);S.cells[k]=o;});});
     SEL={r1,c1:s.c1,r2,c2:s.c2};refresh();changed();toast('Sorted rows '+(r1+1)+'–'+(r2+1)+' by column '+colName(col));
+  }
+  /* ── v04.63: merging ─────────────────────────────────────────────────
+     Same two-step confirm as Remove (delArm below), armed only when the
+     selection holds values OUTSIDE the top-left cell — an empty selection
+     or one already holding a single value merges on the first click,
+     because nothing would be lost. */
+  function selHasExtraValues(s){
+    for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1;c<=s.c2;c++){if(r===s.r1&&c===s.c1)continue;if(rawOf(r,c)!=='')return true;}
+    return false;
+  }
+  function mergeBtnLabel(){return mergeAt(A.r,A.c)?'Unmerge':'Merge cells';}
+  function mergeRange(s){
+    snap();
+    for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1;c<=s.c2;c++){if(r===s.r1&&c===s.c1)continue;setRaw(r,c,'');}
+    if(!S.mg)S.mg=[];
+    S.mg.push([s.r1,s.c1,s.r2,s.c2]);
+    A={r:s.r1,c:s.c1};SEL={r1:s.r1,c1:s.c1,r2:s.r2,c2:s.c2};
+    renderGrid();changed();toast('Cells merged');
+  }
+  function unmergeCells(m){
+    snap();
+    S.mg=(S.mg||[]).filter(x=>x!==m);if(!S.mg.length)S.mg=undefined;
+    A={r:m[0],c:m[1]};SEL={r1:m[0],c1:m[1],r2:m[0],c2:m[1]};
+    renderGrid();changed();toast('Cells unmerged');
+  }
+  let mergeArm=0;
+  function mergeAction(btn){
+    const cur=mergeAt(A.r,A.c);
+    if(cur){unmergeCells(cur);if(btn){btn.textContent=mergeBtnLabel();btn.classList.remove('armed');}return;}
+    const s=norm(SEL);
+    if(s.r1===s.r2&&s.c1===s.c2)return toast('Select more than one cell to merge');
+    if((S.mg||[]).some(m=>rangesOverlap(m,[s.r1,s.c1,s.r2,s.c2])))return toast('Overlaps an existing merge — unmerge it first');
+    if(S.frz&&mergeCrossesFreeze([s.r1,s.c1,s.r2,s.c2]))return toast('Cannot merge across the frozen row while frozen');
+    if(selHasExtraValues(s)){
+      if(Date.now()-mergeArm<4000){mergeArm=0;mergeRange(s);if(btn){btn.textContent=mergeBtnLabel();btn.classList.remove('armed');}return;}
+      mergeArm=Date.now();
+      toast('Tap again to merge — keeps only the top-left value');
+      if(btn){btn.textContent='Tap again to merge — keeps only the top-left value';btn.classList.add('armed');
+        setTimeout(()=>{if(Date.now()-mergeArm>=4000){btn.textContent=mergeBtnLabel();btn.classList.remove('armed');}},4000);}
+      return;
+    }
+    mergeRange(s);
+    if(btn){btn.textContent=mergeBtnLabel();btn.classList.remove('armed');}
   }
   let delArm=0;
   function removeSheet(btn){
@@ -23853,19 +24078,21 @@ function _sgMount(root,state,editable){
     m.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-h-8))+'px';
   }
   const rcItems=()=>[['insRowA','Insert row above'],['insRowB','Insert row below'],['delRow','Delete row'],'-',['insColL','Insert column left'],['insColR','Insert column right'],['delCol','Delete column']];
-  const cellItems=()=>editable?[['cut','Cut','Ctrl+X'],['copy','Copy','Ctrl+C'],['pasteH','Paste','Ctrl+V'],'-',...rcItems(),'-',['sortA','Sort A→Z'],['sortZ','Sort Z→A'],['clear','Clear contents','Del']]:[['copy','Copy','Ctrl+C']];
+  const cellItems=()=>editable?[['cut','Cut','Ctrl+X'],['copy','Copy','Ctrl+C'],['pasteH','Paste','Ctrl+V'],'-',...rcItems(),'-',['sortA','Sort A→Z'],['sortZ','Sort Z→A'],['clear','Clear contents','Del'],'-',['merge',mergeBtnLabel()]]:[['copy','Copy','Ctrl+C']];
   const bdItems=()=>[['bdAll','All borders'],['bdOut','Outside borders'],['bdTop','Top border'],['bdBot','Bottom border'],['bdLeft','Left border'],['bdRight','Right border'],'-',['bdNone','No borders']];
   const ACT={insRowA:()=>insRow(false),insRowB:()=>insRow(true),delRow,insColL:()=>insCol(false),insColR:()=>insCol(true),delCol,
     cut:()=>doCopy(true),copy:()=>doCopy(false),pasteH:()=>{if(clip)doPaste(null);else toast('Press Ctrl+V to paste from another app');},
     sortA:()=>sortBy(false),sortZ:()=>sortBy(true),clear:clearSel,
     bdAll:()=>applyBorders('all'),bdOut:()=>applyBorders('outside'),bdTop:()=>applyBorders('top'),bdBot:()=>applyBorders('bottom'),
-    bdLeft:()=>applyBorders('left'),bdRight:()=>applyBorders('right'),bdNone:()=>applyBorders('none')};
+    bdLeft:()=>applyBorders('left'),bdRight:()=>applyBorders('right'),bdNone:()=>applyBorders('none'),
+    merge:()=>mergeAction()};
   self.act=k=>{(ACT[k]||(()=>{}))();gw.focus({preventScroll:true});};
   self.editing=()=>!!E;
   self.commit=commit;
   self.focusGrid=()=>{gw.focus({preventScroll:true});paint();};
   self.insertFn=name=>{if(!editable)return;if(!E)startEdit('=',false);const el=inputEl();if(el.value==='')el.value='=';insertAtCaretSg(name+'(');};
   self.state=()=>S;
+  self.undoDepth=()=>U.length;
   self.destroy=()=>{if(_sgCur===self)_sgCur=null;ui.remove();st.removeAttribute('hidden');delete root._sg;};
 
   /* ── events ── */
@@ -23903,7 +24130,7 @@ function _sgMount(root,state,editable){
   gw.addEventListener('dblclick',e=>{const td=tdFrom(e);if(!td||!editable)return;select(+td.dataset.r,+td.dataset.c,false);startEdit('',true);});
   gw.addEventListener('contextmenu',e=>{
     const td=tdFrom(e),th=e.target.closest('th');if(!td&&!th)return;e.preventDefault();e.stopPropagation();if(E)commit();
-    if(td){const r=+td.dataset.r,c=+td.dataset.c;const s=norm(SEL);if(!(r>=s.r1&&r<=s.r2&&c>=s.c1&&c<=s.c2))select(r,c,false);openMenu(e.clientX,e.clientY,cellItems());return;}
+    if(td){const r=+td.dataset.r,c=+td.dataset.c;const s=normM(SEL);if(!(r>=s.r1&&r<=s.r2&&c>=s.c1&&c<=s.c2))select(r,c,false);openMenu(e.clientX,e.clientY,cellItems());return;}
     if(!editable)return;
     if(th.classList.contains('sg-rh')){const r=+th.dataset.r;const s=norm(SEL);if(!(r>=s.r1&&r<=s.r2)){A={r,c:0};SEL={r1:r,c1:0,r2:r,c2:S.cols-1};paint();}openMenu(e.clientX,e.clientY,rcItems().slice(0,3).concat(['-',['sortA','Sort A→Z'],['sortZ','Sort Z→A'],['clear','Clear contents']]));}
     else if(th.classList.contains('sg-ch')){const c=+th.dataset.c;const s=norm(SEL);if(!(c>=s.c1&&c<=s.c2)){A={r:0,c};SEL={r1:0,c1:c,r2:S.rows-1,c2:c};paint();}openMenu(e.clientX,e.clientY,rcItems().slice(4).concat(['-',['clear','Clear contents']]));}
@@ -23965,7 +24192,10 @@ function _sgMount(root,state,editable){
       switch(a){case'undo':undo();break;case'redo':redo();break;case'bold':styleSel('b');break;case'ital':styleSel('i');break;
         case'al-l':styleSel('al','l');break;case'al-c':styleSel('al','c');break;case'al-r':styleSel('al','r');break;
         case'sortA':sortBy(false);break;case'sortZ':sortBy(true);break;case'fill':fillDown();break;case'del':removeSheet(b);break;
-        case'frz':snap();S.frz=S.frz?0:1;grid.classList.toggle('sg-frz',!!S.frz);refresh();changed();break;
+        case'frz':{
+          if(!S.frz&&(S.mg||[]).some(mergeCrossesFreeze)){toast('Cannot freeze the top row: a merge crosses row 1/2 — unmerge it first');break;}
+          snap();S.frz=S.frz?0:1;grid.classList.toggle('sg-frz',!!S.frz);refresh();changed();break;}
+        case'merge':mergeAction(b);break;
         case'fn':{const p=_sgFnEl();p._draw();p.querySelector('.sg-fnq').value='';p._draw();p.hidden=false;const rr=root.getBoundingClientRect();
           p.style.left=Math.max(8,Math.min(rr.right-p.offsetWidth,innerWidth-p.offsetWidth-8))+'px';
           p.style.top=Math.max(8,Math.min(rr.top+70,innerHeight-p.offsetHeight-8))+'px';p.querySelector('.sg-fnq').focus({preventScroll:true});break;}
@@ -23977,7 +24207,7 @@ function _sgMount(root,state,editable){
     fillEl.addEventListener('pointerdown',e=>{
       if(e.pointerType==='mouse'&&e.button!==0)return;
       e.preventDefault();e.stopPropagation();
-      const s=norm(SEL);
+      const s=normM(SEL);
       fillDrag={r1:s.r1,c1:s.c1,r2:s.r2,c2:s.c2,dr:0,dc:0};
       fillLastPt={x:e.clientX,y:e.clientY};
       try{fillEl.setPointerCapture(e.pointerId);}catch(x){}
@@ -23991,10 +24221,18 @@ function _sgMount(root,state,editable){
       const td=el&&el.closest&&el.closest('td');
       if(td&&grid.contains(td)){
         const r=+td.dataset.r,c=+td.dataset.c;
-        const down=r-fillDrag.r2,right=c-fillDrag.c2;
-        if(down>0&&Math.abs(down)>=Math.abs(right)){fillDrag.dr=down;fillDrag.dc=0;}
-        else if(right>0){fillDrag.dc=right;fillDrag.dr=0;}
-        else{fillDrag.dr=0;fillDrag.dc=0;}
+        /* v04.63 — up/left now continue the series backward too. The axis is
+           whichever way the pointer has moved furthest OUTSIDE the
+           selection; still further inside it (shrinking back) does nothing
+           this round (CLAUDE.md I1 — clearing there is destructive enough to
+           need its own round). */
+        const down=r-fillDrag.r2,up=fillDrag.r1-r,right=c-fillDrag.c2,left=fillDrag.c1-c;
+        const best=Math.max(down,up,right,left,0);
+        if(best<=0){fillDrag.dr=0;fillDrag.dc=0;}
+        else if(down===best){fillDrag.dr=down;fillDrag.dc=0;}
+        else if(up===best){fillDrag.dr=-up;fillDrag.dc=0;}
+        else if(right===best){fillDrag.dc=right;fillDrag.dr=0;}
+        else{fillDrag.dc=-left;fillDrag.dr=0;}
         showFillPreview();
       }
     });
@@ -24002,8 +24240,14 @@ function _sgMount(root,state,editable){
       if(!fillDrag)return;
       const d=fillDrag;fillDrag=null;fillPrev.hidden=true;
       const sel={r1:d.r1,c1:d.c1,r2:d.r2,c2:d.c2};
+      const tgt=fillTargetRange(d);
+      if(!tgt){paint();return;}
+      const full={r1:Math.min(sel.r1,tgt.r1),c1:Math.min(sel.c1,tgt.c1),r2:Math.max(sel.r2,tgt.r2),c2:Math.max(sel.c2,tgt.c2)};
+      if((S.mg||[]).some(m=>m[0]<=full.r2&&m[2]>=full.r1&&m[1]<=full.c2&&m[3]>=full.c1)){toast('Cannot fill across a merged cell — unmerge it first');paint();return;}
       if(d.dr>0)doFillDrag('down',sel,d.dr);
+      else if(d.dr<0)doFillDrag('up',sel,-d.dr);
       else if(d.dc>0)doFillDrag('right',sel,d.dc);
+      else if(d.dc<0)doFillDrag('left',sel,-d.dc);
       else paint();
     };
     fillEl.addEventListener('pointerup',fillEnd);

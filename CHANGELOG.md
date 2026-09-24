@@ -6072,3 +6072,166 @@ the import job, removes it entirely.
     (`26a` ×2 and the `26b`/`26c` blocks, each refused at 10 MiB);
   - the builder's first cut with the same `tools/`: **14/16, 2 FAILED**
     (`26d` and `26f`).
+
+---
+
+## v04.63 — spreadsheet round 2b1: merged cells, and the fill handle upward and leftward (24 Sep 2026)
+
+Issue #93, round 2b1 of the spreadsheet backlog the owner approved on 23 Sep
+2026 (round 1 shipped as v04.52, round 2a as v04.61; round 2b2 — colour
+rules and filters — and round 2c come later). Everything lives in
+`_sgMount()` and its neighbours (`index.html`, from about line 23350).
+
+**Merged cells.** A new toolbar button, worded (`CLAUDE.md`: a bare glyph is
+not a label) — `Merge cells`, reading `Unmerge` when the active cell is
+already inside one — and the same choice in the right-click menu on a
+selection. Stored as a new top-level key, `mg`: an array of
+`[r1,c1,r2,c2]` ranges, at least two cells each, value at the top-left
+("the anchor"), covered cells holding nothing; the key is left off a sheet
+with no merges.
+
+- **Nothing lost silently (I1).** A selection holding values in more than
+  the top-left cell arms the button (`Tap again to merge — keeps only the
+  top-left value`, the `Remove` button's own two-tap pattern) rather than
+  merging outright; a second click within 4 seconds merges. An empty
+  selection or one already holding a single value merges on the first
+  click. The merge clears the covered cells' `raw` and keeps their other
+  properties; it is one undo step.
+- **Drawing.** The live grid gives the anchor `td` a real `rowSpan`/
+  `colSpan` and sets the covered `td`s `display:none` — they stay in the
+  `TD[r][c]` lookup (so nothing that loops over every cell has to
+  special-case a merge) but drop out of the table's own column layout,
+  landing the anchor exactly where a hand-written merged `<table>` would.
+  `boxTD(r,c)` resolves any covered position to its anchor's own box — the
+  anchor's `rowSpan`/`colSpan` already make that box the whole merged
+  area — and every call site that used to read `TD[r][c]`'s box directly
+  (selection paint, `scrollIntoCell`, the fill handle, the fill preview)
+  now goes through it. `_sgStaticHTML()` writes `colspan`/`rowspan` on the
+  anchor and omits the covered `<td>`s, and its used-range scan now also
+  covers a merge's full extent, so the snapshot, search, Save File and an
+  older build all see a real merged table (I4).
+- **Selecting.** `select()` resolves a plain click anywhere in a merge (the
+  browser routes it to the spanning anchor `td` on its own) to the whole
+  range, anchored at the top-left — Excel's rule. A drag or Shift-selection
+  that TOUCHES a merge grows to cover it, via `normM()` — a merge-aware
+  wrapper the visual/cell-iterating call sites (`paint`, `forSel`, `status`,
+  `updateFillHandle`, `doCopy`, `applyBorders`) now use in place of the
+  plain, still-unchanged `norm()`. Row/column HEADER selection deliberately
+  keeps the plain `norm()` — growing that too would make "insert a row
+  strictly inside a merge" inexpressible, since the header click is the only
+  way to pick one row of a merge rather than the whole thing.
+- **Keyboard.** `move()` steps a merge as one cell: leaving from whichever
+  of its edges faces the direction of travel. Typing edits the anchor,
+  because `A` is always kept at a real, content-bearing position by
+  `select()`. A formula referring to a covered cell sees it as blank —
+  Excel's behaviour, and it falls out for free because a covered cell
+  carries no `raw`.
+- **Insert/delete rows and columns.** `rekeyMerges()` — called from the
+  existing `rekey()` alongside the cell/`colW` rekeying it already did —
+  moves and resizes every `mg` range with the same shift math already
+  proven on individual cell coordinates (`SGE.axisOp`'s own shape): an
+  insertion strictly inside a merge's span grows it, at or before its top/
+  left edge carries it along unshrunk; a deletion's edge collapses to the
+  deletion point, and when both edges collapse to the same point the merge
+  is dropped — one formula, no separate "fully deleted" branch. Deleting
+  the anchor's row/column keeps the merge with a new, empty anchor (the
+  surviving row's own cell, already empty, becomes it) — Excel does the
+  same.
+- **Refused, with a toast, nothing changed, no undo step:** sort, a fill
+  (handle, Fill down, Ctrl+D/R) whose source or target touches a merge, a
+  paste whose target touches a merge, a merge overlapping an existing one,
+  and — both directions — freezing while a merge crosses the row-1/row-2
+  boundary, or merging across it while frozen (a sticky `rowSpan` cell
+  spanning the freeze line can't be drawn correctly). Every refusal path
+  returns before its `snap()`, proved directly: `self.undoDepth()`, a new
+  test-only accessor beside the existing `self.state()`, reads the sheet's
+  own undo-stack length, because a refused action that (wrongly) pushed a
+  no-op step would still leave `data-sg` byte-identical — the state
+  comparison alone can't see a spurious entry that undoes to what it
+  started from.
+- **Unmerge** leaves the value in the top-left cell, empties the rest —
+  they already held nothing — and is one undo step.
+- **Borders on a merge apply to the anchor's edges only.** `forSel()`, the
+  function every per-cell styling action (bold, italic, align, fill colour,
+  borders, Clear contents) already funnels through, now skips a merge's
+  covered cells — so a border (or any other per-cell property) lands on the
+  anchor, and draws around the whole merged box because the anchor's own
+  `td` IS that box.
+- **Read view and Multi** draw merges from the same `_sgMount()`/
+  `_sgStaticHTML()` every mode already shares — proved in app-check `27g`,
+  not assumed.
+
+**The fill handle, upward and leftward.** In v04.61 dragging up or left did
+nothing; now it continues the series backward, one rule per line exactly
+as before (formula > date > text-with-trailing-number > all-numbers >
+cyclic pattern), just read from the other end:
+- a number line extrapolates from the source's FIRST value, the end
+  nearest the new cells, instead of its last;
+- text ending in a number counts down the same way, and never prints a
+  negative — past zero it mirrors and keeps counting by absolute value,
+  matching Excel (`Item 3` dragged up 4 gives `Item 2, Item 1, Item 0,
+  Item 1`);
+- a date line steps backward by its own gap;
+- a formula still shifts by a plain row/col delta either direction, so a
+  reference walked off the sheet resolves to `#REF!` exactly as the
+  forward case already did (`SGE.shiftF` needed no change);
+- a pattern repeats backward (cycling from its last cell rather than its
+  first).
+
+The axis is still whichever way the pointer has moved furthest OUTSIDE the
+selection — now checked in all four directions, not just down/right.
+`fillTargetRange()` and the drag's own merge-touch refusal check (above)
+both work either direction unchanged, since they already operated on a
+combined source-plus-target box rather than assuming a sign. Still one
+undo step per fill, still no auto-growing.
+
+**Not done, per the issue's own scope:**
+- merges are not carried by copy/paste this round — pasting copies values
+  only, and a paste target touching a merge is refused;
+- dragging the fill handle BACK INSIDE the current selection (shrinking
+  it) does nothing; Excel clears there, and clearing is destructive enough
+  to need its own round;
+- round 2b2 (colour rules, filters) and 2c (several sheets, CSV, more
+  functions).
+
+**Layouts (D5).** `Merge cells` rides the sheet's own toolbar — sideways-
+scrolling on the phone, wrapped and fully visible from 640px up, both
+already true of every other sheet control since v04.61's Architect review,
+so nothing new was needed to keep `25h` green. Selecting a merge is tap or
+click at every tier, the same `select()` regardless of `lastPtr`. The fill
+handle's up/left dragging reuses its existing per-tier hit box (32×32px
+touch, 12×12px mouse) unchanged. The armed confirm label
+(`Tap again to merge — keeps only the top-left value`) is long; the
+button, like `Remove`'s own armed state, simply grows — `white-space:nowrap`
+already held on every `.sg-b`, and the phone toolbar's own sideways scroll
+(unchanged this round) keeps its box reachable.
+
+**Checks: new section 27, `27a`–`27h`.** Real input only — `page.mouse` for
+drags and clicks, `page.keyboard` for typing/undo, `touchDrag()` in a
+`hasTouch` context for a real touch drag — never a merge/fill/unmerge
+function called directly, and every check id names its size. `27a` (×3
+sizes): the real two-tap merge, `mg`, the anchor's box, one Ctrl+Z, the
+saved snapshot's `colspan`/`rowspan` with the covered `<td>` omitted, and
+the read view after a reload. `27b` (1440): a click anywhere in the merge
+selects it whole; arrow keys step over it; typing edits the anchor; a
+formula referencing a covered cell reads blank. `27c` (1440): the real
+`Rows & columns ▾` menu, via row/column HEADER selection so a genuinely
+single row inside the merge can be targeted — insert grows it, delete
+shrinks it, deleting the anchor keeps an empty new one, deleting down to
+one cell drops it. `27d` (1440): all six refusals, each proved by
+`data-sg` byte-identity, a toast, AND `self.undoDepth()` staying flat.
+`27e` (820): `Unmerge`'s label and its one undo step. `27f`: fill up/left
+by real mouse at 1440 and 820 and real touch at 390, checking both raws
+and displayed values across all four rules including the `#REF!` case.
+`27g` (1440): merge and unmerge in a real Multi window, then save. `27h`:
+opening a note whose sheet already has `mg` (plus `frz` and `bd`) changes
+nothing — `17d`/`25g`'s rule, extended to the new key. `25a`–`25i` and
+`17*` stay green, confirmed by re-running them, not assumed from the
+shared code path.
+
+**Measured**
+- `ship-check`: **12/12**.
+- `app-check --only 27`: **83/83**.
+- `app-check --only 25`: **106/106**.
+- `app-check --only 17`: **23/23**.
+- Full `app-check`: run by the Architect in review.
