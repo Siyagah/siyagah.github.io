@@ -81,6 +81,9 @@ must never accumulate here instead of there.
     dropped (a `bd`-only cell, an unknown-key cell, a genuinely empty cell
     still tidied); Multi gets all three; opening a sheet that already has
     `frz`/`bd` changes nothing (`17d`'s rule, extended).
+  - 12/12 ship checks, `app-check --only 25` **93/93**, `--only 17`
+    **23/23** (no regressions). Full `app-check`, **599/599, twice in a
+    row**.
 - **v04.60** (23 Sep 2026) — the last note titles out of the public file,
   and Contents without heading chrome. Built by the Architect directly.
   - **v04.58 missed some.** It named the tab *picker*, but the static

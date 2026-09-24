@@ -5886,3 +5886,9 @@ gained `openApp({hasTouch:true})` and a `touchDrag()` helper for this) —
 never the fill/border functions directly and never a synthesized event, per
 the `⚙ Backup & Restore` lesson in `CLAUDE.md`.
 
+**Measured**
+- `ship-check`: **12/12**.
+- `app-check --only 25`: **93/93**.
+- `app-check --only 17`: **23/23** (no regressions from round 1).
+- Full `app-check`: **599/599, twice in a row**.
+
