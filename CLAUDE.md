@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.62.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.65.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -66,7 +66,12 @@ must never accumulate here instead of there.
     check. `27a`'s armed-label assertion updated in place for the record
     fix, reason recorded.
   - 12/12 ship checks, `--only 28` **51/51**, `--only 27,25,17` **212/212**.
-    Full `app-check`: run by the Architect in review.
+    Full `app-check` (Architect, on `47a31ef`): **762/762, twice in a row**.
+    Unpatched (v04.63's app with this round's tools), `--only 28,27,25,17`:
+    **214/226, 12 FAILED**: 7 `28*` blocks aborted, `28f` aborted after 1
+    check, `28h` failed, the three `27a` arm-label checks failed (updated in
+    place for the shorter label). `28g` passes on both, by design; every
+    `25*`/`17*` check passed on v04.63.
 - **v04.63** (24 Sep 2026) — spreadsheet round 2b1: merged cells, and the
   fill handle upward and leftward. Issue #93, round 2b1 of the spreadsheet
   backlog (round 1 shipped as v04.52, round 2a as v04.61; round 2b2 —

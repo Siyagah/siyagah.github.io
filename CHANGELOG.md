@@ -6370,4 +6370,14 @@ stay green, re-run in full, not assumed from the shared code path.
 - `app-check --only 28`: **51/51**.
 - `app-check --only 27,25,17`: **212/212** (`27a`'s armed-label assertion
   updated in place for the record fix above; every other check unchanged).
-- Full `app-check`: run by the Architect in review.
+- Full `app-check` (Architect, on `47a31ef`): **762/762, twice in a row**.
+- Unpatched (v04.63's app with this round's tools), `--only 28,27,25,17`:
+  **214/226, 12 FAILED**:
+  - 7 `28*` blocks aborted;
+  - `28f` aborted after 1 check;
+  - `28h` failed;
+  - the three `27a` arm-label checks failed, because they were updated in
+    place for the shorter label.
+
+  `28g` passes on both versions, by design. Every `25*` and `17*` check
+  passed on v04.63.
