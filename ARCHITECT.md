@@ -102,6 +102,14 @@ that has already failed twice just spends another run. The rule that works:
 > **When the builder stops at the same step twice, take that step off it
 > rather than say it louder.**
 
+**Applied, 24 Sep 2026: the full `app-check` run belongs to the Architect.**
+The builder stopped during its full `app-check` run in v04.42, in v04.61's
+fix run (all five fixes lost, never pushed) and in v04.62 (pushed, but no
+PR opened). Three times at the same step. From v04.63 on, an issue tells the
+builder to run `ship-check` and `app-check --only <its own sections>`, push,
+open the PR, and **not** run the full suite. The Architect runs the full
+suite twice, plus the unpatched run, in review, and records the totals.
+
 Doing that is not a lowering of standards when the step is a *measurement*,
 because re-running the measurement is the Architect's job in review anyway.
 In v04.42 the third attempt was given four numbered steps with "push" as

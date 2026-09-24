@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.61.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.62.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,61 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.62** (24 Sep 2026) — batch the cloud sync write, so it doesn't stop
+  at ~7 MB. Issue #91.
+  - `_writeCloudDB()` used to put every chunk doc plus the main doc in ONE
+    `batch.commit()`. Firestore rejects any single request over 10 MiB, so
+    once `JSON.stringify(DB)` passed roughly 7.3 MB, every push failed on
+    every device and sync stopped outright (I2), with no guard anywhere to
+    say why. The owner's notebook was already ~5.0 MB in v04.50, about 35%
+    short of that ceiling.
+  - **Write path only — the stored format does not change.** Chunk docs now
+    go out in as many batches as needed, capped at `_SYNC_CHUNK_BATCH = 8`
+    chunks per batch (≈7.2 MB of payload, headroom under 10 MiB for request
+    overhead). The **main doc is written LAST, in its own final batch, only
+    after every chunk batch has committed** — if any chunk batch throws,
+    the main doc is never reached and the error propagates exactly as
+    before. That's what makes the non-atomic, multi-batch write safe:
+    `_readCloudDB()` already treats a chunk whose `ver` differs from the
+    main doc's `ver` as torn and retries, so a reader catching a write
+    mid-flight just sees the OLD main `ver` and is fired again once the new
+    one lands. No compression, no per-note documents — both change the
+    format and are later, owner-approved work.
+  - **A real edge case, found while writing the check, not shipped broken**:
+    Firestore batches are atomic *within* a batch, not *across* batches. If
+    an earlier chunk batch of a write already committed before a later
+    batch of the *same* write fails, the low-numbered chunks it touched now
+    carry the failed write's new `ver` while the main doc (never reached)
+    still shows the old one — a read in that window sees the mismatch and
+    fails safe to `null` rather than replaying the previous notebook
+    instantly, recovering only once the next write succeeds. Fixing this
+    for real means the chunk docs can no longer be blindly overwritten in
+    place (a staged/generation doc-ID scheme), which changes the stored
+    format — out of scope this round, flagged for the Architect/owner.
+  - **Layouts (D5)**: no UI changes; sync behaves the same at every size.
+  - New app-check section 26 (`26a`–`26e`): a fake Firestore (Firestore
+    itself is blocked in the harness) enforcing the real 10 MiB/1 MiB
+    limits and recording commit order — a ~12 MB notebook writes and
+    round-trips deep-equal; the main doc commits after every chunk and no
+    commit exceeds 10 MiB; a forced second-chunk-batch failure rejects,
+    leaves the main doc unchanged, and never returns anything but the
+    untouched previous notebook or `null`, recovering fully on the next
+    successful write; a small single-batch notebook still round-trips, main
+    doc last; the stored keys and the unchanged `_readCloudDB()` prove the
+    format didn't move. `26a`/`26b` are expected to fail on v04.61 (one
+    commit over 10 MiB).
+  - **Architect review:** the first cut split EVERY write, so even a small
+    notebook (the owner's today) lost the single-commit atomicity: a failed
+    main-doc batch left readers with `null` instead of the previous notebook.
+    A notebook that fits in one request (`n <= _SYNC_CHUNK_BATCH`) is now
+    written exactly as in v04.61, in one atomic commit. Only larger ones take
+    the multi-batch path. `26d` was rewritten in place and `26f` added; both
+    fail on the first cut. Not done: two devices pushing a notebook larger
+    than one request at once can interleave chunks (readers get `null` until
+    the next push). Per-note sync removes this.
+  - 12/12 ship checks, `--only 26` **16/16**, full `app-check`
+    **628/628, twice in a row**. Unpatched (v04.61 app, this round's tools): `--only 26`
+    **7/11, 4 FAILED**.
 - **v04.61** (24 Sep 2026) — spreadsheet round 2a: drag-to-fill handle,
   frozen top row, cell borders. Issue #88, round 2a of 3 of the spreadsheet
   backlog (round 1 shipped as v04.52; 2b — merged cells, colour rules,
@@ -212,62 +267,6 @@ must never accumulate here instead of there.
     notebook's real protection is the Firestore security rules, which is
     already the top item waiting on the owner.
   - 12/12 ship checks, **493/493 app checks, twice in a row** (unchanged from v04.57 — no app behaviour changed).
-- **v04.57** (23 Sep 2026) — pop-ups made alike, round (c2): one formatting
-  row, same buttons, same order, one line at every size. Issue #82, round 2
-  of 2 of round (c) — the formatting row under the metadata strip c1 (v04.55)
-  built; normal Pane 3 does not change, `20g` guards its exact editing
-  control list unchanged.
-  - Measured on `main` at v04.56: Single's row (`_p3EditIconsHTML()`, wrapped
-    in `.p3h-nav-edit-row` under 1200px or `.p3h-unified-tb` above it) was
-    already in the right order — `Aa H ≡ + ↺ 📋 🔍 ⋯ 💾 Save` — except on the
-    phone, where 💾 Save landed BEFORE ⋯ instead of after it. Multi's own
-    `.fw-tb` had ⋯ before 📋/🔍 (wrong order, every size), wrapped to two rows
-    on a phone (nothing folded the way Pane 3's own phone bar does), and its
-    own 8px inset never matched the strip's 14px (v04.55) above it.
-  - **One builder, both pop-ups: `_popFormatRowHTML(host,curA)`.** Host
-    falsy (Single) wraps `_p3EditIconsHTML(curA,true)` — the SAME function
-    normal Pane 3 uses, now taking a `noSave` param so the row can place its
-    own 💾 Save once, at the very end, instead of `_p3EditIconsHTML`'s
-    phone-only inline Save landing before ⋯. A Multi window's aid renders
-    the new `_fwEditIconsHTML(aid)` — Multi's own group buttons/Template/
-    Find, keyed to that window's `_fwTogGroup`/`#fw-eb-pop` the way Single's
-    are keyed to `togEBGroup`/`#eb-pop`. Both then get `_edColToolbarHTML
-    (host)` (⋯, now parameterised instead of a hand-copied literal inside
-    `_fwRenderBody`) and one 💾 Save, always last. Normal Pane 3's own
-    no-argument call sites are untouched — byte-identical output, the new
-    params default to falsy.
-  - **Phone folding, one shared block.** `_p3OneBar()` drops the History
-    group from the row and folds Undo/Redo/History/Find into `≡` and
-    Template into `+`, exactly as Pane 3's phone bar already did — now via
-    `_ebFoldedHistHTML(aid)`, called from both Pane 3's `_buildEBSub('lists')`
-    (aid falsy, byte-identical to what was hand-written there before) and
-    Multi's new `_fwBuildEBSub('lists')` phone branch. Multi's `insert` group
-    is now `_ebInsertHTML(_p3OneBar())` — Pane 3's own `_EB_INSERT` table —
-    rather than a second hand-written array: all six of Multi's insert
-    buttons already called the exact same host-generic handler Pane 3's `+`
-    menu does, so the two lists could only ever drift, never actually differ.
-  - **One line, same inset, every size.** `.pop-fmt-row`, a second class both
-    rows now carry alongside their existing one (`.fw-tb` / `.p3h-unified-tb`,
-    the latter now rendered unconditionally in modal mode instead of
-    switching to `.p3h-nav-edit-row` under 1200px), sets `flex-wrap:nowrap`
-    and the strip's own 14px inset, with 💾 Save pushed right via
-    `margin-left:auto`. Keeping the legacy class names meant section 20's
-    existing geometry checks (`20h`–`20j`) needed no changes.
-  - **Also this round**: Single's version pills stay in edit mode on switch
-    (`selArt()` alone set `ST.editing=false`; now `startEdit()` follows it
-    whenever `ST.noteModal`, the same pair `‹ ›`/`_panelNavigate()` already
-    uses — found in the v04.55 review). v04.56's review totals recorded
-    above and in `CHANGELOG.md`.
-  - New app-check section 22 (`22a`–`22e`): the same ordered `data-tb` row in
-    both pop-ups at every size; one line, same inset, nothing clipped, ≥38px
-    tall under 1200px; the folded phone actions really work, in both
-    pop-ups; nothing on the 1440 row is unreachable from the 390 shape;
-    Single stays editing across a version switch. No pre-existing check
-    needed updating beyond `20g`, unchanged.
-  - 11/11 ship checks, `app-check --only 22` **18/18**, `--only 20`
-    **31/31**, `--only 6` **233/233**. Measured in review: full
-    `app-check` **493/493 twice**; unpatched 475/491, all 16 failures in
-    section 22.
 ---
 
 ## What this is

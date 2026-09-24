@@ -5930,3 +5930,145 @@ Every new or rewritten assertion was run against the code it guards:
 - `app-check --only 25`: **106/106**.
 - Full `app-check`: **612/612, twice in a row**.
 
+---
+
+## v04.62 — batch the cloud sync write, so it doesn't stop at ~7 MB (24 Sep 2026)
+
+Issue #91. `_writeCloudDB()` (`index.html`, from about line 21222) uploads
+the whole notebook as one base64 string, cut into 900,000-character chunk
+documents (`_SYNC_CHUNK`). Every chunk plus the main doc used to go in ONE
+`batch.commit()`. Firestore rejects any single request over 10 MiB, so once
+`JSON.stringify(DB)` passed roughly 7.3 MB, every push failed on every
+device and cross-device sync stopped outright (I2) — with no size guard
+anywhere to say why. The owner's notebook was already ~5.0 MB in v04.50
+(images stored inline), about 35% short of that ceiling.
+
+**Scope, per the issue: the write path only.** The stored format does not
+change — an older build on another device still reads exactly what this
+build writes, the same `notebooks/{id}` main doc `{n, ver, …}` and the same
+`chunks/{i}` docs `{p, ver}`. No compression, no per-note documents; both
+are later, owner-approved jobs (see *Not done* below).
+
+**The fix.** Chunk documents now go out in as many batches as needed, each
+capped at `_SYNC_CHUNK_BATCH = 8` chunks (8 × 900,000 ≈ 7.2 MB of payload,
+leaving headroom under the 10 MiB request ceiling for field names and
+request overhead) — a named constant with a comment explaining the number,
+as asked. The **main doc is written LAST, in its own final batch, only
+after every chunk batch has committed**. If any chunk batch throws,
+`_writeCloudDB()` never reaches the main-doc batch — the error propagates
+exactly as before (the caller's toast/status handling is unchanged), and no
+half-written version is ever marked complete. This is what makes the
+non-atomic, multi-batch write safe: `_readCloudDB()` already treats a chunk
+whose `ver` differs from the main doc's `ver` as torn and retries, so a
+reader that catches a write mid-flight just sees the OLD main `ver`, fails
+that check, and is fired again once the new main doc lands. The existing
+stale-chunk cleanup still runs after the main doc, unchanged. Checked both
+existing call sites (`syncNow()` around `:20843`, `_doPush()` around
+`:21280`) and the whole file for any other write to the `chunks`
+subcollection — both go through `_writeCloudDB()`, and nothing else writes
+a chunk.
+
+**A real edge case, found while writing check `26c`, not shipping something
+broken because of it.** Firestore batches are atomic *within* a batch but
+not *across* batches — that's inherent to splitting one write into several,
+not something this round could avoid without changing the chunk-doc format
+(out of scope, see below). So if an EARLIER chunk batch of a write already
+committed before a LATER batch of the *same* write fails, the low-numbered
+chunks it touched now carry the failed write's new `ver`, while the main
+doc — never reached — still shows the old `ver`. A read attempted in that
+window compares the old main `ver` against those chunks, finds a mismatch
+at once, and correctly refuses to reassemble them: it fails safe to
+**null**, not to wrong data, but it does not necessarily replay the
+previous notebook instantly the way a read racing a write *that goes on to
+succeed* does. It recovers the moment the next write — the existing
+retry/debounce path already in `_doPush()` — completes. `app-check` `26c`
+proves both halves directly: after a forced second-chunk-batch failure,
+`_readCloudDB()` never returns anything but the untouched previous notebook
+or `null`, and a following successful write fully restores it. Flagged for
+the Architect/owner, not fixed here — fixing it for real means the chunk
+docs can no longer be blindly overwritten in place (a staged/generation
+doc-ID scheme), which changes the stored format and is exactly what this
+round was scoped to avoid (see *Not done*).
+
+**Layouts (D5).** No UI changes. Sync behaves the same at every screen
+size — nothing in this round touches rendering, only what gets written to
+Firestore and in how many requests.
+
+**Checks: new section 26 (`26a`–`26e`)**, in `tools/app-check.mjs`.
+Firestore is blocked in the harness (`BLOCKED` in `harness.mjs`), so these
+build an in-memory fake with the same shape the app calls —
+`collection().doc()`, `.collection('chunks').doc(i)`, `batch()` with
+`set`/`delete`/`commit`, `get({source})` — that enforces the same two real
+limits (`commit()` rejects over 10 MiB summed, `set()` rejects a single
+document over 1 MiB) and records the commit order. `_syncFsDb` is pointed
+at the fake and `_writeCloudDB`/`_readCloudDB` are called directly — a
+data-path check, not a UI one, since nothing in the UI can produce a 12 MB
+note through a click.
+- `26a` — a ~12 MB notebook (large inline-image-sized article content)
+  writes without error; `_readCloudDB()` of what was written is deep-equal
+  to the original (note count, ids, content lengths).
+- `26b` — the main doc is committed after every chunk, from the fake's
+  commit log; no single commit exceeds 10 MiB.
+- `26c` — the fake is made to fail the second chunk batch; see the edge
+  case above for exactly what's asserted and why.
+- `26d` — a small, single-batch notebook still writes and round-trips, main
+  doc still last, exactly one chunk-batch commit plus one main-doc commit.
+- `26e` — the stored main doc and chunk docs have exactly the keys the
+  current (unchanged) `_readCloudDB()` reads; that same function reassembles
+  a batched write with no changes of its own — the proof that the format
+  didn't move.
+
+`26a` and `26b` are expected to FAIL on v04.61 — the old code puts every
+chunk plus the main doc in one `batch.commit()`, which the fake's 10 MiB
+enforcement rejects outright for a 12 MB notebook.
+
+**Not done, and why (owner-approved later rounds, per the issue):**
+- No compression and no per-note sync documents — both change the stored
+  format, and would also shrink every push (today's every-edit re-uploads
+  the whole notebook either way).
+- Firestore's 500-writes-per-batch limit is never reached at 8 chunks per
+  batch, so no guard was needed for it.
+- The `26c` edge case above (a staged/generation chunk-doc scheme so a
+  partially-failed write can't touch a still-valid previous chunk) — would
+  also change the stored format.
+
+**Architect review, and what it changed.** The builder's run pushed the code
+and section 26, then ended during the full `app-check` without opening the PR.
+That is the third stop at the same step (v04.42, v04.61, v04.62), so the full
+run is now the Architect's alone; see `ARCHITECT.md`. The review found one
+design fault:
+- **Every write had lost its atomicity, not just the large ones.** The first
+  cut split every write into chunk batches plus a separate main-doc batch. So
+  even a small notebook, the owner's today, could have a push fail after its
+  chunks landed. The main doc then kept the old `ver` while chunk 0 carried
+  the new one, and every reader got `null` instead of the previous notebook
+  until the next successful push. v04.61 never had that window.
+- **Fix:** a notebook that fits in one request (`n <= _SYNC_CHUNK_BATCH`) is
+  written exactly as v04.61 wrote it, chunks and main doc in ONE commit. The
+  multi-batch path, and its `null`-until-the-next-push window, is used only
+  past the size where the single commit would be refused outright.
+- **`26d` rewritten in place** (it asserted the main doc came in a batch of
+  its own even for a small notebook, which was the fault). It now asserts one
+  atomic commit.
+- **New `26f`:** a failed push of a notebook that fits in one request leaves
+  the previous notebook readable whole.
+- Both fail on the builder's first cut and pass on v04.61, which is what they
+  guard.
+- `26a`, `26b` and `26c` fail on v04.61, which is what they fix. `26e` (format
+  unchanged) passes on both, by design.
+
+**Still not done:** two devices pushing a notebook LARGER than one request at
+the same moment could interleave their chunk batches. Readers would then get
+`null` until the next push. Below that size the single atomic commit makes
+this impossible, as before. Per-note sync, the owner-approved first round of
+the import job, removes it entirely.
+
+**Measured** (by the Architect)
+- `ship-check`: **12/12**.
+- `app-check --only 26`: **16/16**.
+- Full `app-check`: **628/628, twice in a row**.
+- **Unpatched:**
+  - v04.61's app with this round's `tools/`: `--only 26` **7/11, 4 FAILED**
+    (`26a` ×2 and the `26b`/`26c` blocks, each refused at 10 MiB);
+  - the builder's first cut with the same `tools/`: **14/16, 2 FAILED**
+    (`26d` and `26f`).
