@@ -8639,7 +8639,8 @@ await r.block(`29a-filter-onoff-${vp.name}`, async () => {
 
   const rowNums = await page.evaluate((sel) => [...document.querySelectorAll(sel + ' th.sg-rh')]
     .filter((th) => th.closest('tr').style.display !== 'none').map((th) => th.textContent), sgx);
-  r.check(JSON.stringify(rowNums) === JSON.stringify(['1', '4', '5', '6']), `${vp.name}: the visible row numbers skip 2, 3 and 7`, JSON.stringify(rowNums));
+  r.check(JSON.stringify(rowNums) === JSON.stringify(['1', '4', '5', '6', '8', '9', '10', '11', '12']),
+    `${vp.name}: the visible row numbers skip 2, 3 and 7 (rows 8-12 are past the filter's data range and were never hidden)`, JSON.stringify(rowNums));
 
   r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
   await s.close();
@@ -8662,10 +8663,12 @@ await r.block('29b-blanks-and-search-1440', async () => {
   r.check(rowDisplay5 === 'none', '1440: unticking (Blanks) hides the empty row', rowDisplay5);
 
   await sgFltOpen(page, root, sgx, 0, 0);
-  await page.fill('#sg-fltp .sg-flt-q', 'pl');
+  /* "pl" is also a substring of "apple" (a-p-P-L-e) — "plu" is unique to
+     "plum" among this column's values, so it actually proves narrowing. */
+  await page.fill('#sg-fltp .sg-flt-q', 'plu');
   await page.waitForTimeout(80);
   const items = await page.evaluate(() => [...document.querySelectorAll('#sg-fltp .sg-flt-item span')].map((el) => el.textContent));
-  r.check(JSON.stringify(items) === JSON.stringify(['plum']), '1440: typing "pl" in the search narrows the checklist to plum only', JSON.stringify(items));
+  r.check(JSON.stringify(items) === JSON.stringify(['plum']), '1440: typing "plu" in the search narrows the checklist to plum only', JSON.stringify(items));
   await page.click('#sg-fltp .sg-flt-cancel');
 
   r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
@@ -8746,21 +8749,24 @@ await r.block('29d-refusals-1440', async () => {
     r.check(depthAfter === depthBefore, `${label}: the refusal added no undo step (undo stack depth unchanged: ${depthBefore})`, `${depthBefore} -> ${depthAfter}`);
   }
 
-  await sgType(page, root, 0, 3, '1'); await sgType(page, root, 1, 3, '2'); // D1,D2 — a plain visible source to drag from
+  /* D3,D4 (rows 2,3 — pear/plum) rather than D1,D2: row 1 (apple) is
+     hidden, and a real click can never land on a display:none cell — using
+     it here would hang the check, not prove anything about the app. */
+  await sgType(page, root, 2, 3, '1'); await sgType(page, root, 3, 3, '2'); // D3,D4 — a plain visible source to drag from
   await refusalRoundTrip('fill-handle drag', /filter/i, async () => {
-    await sgSelectRange(page, root, 0, 3, 1, 3);
-    await sgDragFillMouse(page, root, sgx, 4, 3);
+    await sgSelectRange(page, root, 2, 3, 3, 3);
+    await sgDragFillMouse(page, root, sgx, 6, 3);
   });
 
   await refusalRoundTrip('Fill down', /filter/i, async () => {
-    await sgSelectRange(page, root, 0, 3, 1, 3);
+    await sgSelectRange(page, root, 2, 3, 3, 3);
     await page.click(`${sgx} button[data-a="fill"]`);
   });
 
-  await page.click(sgCell(root, 0, 3));
+  await page.click(sgCell(root, 2, 3));
   await page.keyboard.press('Control+c');
   await refusalRoundTrip('paste', /filter/i, async () => {
-    await page.click(sgCell(root, 2, 3), { button: 'right' });
+    await page.click(sgCell(root, 3, 3), { button: 'right' });
     await page.waitForTimeout(100);
     await page.click('#sg-menu button[data-m="pasteH"]');
   });
@@ -8794,13 +8800,17 @@ await r.block('29e-visible-only-820', async () => {
   await sgEditA1(page);
   await sgInsertViaMenu(page);
   const root = '#ed', sgx = '#ed .sgx';
+  /* Only ONE hidden row (row 1) this time — a real drag/click can never
+     land on a display:none cell, so every selection below is made between
+     row 0 and row 3, both always visible, with the hidden row 1 simply
+     falling inside that range (exactly as it would for the owner clicking
+     A1 then shift-clicking A4). */
   await sgType(page, root, 0, 0, 'Fruit'); await sgType(page, root, 0, 1, 'Qty');
   await sgType(page, root, 1, 0, 'apple'); await sgType(page, root, 1, 1, '2');
   await sgType(page, root, 2, 0, 'pear');  await sgType(page, root, 2, 1, '5');
   await sgType(page, root, 3, 0, 'plum');  await sgType(page, root, 3, 1, '3');
-  await sgType(page, root, 4, 0, 'apple'); await sgType(page, root, 4, 1, '2');
 
-  await sgTurnOnFilter(page, root, sgx, 0, 0, 4, 1);
+  await sgTurnOnFilter(page, root, sgx, 0, 0, 3, 1);
   await sgFltOpen(page, root, sgx, 0, 0);
   await sgFltUntick(page, 'apple');
   await sgFltOK(page);
@@ -8811,27 +8821,27 @@ await r.block('29e-visible-only-820', async () => {
   const nameAfterDown = await page.evaluate((sel) => document.querySelector(sel + ' .sg-name').textContent, sgx);
   r.check(nameAfterDown === 'A3', '820: ArrowDown from A1 skips the hidden apple row (A2) and lands on A3 (pear)', nameAfterDown);
 
-  await sgSelectRange(page, root, 1, 0, 4, 0); // A2:A5 — spans the hidden apple rows (2, 5)
+  await sgSelectRange(page, root, 0, 0, 3, 0); // A1:A4 — corners visible, the hidden A2 falls inside
   await page.click(`${sgx} button[data-a="bold"]`);
   await page.waitForTimeout(100);
   const bolds = await page.evaluate((sel) => {
     const st = document.querySelector(sel)._sg.state();
-    return [1, 2, 3, 4].map((r2) => !!(st.cells[r2 + ',0'] || {}).b);
+    return [1, 2, 3].map((r2) => !!(st.cells[r2 + ',0'] || {}).b);
   }, sgx);
-  r.check(JSON.stringify(bolds) === JSON.stringify([false, true, true, false]),
-    '820: Bold on A2:A5 skips the hidden apple rows (2, 5), bolds pear/plum (3, 4) only', JSON.stringify(bolds));
+  r.check(JSON.stringify(bolds) === JSON.stringify([false, true, true]),
+    '820: Bold on A1:A4 skips the hidden apple row (2), bolds pear/plum (3, 4) only', JSON.stringify(bolds));
 
-  await sgSelectRange(page, root, 1, 1, 4, 1); // B2:B5
+  await sgSelectRange(page, root, 0, 1, 3, 1); // B1:B4
   await page.keyboard.press('Delete');
   await page.waitForTimeout(100);
   const qty = await page.evaluate((sel) => {
     const st = document.querySelector(sel)._sg.state();
-    return [1, 2, 3, 4].map((r2) => (st.cells[r2 + ',1'] || {}).raw ?? '');
+    return [1, 2, 3].map((r2) => (st.cells[r2 + ',1'] || {}).raw ?? '');
   }, sgx);
-  r.check(JSON.stringify(qty) === JSON.stringify(['2', '', '', '2']),
-    '820: Clear contents on B2:B5 leaves the hidden rows\' values (2, 5) and clears the visible ones (3, 4)', JSON.stringify(qty));
+  r.check(JSON.stringify(qty) === JSON.stringify(['2', '', '']),
+    '820: Clear contents on B1:B4 leaves the hidden row\'s value (2) and clears the visible ones (3, 4)', JSON.stringify(qty));
 
-  await sgSelectRange(page, root, 0, 0, 4, 1); // A1:B5 — header + all 4 data rows, 2 hidden
+  await sgSelectRange(page, root, 0, 0, 3, 1); // A1:B4 — header + all 3 data rows, 1 hidden
   await page.keyboard.press('Control+c');
   await page.click(`${sgx} button[data-a="flt"]`); // Clear filter — nothing hidden now, so paste is allowed
   await page.waitForTimeout(100);
@@ -8839,9 +8849,9 @@ await r.block('29e-visible-only-820', async () => {
   await page.waitForTimeout(100);
   await page.click('#sg-menu button[data-m="pasteH"]');
   await page.waitForTimeout(150);
-  const pastedD = []; for (let r2 = 0; r2 <= 3; r2++) pastedD.push(await sgCellText(page, root, r2, 3));
-  r.check(pastedD[0] === 'Fruit' && pastedD[1] === 'pear' && pastedD[2] === 'plum' && pastedD[3] === '',
-    '820: the clip captured while filtered held only the header + visible rows (pear, plum) — 3 rows, not 5', JSON.stringify(pastedD));
+  const pastedD = []; for (let r2 = 0; r2 <= 2; r2++) pastedD.push(await sgCellText(page, root, r2, 3));
+  r.check(pastedD[0] === 'Fruit' && pastedD[1] === 'pear' && pastedD[2] === 'plum',
+    '820: the clip captured while filtered held only the header + visible rows (pear, plum) — 3 rows, not 4', JSON.stringify(pastedD));
 
   r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
   await s.close();
@@ -8864,7 +8874,9 @@ await r.block('29f-sort-from-panel-1440', async () => {
   await page.waitForTimeout(150);
   await page.click('#sg-fltp .sg-fltx');
 
-  const names = []; for (let r2 = 0; r2 <= 3; r2++) names.push(await sgCellText(page, root, r2, 0));
+  /* sgCellText reads the header cell's full textContent, which includes its
+     own ▾ button's glyph ("Name▾") — strip it before comparing. */
+  const names = []; for (let r2 = 0; r2 <= 3; r2++) names.push((await sgCellText(page, root, r2, 0)).replace('▾', ''));
   r.check(JSON.stringify(names) === JSON.stringify(['Name', 'apple', 'banana', 'cherry']),
     '1440: Sort A→Z from the panel sorts the data rows, the header stays in row 1', JSON.stringify(names));
 
