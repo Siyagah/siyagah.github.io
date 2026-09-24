@@ -16,6 +16,57 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.64** (24 Sep 2026) — spreadsheet round 2b2: colour rules
+  (conditional formatting). Issue #95, round 2b2 of the spreadsheet backlog
+  (round 1: v04.52, 2a: v04.61, 2b1: v04.63; 2b3 — filters — and 2c come
+  later).
+  - **Record fix carried from v04.63's review:** the armed `Merge cells`
+    label was 340px wide, past the phone's sideways-scrolling toolbar at
+    390px — now `Tap again: keeps top-left only`; the toast keeps the full
+    sentence.
+  - **New toolbar button `Colour rules ▾`** (words, no glyph), opening a
+    small panel anchored to the button and clamped on screen, the same
+    shape `Borders ▾`/`ƒx Functions` already use. Add a rule for the
+    selected cells (condition — greater than/less than/equal to/between/
+    text contains/is empty/is not empty — one or two values, and a colour:
+    green, gold or rose fill, or red text for negatives) and see/remove the
+    rules overlapping the current selection, in words
+    (`B2:B20 · greater than 100 · green`).
+  - Stored as a new top-level key `cr`: `[{rng:[r1,c1,r2,c2], op, v1, v2?,
+    fill?, ink?}]`, in the order added, key left off when there are no
+    rules.
+  - **Applying.** `_sgCrFor()` (top-level, shared by the snapshot and the
+    live grid) checks each cell's CURRENT COMPUTED value against `state.cr`
+    in order — the FIRST match wins. A match overrides only how a cell is
+    DRAWN; the cell's own stored `bg` is never touched (a cell with its own
+    gold fill shows the rule colour while it matches and its gold once it
+    stops). A rule on a volatile formula (`TODAY()`) goes stale in the
+    snapshot between edits — the same trade-off v04.52 made for values.
+  - **Moves with the grid.** `rekeyMerges`'s shift math is now a shared
+    helper, `rekeyRange()`, that a new `rekeyColorRules()` also calls from
+    `rekey()` — an insert/delete grows, shrinks or drops a rule's range the
+    same way it does a merge's, except a rule collapsing to one cell stays
+    (a merge needs two). Sorting never calls `rekey()`, so a rule's range —
+    unlike a merge's — is untouched by a sort; it colours by position.
+  - **Merges:** a rule over a merge applies to the anchor, for free — a
+    merge's covered cells are already skipped/hidden everywhere a rule
+    would be drawn. **Undo:** adding/removing a rule is one step each.
+    **Read view and Multi** share the same drawing code.
+  - **Not done:** colour scales, data bars, icon sets; rules written as
+    formulas; font styling from rules beyond red text; filters (2b3); 2c.
+  - New app-check section 28 (`28a`–`28h`): adding a rule through the real
+    panel at all three sizes (values turn green/don't, typing a new value
+    re-evaluates, a save carries the colour into `.sg-static`, a reload
+    shows it in the read view, the panel's own box/44px tap targets); every
+    condition, one match and one non-match each, plus red text; rule order
+    and the owner's own fill both proved, `bg` in `data-sg` never changed;
+    the real `Rows & columns ▾` menu (insert grows, delete-column drops, a
+    sort leaves it alone); `✕ Remove` and one-undo; a real Multi window;
+    "opening changes nothing" extended to `cr`; the record fix's 240px
+    check. `27a`'s armed-label assertion updated in place for the record
+    fix, reason recorded.
+  - 12/12 ship checks, `--only 28` **51/51**, `--only 27,25,17` **212/212**.
+    Full `app-check`: run by the Architect in review.
 - **v04.63** (24 Sep 2026) — spreadsheet round 2b1: merged cells, and the
   fill handle upward and leftward. Issue #93, round 2b1 of the spreadsheet
   backlog (round 1 shipped as v04.52, round 2a as v04.61; round 2b2 —
@@ -90,7 +141,11 @@ must never accumulate here instead of there.
     values including the `#REF!` case; a real Multi window; and `17d`/
     `25g`'s "opening changes nothing" rule extended to `mg`.
   - 12/12 ship checks, `--only 27` **83/83**, `--only 25` **106/106**,
-    `--only 17` **23/23**. Full `app-check`: run by the Architect in review.
+    `--only 17` **23/23**. Full `app-check` (Architect, on `5034af0`):
+    **711/711, twice in a row**. Unpatched (v04.62's app with this round's
+    tools), `--only 27,25,17`: **136/153, 17 FAILED, all in section 27**
+    (7 blocks aborted, 9 `27f` fill assertions failed, `27g` aborted after 1
+    check; `27h` passes on both by design, a guard).
 - **v04.62** (24 Sep 2026) — batch the cloud sync write, so it doesn't stop
   at ~7 MB. Issue #91.
   - `_writeCloudDB()` used to put every chunk doc plus the main doc in ONE
@@ -250,72 +305,6 @@ must never accumulate here instead of there.
   - Still the owner's call: the same markup in `legacy/v03.99/` and in
     git history.
   - 12/12 ship checks, **506/506 app checks, twice in a row**.
-- **v04.59** (23 Sep 2026) — pop-ups made alike, round (d1): the Sidepane
-  and Contents panels, same side and same place. Issue #85, round (d1) of
-  "make the two pop-ups look and work the same" — round (d2), the tab bar
-  inside Single, is out of scope here on purpose.
-  - Measured on `main` at v04.58, seed note `a1`: Single's Sidepane sat on
-    the left (opposite `DB.theme.tocSide`, default right) whether or not
-    Contents showed, and started below the formatting row, beside the note
-    body only. Multi's sat on the right whenever Contents was hidden but
-    **flipped sides the instant a note gained its third heading**, because
-    float mode's rule was "opposite Contents while Contents is actually
-    drawn", not the modal's stable "opposite the configured side, always".
-    Multi's panel also started directly under the frame, overlapping the
-    title/strip/formatting row, because its top was measured from `.fw-hd`
-    alone. And Multi had **no way at all** to pin a note into its
-    Sidepane — the empty-state text said "drag a tab here (or tap 📌 on a
-    tab)", and Multi has never had a tab bar.
-  - **One side rule, `_popPanelSides()`**: the Sidepane sits opposite
-    `DB.theme.tocSide` regardless of whether Contents is currently drawn —
-    Single's already-stable rule, now shared, so a Multi panel can no
-    longer swing sides mid-session. `pinPanelPos==='below'` now works in
-    float mode too (was modal-only).
-  - **One vertical placement, `_popPanelTop(host,inModal)`**: float mode now
-    measures its own header stack (`.fw-hd` + `.fw-ti` + `.pop-meta-strip` +
-    `.fw-tb.pop-fmt-row`) the way modal always measured `#p3h` + the tab
-    bar + the frame — one function, called by both `_tocInject()` and
-    `_pinPanelInject()`, so the two panels can't disagree.
-  - **Multi's title/strip/formatting row keep the window's full width now.**
-    `_fwSyncBodyPadding()` padded all of `.fw-body` before (title and all);
-    `_fwRenderBody()` now wraps the find bar and editor in their own
-    `.fw-editarea`, and only that gets padded — mirroring Single, whose
-    padding has always landed on `#p3c`, never `#p3h`.
-  - **Pinning without tabs**: a `📌 Pin a note…` button in both Sidepanes
-    opens a searchable picker. Not a second search — the existing Tab-bar
-    picker (`#tab-picker`) is generalised with a `mode` ('tab'/'pin')
-    picking what's excluded and what a click does
-    (`addToTabPicker`/`addToPinPicker`, the latter calling the existing
-    `pinTabToPanel()`). Empty-state text is true in both now: Multi's never
-    mentions tabs, Single's still offers drag-a-tab too.
-  - **Phone (D5)**: no side panel in either pop-up, unchanged (v04.34) —
-    `📌 Pin a note…` rides the `⋯` Section tools menu instead, already open
-    at every tier in both pop-ups, gated to popup contexts only so normal
-    (non-modal) Pane 3's own `⋯` is untouched.
-  - New app-check section 23 (`23a`–`23f`): same side in both pop-ups,
-    stable across a 2- vs 3-heading note, opposite Contents with no
-    overlap; both panels start at/below the formatting row, Multi's row
-    width still equals the strip's; the Contents side toggle and the
-    Sidepane's own ⬇/◫ toggle really move both panels in both pop-ups; a
-    real click on `📌 Pin a note…` → search → pick reaches
-    `DB.theme.pinTabIds` and shows the card, in both; Multi's empty text
-    never says "tab"; at 390px no panel is drawn and pinning is still
-    reachable. Guard: `20g` unchanged.
-  - **Also found while testing 23c**: `_pinPanelToggleSide()` compared the
-    stored `pinPanelPos` against the literal `'side'`, so the very first
-    click ever made on a fresh notebook was a silent no-op (the value
-    starts `undefined`, not `'side'`) — pre-existing on `main`, fixed here
-    since it sat directly under the toggle this round had to verify.
-  - **Not done, flagged instead of fixed**: found by chance while reading
-    the tab bar's markup (told not to touch it this round) — `index.html`'s
-    static `#tab-bar` still carries real, baked-in note titles and ids.
-    Same class of bug as v04.58, in a place its new ship-check guard
-    doesn't look (it only matches `addToTabPicker('<id>')` rows, not the
-    tab bar's own persisted DOM). Left for the Architect/owner.
-  - 12/12 ship checks, `app-check --only 23` **11/11**, `--only 20`
-    **31/31**, `--only 6p` **104/104**. Measured in review: full
-    `app-check` **504/504 twice**; unpatched 493/504, all 11 failures in
-    section 23.
 ---
 
 ## What this is
@@ -509,11 +498,20 @@ A failing check is a wrong assertion surprisingly often — investigate before
   future property (2b/2c) is neither dropped on the next edit nor pushed
   out of the saved snapshot. The sheet's top-level state also carries
   `frz` (v04.61, `1`/absent — a frozen top row; a number, not a boolean,
-  so more rows can be frozen later with no migration) and `mg` (v04.63,
+  so more rows can be frozen later with no migration), `mg` (v04.63,
   absent when there are no merges — an array of `[r1,c1,r2,c2]` ranges,
-  value at the top-left "anchor" cell, covered cells holding nothing;
-  `rekeyMerges()` keeps it in step with every row/column insert and
-  delete) alongside `v`, `rows`, `cols`, `cells`, `colW`.
+  value at the top-left "anchor" cell, covered cells holding nothing) and
+  `cr` (v04.64, absent when there are no colour rules — an array of
+  `{rng:[r1,c1,r2,c2], op, v1, v2?, fill?, ink?}`, in the order added; the
+  FIRST rule in the array whose range covers a cell and whose condition
+  matches that cell's current computed value wins, via the top-level
+  `_sgCrFor()` that both `_sgStaticHTML()` and the live grid's `refresh()`
+  call — a match overrides only how the cell is DRAWN, never its own
+  stored `bg`) alongside `v`, `rows`, `cols`, `cells`, `colW`. `rekeyMerges`
+  and the new `rekeyColorRules` both move/resize their ranges through one
+  shared helper, `rekeyRange()`, kept in step with every row/column insert
+  and delete; a rule's range, unlike a merge's, survives collapsing to one
+  cell, and is untouched by a sort (it colours by position).
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
