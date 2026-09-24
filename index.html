@@ -2991,6 +2991,34 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
   .sg-cr-sw{width:44px;height:44px}
   .sg-cr-v1,.sg-cr-v2{flex:1 1 45%}
 }
+/* v04.65 — filters. .sg-fltdd sits at the right edge of a header cell in the
+   filter's column range, full cell height; touchTier() widens its tap
+   target the same way the fill handle's own hit box already widens (see
+   _sgMount). .sg-fltp mirrors .sg-crp's anchored/clamped panel. */
+.sg-g td.sg-fltcol{padding-right:20px}
+.sg-fltdd{position:absolute;right:0;top:0;height:100%;width:16px;border:0;background:none;cursor:pointer;color:var(--t2);font-size:11px;padding:0;display:flex;align-items:center;justify-content:center}
+.sg-fltdd:hover{background:var(--greenlt)}
+.sg-fltdd.on{color:var(--green2);font-weight:700}
+@media(max-width:1199.98px){.sg-fltdd{width:32px}}
+.sg-flt-status{display:inline-flex;align-items:center;gap:4px}
+.sg-clrflt{border:0;background:none;color:var(--green2);cursor:pointer;font:inherit;text-decoration:underline;padding:0}
+.sg-fltp{position:fixed;z-index:9000;background:var(--white);border:1px solid var(--border2);border-radius:12px;box-shadow:0 20px 50px -18px rgba(30,20,0,.45);width:260px;max-height:min(70vh,480px);display:flex;flex-direction:column;font:13px 'DM Sans',system-ui,sans-serif;color:var(--t1)}
+.sg-fltp[hidden]{display:none}
+.sg-fltp .sg-fh{justify-content:space-between}
+.sg-fltbody{overflow:auto;padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px}
+.sg-flt-q{border:1px solid var(--border2);border-radius:8px;padding:6px 8px;font:13px 'DM Sans',system-ui,sans-serif;background:var(--white);color:var(--t1);height:32px}
+.sg-flt-btns,.sg-flt-sort,.sg-flt-ok{display:flex;gap:8px}
+.sg-flt-list{display:flex;flex-direction:column;gap:2px;overflow:auto;max-height:220px}
+.sg-flt-item{display:flex;align-items:center;gap:8px;padding:4px 2px;font-size:13px;cursor:pointer}
+.sg-flt-empty{color:var(--t3);font-size:12px;padding:2px}
+.sg-flt-ok{justify-content:flex-end;margin-top:4px}
+@media(max-width:639.98px){
+  .sg-fltdd{width:32px}
+  .sg-flt-q{min-height:44px}
+  .sg-flt-btns .sg-b,.sg-flt-sort .sg-b,.sg-flt-ok .sg-b{min-height:44px;min-width:44px}
+  .sg-flt-item{min-height:44px}
+  .sg-flt-item input[type=checkbox]{width:20px;height:20px}
+}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script><style></style><style id="dyn-hs">.av-body h1,#ed h1,.fw-ed h1{border-left:3px solid #0f766e;background:#f0fdfa;padding-left:10px;border-radius:0 4px 4px 0}
 .av-body h2,#ed h2,.fw-ed h2{border-left:3px solid #4338ca;background:#eef2ff;padding-left:10px;border-radius:0 4px 4px 0}
@@ -23577,13 +23605,72 @@ function _sgCrEl(){
   };
   return p;
 }
+/* v04.65 — filters. Anchored/clamped exactly like _sgCrPosition/_sgCrEl
+   above — one shared instance, always acting on whichever sheet is _sgCur.
+   The checklist only ever asks the mounted sheet for distinct values
+   (fltColValues) and applies through fltApply/fltSort — this panel never
+   reaches S/SEL/snap directly, same shape as the colour-rules panel. */
+function _sgFltPosition(p,btnRect){
+  if(window.innerWidth<640){p.style.width='calc(100vw - 16px)';p.style.left='8px';}
+  else{p.style.width='260px';p.style.left=Math.max(8,Math.min(btnRect.left,window.innerWidth-260-8))+'px';}
+  p.style.top=Math.max(8,Math.min(btnRect.bottom+6,window.innerHeight-p.offsetHeight-8))+'px';
+}
+function _sgFltEl(){
+  let p=document.getElementById('sg-fltp');if(p)return p;
+  p=document.createElement('div');p.id='sg-fltp';p.className='sg-fltp';p.hidden=true;
+  p.innerHTML=
+      '<div class="sg-fh"><b>Filter</b><button type="button" class="sg-b sg-fltx" title="Close">✕</button></div>'
+    +'<div class="sg-fltbody">'
+      +'<input class="sg-flt-q" placeholder="Search values" aria-label="Search values" autocomplete="off">'
+      +'<div class="sg-flt-btns"><button type="button" class="sg-b sg-flt-all">Select all</button><button type="button" class="sg-b sg-flt-clr">Clear</button></div>'
+      +'<div class="sg-flt-sort"><button type="button" class="sg-b sg-flt-sa">Sort A→Z</button><button type="button" class="sg-b sg-flt-sz">Sort Z→A</button></div>'
+      +'<div class="sg-flt-list"></div>'
+      +'<div class="sg-flt-ok"><button type="button" class="sg-b sg-flt-cancel">Cancel</button><button type="button" class="sg-b sg-fxb sg-flt-okbtn">OK</button></div>'
+    +'</div>';
+  document.body.appendChild(p);
+  const qEl=p.querySelector('.sg-flt-q'),list=p.querySelector('.sg-flt-list'),sortRow=p.querySelector('.sg-flt-sort');
+  let curCol=null,pendingHide=new Set(),allVals=[],filtered=[];
+  function drawList(){
+    const s=qEl.value.trim().toLowerCase();
+    filtered=allVals.filter(function(v){return !s||v.label.toLowerCase().includes(s);});
+    list.innerHTML=filtered.length?filtered.map(function(v,i){return '<label class="sg-flt-item"><input type="checkbox" data-i="'+i+'"'+(pendingHide.has(v.value)?'':' checked')+'><span>'+esc(v.label)+'</span></label>';}).join('')
+      :'<div class="sg-flt-empty">No values match</div>';
+  }
+  qEl.addEventListener('input',drawList);
+  list.addEventListener('change',function(e){
+    const cb=e.target.closest('input[type="checkbox"]');if(!cb)return;
+    const v=filtered[+cb.dataset.i].value;
+    if(cb.checked)pendingHide.delete(v);else pendingHide.add(v);
+  });
+  p.querySelector('.sg-flt-all').addEventListener('click',function(){pendingHide.clear();drawList();});
+  p.querySelector('.sg-flt-clr').addEventListener('click',function(){allVals.forEach(function(v){pendingHide.add(v.value);});drawList();});
+  p.querySelector('.sg-flt-sa').addEventListener('click',function(){if(_sgCur&&_sgCur.editable)_sgCur.fltSort(curCol,false);});
+  p.querySelector('.sg-flt-sz').addEventListener('click',function(){if(_sgCur&&_sgCur.editable)_sgCur.fltSort(curCol,true);});
+  p.querySelector('.sg-flt-cancel').addEventListener('click',function(){p.hidden=true;});
+  p.querySelector('.sg-fltx').addEventListener('click',function(){p.hidden=true;});
+  p.querySelector('.sg-flt-okbtn').addEventListener('click',function(){
+    if(_sgCur)_sgCur.fltApply(curCol,[...pendingHide]);
+    p.hidden=true;
+  });
+  p.addEventListener('keydown',function(e){e.stopPropagation();if(e.key==='Escape')p.hidden=true;});
+  p._open=function(colIdx){
+    curCol=colIdx;
+    allVals=(_sgCur&&_sgCur.fltColValues(colIdx))||[];
+    pendingHide=(_sgCur&&_sgCur.fltHideFor(colIdx))||new Set();
+    qEl.value='';
+    sortRow.style.display=(_sgCur&&_sgCur.editable)?'':'none';
+    drawList();
+  };
+  return p;
+}
 document.addEventListener('mousemove',function(e){if(_sgDragS)_sgDragS.onDrag(e);});
 document.addEventListener('mouseup',function(){if(_sgDragS){const s=_sgDragS;_sgDragS=null;s.onDragEnd();}});
 document.addEventListener('mousedown',function(e){
   const m=document.getElementById('sg-menu');if(m&&!m.hidden&&!m.contains(e.target))m.hidden=true;
   const p=document.getElementById('sg-fnp');if(p&&!p.hidden&&!p.contains(e.target)&&!(e.target.closest&&e.target.closest('[data-a="fn"]')))p.hidden=true;
   const cp=document.getElementById('sg-crp');if(cp&&!cp.hidden&&!cp.contains(e.target)&&!(e.target.closest&&e.target.closest('[data-a="cr"]')))cp.hidden=true;
-  if(_sgCur&&_sgCur.editing()&&!_sgCur.root.contains(e.target)&&!(p&&p.contains(e.target))&&!(cp&&cp.contains(e.target)))_sgCur.commit();
+  const fp=document.getElementById('sg-fltp');if(fp&&!fp.hidden&&!fp.contains(e.target)&&!(e.target.closest&&e.target.closest('.sg-fltdd')))fp.hidden=true;
+  if(_sgCur&&_sgCur.editing()&&!_sgCur.root.contains(e.target)&&!(p&&p.contains(e.target))&&!(cp&&cp.contains(e.target))&&!(fp&&fp.contains(e.target)))_sgCur.commit();
 },true);
 
 function _sgMount(root,state,editable){
@@ -23591,6 +23678,7 @@ function _sgMount(root,state,editable){
   const self={root,editable};root._sg=self;
   let A={r:0,c:0},SEL={r1:0,c1:0,r2:0,c2:0},E=null,drag=null,clip=null,lastPtr='mouse',TD=[],sugg=[],get=null;
   let fillDrag=null,fillLastPt={x:0,y:0};
+  let hiddenRows=new Set();
   const U=[],R=[];
   const K=(r,c)=>r+','+c;
   const cellO=(r,c)=>S.cells[K(r,c)];
@@ -23632,6 +23720,78 @@ function _sgMount(root,state,editable){
   const touchTier=()=>window.innerWidth<1200;
   const {colName,addr}=SGE;
 
+  /* ── v04.65: filters ──────────────────────────────────────────────────
+     S.flt is {r,c1,c2,hide:{"<col>":["value",…]}} — one filter per sheet,
+     as in Excel. `r` is the header row, [c1,c2] the filter's columns. The
+     DATA ROWS are never stored: fltDataRange() rescans down from r+1 every
+     time, to the LAST row (not the first gap) that holds any value in the
+     filter's own columns, so a row typed later is picked up on the next
+     render and a genuinely blank row in the middle of the data still
+     counts as a row (its own "(Blanks)" group). hide lists the DISPLAYED
+     values unticked per column — never the raw text, so a formula hides by
+     what it currently shows, same reasoning as v04.64's colour rules. */
+  const fltDisplayVal=(r,c)=>{const o=cellO(r,c);return SGE.display(get?get(r,c):null,o&&o.fmt);};
+  function fltDataRange(){
+    if(!S.flt)return null;
+    const {r,c1,c2}=S.flt;let r2=r;
+    for(let rr=r+1;rr<S.rows;rr++)for(let c=c1;c<=c2;c++)if(rawOf(rr,c)!==''){r2=rr;break;}
+    return{r1:r+1,r2,c1,c2};
+  }
+  function fltHiddenRowSet(){
+    const set=new Set();
+    if(!S.flt||!S.flt.hide)return set;
+    const rng=fltDataRange();const {c1,c2,hide}=S.flt;
+    for(let r=rng.r1;r<=rng.r2;r++){
+      for(let c=c1;c<=c2;c++){
+        const h=hide[c];if(!h||!h.length)continue;
+        if(h.includes(fltDisplayVal(r,c))){set.add(r);break;}
+      }
+    }
+    return set;
+  }
+  function fltRangeFromSel(){
+    const s=norm(SEL);
+    if(s.r1===s.r2&&s.c1===s.c2){
+      let lo=null,hi=null;
+      for(const k in S.cells){const parts=k.split(',');const cc=+parts[1];if(_sgCellHasContent(S.cells[k])){if(lo===null||cc<lo)lo=cc;if(hi===null||cc>hi)hi=cc;}}
+      return{r:s.r1,c1:lo===null?0:lo,c2:lo===null?S.cols-1:hi};
+    }
+    return{r:s.r1,c1:s.c1,c2:s.c2};
+  }
+  function turnOnFilter(){
+    if(S.flt)return;
+    const rng=fltRangeFromSel();
+    if((S.mg||[]).some(m=>m[0]<=S.rows-1&&m[2]>=rng.r&&m[1]<=rng.c2&&m[3]>=rng.c1))return toast('Cannot filter over a merged cell — unmerge it first');
+    snap();
+    S.flt={r:rng.r,c1:rng.c1,c2:rng.c2,hide:{}};
+    refresh();changed();toast('Filter on');
+  }
+  function clearFilter(){
+    if(!S.flt)return;
+    snap();
+    S.flt=undefined;
+    refresh();changed();toast('Filter cleared');
+  }
+  /* A column's own range moves the same way a merge/colour-rule's does
+     (rekeyRange, shared); the per-column `hide` keys are re-pointed with
+     the same inline shift idiom rekey() already uses for cell coordinates
+     — a deleted column's own entry is simply dropped. */
+  function rekeyFilter(axis,at,n){
+    if(!S.flt)return;
+    const r=rekeyRange([S.flt.r,S.flt.c1,S.flt.r,S.flt.c2],axis,at,n);
+    if(!r){S.flt=undefined;return;}
+    S.flt.r=r[0];S.flt.c1=r[1];S.flt.c2=r[3];
+    if(axis==='c'&&S.flt.hide){
+      const nh={};
+      for(const k in S.flt.hide){
+        const c=+k;
+        if(n<0&&c>=at&&c<at-n)continue;
+        nh[c>=at?c+n:c]=S.flt.hide[k];
+      }
+      S.flt.hide=nh;
+    }
+  }
+
   /* ── DOM ── */
   let st=root.querySelector(':scope > .sg-static');
   if(!st){root.insertAdjacentHTML('afterbegin',_sgStaticHTML(S));st=root.querySelector(':scope > .sg-static');}
@@ -23658,6 +23818,7 @@ function _sgMount(root,state,editable){
       +'<button type="button" class="sg-b" data-a="bd" title="Add or remove cell borders">Borders ▾</button>'
       +'<button type="button" class="sg-b" data-a="merge" title="Merge the selected cells into one">Merge cells</button><span class="sg-sep"></span>'
       +'<button type="button" class="sg-b" data-a="cr" title="Colour cells based on their value">Colour rules ▾</button><span class="sg-sep"></span>'
+      +'<button type="button" class="sg-b" data-a="flt" title="Show only chosen rows">Filter</button><span class="sg-sep"></span>'
       +'<button type="button" class="sg-b sg-fxb" data-a="fn" title="Browse every function">ƒx Functions</button>'
       +'<button type="button" class="sg-b sg-del" data-a="del" title="Remove this spreadsheet from the note">Remove</button>'
       +'</div>':'')
@@ -23671,6 +23832,7 @@ function _sgMount(root,state,editable){
   const q=s=>ui.querySelector(s);
   const grid=q('.sg-g'),gw=q('.sg-gw'),fx=q('.sg-fx'),ced=q('.sg-ced'),nameBox=q('.sg-name'),hint=q('.sg-hint'),keys=q('.sg-keys'),statusEl=q('.sg-status');
   const fillEl=q('.sg-fill'),fillDot=q('.sg-fill-dot'),fillPrev=q('.sg-fillprev');
+  statusEl.addEventListener('click',function(e){if(e.target.closest('.sg-clrflt')&&editable)clearFilter();});
 
   /* Everything typed, pasted or clicked in here is the sheet's business, not
      the note editor's (its Enter rules, its document-level Ctrl+Z, its input
@@ -23722,6 +23884,7 @@ function _sgMount(root,state,editable){
   }
   function refresh(){
     get=SGE.evaluate(S);
+    hiddenRows=fltHiddenRowSet();
     for(let r=0;r<S.rows;r++)for(let c=0;c<S.cols;c++){
       const td=TD[r][c],o=cellO(r,c),v=get(r,c);
       const txt=SGE.display(v,o&&o.fmt);
@@ -23729,11 +23892,19 @@ function _sgMount(root,state,editable){
       if(o&&o.b)cls+=' sg-bo';if(o&&o.i)cls+=' sg-it';
       if(o&&o.bd){if(o.bd.includes('t'))cls+=' sg-bt';if(o.bd.includes('b'))cls+=' sg-bb';if(o.bd.includes('l'))cls+=' sg-bl';if(o.bd.includes('r'))cls+=' sg-br';}
       const cr=_sgCrFor(S,r,c,v);
-      td.className=cls;td.textContent=txt;
+      const isFltHdr=!!(S.flt&&r===S.flt.r&&c>=S.flt.c1&&c<=S.flt.c2);
+      if(isFltHdr)cls+=' sg-fltcol';
+      td.className=cls;
+      if(isFltHdr){
+        const on=S.flt.hide&&S.flt.hide[c]&&S.flt.hide[c].length;
+        td.innerHTML=esc(txt)+'<button type="button" class="sg-fltdd'+(on?' on':'')+'" data-c="'+c+'" aria-label="Filter column '+esc(txt||colName(c))+'">▾</button>';
+      } else td.textContent=txt;
       td.style.backgroundColor=cr&&cr.fill?cr.fill:(o&&o.bg?o.bg:'');
       td.style.color=cr&&cr.ink?cr.ink:'';
       td.title=SGE.isErr(v)?(SGE.ERRTXT[v.err]||''):(txt.length>14?txt:'');
     }
+    const trs=grid.tBodies[0].rows;
+    for(let r=0;r<S.rows;r++)if(trs[r])trs[r].style.display=hiddenRows.has(r)?'none':'';
     paint();
   }
   function paint(){
@@ -23754,6 +23925,7 @@ function _sgMount(root,state,editable){
       q('.sg-bL').classList.toggle('on',o.al==='l');q('.sg-bC').classList.toggle('on',o.al==='c');q('.sg-bR').classList.toggle('on',o.al==='r');
       q('.sg-fmt').value=o.fmt||'';
       const frzBtn=q('[data-a="frz"]');if(frzBtn)frzBtn.classList.toggle('on',!!S.frz);
+      const fltBtn=q('[data-a="flt"]');if(fltBtn){fltBtn.textContent=S.flt?'Clear filter':'Filter';fltBtn.classList.toggle('on',!!S.flt);}
       const mergeBtn=q('[data-a="merge"]');if(mergeBtn&&!mergeBtn.classList.contains('armed'))mergeBtn.textContent=mergeBtnLabel();}
     updateFillHandle();
     status();
@@ -23781,9 +23953,15 @@ function _sgMount(root,state,editable){
   function status(){
     const s=normM(SEL);const n=[];let cnt=0;
     for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1;c<=s.c2;c++){const v=val(r,c);if(v!==null&&v!=='')cnt++;if(typeof v==='number')n.push(v);}
-    if((s.r1===s.r2&&s.c1===s.c2)||!cnt){statusEl.innerHTML='<span>'+(editable?'Select several cells to see their total':'Read only: tap Edit to change this table')+'</span>';return;}
+    let fltTxt='';
+    if(S.flt){
+      const rng=fltDataRange();const total=Math.max(0,rng.r2-rng.r1+1);
+      let visible=0;for(let r=rng.r1;r<=rng.r2;r++)if(!hiddenRows.has(r))visible++;
+      fltTxt='<span class="sg-flt-status">Showing '+visible+' of '+total+' rows · filter on'+(editable?' <button type="button" class="sg-clrflt" data-a="clrflt">Clear filter</button>':'')+'</span>';
+    }
+    if((s.r1===s.r2&&s.c1===s.c2)||!cnt){statusEl.innerHTML=fltTxt+'<span>'+(editable?'Select several cells to see their total':'Read only: tap Edit to change this table')+'</span>';return;}
     const f=x=>SGE.fmtPattern(x,'#,##0.##');
-    statusEl.innerHTML=(n.length?'<span>Sum <b>'+f(SGE.sum(n))+'</b></span><span>Average <b>'+f(SGE.sum(n)/n.length)+'</b></span>':'')+'<span>Count <b>'+cnt+'</b></span>';
+    statusEl.innerHTML=fltTxt+(n.length?'<span>Sum <b>'+f(SGE.sum(n))+'</b></span><span>Average <b>'+f(SGE.sum(n)/n.length)+'</b></span>':'')+'<span>Count <b>'+cnt+'</b></span>';
   }
   function scrollIntoCell(r,c){const td=boxTD(r,c);if(!td)return;const tr=td.getBoundingClientRect(),g=gw.getBoundingClientRect();
     const lw=40,hh=27;const topGuard=(S.frz&&r>0)?hh*2:hh;
@@ -23807,6 +23985,14 @@ function _sgMount(root,state,editable){
       const cur=mergeAt(r,c);
       if(cur){const stepR=dr>0?cur[2]:dr<0?cur[0]:r,stepC=dc>0?cur[3]:dc<0?cur[1]:c;r=stepR+dr;c=stepC+dc;}
       else{r+=dr;c+=dc;}
+    }
+    /* v04.65 — arrow keys, Tab and Enter skip a filter-hidden row. Only
+       adopted when the skip lands within the sheet's current bounds, so a
+       run of hidden rows right up to the last row still falls through to
+       the "walking off the edge grows the sheet" rule below unchanged. */
+    if(S.flt&&dr!==0&&!jump){
+      let rr=r;while(rr>=0&&rr<S.rows&&hiddenRows.has(rr))rr+=dr;
+      if(rr>=0&&rr<S.rows)r=rr;
     }
     /* Walking off the bottom or right edge of a small sheet grows it, the way
        a note grows when you keep typing. */
@@ -23874,17 +24060,23 @@ function _sgMount(root,state,editable){
      colour, Clear contents…) lands on the anchor only, which is exactly what
      "covered cells hold nothing" requires and what makes a border on a
      merge draw as one box around the anchor's own spanned <td>. */
-  function forSel(f){const s=normM(SEL);for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1;c<=s.c2;c++){const m=mergeAt(r,c);if(m&&(m[0]!==r||m[1]!==c))continue;f(r,c);}}
+  /* v04.65 — also skips a filter-hidden row: styling, borders and Clear
+     contents apply to visible cells only, as in Excel. */
+  function forSel(f){const s=normM(SEL);for(let r=s.r1;r<=s.r2;r++){if(hiddenRows.has(r))continue;for(let c=s.c1;c<=s.c2;c++){const m=mergeAt(r,c);if(m&&(m[0]!==r||m[1]!==c))continue;f(r,c);}}}
   function styleSel(p,v){snap();const o=cellO(A.r,A.c)||{};const nv=(p==='b'||p==='i')?!o[p]:(o[p]===v&&p==='al'?undefined:v);forSel((r,c)=>setProp(r,c,p,nv));refresh();changed();}
   function clearSel(){snap();forSel((r,c)=>setRaw(r,c,''));refresh();changed();}
   function copyCell(r0,c0,r,c){const o=cellO(r0,c0);const k=K(r,c);if(!o){delete S.cells[k];return;}const n=JSON.parse(JSON.stringify(o));n.raw=SGE.shiftF(n.raw,r-r0,c-c0);S.cells[k]=n;tidy(k);}
-  function fillDown(){const s=norm(SEL);const srcRow=s.r1===s.r2?s.r1-1:s.r1;
+  function fillDown(){
+    if(hiddenRows.size)return toast('Cannot fill while a filter is hiding rows — clear the filter first');
+    const s=norm(SEL);const srcRow=s.r1===s.r2?s.r1-1:s.r1;
     if(srcRow>=0&&(S.mg||[]).some(m=>m[0]<=s.r2&&m[2]>=srcRow&&m[1]<=s.c2&&m[3]>=s.c1))return toast('Cannot fill across a merged cell — unmerge it first');
     snap();
     if(s.r1===s.r2){if(s.r1===0)return;for(let c=s.c1;c<=s.c2;c++)copyCell(s.r1-1,c,s.r1,c);}
     else for(let c=s.c1;c<=s.c2;c++)for(let r=s.r1+1;r<=s.r2;r++)copyCell(s.r1,c,r,c);
     refresh();changed();}
-  function fillRight(){const s=norm(SEL);const srcCol=s.c1===s.c2?s.c1-1:s.c1;
+  function fillRight(){
+    if(hiddenRows.size)return toast('Cannot fill while a filter is hiding rows — clear the filter first');
+    const s=norm(SEL);const srcCol=s.c1===s.c2?s.c1-1:s.c1;
     if(srcCol>=0&&(S.mg||[]).some(m=>m[0]<=s.r2&&m[2]>=s.r1&&m[1]<=s.c2&&m[3]>=srcCol))return toast('Cannot fill across a merged cell — unmerge it first');
     snap();
     if(s.c1===s.c2){if(s.c1===0)return;for(let r=s.r1;r<=s.r2;r++)copyCell(r,s.c1-1,r,s.c1);}
@@ -24071,27 +24263,37 @@ function _sgMount(root,state,editable){
     }
     refresh();changed();
   }
-  function doCopy(cut){const s=normM(SEL);const rows=[];const text=[];
-    for(let r=s.r1;r<=s.r2;r++){const row=[],t=[];for(let c=s.c1;c<=s.c2;c++){const o=cellO(r,c);row.push(o?JSON.parse(JSON.stringify(o)):null);t.push(SGE.display(val(r,c),o&&o.fmt));}rows.push(row);text.push(t.join('\t'));}
-    clip={s,rows,text:text.join('\n'),cut:!!cut&&editable};
+  /* v04.65 — a filter-hidden row is skipped when copying, so the clip holds
+     visible rows only (Excel's behaviour); rowIdx remembers each kept row's
+     REAL index so a formula pasted back still shifts by the true distance —
+     with no filter active, hiddenRows is empty and rowIdx is exactly the
+     old contiguous s.r1…s.r2, so nothing changes for the common case. */
+  function doCopy(cut){const s=normM(SEL);const rows=[];const text=[];const rowIdx=[];
+    for(let r=s.r1;r<=s.r2;r++){
+      if(hiddenRows.has(r))continue;
+      const row=[],t=[];for(let c=s.c1;c<=s.c2;c++){const o=cellO(r,c);row.push(o?JSON.parse(JSON.stringify(o)):null);t.push(SGE.display(val(r,c),o&&o.fmt));}
+      rows.push(row);text.push(t.join('\t'));rowIdx.push(r);
+    }
+    clip={s,rows,rowIdx,text:text.join('\n'),cut:!!cut&&editable};
     try{navigator.clipboard.writeText(clip.text).catch(()=>{});}catch(e){}
-    toast(cut&&editable?'Cut: choose where to paste':'Copied '+(s.r2-s.r1+1)*(s.c2-s.c1+1)+' cells');
+    toast(cut&&editable?'Cut: choose where to paste':'Copied '+rows.length*(s.c2-s.c1+1)+' cells');
     return clip.text;}
   function doPaste(text){
     if(!editable)return;
+    if(hiddenRows.size)return toast('Cannot paste while a filter is hiding rows — clear the filter first');
     /* Merge overlap is checked BEFORE any snap()/mutation, in either branch,
        so a refused paste really leaves nothing changed and adds no undo
        step (CLAUDE.md's refusal rule) — merges are not carried by copy/paste
        this round (Not done); only the overlap check needs to know about
        them here. */
     if(clip&&(text==null||text.replace(/\r/g,'')===clip.text)){
-      const {s,rows}=clip;
+      const {s,rows,rowIdx}=clip;
       const r2=Math.min(S.rows-1,A.r+rows.length-1),c2=Math.min(S.cols-1,A.c+(rows[0]?rows[0].length:1)-1);
       if((S.mg||[]).some(m=>m[0]<=r2&&m[2]>=A.r&&m[1]<=c2&&m[3]>=A.c))return toast('Cannot paste onto a merged cell — unmerge it first');
       snap();
       rows.forEach((row,i)=>row.forEach((o,j)=>{const r=A.r+i,c=A.c+j;if(r>=S.rows||c>=S.cols)return;const k=K(r,c);
-        if(!o){delete S.cells[k];return;}const n=JSON.parse(JSON.stringify(o));n.raw=SGE.shiftF(n.raw,r-(s.r1+i),c-(s.c1+j));S.cells[k]=n;}));
-      if(clip.cut){rows.forEach((row,i)=>row.forEach((o,j)=>{const r=s.r1+i,c=s.c1+j;if(r<A.r||r>=A.r+rows.length||c<A.c||c>=A.c+row.length)delete S.cells[K(r,c)];}));clip=null;}
+        if(!o){delete S.cells[k];return;}const n=JSON.parse(JSON.stringify(o));n.raw=SGE.shiftF(n.raw,r-((rowIdx?rowIdx[i]:s.r1+i)),c-(s.c1+j));S.cells[k]=n;}));
+      if(clip.cut){rows.forEach((row,i)=>row.forEach((o,j)=>{const r=rowIdx?rowIdx[i]:s.r1+i,c=s.c1+j;if(r<A.r||r>=A.r+rows.length||c<A.c||c>=A.c+row.length)delete S.cells[K(r,c)];}));clip=null;}
       SEL={r1:A.r,c1:A.c,r2:Math.min(S.rows-1,A.r+rows.length-1),c2:Math.min(S.cols-1,A.c+rows[0].length-1)};
       refresh();changed();return;
     }
@@ -24163,9 +24365,14 @@ function _sgMount(root,state,editable){
     if(axis==='c'){const w={};for(const k in (S.colW||{})){let c=+k;if(n<0&&c>=at&&c<at-n)continue;if(c>=at)c+=n;w[c]=S.colW[k];}S.colW=w;}
     rekeyMerges(axis,at,n);
     rekeyColorRules(axis,at,n);
+    rekeyFilter(axis,at,n);
   }
-  function insRow(below){const s=norm(SEL);const n=s.r2-s.r1+1;if(S.rows+n>_SG_MAX_ROWS)return toast('A table can have up to '+_SG_MAX_ROWS+' rows');snap();const at=below?s.r2+1:s.r1;rekey('r',at,n);S.rows+=n;if(!below){A.r+=n;SEL.r1+=n;SEL.r2+=n;}after();}
-  function delRow(){const s=norm(SEL);const n=s.r2-s.r1+1;if(n>=S.rows)return toast('A table needs at least one row');snap();rekey('r',s.r1,-n);S.rows-=n;SEL={r1:s.r1,c1:s.c1,r2:s.r1,c2:s.c1};A={r:s.r1,c:s.c1};after();}
+  function insRow(below){
+    if(hiddenRows.size)return toast('Cannot insert rows while a filter is hiding rows — clear the filter first');
+    const s=norm(SEL);const n=s.r2-s.r1+1;if(S.rows+n>_SG_MAX_ROWS)return toast('A table can have up to '+_SG_MAX_ROWS+' rows');snap();const at=below?s.r2+1:s.r1;rekey('r',at,n);S.rows+=n;if(!below){A.r+=n;SEL.r1+=n;SEL.r2+=n;}after();}
+  function delRow(){
+    if(hiddenRows.size)return toast('Cannot delete rows while a filter is hiding rows — clear the filter first');
+    const s=norm(SEL);const n=s.r2-s.r1+1;if(n>=S.rows)return toast('A table needs at least one row');snap();rekey('r',s.r1,-n);S.rows-=n;SEL={r1:s.r1,c1:s.c1,r2:s.r1,c2:s.c1};A={r:s.r1,c:s.c1};after();}
   function insCol(right){const s=norm(SEL);const n=s.c2-s.c1+1;if(S.cols+n>_SG_MAX_COLS)return toast('A table can have up to '+_SG_MAX_COLS+' columns');snap();const at=right?s.c2+1:s.c1;rekey('c',at,n);S.cols+=n;if(!right){A.c+=n;SEL.c1+=n;SEL.c2+=n;}after();}
   function delCol(){const s=norm(SEL);const n=s.c2-s.c1+1;if(n>=S.cols)return toast('A table needs at least one column');snap();rekey('c',s.c1,-n);S.cols-=n;SEL={r1:s.r1,c1:s.c1,r2:s.r1,c2:s.c1};A={r:s.r1,c:s.c1};after();}
   function sortBy(desc){
@@ -24207,6 +24414,7 @@ function _sgMount(root,state,editable){
   }
   let mergeArm=0;
   function mergeAction(btn){
+    if(hiddenRows.size)return toast('Cannot merge while a filter is hiding rows — clear the filter first');
     const cur=mergeAt(A.r,A.c);
     if(cur){unmergeCells(cur);if(btn){btn.textContent=mergeBtnLabel();btn.classList.remove('armed');}return;}
     const s=norm(SEL);
@@ -24265,6 +24473,40 @@ function _sgMount(root,state,editable){
     S.cr.splice(i,1);if(!S.cr.length)S.cr=undefined;
     refresh();changed();
   };
+  /* ── v04.65: the filter panel's only way into a sheet's internals — same
+     shape as crRulesFor/crAdd/crRemove above. fltApply/fltSort branch on
+     `editable`: in the read view they mutate S in memory and refresh() the
+     live grid, but never snap()/changed(), so a reload (which re-parses
+     data-sg fresh) discards it — filtering there is view-only (I1/I4: the
+     stored note never changes from a read-only view). */
+  self.fltColValues=c=>{
+    if(!S.flt)return[];
+    const rng=fltDataRange();const seen=new Map();
+    for(let r=rng.r1;r<=rng.r2;r++){const t=fltDisplayVal(r,c);if(!seen.has(t))seen.set(t,t===''?'(Blanks)':t);}
+    const arr=[...seen.entries()].map(([value,label])=>({value,label}));
+    arr.sort((a,b)=>{if(a.value==='')return 1;if(b.value==='')return-1;return a.value<b.value?-1:a.value>b.value?1:0;});
+    return arr;
+  };
+  self.fltHideFor=c=>new Set((S.flt&&S.flt.hide&&S.flt.hide[c])||[]);
+  self.fltApply=(c,hideArr)=>{
+    if(!S.flt)return;
+    if(editable)snap();
+    if(!S.flt.hide)S.flt.hide={};
+    if(hideArr.length)S.flt.hide[c]=hideArr;else delete S.flt.hide[c];
+    refresh();
+    if(editable)changed();
+  };
+  self.fltSort=(c,desc)=>{
+    if(!editable||!S.flt)return;
+    const rng=fltDataRange();
+    if(rng.r2<rng.r1)return;
+    if((S.mg||[]).some(m=>m[0]<=rng.r2&&m[2]>=rng.r1))return toast('Cannot sort a range containing a merged cell — unmerge it first');
+    snap();const g=SGE.evaluate(S);
+    const rows=[];for(let r=rng.r1;r<=rng.r2;r++){const cs=[];for(let cc=0;cc<S.cols;cc++){const o=cellO(r,cc);cs.push(o?JSON.parse(JSON.stringify(o)):null);}rows.push({r,key:g(r,c),cs});}
+    rows.sort((x,y)=>{const a=x.key,b=y.key;if(a===null&&b===null)return 0;if(a===null)return 1;if(b===null)return-1;const d=SGE.cmp(a,b);return desc?-d:d;});
+    rows.forEach((row,i)=>{const nr=rng.r1+i;row.cs.forEach((o,cc)=>{const k=K(nr,cc);if(!o){delete S.cells[k];return;}o.raw=SGE.shiftF(o.raw,nr-row.r,0);S.cells[k]=o;});});
+    refresh();changed();
+  };
   let delArm=0;
   function removeSheet(btn){
     if(Date.now()-delArm>4000){delArm=Date.now();btn.textContent='Tap again to remove';btn.classList.add('armed');setTimeout(()=>{btn.textContent='Remove';btn.classList.remove('armed');},4000);return;}
@@ -24277,14 +24519,14 @@ function _sgMount(root,state,editable){
     m.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-h-8))+'px';
   }
   const rcItems=()=>[['insRowA','Insert row above'],['insRowB','Insert row below'],['delRow','Delete row'],'-',['insColL','Insert column left'],['insColR','Insert column right'],['delCol','Delete column']];
-  const cellItems=()=>editable?[['cut','Cut','Ctrl+X'],['copy','Copy','Ctrl+C'],['pasteH','Paste','Ctrl+V'],'-',...rcItems(),'-',['sortA','Sort A→Z'],['sortZ','Sort Z→A'],['clear','Clear contents','Del'],'-',['merge',mergeBtnLabel()]]:[['copy','Copy','Ctrl+C']];
+  const cellItems=()=>editable?[['cut','Cut','Ctrl+X'],['copy','Copy','Ctrl+C'],['pasteH','Paste','Ctrl+V'],'-',...rcItems(),'-',['sortA','Sort A→Z'],['sortZ','Sort Z→A'],['clear','Clear contents','Del'],'-',['merge',mergeBtnLabel()],['flt',S.flt?'Clear filter':'Filter']]:[['copy','Copy','Ctrl+C']];
   const bdItems=()=>[['bdAll','All borders'],['bdOut','Outside borders'],['bdTop','Top border'],['bdBot','Bottom border'],['bdLeft','Left border'],['bdRight','Right border'],'-',['bdNone','No borders']];
   const ACT={insRowA:()=>insRow(false),insRowB:()=>insRow(true),delRow,insColL:()=>insCol(false),insColR:()=>insCol(true),delCol,
     cut:()=>doCopy(true),copy:()=>doCopy(false),pasteH:()=>{if(clip)doPaste(null);else toast('Press Ctrl+V to paste from another app');},
     sortA:()=>sortBy(false),sortZ:()=>sortBy(true),clear:clearSel,
     bdAll:()=>applyBorders('all'),bdOut:()=>applyBorders('outside'),bdTop:()=>applyBorders('top'),bdBot:()=>applyBorders('bottom'),
     bdLeft:()=>applyBorders('left'),bdRight:()=>applyBorders('right'),bdNone:()=>applyBorders('none'),
-    merge:()=>mergeAction()};
+    merge:()=>mergeAction(),flt:()=>{if(S.flt)clearFilter();else turnOnFilter();}};
   self.act=k=>{(ACT[k]||(()=>{}))();gw.focus({preventScroll:true});};
   self.editing=()=>!!E;
   self.commit=commit;
@@ -24298,6 +24540,7 @@ function _sgMount(root,state,editable){
   const tdFrom=e=>{const t=e.target.closest&&e.target.closest('td');return t&&grid.contains(t)?t:null;};
   ui.addEventListener('pointerdown',e=>{lastPtr=e.pointerType||'mouse';},true);
   gw.addEventListener('mousedown',e=>{
+    if(e.target.closest&&e.target.closest('.sg-fltdd'))return;
     if(e.button!==0)return;_sgCur=self;
     if(editable&&e.target.classList.contains('sg-rz')){const c=+e.target.dataset.c;drag={t:'rz',c,x0:e.clientX,w0:(S.colW&&S.colW[c])||96};_sgDragS=self;e.preventDefault();return;}
     const th=e.target.closest('th');
@@ -24327,6 +24570,13 @@ function _sgMount(root,state,editable){
   };
   self.onDragEnd=()=>{if(drag&&drag.t==='rz')changed();drag=null;};
   gw.addEventListener('dblclick',e=>{const td=tdFrom(e);if(!td||!editable)return;select(+td.dataset.r,+td.dataset.c,false);startEdit('',true);});
+  grid.addEventListener('click',e=>{
+    const b=e.target.closest('.sg-fltdd');if(!b)return;
+    e.preventDefault();e.stopPropagation();
+    _sgCur=self;
+    const p=_sgFltEl();p.hidden=false;p._open(+b.dataset.c);
+    _sgFltPosition(p,b.getBoundingClientRect());
+  });
   gw.addEventListener('contextmenu',e=>{
     const td=tdFrom(e),th=e.target.closest('th');if(!td&&!th)return;e.preventDefault();e.stopPropagation();if(E)commit();
     if(td){const r=+td.dataset.r,c=+td.dataset.c;const s=normM(SEL);if(!(r>=s.r1&&r<=s.r2&&c>=s.c1&&c<=s.c2))select(r,c,false);openMenu(e.clientX,e.clientY,cellItems());return;}
@@ -24400,7 +24650,8 @@ function _sgMount(root,state,editable){
           p.style.top=Math.max(8,Math.min(rr.top+70,innerHeight-p.offsetHeight-8))+'px';p.querySelector('.sg-fnq').focus({preventScroll:true});break;}
         case'rc':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,rcItems());break;}
         case'bd':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,bdItems());break;}
-        case'cr':{const p=_sgCrEl();p.hidden=false;p._open();_sgCrPosition(p,b.getBoundingClientRect());break;}}
+        case'cr':{const p=_sgCrEl();p.hidden=false;p._open();_sgCrPosition(p,b.getBoundingClientRect());break;}
+        case'flt':if(S.flt)clearFilter();else turnOnFilter();break;}
     });
     q('.sg-fmt').addEventListener('change',e=>{if(E)commit();snap();const v=e.target.value||undefined;forSel((r,c)=>setProp(r,c,'fmt',v));refresh();changed();gw.focus({preventScroll:true});});
     gw.addEventListener('scroll',()=>{if(!fillDrag)updateFillHandle();},{passive:true});
@@ -24444,6 +24695,7 @@ function _sgMount(root,state,editable){
       if(!tgt){paint();return;}
       const full={r1:Math.min(sel.r1,tgt.r1),c1:Math.min(sel.c1,tgt.c1),r2:Math.max(sel.r2,tgt.r2),c2:Math.max(sel.c2,tgt.c2)};
       if((S.mg||[]).some(m=>m[0]<=full.r2&&m[2]>=full.r1&&m[1]<=full.c2&&m[3]>=full.c1)){toast('Cannot fill across a merged cell — unmerge it first');paint();return;}
+      if(hiddenRows.size){toast('Cannot fill while a filter is hiding rows — clear the filter first');paint();return;}
       if(d.dr>0)doFillDrag('down',sel,d.dr);
       else if(d.dr<0)doFillDrag('up',sel,-d.dr);
       else if(d.dc>0)doFillDrag('right',sel,d.dc);
