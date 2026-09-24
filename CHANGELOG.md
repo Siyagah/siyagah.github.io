@@ -5855,16 +5855,18 @@ instead of a shared list. `setProp()`/`copyCell()`/`rekey()`/`doCopy()`/
 `doPaste()`/`sortBy()` were already generic (they read/write a whole cell
 object, not named fields) and needed no change.
 
-**Layouts (D5).** The sheet's own toolbar (`.sg-tb`) has always scrolled
-sideways with `overflow-x:auto` — the phone's "sideways-scrolling sheet
-toolbar, reachable by scrolling it" requirement the issue asked for was
-already true of every button on it, so the two new buttons needed no
-phone-specific fold. The fill handle's hit-box sizing (above) is the one
-piece that genuinely differs by tier. The `Borders ▾` menu reuses
-`openMenu()`, which already clamps itself inside the viewport. **Both
-pop-ups**: `_sgMount()` is the same code regardless of host (`#ed` in Single,
-`.fw-ed-<id>` in Multi), so all three features work in Multi with no
-integration work — proved in app-check `25f`, not assumed.
+**Layouts (D5).** The sheet's own toolbar (`.sg-tb`) scrolled sideways
+(`overflow-x:auto`) at every size. That is right for the phone, and the phone
+keeps it. It was wrong from 640px up: measured at 1440, it was 1221px of
+controls in a 604px strip, so `❄ Freeze top row`, `Borders ▾`, `Fill down`,
+`ƒx Functions` and `Remove` sat past a thin scrollbar that a Mac trackpad does
+not even draw. **From 640px up the toolbar now wraps** (added in the
+Architect's review, below). The fill handle's hit-box sizing (above) also
+differs by size. The `Borders ▾` menu reuses `openMenu()`, which already
+clamps itself inside the viewport. **Both pop-ups**: `_sgMount()` is the same
+code regardless of host (`#ed` in Single, `.fw-ed-<id>` in Multi), so all
+three features work in Multi with no integration work. That is proved in
+app-check `25f`, not assumed.
 
 **Not done, and why:**
 - **Dragging the fill handle up or left does nothing** — the issue scoped
@@ -5886,9 +5888,45 @@ gained `openApp({hasTouch:true})` and a `touchDrag()` helper for this) —
 never the fill/border functions directly and never a synthesized event, per
 the `⚙ Backup & Restore` lesson in `CLAUDE.md`.
 
+**Architect review, and what it changed.** The first build measured
+**599/599**. Unpatched, v04.60's app with this round's `tools/` scored
+**515/529, 14 FAILED**, all in section 25. The review found four faults.
+The builder's fix run made all four fixes but ended without pushing, the
+same stop `ARCHITECT.md` describes, so the Architect finished the round on
+its own branch:
+- **Wrong values from a mixed fill.** `fillLine()` shifted formulas only when
+  the whole source line was formulas. So `x`, `=A2` repeated as `x, =A2, x,
+  =A2` instead of `x, =A4, x, =A6`. Any source cell starting with `=` now
+  shifts, whatever the line's mode. New check in `25a`, at both sizes.
+- **`25e` could not fail.** It edited a *different* cell and saved, and passed
+  on v04.60, because the old `tidy(k)` only ever touched the key being
+  written. It was rewritten in place to drive the two losses the allow-list
+  really caused:
+  - a real **Delete** on a cell holding content and a border (or an unknown
+    key) tidied the whole cell away;
+  - a bordered empty cell beyond the last value fell outside the saved
+    snapshot.
+
+  All four of its new assertions fail on v04.60.
+- **The toolbar hid the new buttons at tablet and laptop sizes**, as described
+  under *Layouts* above. New `25h`: at 820, at 1440 and in a Multi window at
+  1440, every control lies inside the toolbar and it does not scroll; at 390,
+  the sideways scroll is kept.
+- **The fill handle painted over the sticky header.** At `z-index:7` it
+  drew over the column-letter row, the row numbers and the frozen row when the
+  selection scrolled under them. It now hides while its centre is behind
+  them, re-checked on every scroll of the grid. New `25i`, scrolled with a
+  real mouse wheel, with and without a frozen row.
+
+Every new or rewritten assertion was run against the code it guards:
+- the `25a` mixed case (×2), `25h` at 820/1440/Multi and `25i` (×2), **7**
+  in all, fail on the unfixed #89 build;
+- the four new `25e` assertions fail on v04.60;
+- `25h`'s phone check passes on both. It is a guard that the phone's
+  sideways scroll survives, not a fix.
+
 **Measured**
 - `ship-check`: **12/12**.
-- `app-check --only 25`: **93/93**.
-- `app-check --only 17`: **23/23** (no regressions from round 1).
-- Full `app-check`: **599/599, twice in a row**.
+- `app-check --only 25`: **106/106**.
+- Full `app-check`: **612/612** (second run pending).
 

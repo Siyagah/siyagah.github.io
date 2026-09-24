@@ -62,8 +62,8 @@ must never accumulate here instead of there.
     properties one at a time by necessity (each maps to a different CSS
     rule); `setProp`/`copyCell`/`rekey`/`doCopy`/`doPaste`/`sortBy` were
     already generic and needed no change.
-  - **Layouts (D5)**: the sheet's own toolbar already scrolled sideways, so
-    the two new buttons needed no phone-specific fold; `Borders ▾` reuses
+  - **Layouts (D5)**: the sheet's toolbar scrolls sideways on the phone
+    and wraps from 640px up (review fix); `Borders ▾` reuses
     `openMenu()`, already viewport-clamped. Both pop-ups: `_sgMount()` is
     the same code regardless of host, so Multi got all three for free —
     proved in app-check `25f`, not assumed.
@@ -81,9 +81,22 @@ must never accumulate here instead of there.
     dropped (a `bd`-only cell, an unknown-key cell, a genuinely empty cell
     still tidied); Multi gets all three; opening a sheet that already has
     `frz`/`bd` changes nothing (`17d`'s rule, extended).
-  - 12/12 ship checks, `app-check --only 25` **93/93**, `--only 17`
-    **23/23** (no regressions). Full `app-check`, **599/599, twice in a
-    row**.
+  - **Architect review** (the builder's fix run did every fix and never
+    pushed, so the Architect finished the round):
+    - a formula inside a mixed source was copied unshifted (`x,=A2` →
+      `x,=A2,x,=A2`), and now shifts;
+    - `25e` passed on v04.60 and could not fail; it now drives a real Delete
+      on a bordered cell and a bordered empty edge cell in the snapshot;
+    - the sheet toolbar hid Freeze/Borders past a thin scrollbar at 820 and
+      1440, and now wraps from 640px up (`25h`);
+    - the fill handle painted over the sticky header and frozen row, and now
+      hides behind them (`25i`).
+
+    Every new assertion fails on the code it guards.
+  - First build: 599/599. Unpatched (v04.60 app, this round's tools):
+    **515/529, 14 FAILED, all in section 25**. After review: 12/12 ship
+    checks, `--only 25` **106/106**, full `app-check` **612/612** (second run
+    pending).
 - **v04.60** (23 Sep 2026) — the last note titles out of the public file,
   and Contents without heading chrome. Built by the Architect directly.
   - **v04.58 missed some.** It named the tab *picker*, but the static
