@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.60">
+<meta name="app-version" content="04.61">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2914,6 +2914,31 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 .sg-g td.sg-act{box-shadow:inset 0 0 0 2px var(--green)}
 .sg-g td.sg-rf0{box-shadow:inset 0 0 0 2px #2563EB}.sg-g td.sg-rf1{box-shadow:inset 0 0 0 2px #C2410C}.sg-g td.sg-rf2{box-shadow:inset 0 0 0 2px #7C3AED}
 .sg-g td.sg-rf3{box-shadow:inset 0 0 0 2px #0E7490}.sg-g td.sg-rf4{box-shadow:inset 0 0 0 2px #BE185D}
+/* v04.61 — cell borders. Real CSS borders, never box-shadow: .sg-act and
+   .sg-rf0–4 above are inset box-shadows, and a border drawn the same way
+   would fight them for the same layer. */
+.sg-g td.sg-bt{border-top:1px solid var(--t1)}.sg-g td.sg-bb{border-bottom:1px solid var(--t1)}
+.sg-g td.sg-bl{border-left:1px solid var(--t1)}.sg-g td.sg-br{border-right:1px solid var(--t1)}
+/* v04.61 — frozen top row. Row 1 (tbody's first <tr>) sticks just below the
+   27px header row (the same `hh` the grid's own scrollIntoCell() already
+   uses); its row-number cell and the corner keep the stacking order the
+   thead corner already set (corner 4, header 3, row headers 2). */
+.sg-g.sg-frz tbody tr:first-child>td{position:sticky;top:27px;z-index:1}
+.sg-g.sg-frz tbody tr:first-child>th.sg-rh{position:sticky;top:27px;z-index:4}
+.sg-g.sg-frz tbody tr:first-child>td,.sg-g.sg-frz tbody tr:first-child>th.sg-rh{border-bottom:2px solid var(--t1)}
+/* v04.61 — the drag-to-fill handle. The visible dot is small; the touch hit
+   box around it (sized in JS per tier) is not, so a phone finger can find
+   it without the box swallowing a tap on the cell body next to it. */
+/* v04.61 — from 640px up the sheet toolbar wraps instead of scrolling: at
+   1440 it was 1221px of controls in a 604px strip, and a thin (on a Mac,
+   invisible) scrollbar hid Freeze, Borders, Fill down, ƒx and Remove. The
+   phone keeps its sideways scroll. */
+@media(min-width:640px){.sg-tb{flex-wrap:wrap;overflow-x:visible}}
+.sg-fill{position:absolute;z-index:7;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:crosshair;background:transparent}
+.sg-fill[hidden]{display:none}
+.sg-fill-dot{background:var(--green);border-radius:1px;pointer-events:none}
+.sg-fillprev{position:absolute;z-index:6;border:2px dashed var(--green);pointer-events:none;box-sizing:border-box}
+.sg-fillprev[hidden]{display:none}
 .sg-rz{position:absolute;right:-3px;top:0;width:7px;height:100%;cursor:col-resize;z-index:5}
 .sg-ced{position:absolute;z-index:6;border:2px solid var(--green);background:var(--white);font:13px/1 'DM Sans',system-ui,sans-serif;padding:0 6px;outline:none;box-shadow:0 4px 14px -6px rgba(0,0,0,.35);color:var(--t1);user-select:text;-webkit-user-select:text}
 .sg-keys{display:flex;gap:4px;padding:6px;border-top:1px solid var(--border);background:var(--paper);overflow-x:auto}
@@ -2983,7 +3008,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.60</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.61</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -23273,11 +23298,18 @@ const SGE=(function(){
 const _SG_MAX_ROWS=500,_SG_MAX_COLS=52;
 function _sgNew(){return{v:1,rows:12,cols:6,cells:{},colW:{}};}
 function _sgParse(el){try{const d=JSON.parse(el.getAttribute('data-sg')||'');if(d&&d.cells&&d.rows&&d.cols)return d;}catch(e){}return null;}
+/* Whether a cell object is worth keeping — true if ANY of its properties
+   holds a truthy value. Not a list of known names: `tidy()` and the
+   used-range scan below both call this, so a cell property 2b/2c adds later
+   (or one written by an older/newer device) is neither dropped on the next
+   edit nor pushed out of the saved snapshot. See CLAUDE.md's mergeDB()
+   allow-list lesson — same shape of bug, same fix. */
+function _sgCellHasContent(o){return !!o&&Object.keys(o).some(function(k){return o[k];});}
 /* The snapshot a note's content carries: the used range only, as values. */
 function _sgStaticHTML(state){
   const get=SGE.evaluate(state);
   let r2=-1,c2=-1;
-  for(const k in state.cells){const [r,c]=k.split(',').map(Number);const o=state.cells[k];if(o&&(o.raw||o.bg)){if(r>r2)r2=r;if(c>c2)c2=c;}}
+  for(const k in state.cells){const [r,c]=k.split(',').map(Number);if(_sgCellHasContent(state.cells[k])){if(r>r2)r2=r;if(c>c2)c2=c;}}
   if(r2<0){r2=Math.min(2,state.rows-1);c2=Math.min(2,state.cols-1);}
   let h='<table class="sg-static"><tbody>';
   for(let r=0;r<=r2;r++){h+='<tr>';for(let c=0;c<=c2;c++){
@@ -23285,6 +23317,8 @@ function _sgStaticHTML(state){
     const al=o.al||(typeof v==='number'?'r':typeof v==='boolean'||SGE.isErr(v)?'c':'');
     const st=[];if(o.b)st.push('font-weight:700');if(o.i)st.push('font-style:italic');if(o.bg)st.push('background:'+o.bg);
     if(al==='r')st.push('text-align:right');else if(al==='c')st.push('text-align:center');
+    if(o.bd){if(o.bd.includes('t'))st.push('border-top:1px solid var(--t1)');if(o.bd.includes('b'))st.push('border-bottom:1px solid var(--t1)');
+      if(o.bd.includes('l'))st.push('border-left:1px solid var(--t1)');if(o.bd.includes('r'))st.push('border-right:1px solid var(--t1)');}
     h+='<td'+(st.length?' style="'+st.join(';')+'"':'')+'>'+esc(t)+'</td>';}h+='</tr>';}
   return h+'</tbody></table>';
 }
@@ -23375,15 +23409,17 @@ function _sgMount(root,state,editable){
   const S0=state;let S=state;
   const self={root,editable};root._sg=self;
   let A={r:0,c:0},SEL={r1:0,c1:0,r2:0,c2:0},E=null,drag=null,clip=null,lastPtr='mouse',TD=[],sugg=[],get=null;
+  let fillDrag=null,fillLastPt={x:0,y:0};
   const U=[],R=[];
   const K=(r,c)=>r+','+c;
   const cellO=(r,c)=>S.cells[K(r,c)];
   const rawOf=(r,c)=>{const o=cellO(r,c);return o&&o.raw!=null?o.raw:'';};
-  const tidy=k=>{const o=S.cells[k];if(o&&!o.raw&&!o.b&&!o.i&&!o.al&&!o.fmt&&!o.bg)delete S.cells[k];};
+  const tidy=k=>{if(!_sgCellHasContent(S.cells[k]))delete S.cells[k];};
   const setRaw=(r,c,raw)=>{const k=K(r,c);S.cells[k]=Object.assign(S.cells[k]||{},{raw});tidy(k);};
   const setProp=(r,c,p,v)=>{const k=K(r,c);const o=S.cells[k]||(S.cells[k]={raw:''});if(v===undefined||v===''||v===false)delete o[p];else o[p]=v;tidy(k);};
   const norm=s=>({r1:Math.min(s.r1,s.r2),c1:Math.min(s.c1,s.c2),r2:Math.max(s.r1,s.r2),c2:Math.max(s.c1,s.c2)});
   const narrow=()=>window.innerWidth<640;
+  const touchTier=()=>window.innerWidth<1200;
   const {colName,addr}=SGE;
 
   /* ── DOM ── */
@@ -23408,17 +23444,21 @@ function _sgMount(root,state,editable){
       +'<button type="button" class="sg-b" data-a="sortZ" title="Sort Z→A / largest first">↓ Sort</button>'
       +'<button type="button" class="sg-b" data-a="rc" title="Insert or delete rows and columns">Rows &amp; columns ▾</button>'
       +'<button type="button" class="sg-b" data-a="fill" title="Fill down (Ctrl+D)">Fill down</button><span class="sg-sep"></span>'
+      +'<button type="button" class="sg-b" data-a="frz" title="Keep row 1 visible while the grid scrolls">❄ Freeze top row</button>'
+      +'<button type="button" class="sg-b" data-a="bd" title="Add or remove cell borders">Borders ▾</button><span class="sg-sep"></span>'
       +'<button type="button" class="sg-b sg-fxb" data-a="fn" title="Browse every function">ƒx Functions</button>'
       +'<button type="button" class="sg-b sg-del" data-a="del" title="Remove this spreadsheet from the note">Remove</button>'
       +'</div>':'')
     +'<div class="sg-fxbar"><div class="sg-name">A1</div><div class="sg-fxi">ƒx</div><input class="sg-fx" autocomplete="off" spellcheck="false" aria-label="Formula bar"'+(editable?'':' readonly')+'></div>'
     +'<div class="sg-hint" hidden></div>'
-    +'<div class="sg-gw" tabindex="0"><table class="sg-g"></table><input class="sg-ced" hidden autocomplete="off" spellcheck="false" aria-label="Cell editor"></div>'
+    +'<div class="sg-gw" tabindex="0"><table class="sg-g"></table><input class="sg-ced" hidden autocomplete="off" spellcheck="false" aria-label="Cell editor">'
+      +'<div class="sg-fill" hidden><span class="sg-fill-dot"></span></div><div class="sg-fillprev" hidden></div></div>'
     +'<div class="sg-keys" hidden></div>'
     +'<div class="sg-status"></div>';
   root.appendChild(ui);
   const q=s=>ui.querySelector(s);
   const grid=q('.sg-g'),gw=q('.sg-gw'),fx=q('.sg-fx'),ced=q('.sg-ced'),nameBox=q('.sg-name'),hint=q('.sg-hint'),keys=q('.sg-keys'),statusEl=q('.sg-status');
+  const fillEl=q('.sg-fill'),fillDot=q('.sg-fill-dot'),fillPrev=q('.sg-fillprev');
 
   /* Everything typed, pasted or clicked in here is the sheet's business, not
      the note editor's (its Enter rules, its document-level Ctrl+Z, its input
@@ -23443,6 +23483,7 @@ function _sgMount(root,state,editable){
   const val=(r,c)=>get?get(r,c):null;
 
   function renderGrid(){
+    grid.classList.toggle('sg-frz',!!S.frz);
     let h='<colgroup><col style="width:40px">';
     for(let c=0;c<S.cols;c++)h+='<col style="width:'+((S.colW&&S.colW[c])||96)+'px">';
     h+='</colgroup><thead><tr><th class="sg-corner" title="Select all"></th>';
@@ -23460,6 +23501,7 @@ function _sgMount(root,state,editable){
       const txt=SGE.display(v,o&&o.fmt);
       let cls=SGE.isErr(v)?'sg-er':'sg-'+((o&&o.al)||(typeof v==='number'?'r':typeof v==='boolean'?'c':'l'));
       if(o&&o.b)cls+=' sg-bo';if(o&&o.i)cls+=' sg-it';
+      if(o&&o.bd){if(o.bd.includes('t'))cls+=' sg-bt';if(o.bd.includes('b'))cls+=' sg-bb';if(o.bd.includes('l'))cls+=' sg-bl';if(o.bd.includes('r'))cls+=' sg-br';}
       td.className=cls;td.textContent=txt;td.style.backgroundColor=o&&o.bg?o.bg:'';
       td.title=SGE.isErr(v)?(SGE.ERRTXT[v.err]||''):(txt.length>14?txt:'');
     }
@@ -23481,8 +23523,30 @@ function _sgMount(root,state,editable){
     if(editable){const o=cellO(A.r,A.c)||{};
       q('.sg-bB').classList.toggle('on',!!o.b);q('.sg-bI').classList.toggle('on',!!o.i);
       q('.sg-bL').classList.toggle('on',o.al==='l');q('.sg-bC').classList.toggle('on',o.al==='c');q('.sg-bR').classList.toggle('on',o.al==='r');
-      q('.sg-fmt').value=o.fmt||'';}
+      q('.sg-fmt').value=o.fmt||'';
+      const frzBtn=q('[data-a="frz"]');if(frzBtn)frzBtn.classList.toggle('on',!!S.frz);}
+    updateFillHandle();
     status();
+  }
+  function updateFillHandle(){
+    if(!editable){fillEl.hidden=true;return;}
+    const s=norm(SEL);
+    const fullRow=s.c1===0&&s.c2===S.cols-1,fullCol=s.r1===0&&s.r2===S.rows-1;
+    if(E||fullRow||fullCol){fillEl.hidden=true;return;}
+    const td=TD[s.r2]&&TD[s.r2][s.c2];if(!td){fillEl.hidden=true;return;}
+    const hit=touchTier()?32:12,vis=touchTier()?12:7;
+    fillEl.style.width=hit+'px';fillEl.style.height=hit+'px';
+    fillEl.style.left=Math.round(td.offsetLeft+td.offsetWidth-hit/2)+'px';
+    fillEl.style.top=Math.round(td.offsetTop+td.offsetHeight-hit/2)+'px';
+    fillDot.style.width=vis+'px';fillDot.style.height=vis+'px';
+    /* Hide it while its centre is behind the sticky parts of the grid (the
+       column-letter row, the row-number column and, when frozen, row 1):
+       at z-index 7 it would otherwise paint on top of them. */
+    const cx=td.offsetLeft+td.offsetWidth,cy=td.offsetTop+td.offsetHeight;
+    const hd=grid.tHead?grid.tHead.offsetHeight:27,rh=grid.querySelector('th.sg-rh');
+    const r1=S.frz&&s.r2>0&&TD[0]&&TD[0][0]?TD[0][0].offsetHeight:0;
+    const under=cy<gw.scrollTop+hd+r1||cx<gw.scrollLeft+(rh?rh.offsetWidth:40);
+    fillEl.hidden=under;
   }
   function status(){
     const s=norm(SEL);const n=[];let cnt=0;
@@ -23492,8 +23556,9 @@ function _sgMount(root,state,editable){
     statusEl.innerHTML=(n.length?'<span>Sum <b>'+f(SGE.sum(n))+'</b></span><span>Average <b>'+f(SGE.sum(n)/n.length)+'</b></span>':'')+'<span>Count <b>'+cnt+'</b></span>';
   }
   function scrollIntoCell(r,c){const td=TD[r]&&TD[r][c];if(!td)return;const tr=td.getBoundingClientRect(),g=gw.getBoundingClientRect();
-    const lw=40,hh=27;if(tr.left<g.left+lw)gw.scrollLeft-=g.left+lw-tr.left;else if(tr.right>g.right)gw.scrollLeft+=tr.right-g.right+2;
-    if(tr.top<g.top+hh)gw.scrollTop-=g.top+hh-tr.top;else if(tr.bottom>g.bottom)gw.scrollTop+=tr.bottom-g.bottom+2;}
+    const lw=40,hh=27;const topGuard=(S.frz&&r>0)?hh*2:hh;
+    if(tr.left<g.left+lw)gw.scrollLeft-=g.left+lw-tr.left;else if(tr.right>g.right)gw.scrollLeft+=tr.right-g.right+2;
+    if(tr.top<g.top+topGuard)gw.scrollTop-=g.top+topGuard-tr.top;else if(tr.bottom>g.bottom)gw.scrollTop+=tr.bottom-g.bottom+2;}
   function select(r,c,extend){r=Math.max(0,Math.min(S.rows-1,r));c=Math.max(0,Math.min(S.cols-1,c));
     if(extend){SEL.r2=r;SEL.c2=c;}else{A={r,c};SEL={r1:r,c1:c,r2:r,c2:c};}paint();scrollIntoCell(extend?r:A.r,extend?c:A.c);}
   function move(dr,dc,extend,jump){
@@ -23574,6 +23639,122 @@ function _sgMount(root,state,editable){
   function fillRight(){const s=norm(SEL);snap();
     if(s.c1===s.c2){if(s.c1===0)return;for(let r=s.r1;r<=s.r2;r++)copyCell(r,s.c1-1,r,s.c1);}
     else for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1+1;c<=s.c2;c++)copyCell(r,s.c1,r,c);refresh();changed();}
+
+  /* ── v04.61: the drag-to-fill handle ──────────────────────────────────
+     Applied per column when filling down, per row when filling right — see
+     the round's issue for the exact rule order (formula > date > text-with-
+     trailing-number > all-numbers > cyclic pattern repeat, which also
+     covers a single plain cell being simply copied). */
+  const TRAIL_NUM=/^(.*?)(\d+)$/;
+  function fmtSeriesNum(v){return Number.isInteger(v)?String(v):String(parseFloat(v.toFixed(10)));}
+  function seriesLineMode(raws,objs){
+    if(raws.every(x=>x&&x[0]==='='))return'formula';
+    if(objs.every(o=>o&&o.fmt==='date')&&raws.every(x=>typeof SGE.literal(x)==='number'))return'date';
+    /* A plain number ("7", "-7", "7.5") also matches the trailing-digits
+       regex with an empty prefix — exclude anything SGE.literal() already
+       reads as a whole number, so "Item 1" counts up but "7" is copied. */
+    if(raws.every(x=>TRAIL_NUM.test(String(x).trim())&&typeof SGE.literal(String(x).trim())!=='number'))return'textnum';
+    if(raws.every(x=>typeof SGE.literal(x)==='number'))return'number';
+    return'pattern';
+  }
+  function seriesRaw(mode,raws,idx){
+    const n=raws.length;
+    if(mode==='number'){
+      if(n===1)return raws[0];
+      const vals=raws.map(x=>SGE.literal(x));const step=(vals[n-1]-vals[0])/(n-1);
+      return fmtSeriesNum(vals[n-1]+step*(idx+1));
+    }
+    if(mode==='textnum'){
+      const m=raws.map(x=>TRAIL_NUM.exec(String(x).trim()));
+      const prefix=m[n-1][1];const nums=m.map(x=>parseInt(x[2],10));
+      const width=m[n-1][2].length,padded=m[n-1][2][0]==='0';
+      const step=n===1?1:(nums[n-1]-nums[0])/(n-1);
+      const v=Math.round(nums[n-1]+step*(idx+1));
+      return prefix+(padded?String(v).padStart(width,'0'):String(v));
+    }
+    if(mode==='date'){
+      const pat=/^\d{4}-\d{1,2}-\d{1,2}$/.test(String(raws[0]).trim())?'yyyy-mm-dd':'dd/mm/yyyy';
+      const vals=raws.map(x=>SGE.literal(x));const step=n===1?1:(vals[n-1]-vals[0])/(n-1);
+      return SGE.fmtPattern(Math.round(vals[n-1]+step*(idx+1)),pat);
+    }
+    return raws[idx%n];
+  }
+  function fillLine(cells,n,shift){
+    /* cells: [{r,c}] source positions in order, along the axis being filled.
+       shift(k, srcR, srcC) -> {r,c} of the k-th new cell (0-based). */
+    const raws=cells.map(p=>rawOf(p.r,p.c)),objs=cells.map(p=>cellO(p.r,p.c)||{});
+    const mode=seriesLineMode(raws,objs);const len=cells.length;
+    for(let k=0;k<n;k++){
+      const srcIdx=k%len,src=cells[srcIdx];const tgt=shift(k,src.r,src.c);
+      if(tgt.r<0||tgt.c<0||tgt.r>=S.rows||tgt.c>=S.cols)continue;
+      /* A formula always shifts relatively, whatever the line's mode: a
+         mixed source (`x`, `=B2`) repeats as a pattern, and its formula
+         must still move with it (=B4, =B6), as in Excel. */
+      const isF=String(raws[srcIdx]||'')[0]==='=';
+      const raw=(mode==='formula'||isF)?SGE.shiftF(raws[srcIdx],tgt.r-src.r,tgt.c-src.c):seriesRaw(mode,raws,k);
+      const o=Object.assign(JSON.parse(JSON.stringify(objs[srcIdx])),{raw});
+      S.cells[K(tgt.r,tgt.c)]=o;tidy(K(tgt.r,tgt.c));
+    }
+  }
+  function fillDownDrag(sel,n){
+    for(let c=sel.c1;c<=sel.c2;c++){
+      const cells=[];for(let r=sel.r1;r<=sel.r2;r++)cells.push({r,c});
+      fillLine(cells,n,(k,srcR,srcC)=>({r:sel.r2+1+k,c:srcC}));
+    }
+  }
+  function fillRightDrag(sel,n){
+    for(let r=sel.r1;r<=sel.r2;r++){
+      const cells=[];for(let c=sel.c1;c<=sel.c2;c++)cells.push({r,c});
+      fillLine(cells,n,(k,srcR,srcC)=>({r:srcR,c:sel.c2+1+k}));
+    }
+  }
+  function doFillDrag(axis,sel,n){
+    snap();
+    if(axis==='down')fillDownDrag(sel,n);else fillRightDrag(sel,n);
+    if(axis==='down')SEL={r1:sel.r1,c1:sel.c1,r2:Math.min(S.rows-1,sel.r2+n),c2:sel.c2};
+    else SEL={r1:sel.r1,c1:sel.c1,r2:sel.r2,c2:Math.min(S.cols-1,sel.c2+n)};
+    A={r:sel.r1,c:sel.c1};
+    refresh();changed();
+  }
+  function fillTargetRange(d){
+    if(d.dr>0)return{r1:d.r1,c1:d.c1,r2:Math.min(S.rows-1,d.r2+d.dr),c2:d.c2};
+    if(d.dc>0)return{r1:d.r1,c1:d.c1,r2:d.r2,c2:Math.min(S.cols-1,d.c2+d.dc)};
+    return null;
+  }
+  function showFillPreview(){
+    const t=fillTargetRange(fillDrag);if(!t){fillPrev.hidden=true;return;}
+    const td1=TD[t.r1]&&TD[t.r1][t.c1],td2=TD[t.r2]&&TD[t.r2][t.c2];if(!td1||!td2){fillPrev.hidden=true;return;}
+    fillPrev.style.left=td1.offsetLeft+'px';fillPrev.style.top=td1.offsetTop+'px';
+    fillPrev.style.width=(td2.offsetLeft+td2.offsetWidth-td1.offsetLeft)+'px';
+    fillPrev.style.height=(td2.offsetTop+td2.offsetHeight-td1.offsetTop)+'px';
+    fillPrev.hidden=false;
+  }
+  function fillAutoScrollLoop(){
+    if(!fillDrag)return;
+    const g=gw.getBoundingClientRect(),edge=28;
+    if(fillLastPt.y<g.top+edge)gw.scrollTop-=10;else if(fillLastPt.y>g.bottom-edge)gw.scrollTop+=10;
+    if(fillLastPt.x<g.left+edge)gw.scrollLeft-=10;else if(fillLastPt.x>g.right-edge)gw.scrollLeft+=10;
+    requestAnimationFrame(fillAutoScrollLoop);
+  }
+
+  /* ── v04.61: cell borders ── */
+  function applyBorders(kind){
+    const s=norm(SEL);snap();
+    if(kind==='all'){forSel((r,c)=>setProp(r,c,'bd','tblr'));}
+    else if(kind==='none'){forSel((r,c)=>setProp(r,c,'bd',undefined));}
+    else if(kind==='outside'){
+      forSel((r,c)=>{let bd='';if(r===s.r1)bd+='t';if(r===s.r2)bd+='b';if(c===s.c1)bd+='l';if(c===s.c2)bd+='r';setProp(r,c,'bd',bd||undefined);});
+    } else {
+      const ch={top:'t',bottom:'b',left:'l',right:'r'}[kind];
+      forSel((r,c)=>{
+        const onEdge=(ch==='t'&&r===s.r1)||(ch==='b'&&r===s.r2)||(ch==='l'&&c===s.c1)||(ch==='r'&&c===s.c2);
+        if(!onEdge)return;
+        const k=K(r,c);const o=S.cells[k]||(S.cells[k]={raw:''});
+        if(!o.bd||!o.bd.includes(ch))o.bd=(o.bd||'')+ch;
+      });
+    }
+    refresh();changed();
+  }
   function doCopy(cut){const s=norm(SEL);const rows=[];const text=[];
     for(let r=s.r1;r<=s.r2;r++){const row=[],t=[];for(let c=s.c1;c<=s.c2;c++){const o=cellO(r,c);row.push(o?JSON.parse(JSON.stringify(o)):null);t.push(SGE.display(val(r,c),o&&o.fmt));}rows.push(row);text.push(t.join('\t'));}
     clip={s,rows,text:text.join('\n'),cut:!!cut&&editable};
@@ -23635,9 +23816,12 @@ function _sgMount(root,state,editable){
   }
   const rcItems=()=>[['insRowA','Insert row above'],['insRowB','Insert row below'],['delRow','Delete row'],'-',['insColL','Insert column left'],['insColR','Insert column right'],['delCol','Delete column']];
   const cellItems=()=>editable?[['cut','Cut','Ctrl+X'],['copy','Copy','Ctrl+C'],['pasteH','Paste','Ctrl+V'],'-',...rcItems(),'-',['sortA','Sort A→Z'],['sortZ','Sort Z→A'],['clear','Clear contents','Del']]:[['copy','Copy','Ctrl+C']];
+  const bdItems=()=>[['bdAll','All borders'],['bdOut','Outside borders'],['bdTop','Top border'],['bdBot','Bottom border'],['bdLeft','Left border'],['bdRight','Right border'],'-',['bdNone','No borders']];
   const ACT={insRowA:()=>insRow(false),insRowB:()=>insRow(true),delRow,insColL:()=>insCol(false),insColR:()=>insCol(true),delCol,
     cut:()=>doCopy(true),copy:()=>doCopy(false),pasteH:()=>{if(clip)doPaste(null);else toast('Press Ctrl+V to paste from another app');},
-    sortA:()=>sortBy(false),sortZ:()=>sortBy(true),clear:clearSel};
+    sortA:()=>sortBy(false),sortZ:()=>sortBy(true),clear:clearSel,
+    bdAll:()=>applyBorders('all'),bdOut:()=>applyBorders('outside'),bdTop:()=>applyBorders('top'),bdBot:()=>applyBorders('bottom'),
+    bdLeft:()=>applyBorders('left'),bdRight:()=>applyBorders('right'),bdNone:()=>applyBorders('none')};
   self.act=k=>{(ACT[k]||(()=>{}))();gw.focus({preventScroll:true});};
   self.editing=()=>!!E;
   self.commit=commit;
@@ -23743,12 +23927,49 @@ function _sgMount(root,state,editable){
       switch(a){case'undo':undo();break;case'redo':redo();break;case'bold':styleSel('b');break;case'ital':styleSel('i');break;
         case'al-l':styleSel('al','l');break;case'al-c':styleSel('al','c');break;case'al-r':styleSel('al','r');break;
         case'sortA':sortBy(false);break;case'sortZ':sortBy(true);break;case'fill':fillDown();break;case'del':removeSheet(b);break;
+        case'frz':snap();S.frz=S.frz?0:1;grid.classList.toggle('sg-frz',!!S.frz);refresh();changed();break;
         case'fn':{const p=_sgFnEl();p._draw();p.querySelector('.sg-fnq').value='';p._draw();p.hidden=false;const rr=root.getBoundingClientRect();
           p.style.left=Math.max(8,Math.min(rr.right-p.offsetWidth,innerWidth-p.offsetWidth-8))+'px';
           p.style.top=Math.max(8,Math.min(rr.top+70,innerHeight-p.offsetHeight-8))+'px';p.querySelector('.sg-fnq').focus({preventScroll:true});break;}
-        case'rc':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,rcItems());break;}}
+        case'rc':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,rcItems());break;}
+        case'bd':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,bdItems());break;}}
     });
     q('.sg-fmt').addEventListener('change',e=>{if(E)commit();snap();const v=e.target.value||undefined;forSel((r,c)=>setProp(r,c,'fmt',v));refresh();changed();gw.focus({preventScroll:true});});
+    gw.addEventListener('scroll',()=>{if(!fillDrag)updateFillHandle();},{passive:true});
+    fillEl.addEventListener('pointerdown',e=>{
+      if(e.pointerType==='mouse'&&e.button!==0)return;
+      e.preventDefault();e.stopPropagation();
+      const s=norm(SEL);
+      fillDrag={r1:s.r1,c1:s.c1,r2:s.r2,c2:s.c2,dr:0,dc:0};
+      fillLastPt={x:e.clientX,y:e.clientY};
+      try{fillEl.setPointerCapture(e.pointerId);}catch(x){}
+      showFillPreview();
+      requestAnimationFrame(fillAutoScrollLoop);
+    });
+    fillEl.addEventListener('pointermove',e=>{
+      if(!fillDrag)return;
+      fillLastPt={x:e.clientX,y:e.clientY};
+      const el=document.elementFromPoint(e.clientX,e.clientY);
+      const td=el&&el.closest&&el.closest('td');
+      if(td&&grid.contains(td)){
+        const r=+td.dataset.r,c=+td.dataset.c;
+        const down=r-fillDrag.r2,right=c-fillDrag.c2;
+        if(down>0&&Math.abs(down)>=Math.abs(right)){fillDrag.dr=down;fillDrag.dc=0;}
+        else if(right>0){fillDrag.dc=right;fillDrag.dr=0;}
+        else{fillDrag.dr=0;fillDrag.dc=0;}
+        showFillPreview();
+      }
+    });
+    const fillEnd=()=>{
+      if(!fillDrag)return;
+      const d=fillDrag;fillDrag=null;fillPrev.hidden=true;
+      const sel={r1:d.r1,c1:d.c1,r2:d.r2,c2:d.c2};
+      if(d.dr>0)doFillDrag('down',sel,d.dr);
+      else if(d.dc>0)doFillDrag('right',sel,d.dc);
+      else paint();
+    };
+    fillEl.addEventListener('pointerup',fillEnd);
+    fillEl.addEventListener('pointercancel',fillEnd);
   }
   renderGrid();
   return self;

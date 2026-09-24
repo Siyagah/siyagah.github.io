@@ -5753,3 +5753,180 @@ decision.
 - `ship-check`: **12/12**; check 6 fails on v04.59's `index.html`.
 - Full `app-check`: **506/506 app checks, twice in a row**.
 
+---
+
+## v04.61 — spreadsheet round 2a: drag-to-fill handle, frozen top row, cell borders (24 Sep 2026)
+
+Issue #88, round 2a of the spreadsheet backlog the owner approved on 23 Sep
+2026 (round 1 shipped as v04.52; round 2b — merged cells, colour rules,
+filters — and round 2c come later). Everything lives in `_sgMount()` and its
+neighbours (`index.html`, from about line 23274).
+
+**Drag-to-fill handle.** A small green square sits at the bottom-right
+corner of the current selection, in edit mode only — hidden while a cell is
+being typed in and while a whole row/column is selected from the headers.
+Dragging it down or right (up/left do nothing this round) shows a dashed
+preview along whichever axis moved further, and releasing fills that range,
+one `snap()` for the whole drag so one Ctrl+Z undoes it all. What fills is
+decided **per column when filling down, per row when filling right**, most
+specific rule first: a formula shifts relatively (`SGE.shiftF`, exactly as
+Fill down already does); a `fmt:'date'` line steps by the date's own gap (or
+one day for a single cell), writing back in the source's own raw form
+(`dd/mm/yyyy` or `yyyy-mm-dd`); text ending in a whole number
+(`Item 1`, `Week 09`) counts up, keeping zero-padding; two or more plain
+numbers extend a linear series; anything else (including a single plain
+number or plain text cell) copies, which for a multi-cell source means the
+whole block's pattern repeats (`a, b` → `a, b, a, b`). Formatting (`b`, `i`,
+`al`, `fmt`, `bg`, `bd`) rides along with its source cell. It only fills
+within the table's existing rows/columns — no auto-growing — and
+auto-scrolls `.sg-gw` near its edges while dragging.
+
+Input is pointer events (`pointerdown`/`pointermove`/`pointerup`) on a
+dedicated handle element, not the existing `mousedown` selection path, with
+`touch-action:none` and `setPointerCapture` so a drag that leaves the grid
+still ends cleanly. The touch hit box (invisible padding around the visible
+square) is sized per tier in JS — 32×32px on phone and tablet (both
+touch-first breakpoints), 12×12px minimum on a mouse-first laptop, where the
+visible square itself is smaller (~12px / ~7px) — and is anchored at the
+selection's own corner point so it does not cover the active cell's body; a
+tap on an already-selected cell still starts editing.
+
+**A real bug found while building this, not shipping it**: the first cut of
+the "text ending in a whole number" rule matched a *plain* number too — the
+regex `/^(.*?)(\d+)$/` matches `"7"` with an empty prefix — so a single cell
+holding `7` (which the spec says must be **copied**) was instead incrementing
+by 1 every row. Excluding anything `SGE.literal()` already reads as a number
+fixed it. Caught by a manual smoke test before any check was written; see
+*Standing lessons* in `CLAUDE.md` — this is the same shape as the trap that
+guidance describes elsewhere: two rules whose match sets weren't actually
+disjoint.
+
+**Freeze top row.** A new toolbar button, `❄ Freeze top row`, glyph plus
+word (`CLAUDE.md`: a bare glyph is not a label; `❄` was not already used for
+anything else). Stored as `frz: 1` on the sheet state (`0`/absent means not
+frozen) — a **number**, not a boolean, so more rows can be frozen later with
+no migration. While on, row 1 sticks just under the header row
+(`position:sticky;top:27px`, the same `hh` constant `scrollIntoCell()`
+already used) with a heavier rule under it, in both edit and read view (the
+grid markup and CSS are shared between them, so no special-casing was
+needed) — the static snapshot does not need to show it, and doesn't.
+Stacking order: row 1's own row-number cell and the corner already sit at
+z-index 4 and 2 respectively; row 1's cells get z-index 1 so they paint over
+rows scrolling up underneath, and its row header keeps the corner's z-index
+4. `scrollIntoCell()`'s hard-coded header-height guard (`hh=27`) now doubles
+when frozen and the target row isn't row 1 itself, so arrowing up into row 2
+no longer leaves it hidden under the frozen row. Toggling is undoable
+(`snap()` before flipping); inserting or deleting rows never touches `frz`.
+
+**Cell borders.** A new toolbar button, `Borders ▾`, opening the existing
+`openMenu()` with seven worded items (All/Outside/Top/Bottom/Left/Right/No
+borders). Stored per cell as `bd`, a string of the letters `t`/`b`/`l`/`r`
+(`"tb"`, corners get two letters under *Outside borders*). Drawn with real
+CSS border properties on specific sides (`.sg-bt`/`.sg-bb`/`.sg-bl`/`.sg-br`,
+`var(--t1)`), **never `box-shadow`** — `.sg-act`'s ring and the `.sg-rf0`–`4`
+formula-reference highlights are already inset box-shadows on the same
+cells, and a border painted the same way would fight them for the layer.
+Both keep showing correctly on a bordered cell, because they're different
+CSS properties now. `_sgStaticHTML()` (the snapshot Save File, search, Pane
+2 and an older build all read) writes `bd` as inline `border-*` styles.
+Borders move with their cells through sort, copy/paste, cut, fill (both the
+existing button and the new handle) and row/column insert/delete for free —
+`bd` is just another key on the cell object, and every one of those paths
+already clones or rekeys the whole object rather than naming properties.
+Measured, not assumed: `rekey()`, `copyCell()`, `doCopy()`/`doPaste()` and
+`sortBy()` all already clone the full cell object; nothing there named
+`raw`/`b`/`i`/`al`/`fmt`/`bg` explicitly.
+
+**Forward compatibility: `tidy()` stopped throwing keys away.** `tidy()`
+used to delete a cell unless it had one of six named properties — the same
+allow-list shape `CLAUDE.md` already has a standing lesson about
+(`mergeDB()`'s `DB.theme` key). A cell holding only the new `bd` would have
+been silently deleted on the next edit, and so would every property 2b/2c
+add later. `tidy()` and `_sgStaticHTML()`'s used-range scan (`if(o&&(o.raw||
+o.bg))`, which had the same fault — a bordered empty cell at the edge of the
+sheet fell outside the snapshot) now both call one new function,
+`_sgCellHasContent(o)`, that asks "does this cell have ANY truthy property",
+naming none of them. Swept the rest of `_sgMount` for the same shape:
+`refresh()`'s class list (`sg-bo`/`sg-it`) and `_sgStaticHTML()`'s inline
+style list already had to name `b`/`i`/`al`/`fmt`/`bg` one at a time because
+each maps to a *different* CSS treatment — that part can't be generalised
+away, and `bd`'s four class/style lines were added alongside them, not
+instead of a shared list. `setProp()`/`copyCell()`/`rekey()`/`doCopy()`/
+`doPaste()`/`sortBy()` were already generic (they read/write a whole cell
+object, not named fields) and needed no change.
+
+**Layouts (D5).** The sheet's own toolbar (`.sg-tb`) scrolled sideways
+(`overflow-x:auto`) at every size. That is right for the phone, and the phone
+keeps it. It was wrong from 640px up: measured at 1440, it was 1221px of
+controls in a 604px strip, so `❄ Freeze top row`, `Borders ▾`, `Fill down`,
+`ƒx Functions` and `Remove` sat past a thin scrollbar that a Mac trackpad does
+not even draw. **From 640px up the toolbar now wraps** (added in the
+Architect's review, below). The fill handle's hit-box sizing (above) also
+differs by size. The `Borders ▾` menu reuses `openMenu()`, which already
+clamps itself inside the viewport. **Both pop-ups**: `_sgMount()` is the same
+code regardless of host (`#ed` in Single, `.fw-ed-<id>` in Multi), so all
+three features work in Multi with no integration work. That is proved in
+app-check `25f`, not assumed.
+
+**Not done, and why:**
+- **Dragging the fill handle up or left does nothing** — the issue scoped
+  this round to down/right only, matching Excel's own primary direction.
+- A device still on v04.52–v04.60 that edits a sheet with a border-only cell
+  will drop that cell's border on save, because its `tidy()` is still the
+  six-name allow-list. The service worker update (I3) is what closes this
+  for that device; nothing was built for it here, per the issue.
+- Round 2b (merged cells, colour rules, filters) and 2c (several sheets,
+  CSV, more functions) are out of scope for this round.
+
+**Also:** added the "write the owner's actual words down" bullet to
+`ARCHITECT.md`'s *How the owner gives work*, as asked.
+
+**Checks: new section 25, `25a`–`25g`.** Every check drives the real
+handle/button/menu with `page.mouse` or a real touch sequence through CDP
+`Input.dispatchTouchEvent` in a `hasTouch` context (`tools/harness.mjs`
+gained `openApp({hasTouch:true})` and a `touchDrag()` helper for this) —
+never the fill/border functions directly and never a synthesized event, per
+the `⚙ Backup & Restore` lesson in `CLAUDE.md`.
+
+**Architect review, and what it changed.** The first build measured
+**599/599**. Unpatched, v04.60's app with this round's `tools/` scored
+**515/529, 14 FAILED**, all in section 25. The review found four faults.
+The builder's fix run made all four fixes but ended without pushing, the
+same stop `ARCHITECT.md` describes, so the Architect finished the round on
+its own branch:
+- **Wrong values from a mixed fill.** `fillLine()` shifted formulas only when
+  the whole source line was formulas. So `x`, `=A2` repeated as `x, =A2, x,
+  =A2` instead of `x, =A4, x, =A6`. Any source cell starting with `=` now
+  shifts, whatever the line's mode. New check in `25a`, at both sizes.
+- **`25e` could not fail.** It edited a *different* cell and saved, and passed
+  on v04.60, because the old `tidy(k)` only ever touched the key being
+  written. It was rewritten in place to drive the two losses the allow-list
+  really caused:
+  - a real **Delete** on a cell holding content and a border (or an unknown
+    key) tidied the whole cell away;
+  - a bordered empty cell beyond the last value fell outside the saved
+    snapshot.
+
+  All four of its new assertions fail on v04.60.
+- **The toolbar hid the new buttons at tablet and laptop sizes**, as described
+  under *Layouts* above. New `25h`: at 820, at 1440 and in a Multi window at
+  1440, every control lies inside the toolbar and it does not scroll; at 390,
+  the sideways scroll is kept.
+- **The fill handle painted over the sticky header.** At `z-index:7` it
+  drew over the column-letter row, the row numbers and the frozen row when the
+  selection scrolled under them. It now hides while its centre is behind
+  them, re-checked on every scroll of the grid. New `25i`, scrolled with a
+  real mouse wheel, with and without a frozen row.
+
+Every new or rewritten assertion was run against the code it guards:
+- the `25a` mixed case (×2), `25h` at 820/1440/Multi and `25i` (×2), **7**
+  in all, fail on the unfixed #89 build;
+- the four new `25e` assertions fail on v04.60;
+- `25h`'s phone check passes on both. It is a guard that the phone's
+  sideways scroll survives, not a fix.
+
+**Measured**
+- `ship-check`: **12/12**.
+- `app-check --only 25`: **106/106**.
+- Full `app-check`: **612/612, twice in a row**.
+

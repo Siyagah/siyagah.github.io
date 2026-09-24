@@ -8,7 +8,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { ROOT, openApp, report, VIEWPORTS, seedDB } from './harness.mjs';
+import { ROOT, openApp, report, VIEWPORTS, seedDB, touchDrag } from './harness.mjs';
 
 const r = report('app-check — boot, handlers, panes, views, editor, data round-trip');
 
@@ -6875,6 +6875,633 @@ await r.block(`24a-toc-text-${mode}`, async () => {
     `${mode === 'panel' ? 'Single' : 'Multi'}: Contents lists the headings' own words, with no ⠿/▼ chrome`, JSON.stringify(items));
 });
 }
+
+/* ── 25. v04.61 — spreadsheet round 2a: fill handle, frozen top row, cell
+   borders. Every check drives the real handle/button/menu — page.mouse for
+   a mouse drag, a real touch sequence through CDP Input.dispatchTouchEvent
+   (harness.mjs's touchDrag(), needs openApp({hasTouch:true})) for a touch
+   one — never the fill/border functions directly and never a synthesized
+   event (the ⚙ Backup & Restore lesson in CLAUDE.md: that proves the
+   function works, not that the owner can reach it). Reuses sgInsertViaMenu/
+   sgCell/sgEditA1/sgStored from section 17 above. */
+function sgCenter(box) { return { x: box.x + box.width / 2, y: box.y + box.height / 2 }; }
+async function sgType(page, root, r, c, text) {
+  await page.click(sgCell(root, r, c));
+  await page.keyboard.type(text);
+  await page.keyboard.press('Enter');
+}
+async function sgSelectRange(page, root, r1, c1, r2, c2) {
+  const b1 = sgCenter(await (await page.$(sgCell(root, r1, c1))).boundingBox());
+  const b2 = sgCenter(await (await page.$(sgCell(root, r2, c2))).boundingBox());
+  await page.mouse.move(b1.x, b1.y);
+  await page.mouse.down();
+  await page.mouse.move(b2.x, b2.y, { steps: 5 });
+  await page.mouse.up();
+}
+/* sgCell(root,...) already appends ` .sgx` itself (see section 17 above) —
+   these helpers that query the .sgx element directly (the fill handle, the
+   toolbar buttons, ._sg) take that full `${root} .sgx` selector instead,
+   built once per block as `sgx`. */
+async function sgFillHandleBox(page, sgx) {
+  return page.evaluate((sel) => {
+    const el = document.querySelector(sel + ' .sg-fill'); if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.x, y: r.y, w: r.width, h: r.height, hidden: el.hidden };
+  }, sgx);
+}
+async function sgDragFillMouse(page, root, sgx, targetR, targetC) {
+  const fh = await sgFillHandleBox(page, sgx);
+  const start = { x: fh.x + fh.w / 2, y: fh.y + fh.h / 2 };
+  const end = sgCenter(await (await page.$(sgCell(root, targetR, targetC))).boundingBox());
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move((start.x + end.x) / 2, (start.y + end.y) / 2, { steps: 4 });
+  await page.mouse.move(end.x, end.y, { steps: 4 });
+  await page.mouse.up();
+}
+async function sgCellText(page, root, r, c) { return page.textContent(sgCell(root, r, c)); }
+async function sgOpenBordersMenu(page, sgx) {
+  await page.click(`${sgx} button[data-a="bd"]`);
+  await page.waitForTimeout(150);
+}
+
+const FILL_SIZES = [{ name: '1440', width: 1440, height: 900 }, { name: '820', width: 820, height: 1180 }];
+for (const vp of FILL_SIZES) {
+await r.block(`25a-fill-mouse-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 0, 0, '1'); await sgType(page, root, 1, 0, '2');
+  await sgType(page, root, 0, 1, 'Item 1');
+  await sgType(page, root, 0, 2, '=A1*2');
+  await sgType(page, root, 0, 3, '7');
+  await sgType(page, root, 6, 0, '10'); await sgType(page, root, 6, 1, '20');
+
+  await sgSelectRange(page, root, 0, 0, 1, 0);
+  await sgDragFillMouse(page, root, sgx, 5, 0);
+  const colA = []; for (let r2 = 0; r2 <= 5; r2++) colA.push(await sgCellText(page, root, r2, 0));
+  r.check(JSON.stringify(colA) === JSON.stringify(['1', '2', '3', '4', '5', '6']),
+    `${vp.name}: dragging the fill handle down continues a numeric series (1,2 → 3,4,5,6)`, colA.join(','));
+
+  await page.click(sgCell(root, 0, 1));
+  await sgDragFillMouse(page, root, sgx, 4, 1);
+  const colB = []; for (let r2 = 0; r2 <= 4; r2++) colB.push(await sgCellText(page, root, r2, 1));
+  r.check(JSON.stringify(colB) === JSON.stringify(['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5']),
+    `${vp.name}: a trailing number in text counts up, keeping the prefix (Item 1 → Item 2…Item 5)`, colB.join(','));
+
+  await page.click(sgCell(root, 0, 2));
+  await sgDragFillMouse(page, root, sgx, 4, 2);
+  const colC = []; for (let r2 = 0; r2 <= 4; r2++) colC.push(await sgCellText(page, root, r2, 2));
+  const rawsC = await page.evaluate((sel) => {
+    const st = document.querySelector(sel)._sg.state();
+    const out = []; for (let r2 = 0; r2 <= 4; r2++) out.push(st.cells[r2 + ',2'] ? st.cells[r2 + ',2'].raw : null);
+    return out;
+  }, sgx);
+  r.check(JSON.stringify(colC) === JSON.stringify(['2', '4', '6', '8', '10']) && rawsC[4] === '=A5*2',
+    `${vp.name}: a formula fills shifted relatively, with correct values (=A1*2 → =A2*2…=A5*2, values 2,4,6,8,10)`,
+    colC.join(',') + ' · ' + JSON.stringify(rawsC));
+
+  await page.click(sgCell(root, 0, 3));
+  await sgDragFillMouse(page, root, sgx, 4, 3);
+  const colD = []; for (let r2 = 0; r2 <= 4; r2++) colD.push(await sgCellText(page, root, r2, 3));
+  r.check(JSON.stringify(colD) === JSON.stringify(['7', '7', '7', '7', '7']),
+    `${vp.name}: a single plain number is copied, not incremented (7 → 7,7,7,7,7)`, colD.join(','));
+
+  /* Added in Architect review (v04.61): a MIXED source — text then a
+     formula — repeats as a pattern, and its formula must still shift. The
+     first cut copied `=A2` verbatim into every repeat. */
+  await sgType(page, root, 0, 4, 'x'); await sgType(page, root, 1, 4, '=A2');
+  await sgSelectRange(page, root, 0, 4, 1, 4);
+  await sgDragFillMouse(page, root, sgx, 5, 4);
+  const colE = []; for (let r2 = 0; r2 <= 5; r2++) colE.push(await sgCellText(page, root, r2, 4));
+  const rawsE = await page.evaluate((sel) => {
+    const st = document.querySelector(sel)._sg.state();
+    const out = []; for (let r2 = 0; r2 <= 5; r2++) out.push(st.cells[r2 + ',4'] ? st.cells[r2 + ',4'].raw : null);
+    return out;
+  }, sgx);
+  r.check(JSON.stringify(rawsE) === JSON.stringify(['x', '=A2', 'x', '=A4', 'x', '=A6'])
+    && JSON.stringify(colE) === JSON.stringify(['x', '2', 'x', '4', 'x', '6']),
+    `${vp.name}: a formula inside a mixed source still shifts as the pattern repeats (x,=A2 → x,=A4,x,=A6; values 2,4,6)`,
+    JSON.stringify(rawsE) + ' · ' + colE.join(','));
+
+  await sgSelectRange(page, root, 6, 0, 6, 1);
+  await sgDragFillMouse(page, root, sgx, 6, 2);
+  const rightVal = await sgCellText(page, root, 6, 2);
+  r.check(rightVal === '30', `${vp.name}: dragging the fill handle right also continues a numeric series (10,20 → 30)`, rightVal);
+
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(100);
+  const afterUndo = await sgCellText(page, root, 6, 2);
+  r.check(afterUndo === '', `${vp.name}: one Ctrl+Z restores the whole fill (the right-fill's 30 is gone after one undo)`, JSON.stringify(afterUndo));
+
+  await page.evaluate(() => { _flushEd(); persist(); });
+  const stored = await sgStored(page);
+  r.check(/>6</.test(stored) && /Item 5/.test(stored) && />10</.test(stored),
+    `${vp.name}: after saving, .sg-static in a.content carries the filled values`, stored.length);
+
+  await page.waitForTimeout(400);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__appBooted === true);
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(400);
+  const reloadedA5 = await page.textContent(sgCell('#p3c', 5, 0));
+  const reloadedD4 = await page.textContent(sgCell('#p3c', 4, 3));
+  r.check(reloadedA5 === '6' && reloadedD4 === '7', `${vp.name}: after a reload the filled values are still there`, `${reloadedA5} ${reloadedD4}`);
+
+  r.check(s.errors.length === 0, `${vp.name}: no page errors during any of the fill operations`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+const TOUCH_SIZES = [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }];
+for (const vp of TOUCH_SIZES) {
+await r.block(`25b-fill-touch-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB(), hasTouch: true });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 0, 0, '9');
+  await page.click(sgCell(root, 0, 0)); // reselect A1 (Enter after typing moved the active cell down)
+
+  const fh = await sgFillHandleBox(page, sgx);
+  r.check(!!fh && fh.w >= 32 && fh.h >= 32, `${vp.name}: the fill handle's touch hit box is at least 32×32px`, JSON.stringify(fh));
+
+  const start = { x: fh.x + fh.w / 2, y: fh.y + fh.h / 2 };
+  const endBox = await (await page.$(sgCell(root, 4, 0))).boundingBox();
+  const end = sgCenter(endBox);
+  await touchDrag(page, [start, { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }, end]);
+  await page.waitForTimeout(200);
+  const col = []; for (let r2 = 0; r2 <= 4; r2++) col.push(await sgCellText(page, root, r2, 0));
+  r.check(JSON.stringify(col) === JSON.stringify(['9', '9', '9', '9', '9']),
+    `${vp.name}: a real touch drag on the handle fills down`, col.join(','));
+
+  /* A real touch tap on an already-selected, already-active cell still
+     starts editing (existing behaviour, gated on lastPtr==='touch') — the
+     handle's hit box must not have swallowed it. Two taps: the first makes
+     the cell the sole active selection via touch (arming lastPtr), the
+     second is the one that must start editing. */
+  const cellBox = sgCenter(await (await page.$(sgCell(root, 2, 1))).boundingBox());
+  await touchDrag(page, [cellBox]);
+  await page.waitForTimeout(80);
+  await touchDrag(page, [cellBox]);
+  await page.waitForTimeout(80);
+  const editing = await page.evaluate((sel) => document.querySelector(sel)._sg.editing(), sgx);
+  r.check(editing === true, `${vp.name}: a touch tap on the already-selected active cell still starts editing`, editing);
+
+  r.check(s.errors.length === 0, `${vp.name}: no page errors during the touch fill`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+const FREEZE_SIZES = [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }, { name: '1440', width: 1440, height: 900 }];
+for (const vp of FREEZE_SIZES) {
+await r.block(`25c-freeze-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 0, 0, 'R1');
+  await sgType(page, root, 4, 0, 'R5');
+  /* grow the sheet well past what fits in .sg-gw's ~460px max-height, so
+     the round-200px scroll below is a real scroll, not a no-op on a sheet
+     short enough to show every row already. */
+  await page.click(sgCell(root, 11, 0));
+  for (let i = 0; i < 30; i++) await page.keyboard.press('ArrowDown');
+
+  const frzBtn = await page.$(`${sgx} button[data-a="frz"]`);
+  await frzBtn.scrollIntoViewIfNeeded();
+  await frzBtn.click();
+  await page.waitForTimeout(150);
+  const frzOn = await page.evaluate((sel) => document.querySelector(sel)._sg.state().frz, sgx);
+  r.check(frzOn === 1, `${vp.name}: clicking the real ❄ Freeze top row button sets frz:1`, frzOn);
+
+  const gwBox = await (await page.$(`${sgx} .sg-gw`)).boundingBox();
+  await page.mouse.move(gwBox.x + gwBox.width / 2, gwBox.y + gwBox.height / 2);
+  await page.mouse.wheel(0, 200);
+  await page.waitForTimeout(150);
+  const row1Check = await page.evaluate((sel) => {
+    const gw = document.querySelector(sel + ' .sg-gw');
+    const td = document.querySelector(sel + ' td[data-r="0"][data-c="0"]');
+    const r = td.getBoundingClientRect(), g = gw.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const hit = document.elementFromPoint(cx, cy);
+    return { top: r.top, gwTop: g.top, scrollTop: gw.scrollTop, hitIsRow1: hit === td || td.contains(hit), topWithinPane: r.top >= g.top - 1 };
+  }, sgx);
+  r.check(row1Check.scrollTop > 0 && row1Check.hitIsRow1 && row1Check.topWithinPane,
+    `${vp.name}: after scrolling 200px, row 1 stays fully visible under the header and isn't covered by anything else`,
+    JSON.stringify(row1Check));
+
+  await page.evaluate(() => { _flushEd(); persist(); });
+  await page.waitForTimeout(300);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__appBooted === true);
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(400);
+  const readFrz = await page.evaluate(() => {
+    const el = document.querySelector('#p3c .sgx'); if (!el || !el._sg) return null;
+    return { frz: el._sg.state().frz, cls: document.querySelector('#p3c .sgx .sg-g').className };
+  });
+  r.check(readFrz && readFrz.frz === 1 && /\bsg-frz\b/.test(readFrz.cls),
+    `${vp.name}: after saving, reloading and opening in the read view, the sheet is still frozen`, JSON.stringify(readFrz));
+
+  await page.evaluate(() => startEdit());
+  await page.waitForTimeout(400);
+  await page.click(sgCell(root, 5, 0));
+  for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowUp');
+  await page.waitForTimeout(100);
+  const row2Check = await page.evaluate((sel) => {
+    const gw = document.querySelector(sel + ' .sg-gw');
+    const td = document.querySelector(sel + ' td[data-r="1"][data-c="0"]');
+    const r = td.getBoundingClientRect(), g = gw.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const hit = document.elementFromPoint(cx, cy);
+    return { hitIsRow2: hit === td || td.contains(hit), top: r.top, gwTop: g.top };
+  }, sgx);
+  r.check(row2Check.hitIsRow2 && row2Check.top >= row2Check.gwTop - 1,
+    `${vp.name}: arrowing up from row 6 to row 2 leaves row 2 fully visible, not hidden under the frozen row 1`,
+    JSON.stringify(row2Check));
+
+  const frzBtn2 = await page.$(`${sgx} button[data-a="frz"]`);
+  await frzBtn2.scrollIntoViewIfNeeded();
+  await frzBtn2.click();
+  await page.waitForTimeout(150);
+  await page.mouse.move(gwBox.x + gwBox.width / 2, gwBox.y + gwBox.height / 2);
+  await page.mouse.wheel(0, 200);
+  await page.waitForTimeout(150);
+  const afterOff = await page.evaluate((sel) => {
+    const gw = document.querySelector(sel + ' .sg-gw');
+    const td = document.querySelector(sel + ' td[data-r="0"][data-c="0"]');
+    const r = td.getBoundingClientRect(), g = gw.getBoundingClientRect();
+    return { frz: document.querySelector(sel)._sg.state().frz, top: r.top, gwTop: g.top };
+  }, sgx);
+  r.check(!afterOff.frz && afterOff.top < afterOff.gwTop - 1,
+    `${vp.name}: toggling freeze off lets row 1 scroll away again`, JSON.stringify(afterOff));
+
+  r.check(s.errors.length === 0, `${vp.name}: no page errors while testing freeze`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+const BORDER_SIZES = [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }, { name: '1440', width: 1440, height: 900 }];
+for (const vp of BORDER_SIZES) {
+await r.block(`25d-borders-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+
+  await sgSelectRange(page, root, 1, 1, 2, 2); // B2:C3
+  await sgOpenBordersMenu(page, sgx);
+  await page.click('#sg-menu button[data-m="bdAll"]');
+  await page.waitForTimeout(150);
+  const allSides = await page.evaluate((sel) => {
+    const out = [];
+    for (const [r2, c2] of [[1, 1], [1, 2], [2, 1], [2, 2]]) {
+      const td = document.querySelector(`${sel} td[data-r="${r2}"][data-c="${c2}"]`);
+      const cs = getComputedStyle(td);
+      out.push([cs.borderTopWidth, cs.borderBottomWidth, cs.borderLeftWidth, cs.borderRightWidth]);
+    }
+    return out;
+  }, sgx);
+  r.check(allSides.every((w) => w.every((x) => parseFloat(x) > 0)),
+    `${vp.name}: All borders on B2:C3 gives all four cells non-zero computed borders on all four sides`, JSON.stringify(allSides));
+
+  await sgSelectRange(page, root, 1, 1, 2, 2);
+  await sgOpenBordersMenu(page, sgx);
+  await page.click('#sg-menu button[data-m="bdOut"]');
+  await page.waitForTimeout(150);
+  const outLetters = await page.evaluate((sel) => {
+    const st = document.querySelector(sel)._sg.state();
+    return { tl: st.cells['1,1']?.bd, tr: st.cells['1,2']?.bd, bl: st.cells['2,1']?.bd, br: st.cells['2,2']?.bd };
+  }, sgx);
+  r.check(outLetters.tl === 'tl' && outLetters.tr === 'tr' && outLetters.bl === 'bl' && outLetters.br === 'br',
+    `${vp.name}: Outside borders gives each corner cell the right two letters`, JSON.stringify(outLetters));
+
+  await page.click(sgCell(root, 1, 1));
+  const ring = await page.evaluate((sel) => getComputedStyle(document.querySelector(`${sel} td[data-r="1"][data-c="1"]`)).boxShadow, sgx);
+  r.check(/inset/.test(ring) && ring !== 'none', `${vp.name}: the active-cell ring still paints on a bordered cell`, ring);
+
+  await page.evaluate(() => { _flushEd(); persist(); });
+  const stored = await sgStored(page);
+  r.check(/border-top|border-bottom|border-left|border-right/.test(stored),
+    `${vp.name}: the saved .sg-static <td>s carry border styles`, /border-/.test(stored));
+
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(100);
+  const afterUndo = await page.evaluate((sel) => {
+    const st = document.querySelector(sel)._sg.state();
+    return { tl: st.cells['1,1']?.bd, tr: st.cells['1,2']?.bd };
+  }, sgx);
+  r.check(afterUndo.tl === 'tblr' && afterUndo.tr === 'tblr',
+    `${vp.name}: one Ctrl+Z undoes one menu choice (back to All borders' tblr)`, JSON.stringify(afterUndo));
+
+  /* survives a sort: border a single cell that also carries the value being
+     sorted, so the check can find it again wherever it lands. */
+  await sgType(page, root, 0, 0, '3'); await sgType(page, root, 1, 0, '1'); await sgType(page, root, 2, 0, '2');
+  await page.click(sgCell(root, 2, 0)); // the cell holding "2"
+  await sgOpenBordersMenu(page, sgx);
+  await page.click('#sg-menu button[data-m="bdAll"]');
+  await page.waitForTimeout(100);
+  await page.click(sgCell(root, 2, 0));
+  const sortBtn = await page.$(`${sgx} button[data-a="sortA"]`);
+  await sortBtn.scrollIntoViewIfNeeded();
+  await sortBtn.click();
+  await page.waitForTimeout(150);
+  const afterSort = await page.evaluate((sel) => {
+    const st = document.querySelector(sel)._sg.state();
+    const vals = [0, 1, 2].map((r2) => st.cells[r2 + ',0']?.raw);
+    const bdRow = vals.indexOf('2');
+    return { vals, bd: st.cells[bdRow + ',0']?.bd };
+  }, sgx);
+  r.check(afterSort.vals[0] === '1' && afterSort.bd === 'tblr',
+    `${vp.name}: the border survives a sort, still on the cell holding "2" wherever it landed`, JSON.stringify(afterSort));
+
+  /* survives insert-row-above: the bordered "2" cell shifts down by one. */
+  const rowWithTwo = await page.evaluate((sel) => {
+    const st = document.querySelector(sel)._sg.state();
+    for (let r2 = 0; r2 <= 2; r2++) if (st.cells[r2 + ',0']?.raw === '2') return r2;
+    return -1;
+  }, sgx);
+  await page.click(sgCell(root, rowWithTwo, 0));
+  const rcBtn = await page.$(`${sgx} button[data-a="rc"]`);
+  await rcBtn.scrollIntoViewIfNeeded();
+  await rcBtn.click();
+  await page.waitForTimeout(100);
+  await page.click('#sg-menu button[data-m="insRowA"]');
+  await page.waitForTimeout(150);
+  const afterIns = await page.evaluate(({ sel, expectRow }) => {
+    const st = document.querySelector(sel)._sg.state();
+    return { raw: st.cells[expectRow + ',0']?.raw, bd: st.cells[expectRow + ',0']?.bd };
+  }, { sel: sgx, expectRow: rowWithTwo + 1 });
+  r.check(afterIns.raw === '2' && afterIns.bd === 'tblr',
+    `${vp.name}: the border survives inserting a row above it (shifts down with its cell)`, JSON.stringify(afterIns));
+
+  /* survives copy/paste */
+  await page.click(sgCell(root, rowWithTwo + 1, 0));
+  await page.keyboard.press('Control+c');
+  await page.click(sgCell(root, 8, 3));
+  await page.keyboard.press('Control+v');
+  await page.waitForTimeout(150);
+  const afterPaste = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cells['8,3']?.bd, sgx);
+  r.check(afterPaste === 'tblr', `${vp.name}: the border survives a copy/paste`, afterPaste);
+
+  const bdBtn2 = await page.$(`${sgx} button[data-a="bd"]`);
+  await bdBtn2.scrollIntoViewIfNeeded();
+  await bdBtn2.click();
+  await page.waitForTimeout(150);
+  const menuRect = await page.evaluate(() => {
+    const m = document.getElementById('sg-menu');
+    const r2 = m.getBoundingClientRect();
+    return { left: r2.left, top: r2.top, right: r2.right, bottom: r2.bottom, vw: innerWidth, vh: innerHeight };
+  });
+  r.check(menuRect.left >= 0 && menuRect.top >= 0 && menuRect.right <= menuRect.vw && menuRect.bottom <= menuRect.vh,
+    `${vp.name}: the Borders menu's bounding box lies fully inside the viewport`, JSON.stringify(menuRect));
+
+  r.check(s.errors.length === 0, `${vp.name}: no page errors while testing borders`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+/* Rewritten in Architect review (v04.61). The first version edited a
+   DIFFERENT cell and saved, which passed on v04.60 too: the old tidy(k) only
+   ever runs on the key being written, so a border-only cell elsewhere was
+   never at risk. The two real losses the allow-list tidy() caused, and that
+   this round's _sgCellHasContent() fixes, are driven here instead:
+   (a) a real Delete on a cell holding content AND a border (or an unknown
+       key) tidied the whole cell away, border included;
+   (b) a bordered EMPTY cell beyond the last value fell outside the saved
+       .sg-static snapshot, because the used-range scan only counted raw/bg. */
+await r.block('25e-nothing-dropped', async () => {
+  const db = seedDB();
+  const sgEsc = (x) => x.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const data = { v: 1, rows: 8, cols: 8, colW: {}, cells: {
+    '0,0': { raw: 'keep', bd: 'tblr' }, '1,0': { raw: 'gone', zz: 1 }, '0,1': { raw: 'v' }, '3,4': { bd: 'b' } } };
+  db.articles[0].content = '<p>Before</p><div class="sgx" contenteditable="false" data-sg="' + sgEsc(JSON.stringify(data)) + '"></div><p>After</p>';
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+  const { page } = s;
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => startEdit());
+  await page.waitForTimeout(400);
+  const root = '#ed', sgx = '#ed .sgx';
+
+  await page.click(sgCell(root, 0, 0)); await page.keyboard.press('Delete');
+  await page.click(sgCell(root, 1, 0)); await page.keyboard.press('Delete');
+  await page.waitForTimeout(150);
+  const live = await page.evaluate((sel) => { const c = document.querySelector(sel)._sg.state().cells; return { a1: c['0,0'], a2: c['1,0'] }; }, sgx);
+  r.check(live.a1 && live.a1.bd === 'tblr' && !live.a1.raw,
+    'a real Delete on a cell with content AND a border clears the content and keeps the border (live state)', JSON.stringify(live.a1));
+  r.check(live.a2 && live.a2.zz === 1 && !live.a2.raw,
+    'a real Delete on a cell with content and an unknown property keeps that property (live state)', JSON.stringify(live.a2));
+
+  await page.evaluate(() => { _flushEd(); persist(); });
+  const stored = await sgStored(page);
+  const m = /data-sg="([^"]*)"/.exec(stored);
+  const parsed = m ? JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : null;
+  r.check(parsed && parsed.cells['0,0']?.bd === 'tblr' && parsed.cells['1,0']?.zz === 1,
+    'after saving, both cells are still in the stored sheet (border and unknown property)',
+    JSON.stringify(parsed && { a1: parsed.cells['0,0'], a2: parsed.cells['1,0'] }));
+
+  const snap = await page.evaluate((html) => {
+    const d = document.createElement('div'); d.innerHTML = html;
+    const t = d.querySelector('.sg-static'); if (!t) return null;
+    const rows = t.querySelectorAll('tr'); const r4 = rows[3];
+    const td = r4 ? r4.children[4] : null;
+    return { rows: rows.length, cols: rows[0] ? rows[0].children.length : 0, e4: td ? td.getAttribute('style') : null };
+  }, stored);
+  r.check(snap && snap.rows >= 4 && snap.cols >= 5 && /border-bottom/.test(snap.e4 || ''),
+    'a bordered EMPTY cell beyond the last value (E4) is inside the saved .sg-static snapshot, with its border', JSON.stringify(snap));
+
+  await page.click(sgCell(root, 2, 2));
+  await page.keyboard.type('x');
+  await page.keyboard.press('Enter');
+  await page.click(sgCell(root, 2, 2));
+  await page.keyboard.press('Backspace');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(150);
+  const tidied = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cells['2,2'], sgx);
+  r.check(tidied === undefined, 'an empty {raw:\'\'} cell (typed, then cleared back to empty) is still tidied away', JSON.stringify(tidied));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+const MULTI_SIZES = [{ name: '1440', width: 1440, height: 900 }, { name: '820', width: 820, height: 1180 }];
+for (const vp of MULTI_SIZES) {
+await r.block(`25f-multi-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await page.evaluate(() => popOutNote('a1'));
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const ed = document.getElementById('fw-ed-a1'); ed.focus();
+    const r2 = document.createRange(); r2.selectNodeContents(ed); r2.collapse(false);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r2);
+  });
+  const inserted = await sgInsertViaMenu(page, '#fw-a1');
+  const root = '#fw-ed-a1', sgx = '#fw-ed-a1 .sgx';
+  r.check(inserted && await page.evaluate((sel) => !!document.querySelector(sel), sgx),
+    `${vp.name}: a sheet mounts inside Multi's own .fw-ed`, inserted);
+
+  await sgType(page, root, 0, 0, '5');
+  await page.click(sgCell(root, 0, 0));
+  await sgDragFillMouse(page, root, sgx, 3, 0);
+  const filled = []; for (let r2 = 0; r2 <= 3; r2++) filled.push(await sgCellText(page, root, r2, 0));
+  r.check(JSON.stringify(filled) === JSON.stringify(['5', '5', '5', '5']), `${vp.name}: Multi — a real handle drag fills down`, filled.join(','));
+
+  await sgSelectRange(page, root, 1, 1, 1, 1);
+  await sgOpenBordersMenu(page, sgx);
+  await page.click('#sg-menu button[data-m="bdAll"]');
+  await page.waitForTimeout(150);
+  const bd = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cells['1,1']?.bd, sgx);
+  r.check(bd === 'tblr', `${vp.name}: Multi — a real Borders ▾ click takes a border`, bd);
+
+  const frzBtn = await page.$(`${sgx} button[data-a="frz"]`);
+  await frzBtn.scrollIntoViewIfNeeded();
+  await frzBtn.click();
+  await page.waitForTimeout(150);
+  const frz = await page.evaluate((sel) => document.querySelector(sel)._sg.state().frz, sgx);
+  r.check(frz === 1, `${vp.name}: Multi — a real ❄ Freeze top row click freezes`, frz);
+
+  await page.evaluate(() => _fwFlush('a1'));
+  const stored = await sgStored(page);
+  const dataSgM = /data-sg="([^"]*)"/.exec(stored);
+  const parsedM = dataSgM ? JSON.parse(dataSgM[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : null;
+  r.check(/>5</.test(stored) && /border-/.test(stored) && parsedM && parsedM.frz === 1,
+    `${vp.name}: all three — fill, border, freeze — are saved from Multi`, JSON.stringify(parsedM && parsedM.frz));
+
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+await r.block('25g-opening-changes-nothing', async () => {
+  const sgEsc = (x) => x.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const data = { v: 1, rows: 6, cols: 4, frz: 1, cells: { '0,0': { raw: '1', bd: 'tblr' }, '1,0': { raw: '2', bd: 'b' } }, colW: {} };
+  /* The static snapshot must match exactly what _sgStaticHTML(data) itself
+     produces, or "opening changes nothing" would fail on a seed-content
+     mismatch rather than on real app behaviour — computed by the app
+     itself, in a throwaway session, rather than hand-replicated here. */
+  const helper = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const staticHTML = await helper.page.evaluate((d) => _sgStaticHTML(d), data);
+  await helper.close();
+  const db = seedDB();
+  db.articles[0].content = '<p>Before</p><div class="sgx" contenteditable="false" data-sg="' + sgEsc(JSON.stringify(data)) + '">' + staticHTML + '</div><p>After</p>';
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+  const { page } = s;
+  const c0 = await sgStored(page);
+  const u0 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => startEdit());
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { _flushEd(); });
+  const c1 = await sgStored(page);
+  const u1 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  r.check(c1 === c0 && u1 === u0, 'opening in edit view a note whose sheet already has frz and bd changes nothing (17d\'s rule, extended)',
+    `content same ${c1 === c0} · updatedAt same ${u1 === u0}`);
+
+  await page.evaluate(() => cancelEdit());
+  await page.waitForTimeout(300);
+  const c2 = await sgStored(page);
+  const u2 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  r.check(c2 === c0 && u2 === u0, 'closing it again (read view) still leaves a.content and updatedAt byte-for-byte unchanged',
+    `content same ${c2 === c0} · updatedAt same ${u2 === u0}`);
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+/* Added in Architect review (v04.61). At 1440 the sheet toolbar was 1221px
+   of controls in a 604px strip: Freeze, Borders, Fill down, ƒx and Remove
+   sat past a thin (on a Mac, invisible) scrollbar. From 640px up it wraps;
+   the phone keeps its sideways scroll. */
+async function sgToolbarFit(page, sgx) {
+  return page.evaluate((sel) => {
+    const tb = document.querySelector(sel + ' .sg-tb'); const r0 = tb.getBoundingClientRect();
+    const out = [...tb.children].filter((c) => c.offsetWidth).filter((c) => {
+      const b = c.getBoundingClientRect();
+      return b.left < r0.left - 0.5 || b.right > r0.right + 0.5 || b.top < r0.top - 0.5 || b.bottom > r0.bottom + 0.5;
+    }).map((c) => c.textContent || c.className);
+    return { sw: tb.scrollWidth, cw: tb.clientWidth, out, ox: getComputedStyle(tb).overflowX };
+  }, sgx);
+}
+for (const vp of [{ name: '1440', width: 1440, height: 900 }, { name: '820', width: 820, height: 1180 }, { name: '390', width: 390, height: 844 }]) {
+await r.block(`25h-toolbar-reachable-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const fit = await sgToolbarFit(page, '#ed .sgx');
+  if (vp.width >= 640) {
+    r.check(fit.sw <= fit.cw && fit.out.length === 0,
+      `${vp.name}: every sheet toolbar control is visible without scrolling (Freeze and Borders included)`, JSON.stringify(fit));
+  } else {
+    r.check(fit.sw > fit.cw && /auto|scroll/.test(fit.ox),
+      `${vp.name}: the phone keeps the sheet toolbar's sideways scroll`, JSON.stringify({ sw: fit.sw, cw: fit.cw, ox: fit.ox }));
+  }
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+await r.block('25h-toolbar-reachable-multi-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await page.evaluate(() => popOutNote('a1'));
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const ed = document.getElementById('fw-ed-a1'); ed.focus();
+    const r2 = document.createRange(); r2.selectNodeContents(ed); r2.collapse(false);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r2);
+  });
+  await sgInsertViaMenu(page, '#fw-a1');
+  const fit = await sgToolbarFit(page, '#fw-ed-a1 .sgx');
+  r.check(fit.sw <= fit.cw && fit.out.length === 0,
+    '1440 Multi: every sheet toolbar control is visible without scrolling', JSON.stringify(fit));
+  await s.close();
+});
+
+/* Added in Architect review (v04.61): the fill handle (z-index 7) painted
+   over the sticky column-letter row and the frozen row when the selection
+   scrolled under them. Scrolled with a real mouse wheel. */
+await r.block('25i-handle-hides-under-header', async () => {
+  const sgEsc = (x) => x.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  for (const frz of [0, 1]) {
+    const db = seedDB();
+    const data = { v: 1, rows: 40, cols: 6, colW: {}, frz, cells: { '0,0': { raw: 'Head' }, '4,1': { raw: 'x' } } };
+    db.articles[0].content = '<p>Before</p><div class="sgx" contenteditable="false" data-sg="' + sgEsc(JSON.stringify(data)) + '"></div><p>After</p>';
+    const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+    const { page } = s;
+    await page.evaluate(() => { selArt('a1'); startEdit(); });
+    await page.waitForTimeout(500);
+    const root = '#ed', sgx = '#ed .sgx';
+    await page.click(sgCell(root, 4, 1));
+    const vis0 = await page.evaluate((sel) => !document.querySelector(sel + ' .sg-fill').hidden, sgx);
+    const gwBox = await (await page.$(sgx + ' .sg-gw')).boundingBox();
+    await page.mouse.move(gwBox.x + gwBox.width / 2, gwBox.y + gwBox.height / 2);
+    /* Row 5's bottom edge sits at 162px in the grid's content; 150px of
+       scroll puts it behind the 27px header (and the frozen row) but still
+       inside the grid's box, where a painted handle would be visible. */
+    await page.mouse.wheel(0, 150);
+    await page.waitForTimeout(250);
+    const st = await page.evaluate((sel) => {
+      const g = document.querySelector(sel + ' .sg-gw'); const f = document.querySelector(sel + ' .sg-fill');
+      const b = f.getBoundingClientRect(); const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+      const top = document.elementFromPoint(cx, cy);
+      return { scrollTop: g.scrollTop, hidden: f.hidden, onTop: !f.hidden && top === f };
+    }, sgx);
+    r.check(vis0 && st.scrollTop > 136 && st.scrollTop < 162 && (st.hidden || !st.onTop),
+      `1440${frz ? ' frozen' : ''}: once the selection scrolls under the header${frz ? ' and frozen row' : ''}, the fill handle no longer paints over them`,
+      JSON.stringify({ vis0, ...st }));
+    await s.close();
+  }
+});
 
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
