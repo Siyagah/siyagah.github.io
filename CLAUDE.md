@@ -16,6 +16,81 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.63** (24 Sep 2026) — spreadsheet round 2b1: merged cells, and the
+  fill handle upward and leftward. Issue #93, round 2b1 of the spreadsheet
+  backlog (round 1 shipped as v04.52, round 2a as v04.61; round 2b2 —
+  colour rules and filters — and 2c come later).
+  - **Merged cells.** New toolbar button `Merge cells`/`Unmerge` (worded, no
+    glyph) and the same in the right-click menu. Stored as a new top-level
+    key `mg`: `[[r1,c1,r2,c2],…]`, value at the top-left anchor, covered
+    cells holding nothing, key left off when there are no merges. A
+    selection holding values beyond the top-left arms the button (`Remove`'s
+    own two-tap pattern) rather than merging outright, so nothing is lost
+    silently (I1); the merge is one undo step.
+  - **Drawing.** The live grid gives the anchor `td` a real `rowSpan`/
+    `colSpan` and sets covered `td`s `display:none` — still in the
+    `TD[r][c]` lookup, but out of the table's own column layout, landing the
+    anchor exactly where a hand-written merged table would. `boxTD(r,c)`
+    resolves a covered position to its anchor's box for every call site that
+    reads a cell's box (selection paint, `scrollIntoCell`, the fill handle/
+    preview). `_sgStaticHTML()` writes `colspan`/`rowspan` on the anchor,
+    omits covered `<td>`s, and its used-range scan covers a merge's full
+    extent — the snapshot, search, Save File and an older build see a real
+    merged table (I4).
+  - **Selecting/keyboard/formulas.** Clicking anywhere in a merge selects it
+    whole, anchored top-left (`select()`); a drag or Shift-selection that
+    touches a merge grows to cover it, via a new `normM()` used only by the
+    visual/cell-iterating call sites — row/column HEADER selection
+    deliberately keeps the plain, unchanged `norm()`, or "insert a row
+    strictly inside a merge" (below) would be inexpressible. Arrow keys/Tab/
+    Enter step a merge as one cell; typing edits the anchor; a formula
+    referencing a covered cell reads blank (falls out for free — a covered
+    cell carries no `raw`).
+  - **Insert/delete rows and columns.** `rekeyMerges()`, hung off the
+    existing `rekey()`, moves/resizes every `mg` range with the same
+    shift-math shape already proven on individual cell coordinates: an
+    insertion strictly inside a merge grows it, at/before its top-left edge
+    carries it along; a deletion's edge collapses to the deletion point, and
+    when both edges collapse to the same point the merge drops — one
+    formula, no separate "fully deleted" branch. Deleting the anchor's row/
+    column keeps the merge with a new, empty anchor.
+  - **Refused, with a toast, nothing changed, no undo step:** sort, a fill
+    (handle/Fill down/Ctrl+D/R) whose source or target touches a merge, a
+    paste onto a merge, an overlapping merge, and — both directions —
+    freezing across a merge that crosses row 1/2 or merging across it while
+    frozen. Proved directly via a new test-only `self.undoDepth()` (reads
+    the sheet's own undo-stack length) beside the existing `self.state()`,
+    because a `data-sg` comparison alone can't see a refusal that wrongly
+    pushed a no-op step.
+  - **Borders on a merge land on the anchor only** — `forSel()`, the
+    function every per-cell styling action already funnels through, now
+    skips a merge's covered cells, so a border (or any per-cell property)
+    draws around the whole merged box because the anchor's own `td` IS that
+    box.
+  - **Fill handle up/left.** Continues each of v04.61's four rules
+    backward: a number/date line extrapolates from the source's nearest
+    end instead of its farthest; text-with-a-trailing-number counts down
+    and never prints negative (mirrors past zero, matching Excel); a
+    pattern repeats backward; a formula still shifts by a plain row/col
+    delta either direction, so a reference walked off-sheet resolves to
+    `#REF!` unchanged (`SGE.shiftF` needed no change). The axis is still
+    whichever way the pointer has moved furthest OUTSIDE the selection, now
+    checked all four directions.
+  - **Not done:** merges aren't carried by copy/paste (paste copies values
+    only, and a paste target touching a merge is refused); dragging the
+    fill handle back inside the current selection does nothing (Excel
+    clears there — destructive enough to need its own round); 2b2 and 2c.
+  - New app-check section 27 (`27a`–`27h`): real mouse/keyboard/touch input
+    only, every check id names its size — the two-tap merge and its
+    snapshot `colspan`/`rowspan`; click/arrow-key/typing/formula behaviour;
+    insert/delete via the real `Rows & columns ▾` menu (using row/column
+    header selection so a single row inside a merge can be targeted); all
+    six refusals (`data-sg` identity + toast + `undoDepth()`); `Unmerge`;
+    fill up/left by mouse and real touch, checking raws and displayed
+    values including the `#REF!` case; a real Multi window; and `17d`/
+    `25g`'s "opening changes nothing" rule extended to `mg`.
+  - 12/12 ship checks, `--only 27` **83/83**, `--only 25` **106/106**,
+    `--only 17` **23/23**. Full `app-check`: run by the Architect in review.
 - **v04.62** (24 Sep 2026) — batch the cloud sync write, so it doesn't stop
   at ~7 MB. Issue #91.
   - `_writeCloudDB()` used to put every chunk doc plus the main doc in ONE
@@ -241,32 +316,6 @@ must never accumulate here instead of there.
     **31/31**, `--only 6p` **104/104**. Measured in review: full
     `app-check` **504/504 twice**; unpatched 493/504, all 11 failures in
     section 23.
-- **v04.58** (23 Sep 2026) — note titles taken out of the public app file.
-  Built by the Architect directly. No behaviour change.
-  - The builder found this while working on v04.57. `index.html` had been
-    saved, at some point, from a **running** page, and since PR #9 (4 Sep)
-    it carried debris from that session:
-    - the tab picker already filled with **four real note titles and
-      their folders**;
-    - three Firebase auth iframes;
-    - a browser extension's widget root;
-    - stale copies of `#nti-picker`, `#jrn-picker` and `#eb-pop`.
-    The site serves this file publicly.
-  - Every one of those elements is created by the app on demand. Removed:
-    - the file's last line (it becomes `</body></html>`);
-    - one iframe glued to the front of `<style id="mywall-style">`.
-  - New ship-check guard (`ship-check` is now 12 checks): no auth iframe,
-    no extension root, no tab-picker row with a literal note id. It fails
-    on v04.57's file, naming all four.
-  - **Not done, and the owner's call:**
-    - the same debris sits in `legacy/v03.99/index.html` (sealed, I6);
-    - every past commit of `index.html` still holds it in git history.
-      Removing that means a history rewrite, which is destructive and
-      needs the owner's decision.
-  - The Firebase web API key in those URLs is public by design. The
-    notebook's real protection is the Firestore security rules, which is
-    already the top item waiting on the owner.
-  - 12/12 ship checks, **493/493 app checks, twice in a row** (unchanged from v04.57 — no app behaviour changed).
 ---
 
 ## What this is
@@ -460,8 +509,11 @@ A failing check is a wrong assertion surprisingly often — investigate before
   future property (2b/2c) is neither dropped on the next edit nor pushed
   out of the saved snapshot. The sheet's top-level state also carries
   `frz` (v04.61, `1`/absent — a frozen top row; a number, not a boolean,
-  so more rows can be frozen later with no migration) alongside `v`,
-  `rows`, `cols`, `cells`, `colW`.
+  so more rows can be frozen later with no migration) and `mg` (v04.63,
+  absent when there are no merges — an array of `[r1,c1,r2,c2]` ranges,
+  value at the top-left "anchor" cell, covered cells holding nothing;
+  `rekeyMerges()` keeps it in step with every row/column insert and
+  delete) alongside `v`, `rows`, `cols`, `cells`, `colW`.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,

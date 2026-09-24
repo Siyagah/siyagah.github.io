@@ -7820,6 +7820,409 @@ await r.block('26e-stored-format-unchanged', async () => {
   await app.close();
 });
 
+/* ── 27. v04.63 — spreadsheet round 2b1: merged cells, fill up/left ───────
+   Real input only, exactly like section 25: page.mouse for a mouse drag,
+   page.keyboard for typing/undo, touchDrag() in a hasTouch context for a
+   real touch drag — never a merge/fill/unmerge function called directly.
+   Reuses sgCell/sgEditA1/sgInsertViaMenu/sgStored (section 17) and
+   sgCenter/sgType/sgSelectRange/sgFillHandleBox/sgDragFillMouse/
+   sgCellText/sgOpenBordersMenu (section 25). */
+async function sgLastToast(page) {
+  return page.evaluate(() => { const t = document.querySelectorAll('.toast'); return t.length ? t[t.length - 1].textContent : null; });
+}
+async function sgMergeSelection(page, root, sgx, r1, c1, r2, c2) {
+  await sgSelectRange(page, root, r1, c1, r2, c2);
+  await page.click(`${sgx} button[data-a="merge"]`);
+  await page.waitForTimeout(80);
+  await page.click(`${sgx} button[data-a="merge"]`);
+  await page.waitForTimeout(150);
+}
+
+const MERGE_SIZES = [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }, { name: '1440', width: 1440, height: 900 }];
+for (const vp of MERGE_SIZES) {
+await r.block(`27a-merge-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 1, 1, 'X'); await sgType(page, root, 2, 2, 'Y'); // B2=X, C3=Y
+
+  await sgSelectRange(page, root, 1, 1, 2, 2);
+  const mgBefore = await page.evaluate((sel) => document.querySelector(sel)._sg.state().mg, sgx);
+  await page.click(`${sgx} button[data-a="merge"]`);
+  await page.waitForTimeout(100);
+  const armedLabel = await page.evaluate((sel) => document.querySelector(sel + ' [data-a="merge"]').textContent, sgx);
+  const mgArmed = await page.evaluate((sel) => document.querySelector(sel)._sg.state().mg, sgx);
+  r.check(!mgBefore && !mgArmed && /Tap again to merge/.test(armedLabel),
+    `${vp.name}: a first click on Merge cells with two values selected only arms it (label changes, nothing merged yet)`,
+    JSON.stringify({ armedLabel, mgArmed }));
+
+  await page.click(`${sgx} button[data-a="merge"]`);
+  await page.waitForTimeout(150);
+  const st = await page.evaluate((sel) => document.querySelector(sel)._sg.state(), sgx);
+  r.check(JSON.stringify(st.mg) === JSON.stringify([[1, 1, 2, 2]]), `${vp.name}: a second click within 4s merges — mg is [[1,1,2,2]]`, JSON.stringify(st.mg));
+  r.check(!!st.cells['1,1'] && st.cells['1,1'].raw === 'X' && !st.cells['2,2'],
+    `${vp.name}: the top-left value survives, the covered cell's value is gone`, JSON.stringify({ '1,1': st.cells['1,1'], '2,2': st.cells['2,2'] }));
+
+  const box = await page.evaluate((sel) => { const td = document.querySelector(sel + ' td[data-r="1"][data-c="1"]'); return { rowSpan: td.rowSpan, colSpan: td.colSpan }; }, sgx);
+  r.check(box.rowSpan === 2 && box.colSpan === 2, `${vp.name}: the anchor's own box covers all four cells (rowSpan/colSpan 2×2)`, JSON.stringify(box));
+
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(120);
+  const afterUndo = await page.evaluate((sel) => document.querySelector(sel)._sg.state(), sgx);
+  r.check(!afterUndo.mg && afterUndo.cells['1,1']?.raw === 'X' && afterUndo.cells['2,2']?.raw === 'Y',
+    `${vp.name}: one Ctrl+Z brings both values back and removes the merge`, JSON.stringify({ mg: afterUndo.mg, c1: afterUndo.cells['1,1'], c2: afterUndo.cells['2,2'] }));
+  await page.keyboard.press('Control+y');
+  await page.waitForTimeout(120);
+
+  await page.evaluate(() => { _flushEd(); persist(); });
+  const stored = await sgStored(page);
+  r.check(/colspan="2"\s+rowspan="2"|rowspan="2"\s+colspan="2"/.test(stored) && !/data-r="1"[^>]*data-c="2"/.test(stored),
+    `${vp.name}: after a save, the .sg-static anchor carries colspan="2" rowspan="2"`, stored.match(/<td[^>]*colspan[^>]*>/)?.[0] || 'no colspan td found');
+  const snapTable = stored.match(/<table class="sg-static">[\s\S]*?<\/table>/)?.[0] || '';
+  const tdCountRow1 = (snapTable.split('<tr>')[2] || '').match(/<td/g)?.length || 0;
+  r.check(tdCountRow1 <= 2, `${vp.name}: the merge's covered <td> is omitted from the snapshot row (row 2 has ≤2 <td>, not 3+)`, tdCountRow1);
+
+  await page.waitForTimeout(300);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__appBooted === true);
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(400);
+  const readBox = await page.evaluate(() => { const td = document.querySelector('#p3c .sgx td[data-r="1"][data-c="1"]'); return td ? { rowSpan: td.rowSpan, colSpan: td.colSpan, text: td.textContent } : null; });
+  r.check(readBox && readBox.rowSpan === 2 && readBox.colSpan === 2 && readBox.text === 'X', `${vp.name}: after a reload, the read view shows the merge`, JSON.stringify(readBox));
+
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+await r.block('27b-selection-and-keys-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 1, 1, 'X'); await sgType(page, root, 2, 2, 'Y');
+  await sgMergeSelection(page, root, sgx, 1, 1, 2, 2);
+
+  /* A real click at the visual position of C3 (a covered cell, so it is
+     display:none and cannot be a Playwright click target itself) always
+     lands on the anchor's own <td> — it spans that area — the same way a
+     real user's tap would. */
+  const anchorBox = await (await page.$(sgCell(root, 1, 1))).boundingBox();
+  await page.mouse.click(anchorBox.x + anchorBox.width - 5, anchorBox.y + anchorBox.height - 5);
+  const selected = await page.evaluate((sel) => [...document.querySelectorAll(sel + ' .sg-g td.sg-sel, ' + sel + ' .sg-g td.sg-act')]
+    .map((td) => td.dataset.r + ',' + td.dataset.c).sort(), sgx);
+  r.check(JSON.stringify(selected) === JSON.stringify(['1,1', '1,2', '2,1', '2,2']),
+    'clicking anywhere in the merge (C3\'s visual position) selects the whole B2:C3', JSON.stringify(selected));
+
+  await page.click(sgCell(root, 1, 0)); // A2
+  await page.keyboard.press('ArrowRight');
+  let act = await page.evaluate((sel) => { const td = document.querySelector(sel + ' td.sg-act'); return td && [td.dataset.r, td.dataset.c].join(','); }, sgx);
+  r.check(act === '1,1', 'ArrowRight from A2 lands on the merge (its anchor, B2)', act);
+  await page.keyboard.press('ArrowRight');
+  act = await page.evaluate((sel) => { const td = document.querySelector(sel + ' td.sg-act'); return td && [td.dataset.r, td.dataset.c].join(','); }, sgx);
+  r.check(act === '1,3', 'one more ArrowRight steps over the whole merge and lands on D2', act);
+
+  await page.click(sgCell(root, 1, 0));
+  await page.keyboard.press('ArrowRight'); // back on the merge
+  await page.keyboard.type('Z'); await page.keyboard.press('Enter');
+  const anchorRaw = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cells['1,1']?.raw, sgx);
+  r.check(anchorRaw === 'Z', 'typing while the merge is selected edits the anchor', anchorRaw);
+
+  await sgType(page, root, 0, 4, '=C3');
+  const shown = await sgCellText(page, root, 0, 4);
+  r.check(shown === '' || shown === '0', 'a formula referring to a covered cell (C3) sees it as blank, as Excel does', JSON.stringify(shown));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('27c-rows-and-columns-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 1, 1, 'X'); await sgType(page, root, 2, 2, 'Y');
+  await sgMergeSelection(page, root, sgx, 1, 1, 2, 2); // B2:C3 -> mg [[1,1,2,2]]
+
+  /* Every selection below is via the real row/column HEADER — clicking a
+     cell inside the merge would select the whole merge (27b), and "insert a
+     row inside a merge" specifically needs one real row of it, not all of
+     them. */
+  await page.click(`${sgx} th.sg-rh[data-r="2"]`); // row 3, the merge's bottom row
+  await page.click(`${sgx} button[data-a="rc"]`);
+  await page.waitForTimeout(100);
+  await page.click('#sg-menu button[data-m="insRowA"]');
+  await page.waitForTimeout(150);
+  let mg = await page.evaluate((sel) => document.querySelector(sel)._sg.state().mg, sgx);
+  r.check(JSON.stringify(mg) === JSON.stringify([[1, 1, 3, 2]]), 'inserting a row inside the merge grows it (rows 1-2 -> rows 1-3)', JSON.stringify(mg));
+
+  await page.click(`${sgx} th.sg-ch[data-c="2"]`); // column C, the merge's right column
+  await page.click(`${sgx} button[data-a="rc"]`);
+  await page.waitForTimeout(100);
+  await page.click('#sg-menu button[data-m="delCol"]');
+  await page.waitForTimeout(150);
+  mg = await page.evaluate((sel) => document.querySelector(sel)._sg.state().mg, sgx);
+  r.check(JSON.stringify(mg) === JSON.stringify([[1, 1, 3, 1]]), 'deleting column C shrinks the merge to one column', JSON.stringify(mg));
+
+  await page.click(`${sgx} th.sg-rh[data-r="1"]`); // the anchor's row
+  await page.click(`${sgx} button[data-a="rc"]`);
+  await page.waitForTimeout(100);
+  await page.click('#sg-menu button[data-m="delRow"]');
+  await page.waitForTimeout(150);
+  let st = await page.evaluate((sel) => document.querySelector(sel)._sg.state(), sgx);
+  r.check(JSON.stringify(st.mg) === JSON.stringify([[1, 1, 2, 1]]) && !st.cells['1,1'],
+    'deleting the anchor row keeps the merge, with a new, empty anchor', JSON.stringify({ mg: st.mg, anchor: st.cells['1,1'] }));
+
+  await page.click(`${sgx} th.sg-rh[data-r="2"]`); // the merge's remaining second row
+  await page.click(`${sgx} button[data-a="rc"]`);
+  await page.waitForTimeout(100);
+  await page.click('#sg-menu button[data-m="delRow"]');
+  await page.waitForTimeout(150);
+  st = await page.evaluate((sel) => document.querySelector(sel)._sg.state(), sgx);
+  r.check(!st.mg, 'deleting down to one cell drops the merge entirely', JSON.stringify(st.mg));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('27d-refusals-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 1, 1, 'X'); await sgType(page, root, 2, 2, 'Y');
+  await sgMergeSelection(page, root, sgx, 1, 1, 2, 2); // B2:C3
+
+  /* undoDepth() (v04.63, test-only surface on self, mirroring state()) reads
+     the sheet's own undo-stack length directly — the one thing a data-sg
+     comparison can't prove: a refusal that (wrongly) pushed a no-op entry
+     would still leave data-sg unchanged, since the no-op undoes to the same
+     state it started from. */
+  async function refusalRoundTrip(label, toastPattern, act) {
+    const before = await page.evaluate((sel) => document.querySelector(sel).getAttribute('data-sg'), sgx);
+    const depthBefore = await page.evaluate((sel) => document.querySelector(sel)._sg.undoDepth(), sgx);
+    await act();
+    await page.waitForTimeout(150);
+    const after = await page.evaluate((sel) => document.querySelector(sel).getAttribute('data-sg'), sgx);
+    r.check(before === after, `${label}: data-sg is byte-identical before and after the refused attempt`, before === after ? 'unchanged' : 'CHANGED');
+    const toastText = await sgLastToast(page);
+    r.check(toastPattern.test(toastText || ''), `${label}: a toast explains the refusal`, JSON.stringify(toastText));
+    const depthAfter = await page.evaluate((sel) => document.querySelector(sel)._sg.undoDepth(), sgx);
+    r.check(depthAfter === depthBefore, `${label}: the refusal added no undo step (undo stack depth unchanged: ${depthBefore})`, `${depthBefore} -> ${depthAfter}`);
+  }
+
+  await refusalRoundTrip('sort', /merged cell/, async () => {
+    await sgSelectRange(page, root, 0, 0, 3, 3); // A1:D4, a multi-row range containing the merge
+    await page.click(`${sgx} button[data-a="sortA"]`);
+  });
+
+  await sgType(page, root, 0, 1, '9'); // B1, directly above the merge, same column — setup, outside the round-trip's own before/after window
+  await page.click(sgCell(root, 0, 1));
+  await refusalRoundTrip('fill-handle drag', /merged cell/, async () => {
+    await sgDragFillMouse(page, root, sgx, 3, 1); // drags down through the merge's rows
+  });
+
+  await refusalRoundTrip('Fill down', /merged cell/, async () => {
+    await sgSelectRange(page, root, 0, 1, 3, 1); // B1:B4, touching the merge's column and rows
+    await page.click(`${sgx} button[data-a="fill"]`);
+  });
+
+  await page.click(sgCell(root, 0, 0));
+  await page.keyboard.press('Control+c'); // sets the sheet's internal clip — setup, outside the round-trip's window
+  await refusalRoundTrip('paste', /merged cell/, async () => {
+    /* The real right-click ▸ Paste item, not Ctrl+V — Ctrl+V depends on the
+       OS/browser clipboard-read permission the harness does not grant;
+       right-click ▸ Paste replays the sheet's own internal clip (already
+       set by the real Ctrl+C above), which is real input reaching the same
+       doPaste() the native paste event would. */
+    await page.click(sgCell(root, 1, 1)); // selects the merge, A at its anchor
+    await page.click(sgCell(root, 1, 1), { button: 'right' });
+    await page.waitForTimeout(100);
+    await page.click('#sg-menu button[data-m="pasteH"]');
+  });
+
+  await refusalRoundTrip('an overlapping merge', /existing merge/, async () => {
+    await sgSelectRange(page, root, 0, 0, 1, 1); // A1:B2, overlaps the B2:C3 merge at its anchor (B2, not covered)
+    await page.click(`${sgx} button[data-a="merge"]`);
+  });
+
+  /* Freeze needs a merge that crosses the row-1/row-2 boundary — B2:C3
+     (rows 1-2, 0-based) does not, so this sub-test creates its own,
+     leaving the B2:C3 merge above untouched throughout. */
+  await sgType(page, root, 0, 4, 'P'); await sgType(page, root, 1, 4, 'Q'); // E1:E2
+  await sgMergeSelection(page, root, sgx, 0, 4, 1, 4);
+  await refusalRoundTrip('freeze (a merge crosses row 1/2)', /frozen row|freeze/i, async () => {
+    await page.click(`${sgx} button[data-a="frz"]`);
+  });
+  const frz = await page.evaluate((sel) => document.querySelector(sel)._sg.state().frz, sgx);
+  r.check(!frz, 'freeze: frz was not set', JSON.stringify(frz));
+  const mgFinal = await page.evaluate((sel) => document.querySelector(sel)._sg.state().mg, sgx);
+  r.check(JSON.stringify(mgFinal) === JSON.stringify([[1, 1, 2, 2], [0, 4, 1, 4]]), 'both merges are still present — B2:C3 and the E1:E2 one used for this sub-test', JSON.stringify(mgFinal));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('27e-unmerge-820', async () => {
+  const s = await openApp({ viewport: { width: 820, height: 1180 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 1, 1, 'X'); await sgType(page, root, 2, 2, 'Y');
+  await sgMergeSelection(page, root, sgx, 1, 1, 2, 2);
+
+  await page.click(sgCell(root, 1, 1));
+  const label = await page.evaluate((sel) => document.querySelector(sel + ' [data-a="merge"]').textContent, sgx);
+  r.check(label === 'Unmerge', 'the button reads "Unmerge" while the active cell is inside a merge', label);
+  await page.click(`${sgx} button[data-a="merge"]`);
+  await page.waitForTimeout(150);
+  const st = await page.evaluate((sel) => document.querySelector(sel)._sg.state(), sgx);
+  r.check(!st.mg && st.cells['1,1']?.raw === 'X', 'Unmerge leaves the value at the top-left and drops mg', JSON.stringify({ mg: st.mg, anchor: st.cells['1,1'] }));
+
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(120);
+  const afterUndo = await page.evaluate((sel) => document.querySelector(sel)._sg.state().mg, sgx);
+  r.check(JSON.stringify(afterUndo) === JSON.stringify([[1, 1, 2, 2]]), 'Unmerge is one undo step — one Ctrl+Z brings the merge straight back', JSON.stringify(afterUndo));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+const FILLBACK_MOUSE = [{ name: '1440', width: 1440, height: 900 }, { name: '820', width: 820, height: 1180 }];
+for (const vp of FILLBACK_MOUSE) {
+await r.block(`27f-fill-back-mouse-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+
+  await sgType(page, root, 4, 0, '1'); await sgType(page, root, 5, 0, '2'); // A5=1, A6=2
+  await sgSelectRange(page, root, 4, 0, 5, 0);
+  await sgDragFillMouse(page, root, sgx, 2, 0); // up to A3, 2 rows above the selection
+  const colA = []; for (let r2 = 2; r2 <= 5; r2++) colA.push(await sgCellText(page, root, r2, 0));
+  r.check(JSON.stringify(colA) === JSON.stringify(['-1', '0', '1', '2']), `${vp.name}: 1,2 dragged up 2 gives 0,-1 above them (top to bottom: -1, 0, 1, 2)`, colA.join(','));
+
+  await sgType(page, root, 4, 1, 'Item 3'); // B5
+  await page.click(sgCell(root, 4, 1));
+  await sgDragFillMouse(page, root, sgx, 0, 1); // up to B1, 4 rows above
+  const colB = []; for (let r2 = 0; r2 <= 4; r2++) colB.push(await sgCellText(page, root, r2, 1));
+  r.check(JSON.stringify(colB) === JSON.stringify(['Item 1', 'Item 0', 'Item 1', 'Item 2', 'Item 3']),
+    `${vp.name}: Item 3 dragged up 4 gives Item 2, Item 1, Item 0, Item 1`, colB.join(','));
+
+  await sgType(page, root, 6, 3, '10/03/2026'); // D7
+  await page.click(sgCell(root, 6, 3));
+  await sgDragFillMouse(page, root, sgx, 6, 1); // left to B7, 2 columns
+  const rowD = []; for (let c2 = 1; c2 <= 3; c2++) rowD.push(await sgCellText(page, root, 6, c2));
+  r.check(JSON.stringify(rowD) === JSON.stringify(['08/03/2026', '09/03/2026', '10/03/2026']),
+    `${vp.name}: a date dragged left 2 goes back 2 days`, rowD.join(','));
+
+  await sgType(page, root, 9, 3, '=B5'); // D10
+  await page.click(sgCell(root, 9, 3));
+  await sgDragFillMouse(page, root, sgx, 4, 3); // up to D5, 5 rows above
+  const raws = await page.evaluate((sel) => { const st = document.querySelector(sel)._sg.state(); const out = []; for (let r2 = 4; r2 <= 9; r2++) out.push(st.cells[r2 + ',3']?.raw); return out; }, sgx);
+  const colD = []; for (let r2 = 4; r2 <= 9; r2++) colD.push(await sgCellText(page, root, r2, 3));
+  r.check(colD[0] === '#REF!' && raws[0] === '=#REF!', `${vp.name}: =B5 dragged up 5 reaches #REF! at the far end`, JSON.stringify({ raws, colD }));
+
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+await r.block('27f-fill-back-touch-390', async () => {
+  const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB(), hasTouch: true });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 4, 0, '1'); await sgType(page, root, 5, 0, '2'); // A5=1, A6=2
+  await sgSelectRange(page, root, 4, 0, 5, 0);
+  const fh = await sgFillHandleBox(page, sgx);
+  const start = { x: fh.x + fh.w / 2, y: fh.y + fh.h / 2 };
+  const endBox = await (await page.$(sgCell(root, 2, 0))).boundingBox(); // A3, 2 rows above
+  const end = sgCenter(endBox);
+  await touchDrag(page, [start, { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }, end]);
+  await page.waitForTimeout(200);
+  const colA = []; for (let r2 = 2; r2 <= 5; r2++) colA.push(await sgCellText(page, root, r2, 0));
+  r.check(JSON.stringify(colA) === JSON.stringify(['-1', '0', '1', '2']), 'a real touch drag on the handle fills up, continuing the series backward', colA.join(','));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('27g-multi-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await page.evaluate(() => popOutNote('a1'));
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const ed = document.getElementById('fw-ed-a1'); ed.focus();
+    const r2 = document.createRange(); r2.selectNodeContents(ed); r2.collapse(false);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r2);
+  });
+  const inserted = await sgInsertViaMenu(page, '#fw-a1');
+  const root = '#fw-ed-a1', sgx = '#fw-ed-a1 .sgx';
+  r.check(inserted, 'a sheet mounts inside Multi\'s own .fw-ed', inserted);
+
+  await sgType(page, root, 1, 1, 'M'); await sgType(page, root, 2, 2, 'N');
+  await sgMergeSelection(page, root, sgx, 1, 1, 2, 2);
+  let mg = await page.evaluate((sel) => document.querySelector(sel)._sg.state().mg, sgx);
+  r.check(JSON.stringify(mg) === JSON.stringify([[1, 1, 2, 2]]), 'Multi: merging works via the real button', JSON.stringify(mg));
+
+  await page.click(sgCell(root, 1, 1));
+  await page.click(`${sgx} button[data-a="merge"]`);
+  await page.waitForTimeout(150);
+  mg = await page.evaluate((sel) => document.querySelector(sel)._sg.state().mg, sgx);
+  r.check(!mg, 'Multi: unmerging works via the real button', JSON.stringify(mg));
+
+  await page.evaluate(() => _fwFlush('a1'));
+  const stored = await sgStored(page);
+  r.check(/&quot;raw&quot;:&quot;M&quot;/.test(stored) && !/&quot;mg&quot;/.test(stored), 'Multi: saving after merge+unmerge stores a clean, unmerged sheet', stored.slice(0, 200));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('27h-opening-changes-nothing', async () => {
+  const sgEsc = (x) => x.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const data = { v: 1, rows: 6, cols: 4, frz: 1, mg: [[2, 0, 3, 0]], cells: { '0,0': { raw: '1', bd: 'tblr' }, '2,0': { raw: 'M' } }, colW: {} };
+  const helper = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const staticHTML = await helper.page.evaluate((d) => _sgStaticHTML(d), data);
+  await helper.close();
+  const db = seedDB();
+  db.articles[0].content = '<p>Before</p><div class="sgx" contenteditable="false" data-sg="' + sgEsc(JSON.stringify(data)) + '">' + staticHTML + '</div><p>After</p>';
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+  const { page } = s;
+  const c0 = await sgStored(page);
+  const u0 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => startEdit());
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { _flushEd(); });
+  const c1 = await sgStored(page);
+  const u1 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  r.check(c1 === c0 && u1 === u0, 'opening in edit view a note whose sheet already has mg (plus frz and bd) changes nothing (17d/25g\'s rule, extended)',
+    `content same ${c1 === c0} · updatedAt same ${u1 === u0}`);
+
+  await page.evaluate(() => cancelEdit());
+  await page.waitForTimeout(300);
+  const c2 = await sgStored(page);
+  const u2 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  r.check(c2 === c0 && u2 === u0, 'closing it again (read view) still leaves a.content and updatedAt byte-for-byte unchanged',
+    `content same ${c2 === c0} · updatedAt same ${u2 === u0}`);
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
