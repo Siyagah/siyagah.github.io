@@ -7854,7 +7854,11 @@ await r.block(`27a-merge-${vp.name}`, async () => {
   await page.waitForTimeout(100);
   const armedLabel = await page.evaluate((sel) => document.querySelector(sel + ' [data-a="merge"]').textContent, sgx);
   const mgArmed = await page.evaluate((sel) => document.querySelector(sel)._sg.state().mg, sgx);
-  r.check(!mgBefore && !mgArmed && /Tap again to merge/.test(armedLabel),
+  /* v04.64 — the armed label was shortened (record fix, issue #95): the
+     full sentence was 340px wide at 390px, past the phone's own
+     sideways-scrolling toolbar. The toast (checked elsewhere) keeps the
+     full sentence; only the button's own label changed. */
+  r.check(!mgBefore && !mgArmed && /Tap again: keeps top-left only/.test(armedLabel),
     `${vp.name}: a first click on Merge cells with two values selected only arms it (label changes, nothing merged yet)`,
     JSON.stringify({ armedLabel, mgArmed }));
 
@@ -8218,6 +8222,338 @@ await r.block('27h-opening-changes-nothing', async () => {
   const u2 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
   r.check(c2 === c0 && u2 === u0, 'closing it again (read view) still leaves a.content and updatedAt byte-for-byte unchanged',
     `content same ${c2 === c0} · updatedAt same ${u2 === u0}`);
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+/* ── 28. v04.64 — spreadsheet round 2b2: colour rules ────────────────────
+   Real input only — the real `Colour rules ▾` button, the real panel's
+   fields and swatches, real clicks — never crAdd/crRemove/_sgCrFor called
+   directly. Reuses sgEditA1/sgInsertViaMenu/sgCell/sgStored (17),
+   sgType/sgSelectRange/sgCellText (25), sgLastToast (27) and MERGE_SIZES'
+   three named sizes. Colours are read back with getComputedStyle, compared
+   against the app's own fill hexes turned into rgb() — the browser
+   normalises an inline `background:#E3F1E7` to rgb() on both reads, so
+   comparing hex text against a computed value would never match. */
+const CR_GREEN = '#E3F1E7', CR_GOLD = '#F6EAD2', CR_ROSE = '#FBE3E3', CR_RED = '#C0392B';
+const hex2rgb = (hex) => { const n = parseInt(hex.slice(1), 16); return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`; };
+async function sgCrOpen(page, sgx) {
+  await page.click(`${sgx} button[data-a="cr"]`);
+  await page.waitForTimeout(150);
+}
+async function sgCrAdd(page, { op = 'gt', v1 = '', v2 = '', fill = 'green' } = {}) {
+  await page.selectOption('#sg-crp .sg-cr-op', op);
+  await page.waitForTimeout(50);
+  if (v1 !== '') await page.fill('#sg-crp .sg-cr-v1', v1);
+  if (v2 !== '') await page.fill('#sg-crp .sg-cr-v2', v2);
+  await page.click(`#sg-crp .sg-cr-sw[data-fill="${fill}"]`);
+  await page.click('#sg-crp .sg-cr-addbtn');
+  await page.waitForTimeout(100);
+  /* Close the real panel via its own ✕ — the panel sits over the grid at
+     every size, so leaving it open would obstruct the next click on a cell
+     underneath it (a real owner would close it too, or reach for a
+     different cell first; either way the grid must not be blocked). */
+  await page.click('#sg-crp .sg-crx');
+  await page.waitForTimeout(100);
+}
+async function sgCellStyle(page, root, r, c) {
+  return page.evaluate((sel) => { const el = document.querySelector(sel); const cs = getComputedStyle(el); return { bg: cs.backgroundColor, color: cs.color }; }, sgCell(root, r, c));
+}
+
+for (const vp of MERGE_SIZES) {
+await r.block(`28a-add-rule-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 1, 1, '50'); await sgType(page, root, 2, 1, '150'); await sgType(page, root, 3, 1, '250'); // B2,B3,B4
+
+  await sgSelectRange(page, root, 1, 1, 3, 1); // B2:B4
+  await sgCrOpen(page, sgx);
+  const panelBox0 = await page.evaluate(() => document.getElementById('sg-crp').getBoundingClientRect());
+  r.check(panelBox0.x >= 0 && panelBox0.y >= 0 && panelBox0.x + panelBox0.width <= vp.width && panelBox0.y + panelBox0.height <= vp.height,
+    `${vp.name}: the colour-rules panel lies fully inside the viewport`, JSON.stringify(panelBox0));
+  if (vp.name === '390') {
+    const tapOk = await page.evaluate(() => [...document.querySelectorAll('#sg-crp .sg-cr-op, #sg-crp .sg-cr-v1, #sg-crp .sg-cr-addbtn, #sg-crp .sg-cr-sw')]
+      .every((el) => { const b = el.getBoundingClientRect(); return b.height >= 44 && b.width >= 44; }));
+    r.check(tapOk, '390: every field, swatch and the Add button are 44px or more', tapOk);
+  }
+  await sgCrAdd(page, { op: 'gt', v1: '100', fill: 'green' });
+
+  const bgB2 = await sgCellStyle(page, root, 1, 1), bgB3 = await sgCellStyle(page, root, 2, 1), bgB4 = await sgCellStyle(page, root, 3, 1);
+  r.check(bgB3.bg === hex2rgb(CR_GREEN) && bgB4.bg === hex2rgb(CR_GREEN) && bgB2.bg !== hex2rgb(CR_GREEN),
+    `${vp.name}: B3 (150) and B4 (250) compute a green background, B2 (50) does not`, JSON.stringify({ bgB2, bgB3, bgB4 }));
+
+  await sgType(page, root, 1, 1, '500'); // B2 -> 500, now matches
+  const bgB2b = await sgCellStyle(page, root, 1, 1);
+  r.check(bgB2b.bg === hex2rgb(CR_GREEN), `${vp.name}: changing B2 to 500 by typing turns it green`, bgB2b.bg);
+
+  await page.evaluate(() => { _flushEd(); persist(); });
+  const stored = await sgStored(page);
+  const greenTds = (stored.match(new RegExp('background:' + CR_GREEN, 'g')) || []).length;
+  r.check(greenTds === 3, `${vp.name}: after a save, the .sg-static <td>s carry the colour (3 green cells)`, greenTds);
+
+  await page.waitForTimeout(300);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__appBooted === true);
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(400);
+  const readBg = await page.evaluate((sel) => getComputedStyle(document.querySelector(sel)).backgroundColor, sgCell('#p3c', 3, 1));
+  r.check(readBg === hex2rgb(CR_GREEN), `${vp.name}: after a reload, the read view shows the colour`, readBg);
+
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+await r.block('28b-conditions-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+
+  /* Column B (index 1): between, less than, equal to, text contains —
+     each a (row, row+1) pair, non-match then match. Column C (index 2):
+     is empty, is not empty, red text. Both fit inside the default 12-row,
+     6-column sheet, so nothing needs to grow first. */
+  await sgType(page, root, 0, 1, '5'); await sgType(page, root, 1, 1, '15'); // B1,B2 — between
+  await sgSelectRange(page, root, 0, 1, 1, 1);
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'between', v1: '10', v2: '20', fill: 'green' });
+
+  await sgType(page, root, 2, 1, '20'); await sgType(page, root, 3, 1, '5'); // B3,B4 — less than
+  await sgSelectRange(page, root, 2, 1, 3, 1);
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'lt', v1: '10', fill: 'green' });
+
+  await sgType(page, root, 4, 1, '3'); await sgType(page, root, 5, 1, '7'); // B5,B6 — equal to
+  await sgSelectRange(page, root, 4, 1, 5, 1);
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'eq', v1: '7', fill: 'green' });
+
+  await sgType(page, root, 6, 1, 'Zulu'); await sgType(page, root, 7, 1, 'Alpha'); // B7,B8 — text contains
+  await sgSelectRange(page, root, 6, 1, 7, 1);
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'contains', v1: 'alp', fill: 'green' });
+
+  await sgType(page, root, 0, 2, 'x'); // C1 — is empty (C2 left blank)
+  await sgSelectRange(page, root, 0, 2, 1, 2);
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'empty', fill: 'green' });
+
+  await sgType(page, root, 3, 2, 'y'); // C4 — is not empty (C3 left blank)
+  await sgSelectRange(page, root, 2, 2, 3, 2);
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'notEmpty', fill: 'green' });
+
+  await sgType(page, root, 4, 2, '5'); await sgType(page, root, 5, 2, '-5'); // C5,C6 — red text
+  await sgSelectRange(page, root, 4, 2, 5, 2);
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'lt', v1: '0', fill: 'redtext' });
+
+  const cases = [
+    ['between', await sgCellStyle(page, root, 0, 1), await sgCellStyle(page, root, 1, 1)],
+    ['less than', await sgCellStyle(page, root, 2, 1), await sgCellStyle(page, root, 3, 1)],
+    ['equal to', await sgCellStyle(page, root, 4, 1), await sgCellStyle(page, root, 5, 1)],
+    ['text contains (case-insensitive)', await sgCellStyle(page, root, 6, 1), await sgCellStyle(page, root, 7, 1)],
+    ['is empty', await sgCellStyle(page, root, 0, 2), await sgCellStyle(page, root, 1, 2)],
+    ['is not empty', await sgCellStyle(page, root, 2, 2), await sgCellStyle(page, root, 3, 2)],
+  ];
+  for (const [name, nonMatch, match] of cases) {
+    r.check(nonMatch.bg !== hex2rgb(CR_GREEN) && match.bg === hex2rgb(CR_GREEN), `1440: ${name} — the non-match stays plain and the match turns green`, JSON.stringify({ nonMatch, match }));
+  }
+  const redNon = await sgCellStyle(page, root, 4, 2), redMatch = await sgCellStyle(page, root, 5, 2);
+  r.check(redMatch.color === hex2rgb(CR_RED) && redNon.color !== hex2rgb(CR_RED) && redMatch.bg === redNon.bg,
+    '1440: red text — the matching negative gets red ink with no fill change', JSON.stringify({ redNon, redMatch }));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('28c-order-and-own-fill-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 1, 1, '150'); // B2
+
+  await sgSelectRange(page, root, 0, 1, 9, 1); // B1:B10 — added FIRST
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'gt', v1: '100', fill: 'green' });
+  await sgSelectRange(page, root, 0, 1, 4, 1); // B1:B5 — added SECOND, overlaps at B2
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'gt', v1: '50', fill: 'gold' });
+
+  const bgB2 = await sgCellStyle(page, root, 1, 1);
+  r.check(bgB2.bg === hex2rgb(CR_GREEN), '1440: two overlapping rules both match B2 — the FIRST one added (green) wins, not gold', bgB2.bg);
+
+  await page.click(sgCell(root, 6, 1)); // B7 — inside rule 1's range (B1:B10), outside rule 2's (B1:B5)
+  await page.click(`${sgx} button.sg-sw[data-bg="${CR_GOLD}"]`); // the cell's OWN fill, via the normal fill swatch
+  await sgType(page, root, 6, 1, '200'); // matches rule 1 (>100)
+  const b7matching = await sgCellStyle(page, root, 6, 1);
+  r.check(b7matching.bg === hex2rgb(CR_GREEN), '1440: a cell with its own gold fill shows the rule colour while it matches', b7matching.bg);
+
+  await sgType(page, root, 6, 1, '50'); // no longer matches rule 1 (not >100)
+  const b7notMatching = await sgCellStyle(page, root, 6, 1);
+  r.check(b7notMatching.bg === hex2rgb(CR_GOLD), '1440: once it stops matching, the cell falls back to its own gold fill', b7notMatching.bg);
+
+  await page.evaluate(() => { _flushEd(); persist(); });
+  const own = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cells['6,1'].bg, sgx);
+  r.check(own === CR_GOLD, `1440: the cell's own stored bg is never touched by a colour rule`, own);
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('28d-grid-edits-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 0, 1, 'a'); await sgType(page, root, 1, 1, 'b'); await sgType(page, root, 2, 1, 'c'); await sgType(page, root, 3, 1, 'd'); // B1:B4
+
+  await sgSelectRange(page, root, 0, 1, 3, 1); // B1:B4 — ruleSort
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'notEmpty', fill: 'green' });
+  await sgSelectRange(page, root, 5, 2, 8, 2); // C6:C9 — ruleGrow
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'notEmpty', fill: 'green' });
+  await sgSelectRange(page, root, 0, 3, 1, 3); // D1:D2 — ruleDrop
+  await sgCrOpen(page, sgx); await sgCrAdd(page, { op: 'notEmpty', fill: 'green' });
+
+  await sgSelectRange(page, root, 0, 1, 3, 1);
+  await page.click(`${sgx} button[data-a="sortA"]`);
+  await page.waitForTimeout(150);
+  let cr = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cr, sgx);
+  r.check(cr.length === 3 && JSON.stringify(cr[0].rng) === JSON.stringify([0, 1, 3, 1]), '1440: a sort leaves a rule\'s range unchanged', JSON.stringify(cr.map((x) => x.rng)));
+
+  await page.click(`${sgx} th.sg-rh[data-r="6"]`); // strictly inside ruleGrow's rows 5-8
+  await page.click(`${sgx} button[data-a="rc"]`);
+  await page.waitForTimeout(100);
+  await page.click('#sg-menu button[data-m="insRowA"]');
+  await page.waitForTimeout(150);
+  cr = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cr, sgx);
+  const grown = cr.find((x) => x.rng[1] === 2);
+  r.check(grown && JSON.stringify(grown.rng) === JSON.stringify([5, 2, 9, 2]), '1440: inserting a row inside a rule\'s range grows it (rows 5-8 -> 5-9)', JSON.stringify(grown?.rng));
+
+  await page.click(`${sgx} th.sg-ch[data-c="3"]`); // ruleDrop's own, only, column
+  await page.click(`${sgx} button[data-a="rc"]`);
+  await page.waitForTimeout(100);
+  await page.click('#sg-menu button[data-m="delCol"]');
+  await page.waitForTimeout(150);
+  cr = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cr, sgx);
+  r.check(cr.length === 2 && !cr.some((x) => x.rng[1] === 3 || x.rng[3] === 3), '1440: deleting its column drops the rule entirely', JSON.stringify(cr.map((x) => x.rng)));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('28e-remove-and-undo-820', async () => {
+  const s = await openApp({ viewport: { width: 820, height: 1180 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 1, 1, '150'); // B2
+
+  await sgSelectRange(page, root, 0, 1, 5, 1); // B1:B6
+  await sgCrOpen(page, sgx);
+  await sgCrAdd(page, { op: 'gt', v1: '100', fill: 'green' });
+  let cr = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cr, sgx);
+  r.check(cr && cr.length === 1, '820: adding a rule via the real panel stores it', JSON.stringify(cr));
+
+  await sgCrOpen(page, sgx); // reopen (same selection) to read the list and reach Remove
+  const text = await page.evaluate(() => document.querySelector('#sg-crp .sg-cr-item span')?.textContent || '');
+  r.check(/B1:B6/.test(text) && /greater than 100/.test(text) && /green/.test(text), '820: the rule is listed in words (range · condition · colour)', text);
+
+  await page.click('#sg-crp .sg-cr-item button[data-i="0"]');
+  await page.waitForTimeout(150);
+  cr = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cr, sgx);
+  r.check(!cr, '820: ✕ Remove removes the rule', JSON.stringify(cr));
+
+  await page.focus(`${sgx} .sg-gw`);
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(150);
+  cr = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cr, sgx);
+  r.check(cr && cr.length === 1, '820: one Ctrl+Z restores the removed rule', JSON.stringify(cr));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('28f-multi-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await page.evaluate(() => popOutNote('a1'));
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const ed = document.getElementById('fw-ed-a1'); ed.focus();
+    const r2 = document.createRange(); r2.selectNodeContents(ed); r2.collapse(false);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r2);
+  });
+  const inserted = await sgInsertViaMenu(page, '#fw-a1');
+  const root = '#fw-ed-a1', sgx = '#fw-ed-a1 .sgx';
+  r.check(inserted, 'Multi: a sheet mounts inside Multi\'s own .fw-ed for the colour-rules check', inserted);
+
+  await sgType(page, root, 1, 1, '150'); // B2
+  await sgSelectRange(page, root, 0, 1, 5, 1);
+  await sgCrOpen(page, sgx);
+  await sgCrAdd(page, { op: 'gt', v1: '100', fill: 'green' });
+  const cr = await page.evaluate((sel) => document.querySelector(sel)._sg.state().cr, sgx);
+  r.check(cr && cr.length === 1, 'Multi: adding a colour rule via the real button works', JSON.stringify(cr));
+  const bg = await sgCellStyle(page, root, 1, 1);
+  r.check(bg.bg === hex2rgb(CR_GREEN), 'Multi: the matching cell is coloured', bg.bg);
+
+  await page.evaluate(() => _fwFlush('a1'));
+  const stored = await sgStored(page);
+  r.check(stored.includes('background:' + CR_GREEN), 'Multi: saving stores the coloured snapshot', stored.length);
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('28g-opening-changes-nothing', async () => {
+  const sgEsc = (x) => x.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const data = { v: 1, rows: 6, cols: 4, frz: 1, mg: [[2, 0, 3, 0]], cr: [{ rng: [0, 0, 5, 0], op: 'gt', v1: '10', fill: CR_GREEN }],
+    cells: { '0,0': { raw: '1', bd: 'tblr' }, '2,0': { raw: 'M' } }, colW: {} };
+  const helper = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const staticHTML = await helper.page.evaluate((d) => _sgStaticHTML(d), data);
+  await helper.close();
+  const db = seedDB();
+  db.articles[0].content = '<p>Before</p><div class="sgx" contenteditable="false" data-sg="' + sgEsc(JSON.stringify(data)) + '">' + staticHTML + '</div><p>After</p>';
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+  const { page } = s;
+  const c0 = await sgStored(page);
+  const u0 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => startEdit());
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { _flushEd(); });
+  const c1 = await sgStored(page);
+  const u1 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  r.check(c1 === c0 && u1 === u0, 'opening in edit view a note whose sheet already has cr (plus mg, frz and bd) changes nothing (17d/25g/27h\'s rule, extended)',
+    `content same ${c1 === c0} · updatedAt same ${u1 === u0}`);
+
+  await page.evaluate(() => cancelEdit());
+  await page.waitForTimeout(300);
+  const c2 = await sgStored(page);
+  const u2 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  r.check(c2 === c0 && u2 === u0, 'closing it again (read view) still leaves a.content and updatedAt byte-for-byte unchanged',
+    `content same ${c2 === c0} · updatedAt same ${u2 === u0}`);
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('28h-merge-label-width-390', async () => {
+  const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 1, 1, 'X'); await sgType(page, root, 2, 2, 'Y');
+  await sgSelectRange(page, root, 1, 1, 2, 2);
+  await page.click(`${sgx} button[data-a="merge"]`); // first click arms it
+  await page.waitForTimeout(120);
+  const box = await page.evaluate((sel) => document.querySelector(sel + ' [data-a="merge"]').getBoundingClientRect(), sgx);
+  const label = await page.evaluate((sel) => document.querySelector(sel + ' [data-a="merge"]').textContent, sgx);
+  r.check(/Tap again/.test(label) && box.width <= 240, '390: the armed Merge cells button is no wider than 240px', JSON.stringify({ label, width: box.width }));
 
   r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
   await s.close();
