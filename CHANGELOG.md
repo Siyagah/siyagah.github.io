@@ -6511,6 +6511,7 @@ undo step. `17*`, `25*`, `27*` and `28*` all stay green, re-run in full.
 **Measured**
 - `ship-check`: **13/13** (shown failing on `origin/main`'s `CLAUDE.md`
   before the fix — see Record fixes above).
-- `app-check --only 29`: measured below.
-- `app-check --only 28,27,25,17`: measured below.
+- `app-check --only 29`: **73/73, twice in a row** (the first run found
+  seven test-side bugs — not app bugs — all fixed: see the commit history).
+- `app-check --only 28,27,25,17`: **263/263**.
 - Full `app-check`: run by the Architect in review.

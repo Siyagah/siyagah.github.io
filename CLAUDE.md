@@ -75,7 +75,9 @@ must never accumulate here instead of there.
     Clear/Copy/ArrowDown; Sort A→Z from the panel; column insert/delete
     shifting/dropping the filter; a real Multi window; "opening changes
     nothing" extended to `flt`; `Clear filter`'s one undo step.
-  - `ship-check` **13/13**. `app-check` totals: measured below.
+  - `ship-check` **13/13**, `--only 29` **73/73, twice in a row**,
+    `--only 28,27,25,17` **263/263**. Full `app-check`: run by the
+    Architect in review.
 - **v04.64** (24 Sep 2026) — spreadsheet round 2b2: colour rules
   (conditional formatting). Issue #95, round 2b2 of the spreadsheet backlog
   (round 1: v04.52, 2a: v04.61, 2b1: v04.63; 2b3 — filters — and 2c come
