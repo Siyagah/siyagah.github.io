@@ -118,6 +118,37 @@ and record it on the PR"*, and it finished. Record the result you measured
 as a PR comment, and tell the builder to write exactly that in
 `CHANGELOG.md`/`CLAUDE.md` rather than a number it has not measured.
 
+**Paid for again, 24 Sep 2026: push before measuring is not enough if the
+builder measures DURING the build.** In v04.61 the builder did every review
+fix, then ended during its full `app-check` without pushing. In v04.62 it
+pushed but never opened the PR. On #97 (filters) the first run started a
+browser check before its first commit and lost 29 minutes of work. What
+works, and every issue now says it:
+- **an early, trivial first push** (the record fixes), so the branch exists
+  from the start;
+- **no `app-check` or Playwright run of any kind before the implementation
+  is pushed**;
+- **the builder runs only `ship-check` and `--only <its own sections>`.**
+  The full suite, run twice, and the unpatched run are the Architect's, in
+  review.
+
+The retried #97 run finished cleanly under exactly those words.
+
+**When a round is urgent or small, build it yourself.** v04.55, v04.58,
+v04.60, v04.65 and v04.67–v04.71 were built by the Architect directly. v04.65
+was data loss found mid-round and went ahead of the builder's queued work.
+The builder's round was then renumbered and `main` merged into it. Cheap,
+and nothing waited.
+
+**A check that cannot fail is not a check. Show every new one failing on the
+code it guards.** Three times this session a new check passed on the old
+code:
+- `25e` edited the wrong cell;
+- `33b` waited 3.5s for a balloon that appears at 6s;
+- `26c` quietly accepted `null`.
+
+Each was caught only by the unpatched run.
+
 ## How the owner gives work — confirmed 23 Sep 2026
 
 **The owner sends jobs scattered and unplanned, and that is the agreed way of
