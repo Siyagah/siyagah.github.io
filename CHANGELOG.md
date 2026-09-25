@@ -6903,5 +6903,5 @@ the real `_pullRemote()`, with `pushToCloud` counted. Four cases:
 - Unpatched (v04.70's app): **4/5**. Only the first case fails. The three
   "send nothing" guards pass on both versions, as they should.
 - `tools/sync-audit.mjs`: unchanged, at 110 PASS / 0 FAIL.
-- Full `app-check`: **@@FULL@@**.
+- Full `app-check`: **903/903, twice in a row**.
 

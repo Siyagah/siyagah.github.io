@@ -29,7 +29,7 @@ must never accumulate here instead of there.
   Firestore and the real `_pullRemote`): a missing edit is pushed back, and
   an identical copy, an incoming-only change, or a converged state push
   nothing. Unpatched v04.70: `35a` fails only its first check. Full
-  `app-check` **@@FULL@@**.
+  `app-check` **903/903, twice in a row**.
 - **v04.70** (25 Sep 2026) — the folder dialog's ⋯ row menu opens on top
   on phone and tablet. `#ctx` sat at z-index 9999, under the modal overlay
   `#ov` (10000) that hosts the folder dialog. Below 1200px, where the row
