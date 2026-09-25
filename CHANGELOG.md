@@ -6606,3 +6606,43 @@ undo step. `17*`, `25*`, `27*` and `28*` all stay green, re-run in full.
   `29i`, "opening changes nothing", passes on both versions: it is a guard.
 - **Built as v04.65 and renumbered.** The Architect shipped an urgent I1
   fix as v04.65 while this round was in review. See that entry.
+
+---
+
+## v04.67 — pop-ups: no empty gap when the Sidepane sits below Contents (25 Sep 2026)
+
+**Owner-reported,** with a screenshot, on 24 Sep: "Both single or multi pop-up
+shows this, pls fix." The pop-up showed a wide empty strip between the
+Contents panel and the note. **Built by the Architect directly** (a two-line
+fix).
+
+**Cause.** The Sidepane can sit beside the note on the side opposite Contents
+(`pinPanelPos: 'side'`) or stacked under Contents in the same column
+(`'below'`). The function that keeps the note clear of the panels added both
+panels' widths on a side, even when they were stacked. Single uses
+`_syncP3CPadding()` and Multi uses `_fwSyncBodyPadding()`. The result was a
+second, empty column exactly as wide as the Sidepane. At 1590px wide with
+Contents on the left, the padding measured **412px** where it should be
+**212px**. Single has had this since `'below'` existed; Multi since v04.59
+made `'below'` work there.
+
+**Fix.** Panels on the same side take the wider width (`Math.max`), not the
+sum. Opposite-side panels are unchanged.
+
+**Layouts (D5).** Tablet and laptop both get the fix. The phone draws no side
+panels in either pop-up (v04.34), which is unchanged and checked.
+
+**Checks: new section 31.**
+- `31a`, at 1440 and 820: every combination of Single/Multi, Contents
+  left/right and Sidepane below/side. The note's inner edge must sit within
+  2px of the nearest panel, with no overlap.
+- `31b`, at 390: no side panel and no side padding.
+
+**Measured (Architect):**
+- `ship-check`: **13/13**.
+- `--only 31`: **17/17**.
+- Unpatched (v04.66's app): `--only 31` **9/17, 8 FAILED**. That is exactly
+  the eight "Sidepane below" cases; the side-by-side cases and the phone
+  check were never broken and pass on both.
+- Full `app-check`: **869/869, twice in a row**.
+

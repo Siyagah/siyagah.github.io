@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.66">
+<meta name="app-version" content="04.67">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3064,7 +3064,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.66</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.67</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -12738,9 +12738,13 @@ function _fwSyncBodyPadding(aid){
   const body=win.querySelector('.fw-editarea');if(!body)return;
   const toc=document.getElementById('toc-panel');
   const pin=document.getElementById('pin-panel');
+  /* v04.67 — Math.max, not +=. With the Sidepane set "below Contents"
+     (DB.theme.pinPanelPos==='below') both panels share ONE column on the
+     same side, stacked; adding their widths reserved a second, empty
+     column the width of the Sidepane between Contents and the note. */
   let left=0,right=0;
-  if(toc&&toc.parentElement===win){ if(toc.classList.contains('toc-left'))left+=toc.offsetWidth; else right+=toc.offsetWidth; }
-  if(pin&&pin.parentElement===win){ if(pin.classList.contains('pin-left'))left+=pin.offsetWidth; else right+=pin.offsetWidth; }
+  if(toc&&toc.parentElement===win){ if(toc.classList.contains('toc-left'))left=Math.max(left,toc.offsetWidth); else right=Math.max(right,toc.offsetWidth); }
+  if(pin&&pin.parentElement===win){ if(pin.classList.contains('pin-left'))left=Math.max(left,pin.offsetWidth); else right=Math.max(right,pin.offsetWidth); }
   body.style.paddingLeft=left?left+'px':'';
   body.style.paddingRight=right?right+'px':'';
 }
@@ -12789,9 +12793,11 @@ function _syncP3CPadding(){
   const toc=document.getElementById('toc-panel');
   const pin=document.getElementById('pin-panel');
   const p3=document.getElementById('p3');
+  /* v04.67 — Math.max, not +=: see _fwSyncBodyPadding. Stacked panels on
+     one side ("below Contents") share a single column. */
   let left=0,right=0;
-  if(toc){ if(p3&&p3.classList.contains('toc-left'))left+=toc.offsetWidth; else right+=toc.offsetWidth; }
-  if(pin){ if(pin.classList.contains('pin-left'))left+=pin.offsetWidth; else right+=pin.offsetWidth; }
+  if(toc){ if(p3&&p3.classList.contains('toc-left'))left=Math.max(left,toc.offsetWidth); else right=Math.max(right,toc.offsetWidth); }
+  if(pin){ if(pin.classList.contains('pin-left'))left=Math.max(left,pin.offsetWidth); else right=Math.max(right,pin.offsetWidth); }
   p3c.style.paddingLeft=left?left+'px':'';
   p3c.style.paddingRight=right?right+'px':'';
 }
