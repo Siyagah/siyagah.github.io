@@ -6455,5 +6455,5 @@ again is part of the filters round (#97), which becomes **v04.66**.
   The 6 that pass on both are the real-🗑 click itself, the unfiling, the
   folder deletion syncing, the `30d` guard, and two no-page-error checks. All
   six are right to pass on v04.64.
-- Full `app-check`: **@@FULL@@**.
+- Full `app-check`: **779/779, twice in a row**.
 

@@ -30,7 +30,7 @@ must never accumulate here instead of there.
     `DB._folderNoteRecoveryV1`) brings back notes the bug removed, from the
     folder's Trash copy, unfiled.
   - New section 30 (`30a`–`30e`). Unpatched v04.64: `--only 30` 6/17.
-    Full `app-check` **@@FULL@@**.
+    Full `app-check` **779/779, twice in a row**.
 - **v04.64** (24 Sep 2026) — spreadsheet round 2b2: colour rules
   (conditional formatting). Issue #95, round 2b2 of the spreadsheet backlog
   (round 1: v04.52, 2a: v04.61, 2b1: v04.63; 2b3 — filters — and 2c come
