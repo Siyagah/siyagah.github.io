@@ -6845,5 +6845,5 @@ open the rename box.
 - `--only 34`: **6/6**.
 - Unpatched (v04.69's app): **0/4**. The menu is covered at both sizes, and
   the Rename tap cannot reach it.
-- Full `app-check`: **@@FULL@@**.
+- Full `app-check`: **898/898, twice in a row**.
 

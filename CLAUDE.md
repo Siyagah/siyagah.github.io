@@ -24,7 +24,7 @@ must never accumulate here instead of there.
   modal, `#gs-overlay` 10100). Found in the MMSA research. New section 34
   (`34a` at 390/820: real taps on 📚 Folders → ⋯ → Rename; the menu is
   topmost and on screen; the rename box opens). Unpatched v04.69:
-  `--only 34` 0/4. Full `app-check` **@@FULL@@**.
+  `--only 34` 0/4. Full `app-check` **898/898, twice in a row**.
 - **v04.69** (25 Sep 2026) — no backup balloon; Recent and MyWall on the
   sidebar's bottom row. Owner's requests, with two phone screenshots.
   - **The balloon:** `_bkMaybeAuto()` showed "No backup yet" (or "Last backup
