@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.68">
+<meta name="app-version" content="04.69">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1212,6 +1212,14 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .sb-toolbar .sb-tb-btn .tb-ico{font-size:19px;line-height:1}
 .sb-toolbar .sb-tb-new{font-weight:600}
 @media(max-width:1199.98px){.sb-toolbar .sb-tb-btn{min-height:46px;font-size:15.5px}}
+/* v04.69 — four buttons (New Note · Recent · MyWall · Folders, owner's order,
+   25 Sep). Icon above word, so a phone's full-width sidebar fits all four on
+   one row; a narrow laptop sidebar (~200px) falls to a 2×2 grid by itself
+   rather than cutting a word off. */
+#sb-toolbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:6px}
+#sb-toolbar .sb-tb-btn{flex-direction:column;gap:2px;padding:6px 4px;font-size:13px;line-height:1.15;white-space:nowrap;min-width:0}
+#sb-toolbar .sb-tb-btn .tb-ico{font-size:20px}
+@media(max-width:1199.98px){#sb-toolbar .sb-tb-btn{min-height:56px;font-size:14px}}
 .sb-exp-tb{color:#B89050!important}
 .sb-exp-tb.dirty{background:rgba(184,135,58,.1)!important;
                  border-color:rgba(184,135,58,.25)!important}
@@ -3064,7 +3072,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.68</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.69</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3154,6 +3162,8 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 
   <div class="sb-toolbar" id="sb-toolbar">
     <button class="sb-tb-btn sb-tb-new" onclick="quickCapture()" title="New note — opens in its own pop-out window"><span class="tb-ico">📝</span>New Note</button>
+    <button class="sb-tb-btn sb-tb-recent" onclick="selFolder('sf-recent')" title="Recently edited notes"><span class="tb-ico">🕐</span>Recent</button>
+    <button class="sb-tb-btn sb-tb-wall" onclick="selFolder('sf-mywall')" title="Open MyWall"><span class="tb-ico">🧱</span>MyWall</button>
     <button class="sb-tb-btn" onclick="openFolderPopupFromToolbar()" title="Open the folder pop-up browser"><span class="tb-ico">📚</span>Folders</button>
   </div>
 </aside>
@@ -20317,12 +20327,13 @@ async function _bkMaybeAuto(){
     toast('🗄 Backups paused — ⚙ → Automatic Backups to allow the folder again',7000);
     return;
   }
-  const age=_bkAgeDays(cfg);
-  if(age===null||age>=14){
-    toast(age===null
-      ? '🗄 No backup yet — ⚙ → Automatic Backups keeps a dated copy safe'
-      : '🗄 Last backup was '+age+' days ago — ⚙ → Automatic Backups',7000);
-  }
+  /* v04.69 — no reminder on launch. The owner asked for the balloon to go
+     ("Don't want to see the baloon", 25 Sep): "No backup yet" showed on
+     EVERY launch of a device that had never backed up — which is every
+     phone, since automatic backups need a desktop browser's folder access —
+     and covered the sidebar's bottom buttons. The backup status stays in
+     ⚙ → Automatic Backups (_bkStatusHTML). The "Backups paused" notice above
+     is kept: it reports a real failure after the owner turned backups on. */
 }
 
 /* ── The panel ────────────────────────────────────────────────────────── */

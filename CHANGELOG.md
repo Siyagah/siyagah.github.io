@@ -6757,3 +6757,58 @@ integrating it.
 - On v04.67's app: **59 PASS / 51 FAIL**.
 - Full `app-check`: **873/873, twice in a row**.
 
+---
+
+## v04.69 — no backup balloon; Recent and MyWall on the sidebar's bottom row (25 Sep 2026)
+
+**Owner's requests (25 Sep),** with two phone screenshots: "Don't want to see
+the baloon. Pls fix." and "can you put these short cut button at the bottom:
+Recent and MyWall in between New Note and Folders?" Built by the Architect
+directly.
+
+**The balloon.** Six seconds after every launch, `_bkMaybeAuto()` showed
+"🗄 No backup yet — ⚙ → Automatic Backups keeps a dated copy safe". Once a
+backup existed but was 14 or more days old, it showed "Last backup was N days
+ago" instead. The code's own comment claimed it stayed "silent about a
+missing setup on every launch", but it did the opposite. Automatic backups
+need a desktop browser's folder access, so on a phone the reminder could
+never be satisfied and showed on every launch, on top of the bottom buttons.
+**Removed.** The backup status is still in ⚙ → Automatic Backups. The
+"Backups paused" notice stays, because it reports a real failure after the
+owner has turned backups on.
+
+**The bottom row.** `#sb-toolbar` now holds, in the owner's order:
+`📝 New Note` · `🕐 Recent` · `🧱 MyWall` · `📚 Folders`. Recent and MyWall
+open the "(02) Recently Edited" and "(08) MyWall" Smart Views through
+`selFolder()`, which already slides the note list in under 1200px.
+
+**Layouts (D5).** Each button shows its icon above its word, laid out in a
+grid (`repeat(auto-fit, minmax(78px, 1fr))`):
+- **Phone:** the sidebar is full width, so all four sit on one row, 56px
+  tall.
+- **Tablet:** one row.
+- **Laptop:** the sidebar is about 200px wide, so the buttons form a 2×2
+  grid. No word is cut off at any size.
+
+**Checks: new section 33.**
+- `33a`, at 390, 820 and 1440:
+  - the four buttons appear in the owner's order;
+  - they are 44px or taller on touch screens and 40px or taller on a laptop;
+  - they are fully on screen, inside the sidebar, with no word cut off;
+  - under 1200px they sit on one row;
+  - a real tap on Recent or MyWall opens that list (under 1200px, the note
+    list slides in).
+- `33b`, at 390: no balloon within 7.5s of launch, both for a device that has
+  never backed up and for one whose last backup was 30 days ago. The first
+  draft checked at 3.5s and passed on v04.68 too, because the reminder waits
+  6s. The wait was fixed, and the check was then shown to fail on v04.68.
+- `6i`'s "the sidebar's own two buttons are boxes" check was updated in place
+  to four buttons, with the reason recorded.
+
+**Measured (Architect):**
+- `ship-check`: **13/13**.
+- `--only 33,6i`: **all pass**.
+- Unpatched (v04.68's app): `33a` fails its order check at all three sizes,
+  both `33b` cases fail, and `6i`'s four-button check fails.
+- Full `app-check`: **892/892, twice in a row**.
+
