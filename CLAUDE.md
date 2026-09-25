@@ -23,7 +23,7 @@ must never accumulate here instead of there.
   started a Sidepane-width (about 200px) away from Contents. Same-side panels
   now take `Math.max`. New section 31 (`31a` both pop-ups × both sides × both
   positions × 820/1440; `31b` phone unchanged). Unpatched v04.66:
-  `--only 31` 9/17. Full `app-check` **@@FULL@@**.
+  `--only 31` 9/17. Full `app-check` **869/869, twice in a row**.
 - **v04.66** (24 Sep 2026) — spreadsheet round 2b3: filters. Issue #97,
   round 2b3 of the spreadsheet backlog (round 1: v04.52, 2a: v04.61, 2b1:
   v04.63, 2b2: v04.64; 2c comes later).

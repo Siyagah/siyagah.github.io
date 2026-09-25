@@ -6644,5 +6644,5 @@ panels in either pop-up (v04.34), which is unchanged and checked.
 - Unpatched (v04.66's app): `--only 31` **9/17, 8 FAILED**. That is exactly
   the eight "Sidepane below" cases; the side-by-side cases and the phone
   check were never broken and pass on both.
-- Full `app-check`: **@@FULL@@**.
+- Full `app-check`: **869/869, twice in a row**.
 
