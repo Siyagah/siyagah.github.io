@@ -9337,6 +9337,55 @@ await r.block(`34a-folder-row-menu-reachable-${vp.name}`, async () => {
 });
 }
 
+/* v04.71 — section 35: after merging an incoming cloud copy, a device sends
+   back whatever that copy lacks. _doPush() writes without reading first, so
+   a device that had not yet received another device's edit could overwrite
+   the cloud copy without it; the device that still had the edit merged the
+   incoming copy, kept its edit — and, the record COUNT being unchanged,
+   never pushed it back. Found in the v04.68 sync audit, verified here with
+   the section-26 fake Firestore and the real _pullRemote(). */
+await r.block('35a-pull-pushes-back-what-cloud-lacks', async () => {
+  const app = await openApp();
+  const { page } = app;
+  await installFakeFs(page);
+  const out = await page.evaluate(async () => {
+    window.__pushed = 0; pushToCloud = () => { window.__pushed++; };
+    const nb = window.__fakeFs.collection('notebooks').doc('nb-35');
+    const clone = (x) => JSON.parse(JSON.stringify(x));
+    const pull = async (remote, ver) => {
+      await window._writeCloudDB(nb, ver, window._b64enc(JSON.stringify(remote)));
+      const md = (await nb.get()).data();
+      window.__pushed = 0; _pullInFlight = false;
+      await _pullRemote(nb, md);
+      return window.__pushed;
+    };
+    const res = {};
+    /* 1. This device edited a1 after the cloud copy was written. */
+    const stale = clone(DB);
+    const a1 = DB.articles.find((a) => a.id === 'a1');
+    a1.content = '<p>Laptop edit L</p>'; a1.updatedAt = new Date(Date.now() + 5000).toISOString();
+    res.lacking = await pull(stale, Date.now());
+    res.keptL = DB.articles.find((a) => a.id === 'a1').content.includes('Laptop edit L');
+    /* 2. The cloud copy is exactly this device's notebook. */
+    res.identical = await pull(clone(DB), Date.now() + 1);
+    /* 3. The cloud carries a newer edit from elsewhere; nothing newer here. */
+    const other = clone(DB);
+    const a2 = other.articles.find((a) => a.id === 'a2');
+    a2.content = '<p>Phone edit P</p>'; a2.updatedAt = new Date(Date.now() + 60000).toISOString();
+    res.incoming = await pull(other, Date.now() + 2);
+    res.gotP = DB.articles.find((a) => a.id === 'a2').content.includes('Phone edit P');
+    /* 4. Pull the same copy again: the two devices have converged. */
+    res.again = await pull(clone(DB), Date.now() + 3);
+    return res;
+  });
+  r.check(out.keptL && out.lacking >= 1, 'a cloud copy missing this device\'s newer edit (same record count) makes this device push it back', JSON.stringify(out));
+  r.check(out.identical === 0, 'a cloud copy identical to this device\'s notebook sends nothing back', JSON.stringify(out));
+  r.check(out.gotP && out.incoming === 0, 'an incoming newer edit is taken, and nothing is sent back when this device has nothing newer (no ping-pong)', JSON.stringify(out));
+  r.check(out.again === 0, 'once both hold the same merged notebook, nobody pushes', JSON.stringify(out));
+  r.check(app.errors.length === 0, 'no page errors', app.errors.slice(0, 2).join(' · '));
+  await app.close();
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
