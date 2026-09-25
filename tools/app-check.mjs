@@ -1595,8 +1595,10 @@ await r.block('6i-4-section-strip', async () => {
       'a section heading sits on a strip of its own, not on the same ground as its rows',
       `heading ${m.strip} · row ${m.rowBg}`);
     const bare = m.btns.filter((b) => b.bg === 'rgba(0, 0, 0, 0)' || parseFloat(b.border) < 0.5 || b.h < 40);
-    r.check(m.btns.length === 2 && bare.length === 0,
-      'the sidebar’s own two buttons are boxes you can hit, not bare labels',
+    /* v04.69 — four buttons now (New Note · Recent · MyWall · Folders, the
+       owner's request of 25 Sep); updated in place from `=== 2`. */
+    r.check(m.btns.length === 4 && bare.length === 0,
+      'the sidebar’s own four buttons are boxes you can hit, not bare labels',
       bare.length ? bare.map((b) => `${b.label} ${b.h}px bg ${b.bg} border ${b.border}`).join(' · ')
         : m.btns.map((b) => `${b.label} ${b.h}px`).join(' · '));
   }
@@ -9248,6 +9250,55 @@ await r.block('32-sync-audit-all-directions', async () => {
     'every change reaches the other device and survives the merge back, in both directions (114 operations)', `PASS ${pass}/${total}, FAIL ${fail}, ERROR ${err}, NOTRUN ${notrun} ${bad}`);
   r.check(known === 2, 'only the two recorded undo rows are KNOWN (undo stays local)', `KNOWN ${known}`);
   r.check(out.status === 0, 'the sync audit exits cleanly', `exit ${out.status}`);
+});
+
+/* v04.69 — section 33: the sidebar's bottom row, and no backup balloon.
+   Owner, 25 Sep, with two phone screenshots: "Don't want to see the baloon"
+   (the "No backup yet" toast on every launch, covering the bottom row) and
+   "put these short cut button at the bottom: Recent and MyWall in between
+   New Note and Folders". */
+const TOAST_SPY = () => { window.__toasts = []; new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => {
+  if (n.nodeType === 1 && n.classList && n.classList.contains('toast')) window.__toasts.push(n.textContent); }))).observe(document, { childList: true, subtree: true }); };
+for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }, { name: '1440', width: 1440, height: 900 }]) {
+await r.block(`33a-bottom-row-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB(), initScript: TOAST_SPY });
+  const { page } = s;
+  if (vp.width < 1200) await page.evaluate(() => showPane('sb'));
+  await page.waitForTimeout(3500);
+  const g = await page.evaluate(() => {
+    const t = document.getElementById('sb-toolbar'); const tb = t.getBoundingClientRect();
+    const btns = [...t.querySelectorAll('.sb-tb-btn')].map((b) => { const q = b.getBoundingClientRect();
+      return { t: b.textContent.trim(), l: q.left, r: q.right, top: q.top, b: q.bottom, h: q.height, clip: b.scrollWidth > b.clientWidth + 1 }; });
+    return { tb: { l: tb.left, r: tb.right }, btns, vw: innerWidth, vh: innerHeight, toasts: window.__toasts || [] };
+  });
+  const names = g.btns.map((b) => b.t.replace(/^[^A-Za-z]+/, '').trim());
+  r.check(JSON.stringify(names) === '["New Note","Recent","MyWall","Folders"]', `${vp.name}: the bottom row reads New Note · Recent · MyWall · Folders, in that order`, JSON.stringify(names));
+  const minH = vp.width < 1200 ? 44 : 40;
+  r.check(g.btns.every((b) => b.h >= minH && !b.clip && b.l >= g.tb.l - 0.5 && b.r <= g.tb.r + 0.5 && b.b <= g.vh + 0.5 && b.top >= 0),
+    `${vp.name}: all four are at least ${minH}px tall, fully on screen, inside the sidebar, no word cut off`, JSON.stringify(g.btns));
+  if (vp.width < 1200) r.check(new Set(g.btns.map((b) => Math.round(b.top))).size === 1, `${vp.name}: all four sit on one row`, JSON.stringify(g.btns.map((b) => Math.round(b.top))));
+  for (const [label, sf] of [['Recent', 'sf-recent'], ['MyWall', 'sf-mywall']]) {
+    if (vp.width < 1200) await page.evaluate(() => showPane('sb'));
+    await page.locator('#sb-toolbar .sb-tb-btn', { hasText: label }).click();
+    await page.waitForTimeout(400);
+    const st = await page.evaluate(() => ({ folder: ST.folder, p2: document.getElementById('p2').classList.contains('mob-open') }));
+    r.check(st.folder === sf && (vp.width >= 1200 || st.p2), `${vp.name}: a real tap on ${label} opens that list${vp.width < 1200 ? ' (the note list slides in)' : ''}`, JSON.stringify(st));
+  }
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+/* The reminder fired 6s after boot (setTimeout in the boot sequence), so
+   each case waits 7.5s — a shorter wait saw nothing on v04.68 either. */
+await r.block('33b-no-backup-balloon-390', async () => {
+  for (const [label, cfg] of [['never backed up', null], ['last backup 30 days ago', { lastAt: Date.now() - 30 * 864e5, lastName: 'old.json' }]]) {
+    const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB(),
+      initScript: `(${TOAST_SPY.toString()})();` + (cfg ? ` try{ localStorage.setItem('siyagah-backup-cfg', ${JSON.stringify(JSON.stringify(cfg))}); }catch(e){}` : '') });
+    await s.page.waitForTimeout(7500);
+    const t = await s.page.evaluate(() => window.__toasts || []);
+    r.check(!t.some((x) => /No backup yet|Last backup was/.test(x)), `390, ${label}: no backup reminder balloon after launch`, JSON.stringify(t));
+    await s.close();
+  }
 });
 
 /* Proves the isolation mechanism itself, permanently, rather than trusting a

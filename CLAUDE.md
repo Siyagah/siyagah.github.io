@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.68.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.69.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,23 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.69** (25 Sep 2026) — no backup balloon; Recent and MyWall on the
+  sidebar's bottom row. Owner's requests, with two phone screenshots.
+  - **The balloon:** `_bkMaybeAuto()` showed "No backup yet" (or "Last backup
+    was N days ago") 6s after every launch. A phone can't set up automatic
+    backups at all, so it showed on every phone launch and covered the
+    bottom row. The reminder is gone; the status stays in ⚙ → Automatic
+    Backups, and the real-failure "Backups paused" notice is kept.
+  - **The bottom row** (`#sb-toolbar`) is New Note · Recent · MyWall ·
+    Folders, calling `selFolder('sf-recent')` / `selFolder('sf-mywall')`,
+    which already slides the note list in under 1200px. Each button is an
+    icon above its word, in a grid (`minmax(78px,1fr)`): one row on a
+    phone's full-width sidebar and on a tablet, 2×2 in a narrow laptop
+    sidebar.
+  - New section 33 (`33a` at 390/820/1440: order, size, on screen, not
+    clipped, one row under 1200, real taps open each list; `33b`: no balloon
+    after 7.5s, never backed up and 30 days old). `6i`'s "two buttons" check
+    was updated in place to four. Full `app-check` **@@FULL@@**.
 - **v04.68** (25 Sep 2026) — sync: every change reaches the other device,
   in both directions. The owner asked for a sync check in all directions.
   - `tools/sync-audit.mjs` runs 114 operations × both merge directions. On
@@ -124,62 +141,6 @@ must never accumulate here instead of there.
     folder's Trash copy, unfiled.
   - New section 30 (`30a`–`30e`). Unpatched v04.64: `--only 30` 6/17.
     Full `app-check` **779/779, twice in a row**.
-- **v04.64** (24 Sep 2026) — spreadsheet round 2b2: colour rules
-  (conditional formatting). Issue #95, round 2b2 of the spreadsheet backlog
-  (round 1: v04.52, 2a: v04.61, 2b1: v04.63; 2b3 — filters — and 2c come
-  later).
-  - **Record fix carried from v04.63's review:** the armed `Merge cells`
-    label was 340px wide, past the phone's sideways-scrolling toolbar at
-    390px — now `Tap again: keeps top-left only`; the toast keeps the full
-    sentence.
-  - **New toolbar button `Colour rules ▾`** (words, no glyph), opening a
-    small panel anchored to the button and clamped on screen, the same
-    shape `Borders ▾`/`ƒx Functions` already use. Add a rule for the
-    selected cells (condition — greater than/less than/equal to/between/
-    text contains/is empty/is not empty — one or two values, and a colour:
-    green, gold or rose fill, or red text for negatives) and see/remove the
-    rules overlapping the current selection, in words
-    (`B2:B20 · greater than 100 · green`).
-  - Stored as a new top-level key `cr`: `[{rng:[r1,c1,r2,c2], op, v1, v2?,
-    fill?, ink?}]`, in the order added, key left off when there are no
-    rules.
-  - **Applying.** `_sgCrFor()` (top-level, shared by the snapshot and the
-    live grid) checks each cell's CURRENT COMPUTED value against `state.cr`
-    in order — the FIRST match wins. A match overrides only how a cell is
-    DRAWN; the cell's own stored `bg` is never touched (a cell with its own
-    gold fill shows the rule colour while it matches and its gold once it
-    stops). A rule on a volatile formula (`TODAY()`) goes stale in the
-    snapshot between edits — the same trade-off v04.52 made for values.
-  - **Moves with the grid.** `rekeyMerges`'s shift math is now a shared
-    helper, `rekeyRange()`, that a new `rekeyColorRules()` also calls from
-    `rekey()` — an insert/delete grows, shrinks or drops a rule's range the
-    same way it does a merge's, except a rule collapsing to one cell stays
-    (a merge needs two). Sorting never calls `rekey()`, so a rule's range —
-    unlike a merge's — is untouched by a sort; it colours by position.
-  - **Merges:** a rule over a merge applies to the anchor, for free — a
-    merge's covered cells are already skipped/hidden everywhere a rule
-    would be drawn. **Undo:** adding/removing a rule is one step each.
-    **Read view and Multi** share the same drawing code.
-  - **Not done:** colour scales, data bars, icon sets; rules written as
-    formulas; font styling from rules beyond red text; filters (2b3); 2c.
-  - New app-check section 28 (`28a`–`28h`): adding a rule through the real
-    panel at all three sizes (values turn green/don't, typing a new value
-    re-evaluates, a save carries the colour into `.sg-static`, a reload
-    shows it in the read view, the panel's own box/44px tap targets); every
-    condition, one match and one non-match each, plus red text; rule order
-    and the owner's own fill both proved, `bg` in `data-sg` never changed;
-    the real `Rows & columns ▾` menu (insert grows, delete-column drops, a
-    sort leaves it alone); `✕ Remove` and one-undo; a real Multi window;
-    "opening changes nothing" extended to `cr`; the record fix's 240px
-    check. `27a`'s armed-label assertion updated in place for the record
-    fix, reason recorded.
-  - 12/12 ship checks, `--only 28` **51/51**, `--only 27,25,17` **212/212**.
-    Full `app-check` (Architect, on `47a31ef`): **762/762, twice in a row**.
-    Unpatched (v04.63's app with this round's tools), `--only 28,27,25,17`:
-    **214/226, 12 FAILED**: 7 `28*` blocks aborted, `28f` aborted after 1
-    check, `28h` failed, the three `27a` arm-label checks failed (updated in
-    place for the shorter label). `28g` passes on both, by design; every
-    `25*`/`17*` check passed on v04.63.
 ---
 
 ## What this is
