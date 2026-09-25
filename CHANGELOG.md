@@ -6812,3 +6812,38 @@ grid (`repeat(auto-fit, minmax(78px, 1fr))`):
   both `33b` cases fail, and `6i`'s four-button check fails.
 - Full `app-check`: **892/892, twice in a row**.
 
+---
+
+## v04.70 — the folder dialog's ⋯ row menu opens on top on phone and tablet (25 Sep 2026)
+
+**Found** while answering MMSA's question about the folder dialog (24 Sep).
+Built by the Architect directly.
+
+**The defect.** Below 1200px, the folder dialog folds each row's 📍, ✏️ and 🗑
+into a single ⋯, which opens the shared context menu `#ctx`. `#ctx` was at
+z-index **9999**, while the dialog sits on the modal overlay `#ov` at
+**10000**. So the menu opened invisibly behind the dialog, and on a phone
+or tablet a folder could not be renamed or deleted from there, nor set as
+the target for new folders. The existing check only asked whether the menu
+was displayed, not whether it was on top, so it passed.
+
+**Fix.** `#ctx` is now at z-index **10110**. That is above every overlay it
+can be opened from: `#ov` (10000), the 10050 modal, and the search overlay
+`#gs-overlay` (10100). It stays below the folder dialog's own 🎨 text-style
+pop (10120), which never appears at the same time.
+
+**Layouts (D5).** Phone and tablet get the fix. On a laptop the row icons are
+drawn directly and don't use this menu, so nothing changes there.
+
+**Checks: new section 34.** `34a`, at 390 and 820, uses real taps only:
+sidebar 📚 Folders, then ⋯ on a folder row. The menu must be the topmost
+element at its own centre, fully on screen. A real tap on Rename must then
+open the rename box.
+
+**Measured (Architect):**
+- `ship-check`: **13/13**.
+- `--only 34`: **6/6**.
+- Unpatched (v04.69's app): **0/4**. The menu is covered at both sizes, and
+  the Rename tap cannot reach it.
+- Full `app-check`: **898/898, twice in a row**.
+

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.69.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.70.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,15 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.70** (25 Sep 2026) — the folder dialog's ⋯ row menu opens on top
+  on phone and tablet. `#ctx` sat at z-index 9999, under the modal overlay
+  `#ov` (10000) that hosts the folder dialog. Below 1200px, where the row
+  icons fold into ⋯, 📍 / Rename / Delete could not be reached. `#ctx` is
+  now 10110, above every overlay it can open from (`#ov` 10000, the 10050
+  modal, `#gs-overlay` 10100). Found in the MMSA research. New section 34
+  (`34a` at 390/820: real taps on 📚 Folders → ⋯ → Rename; the menu is
+  topmost and on screen; the rename box opens). Unpatched v04.69:
+  `--only 34` 0/4. Full `app-check` **898/898, twice in a row**.
 - **v04.69** (25 Sep 2026) — no backup balloon; Recent and MyWall on the
   sidebar's bottom row. Owner's requests, with two phone screenshots.
   - **The balloon:** `_bkMaybeAuto()` showed "No backup yet" (or "Last backup
@@ -126,21 +135,6 @@ must never accumulate here instead of there.
     **852/852, twice in a row**. Unpatched (v04.65 app): `--only 29`
     **4/15, 11 FAILED**. Built as v04.65 and renumbered to v04.66 after the
     urgent I1 fix took v04.65.
-- **v04.65** (24 Sep 2026) — deleting a folder no longer deletes its notes
-  on the next sync (I1). Built by the Architect directly, ahead of filters.
-  - Up to v04.64, `trashFolder()` tombstoned the notes inside a deleted folder
-    (it only unfiles them), and `mergeDB()` read a folder Trash entry's
-    `subtree.articles` as deletions. So one sync removed every such note on
-    every device. Restoring the folder from Trash brought them back; emptying
-    Trash made the loss permanent.
-  - **Fix:** folders only are tombstoned. `mergeDB()` ignores a side's
-    tombstone for a note that same side holds alive, which neutralises marks
-    from older builds. A one-time boot repair
-    (`_migrateRecoverFolderDeletedNotes`, recorded in
-    `DB._folderNoteRecoveryV1`) brings back notes the bug removed, from the
-    folder's Trash copy, unfiled.
-  - New section 30 (`30a`–`30e`). Unpatched v04.64: `--only 30` 6/17.
-    Full `app-check` **779/779, twice in a row**.
 ---
 
 ## What this is
