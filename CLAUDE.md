@@ -36,7 +36,7 @@ must never accumulate here instead of there.
     - a note left pointing at a deleted folder is unfiled in the merge.
   - **Undo stays local** (`U01`/`Z03` are KNOWN).
   - App-check block 32 runs the audit. Audit on v04.67: 59/51 (PASS/FAIL).
-    With the fixes: 110/0. Full `app-check` **@@FULL@@**.
+    With the fixes: 110/0. Full `app-check` **873/873, twice in a row**.
 - **v04.67** (25 Sep 2026) — pop-ups: no empty gap when the Sidepane sits
   below Contents. Owner-reported. `_syncP3CPadding()` (Single) and
   `_fwSyncBodyPadding()` (Multi) ADDED the Contents and Sidepane widths

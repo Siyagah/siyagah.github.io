@@ -6755,5 +6755,5 @@ integrating it.
 - `ship-check`: **13/13**.
 - `node tools/sync-audit.mjs`: **110 PASS / 0 FAIL / 2 BY-DESIGN / 2 KNOWN**.
 - On v04.67's app: **59 PASS / 51 FAIL**.
-- Full `app-check`: **@@FULL@@**.
+- Full `app-check`: **873/873, twice in a row**.
 
