@@ -16,6 +16,14 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.67** (25 Sep 2026) — pop-ups: no empty gap when the Sidepane sits
+  below Contents. Owner-reported. `_syncP3CPadding()` (Single) and
+  `_fwSyncBodyPadding()` (Multi) ADDED the Contents and Sidepane widths
+  even when `pinPanelPos==='below'` stacks them in one column. The note then
+  started a Sidepane-width (about 200px) away from Contents. Same-side panels
+  now take `Math.max`. New section 31 (`31a` both pop-ups × both sides × both
+  positions × 820/1440; `31b` phone unchanged). Unpatched v04.66:
+  `--only 31` 9/17. Full `app-check` **@@FULL@@**.
 - **v04.66** (24 Sep 2026) — spreadsheet round 2b3: filters. Issue #97,
   round 2b3 of the spreadsheet backlog (round 1: v04.52, 2a: v04.61, 2b1:
   v04.63, 2b2: v04.64; 2c comes later).
@@ -230,61 +238,6 @@ must never accumulate here instead of there.
     tools), `--only 27,25,17`: **136/153, 17 FAILED, all in section 27**
     (7 blocks aborted, 9 `27f` fill assertions failed, `27g` aborted after 1
     check; `27h` passes on both by design, a guard).
-- **v04.62** (24 Sep 2026) — batch the cloud sync write, so it doesn't stop
-  at ~7 MB. Issue #91.
-  - `_writeCloudDB()` used to put every chunk doc plus the main doc in ONE
-    `batch.commit()`. Firestore rejects any single request over 10 MiB, so
-    once `JSON.stringify(DB)` passed roughly 7.3 MB, every push failed on
-    every device and sync stopped outright (I2), with no guard anywhere to
-    say why. The owner's notebook was already ~5.0 MB in v04.50, about 35%
-    short of that ceiling.
-  - **Write path only — the stored format does not change.** Chunk docs now
-    go out in as many batches as needed, capped at `_SYNC_CHUNK_BATCH = 8`
-    chunks per batch (≈7.2 MB of payload, headroom under 10 MiB for request
-    overhead). The **main doc is written LAST, in its own final batch, only
-    after every chunk batch has committed** — if any chunk batch throws,
-    the main doc is never reached and the error propagates exactly as
-    before. That's what makes the non-atomic, multi-batch write safe:
-    `_readCloudDB()` already treats a chunk whose `ver` differs from the
-    main doc's `ver` as torn and retries, so a reader catching a write
-    mid-flight just sees the OLD main `ver` and is fired again once the new
-    one lands. No compression, no per-note documents — both change the
-    format and are later, owner-approved work.
-  - **A real edge case, found while writing the check, not shipped broken**:
-    Firestore batches are atomic *within* a batch, not *across* batches. If
-    an earlier chunk batch of a write already committed before a later
-    batch of the *same* write fails, the low-numbered chunks it touched now
-    carry the failed write's new `ver` while the main doc (never reached)
-    still shows the old one — a read in that window sees the mismatch and
-    fails safe to `null` rather than replaying the previous notebook
-    instantly, recovering only once the next write succeeds. Fixing this
-    for real means the chunk docs can no longer be blindly overwritten in
-    place (a staged/generation doc-ID scheme), which changes the stored
-    format — out of scope this round, flagged for the Architect/owner.
-  - **Layouts (D5)**: no UI changes; sync behaves the same at every size.
-  - New app-check section 26 (`26a`–`26e`): a fake Firestore (Firestore
-    itself is blocked in the harness) enforcing the real 10 MiB/1 MiB
-    limits and recording commit order — a ~12 MB notebook writes and
-    round-trips deep-equal; the main doc commits after every chunk and no
-    commit exceeds 10 MiB; a forced second-chunk-batch failure rejects,
-    leaves the main doc unchanged, and never returns anything but the
-    untouched previous notebook or `null`, recovering fully on the next
-    successful write; a small single-batch notebook still round-trips, main
-    doc last; the stored keys and the unchanged `_readCloudDB()` prove the
-    format didn't move. `26a`/`26b` are expected to fail on v04.61 (one
-    commit over 10 MiB).
-  - **Architect review:** the first cut split EVERY write, so even a small
-    notebook (the owner's today) lost the single-commit atomicity: a failed
-    main-doc batch left readers with `null` instead of the previous notebook.
-    A notebook that fits in one request (`n <= _SYNC_CHUNK_BATCH`) is now
-    written exactly as in v04.61, in one atomic commit. Only larger ones take
-    the multi-batch path. `26d` was rewritten in place and `26f` added; both
-    fail on the first cut. Not done: two devices pushing a notebook larger
-    than one request at once can interleave chunks (readers get `null` until
-    the next push). Per-note sync removes this.
-  - 12/12 ship checks, `--only 26` **16/16**, full `app-check`
-    **628/628, twice in a row**. Unpatched (v04.61 app, this round's tools): `--only 26`
-    **7/11, 4 FAILED**.
 ---
 
 ## What this is

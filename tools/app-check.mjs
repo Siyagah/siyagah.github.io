@@ -9171,6 +9171,60 @@ await r.block('30e-lost-notes-come-back-once', async () => {
   await s.close();
 });
 
+/* v04.67 — section 31: no empty gap between Contents and the note when the
+   Sidepane sits "below Contents". Owner-reported (screenshot, 24 Sep): with
+   DB.theme.pinPanelPos === 'below' both panels share ONE column on the same
+   side, yet _syncP3CPadding()/_fwSyncBodyPadding() ADDED their widths, so
+   the note started a whole Sidepane width away from Contents. Measured in
+   both pop-ups, both Contents sides, both Sidepane positions, at 820 and
+   1440 (the phone draws no side panels at all, v04.34 — checked too). */
+const GAP_NOTE = '<h1>Title</h1><p>a</p><h2>One</h2><p>b</p><h2>Two</h2><p>c</p><h2>Three</h2><p>d</p>';
+for (const vp of [{ name: '1440', width: 1440, height: 900 }, { name: '820', width: 820, height: 1180 }]) {
+await r.block(`31a-no-gap-beside-panels-${vp.name}`, async () => {
+  for (const side of ['left', 'right']) for (const pos of ['below', 'side']) for (const mode of ['single', 'multi']) {
+    const db = seedDB(); db.articles[0].content = GAP_NOTE; db.theme.tocSide = side; db.theme.pinPanelPos = pos;
+    const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db });
+    const { page } = s;
+    await page.evaluate(() => { selArt('a1'); startEdit(); });
+    await page.waitForTimeout(400);
+    if (mode === 'single') await page.evaluate(() => openNoteModal());
+    else await page.evaluate(() => popOutNote('a1'));
+    await page.waitForTimeout(900);
+    const g = await page.evaluate((mode) => {
+      const box = (e) => { if (!e) return null; const b = e.getBoundingClientRect(); return b.width ? { l: b.left, r: b.right } : null; };
+      const area = mode === 'single' ? document.getElementById('p3c') : document.querySelector('.fw-editarea');
+      const cs = area && getComputedStyle(area);
+      const ab = box(area);
+      return { toc: box(document.getElementById('toc-panel')), pin: box(document.getElementById('pin-panel')),
+        inner: ab && cs ? { l: ab.l + parseFloat(cs.paddingLeft), r: ab.r - parseFloat(cs.paddingRight) } : null };
+    }, mode);
+    const tag = `${vp.name} ${mode}, Contents ${side}, Sidepane ${pos}`;
+    if (!g.toc || !g.inner) { r.check(false, `${tag}: Contents and the note area are both drawn`, JSON.stringify(g)); await s.close(); continue; }
+    const panels = [g.toc, g.pin].filter(Boolean);
+    const leftEdge = Math.max(0, ...panels.filter((p) => p.r <= g.inner.l + 1).map((p) => p.r));
+    const rightEdge = Math.min(1e9, ...panels.filter((p) => p.l >= g.inner.r - 1).map((p) => p.l));
+    const gapL = side === 'left' || (pos === 'side' && g.pin && g.pin.r <= g.inner.l + 1) ? g.inner.l - leftEdge : 0;
+    const gapR = side === 'right' || (pos === 'side' && g.pin && g.pin.l >= g.inner.r - 1) ? rightEdge - g.inner.r : 0;
+    const overlap = panels.some((p) => p.r > g.inner.l + 1 && p.l < g.inner.r - 1);
+    r.check(!overlap && gapL <= 2 && gapR <= 2,
+      `${tag}: the note starts right beside the panels — no empty gap, no overlap`, JSON.stringify({ gapL, gapR, overlap, ...g }));
+    await s.close();
+  }
+});
+}
+await r.block('31b-phone-no-side-padding-390', async () => {
+  const db = seedDB(); db.articles[0].content = GAP_NOTE; db.theme.tocSide = 'left'; db.theme.pinPanelPos = 'below';
+  const s = await openApp({ viewport: { width: 390, height: 844 }, db });
+  const { page } = s;
+  await page.evaluate(() => { selArt('a1'); startEdit(); });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => openNoteModal());
+  await page.waitForTimeout(700);
+  const g = await page.evaluate(() => { const p = document.getElementById('p3c'); return { pl: p.style.paddingLeft, pr: p.style.paddingRight, pin: !!document.getElementById('pin-panel') }; });
+  r.check(!g.pl && !g.pr && !g.pin, '390 Single: no side panel and no side padding on a phone (v04.34 shape unchanged)', JSON.stringify(g));
+  await s.close();
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
