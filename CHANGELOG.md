@@ -6599,4 +6599,10 @@ undo step. `17*`, `25*`, `27*` and `28*` all stay green, re-run in full.
 - `app-check --only 29`: **73/73, twice in a row** (the first run found
   seven test-side bugs — not app bugs — all fixed: see the commit history).
 - `app-check --only 28,27,25,17`: **263/263**.
-- Full `app-check`: run by the Architect in review.
+- Full `app-check` (Architect, after merging v04.65 into this branch and
+  renumbering it to v04.66): **852/852, twice in a row**.
+- Unpatched (v04.65's app with this round's tools), `--only 29`: **4/15,
+  11 FAILED**. Eleven `29*` blocks aborted (no Filter control on v04.65).
+  `29i`, "opening changes nothing", passes on both versions: it is a guard.
+- **Built as v04.65 and renumbered.** The Architect shipped an urgent I1
+  fix as v04.65 while this round was in review. See that entry.

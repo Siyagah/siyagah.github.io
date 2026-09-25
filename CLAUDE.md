@@ -76,8 +76,10 @@ must never accumulate here instead of there.
     shifting/dropping the filter; a real Multi window; "opening changes
     nothing" extended to `flt`; `Clear filter`'s one undo step.
   - `ship-check` **13/13**, `--only 29` **73/73, twice in a row**,
-    `--only 28,27,25,17` **263/263**. Full `app-check`: run by the
-    Architect in review.
+    `--only 28,27,25,17` **263/263**. Full `app-check` (Architect):
+    **852/852, twice in a row**. Unpatched (v04.65 app): `--only 29`
+    **4/15, 11 FAILED**. Built as v04.65 and renumbered to v04.66 after the
+    urgent I1 fix took v04.65.
 - **v04.65** (24 Sep 2026) — deleting a folder no longer deletes its notes
   on the next sync (I1). Built by the Architect directly, ahead of filters.
   - Up to v04.64, `trashFolder()` tombstoned the notes inside a deleted folder
