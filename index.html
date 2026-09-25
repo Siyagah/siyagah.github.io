@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.69">
+<meta name="app-version" content="04.70">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -575,7 +575,13 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 @media(max-width:1199.98px){#paste-pop .ci,#men-dd .ci,#item-menu .ci{min-height:44px;align-items:center;display:flex}}
 
 /* Context menu */
-#ctx{position:fixed;background:var(--white);border:1px solid var(--border2);border-radius:var(--rl);padding:5px;z-index:9999;box-shadow:0 6px 22px rgba(0,0,0,.12);min-width:165px;max-width:240px;max-height:70vh;overflow-y:auto;display:none}
+/* v04.70 — #ctx was z-index 9999, UNDER the modal overlay #ov (10000) that
+   hosts the folder dialog, so below 1200px — where the dialog's row icons
+   fold into one ⋯ that opens this menu — the menu opened behind the dialog
+   and 📍 / Rename / Delete could not be reached on a phone or tablet. A
+   context menu belongs above every overlay it can be opened from: #ov
+   (10000), the 10050 modal and the search overlay #gs-overlay (10100). */
+#ctx{position:fixed;background:var(--white);border:1px solid var(--border2);border-radius:var(--rl);padding:5px;z-index:10110;box-shadow:0 6px 22px rgba(0,0,0,.12);min-width:165px;max-width:240px;max-height:70vh;overflow-y:auto;display:none}
 .ci{padding:7px 11px;border-radius:5px;cursor:pointer;font-size:12.5px;display:flex;align-items:center;gap:7px;color:var(--t1)}
 .ci:hover{background:var(--paper)}
 .ci.d{color:#C0392B}
@@ -3072,7 +3078,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.69</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.70</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>

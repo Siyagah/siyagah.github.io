@@ -9301,6 +9301,42 @@ await r.block('33b-no-backup-balloon-390', async () => {
   }
 });
 
+/* v04.70 — section 34: the folder dialog's ⋯ row menu is reachable on a
+   phone and a tablet. Below 1200px the row icons fold into one ⋯ that opens
+   #ctx, which sat at z-index 9999 under the dialog's own overlay (10000):
+   it opened invisibly behind the dialog. Found in the MMSA research, 24 Sep.
+   Real taps only: 📚 Folders → ⋯ on a row → Rename, and the rename box must
+   then be open. */
+for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }]) {
+await r.block(`34a-folder-row-menu-reachable-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await page.evaluate(() => showPane('sb'));
+  await page.locator('#sb-toolbar .sb-tb-btn', { hasText: 'Folders' }).click();
+  await page.waitForTimeout(500);
+  await page.locator('#pkList .pr[data-fid="f1"] .pk-more').click();
+  await page.waitForTimeout(250);
+  const g = await page.evaluate(() => {
+    const m = document.getElementById('ctx'); const b = m && m.getBoundingClientRect();
+    if (!b || !b.width) return { shown: false };
+    const top = document.elementFromPoint(b.left + b.width / 2, b.top + Math.min(b.height / 2, 20));
+    return { shown: true, onTop: !!(top && m.contains(top)), items: [...m.querySelectorAll('.ci,button,div')].map((x) => x.textContent.trim()).filter(Boolean).slice(0, 6),
+      inView: b.left >= 0 && b.top >= 0 && b.right <= innerWidth && b.bottom <= innerHeight };
+  });
+  r.check(g.shown && g.onTop && g.inView, `${vp.name}: tapping ⋯ on a folder row shows its menu ON TOP of the folder dialog, fully on screen`, JSON.stringify(g));
+  const ren = page.locator('#ctx >> text=/Rename/').first();
+  let renamed = false;
+  if (await ren.count()) {
+    await ren.click();
+    await page.waitForTimeout(300);
+    renamed = await page.evaluate(() => !!document.querySelector('#pkList input, #pkList [contenteditable="true"], #pkList .pk-ren'));
+  }
+  r.check(renamed, `${vp.name}: a real tap on Rename in that menu opens the rename box`, String(renamed));
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
