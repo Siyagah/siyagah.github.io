@@ -8559,6 +8559,142 @@ await r.block('28h-merge-label-width-390', async () => {
   await s.close();
 });
 
+/* v04.65 — section 30: deleting a folder must not delete its notes (I1).
+   Up to v04.64 trashFolder() tombstoned the notes inside a deleted folder
+   (it only UNFILES them) and mergeDB() also read a folder Trash entry's
+   subtree.articles as deletions, so the next sync removed every note that
+   had been in the folder, on every device. 30a deletes through the real
+   folder dialog (sidebar 📚 Folders → 🗑 → confirm); the merge checks call
+   mergeDB() directly, as sections 8/9 do — it is a data path. */
+function f30Snapshot(page) { return page.evaluate(() => JSON.parse(JSON.stringify(DB))); }
+await r.block('30a-folder-delete-keeps-notes-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  page.on('dialog', (d) => d.accept());
+  const other = await f30Snapshot(page);
+  await page.waitForTimeout(30);
+  await page.locator('button:has-text("Folders").sb-tb-btn').first().click();
+  await page.waitForTimeout(450);
+  await page.locator('#pkList .pr[data-fid="f1"] .pk-act[title="Delete"]').click();
+  await page.waitForTimeout(300);
+  const out = await page.evaluate((other) => {
+    const ids = (d) => (d.articles || []).map((a) => a.id).sort();
+    const merged1 = mergeDB(JSON.parse(JSON.stringify(other)), JSON.parse(JSON.stringify(DB)));
+    const merged2 = mergeDB(JSON.parse(JSON.stringify(DB)), JSON.parse(JSON.stringify(other)));
+    return {
+      foldersGone: !DB.folders.some((f) => f.id === 'f1' || f.id === 'f1a'),
+      local: ids(DB), a2Unfiled: (DB.articles.find((a) => a.id === 'a2') || {}).folderIds,
+      tombs: (DB.tombstones || []).map((t) => t.id).sort(),
+      otherAfter: ids(merged1), localAfter: ids(merged2),
+      otherFolders: merged1.folders.map((f) => f.id).sort(),
+    };
+  }, other);
+  r.check(out.foldersGone, '1440: a real 🗑 click in the folder dialog deletes the folder and its subfolder', JSON.stringify(out));
+  r.check(JSON.stringify(out.local) === '["a1","a2","a3"]' && JSON.stringify(out.a2Unfiled) === '[]',
+    '1440: the notes that were inside stay in the notebook, unfiled', JSON.stringify(out));
+  r.check(!out.tombs.includes('a1') && !out.tombs.includes('a2'), 'only the folders are marked deleted, never the notes that were in them', JSON.stringify(out.tombs));
+  r.check(JSON.stringify(out.otherAfter) === '["a1","a2","a3"]', 'after a sync, the OTHER device still has every note', JSON.stringify(out.otherAfter));
+  r.check(JSON.stringify(out.localAfter) === '["a1","a2","a3"]', 'after a sync back, THIS device still has every note', JSON.stringify(out.localAfter));
+  r.check(!out.otherFolders.includes('f1') && !out.otherFolders.includes('f1a'), 'the folder deletion itself still reaches the other device', JSON.stringify(out.otherFolders));
+  r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('30b-empty-trash-keeps-notes', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  page.on('dialog', (d) => d.accept());
+  const out = await page.evaluate(() => {
+    const other = JSON.parse(JSON.stringify(DB));
+    trashFolder('f1'); emptyTrash();
+    const ids = (d) => (d.articles || []).map((a) => a.id).sort();
+    return { trash: DB.trash.length, tombs: DB.tombstones.map((t) => t.id).sort(),
+      otherAfter: ids(mergeDB(other, JSON.parse(JSON.stringify(DB)))) };
+  });
+  r.check(out.trash === 0 && !out.tombs.includes('a1') && !out.tombs.includes('a2'),
+    'emptying Trash after deleting a folder never marks the folder\'s notes deleted', JSON.stringify(out));
+  r.check(JSON.stringify(out.otherAfter) === '["a1","a2","a3"]', 'and a sync after emptying Trash keeps every note', JSON.stringify(out.otherAfter));
+  await s.close();
+});
+
+await r.block('30c-old-build-marks-are-ignored', async () => {
+  /* What a v04.64-or-older device writes after deleting folder f1: a1/a2
+     alive and unfiled, yet tombstoned, plus a Trash entry listing them. */
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  const out = await page.evaluate(() => {
+    const clean = JSON.parse(JSON.stringify(DB));
+    const old = JSON.parse(JSON.stringify(DB));
+    const at = new Date(Date.now() + 1000).toISOString();
+    const inF = old.articles.filter((a) => ['f1', 'f1a'].some((f) => a.folderIds.includes(f)));
+    old.trash = [{ id: 'tx', type: 'folder', item: old.folders.find((f) => f.id === 'f1'),
+      subtree: { folders: old.folders.filter((f) => f.id === 'f1a'), articles: JSON.parse(JSON.stringify(inF)) }, deletedAt: at }];
+    old.tombstones = ['f1', 'f1a', ...inF.map((a) => a.id)].map((id) => ({ id, deletedAt: at }));
+    old.folders = old.folders.filter((f) => f.id !== 'f1' && f.id !== 'f1a');
+    old.articles.forEach((a) => { a.folderIds = a.folderIds.filter((f) => f !== 'f1' && f !== 'f1a'); });
+    const ids = (d) => (d.articles || []).map((a) => a.id).sort();
+    return { a: ids(mergeDB(JSON.parse(JSON.stringify(clean)), JSON.parse(JSON.stringify(old)))),
+      b: ids(mergeDB(JSON.parse(JSON.stringify(old)), JSON.parse(JSON.stringify(clean)))) };
+  });
+  r.check(JSON.stringify(out.a) === '["a1","a2","a3"]' && JSON.stringify(out.b) === '["a1","a2","a3"]',
+    'a notebook written by an older build (notes alive but marked deleted) no longer deletes those notes in a sync, either direction', JSON.stringify(out));
+  await s.close();
+});
+
+await r.block('30d-real-note-delete-still-syncs', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  const out = await page.evaluate(() => {
+    const other = JSON.parse(JSON.stringify(DB));
+    trashArt('a2');
+    const ids = (d) => (d.articles || []).map((a) => a.id).sort();
+    return { other: ids(mergeDB(other, JSON.parse(JSON.stringify(DB)))), back: ids(mergeDB(JSON.parse(JSON.stringify(DB)), other)) };
+  });
+  r.check(JSON.stringify(out.other) === '["a1","a3"]' && JSON.stringify(out.back) === '["a1","a3"]',
+    'deleting a NOTE on purpose still removes it on every device (guard: the fix must not resurrect real deletions)', JSON.stringify(out));
+  await s.close();
+});
+
+await r.block('30e-lost-notes-come-back-once', async () => {
+  /* A notebook this bug already damaged: a1/a2 gone from DB.articles, their
+     copies in the folder's Trash entry, tombstoned with that entry's stamp.
+     a2 was then deleted on purpose (an article Trash entry, later stamp):
+     it must stay deleted. */
+  const db = seedDB();
+  const at = '2026-09-20T10:00:00.000Z', later = '2026-09-21T10:00:00.000Z';
+  const inF = db.articles.filter((a) => a.id === 'a1' || a.id === 'a2');
+  const a2 = db.articles.find((a) => a.id === 'a2');
+  db.trash = [
+    { id: 't1', type: 'folder', item: db.folders.find((f) => f.id === 'f1'), subtree: { folders: db.folders.filter((f) => f.id === 'f1a'), articles: JSON.parse(JSON.stringify(inF)) }, deletedAt: at },
+    { id: 't2', type: 'article', item: JSON.parse(JSON.stringify(a2)), deletedAt: later },
+  ];
+  db.tombstones = [{ id: 'f1', deletedAt: at }, { id: 'f1a', deletedAt: at }, { id: 'a1', deletedAt: at }, { id: 'a2', deletedAt: later }];
+  db.folders = db.folders.filter((f) => f.id !== 'f1' && f.id !== 'f1a');
+  db.articles = db.articles.filter((a) => a.id === 'a3');
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+  const { page } = s;
+  const out = await page.evaluate(() => ({
+    ids: DB.articles.map((a) => a.id).sort(),
+    unfiled: !(DB.articles.find((a) => a.id === 'a1') || {folderIds:[1]}).folderIds.length,
+    fresh: (DB.articles.find((a) => a.id === 'a1') || {}).updatedAt > '2026-09-22',
+    tombs: DB.tombstones.map((t) => t.id).sort(),
+    rec: DB._folderNoteRecoveryV1,
+  }));
+  r.check(JSON.stringify(out.ids) === '["a1","a3"]', 'on boot, a note a folder deletion had removed (a1) comes back from the folder\'s Trash copy', JSON.stringify(out));
+  r.check(out.unfiled && out.fresh, 'they come back unfiled, with a fresh updatedAt so every device keeps them', JSON.stringify(out));
+  r.check(!out.tombs.includes('a1') && out.tombs.includes('a2') && !out.ids.includes('a2'),
+    'its deletion mark is cleared; a note from the same folder deleted on purpose later (a2) stays deleted', JSON.stringify(out));
+  r.check(out.rec && JSON.stringify(out.rec.restored.slice().sort()) === '["a1"]', 'the repair records what it restored (I8)', JSON.stringify(out.rec));
+  await page.evaluate(() => { _flushEverythingOut && _flushEverythingOut(); });
+  await page.waitForTimeout(400);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__appBooted === true);
+  const n2 = await page.evaluate(() => DB.articles.length);
+  r.check(n2 === 2, 'the repair runs once: a reload does not add copies', String(n2));
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
