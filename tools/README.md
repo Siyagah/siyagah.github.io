@@ -600,3 +600,21 @@ assertions miss.
   delayed the fold. When a surface can hide its own text (fold classes,
   palettes, collapsed menus), a sweep says nothing about the hidden text.
   Force it into view and measure it, as `16j` does.
+
+## `sync-audit.mjs` (v04.68)
+
+`node tools/sync-audit.mjs [--vp 1440,900] [--only N0,F1] [--root dir] [--json out]`
+
+This boots the real app and simulates two devices in one page. For each of
+114 operations, device A makes the change through the function the UI calls,
+and device B holds a stale copy or makes its own concurrent change. Then
+`mergeDB` runs in both directions, and a second merge must agree and stay
+unchanged. Each row prints PASS, FAIL, BY-DESIGN (record-level newest-wins),
+KNOWN (undo stays local), NOTRUN (the operation changed nothing, meaning the
+test is broken) or ERROR. It exits non-zero on FAIL, ERROR or NOTRUN, and
+takes about 6s. App-check block 32 runs it.
+
+**When you add a new kind of change the owner can make, add a row.** Also:
+any function that edits a record must go through `_save()`/`persist()`,
+because the record sweep there is what stamps it.
+
