@@ -6810,5 +6810,5 @@ grid (`repeat(auto-fit, minmax(78px, 1fr))`):
 - `--only 33,6i`: **all pass**.
 - Unpatched (v04.68's app): `33a` fails its order check at all three sizes,
   both `33b` cases fail, and `6i`'s four-button check fails.
-- Full `app-check`: **@@FULL@@**.
+- Full `app-check`: **892/892, twice in a row**.
 

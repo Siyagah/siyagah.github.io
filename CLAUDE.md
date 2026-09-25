@@ -32,7 +32,7 @@ must never accumulate here instead of there.
   - New section 33 (`33a` at 390/820/1440: order, size, on screen, not
     clipped, one row under 1200, real taps open each list; `33b`: no balloon
     after 7.5s, never backed up and 30 days old). `6i`'s "two buttons" check
-    was updated in place to four. Full `app-check` **@@FULL@@**.
+    was updated in place to four. Full `app-check` **892/892, twice in a row**.
 - **v04.68** (25 Sep 2026) — sync: every change reaches the other device,
   in both directions. The owner asked for a sync check in all directions.
   - `tools/sync-audit.mjs` runs 114 operations × both merge directions. On
