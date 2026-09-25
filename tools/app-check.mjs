@@ -8559,6 +8559,482 @@ await r.block('28h-merge-label-width-390', async () => {
   await s.close();
 });
 
+/* ── 29. v04.66 — spreadsheet round 2b3: filters ──────────────────────────
+   Real input only — the real `Filter`/`Clear filter` button, real ▾
+   clicks, real checkbox clicks — never turnOnFilter/fltApply/fltSort
+   called directly. Reuses sgEditA1/sgInsertViaMenu/sgCell/sgStored (17),
+   sgType/sgSelectRange/sgCellText/sgDragFillMouse (25), sgLastToast (27)
+   and MERGE_SIZES' three named sizes. */
+async function sgFltOpen(page, root, sgx, r, c) {
+  await page.click(`${sgCell(root, r, c)} .sg-fltdd`);
+  await page.waitForTimeout(150);
+}
+async function sgFltUntick(page, label) {
+  await page.click(`#sg-fltp .sg-flt-item:has-text("${label}") input[type="checkbox"]`);
+}
+async function sgFltOK(page) {
+  await page.click('#sg-fltp .sg-flt-okbtn');
+  await page.waitForTimeout(150);
+}
+async function sgTurnOnFilter(page, root, sgx, r1, c1, r2, c2) {
+  await sgSelectRange(page, root, r1, c1, r2, c2);
+  await page.click(`${sgx} button[data-a="flt"]`);
+  await page.waitForTimeout(150);
+}
+async function sgRowDisplay(page, sgx, r) {
+  return page.evaluate(({ sgx, r }) => {
+    const grid = document.querySelector(sgx + ' .sg-g');
+    const tr = grid && grid.tBodies[0].rows[r];
+    return tr ? tr.style.display : null;
+  }, { sgx, r });
+}
+async function sgStatusText(page, sgx) {
+  return page.evaluate((sel) => document.querySelector(sel + ' .sg-status').textContent, sgx);
+}
+/* Seeds the same small Fruit|Qty table every 29* block starts from: a
+   header, three apple rows (1, 2, 7), one pear, one plum, and a row (6)
+   left entirely blank on purpose — the data range must still reach row 7
+   past that gap. */
+async function sgFltSeedFruit(page, root) {
+  await sgType(page, root, 0, 0, 'Fruit'); await sgType(page, root, 0, 1, 'Qty');
+  await sgType(page, root, 1, 0, 'apple'); await sgType(page, root, 1, 1, '2');
+  await sgType(page, root, 2, 0, 'apple'); await sgType(page, root, 2, 1, '2');
+  await sgType(page, root, 3, 0, 'pear');  await sgType(page, root, 3, 1, '5');
+  await sgType(page, root, 4, 0, 'plum');  await sgType(page, root, 4, 1, '3');
+  // row 5 left blank on purpose
+  await sgType(page, root, 6, 0, 'apple'); await sgType(page, root, 6, 1, '2');
+}
+
+for (const vp of MERGE_SIZES) {
+await r.block(`29a-filter-onoff-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgFltSeedFruit(page, root);
+
+  await sgTurnOnFilter(page, root, sgx, 0, 0, 6, 1); // A1:B7
+  const ddCount = await page.evaluate((sel) => document.querySelectorAll(sel + ' .sg-fltdd').length, sgx);
+  r.check(ddCount === 2, `${vp.name}: both headers show a ▾ once the filter is on`, ddCount);
+
+  await sgFltOpen(page, root, sgx, 0, 0);
+  const panelBox = await page.evaluate(() => document.getElementById('sg-fltp').getBoundingClientRect());
+  r.check(panelBox.x >= 0 && panelBox.y >= 0 && panelBox.x + panelBox.width <= vp.width && panelBox.y + panelBox.height <= vp.height,
+    `${vp.name}: the filter panel lies fully inside the viewport`, JSON.stringify(panelBox));
+  if (vp.name === '390') {
+    const tapOk = await page.evaluate(() => [...document.querySelectorAll('#sg-fltp .sg-flt-q, #sg-fltp .sg-flt-btns .sg-b, #sg-fltp .sg-flt-ok .sg-b, #sg-fltp .sg-flt-item')]
+      .every((el) => el.getBoundingClientRect().height >= 44));
+    r.check(tapOk, '390: the panel\'s search box, buttons and checklist rows are 44px or taller', tapOk);
+  }
+  await sgFltUntick(page, 'apple');
+  await sgFltOK(page);
+
+  const hidden = []; for (let r2 = 0; r2 <= 6; r2++) hidden.push(await sgRowDisplay(page, sgx, r2));
+  r.check(JSON.stringify(hidden) === JSON.stringify(['', 'none', 'none', '', '', '', 'none']),
+    `${vp.name}: exactly the three apple rows (2, 3, 7) are hidden`, JSON.stringify(hidden));
+
+  const status = await sgStatusText(page, sgx);
+  r.check(/Showing 3 of 6 rows/.test(status), `${vp.name}: the status bar reads "Showing 3 of 6 rows"`, status);
+
+  const rowNums = await page.evaluate((sel) => [...document.querySelectorAll(sel + ' th.sg-rh')]
+    .filter((th) => th.closest('tr').style.display !== 'none').map((th) => th.textContent), sgx);
+  r.check(JSON.stringify(rowNums) === JSON.stringify(['1', '4', '5', '6', '8', '9', '10', '11', '12']),
+    `${vp.name}: the visible row numbers skip 2, 3 and 7 (rows 8-12 are past the filter's data range and were never hidden)`, JSON.stringify(rowNums));
+
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+await r.block('29b-blanks-and-search-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgFltSeedFruit(page, root);
+  await sgTurnOnFilter(page, root, sgx, 0, 0, 6, 1);
+
+  await sgFltOpen(page, root, sgx, 0, 0);
+  await sgFltUntick(page, '(Blanks)');
+  await sgFltOK(page);
+  const rowDisplay5 = await sgRowDisplay(page, sgx, 5);
+  r.check(rowDisplay5 === 'none', '1440: unticking (Blanks) hides the empty row', rowDisplay5);
+
+  await sgFltOpen(page, root, sgx, 0, 0);
+  /* "pl" is also a substring of "apple" (a-p-P-L-e) — "plu" is unique to
+     "plum" among this column's values, so it actually proves narrowing. */
+  await page.fill('#sg-fltp .sg-flt-q', 'plu');
+  await page.waitForTimeout(80);
+  const items = await page.evaluate(() => [...document.querySelectorAll('#sg-fltp .sg-flt-item span')].map((el) => el.textContent));
+  r.check(JSON.stringify(items) === JSON.stringify(['plum']), '1440: typing "plu" in the search narrows the checklist to plum only', JSON.stringify(items));
+  await page.click('#sg-fltp .sg-flt-cancel');
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('29c-snapshot-and-save-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgFltSeedFruit(page, root);
+  await sgTurnOnFilter(page, root, sgx, 0, 0, 6, 1);
+  await sgFltOpen(page, root, sgx, 0, 0);
+  await sgFltUntick(page, 'apple');
+  await sgFltOK(page);
+
+  await page.evaluate(() => { _flushEd(); persist(); });
+  const stored = await sgStored(page);
+  const trCount = (stored.match(/<tr>/g) || []).length;
+  r.check(trCount === 7, '1440: after saving, .sg-static has all 7 rows', trCount);
+  const dataSg = await page.evaluate((sel) => document.querySelector(sel).getAttribute('data-sg'), sgx);
+  r.check(/"flt"/.test(dataSg), '1440: data-sg carries flt', true);
+
+  await page.waitForTimeout(300);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__appBooted === true);
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(400);
+  const readHidden = []; for (let r2 = 0; r2 <= 6; r2++) readHidden.push(await sgRowDisplay(page, '#p3c .sgx', r2));
+  r.check(JSON.stringify(readHidden) === JSON.stringify(['', 'none', 'none', '', '', '', 'none']),
+    '1440: after a reload, the read view shows the same rows hidden', JSON.stringify(readHidden));
+
+  const c0 = await sgStored(page), u0 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  await sgFltOpen(page, '#p3c', '#p3c .sgx', 0, 0);
+  await sgFltUntick(page, 'pear');
+  await sgFltOK(page);
+  const readHidden2 = await sgRowDisplay(page, '#p3c .sgx', 3);
+  r.check(readHidden2 === 'none', '1440: filtering in the read view still changes what is shown', readHidden2);
+  const c1 = await sgStored(page), u1 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  r.check(c1 === c0 && u1 === u0, '1440: filtering in the read view leaves a.content and updatedAt byte-identical',
+    `content same ${c1 === c0} · updatedAt same ${u1 === u0}`);
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('29d-refusals-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 0, 0, 'Fruit'); await sgType(page, root, 0, 1, 'Qty');
+  await sgType(page, root, 1, 0, 'apple'); await sgType(page, root, 1, 1, '2');
+  await sgType(page, root, 2, 0, 'pear');  await sgType(page, root, 2, 1, '5');
+  await sgType(page, root, 3, 0, 'plum');  await sgType(page, root, 3, 1, '3');
+  await sgType(page, root, 4, 0, 'apple'); await sgType(page, root, 4, 1, '2');
+
+  await sgTurnOnFilter(page, root, sgx, 0, 0, 4, 1);
+  await sgFltOpen(page, root, sgx, 0, 0);
+  await sgFltUntick(page, 'apple');
+  await sgFltOK(page);
+  const hiddenNow = await sgRowDisplay(page, sgx, 1);
+  r.check(hiddenNow === 'none', 'setup: apple rows are hidden before the refusal checks', hiddenNow);
+
+  async function refusalRoundTrip(label, toastPattern, act) {
+    const before = await page.evaluate((sel) => document.querySelector(sel).getAttribute('data-sg'), sgx);
+    const depthBefore = await page.evaluate((sel) => document.querySelector(sel)._sg.undoDepth(), sgx);
+    await act();
+    await page.waitForTimeout(150);
+    const after = await page.evaluate((sel) => document.querySelector(sel).getAttribute('data-sg'), sgx);
+    r.check(before === after, `${label}: data-sg is byte-identical before and after the refused attempt`, before === after ? 'unchanged' : 'CHANGED');
+    const toastText = await sgLastToast(page);
+    r.check(toastPattern.test(toastText || ''), `${label}: a toast explains the refusal`, JSON.stringify(toastText));
+    const depthAfter = await page.evaluate((sel) => document.querySelector(sel)._sg.undoDepth(), sgx);
+    r.check(depthAfter === depthBefore, `${label}: the refusal added no undo step (undo stack depth unchanged: ${depthBefore})`, `${depthBefore} -> ${depthAfter}`);
+  }
+
+  /* D3,D4 (rows 2,3 — pear/plum) rather than D1,D2: row 1 (apple) is
+     hidden, and a real click can never land on a display:none cell — using
+     it here would hang the check, not prove anything about the app. */
+  await sgType(page, root, 2, 3, '1'); await sgType(page, root, 3, 3, '2'); // D3,D4 — a plain visible source to drag from
+  await refusalRoundTrip('fill-handle drag', /filter/i, async () => {
+    await sgSelectRange(page, root, 2, 3, 3, 3);
+    await sgDragFillMouse(page, root, sgx, 6, 3);
+  });
+
+  await refusalRoundTrip('Fill down', /filter/i, async () => {
+    await sgSelectRange(page, root, 2, 3, 3, 3);
+    await page.click(`${sgx} button[data-a="fill"]`);
+  });
+
+  await page.click(sgCell(root, 2, 3));
+  await page.keyboard.press('Control+c');
+  await refusalRoundTrip('paste', /filter/i, async () => {
+    await page.click(sgCell(root, 3, 3), { button: 'right' });
+    await page.waitForTimeout(100);
+    await page.click('#sg-menu button[data-m="pasteH"]');
+  });
+
+  await refusalRoundTrip('insert row', /filter/i, async () => {
+    await page.click(`${sgx} th.sg-rh[data-r="2"]`);
+    await page.click(`${sgx} button[data-a="rc"]`);
+    await page.waitForTimeout(100);
+    await page.click('#sg-menu button[data-m="insRowA"]');
+  });
+
+  await refusalRoundTrip('delete row', /filter/i, async () => {
+    await page.click(`${sgx} th.sg-rh[data-r="2"]`);
+    await page.click(`${sgx} button[data-a="rc"]`);
+    await page.waitForTimeout(100);
+    await page.click('#sg-menu button[data-m="delRow"]');
+  });
+
+  await refusalRoundTrip('merge', /filter/i, async () => {
+    await sgSelectRange(page, root, 2, 3, 2, 4);
+    await page.click(`${sgx} button[data-a="merge"]`);
+  });
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('29e-visible-only-820', async () => {
+  const s = await openApp({ viewport: { width: 820, height: 1180 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  /* Only ONE hidden row (row 1) this time — a real drag/click can never
+     land on a display:none cell, so every selection below is made between
+     row 0 and row 3, both always visible, with the hidden row 1 simply
+     falling inside that range (exactly as it would for the owner clicking
+     A1 then shift-clicking A4). */
+  await sgType(page, root, 0, 0, 'Fruit'); await sgType(page, root, 0, 1, 'Qty');
+  await sgType(page, root, 1, 0, 'apple'); await sgType(page, root, 1, 1, '2');
+  await sgType(page, root, 2, 0, 'pear');  await sgType(page, root, 2, 1, '5');
+  await sgType(page, root, 3, 0, 'plum');  await sgType(page, root, 3, 1, '3');
+
+  await sgTurnOnFilter(page, root, sgx, 0, 0, 3, 1);
+  await sgFltOpen(page, root, sgx, 0, 0);
+  await sgFltUntick(page, 'apple');
+  await sgFltOK(page);
+
+  await page.click(sgCell(root, 0, 0)); // A1
+  await page.keyboard.press('ArrowDown');
+  await page.waitForTimeout(80);
+  const nameAfterDown = await page.evaluate((sel) => document.querySelector(sel + ' .sg-name').textContent, sgx);
+  r.check(nameAfterDown === 'A3', '820: ArrowDown from A1 skips the hidden apple row (A2) and lands on A3 (pear)', nameAfterDown);
+
+  await sgSelectRange(page, root, 0, 0, 3, 0); // A1:A4 — corners visible, the hidden A2 falls inside
+  await page.click(`${sgx} button[data-a="bold"]`);
+  await page.waitForTimeout(100);
+  const bolds = await page.evaluate((sel) => {
+    const st = document.querySelector(sel)._sg.state();
+    return [1, 2, 3].map((r2) => !!(st.cells[r2 + ',0'] || {}).b);
+  }, sgx);
+  r.check(JSON.stringify(bolds) === JSON.stringify([false, true, true]),
+    '820: Bold on A1:A4 skips the hidden apple row (2), bolds pear/plum (3, 4) only', JSON.stringify(bolds));
+
+  await sgSelectRange(page, root, 0, 1, 3, 1); // B1:B4
+  await page.keyboard.press('Delete');
+  await page.waitForTimeout(100);
+  const qty = await page.evaluate((sel) => {
+    const st = document.querySelector(sel)._sg.state();
+    return [1, 2, 3].map((r2) => (st.cells[r2 + ',1'] || {}).raw ?? '');
+  }, sgx);
+  r.check(JSON.stringify(qty) === JSON.stringify(['2', '', '']),
+    '820: Clear contents on B1:B4 leaves the hidden row\'s value (2) and clears the visible ones (3, 4)', JSON.stringify(qty));
+
+  await sgSelectRange(page, root, 0, 0, 3, 1); // A1:B4 — header + all 3 data rows, 1 hidden
+  await page.keyboard.press('Control+c');
+  await page.click(`${sgx} button[data-a="flt"]`); // Clear filter — nothing hidden now, so paste is allowed
+  await page.waitForTimeout(100);
+  await page.click(sgCell(root, 0, 3), { button: 'right' }); // D1
+  await page.waitForTimeout(100);
+  await page.click('#sg-menu button[data-m="pasteH"]');
+  await page.waitForTimeout(150);
+  const pastedD = []; for (let r2 = 0; r2 <= 2; r2++) pastedD.push(await sgCellText(page, root, r2, 3));
+  r.check(pastedD[0] === 'Fruit' && pastedD[1] === 'pear' && pastedD[2] === 'plum',
+    '820: the clip captured while filtered held only the header + visible rows (pear, plum) — 3 rows, not 4', JSON.stringify(pastedD));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('29f-sort-from-panel-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 0, 0, 'Name');
+  await sgType(page, root, 1, 0, 'banana');
+  await sgType(page, root, 2, 0, 'apple');
+  await sgType(page, root, 3, 0, 'cherry');
+
+  await sgTurnOnFilter(page, root, sgx, 0, 0, 3, 0); // A1:A4, single column
+  await sgFltOpen(page, root, sgx, 0, 0);
+  await page.click('#sg-fltp .sg-flt-sa'); // Sort A→Z
+  await page.waitForTimeout(150);
+  await page.click('#sg-fltp .sg-fltx');
+
+  /* sgCellText reads the header cell's full textContent, which includes its
+     own ▾ button's glyph ("Name▾") — strip it before comparing. */
+  const names = []; for (let r2 = 0; r2 <= 3; r2++) names.push((await sgCellText(page, root, r2, 0)).replace('▾', ''));
+  r.check(JSON.stringify(names) === JSON.stringify(['Name', 'apple', 'banana', 'cherry']),
+    '1440: Sort A→Z from the panel sorts the data rows, the header stays in row 1', JSON.stringify(names));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('29g-columns-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 0, 2, 'X'); await sgType(page, root, 0, 3, 'Y'); // C1, D1 — the filter's header
+  await sgType(page, root, 1, 2, 'a'); await sgType(page, root, 1, 3, 'p');
+  await sgType(page, root, 2, 2, 'b'); await sgType(page, root, 2, 3, 'q');
+
+  await sgTurnOnFilter(page, root, sgx, 0, 2, 2, 3); // C1:D3
+  await sgFltOpen(page, root, sgx, 0, 2);
+  await sgFltUntick(page, 'a');
+  await sgFltOK(page);
+  let flt = await page.evaluate((sel) => document.querySelector(sel)._sg.state().flt, sgx);
+  r.check(flt.c1 === 2 && flt.c2 === 3 && flt.hide['2'] && flt.hide['2'].length === 1,
+    'setup: the filter is on C:D with a hide entry on column C (index 2)', JSON.stringify(flt));
+
+  await page.click(`${sgx} th.sg-ch[data-c="0"]`);
+  await page.click(`${sgx} button[data-a="rc"]`);
+  await page.waitForTimeout(100);
+  await page.click('#sg-menu button[data-m="insColL"]');
+  await page.waitForTimeout(150);
+  flt = await page.evaluate((sel) => document.querySelector(sel)._sg.state().flt, sgx);
+  r.check(flt.c1 === 3 && flt.c2 === 4 && flt.hide['3'] && !flt.hide['2'],
+    '1440: inserting a column left of the filter shifts c1/c2 (2,3 -> 3,4) and re-points the hide key (2 -> 3)', JSON.stringify(flt));
+
+  await page.click(`${sgx} th.sg-ch[data-c="3"]`); // the shifted filter column carrying the hide entry
+  await page.click(`${sgx} button[data-a="rc"]`);
+  await page.waitForTimeout(100);
+  await page.click('#sg-menu button[data-m="delCol"]');
+  await page.waitForTimeout(150);
+  flt = await page.evaluate((sel) => document.querySelector(sel)._sg.state().flt, sgx);
+  r.check(!!flt && flt.c1 === 3 && flt.c2 === 3 && (!flt.hide || !flt.hide['3']),
+    '1440: deleting that filter column drops its own hide entry — the filter itself stays, one column left', JSON.stringify(flt));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('29h-multi-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await page.evaluate(() => popOutNote('a1'));
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const ed = document.getElementById('fw-ed-a1'); ed.focus();
+    const r2 = document.createRange(); r2.selectNodeContents(ed); r2.collapse(false);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r2);
+  });
+  const inserted = await sgInsertViaMenu(page, '#fw-a1');
+  const root = '#fw-ed-a1', sgx = '#fw-ed-a1 .sgx';
+  r.check(inserted, 'Multi: a sheet mounts inside Multi\'s own .fw-ed for the filter check', inserted);
+
+  await sgType(page, root, 0, 0, 'Fruit');
+  await sgType(page, root, 1, 0, 'apple');
+  await sgType(page, root, 2, 0, 'pear');
+
+  await sgTurnOnFilter(page, root, sgx, 0, 0, 2, 0);
+  await sgFltOpen(page, root, sgx, 0, 0);
+  await sgFltUntick(page, 'apple');
+  await sgFltOK(page);
+  const hiddenRow = await sgRowDisplay(page, sgx, 1);
+  r.check(hiddenRow === 'none', 'Multi: filtering via the real panel hides the apple row', hiddenRow);
+
+  await page.evaluate(() => _fwFlush('a1'));
+  const stored = await sgStored(page);
+  const trCount = (stored.match(/<tr>/g) || []).length;
+  r.check(trCount === 3, 'Multi: saving keeps all 3 rows in the snapshot', trCount);
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('29i-opening-changes-nothing', async () => {
+  const sgEsc = (x) => x.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const data = { v: 1, rows: 6, cols: 4, frz: 1, mg: [[2, 2, 3, 2]], cr: [{ rng: [0, 0, 5, 0], op: 'gt', v1: '10', fill: CR_GREEN }],
+    flt: { r: 0, c1: 0, c2: 1, hide: { 1: ['5'] } },
+    cells: { '0,0': { raw: 'H', bd: 'tblr' }, '0,1': { raw: 'Q' }, '1,1': { raw: '5' }, '2,2': { raw: 'M' } }, colW: {} };
+  const helper = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const staticHTML = await helper.page.evaluate((d) => _sgStaticHTML(d), data);
+  await helper.close();
+  const db = seedDB();
+  db.articles[0].content = '<p>Before</p><div class="sgx" contenteditable="false" data-sg="' + sgEsc(JSON.stringify(data)) + '">' + staticHTML + '</div><p>After</p>';
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db });
+  const { page } = s;
+  const c0 = await sgStored(page);
+  const u0 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => startEdit());
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { _flushEd(); });
+  const c1 = await sgStored(page);
+  const u1 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  r.check(c1 === c0 && u1 === u0, 'opening in edit view a note whose sheet already has flt (plus cr, mg, frz and bd) changes nothing',
+    `content same ${c1 === c0} · updatedAt same ${u1 === u0}`);
+
+  await page.evaluate(() => cancelEdit());
+  await page.waitForTimeout(300);
+  const c2 = await sgStored(page);
+  const u2 = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').updatedAt);
+  r.check(c2 === c0 && u2 === u0, 'closing it again (read view) still leaves a.content and updatedAt byte-for-byte unchanged',
+    `content same ${c2 === c0} · updatedAt same ${u2 === u0}`);
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+await r.block('29j-clear-filter-390', async () => {
+  const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 0, 0, 'Fruit');
+  await sgType(page, root, 1, 0, 'apple');
+  await sgType(page, root, 2, 0, 'pear');
+
+  await sgTurnOnFilter(page, root, sgx, 0, 0, 2, 0);
+  await sgFltOpen(page, root, sgx, 0, 0);
+  await sgFltUntick(page, 'apple');
+  await sgFltOK(page);
+  const depthBefore = await page.evaluate((sel) => document.querySelector(sel)._sg.undoDepth(), sgx);
+  const hiddenBefore = await sgRowDisplay(page, sgx, 1);
+  r.check(hiddenBefore === 'none', 'setup: apple is hidden before Clear filter', hiddenBefore);
+
+  const label = await page.evaluate((sel) => document.querySelector(sel + ' [data-a="flt"]').textContent, sgx);
+  r.check(label === 'Clear filter', '390: the toolbar button now reads Clear filter', label);
+  await page.click(`${sgx} button[data-a="flt"]`);
+  await page.waitForTimeout(150);
+
+  const flt = await page.evaluate((sel) => document.querySelector(sel)._sg.state().flt, sgx);
+  r.check(!flt, '390: Clear filter drops flt entirely', JSON.stringify(flt));
+  const hiddenAfter = await sgRowDisplay(page, sgx, 1);
+  r.check(hiddenAfter === '', '390: every row is visible again', hiddenAfter);
+  const depthAfter = await page.evaluate((sel) => document.querySelector(sel)._sg.undoDepth(), sgx);
+  r.check(depthAfter === depthBefore + 1, '390: Clear filter is exactly one more undo step', `${depthBefore} -> ${depthAfter}`);
+
+  await page.focus(`${sgx} .sg-gw`);
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(150);
+  const restored = await page.evaluate((sel) => document.querySelector(sel)._sg.state().flt, sgx);
+  r.check(restored && restored.hide && restored.hide['0'] && restored.hide['0'].includes('apple'),
+    '390: one Ctrl+Z restores the filter with its hide list', JSON.stringify(restored));
+
+  r.check(s.errors.length === 0, 'no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
 /* v04.65 — section 30: deleting a folder must not delete its notes (I1).
    Up to v04.64 trashFolder() tombstoned the notes inside a deleted folder
    (it only UNFILES them) and mergeDB() also read a folder Trash entry's

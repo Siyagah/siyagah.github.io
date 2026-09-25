@@ -6370,9 +6370,17 @@ stay green, re-run in full, not assumed from the shared code path.
 - `app-check --only 28`: **51/51**.
 - `app-check --only 27,25,17`: **212/212** (`27a`'s armed-label assertion
   updated in place for the record fix above; every other check unchanged).
-- Full `app-check`: run by the Architect in review.
+- Full `app-check` (Architect, on `47a31ef`): **762/762, twice in a row**.
+- Unpatched (v04.63's app with this round's tools), `--only 28,27,25,17`:
+  **214/226, 12 FAILED**:
+  - 7 `28*` blocks aborted;
+  - `28f` aborted after 1 check;
+  - `28h` failed;
+  - the three `27a` arm-label checks failed, because they were updated in
+    place for the shorter label.
 
----
+  `28g` passes on both versions, by design. Every `25*` and `17*` check
+  passed on v04.63.
 
 ## v04.65 — deleting a folder no longer deletes its notes on the next sync (24 Sep 2026)
 
@@ -6457,3 +6465,144 @@ again is part of the filters round (#97), which becomes **v04.66**.
   six are right to pass on v04.64.
 - Full `app-check`: **779/779, twice in a row**.
 
+---
+
+## v04.66 — spreadsheet round 2b3: filters (24 Sep 2026)
+
+Issue #97, round 2b3 of the spreadsheet backlog the owner approved on 23 Sep
+2026 (round 1: v04.52, round 2a: v04.61, round 2b1: v04.63, round 2b2:
+v04.64; round 2c comes later, out of scope here on purpose).
+
+**Record fixes carried from v04.64's review.** `CHANGELOG.md`'s and
+`CLAUDE.md`'s v04.64 entries now carry the Architect's real review totals
+(762/762, twice in a row; unpatched 214/226) instead of the placeholder
+"run by the Architect in review" line. `CLAUDE.md` line 6 ("Current
+version") had drifted to v04.62 across both v04.63 and v04.64, because
+nothing checked it; it now reads v04.66, and `ship-check` has a 13th check
+comparing that line against `<meta name="app-version">` so it can never go
+stale silently again — shown failing on `origin/main`'s own `CLAUDE.md`
+(line 6 still v04.62 against a v04.64 meta tag) before this round's fix.
+
+**What the owner gets.** A new toolbar button, `Filter` (words, no glyph;
+`Clear filter` once one is on), also in the right-click menu. Turning it on
+uses the selection's TOP ROW as the header and its columns as the filter's
+columns; a single cell selected uses its own row as the header and the
+sheet's USED columns instead. Only one filter per sheet, as in Excel.
+
+**Stored as a new top-level key, `flt`.** `{r,c1,c2,hide:{"<col>":
+["value",…]}}` — `r` is the header row, `[c1,c2]` the filter's columns,
+`hide` lists the DISPLAYED values unticked per column (`(Blanks)` stored as
+`""`). The key is left off a sheet with no filter. The DATA ROWS are never
+stored: `fltDataRange()` rescans from the header down to the LAST row that
+holds a value in the filter's own columns, on every render, so a row typed
+later is picked up automatically and a genuinely blank row in the middle of
+the data still counts as its own row (its own `(Blanks)` group) rather than
+ending the scan.
+
+**The header's ▾.** Each header cell in the filter's columns gets a small
+`▾` — live-grid chrome only, written by `refresh()` into the cell's
+`innerHTML`, never into `a.content`. Tapping it opens a panel anchored and
+clamped exactly like v04.64's Colour rules panel (`_sgFltPosition`/
+`_sgFltEl`, one shared instance reused by every mounted sheet, always
+acting on whichever sheet is `_sgCur` — the same shape `_sgCrEl` already
+uses): a search box, `Select all`/`Clear`, a checklist of that column's
+distinct DISPLAYED values from the data rows (sorted, `(Blanks)` last),
+`Sort A→Z`/`Sort Z→A` (edit mode only — see Read view below), and
+`OK`/`Cancel`. `OK` applies the choice as one undo step. A column with
+anything hidden shows its own ▾ as "on", the same way the Freeze button
+does.
+
+**What hides.** A data row is hidden when ANY filtered column's displayed
+value is in that column's `hide` list — `fltHiddenRowSet()` computes this
+fresh on every `refresh()` and the live grid sets the hidden `tr`'s
+`display:none`, in both edit and read view. Row numbers stay true (the
+`<th>` still shows `r+1`), so they visibly skip.
+
+**The snapshot shows ALL rows, unchanged** (I1/I4). `_sgStaticHTML()`
+already renders every row from 0 up to the used range regardless of
+individual row content, so no code change was needed there at all — an
+older build, search, Pane 2 and Save File all see the same full table a
+filter never touches. The snapshot is still rebuilt only on edit, the same
+rule v04.61–v04.64 already established.
+
+**While any row is hidden**, these are refused with a toast, checked BEFORE
+any `snap()` so nothing changes and no undo step is added: a fill (the
+handle, Fill down, Ctrl+D/R), a paste, inserting or deleting rows, and
+merge/unmerge. Column insert/delete is always allowed.
+
+**Visible-only, as in Excel.** `forSel()` — the function styling, borders
+and Clear contents already funnel through — now skips a filter-hidden row,
+so those three apply to visible cells only, for free, with no change at
+their own call sites. `doCopy()` skips hidden rows too, so Copy produces
+visible rows only; a `rowIdx` array remembers each kept row's REAL index so
+a paste-back's formula shift is still correct even though the copied rows
+are no longer contiguous. Arrow keys, Tab and Enter skip a hidden row in
+`move()`, bounded so a run of hidden rows up to the sheet's edge still
+falls through to the existing "walking off the edge grows the sheet" rule
+unchanged. Formulas are unaffected — `SUM` still counts hidden rows, as in
+Excel, since a formula reads `S.cells` directly and was never routed
+through `forSel`.
+
+**Moves with the grid.** Column insert/delete shifts `c1`/`c2` via
+`rekeyRange()` — the same helper v04.64 already factored out of
+`rekeyMerges` for merges and colour rules — and re-points the `hide` keys
+with the same inline shift idiom `rekey()` already uses for cell
+coordinates; a deleted filter column's own `hide` entry is simply dropped,
+and deleting every filter column drops the filter entirely (the shared
+range-collapse rule already used for merges). Row insert/delete is refused
+outright while any row is hidden (above); with nothing hidden, it shifts
+`r` the same way, and deleting the header row drops the filter.
+
+**A filter over a merge is refused at turn-on**, with a toast, before
+anything is touched.
+
+**Read view and Multi** share the same drawing code, so the read view shows
+the filtered rows and the ▾ for free. The panel there can still adjust an
+existing filter's checklist — `fltApply`/`fltSort` branch on `editable` and
+skip `snap()`/`changed()` when it's false, mutating `S` in memory and
+calling `refresh()` only, so a reload (which re-parses `data-sg` fresh)
+discards it entirely: filtering in the read view is view-only, never writes
+`a.content`, and the panel hides its Sort buttons there since sorting is a
+real data mutation. Nothing here needed a Multi-specific change — the
+window uses the exact same `_sgMount`.
+
+**Not done, per the issue's own scope:**
+- more than one filter per sheet;
+- filtering by condition (greater than, and so on) or by colour;
+- showing the filter in the snapshot;
+- round 2c.
+
+**Checks: new section 29, `29a`–`29j`.** Real input only — the real
+`Filter`/`Clear filter` button, real ▾ clicks/taps, real checkbox clicks —
+never `turnOnFilter`/`fltApply` called directly, and every check id names
+its size. `29a` (×3 sizes): a real filter turned on over a seeded
+`Fruit|Qty` table, unticking `apple` through the panel hides exactly the
+three apple rows, the status bar text, row numbers skipping, and the
+panel's box/44px targets at 390. `29b` (1440): `(Blanks)` hiding the empty
+row, and the search box narrowing the checklist. `29c` (1440): the
+snapshot keeps all 7 rows, `data-sg` carries `flt`, a reload's read view
+shows the same rows hidden, and filtering in the read view leaves
+`a.content`/`updatedAt` byte-identical. `29d` (1440): all six refusals —
+fill-handle drag, Fill down, paste, insert row, delete row, merge — each
+leaving `data-sg` byte-identical and `undoDepth()` unchanged. `29e` (820):
+bold/Clear contents/Copy/ArrowDown all visible-only. `29f` (1440): Sort
+A→Z from the panel sorts the data rows, header stays put. `29g` (1440):
+column insert/delete shifting/dropping the filter and its `hide` keys.
+`29h` (1440): filter and save in a real Multi window. `29i`: opening a note
+whose sheet already has `flt` (plus `cr`, `mg`, `frz`, `bd`) changes
+nothing. `29j` (390): `Clear filter` shows every row, drops `flt`, one
+undo step. `17*`, `25*`, `27*` and `28*` all stay green, re-run in full.
+
+**Measured**
+- `ship-check`: **13/13** (shown failing on `origin/main`'s `CLAUDE.md`
+  before the fix — see Record fixes above).
+- `app-check --only 29`: **73/73, twice in a row** (the first run found
+  seven test-side bugs — not app bugs — all fixed: see the commit history).
+- `app-check --only 28,27,25,17`: **263/263**.
+- Full `app-check` (Architect, after merging v04.65 into this branch and
+  renumbering it to v04.66): **852/852, twice in a row**.
+- Unpatched (v04.65's app with this round's tools), `--only 29`: **4/15,
+  11 FAILED**. Eleven `29*` blocks aborted (no Filter control on v04.65).
+  `29i`, "opening changes nothing", passes on both versions: it is a guard.
+- **Built as v04.65 and renumbered.** The Architect shipped an urgent I1
+  fix as v04.65 while this round was in review. See that entry.

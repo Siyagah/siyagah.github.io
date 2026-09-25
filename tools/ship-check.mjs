@@ -10,6 +10,7 @@ import { ROOT, report, pngSize } from './harness.mjs';
 const r = report('ship-check — version, data tag, service worker, manifest, legacy');
 const html = await readFile(join(ROOT, 'index.html'), 'utf8');
 const sw = await readFile(join(ROOT, 'sw.js'), 'utf8');
+const claudeMd = await readFile(join(ROOT, 'CLAUDE.md'), 'utf8');
 const manifest = JSON.parse(await readFile(join(ROOT, 'manifest.json'), 'utf8'));
 const exists = async (p) => { try { await stat(join(ROOT, p)); return true; } catch { return false; } };
 /* maxBuffer matters: index.html is over 1 MB, and execSync's 1 MB default
@@ -26,6 +27,14 @@ r.check(tag === meta, '.sb-logo pre-boot tag matches the meta tag',
   tag === meta ? `both v${meta}` : `meta v${meta} vs sb-logo v${tag} — the old number paints for a frame`);
 r.check(swv && swv.startsWith(meta + '.'), "sw.js VERSION is 'v<meta>.NN' — the cache name",
   swv && swv.startsWith(meta + '.') ? `v${swv}` : `sw.js has v${swv}, expected v${meta}.NN — devices keep serving the old build`);
+
+/* CLAUDE.md's own "Current version" line went stale for two whole rounds
+   (v04.63, v04.64 both left it reading v04.62) because nothing checked it.
+   It is prose, not a source of truth, so this only ever compares it to the
+   meta tag — never the other way round. */
+const claudeV = claudeMd.match(/\*\*Current version: v([0-9.]+)\.\*\*/)?.[1];
+r.check(claudeV === meta, "CLAUDE.md's \"Current version\" line matches the meta tag",
+  claudeV === meta ? `both v${meta}` : `CLAUDE.md says v${claudeV}, meta tag says v${meta} — CLAUDE.md line 6 is stale`);
 
 /* Every round bumps. A build identical in version to main has not shipped. */
 const mainHtml = git('git show origin/main:index.html 2>/dev/null');
