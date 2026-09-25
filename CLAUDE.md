@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.70.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.71.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,20 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.71** (25 Sep 2026) — a device pushes back what the cloud copy lacks.
+  `_doPush()` writes without reading first. So a device that had not yet
+  received another device's edit could overwrite the cloud copy without it.
+  The device that still held the edit merged the incoming copy and kept it,
+  but pushed back only if its record COUNT had grown, so the edit reached
+  nobody else until its next local change. `_pullRemote()` now also pushes
+  when `_syncDigest(DB) !== _syncDigest(remoteDB)`. The digest covers only
+  what `mergeDB()` settles: record ids and stamps, Trash, tombstones, stamp
+  maps and `globalTags`. It is order-independent, so devices converge
+  instead of ping-ponging. New section 35 (`35a`, using the section-26 fake
+  Firestore and the real `_pullRemote`): a missing edit is pushed back, and
+  an identical copy, an incoming-only change, or a converged state push
+  nothing. Unpatched v04.70: `35a` fails only its first check. Full
+  `app-check` **@@FULL@@**.
 - **v04.70** (25 Sep 2026) — the folder dialog's ⋯ row menu opens on top
   on phone and tablet. `#ctx` sat at z-index 9999, under the modal overlay
   `#ov` (10000) that hosts the folder dialog. Below 1200px, where the row
@@ -71,70 +85,6 @@ must never accumulate here instead of there.
   now take `Math.max`. New section 31 (`31a` both pop-ups × both sides × both
   positions × 820/1440; `31b` phone unchanged). Unpatched v04.66:
   `--only 31` 9/17. Full `app-check` **869/869, twice in a row**.
-- **v04.66** (24 Sep 2026) — spreadsheet round 2b3: filters. Issue #97,
-  round 2b3 of the spreadsheet backlog (round 1: v04.52, 2a: v04.61, 2b1:
-  v04.63, 2b2: v04.64; 2c comes later).
-  - **Record fixes carried from v04.64's review:** its `CHANGELOG.md`/
-    `CLAUDE.md` entries now carry the Architect's real review totals
-    (762/762 twice in a row; unpatched 214/226) instead of the placeholder
-    line; this file's line 6 ("Current version") had drifted to v04.62
-    across v04.63 and v04.64 and now reads v04.66, and `ship-check` gained
-    a 13th check comparing that line to the meta tag so it can't go stale
-    silently again.
-  - **New toolbar button `Filter`** (words, `Clear filter` once on), also
-    in the right-click menu. Turning it on uses the selection's top row as
-    the header and its columns as the filter (a single cell falls back to
-    the sheet's used columns); refused with a toast if it would land over
-    a merge. Only one filter per sheet.
-  - Stored as a new top-level key `flt`: `{r,c1,c2,hide:{"<col>":
-    ["value",…]}}` — `hide` lists the DISPLAYED values unticked per
-    column, `(Blanks)` as `""`, key left off when there's no filter. The
-    data-row range is never stored — `fltDataRange()` rescans from the
-    header down to the LAST row holding a value in the filter's columns on
-    every render.
-  - **The header's ▾** (live-grid chrome only, never in `a.content`) opens
-    a panel anchored/clamped like Colour rules': search, Select all/Clear,
-    a sorted checklist of distinct displayed values (`(Blanks)` last),
-    Sort A→Z/Z→A (edit mode only), OK/Cancel. OK is one undo step.
-  - **Hiding:** a row is hidden when any filtered column's value is in its
-    `hide` list; the live grid sets the hidden `tr` to `display:none` in
-    both edit and read view, row numbers stay true and visibly skip.
-  - **The snapshot shows ALL rows, unchanged** — `_sgStaticHTML()` already
-    renders the whole used range regardless of row content, so no code
-    change was needed there. A filter is a way of looking, not a change to
-    the data (I1/I4).
-  - **While any row is hidden:** fill (handle/Fill down/Ctrl+D/R), paste,
-    row insert/delete and merge are refused with a toast, checked before
-    any `snap()` — no undo step added. Column insert/delete is always
-    allowed. **Visible-only:** `forSel()` (styling, borders, Clear
-    contents) and `doCopy()` skip hidden rows; arrow keys/Tab/Enter skip
-    them in `move()`. Formulas are unaffected — `SUM` still counts hidden
-    rows, as in Excel.
-  - **Moves with the grid:** column insert/delete shifts `c1`/`c2` via the
-    shared `rekeyRange()` and re-points `hide`'s keys; a deleted filter
-    column drops its entry, deleting every filter column drops the filter.
-    Row insert/delete (only possible with nothing hidden) shifts `r`;
-    deleting the header row drops the filter.
-  - **Read view and Multi** share the same drawing code; the panel there
-    can still adjust an existing filter's checklist (view-only —
-    `fltApply`/`fltSort` skip `snap()`/`changed()` when not editable, so a
-    reload discards it) but hides its Sort buttons and never writes
-    `a.content`.
-  - **Not done:** more than one filter per sheet; filtering by condition or
-    colour; showing the filter in the snapshot; round 2c.
-  - New app-check section 29 (`29a`–`29j`): turning a filter on/off and
-    hiding rows through the real panel at all three sizes; `(Blanks)` and
-    search; the snapshot keeping all rows and the read view matching after
-    reload with `a.content`/`updatedAt` untouched; all six refusals
-    (`data-sg` identity + toast + `undoDepth()`); visible-only styling/
-    Clear/Copy/ArrowDown; Sort A→Z from the panel; column insert/delete
-    shifting/dropping the filter; a real Multi window; "opening changes
-    nothing" extended to `flt`; `Clear filter`'s one undo step.
-  - `ship-check` **13/13**, `--only 29` **73/73, twice in a row**,
-    `--only 28,27,25,17` **263/263**. Full `app-check` (Architect):
-    **852/852, twice in a row**. Unpatched (v04.65 app): `--only 29`
-    **4/15, 11 FAILED**. Built as v04.65 and renumbered to v04.66 after the
-    urgent I1 fix took v04.65.
 ---
 
 ## What this is

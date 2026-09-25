@@ -6847,3 +6847,61 @@ open the rename box.
   the Rename tap cannot reach it.
 - Full `app-check`: **898/898, twice in a row**.
 
+---
+
+## v04.71 — a device pushes back what the cloud copy lacks (25 Sep 2026)
+
+**Found** in the v04.68 sync audit, as an observation to verify. It is now
+verified. Built by the Architect directly.
+
+**The gap.** `_doPush()` writes this device's whole notebook to the cloud
+without reading the cloud copy first. So:
+1. The laptop sends edit L.
+2. The phone has not received L yet. It sends its own notebook, and the
+   cloud copy no longer has L.
+3. The laptop receives the phone's copy and merges it. L is newer, so the
+   laptop keeps it. But `_pullRemote()` pushed back only if the merged
+   notebook held **more records** than the cloud copy. An edit to an
+   existing note changes no count.
+
+L therefore reached no other device, and was missing from the cloud copy
+any new device would load, until the laptop happened to make another local
+change. Nothing was deleted, but an edit could sit on one device
+indefinitely.
+
+**Fix.** After a merge, `_pullRemote()` pushes back whenever
+`_syncDigest(DB) !== _syncDigest(remoteDB)`, as well as when the record
+count grew.
+- The digest holds exactly what `mergeDB()` settles in the same way on
+  every device:
+  - each record's id plus its `updatedAt` (or `deletedAt`), across the nine
+    record collections, Trash and tombstones;
+  - the stamp maps: `themeAt`, `tagColorsAt`, `uiAt`, `globalTagsAt`/`X` and
+    `tabsAt`/`X`;
+  - the standalone tag list.
+- It ignores order and ignores keys a device keeps for itself. So two
+  devices converge: once both hold the same merged notebook the digests
+  match, and neither pushes. There is no ping-pong.
+- A full read-merge-write inside `_doPush()` would also close the gap. It
+  was not chosen, because it would download the whole notebook (about 5 MB)
+  before every save.
+
+**Layouts (D5):** no UI change; sync behaves the same at every size.
+
+**Checks: new section 35.** `35a` uses section 26's in-memory Firestore and
+the real `_pullRemote()`, with `pushToCloud` counted. Four cases:
+- the cloud copy lacks this device's newer edit, with the same record count:
+  it pushes;
+- the cloud copy is identical: nothing is sent;
+- the cloud copy carries a newer edit from elsewhere and nothing here is
+  newer: the edit is taken and nothing is sent;
+- the same copy is pulled again: nothing is sent (converged).
+
+**Measured (Architect):**
+- `ship-check`: **13/13**.
+- `--only 35`: **5/5**.
+- Unpatched (v04.70's app): **4/5**. Only the first case fails. The three
+  "send nothing" guards pass on both versions, as they should.
+- `tools/sync-audit.mjs`: unchanged, at 110 PASS / 0 FAIL.
+- Full `app-check`: **@@FULL@@**.
+

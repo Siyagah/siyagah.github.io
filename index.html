@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.70">
+<meta name="app-version" content="04.71">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3078,7 +3078,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.70</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.71</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -21740,6 +21740,24 @@ function _scheduleListenerRestart(){
   },5000);
 }
 
+/* v04.71 — a digest of exactly what mergeDB() settles: every mergeable
+   record's id + updatedAt, Trash entries and tombstones by id + deletedAt,
+   the stamp maps, and the standalone tag list. Order-independent, and blind
+   to keys mergeDB() keeps per-device, so equal digests mean "nothing here
+   the other side does not already have". */
+function _syncDigest(d){
+  if(!d)return '';
+  const stable=v=>{ if(v==null||typeof v!=='object')return JSON.stringify(v===undefined?null:v);
+    if(Array.isArray(v))return '['+v.map(stable).join(',')+']';
+    return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}'; };
+  const parts=[];
+  ['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','trash','tombstones'].forEach(k=>{
+    parts.push(k+'='+((d[k]||[]).map(r=>r?(r.id+'@'+(r.updatedAt||r.deletedAt||'')):'').sort().join(',')));
+  });
+  ['themeAt','tagColorsAt','uiAt','globalTagsAt','globalTagsX','tabsAt','tabsX'].forEach(k=>parts.push(k+'='+stable(d[k]||{})));
+  parts.push('globalTags='+(d.globalTags||[]).slice().sort().join(','));
+  return parts.join('|');
+}
 async function _pullRemote(docRef, md, retry){
   if(_pullInFlight){ _pullQueued={docRef,md}; return; }
   _pullInFlight=true;
@@ -21803,7 +21821,18 @@ async function _pullRemote(docRef, md, retry){
     if(after>before) toast('☁ Merged entries from another device');
     setSyncStatus('live');
     const rc=(remoteDB.articles||[]).length+(remoteDB.folders||[]).length+(remoteDB.trash||[]).length;
-    if(after>rc) pushToCloud();                /* propagate records the cloud is missing */
+    /* v04.71 — push back whenever the merge left this device holding ANYTHING
+       the cloud copy lacks, not only more records. _doPush() writes without
+       reading first, so a device that had not yet received an edit (L) from
+       another could overwrite the cloud copy without it; the device that
+       still had L merged the incoming copy, kept L (newer) — and, with the
+       record COUNT unchanged, never sent it back. L then reached no other
+       device until this one happened to edit again. _syncDigest compares
+       only what mergeDB() settles deterministically (record ids + stamps,
+       deletions, stamp maps), so two devices converge instead of
+       ping-ponging: once both hold the same merged result, the digests
+       match and nobody pushes. */
+    if(after>rc||_syncDigest(DB)!==_syncDigest(remoteDB)) pushToCloud();
   }catch(e){
     /* v03.96 — this used to call setSyncStatus('live') here too, on the way
        out of a genuinely failed pull (e.g. Firestore returning
