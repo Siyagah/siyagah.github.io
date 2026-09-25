@@ -6344,7 +6344,10 @@ await r.block('21e-no-stale-overwrite-of-remote-change', async () => {
   const s = await openEditAt(1440, 900);
   const setup = await s.page.evaluate(() => ({ baselineOk: ST.eBaselineAid === 'a1' }));
   const stampBefore = await s.page.evaluate(() => DB.articles.find((x) => x.id === 'a1').updatedAt);
-  await s.page.evaluate(() => { DB.articles.find((x) => x.id === 'a1').tags = ['seed', 'remote']; });
+  /* v04.68 — a real merge reseeds the record-stamp baseline (_seedRecSnap,
+     see syncNow/the snapshot listener); a simulated one must too, or the
+     _save() sweep correctly reads this bare assignment as a LOCAL edit. */
+  await s.page.evaluate(() => { DB.articles.find((x) => x.id === 'a1').tags = ['seed', 'remote']; if (typeof _seedRecSnap === 'function') _seedRecSnap(); });
   await s.page.evaluate(() => window._flushEd());
   await s.page.evaluate(() => window._flushEverythingOut());
   await s.page.waitForTimeout(250);
@@ -9223,6 +9226,28 @@ await r.block('31b-phone-no-side-padding-390', async () => {
   const g = await page.evaluate(() => { const p = document.getElementById('p3c'); return { pl: p.style.paddingLeft, pr: p.style.paddingRight, pin: !!document.getElementById('pin-panel') }; });
   r.check(!g.pl && !g.pr && !g.pin, '390 Single: no side panel and no side padding on a phone (v04.34 shape unchanged)', JSON.stringify(g));
   await s.close();
+});
+
+/* v04.68 — section 32: sync in both directions, for every kind of change.
+   tools/sync-audit.mjs boots the real app and, for 114 operations, makes the
+   change on device A through the function the UI calls, then merges it into
+   device B's stale copy in BOTH directions and checks that it arrived, that
+   nothing else changed, and that the two devices agree afterwards. v04.67
+   failed 51 of them (plus the 2 undo rows, KNOWN: undo stays local). Kept as
+   its own script so it can be run alone in ~6s; this block runs it whole. */
+await r.block('32-sync-audit-all-directions', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./sync-audit.mjs', import.meta.url).pathname, '--vp', '1440,900'], { encoding: 'utf8', timeout: 180000 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const m = /TOTAL (\d+): PASS (\d+), FAIL (\d+), BY-DESIGN (\d+), KNOWN (\d+), NOTRUN (\d+), ERROR (\d+)/.exec(txt);
+  r.check(!!m, 'the sync audit ran to the end', txt.slice(-400));
+  if (!m) return;
+  const [, total, pass, fail, , known, notrun, err] = m.map(Number);
+  const bad = txt.split('\n').filter((l) => /^(FAIL|ERROR|NOTRUN)\b/.test(l)).slice(0, 8).join(' | ');
+  r.check(fail === 0 && err === 0 && notrun === 0,
+    'every change reaches the other device and survives the merge back, in both directions (114 operations)', `PASS ${pass}/${total}, FAIL ${fail}, ERROR ${err}, NOTRUN ${notrun} ${bad}`);
+  r.check(known === 2, 'only the two recorded undo rows are KNOWN (undo stays local)', `KNOWN ${known}`);
+  r.check(out.status === 0, 'the sync audit exits cleanly', `exit ${out.status}`);
 });
 
 /* Proves the isolation mechanism itself, permanently, rather than trusting a

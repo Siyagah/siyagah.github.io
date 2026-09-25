@@ -6646,3 +6646,114 @@ panels in either pop-up (v04.34), which is unchanged and checked.
   check were never broken and pass on both.
 - Full `app-check`: **869/869, twice in a row**.
 
+---
+
+## v04.68 — sync: every change reaches the other device, in both directions (25 Sep 2026)
+
+**Why.** The owner asked on 25 Sep: "check the sync issue in all directions.
+Anything find, fix it." It followed the MMSA research, which had spotted that
+folder moves don't bump `updatedAt`.
+
+**How it was checked.** A new tool, `tools/sync-audit.mjs`, boots the real app
+and simulates two devices in one page. For each of **114 operations**:
+- device A makes the change through the same function the UI calls;
+- device B keeps its stale copy, or makes its own concurrent change;
+- both merge directions are checked: `mergeDB(B, A)`, B receiving A, and
+  `mergeDB(A, B)`, A receiving B's stale copy;
+- the two results are merged again, and must agree and stay unchanged.
+
+The operations cover notes, folders, sections, tags, Note Types, favourites
+categories, the calendar, Smart Views, MyWall, tabs, Sidepane pins, theme
+settings, Trash, undo, and concurrent edits. It was run at all three sizes
+with identical results. The audit and the fixes were written by the
+Architect's research agent; the Architect reviewed every diff before
+integrating it.
+
+**v04.67 as shipped: 51 FAIL** (plus the two undo rows, below).
+
+**Root causes, and their fixes:**
+1. **About 35 functions changed a record without moving its `updatedAt`.**
+   `_mergeById` keeps the receiving device's copy on a tie, so the change
+   never arrived, and the two devices disagreed for good. The affected
+   changes:
+   - notes: an inline title rename, Attach → Folder, dropping a note on a
+     sidebar folder, Note Type, favourite, pin, finish and un-finish,
+     favourites-category removal, tab colour;
+   - folders: every folder move and reorder (sidebar and dialog), move to the
+     top level, move to another section, `autoNumberAll`/`doRenumber`. Because
+     `mkFolder` runs `autoNumberAll` whenever names are numbered, **even
+     creating a folder** did not sync;
+   - section reorder;
+   - tags: rename and delete across notes;
+   - Note Types and their groups: drag, reorder, rename, colour, bold;
+   - favourites and calendar categories: edits.
+
+   **Fix:** `_stampRecordTouches()`, called from `_save()` and before both
+   merge paths. It uses the same compare-with-the-last-save approach v04.40
+   uses for `DB.theme`, applied to the nine collections `_mergeById`
+   resolves. A record whose content changed while its `updatedAt` did not
+   move forward gets `updatedAt = now`, and nothing else is stamped. The
+   baseline is reseeded after boot, after both merges, after a backup
+   restore, and after undo and redo. It also covers any future field (`G01`,
+   `G02`). Measured cost: about 10 ms per save on a 6.3 MB, 2000-note notebook.
+2. **Deletions with no deletion record:** sections, Note Types, Note Type
+   groups, favourites categories, and calendar events and categories. The
+   union merge put them straight back. **Fix:** the sweep tombstones a
+   record that disappears from one of these collections, and `mergeDB`
+   filters them with the existing `_alive` rule. Notes and folders are
+   unchanged; Trash already records their deletions (v04.65).
+3. **Standalone tags were merged by union,** so a deleted tag returned.
+   **Fix:** per-tag add and remove stamps in two **new additive keys,
+   `DB.globalTagsAt` and `DB.globalTagsX`** (`{tag: ms}`). `mergeDB` drops a
+   tag whose removal is newer than its last add. Also fixed: renaming a tag
+   left the old name in the standalone list, so it showed twice.
+4. **Delete forever and Empty Trash came back** when the other device still
+   listed the entry. **Fix:** a purged entry is tombstoned by its own id (a
+   uid, never a record id), and `mergeDB` keeps it out of Trash.
+5. **`_mergeById` ignored a timestamp that only one side had.** A new
+   calendar event is created without one, so its first edit never
+   arrived. **Fix:** the remote copy wins when only it is stamped, as
+   `_mergeMapById` already does.
+6. **Notes left pointing at a deleted folder.** Another device that had filed
+   a note into the folder meanwhile, or simply still had the old copy, kept
+   the dead folder id. The note then appeared in no folder and in no "not in
+   a folder" list. **Fix:** `mergeDB` unfiles a tombstoned, non-alive folder
+   id the same way on every device, without stamping the note. As a result a
+   concurrent edit to that note is never beaten by the folder deletion.
+7. **Undo stays local, as before.** HISTORY holds whole-notebook snapshots,
+   so an undo after a merge also rolls back the other device's edit. The
+   sweep would otherwise stamp that rollback as new and push it everywhere.
+   Undo and redo reseed the baseline instead. `U01` and `Z03` are recorded
+   as **KNOWN**; making undo sync safely is its own design change.
+
+**With the fixes:** 110 PASS, 0 FAIL, 2 BY-DESIGN, 2 KNOWN.
+- **BY-DESIGN:** when both devices edit the same record before syncing, the
+  newer edit wins the whole record (`X02`, `X06`). That is unchanged.
+- **Trade-off, recorded:** because more operations now stamp, a bulk change
+  also beats an older unsynced edit of the same record on another device.
+  Examples: renaming a tag used by many notes, or auto-renumbering folders.
+  Before this round, the bulk change never reached the other device at all.
+
+**Checks.**
+- New app-check block `32-sync-audit-all-directions` runs the whole audit at
+  1440. It requires 0 FAIL, 0 ERROR and 0 NOTRUN, with exactly 2 KNOWN.
+- `21e` was updated in place: it faked a merge by assigning a note's tags
+  directly, which the sweep correctly reads as a local edit. It now reseeds
+  the baseline the way a real merge does.
+
+**Not done / not tested:**
+- real Firestore, and two real browsers;
+- the linked-file load merge, and journal events, versioning and the other
+  rarely used fields. The generic sweep covers these, and `G01`/`G02` show it
+  does, but they have no row of their own.
+- **Observation, to verify:** `_doPush()` writes without merging first. After
+  merging an incoming change, the app pushes back only if it now holds more
+  records than the remote copy, so a local change can wait until the next
+  edit to be sent.
+
+**Measured (Architect):**
+- `ship-check`: **13/13**.
+- `node tools/sync-audit.mjs`: **110 PASS / 0 FAIL / 2 BY-DESIGN / 2 KNOWN**.
+- On v04.67's app: **59 PASS / 51 FAIL**.
+- Full `app-check`: **873/873, twice in a row**.
+

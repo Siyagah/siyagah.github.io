@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.67.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.68.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,27 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.68** (25 Sep 2026) — sync: every change reaches the other device,
+  in both directions. The owner asked for a sync check in all directions.
+  - `tools/sync-audit.mjs` runs 114 operations × both merge directions. On
+    v04.67, **51 FAILED**.
+  - **Main cause:** about 35 functions changed a record without bumping
+    `updatedAt`, and `_mergeById` keeps local on a tie. Folder
+    moves/reorders/numbering and even folder create never synced.
+  - **Fix:** `_stampRecordTouches()`, a diff-at-`_save()` sweep over the nine
+    `_mergeById` collections, the same method as `_stampThemeTouches`. The
+    baseline is reseeded after boot, merges, backup restore, and undo/redo.
+  - **Also fixed:**
+    - no-Trash deletions (sections, Note Types, groups, favourites and
+      calendar categories and events) now get tombstones;
+    - `globalTags` get add/remove stamps, in the new keys `globalTagsAt` and
+      `globalTagsX`;
+    - purged Trash entries are tombstoned;
+    - a one-sided `updatedAt` now wins;
+    - a note left pointing at a deleted folder is unfiled in the merge.
+  - **Undo stays local** (`U01`/`Z03` are KNOWN).
+  - App-check block 32 runs the audit. Audit on v04.67: 59/51 (PASS/FAIL).
+    With the fixes: 110/0. Full `app-check` **873/873, twice in a row**.
 - **v04.67** (25 Sep 2026) — pop-ups: no empty gap when the Sidepane sits
   below Contents. Owner-reported. `_syncP3CPadding()` (Single) and
   `_fwSyncBodyPadding()` (Multi) ADDED the Contents and Sidepane widths
@@ -159,85 +180,6 @@ must never accumulate here instead of there.
     check, `28h` failed, the three `27a` arm-label checks failed (updated in
     place for the shorter label). `28g` passes on both, by design; every
     `25*`/`17*` check passed on v04.63.
-- **v04.63** (24 Sep 2026) — spreadsheet round 2b1: merged cells, and the
-  fill handle upward and leftward. Issue #93, round 2b1 of the spreadsheet
-  backlog (round 1 shipped as v04.52, round 2a as v04.61; round 2b2 —
-  colour rules and filters — and 2c come later).
-  - **Merged cells.** New toolbar button `Merge cells`/`Unmerge` (worded, no
-    glyph) and the same in the right-click menu. Stored as a new top-level
-    key `mg`: `[[r1,c1,r2,c2],…]`, value at the top-left anchor, covered
-    cells holding nothing, key left off when there are no merges. A
-    selection holding values beyond the top-left arms the button (`Remove`'s
-    own two-tap pattern) rather than merging outright, so nothing is lost
-    silently (I1); the merge is one undo step.
-  - **Drawing.** The live grid gives the anchor `td` a real `rowSpan`/
-    `colSpan` and sets covered `td`s `display:none` — still in the
-    `TD[r][c]` lookup, but out of the table's own column layout, landing the
-    anchor exactly where a hand-written merged table would. `boxTD(r,c)`
-    resolves a covered position to its anchor's box for every call site that
-    reads a cell's box (selection paint, `scrollIntoCell`, the fill handle/
-    preview). `_sgStaticHTML()` writes `colspan`/`rowspan` on the anchor,
-    omits covered `<td>`s, and its used-range scan covers a merge's full
-    extent — the snapshot, search, Save File and an older build see a real
-    merged table (I4).
-  - **Selecting/keyboard/formulas.** Clicking anywhere in a merge selects it
-    whole, anchored top-left (`select()`); a drag or Shift-selection that
-    touches a merge grows to cover it, via a new `normM()` used only by the
-    visual/cell-iterating call sites — row/column HEADER selection
-    deliberately keeps the plain, unchanged `norm()`, or "insert a row
-    strictly inside a merge" (below) would be inexpressible. Arrow keys/Tab/
-    Enter step a merge as one cell; typing edits the anchor; a formula
-    referencing a covered cell reads blank (falls out for free — a covered
-    cell carries no `raw`).
-  - **Insert/delete rows and columns.** `rekeyMerges()`, hung off the
-    existing `rekey()`, moves/resizes every `mg` range with the same
-    shift-math shape already proven on individual cell coordinates: an
-    insertion strictly inside a merge grows it, at/before its top-left edge
-    carries it along; a deletion's edge collapses to the deletion point, and
-    when both edges collapse to the same point the merge drops — one
-    formula, no separate "fully deleted" branch. Deleting the anchor's row/
-    column keeps the merge with a new, empty anchor.
-  - **Refused, with a toast, nothing changed, no undo step:** sort, a fill
-    (handle/Fill down/Ctrl+D/R) whose source or target touches a merge, a
-    paste onto a merge, an overlapping merge, and — both directions —
-    freezing across a merge that crosses row 1/2 or merging across it while
-    frozen. Proved directly via a new test-only `self.undoDepth()` (reads
-    the sheet's own undo-stack length) beside the existing `self.state()`,
-    because a `data-sg` comparison alone can't see a refusal that wrongly
-    pushed a no-op step.
-  - **Borders on a merge land on the anchor only** — `forSel()`, the
-    function every per-cell styling action already funnels through, now
-    skips a merge's covered cells, so a border (or any per-cell property)
-    draws around the whole merged box because the anchor's own `td` IS that
-    box.
-  - **Fill handle up/left.** Continues each of v04.61's four rules
-    backward: a number/date line extrapolates from the source's nearest
-    end instead of its farthest; text-with-a-trailing-number counts down
-    and never prints negative (mirrors past zero, matching Excel); a
-    pattern repeats backward; a formula still shifts by a plain row/col
-    delta either direction, so a reference walked off-sheet resolves to
-    `#REF!` unchanged (`SGE.shiftF` needed no change). The axis is still
-    whichever way the pointer has moved furthest OUTSIDE the selection, now
-    checked all four directions.
-  - **Not done:** merges aren't carried by copy/paste (paste copies values
-    only, and a paste target touching a merge is refused); dragging the
-    fill handle back inside the current selection does nothing (Excel
-    clears there — destructive enough to need its own round); 2b2 and 2c.
-  - New app-check section 27 (`27a`–`27h`): real mouse/keyboard/touch input
-    only, every check id names its size — the two-tap merge and its
-    snapshot `colspan`/`rowspan`; click/arrow-key/typing/formula behaviour;
-    insert/delete via the real `Rows & columns ▾` menu (using row/column
-    header selection so a single row inside a merge can be targeted); all
-    six refusals (`data-sg` identity + toast + `undoDepth()`); `Unmerge`;
-    fill up/left by mouse and real touch, checking raws and displayed
-    values including the `#REF!` case; a real Multi window; and `17d`/
-    `25g`'s "opening changes nothing" rule extended to `mg`.
-  - 12/12 ship checks, `--only 27` **83/83**, `--only 25` **106/106**,
-    `--only 17` **23/23**. Full `app-check` (Architect, on `5034af0`):
-    **711/711, twice in a row**. Unpatched (v04.62's app with this round's
-    tools), `--only 27,25,17`: **136/153, 17 FAILED, all in section 27**
-    (7 blocks aborted, 9 `27f` fill assertions failed, `27g` aborted after 1
-    check; `27h` passes on both by design, a guard).
 ---
 
 ## What this is
@@ -495,6 +437,21 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A change that does not move `updatedAt` does not exist for sync.**
+  `mergeDB()` settles every record by its newest `updatedAt` and keeps the
+  receiving device's copy on a tie. So any function that edits a record in
+  place without re-stamping it makes a change the other device never
+  receives. About 35 functions did exactly that, including every folder move
+  and reorder, and the auto-numbering that runs whenever a folder is created.
+  Every one of them looked fine on the device it ran on. No check had ever
+  made a change and then merged it into a stale copy, both ways, for each
+  kind of change. The fix is the same shape as the `mergeDB()` allow-list
+  lesson below: not "remember to stamp" at each site, but a general sweep
+  (`_stampRecordTouches()`) that stamps whatever changed. Plus a check,
+  `tools/sync-audit.mjs` (app-check block 32), that runs every operation in
+  both directions, so the next unstamped change fails a check instead of
+  failing the owner. Cost: 51 kinds of change that silently never synced,
+  found only because the owner asked for a sync check. Fixed in v04.68.
 - **A deletion mark must only ever name what was actually deleted.**
   Deleting a folder UNFILES its notes and keeps them, but `trashFolder()`
   tombstoned them anyway, and `mergeDB()` read the folder's Trash copy of
