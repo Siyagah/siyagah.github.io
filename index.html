@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.65">
+<meta name="app-version" content="04.66">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2991,7 +2991,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
   .sg-cr-sw{width:44px;height:44px}
   .sg-cr-v1,.sg-cr-v2{flex:1 1 45%}
 }
-/* v04.65 — filters. .sg-fltdd sits at the right edge of a header cell in the
+/* v04.66 — filters. .sg-fltdd sits at the right edge of a header cell in the
    filter's column range, full cell height; touchTier() widens its tap
    target the same way the fill handle's own hit box already widens (see
    _sgMount). .sg-fltp mirrors .sg-crp's anchored/clamped panel. */
@@ -3064,7 +3064,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.65</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.66</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3425,6 +3425,44 @@ async function loadDB(){
       });
     });
     if(touched){ _save(); try{pushToCloud();}catch(e){} }
+  })();
+  /* v04.65 — one-time recovery of notes that a FOLDER deletion removed.
+     Up to v04.64, deleting a folder tombstoned the notes inside it (see
+     trashFolder), so the next sync deleted them everywhere. The folder's
+     Trash entry still holds a copy of each one. A note is brought back when
+     it is missing from DB.articles, is in a folder Trash entry, and its
+     tombstone carries that entry's exact deletedAt — the fingerprint of
+     this bug and nothing else: a note the owner deleted on purpose later has
+     a later stamp (or an article Trash entry) and is left alone. Restored
+     notes come back unfiled (a deleted folder is not recreated), with a
+     fresh updatedAt so every device keeps them. Additive and run once (I8):
+     DB._folderNoteRecoveryV1 records what was restored. */
+  (function _migrateRecoverFolderDeletedNotes(){
+    if(DB._folderNoteRecoveryV1)return;
+    const live={};(DB.articles||[]).forEach(a=>{ if(a&&a.id!=null) live[a.id]=1; });
+    const tstamp={};(DB.tombstones||[]).forEach(t=>{ if(t&&t.id!=null) tstamp[t.id]=t.deletedAt; });
+    const laterDeleted={};(DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item&&t.item.id!=null) laterDeleted[t.item.id]=1; });
+    const now=new Date().toISOString(), back=[];
+    (DB.trash||[]).forEach(t=>{
+      if(!t||t.type!=='folder'||!t.subtree)return;
+      (t.subtree.articles||[]).forEach(a=>{
+        if(!a||a.id==null||live[a.id]||laterDeleted[a.id])return;
+        /* No tombstone at all also counts: before v04.65 mergeDB treated a
+           folder entry's subtree.articles as deletions by themselves. */
+        if(tstamp[a.id]!=null&&tstamp[a.id]!==t.deletedAt)return;
+        const copy=JSON.parse(JSON.stringify(a));
+        copy.folderIds=(copy.folderIds||[]).filter(fid=>(DB.folders||[]).some(f=>f.id===fid));
+        copy.updatedAt=now;
+        DB.articles.push(copy);live[a.id]=1;back.push(a.id);
+      });
+    });
+    if(back.length) DB.tombstones=(DB.tombstones||[]).filter(t=>!back.includes(t.id));
+    DB._folderNoteRecoveryV1={at:now,restored:back};
+    _save();
+    if(back.length){
+      try{pushToCloud();}catch(e){}
+      setTimeout(()=>{try{toast('↩ Brought back '+back.length+' note'+(back.length!==1?'s':'')+' that deleting a folder had removed. Look for them outside any folder.');}catch(e){}},1500);
+    }
   })();
   /* v04.50 — migrate to IndexedDB once, on boot: it wasn't already
      authoritative (checked at the top of this function) and there is a
@@ -19241,7 +19279,9 @@ function _tombstoneTrashEntry(t){
   _addTombstones([rid],at);
   if(t.subtree){
     _addTombstones((t.subtree.folders||[]).map(f=>f&&f.id),at);
-    _addTombstones((t.subtree.articles||[]).map(a=>a&&a.id),at);
+    /* v04.65 — a folder entry's subtree.articles are the notes that were
+       IN the folder, kept so Restore can re-file them; they were never
+       deleted, so permanently deleting the folder must not tombstone them. */
   }
 }
 function trashFolder(id){
@@ -19265,7 +19305,14 @@ function trashFolder(id){
     },
     deletedAt: _delAt
   });
-  _addTombstones([id,...savedFolders.filter(f=>f.id!==id).map(f=>f.id),...savedArts.map(a=>a.id)],_delAt);
+  /* v04.65 — tombstone the FOLDERS only. The notes inside a deleted folder
+     are not deleted: the line below only unfiles them, and they stay in
+     DB.articles. Until v04.64 their ids were tombstoned here too, so the
+     next mergeDB() (on every device, this one included) filtered them out
+     as deleted — deleting a folder silently deleted every note in it on
+     the next sync (I1). savedArts is still kept in the Trash entry: it is
+     what Restore uses to put the notes back INTO the restored folder. */
+  _addTombstones([id,...savedFolders.filter(f=>f.id!==id).map(f=>f.id)],_delAt);
 
   DB.folders = DB.folders.filter(f=>!ids.includes(f.id));
   DB.articles.forEach(a=>{ a.folderIds=a.folderIds.filter(x=>!ids.includes(x)); });
@@ -21108,15 +21155,29 @@ function mergeDB(local, remote){
      erased the only record of a deletion, so a stale device that hadn't yet
      synced that delete would resurrect the item on its next sync. Tombstones
      now survive Trash being cleared, closing that hole for good. */
+  /* v04.65 — a tombstone for a note that the SAME copy still holds alive
+     is not a deletion: a genuine delete removes the note from the copy that
+     records it. Builds up to v04.64 wrote exactly that pair when a FOLDER
+     was deleted (its notes were unfiled, kept, and tombstoned anyway), and
+     a device still running such a build keeps writing it until the service
+     worker updates it (I3). Each side's own tombstones are read against
+     that side's own articles before anything is unioned, so a tombstone
+     like that can never delete a note on any device. */
+  const _liveIds=o=>{const m={};(o.articles||[]).forEach(a=>{ if(a&&a.id!=null) m[a.id]=1; });return m;};
+  const _liveL=_liveIds(local), _liveR=_liveIds(remote);
+  const _ownTombs=(side,live)=>(side.tombstones||[]).filter(t=>t&&t.id!=null&&!live[t.id]);
   const tomb={};
   const _tadd=(rid,at)=>{ if(rid==null||at==null) return; if(!tomb[rid]||at>tomb[rid]) tomb[rid]=at; };
-  (out.tombstones||[]).forEach(t=>{ if(t&&t.id!=null) _tadd(t.id,t.deletedAt); });
+  _ownTombs(local,_liveL).forEach(t=>_tadd(t.id,t.deletedAt));
+  _ownTombs(remote,_liveR).forEach(t=>_tadd(t.id,t.deletedAt));
+  out.tombstones=(out.tombstones||[]).filter(t=>!(t&&t.id!=null&&(_liveL[t.id]||_liveR[t.id])&&!tomb[t.id]));
   (out.trash||[]).forEach(t=>{
     if(!t) return; const at=t.deletedAt;
     _tadd(t.item&&t.item.id!=null?t.item.id:t.id, at);
     if(t.subtree){
       (t.subtree.folders ||[]).forEach(f=>{ if(f&&f.id!=null) _tadd(f.id, at); });
-      (t.subtree.articles||[]).forEach(a=>{ if(a&&a.id!=null) _tadd(a.id, at); });
+      /* v04.65 — NOT subtree.articles: those are the notes that were
+         inside the folder, unfiled and kept alive, never deleted. */
     }
   });
   const _alive=(r)=>{ if(!r||r.id==null) return true; const d=tomb[r.id]; if(d==null) return true; return (r.updatedAt||0) > d; };
@@ -23605,7 +23666,7 @@ function _sgCrEl(){
   };
   return p;
 }
-/* v04.65 — filters. Anchored/clamped exactly like _sgCrPosition/_sgCrEl
+/* v04.66 — filters. Anchored/clamped exactly like _sgCrPosition/_sgCrEl
    above — one shared instance, always acting on whichever sheet is _sgCur.
    The checklist only ever asks the mounted sheet for distinct values
    (fltColValues) and applies through fltApply/fltSort — this panel never
@@ -23720,7 +23781,7 @@ function _sgMount(root,state,editable){
   const touchTier=()=>window.innerWidth<1200;
   const {colName,addr}=SGE;
 
-  /* ── v04.65: filters ──────────────────────────────────────────────────
+  /* ── v04.66: filters ──────────────────────────────────────────────────
      S.flt is {r,c1,c2,hide:{"<col>":["value",…]}} — one filter per sheet,
      as in Excel. `r` is the header row, [c1,c2] the filter's columns. The
      DATA ROWS are never stored: fltDataRange() rescans down from r+1 every
@@ -23986,7 +24047,7 @@ function _sgMount(root,state,editable){
       if(cur){const stepR=dr>0?cur[2]:dr<0?cur[0]:r,stepC=dc>0?cur[3]:dc<0?cur[1]:c;r=stepR+dr;c=stepC+dc;}
       else{r+=dr;c+=dc;}
     }
-    /* v04.65 — arrow keys, Tab and Enter skip a filter-hidden row. Only
+    /* v04.66 — arrow keys, Tab and Enter skip a filter-hidden row. Only
        adopted when the skip lands within the sheet's current bounds, so a
        run of hidden rows right up to the last row still falls through to
        the "walking off the edge grows the sheet" rule below unchanged. */
@@ -24060,7 +24121,7 @@ function _sgMount(root,state,editable){
      colour, Clear contents…) lands on the anchor only, which is exactly what
      "covered cells hold nothing" requires and what makes a border on a
      merge draw as one box around the anchor's own spanned <td>. */
-  /* v04.65 — also skips a filter-hidden row: styling, borders and Clear
+  /* v04.66 — also skips a filter-hidden row: styling, borders and Clear
      contents apply to visible cells only, as in Excel. */
   function forSel(f){const s=normM(SEL);for(let r=s.r1;r<=s.r2;r++){if(hiddenRows.has(r))continue;for(let c=s.c1;c<=s.c2;c++){const m=mergeAt(r,c);if(m&&(m[0]!==r||m[1]!==c))continue;f(r,c);}}}
   function styleSel(p,v){snap();const o=cellO(A.r,A.c)||{};const nv=(p==='b'||p==='i')?!o[p]:(o[p]===v&&p==='al'?undefined:v);forSel((r,c)=>setProp(r,c,p,nv));refresh();changed();}
@@ -24263,7 +24324,7 @@ function _sgMount(root,state,editable){
     }
     refresh();changed();
   }
-  /* v04.65 — a filter-hidden row is skipped when copying, so the clip holds
+  /* v04.66 — a filter-hidden row is skipped when copying, so the clip holds
      visible rows only (Excel's behaviour); rowIdx remembers each kept row's
      REAL index so a formula pasted back still shifts by the true distance —
      with no filter active, hiddenRows is empty and rowIdx is exactly the
@@ -24473,7 +24534,7 @@ function _sgMount(root,state,editable){
     S.cr.splice(i,1);if(!S.cr.length)S.cr=undefined;
     refresh();changed();
   };
-  /* ── v04.65: the filter panel's only way into a sheet's internals — same
+  /* ── v04.66: the filter panel's only way into a sheet's internals — same
      shape as crRulesFor/crAdd/crRemove above. fltApply/fltSort branch on
      `editable`: in the read view they mutate S in memory and refresh() the
      live grid, but never snap()/changed(), so a reload (which re-parses

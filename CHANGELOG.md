@@ -6382,7 +6382,92 @@ stay green, re-run in full, not assumed from the shared code path.
   `28g` passes on both versions, by design. Every `25*` and `17*` check
   passed on v04.63.
 
-## v04.65 — spreadsheet round 2b3: filters (24 Sep 2026)
+## v04.65 — deleting a folder no longer deletes its notes on the next sync (24 Sep 2026)
+
+**Built by the Architect directly, ahead of the filters round (#97),** because it
+is data loss (I1) on the live app.
+
+**How it was found.** The owner's sister app, MMSA, asked how Siyagah's folder
+dialog works. The research for that answer read `trashFolder()` and noticed
+it writes tombstones for the notes inside a deleted folder. Measured on
+v04.64: delete folder `f1` (holding `a1`, and `a2` in its subfolder), then
+merge with another device's copy. **Both notes are gone on both devices after
+one sync,** although the app had said they were kept, only unfiled.
+
+**The two routes to the loss:**
+1. `trashFolder()` called `_addTombstones()` with the ids of every note in the
+   folder (`savedArts`), even though the same function only UNFILES them. A
+   tombstone is exactly what `mergeDB()` treats as "deleted on purpose".
+2. `mergeDB()` also read every Trash entry's `subtree.articles` as deletions.
+   For a folder entry those are the notes that were inside it, kept so that
+   Restore can re-file them. They were never deleted.
+
+Emptying Trash made it permanent: `_tombstoneTrashEntry()` tombstoned the
+same notes again, and the Trash copy that Restore could have used was gone.
+Until then, **restoring the deleted folder from Trash brought the notes back**
+(`restoreItem()` pushes back any saved note that is missing), so a notebook
+whose Trash was never emptied has lost nothing that cannot be recovered.
+
+**The fix:**
+- `trashFolder()` tombstones the folders only.
+- `_tombstoneTrashEntry()` never tombstones a folder entry's notes.
+- `mergeDB()` no longer takes deletions from `subtree.articles`. It also
+  ignores any tombstone for a note that **the same copy still holds alive**.
+  A genuine delete always removes the note from the copy that records it, so
+  that pair only ever came from this bug. This is what protects a notebook
+  from a device still running v04.64 or older, which keeps writing those
+  marks until its service worker updates (I3).
+- **A one-time repair on boot**, `_migrateRecoverFolderDeletedNotes()`, brings
+  back notes this bug already removed. A note qualifies when all of these
+  hold:
+  - it is missing from `DB.articles`;
+  - it sits in a folder Trash entry;
+  - its tombstone is either absent or carries that entry's exact
+    `deletedAt`, the bug's fingerprint;
+  - it has no article Trash entry of its own.
+
+  So a note the owner deleted on purpose afterwards stays deleted.
+
+  Restored notes come back **unfiled**, because the deleted folder is not
+  recreated. They get a fresh `updatedAt`, so every device keeps them, and
+  their stale tombstones are cleared. The repair is additive and runs once
+  (I8): `DB._folderNoteRecoveryV1` records `{at, restored:[ids]}`. A toast
+  tells the owner how many notes came back and where to find them.
+
+**What it cannot bring back:** a note whose folder was deleted **and** whose
+Trash was then emptied. No copy of it exists anywhere in the notebook.
+
+**Also:** `CLAUDE.md` line 6 read `Current version: v04.62` through two
+rounds, and now reads v04.65. The ship-check guard that stops it going stale
+again is part of the filters round (#97), which becomes **v04.66**.
+
+**Layouts (D5):** no UI change; sync and boot behave the same at every size.
+
+**Checks: new section 30.**
+- `30a`: a real 🗑 click in the folder dialog at 1440, with the confirm
+  accepted. The notes stay local and unfiled, only the folders are
+  tombstoned, and every note survives a merge in both directions. The folder
+  deletion itself still reaches the other device.
+- `30b`: emptying Trash afterwards still keeps every note.
+- `30c`: a copy written by an older build (notes alive but tombstoned, plus a
+  folder Trash entry) no longer deletes those notes in either direction.
+- `30d` (guard): deleting a **note** on purpose still removes it everywhere.
+- `30e`: a damaged notebook gets its lost note back on boot, unfiled and
+  freshly stamped. A note from the same folder deleted on purpose later stays
+  deleted, the repair records itself, and a reload adds no copies.
+
+**Measured (Architect):**
+- `ship-check`: **12/12**.
+- `app-check --only 30`: **17/17**.
+- Unpatched (v04.64's app with these tools): `--only 30` **6/17, 11 FAILED**.
+  The 6 that pass on both are the real-🗑 click itself, the unfiling, the
+  folder deletion syncing, the `30d` guard, and two no-page-error checks. All
+  six are right to pass on v04.64.
+- Full `app-check`: **779/779, twice in a row**.
+
+---
+
+## v04.66 — spreadsheet round 2b3: filters (24 Sep 2026)
 
 Issue #97, round 2b3 of the spreadsheet backlog the owner approved on 23 Sep
 2026 (round 1: v04.52, round 2a: v04.61, round 2b1: v04.63, round 2b2:
@@ -6393,7 +6478,7 @@ v04.64; round 2c comes later, out of scope here on purpose).
 (762/762, twice in a row; unpatched 214/226) instead of the placeholder
 "run by the Architect in review" line. `CLAUDE.md` line 6 ("Current
 version") had drifted to v04.62 across both v04.63 and v04.64, because
-nothing checked it; it now reads v04.65, and `ship-check` has a 13th check
+nothing checked it; it now reads v04.66, and `ship-check` has a 13th check
 comparing that line against `<meta name="app-version">` so it can never go
 stale silently again — shown failing on `origin/main`'s own `CLAUDE.md`
 (line 6 still v04.62 against a v04.64 meta tag) before this round's fix.

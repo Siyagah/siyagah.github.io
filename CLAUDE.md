@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.65.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.66.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,14 +16,14 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
-- **v04.65** (24 Sep 2026) — spreadsheet round 2b3: filters. Issue #97,
+- **v04.66** (24 Sep 2026) — spreadsheet round 2b3: filters. Issue #97,
   round 2b3 of the spreadsheet backlog (round 1: v04.52, 2a: v04.61, 2b1:
   v04.63, 2b2: v04.64; 2c comes later).
   - **Record fixes carried from v04.64's review:** its `CHANGELOG.md`/
     `CLAUDE.md` entries now carry the Architect's real review totals
     (762/762 twice in a row; unpatched 214/226) instead of the placeholder
     line; this file's line 6 ("Current version") had drifted to v04.62
-    across v04.63 and v04.64 and now reads v04.65, and `ship-check` gained
+    across v04.63 and v04.64 and now reads v04.66, and `ship-check` gained
     a 13th check comparing that line to the meta tag so it can't go stale
     silently again.
   - **New toolbar button `Filter`** (words, `Clear filter` once on), also
@@ -78,6 +78,21 @@ must never accumulate here instead of there.
   - `ship-check` **13/13**, `--only 29` **73/73, twice in a row**,
     `--only 28,27,25,17` **263/263**. Full `app-check`: run by the
     Architect in review.
+- **v04.65** (24 Sep 2026) — deleting a folder no longer deletes its notes
+  on the next sync (I1). Built by the Architect directly, ahead of filters.
+  - Up to v04.64, `trashFolder()` tombstoned the notes inside a deleted folder
+    (it only unfiles them), and `mergeDB()` read a folder Trash entry's
+    `subtree.articles` as deletions. So one sync removed every such note on
+    every device. Restoring the folder from Trash brought them back; emptying
+    Trash made the loss permanent.
+  - **Fix:** folders only are tombstoned. `mergeDB()` ignores a side's
+    tombstone for a note that same side holds alive, which neutralises marks
+    from older builds. A one-time boot repair
+    (`_migrateRecoverFolderDeletedNotes`, recorded in
+    `DB._folderNoteRecoveryV1`) brings back notes the bug removed, from the
+    folder's Trash copy, unfiled.
+  - New section 30 (`30a`–`30e`). Unpatched v04.64: `--only 30` 6/17.
+    Full `app-check` **779/779, twice in a row**.
 - **v04.64** (24 Sep 2026) — spreadsheet round 2b2: colour rules
   (conditional formatting). Issue #95, round 2b2 of the spreadsheet backlog
   (round 1: v04.52, 2a: v04.61, 2b1: v04.63; 2b3 — filters — and 2c come
@@ -268,29 +283,6 @@ must never accumulate here instead of there.
   - 12/12 ship checks, `--only 26` **16/16**, full `app-check`
     **628/628, twice in a row**. Unpatched (v04.61 app, this round's tools): `--only 26`
     **7/11, 4 FAILED**.
-- **v04.60** (23 Sep 2026) — the last note titles out of the public file,
-  and Contents without heading chrome. Built by the Architect directly.
-  - **v04.58 missed some.** It named the tab *picker*, but the static
-    `#tab-bar` beside it still held two real note titles as rendered
-    chips, and `#ctx` held a real `data-aid`. The v04.59 builder flagged
-    it.
-  - The static `#tab-bar` is now empty. `renderTabBar()` fills it on the
-    first render (`bar._sig` starts undefined).
-  - `#ctx` loses the `data-aid`.
-  - A full scan of the remaining static markup (outside `<script>` and
-    `<style>`) found nothing else. The sidebar, list and note panes are
-    empty.
-  - ship-check check 6 also fails on any literal note id in a `data-tid`
-    or `data-aid`, or in a tab-bar handler call. That is the general
-    fingerprint, where v04.58's was a named one. It fails on v04.59's file.
-  - **Also:** `_tocScan()` read `textContent`, so in an editor the heading's
-    injected `⠿`/`▼` chrome was part of each Contents entry. Single read
-    `⠿▼One`. Pre-existing, found in the v04.59 review. It now reads a
-    clone with the chrome removed. New check `24a` (both pop-ups) fails on
-    v04.59 for Single.
-  - Still the owner's call: the same markup in `legacy/v03.99/` and in
-    git history.
-  - 12/12 ship checks, **506/506 app checks, twice in a row**.
 ---
 
 ## What this is
@@ -493,7 +485,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   matches that cell's current computed value wins, via the top-level
   `_sgCrFor()` that both `_sgStaticHTML()` and the live grid's `refresh()`
   call — a match overrides only how the cell is DRAWN, never its own
-  stored `bg`) and `flt` (v04.65, absent when no filter is on — one filter
+  stored `bg`) and `flt` (v04.66, absent when no filter is on — one filter
   per sheet, `{r,c1,c2,hide:{"<col>":["value",…]}}`; `r`/`[c1,c2]` are the
   header row and filter columns, `hide` lists the DISPLAYED values
   unticked per column. The data-row range is never stored — `fltDataRange()`
@@ -548,6 +540,21 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A deletion mark must only ever name what was actually deleted.**
+  Deleting a folder UNFILES its notes and keeps them, but `trashFolder()`
+  tombstoned them anyway, and `mergeDB()` read the folder's Trash copy of
+  them as deletions too. Locally nothing looked wrong: the notes were still
+  there, unfiled. The next sync removed them on every device. No check had
+  ever deleted a folder and then synced, because sections 8–10 tested notes
+  and folders separately. Two rules. First, a tombstone may only name a record
+  the same operation removes from `DB`; anything kept alive must never
+  appear in it. Second, every delete path needs a check that deletes, merges
+  in both directions, and counts what is left. The general guard now in
+  `mergeDB()` (a side's tombstone never deletes a note that same side still
+  holds) catches the next function that gets this wrong. Cost: every note
+  in every folder the owner ever deleted was removed at the next sync. It
+  was recoverable only from Trash, and was found by chance while answering
+  another app's question. Fixed in v04.65.
 - **A field staged in `ST` is a field autosave does not know about, unless it
   is told.** `ST.etitle` had `_flushEd()` committing it from the day the
   autosave tick was written; `ST.etags` and `ST.efolders` were staged into
