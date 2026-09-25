@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.67">
+<meta name="app-version" content="04.68">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3064,7 +3064,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.67</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.68</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3594,6 +3594,87 @@ function _stampThemeTouches(){
     _themeSnap=curStr;
   }catch(_){}
 }
+/* v04.68 — the same diff-at-_save() sweep as _stampThemeTouches above, for
+   the RECORDS mergeDB() resolves newest-updatedAt-wins (_mergeById). A sync
+   audit found ~35 functions that change a note, folder, section, Note Type,
+   favourites/calendar category or event and never bump its updatedAt:
+   toggleFav, togglePin, finishNote, setNoteKind, toggleArtFolder, the
+   sidebar note drop, every folder move/reorder/renumber, moveFolderToSec,
+   secDDrop, finRenameTag, renNtiCat, _calSaveCat, undo()... On a tie
+   _mergeById keeps LOCAL, so the other device silently kept its old copy,
+   and the next push could carry that old copy back. Rather than touch every
+   site and rely on every future site remembering to, this compares each
+   record with the copy seen at the previous _save(): a record whose content
+   changed while its updatedAt did not move forward gets updatedAt=now. Nothing else is
+   stamped — an untouched record never gets a phantom stamp (the v03.95
+   lesson). noteHistory is left out of the comparison: it is a side-log that
+   opening a note appends to, deliberately never stamped (v03.97).
+   The baseline is reseeded exactly where _seedThemeSnap() is (end of boot,
+   after every merge) so a merged-in remote change is never mistaken for a
+   local edit. Before boot has finished this is a no-op: migrations keep
+   their existing no-stamp behaviour. */
+const _REC_COLLS=['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups'];
+/* v04.68 — collections with no Trash of their own: deleting one of these
+   records used to just drop it from the array, and the union merge put it
+   straight back from any device that still had it (a deleted section, Note
+   Type, Note Type group, favourites category, calendar event or calendar
+   category could never stay deleted). A record the sweep sees GONE from one
+   of these gets a tombstone — the same {id,deletedAt} log folder groups
+   already use — and mergeDB() filters these collections with it. Notes and
+   folders are not listed: they are deleted through Trash, which already
+   tombstones exactly what it removes (v04.65). */
+const _REC_TOMB_COLLS=['sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups'];
+let _recSnap;        /* {coll:{id:[sig,updatedAt]}} — undefined until boot seeds it */
+/* The record's JSON itself, not a hash of it: hashing a 6MB notebook took
+   ~70ms per save in Chromium, the plain string ~7ms (measured, 2000 notes).
+   The memory is one more copy of the notebook — HISTORY already keeps 60. */
+function _recSig(r){
+  const o={};Object.keys(r).sort().forEach(k=>{if(k!=='updatedAt'&&k!=='noteHistory')o[k]=r[k];});
+  return JSON.stringify(o);
+}
+function _recSnapOf(db){
+  const s={};
+  _REC_COLLS.forEach(c=>{const m=s[c]={};((db&&db[c])||[]).forEach(r=>{if(r&&r.id!=null)m[r.id]=[_recSig(r),r.updatedAt];});});
+  s.__tags=((db&&db.globalTags)||[]).slice();
+  return s;
+}
+function _seedRecSnap(){ try{ _recSnap=_recSnapOf(DB); }catch(_){} }
+function _stampRecordTouches(){
+  if(_recSnap===undefined) return;
+  try{
+    const now=new Date().toISOString(), next={}, gone=[];
+    _REC_COLLS.forEach(c=>{
+      const prev=_recSnap[c]||{}, m=next[c]={};
+      ((DB&&DB[c])||[]).forEach(r=>{
+        if(!r||r.id==null) return;
+        const sig=_recSig(r), p=prev[r.id];
+        /* "its updatedAt did not move FORWARD" — not just "is unchanged": undo()
+           puts back the older copy, stamp and all, and that is a change too. */
+        const moved=r.updatedAt!=null&&(p?(p[1]==null||r.updatedAt>p[1]):true);
+        if(p && p[0]!==sig && !moved) r.updatedAt=now;
+        m[r.id]=[sig,r.updatedAt];
+      });
+      if(_REC_TOMB_COLLS.includes(c)) Object.keys(prev).forEach(id=>{ if(!m[id]) gone.push(id); });
+    });
+    if(gone.length) _addTombstones(gone,now);
+    /* v04.68 — DB.globalTags is a plain list that mergeDB() used to UNION, so
+       a deleted standalone tag came straight back from any other device.
+       Adds and removals are stamped here, per tag, in the same {tag:ms} shape
+       as tagColorsAt, and mergeDB() drops a tag whose removal is newer than
+       its last add. */
+    const pt=new Set(_recSnap.__tags||[]), ct=new Set((DB&&DB.globalTags)||[]), ms=Date.now();
+    ct.forEach(t=>{ if(!pt.has(t)){ if(!DB.globalTagsAt||typeof DB.globalTagsAt!=='object')DB.globalTagsAt={}; DB.globalTagsAt[t]=ms; } });
+    pt.forEach(t=>{ if(!ct.has(t)){ if(!DB.globalTagsX||typeof DB.globalTagsX!=='object')DB.globalTagsX={}; DB.globalTagsX[t]=ms; } });
+    next.__tags=[...ct];
+    _recSnap=next;
+  }catch(_){}
+}
+/* A change that must NOT count as an edit of these records (see trashFolder):
+   refresh their baseline so the next sweep leaves their updatedAt alone. */
+function _recUntouched(coll,recs){
+  if(_recSnap===undefined||!_recSnap[coll]) return;
+  try{ (recs||[]).forEach(r=>{ if(r&&r.id!=null&&_recSnap[coll][r.id]) _recSnap[coll][r.id]=[_recSig(r),r.updatedAt]; }); }catch(_){}
+}
 /** Shared by both the localStorage-only path and the async IndexedDB path
  *  below (v04.50) — factored out of _save()'s old catch block so a write
  *  that fails or recovers ASYNCHRONOUSLY (IndexedDB) drives the exact same
@@ -3646,6 +3727,7 @@ function _markSaveFailure(e){
 function _save(pre){
   if(!_dbLoaded) return false;   /* never write the pre-load placeholder over the real notebook — see _dbLoaded */
   _stampThemeTouches();
+  _stampRecordTouches();   /* v04.68 */
   const json = pre!=null?pre:JSON.stringify(DB);
   let lsErr=null;
   try{ localStorage.setItem(SK, json); }catch(e){ lsErr=e; }
@@ -7724,6 +7806,10 @@ function _replaceWithBackup(bk,rec){
   if(bk.folderGroups)DB.folderGroups=bk.folderGroups;
   /* Re-add KB notes so user keeps the guide */
   syncKnowledgeBase&&syncKnowledgeBase();
+  /* v04.68 — a restored backup keeps the timestamps it was saved with, as it
+     always has: it is not a fresh edit of every record, so the record sweep
+     must not stamp (or, for sections/Note Types, tombstone) any of it. */
+  _seedRecSnap();
   persist(); renderTree(); renderP2C(); renderP3H(); renderP3C();
   const copyMsg=rec?(rec.ok?' A copy of what you had before is saved on this device.':' No recovery copy could be kept.'):'';
   toast('✓ Backup restored — '+DB.articles.filter(a=>!a.id?.startsWith('kb-')).length+' notes recovered.'+copyMsg+' Syncing to cloud…');
@@ -19235,6 +19321,12 @@ function undo(){
   if(HIST_POS <= 0) return;
   HIST_POS--;
   DB = JSON.parse(HISTORY[HIST_POS]);
+  /* v04.68 — NOT swept as an edit. HISTORY holds whole-notebook snapshots
+     taken at persist() time, so stepping back also rolls back anything merged
+     in from another device (or autosaved) since that snapshot; stamping that
+     rollback "now" would push it to every device and erase their edits. As
+     before, an undo stays local and sync may put the change back. */
+  _seedRecSnap();
   _save();
   ST.editing=false; ST.article=null;
   applyTheme(DB.theme||{preset:'forest',custom:{}});
@@ -19245,6 +19337,7 @@ function redo(){
   if(HIST_POS >= HISTORY.length-1) return;
   HIST_POS++;
   DB = JSON.parse(HISTORY[HIST_POS]);
+  _seedRecSnap();   /* v04.68 — see undo() */
   _save();
   ST.editing=false; ST.article=null;
   applyTheme(DB.theme||{preset:'forest',custom:{}});
@@ -19321,7 +19414,12 @@ function trashFolder(id){
   _addTombstones([id,...savedFolders.filter(f=>f.id!==id).map(f=>f.id)],_delAt);
 
   DB.folders = DB.folders.filter(f=>!ids.includes(f.id));
+  const _unfiled=DB.articles.filter(a=>a.folderIds.some(x=>ids.includes(x)));
   DB.articles.forEach(a=>{ a.folderIds=a.folderIds.filter(x=>!ids.includes(x)); });
+  /* v04.68 — unfiling is not an edit of those notes: mergeDB() unfiles them on
+     every device from the folder's tombstone, so they keep their updatedAt and
+     a concurrent edit elsewhere is never beaten by this deletion. */
+  _recUntouched('articles',_unfiled);
   if(ids.includes(ST.folder)) ST.folder=null;
   persist(); render();
 }
@@ -19433,9 +19531,15 @@ function restoreItem(tid){
   persist(); render(); renderTrashModal();
 }
 
+/* v04.68 — a purged Trash ENTRY is tombstoned by its own id too (a uid,
+   never a note's or folder's id), so mergeDB() can keep it out of Trash:
+   before this, the union merge refilled an emptied Trash from any device
+   that still listed the entry. */
+function _tombstoneTrashEntryId(t){ if(t&&t.item&&t.id!=null) _addTombstones([t.id]); }
 function permDeleteItem(tid){
   const t=DB.trash.find(x=>x.id===tid);
   _tombstoneTrashEntry(t);
+  _tombstoneTrashEntryId(t);
   DB.trash = DB.trash.filter(t=>t.id!==tid);
   persist(); renderTrashModal();
 }
@@ -19444,6 +19548,7 @@ function emptyTrash(){
   if(!DB.trash?.length) return;
   if(!confirm('Permanently delete all items in Trash? This cannot be undone.')) return;
   DB.trash.forEach(_tombstoneTrashEntry);
+  DB.trash.forEach(_tombstoneTrashEntryId);   /* v04.68 */
   DB.trash=[];
   _popCleanupOrphans();
   persist(); renderTrashModal();
@@ -20940,8 +21045,10 @@ async function syncNow(){
     const remoteDB=await _readCloudDB(nb, main.exists?main.data():null);
     if(remoteDB){
       const before=(DB.articles||[]).length;
+      _stampRecordTouches();   /* v04.68 — stamp any local change not yet swept, BEFORE the merge judges it */
       DB=mergeDB(DB, remoteDB);
-      _seedThemeSnap();  /* v04.40 — mergeDB already resolved DB.theme correctly; reseed so the next _save() doesn't re-diff against the pre-merge snapshot and overwrite an honest remote stamp with a fresh local "now" */
+      _seedThemeSnap();
+      _seedRecSnap();          /* v04.68 — merged-in remote changes are not local edits */  /* v04.40 — mergeDB already resolved DB.theme correctly; reseed so the next _save() doesn't re-diff against the pre-merge snapshot and overwrite an honest remote stamp with a fresh local "now" */
       added=(DB.articles||[]).length-before;
       _flushAllEditors();
       _save(); _renderPreserveEdit();
@@ -20969,7 +21076,12 @@ function _mergeById(localArr, remoteArr, tsKey){
     if(!x||x.id==null){ out.push(x); return; }
     if(idx[x.id]===undefined){ idx[x.id]=out.length; out.push(x); }
     else{ const cur=out[idx[x.id]]; const tb=x[tsKey],ta=cur[tsKey];
-      if(tb!=null&&ta!=null&&tb>ta) out[idx[x.id]]=x; }
+      if(tb!=null&&ta!=null&&tb>ta) out[idx[x.id]]=x;
+      /* v04.68 — only REMOTE is stamped: it has been edited and local has
+         not (a calendar event is created with no updatedAt and gets one on
+         its first edit). Without this the edit never reached the device
+         holding the unstamped copy. _mergeMapById already does the same. */
+      else if(ta==null&&tb!=null) out[idx[x.id]]=x; }
   });
   return out;
 }
@@ -21114,6 +21226,11 @@ function mergeDB(local, remote){
   out.trash=_mergeById(local.trash, remote.trash, "deletedAt");
   out.tombstones=_mergeById(local.tombstones, remote.tombstones, "deletedAt");
   out.globalTags=_mergeStrs(local.globalTags, remote.globalTags);
+  /* v04.68 — per-tag add/remove stamps (see _stampRecordTouches): a tag
+     removed more recently than it was last added stays removed. */
+  out.globalTagsAt=_mergeStampMap(local.globalTagsAt, remote.globalTagsAt);
+  out.globalTagsX =_mergeStampMap(local.globalTagsX,  remote.globalTagsX);
+  out.globalTags=out.globalTags.filter(t=>!((+out.globalTagsX[t]||0)>(+out.globalTagsAt[t]||0)));
   /* v03.81 — Smart-View settings and per-tag colours. Object maps, not
      arrays, so they use the dedicated helpers above. tagColors is resolved
      by its companion stamp map, which must be read from the ORIGINAL sides. */
@@ -21189,14 +21306,40 @@ function mergeDB(local, remote){
   const _alive=(r)=>{ if(!r||r.id==null) return true; const d=tomb[r.id]; if(d==null) return true; return (r.updatedAt||0) > d; };
   out.articles=(out.articles||[]).filter(_alive);
   out.folders =(out.folders ||[]).filter(_alive);
+  /* v04.68 — a note filed in a folder that is DELETED (tombstoned, and not
+     alive on either side) is unfiled here, on every device alike. Deleting a
+     folder unfiles its notes on the deleting device, but another device that
+     filed a note there meanwhile — or simply still had the old copy — kept
+     the dead id, and a note whose only folder no longer exists appears in no
+     folder and in no "not in a folder" list either. Doing it in the merge
+     rather than by stamping those notes also means a concurrent edit to one
+     of them on the other device is never beaten by the folder deletion. The
+     note's own updatedAt is left alone: both devices compute the same result. */
+  const _liveF={}; out.folders.forEach(f=>{ if(f&&f.id!=null) _liveF[f.id]=1; });
+  out.articles=out.articles.map(a=>{
+    if(!a||!Array.isArray(a.folderIds)||!a.folderIds.some(fid=>tomb[fid]!=null&&!_liveF[fid])) return a;
+    return Object.assign({},a,{folderIds:a.folderIds.filter(fid=>!(tomb[fid]!=null&&!_liveF[fid]))});
+  });
   /* v03.81 — a deleted folder group must stay deleted; without this the
      union above re-adds it from any device that hasn't synced the delete. */
   out.folderGroups=(out.folderGroups||[]).filter(_alive);
+  /* v04.68 — and the other collections that have no Trash: a deleted
+     section, Note Type, Note Type group, favourites category, calendar event
+     or calendar category stays deleted (tombstoned by _stampRecordTouches). */
+  ['sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats'].forEach(k=>{
+    if(Array.isArray(out[k])) out[k]=out[k].filter(_alive);
+  });
   /* drop tombstones whose primary record is active again (edited after deletion) */
   const activeMap={};
   (out.articles||[]).forEach(a=>{ if(a&&a.id!=null) activeMap[a.id]=1; });
   (out.folders ||[]).forEach(f=>{ if(f&&f.id!=null) activeMap[f.id]=1; });
   out.trash=(out.trash||[]).filter(t=>{ if(!t) return true; const rid=t.item&&t.item.id!=null?t.item.id:t.id; return !activeMap[rid]; });
+  /* v04.68 — an entry permanently deleted from Trash on either side stays
+     out of Trash (see _tombstoneTrashEntryId). Only entries with an .item
+     are matched: their own id is a uid, never a record id. */
+  const _purged={};
+  [local,remote].forEach(side=>(side.tombstones||[]).forEach(t=>{ if(t&&t.id!=null) _purged[t.id]=1; }));
+  out.trash=out.trash.filter(t=>!(t&&t.item&&t.id!=null&&_purged[t.id]));
   /* v04.40 — the list above is an allow-list, and an allow-list is correct
      only until the next key. A top-level key that exists on remote and not
      on local at all — data written by a newer build than this device is
@@ -21427,6 +21570,7 @@ async function _doPush(){
        a stale one. Calling it again inside _save() below is a harmless
        no-op once this has already run. */
     _stampThemeTouches();
+    _stampRecordTouches();   /* v04.68 — same reason as the theme stamp above */
     const json=JSON.stringify(DB);
     const sig=_syncSig(json);
     if(sig===_lastPushedSig){ setSyncStatus('live'); return; }   /* nothing new */
@@ -21630,8 +21774,10 @@ async function _pullRemote(docRef, md, retry){
        typist's text is newer and wins, an untouched open note is a no-op
        flush and correctly loses to the incoming change. */
     _flushAllEditors();
+    _stampRecordTouches();   /* v04.68 — see syncNow() */
     DB=mergeDB(DB, remoteDB);                  /* MERGE — never replace, so nothing is lost */
     _seedThemeSnap();  /* v04.40 — see the identical call in syncNow() above */
+    _seedRecSnap();    /* v04.68 */
     const after=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
     _save();
     _renderPreserveEdit();
@@ -22984,6 +23130,12 @@ function finRenameTag(oldTag,newRaw){
     const i=a.tags.indexOf(oldTag);
     if(i!==-1){if(!a.tags.includes(newTag))a.tags[i]=newTag;else a.tags.splice(i,1);}
   });
+  /* v04.68 — the standalone tag list kept the OLD name, so a renamed tag
+     showed up twice (old name at 0 notes). */
+  if(DB.globalTags&&DB.globalTags.includes(oldTag)){
+    DB.globalTags=DB.globalTags.filter(t=>t!==oldTag);
+    if(!DB.globalTags.includes(newTag)){DB.globalTags.push(newTag);DB.globalTags.sort();}
+  }
   if(ST.tag===oldTag)ST.tag=newTag;
   persist();renderTree();renderP2H();renderP2C();
 }
@@ -24800,6 +24952,7 @@ function _sgMount(root,state,editable){
   if(!DB.theme)DB.theme={};
   if(!DB.theme.calLayers)DB.theme.calLayers={notes:true,publicHols:true,schoolHols:true,personal:true,journal:true};
   render();
+  _seedRecSnap();   /* v04.68 — record-stamp baseline: everything boot, its migrations and the first render settled on (see _stampRecordTouches) */
   /* v04.50 — the flag means "settled", not "render() returned": fonts
      loaded and two frames laid out, so the post-render fit/measure passes
      have run. Setting it straight after render() made the harness's fixed
