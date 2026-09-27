@@ -32,7 +32,7 @@ must never accumulate here instead of there.
 
   Delete is a confirmed row on the ⋯ card (`_confirmDeleteNote()` →
   `deleteNote()`). New section 36; `6p-08` updated in place. Unpatched
-  v04.71: 15/23. Full `app-check` **@@FULL@@**.
+  v04.71: 15/23. Full `app-check` **922/922, twice in a row**.
 - **v04.71** (25 Sep 2026) — a device pushes back what the cloud copy lacks.
   `_doPush()` writes without reading first. So a device that had not yet
   received another device's edit could overwrite the cloud copy without it.

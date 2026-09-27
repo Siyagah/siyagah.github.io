@@ -6992,4 +6992,4 @@ the bar's ⋯ menu.
   **15/23, 8 FAILED**. `36a` reproduces the owner's exact alarm text.
   `36e` passes at 820 and 1440 on both versions, because the ⋯ menu path
   already had Delete.
-- Full `app-check`: **@@FULL@@**.
+- Full `app-check`: **922/922, twice in a row**.
