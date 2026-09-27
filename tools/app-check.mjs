@@ -3196,8 +3196,12 @@ await r.block('6p-08-read-bar-home-and-more', async () => {
         shortest: Math.min(...rows.map((b) => Math.round(b.getBoundingClientRect().height))),
         widths: new Set(rows.map((b) => Math.round(b.getBoundingClientRect().width))).size,
         scrolls: p.scrollHeight > p.clientHeight + 1,
-        /* 🗑 Delete stays one tap further in, where v04.11 deliberately put it. */
-        deleteOut: rows.some((b) => /deleteNote\(/.test(fn(b))),
+        /* v04.72 — updated in place: 🗑 Delete WAS kept one tap further in
+           (v04.11); the owner asked where it was, so it is a row in this card
+           now, behind a confirmation (_confirmDeleteNote), still off the bar.
+           A row calling deleteNote() directly — no confirmation — fails. */
+        deleteIn: rows.some((b) => /_confirmDeleteNote\(/.test(fn(b))),
+        deleteBare: rows.some((b) => /(^|[^_A-Za-z])deleteNote\(/.test(fn(b))),
         rows: rows.map((b) => b.textContent.trim().replace(/\s+/g, ' ')) };
     });
     r.check(bar.home === 0 && bar.folders === 1 && bar.logo && /goHome\(/.test(card.fns),
@@ -3209,12 +3213,12 @@ await r.block('6p-08-read-bar-home-and-more', async () => {
        now, identified by the function each calls. */
     const spread = ['startRenameArtTitle(', 'duplicateNote(', 'openNoteHistory(', 'toggleArchive(']
       .filter((f) => card.fns.includes(f));
-    r.check(card.open && spread.length === 4 && /showArtCtx\(/.test(card.fns) && !card.deleteOut
+    r.check(card.open && spread.length === 4 && /showArtCtx\(/.test(card.fns) && card.deleteIn && !card.deleteBare
       && card.heads.length >= 3 && card.heads.every((h) => h.length > 2)
       && card.wordless === 0 && card.ellipsis === 0,
       'phone read mode: the ⋯ card spreads the four actions open under named headings, and names what is left',
       `${card.heads.join(' | ')} · spread ${spread.length}/4 · wordless rows ${card.wordless}`
-      + ` · rows trailing off ${card.ellipsis} · Delete still behind the full menu ${!card.deleteOut}`);
+      + ` · rows trailing off ${card.ellipsis} · Delete in the card behind a confirmation ${card.deleteIn && !card.deleteBare}`);
     r.check(card.open && card.shortest >= 44 && card.widths >= 4 && !card.scrolls,
       'phone read mode: every ⋯ row is tappable, sized to its own words, and the card fits the screen',
       `shortest ${card.shortest}px · ${card.widths} distinct widths · scrolls ${card.scrolls} · ${card.rows.length} rows`);
@@ -7533,7 +7537,11 @@ async function installFakeFs(page) {
         return {
           _path: path,
           collection: (name) => collRef(path + '/' + name),
-          get: async () => { const d = store.get(path);
+          /* v04.72 — window.__fsGetFail(path) may return an error to throw,
+             so section 36 can make the chunk reads fail the way an offline
+             phone's (or a refused) Firestore read does. */
+          get: async () => { const f = window.__fsGetFail && window.__fsGetFail(path); if (f) throw f;
+            const d = store.get(path);
             return { exists: d !== undefined, data: () => (d ? JSON.parse(JSON.stringify(d)) : undefined) }; },
         };
       }
@@ -9385,6 +9393,180 @@ await r.block('35a-pull-pushes-back-what-cloud-lacks', async () => {
   r.check(app.errors.length === 0, 'no page errors', app.errors.slice(0, 2).join(' · '));
   await app.close();
 });
+
+/* v04.72 — section 36: a phone reading the cloud copy only raises the
+   "NOT syncing" alarm for a real problem. The owner's phone showed "Sync
+   error: could not read the notebook from the cloud after several attempts"
+   in normal use. Up to v04.71, _pullRemote() retried the SAME main-doc
+   version three times, 1.5s apart, and then alarmed — so (a) another device
+   finishing a newer write between the phone reading the main doc and its
+   chunks, and (b) a phone still waking its connection, both ended in the
+   alarm, though nothing was wrong. Driven through the real _pullRemote()
+   and _readCloudDB() against the section-26 fake Firestore, whose get() can
+   now be made to fail per path (window.__fsGetFail). */
+async function sync36(page, body) {
+  return page.evaluate(async (src) => {
+    window.__toasts = [];
+    const _t = toast;
+    toast = (m, ...rest) => { window.__toasts.push(String(m)); try { return _t(m, ...rest); } catch (e) {} };
+    pushToCloud = () => {};
+    window.__fsGetFail = null;
+    const nb = window.__fakeFs.collection('notebooks').doc('nb-36');
+    const clone = (x) => JSON.parse(JSON.stringify(x));
+    const write = async (d, ver) => { await window._writeCloudDB(nb, ver, window._b64enc(JSON.stringify(d))); return (await nb.get()).data(); };
+    const mark = (d, id, txt, ahead) => { const a = d.articles.find((x) => x.id === id);
+      a.content = '<p>' + txt + '</p>'; a.updatedAt = new Date(Date.now() + ahead).toISOString(); return d; };
+    const has = (id, txt) => (DB.articles.find((x) => x.id === id)?.content || '').includes(txt);
+    const dot = () => { const el = document.getElementById('sync-dot'); return el ? el.className + '|' + el.textContent : 'none'; };
+    const alarm = () => window.__toasts.filter((t) => /NOT syncing|Sync error|REJECTING/.test(t));
+    const settle = async (ok, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (ok()) return true; await new Promise((r) => setTimeout(r, 200)); } return ok(); };
+    const pull = (md) => { _pullInFlight = false; return _pullRemote(nb, md); };
+    return (new Function('ctx', 'return (async () => {' + src + '})()'))({ nb, clone, write, mark, has, dot, alarm, settle, pull });
+  }, body);
+}
+
+await r.block('36a-superseded-version-is-read-not-alarmed', async () => {
+  const app = await openApp();
+  const { page } = app;
+  await installFakeFs(page);
+  const out = await sync36(page, `
+    const { clone, write, mark, has, dot, alarm, settle, pull } = ctx;
+    const t = Date.now();
+    const mdA = await write(mark(clone(DB), 'a1', 'Version A', 60000), t);
+    await write(mark(clone(DB), 'a1', 'Version B', 120000), t + 1);   /* another device, a moment later */
+    await pull(mdA);                                                   /* the phone was handed A's main doc */
+    await settle(() => has('a1', 'Version B') || alarm().length, 9000);
+    await new Promise((r) => setTimeout(r, 300));
+    return { gotB: has('a1', 'Version B'), alarm: alarm(), dot: dot() };`);
+  r.check(out.gotB && out.alarm.length === 0 && !/sd-err/.test(out.dot),
+    'a main doc superseded by a newer complete write before its chunks were read: the newer notebook is merged, and no sync alarm is raised',
+    JSON.stringify(out));
+  /* The newer write is LARGER (more chunks than the old main doc names):
+     the old version's chunk count cannot assemble it, so the retry must
+     re-read the main doc rather than retry the stale one. */
+  const out2 = await sync36(page, `
+    const { clone, write, mark, has, alarm, settle, pull } = ctx;
+    const t = Date.now() + 10;
+    const mdA = await write(mark(clone(DB), 'a2', 'Small A', 60000), t);
+    const big = mark(clone(DB), 'a2', 'Big B ' + 'x'.repeat(1200000), 180000);
+    await write(big, t + 1);
+    await pull(mdA);
+    await settle(() => has('a2', 'Big B') || alarm().length, 12000);
+    return { gotB: has('a2', 'Big B'), alarm: alarm() };`);
+  r.check(out2.gotB && out2.alarm.length === 0,
+    'superseded by a newer write with MORE chunks: the retry re-reads the main doc and merges the newer notebook, no alarm',
+    JSON.stringify(out2));
+  r.check(app.errors.length === 0, 'no page errors', app.errors.slice(0, 2).join(' · '));
+  await app.close();
+});
+
+await r.block('36b-offline-phone-waits-quietly-then-syncs', async () => {
+  const app = await openApp({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  const { page } = app;
+  await installFakeFs(page);
+  const out = await sync36(page, `
+    const { nb, clone, write, mark, has, dot, alarm, settle, pull } = ctx;
+    const md = await write(mark(clone(DB), 'a1', 'Written on the laptop', 60000), Date.now());
+    window.__fsGetFail = (p) => p.includes('/chunks/') ? { code: 'unavailable', message: 'Failed to get document because the client is offline.' } : null;
+    await pull(md);
+    await settle(() => /Offline/.test(dot()) || alarm().length, 12000);
+    await new Promise((r) => setTimeout(r, 500));
+    const offline = { dot: dot(), alarm: alarm(), got: has('a1', 'Written on the laptop') };
+    /* The connection comes back. */
+    window.__fsGetFail = null;
+    _syncDocRef = nb;
+    window.dispatchEvent(new Event('online'));
+    await settle(() => has('a1', 'Written on the laptop'), 8000);
+    await new Promise((r) => setTimeout(r, 300));
+    return { offline, back: { dot: dot(), got: has('a1', 'Written on the laptop'), alarm: alarm() } };`);
+  r.check(out.offline.alarm.length === 0 && /Offline/.test(out.offline.dot) && !out.offline.got,
+    '390: chunk reads failing as "client is offline": no sync alarm, and the sync button says Offline',
+    JSON.stringify(out.offline));
+  r.check(out.back.got && /sd-live/.test(out.back.dot) && out.back.alarm.length === 0,
+    '390: when the connection comes back (online event) the waiting change is fetched and merged, and the button says Live',
+    JSON.stringify(out.back));
+  r.check(app.errors.length === 0, 'no page errors', app.errors.slice(0, 2).join(' · '));
+  await app.close();
+});
+
+await r.block('36c-refused-read-still-says-so', async () => {
+  const app = await openApp();
+  const { page } = app;
+  await installFakeFs(page);
+  const out = await sync36(page, `
+    const { clone, write, mark, has, dot, alarm, settle, pull } = ctx;
+    const md = await write(mark(clone(DB), 'a1', 'Refused', 60000), Date.now());
+    window.__fsGetFail = (p) => p.includes('/chunks/') ? { code: 'permission-denied', message: 'Missing or insufficient permissions.' } : null;
+    await pull(md);
+    await settle(() => alarm().length, 6000);
+    return { alarm: alarm(), dot: dot(), got: has('a1', 'Refused') };`);
+  r.check(out.alarm.some((t) => /permission-denied/.test(t)) && /sd-err/.test(out.dot) && !out.got,
+    'Firestore REFUSING the read (permission-denied) is still reported at once, by name, and the button says Err',
+    JSON.stringify(out));
+  /* The refused chunk reads this block causes are logged as console errors
+     on purpose — a refusal IS an error. Anything else is not expected. */
+  const other = app.errors.filter((e) => !/chunk fetch \((server|default)\).*permission-denied/.test(e));
+  r.check(other.length === 0, 'no page errors other than the refused reads this check causes', other.slice(0, 2).join(' · '));
+  await app.close();
+});
+
+await r.block('36d-broken-cloud-copy-still-alarms-and-changes-nothing', async () => {
+  const app = await openApp();
+  const { page } = app;
+  await installFakeFs(page);
+  const out = await sync36(page, `
+    const { nb, clone, write, mark, has, dot, alarm, settle, pull } = ctx;
+    const before = JSON.stringify(DB.articles.map((a) => [a.id, a.content, a.updatedAt]));
+    const md = await write(mark(clone(DB), 'a1', 'Never readable', 60000), Date.now());
+    /* Reads succeed, but the chunk is garbage under the right version. */
+    window.__fakeFs._store.set(nb._path + '/chunks/0', { p: 'bm90IGpzb24=', ver: md.ver });
+    await pull(md);
+    await settle(() => alarm().length, 12000);
+    return { alarm: alarm(), dot: dot(), unchanged: before === JSON.stringify(DB.articles.map((a) => [a.id, a.content, a.updatedAt])) };`);
+  r.check(out.alarm.some((t) => /could not read the notebook/.test(t)) && /sd-err/.test(out.dot) && out.unchanged,
+    'a cloud copy that really will not assemble (reads succeed, data is broken) still raises the alarm, and this device\'s notes are untouched',
+    JSON.stringify(out));
+  r.check(app.errors.length === 0, 'no page errors', app.errors.slice(0, 2).join(' · '));
+  await app.close();
+});
+
+/* The owner asked where a note's Delete is. It is a row on the ⋯ card now
+   (phone and tablet, where the bar folds ⋯ into the card) behind a
+   confirmation; on a laptop the bar's own ⋯ opens the full menu, which has
+   always carried Delete. Real taps, all three sizes. */
+for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }, { name: '1440', width: 1440, height: 900 }]) {
+  await r.block(`36e-delete-reachable-${vp.name}`, async () => {
+    const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB(), hasTouch: vp.width < 1200 });
+    await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; window.render(); if (window.innerWidth < 1200) showPane('p3'); });
+    await s.page.waitForTimeout(500);
+    const grp = await s.page.evaluate(() => { const b = document.getElementById('p3h-act-grp'); return !!(b && b.offsetParent); });
+    let via;
+    if (grp) {
+      via = 'card';
+      await s.page.click('#p3h-act-grp');
+      await s.page.waitForTimeout(300);
+      const row = s.page.locator('#p3h-pal .p3h-pal-btn', { hasText: 'Delete' }).first();
+      r.check(await row.count() > 0 && await row.isVisible(), `${vp.name}: the ⋯ card has a Delete row`, String(await row.count()));
+      if (await row.count()) await row.click();
+    } else {
+      via = 'menu';
+      await s.page.locator('#p3h .p3h-actions button', { hasText: '⋯' }).first().click();
+      await s.page.waitForTimeout(300);
+      const row = s.page.locator('#ctx .ci', { hasText: 'Delete' }).first();
+      r.check(await row.count() > 0 && await row.isVisible(), `${vp.name}: the bar's ⋯ opens the menu with Delete`, String(await row.count()));
+      if (await row.count()) await row.click();
+    }
+    await s.page.waitForTimeout(300);
+    const ok = s.page.locator('#del-note-ok');
+    const asked = via === 'card' ? await ok.count() > 0 : true;
+    if (via === 'card' && asked) { await ok.click(); await s.page.waitForTimeout(300); }
+    const res = await s.page.evaluate(() => ({ gone: !DB.articles.some((a) => a.id === 'a1'),
+      inTrash: (DB.trash || []).some((t) => t.type === 'article' && t.item && t.item.id === 'a1') }));
+    r.check(asked && res.gone && res.inTrash, `${vp.name}: Delete (${via}) ${via === 'card' ? 'asks first, then ' : ''}moves the note to Trash`, JSON.stringify({ asked, ...res }));
+    r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+    await s.close();
+  });
+}
 
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and

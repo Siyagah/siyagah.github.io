@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.71">
+<meta name="app-version" content="04.72">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3078,7 +3078,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.71</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.72</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -13187,15 +13187,18 @@ function _p3ActPalette(ev){
     +_p3PalBtn(a.archived?'\ud83d\udce4':'\ud83d\udce6',a.archived?'Unarchive':'Archive',
         "toggleArchive('"+id+"')")
     +_p3PalBtn(a.favourite?'\u2705':'\u2b50',a.favourite?'In favourites':'Favourite',
-        "toggleFav('"+id+"')");
+        "toggleFav('"+id+"')")
+    /* v04.72 — the owner asked where Delete was. It was three taps deep
+       (⋯ → All actions → Delete); it is a row here now, still off the BAR
+       (v04.11), and it asks first before moving the note to Trash. */
+    +_p3PalBtn('\ud83d\uddd1','Delete',"_confirmDeleteNote('"+id+"')",'pal-del','moves it to Trash');
   /* v04.34 — no width gate. The pop-ups exist on every platform now; on a
      phone this card IS the surface that reaches them, because the read bar
      has no room for two more buttons and v04.22 fought to keep it one row. */
   h+=_p3PalBtn(_popIcoHTML('float'),_popKindLbl('float'),"openNotePopup('"+id+"','float')",'pal-pop pop-multi')
     +_p3PalBtn(_popIcoHTML('panel'),_popKindLbl('panel'),"openNotePopup('"+id+"','panel')",'pal-pop pop-single');
-  /* MORE — and the last row NAMES what is behind it. 🗑 Delete stays in there
-     rather than out here: v04.11 took it off the bar deliberately, and a
-     Delete one tap from a phone toolbar would undo that. */
+  /* MORE — and the last row NAMES what is behind it. (v04.72: 🗑 Delete is a
+     THIS NOTE row above now, behind a confirmation; it is still off the bar.) */
   h+='<div class="fl-pop-hd">More</div>'
     +_p3PalBtn('\u271a','New note',"quickCapture()",'','in the Primary folder')
     /* v04.32 — the REAL event, not a synthesised one. v04.31 handed showArtCtx
@@ -13210,7 +13213,7 @@ function _p3ActPalette(ev){
        inline ⋯ away — which is the only reason the owner could screenshot the
        menu at all. The lesson is in CLAUDE.md and cost a round once already. */
     +_p3PalBtn('\u22ef','All actions',"showArtCtx(event,'"+id+"')",
-        '','tags, folders, reminders, pin, delete');
+        '','tags, folders, reminders, pin');
   _openFloatPop('p3h-pal',ev.currentTarget,h,true);
 }
 function _p3NtiPalette(ev){
@@ -17251,6 +17254,15 @@ function openModal(type,target){
       </div>`);
   }
 }
+/* v04.72 — the ⋯ card's Delete row: ask, then the same deleteNote() that
+   All actions → 🗑 Delete calls (Trash entry, tombstone, tab clean-up). */
+function _confirmDeleteNote(id){
+  const a=DB.articles.find(x=>x.id===id); if(!a) return;
+  showModal(`<div class="mt">Move to Trash</div>
+    <div class="mm">Move "<strong>${esc(a.title||'Untitled')}</strong>" to Trash? You can restore it from Trash.</div>
+    <div class="ma"><button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn bd" id="del-note-ok" onclick="closeModal();deleteNote('${id}')">Move to Trash</button></div>`);
+}
 function confirmDel(type,id){
   const label=type==='art'?(DB.articles.find(a=>a.id===id)?.title||'this'):(DB.folders.find(f=>f.id===id)?.name||'this');
   const msg=type==='art'?`Move "<strong>${esc(label)}</strong>" to Trash?`:`Move folder "<strong>${esc(label)}</strong>" and all its subfolders to Trash? You can restore them later.`;
@@ -20895,10 +20907,11 @@ function setSyncStatus(s){
     live:{cls:'sd-live',txt:'☁ Live'},
     busy:{cls:'sd-busy',txt:'☁…'},
     err: {cls:'sd-err', txt:'☁ Err'},
+    offline:{cls:'sd-conn', txt:'☁ Offline'},   /* v04.72 — waiting for a connection, not an error */
   };
   const m=M[s]||M.off;
   el.className='sync-dot-tb '+m.cls;
-  el.title={'off':'☁ Sync off — click to set up','conn':'☁ Connecting…','live':'☁ Live — synced','busy':'☁ Syncing…','err':'☁ Sync error'}[s]||'☁ Sync';
+  el.title={'off':'☁ Sync off — click to set up','conn':'☁ Connecting…','live':'☁ Live — synced','busy':'☁ Syncing…','err':'☁ Sync error','offline':'☁ Offline — can\'t reach the cloud right now. Your notes are safe on this device and will sync when the connection is back.'}[s]||'☁ Sync';
   el.textContent=m.txt;
 }
 
@@ -21468,10 +21481,23 @@ function _edApplyRemote(){
    "nothing to do" and dropped the update on the floor, with no retry: the
    remote change then stayed invisible until some *other* write happened to
    produce a fresh snapshot. That is a large part of the multi-minute lag. */
+/* v04.72 — WHY the last _readCloudDB() came back empty, so _pullRemote() can
+   tell "this phone is offline / still waking up" (wait quietly and retry)
+   from "Firestore refused" or "the cloud copy is broken" (say so). Up to
+   v04.71 all three ended in the same alarm, and a phone opened on a slow
+   connection told the owner it was "NOT syncing" when nothing was wrong. */
+let _lastReadFail=null;
+function _isNetErr(e){
+  const c=e&&e.code;
+  try{ if(navigator.onLine===false) return true; }catch(x){}
+  return !c||c==='unavailable'||c==='deadline-exceeded'||c==='cancelled'||c==='unknown';
+}
 async function _readCloudDB(nb, md){
+  _lastReadFail=null;
   if(!md) return null;
   if(md.n==null && md.db){ try{return JSON.parse(md.db);}catch(e){return null;} } /* legacy single-blob */
   const n=md.n; if(!n) return null; const ver=md.ver;
+  let sawNet=null, sawDenied=null, sawTornServer=false;
   for(let attempt=0;attempt<4;attempt++){
     if(attempt) await _syncSleep(150*attempt);
     let snaps;
@@ -21488,18 +21514,48 @@ async function _readCloudDB(nb, md){
       snaps=await Promise.all(
         Array.from({length:n},(_,i)=>nb.collection("chunks").doc(String(i)).get({source:src}))
       );
-    }catch(e){ console.error('chunk fetch ('+src+'):',e); continue; }
-    const parts=[]; let torn=false;
+    }catch(e){
+      const c=e&&e.code;
+      /* Offline is routine on a phone — a warning, not an error. */
+      (_isNetErr(e)?console.warn:console.error)('chunk fetch ('+src+'):',e);
+      if(c==='permission-denied'||c==='unauthenticated'){ sawDenied=e; break; }   /* a refusal will not change in 450ms */
+      else if(_isNetErr(e)) sawNet=e;
+      else sawNet=sawNet||e;
+      continue;
+    }
+    const parts=[]; let torn=false; const vers=new Set();
     for(const c of snaps){
       if(!c.exists){ torn=true; break; }
       const cd=c.data();
-      if(!cd || (ver!=null && cd.ver!=null && cd.ver!==ver)){ torn=true; break; }  /* mid-write */
+      if(!cd){ torn=true; break; }
+      vers.add(cd.ver);
       parts.push(cd.p||"");
     }
-    if(torn) continue;
-    try{ return JSON.parse(_b64dec(parts.join(""))); }
-    catch(e){ /* torn payload — one more attempt may catch the settled write */ }
+    /* v04.72 — the chunks all carry ONE version, just not the one the main
+       doc we were handed names: another device finished a newer write
+       between our reading the main doc and our reading its chunks. That is
+       a complete notebook, not a torn one — take it. Up to v04.71 this was
+       "torn" forever: the chunks would never go back to the old version,
+       so every retry failed the same way and ended in the alarm, whenever
+       the phone's listener was too slow to deliver the newer main doc
+       inside ~6s. A payload that is really mid-write still fails the
+       JSON.parse below (or carries mixed versions) and is still refused. */
+    if(!torn && vers.size===1){
+      const v=[...vers][0];
+      if(ver!=null && v!=null && v!==ver && !(v>ver)) torn=true;   /* OLDER chunks — cache/mid-write */
+    } else if(!torn) torn=true;                                    /* mixed versions — mid-write */
+    if(!torn){
+      try{ return JSON.parse(_b64dec(parts.join(""))); }
+      catch(e){ /* torn payload — one more attempt may catch the settled write */ }
+    }
+    if(src==='server') sawTornServer=true;
   }
+  /* Server reads that SUCCEEDED and still would not assemble mean the cloud
+     copy really is inconsistent — that outranks an earlier network blip. */
+  _lastReadFail = sawDenied ? {kind:'denied', err:sawDenied}
+    : sawTornServer ? {kind:'torn'}
+    : sawNet ? {kind:'network', err:sawNet}
+    : {kind:'torn'};
   return null;
 }
 /* v04.62 — Firestore rejects any single request over 10 MiB. A notebook
@@ -21656,7 +21712,7 @@ function flushPendingPush(){
    Concurrent snapshots are also serialised now: two overlapping pulls used
    to each fan out a full chunk-read storm against the same document. */
 const _SYNC_STREAM_SK='siyagah-sync-stream';
-let _pullInFlight=false, _pullQueued=null, _pullRetryTimer=null, _pullFailures=0;
+let _pullInFlight=false, _pullQueued=null, _pullRetryTimer=null, _pullFailures=0, _pullNetGiveUps=0;
 
 /* Opt-in escape hatch: try the WebChannel streaming transport on this
    device. Off by default — see the settings() call in initSync(). */
@@ -21770,8 +21826,22 @@ async function _pullRemote(docRef, md, retry){
          one that would not assemble is a torn read worth another attempt.
          Bounded, so a permanently unreadable document cannot leave this
          device re-reading it forever — the next real snapshot retries. */
-      if(md&&md.n&&(retry||0)<_PULL_MAX_RETRIES){
-        _pullRetryTimer=setTimeout(()=>_pullRemote(docRef, md, (retry||0)+1), 1500);
+      const fail=_lastReadFail||{kind:'torn'};
+      if(md&&md.n&&fail.kind!=='denied'&&(retry||0)<_PULL_MAX_RETRIES){
+        /* v04.72 — each retry re-reads the MAIN doc first. Retrying the same
+           old version could only ever fail again once a newer write had
+           replaced its chunks; the fresh main doc names the chunks that are
+           actually there now. If it names a version this device already
+           holds (its own push, or one already applied), there is nothing
+           left to read. */
+        _pullRetryTimer=setTimeout(async ()=>{
+          let fresh=md;
+          try{ const s=await docRef.get({source:'server'}); if(s&&s.exists&&s.data()) fresh=s.data(); }catch(e){}
+          if(fresh.ver!=null&&fresh.ver!==md.ver&&(fresh.ver===_myLastPushVer||fresh.ver===_lastAppliedVer)){
+            setSyncStatus('live'); return;
+          }
+          _pullRemote(docRef, fresh, (retry||0)+1);
+        }, 1500);
         setSyncStatus('busy');
       }else{
         /* v03.96 — this used to call setSyncStatus('live') here, actively
@@ -21781,7 +21851,23 @@ async function _pullRemote(docRef, md, retry){
            forever, with the only trace being a console.warn nobody was
            watching. A device that gave up without ever reading this
            update is not live. */
-        if(md&&md.n){
+        if(md&&md.n&&fail.kind==='network'){
+          /* v04.72 — offline, or a phone still waking its connection. Not an
+             error: the notes are safe on this device, the reconcile poll and
+             the 'online' event both retry, and the dot says what is true.
+             Only if it lasts (about a minute of give-ups while the phone
+             claims to be online) does the owner hear about it — calmly. */
+          console.warn('Sync: cloud unreachable for ver',md.ver,fail.err);
+          setSyncStatus('offline');
+          _pullNetGiveUps++;
+          let online=true; try{ online=navigator.onLine!==false; }catch(e){}
+          if(_pullNetGiveUps===4&&online)
+            toast('☁ Can\'t reach the cloud right now. Your notes are safe on this device and will sync when the connection is back.', 7000);
+        }else if(md&&md.n&&fail.kind==='denied'){
+          console.warn('Sync: cloud refused the read of ver',md.ver,fail.err);
+          setSyncStatus('err');
+          _syncErrorToast(fail.err);
+        }else if(md&&md.n){
           console.warn('Sync: could not assemble remote notebook ver',md.ver);
           setSyncStatus('err');
           _syncErrorToast({message:'could not read the notebook from the cloud after several attempts'});
@@ -21792,6 +21878,7 @@ async function _pullRemote(docRef, md, retry){
       return;
     }
     _pullFailures=0;
+    _pullNetGiveUps=0;
     /* Record what we actually applied, so the reconcile poll can tell a
        version it has already handled from one the listener never delivered. */
     if(md&&md.ver!=null)_lastAppliedVer=md.ver;
@@ -25102,6 +25189,9 @@ window.addEventListener('pagehide',()=>{ _flushEverythingOut(); });
    connection is back instead of waiting for the next edit to trigger one. */
 window.addEventListener('online',()=>{
   try{ flushPendingPush(); }catch(e){}
+  /* v04.72 — and fetch what arrived while offline, now, rather than on the
+     next 15s reconcile tick. */
+  try{ _reconcileNow(); }catch(e){}
 });
 
 // Warn before unload when there are unsaved changes and no FSA link

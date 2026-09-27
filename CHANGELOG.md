@@ -6905,3 +6905,91 @@ the real `_pullRemote()`, with `pushToCloud` counted. Four cases:
 - `tools/sync-audit.mjs`: unchanged, at 110 PASS / 0 FAIL.
 - Full `app-check`: **903/903, twice in a row**.
 
+
+## v04.72 — 27 Sep 2026 — the "NOT syncing" alarm only for real problems; Delete on the ⋯ card
+
+**Owner-reported, with a phone screenshot.** In normal use the phone showed
+"☁ Sync error: could not read the notebook from the cloud after several
+attempts — this device is NOT syncing until it clears". The owner also asked
+where a note's Delete button is.
+
+**Cause.** `_pullRemote()` is handed a main-doc version (from the listener
+or the 15s reconcile poll) and reads that version's chunks. If they would not
+assemble, it retried the SAME version three times, 1.5s apart, and then raised
+the alarm. Two ordinary situations could never succeed that way:
+- **Superseded.** Another device finished a newer write between the phone
+  reading the main doc and reading its chunks. The chunks now carry the newer
+  version and will never go back, so every retry failed identically. The
+  listener should deliver the newer main doc and cancel the retries, but the
+  phone's long-polling listener is often slower than ~6s. The laptop saves
+  every 2.5s while the owner types, so this is common.
+- **Offline or waking.** A phone just opened or resumed has no connection
+  for a few seconds. Every `get({source:'server'})` failed "client is
+  offline", the cache fallback held stale chunks, and the alarm fired.
+
+Neither lost anything. The alarm was false, but it said the device was
+"NOT syncing", which is what the owner saw.
+
+**Fix** (`index.html`, sync section):
+- `_readCloudDB()` accepts a chunk set whose chunks all carry ONE version
+  newer than the main doc named. That is a complete write. A mid-write set
+  still has mixed versions or fails `JSON.parse`, and is still refused.
+  Older-than-named chunks (cache) are still refused.
+- It records why a read failed, in `_lastReadFail`: `network` (offline,
+  `unavailable`, `deadline-exceeded`, `cancelled`, `unknown`, no code),
+  `denied` (`permission-denied`/`unauthenticated`, no further attempts), or
+  `torn` (server reads succeeded and still would not assemble; this
+  outranks an earlier blip).
+- `_pullRemote()`'s retry re-reads the main doc from the server first and
+  retries against THAT. If the fresh version is one this device already
+  holds (its own push or one applied), it stops quietly.
+- On giving up:
+  - `network`: the sync button reads **☁ Offline** (new `offline` state,
+    with a tooltip saying the notes are safe here) and there is no alarm.
+    After about a minute of give-ups while the phone says it is online,
+    there is one calm toast: "Can't reach the cloud right now. Your notes
+    are safe on this device and will sync when the connection is back."
+  - `denied`: the existing, specific permission-denied message, at once.
+  - `torn`: the original alarm, unchanged. A really broken cloud copy is
+    still reported.
+- The `online` event now also runs `_reconcileNow()`, so what arrived while
+  offline is fetched at once instead of on the next 15s tick.
+- Offline chunk reads are logged with `console.warn`, not `console.error`.
+
+**Delete.** It was three taps deep: ⋯ → All actions → 🗑 Delete. It is now a
+THIS NOTE row on the ⋯ card (phone and tablet, where the bar folds ⋯ into
+the card): **🗑 Delete · moves it to Trash**. It asks first
+(`_confirmDeleteNote()`), then calls the same `deleteNote()` that All actions
+uses. It is still off the bar (v04.11). The card's "All actions" sub-line
+drops "delete". On a laptop the bar's own ⋯ opens the full menu, which has
+always carried Delete.
+
+**Layouts (D5):** sync is the same at every size. The Delete row is on the
+⋯ card, which is the phone and tablet shape; the laptop reaches Delete from
+the bar's ⋯ menu.
+
+**Checks: new section 36**, using section 26's in-memory Firestore, whose
+`get()` can now fail per path (`window.__fsGetFail`):
+- `36a`: a superseded main doc merges the newer notebook with no alarm. It
+  does so twice: once where the newer write has the same chunk count, once
+  where it has MORE chunks (1.2 MB note), which needs the fresh re-read.
+- `36b` (390, touch): chunk reads failing "client is offline" raise no
+  alarm and the button says Offline. After an `online` event the waiting
+  change is merged and the button says Live.
+- `36c`: permission-denied is still reported at once, by name.
+- `36d`: a broken cloud copy (reads succeed, garbage chunk) still raises
+  the alarm and changes nothing on this device (I1).
+- `36e` at 390/820/1440: Delete is reached by real taps and moves the note
+  to Trash. On the card it asks first.
+- `6p-08`'s "Delete stays behind the full menu" was updated in place. It
+  now requires the card's Delete row AND that it goes through the
+  confirmation (a row calling `deleteNote()` directly fails).
+
+**Measured (Architect):**
+- `ship-check`: **13/13**.
+- `--only 36,6p-08,35,26`: **44/44**.
+- Unpatched (v04.71's app, this round's checks), `--only 36,6p-08`:
+  **15/23, 8 FAILED**. `36a` reproduces the owner's exact alarm text.
+  `36e` passes at 820 and 1440 on both versions, because the ⋯ menu path
+  already had Delete.
+- Full `app-check`: **922/922, twice in a row**.
