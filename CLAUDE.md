@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.71.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.72.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,23 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.72** (27 Sep 2026) — the "NOT syncing" alarm only for real
+  problems; Delete on the ⋯ card. Owner-reported (phone screenshot).
+  `_pullRemote()` retried the SAME main-doc version three times and then
+  alarmed, so a version superseded by another device's newer write, or a
+  phone still waking its connection, raised "could not read the notebook
+  from the cloud… NOT syncing" with nothing wrong. Now:
+  - `_readCloudDB()` takes a chunk set that is all ONE newer version (a
+    complete write) and records why a read failed (`_lastReadFail`:
+    network / denied / torn);
+  - the retry re-reads the main doc first;
+  - network failures show **☁ Offline** (new `offline` status) with no
+    alarm, and the `online` event runs `_reconcileNow()`;
+  - permission-denied and a really broken cloud copy still alarm.
+
+  Delete is a confirmed row on the ⋯ card (`_confirmDeleteNote()` →
+  `deleteNote()`). New section 36; `6p-08` updated in place. Unpatched
+  v04.71: 15/23. Full `app-check` **@@FULL@@**.
 - **v04.71** (25 Sep 2026) — a device pushes back what the cloud copy lacks.
   `_doPush()` writes without reading first. So a device that had not yet
   received another device's edit could overwrite the cloud copy without it.
@@ -77,14 +94,6 @@ must never accumulate here instead of there.
   - **Undo stays local** (`U01`/`Z03` are KNOWN).
   - App-check block 32 runs the audit. Audit on v04.67: 59/51 (PASS/FAIL).
     With the fixes: 110/0. Full `app-check` **873/873, twice in a row**.
-- **v04.67** (25 Sep 2026) — pop-ups: no empty gap when the Sidepane sits
-  below Contents. Owner-reported. `_syncP3CPadding()` (Single) and
-  `_fwSyncBodyPadding()` (Multi) ADDED the Contents and Sidepane widths
-  even when `pinPanelPos==='below'` stacks them in one column. The note then
-  started a Sidepane-width (about 200px) away from Contents. Same-side panels
-  now take `Math.max`. New section 31 (`31a` both pop-ups × both sides × both
-  positions × 820/1440; `31b` phone unchanged). Unpatched v04.66:
-  `--only 31` 9/17. Full `app-check` **869/869, twice in a row**.
 ---
 
 ## What this is
@@ -342,6 +351,15 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **Retrying the same stale request is not a retry, and an alarm must
+  know why it is ringing.** `_pullRemote()` retried a main-doc version whose
+  chunks another device had already replaced, so all three retries were
+  certain to fail. And it gave "offline", "refused" and "broken" the same
+  "NOT syncing" alarm. The owner saw it on a phone in normal use, with
+  nothing wrong. A retry must re-read the thing that may have moved (the
+  main doc), and a give-up must classify the failure first: wait quietly on
+  a network failure, name a refusal, and alarm only on real damage. Cost:
+  a false alarm on the owner's phone. Fixed in v04.72.
 - **A change that does not move `updatedAt` does not exist for sync.**
   `mergeDB()` settles every record by its newest `updatedAt` and keeps the
   receiving device's copy on a tie. So any function that edits a record in
