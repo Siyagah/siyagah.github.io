@@ -27,7 +27,7 @@ must never accumulate here instead of there.
     and one edit never arrived (2 of 3 natural runs on v04.72).
   - **Fix:** `_newPushVer()`, the millisecond plus a random fraction.
 
-  Unpatched: 17/19. Full `app-check` **@@FULL@@**.
+  Unpatched: 17/19. Full `app-check` **943/943, twice in a row**.
 - **v04.72** (27 Sep 2026) — the "NOT syncing" alarm only for real
   problems; Delete on the ⋯ card. Owner-reported (phone screenshot).
   `_pullRemote()` retried the SAME main-doc version three times and then

@@ -7070,7 +7070,7 @@ the bar's ⋯ menu.
 - `--only 38`: **21/21**.
 - Unpatched (v04.72, this round's tool): **17/19, 2 FAILED, twice**: the
   natural same-moment case and the forced same-millisecond case.
-- Full `app-check`: **@@FULL@@**.
+- Full `app-check`: **943/943, twice in a row**.
 
 **Not done, and why:** the real Firestore SDK and Google sign-in cannot run
 here (no network to Google), so the SDK is faked. The fake carries its
