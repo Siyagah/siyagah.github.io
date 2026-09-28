@@ -9568,6 +9568,33 @@ for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '820', width
   });
 }
 
+/* v04.73 — section 38: three real devices, one cloud, end to end.
+   The owner asked (28 Sep) to "CHECK the SYNC again across all platforms".
+   tools/sync-e2e.mjs runs the real app as a phone (390, touch), a tablet
+   (820, touch) and a laptop (1440) in three separate browser contexts,
+   signed in to one notebook whose cloud is a fake Firestore held in Node —
+   so the real sign-in → listener → pull → merge → push-timer → write path
+   runs on every device. Twelve scenarios: typing, a folder, a delete, two
+   devices at the same moment (and in the same millisecond), the same note
+   on two devices, a setting, a phone offline and back, a phone put in the
+   background mid-sentence, a 9 MB notebook past the 10 MiB write limit, no
+   ping-pong when idle, no alarm and no page error anywhere. On v04.72 the
+   two same-moment scenarios failed (2 of 3 natural runs, every forced one):
+   the push version was Date.now(), so two devices pushing in the same
+   millisecond each took the other's write for its own echo. Each line the
+   script prints becomes one check here. Section 37 is the header round's. */
+await r.block('38-sync-three-devices-end-to-end', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./sync-e2e.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 420000 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 19, 'the three-device sync check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'three devices: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the three-device sync check exits cleanly', `exit ${out.status}`);
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores

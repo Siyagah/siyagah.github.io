@@ -6993,3 +6993,85 @@ the bar's ⋯ menu.
   `36e` passes at 820 and 1440 on both versions, because the ⋯ menu path
   already had Delete.
 - Full `app-check`: **922/922, twice in a row**.
+
+## v04.73 — 28 Sep 2026 — sync checked end to end on three devices at once; two devices saving in the same millisecond
+
+**Owner's request, 28 Sep:** "CHECK the SYNC again in across all platforms."
+
+**New tool: `tools/sync-e2e.mjs`.**
+- It runs the real app three times at once, in three separate browser
+  contexts with their own storage:
+  - a phone (390×844, touch);
+  - a tablet (820×1180, touch);
+  - a laptop (1440×900).
+- All three are signed in to one notebook. Its cloud is a fake Firestore
+  held in Node. The three gstatic Firebase scripts are answered with a small
+  fake SDK that forwards every read, write and listener to that one store.
+- So the whole real chain runs on every device:
+  - `initAuth()` → `initSync()` → `onSnapshot` → `_pullRemote()` →
+    `mergeDB()`;
+  - the push timers → `_doPush()` → `_writeCloudDB()`.
+- The fake keeps the Firestore rules that matter here:
+  - 1 MiB per document;
+  - 10 MiB per commit;
+  - a write made offline waits and lands on reconnect, as the real SDK's
+    does;
+  - a server read offline fails with `unavailable`.
+- `tools/sync-audit.mjs` (v04.68) proves `mergeDB()` settles every kind of
+  change. This new tool proves the transport around it: timers, listeners,
+  offline and background, across the three platforms together.
+
+**Scenarios (12, 19 checks):**
+1. All three boot, sign in and go Live on the same notebook.
+2. Words typed on the phone (real keyboard) reach the tablet and laptop.
+3. The tablet makes a folder and files a note into it; both arrive.
+4. The laptop deletes a note; it leaves every device and is in every Trash.
+5. Phone and laptop edit two different notes at the same moment: both
+   survive. The same again, forced into the same millisecond.
+6. The same note changed on tablet, then on the laptop a second later: the
+   newer change wins on all three.
+7. A setting (the colour preset) changed on the tablet reaches both others.
+8. The phone goes offline for 6s while both sides write. There is no alarm
+   on the phone, and on reconnect everything meets.
+9. The phone is put in the background right after typing. The words reach
+   the cloud in about 100ms, not on the next timer.
+10. The laptop adds a 9 MB note, past the single-write limit: 14 chunks,
+    multi-batch. It reaches the phone and tablet whole, and deleting it
+    settles.
+11. Converged and idle for 20s: zero writes (no ping-pong).
+12. The end state:
+    - all Live;
+    - no sync alarm at any point;
+    - no page error on any device, except localStorage's expected quota
+      message for the 9 MB notebook (IndexedDB is authoritative, v04.50).
+
+**Found: two devices saving in the same millisecond lost one save.**
+- Scenario 5 failed in 2 of 3 runs on v04.72.
+- A push's version (`ver`) was `Date.now()`. When the phone and laptop
+  pushed in the same millisecond, the pushes carried the same `ver`. Each
+  device then took the other's write for its own echo (`md.ver ===
+  _myLastPushVer`) and skipped it. The v03.62.01 comment claimed "a
+  concurrent update from elsewhere always carries a different version"; that
+  held only while no two devices shared a millisecond.
+- The laptop kept its own copy with no reconcile, because it believed it
+  already had that version. The phone's edit never reached the laptop until
+  something else changed.
+- On real devices it is rarer than on one test machine, but it happens when
+  two devices save together.
+
+**Fix:** `_newPushVer()` is the millisecond plus a random six-place fraction.
+- It is unique per push, still ordered by time, and still a plain number, so
+  older builds' comparisons keep working.
+- Both writers use it: `_doPush()` and ⚙ Sync now.
+
+**Measured (Architect):**
+- `ship-check`: **13/13**.
+- `sync-e2e`: every run since the fix passed. That is three runs at 18/18, before the forced same-millisecond case was added, then **19/19** standalone and in `--only 38`, plus once inside each full run below.
+- `--only 38`: **21/21**.
+- Unpatched (v04.72, this round's tool): **17/19, 2 FAILED, twice**: the
+  natural same-moment case and the forced same-millisecond case.
+- Full `app-check`: **943/943, twice in a row**.
+
+**Not done, and why:** the real Firestore SDK and Google sign-in cannot run
+here (no network to Google), so the SDK is faked. The fake carries its
+documented behaviour; a real two-phone test still needs the owner.

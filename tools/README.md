@@ -618,3 +618,33 @@ takes about 6s. App-check block 32 runs it.
 any function that edits a record must go through `_save()`/`persist()`,
 because the record sweep there is what stamps it.
 
+
+## `sync-e2e.mjs` (v04.73)
+
+Three real devices on one cloud: phone (390, touch), tablet (820, touch) and
+laptop (1440). Each runs in its own browser context, with its own storage.
+The gstatic Firebase scripts are answered with a fake SDK (inside the file)
+that forwards every read, write and listener to one store held in Node. So
+the app's real `initAuth()`/`initSync()`/listener/push path runs unchanged.
+The run takes about 90s, and `node tools/sync-e2e.mjs` runs it alone.
+App-check block 38 runs it and turns each printed line into one check.
+
+Traps:
+- **The fake must behave like Firestore, not like a mock.** An offline
+  `commit()` WAITS until reconnect, as the real SDK's does; it must not fail.
+  A fake that rejected it would test a code path real phones never take.
+  An offline `get({source:'server'})` fails with `unavailable`.
+- **Snapshots are delivered with 40–200ms random latency**, from the store
+  as it is when the delivery is scheduled. This is what makes the
+  superseded-version and same-moment races happen at all. Take it out and
+  the check gets quieter and proves less.
+- **The same-millisecond case is forced by overriding `Date.now`** on two
+  pages for one push. The natural race only hits it about two runs in three,
+  and a check that fails a third of the time is noise.
+- **Converged means the owner's view matches, not the stamps.** `FP()`
+  compares note words, titles, tags, folders and flags; folder names and
+  places; sections; Trash; and the preset. It checks twice, 1.5s apart,
+  so a push still in flight cannot pass for convergence.
+- **The 9 MB note overflows localStorage (5 MB).** `_save()` logs that as a
+  console error by design, because IndexedDB is authoritative (v04.50). The
+  page-error check filters exactly that message, nothing broader.
