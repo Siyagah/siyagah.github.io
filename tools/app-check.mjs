@@ -5859,6 +5859,12 @@ await r.block('19g-single-drags-by-frame', async () => {
    SECOND tag and a version sibling: the base seedDB() note has only one of
    each, and 20b/20c need a real tag to remove and a real sibling to switch
    to. */
+/* v04.73 — the pop-ups' strip is ONE Details line by default now, and the
+   four rows that sections 20a–20c and 20h–20j describe are its OPEN state
+   (▾ Details). Those checks are updated in place to run with it open, via
+   this init script (the same localStorage key a tap on ▾ Details writes);
+   section 37 covers the closed line itself. */
+const DETAILS_OPEN = "try{localStorage.setItem('siyagah-pop-details','1')}catch(e){}";
 function richDB() {
   const db = seedDB();
   const now = db.articles[0].updatedAt;
@@ -5890,7 +5896,7 @@ async function stripSnapshot(page, containerSel) {
   }, containerSel);
 }
 async function openBothStrips(vpOpts) {
-  const s = await openApp({ viewport: vpOpts, db: richDB() });
+  const s = await openApp({ viewport: vpOpts, db: richDB(), initScript: DETAILS_OPEN });
   await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
     window.render(); showPane('p3'); });
   await s.page.waitForTimeout(300);
@@ -5921,7 +5927,7 @@ await r.block(`20a-same-strip-${vp.name}`, async () => {
 }
 
 await r.block('20b-tags-work-in-multi-and-single', async () => {
-  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: richDB() });
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: richDB(), initScript: DETAILS_OPEN });
   await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
     window.render(); openNotePopup('a1', 'float'); });
   await s.page.waitForTimeout(400);
@@ -5953,7 +5959,7 @@ await r.block('20b-tags-work-in-multi-and-single', async () => {
 });
 
 await r.block('20c-multi-version-switch-stays-in-window', async () => {
-  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: richDB() });
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: richDB(), initScript: DETAILS_OPEN });
   await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
     window.render(); openNotePopup('a1', 'float'); });
   await s.page.waitForTimeout(400);
@@ -5977,7 +5983,10 @@ await r.block('20d-one-meaning-for-tag-emoji', async () => {
     const bareBtn = [...root.querySelectorAll('button')].some((b) => visible(b) && b.textContent.trim() === '🏷');
     const ownText = (el) => { let t = ''; el.childNodes.forEach((n) => { if (n.nodeType === 3) t += n.textContent; }); return t.trim(); };
     const offenders = [...root.querySelectorAll('*')]
-      .filter((el) => visible(el) && ownText(el).startsWith('🏷') && !el.classList.contains('tag-chip'))
+      /* v04.73 — the closed Details line's own 🏷 Tags button (.pdl-tags) is
+         the one other thing allowed to start with 🏷: it carries a word or a
+         count, never the bare glyph (bareBtn still asserts that). */
+      .filter((el) => visible(el) && ownText(el).startsWith('🏷') && !el.classList.contains('tag-chip') && !el.classList.contains('pdl-tags'))
       .map((el) => el.className);
     return { bareBtn, offenders };
   }, sel);
@@ -6134,12 +6143,18 @@ async function stripGeom(page, containerSel, barSel) {
     const box = (el) => { if (!el || !el.getClientRects().length) return null; const r = el.getBoundingClientRect();
       return { left: Math.round(r.left - L), mid: Math.round(r.top + r.height / 2), top: Math.round(r.top), bottom: Math.round(r.bottom) }; };
     const q = (sel) => box(strip.querySelector(sel));
-    const title = box(host.querySelector('[data-ps="title"]'));
+    /* v04.73 — updated in place: the title is the input in the WINDOW BAR now
+       (after the grip and ‹ ›), so it no longer stands above the strip on the
+       rows' inset (dropped from rowLefts), and the budget this measured —
+       "how much room the strip and its neighbours take" — now starts under
+       the tab bar (which the round added between the bar and the strip), not
+       under a title row that no longer exists. */
+    const title = box(host.querySelector('.fw-tabs, #tab-bar')) || box(host.querySelector('[data-ps="title"]'));
     const bar = box(host.querySelector(barSel));
-    /* each row's FIRST visible thing — a row is a .pop-row, plus the title */
-    const rowLefts = [title && title.left, ...[...strip.querySelectorAll(':scope>.pop-row')].map((row) => {
+    /* each row's FIRST visible thing — a row is a .pop-row */
+    const rowLefts = [...strip.querySelectorAll(':scope>.pop-row')].map((row) => {
       const kids = [...row.querySelectorAll('[data-ps]'), row].map(box).filter(Boolean);
-      return Math.min(...kids.map((k) => k.left)); })].filter((x) => x != null);
+      return Math.min(...kids.map((k) => k.left)); }).filter((x) => x != null);
     return { type: q('[data-ps="type"]'), attach: q('[data-ps="attach"]'), archive: q('.kind-arch-btn'),
       folders: q('[data-ps="folders"]'), versions: q('[data-ps="versions"]'),
       gap: title && bar ? bar.top - title.bottom : null, rowLefts };
@@ -6147,7 +6162,7 @@ async function stripGeom(page, containerSel, barSel) {
 }
 for (const vp of VIEWPORTS) {
 await r.block(`20h-20i-20j-strip-geometry-${vp.name}`, async () => {
-  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: richDB() });
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: richDB(), initScript: DETAILS_OPEN });
   await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false; window.render(); showPane('p3'); openNotePopup('a1', 'float'); });
   await s.page.waitForTimeout(400);
   const m = await stripGeom(s.page, '#fw-a1', '.fw-tb');
@@ -9713,7 +9728,8 @@ await r.block(`37c-details-line-${vp.name}-${mode}`, async () => {
   const line = await page.evaluate((S) => {
     const l = document.querySelector(S.strip + ' .pop-details-line'); if (!l) return null;
     const kids = [...l.children].filter((e) => e.getBoundingClientRect().width && e.getBoundingClientRect().height);
-    const tops = kids.map((e) => Math.round(e.getBoundingClientRect().top));
+    /* centres, not tops: a 20px chip and a 36px button share a row */
+    const tops = kids.map((e) => { const b = e.getBoundingClientRect(); return Math.round((b.top + b.bottom) / 2); });
     return { n: kids.length, spread: Math.max(...tops) - Math.min(...tops), h: l.getBoundingClientRect().height,
       words: kids.map((e) => e.textContent.trim().slice(0, 14)), over: l.scrollWidth > l.clientWidth + 1,
       hasDate: kids.some((e) => /Created/.test(e.textContent)), hasTags: kids.some((e) => /🏷/.test(e.textContent)),

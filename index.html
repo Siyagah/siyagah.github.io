@@ -4084,7 +4084,7 @@ function _popDetailsLineHTML(a,host){
     ?`<button class="ver-pill on pdl-ver" data-ps="versions" onclick="${go('ver')}" title="Version ${vi+1} of ${sibs.length} — tap to see them all">${esc(a.versionIcon||'📝')} ${esc(a.versionLabel||'Version')} · ${vi+1}/${sibs.length}</button>`
     :`<button class="ver-pill ver-add pdl-ver" data-ps="versions" onclick="${go('ver')}" title="Versions — tap to see or start them">🔀</button>`;
   const nt=_tagsGet(host).length;
-  h+=`<button class="nti-picker-btn pdl-tags" data-ps="tags" onclick="${go('tags')}" title="Tags — tap to add or remove">🏷 ${nt||''}</button>`;
+  h+=`<button class="nti-picker-btn pdl-tags" data-ps="tags" onclick="${go('tags')}" title="Tags — tap to add or remove">🏷 ${nt||'Tags'}</button>`;
   const dt=_dateFlipHTML(a);
   if(dt)h+=`<span class="pdl-date" data-ps="date">${dt}</span>`;
   h+=`<span class="pdl-attach">${_attachBtnHTML(a)}</span><span class="pdl-arch">${_archBtnHTML(a)}</span>`;
