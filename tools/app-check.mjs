@@ -9568,6 +9568,281 @@ for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '820', width
   });
 }
 
+/* v04.73 — section 37: the pop-up header. Owner, 27–28 Sep (issue #107): the
+   Single pop-up showed the note's title twice and stacked seven rows above
+   the note. Now, in BOTH pop-ups: the title once, as the editable input in
+   the window bar; a tab bar always (Multi gets one for its own note); the
+   type/folder/version/tags/date strip folded into ONE Details line, closed
+   by default (▾ Details opens the full strip, remembered per device in
+   localStorage under 'siyagah-pop-details'); then the formatting row.
+   Real taps/clicks only. Every check names its size. */
+const P37_KEY = 'siyagah-pop-details';
+const P37_VPS = [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }, { name: '1440', width: 1440, height: 900 }];
+const P37_SEL = {
+  single: { root: '#p3', frame: '#p3-frame-modal', tabs: '#tab-bar', strip: '#p3h .pop-meta-strip', fmt: '#p3h .pop-fmt-row', ed: '#ed', title: '#ti' },
+  multi: { root: '#fw-a1', frame: '#fw-a1 .fw-hd', tabs: '#fw-a1 .fw-tabs', strip: '#fw-a1 .pop-meta-strip', fmt: '#fw-a1 .fw-tb.pop-fmt-row', ed: '#fw-a1 .fw-ed', title: '#fw-ti-a1' },
+};
+function db37(extra) {
+  const db = seedDB();
+  if (extra && extra.versions) {
+    db.articles[0].versionGroupId = 'vg37'; db.articles[0].versionLabel = 'Draft 1'; db.articles[0].versionOrder = 0;
+    db.articles[1].versionGroupId = 'vg37'; db.articles[1].versionLabel = 'Draft 2'; db.articles[1].versionOrder = 1;
+  }
+  if (extra && extra.headings) db.articles[0].content = GAP_NOTE;
+  if (extra && extra.theme) Object.assign(db.theme, extra.theme);
+  return db;
+}
+async function open37(vp, mode, extra) {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db37(extra), hasTouch: vp.width < 1200 });
+  await s37open(s.page, mode);
+  return s;
+}
+async function s37open(page, mode) {
+  if (mode === 'single') {
+    await page.evaluate(() => { selArt('a1'); startEdit(); });
+    await page.waitForTimeout(300);
+    await page.evaluate(() => openNoteModal());
+  } else await page.evaluate(() => popOutNote('a1'));
+  await page.waitForTimeout(900);
+}
+const tap37 = (page, vp, loc) => (vp.width < 1200 ? loc.tap() : loc.click());
+/* Geometry of the four header rows and the editor, in one read. */
+const geo37 = (page, sel) => page.evaluate((S) => {
+  const q = (x) => document.querySelector(x); const r = (e) => { if (!e) return null; const b = e.getBoundingClientRect(); return b.width && b.height ? { t: b.top, b: b.bottom, l: b.left, r: b.right, h: b.height } : null; };
+  const root = q(S.root), ed = q(S.ed);
+  return { root: r(root), frame: r(q(S.frame)), tabs: r(q(S.tabs)), strip: r(q(S.strip)), fmt: r(q(S.fmt)), ed: r(ed),
+    header: root && ed ? ed.getBoundingClientRect().top - root.getBoundingClientRect().top : null };
+}, sel);
+const oneTitle37 = (page, sel, title) => page.evaluate(({ S, title }) => {
+  const root = document.querySelector(S.root), top = document.querySelector(S.ed).getBoundingClientRect().top;
+  return [...root.querySelectorAll('*')].filter((e) => {
+    const b = e.getBoundingClientRect(); if (!b.width || !b.height || b.bottom > top + 1) return false;
+    const cs = getComputedStyle(e); if (cs.visibility === 'hidden' || cs.display === 'none') return false;
+    const own = e.tagName === 'INPUT' ? e.value : [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
+    return own === title;
+  }).map((e) => e.tagName + (e.id ? '#' + e.id : '') + '.' + String(e.className).slice(0, 30));
+}, { S: sel, title });
+
+for (const vp of P37_VPS) for (const mode of ['single', 'multi']) {
+await r.block(`37a-title-once-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await open37(vp, mode);
+  const { page } = s;
+  const hit = await oneTitle37(page, S, 'Seeded note one');
+  r.check(hit.length === 1, `${vp.name} ${mode}, edit mode: the note's title appears exactly once above the editor`, JSON.stringify(hit));
+  const inFrame = await page.evaluate((S) => { const t = document.querySelector(S.title); const f = document.querySelector(S.frame); return !!(t && f && f.contains(t) && t.tagName === 'INPUT'); }, S);
+  r.check(inFrame, `${vp.name} ${mode}: that one title is the editable input, and it lives in the window bar`, String(inFrame));
+  if (mode === 'single') {
+    /* Read mode: plain text in the window bar, right-click starts editing. */
+    await page.evaluate(() => cancelEdit());
+    await page.waitForTimeout(400);
+    const hitR = await oneTitle37(page, { ...S, ed: '#p3c' }, 'Seeded note one');
+    r.check(hitR.length === 1, `${vp.name} single, read mode: the title appears exactly once above the note`, JSON.stringify(hitR));
+    const disp = page.locator('#p3-frame-modal .fw-title-disp');
+    r.check(await disp.count() === 1, `${vp.name} single, read mode: the window bar shows it as plain text`, String(await disp.count()));
+    await disp.click({ button: 'right' });
+    await page.waitForTimeout(500);
+    const ed = await page.evaluate(() => ST.editing && !!document.querySelector('#p3-frame-modal #ti'));
+    r.check(ed, `${vp.name} single, read mode: a right-click on the title starts editing (the input takes its place)`, String(ed));
+  }
+  /* Type a new title in the window bar; it autosaves; reload keeps it. */
+  const ti = page.locator(S.title);
+  await ti.fill('Renamed in the bar ' + vp.name + mode);
+  await page.waitForTimeout(2600);
+  await page.evaluate(() => { try { _flushEverythingOut && _flushEverythingOut(); } catch (e) {} });
+  await page.waitForTimeout(500);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__appBooted === true);
+  const t = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').title);
+  r.check(t === 'Renamed in the bar ' + vp.name + mode, `${vp.name} ${mode}: typing in the window bar autosaves — after a reload DB has the new title`, t);
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+for (const vp of P37_VPS) for (const mode of ['single', 'multi']) {
+await r.block(`37b-tab-bar-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await open37(vp, mode);
+  const { page } = s;
+  const add = page.locator(`${S.tabs} .tab-add-btn`);
+  const vis = await add.isVisible().catch(() => false);
+  r.check(vis, `${vp.name} ${mode}: the tab bar is drawn with NO tabs, and ＋ Add Tab is in it`, String(vis));
+  await tap37(page, vp, add);
+  await page.waitForTimeout(500);
+  const picker = await page.evaluate(() => { const p = document.getElementById('tab-picker'); return !!(p && p.classList.contains('open') && p.getBoundingClientRect().width); });
+  r.check(picker, `${vp.name} ${mode}: a real tap on ＋ Add Tab opens the note picker`, String(picker));
+  await tap37(page, vp, page.locator('#tp-list .tp-it', { hasText: 'Seeded note two' }).first());
+  await page.waitForTimeout(500);
+  const grp = await page.evaluate(() => JSON.stringify(DB.tabs.a1 || null));
+  r.check(/a2/.test(grp), `${vp.name} ${mode}: the picked note was added to THIS note's tab group`, grp);
+  const chip = page.locator(`${S.tabs} .tab-it[data-tid="a2"]`);
+  r.check(await chip.count() === 1 && await chip.isVisible(), `${vp.name} ${mode}: with tabs, the bar shows the new tab`, String(await chip.count()));
+  if (vp.width === 390) {
+    const one = await page.evaluate((S) => { const b = document.querySelector(S.tabs); const tops = [...b.querySelectorAll('.tab-it,.tab-add-btn')].filter((e) => e.getBoundingClientRect().width).map((e) => Math.round(e.getBoundingClientRect().top));
+      return { h: b.getBoundingClientRect().height, spread: Math.max(...tops) - Math.min(...tops) }; }, S);
+    r.check(one.h < 64 && one.spread <= 3, `390 ${mode}: the tab bar is one line (height ${Math.round(one.h)}px, chips on one row)`, JSON.stringify(one));
+  }
+  await tap37(page, vp, chip);
+  await page.waitForTimeout(900);
+  if (mode === 'multi') {
+    const w = await page.evaluate(() => ({ a2: !!document.getElementById('fw-a2'), a1: !!document.getElementById('fw-a1') }));
+    r.check(w.a2 && !w.a1, `${vp.name} multi: tapping a tab switches THIS window to that note`, JSON.stringify(w));
+  } else {
+    const w = await page.evaluate(() => ({ art: ST.article, editing: ST.editing, modal: ST.noteModal }));
+    r.check(w.art === 'a2' && w.modal && w.editing, `${vp.name} single: tapping a tab switches the pop-up to that note and stays in the editor`, JSON.stringify(w));
+  }
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+await r.block('37b-main-phone-tab-bar-stays-hidden-390', async () => {
+  const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB(), hasTouch: true });
+  await s.page.evaluate(() => { selArt('a1'); showPane('p3'); });
+  await s.page.waitForTimeout(400);
+  const d = await s.page.evaluate(() => getComputedStyle(document.getElementById('tab-bar')).display);
+  r.check(d === 'none', '390: the phone\'s MAIN view (no pop-up) keeps its tab bar hidden', d);
+  await s.close();
+});
+
+for (const vp of P37_VPS) for (const mode of ['single', 'multi']) {
+await r.block(`37c-details-line-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await open37(vp, mode, { versions: true });
+  const { page } = s;
+  const line = await page.evaluate((S) => {
+    const l = document.querySelector(S.strip + ' .pop-details-line'); if (!l) return null;
+    const kids = [...l.children].filter((e) => e.getBoundingClientRect().width && e.getBoundingClientRect().height);
+    const tops = kids.map((e) => Math.round(e.getBoundingClientRect().top));
+    return { n: kids.length, spread: Math.max(...tops) - Math.min(...tops), h: l.getBoundingClientRect().height,
+      words: kids.map((e) => e.textContent.trim().slice(0, 14)), over: l.scrollWidth > l.clientWidth + 1,
+      hasDate: kids.some((e) => /Created/.test(e.textContent)), hasTags: kids.some((e) => /🏷/.test(e.textContent)),
+      hasAttach: kids.some((e) => /Attach/.test(e.textContent)), hasArch: kids.some((e) => /📦|📤/.test(e.textContent)) };
+  }, S);
+  r.check(!!line && line.spread <= 3 && line.h < 60 && !line.over, `${vp.name} ${mode}: the Details line is ONE row, nothing cut off`, JSON.stringify(line));
+  const want = { date: vp.width >= 1200, tags: vp.width >= 640, attach: vp.width >= 640, arch: vp.width >= 640 };
+  r.check(line && line.hasDate === want.date && line.hasTags === want.tags && line.hasAttach === want.attach && line.hasArch === want.arch,
+    `${vp.name} ${mode}: the line carries ${vp.width >= 1200 ? 'the date, tags, Attach and 📦' : vp.width >= 640 ? 'tags, Attach and 📦 (no date)' : 'only Type · folder · version · ▾ Details (no tags/Attach/📦/date)'}`, JSON.stringify(line));
+  const g = await geo37(page, S);
+  const ok = g.frame && g.tabs && g.strip && g.fmt && g.ed && g.frame.b <= g.tabs.t + 1.5 && g.tabs.b <= g.strip.t + 1.5 && g.strip.b <= g.fmt.t + 1.5 && g.fmt.b <= g.ed.t + 1.5;
+  const sum = ok ? g.frame.h + g.tabs.h + g.strip.h + g.fmt.h : 0;
+  r.check(ok && Math.abs(g.header - sum) <= 14, `${vp.name} ${mode}: exactly four rows stand above the note — window bar, tab bar, Details line, formatting row`, JSON.stringify({ ...g, sum }));
+  const closedH = g.header;
+  await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`).first());
+  await page.waitForTimeout(400);
+  const g2 = await geo37(page, S);
+  const drop = g2.header - closedH;
+  console.log(`  [37c] ${vp.name} ${mode}: above-the-note height closed ${Math.round(closedH)}px, Details open ${Math.round(g2.header)}px (open is what today's strip costs, minus its separate title row)`);
+  if (vp.width !== 820) r.check(drop >= 80, `${vp.name} ${mode}: the closed header is at least 80px shorter than the full strip it replaces (closed ${Math.round(closedH)}px vs open ${Math.round(g2.header)}px)`, String(Math.round(drop)));
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+for (const vp of P37_VPS) for (const mode of ['single', 'multi']) {
+await r.block(`37d-details-open-close-remember-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await open37(vp, mode, { versions: true });
+  const { page } = s;
+  const state = () => page.evaluate(({ S, key }) => ({ ls: localStorage.getItem(key), line: !!document.querySelector(S.strip + ' .pop-details-line'),
+    open: !!document.querySelector(S.strip + '.pop-details-open'), tags: !!document.querySelector(S.strip + ' [data-ps="tags"].tag-editor'),
+    ver: !!document.querySelector(S.strip + ' .ver-strip'), date: !!document.querySelector(S.strip + ' [data-ps="date"]') }), { S, key: P37_KEY });
+  const st0 = await state();
+  r.check(st0.line && !st0.open && !st0.ls, `${vp.name} ${mode}: on a fresh profile the Details are CLOSED (one line, nothing stored)`, JSON.stringify(st0));
+  await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`, { hasText: '▾' }).first());
+  await page.waitForTimeout(400);
+  const st1 = await state();
+  r.check(st1.open && !st1.line && st1.tags && st1.ver && st1.date, `${vp.name} ${mode}: a real tap on ▾ Details opens the full strip (type/attach, tag box, folders + versions, date)`, JSON.stringify(st1));
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__appBooted === true);
+  await s37open(page, mode);
+  const st2 = await state();
+  r.check(st2.open && st2.ls === '1', `${vp.name} ${mode}: the open state survives a reload (localStorage, this device)`, JSON.stringify(st2));
+  const inTheme = await page.evaluate(() => JSON.stringify(DB.theme).includes('siyagah-pop-details'));
+  r.check(!inTheme, `${vp.name} ${mode}: the choice is NOT in DB.theme (which would sync)`, String(inTheme));
+  if (vp.width === 390) {
+    const inp = page.locator(`${S.strip} .tag-editor .tag-inp`);
+    await inp.click();
+    await page.keyboard.type('tag37' + mode);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    await page.evaluate(() => { try { _flushEverythingOut && _flushEverythingOut(); } catch (e) {} });
+    await page.waitForTimeout(600);
+    const tags = await page.evaluate(() => (DB.articles.find((a) => a.id === 'a1').tags || []).join(','));
+    r.check(tags.includes('tag37' + mode), `390 ${mode}: a tag typed into the opened strip lands in DB`, tags);
+  }
+  await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`, { hasText: '▴' }).first());
+  await page.waitForTimeout(400);
+  const st3 = await state();
+  r.check(st3.line && !st3.open && st3.ls === '0', `${vp.name} ${mode}: a real tap on ▴ Details closes it again`, JSON.stringify(st3));
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__appBooted === true);
+  await s37open(page, mode);
+  const st4 = await state();
+  r.check(st4.line && !st4.open, `${vp.name} ${mode}: the closed state survives a reload too`, JSON.stringify(st4));
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+for (const vp of P37_VPS) for (const mode of ['single', 'multi']) {
+await r.block(`37e-closed-line-chips-open-their-thing-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await open37(vp, mode, { versions: true });
+  const { page } = s;
+  const lineBtn = (sel) => page.locator(`${S.strip} .pop-details-line ${sel}`).first();
+  /* Type chip → the type list */
+  await tap37(page, vp, lineBtn('.pdl-type .nti-chip, button.pdl-type'));
+  await page.waitForTimeout(400);
+  const nti = await page.evaluate(() => { const p = document.getElementById('nti-picker'); return !!(p && p.classList.contains('open') && p.getBoundingClientRect().width); });
+  r.check(nti, `${vp.name} ${mode}: a real tap on the Type chip opens the type list`, String(nti));
+  await page.evaluate(() => { try { closeNtiPicker(); } catch (e) {} });
+  /* Version chip → the version list (the opened strip's version pills) */
+  await tap37(page, vp, lineBtn('.pdl-ver'));
+  await page.waitForTimeout(400);
+  const ver = await page.evaluate((S) => { const v = document.querySelector(S.strip + ' .ver-strip'); const b = v && v.getBoundingClientRect(); return { open: !!document.querySelector(S.strip + '.pop-details-open'), shown: !!(b && b.width), pills: v ? v.querySelectorAll('.ver-pill').length : 0 }; }, S);
+  r.check(ver.open && ver.shown && ver.pills >= 3, `${vp.name} ${mode}: a real tap on the version chip shows the version list`, JSON.stringify(ver));
+  await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`, { hasText: '▴' }).first());
+  await page.waitForTimeout(300);
+  /* 🏷 → the tag box (tablet and laptop; on a phone tags are reached with ▾ Details) */
+  if (vp.width >= 640) {
+    await tap37(page, vp, lineBtn('.pdl-tags'));
+    await page.waitForTimeout(400);
+    const tg = await page.evaluate((S) => ({ open: !!document.querySelector(S.strip + '.pop-details-open'), focus: !!(document.activeElement && document.activeElement.classList.contains('tag-inp')) }), S);
+    r.check(tg.open && tg.focus, `${vp.name} ${mode}: a real tap on 🏷 opens the tag box with the cursor in it`, JSON.stringify(tg));
+  }
+  /* Nothing cut off: ▾ Details is on screen in the line. */
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+for (const vp of P37_VPS.filter((v) => v.width >= 640)) for (const mode of ['single', 'multi']) {
+await r.block(`37f-side-panels-below-the-formatting-row-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await open37(vp, mode, { headings: true, theme: { tocSide: 'right', pinPanelPos: 'side' } });
+  const { page } = s;
+  const measure = () => page.evaluate((S) => { const fmt = document.querySelector(S.fmt).getBoundingClientRect(); const out = { fmtB: fmt.bottom };
+    for (const id of ['toc-panel', 'pin-panel']) { const p = document.getElementById(id); out[id] = p && p.getBoundingClientRect().width ? p.getBoundingClientRect().top : null; } return out; }, S);
+  const check = (m, label) => {
+    const ids = ['toc-panel', 'pin-panel'].filter((id) => m[id] != null);
+    r.check(ids.includes('toc-panel') && ids.every((id) => m[id] >= m.fmtB - 2 && m[id] <= m.fmtB + 8),
+      `${vp.name} ${mode}, Details ${label}: Contents and Sidepane start right under the formatting row`, JSON.stringify(m));
+  };
+  check(await measure(), 'closed');
+  await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`, { hasText: '▾' }).first());
+  await page.waitForTimeout(500);
+  check(await measure(), 'open');
+  await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`, { hasText: '▴' }).first());
+  await page.waitForTimeout(500);
+  check(await measure(), 'closed again');
+  const pad = await page.evaluate((mode) => { const a = mode === 'single' ? document.getElementById('p3c') : document.querySelector('.fw-editarea'); return { l: a.style.paddingLeft, r: a.style.paddingRight }; }, mode);
+  r.check(!!(pad.l || pad.r), `${vp.name} ${mode}: the note area is still padded clear of the side panels`, JSON.stringify(pad));
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores

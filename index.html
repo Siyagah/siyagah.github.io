@@ -6892,6 +6892,10 @@ function tabSelect(aid){
   ST.article=aid;ST.editing=false;
   if(window.innerWidth<1200)showPane('p3');
   renderP3H();renderP3C();renderTabBar();renderP2C();
+  /* v04.73 — the Single pop-up is never in read mode (v04.54), and its tab
+     bar is always drawn now, so a tab tap stays in the editor like ‹ › and
+     the version pills do. */
+  if(ST.noteModal)startEdit();
 }
 function toggleTab(aid){
   const host=_tabHost();
