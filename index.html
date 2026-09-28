@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.73">
+<meta name="app-version" content="04.74">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2297,7 +2297,7 @@ sup.ann-sup:hover{text-decoration:underline}
 #p3.modal-mode .modal-pop-btn,
 #p3.modal-mode #save-flash,
 #p3.modal-mode [onclick="cancelEdit()"]{display:none}
-/* ══ v04.73 — pop-up header: one title, a tab bar in both, one Details line
+/* ══ v04.74 — pop-up header: one title, a tab bar in both, one Details line
    (issue #107) ═══════════════════════════════════════════════════════════
    The title is an input INSIDE the window bar (.pf-ti — Single's is #ti,
    Multi's #fw-ti-<aid>); the selectors carry #p3.modal-mode or .float-win so
@@ -3115,7 +3115,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.73</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.74</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3990,7 +3990,7 @@ function _dlFlipDate(ev){
     if(t)b.textContent=t;
   });
 }
-/* v04.73 — the Created/Updated button on its own, so the pop-ups' one-line
+/* v04.74 — the Created/Updated button on its own, so the pop-ups' one-line
    Details row shows the very same control the date line carries. */
 function _dateFlipHTML(a){
   if(!a||!(a.createdAt||a.updatedAt))return '';
@@ -4038,7 +4038,7 @@ function _p3MetaRowHTML(a,withCol){
    drift apart (Multi's _fwMetaHTML used to build its own copy). */
 function _folderChipsHTML(a,lastOnly){
   if(!a)return '';
-  /* v04.73 — `lastOnly` is the pop-ups' one-line Details row: the LAST
+  /* v04.74 — `lastOnly` is the pop-ups' one-line Details row: the LAST
      folder's own name, the full path in the tooltip. */
   const ids=lastOnly?(a.folderIds||[]).slice(-1):(a.folderIds||[]);
   return ids.map(x=>{
@@ -4058,7 +4058,7 @@ function _folderChipsHTML(a,lastOnly){
    it). Each row is tagged `data-ps` so a check can read the visible order
    back and compare it between the two pop-ups (20a). Not used by normal
    Pane 3 at all — its own read/edit layouts are unchanged this round. */
-/* ══ v04.73 — ONE DETAILS LINE (issue #107) ═══════════════════════════════
+/* ══ v04.74 — ONE DETAILS LINE (issue #107) ═══════════════════════════════
    The four rows above are the OPEN state. Closed (the default) the strip is
    one line built from the same pieces — kindBarHTML's chips/Attach/📦
    (_kindChipsHTML/_attachBtnHTML/_archBtnHTML), _folderChipsHTML, the
@@ -4116,7 +4116,7 @@ function _popMetaStripHTML(a,host){
   /* v04.55 review fix — four rows, each a .pop-row flex row: Type · chip ·
      Attach · 📦 on one, the tag box on the next, folders and versions
      sharing a third (both are short), the date last. Order unchanged.
-     v04.73 — the first row ends with ▴ Details, which closes the strip. */
+     v04.74 — the first row ends with ▴ Details, which closes the strip. */
   h+='<div class="pop-row pop-kind-row">'+kindBarHTML(a,true,true,!!host)
     +`<button class="nti-picker-btn pop-details-btn" onclick="_popDetailsSet(false,null,${host?`'${host}'`:'null'})" title="Back to the one-line summary">▴ Details</button></div>`;
   h+=`<div class="pop-row"><div class="tag-editor" data-ps="tags" data-tag-host="${host||''}" onclick="this.querySelector('.tag-inp')?.focus()"></div></div>`;
@@ -4767,7 +4767,7 @@ function renderP3H(){
          curA) now, ONE row at every size instead of the phone/tablet
          nav-edit-row vs desktop unified-tb split this branch used to make —
          see that function for the shared order/fold both pop-ups now use. */
-      /* v04.73 — the title is NOT drawn here any more: the editable #ti now
+      /* v04.74 — the title is NOT drawn here any more: the editable #ti now
          lives in the window bar (_popFrameHTML, panel mode, while editing),
          so the note's title shows once. */
       let hm=_popMetaStripHTML(curA,null);
@@ -6677,7 +6677,7 @@ function _tabOwner(){
 }
 /* Note a NEW tab attaches to: the active group, else the note open in pane 3. */
 function _tabHost(){
-  /* v04.73 — a Multi window's ＋ Add Tab aims the picker at ITS note's group. */
+  /* v04.74 — a Multi window's ＋ Add Tab aims the picker at ITS note's group. */
   if(_tabPickHost&&document.getElementById('tab-picker')?.classList.contains('open')&&DB.articles.some(a=>a.id===_tabPickHost))return _tabPickHost;
   const o=_tabOwner();
   if(o)return o;
@@ -6762,7 +6762,7 @@ function renderTabBar(){
      ＋ Add Tab and every open tab are rows in the `+` menu while editing and in
      the 🏷 palette while reading, both built by _ebGoToHTML(). A tablet and a
      laptop keep the bar exactly as it was. */
-  /* v04.73 — inside the Single pop-up the bar is ALWAYS shown, at every
+  /* v04.74 — inside the Single pop-up the bar is ALWAYS shown, at every
      size, tabs or none (so ＋ Add Tab is reachable). Only the phone's MAIN
      view keeps it hidden. On the phone sheet the 📅 Cal button stays off
      (the calendar is not a pop-up thing), ＋ Add Tab stays on. */
@@ -6808,7 +6808,7 @@ function renderTabBar(){
      which also stops the scroll strip snapping back to 0 on every re-render. */
   if(bar._sig!==html){ bar._sig=html; bar.innerHTML=html; if(_mh)_tabSplitVizAdd(bar); }
   if(tabs.length)_tabNavQueue();
-  /* v04.73 — every Multi window's own bar follows the same DB.tabs data; and
+  /* v04.74 — every Multi window's own bar follows the same DB.tabs data; and
      a bar that just appeared/vanished moves the header stack the side panels
      hang from. */
   try{_fwRefreshTabsAll();}catch(e){}
@@ -6892,7 +6892,7 @@ function tabSelect(aid){
   ST.article=aid;ST.editing=false;
   if(window.innerWidth<1200)showPane('p3');
   renderP3H();renderP3C();renderTabBar();renderP2C();
-  /* v04.73 — the Single pop-up is never in read mode (v04.54), and its tab
+  /* v04.74 — the Single pop-up is never in read mode (v04.54), and its tab
      bar is always drawn now, so a tab tap stays in the editor like ‹ › and
      the version pills do. */
   if(ST.noteModal)startEdit();
@@ -11214,7 +11214,7 @@ function _fwFlashSaved(aid){
    phone tier for both modes, matching what #p3-sheet-hd used to say only
    for Single. Every control carries a title and a stable data-pf so a check
    can compare the two frames control-for-control. */
-/* v04.73 — the note's title, shown ONCE, in the window bar. An editor (Multi
+/* v04.74 — the note's title, shown ONCE, in the window bar. An editor (Multi
    always; Single while editing) gets the editable input right here — Single's
    keeps id="ti" and the ST.etitle/autosave wiring, Multi's keeps
    id="fw-ti-<aid>" — and Single's read view gets plain text that still
@@ -11287,7 +11287,7 @@ function _popFrameSync(){
   let hd=document.getElementById('p3-frame-modal');
   if(!p3||!ST.noteModal||!ST.article||ST.article==='cal'){ if(hd)hd.remove(); return; }
   const html=_popFrameHTML(ST.article,'panel','p3-frame-modal');
-  /* v04.73 — the frame holds the editable title now and is rebuilt on every
+  /* v04.74 — the frame holds the editable title now and is rebuilt on every
      renderP3H(), so a focused #ti (and its caret) has to be carried across
      or the keyboard drops on a touch screen mid-word. */
   const _af=document.activeElement,_tiFocus=!!(_af&&_af.id==='ti'&&hd&&hd.contains(_af));
@@ -11304,7 +11304,7 @@ function _wireModalFrameDrag(hd){
   if(!hd)return;
   hd.addEventListener('pointerdown',e=>{
     if(_popTier()==='sheet')return;
-    if(e.target.closest('.fw-close,.pf-ti'))return;   /* v04.73 — the title input is a text box, not a handle */
+    if(e.target.closest('.fw-close,.pf-ti'))return;   /* v04.74 — the title input is a text box, not a handle */
     _modalDragStart(e);
   });
 }
@@ -11378,7 +11378,7 @@ function _popFormatRowHTML(host,curA){
     +'<button class="et et-save" data-tb="save" onmousedown="event.preventDefault()" onclick="'+saveOn+'" title="Save this note">💾 Save</button>'
     +'</div>';
 }
-/* ══ v04.73 — A TAB BAR FOR A MULTI WINDOW (issue #107) ═══════════════════
+/* ══ v04.74 — A TAB BAR FOR A MULTI WINDOW (issue #107) ═══════════════════
    The same chips and the same DB.tabs group Single's bar shows, for THIS
    window's note: the group it owns, else the group it belongs to. Tapping a
    tab hands the window to that note (_fwHandTo, as ‹ › and the version pills
@@ -11447,7 +11447,7 @@ function _fwRenderBody(aid){
      side panels, so the title/strip/formatting-row above keep the window's
      full width instead of being squeezed by a panel's own width, exactly as
      Single's #p3h always has (padding there lands on #p3c, not #p3h). */
-  /* v04.73 — the title input moved into the frame (_popTitleHTML), and the
+  /* v04.74 — the title input moved into the frame (_popTitleHTML), and the
      tab bar for THIS window's note stands between the frame and the body. */
   return _popFrameHTML(aid,'float')
     +_fwTabsHTML(aid)
@@ -11600,7 +11600,7 @@ function _fwWireDragHandle(handle,win,aid){
   }
   function up(){_ptrUp(move,up);if(aid)_fwSavePos(aid);}
   handle.addEventListener('pointerdown',e=>{
-    if(e.target.closest('.fw-close,.pf-ti'))return;   /* v04.73 — the title input is a text box, not a handle */
+    if(e.target.closest('.fw-close,.pf-ti'))return;   /* v04.74 — the title input is a text box, not a handle */
     sx=e.clientX;sy=e.clientY;
     const r=win.getBoundingClientRect();sl=r.left;st=r.top;
     _ptrDown(move,up);
@@ -11621,7 +11621,7 @@ function _fwFrameResyncAll(){
     const aid=win.id.slice(3);   /* win.id is always 'fw-'+aid, see _fwCreate() */
     const oldHd=win.querySelector('.fw-hd');
     if(!oldHd)return;
-    /* v04.73 — the title input lives in this bar: carry what is typed in it
+    /* v04.74 — the title input lives in this bar: carry what is typed in it
        (and the focus) across the rebuild. */
     const oldTi=oldHd.querySelector('.fw-ti');
     const tv=oldTi?oldTi.value:null,tf=oldTi&&document.activeElement===oldTi;
@@ -12935,7 +12935,7 @@ function _popPanelTop(host,inModal){
     const pf=document.getElementById('p3-frame-modal');   /* the frame sits ABOVE both */
     return (pf?pf.offsetHeight:0)+(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32);
   }
-  /* v04.73 — the title moved INTO .fw-hd and Multi gained a tab bar
+  /* v04.74 — the title moved INTO .fw-hd and Multi gained a tab bar
      (.fw-tabs), so the stack is frame + tabs + strip + formatting row. */
   const hd=host.querySelector('.fw-hd');
   const tabs=host.querySelector('.fw-tabs');
@@ -12943,7 +12943,7 @@ function _popPanelTop(host,inModal){
   const row=host.querySelector('.fw-tb.pop-fmt-row');
   return (hd?hd.offsetHeight:34)+(tabs?tabs.offsetHeight:0)+(strip?strip.offsetHeight:0)+(row?row.offsetHeight:0);
 }
-/* v04.73 — re-seat Contents / Sidepane under the header stack after it
+/* v04.74 — re-seat Contents / Sidepane under the header stack after it
    changed height (Details opened or closed, a tab bar repainted). The two
    inject functions only measure when they (re)build a panel. */
 function _popPanelsRelayout(){
@@ -20999,6 +20999,17 @@ let _syncApp=null, _syncFsDb=null, _syncUnsub=null;
    concurrent update from elsewhere always carries a different version, so
    it can never be mistaken for our own echo, regardless of timing. */
 let _myLastPushVer=0, _syncPushTimer=null;
+/* v04.73 — …and "a concurrent update from elsewhere always carries a
+   different version" was only true while no two devices ever pushed in the
+   SAME millisecond: ver was Date.now(). Measured with three real devices on
+   one cloud (tools/sync-e2e.mjs): the phone and the laptop, each saving an
+   edit at the same moment, pushed with the identical ver, so the laptop
+   took the phone's write for its own echo, skipped it, and kept its own
+   copy forever — two of three runs, the phone's edit never reached the
+   laptop. A version is now the millisecond plus a random fraction, unique
+   per push, still ordered by time and still a plain number (comparisons in
+   older builds keep working). */
+function _newPushVer(){ return Date.now()+(1+Math.floor(Math.random()*999998))/1000000; }
 let _lastSyncTime=parseInt(localStorage.getItem(SYNC_TIME_SK)||'0');
 
 /* ── Firebase Authentication ─────────────────────────────────────────────
@@ -21302,9 +21313,10 @@ async function syncNow(){
       _save(); _renderPreserveEdit();
     }
     const now=Date.now();
-    _myLastPushVer=now;
+    const ver=_newPushVer();
+    _myLastPushVer=ver;
     const json=JSON.stringify(DB);
-    await _writeCloudDB(nb, now, _b64enc(json));
+    await _writeCloudDB(nb, ver, _b64enc(json));
     _lastPushedSig=_syncSig(json); _pushFailures=0;
     _lastSyncTime=now; localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);
     setSyncStatus("live");
@@ -21872,8 +21884,9 @@ async function _doPush(){
     setSyncStatus('busy');
     const nb=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
     const now=Date.now();
-    _myLastPushVer=now;
-    await _writeCloudDB(nb, now, _b64enc(json));
+    const ver=_newPushVer();   /* v04.73 — unique per push; see _newPushVer() */
+    _myLastPushVer=ver;
+    await _writeCloudDB(nb, ver, _b64enc(json));
     _lastPushedSig=sig;
     _pushFailures=0;
     _lastSyncTime=now;
@@ -22718,7 +22731,7 @@ function renameNoteKind(kid){
    current note, so the old `ST.editing&&ST.article===a.id` test was always
    false there. Single stays on that test unchanged: openNoteAsModal() calls
    startEdit() before the modal ever opens, so it is already true. */
-/* v04.73 — the three pieces the pop-ups' one-line Details row reuses. */
+/* v04.74 — the three pieces the pop-ups' one-line Details row reuses. */
 function _kindChipsHTML(a){
   const curKinds=new Set(artKinds(a));
   return noteKinds().filter(k=>curKinds.has(k.id)).map(k=>{
@@ -22745,7 +22758,7 @@ function kindBarHTML(a,bare,noSave,forceEdit){
      picker instead, which is where a type is added or removed deliberately.
      Nothing became unreachable: the picker, 📎 Attach → Note Type and the
      right-click menu's NTI Types submenu all still toggle a type off.
-     (v04.73: the chip markup itself is _kindChipsHTML().) */
+     (v04.74: the chip markup itself is _kindChipsHTML().) */
   const chips=_kindChipsHTML(a);
   const hasNag=activeKinds.some(k=>k.nag);
   let statusHTML='';

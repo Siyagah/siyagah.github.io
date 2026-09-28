@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.73.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.74.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,7 +16,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
-- **v04.73** (28 Sep 2026) — pop-up header: one title, a tab bar in both,
+- **v04.74** (28 Sep 2026) — pop-up header: one title, a tab bar in both,
   one Details line. Owner's laptop screenshot of Single in edit mode: the
   title showed twice and seven rows stood above the note. In BOTH pop-ups,
   top to bottom, four rows:
@@ -48,6 +48,18 @@ must never accumulate here instead of there.
     and 135/227 (Multi); 390 200/306 and 190/296.
   - Builder ran `--only 37,31,23,20`: **245/245**. No full run and no
     unpatched run (the Architect does both).
+- **v04.73** (28 Sep 2026) — sync checked end to end on three devices at
+  once. Owner: "CHECK the SYNC again across all platforms". New
+  `tools/sync-e2e.mjs` runs a phone (390, touch), a tablet (820, touch) and a
+  laptop (1440) against one fake Firestore in Node (a fake SDK is served for
+  the gstatic scripts), so the real sign-in → listener → pull → merge → push
+  path runs on all three. It has 12 scenarios; app-check block 38 runs it.
+  - **Found:** a push's `ver` was `Date.now()`, so two devices pushing in
+    the same millisecond each skipped the other's write as their own echo,
+    and one edit never arrived (2 of 3 natural runs on v04.72).
+  - **Fix:** `_newPushVer()`, the millisecond plus a random fraction.
+
+  Unpatched: 17/19. Full `app-check` **943/943, twice in a row**.
 - **v04.72** (27 Sep 2026) — the "NOT syncing" alarm only for real
   problems; Delete on the ⋯ card. Owner-reported (phone screenshot).
   `_pullRemote()` retried the SAME main-doc version three times and then
@@ -88,23 +100,6 @@ must never accumulate here instead of there.
   (`34a` at 390/820: real taps on 📚 Folders → ⋯ → Rename; the menu is
   topmost and on screen; the rename box opens). Unpatched v04.69:
   `--only 34` 0/4. Full `app-check` **898/898, twice in a row**.
-- **v04.69** (25 Sep 2026) — no backup balloon; Recent and MyWall on the
-  sidebar's bottom row. Owner's requests, with two phone screenshots.
-  - **The balloon:** `_bkMaybeAuto()` showed "No backup yet" (or "Last backup
-    was N days ago") 6s after every launch. A phone can't set up automatic
-    backups at all, so it showed on every phone launch and covered the
-    bottom row. The reminder is gone; the status stays in ⚙ → Automatic
-    Backups, and the real-failure "Backups paused" notice is kept.
-  - **The bottom row** (`#sb-toolbar`) is New Note · Recent · MyWall ·
-    Folders, calling `selFolder('sf-recent')` / `selFolder('sf-mywall')`,
-    which already slides the note list in under 1200px. Each button is an
-    icon above its word, in a grid (`minmax(78px,1fr)`): one row on a
-    phone's full-width sidebar and on a tablet, 2×2 in a narrow laptop
-    sidebar.
-  - New section 33 (`33a` at 390/820/1440: order, size, on screen, not
-    clipped, one row under 1200, real taps open each list; `33b`: no balloon
-    after 7.5s, never backed up and 30 days old). `6i`'s "two buttons" check
-    was updated in place to four. Full `app-check` **892/892, twice in a row**.
 ---
 
 ## What this is
@@ -362,6 +357,16 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **"A version from elsewhere is always different" is a claim about
+  clocks, not code.** The echo check `md.ver === _myLastPushVer` was right
+  only while no two devices pushed in the same millisecond, because `ver`
+  was `Date.now()`. When the phone and laptop saved together, each skipped
+  the other's write as its own, and one edit never arrived. No check had
+  ever run two devices' timers against one cloud at once. An identity must
+  be unique by construction (a random part), never by the odds of timing.
+  `tools/sync-e2e.mjs` runs three devices together, so the next timing
+  assumption fails a check. Cost: found in the owner's "check sync again"
+  round, before any report of a lost edit. Fixed in v04.73.
 - **Retrying the same stale request is not a retry, and an alarm must
   know why it is ringing.** `_pullRemote()` retried a main-doc version whose
   chunks another device had already replaced, so all three retries were

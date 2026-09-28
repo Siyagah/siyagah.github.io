@@ -5859,7 +5859,7 @@ await r.block('19g-single-drags-by-frame', async () => {
    SECOND tag and a version sibling: the base seedDB() note has only one of
    each, and 20b/20c need a real tag to remove and a real sibling to switch
    to. */
-/* v04.73 — the pop-ups' strip is ONE Details line by default now, and the
+/* v04.74 — the pop-ups' strip is ONE Details line by default now, and the
    four rows that sections 20a–20c and 20h–20j describe are its OPEN state
    (▾ Details). Those checks are updated in place to run with it open, via
    this init script (the same localStorage key a tap on ▾ Details writes);
@@ -5983,7 +5983,7 @@ await r.block('20d-one-meaning-for-tag-emoji', async () => {
     const bareBtn = [...root.querySelectorAll('button')].some((b) => visible(b) && b.textContent.trim() === '🏷');
     const ownText = (el) => { let t = ''; el.childNodes.forEach((n) => { if (n.nodeType === 3) t += n.textContent; }); return t.trim(); };
     const offenders = [...root.querySelectorAll('*')]
-      /* v04.73 — the closed Details line's own 🏷 Tags button (.pdl-tags) is
+      /* v04.74 — the closed Details line's own 🏷 Tags button (.pdl-tags) is
          the one other thing allowed to start with 🏷: it carries a word or a
          count, never the bare glyph (bareBtn still asserts that). */
       .filter((el) => visible(el) && ownText(el).startsWith('🏷') && !el.classList.contains('tag-chip') && !el.classList.contains('pdl-tags'))
@@ -6143,7 +6143,7 @@ async function stripGeom(page, containerSel, barSel) {
     const box = (el) => { if (!el || !el.getClientRects().length) return null; const r = el.getBoundingClientRect();
       return { left: Math.round(r.left - L), mid: Math.round(r.top + r.height / 2), top: Math.round(r.top), bottom: Math.round(r.bottom) }; };
     const q = (sel) => box(strip.querySelector(sel));
-    /* v04.73 — updated in place: the title is the input in the WINDOW BAR now
+    /* v04.74 — updated in place: the title is the input in the WINDOW BAR now
        (after the grip and ‹ ›), so it no longer stands above the strip on the
        rows' inset (dropped from rowLefts), and the budget this measured —
        "how much room the strip and its neighbours take" — now starts under
@@ -9583,7 +9583,7 @@ for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '820', width
   });
 }
 
-/* v04.73 — section 37: the pop-up header. Owner, 27–28 Sep (issue #107): the
+/* v04.74 — section 37: the pop-up header. Owner, 27–28 Sep (issue #107): the
    Single pop-up showed the note's title twice and stacked seven rows above
    the note. Now, in BOTH pop-ups: the title once, as the editable input in
    the window bar; a tab bar always (Multi gets one for its own note); the
@@ -9858,6 +9858,33 @@ await r.block(`37f-side-panels-below-the-formatting-row-${vp.name}-${mode}`, asy
   await s.close();
 });
 }
+
+/* v04.73 — section 38: three real devices, one cloud, end to end.
+   The owner asked (28 Sep) to "CHECK the SYNC again across all platforms".
+   tools/sync-e2e.mjs runs the real app as a phone (390, touch), a tablet
+   (820, touch) and a laptop (1440) in three separate browser contexts,
+   signed in to one notebook whose cloud is a fake Firestore held in Node —
+   so the real sign-in → listener → pull → merge → push-timer → write path
+   runs on every device. Twelve scenarios: typing, a folder, a delete, two
+   devices at the same moment (and in the same millisecond), the same note
+   on two devices, a setting, a phone offline and back, a phone put in the
+   background mid-sentence, a 9 MB notebook past the 10 MiB write limit, no
+   ping-pong when idle, no alarm and no page error anywhere. On v04.72 the
+   two same-moment scenarios failed (2 of 3 natural runs, every forced one):
+   the push version was Date.now(), so two devices pushing in the same
+   millisecond each took the other's write for its own echo. Each line the
+   script prints becomes one check here. Section 37 is the header round's. */
+await r.block('38-sync-three-devices-end-to-end', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./sync-e2e.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 420000 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 19, 'the three-device sync check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'three devices: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the three-device sync check exits cleanly', `exit ${out.status}`);
+});
 
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
