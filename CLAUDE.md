@@ -16,6 +16,38 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.73** (28 Sep 2026) — pop-up header: one title, a tab bar in both,
+  one Details line. Owner's laptop screenshot of Single in edit mode: the
+  title showed twice and seven rows stood above the note. In BOTH pop-ups,
+  top to bottom, four rows:
+  - **Window bar** holds the one title. Editing: it is the input (Single's
+    keeps `id="ti"`, Multi's `#fw-ti-<aid>`), built by `_popTitleHTML()`
+    inside `_popFrameHTML()`. Reading (Single): plain text, right-click
+    edits. The separate title row is gone.
+  - **Tab bar**, always drawn in both pop-ups at every size, even with no
+    tabs. Single uses `#tab-bar` (now shown on the phone sheet too, only
+    the phone's MAIN view still hides it); Multi has `.fw-tabs`
+    (`_fwTabsHTML()`) for its own note's group. A tab tap hands the window
+    to that note; ＋ Add Tab aims the shared picker at that note's group
+    (`_tabPickHost`).
+  - **One Details line** (`_popDetailsLineHTML()`): Type chip · last
+    folder name · version · 🏷 Tags · date · 📎 Attach · 📦 · ▾ Details.
+    CSS drops the date under 1200px, and tags/Attach/📦 under 640px.
+    ▾ Details swaps in the full four-row strip, ▴ closes it. Closed by
+    default, remembered per device in `localStorage`
+    (`siyagah-pop-details`, never `DB.theme`). The chips reuse
+    `_kindChipsHTML/_attachBtnHTML/_archBtnHTML/_dateFlipHTML/
+    _folderChipsHTML(a,true)`. The version and 🏷 chips open Details.
+  - **Formatting row + Save**, unchanged. `_popPanelTop()` now counts the
+    tab bar, and `_popPanelsRelayout()` re-seats Contents/Sidepane when
+    Details flips or the tab bar changes.
+  - Section 20 was updated in place: it describes the OPEN strip, so it
+    runs with Details open; 20i/20j no longer measure from a title row.
+  - New section 37 (37a–37f, 390/820/1440, Single and Multi, real taps).
+    Measured, above-the-note height closed vs open: 1440 146/238 (Single)
+    and 135/227 (Multi); 390 200/306 and 190/296.
+  - Builder ran `--only 37,31,23,20`: **245/245**. No full run and no
+    unpatched run (the Architect does both).
 - **v04.72** (27 Sep 2026) — the "NOT syncing" alarm only for real
   problems; Delete on the ⋯ card. Owner-reported (phone screenshot).
   `_pullRemote()` retried the SAME main-doc version three times and then
@@ -73,27 +105,6 @@ must never accumulate here instead of there.
     clipped, one row under 1200, real taps open each list; `33b`: no balloon
     after 7.5s, never backed up and 30 days old). `6i`'s "two buttons" check
     was updated in place to four. Full `app-check` **892/892, twice in a row**.
-- **v04.68** (25 Sep 2026) — sync: every change reaches the other device,
-  in both directions. The owner asked for a sync check in all directions.
-  - `tools/sync-audit.mjs` runs 114 operations × both merge directions. On
-    v04.67, **51 FAILED**.
-  - **Main cause:** about 35 functions changed a record without bumping
-    `updatedAt`, and `_mergeById` keeps local on a tie. Folder
-    moves/reorders/numbering and even folder create never synced.
-  - **Fix:** `_stampRecordTouches()`, a diff-at-`_save()` sweep over the nine
-    `_mergeById` collections, the same method as `_stampThemeTouches`. The
-    baseline is reseeded after boot, merges, backup restore, and undo/redo.
-  - **Also fixed:**
-    - no-Trash deletions (sections, Note Types, groups, favourites and
-      calendar categories and events) now get tombstones;
-    - `globalTags` get add/remove stamps, in the new keys `globalTagsAt` and
-      `globalTagsX`;
-    - purged Trash entries are tombstoned;
-    - a one-sided `updatedAt` now wins;
-    - a note left pointing at a deleted folder is unfiled in the merge.
-  - **Undo stays local** (`U01`/`Z03` are KNOWN).
-  - App-check block 32 runs the audit. Audit on v04.67: 59/51 (PASS/FAIL).
-    With the fixes: 110/0. Full `app-check` **873/873, twice in a row**.
 ---
 
 ## What this is

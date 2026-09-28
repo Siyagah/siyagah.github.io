@@ -6997,4 +6997,86 @@ the bar's ⋯ menu.
 
 ## v04.73 — pop-up header: one title, tab bar in both, one Details line (28 Sep 2026)
 
-*Stub — written at the start of the round; finished at the end.* Issue #107: in both pop-ups (Single and Multi) show the title once in the window bar, always show a tab bar, and fold the metadata strip into one Details line (closed by default, remembered per device in localStorage).
+Issue #107. The owner sent a laptop screenshot of the Single pop-up in edit
+mode: the title showed twice, and seven rows stood above the note. Approved
+the Architect's demo, with two choices: adding a tag on a phone may take one
+extra tap (open Details, then type), and ▾ Details starts closed and each
+device remembers the last choice. They also decided the tab bar belongs in
+BOTH pop-ups, which settles the old "round d2" question.
+
+**Built, in both pop-ups, at 390 / 820 / 1440 — four rows:**
+1. **Window bar with the one title.** Editing: the input lives in the bar
+   (`_popTitleHTML()` in `_popFrameHTML()`); Single keeps `id="ti"` and the
+   `ST.etitle` autosave, Multi keeps `#fw-ti-<aid>`. ✓ Saved sits beside it.
+   Reading (Single): plain text, right-click still edits. The separate title
+   row (`.p3h-title-bar` in Single's modal branch, `.fw-ti` in Multi's body)
+   is gone. The frame is rebuilt on every `renderP3H()`, so `_popFrameSync()`
+   now carries a focused `#ti` and its caret across the rebuild (or a phone's
+   keyboard would drop mid-word); `_fwFrameResyncAll()` does the same for
+   Multi. Both drag handlers ignore the title input.
+2. **Tab bar**, always shown in both. Single: `renderTabBar()` no longer
+   hides `#tab-bar` on the phone while `ST.noteModal` (only the phone's MAIN
+   view keeps it hidden); 📅 Cal stays off on the sheet, ＋ Add Tab stays on.
+   `tabSelect()` now stays in the editor inside the pop-up. Multi: new
+   `.fw-tabs` (`_fwTabsHTML()`), the same chips for THIS window's note's group
+   (its own, else the group it belongs to); a tap hands the window over
+   (`_fwHandTo`); ＋ Add Tab opens the shared picker aimed at that group
+   (`openTabPicker(btn,host)` / `_tabPickHost`). One line, the strip scrolls
+   sideways.
+3. **One Details line** (`_popDetailsLineHTML()`), built from the strip's own
+   pieces, extracted rather than copied: `_kindChipsHTML`, `_attachBtnHTML`,
+   `_archBtnHTML`, `_dateFlipHTML`, `_folderChipsHTML(a,true)` (last folder's
+   name, full path in the tooltip). Laptop: Type · folder · version (n/N) ·
+   🏷 Tags · date · 📎 Attach · 📦 · ▾ Details. Tablet: no date. Phone: Type ·
+   folder · version · ▾ Details. What shows is CSS by width, so a rotation
+   needs no rebuild. ▾ Details swaps in today's four rows with ▴ Details at
+   the end of the first. **Closed by default**, one `localStorage` key
+   (`siyagah-pop-details`) shared by both pop-ups — not `DB.theme`.
+   `_popDetailsSet()` repaints every open pop-up's strip in place.
+4. **Formatting row + Save**, unchanged.
+
+**Reachability:** Type chip opens the type list; folder chip goes to the
+folder; the version chip and 🏷 Tags open Details (the version pills / the tag
+box with the cursor in it). Attach, 📦 and the date are on the line at
+tablet/laptop, and in ▾ Details everywhere.
+
+**Side panels:** `_popPanelTop()` counts the tab bar (Multi: `.fw-tabs`
+replaces the title input); new `_popPanelsRelayout()` re-seats Contents and
+Sidepane when Details flips or the tab bar changes height.
+`_syncP3CPadding()`/`_fwSyncBodyPadding()` are untouched and section 31 holds.
+
+**Checks: new section 37** (37a–37f; 390 and 820 with touch; Single and Multi;
+edit and, for Single, read mode). Real taps only.
+- `37a` the title appears once above the editor, as the input in the bar;
+  read mode is plain text and a right-click edits; a new title autosaves.
+- `37b` tab bar with no tabs and with tabs; ＋ Add Tab adds to THIS note's
+  group; a tab tap switches the window/pop-up; one line at 390; the phone's
+  main view still hides its bar.
+- `37c` the line is one row; the right pieces per size; exactly four rows
+  stand above the note; closed is ≥ 80px shorter than open at 1440 and 390.
+- `37d` ▾/▴ work; closed on a fresh profile; survives a reload; not in
+  `DB.theme`; a tag typed into the opened strip at 390 lands in `DB`.
+- `37e` each closed-line chip opens its thing.
+- `37f` Contents and Sidepane start under the formatting row with Details
+  closed, open, and closed again (820 and 1440).
+
+**Updated in place** (they describe what this round deliberately changed):
+- `20a`–`20c`, `20h`–`20j` describe the four-row strip, which is now the OPEN
+  state: they run with Details open (`DETAILS_OPEN` init script).
+- `20i`/`20j` measured from / aligned to the title row; the title is in the
+  window bar now, so the budget starts under the tab bar and the title is
+  no longer one of the rows' insets.
+- `20d` lets the closed line's own `🏷 Tags` button (`.pdl-tags`) start with 🏷.
+
+**Measured** (above-the-note height, closed / Details open): Single 1440
+146/238px, 820 194/300, 390 200/306; Multi 1440 135/227, 820 186/292, 390
+190/296. "Open" is what today's strip costs minus its separate title row, so
+the saving against v04.72 is at least that much again. No unpatched run was
+made (the Architect does it in review).
+- `ship-check` **13/13**; `--only 37,31,23,20`: **245/245**. The full
+  `app-check` was NOT run by the builder, as the issue asked.
+
+**Not done / left:** the phone's MAIN-view tab bar (stays hidden, as asked);
+what the strip's items do (unchanged); the note body. In Multi, the tab chips
+have no ✕ / 📌 (Single's bar keeps them); closing or pinning a tab is done in
+the main bar.
