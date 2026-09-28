@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.72.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.73.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,18 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.73** (28 Sep 2026) — sync checked end to end on three devices at
+  once. Owner: "CHECK the SYNC again across all platforms". New
+  `tools/sync-e2e.mjs` runs a phone (390, touch), a tablet (820, touch) and a
+  laptop (1440) against one fake Firestore in Node (a fake SDK is served for
+  the gstatic scripts), so the real sign-in → listener → pull → merge → push
+  path runs on all three. It has 12 scenarios; app-check block 38 runs it.
+  - **Found:** a push's `ver` was `Date.now()`, so two devices pushing in
+    the same millisecond each skipped the other's write as their own echo,
+    and one edit never arrived (2 of 3 natural runs on v04.72).
+  - **Fix:** `_newPushVer()`, the millisecond plus a random fraction.
+
+  Unpatched: 17/19. Full `app-check` **@@FULL@@**.
 - **v04.72** (27 Sep 2026) — the "NOT syncing" alarm only for real
   problems; Delete on the ⋯ card. Owner-reported (phone screenshot).
   `_pullRemote()` retried the SAME main-doc version three times and then
@@ -73,27 +85,6 @@ must never accumulate here instead of there.
     clipped, one row under 1200, real taps open each list; `33b`: no balloon
     after 7.5s, never backed up and 30 days old). `6i`'s "two buttons" check
     was updated in place to four. Full `app-check` **892/892, twice in a row**.
-- **v04.68** (25 Sep 2026) — sync: every change reaches the other device,
-  in both directions. The owner asked for a sync check in all directions.
-  - `tools/sync-audit.mjs` runs 114 operations × both merge directions. On
-    v04.67, **51 FAILED**.
-  - **Main cause:** about 35 functions changed a record without bumping
-    `updatedAt`, and `_mergeById` keeps local on a tie. Folder
-    moves/reorders/numbering and even folder create never synced.
-  - **Fix:** `_stampRecordTouches()`, a diff-at-`_save()` sweep over the nine
-    `_mergeById` collections, the same method as `_stampThemeTouches`. The
-    baseline is reseeded after boot, merges, backup restore, and undo/redo.
-  - **Also fixed:**
-    - no-Trash deletions (sections, Note Types, groups, favourites and
-      calendar categories and events) now get tombstones;
-    - `globalTags` get add/remove stamps, in the new keys `globalTagsAt` and
-      `globalTagsX`;
-    - purged Trash entries are tombstoned;
-    - a one-sided `updatedAt` now wins;
-    - a note left pointing at a deleted folder is unfiled in the merge.
-  - **Undo stays local** (`U01`/`Z03` are KNOWN).
-  - App-check block 32 runs the audit. Audit on v04.67: 59/51 (PASS/FAIL).
-    With the fixes: 110/0. Full `app-check` **873/873, twice in a row**.
 ---
 
 ## What this is
@@ -351,6 +342,16 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **"A version from elsewhere is always different" is a claim about
+  clocks, not code.** The echo check `md.ver === _myLastPushVer` was right
+  only while no two devices pushed in the same millisecond, because `ver`
+  was `Date.now()`. When the phone and laptop saved together, each skipped
+  the other's write as its own, and one edit never arrived. No check had
+  ever run two devices' timers against one cloud at once. An identity must
+  be unique by construction (a random part), never by the odds of timing.
+  `tools/sync-e2e.mjs` runs three devices together, so the next timing
+  assumption fails a check. Cost: found in the owner's "check sync again"
+  round, before any report of a lost edit. Fixed in v04.73.
 - **Retrying the same stale request is not a retry, and an alarm must
   know why it is ringing.** `_pullRemote()` retried a main-doc version whose
   chunks another device had already replaced, so all three retries were

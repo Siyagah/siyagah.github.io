@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.72">
+<meta name="app-version" content="04.73">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3078,7 +3078,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.72</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.73</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -20781,6 +20781,17 @@ let _syncApp=null, _syncFsDb=null, _syncUnsub=null;
    concurrent update from elsewhere always carries a different version, so
    it can never be mistaken for our own echo, regardless of timing. */
 let _myLastPushVer=0, _syncPushTimer=null;
+/* v04.73 — …and "a concurrent update from elsewhere always carries a
+   different version" was only true while no two devices ever pushed in the
+   SAME millisecond: ver was Date.now(). Measured with three real devices on
+   one cloud (tools/sync-e2e.mjs): the phone and the laptop, each saving an
+   edit at the same moment, pushed with the identical ver, so the laptop
+   took the phone's write for its own echo, skipped it, and kept its own
+   copy forever — two of three runs, the phone's edit never reached the
+   laptop. A version is now the millisecond plus a random fraction, unique
+   per push, still ordered by time and still a plain number (comparisons in
+   older builds keep working). */
+function _newPushVer(){ return Date.now()+(1+Math.floor(Math.random()*999998))/1000000; }
 let _lastSyncTime=parseInt(localStorage.getItem(SYNC_TIME_SK)||'0');
 
 /* ── Firebase Authentication ─────────────────────────────────────────────
@@ -21084,9 +21095,10 @@ async function syncNow(){
       _save(); _renderPreserveEdit();
     }
     const now=Date.now();
-    _myLastPushVer=now;
+    const ver=_newPushVer();
+    _myLastPushVer=ver;
     const json=JSON.stringify(DB);
-    await _writeCloudDB(nb, now, _b64enc(json));
+    await _writeCloudDB(nb, ver, _b64enc(json));
     _lastPushedSig=_syncSig(json); _pushFailures=0;
     _lastSyncTime=now; localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);
     setSyncStatus("live");
@@ -21654,8 +21666,9 @@ async function _doPush(){
     setSyncStatus('busy');
     const nb=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
     const now=Date.now();
-    _myLastPushVer=now;
-    await _writeCloudDB(nb, now, _b64enc(json));
+    const ver=_newPushVer();   /* v04.73 — unique per push; see _newPushVer() */
+    _myLastPushVer=ver;
+    await _writeCloudDB(nb, ver, _b64enc(json));
     _lastPushedSig=sig;
     _pushFailures=0;
     _lastSyncTime=now;
