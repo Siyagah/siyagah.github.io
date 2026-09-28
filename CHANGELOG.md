@@ -6993,3 +6993,8 @@ the bar's ⋯ menu.
   `36e` passes at 820 and 1440 on both versions, because the ⋯ menu path
   already had Delete.
 - Full `app-check`: **922/922, twice in a row**.
+
+
+## v04.73 — pop-up header: one title, tab bar in both, one Details line (28 Sep 2026)
+
+*Stub — written at the start of the round; finished at the end.* Issue #107: in both pop-ups (Single and Multi) show the title once in the window bar, always show a tab bar, and fold the metadata strip into one Details line (closed by default, remembered per device in localStorage).
