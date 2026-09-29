@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.73">
+<meta name="app-version" content="04.74">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2297,6 +2297,43 @@ sup.ann-sup:hover{text-decoration:underline}
 #p3.modal-mode .modal-pop-btn,
 #p3.modal-mode #save-flash,
 #p3.modal-mode [onclick="cancelEdit()"]{display:none}
+/* ══ v04.74 — pop-up header: one title, a tab bar in both, one Details line
+   (issue #107) ═══════════════════════════════════════════════════════════
+   The title is an input INSIDE the window bar (.pf-ti — Single's is #ti,
+   Multi's #fw-ti-<aid>); the selectors carry #p3.modal-mode or .float-win so
+   they beat both `#ti{…}` and the old `.float-win .fw-ti{…}` rules, which
+   styled the separate title row this round removed. */
+.float-win .fw-hd .pf-ti,#p3.modal-mode .fw-hd .pf-ti{flex:1 1 auto;width:0;min-width:80px;margin:0;
+  padding:4px 6px;border:1px solid transparent;border-radius:6px;background:transparent;
+  color:var(--t1);font-family:var(--ui);font-size:13px;font-weight:600;outline:none;
+  text-overflow:ellipsis;cursor:text}
+.float-win .fw-hd .pf-ti:hover,#p3.modal-mode .fw-hd .pf-ti:hover{border-color:var(--border2)}
+.float-win .fw-hd .pf-ti:focus,#p3.modal-mode .fw-hd .pf-ti:focus{border-color:var(--accent);background:var(--paper)}
+@media(max-width:1199.98px){
+  .float-win .fw-hd .pf-ti,#p3.modal-mode .fw-hd .pf-ti{font-size:16px;min-height:40px}}
+/* Multi's own tab bar — the same chips as #tab-bar, one line, scrolls sideways. */
+.fw-tabs{display:flex;align-items:stretch;gap:3px;flex-shrink:0;padding:5px 6px 0;
+  border-bottom:1px solid var(--border2);background:var(--paper2,var(--paper))}
+@media(max-width:1199.98px){.fw-tabs{padding:6px 8px 0}}
+.fw-tabs .tab-add-btn{flex-shrink:0;white-space:nowrap}
+/* The one Details line: never wraps, chips shrink with an ellipsis, ▾ Details
+   stays pinned at the right end. What shows is decided by width, in CSS. */
+.pop-meta-strip:not(.pop-details-open){padding:4px 0}
+.float-win .pop-meta-strip:not(.pop-details-open){padding:4px 14px}
+.pop-details-line{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0;overflow:hidden}
+.pop-details-line>*{flex:0 0 auto;margin:0}
+.pop-details-line .pdl-type{flex:0 1 auto;min-width:0;max-width:36%;overflow:hidden}
+.pop-details-line .ftag{flex:0 1 auto;min-width:0;max-width:32%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pop-details-line .pdl-ver{flex:0 1 auto;min-width:0;max-width:38%;overflow:hidden;text-overflow:ellipsis}
+.pop-details-line .pdl-date,.pop-details-line .pdl-attach,.pop-details-line .pdl-arch{display:inline-flex;align-items:center}
+.pop-details-line .pdl-date .dl-flip{margin:0;font-size:11px;color:var(--t3);background:none;border:none;padding:2px 4px;cursor:pointer}
+.pop-details-btn{margin-left:auto;flex-shrink:0;white-space:nowrap}
+@media(max-width:1199.98px){
+  .pop-details-line .pdl-date{display:none}
+  .pop-details-line .nti-chip{min-height:32px}
+  .pop-details-line .ver-pill{min-height:36px}}
+@media(max-width:639.98px){
+  .pop-details-line .pdl-tags,.pop-details-line .pdl-attach,.pop-details-line .pdl-arch{display:none}}
 /* v03.NotePane.G5 — "Close all" chip, shown only once a 2nd window is open */
 #fw-closeall{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
   background:var(--paper);color:var(--t1);border:1px solid var(--border2);
@@ -3078,7 +3115,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.73</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.74</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3953,17 +3990,21 @@ function _dlFlipDate(ev){
     if(t)b.textContent=t;
   });
 }
+/* v04.74 — the Created/Updated button on its own, so the pop-ups' one-line
+   Details row shows the very same control the date line carries. */
+function _dateFlipHTML(a){
+  if(!a||!(a.createdAt||a.updatedAt))return '';
+  const crt='Created '+fmtDs(a.createdAt||a.updatedAt);
+  const upd=a.updatedAt?'Updated '+fmtDs(a.updatedAt):'';
+  const show=(ST.dlShowUpd&&upd)?upd:crt;
+  return `<button class="dl-flip" data-crt="${esc(crt)}"${upd?` data-upd="${esc(upd)}"`:''}`
+    +` onmousedown="event.preventDefault()" onclick="_dlFlipDate(event)"`
+    +` title="Tap to switch between the created and the last-updated date">${esc(show)}</button>`;
+}
 function _dateLineHTML(a){
   if(!a)return '';
   const parts=[];
-  if(a.createdAt||a.updatedAt){
-    const crt='Created '+fmtDs(a.createdAt||a.updatedAt);
-    const upd=a.updatedAt?'Updated '+fmtDs(a.updatedAt):'';
-    const show=(ST.dlShowUpd&&upd)?upd:crt;
-    parts.push(`<button class="dl-flip" data-crt="${esc(crt)}"${upd?` data-upd="${esc(upd)}"`:''}`
-      +` onmousedown="event.preventDefault()" onclick="_dlFlipDate(event)"`
-      +` title="Tap to switch between the created and the last-updated date">${esc(show)}</button>`);
-  }
+  if(a.createdAt||a.updatedAt)parts.push(_dateFlipHTML(a));
   if(isJournalNote(a)){
     if(parts.length)parts.push(`<span class="dl-div">|</span>`);
     parts.push(`<span>📓 Entry date: <input type="date" class="jrn-entry-date-inp" value="${jrnEntryDate(a)}" onclick="event.stopPropagation()" onchange="setJrnEntryDate('${a.id}',this.value)"></span>`);
@@ -3995,11 +4036,16 @@ function _p3MetaRowHTML(a,withCol){
    own read view and (v04.55) the pop-up metadata strip, so Single and Multi
    show identically-built chips rather than two markup strings that could
    drift apart (Multi's _fwMetaHTML used to build its own copy). */
-function _folderChipsHTML(a){
+function _folderChipsHTML(a,lastOnly){
   if(!a)return '';
-  return (a.folderIds||[]).map(x=>{
+  /* v04.74 — `lastOnly` is the pop-ups' one-line Details row: the LAST
+     folder's own name, the full path in the tooltip. */
+  const ids=lastOnly?(a.folderIds||[]).slice(-1):(a.folderIds||[]);
+  return ids.map(x=>{
     const p=pathOf(x);
-    return p.length?`<span class="ftag ftag-nav" onclick="selFolder('${x}')" title="Go to this folder">${esc(p.map(f=>f.name).join(' › '))}</span>`:'';
+    if(!p.length)return '';
+    const full=esc(p.map(f=>f.name).join(' › '));
+    return `<span class="ftag ftag-nav" onclick="selFolder('${x}')" title="${lastOnly?full+' — go to this folder':'Go to this folder'}">${lastOnly?esc(p[p.length-1].name):full}</span>`;
   }).join('');
 }
 /* ══ v04.55 — ONE METADATA STRIP FOR BOTH POP-UPS (round (c1) of "make the
@@ -4012,13 +4058,67 @@ function _folderChipsHTML(a){
    it). Each row is tagged `data-ps` so a check can read the visible order
    back and compare it between the two pop-ups (20a). Not used by normal
    Pane 3 at all — its own read/edit layouts are unchanged this round. */
+/* ══ v04.74 — ONE DETAILS LINE (issue #107) ═══════════════════════════════
+   The four rows above are the OPEN state. Closed (the default) the strip is
+   one line built from the same pieces — kindBarHTML's chips/Attach/📦
+   (_kindChipsHTML/_attachBtnHTML/_archBtnHTML), _folderChipsHTML, the
+   version list, the tag box and _dateFlipHTML — plus a ▾ Details button.
+   Which of them show is CSS by width (date drops under 1200px; tags, Attach
+   and 📦 under 640px), so a rotation needs no rebuild. The choice is one
+   localStorage key shared by both pop-ups — NOT DB.theme, which syncs. */
+const POP_DETAILS_KEY='siyagah-pop-details';
+function _popDetailsIsOpen(){
+  try{return localStorage.getItem(POP_DETAILS_KEY)==='1';}catch(e){return false;}
+}
+function _popDetailsLineHTML(a,host){
+  const hostArg=host?`'${host}'`:'null';
+  const go=w=>`_popDetailsSet(true,'${w}',${hostArg})`;
+  const chips=_kindChipsHTML(a);
+  let h='<div class="pop-details-line" data-ps="details-line">';
+  h+=chips?`<div class="nti-chips pdl-type" data-ps="type">${chips}</div>`
+    :`<button class="nti-picker-btn pdl-type" data-ps="type" onclick="openNtiPicker('${a.id}',this)" title="Note Type — tap to set">Type: not set</button>`;
+  h+=_folderChipsHTML(a,true);
+  const sibs=_versionSiblings(a);
+  const vi=sibs.findIndex(v=>v.id===a.id);
+  h+=sibs.length&&vi>-1
+    ?`<button class="ver-pill on pdl-ver" data-ps="versions" onclick="${go('ver')}" title="Version ${vi+1} of ${sibs.length} — tap to see them all">${esc(a.versionIcon||'📝')} ${esc(a.versionLabel||'Version')} · ${vi+1}/${sibs.length}</button>`
+    :`<button class="ver-pill ver-add pdl-ver" data-ps="versions" onclick="${go('ver')}" title="Versions — tap to see or start them">🔀</button>`;
+  const nt=_tagsGet(host).length;
+  h+=`<button class="nti-picker-btn pdl-tags" data-ps="tags" onclick="${go('tags')}" title="Tags — tap to add or remove">🏷 ${nt||'Tags'}</button>`;
+  const dt=_dateFlipHTML(a);
+  if(dt)h+=`<span class="pdl-date" data-ps="date">${dt}</span>`;
+  h+=`<span class="pdl-attach">${_attachBtnHTML(a)}</span><span class="pdl-arch">${_archBtnHTML(a)}</span>`;
+  h+=`<button class="nti-picker-btn pop-details-btn" onclick="${go('')}" title="Show everything: tags, folders, versions, date">▾ Details</button>`;
+  return h+'</div>';
+}
+/* Flip the shared choice, repaint every open pop-up's strip in place (the
+   title and editor are never touched), then re-seat the side panels, whose
+   top edge is measured from the header stack. */
+function _popDetailsSet(open,focusWhat,host){
+  try{localStorage.setItem(POP_DETAILS_KEY,open?'1':'0');}catch(e){}
+  const p3h=document.getElementById('p3h');
+  const old=ST.noteModal&&p3h&&p3h.querySelector('.pop-meta-strip');
+  const cur=old&&DB.articles.find(x=>x.id===ST.article);
+  if(old&&cur){old.outerHTML=_popMetaStripHTML(cur,null);renderTagEditor();}
+  document.querySelectorAll('.float-win').forEach(w=>{try{_fwRefreshMeta(w.id.slice(3));}catch(e){}});
+  _popPanelsRelayout();
+  if(open&&focusWhat){
+    const root=host?document.getElementById('fw-'+host):document.getElementById('p3h');
+    const t=focusWhat==='tags'?root?.querySelector('.tag-editor .tag-inp'):root?.querySelector('.ver-strip');
+    try{if(focusWhat==='tags')t?.focus({preventScroll:true});else t?.scrollIntoView({block:'nearest'});}catch(e){}
+  }
+}
 function _popMetaStripHTML(a,host){
   if(!a)return '';
-  let h='<div class="pop-meta-strip">';
+  const _open=_popDetailsIsOpen();
+  let h='<div class="pop-meta-strip'+(_open?' pop-details-open':'')+'">';
+  if(!_open)return h+_popDetailsLineHTML(a,host)+'</div>';
   /* v04.55 review fix — four rows, each a .pop-row flex row: Type · chip ·
      Attach · 📦 on one, the tag box on the next, folders and versions
-     sharing a third (both are short), the date last. Order unchanged. */
-  h+='<div class="pop-row pop-kind-row">'+kindBarHTML(a,true,true,!!host)+'</div>';
+     sharing a third (both are short), the date last. Order unchanged.
+     v04.74 — the first row ends with ▴ Details, which closes the strip. */
+  h+='<div class="pop-row pop-kind-row">'+kindBarHTML(a,true,true,!!host)
+    +`<button class="nti-picker-btn pop-details-btn" onclick="_popDetailsSet(false,null,${host?`'${host}'`:'null'})" title="Back to the one-line summary">▴ Details</button></div>`;
   h+=`<div class="pop-row"><div class="tag-editor" data-ps="tags" data-tag-host="${host||''}" onclick="this.querySelector('.tag-inp')?.focus()"></div></div>`;
   const fols=_folderChipsHTML(a);
   h+='<div class="pop-row pop-fv-row">'
@@ -4667,8 +4767,10 @@ function renderP3H(){
          curA) now, ONE row at every size instead of the phone/tablet
          nav-edit-row vs desktop unified-tb split this branch used to make —
          see that function for the shared order/fold both pop-ups now use. */
-      let hm=`<div class="p3h-title-bar p3c-titlebar" data-ps="title"><input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span></div>`;
-      hm+=_popMetaStripHTML(curA,null);
+      /* v04.74 — the title is NOT drawn here any more: the editable #ti now
+         lives in the window bar (_popFrameHTML, panel mode, while editing),
+         so the note's title shows once. */
+      let hm=_popMetaStripHTML(curA,null);
       hm+=_popFormatRowHTML(null,curA);
       el.innerHTML=hm;
       if(_tiFoc){const _tin=document.getElementById('ti');if(_tin){_tin.focus({preventScroll:true});try{_tin.setSelectionRange(_selS,_selE);}catch(e){}}}
@@ -4883,7 +4985,7 @@ function renderP3C(){
     /* v04.08 — the NTI bar is rendered inside the Pane-3 toolbar now, at every
        size (see renderP3H), so it is no longer a row of its own here. */
     el.scrollTop=0;el.innerHTML=`<div class="avw"><div class="av">
-      <div class="p3h-title-bar p3c-titlebar p3c-vt"><div class="tbt" title="Right-click to edit" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">${esc(curA.title)||'<em style="color:var(--t3)">Untitled</em>'}</div></div>
+      ${ST.noteModal?'':`<div class="p3h-title-bar p3c-titlebar p3c-vt"><div class="tbt" title="Right-click to edit" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">${esc(curA.title)||'<em style="color:var(--t3)">Untitled</em>'}</div></div>`}
       ${_p3MetaRowHTML(curA)}
       ${reminderStripHTML(curA)}
       <div class="av-tags">${tags}</div>
@@ -6575,6 +6677,8 @@ function _tabOwner(){
 }
 /* Note a NEW tab attaches to: the active group, else the note open in pane 3. */
 function _tabHost(){
+  /* v04.74 — a Multi window's ＋ Add Tab aims the picker at ITS note's group. */
+  if(_tabPickHost&&document.getElementById('tab-picker')?.classList.contains('open')&&DB.articles.some(a=>a.id===_tabPickHost))return _tabPickHost;
   const o=_tabOwner();
   if(o)return o;
   return (ST.article&&ST.article!=='cal'&&DB.articles.some(a=>a.id===ST.article))?ST.article:null;
@@ -6658,7 +6762,12 @@ function renderTabBar(){
      ＋ Add Tab and every open tab are rows in the `+` menu while editing and in
      the 🏷 palette while reading, both built by _ebGoToHTML(). A tablet and a
      laptop keep the bar exactly as it was. */
-  const _lean=_p3OneBar();
+  /* v04.74 — inside the Single pop-up the bar is ALWAYS shown, at every
+     size, tabs or none (so ＋ Add Tab is reachable). Only the phone's MAIN
+     view keeps it hidden. On the phone sheet the 📅 Cal button stays off
+     (the calendar is not a pop-up thing), ＋ Add Tab stays on. */
+  const _lean=_p3OneBar()&&!ST.noteModal;
+  const _noCal=_lean||(ST.noteModal&&_p3OneBar());
   bar.style.display=_lean?'none':'flex';
   /* v03.NotePane.P7 — this assignment runs unconditionally, AHEAD of the
      signature guard below, so it used to strip .modal-handle on every single
@@ -6683,7 +6792,7 @@ function renderTabBar(){
       +'</div>';
   };
   const html=
-    (_lean?'':'<div class="tab-it'+(ST.article==="cal"?' on':'')+' tab-cal" onclick="_calOpen()" title="Calendar">📅 Cal</div>')
+    (_noCal?'':'<div class="tab-it'+(ST.article==="cal"?' on':'')+' tab-cal" onclick="_calOpen()" title="Calendar">📅 Cal</div>')
     +'<button class="tab-nav" id="tab-nav-l" onclick="event.stopPropagation();_tabScroll(-1)" title="Scroll tabs left">‹</button>'
     +'<div class="tab-strip" id="tab-strip" onscroll="_tabNavSync()">'
       +(ownArt?chip(ownArt,true):'')
@@ -6699,6 +6808,11 @@ function renderTabBar(){
      which also stops the scroll strip snapping back to 0 on every re-render. */
   if(bar._sig!==html){ bar._sig=html; bar.innerHTML=html; if(_mh)_tabSplitVizAdd(bar); }
   if(tabs.length)_tabNavQueue();
+  /* v04.74 — every Multi window's own bar follows the same DB.tabs data; and
+     a bar that just appeared/vanished moves the header stack the side panels
+     hang from. */
+  try{_fwRefreshTabsAll();}catch(e){}
+  if(ST.noteModal){try{_popPanelsRelayout();}catch(e){}}
 }
 /* v03.NotePane.P7 — the ↕ / ✥ half-and-half hint. Lives as a DOM child of
    #tab-bar, so any innerHTML rewrite above destroys it; both the panel opener
@@ -6778,6 +6892,10 @@ function tabSelect(aid){
   ST.article=aid;ST.editing=false;
   if(window.innerWidth<1200)showPane('p3');
   renderP3H();renderP3C();renderTabBar();renderP2C();
+  /* v04.74 — the Single pop-up is never in read mode (v04.54), and its tab
+     bar is always drawn now, so a tab tap stays in the editor like ‹ › and
+     the version pills do. */
+  if(ST.noteModal)startEdit();
 }
 function toggleTab(aid){
   const host=_tabHost();
@@ -7159,7 +7277,7 @@ function _openNotePicker(btn,mode,title){
     document.addEventListener('touchstart',_outside,{capture:true});
   },60);
 }
-function openTabPicker(btn){_openNotePicker(btn,'tab','Add note to Tab bar');}
+function openTabPicker(btn,host){_tabPickHost=host||null;_openNotePicker(btn,'tab','Add note to Tab bar');}
 /* v04.59 — round (d1): the Sidepane's own picker, reusing this same search
    rather than a second one — see the note above. */
 function openPinPicker(btn){_openNotePicker(btn,'pin','Pin a note to the Sidepane');}
@@ -7219,6 +7337,7 @@ function addToTabPicker(aid){
     m[host].push(aid);_tabStampAdd(host,aid);ST.tabOwner=host;
     persist();
     renderTabBar();
+    try{_fwRefreshTabsAll();}catch(e){}
     setTimeout(()=>_tabScrollIntoView(aid,true),0);
     toast('📑 Added to Tab bar');
   } else {
@@ -11095,6 +11214,18 @@ function _fwFlashSaved(aid){
    phone tier for both modes, matching what #p3-sheet-hd used to say only
    for Single. Every control carries a title and a stable data-pf so a check
    can compare the two frames control-for-control. */
+/* v04.74 — the note's title, shown ONCE, in the window bar. An editor (Multi
+   always; Single while editing) gets the editable input right here — Single's
+   keeps id="ti" and the ST.etitle/autosave wiring, Multi's keeps
+   id="fw-ti-<aid>" — and Single's read view gets plain text that still
+   right-click-edits. `title` is the already-escaped display title. */
+function _popTitleHTML(aid,mode,a,title){
+  if(mode==='float')
+    return '<input class="fw-ti pf-ti" id="fw-ti-'+aid+'" data-pf="title" data-ps="title" value="'+esc((a&&a.title)||'')+'" placeholder="Title…" title="Title">';
+  if(ST.editing&&ST.noteModal&&ST.article===aid)
+    return '<input class="pf-ti" id="ti" data-pf="title" data-ps="title" value="'+esc(ST.etitle!=null?ST.etitle:((a&&a.title)||''))+'" placeholder="Article title…" title="Title" oninput="ST.etitle=this.value;_tiScheduleAutoSave()">';
+  return '<span class="fw-title-disp" data-pf="title" data-ps="title" title="Right-click to edit — '+title+'" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">'+title+'</span>';
+}
 function _popFrameHTML(aid,mode,elId){
   const a=DB.articles.find(x=>x.id===aid);
   const title=esc((a&&a.title)||'Untitled');
@@ -11111,7 +11242,7 @@ function _popFrameHTML(aid,mode,elId){
     +'<span class="pf-ico '+k.cls+'" data-pf="ico" title="'+esc(k.name)+'">'+_popIcoHTML(mode)+'</span>'
     +'<button class="fw-nav" data-pf="prev" onclick="_popNav(\''+idAttr+'\',-1,\''+mode+'\')" title="Previous note in this folder">‹</button>'
     +'<button class="fw-nav" data-pf="next" onclick="_popNav(\''+idAttr+'\',1,\''+mode+'\')" title="Next note in this folder">›</button>'
-    +'<span class="fw-title-disp" data-pf="title" title="'+title+'">'+title+'</span>'
+    +_popTitleHTML(aid,mode,a,title)
     +'<span class="save-flash" data-pf="saved" id="'+savedId+'">✓ Saved</span>'
     +'<button class="pf-switch '+ok.cls+'" data-pf="switch" onclick="openNotePopup(\''+idAttr+'\',\''+otherMode+'\')" title="Switch to '+esc(ok.name)+'">'
     +_popIcoHTML(otherMode)+switchLbl+'</button>'
@@ -11156,8 +11287,14 @@ function _popFrameSync(){
   let hd=document.getElementById('p3-frame-modal');
   if(!p3||!ST.noteModal||!ST.article||ST.article==='cal'){ if(hd)hd.remove(); return; }
   const html=_popFrameHTML(ST.article,'panel','p3-frame-modal');
+  /* v04.74 — the frame holds the editable title now and is rebuilt on every
+     renderP3H(), so a focused #ti (and its caret) has to be carried across
+     or the keyboard drops on a touch screen mid-word. */
+  const _af=document.activeElement,_tiFocus=!!(_af&&_af.id==='ti'&&hd&&hd.contains(_af));
+  let _s=0,_e=0;if(_tiFocus){try{_s=_af.selectionStart;_e=_af.selectionEnd;}catch(e){}}
   if(hd)hd.outerHTML=html; else p3.insertAdjacentHTML('afterbegin',html);
   _wireModalFrameDrag(document.getElementById('p3-frame-modal'));
+  if(_tiFocus){const t=document.getElementById('ti');if(t){t.focus({preventScroll:true});try{t.setSelectionRange(_s,_e);}catch(e){}}}
 }
 /* The frame IS a drag handle on the window tier — reuses the modal's own
    drag mover (_modalDragStart/_modalDragMove/_modalDragEnd) rather than a
@@ -11167,7 +11304,7 @@ function _wireModalFrameDrag(hd){
   if(!hd)return;
   hd.addEventListener('pointerdown',e=>{
     if(_popTier()==='sheet')return;
-    if(e.target.closest('.fw-close'))return;
+    if(e.target.closest('.fw-close,.pf-ti'))return;   /* v04.74 — the title input is a text box, not a handle */
     _modalDragStart(e);
   });
 }
@@ -11241,6 +11378,58 @@ function _popFormatRowHTML(host,curA){
     +'<button class="et et-save" data-tb="save" onmousedown="event.preventDefault()" onclick="'+saveOn+'" title="Save this note">💾 Save</button>'
     +'</div>';
 }
+/* ══ v04.74 — A TAB BAR FOR A MULTI WINDOW (issue #107) ═══════════════════
+   The same chips and the same DB.tabs group Single's bar shows, for THIS
+   window's note: the group it owns, else the group it belongs to. Tapping a
+   tab hands the window to that note (_fwHandTo, as ‹ › and the version pills
+   do); ＋ Add Tab opens the shared note picker aimed at this note's group.
+   Shown always, even with no tabs, so ＋ Add Tab is reachable. One line: the
+   strip scrolls sideways (.tab-strip). */
+let _tabPickHost=null;
+function _fwTabsHTML(aid){
+  const m=_tabsMap();
+  const has=id=>DB.articles.some(x=>x.id===id);
+  let owner=null;
+  if(m[aid]&&m[aid].length)owner=aid;
+  else for(const k in m){if(m[k]&&m[k].indexOf(aid)>-1&&has(k)){owner=k;break;}}
+  const ids=owner?[owner].concat((m[owner]||[]).filter(id=>id!==owner&&has(id))):[];
+  const seen=new Set();
+  const chips=ids.filter(id=>!seen.has(id)&&seen.add(id)).map(id=>{
+    const t=DB.articles.find(x=>x.id===id);
+    const lbl=(t.title||'Untitled').slice(0,22)+((t.title||'').length>22?'…':'');
+    const own=id===owner;
+    return `<div class="tab-it${id===aid?' on':''}${own?' tab-own':''}" data-tid="${id}" onclick="_fwTabSelect('${aid}','${id}')" title="${esc(t.title||'Untitled')}${own?' — owns this tab group':''}">`
+      +(own?'<span class="tab-own-dot">◆</span>':'')
+      +`<span class="tab-lbl">${esc(lbl)}</span></div>`;
+  }).join('');
+  return `<div class="fw-tabs" data-ps="tabs"><div class="tab-strip">${chips}</div>`
+    +`<button class="tab-add-btn" onclick="event.stopPropagation();_fwAddTab('${aid}',this)" title="Search & add a note to this note’s Tab bar">＋ Add Tab</button></div>`;
+}
+function _fwTabSelect(aid,tid){
+  if(tid===aid)return;
+  _fwHandTo(aid,tid);
+}
+function _fwAddTab(aid,btn){
+  const m=_tabsMap();
+  let owner=(m[aid]&&m[aid].length)?aid:null;
+  if(!owner)for(const k in m){if(m[k]&&m[k].indexOf(aid)>-1&&DB.articles.some(x=>x.id===k)){owner=k;break;}}
+  openTabPicker(btn,owner||aid);
+}
+/* Repaint every open window's tab bar (only when it actually changed, so a
+   scrolled strip is not snapped back) — called whenever the main bar's data
+   may have changed. */
+function _fwRefreshTabsAll(){
+  document.querySelectorAll('.float-win').forEach(win=>{
+    const aid=win.id.slice(3),old=win.querySelector('.fw-tabs');
+    if(!old||!DB.articles.some(x=>x.id===aid))return;
+    const html=_fwTabsHTML(aid);
+    if(old._sig===html)return;
+    const sl=old.querySelector('.tab-strip')?.scrollLeft||0;
+    old.outerHTML=html;
+    const nw=win.querySelector('.fw-tabs');
+    if(nw){nw._sig=html;const s=nw.querySelector('.tab-strip');if(s)s.scrollLeft=sl;}
+  });
+}
 function _fwRenderBody(aid){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return '';
   /* v04.55 — 🏷 Note Types and the bare 📎 Attach left this row (round (c1)
@@ -11258,9 +11447,11 @@ function _fwRenderBody(aid){
      side panels, so the title/strip/formatting-row above keep the window's
      full width instead of being squeezed by a panel's own width, exactly as
      Single's #p3h always has (padding there lands on #p3c, not #p3h). */
+  /* v04.74 — the title input moved into the frame (_popTitleHTML), and the
+     tab bar for THIS window's note stands between the frame and the body. */
   return _popFrameHTML(aid,'float')
+    +_fwTabsHTML(aid)
     +'<div class="fw-body">'
-    +'<input class="fw-ti" id="fw-ti-'+aid+'" data-ps="title" value="'+esc(a.title||'')+'" placeholder="Title…">'
     +_popMetaStripHTML(a,aid)
     +_popFormatRowHTML(aid,a)
     +'<div class="fw-editarea">'
@@ -11409,7 +11600,7 @@ function _fwWireDragHandle(handle,win,aid){
   }
   function up(){_ptrUp(move,up);if(aid)_fwSavePos(aid);}
   handle.addEventListener('pointerdown',e=>{
-    if(e.target.closest('.fw-close'))return;
+    if(e.target.closest('.fw-close,.pf-ti'))return;   /* v04.74 — the title input is a text box, not a handle */
     sx=e.clientX;sy=e.clientY;
     const r=win.getBoundingClientRect();sl=r.left;st=r.top;
     _ptrDown(move,up);
@@ -11430,7 +11621,17 @@ function _fwFrameResyncAll(){
     const aid=win.id.slice(3);   /* win.id is always 'fw-'+aid, see _fwCreate() */
     const oldHd=win.querySelector('.fw-hd');
     if(!oldHd)return;
+    /* v04.74 — the title input lives in this bar: carry what is typed in it
+       (and the focus) across the rebuild. */
+    const oldTi=oldHd.querySelector('.fw-ti');
+    const tv=oldTi?oldTi.value:null,tf=oldTi&&document.activeElement===oldTi;
     oldHd.outerHTML=_popFrameHTML(aid,'float');
+    const newTi=win.querySelector('.fw-hd .fw-ti');
+    if(newTi){
+      if(tv!=null)newTi.value=tv;
+      newTi.addEventListener('input',()=>_fwScheduleAutoSave(aid));
+      if(tf)newTi.focus({preventScroll:true});
+    }
     _fwWireDragHandle(win.querySelector('.fw-hd'),win,aid);
   });
 }
@@ -12734,11 +12935,28 @@ function _popPanelTop(host,inModal){
     const pf=document.getElementById('p3-frame-modal');   /* the frame sits ABOVE both */
     return (pf?pf.offsetHeight:0)+(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32);
   }
+  /* v04.74 — the title moved INTO .fw-hd and Multi gained a tab bar
+     (.fw-tabs), so the stack is frame + tabs + strip + formatting row. */
   const hd=host.querySelector('.fw-hd');
-  const ti=host.querySelector('.fw-ti');
+  const tabs=host.querySelector('.fw-tabs');
   const strip=host.querySelector('.pop-meta-strip');
   const row=host.querySelector('.fw-tb.pop-fmt-row');
-  return (hd?hd.offsetHeight:34)+(ti?ti.offsetHeight:0)+(strip?strip.offsetHeight:0)+(row?row.offsetHeight:0);
+  return (hd?hd.offsetHeight:34)+(tabs?tabs.offsetHeight:0)+(strip?strip.offsetHeight:0)+(row?row.offsetHeight:0);
+}
+/* v04.74 — re-seat Contents / Sidepane under the header stack after it
+   changed height (Details opened or closed, a tab bar repainted). The two
+   inject functions only measure when they (re)build a panel. */
+function _popPanelsRelayout(){
+  const toc=document.getElementById('toc-panel'),pin=document.getElementById('pin-panel');
+  [toc,pin].forEach(p=>{
+    if(!p||!p.parentElement)return;
+    const host=p.parentElement;
+    let t=_popPanelTop(host,ST.noteModal&&host.id==='p3');
+    if(p===pin&&toc&&toc.parentElement===host){
+      try{if(_popPanelSides().pos==='below')t+=toc.offsetHeight;}catch(e){}
+    }
+    p.style.top=t+'px';
+  });
 }
 function _pinPanelInject(){
   /* v04.34 — see _tocInject. Pinned Tabs is a panel you keep BESIDE the note;
@@ -22513,21 +22731,35 @@ function renameNoteKind(kid){
    current note, so the old `ST.editing&&ST.article===a.id` test was always
    false there. Single stays on that test unchanged: openNoteAsModal() calls
    startEdit() before the modal ever opens, so it is already true. */
+/* v04.74 — the three pieces the pop-ups' one-line Details row reuses. */
+function _kindChipsHTML(a){
+  const curKinds=new Set(artKinds(a));
+  return noteKinds().filter(k=>curKinds.has(k.id)).map(k=>{
+    const sty=`background:${k.color};border-color:${k.color};color:#fff`;
+    return `<button class="nti-chip on" style="${sty}" onclick="_ntiChipTap('${a.id}',this)" title="Note Type: ${esc(k.name)} — tap to change">${esc(k.name)}</button>`;
+  }).join('');
+}
+function _attachBtnHTML(a){
+  return `<button class="nti-picker-btn nti-attach-btn" data-ps="attach" onclick="openAttachMenu(event,'${a.id}')" title="Note Type · Folder · My Journal · MyDatabase">📎 Attach${_attachCount(a)?' ('+_attachCount(a)+')':''} ▾</button>`;
+}
+function _archBtnHTML(a){
+  return a.archived
+    ?`<button class="kind-arch-btn archived" data-ps="archive" onclick="toggleArchive('${a.id}')" title="Unarchive">📤</button>`
+    :`<button class="kind-arch-btn" data-ps="archive" onclick="toggleArchive('${a.id}')" title="Archive">📦</button>`;
+}
 function kindBarHTML(a,bare,noSave,forceEdit){
   const isEditingThis=forceEdit||(ST.editing&&ST.article===a.id);
   const curKinds=new Set(artKinds(a));
   const activeKinds=noteKinds().filter(k=>curKinds.has(k.id));
-  const chips=activeKinds.map(k=>{
-    const sty=`background:${k.color};border-color:${k.color};color:#fff`;
-    /* v04.13 — the chip is a BADGE now, not a delete button. It used to call
-       toggleNoteKind(), so one tap on what reads as a label silently stripped
-       the note's type — a trap that only got worse once 🏷 Note Type moved to
-       its proper home under 📎 Attach in v04.11. Tapping it opens the type
-       picker instead, which is where a type is added or removed deliberately.
-       Nothing became unreachable: the picker, 📎 Attach → Note Type and the
-       right-click menu's NTI Types submenu all still toggle a type off. */
-    return `<button class="nti-chip on" style="${sty}" onclick="_ntiChipTap('${a.id}',this)" title="Note Type: ${esc(k.name)} — tap to change">${esc(k.name)}</button>`;
-  }).join('');
+  /* v04.13 — the chip is a BADGE now, not a delete button. It used to call
+     toggleNoteKind(), so one tap on what reads as a label silently stripped
+     the note's type — a trap that only got worse once 🏷 Note Type moved to
+     its proper home under 📎 Attach in v04.11. Tapping it opens the type
+     picker instead, which is where a type is added or removed deliberately.
+     Nothing became unreachable: the picker, 📎 Attach → Note Type and the
+     right-click menu's NTI Types submenu all still toggle a type off.
+     (v04.74: the chip markup itself is _kindChipsHTML().) */
+  const chips=_kindChipsHTML(a);
   const hasNag=activeKinds.some(k=>k.nag);
   let statusHTML='';
   if(hasNag&&!a.finalised){
@@ -22542,11 +22774,7 @@ function kindBarHTML(a,bare,noSave,forceEdit){
      and Delete, which is where the owner asked for all three, and where the
      right-click menu already carried them. Edit mode keeps its own button
      because that toolbar has no ⋯ to reach it from. */
-  const archIcon=isEditingThis
-    ? (a.archived
-      ?`<button class="kind-arch-btn archived" data-ps="archive" onclick="toggleArchive('${a.id}')" title="Unarchive">📤</button>`
-      :`<button class="kind-arch-btn" data-ps="archive" onclick="toggleArchive('${a.id}')" title="Archive">📦</button>`)
-    : '';
+  const archIcon=isEditingThis?_archBtnHTML(a):'';
   /* v04.11 — 🏷 Types left the bar too, and is the first row of the 📎 Attach
      menu now: everything that says where a note belongs and what it is, under
      one button, with 📎 Attach itself permanently on the bar. */
@@ -22559,7 +22787,7 @@ function kindBarHTML(a,bare,noSave,forceEdit){
      reads as after the label: "Type · not set". */
   const inner=`<span class="nti-lbl" data-ps="type" title="Note Type — what kind of note this is">Type</span>`
     +`<div class="nti-chips">${chips||'<span class="nti-no-type">not set</span>'}</div>`
-    +`<button class="nti-picker-btn nti-attach-btn" data-ps="attach" onclick="openAttachMenu(event,'${a.id}')" title="Note Type · Folder · My Journal · MyDatabase">📎 Attach${_attachCount(a)?' ('+_attachCount(a)+')':''} ▾</button>`
+    +_attachBtnHTML(a)
     +((isEditingThis&&!noSave)?`<button class="nti-picker-btn nti-editbtn nti-save" onclick="saveArt()" title="Save note">💾 Save</button>`:'')
     +`<div class="kind-act">${statusHTML}${archIcon}</div>`;
   return bare?inner:`<div class="kind-bar">${inner}</div>`;

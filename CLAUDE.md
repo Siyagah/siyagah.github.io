@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.73.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.74.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,40 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.74** (28 Sep 2026) — pop-up header: one title, a tab bar in both,
+  one Details line. Owner's laptop screenshot of Single in edit mode: the
+  title showed twice and seven rows stood above the note. In BOTH pop-ups,
+  top to bottom, four rows:
+  - **Window bar** holds the one title. Editing: it is the input (Single's
+    keeps `id="ti"`, Multi's `#fw-ti-<aid>`), built by `_popTitleHTML()`
+    inside `_popFrameHTML()`. Reading (Single): plain text, right-click
+    edits. The separate title row is gone.
+  - **Tab bar**, always drawn in both pop-ups at every size, even with no
+    tabs. Single uses `#tab-bar` (now shown on the phone sheet too, only
+    the phone's MAIN view still hides it); Multi has `.fw-tabs`
+    (`_fwTabsHTML()`) for its own note's group. A tab tap hands the window
+    to that note; ＋ Add Tab aims the shared picker at that note's group
+    (`_tabPickHost`).
+  - **One Details line** (`_popDetailsLineHTML()`): Type chip · last
+    folder name · version · 🏷 Tags · date · 📎 Attach · 📦 · ▾ Details.
+    CSS drops the date under 1200px, and tags/Attach/📦 under 640px.
+    ▾ Details swaps in the full four-row strip, ▴ closes it. Closed by
+    default, remembered per device in `localStorage`
+    (`siyagah-pop-details`, never `DB.theme`). The chips reuse
+    `_kindChipsHTML/_attachBtnHTML/_archBtnHTML/_dateFlipHTML/
+    _folderChipsHTML(a,true)`. The version and 🏷 chips open Details.
+  - **Formatting row + Save**, unchanged. `_popPanelTop()` now counts the
+    tab bar, and `_popPanelsRelayout()` re-seats Contents/Sidepane when
+    Details flips or the tab bar changes.
+  - Section 20 was updated in place: it describes the OPEN strip, so it
+    runs with Details open; 20i/20j no longer measure from a title row.
+  - New section 37 (37a–37f, 390/820/1440, Single and Multi, real taps).
+    Measured, above-the-note height closed vs open: 1440 146/238 (Single)
+    and 135/227 (Multi); 390 200/306 and 190/296.
+  - Builder ran `--only 37,31,23,20`: **245/245**. The review's full run
+    found `21d`, `22e` and the 1440 title-drag check still written for the
+    old header; all three were updated in place. Unpatched v04.73 fails
+    `--only 37` at 27/101. Full `app-check` **1129/1129, twice in a row**.
 - **v04.73** (28 Sep 2026) — sync checked end to end on three devices at
   once. Owner: "CHECK the SYNC again across all platforms". New
   `tools/sync-e2e.mjs` runs a phone (390, touch), a tablet (820, touch) and a
@@ -68,23 +102,6 @@ must never accumulate here instead of there.
   (`34a` at 390/820: real taps on 📚 Folders → ⋯ → Rename; the menu is
   topmost and on screen; the rename box opens). Unpatched v04.69:
   `--only 34` 0/4. Full `app-check` **898/898, twice in a row**.
-- **v04.69** (25 Sep 2026) — no backup balloon; Recent and MyWall on the
-  sidebar's bottom row. Owner's requests, with two phone screenshots.
-  - **The balloon:** `_bkMaybeAuto()` showed "No backup yet" (or "Last backup
-    was N days ago") 6s after every launch. A phone can't set up automatic
-    backups at all, so it showed on every phone launch and covered the
-    bottom row. The reminder is gone; the status stays in ⚙ → Automatic
-    Backups, and the real-failure "Backups paused" notice is kept.
-  - **The bottom row** (`#sb-toolbar`) is New Note · Recent · MyWall ·
-    Folders, calling `selFolder('sf-recent')` / `selFolder('sf-mywall')`,
-    which already slides the note list in under 1200px. Each button is an
-    icon above its word, in a grid (`minmax(78px,1fr)`): one row on a
-    phone's full-width sidebar and on a tablet, 2×2 in a narrow laptop
-    sidebar.
-  - New section 33 (`33a` at 390/820/1440: order, size, on screen, not
-    clipped, one row under 1200, real taps open each list; `33b`: no balloon
-    after 7.5s, never backed up and 30 days old). `6i`'s "two buttons" check
-    was updated in place to four. Full `app-check` **892/892, twice in a row**.
 ---
 
 ## What this is
