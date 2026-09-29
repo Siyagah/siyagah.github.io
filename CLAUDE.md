@@ -46,8 +46,10 @@ must never accumulate here instead of there.
   - New section 37 (37a–37f, 390/820/1440, Single and Multi, real taps).
     Measured, above-the-note height closed vs open: 1440 146/238 (Single)
     and 135/227 (Multi); 390 200/306 and 190/296.
-  - Builder ran `--only 37,31,23,20`: **245/245**. No full run and no
-    unpatched run (the Architect does both).
+  - Builder ran `--only 37,31,23,20`: **245/245**. The review's full run
+    found `21d`, `22e` and the 1440 title-drag check still written for the
+    old header; all three were updated in place. Unpatched v04.73 fails
+    `--only 37` at 27/101. Full `app-check` **@@FULL@@**.
 - **v04.73** (28 Sep 2026) — sync checked end to end on three devices at
   once. Owner: "CHECK the SYNC again across all platforms". New
   `tools/sync-e2e.mjs` runs a phone (390, touch), a tablet (820, touch) and a

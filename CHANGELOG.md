@@ -7163,3 +7163,27 @@ made (the Architect does it in review).
 what the strip's items do (unchanged); the note body. In Multi, the tab chips
 have no ✕ / 📌 (Single's bar keeps them); closing or pinning a tab is done in
 the main bar.
+
+**Architect's review** (on the builder's branch, after merging `main`'s
+v04.73 and renumbering this round to v04.74):
+- **The full suite found three failures that the builder's `--only` run
+  could not.** All three were older checks written for the old header, and
+  each was updated in place, with the reason recorded at the check:
+  - `21d` (tag, then ✕, in Single) and `22e` (version switch in Single)
+    clicked straight into the strip, which is now behind ▾ Details. They
+    click the real ▾ Details first.
+  - The 1440 "drag the frame's title moves Single" check: in edit mode the
+    title IS the text box now. A press there places the caret, as Multi's
+    always has, so it drags by the ⠿ grip. The 390 "does not move" check is
+    unchanged.
+- **The Details line's date** was drawn at the button default (~13px),
+  larger than everything around it. It is now 11px `--t3`, the line's own
+  size.
+- **Screenshots** at 390/820/1440, Single and Multi, no tabs: one title, the
+  tab bar with ＋ Add Tab, one Details line and the formatting row. The
+  tinted halves of Single's empty tab bar are the existing ↕ resize / ✥
+  move handle (v03.NotePane.P7). Tabs used to hide it, and it now shows
+  whenever the bar is empty. It is kept as it is.
+- **Unpatched** (v04.73's app with this round's checks), `--only 37`:
+  **27/101, 74 FAILED**.
+- Full `app-check`: **@@FULL@@**.
