@@ -49,7 +49,7 @@ must never accumulate here instead of there.
   - Builder ran `--only 37,31,23,20`: **245/245**. The review's full run
     found `21d`, `22e` and the 1440 title-drag check still written for the
     old header; all three were updated in place. Unpatched v04.73 fails
-    `--only 37` at 27/101. Full `app-check` **@@FULL@@**.
+    `--only 37` at 27/101. Full `app-check` **1129/1129, twice in a row**.
 - **v04.73** (28 Sep 2026) — sync checked end to end on three devices at
   once. Owner: "CHECK the SYNC again across all platforms". New
   `tools/sync-e2e.mjs` runs a phone (390, touch), a tablet (820, touch) and a

@@ -7186,4 +7186,4 @@ v04.73 and renumbering this round to v04.74):
   whenever the bar is empty. It is kept as it is.
 - **Unpatched** (v04.73's app with this round's checks), `--only 37`:
   **27/101, 74 FAILED**.
-- Full `app-check`: **@@FULL@@**.
+- Full `app-check`: **1129/1129, twice in a row**.
