@@ -5804,7 +5804,12 @@ await r.block('19g-single-drags-by-frame', async () => {
     const before = await s.page.evaluate(() => {
       const b = document.getElementById('p3').getBoundingClientRect(); return { left: b.left, top: b.top };
     });
-    const box = await s.page.locator('#p3-frame-modal [data-pf="title"]').boundingBox();
+    /* v04.74 — updated in place: Single opens editing, and the title in the
+       frame is now the title's text box (one title, owner-approved), so a
+       press on it places the caret instead of grabbing the window, as
+       Multi's always has. The frame still drags from its ⠿ grip and every
+       non-input part; this drags by the grip. */
+    const box = await s.page.locator('#p3-frame-modal [data-pf="grip"]').boundingBox();
     if (box) {
       const sx = box.x + box.width / 2, sy = box.y + box.height / 2;
       await s.page.mouse.move(sx, sy);
@@ -5819,7 +5824,7 @@ await r.block('19g-single-drags-by-frame', async () => {
     await s.close();
     const dx = after.left - before.left, dy = after.top - before.top;
     r.check(!!box && Math.abs(dx - 60) <= 4 && Math.abs(dy - 40) <= 4,
-      'at 1440, a mouse drag on the frame’s title moves the Single panel by the drag distance',
+      'at 1440, a mouse drag on the frame’s ⠿ grip moves the Single panel by the drag distance',
       JSON.stringify({ before, after, dx, dy }));
   }
   {
@@ -6343,6 +6348,11 @@ await r.block('21d-single-closes-with-tags', async () => {
   await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
     window.render(); openNotePopup('a1', 'panel'); });
   await s.page.waitForTimeout(400);
+  /* v04.74 — updated in place: the strip's tag box / version pills live
+     behind ▾ Details now (closed by default, the owner's choice), so the
+     real ▾ Details button is clicked first, exactly as the owner would. */
+  await s.page.click('#p3 .pop-details-btn');
+  await s.page.waitForTimeout(250);
   await s.page.click('#p3 .pop-meta-strip .tag-editor .tag-inp');
   await s.page.keyboard.type('singleclosetag');
   await s.page.keyboard.press('Enter');
@@ -6690,6 +6700,11 @@ await r.block('22e-single-stays-editing-on-version-switch', async () => {
   await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
     window.render(); openNotePopup('a1', 'panel'); });
   await s.page.waitForTimeout(400);
+  /* v04.74 — updated in place: the strip's tag box / version pills live
+     behind ▾ Details now (closed by default, the owner's choice), so the
+     real ▾ Details button is clicked first, exactly as the owner would. */
+  await s.page.click('#p3 .pop-details-btn');
+  await s.page.waitForTimeout(250);
   await s.page.click('#p3 .pop-meta-strip .ver-strip .ver-pill:not(.on):not(.ver-add)');
   await s.page.waitForTimeout(400);
   const after = await s.page.evaluate(() => ({
