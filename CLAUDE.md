@@ -28,7 +28,8 @@ must never accumulate here instead of there.
   `F16`, `N26`, `X05`, `Z02` empty the folder in setup first (updated in
   place); new `F19` (refused, nothing changes) and `F20`; 116 operations,
   0 FAIL. `30a`/`30b` updated in place; new section 41 (390/820 dialog ⋯,
-  1440 sidebar right-click).
+  1440 sidebar right-click). Unpatched: `--only 41,30` 16/25, `F19`/`F20`
+  FAIL. Full `app-check` **1277/1277, twice in a row**.
 - **v04.76** (30 Sep 2026) — 📎 Attach → Folder works in READ mode
   (owner's screenshot of the greyed row). Editing this note: still the
   staged `openPicker()`. Otherwise: `showArtFolderPicker(aid)`, which

@@ -7354,6 +7354,7 @@ Recorded as decision **D6** in `CLAUDE.md`. The same day the owner said
 - Unpatched (v04.76's app with these checks): `--only 41,30` **16/25, 9
   FAILED**, and sync-audit `F19`, `F20` both **FAIL**.
 - `ship-check` **13/13**.
+- Full `app-check` **1277/1277, twice in a row**.
 
 **Not done / left:**
 - Deleting a SECTION still moves its folders to the first remaining section
