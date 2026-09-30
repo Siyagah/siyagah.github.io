@@ -7236,3 +7236,54 @@ colours or notes). The sidebar's Note Types list and the right-click
 "NTI Types" submenu are unchanged — the ask was this panel's title bar. The
 journal and MyDatabase pickers share the panel's styling but not these
 buttons.
+
+## v04.76 — 📎 Attach → Folder works in read mode (30 Sep 2026)
+
+**Owner's ask** ("Bismillah! Enable the attachng to the folders in edit mode
+as well"), with a laptop screenshot of the note in READ mode: the Attach
+menu's "📁 Folder (2)" row was greyed and only said "Open this note for
+editing to change its folders". Read as: the Folder row must work without
+first opening the note for editing, as it already does while editing.
+Built by the Architect directly (small round).
+
+**What changed:**
+- `openAttachMenu()` (the desktop/tablet menu) and `_ebAttachHTML()` (the
+  phone's spread-open card, and the edit bar's `+` menu) no longer grey the
+  row. When THIS note is being edited, Folder still opens the staged
+  "Assign to folders" picker (`openPicker()`, `ST.efolders`, saved with the
+  edit). Otherwise it opens `showArtFolderPicker(aid)`: the "📁 Manage
+  folders" picker that writes `a.folderIds` directly. It is the same picker
+  the note's right-click "📎 Attach to folder…" has always opened.
+- `toggleArtFolder()` now updates the ticks and the count in place instead
+  of re-opening the modal, so the list keeps its scroll position and the
+  search box its text. It also re-stamps `updatedAt` explicitly. The v04.68
+  sweep would have done that anyway. The call also repaints an open Multi
+  window's strip.
+- Kept as it was: that picker refuses to remove a note's LAST folder ("An
+  article must stay in at least one folder"), while the staged edit picker
+  allows it.
+
+**Checks: new section 40** (real taps, reached the way the owner reaches
+it: the inline 📎 Attach at 1440; the 🏷 palette at 820 (→ Attach → Folder)
+and 390 (the card's Folder row); and the Single pop-up in read mode):
+- `40ab` at 390/820/1440, in Pane 3 and in Single:
+  - the row opens the picker, on top;
+  - ticking a folder attaches it at once and moves `updatedAt`;
+  - the picker keeps its tick, its search text and "2 folders";
+  - un-ticking detaches it.
+- `40c` at 1440, while editing: Folder still opens the staged picker.
+
+`--only 40`: **32/32**. Unpatched (v04.75's app, these checks):
+**2/14, 12 FAILED** (fewer checks run because the blocks stop at the
+missing picker). `ship-check` **13/13**. Full `app-check` **1261/1261, twice
+in a row** (after the in-place updates below).
+
+**Updated in place** (the full suite found them; they named the old
+read-mode behaviour): `6p-06` and `6p-10` identify the Folder row by the
+function it calls, and accepted `openPicker(` or the old toast. They now
+also accept `showArtFolderPicker(`. Before this they failed 9 checks, twice.
+
+**Not done / left:**
+- A Multi window's own Attach chip was not given a separate check. It calls
+  the same `openAttachMenu()`, so it gets the same row.
+- The "keep at least one folder" rule is unchanged in read mode.

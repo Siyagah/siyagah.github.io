@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.75">
+<meta name="app-version" content="04.76">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3126,7 +3126,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.75</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.76</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -7569,9 +7569,11 @@ function openAttachMenu(ev,aid){
   const kindN=artKinds(a).length;
   m.innerHTML=`<div class="ci" onclick="openNtiPicker('${aid}',this);hideCtx()">🏷 Note Type${kindN?' ('+kindN+')':''}</div>`
     +`<div class="csep"></div>`
-    +(inEdit
-      ?`<div class="ci" onclick="hideCtx();openPicker()">📁 Folder${fCount?' ('+fCount+')':''}</div>`
-      :`<div class="ci" style="opacity:.55" onclick="hideCtx();toast('Open this note for editing to change its folders')">📁 Folder${fCount?' ('+fCount+')':''}</div>`)
+    /* v04.76 — Folder works in read mode too (owner's ask). Editing THIS
+       note: the staged picker (ST.efolders, committed with the edit).
+       Otherwise: the picker that writes a.folderIds directly, the same one
+       the note's right-click "Attach to folder…" has always opened. */
+    +`<div class="ci" onclick="hideCtx();${inEdit?'openPicker()':`showArtFolderPicker('${aid}')`}">📁 Folder${fCount?' ('+fCount+')':''}</div>`
     +`<div class="ci" onclick="hideCtx();openJournalPicker('${aid}')">📓 My Journal</div>`
     +`<div class="ci" onclick="hideCtx();openMyDatabasePicker('${aid}')">🗄 MyDatabase</div>`;
   _ctxPos(m,ev);
@@ -10427,8 +10429,9 @@ function _ebAttachHTML(a,popId){
   const c="_closeStickyPop('"+popId+"');";
   const aid=a.id;
   /* v04.30 — read mode uses the same rows. Folder is the one that differs:
-     ST.efolders only exists while editing, so openPicker() has nothing to
-     edit and the existing Attach menu greys the row and says so. Same here. */
+     ST.efolders only exists while editing, so read mode opens
+     showArtFolderPicker(), which writes a.folderIds directly (v04.76 — it
+     used to grey the row and say "open this note for editing"). */
   const inEdit=ST.editing&&ST.article===aid;
   const kinds=noteKinds().filter(k=>new Set(artKinds(a)).has(k.id)).map(k=>k.name);
   const fN=_attachCount(a);
@@ -10456,7 +10459,7 @@ function _ebAttachHTML(a,popId){
     +row('\ud83c\udff7','Note Type',"openNtiPicker('"+aid+"',this);"+c+"",
          kinds.length?kinds.join(', '):'none yet')
     +row('\ud83d\udcc1','Folder',inEdit?c+"openPicker()"
-         :c+"toast('Open this note for editing to change its folders')",
+         :c+"showArtFolderPicker('"+aid+"')",
          fN?String(fN):'none yet')
     +'</div><div class="eb-pair">'
     +row('\ud83d\udcd3','My Journal',c+"openJournalPicker('"+aid+"')")
@@ -20085,7 +20088,7 @@ function showArtFolderPicker(aid){
     return flds.map(f=>{
       const checked=art.folderIds.includes(f.id);
       const kids=chOf(f.id);
-      return `<div class="pr" style="padding-left:${12+depth*12}px" ` +
+      return `<div class="pr" data-fid="${esc(f.id)}" style="padding-left:${12+depth*12}px" ` +
              `onclick="toggleArtFolder('${aid}','${f.id}')">` +
              `<div class="pc${checked?' on':''}">${checked?'✓':''}</div>` +
              `<span style="font-size:12px">📁</span>` +
@@ -20105,7 +20108,7 @@ function showArtFolderPicker(aid){
       <button class="btn" style="flex-shrink:0" onclick="createFolderFromPicker('${aid}')">＋ New folder</button>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-      <span style="font-size:12px;color:var(--t3)">${cnt} folder${cnt!==1?'s':''}</span>
+      <span style="font-size:12px;color:var(--t3)" id="fp-count">${cnt} folder${cnt!==1?'s':''}</span>
       <button class="btn bp" onclick="closeModal()">Done</button>
     </div>`);
   // Focus search; blur new-folder input to avoid auto-keyboard
@@ -20161,7 +20164,7 @@ function fpFilter(aid,q){
       return flds.map(f=>{
         const checked=art?art.folderIds.includes(f.id):false;
         const kids=chOf(f.id);
-        return `<div class="pr" style="padding-left:${12+depth*12}px" onclick="toggleArtFolder('${aid}','${f.id}')">`
+        return `<div class="pr" data-fid="${esc(f.id)}" style="padding-left:${12+depth*12}px" onclick="toggleArtFolder('${aid}','${f.id}')">`
           +`<div class="pc${checked?' on':''}">${checked?'✓':''}</div>`
           +`<span style="font-size:12px">📁</span>`
           +`<span style="font-size:13px;color:var(--t1)">${esc(f.name)}</span>`
@@ -20176,7 +20179,7 @@ function fpFilter(aid,q){
   if(!matches.length){pl.innerHTML='<div style="padding:10px 4px;color:var(--t3);font-size:13px">No folders found</div>';return;}
   pl.innerHTML=matches.map(f=>{
     const checked=art?art.folderIds.includes(f.id):false;
-    return `<div class="pr" onclick="toggleArtFolder('${aid}','${f.id}')">`
+    return `<div class="pr" data-fid="${esc(f.id)}" onclick="toggleArtFolder('${aid}','${f.id}')">`
       +`<div class="pc${checked?' on':''}">${checked?'✓':''}</div>`
       +`<span style="font-size:12px">📁</span>`
       +`<span style="font-size:13px;color:var(--t1)">${esc(f.name)}</span>`
@@ -20198,9 +20201,17 @@ function toggleArtFolder(aid,fid){
     art.folderIds.push(fid);
     art.folderIds=_autoLeavePrimary(art.folderIds);
   }
+  art.updatedAt=new Date().toISOString();
   persist();
   renderP2C();renderP3H();renderP3C();
-  showArtFolderPicker(aid);   // refresh the modal live
+  try{_fwRefreshMeta(aid);}catch(e){}   /* a Multi window showing this note */
+  /* v04.76 — refresh the ticks in place rather than re-open the modal, so
+     the list keeps its scroll and the search box its text (read mode now
+     reaches this from 📎 Attach → Folder, on a long folder list). */
+  const list=document.getElementById('fp-list');
+  if(!list){showArtFolderPicker(aid);return;}
+  list.querySelectorAll('.pr[data-fid]').forEach(r=>{const on=art.folderIds.includes(r.dataset.fid),pc=r.querySelector('.pc');if(pc){pc.classList.toggle('on',on);pc.textContent=on?'✓':'';}});
+  const c=document.getElementById('fp-count'),n=art.folderIds.length;if(c)c.textContent=n+' folder'+(n!==1?'s':'');
 }
 
 

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.75.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.76.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,15 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.76** (30 Sep 2026) — 📎 Attach → Folder works in READ mode
+  (owner's screenshot of the greyed row). Editing this note: still the
+  staged `openPicker()`. Otherwise: `showArtFolderPicker(aid)`, which
+  writes `a.folderIds` directly. Its `toggleArtFolder()` now updates ticks
+  in place (keeps scroll and search) and stamps `updatedAt`. Both the menu
+  (`openAttachMenu`) and the phone card (`_ebAttachHTML`) changed. New
+  section 40 (390/820/1440, Pane 3 and Single, real taps): `--only 40`
+  **32/32**; unpatched 2/14. `6p-06`/`6p-10` updated in place. Full
+  `app-check` **1261/1261, twice in a row**.
 - **v04.75** (30 Sep 2026) — NTI Types panel: 🔍 Search, ＋ Category and
   ＋ NTI in its title bar (owner's laptop screenshot). One line on all three
   layouts (the sub-1200px bottom sheet gets 34px buttons). 🔍 opens a box
@@ -90,20 +99,6 @@ must never accumulate here instead of there.
   Delete is a confirmed row on the ⋯ card (`_confirmDeleteNote()` →
   `deleteNote()`). New section 36; `6p-08` updated in place. Unpatched
   v04.71: 15/23. Full `app-check` **922/922, twice in a row**.
-- **v04.71** (25 Sep 2026) — a device pushes back what the cloud copy lacks.
-  `_doPush()` writes without reading first. So a device that had not yet
-  received another device's edit could overwrite the cloud copy without it.
-  The device that still held the edit merged the incoming copy and kept it,
-  but pushed back only if its record COUNT had grown, so the edit reached
-  nobody else until its next local change. `_pullRemote()` now also pushes
-  when `_syncDigest(DB) !== _syncDigest(remoteDB)`. The digest covers only
-  what `mergeDB()` settles: record ids and stamps, Trash, tombstones, stamp
-  maps and `globalTags`. It is order-independent, so devices converge
-  instead of ping-ponging. New section 35 (`35a`, using the section-26 fake
-  Firestore and the real `_pullRemote`): a missing edit is pushed back, and
-  an identical copy, an incoming-only change, or a converged state push
-  nothing. Unpatched v04.70: `35a` fails only its first check. Full
-  `app-check` **903/903, twice in a row**.
 ---
 
 ## What this is
