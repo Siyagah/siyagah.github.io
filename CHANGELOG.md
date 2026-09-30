@@ -7275,7 +7275,8 @@ and 390 (the card's Folder row); and the Single pop-up in read mode):
 
 `--only 40`: **32/32**. Unpatched (v04.75's app, these checks):
 **2/14, 12 FAILED** (fewer checks run because the blocks stop at the
-missing picker). `ship-check` **13/13**.
+missing picker). `ship-check` **13/13**. Full `app-check` **1261/1261, twice
+in a row** (after the in-place updates below).
 
 **Updated in place** (the full suite found them; they named the old
 read-mode behaviour): `6p-06` and `6p-10` identify the Folder row by the

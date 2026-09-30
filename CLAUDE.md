@@ -23,7 +23,8 @@ must never accumulate here instead of there.
   in place (keeps scroll and search) and stamps `updatedAt`. Both the menu
   (`openAttachMenu`) and the phone card (`_ebAttachHTML`) changed. New
   section 40 (390/820/1440, Pane 3 and Single, real taps): `--only 40`
-  **32/32**; unpatched 2/14.
+  **32/32**; unpatched 2/14. `6p-06`/`6p-10` updated in place. Full
+  `app-check` **1261/1261, twice in a row**.
 - **v04.75** (30 Sep 2026) — NTI Types panel: 🔍 Search, ＋ Category and
   ＋ NTI in its title bar (owner's laptop screenshot). One line on all three
   layouts (the sub-1200px bottom sheet gets 34px buttons). 🔍 opens a box
