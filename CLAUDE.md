@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.74.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.75.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,16 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.75** (30 Sep 2026) — NTI Types panel: 🔍 Search, ＋ Category and
+  ＋ NTI in its title bar (owner's laptop screenshot). One line on all three
+  layouts (the sub-1200px bottom sheet gets 34px buttons). 🔍 opens a box
+  outside the scrolling list (`_ntiPickListHTML()` redraws only the list, so
+  typing keeps focus); it narrows to matching types, Enter picks a single
+  match, Esc clears then closes, no match offers Create "…". ＋ Category
+  MOVED from the list's foot. ＋ NTI asks which category (`#ctx`), then runs
+  `addKindInCat()` (now takes an optional pre-filled name). New section 39
+  (39a–39d, real taps from the pop-up's Type chip, Single and Multi,
+  390/820/1440): `--only 39` **100/100**; unpatched 18/52.
 - **v04.74** (28 Sep 2026) — pop-up header: one title, a tab bar in both,
   one Details line. Owner's laptop screenshot of Single in edit mode: the
   title showed twice and seven rows stood above the note. In BOTH pop-ups,
@@ -93,15 +103,6 @@ must never accumulate here instead of there.
   an identical copy, an incoming-only change, or a converged state push
   nothing. Unpatched v04.70: `35a` fails only its first check. Full
   `app-check` **903/903, twice in a row**.
-- **v04.70** (25 Sep 2026) — the folder dialog's ⋯ row menu opens on top
-  on phone and tablet. `#ctx` sat at z-index 9999, under the modal overlay
-  `#ov` (10000) that hosts the folder dialog. Below 1200px, where the row
-  icons fold into ⋯, 📍 / Rename / Delete could not be reached. `#ctx` is
-  now 10110, above every overlay it can open from (`#ov` 10000, the 10050
-  modal, `#gs-overlay` 10100). Found in the MMSA research. New section 34
-  (`34a` at 390/820: real taps on 📚 Folders → ⋯ → Rename; the menu is
-  topmost and on screen; the rename box opens). Unpatched v04.69:
-  `--only 34` 0/4. Full `app-check` **898/898, twice in a row**.
 ---
 
 ## What this is
