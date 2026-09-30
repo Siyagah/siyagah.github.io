@@ -9901,6 +9901,120 @@ await r.block('38-sync-three-devices-end-to-end', async () => {
   r.check(out.status === 0, 'the three-device sync check exits cleanly', `exit ${out.status}`);
 });
 
+/* 39 — v04.75: the NTI Types panel's title bar carries 🔍 Search, ＋ Category
+   and ＋ NTI (owner's ask, laptop screenshot of the panel opened from a
+   pop-up's Type chip). Every step is a REAL tap/click, from the Type chip in
+   the pop-up's Details line, in Single and Multi, at 390/820/1440:
+   39a the header holds all five on ONE line, inside the panel and the screen,
+       and the old "＋ Add new category" row at the foot is gone;
+   39b 🔍 opens a box; typing keeps focus and narrows the list to matching
+       types; tapping the match adds it to the note; no match offers Create;
+   39c ＋ NTI opens a category menu ON TOP of the panel, and a type made
+       through it lands in the chosen category;
+   39d ＋ Category makes a category and the panel shows it. */
+const P39_SEL = { single: '#p3h .pop-meta-strip', multi: '#fw-a1 .pop-meta-strip' };
+async function open39(vp, mode, answers) {
+  const s = await open37(vp, mode);
+  s.page.on('dialog', (d) => (d.type() === 'prompt' ? d.accept(answers.length ? answers.shift() : '') : d.accept()));
+  await tap37(s.page, vp, s.page.locator(`${P39_SEL[mode]} [onclick^="_ntiChipTap"]`).first());
+  await s.page.waitForTimeout(400);
+  return s;
+}
+const hb39 = (page, word) => page.locator('#nti-picker .nti-pk-hd button', { hasText: word }).first();
+for (const vp of P37_VPS) for (const mode of ['single', 'multi']) {
+await r.block(`39a-nti-header-${vp.name}-${mode}`, async () => {
+  const s = await open39(vp, mode, []);
+  const { page } = s;
+  const g = await page.evaluate(() => {
+    const p = document.getElementById('nti-picker'); if (!p || !p.classList.contains('open')) return null;
+    const pb = p.getBoundingClientRect(), hd = p.querySelector('.nti-pk-hd');
+    const parts = [...hd.querySelectorAll('.nti-pk-ttl,button')].map((e) => { const b = e.getBoundingClientRect(); return { w: e.textContent.trim(), l: b.left, r: b.right, c: (b.top + b.bottom) / 2, h: b.height }; });
+    const cs = parts.map((x) => x.c);
+    return { parts: parts.map((x) => x.w), spread: Math.max(...cs) - Math.min(...cs),
+      inside: parts.every((x) => x.l >= pb.left - 0.5 && x.r <= pb.right + 0.5 && x.r <= innerWidth && x.h > 0),
+      over: hd.scrollWidth > hd.clientWidth + 1, minH: Math.min(...parts.filter((x) => x.w !== '🏷 NTI Types').map((x) => x.h)),
+      footRow: [...p.querySelectorAll('.nti-pk-add-cat')].some((e) => /Add new category/.test(e.textContent)) };
+  });
+  r.check(!!g, `${vp.name} ${mode}: a real tap on the pop-up's Type chip opens NTI Types`, String(!!g));
+  const want = ['🏷 NTI Types', '🔍', '＋ Category', '＋ NTI', '✕'];
+  r.check(g && JSON.stringify(g.parts) === JSON.stringify(want), `${vp.name} ${mode}: the title bar reads 🏷 NTI Types · 🔍 · ＋ Category · ＋ NTI · ✕`, JSON.stringify(g && g.parts));
+  r.check(g && g.spread <= 3 && g.inside && !g.over, `${vp.name} ${mode}: all five sit on ONE line, inside the panel and the screen`, JSON.stringify(g));
+  if (vp.width < 1200) r.check(g && g.minH >= 32, `${vp.name} ${mode}: header buttons are touch-sized (>=32px tall)`, String(g && g.minH));
+  r.check(g && !g.footRow, `${vp.name} ${mode}: "＋ Add new category" has left the foot of the list (it moved to the title bar)`, String(g && g.footRow));
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+await r.block(`39b-nti-search-${vp.name}-${mode}`, async () => {
+  const s = await open39(vp, mode, []);
+  const { page } = s;
+  /* a type the note does NOT have, with a name unique enough to search */
+  const k = await page.evaluate(() => { const have = new Set(artKinds(DB.articles.find((a) => a.id === 'a1')));
+    const ks = noteKinds().filter((x) => !have.has(x.id) && x.name.length >= 4);
+    const k = ks.find((x) => noteKinds().filter((y) => y.name.toLowerCase().includes(x.name.toLowerCase())).length === 1) || ks[0];
+    return { id: k.id, name: k.name, total: document.querySelectorAll('#nti-picker .nti-pk-kind').length }; });
+  await tap37(page, vp, hb39(page, '🔍'));
+  await page.waitForTimeout(250);
+  const box = page.locator('#nti-pk-q');
+  r.check(await box.isVisible(), `${vp.name} ${mode}: a real tap on 🔍 opens a search box`, String(await box.isVisible()));
+  if (vp.width < 1200) await box.tap();
+  await page.keyboard.type(k.name.toLowerCase(), { delay: 20 });
+  await page.waitForTimeout(250);
+  const st = await page.evaluate(() => ({ focus: document.activeElement && document.activeElement.id, val: document.getElementById('nti-pk-q').value,
+    chips: [...document.querySelectorAll('#nti-picker .nti-pk-kind')].map((e) => e.textContent.trim()) }));
+  r.check(st.focus === 'nti-pk-q' && st.val === k.name.toLowerCase(), `${vp.name} ${mode}: typing keeps the box focused with every letter (${JSON.stringify(st.val)})`, JSON.stringify(st));
+  r.check(st.chips.length >= 1 && st.chips.length < k.total && st.chips.every((c) => c.toLowerCase().includes(k.name.toLowerCase())) && st.chips.includes(k.name),
+    `${vp.name} ${mode}: the list narrows to matching types only (${st.chips.length} of ${k.total})`, JSON.stringify(st.chips));
+  await tap37(page, vp, page.locator('#nti-picker .nti-pk-kind', { hasText: k.name }).first());
+  await page.waitForTimeout(400);
+  const has = await page.evaluate((id) => artKinds(DB.articles.find((a) => a.id === 'a1')).includes(id), k.id);
+  r.check(has, `${vp.name} ${mode}: tapping the found type adds it to the note`, String(has));
+  const box2 = page.locator('#nti-pk-q');
+  if (vp.width < 1200) await box2.tap(); else await box2.click();
+  await box2.fill('');
+  await page.keyboard.type('zzqx39', { delay: 10 });
+  await page.waitForTimeout(250);
+  const none = await page.evaluate(() => ({ chips: document.querySelectorAll('#nti-picker .nti-pk-kind').length,
+    create: [...document.querySelectorAll('#nti-picker .nti-pk-add-cat')].map((e) => e.textContent.trim()) }));
+  r.check(none.chips === 0 && none.create.some((t) => /Create “zzqx39”/.test(t)), `${vp.name} ${mode}: no match shows no types and offers ＋ Create`, JSON.stringify(none));
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+await r.block(`39c-nti-new-type-${vp.name}-${mode}`, async () => {
+  const name = `Type39 ${vp.name}${mode}`;
+  const s = await open39(vp, mode, [name]);
+  const { page } = s;
+  await tap37(page, vp, hb39(page, '＋ NTI'));
+  await page.waitForTimeout(300);
+  const cats = await page.evaluate(() => noteKindCats().map((c) => c.id));
+  const menu = await page.evaluate(() => { const m = document.getElementById('ctx'); const b = m.getBoundingClientRect();
+    const rows = [...m.querySelectorAll('.ci[onclick*="addKindInCat"]')];
+    const last = rows[rows.length - 1]; const lb = last && last.getBoundingClientRect();
+    return { shown: getComputedStyle(m).display !== 'none' && b.width > 0, rows: rows.length, onScreen: b.left >= 0 && b.right <= innerWidth && b.top >= 0 && b.bottom <= innerHeight + 1,
+      top: last ? m.contains(document.elementFromPoint(lb.left + lb.width / 2, lb.top + lb.height / 2)) : false }; });
+  r.check(menu.shown && menu.rows === cats.length && menu.onScreen && menu.top, `${vp.name} ${mode}: a real tap on ＋ NTI opens a "which category" menu, on screen and on top of the panel (${menu.rows} categories)`, JSON.stringify(menu));
+  const target = cats[cats.length - 1];
+  await tap37(page, vp, page.locator(`#ctx .ci[onclick*="'${target}'"]`).first());
+  await page.waitForTimeout(400);
+  const made = await page.evaluate((nm) => { const k = noteKinds().find((x) => x.name === nm); return k ? { cat: k.catId, shown: [...document.querySelectorAll('#nti-picker .nti-pk-kind')].some((e) => e.textContent.trim() === nm) } : null; }, name);
+  r.check(made && made.cat === target && made.shown, `${vp.name} ${mode}: the new type is made in the chosen category and shows in the panel`, JSON.stringify(made));
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+await r.block(`39d-nti-new-category-${vp.name}-${mode}`, async () => {
+  const name = `Cat39 ${vp.name}${mode}`;
+  const s = await open39(vp, mode, [name, '🧪']);
+  const { page } = s;
+  await tap37(page, vp, hb39(page, '＋ Category'));
+  await page.waitForTimeout(400);
+  const made = await page.evaluate((nm) => ({ db: noteKindCats().some((c) => c.name === nm && c.icon === '🧪'),
+    shown: [...document.querySelectorAll('#nti-picker .nti-pk-cat-name')].some((e) => e.textContent.trim() === nm),
+    open: document.getElementById('nti-picker').classList.contains('open') }), name);
+  r.check(made.db && made.shown && made.open, `${vp.name} ${mode}: a real tap on ＋ Category makes the category and the open panel shows it`, JSON.stringify(made));
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores

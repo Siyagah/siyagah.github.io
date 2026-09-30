@@ -7187,3 +7187,52 @@ v04.73 and renumbering this round to v04.74):
 - **Unpatched** (v04.73's app with this round's checks), `--only 37`:
   **27/101, 74 FAILED**.
 - Full `app-check`: **1129/1129, twice in a row**.
+
+## v04.75 — NTI Types: 🔍 Search, ＋ Category and ＋ NTI in the title bar (30 Sep 2026)
+
+**Owner's ask** (laptop screenshot of the NTI Types panel, opened from a
+pop-up's Type chip, with the empty title bar circled): "Build a search
+button and place new category, new NTI button here on top bar of the popup."
+Built by the Architect directly (small round).
+
+**What changed** (`renderNtiPickerBody()` / new `_ntiPickListHTML()`):
+- The title bar reads **🏷 NTI Types · 🔍 · ＋ Category · ＋ NTI · ✕** on one
+  line, in every place the panel opens (Pane 3, Single, Multi), on all three
+  layouts. Under 1200px the panel is the existing bottom sheet and the header
+  buttons grow to 34px touch targets.
+- **🔍** opens a search box under the title bar. Typing narrows the list to
+  the types whose name matches; a category whose NAME matches shows all its
+  types; a category with neither is hidden; everything shown is unfolded.
+  Enter adds/removes the type when exactly one matches (or one matches
+  exactly); Esc clears, then closes the box. No match offers
+  **＋ Create "…" as a new type**. The box sits outside the scrolling list
+  and typing redraws only the list (`_ntiPickRefreshList()`), so the box
+  keeps focus and caret. Search state is `ST.ntiQ`/`ST.ntiSearch` (UI only,
+  never saved or synced). The phone's box is 16px so iOS does not zoom.
+- **＋ Category** is the existing `addNtiCat()`. It **moved** here: the
+  "＋ Add new category" row at the foot of the list is gone.
+- **＋ NTI** opens a small "Add the new type to…" menu (the shared `#ctx`,
+  on top of the panel) listing every category, then runs the existing
+  `addKindInCat()` — so a type made here is made exactly like one made from a
+  category's own ＋. `addKindInCat()` gained an optional name to pre-fill
+  (used by Create "…").
+
+**Checks: new section 39** (390 and 820 with touch, 1440; Single and Multi;
+the panel opened by a real tap on the pop-up's Type chip):
+- `39a` the five header pieces are on one line, inside the panel and screen;
+  touch-sized under 1200px; the old foot row is gone.
+- `39b` 🔍 opens the box; typing keeps focus; the list narrows to matches;
+  tapping the match adds it to the note; no match offers Create.
+- `39c` ＋ NTI's category menu is on screen and topmost; the new type lands
+  in the chosen category and shows in the panel.
+- `39d` ＋ Category makes the category and the open panel shows it.
+
+`--only 39`: **100/100**. Unpatched (v04.74's app, these checks):
+**18/52, 34 FAILED** (fewer checks run because blocks stop at their first
+missing button). `ship-check` **13/13**. Full `app-check` **1229/1229, twice in a row**.
+
+**Not done / left:** search matches type and category names only (not
+colours or notes). The sidebar's Note Types list and the right-click
+"NTI Types" submenu are unchanged — the ask was this panel's title bar. The
+journal and MyDatabase pickers share the panel's styling but not these
+buttons.
