@@ -7287,3 +7287,76 @@ also accept `showArtFolderPicker(`. Before this they failed 9 checks, twice.
 - A Multi window's own Attach chip was not given a separate check. It calls
   the same `openAttachMenu()`, so it gets the same row.
 - The "keep at least one folder" rule is unchanged in read mode.
+
+## v04.77 — a folder that holds notes cannot be deleted; every empty-folder removal syncs (30 Sep 2026)
+
+**The owner's rule** (30 Sep 2026, given first for the MMSA app and then
+"yes, same rule for Siyagah"):
+> a folder should not be deleted with notes in it … but empty folders
+> deleted should be synced
+
+Recorded as decision **D6** in `CLAUDE.md`. The same day the owner said
+"don't wait for permission for merging", recorded as **D7** and in
+`ARCHITECT.md` step 5. Built by the Architect directly.
+
+**What changed:**
+- **`_folderDelRefusal(fid)`** (new) returns the refusal text when
+  `cntOf(fid) > 0`. `cntOf` counts notes in the folder AND all its
+  subfolders, archived ones included. Example text: *"(001) Seeded Folder"
+  still holds 2 notes (counting its subfolders). Move them to another folder
+  or delete them first, then delete the folder.*
+- **`trashFolder()` enforces it itself.** Every folder delete goes through
+  it, so the rule holds for any caller. It shows a 6-second toast and returns
+  `false`. The menus check first so they can say it properly:
+  - the sidebar's right-click **🗑 Delete folder** (`confirmDel`) and a
+    journal event's 🗑 show a "This folder isn't empty" dialog, with
+    **📂 Open the folder** and no delete button;
+  - the folder dialog's 🗑 and ⋯ → Delete (`pkDelete`) show the toast
+    instead, because a second modal would replace the dialog.
+  - `_dedupePrimaryFolders()` moves notes out before it trashes the
+    duplicates, so it is unaffected.
+- **Every path that removes a folder now writes a tombstone**, so the
+  removal reaches every device:
+  - `_doFolderToSection()` (Convert to section) removed the folder with no
+    tombstone. A device holding the older copy brought it back as an empty
+    duplicate at the next merge. This was found while writing the MMSA
+    handover, and **measured this round**: the new sync-audit `F20` fails on
+    v04.76.
+  - `dbBuilderCancel()` removed an already-saved new database folder the
+    same way.
+
+**Checks:**
+- **sync-audit, updated in place:** `F14`, `F15`, `F16`, `N26`, `X05` and
+  `Z02` deleted folders that held notes. Their setup (shared by both
+  devices) now moves those notes to `f3` first. What each proves about sync
+  is unchanged.
+- **sync-audit, new:** `F19` (deleting a folder that holds notes is refused
+  and changes nothing) and `F20` (converting a folder to a section: the
+  folder must not come back). The audit now runs **116 operations: 112
+  PASS, 0 FAIL, 2 BY-DESIGN, 2 KNOWN**. App-check block 32 reads the total
+  instead of saying "114".
+- **app-check `30a`, updated in place:**
+  - the real 🗑 click on `f1` is now refused, with its message, and nothing
+    is deleted or unfiled;
+  - after the notes are moved out, the same click deletes the empty folder,
+    its deletion reaches a stale device, and every note survives both ways.
+- **app-check `30b`, updated in place:** empties `f1` before deleting it.
+- **New section 41:**
+  - `41a` at 390 and 820 (touch): 📚 Folders → ⋯ → Delete. A folder with
+    notes is refused, with "still holds 2 notes", and the dialog stays open.
+    An empty folder deletes, is tombstoned, and a stale device loses it.
+  - `41b` at 1440: sidebar right-click → Delete folder. The "isn't empty"
+    dialog appears with no delete button, and 📂 Open the folder opens it. An
+    empty folder still goes to Trash.
+
+**Measured:**
+- `--only 41,30,32`: **37/37**.
+- Unpatched (v04.76's app with these checks): `--only 41,30` **16/25, 9
+  FAILED**, and sync-audit `F19`, `F20` both **FAIL**.
+- `ship-check` **13/13**.
+
+**Not done / left:**
+- Deleting a SECTION still moves its folders to the first remaining section
+  rather than deleting them. No folder or note is removed, so D6 is not
+  involved.
+- A folder deleted before this round, with its notes unfiled, is untouched.

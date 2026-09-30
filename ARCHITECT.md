@@ -43,6 +43,8 @@ click, or for a relay. Do the whole loop yourself.
 5. **Reassign or merge.** Anything wrong → a PR comment starting `@claude`
    naming exactly what to fix, then back to step 3. All green → merge with a
    merge commit, confirm `main` has the new version, and go to the next round.
+   **Never ask the owner before merging** — confirmed 30 Sep 2026: "don't
+   wait for permission for merging". A green review is the permission.
 6. **Report** to the owner when the JOB is done (not after each round), in
    the shape set out under *Reporting to the owner* below. Update the pinned
    status issue after EVERY step, not just at the end — see *Handover*.

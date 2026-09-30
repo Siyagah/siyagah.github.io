@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.76.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.77.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,19 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.77** (30 Sep 2026) — a folder holding notes cannot be deleted
+  (D6, owner's rule). `_folderDelRefusal(fid)` (uses `cntOf`, so
+  subfolders count) is checked inside `trashFolder()` itself, the one
+  choke point, which toasts and returns false. The sidebar's Delete folder
+  (`confirmDel`) shows an "isn't empty" dialog with 📂 Open the folder;
+  the folder dialog's 🗑 (`pkDelete`) toasts, since a second modal would
+  replace the dialog. Empty-folder removals now all sync:
+  `_doFolderToSection()` and `dbBuilderCancel()` write the tombstone they
+  lacked (measured: sync-audit `F20` failed on v04.76). sync-audit: `F14`–
+  `F16`, `N26`, `X05`, `Z02` empty the folder in setup first (updated in
+  place); new `F19` (refused, nothing changes) and `F20`; 116 operations,
+  0 FAIL. `30a`/`30b` updated in place; new section 41 (390/820 dialog ⋯,
+  1440 sidebar right-click).
 - **v04.76** (30 Sep 2026) — 📎 Attach → Folder works in READ mode
   (owner's screenshot of the greyed row). Editing this note: still the
   staged `openPicker()`. Otherwise: `showArtFolderPicker(aid)`, which
@@ -82,23 +95,6 @@ must never accumulate here instead of there.
   - **Fix:** `_newPushVer()`, the millisecond plus a random fraction.
 
   Unpatched: 17/19. Full `app-check` **943/943, twice in a row**.
-- **v04.72** (27 Sep 2026) — the "NOT syncing" alarm only for real
-  problems; Delete on the ⋯ card. Owner-reported (phone screenshot).
-  `_pullRemote()` retried the SAME main-doc version three times and then
-  alarmed, so a version superseded by another device's newer write, or a
-  phone still waking its connection, raised "could not read the notebook
-  from the cloud… NOT syncing" with nothing wrong. Now:
-  - `_readCloudDB()` takes a chunk set that is all ONE newer version (a
-    complete write) and records why a read failed (`_lastReadFail`:
-    network / denied / torn);
-  - the retry re-reads the main doc first;
-  - network failures show **☁ Offline** (new `offline` status) with no
-    alarm, and the `online` event runs `_reconcileNow()`;
-  - permission-denied and a really broken cloud copy still alarm.
-
-  Delete is a confirmed row on the ⋯ card (`_confirmDeleteNote()` →
-  `deleteNote()`). New section 36; `6p-08` updated in place. Unpatched
-  v04.71: 15/23. Full `app-check` **922/922, twice in a row**.
 ---
 
 ## What this is
@@ -349,6 +345,8 @@ A failing check is a wrong assertion surprisingly often — investigate before
 | **D3** | **"Never lost" excludes the owner's own deliberate deletion.** Deleting must keep working, through Trash. Confirmed 4 Sep 2026, correcting an over-broad reading of I1. |
 | **D4** | **Every round is measured at all three screen sizes** (390×844, 820×1180, 1440×900) and against all four risk areas. The owner left the choice to Claude; both were cheap, so neither was narrowed. 4 Sep 2026. |
 | **D5** | **Every feature ships on ALL THREE platforms in the round it is built — "always do all platforms as adaptible, don't wait for doing next".** Adapt the SHAPE to the layout (a phone gets a sheet where a laptop gets a floating window); never adapt by omitting the feature. A platform left out is not a scope decision Claude may take on its own. Confirmed 12 Sep 2026, after v04.33 shipped the pop-ups to the desktop only and reported the phone and tablet gap as deliberate. |
+| **D6** | **A folder that holds notes cannot be deleted** — counting notes in any of its subfolders (`cntOf`). The owner moves or deletes the notes first. **Deleting an EMPTY folder must sync:** every path that removes a folder writes its tombstone. "a folder should not be deleted with notes in it … but empty folders deleted should be synced", confirmed 30 Sep 2026 (first for MMSA, then "yes, same rule for Siyagah"). Enforced in `trashFolder()` itself (`_folderDelRefusal()`), v04.77. |
+| **D7** | **The Architect merges a green round without asking.** "don't wait for permission for merging", 30 Sep 2026. |
 
 ## Standing lessons — earned the hard way, do not relearn them
 

@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.76">
+<meta name="app-version" content="04.77">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3126,7 +3126,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.76</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.77</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -15352,6 +15352,7 @@ function dbBuilderCancel(){
     const used=DB.articles.some(a=>!a.trash&&(a.folderIds||[]).includes(_dbbId));
     if(f&&!used){
       DB.folders=DB.folders.filter(x=>x.id!==_dbbId);
+      _addTombstones([_dbbId],new Date().toISOString());   /* v04.77 — already saved (and maybe synced): the removal must sync too */
       if(ST.folder===_dbbId)ST.folder=null;
       persist();renderTree();renderP2C();
     }
@@ -17549,6 +17550,16 @@ function _confirmDeleteNote(id){
     <button class="btn bd" id="del-note-ok" onclick="closeModal();deleteNote('${id}')">Move to Trash</button></div>`);
 }
 function confirmDel(type,id){
+  if(type!=='art'){
+    const _refuse=_folderDelRefusal(id);
+    if(_refuse){
+      showModal(`<div class="mt">This folder isn't empty</div>
+        <div class="mm">${esc(_refuse)}</div>
+        <div class="ma"><button class="btn" onclick="closeModal()">Close</button>
+        <button class="btn bp" onclick="closeModal();selFolder('${id}')">📂 Open the folder</button></div>`);
+      return;
+    }
+  }
   const label=type==='art'?(DB.articles.find(a=>a.id===id)?.title||'this'):(DB.folders.find(f=>f.id===id)?.name||'this');
   const msg=type==='art'?`Move "<strong>${esc(label)}</strong>" to Trash?`:`Move folder "<strong>${esc(label)}</strong>" and all its subfolders to Trash? You can restore them later.`;
   showModal(`<div class="mt">Move to Trash</div>
@@ -18399,6 +18410,10 @@ function pkRenameCancel(fid){
 }
 function pkDelete(fid){
   const f=DB.folders.find(x=>x.id===fid);if(!f)return;
+  /* v04.77 — a folder holding notes cannot be deleted. A toast, not a modal:
+     this runs INSIDE the folder dialog, and a second modal would replace it. */
+  const _refuse=_folderDelRefusal(fid);
+  if(_refuse){toast('🔒 '+_refuse,6000);return;}
   const removedIds=descOf(fid);
   const subCount=removedIds.length-1;
   const msg=subCount>0
@@ -19525,6 +19540,10 @@ function _doFolderToSection(fid){
   const kids=chOf(fid);
   kids.forEach((c,i)=>{c.parentId=null;c.sectionId=sid;c.order=i+1;});
   DB.folders=DB.folders.filter(x=>x.id!==fid);
+  /* v04.77 — the folder is gone from this device; without a tombstone another
+     device's copy would bring it back as an empty duplicate at the next merge
+     (folders are not in the sweep's _REC_TOMB_COLLS — Trash normally does it) */
+  _addTombstones([fid],new Date().toISOString());
   DB.articles.forEach(a=>{if(a.folderIds&&a.folderIds.includes(fid))a.folderIds=a.folderIds.filter(x=>x!==fid);});
   if(ST.folder===fid){ST.folder=kids[0]?kids[0].id:null;ST.article=null;ST.editing=false;}
   persist();renderTree();renderP2H&&renderP2H();renderP2C&&renderP2C();renderP3H&&renderP3H();renderP3C&&renderP3C();
@@ -19696,8 +19715,24 @@ function _tombstoneTrashEntry(t){
        deleted, so permanently deleting the folder must not tombstone them. */
   }
 }
+/* v04.77 — owner's rule (30 Sep 2026): "a folder should not be deleted with
+   notes in it". A folder that holds any note — directly or in any subfolder
+   (cntOf counts the whole subtree) — cannot be deleted; the owner moves or
+   deletes the notes first. Returns the refusal text, or '' when the folder
+   (and every subfolder) is empty and may go to Trash. Deleting an EMPTY
+   folder still tombstones it, so it disappears on every device. */
+function _folderDelRefusal(fid){
+  const f=DB.folders.find(x=>x.id===fid);if(!f)return '';
+  const n=cntOf(fid);if(!n)return '';
+  const sub=descOf(fid).length>1;
+  return `"${f.name}" still holds ${n} note${n===1?'':'s'}${sub?' (counting its subfolders)':''}. Move ${n===1?'it':'them'} to another folder or delete ${n===1?'it':'them'} first, then delete the folder.`;
+}
 function trashFolder(id){
-  if(!id) return;
+  if(!id) return false;
+  /* the one choke point every folder delete goes through — the menus check
+     first to show a proper message, this makes the rule hold for any caller */
+  const _refuse=_folderDelRefusal(id);
+  if(_refuse){toast('🔒 '+_refuse,6000);return false;}
   const ids = descOf(id);
   const savedFolders = DB.folders.filter(f=>ids.includes(f.id)).map(f=>JSON.parse(JSON.stringify(f)));
   const rootF = savedFolders.find(f=>f.id===id);
