@@ -10015,6 +10015,77 @@ await r.block(`39d-nti-new-category-${vp.name}-${mode}`, async () => {
 });
 }
 
+/* 40 — v04.76: 📎 Attach → Folder works in READ mode (owner's ask, laptop
+   screenshot of the greyed "Folder (2)" row with the note not being edited).
+   Read mode now opens showArtFolderPicker(), which writes a.folderIds
+   directly; editing still opens the staged picker. Real taps only, reached
+   the way the owner reaches it at each size: the inline 📎 Attach (1440),
+   through the folded 🏷 palette (820: palette → Attach → Folder; 390: the
+   spread-open card's Folder row), and from the Single pop-up in read mode.
+   40a the Folder row is not greyed and opens the picker, on top;
+   40b ticking a folder attaches it at once (and moves updatedAt, so it
+       syncs), keeps the picker open with its search text, and un-ticking
+       detaches it;
+   40c editing the same note still opens the staged "Assign to folders". */
+async function tapVis40(page, vp, sel) {
+  const loc = page.locator(sel).filter({ visible: true }).first();
+  if (!(await loc.count())) return false;
+  await tap37(page, vp, loc); await page.waitForTimeout(350); return true;
+}
+async function reachFolder40(page, vp) {
+  const A = '#p3h [onclick^="openAttachMenu"]';
+  if (!(await tapVis40(page, vp, A))) {
+    /* the Single pop-up's closed Details line at 640–1199 hides Attach behind
+       ▾ Details; below 1200 in read mode the toolbar folds it behind 🏷 */
+    if (!((await tapVis40(page, vp, '#p3h .pop-details-btn')) && (await tapVis40(page, vp, A)))) {
+      await tapVis40(page, vp, '#p3h [onclick*="_p3NtiPalette"]');
+      await tapVis40(page, vp, '[onclick^="openAttachMenu"]');
+    }
+  }
+  return tapVis40(page, vp, '#ctx .ci:has-text("Folder"), .eb-act:has-text("Folder")');
+}
+for (const vp of P37_VPS) for (const where of ['pane3', 'single']) {
+await r.block(`40ab-read-mode-folder-${vp.name}-${where}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB(), hasTouch: vp.width < 1200 });
+  const { page } = s;
+  await page.evaluate((where) => { selArt('a1'); if (where === 'single') openNoteModal(); else if (innerWidth < 640) showPane('p3'); }, where);
+  await page.waitForTimeout(700);
+  const t0 = await page.evaluate(() => ({ ed: ST.editing, up: DB.articles.find((a) => a.id === 'a1').updatedAt }));
+  const hit = await reachFolder40(page, vp);
+  const pk = await page.evaluate(() => { const l = document.getElementById('fp-list'); if (!l) return null;
+    const row = l.querySelector('.pr[data-fid="f2"]'); const b = row && row.getBoundingClientRect();
+    return { top: !!b && row.contains(document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)), staged: !!document.getElementById('pkList') }; });
+  r.check(!t0.ed && hit && pk && pk.top && !pk.staged, `${vp.name} ${where}: in READ mode, real taps on 📎 Attach → Folder open the folder picker, on top`, JSON.stringify({ t0, hit, pk }));
+  await page.locator('#fp-srch').fill('Second');
+  await page.waitForTimeout(200);
+  await tap37(page, vp, page.locator('#fp-list .pr[data-fid="f2"]').first());
+  await page.waitForTimeout(400);
+  const on = await page.evaluate(() => { const a = DB.articles.find((x) => x.id === 'a1'); const row = document.querySelector('#fp-list .pr[data-fid="f2"] .pc');
+    return { ids: a.folderIds, up: a.updatedAt, tick: !!(row && row.classList.contains('on')), q: (document.getElementById('fp-srch') || {}).value, count: (document.getElementById('fp-count') || {}).textContent }; });
+  r.check(on.ids.includes('f2') && on.ids.includes('f1') && on.up > t0.up, `${vp.name} ${where}: ticking a folder attaches it at once and re-stamps the note (so it syncs)`, JSON.stringify(on));
+  r.check(on.tick && on.q === 'Second' && /2 folders/.test(on.count || ''), `${vp.name} ${where}: the picker stays open with its tick, its search text and "2 folders"`, JSON.stringify(on));
+  await tap37(page, vp, page.locator('#fp-list .pr[data-fid="f2"]').first());
+  await page.waitForTimeout(400);
+  const off = await page.evaluate(() => DB.articles.find((x) => x.id === 'a1').folderIds);
+  r.check(JSON.stringify(off) === '["f1"]', `${vp.name} ${where}: un-ticking detaches it again`, JSON.stringify(off));
+  r.check(s.errors.length === 0, `${vp.name} ${where}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+await r.block('40c-edit-mode-folder-still-staged-1440', async () => {
+  const vp = P37_VPS[2];
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await page.evaluate(() => { selArt('a1'); startEdit(); });
+  await page.waitForTimeout(500);
+  await page.locator('#p3h [onclick^="openAttachMenu"]').filter({ visible: true }).first().click();
+  await page.waitForTimeout(300);
+  const row = await page.evaluate(() => { const r = [...document.querySelectorAll('#ctx .ci')].find((e) => /Folder/.test(e.textContent)); return r ? r.getAttribute('onclick') : null; });
+  r.check(/openPicker\(\)/.test(row || ''), '1440 editing: 📎 Attach → Folder still opens the staged picker (saved with the edit)', String(row));
+  r.check(s.errors.length === 0, '1440 editing: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
