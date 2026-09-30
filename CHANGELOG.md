@@ -7277,6 +7277,11 @@ and 390 (the card's Folder row); and the Single pop-up in read mode):
 **2/14, 12 FAILED** (fewer checks run because the blocks stop at the
 missing picker). `ship-check` **13/13**.
 
+**Updated in place** (the full suite found them; they named the old
+read-mode behaviour): `6p-06` and `6p-10` identify the Folder row by the
+function it calls, and accepted `openPicker(` or the old toast. They now
+also accept `showArtFolderPicker(`. Before this they failed 9 checks, twice.
+
 **Not done / left:**
 - A Multi window's own Attach chip was not given a separate check. It calls
   the same `openAttachMenu()`, so it gets the same row.

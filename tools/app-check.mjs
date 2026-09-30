@@ -3111,7 +3111,10 @@ await r.block('6p-06-read-mode-palette', async () => {
     const spread = (o) => o.open && !o.middleman
       && /openNtiPicker\(/.test(o.fns) && /openJournalPicker\(/.test(o.fns)
       && /openMyDatabasePicker\(/.test(o.fns)
-      && /openPicker\(|Open this note for editing/.test(o.fns);
+      /* v04.76 — updated in place: read mode's Folder row now opens
+         showArtFolderPicker() instead of a "open this note for editing"
+         toast (the owner asked for Folder to work in read mode). */
+      && /openPicker\(|showArtFolderPicker\(|Open this note for editing/.test(o.fns);
     r.check(spread(viaGrp),
       'phone read mode: the 🏷 palette spreads all four Attach rows open, with no 📎 middleman',
       viaGrp.open ? `headings: ${viaGrp.heads.join(' | ')} · 📎 opener still there ${viaGrp.middleman}`
@@ -3305,7 +3308,9 @@ await r.block('6p-10-attach-rows-pairing', async () => {
         if (!p || !p.classList.contains('open')) return { reached: false };
         /* The Attach four are the rows this group builds — identified by the
            FUNCTION each calls, so a relabel cannot fake the measurement. */
-        const want = ['openNtiPicker\\(', 'openPicker\\(|editing to change', 'openJournalPicker\\(', 'openMyDatabasePicker\\('];
+        /* v04.76 — the Folder row's read-mode function is now
+           showArtFolderPicker() (it was a toast); updated in place. */
+        const want = ['openNtiPicker\\(', 'openPicker\\(|showArtFolderPicker\\(|editing to change', 'openJournalPicker\\(', 'openMyDatabasePicker\\('];
         const rows = [...p.querySelectorAll('.eb-act')].filter((x) => x.offsetParent)
           .filter((x) => want.some((f) => new RegExp(f).test(x.getAttribute('onclick') || '')));
         const lines = {};
