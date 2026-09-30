@@ -25,7 +25,8 @@ must never accumulate here instead of there.
   MOVED from the list's foot. ＋ NTI asks which category (`#ctx`), then runs
   `addKindInCat()` (now takes an optional pre-filled name). New section 39
   (39a–39d, real taps from the pop-up's Type chip, Single and Multi,
-  390/820/1440): `--only 39` **100/100**; unpatched 18/52.
+  390/820/1440): `--only 39` **100/100**; unpatched 18/52. Full
+  `app-check` **1229/1229, twice in a row**.
 - **v04.74** (28 Sep 2026) — pop-up header: one title, a tab bar in both,
   one Details line. Owner's laptop screenshot of Single in edit mode: the
   title showed twice and seven rows stood above the note. In BOTH pop-ups,

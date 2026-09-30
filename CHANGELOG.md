@@ -7229,7 +7229,7 @@ the panel opened by a real tap on the pop-up's Type chip):
 
 `--only 39`: **100/100**. Unpatched (v04.74's app, these checks):
 **18/52, 34 FAILED** (fewer checks run because blocks stop at their first
-missing button). `ship-check` **13/13**.
+missing button). `ship-check` **13/13**. Full `app-check` **1229/1229, twice in a row**.
 
 **Not done / left:** search matches type and category names only (not
 colours or notes). The sidebar's Note Types list and the right-click
