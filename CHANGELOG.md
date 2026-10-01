@@ -7361,3 +7361,57 @@ Recorded as decision **D6** in `CLAUDE.md`. The same day the owner said
   rather than deleting them. No folder or note is removed, so D6 is not
   involved.
 - A folder deleted before this round, with its notes unfiled, is untouched.
+
+## v04.78 — a note in the search results joins the open note's tabs (1 Oct 2026)
+
+**Owner's ask** (laptop screenshot: sidebar search for "template", with an
+arrow from the result "Jumu'a Khutbah - TEMPLATE" to the open note's tab bar):
+> Enable a note from search result to add to the open note Tab by dragging
+> (is there any other way?)
+
+Built by the Architect directly.
+
+**Shape per layout (D5):**
+- **Laptop (1200px+):** drag the search result onto a tab bar. The sidebar,
+  the list and the note are all on screen together here.
+  - Each note row in the search results (`.sr`, built in `renderTree()`) is
+    now `draggable` with `artDStart()`, the same as a Pane 2 card. The main
+    tab bar's existing `tabBarDrop()` takes it.
+  - A Multi window's own bar (`.fw-tabs`) now accepts drops too
+    (`_fwTabsDrop()`). The note joins the group that window's note belongs
+    to, as its ＋ Add Tab already does (`_fwTabsOwner()`).
+  - Both drops go through one new `_tabDropAdd()`, so they cannot drift.
+- **Phone and tablet (below 1200px):** the sidebar and the note are never on
+  screen together, so there is nothing to drag onto. Instead, a **600ms
+  long-press on the search result** opens the note menu, which has
+  **📑 Add to Tab**. The tree's long-press handler gained a `.sr[data-aid]`
+  branch. On iOS no `contextmenu` fires, so a long-press on a search result
+  used to do nothing at all.
+- **"Is there any other way?"** Yes, two that already existed:
+  - right-click a search result → **📑 Add to Tab**;
+  - the tab bar's **＋ Add Tab**, which searches notes by title.
+
+**Checks: new section 42.**
+- `42a` (1440): a real mouse drag of the search result onto Pane 3's tab bar
+  adds the tab, and the chip appears.
+- `42b` (1440): the same drag onto a Multi window's bar.
+- `42c` (1440): right-click → 📑 Add to Tab.
+- `42d` (390 and 820, touch): a real CDP long-press opens the menu on top
+  without opening the result, and tapping 📑 Add to Tab adds the tab.
+
+The search row is found by its title, not by this round's `data-aid`, so
+the unpatched run reaches the real gesture.
+
+**Measured:**
+- `--only 42`: **12/12**.
+- Unpatched (v04.77's app): **6/12**. The 6 that fail are the drags and the
+  long-presses. `42c` passes on both versions by design: right-click → Add
+  to Tab is the pre-existing route.
+- `ship-check` **13/13**.
+
+**Not done / left:**
+- The Single pop-up's tab bar is not a drop target from the sidebar while
+  Single is open, because its backdrop covers the sidebar. The search
+  result's right-click → 📑 Add to Tab still adds to that note.
+- Dragging from search results onto a sidebar FOLDER is not offered: in
+  search mode the tree shows results, not folders.

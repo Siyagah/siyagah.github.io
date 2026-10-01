@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.77.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.78.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,15 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.78** (1 Oct 2026) — a note in the sidebar's search results joins
+  the open note's tabs (owner's screenshot). 1200px+: the `.sr` note rows are
+  `draggable` (`artDStart`). The main bar's `tabBarDrop()` and, new, every
+  Multi window's `.fw-tabs` (`_fwTabsDrop()` → `_fwTabsOwner()`) take the
+  drop, both through one `_tabDropAdd()`. Below 1200px (sidebar and note are
+  never on screen together): a 600ms long-press on the result opens the
+  note menu with 📑 Add to Tab (new `.sr[data-aid]` branch in the tree's
+  long-press handler; iOS had nothing). New section 42: `--only 42`
+  **12/12**; unpatched 6/12 (`42c` right-click is the pre-existing route).
 - **v04.77** (30 Sep 2026) — a folder holding notes cannot be deleted
   (D6, owner's rule). `_folderDelRefusal(fid)` (uses `cntOf`, so
   subfolders count) is checked inside `trashFolder()` itself, the one
@@ -84,18 +93,6 @@ must never accumulate here instead of there.
     found `21d`, `22e` and the 1440 title-drag check still written for the
     old header; all three were updated in place. Unpatched v04.73 fails
     `--only 37` at 27/101. Full `app-check` **1129/1129, twice in a row**.
-- **v04.73** (28 Sep 2026) — sync checked end to end on three devices at
-  once. Owner: "CHECK the SYNC again across all platforms". New
-  `tools/sync-e2e.mjs` runs a phone (390, touch), a tablet (820, touch) and a
-  laptop (1440) against one fake Firestore in Node (a fake SDK is served for
-  the gstatic scripts), so the real sign-in → listener → pull → merge → push
-  path runs on all three. It has 12 scenarios; app-check block 38 runs it.
-  - **Found:** a push's `ver` was `Date.now()`, so two devices pushing in
-    the same millisecond each skipped the other's write as their own echo,
-    and one edit never arrived (2 of 3 natural runs on v04.72).
-  - **Fix:** `_newPushVer()`, the millisecond plus a random fraction.
-
-  Unpatched: 17/19. Full `app-check` **943/943, twice in a row**.
 ---
 
 ## What this is

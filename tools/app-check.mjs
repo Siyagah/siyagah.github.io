@@ -10180,6 +10180,97 @@ await r.block('41b-sidebar-delete-rule-1440', async () => {
   await s.close();
 });
 
+/* 42 — v04.78: a note in the sidebar's search results joins the open
+   note's tabs (owner's laptop screenshot: an arrow from a search result to
+   the tab bar). Shapes, by layout:
+   42a 1440: a real mouse DRAG of the search result onto Pane 3's tab bar;
+   42b 1440: the same drag onto a Multi window's own tab bar;
+   42c 1440: right-click the result → 📑 Add to Tab (the other way);
+   42d 390/820 (touch): the sidebar and the note are never on screen together,
+       so the route is a real 600ms LONG-PRESS on the result → 📑 Add to Tab.
+   a1 is the open note; "Seeded note two" (a2) is searched for. */
+async function search42(page) {
+  await page.locator('#sq').fill('Seeded note two');
+  await page.waitForTimeout(300);
+  /* by its title, not by this round's data-aid, so the unpatched run reaches
+     the real drag/long-press instead of failing on a missing selector */
+  return page.locator('#tree .sr', { hasText: 'Seeded note two' }).first();
+}
+const tabs42 = (page) => page.evaluate(() => JSON.stringify(DB.tabs || {}));
+await r.block('42a-search-result-drag-to-tab-bar-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(400);
+  const row = await search42(page);
+  r.check(await row.isVisible(), '1440: the search lists "Seeded note two" as a note result', String(await row.isVisible()));
+  await row.dragTo(page.locator('#tab-bar'));
+  await page.waitForTimeout(400);
+  const t = await tabs42(page);
+  const chip = await page.locator('#tab-bar .tab-it[data-tid="a2"]').count();
+  r.check(/"a1":\["a2"\]/.test(t) && chip === 1, '1440: dragging the search result onto the tab bar adds it as a tab of the open note', t + ' chip ' + chip);
+  r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+await r.block('42b-search-result-drag-to-multi-window-tabs-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await page.evaluate(() => popOutNote('a1'));
+  await page.waitForTimeout(900);
+  /* the window covers the sidebar by default: move it right so the result is reachable, as the owner would */
+  await page.evaluate(() => { const w = document.getElementById('fw-a1'); w.style.left = '520px'; w.style.top = '60px'; w.style.width = '860px'; });
+  const row = await search42(page);
+  await row.dragTo(page.locator('#fw-a1 .fw-tabs'));
+  await page.waitForTimeout(500);
+  const t = await tabs42(page);
+  const chip = await page.locator('#fw-a1 .fw-tabs .tab-it[data-tid="a2"]').count();
+  r.check(/"a1":\["a2"\]/.test(t) && chip === 1, '1440 Multi: dragging the search result onto a window\'s tab bar adds it to THAT note\'s tabs', t + ' chip ' + chip);
+  r.check(s.errors.length === 0, '1440 Multi: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+await r.block('42c-search-result-right-click-add-to-tab-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await page.evaluate(() => selArt('a1'));
+  await page.waitForTimeout(400);
+  const row = await search42(page);
+  await row.click({ button: 'right' });
+  await page.waitForTimeout(300);
+  await page.locator('#ctx .ci', { hasText: 'Add to Tab' }).first().click();
+  await page.waitForTimeout(300);
+  const t = await tabs42(page);
+  r.check(/"a1":\["a2"\]/.test(t), '1440: right-click on the search result → 📑 Add to Tab adds it too', t);
+  await s.close();
+});
+for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }]) {
+await r.block(`42d-search-result-long-press-add-to-tab-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB(), hasTouch: true });
+  const { page } = s;
+  await page.evaluate(() => { selArt('a1'); });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => showPane('sb'));
+  await page.waitForTimeout(400);
+  const row = await search42(page);
+  const b = await row.boundingBox();
+  const cdp = await page.context().newCDPSession(page);
+  const p = { x: b.x + 30, y: b.y + b.height / 2 };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] });
+  await page.waitForTimeout(800);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(300);
+  const menu = await page.evaluate(() => { const m = document.getElementById('ctx'); const it = [...m.querySelectorAll('.ci')].find((e) => /Add to Tab/.test(e.textContent));
+    if (!it) return { item: false, shown: getComputedStyle(m).display };
+    it.scrollIntoView({ block: 'nearest' });
+    const r = it.getBoundingClientRect(); return { item: true, top: m.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)), art: ST.article }; });
+  r.check(menu.item && menu.top && menu.art === 'a1', `${vp.name}: a real long-press on the search result opens the note menu with 📑 Add to Tab, on top (and does not open the result)`, JSON.stringify(menu));
+  if (menu.item) { await page.locator('#ctx .ci', { hasText: 'Add to Tab' }).first().tap(); await page.waitForTimeout(300); }
+  const t = await tabs42(page);
+  r.check(/"a1":\["a2"\]/.test(t), `${vp.name}: tapping 📑 Add to Tab adds it to the open note's tabs`, t);
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and
    report() must say so. Declared expectThrow so the deliberate throw scores
