@@ -85,7 +85,11 @@ t('N22 tab colour (openTabClrPicker)', 'Notes', { op: () => { __A.pickColour('#1
 t('N23 delete note (trashArt)', 'Notes', { op: () => trashArt('a2') });
 t('N24 restore note from Trash (restoreItem)', 'Notes', { setup: () => trashArt('a2'), op: () => restoreItem(DB.trash[DB.trash.length - 1].id) });
 t('N25 permanently delete from Trash (permDeleteItem)', 'Notes', { setup: () => trashArt('a2'), op: () => permDeleteItem(DB.trash[DB.trash.length - 1].id) });
-t('N26 empty Trash (emptyTrash)', 'Notes', { setup: () => { trashArt('a2'); trashFolder('f2'); }, op: () => emptyTrash() });
+/* v04.77 — updated in place: a folder holding notes can no longer be deleted
+   (owner's rule), so every folder-delete test first moves the folder's notes
+   to f3 in its setup — which both devices share — and then deletes the now
+   EMPTY folder. What each test proves about sync is unchanged. */
+t('N26 empty Trash (emptyTrash)', 'Notes', { setup: () => { trashArt('a2'); DB.articles.forEach(a => { a.folderIds = a.folderIds.filter(f => f !== 'f2'); if (!a.folderIds.length) a.folderIds = ['f3']; }); persist(); trashFolder('f2'); }, op: () => emptyTrash() });
 t('N27 restore a note-history version (restoreNoteHistory)', 'Notes', {
   setup: () => { const a = DB.articles.find(x => x.id === 'a2'); _captureNoteHistory(a, 'save', true); a.content = '<p>Later text.</p>'; a.updatedAt = new Date().toISOString(); persist(); },
   op: () => { const a = DB.articles.find(x => x.id === 'a2'); restoreNoteHistory('a2', a.noteHistory[0].id); } });
@@ -107,9 +111,11 @@ t('F10 auto-number all folders (autoNumberAll)', 'Folders', { op: () => autoNumb
 t('F11 renumber children (doRenumber)', 'Folders', { op: () => doRenumber('f1', 3, false, 0) });
 t('F12 folder colour (setFolderColor)', 'Folders', { op: () => setFolderColor('f2', '#ff0000') });
 t('F13 folder bold (setFolderBold)', 'Folders', { op: () => setFolderBold('f2') });
-t('F14 delete folder (trashFolder)', 'Folders', { op: () => trashFolder('f2') });
-t('F15 delete folder with subfolder (trashFolder f1)', 'Folders', { op: () => trashFolder('f1') });
-t('F16 restore folder (restoreItem)', 'Folders', { setup: () => trashFolder('f2'), op: () => restoreItem(DB.trash[DB.trash.length - 1].id) });
+t('F14 delete empty folder (trashFolder)', 'Folders', { setup: () => { DB.articles.forEach(a => { a.folderIds = a.folderIds.filter(f => f !== 'f2'); if (!a.folderIds.length) a.folderIds = ['f3']; }); persist(); }, op: () => trashFolder('f2') });
+t('F15 delete empty folder with subfolder (trashFolder f1)', 'Folders', { setup: () => { DB.articles.forEach(a => { a.folderIds = a.folderIds.filter(f => f !== 'f1' && f !== 'f1a'); if (!a.folderIds.length) a.folderIds = ['f3']; }); persist(); }, op: () => trashFolder('f1') });
+t('F16 restore folder (restoreItem)', 'Folders', { setup: () => { DB.articles.forEach(a => { a.folderIds = a.folderIds.filter(f => f !== 'f2'); if (!a.folderIds.length) a.folderIds = ['f3']; }); persist(); trashFolder('f2'); }, op: () => restoreItem(DB.trash[DB.trash.length - 1].id) });
+t('F19 delete a folder that still holds notes is REFUSED (v04.77)', 'Folders', { op: () => trashFolder('f1'), expectNoChange: true });
+t('F20 convert empty folder to section (_doFolderToSection) — the folder must not come back', 'Folders', { setup: () => { DB.articles.forEach(a => { a.folderIds = a.folderIds.filter(f => f !== 'f2'); if (!a.folderIds.length) a.folderIds = ['f3']; }); persist(); }, op: () => _doFolderToSection('f2') });
 t('F17 move root folder to another section (moveFolderToSec)', 'Folders', { op: () => moveFolderToSec('f2', 'sec-2') });
 t('F18 move folder to MyWall group (moveFolderToGroup)', 'Folders', { op: () => moveFolderToGroup('f2', 'fg-2') });
 
@@ -202,8 +208,8 @@ t('X04 B edits note EARLIER, A deletes it later (delete must win)', 'Concurrency
   bFirst: true, op: () => trashArt('a2'), bop: () => __A.editContent('a2', '<p>B edited first</p>'),
   check: ({ MB, MA }) => { const p = []; for (const [n, M] of [['dir1', MB], ['dir2', MA]]) {
     if (M.articles.find(x => x.id === 'a2')) p.push(n + ': deleted note came back'); } return p; } });
-t('X05 A deletes folder f2, B adds a new note into f2 later', 'Concurrency', {
-  op: () => trashFolder('f2'), bop: () => { mkArt('f2', 'B new note in f2'); window.__bNew = DB.articles[DB.articles.length - 1].id; },
+t('X05 A deletes (empty) folder f2, B adds a new note into f2 later', 'Concurrency', {
+  setup: () => { DB.articles.forEach(a => { a.folderIds = a.folderIds.filter(f => f !== 'f2'); if (!a.folderIds.length) a.folderIds = ['f3']; }); persist(); }, op: () => trashFolder('f2'), bop: () => { mkArt('f2', 'B new note in f2'); window.__bNew = DB.articles[DB.articles.length - 1].id; },
   check: ({ MB, MA }) => { const p = []; for (const [n, M] of [['dir1', MB], ['dir2', MA]]) {
     const a = M.articles.find(x => x.title === 'B new note in f2');
     if (!a) p.push(n + ': B\'s new note lost');
@@ -237,7 +243,7 @@ t('Z01 browsing only (open notes, enter+leave edit unchanged, open Trash, render
     ST.folder = 'f2'; render(); openTrash(); closeTrash(); toggleSection({ target: document.body, stopPropagation() {} }, 'sec-1');
     await __A.sleep(30); persist(); } });
 t('Z02 B edits a3 EARLIER, A deletes its folder f2 later (B edit must survive, a3 unfiled)', 'Concurrency', {
-  bFirst: true, op: () => trashFolder('f2'), bop: () => __A.editContent('a3', '<p>B edit before folder delete</p>'),
+  setup: () => { DB.articles.forEach(a => { a.folderIds = a.folderIds.filter(f => f !== 'f2'); if (!a.folderIds.length) a.folderIds = ['f3']; }); persist(); }, bFirst: true, op: () => trashFolder('f2'), bop: () => __A.editContent('a3', '<p>B edit before folder delete</p>'),
   check: ({ MB, MA }) => { const p = []; for (const [n, M] of [['dir1', MB], ['dir2', MA]]) {
     const a = M.articles.find(x => x.id === 'a3');
     if (!a) { p.push(n + ': a3 lost'); continue; }

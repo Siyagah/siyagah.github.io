@@ -9091,6 +9091,12 @@ await r.block('29j-clear-filter-390', async () => {
    folder dialog (sidebar 📚 Folders → 🗑 → confirm); the merge checks call
    mergeDB() directly, as sections 8/9 do — it is a data path. */
 function f30Snapshot(page) { return page.evaluate(() => JSON.parse(JSON.stringify(DB))); }
+/* v04.77 — updated in place. The owner's rule: "a folder should not be
+   deleted with notes in it". So the real 🗑 click on f1 (which holds a1, and
+   a2 in its subfolder f1a) is now REFUSED and changes nothing. The owner
+   then moves the notes out, and the same real click deletes the now-empty
+   folder — and that deletion must reach the other device (the owner's
+   "empty folders deleted should be synced"), with every note still there. */
 await r.block('30a-folder-delete-keeps-notes-1440', async () => {
   const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
   const { page } = s;
@@ -9101,25 +9107,34 @@ await r.block('30a-folder-delete-keeps-notes-1440', async () => {
   await page.waitForTimeout(450);
   await page.locator('#pkList .pr[data-fid="f1"] .pk-act[title="Delete"]').click();
   await page.waitForTimeout(300);
-  const out = await page.evaluate((other) => {
+  const refused = await page.evaluate(() => ({ f1: DB.folders.some((f) => f.id === 'f1'), f1a: DB.folders.some((f) => f.id === 'f1a'),
+    trash: (DB.trash || []).length, tombs: (DB.tombstones || []).length, a1: (DB.articles.find((a) => a.id === 'a1') || {}).folderIds,
+    toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | ') }));
+  r.check(refused.f1 && refused.f1a && refused.trash === 0 && refused.tombs === 0 && JSON.stringify(refused.a1) === '["f1"]',
+    '1440: a real 🗑 click on a folder that holds notes is REFUSED — nothing deleted, nothing unfiled', JSON.stringify(refused));
+  r.check(/still holds 2 notes/.test(refused.toast), '1440: the refusal says why and how many notes (counting subfolders)', refused.toast);
+  /* the owner moves the notes out, then deletes the now-empty folder */
+  await page.evaluate(() => { ['a1', 'a2'].forEach((id) => { const a = DB.articles.find((x) => x.id === id); a.folderIds = ['f2']; a.updatedAt = new Date().toISOString(); }); persist(); _pkRebuildList(); });
+  const other2 = await f30Snapshot(page);
+  await page.locator('#pkList .pr[data-fid="f1"] .pk-act[title="Delete"]').click();
+  await page.waitForTimeout(300);
+  const out = await page.evaluate(({ other, other2 }) => {
     const ids = (d) => (d.articles || []).map((a) => a.id).sort();
-    const merged1 = mergeDB(JSON.parse(JSON.stringify(other)), JSON.parse(JSON.stringify(DB)));
+    const merged1 = mergeDB(JSON.parse(JSON.stringify(other2)), JSON.parse(JSON.stringify(DB)));
     const merged2 = mergeDB(JSON.parse(JSON.stringify(DB)), JSON.parse(JSON.stringify(other)));
     return {
       foldersGone: !DB.folders.some((f) => f.id === 'f1' || f.id === 'f1a'),
-      local: ids(DB), a2Unfiled: (DB.articles.find((a) => a.id === 'a2') || {}).folderIds,
-      tombs: (DB.tombstones || []).map((t) => t.id).sort(),
+      local: ids(DB), tombs: (DB.tombstones || []).map((t) => t.id).sort(),
       otherAfter: ids(merged1), localAfter: ids(merged2),
       otherFolders: merged1.folders.map((f) => f.id).sort(),
     };
-  }, other);
-  r.check(out.foldersGone, '1440: a real 🗑 click in the folder dialog deletes the folder and its subfolder', JSON.stringify(out));
-  r.check(JSON.stringify(out.local) === '["a1","a2","a3"]' && JSON.stringify(out.a2Unfiled) === '[]',
-    '1440: the notes that were inside stay in the notebook, unfiled', JSON.stringify(out));
-  r.check(!out.tombs.includes('a1') && !out.tombs.includes('a2'), 'only the folders are marked deleted, never the notes that were in them', JSON.stringify(out.tombs));
+  }, { other, other2 });
+  r.check(out.foldersGone, '1440: once empty, a real 🗑 click deletes the folder and its subfolder', JSON.stringify(out));
+  r.check(JSON.stringify(out.local) === '["a1","a2","a3"]', '1440: every note is still in the notebook', JSON.stringify(out));
+  r.check(!out.tombs.includes('a1') && !out.tombs.includes('a2'), 'only the folders are marked deleted, never a note', JSON.stringify(out.tombs));
   r.check(JSON.stringify(out.otherAfter) === '["a1","a2","a3"]', 'after a sync, the OTHER device still has every note', JSON.stringify(out.otherAfter));
-  r.check(JSON.stringify(out.localAfter) === '["a1","a2","a3"]', 'after a sync back, THIS device still has every note', JSON.stringify(out.localAfter));
-  r.check(!out.otherFolders.includes('f1') && !out.otherFolders.includes('f1a'), 'the folder deletion itself still reaches the other device', JSON.stringify(out.otherFolders));
+  r.check(JSON.stringify(out.localAfter) === '["a1","a2","a3"]', 'after a sync back from a stale copy, THIS device still has every note', JSON.stringify(out.localAfter));
+  r.check(!out.otherFolders.includes('f1') && !out.otherFolders.includes('f1a'), 'the empty folder\'s deletion reaches the other device', JSON.stringify(out.otherFolders));
   r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
   await s.close();
 });
@@ -9130,6 +9145,9 @@ await r.block('30b-empty-trash-keeps-notes', async () => {
   page.on('dialog', (d) => d.accept());
   const out = await page.evaluate(() => {
     const other = JSON.parse(JSON.stringify(DB));
+    /* v04.77 — updated in place: empty the folder first (a folder holding
+       notes can no longer be deleted), then delete it and empty Trash */
+    ['a1', 'a2'].forEach((id) => { DB.articles.find((x) => x.id === id).folderIds = ['f2']; });
     trashFolder('f1'); emptyTrash();
     const ids = (d) => (d.articles || []).map((a) => a.id).sort();
     return { trash: DB.trash.length, tombs: DB.tombstones.map((t) => t.id).sort(),
@@ -9290,7 +9308,7 @@ await r.block('32-sync-audit-all-directions', async () => {
   const [, total, pass, fail, , known, notrun, err] = m.map(Number);
   const bad = txt.split('\n').filter((l) => /^(FAIL|ERROR|NOTRUN)\b/.test(l)).slice(0, 8).join(' | ');
   r.check(fail === 0 && err === 0 && notrun === 0,
-    'every change reaches the other device and survives the merge back, in both directions (114 operations)', `PASS ${pass}/${total}, FAIL ${fail}, ERROR ${err}, NOTRUN ${notrun} ${bad}`);
+    'every change reaches the other device and survives the merge back, in both directions (${total} operations; 116 since v04.77)', `PASS ${pass}/${total}, FAIL ${fail}, ERROR ${err}, NOTRUN ${notrun} ${bad}`);
   r.check(known === 2, 'only the two recorded undo rows are KNOWN (undo stays local)', `KNOWN ${known}`);
   r.check(out.status === 0, 'the sync audit exits cleanly', `exit ${out.status}`);
 });
@@ -10088,6 +10106,77 @@ await r.block('40c-edit-mode-folder-still-staged-1440', async () => {
   const row = await page.evaluate(() => { const r = [...document.querySelectorAll('#ctx .ci')].find((e) => /Folder/.test(e.textContent)); return r ? r.getAttribute('onclick') : null; });
   r.check(/openPicker\(\)/.test(row || ''), '1440 editing: 📎 Attach → Folder still opens the staged picker (saved with the edit)', String(row));
   r.check(s.errors.length === 0, '1440 editing: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+/* 41 — v04.77: a folder that holds notes cannot be deleted (owner's rule,
+   30 Sep 2026: "a folder should not be deleted with notes in it … but empty
+   folders deleted should be synced"). Real taps/clicks along the owner's
+   routes: the folder dialog's ⋯ row menu at 390/820 (touch), and the
+   sidebar's right-click menu at 1440. f1 holds a1 (and a2 in its subfolder
+   f1a); f9 is seeded EMPTY.
+   41a refused with the reason, nothing deleted; the empty folder deletes,
+       is tombstoned, and a stale device loses it at the next merge;
+   41b (1440) the refusal is a dialog with "📂 Open the folder", which opens
+       the folder so the owner can move its notes. */
+function db41() { const d = seedDB(); d.folders.push({ id: 'f9', name: '(009) Empty Folder', parentId: null, order: 9, sectionId: 'sec-1', updatedAt: d.folders[0].updatedAt }); return d; }
+for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }]) {
+await r.block(`41a-folder-dialog-delete-rule-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db41(), hasTouch: true });
+  const { page } = s;
+  page.on('dialog', (d) => d.accept());
+  const stale = await page.evaluate(() => JSON.parse(JSON.stringify(DB)));
+  await page.evaluate(() => showPane('sb'));
+  await page.locator('#sb-toolbar .sb-tb-btn', { hasText: 'Folders' }).tap();
+  await page.waitForTimeout(500);
+  const del = async (fid) => {
+    await page.locator(`#pkList .pr[data-fid="${fid}"] .pk-more`).tap();
+    await page.waitForTimeout(250);
+    await page.locator('#ctx .ci', { hasText: 'Delete' }).first().tap();
+    await page.waitForTimeout(350);
+  };
+  await del('f1');
+  const r1 = await page.evaluate(() => ({ f1: DB.folders.some((f) => f.id === 'f1'), f1a: DB.folders.some((f) => f.id === 'f1a'), trash: (DB.trash || []).length,
+    a1: (DB.articles.find((a) => a.id === 'a1') || {}).folderIds, dialogOpen: !!document.getElementById('pkList'),
+    toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | ') }));
+  r.check(r1.f1 && r1.f1a && r1.trash === 0 && JSON.stringify(r1.a1) === '["f1"]', `${vp.name}: ⋯ → Delete on a folder holding notes deletes NOTHING`, JSON.stringify(r1));
+  r.check(/still holds 2 notes/.test(r1.toast) && r1.dialogOpen, `${vp.name}: it says why ("still holds 2 notes") and the folder dialog stays open`, JSON.stringify(r1));
+  await del('f9');
+  const r2 = await page.evaluate((stale) => { const m = mergeDB(JSON.parse(JSON.stringify(stale)), JSON.parse(JSON.stringify(DB)));
+    return { gone: !DB.folders.some((f) => f.id === 'f9'), tomb: (DB.tombstones || []).some((t) => t.id === 'f9'), staleAfter: m.folders.some((f) => f.id === 'f9'), notes: m.articles.length }; }, stale);
+  r.check(r2.gone && r2.tomb, `${vp.name}: ⋯ → Delete on an EMPTY folder deletes it (and marks it deleted)`, JSON.stringify(r2));
+  r.check(!r2.staleAfter && r2.notes === 3, `${vp.name}: the empty folder's deletion reaches a stale device; every note survives`, JSON.stringify(r2));
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+await r.block('41b-sidebar-delete-rule-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: db41() });
+  const { page } = s;
+  await page.evaluate(() => { ST.secOpen = { 'sec-1': true }; renderTree(); });
+  await page.waitForTimeout(200);
+  await page.locator('#sb .tr-row[data-fid="f1"]').first().click({ button: 'right' });
+  await page.waitForTimeout(250);
+  await page.locator('#ctx .ci', { hasText: 'Delete folder' }).click();
+  await page.waitForTimeout(300);
+  const m1 = await page.evaluate(() => ({ text: (document.getElementById('mb') || {}).textContent || '', f1: DB.folders.some((f) => f.id === 'f1'),
+    btn: [...document.querySelectorAll('#mb button')].map((b) => b.textContent.trim()) }));
+  r.check(/isn't empty/.test(m1.text) && /still holds 2 notes/.test(m1.text) && m1.f1 && !m1.btn.some((b) => /Move to Trash/.test(b)),
+    '1440: right-click → Delete folder on a folder holding notes shows "isn\'t empty … still holds 2 notes", with no delete button', JSON.stringify(m1));
+  await page.locator('#mb button', { hasText: 'Open the folder' }).click();
+  await page.waitForTimeout(300);
+  const open = await page.evaluate(() => ({ folder: ST.folder, modal: !!(document.getElementById('mb') && document.getElementById('mb').offsetParent) }));
+  r.check(open.folder === 'f1' && !open.modal, '1440: "📂 Open the folder" closes the message and opens that folder', JSON.stringify(open));
+  await page.evaluate(() => { ST.secOpen = { 'sec-1': true }; renderTree(); });
+  await page.locator('#sb .tr-row[data-fid="f9"]').first().click({ button: 'right' });
+  await page.waitForTimeout(250);
+  await page.locator('#ctx .ci', { hasText: 'Delete folder' }).click();
+  await page.waitForTimeout(300);
+  await page.locator('#mb button', { hasText: 'Move to Trash' }).click();
+  await page.waitForTimeout(300);
+  const gone = await page.evaluate(() => ({ gone: !DB.folders.some((f) => f.id === 'f9'), trash: (DB.trash || []).some((t) => t.item && t.item.id === 'f9') }));
+  r.check(gone.gone && gone.trash, '1440: an EMPTY folder still deletes through the same menu, into Trash', JSON.stringify(gone));
+  r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
   await s.close();
 });
 
