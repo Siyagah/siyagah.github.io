@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.77">
+<meta name="app-version" content="04.78">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1367,7 +1367,7 @@ sup.ann-sup:hover{text-decoration:underline}
 .tab-more.show{display:block}
 .tab-it.tab-flash{box-shadow:0 0 0 2px var(--accent);transition:box-shadow .15s}
 #tab-bar.has-tabs{display:flex}
-#tab-bar.tab-drop-over{background:rgba(99,102,241,.1);box-shadow:inset 0 0 0 2px var(--accent)}
+#tab-bar.tab-drop-over,.fw-tabs.tab-drop-over{background:rgba(99,102,241,.1);box-shadow:inset 0 0 0 2px var(--accent)}
 #tab-bar::-webkit-scrollbar{display:none}
 .tab-it{display:inline-flex;align-items:center;gap:5px;padding:5px 11px 5px;
   border:1px solid var(--border2);border-radius:6px 6px 0 0;border-bottom:none;
@@ -3126,7 +3126,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.77</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.78</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4236,7 +4236,13 @@ function renderTree(){
         ).join('');
       }
       if(noteHits.length){
-        h+='<div class="sr-grp-hd">📄 Notes</div>'+noteHits.map(a=>`<div class="sr${ST.article===a.id?' on':''}" onclick="selArt('${a.id}')" oncontextmenu="showArtCtx(event,'${a.id}')">${esc(a.title)}</div>`).join('');
+        /* v04.78 — a note in the search results can be DRAGGED onto a tab bar
+           (the owner's ask), exactly like a Pane 2 card: artDStart() sets
+           _artDragId, which tabBarDrop()/_fwTabsDrop() accept. data-aid lets
+           a touch long-press open the same note menu (📑 Add to Tab), which
+           is the phone/tablet route: there the sidebar and the note are
+           never on screen together, so there is nothing to drag onto. */
+        h+='<div class="sr-grp-hd">📄 Notes</div>'+noteHits.map(a=>`<div class="sr${ST.article===a.id?' on':''}" data-aid="${a.id}" draggable="true" ondragstart="artDStart(event,'${a.id}')" ondragend="artDEnd(event)" onclick="selArt('${a.id}')" oncontextmenu="showArtCtx(event,'${a.id}')" title="Drag onto the Tab bar to add it as a tab · right-click for more">${esc(a.title)}</div>`).join('');
       }
     }
     el.innerHTML=h;
@@ -6964,19 +6970,48 @@ function tabBarDrop(ev){
   const aid=_artDragId||_pinDragAid||(function(){try{return ev.dataTransfer.getData('text/plain')||ev.dataTransfer.getData('text').replace(/^art:/,'');}catch(e){return null;}})();
   _artDragId=null;_pinDragAid=null;
   if(!aid)return;
-  const art=DB.articles.find(x=>x.id===aid);
-  if(!art)return;
   const host=_tabHost();
   if(!host){_tabNoHost();return;}
+  _tabDropAdd(host,aid,false);
+}
+/* v04.78 — one "a dropped note joins this group" for the main/Single tab bar
+   and every Multi window's own bar, so the two cannot drift apart. */
+function _tabDropAdd(host,aid,ownerFromWindow){
+  const art=DB.articles.find(x=>x.id===aid);
+  if(!art||!host)return;
   if(aid===host){toast('📑 A note can’t be a tab of itself');return;}
   const m=_tabsMap();
   if(!m[host])m[host]=[];
   if(m[host].includes(aid)){_tabScrollIntoView(aid,true);toast('📑 Already in this note’s Tab bar');return;}
-  m[host].push(aid);_tabStampAdd(host,aid);ST.tabOwner=host;
+  m[host].push(aid);_tabStampAdd(host,aid);
+  if(!ownerFromWindow)ST.tabOwner=host;
   persist();
   renderTabBar();
+  try{_fwRefreshTabsAll();}catch(e){}
   setTimeout(()=>_tabScrollIntoView(aid,true),0);
   toast('📑 "'+(art.title||'Untitled').slice(0,30)+'" added to Tab bar');
+}
+/* A Multi window's bar: the group is the one THIS window's note belongs to
+   (owner, or the note itself when it has none yet) — as its ＋ Add Tab does. */
+function _fwTabsOwner(aid){
+  const m=_tabsMap();
+  if(m[aid]&&m[aid].length)return aid;
+  for(const k in m){if(m[k]&&m[k].indexOf(aid)>-1&&DB.articles.some(x=>x.id===k))return k;}
+  return aid;
+}
+function _fwTabsDragOver(ev){
+  if(!(_artDragId||_pinDragAid))return;
+  ev.preventDefault();ev.dataTransfer.dropEffect='copy';
+  ev.currentTarget.classList.add('tab-drop-over');
+}
+function _fwTabsDragLeave(ev){if(!ev.currentTarget.contains(ev.relatedTarget))ev.currentTarget.classList.remove('tab-drop-over');}
+function _fwTabsDrop(ev,aid){
+  ev.preventDefault();ev.stopPropagation();
+  ev.currentTarget.classList.remove('tab-drop-over');
+  const did=_artDragId||_pinDragAid;
+  _artDragId=null;_pinDragAid=null;
+  if(!did)return;
+  _tabDropAdd(_fwTabsOwner(aid),did,true);
 }
 
 
@@ -11469,7 +11504,7 @@ function _fwTabsHTML(aid){
       +(own?'<span class="tab-own-dot">◆</span>':'')
       +`<span class="tab-lbl">${esc(lbl)}</span></div>`;
   }).join('');
-  return `<div class="fw-tabs" data-ps="tabs"><div class="tab-strip">${chips}</div>`
+  return `<div class="fw-tabs" data-ps="tabs" ondragover="_fwTabsDragOver(event)" ondragleave="_fwTabsDragLeave(event)" ondrop="_fwTabsDrop(event,'${aid}')"><div class="tab-strip">${chips}</div>`
     +`<button class="tab-add-btn" onclick="event.stopPropagation();_fwAddTab('${aid}',this)" title="Search & add a note to this note’s Tab bar">＋ Add Tab</button></div>`;
 }
 function _fwTabSelect(aid,tid){
@@ -25620,6 +25655,15 @@ document.addEventListener('keydown', function(ev){
         _fired=true;
         if(navigator.vibrate) navigator.vibrate(25);
         showSfItemCtx({clientX:_sx,clientY:_sy,preventDefault:()=>{},stopPropagation:()=>{}},sfid);
+      },600);
+    } else if(e.target.closest('.sr[data-aid]')){
+      /* v04.78 — a note in the search results: the same note menu a
+         right-click opens, with 📑 Add to Tab (iOS fires no contextmenu) */
+      const aid=e.target.closest('.sr[data-aid]').dataset.aid;
+      _t=setTimeout(()=>{
+        _fired=true;
+        if(navigator.vibrate) navigator.vibrate(25);
+        showArtCtx({clientX:_sx,clientY:_sy,preventDefault:()=>{},stopPropagation:()=>{}},aid);
       },600);
     } else if(e.target.closest('[data-tag-sec]')){
       _t=setTimeout(()=>{
