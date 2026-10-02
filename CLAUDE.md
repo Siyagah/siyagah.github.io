@@ -24,7 +24,8 @@ must never accumulate here instead of there.
   never on screen together): a 600ms long-press on the result opens the
   note menu with 📑 Add to Tab (new `.sr[data-aid]` branch in the tree's
   long-press handler; iOS had nothing). New section 42: `--only 42`
-  **12/12**; unpatched 6/12 (`42c` right-click is the pre-existing route).
+  **12/12**; unpatched 6/12 (`42c` right-click is the pre-existing route). Full `app-check`
+  **1289/1289, twice in a row**.
 - **v04.77** (30 Sep 2026) — a folder holding notes cannot be deleted
   (D6, owner's rule). `_folderDelRefusal(fid)` (uses `cntOf`, so
   subfolders count) is checked inside `trashFolder()` itself, the one

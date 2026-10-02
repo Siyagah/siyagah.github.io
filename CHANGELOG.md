@@ -7408,6 +7408,7 @@ the unpatched run reaches the real gesture.
   long-presses. `42c` passes on both versions by design: right-click → Add
   to Tab is the pre-existing route.
 - `ship-check` **13/13**.
+- Full `app-check` **1289/1289, twice in a row**.
 
 **Not done / left:**
 - The Single pop-up's tab bar is not a drop target from the sidebar while
