@@ -7653,5 +7653,6 @@ both when done".
 - `--only 22,23,37`: **215/215**. `--only 45`: **24/24**.
 - Unpatched (v04.80's app), `--only 45,37c`: **12/30, 18 FAILED**.
 - `ship-check` **13/13**.
+- Full `app-check` **1405/1405, twice in a row**.
 
 **Not done / left:** nothing from the owner's 4 Oct message.

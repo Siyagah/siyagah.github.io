@@ -24,7 +24,7 @@ must never accumulate here instead of there.
   row under the four-row strip. Single's ▾/▴ rebuilds `#p3h`;
   `_fwRefreshMeta()` keeps exactly one formatting row; `_popPanelTop()`
   counts only a free-standing row. `37c`/`22b`/`23b` updated in place; new
-  section 45: **24/24**; unpatched `--only 45,37c` 12/30.
+  section 45: **24/24**; unpatched `--only 45,37c` 12/30. Full `app-check` **1405/1405, twice in a row**.
 - **v04.80** (4 Oct 2026) — owner: Details "doesn't work", ✚ should open in
   the pane, Edit/Save "on the upper bar … at the corner", ✚ New in both
   pop-ups. **Details:** reproduced only with a FULL localStorage (the
