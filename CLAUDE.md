@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.78.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.79.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,24 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.79** (3 Oct 2026) — pop-ups: tabs in row 1, title in row 2 (owner:
+  "title bar on the top doesn't look usual. It should be on the second row.
+  First row keep for dragging, resizing and other tabs"; partly reverses
+  v04.74). Both pop-ups, every size, four rows:
+  1. **bar:** ⠿ · icon · tabs (`.pf-tabs-slot`) · ✓ Saved · switch · ✕.
+     Multi's tabs are built into it; Single's one `#tab-bar` is MOVED in by
+     `_popFrameSync()` and back before `#p3h` by `_popTabBarHome()` /
+     `_popFrameRemove()` (also the main view's bar and the ↕/✥ handle);
+  2. **title row:** `_popTitleRowHTML()` (Single: `#p3-title-modal`) with
+     ‹ › moved here (on the phone the bar measured four arrows and no room
+     for a tab) and the title input (read mode: text, right-click edits);
+  3. Details line; 4. formatting row.
+
+  Drag ignores tab chips and `#tab-bar` keeps its own handler.
+  `_popPanelTop()` counts the title row. `37a`/`37c`/`20i` updated in place;
+  new section 43 (tab bar goes home on close, ‹ › in row 2 work, row 1
+  drags and tab clicks don't): `--only 43` **34/34**; unpatched `--only
+  43,37` 170/207.
 - **v04.78** (1 Oct 2026) — a note in the sidebar's search results joins
   the open note's tabs (owner's screenshot). 1200px+: the `.sr` note rows are
   `draggable` (`artDStart`). The main bar's `tabBarDrop()` and, new, every
@@ -60,40 +78,6 @@ must never accumulate here instead of there.
   (39a–39d, real taps from the pop-up's Type chip, Single and Multi,
   390/820/1440): `--only 39` **100/100**; unpatched 18/52. Full
   `app-check` **1229/1229, twice in a row**.
-- **v04.74** (28 Sep 2026) — pop-up header: one title, a tab bar in both,
-  one Details line. Owner's laptop screenshot of Single in edit mode: the
-  title showed twice and seven rows stood above the note. In BOTH pop-ups,
-  top to bottom, four rows:
-  - **Window bar** holds the one title. Editing: it is the input (Single's
-    keeps `id="ti"`, Multi's `#fw-ti-<aid>`), built by `_popTitleHTML()`
-    inside `_popFrameHTML()`. Reading (Single): plain text, right-click
-    edits. The separate title row is gone.
-  - **Tab bar**, always drawn in both pop-ups at every size, even with no
-    tabs. Single uses `#tab-bar` (now shown on the phone sheet too, only
-    the phone's MAIN view still hides it); Multi has `.fw-tabs`
-    (`_fwTabsHTML()`) for its own note's group. A tab tap hands the window
-    to that note; ＋ Add Tab aims the shared picker at that note's group
-    (`_tabPickHost`).
-  - **One Details line** (`_popDetailsLineHTML()`): Type chip · last
-    folder name · version · 🏷 Tags · date · 📎 Attach · 📦 · ▾ Details.
-    CSS drops the date under 1200px, and tags/Attach/📦 under 640px.
-    ▾ Details swaps in the full four-row strip, ▴ closes it. Closed by
-    default, remembered per device in `localStorage`
-    (`siyagah-pop-details`, never `DB.theme`). The chips reuse
-    `_kindChipsHTML/_attachBtnHTML/_archBtnHTML/_dateFlipHTML/
-    _folderChipsHTML(a,true)`. The version and 🏷 chips open Details.
-  - **Formatting row + Save**, unchanged. `_popPanelTop()` now counts the
-    tab bar, and `_popPanelsRelayout()` re-seats Contents/Sidepane when
-    Details flips or the tab bar changes.
-  - Section 20 was updated in place: it describes the OPEN strip, so it
-    runs with Details open; 20i/20j no longer measure from a title row.
-  - New section 37 (37a–37f, 390/820/1440, Single and Multi, real taps).
-    Measured, above-the-note height closed vs open: 1440 146/238 (Single)
-    and 135/227 (Multi); 390 200/306 and 190/296.
-  - Builder ran `--only 37,31,23,20`: **245/245**. The review's full run
-    found `21d`, `22e` and the 1440 title-drag check still written for the
-    old header; all three were updated in place. Unpatched v04.73 fails
-    `--only 37` at 27/101. Full `app-check` **1129/1129, twice in a row**.
 ---
 
 ## What this is

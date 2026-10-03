@@ -7416,3 +7416,81 @@ the unpatched run reaches the real gesture.
   result's right-click → 📑 Add to Tab still adds to that note.
 - Dragging from search results onto a sidebar FOLDER is not offered: in
   search mode the tree shows results, not folders.
+
+## v04.79 — pop-ups: tabs in the top row, the title on its own second row (3 Oct 2026)
+
+**Owner's ask** (laptop screenshot of a Multi pop-up in edit mode, with the
+title in the window bar and the tab bar as its own row underneath):
+> Bismillah! I think title bar on the top doesn't look usual. It should be
+> on the second row. First row keep for drangging, resizing and other tabs.
+
+Built by the Architect directly. This partly reverses v04.74, which put the
+title into the window bar.
+
+**Both pop-ups, every size, now have four rows above the note:**
+1. **Window bar:** ⠿ grip · pop-up icon · **the tabs** (＋ Add Tab; Single
+   also 📅 Cal) · ✓ Saved · Single/Multi switch · ✕.
+   - Multi: `_popFrameHTML()` builds `_fwTabsHTML()` into a
+     `.pf-tabs-slot`. Multi's separate tab row is gone.
+   - Single: the one `#tab-bar` element is **moved** into the slot by
+     `_popFrameSync()`. It is also the main view's tab bar and Single's
+     ↕/✥ resize/drag handle, so it is moved rather than duplicated.
+     `_popTabBarHome()` puts it back before `#p3h` before the frame is
+     rebuilt or removed; `_popFrameRemove()` is used by `closeNoteModal()`
+     and the sync's removal branch.
+2. **Title row** (`_popTitleRowHTML()`; Single's is `#p3-title-modal`, a
+   sibling under the frame): **‹ ›** and the title.
+   - The title is the input while editing; Single's read view shows plain
+     text that still edits on right-click.
+   - It is 15px bold (16px on touch so iOS does not zoom), the full width of
+     the pop-up.
+   - **‹ › moved here from the bar.** On the phone the bar measured four
+     arrows in a row (note ‹ › beside the tab strip's own ‹ › scroll arrows)
+     and left no room for a tab. ‹ › go to the neighbouring note, so they
+     sit beside its title.
+3. **Details line**, unchanged.
+4. **Formatting row + Save**, unchanged.
+
+**Plumbing:**
+- Drag: the frame's drag ignores presses on `#tab-bar` (it keeps its own
+  `_tabBarModalDown`). Multi's drag ignores tab chips, ＋ Add Tab, the
+  strip's arrows and ✕. The strip inside the bar keeps
+  `touch-action:pan-x`, so a swipe scrolls it.
+- `_popPanelTop()` measures frame + title row + strip + formatting row.
+- `_popFrameFlash()` looks for the title in the row.
+- `_fwFrameResyncAll()` no longer carries a title, since the title is not in
+  the bar.
+
+**Checks updated in place** (they described v04.74's layout; the reason is
+recorded at each check):
+- `37a`: the title is the input in its own row directly under the bar, not
+  inside it. Single's read-mode text and right-click edit are in that row.
+- `37c`: still exactly four rows, now bar (with the tabs inside it) · title
+  · Details line · formatting row.
+- `20i`: the strip budget starts under the title row again.
+
+**New section 43:**
+- `43a` (390/820/1440): while Single is open its tab bar, with its tab, is
+  in row 1. ✕ puts it back in the main view, before `#p3h`, and removes rows
+  1 and 2; at 1440 the main bar shows again. Reopening Single moves it in
+  again.
+- `43b` (390/820/1440, Single and Multi): ‹ › are in the title row, not the
+  bar, and a real tap or click on › opens the next note in the folder.
+- `43c` (1440 Multi): dragging row 1 by the grip still moves the window, and
+  clicking a tab chip in row 1 switches the window without moving it.
+
+**Measured:**
+- `--only 37,20`: **217/217**. `--only 43`: **34/34**.
+- Unpatched (v04.78's app), `--only 43,37`: **170/207, 37 FAILED**. All the
+  37 failures are the new layout. Two kinds of check pass on both versions,
+  by design:
+  - `43a`'s "back in the main view" checks, which guard the new move;
+  - `43c`'s drag check, which guards against breaking the drag.
+- Screenshots at 390, 820 and 1440, Single and Multi, with two tabs.
+- `ship-check` **13/13**.
+
+**Not done / left:**
+- On a phone, row 1 shows about one tab at a time; the strip scrolls
+  sideways and shows "+N" for the rest.
+- Single's ↕/✥ tint (v03.NotePane.P7) now sits in row 1 with the tabs, where
+  it always marked the tab bar.
