@@ -5733,9 +5733,11 @@ await r.block('19i-frame-resyncs-on-tier-cross', async () => {
     await s.close();
     r.check(!!wide && !!narrow && !!wideAgain
       && wide.closeText === '✕' && wide.switchHasWord && wide.gripVisible
-      && narrow.closeText === '✕ Close' && !narrow.switchHasWord && !narrow.gripVisible
+      /* v04.80 — updated in place: the phone's ✕ no longer adds "Close" (row 1
+         holds ✚ New and Save/Edit now; the word cost the tab strip 34px) */
+      && narrow.closeText === '✕' && !narrow.switchHasWord && !narrow.gripVisible
       && wideAgain.closeText === '✕' && wideAgain.switchHasWord && wideAgain.gripVisible,
-      `${c.label}: the frame re-syncs across a _popTier() crossing (820→390→820) — ✕ gains/drops "Close" and the grip/switch word follow, in both directions`,
+      `${c.label}: the frame re-syncs across a _popTier() crossing (820→390→820) — the grip/switch word follow, in both directions`,
       JSON.stringify({ wide, narrow, wideAgain }));
   }
 });
@@ -6494,8 +6496,11 @@ await r.block('21h-saveArt-keeps-users-own-edit', async () => {
    for the metadata strip above this row. SIZES_22 adds 360 to the three
    VIEWPORTS sizes, since the issue's own table is measured at all four. */
 const SIZES_22 = [{ name: '360', width: 360, height: 780 }, ...VIEWPORTS];
-const ROW_ORDER_MOBILE = ['text', 'heads', 'lists', 'insert', 'sect', 'save'];
-const ROW_ORDER_WIDE = ['text', 'heads', 'lists', 'insert', 'hist', 'tpl', 'find', 'sect', 'save'];
+/* v04.80 — updated in place: 💾 Save moved from this row to the window bar's
+   corner (owner: "the edit button could fit on the upper bar, even the save
+   button, at the corner"), so neither order ends with 'save' any more. */
+const ROW_ORDER_MOBILE = ['text', 'heads', 'lists', 'insert', 'sect'];
+const ROW_ORDER_WIDE = ['text', 'heads', 'lists', 'insert', 'hist', 'tpl', 'find', 'sect'];
 
 /* The ordered, visible data-tb list plus the geometry 22b needs, read off
    ONE pop-up's own row+strip in one pass — containerSel is `#fw-<aid>` for
@@ -6522,7 +6527,8 @@ async function rowSnapshot(page, containerSel) {
       items,
       firstLeft: rects.length ? Math.round(rects[0].left - hostBox.left) : null,
       stripInset,
-      lastIsSave: items.length ? items[items.length - 1] === 'save' : false,
+      /* v04.80 — Save is in row 1 now: none in this row, one in the bar */
+      lastIsSave: !items.includes('save') && !!host.querySelector('.fw-hd [data-pf="save"]'),
       oneLine: tops.length ? Math.max(...tops) - Math.min(...tops) <= 6 : true,
       scrollWidth: Math.round(row.scrollWidth), clientWidth: Math.round(row.clientWidth),
       minHeight: heights.length ? Math.min(...heights) : null,
@@ -6566,7 +6572,7 @@ await r.block(`22b-one-line-same-inset-${vp.name}`, async () => {
     const notClipped = !!x && x.scrollWidth <= x.clientWidth + 1;
     const tallEnough = vp.width >= 1200 || (!!x && x.minHeight != null && x.minHeight >= 37);
     r.check(!!x && x.oneLine && insetOk && x.lastIsSave && notClipped && tallEnough,
-      `${vp.name} ${name}: the row is one line, starts at the strip's own inset, 💾 Save is rightmost, nothing is clipped, and every control is ≥38px tall under 1200px`,
+      `${vp.name} ${name}: the row is one line, starts at the strip's own inset, 💾 Save is in the window bar (not this row), nothing is clipped, and every control is ≥38px tall under 1200px`,
       JSON.stringify(x));
   }
 });
@@ -10376,6 +10382,106 @@ await r.block(`43d-grip-not-under-corner-${vp.name}-${mode}`, async () => {
     return { shown: true, top: hit === gr || gr.contains(hit), hit: hit && (hit.id || hit.className) }; }, S);
   if (g.shown) r.check(g.top, `${vp.name} ${mode}: the ⠿ grip is on top at its centre (not under a resize corner)`, JSON.stringify(g));
   else r.pass(`${vp.name} ${mode}: no ⠿ grip on this tier (nothing to cover)`);
+  await s.close();
+});
+}
+
+/* 44 — v04.80 (owner, two laptop screenshots, 4 Oct 2026):
+   44a "The 'detail' button doesn't work in both pop up single and multi" —
+       reproduced with a FULL localStorage (setItem throws, as on the
+       owner's device): ▾ Details must still open and ▴ close, real taps;
+   44b Pane 3's ✚ "should open the note in the NotePane, not pop-up";
+   44c "add a new note button to the both popups": the pop-up's own ✚
+       opens a new note in THAT kind of pop-up;
+   44d "the edit button could fit on the upper bar, even the save button,
+       at the corner": Save/Edit sit in row 1 (≥640) or beside the title
+       (phone), toggle edit mode, and the formatting row has no Save. */
+const FULL44 = `(()=>{const o=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(window.__appBooted){const e=new Error('The quota has been exceeded.');e.name='QuotaExceededError';throw e;}return o.call(this,k,v);};})();`;
+const vis44 = (page, sel) => page.locator(sel).filter({ visible: true }).first();
+for (const vp of P37_VPS) for (const mode of ['single', 'multi']) {
+await r.block(`44a-details-with-full-storage-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db37(), hasTouch: vp.width < 1200, initScript: FULL44 });
+  const { page } = s;
+  await s37open(page, mode);
+  const full = await page.evaluate(() => { try { localStorage.setItem('x44', '1'); return false; } catch (e) { return true; } });
+  r.check(full, `${vp.name} ${mode}: the device's storage is full (as on the owner's)`, String(full));
+  await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`, { hasText: '▾' }).first());
+  await page.waitForTimeout(400);
+  const o = await page.evaluate((S) => !!document.querySelector(S.strip + '.pop-details-open'), S);
+  r.check(o, `${vp.name} ${mode}: a real tap on ▾ Details OPENS the strip even with storage full`, String(o));
+  await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`, { hasText: '▴' }).first());
+  await page.waitForTimeout(400);
+  const c = await page.evaluate((S) => !document.querySelector(S.strip + '.pop-details-open') && !!document.querySelector(S.strip + ' .pop-details-line'), S);
+  r.check(c, `${vp.name} ${mode}: and ▴ Details closes it again`, String(c));
+  await s.close();
+});
+}
+for (const vp of P37_VPS) {
+await r.block(`44b-pane-new-note-opens-in-pane-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db37(), hasTouch: vp.width < 1200 });
+  const { page } = s;
+  await page.evaluate(() => { selArt('a1'); if (innerWidth < 1200) showPane('p3'); });
+  await page.waitForTimeout(500);
+  const n0 = await page.evaluate(() => DB.articles.length);
+  /* the visible ✚ on Pane 3's toolbar — or, folded, the ⋯ palette's "New note" */
+  if (!(await vis44(page, '#p3h .p3h-new-btn').count())) {
+    await tap37(page, vp, vis44(page, '#p3h #p3h-act-grp'));
+    await page.waitForTimeout(300);
+    await tap37(page, vp, vis44(page, '#p3h-pal button:has-text("New note")'));
+  } else await tap37(page, vp, vis44(page, '#p3h .p3h-new-btn'));
+  await page.waitForTimeout(700);
+  const st = await page.evaluate((n0) => ({ added: DB.articles.length === n0 + 1, art: ST.article, isNew: ST.article === DB.articles[DB.articles.length - 1].id,
+    editing: ST.editing, modal: !!ST.noteModal, floats: document.querySelectorAll('.float-win').length, edVisible: !!(document.getElementById('ed') && document.getElementById('ed').getBoundingClientRect().width) }), n0);
+  r.check(st.added && st.isNew && st.editing && !st.modal && st.floats === 0 && st.edVisible,
+    `${vp.name}: Pane 3's ✚ makes a new note and opens it IN THE NOTE PANE, editing — no pop-up`, JSON.stringify(st));
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+for (const mode of ['single', 'multi']) {
+await r.block(`44c-popup-new-note-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db37(), hasTouch: vp.width < 1200 });
+  const { page } = s;
+  await s37open(page, mode);
+  const n0 = await page.evaluate(() => DB.articles.length);
+  const where = await page.evaluate((S) => { const b = [...document.querySelectorAll(S.root + ' [data-pf="new"]')].find((e) => e.getBoundingClientRect().width);
+    return b ? (b.closest('.fw-hd') ? 'row1' : b.closest('.pf-title-row') ? 'row2' : 'other') : 'none'; }, S);
+  r.check(where === (vp.width < 640 ? 'row2' : 'row1'), `${vp.name} ${mode}: ✚ New is in ${vp.width < 640 ? 'the title row (phone)' : 'row 1'}`, where);
+  await tap37(page, vp, vis44(page, `${S.root} [data-pf="new"]`));
+  await page.waitForTimeout(900);
+  const st = await page.evaluate(({ n0, mode }) => { const nid = DB.articles[DB.articles.length - 1].id;
+    return { added: DB.articles.length === n0 + 1, inSingle: mode === 'single' ? (!!ST.noteModal && ST.article === nid && ST.editing) : null,
+      inMulti: mode === 'multi' ? !!document.getElementById('fw-' + nid) : null }; }, { n0, mode });
+  r.check(st.added && (mode === 'single' ? st.inSingle : st.inMulti), `${vp.name} ${mode}: the pop-up's ✚ opens the new note in ${mode === 'single' ? 'Single, editing' : 'its own Multi window'}`, JSON.stringify(st));
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+await r.block(`44d-save-edit-in-the-bar-${vp.name}`, async () => {
+  const S = P37_SEL.single;
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db37(), hasTouch: vp.width < 1200 });
+  const { page } = s;
+  await s37open(page, 'single');
+  const want = vp.width < 640 ? 'row2' : 'row1';
+  const place = (pf) => page.evaluate(({ S, pf }) => { const b = [...document.querySelectorAll(S.root + ` [data-pf="${pf}"]`)].find((e) => e.getBoundingClientRect().width);
+    return b ? (b.closest('.fw-hd') ? 'row1' : b.closest('.pf-title-row') ? 'row2' : 'other') : 'none'; }, { S, pf });
+  const sv = await place('save');
+  const fmtSave = await page.evaluate((S) => !!document.querySelector(S.fmt + ' [data-tb="save"]'), S);
+  r.check(sv === want && !fmtSave, `${vp.name} single: 💾 Save is in ${want} and no longer in the formatting row`, JSON.stringify({ sv, fmtSave }));
+  await page.locator('#ed').click();
+  await page.keyboard.type(' typed44');
+  await tap37(page, vp, vis44(page, `${S.root} [data-pf="save"]`));
+  await page.waitForTimeout(600);
+  const r1 = await page.evaluate(() => ({ editing: ST.editing, saved: /typed44/.test(DB.articles.find((a) => a.id === 'a1').content) }));
+  const ed = await place('edit');
+  const paneDup = await page.evaluate(() => [...document.querySelectorAll('#p3h .p3h-edit-btn, #p3h .p3h-new-btn, #p3h .p3h-actions [onclick^="_p3Navigate"]')].filter((e) => e.getBoundingClientRect().width).length);
+  r.check(!r1.editing && r1.saved && ed === want && paneDup === 0, `${vp.name} single: 💾 Save saves and leaves edit mode; ✏️ Edit takes its place; the pane toolbar's own Edit/✚/‹ › are not repeated`, JSON.stringify({ r1, ed, paneDup }));
+  await tap37(page, vp, vis44(page, `${S.root} [data-pf="edit"]`));
+  await page.waitForTimeout(600);
+  const r2 = await page.evaluate(() => ST.editing && !!ST.noteModal);
+  r.check(r2, `${vp.name} single: ✏️ Edit goes back into edit mode, still in Single`, String(r2));
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
   await s.close();
 });
 }

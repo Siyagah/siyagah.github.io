@@ -7515,3 +7515,89 @@ recorded at each check):
   sideways and shows "+N" for the rest.
 - Single's ↕/✥ tint (v03.NotePane.P7) now sits in row 1 with the tabs, where
   it always marked the tab bar.
+
+## v04.80 — Details works with a full storage; ✚ opens in the pane; ✚ New and Edit/Save in the pop-up's top row (4 Oct 2026)
+
+**Owner's ask** (two laptop screenshots: Pane 3 with its ✚ circled; a
+Single pop-up with Save arrowed to row 1's corner and the formatting row
+arrowed up into the Details line):
+> *The new note button should open the note in the NotePane, not pop-up. Or
+> you can make one new button to open in the pane one for pop-up.
+> * The 'detail' button doesn't work in both pop up single and multi. FIX.
+> * And I think the edit button could fit on the upper bar, even the save
+> button, at the corner, 'detail' button moving left to save button. (see
+> image2)
+> * Also add a new note button to the both popups.
+
+Built by the Architect directly, as two rounds. This is the first. The
+second, v04.81, moves the formatting tools up into the Details line, with
+▾ Details at its right end.
+
+**▾ Details did nothing — diagnosed, not guessed.**
+- On a fresh browser it worked at every size, in both pop-ups.
+- With a **full localStorage** it did nothing in both. The owner's is full:
+  their notebook outgrew the 5 MB store, as found in v04.50.
+- `_popDetailsSet()` wrote the choice with `localStorage.setItem()`. The
+  write threw; the `catch` swallowed it; the strip re-read the old value; so
+  nothing changed.
+- Fix: the choice lives in memory for the session (`_popDetailsMem`) and is
+  still written to the device when there is room. A full store can now cost
+  only remembering the choice across a reload.
+- Check `44a` reproduces the owner's state with `setItem` throwing.
+
+**✚ in the note pane opens the new note IN the pane.**
+- `quickCapture(where)`. Pane 3's read-toolbar ✚, the no-note ✚ and the ⋯
+  palette's "New note" pass `'pane'` and use the new
+  `_openNewNoteInPane()`: save whatever was being edited, select the new
+  note, start editing, focus the title.
+- Every other caller (sidebar 📝 New Note, list buttons) is unchanged: they
+  still open the new note in its own Multi window, as their labels say.
+
+**The pop-ups (`_popActsHTML()`):**
+- A new **✚ New** button. In Single it opens the new note in Single
+  (`openNotePopup(…,'panel')`); in Multi, in a new Multi window.
+- **✏️ Edit** or **💾 Save** next to it. Single shows Edit while reading
+  and Save while editing; Multi always edits, so it shows Save.
+- **💾 Save left the formatting row** (`_popFormatRowHTML`). Single's
+  reading view also stops showing the pane toolbar's own ✏️ Edit, ✚ and
+  ‹ ›, because those now have a home in rows 1 and 2.
+
+**Where those buttons sit, by layout:**
+- **Tablet and laptop (640px and up):** in row 1's corner, with words, as
+  the owner drew.
+- **Phone:** at the right end of the title row, as glyphs. Measured at 390:
+  in row 1 they left the tab strip 85px against a 172px tab, so a tap on
+  the tab hit its ✕.
+- Both copies are rendered and CSS shows one per layout (`.pf-acts-bar` /
+  `.pf-acts-row`).
+
+**Other phone row-1 changes:**
+- "✓ Saved" floats over the bar instead of holding 62px while invisible.
+- The strip's ‹ › scroll arrows are hidden; a swipe scrolls the strip.
+- "＋ Add Tab" says "＋ Tab".
+- ✕ drops its word "Close" (the v04.54 choice), which gave the strip 34px.
+- A tab is never wider than the strip it scrolls in.
+
+**Checks updated in place:**
+- `22a`/`22b`: the formatting row no longer ends with `save`, and Save is in
+  the bar.
+- `19f`: the phone's ✕ is "✕".
+
+**New section 44:**
+- `44a`: Details with a full storage, 390/820/1440, both pop-ups, real taps.
+- `44b`: Pane 3's ✚ (or the folded palette's New note) opens the new note
+  in the pane, editing, with no pop-up.
+- `44c`: each pop-up's ✚ is in the right row for the layout and opens the
+  new note in that kind of pop-up.
+- `44d`: Save is in the right row and not in the formatting row. Save saves
+  and leaves edit mode; Edit returns to it; the pane toolbar's copies are
+  not repeated.
+
+**Measured:**
+- `--only 44`: **54/54**. Unpatched (v04.79's app): **7/40, 33 FAILED**.
+  The 7 that pass are the setup checks, such as "the storage is full".
+- `--only 19,20,21,22,23,31,37,39,40,42,43`: **489/489**.
+- `ship-check` **13/13**.
+
+**Not done / left (v04.81):** the formatting tools moving up into the
+Details line.

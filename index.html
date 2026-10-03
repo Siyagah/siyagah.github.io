@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.79">
+<meta name="app-version" content="04.80">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2342,6 +2342,36 @@ sup.ann-sup:hover{text-decoration:underline}
    the window instead of moving it (found by 19g). Start the row clear of it
    wherever the corners exist (the window tier). */
 @media(min-width:640px){.float-win .fw-hd,#p3.modal-mode .fw-hd{padding-left:20px}}
+/* v04.80 — row 1 also holds ✚ New and Edit/Save now; on the phone sheet
+   (measured at 390: 14px left for the tab strip) three things give back room:
+   the "✓ Saved" chip floats over the bar instead of holding 62px while
+   invisible, the strip's ‹ › scroll arrows go (a swipe scrolls it — it is
+   pan-x), and "＋ Add Tab" says "＋ Tab". */
+.fw-hd{position:relative}
+.fw-hd .save-flash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0}
+@media(max-width:639.98px){
+  .fw-hd .tab-nav,.fw-hd .tab-nav.show{display:none!important}
+  .fw-hd .tab-add-w{display:none}
+  /* a tab is never wider than the strip it scrolls in, or its centre — where
+     a tap lands — sits outside the visible strip (measured: a 172px tab in
+     an 85px strip, so tapping it hit the bar instead) */
+  .fw-hd .tab-strip .tab-it{max-width:100%;min-width:0;overflow:hidden}
+  .fw-hd .tab-strip .tab-lbl{max-width:none;min-width:0;flex:1 1 auto}}
+/* v04.80 — ✚ New and ✏️ Edit / 💾 Save in row 1's corner */
+.pf-act{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;white-space:nowrap;cursor:pointer;
+  font-family:var(--ui);font-size:12px;font-weight:600;border-radius:6px;padding:3px 9px;
+  border:1px solid var(--border2);background:var(--paper);color:var(--t1)}
+.pf-act:hover{background:var(--hover)}
+.pf-act.pf-save,.pf-act.pf-edit{background:var(--green);border-color:var(--green);color:var(--on-accent)}
+.pf-acts{display:inline-flex;gap:4px;flex-shrink:0;align-items:center}
+.pf-acts-row{display:none;margin-left:6px}
+@media(max-width:639.98px){.pf-act .pf-lbl{display:none}.pf-act{min-width:40px;min-height:40px;justify-content:center;font-size:16px;padding:0}
+  .pf-acts-bar{display:none}.pf-acts-row{display:inline-flex}}
+@media(min-width:640px) and (max-width:1199.98px){.pf-act{min-height:36px}}
+/* Single, reading: its row 1 carries ✏️ Edit and ✚, its row 2 ‹ › — the
+   pane toolbar's own copies would be a second home for each (v04.22 rule) */
+#p3.modal-mode #p3h .p3h-edit-btn,#p3.modal-mode #p3h .p3h-new-btn,
+#p3.modal-mode #p3h .p3h-actions [onclick^="_p3Navigate"]{display:none!important}
 /* Multi's own tab bar — the same chips as #tab-bar, one line, scrolls sideways. */
 .fw-tabs{display:flex;align-items:stretch;gap:3px;flex-shrink:0;padding:5px 6px 0;
   border-bottom:1px solid var(--border2);background:var(--paper2,var(--paper))}
@@ -3146,7 +3176,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.79</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.80</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4098,7 +4128,15 @@ function _folderChipsHTML(a,lastOnly){
    and 📦 under 640px), so a rotation needs no rebuild. The choice is one
    localStorage key shared by both pop-ups — NOT DB.theme, which syncs. */
 const POP_DETAILS_KEY='siyagah-pop-details';
+/* v04.80 — the owner: "The 'detail' button doesn't work in both pop up single
+   and multi". Reproduced with a FULL localStorage (the owner's is — see
+   v04.50): setItem() threw, the catch swallowed it, and the strip re-read the
+   old value, so ▾ Details changed nothing in either pop-up. The choice now
+   lives in memory for the session and is saved to the device as well when
+   there is room; a full store can only cost remembering it across a reload. */
+let _popDetailsMem=null;
 function _popDetailsIsOpen(){
+  if(_popDetailsMem!==null)return _popDetailsMem;
   try{return localStorage.getItem(POP_DETAILS_KEY)==='1';}catch(e){return false;}
 }
 function _popDetailsLineHTML(a,host){
@@ -4126,6 +4164,7 @@ function _popDetailsLineHTML(a,host){
    title and editor are never touched), then re-seat the side panels, whose
    top edge is measured from the header stack. */
 function _popDetailsSet(open,focusWhat,host){
+  _popDetailsMem=!!open;
   try{localStorage.setItem(POP_DETAILS_KEY,open?'1':'0');}catch(e){}
   const p3h=document.getElementById('p3h');
   const old=ST.noteModal&&p3h&&p3h.querySelector('.pop-meta-strip');
@@ -4937,7 +4976,7 @@ function renderP3H(){
       <button class="btn bn bi" onclick="_p3Navigate(-1)" title="Previous note in this folder">‹</button>
       <button class="btn bn bi" onclick="_p3Navigate(1)" title="Next note in this folder">›</button>
       <button class="btn bn bi" onclick="_ntFindToggle('p3')" title="Find in this note">🔍</button>
-      <button class="btn bn bi" onclick="quickCapture()" title="New note (Primary folder) — opens in its own pop-out window">✚</button>
+      <button class="btn bn bi p3h-new-btn" onclick="quickCapture('pane')" title="New note (Primary folder) — opens here, in the note pane">✚</button>
       ${_popBtnHTML(curA.id,'float','btn bn',true)}
       ${_popBtnHTML(curA.id,'panel','btn bn',true)}
       <button class="btn bn bi" title="${esc(_moreBtnHint())}" oncontextmenu="event.preventDefault();showArtCtx(event,'${curA.id}')" onclick="showArtCtx(event,'${curA.id}')">⋯</button></div>
@@ -4946,7 +4985,7 @@ function renderP3H(){
   } else {
     el.classList.remove('editing');
     h+=`<span style="flex:1;color:var(--t3);font-size:13px;font-weight:500">Siyagah</span>`
-      +`<button class="btn bn bi" onclick="quickCapture()" title="New note (Primary folder) — opens in its own pop-out window" style="padding:5px 8px;font-size:15px">✚</button>`;
+      +`<button class="btn bn bi p3h-new-btn" onclick="quickCapture('pane')" title="New note (Primary folder) — opens here, in the note pane" style="padding:5px 8px;font-size:15px">✚</button>`;
   }
   el.innerHTML=h;
   /* v04.09 — the row can only be fitted once it is in the document and laid
@@ -6837,7 +6876,7 @@ function renderTabBar(){
     +'</div>'
     +'<button class="tab-nav" id="tab-nav-r" onclick="event.stopPropagation();_tabScroll(1)" title="Scroll tabs right">›</button>'
     +'<span class="tab-more" id="tab-more" title="Tabs hidden off-screen — use ‹ › to reach them"></span>'
-    +(_lean?'':`<button class="tab-add-btn" onclick="openTabPicker(this)" title="Search & add a note to the Tab bar">＋ Add Tab</button>`);
+    +(_lean?'':`<button class="tab-add-btn" onclick="openTabPicker(this)" title="Search & add a note to the Tab bar">＋ <span class="tab-add-w">Add </span>Tab</button>`);
   /* v03.79 — output-signature guard. The built HTML already encodes owner,
      membership, active note, titles and colours, so comparing it is an exact
      dirty-check. Two wins: renderTabBar() is now free to be called from
@@ -11348,6 +11387,22 @@ function _popTitleHTML(aid,mode,a,title){
     return '<input class="pf-ti" id="ti" data-pf="title" data-ps="title" value="'+esc(ST.etitle!=null?ST.etitle:((a&&a.title)||''))+'" placeholder="Article title…" title="Title" oninput="ST.etitle=this.value;_tiScheduleAutoSave()">';
   return '<span class="fw-title-disp" data-pf="title" data-ps="title" title="Right-click to edit — '+title+'" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">'+title+'</span>';
 }
+/* v04.80 — ✚ New + ✏️ Edit / 💾 Save. Rendered in BOTH rows; CSS shows the
+   row-1 copy on the window tier (≥640px, where the owner asked for them "on
+   the upper bar ... at the corner") and the row-2 copy on the phone sheet,
+   where row 1 measured no room left for a tab beside them (85px strip, a
+   172px tab, so a tap on the tab hit its ✕). Same buttons, same handlers. */
+function _popActsHTML(aid,mode,cls){
+  const k=POP_KINDS[mode]||POP_KINDS.float;
+  const idAttr=String(aid).replace(/'/g,"\\'");
+  const editing=mode==='float'||(ST.editing&&ST.noteModal&&ST.article===aid);
+  return '<span class="pf-acts '+cls+'">'
+    +'<button class="pf-act pf-new" data-pf="new" onclick="quickCapture(\''+mode+'\')" title="New note — opens in this '+esc(k.name)+'">✚<span class="pf-lbl"> New</span></button>'
+    +(editing
+      ?'<button class="pf-act pf-save" data-pf="save" onmousedown="event.preventDefault()" onclick="'+(mode==='float'?"_fwSave('"+idAttr+"')":'saveArt()')+'" title="Save this note">💾<span class="pf-lbl"> Save</span></button>'
+      :'<button class="pf-act pf-edit" data-pf="edit" onclick="startEdit()" title="Edit this note">✏️<span class="pf-lbl"> Edit</span></button>')
+    +'</span>';
+}
 /* v04.79 — row 2 of both pop-ups: the note's title, on its own. Single's is
    #p3-title-modal, a sibling right under the frame (_popFrameSync). */
 function _popTitleRowHTML(aid,mode,elId){
@@ -11359,7 +11414,8 @@ function _popTitleRowHTML(aid,mode,elId){
   return '<div class="pf-title-row"'+(elId?' id="'+elId+'"':'')+' data-pf="titlerow">'
     +'<button class="fw-nav" data-pf="prev" onclick="_popNav(\''+idAttr+'\',-1,\''+mode+'\')" title="Previous note in this folder">‹</button>'
     +'<button class="fw-nav" data-pf="next" onclick="_popNav(\''+idAttr+'\',1,\''+mode+'\')" title="Next note in this folder">›</button>'
-    +_popTitleHTML(aid,mode,a,esc((a&&a.title)||'Untitled'))+'</div>';
+    +_popTitleHTML(aid,mode,a,esc((a&&a.title)||'Untitled'))
+    +_popActsHTML(aid,mode,'pf-acts-row')+'</div>';
 }
 function _popFrameHTML(aid,mode,elId){
   const a=DB.articles.find(x=>x.id===aid);
@@ -11370,7 +11426,10 @@ function _popFrameHTML(aid,mode,elId){
   const idAttr=String(aid).replace(/'/g,"\\'");
   const savedId=mode==='panel'?'p3-frame-flash':('fw-flash-'+aid);
   const closeCall=mode==='panel'?'closeNoteModal()':("closeFloatWin('"+idAttr+"')");
-  const closeLbl=tier==='sheet'?' Close':'';
+  /* v04.80 — the phone sheet's ✕ lost its word "Close" (v04.54): row 1 now
+     also holds ✚ New and Save/Edit, and at 390 the word cost the tab strip
+     34 of its 48px. ✕ is a 40px button in the corner, titled "Close". */
+  const closeLbl='';
   const switchLbl=tier==='sheet'?'':'<span class="pf-switch-lbl">'+esc(ok.short)+'</span>';
   return '<div class="fw-hd"'+(elId?' id="'+elId+'"':'')+' data-mode="'+mode+'">'
     +'<span class="fw-drag" data-pf="grip" title="Drag to move">⠿</span>'
@@ -11383,6 +11442,14 @@ function _popFrameHTML(aid,mode,elId){
        (it is also the main view's tab bar and Single's ↕/✥ handle). */
     +'<span class="pf-tabs-slot" data-pf="tabs">'+(mode==='float'?_fwTabsHTML(aid):'')+'</span>'
     +'<span class="save-flash" data-pf="saved" id="'+savedId+'">✓ Saved</span>'
+    /* v04.80 — the owner: "the edit button could fit on the upper bar, even
+       the save button, at the corner" and "add a new note button to the both
+       popups". ✚ makes a new note in THIS kind of pop-up; then ✏️ Edit
+       (Single, reading) or 💾 Save (editing — Multi always is). Save left
+       the formatting row in the same edit, and Single's reading toolbar
+       drops its own ✏️ Edit / ✚ / ‹ › (CSS, #p3.modal-mode). Words on the
+       window tier; the phone sheet keeps the glyphs (a bar may be terse). */
+    +_popActsHTML(aid,mode,'pf-acts-bar')
     +'<button class="pf-switch '+ok.cls+'" data-pf="switch" onclick="openNotePopup(\''+idAttr+'\',\''+otherMode+'\')" title="Switch to '+esc(ok.name)+'">'
     +_popIcoHTML(otherMode)+switchLbl+'</button>'
     +'<button class="fw-close" data-pf="close" onclick="'+closeCall+'" title="Close">✕'+closeLbl+'</button>'
@@ -11466,7 +11533,7 @@ function _wireModalFrameDrag(hd){
     if(e.target.closest('.fw-close,.pf-ti'))return;   /* v04.74 — the title input is a text box, not a handle */
     /* v04.79 — #tab-bar sits in this row now and keeps its own ↕/✥ handling
        (_tabBarModalDown); starting a second drag here would fight it */
-    if(e.target.closest('#tab-bar'))return;
+    if(e.target.closest('#tab-bar,.pf-act'))return;
     _modalDragStart(e);
   });
 }
@@ -11534,10 +11601,9 @@ function _popFormatRowHTML(host,curA){
   const icons=host?_fwEditIconsHTML(host):_p3EditIconsHTML(curA,true);
   const sect=_edColToolbarHTML(host);
   const cls=host?'fw-tb':'p3h-unified-tb';
-  const saveOn=host?`_fwSave('${host}')`:'saveArt()';
+  /* v04.80 — 💾 Save moved to the window bar's corner (_popFrameHTML) */
   return '<div class="'+cls+' pop-fmt-row" data-ps="toolbar">'
     +icons+sect
-    +'<button class="et et-save" data-tb="save" onmousedown="event.preventDefault()" onclick="'+saveOn+'" title="Save this note">💾 Save</button>'
     +'</div>';
 }
 /* ══ v04.74 — A TAB BAR FOR A MULTI WINDOW (issue #107) ═══════════════════
@@ -11565,7 +11631,7 @@ function _fwTabsHTML(aid){
       +`<span class="tab-lbl">${esc(lbl)}</span></div>`;
   }).join('');
   return `<div class="fw-tabs" data-ps="tabs" ondragover="_fwTabsDragOver(event)" ondragleave="_fwTabsDragLeave(event)" ondrop="_fwTabsDrop(event,'${aid}')"><div class="tab-strip">${chips}</div>`
-    +`<button class="tab-add-btn" onclick="event.stopPropagation();_fwAddTab('${aid}',this)" title="Search & add a note to this note’s Tab bar">＋ Add Tab</button></div>`;
+    +`<button class="tab-add-btn" onclick="event.stopPropagation();_fwAddTab('${aid}',this)" title="Search & add a note to this note’s Tab bar">＋ <span class="tab-add-w">Add </span>Tab</button></div>`;
 }
 function _fwTabSelect(aid,tid){
   if(tid===aid)return;
@@ -11766,7 +11832,7 @@ function _fwWireDragHandle(handle,win,aid){
     if(e.target.closest('.fw-close,.pf-ti'))return;   /* v04.74 — the title input is a text box, not a handle */
     /* v04.79 — the tabs are in this bar now: a tab, ＋ Add Tab or a scroll
        arrow is a button, not a handle (the bar around them still drags) */
-    if(e.target.closest('.tab-it,.tab-add-btn,.tab-nav,.tab-x'))return;
+    if(e.target.closest('.tab-it,.tab-add-btn,.tab-nav,.tab-x,.pf-act'))return;
     sx=e.clientX;sy=e.clientY;
     const r=win.getBoundingClientRect();sl=r.left;st=r.top;
     _ptrDown(move,up);
@@ -13577,7 +13643,7 @@ function _p3ActPalette(ev){
   /* MORE — and the last row NAMES what is behind it. (v04.72: 🗑 Delete is a
      THIS NOTE row above now, behind a confirmation; it is still off the bar.) */
   h+='<div class="fl-pop-hd">More</div>'
-    +_p3PalBtn('\u271a','New note',"quickCapture()",'','in the Primary folder')
+    +_p3PalBtn('\u271a','New note',"quickCapture('pane')",'','in the Primary folder, opens here')
     /* v04.32 — the REAL event, not a synthesised one. v04.31 handed showArtCtx
        `{clientX:0,clientY:60,preventDefault:()=>{},stopPropagation:()=>{}}`,
        which is the v04.12 defect exactly: showArtCtx opens the menu and then
@@ -21091,7 +21157,22 @@ function _openNewNoteWindow(aid,fid){
     const ed=document.getElementById('fw-ed-'+aid);if(ed)ed.focus();
   },80);
 }
-function quickCapture(){
+/* v04.80 — the owner: "The new note button should open the note in the
+   NotePane, not pop-up. Or you can make one new button to open in the pane
+   one for pop-up." `where`: 'pane' (Pane 3's own ✚ — opens there, editing,
+   title focused), 'panel'/'float' (the ✚ in a pop-up's top row — opens in
+   that same kind of pop-up), or nothing (every other ✚/New Note, unchanged:
+   its own Multi window). */
+function _openNewNoteInPane(aid,fid){
+  if(ST.editing){try{saveArt();}catch(e){}}
+  if(fid)ST.folder=fid;
+  ST.article=aid;ST.editing=false;
+  render();
+  if(window.innerWidth<1200)showPane('p3');
+  startEdit();
+  setTimeout(function(){const ti=document.getElementById('ti');if(ti){ti.focus();return;}const ed=document.getElementById('ed');if(ed)ed.focus();},80);
+}
+function quickCapture(where){
   /* 1. Get the quick-capture folder — _dedupePrimaryFolders() is the single
      canonical lookup: it finds the folder by name (works across devices,
      since folder names DO sync, unlike DB.theme), and auto-merges any
@@ -21114,8 +21195,11 @@ function quickCapture(){
            tags:[],createdAt:_now,updatedAt:_now};
   DB.articles.push(art);
   persist();
-  /* 3. Open it in its own pop-out window (pane flow below 900px) */
-  _openNewNoteWindow(art.id,pf.id);
+  /* 3. Open it — in the pane, in Single, or in its own Multi window */
+  if(where==='pane')_openNewNoteInPane(art.id,pf.id);
+  else if(where==='panel'){ST.folder=pf.id;openNotePopup(art.id,'panel');
+    setTimeout(function(){const ti=document.getElementById('ti');if(ti)ti.focus();},120);}
+  else _openNewNoteWindow(art.id,pf.id);
 }
 /* ── MyWALL "New note under this NTI type" — v03.54.01 ────────────────────
    Same quick-capture mechanics as quickCapture() above, but the new note is
