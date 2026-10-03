@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.79.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.80.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,20 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.80** (4 Oct 2026) — owner: Details "doesn't work", ✚ should open in
+  the pane, Edit/Save "on the upper bar … at the corner", ✚ New in both
+  pop-ups. **Details:** reproduced only with a FULL localStorage (the
+  owner's): `setItem` threw and the strip re-read the old value. Now
+  `_popDetailsMem` holds it for the session. **✚:** `quickCapture('pane')`
+  → `_openNewNoteInPane()` for Pane 3's ✚ and palette; other callers are
+  unchanged (own Multi window). **Pop-ups:** `_popActsHTML()` gives ✚ New
+  plus ✏️ Edit/💾 Save, in row 1 at ≥640px and in the title row on the
+  phone (row 1 had no room for a tab). Save left the formatting row.
+  Single's reading view hides the pane toolbar's Edit/✚/‹ ›. Phone row 1
+  gained room: floating ✓ Saved, no strip arrows, "＋ Tab", ✕ without
+  "Close". `22a`/`22b`/`19f` updated in place; new section 44: **54/54**;
+  unpatched 7/40. The phone's ✕ is now at least 44px (`6p-17`). Full `app-check`
+  **1381/1381, twice in a row**.
 - **v04.79** (3 Oct 2026) — pop-ups: tabs in row 1, title in row 2 (owner:
   "title bar on the top doesn't look usual. It should be on the second row.
   First row keep for dragging, resizing and other tabs"; partly reverses
@@ -69,17 +83,6 @@ must never accumulate here instead of there.
   section 40 (390/820/1440, Pane 3 and Single, real taps): `--only 40`
   **32/32**; unpatched 2/14. `6p-06`/`6p-10` updated in place. Full
   `app-check` **1261/1261, twice in a row**.
-- **v04.75** (30 Sep 2026) — NTI Types panel: 🔍 Search, ＋ Category and
-  ＋ NTI in its title bar (owner's laptop screenshot). One line on all three
-  layouts (the sub-1200px bottom sheet gets 34px buttons). 🔍 opens a box
-  outside the scrolling list (`_ntiPickListHTML()` redraws only the list, so
-  typing keeps focus); it narrows to matching types, Enter picks a single
-  match, Esc clears then closes, no match offers Create "…". ＋ Category
-  MOVED from the list's foot. ＋ NTI asks which category (`#ctx`), then runs
-  `addKindInCat()` (now takes an optional pre-filled name). New section 39
-  (39a–39d, real taps from the pop-up's Type chip, Single and Multi,
-  390/820/1440): `--only 39` **100/100**; unpatched 18/52. Full
-  `app-check` **1229/1229, twice in a row**.
 ---
 
 ## What this is
