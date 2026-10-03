@@ -6529,6 +6529,7 @@ async function rowSnapshot(page, containerSel) {
       stripInset,
       /* v04.80 — Save is in row 1 now: none in this row, one in the bar */
       lastIsSave: !items.includes('save') && !!host.querySelector('.fw-hd [data-pf="save"]'),
+      inLine: !!row.closest('.pop-details-line'),
       oneLine: tops.length ? Math.max(...tops) - Math.min(...tops) <= 6 : true,
       scrollWidth: Math.round(row.scrollWidth), clientWidth: Math.round(row.clientWidth),
       minHeight: heights.length ? Math.min(...heights) : null,
@@ -6568,7 +6569,10 @@ for (const vp of SIZES_22) {
 await r.block(`22b-one-line-same-inset-${vp.name}`, async () => {
   const { multi, single } = await openBothRows({ width: vp.width, height: vp.height });
   for (const [name, x] of [['Multi', multi], ['Single', single]]) {
-    const insetOk = x && x.stripInset != null && x.firstLeft != null && Math.abs(x.firstLeft - x.stripInset) <= 2;
+    /* v04.81 — updated in place: with Details closed the row sits INSIDE the
+       Details line, after 📦 where there is room — so it starts at the
+       strip's inset only when it wrapped to the line's second line. */
+    const insetOk = x && (x.inLine || (x.stripInset != null && x.firstLeft != null && Math.abs(x.firstLeft - x.stripInset) <= 2));
     const notClipped = !!x && x.scrollWidth <= x.clientWidth + 1;
     const tallEnough = vp.width >= 1200 || (!!x && x.minHeight != null && x.minHeight >= 37);
     r.check(!!x && x.oneLine && insetOk && x.lastIsSave && notClipped && tallEnough,
@@ -6807,7 +6811,11 @@ await r.block(`23b-same-top-${vp.name}`, async () => {
   const { multi, single } = await openPopupMeasured(vp, HEADS_3);
   const belowRow = (g) => (!g.pinBox || (g.rowBox && g.pinBox.top >= g.rowBox.bottom - 2))
     && (!g.tocBox || (g.rowBox && g.tocBox.top >= g.rowBox.bottom - 2));
-  const rowMatchesStrip = !multi.rowBox || !multi.stripBox || Math.abs(multi.rowBox.width - multi.stripBox.width) <= 2;
+  /* v04.81 — updated in place: closed, the row is inside the strip (the
+     Details line), so "keeps the strip's width" applies only to a row that
+     stands on its own; the panels must still start below the strip. */
+  const inside = (g) => g.rowBox && g.stripBox && g.rowBox.top >= g.stripBox.top - 1 && g.rowBox.bottom <= g.stripBox.bottom + 1;
+  const rowMatchesStrip = !multi.rowBox || !multi.stripBox || inside(multi) || Math.abs(multi.rowBox.width - multi.stripBox.width) <= 2;
   r.check(belowRow(multi) && belowRow(single) && rowMatchesStrip,
     `${vp.name}: both side panels start at/below the formatting row’s bottom edge in both pop-ups, and Multi’s row keeps the strip’s width`,
     JSON.stringify({ multi, single }));
@@ -9784,17 +9792,28 @@ await r.block(`37c-details-line-${vp.name}-${mode}`, async () => {
   const S = P37_SEL[mode];
   const s = await open37(vp, mode, { versions: true });
   const { page } = s;
+  /* v04.81 — updated in place: the formatting tools moved UP into this line
+     (owner's screenshot: "the formatting row" arrowed into the space after
+     📦, ▾ Details at the end). The line is three units that wrap as wholes —
+     chips (.pdl-meta), tools (.pdl-fmt), ▾ Details — so it is one line where
+     it fits (a 1440 Multi window) and at most two elsewhere: the chips on
+     one, the tools with ▾ Details on the next. Never a lone chip wrapping. */
   const line = await page.evaluate((S) => {
     const l = document.querySelector(S.strip + ' .pop-details-line'); if (!l) return null;
-    const kids = [...l.children].filter((e) => e.getBoundingClientRect().width && e.getBoundingClientRect().height);
-    /* centres, not tops: a 20px chip and a 36px button share a row */
-    const tops = kids.map((e) => { const b = e.getBoundingClientRect(); return Math.round((b.top + b.bottom) / 2); });
-    return { n: kids.length, spread: Math.max(...tops) - Math.min(...tops), h: l.getBoundingClientRect().height,
-      words: kids.map((e) => e.textContent.trim().slice(0, 14)), over: l.scrollWidth > l.clientWidth + 1,
-      hasDate: kids.some((e) => /Created/.test(e.textContent)), hasTags: kids.some((e) => /🏷/.test(e.textContent)),
-      hasAttach: kids.some((e) => /Attach/.test(e.textContent)), hasArch: kids.some((e) => /📦|📤/.test(e.textContent)) };
+    const mid = (e) => { const b = e.getBoundingClientRect(); return Math.round((b.top + b.bottom) / 2); };
+    const vis = (e) => e.getBoundingClientRect().width && e.getBoundingClientRect().height;
+    const meta = l.querySelector('.pdl-meta'), fmt = l.querySelector('.pdl-fmt'), det = l.querySelector('.pop-details-btn');
+    const chips = [...meta.children].filter(vis), tools = [...fmt.querySelectorAll('[data-tb]')].filter(vis);
+    const cm = chips.map(mid), tm = tools.map(mid);
+    return { chipsSpread: Math.max(...cm) - Math.min(...cm), toolsSpread: Math.max(...tm) - Math.min(...tm), detWithTools: Math.abs(mid(det) - mid(fmt)) <= 4,
+      oneLine: Math.abs(mid(meta) - mid(fmt)) <= 4, h: l.getBoundingClientRect().height, over: l.scrollWidth > l.clientWidth + 1 || fmt.scrollWidth > fmt.clientWidth + 1,
+      tools: tools.length, words: chips.map((e) => e.textContent.trim().slice(0, 14)),
+      hasDate: chips.some((e) => /Created/.test(e.textContent)), hasTags: chips.some((e) => /🏷/.test(e.textContent)),
+      hasAttach: chips.some((e) => /Attach/.test(e.textContent)), hasArch: chips.some((e) => /📦|📤/.test(e.textContent)) };
   }, S);
-  r.check(!!line && line.spread <= 3 && line.h < 60 && !line.over, `${vp.name} ${mode}: the Details line is ONE row, nothing cut off`, JSON.stringify(line));
+  const wantOne = vp.width >= 1200 && mode === 'multi';
+  r.check(!!line && line.chipsSpread <= 3 && line.toolsSpread <= 3 && line.detWithTools && line.tools >= 4 && !line.over && line.h < 110 && (!wantOne || line.oneLine),
+    `${vp.name} ${mode}: the Details line holds the chips, the formatting tools and ▾ Details — ${wantOne ? 'all on ONE line' : 'chips on one line, tools with ▾ Details on one line'}, nothing cut off`, JSON.stringify(line));
   const want = { date: vp.width >= 1200, tags: vp.width >= 640, attach: vp.width >= 640, arch: vp.width >= 640 };
   r.check(line && line.hasDate === want.date && line.hasTags === want.tags && line.hasAttach === want.attach && line.hasArch === want.arch,
     `${vp.name} ${mode}: the line carries ${vp.width >= 1200 ? 'the date, tags, Attach and 📦' : vp.width >= 640 ? 'tags, Attach and 📦 (no date)' : 'only Type · folder · version · ▾ Details (no tags/Attach/📦/date)'}`, JSON.stringify(line));
@@ -9802,10 +9821,13 @@ await r.block(`37c-details-line-${vp.name}-${mode}`, async () => {
   /* v04.79 — updated in place: the tab bar moved INTO the window bar (row 1)
      and the title took row 2 (the owner's "First row keep for dragging,
      resizing and other tabs"); still exactly four rows. */
-  const ok = g.frame && g.tabs && g.tabsInFrame && g.title && g.strip && g.fmt && g.ed && g.frame.b <= g.title.t + 1.5 && g.title.b <= g.strip.t + 1.5 && g.strip.b <= g.fmt.t + 1.5 && g.fmt.b <= g.ed.t + 1.5
+  /* v04.81 — updated in place: with Details closed the formatting row is
+     INSIDE the Details line, so three rows stand above the note. */
+  const ok = g.frame && g.tabs && g.tabsInFrame && g.title && g.strip && g.fmt && g.ed && g.frame.b <= g.title.t + 1.5 && g.title.b <= g.strip.t + 1.5
+    && g.fmt.t >= g.strip.t - 1 && g.fmt.b <= g.strip.b + 1 && g.strip.b <= g.ed.t + 1.5
     && g.tabs.t >= g.frame.t - 1 && g.tabs.b <= g.frame.b + 1;
-  const sum = ok ? g.frame.h + g.title.h + g.strip.h + g.fmt.h : 0;
-  r.check(ok && Math.abs(g.header - sum) <= 14, `${vp.name} ${mode}: exactly four rows stand above the note — window bar WITH the tabs, title, Details line, formatting row`, JSON.stringify({ ...g, sum }));
+  const sum = ok ? g.frame.h + g.title.h + g.strip.h : 0;
+  r.check(ok && Math.abs(g.header - sum) <= 14, `${vp.name} ${mode}: three rows stand above the note — window bar WITH the tabs, title, Details line WITH the formatting tools`, JSON.stringify({ ...g, sum }));
   const closedH = g.header;
   await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`).first());
   await page.waitForTimeout(400);
@@ -10482,6 +10504,36 @@ await r.block(`44d-save-edit-in-the-bar-${vp.name}`, async () => {
   const r2 = await page.evaluate(() => ST.editing && !!ST.noteModal);
   r.check(r2, `${vp.name} single: ✏️ Edit goes back into edit mode, still in Single`, String(r2));
   r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+/* 45 — v04.81: the formatting tools live INSIDE the Details line while it
+   is closed, and in their own row under the open four-row strip. Real taps
+   on ▾/▴ Details, 390/820/1440, Single and Multi: always exactly ONE
+   formatting row, in the right place, and text typed before the switch is
+   still in the editor after it. */
+for (const vp of P37_VPS) for (const mode of ['single', 'multi']) {
+await r.block(`45a-tools-move-with-details-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await open37(vp, mode);
+  const { page } = s;
+  const where = () => page.evaluate((S) => { const rows = [...document.querySelectorAll(S.root + ' .pop-fmt-row')];
+    return { n: rows.length, inLine: rows.length === 1 && !!rows[0].closest('.pop-details-line'), own: rows.length === 1 && !rows[0].closest('.pop-meta-strip') }; }, S);
+  const w0 = await where();
+  r.check(w0.n === 1 && w0.inLine, `${vp.name} ${mode}: closed — one formatting row, inside the Details line`, JSON.stringify(w0));
+  await page.locator(S.ed).click();
+  await page.keyboard.type(' kept45');
+  await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`, { hasText: '▾' }).first());
+  await page.waitForTimeout(500);
+  const w1 = await where();
+  const txt1 = await page.evaluate((S) => document.querySelector(S.ed).textContent.includes('kept45'), S);
+  r.check(w1.n === 1 && w1.own && txt1, `${vp.name} ${mode}: ▾ Details — the formatting row stands on its own under the strip, once, and the typed text is still there`, JSON.stringify({ w1, txt1 }));
+  await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`, { hasText: '▴' }).first());
+  await page.waitForTimeout(500);
+  const w2 = await where();
+  r.check(w2.n === 1 && w2.inLine, `${vp.name} ${mode}: ▴ Details — back inside the line, still once`, JSON.stringify(w2));
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
   await s.close();
 });
 }

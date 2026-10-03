@@ -7607,3 +7607,52 @@ in a row**.
 
 **Not done / left (v04.81):** the formatting tools moving up into the
 Details line.
+
+## v04.81 — the formatting tools move up into the Details line (4 Oct 2026)
+
+Second part of the owner's 4 Oct request (screenshot 2: the formatting row
+circled with an arrow up into the empty space of the Details line after 📦,
+and "'detail' button moving left to save button"). Built by the Architect
+directly; the owner then said "go ahead with the second part too" and "merge
+both when done".
+
+**What changed (both pop-ups, every size):**
+- With Details **closed**, the formatting tools (Aa H ≡ + ↺ 📋 🔍 ⋯) are
+  **inside** the Details line, between 📦 and ▾ Details.
+  `_popDetailsLineHTML()` builds three units that wrap as wholes:
+  `.pdl-meta` (the chips), `.pdl-fmt` (the tools, `_popFormatRowHTML()`) and
+  ▾ Details.
+  - Where it fits, all three share one line. A Multi window at 1440 does,
+    which is exactly the owner's drawing.
+  - Where it does not (Single's default 700px window, a tablet, a phone),
+    the tools and ▾ Details drop together to a second line. That is the
+    old two-row look, and a lone chip never wraps.
+- With Details **open**, the four-row strip is followed by the formatting
+  row on its own, as before.
+- **Switching:** Single's ▾/▴ now rebuilds `#p3h` (`renderP3H()`, which
+  keeps `#ti`'s focus). Multi's `_fwRefreshMeta()` keeps exactly one
+  formatting row: inside the line when closed, its own row when open.
+- `_popPanelTop()` counts only a formatting row that stands on its own; the
+  one inside the strip was already counted.
+
+**Checks updated in place**, with reasons recorded:
+- `37c`: the line holds chips, tools and ▾ Details, on one line for a 1440
+  Multi window and at most two lines elsewhere, never a lone chip.
+  Three rows now stand above the note, not four.
+- `22b`: the row starts at the strip's inset only when it wrapped.
+- `23b`: "keeps the strip's width" applies only to a row that stands on
+  its own.
+
+**New section 45** (`45a`, 390/820/1440, Single and Multi, real taps):
+- closed, there is one formatting row, inside the line;
+- ▾ Details moves it to its own row, once, and text typed before the
+  switch is still there;
+- ▴ Details moves it back.
+
+**Measured:**
+- `--only 22,23,37`: **215/215**. `--only 45`: **24/24**.
+- Unpatched (v04.80's app), `--only 45,37c`: **12/30, 18 FAILED**.
+- `ship-check` **13/13**.
+- Full `app-check` **1405/1405, twice in a row**.
+
+**Not done / left:** nothing from the owner's 4 Oct message.
