@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.78">
+<meta name="app-version" content="04.79">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2314,14 +2314,34 @@ sup.ann-sup:hover{text-decoration:underline}
    Multi's #fw-ti-<aid>); the selectors carry #p3.modal-mode or .float-win so
    they beat both `#ti{…}` and the old `.float-win .fw-ti{…}` rules, which
    styled the separate title row this round removed. */
-.float-win .fw-hd .pf-ti,#p3.modal-mode .fw-hd .pf-ti{flex:1 1 auto;width:0;min-width:80px;margin:0;
+/* v04.79 — "title bar on the top doesn't look usual. It should be on the
+   second row. First row keep for dragging, resizing and other tabs." Row 1
+   (.fw-hd) holds grip · ‹ › · the tabs · Saved · switch · ✕; row 2 is the
+   title alone, a little larger, the full width of the pop-up. */
+.pf-title-row{display:flex;align-items:center;flex-shrink:0;padding:4px 10px;
+  border-bottom:1px solid var(--border2);background:var(--paper);min-width:0}
+.float-win .pf-title-row .pf-ti,#p3.modal-mode .pf-title-row .pf-ti{flex:1 1 auto;width:0;min-width:0;margin:0;
   padding:4px 6px;border:1px solid transparent;border-radius:6px;background:transparent;
-  color:var(--t1);font-family:var(--ui);font-size:13px;font-weight:600;outline:none;
-  text-overflow:ellipsis;cursor:text}
-.float-win .fw-hd .pf-ti:hover,#p3.modal-mode .fw-hd .pf-ti:hover{border-color:var(--border2)}
-.float-win .fw-hd .pf-ti:focus,#p3.modal-mode .fw-hd .pf-ti:focus{border-color:var(--accent);background:var(--paper)}
+  color:var(--t1);font-family:var(--ui);font-size:15px;font-weight:700;outline:none;
+  text-overflow:ellipsis;cursor:text;box-shadow:none}
+.float-win .pf-title-row .pf-ti:hover,#p3.modal-mode .pf-title-row .pf-ti:hover{border-color:var(--border2)}
+.float-win .pf-title-row .pf-ti:focus,#p3.modal-mode .pf-title-row .pf-ti:focus{border-color:var(--accent);background:var(--paper)}
+.pf-title-row .fw-title-disp{font-size:15px;font-weight:700;padding:5px 7px;min-width:0}
 @media(max-width:1199.98px){
-  .float-win .fw-hd .pf-ti,#p3.modal-mode .fw-hd .pf-ti{font-size:16px;min-height:40px}}
+  .float-win .pf-title-row .pf-ti,#p3.modal-mode .pf-title-row .pf-ti{font-size:16px;min-height:40px}}
+/* The tabs inside row 1: the slot takes the free width, and the bar inside it
+   drops its own row chrome (border, background, padding) — the window bar is
+   the row now. Chips hang from the bar's bottom edge as they did before. */
+.fw-hd .pf-tabs-slot{flex:1 1 auto;min-width:0;display:flex;align-self:stretch;
+  margin:-4px 0 -5px;padding-top:4px}
+.fw-hd .pf-tabs-slot>#tab-bar,.fw-hd .pf-tabs-slot>.fw-tabs{display:flex;flex:1 1 auto;min-width:0;
+  border-bottom:0;background:none;padding:0;font-weight:400}
+.fw-hd .pf-tabs-slot .tab-strip{touch-action:pan-x}
+/* The window's 16px top-left resize corner (.modal-corner-tl) sat over the ⠿
+   grip once row 1 lost the taller title input: a press on the grip resized
+   the window instead of moving it (found by 19g). Start the row clear of it
+   wherever the corners exist (the window tier). */
+@media(min-width:640px){.float-win .fw-hd,#p3.modal-mode .fw-hd{padding-left:20px}}
 /* Multi's own tab bar — the same chips as #tab-bar, one line, scrolls sideways. */
 .fw-tabs{display:flex;align-items:stretch;gap:3px;flex-shrink:0;padding:5px 6px 0;
   border-bottom:1px solid var(--border2);background:var(--paper2,var(--paper))}
@@ -3126,7 +3146,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.78</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.79</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -10018,7 +10038,7 @@ function closeNoteModal(){
     }
   }
   document.getElementById('note-modal-bg')?.classList.remove('active');
-  document.getElementById('p3-frame-modal')?.remove();
+  _popFrameRemove();   /* v04.79 — puts #tab-bar back before the frame goes */
   renderP3H();
   if(_fwFocusedAid){_tocInject();_pinPanelInject();} /* hand both panels back to a focused pop-out, if any (Contents first — F9) */
 }
@@ -11328,6 +11348,19 @@ function _popTitleHTML(aid,mode,a,title){
     return '<input class="pf-ti" id="ti" data-pf="title" data-ps="title" value="'+esc(ST.etitle!=null?ST.etitle:((a&&a.title)||''))+'" placeholder="Article title…" title="Title" oninput="ST.etitle=this.value;_tiScheduleAutoSave()">';
   return '<span class="fw-title-disp" data-pf="title" data-ps="title" title="Right-click to edit — '+title+'" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">'+title+'</span>';
 }
+/* v04.79 — row 2 of both pop-ups: the note's title, on its own. Single's is
+   #p3-title-modal, a sibling right under the frame (_popFrameSync). */
+function _popTitleRowHTML(aid,mode,elId){
+  const a=DB.articles.find(x=>x.id===aid);
+  const idAttr=String(aid).replace(/'/g,"\\'");
+  /* ‹ › go to the neighbouring note, so they sit beside the note's title —
+     and not beside the tab bar's own ‹ › scroll arrows in row 1, where the
+     phone measured four arrows in a row and no room left for a tab. */
+  return '<div class="pf-title-row"'+(elId?' id="'+elId+'"':'')+' data-pf="titlerow">'
+    +'<button class="fw-nav" data-pf="prev" onclick="_popNav(\''+idAttr+'\',-1,\''+mode+'\')" title="Previous note in this folder">‹</button>'
+    +'<button class="fw-nav" data-pf="next" onclick="_popNav(\''+idAttr+'\',1,\''+mode+'\')" title="Next note in this folder">›</button>'
+    +_popTitleHTML(aid,mode,a,esc((a&&a.title)||'Untitled'))+'</div>';
+}
 function _popFrameHTML(aid,mode,elId){
   const a=DB.articles.find(x=>x.id===aid);
   const title=esc((a&&a.title)||'Untitled');
@@ -11342,9 +11375,13 @@ function _popFrameHTML(aid,mode,elId){
   return '<div class="fw-hd"'+(elId?' id="'+elId+'"':'')+' data-mode="'+mode+'">'
     +'<span class="fw-drag" data-pf="grip" title="Drag to move">⠿</span>'
     +'<span class="pf-ico '+k.cls+'" data-pf="ico" title="'+esc(k.name)+'">'+_popIcoHTML(mode)+'</span>'
-    +'<button class="fw-nav" data-pf="prev" onclick="_popNav(\''+idAttr+'\',-1,\''+mode+'\')" title="Previous note in this folder">‹</button>'
-    +'<button class="fw-nav" data-pf="next" onclick="_popNav(\''+idAttr+'\',1,\''+mode+'\')" title="Next note in this folder">›</button>'
-    +_popTitleHTML(aid,mode,a,title)
+    /* v04.79 — the owner's "First row keep for dragging, resizing and
+       other tabs": the window bar carries the TABS where the title was, and
+       the title has a row of its own under it (_popTitleRowHTML). Multi's
+       bar is built right here; Single's is the one #tab-bar element, MOVED
+       into this slot by _popFrameSync() and back out when the pop-up closes
+       (it is also the main view's tab bar and Single's ↕/✥ handle). */
+    +'<span class="pf-tabs-slot" data-pf="tabs">'+(mode==='float'?_fwTabsHTML(aid):'')+'</span>'
     +'<span class="save-flash" data-pf="saved" id="'+savedId+'">✓ Saved</span>'
     +'<button class="pf-switch '+ok.cls+'" data-pf="switch" onclick="openNotePopup(\''+idAttr+'\',\''+otherMode+'\')" title="Switch to '+esc(ok.name)+'">'
     +_popIcoHTML(otherMode)+switchLbl+'</button>'
@@ -11387,16 +11424,36 @@ function _panelNavigate(dir){
 function _popFrameSync(){
   const p3=document.getElementById('p3');
   let hd=document.getElementById('p3-frame-modal');
-  if(!p3||!ST.noteModal||!ST.article||ST.article==='cal'){ if(hd)hd.remove(); return; }
+  if(!p3||!ST.noteModal||!ST.article||ST.article==='cal'){ _popFrameRemove(); return; }
   const html=_popFrameHTML(ST.article,'panel','p3-frame-modal');
-  /* v04.74 — the frame holds the editable title now and is rebuilt on every
-     renderP3H(), so a focused #ti (and its caret) has to be carried across
-     or the keyboard drops on a touch screen mid-word. */
-  const _af=document.activeElement,_tiFocus=!!(_af&&_af.id==='ti'&&hd&&hd.contains(_af));
+  const trow=_popTitleRowHTML(ST.article,'panel','p3-title-modal');
+  /* v04.74 — the frame is rebuilt on every renderP3H(); v04.79 — the title
+     input now lives in the row UNDER it (#p3-title-modal), rebuilt with it,
+     so a focused #ti (and its caret) is carried across or the keyboard
+     drops on a touch screen mid-word. */
+  const _af=document.activeElement,_tiFocus=!!(_af&&_af.id==='ti'&&_af.closest('#p3-title-modal'));
   let _s=0,_e=0;if(_tiFocus){try{_s=_af.selectionStart;_e=_af.selectionEnd;}catch(e){}}
+  _popTabBarHome();   /* take #tab-bar out before the frame holding it is replaced */
   if(hd)hd.outerHTML=html; else p3.insertAdjacentHTML('afterbegin',html);
-  _wireModalFrameDrag(document.getElementById('p3-frame-modal'));
+  hd=document.getElementById('p3-frame-modal');
+  const oldRow=document.getElementById('p3-title-modal');
+  if(oldRow)oldRow.outerHTML=trow; else hd.insertAdjacentHTML('afterend',trow);
+  const tb=document.getElementById('tab-bar'),slot=hd.querySelector('.pf-tabs-slot');
+  if(tb&&slot)slot.appendChild(tb);
+  _wireModalFrameDrag(hd);
   if(_tiFocus){const t=document.getElementById('ti');if(t){t.focus({preventScroll:true});try{t.setSelectionRange(_s,_e);}catch(e){}}}
+}
+/* v04.79 — #tab-bar's home is between the frame and #p3h; it only visits the
+   frame while Single is open. Every path that removes the frame puts it back
+   first, or the main view would lose its tab bar with the frame. */
+function _popTabBarHome(){
+  const tb=document.getElementById('tab-bar'),p3=document.getElementById('p3'),p3h=document.getElementById('p3h');
+  if(tb&&p3&&p3h&&tb.parentElement!==p3)p3.insertBefore(tb,p3h);
+}
+function _popFrameRemove(){
+  _popTabBarHome();
+  document.getElementById('p3-title-modal')?.remove();
+  document.getElementById('p3-frame-modal')?.remove();
 }
 /* The frame IS a drag handle on the window tier — reuses the modal's own
    drag mover (_modalDragStart/_modalDragMove/_modalDragEnd) rather than a
@@ -11407,6 +11464,9 @@ function _wireModalFrameDrag(hd){
   hd.addEventListener('pointerdown',e=>{
     if(_popTier()==='sheet')return;
     if(e.target.closest('.fw-close,.pf-ti'))return;   /* v04.74 — the title input is a text box, not a handle */
+    /* v04.79 — #tab-bar sits in this row now and keeps its own ↕/✥ handling
+       (_tabBarModalDown); starting a second drag here would fight it */
+    if(e.target.closest('#tab-bar'))return;
     _modalDragStart(e);
   });
 }
@@ -11417,7 +11477,7 @@ function _wireModalFrameDrag(hd){
    rebuild. */
 function _popFrameFlash(msg){
   const hd=document.getElementById('p3-frame-modal');if(!hd)return;
-  const disp=hd.querySelector('.fw-title-disp');
+  const disp=document.querySelector('#p3-title-modal .fw-title-disp');
   if(disp){const a=DB.articles.find(x=>x.id===ST.article);if(a){disp.textContent=a.title||'Untitled';disp.title=a.title||'Untitled';}}
   const el=document.getElementById('p3-frame-flash');if(!el)return;
   el.textContent=msg||'✓ Saved';
@@ -11551,8 +11611,9 @@ function _fwRenderBody(aid){
      Single's #p3h always has (padding there lands on #p3c, not #p3h). */
   /* v04.74 — the title input moved into the frame (_popTitleHTML), and the
      tab bar for THIS window's note stands between the frame and the body. */
+  /* v04.79 — the tabs moved INTO the frame (row 1) and the title has row 2. */
   return _popFrameHTML(aid,'float')
-    +_fwTabsHTML(aid)
+    +_popTitleRowHTML(aid,'float')
     +'<div class="fw-body">'
     +_popMetaStripHTML(a,aid)
     +_popFormatRowHTML(aid,a)
@@ -11703,6 +11764,9 @@ function _fwWireDragHandle(handle,win,aid){
   function up(){_ptrUp(move,up);if(aid)_fwSavePos(aid);}
   handle.addEventListener('pointerdown',e=>{
     if(e.target.closest('.fw-close,.pf-ti'))return;   /* v04.74 — the title input is a text box, not a handle */
+    /* v04.79 — the tabs are in this bar now: a tab, ＋ Add Tab or a scroll
+       arrow is a button, not a handle (the bar around them still drags) */
+    if(e.target.closest('.tab-it,.tab-add-btn,.tab-nav,.tab-x'))return;
     sx=e.clientX;sy=e.clientY;
     const r=win.getBoundingClientRect();sl=r.left;st=r.top;
     _ptrDown(move,up);
@@ -11723,17 +11787,9 @@ function _fwFrameResyncAll(){
     const aid=win.id.slice(3);   /* win.id is always 'fw-'+aid, see _fwCreate() */
     const oldHd=win.querySelector('.fw-hd');
     if(!oldHd)return;
-    /* v04.74 — the title input lives in this bar: carry what is typed in it
-       (and the focus) across the rebuild. */
-    const oldTi=oldHd.querySelector('.fw-ti');
-    const tv=oldTi?oldTi.value:null,tf=oldTi&&document.activeElement===oldTi;
+    /* v04.79 — the title is in its own row again (not rebuilt here); this
+       bar holds the tabs, which _popFrameHTML() rebuilds from DB.tabs. */
     oldHd.outerHTML=_popFrameHTML(aid,'float');
-    const newTi=win.querySelector('.fw-hd .fw-ti');
-    if(newTi){
-      if(tv!=null)newTi.value=tv;
-      newTi.addEventListener('input',()=>_fwScheduleAutoSave(aid));
-      if(tf)newTi.focus({preventScroll:true});
-    }
     _fwWireDragHandle(win.querySelector('.fw-hd'),win,aid);
   });
 }
@@ -13033,17 +13089,18 @@ function _popPanelSides(){
 function _popPanelTop(host,inModal){
   if(inModal){
     const p3h=document.getElementById('p3h');
-    const tb=document.getElementById('tab-bar');
-    const pf=document.getElementById('p3-frame-modal');   /* the frame sits ABOVE both */
-    return (pf?pf.offsetHeight:0)+(p3h?p3h.offsetHeight:48)+(tb?tb.offsetHeight:32);
+    const pf=document.getElementById('p3-frame-modal');   /* v04.79 — holds the tab bar now */
+    const tr=document.getElementById('p3-title-modal');
+    return (pf?pf.offsetHeight:0)+(tr?tr.offsetHeight:0)+(p3h?p3h.offsetHeight:48);
   }
   /* v04.74 — the title moved INTO .fw-hd and Multi gained a tab bar
      (.fw-tabs), so the stack is frame + tabs + strip + formatting row. */
+  /* v04.79 — the tabs are INSIDE .fw-hd now, and the title has its own row. */
   const hd=host.querySelector('.fw-hd');
-  const tabs=host.querySelector('.fw-tabs');
+  const tr=host.querySelector('.pf-title-row');
   const strip=host.querySelector('.pop-meta-strip');
   const row=host.querySelector('.fw-tb.pop-fmt-row');
-  return (hd?hd.offsetHeight:34)+(tabs?tabs.offsetHeight:0)+(strip?strip.offsetHeight:0)+(row?row.offsetHeight:0);
+  return (hd?hd.offsetHeight:34)+(tr?tr.offsetHeight:0)+(strip?strip.offsetHeight:0)+(row?row.offsetHeight:0);
 }
 /* v04.74 — re-seat Contents / Sidepane under the header stack after it
    changed height (Details opened or closed, a tab bar repainted). The two

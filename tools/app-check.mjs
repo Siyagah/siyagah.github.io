@@ -5496,7 +5496,10 @@ async function frameSnapshot(page, containerSel) {
     const visible = (el) => el.getClientRects().length > 0;
     const controls = [...frame.querySelectorAll('[data-pf]')].filter(visible);
     const fr = frame.getBoundingClientRect();
-    const titleEl = frame.querySelector('[data-pf="title"]');
+    /* v04.79 — updated in place: the title left the bar for its own row
+       (owner: "It should be on the second row"); its width floor is now
+       measured there, and the bar's ordered set holds the tabs instead. */
+    const titleEl = host.querySelector('[data-pf="titlerow"] [data-pf="title"]');
     return {
       items: controls.map((el) => el.getAttribute('data-pf')),
       frameH: Math.round(fr.height),
@@ -5554,7 +5557,8 @@ await r.block('19b-single-nav-in-place', async () => {
   await s.page.keyboard.press('End');
   await s.page.keyboard.type(' TYPEDBEFORESWITCH');
   await s.page.waitForTimeout(150);
-  const box = await s.page.locator('#p3-frame-modal [data-pf="next"]').boundingBox();
+  /* v04.79 — updated in place: ‹ › moved to the title row */
+  const box = await s.page.locator('#p3-title-modal [data-pf="next"]').boundingBox();
   if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await s.page.waitForTimeout(400);
   const out = await s.page.evaluate(() => ({
@@ -5840,7 +5844,8 @@ await r.block('19g-single-drags-by-frame', async () => {
     const before = await s.page.evaluate(() => {
       const b = document.getElementById('p3').getBoundingClientRect(); return { left: b.left, top: b.top };
     });
-    const box = await s.page.locator('#p3-frame-modal [data-pf="title"]').boundingBox();
+    /* v04.79 — updated in place: the title left the bar; press on the bar's own icon */
+    const box = await s.page.locator('#p3-frame-modal [data-pf="ico"]').boundingBox();
     if (box) {
       const sx = box.x + box.width / 2, sy = box.y + box.height / 2;
       await s.page.mouse.move(sx, sy);
@@ -6159,7 +6164,10 @@ async function stripGeom(page, containerSel, barSel) {
        "how much room the strip and its neighbours take" — now starts under
        the tab bar (which the round added between the bar and the strip), not
        under a title row that no longer exists. */
-    const title = box(host.querySelector('.fw-tabs, #tab-bar')) || box(host.querySelector('[data-ps="title"]'));
+    /* v04.79 — updated in place: the tabs moved into the window bar and the
+       title has its own row again, directly above the strip, so the budget
+       starts under the TITLE ROW once more. */
+    const title = box(host.querySelector('.pf-title-row')) || box(host.querySelector('[data-ps="title"]'));
     const bar = box(host.querySelector(barSel));
     /* each row's FIRST visible thing — a row is a .pop-row */
     const rowLefts = [...strip.querySelectorAll(':scope>.pop-row')].map((row) => {
@@ -9632,8 +9640,8 @@ for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '820', width
 const P37_KEY = 'siyagah-pop-details';
 const P37_VPS = [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }, { name: '1440', width: 1440, height: 900 }];
 const P37_SEL = {
-  single: { root: '#p3', frame: '#p3-frame-modal', tabs: '#tab-bar', strip: '#p3h .pop-meta-strip', fmt: '#p3h .pop-fmt-row', ed: '#ed', title: '#ti' },
-  multi: { root: '#fw-a1', frame: '#fw-a1 .fw-hd', tabs: '#fw-a1 .fw-tabs', strip: '#fw-a1 .pop-meta-strip', fmt: '#fw-a1 .fw-tb.pop-fmt-row', ed: '#fw-a1 .fw-ed', title: '#fw-ti-a1' },
+  single: { root: '#p3', frame: '#p3-frame-modal', tabs: '#tab-bar', strip: '#p3h .pop-meta-strip', fmt: '#p3h .pop-fmt-row', ed: '#ed', title: '#ti', titlerow: '#p3-title-modal' },
+  multi: { root: '#fw-a1', frame: '#fw-a1 .fw-hd', tabs: '#fw-a1 .fw-tabs', strip: '#fw-a1 .pop-meta-strip', fmt: '#fw-a1 .fw-tb.pop-fmt-row', ed: '#fw-a1 .fw-ed', title: '#fw-ti-a1', titlerow: '#fw-a1 .pf-title-row' },
 };
 function db37(extra) {
   const db = seedDB();
@@ -9663,7 +9671,7 @@ const tap37 = (page, vp, loc) => (vp.width < 1200 ? loc.tap() : loc.click());
 const geo37 = (page, sel) => page.evaluate((S) => {
   const q = (x) => document.querySelector(x); const r = (e) => { if (!e) return null; const b = e.getBoundingClientRect(); return b.width && b.height ? { t: b.top, b: b.bottom, l: b.left, r: b.right, h: b.height } : null; };
   const root = q(S.root), ed = q(S.ed);
-  return { root: r(root), frame: r(q(S.frame)), tabs: r(q(S.tabs)), strip: r(q(S.strip)), fmt: r(q(S.fmt)), ed: r(ed),
+  return { root: r(root), frame: r(q(S.frame)), tabs: r(q(S.tabs)), title: r(q(S.titlerow)), tabsInFrame: !!(q(S.frame) && q(S.tabs) && q(S.frame).contains(q(S.tabs))), strip: r(q(S.strip)), fmt: r(q(S.fmt)), ed: r(ed),
     header: root && ed ? ed.getBoundingClientRect().top - root.getBoundingClientRect().top : null };
 }, sel);
 const oneTitle37 = (page, sel, title) => page.evaluate(({ S, title }) => {
@@ -9683,19 +9691,26 @@ await r.block(`37a-title-once-${vp.name}-${mode}`, async () => {
   const { page } = s;
   const hit = await oneTitle37(page, S, 'Seeded note one');
   r.check(hit.length === 1, `${vp.name} ${mode}, edit mode: the note's title appears exactly once above the editor`, JSON.stringify(hit));
-  const inFrame = await page.evaluate((S) => { const t = document.querySelector(S.title); const f = document.querySelector(S.frame); return !!(t && f && f.contains(t) && t.tagName === 'INPUT'); }, S);
-  r.check(inFrame, `${vp.name} ${mode}: that one title is the editable input, and it lives in the window bar`, String(inFrame));
+  /* v04.79 — updated in place: the owner moved the title OUT of the window
+     bar ("It should be on the second row. First row keep for dragging,
+     resizing and other tabs"), so it is the input in its own row, directly
+     under the bar — not inside it. */
+  const inRow = await page.evaluate((S) => { const t = document.querySelector(S.title); const f = document.querySelector(S.frame); const row = document.querySelector(S.titlerow);
+    if (!t || !f || !row) return { t: !!t, f: !!f, row: !!row };
+    const fb = f.getBoundingClientRect(), rb = row.getBoundingClientRect();
+    return { input: t.tagName === 'INPUT', inRow: row.contains(t), notInBar: !f.contains(t), under: rb.top >= fb.bottom - 1.5 && rb.top <= fb.bottom + 1.5 }; }, S);
+  r.check(inRow.input && inRow.inRow && inRow.notInBar && inRow.under, `${vp.name} ${mode}: that one title is the editable input, in its own row directly under the window bar`, JSON.stringify(inRow));
   if (mode === 'single') {
     /* Read mode: plain text in the window bar, right-click starts editing. */
     await page.evaluate(() => cancelEdit());
     await page.waitForTimeout(400);
     const hitR = await oneTitle37(page, { ...S, ed: '#p3c' }, 'Seeded note one');
     r.check(hitR.length === 1, `${vp.name} single, read mode: the title appears exactly once above the note`, JSON.stringify(hitR));
-    const disp = page.locator('#p3-frame-modal .fw-title-disp');
-    r.check(await disp.count() === 1, `${vp.name} single, read mode: the window bar shows it as plain text`, String(await disp.count()));
+    const disp = page.locator('#p3-title-modal .fw-title-disp');
+    r.check(await disp.count() === 1, `${vp.name} single, read mode: the title row shows it as plain text (v04.79: row 2, not the bar)`, String(await disp.count()));
     await disp.click({ button: 'right' });
     await page.waitForTimeout(500);
-    const ed = await page.evaluate(() => ST.editing && !!document.querySelector('#p3-frame-modal #ti'));
+    const ed = await page.evaluate(() => ST.editing && !!document.querySelector('#p3-title-modal #ti'));
     r.check(ed, `${vp.name} single, read mode: a right-click on the title starts editing (the input takes its place)`, String(ed));
   }
   /* Type a new title in the window bar; it autosaves; reload keeps it. */
@@ -9778,9 +9793,13 @@ await r.block(`37c-details-line-${vp.name}-${mode}`, async () => {
   r.check(line && line.hasDate === want.date && line.hasTags === want.tags && line.hasAttach === want.attach && line.hasArch === want.arch,
     `${vp.name} ${mode}: the line carries ${vp.width >= 1200 ? 'the date, tags, Attach and 📦' : vp.width >= 640 ? 'tags, Attach and 📦 (no date)' : 'only Type · folder · version · ▾ Details (no tags/Attach/📦/date)'}`, JSON.stringify(line));
   const g = await geo37(page, S);
-  const ok = g.frame && g.tabs && g.strip && g.fmt && g.ed && g.frame.b <= g.tabs.t + 1.5 && g.tabs.b <= g.strip.t + 1.5 && g.strip.b <= g.fmt.t + 1.5 && g.fmt.b <= g.ed.t + 1.5;
-  const sum = ok ? g.frame.h + g.tabs.h + g.strip.h + g.fmt.h : 0;
-  r.check(ok && Math.abs(g.header - sum) <= 14, `${vp.name} ${mode}: exactly four rows stand above the note — window bar, tab bar, Details line, formatting row`, JSON.stringify({ ...g, sum }));
+  /* v04.79 — updated in place: the tab bar moved INTO the window bar (row 1)
+     and the title took row 2 (the owner's "First row keep for dragging,
+     resizing and other tabs"); still exactly four rows. */
+  const ok = g.frame && g.tabs && g.tabsInFrame && g.title && g.strip && g.fmt && g.ed && g.frame.b <= g.title.t + 1.5 && g.title.b <= g.strip.t + 1.5 && g.strip.b <= g.fmt.t + 1.5 && g.fmt.b <= g.ed.t + 1.5
+    && g.tabs.t >= g.frame.t - 1 && g.tabs.b <= g.frame.b + 1;
+  const sum = ok ? g.frame.h + g.title.h + g.strip.h + g.fmt.h : 0;
+  r.check(ok && Math.abs(g.header - sum) <= 14, `${vp.name} ${mode}: exactly four rows stand above the note — window bar WITH the tabs, title, Details line, formatting row`, JSON.stringify({ ...g, sum }));
   const closedH = g.header;
   await tap37(page, vp, page.locator(`${S.strip} .pop-details-btn`).first());
   await page.waitForTimeout(400);
@@ -10267,6 +10286,96 @@ await r.block(`42d-search-result-long-press-add-to-tab-${vp.name}`, async () => 
   const t = await tabs42(page);
   r.check(/"a1":\["a2"\]/.test(t), `${vp.name}: tapping 📑 Add to Tab adds it to the open note's tabs`, t);
   r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+/* 43 — v04.79: pop-up rows swapped (owner, laptop screenshot): "title bar on
+   the top doesn't look usual. It should be on the second row. First row keep
+   for dragging, resizing and other tabs." Row 1 = grip · tabs · switch · ✕;
+   row 2 = ‹ › title. Section 37 (updated in place) measures the four rows.
+   43a Single's #tab-bar visits the frame only while Single is open: closing
+       puts it back in the main view (it is the main view's tab bar too);
+   43b ‹ › moved to the title row and still go to the neighbouring note
+       (real tap/click), both pop-ups, 390/820/1440;
+   43c 1440: row 1 still drags the window by its empty space, and a click
+       on a tab chip in it switches tabs without moving the window. */
+function db43() { const d = db37(); d.tabs = { a1: ['a2'] }; d.articles.push({ id: 'a4', title: 'Seeded note four', content: '<p>Four.</p>', folderIds: ['f1'], tags: [], createdAt: d.articles[0].createdAt, updatedAt: d.articles[0].updatedAt, kind: 'general' }); return d; }
+for (const vp of P37_VPS) {
+await r.block(`43a-single-tab-bar-goes-home-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db43(), hasTouch: vp.width < 1200 });
+  const { page } = s;
+  await s37open(page, 'single');
+  const open = await page.evaluate(() => ({ inFrame: !!document.querySelector('#p3-frame-modal #tab-bar'), chip: !!document.querySelector('#p3-frame-modal #tab-bar .tab-it[data-tid="a2"]') }));
+  r.check(open.inFrame && open.chip, `${vp.name}: while Single is open its tab bar (with the tab) is in row 1`, JSON.stringify(open));
+  await tap37(page, vp, page.locator('#p3-frame-modal .fw-close'));
+  await page.waitForTimeout(500);
+  const shut = await page.evaluate(() => { const tb = document.getElementById('tab-bar'); const p3h = document.getElementById('p3h');
+    return { exists: !!tb, home: !!tb && tb.parentElement && tb.parentElement.id === 'p3' && tb.nextElementSibling === p3h, frame: !!document.getElementById('p3-frame-modal'), row: !!document.getElementById('p3-title-modal'),
+      shown: !!tb && !!tb.getBoundingClientRect().height }; });
+  r.check(shut.exists && shut.home && !shut.frame && !shut.row, `${vp.name}: ✕ puts the tab bar back in the main view and removes rows 1 and 2`, JSON.stringify(shut));
+  if (vp.width >= 1200) r.check(shut.shown, `${vp.name}: the main view's tab bar is showing again`, JSON.stringify(shut));
+  await s37open(page, 'single');
+  const again = await page.evaluate(() => !!document.querySelector('#p3-frame-modal #tab-bar'));
+  r.check(again, `${vp.name}: reopening Single takes the tab bar into row 1 again`, String(again));
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+for (const mode of ['single', 'multi']) {
+await r.block(`43b-title-row-nav-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db43(), hasTouch: vp.width < 1200 });
+  const { page } = s;
+  await page.evaluate(() => { ST.folder = 'f1'; });
+  await s37open(page, mode);
+  const where = await page.evaluate((S) => { const n = document.querySelector(S.titlerow + ' [data-pf="next"]'); const f = document.querySelector(S.frame);
+    return { inRow: !!n, notInBar: !(f && f.querySelector('[data-pf="next"]')) }; }, S);
+  r.check(where.inRow && where.notInBar, `${vp.name} ${mode}: ‹ › sit in the title row (row 2), not in the window bar`, JSON.stringify(where));
+  await tap37(page, vp, page.locator(S.titlerow + ' [data-pf="next"]').first());
+  await page.waitForTimeout(900);
+  const now = await page.evaluate((mode) => mode === 'single' ? ST.article : ([...document.querySelectorAll('.float-win')].map((w) => w.id.slice(3)).join(',')), mode);
+  r.check(/a4/.test(now) && !/a1/.test(now), `${vp.name} ${mode}: a real ${vp.width < 1200 ? 'tap' : 'click'} on › opens the next note in the folder`, now);
+  r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+}
+await r.block('43c-row-1-drags-tabs-click-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: db43() });
+  const { page } = s;
+  await s37open(page, 'multi');
+  const box = async () => page.evaluate(() => { const b = document.getElementById('fw-a1').getBoundingClientRect(); return { x: Math.round(b.left), y: Math.round(b.top) }; });
+  const b0 = await box();
+  /* empty space in row 1: just right of the ⠿ grip */
+  const g = await page.locator('#fw-a1 .fw-hd .fw-drag').boundingBox();
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2); await page.mouse.down();
+  await page.mouse.move(g.x + 80, g.y + 60, { steps: 6 }); await page.mouse.up();
+  await page.waitForTimeout(300);
+  const b1 = await box();
+  /* the first pointermove step lands before the drag is armed, so it moves a little less than the pointer */
+  r.check(b1.x - b0.x >= 60 && b1.y - b0.y >= 40, '1440 Multi: dragging row 1 still moves the window', JSON.stringify({ b0, b1 }));
+  await page.locator('#fw-a1 .fw-hd .tab-it[data-tid="a2"]').click();
+  await page.waitForTimeout(800);
+  const after = await page.evaluate(() => { const w = document.getElementById('fw-a2'); const b = w && w.getBoundingClientRect(); return { a2: !!w, x: b ? Math.round(b.left) : null, y: b ? Math.round(b.top) : null }; });
+  r.check(after.a2 && Math.abs(after.x - b1.x) <= 4 && Math.abs(after.y - b1.y) <= 4, '1440 Multi: clicking a tab in row 1 switches the window to that note, without moving it', JSON.stringify({ after, b1 }));
+  r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
+/* 43d — v04.79: once the title left row 1 the bar got shorter, and the
+   window's 16px top-left resize corner covered the ⠿ grip: a press on the
+   grip RESIZED the window (found by 19g in the full run). The grip must be
+   the topmost thing at its own centre wherever it is shown. */
+for (const vp of [{ name: '820', width: 820, height: 1180 }, { name: '1440', width: 1440, height: 900 }]) for (const mode of ['single', 'multi']) {
+await r.block(`43d-grip-not-under-corner-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db43(), hasTouch: vp.width < 1200 });
+  await s37open(s.page, mode);
+  const g = await s.page.evaluate((S) => { const gr = document.querySelector(S.frame + ' .fw-drag'); if (!gr || !gr.getClientRects().length) return { shown: false };
+    const b = gr.getBoundingClientRect(); const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return { shown: true, top: hit === gr || gr.contains(hit), hit: hit && (hit.id || hit.className) }; }, S);
+  if (g.shown) r.check(g.top, `${vp.name} ${mode}: the ⠿ grip is on top at its centre (not under a resize corner)`, JSON.stringify(g));
+  else r.pass(`${vp.name} ${mode}: no ⠿ grip on this tier (nothing to cover)`);
   await s.close();
 });
 }
