@@ -7488,6 +7488,7 @@ recorded at each check):
   - `43c`'s drag check, which guards against breaking the drag.
 - Screenshots at 390, 820 and 1440, Single and Multi, with two tabs.
 - `ship-check` **13/13**.
+- Full `app-check`, after the fix below: **1327/1327, twice in a row**.
 
 **Found by the first full run, and fixed in this round.**
 - **The window's 16px top-left resize corner covered the ⠿ grip.** Row 1
