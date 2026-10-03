@@ -7599,5 +7599,10 @@ second, v04.81, moves the formatting tools up into the Details line, with
 - `--only 19,20,21,22,23,31,37,39,40,42,43`: **489/489**.
 - `ship-check` **13/13**.
 
+**Found by the first full run, and fixed:** with its word gone, the
+phone's ✕ measured 37px wide, under the 40px finger target that
+`6p-17-popups-every-platform` asks for. It now has a 44×44 minimum on the
+phone. That check passes again.
+
 **Not done / left (v04.81):** the formatting tools moving up into the
 Details line.
