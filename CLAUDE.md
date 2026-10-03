@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.80.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.81.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,15 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.81** (4 Oct 2026) — the formatting tools move up INTO the Details
+  line (owner's screenshot). Closed: `_popDetailsLineHTML()` = `.pdl-meta`
+  (chips) · `.pdl-fmt` (`_popFormatRowHTML()`) · ▾ Details, three units that
+  wrap as wholes. One line where it fits (a 1440 Multi window); otherwise the
+  tools and ▾ Details take a second line. Open: the old separate formatting
+  row under the four-row strip. Single's ▾/▴ rebuilds `#p3h`;
+  `_fwRefreshMeta()` keeps exactly one formatting row; `_popPanelTop()`
+  counts only a free-standing row. `37c`/`22b`/`23b` updated in place; new
+  section 45: **24/24**; unpatched `--only 45,37c` 12/30.
 - **v04.80** (4 Oct 2026) — owner: Details "doesn't work", ✚ should open in
   the pane, Edit/Save "on the upper bar … at the corner", ✚ New in both
   pop-ups. **Details:** reproduced only with a FULL localStorage (the
@@ -74,15 +83,6 @@ must never accumulate here instead of there.
   0 FAIL. `30a`/`30b` updated in place; new section 41 (390/820 dialog ⋯,
   1440 sidebar right-click). Unpatched: `--only 41,30` 16/25, `F19`/`F20`
   FAIL. Full `app-check` **1277/1277, twice in a row**.
-- **v04.76** (30 Sep 2026) — 📎 Attach → Folder works in READ mode
-  (owner's screenshot of the greyed row). Editing this note: still the
-  staged `openPicker()`. Otherwise: `showArtFolderPicker(aid)`, which
-  writes `a.folderIds` directly. Its `toggleArtFolder()` now updates ticks
-  in place (keeps scroll and search) and stamps `updatedAt`. Both the menu
-  (`openAttachMenu`) and the phone card (`_ebAttachHTML`) changed. New
-  section 40 (390/820/1440, Pane 3 and Single, real taps): `--only 40`
-  **32/32**; unpatched 2/14. `6p-06`/`6p-10` updated in place. Full
-  `app-check` **1261/1261, twice in a row**.
 ---
 
 ## What this is

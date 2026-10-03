@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.80">
+<meta name="app-version" content="04.81">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2383,8 +2383,14 @@ sup.ann-sup:hover{text-decoration:underline}
    stays pinned at the right end. What shows is decided by width, in CSS. */
 .pop-meta-strip:not(.pop-details-open){padding:4px 0}
 .float-win .pop-meta-strip:not(.pop-details-open){padding:4px 14px}
-.pop-details-line{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0;overflow:hidden}
+.pop-details-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px;row-gap:4px;min-width:0}
 .pop-details-line>*{flex:0 0 auto;margin:0}
+/* v04.81 — three units that wrap as wholes: chips · tools · ▾ Details */
+.pdl-meta{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0;max-width:100%;overflow:hidden}
+.pdl-meta>*{flex:0 0 auto;margin:0}
+.pdl-fmt{display:flex;min-width:0}
+.pop-details-line .pdl-fmt>.pop-fmt-row{display:flex;flex-wrap:nowrap;align-items:center;gap:3px;
+  padding:0!important;margin:0!important;border:0!important;background:none!important;width:auto!important;min-height:0}
 .pop-details-line .pdl-type{flex:0 1 auto;min-width:0;max-width:36%;overflow:hidden}
 .pop-details-line .ftag{flex:0 1 auto;min-width:0;max-width:32%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pop-details-line .pdl-ver{flex:0 1 auto;min-width:0;max-width:38%;overflow:hidden;text-overflow:ellipsis}
@@ -3178,7 +3184,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.80</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.81</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4145,7 +4151,14 @@ function _popDetailsLineHTML(a,host){
   const hostArg=host?`'${host}'`:'null';
   const go=w=>`_popDetailsSet(true,'${w}',${hostArg})`;
   const chips=_kindChipsHTML(a);
-  let h='<div class="pop-details-line" data-ps="details-line">';
+  /* v04.81 — the owner's screenshot: the formatting row moves UP into this
+     line's empty space after 📦, with ▾ Details at the right end. Three
+     units that wrap as wholes: the chips (.pdl-meta), the tools (.pdl-fmt)
+     and ▾ Details — so where a pop-up is too narrow for one line the tools
+     and ▾ Details drop to a second line together (what the two rows looked
+     like before), and never a lone chip. Details OPEN keeps the separate
+     formatting row under the four-row strip, as before. */
+  let h='<div class="pop-details-line" data-ps="details-line"><span class="pdl-meta">';
   h+=chips?`<div class="nti-chips pdl-type" data-ps="type">${chips}</div>`
     :`<button class="nti-picker-btn pdl-type" data-ps="type" onclick="openNtiPicker('${a.id}',this)" title="Note Type — tap to set">Type: not set</button>`;
   h+=_folderChipsHTML(a,true);
@@ -4159,6 +4172,7 @@ function _popDetailsLineHTML(a,host){
   const dt=_dateFlipHTML(a);
   if(dt)h+=`<span class="pdl-date" data-ps="date">${dt}</span>`;
   h+=`<span class="pdl-attach">${_attachBtnHTML(a)}</span><span class="pdl-arch">${_archBtnHTML(a)}</span>`;
+  h+='</span><span class="pdl-fmt">'+_popFormatRowHTML(host||null,a)+'</span>';
   h+=`<button class="nti-picker-btn pop-details-btn" onclick="${go('')}" title="Show everything: tags, folders, versions, date">▾ Details</button>`;
   return h+'</div>';
 }
@@ -4170,8 +4184,10 @@ function _popDetailsSet(open,focusWhat,host){
   try{localStorage.setItem(POP_DETAILS_KEY,open?'1':'0');}catch(e){}
   const p3h=document.getElementById('p3h');
   const old=ST.noteModal&&p3h&&p3h.querySelector('.pop-meta-strip');
-  const cur=old&&DB.articles.find(x=>x.id===ST.article);
-  if(old&&cur){old.outerHTML=_popMetaStripHTML(cur,null);renderTagEditor();}
+  /* v04.81 — the formatting tools move between the Details line and their
+     own row with this switch, so Single's whole header is rebuilt (it keeps
+     #ti's focus); Multi's strip + row via _fwRefreshMeta() */
+  if(old)renderP3H();
   document.querySelectorAll('.float-win').forEach(w=>{try{_fwRefreshMeta(w.id.slice(3));}catch(e){}});
   _popPanelsRelayout();
   if(open&&focusWhat){
@@ -4849,7 +4865,8 @@ function renderP3H(){
          lives in the window bar (_popFrameHTML, panel mode, while editing),
          so the note's title shows once. */
       let hm=_popMetaStripHTML(curA,null);
-      hm+=_popFormatRowHTML(null,curA);
+      /* v04.81 — closed, the tools are INSIDE the Details line */
+      if(_popDetailsIsOpen())hm+=_popFormatRowHTML(null,curA);
       el.innerHTML=hm;
       if(_tiFoc){const _tin=document.getElementById('ti');if(_tin){_tin.focus({preventScroll:true});try{_tin.setSelectionRange(_selS,_selE);}catch(e){}}}
       renderTagEditor();
@@ -11353,6 +11370,12 @@ function _fwRefreshMeta(aid){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return;
   const old=win.querySelector('.pop-meta-strip');
   if(old)old.outerHTML=_popMetaStripHTML(a,aid);
+  /* v04.81 — with Details closed the tools are inside the strip; open, they
+     are their own row under it. Keep exactly one of the two. */
+  const strip=win.querySelector('.pop-meta-strip');
+  const sep=[...win.querySelectorAll('.fw-tb.pop-fmt-row')].find(r=>!r.closest('.pop-meta-strip'));
+  if(strip&&_popDetailsIsOpen()&&!sep)strip.insertAdjacentHTML('afterend',_popFormatRowHTML(aid,a));
+  if(sep&&!_popDetailsIsOpen())sep.remove();
   renderTagEditor(aid);
 }
 function _fwFlashSaved(aid){
@@ -11684,7 +11707,7 @@ function _fwRenderBody(aid){
     +_popTitleRowHTML(aid,'float')
     +'<div class="fw-body">'
     +_popMetaStripHTML(a,aid)
-    +_popFormatRowHTML(aid,a)
+    +(_popDetailsIsOpen()?_popFormatRowHTML(aid,a):'')   /* v04.81 — closed: inside the Details line */
     +'<div class="fw-editarea">'
     +'<div class="fw-find" id="fw-find-'+aid+'" style="display:none">'
     +'<input class="fw-find-q" id="fw-find-q-'+aid+'" placeholder="Find in note…" '
@@ -13167,7 +13190,9 @@ function _popPanelTop(host,inModal){
   const hd=host.querySelector('.fw-hd');
   const tr=host.querySelector('.pf-title-row');
   const strip=host.querySelector('.pop-meta-strip');
-  const row=host.querySelector('.fw-tb.pop-fmt-row');
+  /* v04.81 — only the formatting row that stands ON ITS OWN (Details open);
+     closed, it is inside the strip and already counted */
+  const row=[...host.querySelectorAll('.fw-tb.pop-fmt-row')].find(r=>!r.closest('.pop-meta-strip'));
   return (hd?hd.offsetHeight:34)+(tr?tr.offsetHeight:0)+(strip?strip.offsetHeight:0)+(row?row.offsetHeight:0);
 }
 /* v04.74 — re-seat Contents / Sidepane under the header stack after it
