@@ -28,7 +28,8 @@ must never accumulate here instead of there.
   Single's reading view hides the pane toolbar's Edit/✚/‹ ›. Phone row 1
   gained room: floating ✓ Saved, no strip arrows, "＋ Tab", ✕ without
   "Close". `22a`/`22b`/`19f` updated in place; new section 44: **54/54**;
-  unpatched 7/40.
+  unpatched 7/40. The phone's ✕ is now at least 44px (`6p-17`). Full `app-check`
+  **1381/1381, twice in a row**.
 - **v04.79** (3 Oct 2026) — pop-ups: tabs in row 1, title in row 2 (owner:
   "title bar on the top doesn't look usual. It should be on the second row.
   First row keep for dragging, resizing and other tabs"; partly reverses
