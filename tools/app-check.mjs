@@ -5496,7 +5496,10 @@ async function frameSnapshot(page, containerSel) {
     const visible = (el) => el.getClientRects().length > 0;
     const controls = [...frame.querySelectorAll('[data-pf]')].filter(visible);
     const fr = frame.getBoundingClientRect();
-    const titleEl = frame.querySelector('[data-pf="title"]');
+    /* v04.79 — updated in place: the title left the bar for its own row
+       (owner: "It should be on the second row"); its width floor is now
+       measured there, and the bar's ordered set holds the tabs instead. */
+    const titleEl = host.querySelector('[data-pf="titlerow"] [data-pf="title"]');
     return {
       items: controls.map((el) => el.getAttribute('data-pf')),
       frameH: Math.round(fr.height),
@@ -5554,7 +5557,8 @@ await r.block('19b-single-nav-in-place', async () => {
   await s.page.keyboard.press('End');
   await s.page.keyboard.type(' TYPEDBEFORESWITCH');
   await s.page.waitForTimeout(150);
-  const box = await s.page.locator('#p3-frame-modal [data-pf="next"]').boundingBox();
+  /* v04.79 — updated in place: ‹ › moved to the title row */
+  const box = await s.page.locator('#p3-title-modal [data-pf="next"]').boundingBox();
   if (box) await s.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await s.page.waitForTimeout(400);
   const out = await s.page.evaluate(() => ({
@@ -5840,7 +5844,8 @@ await r.block('19g-single-drags-by-frame', async () => {
     const before = await s.page.evaluate(() => {
       const b = document.getElementById('p3').getBoundingClientRect(); return { left: b.left, top: b.top };
     });
-    const box = await s.page.locator('#p3-frame-modal [data-pf="title"]').boundingBox();
+    /* v04.79 — updated in place: the title left the bar; press on the bar's own icon */
+    const box = await s.page.locator('#p3-frame-modal [data-pf="ico"]').boundingBox();
     if (box) {
       const sx = box.x + box.width / 2, sy = box.y + box.height / 2;
       await s.page.mouse.move(sx, sy);
@@ -10356,6 +10361,24 @@ await r.block('43c-row-1-drags-tabs-click-1440', async () => {
   r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
   await s.close();
 });
+
+/* 43d — v04.79: once the title left row 1 the bar got shorter, and the
+   window's 16px top-left resize corner covered the ⠿ grip: a press on the
+   grip RESIZED the window (found by 19g in the full run). The grip must be
+   the topmost thing at its own centre wherever it is shown. */
+for (const vp of [{ name: '820', width: 820, height: 1180 }, { name: '1440', width: 1440, height: 900 }]) for (const mode of ['single', 'multi']) {
+await r.block(`43d-grip-not-under-corner-${vp.name}-${mode}`, async () => {
+  const S = P37_SEL[mode];
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db43(), hasTouch: vp.width < 1200 });
+  await s37open(s.page, mode);
+  const g = await s.page.evaluate((S) => { const gr = document.querySelector(S.frame + ' .fw-drag'); if (!gr || !gr.getClientRects().length) return { shown: false };
+    const b = gr.getBoundingClientRect(); const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return { shown: true, top: hit === gr || gr.contains(hit), hit: hit && (hit.id || hit.className) }; }, S);
+  if (g.shown) r.check(g.top, `${vp.name} ${mode}: the ⠿ grip is on top at its centre (not under a resize corner)`, JSON.stringify(g));
+  else r.pass(`${vp.name} ${mode}: no ⠿ grip on this tier (nothing to cover)`);
+  await s.close();
+});
+}
 
 /* Proves the isolation mechanism itself, permanently, rather than trusting a
    one-off manual run: a block that throws must cost only that block, and

@@ -7489,6 +7489,26 @@ recorded at each check):
 - Screenshots at 390, 820 and 1440, Single and Multi, with two tabs.
 - `ship-check` **13/13**.
 
+**Found by the first full run, and fixed in this round.**
+- **The window's 16px top-left resize corner covered the ⠿ grip.** Row 1
+  got shorter once the title input left it, so the grip's centre moved up
+  under `.modal-corner-tl`. A press on the grip **resized** the window
+  instead of moving it.
+  - It was measured by `19g`: a 60px drag moved Single 74.5px while its
+    width shrank by 74.5px.
+  - Multi was covered the same way; the new `43d` shows it.
+  - Fix: row 1 starts 20px in on the window tier (≥640px, where the
+    corners exist).
+  - New `43d` (820/1440, Single and Multi): the grip is the topmost element
+    at its own centre. Without the fix, both 1440 checks FAIL.
+- **Updated in place** (`19a`, `19a-title-min-width-360`, `19b`, `19g`,
+  each with its reason recorded):
+  - `19a`: the bar's ordered set of controls now holds the tabs, and the
+    title's 80px floor is measured in the title row.
+  - `19b`: Single's › is pressed in the title row.
+  - `19g`: the phone "frame does not drag" press lands on the bar's icon,
+    because the title left the bar.
+
 **Not done / left:**
 - On a phone, row 1 shows about one tab at a time; the strip scrolls
   sideways and shows "+N" for the rest.

@@ -33,7 +33,9 @@ must never accumulate here instead of there.
   `_popPanelTop()` counts the title row. `37a`/`37c`/`20i` updated in place;
   new section 43 (tab bar goes home on close, ‹ › in row 2 work, row 1
   drags and tab clicks don't): `--only 43` **34/34**; unpatched `--only
-  43,37` 170/207.
+  43,37` 170/207. The full run found the 16px top-left resize corner over
+  the ⠿ grip (row 1 is shorter), so the grip resized: row 1 starts 20px in
+  at ≥640px; new `43d` (fails without it); `19a`/`19b`/`19g` updated in place.
 - **v04.78** (1 Oct 2026) — a note in the sidebar's search results joins
   the open note's tabs (owner's screenshot). 1200px+: the `.sr` note rows are
   `draggable` (`artDStart`). The main bar's `tabBarDrop()` and, new, every
