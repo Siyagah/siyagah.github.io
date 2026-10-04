@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.83">
+<meta name="app-version" content="04.84">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -437,6 +437,14 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 #ed h3,.fw-ed h3{font-size:var(--fs-h3);font-weight:600;margin:12px 0 4px;color:var(--t1)}
 #ed h4,.fw-ed h4{font-size:var(--fs-h4);font-weight:600;margin:10px 0 4px;color:var(--t1)}
 #ed p,.fw-ed p{margin:0 0 var(--pp-gap)}
+.spc-pop{position:fixed;z-index:10050;background:var(--white);border:1px solid var(--border2);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:10px;display:flex;flex-direction:column;gap:8px;max-width:calc(100vw - 16px);font-family:var(--ui,inherit)}
+.spc-row{display:flex;flex-direction:column;gap:4px}
+.spc-lbl{font-size:11.5px;font-weight:700;color:var(--t2);letter-spacing:.02em}
+.spc-opts,.spc-foot{display:flex;gap:6px;flex-wrap:wrap}
+.spc-b{min-height:34px;min-width:52px;padding:4px 10px;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font-size:13px;cursor:pointer}
+.spc-b:hover{border-color:var(--green)}
+.spc-b.on{background:var(--green);border-color:var(--green);color:var(--on-accent)}
+@media(max-width:639.98px){.spc-b{min-height:44px;flex:1}}
 #ed ul,#ed ol,.fw-ed ul,.fw-ed ol{margin:6px 0 11px;padding-left:22px}
  .av-body ol,#ed ol,.fw-ed ol{list-style-type:decimal-leading-zero}
 #ed blockquote,.fw-ed blockquote{border-left:3px solid var(--gold);padding:2px 0 2px 15px;margin:13px 0;color:var(--t2);font-style:italic}
@@ -3184,7 +3192,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.83</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.84</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -10713,6 +10721,8 @@ function _buildEBSub(g){
       '<button class="et" onmousedown="edFontStep(event,0)" title="Reset text size to 100%" style="font-size:12px;font-weight:700;line-height:1">A\u21ba</button>',
       '<span class="esep"></span>',
       _alignBtnsHTML(),
+      '<span class="esep"></span>',
+      '<button class="et et-spc" onmousedown="edSpacingBtn(event)" title="Line and paragraph spacing (like Word)">↕ Spacing</button>',
     ],
     heads:[
       '<button class="et" onmousedown="fb(event,\'h1\')" style="font-size:12px;font-weight:800">H1</button>',
@@ -11784,6 +11794,8 @@ function _fwBuildEBSub(aid,g){
       `<button class="et" onmousedown="_fwEc(event,'${aid}','justifyLeft')" title="Align left">⯇</button>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','justifyCenter')" title="Align center">⯃</button>`,
       `<button class="et" onmousedown="_fwEc(event,'${aid}','justifyRight')" title="Align right">⯈</button>`,
+      `<span class="esep"></span>`,
+      `<button class="et et-spc" onmousedown="edSpacingBtn(event)" title="Line and paragraph spacing (like Word)">↕ Spacing</button>`,
     ],
     heads:[
       `<button class="et" onmousedown="_fwFb(event,'${aid}','h1')" style="font-weight:800">H1</button>`,
@@ -14169,6 +14181,183 @@ function edColorBtn(ev){
   if(s&&s.rangeCount&&_isED(s.anchorNode))_edRange=s.getRangeAt(0).cloneRange();
   _openColorPop(ev);
 }
+/* ══ v04.84 — LINE AND PARAGRAPH SPACING, AS IN WORD ═══════════════════════
+   The owner: "Enable paragraph, space edit like the standard MS word".
+   Appearance ▸ Line spacing (v04.02) already sets the whole app's spacing;
+   this sets it per PARAGRAPH, on the paragraphs the selection touches (or
+   the one holding the caret), as Word's Paragraph ▸ Spacing does:
+     Line spacing   1 · 1.15 · 1.5 · 2      → style="line-height:…"
+     Space after    None · Small · Normal · Large → style="margin-bottom:…"
+   Inline styles in the note's own HTML, so they save, sync, travel in a
+   Save File copy and show in the read view (an inline style outranks the
+   stylesheet's p margin) with nothing new in DB. "Normal" and ↺ Reset
+   remove the inline value, so the paragraph follows the app setting again.
+   Shared by Pane 3's #ed and every Multi window's .fw-ed (_edActive()).
+   A sheet, a card or any contenteditable=false widget is never touched. */
+const _SPC_LH=[['1','1'],['1.15','1.15'],['1.5','1.5'],['2','2']];
+const _SPC_GAP=[['None','0px'],['Small','4px'],['Normal',''],['Large','24px']];
+let _spcPop=null,_spcRange=null,_spcEd=null;
+function edSpacingBtn(ev){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  const ed=_edActive();if(!ed)return;
+  const s=window.getSelection();
+  _spcEd=ed;_spcRange=(s&&s.rangeCount&&ed.contains(s.anchorNode))?s.getRangeAt(0).cloneRange():null;
+  _openSpacingPop(ev);
+}
+function _spcBlocks(ed,range){
+  const SEL='p,li,h1,h2,h3,h4,blockquote,pre,div';
+  const ok=el=>el!==ed&&ed.contains(el)&&!el.closest('.sgx,[contenteditable="false"],.bk-card')&&el.isContentEditable;
+  if(!range||range.collapsed){
+    let n=range?range.startContainer:null;
+    if(n&&n.nodeType!==1)n=n.parentNode;
+    const b=n&&n.closest?n.closest(SEL):null;
+    return b&&ok(b)?[b]:[];
+  }
+  const all=[...ed.querySelectorAll(SEL)].filter(el=>ok(el)&&range.intersectsNode(el));
+  /* The innermost blocks only: a div holding paragraphs is not itself a line. */
+  return all.filter(el=>!all.some(o=>o!==el&&el.contains(o)));
+}
+function _spcApply(kind,val){
+  const ed=_spcEd;if(!ed||!document.contains(ed))return _closeSpacingPop();
+  const bl=_spcBlocks(ed,_spcRange);
+  if(!bl.length){toast('Put the cursor in a paragraph first');return;}
+  bl.forEach(el=>{
+    if(kind==='lh')el.style.lineHeight=val;
+    else if(kind==='gap'){el.style.marginBottom=val;}
+    else{el.style.lineHeight='';el.style.marginBottom='';}
+    if(!el.getAttribute('style'))el.removeAttribute('style');
+  });
+  _edTouched(ed);
+  _spcMark();
+}
+/* Shows which choice the first selected paragraph currently has. */
+function _spcMark(){
+  if(!_spcPop||!_spcEd)return;
+  const b=_spcBlocks(_spcEd,_spcRange)[0];
+  const lh=b?b.style.lineHeight:'',gap=b?b.style.marginBottom:'';
+  _spcPop.querySelectorAll('[data-lh]').forEach(x=>x.classList.toggle('on',x.dataset.lh===lh));
+  _spcPop.querySelectorAll('[data-gap]').forEach(x=>x.classList.toggle('on',x.dataset.gap===gap));
+}
+function _spcPopAway(e){
+  if(!_spcPop||_spcPop.contains(e.target))return;
+  if(e.target&&e.target.closest&&e.target.closest('#ed,.fw-ed'))return;
+  _closeSpacingPop();
+}
+function _closeSpacingPop(){if(_spcPop){_spcPop.remove();_spcPop=null;document.removeEventListener('mousedown',_spcPopAway,true);}}
+function _openSpacingPop(ev){
+  _closeSpacingPop();_closeColorPop();
+  const b=(k,v,l)=>'<button type="button" class="spc-b" data-'+k+'="'+v+'" onmousedown="event.preventDefault()" onclick="_spcApply(\''+k+'\',\''+v+'\')">'+l+'</button>';
+  const html='<div class="spc-row"><span class="spc-lbl">Line spacing</span><div class="spc-opts">'+_SPC_LH.map(x=>b('lh',x[1],x[0])).join('')+'</div></div>'
+    +'<div class="spc-row"><span class="spc-lbl">Space after paragraph</span><div class="spc-opts">'+_SPC_GAP.map(x=>b('gap',x[1],x[0])).join('')+'</div></div>'
+    +'<div class="spc-foot"><button type="button" class="spc-b" onmousedown="event.preventDefault()" onclick="_spcApply(\'reset\')" title="Back to the app\'s spacing (Appearance)">↺ Reset</button>'
+    +'<button type="button" class="spc-b" onmousedown="event.preventDefault()" onclick="_closeSpacingPop()">✕ Close</button></div>';
+  const p=document.createElement('div');
+  p.className='spc-pop';p.id='spc-pop';p.innerHTML=html;
+  document.body.appendChild(p);_spcPop=p;
+  const btn=ev&&ev.target&&ev.target.closest?ev.target.closest('button'):null;
+  const br=btn?btn.getBoundingClientRect():{left:(ev&&ev.clientX)||120,bottom:(ev&&ev.clientY)||120,top:(ev&&ev.clientY)||120};
+  const r=p.getBoundingClientRect();
+  const left=Math.max(8,Math.min(br.left,window.innerWidth-r.width-8));
+  let top=br.bottom+6;if(top+r.height>window.innerHeight-8)top=Math.max(8,br.top-r.height-6);
+  /* A phone gets a sheet along the bottom edge, so the paragraphs being
+     changed stay visible above it while a choice is tried. */
+  if(window.innerWidth<640){p.classList.add('spc-sheet');p.style.left='8px';p.style.right='8px';p.style.top='auto';p.style.bottom='8px';}
+  else{p.style.left=left+'px';p.style.top=top+'px';}
+  _spcMark();
+  setTimeout(()=>document.addEventListener('mousedown',_spcPopAway,true),0);
+}
+
+/* ══ v04.84 — 📋 COPY A HEADING'S SECTION ═══════════════════════════════════
+   The owner: "Enable copying the content inside a headings by pressing
+   (whatever is easier) the headings". A heading's section is everything
+   after it up to the next heading of the same or a higher level — the same
+   extent the fold arrow hides and the ⠿ grip moves. Reached by:
+     read view  — right-click the heading (laptop), press and hold it
+                  (phone, tablet); a plain tap still folds it, as before;
+     edit mode  — tap or click the heading's ⠿ grip without dragging it
+                  (a drag still moves the section), or right-click the
+                  heading; this is also how a Multi window gets it.
+   Copies rich text AND plain text, so it pastes into Word with its
+   formatting and into a chat as clean lines. The app's own chrome (fold
+   arrows, grips, status badges, a live sheet's grid) is stripped first. */
+function _secNodesOf(h){
+  const hd=h.closest('.col-hd');
+  if(hd){const sec=hd.parentElement;const b=sec&&sec.querySelector(':scope>.col-body');return b?[...b.childNodes]:[];}
+  const lv=parseInt(h.tagName[1]);const out=[];let n=h.nextSibling;
+  while(n){if(n.nodeType===1&&/^H[1-4]$/.test(n.tagName)&&parseInt(n.tagName[1])<=lv)break;out.push(n);n=n.nextSibling;}
+  return out;
+}
+function _secClean(wrap){
+  wrap.querySelectorAll('.ed-col-grip,.ed-col-arr,.ed-col-preview,.col-arr,.col-preview,.hd-status-badge,.sg-ui').forEach(n=>n.remove());
+  wrap.querySelectorAll('.col-sec,.col-hd,.col-body').forEach(n=>{n.style.display='';});
+  wrap.querySelectorAll('.sg-static[hidden],[hidden].sg-static').forEach(n=>n.removeAttribute('hidden'));
+  wrap.querySelectorAll('.ed-col-hidden').forEach(n=>n.classList.remove('ed-col-hidden'));
+}
+async function copyHeadingSection(h,withHeading){
+  hideCtx();
+  if(!h||!document.contains(h))return;
+  const wrap=document.createElement('div');
+  if(withHeading)wrap.appendChild(h.cloneNode(true));
+  _secNodesOf(h).forEach(n=>wrap.appendChild(n.cloneNode(true)));
+  _secClean(wrap);
+  /* innerText needs a rendered element to give real line breaks. */
+  wrap.style.cssText='position:fixed;left:-9999px;top:0;white-space:normal;opacity:0';
+  document.body.appendChild(wrap);
+  const text=(wrap.innerText||'').replace(/\n{3,}/g,'\n\n').trim(),html=wrap.innerHTML;
+  let ok=false;
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);
+      ok=true;
+    }
+  }catch(e){}
+  if(!ok){
+    try{
+      const s=window.getSelection(),r=document.createRange();
+      wrap.style.opacity='1';r.selectNodeContents(wrap);s.removeAllRanges();s.addRange(r);
+      ok=document.execCommand('copy');s.removeAllRanges();
+    }catch(e){}
+  }
+  wrap.remove();
+  window.__lastSecCopy={text,html,ok};
+  toast(ok?(text?'📋 Section copied':'📋 This section is empty'):'Copy was blocked by the browser');
+}
+let _secCtxHead=null;
+function showHeadingSecMenu(h,x,y){
+  _secCtxHead=h;
+  const m=document.getElementById('ctx');
+  const name=((h.textContent||'').replace(/[\u25b6\u25bc\u283f]/g,'').replace(/Set the Status/g,'').trim().slice(0,40))||'this heading';
+  m.innerHTML='<div class="ci-nti-hd">'+esc(name)+'</div>'
+    +'<div class="ci" onclick="copyHeadingSection(_secCtxHead,false)">📋 Copy section</div>'
+    +'<div class="ci" onclick="copyHeadingSection(_secCtxHead,true)">📋 Copy section with heading</div>';
+  m.style.display='block';
+  const vw=window.innerWidth,vh=window.innerHeight,mw=m.offsetWidth||200,mh=m.offsetHeight||100;
+  m.style.left=Math.max(5,Math.min(x,vw-mw-5))+'px';m.style.top=Math.max(5,Math.min(y,vh-mh-5))+'px';
+}
+/* Read view: right-click, and a 550ms press-and-hold on touch (iOS never
+   fires contextmenu; Android does, and the timer is cancelled by it). The
+   click a fired hold would produce is swallowed, so holding never folds. */
+(function(){
+  let t=null,x0=0,y0=0,fired=false;
+  const headOf=e=>{const hd=e.target&&e.target.closest&&e.target.closest('.av-body .col-hd');
+    if(!hd||(e.target.closest&&e.target.closest('.hd-status-badge')))return null;
+    return hd.querySelector('h1,h2,h3,h4');};
+  document.addEventListener('contextmenu',e=>{
+    const h=headOf(e);if(!h)return;
+    clearTimeout(t);e.preventDefault();e.stopPropagation();
+    showHeadingSecMenu(h,e.clientX,e.clientY);
+  });
+  document.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse')return;
+    const h=headOf(e);if(!h)return;
+    x0=e.clientX;y0=e.clientY;fired=false;clearTimeout(t);
+    t=setTimeout(()=>{fired=true;if(navigator.vibrate)try{navigator.vibrate(25);}catch(x){}showHeadingSecMenu(h,x0,y0);},550);
+  },true);
+  document.addEventListener('pointermove',e=>{if(t&&Math.hypot(e.clientX-x0,e.clientY-y0)>10){clearTimeout(t);t=null;}},true);
+  document.addEventListener('pointerup',()=>{clearTimeout(t);t=null;},true);
+  document.addEventListener('pointercancel',()=>{clearTimeout(t);t=null;},true);
+  document.addEventListener('click',e=>{if(fired){fired=false;if(e.target.closest&&e.target.closest('.col-hd')){e.stopPropagation();e.preventDefault();}}},true);
+})();
 function _clrPopAway(e){
   if(!_clrPop||_clrPop.contains(e.target))return;
   /* keep the board up while the caret/selection is moved inside the editor */
@@ -14298,8 +14487,15 @@ function _edColInit(ed){
   if(!heads.length)return;
   heads.forEach(function(h){
     const g=document.createElement('span');
-    g.className='ed-col-grip';g.setAttribute('contenteditable','false');g.title='Drag to move this section (left/right to change level)';g.textContent='\u283F';
-    g.addEventListener('pointerdown',function(e){_edBlockDragStart(e,h.el);});
+    g.className='ed-col-grip';g.setAttribute('contenteditable','false');g.title='Drag to move this section (left/right to change level) · tap for Copy section';g.textContent='\u283F';
+    g.addEventListener('pointerdown',function(e){_gripTap=null;_edBlockDragStart(e,h.el);});
+    /* v04.84 — the menu opens from the grip's OWN click, which also stops
+       that click reaching the document's "click anywhere closes menus"
+       listener (opening it on pointerup would be closed by the very click
+       that follows). */
+    g.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();
+      const t=_gripTap;_gripTap=null;
+      if(t&&t.h===h.el&&Date.now()-t.at<1500)showHeadingSecMenu(t.h,t.x,t.y);});
     h.el.insertBefore(g,h.el.firstChild);
     const b=document.createElement('button');
     b.className='ed-col-arr';b.type='button';b.setAttribute('contenteditable','false');
@@ -14318,7 +14514,7 @@ function _edColInit(ed){
    content up to the next same/higher heading); horizontal = target level. Works
    in the NotePane and the PC pop-out (same #ed). Content is only re-ordered, never
    duplicated or lost; arrows/grips are rebuilt and autosave fires after a move. */
-let _edDrag=null;
+let _edDrag=null,_gripTap=null;
 function _edRetag(el,tag){
   const n=document.createElement(tag);
   for(const a of Array.from(el.attributes)){
@@ -14330,7 +14526,7 @@ function _edRetag(el,tag){
 function _edBlockDragStart(e,headEl){
   if(e.button&&e.button!==0)return;
   e.preventDefault();e.stopPropagation();
-  const ed=headEl.closest('#ed')||document.getElementById('ed');if(!ed)return;
+  const ed=headEl.closest('#ed,.fw-ed')||document.getElementById('ed');if(!ed)return;
   const level=parseInt(headEl.tagName[1]);
   const nodes=[headEl];let n=headEl.nextElementSibling;
   while(n){if(/^H[1-4]$/.test(n.tagName)&&parseInt(n.tagName[1])<=level)break;nodes.push(n);n=n.nextElementSibling;}
@@ -14394,7 +14590,9 @@ function _edBlockDragEnd(){
   const dl=document.getElementById('ed-drop-line');if(dl)dl.style.display='none';
   if(!d)return;
   d.nodes.forEach(x=>x.classList.remove('ed-blk-dragging'));
-  if(!d.moved)return;                       /* a click, not a drag → do nothing */
+  /* v04.84 — a tap or click on the grip, with no drag, opens the section
+     menu (📋 Copy section). Before, it did nothing. */
+  if(!d.moved){_gripTap={h:d.headEl,x:d.startX+8,y:d.startY+8,at:Date.now()};return;}
   const ed=d.ed;
   const delta=d.targetLevel-d.level;
   /* move the block */
@@ -14744,7 +14942,11 @@ function initRichPaste(ed){
   ed.addEventListener('contextmenu',e=>{
     clearTimeout(_edLpT);
     const t=e.target.closest?.('.bk-card,img.ed-img,.mention,.embed-wrap,a[href]');
-    if(!t)return;
+    /* v04.84 — right-click a heading (mouse only: a touch long-press on text
+       must keep selecting words) → 📋 Copy section. */
+    if(!t){const h=e.target.closest?.('h1,h2,h3,h4');
+      if(h&&h.parentNode===ed&&e.pointerType!=='touch'&&!(window.matchMedia&&matchMedia('(pointer:coarse)').matches)){e.preventDefault();e.stopPropagation();showHeadingSecMenu(h,e.clientX,e.clientY);}
+      return;}
     e.preventDefault();e.stopPropagation();
     itemMenu(t,e.clientX,e.clientY);
   });
