@@ -28,7 +28,8 @@ must never accumulate here instead of there.
   - Fixed on the way (I1): a section dragged by its grip in a Multi
     window moved into Pane 3's note when Pane 3 was editing another
     (`closest('#ed')||#ed`). `47f` guards it.
-  - New section 47: `--only 47` **39/39**; unpatched 6/23.
+  - New section 47: `--only 47` **39/39**; unpatched 6/23. Full `app-check`
+    **1474/1474, twice in a row**.
 - **v04.83** (4 Oct 2026) — tables: Σ Sum ▾ (owner: "Sum of cells in
   both Vertical and Horizontal as in standard MS Excel") and "1,234"
   ("cell value without decimal"). Σ Sum ▾ on the table toolbar: total

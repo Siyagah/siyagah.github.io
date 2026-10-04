@@ -7903,7 +7903,8 @@ adds; nobody had reported it.
   (the section leaves the window's note).
 
 `--only 47` **39/39**. Against v04.83's `index.html`: 6/23, and the six that
-pass are the "no page errors" lines.
+pass are the "no page errors" lines. Full `app-check` **1474/1474, twice in a
+row**.
 
 **Not done, and why:**
 - **Undo (Ctrl+Z) does not undo a spacing change.** It is a style set
