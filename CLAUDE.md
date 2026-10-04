@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.82.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.83.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,14 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.83** (4 Oct 2026) — tables: Σ Sum ▾ (owner: "Sum of cells in
+  both Vertical and Horizontal as in standard MS Excel") and "1,234"
+  ("cell value without decimal"). Σ Sum ▾ on the table toolbar: total
+  below each column, right of each row, or both (+ grand total), as real
+  `=SUM()` formulas. Also Alt+= and right-click Σ AutoSum. Refused on a
+  filled target, a merge, or rows hidden by a filter. `fmt:'int'` =
+  `#,##0`. New section 46: `--only 46` **26/26**; unpatched: all four
+  blocks fail.
 - **v04.82** (4 Oct 2026) — sync: an interrupted upload no longer stops
   every device syncing (owner, phone and laptop: "NOT syncing until it
   clears"). Past 8 chunks a write takes several batches and overwrote
@@ -70,16 +78,6 @@ must never accumulate here instead of there.
   43,37` 170/207. The full run found the 16px top-left resize corner over
   the ⠿ grip (row 1 is shorter), so the grip resized: row 1 starts 20px in
   at ≥640px; new `43d` (fails without it); `19a`/`19b`/`19g` updated in place. Full `app-check` **1327/1327, twice in a row**.
-- **v04.78** (1 Oct 2026) — a note in the sidebar's search results joins
-  the open note's tabs (owner's screenshot). 1200px+: the `.sr` note rows are
-  `draggable` (`artDStart`). The main bar's `tabBarDrop()` and, new, every
-  Multi window's `.fw-tabs` (`_fwTabsDrop()` → `_fwTabsOwner()`) take the
-  drop, both through one `_tabDropAdd()`. Below 1200px (sidebar and note are
-  never on screen together): a 600ms long-press on the result opens the
-  note menu with 📑 Add to Tab (new `.sr[data-aid]` branch in the tree's
-  long-press handler; iOS had nothing). New section 42: `--only 42`
-  **12/12**; unpatched 6/12 (`42c` right-click is the pre-existing route). Full `app-check`
-  **1289/1289, twice in a row**.
 ---
 
 ## What this is

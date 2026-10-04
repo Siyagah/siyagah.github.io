@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.82">
+<meta name="app-version" content="04.83">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3184,7 +3184,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.82</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.83</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -24051,7 +24051,7 @@ const SGE=(function(){
     if(comma){const [i,f]=s.split('.');s=i.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(f?'.'+f:'');}
     return(neg?'-':'')+(cur?'$':'')+s+(pct?'%':'');
   }
-  const PRESET={number:'#,##0.00',currency:'$#,##0.00',percent:'0.0%',date:'dd/mm/yyyy'};
+  const PRESET={number:'#,##0.00',int:'#,##0',currency:'$#,##0.00',percent:'0.0%',date:'dd/mm/yyyy'};
   function display(v,fmt){
     if(isErr(v))return v.err;if(v===null)return'';
     if(typeof v==='boolean')return v?'TRUE':'FALSE';
@@ -24793,13 +24793,14 @@ function _sgMount(root,state,editable){
       +'<button type="button" class="sg-b sg-bL" data-a="al-l" title="Align left">⇤</button>'
       +'<button type="button" class="sg-b sg-bC" data-a="al-c" title="Align centre">↔</button>'
       +'<button type="button" class="sg-b sg-bR" data-a="al-r" title="Align right">⇥</button>'
-      +'<select class="sg-b sg-fmt" title="Number format" aria-label="Number format"><option value="">General</option><option value="number">1,234.00</option><option value="currency">$ Currency</option><option value="percent">% Percent</option><option value="date">Date</option></select>'
+      +'<select class="sg-b sg-fmt" title="Number format" aria-label="Number format"><option value="">General</option><option value="int">1,234</option><option value="number">1,234.00</option><option value="currency">$ Currency</option><option value="percent">% Percent</option><option value="date">Date</option></select>'
       +'<button type="button" class="sg-sw" data-bg="" title="No fill"></button>'
       +'<button type="button" class="sg-sw" data-bg="#E3F1E7" title="Green fill" style="background:#E3F1E7"></button>'
       +'<button type="button" class="sg-sw" data-bg="#F6EAD2" title="Gold fill" style="background:#F6EAD2"></button>'
       +'<button type="button" class="sg-sw" data-bg="#FBE3E3" title="Rose fill" style="background:#FBE3E3"></button><span class="sg-sep"></span>'
       +'<button type="button" class="sg-b" data-a="sortA" title="Sort A→Z / smallest first">↑ Sort</button>'
       +'<button type="button" class="sg-b" data-a="sortZ" title="Sort Z→A / largest first">↓ Sort</button>'
+      +'<button type="button" class="sg-b" data-a="sum" title="Add up a row or a column (AutoSum, Alt+=)">Σ Sum ▾</button>'
       +'<button type="button" class="sg-b" data-a="rc" title="Insert or delete rows and columns">Rows &amp; columns ▾</button>'
       +'<button type="button" class="sg-b" data-a="fill" title="Fill down (Ctrl+D)">Fill down</button><span class="sg-sep"></span>'
       +'<button type="button" class="sg-b" data-a="frz" title="Keep row 1 visible while the grid scrolls">❄ Freeze top row</button>'
@@ -25363,6 +25364,77 @@ function _sgMount(root,state,editable){
     const s=norm(SEL);const n=s.r2-s.r1+1;if(n>=S.rows)return toast('A table needs at least one row');snap();rekey('r',s.r1,-n);S.rows-=n;SEL={r1:s.r1,c1:s.c1,r2:s.r1,c2:s.c1};A={r:s.r1,c:s.c1};after();}
   function insCol(right){const s=norm(SEL);const n=s.c2-s.c1+1;if(S.cols+n>_SG_MAX_COLS)return toast('A table can have up to '+_SG_MAX_COLS+' columns');snap();const at=right?s.c2+1:s.c1;rekey('c',at,n);S.cols+=n;if(!right){A.c+=n;SEL.c1+=n;SEL.c2+=n;}after();}
   function delCol(){const s=norm(SEL);const n=s.c2-s.c1+1;if(n>=S.cols)return toast('A table needs at least one column');snap();rekey('c',s.c1,-n);S.cols-=n;SEL={r1:s.r1,c1:s.c1,r2:s.r1,c2:s.c1};A={r:s.r1,c:s.c1};after();}
+  /* ── v04.83: Σ Sum (AutoSum), as in Excel ──────────────────────────────
+     "Total below each column", "Total right of each row", or both (with a
+     grand total in the corner). Each total is a real =SUM() formula, so it
+     follows later edits. A range whose LAST row (or column) is still empty
+     uses that row (column) for its totals, as Excel does; otherwise the
+     totals go in the next row (column), which the sheet grows into at its
+     edge. A column or row holding no numbers (a label column) gets no total.
+     One undo step. Refused, with a toast and nothing changed, when a target
+     cell already holds something, is inside a merge, or a filter is hiding
+     rows (a total of hidden rows reads as a total of what is shown).
+     A single EMPTY cell sums the numbers directly above it (or, for the
+     "right" choice, to its left), as Excel's AutoSum does. */
+  const isNumAt=(r,c)=>typeof val(r,c)==='number';
+  const rngA1=(r1,c1,r2,c2)=>addr(r1,c1)+':'+addr(r2,c2);
+  function sumPlan(mode){
+    const s=normM(SEL),one=s.r1===s.r2&&s.c1===s.c2;
+    const out=[];
+    if(one&&rawOf(s.r1,s.c1)===''){
+      const r=s.r1,c=s.c1;
+      const up=()=>{let r0=r;while(r0-1>=0&&isNumAt(r0-1,c))r0--;return r0<r?{r,c,f:'=SUM('+rngA1(r0,c,r-1,c)+')'}:null;};
+      const left=()=>{let c0=c;while(c0-1>=0&&isNumAt(r,c0-1))c0--;return c0<c?{r,c,f:'=SUM('+rngA1(r,c0,r,c-1)+')'}:null;};
+      const t=mode==='right'?left():mode==='down'?up():(up()||left());
+      if(!t)return{err:mode==='right'?'No numbers directly to the left of this cell to add up':mode==='down'?'No numbers directly above this cell to add up':'No numbers directly above or to the left of this cell to add up'};
+      out.push(t);return{cells:out,sel:{r1:r,c1:c,r2:r,c2:c}};
+    }
+    const rowEmpty=r=>{for(let c=s.c1;c<=s.c2;c++)if(rawOf(r,c)!=='')return false;return true;};
+    const colEmpty=c=>{for(let r=s.r1;r<=s.r2;r++)if(rawOf(r,c)!=='')return false;return true;};
+    const down=mode==='down'||mode==='both',right=mode==='right'||mode==='both';
+    let dr2=s.r2,tr=s.r2+1,dc2=s.c2,tc=s.c2+1;
+    if(down&&s.r2>s.r1&&rowEmpty(s.r2)){dr2=s.r2-1;tr=s.r2;}
+    if(right&&s.c2>s.c1&&colEmpty(s.c2)){dc2=s.c2-1;tc=s.c2;}
+    if(!down){dr2=s.r2;}if(!right){dc2=s.c2;}
+    const colHasNum=c=>{for(let r=s.r1;r<=dr2;r++)if(isNumAt(r,c))return true;return false;};
+    const rowHasNum=r=>{for(let c=s.c1;c<=dc2;c++)if(isNumAt(r,c))return true;return false;};
+    if(down)for(let c=s.c1;c<=dc2;c++)if(colHasNum(c))out.push({r:tr,c,f:'=SUM('+rngA1(s.r1,c,dr2,c)+')'});
+    if(right)for(let r=s.r1;r<=dr2;r++)if(rowHasNum(r))out.push({r,c:tc,f:'=SUM('+rngA1(r,s.c1,r,dc2)+')'});
+    if(down&&right&&out.length)out.push({r:tr,c:tc,f:'=SUM('+rngA1(s.r1,s.c1,dr2,dc2)+')'});
+    if(!out.length)return{err:'There are no numbers in the selection to add up'};
+    const rs=out.map(t=>t.r),cs=out.map(t=>t.c);
+    return{cells:out,sel:{r1:Math.min(...rs),c1:Math.min(...cs),r2:Math.max(...rs),c2:Math.max(...cs)}};
+  }
+  function autoSum(mode){
+    if(!editable)return;
+    if(E)commit();
+    if(hiddenRows.size)return toast('Σ Sum is off while a filter hides rows: clear the filter first');
+    const p=sumPlan(mode);
+    if(p.err)return toast(p.err);
+    const maxR=Math.max(...p.cells.map(t=>t.r)),maxC=Math.max(...p.cells.map(t=>t.c));
+    if(maxR>=_SG_MAX_ROWS)return toast('A table can have up to '+_SG_MAX_ROWS+' rows');
+    if(maxC>=_SG_MAX_COLS)return toast('A table can have up to '+_SG_MAX_COLS+' columns');
+    for(const t of p.cells){
+      if(t.r<S.rows&&t.c<S.cols&&rawOf(t.r,t.c)!=='')return toast('Σ Sum needs empty cells for its totals: '+addr(t.r,t.c)+' is not empty');
+      if(mergeAt(t.r,t.c))return toast('Σ Sum cannot write into a merged cell ('+addr(t.r,t.c)+')');
+    }
+    snap();
+    const grow=maxR>=S.rows||maxC>=S.cols;
+    if(maxR>=S.rows)S.rows=maxR+1;
+    if(maxC>=S.cols)S.cols=maxC+1;
+    for(const t of p.cells)setRaw(t.r,t.c,t.f);
+    SEL=p.sel;A={r:p.sel.r1,c:p.sel.c1};
+    if(grow)renderGrid();else refresh();
+    changed();
+    toast(p.cells.length===1?'Σ Total added':'Σ '+p.cells.length+' totals added');
+  }
+  /* The smart choice for Alt+= and the right-click menu: a single empty cell
+     sums above (else left); a selection one row tall totals to its right;
+     anything else totals below each column. */
+  function autoSumSmart(){const s=normM(SEL);autoSum(s.r1===s.r2&&s.c1===s.c2&&rawOf(s.r1,s.c1)===''?'auto':(s.r1===s.r2&&s.c2>s.c1)?'right':'down');}
+  const sumItems=()=>{const s=normM(SEL);return (s.r1===s.r2&&s.c1===s.c2&&rawOf(s.r1,s.c1)==='')
+    ?[['sumDown','Σ Sum the numbers above'],['sumRight','Σ Sum the numbers to the left']]
+    :[['sumDown','Σ Total below each column'],['sumRight','Σ Total right of each row'],['sumBoth','Σ Totals below and right']];};
   function sortBy(desc){
     const s=norm(SEL);let r1=s.r1,r2=s.r2;const col=A.c;
     if(r1===r2){r1=r2=A.r;while(r1>0&&rawOf(r1-1,col)!=='')r1--;while(r2<S.rows-1&&rawOf(r2+1,col)!=='')r2++;
@@ -25507,14 +25579,15 @@ function _sgMount(root,state,editable){
     m.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-h-8))+'px';
   }
   const rcItems=()=>[['insRowA','Insert row above'],['insRowB','Insert row below'],['delRow','Delete row'],'-',['insColL','Insert column left'],['insColR','Insert column right'],['delCol','Delete column']];
-  const cellItems=()=>editable?[['cut','Cut','Ctrl+X'],['copy','Copy','Ctrl+C'],['pasteH','Paste','Ctrl+V'],'-',...rcItems(),'-',['sortA','Sort A→Z'],['sortZ','Sort Z→A'],['clear','Clear contents','Del'],'-',['merge',mergeBtnLabel()],['flt',S.flt?'Clear filter':'Filter']]:[['copy','Copy','Ctrl+C']];
+  const cellItems=()=>editable?[['cut','Cut','Ctrl+X'],['copy','Copy','Ctrl+C'],['pasteH','Paste','Ctrl+V'],'-',...rcItems(),'-',['sortA','Sort A→Z'],['sortZ','Sort Z→A'],['clear','Clear contents','Del'],['sumAuto','Σ AutoSum','Alt+='],'-',['merge',mergeBtnLabel()],['flt',S.flt?'Clear filter':'Filter']]:[['copy','Copy','Ctrl+C']];
   const bdItems=()=>[['bdAll','All borders'],['bdOut','Outside borders'],['bdTop','Top border'],['bdBot','Bottom border'],['bdLeft','Left border'],['bdRight','Right border'],'-',['bdNone','No borders']];
   const ACT={insRowA:()=>insRow(false),insRowB:()=>insRow(true),delRow,insColL:()=>insCol(false),insColR:()=>insCol(true),delCol,
     cut:()=>doCopy(true),copy:()=>doCopy(false),pasteH:()=>{if(clip)doPaste(null);else toast('Press Ctrl+V to paste from another app');},
     sortA:()=>sortBy(false),sortZ:()=>sortBy(true),clear:clearSel,
     bdAll:()=>applyBorders('all'),bdOut:()=>applyBorders('outside'),bdTop:()=>applyBorders('top'),bdBot:()=>applyBorders('bottom'),
     bdLeft:()=>applyBorders('left'),bdRight:()=>applyBorders('right'),bdNone:()=>applyBorders('none'),
-    merge:()=>mergeAction(),flt:()=>{if(S.flt)clearFilter();else turnOnFilter();}};
+    merge:()=>mergeAction(),flt:()=>{if(S.flt)clearFilter();else turnOnFilter();},
+    sumDown:()=>autoSum('down'),sumRight:()=>autoSum('right'),sumBoth:()=>autoSum('both'),sumAuto:autoSumSmart};
   self.act=k=>{(ACT[k]||(()=>{}))();gw.focus({preventScroll:true});};
   self.editing=()=>!!E;
   self.commit=commit;
@@ -25591,6 +25664,7 @@ function _sgMount(root,state,editable){
       return;}
     if(!editable)return;
     if(k==='F2'){e.preventDefault();startEdit('',true);return;}
+    if(e.altKey&&(k==='='||e.code==='Equal')){e.preventDefault();autoSumSmart();return;}
     if(k==='Delete'||k==='Backspace'){e.preventDefault();clearSel();return;}
     if(k.length===1&&!e.altKey){e.preventDefault();startEdit(k,false);}
   });
@@ -25638,6 +25712,7 @@ function _sgMount(root,state,editable){
           p.style.top=Math.max(8,Math.min(rr.top+70,innerHeight-p.offsetHeight-8))+'px';p.querySelector('.sg-fnq').focus({preventScroll:true});break;}
         case'rc':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,rcItems());break;}
         case'bd':{const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,bdItems());break;}
+        case'sum':{if(E)commit();const r=b.getBoundingClientRect();openMenu(r.left,r.bottom+4,sumItems());break;}
         case'cr':{const p=_sgCrEl();p.hidden=false;p._open();_sgCrPosition(p,b.getBoundingClientRect());break;}
         case'flt':if(S.flt)clearFilter();else turnOnFilter();break;}
     });
