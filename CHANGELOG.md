@@ -7726,6 +7726,19 @@ is wrong once generations exist, and now use it).
 lines fail (dots `☁…`, never converged in 60s), and 9c cannot even be set
 up: the old code writes no generation, so the setup throws.
 
+**Two older checks updated in place, because this round deliberately
+changes what they describe:**
+- `26e` demanded the main doc's keys be exactly v04.62's four. It now
+  expects `g` as well, and reads chunk `<g>_0`.
+- `36d` corrupted chunk `0`, which no longer exists under the new layout,
+  so it corrupted nothing. It now corrupts the chunk the main doc names,
+  and its repair push is pointed at the block's fake notebook. Its
+  expectation changes from "alarm" to "re-saved whole from this device":
+  one notice, no alarm, Live, the cloud reads back, local notes untouched.
+
+Run against v04.81's `index.html`, both of those fail (`--only 36d,26e`
+1/3); patched 5/5. Full `app-check` **1409/1409, twice in a row**.
+
 **Not done, and why:**
 - **A generation orphaned by a device killed mid-upload is not deleted
   after a reload.** `_syncMyGens` lives in memory only, because the owner's

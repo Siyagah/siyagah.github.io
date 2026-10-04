@@ -25,7 +25,8 @@ must never accumulate here instead of there.
   deleted after; a main doc without `g` is read the old way. A copy stuck
   half-saved is rewritten whole by `_repairCloudCopy()` (merge is a union,
   so nothing is lost). Reproduced first in `sync-e2e` (new 9b, 9c): 23/23,
-  unpatched 13/16.
+  unpatched 13/16. `26e`/`36d` updated in place. Full `app-check`
+  **1409/1409, twice in a row**.
 - **v04.81** (4 Oct 2026) — the formatting tools move up INTO the Details
   line (owner's screenshot). Closed: `_popDetailsLineHTML()` = `.pdl-meta`
   (chips) · `.pdl-fmt` (`_popFormatRowHTML()`) · ▾ Details, three units that
