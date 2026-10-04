@@ -7810,7 +7810,7 @@ clicks on Σ Sum ▾ and its menu rows, the real format box, a real Alt+=).
     changes nothing.
 
 `--only 46` **26/26**. Against v04.82's `index.html` all four blocks fail
-(no Σ Sum button to click).
+(no Σ Sum button to click). Full `app-check` **1435/1435, twice in a row**.
 
 **Not done, and why:**
 - **Increase / decrease decimals buttons** (Excel's .0 / .00). The owner

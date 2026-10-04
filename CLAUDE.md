@@ -23,7 +23,7 @@ must never accumulate here instead of there.
   `=SUM()` formulas. Also Alt+= and right-click Σ AutoSum. Refused on a
   filled target, a merge, or rows hidden by a filter. `fmt:'int'` =
   `#,##0`. New section 46: `--only 46` **26/26**; unpatched: all four
-  blocks fail.
+  blocks fail. Full `app-check` **1435/1435, twice in a row**.
 - **v04.82** (4 Oct 2026) — sync: an interrupted upload no longer stops
   every device syncing (owner, phone and laptop: "NOT syncing until it
   clears"). Past 8 chunks a write takes several batches and overwrote
