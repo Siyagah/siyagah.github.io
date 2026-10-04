@@ -10672,6 +10672,153 @@ await r.block('46b-autosum-both-alt-equals-and-refusals-1440', async () => {
   await s.close();
 });
 
+/* ── 47. v04.84 — ↕ Spacing (Word-like, per paragraph) and 📋 Copy section ─
+   The owner: "Enable paragraph, space edit like the standard MS word" and
+   "Enable copying the content inside a headings by pressing (whatever is
+   easier) the headings". Real input only: real clicks on the Aa group and
+   ↕ Spacing and its choices; a real right-click, a real CDP touch
+   press-and-hold, and a real click on the ⠿ grip for the section menu. */
+const db47 = () => { const d = seedDB(); d.articles[0].content =
+  '<h2>Important INFO:</h2><p>1000 People.</p><p>1 Hector each</p><p>Land Size</p><h2>Other</h2><p>Not copied.</p>'; return d; };
+async function open47(page, vp, edit) {
+  await page.evaluate((e) => { selArt('a1'); if (innerWidth < 1200) showPane('p3'); if (e) startEdit(); }, edit);
+  await page.waitForTimeout(500);
+}
+for (const vp of MERGE_SIZES) {
+await r.block(`47a-spacing-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db47() });
+  const { page } = s;
+  await open47(page, vp, true);
+  await page.click('#ed p >> nth=0');
+  await page.click('.eb-grp-btn[data-g="text"]:visible');
+  await page.waitForTimeout(200);
+  await page.click('button.et-spc:visible');
+  await page.waitForTimeout(150);
+  const box = await page.evaluate(() => { const p = document.getElementById('spc-pop'); if (!p) return null; const b = p.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; });
+  r.check(!!box && box.x >= 0 && box.y >= 0 && box.x + box.w <= vp.width && box.y + box.h <= vp.height,
+    `${vp.name}: Aa ▸ ↕ Spacing opens its panel fully inside the screen`, JSON.stringify(box));
+  await page.click('#spc-pop [data-gap="0px"]');
+  await page.click('#spc-pop [data-lh="1.5"]');
+  const live = await page.evaluate(() => { const ps = document.querySelectorAll('#ed p'); return [ps[0].style.marginBottom, ps[0].style.lineHeight, ps[1].style.marginBottom]; });
+  r.check(JSON.stringify(live) === JSON.stringify(['0px', '1.5', '']),
+    `${vp.name}: "None" and "1.5" apply to the paragraph holding the caret, and only to it`, JSON.stringify(live));
+  await page.evaluate(() => { _flushEd(); });
+  const stored = await sgStored(page);
+  r.check(/margin-bottom:\s*0px/.test(stored) && /line-height:\s*1\.5/.test(stored), `${vp.name}: the spacing is saved in the note itself`, stored.slice(0, 160));
+  await page.evaluate(() => { cancelEdit(); }); await page.waitForTimeout(400);
+  const read = await page.evaluate(() => { const ps = document.querySelectorAll('.av-body p'); return [getComputedStyle(ps[0]).marginBottom, getComputedStyle(ps[1]).marginBottom]; });
+  r.check(read[0] === '0px' && read[1] !== '0px', `${vp.name}: the read view shows that paragraph with no space after it, the next one unchanged`, JSON.stringify(read));
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+await r.block('47b-spacing-in-a-multi-window-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: db47() });
+  const { page } = s;
+  await page.evaluate(() => popOutNote('a1')); await page.waitForTimeout(400);
+  await page.click('#fw-ed-a1 p >> nth=1');
+  await page.click('#fw-a1 .eb-grp-btn[data-g="text"]');
+  await page.waitForTimeout(200);
+  await page.click('button.et-spc:visible');
+  await page.waitForTimeout(150);
+  await page.click('#spc-pop [data-gap="24px"]');
+  const got = await page.evaluate(() => [...document.querySelectorAll('#fw-ed-a1 p')].map((p) => p.style.marginBottom));
+  r.check(JSON.stringify(got.slice(0, 3)) === JSON.stringify(['', '24px', '']), '1440: in a Multi window, Aa ▸ ↕ Spacing ▸ Large spaces out the paragraph holding the caret', JSON.stringify(got));
+  r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+const EXPECT47 = (t) => /1000 People\./.test(t) && /Land Size/.test(t) && !/Not copied/.test(t) && !/Set the Status/.test(t) && !/[⠿▼▶]/.test(t);
+await r.block('47c-copy-section-read-view-right-click-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: db47() });
+  const { page } = s;
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await open47(page, { width: 1440 }, false);
+  await page.click('.av-body .col-hd h2 >> nth=0', { button: 'right' });
+  await page.waitForTimeout(150);
+  const items = await page.evaluate(() => { const m = document.getElementById('ctx'); return getComputedStyle(m).display === 'none' ? [] : [...m.querySelectorAll('.ci')].map((e) => e.textContent); });
+  r.check(items.includes('📋 Copy section') && items.includes('📋 Copy section with heading'), '1440: right-clicking a heading in the read view offers 📋 Copy section', JSON.stringify(items));
+  await page.locator('#ctx .ci', { hasText: /^📋 Copy section$/ }).click();
+  await page.waitForTimeout(300);
+  const clip = await page.evaluate(() => navigator.clipboard.readText().catch((e) => 'ERR ' + e));
+  r.check(EXPECT47(clip) && !/Important INFO/.test(clip), '1440: the clipboard holds that section\'s lines, without the heading, the next section, or any app chrome', JSON.stringify(clip));
+  const folded = await page.evaluate(() => document.querySelector('.av-body .col-sec').classList.contains('clp'));
+  r.check(!folded, '1440: right-clicking did not fold the heading', folded);
+  await page.click('.av-body .col-hd h2 >> nth=0', { button: 'right' });
+  await page.locator('#ctx .ci', { hasText: 'with heading' }).click();
+  await page.waitForTimeout(300);
+  const clip2 = await page.evaluate(() => navigator.clipboard.readText().catch((e) => 'ERR ' + e));
+  r.check(EXPECT47(clip2) && /^Important INFO:/.test(clip2), '1440: "with heading" starts with the heading\'s own words (no status badge)', JSON.stringify(clip2));
+  r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }]) {
+await r.block(`47d-copy-section-read-view-press-and-hold-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db47(), hasTouch: true });
+  const { page } = s;
+  await open47(page, vp, false);
+  const b = await page.locator('.av-body .col-hd h2').first().boundingBox();
+  const cdp = await page.context().newCDPSession(page);
+  const pt = { x: b.x + 20, y: b.y + b.height / 2 };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [pt] });
+  await page.waitForTimeout(800);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(300);
+  const menu = await page.evaluate(() => { const m = document.getElementById('ctx'); const it = [...m.querySelectorAll('.ci')].find((e) => e.textContent === '📋 Copy section');
+    if (!it || getComputedStyle(m).display === 'none') return { item: false };
+    const r = it.getBoundingClientRect(); return { item: true, top: m.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)),
+      inside: r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight, folded: document.querySelector('.av-body .col-sec').classList.contains('clp') }; });
+  r.check(menu.item && menu.top && menu.inside && !menu.folded, `${vp.name}: a real press-and-hold on a heading opens 📋 Copy section, on top and on screen, without folding the heading`, JSON.stringify(menu));
+  if (menu.item) { await page.locator('#ctx .ci', { hasText: /^📋 Copy section$/ }).tap(); await page.waitForTimeout(300); }
+  const c = await page.evaluate(() => window.__lastSecCopy || null);
+  r.check(!!c && c.ok && EXPECT47(c.text), `${vp.name}: tapping it copies the section's lines`, JSON.stringify(c && { ok: c.ok, text: c.text }));
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+for (const vp of MERGE_SIZES) {
+await r.block(`47e-copy-section-edit-grip-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: db47() });
+  const { page } = s;
+  await open47(page, vp, true);
+  await page.click('#ed h2 .ed-col-grip >> nth=0');
+  await page.waitForTimeout(250);
+  const shown = await page.evaluate(() => { const m = document.getElementById('ctx'); return getComputedStyle(m).display !== 'none' && /Copy section/.test(m.textContent); });
+  r.check(shown, `${vp.name}: in edit mode a real click on a heading's ⠿ grip opens 📋 Copy section, and it is still open after the click`, shown);
+  if (shown) { await page.locator('#ctx .ci', { hasText: /^📋 Copy section$/ }).click(); await page.waitForTimeout(300); }
+  const c = await page.evaluate(() => window.__lastSecCopy || null);
+  const content = await page.evaluate(() => document.querySelectorAll('#ed h2').length);
+  r.check(!!c && c.ok && EXPECT47(c.text) && content === 2, `${vp.name}: it copies the section, and the note is not changed by it`, JSON.stringify(c && { ok: c.ok, text: c.text, heads: content }));
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
+await r.block('47f-multi-section-drag-stays-in-its-own-note-1440', async () => {
+  /* v04.84 — _edBlockDragStart() resolved the editor as closest('#ed')||#ed,
+     so a grip dragged in a Multi window while Pane 3 was editing ANOTHER
+     note moved the section into that other note. Headings are read at any
+     level: a drag's sideways position also sets the level (by design). */
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: db47() });
+  const { page } = s;
+  await page.evaluate(() => { selArt('a2'); startEdit(); }); await page.waitForTimeout(400);
+  const p3Before = await page.evaluate(() => document.getElementById('ed').innerHTML);
+  await page.evaluate(() => popOutNote('a1')); await page.waitForTimeout(500);
+  const g = await page.locator('#fw-ed-a1 h2 .ed-col-grip').nth(1).boundingBox();
+  const t = await page.locator('#fw-ed-a1 h2').nth(0).boundingBox();
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(g.x + g.width / 2, t.y + 20, { steps: 6 });
+  await page.mouse.move(g.x + g.width / 2, t.y + 2, { steps: 4 });
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  const out = await page.evaluate(() => ({ fw: [...document.querySelectorAll('#fw-ed-a1 h1, #fw-ed-a1 h2, #fw-ed-a1 h3, #fw-ed-a1 h4')].map((h) => h.textContent.replace(/[⠿▼▶]/g, '').trim()),
+    p3: document.getElementById('ed').innerHTML }));
+  r.check(JSON.stringify(out.fw) === JSON.stringify(['Other', 'Important INFO:']) && out.p3 === p3Before,
+    '1440: dragging a section\'s grip in a Multi window moves it within that window\'s note, and Pane 3\'s note (being edited) is untouched', JSON.stringify(out.fw));
+  r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

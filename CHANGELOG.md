@@ -7818,3 +7818,98 @@ clicks on Σ Sum ▾ and its menu rows, the real format box, a real Alt+=).
   need a new per-cell property, which no request has asked for yet.
 - **Average, Count, Max, Min under Σ ▾** (Excel's AutoSum drop-down). The
   status bar already shows Sum, Average and Count for any selection.
+
+## v04.84 — ↕ Spacing per paragraph (like Word), and 📋 Copy section from a heading (4 Oct 2026)
+
+**The owner's words** (4 Oct 2026):
+- With red marks on the gaps between "1000 People." / "1 Hector each" /
+  …: "Enable paragraph, space edit like the standard MS word".
+- On a phone, circling the heading "Important INFO:" with the line under
+  it: "Enable copying the content inside a headings by pressing (whatever
+  is easier) the headings".
+
+Built by the Architect, as one round (both are editor-side and small).
+
+**↕ Spacing.** A new button at the end of the **Aa** (text style) palette,
+in Pane 3 (`_buildEBSub`) and in every Multi window (`_fwBuildEBSub`), the
+two places CLAUDE.md says an edit-toolbar control belongs. It opens a
+panel, as Word's Paragraph ▸ Spacing does:
+- **Line spacing:** 1 · 1.15 · 1.5 · 2 (`line-height`).
+- **Space after paragraph:** None · Small (4px) · Normal · Large (24px)
+  (`margin-bottom`).
+- **↺ Reset** and **✕ Close.**
+
+It applies to the paragraphs the selection touches, or the one holding the
+caret (`_spcBlocks()`: the innermost `p, li, h1–h4, blockquote, pre, div`
+in the editor; never a sheet, a card or a `contenteditable=false` widget).
+The values are inline styles in the note's own HTML, so they save, sync, go
+into a Save File and show in the read view (an inline style outranks
+`.av-body p`'s margin) with nothing new in `DB`. "Normal" and Reset remove
+the inline value, so the paragraph follows Appearance ▸ Line spacing again
+(v04.02, the app-wide setting, unchanged). The panel marks the current
+choice. On a laptop or tablet it opens under the button. **On a phone it is
+a sheet along the bottom edge**, so the paragraphs being changed stay in
+view above it (measured: the first cut covered the very paragraph it was
+changing).
+
+**📋 Copy section.** A heading's section is everything after it up to the
+next heading of the same or a higher level, the same extent the fold arrow
+hides and the ⠿ grip moves. A small menu offers **📋 Copy section** and
+**📋 Copy section with heading**:
+- **Read view, laptop:** right-click the heading.
+- **Read view, phone and tablet:** press and hold the heading (550ms; iOS
+  fires no `contextmenu`, so a timer does it, and the click a hold would
+  produce is swallowed, so holding never folds). A plain tap still folds,
+  as before.
+- **Edit mode, all sizes, and in Multi windows:** tap or click the heading's
+  ⠿ grip without dragging (it did nothing before; a drag still moves the
+  section). A laptop can also right-click the heading. A touch long-press
+  on heading text is left alone, because it must keep selecting words.
+
+The menu opens from the grip's OWN `click`, which also stops that click
+reaching the document's "click anywhere closes menus" listener (the v04.12
+standing lesson). It copies rich text and plain text together, so it pastes
+into Word with formatting and into a chat as clean lines. App chrome (fold
+arrows, grips, status badges, a live sheet's grid) is stripped first. It
+falls back to a selection-and-copy where the clipboard API is refused.
+
+**Also fixed on the way: a section dragged in a Multi window could land in
+a different note (I1).** `_edBlockDragStart()` resolved the editor as
+`closest('#ed') || #ed`. In a Multi window that is Pane 3's editor, so with
+Pane 3 editing ANOTHER note, dropping a section dragged by its ⠿ grip in
+the window moved the heading and its lines into Pane 3's note, out of
+their own. Measured with new check `47f` on v04.83: the window's note lost
+its "Other" section. It is now `closest('#ed,.fw-ed')`, and the section
+moves within its own note. Found while checking the grip tap this round
+adds; nobody had reported it.
+
+**Checks: new section 47**, real input only.
+- `47a` (×390/820/1440): a real click in a paragraph, then on **Aa** and
+  ↕ Spacing; the panel lies inside the screen; "None" and "1.5" change that
+  paragraph only; the values are in the stored note; the read view shows
+  0px after it and the next one unchanged.
+- `47b` (1440): a Multi window's own Aa ▸ ↕ Spacing ▸ Large.
+- `47c` (1440): a real right-click in the read view offers both items. The
+  real clipboard (permission granted) then holds exactly the section's
+  lines: no heading, no next section, no ⠿▼, no "Set the Status". "With
+  heading" starts with the heading's words. Right-clicking did not fold.
+- `47d` (390/820, touch): a real CDP press-and-hold opens the menu on top
+  and on screen without folding; tapping it copies the section.
+- `47e` (×3): in edit mode a real click on the grip leaves the menu open
+  after the click; it copies the section and leaves the note unchanged.
+- `47f` (1440): Pane 3 edits one note while a Multi window shows another.
+  A real mouse drag of the window's second section's grip to the top moves
+  it there, and Pane 3's note is byte-for-byte unchanged. On v04.83 it fails
+  (the section leaves the window's note).
+
+`--only 47` **39/39**. Against v04.83's `index.html`: 6/23, and the six that
+pass are the "no page errors" lines. Full `app-check` **1474/1474, twice in a
+row**.
+
+**Not done, and why:**
+- **Undo (Ctrl+Z) does not undo a spacing change.** It is a style set
+  directly, outside the browser's own undo stack. ↺ Reset and Note History
+  both undo it.
+- **Space BEFORE a paragraph** (Word has both before and after). After
+  alone covers the gaps the owner marked; adding Before is one more row if
+  asked.

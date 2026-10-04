@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.83.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.84.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,20 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.84** (4 Oct 2026) — owner: "paragraph, space edit like the
+  standard MS word" and "copying the content inside a headings by
+  pressing … the headings".
+  - **↕ Spacing** at the end of the Aa palette (Pane 3 and Multi): line
+    1/1.15/1.5/2 and space after None/Small/Normal/Large, as inline styles
+    on the selected paragraphs. A sheet at the bottom on a phone.
+  - **📋 Copy section** (rich + plain) from a heading: right-click (laptop)
+    or press-and-hold (touch) in the read view; tap the ⠿ grip in edit
+    mode (also Multi).
+  - Fixed on the way (I1): a section dragged by its grip in a Multi
+    window moved into Pane 3's note when Pane 3 was editing another
+    (`closest('#ed')||#ed`). `47f` guards it.
+  - New section 47: `--only 47` **39/39**; unpatched 6/23. Full `app-check`
+    **1474/1474, twice in a row**.
 - **v04.83** (4 Oct 2026) — tables: Σ Sum ▾ (owner: "Sum of cells in
   both Vertical and Horizontal as in standard MS Excel") and "1,234"
   ("cell value without decimal"). Σ Sum ▾ on the table toolbar: total
@@ -58,26 +72,6 @@ must never accumulate here instead of there.
   "Close". `22a`/`22b`/`19f` updated in place; new section 44: **54/54**;
   unpatched 7/40. The phone's ✕ is now at least 44px (`6p-17`). Full `app-check`
   **1381/1381, twice in a row**.
-- **v04.79** (3 Oct 2026) — pop-ups: tabs in row 1, title in row 2 (owner:
-  "title bar on the top doesn't look usual. It should be on the second row.
-  First row keep for dragging, resizing and other tabs"; partly reverses
-  v04.74). Both pop-ups, every size, four rows:
-  1. **bar:** ⠿ · icon · tabs (`.pf-tabs-slot`) · ✓ Saved · switch · ✕.
-     Multi's tabs are built into it; Single's one `#tab-bar` is MOVED in by
-     `_popFrameSync()` and back before `#p3h` by `_popTabBarHome()` /
-     `_popFrameRemove()` (also the main view's bar and the ↕/✥ handle);
-  2. **title row:** `_popTitleRowHTML()` (Single: `#p3-title-modal`) with
-     ‹ › moved here (on the phone the bar measured four arrows and no room
-     for a tab) and the title input (read mode: text, right-click edits);
-  3. Details line; 4. formatting row.
-
-  Drag ignores tab chips and `#tab-bar` keeps its own handler.
-  `_popPanelTop()` counts the title row. `37a`/`37c`/`20i` updated in place;
-  new section 43 (tab bar goes home on close, ‹ › in row 2 work, row 1
-  drags and tab clicks don't): `--only 43` **34/34**; unpatched `--only
-  43,37` 170/207. The full run found the 16px top-left resize corner over
-  the ⠿ grip (row 1 is shorter), so the grip resized: row 1 starts 20px in
-  at ≥640px; new `43d` (fails without it); `19a`/`19b`/`19g` updated in place. Full `app-check` **1327/1327, twice in a row**.
 ---
 
 ## What this is
