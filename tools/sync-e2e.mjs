@@ -107,6 +107,9 @@ async function addDevice(browser, base, name, viewport, touch, seed, cfg) {
        server has it — it does not fail. So does this. */
     while (d.offline) await sleep(100);
     await sleep(20 + Math.random() * 60);
+    /* v04.82 — `dieAfter`: let this many more commits land, then hang every
+       later one forever, as a phone frozen or killed mid-upload does. */
+    if (d.dieAfter != null) { if (d.dieAfter <= 0) await new Promise(() => {}); d.dieAfter--; }
     return applyCommit(ops);
   });
   const page = await ctx.newPage();
@@ -115,13 +118,30 @@ async function addDevice(browser, base, name, viewport, touch, seed, cfg) {
   page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) d.errors.push('console: ' + m.text()); });
   await page.goto(base + '/', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__appBooted === true && !!document.getElementById('tree'));
+  await hookToasts(page);
+  devices.push(d);
+  return d;
+}
+async function hookToasts(page) {
   await page.evaluate(() => {
     window.__toasts = [];
     const _t = toast;
     toast = (m, ...rest) => { window.__toasts.push(String(m)); try { return _t(m, ...rest); } catch (e) {} };
   });
-  devices.push(d);
-  return d;
+}
+async function reopen(d) {
+  await d.page.reload({ waitUntil: 'domcontentloaded' });
+  await d.page.waitForFunction(() => window.__appBooted === true && !!document.getElementById('tree'));
+  await hookToasts(d.page);
+}
+/* The notebook the cloud's main doc currently names, as text. v04.82 chunks
+   are named by generation ("<g>_<i>"); a main doc without `g` names the old
+   numbered chunks. */
+function cloudText() {
+  const m = store.get('notebooks/nb-e2e'); if (!m || !m.n) return '';
+  const id = (i) => 'notebooks/nb-e2e/chunks/' + (m.g ? m.g + '_' + i : String(i));
+  let b64 = ''; for (let i = 0; i < m.n; i++) b64 += (store.get(id(i)) || {}).p || '';
+  try { return Buffer.from(b64, 'base64').toString('utf8'); } catch { return ''; }
 }
 
 async function setOffline(d, off) {
@@ -234,7 +254,7 @@ try {
   c = await converge('concurrent');
   const both = await Promise.all(all.map(async (d) => (await has(d, 'a1', 'phone-same-moment')) && (await has(d, 'a2', 'laptop-same-moment'))));
   if (!c.ok || !both.every(Boolean)) {
-    const cloud = (() => { const b64 = [...store.entries()].filter(([k]) => k.includes('/chunks/')).sort((x, y) => +x[0].split('/').pop() - +y[0].split('/').pop()).map(([, v]) => v.p || '').join(''); try { const d = JSON.parse(Buffer.from(b64, 'base64').toString('utf8')); return { a1: /phone-same-moment/.test(d.articles.find((a) => a.id === 'a1')?.content), a2: /laptop-same-moment/.test(d.articles.find((a) => a.id === 'a2')?.content) }; } catch (e) { return String(e); } })();
+    const cloud = (() => { try { const d = JSON.parse(cloudText()); return { a1: /phone-same-moment/.test(d.articles.find((a) => a.id === 'a1')?.content), a2: /laptop-same-moment/.test(d.articles.find((a) => a.id === 'a2')?.content) }; } catch (e) { return String(e); } })();
     const per = await Promise.all(all.map(async (d) => ({ n: d.name, a1: await has(d, 'a1', 'phone-same-moment'), a2: await has(d, 'a2', 'laptop-same-moment'),
       st: await on(d, () => ({ a1: DB.articles.find((a) => a.id === 'a1')?.updatedAt, a2: DB.articles.find((a) => a.id === 'a2')?.updatedAt, dot: document.getElementById('sync-dot')?.textContent, digest: _syncDigest(DB).length })) })));
     console.log('DEBUG concurrent', JSON.stringify({ cloud, per, main: store.get('notebooks/nb-e2e'), commits: commitCount }, null, 1));
@@ -298,8 +318,7 @@ try {
   });
   let sentMs = -1;
   while (Date.now() - tHide < 3000) {
-    const b64 = [...store.entries()].filter(([k]) => k.includes('/chunks/')).sort().map(([, v]) => v.p || '').join('');
-    let txt = ''; try { txt = Buffer.from(b64, 'base64').toString('utf8'); } catch {}
+    const txt = cloudText();
     if (commitCount > before && /typed-then-backgrounded/.test(txt)) { sentMs = Date.now() - tHide; break; }
     await sleep(50);
   }
@@ -321,9 +340,55 @@ try {
     persist();
   });
   c = await converge('big', 60000);
-  const chunks = [...store.keys()].filter((k) => k.includes('/chunks/')).length;
+  const chunks = (store.get('notebooks/nb-e2e') || {}).n;
   check(c.ok && await has(phone, 'a-big', 'END-OF-BIG') && await has(tablet, 'a-big', 'END-OF-BIG'),
     'laptop adds a 9 MB note (over the 10 MiB single-write limit): it reaches phone + tablet whole', `${chunks} chunks · ${c.ms}ms`);
+
+  /* 9b. v04.82 — the owner's report (4 Oct 2026): the phone's upload of a
+         notebook this size is CUT OFF after its first batch (put to sleep,
+         tab killed). Up to v04.81 that left the cloud copy half new, half
+         old, and every device that opened said "NOT syncing", for good. */
+  phone.dieAfter = 1;
+  await on(phone, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>phone-cut-off</p>'; persist(); flushPendingPush(); });
+  await sleep(3000);
+  devices.splice(devices.indexOf(phone), 1);
+  await Promise.all([tablet, laptop].map(reopen));
+  await sleep(12000);
+  const cutAl = await Promise.all([tablet, laptop].map(alarms)), cutDots = await Promise.all([tablet, laptop].map(dot));
+  check(cutAl.every((a) => a.length === 0) && cutDots.every((t) => /Live/.test(t)),
+    'phone\'s upload of a 9 MB notebook cut off half-way: tablet + laptop reopen Live, with no sync alarm', JSON.stringify({ cutDots, cutAl }));
+  phone.dieAfter = null;
+  await reopen(phone);
+  devices.push(phone);
+  c = await converge('cut-off', 60000);
+  check(c.ok && await has(tablet, 'a1', 'phone-cut-off') && await has(laptop, 'a1', 'phone-cut-off'),
+    '…and when the phone reopens, its cut-off edit reaches tablet + laptop', `${c.ms}ms`);
+
+  /* 9c. The cloud copy is ALREADY half-saved in the pre-v04.82 layout (the
+         owner's cloud on 4 Oct 2026): numbered chunks, the first batch one
+         version ahead of the rest. Opening the new build repairs it. */
+  {
+    const m = store.get('notebooks/nb-e2e');
+    const parts = []; for (let i = 0; i < m.n; i++) parts.push(store.get('notebooks/nb-e2e/chunks/' + m.g + '_' + i).p);
+    for (const k of [...store.keys()]) if (k.includes('/chunks/')) store.delete(k);
+    const v0 = m.ver - 1000;
+    parts.forEach((p, i) => store.set('notebooks/nb-e2e/chunks/' + i, { p, ver: i < 8 ? m.ver : v0 }));
+    store.set('notebooks/nb-e2e', { n: m.n, ver: v0, deviceUpdatedAt: v0, updatedAt: Date.now() });
+  }
+  await Promise.all(all.map(reopen));
+  const tFix = Date.now();
+  while (Date.now() - tFix < 45000 && !(store.get('notebooks/nb-e2e') || {}).g) await sleep(250);
+  const fixMs = Date.now() - tFix;
+  c = await converge('legacy-torn', 60000);
+  await sleep(3000);
+  const tornAl = await Promise.all(all.map(alarms)), tornDots = await Promise.all(all.map(dot));
+  const mFixed = store.get('notebooks/nb-e2e');
+  const legacyLeft = [...store.keys()].filter((k) => /\/chunks\/\d+$/.test(k)).length;
+  check(c.ok && !!mFixed.g && /phone-cut-off/.test(cloudText()) && tornAl.every((a) => a.length === 0) && tornDots.every((t) => /Live/.test(t)),
+    'a cloud copy already half-saved (old layout) is repaired on opening: all three Live, no alarm, the cloud readable again',
+    JSON.stringify({ repairedAfterMs: fixMs, ms: c.ms, g: !!mFixed.g, legacyLeft, tornDots, tornAl }));
+  check(legacyLeft === 0, '…and the old numbered pieces are cleaned up', `${legacyLeft} left`);
+
   await on(laptop, () => deleteNote('a-big'));
   c = await converge('big-delete', 60000);
   check(c.ok, '…and deleting it settles on all three', `${c.ms}ms`);
