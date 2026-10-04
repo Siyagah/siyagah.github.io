@@ -7876,12 +7876,16 @@ await r.block('26e-stored-format-unchanged', async () => {
     await window._writeCloudDB(nb, Date.now(), b64);
     const store = window.__fakeFs._store;
     const mainKeys = Object.keys(store.get('notebooks/nb-26e')).sort();
-    const chunkKeys = Object.keys(store.get('notebooks/nb-26e/chunks/0')).sort();
+    /* v04.82 — chunks are named by generation (`<g>_<i>`), and the main doc
+       names its generation as `g`. Updated in place: this check used to
+       demand the v04.62 keys exactly. */
+    const g = store.get('notebooks/nb-26e').g;
+    const chunkKeys = Object.keys(store.get('notebooks/nb-26e/chunks/' + g + '_0')).sort();
     const remoteDB = await window._readCloudDB(nb, (await nb.get()).data());
     return { mainKeys, chunkKeys, deepEqual: JSON.stringify(remoteDB) === JSON.stringify(original) };
   });
-  r.check(JSON.stringify(out.mainKeys) === JSON.stringify(['deviceUpdatedAt', 'n', 'updatedAt', 'ver']),
-    'the main doc has exactly the keys _readCloudDB() (and an older build\'s reader) expect — n, ver, deviceUpdatedAt, updatedAt',
+  r.check(JSON.stringify(out.mainKeys) === JSON.stringify(['deviceUpdatedAt', 'g', 'n', 'updatedAt', 'ver']),
+    'the main doc has exactly the keys _readCloudDB() expects — n, ver, g (v04.82: the chunk generation it names), deviceUpdatedAt, updatedAt',
     JSON.stringify(out.mainKeys));
   r.check(JSON.stringify(out.chunkKeys) === JSON.stringify(['p', 'ver']),
     'a chunk doc has exactly the keys _readCloudDB() expects — p, ver', JSON.stringify(out.chunkKeys));
@@ -9594,12 +9598,25 @@ await r.block('36d-broken-cloud-copy-still-alarms-and-changes-nothing', async ()
     const before = JSON.stringify(DB.articles.map((a) => [a.id, a.content, a.updatedAt]));
     const md = await write(mark(clone(DB), 'a1', 'Never readable', 60000), Date.now());
     /* Reads succeed, but the chunk is garbage under the right version. */
-    window.__fakeFs._store.set(nb._path + '/chunks/0', { p: 'bm90IGpzb24=', ver: md.ver });
+    /* v04.82 — the chunk is named by the generation the main doc names. */
+    window.__fakeFs._store.set(nb._path + '/chunks/' + (md.g ? md.g + '_0' : '0'), { p: 'bm90IGpzb24=', ver: md.ver });
+    window.__toasts = [];
+    /* The repair is a real push: point it at this block's fake notebook. */
+    _syncFsDb = window.__fakeFs; getSyncConfig = () => ({ notebookId: 'nb-36', firebaseConfig: {} });
     await pull(md);
-    await settle(() => alarm().length, 12000);
-    return { alarm: alarm(), dot: dot(), unchanged: before === JSON.stringify(DB.articles.map((a) => [a.id, a.content, a.updatedAt])) };`);
-  r.check(out.alarm.some((t) => /could not read the notebook/.test(t)) && /sd-err/.test(out.dot) && out.unchanged,
-    'a cloud copy that really will not assemble (reads succeed, data is broken) still raises the alarm, and this device\'s notes are untouched',
+    await settle(() => window.__toasts.some((t) => /half-saved/.test(t)) && /sd-live/.test(dot()), 15000);
+    const main = (await nb.get()).data();
+    let readBack = null; try { readBack = await _readCloudDB(nb, main); } catch (e) {}
+    return { alarm: alarm(), dot: dot(), repaired: window.__toasts.filter((t) => /half-saved/.test(t)),
+      newVer: main.ver !== md.ver, readsBack: !!readBack && readBack.articles.length === DB.articles.length,
+      unchanged: before === JSON.stringify(DB.articles.map((a) => [a.id, a.content, a.updatedAt])) };`);
+  /* Updated in place, v04.82. Up to v04.81 an unreadable cloud copy ended in
+     "this device is NOT syncing until it clears", and nothing ever cleared
+     it (the owner's report, 4 Oct 2026). Now the device rewrites the cloud
+     copy whole from its own notebook. Merge is a union, so nothing is lost.
+     The alarm remains for a copy still unreadable after that repair. */
+  r.check(out.repaired.length === 1 && out.alarm.length === 0 && /sd-live/.test(out.dot) && out.newVer && out.readsBack && out.unchanged,
+    'a cloud copy that really will not assemble (reads succeed, data is broken) is re-saved whole from this device: one calm notice, no alarm, Live, the cloud reads back, and this device\'s notes are untouched',
     JSON.stringify(out));
   r.check(app.errors.length === 0, 'no page errors', app.errors.slice(0, 2).join(' · '));
   await app.close();

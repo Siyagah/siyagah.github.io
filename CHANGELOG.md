@@ -7656,3 +7656,97 @@ both when done".
 - Full `app-check` **1405/1405, twice in a row**.
 
 **Not done / left:** nothing from the owner's 4 Oct message.
+
+## v04.82 — sync: an interrupted upload no longer stops every device syncing (4 Oct 2026)
+
+**The owner's report.** Laptop and phone at once, on v04.81: "☁ Sync error:
+could not read the notebook from the cloud after several attempts — this
+device is NOT syncing until it clears." Their words: "Fix error across
+devices pls." Then: "same in mobile too." Built by the Architect, ahead of
+tables round 2c (sync is I2; tables are a feature).
+
+**Cause, reproduced before anything was changed.** A notebook over about
+5 MB of JSON is more than 8 chunks, so `_writeCloudDB()` uploads it in
+several batches (v04.62), and every write overwrote chunk documents `0…n` in
+place. If an upload is cut off after its first batch (a phone put to sleep,
+a tab closed, signal lost), the cloud keeps chunks 0–7 at the new version,
+the rest at the old one, and a main doc still naming the old version.
+`_readCloudDB()` rightly refuses that mix. Nothing ever repaired it, because
+a device writes only when something changes on it. So every device that
+opened (boot snapshot → `_pullRemote()` → three retries) gave the alarm, for
+good. Measured in a three-device run (16 chunks, the phone's commits hung
+after one): tablet and laptop reopened into the owner's exact message, both
+on ☁ Err. They had not converged 90s after the phone came back.
+
+**Fix, part 1: an upload can no longer damage the copy in use.** Every
+write now fills a fresh *generation* of chunk documents, `<g>_<i>` (`g`
+random per write, `_syncNewGen()`). The main doc, written last, names it
+(`g`). A cut-off upload leaves only an unnamed, unfinished generation
+behind. Two devices writing at once also each fill their own generation,
+so they cannot tear each other's chunks either. A notebook that fits one
+request still goes in one atomic commit. Clean-up runs only after the new
+main doc commits, and is best effort: it deletes the generation the main
+doc named before (read alongside the upload so a push is never delayed
+by it, else the last one seen, `_syncLastMd`), any earlier generation this device wrote in this session
+(`_syncMyGens`), and the old numbered chunks. A reader whose generation is
+deleted mid-read finds a chunk missing; its retry re-reads the main doc,
+which names the new one (v04.72). Reading: `_syncChunkId(md.g,i)`. A main doc
+with no `g` (v04.81 or older, or a frozen build) is read from the numbered
+chunks exactly as before. A generation's chunks must all carry the main
+doc's own `ver`.
+
+**Fix, part 2: a stuck copy is repaired, not reported.** When the server
+reads succeed and the copy still will not assemble after the retries,
+`_repairCloudCopy()` re-reads the main doc. If a newer version has landed,
+it reads that one. If it is still the same version, the device writes its
+own whole notebook as a new version, with one calm toast ("The cloud copy
+was left half-saved by an interrupted upload. Re-saving it from this
+device: nothing is lost."). **I1 holds:** sync merges and never replaces.
+The device whose upload was cut off still holds its own change in its own
+storage. When it next reads the repaired copy, `mergeDB()` keeps the change
+and the v04.71 digest check pushes it back up. The repair runs once per
+version per session. A version still unreadable after this device's own
+repair is real damage, and only then does the old alarm show.
+
+**Checks: `tools/sync-e2e.mjs`** (app-check block 38 runs it) gains three
+lines. The fake's `__fsCommit` takes `dieAfter`, which hangs every later
+commit as a frozen phone does. New helpers: `reopen()` (a real reload) and
+`cloudText()` (reads the generation the main doc names; §4's debug dump and
+§8's "reached the cloud" check used to concatenate every chunk key, which
+is wrong once generations exist, and now use it).
+- **9b:** the phone's upload of the 9 MB notebook is cut off after batch 1;
+  tablet and laptop reopen Live with no alarm.
+- **9b:** the reopened phone's cut-off edit then reaches both.
+- **9c:** the cloud is rebuilt as the owner's is now: old layout, chunks
+  0–7 one version ahead. All three reopen; the copy is repaired (main doc
+  gets `g`, about 16s), all Live, no alarm, and the cut-off edit is in it.
+- **9c:** none of the old numbered chunks are left.
+
+`sync-e2e` **23/23**. With `index.html` stashed (v04.81): 13/16. Both 9b
+lines fail (dots `☁…`, never converged in 60s), and 9c cannot even be set
+up: the old code writes no generation, so the setup throws.
+
+**Two older checks updated in place, because this round deliberately
+changes what they describe:**
+- `26e` demanded the main doc's keys be exactly v04.62's four. It now
+  expects `g` as well, and reads chunk `<g>_0`.
+- `36d` corrupted chunk `0`, which no longer exists under the new layout,
+  so it corrupted nothing. It now corrupts the chunk the main doc names,
+  and its repair push is pointed at the block's fake notebook. Its
+  expectation changes from "alarm" to "re-saved whole from this device":
+  one notice, no alarm, Live, the cloud reads back, local notes untouched.
+
+Run against v04.81's `index.html`, both of those fail (`--only 36d,26e`
+1/3); patched 5/5. Full `app-check` **1409/1409, twice in a row**.
+
+**Not done, and why:**
+- **A generation orphaned by a device killed mid-upload is not deleted
+  after a reload.** `_syncMyGens` lives in memory only, because the owner's
+  localStorage is full (see the v04.80 watch item). The leftover costs
+  cloud storage, at most one notebook-sized set per interruption, never
+  correctness. Listing the `chunks` collection would find these, but the
+  fake SDK has no collection query to check it against. Filed on the backlog.
+- **A v04.81 tab left open** while another device runs v04.82 will read
+  the old numbered chunks, find them gone, and show the old alarm until it
+  reloads. The update reaches it on the next open (network-first service
+  worker, I3).

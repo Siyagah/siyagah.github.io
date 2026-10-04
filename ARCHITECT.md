@@ -377,13 +377,20 @@ Every report follows one shape:
       merged cells, borders, colour rules, filters, several sheets per
       table, CSV in/out, and ~150 functions. Round 3: charts from a table,
       and .xlsx import/export.
-- [ ] **Tags added while editing are not committed by autosave or on
+- [x] **Tags added while editing are not committed by autosave or on
       leaving the app (I1).** Found in the v04.55 review and measured on
       v04.54: `ST.etags` reaches `DB` only via `saveArt()`, and
       `_flushEd()`/`_flushEverythingOut()` skip it. So backgrounding the
       app loses the tag while the typed text survives. Check `ST.efolders`
-      and every other staged field the same way. **Next round, ahead of
-      (c2).**
+      and every other staged field the same way. Resolved v04.56 (baseline
+      snapshot; see the standing lesson in `CLAUDE.md`).
+- [ ] **Orphaned chunk generations (v04.82).** A device killed mid-upload
+      leaves its unfinished generation in the cloud's `chunks` collection.
+      Only the same session can delete it (`_syncMyGens` is memory-only,
+      because the owner's localStorage is full). It costs storage, never
+      correctness. Fix by listing the collection (a real Firestore query;
+      the `sync-e2e` fake needs one added) and deleting every generation the
+      main doc does not name and that is older than a few minutes.
 - [ ] **A sheet copied through the note editor** (select text around it,
       copy, paste into another note) passes through `execCommand`'s
       sanitiser. Whether `data-sg` survives is **not measured** (v04.52).

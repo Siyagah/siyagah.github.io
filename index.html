@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.81">
+<meta name="app-version" content="04.82">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3184,7 +3184,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.81</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.82</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -21579,6 +21579,7 @@ async function initSync(cfg){
     _syncUnsub=docRef.onSnapshot(snap=>{
       if(!snap.exists){setSyncStatus('live');return;}
       const md=snap.data();
+      if(md) _syncLastMd=md;
       /* Skip only if this exact version is the one we ourselves just wrote —
          see the comment above _myLastPushVer's declaration for why this
          must be an exact-version check, not a "did I just push" flag. */
@@ -21927,6 +21928,12 @@ function mergeDB(local, remote){
 function _b64enc(s){ return btoa(unescape(encodeURIComponent(s))); }
 function _b64dec(s){ return decodeURIComponent(escape(atob(s))); }
 var _SYNC_CHUNK=900000;
+/* v04.82 — chunk documents are named by generation; see _writeCloudDB().
+   A main doc with no `g` was written by v04.81 or older (or a frozen build)
+   and names the old numbered chunks, which are still read as before. */
+function _syncChunkId(g,i){ return g ? g+'_'+i : String(i); }
+function _syncNewGen(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+let _syncLastMd=null, _syncMyGens=[];
 function _syncSleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 /* Cheap 32-bit content signature — lets a push skip the network entirely
    when the notebook has not actually changed since the last successful
@@ -22055,7 +22062,7 @@ async function _readCloudDB(nb, md){
     const src=(attempt<3)?'server':'default';
     try{
       snaps=await Promise.all(
-        Array.from({length:n},(_,i)=>nb.collection("chunks").doc(String(i)).get({source:src}))
+        Array.from({length:n},(_,i)=>nb.collection("chunks").doc(_syncChunkId(md.g,i)).get({source:src}))
       );
     }catch(e){
       const c=e&&e.code;
@@ -22083,7 +22090,12 @@ async function _readCloudDB(nb, md){
        the phone's listener was too slow to deliver the newer main doc
        inside ~6s. A payload that is really mid-write still fails the
        JSON.parse below (or carries mixed versions) and is still refused. */
-    if(!torn && vers.size===1){
+    if(!torn && md.g){
+      /* v04.82 — a generation is written once and never overwritten, so
+         every one of its chunks must carry exactly the version that names
+         it. Anything else is not this generation. */
+      if(vers.size!==1 || [...vers][0]!==ver) torn=true;
+    } else if(!torn && vers.size===1){
       const v=[...vers][0];
       if(ver!=null && v!=null && v!==ver && !(v>ver)) torn=true;   /* OLDER chunks — cache/mid-write */
     } else if(!torn) torn=true;                                    /* mixed versions — mid-write */
@@ -22111,42 +22123,78 @@ const _SYNC_CHUNK_BATCH = 8;
 async function _writeCloudDB(nb, now, b64){
   if(b64==null) b64=_b64enc(JSON.stringify(DB));
   const n=Math.ceil(b64.length/_SYNC_CHUNK);
-  /* Chunks go out first, in as many batches as needed, each well under the
-     10 MiB request limit. The main doc — the thing readers actually watch
-     for changes — is written LAST, in its own final batch, only after
-     every chunk batch has committed. _readCloudDB() already treats a chunk
-     whose ver differs from the main doc's ver as torn and retries; while
-     the chunk batches are still landing the main doc still shows the
-     PREVIOUS ver, so a reader that catches the write mid-flight simply
-     fails that check and gets fired again when the new main doc lands.
-     That is what makes this non-atomic, multi-batch write safe. If any
-     chunk batch throws, the main doc is never written, the error
-     propagates to the caller exactly as before, and every device keeps
-     assembling the previous complete version. */
-  /* Architect review (v04.62): a notebook that FITS in one request is still
-     written exactly as before — every chunk and the main doc in ONE atomic
-     commit — so a failed push leaves the previous version whole and
-     readable. The multi-batch path below can't promise that (a failure after
-     the first batch leaves low chunks carrying the new ver, and readers get
-     null until the next successful push), so it is used only past the size
-     where the single commit would be refused outright. */
+  /* v04.82 — every write goes into a FRESH generation of chunk documents
+     ("<g>_0", "<g>_1", …, g random per write), never over the chunks the
+     main doc currently names. The main doc — the thing readers watch — is
+     written LAST and names its generation (`g`), so it only ever points at
+     a generation that finished uploading.
+
+     Up to v04.81 every write overwrote "0", "1", … in place. Past 8 chunks
+     (a notebook over ~5 MB) that takes several batches, and an upload cut
+     off part-way — a phone put to sleep, a tab closed, signal lost — left
+     the low chunks new and the high ones old under a main doc still naming
+     the old version. That cloud copy could never be read again, by any
+     device, until someone happened to write a whole new one: every device
+     that opened said "could not read the notebook from the cloud after
+     several attempts — this device is NOT syncing" (the owner's report,
+     4 Oct 2026, on phone and laptop at once). Now a cut-off upload leaves
+     only an unnamed, unfinished generation behind; the named one is whole.
+
+     A notebook that fits one request still goes in ONE atomic commit
+     (chunks + main doc), as since v04.62. Two devices writing at once each
+     fill their own generation, so they can no longer tear each other's
+     chunks either: whichever main doc lands last names a whole one.
+
+     Old generations are deleted only AFTER the new main doc has committed:
+     the one the main doc named before (read alongside the upload, or
+     the last one this device saw), any earlier generation this device
+     wrote, and the pre-v04.82 numbered chunks. A reader caught mid-read by
+     that delete finds a chunk missing and re-reads the main doc, which
+     names the new generation (see _pullRemote()). */
+  const g=_syncNewGen();
+  /* The main doc this write replaces, read ALONGSIDE the upload rather than
+     before it, so a push started as the phone is put away is not delayed
+     by an extra round trip. Only clean-up uses it. */
+  const prevSeen=_syncLastMd;
+  const prevP=nb.get({source:'server'}).then(s0=>(s0&&s0.exists)?s0.data():null).catch(()=>null);
+  _syncMyGens.push({g,n});
+  const chunkSet=(batch,i)=>batch.set(nb.collection("chunks").doc(_syncChunkId(g,i)),{p:b64.slice(i*_SYNC_CHUNK,(i+1)*_SYNC_CHUNK),ver:now});
+  const mainDoc={ n:n, ver:now, g:g, deviceUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp() };
   if(n<=_SYNC_CHUNK_BATCH){
     const batch=_syncFsDb.batch();
-    for(let i=0;i<n;i++){ batch.set(nb.collection("chunks").doc(String(i)),{p:b64.slice(i*_SYNC_CHUNK,(i+1)*_SYNC_CHUNK),ver:now}); }
-    batch.set(nb,{ n:n, ver:now, deviceUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
+    for(let i=0;i<n;i++) chunkSet(batch,i);
+    batch.set(nb,mainDoc);
     await batch.commit();
   } else {
-  for(let i=0;i<n;i+=_SYNC_CHUNK_BATCH){
-    const batch=_syncFsDb.batch();
-    const end=Math.min(i+_SYNC_CHUNK_BATCH,n);
-    for(let j=i;j<end;j++){ batch.set(nb.collection("chunks").doc(String(j)),{p:b64.slice(j*_SYNC_CHUNK,(j+1)*_SYNC_CHUNK),ver:now}); }
-    await batch.commit();
+    for(let i=0;i<n;i+=_SYNC_CHUNK_BATCH){
+      const batch=_syncFsDb.batch();
+      const end=Math.min(i+_SYNC_CHUNK_BATCH,n);
+      for(let j=i;j<end;j++) chunkSet(batch,j);
+      await batch.commit();
+    }
+    const mainBatch=_syncFsDb.batch();
+    mainBatch.set(nb,mainDoc);
+    await mainBatch.commit();
   }
-  const mainBatch=_syncFsDb.batch();
-  mainBatch.set(nb,{ n:n, ver:now, deviceUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
-  await mainBatch.commit();
-  }
-  const b2=_syncFsDb.batch(); for(let i=n;i<n+10;i++) b2.delete(nb.collection("chunks").doc(String(i))); try{ await b2.commit(); }catch(e){}
+  _syncLastMd=mainDoc;
+  /* Clean-up is best effort and never fails the push: a leftover
+     generation costs storage, never correctness. */
+  try{
+    let prev=await prevP; if(!prev||prev.g===g) prev=prevSeen;
+    const del=[];
+    if(prev&&prev.n){
+      if(prev.g){ if(prev.g!==g) for(let i=0;i<prev.n;i++) del.push(_syncChunkId(prev.g,i)); }
+      else for(let i=0;i<prev.n+10;i++) del.push(String(i));   /* the pre-v04.82 layout */
+    }
+    _syncMyGens.filter(x=>x.g!==g).forEach(x=>{ for(let i=0;i<x.n;i++) del.push(_syncChunkId(x.g,i)); });
+    _syncMyGens=_syncMyGens.filter(x=>x.g===g);
+    const uniq=[...new Set(del)];
+    for(let i=0;i<uniq.length;i+=400){
+      const b2=_syncFsDb.batch();
+      uniq.slice(i,i+400).forEach(id=>b2.delete(nb.collection("chunks").doc(id)));
+      await b2.commit();
+    }
+  }catch(e){ console.warn('Sync: old chunk clean-up skipped:',e); }
 }
 
 /* ── Push scheduling ──────────────────────────────────────────────────────
@@ -22298,6 +22346,7 @@ async function _reconcileNow(){
     const snap=await _syncDocRef.get({source:'server'});
     if(!snap.exists)return;
     const md=snap.data();
+    if(md) _syncLastMd=md;
     const ver=md&&md.ver;
     if(ver==null)return;
     if(ver===_myLastPushVer||ver===_lastAppliedVer)return;   /* already current */
@@ -22358,6 +22407,40 @@ function _syncDigest(d){
   parts.push('globalTags='+(d.globalTags||[]).slice().sort().join(','));
   return parts.join('|');
 }
+/* v04.82 — the cloud copy was read successfully from the server, several
+   times, and still would not assemble, while its main doc stayed on the
+   same version: it is a half-finished upload that nobody is finishing (see
+   _writeCloudDB()). Up to v04.81 this device then gave up with "this
+   device is NOT syncing until it clears" — and nothing ever cleared it,
+   because no device writes unless something changes on it.
+   Repair it by writing this device's whole notebook as a new, complete
+   version. That loses nothing (I1): sync never replaces, it merges, and
+   the device whose upload was cut off still holds its own changes — when
+   it next reads the repaired copy, mergeDB() keeps them and the digest
+   check in _pullRemote() sends them back up. Once per version per
+   session: a version that is still unreadable after this device's own
+   repair is real damage, and only then does the owner hear an alarm. */
+let _syncRepairedVer=null;
+async function _repairCloudCopy(docRef, md){
+  let fresh=null;
+  try{ const s=await docRef.get({source:'server'}); if(s&&s.exists) fresh=s.data(); }catch(e){}
+  if(fresh&&fresh.ver!==md.ver){
+    /* A newer version landed meanwhile: read that one instead. */
+    if(fresh.ver===_myLastPushVer||fresh.ver===_lastAppliedVer){ setSyncStatus('live'); return; }
+    _pullRemote(docRef, fresh); return;
+  }
+  if(_syncRepairedVer===md.ver){
+    setSyncStatus('err');
+    _syncErrorToast({message:'could not read the notebook from the cloud after several attempts'});
+    return;
+  }
+  _syncRepairedVer=md.ver;
+  console.warn('Sync: cloud copy ver',md.ver,'is an unfinished upload: rewriting it whole from this device');
+  setSyncStatus('busy');
+  toast('☁ The cloud copy was left half-saved by an interrupted upload. Re-saving it from this device: nothing is lost.', 6000);
+  _lastPushedSig='';
+  flushPendingPush();
+}
 async function _pullRemote(docRef, md, retry){
   if(_pullInFlight){ _pullQueued={docRef,md}; return; }
   _pullInFlight=true;
@@ -22413,8 +22496,7 @@ async function _pullRemote(docRef, md, retry){
           _syncErrorToast(fail.err);
         }else if(md&&md.n){
           console.warn('Sync: could not assemble remote notebook ver',md.ver);
-          setSyncStatus('err');
-          _syncErrorToast({message:'could not read the notebook from the cloud after several attempts'});
+          _repairCloudCopy(docRef, md);
         }else{
           setSyncStatus('live');
         }

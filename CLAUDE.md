@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.81.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.82.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,17 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.82** (4 Oct 2026) — sync: an interrupted upload no longer stops
+  every device syncing (owner, phone and laptop: "NOT syncing until it
+  clears"). Past 8 chunks a write takes several batches and overwrote
+  chunks `0…n` in place, so a cut-off upload left a mixed copy that no
+  device could read or would repair. Now each write fills a fresh
+  generation `<g>_<i>` named last by the main doc (`g`), with old ones
+  deleted after; a main doc without `g` is read the old way. A copy stuck
+  half-saved is rewritten whole by `_repairCloudCopy()` (merge is a union,
+  so nothing is lost). Reproduced first in `sync-e2e` (new 9b, 9c): 23/23,
+  unpatched 13/16. `26e`/`36d` updated in place. Full `app-check`
+  **1409/1409, twice in a row**.
 - **v04.81** (4 Oct 2026) — the formatting tools move up INTO the Details
   line (owner's screenshot). Closed: `_popDetailsLineHTML()` = `.pdl-meta`
   (chips) · `.pdl-fmt` (`_popFormatRowHTML()`) · ▾ Details, three units that
@@ -69,20 +80,6 @@ must never accumulate here instead of there.
   long-press handler; iOS had nothing). New section 42: `--only 42`
   **12/12**; unpatched 6/12 (`42c` right-click is the pre-existing route). Full `app-check`
   **1289/1289, twice in a row**.
-- **v04.77** (30 Sep 2026) — a folder holding notes cannot be deleted
-  (D6, owner's rule). `_folderDelRefusal(fid)` (uses `cntOf`, so
-  subfolders count) is checked inside `trashFolder()` itself, the one
-  choke point, which toasts and returns false. The sidebar's Delete folder
-  (`confirmDel`) shows an "isn't empty" dialog with 📂 Open the folder;
-  the folder dialog's 🗑 (`pkDelete`) toasts, since a second modal would
-  replace the dialog. Empty-folder removals now all sync:
-  `_doFolderToSection()` and `dbBuilderCancel()` write the tombstone they
-  lacked (measured: sync-audit `F20` failed on v04.76). sync-audit: `F14`–
-  `F16`, `N26`, `X05`, `Z02` empty the folder in setup first (updated in
-  place); new `F19` (refused, nothing changes) and `F20`; 116 operations,
-  0 FAIL. `30a`/`30b` updated in place; new section 41 (390/820 dialog ⋯,
-  1440 sidebar right-click). Unpatched: `--only 41,30` 16/25, `F19`/`F20`
-  FAIL. Full `app-check` **1277/1277, twice in a row**.
 ---
 
 ## What this is
@@ -342,6 +339,17 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A write in several steps must never overwrite what readers are using
+  until its last step — and a broken shared copy needs a repairer, not an
+  alarm.** v04.62 split a big notebook's upload into batches but kept
+  writing over chunks `0…n` in place, so an upload cut off after one batch
+  (a phone asleep) left a cloud copy no device could read. No device ever
+  rewrote it, because nothing changed on any of them. The owner saw "NOT
+  syncing" on phone and laptop at once. Write new data beside the old and
+  switch the pointer last. Wherever a reader can recognise damage, give it
+  a safe way to repair it (here: re-save its own copy, since merge loses
+  nothing). `sync-e2e` 9b/9c kill an upload half-way. Cost: every device
+  stopped syncing until v04.82.
 - **"A version from elsewhere is always different" is a claim about
   clocks, not code.** The echo check `md.ver === _myLastPushVer` was right
   only while no two devices pushed in the same millisecond, because `ver`
