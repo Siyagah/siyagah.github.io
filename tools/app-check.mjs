@@ -10577,6 +10577,101 @@ await r.block('self-check-block-isolation-followup', async () => {
     JSON.stringify(prior));
 });
 
+/* ── 46. v04.83 — Σ Sum (AutoSum) and the "1,234" number format ─────────
+   The owner: "Enable Sum of cells in both Vertical and Horizontal as in
+   standard MS Excel" and "Enable cell value without decimal". Real input
+   only: typed cells, a real drag to select, a real click on Σ Sum ▾ and on
+   its menu row, the real format box, the real Alt+= key. */
+const sgRaw = (page, sgx, r, c) => page.evaluate(({ sgx, k }) => {
+  const d = JSON.parse(document.querySelector(sgx).getAttribute('data-sg')); return (d.cells[k] || {}).raw ?? ''; }, { sgx, k: r + ',' + c });
+async function sgSumMenu(page, sgx, item) {
+  await page.click(`${sgx} button[data-a="sum"]`);
+  await page.waitForTimeout(150);
+  const box = await page.evaluate(() => { const m = document.getElementById('sg-menu'); const b = m.getBoundingClientRect();
+    return { x: b.x, y: b.y, w: b.width, h: b.height, hidden: m.hidden, rows: [...m.querySelectorAll('button')].map((x) => [x.dataset.m, Math.round(x.getBoundingClientRect().height)]) }; });
+  await page.click(`#sg-menu button[data-m="${item}"]`);
+  await page.waitForTimeout(150);
+  return box;
+}
+for (const vp of MERGE_SIZES) {
+await r.block(`46a-autosum-row-and-column-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 1, 0, 'Land cost'); await sgType(page, root, 1, 1, '1250');
+  await sgType(page, root, 1, 2, '50000'); await sgType(page, root, 1, 3, '1250');
+
+  /* The owner's own row: Land cost | 1250 | 50000 | 1250 → total to the right. */
+  await sgSelectRange(page, root, 1, 1, 1, 3);
+  const box = await sgSumMenu(page, sgx, 'sumRight');
+  r.check(!box.hidden && box.x >= 0 && box.y >= 0 && box.x + box.w <= vp.width && box.y + box.h <= vp.height,
+    `${vp.name}: Σ Sum ▾ opens its menu fully inside the screen`, JSON.stringify(box));
+  r.check(JSON.stringify(box.rows.map((x) => x[0])) === JSON.stringify(['sumDown', 'sumRight', 'sumBoth']),
+    `${vp.name}: the menu offers total below, total right, and both`, JSON.stringify(box.rows));
+  const e2 = await sgRaw(page, sgx, 1, 4), e2t = (await sgCellText(page, root, 1, 4)).trim();
+  r.check(e2 === '=SUM(B2:D2)' && e2t === '52500', `${vp.name}: "Total right of each row" writes =SUM(B2:D2) in E2, showing 52500`, JSON.stringify({ e2, e2t }));
+
+  /* A column: B2:B4 → total below in B5. */
+  await sgType(page, root, 2, 1, '750'); await sgType(page, root, 3, 1, '500');
+  await sgSelectRange(page, root, 1, 1, 3, 1);
+  await sgSumMenu(page, sgx, 'sumDown');
+  const b5 = await sgRaw(page, sgx, 4, 1), b5t = (await sgCellText(page, root, 4, 1)).trim();
+  r.check(b5 === '=SUM(B2:B4)' && b5t === '2500', `${vp.name}: "Total below each column" writes =SUM(B2:B4) in B5, showing 2500`, JSON.stringify({ b5, b5t }));
+
+  /* One undo step takes it back. */
+  await page.click(`${sgx} button[data-a="undo"]`);
+  await page.waitForTimeout(100);
+  r.check(await sgRaw(page, sgx, 4, 1) === '' && await sgRaw(page, sgx, 1, 4) === '=SUM(B2:D2)',
+    `${vp.name}: one Undo removes only the last total`, await sgRaw(page, sgx, 4, 1));
+
+  /* "1,234": no decimals, thousands separators. */
+  await page.click(sgCell(root, 1, 2));
+  await page.selectOption(`${sgx} select.sg-fmt`, 'int');
+  await page.waitForTimeout(100);
+  const c2t = (await sgCellText(page, root, 1, 2)).trim();
+  const snap = await page.evaluate((sel) => document.querySelector(sel + ' > .sg-static').textContent, sgx);
+  r.check(c2t === '50,000' && snap.includes('50,000') && !snap.includes('50,000.00'),
+    `${vp.name}: the "1,234" format shows 50000 as 50,000 (no decimals), in the grid and in the saved snapshot`, JSON.stringify({ c2t }));
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+await r.block('46b-autosum-both-alt-equals-and-refusals-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await sgEditA1(page);
+  await sgInsertViaMenu(page);
+  const root = '#ed', sgx = '#ed .sgx';
+  await sgType(page, root, 0, 0, 'x'); await sgType(page, root, 0, 1, '1'); await sgType(page, root, 0, 2, '2');
+  await sgType(page, root, 1, 0, 'y'); await sgType(page, root, 1, 1, '3'); await sgType(page, root, 1, 2, '4');
+  await sgSelectRange(page, root, 0, 0, 1, 2);
+  await sgSumMenu(page, sgx, 'sumBoth');
+  const got = {}; for (const [r2, c2] of [[2, 0], [2, 1], [2, 2], [0, 3], [1, 3], [2, 3]]) got[r2 + ',' + c2] = await sgRaw(page, sgx, r2, c2);
+  r.check(JSON.stringify(got) === JSON.stringify({ '2,0': '', '2,1': '=SUM(B1:B2)', '2,2': '=SUM(C1:C2)', '0,3': '=SUM(A1:C1)', '1,3': '=SUM(A2:C2)', '2,3': '=SUM(A1:C2)' }),
+    '1440: "Totals below and right" totals each number column and each row, plus a grand total, and skips the label column', JSON.stringify(got));
+  r.check((await sgCellText(page, root, 2, 3)).trim() === '10', '1440: the grand total shows 10', await sgCellText(page, root, 2, 3));
+
+  /* Alt+= on an empty cell under a column of numbers. */
+  await sgType(page, root, 4, 5, '10'); await sgType(page, root, 5, 5, '20'); await sgType(page, root, 6, 5, '30');
+  await page.click(sgCell(root, 7, 5));
+  await page.keyboard.press('Alt+Equal');
+  await page.waitForTimeout(100);
+  r.check(await sgRaw(page, sgx, 7, 5) === '=SUM(F5:F7)' && (await sgCellText(page, root, 7, 5)).trim() === '60',
+    '1440: Alt+= on the empty cell under 10, 20, 30 writes =SUM(F5:F7), showing 60', await sgRaw(page, sgx, 7, 5));
+
+  /* A target that already holds something: refused, nothing changes. */
+  const before = await page.evaluate((sel) => document.querySelector(sel).getAttribute('data-sg'), sgx);
+  await sgSelectRange(page, root, 4, 5, 6, 5);   // F5:F7, total would go in F8, which is taken
+  await sgSumMenu(page, sgx, 'sumDown');
+  const after = await page.evaluate((sel) => document.querySelector(sel).getAttribute('data-sg'), sgx);
+  const t = await sgLastToast(page);
+  r.check(before === after && /not empty/.test(t), '1440: a total that would land on a filled cell is refused with a toast, and nothing changes', t);
+  r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

@@ -7750,3 +7750,71 @@ Run against v04.81's `index.html`, both of those fail (`--only 36d,26e`
   the old numbered chunks, find them gone, and show the old alarm until it
   reloads. The update reaches it on the next open (network-first service
   worker, I3).
+
+## v04.83 — tables: Σ Sum (AutoSum) and the "1,234" number format (4 Oct 2026)
+
+**The owner's words** (4 Oct 2026, with screenshots of a sheet holding
+"Land cost | 1250 | 50000 | 1250"): "Enable Sum of cells in both Vertical
+and Horizontal as in standard MS Excel" and, circling the number-format box
+showing 1,250.00 / 50,000.00, "Enable cell value without decimal". Built by
+the Architect, as one tables round.
+
+**Σ Sum ▾** is a new button on the table toolbar, after ↓ Sort. Its menu,
+anchored to the button and clamped to the screen by the shared `openMenu()`:
+- **Total below each column:** a `=SUM()` under each column of the selection
+  that holds numbers.
+- **Total right of each row:** a `=SUM()` to the right of each row that holds
+  numbers.
+- **Totals below and right:** both, plus a grand total in the corner.
+
+Totals are real formulas, so they follow later edits. As in Excel, a
+selection whose last row (or column) is still empty puts its totals there;
+otherwise they go in the next row (column), and the sheet grows at its edge.
+A column or row with no numbers (a label column such as "Land cost") gets no
+total. With a single EMPTY cell selected the menu reads "Sum the numbers
+above" / "Sum the numbers to the left", and sums the run of numbers directly
+above or to the left. **Alt+=** (Excel's shortcut) and a new right-click
+item, **Σ AutoSum**, make the smart choice: a single empty cell sums above,
+else to its left; a one-row selection totals to its right; anything else
+totals below each column. One undo step.
+
+**Refused, with a toast, before anything changes:** a target cell that
+already holds something, a target inside a merge, or any row hidden by a
+filter (a total of hidden rows would read as a total of what is shown).
+
+**"1,234"** is a new choice in the number-format box, before "1,234.00":
+thousands separators, no decimals (`PRESET.int = '#,##0'`, stored as
+`fmt:'int'`). It is stored the same way as every other format. An older
+build that does not know `int` shows the plain number (`1250`); nothing is
+lost.
+
+**All three layouts get the same shape.** The table toolbar is one row that
+scrolls sideways on a phone and wraps on a laptop, as before. Σ Sum ▾ sits in
+it beside Sort, and its menu opens under it on every size (measured inside
+the screen at 390, 820 and 1440). The menu's rows are 36px tall, the same as
+every other table menu (Rows & columns ▾, Borders ▾).
+
+**Checks: new section 46**, real input only (typed cells, a real drag,
+clicks on Σ Sum ▾ and its menu rows, the real format box, a real Alt+=).
+- `46a` (×390/820/1440):
+  - the menu opens inside the screen with its three rows;
+  - the owner's row B2:D2 → `=SUM(B2:D2)` in E2, showing 52500;
+  - B2:B4 → `=SUM(B2:B4)` in B5, showing 2500;
+  - one Undo removes only the last total;
+  - "1,234" shows 50,000 in the grid and in the saved snapshot.
+- `46b` (1440):
+  - "Totals below and right" over a block with a label column gives the
+    exact six formulas, and a grand total of 10;
+  - Alt+= under 10, 20, 30 writes `=SUM(F5:F7)`;
+  - a total that would land on a filled cell is refused with a toast and
+    changes nothing.
+
+`--only 46` **26/26**. Against v04.82's `index.html` all four blocks fail
+(no Σ Sum button to click). Full `app-check` **1435/1435, twice in a row**.
+
+**Not done, and why:**
+- **Increase / decrease decimals buttons** (Excel's .0 / .00). The owner
+  asked for "without decimal", which "1,234" gives. Arbitrary decimal places
+  need a new per-cell property, which no request has asked for yet.
+- **Average, Count, Max, Min under Σ ▾** (Excel's AutoSum drop-down). The
+  status bar already shows Sum, Average and Count for any selection.
