@@ -22146,15 +22146,17 @@ async function _writeCloudDB(nb, now, b64){
      chunks either: whichever main doc lands last names a whole one.
 
      Old generations are deleted only AFTER the new main doc has committed:
-     the one the main doc named before (read fresh just before writing, or
+     the one the main doc named before (read alongside the upload, or
      the last one this device saw), any earlier generation this device
      wrote, and the pre-v04.82 numbered chunks. A reader caught mid-read by
      that delete finds a chunk missing and re-reads the main doc, which
      names the new generation (see _pullRemote()). */
   const g=_syncNewGen();
-  let prev=null;
-  try{ const s0=await nb.get({source:'server'}); if(s0&&s0.exists) prev=s0.data(); }catch(e){}
-  if(!prev) prev=_syncLastMd;
+  /* The main doc this write replaces, read ALONGSIDE the upload rather than
+     before it, so a push started as the phone is put away is not delayed
+     by an extra round trip. Only clean-up uses it. */
+  const prevSeen=_syncLastMd;
+  const prevP=nb.get({source:'server'}).then(s0=>(s0&&s0.exists)?s0.data():null).catch(()=>null);
   _syncMyGens.push({g,n});
   const chunkSet=(batch,i)=>batch.set(nb.collection("chunks").doc(_syncChunkId(g,i)),{p:b64.slice(i*_SYNC_CHUNK,(i+1)*_SYNC_CHUNK),ver:now});
   const mainDoc={ n:n, ver:now, g:g, deviceUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp() };
@@ -22178,6 +22180,7 @@ async function _writeCloudDB(nb, now, b64){
   /* Clean-up is best effort and never fails the push: a leftover
      generation costs storage, never correctness. */
   try{
+    let prev=await prevP; if(!prev||prev.g===g) prev=prevSeen;
     const del=[];
     if(prev&&prev.n){
       if(prev.g){ if(prev.g!==g) for(let i=0;i<prev.n;i++) del.push(_syncChunkId(prev.g,i)); }

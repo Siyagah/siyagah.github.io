@@ -7686,8 +7686,8 @@ behind. Two devices writing at once also each fill their own generation,
 so they cannot tear each other's chunks either. A notebook that fits one
 request still goes in one atomic commit. Clean-up runs only after the new
 main doc commits, and is best effort: it deletes the generation the main
-doc named before (read fresh just before writing, else the last one seen,
-`_syncLastMd`), any earlier generation this device wrote in this session
+doc named before (read alongside the upload so a push is never delayed
+by it, else the last one seen, `_syncLastMd`), any earlier generation this device wrote in this session
 (`_syncMyGens`), and the old numbered chunks. A reader whose generation is
 deleted mid-read finds a chunk missing; its retry re-reads the main doc,
 which names the new one (v04.72). Reading: `_syncChunkId(md.g,i)`. A main doc
