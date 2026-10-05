@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.84.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.85.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,13 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.85** (5 Oct 2026) — a short name for a tab (owner chose "Only
+  names I type"). Right-click (laptop) / press-and-hold (touch) a tab →
+  ✏️ short name · ↺ full title again · 🎨 Tab colour. Shows on the main
+  bar, Multi tabs and the phone's Open tabs rows; the tooltip keeps the
+  full title. Stored in `DB.theme.tabNames` (never on the note: no
+  `updatedAt` bump); cleared = `""` so a merge can't resurrect it.
+  Section 48 **13/13** (unpatched 2/9); sync-audit `N29`/`N30` PASS.
 - **v04.84** (4 Oct 2026) — owner: "paragraph, space edit like the
   standard MS word" and "copying the content inside a headings by
   pressing … the headings".
@@ -58,20 +65,6 @@ must never accumulate here instead of there.
   `_fwRefreshMeta()` keeps exactly one formatting row; `_popPanelTop()`
   counts only a free-standing row. `37c`/`22b`/`23b` updated in place; new
   section 45: **24/24**; unpatched `--only 45,37c` 12/30. Full `app-check` **1405/1405, twice in a row**.
-- **v04.80** (4 Oct 2026) — owner: Details "doesn't work", ✚ should open in
-  the pane, Edit/Save "on the upper bar … at the corner", ✚ New in both
-  pop-ups. **Details:** reproduced only with a FULL localStorage (the
-  owner's): `setItem` threw and the strip re-read the old value. Now
-  `_popDetailsMem` holds it for the session. **✚:** `quickCapture('pane')`
-  → `_openNewNoteInPane()` for Pane 3's ✚ and palette; other callers are
-  unchanged (own Multi window). **Pop-ups:** `_popActsHTML()` gives ✚ New
-  plus ✏️ Edit/💾 Save, in row 1 at ≥640px and in the title row on the
-  phone (row 1 had no room for a tab). Save left the formatting row.
-  Single's reading view hides the pane toolbar's Edit/✚/‹ ›. Phone row 1
-  gained room: floating ✓ Saved, no strip arrows, "＋ Tab", ✕ without
-  "Close". `22a`/`22b`/`19f` updated in place; new section 44: **54/54**;
-  unpatched 7/40. The phone's ✕ is now at least 44px (`6p-17`). Full `app-check`
-  **1381/1381, twice in a row**.
 ---
 
 ## What this is

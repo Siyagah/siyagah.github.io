@@ -7913,3 +7913,66 @@ row**.
 - **Space BEFORE a paragraph** (Word has both before and after). After
   alone covers the gaps the owner marked; adding Before is one more row if
   asked.
+
+## v04.85 — a short name for a tab (5 Oct 2026)
+
+**The owner's words** (4 Oct 2026, a screenshot of two look-alike tabs,
+"Saudi Farm Projec…" and "Saudi – Farming Vill…"): "Is it possible that the
+file names in tab be given a short name to identify which one which, which
+won't change the main title of the note (the short name would only work on/
+for the tab) At the same time the short name also be identifiable from the
+title?" Asked how (two readings were possible), the owner chose **"Only
+names I type"** (5 Oct 2026): no automatic shortening. Built by the
+Architect.
+
+**What the owner gets.** A tab can be given a short name. Only the tab
+shows it. The note keeps its title everywhere else, and pointing at the tab
+(its tooltip) still shows the full title, plus "· tab name: …". A tab with
+no name shows its title exactly as before.
+- **Reached from the tab itself:** right-click it (laptop) or press and
+  hold it (phone, tablet). Its menu has ✏️ Give this tab a short name (or
+  Change …), ↺ Show the full title again once it has one, and 🎨 Tab colour.
+  A right-click on a main-bar tab used to open the colour picker directly;
+  that picker is now one row of this menu.
+- **The dialog** says what will and won't change ("Only the tab shows it.
+  The note stays titled: …"). It takes up to 30 characters. Enter saves.
+  "Use the title again" appears once a name exists.
+- **Everywhere a tab is drawn:**
+  - the main tab bar (tablet and laptop, and Single's bar on every size);
+  - every Multi window's tab bar;
+  - the phone's "Open tabs" rows in the 🏷 palette (read view) and the `+`
+    menu (editing), which now carry `data-tid` so a hold can find their note.
+
+**Stored as `DB.theme.tabNames = {noteId: "name"}`, never on the note.**
+Naming a tab therefore does not move the note's `updatedAt` or put it in
+Recently Edited. It is a plain-object theme key, so sync resolves it per
+note at the leaf (v04.42) with no new plumbing. **Clearing stores `""`, not a
+deleted key:** `_mergeThemeObjKey()` keeps a sub-key that only one side
+holds, so a deleted name would come back from the other device. The new
+sync-audit lines prove both directions.
+
+**Checks:**
+- **New section 48:**
+  - `48a` (1440): a real right-click opens the menu on top; naming makes
+    the tab read "Estimate" with the full title in its tooltip; the note's
+    title and `updatedAt` are unchanged; a Multi window's tab shows the
+    same name; "Show the full title again" (right-clicked on the Multi
+    tab) restores the title and stores `""`.
+  - `48b` (820, touch): a real CDP press-and-hold opens the menu without
+    switching tab; tapping Save names it.
+  - `48c` (390, touch): the 🏷 palette lists the open tab; a hold on its
+    row opens the menu on top without switching note; the row then reads
+    "Estimate".
+  - `--only 48` **13/13**. On v04.84: 2/9, the two that pass being "no
+    page errors". 390's "lists the open tab" fails there partly because
+    the rows carried no `data-tid` before this round.
+- **`tools/sync-audit.mjs`:** new `N29` (a name set) and `N30` (a name
+  cleared) both PASS both ways. 118 operations, 0 FAIL.
+- **`ship-check`'s leaked-note-id scan** (the v04.60 lesson: sweep the
+  class) now also covers `showTabMenu(event,'…')`, `renameTab('…')` and
+  `_setTabName('…')`. Tested both ways.
+
+**Not done, and why:**
+- **Dragging a tab out to sit side by side**: the owner's next request,
+  its own round.
+- **No automatic short names**: the owner chose names they type.

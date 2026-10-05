@@ -137,7 +137,7 @@ const debris = [
      and #ctx a real data-aid. The general fingerprint is any literal note
      id where the source only ever interpolates one. */
   [/data-(tid|aid)="[a-z0-9]{6,}"/, 'a data-tid/data-aid holding a REAL note id'],
-  [/(tabSelect|pinTabToPanel|closeTabGroup|closeTab|openTabClrPicker)\('[a-z0-9]{6,}'\)|pinTabDStart\(event,'[a-z0-9]{6,}'\)/, 'a tab-bar chip calling a handler with a REAL note id'],
+  [/(tabSelect|pinTabToPanel|closeTabGroup|closeTab|openTabClrPicker|renameTab|_setTabName)\('[a-z0-9]{6,}'\)|(pinTabDStart|showTabMenu)\(event,'[a-z0-9]{6,}'\)/, 'a tab-bar chip calling a handler with a REAL note id'],
 ].filter(([re]) => re.test(html)).map(([, what]) => what);
 r.check(debris.length === 0, 'index.html carries no markup captured from a running page',
   debris.length ? `found: ${debris.join('; ')}` : 'clean');
