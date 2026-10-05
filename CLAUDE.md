@@ -23,7 +23,8 @@ must never accumulate here instead of there.
   14.5px (Bold/Medium/Large kept on a calmer 15.5/17px scale), count pill,
   chevron. Types are rows inside the card. Classes and data attributes
   the drag/open code uses are unchanged. Section 50 **18/18**; unpatched,
-  every block aborts.
+  every block aborts. The stripe colour needs its fallback
+  (`6m-1` caught it). Full `app-check` **1519/1519, twice in a row**.
 - **v04.86** (5 Oct 2026) — drag a tab out to sit beside its note (owner:
   "draggable out of the tab to keep on the side of the original note").
   Both notes as Multi windows: tiled halves on laptop/tablet (dropped side

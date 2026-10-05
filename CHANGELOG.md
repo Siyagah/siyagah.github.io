@@ -8126,7 +8126,8 @@ variable the stylesheet uses is actually defined" (the v04.17 lesson),
 failed on all seven themes: the stripe and the icon chip read
 `var(--mw-acc)`. That variable is set inline on each card, but the rule
 named it with no fallback, so the sweep saw an undefined variable. Both
-uses are now `var(--mw-acc,var(--border2))`. `--only 6m-1,50` 32/32.
+uses are now `var(--mw-acc,var(--border2))`. `--only 6m-1,50` 32/32. Full
+`app-check` **1519/1519, twice in a row**.
 
 **Not done, and why:**
 - **The Coming-up strip above the cards** (`_renderComingUp`) keeps its
