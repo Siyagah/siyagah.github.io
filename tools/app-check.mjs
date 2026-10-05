@@ -11011,6 +11011,62 @@ await r.block('49d-open-beside-phone-390', async () => {
   await s.close();
 });
 
+/* ── 50. v04.87 — MyWall, elegant ────────────────────────────────────────
+   The owner: "Can you give the wall an elegant look, it looks so dumb."
+   Reached by a real tap on the sidebar's MyWall button; categories and
+   types opened by real clicks. Seeded: notes across every Note Type, and
+   the owner's own styling on three categories (colour, Bold, Large). */
+async function seedWall50(page) {
+  await page.evaluate(() => {
+    const cats = noteKindCats(), kinds = noteKinds(), now = Date.now();
+    cats[1].color = '#16a34a'; cats[1].fontSize = 'lg'; cats[1].bold = true;
+    cats[2].color = '#ea580c'; cats[2].fontSize = 'lg';
+    kinds.forEach((k, i) => { for (let j = 0; j < 1 + (i * 7) % 9; j++) DB.articles.push({ id: 'w' + i + '_' + j, title: 'Wall note ' + k.name + ' ' + j, content: '<p>x</p>', folderIds: ['f1'], tags: [], kind: k.id,
+      createdAt: new Date(now - (i * 9 + j) * 36e5).toISOString(), updatedAt: new Date(now - (i * 9 + j) * 36e5).toISOString() }); });
+    ST.mwCatOpen = {}; cats.forEach((c) => { ST.mwCatOpen[c.id] = false; });
+    persist(); render();
+  });
+}
+for (const vp of MERGE_SIZES) {
+await r.block(`50a-mywall-cards-${vp.name}`, async () => {
+  const s = await openApp({ viewport: { width: vp.width, height: vp.height }, db: seedDB() });
+  const { page } = s;
+  await seedWall50(page);
+  if (vp.width < 1200) await page.evaluate(() => showPane('sb'));
+  await page.locator('#sb-toolbar .sb-tb-btn', { hasText: 'MyWall' }).click();
+  await page.waitForTimeout(500);
+  const look = await page.evaluate(() => {
+    const p2 = document.getElementById('p2c') || document.getElementById('p2');
+    const cards = [...document.querySelectorAll('.mw-wall .mw-card')];
+    const lum = (c) => { const m = c.match(/\d+(\.\d+)?/g).map(Number); const f = (v) => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(m[0]) + .7152 * f(m[1]) + .0722 * f(m[2]); };
+    const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+    return { n: cards.length, eachOneHeader: cards.every((c) => c.querySelectorAll(':scope > .wall-cat-hd').length === 1),
+      inside: cards.every((c) => { const r = c.getBoundingClientRect(), q = p2.getBoundingClientRect(); return r.left >= q.left - 0.5 && r.right <= q.right + 0.5; }),
+      minH: Math.min(...cards.map((c) => c.querySelector('.wall-cat-hd').getBoundingClientRect().height)),
+      upper: cards.some((c) => getComputedStyle(c.querySelector('.mw-name')).textTransform === 'uppercase'),
+      names: cards.map((c) => { const n = c.querySelector('.mw-name'), cs = getComputedStyle(n), bg = getComputedStyle(c).backgroundColor;
+        return { t: n.textContent, color: cs.color, size: cs.fontSize, weight: cs.fontWeight, cr: +cr(cs.color, bg).toFixed(2), stripe: getComputedStyle(c, '::before').backgroundColor }; }),
+      pillCr: (() => { const p = document.querySelector('.mw-wall .mw-pill'); const cs = getComputedStyle(p); return +cr(cs.color, cs.backgroundColor).toFixed(2); })() };
+  });
+  r.check(look.n === 4 && look.eachOneHeader && look.inside, `${vp.name}: MyWall shows each category as one card, inside the note list's width`, JSON.stringify({ n: look.n, inside: look.inside }));
+  r.check(look.minH >= (vp.width < 1200 ? 50 : 46) && !look.upper, `${vp.name}: every card header is a comfortable target and its name is written as typed, not in capitals`, JSON.stringify({ minH: look.minH, upper: look.upper }));
+  const g = look.names[1], o = look.names[2], d = look.names[0];
+  r.check(g.color === 'rgb(22, 163, 74)' && g.stripe === 'rgb(22, 163, 74)' && g.size === '17px' && +g.weight >= 800 && o.color === 'rgb(234, 88, 12)' && o.size === '17px' && d.size === '14.5px',
+    `${vp.name}: the owner's own colour, Bold and Large still show, on the name and the card's stripe`, JSON.stringify(look.names));
+  r.check(d.cr >= 4.5 && look.pillCr >= 4.5, `${vp.name}: an unstyled name and the count pills read at 4.5:1 or better`, JSON.stringify({ name: d.cr, pill: look.pillCr }));
+  /* Open a category, then a type, by real clicks. */
+  await page.locator('.mw-wall .wall-cat-hd').nth(1).click(); await page.waitForTimeout(250);
+  await page.locator('.mw-wall .wall-grp-hd').first().click(); await page.waitForTimeout(250);
+  const open = await page.evaluate(() => { const c = document.querySelectorAll('.mw-wall .mw-card')[1];
+    return { exp: c.querySelector('.wall-cat-hd').getAttribute('aria-expanded'), kinds: c.querySelectorAll('.wall-grp-hd').length, notes: c.querySelectorAll('.mw-notes .ar, .mw-notes [data-aid], .mw-notes > *').length,
+      kindH: Math.min(...[...c.querySelectorAll('.wall-grp-hd')].map((k) => k.getBoundingClientRect().height)) }; });
+  r.check(open.exp === 'true' && open.kinds >= 1 && open.notes >= 1 && open.kindH >= (vp.width < 1200 ? 44 : 36),
+    `${vp.name}: a real click opens a category inside its card, and a click on a type lists its notes there`, JSON.stringify(open));
+  r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+}
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

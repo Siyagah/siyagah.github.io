@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.86">
+<meta name="app-version" content="04.87">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -478,6 +478,36 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 /* ── MyWALL subfolder type groups ────────────────────────────────────────── */
 .wall-cat-hd{opacity:.85;border-top:1px solid var(--border2);margin-top:4px}
 .wall-cat-hd:first-of-type{border-top:none;margin-top:0}
+/* v04.87 — MyWall, elegant: a title row, then one card per category. */
+.mw-wall .mw-top{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px;margin:2px 0 14px}
+.mw-wall .mw-ttl{display:flex;align-items:center;gap:8px;min-width:0}
+.mw-wall .mw-ttl-ico{font-size:18px;line-height:1}
+.mw-wall .mw-ttl-name{font-size:18px;font-weight:700;color:var(--t1);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mw-wall .mw-tools{display:inline-flex;border:1px solid var(--border2);border-radius:9px;overflow:hidden;background:var(--white)}
+.mw-wall .mw-tbtn{border:0;background:transparent;color:var(--t2);font-size:12px;padding:5px 10px;cursor:pointer;font-family:inherit}
+.mw-wall .mw-tbtn+.mw-tbtn{border-left:1px solid var(--border2)}
+.mw-wall .mw-tbtn:hover{background:var(--hover)}
+.mw-wall .mw-sum{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2)}
+.mw-wall .mw-sum .wall-badge{margin-left:0}
+.mw-wall .mw-card{position:relative;background:var(--white);border:1px solid var(--border);border-radius:12px;margin:0 0 8px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:box-shadow .15s,border-color .15s}
+.mw-wall .mw-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--mw-acc,var(--border2))}
+.mw-wall .mw-card:hover{border-color:var(--border2);box-shadow:0 3px 10px rgba(0,0,0,.06)}
+.mw-wall .mw-cat{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;margin:0;border:0;opacity:1;border-radius:0;min-height:48px;box-sizing:border-box;cursor:pointer}
+.mw-wall .mw-cat:hover{background:var(--hover)}
+.mw-wall .mw-ico{flex:0 0 30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;background:var(--paper);background:color-mix(in srgb,var(--mw-acc,var(--border2)) 14%,var(--white))}
+.mw-wall .mw-name{flex:1;min-width:0;font-size:14.5px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:0}
+.mw-wall .mw-pill{flex:0 0 auto;min-width:24px;text-align:center;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--t1);background:var(--paper);border:1px solid var(--border);border-radius:999px;padding:1px 8px}
+.mw-wall .mw-pill-s{font-size:11px;font-weight:600;padding:0 7px}
+.mw-wall .mw-chev{flex:0 0 14px;text-align:center;font-size:11px;color:var(--t2)}
+.mw-wall .mw-kinds{border-top:1px solid var(--border);padding:4px 0 6px}
+.mw-wall .mw-kind{display:flex;align-items:center;gap:8px;padding:7px 12px 7px 18px;margin:0;font-size:13px;color:var(--t1);text-transform:none;letter-spacing:0;min-height:38px;box-sizing:border-box;border-radius:0}
+.mw-wall .mw-kind:hover{background:var(--hover)}
+.mw-wall .mw-kind .wall-dot{margin:0}
+.mw-wall .mw-kname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mw-wall .mw-kind .wall-grp-handle{width:14px;margin:0 -2px 0 -6px}
+.mw-wall .wall-peek{padding:0 14px 6px 48px}
+.mw-wall .mw-notes{padding:2px 10px 8px 14px}
+@media(max-width:1199.98px){.mw-wall .mw-cat{min-height:52px}.mw-wall .mw-kind{min-height:44px}}
 .mwsub-cat-hd{display:flex;align-items:center;gap:6px;padding:8px 10px 4px 12px;cursor:pointer;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3);user-select:none;-webkit-user-select:none}
 .mwsub-cat-hd:hover{color:var(--t1)}
 .mwsub-cat-hd .mw-tog{font-size:10px;flex-shrink:0;min-width:10px}
@@ -3192,7 +3222,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.86</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.87</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -23577,13 +23607,23 @@ function renderMyWall(sf){
 
   const _mwSz=DB.theme?.mwFontSize||'sm';
   const _mwSzCls=_mwSz!=='sm'?' mw-sz-'+_mwSz:'';
-  let h='<div class="fv'+_mwSzCls+'">'+`<div class="slbl">${sf.icon} ${esc(dispName)} `
-    +(total?`<span class="wall-badge">${total} pending</span>`
-           :`<span class="wall-badge wall-clear">all clear ✓</span>`)
-    +`<span style="float:right;display:flex;gap:4px">`
-    +`<button class="btn bn" style="font-size:10.5px;padding:2px 6px" onclick="mwToggleAllCats()" title="Expand or collapse every category">⇅ All</button>`
-    +`<button class="btn bn" style="font-size:10.5px;padding:2px 6px" onclick="mwToggleViewMode()" title="Compact = category/type names only · Preview = peek the top note under each type">${mwPreview?'👁 Preview':'▤ Compact'}</button>`
-    +`</span></div>`;
+  /* v04.87 — the owner: "Can you give the wall an elegant look, it looks so
+     dumb." A title row (name, one quiet summary line, the two view buttons
+     as one small segmented pair), then each category as a CARD: a stripe
+     and icon chip in the category's own colour (the owner's 🎨 choice; else
+     its first type's colour), the name in sentence case at a steady size
+     (the owner's Bold / Medium / Large still lift it, on a gentler scale),
+     a count pill and a chevron. Its note types sit inside the card as
+     rows: colour dot, name, count pill. Every class and data attribute the
+     drag, open/close and right-click code looks for (wall-cat-hd,
+     wall-grp-hd, data-catid, data-kid) is unchanged. */
+  const _catN=noteKindCats().filter(c=>kindsInCat(c.id).some(k=>pendingArts.some(a=>artKinds(a).includes(k.id)))).length;
+  let h='<div class="fv mw-wall'+_mwSzCls+'">'
+    +`<div class="mw-top"><div class="mw-ttl"><span class="mw-ttl-ico">${sf.icon}</span><span class="mw-ttl-name">${esc(dispName.replace(/^\(\d+\)\s*/,''))}</span></div>`
+    +`<div class="mw-tools"><button class="mw-tbtn" onclick="mwToggleAllCats()" title="Expand or collapse every category">⇅ All</button>`
+    +`<button class="mw-tbtn" onclick="mwToggleViewMode()" title="Compact = category/type names only · Preview = peek the top note under each type">${mwPreview?'👁 Preview':'▤ Compact'}</button></div>`
+    +`<div class="mw-sum">`+(total?`<span class="wall-badge">${total} pending</span><span class="mw-sum-t">across ${_catN} categor${_catN===1?'y':'ies'}</span>`
+           :`<span class="wall-badge wall-clear">all clear ✓</span>`)+`</div></div>`;
 
   h+=_renderComingUp();
   if(!total){
@@ -23610,7 +23650,11 @@ function renderMyWall(sf){
     if(!kinds.length)return; /* categories with nothing pending are hidden from MyWALL entirely */
     const catCnt=kinds.reduce((s,k)=>s+(byKind[k.id]||[]).length,0);
     const cOpen=mwCatIsOpen(cat.id);
-    h+=`<div class="slbl sf-grp sf-grp-hd wall-cat-hd" data-catid="${cat.id}"
+    const _acc=cat.color||(kinds[0]&&kinds[0].color)||'var(--border2)';
+    const _nm=[];if(cat.color)_nm.push('color:'+cat.color);if(cat.bold)_nm.push('font-weight:800');
+    const _fs={md:'15.5px',lg:'17px'}[cat.fontSize];if(_fs)_nm.push('font-size:'+_fs);
+    h+=`<div class="mw-card${cOpen?' open':''}" style="--mw-acc:${_acc}">`;
+    h+=`<div class="sf-grp-hd wall-cat-hd mw-cat" data-catid="${cat.id}"
       draggable="true"
       ondragstart="wallCatDStart(event,'${cat.id}')"
       ondragend="wallCatDEnd(event)"
@@ -23618,12 +23662,13 @@ function renderMyWall(sf){
       ondragleave="wallCatDLeave(event,'${cat.id}')"
       ondrop="wallCatDDrop(event,'${cat.id}')"
       oncontextmenu="event.preventDefault();showNtiCatMenu(event,'${cat.id}','')"
-      onclick="togMwCat('${cat.id}')" role="button">
-      <span class="sf-grp-tog">${cOpen?'▾':'▸'}</span>
-      <span style="font-size:11px">${esc(cat.icon||'📝')}</span>
-      <span style="${catTextStyle(cat)}">${esc(cat.name)}</span>
-      <span style="font-weight:400">(${catCnt})</span></div>`;
-    if(!cOpen)return;
+      onclick="togMwCat('${cat.id}')" role="button" aria-expanded="${cOpen}">
+      <span class="mw-ico">${esc(cat.icon||'📝')}</span>
+      <span class="mw-name" style="${_nm.join(';')}">${esc(cat.name)}</span>
+      <span class="mw-pill">${catCnt}</span>
+      <span class="mw-chev">${cOpen?'▾':'▸'}</span></div>`;
+    if(!cOpen){h+='</div>';return;}
+    h+='<div class="mw-kinds">';
 
     kinds.forEach(k=>{
       const arr=(byKind[k.id]||[]).slice()
@@ -23635,8 +23680,8 @@ function renderMyWall(sf){
         onclick="event.stopPropagation()"
         ontouchstart="showWallKindCtx(event,'${k.id}')">⠿</span>`;
       const peek=(mwPreview&&!gOpen&&arr[0])
-        ?`<div class="wall-peek" style="padding-left:44px">→ ${esc((arr[0].title||'Untitled').slice(0,60))}</div>`:'';
-      h+=`<div class="slbl sf-grp sf-grp-hd wall-grp-hd" data-kid="${k.id}" style="padding-left:22px"
+        ?`<div class="wall-peek">→ ${esc((arr[0].title||'Untitled').slice(0,60))}</div>`:'';
+      h+=`<div class="sf-grp-hd wall-grp-hd mw-kind${gOpen?' open':''}" data-kid="${k.id}"
         draggable="true"
         ondragstart="wallGrpDStart(event,'${k.id}')"
         ondragend="wallGrpDEnd(event)"
@@ -23646,14 +23691,15 @@ function renderMyWall(sf){
         oncontextmenu="showWallKindCtx(event,'${k.id}')"
         onclick="togSfGrp('${esc(gkey)}')" role="button">`
         +handle
-        +`<span class="sf-grp-tog">${gOpen?'▾':'▸'}</span>${dot}<span style="color:${k.color}">${esc(k.name)}</span> (${arr.length})</div>`
+        +`${dot}<span class="mw-kname">${esc(k.name)}</span><span class="mw-pill mw-pill-s">${arr.length}</span><span class="mw-chev">${gOpen?'▾':'▸'}</span></div>`
         +peek;
       if(gOpen){
-        h+='<div class="al">';
+        h+='<div class="al mw-notes">';
         arr.forEach(a=>{h+=artCard(a,ST.article===a.id,true,true);});
         h+='</div>';
       }
     });
+    h+='</div></div>';
   });
   return h+'</div>';
 }

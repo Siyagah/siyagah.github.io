@@ -8065,3 +8065,73 @@ Full `app-check` **1501/1501, twice in a row** (after that fix).
   have to undo that menu.
 - **Single beside Multi.** Two kinds of pop-up at once is a G4 decision,
   not this round's.
+
+## v04.87 — MyWall, elegant (5 Oct 2026)
+
+**The owner's words** (5 Oct 2026, a laptop screenshot of MyWall: a long
+list of rows on thin lines, most in small grey capitals with a 📝 and a
+count in brackets, a few in large coloured words): "Bismillah! Can you give
+the wall an elegant look, it looks so dumb." Built by the Architect.
+
+**What was wrong, looked at before changing anything** (screenshots at 390,
+820 and 1440 on a seeded wall):
+- Every category row borrowed `.slbl` (10px grey capitals, wide letter
+  spacing).
+- The rows were separated only by a 1px rule, with uneven gaps from
+  `.sf-grp`'s 14px top margin.
+- An owner-styled category (🎨 colour + Large) jumped to 15px coloured
+  capitals beside 10px grey ones.
+- The counts were bare "(317)".
+
+**What the owner gets.** Same data, same order, same controls:
+- **A title row:** "🧱 MyWall" (the "(08)" number dropped from the
+  heading), the ⇅ All / ▤ Compact buttons as one small segmented pair, and
+  a summary line: "413 pending · across 17 categories".
+- **One card per category:** white, rounded, with a soft shadow and a
+  4px stripe down its left edge in the category's colour (the owner's 🎨
+  choice; else its first Note Type's colour). The icon sits in a tinted
+  rounded chip. The name is written as typed (no forced capitals) at
+  14.5px semibold. The count is a pill, with a chevron at the end.
+  Headers are at least 48px tall (52px under 1200px).
+- **The owner's own styling is kept, on a calmer scale:** colour on the
+  name and the stripe, Bold → 800, Medium → 15.5px, Large → 17px (the old
+  15px Large next to 10px capitals was the jarring part).
+- **Inside an opened card**, each Note Type is a row: colour dot, name in
+  ink (no longer the type's own colour as text), count pill, chevron, ⠿
+  handle. Rows are 38px tall (44px under 1200px). Its notes list inside
+  the same card.
+
+Every class and data attribute the drag-to-reorder, open/close and
+right-click code looks for (`wall-cat-hd`, `wall-grp-hd`, `data-catid`,
+`data-kid`) is unchanged, and so are the handlers. MyWall's own text-size
+setting (`.mw-sz-md/lg`) still applies.
+
+**All three layouts get the same cards.** The list is one column at every
+width. Only the target heights grow on touch sizes.
+
+**Checks: new section 50** (×390/820/1440), reached by a real tap on the
+sidebar's MyWall button:
+- one card per category, inside the list's width;
+- headers ≥50px (touch) / ≥46px, names not in capitals;
+- the owner's colour, Bold and Large shown on the name and the stripe
+  (exact computed values);
+- an unstyled name and the count pills at ≥4.5:1;
+- a real click opens a category inside its card, and a click on a type
+  lists its notes there.
+
+`--only 50` **18/18**. On v04.86 every block aborts (no cards to find).
+
+**Caught by the standing sweep in review.** `6m-1`, "every colour
+variable the stylesheet uses is actually defined" (the v04.17 lesson),
+failed on all seven themes: the stripe and the icon chip read
+`var(--mw-acc)`. That variable is set inline on each card, but the rule
+named it with no fallback, so the sweep saw an undefined variable. Both
+uses are now `var(--mw-acc,var(--border2))`. `--only 6m-1,50` 32/32. Full
+`app-check` **1519/1519, twice in a row**.
+
+**Not done, and why:**
+- **The Coming-up strip above the cards** (`_renderComingUp`) keeps its
+  look. It is a different surface and was not in the screenshot.
+- **Note cards inside a type** are the app's standard `artCard`, shared
+  with every list; restyling them would change every list in the app, so
+  they are left alone.
