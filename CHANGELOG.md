@@ -7977,3 +7977,78 @@ sync-audit lines prove both directions.
 - **Dragging a tab out to sit side by side**: the owner's next request,
   its own round.
 - **No automatic short names**: the owner chose names they type.
+
+## v04.86 — drag a tab out to sit beside its note (5 Oct 2026)
+
+**The owner's words** (4 Oct 2026, a Single pop-up with two tabs and its
+Sidepane): "Is it also possible that a note from tab can be draggable out of
+the tab to keep on the side of the original note (Multi note pop-up option to
+work)". Built by the Architect.
+
+**The shape, per layout.** Only one kind of pop-up is up at a time (G4:
+opening Multi closes Single), so "beside" means **both notes as Multi
+windows**:
+- **Laptop and tablet:** two windows tiled across the screen. The dragged
+  note goes on the half it was dropped on, and the note it was a tab of
+  takes the other half (8px margins, full height, each remembered by
+  `_fwSavePos()` as usual).
+- **Phone:** Multi is a full-screen sheet there, so both open as sheets,
+  the tab's note on top, with the existing switcher bar (`body.fw-sheets`)
+  along the bottom. The other note is one tap away.
+
+**Two ways in.**
+- **Drag** a tab out of its bar (the main bar, Single's bar, or a Multi
+  window's bar, whose tabs are now `draggable` too) and let go anywhere that
+  is not a drop target. `tabDragEnd()` → `openTabBeside()`. Real targets
+  keep their jobs: the Sidepane still pins, a tab bar still adds (v04.78),
+  letting go on the tab's own bar does nothing, and the sidebar is ignored.
+- **🗗 Open beside this note (Multi)**, a new row in the tab menu (v04.85),
+  shown only when the tab is a different note. This is the touch route,
+  because a press-and-hold opens that menu rather than a drag.
+
+The note a tab belongs to is the Multi window it sits in, else the note on
+screen.
+
+**Measured on the way: "was the drop taken?" cannot be read from
+`dropEffect` here.** The document accepts every drop (`dragover`/`drop`
+`preventDefault()` at the root, so a stray file never navigates the app
+away), so the browser reports every drop as handled. The first cut trusted
+`dropEffect` and the laptop drag opened nothing. The signal that works is
+the app's own: every real tab drop target clears `_pinDragAid` when it
+takes the drop. If it is still set at `dragend`, nothing took it.
+
+**Tab drags now carry a private type** (`application/x-siyagah-note`), not
+`text/plain`. Every in-app drop target reads `_pinDragAid` first. Measured:
+the same document-wide drop guard already stopped a tab dropped on a note
+being edited from pasting its id into the text, so this is a second guard,
+not a fix. `49a`'s "pasted nothing" line therefore passes on v04.85 too
+(see below).
+
+**Checks: new section 49.**
+- `49a` (1440): a real mouse drag of a main-bar tab, let go over the right
+  half of the note being edited. Two non-overlapping full-height windows,
+  the tab's note on the right; nothing pasted into the note; no Single
+  left open.
+- `49b` (1440):
+  - dragged out of a Multi window's bar and let go on the left half: the
+    tab's note on the left, the window's own note moving right;
+  - let go on its own bar: nothing opens;
+  - let go on the window's Sidepane: pinned, nothing opens. (The test's
+    first drop point landed on that Sidepane and pinned the note,
+    correctly; the point was moved, not the feature.)
+- `49c` (820, touch): a real press-and-hold offers 🗗 Open beside; tapping
+  it opens both side by side inside the screen.
+- `49d` (390, touch): from the 🏷 palette's open-tab row, both open as
+  sheets, the tab's note on top, the switcher bar on.
+
+`--only 49` **14/14**. On v04.85: 6/13. Besides the "no page errors" lines,
+three pass there by construction: "nothing opens on its own bar" and "no
+Single left open" (the old code opens nothing at all), and "pasted
+nothing" (the document's drop guard, above).
+
+**Not done, and why:**
+- **Touch drag-out** (dragging a tab with a finger). A hold opens the tab
+  menu, whose 🗗 row does the same job in one more tap. A finger-drag would
+  have to undo that menu.
+- **Single beside Multi.** Two kinds of pop-up at once is a G4 decision,
+  not this round's.

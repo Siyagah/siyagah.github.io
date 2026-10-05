@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.85.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.86.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,14 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.86** (5 Oct 2026) — drag a tab out to sit beside its note (owner:
+  "draggable out of the tab to keep on the side of the original note").
+  Both notes as Multi windows: tiled halves on laptop/tablet (dropped side
+  wins), two sheets + switcher bar on a phone. By drag (main, Single and
+  Multi tab bars) or the tab menu's 🗗 Open beside (the touch route).
+  "Was the drop taken" = `_pinDragAid` still set at `dragend`, NOT
+  `dropEffect` (the document accepts every drop). Tab drags carry
+  `application/x-siyagah-note`. Section 49 **14/14**; unpatched 6/13.
 - **v04.85** (5 Oct 2026) — a short name for a tab (owner chose "Only
   names I type"). Right-click (laptop) / press-and-hold (touch) a tab →
   ✏️ short name · ↺ full title again · 🎨 Tab colour. Shows on the main
@@ -57,15 +65,6 @@ must never accumulate here instead of there.
   so nothing is lost). Reproduced first in `sync-e2e` (new 9b, 9c): 23/23,
   unpatched 13/16. `26e`/`36d` updated in place. Full `app-check`
   **1409/1409, twice in a row**.
-- **v04.81** (4 Oct 2026) — the formatting tools move up INTO the Details
-  line (owner's screenshot). Closed: `_popDetailsLineHTML()` = `.pdl-meta`
-  (chips) · `.pdl-fmt` (`_popFormatRowHTML()`) · ▾ Details, three units that
-  wrap as wholes. One line where it fits (a 1440 Multi window); otherwise the
-  tools and ▾ Details take a second line. Open: the old separate formatting
-  row under the four-row strip. Single's ▾/▴ rebuilds `#p3h`;
-  `_fwRefreshMeta()` keeps exactly one formatting row; `_popPanelTop()`
-  counts only a free-standing row. `37c`/`22b`/`23b` updated in place; new
-  section 45: **24/24**; unpatched `--only 45,37c` 12/30. Full `app-check` **1405/1405, twice in a row**.
 ---
 
 ## What this is

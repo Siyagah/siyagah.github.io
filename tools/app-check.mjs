@@ -10916,6 +10916,101 @@ await r.block('48c-tab-short-name-phone-open-tabs-390', async () => {
   await s.close();
 });
 
+/* ── 49. v04.86 — drag a tab out to sit beside its note ──────────────────
+   The owner: "a note from tab can be draggable out of the tab to keep on the
+   side of the original note (Multi note pop-up option to work)". Real input:
+   a real mouse drag (Chromium runs native drag-and-drop from page.mouse), a
+   real CDP press-and-hold and real taps. Tabs are seeded as in section 48. */
+const wins49 = (page) => page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.float-win')].map((w) => {
+  const r = w.getBoundingClientRect(); return [w.id.slice(3), { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }]; })));
+async function dragOut49(page, from, to) {
+  const b = await page.locator(from).first().boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2 + 10, b.y + b.height / 2 + 10, { steps: 3 });
+  await page.mouse.move(to.x, to.y, { steps: 12 });
+  await page.mouse.up();
+  await page.waitForTimeout(500);
+}
+await r.block('49a-drag-tab-out-from-main-bar-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await seedTabs48(page);
+  await page.evaluate(() => { startEdit(); }); await page.waitForTimeout(400);
+  const before = await page.evaluate(() => DB.articles.find((a) => a.id === 'a1').content);
+  /* Let go over the RIGHT half of the note being edited. */
+  await dragOut49(page, '#tab-bar .tab-it[data-tid="a2"]', { x: 1150, y: 520 });
+  const w = await wins49(page);
+  const ok = w.a1 && w.a2 && w.a2.x >= 720 - 8 && w.a1.x <= 16 && w.a1.x + w.a1.w <= w.a2.x && w.a2.x + w.a2.w <= 1440 && w.a1.h > 800;
+  r.check(!!ok, '1440: dragging a tab out and letting go on the right opens it as a Multi window on the right half, its note on the left half, not overlapping', JSON.stringify(w));
+  const after = await page.evaluate(() => { _flushAllEditors && _flushAllEditors(); return DB.articles.find((a) => a.id === 'a1').content; });
+  r.check(after === before && !/\ba2\b/.test(after.replace(before, '')), '1440: letting go over the note being edited pasted nothing into it', JSON.stringify(after.slice(0, 120)));
+  const single = await page.evaluate(() => !!ST.noteModal);
+  r.check(!single, '1440: no Single pop-up is left open behind the two windows', single);
+  r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+await r.block('49b-drag-tab-out-of-a-multi-window-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await seedTabs48(page);
+  await page.evaluate(() => popOutNote('a1')); await page.waitForTimeout(500);
+  /* Let go on the LEFT half this time, over the window's own text (its
+     Sidepane, further left, is a real drop target: it pins). */
+  await dragOut49(page, '#fw-a1 .fw-tabs .tab-it[data-tid="a2"]', { x: 620, y: 600 });
+  const w = await wins49(page);
+  const ok = w.a1 && w.a2 && w.a2.x <= 16 && w.a1.x >= 720 - 8 && w.a2.x + w.a2.w <= w.a1.x;
+  r.check(!!ok, '1440: a tab dragged out of a Multi window and let go on the left opens on the left half, the window\'s own note moving to the right half', JSON.stringify(w));
+  /* And letting go on its own bar does nothing. */
+  await page.evaluate(() => { document.querySelectorAll('.float-win').forEach((x) => x.remove()); }); 
+  await page.evaluate(() => popOutNote('a1')); await page.waitForTimeout(400);
+  const b = await page.locator('#fw-a1 .fw-tabs').boundingBox();
+  await dragOut49(page, '#fw-a1 .fw-tabs .tab-it[data-tid="a2"]', { x: b.x + b.width - 60, y: b.y + b.height / 2 });
+  const w2 = await wins49(page);
+  r.check(Object.keys(w2).length === 1, '1440: letting go on the tab bar itself opens nothing', JSON.stringify(Object.keys(w2)));
+  /* A real drop target still wins: the window's Sidepane pins, and nothing opens. */
+  const pp = await page.locator('#fw-a1 #pin-panel, #fw-a1 .pin-left').first().boundingBox();
+  if (pp) await dragOut49(page, '#fw-a1 .fw-tabs .tab-it[data-tid="a2"]', { x: pp.x + pp.width / 2, y: pp.y + pp.height / 2 });
+  const w3 = await wins49(page), pinned = await page.evaluate(() => (DB.theme.pinTabIds || []).includes('a2'));
+  r.check(!!pp && pinned && Object.keys(w3).length === 1, '1440: a tab let go on the Sidepane is pinned there, and no window opens', JSON.stringify({ pp: !!pp, pinned, wins: Object.keys(w3) }));
+  r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+await r.block('49c-open-beside-from-tab-menu-820', async () => {
+  const s = await openApp({ viewport: { width: 820, height: 1180 }, db: seedDB(), hasTouch: true });
+  const { page } = s;
+  await seedTabs48(page);
+  await page.evaluate(() => showPane('p3')); await page.waitForTimeout(300);
+  await hold48(page, page.locator('#tab-bar .tab-it[data-tid="a2"]'));
+  const item = page.locator('#ctx .ci', { hasText: 'Open beside' });
+  const n = await item.count();
+  r.check(n === 1, '820: holding a tab offers 🗗 Open beside this note', n);
+  if (n) { await item.tap(); await page.waitForTimeout(500); }
+  const w = await wins49(page);
+  const ok = w.a1 && w.a2 && w.a1.x >= 0 && w.a2.x >= 0 && w.a1.x + w.a1.w <= 820 && w.a2.x + w.a2.w <= 820 && (w.a1.x + w.a1.w <= w.a2.x || w.a2.x + w.a2.w <= w.a1.x);
+  r.check(!!ok, '820: tapping it opens both notes as Multi windows side by side, inside the screen', JSON.stringify(w));
+  r.check(s.errors.length === 0, '820: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+await r.block('49d-open-beside-phone-390', async () => {
+  const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB(), hasTouch: true });
+  const { page } = s;
+  await seedTabs48(page);
+  await page.evaluate(() => showPane('p3')); await page.waitForTimeout(300);
+  await page.locator('#p3h button[onclick*="_p3NtiPalette"]:visible').first().tap(); await page.waitForTimeout(300);
+  await hold48(page, page.locator('.eb-tab-row[data-tid="a2"]:visible').first());
+  const item = page.locator('#ctx .ci', { hasText: 'Open beside' });
+  const n = await item.count();
+  r.check(n === 1, '390: holding an open-tab row offers 🗗 Open beside this note', n);
+  if (n) { await item.tap(); await page.waitForTimeout(500); }
+  const st = await page.evaluate(() => ({ wins: [...document.querySelectorAll('.float-win')].map((w) => w.id), sheets: document.body.classList.contains('fw-sheets'),
+    top: (() => { const ws = [...document.querySelectorAll('.float-win')]; ws.sort((a, b) => (+b.style.zIndex) - (+a.style.zIndex)); return ws[0] && ws[0].id; })() }));
+  r.check(st.wins.includes('fw-a1') && st.wins.includes('fw-a2') && st.sheets && st.top === 'fw-a2',
+    '390: both notes open as sheets, the tab\'s note on top, with the switcher bar to reach the other', JSON.stringify(st));
+  r.check(s.errors.length === 0, '390: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
