@@ -8057,6 +8057,8 @@ app. 9c now waits until no device has written for 4s before its setup.
 `sync-e2e` 23/23, three runs in a row. The only effect such a race can have
 in real use is leftover old numbered pieces in storage, never correctness.
 
+Full `app-check` **1501/1501, twice in a row** (after that fix).
+
 **Not done, and why:**
 - **Touch drag-out** (dragging a tab with a finger). A hold opens the tab
   menu, whose 🗗 row does the same job in one more tap. A finger-drag would

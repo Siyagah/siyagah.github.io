@@ -24,6 +24,8 @@ must never accumulate here instead of there.
   "Was the drop taken" = `_pinDragAid` still set at `dragend`, NOT
   `dropEffect` (the document accepts every drop). Tab drags carry
   `application/x-siyagah-note`. Section 49 **14/14**; unpatched 6/13.
+  `sync-e2e` 9c now waits for quiet before its setup (a test race). Full
+  `app-check` **1501/1501, twice in a row**.
 - **v04.85** (5 Oct 2026) — a short name for a tab (owner chose "Only
   names I type"). Right-click (laptop) / press-and-hold (touch) a tab →
   ✏️ short name · ↺ full title again · 🎨 Tab colour. Shows on the main
