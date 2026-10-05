@@ -8121,6 +8121,13 @@ sidebar's MyWall button:
 
 `--only 50` **18/18**. On v04.86 every block aborts (no cards to find).
 
+**Caught by the standing sweep in review.** `6m-1`, "every colour
+variable the stylesheet uses is actually defined" (the v04.17 lesson),
+failed on all seven themes: the stripe and the icon chip read
+`var(--mw-acc)`. That variable is set inline on each card, but the rule
+named it with no fallback, so the sweep saw an undefined variable. Both
+uses are now `var(--mw-acc,var(--border2))`. `--only 6m-1,50` 32/32.
+
 **Not done, and why:**
 - **The Coming-up strip above the cards** (`_renderComingUp`) keeps its
   look. It is a different surface and was not in the screenshot.
