@@ -8046,6 +8046,17 @@ three pass there by construction: "nothing opens on its own bar" and "no
 Single left open" (the old code opens nothing at all), and "pasted
 nothing" (the document's drop guard, above).
 
+**A harness race found in review, fixed in the test.** The second full run
+failed `sync-e2e` 9c (v04.82's "old half-saved copy is repaired"): the
+three devices showed busy dots, the copy had never been repaired
+(`repairedAfterMs` 0) and 14 numbered pieces remained. Cause: a save from
+9b's merge was still in flight when 9c put the old-layout copy in place. It
+landed just after, superseding the setup, and its clean-up had read the
+main doc before the setup existed. That is the test racing a push, not the
+app. 9c now waits until no device has written for 4s before its setup.
+`sync-e2e` 23/23, three runs in a row. The only effect such a race can have
+in real use is leftover old numbered pieces in storage, never correctness.
+
 **Not done, and why:**
 - **Touch drag-out** (dragging a tab with a finger). A hold opens the tab
   menu, whose 🗗 row does the same job in one more tap. A finger-drag would
