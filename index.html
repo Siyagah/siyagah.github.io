@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.84">
+<meta name="app-version" content="04.85">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3192,7 +3192,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.84</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.85</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6881,13 +6881,13 @@ function renderTabBar(){
   const ownArt=(owner&&tabs.length)?DB.articles.find(x=>x.id===owner):null;
   const chip=(a,isOwner)=>{
     const id=a.id;
-    const lbl=(a.title||'Untitled').slice(0,22)+((a.title||'').length>22?'…':'');
+    const lbl=_tabLabel(a,22);
     const on=ST.article===id?' on':'';
     const _tbc=a.tabColor||'';
     return `<div class="tab-it${on}${isOwner?' tab-own':''}" data-tid="${id}" style="${_tbc?`border-bottom:3px solid ${_tbc}`:''}"` +
            ` draggable="true" ondragstart="pinTabDStart(event,'${id}')"` +
-           ` onclick="tabSelect('${id}')" oncontextmenu="event.preventDefault();event.stopPropagation();openTabClrPicker(event,'${id}')"` +
-           ` title="${esc(a.title||'Untitled')}${isOwner?' — owns this tab group (✕ closes all its tabs)':''}">`
+           ` onclick="tabSelect('${id}')" oncontextmenu="event.preventDefault();event.stopPropagation();showTabMenu(event,'${id}')"` +
+           ` title="${esc(_tabTitleAttr(a))}${isOwner?' — owns this tab group (✕ closes all its tabs)':''}">`
       +(isOwner?'<span class="tab-own-dot">◆</span>':'')
       +`<span class="tab-lbl" ${_tbc?`style="color:${_tbc}"`:''}>${esc(lbl)}</span>`
       +`<button class="tab-x" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();pinTabToPanel('${id}')" title="Pin to sidepane">📌</button>`
@@ -9895,6 +9895,90 @@ function showTagClrPicker(ev,tag){
     persist();render();
   });
 }
+/* ══ v04.85 — A SHORT NAME FOR A TAB ══════════════════════════════════════
+   The owner: "the file names in tab be given a short name to identify which
+   one which, which won't change the main title of the note (the short name
+   would only work on/ for the tab)", and, asked how, chose "Only names I
+   type" (5 Oct 2026): no automatic shortening. A tab shows its note's title
+   as before until the owner names it. Pointing at it (its tooltip) still
+   shows the full title.
+   Stored as DB.theme.tabNames = {noteId: "name"} — never on the note, so
+   naming a tab does not move the note's updatedAt or put it in Recently
+   Edited. It is a plain-object theme key, so sync resolves it per note at the
+   leaf (v04.42) with no new plumbing. Clearing a name stores "" rather than
+   deleting the key: the leaf merge keeps a sub-key the other side still
+   holds, so a deleted one would come back from the other device.
+   Reached from the tab itself: right-click (laptop), press and hold (touch),
+   on the main tab bar, a Multi window's tabs, Single's bar, and the phone's
+   "Open tabs" rows. The menu also keeps 🎨 Tab colour, which a right-click
+   on a main-bar tab used to open directly. */
+function _tabNameOf(id){const m=DB.theme&&DB.theme.tabNames;const v=m&&typeof m[id]==='string'?m[id].trim():'';return v;}
+function _tabLabel(a,max){const n=_tabNameOf(a.id);const t=n||a.title||'Untitled';return t.length>max?t.slice(0,max)+'\u2026':t;}
+function _tabTitleAttr(a){const n=_tabNameOf(a.id);return (a.title||'Untitled')+(n?' \u00b7 tab name: '+n:'');}
+function _setTabName(id,v){
+  if(!DB.theme)DB.theme={};
+  const m=Object.assign({},DB.theme.tabNames||{});
+  v=String(v||'').replace(/\s+/g,' ').trim().slice(0,30);
+  if(!v&&!(id in m))return;
+  m[id]=v;DB.theme.tabNames=m;
+  persist();
+  try{renderTabBar();}catch(e){}
+  try{_fwRefreshTabsAll();}catch(e){}
+  toast(v?'✏️ Tab named "'+v+'"':'Tab name removed: the tab shows the note\'s title again');
+}
+function renameTab(id){
+  hideCtx();
+  const a=DB.articles.find(x=>x.id===id);if(!a)return;
+  const cur=_tabNameOf(id);
+  showModal(`<div class="mt">✏️ Short name for this tab</div>
+    <div style="font-size:12.5px;color:var(--t2);margin:-4px 0 8px">Only the tab shows it. The note stays titled: <b>${esc(a.title||'Untitled')}</b></div>
+    <input class="mi" id="tab-ren-inp" maxlength="30" value="${esc(cur)}" placeholder="e.g. Estimate"
+      onkeydown="if(event.key==='Enter'){_setTabName('${id}',this.value);closeModal();}if(event.key==='Escape')closeModal()">
+    <div class="ma">
+      ${cur?`<button class="btn" onclick="_setTabName('${id}','');closeModal()">Use the title again</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn bp" onclick="_setTabName('${id}',document.getElementById('tab-ren-inp').value);closeModal()">Save</button>
+    </div>`);
+  setTimeout(()=>{const i=document.getElementById('tab-ren-inp');if(i){i.focus();i.select();}},50);
+}
+let _tabMenuEv=null;
+function showTabMenu(ev,id){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  const a=DB.articles.find(x=>x.id===id);if(!a)return;
+  _tabMenuEv={clientX:ev.clientX,clientY:ev.clientY};
+  const m=document.getElementById('ctx');
+  const cur=_tabNameOf(id);
+  m.innerHTML='<div class="ci-nti-hd">'+esc((a.title||'Untitled').slice(0,40))+'</div>'
+    +'<div class="ci" onclick="renameTab(\''+id+'\')">✏️ '+(cur?'Change the tab\'s short name':'Give this tab a short name')+'</div>'
+    +(cur?'<div class="ci" onclick="hideCtx();_setTabName(\''+id+'\',\'\')">↺ Show the full title again</div>':'')
+    +'<div class="ci" onclick="event.stopPropagation();hideCtx();openTabClrPicker(event,\''+id+'\')">🎨 Tab colour</div>';
+  m.style.display='block';
+  const vw=window.innerWidth,vh=window.innerHeight,mw=m.offsetWidth||200,mh=m.offsetHeight||100;
+  m.style.left=Math.max(5,Math.min(ev.clientX,vw-mw-5))+'px';m.style.top=Math.max(5,Math.min(ev.clientY,vh-mh-5))+'px';
+}
+/* Press and hold a tab on a touch screen (iOS fires no contextmenu). The
+   click a fired hold would produce is swallowed, so holding never switches
+   tab. Android's own contextmenu reaches the inline handlers / the
+   delegated one below and cancels the timer. */
+(function(){
+  let t=null,x0=0,y0=0,fired=false;
+  const tabOf=e=>{const el=e.target&&e.target.closest&&e.target.closest('.tab-it[data-tid],.eb-tab-row[data-tid]');
+    if(!el||(e.target.closest&&e.target.closest('.tab-x')))return null;return el;};
+  document.addEventListener('contextmenu',e=>{
+    const el=tabOf(e);if(!el)return;clearTimeout(t);t=null;
+    if(el.classList.contains('eb-tab-row')){e.preventDefault();e.stopPropagation();showTabMenu(e,el.dataset.tid);}
+  },true);
+  document.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse')return;
+    const el=tabOf(e);if(!el)return;
+    x0=e.clientX;y0=e.clientY;fired=false;clearTimeout(t);
+    t=setTimeout(()=>{t=null;fired=true;if(navigator.vibrate)try{navigator.vibrate(25);}catch(x){}showTabMenu({clientX:x0,clientY:y0},el.dataset.tid);},550);
+  },true);
+  document.addEventListener('pointermove',e=>{if(t&&Math.hypot(e.clientX-x0,e.clientY-y0)>10){clearTimeout(t);t=null;}},true);
+  document.addEventListener('pointerup',()=>{clearTimeout(t);t=null;},true);
+  document.addEventListener('pointercancel',()=>{clearTimeout(t);t=null;},true);
+  document.addEventListener('click',e=>{if(fired){fired=false;if(e.target.closest&&e.target.closest('.tab-it,.eb-tab-row')){e.stopPropagation();e.preventDefault();}}},true);
+})();
 function openTabClrPicker(ev,id){
   const a=DB.articles.find(x=>x.id===id);if(!a)return;
   _showClrPicker(ev,a.tabColor||'',hex=>{
@@ -10462,10 +10546,10 @@ function _ebOpenTabsHTML(popId){
   });
   if(!ids.length)return '';
   const row=(a,own)=>{
-    const lbl=(a.title||'Untitled').slice(0,26)+((a.title||'').length>26?'\u2026':'');
-    return '<button class="et eb-tab-row'+(ST.article===a.id?' on':'')+'"'
+    const lbl=_tabLabel(a,26);
+    return '<button class="et eb-tab-row'+(ST.article===a.id?' on':'')+'" data-tid="'+a.id+'"'
       +' onmousedown="event.preventDefault()" onclick="_closeStickyPop(\''+popId+'\');tabSelect(\''+a.id+'\')"'
-      +' title="'+esc(a.title||'Untitled')+(own?' \u2014 owns this tab group':'')+'">'
+      +' title="'+esc(_tabTitleAttr(a))+(own?' \u2014 owns this tab group':'')+'">'
       +(own?'\u25c6 ':'')+esc(lbl)+'</button>';
   };
   const ownArt=DB.articles.find(x=>x.id===owner);
@@ -11659,9 +11743,9 @@ function _fwTabsHTML(aid){
   const seen=new Set();
   const chips=ids.filter(id=>!seen.has(id)&&seen.add(id)).map(id=>{
     const t=DB.articles.find(x=>x.id===id);
-    const lbl=(t.title||'Untitled').slice(0,22)+((t.title||'').length>22?'…':'');
+    const lbl=_tabLabel(t,22);
     const own=id===owner;
-    return `<div class="tab-it${id===aid?' on':''}${own?' tab-own':''}" data-tid="${id}" onclick="_fwTabSelect('${aid}','${id}')" title="${esc(t.title||'Untitled')}${own?' — owns this tab group':''}">`
+    return `<div class="tab-it${id===aid?' on':''}${own?' tab-own':''}" data-tid="${id}" onclick="_fwTabSelect('${aid}','${id}')" oncontextmenu="event.preventDefault();event.stopPropagation();showTabMenu(event,'${id}')" title="${esc(_tabTitleAttr(t))}${own?' — owns this tab group':''}">`
       +(own?'<span class="tab-own-dot">◆</span>':'')
       +`<span class="tab-lbl">${esc(lbl)}</span></div>`;
   }).join('');

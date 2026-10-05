@@ -97,6 +97,12 @@ t('N28 spreadsheet edit inside a note (sheet insRow → _flushEd)', 'Notes', {
   setup: () => { const a = DB.articles.find(x => x.id === 'a2'); const d = _sgNew(); a.content = '<div class="sgx" contenteditable="false" data-sg=\'' + JSON.stringify(d) + '\'>' + _sgStaticHTML(d) + '</div><p><br></p>'; a.updatedAt = new Date().toISOString(); persist(); },
   op: async () => { selArt('a2'); startEdit(); await __A.sleep(50); const r = document.querySelector('#ed .sgx'); if (!r || !r._sg) throw new Error('sheet not mounted'); r._sg.act('insRowA'); _flushEd(); persist(); } });
 
+/* v04.85 — a tab's short name lives in DB.theme.tabNames (never on the note).
+   N30 proves a CLEARED name ("") reaches the other device instead of the old
+   name coming back from it. */
+t('N29 tab short name (_setTabName)', 'Notes', { op: () => _setTabName('a2', 'Short') });
+t('N30 tab short name cleared (_setTabName "")', 'Notes', { setup: () => _setTabName('a2', 'Short'), op: () => _setTabName('a2', '') });
+
 /* Folders */
 t('F01 create folder (mkFolder)', 'Folders', { op: () => mkFolder(null, 'Brand new folder') });
 t('F02 create subfolder (mkFolder with parent)', 'Folders', { op: () => mkFolder('f2', 'New child') });

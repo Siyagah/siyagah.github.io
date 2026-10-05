@@ -10819,6 +10819,103 @@ await r.block('47f-multi-section-drag-stays-in-its-own-note-1440', async () => {
   await s.close();
 });
 
+/* ── 48. v04.85 — a short name for a tab ─────────────────────────────────
+   The owner: a short name "only … for the tab", which "won't change the main
+   title", and, asked, "Only names I type". Real input: a real right-click
+   (1440), a real CDP press-and-hold (820, 390), real clicks/taps on the menu,
+   real typing in the dialog. Tabs are seeded (a1 owns a tab group holding
+   a2); the naming itself is never called directly. */
+async function seedTabs48(page) {
+  await page.evaluate(() => { const m = _tabsMap(); m.a1 = ['a2']; ST.tabOwner = 'a1'; selArt('a1'); persist(); render(); });
+  await page.waitForTimeout(400);
+}
+async function hold48(page, loc) {
+  const b = await loc.boundingBox();
+  const cdp = await page.context().newCDPSession(page);
+  const p = { x: b.x + Math.min(30, b.width / 2), y: b.y + b.height / 2 };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] });
+  await page.waitForTimeout(800);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(300);
+}
+const state48 = (page) => page.evaluate(() => ({ name: (DB.theme.tabNames || {}).a2, title: DB.articles.find((a) => a.id === 'a2').title,
+  upd: DB.articles.find((a) => a.id === 'a2').updatedAt, cur: ST.article,
+  menuOnTop: (() => { const it = [...document.querySelectorAll('#ctx .ci')].find((e) => /short name/.test(e.textContent)); if (!it || getComputedStyle(document.getElementById('ctx')).display === 'none') return false;
+    const r = it.getBoundingClientRect(); return document.getElementById('ctx').contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)) && r.right <= innerWidth && r.bottom <= innerHeight; })() }));
+async function nameIt48(page, tap) {
+  const it = page.locator('#ctx .ci', { hasText: 'short name' }).first();
+  if (tap) await it.tap(); else await it.click();
+  await page.waitForTimeout(250);
+  await page.fill('#tab-ren-inp', 'Estimate');
+  const save = page.locator('.ma .btn.bp', { hasText: 'Save' }).last();
+  if (tap) await save.tap(); else await save.click();
+  await page.waitForTimeout(300);
+}
+await r.block('48a-tab-short-name-right-click-1440', async () => {
+  const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  const { page } = s;
+  await seedTabs48(page);
+  const before = await state48(page);
+  await page.click('#tab-bar .tab-it[data-tid="a2"]', { button: 'right' });
+  await page.waitForTimeout(200);
+  const st = await state48(page);
+  r.check(st.menuOnTop, '1440: right-clicking a tab opens its menu with "Give this tab a short name", on top and on screen', JSON.stringify(st));
+  await nameIt48(page, false);
+  const chip = await page.evaluate(() => { const c = document.querySelector('#tab-bar .tab-it[data-tid="a2"]'); return { lbl: c.querySelector('.tab-lbl').textContent, tip: c.title }; });
+  const after = await state48(page);
+  r.check(chip.lbl === 'Estimate' && chip.tip.startsWith(before.title), '1440: the tab now reads "Estimate", and pointing at it still shows the full title', JSON.stringify(chip));
+  r.check(after.name === 'Estimate' && after.title === before.title && after.upd === before.upd,
+    '1440: the note\'s own title and its last-edited time are untouched (the name lives in DB.theme.tabNames)', JSON.stringify({ before, after }));
+  /* The same name shows on a Multi window's tabs. */
+  await page.evaluate(() => popOutNote('a1')); await page.waitForTimeout(400);
+  const fw = await page.evaluate(() => document.querySelector('#fw-a1 .fw-tabs .tab-it[data-tid="a2"] .tab-lbl')?.textContent);
+  r.check(fw === 'Estimate', '1440: a Multi window\'s tab bar shows the same short name', fw);
+  /* And "Show the full title again" (right-click on the Multi tab this time). */
+  await page.click('#fw-a1 .fw-tabs .tab-it[data-tid="a2"]', { button: 'right' });
+  await page.locator('#ctx .ci', { hasText: 'full title again' }).click();
+  await page.waitForTimeout(300);
+  const back = await page.evaluate(() => [document.querySelector('#tab-bar .tab-it[data-tid="a2"] .tab-lbl').textContent, (DB.theme.tabNames || {}).a2]);
+  r.check(back[0] === before.title.slice(0, 22) + (before.title.length > 22 ? '…' : '') && back[1] === '', '1440: "Show the full title again" puts the title back (stored as "", so a sync cannot bring the old name back)', JSON.stringify(back));
+  r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+await r.block('48b-tab-short-name-press-and-hold-820', async () => {
+  const s = await openApp({ viewport: { width: 820, height: 1180 }, db: seedDB(), hasTouch: true });
+  const { page } = s;
+  await seedTabs48(page);
+  await page.evaluate(() => showPane('p3')); await page.waitForTimeout(300);
+  await hold48(page, page.locator('#tab-bar .tab-it[data-tid="a2"]'));
+  const st = await state48(page);
+  r.check(st.menuOnTop && st.cur === 'a1', '820: a real press-and-hold on a tab opens its menu (and does not switch to that tab)', JSON.stringify(st));
+  if (st.menuOnTop) await nameIt48(page, true);
+  const lbl = await page.evaluate(() => document.querySelector('#tab-bar .tab-it[data-tid="a2"] .tab-lbl')?.textContent);
+  r.check(lbl === 'Estimate', '820: after tapping Save the tab reads "Estimate"', lbl);
+  r.check(s.errors.length === 0, '820: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+await r.block('48c-tab-short-name-phone-open-tabs-390', async () => {
+  const s = await openApp({ viewport: { width: 390, height: 844 }, db: seedDB(), hasTouch: true });
+  const { page } = s;
+  await seedTabs48(page);
+  await page.evaluate(() => showPane('p3')); await page.waitForTimeout(300);
+  /* The phone has no tab bar; its open tabs are rows in the 🏷 palette. */
+  const btn = page.locator('#p3h button[onclick*="_p3NtiPalette"]:visible').first();
+  await btn.tap(); await page.waitForTimeout(300);
+  const row = page.locator('.eb-tab-row[data-tid="a2"]:visible').first();
+  const has = await row.count();
+  r.check(has === 1, '390: the 🏷 palette lists the open tab', has);
+  if (has) await hold48(page, row);
+  const st = await state48(page);
+  r.check(st.menuOnTop && st.cur === 'a1', '390: a real press-and-hold on that row opens the tab menu, on top, without switching note', JSON.stringify(st));
+  if (st.menuOnTop) await nameIt48(page, true);
+  await btn.tap(); await page.waitForTimeout(300);
+  const lbl = await page.evaluate(() => document.querySelector('.eb-tab-row[data-tid="a2"]')?.textContent);
+  const after = await state48(page);
+  r.check(/Estimate/.test(lbl || '') && after.name === 'Estimate', '390: the row now reads "Estimate"', lbl);
+  r.check(s.errors.length === 0, '390: no page errors', s.errors.slice(0, 2).join(' · '));
+  await s.close();
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
