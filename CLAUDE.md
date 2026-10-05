@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.86.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.87.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,14 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.87** (5 Oct 2026) — MyWall, elegant (owner: "it looks so dumb").
+  A title row (name, segmented ⇅ All / ▤ Compact, "N pending · across M
+  categories"), then one card per category: colour stripe + tinted icon
+  chip (the owner's 🎨 colour, else its first type's), name as typed at
+  14.5px (Bold/Medium/Large kept on a calmer 15.5/17px scale), count pill,
+  chevron. Types are rows inside the card. Classes and data attributes
+  the drag/open code uses are unchanged. Section 50 **18/18**; unpatched,
+  every block aborts.
 - **v04.86** (5 Oct 2026) — drag a tab out to sit beside its note (owner:
   "draggable out of the tab to keep on the side of the original note").
   Both notes as Multi windows: tiled halves on laptop/tablet (dropped side
@@ -56,17 +64,6 @@ must never accumulate here instead of there.
   filled target, a merge, or rows hidden by a filter. `fmt:'int'` =
   `#,##0`. New section 46: `--only 46` **26/26**; unpatched: all four
   blocks fail. Full `app-check` **1435/1435, twice in a row**.
-- **v04.82** (4 Oct 2026) — sync: an interrupted upload no longer stops
-  every device syncing (owner, phone and laptop: "NOT syncing until it
-  clears"). Past 8 chunks a write takes several batches and overwrote
-  chunks `0…n` in place, so a cut-off upload left a mixed copy that no
-  device could read or would repair. Now each write fills a fresh
-  generation `<g>_<i>` named last by the main doc (`g`), with old ones
-  deleted after; a main doc without `g` is read the old way. A copy stuck
-  half-saved is rewritten whole by `_repairCloudCopy()` (merge is a union,
-  so nothing is lost). Reproduced first in `sync-e2e` (new 9b, 9c): 23/23,
-  unpatched 13/16. `26e`/`36d` updated in place. Full `app-check`
-  **1409/1409, twice in a row**.
 ---
 
 ## What this is
