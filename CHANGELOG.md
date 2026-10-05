@@ -7966,6 +7966,7 @@ sync-audit lines prove both directions.
   - `--only 48` **13/13**. On v04.84: 2/9, the two that pass being "no
     page errors". 390's "lists the open tab" fails there partly because
     the rows carried no `data-tid` before this round.
+- **Full `app-check` 1487/1487, twice in a row.**
 - **`tools/sync-audit.mjs`:** new `N29` (a name set) and `N30` (a name
   cleared) both PASS both ways. 118 operations, 0 FAIL.
 - **`ship-check`'s leaked-note-id scan** (the v04.60 lesson: sweep the

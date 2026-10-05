@@ -23,6 +23,7 @@ must never accumulate here instead of there.
   full title. Stored in `DB.theme.tabNames` (never on the note: no
   `updatedAt` bump); cleared = `""` so a merge can't resurrect it.
   Section 48 **13/13** (unpatched 2/9); sync-audit `N29`/`N30` PASS.
+  Full `app-check` **1487/1487, twice in a row**.
 - **v04.84** (4 Oct 2026) — owner: "paragraph, space edit like the
   standard MS word" and "copying the content inside a headings by
   pressing … the headings".
