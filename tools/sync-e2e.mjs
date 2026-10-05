@@ -367,6 +367,13 @@ try {
   /* 9c. The cloud copy is ALREADY half-saved in the pre-v04.82 layout (the
          owner's cloud on 4 Oct 2026): numbered chunks, the first batch one
          version ahead of the rest. Opening the new build repairs it. */
+  /* Quiet first: no device may still be writing when the old-layout copy is
+     put in place. v04.86's second full run caught a save from 9b's merge
+     landing just AFTER this setup, superseding it (so nothing was ever
+     repaired) and leaving its numbered pieces behind. That is the test
+     racing an in-flight push, not the app. */
+  { let last = commitCount, quietSince = Date.now(); const t0 = Date.now();
+    while (Date.now() - quietSince < 4000 && Date.now() - t0 < 30000) { await sleep(250); if (commitCount !== last) { last = commitCount; quietSince = Date.now(); } } }
   {
     const m = store.get('notebooks/nb-e2e');
     const parts = []; for (let i = 0; i < m.n; i++) parts.push(store.get('notebooks/nb-e2e/chunks/' + m.g + '_' + i).p);

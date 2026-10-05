@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.85">
+<meta name="app-version" content="04.86">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3192,7 +3192,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.85</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.86</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6885,7 +6885,7 @@ function renderTabBar(){
     const on=ST.article===id?' on':'';
     const _tbc=a.tabColor||'';
     return `<div class="tab-it${on}${isOwner?' tab-own':''}" data-tid="${id}" style="${_tbc?`border-bottom:3px solid ${_tbc}`:''}"` +
-           ` draggable="true" ondragstart="pinTabDStart(event,'${id}')"` +
+           ` draggable="true" ondragstart="pinTabDStart(event,'${id}')" ondragend="tabDragEnd(event,'${id}')"` +
            ` onclick="tabSelect('${id}')" oncontextmenu="event.preventDefault();event.stopPropagation();showTabMenu(event,'${id}')"` +
            ` title="${esc(_tabTitleAttr(a))}${isOwner?' — owns this tab group (✕ closes all its tabs)':''}">`
       +(isOwner?'<span class="tab-own-dot">◆</span>':'')
@@ -9941,16 +9941,19 @@ function renameTab(id){
     </div>`);
   setTimeout(()=>{const i=document.getElementById('tab-ren-inp');if(i){i.focus();i.select();}},50);
 }
-let _tabMenuEv=null;
+let _tabMenuEv=null,_tabMenuOrig=null;
 function showTabMenu(ev,id){
   if(ev&&ev.preventDefault)ev.preventDefault();
   const a=DB.articles.find(x=>x.id===id);if(!a)return;
   _tabMenuEv={clientX:ev.clientX,clientY:ev.clientY};
+  _tabMenuOrig=_tabOrigOf(ev&&ev.target);
+  const beside=_tabMenuOrig&&_tabMenuOrig!==id;
   const m=document.getElementById('ctx');
   const cur=_tabNameOf(id);
   m.innerHTML='<div class="ci-nti-hd">'+esc((a.title||'Untitled').slice(0,40))+'</div>'
     +'<div class="ci" onclick="renameTab(\''+id+'\')">✏️ '+(cur?'Change the tab\'s short name':'Give this tab a short name')+'</div>'
     +(cur?'<div class="ci" onclick="hideCtx();_setTabName(\''+id+'\',\'\')">↺ Show the full title again</div>':'')
+    +(beside?'<div class="ci" onclick="hideCtx();openTabBeside(\''+id+'\',_tabMenuOrig)">🗗 Open beside this note (Multi)</div>':'')
     +'<div class="ci" onclick="event.stopPropagation();hideCtx();openTabClrPicker(event,\''+id+'\')">🎨 Tab colour</div>';
   m.style.display='block';
   const vw=window.innerWidth,vh=window.innerHeight,mw=m.offsetWidth||200,mh=m.offsetHeight||100;
@@ -9972,13 +9975,69 @@ function showTabMenu(ev,id){
     if(e.pointerType==='mouse')return;
     const el=tabOf(e);if(!el)return;
     x0=e.clientX;y0=e.clientY;fired=false;clearTimeout(t);
-    t=setTimeout(()=>{t=null;fired=true;if(navigator.vibrate)try{navigator.vibrate(25);}catch(x){}showTabMenu({clientX:x0,clientY:y0},el.dataset.tid);},550);
+    t=setTimeout(()=>{t=null;fired=true;if(navigator.vibrate)try{navigator.vibrate(25);}catch(x){}showTabMenu({clientX:x0,clientY:y0,target:el},el.dataset.tid);},550);
   },true);
   document.addEventListener('pointermove',e=>{if(t&&Math.hypot(e.clientX-x0,e.clientY-y0)>10){clearTimeout(t);t=null;}},true);
   document.addEventListener('pointerup',()=>{clearTimeout(t);t=null;},true);
   document.addEventListener('pointercancel',()=>{clearTimeout(t);t=null;},true);
   document.addEventListener('click',e=>{if(fired){fired=false;if(e.target.closest&&e.target.closest('.tab-it,.eb-tab-row')){e.stopPropagation();e.preventDefault();}}},true);
 })();
+/* ══ v04.86 — DRAG A TAB OUT TO SIT BESIDE ITS NOTE ═══════════════════════
+   The owner: "a note from tab can be draggable out of the tab to keep on
+   the side of the original note (Multi note pop-up option to work)".
+   Only one KIND of pop-up is up at a time (G4: Multi closes Single), so
+   "beside" means BOTH notes as Multi windows:
+     laptop, tablet — two windows tiled across the screen, the dragged
+                      note on the side it was dropped (left or right half),
+                      the note it was a tab of on the other;
+     phone          — Multi is a full-screen sheet there, so both open as
+                      sheets with the switcher bar (body.fw-sheets) along
+                      the bottom: the other note is one tap away.
+   Reached by dragging a tab out of its bar (main, Single's, or a Multi
+   window's) and letting go anywhere that is not a drop target (the
+   Sidepane still pins, a tab bar still adds), or from the tab's own menu:
+   🗗 Open beside this note — the touch route, since a hold opens that
+   menu rather than a drag. The note a tab belongs to is the Multi window
+   it sits in, else the note on screen (ST.article). */
+function _tabOrigOf(el){
+  const w=el&&el.closest?el.closest('.float-win'):null;
+  if(w&&w.id&&w.id.indexOf('fw-')===0)return w.id.slice(3);
+  return ST.article&&ST.article!=='cal'?ST.article:null;
+}
+function tabDragEnd(ev,id){
+  const orig=_tabOrigOf(ev.target);
+  /* Was the drop TAKEN by something? Not dropEffect: the document accepts
+     every drop (a stray file must never navigate the app away), so the
+     browser reports every drop as handled. Every real tab drop target —
+     the tab bars (v04.78), the Sidepane — clears _pinDragAid when it takes
+     one; still set here means nothing did. */
+  const taken=_pinDragAid!==id;
+  _pinDragAid=null;
+  if(taken||!orig||orig===id)return;
+  const x=ev.clientX,y=ev.clientY;
+  if(ev.target&&document.elementFromPoint&&(x>0||y>0)){const at=document.elementFromPoint(x,y);if(at&&at.closest&&at.closest('#sb'))return;}
+  if(!(x>0||y>0))return;                       /* dropped outside the window */
+  const bar=ev.target&&ev.target.closest?ev.target.closest('#tab-bar,.fw-tabs'):null;
+  if(bar){const r=bar.getBoundingClientRect();if(y>=r.top-12&&y<=r.bottom+24)return;}   /* let go on its own bar: no move */
+  openTabBeside(id,orig,x);
+}
+function openTabBeside(id,orig,dropX){
+  if(!id||!orig||id===orig)return;
+  if(!DB.articles.some(a=>a.id===id)||!DB.articles.some(a=>a.id===orig))return;
+  popOutNote(orig);
+  popOutNote(id);
+  if(_popTier()==='window'){
+    const vw=window.innerWidth,vh=window.innerHeight,g=8;
+    const w=Math.max(320,Math.floor((vw-g*3)/2)),h=Math.max(280,vh-g*2);
+    const right=dropX==null||dropX>=vw/2;
+    const place=(aid,left)=>{const win=document.getElementById('fw-'+aid);if(!win)return;
+      win.style.left=(left?g:vw-w-g)+'px';win.style.top=g+'px';win.style.width=w+'px';win.style.height=h+'px';
+      try{_fwSavePos(aid);}catch(e){}};
+    place(orig,right);place(id,!right);
+  }
+  const a=DB.articles.find(x=>x.id===id);
+  toast(_popTier()==='window'?'🗗 Side by side: '+_tabLabel(a,24):'🗗 Both open: switch with the bar at the bottom');
+}
 function openTabClrPicker(ev,id){
   const a=DB.articles.find(x=>x.id===id);if(!a)return;
   _showClrPicker(ev,a.tabColor||'',hex=>{
@@ -11745,7 +11804,7 @@ function _fwTabsHTML(aid){
     const t=DB.articles.find(x=>x.id===id);
     const lbl=_tabLabel(t,22);
     const own=id===owner;
-    return `<div class="tab-it${id===aid?' on':''}${own?' tab-own':''}" data-tid="${id}" onclick="_fwTabSelect('${aid}','${id}')" oncontextmenu="event.preventDefault();event.stopPropagation();showTabMenu(event,'${id}')" title="${esc(_tabTitleAttr(t))}${own?' — owns this tab group':''}">`
+    return `<div class="tab-it${id===aid?' on':''}${own?' tab-own':''}" data-tid="${id}" draggable="true" ondragstart="pinTabDStart(event,'${id}')" ondragend="tabDragEnd(event,'${id}')" onclick="_fwTabSelect('${aid}','${id}')" oncontextmenu="event.preventDefault();event.stopPropagation();showTabMenu(event,'${id}')" title="${esc(_tabTitleAttr(t))}${own?' — owns this tab group':''}">`
       +(own?'<span class="tab-own-dot">◆</span>':'')
       +`<span class="tab-lbl">${esc(lbl)}</span></div>`;
   }).join('');
@@ -13128,7 +13187,11 @@ function _tocDestroy(){
 let _pinDragAid=null;
 function pinTabDStart(ev,aid){
   _pinDragAid=aid;
-  try{ev.dataTransfer.effectAllowed='copy';ev.dataTransfer.setData('text/plain',aid);}catch(e){}
+  /* v04.86 — a private type, not text/plain. Every in-app drop target reads
+     _pinDragAid first; text/plain was only ever a fallback, and it let a tab
+     dropped on a note being edited paste the note's id into its text — a
+     drop this round invites ("drag a tab out"). */
+  try{ev.dataTransfer.effectAllowed='copy';ev.dataTransfer.setData('application/x-siyagah-note',aid);}catch(e){}
 }
 function _pinPanelDragOver(ev){
   ev.preventDefault();
