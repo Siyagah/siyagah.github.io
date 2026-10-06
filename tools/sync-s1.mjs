@@ -686,7 +686,13 @@ try {
     for (const d of devs) await on(d, () => { _S1_BACKOFF = [400, 800, 1200]; window.__rs = 0; const o = _s1ReadStart; _s1ReadStart = async (c) => { window.__rs++; return o(c); }; });
     const ghost = NB + '/recs/articles~ghost';
     cloud.apply([{ t: 'set', p: ghost, d: { c: 'articles', id: 'ghost', sig: 'x', ver: 'v-ghost', n: 2, g: 'gGONE', at: { __sts: 1 } } }], null);
-    await sleep(14000);   /* unpatched: a restart every 3 s, for ever */
+    /* wait for the condition, never a fixed time: the give-up comes after the 4th failure (3 backoffs of 400+800+1200 ms plus the reads) */
+    for (let t0 = Date.now(); Date.now() - t0 < 60000;) {
+      const sts = await Promise.all(devs.map((d) => stat(d)));
+      if (sts.every((x) => x.rd && x.rd.err && x.rd.err.code === 'unresolvable')) break;
+      await sleep(300);
+    }
+    await sleep(2000);   /* unpatched: a restart every 3 s, for ever — still bites after the give-up point */
     const rs1 = await Promise.all(devs.map((d) => on(d, () => window.__rs)));
     const st1 = await Promise.all(devs.map((d) => stat(d)));
     await sleep(6000);
@@ -962,12 +968,14 @@ try {
     await rest();
     /* (3) a recs refusal on, then off */
     mark = cloud.log.length;
+    for (const d of devs) await on(d, () => { _S1_DENY_RETRY_MS = 4000; });   /* the real cool-down is 10 minutes */
     cloud.refuse = ['/recs/', '/recparts/'];
     await editTitle(A, 'a1', 'Fallback 3, recs refused');
     const f3 = await waitTitle([B, C], 'a1', 'Fallback 3, recs refused', 30000);
     await settle(cloud, devs);
     const f3fb = fb() && blobWrites(cloud, mark).length > 0;
     cloud.refuse = [];
+    await sleep(9000);   /* one cool-down, plus the reader coming back (no reload) */
     await settle(cloud, devs);
     const mdLast = { ...cloud.store.get(NB) };
     check(f1 && f2 && f2fb && f3 && f3fb && !('s1o' in mdLast) && !(mdLast.s1o > 0),

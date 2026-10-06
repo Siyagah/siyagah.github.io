@@ -22679,11 +22679,27 @@ let _s1Busy=0, _s1Pending=null, _s1Denied=false, _s1Dead=false, _s1Map=null, _s1
 function _s1Key(c,id){ return c+'~'+encodeURIComponent(String(id)).replace(/\./g,'%2E'); }
 function _s1Eligible(){ return _dbLoaded && !_s1Denied && !_s1Dead; }
 function _s1Disable(why){ _s1Dead=true; _s1Stat.enabled=false; _s1Stat.reason=why; }
+/* v04.90 — a refusal is not for the session: the owner may fix the Firestore
+   rules. After a cool-down (`let`, so a check can shorten it) the per-note copy is
+   tried again — flags cleared, reader restarted, everything re-offered. If it is
+   refused again the same code schedules the next try. */
+let _S1_DENY_RETRY_MS=600000, _s1DenyTimer=null;
+function _s1DenySchedule(){
+  if(_s1DenyTimer) return;
+  _s1DenyTimer=setTimeout(()=>{
+    _s1DenyTimer=null;
+    const cfg=getSyncConfig();
+    if(!cfg||!_syncFsDb||_s1Dead) return;
+    _s1Denied=false; _s1Stat.enabled=true; _s1Stat.reason=null;
+    try{ _s1Dirty.full=true; }catch(e){}
+    try{ _s1ReadStart(cfg); }catch(e){ console.warn('S1 retry:',e); }
+  },_S1_DENY_RETRY_MS);
+}
 function _s1Fail(e){
   const code=(e&&e.code)||'error';
   console.warn('S1 shadow write skipped:',e);
   _s1Stat.lastErr={code:code, at:Date.now(), message:String((e&&e.message)||e).slice(0,200)};
-  if(code==='permission-denied'){ _s1Denied=true; _s1Stat.enabled=false; _s1Stat.reason='permission-denied'; }
+  if(code==='permission-denied'){ _s1Denied=true; _s1Stat.enabled=false; _s1Stat.reason='permission-denied'; _s1DenySchedule(); }
   if(e&&e.s1disable) _s1Disable('map-not-persistable');
 }
 /* The record list, built from DB synchronously (same tick as the blob's json). */
@@ -23073,6 +23089,7 @@ function _s1RdOff(st, reason, e){
   st.perm=['permission-denied','no-query-support','no-indexeddb','replica-not-writable'].indexOf(reason)>=0;
   if(e) st.err={code:(e&&e.code)||'error', at:Date.now(), message:String((e&&e.message)||e).slice(0,200)};
   console.warn('S1 read off:',reason,e||'');
+  if(reason==='permission-denied') _s1DenySchedule();
   /* v04.90 — a reader that is off for good can no longer stand in for the blob:
      main docs this device skipped (see _s1CanSkipBlob) are read after all. */
   if(st.perm){ _lastAppliedVer=0; setTimeout(()=>{ try{ if(_syncDocRef&&_syncLastMd) _pullRemote(_syncDocRef,_syncLastMd); }catch(x){} },0); }
@@ -23377,6 +23394,7 @@ async function _pushWrite(cfg, o){
     return 'wait';
   }else if(!(r&&r.ineligible)){
     _s1Problem=null;
+    if(_s1FallbackToasted){ _s1FallbackToasted=false; toast('☁ The per-note copy works again — syncing the new way.', 6000); }
     return 'recs';
   }
   /* The per-note copy is refused (or cannot be kept on this device) and the blob
