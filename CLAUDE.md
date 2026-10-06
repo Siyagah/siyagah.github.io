@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.90.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.91.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -37,7 +37,14 @@ must never accumulate here instead of there.
   ~5 KB, 0 blob docs; **merge 6.1 s on a ×4 phone (1.6–2.1 s laptop) — over
   1.5 s, a later round needs an incremental merge.** Checks 51s–51x (51t runs
   the real v04.89 build from git). `--only 51` **103/103**, `sync-e2e`
-  **25/25**, `sync-audit` 118/118; full `app-check` left to the Architect.
+  **25/25**, `sync-audit` 118/118. Review fixes (PR #129): fallback blob is
+  `s1c`+`s1fb` (never renews `s1o`, 51y); a refused recs copy retries after
+  10 min (`_S1_DENY_RETRY_MS`); unresolved recs stay pending across
+  snapshots and the cursor never passes the oldest (`_s1RdPending`, 51z; an
+  edit was being lost, I2). Architect's totals: full `app-check`
+  **1632/1632, twice in a row**; unpatched `--only 51` 90/97. Not done
+  (moved to S1d, v04.91): merge 6.1 s on a ×4 phone, `persist()` 1.5 s, undo
+  keeps 60 whole-notebook copies.
 - **v04.89** (6 Oct 2026) — S1b, step two of per-note cloud storage (issue
   #126). Every device also READS `recs` into a replica (own IndexedDB,
   `siyagah-s1-v1`) and merges the FULL replica with the unchanged
