@@ -22715,16 +22715,28 @@ async function _s1Exec(nbId, snap){
     d.forEach(e=>{
       m.s[e.key]=e.sig; written++;
       const old=m.p[e.key];
-      if(old) for(let i=0;i<old[1];i++) dels.push(partsC.doc(e.key+'~'+old[0]+'~'+i));
+      if(old) dels.push({key:e.key, g:old[0], n:old[1]});
       if(e.parts) m.p[e.key]=e.parts; else delete m.p[e.key];
     });
     try{ await _idbPut(mk,m); }catch(err){ err.s1disable=true; throw err; }
     /* The previous generation's pieces go only after the rec doc that
        replaced them has committed. Best effort. */
+    /* v04.89 — m.p[key] can be a generation RECEIVED from another device, and a
+       second device may have committed its own rec after this one. Delete a
+       generation only if the rec doc on the server no longer names it; one
+       that is still named stays for a later run. */
     try{
-      for(let i=0;i<dels.length;i+=_S1_OPS){
+      const refs=[];
+      for(const o of dels){
+        let named=true;
+        try{ const rs=await recsC.doc(o.key).get({source:'server'}); named=rs.exists&&rs.data().g===o.g; }
+        catch(err){ named=true; }
+        if(named) continue;
+        for(let i=0;i<o.n;i++) refs.push(partsC.doc(o.key+'~'+o.g+'~'+i));
+      }
+      for(let i=0;i<refs.length;i+=_S1_OPS){
         const b2=_syncFsDb.batch();
-        dels.slice(i,i+_S1_OPS).forEach(r=>b2.delete(r));
+        refs.slice(i,i+_S1_OPS).forEach(r=>b2.delete(r));
         await b2.commit();
       }
     }catch(err){ console.warn('S1: old piece clean-up skipped:',err); }
@@ -22784,6 +22796,8 @@ async function _s1Exec(nbId, snap){
    no-op. Failure here is invisible: window._s1Stat.rd and a console.warn,
    never a toast, never the dot — the blob carries on. */
 const _S1R_DB='siyagah-s1-v1', _S1_OVERLAP_MS=2000, _S1_PARTS_TRIES=3;
+let _S1_BACKOFF=[3000,30000,300000];   /* restart delays for a rec that cannot be resolved; a 4th failure gives up on that version */
+let _s1RdFails=new Map(), _s1RdGaveUp=new Set();
 let _S1_GRACE_MS=6000;   /* wait for the originating device's recs before writing back */
 let _s1Rep=null, _s1RdUnsub=null, _s1RdChain=Promise.resolve(), _s1RdGen=0, _s1RdTimer=null;
 let _s1RdDbP=null, _s1KickTimer=null, _s1RecsMergeQueued=false, _s1RecsMerged=false;
@@ -22929,18 +22943,35 @@ function _s1RdFail(cfg, e, listener){
 async function _s1OnSnap(gen, snap, nbRef){
   if(gen!==_s1RdGen||!_s1Rep) return;
   const rep=_s1Rep, st=_s1Stat.rd, nb=rep.nb;
-  const puts=[]; let skipMin=Infinity, maxAt=0;
+  const puts=[]; let skipMin=Infinity, maxAt=0, skipDelay=0;
   for(const ch of snap.docChanges()){
     if(ch.type==='removed'||ch.doc.metadata.hasPendingWrites) continue;   /* its `at` is not a server time yet */
     const key=ch.doc.id; let d=ch.doc.data(), at=_s1AtMs(d.at);
     if(at==null) continue;
     const cur=rep.map.get(key);
     if(cur&&cur.at>=at){ if(at<skipMin) maxAt=Math.max(maxAt,at); continue; }   /* an overlap redelivery */
+    const fk=key+'|'+at;
+    if(_s1RdGaveUp.has(fk)){ if(at<skipMin) maxAt=Math.max(maxAt,at); continue; }   /* given up on: never re-read */
     let r;
     try{ r=await _s1ResolveRec(nbRef,key,d); }
     catch(e){ if(e&&e.code==='permission-denied') throw e; r=null; }
     if(gen!==_s1RdGen) return;
-    if(!r){ skipMin=Math.min(skipMin,at); continue; }   /* never half a record: leave it for the retry below */
+    if(!r){
+      /* never half a record: leave it for the retry below — but not for ever.
+         Each failure of one (key, at) backs off 3 s, 30 s, 5 min; the next one
+         gives up on THAT version: the cursor moves past it, st.err says so.
+         Nothing is lost while the blob carries the record, and the next write
+         of the record (a new `at`) is delivered normally. S1c, when the blob
+         stops carrying records, must keep this in mind. */
+      const nf=(_s1RdFails.get(fk)||0)+1; _s1RdFails.set(fk,nf);
+      if(nf<=_S1_BACKOFF.length){ skipMin=Math.min(skipMin,at); skipDelay=Math.max(skipDelay,_S1_BACKOFF[nf-1]); continue; }
+      _s1RdGaveUp.add(fk); _s1RdFails.delete(fk);
+      st.err={code:'unresolvable', key:key, at:at, message:'its pieces are gone; given up on this version'};
+      console.warn('S1 read: gave up on an unresolvable record',key,at);
+      if(at<skipMin) maxAt=Math.max(maxAt,at);
+      continue;
+    }
+    _s1RdFails.delete(fk);
     d=r.d; at=_s1AtMs(d.at)||at;
     puts.push([key,{c:d.c, sig:d.sig, o:d.o, at:at, gone:d.gone?true:undefined, rec:r.json, n:d.n, g:d.g}]);
     if(at<skipMin) maxAt=Math.max(maxAt,at);
@@ -22968,10 +22999,10 @@ async function _s1OnSnap(gen, snap, nbRef){
   if(m&&touched){ try{ await _idbPut('s1:'+nb,m); }catch(e){ console.warn('S1 read: sig map not saved',e); } }
   st.records=0; rep.map.forEach((e,k)=>{ if(!e.gone&&k!=='_head~0') st.records++; });
   if(skipMin===Infinity) _s1RdCaught=true;
-  if(puts.length){ st.lastRecv=Date.now(); st.err=null; _s1RepUnmerged=true; _pullRecsMerge(); }
+  if(puts.length){ st.lastRecv=Date.now(); if(!(st.err&&st.err.code==='unresolvable')) st.err=null; _s1RepUnmerged=true; _pullRecsMerge(); }
   if(skipMin<Infinity){
     clearTimeout(_s1RdTimer);
-    _s1RdTimer=setTimeout(()=>{ const c=getSyncConfig(); if(c&&_syncFsDb) _s1ReadStart(c); },3000);
+    _s1RdTimer=setTimeout(()=>{ const c=getSyncConfig(); if(c&&_syncFsDb) _s1ReadStart(c); },skipDelay||_S1_BACKOFF[0]);
   }
 }
 /* Merge the full replica, serialised with _pullRemote() (never beside it). */
