@@ -8210,6 +8210,133 @@ unpatched code (the blob does not change).
 **Not done, and why.** No line in a diagnostics surface (none exists to
 extend; `window._s1Stat` is the report). No reading of `recs` (S1b).
 
-## v04.89 — S1b: read the per-note cloud copy into a local replica (stub)
+## v04.89 — S1b: read the per-note cloud copy into a local replica
 
-In progress (issue #126).
+Second of three steps of S1, per-note cloud storage (issue #126; design in the
+6 Oct comments on #52). Every device now also READS `notebooks/{nb}/recs` and
+merges what it holds into `DB` with the **unchanged** `mergeDB()`. The blob is
+still written and still read, so a device on this build syncs at least as well
+as v04.88 even if the recs path fails. S1c (next) stops writing the blob.
+`mergeDB()`, `_readCloudDB()` and `_writeCloudDB()` are untouched; nothing
+writes over or deletes the blob, the chunks or the `notebook` key.
+
+**What changed.**
+- **The replica.** A separate IndexedDB database, `siyagah-s1-v1` (stores
+  `recs`, `meta`) — `siyagah-local-v1` is not upgraded. `key → {c, sig, o, at,
+  gone?, rec, n?, g?}` for every rec received (`rec` is the record's JSON
+  text, parsed afresh at every assembly), plus the cursor. One put per
+  changed key in batches of 200, the cursor with the last batch. No
+  IndexedDB (or an SDK without query listeners) = reading off on that
+  device, blob carries on, reason in `window._s1Stat.rd`.
+- **The pull.** After the blob listener in `initSync()`: `recs.where('at','>',cursor)
+  .orderBy('at')`, read through `docChanges()`, skipping docs with pending
+  local writes. Cursor = newest `at` applied less a 2 s overlap (commits can
+  become visible slightly out of order); a redelivered doc is a no-op.
+  A big rec (`n`+`g`) reads its parts; a missing part means a newer
+  generation replaced it, so the rec doc is re-read, up to 3 times; then it is
+  left out, the cursor does not pass it, and the listener restarts 3 s
+  later. Never half a record.
+- **Merge against the FULL replica**, never the changed records — the
+  v04.65 guard reads the whole remote side. The merge block of
+  `_pullRemote()` is extracted unchanged into `_mergeRemoteIn()`, called by
+  it and by the new `_pullRecsMerge()`; both hold `_pullInFlight`, and
+  `_pullDrain()` runs whichever is queued. Once per page load a non-empty
+  replica is merged at start (a cut-off between its write and a merge).
+- **Order.** Every rec write also carries `o`, the record's index in its
+  array (not part of `sig`). The replica assembles each array sorted by
+  `(o, key)`; recs without `o` (v04.88) last, by key; `gone` recs left out;
+  `_head~0` supplies the other keys and its `odd` elements, appended.
+- **Received = known.** Applying a rec sets this device's sig-map entry to the
+  received sig (and `m.p` for parts), so a device never rewrites a record it
+  merely received. Exception: `_head~0` — every device's head differs in
+  what it alone keeps, so "received = known" there made two devices rewrite
+  each other's head for ever; the head's sig is also taken over a key-sorted
+  serialisation for the same reason.
+- **Self-heal.** After any merge (blob or recs), `_s1KickSoon()` waits a
+  grace (6 s; the originating device writes its recs just after its blob)
+  and then writes whatever this device holds that its sig map says the cloud
+  lacks — a merge whose newer local copy beat the cloud's rec.
+- **A real single-flight** replaces the 90 s time-out of v04.88
+  (`_s1Run()`): no second run beside a slow one, the latest pending
+  snapshot runs after it.
+- **Diagnostics.** One line in the sync setup modal's diagnostics: `Per-note
+  copy: on · 2,031 records · last received 2 min ago`, or `off — <reason>`.
+- **Test-only flag** `window.__s1RecsOnly` (init script only, never
+  localStorage) stops a device reading the blob (`_pullRemote()` returns,
+  `syncNow()` does not read it).
+
+**Found and fixed in build — both would have shipped a real loss.**
+1. *A device must not write before it has read.* A fresh or long-offline
+   device whose first push went out before its first read put its OLD copy
+   of a deleted note over the cloud's `gone` rec (and wrote `gone` over the
+   Trash entry and tombstone it had just received but not yet merged).
+   `_s1WriteGate()`: no recs are written until the reader's first snapshot
+   has been merged, not while a received batch waits to be merged, and a
+   snapshot built before the last merge is rebuilt. A reader that is off for
+   good gates nothing (v04.88 behaviour). `51p` holds a stale device's first
+   read back and counts what it writes.
+2. *`mergeDB()` appends every remote element with no id, whether or not
+   local already holds it*, so each merge doubles such an element
+   (524,289 → 1,048,577 in `51a`, then a crashed page). Harmless once per
+   blob pull; fatal for a merge that runs on every received batch. The recs
+   path leaves out of the remote side an id-less element that is
+   byte-for-byte already local (`mergeDB()` itself untouched). **The blob
+   path has the same latent doubling** (it needs an id-less element in a
+   real notebook; none is known) — not changed here.
+
+**Answer on order (what the issue asked).** A note created on another
+device: on a device that already holds the notebook, `mergeDB()` keeps
+local order and appends remote-only records, so it lands **last** in
+`DB.articles` and therefore at the same place in Pane 2's list as via the
+blob (`51o`: A, B, C all position 1 of 2 in folder f1; and equal to
+`mergeDB(B-before, A)` computed directly). On a device that starts with NO
+notes and reads recs only, the `(o, key)` order equals the writer's array
+order (`51o`, 4 of 4). It can differ from the blob only where two records
+carry the same `o` (an array shifted by a deletion after the other was
+written — `o` is not re-written on a shift) or where a record is id-less
+(appended last instead of in place). `51i` lists every order difference in
+the audit's 118 operations: **none**.
+
+**Checks.** `tools/sync-s1.mjs` (app-check block 51): the fake gains query
+listeners (`where('at','>',x)`, `orderBy('at')`, `docChanges()`,
+`hasPendingWrites` — a device's own write first arrives pending, with no
+server time — Timestamps, commit times strictly increasing, a first snapshot
+even when empty, offline and read-refusal, a hook between two part reads).
+**51h** three devices, blob NOT read: create, edit, rename, Trash, restore,
+empty Trash, move folder, theme colour, concurrent edit (newer wins), offline
+rejoin — converge, order included, recs assemble to it. **51i** (in
+`tools/sync-audit.mjs`) for all 118 operations, both directions:
+`mergeDB(local, assemble(recsOf(remote)))` equals `mergeDB(local, remote)`
+(118/118; order differs in 0). **51j** received = known: one writes the note's
+rec, the other two write zero (nor any other rec), and nothing is written
+for 9 s afterwards. **51k** self-heal: B's recs write is held back, the other
+two merge B's newer copy from the blob and write it up. **51l** a fresh
+fourth device (empty replica, blob not read) takes cursor 0 = every rec once,
+equals the others, and a reload re-downloads nothing beyond the overlap.
+**51m** a >1 MB note edited on A between B's part reads: B never applies half
+a record and ends on v2. **51n** reads refused: blob still converges three
+devices, no toast, dot not `err`, `_s1Stat.rd` names `permission-denied`.
+**51o** order (above). **51p** the write gate. `--only 51` **76/76**;
+`sync-e2e` **24/24** (its fake has no query listeners, so the reader is off
+there and nothing changes); `sync-audit --vp 1440,900` **118 ops: PASS 114,
+BY-DESIGN 2, KNOWN 2**, 51i 118/118. Full `app-check` not run (the Architect
+runs it). Unpatched: 51h, 51j–51n and 51p
+need the reader (they read `_s1Stat.rd`, or rely on recs-only convergence or
+on received = known) and fail without it; 51i calls `_s1RecsAsDB()`, which
+does not exist. **51o's first check cannot fail without the feature** — the
+blob already puts a new note last — it guards the recs path against changing
+that; its second (a no-notes device, recs only) needs the reader.
+
+**Not done, and why.**
+- **Per-push full serialisation (`_s1Snap()`) is as it was** — S1c drives it
+  from a dirty set.
+- **Every merge parses the whole replica** (`JSON.parse` of every record):
+  fine at today's size, to be measured before the 8,900-note import.
+- **The replica holds record text beside `DB`** (memory and disk roughly
+  double the notes' size) — S1c decides whether the blob's removal pays for it.
+- **No UI beyond the one diagnostics line.**
+- **The blob path's id-less doubling** (above) is not changed: `mergeDB()` is
+  off limits this round.
+- **A real Firestore was not run** (none is reachable from the builder); the
+  fake follows the SDK's documented behaviour. The import must still wait
+  for S1c.

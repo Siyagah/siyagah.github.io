@@ -16,6 +16,17 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.89** (6 Oct 2026) — S1b, step two of per-note cloud storage (issue
+  #126). Every device also READS `recs` into a replica (own IndexedDB,
+  `siyagah-s1-v1`) and merges the FULL replica with the unchanged
+  `mergeDB()`; the blob is still written and read. Shared merge block
+  (`_mergeRemoteIn`), received = known, a real single-flight, one
+  diagnostics line, recs carry `o` for order. Two real losses found in
+  build: a device must not WRITE before it has READ (`_s1WriteGate`), and
+  `mergeDB()` doubles id-less elements on each merge (blob path too, not
+  changed). Checks 51h–51p (recs-only convergence, 51i equivalence in
+  sync-audit 118/118). `--only 51` **76/76**, `sync-e2e` **24/24**; full
+  `app-check` left to the Architect. The import must still wait for S1c.
 - **v04.88** (6 Oct 2026) — S1a, step one of per-note cloud storage (issue
   #124). After each blob push, changed records are also written one doc
   each to `notebooks/{nb}/recs` (+ `recparts` over 700 KB, `_head~0` for
@@ -53,20 +64,6 @@ must never accumulate here instead of there.
   `updatedAt` bump); cleared = `""` so a merge can't resurrect it.
   Section 48 **13/13** (unpatched 2/9); sync-audit `N29`/`N30` PASS.
   Full `app-check` **1487/1487, twice in a row**.
-- **v04.84** (4 Oct 2026) — owner: "paragraph, space edit like the
-  standard MS word" and "copying the content inside a headings by
-  pressing … the headings".
-  - **↕ Spacing** at the end of the Aa palette (Pane 3 and Multi): line
-    1/1.15/1.5/2 and space after None/Small/Normal/Large, as inline styles
-    on the selected paragraphs. A sheet at the bottom on a phone.
-  - **📋 Copy section** (rich + plain) from a heading: right-click (laptop)
-    or press-and-hold (touch) in the read view; tap the ⠿ grip in edit
-    mode (also Multi).
-  - Fixed on the way (I1): a section dragged by its grip in a Multi
-    window moved into Pane 3's note when Pane 3 was editing another
-    (`closest('#ed')||#ed`). `47f` guards it.
-  - New section 47: `--only 47` **39/39**; unpatched 6/23. Full `app-check`
-    **1474/1474, twice in a row**.
 ---
 
 ## What this is
@@ -288,6 +285,21 @@ A failing check is a wrong assertion surprisingly often — investigate before
   merging, filling and pasting are refused with a toast rather than
   guessing what the owner meant by "row 3" when the grid's row 3 and the
   sheet's row 3 disagree.
+- **The per-record cloud copy (`recs`, v04.88–v04.89, S1).** One Firestore
+  doc per record under `notebooks/{nb}/recs`, key `<coll>~<encoded id>` for
+  the 11 id-keyed arrays; `_head~0` is `DB` minus those arrays (every other
+  key, no allow-list) plus any element with no usable id; over 700 KB a rec
+  is `n`+`g` with pieces in `recparts`. A rec carries `sig` (not `o`, the
+  array index, used only to order) and `at` (server time). Each device keeps
+  a **replica** of what the cloud holds in its own IndexedDB database
+  `siyagah-s1-v1` (never an upgrade of `siyagah-local-v1`) and a per-device
+  sig map `s1:<nb>` (what the cloud is known to hold, per key). **The rule:
+  merge the FULL replica, never "the records that changed"** — `mergeDB()`'s
+  v04.65 guard (a side's tombstone never deletes a note that side still
+  holds) reads the whole remote side, and a partial one switches it off.
+  **A device writes recs only after it has read** (`_s1WriteGate()`): a
+  stale device's first write would otherwise put a deleted note's live rec
+  over the cloud's `gone`. Received = known, except for `_head~0`.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
@@ -326,6 +338,19 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A copy that a device writes must be a copy it has just read — "what I
+  hold" is not "what is newest".** The first cut of v04.89's reader let a
+  device write its whole notebook to the per-record cloud copy as soon as it
+  pushed, before its first read had arrived. A fresh or long-offline device
+  then put its old, live copy of a deleted note over the cloud's `gone`
+  record, and wrote `gone` over the Trash entry it had just received but not
+  yet merged. Nothing threw; the three-device check only failed because the
+  new device's seed was older than the deletion. A write to shared storage
+  needs a gate: the reader has caught up, nothing received is waiting to be
+  merged, and the snapshot is not older than the last merge (`51p`). Its
+  twin: `mergeDB()` appends every id-less remote element on every merge, so
+  a merge that runs per received batch doubles it each time. Cost: caught
+  in build, before any device ran it.
 - **A write in several steps must never overwrite what readers are using
   until its last step — and a broken shared copy needs a repairer, not an
   alarm.** v04.62 split a big notebook's upload into batches but kept
