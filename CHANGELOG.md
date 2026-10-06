@@ -8486,3 +8486,16 @@ Laptop 1440 and phone 390 with `Emulation.setCPUThrottlingRate` ×4:
   behaviour. The owner's import can go ahead only after the Architect has
   looked at (c).
 - The two failures in one `--only 51` run are unexplained (see above).
+
+**Review fixes (PR #129):**
+1. a v04.90 fallback blob is written `s1c` + `s1fb`: always read, never counted as an older build, never renews `s1o` (51y). Without it, any momentary fallback restarted the 30-day window and the group never left plan `both`;
+2. a refused per-note copy is retried after a 10-minute cool-down (`_S1_DENY_RETRY_MS`) instead of for the whole session, so syncing recovers without a reload after the owner fixes the Firestore rules;
+3. unresolved recs stay pending across snapshots (`_s1RdPending`), and the cursor never passes the oldest of them (51z). Before, an incremental snapshot carrying a later doc moved the cursor past a rec whose retry was pending, and that edit never arrived on the device (I2). Found because 51q failed intermittently.
+
+**Architect's totals:** full `app-check` **1632/1632, twice in a row**; unpatched (v04.89's `index.html`): `--only 51` 90/97 (51s, 51t ×2 and both 51z fail; sync-s1 throws, `_s1Plan` missing).
+
+**Not done** (moved to S1d, v04.91): merge 6.1 s on a ×4 phone at 9k notes; `persist()` 1.5 s; undo keeps 60 whole-notebook copies.
+
+## v04.91 — S1d: the local hot path at 9,000 notes (in progress)
+
+Issue #130. Stub entry: profile first, then fixes. Nothing shipped yet.
