@@ -22645,6 +22645,7 @@ function _s1Snap(db){
   });
   out.set('_head~0',{c:'_head', id:'0', json:JSON.stringify(head), canon:_s1Canon(head)});
   out.forEach(r=>{ r.sig=_syncSig(r.canon||r.json); });
+  out.seq=_s1MergeSeq;
   return out;
 }
 /* Detached and single-flight: never awaited by a push. v04.89 — a real
@@ -22677,8 +22678,24 @@ async function _s1MapLoad(nbId){
   _s1Map=m0; _s1MapNb=nbId;
   return m0;
 }
+/* v04.89 — when may this device write recs? Only from a notebook that has
+   caught up with the per-record copy: a device that wrote its stale copy
+   before reading (a phone off for a month; a new install with an old backup)
+   would put a deleted note's live record over the cloud's `gone` one. So: not
+   until the reader's first snapshot has been merged, not while a received
+   batch is still waiting to be merged, and never from a snapshot older than
+   the last merge. A reader that is off for good (refused, no IndexedDB, no
+   query support) no longer gates anything: v04.88's behaviour, blob alongside. */
+let _s1MergeSeq=0, _s1RepUnmerged=false, _s1RdCaught=false;
+function _s1WriteGate(){
+  const r=_s1Stat.rd;
+  if(!r||r.perm) return true;
+  return r.on&&_s1RdCaught&&!_s1RepUnmerged&&!_s1RecsMergeQueued&&!_pullInFlight;
+}
 async function _s1Exec(nbId, snap){
   if(!_s1Eligible()) return;
+  if(!_s1WriteGate()){ _s1KickSoon(); return; }
+  if(snap.seq!==_s1MergeSeq){ try{ _stampRecordTouches(); }catch(e){} snap=_s1Snap(); }
   const mk='s1:'+nbId;
   const m=await _s1MapLoad(nbId);
   if(!m){ _s1Disable(window.indexedDB?'map-not-persistable':'no-indexeddb'); return; }
@@ -22870,6 +22887,7 @@ function _s1ReadStop(){
 }
 function _s1RdOff(st, reason, e){
   st.on=false; st.reason=reason;
+  st.perm=['permission-denied','no-query-support','no-indexeddb','replica-not-writable'].indexOf(reason)>=0;
   if(e) st.err={code:(e&&e.code)||'error', at:Date.now(), message:String((e&&e.message)||e).slice(0,200)};
   console.warn('S1 read off:',reason,e||'');
 }
@@ -22877,7 +22895,7 @@ async function _s1ReadStart(cfg){
   _s1ReadStop();
   const gen=_s1RdGen, nb=cfg.notebookId;
   const st=_s1Stat.rd=_s1Stat.rd||{on:false, reason:null, records:0, lastRecv:0, cursor:0, err:null};
-  st.on=false; st.reason='starting';
+  st.on=false; st.reason='starting'; st.perm=false; _s1RdCaught=false;
   try{
     const nbRef=_syncFsDb.collection('notebooks').doc(nb), recsC=nbRef.collection('recs');
     if(typeof recsC.where!=='function'||!(firebase.firestore.Timestamp)){ _s1RdOff(st,'no-query-support'); return; }
@@ -22928,7 +22946,7 @@ async function _s1OnSnap(gen, snap, nbRef){
     if(at<skipMin) maxAt=Math.max(maxAt,at);
   }
   const base=Math.max(rep.cursor, maxAt?Math.min(maxAt-_S1_OVERLAP_MS, skipMin-1):0);
-  if(!puts.length&&base===rep.cursor&&skipMin===Infinity) return;
+  if(!puts.length&&base===rep.cursor&&skipMin===Infinity){ _s1RdCaught=true; return; }
   try{ await _s1RepSave(nb, puts, base); }
   catch(e){ _s1ReadStop(); _s1RdOff(st,'replica-not-writable',e); return; }
   if(gen!==_s1RdGen) return;
@@ -22949,7 +22967,8 @@ async function _s1OnSnap(gen, snap, nbRef){
   });
   if(m&&touched){ try{ await _idbPut('s1:'+nb,m); }catch(e){ console.warn('S1 read: sig map not saved',e); } }
   st.records=0; rep.map.forEach((e,k)=>{ if(!e.gone&&k!=='_head~0') st.records++; });
-  if(puts.length){ st.lastRecv=Date.now(); st.err=null; _pullRecsMerge(); }
+  if(skipMin===Infinity) _s1RdCaught=true;
+  if(puts.length){ st.lastRecv=Date.now(); st.err=null; _s1RepUnmerged=true; _pullRecsMerge(); }
   if(skipMin<Infinity){
     clearTimeout(_s1RdTimer);
     _s1RdTimer=setTimeout(()=>{ const c=getSyncConfig(); if(c&&_syncFsDb) _s1ReadStart(c); },3000);
@@ -22976,6 +22995,7 @@ async function _pullRecsMerge(){
       });
       _mergeRemoteIn(remoteDB, 0);
     }
+    _s1RepUnmerged=false;
   }catch(e){
     console.warn('S1 read: merge skipped:',e);
     if(_s1Stat.rd) _s1Stat.rd.err={code:(e&&e.code)||'merge', at:Date.now(), message:String((e&&e.message)||e).slice(0,200)};
@@ -22995,6 +23015,7 @@ function _s1KickSoon(){
     _s1KickTimer=null;
     const cfg=getSyncConfig();
     if(!cfg||!_syncFsDb||!_s1Eligible()) return;
+    if(!_s1WriteGate()){ _s1KickSoon(); return; }   /* not caught up yet: look again shortly */
     try{ _flushAllEditors(); _stampThemeTouches(); _stampRecordTouches(); _s1Run(cfg.notebookId,_s1Snap()); }catch(e){ _s1Fail(e); }
   }, _S1_GRACE_MS);
 }
@@ -23342,6 +23363,7 @@ async function _pullRemote(docRef, md, retry){
    (_pullRemote) and the recs path (_pullRecsMerge) run exactly the same code.
    Callers hold _pullInFlight. */
 function _mergeRemoteIn(remoteDB, remoteT){
+    _s1MergeSeq++;   /* any per-record snapshot built before this merge is now out of date */
     const before=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
     /* v03.92.02 — flush BEFORE the merge, never after.
        Flushing afterwards (as v03.92.01 did) was actively destructive: it

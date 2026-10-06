@@ -81,8 +81,8 @@ function makeCloud() {
      write counter moved since the last time it was sent on that listener. */
   const tsCmp = (a, b) => (a[0] - b[0]) || (a[1] - b[1]);
   cloud.refusedRead = (path) => cloud.refuseRead.some((pre) => path.includes(pre));
-  cloud.deliverQ = (d, id) => {
-    const sub = d.qsubs.get(id); if (!sub || d.offline) return;
+  cloud.deliverQ = (d, id, initial) => {
+    const sub = d.qsubs.get(id); if (!sub || d.offline || d.holdQ) return;
     if (cloud.refusedRead(sub.path)) {
       d.qchain = d.qchain.then(() => d.page.evaluate(([i, e]) => window.__fsDeliverQErr && window.__fsDeliverQErr(i, e), [id, { code: 'permission-denied', message: 'Missing or insufficient permissions.' }]).catch(() => {}));
       d.qsubs.delete(id); return;
@@ -101,7 +101,7 @@ function makeCloud() {
       changes.push({ type: sub.sent.has(p) ? 'modified' : 'added', id: p.split('/').pop(), data: v });
       sub.sent.set(p, ver);
     }
-    if (!changes.length) return;
+    if (!changes.length && !initial) return;   /* a real listener always fires once at the start, even with nothing */
     d.qDelivered += changes.length;
     d.qChangeLog.push(...changes.map((c) => ({ id: c.id, at: c.data.at.__ts })));
     d.qchain = d.qchain.then(async () => { await sleep(40 + Math.floor(Math.random() * 100)); await d.page.evaluate(([i, c]) => window.__fsDeliverQ && window.__fsDeliverQ(i, c), [id, changes]).catch(() => {}); });
@@ -134,7 +134,7 @@ function makeCloud() {
       for (const k of Object.keys(d)) if (d[k] && d[k].__sts) d[k] = at;
       cloud.store.set(o.p, d);
       cloud.ver.set(o.p, (cloud.ver.get(o.p) || 0) + 1);
-      cloud.log.push({ t: 'set', p: o.p, bytes: Buffer.byteLength(JSON.stringify(d)), dev: committer && committer.name });
+      cloud.log.push({ t: 'set', p: o.p, bytes: Buffer.byteLength(JSON.stringify(d)), dev: committer && committer.name, gone: !!d.gone, ms });
     }
     cloud.commits++;
     const touched = new Set(ops.map((o) => o.p));
@@ -155,7 +155,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
     try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(db)); localStorage.setItem('siyagah-sync-v1', JSON.stringify(c)); } catch {}
     if (recsOnly) window.__s1RecsOnly = true;   /* test-only: this device does not read the blob */
   }, [seed, cfg, !!opts.recsOnly]);
-  const d = { name, ctx, offline: false, listens: new Set(), errors: [], dieAfterRec: null, qsubs: new Map(), qchain: Promise.resolve(), qDelivered: 0, qChangeLog: [], partHook: null, grace: opts.grace || 1500 };
+  const d = { name, ctx, offline: false, listens: new Set(), errors: [], dieAfterRec: null, qsubs: new Map(), qchain: Promise.resolve(), qDelivered: 0, qChangeLog: [], partHook: null, holdQ: !!opts.holdQ, grace: opts.grace || 1500 };
   await ctx.exposeBinding('__fsGet', async (_s, path, src) => {
     if (d.offline && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get document because the client is offline.' } };
     if (cloud.refusedRead(path)) return { error: { code: 'permission-denied', message: 'Missing or insufficient permissions.' } };
@@ -164,7 +164,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
     return { data: cloud.store.has(path) ? cloud.store.get(path) : null };
   });
   await ctx.exposeBinding('__fsListen', async (_s, path) => { d.listens.add(path); const data = cloud.store.has(path) ? cloud.store.get(path) : null; setTimeout(() => d.page.evaluate(([p, x]) => window.__fsDeliver && window.__fsDeliver(p, x), [path, data]).catch(() => {}), 50); });
-  await ctx.exposeBinding('__fsListenQ', async (_s, id, path, cur) => { d.qsubs.set(id, { path, cur, sent: new Map() }); setTimeout(() => cloud.deliverQ(d, id), 50); });
+  await ctx.exposeBinding('__fsListenQ', async (_s, id, path, cur) => { d.qsubs.set(id, { path, cur, sent: new Map() }); setTimeout(() => cloud.deliverQ(d, id, true), 50); });
   await ctx.exposeBinding('__fsUnlistenQ', async (_s, id) => { d.qsubs.delete(id); });
   await ctx.exposeBinding('__fsCommit', async (_s, ops) => {
     /* Offline: the SDK queues the write and lands it on reconnect. */
@@ -444,7 +444,7 @@ try {
 
   /* ── 51h: recs only — three devices converge through recs alone ── */
   {
-    const { cloud, devs, A, B, C } = await trio({ recsOnly: true });
+    const { cloud, devs, A, B, C } = await trio({ recsOnly: !process.argv.includes('--normal') });   /* --normal: run 51h with the blob read too, to tell a recs fault from an old one */
     const fails = [], steps = [];
     const step = async (label, fn, verify) => {
       await fn(); const s = await settle(cloud, devs); const r = await sameDB(devs);
@@ -456,12 +456,19 @@ try {
       return r;
     };
     const idOf = (d, title) => on(d, (t) => (DB.articles.find((a) => a.title === t) || {}).id, title);
-    await step('create', () => act(A, () => { mkArt('f1', 'Created on A'); }), async () => ((await has(B, () => DB.articles.some((a) => a.title === 'Created on A'))) && (await has(C, () => DB.articles.some((a) => a.title === 'Created on A')))) ? '' : 'note missing on B or C');
+    await step('create', () => act(A, () => { mkArt('f1', 'Created on A'); try { if (ST.editing) saveArt(); } catch (e) {} ST.editing = false; /* a note left open in edit mode restamps itself when a rename arrives (an old, separate behaviour) */ }), async () => ((await has(B, () => DB.articles.some((a) => a.title === 'Created on A'))) && (await has(C, () => DB.articles.some((a) => a.title === 'Created on A')))) ? '' : 'note missing on B or C');
     const nid = await idOf(A, 'Created on A');
     await step('edit', () => act(B, (i) => { const a = DB.articles.find((x) => x.id === i); a.content = '<p>Edited on B</p>'; a.updatedAt = new Date().toISOString(); }, nid),
       async () => ((await has(A, (i) => DB.articles.find((x) => x.id === i).content.includes('Edited on B'), nid)) && (await has(C, (i) => DB.articles.find((x) => x.id === i).content.includes('Edited on B'), nid))) ? '' : 'edit missing');
     await step('rename', () => act(C, (i) => { finRenameArtTitle(i, 'Renamed on C'); }, nid),
-      async () => { const ts = await Promise.all(devs.map((d) => noteTitle(d, nid))); return ts.every((t) => t === 'Renamed on C') ? '' : 'rename missing, titles now: ' + JSON.stringify(ts); });
+      async () => {
+        const ts = await Promise.all(devs.map((d) => noteTitle(d, nid)));
+        if (ts.every((t) => t === 'Renamed on C')) return '';
+        const ups = await Promise.all(devs.map((d) => on(d, (i) => DB.articles.find((x) => x.id === i).updatedAt, nid)));
+        const rec = cloud.store.get(NB + '/recs/articles~' + encodeURIComponent(nid));
+        const wr = cloud.log.filter((o) => o.t === 'set' && o.p === NB + '/recs/articles~' + encodeURIComponent(nid)).map((o) => o.dev);
+        return 'rename missing, titles now: ' + JSON.stringify(ts) + ' updatedAt ' + JSON.stringify(ups) + ' cloud rec ' + (rec && rec.j ? JSON.parse(rec.j).title + '@' + JSON.parse(rec.j).updatedAt : String(rec)) + ' writers ' + wr.join();
+      });
     await step('trash', () => act(A, (i) => { trashArt(i); }, nid), async () => (await has(B, (i) => !DB.articles.some((a) => a.id === i) && DB.trash.some((t) => t.item && t.item.id === i), nid)) ? '' : 'not in Trash on B');
     await step('restore', () => act(B, (i) => { restoreItem(DB.trash.find((t) => t.item && t.item.id === i).id); }, nid), async () => ((await has(A, (i) => DB.articles.some((a) => a.id === i), nid)) && (await has(C, (i) => DB.articles.some((a) => a.id === i), nid))) ? '' : 'restored note missing on A or C');
     await step('empty Trash', async () => { await act(A, (i) => { trashArt(i); }, nid); await settle(cloud, devs); await act(C, () => { emptyTrash(); }); },
@@ -534,13 +541,13 @@ try {
     await settle(cloud, devs);
     await act(B, () => { trashArt('a3'); });
     await settle(cloud, devs);
-    const D = await addDevice(browser, srv.base, cloud, 'fresh', { width: 1440, height: 900 }, false, seedDB(), { recsOnly: true });
+    const D = await addDevice(browser, srv.base, cloud, 'fresh', { width: 1440, height: 900 }, false, seedDB('2026-01-01T00:00:00.000Z'), { recsOnly: true });   /* an OLD notebook: a note newer than its own deletion would (rightly) survive it */
     await settle(cloud, [...devs, D]);
     const all = [...devs, D];
     const total = [...cloud.store.keys()].filter((k) => k.startsWith(NB + '/recs/')).length;
     const r = await sameDB(all);
     check(r.ok && D.qDelivered >= total && (await has(D, () => DB.articles.some((a) => a.title === 'Before the fresh device'))),
-      '51l fresh device: cursor 0 downloads every rec once, and it equals the other three', JSON.stringify({ why: r.why, delivered: D.qDelivered, total }));
+      '51l fresh device: cursor 0 downloads every rec once, and it equals the other three', JSON.stringify({ why: r.why, delivered: D.qDelivered, total, ...(r.ok ? {} : { state: await Promise.all(all.map((d) => on(d, () => ({ a: DB.articles.map((x) => x.id), t: DB.trash.map((x) => x.item && x.item.id), ts: DB.tombstones.map((x) => x.id) })))) }) }));
     const maxAt = Math.max(...[...cloud.store.entries()].filter(([k]) => k.startsWith(NB + '/recs/')).map(([, v]) => v.at.__ts[0] * 1e3 + v.at.__ts[1] / 1e6));
     const within = [...cloud.store.entries()].filter(([k, v]) => k.startsWith(NB + '/recs/') && v.at.__ts[0] * 1e3 + v.at.__ts[1] / 1e6 > maxAt - 2000).length;
     await reopen(D); await settle(cloud, all);
@@ -549,6 +556,31 @@ try {
     check(r2.ok && redelivered <= within && redelivered < total,
       '51l …then reloading it re-downloads nothing beyond the 2 s overlap', JSON.stringify({ redelivered, overlapDocs: within, total, why: r2.why }));
     check(all.every((d) => d.errors.length === 0), '51l no page errors', all.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+    for (const d of all) await d.ctx.close();
+  }
+
+  /* ── 51p: a stale device writes nothing until it has read — it cannot put a deleted note's live rec over the cloud's `gone` ── */
+  {
+    const { cloud, devs, A, B } = await trio({ recsOnly: true });
+    await act(A, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>warm</p>'; a.updatedAt = new Date().toISOString(); });
+    await settle(cloud, devs);
+    await act(B, () => { trashArt('a3'); });
+    await settle(cloud, devs);
+    const goneBefore = cloud.store.get(NB + '/recs/articles~a3');
+    const mark = cloud.log.length;
+    /* A device with an OLD copy of the notebook (a3 still alive in it) whose first read of the per-note copy is held back. */
+    const D = await addDevice(browser, srv.base, cloud, 'stale', { width: 1440, height: 900 }, false, seedDB('2026-01-01T00:00:00.000Z'), { recsOnly: true, holdQ: true });
+    await act(D, () => { const a = DB.articles.find((x) => x.id === 'a2'); a.content += '<p>typed on the stale device</p>'; a.updatedAt = new Date().toISOString(); });
+    await sleep(5000);
+    const early = cloud.log.slice(mark).filter((o) => o.t === 'set' && o.p.startsWith(NB + '/recs/') && o.dev === 'stale').map((o) => o.p.slice(NB.length + 6));
+    D.holdQ = false; for (const id of D.qsubs.keys()) cloud.deliverQ(D, id, true);
+    const all = [...devs, D];
+    await settle(cloud, all);
+    const goneAfter = cloud.store.get(NB + '/recs/articles~a3');
+    const r = await sameDB(all);
+    check(early.length === 0 && goneBefore && goneBefore.gone === true && goneAfter && goneAfter.gone === true && r.ok && (await has(D, () => !DB.articles.some((a) => a.id === 'a3') && DB.articles.find((a) => a.id === 'a2').content.includes('typed on the stale device'))),
+      '51p a stale device whose first read is held back writes no recs until it has read; the deleted note stays gone and its own edit still arrives', JSON.stringify({ earlyWrites: early, goneBefore: !!(goneBefore && goneBefore.gone), goneAfter: !!(goneAfter && goneAfter.gone), why: r.why }));
+    check(all.every((d) => d.errors.length === 0), '51p no page errors', all.flatMap((d) => d.errors).slice(0, 3).join(' · '));
     for (const d of all) await d.ctx.close();
   }
 
