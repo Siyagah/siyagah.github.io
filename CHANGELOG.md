@@ -8200,10 +8200,16 @@ still converge; 51g cut-off seed resumes (1,023 records, 1,023 writes).
 `sync-e2e` gains an assembly check after convergence (it leaves out top-level
 keys the devices themselves disagree on, and names them).
 `tools/s1-assemble.mjs` is the Node-side reader. `--only 51` **53/53**;
-`sync-e2e` **24/24**. Full `app-check` not run (the Architect runs it).
+`sync-e2e` **24/24**. Full `app-check` **1573/1573, twice in a row**;
+unpatched: `--only 51` 0/3 blocks (every block fails), `sync-e2e` 23/24
+(only the new recs-assembly check fails).
 51f: unpatched, no `recs` exist and `_s1Stat` is undefined, so its
 `permission-denied` assertions fail; its convergence assertion would pass on
 unpatched code (the blob does not change).
 
 **Not done, and why.** No line in a diagnostics surface (none exists to
 extend; `window._s1Stat` is the report). No reading of `recs` (S1b).
+
+## v04.89 — S1b: read the per-note cloud copy into a local replica (stub)
+
+In progress (issue #126).

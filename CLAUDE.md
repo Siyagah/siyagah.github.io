@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.88.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.89.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -23,7 +23,9 @@ must never accumulate here instead of there.
   blob are untouched. Per-device sig map in IndexedDB; failure is invisible
   (`window._s1Stat`). The owner-visible lists DO depend on array order, so
   S1b needs a stable order. The import must wait for S1c. `--only 51`
-  **53/53**, `sync-e2e` **24/24**; full `app-check` left to the Architect.
+  **53/53**, `sync-e2e` **24/24**; full `app-check` **1573/1573, twice in a
+  row**; unpatched: `--only 51` 0/3 blocks (every block fails), `sync-e2e`
+  23/24 (only the new recs-assembly check fails).
 - **v04.87** (5 Oct 2026) — MyWall, elegant (owner: "it looks so dumb").
   A title row (name, segmented ⇅ All / ▤ Compact, "N pending · across M
   categories"), then one card per category: colour stripe + tinted icon
