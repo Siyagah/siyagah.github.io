@@ -22,6 +22,7 @@
 
    Exit code: 0 only if every check passes.  Run: node tools/sync-e2e.mjs */
 import { playwright, serve, seedDB } from './harness.mjs';
+import { assembleRecs, canonDB, diffDB } from './s1-assemble.mjs';
 
 const FAKE_SDK = String.raw`(function(){
   if (window.firebase && window.firebase.__fake) return;
@@ -405,6 +406,28 @@ try {
   const idle0 = commitCount;
   await sleep(20000);
   check(commitCount - idle0 === 0, 'converged and idle for 20s: no device writes to the cloud (no ping-pong)', `${commitCount - idle0} writes`);
+
+  /* 10b. v04.88 (S1a) — the per-record copy beside the blob describes the
+          notebook: assembled from recs (+ parts), it equals each converged
+          device's DB, order-insensitive by id per array. Every device writes
+          its own shadow, so wait for all of them to go quiet first. */
+  {
+    const t0 = Date.now(); let lastN = -1, since = Date.now();
+    while (Date.now() - t0 < 30000) {
+      const busy = (await Promise.all(all.map((d) => on(d, () => !!_s1Busy || !!_pushInFlight).catch(() => true)))).some(Boolean);
+      if (busy || store.size !== lastN) { lastN = store.size; since = Date.now(); }
+      else if (Date.now() - since > 2000) break;
+      await sleep(250);
+    }
+    const { db: asm, missingParts } = assembleRecs(store, 'notebooks/nb-e2e');
+    const per = [];
+    for (const d of all) {
+      const dev = await on(d, () => JSON.parse(JSON.stringify(DB)));
+      const same = !!asm && missingParts === 0 && canonDB(asm) === canonDB(dev);
+      per.push(same ? d.name + ':equal' : d.name + ':' + (asm ? diffDB(asm, dev) : 'no head'));
+    }
+    check(per.every((x) => /:equal$/.test(x)), 'S1a: the per-record cloud copy (recs) assembles to each converged device\'s notebook', JSON.stringify(per));
+  }
 
   /* 11. Nothing alarming, nothing broken, on any device. */
   const endDots = await Promise.all(all.map(dot));
