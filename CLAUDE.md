@@ -24,9 +24,13 @@ must never accumulate here instead of there.
   diagnostics line, recs carry `o` for order. Two real losses found in
   build: a device must not WRITE before it has READ (`_s1WriteGate`), and
   `mergeDB()` doubles id-less elements on each merge (blob path too, not
-  changed). Checks 51h–51p (recs-only convergence, 51i equivalence in
-  sync-audit 118/118). `--only 51` **76/76**, `sync-e2e` **24/24**; full
-  `app-check` left to the Architect. The import must still wait for S1c.
+  changed). Review fixes: an unresolvable rec backs off 3 s/30 s/5 min then
+  is given up on (`st.err` `unresolvable`; S1c must remember it), and the
+  clean-up never deletes a generation the rec still names (server read
+  first). Checks 51h–51r (51i equivalence in sync-audit 118/118). `--only 51`
+  **81/81** (51q/51r fail unpatched), `sync-e2e` **24/24**; full `app-check`
+  left to the Architect. The import must still wait for S1c; the write gate
+  stays shut while the reader fails (S1c must surface it).
 - **v04.88** (6 Oct 2026) — S1a, step one of per-note cloud storage (issue
   #124). After each blob push, changed records are also written one doc
   each to `notebooks/{nb}/recs` (+ `recparts` over 700 KB, `_head~0` for

@@ -8327,7 +8327,44 @@ does not exist. **51o's first check cannot fail without the feature** — the
 blob already puts a new note last — it guards the recs path against changing
 that; its second (a no-notes device, recs only) needs the reader.
 
+**Two fixes from the Architect's review (same round).**
+- **An unresolvable rec no longer causes an endless re-read loop** (read
+  quota, I2). A rec whose pieces are missing on all 3 tries used to restart
+  the listener 3 s later, for ever (~28,800 restarts a day against a 50,000
+  reads/day free quota; when it runs out Firestore refuses every read, the
+  blob too). Now failures are counted per `(key, at)`: back off 3 s, 30 s,
+  5 min (`_S1_BACKOFF`), and the next failure gives up on THAT version — the
+  cursor moves past it, `_s1Stat.rd.err = {code:'unresolvable', key, at}`, a
+  `console.warn`, and it is never re-read (`_s1RdGaveUp`). Nothing is lost:
+  the blob still carries the record in S1b, and the next write of that
+  record (a new `at`) is delivered normally. **S1c must keep this in mind**:
+  once the blob stops carrying records, a version given up on is a version
+  no device can get.
+- **The clean-up never deletes a generation the rec doc still names.**
+  `m.p[key]` can be a generation received from another device, so two
+  devices saving the same >700 KB note within seconds could have A delete
+  B's pieces while the rec named them. Before deleting a previous
+  generation's pieces, `commit()` reads the rec doc from the server
+  (`get({source:'server'})`) and deletes only if it no longer names that
+  generation; a read that fails counts as "still named". One extra read per
+  big-record write; a generation left behind waits for a later run.
+- **51q** a rec naming a generation whose pieces are deleted: at most 4
+  listener restarts (3 measured, backoff shortened to 0.4/0.8/1.2 s), then
+  `st.err.code==='unresolvable'`, no more restarts, and a rec written after it
+  still arrives with the cursor past it. Unpatched: 4 restarts in 14 s and 6
+  after 20 s (still going), no error recorded, cursors stuck at 0, the later
+  edit never arrives. **51r** A's rec commit is held until B's rec has landed
+  and A's reader holds B's generation; the cloud is sampled for 12 s after the
+  release and no rec ever names a generation with a piece missing; the
+  assembly equals the devices. Unpatched: the rec named a generation with 0
+  of 2 pieces.
+  Totals: `--only 51` **81/81**, `sync-e2e` **24/24**, `ship-check` 13/13.
+  Full `app-check` not run (the Architect runs it twice).
+
 **Not done, and why.**
+- **While the reader keeps failing with a non-permanent error,
+  `_s1WriteGate()` stays shut and the device writes no recs.** Fine while the
+  blob carries everything; S1c must surface or bound it.
 - **Per-push full serialisation (`_s1Snap()`) is as it was** — S1c drives it
   from a dirty set.
 - **Every merge parses the whole replica** (`JSON.parse` of every record):
