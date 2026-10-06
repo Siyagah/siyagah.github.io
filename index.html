@@ -3486,6 +3486,13 @@ function _ljOpen(){
 function _ljWanted(){ return !_ljDead&&(_ljOn||((DB&&DB.articles)||[]).length>=_LJ_MIN_NOTES); }
 function _ljOrdOf(sw){ const o={}; _LJ_COLLS.forEach(c=>{ o[c]=sw.c[c].keys; }); return o; }
 function _ljCounts(sw){ const n={}; _LJ_COLLS.forEach(c=>{ if(sw.c[c].isArr) n[c]=sw.c[c].keys.length; }); return n; }
+/* test-only: with window.__ljHold (ms) set, keep THIS transaction open after its puts, so a check can kill the browser inside it. Inert when unset. */
+function _ljHoldOpen(st){
+  const ms=window.__ljHold; if(typeof ms!=='number'||!(ms>0)) return;
+  const t0=Date.now(); console.log('LJ_HOLD');
+  const spin=()=>{ const r=st.get('m'); r.onsuccess=()=>{ if(Date.now()-t0<ms) spin(); }; };
+  spin();
+}
 /* the full copy and the save number it holds, in ONE transaction */
 function _ljFullPut(seq){
   return _idbOpen().then(db=>new Promise((resolve,reject)=>{
@@ -3497,6 +3504,7 @@ function _ljFullPut(seq){
       tx.onerror=()=>reject(tx.error||new Error('IndexedDB write failed'));
       tx.onabort=()=>reject(tx.error||new Error('IndexedDB write aborted'));
       st.put(DB,IDB_KEY); st.put(seq,'notebook-seq');
+      _ljHoldOpen(st);
     }catch(e){ try{ if(tx) tx.abort(); }catch(_){} reject(e); }
   }));
 }
@@ -3517,6 +3525,7 @@ function _ljTx(puts,m,cleanSeq){
       }
       puts.forEach(p=>st.put(p[1],p[0]));
       if(m) st.put(m,'m');
+      _ljHoldOpen(st);
     }catch(e){ try{ if(tx) tx.abort(); }catch(_){} reject(e); }   /* a throw half-way must not commit half a save */
   }));
 }

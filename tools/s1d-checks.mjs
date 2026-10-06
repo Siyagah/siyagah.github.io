@@ -322,6 +322,61 @@ async function check52d(browser, srv) {
   }
 }
 
+/* ══ 52d2 ════════════════════════════════════════════════════════════════════ */
+/* Kill INSIDE the transaction. The app keeps a journal transaction (or a checkpoint's full-copy transaction) open for window.__ljHold ms
+   after its puts and logs LJ_HOLD; the harness SIGKILLs the profile on that line, so the kill lands with the writes issued and uncommitted.
+   Journal save: must reopen as the notebook BEFORE the save. Checkpoint (the save already journaled): must reopen as the notebook the
+   journal holds, i.e. AFTER the save — and in neither case with fewer notes. */
+async function check52d2(browser, srv) {
+  for (const [vp, nJ, nC] of [[VPS[2], 10, 5], [VPS[0], 5, 3]]) {
+    const dir = mkdtempSync(join(tmpdir(), 's1d-52d2-'));
+    const bad = [], cnt = { J: { before: 0, after: 0 }, C: { before: 0, after: 0 } }, errsAll = [];
+    let ctx, page, errors, state, failed = null;
+    try {
+      ({ ctx, page, errors } = await openPersistent(browser, srv.base, vp, dir));
+      await seedInPage(page, 2000); await idle(page);
+      state = await page.evaluate(() => window.__sig52());
+      for (let i = 0; i < nJ + nC; i++) {
+        const kind = i < nJ ? 'J' : 'C';
+        let killed = null;
+        const onLog = (m) => { if (m.text() === 'LJ_HOLD' && !killed) { killed = Date.now(); killProfile(dir); } };
+        page.on('console', onLog);
+        const r = await page.evaluate(async ({ i, kind }) => {
+          _LJ_CKPT_MS = 30000; window.__ljHold = 0;
+          const n0 = DB.articles.length;
+          for (let k = 0; k < 6; k++) DB.articles.push({ id: 'h' + i + '-' + k, title: 'Held ' + i, content: '<p>' + 'z'.repeat(250000) + '</p>', folderIds: ['f1'], tags: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), kind: 'general' });
+          for (let k = 0; k < 3; k++) { const a = DB.articles[(i * 13 + k * 101) % n0]; a.title += '!'; a.content += '<p>' + i + '</p>'; a.updatedAt = new Date(Date.now() + i * 1000 + k).toISOString(); }
+          if (kind === 'J') { window.__ljHold = 2000; persist(); }
+          else { persist(); await _ljChain.catch(() => {}); window.__ljHold = 2000; _ljCheckpoint(); }
+          return window.__sig52();
+        }, { i, kind }).catch(() => null);
+        const t0 = Date.now();
+        while (!killed && Date.now() - t0 < 10000) await sleep(20);
+        if (!killed) { bad.push(`trial ${i} (${kind}): the app never reached the held transaction`); killProfile(dir); }
+        await sleep(300);
+        closeQuiet(ctx);
+        ({ ctx, page, errors } = await openPersistent(browser, srv.base, vp, dir));
+        errsAll.push(...errors.filter((e) => /local journal/.test(e)));
+        const got = await page.evaluate(() => window.__sig52());
+        /* the page that was killed may not have returned its sig: it is computed again from what the trial built */
+        const sigAfter = r && r.sig, want = kind === 'J' ? state : { sig: sigAfter, n: r ? r.n : -1 };
+        const isBefore = got.sig === state.sig, isAfter = !!sigAfter && got.sig === sigAfter;
+        if (isBefore) cnt[kind].before++; else if (isAfter) cnt[kind].after++;
+        if (kind === 'J' ? !isBefore : !isAfter) bad.push(`trial ${i} (${kind}): reopened with ${got.n} notes / ${got.trash} in Trash; expected ${want.n}/${want.trash}${isBefore ? ' (the earlier notebook)' : isAfter ? ' (the saved notebook)' : ' (a MIX or something else)'}`);
+        if (got.n < state.n) bad.push(`trial ${i} (${kind}): FEWER notes (${got.n} < ${state.n})`);
+        page.removeAllListeners('console'); page.on('console', () => {});
+        state = got;
+      }
+    } catch (e) { failed = String(e && e.message || e); }
+    if (failed) check(false, `52d2 ${vp.name}: the in-transaction kill trials ran to the end`, failed);
+    else {
+      check(bad.length === 0, `52d2 ${vp.name}: ${nJ} kills inside a journal transaction reopen as the notebook before it; ${nC} inside a checkpoint's full-copy write reopen as the journaled notebook; never fewer (journal ${cnt.J.before} before · ${cnt.J.after} after; checkpoint ${cnt.C.before} before · ${cnt.C.after} after)`, bad.slice(0, 4).join(' | '));
+      check(errsAll.length === 0, `52d2 ${vp.name}: no reopen found the journal and the full copy out of step`, errsAll.slice(0, 3).join(' · '));
+    }
+    await closeQuiet(ctx); killProfile(dir); rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 /* ══ 52e ═════════════════════════════════════════════════════════════════════ */
 async function check52e(browser, srv) {
   for (const vp of [VPS[2], VPS[0]]) {
@@ -366,5 +421,6 @@ export async function runChecks({ browser, srv, only }) {
   if (want('52b')) await check52b(browser, srv);
   if (want('52c')) await check52c(browser, srv);
   if (want('52d')) await check52d(browser, srv);
+  if (want('52d2')) await check52d2(browser, srv);
   if (want('52e')) await check52e(browser, srv);
 }
