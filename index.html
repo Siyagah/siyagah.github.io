@@ -22599,7 +22599,16 @@ async function _writeCloudDB(nb, now, b64, marked){
   _syncMyGens.push({g,n});
   const chunkSet=(batch,i)=>batch.set(nb.collection("chunks").doc(_syncChunkId(g,i)),{p:b64.slice(i*_SYNC_CHUNK,(i+1)*_SYNC_CHUNK),ver:now});
   const mainDoc={ n:n, ver:now, g:g, deviceUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp() };
-  if(marked) mainDoc.s1c=_S1C_MARK;
+  if(marked){
+    mainDoc.s1c=_S1C_MARK;
+    /* `s1o` = when a build WITHOUT the marker last wrote the main doc. This write
+       replaces that main doc, so without the date an older build that is still in
+       use would be forgotten the moment a v04.90 device wrote over it (and its
+       reader would then never see another edit). Carried from the main doc this
+       device last saw: an unmarked one's own time, or a marked one's `s1o`. */
+    const pv=prevSeen, o=pv?(pv.s1c?pv.s1o:(pv.deviceUpdatedAt||pv.ver)):0;
+    if(o) mainDoc.s1o=o;
+  }
   if(n<=_SYNC_CHUNK_BATCH){
     const batch=_syncFsDb.batch();
     for(let i=0;i<n;i++) chunkSet(batch,i);
@@ -22836,7 +22845,13 @@ async function _s1Exec(nbId, snap){
   const utf8=s=>new TextEncoder().encode(s).length;
   const work=[];
   snap.forEach((r,key)=>{ if(m.s[key]!==r.sig) work.push([key,r]); });
-  if(snap.partial) snap.goneKeys.forEach(key=>{ if(!snap.has(key)&&m.s[key]!==undefined&&m.s[key]!=='gone') work.push([key,null]); });
+  if(snap.partial){
+    /* named by the sweep (a record that left one of the watched arrays) … */
+    snap.goneKeys.forEach(key=>{ if(!snap.has(key)&&m.s[key]!==undefined&&m.s[key]!=='gone') work.push([key,null]); });
+    /* … and `trash` / `tombstones`, which the sweep does not watch but a partial
+       snapshot always holds in full: one it lacks is one that was removed. */
+    Object.keys(m.s).forEach(key=>{ if((key.startsWith('trash~')||key.startsWith('tombstones~'))&&!snap.has(key)&&m.s[key]!=='gone'&&!snap.goneKeys.has(key)) work.push([key,null]); });
+  }
   else Object.keys(m.s).forEach(key=>{ if(!snap.has(key)&&m.s[key]!=='gone') work.push([key,null]); });
   let batch=null, nOps=0, nBytes=0, done=[], written=0;
   const commit=async()=>{
@@ -23284,11 +23299,14 @@ let _lastPushedSig='', _pushFailures=0;
    whose recs were refused would write a blob nobody reads. */
 const _S1C_ACTIVE_MS=30*24*3600*1000;
 let _S1_GATE_MAX_MS=120000, _s1GateSince=0, _s1FallbackToasted=false;
+function _s1Now(){ return Date.now(); }   /* one place a check can move the clock */
 function _s1OlderActive(){
   const md=_syncLastMd;
   if(!md) return true;   /* nothing seen yet (or a new notebook): write the blob */
-  if(md.s1c) return false;
-  return Date.now()-(md.deviceUpdatedAt||md.ver||0)<_S1C_ACTIVE_MS;
+  /* the last time a build without the marker wrote: the main doc's own time when
+     it is unmarked, else the date a marked one carries (`s1o`, see _writeCloudDB) */
+  const t=md.s1c?(md.s1o||0):(md.deviceUpdatedAt||md.ver||0);
+  return t>0&&_s1Now()-t<_S1C_ACTIVE_MS;
 }
 function _s1Plan(){
   const rd=_s1Stat.rd;

@@ -15,7 +15,11 @@
    uses and the same boot path runs on each.
 
    Run: node tools/sync-s1.mjs            (add --measure for the S1a numbers) */
-import { playwright, serve, seedDB } from './harness.mjs';
+import { playwright, serve, seedDB, ROOT } from './harness.mjs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { assembleRecs, canonDB, diffDB, S1_COLLS } from './s1-assemble.mjs';
 
 const FAKE_SDK = String.raw`(function(){
@@ -445,9 +449,14 @@ try {
   const has = (d, fn, arg) => on(d, fn, arg).catch(() => false);
   const noteTitle = (d, id) => on(d, (i) => (DB.articles.find((a) => a.id === i) || {}).title, id);
 
-  /* ── 51h: recs only — three devices converge through recs alone ── */
-  {
-    const { cloud, devs, A, B, C } = await trio({ recsOnly: !process.argv.includes('--normal') });   /* --normal: run 51h with the blob read too, to tell a recs fault from an old one */
+  /* ── 51h: recs only — three devices converge through recs alone ──
+     v04.90 — the scenario is a function: 51s runs it again with the blob read
+     too, after every main doc has been marked, and counts blob writes. */
+  const blobWrites = (cloud, from) => cloud.log.slice(from).filter((o) => o.t === 'set' && (o.p === NB || o.p.startsWith(NB + '/chunks/')));
+  const scenarioH = async (tag, trioOpts, warm) => {
+    const { cloud, devs, A, B, C } = await trio(trioOpts);
+    if (warm) await warm(cloud, devs);
+    const mark0 = cloud.log.length;
     const fails = [], steps = [];
     const step = async (label, fn, verify) => {
       await fn(); const s = await settle(cloud, devs); const r = await sameDB(devs);
@@ -490,12 +499,27 @@ try {
       B.offline = false; await B.ctx.setOffline(false); cloud.reconnect(B);
     }, async () => ((await Promise.all(devs.map((d) => noteTitle(d, 'a2')))).every((t) => t === 'Written offline on B') && (await Promise.all(devs.map((d) => noteTitle(d, 'a3')))).every((t) => t === 'Written on A meanwhile')) ? '' : 'an offline/online edit missing');
     const fin = await sameDB(devs);
-    check(fails.length === 0, '51h three devices, blob NOT read: create, edit, rename, Trash, restore, empty Trash, move folder, theme colour, concurrent edit, offline rejoin all converge (order included)', fails.slice(0, 3).join(' · ') + ' ' + steps.join(' '));
-    check(recsAssemble(cloud, fin.dbs, fin.own), '51h …and the recs assemble to the converged notebook', 'per-device keys ignored: ' + fin.own.join(','));
+    check(fails.length === 0, tag + ' three devices' + (trioOpts.recsOnly ? ', blob NOT read' : ', blob read too, every main doc marked') + ': create, edit, rename, Trash, restore, empty Trash, move folder, theme colour, concurrent edit, offline rejoin all converge (order included)', fails.slice(0, 3).join(' · ') + ' ' + steps.join(' '));
+    check(recsAssemble(cloud, fin.dbs, fin.own), tag + ' …and the recs assemble to the converged notebook', 'per-device keys ignored: ' + fin.own.join(','));
     const sts = await Promise.all(devs.map((d) => stat(d)));
-    check(sts.every((s) => s.rd && s.rd.on && s.rd.records > 0), '51h …every device reports the per-note copy on, with records', JSON.stringify(sts.map((s) => s.rd)));
-    check(devs.every((d) => d.errors.length === 0), '51h no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+    check(sts.every((s) => s.rd && s.rd.on && s.rd.records > 0), tag + ' …every device reports the per-note copy on, with records', JSON.stringify(sts.map((s) => s.rd)));
+    const blobs = blobWrites(cloud, mark0), mainDoc = cloud.store.get(NB);
+    check(devs.every((d) => d.errors.length === 0), tag + ' no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
     for (const d of devs) await d.ctx.close();
+    return { blobs, mainDoc };
+  };
+  await scenarioH('51h', { recsOnly: !process.argv.includes('--normal') });   /* --normal: run 51h with the blob read too, to tell a recs fault from an old one */
+
+  /* ── 51s (v04.90): three v04.90 devices, every main doc marked. After the first
+        marked writes a push writes ZERO blob docs, and the whole 51h scenario
+        still converges (with the blob read too: marked main docs are skipped). ── */
+  {
+    const r = await scenarioH('51s', {}, async (cloud, devs) => {
+      for (const d of devs) { await act(d, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>warm ' + Math.random() + '</p>'; a.updatedAt = new Date().toISOString(); }); await settle(cloud, devs); }
+    });
+    check(r.blobs.length === 0 && r.mainDoc && r.mainDoc.s1c === '04.90',
+      '51s after the first marked writes, the whole scenario writes ZERO blob docs (main doc + chunks), and the main doc carries s1c "04.90"',
+      JSON.stringify({ blobWritesAfterWarmUp: r.blobs.map((o) => o.dev + ':' + o.p.slice(NB.length)), s1c: r.mainDoc && r.mainDoc.s1c }));
   }
 
   /* ── 51j: received = known — the two that receive an edit write zero recs for it ── */
@@ -734,6 +758,163 @@ try {
       '51o a device that starts with no notes and reads only recs lists them in the same order as the writer (blob order)', JSON.stringify({ writer: orderA, recsOnly: orderD }));
     check([...devs, D].every((d) => d.errors.length === 0), '51o no page errors', [...devs, D].flatMap((d) => d.errors).slice(0, 3).join(' · '));
     for (const d of [...devs, D]) await d.ctx.close();
+  }
+
+  /* ══ v04.90 — S1c: recs is the sync; the blob only while an older build is active ══ */
+  const warmAll = async (cloud, devs) => {
+    for (const d of devs) { await act(d, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>warm ' + Math.random() + '</p>'; a.updatedAt = new Date().toISOString(); }); await settle(cloud, devs); }
+  };
+  const editTitle = (d, id, t) => act(d, ([i, tt]) => { const a = DB.articles.find((x) => x.id === i); a.title = tt; a.updatedAt = new Date().toISOString(); }, [id, t]);
+  const waitTitle = async (devs, id, t, ms = 30000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if ((await Promise.all(devs.map((d) => noteTitle(d, id)))).every((x) => x === t)) return true; await sleep(300); } return false; };
+  const toastsOf = (d, re) => on(d, (s) => window.__toasts.filter((t) => new RegExp(s, 'i').test(t)), re.source);
+
+  /* ── 51t: an OLD build (v04.89, from git) is active. v04.90 devices write the blob too; the old device receives
+        their edits and they receive its edits. Then the unmarked write ages past 30 days and blob writes stop;
+        when the old build writes again, they flip back. ── */
+  {
+    let oldSrv = null, why = '';
+    try {
+      const dir = mkdtempSync(join(tmpdir(), 'siyagah-old-'));
+      for (const f of ['index.html', 'sw.js', 'manifest.json']) { try { writeFileSync(join(dir, f), execFileSync('git', ['show', '2a5d1ca:' + f], { cwd: ROOT, maxBuffer: 1 << 28 })); } catch (e) { if (f === 'index.html') throw e; } }
+      oldSrv = await serve(dir);
+    } catch (e) { why = String(e.message || e).slice(0, 200); }
+    if (!oldSrv) check(false, '51t the v04.89 build could not be read from git (commit 2a5d1ca)', why);
+    else {
+      const { cloud, devs: three, A, B, C } = await trio();
+      const D = await addDevice(browser, oldSrv.base, cloud, 'old', { width: 1440, height: 900 }, false, seedDB());
+      const devs = [...three, D];
+      await settle(cloud, devs);
+      const oldVer = await on(D, () => document.querySelector('meta[name=app-version]').content);
+      await editTitle(D, 'a2', 'Edited on the OLD build');
+      await settle(cloud, devs);
+      const g1 = await waitTitle(three, 'a2', 'Edited on the OLD build');
+      check(oldVer === '04.89' && g1, '51t the old build (v04.89) writes the blob unmarked: all three v04.90 devices receive its edit', JSON.stringify({ oldVer, g1 }));
+      let mark = cloud.log.length;
+      await editTitle(A, 'a1', 'Edited on A while old is active');
+      await settle(cloud, devs);
+      const gOld = await waitTitle([D], 'a1', 'Edited on A while old is active');
+      const bw1 = blobWrites(cloud, mark);
+      const md1 = cloud.store.get(NB);
+      check(gOld && bw1.length > 0 && recWrites(cloud, mark).length > 0 && md1.s1c === '04.90' && md1.s1o > 0,
+        '51t a v04.90 device edits: it writes recs AND the blob, the old build receives it, and the marked main doc remembers when an older build last wrote (s1o)', JSON.stringify({ gOld, blobDocs: bw1.length, recs: recWrites(cloud, mark).length, s1c: md1.s1c, s1o: md1.s1o }));
+      mark = cloud.log.length;
+      await editTitle(B, 'a3', 'Edited on B, old still active');
+      await settle(cloud, devs);
+      const gOld2 = await waitTitle([D], 'a3', 'Edited on B, old still active');
+      check(gOld2 && blobWrites(cloud, mark).length > 0, '51t …and the NEXT v04.90 device (main doc now marked) still writes the blob, because the older build is still active', JSON.stringify({ gOld2, blobDocs: blobWrites(cloud, mark).length }));
+      await editTitle(D, 'a2', 'Edited on the OLD build again');
+      await settle(cloud, devs);
+      const g2 = await waitTitle(three, 'a2', 'Edited on the OLD build again');
+      check(g2, '51t …and the old build\'s next edit reaches all three v04.90 devices', JSON.stringify({ g2 }));
+      /* age the unmarked write past 30 days (inject the clock on the v04.90 devices) */
+      await Promise.all(three.map((d) => on(d, () => { window._s1Now = () => Date.now() + 31 * 864e5; })));
+      mark = cloud.log.length;
+      await editTitle(A, 'a1', 'Edited on A after 30 days');
+      await settle(cloud, devs);
+      const gB = await waitTitle([B, C], 'a1', 'Edited on A after 30 days');
+      const staleOld = (await noteTitle(D, 'a1')) !== 'Edited on A after 30 days';
+      check(gB && blobWrites(cloud, mark).length === 0 && recWrites(cloud, mark).length > 0,
+        '51t the last unmarked write is over 30 days old: a push writes recs only (zero blob docs) and the other v04.90 devices still receive it', JSON.stringify({ gB, blobDocs: blobWrites(cloud, mark).length, oldDeviceStale: staleOld }));
+      /* the old build writes again: they flip back by themselves */
+      await editTitle(D, 'a2', 'Old build writes again');
+      await settle(cloud, devs);
+      await waitTitle(three, 'a2', 'Old build writes again');
+      await Promise.all(three.map((d) => on(d, () => { window._s1Now = () => Date.now(); })));
+      mark = cloud.log.length;
+      await editTitle(C, 'a3', 'Edited on C, old wrote again');
+      await settle(cloud, devs);
+      const gOld3 = await waitTitle([D], 'a3', 'Edited on C, old wrote again');
+      check(gOld3 && blobWrites(cloud, mark).length > 0, '51t an old build writes again: the v04.90 devices flip back to writing the blob, and it reaches the old build', JSON.stringify({ gOld3, blobDocs: blobWrites(cloud, mark).length }));
+      check(devs.every((d) => d.errors.length === 0), '51t no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+      for (const d of devs) await d.ctx.close();
+      await oldSrv.close();
+    }
+  }
+
+  /* ── 51u: recs writes refused while the blob is off → the device falls back to the blob, one toast, two devices converge ── */
+  {
+    const { cloud, devs, A, B } = await trio();
+    await warmAll(cloud, devs);
+    const planA = await on(A, () => _s1Plan());
+    cloud.refuse = ['/recs/', '/recparts/'];
+    const mark = cloud.log.length;
+    await editTitle(A, 'a1', 'A edit 1, recs refused');
+    const g1 = await waitTitle([B], 'a1', 'A edit 1, recs refused');
+    await editTitle(B, 'a2', 'B edit, recs refused');
+    const g2 = await waitTitle([A], 'a2', 'B edit, recs refused');
+    for (let i = 2; i <= 4; i++) { await editTitle(A, 'a1', 'A edit ' + i + ', recs refused'); await sleep(1200); }
+    const g3 = await waitTitle([B], 'a1', 'A edit 4, recs refused');
+    await settle(cloud, devs);
+    const toastsA = await toastsOf(A, /per-note copy/), alarmsA = await toastsOf(A, /NOT syncing|Sync error|REJECTING|Still cannot/), alarmsB = await toastsOf(B, /NOT syncing|Sync error|REJECTING|Still cannot/);
+    const dots = await Promise.all([A, B].map((d) => on(d, () => document.getElementById('sync-dot').textContent)));
+    const pf = await Promise.all([A, B].map((d) => on(d, () => _pushFailures)));
+    const unmarked = blobWrites(cloud, mark).length > 0 && cloud.store.get(NB).s1c == null;
+    check(planA === 'recs' && g1 && g2 && g3 && unmarked, '51u recs refused with the blob off: the device falls back to the blob (written UNMARKED), and the two devices converge, an edit each way', JSON.stringify({ planBefore: planA, g1, g2, g3, mainMarked: cloud.store.get(NB).s1c }));
+    check(toastsA.length === 1 && alarmsA.length === 0 && alarmsB.length === 0 && dots.every((t) => !/err/i.test(t)) && pf.every((n) => n === 0),
+      '51u …with ONE toast about it (not a stream), no sync alarm, the dot not in error, no push failures', JSON.stringify({ toastsA, alarmsA, alarmsB, dots, pf }));
+    check(devs.every((d) => d.errors.length === 0), '51u no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+    for (const d of devs) await d.ctx.close();
+  }
+
+  /* ── 51v: the reader is stuck on a transient error and an edit is waiting → within the bound the edit leaves through the blob, and the dot shows the problem ── */
+  {
+    const { cloud, devs, A, B, C } = await trio();
+    await warmAll(cloud, devs);
+    const bound = await on(A, () => _S1_GATE_MAX_MS);
+    await on(A, () => {
+      _S1_GATE_MAX_MS = 5000;
+      _s1ReadStop(); _s1ReadStart = async () => {};
+      const st = _s1Stat.rd; st.on = false; st.reason = 'error: unavailable'; st.perm = false; _s1RdCaught = false;
+    });
+    const mark = cloud.log.length;
+    const t0 = Date.now();
+    await editTitle(A, 'a1', 'Edit while the reader is stuck');
+    await sleep(2500);
+    const early = cloud.log.slice(mark).filter((o) => o.dev === 'phone').length;   /* inside the bound: nothing has left A */
+    const got = await waitTitle([B, C], 'a1', 'Edit while the reader is stuck', 30000);
+    const ms = Date.now() - t0;
+    await sleep(500);
+    const dotA = await on(A, () => ({ cls: document.getElementById('sync-dot').className, txt: document.getElementById('sync-dot').textContent, title: document.getElementById('sync-dot').title }));
+    check(bound === 120000 && early === 0 && got && blobWrites(cloud, mark).length > 0 && cloud.store.get(NB).s1c == null && ms < 30000,
+      '51v the reader is stuck (transient error) and an edit waits: nothing is written ahead of the reader inside the bound (default 2 min, shortened to 5 s here), then the edit leaves through the blob (unmarked) and reaches the others', JSON.stringify({ defaultBoundMs: bound, writesInsideBound: early, got, ms, blobDocs: blobWrites(cloud, mark).length }));
+    check(/sd-err/.test(dotA.cls) && /Err/.test(dotA.txt), '51v …and the sync dot on the stuck device shows the problem', JSON.stringify(dotA));
+    check(devs.every((d) => d.errors.length === 0), '51v no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+    for (const d of devs) await d.ctx.close();
+  }
+
+  /* ── 51w: an own echo causes no merge; a real remote change still merges ── */
+  {
+    const { cloud, devs, A, B, C } = await trio();
+    await warmAll(cloud, devs);
+    await Promise.all(devs.map((d) => on(d, () => { window.__mrg = 0; const o = _mergeRemoteIn; _mergeRemoteIn = function (...a) { window.__mrg++; return o.apply(this, a); }; })));
+    for (let i = 1; i <= 3; i++) { await editTitle(A, 'a1', 'Echo test ' + i); await settle(cloud, devs); }
+    const got = await waitTitle([B, C], 'a1', 'Echo test 3');
+    const m = await Promise.all(devs.map((d) => on(d, () => window.__mrg)));
+    check(got && m[0] === 0 && m[1] >= 1 && m[2] >= 1,
+      '51w three own edits on A: A\'s own recs come back through its listener and cause NO merge, while B and C (a real remote change) do merge', JSON.stringify({ mergesA: m[0], mergesB: m[1], mergesC: m[2], got }));
+    check(devs.every((d) => d.errors.length === 0), '51w no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+    for (const d of devs) await d.ctx.close();
+  }
+
+  /* ── 51x: the dirty-set snapshot misses a change on purpose; the periodic full snapshot writes it ── */
+  {
+    const { cloud, devs, A, B } = await trio();
+    await warmAll(cloud, devs);
+    const recTitle = () => { const r = cloud.store.get(NB + '/recs/articles~a2'); return r && r.j ? JSON.parse(r.j).title : null; };
+    const before = recTitle();
+    await on(A, () => {
+      const a = DB.articles.find((x) => x.id === 'a2'); a.title = 'Changed without being stamped';   /* as a buggy future function would: no updatedAt, no mark … */
+      _seedRecSnap(true);                                                                              /* … and the sweep's baseline already holds it */
+      persist(); flushPendingPush();
+    });
+    await settle(cloud, devs);
+    const missed = recTitle() === before;
+    const lastFull = await on(A, () => { _S1_FULL_MS = 3000; _s1LastFull = Date.now(); return _s1LastFull; });
+    const t0 = Date.now(); let wrote = false;
+    while (Date.now() - t0 < 25000) { if (recTitle() === 'Changed without being stamped') { wrote = true; break; } await sleep(300); }
+    check(before && missed && wrote, '51x a change the dirty set never saw is NOT written by the next push, and IS written by the periodic full snapshot within its interval (3 s here, 1 h by default)', JSON.stringify({ before, missedByPush: missed, writtenByFull: wrote, afterMs: Date.now() - t0, defaultMs: 3600000 }));
+    check(devs.every((d) => d.errors.length === 0), '51x no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+    for (const d of devs) await d.ctx.close();
   }
 
   /* ── --measure: seed time and "edit one note" for ~2,000 notes (not a check) ── */

@@ -32,14 +32,25 @@ const FAKE_SDK = String.raw`(function(){
     app(name){ const a = apps[name || '[DEFAULT]']; if (!a){ const e = new Error('No Firebase App'); e.code = 'app/no-app'; throw e; } return a; },
     get apps(){ return Object.values(apps); } };
   const listeners = {};
-  const snap = (d) => ({ exists: d != null, data: () => (d == null ? undefined : JSON.parse(JSON.stringify(d))) });
+  /* v04.90 — the per-record copy is now THE sync, so this fake has what the
+     reader needs (as tools/sync-s1.mjs does): Timestamps, and where('at','>',x)
+     .orderBy('at').onSnapshot() with docChanges(). A stored server time is
+     {__ts:[seconds,nanos]} and reaches the app as a Timestamp. */
+  class TS { constructor(s, n){ this.seconds = s; this.nanoseconds = n; } toMillis(){ return this.seconds * 1000 + this.nanoseconds / 1e6; } }
+  const conv = (d) => { if (d == null) return d; const o = JSON.parse(JSON.stringify(d)); for (const k of Object.keys(o)) if (o[k] && o[k].__ts) o[k] = new TS(o[k].__ts[0], o[k].__ts[1]); return o; };
+  const snap = (d) => ({ exists: d != null, data: () => (d == null ? undefined : conv(d)) });
   const mkErr = (e) => { const x = new Error(e.message); x.code = e.code; return x; };
   window.__fsDeliver = (path, data) => { (listeners[path] || []).forEach((cb) => { try { cb(snap(data)); } catch (e) { console.error(e); } }); };
+  let qid = 0; const qls = {};
+  window.__fsDeliverQ = (id, changes) => { const l = qls[id]; if (!l) return;
+    try { l.cb({ docChanges: () => changes.map((c) => ({ type: c.type, doc: { id: c.id, data: () => conv(c.data), metadata: { hasPendingWrites: false } } })) }); } catch (e) { console.error(e); } };
+  function query(path, cur){ const q = { orderBy(){ return q; },
+    onSnapshot(cb, err){ const id = ++qid; qls[id] = { cb, err }; window.__fsListenQ(id, path, [cur.seconds, cur.nanoseconds]); return () => { delete qls[id]; window.__fsUnlistenQ(id); }; } }; return q; }
   function docRef(path){ return { _path: path, id: path.split('/').pop(),
     collection: (n) => collRef(path + '/' + n),
     async get(opts){ const r = await window.__fsGet(path, (opts && opts.source) || 'default'); if (r.error) throw mkErr(r.error); return snap(r.data); },
     onSnapshot(cb){ (listeners[path] = listeners[path] || []).push(cb); window.__fsListen(path); return () => { listeners[path] = (listeners[path] || []).filter((x) => x !== cb); }; } }; }
-  function collRef(path){ return { doc: (id) => docRef(path + '/' + id) }; }
+  function collRef(path){ return { doc: (id) => docRef(path + '/' + id), where: (f, op, v) => query(path, v) }; }
   function batch(){ const ops = []; const b = {
     set(ref, data){ ops.push({ t: 'set', p: ref._path, d: data }); return b; },
     delete(ref){ ops.push({ t: 'del', p: ref._path }); return b; },
@@ -47,6 +58,7 @@ const FAKE_SDK = String.raw`(function(){
   const fs = { collection: (n) => collRef(n), batch, settings(){} };
   fb.firestore = function(){ return fs; };
   fb.firestore.FieldValue = { serverTimestamp: () => ({ __sts: 1 }) };
+  fb.firestore.Timestamp = TS;
   fb.auth = function(){ return { setPersistence: async () => {}, signInWithPopup: async () => ({}), signOut: async () => {},
     currentUser: { uid: 'u-e2e' }, onAuthStateChanged(cb){ setTimeout(() => cb({ uid: 'u-e2e', email: 'owner@example.invalid' }), 30); return () => {}; } }; };
   fb.auth.Auth = { Persistence: { LOCAL: 'local' } };
@@ -57,6 +69,7 @@ const MAX_DOC = 1024 * 1024, MAX_REQ = 10 * 1024 * 1024;
 const store = new Map();
 const devices = [];
 let commitCount = 0;
+const writeLog = [];   /* every doc set, in order: lets a check ask "was the blob written" */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function deliverTo(d, path) {
@@ -64,6 +77,30 @@ function deliverTo(d, path) {
   const data = store.has(path) ? store.get(path) : null;
   setTimeout(() => { d.page.evaluate(([p, x]) => window.__fsDeliver && window.__fsDeliver(p, x), [path, data]).catch(() => {}); },
     40 + Math.floor(Math.random() * 160));
+}
+/* v04.90 — query listeners: each device's deliveries go out in order, and a doc
+   is re-sent on a listener only when its write counter moved since last time. */
+const tsCmp = (a, b) => (a[0] - b[0]) || (a[1] - b[1]);
+const verOf = new Map();
+let lastMs = 0;
+function deliverQ(d, id, initial) {
+  const sub = d.qsubs.get(id); if (!sub || d.offline) return;
+  const rows = [];
+  for (const [p, v] of store) {
+    if (!p.startsWith(sub.path + '/') || p.slice(sub.path.length + 1).includes('/')) continue;
+    if (!v.at || !v.at.__ts || tsCmp(v.at.__ts, sub.cur) <= 0) continue;
+    rows.push([p, v]);
+  }
+  rows.sort((a, b) => tsCmp(a[1].at.__ts, b[1].at.__ts));
+  const changes = [];
+  for (const [p, v] of rows) {
+    const ver = verOf.get(p);
+    if (sub.sent.get(p) === ver) continue;
+    changes.push({ type: sub.sent.has(p) ? 'modified' : 'added', id: p.split('/').pop(), data: v });
+    sub.sent.set(p, ver);
+  }
+  if (!changes.length && !initial) return;
+  d.qchain = d.qchain.then(async () => { await sleep(40 + Math.floor(Math.random() * 100)); await d.page.evaluate(([i, c]) => window.__fsDeliverQ && window.__fsDeliverQ(i, c), [id, changes]).catch(() => {}); });
 }
 function applyCommit(ops) {
   let total = 0;
@@ -73,16 +110,19 @@ function applyCommit(ops) {
     total += s;
   }
   if (total > MAX_REQ) return { error: { code: 'invalid-argument', message: 'request over 10 MiB' } };
-  const now = Date.now();
+  const now = Math.max(Date.now(), lastMs + 1); lastMs = now;   /* strictly increasing commit times */
+  const at = { __ts: [Math.floor(now / 1000), (now % 1000) * 1e6] };
   for (const o of ops) {
     if (o.t === 'del') { store.delete(o.p); continue; }
     const d = JSON.parse(JSON.stringify(o.d));
-    for (const k of Object.keys(d)) if (d[k] && d[k].__sts) d[k] = now;
+    for (const k of Object.keys(d)) if (d[k] && d[k].__sts) d[k] = at;
     store.set(o.p, d);
+    verOf.set(o.p, (verOf.get(o.p) || 0) + 1);
+    writeLog.push({ p: o.p, dev: o.dev });
   }
   commitCount++;
   const touched = new Set(ops.map((o) => o.p));
-  for (const dv of devices) for (const p of touched) deliverTo(dv, p);
+  for (const dv of devices) { for (const p of touched) deliverTo(dv, p); for (const id of dv.qsubs.keys()) deliverQ(dv, id); }
   return {};
 }
 
@@ -96,7 +136,9 @@ async function addDevice(browser, base, name, viewport, touch, seed, cfg) {
       localStorage.setItem('siyagah-sync-v1', JSON.stringify(c));
     } catch {}
   }, [seed, cfg]);
-  const d = { name, ctx, offline: false, listens: new Set(), errors: [], pending: [] };
+  const d = { name, ctx, offline: false, listens: new Set(), errors: [], pending: [], qsubs: new Map(), qchain: Promise.resolve() };
+  await ctx.exposeBinding('__fsListenQ', async (_s, id, path, cur) => { d.qsubs.set(id, { path, cur, sent: new Map() }); setTimeout(() => deliverQ(d, id, true), 50); });
+  await ctx.exposeBinding('__fsUnlistenQ', async (_s, id) => { d.qsubs.delete(id); });
   await ctx.exposeBinding('__fsGet', async (_s, path, src) => {
     if (d.offline && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get document because the client is offline.' } };
     await sleep(20 + Math.random() * 60);
@@ -111,7 +153,7 @@ async function addDevice(browser, base, name, viewport, touch, seed, cfg) {
     /* v04.82 — `dieAfter`: let this many more commits land, then hang every
        later one forever, as a phone frozen or killed mid-upload does. */
     if (d.dieAfter != null) { if (d.dieAfter <= 0) await new Promise(() => {}); d.dieAfter--; }
-    return applyCommit(ops);
+    return applyCommit(ops.map((o) => ({ ...o, dev: d.name })));
   });
   const page = await ctx.newPage();
   d.page = page;
@@ -145,10 +187,16 @@ function cloudText() {
   try { return Buffer.from(b64, 'base64').toString('utf8'); } catch { return ''; }
 }
 
+/* Does the cloud hold these words — in a per-note rec, or in the blob? */
+function cloudHolds(re) {
+  for (const [p, v] of store) if (p.includes('/recs/') && typeof v.j === 'string' && re.test(v.j)) return true;
+  return re.test(cloudText());
+}
+
 async function setOffline(d, off) {
   d.offline = off;
   await d.ctx.setOffline(off);
-  if (!off) for (const p of d.listens) deliverTo(d, p);
+  if (!off) { for (const p of d.listens) deliverTo(d, p); for (const id of d.qsubs.keys()) deliverQ(d, id); }
 }
 
 /* What the owner would call "the same notebook": every note's words, title,
@@ -319,8 +367,10 @@ try {
   });
   let sentMs = -1;
   while (Date.now() - tHide < 3000) {
-    const txt = cloudText();
-    if (commitCount > before && /typed-then-backgrounded/.test(txt)) { sentMs = Date.now() - tHide; break; }
+    /* v04.90 — updated in place: the blob is no longer written once every main
+       doc is marked, so "the words reached the cloud" is asked of the per-note
+       copy (a rec holding them) as well as of the blob. */
+    if (commitCount > before && cloudHolds(/typed-then-backgrounded/)) { sentMs = Date.now() - tHide; break; }
     await sleep(50);
   }
   check(sentMs >= 0 && sentMs < 1500, 'phone backgrounded right after typing: the words reach the cloud straight away', `${sentMs}ms after hiding`);
