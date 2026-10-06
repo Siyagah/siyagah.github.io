@@ -22983,6 +22983,9 @@ async function _s1Write(nbId, snap){
 const _S1R_DB='siyagah-s1-v1', _S1_OVERLAP_MS=2000, _S1_PARTS_TRIES=3;
 let _S1_BACKOFF=[3000,30000,300000];   /* restart delays for a rec that cannot be resolved; a 4th failure gives up on that version */
 let _s1RdFails=new Map(), _s1RdGaveUp=new Set();
+/* v04.90 — key -> `at` of a version that failed to resolve and is waiting for its retry.
+   Lives across snapshots: the cursor may never pass the oldest of them. */
+let _s1RdPending=new Map();
 let _S1_GRACE_MS=6000;   /* wait for the originating device's recs before writing back */
 let _s1Rep=null, _s1RdUnsub=null, _s1RdChain=Promise.resolve(), _s1RdGen=0, _s1RdTimer=null;
 let _s1RdDbP=null, _s1KickTimer=null, _s1RecsMergeQueued=false, _s1RecsMerged=false;
@@ -23146,7 +23149,8 @@ async function _s1OnSnap(gen, snap, nbRef){
     const key=ch.doc.id; let d=ch.doc.data(), at=_s1AtMs(d.at);
     if(at==null) continue;
     const cur=rep.map.get(key);
-    if(cur&&cur.at>=at){ if(at<skipMin) maxAt=Math.max(maxAt,at); continue; }   /* an overlap redelivery */
+    { const pa=_s1RdPending.get(key); if(pa!==undefined&&at>pa) _s1RdPending.delete(key); }   /* a newer version replaces the pending one */
+    if(cur&&cur.at>=at){ if(_s1RdPending.get(key)<=cur.at) _s1RdPending.delete(key); if(at<skipMin) maxAt=Math.max(maxAt,at); continue; }   /* an overlap redelivery */
     const fk=key+'|'+at;
     if(_s1RdGaveUp.has(fk)){ if(at<skipMin) maxAt=Math.max(maxAt,at); continue; }   /* given up on: never re-read */
     let r;
@@ -23161,20 +23165,23 @@ async function _s1OnSnap(gen, snap, nbRef){
          of the record (a new `at`) is delivered normally. S1c, when the blob
          stops carrying records, must keep this in mind. */
       const nf=(_s1RdFails.get(fk)||0)+1; _s1RdFails.set(fk,nf);
-      if(nf<=_S1_BACKOFF.length){ skipMin=Math.min(skipMin,at); skipDelay=Math.max(skipDelay,_S1_BACKOFF[nf-1]); continue; }
-      _s1RdGaveUp.add(fk); _s1RdFails.delete(fk);
+      if(nf<=_S1_BACKOFF.length){ _s1RdPending.set(key,at); skipMin=Math.min(skipMin,at); skipDelay=Math.max(skipDelay,_S1_BACKOFF[nf-1]); continue; }
+      _s1RdGaveUp.add(fk); _s1RdFails.delete(fk); if(_s1RdPending.get(key)===at) _s1RdPending.delete(key);
       st.err={code:'unresolvable', key:key, at:at, message:'its pieces are gone; given up on this version'};
       console.warn('S1 read: gave up on an unresolvable record',key,at);
       if(at<skipMin) maxAt=Math.max(maxAt,at);
       continue;
     }
-    _s1RdFails.delete(fk);
+    _s1RdFails.delete(fk); if(_s1RdPending.get(key)===at) _s1RdPending.delete(key);
     d=r.d; at=_s1AtMs(d.at)||at;
     puts.push([key,{c:d.c, sig:d.sig, o:d.o, at:at, gone:d.gone?true:undefined, rec:r.json, n:d.n, g:d.g}]);
     if(at<skipMin) maxAt=Math.max(maxAt,at);
   }
-  const base=Math.max(rep.cursor, maxAt?Math.min(maxAt-_S1_OVERLAP_MS, skipMin-1):0);
-  if(!puts.length&&base===rep.cursor&&skipMin===Infinity){ _s1RdCaught=true; return; }
+  /* skipMin is this snapshot's own failures (they schedule the retry); `hold` also
+     counts earlier snapshots' pending ones, which the cursor must not pass either. */
+  let hold=skipMin; _s1RdPending.forEach(a=>{ if(a<hold) hold=a; });
+  const base=Math.max(rep.cursor, maxAt?Math.min(maxAt-_S1_OVERLAP_MS, hold-1):0);
+  if(!puts.length&&base===rep.cursor&&hold===Infinity){ _s1RdCaught=true; return; }
   try{ await _s1RepSave(nb, puts, base); }
   catch(e){ _s1ReadStop(); _s1RdOff(st,'replica-not-writable',e); return; }
   if(gen!==_s1RdGen) return;
@@ -23201,7 +23208,7 @@ async function _s1OnSnap(gen, snap, nbRef){
   });
   if(m&&touched){ try{ await _idbPut('s1:'+nb,m); }catch(e){ console.warn('S1 read: sig map not saved',e); } }
   st.records=0; rep.map.forEach((e,k)=>{ if(!e.gone&&k!=='_head~0') st.records++; });
-  if(skipMin===Infinity) _s1RdCaught=true;
+  if(hold===Infinity) _s1RdCaught=true;
   if(puts.length){
     st.lastRecv=Date.now(); if(!(st.err&&st.err.code==='unresolvable')) st.err=null;
     if(!echo){ _s1RepUnmerged=true; _pullRecsMerge(); }
