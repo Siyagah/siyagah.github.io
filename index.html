@@ -23015,6 +23015,8 @@ function _s1KickSoon(){
     _s1KickTimer=null;
     const cfg=getSyncConfig();
     if(!cfg||!_syncFsDb||!_s1Eligible()) return;
+    const rd=_s1Stat.rd;
+    if(!rd||rd.perm) return;   /* no reader on this device: writes happen at push time only, as in v04.88 */
     if(!_s1WriteGate()){ _s1KickSoon(); return; }   /* not caught up yet: look again shortly */
     try{ _flushAllEditors(); _stampThemeTouches(); _stampRecordTouches(); _s1Run(cfg.notebookId,_s1Snap()); }catch(e){ _s1Fail(e); }
   }, _S1_GRACE_MS);

@@ -509,6 +509,8 @@ try {
     const got = await Promise.all([B, C].map((d) => has(d, () => DB.articles.find((x) => x.id === 'a1').content.includes('edit received by two'))));
     check(by.phone === 1 && !by.tablet && !by.laptop && got.every(Boolean) && others.length === 0,
       '51j one device edits a note, the other two receive it: they write ZERO recs for it (or for any other record)', JSON.stringify({ writesForNote: by, otherRecWrites: others, got }));
+    const idleMark = cloud.log.length; await sleep(9000);
+    check(cloud.log.length === idleMark, '51j converged and idle for 9 s: nothing is written to the cloud (no ping-pong between the three)', JSON.stringify(cloud.log.slice(idleMark).map((o) => o.dev + ':' + o.p.slice(NB.length + 1))));
     check(devs.every((d) => d.errors.length === 0), '51j no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
     for (const d of devs) await d.ctx.close();
   }
