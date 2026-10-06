@@ -862,7 +862,7 @@ try {
     const toastsA = await toastsOf(A, /per-note copy/), alarmsA = await toastsOf(A, /NOT syncing|Sync error|REJECTING|Still cannot/), alarmsB = await toastsOf(B, /NOT syncing|Sync error|REJECTING|Still cannot/);
     const dots = await Promise.all([A, B].map((d) => on(d, () => document.getElementById('sync-dot').textContent)));
     const pf = await Promise.all([A, B].map((d) => on(d, () => _pushFailures)));
-    const unmarked = blobWrites(cloud, mark).length > 0 && cloud.store.get(NB).s1c == null;
+    const unmarked = blobWrites(cloud, mark).length > 0 && cloud.store.get(NB).s1c === '04.90' && cloud.store.get(NB).s1fb === 1;   /* v04.90 review: a fallback is s1c + s1fb */
     check(planA === 'recs' && g1 && g2 && g3 && unmarked, '51u recs refused with the blob off: the device falls back to the blob (written UNMARKED), and the two devices converge, an edit each way', JSON.stringify({ planBefore: planA, g1, g2, g3, mainMarked: cloud.store.get(NB).s1c }));
     check(toastsA.length === 1 && alarmsA.length === 0 && alarmsB.length === 0 && dots.every((t) => !/err/i.test(t)) && pf.every((n) => n === 0),
       '51u …with ONE toast about it (not a stream), no sync alarm, the dot not in error, no push failures', JSON.stringify({ toastsA, alarmsA, alarmsB, dots, pf }));
@@ -889,7 +889,7 @@ try {
     const ms = Date.now() - t0;
     await sleep(500);
     const dotA = await on(A, () => ({ cls: document.getElementById('sync-dot').className, txt: document.getElementById('sync-dot').textContent, title: document.getElementById('sync-dot').title }));
-    check(bound === 120000 && early === 0 && got && blobWrites(cloud, mark).length > 0 && cloud.store.get(NB).s1c == null && ms < 30000,
+    check(bound === 120000 && early === 0 && got && blobWrites(cloud, mark).length > 0 && cloud.store.get(NB).s1fb === 1 && ms < 30000,
       '51v the reader is stuck (transient error) and an edit waits: nothing is written ahead of the reader inside the bound (default 2 min, shortened to 5 s here), then the edit leaves through the blob (unmarked) and reaches the others', JSON.stringify({ defaultBoundMs: bound, writesInsideBound: early, got, ms, blobDocs: blobWrites(cloud, mark).length }));
     check(/sd-err/.test(dotA.cls) && /Err/.test(dotA.txt), '51v …and the sync dot on the stuck device shows the problem', JSON.stringify(dotA));
     check(devs.every((d) => d.errors.length === 0), '51v no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
@@ -929,6 +929,96 @@ try {
     check(before && missed && wrote, '51x a change the dirty set never saw is NOT written by the next push, and IS written by the periodic full snapshot within its interval (3 s here, 1 h by default)', JSON.stringify({ before, missedByPush: missed, writtenByFull: wrote, afterMs: Date.now() - t0, defaultMs: 3600000 }));
     check(devs.every((d) => d.errors.length === 0), '51x no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
     for (const d of devs) await d.ctx.close();
+  }
+
+  /* ── 51y: a v04.90 FALLBACK blob must not count as "an older build is active" (Architect review of v04.90).
+        Three v04.90 devices, no older build ever seen. Force fallbacks: the gate shut under plan 'both', the gate bound
+        (shortened) and a recs refusal switched on then off. The group must then be on plan 'recs' (zero blob writes) within one
+        push after the last fallback. Separately a real unmarked writer (v04.89, as 51t) still keeps the group on 'both'
+        even after fallbacks. Unpatched (fallback written unmarked, no s1fb) the group stays on 'both'. ── */
+  if (want('51y')) {
+    const { cloud, devs, A, B, C } = await trio();
+    await warmAll(cloud, devs);
+    const plans = () => Promise.all(devs.map((d) => on(d, () => _s1Plan())));
+    const p0 = await plans();
+    const sav = () => on(A, () => { window.__o = { plan: _s1Plan, gate: _s1WriteGate }; });
+    const rest = () => on(A, () => { _s1Plan = window.__o.plan; _s1WriteGate = window.__o.gate; });
+    const fb = () => { const m = cloud.store.get(NB); return m && m.s1c === '04.90' && m.s1fb === 1; };
+    await sav();
+    /* (1) the gate shut under plan 'both' */
+    let mark = cloud.log.length;
+    await on(A, () => { _s1Plan = () => 'both'; _s1WriteGate = () => false; });
+    await editTitle(A, 'a1', 'Fallback 1, gate shut under both');
+    await settle(cloud, devs);
+    const f1 = fb() && blobWrites(cloud, mark).length > 0 && await waitTitle([B, C], 'a1', 'Fallback 1, gate shut under both');
+    await rest();
+    /* (2) the gate bound (3 s here) */
+    mark = cloud.log.length;
+    await on(A, () => { _S1_GATE_MAX_MS = 3000; _s1WriteGate = () => false; });
+    await editTitle(A, 'a1', 'Fallback 2, gate bound');
+    const f2 = await waitTitle([B, C], 'a1', 'Fallback 2, gate bound', 30000);
+    await settle(cloud, devs);
+    const f2fb = fb() && blobWrites(cloud, mark).length > 0;
+    await rest();
+    /* (3) a recs refusal on, then off */
+    mark = cloud.log.length;
+    cloud.refuse = ['/recs/', '/recparts/'];
+    await editTitle(A, 'a1', 'Fallback 3, recs refused');
+    const f3 = await waitTitle([B, C], 'a1', 'Fallback 3, recs refused', 30000);
+    await settle(cloud, devs);
+    const f3fb = fb() && blobWrites(cloud, mark).length > 0;
+    cloud.refuse = [];
+    await settle(cloud, devs);
+    const mdLast = { ...cloud.store.get(NB) };
+    check(f1 && f2 && f2fb && f3 && f3fb && !('s1o' in mdLast) && !(mdLast.s1o > 0),
+      '51y three v04.90 devices, no older build ever seen: three kinds of fallback each write a blob carrying s1c AND s1fb, none of them sets s1o, and every edit reaches the others', JSON.stringify({ planBefore: p0, f1, f2, f2fb, f3, f3fb, s1o: mdLast.s1o, s1c: mdLast.s1c, s1fb: mdLast.s1fb }));
+    /* the next push from another device: plan 'recs', zero blob writes */
+    const pl = await plans();
+    mark = cloud.log.length;
+    await editTitle(B, 'a2', 'After the last fallback');
+    const gAfter = await waitTitle([A, C], 'a2', 'After the last fallback');
+    await settle(cloud, devs);
+    const bAfter = blobWrites(cloud, mark).length, rAfter = recWrites(cloud, mark).length;
+    check(pl.every((p) => p === 'recs') && gAfter && bAfter === 0 && rAfter > 0,
+      '51y …and the group is on plan "recs" within one push after the last fallback: the next edit writes recs only (zero blob docs) and still reaches the others', JSON.stringify({ plans: pl, gAfter, blobDocs: bAfter, recs: rAfter }));
+    check(devs.every((d) => d.errors.length === 0), '51y no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+    for (const d of devs) await d.ctx.close();
+  }
+
+  /* ── 51y2: a real unmarked writer (the v04.89 build) still keeps the group on 'both' — also after v04.90 fallbacks ── */
+  if (want('51y')) {
+    let oldSrv = null, why = '';
+    try {
+      const dir = mkdtempSync(join(tmpdir(), 'siyagah-old-'));
+      for (const f of ['index.html', 'sw.js', 'manifest.json']) { try { writeFileSync(join(dir, f), execFileSync('git', ['show', '2a5d1ca:' + f], { cwd: ROOT, maxBuffer: 1 << 28 })); } catch (e) { if (f === 'index.html') throw e; } }
+      oldSrv = await serve(dir);
+    } catch (e) { why = String(e.message || e).slice(0, 200); }
+    if (!oldSrv) check(false, '51y the v04.89 build could not be read from git (commit 2a5d1ca)', why);
+    else {
+      const { cloud, devs: three, A, B, C } = await trio();
+      const D = await addDevice(browser, oldSrv.base, cloud, 'old', { width: 1440, height: 900 }, false, seedDB());
+      const devs = [...three, D];
+      await settle(cloud, devs);
+      await editTitle(D, 'a2', 'Old build writes');
+      await settle(cloud, devs);
+      await waitTitle(three, 'a2', 'Old build writes');
+      /* two v04.90 fallbacks in a row, from different devices */
+      await on(A, () => { window.__o = { plan: _s1Plan }; _s1Plan = () => 'blob'; });
+      await editTitle(A, 'a1', 'Fallback while old is active');
+      await settle(cloud, devs);
+      await on(A, () => { _s1Plan = window.__o.plan; });
+      const m1 = { ...cloud.store.get(NB) };
+      const mark = cloud.log.length;
+      await editTitle(B, 'a3', 'B after the fallback, old still active');
+      await settle(cloud, devs);
+      const gOld = await waitTitle([D], 'a3', 'B after the fallback, old still active');
+      const pl = await Promise.all(three.map((d) => on(d, () => _s1Plan())));
+      check(m1.s1fb === 1 && m1.s1o > 0 && gOld && blobWrites(cloud, mark).length > 0 && pl.every((p) => p === 'both'),
+        '51y a v04.90 fallback while an older build is active keeps the window (s1o carried): the next push still writes recs AND the blob, the old build receives it', JSON.stringify({ s1fb: m1.s1fb, s1o: m1.s1o, gOld, blobDocs: blobWrites(cloud, mark).length, plans: pl }));
+      check(devs.every((d) => d.errors.length === 0), '51y2 no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+      for (const d of devs) await d.ctx.close();
+      await oldSrv.close();
+    }
   }
 
   /* ── --measure9k (v04.90, not a check): the owner's import size — 9,000 notes of ~5 KB (~45 MB) — and three

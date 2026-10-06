@@ -22559,7 +22559,7 @@ const _SYNC_CHUNK_BATCH = 8;
    main doc without it, which is how a v04.90 device knows an older build is
    still active. */
 const _S1C_MARK='04.90';
-async function _writeCloudDB(nb, now, b64, marked){
+async function _writeCloudDB(nb, now, b64, marked, fallback){
   if(b64==null) b64=_b64enc(JSON.stringify(DB));
   const n=Math.ceil(b64.length/_SYNC_CHUNK);
   /* v04.82 — every write goes into a FRESH generation of chunk documents
@@ -22599,8 +22599,12 @@ async function _writeCloudDB(nb, now, b64, marked){
   _syncMyGens.push({g,n});
   const chunkSet=(batch,i)=>batch.set(nb.collection("chunks").doc(_syncChunkId(g,i)),{p:b64.slice(i*_SYNC_CHUNK,(i+1)*_SYNC_CHUNK),ver:now});
   const mainDoc={ n:n, ver:now, g:g, deviceUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp() };
-  if(marked){
+  if(marked||fallback){
     mainDoc.s1c=_S1C_MARK;
+    /* `s1fb` = a v04.90 FALLBACK blob: the recs may not hold all of it, so every
+       reader reads it (as an unmarked one), but it is not an older build, so it
+       neither starts nor extends the 30-day window (`s1o` is carried unchanged). */
+    if(fallback&&!marked) mainDoc.s1fb=1;
     /* `s1o` = when a build WITHOUT the marker last wrote the main doc. This write
        replaces that main doc, so without the date an older build that is still in
        use would be forgotten the moment a v04.90 device wrote over it (and its
@@ -23348,7 +23352,7 @@ async function _pushWrite(cfg, o){
   const blobWrite=async(marked)=>{
     const ver=_newPushVer();   /* v04.73 — unique per push; see _newPushVer() */
     _myLastPushVer=ver;
-    await _writeCloudDB(nb, ver, _b64enc(json), marked);
+    await _writeCloudDB(nb, ver, _b64enc(json), marked, !marked);   /* not marked = a v04.90 fallback (s1c + s1fb) */
     _lastPushedSig=sig;
   };
   if(plan==='blob'){
@@ -23618,7 +23622,7 @@ async function _pullRemote(docRef, md, retry){
      reader is on: same merge result, one big download saved. A main doc without
      the marker (any older build, or a v04.90 device syncing the old way) is
      read exactly as before; reading the blob never stops. */
-  if(md&&md.s1c&&_s1CanSkipBlob()){
+  if(md&&md.s1c&&!md.s1fb&&_s1CanSkipBlob()){
     if(md.ver!=null) _lastAppliedVer=md.ver;
     setSyncStatus('live'); return;
   }
