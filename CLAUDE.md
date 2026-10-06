@@ -16,6 +16,14 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.88** (6 Oct 2026) — S1a, step one of per-note cloud storage (issue
+  #124). After each blob push, changed records are also written one doc
+  each to `notebooks/{nb}/recs` (+ `recparts` over 700 KB, `_head~0` for
+  every other key). Nothing reads them; `mergeDB()`, the read path and the
+  blob are untouched. Per-device sig map in IndexedDB; failure is invisible
+  (`window._s1Stat`). The owner-visible lists DO depend on array order, so
+  S1b needs a stable order. The import must wait for S1c. `--only 51`
+  **53/53**, `sync-e2e` **24/24**; full `app-check` left to the Architect.
 - **v04.87** (5 Oct 2026) — MyWall, elegant (owner: "it looks so dumb").
   A title row (name, segmented ⇅ All / ▤ Compact, "N pending · across M
   categories"), then one card per category: colour stripe + tinted icon
@@ -57,14 +65,6 @@ must never accumulate here instead of there.
     (`closest('#ed')||#ed`). `47f` guards it.
   - New section 47: `--only 47` **39/39**; unpatched 6/23. Full `app-check`
     **1474/1474, twice in a row**.
-- **v04.83** (4 Oct 2026) — tables: Σ Sum ▾ (owner: "Sum of cells in
-  both Vertical and Horizontal as in standard MS Excel") and "1,234"
-  ("cell value without decimal"). Σ Sum ▾ on the table toolbar: total
-  below each column, right of each row, or both (+ grand total), as real
-  `=SUM()` formulas. Also Alt+= and right-click Σ AutoSum. Refused on a
-  filled target, a merge, or rows hidden by a filter. `fmt:'int'` =
-  `#,##0`. New section 46: `--only 46` **26/26**; unpatched: all four
-  blocks fail. Full `app-check` **1435/1435, twice in a row**.
 ---
 
 ## What this is

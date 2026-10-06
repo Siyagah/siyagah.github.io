@@ -8136,6 +8136,74 @@ uses are now `var(--mw-acc,var(--border2))`. `--only 6m-1,50` 32/32. Full
   with every list; restyling them would change every list in the app, so
   they are left alone.
 
-## v04.88 — S1a: per-note cloud copy, written alongside (stub)
+## v04.88 — S1a: per-note cloud copy, written alongside (shadow)
 
-Work in progress. See issue #124.
+First of three steps of S1, per-note cloud storage (issue #124; design in the
+6 Oct comments on #52). The owner is about to import ~8,900 Evernote notes
+(~45 MB); today every push re-uploads the whole notebook as one blob.
+
+**What changed.** After every successful blob push (`_doPush()` and
+`syncNow()`), each record that changed since THIS device last wrote it is
+also written as its own Firestore doc under `notebooks/{nb}/recs`. Nothing
+reads `recs`. `mergeDB()`, `_readCloudDB()`, `_pullRemote()` and what
+`_writeCloudDB()` writes are untouched.
+- Key `<coll>~<encodeURIComponent(id)>` (`.`→`%2E`) for the 11 id-keyed
+  arrays; `_head~0` is `DB` minus those arrays (every other key, no
+  allow-list) plus any element with no usable id (or a repeated id).
+- Under 700,000 bytes the record is `j`; over it, `n`+`g` and base64 pieces
+  in `recparts/<key>~<g>~<i>`, written BEFORE the rec doc; the old
+  generation is deleted after the rec doc commits (best effort).
+- A record that left its array is rewritten `gone:true` (not a tombstone).
+- Batches ≤400 ops and ≤8 MB. The per-device `key→sig` map lives in
+  IndexedDB (`s1:<notebookId>` in the `kv` store), updated only after each
+  batch commits, so a cut-off seed resumes. No IndexedDB = shadow disabled
+  on that device (`_s1Stat.reason`).
+- Detached and single-flight; a push that finishes meanwhile queues one
+  more run on its newer snapshot. A run hung for >90 s no longer blocks the
+  next one.
+- Invisible failure: `console.warn` + `window._s1Stat` (`enabled`,
+  `reason`, `seeded`, `lastRun`, `lastWritten`, `lastErr {code,at}`).
+  `permission-denied` stops the shadow for the session.
+
+**Measured.**
+1. *Does anything the owner sees depend on the array order of `DB.articles` /
+   `DB.folders`?* **YES** (read-only audit, nothing changed). Pane 2's list
+   is `artsIn()` → `DB.articles.filter()` with no sort (~l.4271, 4748; also
+   the Note Type and Tag views); prev/next (`_noteSiblings`) inherits it;
+   sidebar search, link pickers, journal/calendar day lists (`.slice` makes
+   array order decide WHICH hits show); the backup HTML's note and top-level
+   folder order. Many comparators have no tiebreak, so ties fall back to
+   array order: `chOf` (`a.order-b.order`, NaN when `order` is missing),
+   Smart Views, MyWall groups, reminders, search top-10, `_versionSiblings`.
+   Default-folder choices use `DB.folders…[0]`, and `_dedupePrimaryFolders`
+   keeps `matches[0]`. Nothing splices the arrays to reorder; folders move
+   by `order`. **For S1b: give the replica a stable order (keep the blob's
+   order, or sort `createdAt` then `id`; folders `order` then `id`).**
+2. *Seed and edit cost* (`node tools/sync-s1.mjs --measure`, 2,003 notes of
+   ~1 KB, 1440×900, fake cloud): seed **2,023 rec writes, 7 commits
+   (including the blob's), ~3.6 s**. Editing one note afterwards: **1 rec**
+   (`articles~n5`), no `_head`.
+
+**Known and accepted.** Every device re-writes a record it received through
+the blob (write amplification ≈ number of devices); S1b removes it by
+recording received sigs. **The import must not run before S1c.** Pieces of a
+generation whose rec doc never committed (a cut-off big write) are orphaned.
+Each device writes its own `_head~0`; per-device keys (e.g.
+`_folderNoteRecoveryV1`) differ between devices' heads — harmless now, to be
+settled in S1b.
+
+**Checks.** New `tools/sync-s1.mjs` (app-check block `51`, ×390/820/1440):
+51a assembly equals DB (11 arrays, Arabic + emoji, null-id element); 51b one
+edit = one rec; 51c reload + nothing changed = 0 writes; 51d >1 MB parts and
+generations; 51e Trash and empty Trash; 51f refusal invisible, two devices
+still converge; 51g cut-off seed resumes (1,023 records, 1,023 writes).
+`sync-e2e` gains an assembly check after convergence (it leaves out top-level
+keys the devices themselves disagree on, and names them).
+`tools/s1-assemble.mjs` is the Node-side reader. `--only 51` **53/53**;
+`sync-e2e` **24/24**. Full `app-check` not run (the Architect runs it).
+51f: unpatched, no `recs` exist and `_s1Stat` is undefined, so its
+`permission-denied` assertions fail; its convergence assertion would pass on
+unpatched code (the blob does not change).
+
+**Not done, and why.** No line in a diagnostics surface (none exists to
+extend; `window._s1Stat` is the report). No reading of `recs` (S1b).
