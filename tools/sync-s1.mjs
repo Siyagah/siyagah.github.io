@@ -176,7 +176,10 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
       if (d.dieAfterRec <= 0) await new Promise(() => {});
       d.dieAfterRec--;
     }
-    return cloud.apply(ops, d);
+    const res = cloud.apply(ops, d);
+    /* test hook (51r): the commit lands, but this device is not told until released */
+    if (d.holdAfterRec && !res.error && ops.some((o) => o.t === 'set' && o.p.endsWith('/recs/articles~a-big') && o.d.g)) { const h = d.holdAfterRec; d.holdAfterRec = null; await h; }
+    return res;
   });
   const page = await ctx.newPage();
   d.page = page;
@@ -635,6 +638,70 @@ try {
     check(alarms.every((x) => x.length === 0) && dots.every((t) => !/err|NOT/i.test(t)), '51n …no toast, the dot not in error', JSON.stringify({ dots, alarms }));
     check(sts.every((s) => s.rd && s.rd.on === false && s.rd.reason === 'permission-denied' && s.rd.err && s.rd.err.code === 'permission-denied'), '51n …and _s1Stat names the refusal on every device', JSON.stringify(sts.map((s) => s.rd)));
     check(devs.every((d) => d.errors.length === 0), '51n no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+    for (const d of devs) await d.ctx.close();
+  }
+
+  /* ── 51q: a rec naming a generation whose pieces are gone — bounded retries, then given up on; later recs still arrive ── */
+  {
+    const { cloud, devs, A, B, C } = await trio({ recsOnly: true });
+    await settle(cloud, devs);
+    for (const d of devs) await on(d, () => { _S1_BACKOFF = [400, 800, 1200]; window.__rs = 0; const o = _s1ReadStart; _s1ReadStart = async (c) => { window.__rs++; return o(c); }; });
+    const ghost = NB + '/recs/articles~ghost';
+    cloud.apply([{ t: 'set', p: ghost, d: { c: 'articles', id: 'ghost', sig: 'x', ver: 'v-ghost', n: 2, g: 'gGONE', at: { __sts: 1 } } }], null);
+    await sleep(14000);   /* unpatched: a restart every 3 s, for ever */
+    const rs1 = await Promise.all(devs.map((d) => on(d, () => window.__rs)));
+    const st1 = await Promise.all(devs.map((d) => stat(d)));
+    await sleep(6000);
+    const rs2 = await Promise.all(devs.map((d) => on(d, () => window.__rs)));
+    await act(A, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.title = 'After the unresolvable rec'; a.updatedAt = new Date().toISOString(); });
+    let got = false; const t0 = Date.now();
+    while (Date.now() - t0 < 30000) { if ((await Promise.all([B, C].map((d) => noteTitle(d, 'a1')))).every((t) => t === 'After the unresolvable rec')) { got = true; break; } await sleep(300); }
+    const gAt = cloud.store.get(ghost).at.__ts[0] * 1000 + cloud.store.get(ghost).at.__ts[1] / 1e6;
+    const st2 = await Promise.all(devs.map((d) => stat(d)));
+    check(rs1.every((n) => n <= 4) && rs2.every((n, i) => n === rs1[i]) && st1.every((s) => s.rd && s.rd.err && s.rd.err.code === 'unresolvable' && s.rd.err.key === 'articles~ghost'),
+      '51q a rec naming a generation whose pieces are gone: at most 4 listener restarts, then given up on (st.err unresolvable, no more restarts)', JSON.stringify({ rs1, rs2, err: st1.map((s) => s.rd && s.rd.err) }));
+    check(got && st2.every((s) => s.rd.cursor >= gAt - 1) && st2.every((s) => s.rd.on), '51q …a rec written after it still arrives, and the cursor is past it', JSON.stringify({ got, gAt, cursors: st2.map((s) => s.rd.cursor) }));
+    check(devs.every((d) => d.errors.length === 0), '51q no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+    for (const d of devs) await d.ctx.close();
+  }
+
+  /* ── 51r: two devices save the same >700 KB note within seconds — the clean-up never deletes a generation the rec still names ── */
+  {
+    const { cloud, devs, A, B, C } = await trio({ recsOnly: true });
+    const BIG = NB + '/recs/articles~a-big';
+    await act(A, () => {
+      const now = new Date().toISOString();
+      DB.articles.push({ id: 'a-big', title: 'Big', content: '<p><img src="data:image/png;base64,' + 'QUJD'.repeat(330000) + '"></p>', folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general' });
+    });
+    await settle(cloud, devs, 120000);
+    const g1 = (cloud.store.get(BIG) || {}).g;
+    let release; A.holdAfterRec = new Promise((r) => { release = r; });   /* A's rec commit lands, but A is not told until released */
+    await on(A, () => { const a = DB.articles.find((x) => x.id === 'a-big'); a.content += '<p>vA</p>'; a.updatedAt = new Date().toISOString(); persist(); flushPendingPush(); });
+    let gA = null; let t0 = Date.now();
+    while (Date.now() - t0 < 40000) { const r = cloud.store.get(BIG); if (r && r.g && r.g !== g1) { gA = r.g; break; } await sleep(100); }
+    const bHas = () => has(B, () => DB.articles.find((x) => x.id === 'a-big').content.includes('vA'));
+    t0 = Date.now(); while (Date.now() - t0 < 40000 && !(await bHas())) await sleep(200);
+    await on(B, () => { const a = DB.articles.find((x) => x.id === 'a-big'); a.content += '<p>vB</p>'; a.updatedAt = new Date(Date.now() + 1000).toISOString(); persist(); flushPendingPush(); });
+    let gB = null; t0 = Date.now();
+    while (Date.now() - t0 < 40000) { const r = cloud.store.get(BIG); if (r && r.g && r.g !== g1 && r.g !== gA) { gB = r.g; break; } await sleep(100); }
+    /* wait until A's own reader holds B's generation as the one it knows: its clean-up will treat it as "previous" */
+    t0 = Date.now(); while (Date.now() - t0 < 40000) { const pg = await on(A, () => (_s1Map && _s1Map.p['articles~a-big'] || [])[0]); if (pg && pg === gB) break; await sleep(200); }
+    release();
+    /* sample the cloud while the clean-ups run: at no moment may the rec name a generation with a piece missing */
+    let torn = null; const tS = Date.now();
+    while (Date.now() - tS < 12000) {
+      const rr = cloud.store.get(BIG);
+      if (rr && rr.g) { const have = [...cloud.store.keys()].filter((k) => k.includes('/recparts/articles~a-big~' + rr.g + '~')).length; if (have < rr.n) torn = { g: rr.g, have, n: rr.n }; }
+      await sleep(50);
+    }
+    await settle(cloud, devs, 120000);
+    const named = cloud.store.get(BIG);
+    const parts = [...cloud.store.keys()].filter((k) => named && k.includes('/recparts/articles~a-big~' + named.g + '~'));
+    const r = await sameDB(devs);
+    const eq = { ok: recsAssemble(cloud, r.dbs, r.own), why: 'recs differ from the devices (per-device keys ignored: ' + r.own.join(',') + ')' };
+    check(gA && gB && !torn && named && parts.length === named.n && eq.ok && r.ok && (await has(A, () => DB.articles.find((x) => x.id === 'a-big').content.includes('vB'))),
+      '51r the generation the rec names keeps all its pieces after the other device\'s clean-up; the assembly equals both devices', JSON.stringify({ torn, g1, gA, gB, namedG: named && named.g, parts: parts.length, n: named && named.n, why: eq.why || r.why }));
+    check(devs.every((d) => d.errors.length === 0), '51r no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
     for (const d of devs) await d.ctx.close();
   }
 
