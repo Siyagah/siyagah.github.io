@@ -361,7 +361,7 @@ const PAGE_LIB = () => {
 async function runOne(page, test) {
   return page.evaluate(async ({ setup, op, bop, bFirst, check, expectNoChange }) => {
     const A = window.__A, ev = (s) => (s ? (0, eval)('(' + s + ')') : null);
-    const res = { changed: [], d1: [], d2: [], stable: [], error: null };
+    const res = { changed: [], d1: [], d2: [], stable: [], eq: [], ord: [], error: null };
     try {
       A.reset();
       if (setup) { await ev(setup)(); await A.sleep(15); }
@@ -389,6 +389,22 @@ async function runOne(page, test) {
         res.d1 = A.diff(A.view(MB), A.view(A1));
         res.d2 = A.diff(A.view(MA), A.view(A1));
       }
+      /* 51i (v04.89) — merging the assembled per-record copy must equal merging
+         the blob: mergeDB(local, assemble(recsOf(remote))) vs mergeDB(local,
+         remote), both directions. Contents + id-sets must be identical (a
+         failure); array ORDER is compared separately and listed, never hidden. */
+      res.eq = []; res.ord = [];
+      for (const [dir, loc, rem, want] of [['dir1', B1, A1, MB], ['dir2', A1, B1, MA]]) {
+        const got = mergeDB(A.clone(loc), _s1RecsAsDB(A.clone(rem)));
+        const nw = JSON.stringify(A.norm(want)), ng = JSON.stringify(A.norm(got));
+        if (nw !== ng) res.eq.push(dir + ': ' + A.diff(A.norm(got), A.norm(want)).slice(0, 3).join('; '));
+        for (const c of ['articles', 'folders', 'sections', 'calEvents', 'calCategories', 'noteKinds', 'noteKindCats', 'myFavCats', 'folderGroups', 'trash', 'tombstones']) {
+          const ids = (x) => (x[c] || []).map((r) => (r && r.id != null ? r.id : '(no id)'));
+          const a = ids(want), b = ids(got);
+          if (a.slice().sort().join('|') !== b.slice().sort().join('|')) res.eq.push(dir + ': ' + c + ' id-set differs');
+          else if (a.join('|') !== b.join('|')) res.ord.push(dir + ': ' + c + ' order blob=[' + a.join(',') + '] recs=[' + b.join(',') + ']');
+        }
+      }
       const MB2 = mergeDB(A.clone(MB), A.clone(MA)), MA2 = mergeDB(A.clone(MA), A.clone(MB));
       res.stable = A.diff(A.view(MB2), A.view(MA2)).map(x => 'devices disagree: ' + x)
         .concat(A.diff(A.view(MB2), A.view(MB)).map(x => 'not idempotent: ' + x));
@@ -409,15 +425,18 @@ for (const test of T) {
   else if (test.expectNoChange) status = r.d1.length ? 'FAIL' : 'PASS';
   else {
     const f1 = r.d1.length > 0, f2 = r.d2.length > 0;
-    status = (f1 || f2 || r.stable.length) ? 'FAIL' : 'PASS';
+    status = (f1 || f2 || r.stable.length || r.eq.length) ? 'FAIL' : 'PASS';
     if (status === 'FAIL' && test.byDesign && [...r.d1, ...r.d2].every(x => x.includes('by design')) && !r.stable.length) status = 'BY-DESIGN';
     if (status === 'FAIL' && test.known) status = 'KNOWN';
   }
+  if (!r.error && r.eq.length) status = 'FAIL';   /* 51i is never excused by known / by-design */
   const row = { name: test.name, area: test.area, status,
     dir1: r.error ? '-' : (r.d1.length ? 'FAIL' : 'ok'), dir2: r.error ? '-' : (r.d2.length ? 'FAIL' : 'ok'),
     stable: r.error ? '-' : (r.stable.length ? 'FAIL' : 'ok'), detail: r };
   results.push(row);
   console.log(`${status.padEnd(9)} d1:${row.dir1.padEnd(4)} d2:${row.dir2.padEnd(4)} st:${row.stable.padEnd(4)} ${test.name}`);
+  r.eq.slice(0, 4).forEach(x => console.log('          51i (recs ≠ blob): ' + x));
+  r.ord.slice(0, 2).forEach(x => console.log('          51i order (listed): ' + x.slice(0, 400)));
   if (status !== 'PASS') {
     if (r.error) console.log('          error: ' + r.error);
     r.d1.slice(0, 4).forEach(x => console.log('          dir1 (B receives A): ' + x));
@@ -428,6 +447,10 @@ for (const test of T) {
 }
 const n = (s) => results.filter(r => r.status === s).length;
 console.log(`\nTOTAL ${results.length}: PASS ${n('PASS')}, FAIL ${n('FAIL')}, BY-DESIGN ${n('BY-DESIGN')}, KNOWN ${n('KNOWN')}, NOTRUN ${n('NOTRUN')}, ERROR ${n('ERROR')}`);
+{
+  const ran = results.filter(r => !r.detail.error), eqBad = ran.filter(r => r.detail.eq.length), ordBad = ran.filter(r => r.detail.ord.length);
+  console.log(`51i recs-vs-blob equivalence: ${ran.length - eqBad.length}/${ran.length} operations identical in both directions; order differs in ${ordBad.length}${ordBad.length ? ' (' + ordBad.map(r => r.name.split(' ')[0]).join(', ') + ')' : ''}`);
+}
 if (errors.length) console.log('page errors:\n  ' + errors.slice(0, 10).join('\n  '));
 if (JSON_OUT) writeFileSync(JSON_OUT, JSON.stringify(results, null, 1));
 await close();
