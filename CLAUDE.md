@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.89.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.90.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -29,7 +29,9 @@ must never accumulate here instead of there.
   clean-up never deletes a generation the rec still names (server read
   first). Checks 51h–51r (51i equivalence in sync-audit 118/118). `--only 51`
   **81/81** (51q/51r fail unpatched), `sync-e2e` **24/24**; full `app-check`
-  left to the Architect. The import must still wait for S1c; the write gate
+  **1601/1601, twice in a row**; unpatched: `--only 51` 23/25 (the S1b part
+  of the S1 check aborts), `sync-audit` 118/118 ERROR (51i needs
+  `_s1RecsAsDB`), `sync-e2e` 24/24 (unchanged this round). The import must still wait for S1c; the write gate
   stays shut while the reader fails (S1c must surface it).
 - **v04.88** (6 Oct 2026) — S1a, step one of per-note cloud storage (issue
   #124). After each blob push, changed records are also written one doc

@@ -8377,3 +8377,13 @@ that; its second (a no-notes device, recs only) needs the reader.
 - **A real Firestore was not run** (none is reachable from the builder); the
   fake follows the SDK's documented behaviour. The import must still wait
   for S1c.
+
+**Architect's review totals (v04.89, measured by the Architect).** Full
+`app-check` **1601/1601, twice in a row**; unpatched: `--only 51` 23/25 (the
+S1b part of the S1 check aborts), `sync-audit` 118/118 ERROR (51i needs
+`_s1RecsAsDB`), `sync-e2e` 24/24 (unchanged this round).
+
+## v04.90 — S1c: the per-note copy becomes the sync (stub)
+
+Third of three steps of S1 (issue #128). Work in progress; entry to be
+completed.
