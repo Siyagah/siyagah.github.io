@@ -235,7 +235,7 @@ const VPS = [{ name: '390', w: 390, h: 844, touch: true }, { name: '820', w: 820
 const measure = process.argv.includes('--measure');
 
 try {
-  for (const vp of VPS) {
+  for (const vp of (process.argv.includes('--s1b') ? [] : VPS)) {   /* --s1b: only 51h–51o (a faster loop while working) */
     const T = (s) => `${vp.name}: ${s}`;
     const ARABIC = 'ملاحظة عربية 😀 مرحبا بالعالم';
     /* ── 51a: a seeded notebook, all 11 arrays non-empty, Arabic + emoji, a null-id element ── */
@@ -430,7 +430,7 @@ try {
     const fps = dbs.map(fp); let why = '';
     for (let i = 1; i < fps.length && !why; i++) for (const k of Object.keys(fps[0])) if (JSON.stringify(fps[0][k]) !== JSON.stringify(fps[i][k])) {
       const a = fps[0][k], b = fps[i][k];
-      why = `${devs[0].name} vs ${devs[i].name}: "${k}" differs` + (Array.isArray(a) && Array.isArray(b) ? (a.length !== b.length ? ` (${a.length} vs ${b.length} items)` : ' (same items, different ORDER or content)') : ''); break;
+      why = `${devs[0].name} vs ${devs[i].name}: "${k}" differs` + (Array.isArray(a) && Array.isArray(b) ? (a.length !== b.length ? ` (${a.length} vs ${b.length} items)` : ' (same count; ' + (() => { const ia = a.map((s) => JSON.parse(s).id), ib = b.map((s) => JSON.parse(s).id); return ia.join() === ib.join() ? 'same order, a record\'s CONTENT differs: ' + ia.filter((id, j) => a[j] !== b[j]).join() : 'order ' + ia.join() + ' vs ' + ib.join(); })() + ')') : ''); break;
     }
     return { ok: !why, why, dbs, own };
   }
@@ -461,7 +461,7 @@ try {
     await step('edit', () => act(B, (i) => { const a = DB.articles.find((x) => x.id === i); a.content = '<p>Edited on B</p>'; a.updatedAt = new Date().toISOString(); }, nid),
       async () => ((await has(A, (i) => DB.articles.find((x) => x.id === i).content.includes('Edited on B'), nid)) && (await has(C, (i) => DB.articles.find((x) => x.id === i).content.includes('Edited on B'), nid))) ? '' : 'edit missing');
     await step('rename', () => act(C, (i) => { finRenameArtTitle(i, 'Renamed on C'); }, nid),
-      async () => ((await noteTitle(A, nid)) === 'Renamed on C' && (await noteTitle(B, nid)) === 'Renamed on C') ? '' : 'rename missing');
+      async () => { const ts = await Promise.all(devs.map((d) => noteTitle(d, nid))); return ts.every((t) => t === 'Renamed on C') ? '' : 'rename missing, titles now: ' + JSON.stringify(ts); });
     await step('trash', () => act(A, (i) => { trashArt(i); }, nid), async () => (await has(B, (i) => !DB.articles.some((a) => a.id === i) && DB.trash.some((t) => t.item && t.item.id === i), nid)) ? '' : 'not in Trash on B');
     await step('restore', () => act(B, (i) => { restoreItem(DB.trash.find((t) => t.item && t.item.id === i).id); }, nid), async () => ((await has(A, (i) => DB.articles.some((a) => a.id === i), nid)) && (await has(C, (i) => DB.articles.some((a) => a.id === i), nid))) ? '' : 'restored note missing on A or C');
     await step('empty Trash', async () => { await act(A, (i) => { trashArt(i); }, nid); await settle(cloud, devs); await act(C, () => { emptyTrash(); }); },

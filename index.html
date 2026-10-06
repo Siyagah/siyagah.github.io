@@ -22961,7 +22961,21 @@ async function _pullRecsMerge(){
   _pullInFlight=true;
   try{
     const remoteDB=_s1AssembleRep();
-    if(remoteDB) _mergeRemoteIn(remoteDB, 0);
+    if(remoteDB){
+      /* mergeDB() appends every remote element that has no id, whether or not
+         this device already holds the same one — harmless once per blob pull,
+         but this merge runs on every received batch and every start, so such
+         an element would double each time. An element with no id that is
+         byte-for-byte already here is the same element: leave it out of the
+         remote side (mergeDB() itself is untouched). */
+      _S1_COLLS.forEach(c=>{
+        const r=remoteDB[c], l=DB[c];
+        if(!Array.isArray(r)||!Array.isArray(l)) return;
+        const have=new Set(); l.forEach(x=>{ if(!x||typeof x!=='object'||x.id==null) have.add(JSON.stringify(x)); });
+        if(have.size) remoteDB[c]=r.filter(x=>(x&&typeof x==='object'&&x.id!=null)||!have.has(JSON.stringify(x)));
+      });
+      _mergeRemoteIn(remoteDB, 0);
+    }
   }catch(e){
     console.warn('S1 read: merge skipped:',e);
     if(_s1Stat.rd) _s1Stat.rd.err={code:(e&&e.code)||'merge', at:Date.now(), message:String((e&&e.message)||e).slice(0,200)};
