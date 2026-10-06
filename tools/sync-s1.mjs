@@ -709,6 +709,37 @@ try {
     for (const d of devs) await d.ctx.close();
   }
 
+  /* ── 51z: a rec whose piece is not there yet, and another rec written inside its backoff — the first one still arrives ──
+     The running listener delivers the later doc as its own snapshot; the cursor must not pass the pending rec. */
+  if (want('51z')) {
+    const { cloud, devs, A, B, C } = await trio({ recsOnly: true });
+    await settle(cloud, devs);
+    for (const d of devs) await on(d, () => { _S1_BACKOFF = [5000, 10000, 15000]; });
+    const late = NB + '/recs/articles~late', part = NB + '/recparts/articles~late~gLATE~0';
+    cloud.apply([{ t: 'set', p: late, d: { c: 'articles', id: 'late', sig: 'zz1', ver: 'v-late', n: 1, g: 'gLATE', o: 99, at: { __sts: 1 } } }], null);
+    const pend = (d) => on(d, () => _s1RdFails.size);   /* exists unpatched too: one failure recorded, retry scheduled */
+    let pending = false;
+    for (let t0 = Date.now(); Date.now() - t0 < 15000 && !pending;) { pending = (await Promise.all(devs.map(pend))).every((n) => n === 1); if (!pending) await sleep(200); }
+    /* inside the backoff window another device writes a different rec — more than the 2 s cursor overlap later, or the overlap alone hides the fault */
+    await sleep(2600);
+    await act(A, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.title = 'Written inside the backoff'; a.updatedAt = new Date().toISOString(); });
+    let got1 = false;
+    for (let t0 = Date.now(); Date.now() - t0 < 4000 && !got1;) { got1 = (await Promise.all([B, C].map((d) => noteTitle(d, 'a1')))).every((t) => t === 'Written inside the backoff'); if (!got1) await sleep(200); }
+    await sleep(300);
+    const lAt = cloud.store.get(late).at.__ts[0] * 1000 + cloud.store.get(late).at.__ts[1] / 1e6;
+    const mid = await Promise.all(devs.map((d) => stat(d)));
+    /* now the piece arrives; the scheduled retry must find the rec */
+    const body = await on(A, () => _b64enc(JSON.stringify({ id: 'late', title: 'Arrived late', content: '<p>x</p>', folderIds: ['f1'], tags: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), kind: 'general' })));
+    cloud.apply([{ t: 'set', p: part, d: { p: body } }], null);
+    let got = false;
+    for (let t0 = Date.now(); Date.now() - t0 < 60000 && !got;) { got = (await Promise.all(devs.map((d) => noteTitle(d, 'late')))).every((t) => t === 'Arrived late'); if (!got) await sleep(300); }
+    const end = await Promise.all(devs.map((d) => stat(d)));
+    check(pending && got1 && mid.every((s) => s.rd && s.rd.cursor < lAt), '51z …the cursor did not pass the pending rec while another rec was delivered', JSON.stringify({ pending, got1, lAt, cursors: mid.map((s) => s.rd && s.rd.cursor) }));
+    check(got, '51z …the rec whose piece came late still arrives on every device after its retry', JSON.stringify({ titles: await Promise.all(devs.map((d) => noteTitle(d, 'late'))), cursors: end.map((s) => s.rd && s.rd.cursor), lAt }));
+    check(devs.every((d) => d.errors.length === 0), '51z no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
+    for (const d of devs) await d.ctx.close();
+  }
+
   /* ── 51r: two devices save the same >700 KB note within seconds — the clean-up never deletes a generation the rec still names ── */
   if (want('51r')) {
     const { cloud, devs, A, B, C } = await trio({ recsOnly: true });
