@@ -349,7 +349,7 @@ const PAGE_LIB = () => {
       document.querySelectorAll('.float-win').forEach(w => w.remove());
       ST.editing = false; ST.article = null; ST.tabOwner = null;
       DB = clone(window.__BASE);
-      try { HISTORY.length = 0; HISTORY.push(JSON.stringify(DB)); HIST_POS = 0; } catch (e) {}
+      try { if (typeof _histReset === 'function') _histReset(); else { HISTORY.length = 0; HISTORY.push(JSON.stringify(DB)); HIST_POS = 0; } } catch (e) {}   /* v04.91: the history is frames, not whole-notebook strings */
       window._showClrPicker = window.__origClr;
       reseed(); render();
     },
@@ -368,7 +368,7 @@ async function runOne(page, test) {
       A.reseed();
       const A0 = A.clone(DB);
       let B1 = A0;
-      const runB = async () => { const H = HISTORY.slice(), P = HIST_POS; DB = A.clone(A0); A.reseed(); await A.sleep(15); await ev(bop)(); await A.sleep(5); B1 = A.clone(DB); window.__B1 = A.clone(B1); DB = A.clone(A0); A.reseed(); HISTORY.length = 0; H.forEach(x => HISTORY.push(x)); HIST_POS = P; ST.editing = false; ST.article = null; };
+      const runB = async () => { const H = HISTORY.slice(), P = HIST_POS; DB = A.clone(A0); A.reseed(); await A.sleep(15); await ev(bop)(); await A.sleep(5); B1 = A.clone(DB); window.__B1 = A.clone(B1); DB = A.clone(A0); A.reseed(); HISTORY.length = 0; H.forEach(x => HISTORY.push(x)); HIST_POS = P; if (typeof _histRebase === 'function') _histRebase(); ST.editing = false; ST.article = null; };
       if (bop && bFirst) await runB();
       await A.sleep(15);
       await ev(op)();

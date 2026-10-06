@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.90">
+<meta name="app-version" content="04.91">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3222,7 +3222,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.90</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.91</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3439,6 +3439,187 @@ async function _idbMigrateFrom(db){
   }catch(e){ return false; }
 }
 
+/* ── v04.91 · S1d — the local journal ─────────────────────────────────────
+   At 9,000 notes (~47 MB) every save cloned the whole notebook into IndexedDB
+   (and stringified it for localStorage, which refuses it): 0.66 s on a laptop and
+   1.5 s on a ×4 phone, per keystroke-save. In "journal mode" — IndexedDB is the
+   system of record and the notebook holds ≥ _LJ_MIN_NOTES notes, or the journal
+   already exists on this device — a save writes ONLY what changed:
+     siyagah-localrecs-v1 (a NEW database; siyagah-local-v1 is never upgraded — a
+       blocked upgrade would drop boot to localStorage), store `kv`:
+       'r:<key>'  {s, j}  the record's JSON       {s, g:1}  the record is gone
+       'o:<coll>' {s, j}  the slot order of an array (JSON list of keys / null)
+       'h'        {s, j}  the head: every key that is not an id-keyed array, and the
+                          elements with no usable id (see _headOf)
+       'm'        {seq, n} the newest save, and how many slots each array has
+     `s` is a save number (a millisecond clock that never goes back).
+   Each save is ONE transaction, so a save cut off half-way leaves the notebook as it
+   was before it, never a notebook with fewer notes.
+   siyagah-local-v1 'notebook' stays the full copy, read at boot exactly as before,
+   plus 'notebook-seq' (written in the same transaction): the save number the full
+   copy already holds. At boot the journal entries NEWER than that are laid over it
+   (_ljOverlay). A full copy is written (a) the first time a notebook enters
+   journal mode, (b) in the idle after the last save (_LJ_CKPT_MS), (c) after
+   _LJ_CKPT_PUTS journal writes; the entries it makes redundant are then removed.
+   If a journal write fails the journal is dropped and the next save writes a full
+   copy again — the failure raises the same ⚠ alarm any failed save always has.
+   Not covered: a build older than v04.91 reads only the full copy, which can be
+   up to _LJ_CKPT_MS behind. Nobody downgrades (the service worker only moves
+   forward); the frozen builds under legacy/ read-only and do not write. */
+const _LJ_NAME='siyagah-localrecs-v1', _LJ_STORE='kv';
+let _LJ_MIN_NOTES=1500, _LJ_CKPT_MS=30000, _LJ_CKPT_PUTS=3000;
+let _ljDbP=null, _ljOn=false, _ljDead=false, _ljSeq=0, _ljCkpt=0, _ljBase=null, _ljOrd=null, _ljHead=null;
+let _ljEpoch=0, _ljChain=Promise.resolve(), _ljCkptTimer=null, _ljCkptBusy=false, _ljPuts=0;
+window._ljStat={writes:0,puts:0,full:0,lastMs:0};
+function _ljOpen(){
+  if(_ljDbP) return _ljDbP;
+  _ljDbP=new Promise(resolve=>{
+    if(!window.indexedDB){ resolve(null); return; }
+    let rq; try{ rq=indexedDB.open(_LJ_NAME,1); }catch(e){ resolve(null); return; }
+    rq.onupgradeneeded=()=>{ try{ rq.result.createObjectStore(_LJ_STORE); }catch(e){} };
+    rq.onsuccess=()=>resolve(rq.result);
+    rq.onerror=()=>resolve(null);
+    rq.onblocked=()=>resolve(null);
+  });
+  return _ljDbP;
+}
+function _ljWanted(){ return !_ljDead&&(_ljOn||((DB&&DB.articles)||[]).length>=_LJ_MIN_NOTES); }
+function _ljOrdOf(sw){ const o={}; _LJ_COLLS.forEach(c=>{ o[c]=sw.c[c].keys; }); return o; }
+function _ljCounts(sw){ const n={}; _LJ_COLLS.forEach(c=>{ if(sw.c[c].isArr) n[c]=sw.c[c].keys.length; }); return n; }
+/* test-only: with window.__ljHold (ms) set, keep THIS transaction open after its puts, so a check can kill the browser inside it. Inert when unset. */
+function _ljHoldOpen(st){
+  const ms=window.__ljHold; if(typeof ms!=='number'||!(ms>0)) return;
+  const t0=Date.now(); console.log('LJ_HOLD');
+  const spin=()=>{ const r=st.get('m'); r.onsuccess=()=>{ if(Date.now()-t0<ms) spin(); }; };
+  spin();
+}
+/* the full copy and the save number it holds, in ONE transaction */
+function _ljFullPut(seq){
+  return _idbOpen().then(db=>new Promise((resolve,reject)=>{
+    if(!db){ reject(new Error('IndexedDB unavailable')); return; }
+    let tx=null;
+    try{
+      tx=db.transaction(IDB_STORE,'readwrite'); const st=tx.objectStore(IDB_STORE);
+      tx.oncomplete=()=>resolve(true);
+      tx.onerror=()=>reject(tx.error||new Error('IndexedDB write failed'));
+      tx.onabort=()=>reject(tx.error||new Error('IndexedDB write aborted'));
+      st.put(DB,IDB_KEY); st.put(seq,'notebook-seq');
+      _ljHoldOpen(st);
+    }catch(e){ try{ if(tx) tx.abort(); }catch(_){} reject(e); }
+  }));
+}
+/* one journal transaction: the puts, the newest-save marker, and (a checkpoint) the removal of
+   what the full copy now makes redundant */
+function _ljTx(puts,m,cleanSeq){
+  return _ljOpen().then(db=>new Promise((resolve,reject)=>{
+    if(!db){ reject(new Error('journal database unavailable')); return; }
+    let tx=null;
+    try{
+      tx=db.transaction(_LJ_STORE,'readwrite'); const st=tx.objectStore(_LJ_STORE);
+      tx.oncomplete=()=>resolve(true);
+      tx.onerror=()=>reject(tx.error||new Error('journal write failed'));
+      tx.onabort=()=>reject(tx.error||new Error('journal write aborted'));
+      if(cleanSeq!=null){
+        const cr=st.openCursor();
+        cr.onsuccess=()=>{ const c=cr.result; if(!c) return; if(c.key!=='m'&&c.value&&c.value.s<=cleanSeq) c.delete(); c.continue(); };
+      }
+      puts.forEach(p=>st.put(p[1],p[0]));
+      if(m) st.put(m,'m');
+      _ljHoldOpen(st);
+    }catch(e){ try{ if(tx) tx.abort(); }catch(_){} reject(e); }   /* a throw half-way must not commit half a save */
+  }));
+}
+/* tasks run one after the other, in the order the saves were made; a task of a journal that
+   has since been dropped does not run (and reports failure, so no save is taken for written) */
+function _ljRun(epoch,fn,soft){
+  const p=_ljChain.catch(()=>{}).then(()=>{
+    if(epoch!==_ljEpoch||!_ljOn) throw new Error('local journal restarted');
+    return fn();
+  });
+  _ljChain=p;
+  p.catch(()=>{ if(!soft&&epoch===_ljEpoch) _ljOn=false; });
+  return p;
+}
+function _ljSave(sw){
+  const t0=performance.now();
+  _ljStat.writes++;
+  if(!_ljOn){
+    /* the first save of this journal: a full copy, and everything after it is a difference */
+    const epoch=++_ljEpoch, seq=_ljSeq=Math.max(_ljSeq+1,Date.now()), n=_ljCounts(sw);
+    _ljBase=sw.map; _ljOrd=_ljOrdOf(sw); _ljHead=_headOf(DB,sw); _ljOn=true; _ljPuts=0;
+    _ljStat.full++;
+    const p=_ljRun(epoch,()=>_ljOpen().then(ldb=>{
+      /* no second database on this device: save the old way, whole, for good */
+      if(!ldb){ _ljDead=true; _ljOn=false; return _idbPut(IDB_KEY,DB); }
+      return _ljFullPut(seq).then(()=>_ljTx([],{seq:seq,n:n},seq)).then(()=>{ _ljCkpt=seq; return true; });
+    }));
+    _ljStat.lastMs=performance.now()-t0;
+    return p;
+  }
+  const epoch=_ljEpoch, seq=_ljSeq=Math.max(_ljSeq+1,Date.now()), puts=[], cur=sw.map;
+  cur.forEach((e,k)=>{ if(_ljBase.get(k)!==e) puts.push(['r:'+k,{s:seq,j:_rcJson(e)}]); });
+  _ljBase.forEach((e,k)=>{ if(!cur.has(k)) puts.push(['r:'+k,{s:seq,g:1}]); });
+  _LJ_COLLS.forEach(c=>{ const a=sw.c[c].keys; if(!_sameKeys(a,_ljOrd[c])){ puts.push(['o:'+c,{s:seq,j:JSON.stringify(a)}]); _ljOrd[c]=a; } });
+  const hs=_headOf(DB,sw); if(hs!==_ljHead){ puts.push(['h',{s:seq,j:hs}]); _ljHead=hs; }
+  _ljBase=cur;
+  _ljStat.lastMs=performance.now()-t0;
+  if(!puts.length) return _ljChain.catch(()=>{}).then(()=>{ if(epoch!==_ljEpoch||!_ljOn) throw new Error('local journal restarted'); return true; });
+  const m={seq:seq,n:_ljCounts(sw)};
+  _ljStat.puts+=puts.length; _ljPuts+=puts.length;
+  const p=_ljRun(epoch,()=>_ljTx(puts,m,null));
+  clearTimeout(_ljCkptTimer);
+  _ljCkptTimer=setTimeout(_ljCheckpoint,_ljPuts>=_LJ_CKPT_PUTS?0:_LJ_CKPT_MS);
+  return p;
+}
+/* a full copy of the notebook as it is now, then the removal of what it makes redundant */
+function _ljCheckpoint(){
+  clearTimeout(_ljCkptTimer); _ljCkptTimer=null;
+  if(!_ljOn||_ljCkptBusy||!_dbLoaded) return;
+  const epoch=_ljEpoch, seq=_ljSeq; _ljCkptBusy=true;
+  _ljRun(epoch,()=>_ljFullPut(seq).then(()=>_ljTx([],null,seq)),true)
+    .then(()=>{ _ljCkpt=seq; if(_ljSeq===seq) _ljPuts=0; _ljStat.full++; })
+    .catch(e=>{ if(_ljOn) console.warn('local journal: full copy not written (the journal still holds every change):',e); })
+    .finally(()=>{ _ljCkptBusy=false; });
+}
+/* Boot: lay the journal entries newer than the full copy over `db` (the full copy, as read).
+   Builds the result first and assigns it last, so a failure leaves `db` as it was read. */
+async function _ljOverlay(db){
+  const ldb=await _ljOpen(); if(!ldb) return false;
+  const all=await new Promise(res=>{
+    try{ const tx=ldb.transaction(_LJ_STORE,'readonly'), st=tx.objectStore(_LJ_STORE), ks=st.getAllKeys(), vs=st.getAll();
+      tx.oncomplete=()=>res([ks.result,vs.result]); tx.onerror=()=>res(null); tx.onabort=()=>res(null); }catch(e){ res(null); }
+  });
+  if(!all) return false;
+  const ent=new Map(); all[0].forEach((k,i)=>ent.set(k,all[1][i]));
+  const m=ent.get('m'); if(!m) return false;   /* the journal was never written: the full copy is the notebook */
+  const baseSeq=+(await _idbGet('notebook-seq'))||0;
+  const newer=v=>!!v&&v.s>baseSeq;
+  const byColl={}, ords={}; let head=null;
+  ent.forEach((v,k)=>{
+    if(!newer(v)) return;
+    if(k.startsWith('r:')){ const key=k.slice(2), c=key.slice(0,key.indexOf('~')); (byColl[c]=byColl[c]||new Map()).set(key,v.g?null:JSON.parse(v.j)); }
+    else if(k.startsWith('o:')) ords[k.slice(2)]=JSON.parse(v.j);
+    else if(k==='h') head=JSON.parse(v.j);
+  });
+  const res={};
+  _LJ_COLLS.forEach(c=>{
+    const arr=db[c], has=Array.isArray(arr);
+    if(!byColl[c]&&!ords[c]&&!(head&&(has||(head.__odd&&head.__odd[c])))) return;
+    if(!has&&!(head&&head.__odd&&head.__odd[c])&&!byColl[c]&&!ords[c]) return;
+    res[c]=_applyToColl(c,has?arr:[],byColl[c]||new Map(),ords[c]||null,head?((head.__odd||{})[c]||[]):null);
+  });
+  Object.keys(res).forEach(c=>{ db[c]=res[c]; });
+  if(head){
+    Object.keys(db).forEach(k=>{ if(_LJ_COLLS.indexOf(k)<0&&!(k in head)) delete db[k]; });
+    Object.keys(head).forEach(k=>{ if(k!=='__odd'&&k!=='__has') db[k]=head[k]; });
+    _headHas(db,head);
+  }
+  if(m.n) Object.keys(m.n).forEach(c=>{ if(Array.isArray(db[c])&&db[c].length!==m.n[c]) console.error('local journal: '+c+' holds '+db[c].length+' after the overlay, the last save had '+m.n[c]); });
+  _ljOn=true; _ljSeq=Math.max(+m.seq||0,baseSeq,_ljSeq); _ljCkpt=baseSeq;
+  const sw=_collect(db,null); _ljBase=sw.map; _ljOrd=_ljOrdOf(sw); _ljHead=_headOf(db,sw); _ljPuts=0;
+  return true;
+}
+
 async function loadDB(){
   const el = document.getElementById('nd');
   let emb = null;
@@ -3464,8 +3645,11 @@ async function loadDB(){
   try{ _idb=await _idbGet(IDB_KEY); }catch(e){ _idb=null; }
   if(_idb&&_idb.folders){
     _idbReady=true;
+    /* v04.91 — a notebook saved in journal mode: the full copy plus what the journal
+       holds newer than it (see _ljOverlay). Without a journal this does nothing. */
+    try{ await _ljOverlay(_idb); }catch(e){ console.error('local journal not applied (the full copy is used):',e); }
     if(emb?.folders){DB=mergeDB(_idb,emb);}
-    else{DB=JSON.parse(JSON.stringify(_idb));}
+    else{DB=_idb;}   /* v04.91 — `_idb` is this boot's own read (a structured clone): copying it again cost two whole-notebook passes */
   }
   else if(_stored?.folders&&emb?.folders){DB=mergeDB(_stored,emb);}
   else if(emb?.folders){DB=JSON.parse(JSON.stringify(emb));}
@@ -3793,7 +3977,114 @@ let _recSnap;        /* {coll:{id:[sig,updatedAt,noteHistory length]}} — undef
    uninitialised. */
 let _s1Dirty={keys:new Set(), gone:new Set(), full:true};
 function _s1DirtyKey(c,id){ return c+'~'+encodeURIComponent(String(id)).replace(/\./g,'%2E'); }   /* = _s1Key() */
-function _recEnt(r){ return [_recSig(r), r.updatedAt, Array.isArray(r.noteHistory)?r.noteHistory.length:0]; }
+/* ── v04.91 · S1d — one cached view of each record ───────────────────────
+   Until v04.90 every sweep (_stampRecordTouches), every reseed and every undo
+   snapshot STRINGIFIED every record: at 9,000 notes (~47 MB) that was most of
+   what a keystroke, a received edit and an undo cost (measured: 0.19 s of
+   _recSig per three sweeps on the laptop, 1.3 s on a ×4 phone, plus 0.6–2.0 s of
+   whole-notebook JSON in _save()). Records are edited IN PLACE all over the
+   app, so nothing can say "this one did not change" except looking at it —
+   but looking is cheap: a record's fields are compared with the copy seen last
+   time (a primitive by value, so a 5 KB note body is one pointer comparison; a
+   small array or object by its JSON, which is a few bytes), and only a record
+   that actually differs is serialised again.
+   An entry is {ks,vs,js} (the fingerprint), plus what is derived from it and
+   kept only while the fingerprint holds: `tok` (a hash of what _recSig used to
+   be — every key except updatedAt and noteHistory), `json` (the record's whole
+   JSON text), `k` (its _s1Key). `noteHistory` is a side-log: it counts as
+   unchanged while it is the same array of the same length ending in the same
+   element. trash and tombstones are fingerprinted SHALLOWLY (an object value by
+   identity only): their entries are written once and removed whole, and a
+   trashed note's body must not be stringified on every save.
+   Nothing here changes what a sweep decides; it only stops re-deriving what has
+   not moved. The one thing it cannot see is an in-place edit INSIDE an old
+   noteHistory entry (or inside a trash entry's item): such a change is picked
+   up by the next full copy (see the checkpoint in _ljSave()). */
+const _LJ_COLLS=['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','trash','tombstones'];
+const _RC=new WeakMap(), _RC_NOSIG={updatedAt:1,noteHistory:1}, _REC_SET=new Set(_REC_COLLS);
+function _rcBuild(r,shallow){
+  const ks=Object.keys(r), n=ks.length, vs=new Array(n), js=new Array(n);
+  let nhn=0, nhl;
+  for(let i=0;i<n;i++){
+    const k=ks[i], v=r[k]; vs[i]=v; js[i]=null;
+    if(v!==null&&typeof v==='object'){
+      if(k==='noteHistory'&&Array.isArray(v)){ nhn=v.length; nhl=v[nhn-1]; }
+      else if(!shallow){
+        /* an array of plain values (tags, folderIds, kinds…) is kept as a copy and compared
+           element by element; anything else by its JSON */
+        let flat=Array.isArray(v);
+        if(flat) for(let j=0;j<v.length;j++){ const x=v[j]; if(x!==null&&typeof x==='object'){ flat=false; break; } }
+        js[i]=flat?v.slice():JSON.stringify(v);
+      }
+    }
+  }
+  return {ks,vs,js,sh:!!shallow,nhn,nhl,tok:null,json:null,ssig:null,k:null,kc:null,r:r};
+}
+function _rcSame(r,e){
+  const ks=Object.keys(r), n=ks.length, eks=e.ks;
+  if(n!==eks.length) return false;
+  const vs=e.vs, js=e.js;
+  for(let i=0;i<n;i++){
+    const k=ks[i]; if(k!==eks[i]) return false;
+    const v=r[k], pv=vs[i];
+    if(v!==pv) return false;
+    if(v===null||typeof v!=='object') continue;
+    if(k==='noteHistory'&&Array.isArray(v)){ if(v.length!==e.nhn||v[e.nhn-1]!==e.nhl) return false; continue; }
+    const j=js[i]; if(j===null) continue;   /* shallow: an object is its identity */
+    if(typeof j!=='string'){   /* a copy of an array of plain values */
+      if(v.length!==j.length) return false;
+      for(let x=0;x<j.length;x++){ if(v[x]!==j[x]) return false; }
+      continue;
+    }
+    if(JSON.stringify(v)!==j) return false;
+  }
+  return true;
+}
+function _rcEntry(r,shallow){
+  let e=_RC.get(r);
+  if(e!==undefined&&_rcSame(r,e)) return e;
+  e=_rcBuild(r,shallow); _RC.set(r,e); return e;
+}
+function _rcHash(s){
+  let h1=0x811c9dc5, h2=0x1b873593;
+  for(let i=0;i<s.length;i++){ const c=s.charCodeAt(i); h1=Math.imul(h1^c,0x01000193); h2=(Math.imul(h2+c,0x85ebca6b)^(h2>>>13))|0; }
+  return s.length.toString(36)+':'+(h1>>>0).toString(36)+(h2>>>0).toString(36);
+}
+/* what _recSig() was: the record's JSON without updatedAt and noteHistory, keys sorted */
+function _rcTok(e,r){
+  if(e.tok===null){
+    const o={}; Object.keys(r).sort().forEach(k=>{ if(!_RC_NOSIG[k]) o[k]=r[k]; });
+    e.tok=_rcHash(JSON.stringify(o));
+  }
+  return e.tok;
+}
+function _rcJson(e){ if(e.json===null) e.json=JSON.stringify(e.r); return e.json; }
+function _rcKey(c,r,e){ if(e.kc!==c){ e.kc=c; e.k=_s1Key(c,r.id); } return e.k; }
+/* One pass over the notebook's eleven id-keyed arrays. `visit(c,r,e)` is called for
+   every element that has an id (duplicates included) and returns true if it changed
+   the record (the entry is then taken again). Returns the key of every slot (null =
+   an element with no usable id, or an id already taken: those travel in the head),
+   those elements, and a Map key → entry of everything keyed. */
+function _collect(db,visit){
+  const out={map:new Map(),c:{}};
+  for(let ci=0;ci<_LJ_COLLS.length;ci++){
+    const c=_LJ_COLLS[ci], arr=db&&db[c], shallow=(c==='trash'||c==='tombstones');
+    const info=out.c[c]={isArr:Array.isArray(arr),keys:[],odd:[]};
+    if(!info.isArr) continue;
+    const keys=info.keys, odd=info.odd, map=out.map;
+    for(let i=0;i<arr.length;i++){
+      const x=arr[i];
+      if(!x||typeof x!=='object'||x.id==null){ keys.push(null); odd.push(x); continue; }
+      let e=_rcEntry(x,shallow);
+      if(visit&&visit(c,x,e)) e=_rcEntry(x,shallow);
+      const k=_rcKey(c,x,e);
+      if(map.has(k)){ keys.push(null); odd.push(x); continue; }
+      keys.push(k); map.set(k,e);
+    }
+  }
+  return out;
+}
+function _recEnt(r){ const e=_rcEntry(r); return [_rcTok(e,r), r.updatedAt, Array.isArray(r.noteHistory)?r.noteHistory.length:0]; }
 /* A merge replaces _recSnap wholesale (_seedRecSnap), so what the merge changed
    is the difference between the baseline before it and the one after. */
 function _s1DirtyFromDiff(oldS,newS){
@@ -3806,44 +4097,53 @@ function _s1DirtyFromDiff(oldS,newS){
     });
   }catch(_){ _s1Dirty.full=true; }
 }
-/* The record's JSON itself, not a hash of it: hashing a 6MB notebook took
-   ~70ms per save in Chromium, the plain string ~7ms (measured, 2000 notes).
-   The memory is one more copy of the notebook — HISTORY already keeps 60. */
-function _recSig(r){
-  const o={};Object.keys(r).sort().forEach(k=>{if(k!=='updatedAt'&&k!=='noteHistory')o[k]=r[k];});
-  return JSON.stringify(o);
-}
+/* v04.91 — S1d: a record's signature is now a hash (_rcTok), computed only when
+   its fingerprint moved (see _rcEntry). v04.88–v04.90 kept the record's whole
+   JSON text here and re-derived it for every record on every sweep. */
+function _recSig(r){ return _rcTok(_rcEntry(r),r); }
+/* The baseline of every watched record — and, from the same pass, what
+   _collect() found in all eleven arrays (the history and the local journal use it). */
 function _recSnapOf(db){
   const s={};
-  _REC_COLLS.forEach(c=>{const m=s[c]={};((db&&db[c])||[]).forEach(r=>{if(r&&r.id!=null)m[r.id]=_recEnt(r);});});
+  _REC_COLLS.forEach(c=>{s[c]={};});
+  const old=(db===DB)?_recSnap:undefined;   /* an entry that has not moved is kept, not rebuilt */
+  const sw=_collect(db,(c,r,e)=>{
+    const m=s[c]; if(!m) return false;
+    const tok=_rcTok(e,r), ua=r.updatedAt, nh=Array.isArray(r.noteHistory)?r.noteHistory.length:0, p=old&&old[c]?old[c][r.id]:undefined;
+    m[r.id]=(p&&p[0]===tok&&p[1]===ua&&p[2]===nh)?p:[tok,ua,nh];
+    return false;
+  });
   s.__tags=((db&&db.globalTags)||[]).slice();
-  return s;
+  return {snap:s,sw:sw};
 }
 /* `diffed` = the caller (a merge) compares the baseline before and after itself
    (_s1DirtyFromDiff); any other reseed (undo, a restored backup, boot) swapped
-   the notebook under the sweep, so the next per-record snapshot is a full one. */
-function _seedRecSnap(diffed){ try{ _recSnap=_recSnapOf(DB); if(!diffed) _s1Dirty.full=true; }catch(_){} }
+   the notebook under the sweep, so the next per-record snapshot is a full one.
+   Returns what it collected, so the _save() that follows need not collect again. */
+function _seedRecSnap(diffed){ try{ const r=_recSnapOf(DB); _recSnap=r.snap; if(!diffed) _s1Dirty.full=true; return r.sw; }catch(_){ return null; } }
 function _stampRecordTouches(){
-  if(_recSnap===undefined) return;
+  if(_recSnap===undefined) return null;
   try{
     const now=new Date().toISOString(), next={}, gone=[];
-    _REC_COLLS.forEach(c=>{
-      const prev=_recSnap[c]||{}, m=next[c]={};
-      ((DB&&DB[c])||[]).forEach(r=>{
-        if(!r||r.id==null) return;
-        const e=_recEnt(r), sig=e[0], p=prev[r.id];
-        /* "its updatedAt did not move FORWARD" — not just "is unchanged": undo()
-           puts back the older copy, stamp and all, and that is a change too. */
-        const moved=r.updatedAt!=null&&(p?(p[1]==null||r.updatedAt>p[1]):true);
-        if(p && p[0]!==sig && !moved) r.updatedAt=now;
-        e[1]=r.updatedAt;
-        m[r.id]=e;
-        if(!p||p[0]!==sig||p[1]!==e[1]||p[2]!==e[2]) _s1Dirty.keys.add(_s1DirtyKey(c,r.id));   /* v04.90 — S1c */
-      });
-      Object.keys(prev).forEach(id=>{ if(!m[id]) _s1Dirty.gone.add(_s1DirtyKey(c,id)); });
-      if(_REC_TOMB_COLLS.includes(c)) Object.keys(prev).forEach(id=>{ if(!m[id]) gone.push(id); });
+    _REC_COLLS.forEach(c=>{ next[c]={}; });
+    let sw=_collect(DB,(c,r,e)=>{
+      const m=next[c]; if(!m) return false;
+      const prev=_recSnap[c], p=prev?prev[r.id]:undefined, tok=_rcTok(e,r);
+      /* "its updatedAt did not move FORWARD" — not just "is unchanged": undo()
+         puts back the older copy, stamp and all, and that is a change too. */
+      const moved=r.updatedAt!=null&&(p?(p[1]==null||r.updatedAt>p[1]):true);
+      let stamped=false;
+      if(p && p[0]!==tok && !moved){ r.updatedAt=now; stamped=true; }
+      const ua=r.updatedAt, nh=Array.isArray(r.noteHistory)?r.noteHistory.length:0;
+      if(p&&p[0]===tok&&p[1]===ua&&p[2]===nh) m[r.id]=p;
+      else{ m[r.id]=[tok,ua,nh]; _s1Dirty.keys.add(_s1DirtyKey(c,r.id)); }   /* v04.90 — S1c */
+      return stamped;
     });
-    if(gone.length) _addTombstones(gone,now);
+    _REC_COLLS.forEach(c=>{
+      const prev=_recSnap[c]||{}, m=next[c];
+      Object.keys(prev).forEach(id=>{ if(!m[id]){ _s1Dirty.gone.add(_s1DirtyKey(c,id)); if(_REC_TOMB_COLLS.includes(c)) gone.push(id); } });
+    });
+    if(gone.length){ _addTombstones(gone,now); sw=_collect(DB,null); }   /* the tombstones array grew after it was collected */
     /* v04.68 — DB.globalTags is a plain list that mergeDB() used to UNION, so
        a deleted standalone tag came straight back from any other device.
        Adds and removals are stamped here, per tag, in the same {tag:ms} shape
@@ -3854,7 +4154,8 @@ function _stampRecordTouches(){
     pt.forEach(t=>{ if(!ct.has(t)){ if(!DB.globalTagsX||typeof DB.globalTagsX!=='object')DB.globalTagsX={}; DB.globalTagsX[t]=ms; } });
     next.__tags=[...ct];
     _recSnap=next;
-  }catch(_){}
+    return sw;
+  }catch(_){ return null; }
 }
 /* A change that must NOT count as an edit of these records (see trashFolder):
    refresh their baseline so the next sweep leaves their updatedAt alone. */
@@ -3911,16 +4212,31 @@ function _markSaveFailure(e){
    IndexedDB has ever become ready (unavailable, or its one migration
    attempt this session failed), _save() behaves exactly as it always has:
    localStorage is the system of record and a failed write IS the failure. */
-function _save(pre){
+/* v04.91 — S1d. Two things changed here, for a notebook of thousands of notes:
+   · `sw` — what the sweep just collected (see _collect). A caller that has just
+     swept (persist(), a merge) hands it over, so one save is one pass over the
+     notebook, not three.
+   · once the notebook is in "journal mode" (_ljWanted(): IndexedDB is the system
+     of record and there are ≥1,500 notes) a save writes only the records that
+     changed to a second database (_ljSave()) instead of cloning the whole
+     notebook into IndexedDB, and does not stringify it for localStorage — which
+     cannot hold a notebook that size anyway and used to be tried, and to throw,
+     on every save. The save-failure alarm is unchanged: it is the IndexedDB write
+     that raises it, and an IndexedDB write failing in journal mode raises it too. */
+function _save(pre,sw){
   if(!_dbLoaded) return false;   /* never write the pre-load placeholder over the real notebook — see _dbLoaded */
   _stampThemeTouches();
-  _stampRecordTouches();   /* v04.68 */
-  const json = pre!=null?pre:JSON.stringify(DB);
+  if(!sw) sw=_stampRecordTouches();   /* v04.68 */
+  const jm=_idbReady&&_ljWanted();
+  if(jm&&!sw) sw=_collect(DB,null);
   let lsErr=null;
-  try{ localStorage.setItem(SK, json); }catch(e){ lsErr=e; }
+  if(!jm){
+    const json = pre!=null?pre:JSON.stringify(DB);
+    try{ localStorage.setItem(SK, json); }catch(e){ lsErr=e; }
+  }
 
   if(_idbReady){
-    _idbPut(IDB_KEY, DB).then(_clearSaveFailureIfNeeded).catch(_markSaveFailure);
+    (jm?_ljSave(sw):_idbPut(IDB_KEY, DB)).then(_clearSaveFailureIfNeeded).catch(_markSaveFailure);
     if(lsErr) console.error('localStorage best-effort save failed (IndexedDB is authoritative):', lsErr);
     return true;
   }
@@ -3929,7 +4245,7 @@ function _save(pre){
   _markSaveFailure(lsErr);
   return false;
 }
-const persist = () => { if(!_dbLoaded) return; snapshotState(); _save(); scheduleAutoSave(); pushToCloud(); };
+const persist = () => { if(!_dbLoaded) return; _stampThemeTouches(); const sw=_stampRecordTouches(); snapshotState(sw); _save(undefined,sw); scheduleAutoSave(); pushToCloud(); };
 
 /* ── Export hygiene: never bake foreign DOM into a saved file (v03.80) ──
    getExportHTML() serialises the LIVE document, so anything that landed in
@@ -4082,11 +4398,26 @@ function _wordSnippet(html,n){
   return words.slice(0,n).join(' ')+(words.length>n?'…':'');
 }
 const fmtD=d=>new Date(d).toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'});
+/* v04.91 — S1d: toLocaleDateString() costs ~45 µs, and a folder of 9,000 notes
+   asks for 9,000 of them on every paint (0.4 s on a laptop). The answer for one
+   timestamp never changes within a session — unless the device's time zone does,
+   which empties the memory. */
+const _fmtDsMemo=new Map(); let _fmtDsTz=null, _fmtDsIntl=null;
 const fmtDs=d=>{
+  const memo=(typeof d==='string'||typeof d==='number');
+  if(memo||_fmtDsTz===null){
+    const tz=new Date().getTimezoneOffset();
+    if(tz!==_fmtDsTz){ _fmtDsMemo.clear(); _fmtDsTz=tz; _fmtDsIntl=null; }
+  }
+  if(memo){ const hit=_fmtDsMemo.get(d); if(hit!==undefined) return hit; }
   const dt=new Date(d);
-  const date=dt.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'2-digit'});
+  /* one formatter, built once: toLocaleDateString() builds a new one per call (same output) */
+  if(_fmtDsIntl===null){ try{ _fmtDsIntl=new Intl.DateTimeFormat(undefined,{day:'numeric',month:'short',year:'2-digit'}); }catch(e){ _fmtDsIntl=false; } }
+  const date=(_fmtDsIntl&&!isNaN(dt))?_fmtDsIntl.format(dt):dt.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'2-digit'});
   const h=dt.getHours(),mn=dt.getMinutes(),ampm=h>=12?'PM':'AM',h12=h%12||12;
-  return date+' · '+h12+':'+(String(mn).padStart(2,'0'))+' '+ampm;
+  const out=date+' · '+h12+':'+(String(mn).padStart(2,'0'))+' '+ampm;
+  if(memo){ if(_fmtDsMemo.size>40000) _fmtDsMemo.clear(); _fmtDsMemo.set(d,out); }
+  return out;
 };
 /* v03.NotePane.C7 — date line shown at top of the writing body (both view and
    edit modes). Created + Updated on one line, divided by "|", followed by a
@@ -4794,6 +5125,12 @@ function renderP2C(){
     +`</div>`;
   if(!arts.length){
     h+=`<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl)"><div style="color:var(--t3);font-size:13px;margin-bottom:10px">No articles yet</div><button class="btn bp" onclick="openModal('art','${curF.id}')" style="font-size:12px">Add article</button></div>`;
+  } else if(!curF.structured){
+    /* v04.91 — S1d: one card = one element, so a change that touches a few cards
+       rewrites those cards, not the whole list (see _p2cPaint) */
+    const cards=arts.map(a=>artCard(a,ST.article===a.id,true));
+    _p2cPaint(el,h+'<div class="al">',cards,'</div></div>');
+    return;
   } else {
     h+='<div class="al">';
     arts.forEach(a=>{ h+=artCard(a,ST.article===a.id,true); if(curF.structured)h+=_fieldChipsHTML(a,curF); });
@@ -4801,6 +5138,33 @@ function renderP2C(){
   }
   h+='</div>';
   el.innerHTML=h;
+}
+/* v04.91 — S1d. Painting a folder's list rebuilt every card, every time: with 9,000
+   notes in one folder that was 0.6 s on a laptop and 2.5 s on a ×4 phone, to show a
+   change to one title that arrived from another device, or one undo. The list is
+   painted once whole, marked; the next paint of the same folder (same header, same
+   number of cards) rewrites only the cards whose HTML differs — unless more than
+   _P2C_PATCH_MAX did, which is no longer "a change to a card" but a new list. If the
+   mark is gone (another view wrote into the pane) it is painted whole again. */
+let _p2cLast=null, _p2cSeq=0, _P2C_PATCH_MAX=40;
+function _p2cPaint(el,head,cards,tail){
+  const L=_p2cLast;
+  if(L&&L.el===el&&L.head===head&&L.tail===tail&&L.cards.length===cards.length){
+    const fv=el.firstElementChild, al=(fv&&fv.getAttribute('data-p2c')===L.mark)?fv.querySelector(':scope > .al'):null;
+    if(al&&al.children.length===cards.length){
+      const diff=[];
+      for(let i=0;i<cards.length&&diff.length<=_P2C_PATCH_MAX;i++) if(cards[i]!==L.cards[i]) diff.push(i);
+      if(diff.length<=_P2C_PATCH_MAX){
+        const t=document.createElement('template');
+        diff.forEach(i=>{ t.innerHTML=cards[i]; const n=t.content.firstElementChild; if(n) al.children[i].replaceWith(n); });
+        L.cards=cards;
+        return;
+      }
+    }
+  }
+  const mark=String(++_p2cSeq);
+  el.innerHTML=head.replace('<div class="fv">','<div class="fv" data-p2c="'+mark+'">')+cards.join('')+tail;
+  _p2cLast={el:el,head:head,tail:tail,cards:cards,mark:mark};
 }
 
 /* v03.15.04 — shared nav buttons; ride with the title (below NTI) in edit mode */
@@ -20232,39 +20596,186 @@ function secDDrop(ev,targetSid){
 
 /* ── Undo / Redo ────────────────────────────────────────────────────── */
 
-function snapshotState(){
-  // Invalidate any redo future
-  if(HIST_POS < HISTORY.length-1) HISTORY.splice(HIST_POS+1);
-  HISTORY.push(JSON.stringify(DB));
-  if(HISTORY.length > 60) HISTORY.shift(); else HIST_POS = HISTORY.length-1;
+/* v04.91 — S1d. Until v04.90 HISTORY held up to 60 whole-notebook JSON strings
+   (~2.8 GB at 9,000 notes: enough to kill a phone tab) and every undo parsed one.
+   Now HISTORY[0] is a marker and every other entry is a FRAME: what one persist()
+   changed — for each changed record its JSON before and after, the order of an
+   array whose members or order moved, and the head (every key that is not an
+   id-keyed array, plus the elements that have no usable id) before and after. The
+   frames are bounded by count (60) and by bytes (_H_MAX_BYTES), oldest first.
+   undo() puts the "before" side of the frame back into the live notebook, redo()
+   the "after" side; both leave alone what the frame does not name.
+   What a frame is measured against is the notebook as of the previous capture
+   (_hMap: key → the entry that was current, _hJson: key → its JSON text, _hOrd,
+   _hHead), so a change merged in from another device between two persists is
+   part of the NEXT frame — undone with it, as the whole-notebook snapshots did.
+   A change a frame names always wins over what is live (undo of a record that a
+   merge has since changed puts the older copy back, as before); a record the
+   frame does not name is never touched, and a record that arrived since is kept. */
+const _H_MAX_FRAMES=60, _H_MAX_BYTES=30*1048576;
+let _hMap=null,_hJson=null,_hOrd=null,_hHead=null;
+function _headOf(db,sw){
+  const head={}, odd={}, has=[];
+  Object.keys(db).forEach(k=>{ if(_LJ_COLLS.indexOf(k)<0) head[k]=db[k]; });
+  _LJ_COLLS.forEach(c=>{ const i=sw.c[c]; if(!i.isArr){ if(c in db) head[c]=db[c]; } else{ has.push(c); if(i.odd.length) odd[c]=i.odd; } });
+  if(Object.keys(odd).length) head.__odd=odd;
+  head.__has=has;   /* which arrays exist at all: a merge creates an empty one, and undoing it has to remove it again */
+  return JSON.stringify(head);
+}
+/* the arrays the head says exist / do not exist, put right after the head's own keys were applied */
+function _headHas(db,head){
+  if(!head||!Array.isArray(head.__has)) return;
+  _LJ_COLLS.forEach(c=>{
+    const want=head.__has.indexOf(c)>=0;
+    if(want&&db[c]===undefined) db[c]=[];
+    else if(!want&&Array.isArray(db[c])&&db[c].length===0) delete db[c];
+  });
+}
+function _sameKeys(a,b){
+  if(a===b) return true;
+  if(!a||!b||a.length!==b.length) return false;
+  for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return false;
+  return true;
+}
+/* Compare the notebook with the last capture. Returns the frame (or null when nothing
+   moved) and makes the capture the new baseline. `silent`: take the baseline, no frame. */
+function _histCapture(sw,silent){
+  const cur=sw.map, first=(_hMap===null);
+  if(first){ _hMap=new Map(); _hJson=new Map(); _hOrd={}; _hHead=null; }
+  const ch=[]; let bytes=0;
+  cur.forEach((e,k)=>{
+    if(_hMap.get(k)===e) return;
+    const j=_rcJson(e), bj=_hJson.get(k);
+    if(bj===j) return;
+    if(!silent){ ch.push([k,bj===undefined?null:bj,j]); bytes+=(bj?bj.length:0)+j.length+60; }
+    _hJson.set(k,j);
+  });
+  _hMap.forEach((e,k)=>{ if(!cur.has(k)){ const bj=_hJson.get(k); if(!silent){ ch.push([k,bj===undefined?null:bj,null]); bytes+=(bj?bj.length:0)+60; } _hJson.delete(k); } });
+  _hMap=cur;
+  let ord=null;
+  _LJ_COLLS.forEach(c=>{
+    const a=sw.c[c].keys, b=_hOrd[c];
+    if(!_sameKeys(a,b)){ if(!silent&&!first){ (ord=ord||{})[c]=[b||[],a]; bytes+=8*(a.length+(b?b.length:0)); } _hOrd[c]=a; }
+  });
+  const hs=_headOf(DB,sw); let head=null;
+  if(hs!==_hHead){ if(!silent&&!first) head=[_hHead,hs]; bytes+=0; _hHead=hs; }
+  if(silent||first||(!ch.length&&!ord&&!head)) return null;
+  if(head) bytes+=head[0].length+head[1].length;
+  return {ch:ch,ord:ord,head:head,bytes:bytes};
+}
+function _histBytes(){ let n=0; for(let i=1;i<HISTORY.length;i++) n+=HISTORY[i].bytes||0; return n; }
+/* take the current notebook as the baseline without making a frame (a check swapped it) */
+function _histRebase(){ try{ _histCapture(_collect(DB,null),true); }catch(e){ _hMap=null; } }
+function _histReset(){ HISTORY.length=0; HIST_POS=-1; _hMap=null; _hJson=null; _hOrd=null; _hHead=null; snapshotState(); }
+function snapshotState(sw){
+  try{
+    if(!sw) sw=_collect(DB,null);
+    if(!HISTORY.length||_hMap===null){ HISTORY.length=0; HISTORY.push({base:true}); HIST_POS=0; _histCapture(sw,true); }
+    else{
+      const fr=_histCapture(sw,false);
+      if(fr){
+        if(HIST_POS < HISTORY.length-1) HISTORY.splice(HIST_POS+1);   /* Invalidate any redo future */
+        if(fr.bytes>_H_MAX_BYTES){ HISTORY.length=0; HISTORY.push({base:true}); }   /* one step bigger than the whole budget (a restored backup, an import): nothing older can be undone past it, so none is kept */
+        else{
+          HISTORY.push(fr);
+          while(HISTORY.length>_H_MAX_FRAMES+1||(HISTORY.length>2&&_histBytes()>_H_MAX_BYTES)) HISTORY.splice(1,1);
+        }
+        HIST_POS=HISTORY.length-1;
+      }
+    }
+  }catch(e){ console.error('undo history:',e); try{ HISTORY.length=0; HISTORY.push({base:true}); HIST_POS=0; _hMap=null; _histCapture(_collect(DB,null),true); }catch(_){} }
   updateUndoRedoBtns();
+}
+/* The one place an id-keyed array is rebuilt from "what to change" — shared by undo/redo
+   and by the boot overlay of the local journal. `upd`: key → the new record, or null to
+   remove it. `toOrd`: the slot order to give the array (a key, or null for an element with
+   no usable id), or null to keep the current one. `toOdd`: those id-less elements, or null
+   to keep the current ones. A keyed record that is neither in `toOrd` nor removed (it
+   arrived since) is kept, at the end — nothing is ever dropped for want of a place. */
+function _applyToColl(c,arr,upd,toOrd,toOdd){
+  const liveKeys=[], liveOdd=[], byKey=new Map(), out=[];
+  (arr||[]).forEach(x=>{
+    if(!x||typeof x!=='object'||x.id==null){ liveKeys.push(null); liveOdd.push(x); return; }
+    const k=_s1Key(c,x.id);
+    if(byKey.has(k)){ liveKeys.push(null); liveOdd.push(x); return; }
+    byKey.set(k,x); liveKeys.push(k);
+  });
+  upd.forEach((o,k)=>{ if(o===null) byKey.delete(k); else byKey.set(k,o); });
+  const odd=toOdd||liveOdd; let oi=0;
+  if(toOrd){
+    const used=new Set();
+    toOrd.forEach(k=>{
+      if(k===null){ if(oi<odd.length) out.push(odd[oi++]); return; }
+      const o=byKey.get(k); if(o!==undefined&&!used.has(k)){ out.push(o); used.add(k); }
+    });
+    while(oi<odd.length) out.push(odd[oi++]);
+    liveKeys.forEach(k=>{ if(k!==null&&!used.has(k)&&byKey.has(k)){ out.push(byKey.get(k)); used.add(k); } });
+    upd.forEach((o,k)=>{ if(o!==null&&!used.has(k)){ out.push(o); used.add(k); } });
+  }else{
+    const seen=new Set();
+    liveKeys.forEach(k=>{
+      if(k===null){ if(oi<odd.length) out.push(odd[oi++]); return; }
+      const o=byKey.get(k); if(o!==undefined){ out.push(o); seen.add(k); }
+    });
+    while(oi<odd.length) out.push(odd[oi++]);
+    upd.forEach((o,k)=>{ if(o!==null&&!seen.has(k)) out.push(o); });
+  }
+  return out;
+}
+/* Put one side of a frame back into the live notebook. Returns the keys it changed. */
+function _histApply(fr,dir){
+  const bi=dir?1:0, fi=dir?0:1, changed=[], goneKeys=[], byColl={};
+  fr.ch.forEach(x=>{ const c=x[0].slice(0,x[0].indexOf('~')); (byColl[c]=byColl[c]||[]).push(x); });
+  const to=fr.head?JSON.parse(fr.head[bi]||'{}'):null, from=fr.head?JSON.parse(fr.head[fi]||'{}'):null;
+  const colls=new Set(Object.keys(byColl));
+  if(fr.ord) Object.keys(fr.ord).forEach(c=>colls.add(c));
+  if(to){ [to.__odd,from.__odd].forEach(o=>{ if(o) Object.keys(o).forEach(c=>colls.add(c)); }); }
+  colls.forEach(c=>{
+    if(_LJ_COLLS.indexOf(c)<0) return;
+    if(!Array.isArray(DB[c])){ if(DB[c]!==undefined&&!(to&&Array.isArray(to[c]))) return; DB[c]=[]; }
+    const shallow=(c==='trash'||c==='tombstones'), upd=new Map();
+    (byColl[c]||[]).forEach(x=>{
+      const k=x[0], tgt=x[1+bi];
+      if(tgt===null){ upd.set(k,null); goneKeys.push(k); }
+      else{ const o=JSON.parse(tgt), e=_rcEntry(o,shallow); e.json=tgt; upd.set(k,o); changed.push(k); }
+    });
+    let toOdd=null;
+    if(to&&JSON.stringify((to.__odd||{})[c]||[])!==JSON.stringify((from.__odd||{})[c]||[])) toOdd=(to.__odd||{})[c]||[];
+    DB[c]=_applyToColl(c,DB[c],upd,fr.ord&&fr.ord[c]?fr.ord[c][bi]:null,toOdd);
+  });
+  if(to){
+    Object.keys(from).forEach(k=>{ if(k!=='__odd'&&k!=='__has'&&!(k in to)) delete DB[k]; });
+    Object.keys(to).forEach(k=>{ if(k!=='__odd'&&k!=='__has') DB[k]=to[k]; });
+    _headHas(DB,to);
+  }
+  return {changed:changed,gone:goneKeys};
+}
+function _histStep(fr,dir){
+  const r=_histApply(fr,dir);
+  /* v04.68 — NOT swept as an edit: stepping back also rolls back anything merged
+     in from another device since the frame was taken; stamping that rollback "now"
+     would push it to every device and erase their edits. An undo stays local and
+     sync may put the change back. The keys the frame named go to the per-note copy. */
+  r.changed.forEach(k=>_s1Dirty.keys.add(k)); r.gone.forEach(k=>_s1Dirty.gone.add(k));
+  const sw=_seedRecSnap(true);
+  try{ if(sw) _histCapture(sw,true); else _hMap=null; }catch(e){ _hMap=null; }
+  _save(undefined,sw);
+  ST.editing=false; ST.article=null;
+  applyTheme(DB.theme||{preset:'forest',custom:{}});
+  render(); updateUndoRedoBtns();
 }
 
 function undo(){
   if(HIST_POS <= 0) return;
+  const fr=HISTORY[HIST_POS];
   HIST_POS--;
-  DB = JSON.parse(HISTORY[HIST_POS]);
-  /* v04.68 — NOT swept as an edit. HISTORY holds whole-notebook snapshots
-     taken at persist() time, so stepping back also rolls back anything merged
-     in from another device (or autosaved) since that snapshot; stamping that
-     rollback "now" would push it to every device and erase their edits. As
-     before, an undo stays local and sync may put the change back. */
-  _seedRecSnap();
-  _save();
-  ST.editing=false; ST.article=null;
-  applyTheme(DB.theme||{preset:'forest',custom:{}});
-  render(); updateUndoRedoBtns();
+  _histStep(fr,0);
 }
 
 function redo(){
   if(HIST_POS >= HISTORY.length-1) return;
   HIST_POS++;
-  DB = JSON.parse(HISTORY[HIST_POS]);
-  _seedRecSnap();   /* v04.68 — see undo() */
-  _save();
-  ST.editing=false; ST.article=null;
-  applyTheme(DB.theme||{preset:'forest',custom:{}});
-  render(); updateUndoRedoBtns();
+  _histStep(HISTORY[HIST_POS],1);
 }
 
 function updateUndoRedoBtns(){
@@ -22721,16 +23232,17 @@ function _s1Snap(db){
     const arr=db[c];
     if(!Array.isArray(arr)){ if(c in db) head[c]=arr; return; }
     const odd=[];   /* no id, or an id already taken: kept in the head */
+    const shallow=(c==='trash'||c==='tombstones');
     arr.forEach((x,i)=>{
       if(!x||typeof x!=='object'||x.id==null){ odd.push(x); return; }
-      const key=_s1Key(c,x.id);
+      const e=_rcEntry(x,shallow), key=_rcKey(c,x,e);   /* v04.91 — the record's JSON and its hash are kept while it does not change */
       if(out.has(key)){ odd.push(x); return; }
-      out.set(key,{c:c, id:x.id, o:i, json:JSON.stringify(x)});
+      out.set(key,{c:c, id:x.id, o:i, json:_rcJson(e), e:e});
     });
     head[c]=odd;
   });
   out.set('_head~0',{c:'_head', id:'0', json:JSON.stringify(head), canon:_s1Canon(head)});
-  out.forEach(r=>{ r.sig=_syncSig(r.canon||r.json); });
+  out.forEach(r=>{ r.sig=r.e?(r.e.ssig||(r.e.ssig=_syncSig(r.json))):_syncSig(r.canon||r.json); });
   out.seq=_s1MergeSeq;
   return out;
 }
@@ -22774,15 +23286,15 @@ function _s1SnapDirty(){
     const odd=[], all=(c==='trash'||c==='tombstones');
     arr.forEach((x,i)=>{
       if(!x||typeof x!=='object'||x.id==null){ odd.push(x); return; }
-      const key=_s1Key(c,x.id);
+      const e0=_RC.get(x), key=(e0&&e0.kc===c)?e0.k:_s1Key(c,x.id);   /* v04.91 — the sweep has just keyed every record */
       if(seen.has(key)){ odd.push(x); return; }
       seen.add(key);
-      if(all||keys.has(key)) out.set(key,{c:c, id:x.id, o:i, json:JSON.stringify(x)});
+      if(all||keys.has(key)){ const e=_rcEntry(x,all); out.set(key,{c:c, id:x.id, o:i, json:_rcJson(e), e:e}); }
     });
     head[c]=odd;
   });
   out.set('_head~0',{c:'_head', id:'0', json:JSON.stringify(head), canon:_s1Canon(head)});
-  out.forEach(r=>{ r.sig=_syncSig(r.canon||r.json); });
+  out.forEach(r=>{ r.sig=r.e?(r.e.ssig||(r.e.ssig=_syncSig(r.json))):_syncSig(r.canon||r.json); });
   out.partial=true; out.seq=_s1MergeSeq;
   out.goneKeys=new Set(); goneIn.forEach(k=>{ if(!seen.has(k)) out.goneKeys.add(k); });
   return out;
@@ -23040,7 +23552,7 @@ async function _s1RepSave(nb, puts, cursor){
    (o, key); a rec with no `o` (v04.88) sorts after those with one, by key.
    `gone` recs are left out; the head supplies every non-array key and its
    `odd` elements, which go at the end of their array. null without a head. */
-function _s1AssembleRep(){ return _s1Rep?_s1AssembleMap(_s1Rep.map):null; }
+function _s1AssembleRep(){ return _s1Rep?_s1AssembleMap(_s1Rep.map,DB):null; }
 /* What a device would hold in its replica if the cloud held exactly `db`'s
    per-record copy: used by tools/sync-audit.mjs (51i) to prove that merging
    the assembled replica equals merging the blob. */
@@ -23048,8 +23560,28 @@ function _s1RecsAsDB(db){
   const m=new Map(); _s1Snap(db).forEach((r,k)=>m.set(k,{c:r.c, o:r.o, rec:r.json}));
   return _s1AssembleMap(m);
 }
-function _s1AssembleMap(map){
-  let head=null; const by={};
+/* v04.91 — S1d. `local`: the notebook this will be merged into. A record whose JSON text
+   is the very text this device's own copy of it serialises to IS that copy: the object
+   already held is used and nothing is parsed (9,000 JSON.parse calls were 75 ms on a
+   laptop, 170 ms on a ×4 phone, per received change). mergeDB() keeps its OWN copy
+   on a tie (equal updatedAt) and equal text means equal updatedAt, so the merge
+   result is the one it would have made with a parsed copy — tools check 52b proves it
+   on random notebooks, both ways. */
+function _s1LocalByKey(db){
+  const m=new Map();
+  _LJ_COLLS.forEach(c=>{
+    const arr=db&&db[c]; if(!Array.isArray(arr)) return;
+    const shallow=(c==='trash'||c==='tombstones');
+    arr.forEach(x=>{
+      if(!x||typeof x!=='object'||x.id==null) return;
+      const e=_RC.get(x)||_rcEntry(x,shallow), k=_rcKey(c,x,e);
+      if(!m.has(k)) m.set(k,e);
+    });
+  });
+  return m;
+}
+function _s1AssembleMap(map,local){
+  let head=null; const by={}, mine=local?_s1LocalByKey(local):null;
   map.forEach((e,key)=>{
     if(e.gone||e.rec==null) return;
     if(key==='_head~0'){ head=e.rec; return; }
@@ -23060,7 +23592,10 @@ function _s1AssembleMap(map){
   Object.keys(by).forEach(c=>{
     by[c].sort((a,b)=>(a[0]===b[0]?0:(a[0]<b[0]?-1:1))||(a[1]<b[1]?-1:(a[1]>b[1]?1:0)));
     if(!Array.isArray(head[c])) head[c]=[];
-    by[c].forEach(x=>head[c].push(JSON.parse(x[2])));
+    by[c].forEach(x=>{
+      const he=mine&&mine.get(x[1]);
+      head[c].push((he&&_rcJson(he)===x[2])?he.r:JSON.parse(x[2]));
+    });
   });
   return head;
 }
@@ -23344,7 +23879,9 @@ function _s1Plan(){
 /* Returns 'wait' (recs-only, the reader has not caught up: try again), 'same'
    (the blob path found nothing new), or 'recs' | 'both' | 'blob' for what was
    written. Throws on a failure the caller must classify. */
+let _pushSw=null;   /* v04.91 — what _doPush()'s sweep collected; used (once) by the first _save() in _pushWrite(), before its first await */
 async function _pushWrite(cfg, o){
+  const swNow=_pushSw; _pushSw=null;
   const nbId=cfg.notebookId, nb=_syncFsDb.collection('notebooks').doc(nbId), manual=!!o.manual;
   let plan=_s1Plan();
   if(plan!=='blob'){
@@ -23362,13 +23899,13 @@ async function _pushWrite(cfg, o){
   let json=null, sig=null;
   const buildBlob=()=>{ json=JSON.stringify(DB); sig=_syncSig(json); };
   if(plan==='recs'){
-    if(_s1Dirty.keys.size||_s1Dirty.gone.size||_s1Dirty.full){ try{ _save(); }catch(e){} }
+    if(_s1Dirty.keys.size||_s1Dirty.gone.size||_s1Dirty.full){ try{ _save(undefined,swNow); }catch(e){} }
   }else{
     buildBlob();
     if(!manual&&sig===_lastPushedSig) return 'same';
     /* The flush may have pulled text out of an editor that no local save has seen
        yet, so persist it here too — reusing the string just built. */
-    try{ _save(json); }catch(e){}
+    try{ _save(json,swNow); }catch(e){}
   }
   /* The per-record list, from the same DB as json (same tick). */
   let snap=null; try{ if(_s1Eligible()) snap=_s1TakeSnap(); }catch(e){ _s1Fail(e); }
@@ -23433,7 +23970,7 @@ async function _doPush(){
        a stale one. Calling it again inside _save() below is a harmless
        no-op once this has already run. */
     _stampThemeTouches();
-    _stampRecordTouches();   /* v04.68 — same reason as the theme stamp above */
+    _pushSw=_stampRecordTouches();   /* v04.68 — same reason as the theme stamp above */
     const now=Date.now();
     /* v04.90 — S1c: one write path shared with syncNow(); which of blob / recs it
        uses is decided inside (see _s1Plan()). */
@@ -23758,10 +24295,10 @@ function _mergeRemoteIn(remoteDB, remoteT){
     const _s1Old=_recSnap;   /* v04.90 — S1c: what the merge changes is the difference of the two baselines */
     DB=mergeDB(DB, remoteDB);                  /* MERGE — never replace, so nothing is lost */
     _seedThemeSnap();  /* v04.40 — see the identical call in syncNow() above */
-    _seedRecSnap(true);    /* v04.68 */
+    const _sw=_seedRecSnap(true);    /* v04.68 */
     _s1DirtyFromDiff(_s1Old,_recSnap);
     const after=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
-    _save();
+    _save(undefined,_sw);
     _renderPreserveEdit();
     _edApplyRemote();   /* let the merged text reach an open, idle editor */
     if(remoteT>_lastSyncTime){_lastSyncTime=remoteT;localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);}

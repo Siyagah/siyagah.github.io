@@ -8486,3 +8486,63 @@ Laptop 1440 and phone 390 with `Emulation.setCPUThrottlingRate` ×4:
   behaviour. The owner's import can go ahead only after the Architect has
   looked at (c).
 - The two failures in one `--only 51` run are unexplained (see above).
+
+**Review fixes (PR #129):**
+1. a v04.90 fallback blob is written `s1c` + `s1fb`: always read, never counted as an older build, never renews `s1o` (51y). Without it, any momentary fallback restarted the 30-day window and the group never left plan `both`;
+2. a refused per-note copy is retried after a 10-minute cool-down (`_S1_DENY_RETRY_MS`) instead of for the whole session, so syncing recovers without a reload after the owner fixes the Firestore rules;
+3. unresolved recs stay pending across snapshots (`_s1RdPending`), and the cursor never passes the oldest of them (51z). Before, an incremental snapshot carrying a later doc moved the cursor past a rec whose retry was pending, and that edit never arrived on the device (I2). Found because 51q failed intermittently.
+
+**Architect's totals:** full `app-check` **1632/1632, twice in a row**; unpatched (v04.89's `index.html`): `--only 51` 90/97 (51s, 51t ×2 and both 51z fail; sync-s1 throws, `_s1Plan` missing).
+
+**Not done** (moved to S1d, v04.91): merge 6.1 s on a ×4 phone at 9k notes; `persist()` 1.5 s; undo keeps 60 whole-notebook copies.
+
+## v04.91 — S1d: the local hot path at 9,000 notes
+
+Issue #130. S1c left the merge at 6.1 s on a ×4 phone, `persist()` at 1.5 s
+and undo holding 60 whole-notebook copies. This round fixes most of that.
+
+**What changed**
+- **Record cache** — one cached object per record, so merge, save and list
+  stop re-reading the whole notebook.
+- **Undo as byte-bounded frames** — a step stores only the records it changed,
+  capped by size, not a whole copy. 60 steps at 9,000 notes: 8.7 MB (52c).
+- **Local journal** — a NEW database, `siyagah-localrecs-v1`. One transaction
+  per save holds just the changed records. `notebook` in `siyagah-local-v1`
+  stays the full copy every build reads at boot; `notebook-seq` there says how
+  far it has caught up. Boot reads the full copy and overlays the journal.
+  A checkpoint rewrites the full copy after 30 s idle or 3,000 puts. A failed
+  journal write drops to a full-copy save and rings the alarm. **A build older
+  than v04.91 reads only the full copy, so it can be up to 30 s behind.**
+- **List patching** — the note list updates the rows that changed.
+- **Faster replica assembly** — the S1 replica is built without re-copying.
+- Test-only `window.__ljHold`: holds a journal or checkpoint transaction open
+  and logs `LJ_HOLD`. Unset, it does nothing.
+
+**Profile at 9,000 notes** (`node tools/sync-s1d.mjs`, Architect's figures)
+
+| | before (v04.90) | now | target |
+|---|---|---|---|
+| phone ×4 (b) receive | 9.5 s | 1,010 ms | ≤ 1,000 (a hair over) |
+| phone ×4 (c) undo | 6.7 s | 898 ms | ≤ 500 — **not met** |
+| phone ×4 (a) autosave + push | 1.5 s+ | 437 ms | ≤ 300 — **not met** |
+| phone ×4 (d) heap, 30 edits | 2.8 GB | 149 MB | ≤ 300 ✅ |
+| laptop (a) / (b) / (c) | — | 127 / 364 / 225 ms | 75 / 250 / 125 — **not met** |
+
+**Checks (52a–52e, 52d2)** — 52b: 1,000 merges per size, merge code
+byte-identical to v04.90. 52c: undo frames. 52d: browsers killed at random
+points around a save reopen as the notebook before or after it, never fewer.
+Its first version passed with all 40 kills landing after the commit, which
+tests nothing, so **52d2** kills on the `LJ_HOLD` line: 10 kills inside a
+journal transaction (all reopen as the notebook before it) and 5 inside a
+checkpoint's full-copy write (all reopen as the journaled notebook), 5 + 3 at
+390. 52e: localStorage refusing every write. 52d kills with `pkill -9` on a
+persistent profile because CDP `Page.crash` takes the whole Chromium down
+after ~2 min in this build. `--checks` is app-check block
+`52-s1d-local-hot-path`; `--profile` is on-demand (see `tools/README.md`).
+
+**Not done** (left for a later round): `render()` on a received merge (317 ms
+on the phone) and on undo (426 ms, `renderP2C` 241 ms); `_collect` 146 ms ×2
+per autosave on the phone. The laptop quarter-targets and phone (a)/(c) wait
+on these.
+
+**Totals:** full `app-check`: (Architect, in review).
