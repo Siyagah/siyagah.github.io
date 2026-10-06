@@ -9996,7 +9996,7 @@ await r.block('38-sync-three-devices-end-to-end', async () => {
    script prints becomes one check here. */
 await r.block('51-s1a-per-record-cloud-copy', async () => {
   const { spawnSync } = await import('node:child_process');
-  const out = spawnSync(process.execPath, [new URL('./sync-s1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 600000 });
+  const out = spawnSync(process.execPath, [new URL('./sync-s1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1800000 });   /* v04.90: 51s–51x added ~8 min */
   const txt = (out.stdout || '') + (out.stderr || '');
   const lines = txt.split('\n');
   const rows = [];

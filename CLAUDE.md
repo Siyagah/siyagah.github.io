@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.89.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.90.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,18 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.90** (6 Oct 2026) — S1c, step three of per-note cloud storage (issue
+  #128). `recs` is the sync; the blob is written only while an older build
+  may still read it (`_s1Plan()`: `recs` / `both` / `blob`). Marker `s1c` on a
+  main doc = "recs hold all this"; written only after the same push's recs
+  write succeeded, every fallback blob unmarked; `s1o` carries "an unmarked
+  writer last wrote at" across marked overwrites. Gate bounded at 2 min (blob
+  fallback, dot `Err`); recs refused → blob, one toast; echo merges skipped;
+  snapshot from a dirty set + hourly full. 9,000 notes: one edit = 1 doc,
+  ~5 KB, 0 blob docs; **merge 6.1 s on a ×4 phone (1.6–2.1 s laptop) — over
+  1.5 s, a later round needs an incremental merge.** Checks 51s–51x (51t runs
+  the real v04.89 build from git). `--only 51` **103/103**, `sync-e2e`
+  **25/25**, `sync-audit` 118/118; full `app-check` left to the Architect.
 - **v04.89** (6 Oct 2026) — S1b, step two of per-note cloud storage (issue
   #126). Every device also READS `recs` into a replica (own IndexedDB,
   `siyagah-s1-v1`) and merges the FULL replica with the unchanged
@@ -29,7 +41,9 @@ must never accumulate here instead of there.
   clean-up never deletes a generation the rec still names (server read
   first). Checks 51h–51r (51i equivalence in sync-audit 118/118). `--only 51`
   **81/81** (51q/51r fail unpatched), `sync-e2e` **24/24**; full `app-check`
-  left to the Architect. The import must still wait for S1c; the write gate
+  **1601/1601, twice in a row**; unpatched: `--only 51` 23/25 (the S1b part
+  of the S1 check aborts), `sync-audit` 118/118 ERROR (51i needs
+  `_s1RecsAsDB`), `sync-e2e` 24/24 (unchanged this round). The import must still wait for S1c; the write gate
   stays shut while the reader fails (S1c must surface it).
 - **v04.88** (6 Oct 2026) — S1a, step one of per-note cloud storage (issue
   #124). After each blob push, changed records are also written one doc
@@ -60,14 +74,6 @@ must never accumulate here instead of there.
   `application/x-siyagah-note`. Section 49 **14/14**; unpatched 6/13.
   `sync-e2e` 9c now waits for quiet before its setup (a test race). Full
   `app-check` **1501/1501, twice in a row**.
-- **v04.85** (5 Oct 2026) — a short name for a tab (owner chose "Only
-  names I type"). Right-click (laptop) / press-and-hold (touch) a tab →
-  ✏️ short name · ↺ full title again · 🎨 Tab colour. Shows on the main
-  bar, Multi tabs and the phone's Open tabs rows; the tooltip keeps the
-  full title. Stored in `DB.theme.tabNames` (never on the note: no
-  `updatedAt` bump); cleared = `""` so a merge can't resurrect it.
-  Section 48 **13/13** (unpatched 2/9); sync-audit `N29`/`N30` PASS.
-  Full `app-check` **1487/1487, twice in a row**.
 ---
 
 ## What this is
@@ -289,7 +295,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   merging, filling and pasting are refused with a toast rather than
   guessing what the owner meant by "row 3" when the grid's row 3 and the
   sheet's row 3 disagree.
-- **The per-record cloud copy (`recs`, v04.88–v04.89, S1).** One Firestore
+- **The per-record cloud copy (`recs`, v04.88–v04.90, S1).** One Firestore
   doc per record under `notebooks/{nb}/recs`, key `<coll>~<encoded id>` for
   the 11 id-keyed arrays; `_head~0` is `DB` minus those arrays (every other
   key, no allow-list) plus any element with no usable id; over 700 KB a rec
@@ -304,6 +310,22 @@ A failing check is a wrong assertion surprisingly often — investigate before
   **A device writes recs only after it has read** (`_s1WriteGate()`): a
   stale device's first write would otherwise put a deleted note's live rec
   over the cloud's `gone`. Received = known, except for `_head~0`.
+  **Since v04.90 (S1c) `recs` IS the sync; the blob (main doc + chunks) is
+  written only while an older build may still read it.** `_s1Plan()` per
+  push: `recs` (blob not written, the recs write is awaited and its failures
+  are push failures), `both` (an older build is active: recs first, then the
+  blob) or `blob` (recs refused / no IndexedDB / reader off for good / reader
+  stuck past `_S1_GATE_MAX_MS`, 2 min). "Older build active" = the newest
+  main doc seen is unmarked and < 30 days old, or marked with an `s1o` (when
+  an unmarked writer last wrote, carried forward) < 30 days old. **The
+  marker `s1c:'04.90'` means "recs hold everything this blob does"** — so it
+  is written only after the same push's recs write succeeded, and every
+  fallback blob is UNMARKED; another v04.90 device skips the chunk download
+  of a marked main doc only while its own reader is on. The blob is never
+  deleted. A rec echo (every sig already in the sig map) skips the merge. The
+  snapshot is built from a dirty set (`_s1Dirty`, fed by
+  `_stampRecordTouches()` and by the before/after diff in a merge); a full
+  `_s1Snap()` runs at start, after any failed run and hourly (`_S1_FULL_MS`).
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,

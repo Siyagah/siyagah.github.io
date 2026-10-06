@@ -8377,3 +8377,112 @@ that; its second (a no-notes device, recs only) needs the reader.
 - **A real Firestore was not run** (none is reachable from the builder); the
   fake follows the SDK's documented behaviour. The import must still wait
   for S1c.
+
+**Architect's review totals (v04.89, measured by the Architect).** Full
+`app-check` **1601/1601, twice in a row**; unpatched: `--only 51` 23/25 (the
+S1b part of the S1 check aborts), `sync-audit` 118/118 ERROR (51i needs
+`_s1RecsAsDB`), `sync-e2e` 24/24 (unchanged this round).
+
+## v04.90 — S1c: the per-note copy becomes the sync
+
+Third of three steps of S1 (issue #128). A device on this build stops
+re-uploading the whole notebook on every push and syncs through
+`notebooks/{nb}/recs`. The blob (main doc + chunks) is written only while an
+older build may still be reading it, and is never deleted.
+
+**Which copy a push writes (`_s1Plan()`, per push).**
+- `recs` — the blob is not written; the recs write is awaited and its failure
+  is a push failure (dot, `_pushFailures`, backoff, `_syncErrorToast`).
+- `both` — an older build is active: recs first (awaited), then the blob.
+- `blob` — this device cannot use recs (refused, no IndexedDB, reader off for
+  good, reader stuck past `_S1_GATE_MAX_MS` = 2 min): the blob, as v04.89.
+- **"Older build active"** = the newest main doc this device has seen is
+  unmarked and under 30 days old, or is marked and carries `s1o` (the time an
+  unmarked writer last wrote) under 30 days old. **`s1o` is a departure from
+  the issue's wording**: with only "the last main doc is unmarked", the first
+  v04.90 device to write the blob would overwrite the old build's main doc and
+  the next v04.90 device would conclude no old build is active — an old phone
+  would receive one edit and then none (51t found this on paper before it ran).
+- **The marker `s1c:'04.90'`** means "recs hold everything this blob does". It
+  is written only after the same push's recs write succeeded, and **every
+  fallback blob is written unmarked** (a second departure: marking a blob whose
+  recs were refused would make every other v04.90 device skip it and never get
+  that edit). Unmarked fallbacks count as "older build active" for 30 days.
+- **Reading**: an unmarked main doc is merged exactly as before; a marked one
+  from another v04.90 device is skipped (no chunk download) while this device's
+  own reader is on and has not given up on a record. When a reader goes off for
+  good, the main doc it skipped is read after all.
+- The gate cannot shut for ever: recs-only and the reader not caught up → the
+  edit waits (retry every 2 s); past `_S1_GATE_MAX_MS` it leaves through the
+  blob and the sync dot stays at "Err" with the reason (`_s1Problem`).
+  `permission-denied` on recs with the blob off → blob fallback, one toast.
+- **Echo merges**: a received batch whose every sig already equals the sig map
+  is applied to the replica and does not merge (`51w`: 0 merges on the writer,
+  ≥1 on the others).
+- **Snapshot from the dirty set**: `_stampRecordTouches()` marks changed/added/
+  removed records (updatedAt moved and noteHistory length count too), a merge
+  marks the difference of the baselines before/after it, `_recUntouched()` marks
+  what it re-baselines. `trash`, `tombstones` and the head are always taken in
+  full. A full `_s1Snap()` runs at start, after any failed or gated run, after a
+  reseed (undo, restore) and hourly (`_S1_FULL_MS`, a 5 s heartbeat; `51x`).
+  Two waiting snapshots are unioned, never dropped.
+- `syncNow()` follows the same plan: in `recs` it restarts the reader, merges
+  the replica and pushes a full snapshot; it waits ≤10 s for the reader.
+- Diagnostics line says whether the whole-notebook copy is on or off.
+
+**Checks.** `51s` three v04.90 devices, every main doc marked: after the
+warm-up the whole 51h scenario writes **zero** blob docs and converges. `51t` a
+real v04.89 `index.html` (git `2a5d1ca`) as a fourth device: unmarked writes,
+v04.90 devices write the blob too, edits both ways, then the clock is moved
+31 days (`_s1Now`) and blob writes stop, then the old build writes again and
+they flip back. `51u` recs refused, blob off → fallback, exactly one toast,
+converge. `51v` reader stuck → nothing written inside the bound, then the blob
+(default bound 120000 ms asserted; 5 s in the test), dot `Err`. `51w` echo.
+`51x` a change the dirty set never saw, written by the periodic full snapshot.
+`51k` rewritten in place (its premise — the blob carries an edit when recs
+hang — is the thing that changed; B is now made a blob-only writer). `51a`–`51g`
+unchanged. `sync-e2e`: its fake gained query listeners, so its 24 checks run
+with the blob off; check 8 asks the recs as well as the blob; 9b now also
+touches the 9 MB note (a one-line edit is one commit that lands before the cut);
+one new check says no device wrote the blob from boot to the 9 MB note: **25/25**.
+`--only 51` **103/103** (one earlier run showed 2 failures in the S1 block
+that I could not reproduce in two further runs; output was truncated, so I do
+not know which — see below). `sync-audit --vp 1440,900` 118 ops, 51i 118/118.
+Full `app-check` not run (the Architect runs it).
+
+**Measured (9,000 notes × ~5 KB ≈ 47 MB, fake Firestore, headless Chromium).**
+Laptop 1440 and phone 390 with `Emulation.setCPUThrottlingRate` ×4:
+- (a) push of one edited note — laptop: edit→commit 1.4 s, one doc
+  (`recs/articles~n42`), 5,311 bytes, 0 blob docs; main-thread 2.2 s of which
+  `persist()` 0.66 s. Phone ×4: 3.6 s, 1 doc, 5,312 bytes, `persist()` 1.5 s.
+- (b) receiving it — fresh laptop: write→in DB 1.9 s; phone ×4: **10.2 s**.
+  Laptop receiving the phone's edit: 2.4 s.
+- (c) the merge's main-thread time — laptop 1.6–2.1 s; **phone ×4: 6.1 s.
+  That is over 1.5 s.** The replica assembly is 30–285 ms of it; the rest is
+  `mergeDB()` over 9,000 notes. **A later round needs an incremental merge**
+  (keeping `mergeDB()`'s v04.65 guard whole). Not built here.
+- (d) a fresh device's first full download from recs — 9,023 doc reads;
+  laptop 5.5 s, phone ×4 16.7 s, both ending with 9,003 notes.
+- The first push of the 9,000-note notebook wrote the blob as well (70 chunk
+  docs, ~50 MB) because no main doc existed yet; every push after it wrote one
+  doc.
+
+**Not done, and why.**
+- **No incremental merge** (above): every real remote change still merges the
+  whole replica; only echoes are skipped.
+- **`persist()` still serialises and saves the whole notebook** (0.66 s laptop,
+  1.5 s phone at 9,000 notes) and `_stampRecordTouches()` still stringifies every
+  record on each save: the issue did not ask for them, and they now dominate a
+  push.
+- **A version given up on as unresolvable** (v04.89's reader) is not repaired:
+  while it stands this device does not skip marked blobs, but a record whose
+  pieces were deleted stays missing until its next write.
+- **A noteHistory-only change** (same length) and an `o` shift are not marked
+  dirty; they travel with the next real edit or the hourly full snapshot.
+- **A single fallback blob keeps the group writing the blob for 30 days.**
+  Deliberate (we cannot tell why a v04.90 device went blob-only, and one whose
+  reader is off needs the blob) but costly at 9,000 notes.
+- **A real Firestore was not run.** The fake follows the SDK's documented
+  behaviour. The owner's import can go ahead only after the Architect has
+  looked at (c).
+- The two failures in one `--only 51` run are unexplained (see above).

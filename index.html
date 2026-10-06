@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.89">
+<meta name="app-version" content="04.90">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3222,7 +3222,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.89</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.90</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3784,7 +3784,28 @@ const _REC_COLLS=['articles','folders','sections','calEvents','calCategories','n
    folders are not listed: they are deleted through Trash, which already
    tombstones exactly what it removes (v04.65). */
 const _REC_TOMB_COLLS=['sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups'];
-let _recSnap;        /* {coll:{id:[sig,updatedAt]}} — undefined until boot seeds it */
+let _recSnap;        /* {coll:{id:[sig,updatedAt,noteHistory length]}} — undefined until boot seeds it */
+/* v04.90 — S1c: what the sweep below saw change, for the per-record cloud copy.
+   `keys` = _s1Key()s of records changed/added, `gone` = of records removed.
+   Consumed (and cleared) by _s1TakeSnap(); `full` = "build a full snapshot
+   next time" (start, after a failed run, after a merge this sweep could not
+   see). Declared HERE, beside _recSnap, so a sweep can never meet it
+   uninitialised. */
+let _s1Dirty={keys:new Set(), gone:new Set(), full:true};
+function _s1DirtyKey(c,id){ return c+'~'+encodeURIComponent(String(id)).replace(/\./g,'%2E'); }   /* = _s1Key() */
+function _recEnt(r){ return [_recSig(r), r.updatedAt, Array.isArray(r.noteHistory)?r.noteHistory.length:0]; }
+/* A merge replaces _recSnap wholesale (_seedRecSnap), so what the merge changed
+   is the difference between the baseline before it and the one after. */
+function _s1DirtyFromDiff(oldS,newS){
+  try{
+    if(!oldS||!newS){ _s1Dirty.full=true; return; }
+    _REC_COLLS.forEach(c=>{
+      const a=oldS[c]||{}, b=newS[c]||{};
+      Object.keys(b).forEach(id=>{ const p=a[id], q=b[id]; if(!p||p[0]!==q[0]||p[1]!==q[1]||p[2]!==q[2]) _s1Dirty.keys.add(_s1DirtyKey(c,id)); });
+      Object.keys(a).forEach(id=>{ if(!b[id]) _s1Dirty.gone.add(_s1DirtyKey(c,id)); });
+    });
+  }catch(_){ _s1Dirty.full=true; }
+}
 /* The record's JSON itself, not a hash of it: hashing a 6MB notebook took
    ~70ms per save in Chromium, the plain string ~7ms (measured, 2000 notes).
    The memory is one more copy of the notebook — HISTORY already keeps 60. */
@@ -3794,11 +3815,14 @@ function _recSig(r){
 }
 function _recSnapOf(db){
   const s={};
-  _REC_COLLS.forEach(c=>{const m=s[c]={};((db&&db[c])||[]).forEach(r=>{if(r&&r.id!=null)m[r.id]=[_recSig(r),r.updatedAt];});});
+  _REC_COLLS.forEach(c=>{const m=s[c]={};((db&&db[c])||[]).forEach(r=>{if(r&&r.id!=null)m[r.id]=_recEnt(r);});});
   s.__tags=((db&&db.globalTags)||[]).slice();
   return s;
 }
-function _seedRecSnap(){ try{ _recSnap=_recSnapOf(DB); }catch(_){} }
+/* `diffed` = the caller (a merge) compares the baseline before and after itself
+   (_s1DirtyFromDiff); any other reseed (undo, a restored backup, boot) swapped
+   the notebook under the sweep, so the next per-record snapshot is a full one. */
+function _seedRecSnap(diffed){ try{ _recSnap=_recSnapOf(DB); if(!diffed) _s1Dirty.full=true; }catch(_){} }
 function _stampRecordTouches(){
   if(_recSnap===undefined) return;
   try{
@@ -3807,13 +3831,16 @@ function _stampRecordTouches(){
       const prev=_recSnap[c]||{}, m=next[c]={};
       ((DB&&DB[c])||[]).forEach(r=>{
         if(!r||r.id==null) return;
-        const sig=_recSig(r), p=prev[r.id];
+        const e=_recEnt(r), sig=e[0], p=prev[r.id];
         /* "its updatedAt did not move FORWARD" — not just "is unchanged": undo()
            puts back the older copy, stamp and all, and that is a change too. */
         const moved=r.updatedAt!=null&&(p?(p[1]==null||r.updatedAt>p[1]):true);
         if(p && p[0]!==sig && !moved) r.updatedAt=now;
-        m[r.id]=[sig,r.updatedAt];
+        e[1]=r.updatedAt;
+        m[r.id]=e;
+        if(!p||p[0]!==sig||p[1]!==e[1]||p[2]!==e[2]) _s1Dirty.keys.add(_s1DirtyKey(c,r.id));   /* v04.90 — S1c */
       });
+      Object.keys(prev).forEach(id=>{ if(!m[id]) _s1Dirty.gone.add(_s1DirtyKey(c,id)); });
       if(_REC_TOMB_COLLS.includes(c)) Object.keys(prev).forEach(id=>{ if(!m[id]) gone.push(id); });
     });
     if(gone.length) _addTombstones(gone,now);
@@ -3833,7 +3860,7 @@ function _stampRecordTouches(){
    refresh their baseline so the next sweep leaves their updatedAt alone. */
 function _recUntouched(coll,recs){
   if(_recSnap===undefined||!_recSnap[coll]) return;
-  try{ (recs||[]).forEach(r=>{ if(r&&r.id!=null&&_recSnap[coll][r.id]) _recSnap[coll][r.id]=[_recSig(r),r.updatedAt]; }); }catch(_){}
+  try{ (recs||[]).forEach(r=>{ if(r&&r.id!=null&&_recSnap[coll][r.id]) { _recSnap[coll][r.id]=_recEnt(r); _s1Dirty.keys.add(_s1DirtyKey(coll,r.id)); } }); }catch(_){}
 }
 /** Shared by both the localStorage-only path and the async IndexedDB path
  *  below (v04.50) — factored out of _save()'s old catch block so a write
@@ -21819,9 +21846,15 @@ function getSyncConfig(){try{return JSON.parse(localStorage.getItem(SYNC_CFG_SK)
 function _saveSyncConfig(c){localStorage.setItem(SYNC_CFG_SK,JSON.stringify(c));}
 function clearSyncConfig(){localStorage.removeItem(SYNC_CFG_SK);localStorage.removeItem(SYNC_TIME_SK);}
 
+/* v04.90 — a standing problem on the per-note copy (e.g. its reader is stuck and
+   this device is syncing the old way) keeps the dot at "err" until it clears;
+   nothing else may paint a calm "Live" over it. */
+let _s1Problem=null;
 function setSyncStatus(s){
   const el=document.getElementById('sync-dot');
   if(!el)return;
+  let probTitle=null;
+  if(_s1Problem&&s==='live'){ s='err'; probTitle='☁ '+_s1Problem; }
   const M={
     off: {cls:'sd-off', txt:'☁'},
     conn:{cls:'sd-conn',txt:'☁…'},
@@ -21833,6 +21866,7 @@ function setSyncStatus(s){
   const m=M[s]||M.off;
   el.className='sync-dot-tb '+m.cls;
   el.title={'off':'☁ Sync off — click to set up','conn':'☁ Connecting…','live':'☁ Live — synced','busy':'☁ Syncing…','err':'☁ Sync error','offline':'☁ Offline — can\'t reach the cloud right now. Your notes are safe on this device and will sync when the connection is back.'}[s]||'☁ Sync';
+  if(probTitle) el.title=probTitle;
   el.textContent=m.txt;
 }
 
@@ -21994,27 +22028,44 @@ async function syncNow(){
     /* A manual sync supersedes any debounced push already queued. */
     clearTimeout(_syncPushTimer); _syncPushTimer=null; _pushPendingSince=0;
     const nb=_syncFsDb.collection("notebooks").doc(cfg.notebookId);
-    const main=await nb.get();
-    let added=0;
-    const remoteDB=window.__s1RecsOnly?null:await _readCloudDB(nb, main.exists?main.data():null);   /* __s1RecsOnly: test-only, v04.89 */
+    let added=0, remoteDB=null;
+    /* v04.90 — S1c: same rule as _doPush(). While the blob is not being written
+       the per-record copy IS the notebook, so this reads that (the reader is
+       restarted from its cursor: a listener that died is replaced, and the full
+       replica is merged), not a 45 MB blob that may be weeks old. */
+    if(_s1Plan()==='recs'){
+      const before=(DB.articles||[]).length;
+      _s1RdCaught=false;
+      await _s1ReadStart(cfg);
+      for(let i=0;i<20&&!(_s1RdCaught&&!_s1RepUnmerged&&!_s1RecsMergeQueued&&!_pullInFlight);i++) await _syncSleep(500);
+      if(_s1Rep&&_s1Rep.map.size) await _pullRecsMerge();
+      added=Math.max(0,(DB.articles||[]).length-before);
+    }else{
+      const main=await nb.get();
+      remoteDB=window.__s1RecsOnly?null:await _readCloudDB(nb, main.exists?main.data():null);   /* __s1RecsOnly: test-only, v04.89 */
+    }
     if(remoteDB){
       const before=(DB.articles||[]).length;
       _stampRecordTouches();   /* v04.68 — stamp any local change not yet swept, BEFORE the merge judges it */
+      const _s1Old=_recSnap;
       DB=mergeDB(DB, remoteDB);
       _seedThemeSnap();
-      _seedRecSnap();          /* v04.68 — merged-in remote changes are not local edits */  /* v04.40 — mergeDB already resolved DB.theme correctly; reseed so the next _save() doesn't re-diff against the pre-merge snapshot and overwrite an honest remote stamp with a fresh local "now" */
+      _seedRecSnap(true); _s1DirtyFromDiff(_s1Old,_recSnap);        /* v04.68 — merged-in remote changes are not local edits */  /* v04.40 — mergeDB already resolved DB.theme correctly; reseed so the next _save() doesn't re-diff against the pre-merge snapshot and overwrite an honest remote stamp with a fresh local "now" */
       added=(DB.articles||[]).length-before;
       _flushAllEditors();
       _save(); _renderPreserveEdit();
     }
     const now=Date.now();
-    const ver=_newPushVer();
-    _myLastPushVer=ver;
-    const json=JSON.stringify(DB);
-    let s1=null; try{ if(_s1Eligible()) s1=_s1Snap(); }catch(e){ _s1Fail(e); }   /* v04.88 — S1a */
-    await _writeCloudDB(nb, ver, _b64enc(json));
-    if(s1) _s1Run(cfg.notebookId, s1);
-    _lastPushedSig=_syncSig(json); _pushFailures=0;
+    /* A manual sync is a good moment for the full safety-net snapshot, and it
+       waits a few seconds (not two minutes) for the reader before falling back. */
+    _s1Dirty.full=true;
+    for(let i=0;i<20&&_s1Plan()==='recs'&&!_s1WriteGate();i++) await _syncSleep(500);
+    const res=await _pushWrite(cfg,{manual:true});
+    if(res==='wait'){
+      toast('☁ Still catching up with the cloud — your changes will go out in a moment.');
+      pushToCloud(); return;
+    }
+    _pushFailures=0;
     _lastSyncTime=now; localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);
     setSyncStatus("live");
     toast("✅ Synced — "+(DB.articles||[]).length+" notes"+(added>0?(" (+"+added+" merged in)"):" (already up to date)"));
@@ -22503,7 +22554,12 @@ async function _readCloudDB(nb, md){
    docs: 8 × 900,000 chars ≈ 7.2 MB of payload, leaving headroom under the
    10 MiB request ceiling for field names and gRPC/HTTP overhead. */
 const _SYNC_CHUNK_BATCH = 8;
-async function _writeCloudDB(nb, now, b64){
+/* v04.90 — S1c: the marker a main doc carries when the per-record copy holds
+   everything the blob does (see _s1Plan()). A build older than v04.90 writes the
+   main doc without it, which is how a v04.90 device knows an older build is
+   still active. */
+const _S1C_MARK='04.90';
+async function _writeCloudDB(nb, now, b64, marked, fallback){
   if(b64==null) b64=_b64enc(JSON.stringify(DB));
   const n=Math.ceil(b64.length/_SYNC_CHUNK);
   /* v04.82 — every write goes into a FRESH generation of chunk documents
@@ -22543,6 +22599,20 @@ async function _writeCloudDB(nb, now, b64){
   _syncMyGens.push({g,n});
   const chunkSet=(batch,i)=>batch.set(nb.collection("chunks").doc(_syncChunkId(g,i)),{p:b64.slice(i*_SYNC_CHUNK,(i+1)*_SYNC_CHUNK),ver:now});
   const mainDoc={ n:n, ver:now, g:g, deviceUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp() };
+  if(marked||fallback){
+    mainDoc.s1c=_S1C_MARK;
+    /* `s1fb` = a v04.90 FALLBACK blob: the recs may not hold all of it, so every
+       reader reads it (as an unmarked one), but it is not an older build, so it
+       neither starts nor extends the 30-day window (`s1o` is carried unchanged). */
+    if(fallback&&!marked) mainDoc.s1fb=1;
+    /* `s1o` = when a build WITHOUT the marker last wrote the main doc. This write
+       replaces that main doc, so without the date an older build that is still in
+       use would be forgotten the moment a v04.90 device wrote over it (and its
+       reader would then never see another edit). Carried from the main doc this
+       device last saw: an unmarked one's own time, or a marked one's `s1o`. */
+    const pv=prevSeen, o=pv?(pv.s1c?pv.s1o:(pv.deviceUpdatedAt||pv.ver)):0;
+    if(o) mainDoc.s1o=o;
+  }
   if(n<=_SYNC_CHUNK_BATCH){
     const batch=_syncFsDb.batch();
     for(let i=0;i<n;i++) chunkSet(batch,i);
@@ -22609,11 +22679,27 @@ let _s1Busy=0, _s1Pending=null, _s1Denied=false, _s1Dead=false, _s1Map=null, _s1
 function _s1Key(c,id){ return c+'~'+encodeURIComponent(String(id)).replace(/\./g,'%2E'); }
 function _s1Eligible(){ return _dbLoaded && !_s1Denied && !_s1Dead; }
 function _s1Disable(why){ _s1Dead=true; _s1Stat.enabled=false; _s1Stat.reason=why; }
+/* v04.90 — a refusal is not for the session: the owner may fix the Firestore
+   rules. After a cool-down (`let`, so a check can shorten it) the per-note copy is
+   tried again — flags cleared, reader restarted, everything re-offered. If it is
+   refused again the same code schedules the next try. */
+let _S1_DENY_RETRY_MS=600000, _s1DenyTimer=null;
+function _s1DenySchedule(){
+  if(_s1DenyTimer) return;
+  _s1DenyTimer=setTimeout(()=>{
+    _s1DenyTimer=null;
+    const cfg=getSyncConfig();
+    if(!cfg||!_syncFsDb||_s1Dead) return;
+    _s1Denied=false; _s1Stat.enabled=true; _s1Stat.reason=null;
+    try{ _s1Dirty.full=true; }catch(e){}
+    try{ _s1ReadStart(cfg); }catch(e){ console.warn('S1 retry:',e); }
+  },_S1_DENY_RETRY_MS);
+}
 function _s1Fail(e){
   const code=(e&&e.code)||'error';
   console.warn('S1 shadow write skipped:',e);
   _s1Stat.lastErr={code:code, at:Date.now(), message:String((e&&e.message)||e).slice(0,200)};
-  if(code==='permission-denied'){ _s1Denied=true; _s1Stat.enabled=false; _s1Stat.reason='permission-denied'; }
+  if(code==='permission-denied'){ _s1Denied=true; _s1Stat.enabled=false; _s1Stat.reason='permission-denied'; _s1DenySchedule(); }
   if(e&&e.s1disable) _s1Disable('map-not-persistable');
 }
 /* The record list, built from DB synchronously (same tick as the blob's json). */
@@ -22653,15 +22739,85 @@ function _s1Snap(db){
    slow first one, and the latest pending snapshot runs after it. A commit
    that never settles (offline) simply waits, as the SDK's own queue does. */
 async function _s1Run(nbId, snap){
-  if(_s1Busy){ _s1Pending=[nbId,snap]; return; }
+  if(_s1Busy){ _s1Pending=[nbId,_s1SnapUnion(_s1Pending&&_s1Pending[1],snap)]; return; }
   _s1Busy=Date.now();
-  try{ await _s1Exec(nbId, snap); }
-  catch(e){ try{ _s1Fail(e); }catch(x){} }
-  finally{
-    _s1Busy=0;
-    const p=_s1Pending; _s1Pending=null;
-    if(p&&_s1Eligible()) _s1Run(p[0],p[1]);
+  let res;
+  _s1BusyP=res=(async()=>{
+    try{ await _s1Exec(nbId, snap); }
+    catch(e){ _s1Dirty.full=true; try{ _s1Fail(e); }catch(x){} }
+    finally{
+      _s1Busy=0;
+      const p=_s1Pending; _s1Pending=null;
+      if(p&&_s1Eligible()) _s1Run(p[0],p[1]);
+    }
+  })();
+  return res;
+}
+/* ── v04.90 · S1c — the snapshot from the dirty set ───────────────────────
+   _s1Snap() serialises EVERY record, so one edited note at 9,000 notes cost a
+   full stringify and hash per push. _stampRecordTouches() already knows which
+   records moved (and _mergeRemoteIn() which ones a merge changed): a partial
+   snapshot holds only those, plus the head, `trash` and `tombstones` (which
+   the sweep does not watch) in full. It is marked `partial`, and _s1Exec()
+   then treats a key as removed only if it is named in `goneKeys`, never merely
+   because it is absent. A full _s1Snap() stays as the safety net: at start,
+   after any failed run or reseed, and once an hour (_S1_FULL_MS), so a change
+   that never marked itself is caught. */
+let _S1_FULL_MS=3600000, _s1LastFull=0, _s1BusyP=Promise.resolve();
+function _s1SnapDirty(){
+  const keys=_s1Dirty.keys, goneIn=_s1Dirty.gone;
+  const out=new Map(), head={}, seen=new Set();
+  Object.keys(DB).forEach(k=>{ if(_S1_COLLS.indexOf(k)<0) head[k]=DB[k]; });
+  _S1_COLLS.forEach(c=>{
+    const arr=DB[c];
+    if(!Array.isArray(arr)){ if(c in DB) head[c]=arr; return; }
+    const odd=[], all=(c==='trash'||c==='tombstones');
+    arr.forEach((x,i)=>{
+      if(!x||typeof x!=='object'||x.id==null){ odd.push(x); return; }
+      const key=_s1Key(c,x.id);
+      if(seen.has(key)){ odd.push(x); return; }
+      seen.add(key);
+      if(all||keys.has(key)) out.set(key,{c:c, id:x.id, o:i, json:JSON.stringify(x)});
+    });
+    head[c]=odd;
+  });
+  out.set('_head~0',{c:'_head', id:'0', json:JSON.stringify(head), canon:_s1Canon(head)});
+  out.forEach(r=>{ r.sig=_syncSig(r.canon||r.json); });
+  out.partial=true; out.seq=_s1MergeSeq;
+  out.goneKeys=new Set(); goneIn.forEach(k=>{ if(!seen.has(k)) out.goneKeys.add(k); });
+  return out;
+}
+function _s1TakeSnap(){
+  const now=Date.now();
+  let snap;
+  if(_s1Dirty.full||!_recSnap||now-_s1LastFull>=_S1_FULL_MS){ snap=_s1Snap(); _s1LastFull=now; }
+  else snap=_s1SnapDirty();
+  _s1Dirty.keys=new Set(); _s1Dirty.gone=new Set(); _s1Dirty.full=false;
+  return snap;
+}
+/* Put a snapshot's contents back into the dirty set (it was not written). */
+function _s1Redirty(snap){
+  if(!snap) return;
+  if(!snap.partial){ _s1Dirty.full=true; return; }
+  snap.forEach((r,k)=>{ if(k!=='_head~0') _s1Dirty.keys.add(k); });
+  snap.goneKeys.forEach(k=>_s1Dirty.gone.add(k));
+}
+/* Two snapshots waiting for the same busy run become one. */
+function _s1SnapUnion(a,b){
+  if(!a) return b;
+  if(!b.partial) return b;   /* the later one is complete */
+  if(!a.partial){            /* an earlier full one, then later changes: apply them on top */
+    const full=new Map(a); full.seq=b.seq;
+    b.forEach((r,k)=>full.set(k,r));
+    b.goneKeys.forEach(k=>full.delete(k));
+    return full;
   }
+  const out=new Map(a);
+  b.forEach((r,k)=>out.set(k,r));
+  out.partial=true; out.seq=b.seq;
+  out.goneKeys=new Set(a.goneKeys); b.goneKeys.forEach(k=>out.goneKeys.add(k));
+  b.forEach((r,k)=>out.goneKeys.delete(k));
+  return out;
 }
 /* The per-device key→sig map (IndexedDB `s1:<nb>` in the existing kv store).
    Shared by the writer and, since v04.89, by the reader ("received = known"). */
@@ -22692,20 +22848,31 @@ function _s1WriteGate(){
   if(!r||r.perm) return true;
   return r.on&&_s1RdCaught&&!_s1RepUnmerged&&!_s1RecsMergeQueued&&!_pullInFlight;
 }
+/* v04.90 — returns {ineligible:true} (this device cannot write recs), {gated:true}
+   (the reader has not caught up: nothing written, the snapshot goes back into the
+   dirty set) or {written:n}. Errors propagate: _s1Run() swallows them, the awaited
+   _s1Write() does not. */
 async function _s1Exec(nbId, snap){
-  if(!_s1Eligible()) return;
-  if(!_s1WriteGate()){ _s1KickSoon(); return; }
-  if(snap.seq!==_s1MergeSeq){ try{ _stampRecordTouches(); }catch(e){} snap=_s1Snap(); }
+  if(!_s1Eligible()){ _s1Redirty(snap); return {ineligible:true}; }
+  if(!_s1WriteGate()){ _s1Redirty(snap); _s1KickSoon(); return {gated:true}; }
+  if(snap.seq!==_s1MergeSeq){ try{ _stampRecordTouches(); }catch(e){} _s1Redirty(snap); snap=_s1TakeSnap(); }
   const mk='s1:'+nbId;
   const m=await _s1MapLoad(nbId);
-  if(!m){ _s1Disable(window.indexedDB?'map-not-persistable':'no-indexeddb'); return; }
+  if(!m){ _s1Redirty(snap); _s1Disable(window.indexedDB?'map-not-persistable':'no-indexeddb'); return {ineligible:true}; }
   const nb=_syncFsDb.collection('notebooks').doc(nbId);
   const recsC=nb.collection('recs'), partsC=nb.collection('recparts');
   const ts=()=>firebase.firestore.FieldValue.serverTimestamp();
   const utf8=s=>new TextEncoder().encode(s).length;
   const work=[];
   snap.forEach((r,key)=>{ if(m.s[key]!==r.sig) work.push([key,r]); });
-  Object.keys(m.s).forEach(key=>{ if(!snap.has(key)&&m.s[key]!=='gone') work.push([key,null]); });
+  if(snap.partial){
+    /* named by the sweep (a record that left one of the watched arrays) … */
+    snap.goneKeys.forEach(key=>{ if(!snap.has(key)&&m.s[key]!==undefined&&m.s[key]!=='gone') work.push([key,null]); });
+    /* … and `trash` / `tombstones`, which the sweep does not watch but a partial
+       snapshot always holds in full: one it lacks is one that was removed. */
+    Object.keys(m.s).forEach(key=>{ if((key.startsWith('trash~')||key.startsWith('tombstones~'))&&!snap.has(key)&&m.s[key]!=='gone'&&!snap.goneKeys.has(key)) work.push([key,null]); });
+  }
+  else Object.keys(m.s).forEach(key=>{ if(!snap.has(key)&&m.s[key]!=='gone') work.push([key,null]); });
   let batch=null, nOps=0, nBytes=0, done=[], written=0;
   const commit=async()=>{
     if(!nOps) return;
@@ -22772,8 +22939,26 @@ async function _s1Exec(nbId, snap){
     }
   }
   await commit();
-  let seeded=true; snap.forEach((r,key)=>{ if(m.s[key]!==r.sig) seeded=false; });
-  _s1Stat.seeded=seeded; _s1Stat.lastRun=Date.now(); _s1Stat.lastWritten=written; _s1Stat.lastErr=null;
+  if(!snap.partial){ let seeded=true; snap.forEach((r,key)=>{ if(m.s[key]!==r.sig) seeded=false; }); _s1Stat.seeded=seeded; }
+  _s1Stat.lastRun=Date.now(); _s1Stat.lastWritten=written; _s1Stat.lastErr=null;
+  return {written:written};
+}
+/* The awaited write (S1c): the same run, but waits for a run already in flight,
+   and lets a failure reach the caller. Anything that did not get written goes
+   back into the dirty set. */
+async function _s1Write(nbId, snap){
+  while(_s1Busy){ await _s1BusyP.catch(()=>{}); }
+  _s1Busy=Date.now();
+  let done; _s1BusyP=new Promise(r0=>{ done=r0; });
+  let r;
+  try{ r=await _s1Exec(nbId, snap); }
+  catch(e){ _s1Dirty.full=true; throw e; }
+  finally{
+    _s1Busy=0; done();
+    const p=_s1Pending; _s1Pending=null;
+    if(p&&_s1Eligible()) _s1Run(p[0],p[1]);
+  }
+  return r;
 }
 
 /* ── v04.89 · S1b — READ the per-record copy into a local replica ──────────
@@ -22798,6 +22983,9 @@ async function _s1Exec(nbId, snap){
 const _S1R_DB='siyagah-s1-v1', _S1_OVERLAP_MS=2000, _S1_PARTS_TRIES=3;
 let _S1_BACKOFF=[3000,30000,300000];   /* restart delays for a rec that cannot be resolved; a 4th failure gives up on that version */
 let _s1RdFails=new Map(), _s1RdGaveUp=new Set();
+/* v04.90 — key -> `at` of a version that failed to resolve and is waiting for its retry.
+   Lives across snapshots: the cursor may never pass the oldest of them. */
+let _s1RdPending=new Map();
 let _S1_GRACE_MS=6000;   /* wait for the originating device's recs before writing back */
 let _s1Rep=null, _s1RdUnsub=null, _s1RdChain=Promise.resolve(), _s1RdGen=0, _s1RdTimer=null;
 let _s1RdDbP=null, _s1KickTimer=null, _s1RecsMergeQueued=false, _s1RecsMerged=false;
@@ -22904,12 +23092,24 @@ function _s1RdOff(st, reason, e){
   st.perm=['permission-denied','no-query-support','no-indexeddb','replica-not-writable'].indexOf(reason)>=0;
   if(e) st.err={code:(e&&e.code)||'error', at:Date.now(), message:String((e&&e.message)||e).slice(0,200)};
   console.warn('S1 read off:',reason,e||'');
+  if(reason==='permission-denied') _s1DenySchedule();
+  /* v04.90 — a reader that is off for good can no longer stand in for the blob:
+     main docs this device skipped (see _s1CanSkipBlob) are read after all. */
+  if(st.perm){ _lastAppliedVer=0; setTimeout(()=>{ try{ if(_syncDocRef&&_syncLastMd) _pullRemote(_syncDocRef,_syncLastMd); }catch(x){} },0); }
+}
+/* v04.90 — may a MARKED main doc's chunks be left unread? Only while this
+   device's own reader is on, and has not had to give up on a record: then every
+   record the blob holds also reaches it through `recs`. */
+function _s1CanSkipBlob(){
+  const r=_s1Stat.rd;
+  return !!(r&&r.on&&!r.perm&&!(r.err&&r.err.code==='unresolvable'));
 }
 async function _s1ReadStart(cfg){
   _s1ReadStop();
   const gen=_s1RdGen, nb=cfg.notebookId;
   const st=_s1Stat.rd=_s1Stat.rd||{on:false, reason:null, records:0, lastRecv:0, cursor:0, err:null};
   st.on=false; st.reason='starting'; st.perm=false; _s1RdCaught=false;
+  if(!_s1HbTimer) _s1HbTimer=setInterval(()=>{ try{ _s1Heartbeat(); }catch(e){} },5000);
   try{
     const nbRef=_syncFsDb.collection('notebooks').doc(nb), recsC=nbRef.collection('recs');
     if(typeof recsC.where!=='function'||!(firebase.firestore.Timestamp)){ _s1RdOff(st,'no-query-support'); return; }
@@ -22949,7 +23149,8 @@ async function _s1OnSnap(gen, snap, nbRef){
     const key=ch.doc.id; let d=ch.doc.data(), at=_s1AtMs(d.at);
     if(at==null) continue;
     const cur=rep.map.get(key);
-    if(cur&&cur.at>=at){ if(at<skipMin) maxAt=Math.max(maxAt,at); continue; }   /* an overlap redelivery */
+    { const pa=_s1RdPending.get(key); if(pa!==undefined&&at>pa) _s1RdPending.delete(key); }   /* a newer version replaces the pending one */
+    if(cur&&cur.at>=at){ if(_s1RdPending.get(key)<=cur.at) _s1RdPending.delete(key); if(at<skipMin) maxAt=Math.max(maxAt,at); continue; }   /* an overlap redelivery */
     const fk=key+'|'+at;
     if(_s1RdGaveUp.has(fk)){ if(at<skipMin) maxAt=Math.max(maxAt,at); continue; }   /* given up on: never re-read */
     let r;
@@ -22964,25 +23165,34 @@ async function _s1OnSnap(gen, snap, nbRef){
          of the record (a new `at`) is delivered normally. S1c, when the blob
          stops carrying records, must keep this in mind. */
       const nf=(_s1RdFails.get(fk)||0)+1; _s1RdFails.set(fk,nf);
-      if(nf<=_S1_BACKOFF.length){ skipMin=Math.min(skipMin,at); skipDelay=Math.max(skipDelay,_S1_BACKOFF[nf-1]); continue; }
-      _s1RdGaveUp.add(fk); _s1RdFails.delete(fk);
+      if(nf<=_S1_BACKOFF.length){ _s1RdPending.set(key,at); skipMin=Math.min(skipMin,at); skipDelay=Math.max(skipDelay,_S1_BACKOFF[nf-1]); continue; }
+      _s1RdGaveUp.add(fk); _s1RdFails.delete(fk); if(_s1RdPending.get(key)===at) _s1RdPending.delete(key);
       st.err={code:'unresolvable', key:key, at:at, message:'its pieces are gone; given up on this version'};
       console.warn('S1 read: gave up on an unresolvable record',key,at);
       if(at<skipMin) maxAt=Math.max(maxAt,at);
       continue;
     }
-    _s1RdFails.delete(fk);
+    _s1RdFails.delete(fk); if(_s1RdPending.get(key)===at) _s1RdPending.delete(key);
     d=r.d; at=_s1AtMs(d.at)||at;
     puts.push([key,{c:d.c, sig:d.sig, o:d.o, at:at, gone:d.gone?true:undefined, rec:r.json, n:d.n, g:d.g}]);
     if(at<skipMin) maxAt=Math.max(maxAt,at);
   }
-  const base=Math.max(rep.cursor, maxAt?Math.min(maxAt-_S1_OVERLAP_MS, skipMin-1):0);
-  if(!puts.length&&base===rep.cursor&&skipMin===Infinity){ _s1RdCaught=true; return; }
+  /* skipMin is this snapshot's own failures (they schedule the retry); `hold` also
+     counts earlier snapshots' pending ones, which the cursor must not pass either. */
+  let hold=skipMin; _s1RdPending.forEach(a=>{ if(a<hold) hold=a; });
+  const base=Math.max(rep.cursor, maxAt?Math.min(maxAt-_S1_OVERLAP_MS, hold-1):0);
+  if(!puts.length&&base===rep.cursor&&hold===Infinity){ _s1RdCaught=true; return; }
   try{ await _s1RepSave(nb, puts, base); }
   catch(e){ _s1ReadStop(); _s1RdOff(st,'replica-not-writable',e); return; }
   if(gen!==_s1RdGen) return;
   rep.cursor=base; st.cursor=base;
   const m=_s1Map&&_s1MapNb===nb?_s1Map:await _s1MapLoad(nb).catch(()=>null);
+  /* v04.90 — an ECHO: every record in this batch carries the very sig this device's
+     map already holds for its key (it wrote it, or already received it). The
+     replica takes it, but nothing in it is news to DB, and a full merge per own
+     write is the dominant cost at 9,000 notes. Judged BEFORE the map is updated
+     below. A real remote change differs in at least one sig and merges as before. */
+  const echo=!!m&&puts.length>0&&puts.every(([key,e])=>m.s[key]===(e.gone?'gone':e.sig));
   let touched=false;
   puts.forEach(([key,e])=>{
     rep.map.set(key,e);
@@ -22998,8 +23208,11 @@ async function _s1OnSnap(gen, snap, nbRef){
   });
   if(m&&touched){ try{ await _idbPut('s1:'+nb,m); }catch(e){ console.warn('S1 read: sig map not saved',e); } }
   st.records=0; rep.map.forEach((e,k)=>{ if(!e.gone&&k!=='_head~0') st.records++; });
-  if(skipMin===Infinity) _s1RdCaught=true;
-  if(puts.length){ st.lastRecv=Date.now(); if(!(st.err&&st.err.code==='unresolvable')) st.err=null; _s1RepUnmerged=true; _pullRecsMerge(); }
+  if(hold===Infinity) _s1RdCaught=true;
+  if(puts.length){
+    st.lastRecv=Date.now(); if(!(st.err&&st.err.code==='unresolvable')) st.err=null;
+    if(!echo){ _s1RepUnmerged=true; _pullRecsMerge(); }
+  }
   if(skipMin<Infinity){
     clearTimeout(_s1RdTimer);
     _s1RdTimer=setTimeout(()=>{ const c=getSyncConfig(); if(c&&_syncFsDb) _s1ReadStart(c); },skipDelay||_S1_BACKOFF[0]);
@@ -23049,14 +23262,26 @@ function _s1KickSoon(){
     const rd=_s1Stat.rd;
     if(!rd||rd.perm) return;   /* no reader on this device: writes happen at push time only, as in v04.88 */
     if(!_s1WriteGate()){ _s1KickSoon(); return; }   /* not caught up yet: look again shortly */
-    try{ _flushAllEditors(); _stampThemeTouches(); _stampRecordTouches(); _s1Run(cfg.notebookId,_s1Snap()); }catch(e){ _s1Fail(e); }
+    try{ _flushAllEditors(); _stampThemeTouches(); _stampRecordTouches(); _s1Dirty.full=true; _s1Run(cfg.notebookId,_s1TakeSnap()); }catch(e){ _s1Fail(e); }
   }, _S1_GRACE_MS);
+}
+/* v04.90 — the periodic safety net: once per _S1_FULL_MS a full snapshot is
+   written, whatever the dirty set says. A heartbeat (not one long timer) so the
+   interval can be changed, by a check, after the page has started. */
+let _s1HbTimer=null;
+function _s1Heartbeat(){
+  if(Date.now()-_s1LastFull<_S1_FULL_MS) return;
+  const cfg=getSyncConfig();
+  if(!cfg||!_syncFsDb||!_s1Eligible()||_s1Busy||_pushInFlight) return;
+  const rd=_s1Stat.rd;
+  if(!rd||rd.perm||!_s1WriteGate()) return;
+  try{ _flushAllEditors(); _stampThemeTouches(); _stampRecordTouches(); _s1Dirty.full=true; _s1Run(cfg.notebookId,_s1TakeSnap()); }catch(e){ _s1Fail(e); }
 }
 function _s1DiagText(){
   const r=_s1Stat.rd;
   if(!r) return 'off — not started';
   if(!r.on) return 'off — '+(r.reason||'not started');
-  return 'on · '+r.records.toLocaleString('en-US')+' records · last received '+_syncAgo(r.lastRecv)+(r.err?(' · last error: '+r.err.code):'');
+  return 'on · '+r.records.toLocaleString('en-US')+' records · last received '+_syncAgo(r.lastRecv)+(r.err?(' · last error: '+r.err.code):'')+(_s1Plan()==='recs'?' · whole-notebook copy: off':' · whole-notebook copy: on');
 }
 
 /* ── Push scheduling ──────────────────────────────────────────────────────
@@ -23078,6 +23303,118 @@ const _PUSH_MAX_MS   = 2500;   /* … but never wait longer than this in total *
 let _pushPendingSince=0, _pushInFlight=false, _pushAgain=false;
 let _lastPushedSig='', _pushFailures=0;
 
+/* ── v04.90 · S1c — which copy does a push write? ─────────────────────────
+   The per-record copy (`recs`) is the sync; the blob (main doc + chunks) is
+   written only while a build older than v04.90 may still be reading it: a phone
+   not yet updated, the frozen build, a Save File copy opened from disk. Such a
+   build reads only the blob, so if it simply stopped the old device would see a
+   notebook frozen in time (nothing lost — merge is a union — but stale).
+
+   "An older build is active" = the newest main doc this device has seen was
+   written WITHOUT the `s1c` marker and less than 30 days ago (deviceUpdatedAt).
+   Decided per push, so it flips back by itself when an old build writes again.
+
+     'recs'  the blob is not written; the recs write is awaited and a failure is
+             a push failure (dot, _pushFailures, backoff, the classified toast).
+     'both'  an older build is active: recs first (awaited), then the blob.
+     'blob'  this device cannot use recs (refused, no IndexedDB, reader off for
+             good, or the reader stuck past _S1_GATE_MAX_MS): the blob, as before.
+
+   THE MARKER means "the per-record copy holds everything this blob does": a
+   marked main doc is skipped by every other v04.90 device's reader (see
+   _pullRemote). So the blob is marked only after the recs write has succeeded in
+   the same push, and written UNMARKED in every fallback — otherwise a device
+   whose recs were refused would write a blob nobody reads. */
+const _S1C_ACTIVE_MS=30*24*3600*1000;
+let _S1_GATE_MAX_MS=120000, _s1GateSince=0, _s1FallbackToasted=false;
+function _s1Now(){ return Date.now(); }   /* one place a check can move the clock */
+function _s1OlderActive(){
+  const md=_syncLastMd;
+  if(!md) return true;   /* nothing seen yet (or a new notebook): write the blob */
+  /* the last time a build without the marker wrote: the main doc's own time when
+     it is unmarked, else the date a marked one carries (`s1o`, see _writeCloudDB) */
+  const t=md.s1c?(md.s1o||0):(md.deviceUpdatedAt||md.ver||0);
+  return t>0&&_s1Now()-t<_S1C_ACTIVE_MS;
+}
+function _s1Plan(){
+  const rd=_s1Stat.rd;
+  if(!_s1Eligible()||!rd||rd.perm) return 'blob';
+  return _s1OlderActive()?'both':'recs';
+}
+/* Returns 'wait' (recs-only, the reader has not caught up: try again), 'same'
+   (the blob path found nothing new), or 'recs' | 'both' | 'blob' for what was
+   written. Throws on a failure the caller must classify. */
+async function _pushWrite(cfg, o){
+  const nbId=cfg.notebookId, nb=_syncFsDb.collection('notebooks').doc(nbId), manual=!!o.manual;
+  let plan=_s1Plan();
+  if(plan!=='blob'){
+    if(_s1WriteGate()){ _s1GateSince=0; _s1Problem=null; }
+    else if(plan==='both') plan='blob';   /* v04.89 behaviour: the blob now, recs once the reader has caught up */
+    else{
+      if(!_s1GateSince) _s1GateSince=Date.now();
+      if(!manual&&Date.now()-_s1GateSince<_S1_GATE_MAX_MS) return 'wait';
+      /* An edit must never wait on the reader for ever: write the blob, and let
+         the dot say why. */
+      plan='blob';
+      if(!manual) _s1Problem='The per-note copy has not caught up — this device is syncing the old way until it does.';
+    }
+  }
+  let json=null, sig=null;
+  const buildBlob=()=>{ json=JSON.stringify(DB); sig=_syncSig(json); };
+  if(plan==='recs'){
+    if(_s1Dirty.keys.size||_s1Dirty.gone.size||_s1Dirty.full){ try{ _save(); }catch(e){} }
+  }else{
+    buildBlob();
+    if(!manual&&sig===_lastPushedSig) return 'same';
+    /* The flush may have pulled text out of an editor that no local save has seen
+       yet, so persist it here too — reusing the string just built. */
+    try{ _save(json); }catch(e){}
+  }
+  /* The per-record list, from the same DB as json (same tick). */
+  let snap=null; try{ if(_s1Eligible()) snap=_s1TakeSnap(); }catch(e){ _s1Fail(e); }
+  setSyncStatus('busy');
+  const blobWrite=async(marked)=>{
+    const ver=_newPushVer();   /* v04.73 — unique per push; see _newPushVer() */
+    _myLastPushVer=ver;
+    await _writeCloudDB(nb, ver, _b64enc(json), marked, !marked);   /* not marked = a v04.90 fallback (s1c + s1fb) */
+    _lastPushedSig=sig;
+  };
+  if(plan==='blob'){
+    await blobWrite(false);
+    if(snap) _s1Run(nbId, snap);   /* detached: never awaited, never fails the push */
+    return 'blob';
+  }
+  if(plan==='both'){
+    let ok=false;
+    try{ const r=await _s1Write(nbId, snap); ok=!!(r&&r.written!==undefined); }catch(e){ _s1Fail(e); }
+    await blobWrite(ok);
+    return 'both';
+  }
+  /* 'recs' */
+  _lastPushedSig='';   /* the blob is not being written: its "nothing new" memory is stale */
+  let r=null, err=null;
+  try{ r=await _s1Write(nbId, snap); }catch(e){ err=e; _s1Fail(e); }
+  if(err){
+    if(!((err&&err.code==='permission-denied')||!_s1Eligible())) throw err;
+  }else if(r&&r.gated){
+    if(!_s1GateSince) _s1GateSince=Date.now();
+    return 'wait';
+  }else if(!(r&&r.ineligible)){
+    _s1Problem=null;
+    if(_s1FallbackToasted){ _s1FallbackToasted=false; toast('☁ The per-note copy works again — syncing the new way.', 6000); }
+    return 'recs';
+  }
+  /* The per-note copy is refused (or cannot be kept on this device) and the blob
+     is off: never leave a device with no working write path. Say so once. */
+  if(!_s1FallbackToasted){
+    _s1FallbackToasted=true;
+    toast('☁ The cloud refused the per-note copy — syncing the old way for now. Nothing is lost.', 8000);
+  }
+  buildBlob();
+  await blobWrite(false);
+  return 'blob';
+}
+
 async function _doPush(){
   if(_pushInFlight){ _pushAgain=true; return; }
   const cfg=getSyncConfig();
@@ -23097,23 +23434,19 @@ async function _doPush(){
        no-op once this has already run. */
     _stampThemeTouches();
     _stampRecordTouches();   /* v04.68 — same reason as the theme stamp above */
-    const json=JSON.stringify(DB);
-    const sig=_syncSig(json);
-    if(sig===_lastPushedSig){ setSyncStatus('live'); return; }   /* nothing new */
-    /* The flush above may have pulled text out of the editor that no local
-       save has seen yet, so persist it here too — reusing the string we
-       just built rather than serialising the notebook a second time. */
-    try{ _save(json); }catch(e){}
-    /* v04.88 — S1a: the per-record list, from the same DB as json. */
-    let s1=null; try{ if(_s1Eligible()) s1=_s1Snap(); }catch(e){ _s1Fail(e); }
-    setSyncStatus('busy');
-    const nb=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
     const now=Date.now();
-    const ver=_newPushVer();   /* v04.73 — unique per push; see _newPushVer() */
-    _myLastPushVer=ver;
-    await _writeCloudDB(nb, ver, _b64enc(json));
-    if(s1) _s1Run(cfg.notebookId, s1);   /* detached: never awaited, never fails the push */
-    _lastPushedSig=sig;
+    /* v04.90 — S1c: one write path shared with syncNow(); which of blob / recs it
+       uses is decided inside (see _s1Plan()). */
+    const res=await _pushWrite(cfg,{manual:false});
+    if(res==='wait'){
+      /* recs-only and the reader has not caught up: the edit waits (bounded, see
+         _S1_GATE_MAX_MS), never writes ahead of the reader. */
+      setSyncStatus('busy');
+      clearTimeout(_syncPushTimer);
+      _syncPushTimer=setTimeout(()=>{ _pushPendingSince=0; _doPush(); }, 2000);
+      return;
+    }
+    if(res==='same'){ setSyncStatus('live'); return; }   /* nothing new */
     _pushFailures=0;
     _lastSyncTime=now;
     localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);
@@ -23308,6 +23641,16 @@ async function _repairCloudCopy(docRef, md){
 }
 async function _pullRemote(docRef, md, retry){
   if(window.__s1RecsOnly) return;   /* test-only (v04.89): this device does not read the blob */
+  /* v04.90 — S1c: a main doc written by another v04.90 device carries the marker,
+     meaning the per-record copy holds everything its chunks do (the writer wrote
+     `recs` first, see _s1Plan()). Leave the chunks unread while this device's
+     reader is on: same merge result, one big download saved. A main doc without
+     the marker (any older build, or a v04.90 device syncing the old way) is
+     read exactly as before; reading the blob never stops. */
+  if(md&&md.s1c&&!md.s1fb&&_s1CanSkipBlob()){
+    if(md.ver!=null) _lastAppliedVer=md.ver;
+    setSyncStatus('live'); return;
+  }
   if(_pullInFlight){ _pullQueued={docRef,md}; return; }
   _pullInFlight=true;
   clearTimeout(_pullRetryTimer); _pullRetryTimer=null;
@@ -23412,9 +23755,11 @@ function _mergeRemoteIn(remoteDB, remoteT){
        flush and correctly loses to the incoming change. */
     _flushAllEditors();
     _stampRecordTouches();   /* v04.68 — see syncNow() */
+    const _s1Old=_recSnap;   /* v04.90 — S1c: what the merge changes is the difference of the two baselines */
     DB=mergeDB(DB, remoteDB);                  /* MERGE — never replace, so nothing is lost */
     _seedThemeSnap();  /* v04.40 — see the identical call in syncNow() above */
-    _seedRecSnap();    /* v04.68 */
+    _seedRecSnap(true);    /* v04.68 */
+    _s1DirtyFromDiff(_s1Old,_recSnap);
     const after=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
     _save();
     _renderPreserveEdit();
