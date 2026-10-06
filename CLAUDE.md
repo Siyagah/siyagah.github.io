@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.91.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.90.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,16 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.91** (6 Oct 2026) — S1d, the local hot path at 9,000 notes (issue
+  #130). Record cache; undo as byte-bounded frames; a local journal
+  (`siyagah-localrecs-v1`, one transaction per save, `notebook` stays the
+  full copy, checkpoints); list patching; faster replica assembly. Phone ×4
+  at 9k: receive 9.5 s → 1.01 s, undo 6.7 s → 0.90 s, heap 2.8 GB → 149 MB,
+  autosave 437 ms. **Targets (a) 300 ms, (c) 500 ms and the laptop quarter
+  targets NOT met.** Checks 52a–52e + 52d2 (kills inside a journal
+  transaction and a checkpoint, via `__ljHold`). Not done: render on
+  receive/undo (317/426 ms) and `_collect` 146 ms ×2 per autosave. Full
+  `app-check`: (Architect, in review).
 - **v04.90** (6 Oct 2026) — S1c, step three of per-note cloud storage (issue
   #128). `recs` is the sync; the blob is written only while an older build
   may still read it (`_s1Plan()`: `recs` / `both` / `blob`). Marker `s1c` on a
@@ -27,14 +37,7 @@ must never accumulate here instead of there.
   ~5 KB, 0 blob docs; **merge 6.1 s on a ×4 phone (1.6–2.1 s laptop) — over
   1.5 s, a later round needs an incremental merge.** Checks 51s–51x (51t runs
   the real v04.89 build from git). `--only 51` **103/103**, `sync-e2e`
-  **25/25**, `sync-audit` 118/118. Review fixes (PR #129): fallback blob is
-  `s1c`+`s1fb` (never renews `s1o`, 51y); a refused recs copy retries after
-  10 min (`_S1_DENY_RETRY_MS`); unresolved recs stay pending across
-  snapshots and the cursor never passes the oldest (`_s1RdPending`, 51z; an
-  edit was being lost, I2). Architect's totals: full `app-check`
-  **1632/1632, twice in a row**; unpatched `--only 51` 90/97. Not done
-  (moved to S1d, v04.91): merge 6.1 s on a ×4 phone, `persist()` 1.5 s, undo
-  keeps 60 whole-notebook copies.
+  **25/25**, `sync-audit` 118/118; full `app-check` left to the Architect.
 - **v04.89** (6 Oct 2026) — S1b, step two of per-note cloud storage (issue
   #126). Every device also READS `recs` into a replica (own IndexedDB,
   `siyagah-s1-v1`) and merges the FULL replica with the unchanged
@@ -71,16 +74,6 @@ must never accumulate here instead of there.
   the drag/open code uses are unchanged. Section 50 **18/18**; unpatched,
   every block aborts. The stripe colour needs its fallback
   (`6m-1` caught it). Full `app-check` **1519/1519, twice in a row**.
-- **v04.86** (5 Oct 2026) — drag a tab out to sit beside its note (owner:
-  "draggable out of the tab to keep on the side of the original note").
-  Both notes as Multi windows: tiled halves on laptop/tablet (dropped side
-  wins), two sheets + switcher bar on a phone. By drag (main, Single and
-  Multi tab bars) or the tab menu's 🗗 Open beside (the touch route).
-  "Was the drop taken" = `_pinDragAid` still set at `dragend`, NOT
-  `dropEffect` (the document accepts every drop). Tab drags carry
-  `application/x-siyagah-note`. Section 49 **14/14**; unpatched 6/13.
-  `sync-e2e` 9c now waits for quiet before its setup (a test race). Full
-  `app-check` **1501/1501, twice in a row**.
 ---
 
 ## What this is
@@ -333,6 +326,20 @@ A failing check is a wrong assertion surprisingly often — investigate before
   snapshot is built from a dirty set (`_s1Dirty`, fed by
   `_stampRecordTouches()` and by the before/after diff in a merge); a full
   `_s1Snap()` runs at start, after any failed run and hourly (`_S1_FULL_MS`).
+- **The local journal and undo frames (v04.91, S1d).** `notebook` in
+  `siyagah-local-v1` stays the FULL copy and is what every build reads at
+  boot. The per-record journal lives in a NEW database, `siyagah-localrecs-v1`
+  (never an upgrade of the old one): one transaction per save, holding only
+  the records that changed, plus `notebook-seq` in `siyagah-local-v1` saying
+  how far the full copy has caught up. Boot reads the full copy, then
+  overlays the journal past that seq. A checkpoint rewrites the full copy
+  after 30 s idle or 3,000 puts. A failed journal write drops to a full-copy
+  save and rings the alarm. A build older than v04.91 reads only the full
+  copy, so it can be up to 30 s behind. A per-record cache serves the merge
+  and the list (which is patched, not rebuilt). Undo keeps byte-bounded
+  frames (changed records only), not 60 whole-notebook copies. The test-only
+  `window.__ljHold` (ms) holds a journal or checkpoint transaction open and
+  logs `LJ_HOLD`; unset, it does nothing.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
@@ -371,6 +378,19 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A check that kills a process must prove the kill landed inside the
+  window it claims to test.** The first 52d killed a browser 40 times at
+  random moments around a save and passed 40/40 — but every kill landed
+  AFTER the IndexedDB commit (0 "before", 40 "after"), so it proved nothing
+  about the dangerous window, a kill with writes issued and not committed.
+  Fast code beats a random delay. The fix is a signal from inside the window:
+  the test-only `window.__ljHold` keeps the SAME transaction open and logs
+  `LJ_HOLD`; the harness kills on that line (52d2). Report the before/after
+  counts, and be suspicious when they are all one side. Its twin: CDP
+  `Page.crash` does not kill a tab in this Chromium, it hangs ~2 min and
+  takes the whole browser down, so 52d kills the profile's processes with
+  `pkill -9` on a persistent context. Cost: caught by the Architect reading
+  the counts, before the journal shipped.
 - **A copy that a device writes must be a copy it has just read — "what I
   hold" is not "what is newest".** The first cut of v04.89's reader let a
   device write its whole notebook to the per-record cloud copy as soon as it
