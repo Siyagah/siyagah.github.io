@@ -187,6 +187,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
   });
   const page = await ctx.newPage();
   d.page = page;
+  if (opts.throttle) { d.cdp = await ctx.newCDPSession(page); await d.cdp.send('Emulation.setCPUThrottlingRate', { rate: opts.throttle }); }   /* v04.90 measurements: a phone's CPU */
   page.on('dialog', (x) => x.accept().catch(() => {}));
   page.on('pageerror', (e) => d.errors.push('pageerror: ' + e));
   page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) d.errors.push('console: ' + m.text()); });
@@ -240,9 +241,13 @@ const srv = await serve();
 const browser = await pw.chromium.launch();
 const VPS = [{ name: '390', w: 390, h: 844, touch: true }, { name: '820', w: 820, h: 1180, touch: true }, { name: '1440', w: 1440, h: 900, touch: false }];
 const measure = process.argv.includes('--measure');
+/* --only=51t,51u runs just those multi-device blocks (a faster loop); no flag = all. 51a–51g (single device) run only without it. */
+const onlyArg = process.argv.find((a) => a.startsWith('--only='));
+const onlySet = onlyArg ? new Set(onlyArg.slice(7).split(',')) : null;
+const want = (tag) => !onlySet || onlySet.has(tag);
 
 try {
-  for (const vp of (process.argv.includes('--s1b') ? [] : VPS)) {   /* --s1b: only 51h–51o (a faster loop while working) */
+  for (const vp of (process.argv.includes('--s1b') || onlySet ? [] : VPS)) {   /* --s1b: only 51h–51o (a faster loop while working) */
     const T = (s) => `${vp.name}: ${s}`;
     const ARABIC = 'ملاحظة عربية 😀 مرحبا بالعالم';
     /* ── 51a: a seeded notebook, all 11 arrays non-empty, Arabic + emoji, a null-id element ── */
@@ -508,12 +513,12 @@ try {
     for (const d of devs) await d.ctx.close();
     return { blobs, mainDoc };
   };
-  await scenarioH('51h', { recsOnly: !process.argv.includes('--normal') });   /* --normal: run 51h with the blob read too, to tell a recs fault from an old one */
+  if (want('51h')) await scenarioH('51h', { recsOnly: !process.argv.includes('--normal') });   /* --normal: run 51h with the blob read too, to tell a recs fault from an old one */
 
   /* ── 51s (v04.90): three v04.90 devices, every main doc marked. After the first
         marked writes a push writes ZERO blob docs, and the whole 51h scenario
         still converges (with the blob read too: marked main docs are skipped). ── */
-  {
+  if (want('51s')) {
     const r = await scenarioH('51s', {}, async (cloud, devs) => {
       for (const d of devs) { await act(d, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>warm ' + Math.random() + '</p>'; a.updatedAt = new Date().toISOString(); }); await settle(cloud, devs); }
     });
@@ -523,7 +528,7 @@ try {
   }
 
   /* ── 51j: received = known — the two that receive an edit write zero recs for it ── */
-  {
+  if (want('51j')) {
     const { cloud, devs, A, B, C } = await trio();
     await act(A, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>seed edit</p>'; a.updatedAt = new Date().toISOString(); });
     await settle(cloud, devs);
@@ -543,11 +548,20 @@ try {
   }
 
   /* ── 51k: self-heal — a device's merged copy is newer than the cloud's rec: it is written back up ── */
-  {
+  if (want('51k')) {
     const { cloud, devs, A, B, C } = await trio();
     await act(A, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>first</p>'; a.updatedAt = new Date().toISOString(); });
     await settle(cloud, devs);
     const recBefore = cloud.store.get(NB + '/recs/articles~a1');
+    /* v04.90 — updated in place. Until v04.89 the blob always carried an edit
+       whatever happened to the recs. Now a device with the blob off that cannot
+       finish its recs write simply does not finish the push (that is the
+       point: recs ARE the sync). What this check is about — the cloud's recs
+       lacking an edit that the blob carried, and the other devices writing it
+       back — is the situation a device that can only write the blob (an older
+       build, or one the recs refuse) creates. So B is made to be one: its plan
+       is the blob, and its detached recs write hangs for ever. */
+    await on(B, () => { _s1Plan = () => 'blob'; });
     B.dieAfterRec = 0;   /* B's recs writes now hang for ever; its blob push still lands */
     const mark = cloud.log.length;
     await act(B, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>held back</p>'; a.updatedAt = new Date().toISOString(); });
@@ -564,7 +578,7 @@ try {
   }
 
   /* ── 51l: a fourth, fresh device (empty replica, blob not read) gets everything from recs ── */
-  {
+  if (want('51l')) {
     const { cloud, devs, A, B } = await trio({ recsOnly: true });
     await act(A, () => { mkArt('f1', 'Before the fresh device'); });
     await settle(cloud, devs);
@@ -589,7 +603,7 @@ try {
   }
 
   /* ── 51p: a stale device writes nothing until it has read — it cannot put a deleted note's live rec over the cloud's `gone` ── */
-  {
+  if (want('51p')) {
     const { cloud, devs, A, B } = await trio({ recsOnly: true });
     await act(A, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>warm</p>'; a.updatedAt = new Date().toISOString(); });
     await settle(cloud, devs);
@@ -614,7 +628,7 @@ try {
   }
 
   /* ── 51m: a >1 MB note edited on A while B is reading its parts ── */
-  {
+  if (want('51m')) {
     const { cloud, devs, A, B } = await trio({ recsOnly: true });
     await on(B, () => { window.__putLog = []; const o = _s1RepSave; _s1RepSave = async (nb, puts, c) => { puts.forEach(([k, e]) => { if (k === 'articles~a-big') { let ok = true; try { JSON.parse(e.rec); } catch (x) { ok = false; } window.__putLog.push({ g: e.g, n: e.n, ok, v2: /v2-marker/.test(e.rec || '') }); } }); return o(nb, puts, c); }; });
     let hook = null;
@@ -645,7 +659,7 @@ try {
   }
 
   /* ── 51n: reads of recs refused → the blob still carries, quietly, and _s1Stat names the refusal ── */
-  {
+  if (want('51n')) {
     const cloud = makeCloud(); cloud.refuseRead = ['/recs', '/recparts'];
     const { devs, A, B, C } = await trio({}, cloud);
     await act(A, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.title = 'Edited on A (read refused)'; a.updatedAt = new Date().toISOString(); });
@@ -666,7 +680,7 @@ try {
   }
 
   /* ── 51q: a rec naming a generation whose pieces are gone — bounded retries, then given up on; later recs still arrive ── */
-  {
+  if (want('51q')) {
     const { cloud, devs, A, B, C } = await trio({ recsOnly: true });
     await settle(cloud, devs);
     for (const d of devs) await on(d, () => { _S1_BACKOFF = [400, 800, 1200]; window.__rs = 0; const o = _s1ReadStart; _s1ReadStart = async (c) => { window.__rs++; return o(c); }; });
@@ -690,7 +704,7 @@ try {
   }
 
   /* ── 51r: two devices save the same >700 KB note within seconds — the clean-up never deletes a generation the rec still names ── */
-  {
+  if (want('51r')) {
     const { cloud, devs, A, B, C } = await trio({ recsOnly: true });
     const BIG = NB + '/recs/articles~a-big';
     await act(A, () => {
@@ -730,7 +744,7 @@ try {
   }
 
   /* ── 51o: order — where a note created on another device lands ── */
-  {
+  if (want('51o')) {
     const { cloud, devs, A, B, C } = await trio();
     await act(A, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>warm up</p>'; a.updatedAt = new Date().toISOString(); });
     await settle(cloud, devs);
@@ -771,7 +785,7 @@ try {
   /* ── 51t: an OLD build (v04.89, from git) is active. v04.90 devices write the blob too; the old device receives
         their edits and they receive its edits. Then the unmarked write ages past 30 days and blob writes stop;
         when the old build writes again, they flip back. ── */
-  {
+  if (want('51t')) {
     let oldSrv = null, why = '';
     try {
       const dir = mkdtempSync(join(tmpdir(), 'siyagah-old-'));
@@ -832,7 +846,7 @@ try {
   }
 
   /* ── 51u: recs writes refused while the blob is off → the device falls back to the blob, one toast, two devices converge ── */
-  {
+  if (want('51u')) {
     const { cloud, devs, A, B } = await trio();
     await warmAll(cloud, devs);
     const planA = await on(A, () => _s1Plan());
@@ -857,7 +871,7 @@ try {
   }
 
   /* ── 51v: the reader is stuck on a transient error and an edit is waiting → within the bound the edit leaves through the blob, and the dot shows the problem ── */
-  {
+  if (want('51v')) {
     const { cloud, devs, A, B, C } = await trio();
     await warmAll(cloud, devs);
     const bound = await on(A, () => _S1_GATE_MAX_MS);
@@ -883,7 +897,7 @@ try {
   }
 
   /* ── 51w: an own echo causes no merge; a real remote change still merges ── */
-  {
+  if (want('51w')) {
     const { cloud, devs, A, B, C } = await trio();
     await warmAll(cloud, devs);
     await Promise.all(devs.map((d) => on(d, () => { window.__mrg = 0; const o = _mergeRemoteIn; _mergeRemoteIn = function (...a) { window.__mrg++; return o.apply(this, a); }; })));
@@ -897,7 +911,7 @@ try {
   }
 
   /* ── 51x: the dirty-set snapshot misses a change on purpose; the periodic full snapshot writes it ── */
-  {
+  if (want('51x')) {
     const { cloud, devs, A, B } = await trio();
     await warmAll(cloud, devs);
     const recTitle = () => { const r = cloud.store.get(NB + '/recs/articles~a2'); return r && r.j ? JSON.parse(r.j).title : null; };
@@ -915,6 +929,67 @@ try {
     check(before && missed && wrote, '51x a change the dirty set never saw is NOT written by the next push, and IS written by the periodic full snapshot within its interval (3 s here, 1 h by default)', JSON.stringify({ before, missedByPush: missed, writtenByFull: wrote, afterMs: Date.now() - t0, defaultMs: 3600000 }));
     check(devs.every((d) => d.errors.length === 0), '51x no page errors', devs.flatMap((d) => d.errors).slice(0, 3).join(' · '));
     for (const d of devs) await d.ctx.close();
+  }
+
+  /* ── --measure9k (v04.90, not a check): the owner's import size — 9,000 notes of ~5 KB (~45 MB) — and three
+        devices. (a) one edited note pushed: time, bytes, writes; (b) one edited note received by another device:
+        write → on screen; (c) the merge's main-thread time; (d) a fresh device's first full download from recs.
+        Each on the 1440 laptop and on a 390 phone with the CPU throttled ×4 (Emulation.setCPUThrottlingRate). ── */
+  if (process.argv.includes('--measure9k')) {
+    const N = 9000, out = {};
+    const M = (k, v) => { out[k] = v; console.log('M9K ' + k + ' ' + JSON.stringify(v)); };
+    const cloud = makeCloud();
+    const bytesSince = (from) => cloud.log.slice(from).filter((o) => o.t === 'set').reduce((a, o) => a + o.bytes, 0);
+    const setsSince = (from) => cloud.log.slice(from).filter((o) => o.t === 'set');
+    const L = await addDevice(browser, srv.base, cloud, 'laptop', { width: 1440, height: 900 }, false, seedDB());
+    await sleep(1500);
+    const tSeed = Date.now();
+    await on(L, (n) => {
+      const now = new Date().toISOString(), s = 'The quick brown fox jumps over the lazy dog. ';
+      for (let i = 0; i < n; i++) DB.articles.push({ id: 'n' + i, title: 'Note ' + i, content: '<p>' + s.repeat(110) + i + '</p>', folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general' });
+      persist(); flushPendingPush();
+    }, N);
+    const okSeed = await waitSeeded(cloud, L, 900000);
+    M('seed', { notes: N, ok: okSeed, ms: Date.now() - tSeed, docs: setsSince(0).length, MB: +(bytesSince(0) / 1048576).toFixed(1), commits: cloud.commits, blobDocs: blobWrites(cloud, 0).length });
+    /* (d) a fresh device's first full download from recs */
+    const fresh = async (name, vp, touch, throttle) => {
+      const t0 = Date.now();
+      const d = await addDevice(browser, srv.base, cloud, name, vp, touch, seedDB('2026-01-01T00:00:00.000Z'), { throttle });
+      let ok = false;
+      while (Date.now() - t0 < 900000) { if (await on(d, (n) => DB.articles.length >= n && !_pullInFlight && !_s1RepUnmerged && !_s1RecsMergeQueued, N).catch(() => false)) { ok = true; break; } await sleep(250); }
+      const ms = Date.now() - t0;
+      const eq = ok ? (await on(d, () => DB.articles.length)) : -1;
+      M('fresh_' + name, { ok, ms, readsDocs: d.qDelivered, articlesOnDevice: eq });
+      return d;
+    };
+    const F1 = await fresh('freshLaptop', { width: 1440, height: 900 }, false, 0);
+    const F2 = await fresh('freshPhoneX4', { width: 390, height: 844 }, true, 4);
+    await settle(cloud, [L, F1, F2], 300000);
+    for (const d of [L, F1, F2]) await on(d, () => { window.__mrg = []; const o1 = _mergeRemoteIn, o2 = _s1AssembleRep; window.__asm = []; _mergeRemoteIn = function (...a) { const t = performance.now(); try { return o1.apply(this, a); } finally { window.__mrg.push(performance.now() - t); } }; _s1AssembleRep = function () { const t = performance.now(); try { return o2.apply(this); } finally { window.__asm.push(performance.now() - t); } }; });
+    /* (a) + (b) + (c): an edit on each of the three devices in turn, received by the other two */
+    for (const [src, name] of [[L, 'laptop'], [F2, 'phoneX4']]) {
+      const others = [L, F1, F2].filter((x) => x !== src);
+      const mark = cloud.log.length, tEdit = Date.now();
+      const tag = 'Measured edit from ' + name + ' ' + tEdit;
+      const inPage = await on(src, (t) => { const t0 = performance.now(); const a = DB.articles.find((x) => x.id === 'n42'); a.title = t; a.updatedAt = new Date().toISOString(); persist(); const t1 = performance.now(); return { persistMs: t1 - t0 }; }, tag);
+      await on(src, () => { window.__pp = performance.now(); flushPendingPush(); });
+      let tCommit = null; const tw = Date.now();
+      while (Date.now() - tw < 120000) { const w = setsSince(mark); if (w.length) { tCommit = w[w.length - 1].ms; break; } await sleep(20); }
+      await quiet(cloud, src, 120000);
+      const pushDone = await on(src, () => performance.now() - window.__pp);
+      const w = setsSince(mark);
+      M('push_' + name, { editToCommitMs: tCommit ? tCommit - tEdit : null, pushMainThreadAndWaitMs: Math.round(pushDone), persistMs: Math.round(inPage.persistMs), writes: w.length, bytes: w.reduce((a, o) => a + o.bytes, 0), docs: w.map((o) => o.p.slice(NB.length + 1)), blobDocs: blobWrites(cloud, mark).length });
+      for (const d of others) {
+        const t0 = Date.now(); let got = false;
+        while (Date.now() - t0 < 120000) { if (await on(d, (t) => (DB.articles.find((x) => x.id === 'n42') || {}).title === t, tag).catch(() => false)) { got = true; break; } await sleep(20); }
+        const onScreenMs = got && tCommit ? Date.now() - tCommit : null;
+        await settle(cloud, [L, F1, F2], 120000);
+        const mrg = await on(d, () => ({ merges: window.__mrg.map((x) => Math.round(x)), assembleMs: window.__asm.map((x) => Math.round(x)) }));
+        M('receive_' + name + '_on_' + d.name, { got, commitToDbMs: onScreenMs, ...mrg });
+      }
+    }
+    console.log('M9K_DONE ' + JSON.stringify(out));
+    for (const d of [L, F1, F2]) await d.ctx.close();
   }
 
   /* ── --measure: seed time and "edit one note" for ~2,000 notes (not a check) ── */

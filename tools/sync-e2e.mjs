@@ -265,6 +265,8 @@ try {
   await sleep(1500);
   await on(laptop, () => pushToCloud());
   let c = await converge('boot');
+  await sleep(2500);
+  const blobMark = writeLog.length;   /* after the first (marked) blob write has landed */
   const dots0 = await Promise.all(all.map(dot));
   check(c.ok && dots0.every((t) => /Live/.test(t)), 'boot: all three devices signed in, Live, holding the same notebook',
     JSON.stringify({ dots: dots0, ms: c.ms, docs: store.size }));
@@ -392,6 +394,11 @@ try {
   });
   c = await converge('big', 60000);
   const chunks = (store.get('notebooks/nb-e2e') || {}).n;
+  /* v04.90 — the point of S1c, asked of the whole run so far: after the first
+     (marked) write nobody wrote the blob — main doc or chunks — again. */
+  const blobAfterBoot = writeLog.slice(blobMark).filter((w) => w.p === 'notebooks/nb-e2e' || w.p.includes('/chunks/'));
+  check(blobAfterBoot.length === 0 && (store.get('notebooks/nb-e2e') || {}).s1c === '04.90',
+    'S1c: from boot to here (steps 1–9, a 9 MB note included) no device wrote the blob again; the main doc stays marked', JSON.stringify({ blobWrites: blobAfterBoot.length, s1c: (store.get('notebooks/nb-e2e') || {}).s1c }));
   check(c.ok && await has(phone, 'a-big', 'END-OF-BIG') && await has(tablet, 'a-big', 'END-OF-BIG'),
     'laptop adds a 9 MB note (over the 10 MiB single-write limit): it reaches phone + tablet whole', `${chunks} chunks · ${c.ms}ms`);
 
@@ -400,7 +407,11 @@ try {
          tab killed). Up to v04.81 that left the cloud copy half new, half
          old, and every device that opened said "NOT syncing", for good. */
   phone.dieAfter = 1;
-  await on(phone, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>phone-cut-off</p>'; persist(); flushPendingPush(); });
+  /* v04.90 — updated in place: with the blob off, the phone's push is its recs
+     write, and a one-line edit is a single commit that lands before the cut. So
+     the edit also touches the 9 MB note, whose rec goes up as pieces in several
+     commits — that is the upload a phone can be cut off in the middle of. */
+  await on(phone, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>phone-cut-off</p>'; const b = DB.articles.find((x) => x.id === 'a-big'); b.content += '<p>phone-touched-big</p>'; b.updatedAt = new Date().toISOString(); persist(); flushPendingPush(); });
   await sleep(3000);
   devices.splice(devices.indexOf(phone), 1);
   await Promise.all([tablet, laptop].map(reopen));
