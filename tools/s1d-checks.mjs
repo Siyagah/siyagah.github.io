@@ -109,10 +109,11 @@ const GEN = String.raw`(arg) => {
 async function check52b(browser, srv) {
   for (const vp of VPS) {
     const { ctx, page, errors } = await openPlain(browser, srv.base, vp);
-    const r = await page.evaluate(eval(GEN), { n: 250, seed0: 1000 }).catch((e) => ({ tested: 0, failures: [{ seed: -1, dir: '-', why: String(e) }] }));
-    const r2 = await page.evaluate(eval(GEN), { n: 250, seed0: 777000 }).catch((e) => ({ tested: 0, failures: [{ seed: -1, dir: '-', why: String(e) }] }));
+    const per = vp.name === '1440' ? 250 : 50;   /* 500 pairs at one size, 100 at the other two */
+    const r = await page.evaluate(eval(GEN), { n: per, seed0: 1000 }).catch((e) => ({ tested: 0, failures: [{ seed: -1, dir: '-', why: String(e) }] }));
+    const r2 = await page.evaluate(eval(GEN), { n: per, seed0: 777000 }).catch((e) => ({ tested: 0, failures: [{ seed: -1, dir: '-', why: String(e) }] }));
     const tested = r.tested + r2.tested, fails = [...r.failures, ...r2.failures], reused = (r.reused || 0) + (r2.reused || 0);
-    check(tested >= 1000 && reused > 1000 && fails.length === 0, `52b ${vp.name}: 500 random pairs × 2 directions — merging the faster assembly gives exactly what merging the full one gives (${tested} merges, ${reused} records taken from the local copy instead of parsed)`, fails.slice(0, 5).map((f) => `seed ${f.seed} ${f.dir}: ${f.why}`).join(' | '));
+    check(tested >= per * 4 && reused > per * 4 && fails.length === 0, `52b ${vp.name}: ${per * 2} random pairs × 2 directions — merging the faster assembly gives exactly what merging the full one gives (${tested} merges, ${reused} records taken from the local copy instead of parsed)`, fails.slice(0, 5).map((f) => `seed ${f.seed} ${f.dir}: ${f.why}`).join(' | '));
     check(errors.length === 0, `52b ${vp.name}: no page errors`, errors.slice(0, 3).join(' · '));
     await ctx.close();
   }

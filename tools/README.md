@@ -648,3 +648,23 @@ Traps:
 - **The 9 MB note overflows localStorage (5 MB).** `_save()` logs that as a
   console error by design, because IndexedDB is authoritative (v04.50). The
   page-error check filters exactly that message, nothing broader.
+
+
+## `sync-s1d.mjs` (v04.91)
+
+The local hot path at 9,000 notes. Two modes:
+
+- `node tools/sync-s1d.mjs --checks` — checks 52b–52e (merge equivalence,
+  undo/redo exactness and byte budget, kill-inside-a-save, localStorage full).
+  Must finish in about 12 minutes. App-check block `52-s1d-local-hot-path`
+  runs this and turns each printed line into one check. `--only=52d,52e` runs
+  a subset.
+- `node tools/sync-s1d.mjs --profile` — **on demand, not in app-check.** Seeds
+  9,000 notes and three devices on the fake Firestore (`s1-fake.mjs`) and
+  prints main-thread time for typing one character, receiving one edit, one
+  undo, and the heap after 30 edits, on a laptop and on a phone throttled ×4
+  (52a, with pass/fail targets). Extras: `--base=<git rev>` measures an older
+  build, `--cpuprofile`, `--stacks`, `--json`, `--notes=N`.
+
+Trap: main-thread time is the CDP `TaskDuration` delta, so the ×4 throttle is
+in it; per-step timings wrap the app's own globals and are inclusive.
