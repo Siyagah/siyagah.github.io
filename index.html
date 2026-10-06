@@ -22821,10 +22821,17 @@ async function _s1RepSave(nb, puts, cursor){
    (o, key); a rec with no `o` (v04.88) sorts after those with one, by key.
    `gone` recs are left out; the head supplies every non-array key and its
    `odd` elements, which go at the end of their array. null without a head. */
-function _s1AssembleRep(){
-  if(!_s1Rep) return null;
+function _s1AssembleRep(){ return _s1Rep?_s1AssembleMap(_s1Rep.map):null; }
+/* What a device would hold in its replica if the cloud held exactly `db`'s
+   per-record copy: used by tools/sync-audit.mjs (51i) to prove that merging
+   the assembled replica equals merging the blob. */
+function _s1RecsAsDB(db){
+  const m=new Map(); _s1Snap(db).forEach((r,k)=>m.set(k,{c:r.c, o:r.o, rec:r.json}));
+  return _s1AssembleMap(m);
+}
+function _s1AssembleMap(map){
   let head=null; const by={};
-  _s1Rep.map.forEach((e,key)=>{
+  map.forEach((e,key)=>{
     if(e.gone||e.rec==null) return;
     if(key==='_head~0'){ head=e.rec; return; }
     (by[e.c]=by[e.c]||[]).push([e.o==null?Infinity:e.o, key, e.rec]);
