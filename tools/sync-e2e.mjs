@@ -22,6 +22,7 @@
 
    Exit code: 0 only if every check passes.  Run: node tools/sync-e2e.mjs */
 import { playwright, serve, seedDB } from './harness.mjs';
+import { assembleRecs, canonDB, diffDB } from './s1-assemble.mjs';
 
 const FAKE_SDK = String.raw`(function(){
   if (window.firebase && window.firebase.__fake) return;
@@ -405,6 +406,36 @@ try {
   const idle0 = commitCount;
   await sleep(20000);
   check(commitCount - idle0 === 0, 'converged and idle for 20s: no device writes to the cloud (no ping-pong)', `${commitCount - idle0} writes`);
+
+  /* 10b. v04.88 (S1a) — the per-record copy beside the blob describes the
+          notebook: assembled from recs (+ parts), it equals each converged
+          device's DB, order-insensitive by id per array. Every device writes
+          its own shadow, so wait for all of them to go quiet first. */
+  {
+    const t0 = Date.now(); let lastN = -1, since = Date.now();
+    while (Date.now() - t0 < 30000) {
+      const busy = (await Promise.all(all.map((d) => on(d, () => !!_s1Busy || !!_pushInFlight).catch(() => true)))).some(Boolean);
+      if (busy || store.size !== lastN) { lastN = store.size; since = Date.now(); }
+      else if (Date.now() - since > 2000) break;
+      await sleep(250);
+    }
+    const { db: asm, missingParts } = assembleRecs(store, 'notebooks/nb-e2e');
+    const devs = [];
+    for (const d of all) devs.push(await on(d, () => JSON.parse(JSON.stringify(DB))));
+    /* A few top-level keys are per-device by nature (e.g. _folderNoteRecoveryV1:
+       mergeDB keeps each device's own), so three converged devices do not hold
+       them identically and the recs, written by whichever device pushed last,
+       can match only one. They are left out of the comparison and named. */
+    const keys = [...new Set(devs.flatMap((x) => Object.keys(x)))];
+    const own = keys.filter((k) => new Set(devs.map((x) => JSON.stringify(x[k]))).size > 1 && !['articles', 'folders', 'sections', 'trash', 'tombstones', 'theme'].includes(k));
+    const strip = (x) => { const y = { ...x }; own.forEach((k) => delete y[k]); return y; };
+    const per = [];
+    devs.forEach((dev, i) => {
+      const same = !!asm && missingParts === 0 && canonDB(strip(asm)) === canonDB(strip(dev));
+      per.push(same ? all[i].name + ':equal' : all[i].name + ':' + (asm ? diffDB(strip(asm), strip(dev)) : 'no head'));
+    });
+    check(per.every((x) => /:equal$/.test(x)), 'S1a: the per-record cloud copy (recs) assembles to each converged device\'s notebook', JSON.stringify({ per, perDeviceKeysIgnored: own }));
+  }
 
   /* 11. Nothing alarming, nothing broken, on any device. */
   const endDots = await Promise.all(all.map(dot));

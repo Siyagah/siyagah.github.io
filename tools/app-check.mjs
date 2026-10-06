@@ -9988,6 +9988,24 @@ await r.block('38-sync-three-devices-end-to-end', async () => {
   r.check(out.status === 0, 'the three-device sync check exits cleanly', `exit ${out.status}`);
 });
 
+/* 51 — v04.88, S1a: the per-record cloud copy (recs), written beside the blob.
+   tools/sync-s1.mjs runs the real app against a fake Firestore at 390/820/1440
+   and checks 51a–51g: assembly equals the DB, one edit = one rec, a reload
+   writes nothing, parts for a >1 MB note, delete + empty Trash, a refusal
+   that nobody notices, and a seed cut off half-way that resumes. Each line the
+   script prints becomes one check here. */
+await r.block('51-s1a-per-record-cloud-copy', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./sync-s1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 600000 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the S1a check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'S1a: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the S1a check exits cleanly', `exit ${out.status}`);
+});
+
 /* 39 — v04.75: the NTI Types panel's title bar carries 🔍 Search, ＋ Category
    and ＋ NTI (owner's ask, laptop screenshot of the panel opened from a
    pop-up's Type chip). Every step is a REAL tap/click, from the Type chip in
