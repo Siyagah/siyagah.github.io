@@ -8135,3 +8135,7 @@ uses are now `var(--mw-acc,var(--border2))`. `--only 6m-1,50` 32/32. Full
 - **Note cards inside a type** are the app's standard `artCard`, shared
   with every list; restyling them would change every list in the app, so
   they are left alone.
+
+## v04.88 — S1a: per-note cloud copy, written alongside (stub)
+
+Work in progress. See issue #124.
