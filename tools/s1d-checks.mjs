@@ -7,7 +7,9 @@
 
    No cloud here: these run the real app on its own. */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ROOT } from './harness.mjs';
 import { check, sleep } from './s1-fake.mjs';
 
@@ -232,17 +234,38 @@ async function check52c(browser, srv) {
 const SIG52 = `() => { const h = (s) => { let a = 0x811c9dc5; for (let i = 0; i < s.length; i++) a = Math.imul(a ^ s.charCodeAt(i), 0x01000193); return (a >>> 0).toString(36); };
   return { n: DB.articles.length, trash: DB.trash.length, sig: h(DB.articles.map((a) => a.id + '@' + a.updatedAt + '@' + a.title + '@' + a.content.length).join('|') + '#' + DB.trash.map((t) => t.id).join(',') + '#' + DB.folders.map((f) => f.id).join(',')) }; }`;
 
+/* Each trial runs in its OWN browser process on one profile directory, so IndexedDB survives a kill. CDP Page.crash cannot be used: in this
+   Chromium it hangs ~2 min and then takes the whole browser down. SIGKILL on every process of the profile is a real dead tab: no unload, no flush. */
+const withTimeout = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error(what + ' took more than ' + ms / 1000 + ' s')), ms); })]).finally(() => clearTimeout(t)); };
+async function openPersistent(browser, base, vp, dir) {
+  return withTimeout((async () => {
+    const ctx = await browser.browserType().launchPersistentContext(dir, { args: ['--js-flags=--max-old-space-size=8192'], ...(vp.touch ? { viewport: { width: vp.w, height: vp.h }, hasTouch: true, isMobile: true } : { viewport: { width: vp.w, height: vp.h } }) });
+    for (const p of BLOCK) await ctx.route(p, (r) => r.abort());
+    const page = ctx.pages()[0] || await ctx.newPage(), errors = [];
+    page.on('pageerror', (e) => errors.push('pageerror: ' + e));
+    page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) errors.push('console: ' + m.text()); });
+    page.on('dialog', (x) => x.accept().catch(() => {}));
+    await page.goto(base + '/', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => window.__appBooted === true && !!document.getElementById('tree'));
+    await page.waitForTimeout(300);
+    await page.evaluate(`window.__sig52=${SIG52};`);
+    return { ctx, page, errors };
+  })(), 60000, 'launch + boot');
+}
+const killProfile = (dir) => { try { execFileSync('pkill', ['-9', '-f', '--', 'user-data-dir=' + dir]); } catch (e) { /* none left */ } };
+const closeQuiet = (ctx) => withTimeout(ctx.close(), 15000, 'close').catch(() => {});
+
 async function check52d(browser, srv) {
   for (const vp of [VPS[2], VPS[0]]) {
-    const ctx = await browser.newContext(vp.touch ? { viewport: { width: vp.w, height: vp.h }, hasTouch: true, isMobile: true } : { viewport: { width: vp.w, height: vp.h } });
-    for (const p of BLOCK) await ctx.route(p, (r) => r.abort());
-    let { page, errors } = await openPlain(browser, srv.base, vp, ctx);
-    await seedInPage(page, 2000); await idle(page);
-    let state = await page.evaluate(() => window.__sig52());
+    const dir = mkdtempSync(join(tmpdir(), 's1d-52d-'));
     const bad = [], seen = { before: 0, after: 0 }, errsAll = [];
+    let ctx, page, errors, state, failed = null, last = null;
+    try {
+    ({ ctx, page, errors } = await openPersistent(browser, srv.base, vp, dir));
+    await seedInPage(page, 2000); await idle(page);
+    state = await page.evaluate(() => window.__sig52());
     for (let i = 0; i < 20; i++) {
       /* every other trial the full copy is also written straight after the save, so a kill can land inside that one too */
-      const cdp = await ctx.newCDPSession(page);
       const r = await page.evaluate(({ i, ck }) => {
         _LJ_CKPT_MS = ck;
         const n0 = DB.articles.length;
@@ -254,10 +277,10 @@ async function check52d(browser, srv) {
         return window.__sig52();
       }, { i, ck: i % 2 ? 1 : 30000 });
       await sleep(Math.floor(Math.random() * 30));   /* anywhere from "before the transaction began" to "after it ended" */
-      await cdp.send('Page.crash').catch(() => {});   /* a dead tab, not a closed one: no unload handler, no chance to finish */
-      await sleep(20);
-      await page.close({ runBeforeUnload: false }).catch(() => {});
-      ({ page, errors } = await openPlain(browser, srv.base, vp, ctx));
+      killProfile(dir);   /* SIGKILL: a dead browser, not a closed one — no unload handler, no chance to finish */
+      await sleep(300);
+      closeQuiet(ctx);
+      ({ ctx, page, errors } = await openPersistent(browser, srv.base, vp, dir));
       errsAll.push(...errors.filter((e) => /local journal/.test(e)));
       const got = await page.evaluate(() => window.__sig52());
       const isBefore = got.sig === state.sig, isAfter = got.sig === r.sig;
@@ -266,6 +289,8 @@ async function check52d(browser, srv) {
       if (got.n < Math.min(state.n, r.n)) bad.push(`trial ${i}: FEWER notes (${got.n} < ${Math.min(state.n, r.n)})`);
       state = got;
     }
+    } catch (e) { failed = String(e && e.message || e); }
+    if (failed) { check(false, `52d ${vp.name}: the kill trials ran to the end (${seen.before} before · ${seen.after} after so far)`, failed); killProfile(dir); rmSync(dir, { recursive: true, force: true }); continue; }
     check(bad.length === 0, `52d ${vp.name}: 20 pages killed at random points inside a save reopen as the notebook before the save or after it, never fewer (${seen.before} before · ${seen.after} after)`, bad.slice(0, 4).join(' | '));
     check(errsAll.length === 0, `52d ${vp.name}: no reopen found the journal and the full copy out of step`, errsAll.slice(0, 3).join(' · '));
     /* a write that throws half-way (the 3rd record of a save): nothing of that save may be kept, the alarm must ring, and the next save repairs everything */
@@ -279,18 +304,21 @@ async function check52d(browser, srv) {
       });
       await idle(page); await sleep(300);
       const alarm = await page.evaluate(() => _lsFail);
-      const re = await openPlain(browser, srv.base, vp, ctx);
+      await closeQuiet(ctx);
+      const re = await openPersistent(browser, srv.base, vp, dir);
       const after1 = await re.page.evaluate(() => window.__sig52());
       check(alarm === true && after1.sig === before.sig, `52d ${vp.name}: a save whose write throws half-way keeps NOTHING of itself (the notebook reopens as it was), and the alarm rings`, JSON.stringify({ alarm, reopenedAsBefore: after1.sig === before.sig, n: after1.n, was: before.n }));
       await re.page.evaluate(() => { for (let k = 0; k < 5; k++) { const a = DB.articles[k * 11]; a.title += ' (again)'; a.updatedAt = new Date(Date.now() + 199000 + k).toISOString(); } persist(); });
       await idle(re.page); await sleep(300);
       const want = await re.page.evaluate(() => window.__sig52());
       const alarm2 = await re.page.evaluate(() => _lsFail);
-      const re2 = await openPlain(browser, srv.base, vp, ctx);
+      await closeQuiet(re.ctx);
+      const re2 = await openPersistent(browser, srv.base, vp, dir);
+      last = re2.ctx;
       const after2 = await re2.page.evaluate(() => window.__sig52());
       check(alarm2 === false && after2.sig === want.sig, `52d ${vp.name}: the next save puts everything right and the alarm clears (reopened exactly as saved)`, JSON.stringify({ alarm2, same: after2.sig === want.sig }));
     }
-    await ctx.close();
+    await closeQuiet(last || ctx); killProfile(dir); rmSync(dir, { recursive: true, force: true });
   }
 }
 
