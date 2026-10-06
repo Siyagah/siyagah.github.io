@@ -22009,7 +22009,9 @@ async function syncNow(){
     const ver=_newPushVer();
     _myLastPushVer=ver;
     const json=JSON.stringify(DB);
+    let s1=null; try{ if(_s1Eligible()) s1=_s1Snap(); }catch(e){ _s1Fail(e); }   /* v04.88 — S1a */
     await _writeCloudDB(nb, ver, _b64enc(json));
+    if(s1) _s1Run(cfg.notebookId, s1);
     _lastPushedSig=_syncSig(json); _pushFailures=0;
     _lastSyncTime=now; localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);
     setSyncStatus("live");
@@ -22576,6 +22578,151 @@ async function _writeCloudDB(nb, now, b64){
   }catch(e){ console.warn('Sync: old chunk clean-up skipped:',e); }
 }
 
+/* ── v04.88 · S1a — per-record cloud copy, written ALONGSIDE the blob ─────
+   Step one of three (issue #124). After a blob push succeeds, every record
+   that changed since THIS device last wrote it is also written as its own
+   Firestore document under notebooks/{nb}/recs. NOTHING reads recs yet: the
+   blob stays the only thing any device reads or merges, and mergeDB(),
+   _readCloudDB(), _pullRemote() and _writeCloudDB() are untouched.
+
+   Layout: recs/<coll>~<id> holds one record (`j` = its JSON, or `n`+`g` when
+   over 700,000 bytes: base64 pieces in recparts/<key>~<g>~<i>, written
+   BEFORE the rec doc that names them — the v04.82 rule). recs/_head~0 is DB
+   minus the 11 id-keyed arrays (every other key, no allow-list), plus any
+   array element that has no usable id, so nothing is dropped. `gone:true`
+   marks a record this device wrote that has since left its array.
+
+   Which records: a per-device map key→sig, kept in IndexedDB (never
+   localStorage — it is full) and updated only AFTER a batch commits, so a
+   cut-off seed resumes instead of starting again. No IndexedDB = no shadow
+   on this device (a memory-only map would re-seed on every page load).
+
+   Failure is invisible by design: a console.warn and window._s1Stat, never a
+   toast, never the sync dot, never _pushFailures. permission-denied stops
+   the shadow for the session. */
+const _S1_COLLS=['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','trash','tombstones'];
+const _S1_INLINE_MAX=700000, _S1_PART=900000, _S1_OPS=400, _S1_BYTES=8*1024*1024, _S1_STALE_MS=90000;
+window._s1Stat={enabled:true, reason:null, seeded:false, lastRun:0, lastWritten:0, lastErr:null};
+let _s1Busy=0, _s1Pending=null, _s1Denied=false, _s1Dead=false, _s1Map=null, _s1MapNb=null;
+function _s1Key(c,id){ return c+'~'+encodeURIComponent(String(id)).replace(/\./g,'%2E'); }
+function _s1Eligible(){ return _dbLoaded && !_s1Denied && !_s1Dead; }
+function _s1Disable(why){ _s1Dead=true; _s1Stat.enabled=false; _s1Stat.reason=why; }
+function _s1Fail(e){
+  const code=(e&&e.code)||'error';
+  console.warn('S1 shadow write skipped:',e);
+  _s1Stat.lastErr={code:code, at:Date.now(), message:String((e&&e.message)||e).slice(0,200)};
+  if(code==='permission-denied'){ _s1Denied=true; _s1Stat.enabled=false; _s1Stat.reason='permission-denied'; }
+  if(e&&e.s1disable) _s1Disable('map-not-persistable');
+}
+/* The record list, built from DB synchronously (same tick as the blob's json). */
+function _s1Snap(){
+  const out=new Map(), head={};
+  Object.keys(DB).forEach(k=>{ if(_S1_COLLS.indexOf(k)<0) head[k]=DB[k]; });
+  _S1_COLLS.forEach(c=>{
+    const arr=DB[c];
+    if(!Array.isArray(arr)){ if(c in DB) head[c]=arr; return; }
+    const odd=[];   /* no id, or an id already taken: kept in the head */
+    arr.forEach(x=>{
+      if(!x||typeof x!=='object'||x.id==null){ odd.push(x); return; }
+      const key=_s1Key(c,x.id);
+      if(out.has(key)){ odd.push(x); return; }
+      out.set(key,{c:c, id:x.id, json:JSON.stringify(x)});
+    });
+    head[c]=odd;
+  });
+  out.set('_head~0',{c:'_head', id:'0', json:JSON.stringify(head)});
+  out.forEach(r=>{ r.sig=_syncSig(r.json); });
+  return out;
+}
+/* Detached and single-flight: never awaited by a push. A snapshot that
+   arrives while one is running replaces any waiting one and runs after it. */
+async function _s1Run(nbId, snap){
+  if(_s1Busy && Date.now()-_s1Busy<_S1_STALE_MS){ _s1Pending=[nbId,snap]; return; }
+  const tok=_s1Busy=Date.now();
+  try{ await _s1Exec(nbId, snap); }
+  catch(e){ try{ _s1Fail(e); }catch(x){} }
+  finally{
+    if(_s1Busy===tok){
+      _s1Busy=0;
+      const p=_s1Pending; _s1Pending=null;
+      if(p&&_s1Eligible()) _s1Run(p[0],p[1]);
+    }
+  }
+}
+async function _s1Exec(nbId, snap){
+  if(!_s1Eligible()) return;
+  const mk='s1:'+nbId;
+  if(_s1MapNb!==nbId){
+    if(!(await _idbOpen())){ _s1Disable('no-indexeddb'); return; }
+    let m0=await _idbGet(mk);
+    if(!m0||typeof m0!=='object'||!m0.s||!m0.p){
+      m0={v:1,s:{},p:{}};
+      try{ await _idbPut(mk,m0); }catch(e){ _s1Disable('map-not-persistable'); return; }
+    }
+    _s1Map=m0; _s1MapNb=nbId;
+  }
+  const m=_s1Map;
+  const nb=_syncFsDb.collection('notebooks').doc(nbId);
+  const recsC=nb.collection('recs'), partsC=nb.collection('recparts');
+  const ts=()=>firebase.firestore.FieldValue.serverTimestamp();
+  const utf8=s=>new TextEncoder().encode(s).length;
+  const work=[];
+  snap.forEach((r,key)=>{ if(m.s[key]!==r.sig) work.push([key,r]); });
+  Object.keys(m.s).forEach(key=>{ if(!snap.has(key)&&m.s[key]!=='gone') work.push([key,null]); });
+  let batch=null, nOps=0, nBytes=0, done=[], written=0;
+  const commit=async()=>{
+    if(!nOps) return;
+    const b=batch, d=done; batch=null; nOps=0; nBytes=0; done=[];
+    await b.commit();
+    const dels=[];
+    d.forEach(e=>{
+      m.s[e.key]=e.sig; written++;
+      const old=m.p[e.key];
+      if(old) for(let i=0;i<old[1];i++) dels.push(partsC.doc(e.key+'~'+old[0]+'~'+i));
+      if(e.parts) m.p[e.key]=e.parts; else delete m.p[e.key];
+    });
+    try{ await _idbPut(mk,m); }catch(err){ err.s1disable=true; throw err; }
+    /* The previous generation's pieces go only after the rec doc that
+       replaced them has committed. Best effort. */
+    try{
+      for(let i=0;i<dels.length;i+=_S1_OPS){
+        const b2=_syncFsDb.batch();
+        dels.slice(i,i+_S1_OPS).forEach(r=>b2.delete(r));
+        await b2.commit();
+      }
+    }catch(err){ console.warn('S1: old piece clean-up skipped:',err); }
+  };
+  const add=async(ref,data,size,entry)=>{
+    if(nOps>0&&(nOps+1>_S1_OPS||nBytes+size>_S1_BYTES)) await commit();
+    if(!batch) batch=_syncFsDb.batch();
+    batch.set(ref,data); nOps++; nBytes+=size;
+    if(entry) done.push(entry);
+  };
+  for(const [key,r] of work){
+    const ref=recsC.doc(key);
+    if(!r){
+      const i=key.indexOf('~');
+      await add(ref,{c:key.slice(0,i), id:decodeURIComponent(key.slice(i+1)), gone:true, sig:'gone', ver:_newPushVer(), at:ts()},300,{key:key,sig:'gone'});
+      continue;
+    }
+    const doc={c:r.c, id:r.id, sig:r.sig, ver:_newPushVer(), at:ts()};
+    const sz=utf8(r.json);
+    if(sz<=_S1_INLINE_MAX){
+      doc.j=r.json;
+      await add(ref,doc,sz+300,{key:key,sig:r.sig});
+    } else {
+      const b64=_b64enc(r.json), g=_syncNewGen(), n=Math.ceil(b64.length/_S1_PART);
+      for(let i=0;i<n;i++) await add(partsC.doc(key+'~'+g+'~'+i),{p:b64.slice(i*_S1_PART,(i+1)*_S1_PART), ver:doc.ver},_S1_PART+200,null);
+      await commit();   /* the pieces land BEFORE the rec doc that names them */
+      doc.n=n; doc.g=g;
+      await add(ref,doc,300,{key:key,sig:r.sig,parts:[g,n]});
+    }
+  }
+  await commit();
+  let seeded=true; snap.forEach((r,key)=>{ if(m.s[key]!==r.sig) seeded=false; });
+  _s1Stat.seeded=seeded; _s1Stat.lastRun=Date.now(); _s1Stat.lastWritten=written; _s1Stat.lastErr=null;
+}
+
 /* ── Push scheduling ──────────────────────────────────────────────────────
    v03.92.01 — the old scheduler was a plain 3s debounce: every change called
    clearTimeout() and restarted the full 3s. While someone is actually
@@ -22621,12 +22768,15 @@ async function _doPush(){
        save has seen yet, so persist it here too — reusing the string we
        just built rather than serialising the notebook a second time. */
     try{ _save(json); }catch(e){}
+    /* v04.88 — S1a: the per-record list, from the same DB as json. */
+    let s1=null; try{ if(_s1Eligible()) s1=_s1Snap(); }catch(e){ _s1Fail(e); }
     setSyncStatus('busy');
     const nb=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
     const now=Date.now();
     const ver=_newPushVer();   /* v04.73 — unique per push; see _newPushVer() */
     _myLastPushVer=ver;
     await _writeCloudDB(nb, ver, _b64enc(json));
+    if(s1) _s1Run(cfg.notebookId, s1);   /* detached: never awaited, never fails the push */
     _lastPushedSig=sig;
     _pushFailures=0;
     _lastSyncTime=now;
