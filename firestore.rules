@@ -1,0 +1,38 @@
+rules_version = '2';
+
+// Siyagah: Firestore privacy rules.
+//
+// Only ONE Google account may read or write the notebook: the owner's.
+// Everything else in the database is refused.
+//
+// BEFORE PUBLISHING: replace PASTE-YOUR-USER-UID-HERE below with your own
+// "User UID". Find it in the Firebase console → Authentication → Users:
+// the long code in the "User UID" column next to your Google email.
+// Keep the two single quotes around it.
+//
+// Why one fixed account and not "the account whose ID matches the
+// notebook's name": the notebook's name in the cloud is not always the
+// Google account ID (it can be a random id made when Cloud Sync was first
+// set up), so that rule could lock the owner out of their own notes.
+//
+// Covers the notebook itself and everything under it: the single-copy
+// chunks, the per-note copy (recs, recparts), and any future picture
+// store under the same notebook.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner() {
+      return request.auth != null
+          && request.auth.uid == 'PASTE-YOUR-USER-UID-HERE';
+    }
+
+    match /notebooks/{notebookId} {
+      allow read, write: if isOwner();
+
+      match /{document=**} {
+        allow read, write: if isOwner();
+      }
+    }
+  }
+}
