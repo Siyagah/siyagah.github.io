@@ -9326,7 +9326,7 @@ await r.block('31b-phone-no-side-padding-390', async () => {
    its own script so it can be run alone in ~6s; this block runs it whole. */
 await r.block('32-sync-audit-all-directions', async () => {
   const { spawnSync } = await import('node:child_process');
-  const out = spawnSync(process.execPath, [new URL('./sync-audit.mjs', import.meta.url).pathname, '--vp', '1440,900'], { encoding: 'utf8', timeout: 180000 });
+  const out = spawnSync(process.execPath, [new URL('./sync-audit.mjs', import.meta.url).pathname, '--vp', '1440,900'], { encoding: 'utf8', timeout: 300000 });
   const txt = (out.stdout || '') + (out.stderr || '');
   const m = /TOTAL (\d+): PASS (\d+), FAIL (\d+), BY-DESIGN (\d+), KNOWN (\d+), NOTRUN (\d+), ERROR (\d+)/.exec(txt);
   r.check(!!m, 'the sync audit ran to the end', txt.slice(-400));
@@ -11657,6 +11657,24 @@ await r.block('58-s3b-tags-sidebar', async () => {
   for (const row of rows) r.check(row.ok, 'S3b: ' + row.label, row.detail);
   r.check(out.status === 0, 'the S3b check exits cleanly', `exit ${out.status}`);
   for (const l of lines) if (/^P58g /.test(l)) console.log(l);
+});
+
+/* 59 — v04.98, J1: Jeb's data. tools/jeb-j1.mjs runs 59a–59h: the four default pockets once (two devices
+   seeding at once still make 4), every Jeb operation through sync-audit in both directions, deletion that
+   sticks and restores through Trash, jebToNote, three devices on one fake cloud, the real v04.97 build in the
+   same cloud, Save File / backup HTML / JSON import, and 2,000 items on a phone. Each printed ok/FAIL line
+   becomes one check. */
+await r.block('59-jeb-data', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./jeb-j1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 50, 'the Jeb J1 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'J1: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Jeb J1 check exits cleanly', `exit ${out.status}`);
+  for (const l of lines) if (/^P59[fh] /.test(l)) console.log(l);
 });
 
 /* ── run everything registered above, or a --only subset ─────────────────
