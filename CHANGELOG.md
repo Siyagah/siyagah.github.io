@@ -8572,4 +8572,74 @@ app creates a picture reference yet, so for the owner nothing changes.**
 
 ## v04.93 — S2b: the cloud copy of pictures, and the build stamp
 
-Issue #134. (Stub — written in full at the end of the round.)
+Issue #134. v04.92 taught every device to show a picture reference from its own
+store. This round gives pictures a **cloud copy**: a device that holds a picture
+uploads it once; a device that lacks one fetches it when a note needs it. It also
+adds a **build stamp** so the next round (S2c, which starts creating references)
+can tell whether a device too old to fetch pictures is still in use. **Nothing in
+the app creates a reference yet, so for the owner nothing changes.**
+
+**What changed**
+- **Cloud layout** — `notebooks/{nb}/pics/{sha}` is the meta doc `{n, t, p, at, b}`;
+  `notebooks/{nb}/picparts/{sha}~{i}` holds `{d: Bytes}`, each part at most 900,000
+  bytes of picture. Firestore **Bytes** (`firebase.firestore.Blob`), not base64: a
+  third less of the free gigabyte. Content-addressed and immutable: no merge, no
+  tombstone, no deletion. Covered by the existing `notebooks/{nb}/**` rule.
+- **Upload** (`_picUpload`, `_picUploadPending`) — every part first, the meta doc
+  LAST (the pointer). A sha whose meta already exists on the server writes nothing.
+  `up:1` on the record in `siyagah-pics-v1` remembers it (never localStorage). It
+  starts at the top of `_pushWrite()`, **detached**: a picture never fails or delays
+  a text push. Concurrency 2; a failure backs off 30 s, 2 min, 10 min, then every
+  push. A refusal is named once in the Sync diagnostics ("Pictures" row), no
+  "NOT syncing" alarm. With nothing to upload it returns before any await or read
+  (0.04 µs per push).
+- **Fetch** (`_picFetch`, `_picWant`, from `_picHydrateAll`) — meta, then its parts,
+  concatenated and **checked against the sha** before anything is stored or shown;
+  then `_picPut` with `up:1` and every `<img data-pic>` in the page is painted in
+  place. Meta missing, a part missing, a wrong size or a wrong hash: nothing stored,
+  placeholder stays. Retry 30 s, 2 min, 10 min (memory only, per sha), then only when
+  the note is shown again (not within 10 s of the last try). Concurrency 3, one sha
+  never twice at once. No fetch while sync is off or signed out; a placeholder shown
+  before sync is up is fetched once the reader starts (`_picCloudReady`).
+  `a.content` is never touched.
+- **Build stamp** — every rec `_s1Write` writes carries `b: '<app version>'`,
+  including `_head~0`, gone recs and parts' parent recs. The reader keeps the latest
+  server `at` of a rec with no `b` or a `b` below `04.93` in the replica's `meta`
+  store (`older|<nb>`, additive, survives a reload). `_s2OlderActive()` (on
+  `window`, and in the diagnostics line) is true when `_s1OlderActive()` is, or such
+  a rec arrived in the last 30 days (`_s1Now()`). Nothing uses it yet; S2c will gate
+  on it. It is true after a reload until the main doc has been seen (the same
+  conservative reading `_s1OlderActive()` already has).
+- **Harness** — the fake Firestore holds Bytes, `set()` and a read log (`s1-fake.mjs`
+  and its copy in `sync-s1.mjs`, kept in step); new `tools/sync-s2.mjs`.
+
+**Checks:** block 54 (54a–54h, `tools/sync-s2.mjs`). `--only 54` **51/51**;
+`--only 53` **92/92**; `ship-check` 13/13; `--only 51` **111/111** (run once, because `_s1Write` changed). Block 54's first
+`--only 54` run read 48/51: `54b 390 read view` and `54b 390 Pane 3 editor`
+("both fetched pictures are painted inside the pane") failed with `inside:false` on
+both images (width 120, painted, no overflow) — the phone's pane was still sliding in
+when the box was measured; the same check had passed in a standalone run. The check
+now reads the geometry until two readings agree; `--only 54` has passed since
+(51/51) and `54b` alone 18/18. The third failure in that run was only the block's
+"exits cleanly" line.
+
+**Measured (fake Firestore, so operation counts, not network time):** 20 pictures of
+~1.5 MB: 60 document writes (2 parts + 1 meta each), 39.6 MB written, 3.4 s from push
+to all uploaded. Device B opens one note: 3 reads (meta + 2 parts), 152 ms; all 20
+arrive intact when opened. A 2.5 MB picture is 3 parts (900,000 + 900,000 + 700,000).
+A second push writes 0 picture docs and reads 0; a push with an empty store makes 0
+reads and 0 writes.
+
+**Layouts (D5):** fetch-on-display is the same code on every layout. Measured at
+390×844, 820×1180 and 1440×900 in the read view, the Pane 3 editor and a float window
+(the phone's sheet): painted, inside the pane, no horizontal overflow.
+
+**Not done:** creating references (S2c); migrating inline pictures (S2d); deleting
+pictures from the cloud or the store; any change to `mergeDB()`. Not run: the
+unpatched (v04.92 `index.html`) run of block 54 — the Architect does that; it must
+fail, since `_picUploadPending` and `firebase.firestore.Blob` use do not exist there.
+No real Firestore was available: the Bytes round trip, the 900,000-byte part size
+under the real 1 MiB limit and the real security rules are checked only against the
+fake, which counts Bytes as raw bytes the way Firestore does.
+
+**Totals:** full `app-check`: (Architect, in review).
