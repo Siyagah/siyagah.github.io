@@ -8545,4 +8545,8 @@ on the phone) and on undo (426 ms, `renderP2C` 241 ms); `_collect` 146 ms ×2
 per autosave on the phone. The laptop quarter-targets and phone (a)/(c) wait
 on these.
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` **1725/1725, twice in a row**; `--only=52d2` 4/4; `--only=52d,52e` 16/16; unpatched (v04.90 `index.html`) `--only 52` 4/10 (52b fails ×3, and the check throws because `_histReset` is missing).
+
+## v04.92 — S2a: pictures stored by reference, the device side
+
+Issue #132. (Stub — full entry follows at the end of the round.)

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.91.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.92.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -24,8 +24,9 @@ must never accumulate here instead of there.
   autosave 437 ms. **Targets (a) 300 ms, (c) 500 ms and the laptop quarter
   targets NOT met.** Checks 52a–52e + 52d2 (kills inside a journal
   transaction and a checkpoint, via `__ljHold`). Not done: render on
-  receive/undo (317/426 ms) and `_collect` 146 ms ×2 per autosave. Full
-  `app-check`: (Architect, in review).
+  receive/undo (317/426 ms) and `_collect` 146 ms ×2 per autosave. Architect
+  totals: full `app-check` **1725/1725, twice in a row**; `--only=52d2` 4/4;
+  `--only=52d,52e` 16/16; unpatched `--only 52` 4/10.
 - **v04.90** (6 Oct 2026) — S1c, step three of per-note cloud storage (issue
   #128). `recs` is the sync; the blob is written only while an older build
   may still read it (`_s1Plan()`: `recs` / `both` / `blob`). Marker `s1c` on a
@@ -105,7 +106,10 @@ Access API), a manual `📦 Save File` export that bakes the notes into a copy o
 the app itself, and Firebase Firestore for cross-device sync behind a Google
 sign-in.
 
-**One user, one Google account.** The notebook is keyed by Google UID; there is
+**One user, one Google account.** There is one notebook. Its cloud id
+(`cfg.notebookId`) is set at sync setup (typed, or `generateNotebookId()` →
+`nb-…`) and is not necessarily the Google UID; `_migrateNotebook()` copies to
+`notebooks/{uid}` but does not switch the id. There is
 no sharing, no second person's data, no multi-tenant anything.
 
 ## The owner is a non-coder
