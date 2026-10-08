@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.96.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.97.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,13 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.97** (8 Oct 2026) — S3b, the sidebar Tags section opens to "Find a
+  tag…" + the 20 most-used + "All tags (N)" (issue #142). 25+ tags get the new
+  shape (≤ 24 list in full as before); typing filters all tags (≤ 50 + "+N
+  more"), query in `ST.tagQ`, focus/caret survive `renderTree()`; "All tags"
+  opens the picker's Tags scope. Phone ×4 at 3,000 tags: `renderTree` Tags open
+  870 → 45 ms, keystroke 30 ms; `render()` open vs closed 159 vs 154 ms.
+  `--only 58` **92/92**, `--only 57` 86/86. Full `app-check`: (Architect, in review).
 - **v04.96** (8 Oct 2026) — S3a, every tag works whatever its characters, and
   the tag pickers stay fast (issue #140). `_ja(s)` passes free text safely to an
   inline handler (`'${esc(tag)}'` broke on `Qur'an`; `encodeURIComponent` also
@@ -23,7 +30,7 @@ must never accumulate here instead of there.
   removed); a picker builds its tag list once and draws ≤ 100 rows + "+N more".
   Phone ×4 at 3,000 tags: Add tag modal 624 → 36 ms, keystroke 402 → 24 ms,
   `renderTree` Tags closed 44 → 17 ms. Tags section when open untouched (S3b).
-  `--only 57` **86/86**, `--only 6p` 104/104. Full `app-check`: (Architect, in review).
+  `--only 57` **86/86**, `--only 6p` 104/104. Architect: full `app-check` **2166/2166, twice in a row**; unpatched `--only 57` 1/6.
 - **v04.95** (8 Oct 2026) — S2d, existing inline pictures move out of note
   text (issue #138). `_picMigrate()`, per note all-or-nothing: store, upload and
   read back, back up the original in `siyagah-premig-v1` (I8), re-check, replace,
@@ -49,14 +56,6 @@ must never accumulate here instead of there.
   it). Nothing creates a reference yet. Checks 54a–54h (`tools/sync-s2.mjs`),
   `--only 54` **51/51**, `--only 53` 92/92. Architect: full `app-check`
   **1868/1868, twice in a row**; unpatched `--only 54` 0/3.
-- **v04.92** (8 Oct 2026) — S2a, pictures by reference, the device side (issue
-  #132). A note may hold `<img data-pic="<sha256>" data-mime>` with no src; the
-  bytes live in a new IndexedDB `siyagah-pics-v1`. Every device can display
-  one (placeholder "🖼 Picture not on this device yet" when absent),
-  `_picCanon` keeps object URLs out of every save, every export inlines the
-  bytes. Nothing creates a reference yet (S2c). Checks 53a–53h, `--only 53`
-  **92/92**; `--only 52` 93/93 on rerun (first run 72/75, cause not found).
-  Architect: full `app-check` **1817/1817, twice in a row**; unpatched `--only 53` 0/12 blocks.
 ---
 
 ## What this is
@@ -370,6 +369,10 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `updatedAt` to the ORIGINAL + 1 ms, never "now", so any later real edit wins
   (I1). Gate `_s2RefsOk()`; never an open note; 4,000 picture writes per
   device per UTC day (`_PICMIG_CAP`).
+- **Free text in an inline handler goes through `_ja(s)`** (v04.96) — never
+  `'${esc(x)}'` (`esc()` leaves `'` alone) or a hand-rolled `\x27`. A typed or
+  renamed tag goes through `_cleanTag()` (keeps every character but the comma).
+  Ids may stay as they are.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,

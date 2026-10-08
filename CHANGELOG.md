@@ -8821,4 +8821,42 @@ tag (Pane 2, 0.5 s laptop / 2.4 s phone, backlog); case-insensitive duplicate ta
 `_mergeStrs` O(n²). 57a opens the Add tag modal, `imgAttachTag` and the picker by
 their functions and then clicks the rows; the menu path to them is not clicked.
 
+**Totals (Architect):** full `app-check` **2166/2166, twice in a row** on `f51c99c`; `ship-check` 13/13; unpatched (v04.95 `index.html` + `sw.js`) `--only 57` 1/6. The run aborts at the first `Qur'an` click (`SyntaxError`); the one pass is the display check, which `esc()` already got right.
+
+## v04.97 — S3b: the sidebar Tags section opens to "Find a tag…", the 20 most-used and "All tags" (8 Oct 2026)
+
+Issue #142, PR #143. The owner chose "Search + most-used". With 3,000 tags the open
+section was 15,000 nodes and every sidebar redraw paid 870 ms (phone ×4).
+
+**Built.** Open, with 25 tags or more (`_TAGS_ALL_MAX` = 24; at 24 or fewer the full
+A–Z list shows as before, no box, no All-tags row): a "Find a tag…" box
+(`.tag-find`, `--sb-strip` / `--sb-ink-soft`), then the 20 most-used tags (count desc,
+then A–Z by code unit), the selected tag appended if not among them, then
+"All tags (N)", which opens the picker in its Tags scope (`openAllTags()`). Typing
+filters every tag (case-insensitive substring, prefix matches first, then A–Z), at most
+50 rows plus "+N more — keep typing". The query is `ST.tagQ` (not saved). A keystroke
+redraws only `#tag-find-rows`, so the box keeps focus; `renderTree()` also puts focus and
+caret back on the rebuilt box. Escape clears. Counts come from one O(n) pass
+(`_tagCounts()`, no `localeCompare`) per render. Rows are the same `.tag-row`
+(`_tagRowHTML`), so click, right-click and long-press are unchanged.
+
+**Measured (ms; phone = CPU ×4)**
+
+| Surface | Laptop before → after | Tablet | Phone |
+|---|---|---|---|
+| `renderTree()`, Tags open | 183 → 15 | 176 → 15 | 870 → 45 |
+| `render()`, Tags open (closed) | n/a → 37 (36) | n/a → 35 (36) | ~1250 (270) → 159 (154) |
+| tag colour change, open (closed) | n/a → 41 (40) | n/a → 39 (35) | 1250 → 181 (167) |
+| keystroke in the box | n/a → 11 | n/a → 10 | n/a → 30 |
+
+Targets met: tree open ≤ 60 phone / ≤ 30 laptop, keystroke ≤ 50 phone, open vs closed
+`render()` and colour change ≤ 60 more. Before figures for `render()` are the issue's.
+
+**Checks:** `tools/s3b-tags-sidebar.mjs`, block 58 (58a–58h at 390/820/1440),
+`--only 58` **92/92**; `--only 57` **86/86**; `ship-check` 13/13.
+Contrast of box text and placeholder: ≥ 15:1 on all five presets, focused or not.
+
+**Not done:** tag groups / nested tags, merging duplicates, un-selecting a tag redrawing
+Pane 2 (backlog). I did not run the unpatched comparison for block 58.
+
 **Totals:** full `app-check`: (Architect, in review).
