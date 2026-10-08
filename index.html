@@ -21975,7 +21975,7 @@ function _ctxSub(aid,panel){
       +(art.reminder?`<div class="ci d" onclick="hideCtx();clearReminder('${aid}')">🔕 Clear Reminder</div>`:'');
   } else if(panel==='tags'){
     const tagRows=(art.tags||[]).map(t=>
-      `<div class="ci d" onclick="hideCtx();removeArtTag('${aid}',decodeURIComponent('${encodeURIComponent(t)}'))">✂ #${esc(String(t).length>26?String(t).slice(0,26)+'…':t)}</div>`
+      `<div class="ci d" onclick="hideCtx();removeArtTag('${aid}',${_ja(t)})">✂ #${esc(String(t).length>26?String(t).slice(0,26)+'…':t)}</div>`
     ).join('');
     m.innerHTML=back
       +`<div class="ci" onclick="hideCtx();promptAddArtTag('${aid}')">＋ Add tag…</div>`

@@ -11621,6 +11621,25 @@ await r.block('56-s2d-migrate-inline-pictures', async () => {
   for (const l of lines) if (/^P56k /.test(l)) console.log(l);
 });
 
+/* 57 — v04.96, S3a: every tag works whatever its characters, and the tag pickers stay fast.
+   tools/s3a-tags.mjs runs 57a–57e: the awkward set (Qur'an, say "hi", back\slash, <b>bold</b>,
+   A & B, Arabic, an emoji) through every tag surface by real clicks at 390/820/1440, typed paths
+   keeping their characters, no stored tag rewritten, the speed targets at 3,000 tags / 9,000
+   notes (phone x4 and laptop), and every tag still reachable under the row cap. Each printed
+   ok/FAIL line becomes one check. */
+await r.block('57-s3a-tags', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./s3a-tags.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 40, 'the S3a check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'S3a: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the S3a check exits cleanly', `exit ${out.status}`);
+  for (const l of lines) if (/^P57d /.test(l)) console.log(l);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
