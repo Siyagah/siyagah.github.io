@@ -4958,7 +4958,7 @@ function _picMigrate(){
         bp=0;bb=0;await _picIdle();_picMigT=performance.now();
       }
     }
-    if(dirty){try{persist();}catch(e){console.error('picture migration save',e);}}
+    if(dirty){try{persist();}catch(e){console.error('picture migration save',e);}st.fields=_picMigSweepFields();}
   })().catch(function(e){console.error('picture migration',e);_picMig.lastErr=String((e&&e.message)||e).slice(0,100);})
     .then(function(){
       _picMigRun=null;

@@ -70,7 +70,13 @@ const browser = await pw.chromium.launch();
 const dev = (cloud, name, vp, seed, opts) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, seed, opts);
 const touch = (cloud, d, tag) => on(d, (t) => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>' + t + '</p>'; a.updatedAt = new Date().toISOString(); persist(); flushPendingPush(); }, tag).then(() => sleep(300)).then(() => quiet(cloud, d));
 /* one push, then wait for the gate (_s2RefsOk) to open */
-async function ready(cloud, d) { await touch(cloud, d, 'first push'); for (let i = 0; i < 80; i++) { if (await on(d, () => _s2RefsOk())) return true; await sleep(250); } return false; }
+async function ready(cloud, d) {
+  await sleep(1500);   /* sync has to be up before the first push, or the main doc is never seen */
+  await touch(cloud, d, 'first push');
+  for (let i = 0; i < 80; i++) { if (await on(d, () => _s2RefsOk())) return true; await sleep(250); }
+  console.log('# gate did not open on ' + d.name + ': ' + JSON.stringify(await on(d, () => ({ rd: !!(_s1Stat.rd && _s1Stat.rd.on), caught: _s1RdCaught, md: _syncLastMd && { s1c: _syncLastMd.s1c, s1o: _syncLastMd.s1o, dua: _syncLastMd.deviceUpdatedAt, ver: _syncLastMd.ver }, older: _s1Rep && _s1Rep.older, plan: _s1Plan(), now: Date.now(), prob: _s1Problem }))));
+  return false;
+}
 /* the background pass is stopped so a check decides exactly when a pass runs */
 const hush = (d) => on(d, () => { _picMigWant = false; _picMigKick = function () {}; });
 const migrate = (d) => on(d, async () => { await _picMigrate(); return JSON.parse(JSON.stringify(_picMig.wait)); });
@@ -391,7 +397,10 @@ try {
       ]) {
         await on(A, open);
         const ok = await painted(A.page, sel, 2);
-        const g = await on(A, (sel) => { const root = document.querySelector(sel); if (!root) return null; const rb = root.getBoundingClientRect(); return { n: root.querySelectorAll('img[data-pic]').length, inside: [...root.querySelectorAll('img[data-pic]')].every((i) => { const b = i.getBoundingClientRect(); return b.width > 0 && b.right <= innerWidth + 1 && b.left >= rb.left - 1 && b.right <= rb.right + 1; }), overflow: root.scrollWidth > root.clientWidth + 1 }; }, sel);
+        /* measured until two readings 150 ms apart agree: a phone's pane slides in, and a box measured mid-slide is "outside" */
+        const geo1 = (sel) => on(A, (sel) => { const root = document.querySelector(sel); if (!root) return null; const rb = root.getBoundingClientRect(); return { n: root.querySelectorAll('img[data-pic]').length, inside: [...root.querySelectorAll('img[data-pic]')].every((i) => { const b = i.getBoundingClientRect(); return b.width > 0 && b.right <= innerWidth + 1 && b.left >= rb.left - 1 && b.right <= rb.right + 1; }), overflow: root.scrollWidth > root.clientWidth + 1 }; }, sel);
+        let g = null, prev = null;
+        for (let k = 0; k < 20; k++) { g = await geo1(sel); const s = JSON.stringify(g); if (s === prev) break; prev = s; await sleep(150); }
         check(rA && mig.c === expectRef(html, [pa, pb]) && ok && g && g.n === 2 && g.inside && !g.overflow, `56l ${vp.name} ${label}: both pictures of the migrated note are painted inside the pane, no horizontal overflow`, JSON.stringify(g));
         await closeWins(A); await sleep(400);
       }
