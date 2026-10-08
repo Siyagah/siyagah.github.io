@@ -8859,4 +8859,8 @@ Contrast of box text and placeholder: ≥ 15:1 on all five presets, focused or n
 **Not done:** tag groups / nested tags, merging duplicates, un-selecting a tag redrawing
 Pane 2 (backlog). I did not run the unpatched comparison for block 58.
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` **2258/2258, twice in a row** on `b237976`; `ship-check` 13/13; unpatched (v04.96 `index.html` + `sw.js`) `--only 58` 2/6 (the seed check and "no page errors" pass; the run stops at 58a).
+
+## v04.98 — J1: Jeb's data — pockets and items, synced, merged, trashed and restored (no UI yet) (8 Oct 2026)
+
+Issue #144. Stub — the full entry follows once the checks have run.

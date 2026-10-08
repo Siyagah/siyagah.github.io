@@ -22,7 +22,7 @@ must never accumulate here instead of there.
   more"), query in `ST.tagQ`, focus/caret survive `renderTree()`; "All tags"
   opens the picker's Tags scope. Phone ×4 at 3,000 tags: `renderTree` Tags open
   870 → 45 ms, keystroke 30 ms; `render()` open vs closed 159 vs 154 ms.
-  `--only 58` **92/92**, `--only 57` 86/86. Full `app-check`: (Architect, in review).
+  `--only 58` **92/92**, `--only 57` 86/86. Architect: full `app-check` **2258/2258, twice in a row**; unpatched `--only 58` 2/6.
 - **v04.96** (8 Oct 2026) — S3a, every tag works whatever its characters, and
   the tag pickers stay fast (issue #140). `_ja(s)` passes free text safely to an
   inline handler (`'${esc(tag)}'` broke on `Qur'an`; `encodeURIComponent` also
