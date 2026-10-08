@@ -400,4 +400,5 @@ Every report follows one shape:
 - [ ] `_collect` runs 146 ms ×2 per autosave (v04.91).
 - [ ] `mergeDB()` appends every id-less remote element on each merge (v04.89): measure whether the owner's notebook holds any.
 - [ ] A picture in the store is never deleted (S2): garbage collection is a later round, costs storage only.
+- [ ] `_save()` serialises the whole notebook on every save: 3.5-4.7 s at 187 MB, ~0.2 s at 27 MB (v04.95, 56k). Fine for the owner's notebook today; **measure at S4's ~45 MB of text before the import**, and make the save per-record if it is over budget.
 - [x] Before S2c creates picture references, sweep every surface that renders `a.content` as HTML outside `upgradeViewCards`/`_edColInit` (print, side by side, previews) — they would show an empty `<img>` (v04.92 review). → v04.94 (S2c)

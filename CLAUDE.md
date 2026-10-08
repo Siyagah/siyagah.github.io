@@ -16,6 +16,14 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.95** (8 Oct 2026) — S2d, existing inline pictures move out of note
+  text (issue #138). `_picMigrate()`, per note all-or-nothing: store, upload and
+  read back, back up the original in `siyagah-premig-v1` (I8), re-check, replace,
+  `updatedAt` = original + 1 ms (I1: any later real edit wins). Gate
+  `_s2RefsOk()`, never an open note, 4,000 picture writes/day. 20 MB: 84 s,
+  26.8 -> 0.1 MB; 140 MB: ~150 s, 186.8 -> 0.1 MB (2-6 s pauses are the
+  pre-existing whole-notebook `_save`). `--only 56` **69/69**. Full
+  `app-check`: (Architect, in review).
 - **v04.94** (8 Oct 2026) — S2c, new pictures stored by reference (issue
   #136). Paste, drop and 🖼 pick (Pane 3 and float windows, which gained their
   own paste/drop handlers) store the picture once, insert `data-pic`, upload at
@@ -53,25 +61,6 @@ must never accumulate here instead of there.
   receive/undo (317/426 ms) and `_collect` 146 ms ×2 per autosave. Architect
   totals: full `app-check` **1725/1725, twice in a row**; `--only=52d2` 4/4;
   `--only=52d,52e` 16/16; unpatched `--only 52` 4/10.
-- **v04.90** (6 Oct 2026) — S1c, step three of per-note cloud storage (issue
-  #128). `recs` is the sync; the blob is written only while an older build
-  may still read it (`_s1Plan()`: `recs` / `both` / `blob`). Marker `s1c` on a
-  main doc = "recs hold all this"; written only after the same push's recs
-  write succeeded, every fallback blob unmarked; `s1o` carries "an unmarked
-  writer last wrote at" across marked overwrites. Gate bounded at 2 min (blob
-  fallback, dot `Err`); recs refused → blob, one toast; echo merges skipped;
-  snapshot from a dirty set + hourly full. 9,000 notes: one edit = 1 doc,
-  ~5 KB, 0 blob docs; **merge 6.1 s on a ×4 phone (1.6–2.1 s laptop) — over
-  1.5 s, a later round needs an incremental merge.** Checks 51s–51x (51t runs
-  the real v04.89 build from git). `--only 51` **103/103**, `sync-e2e`
-  **25/25**, `sync-audit` 118/118. Review fixes (PR #129): fallback blob is
-  `s1c`+`s1fb` (never renews `s1o`, 51y); a refused recs copy retries after
-  10 min (`_S1_DENY_RETRY_MS`); unresolved recs stay pending across
-  snapshots and the cursor never passes the oldest (`_s1RdPending`, 51z; an
-  edit was being lost, I2). Architect's totals: full `app-check`
-  **1632/1632, twice in a row**; unpatched `--only 51` 90/97. Not done
-  (moved to S1d, v04.91): merge 6.1 s on a ×4 phone, `persist()` 1.5 s, undo
-  keeps 60 whole-notebook copies.
 ---
 
 ## What this is
@@ -377,8 +366,14 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `data:` exactly as before. Every surface that puts note HTML in the DOM
   hydrates (Note History included); every export inlines (the book/backup
   page via `_picInlineStr`); anything that copies editor markup into a note
-  goes through `_picCanon` (`_itemHTML`). S2d migrates existing inline
-  pictures.
+  goes through `_picCanon` (`_itemHTML`). **Migration (v04.95,
+  S2d):** `_picMigrate()` converts existing inline `data:` pictures in notes
+  and trashed notes, per note all-or-nothing: store, upload and read the meta
+  back from the server, back up the original in `siyagah-premig-v1`
+  (`_premigRestore(key)`), re-check nothing moved, replace, and set
+  `updatedAt` to the ORIGINAL + 1 ms, never "now", so any later real edit wins
+  (I1). Gate `_s2RefsOk()`; never an open note; 4,000 picture writes per
+  device per UTC day (`_PICMIG_CAP`).
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
