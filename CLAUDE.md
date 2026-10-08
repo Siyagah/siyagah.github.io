@@ -16,6 +16,13 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.97** (8 Oct 2026) — S3b, the sidebar Tags section opens to "Find a
+  tag…" + the 20 most-used + "All tags (N)" (issue #142). 25+ tags get the new
+  shape (≤ 24 list in full as before); typing filters all tags (≤ 50 + "+N
+  more"), query in `ST.tagQ`, focus/caret survive `renderTree()`; "All tags"
+  opens the picker's Tags scope. Phone ×4 at 3,000 tags: `renderTree` Tags open
+  870 → 45 ms, keystroke 30 ms; `render()` open vs closed 159 vs 154 ms.
+  `--only 58` **92/92**, `--only 57` 86/86. Full `app-check`: (Architect, in review).
 - **v04.96** (8 Oct 2026) — S3a, every tag works whatever its characters, and
   the tag pickers stay fast (issue #140). `_ja(s)` passes free text safely to an
   inline handler (`'${esc(tag)}'` broke on `Qur'an`; `encodeURIComponent` also
@@ -49,14 +56,6 @@ must never accumulate here instead of there.
   it). Nothing creates a reference yet. Checks 54a–54h (`tools/sync-s2.mjs`),
   `--only 54` **51/51**, `--only 53` 92/92. Architect: full `app-check`
   **1868/1868, twice in a row**; unpatched `--only 54` 0/3.
-- **v04.92** (8 Oct 2026) — S2a, pictures by reference, the device side (issue
-  #132). A note may hold `<img data-pic="<sha256>" data-mime>` with no src; the
-  bytes live in a new IndexedDB `siyagah-pics-v1`. Every device can display
-  one (placeholder "🖼 Picture not on this device yet" when absent),
-  `_picCanon` keeps object URLs out of every save, every export inlines the
-  bytes. Nothing creates a reference yet (S2c). Checks 53a–53h, `--only 53`
-  **92/92**; `--only 52` 93/93 on rerun (first run 72/75, cause not found).
-  Architect: full `app-check` **1817/1817, twice in a row**; unpatched `--only 53` 0/12 blocks.
 ---
 
 ## What this is
