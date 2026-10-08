@@ -67,13 +67,17 @@ const rawLen = (v) => Buffer.from(v.__bytes, 'base64').length;
 const partsOf = (cloud, sha) => { const out = []; for (let i = 0; ; i++) { const v = cloud.store.get(`${NB}/picparts/${sha}~${i}`); if (!v) break; out.push(v); } return out; };
 const painted = (page, sel, n) => page.waitForFunction(({ sel, n }) => { const im = [...document.querySelectorAll(sel + ' img[data-pic]')];
   return im.length >= n && im.every((i) => i.complete && i.naturalWidth > 0 && !i.classList.contains('ed-img-missing')); }, { sel, n }, { timeout: 20000 }).then(() => true, () => false);
-const geo = (page, sel) => page.evaluate((sel) => {
+/* measured twice, 150 ms apart, until two readings agree: a phone's pane slides in, and a box measured mid-slide is "outside" */
+const geo = async (page, sel) => { let prev = null, g = null; for (let i = 0; i < 20; i++) { g = await geo1(page, sel); const s = JSON.stringify(g); if (s === prev) break; prev = s; await sleep(150); } return g; };
+const geo1 = (page, sel) => page.evaluate((sel) => {
   const root = document.querySelector(sel); if (!root) return null; const rb = root.getBoundingClientRect();
   return { imgs: [...root.querySelectorAll('img[data-pic]')].map((i) => { const b = i.getBoundingClientRect();
       return { nw: i.naturalWidth, w: Math.round(b.width), inside: b.left >= rb.left - 1 && b.right <= rb.right + 1 && b.width > 0 && b.right <= innerWidth + 1, src: (i.getAttribute('src') || '').slice(0, 5) }; }),
     overflow: root.scrollWidth > root.clientWidth + 1 };
 }, sel);
 const storeHas = (d, sha) => on(d, async (s) => { const b = await _picGet(s); if (!b) return null; return (await _picSha(await b.arrayBuffer())) === s; }, sha);
+/* polled from Node: waitForFunction does not await a promise a predicate returns */
+async function waitStored(d, sha, ms = 60000) { const t = Date.now(); while (Date.now() - t < ms) { if (await on(d, async (s) => !!(await _picGet(s)), sha)) return true; await sleep(40); } return false; }
 const content = (d, id) => on(d, (i) => DB.articles.find((a) => a.id === i).content, id);
 
 try {
@@ -277,16 +281,17 @@ try {
     const seen2 = await on(B, () => _s1Rep.older);
     check(seen2 > seen.rep, '54g a rec stamped b:04.92 (lower than 04.93) also counts', JSON.stringify({ before: seen.rep, after: seen2 }));
     const idb = await on(B, async () => { const db = await _s1RdDb(); return await new Promise((res) => { const r = db.transaction('meta', 'readonly').objectStore('meta').get('older|nb-s1'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }); });
-    await reopen(B);
-    await B.page.waitForFunction(() => _s1Rep && _s1Rep.older > 0, null, { timeout: 15000 }).catch(() => {});
-    const reloaded = await on(B, () => ({ rep: _s1Rep && _s1Rep.older }));
-    check(idb === seen2 && reloaded.rep === seen2, '54g the "older build seen" time is kept in the replica\'s meta store and survives a reload of B', JSON.stringify({ idb, seen2, reloaded }));
+    /* the clock first: after a reload the main doc has not been seen yet and _s1OlderActive() says "yes" (nothing seen = be careful) */
     await on(B, () => { window.__realNow = _s1Now; _s1Now = () => Date.now() + 31 * 86400000; });
     const moved = await on(B, () => ({ older: _s2OlderActive(), s1: _s1OlderActive(), rep: _s1Rep.older }));
     check(moved.older === false, '54g with the clock moved 31 days on, _s2OlderActive() is false', JSON.stringify(moved));
     await on(B, () => { _s1Now = window.__realNow; });
     const back = await on(B, () => _s2OlderActive());
     check(back === true, '54g ...and true again with the real clock', 'older=' + back);
+    await reopen(B);
+    await B.page.waitForFunction(() => _s1Rep && _s1Rep.older > 0, null, { timeout: 15000 }).catch(() => {});
+    const reloaded = await on(B, () => ({ rep: _s1Rep && _s1Rep.older }));
+    check(idb === seen2 && reloaded.rep === seen2, '54g the "older build seen" time is kept in the replica\'s meta store and survives a reload of B', JSON.stringify({ idb, seen2, reloaded }));
     check(A2.errors.length === 0 && B.errors.length === 0, '54g no page errors', [...A2.errors, ...B.errors].slice(0, 2).join(' · '));
     await A2.ctx.close(); await B.ctx.close();
   }
@@ -311,14 +316,14 @@ try {
     await sleep(1500);
     const r0 = cloud.reads.length, t1 = Date.now();
     await on(B, () => { selArt('h0'); });
-    const got0 = await B.page.waitForFunction(async (s) => !!(await _picGet(s)), pics[0].sha, { timeout: 60000, polling: 50 }).then(() => true, () => false);
+    const got0 = await waitStored(B, pics[0].sha);
     const fetchMs = Date.now() - t1;
     const rd = cloud.reads.slice(r0).filter((o) => o.dev === 'B' && /\/(pics|picparts)\//.test(o.p)).length;
     console.log('P54h fetch ' + JSON.stringify({ ms: fetchMs, reads: rd }));
     let intact = 0;
-    for (let i = 1; i < 20; i++) {
+    for (let i = 1; i < 20; i++) {   /* h0 is counted with the rest below */
       await on(B, (id) => { selArt(id); }, 'h' + i);
-      await B.page.waitForFunction(async (s) => !!(await _picGet(s)), pics[i].sha, { timeout: 60000, polling: 50 }).catch(() => {});
+      await waitStored(B, pics[i].sha);
     }
     for (let i = 0; i < 20; i++) if ((await storeHas(B, pics[i].sha)) === true) intact++;
     check(up && w.length === 60 && intact === 20, `54h 20 pictures of ~1.5 MB: uploaded in ${Math.round(upMs / 100) / 10} s with ${w.length} writes; one note opened on B fetched in ${fetchMs} ms with ${rd} reads; all 20 arrived intact`, JSON.stringify({ up, writes: w.length, intact }));
