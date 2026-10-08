@@ -668,3 +668,31 @@ The local hot path at 9,000 notes. Two modes:
 
 Trap: main-thread time is the CDP `TaskDuration` delta, so the ×4 throttle is
 in it; per-step timings wrap the app's own globals and are inclusive.
+
+## `sync-s2.mjs` (v04.93)
+
+The cloud copy of pictures (checks 54a–54h) on the fake Firestore. App-check
+block `54-s2b-picture-cloud-copy` runs `node tools/sync-s2.mjs` and turns each
+printed line into one check; `--only=54a,54c` runs a subset (~1 minute in all).
+
+- **The pictures are made in Node** (`solid()`, `noisePng()`, `randomBytes`), so a
+  note in a device's seed can reference a sha whose bytes that device does not
+  hold. Real PNGs where the check paints them (54b, 54c, 54d); random bytes
+  where only the bytes matter (54a, 54h).
+- **The fake grew Bytes (v04.93).** `firebase.firestore.Blob` with
+  `fromUint8Array` / `toUint8Array`, carried across the binding as
+  `{__bytes: base64}`; the 1 MiB document limit counts them as raw bytes (as
+  Firestore does). Also `docRef.set()`, and `cloud.reads` (every `get`, by device).
+  The change is in `s1-fake.mjs` **and the copy inside `sync-s1.mjs` — keep the
+  two in step.** A check can: list what was written and in what order
+  (`cloud.log`), refuse a path (`cloud.refuse.push('/pics/')` — note `/pics/`
+  and `/picparts/` are different prefixes), and drop or corrupt a part by
+  editing `cloud.store` directly.
+- Traps: `page.waitForFunction` does **not** await a promise its predicate
+  returns (a Promise is truthy, so it passes at once) — poll from Node
+  (`waitStored`). A phone's pane slides in, so geometry is read until two
+  readings agree (`geo`). After a reload `_s1OlderActive()` is true until the
+  main doc has been seen, so 54g moves the clock before the reload.
+- 54h prints its numbers as `P54h …` lines; they are measured against the
+  fake (no network), so they show the number of operations and bytes, not real
+  upload times.

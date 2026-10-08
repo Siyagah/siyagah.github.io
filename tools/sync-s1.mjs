@@ -34,7 +34,10 @@ const FAKE_SDK = String.raw`(function(){
      docChanges(), metadata.hasPendingWrites). A stored server time is
      {__ts:[seconds,nanos]} and reaches the app as a Timestamp. */
   class TS { constructor(s, n){ this.seconds = s; this.nanoseconds = n; } toMillis(){ return this.seconds * 1000 + this.nanoseconds / 1e6; } }
-  const conv = (d) => { if (d == null) return d; const o = JSON.parse(JSON.stringify(d)); for (const k of Object.keys(o)) if (o[k] && o[k].__ts) o[k] = new TS(o[k].__ts[0], o[k].__ts[1]); return o; };
+  /* v04.93 — Firestore Bytes: {__bytes: base64} across the binding */
+  class FB { constructor(b){ this.__bytes = b; } toUint8Array(){ const s = atob(this.__bytes), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+    static fromUint8Array(u){ let s = ''; for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192)); return new FB(btoa(s)); } }
+  const conv = (d) => { if (d == null) return d; const o = JSON.parse(JSON.stringify(d)); for (const k of Object.keys(o)) if (o[k] && o[k].__ts) o[k] = new TS(o[k].__ts[0], o[k].__ts[1]); else if (o[k] && typeof o[k].__bytes === 'string') o[k] = new FB(o[k].__bytes); return o; };
   const snap = (d) => ({ exists: d != null, data: () => (d == null ? undefined : conv(d)) });
   const mkErr = (e) => { const x = new Error(e.message); x.code = e.code; return x; };
   window.__fsDeliver = (path, data) => { (listeners[path] || []).forEach((cb) => { try { cb(snap(data)); } catch (e) { console.error(e); } }); };
@@ -47,16 +50,18 @@ const FAKE_SDK = String.raw`(function(){
   function docRef(path){ return { _path: path, id: path.split('/').pop(),
     collection: (n) => collRef(path + '/' + n),
     async get(opts){ const r = await window.__fsGet(path, (opts && opts.source) || 'default'); if (r.error) throw mkErr(r.error); return snap(r.data); },
+    async set(data){ const r = await window.__fsCommit([{ t: 'set', p: path, d: JSON.parse(JSON.stringify(data)) }]); if (r.error) throw mkErr(r.error); },
     onSnapshot(cb){ (listeners[path] = listeners[path] || []).push(cb); window.__fsListen(path); return () => { listeners[path] = (listeners[path] || []).filter((x) => x !== cb); }; } }; }
   function collRef(path){ return { doc: (id) => docRef(path + '/' + id), where: (f, op, v) => query(path, v) }; }
   function batch(){ const ops = []; const b = {
-    set(ref, data){ ops.push({ t: 'set', p: ref._path, d: data }); return b; },
+    set(ref, data){ ops.push({ t: 'set', p: ref._path, d: JSON.parse(JSON.stringify(data)) }); return b; },
     delete(ref){ ops.push({ t: 'del', p: ref._path }); return b; },
     async commit(){ const r = await window.__fsCommit(ops); if (r.error) throw mkErr(r.error); } }; return b; }
   const fs = { collection: (n) => collRef(n), batch, settings(){} };
   fb.firestore = function(){ return fs; };
   fb.firestore.FieldValue = { serverTimestamp: () => ({ __sts: 1 }) };
   fb.firestore.Timestamp = TS;
+  fb.firestore.Blob = FB;
   fb.auth = function(){ return { setPersistence: async () => {}, signInWithPopup: async () => ({}), signOut: async () => {},
     currentUser: { uid: 'u-s1' }, onAuthStateChanged(cb){ setTimeout(() => cb({ uid: 'u-s1', email: 'owner@example.invalid' }), 30); return () => {}; } }; };
   fb.auth.Auth = { Persistence: { LOCAL: 'local' } };
@@ -74,7 +79,7 @@ function check(ok, label, detail = '') {
 
 /* One cloud (a Node Map) shared by the devices of a scenario. */
 function makeCloud() {
-  const cloud = { store: new Map(), devices: [], log: [], commits: 0, refuse: [], refuseRead: [], ver: new Map(), lastMs: 0 };
+  const cloud = { store: new Map(), devices: [], log: [], commits: 0, refuse: [], refuseRead: [], reads: [], ver: new Map(), lastMs: 0 };
   const deliverTo = (d, path) => {
     if (d.offline || !d.listens.has(path)) return;
     const data = cloud.store.has(path) ? cloud.store.get(path) : null;
@@ -123,7 +128,8 @@ function makeCloud() {
     if (ops.some((o) => cloud.refuse.some((pre) => o.p.includes(pre)))) return { error: { code: 'permission-denied', message: 'Missing or insufficient permissions.' } };
     let total = 0;
     for (const o of ops) if (o.t === 'set') {
-      const s = Buffer.byteLength(JSON.stringify(o.d));
+      let raw = 0;   /* v04.93 — Bytes count as raw bytes, as Firestore counts them */
+      const s = Buffer.byteLength(JSON.stringify(o.d, (k, v) => { if (v && typeof v === 'object' && typeof v.__bytes === 'string') { raw += Math.floor(v.__bytes.length * 3 / 4); return ''; } return v; })) + raw;
       if (s > MAX_DOC) return { error: { code: 'invalid-argument', message: 'document over 1 MiB at ' + o.p } };
       total += s;
     }
@@ -164,6 +170,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
     if (d.offline && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get document because the client is offline.' } };
     if (cloud.refusedRead(path)) return { error: { code: 'permission-denied', message: 'Missing or insufficient permissions.' } };
     if (d.partHook && /\/recparts\//.test(path)) { const h = d.partHook; d.partHook = null; await h(path); }
+    cloud.reads.push({ p: path, dev: d.name });
     await sleep(10 + Math.random() * 30);
     return { data: cloud.store.has(path) ? cloud.store.get(path) : null };
   });

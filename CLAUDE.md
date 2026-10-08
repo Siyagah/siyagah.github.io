@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.92.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.93.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,16 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.93** (8 Oct 2026) — S2b, the cloud copy of pictures and the build stamp
+  (issue #134). A device that holds a picture uploads it once
+  (`pics/{sha}` + `picparts/{sha}~i` as Firestore Bytes, ≤ 900,000 bytes a
+  part, parts first and meta last, detached from the text push); a device
+  that lacks one fetches it when a note needs it and shows it only after the
+  sha256 checks. Every rec carries `b` (the app version); `_s2OlderActive()`
+  says whether an older build wrote in the last 30 days (S2c will gate on
+  it). Nothing creates a reference yet. Checks 54a–54h (`tools/sync-s2.mjs`),
+  `--only 54` **51/51**, `--only 53` 92/92. Full `app-check`: (Architect, in
+  review).
 - **v04.92** (8 Oct 2026) — S2a, pictures by reference, the device side (issue
   #132). A note may hold `<img data-pic="<sha256>" data-mime>` with no src; the
   bytes live in a new IndexedDB `siyagah-pics-v1`. Every device can display
@@ -23,7 +33,7 @@ must never accumulate here instead of there.
   `_picCanon` keeps object URLs out of every save, every export inlines the
   bytes. Nothing creates a reference yet (S2c). Checks 53a–53h, `--only 53`
   **92/92**; `--only 52` 93/93 on rerun (first run 72/75, cause not found).
-  Full `app-check`: (Architect, in review).
+  Architect: full `app-check` **1817/1817, twice in a row**; unpatched `--only 53` 0/12 blocks.
 - **v04.91** (6 Oct 2026) — S1d, the local hot path at 9,000 notes (issue
   #130). Record cache; undo as byte-bounded frames; a local journal
   (`siyagah-localrecs-v1`, one transaction per save, `notebook` stays the
@@ -71,16 +81,6 @@ must never accumulate here instead of there.
   of the S1 check aborts), `sync-audit` 118/118 ERROR (51i needs
   `_s1RecsAsDB`), `sync-e2e` 24/24 (unchanged this round). The import must still wait for S1c; the write gate
   stays shut while the reader fails (S1c must surface it).
-- **v04.88** (6 Oct 2026) — S1a, step one of per-note cloud storage (issue
-  #124). After each blob push, changed records are also written one doc
-  each to `notebooks/{nb}/recs` (+ `recparts` over 700 KB, `_head~0` for
-  every other key). Nothing reads them; `mergeDB()`, the read path and the
-  blob are untouched. Per-device sig map in IndexedDB; failure is invisible
-  (`window._s1Stat`). The owner-visible lists DO depend on array order, so
-  S1b needs a stable order. The import must wait for S1c. `--only 51`
-  **53/53**, `sync-e2e` **24/24**; full `app-check` **1573/1573, twice in a
-  row**; unpatched: `--only 51` 0/3 blocks (every block fails), `sync-e2e`
-  23/24 (only the new recs-assembly check fails).
 ---
 
 ## What this is
@@ -362,8 +362,23 @@ A failing check is a wrong assertion surprisingly often — investigate before
   present. **Never write a live src into `a.content`.** Exports go through
   async `_picExportHTML()` / `_picInline()`, which inline pictures without
   mutating `DB` and leave a missing one as a bare reference (never fail).
-  Nothing creates a reference yet; S2b is the cloud copy, S2c insertion, S2d
-  migration.
+  **The cloud copy (v04.93, S2b).** `notebooks/{nb}/pics/{sha}` is the meta
+  doc `{n,t,p,at,b}`; `picparts/{sha}~{i}` holds `{d: Bytes}` (Firestore
+  Bytes, never base64), ≤ 900,000 bytes a part. Immutable and content-
+  addressed: no merge, no tombstone, no deletion. **Upload** (`_picUpload`):
+  parts first, meta LAST (the pointer); a sha whose meta exists writes
+  nothing; `up:1` on the store record remembers it. `_picUploadPending()`
+  starts at the top of `_pushWrite()`, detached — a picture never fails or
+  delays the text push — and returns at once (no await, no read) when
+  `_picNotUp` is empty; a refusal shows only in the diagnostics. **Fetch**
+  (`_picFetch`, from `_picHydrateAll`): meta, parts, concatenate, **verify
+  the sha256, then** store and paint; any failure stores nothing and keeps
+  the placeholder, retry 30 s/2 min/10 min then on the next showing. Never
+  touches `a.content`. **Build stamp:** every rec carries `b`;
+  `_s2OlderActive()` = `_s1OlderActive()` or a rec with no `b` / `b` < `04.93`
+  received in the last 30 days (latest `at` kept in the replica's `meta`
+  store as `older|<nb>`). Nothing uses it yet; S2c gates on it. Nothing
+  creates a reference yet; S2c is insertion, S2d migration.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
