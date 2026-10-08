@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.93.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.94.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,15 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.94** (8 Oct 2026) — S2c, new pictures stored by reference (issue
+  #136). Paste, drop and 🖼 pick (Pane 3 and float windows, which gained their
+  own paste/drop handlers) store the picture once, insert `data-pic`, upload at
+  once; the gate `_s2RefsOk()` (IndexedDB, reader caught up, no older build
+  written in 48 h) else inlines as before. Book/backup page inlines the bytes;
+  Note History paints them; the item menu goes through `_picCanon`. The real
+  v04.91 build keeps a reference through an edit (54j). 10 pictures → 1.3 KB
+  of note text. `--only 55` **127/127**, `--only 54` **67/67**. Full
+  `app-check`: (Architect, in review).
 - **v04.93** (8 Oct 2026) — S2b, the cloud copy of pictures and the build stamp
   (issue #134). A device that holds a picture uploads it once
   (`pics/{sha}` + `picparts/{sha}~i` as Firestore Bytes, ≤ 900,000 bytes a
@@ -24,8 +33,8 @@ must never accumulate here instead of there.
   sha256 checks. Every rec carries `b` (the app version); `_s2OlderActive()`
   says whether an older build wrote in the last 30 days (S2c will gate on
   it). Nothing creates a reference yet. Checks 54a–54h (`tools/sync-s2.mjs`),
-  `--only 54` **51/51**, `--only 53` 92/92. Full `app-check`: (Architect, in
-  review).
+  `--only 54` **51/51**, `--only 53` 92/92. Architect: full `app-check`
+  **1868/1868, twice in a row**; unpatched `--only 54` 0/3.
 - **v04.92** (8 Oct 2026) — S2a, pictures by reference, the device side (issue
   #132). A note may hold `<img data-pic="<sha256>" data-mime>` with no src; the
   bytes live in a new IndexedDB `siyagah-pics-v1`. Every device can display
@@ -64,23 +73,6 @@ must never accumulate here instead of there.
   **1632/1632, twice in a row**; unpatched `--only 51` 90/97. Not done
   (moved to S1d, v04.91): merge 6.1 s on a ×4 phone, `persist()` 1.5 s, undo
   keeps 60 whole-notebook copies.
-- **v04.89** (6 Oct 2026) — S1b, step two of per-note cloud storage (issue
-  #126). Every device also READS `recs` into a replica (own IndexedDB,
-  `siyagah-s1-v1`) and merges the FULL replica with the unchanged
-  `mergeDB()`; the blob is still written and read. Shared merge block
-  (`_mergeRemoteIn`), received = known, a real single-flight, one
-  diagnostics line, recs carry `o` for order. Two real losses found in
-  build: a device must not WRITE before it has READ (`_s1WriteGate`), and
-  `mergeDB()` doubles id-less elements on each merge (blob path too, not
-  changed). Review fixes: an unresolvable rec backs off 3 s/30 s/5 min then
-  is given up on (`st.err` `unresolvable`; S1c must remember it), and the
-  clean-up never deletes a generation the rec still names (server read
-  first). Checks 51h–51r (51i equivalence in sync-audit 118/118). `--only 51`
-  **81/81** (51q/51r fail unpatched), `sync-e2e` **24/24**; full `app-check`
-  **1601/1601, twice in a row**; unpatched: `--only 51` 23/25 (the S1b part
-  of the S1 check aborts), `sync-audit` 118/118 ERROR (51i needs
-  `_s1RecsAsDB`), `sync-e2e` 24/24 (unchanged this round). The import must still wait for S1c; the write gate
-  stays shut while the reader fails (S1c must surface it).
 ---
 
 ## What this is
@@ -377,8 +369,17 @@ A failing check is a wrong assertion surprisingly often — investigate before
   touches `a.content`. **Build stamp:** every rec carries `b`;
   `_s2OlderActive()` = `_s1OlderActive()` or a rec with no `b` / `b` < `04.93`
   received in the last 30 days (latest `at` kept in the replica's `meta`
-  store as `older|<nb>`). Nothing uses it yet; S2c gates on it. Nothing
-  creates a reference yet; S2c is insertion, S2d migration.
+  store as `older|<nb>`). **Insertion (v04.94, S2c):** `insertImageFile()` (paste,
+  drop, 🖼 pick; Pane 3 and float windows) stores by reference when
+  `_s2RefsOk()` says yes — IndexedDB works; on a synced device the reader has
+  caught up and a main doc has been seen; no older build (rec without `b` / `b`
+  < 04.93, or an unmarked blob writer) wrote in the last 48 h
+  (`_S2_ACTIVE_MS`, NOT `_s2OlderActive()`'s 30 days) — and otherwise inlines
+  `data:` exactly as before. Every surface that puts note HTML in the DOM
+  hydrates (Note History included); every export inlines (the book/backup
+  page via `_picInlineStr`); anything that copies editor markup into a note
+  goes through `_picCanon` (`_itemHTML`). S2d migrates existing inline
+  pictures.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,

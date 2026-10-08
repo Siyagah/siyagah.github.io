@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.93">
+<meta name="app-version" content="04.94">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1701,6 +1701,8 @@ sup.ann-sup:hover{text-decoration:underline}
 .nh-back{border:none;background:none;cursor:pointer;font-size:12px;color:var(--accent);padding:2px 4px}
 .nh-back:hover{text-decoration:underline}
 .nh-prev-time{font-size:11px;color:var(--t3);margin-left:auto}
+.nh-prev-body img{max-width:100%;height:auto}
+.nh-prev-body img.ed-img-missing{width:320px}
 .nh-prev-body{overflow-y:auto;flex:1;padding:12px 14px;font-size:13px;line-height:1.55;color:var(--t1)}
 .nh-prev-actions{padding:10px 12px;border-top:1px solid var(--border2);flex-shrink:0}
 .nh-prev-actions .btn{width:100%}
@@ -3223,7 +3225,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.93</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.94</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4512,6 +4514,35 @@ async function _picInline(pretty){
   }
 }
 async function _picInlinedJSON(pretty){return (await _picInline(pretty)).text;}
+/* v04.94 — inline the bytes of every picture reference in an arbitrary string of
+   HTML (or of JSON holding HTML, where the quotes are written \"). Same rules as
+   _picInline: nothing is stored, a picture the store lacks stays a bare
+   reference and is counted in .missing, and it never throws. */
+async function _picInlineStr(str){
+  try{
+    if(!str||str.indexOf('data-pic')===-1)return {text:str,missing:0};
+    const re=/<img\b[^>]*?\bdata-pic=\\?"([0-9a-f]{64})\\?"[^>]*>/g;
+    const shas=new Set();let m;
+    while((m=re.exec(str)))shas.add(m[1]);
+    const data={};let missing=0;
+    for(const s of shas){
+      const b=await _picGet(s);
+      if(!b){missing++;continue;}
+      const r=await new Promise(function(res){const fr=new FileReader();fr.onload=function(){res(fr.result);};fr.onerror=function(){res(null);};fr.readAsDataURL(b);});
+      if(!r){missing++;continue;}
+      data[s]=(b.type&&r.indexOf('data:'+b.type)===0)?r:('data:image/jpeg;base64,'+r.slice(r.indexOf(',')+1));
+    }
+    const text=str.replace(/<img\b[^>]*?\bdata-pic=\\?"([0-9a-f]{64})\\?"[^>]*>/g,function(tag,s){
+      if(!data[s]||/\ssrc\s*=/.test(tag))return tag;
+      const q=tag.indexOf('\\"')!==-1?'\\"':'"';
+      return '<img src='+q+data[s]+q+tag.slice(4);
+    });
+    return {text:text,missing:missing};
+  }catch(e){
+    console.error('picture inline failed',e);
+    return {text:str,missing:-1};
+  }
+}
 function _picMissingToast(n){
   if(n>0)toast('⚠ '+n+' picture'+(n>1?'s':'')+' not on this device '+(n>1?'were':'was')+' not included in the file',6000);
 }
@@ -6457,9 +6488,57 @@ function compressImage(file,cb){
   fr.onerror=()=>toast('⚠ Could not read image');
   fr.readAsDataURL(file);
 }
+/* v04.94 — S2c. May a NEW picture be stored by reference? All of: the picture
+   store works; on a sync-connected device the reader has caught up once this
+   session; no build older than v04.93 (one that cannot fetch a picture) has
+   written in the last 48 hours. Deliberately NOT _s2OlderActive()'s 30 days. */
+let _S2_ACTIVE_MS=48*3600*1000;
+function _s2RefsOk(){
+  if(!window.indexedDB)return false;
+  let cfg=null;try{cfg=getSyncConfig();}catch(e){}
+  if(!cfg)return true;   /* sync off: exports inline the bytes, they upload when sync is turned on */
+  const rd=_s1Stat&&_s1Stat.rd;
+  if(!rd||!rd.on||!_s1RdCaught)return false;
+  const md=_syncLastMd;
+  if(!md)return false;
+  const now=_s1Now();
+  const tb=md.s1c?(md.s1o||0):(md.deviceUpdatedAt||md.ver||0);   /* an unmarked blob writer */
+  if(tb>0&&now-tb<_S2_ACTIVE_MS)return false;
+  const tr=_s1Rep&&_s1Rep.older;   /* a rec with no `b`, or `b` < 04.93 */
+  if(tr&&now-tr<_S2_ACTIVE_MS)return false;
+  return true;
+}
+window._s2RefsOk=_s2RefsOk;
+function _dataUrlBytes(url){
+  const m=/^data:([^;,]*)(;base64)?,([\s\S]*)$/.exec(url||'');
+  if(!m||!m[2])return null;
+  const bin=atob(m[3]);const u8=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+  return {bytes:u8,mime:m[1]||'image/jpeg'};
+}
 function insertImageFile(file){
   if(!file||!file.type.startsWith('image/'))return;
-  compressImage(file,url=>{insertAtCaret(`<img class="ed-img" src="${url}" alt="">`);toast('🖼 Image inserted');});
+  compressImage(file,async url=>{
+    let html=`<img class="ed-img" src="${url}" alt="">`;   /* the fallback: inline, exactly as before */
+    let sha=null;
+    try{
+      if(_s2RefsOk()&&await _picDB()){
+        const d=_dataUrlBytes(url);
+        if(d){
+          sha=await _picPut(d.bytes,d.mime);
+          if(sha&&_picKnown.has(sha))html=`<img class="ed-img" data-pic="${sha}" data-mime="${d.mime}" alt="">`;
+          else sha=null;
+        }
+      }
+    }catch(e){sha=null;html=`<img class="ed-img" src="${url}" alt="">`;}
+    insertAtCaret(html);
+    if(sha){
+      const ed=_edActive();
+      if(ed){_picHydrateAll(ed);_edTouched(ed);}
+      try{_picUploadPending();}catch(e){}
+    }
+    toast('🖼 Image inserted');
+  });
 }
 
 /* Bookmark card + embeds */
@@ -6556,6 +6635,14 @@ function convertLinkEl(el,kind){
   el.replaceWith(t.content);
   toast('Converted ✓');
 }
+/* v04.94 — the markup of an editor item, in the shape that is STORED: a clone
+   through _picCanon, so a shown picture never carries its blob: src into a note */
+function _itemHTML(el){
+  const w=document.createElement('div');   /* _picCanon looks at descendants, so the item needs a parent */
+  w.appendChild(el.cloneNode(true));
+  try{_picCanon(w);}catch(e){}
+  return w.innerHTML;
+}
 function itemMenu(el,x,y){
   closeItemMenu();closePastePop();closeMenDD();
   if(!el)return;
@@ -6611,7 +6698,7 @@ function itemMenu(el,x,y){
       DB.folders.filter(f=>(f.name||'').toLowerCase().includes(q)).slice(0,8).forEach(f=>{
         const d=document.createElement('div');d.className='ci im-it';d.innerHTML='📁 '+esc(f.name);
         const go=ev=>{ev.preventDefault();ev.stopPropagation();closeItemMenu();
-          const html=el.outerHTML+'<p><br></p>';const now=new Date().toISOString();
+          const html=_itemHTML(el)+'<p><br></p>';const now=new Date().toISOString();
           DB.articles.push({id:uid(),title:'Image',content:html,folderIds:[f.id],tags:[],createdAt:now,updatedAt:now});
           persist();try{renderP2C();}catch{}toast('📁 Saved into "'+f.name+'"');};
         d.onmousedown=go;d.ontouchstart=go;_srchRes.appendChild(d);found++;
@@ -6620,7 +6707,7 @@ function itemMenu(el,x,y){
       DB.articles.filter(a=>a.id!==ST.article&&((a.title||'').toLowerCase().includes(q))).slice(0,6).forEach(a=>{
         const d=document.createElement('div');d.className='ci im-it';d.innerHTML='📄 '+esc(a.title||'Untitled');
         const go=ev=>{ev.preventDefault();ev.stopPropagation();closeItemMenu();
-          const html=el.outerHTML+'<p><br></p>';a.content=(a.content||'')+html;a.updatedAt=new Date().toISOString();
+          const html=_itemHTML(el)+'<p><br></p>';a.content=(a.content||'')+html;a.updatedAt=new Date().toISOString();
           persist();toast('📄 Attached to "'+a.title+'"');};
         d.onmousedown=go;d.ontouchstart=go;_srchRes.appendChild(d);found++;
       });
@@ -6643,7 +6730,7 @@ function itemMenu(el,x,y){
       const maxOrd=Math.max(0,...DB.folders.filter(f=>!f.parentId&&f.sectionId===sec).map(f=>f.order||0));
       const f={id:uid(),name:name.trim(),parentId:null,order:maxOrd+1,sectionId:sec,color:'#FFFFFF'};
       DB.folders.push(f);
-      const html=el.outerHTML+'<p><br></p>';const now=new Date().toISOString();
+      const html=_itemHTML(el)+'<p><br></p>';const now=new Date().toISOString();
       DB.articles.push({id:uid(),title:name.trim(),content:html,folderIds:[f.id],tags:[],createdAt:now,updatedAt:now});
       persist();render();toast('📂 Folder "'+f.name+'" created & image saved');
     }));
@@ -6676,7 +6763,7 @@ function attachChooser(el,kind,x,y){
     d.innerHTML=(kind==='folder'?'📁 ':'📄 ')+esc(name);
     const go=ev=>{ev.preventDefault();ev.stopPropagation();closeItemMenu();
       try{
-        const html=el.outerHTML+'<p><br></p>';
+        const html=_itemHTML(el)+'<p><br></p>';
         const now=new Date().toISOString();
         if(kind==='folder'){
           DB.articles.push({id:uid(),title:_itemTitle(el),content:html,folderIds:[it.id],tags:[],createdAt:now,updatedAt:now});
@@ -8658,7 +8745,7 @@ async function runMigration(){
 
 
 /* ══ BACKUP EXPORT — standalone HTML (Layer 1) ══════════════════════════════ */
-function generateBackupHTMLContent(){
+async function generateBackupHTMLContent(){
   const notes=DB.articles.filter(a=>!a.trash);
   const now=new Date();
   const dateStr=now.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
@@ -8703,11 +8790,14 @@ function generateBackupHTMLContent(){
     sections:DB.sections,trash:DB.trash||[],
     noteKinds:DB.noteKinds||[],noteKindCats:DB.noteKindCats||[],
     folderGroups:DB.folderGroups||[]});
-  const fullHtml=html.replace('</body>',_t1+_bkJson+_t2+'</body>');
+  /* v04.94 — an export carries the bytes (I4): the page AND the embedded data */
+  const _ih=await _picInlineStr(html),_ij=await _picInlineStr(_bkJson);
+  _picMissingToast(Math.max(_ih.missing,0));
+  const fullHtml=_ih.text.replace('</body>',()=>_t1+_ij.text+_t2+'</body>');
   return {html:fullHtml,name:`Siyagah-Backup-${now.toISOString().slice(0,10)}.html`};
 }
-function exportBackupHTML(){
-  const {html,name}=generateBackupHTMLContent();
+async function exportBackupHTML(){
+  const {html,name}=await generateBackupHTMLContent();
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=name;
@@ -8715,10 +8805,10 @@ function exportBackupHTML(){
   URL.revokeObjectURL(url);
   toast('📦 Backup downloaded — open in any browser or print as PDF');
 }
-function exportBackupPDF(){
-  const {html}=generateBackupHTMLContent();
-  const win=window.open('','_blank');
+async function exportBackupPDF(){
+  const win=window.open('','_blank');   /* opened first, inside the click */
   if(!win){toast('⚠ Pop-up blocked — allow pop-ups then try again');return;}
+  const {html}=await generateBackupHTMLContent();
   win.document.write(html);win.document.close();win.focus();
   setTimeout(()=>{win.print();toast('📄 Choose "Save as PDF" in the print dialog');},600);
 }
@@ -8734,7 +8824,7 @@ async function backupToGDrive(){
     const token=result.credential?.accessToken;
     if(!token){toast('⚠ Could not get Drive access token');return;}
     toast('⏳ Uploading to Drive…');
-    const {html,name}=generateBackupHTMLContent();
+    const {html,name}=await generateBackupHTMLContent();
     const blob=new Blob([html],{type:'text/html;charset=utf-8'});
     const folderId=await _getDriveFolder(token,'Siyagah Backups');
     await _uploadToDrive(token,folderId,name,blob);
@@ -12050,6 +12140,20 @@ function _fwCreate(aid){
     };
     ed.addEventListener('input',_syncCol);
     setTimeout(_syncCol,60);
+    /* v04.94 — a picture pasted or dropped here takes the SAME path as in Pane 3
+       (insertImageFile), so it is stored by reference too. Before this a float
+       window left both to the browser, which wrote its own inline picture. */
+    ed.addEventListener('paste',e=>{
+      try{
+        const img=[...(e.clipboardData?.items||[])].find(it=>it.type.startsWith('image/'));
+        if(img){e.preventDefault();insertImageFile(img.getAsFile());}
+      }catch(err){console.error('paste',err);}
+    });
+    ed.addEventListener('dragover',e=>{if([...(e.dataTransfer?.types||[])].includes('Files'))e.preventDefault();});
+    ed.addEventListener('drop',e=>{
+      const fs=[...(e.dataTransfer?.files||[])].filter(f=>f.type.startsWith('image/'));
+      if(fs.length){e.preventDefault();e.stopPropagation();ed.focus();fs.forEach(f=>insertImageFile(f));}
+    });
   }
   const ti=win.querySelector('.fw-ti');
   if(ti)ti.addEventListener('input',()=>_fwScheduleAutoSave(aid));
@@ -17140,7 +17244,7 @@ function openNoteHistory(aid){
   if(!p){p=document.createElement('div');p.id='nh-picker';document.body.appendChild(p);}
   p.dataset.aid=aid;
   ST.nhPreview=null;
-  p.innerHTML=renderNoteHistoryBody(aid);
+  _nhPaint(p);
   const vw=window.innerWidth;
   if(vw>=1200){p.style.cssText='top:70px;right:20px;bottom:auto;left:auto';}
   p.classList.add('open');
@@ -17148,9 +17252,11 @@ function openNoteHistory(aid){
   setTimeout(()=>{document.addEventListener('mousedown',_cl,{capture:true});document.addEventListener('touchstart',_cl,{capture:true});},50);
 }
 function closeNoteHistory(){const p=document.getElementById('nh-picker');if(p)p.classList.remove('open');ST.nhPreview=null;}
-function previewNoteHistory(aid,vid){ST.nhPreview=vid;ST.nhViewMode='diff';const p=document.getElementById('nh-picker');if(p)p.innerHTML=renderNoteHistoryBody(aid);}
-function _nhBack(aid){ST.nhPreview=null;const p=document.getElementById('nh-picker');if(p)p.innerHTML=renderNoteHistoryBody(aid);}
-function _nhSetMode(aid,mode){ST.nhViewMode=mode;const p=document.getElementById('nh-picker');if(p)p.innerHTML=renderNoteHistoryBody(aid);}
+/* v04.94 — a history body can hold picture references: paint them after every injection */
+function _nhPaint(p){p.innerHTML=renderNoteHistoryBody(p.dataset.aid);try{_picHydrateAll(p);}catch(e){}}
+function previewNoteHistory(aid,vid){ST.nhPreview=vid;ST.nhViewMode='diff';const p=document.getElementById('nh-picker');if(p){p.dataset.aid=aid;_nhPaint(p);}}
+function _nhBack(aid){ST.nhPreview=null;const p=document.getElementById('nh-picker');if(p){p.dataset.aid=aid;_nhPaint(p);}}
+function _nhSetMode(aid,mode){ST.nhViewMode=mode;const p=document.getElementById('nh-picker');if(p){p.dataset.aid=aid;_nhPaint(p);}}
 /* ── Lightweight word-level diff, used to highlight exactly what changed
      between a past snapshot and the current note. Guarded on token count
      (both sides ≤3000 tokens AND product ≤1.5M) so a huge note can never
@@ -17247,7 +17353,7 @@ function restoreNoteHistory(aid,vid){
   if(ST.editing&&ST.article===aid){
     ST.etitle=a.title;
     const ed=document.getElementById('ed');
-    if(ed&&ed.dataset.aid===a.id){ed.innerHTML=a.content;}
+    if(ed&&ed.dataset.aid===a.id){ed.innerHTML=a.content;try{_picHydrateAll(ed);}catch(e){}}
   }
   if(!DB.theme)DB.theme={};DB.theme.lastEditedArticle=a.id;
   persist();
