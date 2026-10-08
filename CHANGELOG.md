@@ -8821,4 +8821,8 @@ tag (Pane 2, 0.5 s laptop / 2.4 s phone, backlog); case-insensitive duplicate ta
 `_mergeStrs` O(n²). 57a opens the Add tag modal, `imgAttachTag` and the picker by
 their functions and then clicks the rows; the menu path to them is not clicked.
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` **2166/2166, twice in a row** on `f51c99c`; `ship-check` 13/13; unpatched (v04.95 `index.html` + `sw.js`) `--only 57` 1/6. The run aborts at the first `Qur'an` click (`SyntaxError`); the one pass is the display check, which `esc()` already got right.
+
+## v04.97 — S3b: the sidebar Tags section (stub)
+
+In progress (issue #142). Entry to follow.

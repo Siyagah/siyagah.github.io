@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.96.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.97.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -23,7 +23,7 @@ must never accumulate here instead of there.
   removed); a picker builds its tag list once and draws ≤ 100 rows + "+N more".
   Phone ×4 at 3,000 tags: Add tag modal 624 → 36 ms, keystroke 402 → 24 ms,
   `renderTree` Tags closed 44 → 17 ms. Tags section when open untouched (S3b).
-  `--only 57` **86/86**, `--only 6p` 104/104. Full `app-check`: (Architect, in review).
+  `--only 57` **86/86**, `--only 6p` 104/104. Architect: full `app-check` **2166/2166, twice in a row**; unpatched `--only 57` 1/6.
 - **v04.95** (8 Oct 2026) — S2d, existing inline pictures move out of note
   text (issue #138). `_picMigrate()`, per note all-or-nothing: store, upload and
   read back, back up the original in `siyagah-premig-v1` (I8), re-check, replace,
@@ -370,6 +370,10 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `updatedAt` to the ORIGINAL + 1 ms, never "now", so any later real edit wins
   (I1). Gate `_s2RefsOk()`; never an open note; 4,000 picture writes per
   device per UTC day (`_PICMIG_CAP`).
+- **Free text in an inline handler goes through `_ja(s)`** (v04.96) — never
+  `'${esc(x)}'` (`esc()` leaves `'` alone) or a hand-rolled `\x27`. A typed or
+  renamed tag goes through `_cleanTag()` (keeps every character but the comma).
+  Ids may stay as they are.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
