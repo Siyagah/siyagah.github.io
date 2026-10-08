@@ -5387,9 +5387,9 @@ function renderTree(){
         }).join('');
       }
       if(tagHits.length){
-        h+='<div class="sr-grp-hd">🏷 Tags</div>'+tagHits.map(t=>
-          `<div class="sr" onclick="clearSearch();selTag('${esc(t.tag)}')">#${esc(t.tag)} <span class="tr-cnt">${t.count}</span></div>`
-        ).join('');
+        h+='<div class="sr-grp-hd">🏷 Tags</div>'+tagHits.slice(0,_TAG_HITS_CAP).map(t=>
+          `<div class="sr" onclick="clearSearch();selTag(${_ja(t.tag)})">#${esc(t.tag)} <span class="tr-cnt">${t.count}</span></div>`
+        ).join('')+(tagHits.length>_TAG_HITS_CAP?_TAG_MORE_HTML(tagHits.length-_TAG_HITS_CAP):'');
       }
       if(kindHits.length){
         h+='<div class="sr-grp-hd">🔖 Note Types</div>'+kindHits.map(k=>
@@ -5710,7 +5710,7 @@ function renderP2C(){
       grps.forEach(([gname,garr])=>{
         const gkey='sec-'+secId+'|'+sfId+'|'+gname;
         const gOpen=ST.sfGrpOpen[gkey]===true; /* default CLOSED */
-        h+=`<div class="slbl sf-grp sf-grp-hd" onclick="togSfGrp('${esc(gkey)}')" role="button">`
+        h+=`<div class="slbl sf-grp sf-grp-hd" onclick="togSfGrp(${_ja(gkey)})" role="button">`
           +`<span class="sf-grp-tog">${gOpen?'▾':'▸'}</span>${gname} (${garr.length})</div>`;
         if(gOpen){h+='<div class="al">';garr.forEach(a=>{h+=artCard(a,ST.article===a.id,true);});h+='</div>';}
       });
@@ -5755,7 +5755,7 @@ function renderP2C(){
       groups.forEach(([gname,garr])=>{
         const gkey=_sf.id+'|'+gname;
         const gOpen=ST.sfGrpOpen[gkey]===true;    /* default: collapsed */
-        h+=`<div class="slbl sf-grp sf-grp-hd" onclick="togSfGrp('${esc(gkey)}')" role="button">`+
+        h+=`<div class="slbl sf-grp sf-grp-hd" onclick="togSfGrp(${_ja(gkey)})" role="button">`+
            `<span class="sf-grp-tog">${gOpen?'▾':'▸'}</span>${gname} (${garr.length})</div>`;
         if(gOpen){
           if(!garr.length){
@@ -6202,7 +6202,7 @@ function renderP3C(){
       ${reminderStripHTML(curA)}
       <div class="av-tags">${tags}</div>
       ${(curA.tags||[]).length
-        ?`<div class="art-tags">${(curA.tags||[]).map(t=>{const _tc=(DB.tagColors||{})[t];const _ts=_tc?` style="background:${_tc}1a;color:${_tc};border-color:${_tc}40"`:'';return `<span class="art-tag"${_ts} onclick="selTag('${esc(t)}')" oncontextmenu="event.preventDefault();showTagClrPicker(event,'${esc(t)}')">🏷 ${esc(t)}</span>`;}).join('')}</div>`
+        ?`<div class="art-tags">${(curA.tags||[]).map(t=>{const _tc=(DB.tagColors||{})[t];const _ts=_tc?` style="background:${_tc}1a;color:${_tc};border-color:${_tc}40"`:'';return `<span class="art-tag"${_ts} onclick="selTag(${_ja(t)})" oncontextmenu="event.preventDefault();showTagClrPicker(event,${_ja(t)})">🏷 ${esc(t)}</span>`;}).join('')}</div>`
         :''}
       <div class="av-body">${_fieldsPanelHTML(curA)}${_injectHeadingStatusBadges(curA.content,curA.id)}</div>
       ${annPanelHTML(curA)}
@@ -6968,16 +6968,17 @@ function itemMenu(el,x,y){
     /* Unified search input */
     const srch=document.createElement('input');srch.type='text';srch.className='im-search';
     srch.placeholder='Type to search…';srch.style.margin='2px 0 4px';
-    let _srchRes=null;
+    let _srchRes=null,_tagPoolM=null;
     const doSearch=()=>{
       const q=srch.value.toLowerCase().trim();
       if(_srchRes)_srchRes.remove();
       if(!q)return;
       _srchRes=document.createElement('div');_srchRes.style.cssText='max-height:180px;overflow-y:auto';
       let found=0;
-      /* Tags */
-      const tags=[...(DB.globalTags||[]),...[...new Set(DB.articles.flatMap(a=>a.tags||[]))]].filter((v,i,a)=>a.indexOf(v)===i);
-      tags.filter(t=>t.toLowerCase().includes(q)).forEach(t=>{
+      /* Tags — the list is built once per menu, capped (v04.96) */
+      if(!_tagPoolM)_tagPoolM=_tagPool();
+      const _tm=_tagMatches(_tagPoolM,q,null,_TAG_ROWS_CAP);
+      _tm.rows.forEach(t=>{
         const d=document.createElement('div');d.className='ci im-it';d.innerHTML='🏷 '+esc(t);
         const go=ev=>{ev.preventDefault();ev.stopPropagation();closeItemMenu();
           const a=DB.articles.find(x=>x.id===ST.article);if(!a)return;
@@ -6986,6 +6987,7 @@ function itemMenu(el,x,y){
             persist();renderP3H();toast('🏷 Tagged #'+t);}else toast('Already has tag #'+t);};
         d.onmousedown=go;d.ontouchstart=go;_srchRes.appendChild(d);found++;
       });
+      if(_tm.more){const d=document.createElement('div');d.className='ci tp-more';d.style.cssText='color:var(--t3);pointer-events:none;font-size:12px';d.textContent='+'+_tm.more+' more — keep typing to narrow';_srchRes.appendChild(d);}
       /* Folders */
       DB.folders.filter(f=>(f.name||'').toLowerCase().includes(q)).slice(0,8).forEach(f=>{
         const d=document.createElement('div');d.className='ci im-it';d.innerHTML='📁 '+esc(f.name);
@@ -7145,10 +7147,16 @@ function imgAttachTag(el,x,y){
   inp.onmousedown=ev=>ev.stopPropagation();inp.ontouchstart=ev=>ev.stopPropagation();
   const listDiv=document.createElement('div');listDiv.style.cssText='max-height:200px;overflow-y:auto';
   const curA=DB.articles.find(a=>a.id===ST.article);
-  const allTags=[...(DB.globalTags||[]),...[...new Set(DB.articles.flatMap(a=>a.tags||[]))]].filter((v,i,a)=>a.indexOf(v)===i).sort();
-  const renderTags=(q)=>{
+  /* v04.96 — the list is built once, on open; a keystroke filters it, and at
+     most _TAG_ROWS_CAP rows are drawn (tags already on the note first) */
+  const pool=_tagPool();
+  const allTags=pool.map(p=>p.t);
+  const renderTags=(q0)=>{
     listDiv.innerHTML='';
-    const filtered=q?allTags.filter(t=>t.toLowerCase().includes(q.toLowerCase())):allTags;
+    const q=_cleanTag(q0);
+    const onNote=new Set((curA?.tags||[]).map(x=>String(x).toLowerCase()));
+    const mt=_tagMatches(pool,q0,onNote,_TAG_ROWS_CAP);
+    const filtered=mt.rows;
     if(!filtered.length&&q){
       const d=document.createElement('div');d.className='ci im-it';
       d.innerHTML='➕ Create tag <strong>#'+esc(q)+'</strong>';
@@ -7170,11 +7178,12 @@ function imgAttachTag(el,x,y){
         d.onmousedown=go;d.ontouchstart=go;}
       listDiv.appendChild(d);
     });
+    if(mt.more){const d=document.createElement('div');d.className='ci tp-more';d.style.cssText='color:var(--t3);pointer-events:none;font-size:12px';d.textContent='+'+mt.more+' more — keep typing to narrow';listDiv.appendChild(d);}
     if(!filtered.length&&!q){const d=document.createElement('div');d.className='ci';d.style.color='var(--t3)';d.textContent='No tags yet — type to create one';listDiv.appendChild(d);}
   };
   renderTags('');
-  inp.oninput=()=>renderTags(inp.value.trim());
-  inp.onkeydown=e=>{if(e.key==='Enter'&&inp.value.trim()){const q=inp.value.trim();
+  inp.oninput=()=>renderTags(inp.value);
+  inp.onkeydown=e=>{const q=_cleanTag(inp.value);if(e.key==='Enter'&&q){
     if(!allTags.includes(q)){
       if(!curA)return;if(!curA.tags)curA.tags=[];curA.tags.push(q);curA.updatedAt=new Date().toISOString();
       if(!DB.globalTags)DB.globalTags=[];if(!DB.globalTags.includes(q)){DB.globalTags.push(q);DB.globalTags.sort();}
@@ -7554,7 +7563,7 @@ function openAnnModal(){
     +` style="width:100%;box-sizing:border-box;resize:vertical;min-height:70px"></textarea>`
     +`<div class="ma" style="margin-top:8px">`
     +`<button class="btn" onclick="_cancelAnn()">Cancel</button>`
-    +`<button class="btn bp" onclick="_confirmAnn(${num},'${esc(quote).replace(/\\/g,'\\\\').replace(/'/g,'\\x27')}')">Add [${num}]</button>`
+    +`<button class="btn bp" onclick="_confirmAnn(${num},${_ja(quote)})">Add [${num}]</button>`
     +`</div>`
   );
   setTimeout(()=>document.getElementById('ann-cmt-inp')?.focus(),80);
@@ -18436,7 +18445,7 @@ function _injectHeadingStatusBadges(html,aid){
     badge.className='hd-status-badge';
     badge.setAttribute('contenteditable','false');
     badge.setAttribute('data-htext',text);
-    badge.setAttribute('onclick',`event.stopPropagation();showHeadingStatusMenu(event,'${aid}',decodeURIComponent('${encodeURIComponent(text)}'))`);
+    badge.setAttribute('onclick',`event.stopPropagation();showHeadingStatusMenu(event,'${aid}',decodeURIComponent('${encodeURIComponent(text).replace(/'/g,'%27')}'))`);   /* v04.96 — encodeURIComponent leaves ' alone */
     if(st&&st.label){
       badge.style.background=st.color+'22';
       badge.style.color=st.color;
@@ -18459,12 +18468,12 @@ function showHeadingStatusMenu(ev,aid,headingText){
   let h='<div class="ci-nti-hd">📌 Heading status</div>';
   HEADING_STATUS_PRESETS.forEach(p=>{
     const on=cur&&cur.label===p.label;
-    h+=`<div class="ci" onclick="setHeadingStatus('${aid}',decodeURIComponent('${encodeURIComponent(headingText)}'),decodeURIComponent('${encodeURIComponent(p.label)}'),'${p.color}')">`
+    h+=`<div class="ci" onclick="setHeadingStatus('${aid}',decodeURIComponent('${encodeURIComponent(headingText).replace(/'/g,'%27')}'),decodeURIComponent('${encodeURIComponent(p.label)}'),'${p.color}')">`
       +`<span class="hd-status-dot" style="background:${p.color}"></span> ${esc(p.label)}${on?' ✓':''}</div>`;
   });
   h+=`<div class="csep"></div>`;
-  h+=`<div class="ci" onclick="promptCustomHeadingStatus('${aid}',decodeURIComponent('${encodeURIComponent(headingText)}'))">✏ Custom text &amp; colour…</div>`;
-  if(cur)h+=`<div class="ci d" onclick="clearHeadingStatus('${aid}',decodeURIComponent('${encodeURIComponent(headingText)}'))">🗑 Clear status</div>`;
+  h+=`<div class="ci" onclick="promptCustomHeadingStatus('${aid}',decodeURIComponent('${encodeURIComponent(headingText).replace(/'/g,'%27')}'))">✏ Custom text &amp; colour…</div>`;
+  if(cur)h+=`<div class="ci d" onclick="clearHeadingStatus('${aid}',decodeURIComponent('${encodeURIComponent(headingText).replace(/'/g,'%27')}'))">🗑 Clear status</div>`;
   m.innerHTML=h;
   _ctxPos(m,ev);
 }
@@ -19811,7 +19820,7 @@ function _pkSmartListHTML(){
 function _pkTagsListHTML(){
   const tags=getAllTags();
   if(!tags.length)return '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12.5px">No tags yet</div>';
-  return tags.map(t=>`<div class="pnav" data-name="${esc(t.tag.toLowerCase())}" onclick="pkNavScope('tag','${esc(t.tag)}')">`
+  return tags.map(t=>`<div class="pnav" data-name="${esc(t.tag.toLowerCase())}" onclick="pkNavScope('tag',${_ja(t.tag)})">`
     +`<span style="font-size:12px">🏷</span>`
     +`<span class="pnav-nm">#${esc(t.tag)}</span>`
     +`<span class="pnav-cnt">${t.count}</span>`
@@ -19987,7 +19996,7 @@ function _pkGlobalSearchHTML(q){
     }).join('');
   }
   if(tagHits.length){
-    h+=grpHd('🏷 Tags')+tagHits.map(t=>`<div class="pnav" onclick="pkNavScope('tag','${esc(t.tag)}')" style="padding-left:8px">`
+    h+=grpHd('🏷 Tags')+tagHits.map(t=>`<div class="pnav" onclick="pkNavScope('tag',${_ja(t.tag)})" style="padding-left:8px">`
       +`<span style="font-size:12px">🏷</span>`
       +`<span class="pnav-nm">#${esc(t.tag)}</span>`
       +`<span class="pnav-cnt">${t.count}</span>`
@@ -20318,6 +20327,42 @@ function tapCtx(ev,fid){
 
 /* ── Tag functions ──────────────────────────────────────────────────── */
 
+/* v04.96 (S3a) — free text inside an inline handler. `esc()` leaves `'` alone,
+   so `'${esc(tag)}'` broke on Qur'an; JSON.stringify gives a JS string literal
+   whatever the characters, and esc() makes that safe inside a "…" attribute. */
+function _ja(s){return esc(JSON.stringify(String(s)));}
+/* v04.96 — the ONE cleaner for a typed or renamed tag. Keeps every character
+   (Arabic, emoji, ' " & <) except the comma, which is the separator. */
+const _TAG_MAX=100;
+function _cleanTag(raw){
+  return String(raw==null?'':raw).trim().replace(/^#+/,'')
+    .replace(/,/g,'').replace(/\s+/g,' ').replace(/[\u0000-\u001f\u007f-\u009f]/g,'')
+    .trim().slice(0,_TAG_MAX).trim();
+}
+/* v04.96 — unique sorted tag list, O(n): globalTags + every note's tags */
+function _tagList(){
+  const set=new Set(DB.globalTags||[]);
+  const arts=DB.articles;
+  for(let i=0;i<arts.length;i++){const ts=arts[i].tags;if(ts)for(let j=0;j<ts.length;j++)set.add(ts[j]);}
+  return Array.from(set).sort();
+}
+/* v04.96 — a picker's list, built once when it opens: [{t,l}] (l = lowercase) */
+function _tagPool(){return _tagList().map(t=>({t,l:String(t).toLowerCase()}));}
+/* matches for a query, tags already on the note first, at most `cap` of them.
+   Returns {rows:[tag…], more:N}. Every tag stays reachable by typing. */
+const _TAG_ROWS_CAP=100, _TAG_HITS_CAP=50;
+function _tagMatches(pool,q,onNote,cap){
+  const ql=String(q||'').toLowerCase().trim();
+  const on=[],off=[];
+  for(let i=0;i<pool.length;i++){
+    const p=pool[i];
+    if(ql&&!p.l.includes(ql))continue;
+    (onNote&&onNote.has(p.l)?on:off).push(p.t);
+  }
+  const all=on.concat(off);
+  return {rows:all.slice(0,cap),more:Math.max(0,all.length-cap)};
+}
+const _TAG_MORE_HTML=n=>`<div class="tp-more" style="padding:8px 10px;color:var(--t3);font-size:12px">+${n} more — keep typing to narrow</div>`;
 function getAllTags(){
   const map={};
   DB.articles.forEach(a=>(a.tags||[]).forEach(t=>{map[t]=(map[t]||0)+1;}));
@@ -20423,7 +20468,7 @@ function renderTagPanel(){
     return;
   }
   list.innerHTML=tags.map(({tag,count})=>
-    `<div class="tag-it${ST.tag===tag?' on':''}" onclick="selTag('${esc(tag)}')">`+
+    `<div class="tag-it${ST.tag===tag?' on':''}" onclick="selTag(${_ja(tag)})">`+
     `<span>#${esc(tag)}</span><span class="tag-ct">${count}</span></div>`
   ).join('');
 }
@@ -20468,8 +20513,8 @@ function _paintTagEditor(el,host){
     tags.map(t=>{
       const _tc=DB.tagColors?.[t];
       const _ts=_tc?` style="background:${_tc}1a;color:${_tc};border-color:${_tc}40"`:'';
-      return `<span class="tag-chip"${_ts} oncontextmenu="event.preventDefault();showTagClrPicker(event,'${esc(t)}')">` +
-             `🏷 ${esc(t)}<span class="tag-x" onclick="rmTag('${esc(t)}','${host||''}',this.closest('.tag-editor'))">×</span></span>`;
+      return `<span class="tag-chip"${_ts} oncontextmenu="event.preventDefault();showTagClrPicker(event,${_ja(t)})">` +
+             `🏷 ${esc(t)}<span class="tag-x" onclick="rmTag(${_ja(t)},'${host||''}',this.closest('.tag-editor'))">×</span></span>`;
     }).join('')+
     `<span class="tag-inp-wrap"><input class="tag-inp"${legacy?' id="tag-inp"':''} `+
     `placeholder="${tags.length?'+ tag…':'add tags…'}" `+
@@ -20493,7 +20538,7 @@ function showTagSuggest(query,host,inputEl){
   const cur=_tagsGet(host);
   const matches=_allTags().filter(t=>!cur.includes(t)&&t.toLowerCase().includes(q)).slice(0,6);
   if(!matches.length){box.style.display='none';box.innerHTML='';return;}
-  box.innerHTML=matches.map(t=>`<div class="tag-sg-item" onmousedown="event.preventDefault();_pickTagSuggestion('${esc(t)}','${host||''}',this.closest('.tag-inp-wrap').querySelector('.tag-inp'))">${esc(t)}</div>`).join('');
+  box.innerHTML=matches.map(t=>`<div class="tag-sg-item" onmousedown="event.preventDefault();_pickTagSuggestion(${_ja(t)},'${host||''}',this.closest('.tag-inp-wrap').querySelector('.tag-inp'))">${esc(t)}</div>`).join('');
   box.style.display='block';
   _tagSuggestPlace(box,inputEl);
 }
@@ -20520,9 +20565,7 @@ function _pickTagSuggestion(tag,host,inputEl){
 }
 
 function addTag(raw,host,srcInput){
-  // Strip leading # and commas, allow spaces for multi-word tags
-  const tag=raw.trim().replace(/^[#,]+/,'').replace(/,+$/,'').trim()
-    .replace(/[^a-zA-Z0-9\-_. ]/g,'').replace(/\s{2,}/g,' ');
+  const tag=_cleanTag(raw);   /* v04.96 — keeps every character but the comma */
   const cur=_tagsGet(host);
   if(!tag||cur.includes(tag))return;
   _tagsSet(host,[...cur,tag]);
@@ -25856,7 +25899,7 @@ function renderMyWall(sf){
         ondragleave="wallGrpDLeave(event,'${k.id}')"
         ondrop="wallGrpDDrop(event,'${k.id}')"
         oncontextmenu="showWallKindCtx(event,'${k.id}')"
-        onclick="togSfGrp('${esc(gkey)}')" role="button">`
+        onclick="togSfGrp(${_ja(gkey)})" role="button">`
         +handle
         +`${dot}<span class="mw-kname">${esc(k.name)}</span><span class="mw-pill mw-pill-s">${arr.length}</span><span class="mw-chev">${gOpen?'▾':'▸'}</span></div>`
         +peek;
@@ -26194,49 +26237,8 @@ function togglePin(aid){
 
 function promptAddArtTag(aid){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return;
-  function applyTag(tag){
-    tag=tag.trim().replace(/^#/,'');
-    if(!tag){toast('⚠ Tag cannot be empty');return;}
-    if(!a.tags)a.tags=[];
-    if(a.tags.some(x=>String(x).toLowerCase()===tag.toLowerCase())){toast('Already tagged #'+tag);return;}
-    a.tags.push(tag);
-    a.updatedAt=new Date().toISOString();
-    if(!DB.globalTags)DB.globalTags=[];
-    if(!DB.globalTags.includes(tag)){DB.globalTags.push(tag);DB.globalTags.sort();}
-    persist();renderTree();renderP2C();
-    if(ST.article===aid){renderP3H();renderP3C();}
-    toast('🏷 Tagged #'+tag);
-    tagPickerRender(aid,'');
-  }
-  function tagPickerRender(aid,q){
-    const a=DB.articles.find(x=>x.id===aid);if(!a)return;
-    const norm=q.toLowerCase().trim();
-    const allTags=[...(DB.globalTags||[]),...[...new Set(DB.articles.flatMap(x=>x.tags||[]))]].filter((v,i,arr)=>arr.indexOf(v)===i).sort();
-    const filtered=norm?allTags.filter(t=>t.toLowerCase().includes(norm)):allTags;
-    let rows='';
-    // Show "create" row when search text doesn't exactly match existing tag
-    const exactMatch=allTags.some(t=>t.toLowerCase()===norm);
-    if(norm&&!exactMatch){
-      rows+=`<div class="pr ltn-row" onclick="tagPickerApply('${aid}','${norm.replace(/'/g,'\\x27')}')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--border2)">`
-        +`<div class="pc" style="flex-shrink:0;background:var(--accent);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center">＋</div>`
-        +`<span style="flex:1;font-size:13px;color:var(--accent);font-style:italic">Create "#${esc(norm)}"</span>`
-        +'</div>';
-    }
-    if(!filtered.length&&!norm){
-      rows='<div style="padding:10px 4px;color:var(--t3);font-size:13px">No tags yet — type to create one</div>';
-    } else {
-      filtered.forEach(t=>{
-        const on=(a.tags||[]).some(x=>String(x).toLowerCase()===t.toLowerCase());
-        rows+=`<div class="pr ltn-row" onclick="tagPickerApply('${aid}','${t.replace(/'/g,'\\x27')}')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--border2)">`
-          +`<div class="pc${on?' on':''}" style="flex-shrink:0">${on?'✓':''}</div>`
-          +`<span style="flex:1;font-size:13px;color:var(--t1)">#${esc(t)}</span>`
-          +(on?'<span style="font-size:11px;color:var(--t3)">on this note</span>':'')
-          +'</div>';
-      });
-    }
-    const pl=document.getElementById('tp-list');
-    if(pl)pl.innerHTML=rows;
-  }
+  /* v04.96 — the pool is built ONCE here; a keystroke only filters it */
+  _tpPool=_tagPool();_tpAid=aid;
   const ttl=(a.title||'Untitled').slice(0,40);
   showModal(
     `<div class="mt">🏷 Add tag</div>`
@@ -26248,37 +26250,45 @@ function promptAddArtTag(aid){
   tagPickerRender(aid,'');
   setTimeout(()=>document.getElementById('tp-srch')?.focus(),80);
 }
+/* v04.96 — the Add tag modal's list: built once when the modal opens
+   (promptAddArtTag), refreshed after an apply, filtered per keystroke, and at
+   most _TAG_ROWS_CAP rows drawn (tags already on the note first). */
+let _tpPool=null,_tpAid=null;
 function tagPickerRender(aid,q){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return;
-  const norm=q.toLowerCase().trim();
-  const allTags=[...(DB.globalTags||[]),...[...new Set(DB.articles.flatMap(x=>x.tags||[]))]].filter((v,i,arr)=>arr.indexOf(v)===i).sort();
-  const filtered=norm?allTags.filter(t=>t.toLowerCase().includes(norm)):allTags;
+  if(!_tpPool||_tpAid!==aid){_tpPool=_tagPool();_tpAid=aid;}
+  const clean=_cleanTag(q);
+  const cl=clean.toLowerCase();
+  const onNote=new Set((a.tags||[]).map(x=>String(x).toLowerCase()));
+  const m=_tagMatches(_tpPool,q,onNote,_TAG_ROWS_CAP);
   let rows='';
-  const exactMatch=allTags.some(t=>t.toLowerCase()===norm);
-  if(norm&&!exactMatch){
-    rows+=`<div class="pr ltn-row" onclick="tagPickerApply('${aid}','${norm.replace(/'/g,'\\x27')}')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--border2)">`
+  /* "create" row when the text is not exactly an existing tag (case-insensitive) */
+  const exactMatch=!!cl&&_tpPool.some(p=>p.l===cl);
+  if(cl&&!exactMatch){
+    rows+=`<div class="pr ltn-row" onclick="tagPickerApply(${_ja(aid)},${_ja(clean)})" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--border2)">`
       +`<div class="pc" style="flex-shrink:0;background:var(--accent);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center">＋</div>`
-      +`<span style="flex:1;font-size:13px;color:var(--accent);font-style:italic">Create "#${esc(norm)}"</span>`
+      +`<span style="flex:1;font-size:13px;color:var(--accent);font-style:italic">Create "#${esc(clean)}"</span>`
       +'</div>';
   }
-  if(!filtered.length&&!norm){
+  if(!m.rows.length&&!cl){
     rows+='<div style="padding:10px 4px;color:var(--t3);font-size:13px">No tags yet — type to create one</div>';
   } else {
-    filtered.forEach(t=>{
-      const on=(a.tags||[]).some(x=>String(x).toLowerCase()===t.toLowerCase());
-      rows+=`<div class="pr ltn-row" onclick="tagPickerApply('${aid}','${t.replace(/'/g,'\\x27')}')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--border2)">`
+    m.rows.forEach(t=>{
+      const on=onNote.has(String(t).toLowerCase());
+      rows+=`<div class="pr ltn-row" onclick="tagPickerApply(${_ja(aid)},${_ja(t)})" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--border2)">`
         +`<div class="pc${on?' on':''}" style="flex-shrink:0">${on?'✓':''}</div>`
         +`<span style="flex:1;font-size:13px;color:var(--t1)">#${esc(t)}</span>`
         +(on?'<span style="font-size:11px;color:var(--t3)">on this note</span>':'')
         +'</div>';
     });
+    if(m.more)rows+=_TAG_MORE_HTML(m.more);
   }
   const pl=document.getElementById('tp-list');
   if(pl)pl.innerHTML=rows;
 }
 function tagPickerApply(aid,tag){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return;
-  tag=tag.trim().replace(/^#/,'');
+  tag=_cleanTag(tag);
   if(!tag){toast('⚠ Tag cannot be empty');return;}
   if(!a.tags)a.tags=[];
   if(a.tags.some(x=>String(x).toLowerCase()===tag.toLowerCase())){toast('Already tagged #'+tag);return;}
@@ -26289,6 +26299,7 @@ function tagPickerApply(aid,tag){
   persist();renderTree();renderP2C();
   if(ST.article===aid){renderP3H();renderP3C();}
   toast('🏷 Tagged #'+tag);
+  _tpPool=null;   /* applying a tag recomputes the list */
   const q=(document.getElementById('tp-srch')?.value)||'';
   tagPickerRender(aid,q);
 }
@@ -26424,7 +26435,7 @@ function promptAddGlobalTag(){
     </div>`);
 }
 function addGlobalTag(raw){
-  const tag=(raw||'').trim().replace(/^[#,]+/,'').replace(/[^a-zA-Z0-9\-_. ]/g,'').replace(/\s{2,}/g,' ');
+  const tag=_cleanTag(raw);
   if(!tag)return;
   if(!DB.globalTags)DB.globalTags=[];
   if(!DB.globalTags.includes(tag)){DB.globalTags.push(tag);DB.globalTags.sort();}
@@ -26434,9 +26445,9 @@ function showTagCtx(ev,tag){
   ev.preventDefault();ev.stopPropagation();
   const m=document.getElementById('ctx');
   m.innerHTML=
-    `<div class="ci" onclick="hideCtx();renameTag('${esc(tag)}')">✏️ Rename tag</div>`+
+    `<div class="ci" onclick="hideCtx();renameTag(${_ja(tag)})">✏️ Rename tag</div>`+
     `<div class="csep"></div>`+
-    `<div class="ci d" onclick="hideCtx();deleteTag('${esc(tag)}')">🗑 Delete tag</div>`;
+    `<div class="ci d" onclick="hideCtx();deleteTag(${_ja(tag)})">🗑 Delete tag</div>`;
   m.style.display='block';
   const x=ev.clientX||0,y=ev.clientY||0;
   const mw=m.offsetWidth||150,mh=m.offsetHeight||80;
@@ -26454,7 +26465,7 @@ function renameTag(oldTag){
   el.replaceWith(inp);setTimeout(()=>inp.select(),0);
 }
 function finRenameTag(oldTag,newRaw){
-  const newTag=(newRaw||'').trim().replace(/[^a-zA-Z0-9\-_. ]/g,'').replace(/\s{2,}/g,' ');
+  const newTag=_cleanTag(newRaw);
   if(!newTag||newTag===oldTag){renderTree();return;}
   DB.articles.forEach(a=>{
     if(!a.tags)return;
@@ -26488,14 +26499,14 @@ function finRenameArtTitle(aid,val){
 
 function renderTagSection(){
   const open=ST.tagOpen;
-  const tags=getAllTags();
+  const tags=open?getAllTags():[];   /* v04.96 — a closed section builds no list */
   const label=DB.tagLabel||'Tags';
   const clr=DB.tagColor?`color:${DB.tagColor}`:'';
   const body=open?(
     '<div class="sec-body">'+
     (tags.length?tags.map(({tag,count})=>
       `<div class="tr-row tag-row${ST.tag===tag?' sel':''}" data-tag="${esc(tag)}" `+
-      `onclick="selTag('${esc(tag)}')" oncontextmenu="showTagCtx(event,'${esc(tag)}')" `+
+      `onclick="selTag(${_ja(tag)})" oncontextmenu="showTagCtx(event,${_ja(tag)})" `+
       `style="padding-left:13px;-webkit-touch-callout:none;user-select:none">`+
       `<span class="tr-tog"></span>`+
       `<span class="tr-ico" style="font-size:11px">🏷</span>`+
