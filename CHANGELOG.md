@@ -8701,4 +8701,8 @@ inside pasted HTML from another app (both S2d); deleting pictures from the
 store; any change to `mergeDB()`. The builder's run stopped after pushing the
 checks; the Architect ran them, fixed 54j and wrote this record.
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` **2011/2011, twice in a row**; `ship-check` 13/13; unpatched (v04.93 `index.html`) `--only 55` 34/89. The 34 that pass are explained in PR #137: no-page-error checks, the inline fallbacks (unpatched code always inlines), the restore repaint (`renderP3C` already hydrates), and two export checks true of code that does not inline.
+
+## v04.95 — S2d, existing inline pictures move out of note text (issue #138)
+
+*(Stub — written in full at the end of the round.)*

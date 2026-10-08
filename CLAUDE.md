@@ -23,8 +23,7 @@ must never accumulate here instead of there.
   written in 48 h) else inlines as before. Book/backup page inlines the bytes;
   Note History paints them; the item menu goes through `_picCanon`. The real
   v04.91 build keeps a reference through an edit (54j). 10 pictures → 1.3 KB
-  of note text. `--only 55` **127/127**, `--only 54` **67/67**. Full
-  `app-check`: (Architect, in review).
+  of note text. `--only 55` **127/127**, `--only 54` **67/67**. Architect: full `app-check` **2011/2011, twice in a row**; unpatched `--only 55` 34/89 (explained in PR #137).
 - **v04.93** (8 Oct 2026) — S2b, the cloud copy of pictures and the build stamp
   (issue #134). A device that holds a picture uploads it once
   (`pics/{sha}` + `picparts/{sha}~i` as Firestore Bytes, ≤ 900,000 bytes a
