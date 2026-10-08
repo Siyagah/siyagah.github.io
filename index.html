@@ -4600,6 +4600,7 @@ async function _picUpload(sha){
   }
   await metaRef.set({n:u8.length,t:blob.type||'image/jpeg',p:n,at:firebase.firestore.FieldValue.serverTimestamp(),b:_S2_BUILD()});
   await _picMarkUp(sha);_picUpStat.uploaded++;
+  if(_picMigShas.has(sha))await _premigBudget(n+1);   /* v04.95 — a migrated picture's document writes count against the day's cap, whoever uploads it */
   return 'up';
 }
 /* Called from _pushWrite(), NOT awaited. Nothing to upload = no await, no read. */
@@ -4725,6 +4726,7 @@ let _PICMIG_CAP=4000;
 let _PICMIG_BATCH_PICS=20, _PICMIG_BATCH_BYTES=10*1024*1024;
 const _picMig={moved:0,remain:0,wait:{budget:0,upload:0,gate:0,open:0,changed:0,other:0},fields:{},runs:0,last:0,lastErr:null,capHit:false,used:0};
 const _picMigOK=new Set();        /* shas whose pics/{sha} was read back from the server this session */
+const _picMigShas=new Set();       /* shas this pass put in the store: their upload writes are counted against the cap */
 const _picMigSkip=new Set();      /* notes restored by hand this session: left alone */
 let _picMigRun=null,_picMigWant=true,_picMigAt=0,_picMigFull=true,_picMigFails=0,_picMigT=0;
 let _premigDBp=null;
@@ -4869,36 +4871,42 @@ async function _picMigNote(c){
   else stamp=_picMigStamp(u0);   /* Trash merges by deletedAt: a missing stamp is left as it is */
   const found=_picMigFind(c0);
   if(!found.length)return true;
+  let cfg=null;try{cfg=getSyncConfig();}catch(e){}
+  /* 0 — the day's budget, BEFORE anything is stored (a stored picture is uploaded by the ordinary
+     uploader on the next push, whatever happens here). It over-estimates: it does not know which
+     pictures the cloud already holds. */
+  if(cfg){
+    const seen=new Set();let est=0;
+    found.forEach(function(f){if(seen.has(f.url))return;seen.add(f.url);est+=Math.max(1,Math.ceil(f.url.length*0.75/_PIC_PART))+1;});
+    const bud=await _premigBudget(0);_picMig.used=bud.n;
+    if(bud.n+est>_PICMIG_CAP){_picMig.capHit=true;return _picMigWaitNote(c,'budget');}
+  }
   /* 1 — into the local store */
   try{
     for(const f of found){
       const d=_dataUrlBytes(f.url);
       if(!d||!/^image\/[a-z0-9.+-]+$/i.test(d.mime))return _picMigWaitNote(c,'other');
-      f.mime=d.mime;f.sha=await _picPut(d.bytes,d.mime);
+      f.mime=d.mime;
+      if(cfg)_picMigShas.add(await _picSha(d.bytes.buffer));
+      f.sha=await _picPut(d.bytes,d.mime);
       if(!_picKnown.has(f.sha))return _picMigWaitNote(c,'other');
       await _picMigSlice();
     }
   }catch(e){_picMig.lastErr=String((e&&e.message)||e).slice(0,100);return _picMigWaitNote(c,'other');}
   /* 2 — the cloud copy, confirmed by reading it back from the server */
-  let cfg=null;try{cfg=getSyncConfig();}catch(e){}
   if(cfg){
     if(!_picCanCloud())return _picMigWaitNote(c,'upload');
-    const uniq=Array.from(new Set(found.map(function(f){return f.sha;})));
-    const need=uniq.filter(function(s){return !_picMigOK.has(s);});
-    let est=0;
-    for(const s of need){if(_picNotUp.has(s)){const b=await _picGet(s);est+=Math.max(1,Math.ceil((b?b.size:0)/_PIC_PART))+1;}}
-    const bud=await _premigBudget(0);_picMig.used=bud.n;
-    if(bud.n+est>_PICMIG_CAP){_picMig.capHit=true;return _picMigWaitNote(c,'budget');}
+    const need=Array.from(new Set(found.map(function(f){return f.sha;}))).filter(function(s){return !_picMigOK.has(s);});
     try{
       const nb=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
       for(const s of need){
         const r=await _picUpload(s);
-        if(r==='up'){const b=await _picGet(s);_picMig.used=(await _premigBudget(Math.max(1,Math.ceil((b?b.size:0)/_PIC_PART))+1)).n;}
         if(r==='gone')return _picMigWaitNote(c,'upload');
         const ex=await nb.collection('pics').doc(s).get({source:'server'});
         if(!ex.exists)return _picMigWaitNote(c,'upload');
         _picMigOK.add(s);
       }
+      _picMig.used=(await _premigBudget(0)).n;
     }catch(e){_picMig.lastErr=((e&&e.code)||'error')+'';return _picMigWaitNote(c,'upload');}
   }
   /* 3 — the original, kept (I8) */
