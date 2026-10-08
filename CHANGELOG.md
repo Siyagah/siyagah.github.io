@@ -8549,4 +8549,23 @@ on these.
 
 ## v04.92 — S2a: pictures stored by reference, the device side
 
-Issue #132. (Stub — full entry follows at the end of the round.)
+Issue #132. The Evernote import (8,878 notes, ~465 MB of pictures) cannot ship
+while a picture lives inside a note as base64 text. S2 moves pictures out of
+the text in four rounds; this is the first, the device side. **Nothing in the
+app creates a picture reference yet, so for the owner nothing changes.**
+
+**What changed**
+- **Stored shape** — `<img class="ed-img" data-pic="<sha256>" data-mime=".." alt="">`, no `src`.
+- **Local store** — a NEW database `siyagah-pics-v1` (`{b, t, n, at}` keyed by sha). `_picPut` / `_picGet` are on `window`. Nothing in localStorage.
+- **Display** — `_picHydrateAll()` beside both `_sgHydrateAll` call sites (read view, every editor). One object URL per sha, at most 64 kept; past that the least recently used URL no `<img>` is showing is revoked. A `data:` src (an opened export) keeps showing, and its bytes go into the store only if they hash to the sha. A missing picture shows a framed box that says "🖼 Picture not on this device yet" (an SVG image, so its 4.5:1 does not depend on the theme); `a.content` is never touched.
+- **Clean** — `_picCanon()` from `_edColClean()`, so on every save path: the placeholder and `blob:` srcs go, a `data:` src goes only once the store is known to hold it. A pasted picture whose reference was lost is restored from a url→sha map.
+- **Exports (I4)** — `_picInline()` / `_picInlinedJSON()` inline every stored picture as a `data:` src without touching `DB`; `exportFile`, `_writeToFile`, the backup folder, `downloadDatedBackup` and `exportJSON` use it (they are async now). A picture the store lacks keeps its bare reference, the export completes, a toast counts them. With no reference anywhere the output is exactly what v04.91 wrote.
+- **History** — `_stripHistoryImages()` only strips `data:` srcs, so a reference survives into a snapshot and restoring shows it (no code change).
+
+**Measured:** Chrome keeps `data-pic` and the `blob:` src through an in-editor copy/paste; `_picCanon` would repair the reference anyway if one were lost.
+
+**Checks:** section 53 (53a–53h), `--only 53` **92/92**. `--only 52` once, because the save paths moved: the first run read 72/75 (3 failed); two reruns passed (the last **93/93**). I did not find the cause of the first failure (likely timing in a journal check; the Architect should watch it).
+
+**Not done:** anything Firestore (S2b), inserting new pictures as references (S2c), migrating existing inline pictures (S2d), deleting unused pictures from the store.
+
+**Totals:** full `app-check`: (Architect, in review).
