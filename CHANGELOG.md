@@ -8763,4 +8763,8 @@ Architect ran the checks, made this change and wrote this record.
 fields holding `data:` pictures (counted only); `mergeDB()`; the whole-notebook
 save cost (backlog, before S4).
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` **2078/2080, twice in a row** on `fbb8d67`. The only failure both times was 51r: its seeds used inline pictures, which S2d now rightly migrates. Fixed in `tools/sync-s1.mjs` (3 seeds now use 1.3 MB of text). Then **2080/2080** on `dac13fa`; `--only 51` 111/111; `ship-check` 13/13; unpatched `--only 56` 0/3 (`_picMigrate` missing).
+
+## v04.96 — S3a: every tag works whatever its characters, and the tag pickers stay fast (8 Oct 2026, issue #140)
+
+(stub — written in full at the end of the round)

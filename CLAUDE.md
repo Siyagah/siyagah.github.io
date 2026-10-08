@@ -22,8 +22,7 @@ must never accumulate here instead of there.
   `updatedAt` = original + 1 ms (I1: any later real edit wins). Gate
   `_s2RefsOk()`, never an open note, 4,000 picture writes/day. 20 MB: 84 s,
   26.8 -> 0.1 MB; 140 MB: ~150 s, 186.8 -> 0.1 MB (2-6 s pauses are the
-  pre-existing whole-notebook `_save`). `--only 56` **69/69**. Full
-  `app-check`: (Architect, in review).
+  pre-existing whole-notebook `_save`). `--only 56` **69/69**. Architect: full `app-check` **2080/2080** on the final head (2078/2080 ×2 before the 51r seed fix); unpatched `--only 56` 0/3.
 - **v04.94** (8 Oct 2026) — S2c, new pictures stored by reference (issue
   #136). Paste, drop and 🖼 pick (Pane 3 and float windows, which gained their
   own paste/drop handlers) store the picture once, insert `data-pic`, upload at
