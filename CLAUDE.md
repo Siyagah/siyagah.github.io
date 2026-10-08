@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.93.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.94.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -24,8 +24,8 @@ must never accumulate here instead of there.
   sha256 checks. Every rec carries `b` (the app version); `_s2OlderActive()`
   says whether an older build wrote in the last 30 days (S2c will gate on
   it). Nothing creates a reference yet. Checks 54a–54h (`tools/sync-s2.mjs`),
-  `--only 54` **51/51**, `--only 53` 92/92. Full `app-check`: (Architect, in
-  review).
+  `--only 54` **51/51**, `--only 53` 92/92. Architect: full `app-check`
+  **1868/1868, twice in a row**; unpatched `--only 54` 0/3.
 - **v04.92** (8 Oct 2026) — S2a, pictures by reference, the device side (issue
   #132). A note may hold `<img data-pic="<sha256>" data-mime>` with no src; the
   bytes live in a new IndexedDB `siyagah-pics-v1`. Every device can display

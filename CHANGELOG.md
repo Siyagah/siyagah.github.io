@@ -8642,4 +8642,8 @@ No real Firestore was available: the Bytes round trip, the 900,000-byte part siz
 under the real 1 MiB limit and the real security rules are checked only against the
 fake, which counts Bytes as raw bytes the way Firestore does.
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` **1868/1868, twice in a row**; `ship-check` 13/13; unpatched (v04.92 `index.html`) `--only 54` 0/3: the S2b check throws (`_picNotUp is not defined`), so every 54 check fails.
+
+## v04.94 — S2c: new pictures are stored by reference
+
+Issue #136. (Stub; the full entry is written at the end of the round.)
