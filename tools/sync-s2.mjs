@@ -15,9 +15,17 @@
    54g  every rec carries `b`; _s2OlderActive() (a rec with no `b`, 31 days on, survives a reload)
    54h  size: 20 pictures of ~1.5 MB (numbers reported, no assertion beyond "all arrive intact")
 
+   v04.94, S2c (pictures PASTED on a device are stored by reference):
+   54i  a picture pasted on A is painted on B within 10 s, with no further edit on A
+   54j  the real v04.91 build (git 55336b4) edits the text of a note holding a reference; it survives into the rec B gets
+   54k  size: one note with 10 pasted pictures of ~1 MB (a.content under 5 KB; rec size and upload writes reported)
+
    `--only=54a,54c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 54). */
 import { playwright, serve, seedDB, ROOT } from './harness.mjs';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 import zlib from 'node:zlib';
 import { makeCloud, addDevice, reopen, on, sleep, quiet, check, results, NB } from './s1-fake.mjs';
@@ -328,6 +336,124 @@ try {
     for (let i = 0; i < 20; i++) if ((await storeHas(B, pics[i].sha)) === true) intact++;
     check(up && w.length === 60 && intact === 20, `54h 20 pictures of ~1.5 MB: uploaded in ${Math.round(upMs / 100) / 10} s with ${w.length} writes; one note opened on B fetched in ${fetchMs} ms with ${rd} reads; all 20 arrived intact`, JSON.stringify({ up, writes: w.length, intact }));
     await A2.ctx.close(); await B.ctx.close();
+  }
+  /* ══ v04.94, S2c — pictures PASTED on a device are stored by reference ══ */
+  const pasteImg = (d, sel, buf, mime) => on(d, ([sel, b64, mime]) => {
+    const ed = document.querySelector(sel); ed.focus();
+    const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const dt = new DataTransfer(); dt.items.add(new File([u], 'pasted.' + (mime === 'image/png' ? 'png' : 'jpg'), { type: mime }));
+    const rg = document.createRange(); rg.selectNodeContents(ed); rg.collapse(false); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(rg);
+    ed.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  }, [sel, buf.toString('base64'), mime]);
+  const imgCount = (d, sel) => on(d, (sel) => document.querySelectorAll(sel + ' img[data-pic]').length, sel);
+  async function waitImgs(d, sel, n, ms = 20000) { const t = Date.now(); while (Date.now() - t < ms) { if ((await imgCount(d, sel)) >= n) return true; await sleep(100); } return false; }
+  const editorA = async (d, id) => { await on(d, (i) => { selArt(i); startEdit(); }, id); await sleep(500); };
+  const gateOf = (d) => on(d, () => ({ ok: _s2RefsOk(), cfg: !!getSyncConfig(), rd: !!(_s1Stat.rd && _s1Stat.rd.on), caught: _s1RdCaught, md: !!_syncLastMd, older: _s1Rep && _s1Rep.older }));
+
+  /* ── 54i — a pasted picture reaches B and is painted there, with no further edit on A ── */
+  if (want('54i')) {
+    const cloud = makeCloud();
+    const A2 = await dev(cloud, 'A', VPS[2], seedWith([])), B = await dev(cloud, 'B', VPS[2], seedWith([]));
+    await sleep(1500);
+    await touch(cloud, A2, 'first push'); await sleep(800);
+    const gate = await gateOf(A2);
+    await editorA(A2, 'a1');
+    const pic = P(solid(210, 120, 30));
+    const t0 = Date.now();
+    await pasteImg(A2, '#ed', pic.buf, pic.mime);
+    const inEd = await waitImgs(A2, '#ed', 1);
+    let ok = false, ms = 0, shown = false;
+    while (Date.now() - t0 < 10000) {
+      const has = await on(B, () => /data-pic="[0-9a-f]{64}"/.test(DB.articles.find((x) => x.id === 'a1').content));
+      if (has) {
+        if (!shown) { await on(B, () => { selArt('a1'); }); shown = true; }
+        if (await painted(B.page, '.av-body', 1)) { ok = true; ms = Date.now() - t0; break; }
+      }
+      await sleep(250);
+    }
+    const ca = await content(A2, 'a1'), cb = await content(B, 'a1');
+    check(gate.ok && inEd, '54i A is allowed to create a reference (reader caught up, no older build) and the pasted picture is in its editor', JSON.stringify(gate));
+    check(ok, `54i the picture pasted on A is painted on B within 10 s, with no further edit on A (${ms} ms)`, JSON.stringify({ shown, bHas: /data-pic/.test(cb) }));
+    check(/data-pic="[0-9a-f]{64}"/.test(ca) && !ca.includes('data:') && !ca.includes('blob:'), '54i A\'s a.content holds data-pic and no data:/blob:', ca.slice(0, 200));
+    check(ok && /data-pic="[0-9a-f]{64}"/.test(cb) && !cb.includes('data:') && !cb.includes('blob:'), '54i B\'s a.content holds the reference only', cb.slice(0, 200));
+    const wr = cloud.log.filter((o) => o.t === 'set' && /\/(pics|picparts)\//.test(o.p)).length;
+    check(wr >= 2, '54i the upload started at once (a pics doc and at least one part are in the cloud)', 'docs=' + wr);
+    check(A2.errors.length === 0 && B.errors.length === 0, '54i no page errors', [...A2.errors, ...B.errors].slice(0, 2).join(' · '));
+    await A2.ctx.close(); await B.ctx.close();
+  }
+
+  /* ── 54j — the real v04.91 build opens a note with a reference, edits its text, saves: the reference survives ── */
+  if (want('54j')) {
+    let oldSrv = null, why = '';
+    try {
+      const dir = mkdtempSync(join(tmpdir(), 'siyagah-old91-'));
+      for (const f of ['index.html', 'sw.js', 'manifest.json']) { try { writeFileSync(join(dir, f), execFileSync('git', ['show', '55336b4:' + f], { cwd: ROOT, maxBuffer: 1 << 28 })); } catch (e) { if (f === 'index.html') throw e; } }
+      oldSrv = await serve(dir);
+    } catch (e) { why = String(e.message || e).slice(0, 200); }
+    if (!oldSrv) check(false, '54j the v04.91 build could not be read from git (commit 55336b4)', why);
+    else {
+      const cloud = makeCloud();
+      const A2 = await dev(cloud, 'A', VPS[2], seedWith([])), B = await dev(cloud, 'B', VPS[2], seedWith([]));
+      const D = await addDevice(browser, oldSrv.base, cloud, 'old91', { width: 1440, height: 900 }, false, seedWith([]));
+      await sleep(1500);
+      const oldVer = await on(D, () => document.querySelector('meta[name=app-version]').content);
+      await touch(cloud, A2, 'first push'); await sleep(800);
+      await editorA(A2, 'a1');
+      const pic = P(solid(20, 160, 200));
+      await pasteImg(A2, '#ed', pic.buf, pic.mime);
+      await waitImgs(A2, '#ed', 1);
+      await sleep(3500); await quiet(cloud, A2);
+      const sha = (/data-pic="([0-9a-f]{64})"/.exec(await content(A2, 'a1')) || [])[1];
+      /* the old build receives the note and shows it in its editor, edits the text, saves */
+      let got = false; for (let i = 0; i < 80 && !got; i++) { got = await on(D, () => /data-pic=/.test((DB.articles.find((x) => x.id === 'a1') || {}).content || '')); if (!got) await sleep(250); }
+      await on(D, () => { selArt('a1'); startEdit(); });
+      await sleep(700);
+      await on(D, () => { const p = document.querySelector('#ed p') || document.querySelector('#ed'); p.insertAdjacentText('beforeend', ' EDITED-ON-OLD'); p.dispatchEvent(new Event('input', { bubbles: true })); });
+      await sleep(3500); await on(D, () => { window.dispatchEvent(new Event('pagehide')); }); await sleep(500);
+      const cd = await content(D, 'a1');
+      check(oldVer === '04.91' && got && !!sha && cd.includes('EDITED-ON-OLD') && cd.includes('data-pic="' + sha + '"'), '54j the v04.91 build edits the text of a note holding a reference: the reference is still in the saved content', JSON.stringify({ oldVer, got, edited: cd.includes('EDITED-ON-OLD'), kept: cd.includes(sha || 'x'), content: cd.slice(0, 200) }));
+      await quiet(cloud, D);
+      let bGot = false; for (let i = 0; i < 80 && !bGot; i++) { bGot = await on(B, () => { const c = (DB.articles.find((x) => x.id === 'a1') || {}).content || ''; return c.includes('EDITED-ON-OLD') && /data-pic=/.test(c); }); if (!bGot) await sleep(250); }
+      const rec = cloud.store.get(`${NB}/recs/articles~a1`);
+      const recJ = rec && rec.j ? rec.j : '';
+      check(bGot && recJ.includes('data-pic=\\"' + sha + '\\"'), '54j the old build\'s edit reaches B and the reference survives into the rec B receives', JSON.stringify({ bGot, inRec: recJ.includes(sha || 'x'), b: rec && rec.b }));
+      await on(B, () => { selArt('a1'); });
+      check(await painted(B.page, '.av-body', 1), '54j ...and B paints the picture from the note the old build saved');
+      await sleep(800);
+      const g = await gateOf(B);
+      check(g.ok === false && g.older > 0, '54j once the old build has written, the gate says no (a rec without `b` within 48 h)', JSON.stringify(g));
+      check([A2, B, D].every((d) => d.errors.length === 0), '54j no page errors (the old build\'s own may include its missing-image noise)', [...A2.errors, ...B.errors].slice(0, 2).join(' · '));
+      await A2.ctx.close(); await B.ctx.close(); await D.ctx.close(); await oldSrv.close();
+    }
+  }
+
+  /* ── 54k — size: one note with 10 pasted pictures of ~1 MB each ── */
+  if (want('54k')) {
+    const cloud = makeCloud();
+    const A2 = await dev(cloud, 'A', VPS[2], seedWith([]));
+    await sleep(1500);
+    await touch(cloud, A2, 'first push'); await sleep(800);
+    await editorA(A2, 'a1');
+    const m = cloud.log.length;
+    let inBytes = 0;
+    for (let i = 0; i < 10; i++) {
+      const buf = noisePng(900, 900); inBytes += buf.length;
+      await pasteImg(A2, '#ed', buf, 'image/png');
+      await waitImgs(A2, '#ed', i + 1, 30000);
+    }
+    await sleep(3500); await waitUp(A2, 120000); await quiet(cloud, A2, 60000);
+    const c = await content(A2, 'a1');
+    const refs = (c.match(/data-pic="[0-9a-f]{64}"/g) || []).length;
+    const rec = cloud.store.get(`${NB}/recs/articles~a1`);
+    const recBytes = rec ? Buffer.byteLength(JSON.stringify(rec)) : -1;
+    const pw = cloud.log.slice(m).filter((o) => o.t === 'set' && /\/(pics|picparts)\//.test(o.p));
+    const storeBytes = await on(A2, async () => { const db = await _picDB(); return await new Promise((res) => { let n = 0, s = 0; const cu = db.transaction('pics', 'readonly').objectStore('pics').openCursor(); cu.onsuccess = () => { const x = cu.result; if (x) { n++; s += x.value.n; x.continue(); } else res({ n, s }); }; }); });
+    console.log('P54k ' + JSON.stringify({ pastedPngBytes: inBytes, storedPictures: storeBytes.n, storedBytes: storeBytes.s, contentBytes: c.length, recBytes, uploadDocWrites: pw.length, uploadMB: Math.round(pw.reduce((s, o) => s + o.bytes, 0) / 1048576 * 10) / 10 }));
+    check(refs === 10 && c.length < 5000 && !c.includes('data:') && !c.includes('blob:'), `54k 10 pasted pictures (${Math.round(storeBytes.s / 1048576 * 10) / 10} MB stored): a.content is ${c.length} bytes (limit 5,000), ${refs} references, no data:/blob:`, c.slice(0, 160));
+    check(recBytes > 0 && recBytes < 8000, `54k the cloud rec for the note is ${recBytes} bytes`, '');
+    check(pw.length >= 20 && (await waitUp(A2, 1000)), `54k all 10 pictures reached the cloud (${pw.length} picture document writes)`, '');
+    check(A2.errors.length === 0, '54k no page errors', A2.errors.slice(0, 2).join(' · '));
+    await A2.ctx.close();
   }
 } catch (e) {
   console.log(' FAIL  sync-s2 threw: ' + (e && e.stack || e));

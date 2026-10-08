@@ -11370,6 +11370,237 @@ await r.block('53h-fast-path-export-is-unchanged', async () => {
   await s.close();
 });
 
+/* 55 — v04.94, S2c: a picture the owner pastes, drops or picks is stored by reference.
+   55a paste of an image file, 390/820/1440, Pane 3 and a float window (the phone's
+       sheet): a reference is stored, the bytes are in the store, the picture is
+       painted inside the pane, a.content has data-pic and no data:/blob:/src;
+   55b the same for drop and for 🖼 pick (the real "+" group button, then the real
+       Image button, then the file chooser it opens);
+   55c the gate (_s2RefsOk): an older rec 1 h ago -> inline; clock +49 h -> reference;
+       sync connected and the reader not caught up -> inline; sync off -> reference;
+       no main doc seen -> inline; an unmarked blob writer 1 h ago -> inline, +49 h -> reference;
+   55d a store that fails (_picPut throws, or no IndexedDB) -> the inline picture, not lost;
+   55e every surface that renders a note shows the picture: the backup page (bytes
+       inlined, opened offline, with the embedded data), Note History's full preview
+       at three sizes, a restored version in the live editor;
+   55f the item menu's Attach to folder / Attach to note / Add New Folder & Save Image
+       of a shown picture store data-pic with no blob: and no src. */
+const s55mk = (page, tag) => page.evaluate(async (tag) => {
+  const c = document.createElement('canvas'); c.width = 160; c.height = 100; const g = c.getContext('2d');
+  g.fillStyle = 'hsl(' + ((tag * 53) % 360) + ',70%,45%)'; g.fillRect(0, 0, 160, 100); g.fillStyle = '#fff'; g.fillRect(8 + tag, 8, 40, 20);
+  return c.toDataURL('image/png').split(',')[1];
+}, tag);
+async function s55send(page, sel, kind, tag) {
+  const b64 = await s55mk(page, tag);
+  await page.evaluate(([sel, kind, b64]) => {
+    const ed = document.querySelector(sel); ed.focus();
+    const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const dt = new DataTransfer(); dt.items.add(new File([u], 'x.png', { type: 'image/png' }));
+    const rg = document.createRange(); rg.selectNodeContents(ed); rg.collapse(false); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(rg);
+    if (kind === 'paste') ed.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    else ed.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+  }, [sel, kind, b64]);
+}
+async function s55pick(page, scope, tag) {
+  const b64 = await s55mk(page, tag);
+  await page.locator(scope + ' .eb-grp-btn').filter({ hasText: '+' }).first().click();
+  await page.waitForTimeout(300);
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser', { timeout: 8000 }),
+    page.locator('[onmousedown*="edImgPick"]:visible').first().click(),
+  ]);
+  await chooser.setFiles({ name: 'picked.png', mimeType: 'image/png', buffer: Buffer.from(b64, 'base64') });
+}
+const s55open = (page, mode) => page.evaluate((m) => { selArt('a1'); if (m === 'single') startEdit(); else popOutNote('a1'); }, mode)
+  .then(() => page.waitForTimeout(700));
+const s55state = (page) => page.evaluate(async () => {
+  const a = DB.articles.find((x) => x.id === 'a1'); const m = /data-pic="([0-9a-f]{64})"/.exec(a.content);
+  let stored = null; if (m) { const b = await _picGet(m[1]); stored = !!b && (await _picSha(await b.arrayBuffer())) === m[1]; }
+  return { c: a.content, sha: m && m[1], stored };
+});
+const s55flush = async (page) => { await page.evaluate(() => window.dispatchEvent(new Event('pagehide'))); await page.waitForTimeout(500); };
+const s55clean = (c) => /data-pic="[0-9a-f]{64}"/.test(c) && !/<img[^>]*\ssrc=/.test(c) && !c.includes('blob:') && !c.includes('data:');
+
+for (const vp of S53_VPS) {
+await r.block(`55a-paste-makes-a-reference-${vp.name}`, async () => {
+  for (const mode of ['single', 'float']) {
+    const s = await openApp({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.width < 1200 });
+    const { page } = s; const sel = mode === 'single' ? '#ed' : '#fw-ed-a1';
+    await s55open(page, mode);
+    const gate = await page.evaluate(() => _s2RefsOk());
+    await s55send(page, sel, 'paste', 1);
+    r.check(await s53painted(page, sel, 1), `${vp.name} ${mode}: a pasted picture is painted at once`);
+    const g = await s53geo(page, sel);
+    r.check(g && g.imgs.length === 1 && g.imgs[0].nw > 0 && g.imgs[0].inside && g.imgs[0].src.startsWith('blob:') && !g.overflow, `${vp.name} ${mode}: ...inside the pane, from an object URL, no horizontal overflow`, JSON.stringify(g));
+    await s55flush(page);
+    const st = await s55state(page);
+    r.check(gate === true && st.stored === true && s55clean(st.c), `${vp.name} ${mode}: the bytes are in the store, a.content holds data-pic and no data:/blob:/src`, JSON.stringify({ gate, stored: st.stored, c: st.c.slice(0, 160) }));
+    r.check(s.errors.length === 0, `${vp.name} ${mode}: no page errors`, s.errors.slice(0, 2).join(' · '));
+    await s.close();
+  }
+});
+await r.block(`55b-drop-and-pick-${vp.name}`, async () => {
+  for (const mode of ['single', 'float']) {
+    for (const how of ['drop', 'pick']) {
+      const s = await openApp({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.width < 1200 });
+      const { page } = s; const sel = mode === 'single' ? '#ed' : '#fw-ed-a1';
+      await s55open(page, mode);
+      if (how === 'drop') await s55send(page, sel, 'drop', 2);
+      else await s55pick(page, mode === 'single' ? '#p3' : '#fw-a1', 3);
+      r.check(await s53painted(page, sel, 1), `${vp.name} ${mode} ${how}: the picture is painted at once`);
+      const g = await s53geo(page, sel);
+      r.check(g && g.imgs.length === 1 && g.imgs[0].inside && !g.overflow, `${vp.name} ${mode} ${how}: ...inside the pane`, JSON.stringify(g));
+      await s55flush(page);
+      const st = await s55state(page);
+      r.check(st.stored === true && s55clean(st.c), `${vp.name} ${mode} ${how}: stored by reference (bytes in the store, no data:/blob:/src in a.content)`, JSON.stringify({ stored: st.stored, c: st.c.slice(0, 160) }));
+      r.check(s.errors.length === 0, `${vp.name} ${mode} ${how}: no page errors`, s.errors.slice(0, 2).join(' · '));
+      await s.close();
+    }
+  }
+});
+}
+
+await r.block('55c-the-gate', async () => {
+  const cases = [
+    ['an older build (a rec with no b) wrote 1 hour ago', { sync: 1, rd: 1, caught: 1, md: 'marked', olderAgoH: 1 }, false],
+    ['...and the clock moved on 49 hours', { sync: 1, rd: 1, caught: 1, md: 'marked', olderAgoH: 1, shiftH: 49 }, true],
+    ['sync connected, the reader has not caught up', { sync: 1, rd: 1, caught: 0, md: 'marked' }, false],
+    ['sync connected, the reader is off', { sync: 1, rd: 0, caught: 1, md: 'marked' }, false],
+    ['sync connected, no main doc seen yet', { sync: 1, rd: 1, caught: 1, md: null }, false],
+    ['an unmarked blob writer wrote 1 hour ago', { sync: 1, rd: 1, caught: 1, md: 'unmarked1h' }, false],
+    ['...and the clock moved on 49 hours', { sync: 1, rd: 1, caught: 1, md: 'unmarked1h', shiftH: 49 }, true],
+    ['sync connected, caught up, only v04.93+ devices', { sync: 1, rd: 1, caught: 1, md: 'marked' }, true],
+    ['sync off', { sync: 0, rd: 0, caught: 0, md: null, olderAgoH: 1 }, true],
+  ];
+  for (const [label, g, expectRef] of cases) {
+    const s = await openApp({ viewport: { width: 1440, height: 900 } });
+    const { page } = s;
+    await s55open(page, 'single');
+    const got = await page.evaluate((g) => {
+      const o = { gc: getSyncConfig, now: _s1Now, md: _syncLastMd, rep: _s1Rep, rdc: _s1RdCaught, rd: _s1Stat.rd };
+      const now = Date.now();
+      getSyncConfig = g.sync ? () => ({ notebookId: 'x' }) : () => null;
+      _s1Stat.rd = { on: !!g.rd }; _s1RdCaught = !!g.caught;
+      _syncLastMd = g.md === 'marked' ? { s1c: '04.90', s1o: 0, deviceUpdatedAt: now } : g.md === 'unmarked1h' ? { deviceUpdatedAt: now - 3600e3 } : null;
+      _s1Now = () => Date.now() + (g.shiftH || 0) * 3600e3;
+      _s1Rep = g.olderAgoH != null ? { older: now - g.olderAgoH * 3600e3 } : null;
+      window.__o = o;
+      return _s2RefsOk();
+    }, g);
+    await s55send(page, '#ed', 'paste', 4);
+    await page.waitForFunction(() => document.querySelectorAll('#ed img').length >= 1, null, { timeout: 8000 }).catch(() => {});
+    await page.evaluate(() => { const o = window.__o; getSyncConfig = o.gc; _s1Now = o.now; _syncLastMd = o.md; _s1Rep = o.rep; _s1RdCaught = o.rdc; _s1Stat.rd = o.rd; });
+    await s55flush(page);
+    const c = await page.evaluate(() => DB.articles.find((x) => x.id === 'a1').content);
+    const isRef = s55clean(c), isInline = /<img[^>]*\ssrc="data:image\/png;base64,/.test(c) && !c.includes('data-pic');
+    r.check(got === expectRef && (expectRef ? isRef : isInline), `gate: ${label} -> ${expectRef ? 'a reference' : 'the inline picture, as before'}`, JSON.stringify({ gate: got, isRef, isInline, c: c.slice(0, 100) }));
+    r.check(s.errors.length === 0, `gate (${label}): no page errors`, s.errors.slice(0, 2).join(' · '));
+    await s.close();
+  }
+});
+
+await r.block('55d-a-failing-store-keeps-the-picture', async () => {
+  for (const how of ['put-throws', 'no-indexeddb']) {
+    const s = how === 'put-throws' ? await openApp({ viewport: { width: 1440, height: 900 } }) : await openApp({ viewport: { width: 1440, height: 900 }, disableIndexedDB: true });
+    const { page } = s;
+    await s55open(page, 'single');
+    if (how === 'put-throws') await page.evaluate(() => { _picPut = async () => { throw new Error('store write failed'); }; });
+    await s55send(page, '#ed', 'paste', 5);
+    await page.waitForFunction(() => document.querySelectorAll('#ed img').length >= 1, null, { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(300);
+    const shown = await page.evaluate(() => { const i = document.querySelector('#ed img'); return i && { src: (i.getAttribute('src') || '').slice(0, 22), nw: i.naturalWidth, ref: i.hasAttribute('data-pic') }; });
+    await s55flush(page);
+    const c = await page.evaluate(() => DB.articles.find((x) => x.id === 'a1').content);
+    r.check(shown && shown.src.startsWith('data:image/') && shown.nw > 0 && !shown.ref && /<img[^>]*\ssrc="data:image\/png;base64,/.test(c) && !c.includes('data-pic'), `${how}: the picture is inserted inline (data:), painted and saved — not lost`, JSON.stringify({ shown, c: c.slice(0, 90) }));
+    r.check(s.errors.filter((e) => !/store write failed/.test(e)).length === 0, `${how}: no page errors`, s.errors.slice(0, 2).join(' · '));
+    await s.close();
+  }
+});
+
+await r.block('55e-every-surface-shows-the-picture', async () => {
+  const { playwright } = await import('./harness.mjs');
+  const { mkdtemp } = await import('node:fs/promises');
+  /* the backup page: bytes inlined, opened offline, embedded data too */
+  {
+    const s = await s53open(S53_VPS[2]);
+    const { page } = s;
+    const before = await page.evaluate(() => DB.articles.find((a) => a.id === 'p1').content);
+    const dl = page.waitForEvent('download');
+    await page.evaluate(() => { exportBackupHTML(); });
+    const d = await dl;
+    const dir = await mkdtemp(join(tmpdir(), 'siyagah-55e-'));
+    const file = join(dir, 'backup.html');
+    await d.saveAs(file);
+    const text = await readFile(file, 'utf8');
+    const body = text.split('<script id="siyagah-backup-data"')[0];
+    r.check((body.match(/<img[^>]*\ssrc="data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]{100,}/g) || []).length >= 2, 'backup page: both pictures of the note are inlined as data: in the readable page');
+    const emb = text.split('<script id="siyagah-backup-data"')[1] || '';
+    r.check(/<img[^>]*?src=\\"data:image\/(jpeg|png);base64,/.test(emb), 'backup page: the embedded data carries the bytes too (so Import Backup restores pictures)');
+    r.check(/data-pic="f{64}"/.test(body) && !/data-pic="f{64}"[^>]*\ssrc=/.test(body), 'backup page: a picture the store lacks stays a bare reference and the export still completed');
+    const pw = await playwright();
+    const browser = await pw.chromium.launch();
+    const ctx = await browser.newContext({ viewport: { width: 1000, height: 800 }, offline: true });
+    const p2 = await ctx.newPage();
+    await p2.goto('file://' + file);
+    await p2.waitForFunction(() => { const im = [...document.querySelectorAll('.bk-content img[data-pic]')].filter((i) => (i.getAttribute('src') || '').startsWith('data:')); return im.length >= 2 && im.every((i) => i.complete && i.naturalWidth > 0); }, null, { timeout: 8000 }).then(() => r.check(true, 'backup page opened offline from disk: both pictures are painted'), () => r.check(false, 'backup page opened offline from disk: both pictures are painted'));
+    await browser.close();
+    const after = await page.evaluate(() => DB.articles.find((a) => a.id === 'p1').content);
+    r.check(after === before && s53noLive(after), 'exporting the backup page did not touch the live notebook');
+    r.check(s.errors.length === 0, 'backup page: no page errors', s.errors.slice(0, 2).join(' · '));
+    await s.close();
+  }
+  /* Note History: full preview at three sizes, and a restored version in the live editor */
+  for (const vp of S53_VPS) {
+    const s = await s53open(vp);
+    const { page } = s;
+    page.on('dialog', (dd) => dd.accept());
+    const id = await page.evaluate(() => { const a = DB.articles.find((x) => x.id === 'p1'); _captureNoteHistory(a, 'save', true); const sn = a.noteHistory[a.noteHistory.length - 1]; a.content = '<p>Replaced</p>'; persist(); selArt('p1'); return sn.id; });
+    await page.evaluate((id) => { openNoteHistory('p1'); previewNoteHistory('p1', id); _nhSetMode('p1', 'full'); }, id);
+    await page.waitForTimeout(500);
+    const ok = await s53painted(page, '#nh-picker .nh-prev-body', 2);
+    const g = await s53geo(page, '#nh-picker .nh-prev-body');
+    r.check(ok && g && g.imgs.length === 2 && g.imgs.every((i) => i.nw > 0 && i.inside) && !g.overflow, `${vp.name}: Note History's full preview paints both pictures inside the panel`, JSON.stringify(g));
+    await page.evaluate(() => { closeNoteHistory(); startEdit(); });
+    await page.waitForTimeout(400);
+    await page.evaluate((id) => { restoreNoteHistory('p1', id); }, id);
+    await page.waitForTimeout(600);
+    r.check(await s53painted(page, '#ed', 2), `${vp.name}: restoring a version while editing paints both pictures in the live editor`);
+    r.check(s.errors.length === 0, `${vp.name}: history surfaces: no page errors`, s.errors.slice(0, 2).join(' · '));
+    await s.close();
+  }
+});
+
+await r.block('55f-item-menu-stores-the-reference', async () => {
+  for (const vp of S53_VPS) {
+    for (const way of ['folder', 'note', 'newfolder']) {
+      const s = await s53open(vp);
+      const { page } = s;
+      page.on('dialog', (dd) => (dd.type() === 'prompt' ? dd.accept('Pictures55') : dd.accept()));
+      await page.evaluate(() => { selArt('p1'); startEdit(); });
+      await s53painted(page, '#ed', 2);
+      await page.locator('#ed img[data-pic]').first().click({ button: 'right' });
+      await page.waitForSelector('#item-menu', { timeout: 4000 });
+      const n0 = await page.evaluate(() => DB.articles.length);
+      if (way === 'newfolder') {
+        await page.locator('#item-menu .ci', { hasText: 'Add New Folder' }).first().click();
+      } else {
+        await page.locator('#item-menu .ci', { hasText: way === 'folder' ? 'Attach to folder' : 'Attach to note' }).first().click();
+        await page.waitForSelector('#item-menu .im-it', { timeout: 4000 });
+        if (way === 'note') await page.locator('#item-menu .im-it', { hasText: 'Empty target' }).first().click();
+        else await page.locator('#item-menu .im-it').first().click();
+      }
+      await page.waitForTimeout(500);
+      const got = await page.evaluate(([way, n0]) => {
+        const a = way === 'note' ? DB.articles.find((x) => x.id === 'p3') : DB.articles[DB.articles.length - 1];
+        return { made: DB.articles.length - n0, c: a.content };
+      }, [way, n0]);
+      r.check((way === 'note' ? got.made === 0 : got.made === 1) && s55clean(got.c), `${vp.name} item menu, ${way}: the stored markup is data-pic only — no blob:, no src, no data:`, JSON.stringify(got).slice(0, 220));
+      r.check(s.errors.length === 0, `${vp.name} item menu, ${way}: no page errors`, s.errors.slice(0, 2).join(' · '));
+      await s.close();
+    }
+  }
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
