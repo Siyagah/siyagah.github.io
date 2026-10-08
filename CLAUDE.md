@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.95.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.96.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,14 +16,21 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.96** (8 Oct 2026) — S3a, every tag works whatever its characters, and
+  the tag pickers stay fast (issue #140). `_ja(s)` passes free text safely to an
+  inline handler (`'${esc(tag)}'` broke on `Qur'an`; `encodeURIComponent` also
+  leaves `'` alone); `_cleanTag()` keeps Arabic, `'`, emoji (only the comma is
+  removed); a picker builds its tag list once and draws ≤ 100 rows + "+N more".
+  Phone ×4 at 3,000 tags: Add tag modal 624 → 36 ms, keystroke 402 → 24 ms,
+  `renderTree` Tags closed 44 → 17 ms. Tags section when open untouched (S3b).
+  `--only 57` **86/86**, `--only 6p` 104/104. Full `app-check`: (Architect, in review).
 - **v04.95** (8 Oct 2026) — S2d, existing inline pictures move out of note
   text (issue #138). `_picMigrate()`, per note all-or-nothing: store, upload and
   read back, back up the original in `siyagah-premig-v1` (I8), re-check, replace,
   `updatedAt` = original + 1 ms (I1: any later real edit wins). Gate
   `_s2RefsOk()`, never an open note, 4,000 picture writes/day. 20 MB: 84 s,
   26.8 -> 0.1 MB; 140 MB: ~150 s, 186.8 -> 0.1 MB (2-6 s pauses are the
-  pre-existing whole-notebook `_save`). `--only 56` **69/69**. Full
-  `app-check`: (Architect, in review).
+  pre-existing whole-notebook `_save`). `--only 56` **69/69**. Architect: full `app-check` **2080/2080** on the final head (2078/2080 ×2 before the 51r seed fix); unpatched `--only 56` 0/3.
 - **v04.94** (8 Oct 2026) — S2c, new pictures stored by reference (issue
   #136). Paste, drop and 🖼 pick (Pane 3 and float windows, which gained their
   own paste/drop handlers) store the picture once, insert `data-pic`, upload at
@@ -50,17 +57,6 @@ must never accumulate here instead of there.
   bytes. Nothing creates a reference yet (S2c). Checks 53a–53h, `--only 53`
   **92/92**; `--only 52` 93/93 on rerun (first run 72/75, cause not found).
   Architect: full `app-check` **1817/1817, twice in a row**; unpatched `--only 53` 0/12 blocks.
-- **v04.91** (6 Oct 2026) — S1d, the local hot path at 9,000 notes (issue
-  #130). Record cache; undo as byte-bounded frames; a local journal
-  (`siyagah-localrecs-v1`, one transaction per save, `notebook` stays the
-  full copy, checkpoints); list patching; faster replica assembly. Phone ×4
-  at 9k: receive 9.5 s → 1.01 s, undo 6.7 s → 0.90 s, heap 2.8 GB → 149 MB,
-  autosave 437 ms. **Targets (a) 300 ms, (c) 500 ms and the laptop quarter
-  targets NOT met.** Checks 52a–52e + 52d2 (kills inside a journal
-  transaction and a checkpoint, via `__ljHold`). Not done: render on
-  receive/undo (317/426 ms) and `_collect` 146 ms ×2 per autosave. Architect
-  totals: full `app-check` **1725/1725, twice in a row**; `--only=52d2` 4/4;
-  `--only=52d,52e` 16/16; unpatched `--only 52` 4/10.
 ---
 
 ## What this is

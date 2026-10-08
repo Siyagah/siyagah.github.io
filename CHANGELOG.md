@@ -8763,4 +8763,62 @@ Architect ran the checks, made this change and wrote this record.
 fields holding `data:` pictures (counted only); `mergeDB()`; the whole-notebook
 save cost (backlog, before S4).
 
+**Totals (Architect):** full `app-check` **2078/2080, twice in a row** on `fbb8d67`. The only failure both times was 51r: its seeds used inline pictures, which S2d now rightly migrates. Fixed in `tools/sync-s1.mjs` (3 seeds now use 1.3 MB of text). Then **2080/2080** on `dac13fa`; `--only 51` 111/111; `ship-check` 13/13; unpatched `--only 56` 0/3 (`_picMigrate` missing).
+
+## v04.96 — S3a: every tag works whatever its characters, and the tag pickers stay fast (8 Oct 2026, issue #140)
+
+S3 makes thousands of tags usable before the Evernote import (S4). Two faults and
+one cost, all measured first (`tools/s3-measure.mjs`, 3,000 tags / 9,000 notes).
+
+**1. A tag in an inline handler.** `esc()` does not escape `'`, so a sidebar row
+for `Qur'an` threw `SyntaxError: missing ) after argument list` and selected
+nothing; `.replace(/'/g,'\\x27')` left `"` open. New `_ja(s)` =
+`esc(JSON.stringify(String(s)))`, a JS string literal that is safe inside a
+double-quoted attribute, used at every handler that interpolates free text.
+The sweep also found `encodeURIComponent(x)` inside `decodeURIComponent('…')`
+(it leaves `'` alone): heading-status menus and the note menu's "remove tag"
+rows. Sites changed and left are listed in PR #141.
+
+**2. A typed tag lost its characters.** `[^a-zA-Z0-9\-_. ]` in `addTag`,
+`addGlobalTag` and `finRenameTag` stripped Arabic, apostrophes and emoji to
+nothing. New `_cleanTag(raw)`: trim, strip leading `#`s, remove commas and
+control characters, collapse whitespace, trim, cap 100. Used by every typed or
+renamed path (tag editor, Add tag, Create row, `imgAttachTag`, New tag, Rename).
+No migration: stored tags are never rewritten (I1; 57c). Duplicate rules are
+unchanged per site. The modal's Create row now uses the text as typed (it used
+to lower-case it, unlike Enter in the same box).
+
+**3. The pickers.** `_tagList()` (one `Set`, O(n)) replaces four
+`indexOf` copies; `_tagPool()`/`_tagMatches()` build a picker's list once when
+it opens and filter it per keystroke; at most 100 rows plus "+N more — keep
+typing to narrow", tags already on the note first (sidebar search hits: 50).
+The Add tag modal's duplicate inner `tagPickerRender` (and its unused
+`applyTag`) are gone. `renderTagSection()` no longer calls `getAllTags()` when
+the section is closed. The Tags section when open is untouched (S3b).
+
+**Measured (ms; phone = CPU x4; before = Architect's table)**
+
+| Surface | Laptop before → after | Tablet | Phone |
+|---|---|---|---|
+| Add tag modal, open | 151 → 30 | 107 → 20 | 624 → 36 |
+| …each keystroke | 78 → 13 | 65 → 15 | 402 → 24 |
+| Tag-it suggestions | 5 → 14 | 10 → 15 | 23 → 16 |
+| Sidebar search keystroke | 35 → 22 | 17 → 12 | 82 → 43 |
+| `renderTree()`, Tags closed | 15 → 15 | 15 → 15 | 44 → 17 |
+| `renderTree()`, Tags open | 183 → 174 | 176 → 176 | 870 → 747 (S3b) |
+
+`imgAttachTag` open: 16 laptop, 22 phone (no earlier figure). Targets on the
+phone (open ≤150, keystroke ≤60, `imgAttachTag` ≤150, tree closed ≤30): all met.
+Suggestion times differ by run noise (it was not changed).
+
+**Checks:** `tools/s3a-tags.mjs`, block 57 (57a–57e, at 390/820/1440), `--only 57`
+**86/86**; `--only 6p` **104/104**; `--only 32,20b,21` 23/23; `ship-check` 13/13.
+Unpatched (`origin/main`'s `index.html`): 57a fails at once (`Qur'an` row
+`SyntaxError`, `back\slash` selects `backslash`, rename boxes missing).
+
+**Not done:** the Tags section's shape when open (S3b); the cost of un-selecting a
+tag (Pane 2, 0.5 s laptop / 2.4 s phone, backlog); case-insensitive duplicate tags;
+`_mergeStrs` O(n²). 57a opens the Add tag modal, `imgAttachTag` and the picker by
+their functions and then clicks the rows; the menu path to them is not clicked.
+
 **Totals:** full `app-check`: (Architect, in review).
