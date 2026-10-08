@@ -69,7 +69,11 @@ async function editNote(page, vp, id) {
   await page.evaluate((id) => { try { if (ST.editing) cancelEdit(); } catch {} try { closeModal(); } catch {} ST.folder = DB.articles.find((a) => a.id === id).folderIds[0]; ST.article = id; ST.tag = null; render(); if (innerWidth < 1200) showPane('p3'); window.startEdit(); }, id);
   await page.waitForSelector('#ed');
   await sleep(350);
-  if (vp.w < 640) { await page.click('.eb-grp-btn[data-g="insert"]'); await sleep(200); }
+  if (vp.w < 640) {
+    await page.evaluate(() => { if (ST.ebGroup) togEBGroup(ST.ebGroup); });   /* a toggle left open by the last note would be closed by the click */
+    await sleep(100);
+    await page.click('.eb-grp-btn[data-g="insert"]'); await sleep(200);
+  }
 }
 const etags = (page) => page.evaluate(() => [...(ST.etags || [])]);
 const tagsOf = (page, id) => page.evaluate((id) => [...(DB.articles.find((a) => a.id === id).tags || [])], id);
@@ -139,7 +143,7 @@ async function perLayout(vp) {
       for (const t of AWK) {
         await reset(page, 'a1', AWK);
         if (!(await tagMenu(page, vp, t))) { fails.push(`${t}: menu did not open`); continue; }
-        page.once('dialog', (d) => d.accept());
+        page.once('dialog', (d) => d.accept().catch(() => {}));
         await page.click('#ctx .ci:has-text("Delete tag")');
         await sleep(250);
         const got = await tagsOf(page, 'a1');
@@ -154,7 +158,7 @@ async function perLayout(vp) {
       await editNote(page, vp, 'a1');
       for (let k = 0; k < AWK.length; k++) {
         const t = AWK[k];
-        await page.evaluate((all) => { ST.etags = [...all]; renderTagEditor(''); if (window.DB.tagColors) DB.tagColors = {}; }, AWK);
+        await page.evaluate((all) => { ST.etags = [...all]; renderTagEditor(''); DB.tagColors = {}; }, AWK);
         const chip = page.locator('#tag-editor .tag-chip').nth(k);
         const shown = await chip.evaluate((e) => ({ txt: e.textContent, kids: [...e.children].map((c) => c.className) }));
         if (shown.txt !== '🏷 ' + t + '×' || shown.kids.join() !== 'tag-x') shownFails.push(`${t}: chip ${JSON.stringify(shown)}`);
@@ -181,7 +185,8 @@ async function perLayout(vp) {
 
       /* suggestion dropdown (on a2, which has none of them) */
       e0 = nErr(); fails = [];
-      await page.evaluate((all) => { DB.articles.find((a) => a.id === 'a1').tags = [...all]; persist(); }, AWK);
+      /* leave a1's editor first: cancelEdit() commits the staged tags (v04.56), so restore a1 after it */
+      await page.evaluate((all) => { try { cancelEdit(); } catch {} DB.articles.find((a) => a.id === 'a1').tags = [...all]; persist(); }, AWK);
       await editNote(page, vp, 'a2');
       for (const t of AWK) {
         await page.evaluate(() => { ST.etags = []; renderTagEditor(''); });
