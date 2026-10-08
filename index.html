@@ -187,6 +187,15 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .sb-si input{background:none;border:none;outline:none;color:var(--sb-ink);font-size:12.5px;
              width:100%;font-family:var(--ui);min-width:0}
 .sb-si input::placeholder{color:var(--sb-ink-dim)}
+/* v04.97 (S3b) — the Tags section's "Find a tag…" box; ink and placeholder both
+   --sb-ink-soft (.92) so they clear 4.5:1 on every preset */
+.tag-find-wrap{padding:4px 12px 6px 13px}
+.tag-find{width:100%;box-sizing:border-box;min-width:0;background:var(--sb-strip);
+          border:1px solid var(--sb-line);border-radius:8px;padding:6px 9px;outline:none;
+          color:var(--sb-ink);font-size:12.5px;font-family:var(--ui)}
+.tag-find:focus{background:var(--sb-strip-hi);border-color:var(--sb-ink-dim)}
+.tag-find::placeholder{color:var(--sb-ink-soft);opacity:1}
+.tag-all-row{cursor:pointer;color:var(--sb-ink)}
 .sb-bts{width:100%;margin-top:6px;justify-content:center;font-size:11.5px;
         min-height:32px;border-radius:8px;
         background:var(--sb-strip)!important;
@@ -5412,7 +5421,15 @@ function renderTree(){
   // Render sections then tags inline
   /* Filter system sections (db-*, kb-*) from regular tree render */
   const _secs=[...DB.sections].filter(s=>!s.id.startsWith('db-')&&!s.id.startsWith('kb-')).sort((a,b)=>a.order-b.order);
+  /* v04.97 — a redraw must not take the Tags box's focus or caret (a phone
+     would lose its keyboard); put them back on the rebuilt input */
+  const _tf=document.activeElement,_tfOn=_tf&&_tf.id==='tag-find';
+  const _tfS=_tfOn?_tf.selectionStart:0,_tfE=_tfOn?_tf.selectionEnd:0;
   el.innerHTML=renderSmartSection()+renderDatabaseSection()+_secs.map(s=>renderSection(s)).join('')+renderTagSection()+renderNTISection();
+  if(_tfOn){
+    const n=document.getElementById('tag-find');
+    if(n){n.focus({preventScroll:true});try{n.setSelectionRange(_tfS,_tfE);}catch(e){}}
+  }
 }
 
 function trNode(f,depth){
@@ -26497,26 +26514,91 @@ function finRenameArtTitle(aid,val){
   persist();renderP2C();renderP3H();
 }
 
+/* v04.97 (S3b) — the open Tags section: a "Find a tag…" box, the 20 most-used
+   tags and "All tags (N)". Under _TAGS_ALL_MAX tags in total it lists them all,
+   A–Z, with no box, as before. One O(n) pass, no localeCompare. */
+const _TAGS_ALL_MAX=24, _TAGS_TOP=20;
+function _tagCounts(){
+  const map=new Map();
+  const arts=DB.articles;
+  for(let i=0;i<arts.length;i++){const ts=arts[i].tags;if(ts)for(let j=0;j<ts.length;j++){const t=ts[j];map.set(t,(map.get(t)||0)+1);}}
+  const g=DB.globalTags;
+  if(g)for(let i=0;i<g.length;i++)if(!map.has(g[i]))map.set(g[i],0);
+  const out=[];
+  map.forEach((count,tag)=>out.push({tag,count}));
+  return out;
+}
+function _tagRowHTML(tag,count){
+  return `<div class="tr-row tag-row${ST.tag===tag?' sel':''}" data-tag="${esc(tag)}" `+
+    `onclick="selTag(${_ja(tag)})" oncontextmenu="showTagCtx(event,${_ja(tag)})" `+
+    `style="padding-left:13px;-webkit-touch-callout:none;user-select:none">`+
+    `<span class="tr-tog"></span>`+
+    `<span class="tr-ico" style="font-size:11px">🏷</span>`+
+    `<span class="tr-name">#${esc(tag)}</span>`+
+    `<span class="tr-cnt">${count}</span>`+
+    `</div>`;
+}
+/* the rows under the box: {html, total} for the current ST.tagQ */
+function _tagRowsHTML(all){
+  const q=String(ST.tagQ||'').toLowerCase().trim();
+  const byName=(a,b)=>a.tag<b.tag?-1:a.tag>b.tag?1:0;
+  if(q){
+    const pre=[],mid=[];
+    for(let i=0;i<all.length;i++){
+      const l=String(all[i].tag).toLowerCase(),k=l.indexOf(q);
+      if(k===0)pre.push(all[i]);else if(k>0)mid.push(all[i]);
+    }
+    pre.sort(byName);mid.sort(byName);
+    const hits=pre.concat(mid);
+    if(!hits.length)return '<div class="tag-none" style="padding:6px 22px;font-size:11.5px;color:var(--sb-ink-soft);font-style:italic">No tag matches</div>';
+    return hits.slice(0,_TAG_HITS_CAP).map(t=>_tagRowHTML(t.tag,t.count)).join('')+
+      (hits.length>_TAG_HITS_CAP?`<div class="tag-more" style="padding:6px 22px;font-size:11.5px;color:var(--sb-ink-soft)">+${hits.length-_TAG_HITS_CAP} more — keep typing</div>`:'');
+  }
+  const top=all.slice().sort((a,b)=>b.count-a.count||byName(a,b)).slice(0,_TAGS_TOP);
+  if(ST.tag&&!top.some(t=>t.tag===ST.tag)){
+    const s=all.find(t=>t.tag===ST.tag);
+    if(s)top.push(s);
+  }
+  return top.map(t=>_tagRowHTML(t.tag,t.count)).join('');
+}
+function tagFind(v){
+  ST.tagQ=String(v==null?'':v);
+  const box=document.getElementById('tag-find-rows');
+  if(box)box.innerHTML=_tagRowsHTML(_tagCounts());
+}
+function tagFindKey(ev){
+  if(ev.key==='Escape'&&ST.tagQ){ev.preventDefault();ev.target.value='';tagFind('');}
+}
+function openAllTags(){
+  _pkMode='browse';_pkScopeKind='tags';_pkSectionScope=null;_pkFolderScope=null;_pkTarget=null;
+  _pkRootLabel='🏠 Root';
+  ST.pickExp={};ST.pkAllSecOpen={};
+  _pkOpenBrowse(_PK_SCOPE_KIND_META.tags.title);
+  _pkSetFolderControlsVisible(false);
+}
 function renderTagSection(){
   const open=ST.tagOpen;
-  const tags=open?getAllTags():[];   /* v04.96 — a closed section builds no list */
+  const all=open?_tagCounts():[];   /* v04.96 — a closed section builds no list */
   const label=DB.tagLabel||'Tags';
   const clr=DB.tagColor?`color:${DB.tagColor}`:'';
-  const body=open?(
-    '<div class="sec-body">'+
-    (tags.length?tags.map(({tag,count})=>
-      `<div class="tr-row tag-row${ST.tag===tag?' sel':''}" data-tag="${esc(tag)}" `+
-      `onclick="selTag(${_ja(tag)})" oncontextmenu="showTagCtx(event,${_ja(tag)})" `+
-      `style="padding-left:13px;-webkit-touch-callout:none;user-select:none">`+
-      `<span class="tr-tog"></span>`+
-      `<span class="tr-ico" style="font-size:11px">🏷</span>`+
-      `<span class="tr-name">#${esc(tag)}</span>`+
-      `<span class="tr-cnt">${count}</span>`+
-      `</div>`
-    ).join('')
-    :`<div style="padding:6px 22px;font-size:11.5px;color:var(--sb-ink-soft);font-style:italic">No tags yet — add them while editing</div>`)+
-    '</div>'
-  ):'';
+  let body='';
+  if(open){
+    if(!all.length){
+      body=`<div class="sec-body"><div style="padding:6px 22px;font-size:11.5px;color:var(--sb-ink-soft);font-style:italic">No tags yet — add them while editing</div></div>`;
+    }else if(all.length<=_TAGS_ALL_MAX){
+      all.sort((a,b)=>a.tag.localeCompare(b.tag));
+      body='<div class="sec-body">'+all.map(t=>_tagRowHTML(t.tag,t.count)).join('')+'</div>';
+    }else{
+      body='<div class="sec-body">'+
+        `<div class="tag-find-wrap"><input type="text" id="tag-find" class="tag-find" placeholder="Find a tag…" value="${esc(ST.tagQ||'')}" `+
+        `oninput="tagFind(this.value)" onkeydown="tagFindKey(event)" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Find a tag"></div>`+
+        `<div id="tag-find-rows">${_tagRowsHTML(all)}</div>`+
+        `<div class="tr-row tag-all-row" style="padding-left:13px;-webkit-touch-callout:none;user-select:none" onclick="openAllTags()">`+
+        `<span class="tr-tog"></span><span class="tr-ico" style="font-size:11px">🏷</span>`+
+        `<span class="tr-name">All tags (${all.length})</span></div>`+
+        '</div>';
+    }
+  }
   return `<div class="sf-sec tag-sec">
     <div class="sec-hd sf-hd-sec" data-tag-sec="1"
         oncontextmenu="showTagSecCtx(event)"
