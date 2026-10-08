@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.91.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.92.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,14 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.92** (8 Oct 2026) — S2a, pictures by reference, the device side (issue
+  #132). A note may hold `<img data-pic="<sha256>" data-mime>` with no src; the
+  bytes live in a new IndexedDB `siyagah-pics-v1`. Every device can display
+  one (placeholder "🖼 Picture not on this device yet" when absent),
+  `_picCanon` keeps object URLs out of every save, every export inlines the
+  bytes. Nothing creates a reference yet (S2c). Checks 53a–53h, `--only 53`
+  **92/92**; `--only 52` 93/93 on rerun (first run 72/75, cause not found).
+  Full `app-check`: (Architect, in review).
 - **v04.91** (6 Oct 2026) — S1d, the local hot path at 9,000 notes (issue
   #130). Record cache; undo as byte-bounded frames; a local journal
   (`siyagah-localrecs-v1`, one transaction per save, `notebook` stays the
@@ -24,8 +32,9 @@ must never accumulate here instead of there.
   autosave 437 ms. **Targets (a) 300 ms, (c) 500 ms and the laptop quarter
   targets NOT met.** Checks 52a–52e + 52d2 (kills inside a journal
   transaction and a checkpoint, via `__ljHold`). Not done: render on
-  receive/undo (317/426 ms) and `_collect` 146 ms ×2 per autosave. Full
-  `app-check`: (Architect, in review).
+  receive/undo (317/426 ms) and `_collect` 146 ms ×2 per autosave. Architect
+  totals: full `app-check` **1725/1725, twice in a row**; `--only=52d2` 4/4;
+  `--only=52d,52e` 16/16; unpatched `--only 52` 4/10.
 - **v04.90** (6 Oct 2026) — S1c, step three of per-note cloud storage (issue
   #128). `recs` is the sync; the blob is written only while an older build
   may still read it (`_s1Plan()`: `recs` / `both` / `blob`). Marker `s1c` on a
@@ -72,15 +81,6 @@ must never accumulate here instead of there.
   **53/53**, `sync-e2e` **24/24**; full `app-check` **1573/1573, twice in a
   row**; unpatched: `--only 51` 0/3 blocks (every block fails), `sync-e2e`
   23/24 (only the new recs-assembly check fails).
-- **v04.87** (5 Oct 2026) — MyWall, elegant (owner: "it looks so dumb").
-  A title row (name, segmented ⇅ All / ▤ Compact, "N pending · across M
-  categories"), then one card per category: colour stripe + tinted icon
-  chip (the owner's 🎨 colour, else its first type's), name as typed at
-  14.5px (Bold/Medium/Large kept on a calmer 15.5/17px scale), count pill,
-  chevron. Types are rows inside the card. Classes and data attributes
-  the drag/open code uses are unchanged. Section 50 **18/18**; unpatched,
-  every block aborts. The stripe colour needs its fallback
-  (`6m-1` caught it). Full `app-check` **1519/1519, twice in a row**.
 ---
 
 ## What this is
@@ -105,7 +105,10 @@ Access API), a manual `📦 Save File` export that bakes the notes into a copy o
 the app itself, and Firebase Firestore for cross-device sync behind a Google
 sign-in.
 
-**One user, one Google account.** The notebook is keyed by Google UID; there is
+**One user, one Google account.** There is one notebook. Its cloud id
+(`cfg.notebookId`) is set at sync setup (typed, or `generateNotebookId()` →
+`nb-…`) and is not necessarily the Google UID; `_migrateNotebook()` copies to
+`notebooks/{uid}` but does not switch the id. There is
 no sharing, no second person's data, no multi-tenant anything.
 
 ## The owner is a non-coder
@@ -347,6 +350,20 @@ A failing check is a wrong assertion surprisingly often — investigate before
   frames (changed records only), not 60 whole-notebook copies. The test-only
   `window.__ljHold` (ms) holds a journal or checkpoint transaction open and
   logs `LJ_HOLD`; unset, it does nothing.
+- **Pictures by reference (v04.92, S2a).** A picture is stored as
+  `<img class="ed-img" data-pic="<sha256>" data-mime alt="">` with NO `src`
+  (`data-pic`, not `data-blob`: "blob" means the S1 main-doc copy). Bytes live
+  in `siyagah-pics-v1` (a new database; localStorage is full) via
+  `_picPut`/`_picGet`, plus an in-memory set of known shas. Display follows
+  the spreadsheet pattern: `_picHydrateAll()` from `upgradeViewCards()` and
+  `_edColInit()`; one object URL per sha, 64 kept, LRU not in the DOM revoked.
+  `_picCanon()` runs from `_edColClean()` on every save path: it removes the
+  placeholder and `blob:` srcs, and a `data:` src only once the sha is known
+  present. **Never write a live src into `a.content`.** Exports go through
+  async `_picExportHTML()` / `_picInline()`, which inline pictures without
+  mutating `DB` and leave a missing one as a bare reference (never fail).
+  Nothing creates a reference yet; S2b is the cloud copy, S2c insertion, S2d
+  migration.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,

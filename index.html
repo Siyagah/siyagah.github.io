@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.91">
+<meta name="app-version" content="04.92">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -451,6 +451,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 
 /* Rich paste: images / bookmarks / mentions / embeds */
 #ed img.ed-img,.av-body img.ed-img,.fw-ed img.ed-img{max-width:100%;height:auto;border-radius:8px;display:block;margin:12px auto;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+#ed img.ed-img-missing,.av-body img.ed-img-missing,.fw-ed img.ed-img-missing{width:320px}
 .bk-card{display:flex;align-items:center;gap:11px;padding:11px 14px;margin:12px 0;border:1px solid var(--border2);border-radius:9px;background:var(--white);cursor:pointer;text-decoration:none;color:inherit;max-width:560px}
 .bk-card:hover{background:var(--paper)}
 .bk-fav{width:26px;height:26px;border-radius:6px;flex-shrink:0}
@@ -3222,7 +3223,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.91</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.92</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4307,6 +4308,208 @@ function _cleanExportRoot(){
   return root.outerHTML;
 }
 
+/* ── Pictures by reference (v04.92, S2a) ─────────────────────────────────
+   A picture can be stored as <img class="ed-img" data-pic="<sha256>"
+   data-mime="image/jpeg" alt=""> with NO src: the bytes live in their own
+   IndexedDB database, siyagah-pics-v1 (never localStorage — it is full).
+   Nothing in the app creates such a reference yet (S2c); this round only
+   teaches every device to DISPLAY one, to keep one out of stored content,
+   and to carry the bytes in every export (I4).
+   Display: _picHydrateAll() (read view + every editor), the same pattern as
+   the spreadsheet. Clean: _picCanon() from _edColClean() on every save path.
+   One object URL per sha, at most _PIC_URL_MAX (64) kept: past that the
+   least recently used URL that no <img> in the document is showing is
+   revoked. */
+const _PIC_URL_MAX=64;
+const _picKnown=new Set();            /* shas known to be in the store */
+const _picUrls=new Map();             /* sha -> object URL (insertion order = recency) */
+const _picUrlSha=new Map();           /* object URL -> {sha,t} */
+let _picDBp=null;
+function _picDB(){
+  if(_picDBp)return _picDBp;
+  _picDBp=new Promise(function(res){
+    try{
+      if(!window.indexedDB){res(null);return;}
+      const rq=indexedDB.open('siyagah-pics-v1',1);
+      rq.onupgradeneeded=function(){try{rq.result.createObjectStore('pics');}catch(e){}};
+      rq.onsuccess=function(){
+        const db=rq.result;
+        try{
+          const k=db.transaction('pics','readonly').objectStore('pics').getAllKeys();
+          k.onsuccess=function(){(k.result||[]).forEach(function(s){_picKnown.add(s);});res(db);};
+          k.onerror=function(){res(db);};
+        }catch(e){res(db);}
+      };
+      rq.onerror=rq.onblocked=function(){res(null);};
+    }catch(e){res(null);}
+  });
+  return _picDBp;
+}
+async function _picBytes(x){
+  if(x instanceof Blob)return await x.arrayBuffer();
+  if(x instanceof ArrayBuffer)return x;
+  if(x&&x.buffer instanceof ArrayBuffer)return x.buffer.slice(x.byteOffset,x.byteOffset+x.byteLength);
+  throw new Error('picture bytes');
+}
+async function _picSha(buf){
+  const d=new Uint8Array(await crypto.subtle.digest('SHA-256',buf));
+  let h='';for(let i=0;i<d.length;i++)h+=(d[i]<16?'0':'')+d[i].toString(16);
+  return h;
+}
+async function _picWrite(sha,blob,t){
+  const db=await _picDB();if(!db)throw new Error('no picture store');
+  await new Promise(function(res,rej){
+    const tx=db.transaction('pics','readwrite');
+    tx.objectStore('pics').put({b:blob,t:t,n:blob.size,at:Date.now()},sha);
+    tx.oncomplete=function(){res();};tx.onerror=tx.onabort=function(){rej(tx.error||new Error('write'));};
+  });
+  _picKnown.add(sha);
+}
+async function _picPut(x,mime){
+  const buf=await _picBytes(x);
+  const t=mime||(x&&x.type)||'image/jpeg';
+  const sha=await _picSha(buf);
+  await _picDB();
+  if(!_picKnown.has(sha))await _picWrite(sha,new Blob([buf],{type:t}),t);
+  return sha;
+}
+async function _picGet(sha){
+  const db=await _picDB();if(!db||!sha)return null;
+  return await new Promise(function(res){
+    try{
+      const rq=db.transaction('pics','readonly').objectStore('pics').get(sha);
+      rq.onsuccess=function(){const v=rq.result;if(v&&v.b){_picKnown.add(sha);res(v.b);}else res(null);};
+      rq.onerror=function(){res(null);};
+    }catch(e){res(null);}
+  });
+}
+window._picPut=_picPut;window._picGet=_picGet;
+function _picUrlFor(sha,blob){
+  let u=_picUrls.get(sha);
+  if(u){_picUrls.delete(sha);_picUrls.set(sha,u);return u;}
+  if(!blob)return null;
+  u=URL.createObjectURL(blob);
+  _picUrls.set(sha,u);_picUrlSha.set(u,{sha:sha,t:blob.type||'image/jpeg'});
+  if(_picUrls.size>_PIC_URL_MAX){
+    for(const [s,url] of Array.from(_picUrls)){
+      if(_picUrls.size<=_PIC_URL_MAX)break;
+      if(s===sha)continue;
+      let shown=false;
+      try{shown=!!document.querySelector('img[src="'+url+'"]');}catch(e){}
+      if(shown)continue;
+      _picUrls.delete(s);_picUrlSha.delete(url);try{URL.revokeObjectURL(url);}catch(e){}
+    }
+  }
+  return u;
+}
+let _picPhSrc='';
+function _picPlaceholderSrc(){
+  if(!_picPhSrc)_picPhSrc='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(
+    "<svg xmlns='http://www.w3.org/2000/svg' width='320' height='72' viewBox='0 0 320 72'>"+
+    "<rect x='1' y='1' width='318' height='70' rx='8' fill='#F4EFE6' stroke='#7A6F5E' stroke-dasharray='5 4'/>"+
+    "<text x='160' y='42' text-anchor='middle' font-family='sans-serif' font-size='15' fill='#3F3829'>🖼 Picture not on this device yet</text></svg>");
+  return _picPhSrc;
+}
+function _picShow(img,sha,blob){
+  const u=_picUrlFor(sha,blob);if(!u)return;
+  img.classList.remove('ed-img-missing');
+  img.setAttribute('src',u);
+}
+function _picPlace(img){
+  img.classList.add('ed-img-missing');
+  img.setAttribute('src',_picPlaceholderSrc());
+}
+async function _picAdopt(sha,src,mime){
+  /* an exported copy being opened: keep the data: src showing, and put the
+     bytes in the store only if they really hash to the sha they claim */
+  try{
+    const m=/^data:([^;,]*)(;base64)?,([\s\S]*)$/.exec(src);if(!m||!m[2])return;
+    const bin=atob(m[3]);const u8=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+    if(await _picSha(u8.buffer)!==sha)return;
+    await _picDB();
+    if(!_picKnown.has(sha)){const t=mime||m[1]||'image/jpeg';await _picWrite(sha,new Blob([u8],{type:t}),t);}
+  }catch(e){}
+}
+function _picHydrateAll(root){
+  if(!root||!root.querySelectorAll)return;
+  root.querySelectorAll('img[data-pic]').forEach(function(img){
+    const sha=img.getAttribute('data-pic');
+    if(!/^[0-9a-f]{64}$/.test(sha||''))return;
+    const src=img.getAttribute('src')||'';
+    const ph=img.classList.contains('ed-img-missing');
+    const hit=_picUrlSha.get(src);
+    if(!ph&&hit&&hit.sha===sha)return;
+    if(!ph&&src.indexOf('data:')===0){_picAdopt(sha,src,img.getAttribute('data-mime'));return;}
+    if(_picUrls.has(sha)){_picShow(img,sha);return;}
+    _picGet(sha).then(function(b){if(b)_picShow(img,sha,b);else _picPlace(img);});
+  });
+}
+/* Called by _edColClean() on every save path, on a CLONE: back to the stored
+   shape. Never loses a picture: a data: src stays until the store is known to
+   hold the bytes. A copied picture arrives with a blob: src and no data-pic —
+   the url->sha map restores the reference. */
+function _picCanon(node){
+  if(!node||!node.querySelectorAll)return;
+  node.querySelectorAll('img[data-pic],img[src^="blob:"]').forEach(function(img){
+    const src=img.getAttribute('src')||'';
+    if(!img.getAttribute('data-pic')&&src.indexOf('blob:')===0){
+      const m=_picUrlSha.get(src);if(!m)return;
+      img.setAttribute('data-pic',m.sha);img.setAttribute('data-mime',m.t);
+    }
+    const sha=img.getAttribute('data-pic');
+    if(img.classList.contains('ed-img-missing')){
+      img.classList.remove('ed-img-missing');
+      if(!img.getAttribute('class'))img.removeAttribute('class');
+      img.removeAttribute('src');return;
+    }
+    if(src.indexOf('blob:')===0)img.removeAttribute('src');
+    else if(src&&_picKnown.has(sha))img.removeAttribute('src');
+  });
+}
+/* Every export carries the bytes. Returns the JSON text of DB with each
+   known picture inlined as a data: src, WITHOUT touching DB. No picture
+   reference anywhere -> exactly JSON.stringify(DB). Never throws: a picture
+   the store lacks keeps its bare reference and is counted in .missing. */
+async function _picInline(pretty){
+  const plain=pretty?JSON.stringify(DB,null,2):JSON.stringify(DB);
+  try{
+    if(plain.indexOf('data-pic')===-1)return {text:plain,inlined:false,missing:0};
+    const re=/<img\b[^>]*?\bdata-pic=\\?"([0-9a-f]{64})\\?"[^>]*>/g;
+    const shas=new Set();let m;
+    while((m=re.exec(plain)))shas.add(m[1]);
+    const data={};let missing=0;
+    for(const s of shas){
+      const b=await _picGet(s);
+      if(!b){missing++;continue;}
+      const r=await new Promise(function(res){const fr=new FileReader();fr.onload=function(){res(fr.result);};fr.onerror=function(){res(null);};fr.readAsDataURL(b);});
+      if(!r){missing++;continue;}
+      data[s]=(b.type&&r.indexOf('data:'+b.type)===0)?r:('data:image/jpeg;base64,'+r.slice(r.indexOf(',')+1));
+    }
+    const rep=function(str){
+      return str.replace(/<img\b[^>]*?\bdata-pic="([0-9a-f]{64})"[^>]*>/g,function(tag,s){
+        if(!data[s]||/\ssrc\s*=/.test(tag))return tag;
+        return '<img src="'+data[s]+'"'+tag.slice(4);
+      });
+    };
+    const text=JSON.stringify(DB,function(k,v){return (typeof v==='string'&&v.indexOf('data-pic')!==-1)?rep(v):v;},pretty?2:0);
+    return {text:text,inlined:true,missing:missing};
+  }catch(e){
+    console.error('picture inline failed',e);
+    return {text:plain,inlined:false,missing:-1};
+  }
+}
+async function _picInlinedJSON(pretty){return (await _picInline(pretty)).text;}
+function _picMissingToast(n){
+  if(n>0)toast('⚠ '+n+' picture'+(n>1?'s':'')+' not on this device '+(n>1?'were':'was')+' not included in the file',6000);
+}
+async function _picExportHTML(){
+  const r=await _picInline(false);
+  _picMissingToast(r.missing);
+  return getExportHTML(r.inlined?r.text:undefined);
+}
+_picDB();
+
 /* ── Export ──────────────────────────────────────────────────────── */
 /** Build the full app HTML with the current DB embedded */
 function getExportHTML(ndOverride){
@@ -4330,9 +4533,9 @@ function getExportHTML(ndOverride){
   return html;
 }
 
-function exportFile(){
+async function exportFile(){
   persist();
-  const html=getExportHTML();
+  const html=await _picExportHTML();   /* v04.92 — pictures carry their bytes (I4) */
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=getTimestampedName();
@@ -4360,7 +4563,7 @@ function exportDeploy(){
   URL.revokeObjectURL(url);
   toast('🚀 Deploy file ready — upload to Firebase Hosting / GitHub Pages');
 }
-function exportJSON(){const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='notebook-backup.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);toast('Backup downloaded ✓');}
+async function exportJSON(){const _pr=await _picInline(true);const blob=new Blob([_pr.text],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='notebook-backup.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);toast('Backup downloaded ✓');_picMissingToast(_pr.missing);}
 /* v04.39 — this used to be DB=d;persist() with no question asked (I1). It now
    routes through the same consent dialog as importBackup() below, since both
    are "replace my notebook with a file" and neither should skip asking. */
@@ -14538,6 +14741,7 @@ function upgradeViewCards(box){
   if(!box)return;
   try{_ktRepair(box);}catch(e){}
   try{_sgHydrateAll(box,false);}catch(e){console.error('sheet mount',e);}
+  try{_picHydrateAll(box);}catch(e){console.error('picture mount',e);}
   try{
     /* anchors whose href or text is a video URL */
     box.querySelectorAll('a:not(.mention)').forEach(a=>{
@@ -15003,6 +15207,7 @@ function _edColHeads(ed){
 /* Strip all C5 display-only artefacts from a (cloned) node before saving. */
 function _edColClean(node){
   if(!node)return;
+  try{_picCanon(node);}catch(e){}   /* v04.92 — a picture goes back to its reference, never an object URL */
   try{_sgCanon(node);}catch(e){}   /* v04.52 — a live spreadsheet goes back to its stored shape */
   node.querySelectorAll('.ed-col-arr,.ed-col-grip,.ed-col-preview').forEach(function(n){n.remove();});
   node.querySelectorAll('.ed-col-hidden').forEach(function(n){n.classList.remove('ed-col-hidden');if(n.getAttribute('class')==='')n.removeAttribute('class');});
@@ -15045,6 +15250,7 @@ function _edColInit(ed){
   if(!ed)return;
   try{_ktRepair(ed);}catch(e){}
   try{_sgHydrateAll(ed,true);}catch(e){console.error('sheet mount',e);}
+  try{_picHydrateAll(ed);}catch(e){console.error('picture mount',e);}
   ed.querySelectorAll('.ed-col-arr,.ed-col-grip').forEach(function(n){n.remove();});
   const heads=_edColHeads(ed);
   /* E6 — each surface owns its own ⋯ wrapper, so a float showing headings
@@ -21466,7 +21672,7 @@ async function enableAutoSave(){
 async function _writeToFile(fromEnableFlow=false){
   if(!_fileHandle) return;
   try{
-    const html=getExportHTML();
+    const html=await _picExportHTML();
     const w=await _fileHandle.createWritable();
     await w.write(new Blob([html],{type:'text/html;charset=utf-8'}));
     await w.close();
@@ -21697,7 +21903,7 @@ async function runBackupNow(manual){
   }
   try{
     persist();
-    const html=getExportHTML();
+    const html=await _picExportHTML();
     const name=_bkFileName(cfg,new Date());
     const fh=await dir.getFileHandle(name,{create:true});
     const w=await fh.createWritable();
@@ -21743,10 +21949,10 @@ function setBackupEvery(v){
 /** The universal fallback: a dated copy through the ordinary download path.
     Same file, same completeness — it just needs a click, because browsers
     without the File System Access API cannot write to a folder unattended. */
-function downloadDatedBackup(){
+async function downloadDatedBackup(){
   const cfg=_bkCfg();
   persist();
-  const html=getExportHTML();
+  const html=await _picExportHTML();
   const name=_bkFileName({every:'daily'},new Date());
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);

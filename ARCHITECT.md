@@ -396,3 +396,7 @@ Every report follows one shape:
       sanitiser. Whether `data-sg` survives is **not measured** (v04.52).
       The worst case is a plain values table, not data loss, but it should
       be measured and, if needed, repaired on paste.
+- [ ] Render on receive/undo (317/426 ms on a ×4 phone, v04.91).
+- [ ] `_collect` runs 146 ms ×2 per autosave (v04.91).
+- [ ] `mergeDB()` appends every id-less remote element on each merge (v04.89): measure whether the owner's notebook holds any.
+- [ ] A picture in the store is never deleted (S2): garbage collection is a later round, costs storage only.
