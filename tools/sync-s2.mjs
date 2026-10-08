@@ -394,9 +394,9 @@ try {
     else {
       const cloud = makeCloud();
       const A2 = await dev(cloud, 'A', VPS[2], seedWith([])), B = await dev(cloud, 'B', VPS[2], seedWith([]));
-      const D = await addDevice(browser, oldSrv.base, cloud, 'old91', { width: 1440, height: 900 }, false, seedWith([]));
-      await sleep(1500);
-      const oldVer = await on(D, () => document.querySelector('meta[name=app-version]').content);
+      /* The old build joins only AFTER A has stored the reference: while an old build is
+         writing, A's gate (_s2RefsOk) rightly inlines the picture instead — which is what
+         the first cut of this check ran into (A wrote data:, so there was no reference). */
       await touch(cloud, A2, 'first push'); await sleep(800);
       await editorA(A2, 'a1');
       const pic = P(solid(20, 160, 200));
@@ -404,6 +404,10 @@ try {
       await waitImgs(A2, '#ed', 1);
       await sleep(3500); await quiet(cloud, A2);
       const sha = (/data-pic="([0-9a-f]{64})"/.exec(await content(A2, 'a1')) || [])[1];
+      check(!!sha, '54j A stored the pasted picture as a reference before the old build joined', 'sha=' + sha);
+      const D = await addDevice(browser, oldSrv.base, cloud, 'old91', { width: 1440, height: 900 }, false, seedWith([]));
+      await sleep(1500);
+      const oldVer = await on(D, () => document.querySelector('meta[name=app-version]').content);
       /* the old build receives the note and shows it in its editor, edits the text, saves */
       let got = false; for (let i = 0; i < 80 && !got; i++) { got = await on(D, () => /data-pic=/.test((DB.articles.find((x) => x.id === 'a1') || {}).content || '')); if (!got) await sleep(250); }
       await on(D, () => { selArt('a1'); startEdit(); });
@@ -411,12 +415,12 @@ try {
       await on(D, () => { const p = document.querySelector('#ed p') || document.querySelector('#ed'); p.insertAdjacentText('beforeend', ' EDITED-ON-OLD'); p.dispatchEvent(new Event('input', { bubbles: true })); });
       await sleep(3500); await on(D, () => { window.dispatchEvent(new Event('pagehide')); }); await sleep(500);
       const cd = await content(D, 'a1');
-      check(oldVer === '04.91' && got && !!sha && cd.includes('EDITED-ON-OLD') && cd.includes('data-pic="' + sha + '"'), '54j the v04.91 build edits the text of a note holding a reference: the reference is still in the saved content', JSON.stringify({ oldVer, got, edited: cd.includes('EDITED-ON-OLD'), kept: cd.includes(sha || 'x'), content: cd.slice(0, 200) }));
+      check(oldVer === '04.91' && got && !!sha && cd.includes('EDITED-ON-OLD') && cd.includes('data-pic="' + sha + '"'), '54j the v04.91 build edits the text of a note holding a reference: the reference is still in the saved content', JSON.stringify({ oldVer, got, edited: cd.includes('EDITED-ON-OLD'), kept: !!sha && cd.includes(sha), content: cd.slice(0, 200) }));
       await quiet(cloud, D);
       let bGot = false; for (let i = 0; i < 80 && !bGot; i++) { bGot = await on(B, () => { const c = (DB.articles.find((x) => x.id === 'a1') || {}).content || ''; return c.includes('EDITED-ON-OLD') && /data-pic=/.test(c); }); if (!bGot) await sleep(250); }
       const rec = cloud.store.get(`${NB}/recs/articles~a1`);
       const recJ = rec && rec.j ? rec.j : '';
-      check(bGot && recJ.includes('data-pic=\\"' + sha + '\\"'), '54j the old build\'s edit reaches B and the reference survives into the rec B receives', JSON.stringify({ bGot, inRec: recJ.includes(sha || 'x'), b: rec && rec.b }));
+      check(bGot && recJ.includes('data-pic=\\"' + sha + '\\"'), '54j the old build\'s edit reaches B and the reference survives into the rec B receives', JSON.stringify({ bGot, inRec: !!sha && recJ.includes(sha), b: rec && rec.b }));
       await on(B, () => { selArt('a1'); });
       check(await painted(B.page, '.av-body', 1), '54j ...and B paints the picture from the note the old build saved');
       await sleep(800);

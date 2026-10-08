@@ -600,6 +600,13 @@ assertions miss.
   delayed the fold. When a surface can hide its own text (fold classes,
   palettes, collapsed menus), a sweep says nothing about the hidden text.
   Force it into view and measure it, as `16j` does.
+- **A fallback inside an assertion can make it pass on nothing.** The first
+  54j (v04.94) asserted `content.includes(sha || 'x')`. The sha was never
+  found, because the app's gate had rightly inlined the picture, so the check
+  tested "does the note contain the letter x" and passed. Assert that the
+  thing you are about to follow exists (`check(!!sha, …)`) before testing
+  what happened to it, and never give a missing value a default that
+  matches.
 
 ## `sync-audit.mjs` (v04.68)
 

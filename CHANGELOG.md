@@ -8646,4 +8646,59 @@ fake, which counts Bytes as raw bytes the way Firestore does.
 
 ## v04.94 — S2c: new pictures are stored by reference
 
-Issue #136. (Stub; the full entry is written at the end of the round.)
+Issue #136. **The first round that creates picture references.** A picture
+pasted, dropped or picked (🖼) is stored once in `siyagah-pics-v1`, uploaded at
+once, and kept out of the note's text: the note holds
+`<img class="ed-img" data-pic="<sha>" data-mime alt="">`. Big notes stop
+growing by megabytes per picture.
+
+**What changed**
+- **Insertion** — `insertImageFile()` compresses exactly as before, then turns
+  the data URL into bytes, `_picPut`s them, inserts the reference, hydrates it
+  in place and calls `_picUploadPending()` straight away (no wait for the next
+  text push). Any failure, or the gate saying no, inserts the inline `data:`
+  picture exactly as before — a picture is never lost.
+- **Float windows** had no paste/drop handler of their own (the browser wrote
+  its own inline picture); they now route both through `insertImageFile`, so
+  Pane 3 and every float window share one path.
+- **The gate, `_s2RefsOk()`** — references only when IndexedDB works; on a
+  sync-connected device, the reader has caught up this session and a main doc
+  has been seen; and no older build (a rec with no `b` / `b` < 04.93, or an
+  unmarked blob writer) has written in the last **48 h** (`_S2_ACTIVE_MS`).
+  Sync off → references freely (exports inline, they upload when sync is
+  turned on). Deliberately not `_s2OlderActive()`'s 30 days, which the last
+  pre-04.90 write keeps true until ~5 Nov.
+- **Surfaces** — swept every place that puts `a.content` or a history
+  `v.content` into the DOM: the read view, Pane 3 and float editors (already
+  hydrated), Note History's preview/diff bodies and restore (now hydrated),
+  and the book/backup page `generateBackupHTMLContent()` (an export: now async
+  and inlines the bytes in both the page and its embedded data via
+  `_picInlineStr`; its PDF window opens inside the click). Backlinks, search
+  and list snippets are text-only.
+- **Item menu** — Save into folder / Attach to note wrote `el.outerHTML`
+  straight into a note, skipping the clean step; all four sites now go
+  through `_itemHTML()` (a clone through `_picCanon`). No other
+  `outerHTML`/`innerHTML` → `a.content` write skips `_edColClean`.
+
+**Measured**
+- The real v04.91 build (git `55336b4`) opens a note holding a reference,
+  edits its text and saves: the reference survives into the rec another
+  device receives, and that device paints the picture (54j).
+- 10 pasted pictures (24 MB as pasted PNG, 5.6 MB stored): `a.content` 1,350
+  bytes, the note's rec 2,215 bytes, 20 picture document writes (54k).
+- A picture pasted on A is painted on B within 10 s with no further edit (54i).
+
+**Checks:** section 55 (55a–55f) `--only 55` **127/127**; `tools/sync-s2.mjs`
+54i–54k, `--only 54` **67/67**; `--only 53` 92/92. **Fixed in review:** the
+builder's first 54j started the old v04.91 device before A pasted, so A's gate
+rightly inlined the picture and the check had no reference to follow; its
+"kept" test then passed vacuously (`cd.includes(sha || 'x')`). The old device
+now joins after A has stored the reference, and the check first asserts the
+reference exists.
+
+**Not done:** migrating existing inline pictures, and `data:` pictures arriving
+inside pasted HTML from another app (both S2d); deleting pictures from the
+store; any change to `mergeDB()`. The builder's run stopped after pushing the
+checks; the Architect ran them, fixed 54j and wrote this record.
+
+**Totals:** full `app-check`: (Architect, in review).
