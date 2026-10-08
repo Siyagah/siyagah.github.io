@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.92.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.93.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -23,7 +23,7 @@ must never accumulate here instead of there.
   `_picCanon` keeps object URLs out of every save, every export inlines the
   bytes. Nothing creates a reference yet (S2c). Checks 53a–53h, `--only 53`
   **92/92**; `--only 52` 93/93 on rerun (first run 72/75, cause not found).
-  Full `app-check`: (Architect, in review).
+  Architect: full `app-check` **1817/1817, twice in a row**; unpatched `--only 53` 0/12 blocks.
 - **v04.91** (6 Oct 2026) — S1d, the local hot path at 9,000 notes (issue
   #130). Record cache; undo as byte-bounded frames; a local journal
   (`siyagah-localrecs-v1`, one transaction per save, `notebook` stays the

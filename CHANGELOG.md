@@ -8568,4 +8568,8 @@ app creates a picture reference yet, so for the owner nothing changes.**
 
 **Not done:** anything Firestore (S2b), inserting new pictures as references (S2c), migrating existing inline pictures (S2d), deleting unused pictures from the store.
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` **1817/1817, twice in a row**; `ship-check` 13/13; unpatched (v04.91 `index.html`) `--only 53` 0/12 blocks (every block fails: seeding needs `_picPut`); `--only 52` 93/93 on two further standalone runs. The builder's single 72/75 was not reproduced in four runs; its failing check names were not captured.
+
+## v04.93 — S2b: the cloud copy of pictures, and the build stamp
+
+Issue #134. (Stub — written in full at the end of the round.)
