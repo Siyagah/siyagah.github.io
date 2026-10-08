@@ -4626,8 +4626,10 @@ async function _picFetch(sha,mime){
 const _picFS=new Map();   /* sha -> {fails,timer,busy,last,mime} — memory only */
 const _picFetchQ=[];let _picFetchActive=0;
 window._picFetchStat={ok:0,failed:0,lastErr:null};
+let _picWaitCloud=false;   /* a placeholder was shown before sync was ready */
+function _picCloudReady(){ if(!_picWaitCloud)return; _picWaitCloud=false; try{_picHydrateAll(document.body);}catch(e){} }
 function _picWant(sha,mime){
-  if(!_picCanCloud())return;
+  if(!_picCanCloud()){_picWaitCloud=true;return;}
   let s=_picFS.get(sha);
   if(!s){s={fails:0,timer:null,busy:false,last:0,mime:mime};_picFS.set(sha,s);}
   if(s.busy||s.timer)return;
@@ -24036,6 +24038,7 @@ async function _s1ReadStart(cfg){
       _s1RdChain=_s1RdChain.then(()=>_s1OnSnap(gen,snap,nbRef)).catch(e=>{ if(gen===_s1RdGen) _s1RdFail(cfg,e); });
     },err=>{ if(gen===_s1RdGen) _s1RdFail(cfg,err,true); });
     st.on=true; st.reason=null;
+    _picCloudReady();   /* v04.93 — a picture asked for before sync was up can be fetched now */
   }catch(e){ _s1RdOff(st,'start-failed',e); }
 }
 function _s1RdFail(cfg, e, listener){

@@ -10024,6 +10024,24 @@ await r.block('52-s1d-local-hot-path', async () => {
   r.check(out.status === 0, 'the S1d check exits cleanly', `exit ${out.status}`);
 });
 
+/* 54 — v04.93, S2b: the cloud copy of pictures, and the build stamp.
+   tools/sync-s2.mjs runs 54a–54h on the fake Firestore of s1-fake.mjs (which now
+   holds Bytes): upload order (parts, then meta), fetch on demand with the sha
+   verified, a corrupt or missing part, nothing written for a second push or an
+   empty store, a refused upload that never fails the text push, `b` on every rec
+   and _s2OlderActive(), and the size run. Each printed line becomes one check. */
+await r.block('54-s2b-picture-cloud-copy', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./sync-s2.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1500000, maxBuffer: 1 << 26 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 25, 'the S2b check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'S2b: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the S2b check exits cleanly', `exit ${out.status}`);
+});
+
 /* 39 — v04.75: the NTI Types panel's title bar carries 🔍 Search, ＋ Category
    and ＋ NTI (owner's ask, laptop screenshot of the panel opened from a
    pop-up's Type chip). Every step is a REAL tap/click, from the Type chip in
