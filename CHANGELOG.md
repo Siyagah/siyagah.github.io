@@ -8701,4 +8701,66 @@ inside pasted HTML from another app (both S2d); deleting pictures from the
 store; any change to `mergeDB()`. The builder's run stopped after pushing the
 checks; the Architect ran them, fixed 54j and wrote this record.
 
+**Totals (Architect):** full `app-check` **2011/2011, twice in a row**; `ship-check` 13/13; unpatched (v04.93 `index.html`) `--only 55` 34/89. The 34 that pass are explained in PR #137: no-page-error checks, the inline fallbacks (unpatched code always inlines), the restore repaint (`renderP3C` already hydrates), and two export checks true of code that does not inline.
+
+## v04.95 — S2d, existing inline pictures move out of note text (issue #138)
+
+The last step of S2. Every picture saved before v04.94 still sat inside its
+note as a base64 `data:` src (and so does any `data:` picture pasted in HTML
+from another app). `_picMigrate()` moves them out in the background.
+**Additive (I8), verified, resumable, and it can never beat a real edit (I1).**
+
+**Per note, all-or-nothing**
+1. Decode every inline picture and `_picPut` it (the sha is of the bytes
+   already in the note: nothing is re-compressed).
+2. On a synced device, `_picUpload` each and READ `pics/{sha}` back from the
+   server; any picture not confirmed leaves the note untouched.
+3. Write the original `{id, coll, content, updatedAt, at}` to a NEW IndexedDB
+   database `siyagah-premig-v1` and await the commit (a second backup of the
+   same note keeps the first). `window._premigRestore(key)` puts one back
+   (emergency only, no UI).
+4. Re-read the note: content or `updatedAt` moved -> abandon, retry later.
+5. Replace each `src` by `data-pic`/`data-mime`; every other attribute kept.
+6. **`updatedAt` = the original + 1 ms, never "now".** The migrated copy beats
+   the unmigrated copy of the same version everywhere; any real edit made
+   after the original version, anywhere, even offline, is newer and wins.
+   `_stampRecordTouches()` does not re-stamp a forward move. Steps 4-6 have no
+   await between them.
+
+Only when `_s2RefsOk()` is true; never a note open in Pane 3 or a float window;
+articles and trashed notes (other fields are only counted, in the diagnostics
+line). Idle batches; at boot, hourly, and 2 s after a merge. Upload budget:
+**4,000 picture document writes per device per UTC day** (`_PICMIG_CAP`),
+counted in `siyagah-premig-v1`, checked before anything is stored. The
+diagnostics "Pictures" line shows `moved out of notes: N of M (K waiting: ...)`
+and where inline pictures remain. No toasts.
+
+**Measured (56k)**
+- **20 MB** (300 notes, 600 pictures): all migrated in 84 s; notebook
+  26.8 MB -> 0.1 MB; peak heap 111 MB; 1,208 picture writes, 587 rec writes;
+  longest task 643 ms, and only the existing whole-notebook save.
+- **140 MB** (the biggest Evernote notebook): all migrated in ~150 s; notebook
+  186.8 MB -> 0.1 MB; peak heap 670 MB; 1,212 picture writes; 590 rec writes.
+  Long tasks of 2-6 s, all of them `_save()` (it serialises the whole
+  notebook: 3.5-4.7 s at 187 MB **before the pass moved anything**, falling to
+  ~0.2 s as notes shrink). The migration's own longest call was 400 ms
+  (`_picMigCands`, a scan of 187 MB of text). A 187 MB notebook of inline
+  pictures is not a real case (S4 imports by reference), but **the
+  whole-notebook save is a real cost for S4's ~45 MB of text** (backlog).
+
+**Checks:** `tools/sync-s2d.mjs`, block 56 (56a-56l, including the I1 race 56c,
+two devices converging with 0 rec writes in 60 s 56d, the real v04.94 build
+56j), `--only 56` **69/69**; `--only 55` 127/127; `--only 54` 67/67.
+**Changed in review:** 56k asserted "no main-thread task over 200 ms", which
+at 140 MB measured the pre-existing save, not this round (seconds before
+anything was migrated). It now asserts the migration's OWN functions stay
+under 600 ms and reports the save cost; the app's existing "localStorage
+best-effort save failed" console note at a 187 MB notebook is excluded from
+its page-error check. The builder's run stopped while 56k was running; the
+Architect ran the checks, made this change and wrote this record.
+
+**Not done:** deleting pictures or backups; templates and other non-note
+fields holding `data:` pictures (counted only); `mergeDB()`; the whole-notebook
+save cost (backlog, before S4).
+
 **Totals:** full `app-check`: (Architect, in review).

@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.94">
+<meta name="app-version" content="04.95">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3225,7 +3225,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.94</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.95</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4600,6 +4600,7 @@ async function _picUpload(sha){
   }
   await metaRef.set({n:u8.length,t:blob.type||'image/jpeg',p:n,at:firebase.firestore.FieldValue.serverTimestamp(),b:_S2_BUILD()});
   await _picMarkUp(sha);_picUpStat.uploaded++;
+  if(_picMigShas.has(sha))await _premigBudget(n+1);   /* v04.95 — a migrated picture's document writes count against the day's cap, whoever uploads it */
   return 'up';
 }
 /* Called from _pushWrite(), NOT awaited. Nothing to upload = no await, no read. */
@@ -4700,7 +4701,298 @@ function _picDiagText(){
   if(_picUpStat.refused)t+=' · cloud refused picture upload (permission-denied)';
   else if(_picUpStat.lastErr)t+=' · last upload error: '+_picUpStat.lastErr.code;
   if(_picFetchStat.lastErr&&_picFS.size)t+=' · '+_picFS.size+' not fetched yet';
-  return t+' · older build seen: '+(_s2OlderActive()?'yes':'no');
+  t+=' · older build seen: '+(_s2OlderActive()?'yes':'no');
+  try{t+=' · '+_picMigDiagText();}catch(e){}
+  return t;
+}
+
+/* ── Pictures: moving the existing inline pictures out of note text (v04.95, S2d) ──
+   A note saved before v04.94 holds each picture as a base64 data: src. This pass
+   converts them to references, one note at a time, ALL-OR-NOTHING per note:
+     1 decode + _picPut every picture (the sha is of the bytes already in the note);
+     2 on a synced device, upload each and READ pics/{sha} BACK from the server;
+     3 write the original to siyagah-premig-v1 (I8) and await the commit;
+     4 re-read the note: content or updatedAt moved -> abandon, retry later;
+     5 replace each <img>'s src by data-pic / data-mime (every other attribute kept);
+     6 updatedAt = the ORIGINAL updatedAt + 1 ms — never "now" (I1): the migrated copy
+       beats the unmigrated copy of the same version everywhere, and ANY real edit made
+       afterwards, on any device, even offline, is newer and wins.
+   Steps 4-6 have no await between them. Notes in Trash are migrated too (their
+   entry is replaced so the sweep sees it; Trash merges by deletedAt, so the other
+   devices simply migrate their own copy — same shas, same text). Nothing is deleted:
+   not the pictures, not the backup. Other fields holding data: pictures are only
+   counted. Upload budget: _PICMIG_CAP picture document writes per UTC day. */
+let _PICMIG_CAP=4000;
+let _PICMIG_BATCH_PICS=20, _PICMIG_BATCH_BYTES=10*1024*1024;
+const _picMig={moved:0,remain:0,wait:{budget:0,upload:0,gate:0,open:0,changed:0,other:0},fields:{},runs:0,last:0,lastErr:null,capHit:false,used:0};
+const _picMigOK=new Set();        /* shas whose pics/{sha} was read back from the server this session */
+const _picMigShas=new Set();       /* shas this pass put in the store: their upload writes are counted against the cap */
+const _picMigSkip=new Set();      /* notes restored by hand this session: left alone */
+let _picMigRun=null,_picMigWant=true,_picMigAt=0,_picMigFull=true,_picMigFails=0,_picMigT=0;
+let _premigDBp=null;
+function _premigDB(){
+  if(_premigDBp)return _premigDBp;
+  _premigDBp=new Promise(function(res){
+    try{
+      if(!window.indexedDB){res(null);return;}
+      const rq=indexedDB.open('siyagah-premig-v1',1);
+      rq.onupgradeneeded=function(){try{rq.result.createObjectStore('backup');rq.result.createObjectStore('meta');}catch(e){}};
+      rq.onsuccess=function(){res(rq.result);};
+      rq.onerror=rq.onblocked=function(){res(null);};
+    }catch(e){res(null);}
+  });
+  return _premigDBp;
+}
+/* Writes the original; a second backup of the same note keeps the first one. Resolves with the key used. */
+async function _premigBackup(key,rec){
+  const db=await _premigDB();if(!db)throw new Error('no backup store');
+  return await new Promise(function(res,rej){
+    const tx=db.transaction('backup','readwrite'),st=tx.objectStore('backup');let used=key;
+    const g=st.get(key);
+    g.onsuccess=function(){if(g.result)used=key+'@'+rec.updatedAt;st.put(rec,used);};
+    tx.oncomplete=function(){res(used);};tx.onerror=tx.onabort=function(){rej(tx.error||new Error('backup write'));};
+  });
+}
+function _premigDay(){return new Date(_s1Now()).toISOString().slice(0,10);}
+async function _premigBudget(add){
+  const db=await _premigDB();if(!db)return {day:_premigDay(),n:_PICMIG_CAP};   /* no store, no counter: no uploads */
+  return await new Promise(function(res){
+    let out={day:_premigDay(),n:0};
+    try{
+      const tx=db.transaction('meta','readwrite'),st=tx.objectStore('meta'),g=st.get('budget');
+      g.onsuccess=function(){
+        const v=g.result,day=_premigDay();
+        out=(v&&v.day===day)?{day:day,n:+v.n||0}:{day:day,n:0};
+        if(add){out.n+=add;st.put(out,'budget');}
+      };
+      tx.oncomplete=function(){res(out);};tx.onerror=tx.onabort=function(){res(out);};
+    }catch(e){res(out);}
+  });
+}
+/* Emergency only, no UI: put one note's original content back (a fresh updatedAt, so it wins). */
+window._premigRestore=async function(key){
+  const db=await _premigDB();if(!db)return false;
+  const bk=await new Promise(function(res){
+    try{const g=db.transaction('backup','readonly').objectStore('backup').get(key);g.onsuccess=function(){res(g.result||null);};g.onerror=function(){res(null);};}catch(e){res(null);}
+  });
+  if(!bk||typeof bk.content!=='string')return false;
+  const now=new Date().toISOString();
+  if(bk.coll==='articles'){
+    const a=(DB.articles||[]).find(function(x){return x&&x.id===bk.id;});if(!a)return false;
+    a.content=bk.content;a.updatedAt=now;
+  }else if(bk.coll==='trash'){
+    const i=(DB.trash||[]).findIndex(function(x){return x&&x.id===bk.id;});if(i<0)return false;
+    const t=DB.trash[i];DB.trash[i]=Object.assign({},t,{item:Object.assign({},t.item,{content:bk.content,updatedAt:t.item.updatedAt?now:t.item.updatedAt})});
+  }else return false;
+  _picMigSkip.add(bk.coll+'~'+bk.id);
+  persist();
+  return true;
+};
+/* every <img> in `html` whose src is a base64 data:image and that has no data-pic */
+function _picMigFind(html){
+  const out=[];
+  if(typeof html!=='string'||html.indexOf('data:image')===-1)return out;
+  const re=/<img\b[^>]*>/gi;let m;
+  while((m=re.exec(html))){
+    const tag=m[0];
+    if(/\sdata-pic\s*=/i.test(tag))continue;
+    const sm=/\ssrc\s*=\s*(["'])(data:image\/[a-z0-9.+-]+;base64,[^"']*)\1/i.exec(tag);
+    if(!sm)continue;
+    out.push({at:m.index,tag:tag,attr:sm[0],url:sm[2]});
+  }
+  return out;
+}
+/* updatedAt + 1 ms as an ISO string, or null when that cannot be done safely (the merge compares the strings) */
+function _picMigStamp(u){
+  if(typeof u!=='string'||!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(u))return null;
+  const t=Date.parse(u);if(!isFinite(t))return null;
+  const n=new Date(t+1).toISOString();
+  return n>u?n:null;
+}
+function _picMigOpen(id){
+  try{
+    if(ST.editing&&ST.article===id)return true;
+    const e=document.getElementById('ed');if(e&&e.dataset.aid===id)return true;
+    if(document.getElementById('fw-ed-'+id))return true;
+  }catch(x){}
+  return false;
+}
+function _picMigGet(c){
+  if(c.coll==='articles'){
+    const a=(DB.articles||[]).find(function(x){return x&&x.id===c.id;});
+    return a?{obj:a,noteId:a.id}:null;
+  }
+  const t=(DB.trash||[]).find(function(x){return x&&x.id===c.id;});
+  return (t&&t.type==='article'&&t.item)?{obj:t.item,entry:t,noteId:t.item.id}:null;
+}
+function _picMigCands(){
+  const out=[];
+  (DB.articles||[]).forEach(function(a){
+    if(a&&typeof a.content==='string'&&a.content.indexOf('data:image')!==-1){const n=_picMigFind(a.content).length;if(n)out.push({coll:'articles',id:a.id,n:n});}
+  });
+  (DB.trash||[]).forEach(function(t){
+    if(t&&t.type==='article'&&t.item&&typeof t.item.content==='string'&&t.item.content.indexOf('data:image')!==-1){const n=_picMigFind(t.item.content).length;if(n)out.push({coll:'trash',id:t.id,n:n});}
+  });
+  return out;
+}
+/* the count, per collection.field, of src="data:image in EVERY string field of DB (read-only) */
+function _picMigSweepFields(){
+  const out={};
+  const walk=function(v,p,d){
+    if(typeof v==='string'){
+      if(v.length>20&&v.indexOf('data:image')!==-1){const m=v.match(/\bsrc=["']data:image/g);if(m)out[p]=(out[p]||0)+m.length;}
+      return;
+    }
+    if(!v||typeof v!=='object'||d>7)return;
+    if(Array.isArray(v)){for(let i=0;i<v.length;i++)walk(v[i],p,d+1);return;}
+    const ks=Object.keys(v);
+    for(let i=0;i<ks.length;i++)walk(v[ks[i]],p?p+'.'+ks[i]:ks[i],d+1);
+  };
+  walk(DB,'',0);
+  return out;
+}
+function _picIdle(){return new Promise(function(r){if(window.requestIdleCallback)requestIdleCallback(function(){r();},{timeout:2000});else setTimeout(r,50);});}
+async function _picMigSlice(){
+  if(performance.now()-_picMigT>30){await new Promise(function(r){setTimeout(r,0);});_picMigT=performance.now();}
+}
+function _picMigWaitNote(c,why){
+  _picMig.wait[why]=(_picMig.wait[why]||0)+c.n;
+  return false;
+}
+/* One note. true = converted; false = left untouched (counted under its reason). */
+async function _picMigNote(c){
+  const key=c.coll+'~'+c.id;
+  let cur=_picMigGet(c);if(!cur)return _picMigWaitNote(c,'changed');
+  if(_picMigSkip.has(key))return _picMigWaitNote(c,'other');
+  if(_picMigOpen(cur.noteId))return _picMigWaitNote(c,'open');
+  const c0=cur.obj.content,u0=cur.obj.updatedAt;
+  let stamp=null;
+  if(c.coll==='articles'){stamp=_picMigStamp(u0);if(!stamp)return _picMigWaitNote(c,'other');}
+  else stamp=_picMigStamp(u0);   /* Trash merges by deletedAt: a missing stamp is left as it is */
+  const found=_picMigFind(c0);
+  if(!found.length)return true;
+  let cfg=null;try{cfg=getSyncConfig();}catch(e){}
+  /* 0 — the day's budget, BEFORE anything is stored (a stored picture is uploaded by the ordinary
+     uploader on the next push, whatever happens here). It over-estimates: it does not know which
+     pictures the cloud already holds. */
+  if(cfg){
+    const seen=new Set();let est=0;
+    found.forEach(function(f){if(seen.has(f.url))return;seen.add(f.url);est+=Math.max(1,Math.ceil(f.url.length*0.75/_PIC_PART))+1;});
+    const bud=await _premigBudget(0);_picMig.used=bud.n;
+    if(bud.n+est>_PICMIG_CAP){_picMig.capHit=true;return _picMigWaitNote(c,'budget');}
+  }
+  /* 1 — into the local store */
+  try{
+    for(const f of found){
+      const d=_dataUrlBytes(f.url);
+      if(!d||!/^image\/[a-z0-9.+-]+$/i.test(d.mime))return _picMigWaitNote(c,'other');
+      f.mime=d.mime;
+      if(cfg)_picMigShas.add(await _picSha(d.bytes.buffer));
+      f.sha=await _picPut(d.bytes,d.mime);
+      if(!_picKnown.has(f.sha))return _picMigWaitNote(c,'other');
+      await _picMigSlice();
+    }
+  }catch(e){_picMig.lastErr=String((e&&e.message)||e).slice(0,100);return _picMigWaitNote(c,'other');}
+  /* 2 — the cloud copy, confirmed by reading it back from the server */
+  if(cfg){
+    if(!_picCanCloud())return _picMigWaitNote(c,'upload');
+    const need=Array.from(new Set(found.map(function(f){return f.sha;}))).filter(function(s){return !_picMigOK.has(s);});
+    try{
+      const nb=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
+      for(const s of need){
+        const r=await _picUpload(s);
+        if(r==='gone')return _picMigWaitNote(c,'upload');
+        const ex=await nb.collection('pics').doc(s).get({source:'server'});
+        if(!ex.exists)return _picMigWaitNote(c,'upload');
+        _picMigOK.add(s);
+      }
+      _picMig.used=(await _premigBudget(0)).n;
+    }catch(e){_picMig.lastErr=((e&&e.code)||'error')+'';return _picMigWaitNote(c,'upload');}
+  }
+  /* 3 — the original, kept (I8) */
+  try{await _premigBackup(key,{id:c.id,coll:c.coll,content:c0,updatedAt:u0,at:new Date(_s1Now()).toISOString()});}
+  catch(e){_picMig.lastErr='backup: '+String((e&&e.message)||e).slice(0,80);return _picMigWaitNote(c,'other');}
+  if(window.__picMigHold>0){console.log('PICMIG_HOLD '+key);await new Promise(function(r){setTimeout(r,window.__picMigHold);});}
+  /* 4-6 — no await from here to the end */
+  cur=_picMigGet(c);
+  if(!cur||cur.obj.content!==c0||cur.obj.updatedAt!==u0)return _picMigWaitNote(c,'changed');
+  if(_picMigOpen(cur.noteId))return _picMigWaitNote(c,'open');
+  if(!_s2RefsOk())return _picMigWaitNote(c,'gate');
+  let nc='',last=0;
+  found.forEach(function(f){
+    nc+=c0.slice(last,f.at)+f.tag.replace(f.attr,function(){return ' data-pic="'+f.sha+'" data-mime="'+f.mime+'"';});
+    last=f.at+f.tag.length;
+  });
+  nc+=c0.slice(last);
+  if(c.coll==='articles'){cur.obj.content=nc;cur.obj.updatedAt=stamp;}
+  else{
+    const i=DB.trash.indexOf(cur.entry);if(i<0)return _picMigWaitNote(c,'changed');
+    const item=Object.assign({},cur.obj,{content:nc});if(stamp)item.updatedAt=stamp;
+    DB.trash[i]=Object.assign({},cur.entry,{item:item});
+  }
+  _picMig.moved+=c.n;
+  return true;
+}
+function _picMigrate(){
+  if(_picMigRun)return _picMigRun;
+  _picMigRun=(async function(){
+    const st=_picMig;
+    st.wait={budget:0,upload:0,gate:0,open:0,changed:0,other:0};st.capHit=false;st.lastErr=null;
+    if(!_dbLoaded)return;
+    _picMigT=performance.now();
+    if(_picMigFull||!st.runs){st.fields=_picMigSweepFields();_picMigFull=false;}
+    st.runs++;st.last=Date.now();
+    const cands=_picMigCands();
+    st.remain=cands.reduce(function(s,c){return s+c.n;},0);
+    if(!cands.length)return;
+    if(!_s2RefsOk()){st.wait.gate=st.remain;return;}
+    let bp=0,bb=0,dirty=false,lastPersist=0;
+    for(const c of cands){
+      if(!_s2RefsOk()){st.wait.gate+=c.n;continue;}
+      const cur=_picMigGet(c);
+      const ok=await _picMigNote(c);
+      if(ok){dirty=true;st.remain-=c.n;}
+      bp+=c.n;bb+=cur&&cur.obj&&typeof cur.obj.content==='string'?cur.obj.content.length*0.75:0;
+      if(bp>=_PICMIG_BATCH_PICS||bb>=_PICMIG_BATCH_BYTES){
+        if(dirty&&Date.now()-lastPersist>10000){try{persist();}catch(e){console.error('picture migration save',e);}dirty=false;lastPersist=Date.now();}
+        bp=0;bb=0;await _picIdle();_picMigT=performance.now();
+      }
+    }
+    if(dirty){try{persist();}catch(e){console.error('picture migration save',e);}st.fields=_picMigSweepFields();}
+  })().catch(function(e){console.error('picture migration',e);_picMig.lastErr=String((e&&e.message)||e).slice(0,100);})
+    .then(function(){
+      _picMigRun=null;
+      const w=_picMig.wait,left=w.budget+w.upload+w.gate+w.open+w.changed+w.other;
+      if(left){
+        _picMigWant=true;
+        _picMigFails=w.upload?_picMigFails+1:0;
+        _picMigAt=Date.now()+(w.upload?Math.min(600000,60000*Math.pow(2,_picMigFails)):w.budget?600000:w.gate?300000:30000);
+      }else _picMigFails=0;
+    });
+  return _picMigRun;
+}
+function _picMigKick(delay){_picMigWant=true;_picMigAt=(delay!=null)?Date.now()+delay:0;}
+window._picMigrate=_picMigrate;window._picMig=_picMig;window._picMigKick=_picMigKick;
+setInterval(function(){
+  if(!_dbLoaded||!_picMigWant||_picMigRun||Date.now()<_picMigAt)return;
+  _picMigWant=false;_picMigrate();
+},15000);
+setInterval(function(){_picMigFull=true;_picMigKick();},3600000);
+function _picMigDiagText(){
+  const w=_picMig.wait,why=[];
+  if(w.budget)why.push('budget');
+  if(w.upload)why.push('not uploaded');
+  if(w.gate)why.push('gate');
+  if(w.open)why.push('open in an editor');
+  if(w.changed)why.push('edited meanwhile');
+  if(w.other)why.push('could not');
+  const k=w.budget+w.upload+w.gate+w.open+w.changed+w.other;
+  let t='moved out of notes: '+_picMig.moved+' of '+(_picMig.moved+_picMig.remain);
+  if(k)t+=' ('+k+' waiting: '+why.join(' | ')+')';
+  if(_picMig.capHit)t+=' · daily upload budget used ('+_picMig.used+' of '+_PICMIG_CAP+'), resumes tomorrow (UTC)';
+  const fk=Object.keys(_picMig.fields);
+  t+=' · inline pictures in: '+(fk.length?fk.map(function(p){return p+' ×'+_picMig.fields[p];}).join(', '):'none');
+  return t;
 }
 
 /* ── Export ──────────────────────────────────────────────────────── */
@@ -24794,6 +25086,7 @@ function _mergeRemoteIn(remoteDB, remoteT){
     _save(undefined,_sw);
     _renderPreserveEdit();
     _edApplyRemote();   /* let the merged text reach an open, idle editor */
+    try{ _picMigKick(2000); }catch(e){}   /* v04.95 — a merge may have brought in data: pictures */
     if(remoteT>_lastSyncTime){_lastSyncTime=remoteT;localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);}
     if(after>before) toast('☁ Merged entries from another device');
     setSyncStatus('live');

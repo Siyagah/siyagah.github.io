@@ -11601,6 +11601,26 @@ await r.block('55f-item-menu-stores-the-reference', async () => {
   }
 });
 
+/* 56 — v04.95, S2d: existing inline pictures move out of note text.
+   tools/sync-s2d.mjs runs 56a–56l on the fake Firestore of s1-fake.mjs: the exact
+   content, bytes and +1 ms stamp of a migrated note, the cloud copy confirmed before
+   any note changes, the I1 race (an offline edit made after the original wins), two
+   devices converging with no rewrite loop, an edit arriving mid-way, open editors left
+   alone, the shut gate, the daily budget, _premigRestore, the real v04.94 build, the
+   three layouts and the Evernote-scale size run. Each printed line becomes one check. */
+await r.block('56-s2d-migrate-inline-pictures', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./sync-s2d.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 40, 'the S2d check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'S2d: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the S2d check exits cleanly', `exit ${out.status}`);
+  for (const l of lines) if (/^P56k /.test(l)) console.log(l);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

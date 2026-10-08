@@ -314,7 +314,7 @@ try {
       /* ── 51d: a note over 1 MB → parts; edit it → new generation, old parts deleted ── */
       await on(d, () => {
         const now = new Date().toISOString();
-        DB.articles.push({ id: 'a-big', title: 'Big', content: '<p><img src="data:image/png;base64,' + 'QUJD'.repeat(330000) + '"></p>', folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general' });
+        DB.articles.push({ id: 'a-big', title: 'Big', content: '<p>' + 'QUJD'.repeat(330000) + '</p>',   /* v04.95: was an inline data:image, which S2d's migration now (rightly) moves out of the note, shrinking it below 700 KB; a big rec needs big TEXT */ folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general' });
         persist(); flushPendingPush();
       });
       await sleep(300); await quiet(cloud, d, 60000);
@@ -653,7 +653,7 @@ try {
     };
     await act(A, () => {
       const now = new Date().toISOString();
-      DB.articles.push({ id: 'a-big', title: 'Big', content: '<p><img src="data:image/png;base64,' + 'QUJD'.repeat(330000) + '"></p>', folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general' });
+      DB.articles.push({ id: 'a-big', title: 'Big', content: '<p>' + 'QUJD'.repeat(330000) + '</p>',   /* v04.95: was an inline data:image, which S2d's migration now (rightly) moves out of the note, shrinking it below 700 KB; a big rec needs big TEXT */ folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general' });
     });
     await settle(cloud, devs, 120000);
     const log = await on(B, () => window.__putLog);
@@ -753,7 +753,7 @@ try {
     const BIG = NB + '/recs/articles~a-big';
     await act(A, () => {
       const now = new Date().toISOString();
-      DB.articles.push({ id: 'a-big', title: 'Big', content: '<p><img src="data:image/png;base64,' + 'QUJD'.repeat(330000) + '"></p>', folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general' });
+      DB.articles.push({ id: 'a-big', title: 'Big', content: '<p>' + 'QUJD'.repeat(330000) + '</p>',   /* v04.95: was an inline data:image, which S2d's migration now (rightly) moves out of the note, shrinking it below 700 KB; a big rec needs big TEXT */ folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general' });
     });
     await settle(cloud, devs, 120000);
     const g1 = (cloud.store.get(BIG) || {}).g;
