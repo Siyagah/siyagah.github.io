@@ -6534,7 +6534,7 @@ function insertImageFile(file){
     insertAtCaret(html);
     if(sha){
       const ed=_edActive();
-      if(ed)_picHydrateAll(ed);
+      if(ed){_picHydrateAll(ed);_edTouched(ed);}
       try{_picUploadPending();}catch(e){}
     }
     toast('🖼 Image inserted');
@@ -12140,6 +12140,20 @@ function _fwCreate(aid){
     };
     ed.addEventListener('input',_syncCol);
     setTimeout(_syncCol,60);
+    /* v04.94 — a picture pasted or dropped here takes the SAME path as in Pane 3
+       (insertImageFile), so it is stored by reference too. Before this a float
+       window left both to the browser, which wrote its own inline picture. */
+    ed.addEventListener('paste',e=>{
+      try{
+        const img=[...(e.clipboardData?.items||[])].find(it=>it.type.startsWith('image/'));
+        if(img){e.preventDefault();insertImageFile(img.getAsFile());}
+      }catch(err){console.error('paste',err);}
+    });
+    ed.addEventListener('dragover',e=>{if([...(e.dataTransfer?.types||[])].includes('Files'))e.preventDefault();});
+    ed.addEventListener('drop',e=>{
+      const fs=[...(e.dataTransfer?.files||[])].filter(f=>f.type.startsWith('image/'));
+      if(fs.length){e.preventDefault();e.stopPropagation();ed.focus();fs.forEach(f=>insertImageFile(f));}
+    });
   }
   const ti=win.querySelector('.fw-ti');
   if(ti)ti.addEventListener('input',()=>_fwScheduleAutoSave(aid));
