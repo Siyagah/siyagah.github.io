@@ -18,7 +18,7 @@
    59h  size: 2,000 items in 8 pockets — head size, split or not, a full merge and persist() on a phone (x4)
 
    `--only=59a,59c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 59). */
-import { playwright, serve, seedDB, ROOT } from './harness.mjs';
+import { playwright, serve, seedDB, openApp, ROOT } from './harness.mjs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -140,7 +140,7 @@ try {
     check(r.trashed === 1 && r.tomb, '59c delete: one Trash entry (type jebItem) and a tombstone for the item id', JSON.stringify({ trashed: r.trashed, tomb: r.tomb }));
     check(r.bNo && r.aNo && r.bKeep && r.aKeep, '59c B, holding the old copy, merges and does NOT resurrect the deleted item (both directions); the other item stays', JSON.stringify(r));
     check(r.restoredOnA && r.restoredOnB && r.aKeeps && r.trashGoneB && r.sameText, '59c restore from Trash on A brings the item back on both, and its Trash entry is gone', JSON.stringify(r));
-    check(r.fallbackPocket === 'jp-task' || /^jp-/.test(r.fallbackPocket || ''), '59c an item whose pocket was deleted restores into the first pocket', JSON.stringify({ fallbackPocket: r.fallbackPocket }));
+    check(r.fallbackPocket === 'jp-task', '59c an item whose pocket was deleted restores into the first pocket', JSON.stringify({ fallbackPocket: r.fallbackPocket }));
     check(r.pocketBack, '59c a deleted pocket restores as an empty pocket', JSON.stringify({ pocketBack: r.pocketBack }));
     check(/Jeb item: keep me/.test(r.label), '59c the Trash modal shows "Jeb item: <text>"', r.label.slice(0, 200));
     const refuse = await on(A, () => { const id = jebAddItem('jp-task', 'stays'); const n = DB.jebPockets.length, t = DB.trash.length; const ok = jebDeletePocket('jp-task'); return { ok, n: DB.jebPockets.length === n, t: DB.trash.length === t, toast: [...document.querySelectorAll('.toast')].map((x) => x.textContent).join('|') }; });
@@ -158,9 +158,10 @@ try {
       jebEditItem(id, { text: 'Title line\nsecond <b>x</b>\n\nthird & more', folderIds: ['f1'], tags: ['t1'], kind: 'general', journal: true });
       const item = cl(DB.jeb.find((i) => i.id === id));
       const B0 = cl(DB);
-      let persists = 0; const op = window.persist; window.persist = function () { persists++; return op.apply(this, arguments); };
+      /* persist() is a const, so it is counted through snapshotState(), which every persist() calls once */
+      let persists = 0; const os = window.snapshotState; window.snapshotState = function () { persists++; return os.apply(this, arguments); };
       const nid = jebToNote(id);
-      window.persist = op;
+      window.snapshotState = os;
       const n = DB.articles.find((a) => a.id === nid);
       const out = { nid: !!nid, persists, title: n && n.title, content: n && n.content, tags: n && n.tags, folderIds: n && n.folderIds, kind: n && n.kind,
         fromJeb: n && n.fromJeb, createdAt: n && n.createdAt, itemCreated: item.createdAt, updated: n && n.updatedAt,
@@ -172,12 +173,12 @@ try {
       out.bNote = MB.articles.some((a) => a.id === nid); out.aNote = MA.articles.some((a) => a.id === nid);
       out.bTrash = MB.trash.some((t) => t.item && t.item.id === id);
       /* a long first line, and no journal flag */
-      const lid = jebAddItem('jp-idea', 'L'.repeat(200) + '\nbody'); const ln = DB.articles.find((a) => a.id === jebToNote(lid));
+      const lid = jebAddItem('jp-idea', 'L'.repeat(200) + '\nbody'); const lnid = jebToNote(lid), ln = DB.articles.find((a) => a.id === lnid);
       out.longTitle = ln.title.length; out.plain = !ln.tags.includes('journal') && !('kind' in ln) && ln.folderIds.length === 0;
       /* the note cannot be built: the item must stay, and no note appears */
-      const bid = jebAddItem('jp-idea', 'will fail\nsecond line'); const nBefore = DB.articles.length, oe = window.esc;
-      window.esc = () => { throw new Error('boom'); };
-      let nid2; try { nid2 = jebToNote(bid); } finally { window.esc = oe; }
+      const bid = jebAddItem('jp-idea', 'will fail\nsecond line'); const nBefore = DB.articles.length;
+      DB.articles.push = () => { throw new Error('boom'); };   /* the last step of building the note fails */
+      let nid2; try { nid2 = jebToNote(bid); } finally { delete DB.articles.push; }
       out.failNull = nid2 === null; out.failKept = DB.jeb.some((i) => i.id === bid); out.failNoNote = DB.articles.length === nBefore; out.failNoTomb = !(DB.tombstones || []).some((t) => t.id === bid);
       out.missing = jebToNote('no-such-id') === null;
       return out;
@@ -190,7 +191,8 @@ try {
     check(r.bGone && r.aGone && r.bNote && r.aNote && !r.bTrash, '59d after a merge the item is gone on both devices and the note is on both', JSON.stringify({ bGone: r.bGone, aGone: r.aGone, bNote: r.bNote, aNote: r.aNote }));
     check(r.longTitle === 120 && r.plain, '59d a first line over 120 characters is cut to 120; no journal flag means no journal tag', JSON.stringify({ longTitle: r.longTitle, plain: r.plain }));
     check(r.failNull && r.failKept && r.failNoNote && r.failNoTomb && r.missing, '59d if the note cannot be built the item stays (no note, no tombstone); an unknown id returns null', JSON.stringify(r));
-    check(A.errors.length === 0, '59d no page errors', A.errors.slice(0, 2).join(' · '));
+    const e59d = A.errors.filter((e) => !/jebToNote: Error: boom/.test(e));   /* the injected failure is logged on purpose */
+    check(e59d.length === 0 && A.errors.length === 1, '59d no page errors (the one injected failure is logged by jebToNote and excluded)', A.errors.slice(0, 2).join(' · '));
     await A.ctx.close();
   }
 
@@ -276,7 +278,9 @@ try {
 
   /* ══ 59g — Save File, backup HTML, JSON import ══ */
   if (want('59g')) {
-    const A = await dev(makeCloud(), 'A', VPS[2], seedDB(T0));
+    /* not on the fake cloud: an import must be judged on its own, without a sync echo merging in behind it */
+    const A = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB(T0) });
+    A.ctx = { close: () => A.close() };
     const sig = await on(A, () => {
       jebAddItem('jp-task', 'one'); jebAddItem('jp-idea', 'two\nlines'); jebAddPocket('Calls', '☎', '#cccccc');
       const keep = jebAddItem('jp-link', 'to delete'); jebDeleteItem(keep);
@@ -330,9 +334,10 @@ try {
       out.mergeAddsFile = DB.jeb.some((i) => i.id === 'imp2');
       out.mergeNoResurrect = deleted ? !DB.jeb.some((i) => i.id === deleted.id) : null;
       out.mergeKeepsAll = (data.jeb || []).every((i) => DB.jeb.some((x) => x.id === i.id));
+      out.ids = { file: (data.jeb || []).map((i) => i.id + ':' + i.updatedAt), now: DB.jeb.map((i) => i.id + ':' + i.updatedAt), tomb: (DB.tombstones || []).map((t) => t.id) };
       return out;
     }, bk);
-    check(/Jeb items: 3/.test(imp.dialog), '59g the import dialog shows "Jeb items: N"', imp.dialog.replace(/\s+/g, ' ').slice(0, 220));
+    check(/In the file:[^\n]*Jeb items: 2[\s\S]*In your notebook now:[^\n]*Jeb items: 2/.test(imp.dialog), '59g the import dialog shows "Jeb items: N"', imp.dialog.replace(/\s+/g, ' ').slice(0, 220));
     check(imp.replaceHasImported && imp.replaceOldFileKeeps && imp.replaceBack, '59g JSON import "replace": the file\'s Jeb replaces ours; a file from before Jeb leaves ours alone; the original comes back whole', JSON.stringify(imp));
     check(imp.mergeKeepsLocal && imp.mergeAddsFile && imp.mergeKeepsAll && imp.mergeNoResurrect !== false, '59g JSON import "merge": keeps ours, adds the file\'s, never resurrects a deleted item (merged through mergeDB, not "local wins")', JSON.stringify(imp));
     check(A.errors.length === 0, '59g no page errors', A.errors.slice(0, 2).join(' · '));

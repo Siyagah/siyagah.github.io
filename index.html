@@ -23729,6 +23729,11 @@ function mergeDB(local, remote){
   ["articles","folders","sections","calEvents","calCategories","noteKinds","noteKindCats","myFavCats",
    "folderGroups"/* v03.81 */,"jebPockets","jeb"/* v04.98 */]
     .forEach(k=>{ out[k]=_mergeById(local[k], remote[k], "updatedAt"); });
+  /* v04.98 — neither side has the Jeb keys (a notebook from before Jeb merged
+     with another): do not invent an EMPTY array, because _jebSeed() seeds the
+     four default pockets only when the key is absent, and an empty one is
+     how the owner's "I emptied it" looks. */
+  ['jebPockets','jeb'].forEach(k=>{ if(!(k in local)&&!(k in remote)) delete out[k]; });
   out.trash=_mergeById(local.trash, remote.trash, "deletedAt");
   out.tombstones=_mergeById(local.tombstones, remote.tombstones, "deletedAt");
   out.globalTags=_mergeStrs(local.globalTags, remote.globalTags);
