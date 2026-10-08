@@ -4322,6 +4322,7 @@ function _cleanExportRoot(){
    revoked. */
 const _PIC_URL_MAX=64;
 const _picKnown=new Set();            /* shas known to be in the store */
+const _picNotUp=new Set();            /* v04.93 — shas in the store whose cloud copy is not known to exist (no `up` on the record) */
 const _picUrls=new Map();             /* sha -> object URL (insertion order = recency) */
 const _picUrlSha=new Map();           /* object URL -> {sha,t} */
 let _picDBp=null;
@@ -4335,8 +4336,13 @@ function _picDB(){
       rq.onsuccess=function(){
         const db=rq.result;
         try{
-          const k=db.transaction('pics','readonly').objectStore('pics').getAllKeys();
-          k.onsuccess=function(){(k.result||[]).forEach(function(s){_picKnown.add(s);});res(db);};
+          /* v04.93 — a cursor, not getAllKeys: it also learns which records are not uploaded yet */
+          const k=db.transaction('pics','readonly').objectStore('pics').openCursor();
+          k.onsuccess=function(){
+            const c=k.result;
+            if(c){_picKnown.add(c.key);if(!(c.value&&c.value.up))_picNotUp.add(c.key);c.continue();}
+            else res(db);
+          };
           k.onerror=function(){res(db);};
         }catch(e){res(db);}
       };
@@ -4356,14 +4362,17 @@ async function _picSha(buf){
   let h='';for(let i=0;i<d.length;i++)h+=(d[i]<16?'0':'')+d[i].toString(16);
   return h;
 }
-async function _picWrite(sha,blob,t){
+async function _picWrite(sha,blob,t,up){
   const db=await _picDB();if(!db)throw new Error('no picture store');
+  const rec={b:blob,t:t,n:blob.size,at:Date.now()};
+  if(up)rec.up=1;   /* v04.93 — fetched from the cloud: it is there already */
   await new Promise(function(res,rej){
     const tx=db.transaction('pics','readwrite');
-    tx.objectStore('pics').put({b:blob,t:t,n:blob.size,at:Date.now()},sha);
+    tx.objectStore('pics').put(rec,sha);
     tx.oncomplete=function(){res();};tx.onerror=tx.onabort=function(){rej(tx.error||new Error('write'));};
   });
   _picKnown.add(sha);
+  if(!up)_picNotUp.add(sha);
 }
 async function _picPut(x,mime){
   const buf=await _picBytes(x);
@@ -4442,7 +4451,10 @@ function _picHydrateAll(root){
     if(!ph&&hit&&hit.sha===sha)return;
     if(!ph&&src.indexOf('data:')===0){_picAdopt(sha,src,img.getAttribute('data-mime'));return;}
     if(_picUrls.has(sha)){_picShow(img,sha);return;}
-    _picGet(sha).then(function(b){if(b)_picShow(img,sha,b);else _picPlace(img);});
+    _picGet(sha).then(function(b){
+      if(b)_picShow(img,sha,b);
+      else{_picPlace(img);_picWant(sha,img.getAttribute('data-mime'));}   /* v04.93 — ask the cloud */
+    });
   });
 }
 /* Called by _edColClean() on every save path, on a CLONE: back to the stored
@@ -4509,6 +4521,154 @@ async function _picExportHTML(){
   return getExportHTML(r.inlined?r.text:undefined);
 }
 _picDB();
+
+/* ── Pictures: the cloud copy (v04.93, S2b) ──────────────────────────────
+   notebooks/{nb}/pics/{sha}        meta  {n bytes, t mime, p parts, at, b build}
+   notebooks/{nb}/picparts/{sha}~i  {d: Bytes}, each <= _PIC_PART bytes of picture
+   Content-addressed and immutable: no merge, no tombstone, no deletion.
+   Upload: every part first, the meta doc LAST (the pointer — a reader that
+   finds meta finds every part). `up:1` on the store record remembers it.
+   Fetch: meta, then the parts, concatenated and checked against the sha
+   BEFORE anything is stored or shown. Neither ever touches a.content, and
+   neither can fail or delay a text push. */
+const _PIC_PART=900000;
+let _PIC_UP_BACKOFF=[30000,120000,600000];      /* then every push */
+let _PIC_FETCH_BACKOFF=[30000,120000,600000];   /* then only when the note is opened again */
+let _PIC_FETCH_GAP=10000;                       /* ... and never twice within this */
+const _picUpS=new Map();                        /* sha -> {fails,next} */
+let _picUpRun=null;
+window._picUpStat={refused:null,lastErr:null,uploaded:0,have:0};
+function _picCanCloud(){
+  try{return !!(getSyncConfig()&&_syncFsDb&&typeof _authInstance!=='undefined'&&_authInstance&&_authInstance.currentUser);}catch(e){return false;}
+}
+async function _picMarkUp(sha){
+  const db=await _picDB();if(!db)return;
+  await new Promise(function(res){
+    try{
+      const tx=db.transaction('pics','readwrite'),st=tx.objectStore('pics'),g=st.get(sha);
+      g.onsuccess=function(){const v=g.result;if(v&&!v.up){v.up=1;st.put(v,sha);}};
+      tx.oncomplete=function(){res();};tx.onerror=tx.onabort=function(){res();};
+    }catch(e){res();}
+  });
+  _picNotUp.delete(sha);
+}
+async function _picUpload(sha){
+  const cfg=getSyncConfig();
+  const nb=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
+  const metaRef=nb.collection('pics').doc(sha),partsC=nb.collection('picparts');
+  const ex=await metaRef.get({source:'server'});
+  if(ex.exists){await _picMarkUp(sha);_picUpStat.have++;return 'have';}
+  const blob=await _picGet(sha);
+  if(!blob){_picNotUp.delete(sha);return 'gone';}
+  const u8=new Uint8Array(await blob.arrayBuffer());
+  const n=Math.max(1,Math.ceil(u8.length/_PIC_PART));
+  for(let i=0;i<n;i++){
+    const b=_syncFsDb.batch();
+    b.set(partsC.doc(sha+'~'+i),{d:firebase.firestore.Blob.fromUint8Array(u8.subarray(i*_PIC_PART,(i+1)*_PIC_PART))});
+    await b.commit();
+  }
+  await metaRef.set({n:u8.length,t:blob.type||'image/jpeg',p:n,at:firebase.firestore.FieldValue.serverTimestamp(),b:_S2_BUILD()});
+  await _picMarkUp(sha);_picUpStat.uploaded++;
+  return 'up';
+}
+/* Called from _pushWrite(), NOT awaited. Nothing to upload = no await, no read. */
+function _picUploadPending(){
+  if(!_picNotUp.size)return null;
+  if(_picUpRun)return _picUpRun;
+  if(!getSyncConfig()||!_syncFsDb)return null;
+  _picUpRun=(async function(){
+    const now=Date.now();
+    const q=Array.from(_picNotUp).filter(function(s){const st=_picUpS.get(s);return !st||now>=st.next;});
+    const worker=async function(){
+      while(q.length){
+        const sha=q.shift();
+        try{
+          await _picUpload(sha);
+          _picUpS.delete(sha);_picUpStat.refused=null;_picUpStat.lastErr=null;
+        }catch(e){
+          const code=(e&&e.code)||'error',st=_picUpS.get(sha)||{fails:0,next:0};
+          st.fails++;st.next=Date.now()+(_PIC_UP_BACKOFF[st.fails-1]||0);_picUpS.set(sha,st);
+          _picUpStat.lastErr={code:code,at:Date.now()};
+          if(code==='permission-denied')_picUpStat.refused=true;
+          console.warn('picture upload deferred:',sha.slice(0,8),code);
+        }
+      }
+    };
+    await Promise.all([worker(),worker()]);
+  })().then(function(){_picUpRun=null;},function(){_picUpRun=null;});
+  return _picUpRun;
+}
+async function _picFetch(sha,mime){
+  if(!_picCanCloud())return null;
+  const have=await _picGet(sha);if(have)return have;
+  const nb=_syncFsDb.collection('notebooks').doc(getSyncConfig().notebookId);
+  const ms=await nb.collection('pics').doc(sha).get();
+  if(!ms.exists)throw new Error('picture is not in the cloud');
+  const m=ms.data(),p=+m.p;
+  if(!(p>=1&&p<=5000))throw new Error('picture meta is wrong');
+  const parts=[];let tot=0;
+  for(let i=0;i<p;i++){
+    const ps=await nb.collection('picparts').doc(sha+'~'+i).get();
+    if(!ps.exists)throw new Error('picture part '+i+' is missing');
+    const d=ps.data().d,u8=(d&&typeof d.toUint8Array==='function')?d.toUint8Array():null;
+    if(!u8)throw new Error('picture part '+i+' is not bytes');
+    parts.push(u8);tot+=u8.length;
+  }
+  const all=new Uint8Array(tot);let off=0;
+  parts.forEach(function(u){all.set(u,off);off+=u.length;});
+  if(m.n!=null&&+m.n!==tot)throw new Error('picture is the wrong size');
+  if(await _picSha(all.buffer)!==sha)throw new Error('picture failed its check');   /* a wrong picture is never stored or shown */
+  const t=m.t||mime||'image/jpeg',blob=new Blob([all],{type:t});
+  await _picDB();
+  if(!_picKnown.has(sha))await _picWrite(sha,blob,t,true);
+  return blob;
+}
+const _picFS=new Map();   /* sha -> {fails,timer,busy,last,mime} — memory only */
+const _picFetchQ=[];let _picFetchActive=0;
+window._picFetchStat={ok:0,failed:0,lastErr:null};
+function _picWant(sha,mime){
+  if(!_picCanCloud())return;
+  let s=_picFS.get(sha);
+  if(!s){s={fails:0,timer:null,busy:false,last:0,mime:mime};_picFS.set(sha,s);}
+  if(s.busy||s.timer)return;
+  if(s.fails>_PIC_FETCH_BACKOFF.length&&Date.now()-s.last<_PIC_FETCH_GAP)return;
+  s.busy=true;_picFetchQ.push(sha);_picFetchPump();
+}
+function _picFetchPump(){
+  while(_picFetchActive<3&&_picFetchQ.length){
+    const sha=_picFetchQ.shift();_picFetchActive++;
+    _picFetchRun(sha).catch(function(){}).then(function(){_picFetchActive--;_picFetchPump();});
+  }
+}
+async function _picFetchRun(sha){
+  const s=_picFS.get(sha);let ok=false;
+  try{ok=!!(await _picFetch(sha,s.mime));}
+  catch(e){_picFetchStat.lastErr={code:(e&&e.code)||'error',message:String((e&&e.message)||e).slice(0,120),at:Date.now()};}
+  s.busy=false;s.last=Date.now();
+  if(ok){_picFS.delete(sha);_picFetchStat.ok++;await _picShowAll(sha);return;}
+  _picFetchStat.failed++;s.fails++;
+  if(s.fails<=_PIC_FETCH_BACKOFF.length){
+    s.timer=setTimeout(function(){
+      s.timer=null;
+      let still=false;
+      try{still=!!document.querySelector('img[data-pic="'+sha+'"]');}catch(e){}
+      if(still)_picWant(sha,s.mime);
+    },_PIC_FETCH_BACKOFF[s.fails-1]);
+  }
+}
+async function _picShowAll(sha){
+  const b=await _picGet(sha);if(!b)return;
+  document.querySelectorAll('img[data-pic="'+sha+'"]').forEach(function(img){
+    if(img.classList.contains('ed-img-missing')||!img.getAttribute('src'))_picShow(img,sha,b);
+  });
+}
+function _picDiagText(){
+  let t=_picNotUp.size?(_picNotUp.size+' waiting to upload'):'all uploaded';
+  if(_picUpStat.refused)t+=' · cloud refused picture upload (permission-denied)';
+  else if(_picUpStat.lastErr)t+=' · last upload error: '+_picUpStat.lastErr.code;
+  if(_picFetchStat.lastErr&&_picFS.size)t+=' · '+_picFS.size+' not fetched yet';
+  return t+' · older build seen: '+(_s2OlderActive()?'yes':'no');
+}
 
 /* ── Export ──────────────────────────────────────────────────────── */
 /** Build the full app HTML with the current DB embedded */
@@ -23389,6 +23549,10 @@ async function _writeCloudDB(nb, now, b64, marked, fallback){
    Failure is invisible by design: a console.warn and window._s1Stat, never a
    toast, never the sync dot, never _pushFailures. permission-denied stops
    the shadow for the session. */
+let _S2_BV=null;
+function _S2_BUILD(){ if(_S2_BV===null){ const m=document.querySelector('meta[name="app-version"]'); _S2_BV=m?(m.getAttribute('content')||''):''; } return _S2_BV; }
+const _S2_MIN_BUILD='04.93';   /* the first build that fetches pictures */
+function _s2IsOlder(b){ return !b||String(b)<_S2_MIN_BUILD; }
 const _S1_COLLS=['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','trash','tombstones'];
 const _S1_INLINE_MAX=700000, _S1_PART=900000, _S1_OPS=400, _S1_BYTES=8*1024*1024;
 window._s1Stat={enabled:true, reason:null, seeded:false, lastRun:0, lastWritten:0, lastErr:null};
@@ -23639,10 +23803,10 @@ async function _s1Exec(nbId, snap){
     if(r&&m.s[key]===r.sig) continue;
     if(!r){
       const i=key.indexOf('~');
-      await add(ref,{c:key.slice(0,i), id:decodeURIComponent(key.slice(i+1)), gone:true, sig:'gone', ver:_newPushVer(), at:ts()},300,{key:key,sig:'gone'});
+      await add(ref,{c:key.slice(0,i), id:decodeURIComponent(key.slice(i+1)), gone:true, sig:'gone', ver:_newPushVer(), at:ts(), b:_S2_BUILD()},300,{key:key,sig:'gone'});
       continue;
     }
-    const doc={c:r.c, id:r.id, sig:r.sig, ver:_newPushVer(), at:ts()};
+    const doc={c:r.c, id:r.id, sig:r.sig, ver:_newPushVer(), at:ts(), b:_S2_BUILD()};
     if(r.o!=null) doc.o=r.o;
     const sz=utf8(r.json);
     if(sz<=_S1_INLINE_MAX){
@@ -23726,10 +23890,10 @@ async function _s1RepLoad(nb){
     try{
       const range=IDBKeyRange.bound(nb+'|', nb+'|￿');
       const tx=db.transaction(['recs','meta'],'readonly'), st=tx.objectStore('recs');
-      const rk=st.getAllKeys(range), rv=st.getAll(range), rc=tx.objectStore('meta').get('cursor|'+nb);
+      const rk=st.getAllKeys(range), rv=st.getAll(range), rc=tx.objectStore('meta').get('cursor|'+nb), ro=tx.objectStore('meta').get('older|'+nb);
       tx.oncomplete=()=>{
         const map=new Map(); rk.result.forEach((k,i)=>map.set(String(k).slice(nb.length+1), rv.result[i]));
-        resolve({map:map, cursor:+rc.result||0});
+        resolve({map:map, cursor:+rc.result||0, older:+ro.result||0});
       };
       tx.onerror=()=>resolve(null); tx.onabort=()=>resolve(null);
     }catch(e){ resolve(null); }
@@ -23858,7 +24022,7 @@ async function _s1ReadStart(cfg){
       const L=await _s1RepLoad(nb);
       if(gen!==_s1RdGen) return;
       if(!L){ _s1RdOff(st,'no-indexeddb'); return; }
-      _s1Rep={nb:nb, map:L.map, cursor:L.cursor};
+      _s1Rep={nb:nb, map:L.map, cursor:L.cursor, older:L.older||0};
       _s1RecsMerged=false;
     }
     st.records=0; _s1Rep.map.forEach((e,k)=>{ if(!e.gone&&k!=='_head~0') st.records++; });
@@ -23884,11 +24048,12 @@ function _s1RdFail(cfg, e, listener){
 async function _s1OnSnap(gen, snap, nbRef){
   if(gen!==_s1RdGen||!_s1Rep) return;
   const rep=_s1Rep, st=_s1Stat.rd, nb=rep.nb;
-  const puts=[]; let skipMin=Infinity, maxAt=0, skipDelay=0;
+  const puts=[]; let skipMin=Infinity, maxAt=0, skipDelay=0, olderMax=0;
   for(const ch of snap.docChanges()){
     if(ch.type==='removed'||ch.doc.metadata.hasPendingWrites) continue;   /* its `at` is not a server time yet */
     const key=ch.doc.id; let d=ch.doc.data(), at=_s1AtMs(d.at);
     if(at==null) continue;
+    if(_s2IsOlder(d.b)&&at>olderMax) olderMax=at;   /* v04.93 — a rec from a build that cannot fetch pictures */
     const cur=rep.map.get(key);
     { const pa=_s1RdPending.get(key); if(pa!==undefined&&at>pa) _s1RdPending.delete(key); }   /* a newer version replaces the pending one */
     if(cur&&cur.at>=at){ if(_s1RdPending.get(key)<=cur.at) _s1RdPending.delete(key); if(at<skipMin) maxAt=Math.max(maxAt,at); continue; }   /* an overlap redelivery */
@@ -23917,6 +24082,10 @@ async function _s1OnSnap(gen, snap, nbRef){
     d=r.d; at=_s1AtMs(d.at)||at;
     puts.push([key,{c:d.c, sig:d.sig, o:d.o, at:at, gone:d.gone?true:undefined, rec:r.json, n:d.n, g:d.g}]);
     if(at<skipMin) maxAt=Math.max(maxAt,at);
+  }
+  if(olderMax>(rep.older||0)){
+    rep.older=olderMax;
+    _s1RdDb().then(db=>{ if(db) db.transaction('meta','readwrite').objectStore('meta').put(olderMax,'older|'+nb); }).catch(()=>{});
   }
   /* skipMin is this snapshot's own failures (they schedule the retry); `hold` also
      counts earlier snapshots' pending ones, which the cursor must not pass either. */
@@ -24077,6 +24246,14 @@ function _s1OlderActive(){
   const t=md.s1c?(md.s1o||0):(md.deviceUpdatedAt||md.ver||0);
   return t>0&&_s1Now()-t<_S1C_ACTIVE_MS;
 }
+/* v04.93 — S2b. May a device older than this build (one that cannot fetch a picture
+   reference) still be in use? S2c will gate creating references on this. */
+function _s2OlderActive(){
+  if(_s1OlderActive()) return true;
+  const t=_s1Rep&&_s1Rep.older;
+  return !!t&&_s1Now()-t<_S1C_ACTIVE_MS;
+}
+window._s2OlderActive=_s2OlderActive;
 function _s1Plan(){
   const rd=_s1Stat.rd;
   if(!_s1Eligible()||!rd||rd.perm) return 'blob';
@@ -24088,6 +24265,7 @@ function _s1Plan(){
 let _pushSw=null;   /* v04.91 — what _doPush()'s sweep collected; used (once) by the first _save() in _pushWrite(), before its first await */
 async function _pushWrite(cfg, o){
   const swNow=_pushSw; _pushSw=null;
+  try{ _picUploadPending(); }catch(e){}   /* v04.93 — detached: pictures never fail or delay the text push */
   const nbId=cfg.notebookId, nb=_syncFsDb.collection('notebooks').doc(nbId), manual=!!o.manual;
   let plan=_s1Plan();
   if(plan!=='blob'){
@@ -24556,6 +24734,7 @@ function _syncDiagnosticsHTML(){
     ['Push failures since load', String(_pushFailures||0)],
     ['Pull failures since load', String(_pullFailures||0)],
     ['Per-note copy', _s1DiagText()],
+    ['Pictures', _picDiagText()],
   ];
   let h='<table style="width:100%;font-size:11px;border-collapse:collapse">'
     +rows.map(([k,v])=>`<tr><td style="padding:2px 8px 2px 0;color:var(--t3);white-space:nowrap">${k}</td><td style="padding:2px 0;font-family:monospace">${esc(String(v))}</td></tr>`).join('')
