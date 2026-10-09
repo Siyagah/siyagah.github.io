@@ -21939,14 +21939,23 @@ function jebLayout(){
   if(window.innerWidth>=1200&&sb) l=Math.max(0,Math.round(sb.getBoundingClientRect().right));
   document.documentElement.style.setProperty('--jeb-l',l+'px');
 }
+/* a phone with the keyboard up for anything outside Jeb: focus is in a text field that is not Jeb's */
+function _jebKbWanted(){
+  const a=document.activeElement;
+  if(window.innerWidth>=640||!a||a===document.body) return false;
+  const tg=a.tagName;
+  const editable=(tg==='INPUT'&&!/^(checkbox|radio|button|submit|range|color|file)$/i.test(a.type))||tg==='TEXTAREA'||a.isContentEditable;
+  return !!editable&&!a.closest('[data-jeb],#jeb-panel,#jeb-bar');
+}
+let _jebKbT=0;
+/* The bar hides at once, but comes back only 300 ms after the focus has left the
+   field: a tap on a button that blurs the editor must not lift the layout between
+   touch-down and the click (the click would land on whatever slid under the finger). */
 function _jebKbCheck(){
-  const a=document.activeElement; let hide=false;
-  if(window.innerWidth<640&&a&&a!==document.body){
-    const tg=a.tagName;
-    const editable=(tg==='INPUT'&&!/^(checkbox|radio|button|submit|range|color|file)$/i.test(a.type))||tg==='TEXTAREA'||a.isContentEditable;
-    if(editable&&!a.closest('[data-jeb],#jeb-panel,#jeb-bar')) hide=true;
-  }
-  document.documentElement.classList.toggle('jeb-kb',hide);
+  const root=document.documentElement;
+  clearTimeout(_jebKbT);
+  if(_jebKbWanted()) root.classList.add('jeb-kb');
+  else if(root.classList.contains('jeb-kb')) _jebKbT=setTimeout(()=>{ if(!_jebKbWanted()) root.classList.remove('jeb-kb'); },300);
 }
 function _jebWireOnce(){
   if(_jebWired) return; _jebWired=true;

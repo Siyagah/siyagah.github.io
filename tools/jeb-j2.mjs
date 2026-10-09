@@ -297,8 +297,8 @@ try {
       await d.page.locator('#ed').first().click(); await sleep(300);
       const hid = await on(d, () => ({ disp: getComputedStyle(document.getElementById('jeb-bar')).display, h: getComputedStyle(document.documentElement).getPropertyValue('--jeb-h').trim(), ae: document.activeElement && document.activeElement.id }));
       check(hid.ae === 'ed' && hid.disp === 'none' && hid.h === '0px', '60h@390 focusing the note editor #ed hides the bar and gives the room back', JSON.stringify(hid));
-      await on(d, () => document.activeElement.blur()); await sleep(200);
-      check((await shown()) === '56px', '60h@390 blurring brings it back');
+      await on(d, () => document.activeElement.blur()); await sleep(600);
+      check((await shown()) === '56px', '60h@390 blurring brings it back (after 300 ms, so a tap that blurs does not shift the layout under the finger)');
       /* a float window's editor */
       const fw = await on(d, () => { popOutNote('a2'); return true; });
       await sleep(700);
@@ -306,12 +306,12 @@ try {
       if (hasFw) {
         await d.page.locator('.fw-ed').first().click(); await sleep(300);
         check((await on(d, () => getComputedStyle(document.getElementById('jeb-bar')).display)) === 'none', '60h@390 focusing a float window\'s .fw-ed hides the bar');
-        await on(d, () => document.activeElement.blur()); await sleep(200);
+        await on(d, () => document.activeElement.blur()); await sleep(600);
         check((await shown()) === '56px', '60h@390 blurring the float window\'s editor brings it back');
       } else check(false, '60h@390 a float window with a .fw-ed could be opened', 'fw=' + fw);
       /* Jeb's own input keeps the bar */
       await on(d, () => { closeAllFloats(); if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); });
-      await sleep(300);
+      await sleep(700);
       const shownBefore = await shown();
       check(shownBefore === '56px', '60h@390 with nothing focused the bar is up again', String(shownBefore));
       await act(d, vp, '#jeb-bar .jeb-chip[title="Ideas"]'); await sleep(400);
