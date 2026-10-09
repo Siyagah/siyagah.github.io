@@ -8941,4 +8941,80 @@ PR from `claude/awesome-archimedes-dsqf92`.
 
 ## v04.99 — J2, the Jeb bar and the pocket panel (issue #147)
 
-*(stub — the full entry is written at the end of the round)*
+Jeb round J2 of four: the bar and the pocket panel, the first part the owner
+can see. Built on J1's API only (`jebAddItem`, `jebEditItem`, `jebToggleDone`,
+`jebMoveItem`, `jebDeleteItem`, `jebClearDone`, the pocket equivalents); nothing
+edits `DB.jeb` directly.
+
+**What it is.** `#jeb-bar`: a scrolling strip of pockets at the bottom (swipe,
+trackpad, vertical wheel scrolls it sideways). A chip = swatch (fixed ink
+`#2A2418` on the pocket's pastel) + name + count of items not done; a hidden,
+empty `[data-jeb-cards]` slot per chip is J4's hook. After the last chip, "＋ New
+pocket" (name, 12 icons, 8 pastels, in the app's own modal). Right-click or
+long-press on a chip: ✏️ Rename · 🎨 Icon & colour · ◀ Move left · Move right ▶ ·
+🧹 Clear done items (N) · 🗑 Delete pocket (refused by `jebDeletePocket`'s toast
+while it holds items). The panel (`#jeb-panel`): header (swatch, name, "N open ·
+M in this pocket", ✕), an add box (Enter adds on TOP and keeps focus, Shift+Enter
+is a new line), the items (tick box; tap the text to edit in place — Enter or
+blur saves, Escape cancels; a ⠿ handle to reorder by mouse or touch; a ⋯ menu:
+✏️ Edit · 📂 Move to pocket ▸ · 🗑 Delete, with a marked slot for J3's Attach /
+→ Note), and "🧹 Clear done (N)". ✕, Escape or a tap outside closes it.
+
+**Shape on each layout (D5, approved).** PC (≥ 1200): the bar starts at the
+sidebar's right edge (`--jeb-l`, kept by a `ResizeObserver` on `#sb`, so it
+follows `#rsz` and the collapse), spans Pane 2 + Pane 3, and the panel is a
+380px panel over Pane 3 that rests on the bar. Tablet (640–1199): the bar is the
+full-width bottom strip of every screen, same panel. Phone (< 640): the same
+strip; the panel is a bottom sheet, ~72% high, resting on the bar; **the bar
+hides while the keyboard is up for anything outside Jeb** (focus in `#ed`,
+`.fw-ed`, the title, search…) and returns 300 ms after that focus ends — not at
+once, because a tap on a button that blurs the editor would otherwise lift the
+layout between touch-down and the click (found by the existing 6p switcher
+check, which clicked the wrong thing).
+
+**Room for the bar.** `--jeb-h` (56px; `0px` when the bar is off, or the phone
+keyboard hides it) on `<html>`. PC: `#p2`/`#p3` get `margin-bottom`. Tablet and
+phone: `#sb`, `#p2`, `#p3` are `bottom:var(--jeb-h)` instead of `0` (6 rules).
+**The bottom-fixed sweep:**
+
+| Element | Result |
+|---|---|
+| `.toast` | moves up: `bottom:calc(22px + var(--jeb-h))` |
+| `#fw-closeall` (laptop chip) | moves up: `calc(14px + var(--jeb-h))` |
+| `#fw-switch` (phone switcher) | moves up: `bottom:var(--jeb-h)` |
+| `body.fw-sheets .float-win` (phone sheets stop above the switcher) | `calc(56px + var(--jeb-h))` |
+| `#toc-float-btn` (< 900px) | moves up: `calc(76px + var(--jeb-h))` |
+| `#toc-drawer` + its backdrop (z 900) | **over the bar on purpose** (a modal sheet) |
+| `#tab-picker` (z 9100, placed against its button by measuring), `#ctx`, `#paste-pop`/`#men-dd`/`#item-menu`, `.fl-pop`, `.pkf-pop`, `.spc-pop`, the pickers (`#nti-picker`, `#nh-picker`…), `.cal-popup`, `.clr-pop`, `.sg-*` menus, `#ann-bubble`, `#cite-ov`, `#hs-ov`, `#gs-overlay` | **over the bar on purpose**: popovers placed by measurement against their button and clamped to the viewport |
+| every modal (`#ov`, `#theme-modal`, `#trash-modal`, `#sync-modal`, `#rem-modal`, `#login-overlay`, `#note-modal-bg`, `#smart-paste-bg`) | **over the bar on purpose** (z ≥ 600) |
+| float windows (`.float-win`) | over the bar on purpose on a laptop/tablet (draggable windows); the phone sheets stop above the switcher |
+| the quick-add bar | not `position:fixed`: it lives in Pane 2/3, which now end at the bar |
+| `#jeb-panel`, `#jeb-menu` | the panel rests on the bar (`bottom:var(--jeb-h)`); the menu is a measured popover (z 9200) |
+| `#nh-picker` on phone/tablet has a hard `bottom:60px!important` | **not changed this round** (a popover over a modal); noted for the Architect |
+
+**"Show Jeb bar"** is a checkbox in 🧰 Tools → 🎨 Appearance (the place the app
+keeps its display settings), `DB.theme.jebBar` (default on), so it syncs through
+the theme-leaf merge with nothing new. Off removes the bar and `--jeb-h` is 0.
+
+**Live.** `jebRefresh()` runs at the end of `render()` and `_renderPreserveEdit()`
+(every merge path ends in one of them), repainting the bar and an open panel
+without a reload; each repaint is skipped when the pockets, counts or items did
+not change. **Never mid-edit:** while an item is being typed in (or dragged), the
+list is not repainted; the edit saves through `jebEditItem` (fresh `updatedAt`)
+when it ends, so it beats the merge, and the panel repaints then.
+
+**Verified.** `tools/jeb-j2.mjs` (app-check block 60), 60a–60l at 390×844,
+820×1180 and 1440×900 with real clicks, taps and typing; the touch reorder is a
+real CDP touch drag. `--only 60` **203/203**; `--only 59` 74/74; `--only 6p`
+104/104; `ship-check` 13/13. Two checks changed because the app was right and
+the check was wrong: 60c/60d counted items wrong in their first cut; 60a waited
+for the sidebar's own 0.2s width transition. 6p's phone-switcher check failed
+once with the 300 ms-less keyboard rule — that was a real defect, fixed in the
+app (see above), not in the check.
+
+**Not done:** Attach, → Note, the "From Jeb" Smart View (J3); the sticky-card
+deck, "All pockets", "☑ Choose" (J4); the standalone app; Jeb in `_S1_COLLS`.
+The full `app-check` was not run, by instruction. The unpatched (v04.98)
+comparison of `--only 60` is for the Architect.
+
+**Totals:** full `app-check`: (Architect, in review).

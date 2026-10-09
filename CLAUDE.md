@@ -16,6 +16,17 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.99** (9 Oct 2026) — J2, the Jeb bar and the pocket panel (issue #147).
+  `#jeb-bar` (scrolling chips: swatch, name, not-done count; ＋ New pocket;
+  right-click/long-press menu), `#jeb-panel` (add on top, tick, edit in place,
+  ⠿ drag, ⋯ menu, Clear done), all through the J1 API. `--jeb-h` on `<html>`
+  makes room (PC: `#p2`/`#p3` margin; tablet/phone: `#sb`/`#p2`/`#p3`
+  `bottom:var(--jeb-h)`); toast, `#fw-*`, `#toc-float-btn` move up by it. PC bar
+  starts at the sidebar's right edge (`--jeb-l`, `ResizeObserver`); the phone
+  hides it for the keyboard (back 300 ms after focus leaves). "Show Jeb bar" in
+  🧰 → 🎨 Appearance = `DB.theme.jebBar`. Live repaint from `render()`/
+  `_renderPreserveEdit()`, never under an item being edited. `--only 60`
+  **203/203**, `--only 59` 74/74, `--only 6p` 104/104. Full `app-check`: (Architect, in review).
 - **v04.98** (9 Oct 2026) — J1, Jeb's data (issue #144). `DB.jebPockets` +
   `DB.jeb`, four default pockets seeded once (fixed ids, 1970 stamp), wired into
   `_REC_COLLS`, `_REC_TOMB_COLLS`, `_LJ_COLLS`, `mergeDB`, `_syncDigest`, the
@@ -46,14 +57,6 @@ must never accumulate here instead of there.
   `_s2RefsOk()`, never an open note, 4,000 picture writes/day. 20 MB: 84 s,
   26.8 -> 0.1 MB; 140 MB: ~150 s, 186.8 -> 0.1 MB (2-6 s pauses are the
   pre-existing whole-notebook `_save`). `--only 56` **69/69**. Architect: full `app-check` **2080/2080** on the final head (2078/2080 ×2 before the 51r seed fix); unpatched `--only 56` 0/3.
-- **v04.94** (8 Oct 2026) — S2c, new pictures stored by reference (issue
-  #136). Paste, drop and 🖼 pick (Pane 3 and float windows, which gained their
-  own paste/drop handlers) store the picture once, insert `data-pic`, upload at
-  once; the gate `_s2RefsOk()` (IndexedDB, reader caught up, no older build
-  written in 48 h) else inlines as before. Book/backup page inlines the bytes;
-  Note History paints them; the item menu goes through `_picCanon`. The real
-  v04.91 build keeps a reference through an edit (54j). 10 pictures → 1.3 KB
-  of note text. `--only 55` **127/127**, `--only 54` **67/67**. Architect: full `app-check` **2011/2011, twice in a row**; unpatched `--only 55` 34/89 (explained in PR #137).
 ---
 
 ## What this is
@@ -386,6 +389,17 @@ A failing check is a wrong assertion surprisingly often — investigate before
   equivalents), never `DB.jeb` directly. Deleting goes to Trash (`jebItem`,
   `jebPocket`; a pocket deletes only when empty); `jebToNote` removes the item
   with a tombstone and no Trash entry, in the same `persist()` as the new note.
+  **The bar and the panel (v04.99, J2).** `#jeb-bar` and `#jeb-panel` are built
+  and repainted by `jebRefresh()` (called at the end of `render()` and
+  `_renderPreserveEdit()`, so every merge path reaches it; a signature skips a
+  repaint that would change nothing, and an item being edited or dragged is never
+  repainted under the caret). `--jeb-h` on `<html>` is the bar's height — `0px`
+  when `DB.theme.jebBar===false` (default on; set from 🧰 → 🎨 Appearance) or while
+  a phone's keyboard is up for a field outside Jeb (`html.jeb-kb`). **Anything
+  `position:fixed` to the bottom must account for it** (`bottom:calc(Npx + var(--jeb-h))`),
+  or be a modal/popover that sits over the bar on purpose. `--jeb-l` is the
+  bar's left edge (PC: the sidebar's right edge). Hooks: `[data-jeb-cards]` on
+  each chip (J4), the marked slot in `_jebItemMenu` (J3).
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
