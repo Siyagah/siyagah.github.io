@@ -9257,4 +9257,30 @@ opened with `/?jeb=1`; the sync, the data and the Jeb code exist once. Step 0 of
   issue put the item "next to 📱 Install App", which is in ⚙; its checks and wording say 🧰, so it is in 🧰.
 - **Checks.** `tools/jeb-j5.mjs`, block `65-jeb-app`.
 
+### Changed in review (Save File, I4)
+
+The Architect measured that `getExportHTML()` (Save File, Deploy Export, the linked-file autosave) baked Jeb's
+runtime into the copy: from `/?jeb=1` a file whose `html.jeb-app` hid the sidebar (no note reachable); from `/` a
+dead `#jeb-bar` (no listeners, because `jebRefresh()` reused it), and pocket names and open item text in an
+"empty" Deploy Export shell. Fixed in this round:
+
+- `_cleanExportRoot()` (on the clone) removes `#jeb-bar`, `#jeb-panel`, `#jeb-deck`, `#jeb-att`, `#jeb-menu`,
+  `#jeb-app-hd` and any `.toast` (a toast can carry a note title), strips `jeb-app`/`jeb-on`/`jeb-kb` and the inline
+  `--jeb-h`/`--jeb-l`, and puts the head's face back from `window._JEB_FACE0` — recorded by the head script before
+  it swaps (title, manifest, theme-color, apple title, touch icon, SVG icon), so the main values live in one place.
+- `jebRefresh()` removes, once per session, any Jeb surface found in the page before it built its own, and the head
+  script drops a baked `jeb-app` class when not in Jeb mode: a copy saved by an older build works.
+- **Sweep of what the app appends to `<body>`** (about 40 `document.body.appendChild` sites). Measured at idle
+  after boot, the only runtime addition is `#jeb-bar`. Stripped now: the Jeb surfaces and `.toast`. Already cleared
+  before this round: `#paste-pop`, `#men-dd`, `#item-menu`, `#jrn-style-pop`, `#dgh`, `#ann-bubble`, `#ctx`.
+  **Not stripped, and not examined for leaks:** the on-demand pickers/popovers (`nti-picker`, `jrn-picker`,
+  `mdb-picker`, `nh-picker`, `fl-pop`, `sg-menu`, `ed-drop-line`, `ed-drag-ghost`), the TOC drawer and float-window
+  chrome (`toc-drawer`, `fw-switch`, windows), and modal overlays. They exist only while used and are removed or
+  hidden on close, but I did not open each and read what a saved copy would hold; a follow-up round should.
+- **Check 65s** (3 sizes): export from `/?jeb=1` and `/`, reopened as a plain file — not a Jeb page, main title and
+  `manifest.json`, one `#jeb-bar`, sidebar visible, a note opens by a real click (1440), a chip click opens the
+  panel; Deploy Export with a panel open holds no pocket name or item text; the live page is unchanged by the export.
+  `--only=65s` 47/47; on `9699b5a`'s `index.html` 19 of 38 pass (19 FAIL, then it stops on a missing sidebar).
+  `ship-check` 13/13; `app-check --only 65,64,60` 709/709.
+
 **Not done:** the full `app-check` (by the issue's instruction). Free card positions and moving Jeb into `_S1_COLLS` stay out.
