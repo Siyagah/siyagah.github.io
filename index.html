@@ -814,6 +814,7 @@ html.jeb-kb #jeb-bar{display:none!important}
 .jeb-px:hover{background:var(--hover)}
 #jeb-deck{display:none;position:fixed;left:0;right:0;top:0;bottom:var(--jeb-h);z-index:8000;flex-direction:column;background:var(--paper);color:var(--t1)}
 #jeb-deck.on{display:flex}
+@media(min-width:1200px){#jeb-deck{left:var(--jeb-l)}}
 @media(max-width:639.98px){#jeb-deck{bottom:0}}
 .jd-hd{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 14px;background:var(--white);color:var(--t1);border-bottom:1px solid var(--border2);flex-shrink:0}
 .jd-hd b{font-size:16px;color:var(--t1)}
@@ -846,6 +847,7 @@ html.jeb-kb #jeb-bar{display:none!important}
 .jeb-card .jeb-chips>span{background:rgba(255,255,255,.55);color:#2A2418;border-color:rgba(42,36,24,.25)}
 .jc-acts{display:flex;flex-wrap:wrap;gap:4px;padding:0 6px}
 .jc-acts button{flex:1 1 auto;min-width:36px;min-height:40px;border:1px solid rgba(42,36,24,.28);border-radius:8px;background:rgba(255,255,255,.55);color:#2A2418;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation}
+.jc-acts .jeb-note-b{white-space:nowrap}
 .jc-acts button:hover{background:rgba(255,255,255,.85)}
 .jc-acts button[aria-pressed="true"]{background:#2A2418;color:#fff}
 #jeb-panel{display:none;position:fixed;top:0;right:0;bottom:var(--jeb-h);width:380px;max-width:100vw;z-index:141;flex-direction:column;background:var(--white);color:var(--t1);border-left:1px solid var(--border2);box-shadow:-6px 0 24px rgba(0,0,0,.18)}
@@ -22417,7 +22419,7 @@ function _jebMakeDeck(){
   return d;
 }
 function _jebCardHTML(i,pk){
-  return `<div class="jeb-card${i.done?' done':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another pocket" aria-label="Drag handle">⠿</div><div class="jeb-tx">${esc(i.text)}</div>${_jebChipsHTML(i)}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
+  return `<div class="jeb-card${i.done?' done':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another pocket" aria-label="Drag handle">⠿</div><div class="jeb-tx">${esc(i.text)}</div>${_jebChipsHTML(i)}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
 }
 function _jebPaintDeck(){
   const sel=_jebDeck, ids=_jebSelIds(sel);

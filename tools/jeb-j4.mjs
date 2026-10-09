@@ -352,6 +352,26 @@ try {
     const hdp = await on(d, () => { const h = document.querySelector('#jeb-deck .jd-hd'); return { bg: getComputedStyle(h).backgroundColor, items: [...h.querySelectorAll('b,small,button')].map((e) => getComputedStyle(e).color) }; });
     const hb = rgbOf(hdp.bg);
     check(!!hb && hb.a === 1 && hdp.items.length >= 4 && hdp.items.every((c) => { const k = rgbOf(c); return k && ratio(k.c, hb.c) >= 4.5; }), `${t} the deck header text clears 4.5:1`, JSON.stringify(hdp));
+    /* review fixes: the deck beside the sidebar on a PC; every card action named */
+    const rv = await on(d, () => {
+      const dk = document.querySelector('#jeb-deck').getBoundingClientRect(), sb = document.querySelector('#sb').getBoundingClientRect();
+      const tb = [...document.querySelectorAll('#sb-toolbar button')].filter((b) => b.offsetParent).map((b) => {
+        const r = b.getBoundingClientRect(), ov = Math.max(0, Math.min(r.right, dk.right) - Math.max(r.left, dk.left)) * Math.max(0, Math.min(r.bottom, dk.bottom) - Math.max(r.top, dk.top));
+        return { n: b.textContent.trim(), ov, area: r.width * r.height };
+      });
+      const acts = [...document.querySelectorAll('#jeb-deck .jeb-card .jc-acts button')].map((b) => {
+        const r = b.getBoundingClientRect(), c = b.closest('.jeb-card').getBoundingClientRect();
+        return { cls: b.className, txt: b.textContent.trim(), name: b.getAttribute('aria-label') || '', title: b.getAttribute('title') || '', out: r.left < c.left - 1 || r.right > c.right + 1 || b.scrollWidth > b.clientWidth + 1 };
+      });
+      return { dl: dk.left, sbr: sb.right, tb, acts };
+    });
+    if (vp.w >= 1200) {
+      check(Math.abs(rv.dl - rv.sbr) <= 1, `${t} the deck starts at the sidebar's right edge (${Math.round(rv.dl)} vs ${Math.round(rv.sbr)})`);
+      check(rv.tb.length > 0 && rv.tb.every((b) => b.ov === 0 || b.ov >= b.area - 1), `${t} no sidebar button is half covered`, JSON.stringify(rv.tb.filter((b) => b.ov > 0 && b.ov < b.area - 1)));
+    }
+    check(rv.acts.length >= 4 && rv.acts.every((a) => a.name && a.title), `${t} every card action has a name and a title`);
+    check(rv.acts.filter((a) => /jeb-note-b/.test(a.cls)).every((a) => /Note/.test(a.txt)) && rv.acts.some((a) => /jeb-note-b/.test(a.cls)), `${t} the note button reads "→ Note"`);
+    check(rv.acts.every((a) => !a.out), `${t} no card action overflows its card`, JSON.stringify(rv.acts.filter((a) => a.out)));
     noErr(d, t);
   });
 
