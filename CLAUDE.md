@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.03.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.04.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -22,8 +22,7 @@ must never accumulate here instead of there.
   chip, drag by ⠿ within/between pockets). **All pockets** chip and **☑ Choose**
   (tick boxes, Panel (N) / Cards (N)); the panel groups several pockets (＋ per
   group; a ＋ item left empty is dropped by `jebDiscardEmpty`). `--only 64`
-  **237/237**, `--only 63` 158/158, `--only 60` 203/203. Full `app-check`:
-  (Architect, in review).
+  **237/237**, `--only 63` 158/158, `--only 60` 203/203. Architect: full `app-check` **2989/2989, twice in a row**; unpatched `--only 64` 0/4.
 - **v05.02** (9 Oct 2026) — J3, 📎 Attach, → Note and "(12) From Jeb" (issue
   #152). `#jeb-att`: four tabs (Folder, Tag, Note Type, Journal) acting at once
   through `jebEditItem`; chips under each item; "📎 Attach" and "→ Note" on every

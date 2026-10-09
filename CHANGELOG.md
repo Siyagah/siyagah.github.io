@@ -9210,4 +9210,4 @@ Architect, and a pass on v05.02 would need explaining). On a phone the 64g modal
 `jebNewPocketDialog()`, because the phone deck covers the button that opens it. Free card positions, the standalone
 Siyagah Jeb and moving Jeb into `_S1_COLLS` are out of this round.
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` **2989/2989, twice in a row** on `c6e640b` (after the two review fixes: PC deck beside the sidebar; the card's "→ Note" button); `ship-check` 13/13; unpatched (v05.02 `index.html` + `sw.js`) `--only 64` 0/4 (no ▦ half; stops at 64a).
