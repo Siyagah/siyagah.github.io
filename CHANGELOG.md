@@ -9203,6 +9203,8 @@ buttons where the All deck has two, a wrong assertion). `--only 63` **158/158**,
 that counted `.jeb-chip` or took the first chip now ask for `.jeb-chip[data-pid]`, because "All pockets" is a chip
 too). `ship-check` 13/13.
 
+**Changed in review:** on a PC (≥ 1200) the deck now starts at the bar's left edge (`left:var(--jeb-l)`) so the sidebar's four buttons stay whole beside it; the card's note button reads "→ Note" (✓ 📎 ⋯ stay icons with `title` + `aria-label`, the row wraps). 64h gained the checks for both; 64g's "covers the panes" now expects the deck beside the sidebar on a PC. `--only 64` **250/250**, `--only 60` **203/203**.
+
 **Not done:** the full `app-check` (by the issue's instruction); the unpatched run of `--only 64` (left to the
 Architect, and a pass on v05.02 would need explaining). On a phone the 64g modal is opened by calling
 `jebNewPocketDialog()`, because the phone deck covers the button that opens it. Free card positions, the standalone
