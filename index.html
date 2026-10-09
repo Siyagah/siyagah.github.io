@@ -785,13 +785,69 @@ html.jeb-kb #jeb-bar{display:none!important}
 #jeb-bar{position:fixed;left:var(--jeb-l);right:0;bottom:0;height:56px;z-index:140;display:flex;align-items:center;gap:8px;padding:0 10px;overflow-x:auto;overflow-y:hidden;background:var(--white);border-top:1px solid var(--border2);scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
 #jeb-bar::-webkit-scrollbar{display:none}
 @media(max-width:1199.98px){#jeb-bar{left:0}}
-.jeb-chip,.jeb-new{flex:0 0 auto;display:flex;align-items:center;gap:7px;height:40px;padding:0 10px 0 5px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;white-space:nowrap}
-.jeb-chip:hover,.jeb-new:hover{background:var(--hover)}
+.jeb-chip,.jeb-new,.jeb-choose,.jeb-go{flex:0 0 auto;display:flex;align-items:center;gap:7px;height:40px;padding:0 10px 0 5px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;white-space:nowrap}
+.jeb-chip{padding:0;gap:0;overflow:hidden}
+.jeb-main{display:flex;align-items:center;gap:7px;height:100%;padding:0 8px 0 5px;cursor:pointer}
+.jeb-chip:hover,.jeb-new:hover,.jeb-choose:hover,.jeb-go:hover{background:var(--hover)}
+.jeb-choose,.jeb-go{padding:0 12px;font-family:inherit}
+.jeb-go:disabled{opacity:.5;cursor:default}
+.jeb-tk{flex:0 0 auto;width:20px;height:20px;border:2px solid var(--border2);border-radius:5px;display:none;align-items:center;justify-content:center;font-size:13px;line-height:1;color:var(--on-accent);background:var(--white)}
+#jeb-bar.choosing .jeb-tk{display:inline-flex}
+.jeb-chip.chosen .jeb-tk{background:var(--green);border-color:var(--green)}
+.jeb-chip.chosen{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
+#jeb-bar.choosing [data-jeb-cards]{display:none!important}
+.jeb-all .jeb-sw{background:conic-gradient(#FFF1A8 0 25%,#FFD9B8 0 50%,#CFE8FF 0 75%,#F6D2E4 0)}
+@media(max-width:639.98px){#jeb-bar.choosing .jeb-new{display:none}}
 .jeb-chip.on{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
 .jeb-new{padding:0 14px;color:var(--t2)}
 .jeb-sw{flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;color:#2A2418;font-weight:700}
 .jeb-ct{min-width:20px;padding:1px 6px;border-radius:999px;background:var(--hover);color:var(--t1);font-size:12px;text-align:center}
-[data-jeb-cards]{display:none}
+[data-jeb-cards]{display:flex;align-items:center;justify-content:center;align-self:stretch;min-width:40px;border-left:1px solid var(--border2);font-size:16px;color:var(--t2);cursor:pointer}
+[data-jeb-cards]:hover{background:var(--hover);color:var(--t1)}
+/* v05.03 · J4 — several pockets in the panel, and the deck of sticky cards */
+.jeb-gh{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--hover);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1;font-size:13px;color:var(--t1)}
+.jeb-gh b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jeb-gh small{color:var(--t2);font-size:12px}
+.jeb-gh .jeb-gadd{border:1px solid var(--border2);background:var(--paper);color:var(--t1);min-width:40px;height:40px;border-radius:8px;font-size:18px;cursor:pointer}
+.jeb-gl:empty::after{content:'Nothing here yet';display:block;padding:14px;text-align:center;color:var(--t2);font-size:13px}
+.jeb-px{border:none;background:transparent;color:var(--t2);font-size:18px;min-width:40px;height:40px;border-radius:8px;cursor:pointer}
+.jeb-px:hover{background:var(--hover)}
+#jeb-deck{display:none;position:fixed;left:0;right:0;top:0;bottom:var(--jeb-h);z-index:8000;flex-direction:column;background:var(--paper);color:var(--t1)}
+#jeb-deck.on{display:flex}
+@media(max-width:639.98px){#jeb-deck{bottom:0}}
+.jd-hd{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 14px;background:var(--white);color:var(--t1);border-bottom:1px solid var(--border2);flex-shrink:0}
+.jd-hd b{font-size:16px;color:var(--t1)}
+.jd-hd small{font-size:12.5px;color:var(--t2)}
+.jd-sp{flex:1}
+.jd-hd button{min-height:40px;min-width:40px;padding:0 12px;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.jd-hd button:hover{background:var(--hover)}
+.jd-hd button:disabled{opacity:.5}
+.jd-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 14px 28px;-webkit-overflow-scrolling:touch}
+.jd-wrap{max-width:1100px;margin:0 auto}
+.jd-grp{margin-bottom:22px}
+.jd-gh{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:6px 10px;width:fit-content;max-width:100%;background:var(--white);color:var(--t1);border:1px solid var(--border2);border-radius:999px;font-size:13px}
+.jd-gh b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jd-gh small{color:var(--t2)}
+.jd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;min-height:60px;padding:6px;border-radius:12px}
+@media(max-width:639.98px){.jd-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
+.jd-grid.jd-over{outline:3px dashed var(--green);outline-offset:-3px}
+.jd-grid:empty::after{content:'Empty — drop a card here';display:flex;align-items:center;justify-content:center;grid-column:1/-1;color:var(--t2);font-size:13px;min-height:48px}
+.jeb-card{position:relative;min-width:150px;display:flex;flex-direction:column;border-radius:4px;padding:0 0 6px;color:#2A2418;box-shadow:0 3px 10px rgba(0,0,0,.22);transform:rotate(var(--rot,0deg));min-height:120px}
+@media(prefers-reduced-motion:reduce){.jeb-card{transform:none}}
+.jeb-card.jeb-drag{opacity:.5}
+.jeb-card.jeb-before::before,.jeb-card.jeb-after::after{content:'';position:absolute;top:-4px;bottom:-4px;width:5px;border-radius:3px;background:var(--green);box-shadow:0 0 0 2px var(--white)}
+.jeb-card.jeb-before::before{left:-10px}
+.jeb-card.jeb-after::after{right:-10px}
+.jc-grip{height:30px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;color:rgba(42,36,24,.6);font-size:16px}
+.jeb-card .jeb-tx{flex:1;padding:2px 10px 8px;color:#2A2418;font-size:14px;line-height:1.4;overflow-wrap:anywhere;min-width:0}
+.jeb-card.done .jeb-tx{text-decoration:line-through;opacity:.75;color:#2A2418}
+.jeb-card .jeb-edit{margin:2px 8px 6px;width:auto;color:#2A2418;background:rgba(255,255,255,.7);min-height:60px}
+.jeb-card .jeb-chips{padding:0 8px 4px}
+.jeb-card .jeb-chips>span{background:rgba(255,255,255,.55);color:#2A2418;border-color:rgba(42,36,24,.25)}
+.jc-acts{display:flex;flex-wrap:wrap;gap:4px;padding:0 6px}
+.jc-acts button{flex:1 1 auto;min-width:36px;min-height:40px;border:1px solid rgba(42,36,24,.28);border-radius:8px;background:rgba(255,255,255,.55);color:#2A2418;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation}
+.jc-acts button:hover{background:rgba(255,255,255,.85)}
+.jc-acts button[aria-pressed="true"]{background:#2A2418;color:#fff}
 #jeb-panel{display:none;position:fixed;top:0;right:0;bottom:var(--jeb-h);width:380px;max-width:100vw;z-index:141;flex-direction:column;background:var(--white);color:var(--t1);border-left:1px solid var(--border2);box-shadow:-6px 0 24px rgba(0,0,0,.18)}
 #jeb-panel.on{display:flex;animation:jebIn .2s ease}
 @keyframes jebIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
@@ -21971,6 +22027,11 @@ function jebDeleteItem(id){
   _jebEnsure(); const it=_jebItem(id); if(!it) return false;
   _jebTrashItem(it,_jebNow()); persist(); return true;
 }
+/* a just-made item the owner left blank is dropped (tombstone, no Trash entry); one with text is never touched */
+function jebDiscardEmpty(id){
+  _jebEnsure(); const it=_jebItem(id); if(!it||String(it.text||'').trim()) return false;
+  _addTombstones([id],_jebNow()); DB.jeb=DB.jeb.filter(x=>x.id!==id); persist(); return true;
+}
 function jebClearDone(pocketId){
   _jebEnsure(); const done=jebItems(pocketId).filter(i=>i.done); if(!done.length) return 0;
   const at=_jebNow(); done.forEach(i=>_jebTrashItem(i,at)); persist(); return done.length;
@@ -22008,6 +22069,12 @@ const _JEB_ICONS=['✓','✶','↗','◫','☏','❝','❙','◷','★','✎','�
 const _JEB_COLORS=['#FFF1A8','#FFD9B8','#CFE8FF','#F6D2E4','#D8F0D2','#E6DCF7','#F3E6C9','#FFD0CC'];
 let _jebOpen=null, _jebEditId=null, _jebEditCancel=false, _jebDrag=null;
 let _jebBarSig='', _jebPanelSig='', _jebLPAt=0, _jebWired=false;
+/* v05.03 · J4 — several pockets in the panel (_jebOpen==='*' + _jebMulti), the card deck, ☑ Choose.
+   A selection is {ids:[pocket ids], all:bool}; all:true follows the pockets as they come and go. */
+let _jebMulti=null, _jebDeck=null, _jebDeckSig='', _jebChoose=false, _jebChosen=new Set(), _jebNewId=null;
+function _jebSelIds(sel){ if(!sel) return []; const ps=jebPockets(); return (sel.all?ps:ps.filter(p=>(sel.ids||[]).includes(p.id))).map(p=>p.id); }
+function _jebPanelSel(){ return !_jebOpen?null:(_jebOpen==='*'?_jebMulti:{ids:[_jebOpen],all:false}); }
+function _jebReduced(){ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }
 let _jebAtt=null;   /* the open 📎 Attach sheet: {iid,tab,q:{folder,tag},pool,anchor} */
 const _jebEl=id=>document.getElementById(id);
 function _jebBarOn(){ return !(DB&&DB.theme&&DB.theme.jebBar===false); }
@@ -22023,7 +22090,7 @@ function _jebKbWanted(){
   if(window.innerWidth>=640||!a||a===document.body) return false;
   const tg=a.tagName;
   const editable=(tg==='INPUT'&&!/^(checkbox|radio|button|submit|range|color|file)$/i.test(a.type))||tg==='TEXTAREA'||a.isContentEditable;
-  return !!editable&&!a.closest('[data-jeb],#jeb-panel,#jeb-bar');
+  return !!editable&&!a.closest('[data-jeb],#jeb-panel,#jeb-bar,#jeb-deck');
 }
 let _jebKbT=0;
 /* The bar hides at once, but comes back only 300 ms after the focus has left the
@@ -22044,13 +22111,15 @@ function _jebWireOnce(){
   document.addEventListener('pointerdown',e=>{
     const t=e.target;
     if(_jebEl('jeb-menu')&&!t.closest('#jeb-menu')) _jebHideMenu();
-    if(_jebOpen&&!t.closest('#jeb-panel,#jeb-bar,#jeb-menu,#jeb-att,.toast-act,#ov')) jebClosePanel();
+    if(_jebOpen&&!t.closest('#jeb-panel,#jeb-bar,#jeb-deck,#jeb-menu,#jeb-att,.toast-act,#ov')) jebClosePanel();
   },true);
   document.addEventListener('keydown',e=>{
     if(e.key!=='Escape') return;
     if(_jebEl('jeb-menu')){ _jebHideMenu(); return; }
     if(_jebAtt){ _jebAttClose(); return; }
-    if(_jebEditId||!_jebOpen||_jebEl('ov')?.classList.contains('on')) return;
+    if(_jebEditId||_jebEl('ov')?.classList.contains('on')) return;
+    if(_jebDeck){ jebCloseDeck(); return; }
+    if(!_jebOpen) return;
     jebClosePanel();
   });
 }
@@ -22062,12 +22131,13 @@ function jebRefresh(){
   let bar=_jebEl('jeb-bar');
   if(!on){
     if(bar){ bar.remove(); _jebBarSig=''; }
-    jebClosePanel(); jebLayout(); return;
+    jebCloseDeck(); jebClosePanel(); jebLayout(); return;
   }
   if(!bar){ bar=_jebMakeBar(); _jebBarSig=''; }
   _jebPaintBar(bar);
   jebLayout();
   if(_jebOpen) _jebPaintPanel();
+  if(_jebDeck) _jebPaintDeck();
   if(_jebAtt) _jebAttList();
 }
 function _jebMakeBar(){
@@ -22076,18 +22146,30 @@ function _jebMakeBar(){
   bar.addEventListener('wheel',e=>{ if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){ bar.scrollLeft+=e.deltaY; e.preventDefault(); } },{passive:false});
   bar.addEventListener('click',e=>{
     if(Date.now()-_jebLPAt<700) return;   /* the tap that ended a long-press */
-    const c=e.target.closest('.jeb-chip');
-    if(c){ jebTogglePanel(c.dataset.pid); return; }
-    if(e.target.closest('.jeb-new')) jebNewPocketDialog();
+    const t=e.target;
+    if(t.closest('.jeb-choose')){ _jebChooseToggle(); return; }
+    const go=t.closest('.jeb-go');
+    if(go){ if(!go.disabled) _jebChooseGo(go.dataset.go); return; }
+    const c=t.closest('.jeb-chip');
+    if(c){
+      if(_jebChoose){ _jebChooseTap(c); return; }
+      const cards=!!t.closest('[data-jeb-cards]');
+      const sel=c.dataset.all?{ids:[],all:true}:{ids:[c.dataset.pid],all:false};
+      if(cards) jebToggleDeck(sel);
+      else if(c.dataset.all) jebToggleAllPanel();
+      else jebTogglePanel(c.dataset.pid);
+      return;
+    }
+    if(t.closest('.jeb-new')) jebNewPocketDialog();
   });
-  bar.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.matches('.jeb-chip,.jeb-new')){ e.preventDefault(); e.target.click(); } });
+  bar.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.matches('.jeb-main,[data-jeb-cards],.jeb-new,.jeb-choose')){ e.preventDefault(); e.target.click(); } });
   bar.addEventListener('contextmenu',e=>{
-    const c=e.target.closest('.jeb-chip'); if(!c) return;
+    const c=e.target.closest('.jeb-chip'); if(!c||!c.dataset.pid) return;
     e.preventDefault(); _jebPocketMenu(c.dataset.pid,e.clientX,e.clientY);
   });
   let lp=null, lx=0, ly=0;
   bar.addEventListener('touchstart',e=>{
-    const c=e.target.closest('.jeb-chip'); if(!c||e.touches.length!==1) return;
+    const c=e.target.closest('.jeb-chip'); if(!c||!c.dataset.pid||e.touches.length!==1) return;
     lx=e.touches[0].clientX; ly=e.touches[0].clientY;
     clearTimeout(lp);
     lp=setTimeout(()=>{ _jebLPAt=Date.now(); _jebPocketMenu(c.dataset.pid,lx,ly); },500);
@@ -22101,23 +22183,59 @@ function _jebOpenCounts(){
 }
 function _jebPaintBar(bar){
   const ps=jebPockets(), cnt=_jebOpenCounts();
-  const sig=_jebOpen+'|'+ps.map(p=>[p.id,p.name,p.icon,p.color,cnt[p.id]||0].join('~')).join('|');
+  const ids=ps.map(p=>p.id);
+  [..._jebChosen].forEach(id=>{ if(!ids.includes(id)) _jebChosen.delete(id); });
+  const chosen=ids.filter(id=>_jebChosen.has(id)), total=ps.reduce((n,p)=>n+(cnt[p.id]||0),0);
+  const sig=_jebOpen+'|'+(_jebChoose?'C'+chosen.join(','):'-')+'|'+total+'|'+ps.map(p=>[p.id,p.name,p.icon,p.color,cnt[p.id]||0].join('~')).join('|');
   if(sig===_jebBarSig) return; _jebBarSig=sig;
-  bar.innerHTML=ps.map(p=>`<div class="jeb-chip${p.id===_jebOpen?' on':''}" data-pid="${esc(p.id)}" role="button" tabindex="0" title="${esc(p.name)}"><span class="jeb-sw" style="background:${esc(p.color)}">${esc(p.icon)}</span><span class="jeb-nm">${esc(p.name)}</span><span class="jeb-ct">${cnt[p.id]||0}</span><span data-jeb-cards></span></div>`).join('')
-    +'<div class="jeb-new" role="button" tabindex="0">＋ New pocket</div>';
+  const allOn=_jebChoose&&ps.length>0&&chosen.length===ps.length, n=chosen.length;
+  bar.classList.toggle('choosing',_jebChoose);
+  bar.innerHTML=`<button type="button" class="jeb-choose" aria-pressed="${_jebChoose}" title="${_jebChoose?'Leave choose mode':'Choose several pockets'}">${_jebChoose?'✕ Cancel':'☑ Choose'}</button>`
+    +`<div class="jeb-chip jeb-all${allOn?' chosen':''}${_jebOpen==='*'&&_jebMulti&&_jebMulti.all?' on':''}" data-all="1" role="group" aria-label="All pockets"><span class="jeb-main" role="button" tabindex="0" title="Open all pockets in the panel"><span class="jeb-tk" aria-hidden="true">${allOn?'✓':''}</span><span class="jeb-sw">▤</span><span class="jeb-nm">All pockets</span><span class="jeb-ct">${total}</span></span><span data-jeb-cards role="button" tabindex="0" aria-label="Spread all pockets as cards" title="Spread all pockets as cards">▦</span></div>`
+    +ps.map(p=>{ const on=_jebChosen.has(p.id); return `<div class="jeb-chip${p.id===_jebOpen?' on':''}${on?' chosen':''}" data-pid="${esc(p.id)}" role="group" aria-label="${esc(p.name)}"><span class="jeb-main" role="button" tabindex="0" title="${esc(p.name)}"><span class="jeb-tk" aria-hidden="true">${on?'✓':''}</span><span class="jeb-sw" style="background:${esc(p.color)}">${esc(p.icon)}</span><span class="jeb-nm">${esc(p.name)}</span><span class="jeb-ct">${cnt[p.id]||0}</span></span><span data-jeb-cards role="button" tabindex="0" aria-label="Spread ${esc(p.name)} as cards" title="Spread ${esc(p.name)} as cards">▦</span></div>`; }).join('')
+    +'<div class="jeb-new" role="button" tabindex="0">＋ New pocket</div>'
+    +(_jebChoose?`<button type="button" class="jeb-go" data-go="panel"${n?'':' disabled'}>▤ Panel (${n})</button><button type="button" class="jeb-go" data-go="cards"${n?'':' disabled'}>▦ Cards (${n})</button>`:'');
+}
+/* ── ☑ Choose ── */
+function _jebChooseToggle(){
+  _jebChoose=!_jebChoose; _jebChosen=new Set(); _jebBarSig='';
+  if(_jebChoose){ jebCloseDeck(); jebClosePanel(); }
+  jebRefresh();
+}
+function _jebChooseEnd(){ _jebChoose=false; _jebChosen=new Set(); _jebBarSig=''; }
+function _jebChooseTap(c){
+  const ids=jebPockets().map(p=>p.id);
+  if(c.dataset.all){ if(ids.every(id=>_jebChosen.has(id))) _jebChosen=new Set(); else _jebChosen=new Set(ids); }
+  else if(_jebChosen.has(c.dataset.pid)) _jebChosen.delete(c.dataset.pid); else _jebChosen.add(c.dataset.pid);
+  _jebBarSig=''; jebRefresh();
+}
+function _jebChooseGo(what){
+  const ids=jebPockets().map(p=>p.id).filter(id=>_jebChosen.has(id)); if(!ids.length) return;
+  _jebChooseEnd();
+  const sel={ids,all:false};
+  if(what==='cards') jebOpenDeck(sel); else jebOpenPanelSel(sel);
 }
 function jebTogglePanel(pid){ if(_jebOpen===pid) jebClosePanel(); else jebOpenPanel(pid); }
+function jebToggleAllPanel(){ if(_jebOpen==='*'&&_jebMulti&&_jebMulti.all) jebClosePanel(); else jebOpenPanelSel({ids:[],all:true}); }
 function jebOpenPanel(pid){
   if(!_jebPocket(pid)) return;
-  _jebHideMenu(); _jebAttClose(); _jebOpen=pid; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen=pid; _jebMulti=null; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
   jebRefresh();
   const ta=_jebEl('jeb-add-in'); if(ta) try{ ta.focus({preventScroll:true}); }catch(e){}
+}
+/* the panel for a selection: one pocket = the single panel, anything else = grouped */
+function jebOpenPanelSel(sel){
+  const ids=_jebSelIds(sel);
+  if(!sel.all&&ids.length===1){ jebOpenPanel(ids[0]); return; }
+  if(!ids.length) return;
+  jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen='*'; _jebMulti={ids:sel.all?[]:ids.slice(),all:!!sel.all}; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  jebRefresh();
 }
 function jebClosePanel(){
   const p=_jebEl('jeb-panel');
   _jebAttClose();
-  _jebEditId=null; _jebDrag=null;
-  if(_jebOpen!==null){ _jebOpen=null; _jebBarSig=''; _jebPanelSig=''; }
+  _jebEditId=null; _jebDrag=null; _jebNewId=null;
+  if(_jebOpen!==null){ _jebOpen=null; _jebMulti=null; _jebBarSig=''; _jebPanelSig=''; }
   if(p) p.classList.remove('on');
   const bar=_jebEl('jeb-bar'); if(bar&&_jebBarOn()) _jebPaintBar(bar);
 }
@@ -22131,8 +22249,10 @@ function _jebMakePanel(){
   p.addEventListener('click',e=>{
     const t=e.target;
     if(t.closest('.jeb-x')){ jebClosePanel(); return; }
+    if(t.closest('.jeb-px')){ const s=_jebPanelSel(); if(s) jebOpenDeck(s); return; }
+    if(t.closest('.jeb-gadd')){ _jebNewCard(t.closest('.jeb-gadd').dataset.pid); return; }
     if(t.closest('[data-act="add"]')){ _jebAddFromInput(); return; }
-    if(t.closest('[data-act="clear"]')){ _jebClearDoneUI(_jebOpen); return; }
+    if(t.closest('[data-act="clear"]')){ _jebClearDoneUI(_jebSelIds(_jebPanelSel())); return; }
     const row=t.closest('.jeb-it'); if(!row) return;
     if(t.closest('.jeb-more')){ _jebItemMenu(row.dataset.iid,t.closest('.jeb-more')); return; }
     if(t.closest('.jeb-att-b')){ _jebAttOpen(row.dataset.iid,t.closest('.jeb-att-b')); return; }
@@ -22149,23 +22269,47 @@ function _jebMakePanel(){
   });
   return p;
 }
+function _jebRowHTML(i){
+  return `<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body"><div class="jeb-tx">${esc(i.text)}</div>${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`;
+}
 function _jebPaintPanel(){
-  const pk=_jebPocket(_jebOpen); if(!pk){ jebClosePanel(); return; }
+  const sel=_jebPanelSel(), ids=_jebSelIds(sel), multi=_jebOpen==='*';
+  if(!ids.length){ jebClosePanel(); return; }
   let p=_jebEl('jeb-panel'); if(!p) p=_jebMakePanel();
   p.classList.add('on');
-  const items=jebItems(pk.id), open=items.filter(i=>!i.done).length, done=items.length-open;
-  const sig=[pk.id,pk.name,pk.icon,pk.color,items.map(i=>[i.id,i.text,i.done?1:0,_jebChipsHTML(i)].join('~')).join('|')].join('#');
+  const pks=ids.map(_jebPocket), groups=pks.map(pk=>jebItems(pk.id));
+  const all=[].concat(...groups), open=all.filter(i=>!i.done).length, done=all.length-open;
+  const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,groups[k].map(i=>[i.id,i.text,i.done?1:0,_jebChipsHTML(i)].join('~')).join('|')].join('#')).join('@@')].join('%');
   if(sig===_jebPanelSig) return;
   /* never repaint under an item being typed in or dragged: it repaints when that ends */
   if(_jebEditId||_jebDrag) return;
   _jebPanelSig=sig;
-  p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this pocket</small></div><button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
-  p.querySelector('.jeb-list').innerHTML=items.length?items.map(i=>`<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body"><div class="jeb-tx">${esc(i.text)}</div>${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`).join('')
-    :'<div class="jeb-empty">Nothing here yet — jot something above.</div>';
+  const px=`<button class="jeb-px" aria-label="Spread as cards" title="Spread as cards">▦</button>`;
+  const addBox=p.querySelector('.jeb-add'); if(addBox) addBox.style.display=multi?'none':'';
+  if(!multi){
+    const pk=pks[0], items=groups[0];
+    p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this pocket</small></div>${px}<button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
+    p.querySelector('.jeb-list').innerHTML=items.length?items.map(_jebRowHTML).join(''):'<div class="jeb-empty">Nothing here yet — jot something above.</div>';
+  }else{
+    p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:#EDE6D6">▤</span><div class="jeb-pt"><b>${esc(_jebSelTitle(sel,pks))}</b><small>${open} open · ${all.length} in all</small></div>${px}<button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
+    p.querySelector('.jeb-list').innerHTML=pks.map((pk,k)=>{
+      const items=groups[k], o=items.filter(i=>!i.done).length;
+      return `<div class="jeb-gh" data-pid="${esc(pk.id)}"><span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><b>${esc(pk.name)}</b><small>${o} open</small><button class="jeb-gadd" data-pid="${esc(pk.id)}" aria-label="Add an item to ${esc(pk.name)}" title="Add an item to ${esc(pk.name)}">＋</button></div><div class="jeb-gl" data-pid="${esc(pk.id)}">${items.map(_jebRowHTML).join('')}</div>`;
+    }).join('');
+  }
   p.querySelector('.jeb-foot').innerHTML=done>0?`<button class="btn" data-act="clear" style="min-height:40px">🧹 Clear done (${done})</button>`:'';
 }
+function _jebSelTitle(sel,pks){ return sel.all?'All pockets':(pks.length===1?pks[0].name:pks.length+' pockets'); }
+/* ＋ on a group header / deck: a new empty item on top, caret in it. Left empty, it is dropped again. */
+function _jebNewCard(pid){
+  if(!_jebPocket(pid)) return;
+  const id=jebAddItem(pid,''); if(!id) return;
+  jebMoveItem(id,pid,0); _jebNewId=id;
+  _jebPanelSig=''; _jebDeckSig=''; jebRefresh();
+  _jebStartEdit(id);
+}
 function _jebAddFromInput(){
-  const ta=_jebEl('jeb-add-in'); if(!ta||!_jebOpen) return;
+  const ta=_jebEl('jeb-add-in'); if(!ta||!_jebOpen||_jebOpen==='*') return;
   const v=ta.value.replace(/\s+$/,''); if(!v.trim()) return;
   const id=jebAddItem(_jebOpen,v);
   if(id) jebMoveItem(id,_jebOpen,0);   /* the newest goes on top */
@@ -22173,8 +22317,8 @@ function _jebAddFromInput(){
   _jebPanelSig=''; jebRefresh(); ta.focus({preventScroll:true});
 }
 function _jebStartEdit(iid){
-  if(_jebEditId&&_jebEditId!==iid){ const cur=document.querySelector('#jeb-panel .jeb-edit'); if(cur) cur.blur(); }
-  const it=_jebItem(iid), row=document.querySelector(`#jeb-panel .jeb-it[data-iid="${iid}"]`);
+  if(_jebEditId&&_jebEditId!==iid){ const cur=document.querySelector('#jeb-panel .jeb-edit,#jeb-deck .jeb-edit'); if(cur) cur.blur(); }
+  const it=_jebItem(iid), row=document.querySelector(`#jeb-deck .jeb-card[data-iid="${iid}"],#jeb-panel .jeb-it[data-iid="${iid}"]`);
   if(!it||!row||_jebEditId===iid) return;
   _jebEditId=iid; _jebEditCancel=false;
   const ta=document.createElement('textarea'); ta.className='jeb-edit'; ta.setAttribute('data-jeb','1');
@@ -22190,13 +22334,14 @@ function _jebStartEdit(iid){
     const cancel=_jebEditCancel, cur=_jebItem(iid), v=ta.value;
     _jebEditId=null; _jebEditCancel=false;
     if(!cancel&&cur&&v.trim()!==''&&v!==cur.text) jebEditItem(iid,{text:v});
-    _jebPanelSig=''; jebRefresh();
+    if(_jebNewId===iid){ _jebNewId=null; if(cur&&!String(_jebItem(iid)?.text||'').trim()) jebDiscardEmpty(iid); }
+    _jebPanelSig=''; _jebDeckSig=''; jebRefresh();
   });
 }
 function _jebStartDrag(g,e){
   const row=g.closest('.jeb-it'), list=row.parentNode, id=row.dataset.iid;
-  if(_jebEditId){ const cur=document.querySelector('#jeb-panel .jeb-edit'); if(cur) cur.blur(); }
-  _jebDrag={id,pid:_jebOpen,idx:null}; row.classList.add('jeb-drag');
+  if(_jebEditId){ const cur=document.querySelector('#jeb-panel .jeb-edit,#jeb-deck .jeb-edit'); if(cur) cur.blur(); }
+  _jebDrag={id,pid:list.dataset.pid||_jebOpen,idx:null}; row.classList.add('jeb-drag');
   try{ g.setPointerCapture(e.pointerId); }catch(x){}
   const others=()=>[...list.querySelectorAll('.jeb-it')].filter(r=>r!==row);
   const mv=ev=>{
@@ -22204,8 +22349,8 @@ function _jebStartDrag(g,e){
     rs.forEach(r=>{ const b=r.getBoundingClientRect(); if(ev.clientY>b.top+b.height/2) idx++; });
     _jebDrag.idx=idx;
     rs.forEach((r,i)=>{ r.classList.toggle('jeb-before',i===idx); r.classList.toggle('jeb-after',idx===rs.length&&i===rs.length-1); });
-    const lb=list.getBoundingClientRect();
-    if(ev.clientY<lb.top+28) list.scrollTop-=12; else if(ev.clientY>lb.bottom-28) list.scrollTop+=12;
+    const lb=(list.closest('.jeb-list')||list).getBoundingClientRect(), sc=list.closest('.jeb-list')||list;
+    if(ev.clientY<lb.top+28) sc.scrollTop-=12; else if(ev.clientY>lb.bottom-28) sc.scrollTop+=12;
   };
   const up=()=>{
     g.removeEventListener('pointermove',mv); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
@@ -22217,9 +22362,130 @@ function _jebStartDrag(g,e){
   g.addEventListener('pointermove',mv); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
 }
 function _jebClearDoneUI(pid){
-  const n=jebClearDone(pid);
+  const n=[].concat(pid).reduce((s,id)=>s+(id?jebClearDone(id):0),0);
   if(n) toast('🧹 '+n+' done item'+(n!==1?'s':'')+' moved to Trash');
-  _jebPanelSig=''; jebRefresh();
+  _jebPanelSig=''; _jebDeckSig=''; jebRefresh();
+}
+/* ══ v05.03 · J4 — the deck: each item a sticky card, spread from the bar ══ */
+function _jebRot(id){ let h=0; for(const ch of String(id)) h=(h*31+ch.charCodeAt(0))>>>0; return ((h%601)/100-3).toFixed(2); }
+function _jebDeckSelNow(){ return _jebDeck?{ids:_jebDeck.ids.slice(),all:_jebDeck.all}:null; }
+function jebToggleDeck(sel){
+  const d=_jebDeck;
+  if(d&&d.all===!!sel.all&&(sel.all||(d.ids.length===sel.ids.length&&sel.ids.every(x=>d.ids.includes(x))))) jebCloseDeck();
+  else jebOpenDeck(sel);
+}
+function jebOpenDeck(sel){
+  const ids=_jebSelIds(sel); if(!ids.length) return;
+  _jebHideMenu(); _jebAttClose(); jebClosePanel();
+  _jebDeck={ids:sel.all?[]:ids.slice(),all:!!sel.all}; _jebDeckSig=''; _jebEditId=null; _jebBarSig='';
+  jebRefresh();
+  _jebJumpOut();
+}
+function jebCloseDeck(){
+  const d=_jebEl('jeb-deck');
+  if(!_jebDeck&&!d) return;
+  _jebAttClose(); _jebHideMenu();
+  _jebEditId=null; _jebDrag=null; _jebNewId=null; _jebDeck=null; _jebDeckSig='';
+  if(d) d.classList.remove('on');
+}
+function _jebMakeDeck(){
+  const d=document.createElement('div'); d.id='jeb-deck'; d.setAttribute('role','dialog'); d.setAttribute('aria-label','Cards');
+  d.innerHTML='<div class="jd-hd"></div><div class="jd-body"><div class="jd-wrap"></div></div>';
+  document.body.appendChild(d);
+  d.addEventListener('click',e=>{
+    const t=e.target;
+    if(t.closest('.jd-x')){ jebCloseDeck(); return; }
+    const b=t.closest('[data-d]');
+    if(b){
+      if(b.dataset.d==='panel'){ const s=_jebDeckSelNow(); if(s) jebOpenPanelSel(s); }
+      else if(b.dataset.d==='add'){ const ids=_jebSelIds(_jebDeck); if(ids.length===1) _jebNewCard(ids[0]); }
+      else if(b.dataset.d==='clear') _jebClearDoneUI(_jebSelIds(_jebDeck));
+      return;
+    }
+    const card=t.closest('.jeb-card'); if(!card) return;
+    const iid=card.dataset.iid;
+    if(t.closest('.jc-tick')){ jebToggleDone(iid); jebRefresh(); return; }
+    if(t.closest('.jeb-more')){ _jebItemMenu(iid,t.closest('.jeb-more')); return; }
+    if(t.closest('.jeb-att-b')){ _jebAttOpen(iid,t.closest('.jeb-att-b')); return; }
+    if(t.closest('.jeb-note-b')){ _jebToNoteUI(iid); return; }
+    if(t.closest('.jeb-tx')) _jebStartEdit(iid);
+  });
+  d.addEventListener('pointerdown',e=>{
+    const g=e.target.closest('.jc-grip'); if(!g||e.button) return;
+    e.preventDefault(); _jebCardDrag(g,e);
+  });
+  return d;
+}
+function _jebCardHTML(i,pk){
+  return `<div class="jeb-card${i.done?' done':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another pocket" aria-label="Drag handle">⠿</div><div class="jeb-tx">${esc(i.text)}</div>${_jebChipsHTML(i)}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
+}
+function _jebPaintDeck(){
+  const sel=_jebDeck, ids=_jebSelIds(sel);
+  if(!ids.length){ jebCloseDeck(); return; }
+  let d=_jebEl('jeb-deck'); if(!d) d=_jebMakeDeck();
+  d.classList.add('on');
+  const pks=ids.map(_jebPocket), groups=pks.map(pk=>jebItems(pk.id));
+  const sig=(sel.all?'A':'')+'%'+pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,groups[k].map(i=>[i.id,i.text,i.done?1:0,_jebChipsHTML(i)].join('~')).join('|')].join('#')).join('@@');
+  if(sig===_jebDeckSig) return;
+  /* never repaint under a card being typed in or dragged: it repaints when that ends */
+  if(_jebEditId||_jebDrag) return;
+  _jebDeckSig=sig;
+  const all=[].concat(...groups), open=all.filter(i=>!i.done).length, done=all.length-open, multi=pks.length>1||sel.all;
+  d.querySelector('.jd-hd').innerHTML=`<b>${esc(_jebSelTitle(sel,pks))}</b><small>${open} open</small><span class="jd-sp"></span>`
+    +(done?`<button data-d="clear" title="Move the done cards to Trash">🧹 Clear done (${done})</button>`:'')
+    +`<button data-d="panel" title="Show these pockets in the panel">▤ Panel</button>`
+    +(multi?'':'<button data-d="add" title="Add a card">＋ Card</button>')
+    +'<button class="jd-x" aria-label="Close" title="Close">✕</button>';
+  d.querySelector('.jd-wrap').innerHTML=pks.map((pk,k)=>{
+    const g=`<div class="jd-grid" data-pid="${esc(pk.id)}">${groups[k].map(i=>_jebCardHTML(i,pk)).join('')}</div>`;
+    if(!multi) return `<section class="jd-grp" data-pid="${esc(pk.id)}">${g}</section>`;
+    const o=groups[k].filter(i=>!i.done).length;
+    return `<section class="jd-grp" data-pid="${esc(pk.id)}"><div class="jd-gh"><span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><b>${esc(pk.name)}</b><small>${o} open</small></div>${g}</section>`;
+  }).join('');
+}
+/* each card flies out of its own pocket's chip to its place; no animation when motion is reduced */
+function _jebJumpOut(){
+  if(_jebReduced()||!_jebDeck) return;
+  const d=_jebEl('jeb-deck'); if(!d||!d.animate) return;
+  d.querySelectorAll('.jeb-card').forEach((c,i)=>{
+    const chip=document.querySelector(`#jeb-bar .jeb-chip[data-pid="${c.dataset.pid}"]`)||document.querySelector('#jeb-bar .jeb-chip');
+    if(!chip) return;
+    const a=chip.getBoundingClientRect(), b=c.getBoundingClientRect();
+    const dx=Math.round(a.left+a.width/2-(b.left+b.width/2)), dy=Math.round(a.top+a.height/2-(b.top+b.height/2));
+    const rot=_jebRot(c.dataset.iid);
+    c.dataset.jump=dx+','+dy;
+    c.animate([{transform:`translate(${dx}px,${dy}px) scale(.15) rotate(0deg)`,opacity:0},{transform:`translate(0px,0px) scale(1) rotate(${rot}deg)`,opacity:1}],
+      {duration:380,delay:Math.min(i*45,520),easing:'cubic-bezier(.2,.8,.25,1)',fill:'backwards'});
+  });
+}
+function _jebCardDrag(g0,e){
+  const id=g0.closest('.jeb-card').dataset.iid, d=_jebEl('jeb-deck'), body=d.querySelector('.jd-body');
+  if(_jebEditId){ const cur=d.querySelector('.jeb-edit'); if(cur) cur.blur(); }
+  const card=d.querySelector(`.jeb-card[data-iid="${id}"]`); if(!card) return;
+  const g=card.querySelector('.jc-grip');
+  _jebDrag={id,pid:card.dataset.pid,idx:null}; card.classList.add('jeb-drag');
+  try{ g.setPointerCapture(e.pointerId); }catch(x){}
+  const clear=()=>d.querySelectorAll('.jeb-before,.jeb-after,.jd-over').forEach(n=>n.classList.remove('jeb-before','jeb-after','jd-over'));
+  const mv=ev=>{
+    const x=ev.clientX, y=ev.clientY; clear();
+    let tg=null, best=1e9;
+    d.querySelectorAll('.jd-grp').forEach(s=>{ const r=s.getBoundingClientRect(), dist=y<r.top?r.top-y:(y>r.bottom?y-r.bottom:0); if(dist<best){ best=dist; tg=s.querySelector('.jd-grid'); } });
+    if(!tg) return;
+    const cs=[...tg.querySelectorAll('.jeb-card')].filter(c=>c!==card); let idx=0;
+    cs.forEach(c=>{ const b=c.getBoundingClientRect(); if(y>b.bottom||(y>=b.top&&x>b.left+b.width/2)) idx++; });
+    _jebDrag.pid=tg.dataset.pid; _jebDrag.idx=idx;
+    if(!cs.length) tg.classList.add('jd-over');
+    else if(idx<cs.length) cs[idx].classList.add('jeb-before'); else cs[cs.length-1].classList.add('jeb-after');
+    const lb=body.getBoundingClientRect();
+    if(y<lb.top+40) body.scrollTop-=14; else if(y>lb.bottom-40) body.scrollTop+=14;
+  };
+  const up=()=>{
+    g.removeEventListener('pointermove',mv); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
+    const dr=_jebDrag; _jebDrag=null; clear(); card.classList.remove('jeb-drag');
+    if(dr&&dr.idx!=null) jebMoveItem(dr.id,dr.pid,dr.idx);
+    _jebDeckSig=''; jebRefresh();
+  };
+  g.addEventListener('pointermove',mv); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
 }
 /* ── menus ── */
 function _jebHideMenu(){ const m=_jebEl('jeb-menu'); if(m) m.remove(); }
@@ -22421,7 +22687,7 @@ function _jebToastOpen(msg,nid){
 /* PC: the note in Pane 3. Tablet/phone: the normal note screen, panel closed. */
 function jebOpenNote(nid){
   const a=DB.articles.find(x=>x.id===nid); if(!a) return;
-  jebClosePanel();
+  jebCloseDeck(); jebClosePanel();
   if(ST.editing) saveArt();
   const fid=(a.folderIds||[]).find(f=>DB.folders.some(x=>x.id===f))||'sf-jeb';
   if(fid!=='sf-jeb') pathOf(fid).forEach(f=>{ ST.exp[f.id]=true; });
