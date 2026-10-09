@@ -9116,4 +9116,56 @@ covered every `timeIt` call in both files, not only the two that failed first.
 They were asked to name each thing that jumps, so that each gets diagnosed
 rather than guessed at.
 
+**Totals (Architect):** full `app-check` on `5db9160` 2581/2581, then 2577/2581 (57d and 58g timings, which flickered on v05.00 too; the checks were changed as recorded above), then **2581/2581** on the final head `d7d36da`; `--only 57,58` 178/178 three times in a row; `--only 62` 25/25; unpatched (v05.00 `index.html`) `--only 62` 8/25; `ship-check` 13/13.
+
+## v05.02 — J3, 📎 Attach, → Note and the "From Jeb" Smart View (issue #152, 9 Oct 2026)
+
+Jeb round J3 of four. All UI goes through the J1 API (`jebEditItem`, `jebToNote`).
+
+- **📎 Attach** — a "📎 Attach" button on every item row and "📎 Attach" in the ⋯
+  menu open one sheet (`#jeb-att`) with four tabs, each acting at once and the
+  sheet staying open (✕ or Escape closes it, and Escape leaves the panel open):
+  **Folder** (multi-select, search by name, shows the path "My Notebooks › (002)
+  Salah", ticked first, ≤ 100 rows + "+N more", no new tree), **Tag** (S3a's
+  `_tagPool()`/`_tagMatches()`, pool built once on open, the item's own tags
+  first, "＋ Create #…" cleaned by `_cleanTag()`, so `Qur'an` survives), **Note
+  Type** (single; tapping the ticked one clears it; grouped by category with
+  each type's colour dot) and **Journal** (one switch).
+- **Chips** under each item's text: 📁 folder, #tag, the Note Type with its dot,
+  📔 Journal; they wrap and never overflow. The panel's repaint signature now
+  includes them, so a sync that changes only an attachment repaints the row.
+- **→ Note** — a "→ Note" button on every row and in ⋯. Calls `jebToNote`; the
+  item leaves at once and the counts update; the panel stays open for the next
+  item. An item with no text is refused with a toast. The toast names the
+  place: "Turned into a note in 📁 <folder>" (+N for more), "📔 Journal", or
+  "👝 From Jeb". **There was no toast-with-action in the app**, so
+  (as the issue allowed) the toast itself is the tap target and carries an
+  "Open note" label (`_jebToastOpen`, class `toast-act`, 7 s, the one place
+  `.toast` takes pointer events). It opens the note in Pane 3 on a PC, and on a
+  tablet or phone the normal note screen with the panel closed (`jebOpenNote`).
+- **(12) From Jeb** — `SF` entry `sf-jeb` (👝), listing every note with
+  `fromJeb`, newest `fromJeb.at` first, in `getSmartArts` and
+  `getSecSmartArts`, with the empty line "Notes you make from Jeb appear here."
+  and the sidebar count.
+- **"👝 from <pocket>"** — quiet meta label on the Pane 2 card (`.ar-jeb`, in the
+  existing `.ar-m` line) and under the read-view meta row (`.av-jeb`, `--t3`).
+  No new colour.
+- **Shape (D5):** laptop and tablet — a 340 px popover to the left of the panel,
+  placed by measuring and clamped to the viewport; phone — a bottom sheet,
+  80 % high, tabs in a row at the top. Row buttons are ≥ 40 px; the item text
+  keeps ≥ 160 px. The Attach sheet sits above the panel (z 9150, below the
+  item menu 9200); the outside-tap rule that closes the panel ignores it.
+- `mergeDB` needed nothing: `fromJeb` rides on the note record.
+
+**Checks:** `tools/jeb-j3.mjs`, app-check block `63-jeb-attach-note`, 63a–63g at
+390/820/1440 by real clicks, taps and typing. `--only 63` **158/158**
+(156 in the file). `--only 60` **203/203**, `--only 59` 74/74, `ship-check` 13/13.
+The first `--only 63` run found one wrong step in the CHECK (a second
+`openPanel` toggled the still-open panel shut); the app was right. The check now
+asserts the panel stays open after → Note. Unpatched run: left to the Architect.
+
+**Not done:** J4 (card deck, All pockets, ☑ Choose). The section-scoped Smart
+View shows the generic empty line, not the Jeb one. The full `app-check` was not
+run, by the issue's instruction.
+
 **Totals:** full `app-check`: (Architect, in review).
