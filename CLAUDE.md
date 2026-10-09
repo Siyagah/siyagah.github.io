@@ -16,6 +16,14 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.03** (9 Oct 2026) — J4, pockets as sticky cards (issue #154). A chip is
+  two halves: name = panel, **▦** (`[data-jeb-cards]`) = the **deck** `#jeb-deck`
+  (cards in the pocket's colour, ink `#2A2418`, tilt from the id, jump-out from the
+  chip, drag by ⠿ within/between pockets). **All pockets** chip and **☑ Choose**
+  (tick boxes, Panel (N) / Cards (N)); the panel groups several pockets (＋ per
+  group; a ＋ item left empty is dropped by `jebDiscardEmpty`). `--only 64`
+  **237/237**, `--only 63` 158/158, `--only 60` 203/203. Full `app-check`:
+  (Architect, in review).
 - **v05.02** (9 Oct 2026) — J3, 📎 Attach, → Note and "(12) From Jeb" (issue
   #152). `#jeb-att`: four tabs (Folder, Tag, Note Type, Journal) acting at once
   through `jebEditItem`; chips under each item; "📎 Attach" and "→ Note" on every
@@ -50,14 +58,6 @@ must never accumulate here instead of there.
   `_renderP3CInner()` and keeps both positions for the same note in reading
   mode, for every caller. Block 61: `--only 61` **21/21**, unpatched 10/21.
   Architect: full `app-check` **2353/2353, twice in a row**.
-- **v04.98** (9 Oct 2026) — J1, Jeb's data (issue #144). `DB.jebPockets` +
-  `DB.jeb`, four default pockets seeded once (fixed ids, 1970 stamp), wired into
-  `_REC_COLLS`, `_REC_TOMB_COLLS`, `_LJ_COLLS`, `mergeDB`, `_syncDigest`, the
-  backup/import paths; **not** `_S1_COLLS` (an older build would mark `jeb~` recs
-  gone), so they ride in `_head~0`. Trash types `jebItem`/`jebPocket` (a pocket
-  deletes only when empty); `jebToNote` tombstones the item, no Trash. No UI.
-  `--only 59` **74/74** (22 sync-audit ops; the real v04.97 build loses nothing).
-  Architect: full `app-check` **2332/2332** on the final head (2330/2332 ×2 before 52b's baseline moved); unpatched `--only 59` 0/3.
 ---
 
 ## What this is
@@ -411,8 +411,21 @@ A failing check is a wrong assertion surprisingly often — investigate before
   target for "Open note"; `jebOpenNote` opens it). A note made this way carries
   `fromJeb:{pocket,at}`; `sf-jeb` lists them, and the Pane 2 card (`.ar-jeb`) and
   read view (`.av-jeb`) say "👝 from <pocket>". `--jeb-l` is the
-  bar's left edge (PC: the sidebar's right edge). Hooks: `[data-jeb-cards]` on
-  each chip (J4), the marked slot in `_jebItemMenu` (J3).
+  bar's left edge (PC: the sidebar's right edge). **The deck, All pockets and
+  Choose (v05.03, J4).** A selection is `{ids,all}` (`_jebSelIds` resolves it live).
+  A chip is `.jeb-chip[data-pid]` = `.jeb-main` (panel) + `[data-jeb-cards]` (deck);
+  "All pockets" is `.jeb-chip.jeb-all` (no `data-pid`, so count/long-press code
+  filters `[data-pid]`). `_jebOpen==='*'` + `_jebMulti` = the grouped panel (one
+  `.jeb-gl[data-pid]` per pocket; the add box hidden); `_jebDeck` = `#jeb-deck`
+  (`_jebPaintDeck`, repainted from `jebRefresh()`, never under `_jebEditId` or
+  `_jebDrag`). Deck z 8000: above float windows (5001), below Attach 9150, menus
+  9200, modals 10000; it stops at the bar (`bottom:var(--jeb-h)`) except on a phone.
+  Cards are drawn only by `_jebCardHTML`, dragged only by `_jebCardDrag` (the ⠿
+  strip, the one `touch-action:none`), flown by `_jebJumpOut` (Web Animations; none
+  under `prefers-reduced-motion`). ＋ on a group/deck makes an empty item and
+  `jebDiscardEmpty` removes it if left blank. Choose state: `_jebChoose`,
+  `_jebChosen`; it ends when Panel/Cards is used. Hook left: the marked slot in
+  `_jebItemMenu` (J3).
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,

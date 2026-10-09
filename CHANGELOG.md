@@ -9172,4 +9172,40 @@ run, by the issue's instruction.
 
 ## v05.03 — J4, pockets as sticky cards, All pockets, ☑ Choose (issue #154, 9 Oct 2026)
 
-(Stub — written in full at the end of the round.)
+Jeb round J4 of four, the last. All UI goes through the J1 API (`jebAddItem`, `jebMoveItem`, `jebEditItem`, `jebToggleDone`, `jebClearDone`, `jebToNote`).
+
+- **Both ways on every pocket.** A chip is two halves: the name half opens the panel as before, a **▦** half
+  (`[data-jeb-cards]`, now shown, ≥ 40 px, `aria-label`/`title` "Spread <name> as cards") spreads it as cards.
+  **All pockets** starts the bar (swatch = four seed pastels) with the same two halves. **☑ Choose** sits before it:
+  in choose mode every chip shows a tick box, a tap ticks/unticks and opens nothing, "All pockets" ticks or unticks
+  all, and **▤ Panel (N)** / **▦ Cards (N)** appear at the bar's end (disabled at 0). "✕ Cancel" (the same button)
+  leaves; choosing also ends once Panel/Cards is used. Phone: the two buttons replace "＋ New pocket" while choosing.
+- **The panel with several pockets** groups items by pocket: a header (swatch, name, "N open", **＋**), the
+  single-pocket add box hidden. ＋ makes an empty item with the caret in it; left empty it is dropped again with a
+  tombstone, no Trash (`jebDiscardEmpty`). The panel header gained a **▦** to switch to the deck.
+- **The deck** (`#jeb-deck`, z 8000: above panes and float windows, below Attach 9150, menus 9200 and modals 10000).
+  Header: title ("Quick tasks" / "All pockets" / "3 pockets"), "N open", 🧹 Clear done, ▤ Panel, ＋ Card (one pocket
+  only), ✕; Escape closes (after Attach). Cards: the pocket's colour, ink `#2A2418`, tilt −3°…+3° from the item id
+  (0 under reduced motion), text (tap to edit in place), the J3 chips, ✓ / 📎 / → / ⋯. Done = struck through.
+  **Jump out:** each card flies from its own chip (Web Animations, 380 ms, 45 ms stagger, delay capped at 520 ms so
+  the whole thing ends by 900 ms); none under reduced motion. **Drag** by the ⠿ strip (mouse and touch, `touch-action:
+  none` only there so the deck still scrolls): reorder in a pocket or drop in another pocket's group; marker bar between
+  cards, dashed outline on an empty group. Repaints are skipped under a card being edited or dragged.
+- **Shape (D5):** laptop/tablet — deck stops at the bar, which stays visible so the cards visibly come from it;
+  grid `repeat(auto-fill,minmax(180px,1fr))`, ≤ 1,100 px, centred (4 columns at 820, 5 at 1440). Phone — full screen
+  (covers the bar), 2 columns, header wraps. Panel as before (bottom sheet on a phone).
+- A chip is now 42 px tall (a 40 px half inside a 1 px border). `.jeb-chip[title]` still names the pocket.
+
+**Checks:** `tools/jeb-j4.mjs`, app-check block `64-jeb-cards-choose`, 64a–64i at 390/820/1440 by real clicks, taps,
+typing and drags (CDP touch events for the drag on touch viewports). `--only 64` **237/237** (the first run: 231/237 —
+the ▦ half measured 38 px inside the chip's border, which was an app fault, fixed; and the check counted three header
+buttons where the All deck has two, a wrong assertion). `--only 63` **158/158**, `--only 60` **203/203** (J2/J3 checks
+that counted `.jeb-chip` or took the first chip now ask for `.jeb-chip[data-pid]`, because "All pockets" is a chip
+too). `ship-check` 13/13.
+
+**Not done:** the full `app-check` (by the issue's instruction); the unpatched run of `--only 64` (left to the
+Architect, and a pass on v05.02 would need explaining). On a phone the 64g modal is opened by calling
+`jebNewPocketDialog()`, because the phone deck covers the button that opens it. Free card positions, the standalone
+Siyagah Jeb and moving Jeb into `_S1_COLLS` are out of this round.
+
+**Totals:** full `app-check`: (Architect, in review).
