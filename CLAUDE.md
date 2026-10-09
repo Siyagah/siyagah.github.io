@@ -16,6 +16,15 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.02** (9 Oct 2026) — J3, 📎 Attach, → Note and "(12) From Jeb" (issue
+  #152). `#jeb-att`: four tabs (Folder, Tag, Note Type, Journal) acting at once
+  through `jebEditItem`; chips under each item; "📎 Attach" and "→ Note" on every
+  row and in ⋯. `_jebToNoteUI` → `jebToNote`, toast says where; no toast action
+  existed, so `_jebToastOpen` makes the toast itself the "Open note" tap target.
+  `sf-jeb` Smart View (`fromJeb`, newest first); "👝 from <pocket>" on the Pane 2
+  card and read view. Popover beside the panel on PC/tablet, 80 % sheet on a
+  phone. `--only 63` **158/158**, `--only 60` 203/203, `--only 59` 74/74.
+  Full `app-check`: (Architect, in review).
 - **v05.01** (9 Oct 2026) — a click below a folded ending writes there,
   without opening it (the owner: "it opens the last heading and jumps at the
   bottom"). The new line is the note's **tail** (`<p data-tail="1">`);
@@ -49,13 +58,6 @@ must never accumulate here instead of there.
   deletes only when empty); `jebToNote` tombstones the item, no Trash. No UI.
   `--only 59` **74/74** (22 sync-audit ops; the real v04.97 build loses nothing).
   Architect: full `app-check` **2332/2332** on the final head (2330/2332 ×2 before 52b's baseline moved); unpatched `--only 59` 0/3.
-- **v04.97** (8 Oct 2026) — S3b, the sidebar Tags section opens to "Find a
-  tag…" + the 20 most-used + "All tags (N)" (issue #142). 25+ tags get the new
-  shape (≤ 24 list in full as before); typing filters all tags (≤ 50 + "+N
-  more"), query in `ST.tagQ`, focus/caret survive `renderTree()`; "All tags"
-  opens the picker's Tags scope. Phone ×4 at 3,000 tags: `renderTree` Tags open
-  870 → 45 ms, keystroke 30 ms; `render()` open vs closed 159 vs 154 ms.
-  `--only 58` **92/92**, `--only 57` 86/86. Architect: full `app-check` **2258/2258, twice in a row**; unpatched `--only 58` 2/6.
 ---
 
 ## What this is
@@ -400,7 +402,15 @@ A failing check is a wrong assertion surprisingly often — investigate before
   when `DB.theme.jebBar===false` (default on; set from 🧰 → 🎨 Appearance) or while
   a phone's keyboard is up for a field outside Jeb (`html.jeb-kb`). **Anything
   `position:fixed` to the bottom must account for it** (`bottom:calc(Npx + var(--jeb-h))`),
-  or be a modal/popover that sits over the bar on purpose. `--jeb-l` is the
+  or be a modal/popover that sits over the bar on purpose. **Attach and → Note
+  (v05.02, J3).** `_jebAttOpen` opens `#jeb-att` (z 9150): Folder / Tag / Note
+  Type / Journal, each through `jebEditItem`; the Tag tab reuses `_tagPool()` /
+  `_tagMatches()`. `_jebChipsHTML(item)` draws the attachments and is part of the
+  panel's repaint signature. `_jebToNoteUI` refuses an empty item, calls
+  `jebToNote`, and `_jebToastOpen` shows where it went (the toast is the tap
+  target for "Open note"; `jebOpenNote` opens it). A note made this way carries
+  `fromJeb:{pocket,at}`; `sf-jeb` lists them, and the Pane 2 card (`.ar-jeb`) and
+  read view (`.av-jeb`) say "👝 from <pocket>". `--jeb-l` is the
   bar's left edge (PC: the sidebar's right edge). Hooks: `[data-jeb-cards]` on
   each chip (J4), the marked slot in `_jebItemMenu` (J3).
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
