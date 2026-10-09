@@ -769,7 +769,68 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .sr-grp-hd:first-of-type{border-top:none;margin-top:0}
 #ti{flex:1;font-size:14px;font-weight:500;border:none;outline:none;background:transparent;color:var(--t1);font-family:var(--ui)}
 .toast-err{background:#c0392b!important;}
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1B7A46;color:#fff;padding:9px 18px;border-radius:14px;font-size:13px;z-index:99999;pointer-events:none;transition:opacity .3s;white-space:normal;word-break:break-word;max-width:min(420px,88vw);text-align:center;line-height:1.5}
+.toast{position:fixed;bottom:calc(22px + var(--jeb-h));left:50%;transform:translateX(-50%);background:#1B7A46;color:#fff;padding:9px 18px;border-radius:14px;font-size:13px;z-index:99999;pointer-events:none;transition:opacity .3s;white-space:normal;word-break:break-word;max-width:min(420px,88vw);text-align:center;line-height:1.5}
+/* ══ JEB bar + panel (v04.99 · J2) ═══════════════════════════════════════════
+   --jeb-h is the bar's height (0 when the bar is off, or while a phone
+   keyboard is up for anything outside Jeb). PC: the bar starts at the
+   sidebar's right edge (--jeb-l, set by jebLayout()) and #p2/#p3 get a bottom
+   margin. Tablet/phone: #sb/#p2/#p3 end at the bar's top; the bar is full width.
+   Inks are the pane inks (--t1/--t2 on --white), already measured on every
+   preset; only the swatch uses a fixed dark ink on its pastel. */
+html{--jeb-h:0px;--jeb-l:0px}
+html.jeb-on{--jeb-h:56px}
+html.jeb-kb{--jeb-h:0px}
+html.jeb-kb #jeb-bar{display:none!important}
+@media(min-width:1200px){#p2,#p3{margin-bottom:var(--jeb-h)}}
+#jeb-bar{position:fixed;left:var(--jeb-l);right:0;bottom:0;height:56px;z-index:140;display:flex;align-items:center;gap:8px;padding:0 10px;overflow-x:auto;overflow-y:hidden;background:var(--white);border-top:1px solid var(--border2);scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+#jeb-bar::-webkit-scrollbar{display:none}
+@media(max-width:1199.98px){#jeb-bar{left:0}}
+.jeb-chip,.jeb-new{flex:0 0 auto;display:flex;align-items:center;gap:7px;height:40px;padding:0 10px 0 5px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;white-space:nowrap}
+.jeb-chip:hover,.jeb-new:hover{background:var(--hover)}
+.jeb-chip.on{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
+.jeb-new{padding:0 14px;color:var(--t2)}
+.jeb-sw{flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;color:#2A2418;font-weight:700}
+.jeb-ct{min-width:20px;padding:1px 6px;border-radius:999px;background:var(--hover);color:var(--t1);font-size:12px;text-align:center}
+[data-jeb-cards]{display:none}
+#jeb-panel{display:none;position:fixed;top:0;right:0;bottom:var(--jeb-h);width:380px;max-width:100vw;z-index:141;flex-direction:column;background:var(--white);color:var(--t1);border-left:1px solid var(--border2);box-shadow:-6px 0 24px rgba(0,0,0,.18)}
+#jeb-panel.on{display:flex;animation:jebIn .2s ease}
+@keyframes jebIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes jebUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media(max-width:639.98px){
+  #jeb-panel{top:auto;left:0;right:0;width:auto;max-width:none;height:72vh;border-left:none;border-top:1px solid var(--border2);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.2)}
+  #jeb-panel.on{animation:jebUp .2s ease}
+}
+.jeb-ph{display:flex;align-items:center;gap:10px;padding:12px 12px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.jeb-pt{flex:1;min-width:0}
+.jeb-pt b{display:block;font-size:15px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jeb-pt small{display:block;font-size:12px;color:var(--t2)}
+.jeb-x,.jeb-more{border:none;background:transparent;color:var(--t2);font-size:18px;min-width:40px;height:40px;border-radius:8px;cursor:pointer}
+.jeb-x:hover,.jeb-more:hover{background:var(--hover)}
+.jeb-add{display:flex;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;align-items:flex-start}
+.jeb-add textarea,.jeb-edit{flex:1;min-width:0;resize:none;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font:inherit;font-size:14px;line-height:1.4;color:var(--t1);background:var(--paper);outline:none;min-height:40px;max-height:140px}
+.jeb-add textarea:focus,.jeb-edit:focus{border-color:var(--green)}
+.jeb-add textarea::placeholder{color:var(--t3);opacity:1}
+.jeb-list{flex:1;min-height:0;overflow-y:auto;padding:4px 0;-webkit-overflow-scrolling:touch}
+.jeb-it{display:flex;align-items:flex-start;gap:6px;padding:6px 8px 6px 4px;border-bottom:1px solid var(--border);background:var(--white);position:relative}
+.jeb-it.jeb-drag{opacity:.55;background:var(--hover)}
+.jeb-it.jeb-before::before,.jeb-it.jeb-after::after{content:'';position:absolute;left:0;right:0;height:3px;background:var(--green)}
+.jeb-it.jeb-before::before{top:-2px}
+.jeb-it.jeb-after::after{bottom:-2px}
+.jeb-grip{flex:0 0 auto;width:30px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:17px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.jeb-tick{flex:0 0 auto;width:20px;height:20px;margin:8px 4px 0 0;accent-color:var(--green);cursor:pointer}
+.jeb-tx{flex:1;min-width:0;padding:8px 2px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-break:break-word;color:var(--t1);cursor:text}
+.jeb-it.done .jeb-tx{text-decoration:line-through;color:var(--t2)}
+.jeb-empty{padding:22px 16px;text-align:center;color:var(--t2);font-size:13px}
+.jeb-foot{padding:8px 12px;border-top:1px solid var(--border);flex-shrink:0}
+.jeb-foot:empty{display:none}
+#jeb-menu{position:fixed;z-index:9200;min-width:210px;max-width:92vw;background:var(--white);color:var(--t1);border:1px solid var(--border2);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.28);padding:4px;visibility:hidden}
+#jeb-menu .jm{display:flex;align-items:center;gap:8px;padding:9px 12px;min-height:40px;border-radius:7px;font-size:13.5px;cursor:pointer;color:var(--t1)}
+#jeb-menu .jm:hover{background:var(--hover)}
+#jeb-menu .jm.off{opacity:.55;pointer-events:none}
+#jeb-menu .jm.d{color:#B42318}
+.jeb-pick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.jeb-pick button{width:38px;height:38px;border-radius:50%;border:2px solid var(--border2);font-size:16px;cursor:pointer;color:#2A2418;background:var(--paper)}
+.jeb-pick button.sel{border-color:var(--green);box-shadow:0 0 0 2px var(--green)}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 @media(max-width:639.98px){
@@ -796,7 +857,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 /* ── TABLET  640 – 1199px ───────────────────────────────────────────── */
 @media(min-width:640px) and (max-width:1199.98px){
   /* ── Sidebar: landing page (left: not transform:) ── */
-  #sb{position:fixed!important;top:0;left:0;bottom:0;
+  #sb{position:fixed!important;top:0;left:0;bottom:var(--jeb-h);
       width:100%!important;max-width:none!important;
       z-index:40;transition:left .25s ease}
   #sb.closed{left:-100%}
@@ -804,7 +865,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
   .mob-ov.on{z-index:35}
   #rsz{display:none!important}
   /* Pane 2: off-screen right, slides in */
-  #p2{position:fixed!important;top:0;left:100%;bottom:0;
+  #p2{position:fixed!important;top:0;left:100%;bottom:var(--jeb-h);
       width:100%!important;max-width:none!important;
       z-index:80;border-right:none;overflow:hidden;
       transition:left .25s ease}
@@ -819,7 +880,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
      pop-up's own px width, set in openNoteModal()/the resize handlers,
      applies once modal-mode is on; the sliding off-canvas pane (not a
      pop-up) is unaffected. */
-  #p3{position:fixed!important;top:0;left:100%;bottom:0;
+  #p3{position:fixed!important;top:0;left:100%;bottom:var(--jeb-h);
       z-index:120;
       display:flex!important;flex-direction:column!important;
       overflow:hidden!important;
@@ -840,7 +901,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 @media(max-width:639.98px){
   /* ── Sidebar: landing page. Uses left: not transform: to avoid
         the iOS Safari fixed+transform flex-child height bug ── */
-  #sb{position:fixed!important;top:0;left:0;bottom:0;
+  #sb{position:fixed!important;top:0;left:0;bottom:var(--jeb-h);
       width:100%!important;max-width:none!important;
       z-index:40;transition:left .25s ease}
   #sb.closed{left:-100%}
@@ -848,7 +909,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
   .mob-ov.on{z-index:35}
   #rsz,#rsz2{display:none!important}
   /* Pane 2: article-list — off-screen right, slides in */
-  #p2{position:fixed!important;top:0;left:100%;bottom:0;
+  #p2{position:fixed!important;top:0;left:100%;bottom:var(--jeb-h);
       width:100%!important;max-width:none!important;
       z-index:80;border-right:none;overflow:hidden;
       transition:left .25s ease}
@@ -857,7 +918,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
   /* Pane 3: article view — off-screen right, slides in over pane 2.
      left: not transform: so flex children (#p3h,#p3c) lay out
      correctly on all browsers including iOS Safari. */
-  #p3{position:fixed!important;top:0;left:100%;bottom:0;
+  #p3{position:fixed!important;top:0;left:100%;bottom:var(--jeb-h);
       width:100%!important;z-index:120;
       display:flex!important;flex-direction:column!important;
       overflow:hidden!important;
@@ -2454,7 +2515,7 @@ sup.ann-sup:hover{text-decoration:underline}
 @media(max-width:639.98px){
   .pop-details-line .pdl-tags,.pop-details-line .pdl-attach,.pop-details-line .pdl-arch{display:none}}
 /* v03.NotePane.G5 — "Close all" chip, shown only once a 2nd window is open */
-#fw-closeall{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+#fw-closeall{position:fixed;bottom:calc(14px + var(--jeb-h));left:50%;transform:translateX(-50%);
   background:var(--paper);color:var(--t1);border:1px solid var(--border2);
   border-radius:999px;padding:7px 16px;font-size:12px;font-weight:600;
   cursor:pointer;white-space:nowrap;user-select:none;-webkit-user-select:none;
@@ -2464,7 +2525,7 @@ sup.ann-sup:hover{text-decoration:underline}
    stacked edge to edge, only the top one is visible, so "several notes open
    at once" is a lie unless there is a way back to the ones underneath. One
    row per open pop-up, the front one marked, and ✕ All at the end. */
-#fw-switch{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;
+#fw-switch{position:fixed;left:0;right:0;bottom:var(--jeb-h);display:flex;gap:6px;
   align-items:center;padding:7px 8px;overflow-x:auto;
   background:var(--paper);border-top:1px solid var(--border2);
   box-shadow:0 -4px 18px rgba(0,0,0,.18)}
@@ -5346,7 +5407,7 @@ function _autoLeavePrimary(folderIdsArr){
 }
 
 /* ── Render ──────────────────────────────────────────────────────── */
-function render(){renderTree();renderP2H();renderP2C();renderP3H();renderP3C();renderTabBar();updateTrashBtn();adjustP3Layout();_applyHeadingStyles();_updateSearchAccessUI();}
+function render(){renderTree();renderP2H();renderP2C();renderP3H();renderP3C();renderTabBar();updateTrashBtn();adjustP3Layout();_applyHeadingStyles();_updateSearchAccessUI();try{jebRefresh();}catch(e){console.error('jebRefresh:',e);}}
 /* v03.12.01 — render triggered by background cloud-sync must NOT rebuild the
    live editor (that reset the caret to the top mid-typing). When actively
    editing, refresh everything except the editor panes so the caret is kept. */
@@ -5354,6 +5415,7 @@ function _renderPreserveEdit(){
   const ed=document.getElementById('ed');
   if(ST.editing && ed && ed.dataset.aid===ST.article){
     renderTree();renderP2H();renderP2C();renderTabBar();updateTrashBtn();
+    try{jebRefresh();}catch(e){console.error('jebRefresh:',e);}   /* v04.99 — J2: the bar and an open panel follow a merge */
     return;
   }
   /* v03.70.01 — preserve Pane 3's scroll position across a background sync
@@ -20988,6 +21050,12 @@ function renderThemeModal(){
   ).join('')+'</div>';
   h+='</div>';
 
+  /* Jeb bar switch (v04.99, J2) — DB.theme.jebBar, default on */
+  h+='<div class="theme-divider"></div>';
+  h+='<div class="theme-sect"><div class="theme-sect-lbl">Jeb bar</div>';
+  h+='<div class="fs-sub" style="margin:-2px 0 8px">The strip of pockets along the bottom of the screen</div>';
+  h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="checkbox" id="th-jebbar"'+(_jebBarOn()?' checked':'')+' onchange="setJebBar(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show Jeb bar</label></div>';
+
   /* Heading styles launcher */
   h+='<div class="theme-divider"></div>';
   h+='<div class="theme-sect">';
@@ -21851,6 +21919,299 @@ function jebToNote(id){
   _addTombstones([id],_jebNow());
   DB.jeb=DB.jeb.filter(x=>x.id!==id);
   persist(); return note.id;
+}
+/* ══ JEB UI (v04.99 · J2) — the bar and the pocket panel ═════════════════════
+   The bar (#jeb-bar) and panel (#jeb-panel) are built here and repaint from
+   jebRefresh(), which render()/_renderPreserveEdit() call — so a merge that
+   brings Jeb changes repaints them, with no reload. All edits go through the
+   jeb*() API above, never DB.jeb. Hooks left for later rounds:
+     J3 — the item ⋯ menu (_jebItemMenu) has a marked slot for 📎 Attach / → Note
+     J4 — each chip carries an empty, hidden [data-jeb-cards] slot for the ▦ half */
+const _JEB_ICONS=['✓','✶','↗','◫','☏','❝','❙','◷','★','✎','⌂','♥'];
+const _JEB_COLORS=['#FFF1A8','#FFD9B8','#CFE8FF','#F6D2E4','#D8F0D2','#E6DCF7','#F3E6C9','#FFD0CC'];
+let _jebOpen=null, _jebEditId=null, _jebEditCancel=false, _jebDrag=null;
+let _jebBarSig='', _jebPanelSig='', _jebLPAt=0, _jebWired=false;
+const _jebEl=id=>document.getElementById(id);
+function _jebBarOn(){ return !(DB&&DB.theme&&DB.theme.jebBar===false); }
+/* the bar's left edge: PC = the sidebar's right edge (0 when collapsed), else 0 */
+function jebLayout(){
+  const sb=_jebEl('sb'); let l=0;
+  if(window.innerWidth>=1200&&sb) l=Math.max(0,Math.round(sb.getBoundingClientRect().right));
+  document.documentElement.style.setProperty('--jeb-l',l+'px');
+}
+function _jebKbCheck(){
+  const a=document.activeElement; let hide=false;
+  if(window.innerWidth<640&&a&&a!==document.body){
+    const tg=a.tagName;
+    const editable=(tg==='INPUT'&&!/^(checkbox|radio|button|submit|range|color|file)$/i.test(a.type))||tg==='TEXTAREA'||a.isContentEditable;
+    if(editable&&!a.closest('[data-jeb],#jeb-panel,#jeb-bar')) hide=true;
+  }
+  document.documentElement.classList.toggle('jeb-kb',hide);
+}
+function _jebWireOnce(){
+  if(_jebWired) return; _jebWired=true;
+  try{ new ResizeObserver(jebLayout).observe(_jebEl('sb')); }catch(e){}
+  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); });
+  document.addEventListener('focusin',_jebKbCheck);
+  document.addEventListener('focusout',()=>setTimeout(_jebKbCheck,0));
+  document.addEventListener('pointerdown',e=>{
+    const t=e.target;
+    if(_jebEl('jeb-menu')&&!t.closest('#jeb-menu')) _jebHideMenu();
+    if(_jebOpen&&!t.closest('#jeb-panel,#jeb-bar,#jeb-menu,#ov')) jebClosePanel();
+  },true);
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='Escape') return;
+    if(_jebEl('jeb-menu')){ _jebHideMenu(); return; }
+    if(_jebEditId||!_jebOpen||_jebEl('ov')?.classList.contains('on')) return;
+    jebClosePanel();
+  });
+}
+function jebRefresh(){
+  if(typeof DB==='undefined'||!DB||!_dbLoaded) return;
+  _jebWireOnce();
+  const root=document.documentElement, on=_jebBarOn();
+  root.classList.toggle('jeb-on',on);
+  let bar=_jebEl('jeb-bar');
+  if(!on){
+    if(bar){ bar.remove(); _jebBarSig=''; }
+    jebClosePanel(); jebLayout(); return;
+  }
+  if(!bar){ bar=_jebMakeBar(); _jebBarSig=''; }
+  _jebPaintBar(bar);
+  jebLayout();
+  if(_jebOpen) _jebPaintPanel();
+}
+function _jebMakeBar(){
+  const bar=document.createElement('div'); bar.id='jeb-bar'; bar.setAttribute('role','toolbar'); bar.setAttribute('aria-label','Jeb pockets');
+  document.body.appendChild(bar);
+  bar.addEventListener('wheel',e=>{ if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){ bar.scrollLeft+=e.deltaY; e.preventDefault(); } },{passive:false});
+  bar.addEventListener('click',e=>{
+    if(Date.now()-_jebLPAt<700) return;   /* the tap that ended a long-press */
+    const c=e.target.closest('.jeb-chip');
+    if(c){ jebTogglePanel(c.dataset.pid); return; }
+    if(e.target.closest('.jeb-new')) jebNewPocketDialog();
+  });
+  bar.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.matches('.jeb-chip,.jeb-new')){ e.preventDefault(); e.target.click(); } });
+  bar.addEventListener('contextmenu',e=>{
+    const c=e.target.closest('.jeb-chip'); if(!c) return;
+    e.preventDefault(); _jebPocketMenu(c.dataset.pid,e.clientX,e.clientY);
+  });
+  let lp=null, lx=0, ly=0;
+  bar.addEventListener('touchstart',e=>{
+    const c=e.target.closest('.jeb-chip'); if(!c||e.touches.length!==1) return;
+    lx=e.touches[0].clientX; ly=e.touches[0].clientY;
+    clearTimeout(lp);
+    lp=setTimeout(()=>{ _jebLPAt=Date.now(); _jebPocketMenu(c.dataset.pid,lx,ly); },500);
+  },{passive:true});
+  bar.addEventListener('touchmove',e=>{ const t=e.touches[0]; if(lp&&(Math.abs(t.clientX-lx)>8||Math.abs(t.clientY-ly)>8)){ clearTimeout(lp); lp=null; } },{passive:true});
+  ['touchend','touchcancel'].forEach(n=>bar.addEventListener(n,()=>{ clearTimeout(lp); lp=null; },{passive:true}));
+  return bar;
+}
+function _jebOpenCounts(){
+  const m={}; (DB.jeb||[]).forEach(i=>{ if(i&&!i.done) m[i.pocketId]=(m[i.pocketId]||0)+1; }); return m;
+}
+function _jebPaintBar(bar){
+  const ps=jebPockets(), cnt=_jebOpenCounts();
+  const sig=_jebOpen+'|'+ps.map(p=>[p.id,p.name,p.icon,p.color,cnt[p.id]||0].join('~')).join('|');
+  if(sig===_jebBarSig) return; _jebBarSig=sig;
+  bar.innerHTML=ps.map(p=>`<div class="jeb-chip${p.id===_jebOpen?' on':''}" data-pid="${esc(p.id)}" role="button" tabindex="0" title="${esc(p.name)}"><span class="jeb-sw" style="background:${esc(p.color)}">${esc(p.icon)}</span><span class="jeb-nm">${esc(p.name)}</span><span class="jeb-ct">${cnt[p.id]||0}</span><span data-jeb-cards></span></div>`).join('')
+    +'<div class="jeb-new" role="button" tabindex="0">＋ New pocket</div>';
+}
+function jebTogglePanel(pid){ if(_jebOpen===pid) jebClosePanel(); else jebOpenPanel(pid); }
+function jebOpenPanel(pid){
+  if(!_jebPocket(pid)) return;
+  _jebHideMenu(); _jebOpen=pid; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  jebRefresh();
+  const ta=_jebEl('jeb-add-in'); if(ta) try{ ta.focus({preventScroll:true}); }catch(e){}
+}
+function jebClosePanel(){
+  const p=_jebEl('jeb-panel');
+  _jebEditId=null; _jebDrag=null;
+  if(_jebOpen!==null){ _jebOpen=null; _jebBarSig=''; _jebPanelSig=''; }
+  if(p) p.classList.remove('on');
+  const bar=_jebEl('jeb-bar'); if(bar&&_jebBarOn()) _jebPaintBar(bar);
+}
+function _jebMakePanel(){
+  const p=document.createElement('div'); p.id='jeb-panel';
+  p.innerHTML='<div class="jeb-ph"></div><div class="jeb-add"><textarea id="jeb-add-in" rows="1" placeholder="Jot something…" aria-label="New item"></textarea><button class="btn bp" data-act="add" style="min-height:40px">Add</button></div><div class="jeb-list"></div><div class="jeb-foot"></div>';
+  document.body.appendChild(p);
+  const add=p.querySelector('#jeb-add-in');
+  add.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); _jebAddFromInput(); } });
+  add.addEventListener('input',()=>{ add.style.height='auto'; add.style.height=Math.min(add.scrollHeight,140)+'px'; });
+  p.addEventListener('click',e=>{
+    const t=e.target;
+    if(t.closest('.jeb-x')){ jebClosePanel(); return; }
+    if(t.closest('[data-act="add"]')){ _jebAddFromInput(); return; }
+    if(t.closest('[data-act="clear"]')){ _jebClearDoneUI(_jebOpen); return; }
+    const row=t.closest('.jeb-it'); if(!row) return;
+    if(t.closest('.jeb-more')){ _jebItemMenu(row.dataset.iid,t.closest('.jeb-more')); return; }
+    if(t.closest('.jeb-tx')) _jebStartEdit(row.dataset.iid);
+  });
+  p.addEventListener('change',e=>{
+    const k=e.target.closest('.jeb-tick'); if(!k) return;
+    jebToggleDone(k.closest('.jeb-it').dataset.iid); _jebPanelSig=''; jebRefresh();
+  });
+  p.addEventListener('pointerdown',e=>{
+    const g=e.target.closest('.jeb-grip'); if(!g||e.button) return;
+    e.preventDefault(); _jebStartDrag(g,e);
+  });
+  return p;
+}
+function _jebPaintPanel(){
+  const pk=_jebPocket(_jebOpen); if(!pk){ jebClosePanel(); return; }
+  let p=_jebEl('jeb-panel'); if(!p) p=_jebMakePanel();
+  p.classList.add('on');
+  const items=jebItems(pk.id), open=items.filter(i=>!i.done).length, done=items.length-open;
+  const sig=[pk.id,pk.name,pk.icon,pk.color,items.map(i=>[i.id,i.text,i.done?1:0].join('~')).join('|')].join('#');
+  if(sig===_jebPanelSig) return;
+  /* never repaint under an item being typed in or dragged: it repaints when that ends */
+  if(_jebEditId||_jebDrag) return;
+  _jebPanelSig=sig;
+  p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this pocket</small></div><button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
+  p.querySelector('.jeb-list').innerHTML=items.length?items.map(i=>`<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-tx">${esc(i.text)}</div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`).join('')
+    :'<div class="jeb-empty">Nothing here yet — jot something above.</div>';
+  p.querySelector('.jeb-foot').innerHTML=done>0?`<button class="btn" data-act="clear" style="min-height:40px">🧹 Clear done (${done})</button>`:'';
+}
+function _jebAddFromInput(){
+  const ta=_jebEl('jeb-add-in'); if(!ta||!_jebOpen) return;
+  const v=ta.value.replace(/\s+$/,''); if(!v.trim()) return;
+  const id=jebAddItem(_jebOpen,v);
+  if(id) jebMoveItem(id,_jebOpen,0);   /* the newest goes on top */
+  ta.value=''; ta.style.height='auto';
+  _jebPanelSig=''; jebRefresh(); ta.focus({preventScroll:true});
+}
+function _jebStartEdit(iid){
+  if(_jebEditId&&_jebEditId!==iid){ const cur=document.querySelector('#jeb-panel .jeb-edit'); if(cur) cur.blur(); }
+  const it=_jebItem(iid), row=document.querySelector(`#jeb-panel .jeb-it[data-iid="${iid}"]`);
+  if(!it||!row||_jebEditId===iid) return;
+  _jebEditId=iid; _jebEditCancel=false;
+  const ta=document.createElement('textarea'); ta.className='jeb-edit'; ta.setAttribute('data-jeb','1');
+  ta.value=it.text; ta.rows=Math.max(1,Math.min(6,String(it.text).split('\n').length));
+  row.querySelector('.jeb-tx').replaceWith(ta);
+  ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length);
+  ta.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); ta.blur(); }
+    else if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); _jebEditCancel=true; ta.blur(); }
+  });
+  ta.addEventListener('blur',()=>{
+    if(_jebEditId!==iid) return;
+    const cancel=_jebEditCancel, cur=_jebItem(iid), v=ta.value;
+    _jebEditId=null; _jebEditCancel=false;
+    if(!cancel&&cur&&v.trim()!==''&&v!==cur.text) jebEditItem(iid,{text:v});
+    _jebPanelSig=''; jebRefresh();
+  });
+}
+function _jebStartDrag(g,e){
+  const row=g.closest('.jeb-it'), list=row.parentNode, id=row.dataset.iid;
+  if(_jebEditId){ const cur=document.querySelector('#jeb-panel .jeb-edit'); if(cur) cur.blur(); }
+  _jebDrag={id,pid:_jebOpen,idx:null}; row.classList.add('jeb-drag');
+  try{ g.setPointerCapture(e.pointerId); }catch(x){}
+  const others=()=>[...list.querySelectorAll('.jeb-it')].filter(r=>r!==row);
+  const mv=ev=>{
+    const rs=others(); let idx=0;
+    rs.forEach(r=>{ const b=r.getBoundingClientRect(); if(ev.clientY>b.top+b.height/2) idx++; });
+    _jebDrag.idx=idx;
+    rs.forEach((r,i)=>{ r.classList.toggle('jeb-before',i===idx); r.classList.toggle('jeb-after',idx===rs.length&&i===rs.length-1); });
+    const lb=list.getBoundingClientRect();
+    if(ev.clientY<lb.top+28) list.scrollTop-=12; else if(ev.clientY>lb.bottom-28) list.scrollTop+=12;
+  };
+  const up=()=>{
+    g.removeEventListener('pointermove',mv); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
+    const d=_jebDrag; _jebDrag=null;
+    row.classList.remove('jeb-drag'); list.querySelectorAll('.jeb-before,.jeb-after').forEach(r=>r.classList.remove('jeb-before','jeb-after'));
+    if(d&&d.idx!=null) jebMoveItem(d.id,d.pid,d.idx);
+    _jebPanelSig=''; jebRefresh();
+  };
+  g.addEventListener('pointermove',mv); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
+}
+function _jebClearDoneUI(pid){
+  const n=jebClearDone(pid);
+  if(n) toast('🧹 '+n+' done item'+(n!==1?'s':'')+' moved to Trash');
+  _jebPanelSig=''; jebRefresh();
+}
+/* ── menus ── */
+function _jebHideMenu(){ const m=_jebEl('jeb-menu'); if(m) m.remove(); }
+/* rows: [{t, f, off?, d?, keep?}]; placed by measuring (anchor = an element, else x/y) */
+function _jebShowMenu(rows,anchor,x,y){
+  _jebHideMenu();
+  const m=document.createElement('div'); m.id='jeb-menu';
+  m.innerHTML=rows.map((r,i)=>`<div class="jm${r.off?' off':''}${r.d?' d':''}" data-i="${i}">${esc(r.t)}</div>`).join('');
+  m.addEventListener('click',e=>{
+    const el=e.target.closest('.jm'); if(!el) return;
+    const r=rows[+el.dataset.i]; if(!r.keep) _jebHideMenu();
+    r.f();
+  });
+  document.body.appendChild(m);
+  const w=m.offsetWidth, h=m.offsetHeight, vw=window.innerWidth, vh=window.innerHeight;
+  let l, t;
+  if(anchor&&anchor.isConnected){
+    const b=anchor.getBoundingClientRect(); l=b.right-w; t=(b.bottom+4+h<=vh)?b.bottom+4:b.top-h-4;
+  }else{ l=x; t=(y+h>vh)?y-h:y; }
+  l=Math.max(6,Math.min(l,vw-w-6)); t=Math.max(6,Math.min(t,vh-h-6));
+  m.style.left=l+'px'; m.style.top=t+'px'; m.style.visibility='visible';
+}
+function _jebPocketMenu(pid,x,y){
+  const pk=_jebPocket(pid); if(!pk) return;
+  const ps=jebPockets(), i=ps.findIndex(p=>p.id===pid), done=jebItems(pid).filter(t=>t.done).length;
+  const anchor=document.querySelector(`#jeb-bar .jeb-chip[data-pid="${pid}"]`);
+  _jebShowMenu([
+    {t:'✏️ Rename',f:()=>jebRenameDialog(pid)},
+    {t:'🎨 Icon & colour',f:()=>jebIconColourDialog(pid)},
+    {t:'◀ Move left',off:i<=0,f:()=>{ jebMovePocket(pid,i-1); jebRefresh(); }},
+    {t:'Move right ▶',off:i>=ps.length-1,f:()=>{ jebMovePocket(pid,i+1); jebRefresh(); }},
+    {t:'🧹 Clear done items ('+done+')',off:!done,f:()=>_jebClearDoneUI(pid)},
+    {t:'🗑 Delete pocket',d:true,f:()=>{ if(jebDeletePocket(pid)){ if(_jebOpen===pid) jebClosePanel(); toast('Pocket moved to Trash'); } jebRefresh(); }}
+  ],anchor&&(x==null)?anchor:null,x,y);
+}
+function _jebItemMenu(iid,anchor){
+  const it=_jebItem(iid); if(!it) return;
+  const back=()=>_jebItemMenu(iid,anchor);
+  _jebShowMenu([
+    {t:'✏️ Edit',f:()=>_jebStartEdit(iid)},
+    /* J3: '📎 Attach' and '→ Note' go here */
+    {t:'📂 Move to pocket ▸',keep:true,f:()=>{
+      const others=jebPockets().filter(p=>p.id!==it.pocketId);
+      const rows=others.map(p=>({t:p.icon+' '+p.name,f:()=>{ jebMoveItem(iid,p.id,0); toast('Moved to '+p.name); _jebPanelSig=''; jebRefresh(); }}));
+      rows.push({t:'◀ Back',keep:true,f:back});
+      _jebShowMenu(rows,anchor);
+    }},
+    {t:'🗑 Delete',d:true,f:()=>{ jebDeleteItem(iid); toast('Moved to Trash'); _jebPanelSig=''; jebRefresh(); }}
+  ],anchor);
+}
+/* ── pocket forms (the app's own modal) ── */
+function _jebPocketForm(o){
+  let icon=o.icon, color=o.color;
+  const pick=(arr,cur,k)=>arr.map(v=>`<button type="button" data-${k}="${esc(v)}" class="${v===cur?'sel':''}"${k==='color'?` style="background:${esc(v)}"`:''} aria-label="${k} ${esc(v)}">${k==='icon'?esc(v):''}</button>`).join('');
+  showModal(`<div class="mt">${esc(o.title)}</div>`
+    +(o.name!=null?`<input class="mi" id="jeb-f-name" data-jeb="1" maxlength="40" placeholder="Pocket name" value="${esc(o.name)}">`:'')
+    +(o.pick?`<div class="jeb-pick" id="jeb-f-icons">${pick(_JEB_ICONS,icon,'icon')}</div><div class="jeb-pick" id="jeb-f-colors">${pick(_JEB_COLORS,color,'color')}</div>`:'')
+    +`<div class="ma"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn bp" id="jeb-f-ok">${esc(o.ok)}</button></div>`);
+  const mb=_jebEl('mb');
+  mb.querySelectorAll('#jeb-f-icons button').forEach(b=>b.addEventListener('click',()=>{ icon=b.dataset.icon; mb.querySelectorAll('#jeb-f-icons button').forEach(x=>x.classList.toggle('sel',x===b)); }));
+  mb.querySelectorAll('#jeb-f-colors button').forEach(b=>b.addEventListener('click',()=>{ color=b.dataset.color; mb.querySelectorAll('#jeb-f-colors button').forEach(x=>x.classList.toggle('sel',x===b)); }));
+  const ok=()=>{ const n=_jebEl('jeb-f-name'); const name=n?n.value:null; closeModal(); o.onOk({name,icon,color}); };
+  _jebEl('jeb-f-ok').addEventListener('click',ok);
+  const n=_jebEl('jeb-f-name'); if(n) n.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); ok(); } });
+}
+function jebNewPocketDialog(){
+  _jebPocketForm({title:'＋ New pocket',name:'',pick:true,icon:_JEB_ICONS[1],color:_JEB_COLORS[0],ok:'Create',onOk:v=>{
+    jebAddPocket(v.name,v.icon,v.color); jebRefresh();
+    const bar=_jebEl('jeb-bar'); if(bar) bar.scrollLeft=bar.scrollWidth;
+  }});
+}
+function jebRenameDialog(pid){
+  const pk=_jebPocket(pid); if(!pk) return;
+  _jebPocketForm({title:'✏️ Rename pocket',name:pk.name,ok:'Save',onOk:v=>{ jebEditPocket(pid,{name:v.name}); _jebPanelSig=''; jebRefresh(); }});
+}
+function jebIconColourDialog(pid){
+  const pk=_jebPocket(pid); if(!pk) return;
+  _jebPocketForm({title:'🎨 Icon & colour',pick:true,icon:pk.icon,color:pk.color,ok:'Save',onOk:v=>{ jebEditPocket(pid,{icon:v.icon,color:v.color}); _jebPanelSig=''; jebRefresh(); }});
+}
+function setJebBar(on){
+  if(!DB.theme) DB.theme={};
+  DB.theme.jebBar=!!on;
+  persist(); jebRefresh();
+  if(typeof renderThemeModal==='function') renderThemeModal();
 }
 function openTrash(){
   const m=document.getElementById('trash-modal');
@@ -29129,7 +29490,7 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
 #toc-panel .toc-l3{padding-left:34px;font-size:11.5px}
 #toc-panel .toc-l4{padding-left:44px;font-size:11px}
 /* TOC mobile */
-#toc-float-btn{position:fixed;bottom:76px;right:14px;background:var(--accent);color:#fff;border:none;border-radius:24px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;z-index:800;box-shadow:0 2px 12px rgba(0,0,0,.22)}
+#toc-float-btn{position:fixed;bottom:calc(76px + var(--jeb-h));right:14px;background:var(--accent);color:#fff;border:none;border-radius:24px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;z-index:800;box-shadow:0 2px 12px rgba(0,0,0,.22)}
 #toc-drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:899;display:none}
 #toc-drawer-bg.open{display:block}
 #toc-drawer{position:fixed;bottom:0;left:0;right:0;background:var(--paper);border-radius:16px 16px 0 0;z-index:900;max-height:50vh;overflow-y:auto;transform:translateY(100%);transition:transform .25s ease}
