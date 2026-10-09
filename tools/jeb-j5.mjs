@@ -323,6 +323,64 @@ try {
     check(!(await on(d, () => _JEB_APP)) && new URL(d.page.url()).pathname === '/' && new URL(d.page.url()).search === '', `${t} 📓 Open Siyagah goes to the full app in the same window`, d.page.url());
     noErr(d, t);
   });
+
+  /* ══ 65s — Save File: an export is never a Jeb page, and never carries Jeb's contents ══ */
+  if (want('65s')) {
+    const { mkdtemp, writeFile } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const dir = await mkdtemp(join(tmpdir(), 'jeb-exp-'));
+    const esrv = await serve(dir);
+    try {
+      for (const vp of VPS) {
+        const t = `65s@${vp.name}`;
+        const files = {};
+        for (const [mode, path] of [['jeb', '/?jeb=1'], ['main', '/']]) {
+          const d = await open(vp, path);
+          try {
+            await act(d, vp, chip('jp-task')); await sleep(400);
+            const html = await on(d, () => getExportHTML());
+            const live = await on(d, () => ({ app: _JEB_APP, hd: !!document.getElementById('jeb-app-hd'), cls: document.documentElement.classList.contains('jeb-app'), docked: !!document.getElementById('jeb-panel')?.classList.contains('on'), title: document.title }));
+            const isJ = mode === 'jeb';
+            check(live.app === isJ && live.hd === isJ && live.cls === isJ && live.docked && (live.title === 'Siyagah Jeb') === isJ, `${t} ${mode}: the live page is unchanged by the export (mode, header, docked panel)`, JSON.stringify(live));
+            const f = `exp-${mode}-${vp.name}.html`; await writeFile(join(dir, f), html); files[mode] = f;
+            const n = (html.match(/id="jeb-bar"|id="jeb-panel"|id="jeb-app-hd"|id="jeb-deck"/g) || []).length;
+            check(n === 0, `${t} ${mode}: the saved HTML has no Jeb bar, panel or header`, String(n));
+          } finally { await d.ctx.close(); }
+        }
+        for (const mode of ['jeb', 'main']) {
+          const ctx = await ctxFor(vp, seed());
+          const d = { ctx, errors: [], urls: [] }; d.page = await ctx.newPage();
+          d.page.on('pageerror', (e) => d.errors.push('pageerror: ' + e));
+          try {
+            await d.page.goto(esrv.base + '/' + files[mode], { waitUntil: 'domcontentloaded' }); await booted(d.page);
+            const s = await on(d, () => ({ app: _JEB_APP, cls: document.documentElement.classList.contains('jeb-app'), title: document.title, man: document.querySelector('link[rel="manifest"]').getAttribute('href'), bars: document.querySelectorAll('#jeb-bar').length, hd: !!document.getElementById('jeb-app-hd') }));
+            check(!s.app && !s.cls && s.title !== 'Siyagah Jeb' && s.man === '/manifest.json' && !s.hd, `${t} reopening the ${mode} export: not a Jeb page, main title and manifest`, JSON.stringify(s));
+            check(s.bars === 1, `${t} reopening the ${mode} export: exactly one #jeb-bar`, String(s.bars));
+            check(await visible(d, '#sb'), `${t} reopening the ${mode} export: the sidebar is visible`);
+            if (!vp.touch) {
+              await on(d, () => selFolder('f1')); await sleep(400);
+              await d.page.locator('#p2c [onclick^="selArt("]').first().click(); await sleep(500);
+              check(await on(d, () => !!ST.article), `${t} reopening the ${mode} export: a note opens by a real click`);
+            }
+            await act(d, vp, chip('jp-task')); await sleep(400);
+            check(await on(d, () => _jebOpen === 'jp-task'), `${t} reopening the ${mode} export: a real click on a chip opens the panel`);
+            check(d.errors.length === 0, `${t} reopening the ${mode} export: no page errors`, d.errors.slice(0, 2).join(' · '));
+          } finally { await ctx.close(); }
+        }
+        /* Deploy Export: an empty shell holds no pocket name and no item text, even with a panel open */
+        const d = await open(vp, '/');
+        try {
+          await on(d, () => { DB.jebPockets.forEach((p) => { p.name = 'Zqpocket' + p.id; }); DB.jeb.forEach((i) => { i.text = 'Zqitem' + i.id; }); persist(); render(); });
+          await sleep(300); await act(d, vp, chip('jp-task')); await sleep(400);
+          const names = await on(d, () => DB.jebPockets.map((p) => p.name));
+          const html = await on(d, () => getExportHTML(JSON.stringify({ folders: [], articles: [], sections: [], trash: [] })));
+          const leak = [...names, 'Zqitem'].filter((w) => html.includes(w));
+          check(leak.length === 0, `${t} Deploy Export with a panel open: no pocket name or item text`, leak.join(','));
+        } finally { await d.ctx.close(); }
+      }
+    } finally { await esrv.close(); }
+  }
 } catch (e) {
   console.log(' FAIL  jeb-j5 threw: ' + (e && e.stack || e));
   results.push({ ok: false, label: 'threw' });
