@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.98.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v04.99.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,13 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.99** (9 Oct 2026) — a note being read keeps its place on a tablet and
+  a phone (the owner: "while reading a note scrolling, screen jumps to the
+  top"). There `#p3c` scrolls, not `.avw`, and `_renderPreserveEdit()` saved
+  only `.avw`, so every sync redraw went to the top. `renderP3C()` now wraps
+  `_renderP3CInner()` and keeps both positions for the same note in reading
+  mode, for every caller. Block 61: `--only 61` **21/21**, unpatched 10/21.
+  Full `app-check`: (Architect, in review).
 - **v04.98** (9 Oct 2026) — J1, Jeb's data (issue #144). `DB.jebPockets` +
   `DB.jeb`, four default pockets seeded once (fixed ids, 1970 stamp), wired into
   `_REC_COLLS`, `_REC_TOMB_COLLS`, `_LJ_COLLS`, `mergeDB`, `_syncDigest`, the
@@ -46,14 +53,6 @@ must never accumulate here instead of there.
   `_s2RefsOk()`, never an open note, 4,000 picture writes/day. 20 MB: 84 s,
   26.8 -> 0.1 MB; 140 MB: ~150 s, 186.8 -> 0.1 MB (2-6 s pauses are the
   pre-existing whole-notebook `_save`). `--only 56` **69/69**. Architect: full `app-check` **2080/2080** on the final head (2078/2080 ×2 before the 51r seed fix); unpatched `--only 56` 0/3.
-- **v04.94** (8 Oct 2026) — S2c, new pictures stored by reference (issue
-  #136). Paste, drop and 🖼 pick (Pane 3 and float windows, which gained their
-  own paste/drop handlers) store the picture once, insert `data-pic`, upload at
-  once; the gate `_s2RefsOk()` (IndexedDB, reader caught up, no older build
-  written in 48 h) else inlines as before. Book/backup page inlines the bytes;
-  Note History paints them; the item menu goes through `_picCanon`. The real
-  v04.91 build keeps a reference through an edit (54j). 10 pictures → 1.3 KB
-  of note text. `--only 55` **127/127**, `--only 54` **67/67**. Architect: full `app-check` **2011/2011, twice in a row**; unpatched `--only 55` 34/89 (explained in PR #137).
 ---
 
 ## What this is
