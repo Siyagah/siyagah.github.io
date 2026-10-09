@@ -9116,4 +9116,8 @@ covered every `timeIt` call in both files, not only the two that failed first.
 They were asked to name each thing that jumps, so that each gets diagnosed
 rather than guessed at.
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` on `5db9160` 2581/2581, then 2577/2581 (57d and 58g timings, which flickered on v05.00 too; the checks were changed as recorded above), then **2581/2581** on the final head `d7d36da`; `--only 57,58` 178/178 three times in a row; `--only 62` 25/25; unpatched (v05.00 `index.html`) `--only 62` 8/25; `ship-check` 13/13.
+
+## v05.02 — J3, 📎 Attach, → Note and the "From Jeb" Smart View (issue #152, 9 Oct 2026)
+
+(Stub — written in full at the end of the round.)

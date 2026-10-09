@@ -22,7 +22,7 @@ must never accumulate here instead of there.
   `_isSecEnd(n,level)` ends a section at the next same-or-higher heading OR the
   tail, in `_edColApply`, `_initCollapsible`, `_secNodesOf` and
   `_edBlockDragStart`. `_edRevealTail` is gone. Block 62: **25/25**, unpatched
-  8/25. Full `app-check`: (Architect, in review).
+  8/25. Architect: full `app-check` **2581/2581** on the final head; unpatched `--only 62` 8/25.
 - **v05.00** (9 Oct 2026) — J2 (built as v04.99, renumbered), the Jeb bar and the pocket panel (issue #147).
   `#jeb-bar` (scrolling chips: swatch, name, not-done count; ＋ New pocket;
   right-click/long-press menu), `#jeb-panel` (add on top, tick, edit in place,
