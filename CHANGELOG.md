@@ -9211,3 +9211,50 @@ Architect, and a pass on v05.02 would need explaining). On a phone the 64g modal
 Siyagah Jeb and moving Jeb into `_S1_COLLS` are out of this round.
 
 **Totals (Architect):** full `app-check` **2989/2989, twice in a row** on `c6e640b` (after the two review fixes: PC deck beside the sidebar; the card's "→ Note" button); `ship-check` 13/13; unpatched (v05.02 `index.html` + `sw.js`) `--only 64` 0/4 (no ▦ half; stops at 64a).
+
+## v05.04 — J5, "Siyagah Jeb": a second home-screen icon that opens Jeb only (issue #156, 10 Oct 2026)
+
+The owner chose the second icon ("go with the recommended one, second icon"). It is **the same `index.html`**
+opened with `/?jeb=1`; the sync, the data and the Jeb code exist once. Step 0 of the issue (the v05.03 totals) is its own commit.
+
+- **How the page knows.** A small `<script id="jeb-mode">` in `<head>` decides once, before first paint:
+  `const _JEB_APP` and `html.jeb-app`. Only the page's face changes — `<link rel=manifest>` →
+  `/manifest-jeb.json`, title "Siyagah Jeb", `apple-mobile-web-app-title` "Jeb", the sized apple-touch-icon and the SVG
+  favicon → the Jeb ones, `theme-color` → the Jeb orange. The unsized data-URI icon and `<script id="nd">` are untouched.
+  **No data path branches on it**: `loadDB`, the journal, Firestore sync, Trash and `mergeDB()` run exactly as before.
+- **The manifest and icon.** `manifest-jeb.json` (`id`/`start_url` `/?jeb=1`, scope `/`, name "Siyagah Jeb", short
+  "Jeb", orange `#D9822B`). Icons: `icon-jeb.svg` (a drawn pouch with a note peeking out, white on warm orange — paths
+  only, no emoji or text), `icon-jeb-192/512.png`, `icon-jeb-maskable-512.png` (art inside the safe zone),
+  `apple-touch-icon-jeb.png` (180). PNGs are rendered from the SVG by `tools/make-jeb-icons.mjs`. All six files are in
+  `sw.js`'s `CORE`. `ship-check`'s icon-size check now covers both manifests, and its "linked icon exists" check also
+  covers every `/icons/` path in the head script (changed in place, reason in a comment).
+- **The screen** (`html.jeb-app`): `#sb`, `#p2`, `#p3`, the tab bar, float windows and the TOC button are hidden
+  (hidden, not removed — the sync dot and the saving alarms keep running). **Header** `#jeb-app-hd`: the icon,
+  "Siyagah Jeb", the sync state **in words, read from the sidebar's own `#sync-dot`** (a MutationObserver — no second
+  state; tap = the sync window), **⚠ Not saving** (mirrors the sidebar's `#save-warn-dot`, which would otherwise be hidden;
+  tap = the storage details), **📱 Install** (only while `_pwaPrompt` is set; `installPWA()`), **📓 Open Siyagah**
+  (`location.pathname`, same window). **The bar** is always on (`DB.theme.jebBar===false` is ignored, the stored value is
+  not changed). **The panel is docked** between header and bar and never closes to nothing: tapping outside, Escape,
+  tapping the open chip and the ✕ (hidden) leave it; if it would close (a pocket deleted, ☑ Choose) it falls back to the
+  remembered view or "All pockets". Chips switch it; ▦ opens the deck over the panel and ✕ / Escape / ▦ again return to the panel.
+  **What opens first:** `DB.theme.jebAppView` = `{sel:{ids,all},deck}`, written only when the owner switches
+  (never by the boot's own auto-open, so boot writes nothing); missing pockets fall back to "All pockets".
+- **Shapes (D5).** **PC 1440×900:** the panel is a centred column, 720 px at most; the bar is full width (`--jeb-l` 0, no
+  sidebar). **Tablet 820×1180:** the panel is full width between header and bar. **Phone 390×844:** full width, compact
+  header (buttons are icons only; the sync words stay), bar at the foot. The keyboard rule `jeb-kb` ignores a field inside
+  Jeb, so typing in the panel does not hide the bar.
+- **Boot-time pop-ups, listed.** The full app opens by itself at boot: the **login overlay** (kept — it is sync), the
+  **"App updated — reload"** toast (kept), the **"Backups paused"** toast (kept — a saving alarm), the **⚠ storage dot**
+  (kept, mirrored into the Jeb header because the sidebar is hidden), **"NOT syncing"** toasts and the sync dot (kept).
+  Notes pop-ups at boot: **none exist in this build** — no what's-new, no Murāja'ah or reminder pop-up (Murāja'ah and
+  reminders are Smart Views, not boot dialogs), no onboarding, and the "no backup yet" balloon was removed in v04.69.
+  So nothing had to be suppressed; the alarms are all left to reach the owner.
+- **→ Note in Jeb mode** is `jebToNote` as before; the toast's "Open note" goes to `/?open=<id>` (same window). **Full
+  app:** after its first render `?open=<id>` calls `jebOpenNote(id)` (an unknown id does nothing) and then
+  `history.replaceState` to the plain path. Back returns to Jeb.
+- **Reaching it.** 🧰 → "Home screen" → **👝 Siyagah Jeb** opens `<path>?jeb=1` in a new window (`window.open`, same
+  window if blocked). The path comes from `location.pathname`, so a downloaded `file://` copy works too (I4). *Note:* the
+  issue put the item "next to 📱 Install App", which is in ⚙; its checks and wording say 🧰, so it is in 🧰.
+- **Checks.** `tools/jeb-j5.mjs`, block `65-jeb-app`.
+
+**Not done:** the full `app-check` (by the issue's instruction). Free card positions and moving Jeb into `_S1_COLLS` stay out.

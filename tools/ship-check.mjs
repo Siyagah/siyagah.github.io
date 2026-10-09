@@ -83,8 +83,11 @@ r.check(missingCore.length === 0, 'every sw.js CORE path exists on disk',
   missingCore.length ? `missing: ${missingCore.join(', ')} — addAll() rejects and the WHOLE precache is silently skipped` : `all ${core.length} present`);
 
 /* ── 4. Manifest icons: declared sizes must be the real pixels ─────────── */
+/* v05.04 (J5): manifest-jeb.json is a second manifest of the same app, so the
+   same icon check covers it — a wrong declared size there is dropped just as silently. */
+const manifestJeb = JSON.parse(await readFile(join(ROOT, 'manifest-jeb.json'), 'utf8'));
 const iconProblems = [];
-for (const ic of manifest.icons ?? []) {
+for (const ic of [...(manifest.icons ?? []), ...(manifestJeb.icons ?? [])]) {
   const rel = ic.src.replace(/^\//, '');
   if (!(await exists(rel))) { iconProblems.push(`${ic.src} does not exist`); continue; }
   if (!rel.endsWith('.png')) continue;
@@ -93,7 +96,7 @@ for (const ic of manifest.icons ?? []) {
   if (ic.sizes !== `${real.w}x${real.h}`) iconProblems.push(`${ic.src} declares ${ic.sizes} but is really ${real.w}x${real.h} — Chrome drops it without saying so`);
 }
 r.check(iconProblems.length === 0, 'manifest icon sizes match the real pixels',
-  iconProblems.length ? iconProblems.join('\n') : `${(manifest.icons ?? []).length} icons checked`);
+  iconProblems.length ? iconProblems.join('\n') : `${(manifest.icons ?? []).length + (manifestJeb.icons ?? []).length} icons checked`);
 
 const shotProblems = [];
 for (const s of manifest.screenshots ?? []) {
@@ -106,7 +109,10 @@ r.check(shotProblems.length === 0, 'manifest screenshots exist at their declared
   shotProblems.length ? shotProblems.join('\n') : `${(manifest.screenshots ?? []).length} screenshots checked`);
 
 /* index.html references icons too, and they 404 just as silently. */
-const linked = [...html.matchAll(/<link[^>]+href="(\/icons\/[^"]+)"/g)].map((m) => m[1]);
+/* v05.04 (J5): also every /icons/ path the head script swaps in for Jeb mode. */
+const linked = [...new Set([
+  ...[...html.matchAll(/<link[^>]+href="(\/icons\/[^"]+)"/g)].map((m) => m[1]),
+  ...(html.match(/<script id="jeb-mode">([\s\S]*?)<\/script>/)?.[1].match(/\/icons\/[\w.-]+/g) ?? [])])];
 const missingLinked = [];
 for (const p of linked) if (!(await exists(p.replace(/^\//, '')))) missingLinked.push(p);
 r.check(missingLinked.length === 0, 'every /icons/ path linked from index.html exists',

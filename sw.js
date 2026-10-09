@@ -32,7 +32,11 @@ const CORE    = ['./', './index.html', './manifest.json',
                  './icons/icon.svg', './icons/favicon-32.png',
                  './icons/apple-touch-icon.png',
                  './icons/icon-192.png', './icons/icon-512.png',
-                 './icons/icon-maskable-512.png'];
+                 './icons/icon-maskable-512.png',
+                 './manifest-jeb.json', './icons/icon-jeb.svg',
+                 './icons/icon-jeb-192.png', './icons/icon-jeb-512.png',
+                 './icons/icon-jeb-maskable-512.png',
+                 './icons/apple-touch-icon-jeb.png'];
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
