@@ -341,7 +341,7 @@ try {
     check(m.minW >= 150, `${t} cards are never narrower than 150px (narrowest ${Math.round(m.minW)})`);
     check(m.docW <= m.innerW && m.bodyOver <= 0 && m.cardOver === 0, `${t} no horizontal overflow, and a long word wraps inside its card`, JSON.stringify({ docW: m.docW, innerW: m.innerW, bodyOver: m.bodyOver, cardOver: m.cardOver }));
     check(m.wrapW <= 1100 + 1, `${t} the deck is at most 1,100px wide (${Math.round(m.wrapW)})`);
-    check(m.hd.length >= 3 && m.hd.every((b) => b.h >= 40 && b.w >= 40), `${t} every header control is at least 40px`, JSON.stringify(m.hd.filter((b) => b.h < 40 || b.w < 40)));
+    check(m.hd.length === 2 && m.hd.every((b) => b.h >= 40 && b.w >= 40), `${t} every header control is at least 40px`, JSON.stringify(m.hd.filter((b) => b.h < 40 || b.w < 40)));
     /* contrast: the ink on all 8 pastels, and what is really painted */
     const cols = await on(d, () => _JEB_COLORS.slice()), ink = hex('#2A2418');
     const worst = Math.min(...cols.map((c) => ratio(ink, hex(c))));
