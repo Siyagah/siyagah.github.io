@@ -290,8 +290,8 @@ async function speed() {
       await sleep(500);
       if (vp.th > 1) { const cdp = await p.context().newCDPSession(p); await cdp.send('Emulation.setCPUThrottlingRate', { rate: vp.th }); }
       const r = {};
-      r.renderTree_closed = await timeIt(p, 'renderTree()', 5, 'ST.tagOpen=false;ST.tagQ=""');
-      r.renderTree_open = await timeIt(p, 'renderTree()', 5, 'ST.tagOpen=true;ST.tagQ=""');
+      r.renderTree_closed = await timeIt(p, 'renderTree()', 15, 'ST.tagOpen=false;ST.tagQ=""');
+      r.renderTree_open = await timeIt(p, 'renderTree()', 15, 'ST.tagOpen=true;ST.tagQ=""');
       r.keystroke = await timeIt(p, 'tagFind("fiq")', 5, 'ST.tagOpen=true;renderTree()');
       r.keystroke_wide = await timeIt(p, 'tagFind("a")', 5);
       r.render_closed = await timeIt(p, 'render()', 3, 'ST.tagOpen=false;ST.tagQ=""');

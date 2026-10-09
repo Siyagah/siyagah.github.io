@@ -456,7 +456,7 @@ async function speed() {
       if (vp.throttle > 1) { const cdp = await p.context().newCDPSession(p); await cdp.send('Emulation.setCPUThrottlingRate', { rate: vp.throttle }); }
       const r = { info };
       r.getAllTags = await timeIt(p, 'getAllTags()');
-      r.renderTree_tagsClosed = await timeIt(p, 'renderTree()', 5, 'ST.tagOpen=false');
+      r.renderTree_tagsClosed = await timeIt(p, 'renderTree()', 15, 'ST.tagOpen=false')   /* v05.01: 15 samples, not 5 — see CHANGELOG v05.01 */;
       r.renderTree_tagsOpen = await timeIt(p, 'renderTree()', 3, 'ST.tagOpen=true');
       await p.evaluate(() => { ST.tagOpen = false; renderTree(); });
       r.sidebarSearch_keystroke = await timeIt(p, "ST.search='fiq';renderTree();ST.search=''", 3);

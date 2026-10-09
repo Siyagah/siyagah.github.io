@@ -9098,6 +9098,17 @@ inside no section; opening the last heading orders content, then tail; the last
 section's nodes stop before the tail; an unfolded ending gets no mark.
 `--only 62` **25/25**. Unpatched (v05.00 `index.html`): **8/25**.
 
+**Changed in review (checks only):** the second full run failed 57d (phone
+`renderTree()` with Tags closed, 44 ms against a 30 ms limit) and 58g (Tags
+open, 62 against 60); the first run passed both. Rerun three times each on
+v05.01 and on v05.00, they failed about half the time on BOTH, so this round did
+not cause it. A direct measurement (15 calls, phone ×4, 3,000 tags) on v04.97,
+v04.98, v04.99, v05.00 and v05.01 gave medians of 20, 20, 17, 16 and 17 ms, with
+single calls up to 42 ms on v04.97 too. So there is no slowdown. The checks took the
+middle of only 5 timings, each including the wait for the next frame, which under
+a ×4 CPU varies by tens of ms. Both now take the middle of **15** timings
+(`tools/s3a-tags.mjs`, `tools/s3b-tags-sidebar.mjs`); the limits are unchanged.
+
 **Not done:** the owner's wider "too much instability of the editing panel".
 They were asked to name each thing that jumps, so that each gets diagnosed
 rather than guessed at.
