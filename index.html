@@ -48,13 +48,22 @@
 const _JEB_APP=(function(){ try{ return /(^|[?&])jeb=1(&|$)/.test(location.search); }catch(e){ return false; } })();
 if(_JEB_APP){
   document.documentElement.classList.add('jeb-app');
-  document.title='Siyagah Jeb';
   var _jq=function(s){ return document.querySelector(s); }, _jx;
+  /* what the page looked like before the swap: Save File puts it back, so a saved copy is never a Jeb page (I4) */
+  var _jg=function(s,a){ var e=_jq(s); return e?e.getAttribute(a):null; };
+  window._JEB_FACE0={title:document.title,
+    manifest:_jg('link[rel="manifest"]','href'), themeColor:_jg('meta[name="theme-color"]','content'),
+    appleTitle:_jg('meta[name="apple-mobile-web-app-title"]','content'),
+    touchIcon:_jg('link[rel="apple-touch-icon"][sizes]','href'), svgIcon:_jg('link[rel="icon"][type="image/svg+xml"]','href')};
+  document.title='Siyagah Jeb';
   if((_jx=_jq('link[rel="manifest"]'))) _jx.setAttribute('href','/manifest-jeb.json');
   if((_jx=_jq('meta[name="apple-mobile-web-app-title"]'))) _jx.setAttribute('content','Jeb');
   if((_jx=_jq('meta[name="theme-color"]'))) _jx.setAttribute('content','#D9822B');
   if((_jx=_jq('link[rel="apple-touch-icon"][sizes]'))) _jx.setAttribute('href','/icons/apple-touch-icon-jeb.png');
   if((_jx=_jq('link[rel="icon"][type="image/svg+xml"]'))) _jx.setAttribute('href','/icons/icon-jeb.svg');
+}else{
+  /* a copy saved with the class baked in is not a Jeb page */
+  try{ document.documentElement.classList.remove('jeb-app'); }catch(e){}
 }
 </script>
 <!--
@@ -4521,6 +4530,26 @@ function _cleanExportRoot(){
     if(cx) cx.setAttribute('style','display:none');
     const jp = root.querySelector('#jrn-style-pop');
     if(jp) jp.remove();
+    /* 6 ─ Jeb (v05.04 review). Every Jeb surface is built at run time and
+           rebuilt on the next boot; baked in, it is a dead copy (no listeners)
+           that also carries pocket names and item text, and a toast can carry
+           a note title. jeb-app would hide the sidebar of a plain copy (I4).
+           The head goes back to what _JEB_FACE0 recorded before the swap. */
+    root.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,.toast').forEach(function(el){ el.remove(); });
+    root.classList.remove('jeb-app','jeb-on','jeb-kb');
+    root.style.removeProperty('--jeb-h'); root.style.removeProperty('--jeb-l');
+    if(!root.getAttribute('style')) root.removeAttribute('style');
+    if(!root.getAttribute('class')) root.removeAttribute('class');
+    const f0 = window._JEB_FACE0;
+    if(f0){
+      const put = function(sel, attr, v){ const e = root.querySelector(sel); if(e && v != null) e.setAttribute(attr, v); };
+      const t = root.querySelector('title'); if(t && f0.title != null) t.textContent = f0.title;
+      put('link[rel="manifest"]', 'href', f0.manifest);
+      put('meta[name="theme-color"]', 'content', f0.themeColor);
+      put('meta[name="apple-mobile-web-app-title"]', 'content', f0.appleTitle);
+      put('link[rel="apple-touch-icon"][sizes]', 'href', f0.touchIcon);
+      put('link[rel="icon"][type="image/svg+xml"]', 'href', f0.svgIcon);
+    }
   }catch(e){ console.error('export sanitise failed:', e); }
   return root.outerHTML;
 }
@@ -22172,8 +22201,13 @@ function _jebWireOnce(){
     jebClosePanel();
   });
 }
+let _jebStaleSwept=false;
 function jebRefresh(){
   if(typeof DB==='undefined'||!DB||!_dbLoaded) return;
+  if(!_jebStaleSwept){   /* a copy saved by an older build may carry dead Jeb surfaces: this session builds its own */
+    _jebStaleSwept=true;
+    document.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd').forEach(el=>el.remove());
+  }
   _jebWireOnce();
   const root=document.documentElement, on=_jebBarOn();
   root.classList.toggle('jeb-on',on);
