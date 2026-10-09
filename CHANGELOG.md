@@ -8859,4 +8859,82 @@ Contrast of box text and placeholder: ≥ 15:1 on all five presets, focused or n
 **Not done:** tag groups / nested tags, merging duplicates, un-selecting a tag redrawing
 Pane 2 (backlog). I did not run the unpatched comparison for block 58.
 
+**Totals (Architect):** full `app-check` **2258/2258, twice in a row** on `b237976`; `ship-check` 13/13; unpatched (v04.96 `index.html` + `sw.js`) `--only 58` 2/6 (the seed check and "no page errors" pass; the run stops at 58a).
+
+## v04.98 — J1: Jeb's data — pockets and items, synced, merged, trashed and restored (no UI yet) (9 Oct 2026)
+
+Issue #144. The first of four Jeb rounds. **Nothing visible changes**: this
+round is the data, its sync and its Trash, so the UI rounds (J2 bar + panel,
+J3 Attach / → Note / "From Jeb", J4 cards deck) only call functions.
+
+**Jeb** is the owner's new feature (8–9 Oct 2026): a scrolling bar of
+**pockets** along the bottom, each holding quick **items** that open as a panel
+or spread as sticky cards, attach to folders / tags / a Note Type / the Journal,
+and turn into notes. Demo: https://claude.ai/artifact/KXKCfAKsh1ypdKk1k6ze2o.
+
+**The data.** `DB.jebPockets=[{id,name,icon,color,order,createdAt,updatedAt}]`
+and `DB.jeb=[{id,pocketId,text,done,folderIds,tags,kind,journal,order,createdAt,updatedAt}]`.
+`_jebSeed()` (from `loadDB`) seeds four pockets (Quick tasks, Ideas, Links to
+read, Shopping) only when the notebook has no `jebPockets` KEY, with fixed ids
+`jp-task`/`jp-idea`/`jp-link`/`jp-shop` and a 1970 stamp, so two devices seeding
+at once merge to the same four and any real edit wins. An array the owner
+emptied is never re-seeded. `mergeDB()` does not invent empty Jeb arrays when
+neither side has the key (the seed relies on the key being absent).
+
+**Wired into every list that names a collection:** `_REC_COLLS` (stamped),
+`_REC_TOMB_COLLS` (a vanished record is tombstoned), `_LJ_COLLS` (local journal
+and undo), `mergeDB()` (`_mergeById` + the `_alive` tombstone filter + the
+Trash `activeMap`), `_syncDigest`, `_migrateTimestamps`, the backup HTML,
+`_replaceWithBackup`, `_mergeBackup` (through `mergeDB`, never "local wins"),
+`_importCounts` ("Jeb items: N") and the recovery copy.
+**Deliberately NOT `_S1_COLLS`:** a device on v04.90–v04.97 writes `gone:true`
+for every rec key its own `_s1Snap` did not produce, so it would mark every
+`jeb~…` rec gone. Both arrays ride in `_head~0` and are merged per record from
+the assembled head. Backlog line in `ARCHITECT.md` to move them once no older
+build has written in 30 days.
+
+**Trash.** Two new types. `jebItem` (`jebDeleteItem`, `jebClearDone`) shows as
+"🗂 Jeb item: <text>" and restores into its pocket, or the first pocket if its
+own is gone. `jebPocket`: a pocket deletes only when it holds no items (D6's
+rule for folders; a toast says so otherwise) and restores empty. Restore stamps
+past the tombstone. The other Trash helpers (folder recovery, picture
+migration) are article/folder-only by design and unchanged.
+
+**The API** (no UI calls it yet): `jebPockets`, `jebItems`, `jebAddPocket`,
+`jebEditPocket`, `jebMovePocket`, `jebDeletePocket`, `jebAddItem`,
+`jebEditItem`, `jebToggleDone`, `jebMoveItem`, `jebDeleteItem`, `jebClearDone`,
+`jebToNote`. `jebToNote` builds the note (first line → title ≤ 120 chars, other
+lines → escaped `<p>`; folders, tags, Note Type; `'journal'` via
+`_ensureJournalTag`; `fromJeb:{pocket,at}`; `createdAt` = the item's) and
+removes the item with a tombstone and **no** Trash entry, in one `persist()`.
+If the note cannot be built, the item stays.
+
+**Checks:** `tools/jeb-j1.mjs`, block `59-jeb-data` (59a–59h), plus 22 Jeb
+operations in `tools/sync-audit.mjs` (J01–J22, both directions, including
+delete-vs-later-edit and → Note-vs-earlier-edit). `--only 59` **74/74**.
+59f runs the real v04.97 build against a cloud holding Jeb data: it keeps the
+arrays as an unknown key, writes no `jeb~` rec, marks none gone, and its stale
+copy undoes nothing. 59h, 2,000 items in 8 pockets: the head is 621 KB (under
+the 700,000-byte split; ~300 bytes an item, so a few hundred more items will
+split it into `recparts`, as designed); phone ×4 full merge 10 ms, `persist()`
+141 ms then 40 ms, one `jebAddItem` 56 ms.
+
+**Changed in review:** the full `app-check` came back 2330/2332 twice; the
+only failure both times was 52b's "the merge code is exactly the v04.90 text"
+(and its exit line). That check guards S1d's faster assembly against changing
+`mergeDB()` by accident; J1 changed `mergeDB()` on purpose (the Jeb lists and
+"never invent an empty Jeb array"), and the builder's run never reached
+`--only 52`. Updated in place in `tools/s1d-checks.mjs`: the baseline moves
+from v04.90 (`42e1165`) to v04.98 (`0d7ddc4`), with a comment that a round
+changing `mergeDB()` on purpose moves it in the same round. 52b's 1,400 random
+merges (faster vs full assembly, both directions) pass unchanged.
+
+**Completed by the Architect.** The builder pushed the implementation and the
+checks, then stopped before its own `--only` runs and the record (the S2c/S2d
+pattern again). The Architect ran the checks, wrote this entry and opened the
+PR from `claude/awesome-archimedes-dsqf92`.
+
+**Not done:** any UI (J2–J4); the "From Jeb" Smart View (J3); `_S1_COLLS`
+(backlog); the standalone Siyagah Jeb.
+
 **Totals:** full `app-check`: (Architect, in review).

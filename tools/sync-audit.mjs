@@ -48,6 +48,17 @@ function baseDB() {
   d.noteKinds = [{ id: 'general', name: 'General', color: '#888888', nag: false, order: 1, catId: 'cat-general', updatedAt: OLD },
                  { id: 'k_idea', name: 'Idea', color: '#aa0000', nag: true, order: 2, catId: 'cat-general', updatedAt: OLD },
                  { id: 'k_ref', name: 'Reference', color: '#0000aa', nag: false, order: 3, catId: 'cat-x', updatedAt: OLD }];
+  /* v04.98 (J1) — Jeb: the four default pockets (the real seed's fixed ids and 1970 stamp), and items spread
+     over them. jp-shop is empty so an empty pocket can be deleted; ji4 is done so Clear done has work. */
+  const J0 = '1970-01-01T00:00:00.000Z';
+  d.jebPockets = [{ id: 'jp-task', name: 'Quick tasks', icon: '✓', color: '#FFF1A8', order: 0, createdAt: J0, updatedAt: J0 },
+                  { id: 'jp-idea', name: 'Ideas', icon: '✶', color: '#FFD9B8', order: 1, createdAt: J0, updatedAt: J0 },
+                  { id: 'jp-link', name: 'Links to read', icon: '↗', color: '#CFE8FF', order: 2, createdAt: J0, updatedAt: J0 },
+                  { id: 'jp-shop', name: 'Shopping', icon: '◫', color: '#F6D2E4', order: 3, createdAt: J0, updatedAt: J0 }];
+  d.jeb = [{ id: 'ji1', pocketId: 'jp-task', text: 'Call plumber', done: false, folderIds: [], tags: [], kind: null, journal: false, order: 0, createdAt: OLD, updatedAt: OLD },
+           { id: 'ji2', pocketId: 'jp-task', text: 'Buy stamps', done: false, folderIds: [], tags: [], kind: null, journal: false, order: 1, createdAt: OLD, updatedAt: OLD },
+           { id: 'ji4', pocketId: 'jp-task', text: 'Already done', done: true, folderIds: [], tags: [], kind: null, journal: false, order: 2, createdAt: OLD, updatedAt: OLD },
+           { id: 'ji3', pocketId: 'jp-idea', text: 'Idea one\nsecond line <b>&', done: false, folderIds: ['f1'], tags: ['seed'], kind: 'k_idea', journal: false, order: 0, createdAt: OLD, updatedAt: OLD }];
   d.sfItems = { recent: { order: 0, updatedAt: OLD } };
   d.theme = { preset: 'forest', custom: {}, fonts: { global: 100, sidebar: 100, list: 100, content: 100 } };
   d.themeAt = {};
@@ -186,6 +197,45 @@ t('P03 pin to sidepane (pinTabToPanel)', 'Tabs', { op: () => pinTabToPanel('a2')
 t('P04 unpin from sidepane (unpinTab)', 'Tabs', { setup: () => pinTabToPanel('a2'), op: () => unpinTab('a2') });
 t('P05 theme scalar (DB.theme.preset + persist)', 'Theme', { op: () => { DB.theme.preset = 'ocean'; persist(); } });
 t('P06 theme sub-key (DB.theme.fonts.sidebar + persist)', 'Theme', { op: () => { DB.theme.fonts.sidebar = 120; persist(); } });
+
+/* Jeb (v04.98, J1) — pockets and items. Every operation goes through the real jeb*() function J2 will call. */
+t('J01 add a Jeb item (jebAddItem)', 'Jeb', { op: () => jebAddItem('jp-task', 'New item from A') });
+t('J02 edit a Jeb item text (jebEditItem)', 'Jeb', { op: () => jebEditItem('ji1', { text: 'Call plumber tomorrow' }) });
+t('J03 tick a Jeb item (jebToggleDone)', 'Jeb', { op: () => jebToggleDone('ji1') });
+t('J04 untick a done Jeb item (jebToggleDone)', 'Jeb', { op: () => jebToggleDone('ji4') });
+t('J05 attach folders, tags, Note Type, Journal to an item (jebEditItem)', 'Jeb', { op: () => jebEditItem('ji2', { folderIds: ['f2'], tags: ['x'], kind: 'k_idea', journal: true }) });
+t('J06 move an item within its pocket (jebMoveItem)', 'Jeb', { op: () => jebMoveItem('ji2', 'jp-task', 0) });
+t('J07 move an item to another pocket (jebMoveItem)', 'Jeb', { op: () => jebMoveItem('ji1', 'jp-idea', 1) });
+t('J08 add a pocket (jebAddPocket)', 'Jeb', { op: () => jebAddPocket('Calls', '☎', '#cccccc') });
+t('J09 edit a pocket (jebEditPocket)', 'Jeb', { op: () => jebEditPocket('jp-idea', { name: 'Ideas!', color: '#112233' }) });
+t('J10 reorder pockets (jebMovePocket)', 'Jeb', { op: () => jebMovePocket('jp-shop', 0) });
+t('J11 delete a Jeb item (jebDeleteItem)', 'Jeb', { op: () => jebDeleteItem('ji1') });
+t('J12 delete an empty pocket (jebDeletePocket)', 'Jeb', { op: () => jebDeletePocket('jp-shop') });
+t('J13 delete a pocket that still holds items is REFUSED', 'Jeb', { op: () => jebDeletePocket('jp-task'), expectNoChange: true });
+t('J14 clear done items (jebClearDone)', 'Jeb', { op: () => jebClearDone('jp-task') });
+t('J15 to Note (jebToNote): the note appears, the item is gone', 'Jeb', { op: () => jebToNote('ji3') });
+t('J16 restore a Jeb item from Trash (restoreItem)', 'Jeb', { setup: () => jebDeleteItem('ji1'), op: () => restoreItem(DB.trash[DB.trash.length - 1].id) });
+t('J17 restore a Jeb pocket from Trash (restoreItem)', 'Jeb', { setup: () => jebDeletePocket('jp-shop'), op: () => restoreItem(DB.trash[DB.trash.length - 1].id) });
+t('J18 permanently delete a trashed Jeb item (permDeleteItem)', 'Jeb', { setup: () => jebDeleteItem('ji1'), op: () => permDeleteItem(DB.trash[DB.trash.length - 1].id) });
+t('J19 A deletes item ji1, B edits it LATER (the edit must survive)', 'Jeb', {
+  op: () => jebDeleteItem('ji1'), bop: () => jebEditItem('ji1', { text: 'B kept working' }),
+  check: ({ MB, MA }) => { const p = []; for (const [n, M] of [['dir1', MB], ['dir2', MA]]) {
+    const i = (M.jeb || []).find(x => x.id === 'ji1');
+    if (!i || i.text !== 'B kept working') p.push(n + ': later edit lost to earlier delete');
+    if ((M.trash || []).some(t => t.item && t.item.id === 'ji1')) p.push(n + ': stale Trash entry for a live item'); } return p; } });
+t('J20 B edits item ji1 EARLIER, A deletes it later (the delete must win)', 'Jeb', {
+  bFirst: true, op: () => jebDeleteItem('ji1'), bop: () => jebEditItem('ji1', { text: 'B edited first' }),
+  check: ({ MB, MA }) => { const p = []; for (const [n, M] of [['dir1', MB], ['dir2', MA]]) {
+    if ((M.jeb || []).find(x => x.id === 'ji1')) p.push(n + ': deleted item came back'); } return p; } });
+t('J21 A adds an item and B adds another to the SAME pocket (both survive)', 'Jeb', {
+  op: () => jebAddItem('jp-idea', 'from A'), bop: () => jebAddItem('jp-idea', 'from B'),
+  check: ({ MB, MA }) => { const p = []; for (const [n, M] of [['dir1', MB], ['dir2', MA]]) {
+    for (const w of ['from A', 'from B']) if (!(M.jeb || []).some(x => x.text === w && x.pocketId === 'jp-idea')) p.push(n + ': "' + w + '" lost'); } return p; } });
+t('J22 A turns item ji3 into a note, B edits ji3 EARLIER (the item stays gone, the note stays)', 'Jeb', {
+  bFirst: true, op: () => jebToNote('ji3'), bop: () => jebEditItem('ji3', { text: 'Idea one (B edit)' }),
+  check: ({ MB, MA }) => { const p = []; for (const [n, M] of [['dir1', MB], ['dir2', MA]]) {
+    if ((M.jeb || []).find(x => x.id === 'ji3')) p.push(n + ': item that became a note came back');
+    if (!(M.articles || []).some(a => a.fromJeb)) p.push(n + ': the note is missing'); } return p; } });
 
 /* Undo */
 t('U01 undo a change (undo after toggleArchive)', 'Undo', { known: 'undo stays local to the device (v04.68): HISTORY holds whole-notebook snapshots, so syncing an undo would also roll back merged-in edits from other devices', setup: () => toggleArchive('a2'), op: () => undo() });
@@ -382,7 +432,7 @@ async function runOne(page, test) {
         const probs = ev(check)({ MB, MA, A1, B1, A0 });
         res.d1 = probs.filter(x => x.startsWith('dir1')); res.d2 = probs.filter(x => x.startsWith('dir2'));
       } else if (expectNoChange) {
-        const R = (d) => { const o = {}; ['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','sfItems','globalTags','tombstones','trash'].forEach(k => o[k] = A.clone(d[k] ?? null)); (o.articles || []).forEach(a => { if (a) delete a.noteHistory; }); return A.norm(o); };
+        const R = (d) => { const o = {}; ['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','jebPockets','jeb','sfItems','globalTags','tombstones','trash'].forEach(k => o[k] = A.clone(d[k] ?? null)); (o.articles || []).forEach(a => { if (a) delete a.noteHistory; }); return A.norm(o); };
         const ch = A.diff(R(A1), R(A0));
         res.d1 = ch.length ? ['op changed synced records: ' + ch.join('; ')] : [];
       } else {
@@ -398,7 +448,7 @@ async function runOne(page, test) {
         const got = mergeDB(A.clone(loc), _s1RecsAsDB(A.clone(rem)));
         const nw = JSON.stringify(A.norm(want)), ng = JSON.stringify(A.norm(got));
         if (nw !== ng) res.eq.push(dir + ': ' + A.diff(A.norm(got), A.norm(want)).slice(0, 3).join('; '));
-        for (const c of ['articles', 'folders', 'sections', 'calEvents', 'calCategories', 'noteKinds', 'noteKindCats', 'myFavCats', 'folderGroups', 'trash', 'tombstones']) {
+        for (const c of ['articles', 'folders', 'sections', 'calEvents', 'calCategories', 'noteKinds', 'noteKindCats', 'myFavCats', 'folderGroups', 'jebPockets', 'jeb', 'trash', 'tombstones']) {
           const ids = (x) => (x[c] || []).map((r) => (r && r.id != null ? r.id : '(no id)'));
           const a = ids(want), b = ids(got);
           if (a.slice().sort().join('|') !== b.slice().sort().join('|')) res.eq.push(dir + ': ' + c + ' id-set differs');

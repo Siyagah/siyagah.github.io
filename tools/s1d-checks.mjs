@@ -119,12 +119,16 @@ async function check52b(browser, srv) {
     check(errors.length === 0, `52b ${vp.name}: no page errors`, errors.slice(0, 3).join(' · '));
     await ctx.close();
   }
-  /* mergeDB() itself, byte for byte, is the v04.90 one: the faster path changed what is fed to it, never it */
+  /* mergeDB() itself, byte for byte, is the one last changed ON PURPOSE: the faster path changed what is fed to it, never it.
+     Baseline moved in v04.98 (Architect, J1 review): J1 deliberately added jebPockets/jeb to mergeDB()'s merge, _alive and
+     Trash activeMap lists and stopped it inventing empty Jeb arrays (commit 0d7ddc4). Until then the baseline was v04.90
+     (42e1165). A round that changes mergeDB() on purpose moves this baseline, with its reason, in the same round. */
+  const BASE = '0d7ddc4', BASE_NAME = 'v04.98';
   const cut = (txt) => { const a = txt.indexOf('function _mergeById('), b = txt.indexOf('/* ── Chunked cloud storage'); return a < 0 || b < a ? null : txt.slice(a, b); };
   let was = null;
-  try { was = cut(execFileSync('git', ['show', '42e1165:index.html'], { cwd: ROOT, maxBuffer: 1 << 28 }).toString()); } catch (e) { was = null; }
+  try { was = cut(execFileSync('git', ['show', BASE + ':index.html'], { cwd: ROOT, maxBuffer: 1 << 28 }).toString()); } catch (e) { was = null; }
   const now = cut(readFileSync(ROOT + '/index.html', 'utf8'));
-  check(was !== null && was === now, '52b the merge code (_mergeById … mergeDB, 22,000+ characters of it) is exactly the v04.90 text', was === null ? 'v04.90 could not be read from git (commit 42e1165)' : `${was && was.length} vs ${now && now.length} characters`);
+  check(was !== null && was === now, `52b the merge code (_mergeById … mergeDB, 22,000+ characters of it) is exactly the ${BASE_NAME} text`, was === null ? `${BASE_NAME} could not be read from git (commit ${BASE})` : `${was && was.length} vs ${now && now.length} characters`);
 }
 
 /* ══ 52c ═════════════════════════════════════════════════════════════════════ */

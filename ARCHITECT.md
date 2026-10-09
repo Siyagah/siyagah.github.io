@@ -294,6 +294,10 @@ Every report follows one shape:
 
 ## Architect's backlog
 
+- [ ] Move `jeb`/`jebPockets` into `_S1_COLLS` once no build older than v04.98
+      has written in 30 days (`_s2OlderActive`-style gate). Until then both
+      arrays ride in `_head~0` (v04.98, J1).
+
 - [x] `ship-check` passes when nothing has changed ("nothing to bump"), so a
       round that forgot to bump but touched nothing else reads green — decide
       whether that is acceptable and record it (found v04.35).

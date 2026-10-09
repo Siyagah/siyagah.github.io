@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.97">
+<meta name="app-version" content="04.98">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3234,7 +3234,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.97</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.98</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3687,6 +3687,7 @@ async function loadDB(){
     ST.article=DB.theme.lastArticle;
   applyTheme(DB.theme);
   if(!DB.trash)DB.trash=[];
+  _jebSeed();   /* v04.98 — J1: the four default pockets, once, with fixed ids */
   /* v03.77 — one-time migration: the flat global tab list (DB.tabs = [aid,...])
      was shown alongside EVERY note, so pinned tabs followed you onto unrelated
      and brand-new notes. Tabs are now per-note groups: DB.tabs = {ownerId:[aid]}.
@@ -3735,7 +3736,7 @@ async function loadDB(){
     let touched=false;
     const now=new Date().toISOString();
     [DB.folders,DB.sections,DB.noteKinds,DB.noteKindCats,
-     DB.folderGroups/* v03.81 */].forEach(arr=>{
+     DB.folderGroups/* v03.81 */,DB.jebPockets,DB.jeb/* v04.98 */].forEach(arr=>{
       (arr||[]).forEach(r=>{ if(r&&!r.updatedAt){ r.updatedAt=now; touched=true; } });
     });
     /* v03.81 — same baseline for the Smart-View settings map. Object, not
@@ -3969,7 +3970,7 @@ function _stampThemeTouches(){
    after every merge) so a merged-in remote change is never mistaken for a
    local edit. Before boot has finished this is a no-op: migrations keep
    their existing no-stamp behaviour. */
-const _REC_COLLS=['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups'];
+const _REC_COLLS=['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','jebPockets','jeb'/* v04.98 */];
 /* v04.68 — collections with no Trash of their own: deleting one of these
    records used to just drop it from the array, and the union merge put it
    straight back from any device that still had it (a deleted section, Note
@@ -3979,7 +3980,7 @@ const _REC_COLLS=['articles','folders','sections','calEvents','calCategories','n
    already use — and mergeDB() filters these collections with it. Notes and
    folders are not listed: they are deleted through Trash, which already
    tombstones exactly what it removes (v04.65). */
-const _REC_TOMB_COLLS=['sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups'];
+const _REC_TOMB_COLLS=['sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','jebPockets','jeb'/* v04.98 */];
 let _recSnap;        /* {coll:{id:[sig,updatedAt,noteHistory length]}} — undefined until boot seeds it */
 /* v04.90 — S1c: what the sweep below saw change, for the per-record cloud copy.
    `keys` = _s1Key()s of records changed/added, `gone` = of records removed.
@@ -4012,7 +4013,7 @@ function _s1DirtyKey(c,id){ return c+'~'+encodeURIComponent(String(id)).replace(
    not moved. The one thing it cannot see is an in-place edit INSIDE an old
    noteHistory entry (or inside a trash entry's item): such a change is picked
    up by the next full copy (see the checkpoint in _ljSave()). */
-const _LJ_COLLS=['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','trash','tombstones'];
+const _LJ_COLLS=['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','jebPockets','jeb'/* v04.98 */,'trash','tombstones'];
 const _RC=new WeakMap(), _RC_NOSIG={updatedAt:1,noteHistory:1}, _REC_SET=new Set(_REC_COLLS);
 function _rcBuild(r,shallow){
   const ks=Object.keys(r), n=ks.length, vs=new Array(n), js=new Array(n);
@@ -9107,7 +9108,8 @@ async function generateBackupHTMLContent(){
   const _bkJson=JSON.stringify({folders:DB.folders,articles:DB.articles,
     sections:DB.sections,trash:DB.trash||[],
     noteKinds:DB.noteKinds||[],noteKindCats:DB.noteKindCats||[],
-    folderGroups:DB.folderGroups||[]});
+    folderGroups:DB.folderGroups||[],
+    jebPockets:DB.jebPockets||[],jeb:DB.jeb||[]/* v04.98 */});
   /* v04.94 — an export carries the bytes (I4): the page AND the embedded data */
   const _ih=await _picInlineStr(html),_ij=await _picInlineStr(_bkJson);
   _picMissingToast(Math.max(_ih.missing,0));
@@ -9241,6 +9243,7 @@ function _importCounts(src){
     a:(src?.articles||[]).filter(x=>!x.id?.startsWith('kb-')).length,
     f:(src?.folders ||[]).filter(x=>!x.id?.startsWith('kb-')).length,
     s:(src?.sections||[]).filter(x=>!x.id?.startsWith('kb-')).length,
+    j:(src?.jeb||[]).length,   /* v04.98 */
   };
 }
 let _pendingImport=null;      // {data, fileName} between the two consent steps
@@ -9252,8 +9255,8 @@ function _showImportConsent(data,fileName){
   showModal(`<div class="mt">📥 Import data</div>
     <div class="mm">
       File: <strong>${esc(fileName)}</strong><br><br>
-      In the file: ${inc.a} notes · ${inc.f} folders · ${inc.s} sections<br>
-      In your notebook now: ${cur.a} notes · ${cur.f} folders · ${cur.s} sections<br><br>
+      In the file: ${inc.a} notes · ${inc.f} folders · ${inc.s} sections · Jeb items: ${inc.j}<br>
+      In your notebook now: ${cur.a} notes · ${cur.f} folders · ${cur.s} sections · Jeb items: ${cur.j}<br><br>
       <strong>Merge</strong> adds anything from the file you don't already have — nothing is removed.<br>
       <strong>Replace everything</strong> deletes your current notebook and puts the file's content in its place.
     </div>
@@ -9306,6 +9309,14 @@ function _mergeBackup(bk){
   (bk.sections||[]).forEach(s=>{if(!sIds.has(s.id)&&!s.id?.startsWith('kb-')){DB.sections.push(s);added++;}});
   (bk.folders||[]).forEach(f=>{if(!fIds.has(f.id)&&!f.id?.startsWith('kb-')){DB.folders.push(f);added++;}});
   (bk.articles||[]).forEach(a=>{if(!aIds.has(a.id)&&!a.id?.startsWith('kb-')){DB.articles.push(a);added++;}});
+  /* v04.98 — Jeb goes through mergeDB's own rules (newest updatedAt wins, a
+     deleted item stays deleted), never "local wins". Pockets/items only. */
+  if(bk.jebPockets||bk.jeb){
+    const m=mergeDB({jebPockets:DB.jebPockets||[],jeb:DB.jeb||[],tombstones:DB.tombstones||[],trash:[]},
+                    {jebPockets:bk.jebPockets||[],jeb:bk.jeb||[]});
+    const cnt=(m.jebPockets||[]).length+(m.jeb||[]).length-(DB.jebPockets||[]).length-(DB.jeb||[]).length;
+    DB.jebPockets=m.jebPockets; DB.jeb=m.jeb; if(cnt>0) added+=cnt;
+  }
   persist(); renderTree(); renderP2C(); renderP3H(); renderP3C();
   toast(`✓ Merge complete — ${added} items restored. Syncing to cloud…`);
 }
@@ -9320,6 +9331,9 @@ function _replaceWithBackup(bk,rec){
   if(bk.noteKinds   )DB.noteKinds   =bk.noteKinds;
   if(bk.noteKindCats)DB.noteKindCats=bk.noteKindCats;
   if(bk.folderGroups)DB.folderGroups=bk.folderGroups;
+  /* v04.98 — a backup from before Jeb has neither key: keep what is here */
+  if(bk.jebPockets)DB.jebPockets=bk.jebPockets;
+  if(bk.jeb       )DB.jeb       =bk.jeb;
   /* Re-add KB notes so user keeps the guide */
   syncKnowledgeBase&&syncKnowledgeBase();
   /* v04.68 — a restored backup keeps the timestamps it was saved with, as it
@@ -9345,6 +9359,7 @@ function _saveRecoveryCopy(db){
   const key=_RECOVERY_PREFIX+ts;
   const snapshot={
     sections:db.sections||[], folders:db.folders||[], articles:db.articles||[], trash:db.trash||[],
+    jebPockets:db.jebPockets||[], jeb:db.jeb||[],   /* v04.98 */
     savedAt:ts,
   };
   let json;
@@ -21712,6 +21727,131 @@ function trashArt(id){
   persist(); render();
 }
 
+/* ══ JEB (v04.98 · J1) — pockets and quick items; data only, no UI yet ══════
+   DB.jebPockets=[{id,name,icon,color,order,createdAt,updatedAt}]
+   DB.jeb       =[{id,pocketId,text,done,folderIds,tags,kind,journal,order,createdAt,updatedAt}]
+   Both are id-keyed collections like folders/sections: they are in _REC_COLLS
+   (stamped), _REC_TOMB_COLLS (a vanished record is tombstoned), _LJ_COLLS
+   (local journal/undo), mergeDB() (merge + tombstone filter), _syncDigest,
+   _migrateTimestamps and the backup/import paths.
+   They are deliberately NOT in _S1_COLLS: a device on v04.90–v04.97 keeps every
+   rec key it receives in its sig map, and on its next full snapshot writes
+   gone:true for each key its own _s1Snap did not produce — it would mark every
+   jeb~… rec gone, at start and hourly. So both arrays travel in the head rec
+   (_head~0 carries every key outside _S1_COLLS) and mergeDB() runs on the
+   assembled head. Move them into _S1_COLLS only once no older build has
+   written for 30 days (backlog in ARCHITECT.md).
+   Ids are uid(): the tombstone map in mergeDB() is collection-blind. */
+const _JEB_SEED_AT='1970-01-01T00:00:00.000Z';
+const _JEB_SEED=[
+  {id:'jp-task',name:'Quick tasks',   icon:'✓',color:'#FFF1A8'},
+  {id:'jp-idea',name:'Ideas',         icon:'✶',color:'#FFD9B8'},
+  {id:'jp-link',name:'Links to read', icon:'↗',color:'#CFE8FF'},
+  {id:'jp-shop',name:'Shopping',      icon:'◫',color:'#F6D2E4'}];
+/* Only when the notebook has no jebPockets KEY at all — never for an array the
+   owner emptied. Fixed ids + a 1970 stamp: two devices seeding at once merge to
+   the same four, and any real edit wins. */
+function _jebSeed(){
+  if(!DB||Array.isArray(DB.jebPockets)) { if(DB&&!Array.isArray(DB.jeb)) DB.jeb=[]; return; }
+  if('jebPockets' in DB&&DB.jebPockets!=null) return;
+  DB.jebPockets=_JEB_SEED.map((p,i)=>({id:p.id,name:p.name,icon:p.icon,color:p.color,order:i,createdAt:_JEB_SEED_AT,updatedAt:_JEB_SEED_AT}));
+  if(!Array.isArray(DB.jeb)) DB.jeb=[];
+}
+function _jebEnsure(){ if(!Array.isArray(DB.jebPockets)) _jebSeed(); if(!Array.isArray(DB.jeb)) DB.jeb=[]; }
+const _jebNow=()=>new Date().toISOString();
+const _jebByOrder=(a,b)=>((a.order||0)-(b.order||0))||(a.createdAt||'').localeCompare(b.createdAt||'')||String(a.id).localeCompare(String(b.id));
+function jebPockets(){ _jebEnsure(); return DB.jebPockets.slice().sort(_jebByOrder); }
+function jebItems(pocketId){ _jebEnsure(); return DB.jeb.filter(i=>i&&i.pocketId===pocketId).sort(_jebByOrder); }
+function _jebPocket(id){ return (DB.jebPockets||[]).find(p=>p&&p.id===id); }
+function _jebItem(id){ return (DB.jeb||[]).find(i=>i&&i.id===id); }
+/* renumber a list 0..n-1, stamping only the records whose order changed */
+function _jebRenumber(list,now){ list.forEach((r,i)=>{ if(r.order!==i){ r.order=i; r.updatedAt=now; } }); }
+function jebAddPocket(name,icon,color){
+  _jebEnsure(); const now=_jebNow();
+  const p={id:uid(),name:String(name==null?'':name).trim()||'New pocket',icon:icon||'✶',color:color||'#FFF1A8',
+    order:DB.jebPockets.reduce((m,x)=>Math.max(m,(x.order||0)+1),0),createdAt:now,updatedAt:now};
+  DB.jebPockets.push(p); persist(); return p.id;
+}
+function jebEditPocket(id,patch){
+  _jebEnsure(); const p=_jebPocket(id); if(!p||!patch) return false;
+  ['name','icon','color'].forEach(k=>{ if(k in patch&&patch[k]!=null) p[k]=(k==='name'?String(patch[k]).trim()||p.name:patch[k]); });
+  p.updatedAt=_jebNow(); persist(); return true;
+}
+function jebMovePocket(id,toIndex){
+  _jebEnsure(); const list=jebPockets(), i=list.findIndex(p=>p.id===id); if(i<0) return false;
+  const p=list.splice(i,1)[0]; list.splice(Math.max(0,Math.min(list.length,toIndex|0)),0,p);
+  _jebRenumber(list,_jebNow()); persist(); return true;
+}
+function jebDeletePocket(id){
+  _jebEnsure(); const p=_jebPocket(id); if(!p) return false;
+  if(DB.jeb.some(i=>i&&i.pocketId===id)){ toast('A pocket that holds items cannot be deleted — move or delete its items first'); return false; }
+  const at=_jebNow();
+  DB.trash.push({id:uid(),type:'jebPocket',item:JSON.parse(JSON.stringify(p)),deletedAt:at});
+  _addTombstones([id],at);
+  DB.jebPockets=DB.jebPockets.filter(x=>x.id!==id);
+  persist(); return true;
+}
+function jebAddItem(pocketId,text){
+  _jebEnsure(); if(!_jebPocket(pocketId)) return null; const now=_jebNow();
+  const it={id:uid(),pocketId,text:String(text==null?'':text),done:false,folderIds:[],tags:[],kind:null,journal:false,
+    order:jebItems(pocketId).reduce((m,x)=>Math.max(m,(x.order||0)+1),0),createdAt:now,updatedAt:now};
+  DB.jeb.push(it); persist(); return it.id;
+}
+function jebEditItem(id,patch){
+  _jebEnsure(); const it=_jebItem(id); if(!it||!patch) return false;
+  ['text','done','kind','journal'].forEach(k=>{ if(k in patch) it[k]=patch[k]; });
+  ['folderIds','tags'].forEach(k=>{ if(Array.isArray(patch[k])) it[k]=patch[k].slice(); });
+  it.updatedAt=_jebNow(); persist(); return true;
+}
+function jebToggleDone(id){
+  _jebEnsure(); const it=_jebItem(id); if(!it) return false;
+  it.done=!it.done; it.updatedAt=_jebNow(); persist(); return true;
+}
+function jebMoveItem(id,pocketId,toIndex){
+  _jebEnsure(); const it=_jebItem(id); if(!it||!_jebPocket(pocketId)) return false;
+  const now=_jebNow(), from=it.pocketId, list=jebItems(pocketId).filter(x=>x.id!==id);
+  list.splice(Math.max(0,Math.min(list.length,toIndex|0)),0,it);
+  if(from!==pocketId){ it.pocketId=pocketId; it.updatedAt=now; }
+  _jebRenumber(list,now);
+  if(from!==pocketId) _jebRenumber(jebItems(from),now);   /* close the gap it left */
+  persist(); return true;
+}
+/* one item to Trash (no persist): the entry, its tombstone, out of DB.jeb */
+function _jebTrashItem(it,at){
+  DB.trash.push({id:uid(),type:'jebItem',item:JSON.parse(JSON.stringify(it)),deletedAt:at});
+  _addTombstones([it.id],at);
+  DB.jeb=DB.jeb.filter(x=>x.id!==it.id);
+}
+function jebDeleteItem(id){
+  _jebEnsure(); const it=_jebItem(id); if(!it) return false;
+  _jebTrashItem(it,_jebNow()); persist(); return true;
+}
+function jebClearDone(pocketId){
+  _jebEnsure(); const done=jebItems(pocketId).filter(i=>i.done); if(!done.length) return 0;
+  const at=_jebNow(); done.forEach(i=>_jebTrashItem(i,at)); persist(); return done.length;
+}
+/* → Note: the note is created and the item removed in ONE persist(). The item
+   gets a tombstone and NO Trash entry — its content lives on in the note. If
+   the note cannot be built, the item stays. Returns the new note id, or null. */
+function jebToNote(id){
+  _jebEnsure(); const it=_jebItem(id); if(!it) return null;
+  let note;
+  try{
+    const lines=String(it.text==null?'':it.text).split(/\r?\n/);
+    const pk=_jebPocket(it.pocketId), now=_jebNow();
+    note={id:uid(),title:(lines[0]||'').slice(0,120),
+      content:lines.slice(1).filter(l=>l.trim()!=='').map(l=>'<p>'+esc(l)+'</p>').join(''),
+      folderIds:(it.folderIds||[]).filter(fid=>DB.folders.some(f=>f.id===fid)),tags:(it.tags||[]).slice(),
+      fromJeb:{pocket:pk?pk.name:'',at:now},createdAt:it.createdAt||now,updatedAt:now};
+    if(it.kind){ note.kind=it.kind; note.kinds=[it.kind]; }
+    if(it.journal) _ensureJournalTag(note);
+    if(!note.title&&!note.content) note.title='Untitled';
+    DB.articles.push(note);
+  }catch(e){ console.error('jebToNote:',e); return null; }
+  _addTombstones([id],_jebNow());
+  DB.jeb=DB.jeb.filter(x=>x.id!==id);
+  persist(); return note.id;
+}
 function openTrash(){
   const m=document.getElementById('trash-modal');
   m.style.display='flex';
@@ -21734,8 +21874,11 @@ function renderTrashModal(){
     return;
   }
   body.innerHTML = items.map(t=>{
-    const icon = t.type==='article'?'📄':'📁';
-    const nm = esc(t.type==='article'?t.item.title:(t.item.name||'Unnamed'));
+    const icon = t.type==='article'?'📄':t.type==='jebItem'||t.type==='jebPocket'?'🗂':'📁';
+    const nm = esc(t.type==='article'?t.item.title
+      :t.type==='jebItem'?'Jeb item: '+String(t.item.text||'').split(/\r?\n/)[0].slice(0,60)   /* v04.98 */
+      :t.type==='jebPocket'?'Jeb pocket: '+(t.item.name||'Unnamed')
+      :(t.item.name||'Unnamed'));
     const age = fmtD(t.deletedAt);
     let sub = `Deleted ${age}`;
     if(t.type==='folder'){
@@ -21769,6 +21912,24 @@ function restoreItem(tid){
       entry.item.folderIds = entry.item.folderIds.filter(fid=>DB.folders.find(f=>f.id===fid));
       entry.item.updatedAt=_now;
       DB.articles.push(entry.item);
+    }
+  } else if(entry.type==='jebItem'||entry.type==='jebPocket'){
+    /* v04.98 — a fresh updatedAt that is certainly past any tombstone for it */
+    _jebEnsure();
+    const it=entry.item, stamp=_now>(entry.deletedAt||'')?_now:new Date(Date.parse(entry.deletedAt)+1).toISOString();
+    it.updatedAt=stamp;
+    if(entry.type==='jebPocket'){
+      if(!_jebPocket(it.id)) DB.jebPockets.push(it);   /* comes back empty */
+    } else if(!_jebItem(it.id)){
+      if(!_jebPocket(it.pocketId)){
+        const first=jebPockets()[0];
+        it.pocketId=first?first.id:null;
+        if(!first){   /* no pocket at all: bring the original one back, empty */
+          const np={id:uid(),name:'Restored',icon:'✶',color:'#FFF1A8',order:0,createdAt:stamp,updatedAt:stamp};
+          DB.jebPockets.push(np); it.pocketId=np.id;
+        }
+      }
+      DB.jeb.push(it);
     }
   } else {
     // Restore root folder
@@ -23566,8 +23727,13 @@ function mergeDB(local, remote){
   if(!local||typeof local!=="object") return remote;
   const out=Object.assign({}, local);
   ["articles","folders","sections","calEvents","calCategories","noteKinds","noteKindCats","myFavCats",
-   "folderGroups"/* v03.81 */]
+   "folderGroups"/* v03.81 */,"jebPockets","jeb"/* v04.98 */]
     .forEach(k=>{ out[k]=_mergeById(local[k], remote[k], "updatedAt"); });
+  /* v04.98 — neither side has the Jeb keys (a notebook from before Jeb merged
+     with another): do not invent an EMPTY array, because _jebSeed() seeds the
+     four default pockets only when the key is absent, and an empty one is
+     how the owner's "I emptied it" looks. */
+  ['jebPockets','jeb'].forEach(k=>{ if(!(k in local)&&!(k in remote)) delete out[k]; });
   out.trash=_mergeById(local.trash, remote.trash, "deletedAt");
   out.tombstones=_mergeById(local.tombstones, remote.tombstones, "deletedAt");
   out.globalTags=_mergeStrs(local.globalTags, remote.globalTags);
@@ -23671,13 +23837,16 @@ function mergeDB(local, remote){
   /* v04.68 — and the other collections that have no Trash: a deleted
      section, Note Type, Note Type group, favourites category, calendar event
      or calendar category stays deleted (tombstoned by _stampRecordTouches). */
-  ['sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats'].forEach(k=>{
+  ['sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','jebPockets','jeb'/* v04.98 */].forEach(k=>{
     if(Array.isArray(out[k])) out[k]=out[k].filter(_alive);
   });
   /* drop tombstones whose primary record is active again (edited after deletion) */
   const activeMap={};
   (out.articles||[]).forEach(a=>{ if(a&&a.id!=null) activeMap[a.id]=1; });
   (out.folders ||[]).forEach(f=>{ if(f&&f.id!=null) activeMap[f.id]=1; });
+  /* v04.98 — a Jeb item or pocket restored from Trash is alive again: its Trash entry goes */
+  (out.jebPockets||[]).forEach(f=>{ if(f&&f.id!=null) activeMap[f.id]=1; });
+  (out.jeb       ||[]).forEach(f=>{ if(f&&f.id!=null) activeMap[f.id]=1; });
   out.trash=(out.trash||[]).filter(t=>{ if(!t) return true; const rid=t.item&&t.item.id!=null?t.item.id:t.id; return !activeMap[rid]; });
   /* v04.68 — an entry permanently deleted from Trash on either side stays
      out of Trash (see _tombstoneTrashEntryId). Only entries with an .item
@@ -24980,7 +25149,7 @@ function _syncDigest(d){
     if(Array.isArray(v))return '['+v.map(stable).join(',')+']';
     return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}'; };
   const parts=[];
-  ['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','trash','tombstones'].forEach(k=>{
+  ['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','jebPockets','jeb','trash','tombstones'].forEach(k=>{
     parts.push(k+'='+((d[k]||[]).map(r=>r?(r.id+'@'+(r.updatedAt||r.deletedAt||'')):'').sort().join(',')));
   });
   ['themeAt','tagColorsAt','uiAt','globalTagsAt','globalTagsX','tabsAt','tabsX'].forEach(k=>parts.push(k+'='+stable(d[k]||{})));
