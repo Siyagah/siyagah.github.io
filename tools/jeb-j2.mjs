@@ -52,6 +52,7 @@ try {
   /* ══ 60a — the bar ══ */
   if (want('60a')) await each(async (d, vp) => {
     const t = `60a@${vp.name}`;
+    await sleep(800);   /* the sidebar's own width transition (0.2s) has finished */
     const names = await chipCounts(d);
     check(names.join('|') === 'Quick tasks:2|Ideas:1|Links to read:0|Shopping:0', `${t} the bar has the 4 seeded pockets in order with the right not-done counts`, names.join('|'));
     const bar = await rect(d, '#jeb-bar');
@@ -120,6 +121,8 @@ try {
     if (vp.touch) await d.page.touchscreen.tap(out.x, out.y); else await d.page.mouse.click(out.x, out.y);
     await sleep(250);
     check(!(await on(d, () => document.getElementById('jeb-panel').classList.contains('on'))), `${t} a tap outside closes it`);
+    /* the tap may have landed on a field (a phone then hides the bar for the keyboard, by design — 60h) */
+    await on(d, () => { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); }); await sleep(250);
     /* add */
     await openPanel(d, vp, 'Quick tasks');
     await d.page.locator('#jeb-add-in').click();
@@ -134,7 +137,7 @@ try {
     await sleep(300);
     const st = await jebState(d);
     const two = st.i.find((x) => x.text === 'L1\nL2');
-    check(!!two && st.i.filter((x) => x.pocketId === 'jp-task').length === 7, `${t} Shift+Enter keeps two lines in ONE item`, JSON.stringify(st.i.map((x) => x.text)));
+    check(!!two && st.i.filter((x) => x.pocketId === 'jp-task').length === 6, `${t} Shift+Enter keeps two lines in ONE item`, JSON.stringify(st.i.map((x) => x.text)));
     noErr(d, t);
   });
 
@@ -172,8 +175,9 @@ try {
     await act(d, vp, '#trash-body .trash-row:has-text("Alpha edited") button:has-text("Restore")'); await sleep(400);
     await on(d, () => { closeTrash(); });
     st = await jebState(d);
-    check(st.i.some((x) => x.id === 't1' && x.text === 'Alpha edited') && (await chipCounts(d))[0] === 'Quick tasks:2', `${t} restoring it from the Trash modal brings it back (bar count 2)`, (await chipCounts(d)).join('|'));
-    /* clear done */
+    check(st.i.some((x) => x.id === 't1' && x.text === 'Alpha edited') && (await chipCounts(d))[0] === 'Quick tasks:1', `${t} restoring it from the Trash modal brings it back (Quick tasks 1: Bravo moved to Ideas)`, (await chipCounts(d)).join('|'));
+    /* clear done (the Trash modal was outside the panel, so the panel closed — reopen it) */
+    await openPanel(d, vp, 'Quick tasks');
     const foot = await on(d, () => document.querySelector('#jeb-panel .jeb-foot').textContent);
     check(/Clear done \(1\)/.test(foot), `${t} the foot offers "Clear done (1)"`, foot);
     await act(d, vp, '#jeb-panel .jeb-foot button'); await sleep(300);
@@ -187,9 +191,9 @@ try {
     const t = `60e@${vp.name}`;
     await openPanel(d, vp, 'Quick tasks');
     /* order now: Alpha, Bravo, Done one -> drag "Done one" above "Alpha" */
-    const g = await rect(d, '#jeb-panel .jeb-it:has(.jeb-tx:text-is("Done one")) .jeb-grip');
-    const a = await rect(d, '#jeb-panel .jeb-it:has(.jeb-tx:text-is("Alpha"))');
-    const from = { x: g.l + g.w / 2, y: g.t + g.h / 2 }, to = { x: from.x, y: a.t + 4 };
+    const g = await d.page.locator('#jeb-panel .jeb-it:has(.jeb-tx:text-is("Done one")) .jeb-grip').boundingBox();
+    const a = await d.page.locator('#jeb-panel .jeb-it:has(.jeb-tx:text-is("Alpha"))').boundingBox();
+    const from = { x: g.x + g.width / 2, y: g.y + g.height / 2 }, to = { x: from.x, y: a.y + 4 };
     if (vp.touch) {
       const pts = Array.from({ length: 12 }, (_, i) => ({ x: from.x, y: from.y + (to.y - from.y) * ((i + 1) / 12) }));
       await touchDrag(d.page, [from, ...pts]);
