@@ -70,7 +70,7 @@ const deckOn = (d) => on(d, () => { const e = document.getElementById('jeb-deck'
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
 const each = async (fn, db) => { for (const vp of VPS) { const d = await open(vp, '/?jeb=1', db ? db() : seed()); try { await fn(d, vp); } finally { await d.ctx.close(); } } };
 const chip = (pid) => `#jeb-bar .jeb-chip[data-pid="${pid}"] .jeb-main`;
-const stripTimes = (o) => JSON.parse(JSON.stringify(o, (k, v) => (/At$|^ver$/.test(k) ? 0 : v)));
+const stripTimes = (o) => JSON.parse(JSON.stringify(o, (k, v) => (/At$|^at$|^ver$/.test(k) ? 0 : v)));
 
 try {
   /* ══ 65a — the head ══ */
@@ -80,7 +80,7 @@ try {
     try {
       const jh = await on(j, () => ({ man: document.querySelector('link[rel="manifest"]').getAttribute('href'), title: document.title, app: _JEB_APP, cls: document.documentElement.classList.contains('jeb-app'),
         ati: document.querySelector('meta[name="apple-mobile-web-app-title"]').content, touch: document.querySelector('link[rel="apple-touch-icon"][sizes]').getAttribute('href'), ico: document.querySelector('link[rel="icon"][type="image/svg+xml"]').getAttribute('href'),
-        fallback: document.querySelector('link[rel="apple-touch-icon"]:not([sizes])').getAttribute('href').slice(0, 24), nd: !!document.getElementById('nd') }));
+        fallback: document.querySelector('link[rel="apple-touch-icon"]:not([sizes])').getAttribute('href').slice(0, 25), nd: !!document.getElementById('nd') }));
       check(jh.man === '/manifest-jeb.json' && jh.title === 'Siyagah Jeb' && jh.app && jh.cls && jh.ati === 'Jeb' && jh.touch === '/icons/apple-touch-icon-jeb.png' && jh.ico === '/icons/icon-jeb.svg',
         `${t} /?jeb=1: manifest-jeb.json, title "Siyagah Jeb", Jeb icons, _JEB_APP and html.jeb-app`, JSON.stringify(jh));
       check(jh.fallback === 'data:image/svg+xml;base64' && jh.nd, `${t} /?jeb=1: the data-URI fallback icon and <script id="nd"> are untouched`);
