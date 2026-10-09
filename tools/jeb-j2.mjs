@@ -36,7 +36,7 @@ const browser = await pw.chromium.launch();
 const mkItem = (id, pocketId, text, order, done = false) => ({ id, pocketId, text, done, folderIds: [], tags: [], kind: null, journal: false, order, createdAt: T0, updatedAt: T0 });
 /* Alpha, Bravo open + "Done one" done in Quick tasks (count 2); Idea in Ideas (count 1) */
 const baseItems = () => [mkItem('t1', 'jp-task', 'Alpha', 0), mkItem('t2', 'jp-task', 'Bravo', 1), mkItem('t3', 'jp-task', 'Done one', 2, true), mkItem('i1', 'jp-idea', 'Idea', 0)];
-const longNote = () => ({ id: 'long1', title: 'A long note', content: Array.from({ length: 140 }, (_, i) => `<p>Paragraph number ${i} of the long note, with enough words to wrap on a phone screen.</p>`).join('') + '<p id="the-end">THE END</p>', folderIds: ['f1'], tags: [], createdAt: T0, updatedAt: T0, kind: 'general' });
+const longNote = () => ({ id: 'long1', title: 'A long note', content: '<h2>One</h2><h2>Two</h2><h2>Three</h2>' + Array.from({ length: 140 }, (_, i) => `<p>Paragraph number ${i} of the long note, with enough words to wrap on a phone screen.</p>`).join('') + '<p id="the-end">THE END</p>', folderIds: ['f1'], tags: [], createdAt: T0, updatedAt: T0, kind: 'general' });
 const seed = (extra) => { const db = seedDB(T0); db.jeb = baseItems(); db.articles.push(longNote()); if (extra) extra(db); return db; };
 const dev = (cloud, name, vp, db) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed());
 const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
@@ -310,7 +310,10 @@ try {
         check((await shown()) === '56px', '60h@390 blurring the float window\'s editor brings it back');
       } else check(false, '60h@390 a float window with a .fw-ed could be opened', 'fw=' + fw);
       /* Jeb's own input keeps the bar */
-      await on(d, () => { closeAllFloats(); });
+      await on(d, () => { closeAllFloats(); if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); });
+      await sleep(300);
+      const shownBefore = await shown();
+      check(shownBefore === '56px', '60h@390 with nothing focused the bar is up again', String(shownBefore));
       await act(d, vp, '#jeb-bar .jeb-chip[title="Ideas"]'); await sleep(400);
       await d.page.locator('#jeb-add-in').tap(); await sleep(300);
       check((await shown()) === '56px', '60h@390 focusing the panel\'s own input does NOT hide the bar', String(await shown()));
@@ -424,20 +427,37 @@ try {
     /* fw-closeall / fw-switch: two float windows */
     await on(d, () => { popOutNote('a1'); popOutNote('a2'); });
     await sleep(900);
+    /* opening a window may focus a field; a phone then hides the bar for the keyboard (60h) — measure with it up */
+    await on(d, () => { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); });
+    await sleep(300);
     const fs = await rect(d, '#fw-switch'), fc = await rect(d, '#fw-closeall');
     const chip = fs || fc;
     check(chip && chip.b <= barTop + 0.5, `${t} ${fs ? '#fw-switch' : '#fw-closeall'} sits above the bar (moves up by --jeb-h)`, JSON.stringify({ chip, barTop }));
+    if (fs) {
+      const fwin = await on(d, () => Math.max(...[...document.querySelectorAll('.float-win')].map((w) => w.getBoundingClientRect().bottom)));
+      check(fwin <= fs.t + 1, `${t} the float-window sheets stop at the switcher, which is above the bar`, JSON.stringify({ fwin, switcherTop: fs.t, barTop }));
+    }
     await on(d, () => { closeAllFloats(); });
-    /* toc-float-btn */
-    const tb = await on(d, () => { const b = document.getElementById('toc-float-btn'); if (!b) return null; const cs = getComputedStyle(b); return { disp: cs.display, bottom: cs.bottom, r: b.getBoundingClientRect().bottom }; });
-    if (tb && tb.disp !== 'none') check(tb.r <= barTop + 0.5, `${t} #toc-float-btn sits above the bar (76px + --jeb-h)`, JSON.stringify({ tb, barTop }));
-    else check(tb !== null, `${t} #toc-float-btn is not shown on this layout (nothing to overlap)`, JSON.stringify(tb));
+    /* toc-float-btn: only under 900px and for a note with 3+ headings */
+    await on(d, () => { selArt('long1'); popOutNote('long1'); });   /* Contents is a float-window / pop-up feature, and needs a selected note */
+    await sleep(900);
+    await on(d, () => { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); _tocMobileCheck(); });
+    await sleep(400);
+    const tb = await on(d, () => { const b = document.getElementById('toc-float-btn'); if (!b) return null; return { r: b.getBoundingClientRect().bottom, scan: _tocScan().length }; });
+    if (vp.w < 900 && !tb) console.log('DBG toc', JSON.stringify(await on(d, () => ({ art: ST.article, scan: _tocScan().length, iw: innerWidth }))));
+    if (vp.w < 900) check(!!tb && tb.r <= barTop - 60, `${t} #toc-float-btn sits above the bar (76px + --jeb-h)`, JSON.stringify({ tb, barTop }));
+    else check(tb === null, `${t} #toc-float-btn is not used on this layout (>= 900px): nothing to overlap`, JSON.stringify(tb));
+    await on(d, () => { closeAllFloats(); if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); });
+    await sleep(400);
     /* the panel: over Pane 3, ends at the bar; the TOC drawer, tab picker and modals sit OVER the bar on purpose */
     await openPanel(d, vp, 'Ideas');
     const pr = await rect(d, '#jeb-panel');
     check(Math.abs(pr.b - barTop) <= 1, `${t} the panel rests on the bar, not under it`, JSON.stringify({ pr, barTop }));
-    const z = await on(d, () => { const g = (s) => { const e = document.querySelector(s); return e ? +getComputedStyle(e).zIndex : null; }; return { bar: g('#jeb-bar'), drawer: g('#toc-drawer'), modal: g('#trash-modal'), tab: g('#tab-picker') }; });
-    check(z.drawer > z.bar && z.modal > z.bar && z.tab > z.bar, `${t} the TOC drawer, modals and the tab picker are stacked above the bar (over it on purpose)`, JSON.stringify(z));
+    const z = await on(d, () => {
+      const rule = (sel) => { for (const ss of document.styleSheets) { let rs; try { rs = ss.cssRules; } catch (e) { continue; } for (const r of rs) if (r.selectorText === sel && r.style.zIndex) return +r.style.zIndex; } return null; };
+      return { bar: rule('#jeb-bar'), drawer: rule('#toc-drawer'), modal: rule('#trash-modal'), tab: rule('#tab-picker'), ov: rule('#ov') };
+    });
+    check(z.bar === 140 && z.drawer > z.bar && z.modal > z.bar && z.tab > z.bar && z.ov > z.bar, `${t} the TOC drawer, the tab picker and modals are stacked above the bar (over it on purpose)`, JSON.stringify(z));
     noErr(d, t);
   });
 } catch (e) {
