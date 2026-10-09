@@ -8919,6 +8919,16 @@ the 700,000-byte split; ~300 bytes an item, so a few hundred more items will
 split it into `recparts`, as designed); phone ×4 full merge 10 ms, `persist()`
 141 ms then 40 ms, one `jebAddItem` 56 ms.
 
+**Changed in review:** the full `app-check` came back 2330/2332 twice; the
+only failure both times was 52b's "the merge code is exactly the v04.90 text"
+(and its exit line). That check guards S1d's faster assembly against changing
+`mergeDB()` by accident; J1 changed `mergeDB()` on purpose (the Jeb lists and
+"never invent an empty Jeb array"), and the builder's run never reached
+`--only 52`. Updated in place in `tools/s1d-checks.mjs`: the baseline moves
+from v04.90 (`42e1165`) to v04.98 (`0d7ddc4`), with a comment that a round
+changing `mergeDB()` on purpose moves it in the same round. 52b's 1,400 random
+merges (faster vs full assembly, both directions) pass unchanged.
+
 **Completed by the Architect.** The builder pushed the implementation and the
 checks, then stopped before its own `--only` runs and the record (the S2c/S2d
 pattern again). The Architect ran the checks, wrote this entry and opened the
