@@ -8938,3 +8938,38 @@ PR from `claude/awesome-archimedes-dsqf92`.
 (backlog); the standalone Siyagah Jeb.
 
 **Totals:** full `app-check`: (Architect, in review).
+
+## v04.99 — a note being read keeps its place on a tablet and a phone (9 Oct 2026)
+
+The owner: "In Tab (not sure in mob), while reading a note scrolling, screen
+jumps to the top. FIX." Built by the Architect directly (small and urgent), while
+the Builder works on J2 (#147), which will now ship as v05.00.
+
+**Diagnosed first, by measurement.** A long note in the read view, scrolled down
+by a real mouse wheel at 820, 390 and 1440. On a tablet and a phone the element
+that scrolls is `#p3c` itself; on a PC it is the `.avw` inside it.
+`_renderPreserveEdit()` (v03.70.01), which every sync merge calls, saved and
+restored only `.avw`. So on a tablet or a phone **every background redraw put the
+note back at the top**: 3,200px → 0 measured on both. The phone has it too; the
+owner was not sure. A PC kept its place through a sync, but not through a plain
+`render()`.
+
+**The fix:** `renderP3C()` is now a thin wrapper around the old body
+(`_renderP3CInner()`). It saves both scroll positions and restores them when it
+redraws the SAME note in reading mode, so every caller is covered, not only the
+sync path. A different note, or a switch between reading and editing, still
+starts at the top. `_renderPreserveEdit()` is unchanged.
+
+**Checks:** app-check block `61-reader-keeps-place`, at all three sizes, by real
+wheel scrolling from a booted app. The place survives the sync redraw, a full
+`render()`, `renderP3C()` alone, and a real `mergeDB()` of another device's
+change followed by the sync redraw. A different note opens at its top.
+`--only 61` **21/21**. Unpatched (v04.98 `index.html`): **10/21**. All four
+redraws fail on the phone and tablet; on the PC the sync redraw passes and the
+rest fail (a plain `render()` reset it, and the later checks start from there).
+
+**Not done:** an edit-mode redraw (the editor is not rebuilt by a sync merge, by
+design) and the float windows' own scroll (they are not rebuilt by a merge).
+
+**Totals:** full `app-check`: (Architect, in review).
+
