@@ -11800,6 +11800,22 @@ await r.block('62-write-below-folded-end', async () => {
   }
 });
 
+/* 63 — v05.02, J3: 📎 Attach, → Note and the "From Jeb" Smart View. tools/jeb-j3.mjs runs 63a–63g at 390/820/1440
+   with real clicks, taps and typing: the Attach sheet and its four tabs, the chips on a row, a reload, two devices,
+   → Note and its toast and Open, an empty item, the sidebar Smart View (by a real click), the "👝 from" label and
+   its contrast on five presets, and the layout. Each printed ok/FAIL line becomes one check. */
+await r.block('63-jeb-attach-note', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./jeb-j3.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 60, 'the Jeb J3 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'J3: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Jeb J3 check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
