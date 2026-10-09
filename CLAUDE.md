@@ -23,7 +23,7 @@ must never accumulate here instead of there.
   gone), so they ride in `_head~0`. Trash types `jebItem`/`jebPocket` (a pocket
   deletes only when empty); `jebToNote` tombstones the item, no Trash. No UI.
   `--only 59` **74/74** (22 sync-audit ops; the real v04.97 build loses nothing).
-  Full `app-check`: (Architect, in review).
+  Architect: full `app-check` **2332/2332** on the final head (2330/2332 ×2 before 52b's baseline moved); unpatched `--only 59` 0/3.
 - **v04.97** (8 Oct 2026) — S3b, the sidebar Tags section opens to "Find a
   tag…" + the 20 most-used + "All tags (N)" (issue #142). 25+ tags get the new
   shape (≤ 24 list in full as before); typing filters all tags (≤ 50 + "+N

@@ -8937,4 +8937,8 @@ PR from `claude/awesome-archimedes-dsqf92`.
 **Not done:** any UI (J2–J4); the "From Jeb" Smart View (J3); `_S1_COLLS`
 (backlog); the standalone Siyagah Jeb.
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` **2330/2332, twice** on `cbe3a57` (the only failure: 52b's merge-code baseline, changed in review as recorded above), then **2332/2332** on the final head `88a6e1d`; `--only 59` 74/74, `--only 32` 4/4, `--only 51` 111/111, `--only 52b` 7/7; `ship-check` 13/13; unpatched (v04.97 `index.html` + `sw.js`) `--only 59` 0/3.
+
+## v04.99 — J2, the Jeb bar and the pocket panel (issue #147)
+
+*(stub — the full entry is written at the end of the round)*
