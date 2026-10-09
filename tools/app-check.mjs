@@ -11741,6 +11741,65 @@ await r.block('61-reader-keeps-place', async () => {
   }
 });
 
+/* ══ 62 — v05.01: a click below a folded ending writes there, without opening it ══
+   The owner: "why i can't put my cursor at the bottom? it opens the last
+   heading and jumps at the bottom." A real click in the editor below the last
+   (folded) heading used to open that section and scroll to its end. Now it
+   gives a line marked as the note's tail (data-tail): the fold stays shut, the
+   view stays put, and the tail belongs to no section anywhere (_isSecEnd). */
+await r.block('62-write-below-folded-end', async () => {
+  const long = Array.from({ length: 30 }, (_, i) => `<p>Tawakkul paragraph ${i}. ${'Trust in Allah. '.repeat(12)}</p>`).join('');
+  const db = seedDB();
+  db.articles[0].content = `<p>Bismillah!</p><p>Al-Hamdulillah!</p><h2>1st PART - The Sovereignty of Allah</h2><p>Part one text.</p><h2>PART2: Tawakkul on Allah</h2><h3>Hadith of ALLAH BEING RABB</h3><p>Hadith text.</p><h3>Tawakkul on Allah</h3>${long}`;
+  db.articles[0].sectionState = { 0: true, 1: false, 2: true, 3: true };
+  for (const vp of VIEWPORTS) {
+    const app = await openApp({ viewport: { width: vp.width, height: vp.height }, db, hasTouch: vp.width < 1200 });
+    const p = app.page;
+    try {
+      await p.evaluate(() => { selArt('a1'); ST.editing = true; render(); });
+      await p.waitForTimeout(600);
+      const b = await p.evaluate(() => { const ed = document.getElementById('ed'); const kids = [...ed.children].filter((c) => { const r = c.getBoundingClientRect(); return r.width || r.height; }); const last = kids[kids.length - 1].getBoundingClientRect(); const er = ed.getBoundingClientRect(); return { lastBottom: last.bottom, edBottom: er.bottom, x: er.left + 40, scroll: document.getElementById('p3c').scrollTop }; });
+      await p.mouse.click(b.x, Math.min(b.lastBottom + 40, b.edBottom - 5));
+      await p.waitForTimeout(300);
+      await p.keyboard.type('My conclusion at the bottom');
+      await p.keyboard.press('Enter');
+      await p.keyboard.type('A second line');
+      await p.waitForTimeout(300);
+      const a = await p.evaluate(() => { const ed = document.getElementById('ed'); const art = DB.articles.find((x) => x.id === 'a1'); const tails = [...ed.querySelectorAll('[data-tail]')]; return { state: art.sectionState, tails: tails.map((t) => ({ text: t.textContent, h: t.getBoundingClientRect().height })), scroll: document.getElementById('p3c').scrollTop }; });
+      r.check(a.state[3] === true, `62 ${vp.name}: a real click below the last folded heading leaves it folded`, JSON.stringify(a.state));
+      r.check(Math.abs(a.scroll - b.scroll) <= 40, `62 ${vp.name}: the view does not jump (${b.scroll} → ${a.scroll}px)`, `${b.scroll} → ${a.scroll}`);
+      r.check(a.tails.length === 2 && a.tails[0].text === 'My conclusion at the bottom' && a.tails[1].text === 'A second line' && a.tails.every((t) => t.h > 0), `62 ${vp.name}: the typed lines show under the folded heading, both marked as the tail (Enter keeps the mark)`, JSON.stringify(a.tails));
+      /* save, then the read view: the tail shows below the folded sections, outside every section */
+      await p.evaluate(() => { saveArt(); ST.editing = false; render(); });
+      await p.waitForTimeout(500);
+      const rd = await p.evaluate(() => { const art = DB.articles.find((x) => x.id === 'a1'); const t = [...document.querySelectorAll('#p3c [data-tail]')]; return { saved: (art.content.match(/data-tail/g) || []).length, endsWithTail: /data-tail="1">A second line<\/p>\s*$/.test(art.content), shown: t.map((x) => ({ text: x.textContent, h: x.getBoundingClientRect().height, inSec: !!x.closest('.col-sec') })) }; });
+      r.check(rd.saved === 2 && rd.endsWithTail, `62 ${vp.name}: the note is saved with the two tail lines at its end`, JSON.stringify(rd));
+      r.check(rd.shown.length === 2 && rd.shown.every((x) => x.h > 0 && !x.inSec), `62 ${vp.name}: the read view shows the tail below the folded headings, inside no section`, JSON.stringify(rd.shown));
+      /* open the last heading: its own content comes first, the tail after it */
+      const order = await p.evaluate(() => { const art = DB.articles.find((x) => x.id === 'a1'); art.sectionState[3] = false; render(); const all = [...document.querySelectorAll('#p3c p')].map((x) => x.textContent); return { lastPara: all.indexOf('Tawakkul paragraph 29. ' + 'Trust in Allah. '.repeat(12).trim()) >= 0 ? 'found' : all.findIndex((t) => t.startsWith('Tawakkul paragraph 29')), tailAt: all.indexOf('My conclusion at the bottom'), p29: all.findIndex((t) => t.startsWith('Tawakkul paragraph 29')) }; });
+      r.check(order.p29 >= 0 && order.tailAt > order.p29, `62 ${vp.name}: opening the last heading shows its content first and the tail after it`, JSON.stringify(order));
+      /* copying the last section does not carry the tail along */
+      const sec = await p.evaluate(() => { ST.editing = true; render(); const ed = document.getElementById('ed'); const hs = ed.querySelectorAll('h3'); return _secNodesOf(hs[hs.length - 1]).map((n) => n.textContent || '').join('|'); });
+      r.check(sec.includes('Tawakkul paragraph 29') && !sec.includes('My conclusion'), `62 ${vp.name}: the last section's nodes stop before the tail (copy and drag use the same rule)`, sec.slice(-120));
+      r.check(app.errors.length === 0, `62 ${vp.name}: no page errors`, app.errors.slice(0, 3).join(' · '));
+    } finally { await app.close(); }
+  }
+  /* unfolded ending: unchanged behaviour, a plain line and no tail mark */
+  {
+    const db2 = seedDB();
+    const app = await openApp({ viewport: { width: 1440, height: 900 }, db: db2 });
+    const p = app.page;
+    try {
+      await p.evaluate(() => { selArt('a1'); ST.editing = true; render(); });
+      await p.waitForTimeout(500);
+      const b = await p.evaluate(() => { const ed = document.getElementById('ed'); const r = ed.lastElementChild.getBoundingClientRect(); const er = ed.getBoundingClientRect(); return { y: Math.min(r.bottom + 40, er.bottom - 5), x: er.left + 40 }; });
+      await p.mouse.click(b.x, b.y); await p.keyboard.type('plain end');
+      const t = await p.evaluate(() => document.querySelectorAll('#ed [data-tail]').length);
+      r.check(t === 0, '62: a note that does NOT end folded gets a plain line at its end, no tail mark (as before)', `${t} tail marks`);
+    } finally { await app.close(); }
+  }
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

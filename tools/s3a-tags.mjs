@@ -430,7 +430,7 @@ function seed(page, NT, NN) {
   }, { NT, NN });
 }
 const med = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
-async function timeIt(page, src, n = 3, pre = '', post = '') {
+async function timeIt(page, src, n = 15, pre = '', post = '') {   /* v05.01: 15 samples — a 3- or 5-sample median of a frame-wait flickered (CHANGELOG v05.01) */
   const out = [];
   for (let i = 0; i < n; i++) {
     out.push(await page.evaluate(async ({ src, pre, post }) => {
@@ -456,19 +456,19 @@ async function speed() {
       if (vp.throttle > 1) { const cdp = await p.context().newCDPSession(p); await cdp.send('Emulation.setCPUThrottlingRate', { rate: vp.throttle }); }
       const r = { info };
       r.getAllTags = await timeIt(p, 'getAllTags()');
-      r.renderTree_tagsClosed = await timeIt(p, 'renderTree()', 5, 'ST.tagOpen=false');
-      r.renderTree_tagsOpen = await timeIt(p, 'renderTree()', 3, 'ST.tagOpen=true');
+      r.renderTree_tagsClosed = await timeIt(p, 'renderTree()', 15, 'ST.tagOpen=false')  ;
+      r.renderTree_tagsOpen = await timeIt(p, 'renderTree()', 15, 'ST.tagOpen=true');
       await p.evaluate(() => { ST.tagOpen = false; renderTree(); });
-      r.sidebarSearch_keystroke = await timeIt(p, "ST.search='fiq';renderTree();ST.search=''", 3);
+      r.sidebarSearch_keystroke = await timeIt(p, "ST.search='fiq';renderTree();ST.search=''", 15);
       await p.evaluate(() => { selArt('n1'); });
       await sleep(300);
-      r.suggest_keystroke = await timeIt(p, "(()=>{const i=document.querySelector('.tag-inp');if(i)showTagSuggest('fi',null,i);})()", 3);
-      r.addTagModal_open = await timeIt(p, "promptAddArtTag('n2')", 3, '', 'closeModal()');
+      r.suggest_keystroke = await timeIt(p, "(()=>{const i=document.querySelector('.tag-inp');if(i)showTagSuggest('fi',null,i);})()", 15);
+      r.addTagModal_open = await timeIt(p, "promptAddArtTag('n2')", 15, '', 'closeModal()');
       await p.evaluate(() => promptAddArtTag('n2'));
       r.addTagModal_rows = await p.evaluate(() => document.querySelectorAll('#tp-list .ltn-row').length);
-      r.addTagModal_keystroke = await timeIt(p, "tagPickerRender('n2','h')", 5);
+      r.addTagModal_keystroke = await timeIt(p, "tagPickerRender('n2','h')", 15);
       await p.evaluate(() => closeModal());
-      r.imgAttachTag_open = await timeIt(p, 'imgAttachTag(null,60,60)', 3, "ST.article='n2'", 'closeItemMenu()');
+      r.imgAttachTag_open = await timeIt(p, 'imgAttachTag(null,60,60)', 15, "ST.article='n2'", 'closeItemMenu()');
       r.errors = A.errors.slice(0, 5);
       console.log('P57d ' + vp.name + ' ' + JSON.stringify(r));
       const L = (s) => `57d ${vp.name} (${vp.throttle > 1 ? 'CPU x' + vp.throttle + ', ' : ''}3,000 tags / 9,000 notes): ${s}`;

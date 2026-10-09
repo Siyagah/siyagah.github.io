@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.00">
+<meta name="app-version" content="05.01">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3295,7 +3295,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.00</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.01</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -14923,6 +14923,8 @@ function _initCollapsible(body){
   while(i<children.length){
     var n=children[i];
     var level=/^H[1-4]$/.test(n.tagName)?parseInt(n.tagName[1]):0;
+    /* v05.01 — the tail belongs to no section (see _isSecEnd) */
+    if(level===0&&n.hasAttribute&&n.hasAttribute('data-tail')){while(stack.length){html+='</div></div>';stack.pop();}html+=n.outerHTML;i++;continue;}
     if(level===0){html+=n.outerHTML;i++;continue;}
     while(stack.length&&stack[stack.length-1]>=level){html+='</div></div>';stack.pop();}
     var si=secIdx++;var collapsed=state[si]===true;
@@ -15735,11 +15737,22 @@ function _openSpacingPop(ev){
    Copies rich text AND plain text, so it pastes into Word with its
    formatting and into a chat as clean lines. The app's own chrome (fold
    arrows, grips, status badges, a live sheet's grid) is stripped first. */
+/* v05.01 — where a heading's section ENDS: at the next heading of the same or a
+   higher level, or at the note's TAIL. The tail is text the owner wrote below
+   every heading while the last one was folded (a paragraph marked data-tail):
+   it belongs to no section, so no fold hides it, and dragging or copying the
+   last section does not carry it along. The owner: "why i can't put my cursor
+   at the bottom? it opens the last heading and jumps at the bottom." */
+function _isSecEnd(n,level){
+  if(!n||n.nodeType!==1)return false;
+  if(n.hasAttribute&&n.hasAttribute('data-tail'))return true;
+  return /^H[1-4]$/.test(n.tagName)&&parseInt(n.tagName[1])<=level;
+}
 function _secNodesOf(h){
   const hd=h.closest('.col-hd');
   if(hd){const sec=hd.parentElement;const b=sec&&sec.querySelector(':scope>.col-body');return b?[...b.childNodes]:[];}
   const lv=parseInt(h.tagName[1]);const out=[];let n=h.nextSibling;
-  while(n){if(n.nodeType===1&&/^H[1-4]$/.test(n.tagName)&&parseInt(n.tagName[1])<=lv)break;out.push(n);n=n.nextSibling;}
+  while(n){if(_isSecEnd(n,lv))break;out.push(n);n=n.nextSibling;}
   return out;
 }
 function _secClean(wrap){
@@ -15915,7 +15928,7 @@ function _edColApply(ed){
     /* hide following siblings until next heading of level <= this one */
     let firstHidden=null;let n=h.el.nextElementSibling;
     while(n){
-      if(/^H[1-4]$/.test(n.tagName)&&parseInt(n.tagName[1])<=h.level)break;
+      if(_isSecEnd(n,h.level))break;
       if(!firstHidden&&n.textContent.trim())firstHidden=n;
       n.classList.add('ed-col-hidden');
       n=n.nextElementSibling;
@@ -15986,7 +15999,7 @@ function _edBlockDragStart(e,headEl){
   const ed=headEl.closest('#ed,.fw-ed')||document.getElementById('ed');if(!ed)return;
   const level=parseInt(headEl.tagName[1]);
   const nodes=[headEl];let n=headEl.nextElementSibling;
-  while(n){if(/^H[1-4]$/.test(n.tagName)&&parseInt(n.tagName[1])<=level)break;nodes.push(n);n=n.nextElementSibling;}
+  while(n){if(_isSecEnd(n,level))break;nodes.push(n);n=n.nextElementSibling;}
   _edDrag={ed,headEl,level,nodes,startX:e.clientX,startY:e.clientY,moved:false,targetBefore:null,targetLevel:level};
   document.addEventListener('pointermove',_edBlockDragMove);
   document.addEventListener('pointerup',_edBlockDragEnd,{once:true});
@@ -16201,17 +16214,15 @@ function _edPutCaret(p){
   _edRange=r.cloneRange();
   try{p.scrollIntoView({block:'nearest'});}catch(e){}
 }
-/* If the note ENDS inside a collapsed section, a paragraph appended at the
-   end would be hidden again by the next _edColApply() — the user would be
-   typing into a line that vanishes on the next render. Open that section
-   first, which is the honest answer to "I want to write here". */
-function _edRevealTail(ed){
-  const heads=_edColHeads(ed);if(!heads.length)return;
-  const art=_edArtOf(ed);if(!art||!art.sectionState)return;
-  const last=heads[heads.length-1];
-  if(art.sectionState[last.idx]!==true)return;
-  art.sectionState[last.idx]=false;
-  _edColApply(ed);
+/* v05.01 — a click below the end of a note that ENDS inside a folded section
+   used to open that section (_edRevealTail) and jump to its bottom, because a
+   plain paragraph there would belong to the folded section and be hidden by
+   the next _edColApply(). Now the new line is marked as the note's TAIL
+   (data-tail): no section owns it (_isSecEnd), so it shows right under the
+   folded headings, the fold stays shut, and the view does not jump. */
+function _edEndsFolded(ed){
+  const last=ed.lastElementChild;
+  return !!last&&(last.classList.contains('ed-col-hidden')||last.hasAttribute('data-tail'));
 }
 /* How many of a heading's leading children are display-only fold chrome
    (the ⠿ grip and the ▼ arrow injected by _edColInit). Everything that asks
@@ -16271,10 +16282,10 @@ document.addEventListener('click',function(e){
     if(_edIsBlankLine(first))p=first;
     else{p=_edBlankLine();t.insertBefore(p,first);}
   }else if(y>kids[kids.length-1].getBoundingClientRect().bottom){
-    _edRevealTail(t);
-    const last=t.lastElementChild;
-    if(_edIsBlankLine(last))p=last;
-    else{p=_edBlankLine();t.appendChild(p);}
+    const last=t.lastElementChild, tail=_edEndsFolded(t);
+    if(_edIsBlankLine(last)&&!last.classList.contains('ed-col-hidden'))p=last;
+    else{p=_edBlankLine();if(tail)p.setAttribute('data-tail','1');t.appendChild(p);}
+    if(tail){try{_edColApply(t);}catch(e){}}
   }else return;                                /* beside a block — not ours */
   t.focus({preventScroll:true});
   _edPutCaret(p);
