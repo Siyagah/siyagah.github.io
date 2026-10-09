@@ -11833,6 +11833,23 @@ await r.block('64-jeb-cards-choose', async () => {
   r.check(out.status === 0, 'the Jeb J4 check exits cleanly', `exit ${out.status}`);
 });
 
+/* 65 — v05.04, J5: "Siyagah Jeb", the second home-screen icon. tools/jeb-j5.mjs runs 65a–65j at 390/820/1440 with
+   real clicks and taps: the head (manifest, title, icons), Chrome's own reading of both manifests, the layout, the
+   docked panel that never closes to nothing, the ignored bar setting, the remembered view, → Note then ?open=,
+   the 🧰 route from the full app, an identical DB in both modes, and the header's sync/⚠/Install. Each printed
+   ok/FAIL line becomes one check. */
+await r.block('65-jeb-app', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./jeb-j5.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the Jeb J5 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'J5: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Jeb J5 check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
