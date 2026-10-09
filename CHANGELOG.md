@@ -9106,8 +9106,11 @@ not cause it. A direct measurement (15 calls, phone ×4, 3,000 tags) on v04.97,
 v04.98, v04.99, v05.00 and v05.01 gave medians of 20, 20, 17, 16 and 17 ms, with
 single calls up to 42 ms on v04.97 too. So there is no slowdown. The checks took the
 middle of only 5 timings, each including the wait for the next frame, which under
-a ×4 CPU varies by tens of ms. Both now take the middle of **15** timings
-(`tools/s3a-tags.mjs`, `tools/s3b-tags-sidebar.mjs`); the limits are unchanged.
+a ×4 CPU varies by tens of ms. Every timing in both files now takes the middle of **15** samples
+(`tools/s3a-tags.mjs`, `tools/s3b-tags-sidebar.mjs`, including the default); the
+limits are unchanged. The class, not the instance: the final run then failed
+58g's keystroke timing too (52 ms against 50) for the same reason, so the sweep
+covered every `timeIt` call in both files, not only the two that failed first.
 
 **Not done:** the owner's wider "too much instability of the editing panel".
 They were asked to name each thing that jumps, so that each gets diagnosed

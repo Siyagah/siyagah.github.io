@@ -266,7 +266,7 @@ async function small() {
 }
 
 /* 58g — speed */
-async function timeIt(page, src, n = 3, pre = '', post = '') {
+async function timeIt(page, src, n = 15, pre = '', post = '') {   /* v05.01: 15 samples — a 3- or 5-sample median of a frame-wait flickered (CHANGELOG v05.01) */
   const out = [];
   for (let i = 0; i < n; i++) {
     out.push(await page.evaluate(async ({ src, pre, post }) => {
@@ -292,12 +292,12 @@ async function speed() {
       const r = {};
       r.renderTree_closed = await timeIt(p, 'renderTree()', 15, 'ST.tagOpen=false;ST.tagQ=""');
       r.renderTree_open = await timeIt(p, 'renderTree()', 15, 'ST.tagOpen=true;ST.tagQ=""');
-      r.keystroke = await timeIt(p, 'tagFind("fiq")', 5, 'ST.tagOpen=true;renderTree()');
-      r.keystroke_wide = await timeIt(p, 'tagFind("a")', 5);
-      r.render_closed = await timeIt(p, 'render()', 3, 'ST.tagOpen=false;ST.tagQ=""');
-      r.render_open = await timeIt(p, 'render()', 3, 'ST.tagOpen=true;ST.tagQ=""');
+      r.keystroke = await timeIt(p, 'tagFind("fiq")', 15, 'ST.tagOpen=true;renderTree()');
+      r.keystroke_wide = await timeIt(p, 'tagFind("a")', 15);
+      r.render_closed = await timeIt(p, 'render()', 15, 'ST.tagOpen=false;ST.tagQ=""');
+      r.render_open = await timeIt(p, 'render()', 15, 'ST.tagOpen=true;ST.tagQ=""');
       /* the colour change: the same callback showTagClrPicker runs (persist + render) */
-      const colour = (open) => timeIt(p, 'DB.tagColors["fiqh"]="#a05030";DB.tagColorsAt["fiqh"]=Date.now();persist();render()', 3, `ST.tagOpen=${open}`);
+      const colour = (open) => timeIt(p, 'DB.tagColors["fiqh"]="#a05030";DB.tagColorsAt["fiqh"]=Date.now();persist();render()', 15, `ST.tagOpen=${open}`);
       r.colour_closed = await colour(false);
       r.colour_open = await colour(true);
       console.log('P58g ' + vp.name + ' ' + JSON.stringify(r));
