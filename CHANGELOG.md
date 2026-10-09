@@ -9168,4 +9168,8 @@ asserts the panel stays open after → Note. Unpatched run: left to the Architec
 View shows the generic empty line, not the Jeb one. The full `app-check` was not
 run, by the issue's instruction.
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` **2739/2739, twice in a row** on `dad4da3`; `ship-check` 13/13; unpatched (v05.01 `index.html` + `sw.js`) `--only 63` 0/3 (the run stops at the first 📎 tap: there is no such button).
+
+## v05.03 — J4, pockets as sticky cards, All pockets, ☑ Choose (issue #154, 9 Oct 2026)
+
+(Stub — written in full at the end of the round.)

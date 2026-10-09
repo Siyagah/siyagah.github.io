@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.02.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.03.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -24,7 +24,7 @@ must never accumulate here instead of there.
   `sf-jeb` Smart View (`fromJeb`, newest first); "👝 from <pocket>" on the Pane 2
   card and read view. Popover beside the panel on PC/tablet, 80 % sheet on a
   phone. `--only 63` **158/158**, `--only 60` 203/203, `--only 59` 74/74.
-  Full `app-check`: (Architect, in review).
+  Architect: full `app-check` **2739/2739, twice in a row**; unpatched `--only 63` 0/3.
 - **v05.01** (9 Oct 2026) — a click below a folded ending writes there,
   without opening it (the owner: "it opens the last heading and jumps at the
   bottom"). The new line is the note's **tail** (`<p data-tail="1">`);
