@@ -11694,6 +11694,53 @@ await r.block('60-jeb-bar-panel', async () => {
   r.check(out.status === 0, 'the Jeb J2 check exits cleanly', `exit ${out.status}`);
 });
 
+/* ══ 61 — v04.99: reading a note keeps its place through a redraw ══════════════
+   The owner: "In Tab ... while reading a note scrolling, screen jumps to the
+   top". On a tablet and a phone the note being read scrolls in #p3c itself;
+   _renderPreserveEdit() saved only .avw (the PC scroller), so every background
+   redraw (a sync merge) put a tablet or phone back at the top. renderP3C() now
+   keeps the place itself, for every caller, when it redraws the SAME note in
+   reading mode. Real wheel scrolling from a booted app, at all three sizes. */
+await r.block('61-reader-keeps-place', async () => {
+  const db = seedDB();
+  db.articles[0].content = Array.from({ length: 60 }, (_, i) => `<h2>Part ${i}</h2><p>${'Long reading text. '.repeat(40)}</p>`).join('');
+  for (const vp of VIEWPORTS) {
+    const app = await openApp({ viewport: { width: vp.width, height: vp.height }, db, hasTouch: vp.width < 1200 });
+    const p = app.page;
+    try {
+      await p.evaluate(() => { selArt('a1'); });
+      await p.waitForTimeout(400);
+      /* the element that actually scrolls the note, whichever it is on this layout */
+      const pos = async () => p.evaluate(() => { const c = document.getElementById('p3c'), a = c && c.querySelector('.avw'); return Math.max(c ? c.scrollTop : 0, a ? a.scrollTop : 0); });
+      const box = await p.evaluate(() => { const r = document.getElementById('p3c').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 300) }; });
+      await p.mouse.move(box.x, box.y);
+      for (let i = 0; i < 8; i++) { await p.mouse.wheel(0, 400); await p.waitForTimeout(50); }
+      await p.waitForTimeout(250);
+      const start = await pos();
+      r.check(start > 1000, `61 ${vp.name}: a reader can scroll the note down (${start}px)`, `scrolled ${start}`);
+      const results = {};
+      for (const [name, src] of [
+        ['the sync redraw (_renderPreserveEdit)', '_renderPreserveEdit()'],
+        ['a full render()', 'render()'],
+        ['renderP3C() alone', 'renderP3C()'],
+        ['a merge from another device that changes a different note, then the sync redraw',
+         "(()=>{const rem=JSON.parse(JSON.stringify(DB));const b=rem.articles.find(x=>x.id==='a2');b.title+=' (other device)';b.updatedAt=new Date(Date.now()+5000).toISOString();DB=mergeDB(DB,rem);_renderPreserveEdit();})()"],
+      ]) {
+        await p.evaluate((s) => (0, eval)(s), src);
+        await p.waitForTimeout(250);
+        results[name] = await pos();
+      }
+      for (const [name, v] of Object.entries(results)) r.check(Math.abs(v - start) <= 2, `61 ${vp.name}: ${name} keeps the reader's place`, `was ${start}px, now ${v}px`);
+      /* a different note still opens at the top */
+      await p.evaluate(() => { selArt('a2'); });
+      await p.waitForTimeout(300);
+      const other = await pos();
+      r.check(other === 0, `61 ${vp.name}: opening a different note starts at its top`, `${other}px`);
+      r.check(app.errors.length === 0, `61 ${vp.name}: no page errors`, app.errors.slice(0, 3).join(' · '));
+    } finally { await app.close(); }
+  }
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

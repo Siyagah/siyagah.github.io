@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v04.99.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.00.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,7 +16,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
-- **v04.99** (9 Oct 2026) — J2, the Jeb bar and the pocket panel (issue #147).
+- **v05.00** (9 Oct 2026) — J2 (built as v04.99, renumbered), the Jeb bar and the pocket panel (issue #147).
   `#jeb-bar` (scrolling chips: swatch, name, not-done count; ＋ New pocket;
   right-click/long-press menu), `#jeb-panel` (add on top, tick, edit in place,
   ⠿ drag, ⋯ menu, Clear done), all through the J1 API. `--jeb-h` on `<html>`
@@ -27,6 +27,13 @@ must never accumulate here instead of there.
   🧰 → 🎨 Appearance = `DB.theme.jebBar`. Live repaint from `render()`/
   `_renderPreserveEdit()`, never under an item being edited. `--only 60`
   **203/203**, `--only 59` 74/74, `--only 6p` 104/104. Full `app-check`: (Architect, in review).
+- **v04.99** (9 Oct 2026) — a note being read keeps its place on a tablet and
+  a phone (the owner: "while reading a note scrolling, screen jumps to the
+  top"). There `#p3c` scrolls, not `.avw`, and `_renderPreserveEdit()` saved
+  only `.avw`, so every sync redraw went to the top. `renderP3C()` now wraps
+  `_renderP3CInner()` and keeps both positions for the same note in reading
+  mode, for every caller. Block 61: `--only 61` **21/21**, unpatched 10/21.
+  Architect: full `app-check` **2353/2353, twice in a row**.
 - **v04.98** (9 Oct 2026) — J1, Jeb's data (issue #144). `DB.jebPockets` +
   `DB.jeb`, four default pockets seeded once (fixed ids, 1970 stamp), wired into
   `_REC_COLLS`, `_REC_TOMB_COLLS`, `_LJ_COLLS`, `mergeDB`, `_syncDigest`, the
@@ -50,13 +57,6 @@ must never accumulate here instead of there.
   Phone ×4 at 3,000 tags: Add tag modal 624 → 36 ms, keystroke 402 → 24 ms,
   `renderTree` Tags closed 44 → 17 ms. Tags section when open untouched (S3b).
   `--only 57` **86/86**, `--only 6p` 104/104. Architect: full `app-check` **2166/2166, twice in a row**; unpatched `--only 57` 1/6.
-- **v04.95** (8 Oct 2026) — S2d, existing inline pictures move out of note
-  text (issue #138). `_picMigrate()`, per note all-or-nothing: store, upload and
-  read back, back up the original in `siyagah-premig-v1` (I8), re-check, replace,
-  `updatedAt` = original + 1 ms (I1: any later real edit wins). Gate
-  `_s2RefsOk()`, never an open note, 4,000 picture writes/day. 20 MB: 84 s,
-  26.8 -> 0.1 MB; 140 MB: ~150 s, 186.8 -> 0.1 MB (2-6 s pauses are the
-  pre-existing whole-notebook `_save`). `--only 56` **69/69**. Architect: full `app-check` **2080/2080** on the final head (2078/2080 ×2 before the 51r seed fix); unpatched `--only 56` 0/3.
 ---
 
 ## What this is
@@ -389,7 +389,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   equivalents), never `DB.jeb` directly. Deleting goes to Trash (`jebItem`,
   `jebPocket`; a pocket deletes only when empty); `jebToNote` removes the item
   with a tombstone and no Trash entry, in the same `persist()` as the new note.
-  **The bar and the panel (v04.99, J2).** `#jeb-bar` and `#jeb-panel` are built
+  **The bar and the panel (v05.00, J2).** `#jeb-bar` and `#jeb-panel` are built
   and repainted by `jebRefresh()` (called at the end of `render()` and
   `_renderPreserveEdit()`, so every merge path reaches it; a signature skips a
   repaint that would change nothing, and an item being edited or dragged is never

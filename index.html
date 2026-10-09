@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="04.99">
+<meta name="app-version" content="05.00">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3295,7 +3295,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v04.99</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.00</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6214,7 +6214,29 @@ function renderP3H(){
   /* Restore title-input focus + caret if it was focused before rebuild */
 }
 
+/* v04.99 — keep the reader's place when Pane 3 is redrawn for the SAME note.
+   On a tablet and a phone the element that scrolls a note being read is #p3c
+   itself; on a PC it is the .avw inside it. _renderPreserveEdit() (v03.70.01)
+   saved only .avw, so on a tablet or phone every background redraw (a sync
+   merge from another device) jumped the note back to the top. The owner: "In
+   Tab ... while reading a note scrolling, screen jumps to the top". Doing it
+   here covers every caller of renderP3C(), not only the sync path. A different
+   note, or a switch between reading and editing, still starts at the top. */
 function renderP3C(){
+  const el=document.getElementById('p3c');
+  const aid=ST.article, rd=!ST.editing;
+  const avw=el&&el.querySelector('.avw');
+  const s1=el?el.scrollTop:0, s2=avw?avw.scrollTop:0;
+  const same=rd&&aid!=null&&_p3cLast.aid===aid&&_p3cLast.rd;
+  _renderP3CInner();
+  _p3cLast={aid,rd:!ST.editing&&ST.article===aid};
+  if(same&&ST.article===aid&&!ST.editing&&el&&(s1||s2)){
+    if(s1)el.scrollTop=s1;
+    const avw2=el.querySelector('.avw'); if(s2&&avw2)avw2.scrollTop=s2;
+  }
+}
+var _p3cLast={aid:null,rd:false};   /* var: safe if anything renders before this line runs */
+function _renderP3CInner(){
   /* N8 — the pane is about to be rebuilt, so any Ranges held by find now point
      at nodes that are on their way out. Drop them before that happens. */
   try{if(_ntFind&&_ntFind.key==='p3')_ntFindClose('p3');}catch(e){}

@@ -8939,7 +8939,47 @@ PR from `claude/awesome-archimedes-dsqf92`.
 
 **Totals (Architect):** full `app-check` **2330/2332, twice** on `cbe3a57` (the only failure: 52b's merge-code baseline, changed in review as recorded above), then **2332/2332** on the final head `88a6e1d`; `--only 59` 74/74, `--only 32` 4/4, `--only 51` 111/111, `--only 52b` 7/7; `ship-check` 13/13; unpatched (v04.97 `index.html` + `sw.js`) `--only 59` 0/3.
 
-## v04.99 — J2, the Jeb bar and the pocket panel (issue #147)
+## v04.99 — a note being read keeps its place on a tablet and a phone (9 Oct 2026)
+
+The owner: "In Tab (not sure in mob), while reading a note scrolling, screen
+jumps to the top. FIX." Built by the Architect directly (small and urgent), while
+the Builder works on J2 (#147), which will now ship as v05.00.
+
+**Diagnosed first, by measurement.** A long note in the read view, scrolled down
+by a real mouse wheel at 820, 390 and 1440. On a tablet and a phone the element
+that scrolls is `#p3c` itself; on a PC it is the `.avw` inside it.
+`_renderPreserveEdit()` (v03.70.01), which every sync merge calls, saved and
+restored only `.avw`. So on a tablet or a phone **every background redraw put the
+note back at the top**: 3,200px → 0 measured on both. The phone has it too; the
+owner was not sure. A PC kept its place through a sync, but not through a plain
+`render()`.
+
+**The fix:** `renderP3C()` is now a thin wrapper around the old body
+(`_renderP3CInner()`). It saves both scroll positions and restores them when it
+redraws the SAME note in reading mode, so every caller is covered, not only the
+sync path. A different note, or a switch between reading and editing, still
+starts at the top. `_renderPreserveEdit()` is unchanged.
+
+**Checks:** app-check block `61-reader-keeps-place`, at all three sizes, by real
+wheel scrolling from a booted app. The place survives the sync redraw, a full
+`render()`, `renderP3C()` alone, and a real `mergeDB()` of another device's
+change followed by the sync redraw. A different note opens at its top.
+`--only 61` **21/21**. Unpatched (v04.98 `index.html`): **10/21**. All four
+redraws fail on the phone and tablet; on the PC the sync redraw passes and the
+rest fail (a plain `render()` reset it, and the later checks start from there).
+
+**Not done:** an edit-mode redraw (the editor is not rebuilt by a sync merge, by
+design) and the float windows' own scroll (they are not rebuilt by a merge).
+
+**Totals (Architect):** full `app-check` **2353/2353, twice in a row** on `5790b2e`; `--only 61` 21/21; unpatched (v04.98 `index.html`) `--only 61` 10/21; `ship-check` 13/13.
+
+## v05.00 — J2, the Jeb bar and the pocket panel (issue #147, 9 Oct 2026)
+
+**Renumbered by the Architect:** built as v04.99, it ships as **v05.00** because
+the Architect's scroll fix (#149) took v04.99 first. Jeb is the first major
+feature since v04.00, so the `XX` step fits too. `main` was merged into this
+round's branch, with no conflict in `index.html`.
+
 
 Jeb round J2 of four: the bar and the pocket panel, the first part the owner
 can see. Built on J1's API only (`jebAddItem`, `jebEditItem`, `jebToggleDone`,
