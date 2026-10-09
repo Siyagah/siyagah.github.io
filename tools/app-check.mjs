@@ -11677,6 +11677,23 @@ await r.block('59-jeb-data', async () => {
   for (const l of lines) if (/^P59[fh] /.test(l)) console.log(l);
 });
 
+/* 60 — v04.99, J2: the Jeb bar and the pocket panel. tools/jeb-j2.mjs runs 60a–60l at 390/820/1440 with real
+   clicks, taps and typing: the bar and where it sits, nothing hiding behind it, the panel, tick/edit/move/
+   delete/restore/clear, drag to reorder (mouse and a real touch drag), pockets, two devices live, the phone
+   keyboard, the "Show Jeb bar" switch, 12 pockets, contrast, and the bottom-fixed sweep. Each printed ok/FAIL
+   line becomes one check. */
+await r.block('60-jeb-bar-panel', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./jeb-j2.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the Jeb J2 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'J2: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Jeb J2 check exits cleanly', `exit ${out.status}`);
+});
+
 /* ══ 61 — v04.99: reading a note keeps its place through a redraw ══════════════
    The owner: "In Tab ... while reading a note scrolling, screen jumps to the
    top". On a tablet and a phone the note being read scrolls in #p3c itself;
