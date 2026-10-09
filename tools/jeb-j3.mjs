@@ -162,7 +162,7 @@ try {
         await act(A, vp, `${row(ids[0])} .jeb-note-b`); await sleep(400);
         const tj = await toastText(A);
         await on(A, () => { document.querySelectorAll('.toast-act').forEach((x) => x.remove()); });
-        await openPanel(A, vp, 'Quick tasks');
+        check(await on(A, () => document.getElementById('jeb-panel').classList.contains('on')), `63c${tag} the panel stays open after → Note (the next item can be done at once)`);
         await act(A, vp, `${row(ids[1])} .jeb-note-b`); await sleep(400);
         const tp = await toastText(A);
         check(/in 📔 Journal/.test(tj) && /in 👝 From Jeb/.test(tp), `63c${tag} with a Journal flag the toast says 📔 Journal; with nothing attached, 👝 From Jeb`, tj + ' || ' + tp);
