@@ -42,7 +42,7 @@ const dev = (cloud, name, vp, db) => addDevice(browser, srv.base, cloud, name, {
 const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
 const jebState = (d) => on(d, () => JSON.parse(JSON.stringify({ p: DB.jebPockets, i: DB.jeb, trash: (DB.trash || []).filter((t) => /^jeb/.test(t.type)).length })));
-const chipCounts = (d) => on(d, () => [...document.querySelectorAll('#jeb-bar .jeb-chip')].map((c) => c.querySelector('.jeb-nm').textContent + ':' + c.querySelector('.jeb-ct').textContent));
+const chipCounts = (d) => on(d, () => [...document.querySelectorAll('#jeb-bar .jeb-chip[data-pid]')].map((c) => c.querySelector('.jeb-nm').textContent + ':' + c.querySelector('.jeb-ct').textContent));
 const itemTexts = (d) => on(d, () => [...document.querySelectorAll('#jeb-panel .jeb-it .jeb-tx')].map((e) => e.textContent));
 const openPanel = async (d, vp, name) => { await act(d, vp, `#jeb-bar .jeb-chip[title="${name}"]`); await d.page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await sleep(300); };
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
@@ -359,7 +359,7 @@ try {
     const t = `60j@${vp.name}`;
     await on(d, () => { for (let i = 0; i < 8; i++) jebAddPocket('Pocket number ' + (i + 5), '★', '#D8F0D2'); jebRefresh(); });
     await sleep(300);
-    const m = await on(d, () => { const b = document.getElementById('jeb-bar'); return { chips: b.querySelectorAll('.jeb-chip').length, sw: b.scrollWidth, cw: b.clientWidth, docW: document.documentElement.scrollWidth, innerW: innerWidth, bodyW: document.body.scrollWidth }; });
+    const m = await on(d, () => { const b = document.getElementById('jeb-bar'); return { chips: b.querySelectorAll('.jeb-chip[data-pid]').length, sw: b.scrollWidth, cw: b.clientWidth, docW: document.documentElement.scrollWidth, innerW: innerWidth, bodyW: document.body.scrollWidth }; });
     check(m.chips === 12 && m.sw > m.cw, `${t} 12 pockets overflow the bar sideways (scrollable)`, JSON.stringify(m));
     check(m.docW <= m.innerW && m.bodyW <= m.innerW, `${t} no page-level horizontal overflow`, JSON.stringify(m));
     await d.page.mouse.move(vp.w / 2, vp.h - 28);
