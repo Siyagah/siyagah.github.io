@@ -831,6 +831,48 @@ html.jeb-kb #jeb-bar{display:none!important}
 .jeb-pick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .jeb-pick button{width:38px;height:38px;border-radius:50%;border:2px solid var(--border2);font-size:16px;cursor:pointer;color:#2A2418;background:var(--paper)}
 .jeb-pick button.sel{border-color:var(--green);box-shadow:0 0 0 2px var(--green)}
+/* v05.02 · J3 — an item's chips and actions, the 📎 Attach sheet, the Open toast.
+   Inks are the pane inks (--t1/--t2/--t3, --green/--on-accent) already measured. */
+.jeb-body{flex:1;min-width:0}
+.jeb-body .jeb-edit{display:block;width:100%;box-sizing:border-box}
+.jeb-chips{display:flex;flex-wrap:wrap;gap:4px;padding:0 2px 4px}
+.jeb-chips>span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:2px 8px;border:1px solid var(--border2);border-radius:999px;font-size:11.5px;color:var(--t2);background:var(--paper)}
+.jc-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;flex:0 0 auto}
+.jeb-acts{display:flex;flex-wrap:wrap;gap:6px;padding:0 2px 2px}
+.jeb-acts button{min-height:40px;padding:0 12px;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.jeb-acts button:hover{background:var(--hover)}
+.jeb-acts .jeb-note-b{color:var(--green2)}
+#jeb-att{position:fixed;z-index:9150;display:flex;flex-direction:column;background:var(--white);color:var(--t1);border:1px solid var(--border2);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.28);width:340px;max-width:calc(100vw - 12px);overflow:hidden}
+@media(max-width:639.98px){#jeb-att{left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;max-width:none;height:80vh!important;border-radius:16px 16px 0 0}}
+.ja-hd{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.ja-hd b{font-size:14px;flex:0 0 auto}
+.ja-sub{flex:1;min-width:0;font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ja-tabs{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0}
+.ja-tabs button{flex:1 0 auto;min-height:40px;padding:0 10px;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font-size:13px;cursor:pointer;white-space:nowrap;touch-action:manipulation}
+.ja-tabs button.on{background:var(--green);border-color:var(--green);color:var(--on-accent);font-weight:700}
+.ja-q{padding:8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.ja-q input{width:100%;box-sizing:border-box;min-height:40px;padding:6px 10px;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font:inherit;font-size:14px;outline:none}
+.ja-q input:focus{border-color:var(--green)}
+.ja-q input::placeholder{color:var(--t3);opacity:1}
+.ja-list{flex:1;min-height:0;overflow-y:auto;padding:4px 0;-webkit-overflow-scrolling:touch}
+.ja-row{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 12px;cursor:pointer;color:var(--t1);font-size:13.5px}
+.ja-row:hover{background:var(--hover)}
+.ja-ck{flex:0 0 auto;width:20px;height:20px;border:2px solid var(--border2);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1}
+.ja-row.on .ja-ck{background:var(--green);border-color:var(--green);color:var(--on-accent)}
+.ja-nm{min-width:0;flex:1}
+.ja-nm b{display:block;font-weight:600;overflow-wrap:anywhere}
+.ja-nm small{display:block;color:var(--t2);font-size:11.5px;overflow-wrap:anywhere}
+.ja-cat{padding:8px 12px 2px;font-size:11.5px;font-weight:700;color:var(--t2)}
+.ja-more,.ja-none{padding:8px 12px;color:var(--t2);font-size:12px}
+.ja-create{font-weight:600;color:var(--green2)}
+.ja-tg{flex:0 0 auto;width:40px;height:22px;border-radius:999px;background:var(--border2);position:relative}
+.ja-tg::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--white);transition:left .15s}
+.ja-row.on .ja-tg{background:var(--green)}
+.ja-row.on .ja-tg::after{left:20px}
+.toast.toast-act{pointer-events:auto;cursor:pointer;padding:11px 18px}
+.toast-open{display:inline-block;margin-left:10px;padding:4px 0;text-decoration:underline}
+.ar-jeb{white-space:nowrap}
+.av-jeb{font-size:var(--fs-list-meta);color:var(--t3);margin:2px 12px 8px}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 @media(max-width:639.98px){
@@ -5851,7 +5893,7 @@ function renderP2C(){
       return;
     }
     const arts=getSmartArts(_sf.id);
-    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any article and choose ⭐ Add to Favourites','sf-pinned':'No pinned articles yet — right-click (or hold on mobile) any article and choose 📌 Pin','sf-new':'No articles yet. Create your first article!','sf-recent':'No recently edited articles.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
+    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any article and choose ⭐ Add to Favourites','sf-pinned':'No pinned articles yet — right-click (or hold on mobile) any article and choose 📌 Pin','sf-new':'No articles yet. Create your first article!','sf-recent':'No recently edited articles.','sf-jeb':'Notes you make from Jeb appear here.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
     let h='<div class="fv">'+`<div class="slbl">${_sf.name} (${arts.length})</div>`;
     h+=_sfQtBarHTML(_sf.id,null);
     if(!arts.length){
@@ -6301,6 +6343,7 @@ function _renderP3CInner(){
     el.scrollTop=0;el.innerHTML=`<div class="avw"><div class="av">
       ${ST.noteModal?'':`<div class="p3h-title-bar p3c-titlebar p3c-vt"><div class="tbt" title="Right-click to edit" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">${esc(curA.title)||'<em style="color:var(--t3)">Untitled</em>'}</div></div>`}
       ${_p3MetaRowHTML(curA)}
+      ${curA.fromJeb?`<div class="av-jeb">👝 from ${esc(curA.fromJeb.pocket||'Jeb')}</div>`:''}
       ${reminderStripHTML(curA)}
       <div class="av-tags">${tags}</div>
       ${(curA.tags||[]).length
@@ -8586,6 +8629,7 @@ function getSecSmartArts(secId,sfId){
       .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
     case 'sf-remind': return sa.filter(a=>a.reminder&&a.reminder.dt)
                              .sort((a,b)=>a.reminder.dt.localeCompare(b.reminder.dt));
+    case 'sf-jeb':    return sa.filter(a=>a.fromJeb).sort((a,b)=>String(b.fromJeb.at||'').localeCompare(String(a.fromJeb.at||'')));
     default: return [];
   }
 }
@@ -21964,6 +22008,7 @@ const _JEB_ICONS=['✓','✶','↗','◫','☏','❝','❙','◷','★','✎','�
 const _JEB_COLORS=['#FFF1A8','#FFD9B8','#CFE8FF','#F6D2E4','#D8F0D2','#E6DCF7','#F3E6C9','#FFD0CC'];
 let _jebOpen=null, _jebEditId=null, _jebEditCancel=false, _jebDrag=null;
 let _jebBarSig='', _jebPanelSig='', _jebLPAt=0, _jebWired=false;
+let _jebAtt=null;   /* the open 📎 Attach sheet: {iid,tab,q:{folder,tag},pool,anchor} */
 const _jebEl=id=>document.getElementById(id);
 function _jebBarOn(){ return !(DB&&DB.theme&&DB.theme.jebBar===false); }
 /* the bar's left edge: PC = the sidebar's right edge (0 when collapsed), else 0 */
@@ -21999,11 +22044,12 @@ function _jebWireOnce(){
   document.addEventListener('pointerdown',e=>{
     const t=e.target;
     if(_jebEl('jeb-menu')&&!t.closest('#jeb-menu')) _jebHideMenu();
-    if(_jebOpen&&!t.closest('#jeb-panel,#jeb-bar,#jeb-menu,#ov')) jebClosePanel();
+    if(_jebOpen&&!t.closest('#jeb-panel,#jeb-bar,#jeb-menu,#jeb-att,.toast-act,#ov')) jebClosePanel();
   },true);
   document.addEventListener('keydown',e=>{
     if(e.key!=='Escape') return;
     if(_jebEl('jeb-menu')){ _jebHideMenu(); return; }
+    if(_jebAtt){ _jebAttClose(); return; }
     if(_jebEditId||!_jebOpen||_jebEl('ov')?.classList.contains('on')) return;
     jebClosePanel();
   });
@@ -22022,6 +22068,7 @@ function jebRefresh(){
   _jebPaintBar(bar);
   jebLayout();
   if(_jebOpen) _jebPaintPanel();
+  if(_jebAtt) _jebAttList();
 }
 function _jebMakeBar(){
   const bar=document.createElement('div'); bar.id='jeb-bar'; bar.setAttribute('role','toolbar'); bar.setAttribute('aria-label','Jeb pockets');
@@ -22062,12 +22109,13 @@ function _jebPaintBar(bar){
 function jebTogglePanel(pid){ if(_jebOpen===pid) jebClosePanel(); else jebOpenPanel(pid); }
 function jebOpenPanel(pid){
   if(!_jebPocket(pid)) return;
-  _jebHideMenu(); _jebOpen=pid; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  _jebHideMenu(); _jebAttClose(); _jebOpen=pid; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
   jebRefresh();
   const ta=_jebEl('jeb-add-in'); if(ta) try{ ta.focus({preventScroll:true}); }catch(e){}
 }
 function jebClosePanel(){
   const p=_jebEl('jeb-panel');
+  _jebAttClose();
   _jebEditId=null; _jebDrag=null;
   if(_jebOpen!==null){ _jebOpen=null; _jebBarSig=''; _jebPanelSig=''; }
   if(p) p.classList.remove('on');
@@ -22087,6 +22135,8 @@ function _jebMakePanel(){
     if(t.closest('[data-act="clear"]')){ _jebClearDoneUI(_jebOpen); return; }
     const row=t.closest('.jeb-it'); if(!row) return;
     if(t.closest('.jeb-more')){ _jebItemMenu(row.dataset.iid,t.closest('.jeb-more')); return; }
+    if(t.closest('.jeb-att-b')){ _jebAttOpen(row.dataset.iid,t.closest('.jeb-att-b')); return; }
+    if(t.closest('.jeb-note-b')){ _jebToNoteUI(row.dataset.iid); return; }
     if(t.closest('.jeb-tx')) _jebStartEdit(row.dataset.iid);
   });
   p.addEventListener('change',e=>{
@@ -22104,13 +22154,13 @@ function _jebPaintPanel(){
   let p=_jebEl('jeb-panel'); if(!p) p=_jebMakePanel();
   p.classList.add('on');
   const items=jebItems(pk.id), open=items.filter(i=>!i.done).length, done=items.length-open;
-  const sig=[pk.id,pk.name,pk.icon,pk.color,items.map(i=>[i.id,i.text,i.done?1:0].join('~')).join('|')].join('#');
+  const sig=[pk.id,pk.name,pk.icon,pk.color,items.map(i=>[i.id,i.text,i.done?1:0,_jebChipsHTML(i)].join('~')).join('|')].join('#');
   if(sig===_jebPanelSig) return;
   /* never repaint under an item being typed in or dragged: it repaints when that ends */
   if(_jebEditId||_jebDrag) return;
   _jebPanelSig=sig;
   p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this pocket</small></div><button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
-  p.querySelector('.jeb-list').innerHTML=items.length?items.map(i=>`<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-tx">${esc(i.text)}</div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`).join('')
+  p.querySelector('.jeb-list').innerHTML=items.length?items.map(i=>`<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body"><div class="jeb-tx">${esc(i.text)}</div>${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`).join('')
     :'<div class="jeb-empty">Nothing here yet — jot something above.</div>';
   p.querySelector('.jeb-foot').innerHTML=done>0?`<button class="btn" data-act="clear" style="min-height:40px">🧹 Clear done (${done})</button>`:'';
 }
@@ -22210,7 +22260,8 @@ function _jebItemMenu(iid,anchor){
   const back=()=>_jebItemMenu(iid,anchor);
   _jebShowMenu([
     {t:'✏️ Edit',f:()=>_jebStartEdit(iid)},
-    /* J3: '📎 Attach' and '→ Note' go here */
+    {t:'📎 Attach',f:()=>_jebAttOpen(iid,anchor)},
+    {t:'→ Note',f:()=>_jebToNoteUI(iid)},
     {t:'📂 Move to pocket ▸',keep:true,f:()=>{
       const others=jebPockets().filter(p=>p.id!==it.pocketId);
       const rows=others.map(p=>({t:p.icon+' '+p.name,f:()=>{ jebMoveItem(iid,p.id,0); toast('Moved to '+p.name); _jebPanelSig=''; jebRefresh(); }}));
@@ -22219,6 +22270,163 @@ function _jebItemMenu(iid,anchor){
     }},
     {t:'🗑 Delete',d:true,f:()=>{ jebDeleteItem(iid); toast('Moved to Trash'); _jebPanelSig=''; jebRefresh(); }}
   ],anchor);
+}
+/* ── v05.02 · J3 — what is attached, 📎 Attach, → Note ── */
+function _jebFolderName(fid){ const p=pathOf(fid); return p.length?p[p.length-1].name:''; }
+function _jebKindOf(id){ return id?(ensureNoteKinds().find(k=>k.id===id)||null):null; }
+/* small chips under an item's text: 📁 folders, #tags, the Note Type with its dot, 📔 Journal */
+function _jebChipsHTML(i){
+  const c=[];
+  (i.folderIds||[]).forEach(fid=>{ const n=_jebFolderName(fid); if(n) c.push(`<span class="jc-f">📁 ${esc(n)}</span>`); });
+  (i.tags||[]).forEach(t=>c.push(`<span class="jc-t">#${esc(t)}</span>`));
+  const k=_jebKindOf(i.kind); if(k) c.push(`<span class="jc-k"><i class="jc-dot" style="background:${esc(k.color)}"></i>${esc(k.name)}</span>`);
+  if(i.journal) c.push('<span class="jc-j">📔 Journal</span>');
+  return c.length?`<div class="jeb-chips">${c.join('')}</div>`:'';
+}
+function _jebAttClose(){ const a=_jebEl('jeb-att'); if(a) a.remove(); _jebAtt=null; }
+function _jebAttOpen(iid,anchor){
+  const it=_jebItem(iid); if(!it) return;
+  _jebHideMenu(); _jebAttClose();
+  _jebAtt={iid,tab:'folder',q:{folder:'',tag:''},pool:_tagPool(),anchor:anchor||null};
+  _jebAttPoolSync(it);
+  const a=document.createElement('div'); a.id='jeb-att'; a.setAttribute('role','dialog'); a.setAttribute('aria-label','Attach');
+  a.innerHTML='<div class="ja-hd"><b>📎 Attach</b><span class="ja-sub"></span><button class="jeb-x ja-x" aria-label="Close attach" title="Close">✕</button></div>'
+    +'<div class="ja-tabs" role="tablist"><button data-tab="folder" role="tab">📁 Folder</button><button data-tab="tag" role="tab">🏷 Tag</button><button data-tab="kind" role="tab">Note Type</button><button data-tab="journal" role="tab">📔 Journal</button></div>'
+    +'<div class="ja-q"><input id="ja-q-in" type="search" data-jeb="1" autocomplete="off" autocapitalize="off"></div><div class="ja-list"></div>';
+  document.body.appendChild(a);
+  const inp=a.querySelector('#ja-q-in');
+  inp.addEventListener('input',()=>{ _jebAtt.q[_jebAtt.tab]=inp.value; _jebAttList(); });
+  inp.addEventListener('keydown',e=>{
+    if(e.key!=='Enter'||e.isComposing||_jebAtt.tab!=='tag') return;
+    e.preventDefault(); const row=a.querySelector('.ja-create'); if(row) row.click();
+  });
+  a.addEventListener('click',_jebAttClick);
+  _jebAttPaint(); _jebAttPlace();
+}
+/* tags the item already holds stay reachable even if no note carries them yet */
+function _jebAttPoolSync(it){
+  const have=new Set(_jebAtt.pool.map(p=>p.l));
+  (it.tags||[]).forEach(t=>{ const l=String(t).toLowerCase(); if(!have.has(l)){ have.add(l); _jebAtt.pool.push({t,l}); } });
+}
+function _jebAttClick(e){
+  const t=e.target;
+  if(t.closest('.ja-x')){ _jebAttClose(); return; }
+  const tb=t.closest('[data-tab]'); if(tb){ _jebAtt.tab=tb.dataset.tab; _jebAttPaint(); return; }
+  const it=_jebAttItem(); if(!it){ _jebAttClose(); return; }
+  const r=t.closest('.ja-row'); if(!r) return;
+  if(r.dataset.fid!=null){
+    const ids=(it.folderIds||[]).slice(), i=ids.indexOf(r.dataset.fid);
+    if(i>=0) ids.splice(i,1); else ids.push(r.dataset.fid);
+    jebEditItem(it.id,{folderIds:ids});
+  }else if(r.dataset.create!=null){
+    const c=_cleanTag(r.dataset.create);
+    if(c){
+      const tags=(it.tags||[]).slice(); if(!tags.some(x=>String(x).toLowerCase()===c.toLowerCase())) tags.push(c);
+      jebEditItem(it.id,{tags}); _jebAttPoolSync(_jebItem(it.id));
+    }
+    _jebAtt.q.tag=''; const inp=_jebEl('ja-q-in'); if(inp) inp.value='';
+  }else if(r.dataset.tag!=null){
+    const l=r.dataset.tag.toLowerCase(), tags=(it.tags||[]).slice(), i=tags.findIndex(x=>String(x).toLowerCase()===l);
+    if(i>=0) tags.splice(i,1); else tags.push(r.dataset.tag);
+    jebEditItem(it.id,{tags});
+  }else if(r.dataset.kind!=null){
+    jebEditItem(it.id,{kind:it.kind===r.dataset.kind?null:r.dataset.kind});
+  }else if(r.dataset.journal!=null){
+    jebEditItem(it.id,{journal:!it.journal});
+  }else return;
+  _jebPanelSig=''; jebRefresh(); _jebAttList();
+}
+function _jebAttItem(){ return _jebAtt?_jebItem(_jebAtt.iid):null; }
+/* tabs, search box and list — the search box is only touched when the tab changes */
+function _jebAttPaint(){
+  const a=_jebEl('jeb-att'), it=_jebAttItem(); if(!a||!it){ _jebAttClose(); return; }
+  const tab=_jebAtt.tab;
+  a.querySelectorAll('[data-tab]').forEach(b=>{ const on=b.dataset.tab===tab; b.classList.toggle('on',on); b.setAttribute('aria-selected',on); });
+  a.querySelector('.ja-sub').textContent=String(it.text||'').split(/\r?\n/)[0].slice(0,80);
+  const q=a.querySelector('.ja-q'), inp=a.querySelector('#ja-q-in'), has=tab==='folder'||tab==='tag';
+  q.style.display=has?'':'none';
+  inp.placeholder=tab==='folder'?'Find a folder…':'Find or create a tag…';
+  inp.value=has?(_jebAtt.q[tab]||''):'';
+  _jebAttList();
+}
+function _jebAttList(){
+  const a=_jebEl('jeb-att'); if(!a) return;
+  const it=_jebAttItem(); if(!it){ _jebAttClose(); return; }
+  const L=a.querySelector('.ja-list'), tab=_jebAtt.tab, q=_jebAtt.q[tab]||'', st=L.scrollTop;
+  let h='';
+  if(tab==='folder'){
+    const on=new Set(it.folderIds||[]), ql=q.toLowerCase().trim();
+    const rows=DB.folders.filter(f=>f&&(!ql||String(f.name||'').toLowerCase().includes(ql)))
+      .map(f=>({f,on:on.has(f.id),path:_pkPathWithSection(f.id,true)}))
+      .sort((x,y)=>(y.on-x.on)||x.path.localeCompare(y.path));
+    rows.slice(0,_TAG_ROWS_CAP).forEach(r=>{ h+=`<div class="ja-row${r.on?' on':''}" role="checkbox" aria-checked="${r.on}" tabindex="0" data-fid="${esc(r.f.id)}"><span class="ja-ck">${r.on?'✓':''}</span><span class="ja-nm"><b>${esc(r.f.name)}</b><small>${esc(r.path)}</small></span></div>`; });
+    if(rows.length>_TAG_ROWS_CAP) h+=_TAG_MORE_HTML(rows.length-_TAG_ROWS_CAP);
+    if(!rows.length) h+='<div class="ja-none">No folder matches.</div>';
+  }else if(tab==='tag'){
+    const onSet=new Set((it.tags||[]).map(x=>String(x).toLowerCase()));
+    const m=_tagMatches(_jebAtt.pool,q,onSet,_TAG_ROWS_CAP), c=_cleanTag(q);
+    if(c&&!_jebAtt.pool.some(p=>p.l===c.toLowerCase())) h+=`<div class="ja-row ja-create" role="button" tabindex="0" data-create="${esc(c)}">＋ Create #${esc(c)}</div>`;
+    m.rows.forEach(tg=>{ const o=onSet.has(String(tg).toLowerCase()); h+=`<div class="ja-row${o?' on':''}" role="checkbox" aria-checked="${o}" tabindex="0" data-tag="${esc(tg)}"><span class="ja-ck">${o?'✓':''}</span><span class="ja-nm"><b>#${esc(tg)}</b></span></div>`; });
+    if(m.more) h+=_TAG_MORE_HTML(m.more);
+    if(!m.rows.length&&!c) h+='<div class="ja-none">No tags yet — type to create one.</div>';
+  }else if(tab==='kind'){
+    noteKindCats().forEach(cat=>{
+      const ks=kindsInCat(cat.id); if(!ks.length) return;
+      h+=`<div class="ja-cat">${esc(cat.icon||'📝')} ${esc(cat.name)}</div>`;
+      ks.forEach(k=>{ const o=it.kind===k.id; h+=`<div class="ja-row${o?' on':''}" role="radio" aria-checked="${o}" tabindex="0" data-kind="${esc(k.id)}"><span class="ja-ck">${o?'✓':''}</span><span class="ja-nm"><b><i class="jc-dot" style="background:${esc(k.color)}"></i>${esc(k.name)}</b></span></div>`; });
+    });
+  }else{
+    h=`<div class="ja-row${it.journal?' on':''}" role="switch" aria-checked="${!!it.journal}" tabindex="0" data-journal="1"><span class="ja-nm"><b>Make it a Journal entry when it becomes a note</b><small>The note gets the “journal” tag and shows in Daily Journals.</small></span><span class="ja-tg"></span></div>`;
+  }
+  L.innerHTML=h; L.scrollTop=st;
+}
+/* beside the panel on a laptop/tablet (measured, clamped); a bottom sheet on a phone (CSS) */
+function _jebAttPlace(){
+  const a=_jebEl('jeb-att'); if(!a) return;
+  const vw=window.innerWidth, vh=window.innerHeight;
+  if(vw<640){ a.style.cssText=''; return; }
+  const w=Math.min(340,vw-12), h=Math.min(540,vh-12);
+  const pn=_jebEl('jeb-panel'), pr=(pn&&pn.classList.contains('on'))?pn.getBoundingClientRect():null;
+  const an=_jebAtt.anchor, ar=(an&&an.isConnected)?an.getBoundingClientRect():null;
+  let l=pr?pr.left-w-8:(ar?ar.left:vw-w-6), t=ar?ar.top-h/2:vh-h-6;
+  l=Math.max(6,Math.min(l,vw-w-6)); t=Math.max(6,Math.min(t,vh-h-6));
+  a.style.width=w+'px'; a.style.height=h+'px'; a.style.left=l+'px'; a.style.top=t+'px';
+}
+/* → Note: refuses an empty item, otherwise jebToNote() and a toast that says where it went */
+function _jebToNoteUI(iid){
+  const it=_jebItem(iid); if(!it) return;
+  if(!String(it.text||'').trim()){ toast('Nothing to turn into a note — this item is empty'); return; }
+  const names=(it.folderIds||[]).map(_jebFolderName).filter(Boolean), journal=!!it.journal;
+  const nid=jebToNote(iid);
+  if(!nid){ toast('Could not turn it into a note'); return; }
+  if(_jebAtt&&_jebAtt.iid===iid) _jebAttClose();
+  const where=names.length?'📁 '+names[0]+(names.length>1?' +'+(names.length-1):''):(journal?'📔 Journal':'👝 From Jeb');
+  _jebPanelSig=''; _jebBarSig='';
+  if(typeof _renderPreserveEdit==='function') _renderPreserveEdit(); else render();
+  jebRefresh();
+  _jebToastOpen('Turned into a note in '+where,nid);
+}
+/* there was no toast with an action in the app: this toast is itself the tap target
+   for "Open note" (v05.02), and lasts long enough to be tapped */
+function _jebToastOpen(msg,nid){
+  document.querySelectorAll('.toast-act').forEach(x=>x.remove());
+  const t=document.createElement('div'); t.className='toast toast-act'; t.setAttribute('role','button'); t.tabIndex=0;
+  t.innerHTML=esc(msg)+'<b class="toast-open">Open note</b>';
+  const go=()=>{ t.remove(); jebOpenNote(nid); };
+  t.addEventListener('click',go);
+  t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); },7000);
+}
+/* PC: the note in Pane 3. Tablet/phone: the normal note screen, panel closed. */
+function jebOpenNote(nid){
+  const a=DB.articles.find(x=>x.id===nid); if(!a) return;
+  jebClosePanel();
+  if(ST.editing) saveArt();
+  const fid=(a.folderIds||[]).find(f=>DB.folders.some(x=>x.id===f))||'sf-jeb';
+  if(fid!=='sf-jeb') pathOf(fid).forEach(f=>{ ST.exp[f.id]=true; });
+  ST.tag=null; ST.kind=null; ST.secSF=null; ST.folder=fid; ST.article=null; ST.editing=false;
+  render(); selArt(nid);
 }
 /* ── pocket forms (the app's own modal) ── */
 function _jebPocketForm(o){
@@ -23333,6 +23541,7 @@ function artCard(a, sel, showFolderCount, showNag, customMeta){
     : 'font-size:15px;flex-shrink:0';
   const _m0=fmtDs(a.updatedAt)
     + (showFolderCount && a.folderIds.length>1 ? ` · in ${a.folderIds.length} folders` : '')
+    + (a.fromJeb ? ` · <span class="ar-jeb">👝 from ${esc(a.fromJeb.pocket||'Jeb')}</span>` : '')
     + (showNag && isNagNote(a) ? ` · <span class="ar-nag">⏳ untouched ${untouchedDays(a)}d</span>` : '');
   const meta=customMeta!==undefined?customMeta:_m0;
   return `<div class="ar${expanded}${sel?' sel':''}" data-aid="${a.id}" `
@@ -26138,6 +26347,7 @@ const SF=[
   {id:'sf-remind', name:'(09) Reminders',        icon:'🔔', smart:'remind'},
   {id:'sf-murajaa',name:'(10) Murāja\'ah Review',  icon:'📖', smart:'murajaa'},
   {id:'sf-practice',name:'(11) In Practice',           icon:'🌱', smart:'practice'},
+  {id:'sf-jeb',     name:'(12) From Jeb',              icon:'👝', smart:'jeb'},
 ];
 const SF_IDS=new Set(SF.map(s=>s.id));
 
@@ -26767,6 +26977,8 @@ function getSmartArts(sfId){
     case 'sf-practice':
       return DB.articles.filter(function(a){return a.practice&&!a.trash;})
         .sort(function(a,b){return (a.practice==='done'?1:0)-(b.practice==='done'?1:0);});
+    case 'sf-jeb':
+      return live.filter(a=>a.fromJeb).sort((a,b)=>String(b.fromJeb.at||'').localeCompare(String(a.fromJeb.at||'')));
     default: return [];
   }
 }
