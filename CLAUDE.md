@@ -16,6 +16,14 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v04.98** (9 Oct 2026) — J1, Jeb's data (issue #144). `DB.jebPockets` +
+  `DB.jeb`, four default pockets seeded once (fixed ids, 1970 stamp), wired into
+  `_REC_COLLS`, `_REC_TOMB_COLLS`, `_LJ_COLLS`, `mergeDB`, `_syncDigest`, the
+  backup/import paths; **not** `_S1_COLLS` (an older build would mark `jeb~` recs
+  gone), so they ride in `_head~0`. Trash types `jebItem`/`jebPocket` (a pocket
+  deletes only when empty); `jebToNote` tombstones the item, no Trash. No UI.
+  `--only 59` **74/74** (22 sync-audit ops; the real v04.97 build loses nothing).
+  Full `app-check`: (Architect, in review).
 - **v04.97** (8 Oct 2026) — S3b, the sidebar Tags section opens to "Find a
   tag…" + the 20 most-used + "All tags (N)" (issue #142). 25+ tags get the new
   shape (≤ 24 list in full as before); typing filters all tags (≤ 50 + "+N
@@ -46,16 +54,6 @@ must never accumulate here instead of there.
   Note History paints them; the item menu goes through `_picCanon`. The real
   v04.91 build keeps a reference through an edit (54j). 10 pictures → 1.3 KB
   of note text. `--only 55` **127/127**, `--only 54` **67/67**. Architect: full `app-check` **2011/2011, twice in a row**; unpatched `--only 55` 34/89 (explained in PR #137).
-- **v04.93** (8 Oct 2026) — S2b, the cloud copy of pictures and the build stamp
-  (issue #134). A device that holds a picture uploads it once
-  (`pics/{sha}` + `picparts/{sha}~i` as Firestore Bytes, ≤ 900,000 bytes a
-  part, parts first and meta last, detached from the text push); a device
-  that lacks one fetches it when a note needs it and shows it only after the
-  sha256 checks. Every rec carries `b` (the app version); `_s2OlderActive()`
-  says whether an older build wrote in the last 30 days (S2c will gate on
-  it). Nothing creates a reference yet. Checks 54a–54h (`tools/sync-s2.mjs`),
-  `--only 54` **51/51**, `--only 53` 92/92. Architect: full `app-check`
-  **1868/1868, twice in a row**; unpatched `--only 54` 0/3.
 ---
 
 ## What this is
@@ -373,6 +371,21 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `'${esc(x)}'` (`esc()` leaves `'` alone) or a hand-rolled `\x27`. A typed or
   renamed tag goes through `_cleanTag()` (keeps every character but the comma).
   Ids may stay as they are.
+- **Jeb (v04.98, J1).** The owner's bar of **pockets** of quick **items**.
+  `DB.jebPockets=[{id,name,icon,color,order,…}]`, `DB.jeb=[{id,pocketId,text,
+  done,folderIds,tags,kind,journal,order,…}]`. Both are in `_REC_COLLS`,
+  `_REC_TOMB_COLLS`, `_LJ_COLLS`, `mergeDB()`'s merge and `_alive` lists, the
+  Trash `activeMap`, `_syncDigest` and the backup/import paths — and
+  **deliberately NOT in `_S1_COLLS`**: a v04.90–v04.97 device writes `gone:true`
+  for any rec key its own snapshot does not produce, so the arrays ride in
+  `_head~0` until no older build has written for 30 days (backlog). `_jebSeed()`
+  seeds four pockets only when the `jebPockets` KEY is absent (an emptied array
+  is the owner's choice), and `mergeDB()` must never invent an empty one. UI code
+  goes through the API (`jebAddItem`, `jebEditItem`, `jebToggleDone`,
+  `jebMoveItem`, `jebDeleteItem`, `jebClearDone`, `jebToNote`, and the pocket
+  equivalents), never `DB.jeb` directly. Deleting goes to Trash (`jebItem`,
+  `jebPocket`; a pocket deletes only when empty); `jebToNote` removes the item
+  with a tombstone and no Trash entry, in the same `persist()` as the new note.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
@@ -392,6 +405,9 @@ A failing check is a wrong assertion surprisingly often — investigate before
 | **Note Type / NTI** — a note's single-select character (`art.kind`) | not "tag" — tags are separate and multiple |
 | **Frozen build** — a sealed copy under `legacy/` | not "old version", not "backup" |
 | **Save File** — the export that bakes notes into a copy of the app | not "download" |
+| **Jeb** — the bar of pockets along the bottom (the owner's name) | not "pockets bar", not "basket" |
+| **Pocket** — one container on Jeb (`DB.jebPockets`) | not "folder", not "list" |
+| **Item** — one thing in a pocket (`DB.jeb`) | not "note" — it becomes a note only via → Note |
 
 ## Decisions confirmed by the owner
 
