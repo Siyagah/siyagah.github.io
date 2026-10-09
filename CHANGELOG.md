@@ -9057,4 +9057,49 @@ deck, "All pockets", "☑ Choose" (J4); the standalone app; Jeb in `_S1_COLLS`.
 The full `app-check` was not run, by instruction. The unpatched (v04.98)
 comparison of `--only 60` is for the Architect.
 
+**Totals (Architect):** `--only 60,61` 224/224; full `app-check` **2556/2556, twice in a row** on `79ce732` (J2 with `main` merged in); unpatched (v04.99 `index.html` + `sw.js`) `--only 60` 0/6 (no bar; stops at 60a); `ship-check` 13/13.
+
+## v05.01 — a click below a folded ending writes there, without opening it (9 Oct 2026)
+
+The owner, with a screenshot of the Single Note Pop-Up in edit mode, every
+heading folded: "why i can't put my cursor at the bottom? it opens the last
+heading and jumps at the bottom. there's too much of unstability of the editing
+panel. pls fix". Built by the Architect directly.
+
+**Diagnosed first, by measurement.** It was a deliberate rule. `_edRevealTail()`
+(the gutter-click handler) opened the last section when a note ENDED inside a
+fold, because a plain paragraph appended there belongs to that section and the
+next `_edColApply()` would hide it again. Then it appended the line after the
+section's content and scrolled to it. Measured on v05.00 with a note shaped like
+the owner's (two lines, then folded H2/H3s, the last section 30 paragraphs
+long), by a real click below the last heading: the heading opens at 1440, 820
+and 390; the tablet jumps 1,530px, the phone 4,125px.
+
+**The fix.** That new line is now the note's **tail**, a `<p data-tail="1">`.
+One helper, `_isSecEnd(n, level)`, decides where a section ends: at the next
+heading of the same or a higher level, **or at the tail**. Every place that
+walks a section uses it:
+- `_edColApply` (edit-mode folds);
+- `_secNodesOf` (copy a section);
+- `_edBlockDragStart` (drag a section by ⠿);
+- `_initCollapsible` (the read view: a tail closes every open section).
+
+So the fold stays shut, the view stays put, and the text shows right under the
+folded headings, in editing and in reading. Enter in a tail line keeps the mark
+(Chrome copies a split block's attributes), so a second line stays visible too.
+Opening the last heading shows its own content first and the tail after it,
+which is the order in the note. `_edRevealTail` is gone. A note that does not end
+folded behaves exactly as before: a plain line, no mark.
+
+**Checks:** app-check block `62-write-below-folded-end`, real clicks and typing
+at all three sizes. Checked: the fold stays; no jump; both typed lines are marked
+and visible; the note saves with the tail at its end; the read view shows it
+inside no section; opening the last heading orders content, then tail; the last
+section's nodes stop before the tail; an unfolded ending gets no mark.
+`--only 62` **25/25**. Unpatched (v05.00 `index.html`): **8/25**.
+
+**Not done:** the owner's wider "too much instability of the editing panel".
+They were asked to name each thing that jumps, so that each gets diagnosed
+rather than guessed at.
+
 **Totals:** full `app-check`: (Architect, in review).

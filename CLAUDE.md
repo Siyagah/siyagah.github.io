@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.00.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.01.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,13 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.01** (9 Oct 2026) — a click below a folded ending writes there,
+  without opening it (the owner: "it opens the last heading and jumps at the
+  bottom"). The new line is the note's **tail** (`<p data-tail="1">`);
+  `_isSecEnd(n,level)` ends a section at the next same-or-higher heading OR the
+  tail, in `_edColApply`, `_initCollapsible`, `_secNodesOf` and
+  `_edBlockDragStart`. `_edRevealTail` is gone. Block 62: **25/25**, unpatched
+  8/25. Full `app-check`: (Architect, in review).
 - **v05.00** (9 Oct 2026) — J2 (built as v04.99, renumbered), the Jeb bar and the pocket panel (issue #147).
   `#jeb-bar` (scrolling chips: swatch, name, not-done count; ＋ New pocket;
   right-click/long-press menu), `#jeb-panel` (add on top, tick, edit in place,
@@ -26,7 +33,7 @@ must never accumulate here instead of there.
   hides it for the keyboard (back 300 ms after focus leaves). "Show Jeb bar" in
   🧰 → 🎨 Appearance = `DB.theme.jebBar`. Live repaint from `render()`/
   `_renderPreserveEdit()`, never under an item being edited. `--only 60`
-  **203/203**, `--only 59` 74/74, `--only 6p` 104/104. Full `app-check`: (Architect, in review).
+  **203/203**, `--only 59` 74/74, `--only 6p` 104/104. Architect: full `app-check` **2556/2556, twice in a row**; unpatched `--only 60` 0/6.
 - **v04.99** (9 Oct 2026) — a note being read keeps its place on a tablet and
   a phone (the owner: "while reading a note scrolling, screen jumps to the
   top"). There `#p3c` scrolls, not `.avw`, and `_renderPreserveEdit()` saved
@@ -49,14 +56,6 @@ must never accumulate here instead of there.
   opens the picker's Tags scope. Phone ×4 at 3,000 tags: `renderTree` Tags open
   870 → 45 ms, keystroke 30 ms; `render()` open vs closed 159 vs 154 ms.
   `--only 58` **92/92**, `--only 57` 86/86. Architect: full `app-check` **2258/2258, twice in a row**; unpatched `--only 58` 2/6.
-- **v04.96** (8 Oct 2026) — S3a, every tag works whatever its characters, and
-  the tag pickers stay fast (issue #140). `_ja(s)` passes free text safely to an
-  inline handler (`'${esc(tag)}'` broke on `Qur'an`; `encodeURIComponent` also
-  leaves `'` alone); `_cleanTag()` keeps Arabic, `'`, emoji (only the comma is
-  removed); a picker builds its tag list once and draws ≤ 100 rows + "+N more".
-  Phone ×4 at 3,000 tags: Add tag modal 624 → 36 ms, keystroke 402 → 24 ms,
-  `renderTree` Tags closed 44 → 17 ms. Tags section when open untouched (S3b).
-  `--only 57` **86/86**, `--only 6p` 104/104. Architect: full `app-check` **2166/2166, twice in a row**; unpatched `--only 57` 1/6.
 ---
 
 ## What this is
@@ -236,6 +235,10 @@ A failing check is a wrong assertion surprisingly often — investigate before
 - **Note content is raw HTML with no sanitiser.** Interactive widgets can live
   in a note's content; the pattern is `contenteditable="false"` chrome plus a
   delegated listener, and a repair pass that rebuilds what a copy/paste stripped.
+- **A section ends at `_isSecEnd(n, level)`** (v05.01): the next heading of
+  the same or a higher level, OR the note's tail (`[data-tail]`, text written
+  below a folded ending). Anything that walks a heading's section (folds, read
+  view, copy, drag) must call it, never re-derive "until the next heading".
 - **Headings drive the outline.** `_edColHeads()` collects `h1`–`h4` for fold
   arrows and drag grips in the editor; `_initCollapsible()` does the same for
   the read-only view. Widgets containing heading-like lines need styled divs or
