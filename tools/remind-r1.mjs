@@ -147,7 +147,10 @@ if (want('67a')) try {
   await sleep(12000);
   const n2 = remWrites(cloud).length;
   await sleep(11000);
-  check(n2 - n >= 1 && n2 - n <= 2 && remWrites(cloud).length === n2, '67a …once per device that had written "on" (A and B), then nothing more', `${n2 - n} then ${remWrites(cloud).length - n2}`);
+  /* Architect review (v05.06): the upper bound of 2 was too tight. Before "off" reaches B through sync, B may still
+     write one last "on" list (a merge changed it), then its own off; 3 writes measured in a full run. What matters is
+     that the writes STOP and the doc ends off, both checked here and just above. */
+  check(n2 - n >= 1 && n2 - n <= 4 && remWrites(cloud).length === n2 && readDoc(cloud).off === true, '67a …a few writes while "off" syncs to both devices, then nothing more, and the doc stays off', `${n2 - n} then ${remWrites(cloud).length - n2}`);
   check(A.errors.length === 0 && B.errors.length === 0, '67a no page errors on either device', A.errors.concat(B.errors).join(' | '));
   await A.ctx.close(); await B.ctx.close();
 

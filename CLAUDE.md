@@ -433,7 +433,10 @@ A failing check is a wrong assertion surprisingly often — investigate before
   only through `_s1WriteGate()` AND a proof of a first read (`_s1RdCaught` or
   `_remMerged`). It is **not** in recs, the blob, `_S1_COLLS`, `mergeDB()` or any
   backup, the app never reads it, and a failure never fails a push. Off writes
-  `off:true` once, only from a device that had written "on". The helper is two text
+  `off:true` once: a device that wrote "on" this session writes it directly; any other device
+  reads the doc once per session and writes off only if a live (not-off) doc exists. No mark in
+  `localStorage` (it is full on the owner's devices). The helper's fetch sends
+  `X-Goog-User-Project` (the Firebase project pays the quota, not Apps Script's own project). The helper is two text
   blocks built by `_remGs()` (pre-filled project and notebook ids) and `_remJson()`;
   the owner pastes them into Google Apps Script. `check()` emails an item once per
   `id|at` (36 h late limit), so editing a time emails again. Tests execute the

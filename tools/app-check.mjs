@@ -2523,7 +2523,9 @@ await r.block('6o-1-menu-reorg', async () => {
        either menu has gained since this baseline was written. */
     '_saveLblTap',
     /* v05.04 (issue #156, J5) — 👝 Siyagah Jeb in 🧰 Tools, added on purpose. */
-    'openJebApp'];
+    'openJebApp',
+    /* v05.06 (issue #160, R1) — 🔔 Reminder emails in 🧰 Tools, added on purpose. */
+    'openRemindMail'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
   const lost = V0420.filter((f) => !now.includes(f));
   const added = [...new Set(now)].filter((f) => !V0420.includes(f));
