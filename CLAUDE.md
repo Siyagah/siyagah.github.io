@@ -21,7 +21,7 @@ must never accumulate here instead of there.
   `_remList`); a helper in the owner's own Google account (Apps Script, text built by
   `_remGs()` / `_remJson()`) emails them from their own Gmail. Panel: 🧰 → 🔔 Reminder
   emails and a line in the reminder dialog (dialog on PC/tablet, sheet on a phone).
-  Check: block 67, `tools/remind-r1.mjs`. Not done: My Calendar events, phone push, repeats.
+  Check: block 67, `tools/remind-r1.mjs`. Not done: My Calendar events, phone push, repeats. Architect: full `app-check` **3652/3652, twice in a row**; unpatched `--only 67` 0/6.
 - **v05.05** (10 Oct 2026) — Z1, "Jeb" becomes **"Zab"** on every screen the owner sees
   (issue #158): bar, menus, "👝 from Zab", Smart View "(12) From Zab", Trash labels,
   "Show Zab bar", the second icon "Siyagah Zab" (manifest `name`/`short_name`, title,
