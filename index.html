@@ -254,7 +254,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .tr-row.dob{box-shadow:inset 0 2px 0 0 var(--green)}
 .tr-row.doa{box-shadow:inset 0 -2px 0 0 var(--green)}
 .tr-row.doi{background:rgba(27,122,70,.22)!important;border-radius:4px}
-.tr-tog{width:20px;flex-shrink:0;text-align:center;font-size:22px;color:var(--sb-ink-dim);line-height:1}
+.tr-tog{width:20px;flex-shrink:0;text-align:center;font-size:22px;color:var(--sb-ink);line-height:1}
 .tr-ico{font-size:14px;flex-shrink:0;line-height:1}
 .tr-name{flex:1;white-space:normal;word-break:break-word;line-height:1.3}
 .tr-cnt{font-size:10px;background:var(--sb-strip);padding:1px 5px;border-radius:9px;flex-shrink:0;color:var(--sb-ink-soft)}
@@ -1189,6 +1189,9 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .sf-grp-hd{cursor:pointer;user-select:none;-webkit-user-select:none;display:flex;align-items:center;gap:5px;border-radius:6px;padding-top:5px;padding-bottom:5px}
 .sf-grp-hd:hover{background:var(--paper)}
 .sf-grp-tog{width:13px;display:inline-block;font-size:10px;color:var(--t3)}
+/* v05.07 (V1) — in the sidebar the same arrow is a sidebar glyph: 16px, full --sb-ink.
+   Pane 2 / Pane 3 keep the small --t3 one (out of scope). */
+#sb .sf-grp-tog{width:16px;font-size:16px;line-height:1;text-align:center;color:var(--sb-ink)}
 @media(max-width:1199.98px){.sf-grp-hd{padding-top:9px;padding-bottom:9px}}
 @media(max-width:1199.98px){.ctx-sw,.ctx-sw-clear,.ctx-sw-bold{width:21px;height:21px}.ctx-sw-bold{font-size:12px}}
 .ctx-clr-lbl{font-size:11px;color:var(--t3);padding:4px 9px 2px;display:block}
@@ -1203,8 +1206,8 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
         background:var(--sb-strip)}
 .sec-hd:hover,.sec-hd:hover .sec-acts{background:var(--sb-strip-hi);opacity:1}
 .sec-hd:active{cursor:grabbing}
-.sec-tog{font-size:10px;color:var(--sb-ink-dim);flex-shrink:0;cursor:pointer;
-         width:13px;text-align:center;line-height:1}
+.sec-tog{font-size:16px;color:var(--sb-ink);flex-shrink:0;cursor:pointer;
+         width:16px;text-align:center;line-height:1}
 .sec-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
         font-size:calc(var(--fs-sidebar)*0.88);font-weight:700;text-transform:uppercase;letter-spacing:.07em;
         color:var(--sb-ink-soft)}

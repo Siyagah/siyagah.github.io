@@ -9355,3 +9355,22 @@ The owner asked what it takes to get an email about a reminder, and chose option
 - **Totals (builder):** `ship-check` 14/14; `--only 67` **110/110** (the script alone: 86 lines in 67a and 67c, 22 in 67b); `--only 59,65,66` **620/620**; unpatched (`index.html` + `sw.js` from `origin/main`) `remind-r1.mjs --base=origin/main` **0/4** — every block fails at its first step (the functions do not exist). The full `app-check` was not run (the Architect's).
 - **Seen while building:** the sandbox redirects `script.google.com`, so the check asserts the exact URL given to `window.open` rather than the tab's final address. The Architect should also know each device that had written "on" writes the `off:true` doc once (two devices → two identical writes).
 - **Changed in review:** the "wrote on" mark in `localStorage` is gone (it is full on the owner's devices, so turning the setting off never wrote `off:true`). Off with nothing written this session now reads `remind/v1` once after the write gate opens and writes `off:true` only if the doc exists and is not already off; absent or already off writes nothing. The helper's fetch sends `X-Goog-User-Project` = the project id, and `setup()`'s failures add Google's own `error.message` (about 300 characters) after the plain-words sentence. Block 67 gained checks with `setItem` throwing, plus the header and the 403 message: `--only 67` **117/117**; ship-check 14/14. Full `app-check` not run (the Architect's).
+
+
+## v05.07 — V1, the sidebar's fold arrows are readable (10 Oct 2026, issue #163)
+
+The owner circled the ▸ arrows at the left of every sidebar section and asked whether anyone can see them. `.sec-tog` was a 10 px glyph in a 13 px box, inked `--sb-ink-dim`. **Words and sizes only: no data, no behaviour, no id changed.**
+
+Every fold arrow in `#sb`, found by sweeping `index.html` for the glyphs `▸ ▾` and the classes that carry them (the sidebar draws sections, groups and folders through `renderTree()`, the journal/year/month/week groups, the Note Types and Tags sections, and the MyDatabase section):
+
+| Arrow | Where in `#sb` | Before | After |
+|---|---|---|---|
+| `.sec-tog` | every section heading: Smart Views, MyDatabase, My Notebooks, Journal, Note Types, Tags, … | 10 px font, 13 px wide, `--sb-ink-dim` | **16 px font, 16 px wide, `--sb-ink`** |
+| `.sf-grp-tog` | Smart View groups, year/month/week/event groups of the journal | 10 px font, 13 px wide, `--t3` (a Pane colour) | **16 px, `--sb-ink`**, scoped as `#sb .sf-grp-tog` so Pane 2's copy is untouched |
+| `.tr-tog` | the folder tree, Note Type groups, tag rows (the empty ones are spacers) | 22 px font, 20 px wide, `--sb-ink-dim` | **22 px (unchanged), `--sb-ink`** |
+
+- **Rows:** a section heading's height is set by its name and ⋯ buttons, not the arrow, so no row grows. The arrow beside the name is 3 px wider (`.sec-tog`) and 3 px wider (`.sf-grp-tog`).
+- **Tap area:** unchanged, the whole row (`togSec` / `togExp` are on the row). No arrow is the only target.
+- **Contrast** is measured per preset in block 68 (see the record below).
+- **Checks:** block `68-fold-arrows` (`tools/arrows-v1.mjs`).
+- **Not done (found in Pane 2 and Pane 3, out of scope, to be filed):** `.p2h-tree-tog` (11 px, Pane 2 tree), `.mw-tog` / `.mw-chev` (10–11 px, the MyDatabase wall), `.nti-pk-cat-tog` (9 px, the Note Type picker), `.clr-fam-tog` (10 px, colour menus), `.mw-cu-tog` (10 px), `#toc-panel .toc-title-arrow` (11 px) and `.pin-exp-arrow` / `.pin-exp-arrow-sm` (10 / 9 px, Pinned Tabs). `.sf-grp-tog` in Pane 2 (10 px, `--t3`) is also still small.
