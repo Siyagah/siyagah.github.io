@@ -57,7 +57,7 @@ const seed = () => {
 };
 
 /* ══ 67a — the doc ══ */
-if (want('67a')) {
+if (want('67a')) try {
   /* off writes nothing */
   const cloud = makeCloud();
   const A = await addDevice(browser, srv.base, cloud, 'A', { width: 1440, height: 900 }, false, seed());
@@ -160,10 +160,10 @@ if (want('67a')) {
   C.holdQ = false; for (const id of [...C.qsubs.keys()]) cloud2.deliverQ(C, id, true);
   check(await until(() => remWrites(cloud2).length > 0, 40000), '67a …and it is written once the reader has caught up');
   await C.ctx.close();
-}
+} catch (e) { check(false, '67a the block ran to the end', String(e && e.message).slice(0, 200)); }
 
 /* ══ 67b — the helper, executed ══ */
-if (want('67b')) {
+if (want('67b')) try {
   const cloud = makeCloud();
   const A = await addDevice(browser, srv.base, cloud, 'A', { width: 1440, height: 900 }, false, seed());
   await waitSeeded(cloud, A);
@@ -270,10 +270,10 @@ if (want('67b')) {
   g.resp = { code: 200, body: JSON.stringify({ fields: { j: { stringValue: real.j } } }) };
   g.run('check');
   check(g.mails.some((m) => /open=rPast/.test(m.body)) && !g.mails.some((m) => /open=rDate/.test(m.body)), '67b the doc the app really wrote makes the helper email the due note (and only it)', g.mails.map((m) => m.subject).join(' | '));
-}
+} catch (e) { check(false, '67b the block ran to the end', String(e && e.message).slice(0, 200)); }
 
 /* ══ 67c — the panel ══ */
-if (want('67c')) {
+if (want('67c')) try {
   const VPS = [{ name: '1440', w: 1440, h: 900, touch: false }, { name: '820', w: 820, h: 1180, touch: true }, { name: '390', w: 390, h: 844, touch: true }];
   for (const vp of VPS) {
     const t = `67c@${vp.name}`;
@@ -362,7 +362,7 @@ if (want('67c')) {
   check(/Cloud Sync/.test(nt) && !/Copy the helper/.test(nt), '67c with no sync set up the panel says sync is needed and shows no steps', nt.slice(0, 120));
   check(errs.length === 0, '67c …without page errors', errs.join(' | '));
   await ctx.close();
-}
+} catch (e) { check(false, '67c the block ran to the end', String(e && e.message).slice(0, 200)); }
 
 await browser.close(); await srv.close();
 const bad = results.filter((x) => !x.ok).length;
