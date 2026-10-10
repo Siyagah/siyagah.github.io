@@ -165,7 +165,7 @@ try {
         check(await on(A, () => document.getElementById('jeb-panel').classList.contains('on')), `63c${tag} the panel stays open after → Note (the next item can be done at once)`);
         await act(A, vp, `${row(ids[1])} .jeb-note-b`); await sleep(400);
         const tp = await toastText(A);
-        check(/in 📔 Journal/.test(tj) && /in 👝 From Jeb/.test(tp), `63c${tag} with a Journal flag the toast says 📔 Journal; with nothing attached, 👝 From Jeb`, tj + ' || ' + tp);
+        check(/in 📔 Journal/.test(tj) && /in 👝 From Zab/.test(tp), `63c${tag} with a Journal flag the toast says 📔 Journal; with nothing attached, 👝 From Jeb`, tj + ' || ' + tp); /* v05.05: renamed to Zab */
       }
       check(A.errors.length + B.errors.length === 0, `63b/63c${tag} no page errors`, [...A.errors, ...B.errors].slice(0, 2).join(' · '));
     } finally { await A.ctx.close(); await B.ctx.close(); }
@@ -196,7 +196,7 @@ try {
       const sfRow = '.sf-row[data-sfid="sf-jeb"]';
       if (!(await on(d, () => !!document.querySelector('.sf-row[data-sfid="sf-jeb"]')))) { await act(d, vp, '.sf-hd-sec'); await sleep(300); }
       const cnt = await on(d, () => { const r = document.querySelector('.sf-row[data-sfid="sf-jeb"]'); return r ? { name: r.querySelector('.tr-name').textContent, cnt: r.querySelector('.tr-cnt').textContent } : null; });
-      check(!!cnt && cnt.name === '(12) From Jeb' && cnt.cnt === '3', `${t} the sidebar row "(12) From Jeb" is there with count 3`, JSON.stringify(cnt));
+      check(!!cnt && cnt.name === '(12) From Zab' && cnt.cnt === '3', `${t} the sidebar row "(12) From Jeb" is there with count 3`, JSON.stringify(cnt)); /* v05.05: renamed to Zab */
       await act(d, vp, sfRow); await sleep(500);
       const titles = await on(d, () => [...document.querySelectorAll('#p2c .ar .ar-t')].map((e) => e.textContent.trim()));
       check(titles.join('|') === 'Jeb newest|Jeb middle|Jeb oldest', `${t} a real click lists them newest first`, titles.join('|'));
@@ -207,7 +207,7 @@ try {
         const c0 = await on(e, () => document.querySelector('.sf-row[data-sfid="sf-jeb"] .tr-cnt').textContent);
         await act(e, vp, sfRow); await sleep(500);
         const txt = await on(e, () => document.getElementById('p2c').innerText);
-        check(c0 === '0' && /Notes you make from Jeb appear here\./.test(txt), `${t} with none made: count 0 and the empty-state line`, c0 + ' ' + txt.slice(0, 80));
+        check(c0 === '0' && /Notes you make from Zab appear here\./.test(txt), `${t} with none made: count 0 and the empty-state line`, c0 + ' ' + txt.slice(0, 80)); /* v05.05: renamed to Zab */
         noErr(e, t + ' (empty)');
       } finally { await e.ctx.close(); }
       noErr(d, t);

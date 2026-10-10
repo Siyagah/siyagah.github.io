@@ -81,7 +81,7 @@ try {
       const jh = await on(j, () => ({ man: document.querySelector('link[rel="manifest"]').getAttribute('href'), title: document.title, app: _JEB_APP, cls: document.documentElement.classList.contains('jeb-app'),
         ati: document.querySelector('meta[name="apple-mobile-web-app-title"]').content, touch: document.querySelector('link[rel="apple-touch-icon"][sizes]').getAttribute('href'), ico: document.querySelector('link[rel="icon"][type="image/svg+xml"]').getAttribute('href'),
         fallback: document.querySelector('link[rel="apple-touch-icon"]:not([sizes])').getAttribute('href').slice(0, 25), nd: !!document.getElementById('nd') }));
-      check(jh.man === '/manifest-jeb.json' && jh.title === 'Siyagah Jeb' && jh.app && jh.cls && jh.ati === 'Jeb' && jh.touch === '/icons/apple-touch-icon-jeb.png' && jh.ico === '/icons/icon-jeb.svg',
+      check(jh.man === '/manifest-jeb.json' && jh.title === 'Siyagah Zab' && jh.app && jh.cls && jh.ati === 'Zab' && jh.touch === '/icons/apple-touch-icon-jeb.png' && jh.ico === '/icons/icon-jeb.svg', /* v05.05: renamed to Zab */
         `${t} /?jeb=1: manifest-jeb.json, title "Siyagah Jeb", Jeb icons, _JEB_APP and html.jeb-app`, JSON.stringify(jh));
       check(jh.fallback === 'data:image/svg+xml;base64' && jh.nd, `${t} /?jeb=1: the data-URI fallback icon and <script id="nd"> are untouched`);
       const mh = await on(m, () => ({ man: document.querySelector('link[rel="manifest"]').getAttribute('href'), title: document.title, app: _JEB_APP, cls: document.documentElement.classList.contains('jeb-app'), ati: document.querySelector('meta[name="apple-mobile-web-app-title"]').content,
@@ -262,7 +262,7 @@ try {
       await booted(pop); await sleep(500);
       const u = new URL(pop.url());
       const st = await pop.evaluate(() => ({ app: _JEB_APP, hd: !!document.getElementById('jeb-app-hd'), title: document.title }));
-      check(u.pathname === '/' && u.search === '?jeb=1' && st.app && st.hd && st.title === 'Siyagah Jeb', `${t} it opens /?jeb=1 in a new window, in Jeb mode`, pop.url() + ' ' + JSON.stringify(st));
+      check(u.pathname === '/' && u.search === '?jeb=1' && st.app && st.hd && st.title === 'Siyagah Zab', `${t} it opens /?jeb=1 in a new window, in Jeb mode`, pop.url() + ' ' + JSON.stringify(st)); /* v05.05: renamed to Zab */
       check(!(await on(d, () => document.getElementById('sb-tools').classList.contains('open') && false)) , `${t} (the full app is still there behind it)`);
       noErr(d, t);
     } finally { await d.ctx.close(); }
@@ -342,7 +342,7 @@ try {
             const html = await on(d, () => getExportHTML());
             const live = await on(d, () => ({ app: _JEB_APP, hd: !!document.getElementById('jeb-app-hd'), cls: document.documentElement.classList.contains('jeb-app'), docked: !!document.getElementById('jeb-panel')?.classList.contains('on'), title: document.title }));
             const isJ = mode === 'jeb';
-            check(live.app === isJ && live.hd === isJ && live.cls === isJ && live.docked && (live.title === 'Siyagah Jeb') === isJ, `${t} ${mode}: the live page is unchanged by the export (mode, header, docked panel)`, JSON.stringify(live));
+            check(live.app === isJ && live.hd === isJ && live.cls === isJ && live.docked && (live.title === 'Siyagah Zab') === isJ, `${t} ${mode}: the live page is unchanged by the export (mode, header, docked panel)`, JSON.stringify(live)); /* v05.05: renamed to Zab */
             const f = `exp-${mode}-${vp.name}.html`; await writeFile(join(dir, f), html); files[mode] = f;
             const n = (html.match(/id="jeb-bar"|id="jeb-panel"|id="jeb-app-hd"|id="jeb-deck"/g) || []).length;
             check(n === 0, `${t} ${mode}: the saved HTML has no Jeb bar, panel or header`, String(n));
@@ -355,7 +355,7 @@ try {
           try {
             await d.page.goto(esrv.base + '/' + files[mode], { waitUntil: 'domcontentloaded' }); await booted(d.page);
             const s = await on(d, () => ({ app: _JEB_APP, cls: document.documentElement.classList.contains('jeb-app'), title: document.title, man: document.querySelector('link[rel="manifest"]').getAttribute('href'), bars: document.querySelectorAll('#jeb-bar').length, hd: !!document.getElementById('jeb-app-hd') }));
-            check(!s.app && !s.cls && s.title !== 'Siyagah Jeb' && s.man === '/manifest.json' && !s.hd, `${t} reopening the ${mode} export: not a Jeb page, main title and manifest`, JSON.stringify(s));
+            check(!s.app && !s.cls && s.title !== 'Siyagah Zab' && s.man === '/manifest.json' && !s.hd, `${t} reopening the ${mode} export: not a Jeb page, main title and manifest`, JSON.stringify(s)); /* v05.05: renamed to Zab */
             check(s.bars === 1, `${t} reopening the ${mode} export: exactly one #jeb-bar`, String(s.bars));
             check(await visible(d, '#sb'), `${t} reopening the ${mode} export: the sidebar is visible`);
             if (!vp.touch) {
