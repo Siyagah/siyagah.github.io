@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.05.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.06.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,12 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.06** (10 Oct 2026) — R1, reminder emails (issue #160). `DB.theme.remindMail={on,hour}`;
+  while on, a synced device writes one cloud doc `notebooks/{nb}/remind/v1` (`_remTick`,
+  `_remList`); a helper in the owner's own Google account (Apps Script, text built by
+  `_remGs()` / `_remJson()`) emails them from their own Gmail. Panel: 🧰 → 🔔 Reminder
+  emails and a line in the reminder dialog (dialog on PC/tablet, sheet on a phone).
+  Check: block 67, `tools/remind-r1.mjs`. Not done: My Calendar events, phone push, repeats.
 - **v05.05** (10 Oct 2026) — Z1, "Jeb" becomes **"Zab"** on every screen the owner sees
   (issue #158): bar, menus, "👝 from Zab", Smart View "(12) From Zab", Trash labels,
   "Show Zab bar", the second icon "Siyagah Zab" (manifest `name`/`short_name`, title,
@@ -45,13 +51,6 @@ must never accumulate here instead of there.
   card and read view. Popover beside the panel on PC/tablet, 80 % sheet on a
   phone. `--only 63` **158/158**, `--only 60` 203/203, `--only 59` 74/74.
   Architect: full `app-check` **2739/2739, twice in a row**; unpatched `--only 63` 0/3.
-- **v05.01** (9 Oct 2026) — a click below a folded ending writes there,
-  without opening it (the owner: "it opens the last heading and jumps at the
-  bottom"). The new line is the note's **tail** (`<p data-tail="1">`);
-  `_isSecEnd(n,level)` ends a section at the next same-or-higher heading OR the
-  tail, in `_edColApply`, `_initCollapsible`, `_secNodesOf` and
-  `_edBlockDragStart`. `_edRevealTail` is gone. Block 62: **25/25**, unpatched
-  8/25. Architect: full `app-check` **2581/2581** on the final head; unpatched `--only 62` 8/25.
 ---
 
 ## What this is
@@ -426,6 +425,19 @@ A failing check is a wrong assertion surprisingly often — investigate before
   never `location.search`; no data path branches on it. Notes panes are hidden, the bar is
   always on, `#jeb-panel` is docked and never closes (`_jebAppEnsure`), and
   `DB.theme.jebAppView` is written only by `_jebAppRemember` on a real switch.
+- **Reminder emails (v05.06, R1).** `art.reminder={dt,msg}` is still shown only in
+  the app; the email path is a separate cloud doc, `notebooks/{nb}/remind/v1`
+  `{j:<JSON string>,at,b[,off:true]}`, written by `_remTick()` (5 s timer) from the
+  merged `DB` — the list (`_remList`: not in Trash, now−2 d … now+60 d, date-only
+  reminders at `remindMail.hour`) only when its signature has held for one tick, and
+  only through `_s1WriteGate()` AND a proof of a first read (`_s1RdCaught` or
+  `_remMerged`). It is **not** in recs, the blob, `_S1_COLLS`, `mergeDB()` or any
+  backup, the app never reads it, and a failure never fails a push. Off writes
+  `off:true` once, only from a device that had written "on". The helper is two text
+  blocks built by `_remGs()` (pre-filled project and notebook ids) and `_remJson()`;
+  the owner pastes them into Google Apps Script. `check()` emails an item once per
+  `id|at` (36 h late limit), so editing a time emails again. Tests execute the
+  generated `Code.gs` in Node `vm` against mocks (block 67).
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,

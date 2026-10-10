@@ -1670,6 +1670,27 @@ sup.ann-sup:hover{text-decoration:underline}
 .rem-btn.save{background:var(--accent);color:#fff}
 .rem-btn.save:hover{opacity:.88}
 .rem-btn.cancel{background:var(--hover);color:var(--t1)}
+.rem-mail{background:none;border:1px dashed var(--border2);border-radius:7px;padding:7px 10px;
+  font-family:var(--ui);font-size:12px;color:var(--t2);cursor:pointer;text-align:left}
+#remmail-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10060;
+  background:rgba(0,0,0,.45);align-items:center;justify-content:center}
+#remmail-modal.open{display:flex}
+#remmail-box{background:var(--paper);border-radius:12px;padding:18px 22px;width:min(480px,94vw);
+  max-height:90vh;overflow-y:auto;box-sizing:border-box;box-shadow:0 8px 32px rgba(0,0,0,.25);
+  display:flex;flex-direction:column;gap:12px;color:var(--t1);font-size:13px}
+.rm-hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rm-p{margin:0;line-height:1.45}
+.rm-sw{display:flex;align-items:center;gap:8px;font-size:14px}
+.rm-row{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--t3)}
+.rm-state{font-size:12px;color:var(--t2);padding:7px 10px;background:var(--hover);border-radius:7px;line-height:1.4}
+.rm-sub{font-size:12px;font-weight:600;color:var(--t2)}
+.rm-steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px;line-height:1.45}
+.rm-big{display:block;width:100%;box-sizing:border-box;margin:4px 0;padding:11px 14px;border:none;border-radius:8px;
+  background:var(--green);color:var(--on-accent);font-family:var(--ui);font-size:14px;font-weight:600;cursor:pointer;min-height:44px}
+#rm-fbt{font-family:monospace;font-size:11px}
+@media(max-width:639.98px){
+  #remmail-modal{align-items:flex-end}
+  #remmail-box{width:100%;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}}
 .rem-strip{display:flex;align-items:center;gap:8px;
   margin:6px 0 0;padding:7px 12px;border-radius:0 8px 8px 0;
   font-size:12px;font-weight:500;border-left:3px solid;flex-wrap:wrap}
@@ -3481,6 +3502,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <div class="sb-mi-hd">Reference &amp; dates</div>
           <div class="sb-mi" onclick="openCiteModal();closeSBTools()" title="Insert Qurʿan or Hadith reference into note">📖 Insert Reference</div>
           <div class="sb-mi" onclick="openCalSettings();closeSBTools()" title="Set your country for public holidays">📅 Calendar Country</div>
+          <div class="sb-mi" onclick="openRemindMail();closeSBTools()" title="Get an email from your own Gmail when a note's reminder comes due">🔔 Reminder emails</div>
           <div class="sb-mi" onclick="toggleHijri();closeSBTools()" title="Toggle Hijri dates in the calendar">☪ Hijri Dates</div>
           <div class="sb-mi-hd">View</div>
           <div class="sb-mi" onclick="openTheme();closeSBTools()">🎨 Appearance</div>
@@ -8601,6 +8623,7 @@ function openReminderModal(aid){
     timeEl.value='';
   }
   msgEl.value=r.msg||'';
+  try{ _remStateRefresh(); }catch(e){}
   document.getElementById('rem-modal').classList.add('open');
   setTimeout(()=>dateEl.focus(),120);
 }
@@ -26066,6 +26089,245 @@ async function _doPush(){
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════════
+   v05.06 — R1, reminder emails.
+   The app keeps ONE small cloud doc, notebooks/{nb}/remind/v1, with the list of
+   upcoming reminders; a helper (Apps Script) in the owner's own Google account
+   reads it every few minutes and emails them. The app never reads it back. It is
+   not in recs, the blob, _S1_COLLS, mergeDB() or any backup, and a failed write
+   never fails a push. Setting: DB.theme.remindMail={on,hour} (syncs per sub-key).
+   ════════════════════════════════════════════════════════════════════════════ */
+const _REM_SCOPES=['https://www.googleapis.com/auth/script.external_request','https://www.googleapis.com/auth/datastore','https://www.googleapis.com/auth/script.send_mail','https://www.googleapis.com/auth/script.scriptapp','https://www.googleapis.com/auth/userinfo.email'];
+let _remMerged=false, _remBusy=false;
+const _remState={sig:'',seen:'',count:0,last:0,err:null,why:null,retryAt:0};
+function _remCfg(){
+  const r=(DB.theme&&DB.theme.remindMail)||{};
+  let h=parseInt(r.hour,10); if(!(h>=0&&h<=23)) h=8;
+  return {on:!!r.on, hour:h};
+}
+function _remSet(patch){
+  if(!DB.theme) DB.theme={};
+  DB.theme.remindMail=Object.assign({},_remCfg(),patch);
+  persist();
+}
+/* every note with a reminder, not in Trash, due between now-2 days and now+60 days */
+function _remList(hour,now){
+  now=now||Date.now();
+  const lo=now-2*864e5, hi=now+60*864e5, out=[];
+  (DB.articles||[]).forEach(a=>{
+    const dt=a&&a.reminder&&a.reminder.dt; if(!dt||typeof dt!=='string') return;
+    let d;
+    if(dt.length===10){ d=new Date(dt+'T00:00'); d.setHours(hour,0,0,0); } else d=new Date(dt);
+    const at=d.getTime(); if(isNaN(at)||at<lo||at>hi) return;
+    out.push({id:a.id,title:String(a.title||'').trim().slice(0,120),msg:String((a.reminder&&a.reminder.msg)||''),dt,at});
+  });
+  out.sort((x,y)=>x.at-y.at||(x.id<y.id?-1:x.id>y.id?1:0));
+  return out;
+}
+function _remPayload(){
+  const c=_remCfg();
+  return {c, o:{v:1,hour:c.hour,list:c.on?_remList(c.hour):[]}};
+}
+function _remMarkKey(nb){ return 'siyagah-remind-w:'+nb; }
+async function _remTick(force){
+  if(_remBusy) return;
+  const cfg=getSyncConfig();
+  if(!cfg||!cfg.notebookId||!_syncFsDb||!_dbLoaded){ _remState.why='nosync'; return; }
+  const nb=cfg.notebookId, mk=_remMarkKey(nb);
+  let wrote=null; try{ wrote=localStorage.getItem(mk); }catch(e){}
+  const {c,o}=_remPayload();
+  if(!c.on&&wrote!=='on') { _remState.why=null; return; }   /* off and never on from here: write nothing */
+  if(!(_s1WriteGate()&&(_s1RdCaught||_remMerged))){ _remState.why='wait'; return; }   /* never before the first read */
+  const sig=(c.on?'on|':'off|')+JSON.stringify(o);
+  if(sig===_remState.sig){ _remState.why=null; return; }
+  if(!force){
+    if(_remState.seen!==sig){ _remState.seen=sig; return; }   /* debounce: the list must hold for one tick */
+    if(Date.now()<_remState.retryAt) return;
+  }
+  _remBusy=true;
+  try{
+    const ts=firebase.firestore.FieldValue.serverTimestamp();
+    const doc=_syncFsDb.collection('notebooks').doc(nb).collection('remind').doc('v1');
+    const body={j:JSON.stringify(o),at:ts,b:document.querySelector('meta[name="app-version"]').content};
+    if(!c.on) body.off=true;
+    await doc.set(body);
+    _remState.sig=sig; _remState.seen=sig; _remState.err=null; _remState.why=null; _remState.retryAt=0;
+    _remState.count=o.list.filter(x=>x.at>Date.now()).length; _remState.last=Date.now();
+    try{ localStorage.setItem(mk,c.on?'on':'off'); }catch(e){}
+  }catch(e){
+    _remState.err=e; _remState.retryAt=Date.now()+60000;
+  }finally{ _remBusy=false; try{ _remStateRefresh(); }catch(e){} }
+}
+setInterval(()=>{ try{ _remTick(); _remStateRefresh(); }catch(e){} },5000);
+function _remStateText(){
+  const c=_remCfg();
+  if(!getSyncConfig()) return 'Cloud Sync is not set up on this device.';
+  if(!c.on) return 'Reminder emails are off.';
+  const e=_remState.err;
+  if(e){
+    if(e.code==='permission-denied') return '⚠ The cloud refused the reminder list (permission). Your notes are fine; this is retried on the next change.';
+    if(typeof navigator!=='undefined'&&navigator.onLine===false) return '⚠ Offline — the reminder list will be sent when the connection is back.';
+    return '⚠ Could not send the reminder list: '+((e&&e.message)||e);
+  }
+  if(!_syncFsDb) return 'Not signed in to sync on this device yet.';
+  if(_remState.last) return _remState.count+' upcoming reminder'+(_remState.count===1?'':'s')+' sent to the cloud · last sent '+new Date(_remState.last).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  if(_remState.why==='wait') return 'Waiting for the first sync to finish…';
+  return 'Sending the reminder list…';
+}
+function _remStateRefresh(){
+  const el=document.getElementById('rm-state'); if(el) el.textContent=_remStateText();
+  const ln=document.getElementById('rem-mail-line'); if(ln) ln.textContent='📧 Email me reminders: '+(_remCfg().on?'On':'Set up');
+}
+/* The helper, as text. One function builds both blocks so a downloaded copy has them (I4). */
+function _remGs(){
+  const cfg=getSyncConfig()||{};
+  const P=JSON.stringify(String((cfg.firebaseConfig&&cfg.firebaseConfig.projectId)||'')), N=JSON.stringify(String(cfg.notebookId||''));
+  return `/* Siyagah reminder emails — paste this whole file, save, choose "setup", press Run. */
+var PROJECT_ID = ${P};
+var NOTEBOOK_ID = ${N};
+var LATE_MS = 36 * 3600 * 1000;
+var KEEP_MS = 4 * 24 * 3600 * 1000;
+var APP_URL = 'https://siyagah.github.io/';
+
+function docUrl_() {
+  return 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(PROJECT_ID) +
+    '/databases/(default)/documents/notebooks/' + encodeURIComponent(NOTEBOOK_ID) + '/remind/v1';
+}
+
+function fetchList_() {
+  var res;
+  try {
+    res = UrlFetchApp.fetch(docUrl_(), {
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      muteHttpExceptions: true
+    });
+  } catch (e) { return { code: 0 }; }
+  var code = res.getResponseCode();
+  if (code !== 200) return { code: code };
+  try {
+    var f = JSON.parse(res.getContentText()).fields || {};
+    return { code: 200, off: !!(f.off && f.off.booleanValue), data: JSON.parse(f.j.stringValue) };
+  } catch (e) { return { code: 0 }; }
+}
+
+function when_(it) {
+  var tz = Session.getScriptTimeZone();
+  var d = new Date(it.at);
+  return String(it.dt).length === 10
+    ? Utilities.formatDate(d, tz, 'EEEE d MMMM yyyy')
+    : Utilities.formatDate(d, tz, 'EEEE d MMMM yyyy, HH:mm');
+}
+
+function esc_(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function send_(it, to) {
+  var link = APP_URL + '?open=' + encodeURIComponent(it.id);
+  var title = it.title || 'Untitled note';
+  var text = 'Note: ' + title + String.fromCharCode(10) + 'Due: ' + when_(it) + String.fromCharCode(10) +
+    (it.msg ? 'Message: ' + it.msg + String.fromCharCode(10) : '') + String.fromCharCode(10) + 'Open it: ' + link;
+  var html = '<p><b>' + esc_(title) + '</b></p><p>Due: ' + esc_(when_(it)) + '</p>' +
+    (it.msg ? '<p>' + esc_(it.msg) + '</p>' : '') + '<p><a href="' + link + '">Open the note in Siyagah</a></p>';
+  MailApp.sendEmail({ to: to, subject: '\\uD83D\\uDD14 ' + (it.msg || title), body: text, htmlBody: html });
+}
+
+function check() {
+  var r = fetchList_();
+  if (r.code !== 200 || r.off) return;
+  var now = Date.now();
+  var props = PropertiesService.getScriptProperties();
+  var sent = {};
+  try { sent = JSON.parse(props.getProperty('sent') || '{}'); } catch (e) { sent = {}; }
+  var to = Session.getEffectiveUser().getEmail();
+  (r.data.list || []).forEach(function (it) {
+    var key = it.id + '|' + it.at;
+    if (sent[key]) return;
+    if (it.at <= now && it.at > now - LATE_MS) {
+      send_(it, to);
+      sent[key] = now;
+      props.setProperty('sent', JSON.stringify(sent));
+    }
+  });
+  Object.keys(sent).forEach(function (k) { if (now - sent[k] > KEEP_MS) delete sent[k]; });
+  props.setProperty('sent', JSON.stringify(sent));
+}
+
+function setup() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('check').timeBased().everyMinutes(5).create();
+  var r = fetchList_();
+  if (r.code === 403 || r.code === 401) {
+    throw new Error("This Google account can't read the Siyagah notebook - sign in with the account that owns the Firebase project.");
+  }
+  if (r.code === 404) {
+    throw new Error("The app hasn't sent the reminder list yet - turn Reminder emails on in Siyagah, wait a minute, run setup again.");
+  }
+  if (r.code !== 200) {
+    throw new Error("Could not reach the Siyagah notebook (code " + r.code + ") - wait a minute and run setup again.");
+  }
+  var now = Date.now();
+  var up = (r.data.list || []).filter(function (it) { return it.at > now; });
+  var next = up.length ? ' (next: ' + (up[0].title || 'Untitled note') + ', ' + when_(up[0]) + ')' : '';
+  var msg = 'Siyagah reminder emails are on \\u2014 ' + up.length + ' upcoming reminder' + (up.length === 1 ? '' : 's') + next;
+  MailApp.sendEmail(Session.getEffectiveUser().getEmail(), 'Siyagah reminder emails are on', msg);
+  Logger.log(msg);
+}
+`;
+}
+function _remJson(){
+  let tz='UTC'; try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'; }catch(e){}
+  return JSON.stringify({timeZone:tz,exceptionLogging:'STACKDRIVER',runtimeVersion:'V8',oauthScopes:_REM_SCOPES},null,2)+'\n';
+}
+function openRemindMail(){
+  let m=document.getElementById('remmail-modal');
+  if(!m){
+    m=document.createElement('div'); m.id='remmail-modal';
+    m.addEventListener('click',e=>{ if(e.target===m) closeRemindMail(); });
+    m.innerHTML='<div id="remmail-box"></div>';
+    document.body.appendChild(m);
+  }
+  _remPaint();
+  m.classList.add('open');
+}
+function closeRemindMail(){ const m=document.getElementById('remmail-modal'); if(m) m.classList.remove('open'); _remStateRefresh(); }
+function _remPaint(){
+  const box=document.getElementById('remmail-box'); if(!box) return;
+  const c=_remCfg(), hasSync=!!getSyncConfig();
+  const hrs=[]; for(let h=0;h<24;h++) hrs.push(`<option value="${h}"${h===c.hour?' selected':''}>${String(h).padStart(2,'0')}:00</option>`);
+  let h=`<div class="rm-hd"><div class="rem-title">🔔 Reminder emails</div><button class="rem-btn cancel" onclick="closeRemindMail()" aria-label="Close">✕</button></div>`;
+  if(!hasSync){
+    h+=`<p class="rm-p">Reminder emails need Cloud Sync, so the cloud can hold your reminder list while the app is closed. Set up sync first.</p>`
+      +`<button class="rm-big" onclick="closeRemindMail();openSyncModal()">☁ Set up Cloud Sync</button>`;
+  }else{
+    h+=`<label class="rm-sw"><input type="checkbox" id="rm-on"${c.on?' checked':''} onchange="_remSet({on:this.checked});_remPaint()"> <b>Email me my reminders</b></label>`
+      +`<label class="rm-row">Morning hour for reminders with no time <select id="rm-hour" class="rem-inp" onchange="_remSet({hour:+this.value});_remStateRefresh()">${hrs.join('')}</select></label>`
+      +`<div id="rm-state" class="rm-state">${esc(_remStateText())}</div>`
+      +`<div class="rm-sub">Set up, once (best on a laptop)</div><ol class="rm-steps">`
+      +`<li><button class="rm-big" onclick="_remCopy('gs')">📋 Copy the helper</button></li>`
+      +`<li><button class="rm-big" onclick="window.open('https://script.google.com/home/projects/create','_blank','noopener')">↗ Open Google Apps Script</button></li>`
+      +`<li>Select everything in the editor and paste.</li>`
+      +`<li>⚙ Project Settings → tick “Show appsscript.json” → back to the editor → open appsscript.json. <button class="rm-big" onclick="_remCopy('json')">📋 Copy the settings file</button> Select everything there and paste.</li>`
+      +`<li>💾 Save, choose <code>setup</code> in the list at the top, press ▶ Run.</li>`
+      +`<li>Google asks for permission. It warns “Google hasn’t verified this app” — this is your own helper. Press <b>Advanced → Go to (unsafe) → Allow</b>.</li>`
+      +`<li>You’ll get an email “Siyagah reminder emails are on”. That’s it.</li></ol>`
+      +`<div id="rm-fb"></div>`;
+  }
+  box.innerHTML=h;
+}
+async function _remCopy(which){
+  const text=which==='json'?_remJson():_remGs();
+  try{
+    if(!navigator.clipboard||!navigator.clipboard.writeText) throw new Error('no clipboard');
+    await navigator.clipboard.writeText(text);
+    toast('📋 Copied');
+  }catch(e){
+    const fb=document.getElementById('rm-fb'); if(!fb) return;
+    fb.innerHTML='<div class="rm-p">Copy did not work here. Select all of this text and copy it:</div><textarea id="rm-fbt" class="rem-inp" rows="8" readonly></textarea>';
+    const t=document.getElementById('rm-fbt'); t.value=text; t.focus(); t.select();
+  }
+}
+
 function pushToCloud(){
   if(!getSyncConfig()||!_syncFsDb)return;
   const now=Date.now();
@@ -26353,6 +26615,7 @@ function _mergeRemoteIn(remoteDB, remoteT){
     _stampRecordTouches();   /* v04.68 — see syncNow() */
     const _s1Old=_recSnap;   /* v04.90 — S1c: what the merge changes is the difference of the two baselines */
     DB=mergeDB(DB, remoteDB);                  /* MERGE — never replace, so nothing is lost */
+    _remMerged=true;   /* v05.06 — the reminder list may be written only after a read */
     _seedThemeSnap();  /* v04.40 — see the identical call in syncNow() above */
     const _sw=_seedRecSnap(true);    /* v04.68 */
     _s1DirtyFromDiff(_s1Old,_recSnap);
@@ -30287,6 +30550,7 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
       <label class="rem-lbl" for="rem-msg">Note (optional)</label>
       <input class="rem-inp" id="rem-msg" type="text" placeholder="e.g. Review this note">
     </div>
+    <button id="rem-mail-line" class="rem-mail" onclick="openRemindMail()">📧 Email me reminders: Set up</button>
     <div class="rem-acts">
       <button class="rem-btn cancel" onclick="closeReminderModal()">Cancel</button>
       <button class="rem-btn save" onclick="saveReminder()">Save</button>
