@@ -9309,4 +9309,8 @@ The owner: "How about write Siyagah Zab, not Jeb?" — and chose **everywhere**.
   (or `''`, which now falls back to "Zab"). The Smart View name is a code constant; `DB.sfItems` holds a name only if the
   owner renamed that view themselves, and would be shown as typed. Nothing was rewritten.
 - **Step 0:** the v05.04 Totals (Architect) line recorded; `ZAB-PLAN.md` (the owner's plan, unedited) brought onto the branch.
-- **Checks:** see the notes below on what was and was not run.
+- **Checks:** new block `66-zab-name` (`tools/zab-z1.mjs`): a sweep at 1440, 820 and 390 of every Zab surface, in the full app and at `/?jeb=1`, collecting visible text, `title`, `aria-label` and `placeholder`; no `/\bJeb\b/i` anywhere. Chrome's manifest name is "Siyagah Zab"/"Zab"; stored data is byte-identical after booting on a v05.04 notebook. Old-word assertions in `jeb-j1/j3/j4/j5.mjs` were updated in place.
+- **Completed by the Architect.** The builder pushed everything (`be1aec0`) and stopped during its `--only 59…65` run, with no PR. The Architect ran the checks, wrote this record and opened the PR from `claude/amazing-euler-jolpkm`.
+- **Seen once, not this round's:** `60l@390 #fw-switch sits above the bar` failed once (switcher bottom at the viewport edge, i.e. measured before `--jeb-h` applied) in an `--only 59,60,63,64,65,66` run that shared the machine with nothing else. It then passed 3× in `--only 60` and in both full runs. It is J2's check and Z1 changed no layout; filed in the backlog as a timing flicker to make robust.
+- **Totals (Architect):** full `app-check` **3535/3535, twice in a row** on `be1aec0`; `ship-check` 14/14; `--only 59,60,63,64,65,66` 1229/1231 (the 60l flicker above; its exit line); `--only 60` 203/203 ×3; unpatched (v05.04 `index.html` + `sw.js` + `manifest-jeb.json`) `--only 66` **130/290** (every "no Jeb" sweep and the manifest name fail; the data-unchanged checks pass, as they must).
+

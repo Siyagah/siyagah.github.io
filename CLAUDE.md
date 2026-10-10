@@ -21,7 +21,7 @@ must never accumulate here instead of there.
   "Show Zab bar", the second icon "Siyagah Zab" (manifest `name`/`short_name`, title,
   apple title). Words only: every internal name (`DB.jeb`, `jeb*`, `#jeb-*`, `fromJeb`,
   `_JEB_APP`, `?jeb=1`, `manifest-jeb.json`, `icons/icon-jeb*`) is unchanged; no migration.
-  Check: block 66, `tools/zab-z1.mjs`.
+  Check: block 66, `tools/zab-z1.mjs`. Architect: full `app-check` **3535/3535, twice in a row**; unpatched `--only 66` 130/290.
 - **v05.04** (10 Oct 2026) — J5, "Siyagah Jeb" (issue #156): the same `index.html`
   opened as `/?jeb=1` is a second home-screen icon showing only Jeb. `const _JEB_APP` +
   `html.jeb-app` are set once in `<script id="jeb-mode">` in `<head>`, which also swaps the
