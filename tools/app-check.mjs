@@ -2521,7 +2521,9 @@ await r.block('6o-1-menu-reorg', async () => {
     /* v04.44 (issue #58) — #save-lbl (already in 🧰 Tools) is now tappable
        when it is showing the storage warning; the only genuinely new action
        either menu has gained since this baseline was written. */
-    '_saveLblTap'];
+    '_saveLblTap',
+    /* v05.04 (issue #156, J5) — 👝 Siyagah Jeb in 🧰 Tools, added on purpose. */
+    'openJebApp'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
   const lost = V0420.filter((f) => !now.includes(f));
   const added = [...new Set(now)].filter((f) => !V0420.includes(f));

@@ -44,7 +44,7 @@
    ?jeb=1. Decided HERE, once, before first paint; everything else asks the
    one global _JEB_APP and never reads the address again. Only the page's face
    changes (manifest, title, icons, the jeb-app class): no data path branches
-   on it. The unsized data-URI icon and <script id="nd"> are left alone. */
+   on it. The unsized data-URI icon and the notebook data tag (id nd) are left alone. */
 const _JEB_APP=(function(){ try{ return /(^|[?&])jeb=1(&|$)/.test(location.search); }catch(e){ return false; } })();
 if(_JEB_APP){
   document.documentElement.classList.add('jeb-app');
@@ -804,7 +804,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
    margin. Tablet/phone: #sb/#p2/#p3 end at the bar's top; the bar is full width.
    Inks are the pane inks (--t1/--t2 on --white), already measured on every
    preset; only the swatch uses a fixed dark ink on its pastel. */
-html{--jeb-h:0px;--jeb-l:0px}
+html{--jeb-h:0px;--jeb-l:0px;--jeb-hd:0px}
 html.jeb-on{--jeb-h:56px}
 html.jeb-kb{--jeb-h:0px}
 html.jeb-kb #jeb-bar{display:none!important}

@@ -9283,4 +9283,9 @@ dead `#jeb-bar` (no listeners, because `jebRefresh()` reused it), and pocket nam
   `--only=65s` 47/47; on `9699b5a`'s `index.html` 19 of 38 pass (19 FAIL, then it stops on a missing sidebar).
   `ship-check` 13/13; `app-check --only 65,64,60` 709/709.
 
+- **Second review (three small causes in the full run, 9 failures):** `--jeb-hd` now has a default (`0px`) on `html`
+  beside `--jeb-h`/`--jeb-l` (52px stays under `html.jeb-app`); the v04.20 menu inventory lists `openJebApp`, added on
+  purpose in v05.04; the head script's comment no longer quotes the literal data tag, and `ship-check` now fails unless
+  `<script id="nd"` occurs exactly once (I7). `ship-check` 14/14; `--only 6m,6o,53d,65` 294/294.
+
 **Not done:** the full `app-check` (by the issue's instruction). Free card positions and moving Jeb into `_S1_COLLS` stay out.

@@ -70,6 +70,10 @@ if (nd) {
   } catch (e) { ndDetail = `present but not valid JSON: ${e.message}`; }
 }
 r.check(ndOk, '<script id="nd"> is intact and parses', ndDetail);
+/* I7: the literal tag text may appear only on the real tag — a comment that
+   quotes it is matched first by every regex that finds the data (v05.04). */
+const ndCount = html.split('<script id="nd"').length - 1;
+r.check(ndCount === 1, '<script id="nd" occurs exactly once in index.html', `${ndCount} occurrence(s)`);
 
 /* ── 3. sw.js CORE is all-or-nothing ───────────────────────────────────── */
 const core = [...(sw.match(/const CORE\s*=\s*\[([\s\S]*?)\];/)?.[1] ?? '').matchAll(/'([^']+)'/g)].map((m) => m[1]);
