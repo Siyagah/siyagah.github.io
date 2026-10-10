@@ -9210,4 +9210,103 @@ Architect, and a pass on v05.02 would need explaining). On a phone the 64g modal
 `jebNewPocketDialog()`, because the phone deck covers the button that opens it. Free card positions, the standalone
 Siyagah Jeb and moving Jeb into `_S1_COLLS` are out of this round.
 
-**Totals:** full `app-check`: (Architect, in review).
+**Totals (Architect):** full `app-check` **2989/2989, twice in a row** on `c6e640b` (after the two review fixes: PC deck beside the sidebar; the card's "→ Note" button); `ship-check` 13/13; unpatched (v05.02 `index.html` + `sw.js`) `--only 64` 0/4 (no ▦ half; stops at 64a).
+
+## v05.04 — J5, "Siyagah Jeb": a second home-screen icon that opens Jeb only (issue #156, 10 Oct 2026)
+
+The owner chose the second icon ("go with the recommended one, second icon"). It is **the same `index.html`**
+opened with `/?jeb=1`; the sync, the data and the Jeb code exist once. Step 0 of the issue (the v05.03 totals) is its own commit.
+
+- **How the page knows.** A small `<script id="jeb-mode">` in `<head>` decides once, before first paint:
+  `const _JEB_APP` and `html.jeb-app`. Only the page's face changes — `<link rel=manifest>` →
+  `/manifest-jeb.json`, title "Siyagah Jeb", `apple-mobile-web-app-title` "Jeb", the sized apple-touch-icon and the SVG
+  favicon → the Jeb ones, `theme-color` → the Jeb orange. The unsized data-URI icon and `<script id="nd">` are untouched.
+  **No data path branches on it**: `loadDB`, the journal, Firestore sync, Trash and `mergeDB()` run exactly as before.
+- **The manifest and icon.** `manifest-jeb.json` (`id`/`start_url` `/?jeb=1`, scope `/`, name "Siyagah Jeb", short
+  "Jeb", orange `#D9822B`). Icons: `icon-jeb.svg` (a drawn pouch with a note peeking out, white on warm orange — paths
+  only, no emoji or text), `icon-jeb-192/512.png`, `icon-jeb-maskable-512.png` (art inside the safe zone),
+  `apple-touch-icon-jeb.png` (180). PNGs are rendered from the SVG by `tools/make-jeb-icons.mjs`. All six files are in
+  `sw.js`'s `CORE`. `ship-check`'s icon-size check now covers both manifests, and its "linked icon exists" check also
+  covers every `/icons/` path in the head script (changed in place, reason in a comment).
+- **The screen** (`html.jeb-app`): `#sb`, `#p2`, `#p3`, the tab bar, float windows and the TOC button are hidden
+  (hidden, not removed — the sync dot and the saving alarms keep running). **Header** `#jeb-app-hd`: the icon,
+  "Siyagah Jeb", the sync state **in words, read from the sidebar's own `#sync-dot`** (a MutationObserver — no second
+  state; tap = the sync window), **⚠ Not saving** (mirrors the sidebar's `#save-warn-dot`, which would otherwise be hidden;
+  tap = the storage details), **📱 Install** (only while `_pwaPrompt` is set; `installPWA()`), **📓 Open Siyagah**
+  (`location.pathname`, same window). **The bar** is always on (`DB.theme.jebBar===false` is ignored, the stored value is
+  not changed). **The panel is docked** between header and bar and never closes to nothing: tapping outside, Escape,
+  tapping the open chip and the ✕ (hidden) leave it; if it would close (a pocket deleted, ☑ Choose) it falls back to the
+  remembered view or "All pockets". Chips switch it; ▦ opens the deck over the panel and ✕ / Escape / ▦ again return to the panel.
+  **What opens first:** `DB.theme.jebAppView` = `{sel:{ids,all},deck}`, written only when the owner switches
+  (never by the boot's own auto-open, so boot writes nothing); missing pockets fall back to "All pockets".
+- **Shapes (D5).** **PC 1440×900:** the panel is a centred column, 720 px at most; the bar is full width (`--jeb-l` 0, no
+  sidebar). **Tablet 820×1180:** the panel is full width between header and bar. **Phone 390×844:** full width, compact
+  header (buttons are icons only; the sync words stay), bar at the foot. The keyboard rule `jeb-kb` ignores a field inside
+  Jeb, so typing in the panel does not hide the bar.
+- **Boot-time pop-ups, listed.** The full app opens by itself at boot: the **login overlay** (kept — it is sync), the
+  **"App updated — reload"** toast (kept), the **"Backups paused"** toast (kept — a saving alarm), the **⚠ storage dot**
+  (kept, mirrored into the Jeb header because the sidebar is hidden), **"NOT syncing"** toasts and the sync dot (kept).
+  Notes pop-ups at boot: **none exist in this build** — no what's-new, no Murāja'ah or reminder pop-up (Murāja'ah and
+  reminders are Smart Views, not boot dialogs), no onboarding, and the "no backup yet" balloon was removed in v04.69.
+  So nothing had to be suppressed; the alarms are all left to reach the owner.
+- **→ Note in Jeb mode** is `jebToNote` as before; the toast's "Open note" goes to `/?open=<id>` (same window). **Full
+  app:** after its first render `?open=<id>` calls `jebOpenNote(id)` (an unknown id does nothing) and then
+  `history.replaceState` to the plain path. Back returns to Jeb.
+- **Reaching it.** 🧰 → "Home screen" → **👝 Siyagah Jeb** opens `<path>?jeb=1` in a new window (`window.open`, same
+  window if blocked). The path comes from `location.pathname`, so a downloaded `file://` copy works too (I4). *Note:* the
+  issue put the item "next to 📱 Install App", which is in ⚙; its checks and wording say 🧰, so it is in 🧰.
+- **Checks.** `tools/jeb-j5.mjs`, block `65-jeb-app`.
+
+### Changed in review (Save File, I4)
+
+The Architect measured that `getExportHTML()` (Save File, Deploy Export, the linked-file autosave) baked Jeb's
+runtime into the copy: from `/?jeb=1` a file whose `html.jeb-app` hid the sidebar (no note reachable); from `/` a
+dead `#jeb-bar` (no listeners, because `jebRefresh()` reused it), and pocket names and open item text in an
+"empty" Deploy Export shell. Fixed in this round:
+
+- `_cleanExportRoot()` (on the clone) removes `#jeb-bar`, `#jeb-panel`, `#jeb-deck`, `#jeb-att`, `#jeb-menu`,
+  `#jeb-app-hd` and any `.toast` (a toast can carry a note title), strips `jeb-app`/`jeb-on`/`jeb-kb` and the inline
+  `--jeb-h`/`--jeb-l`, and puts the head's face back from `window._JEB_FACE0` — recorded by the head script before
+  it swaps (title, manifest, theme-color, apple title, touch icon, SVG icon), so the main values live in one place.
+- `jebRefresh()` removes, once per session, any Jeb surface found in the page before it built its own, and the head
+  script drops a baked `jeb-app` class when not in Jeb mode: a copy saved by an older build works.
+- **Sweep of what the app appends to `<body>`** (about 40 `document.body.appendChild` sites). Measured at idle
+  after boot, the only runtime addition is `#jeb-bar`. Stripped now: the Jeb surfaces and `.toast`. Already cleared
+  before this round: `#paste-pop`, `#men-dd`, `#item-menu`, `#jrn-style-pop`, `#dgh`, `#ann-bubble`, `#ctx`.
+  **Not stripped, and not examined for leaks:** the on-demand pickers/popovers (`nti-picker`, `jrn-picker`,
+  `mdb-picker`, `nh-picker`, `fl-pop`, `sg-menu`, `ed-drop-line`, `ed-drag-ghost`), the TOC drawer and float-window
+  chrome (`toc-drawer`, `fw-switch`, windows), and modal overlays. They exist only while used and are removed or
+  hidden on close, but I did not open each and read what a saved copy would hold; a follow-up round should.
+- **Check 65s** (3 sizes): export from `/?jeb=1` and `/`, reopened as a plain file — not a Jeb page, main title and
+  `manifest.json`, one `#jeb-bar`, sidebar visible, a note opens by a real click (1440), a chip click opens the
+  panel; Deploy Export with a panel open holds no pocket name or item text; the live page is unchanged by the export.
+  `--only=65s` 47/47; on `9699b5a`'s `index.html` 19 of 38 pass (19 FAIL, then it stops on a missing sidebar).
+  `ship-check` 13/13; `app-check --only 65,64,60` 709/709.
+
+- **Second review (three small causes in the full run, 9 failures):** `--jeb-hd` now has a default (`0px`) on `html`
+  beside `--jeb-h`/`--jeb-l` (52px stays under `html.jeb-app`); the v04.20 menu inventory lists `openJebApp`, added on
+  purpose in v05.04; the head script's comment no longer quotes the literal data tag, and `ship-check` now fails unless
+  `<script id="nd"` occurs exactly once (I7). `ship-check` 14/14; `--only 6m,6o,53d,65` 294/294.
+
+**Not done:** the full `app-check` (by the issue's instruction). Free card positions and moving Jeb into `_S1_COLLS` stay out.
+
+**Totals (Architect):** full `app-check` **3245/3245, twice in a row** on `af08e1b` (after three review rounds: Save File strips Jeb surfaces and restores the head; `--jeb-hd` default, the v04.20 menu inventory, the data-tag literal); `ship-check` 14/14; unpatched (v05.03 `index.html` + `sw.js`) `--only 65` 0/3 (`_JEB_APP is not defined`).
+
+## v05.05 — Z1, "Jeb" becomes "Zab" on every screen (issue #158, 10 Oct 2026)
+
+The owner: "How about write Siyagah Zab, not Jeb?" — and chose **everywhere**. Words on screen only.
+
+- **Changed (what the owner sees):** the head script's `document.title` "Siyagah Zab" and `apple-mobile-web-app-title`
+  "Zab"; the Zab-mode header "Siyagah Zab" and the Install tooltip; the bar's `aria-label` "Zab pockets"; 🧰 → "👝 Siyagah Zab"
+  and its tooltip; 🎨 Appearance "Zab bar" / "Show Zab bar"; Smart View "(12) From Zab" and its empty text; the
+  "👝 from Zab" fallback on the Pane 2 card and read view; the Trash labels "Zab item: …" / "Zab pocket: …"; the
+  backup-restore summary "Zab items: N"; the Attach row's "👝 From Zab". `manifest-jeb.json`: `name` "Siyagah Zab",
+  `short_name` "Zab", description (file name, `id`, `start_url`, icons unchanged).
+- **Not changed, on purpose:** `DB.jeb`, `DB.jebPockets`, `fromJeb`, every `jeb*` function, `#jeb-*` ids and classes,
+  `_JEB_APP`, `?jeb=1`, `manifest-jeb.json`, `icons/icon-jeb*`, code comments. No migration; no stored record is touched (I1, I8).
+- **Is "Jeb" stored in data? Found: no.** The four seeded pockets are "Quick tasks / Ideas / Links to read / Shopping".
+  The Trash labels are built at display time from the item text/pocket name. `fromJeb.pocket` holds the owner's pocket name
+  (or `''`, which now falls back to "Zab"). The Smart View name is a code constant; `DB.sfItems` holds a name only if the
+  owner renamed that view themselves, and would be shown as typed. Nothing was rewritten.
+- **Step 0:** the v05.04 Totals (Architect) line recorded; `ZAB-PLAN.md` (the owner's plan, unedited) brought onto the branch.
+- **Checks:** see the notes below on what was and was not run.

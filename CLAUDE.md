@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.03.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.05.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,14 +16,26 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.05** (10 Oct 2026) — Z1, "Jeb" becomes **"Zab"** on every screen the owner sees
+  (issue #158): bar, menus, "👝 from Zab", Smart View "(12) From Zab", Trash labels,
+  "Show Zab bar", the second icon "Siyagah Zab" (manifest `name`/`short_name`, title,
+  apple title). Words only: every internal name (`DB.jeb`, `jeb*`, `#jeb-*`, `fromJeb`,
+  `_JEB_APP`, `?jeb=1`, `manifest-jeb.json`, `icons/icon-jeb*`) is unchanged; no migration.
+  Check: block 66, `tools/zab-z1.mjs`.
+- **v05.04** (10 Oct 2026) — J5, "Siyagah Jeb" (issue #156): the same `index.html`
+  opened as `/?jeb=1` is a second home-screen icon showing only Jeb. `const _JEB_APP` +
+  `html.jeb-app` are set once in `<script id="jeb-mode">` in `<head>`, which also swaps the
+  manifest (`manifest-jeb.json`), title and icons. Header `#jeb-app-hd` (sync words read from
+  `#sync-dot`, ⚠ mirror, 📱 Install, 📓 Open Siyagah), the always-on bar, a docked panel that
+  never closes to nothing, `DB.theme.jebAppView` (written only on a switch). 🧰 → "👝 Siyagah
+  Jeb"; `?open=<id>` opens a note in the full app. Checks: block 65, `tools/jeb-j5.mjs`. Architect: full `app-check` **3245/3245, twice in a row**; unpatched `--only 65` 0/3.
 - **v05.03** (9 Oct 2026) — J4, pockets as sticky cards (issue #154). A chip is
   two halves: name = panel, **▦** (`[data-jeb-cards]`) = the **deck** `#jeb-deck`
   (cards in the pocket's colour, ink `#2A2418`, tilt from the id, jump-out from the
   chip, drag by ⠿ within/between pockets). **All pockets** chip and **☑ Choose**
   (tick boxes, Panel (N) / Cards (N)); the panel groups several pockets (＋ per
   group; a ＋ item left empty is dropped by `jebDiscardEmpty`). `--only 64`
-  **237/237**, `--only 63` 158/158, `--only 60` 203/203. Full `app-check`:
-  (Architect, in review).
+  **237/237**, `--only 63` 158/158, `--only 60` 203/203. Architect: full `app-check` **2989/2989, twice in a row**; unpatched `--only 64` 0/4.
 - **v05.02** (9 Oct 2026) — J3, 📎 Attach, → Note and "(12) From Jeb" (issue
   #152). `#jeb-att`: four tabs (Folder, Tag, Note Type, Journal) acting at once
   through `jebEditItem`; chips under each item; "📎 Attach" and "→ Note" on every
@@ -40,24 +52,6 @@ must never accumulate here instead of there.
   tail, in `_edColApply`, `_initCollapsible`, `_secNodesOf` and
   `_edBlockDragStart`. `_edRevealTail` is gone. Block 62: **25/25**, unpatched
   8/25. Architect: full `app-check` **2581/2581** on the final head; unpatched `--only 62` 8/25.
-- **v05.00** (9 Oct 2026) — J2 (built as v04.99, renumbered), the Jeb bar and the pocket panel (issue #147).
-  `#jeb-bar` (scrolling chips: swatch, name, not-done count; ＋ New pocket;
-  right-click/long-press menu), `#jeb-panel` (add on top, tick, edit in place,
-  ⠿ drag, ⋯ menu, Clear done), all through the J1 API. `--jeb-h` on `<html>`
-  makes room (PC: `#p2`/`#p3` margin; tablet/phone: `#sb`/`#p2`/`#p3`
-  `bottom:var(--jeb-h)`); toast, `#fw-*`, `#toc-float-btn` move up by it. PC bar
-  starts at the sidebar's right edge (`--jeb-l`, `ResizeObserver`); the phone
-  hides it for the keyboard (back 300 ms after focus leaves). "Show Jeb bar" in
-  🧰 → 🎨 Appearance = `DB.theme.jebBar`. Live repaint from `render()`/
-  `_renderPreserveEdit()`, never under an item being edited. `--only 60`
-  **203/203**, `--only 59` 74/74, `--only 6p` 104/104. Architect: full `app-check` **2556/2556, twice in a row**; unpatched `--only 60` 0/6.
-- **v04.99** (9 Oct 2026) — a note being read keeps its place on a tablet and
-  a phone (the owner: "while reading a note scrolling, screen jumps to the
-  top"). There `#p3c` scrolls, not `.avw`, and `_renderPreserveEdit()` saved
-  only `.avw`, so every sync redraw went to the top. `renderP3C()` now wraps
-  `_renderP3CInner()` and keeps both positions for the same note in reading
-  mode, for every caller. Block 61: `--only 61` **21/21**, unpatched 10/21.
-  Architect: full `app-check` **2353/2353, twice in a row**.
 ---
 
 ## What this is
@@ -70,11 +64,13 @@ plain JavaScript in a single inline `<script>`.
 ```
 index.html          the entire app
 manifest.json       web app manifest (PWA install metadata)
+manifest-jeb.json   the second manifest: "Siyagah Jeb" (/?jeb=1), icons/icon-jeb*
 icons/              app icons + manifest screenshots
 sw.js               service worker (network-first, cache name = app version)
 tools/              the verification harness — see tools/README.md
 legacy/v03.99/      a sealed, frozen build — never edited
 CHANGELOG.md        the full history
+ZAB-PLAN.md         the owner's Zab plan (rename, a Zab-first app, QuranRevival)
 ```
 
 It saves in four places: `localStorage`, a linked local file (File System
@@ -379,7 +375,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `'${esc(x)}'` (`esc()` leaves `'` alone) or a hand-rolled `\x27`. A typed or
   renamed tag goes through `_cleanTag()` (keeps every character but the comma).
   Ids may stay as they are.
-- **Jeb (v04.98, J1).** The owner's bar of **pockets** of quick **items**.
+- **Jeb (v04.98, J1) — shown to the owner as "Zab" since v05.05; every identifier, id, class, URL and file name below still says `jeb`, and must.** The owner's bar of **pockets** of quick **items**.
   `DB.jebPockets=[{id,name,icon,color,order,…}]`, `DB.jeb=[{id,pocketId,text,
   done,folderIds,tags,kind,journal,order,…}]`. Both are in `_REC_COLLS`,
   `_REC_TOMB_COLLS`, `_LJ_COLLS`, `mergeDB()`'s merge and `_alive` lists, the
@@ -425,7 +421,11 @@ A failing check is a wrong assertion surprisingly often — investigate before
   under `prefers-reduced-motion`). ＋ on a group/deck makes an empty item and
   `jebDiscardEmpty` removes it if left blank. Choose state: `_jebChoose`,
   `_jebChosen`; it ends when Panel/Cards is used. Hook left: the marked slot in
-  `_jebItemMenu` (J3).
+  `_jebItemMenu` (J3). **Jeb mode (v05.04, J5).** `/?jeb=1` is decided once, in
+  `<script id="jeb-mode">` in `<head>` (`const _JEB_APP`, `html.jeb-app`) — ask `_JEB_APP`,
+  never `location.search`; no data path branches on it. Notes panes are hidden, the bar is
+  always on, `#jeb-panel` is docked and never closes (`_jebAppEnsure`), and
+  `DB.theme.jebAppView` is written only by `_jebAppRemember` on a real switch.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
@@ -445,8 +445,8 @@ A failing check is a wrong assertion surprisingly often — investigate before
 | **Note Type / NTI** — a note's single-select character (`art.kind`) | not "tag" — tags are separate and multiple |
 | **Frozen build** — a sealed copy under `legacy/` | not "old version", not "backup" |
 | **Save File** — the export that bakes notes into a copy of the app | not "download" |
-| **Jeb** — the bar of pockets along the bottom (the owner's name) | not "pockets bar", not "basket" |
-| **Pocket** — one container on Jeb (`DB.jebPockets`) | not "folder", not "list" |
+| **Zab** — the bar of pockets along the bottom (the owner's name since v05.05; the code still says `jeb`) | not "Jeb" on any screen, not "pockets bar", not "basket" |
+| **Pocket** — one container on Zab (`DB.jebPockets`) | not "folder", not "list" |
 | **Item** — one thing in a pocket (`DB.jeb`) | not "note" — it becomes a note only via → Note |
 
 ## Decisions confirmed by the owner

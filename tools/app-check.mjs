@@ -2521,7 +2521,9 @@ await r.block('6o-1-menu-reorg', async () => {
     /* v04.44 (issue #58) — #save-lbl (already in 🧰 Tools) is now tappable
        when it is showing the storage warning; the only genuinely new action
        either menu has gained since this baseline was written. */
-    '_saveLblTap'];
+    '_saveLblTap',
+    /* v05.04 (issue #156, J5) — 👝 Siyagah Jeb in 🧰 Tools, added on purpose. */
+    'openJebApp'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
   const lost = V0420.filter((f) => !now.includes(f));
   const added = [...new Set(now)].filter((f) => !V0420.includes(f));
@@ -11831,6 +11833,38 @@ await r.block('64-jeb-cards-choose', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the Jeb J4 check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, 'J4: ' + row.label, row.detail);
   r.check(out.status === 0, 'the Jeb J4 check exits cleanly', `exit ${out.status}`);
+});
+
+/* 65 — v05.04, J5: "Siyagah Jeb", the second home-screen icon. tools/jeb-j5.mjs runs 65a–65j at 390/820/1440 with
+   real clicks and taps: the head (manifest, title, icons), Chrome's own reading of both manifests, the layout, the
+   docked panel that never closes to nothing, the ignored bar setting, the remembered view, → Note then ?open=,
+   the 🧰 route from the full app, an identical DB in both modes, and the header's sync/⚠/Install. Each printed
+   ok/FAIL line becomes one check. */
+await r.block('65-jeb-app', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./jeb-j5.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the Jeb J5 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'J5: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Jeb J5 check exits cleanly', `exit ${out.status}`);
+});
+
+/* 66 — v05.05, Z1: "Jeb" is "Zab" on every screen. tools/zab-z1.mjs sweeps every Zab surface at 390/820/1440, in the
+   full app and at /?jeb=1, for the old word in any visible text, title, aria-label or placeholder; Chrome's reading of
+   the Zab manifest; and that the stored data is byte-identical after boot. Each printed ok/FAIL line becomes one check. */
+await r.block('66-zab-name', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-z1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the Zab Z1 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z1: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Zab Z1 check exits cleanly', `exit ${out.status}`);
 });
 
 /* ── run everything registered above, or a --only subset ─────────────────

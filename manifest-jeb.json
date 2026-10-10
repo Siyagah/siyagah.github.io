@@ -1,0 +1,20 @@
+{
+  "id": "/?jeb=1",
+  "name": "Siyagah Zab",
+  "short_name": "Zab",
+  "description": "Siyagah's Zab on its own: your pockets of quick items, on the home screen. The same notebook, sync and offline behaviour as Siyagah.",
+  "start_url": "/?jeb=1",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F7F4ED",
+  "theme_color": "#D9822B",
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    { "src": "/icons/icon-jeb.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/icons/icon-jeb-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "/icons/icon-jeb-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "/icons/icon-jeb-maskable-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}
