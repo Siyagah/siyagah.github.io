@@ -209,7 +209,7 @@ try {
     const tt = await toastText(d);
     const made = await on(d, () => { const n = DB.articles.find((a) => a.fromJeb && a.title === 'Charlie'); return n ? { pocket: n.fromJeb.pocket } : null; });
     check(notesBefore === 0 && !!made && made.pocket === 'Quick tasks' && (await item(d, 't3')) === null && !(await cardIds(d)).includes('t3'), `${t} → Note: the card leaves, a note "Charlie" carries fromJeb`, JSON.stringify(made) + ' ' + (await cardIds(d)).join());
-    check(typeof tt === 'string' && /Turned into a note in/.test(tt) && /From Jeb|Journal|📁/.test(tt), `${t} → Note: the toast says where it went`, String(tt));
+    check(typeof tt === 'string' && /Turned into a note in/.test(tt) && /From Zab|Journal|📁/.test(tt), `${t} → Note: the toast says where it went`, String(tt)); /* v05.05: renamed to Zab */
     const inSF = await on(d, () => DB.articles.filter((a) => a.fromJeb).length);
     check(inSF === 1, `${t} "From Jeb" gains the note`, String(inSF));
     /* ＋ Card */

@@ -11852,6 +11852,21 @@ await r.block('65-jeb-app', async () => {
   r.check(out.status === 0, 'the Jeb J5 check exits cleanly', `exit ${out.status}`);
 });
 
+/* 66 — v05.05, Z1: "Jeb" is "Zab" on every screen. tools/zab-z1.mjs sweeps every Zab surface at 390/820/1440, in the
+   full app and at /?jeb=1, for the old word in any visible text, title, aria-label or placeholder; Chrome's reading of
+   the Zab manifest; and that the stored data is byte-identical after boot. Each printed ok/FAIL line becomes one check. */
+await r.block('66-zab-name', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-z1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the Zab Z1 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z1: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Zab Z1 check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

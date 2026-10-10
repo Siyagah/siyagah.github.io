@@ -142,7 +142,7 @@ try {
     check(r.restoredOnA && r.restoredOnB && r.aKeeps && r.trashGoneB && r.sameText, '59c restore from Trash on A brings the item back on both, and its Trash entry is gone', JSON.stringify(r));
     check(r.fallbackPocket === 'jp-task', '59c an item whose pocket was deleted restores into the first pocket', JSON.stringify({ fallbackPocket: r.fallbackPocket }));
     check(r.pocketBack, '59c a deleted pocket restores as an empty pocket', JSON.stringify({ pocketBack: r.pocketBack }));
-    check(/Jeb item: keep me/.test(r.label), '59c the Trash modal shows "Jeb item: <text>"', r.label.slice(0, 200));
+    check(/Zab item: keep me/.test(r.label), '59c the Trash modal shows "Zab item: <text>"', r.label.slice(0, 200)); /* v05.05: renamed to Zab */
     const refuse = await on(A, () => { const id = jebAddItem('jp-task', 'stays'); const n = DB.jebPockets.length, t = DB.trash.length; const ok = jebDeletePocket('jp-task'); return { ok, n: DB.jebPockets.length === n, t: DB.trash.length === t, toast: [...document.querySelectorAll('.toast')].map((x) => x.textContent).join('|') }; });
     check(refuse.ok === false && refuse.n && refuse.t && /holds items/.test(refuse.toast), '59c a pocket that holds items cannot be deleted (a toast says so; nothing changed)', JSON.stringify(refuse));
     check(A.errors.length === 0, '59c no page errors', A.errors.slice(0, 2).join(' · '));
@@ -337,7 +337,7 @@ try {
       out.ids = { file: (data.jeb || []).map((i) => i.id + ':' + i.updatedAt), now: DB.jeb.map((i) => i.id + ':' + i.updatedAt), tomb: (DB.tombstones || []).map((t) => t.id) };
       return out;
     }, bk);
-    check(/In the file:[^\n]*Jeb items: 2[\s\S]*In your notebook now:[^\n]*Jeb items: 2/.test(imp.dialog), '59g the import dialog shows "Jeb items: N"', imp.dialog.replace(/\s+/g, ' ').slice(0, 220));
+    check(/In the file:[^\n]*Zab items: 2[\s\S]*In your notebook now:[^\n]*Zab items: 2/.test(imp.dialog), '59g the import dialog shows "Zab items: N"', imp.dialog.replace(/\s+/g, ' ').slice(0, 220)); /* v05.05: renamed to Zab */
     check(imp.replaceHasImported && imp.replaceOldFileKeeps && imp.replaceBack, '59g JSON import "replace": the file\'s Jeb replaces ours; a file from before Jeb leaves ours alone; the original comes back whole', JSON.stringify(imp));
     check(imp.mergeKeepsLocal && imp.mergeAddsFile && imp.mergeKeepsAll && imp.mergeNoResurrect !== false, '59g JSON import "merge": keeps ours, adds the file\'s, never resurrects a deleted item (merged through mergeDB, not "local wins")', JSON.stringify(imp));
     check(A.errors.length === 0, '59g no page errors', A.errors.slice(0, 2).join(' · '));

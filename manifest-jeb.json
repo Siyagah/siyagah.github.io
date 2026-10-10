@@ -1,8 +1,8 @@
 {
   "id": "/?jeb=1",
-  "name": "Siyagah Jeb",
-  "short_name": "Jeb",
-  "description": "Siyagah's Jeb on its own: your pockets of quick items, on the home screen. The same notebook, sync and offline behaviour as Siyagah.",
+  "name": "Siyagah Zab",
+  "short_name": "Zab",
+  "description": "Siyagah's Zab on its own: your pockets of quick items, on the home screen. The same notebook, sync and offline behaviour as Siyagah.",
   "start_url": "/?jeb=1",
   "scope": "/",
   "display": "standalone",

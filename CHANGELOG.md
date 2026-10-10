@@ -9289,3 +9289,28 @@ dead `#jeb-bar` (no listeners, because `jebRefresh()` reused it), and pocket nam
   `<script id="nd"` occurs exactly once (I7). `ship-check` 14/14; `--only 6m,6o,53d,65` 294/294.
 
 **Not done:** the full `app-check` (by the issue's instruction). Free card positions and moving Jeb into `_S1_COLLS` stay out.
+
+**Totals (Architect):** full `app-check` **3245/3245, twice in a row** on `af08e1b` (after three review rounds: Save File strips Jeb surfaces and restores the head; `--jeb-hd` default, the v04.20 menu inventory, the data-tag literal); `ship-check` 14/14; unpatched (v05.03 `index.html` + `sw.js`) `--only 65` 0/3 (`_JEB_APP is not defined`).
+
+## v05.05 — Z1, "Jeb" becomes "Zab" on every screen (issue #158, 10 Oct 2026)
+
+The owner: "How about write Siyagah Zab, not Jeb?" — and chose **everywhere**. Words on screen only.
+
+- **Changed (what the owner sees):** the head script's `document.title` "Siyagah Zab" and `apple-mobile-web-app-title`
+  "Zab"; the Zab-mode header "Siyagah Zab" and the Install tooltip; the bar's `aria-label` "Zab pockets"; 🧰 → "👝 Siyagah Zab"
+  and its tooltip; 🎨 Appearance "Zab bar" / "Show Zab bar"; Smart View "(12) From Zab" and its empty text; the
+  "👝 from Zab" fallback on the Pane 2 card and read view; the Trash labels "Zab item: …" / "Zab pocket: …"; the
+  backup-restore summary "Zab items: N"; the Attach row's "👝 From Zab". `manifest-jeb.json`: `name` "Siyagah Zab",
+  `short_name` "Zab", description (file name, `id`, `start_url`, icons unchanged).
+- **Not changed, on purpose:** `DB.jeb`, `DB.jebPockets`, `fromJeb`, every `jeb*` function, `#jeb-*` ids and classes,
+  `_JEB_APP`, `?jeb=1`, `manifest-jeb.json`, `icons/icon-jeb*`, code comments. No migration; no stored record is touched (I1, I8).
+- **Is "Jeb" stored in data? Found: no.** The four seeded pockets are "Quick tasks / Ideas / Links to read / Shopping".
+  The Trash labels are built at display time from the item text/pocket name. `fromJeb.pocket` holds the owner's pocket name
+  (or `''`, which now falls back to "Zab"). The Smart View name is a code constant; `DB.sfItems` holds a name only if the
+  owner renamed that view themselves, and would be shown as typed. Nothing was rewritten.
+- **Step 0:** the v05.04 Totals (Architect) line recorded; `ZAB-PLAN.md` (the owner's plan, unedited) brought onto the branch.
+- **Checks:** new block `66-zab-name` (`tools/zab-z1.mjs`): a sweep at 1440, 820 and 390 of every Zab surface, in the full app and at `/?jeb=1`, collecting visible text, `title`, `aria-label` and `placeholder`; no `/\bJeb\b/i` anywhere. Chrome's manifest name is "Siyagah Zab"/"Zab"; stored data is byte-identical after booting on a v05.04 notebook. Old-word assertions in `jeb-j1/j3/j4/j5.mjs` were updated in place.
+- **Completed by the Architect.** The builder pushed everything (`be1aec0`) and stopped during its `--only 59…65` run, with no PR. The Architect ran the checks, wrote this record and opened the PR from `claude/amazing-euler-jolpkm`.
+- **Seen once, not this round's:** `60l@390 #fw-switch sits above the bar` failed once (switcher bottom at the viewport edge, i.e. measured before `--jeb-h` applied) in an `--only 59,60,63,64,65,66` run that shared the machine with nothing else. It then passed 3× in `--only 60` and in both full runs. It is J2's check and Z1 changed no layout; filed in the backlog as a timing flicker to make robust.
+- **Totals (Architect):** full `app-check` **3535/3535, twice in a row** on `be1aec0`; `ship-check` 14/14; `--only 59,60,63,64,65,66` 1229/1231 (the 60l flicker above; its exit line); `--only 60` 203/203 ×3; unpatched (v05.04 `index.html` + `sw.js` + `manifest-jeb.json`) `--only 66` **130/290** (every "no Jeb" sweep and the manifest name fail; the data-unchanged checks pass, as they must).
+
