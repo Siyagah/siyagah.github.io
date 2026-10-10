@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.03">
+<meta name="app-version" content="05.04">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -39,6 +39,33 @@
      file:// copy of the app, where /icons/ does not resolve. -->
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9Ijg4IiBmaWxsPSIjNjM2NkYxIi8+PHRleHQgeD0iMjU2IiB5PSIzNzAiIGZvbnQtc2l6ZT0iMzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiPiYjeDYzMzs8L3RleHQ+PC9zdmc+">
 <link rel="manifest" href="/manifest.json">
+<script id="jeb-mode">
+/* v05.04 · J5 — "Siyagah Jeb". The page is in Jeb mode when its address has
+   ?jeb=1. Decided HERE, once, before first paint; everything else asks the
+   one global _JEB_APP and never reads the address again. Only the page's face
+   changes (manifest, title, icons, the jeb-app class): no data path branches
+   on it. The unsized data-URI icon and the notebook data tag (id nd) are left alone. */
+const _JEB_APP=(function(){ try{ return /(^|[?&])jeb=1(&|$)/.test(location.search); }catch(e){ return false; } })();
+if(_JEB_APP){
+  document.documentElement.classList.add('jeb-app');
+  var _jq=function(s){ return document.querySelector(s); }, _jx;
+  /* what the page looked like before the swap: Save File puts it back, so a saved copy is never a Jeb page (I4) */
+  var _jg=function(s,a){ var e=_jq(s); return e?e.getAttribute(a):null; };
+  window._JEB_FACE0={title:document.title,
+    manifest:_jg('link[rel="manifest"]','href'), themeColor:_jg('meta[name="theme-color"]','content'),
+    appleTitle:_jg('meta[name="apple-mobile-web-app-title"]','content'),
+    touchIcon:_jg('link[rel="apple-touch-icon"][sizes]','href'), svgIcon:_jg('link[rel="icon"][type="image/svg+xml"]','href')};
+  document.title='Siyagah Jeb';
+  if((_jx=_jq('link[rel="manifest"]'))) _jx.setAttribute('href','/manifest-jeb.json');
+  if((_jx=_jq('meta[name="apple-mobile-web-app-title"]'))) _jx.setAttribute('content','Jeb');
+  if((_jx=_jq('meta[name="theme-color"]'))) _jx.setAttribute('content','#D9822B');
+  if((_jx=_jq('link[rel="apple-touch-icon"][sizes]'))) _jx.setAttribute('href','/icons/apple-touch-icon-jeb.png');
+  if((_jx=_jq('link[rel="icon"][type="image/svg+xml"]'))) _jx.setAttribute('href','/icons/icon-jeb.svg');
+}else{
+  /* a copy saved with the class baked in is not a Jeb page */
+  try{ document.documentElement.classList.remove('jeb-app'); }catch(e){}
+}
+</script>
 <!--
 ╔═══════════════════════════════════════════════════════════════════╗
 ║  NOTEBOOK DATA — updated automatically when you click Save File   ║
@@ -777,7 +804,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
    margin. Tablet/phone: #sb/#p2/#p3 end at the bar's top; the bar is full width.
    Inks are the pane inks (--t1/--t2 on --white), already measured on every
    preset; only the swatch uses a fixed dark ink on its pastel. */
-html{--jeb-h:0px;--jeb-l:0px}
+html{--jeb-h:0px;--jeb-l:0px;--jeb-hd:0px}
 html.jeb-on{--jeb-h:56px}
 html.jeb-kb{--jeb-h:0px}
 html.jeb-kb #jeb-bar{display:none!important}
@@ -858,6 +885,30 @@ html.jeb-kb #jeb-bar{display:none!important}
   #jeb-panel{top:auto;left:0;right:0;width:auto;max-width:none;height:72vh;border-left:none;border-top:1px solid var(--border2);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.2)}
   #jeb-panel.on{animation:jebUp .2s ease}
 }
+/* ══ v05.04 · J5 — Siyagah Jeb: the page in Jeb mode (html.jeb-app). Notes surfaces are
+   hidden, not removed (sync, the sync dot and every alarm keep running); the header
+   mirrors the sync dot; the panel is docked between header and bar. Phone: full width,
+   compact header; tablet: full width; PC: a centred column, 720px at most. ══ */
+html.jeb-app{--jeb-hd:52px}
+html.jeb-app #sb,html.jeb-app #p2,html.jeb-app #p3,html.jeb-app #sb-toggle,html.jeb-app #rsz,html.jeb-app #rsz2,
+html.jeb-app #p2-ov,html.jeb-app #mob-ov,html.jeb-app #note-modal-bg,html.jeb-app .float-win,html.jeb-app #fw-closeall,
+html.jeb-app #fw-switch,html.jeb-app #toc-float-btn,html.jeb-app #ann-bubble{display:none!important}
+#jeb-app-hd{display:none}
+html.jeb-app #jeb-app-hd{display:flex;position:fixed;top:0;left:0;right:0;height:var(--jeb-hd);z-index:142;align-items:center;gap:8px;padding:0 12px;background:var(--white);color:var(--t1);border-bottom:1px solid var(--border2)}
+#jeb-app-hd .jah-ic{flex:0 0 auto;width:30px;height:30px;border-radius:8px;display:block}
+#jeb-app-hd b{flex:1;min-width:0;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#jeb-app-hd button{flex:0 0 auto;min-height:40px;min-width:40px;padding:0 12px;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;touch-action:manipulation}
+#jeb-app-hd button:hover{background:var(--hover)}
+#jeb-app-hd #jah-sync{border-radius:999px;font-size:12.5px}
+#jeb-app-hd #jah-sync.sd-live{color:#1B7A46}
+#jeb-app-hd #jah-sync.sd-err{color:#C0392B}
+#jeb-app-hd #jah-sync.sd-conn,#jeb-app-hd #jah-sync.sd-busy{color:#8A6700}
+#jeb-app-hd #jah-warn{color:#C0392B;border-color:#C0392B}
+@media(max-width:639.98px){#jeb-app-hd{gap:6px;padding:0 8px}#jeb-app-hd b{font-size:15px}#jeb-app-hd .jah-t{display:none}#jeb-app-hd button{padding:0 9px}}
+html.jeb-app #jeb-panel{top:var(--jeb-hd);bottom:var(--jeb-h);left:0;right:0;width:auto;max-width:none;height:auto;border:0;border-radius:0;box-shadow:none;animation:none!important}
+html.jeb-app .jeb-x{display:none}
+html.jeb-app #jeb-deck{top:var(--jeb-hd)}
+@media(min-width:1200px){html.jeb-app #jeb-panel{left:max(0px,calc(50% - 360px));right:auto;width:min(720px,100%);border-left:1px solid var(--border2);border-right:1px solid var(--border2)}}
 .jeb-ph{display:flex;align-items:center;gap:10px;padding:12px 12px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
 .jeb-pt{flex:1;min-width:0}
 .jeb-pt b{display:block;font-size:15px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3395,7 +3446,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.03</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.04</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3436,6 +3487,8 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <div class="sb-mi" onclick="autoFit();closeSBTools()">↔ Auto-fit width</div>
           <div class="sb-mi" onclick="autoNumberAll();closeSBTools()">🔢 Auto-number all</div>
           <div class="sb-mi" onclick="toggleAccordionSec();closeSBTools()" id="accordion-sec-btn" title="When ON: opening a section closes all others">📂 Accordion sections: <span id="accordion-sec-lbl">OFF</span></div>
+          <div class="sb-mi-hd">Home screen</div>
+          <div class="sb-mi" id="jeb-app-mi" onclick="openJebApp();closeSBTools()" title="Open Siyagah Jeb — your pockets on their own screen, in a new window. From there you can add it to your home screen as a second icon.">👝 Siyagah Jeb</div>
           <div class="sb-mi-hd">Save</div>
           <button id="autosave-btn" class="sb-mi" onclick="enableAutoSave()" title="Data saves to browser storage automatically; use Save File to export">🔗 Enable auto-save</button>
           <div id="save-lbl" class="save-lbl busy" style="text-align:left;padding:4px 13px" onclick="_saveLblTap()">● Unsaved to file</div>
@@ -4477,6 +4530,26 @@ function _cleanExportRoot(){
     if(cx) cx.setAttribute('style','display:none');
     const jp = root.querySelector('#jrn-style-pop');
     if(jp) jp.remove();
+    /* 6 ─ Jeb (v05.04 review). Every Jeb surface is built at run time and
+           rebuilt on the next boot; baked in, it is a dead copy (no listeners)
+           that also carries pocket names and item text, and a toast can carry
+           a note title. jeb-app would hide the sidebar of a plain copy (I4).
+           The head goes back to what _JEB_FACE0 recorded before the swap. */
+    root.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,.toast').forEach(function(el){ el.remove(); });
+    root.classList.remove('jeb-app','jeb-on','jeb-kb');
+    root.style.removeProperty('--jeb-h'); root.style.removeProperty('--jeb-l');
+    if(!root.getAttribute('style')) root.removeAttribute('style');
+    if(!root.getAttribute('class')) root.removeAttribute('class');
+    const f0 = window._JEB_FACE0;
+    if(f0){
+      const put = function(sel, attr, v){ const e = root.querySelector(sel); if(e && v != null) e.setAttribute(attr, v); };
+      const t = root.querySelector('title'); if(t && f0.title != null) t.textContent = f0.title;
+      put('link[rel="manifest"]', 'href', f0.manifest);
+      put('meta[name="theme-color"]', 'content', f0.themeColor);
+      put('meta[name="apple-mobile-web-app-title"]', 'content', f0.appleTitle);
+      put('link[rel="apple-touch-icon"][sizes]', 'href', f0.touchIcon);
+      put('link[rel="icon"][type="image/svg+xml"]', 'href', f0.svgIcon);
+    }
   }catch(e){ console.error('export sanitise failed:', e); }
   return root.outerHTML;
 }
@@ -14078,17 +14151,20 @@ function installPWA(){
     _pwaPrompt=null;
     const btn=document.getElementById('pwa-install-mi');
     if(btn)btn.style.display='none';
+    _jebAppHdSync();
   });
 }
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();_pwaPrompt=e;
   const btn=document.getElementById('pwa-install-mi');
   if(btn)btn.style.display='';
+  _jebAppHdSync();   /* v05.04 — the Jeb header's 📱 Install follows _pwaPrompt */
 });
 window.addEventListener('appinstalled',()=>{
   _pwaPrompt=null;
   const btn=document.getElementById('pwa-install-mi');
   if(btn)btn.style.display='none';
+  _jebAppHdSync();
   toast('✓ Siyagah installed!');
 });
 
@@ -22079,11 +22155,11 @@ function _jebPanelSel(){ return !_jebOpen?null:(_jebOpen==='*'?_jebMulti:{ids:[_
 function _jebReduced(){ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }
 let _jebAtt=null;   /* the open 📎 Attach sheet: {iid,tab,q:{folder,tag},pool,anchor} */
 const _jebEl=id=>document.getElementById(id);
-function _jebBarOn(){ return !(DB&&DB.theme&&DB.theme.jebBar===false); }
-/* the bar's left edge: PC = the sidebar's right edge (0 when collapsed), else 0 */
+function _jebBarOn(){ return _JEB_APP||!(DB&&DB.theme&&DB.theme.jebBar===false); }   /* Jeb mode (J5): always on; the stored setting is left alone */
+/* the bar's left edge: PC = the sidebar's right edge (0 when collapsed), else 0; Jeb mode has no sidebar */
 function jebLayout(){
   const sb=_jebEl('sb'); let l=0;
-  if(window.innerWidth>=1200&&sb) l=Math.max(0,Math.round(sb.getBoundingClientRect().right));
+  if(!_JEB_APP&&window.innerWidth>=1200&&sb) l=Math.max(0,Math.round(sb.getBoundingClientRect().right));
   document.documentElement.style.setProperty('--jeb-l',l+'px');
 }
 /* a phone with the keyboard up for anything outside Jeb: focus is in a text field that is not Jeb's */
@@ -22113,20 +22189,25 @@ function _jebWireOnce(){
   document.addEventListener('pointerdown',e=>{
     const t=e.target;
     if(_jebEl('jeb-menu')&&!t.closest('#jeb-menu')) _jebHideMenu();
-    if(_jebOpen&&!t.closest('#jeb-panel,#jeb-bar,#jeb-deck,#jeb-menu,#jeb-att,.toast-act,#ov')) jebClosePanel();
+    if(_jebOpen&&!_JEB_APP&&!t.closest('#jeb-panel,#jeb-bar,#jeb-deck,#jeb-menu,#jeb-att,.toast-act,#ov')) jebClosePanel();   /* Jeb mode: the panel never closes to an empty screen */
   },true);
   document.addEventListener('keydown',e=>{
     if(e.key!=='Escape') return;
     if(_jebEl('jeb-menu')){ _jebHideMenu(); return; }
     if(_jebAtt){ _jebAttClose(); return; }
     if(_jebEditId||_jebEl('ov')?.classList.contains('on')) return;
-    if(_jebDeck){ jebCloseDeck(); return; }
-    if(!_jebOpen) return;
+    if(_jebDeck){ jebCloseDeckUser(); return; }
+    if(!_jebOpen||_JEB_APP) return;
     jebClosePanel();
   });
 }
+let _jebStaleSwept=false;
 function jebRefresh(){
   if(typeof DB==='undefined'||!DB||!_dbLoaded) return;
+  if(!_jebStaleSwept){   /* a copy saved by an older build may carry dead Jeb surfaces: this session builds its own */
+    _jebStaleSwept=true;
+    document.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd').forEach(el=>el.remove());
+  }
   _jebWireOnce();
   const root=document.documentElement, on=_jebBarOn();
   root.classList.toggle('jeb-on',on);
@@ -22141,6 +22222,73 @@ function jebRefresh(){
   if(_jebOpen) _jebPaintPanel();
   if(_jebDeck) _jebPaintDeck();
   if(_jebAtt) _jebAttList();
+  if(_JEB_APP) _jebAppEnsure();
+}
+/* ══ v05.04 · J5 — Siyagah Jeb (the page in Jeb mode) ═════════════════════════
+   The header, the docked panel that never closes to nothing, and the view that
+   opens first (DB.theme.jebAppView = {sel:{ids,all}, deck}). Nothing here touches
+   the data path: the stored view is written only when the owner switches. */
+let _jebAppBusy=false, _jebAppView=null, _jebAppHdEl=null;
+function _jebAppRemember(sel,deck){
+  if(!_JEB_APP||_jebAppBusy||!sel) return;
+  const v={sel:{ids:sel.all?[]:(sel.ids||[]).slice(),all:!!sel.all},deck:!!deck};
+  _jebAppView=v;
+  if(DB.theme&&JSON.stringify(DB.theme.jebAppView)===JSON.stringify(v)) return;
+  if(!DB.theme) DB.theme={};
+  DB.theme.jebAppView=v; persist();
+}
+/* the view to show: what was remembered, if its pockets still exist, else All pockets */
+function _jebAppPick(){
+  const v=_jebAppView||(DB.theme&&DB.theme.jebAppView);
+  if(v&&v.sel&&_jebSelIds(v.sel).length) return v;
+  return {sel:{ids:[],all:true},deck:false};
+}
+function _jebAppEnsure(){
+  _jebAppHd();
+  if(_jebAppBusy||_jebOpen||_jebDeck) return;
+  const v=_jebAppPick();
+  _jebAppBusy=true;
+  try{ if(v.deck) jebOpenDeck(v.sel); else jebOpenPanelSel(v.sel); }
+  finally{ _jebAppBusy=false; }
+}
+/* closing the deck by hand: back to the panel (Jeb mode), plain close otherwise */
+function jebCloseDeckUser(){
+  const s=_jebDeckSelNow();
+  jebCloseDeck();
+  if(_JEB_APP){ if(s) _jebAppRemember(s,false); jebRefresh(); }
+}
+const _JEB_APP_SVG='<svg class="jah-ic" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="88" fill="#D9822B"/><path fill="#fff" fill-opacity=".85" d="M178 214L194 130L304 148L292 214Z"/><path fill="#fff" d="M136 200H376Q392 200 392 216V340Q392 396 336 396H176Q120 396 120 340V216Q120 200 136 200Z"/><path fill="none" stroke="#D9822B" stroke-width="16" stroke-linecap="round" d="M152 250Q256 292 360 250"/></svg>';
+function _jebAppHd(){
+  if(_jebAppHdEl&&_jebAppHdEl.isConnected) return;
+  const h=document.createElement('div'); h.id='jeb-app-hd'; _jebAppHdEl=h;
+  h.innerHTML=_JEB_APP_SVG+'<b>Siyagah Jeb</b>'
+    +'<button type="button" id="jah-warn" style="display:none" title="This device can no longer save locally — tap for details" aria-label="Storage warning">⚠<span class="jah-t"> Not saving</span></button>'
+    +'<button type="button" id="jah-sync" class="sync-dot-tb" title="Sync — tap for details"></button>'
+    +'<button type="button" id="jah-inst" style="display:none" title="Add Siyagah Jeb to your home screen" aria-label="Install">📱<span class="jah-t"> Install</span></button>'
+    +'<button type="button" id="jah-open" title="Open Siyagah (the notes)" aria-label="Open Siyagah">📓<span class="jah-t"> Open Siyagah</span></button>';
+  document.body.appendChild(h);
+  h.querySelector('#jah-warn').addEventListener('click',()=>openStorageWarnDetails());
+  h.querySelector('#jah-sync').addEventListener('click',()=>openSyncModal());
+  h.querySelector('#jah-inst').addEventListener('click',()=>installPWA());
+  h.querySelector('#jah-open').addEventListener('click',()=>{ location.href=location.pathname; });
+  /* the words come from the sidebar's own sync dot and ⚠ — one state, read, never a second one */
+  try{
+    const mo=new MutationObserver(_jebAppHdSync), d=document.getElementById('sync-dot'), w=document.getElementById('save-warn-dot');
+    if(d) mo.observe(d,{attributes:true,childList:true,characterData:true,subtree:true});
+    if(w) mo.observe(w,{attributes:true,attributeFilter:['style']});
+  }catch(e){}
+  _jebAppHdSync();
+}
+function _jebAppHdSync(){
+  const h=_jebAppHdEl; if(!h) return;
+  const d=document.getElementById('sync-dot'), s=h.querySelector('#jah-sync');
+  if(d&&s){
+    s.className='sync-dot-tb '+((d.className.match(/\bsd-\w+/)||['sd-off'])[0]);
+    s.textContent=String(d.title||d.textContent||'☁').split(' — ')[0];
+  }
+  const w=document.getElementById('save-warn-dot'), jw=h.querySelector('#jah-warn');
+  if(jw) jw.style.display=(w&&w.style.display!=='none')?'':'none';
+  const ji=h.querySelector('#jah-inst'); if(ji) ji.style.display=_pwaPrompt?'':'none';
 }
 function _jebMakeBar(){
   const bar=document.createElement('div'); bar.id='jeb-bar'; bar.setAttribute('role','toolbar'); bar.setAttribute('aria-label','Jeb pockets');
@@ -22201,7 +22349,7 @@ function _jebPaintBar(bar){
 /* ── ☑ Choose ── */
 function _jebChooseToggle(){
   _jebChoose=!_jebChoose; _jebChosen=new Set(); _jebBarSig='';
-  if(_jebChoose){ jebCloseDeck(); jebClosePanel(); }
+  if(_jebChoose){ if(_JEB_APP) jebCloseDeckUser(); else{ jebCloseDeck(); jebClosePanel(); } }   /* Jeb mode keeps its panel */
   jebRefresh();
 }
 function _jebChooseEnd(){ _jebChoose=false; _jebChosen=new Set(); _jebBarSig=''; }
@@ -22217,13 +22365,14 @@ function _jebChooseGo(what){
   const sel={ids,all:false};
   if(what==='cards') jebOpenDeck(sel); else jebOpenPanelSel(sel);
 }
-function jebTogglePanel(pid){ if(_jebOpen===pid) jebClosePanel(); else jebOpenPanel(pid); }
-function jebToggleAllPanel(){ if(_jebOpen==='*'&&_jebMulti&&_jebMulti.all) jebClosePanel(); else jebOpenPanelSel({ids:[],all:true}); }
+function jebTogglePanel(pid){ if(_jebOpen===pid){ if(!_JEB_APP) jebClosePanel(); } else jebOpenPanel(pid); }
+function jebToggleAllPanel(){ if(_jebOpen==='*'&&_jebMulti&&_jebMulti.all){ if(!_JEB_APP) jebClosePanel(); } else jebOpenPanelSel({ids:[],all:true}); }
 function jebOpenPanel(pid){
   if(!_jebPocket(pid)) return;
   jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen=pid; _jebMulti=null; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  _jebAppRemember({ids:[pid],all:false},false);
   jebRefresh();
-  const ta=_jebEl('jeb-add-in'); if(ta) try{ ta.focus({preventScroll:true}); }catch(e){}
+  const ta=_jebEl('jeb-add-in'); if(ta&&!_jebAppBusy) try{ ta.focus({preventScroll:true}); }catch(e){}   /* not at boot: no keyboard on a phone */
 }
 /* the panel for a selection: one pocket = the single panel, anything else = grouped */
 function jebOpenPanelSel(sel){
@@ -22231,6 +22380,7 @@ function jebOpenPanelSel(sel){
   if(!sel.all&&ids.length===1){ jebOpenPanel(ids[0]); return; }
   if(!ids.length) return;
   jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen='*'; _jebMulti={ids:sel.all?[]:ids.slice(),all:!!sel.all}; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  _jebAppRemember(sel,false);
   jebRefresh();
 }
 function jebClosePanel(){
@@ -22373,13 +22523,14 @@ function _jebRot(id){ let h=0; for(const ch of String(id)) h=(h*31+ch.charCodeAt
 function _jebDeckSelNow(){ return _jebDeck?{ids:_jebDeck.ids.slice(),all:_jebDeck.all}:null; }
 function jebToggleDeck(sel){
   const d=_jebDeck;
-  if(d&&d.all===!!sel.all&&(sel.all||(d.ids.length===sel.ids.length&&sel.ids.every(x=>d.ids.includes(x))))) jebCloseDeck();
+  if(d&&d.all===!!sel.all&&(sel.all||(d.ids.length===sel.ids.length&&sel.ids.every(x=>d.ids.includes(x))))) jebCloseDeckUser();
   else jebOpenDeck(sel);
 }
 function jebOpenDeck(sel){
   const ids=_jebSelIds(sel); if(!ids.length) return;
   _jebHideMenu(); _jebAttClose(); jebClosePanel();
   _jebDeck={ids:sel.all?[]:ids.slice(),all:!!sel.all}; _jebDeckSig=''; _jebEditId=null; _jebBarSig='';
+  _jebAppRemember(sel,true);
   jebRefresh();
   _jebJumpOut();
 }
@@ -22396,7 +22547,7 @@ function _jebMakeDeck(){
   document.body.appendChild(d);
   d.addEventListener('click',e=>{
     const t=e.target;
-    if(t.closest('.jd-x')){ jebCloseDeck(); return; }
+    if(t.closest('.jd-x')){ jebCloseDeckUser(); return; }
     const b=t.closest('[data-d]');
     if(b){
       if(b.dataset.d==='panel'){ const s=_jebDeckSelNow(); if(s) jebOpenPanelSel(s); }
@@ -22680,7 +22831,8 @@ function _jebToastOpen(msg,nid){
   document.querySelectorAll('.toast-act').forEach(x=>x.remove());
   const t=document.createElement('div'); t.className='toast toast-act'; t.setAttribute('role','button'); t.tabIndex=0;
   t.innerHTML=esc(msg)+'<b class="toast-open">Open note</b>';
-  const go=()=>{ t.remove(); jebOpenNote(nid); };
+  /* Jeb mode has no note screen: go to the full app, which opens the note (?open=) */
+  const go=()=>{ t.remove(); if(_JEB_APP) location.href=location.pathname+'?open='+encodeURIComponent(nid); else jebOpenNote(nid); };
   t.addEventListener('click',go);
   t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
   document.body.appendChild(t);
@@ -22724,6 +22876,19 @@ function jebRenameDialog(pid){
 function jebIconColourDialog(pid){
   const pk=_jebPocket(pid); if(!pk) return;
   _jebPocketForm({title:'🎨 Icon & colour',pick:true,icon:pk.icon,color:pk.color,ok:'Save',onOk:v=>{ jebEditPocket(pid,{icon:v.icon,color:v.color}); _jebPanelSig=''; jebRefresh(); }});
+}
+/* 🧰 → 👝 Siyagah Jeb: the same file with ?jeb=1, in a new window (the path, not a "/", so a downloaded copy works too) */
+function openJebApp(){
+  const u=location.pathname+'?jeb=1';
+  let w=null; try{ w=window.open(u,'_blank'); }catch(e){}
+  if(!w) location.href=u;
+}
+/* ?open=<note id> (from Siyagah Jeb's "Open note"): open that note once, then tidy the address */
+function _openFromQuery(){
+  let id=null; try{ id=new URLSearchParams(location.search).get('open'); }catch(e){}
+  if(!id||_JEB_APP) return;
+  try{ jebOpenNote(id); }catch(e){ console.error('open:',e); }   /* an unknown id does nothing */
+  try{ history.replaceState(null,'',location.pathname); }catch(e){}
 }
 function setJebBar(on){
   if(!DB.theme) DB.theme={};
@@ -29503,6 +29668,7 @@ function _sgMount(root,state,editable){
   if(!DB.theme)DB.theme={};
   if(!DB.theme.calLayers)DB.theme.calLayers={notes:true,publicHols:true,schoolHols:true,personal:true,journal:true};
   render();
+  _openFromQuery();   /* v05.04 — ?open=<id> from Siyagah Jeb */
   _seedRecSnap();   /* v04.68 — record-stamp baseline: everything boot, its migrations and the first render settled on (see _stampRecordTouches) */
   /* v04.50 — the flag means "settled", not "render() returned": fonts
      loaded and two frames laid out, so the post-render fit/measure passes
