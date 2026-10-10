@@ -35,8 +35,7 @@ bar, the menus, "👝 from Zab", the Smart View "(12) From Zab", the second icon
 items keep exactly what they hold, and sync is untouched. Renaming the internal
 names would risk the owner's data for no visible gain.
 
-**Status:** waiting on the owner to confirm the scope (everywhere, or only the
-icon). Planned as a small round **right after v05.04 goes live and before the
+**Decided (10 Oct): everywhere.** Planned as a small round **right after v05.04 goes live and before the
 owner installs the second icon**, so the icon is called "Siyagah Zab" from the
 start.
 
@@ -47,11 +46,8 @@ start.
 current work is in `Madrasatul-Muslimeen.github.io` (the app is in its `app/`
 folder). Zab would be built **there**.
 
-**Questions for the owner:**
-- In QuranRevival, is Zab **for you only**, or for **everyone who signs in**
-  (each person with their own pockets)?
-- Should QuranRevival's Zab **share pockets with Siyagah** (the same items on
-  both), or keep its own?
+**Decided (10 Oct): for each signed-in user** of QuranRevival, each person with
+their own pockets. So it is QuranRevival's own data, not shared with Siyagah.
 
 **Approach the Architect recommends:** not a block of code handed over, which
 the owner can't use themselves. Instead, the Architect builds it in
@@ -76,7 +72,13 @@ its supporting features. It covers only those three things and stays simple.
   from Siyagah's code, cut down to Zab + Notes + Folders. It is a bigger job,
   and "one user" (D1) would not apply to it.
 
-**Still to decide after that:** its name ("Zab"?), its own icon, and whether its
+**Decided (10 Oct): (B), for other people too.** So the separate app needs:
+its own web address and repository (the owner creates the empty repository; the
+Architect cannot), its own Firebase project, a sign-in for each person, security
+rules so that each person sees only their own notebook, and a check on what the
+free plan holds for several users.
+
+**Still to decide:** its name ("Zab"?), its own icon, and whether its
 notes open in Siyagah's full editor or a simpler one.
 
 ### 4. Order
@@ -84,8 +86,9 @@ notes open in Siyagah's full editor or a simpler one.
 1. v05.04 goes live (second icon, still called "Jeb").
 2. The rename to Zab, if the owner confirms it.
 3. v05.05: reminder emails (already promised).
-4. Then the separate app or QuranRevival, whichever the owner wants first,
-   once the questions above are answered.
+4. Then the separate Zab app and QuranRevival's Zab. Before either one
+   starts, the Architect brings the owner a short plan: the name, the web
+   address, and which comes first.
 
 ## Decisions
 
@@ -93,6 +96,6 @@ notes open in Siyagah's full editor or a simpler one.
 |---|---|
 | 10 Oct 2026 | Second icon: "go with the recommended one, second icon" (built as v05.04). |
 | 10 Oct 2026 | Reminder emails by a helper in the owner's own Google account ("Bismillah! go with option 2"). |
-| — | Rename to Zab: *waiting.* |
-| — | QuranRevival Zab: *waiting.* |
-| — | Separate app, (A) or (B): *waiting.* |
+| 10 Oct 2026 | Rename to Zab: **everywhere** the owner sees it; data and internal code names unchanged. |
+| 10 Oct 2026 | QuranRevival Zab: **for each signed-in user**, their own pockets. |
+| 10 Oct 2026 | Separate Zab app: **(B) for other people too**: its own address, sign-in, notebook per person. |
