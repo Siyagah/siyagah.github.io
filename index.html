@@ -26142,7 +26142,7 @@ async function _remTick(force){
   if(sig===_remState.sig){ _remState.why=null; return; }
   if(!force){
     if(_remState.seen!==sig){ _remState.seen=sig; return; }   /* debounce: the list must hold for one tick */
-    if(Date.now()<_remState.retryAt) return;
+    if(Date.now()<_remState.retryAt&&sig===_remState.failSig) return;   /* a changed list is a new try */
   }
   _remBusy=true;
   try{
@@ -26155,7 +26155,7 @@ async function _remTick(force){
     _remState.count=o.list.filter(x=>x.at>Date.now()).length; _remState.last=Date.now();
     try{ localStorage.setItem(mk,c.on?'on':'off'); }catch(e){}
   }catch(e){
-    _remState.err=e; _remState.retryAt=Date.now()+60000;
+    _remState.err=e; _remState.retryAt=Date.now()+60000; _remState.failSig=sig;
   }finally{ _remBusy=false; try{ _remStateRefresh(); }catch(e){} }
 }
 setInterval(()=>{ try{ _remTick(); _remStateRefresh(); }catch(e){} },5000);
