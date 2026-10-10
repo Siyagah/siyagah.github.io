@@ -26128,16 +26128,27 @@ function _remPayload(){
   const c=_remCfg();
   return {c, o:{v:1,hour:c.hour,list:c.on?_remList(c.hour):[]}};
 }
-function _remMarkKey(nb){ return 'siyagah-remind-w:'+nb; }
+let _remOffRead=false, _remOffNeeded=false;   /* off with nothing written this session: the doc is read once */
 async function _remTick(force){
   if(_remBusy) return;
   const cfg=getSyncConfig();
   if(!cfg||!cfg.notebookId||!_syncFsDb||!_dbLoaded){ _remState.why='nosync'; return; }
-  const nb=cfg.notebookId, mk=_remMarkKey(nb);
-  let wrote=null; try{ wrote=localStorage.getItem(mk); }catch(e){}
+  const nb=cfg.notebookId;
   const {c,o}=_remPayload();
-  if(!c.on&&wrote!=='on') { _remState.why=null; return; }   /* off and never on from here: write nothing */
   if(!(_s1WriteGate()&&(_s1RdCaught||_remMerged))){ _remState.why='wait'; return; }   /* never before the first read */
+  if(!c.on&&!_remState.sig&&!_remOffNeeded){
+    /* No mark is kept in localStorage (it is full on the owner's devices): read the doc once; only a doc that
+       exists and is not already off gets the off write. Absent or already off: write nothing. */
+    if(_remOffRead||Date.now()<_remState.retryAt){ _remState.why=null; return; }
+    _remBusy=true;
+    try{
+      const snap=await _syncFsDb.collection('notebooks').doc(nb).collection('remind').doc('v1').get();
+      _remOffRead=true;
+      if(snap.exists&&!(snap.data()||{}).off) _remOffNeeded=true;
+    }catch(e){ _remState.retryAt=Date.now()+60000; }
+    finally{ _remBusy=false; }
+    if(!_remOffNeeded){ _remState.why=null; return; }
+  }
   const sig=(c.on?'on|':'off|')+JSON.stringify(o);
   if(sig===_remState.sig){ _remState.why=null; return; }
   if(!force){
@@ -26153,7 +26164,6 @@ async function _remTick(force){
     await doc.set(body);
     _remState.sig=sig; _remState.seen=sig; _remState.err=null; _remState.why=null; _remState.retryAt=0;
     _remState.count=o.list.filter(x=>x.at>Date.now()).length; _remState.last=Date.now();
-    try{ localStorage.setItem(mk,c.on?'on':'off'); }catch(e){}
   }catch(e){
     _remState.err=e; _remState.retryAt=Date.now()+60000; _remState.failSig=sig;
   }finally{ _remBusy=false; try{ _remStateRefresh(); }catch(e){} }
@@ -26198,12 +26208,16 @@ function fetchList_() {
   var res;
   try {
     res = UrlFetchApp.fetch(docUrl_(), {
-      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), 'X-Goog-User-Project': PROJECT_ID },
       muteHttpExceptions: true
     });
   } catch (e) { return { code: 0 }; }
   var code = res.getResponseCode();
-  if (code !== 200) return { code: code };
+  if (code !== 200) {
+    var why = '';
+    try { why = String(JSON.parse(res.getContentText()).error.message || '').slice(0, 300); } catch (e) { why = ''; }
+    return { code: code, why: why };
+  }
   try {
     var f = JSON.parse(res.getContentText()).fields || {};
     return { code: 200, off: !!(f.off && f.off.booleanValue), data: JSON.parse(f.j.stringValue) };
@@ -26257,14 +26271,15 @@ function setup() {
   ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('check').timeBased().everyMinutes(5).create();
   var r = fetchList_();
+  var g = r.why ? ' Google says: ' + r.why : '';
   if (r.code === 403 || r.code === 401) {
-    throw new Error("This Google account can't read the Siyagah notebook - sign in with the account that owns the Firebase project.");
+    throw new Error("This Google account can't read the Siyagah notebook - sign in with the account that owns the Firebase project." + g);
   }
   if (r.code === 404) {
-    throw new Error("The app hasn't sent the reminder list yet - turn Reminder emails on in Siyagah, wait a minute, run setup again.");
+    throw new Error("The app hasn't sent the reminder list yet - turn Reminder emails on in Siyagah, wait a minute, run setup again." + g);
   }
   if (r.code !== 200) {
-    throw new Error("Could not reach the Siyagah notebook (code " + r.code + ") - wait a minute and run setup again.");
+    throw new Error("Could not reach the Siyagah notebook (code " + r.code + ") - wait a minute and run setup again." + g);
   }
   var now = Date.now();
   var up = (r.data.list || []).filter(function (it) { return it.at > now; });

@@ -160,6 +160,45 @@ if (want('67a')) try {
   C.holdQ = false; for (const id of [...C.qsubs.keys()]) cloud2.deliverQ(C, id, true);
   check(await until(() => remWrites(cloud2).length > 0, 40000), '67a …and it is written once the reader has caught up');
   await C.ctx.close();
+
+  /* localStorage FULL (the owner's is): on -> off still writes off:true; a device that never turned it on writes nothing */
+  const FULL = () => { Storage.prototype.setItem = function () { throw new DOMException('full', 'QuotaExceededError'); }; };
+  const cloud4 = makeCloud();
+  const F = await addDevice(browser, srv.base, cloud4, 'F', { width: 1440, height: 900 }, false, seed());
+  await waitSeeded(cloud4, F); await quiet(cloud4, F);
+  await on(F, FULL);
+  await on(F, () => _remSet({ on: true }));
+  check(await until(() => remWrites(cloud4).length > 0, 25000), '67a with localStorage full, turning it on still writes the doc');
+  await on(F, () => _remSet({ on: false }));
+  check(await until(() => { const d = readDoc(cloud4); return d && d.off === true; }, 25000), '67a with localStorage full, on → off still writes off:true');
+  await F.ctx.close();
+  /* a fresh session with the setting off finds a live doc and switches it off, once */
+  const cloud5 = makeCloud();
+  cloud5.store.set(DOC, { j: JSON.stringify({ v: 1, hour: 8, list: [{ id: 'rX', title: 'x', msg: '', dt: ld(NOW + D), at: NOW + D }] }), b: '05.06' });
+  const G = await addDevice(browser, srv.base, cloud5, 'G', { width: 1440, height: 900 }, false, seed());
+  await waitSeeded(cloud5, G); await quiet(cloud5, G);
+  await on(G, FULL);
+  check(await until(() => { const d = readDoc(cloud5); return d && d.off === true; }, 40000), '67a a fresh session with the setting off finds a live doc and writes off:true (no mark needed)');
+  const gn = remWrites(cloud5).length;
+  await sleep(11000);
+  check(remWrites(cloud5).length === gn, '67a …and then nothing more', String(remWrites(cloud5).length - gn));
+  await G.ctx.close();
+  /* never turned on, no doc: nothing is written */
+  const cloud6 = makeCloud();
+  const K = await addDevice(browser, srv.base, cloud6, 'K', { width: 1440, height: 900 }, false, seed());
+  await waitSeeded(cloud6, K); await quiet(cloud6, K);
+  await on(K, FULL);
+  await sleep(13000);
+  check(remWrites(cloud6).length === 0 && !cloud6.store.has(DOC), '67a with localStorage full, a device that never turned it on writes nothing', String(remWrites(cloud6).length));
+  await K.ctx.close();
+  /* a doc already off is not written again */
+  const cloud7 = makeCloud();
+  cloud7.store.set(DOC, { j: JSON.stringify({ v: 1, hour: 8, list: [] }), off: true, b: '05.06' });
+  const L = await addDevice(browser, srv.base, cloud7, 'L', { width: 1440, height: 900 }, false, seed());
+  await waitSeeded(cloud7, L); await quiet(cloud7, L);
+  await sleep(13000);
+  check(remWrites(cloud7).length === 0, '67a a doc that is already off is not written again', String(remWrites(cloud7).length));
+  await L.ctx.close();
 } catch (e) { check(false, '67a the block ran to the end', String(e && e.message).slice(0, 200)); }
 
 /* ══ 67b — the helper, executed ══ */
@@ -219,7 +258,7 @@ if (want('67b')) try {
   check(!!m2 && m2.subject === '🔔 Title edge', '67b with no message the subject is 🔔 <title>', m2 && m2.subject);
   check(!!m1 && m1.body.includes('https://siyagah.github.io/?open=due') && m1.htmlBody.includes('href="https://siyagah.github.io/?open=due"') && m1.body.includes('Title due') && m1.body.includes('Call back') && /Due: /.test(m1.body) && m1.htmlBody.includes('<b>Title due</b>'), '67b the body has the title, when, the message and the /?open=<id> link — plain text and HTML', m1 && m1.body);
   const u = g.fetches[0];
-  check(u && u.url === 'https://firestore.googleapis.com/v1/projects/fake/databases/(default)/documents/notebooks/nb-s1/remind/v1' && u.opts.headers.Authorization === 'Bearer tok-123', '67b it reads the Firestore REST doc with the script\'s OAuth token', u && u.url);
+  check(u && u.url === 'https://firestore.googleapis.com/v1/projects/fake/databases/(default)/documents/notebooks/nb-s1/remind/v1' && u.opts.headers.Authorization === 'Bearer tok-123' && u.opts.headers['X-Goog-User-Project'] === 'fake', '67b it reads the Firestore REST doc with the script\'s OAuth token', u && u.url);
   /* an edited time sends again */
   g.feed([item('due', NOWT - 30 * 60e3, { msg: 'Call back' })]);
   g.run('check');
@@ -253,6 +292,8 @@ if (want('67b')) try {
   check(g.mails.length === 1 && tm.to === 'owner@example.invalid' && /Siyagah reminder emails are on/.test(tm.subject) && /^Siyagah reminder emails are on — 2 upcoming reminders \(next: Pay the bill, /.test(tm.body), '67b …and sends the test email "…are on — N upcoming reminders (next: <title>, <date time>)"', tm && tm.body);
   g = mkGas(NOWT); g.resp = { code: 403, body: '{}' }; threw = null; try { g.run('setup'); } catch (e) { threw = e; }
   check(threw && /can't read the Siyagah notebook/.test(threw.message) && /owns the Firebase project/.test(threw.message) && g.mails.length === 0, '67b setup() with a 403 throws the plain-words message', threw && threw.message);
+  g = mkGas(NOWT); g.resp = { code: 403, body: JSON.stringify({ error: { message: 'Cloud Firestore API has not been used in project 123 before or it is disabled.' } }) }; threw = null; try { g.run('setup'); } catch (e) { threw = e; }
+  check(threw && /^This Google account can't read the Siyagah notebook/.test(threw.message) && /has not been used in project/.test(threw.message) && g.fetches[0].opts.headers['X-Goog-User-Project'] === 'fake', "67b setup() with a 403 carries Google's own words after the plain ones; the quota project header is the project id", threw && threw.message);
   g = mkGas(NOWT); g.resp = { code: 404, body: '{}' }; threw = null; try { g.run('setup'); } catch (e) { threw = e; }
   check(threw && /hasn't sent the reminder list yet/.test(threw.message) && /turn Reminder emails on in Siyagah/.test(threw.message) && /run setup again/.test(threw.message), '67b setup() with a 404 throws the plain-words message', threw && threw.message);
   g = mkGas(NOWT); g.resp = { code: 500, body: '' }; threw = null; try { g.run('setup'); } catch (e) { threw = e; }
