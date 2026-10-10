@@ -1,0 +1,14 @@
+  ok   66b@1440 Chrome reads the Zab manifest: name "Siyagah Zab", short name "Zab"
+         {"name":"Siyagah Zab","short":"Zab"}
+  ok   66b@1440 the manifest description has no "Jeb"
+         Siyagah's Zab on its own: your pockets of quick items, on the home screen. The same notebook, sync and offline behaviour as Siyagah.
+  ok   66b@1440 the manifest file, id and start_url are unchanged
+         {"id":"/?jeb=1","start":"/?jeb=1","url":"http://127.0.0.1:35163/manifest-jeb.json"}
+  ok   66b@1440 document.title "Siyagah Zab", apple-mobile-web-app-title "Zab"
+         {"title":"Siyagah Zab","ati":"Zab"}
+  ok   66b@1440 the full app's title is unchanged
+
+Surfaces swept (0):
+  total strings checked: 0
+
+5/5 passed

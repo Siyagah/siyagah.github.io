@@ -30,6 +30,9 @@ const browser = await pw.chromium.launch();
 const mkItem = (id, pocketId, text, order, extra = {}) => ({ id, pocketId, text, done: false, folderIds: [], tags: [], kind: null, journal: false, order, createdAt: T0, updatedAt: T0, ...extra });
 const seed = () => {
   const db = seedDB(T0);
+  /* a notebook as v05.04 left it: the pockets already exist (the seeding at first boot is not under test) */
+  db.jebPockets = [['jp-task', 'Quick tasks', '✓', '#FFF1A8'], ['jp-idea', 'Ideas', '✶', '#FFD9B8'], ['jp-link', 'Links to read', '↗', '#CFE8FF'], ['jp-shop', 'Shopping', '◫', '#F6D2E4']]
+    .map(([id, name, icon, color], order) => ({ id, name, icon, color, order, createdAt: T0, updatedAt: T0 }));
   db.jeb = [mkItem('t1', 'jp-task', 'Alpha', 0), mkItem('t2', 'jp-task', 'Bravo', 1), mkItem('t3', 'jp-task', 'Charlie', 2), mkItem('i1', 'jp-idea', 'Idea one', 0), mkItem('s1', 'jp-shop', 'Milk', 0)];
   /* a note made from Zab whose pocket name was never stored: the card and the read view show the fallback word */
   db.articles.push({ id: 'zn1', title: 'Made from a pocket', content: '<p>Body</p>', folderIds: [], tags: [], kind: 'general', createdAt: T0, updatedAt: T0, fromJeb: { pocket: '', at: T0 } });
@@ -189,16 +192,39 @@ try {
   }
 
   /* ══ 66c — no migration: what is stored is byte-identical after booting ══ */
-  if (want('66c')) for (const vp of VPS) for (const path of ['/', '/?jeb=1']) {
-    const t = `66c@${vp.name} ${path}`;
-    const S = JSON.stringify(seed());
-    const d = await open(vp, path, S);
+  if (want('66c')) {
+    /* A boot rewrites the stored copy anyway (it adds keys), so "identical" is measured against the build that came
+       before: the same v05.04 notebook is booted by v05.04's own index.html (git, ddc86d6) and by this one, and what each
+       leaves in storage must match byte for byte. The Zab collections must also be exactly what was seeded. */
+    const { mkdtemp, writeFile } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { execFileSync } = await import('node:child_process');
+    const dir = await mkdtemp(join(tmpdir(), 'zab-old-'));
+    await writeFile(join(dir, 'index.html'), execFileSync('git', ['show', 'ddc86d6:index.html'], { maxBuffer: 1 << 28 }));
+    const osrv = await serve(dir);
     try {
-      await sleep(2500);
-      const after = await on(d, () => localStorage.getItem('my-notebook-v1'));
-      check(after === S, `${t} localStorage is byte-identical after boot (${S.length} bytes)`, after === null ? 'null' : `now ${after.length} bytes`);
-      check(d.errors.length === 0, `${t} no page errors`, d.errors.slice(0, 2).join(' · '));
-    } finally { await d.ctx.close(); }
+      for (const vp of VPS) for (const path of ['/', '/?jeb=1']) {
+        const t = `66c@${vp.name} ${path}`;
+        const S = JSON.stringify(seed());
+        const stored = async (base) => {
+          const ctx = await ctxFor(vp, S); const page = await ctx.newPage(); const errs = [];
+          page.on('pageerror', (e) => errs.push(String(e)));
+          try { await page.goto(base + path, { waitUntil: 'domcontentloaded' }); await booted(page); await sleep(2500); return { raw: await page.evaluate(() => localStorage.getItem('my-notebook-v1')), errs }; } finally { await ctx.close(); }
+        };
+        const was = await stored(osrv.base), now = await stored(srv.base);
+        const strip = (s) => JSON.stringify(JSON.parse(s), (k, v) => (/^(ver|savedAt|lastSaved)$/.test(k) ? 0 : v));
+        /* the clock times a boot stamps itself (_folderNoteRecoveryV1.at, noteKinds' stamps) differ run to run in any build */
+        const clock = (s) => (s || '{}').replace(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z/g, 'T');
+        const pa = JSON.parse(clock(was.raw)), pb = JSON.parse(clock(now.raw));
+        const dk = [...new Set([...Object.keys(pa), ...Object.keys(pb)])].filter((k) => JSON.stringify(pa[k]) !== JSON.stringify(pb[k]));
+        check(was.raw && now.raw && !dk.length, `${t} v05.05 leaves the same bytes in storage as v05.04 does (${(now.raw || '').length} bytes)`, 'differs in: ' + dk.map((k) => k + '=' + JSON.stringify(pa[k]).slice(0, 60) + ' vs ' + JSON.stringify(pb[k]).slice(0, 60)).join('; '));
+        const a = JSON.parse(S), b = JSON.parse(now.raw || '{}');
+        const same = ['jeb', 'jebPockets', 'articles', 'folders', 'trash'].filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]));
+        check(same.length === 0, `${t} the Zab pockets and items, the notes, folders and Trash are exactly as seeded`, same.join());
+        check(now.errs.length === 0, `${t} no page errors`, now.errs.slice(0, 2).join(' · '));
+      }
+    } finally { await osrv.close(); }
   }
 
   /* ══ 66d — typed names are shown as typed ══ */

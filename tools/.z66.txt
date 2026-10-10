@@ -1,0 +1,31 @@
+  ok   66c@390 / v05.05 leaves the same bytes in storage as v05.04 does (4329 bytes)
+         differs in: 
+  ok   66c@390 / the Zab pockets and items, the notes, folders and Trash are exactly as seeded
+  ok   66c@390 / no page errors
+  ok   66c@390 /?jeb=1 v05.05 leaves the same bytes in storage as v05.04 does (4329 bytes)
+         differs in: 
+  ok   66c@390 /?jeb=1 the Zab pockets and items, the notes, folders and Trash are exactly as seeded
+  ok   66c@390 /?jeb=1 no page errors
+  ok   66c@820 / v05.05 leaves the same bytes in storage as v05.04 does (4329 bytes)
+         differs in: 
+  ok   66c@820 / the Zab pockets and items, the notes, folders and Trash are exactly as seeded
+  ok   66c@820 / no page errors
+  ok   66c@820 /?jeb=1 v05.05 leaves the same bytes in storage as v05.04 does (4329 bytes)
+         differs in: 
+  ok   66c@820 /?jeb=1 the Zab pockets and items, the notes, folders and Trash are exactly as seeded
+  ok   66c@820 /?jeb=1 no page errors
+  ok   66c@1440 / v05.05 leaves the same bytes in storage as v05.04 does (4329 bytes)
+         differs in: 
+  ok   66c@1440 / the Zab pockets and items, the notes, folders and Trash are exactly as seeded
+  ok   66c@1440 / no page errors
+  ok   66c@1440 /?jeb=1 v05.05 leaves the same bytes in storage as v05.04 does (4329 bytes)
+         differs in: 
+  ok   66c@1440 /?jeb=1 the Zab pockets and items, the notes, folders and Trash are exactly as seeded
+  ok   66c@1440 /?jeb=1 no page errors
+  ok   66d@1440 a pocket the owner named "Jeb stuff" is shown and stored exactly so
+         ▤All pockets5 | ✓Quick tasks3 | ✶Jeb stuff1 | ↗Links to read0 | ◫Shopping1
+
+Surfaces swept (0):
+  total strings checked: 0
+
+19/19 passed
