@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.06.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.07.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +16,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.07** (10 Oct 2026) — V1, the sidebar fold arrows are readable (issue #163). `#sb`
+  `.sec-tog` 10 px → 16 px, `.tr-tog` 22 px (`.sf-grp-tog` is Pane 2 only); all inked full `--sb-ink` (was
+  `-dim`). Row heights and tap areas unchanged. Pane 2/3 arrows left small (listed in
+  CHANGELOG). Check: block 68, `tools/arrows-v1.mjs`.
 - **v05.06** (10 Oct 2026) — R1, reminder emails (issue #160). `DB.theme.remindMail={on,hour}`;
   while on, a synced device writes one cloud doc `notebooks/{nb}/remind/v1` (`_remTick`,
   `_remList`); a helper in the owner's own Google account (Apps Script, text built by
@@ -42,15 +46,6 @@ must never accumulate here instead of there.
   (tick boxes, Panel (N) / Cards (N)); the panel groups several pockets (＋ per
   group; a ＋ item left empty is dropped by `jebDiscardEmpty`). `--only 64`
   **237/237**, `--only 63` 158/158, `--only 60` 203/203. Architect: full `app-check` **2989/2989, twice in a row**; unpatched `--only 64` 0/4.
-- **v05.02** (9 Oct 2026) — J3, 📎 Attach, → Note and "(12) From Jeb" (issue
-  #152). `#jeb-att`: four tabs (Folder, Tag, Note Type, Journal) acting at once
-  through `jebEditItem`; chips under each item; "📎 Attach" and "→ Note" on every
-  row and in ⋯. `_jebToNoteUI` → `jebToNote`, toast says where; no toast action
-  existed, so `_jebToastOpen` makes the toast itself the "Open note" tap target.
-  `sf-jeb` Smart View (`fromJeb`, newest first); "👝 from <pocket>" on the Pane 2
-  card and read view. Popover beside the panel on PC/tablet, 80 % sheet on a
-  phone. `--only 63` **158/158**, `--only 60` 203/203, `--only 59` 74/74.
-  Architect: full `app-check` **2739/2739, twice in a row**; unpatched `--only 63` 0/3.
 ---
 
 ## What this is

@@ -11884,6 +11884,22 @@ await r.block('67-remind-mail', async () => {
   r.check(out.status === 0, 'the R1 reminder-mail check exits cleanly', `exit ${out.status}`);
 });
 
+/* 68 — v05.07, V1: the sidebar's fold arrows are readable. tools/arrows-v1.mjs finds every arrow glyph in #sb by what it
+   says (not by class) and asserts >= 14 px high and >= 4.5:1 composited, on five presets + a custom sidebar colour at
+   390/820/1440, expanded and collapsed; a real tap/click on a section arrow still folds it; nothing clipped or overflowing.
+   Each printed ok/FAIL line becomes one check. */
+await r.block('68-fold-arrows', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./arrows-v1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the V1 fold-arrows check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'V1: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the V1 fold-arrows check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.06">
+<meta name="app-version" content="05.07">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -254,7 +254,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .tr-row.dob{box-shadow:inset 0 2px 0 0 var(--green)}
 .tr-row.doa{box-shadow:inset 0 -2px 0 0 var(--green)}
 .tr-row.doi{background:rgba(27,122,70,.22)!important;border-radius:4px}
-.tr-tog{width:20px;flex-shrink:0;text-align:center;font-size:22px;color:var(--sb-ink-dim);line-height:1}
+.tr-tog{width:20px;flex-shrink:0;text-align:center;font-size:22px;color:var(--sb-ink);line-height:1}
 .tr-ico{font-size:14px;flex-shrink:0;line-height:1}
 .tr-name{flex:1;white-space:normal;word-break:break-word;line-height:1.3}
 .tr-cnt{font-size:10px;background:var(--sb-strip);padding:1px 5px;border-radius:9px;flex-shrink:0;color:var(--sb-ink-soft)}
@@ -1203,8 +1203,8 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
         background:var(--sb-strip)}
 .sec-hd:hover,.sec-hd:hover .sec-acts{background:var(--sb-strip-hi);opacity:1}
 .sec-hd:active{cursor:grabbing}
-.sec-tog{font-size:10px;color:var(--sb-ink-dim);flex-shrink:0;cursor:pointer;
-         width:13px;text-align:center;line-height:1}
+.sec-tog{font-size:16px;color:var(--sb-ink);flex-shrink:0;cursor:pointer;
+         width:16px;text-align:center;line-height:1}
 .sec-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
         font-size:calc(var(--fs-sidebar)*0.88);font-weight:700;text-transform:uppercase;letter-spacing:.07em;
         color:var(--sb-ink-soft)}
@@ -3467,7 +3467,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.06</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.07</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
