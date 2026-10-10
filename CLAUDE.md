@@ -16,6 +16,12 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.05** (10 Oct 2026) — Z1, "Jeb" becomes **"Zab"** on every screen the owner sees
+  (issue #158): bar, menus, "👝 from Zab", Smart View "(12) From Zab", Trash labels,
+  "Show Zab bar", the second icon "Siyagah Zab" (manifest `name`/`short_name`, title,
+  apple title). Words only: every internal name (`DB.jeb`, `jeb*`, `#jeb-*`, `fromJeb`,
+  `_JEB_APP`, `?jeb=1`, `manifest-jeb.json`, `icons/icon-jeb*`) is unchanged; no migration.
+  Check: block 66, `tools/zab-z1.mjs`.
 - **v05.04** (10 Oct 2026) — J5, "Siyagah Jeb" (issue #156): the same `index.html`
   opened as `/?jeb=1` is a second home-screen icon showing only Jeb. `const _JEB_APP` +
   `html.jeb-app` are set once in `<script id="jeb-mode">` in `<head>`, which also swaps the
@@ -46,17 +52,6 @@ must never accumulate here instead of there.
   tail, in `_edColApply`, `_initCollapsible`, `_secNodesOf` and
   `_edBlockDragStart`. `_edRevealTail` is gone. Block 62: **25/25**, unpatched
   8/25. Architect: full `app-check` **2581/2581** on the final head; unpatched `--only 62` 8/25.
-- **v05.00** (9 Oct 2026) — J2 (built as v04.99, renumbered), the Jeb bar and the pocket panel (issue #147).
-  `#jeb-bar` (scrolling chips: swatch, name, not-done count; ＋ New pocket;
-  right-click/long-press menu), `#jeb-panel` (add on top, tick, edit in place,
-  ⠿ drag, ⋯ menu, Clear done), all through the J1 API. `--jeb-h` on `<html>`
-  makes room (PC: `#p2`/`#p3` margin; tablet/phone: `#sb`/`#p2`/`#p3`
-  `bottom:var(--jeb-h)`); toast, `#fw-*`, `#toc-float-btn` move up by it. PC bar
-  starts at the sidebar's right edge (`--jeb-l`, `ResizeObserver`); the phone
-  hides it for the keyboard (back 300 ms after focus leaves). "Show Jeb bar" in
-  🧰 → 🎨 Appearance = `DB.theme.jebBar`. Live repaint from `render()`/
-  `_renderPreserveEdit()`, never under an item being edited. `--only 60`
-  **203/203**, `--only 59` 74/74, `--only 6p` 104/104. Architect: full `app-check` **2556/2556, twice in a row**; unpatched `--only 60` 0/6.
 ---
 
 ## What this is
@@ -380,7 +375,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `'${esc(x)}'` (`esc()` leaves `'` alone) or a hand-rolled `\x27`. A typed or
   renamed tag goes through `_cleanTag()` (keeps every character but the comma).
   Ids may stay as they are.
-- **Jeb (v04.98, J1).** The owner's bar of **pockets** of quick **items**.
+- **Jeb (v04.98, J1) — shown to the owner as "Zab" since v05.05; every identifier, id, class, URL and file name below still says `jeb`, and must.** The owner's bar of **pockets** of quick **items**.
   `DB.jebPockets=[{id,name,icon,color,order,…}]`, `DB.jeb=[{id,pocketId,text,
   done,folderIds,tags,kind,journal,order,…}]`. Both are in `_REC_COLLS`,
   `_REC_TOMB_COLLS`, `_LJ_COLLS`, `mergeDB()`'s merge and `_alive` lists, the
@@ -450,8 +445,8 @@ A failing check is a wrong assertion surprisingly often — investigate before
 | **Note Type / NTI** — a note's single-select character (`art.kind`) | not "tag" — tags are separate and multiple |
 | **Frozen build** — a sealed copy under `legacy/` | not "old version", not "backup" |
 | **Save File** — the export that bakes notes into a copy of the app | not "download" |
-| **Jeb** — the bar of pockets along the bottom (the owner's name) | not "pockets bar", not "basket" |
-| **Pocket** — one container on Jeb (`DB.jebPockets`) | not "folder", not "list" |
+| **Zab** — the bar of pockets along the bottom (the owner's name since v05.05; the code still says `jeb`) | not "Jeb" on any screen, not "pockets bar", not "basket" |
+| **Pocket** — one container on Zab (`DB.jebPockets`) | not "folder", not "list" |
 | **Item** — one thing in a pocket (`DB.jeb`) | not "note" — it becomes a note only via → Note |
 
 ## Decisions confirmed by the owner

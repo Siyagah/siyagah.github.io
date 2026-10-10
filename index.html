@@ -55,9 +55,9 @@ if(_JEB_APP){
     manifest:_jg('link[rel="manifest"]','href'), themeColor:_jg('meta[name="theme-color"]','content'),
     appleTitle:_jg('meta[name="apple-mobile-web-app-title"]','content'),
     touchIcon:_jg('link[rel="apple-touch-icon"][sizes]','href'), svgIcon:_jg('link[rel="icon"][type="image/svg+xml"]','href')};
-  document.title='Siyagah Jeb';
+  document.title='Siyagah Zab';   /* v05.05: renamed to Zab (the code still says jeb) */
   if((_jx=_jq('link[rel="manifest"]'))) _jx.setAttribute('href','/manifest-jeb.json');
-  if((_jx=_jq('meta[name="apple-mobile-web-app-title"]'))) _jx.setAttribute('content','Jeb');
+  if((_jx=_jq('meta[name="apple-mobile-web-app-title"]'))) _jx.setAttribute('content','Zab');
   if((_jx=_jq('meta[name="theme-color"]'))) _jx.setAttribute('content','#D9822B');
   if((_jx=_jq('link[rel="apple-touch-icon"][sizes]'))) _jx.setAttribute('href','/icons/apple-touch-icon-jeb.png');
   if((_jx=_jq('link[rel="icon"][type="image/svg+xml"]'))) _jx.setAttribute('href','/icons/icon-jeb.svg');
@@ -3488,7 +3488,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <div class="sb-mi" onclick="autoNumberAll();closeSBTools()">🔢 Auto-number all</div>
           <div class="sb-mi" onclick="toggleAccordionSec();closeSBTools()" id="accordion-sec-btn" title="When ON: opening a section closes all others">📂 Accordion sections: <span id="accordion-sec-lbl">OFF</span></div>
           <div class="sb-mi-hd">Home screen</div>
-          <div class="sb-mi" id="jeb-app-mi" onclick="openJebApp();closeSBTools()" title="Open Siyagah Jeb — your pockets on their own screen, in a new window. From there you can add it to your home screen as a second icon.">👝 Siyagah Jeb</div>
+          <div class="sb-mi" id="jeb-app-mi" onclick="openJebApp();closeSBTools()" title="Open Siyagah Zab — your pockets on their own screen, in a new window. From there you can add it to your home screen as a second icon.">👝 Siyagah Zab</div>
           <div class="sb-mi-hd">Save</div>
           <button id="autosave-btn" class="sb-mi" onclick="enableAutoSave()" title="Data saves to browser storage automatically; use Save File to export">🔗 Enable auto-save</button>
           <div id="save-lbl" class="save-lbl busy" style="text-align:left;padding:4px 13px" onclick="_saveLblTap()">● Unsaved to file</div>
@@ -6024,7 +6024,7 @@ function renderP2C(){
       return;
     }
     const arts=getSmartArts(_sf.id);
-    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any article and choose ⭐ Add to Favourites','sf-pinned':'No pinned articles yet — right-click (or hold on mobile) any article and choose 📌 Pin','sf-new':'No articles yet. Create your first article!','sf-recent':'No recently edited articles.','sf-jeb':'Notes you make from Jeb appear here.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
+    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any article and choose ⭐ Add to Favourites','sf-pinned':'No pinned articles yet — right-click (or hold on mobile) any article and choose 📌 Pin','sf-new':'No articles yet. Create your first article!','sf-recent':'No recently edited articles.','sf-jeb':'Notes you make from Zab appear here.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
     let h='<div class="fv">'+`<div class="slbl">${_sf.name} (${arts.length})</div>`;
     h+=_sfQtBarHTML(_sf.id,null);
     if(!arts.length){
@@ -6474,7 +6474,7 @@ function _renderP3CInner(){
     el.scrollTop=0;el.innerHTML=`<div class="avw"><div class="av">
       ${ST.noteModal?'':`<div class="p3h-title-bar p3c-titlebar p3c-vt"><div class="tbt" title="Right-click to edit" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">${esc(curA.title)||'<em style="color:var(--t3)">Untitled</em>'}</div></div>`}
       ${_p3MetaRowHTML(curA)}
-      ${curA.fromJeb?`<div class="av-jeb">👝 from ${esc(curA.fromJeb.pocket||'Jeb')}</div>`:''}
+      ${curA.fromJeb?`<div class="av-jeb">👝 from ${esc(curA.fromJeb.pocket||'Zab')}</div>`:''}
       ${reminderStripHTML(curA)}
       <div class="av-tags">${tags}</div>
       ${(curA.tags||[]).length
@@ -9514,8 +9514,8 @@ function _showImportConsent(data,fileName){
   showModal(`<div class="mt">📥 Import data</div>
     <div class="mm">
       File: <strong>${esc(fileName)}</strong><br><br>
-      In the file: ${inc.a} notes · ${inc.f} folders · ${inc.s} sections · Jeb items: ${inc.j}<br>
-      In your notebook now: ${cur.a} notes · ${cur.f} folders · ${cur.s} sections · Jeb items: ${cur.j}<br><br>
+      In the file: ${inc.a} notes · ${inc.f} folders · ${inc.s} sections · Zab items: ${inc.j}<br>
+      In your notebook now: ${cur.a} notes · ${cur.f} folders · ${cur.s} sections · Zab items: ${cur.j}<br><br>
       <strong>Merge</strong> adds anything from the file you don't already have — nothing is removed.<br>
       <strong>Replace everything</strong> deletes your current notebook and puts the file's content in its place.
     </div>
@@ -21263,9 +21263,9 @@ function renderThemeModal(){
 
   /* Jeb bar switch (v04.99, J2) — DB.theme.jebBar, default on */
   h+='<div class="theme-divider"></div>';
-  h+='<div class="theme-sect"><div class="theme-sect-lbl">Jeb bar</div>';
+  h+='<div class="theme-sect"><div class="theme-sect-lbl">Zab bar</div>';
   h+='<div class="fs-sub" style="margin:-2px 0 8px">The strip of pockets along the bottom of the screen</div>';
-  h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="checkbox" id="th-jebbar"'+(_jebBarOn()?' checked':'')+' onchange="setJebBar(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show Jeb bar</label></div>';
+  h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="checkbox" id="th-jebbar"'+(_jebBarOn()?' checked':'')+' onchange="setJebBar(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show Zab bar</label></div>';
 
   /* Heading styles launcher */
   h+='<div class="theme-divider"></div>';
@@ -22261,10 +22261,10 @@ const _JEB_APP_SVG='<svg class="jah-ic" viewBox="0 0 512 512" aria-hidden="true"
 function _jebAppHd(){
   if(_jebAppHdEl&&_jebAppHdEl.isConnected) return;
   const h=document.createElement('div'); h.id='jeb-app-hd'; _jebAppHdEl=h;
-  h.innerHTML=_JEB_APP_SVG+'<b>Siyagah Jeb</b>'
+  h.innerHTML=_JEB_APP_SVG+'<b>Siyagah Zab</b>'
     +'<button type="button" id="jah-warn" style="display:none" title="This device can no longer save locally — tap for details" aria-label="Storage warning">⚠<span class="jah-t"> Not saving</span></button>'
     +'<button type="button" id="jah-sync" class="sync-dot-tb" title="Sync — tap for details"></button>'
-    +'<button type="button" id="jah-inst" style="display:none" title="Add Siyagah Jeb to your home screen" aria-label="Install">📱<span class="jah-t"> Install</span></button>'
+    +'<button type="button" id="jah-inst" style="display:none" title="Add Siyagah Zab to your home screen" aria-label="Install">📱<span class="jah-t"> Install</span></button>'
     +'<button type="button" id="jah-open" title="Open Siyagah (the notes)" aria-label="Open Siyagah">📓<span class="jah-t"> Open Siyagah</span></button>';
   document.body.appendChild(h);
   h.querySelector('#jah-warn').addEventListener('click',()=>openStorageWarnDetails());
@@ -22291,7 +22291,7 @@ function _jebAppHdSync(){
   const ji=h.querySelector('#jah-inst'); if(ji) ji.style.display=_pwaPrompt?'':'none';
 }
 function _jebMakeBar(){
-  const bar=document.createElement('div'); bar.id='jeb-bar'; bar.setAttribute('role','toolbar'); bar.setAttribute('aria-label','Jeb pockets');
+  const bar=document.createElement('div'); bar.id='jeb-bar'; bar.setAttribute('role','toolbar'); bar.setAttribute('aria-label','Zab pockets');
   document.body.appendChild(bar);
   bar.addEventListener('wheel',e=>{ if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){ bar.scrollLeft+=e.deltaY; e.preventDefault(); } },{passive:false});
   bar.addEventListener('click',e=>{
@@ -22819,7 +22819,7 @@ function _jebToNoteUI(iid){
   const nid=jebToNote(iid);
   if(!nid){ toast('Could not turn it into a note'); return; }
   if(_jebAtt&&_jebAtt.iid===iid) _jebAttClose();
-  const where=names.length?'📁 '+names[0]+(names.length>1?' +'+(names.length-1):''):(journal?'📔 Journal':'👝 From Jeb');
+  const where=names.length?'📁 '+names[0]+(names.length>1?' +'+(names.length-1):''):(journal?'📔 Journal':'👝 From Zab');
   _jebPanelSig=''; _jebBarSig='';
   if(typeof _renderPreserveEdit==='function') _renderPreserveEdit(); else render();
   jebRefresh();
@@ -22920,8 +22920,8 @@ function renderTrashModal(){
   body.innerHTML = items.map(t=>{
     const icon = t.type==='article'?'📄':t.type==='jebItem'||t.type==='jebPocket'?'🗂':'📁';
     const nm = esc(t.type==='article'?t.item.title
-      :t.type==='jebItem'?'Jeb item: '+String(t.item.text||'').split(/\r?\n/)[0].slice(0,60)   /* v04.98 */
-      :t.type==='jebPocket'?'Jeb pocket: '+(t.item.name||'Unnamed')
+      :t.type==='jebItem'?'Zab item: '+String(t.item.text||'').split(/\r?\n/)[0].slice(0,60)   /* v04.98 */
+      :t.type==='jebPocket'?'Zab pocket: '+(t.item.name||'Unnamed')
       :(t.item.name||'Unnamed'));
     const age = fmtD(t.deletedAt);
     let sub = `Deleted ${age}`;
@@ -23974,7 +23974,7 @@ function artCard(a, sel, showFolderCount, showNag, customMeta){
     : 'font-size:15px;flex-shrink:0';
   const _m0=fmtDs(a.updatedAt)
     + (showFolderCount && a.folderIds.length>1 ? ` · in ${a.folderIds.length} folders` : '')
-    + (a.fromJeb ? ` · <span class="ar-jeb">👝 from ${esc(a.fromJeb.pocket||'Jeb')}</span>` : '')
+    + (a.fromJeb ? ` · <span class="ar-jeb">👝 from ${esc(a.fromJeb.pocket||'Zab')}</span>` : '')
     + (showNag && isNagNote(a) ? ` · <span class="ar-nag">⏳ untouched ${untouchedDays(a)}d</span>` : '');
   const meta=customMeta!==undefined?customMeta:_m0;
   return `<div class="ar${expanded}${sel?' sel':''}" data-aid="${a.id}" `
@@ -26780,7 +26780,7 @@ const SF=[
   {id:'sf-remind', name:'(09) Reminders',        icon:'🔔', smart:'remind'},
   {id:'sf-murajaa',name:'(10) Murāja\'ah Review',  icon:'📖', smart:'murajaa'},
   {id:'sf-practice',name:'(11) In Practice',           icon:'🌱', smart:'practice'},
-  {id:'sf-jeb',     name:'(12) From Jeb',              icon:'👝', smart:'jeb'},
+  {id:'sf-jeb',     name:'(12) From Zab',              icon:'👝', smart:'jeb'},
 ];
 const SF_IDS=new Set(SF.map(s=>s.id));
 

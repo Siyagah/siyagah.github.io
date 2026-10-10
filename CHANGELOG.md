@@ -9291,3 +9291,22 @@ dead `#jeb-bar` (no listeners, because `jebRefresh()` reused it), and pocket nam
 **Not done:** the full `app-check` (by the issue's instruction). Free card positions and moving Jeb into `_S1_COLLS` stay out.
 
 **Totals (Architect):** full `app-check` **3245/3245, twice in a row** on `af08e1b` (after three review rounds: Save File strips Jeb surfaces and restores the head; `--jeb-hd` default, the v04.20 menu inventory, the data-tag literal); `ship-check` 14/14; unpatched (v05.03 `index.html` + `sw.js`) `--only 65` 0/3 (`_JEB_APP is not defined`).
+
+## v05.05 — Z1, "Jeb" becomes "Zab" on every screen (issue #158, 10 Oct 2026)
+
+The owner: "How about write Siyagah Zab, not Jeb?" — and chose **everywhere**. Words on screen only.
+
+- **Changed (what the owner sees):** the head script's `document.title` "Siyagah Zab" and `apple-mobile-web-app-title`
+  "Zab"; the Zab-mode header "Siyagah Zab" and the Install tooltip; the bar's `aria-label` "Zab pockets"; 🧰 → "👝 Siyagah Zab"
+  and its tooltip; 🎨 Appearance "Zab bar" / "Show Zab bar"; Smart View "(12) From Zab" and its empty text; the
+  "👝 from Zab" fallback on the Pane 2 card and read view; the Trash labels "Zab item: …" / "Zab pocket: …"; the
+  backup-restore summary "Zab items: N"; the Attach row's "👝 From Zab". `manifest-jeb.json`: `name` "Siyagah Zab",
+  `short_name` "Zab", description (file name, `id`, `start_url`, icons unchanged).
+- **Not changed, on purpose:** `DB.jeb`, `DB.jebPockets`, `fromJeb`, every `jeb*` function, `#jeb-*` ids and classes,
+  `_JEB_APP`, `?jeb=1`, `manifest-jeb.json`, `icons/icon-jeb*`, code comments. No migration; no stored record is touched (I1, I8).
+- **Is "Jeb" stored in data? Found: no.** The four seeded pockets are "Quick tasks / Ideas / Links to read / Shopping".
+  The Trash labels are built at display time from the item text/pocket name. `fromJeb.pocket` holds the owner's pocket name
+  (or `''`, which now falls back to "Zab"). The Smart View name is a code constant; `DB.sfItems` holds a name only if the
+  owner renamed that view themselves, and would be shown as typed. Nothing was rewritten.
+- **Step 0:** the v05.04 Totals (Architect) line recorded; `ZAB-PLAN.md` (the owner's plan, unedited) brought onto the branch.
+- **Checks:** see the notes below on what was and was not run.
