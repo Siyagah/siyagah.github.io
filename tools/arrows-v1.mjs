@@ -76,13 +76,10 @@ const sweep = (page) => page.evaluate((glyphs) => {
 }, GLYPHS);
 
 async function states(d, vp, fn) {
-  /* expanded: every section open and every folder open; collapsed: the arrows folded back */
-  await d.page.evaluate(() => { for (const f of DB.folders) { if (typeof ST !== 'undefined' && ST.exp) ST.exp[f.id] = true; } if (typeof renderTree === 'function') renderTree(); });
-  await sleep(300);
-  await fn('expanded');
-  await d.page.evaluate(() => { for (const f of DB.folders) { if (typeof ST !== 'undefined' && ST.exp) ST.exp[f.id] = false; } if (typeof renderTree === 'function') renderTree(); });
-  await sleep(300);
-  await fn('collapsed');
+  /* expanded: every section and folder open; collapsed: folded back (sections included) */
+  const set = (v) => d.page.evaluate((v) => { for (const s of DB.sections) ST.secOpen[s.id] = v; for (const f of DB.folders) ST.exp[f.id] = v; ST.dbOpen = v; ST.tagOpen = v; renderTree(); }, v);
+  await set(true); await sleep(300); await fn('expanded');
+  await set(false); await sleep(300); await fn('collapsed');
 }
 
 try {
@@ -95,7 +92,7 @@ try {
           const arrows = await sweep(d.page);
           const t = `${label} ${state}`;
           const sec = arrows.filter((a) => /sec-tog/.test(String(a.cls)));
-          check(arrows.length >= 6 && sec.length >= 3, `${t}: arrows were found by content (${arrows.length}, ${sec.length} of them section arrows)`, arrows.map((a) => a.cls).join());
+          check(arrows.length >= 6 && sec.length >= 3 && (state === 'collapsed' || arrows.some((a) => /tr-tog/.test(String(a.cls)))), `${t}: arrows were found by content (${arrows.length}, ${sec.length} of them section arrows)`, arrows.map((a) => a.cls).join());
           const short = arrows.filter((a) => a.h < 14);
           check(short.length === 0, `${t}: every arrow is at least 14 px high (smallest ${Math.min(...arrows.map((a) => a.h)).toFixed(1)})`, short.map((a) => `${a.cls} ${a.h.toFixed(1)}px`).join(' · '));
           const scored = arrows.map((a) => { const bg = flatten(a.stack); return { ...a, c: ratio(over(px(a.color), bg), bg) }; });

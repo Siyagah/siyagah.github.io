@@ -17,8 +17,8 @@ must never accumulate here instead of there.
 ### The five most recent rounds
 
 - **v05.07** (10 Oct 2026) — V1, the sidebar fold arrows are readable (issue #163). `#sb`
-  `.sec-tog` and `.sf-grp-tog` 10 px → 16 px, `.tr-tog` 22 px; all inked full `--sb-ink` (was
-  `-dim` / `--t3`). Row heights and tap areas unchanged. Pane 2/3 arrows left small (listed in
+  `.sec-tog` 10 px → 16 px, `.tr-tog` 22 px (`.sf-grp-tog` is Pane 2 only); all inked full `--sb-ink` (was
+  `-dim`). Row heights and tap areas unchanged. Pane 2/3 arrows left small (listed in
   CHANGELOG). Check: block 68, `tools/arrows-v1.mjs`.
 - **v05.06** (10 Oct 2026) — R1, reminder emails (issue #160). `DB.theme.remindMail={on,hour}`;
   while on, a synced device writes one cloud doc `notebooks/{nb}/remind/v1` (`_remTick`,

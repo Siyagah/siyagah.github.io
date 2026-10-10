@@ -9366,11 +9366,10 @@ Every fold arrow in `#sb`, found by sweeping `index.html` for the glyphs `▸ �
 | Arrow | Where in `#sb` | Before | After |
 |---|---|---|---|
 | `.sec-tog` | every section heading: Smart Views, MyDatabase, My Notebooks, Journal, Note Types, Tags, … | 10 px font, 13 px wide, `--sb-ink-dim` | **16 px font, 16 px wide, `--sb-ink`** |
-| `.sf-grp-tog` | Smart View groups, year/month/week/event groups of the journal | 10 px font, 13 px wide, `--t3` (a Pane colour) | **16 px, `--sb-ink`**, scoped as `#sb .sf-grp-tog` so Pane 2's copy is untouched |
 | `.tr-tog` | the folder tree, Note Type groups, tag rows (the empty ones are spacers) | 22 px font, 20 px wide, `--sb-ink-dim` | **22 px (unchanged), `--sb-ink`** |
 
-- **Rows:** a section heading's height is set by its name and ⋯ buttons, not the arrow, so no row grows. The arrow beside the name is 3 px wider (`.sec-tog`) and 3 px wider (`.sf-grp-tog`).
+- **Rows:** a section heading's height is set by its name and ⋯ buttons, not the arrow, so no row grows. The section arrow's box is 3 px wider (13 → 16).
 - **Tap area:** unchanged, the whole row (`togSec` / `togExp` are on the row). No arrow is the only target.
 - **Contrast** is measured per preset in block 68 (see the record below).
 - **Checks:** block `68-fold-arrows` (`tools/arrows-v1.mjs`).
-- **Not done (found in Pane 2 and Pane 3, out of scope, to be filed):** `.p2h-tree-tog` (11 px, Pane 2 tree), `.mw-tog` / `.mw-chev` (10–11 px, the MyDatabase wall), `.nti-pk-cat-tog` (9 px, the Note Type picker), `.clr-fam-tog` (10 px, colour menus), `.mw-cu-tog` (10 px), `#toc-panel .toc-title-arrow` (11 px) and `.pin-exp-arrow` / `.pin-exp-arrow-sm` (10 / 9 px, Pinned Tabs). `.sf-grp-tog` in Pane 2 (10 px, `--t3`) is also still small.
+- **Not done (found in Pane 2 and Pane 3, out of scope, to be filed):** `.p2h-tree-tog` (11 px, Pane 2 tree), `.mw-tog` / `.mw-chev` (10–11 px, the MyDatabase wall), `.nti-pk-cat-tog` (9 px, the Note Type picker), `.clr-fam-tog` (10 px, colour menus), `.mw-cu-tog` (10 px), `#toc-panel .toc-title-arrow` (11 px) and `.pin-exp-arrow` / `.pin-exp-arrow-sm` (10 / 9 px, Pinned Tabs). `.sf-grp-tog` in Pane 2 (Smart View and journal groups; 10 px, `--t3`) is also still small.
