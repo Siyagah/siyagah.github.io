@@ -9289,3 +9289,5 @@ dead `#jeb-bar` (no listeners, because `jebRefresh()` reused it), and pocket nam
   `<script id="nd"` occurs exactly once (I7). `ship-check` 14/14; `--only 6m,6o,53d,65` 294/294.
 
 **Not done:** the full `app-check` (by the issue's instruction). Free card positions and moving Jeb into `_S1_COLLS` stay out.
+
+**Totals (Architect):** full `app-check` **3245/3245, twice in a row** on `af08e1b` (after three review rounds: Save File strips Jeb surfaces and restores the head; `--jeb-hd` default, the v04.20 menu inventory, the data-tag literal); `ship-check` 14/14; unpatched (v05.03 `index.html` + `sw.js`) `--only 65` 0/3 (`_JEB_APP is not defined`).

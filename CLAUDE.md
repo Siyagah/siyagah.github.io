@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.04.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.05.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -22,7 +22,7 @@ must never accumulate here instead of there.
   manifest (`manifest-jeb.json`), title and icons. Header `#jeb-app-hd` (sync words read from
   `#sync-dot`, ⚠ mirror, 📱 Install, 📓 Open Siyagah), the always-on bar, a docked panel that
   never closes to nothing, `DB.theme.jebAppView` (written only on a switch). 🧰 → "👝 Siyagah
-  Jeb"; `?open=<id>` opens a note in the full app. Checks: block 65, `tools/jeb-j5.mjs`.
+  Jeb"; `?open=<id>` opens a note in the full app. Checks: block 65, `tools/jeb-j5.mjs`. Architect: full `app-check` **3245/3245, twice in a row**; unpatched `--only 65` 0/3.
 - **v05.03** (9 Oct 2026) — J4, pockets as sticky cards (issue #154). A chip is
   two halves: name = panel, **▦** (`[data-jeb-cards]`) = the **deck** `#jeb-deck`
   (cards in the pocket's colour, ink `#2A2418`, tilt from the id, jump-out from the
@@ -75,6 +75,7 @@ sw.js               service worker (network-first, cache name = app version)
 tools/              the verification harness — see tools/README.md
 legacy/v03.99/      a sealed, frozen build — never edited
 CHANGELOG.md        the full history
+ZAB-PLAN.md         the owner's Zab plan (rename, a Zab-first app, QuranRevival)
 ```
 
 It saves in four places: `localStorage`, a linked local file (File System
