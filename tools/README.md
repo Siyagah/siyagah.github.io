@@ -676,6 +676,30 @@ The local hot path at 9,000 notes. Two modes:
 Trap: main-thread time is the CDP `TaskDuration` delta, so the ×4 throttle is
 in it; per-step timings wrap the app's own globals and are inclusive.
 
+`--trace` (v05.08) adds a Chromium trace of the phone's receive step: main-thread
+events summed by name, which JS function forced each style/layout pass, and every
+change to `<html>`/`<body>` attributes, `<body>`'s children, `<head>` and focus
+during the window. That is what named the v05.08 cause, which a CPU profile shows
+only as "(program)". Trap: three devices share one browser, so the trace has three
+renderer main threads; the busiest one in the window is the page's (the first
+cut picked the first one and reported a near-empty trace). A step measured on a
+device that typed before it can include a keyboard-down from that typing.
+
+## `jebh-p1.mjs` (v05.08)
+
+Block `69-keyboard-restyle`. Sweeps every stylesheet rule that uses
+`var(--jeb-h)` by its text (69a; a planted unlisted rule must be caught), checks
+`<html>` holds no changing value (69b), times the keyboard flip at 9,000 notes on a
+×4 phone (69c, ≤ 100 ms of style), and the real 💾 Save flow at 390/820 (69d).
+Trap: read the bar's height from `#p2`, never `<html>`, which always says 0px
+since v05.08.
+
+## `s4-save-measure.mjs` (v05.08, on demand, not in app-check)
+
+What a save costs at ~45 MB of note text: one edit, the 30 s checkpoint, a 500-note
+import batch, the pre-journal whole-notebook path and a reload, on a laptop and a
+×4 phone. Numbers only.
+
 ## `sync-s2.mjs` (v04.93)
 
 The cloud copy of pictures (checks 54a–54h) on the fake Firestore. App-check

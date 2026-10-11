@@ -9375,3 +9375,75 @@ Every fold arrow in `#sb`, found by sweeping `index.html` for the glyphs `▸ �
 - **Not done (found in Pane 2 and Pane 3, out of scope, to be filed):** `.p2h-tree-tog` (11 px, Pane 2 tree), `.mw-tog` / `.mw-chev` (10–11 px, the MyDatabase wall), `.nti-pk-cat-tog` (9 px, the Note Type picker), `.clr-fam-tog` (10 px, colour menus), `.mw-cu-tog` (10 px), `#toc-panel .toc-title-arrow` (11 px) and `.pin-exp-arrow` / `.pin-exp-arrow-sm` (10 / 9 px, Pinned Tabs). `.sf-grp-tog` in Pane 2 (Smart View and journal groups; 10 px, `--t3`) is also still small.
 - **Totals (builder):** `ship-check` 14/14; `arrows-v1.mjs` alone **126/126** (smallest arrow 16.0 px high, lowest contrast about 15.9:1 on the presets measured); `--only 68,58,6h` **230/230**; `--only 6i` (the sidebar sweep) 9/9; unpatched (`index.html` + `sw.js` from `origin/main`) `--only 68` **85/128** (the 43 that fail are the 14 px / 4.5:1 sweeps on the old 10 px `--sb-ink-dim` arrows; the tap, overflow and found-by-content checks pass, as they must). The full `app-check` was not run (the Architect's).
 - **Contrast figures:** I did not record each arrow's "before" contrast as a table; the new check asserts the "after" (>= 4.5:1) and the old build fails it. The old ink was `--sb-ink-dim` (62 % white).
+- **Totals (Architect):** full `app-check` **3780/3780, twice in a row** on `dc1df79`; `ship-check` 14/14; unpatched `--only 68` 85/128 (most unpatched passes are `.tr-tog`, already 22 px). *(Written in v05.08.)*
+
+## v05.08 — P1, the phone keyboard no longer freezes a big notebook (11 Oct 2026, Architect)
+
+Found while measuring item 5 (the save cost before the Evernote import, S4).
+`node tools/sync-s1d.mjs --profile` at 9,000 notes (~47 MB of text) showed
+"receive one edited note" on a ×4 phone at **2,014 ms**, against 1,010 ms
+recorded in v04.91. The builds were bisected on one machine, phone (b):
+v04.91 1,201 · v04.98 1,098 · v04.99 1,179 · **v05.00 (J2) 2,357** ·
+v05.02 2,217 · v05.07 2,014–2,572 ms.
+
+**Cause.** J2 made the Zab bar's height `--jeb-h` a custom property
+set on `<html>` (`html.jeb-on{--jeb-h:56px}` / `html.jeb-kb{--jeb-h:0px}`),
+and `jebLayout()` wrote `--jeb-l` into `<html>`'s inline style. Measured
+in Chromium, **any change to `<html>`'s own style restyles every element
+on the page**, even an unused or non-inheriting property, while a plain class
+change on `<html>` costs nothing. With 9,000 notes the page holds ~45,000
+elements (Pane 2 draws every card), so each phone keyboard up/down (a tap
+into or out of any text field) cost **~750 ms of style work, ~0.9 s in all**
+on a ×4 phone. At 300 notes it costs 45–70 ms. The profile's "receive" doubled
+only because one keyboard-down landed inside its window, after its typing step.
+
+**What was measured and ruled out on the way.** The receive's named
+steps are unchanged since v04.98 (~0.74 s). `render()` costs the same in
+v04.99, v05.00 and v05.07, `jebRefresh()` costs ~2 ms, and rewriting the
+unchanged heading-style sheet on every render costs nothing measurable. The
+journal-mode save itself: `_save` 88 ms per autosave on the phone, most of it
+`_collect` + `_stampRecordTouches` (already on the backlog). **The v04.95
+"3.5–4.7 s whole-notebook save" figure does not apply to S4**: it was taken
+below 1,500 notes, outside journal mode.
+
+**The change (CSS + `jebLayout()`; no data, no behaviour).**
+- `@property --jeb-h{inherits:false}`, set by
+  `html.jeb-on :is(<the 10 elements that use it>)` and the same under
+  `html.jeb-kb`: `.toast, #sb, #p2, #p3, #jeb-deck, #jeb-panel, .float-win,
+  #fw-closeall, #fw-switch, #toc-float-btn`. The class flip now restyles those
+  10 elements only. **`<html>` itself always reads `0px` now; read the bar's
+  height from `#p2`.** A browser without `@property` inherits it from the
+  listed element as before.
+- `jebLayout()` writes `--jeb-l` onto `#jeb-bar` and `#jeb-deck`, its only
+  users (only when it changed); `_jebMakeDeck()` calls it.
+- **A new rule using `var(--jeb-h)` must add its element to both lists.**
+  Block 69 sweeps every such rule by its text and fails on an unlisted one.
+
+**Measured after:** the keyboard flip at 9,000 notes, phone ×4, takes
+**11–13 ms of style work (was ~750) and 110–123 ms in all (was ~0.9 s)**.
+
+**Checks:** block `69-keyboard-restyle` (`tools/jebh-p1.mjs`, 69a–69d):
+- 69a sweeps every `var(--jeb-h)` rule at 390/820/1440, bar up and keyboard up;
+  a planted unlisted rule must be caught;
+- 69b `<html>` holds no `--jeb-h`/`--jeb-l` and its value does not move, and the
+  bar carries `--jeb-l` and starts at the sidebar's edge;
+- 69c the cost at 9,000 notes, ≤ 100 ms;
+- 69d the real 💾 Save flow at 390/820 (a tablet keeps the bar while typing,
+  J2's rule).
+
+`jeb-j2.mjs` (60h, 60i) and `jeb-j5.mjs` (65e) read `--jeb-h` from `#p2`
+instead of `<html>`, where it now always reads 0px. They had passed trivially
+on `<html>` in two cases. Tools: `sync-s1d.mjs --trace` (a Chromium trace of
+the phone receive, summed by event, with who forced each style/layout pass and
+every `<html>`/`<body>`/`<head>` change); `s4-save-measure.mjs` (on-demand: a
+save, the 30 s checkpoint, a 500-note import batch and a reload at ~45 MB).
+
+**Not done:**
+- Pane 2 still draws all 9,000 cards (45,000 elements), which makes every
+  page-wide style change expensive. Windowing the list is a design round (backlog).
+- `render()` on a receive (~355 ms) and undo (~410 ms) on the phone are unchanged
+  (backlog since v04.91).
+- The profile's phone typing step leaves editing without the 💾 path, so its
+  keyboard-down can still land in the receive window; it is now cheap.
+
+**Totals (Architect):** full `app-check` **3808/3808, twice in a row** on `8c96a7c`; `ship-check` 14/14; `--only 60,65,69` 487/487; `jebh-p1.mjs` alone 26/26; unpatched (v05.07 `index.html` + `sw.js`) `--only 69` **17/28**. The 10 that fail on v05.07 are the planted-rule catch and both `<html>` checks at each of three sizes, plus the cost (580–763 ms of style per flip), plus the exit line. The sweep (69a) passes on v05.07 only because the old value inherits. The Save flow (69d) is unchanged behaviour. Screenshots at 390/820/1440: the panes end at the bar's top; on the desktop the bar starts at the sidebar's edge.

@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.07">
+<meta name="app-version" content="05.08">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -805,8 +805,21 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
    Inks are the pane inks (--t1/--t2 on --white), already measured on every
    preset; only the swatch uses a fixed dark ink on its pastel. */
 html{--jeb-h:0px;--jeb-l:0px;--jeb-hd:0px}
-html.jeb-on{--jeb-h:56px}
-html.jeb-kb{--jeb-h:0px}
+/* v05.08 — the two values that CHANGE are never set on <html>. Any change to
+   <html>'s own style restyles every element on the page (measured: even an
+   unused property), and with 9,000 notes (~45,000 elements, most of them
+   Pane 2's cards) each phone keyboard up/down cost ~0.9 s on a ×4 phone.
+   --jeb-h is registered as NOT inheriting and set only on the elements that
+   use it, listed here; html.jeb-on/.jeb-kb (plain classes, which cost
+   nothing) then restyle only these: ~15 ms. --jeb-l is written by
+   jebLayout() onto #jeb-bar and #jeb-deck, its only users. ANY NEW RULE
+   USING var(--jeb-h) MUST ADD ITS ELEMENT TO BOTH LISTS — app-check block 69
+   fails on one that does not. Read the bar's height from #p2, never <html>
+   (which always says 0px). A browser without @property inherits it from the
+   listed element as before. */
+@property --jeb-h{syntax:'<length>';inherits:false;initial-value:0px}
+html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn){--jeb-h:56px}
+html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn){--jeb-h:0px}
 html.jeb-kb #jeb-bar{display:none!important}
 @media(min-width:1200px){#p2,#p3{margin-bottom:var(--jeb-h)}}
 #jeb-bar{position:fixed;left:var(--jeb-l);right:0;bottom:0;height:56px;z-index:140;display:flex;align-items:center;gap:8px;padding:0 10px;overflow-x:auto;overflow-y:hidden;background:var(--white);border-top:1px solid var(--border2);scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
@@ -3467,7 +3480,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.07</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.08</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -22183,7 +22196,8 @@ function _jebBarOn(){ return _JEB_APP||!(DB&&DB.theme&&DB.theme.jebBar===false);
 function jebLayout(){
   const sb=_jebEl('sb'); let l=0;
   if(!_JEB_APP&&window.innerWidth>=1200&&sb) l=Math.max(0,Math.round(sb.getBoundingClientRect().right));
-  document.documentElement.style.setProperty('--jeb-l',l+'px');
+  /* v05.08 — onto its two users, never <html> (see the CSS note at --jeb-h) */
+  ['jeb-bar','jeb-deck'].forEach(id=>{ const e=_jebEl(id); if(e&&e.style.getPropertyValue('--jeb-l')!==l+'px') e.style.setProperty('--jeb-l',l+'px'); });
 }
 /* a phone with the keyboard up for anything outside Jeb: focus is in a text field that is not Jeb's */
 function _jebKbWanted(){
@@ -22568,6 +22582,7 @@ function _jebMakeDeck(){
   const d=document.createElement('div'); d.id='jeb-deck'; d.setAttribute('role','dialog'); d.setAttribute('aria-label','Cards');
   d.innerHTML='<div class="jd-hd"></div><div class="jd-body"><div class="jd-wrap"></div></div>';
   document.body.appendChild(d);
+  jebLayout();
   d.addEventListener('click',e=>{
     const t=e.target;
     if(t.closest('.jd-x')){ jebCloseDeckUser(); return; }
