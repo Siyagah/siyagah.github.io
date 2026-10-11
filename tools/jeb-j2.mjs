@@ -290,12 +290,12 @@ try {
     const vp = VPS[0];
     const d = await dev(makeCloud(), 'H', vp);
     try {
-      const shown = () => on(d, () => !!document.getElementById('jeb-bar') && getComputedStyle(document.getElementById('jeb-bar')).display !== 'none' && getComputedStyle(document.documentElement).getPropertyValue('--jeb-h').trim());
+      const shown = () => on(d, () => !!document.getElementById('jeb-bar') && getComputedStyle(document.getElementById('jeb-bar')).display !== 'none' && getComputedStyle(document.getElementById('p2')).getPropertyValue('--jeb-h').trim());
       check((await shown()) === '56px', '60h@390 the bar is up to start with', String(await shown()));
       await on(d, () => { selArt('a1'); document.getElementById('p3').classList.add('mob-open'); startEdit && startEdit(); });
       await sleep(600);
       await d.page.locator('#ed').first().click(); await sleep(300);
-      const hid = await on(d, () => ({ disp: getComputedStyle(document.getElementById('jeb-bar')).display, h: getComputedStyle(document.documentElement).getPropertyValue('--jeb-h').trim(), ae: document.activeElement && document.activeElement.id }));
+      const hid = await on(d, () => ({ disp: getComputedStyle(document.getElementById('jeb-bar')).display, h: getComputedStyle(document.getElementById('p2')).getPropertyValue('--jeb-h').trim(), ae: document.activeElement && document.activeElement.id }));
       check(hid.ae === 'ed' && hid.disp === 'none' && hid.h === '0px', '60h@390 focusing the note editor #ed hides the bar and gives the room back', JSON.stringify(hid));
       await on(d, () => document.activeElement.blur()); await sleep(600);
       check((await shown()) === '56px', '60h@390 blurring brings it back (after 300 ms, so a tap that blurs does not shift the layout under the finger)');
@@ -337,7 +337,7 @@ try {
         check(await A.page.locator('#th-jebbar').isVisible(), `${t} "Show Jeb bar" is on screen after clicking 🧰 -> Appearance`);
         check(await A.page.locator('#th-jebbar').isChecked(), `${t} it is on by default`);
         await act(A, vp, '#th-jebbar'); await sleep(400);
-        const off = await on(A, () => ({ bar: !!document.getElementById('jeb-bar'), h: getComputedStyle(document.documentElement).getPropertyValue('--jeb-h').trim(), cls: document.documentElement.classList.contains('jeb-on'), theme: DB.theme.jebBar }));
+        const off = await on(A, () => ({ bar: !!document.getElementById('jeb-bar'), h: getComputedStyle(document.getElementById('p2')).getPropertyValue('--jeb-h').trim(), cls: document.documentElement.classList.contains('jeb-on'), theme: DB.theme.jebBar }));
         check(!off.bar && off.h === '0px' && !off.cls && off.theme === false, `${t} off: no bar, --jeb-h is 0`, JSON.stringify(off));
         await on(A, () => closeTheme());
         const reach = await on(A, () => { const p = document.getElementById('p2'); if (innerWidth < 1200) { p.classList.add('mob-open'); } return { pb: Math.round(p.getBoundingClientRect().bottom), vh: innerHeight }; });

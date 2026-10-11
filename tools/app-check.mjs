@@ -11900,6 +11900,23 @@ await r.block('68-fold-arrows', async () => {
   r.check(out.status === 0, 'the V1 fold-arrows check exits cleanly', `exit ${out.status}`);
 });
 
+/* 69 — v05.08, P1: the phone keyboard no longer restyles the whole page. tools/jebh-p1.mjs: no changing value is ever
+   set on <html> (any change there restyles all ~45,000 elements of a 9,000-note notebook); every var(--jeb-h) rule's
+   element is found by sweeping the stylesheets and must carry the bar's height (a planted unlisted rule must be
+   caught); the keyboard flip costs <= 100 ms of style at 9,000 notes on a x4 phone; the real Save flow at 390/820.
+   Each printed ok/FAIL line becomes one check. */
+await r.block('69-keyboard-restyle', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./jebh-p1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1800000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 20, 'the P1 keyboard-restyle check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'P1: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the P1 keyboard-restyle check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

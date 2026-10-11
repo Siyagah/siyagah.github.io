@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.07.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.08.** Live at `siyagah.github.io`, served from `main`.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,10 +16,15 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.08** (11 Oct 2026) — P1, the phone keyboard no longer freezes a big notebook (Architect, found
+  measuring item 5). Any change to `<html>`'s own style restyles every element; J2 flipped `--jeb-h` there on
+  each keyboard up/down: ~0.9 s at 9,000 notes on a ×4 phone. `--jeb-h` is now `@property … inherits:false`, set
+  on its 10 users only (`<html>` always reads 0px; read `#p2`); `--jeb-l` goes on `#jeb-bar`/`#jeb-deck`. Now
+  ~12 ms of style. Check: block 69, `tools/jebh-p1.mjs`.
 - **v05.07** (10 Oct 2026) — V1, the sidebar fold arrows are readable (issue #163). `#sb`
   `.sec-tog` 10 px → 16 px, `.tr-tog` 22 px (`.sf-grp-tog` is Pane 2 only); all inked full `--sb-ink` (was
   `-dim`). Row heights and tap areas unchanged. Pane 2/3 arrows left small (listed in
-  CHANGELOG). Check: block 68, `tools/arrows-v1.mjs`.
+  CHANGELOG). Check: block 68, `tools/arrows-v1.mjs`. Architect: full `app-check` **3780/3780, twice in a row**.
 - **v05.06** (10 Oct 2026) — R1, reminder emails (issue #160). `DB.theme.remindMail={on,hour}`;
   while on, a synced device writes one cloud doc `notebooks/{nb}/remind/v1` (`_remTick`,
   `_remList`); a helper in the owner's own Google account (Apps Script, text built by
@@ -39,13 +44,6 @@ must never accumulate here instead of there.
   `#sync-dot`, ⚠ mirror, 📱 Install, 📓 Open Siyagah), the always-on bar, a docked panel that
   never closes to nothing, `DB.theme.jebAppView` (written only on a switch). 🧰 → "👝 Siyagah
   Jeb"; `?open=<id>` opens a note in the full app. Checks: block 65, `tools/jeb-j5.mjs`. Architect: full `app-check` **3245/3245, twice in a row**; unpatched `--only 65` 0/3.
-- **v05.03** (9 Oct 2026) — J4, pockets as sticky cards (issue #154). A chip is
-  two halves: name = panel, **▦** (`[data-jeb-cards]`) = the **deck** `#jeb-deck`
-  (cards in the pocket's colour, ink `#2A2418`, tilt from the id, jump-out from the
-  chip, drag by ⠿ within/between pockets). **All pockets** chip and **☑ Choose**
-  (tick boxes, Panel (N) / Cards (N)); the panel groups several pockets (＋ per
-  group; a ＋ item left empty is dropped by `jebDiscardEmpty`). `--only 64`
-  **237/237**, `--only 63` 158/158, `--only 60` 203/203. Architect: full `app-check` **2989/2989, twice in a row**; unpatched `--only 64` 0/4.
 ---
 
 ## What this is
@@ -392,7 +390,9 @@ A failing check is a wrong assertion surprisingly often — investigate before
   when `DB.theme.jebBar===false` (default on; set from 🧰 → 🎨 Appearance) or while
   a phone's keyboard is up for a field outside Jeb (`html.jeb-kb`). **Anything
   `position:fixed` to the bottom must account for it** (`bottom:calc(Npx + var(--jeb-h))`),
-  or be a modal/popover that sits over the bar on purpose. **Attach and → Note
+  or be a modal/popover that sits over the bar on purpose. **Since v05.08 `--jeb-h` does not inherit:**
+  a new user of it must be added to BOTH `html.jeb-on :is(…)` / `html.jeb-kb :is(…)` lists (block 69
+  fails otherwise), and nothing that changes may ever be written to `<html>`'s style (see the lesson). **Attach and → Note
   (v05.02, J3).** `_jebAttOpen` opens `#jeb-att` (z 9150): Folder / Tag / Note
   Type / Journal, each through `jebEditItem`; the Tag tab reuses `_tagPool()` /
   `_tagMatches()`. `_jebChipsHTML(item)` draws the attachments and is part of the
@@ -477,6 +477,14 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A change to `<html>`'s own style restyles the whole page — on a big notebook that is a freeze.**
+  J2 put the Zab bar's height in a custom property on `<html>` and flipped it with the phone keyboard.
+  Every check passed, because every check ran on a 3-note notebook, where a whole-page restyle costs
+  nothing. At 9,000 notes (45,000 elements) each keyboard up/down froze the phone for ~0.9 s, for seven
+  rounds, and it was found only by chance, as a doubled "receive" time in an unrelated profile. Measured: even an
+  unused or non-inheriting property on `<html>` costs the full restyle, while a plain class flip on `<html>`
+  costs nothing. Put a changing value on the elements that use it, never on the root, and **measure a UI
+  change at the owner's scale (`--notes=9000`), not only at the seed's**. Cost: v05.00–v05.07; fixed in v05.08.
 - **A check that kills a process must prove the kill landed inside the
   window it claims to test.** The first 52d killed a browser 40 times at
   random moments around a save and passed 40/40 — but every kill landed
