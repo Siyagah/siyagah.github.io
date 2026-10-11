@@ -78,7 +78,10 @@ async function profStart(d) { const c = await cdpOf(d); await c.send('Profiler.e
 async function traceStart(d) { await browser.startTracing(d.page, { categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.stack', 'v8', 'blink', 'IndexedDB', 'loading'] }); }
 async function traceStop(d, label) {
   const ev = JSON.parse((await browser.stopTracing()).toString()).traceEvents || [];
-  const main = ev.find((e) => e.name === 'thread_name' && e.args && e.args.name === 'CrRendererMain');
+  /* three devices share one browser: of the renderer main threads, the one that worked hardest in the window is this page's */
+  const mains = ev.filter((e) => e.name === 'thread_name' && e.args && e.args.name === 'CrRendererMain'), busy = new Map();
+  ev.forEach((e) => { if (e.ph === 'X' && e.name === 'RunTask' && e.dur) busy.set(e.pid + ':' + e.tid, (busy.get(e.pid + ':' + e.tid) || 0) + e.dur); });
+  const main = mains.sort((a, b) => (busy.get(b.pid + ':' + b.tid) || 0) - (busy.get(a.pid + ':' + a.tid) || 0))[0];
   const tot = new Map();
   ev.forEach((e) => { if (e.ph !== 'X' || !e.dur || !main || e.pid !== main.pid || e.tid !== main.tid) return; const t = tot.get(e.name) || [0, 0]; t[0] += e.dur / 1000; t[1]++; tot.set(e.name, t); });
   const top = [...tot.entries()].sort((a, b) => b[1][0] - a[1][0]).slice(0, 30).map(([k, v]) => k + ' ' + Math.round(v[0]) + 'ms×' + v[1]);
