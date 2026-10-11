@@ -20,7 +20,7 @@ must never accumulate here instead of there.
   measuring item 5). Any change to `<html>`'s own style restyles every element; J2 flipped `--jeb-h` there on
   each keyboard up/down: ~0.9 s at 9,000 notes on a ×4 phone. `--jeb-h` is now `@property … inherits:false`, set
   on its 10 users only (`<html>` always reads 0px; read `#p2`); `--jeb-l` goes on `#jeb-bar`/`#jeb-deck`. Now
-  ~12 ms of style. Check: block 69, `tools/jebh-p1.mjs`.
+  ~12 ms of style. Check: block 69, `tools/jebh-p1.mjs`. Architect: full `app-check` **3808/3808, twice in a row**; unpatched `--only 69` 17/28.
 - **v05.07** (10 Oct 2026) — V1, the sidebar fold arrows are readable (issue #163). `#sb`
   `.sec-tog` 10 px → 16 px, `.tr-tog` 22 px (`.sf-grp-tog` is Pane 2 only); all inked full `--sb-ink` (was
   `-dim`). Row heights and tap areas unchanged. Pane 2/3 arrows left small (listed in

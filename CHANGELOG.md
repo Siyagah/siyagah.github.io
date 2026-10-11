@@ -9446,3 +9446,4 @@ save, the 30 s checkpoint, a 500-note import batch and a reload at ~45 MB).
 - The profile's phone typing step leaves editing without the 💾 path, so its
   keyboard-down can still land in the receive window; it is now cheap.
 
+**Totals (Architect):** full `app-check` **3808/3808, twice in a row** on `8c96a7c`; `ship-check` 14/14; `--only 60,65,69` 487/487; `jebh-p1.mjs` alone 26/26; unpatched (v05.07 `index.html` + `sw.js`) `--only 69` **17/28**. The 10 that fail on v05.07 are the planted-rule catch and both `<html>` checks at each of three sizes, plus the cost (580–763 ms of style per flip), plus the exit line. The sweep (69a) passes on v05.07 only because the old value inherits. The Save flow (69d) is unchanged behaviour. Screenshots at 390/820/1440: the panes end at the bar's top; on the desktop the bar starts at the sidebar's edge.
