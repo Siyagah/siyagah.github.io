@@ -75,7 +75,7 @@ async function heapMB(d) { const c = await cdpOf(d); await c.send('HeapProfiler.
 async function profStart(d) { const c = await cdpOf(d); await c.send('Profiler.enable'); await c.send('Profiler.setSamplingInterval', { interval: 100 }); await c.send('Profiler.start'); }
 /* --trace: a Chromium trace of one step on the main thread, summed by event name (inclusive ms, count) — names the
    browser's own work ("(program)" in a CPU profile: style, layout, paint, parsing, storage) */
-async function traceStart(d) { await browser.startTracing(d.page, { categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'v8', 'blink', 'IndexedDB', 'loading'] }); }
+async function traceStart(d) { await browser.startTracing(d.page, { categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.stack', 'v8', 'blink', 'IndexedDB', 'loading'] }); }
 async function traceStop(d, label) {
   const ev = JSON.parse((await browser.stopTracing()).toString()).traceEvents || [];
   const main = ev.find((e) => e.name === 'thread_name' && e.args && e.args.name === 'CrRendererMain');
@@ -83,6 +83,13 @@ async function traceStop(d, label) {
   ev.forEach((e) => { if (e.ph !== 'X' || !e.dur || !main || e.pid !== main.pid || e.tid !== main.tid) return; const t = tot.get(e.name) || [0, 0]; t[0] += e.dur / 1000; t[1]++; tot.set(e.name, t); });
   const top = [...tot.entries()].sort((a, b) => b[1][0] - a[1][0]).slice(0, 30).map(([k, v]) => k + ' ' + Math.round(v[0]) + 'ms×' + v[1]);
   console.log('TRACE ' + label + ' ' + JSON.stringify(top));
+  /* who forced each style/layout pass (the JS frames that asked for it) */
+  const by = new Map();
+  ev.forEach((e) => { if (e.ph !== 'X' || !main || e.pid !== main.pid || e.tid !== main.tid || !/^(UpdateLayoutTree|Layout|HitTest)$/.test(e.name)) return;
+    const st = (e.args && e.args.beginData && e.args.beginData.stackTrace) || [];
+    const k = e.name + ' ' + (st.slice(0, 4).map((f) => f.functionName + ':' + f.lineNumber).join(' < ') || '(no JS: a frame or an event)');
+    const t = by.get(k) || [0, 0]; t[0] += e.dur / 1000; t[1]++; by.set(k, t); });
+  console.log('TRACESTACKS ' + label + ' ' + JSON.stringify([...by.entries()].sort((a, b) => b[1][0] - a[1][0]).slice(0, 25).map(([k, v]) => Math.round(v[0]) + 'ms×' + v[1] + ' ' + k)));
 }
 async function profStop(d, label) {
   const c = await cdpOf(d); const { profile } = await c.send('Profiler.stop');
