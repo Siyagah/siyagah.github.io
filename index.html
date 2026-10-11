@@ -15104,7 +15104,7 @@ function _applyHeadingStyles(){
   });
   var el=document.getElementById('dyn-hs');
   if(!el){el=document.createElement('style');el.id='dyn-hs';document.head.appendChild(el);}
-  el.textContent=css;
+  if(el.textContent!==css) el.textContent=css;   /* v05.08 — render() calls this every time: rewriting an unchanged sheet restyles the whole page */
 }
 function _initCollapsible(body){
   /* v04.08 — the section tools live in the Pane-3 header now, so this is also
@@ -22183,7 +22183,8 @@ function _jebBarOn(){ return _JEB_APP||!(DB&&DB.theme&&DB.theme.jebBar===false);
 function jebLayout(){
   const sb=_jebEl('sb'); let l=0;
   if(!_JEB_APP&&window.innerWidth>=1200&&sb) l=Math.max(0,Math.round(sb.getBoundingClientRect().right));
-  document.documentElement.style.setProperty('--jeb-l',l+'px');
+  const st=document.documentElement.style;
+  if(st.getPropertyValue('--jeb-l')!==l+'px') st.setProperty('--jeb-l',l+'px');   /* v05.08 — only on a real change */
 }
 /* a phone with the keyboard up for anything outside Jeb: focus is in a text field that is not Jeb's */
 function _jebKbWanted(){
