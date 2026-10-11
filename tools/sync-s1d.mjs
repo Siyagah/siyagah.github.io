@@ -73,6 +73,22 @@ const readT = (d) => on(d, () => { const o = {}; for (const [k, v] of Object.ent
 async function heapMB(d) { const c = await cdpOf(d); await c.send('HeapProfiler.enable').catch(() => {}); await c.send('HeapProfiler.collectGarbage').catch(() => {}); const h = await c.send('Runtime.getHeapUsage'); return { usedMB: r1(h.usedSize / 1048576), totalMB: r1(h.totalSize / 1048576) }; }
 /* --cpuprofile: a sampling profile of one step, top self-time functions (what the wrappers cannot see) */
 async function profStart(d) { const c = await cdpOf(d); await c.send('Profiler.enable'); await c.send('Profiler.setSamplingInterval', { interval: 100 }); await c.send('Profiler.start'); }
+/* --trace also records every change to <html>/<body> attributes, <body>'s children and <head> (stylesheets), and focus */
+const MUTWATCH = String.raw`(() => {
+  window.__MUT = []; const t0 = performance.now();
+  const nm = (x) => x.nodeName + (x.id ? '#' + x.id : '');
+  const log = (s) => { if (window.__MUT && window.__MUT.length < 80) window.__MUT.push(Math.round(performance.now() - t0) + 'ms ' + s); };
+  if (window.__MO) window.__MO.disconnect();
+  const mo = window.__MO = new MutationObserver((ms) => ms.forEach((m) => {
+    if (m.type === 'attributes') log('attr ' + nm(m.target) + ' @' + m.attributeName + '=' + String(m.target.getAttribute(m.attributeName)).slice(0, 80));
+    else if (m.type === 'childList') log('child ' + nm(m.target) + ' +' + [...m.addedNodes].map(nm).join(',') + ' -' + [...m.removedNodes].map(nm).join(','));
+    else log(m.type + ' ' + nm(m.target.parentNode || m.target));
+  }));
+  mo.observe(document.documentElement, { attributes: true });
+  mo.observe(document.body, { attributes: true, childList: true });
+  mo.observe(document.head, { childList: true, subtree: true, characterData: true });
+  if (!window.__FOCW) { window.__FOCW = 1; window.addEventListener('focusin', (e) => log('focusin ' + nm(e.target)), true); }
+})()`;
 /* --trace: a Chromium trace of one step on the main thread, summed by event name (inclusive ms, count) — names the
    browser's own work ("(program)" in a CPU profile: style, layout, paint, parsing, storage) */
 async function traceStart(d) { await browser.startTracing(d.page, { categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.stack', 'v8', 'blink', 'IndexedDB', 'loading'] }); }
@@ -152,7 +168,7 @@ try {
   const recvOne = async (src, rcv, tag) => {
     await resetT(rcv);
     if (has('--cpuprofile')) await profStart(rcv);
-    if (has('--trace')) await traceStart(rcv);
+    if (has('--trace')) { await traceStart(rcv); await on(rcv, MUTWATCH); }
     const r0 = await taskMs(rcv);
     await on(src, (t) => { const a = DB.articles.find((x) => x.id === 'n77'); a.title = t; a.updatedAt = new Date().toISOString(); persist(); flushPendingPush(); }, tag);
     let got = false; const tw = Date.now();
@@ -160,7 +176,7 @@ try {
     for (const d of [src, rcv]) await quiesce(cloud, d);
     const r1t = await taskMs(rcv);
     if (has('--cpuprofile')) await profStop(rcv, rcv.name + ' (b) receive');
-    if (has('--trace')) await traceStop(rcv, rcv.name + ' (b) receive');
+    if (has('--trace')) { await traceStop(rcv, rcv.name + ' (b) receive'); console.log('MUTATIONS ' + rcv.name + ' ' + JSON.stringify(await on(rcv, () => window.__MUT))); }
     const steps = await readT(rcv);
     const arrive = await on(rcv, () => window.__arrive);
     return { got, mainThreadMs: Math.round(r1t - r0), steps };
