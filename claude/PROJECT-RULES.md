@@ -53,12 +53,19 @@ outside it. Where this file and the PCF disagree, the PCF wins.
 - Every feature ships on phone, tablet and laptop in the same round. (D5)
 - A folder that still holds notes cannot be deleted; deleting an empty folder must
   sync. (D6)
-- The Architect puts a green, checked round live without asking. (D7; whether this
-  covers rounds the Architect built itself is open, PCF job J06.)
+- The Architect puts a green, checked round live without asking. (D7)
+- A round the Architect built itself may be merged by the Architect, but only after a
+  FULL RECHECK on the exact commit. (D8, PCF J06, 12 Oct 2026)
 - Jobs can arrive scattered; Claude writes the owner's words down first, then
   splits and orders the work.
 - Reports to the owner use plain words, say what was not done and why, and ask for
   at most two checks.
+
+## Shared-file duties (general rules, Programme Lead, 12 Oct 2026)
+
+- Act on "PL ▸" lines first and reply under them; clear a 📣 Notify flag once checked.
+- Keep "Who's working on what", the About tab and the User Manual tab current.
+- Links: always link to where a thing is. Choices: always offer a box to tick.
 
 ## Siyagah: suggested by Claude, waiting for the owner to confirm (PCF job J11)
 

@@ -9481,3 +9481,7 @@ changed; the version moves because `CLAUDE.md` did.**
   `claude/PROJECT-RULES.md` point to the shared file.
 - **Totals (Architect):** full `app-check` **3808/3808** on `aa66e34` (the words
   change only); `ship-check` 14/14.
+- **Owner's answers, 12 Oct (shared PCF):** J06 "Merge it. But after FULL RECHECK"
+  is recorded as **D8** in `CLAUDE.md`. The Programme Lead duties (PL lines first,
+  📣 Notify, "Who's working on what", About, User Manual) are in the permanent rule.
+

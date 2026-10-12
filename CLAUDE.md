@@ -18,6 +18,13 @@ stay short enough to read in full before starting work.
 > scheduled check reads the section every 4 hours (Sydney time). The first, separate
 > Siyagah sheet (https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC) is a read-only backup. The pinned status issue #52 stays
 > as a mirror for the builder. Set up 12 Oct 2026 (v05.09).
+> **Programme Lead (approved 12 Oct):** Claude in the BWN chat leads every project's
+> Architect. At the start of every session act on any "PL ▸" line in Siyagah's jobs
+> first and reply under it; clear a 📣 Notify flag (`p/siy.notify`) once checked.
+> Keep `p/siy.monitor` ({text, at}, "Who's working on what") current at the start and
+> end of each piece of work, the About tab (`p/siy.about`) current, and every feature
+> in the User Manual tab (`p/siy.manual`: one heading per feature, then What it does ·
+> Benefit · How to use). The owner's word always overrides the PL.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -481,6 +488,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
 | **D5** | **Every feature ships on ALL THREE platforms in the round it is built — "always do all platforms as adaptible, don't wait for doing next".** Adapt the SHAPE to the layout (a phone gets a sheet where a laptop gets a floating window); never adapt by omitting the feature. A platform left out is not a scope decision Claude may take on its own. Confirmed 12 Sep 2026, after v04.33 shipped the pop-ups to the desktop only and reported the phone and tablet gap as deliberate. |
 | **D6** | **A folder that holds notes cannot be deleted** — counting notes in any of its subfolders (`cntOf`). The owner moves or deletes the notes first. **Deleting an EMPTY folder must sync:** every path that removes a folder writes its tombstone. "a folder should not be deleted with notes in it … but empty folders deleted should be synced", confirmed 30 Sep 2026 (first for MMSA, then "yes, same rule for Siyagah"). Enforced in `trashFolder()` itself (`_folderDelRefusal()`), v04.77. |
 | **D7** | **The Architect merges a green round without asking.** "don't wait for permission for merging", 30 Sep 2026. |
+| **D8** | **A round the Architect built itself may be merged by the Architect — but only after a FULL RECHECK**: the whole `app-check` re-run on the exact commit being merged, plus `ship-check`. "Merge it. But after FULL RECHECK", PCF job J06, 12 Oct 2026. |
 
 ## Standing lessons — earned the hard way, do not relearn them
 
