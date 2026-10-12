@@ -3,7 +3,18 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.08.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.09.** Live at `siyagah.github.io`, served from `main`.
+
+> **PERMANENT RULE: Project Control File.** Siyagah's live Project Control File
+> (PCF) is https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC, a claude.ai page shared by the owner and Claude, with its data in
+> the page's database (`ArtifactData`: collections `jobs`, `guides`, doc
+> `meta/project`). **Every session reads the PCF first and updates it before
+> finishing**; nothing is reported as done unless it is recorded there. Reply under
+> each owner change marked New, clear the marks, stamp `claudeSeenAt`; pin every
+> write with `if_version`; never write `layout`; never hide or delete the owner's
+> text. A scheduled check reads it every 4 hours (Sydney time). The rules are also
+> in `claude/PROJECT-RULES.md`. The pinned status issue #52 stays as a mirror for
+> the builder. Set up 12 Oct 2026 (v05.09).
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +27,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.09** (12 Oct 2026) — The Project Control File (Architect): the PCF is live at
+  https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC (jobs, rules, what waits on the owner, guides),
+  read first and updated last by every session; the permanent rule above, `claude/PROJECT-RULES.md`,
+  and ARCHITECT.md's Handover now point to it. Words only: no app code changed.
 - **v05.08** (11 Oct 2026) — P1, the phone keyboard no longer freezes a big notebook (Architect, found
   measuring item 5). Any change to `<html>`'s own style restyles every element; J2 flipped `--jeb-h` there on
   each keyboard up/down: ~0.9 s at 9,000 notes on a ×4 phone. `--jeb-h` is now `@property … inherits:false`, set
@@ -37,13 +52,6 @@ must never accumulate here instead of there.
   apple title). Words only: every internal name (`DB.jeb`, `jeb*`, `#jeb-*`, `fromJeb`,
   `_JEB_APP`, `?jeb=1`, `manifest-jeb.json`, `icons/icon-jeb*`) is unchanged; no migration.
   Check: block 66, `tools/zab-z1.mjs`. Architect: full `app-check` **3535/3535, twice in a row**; unpatched `--only 66` 130/290.
-- **v05.04** (10 Oct 2026) — J5, "Siyagah Jeb" (issue #156): the same `index.html`
-  opened as `/?jeb=1` is a second home-screen icon showing only Jeb. `const _JEB_APP` +
-  `html.jeb-app` are set once in `<script id="jeb-mode">` in `<head>`, which also swaps the
-  manifest (`manifest-jeb.json`), title and icons. Header `#jeb-app-hd` (sync words read from
-  `#sync-dot`, ⚠ mirror, 📱 Install, 📓 Open Siyagah), the always-on bar, a docked panel that
-  never closes to nothing, `DB.theme.jebAppView` (written only on a switch). 🧰 → "👝 Siyagah
-  Jeb"; `?open=<id>` opens a note in the full app. Checks: block 65, `tools/jeb-j5.mjs`. Architect: full `app-check` **3245/3245, twice in a row**; unpatched `--only 65` 0/3.
 ---
 
 ## What this is
