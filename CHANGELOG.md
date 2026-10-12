@@ -9472,3 +9472,12 @@ changed; the version moves because `CLAUDE.md` did.**
 - **Not done:** the owner has not yet confirmed the two rules Claude suggested, or
   the project summary (PCF job J11). This change waits on J06 (may the Architect
   merge its own rounds?) before going live.
+- **Moved the same day into the owner's ONE shared PCF** (https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ),
+  section SIY. Siyagah's rules (decided and suggested), jobs J00–J12 and guides
+  G01–G03 now live under `p/siy`, and the shared file's placeholder J01 was replaced.
+  The general rules R1–R13 belong to the shared file, so they were not copied. The
+  4-hourly check now reads `p/siy` and writes nowhere else. The first sheet
+  (https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC) stays as a read-only backup. CLAUDE.md, ARCHITECT.md and
+  `claude/PROJECT-RULES.md` point to the shared file.
+- **Totals (Architect):** full `app-check` **3808/3808** on `aa66e34` (the words
+  change only); `ship-check` 14/14.

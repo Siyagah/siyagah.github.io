@@ -1,12 +1,13 @@
 # Siyagah — project rules
 
-**PERMANENT RULE: Project Control File.** Siyagah's live Project Control File (PCF)
-is https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC. Every session reads it first
-and updates it before finishing. Nothing is reported as done unless it is recorded
+**PERMANENT RULE: Project Control File.** The owner keeps one shared Project
+Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ.
+Siyagah's section is SIY (database `p/siy`, `p/siy/jobs`, `p/siy/guides`; write
+nothing outside it). Every session reads it first and updates it before finishing. Nothing is reported as done unless it is recorded
 there. The live page is the record; these rules are copied here so they survive
 outside it. Where this file and the PCF disagree, the PCF wins.
 
-## Standard rules (every PCF)
+## Standard rules (the shared file's general rules, R1–R13; kept here as a copy)
 
 1. **Project Control File:** this file is our Project Control File. It holds the
    jobs, monitoring, follow-ups, status and project information, and both of us

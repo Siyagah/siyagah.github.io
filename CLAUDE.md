@@ -5,16 +5,19 @@ stay short enough to read in full before starting work.
 
 **Current version: v05.09.** Live at `siyagah.github.io`, served from `main`.
 
-> **PERMANENT RULE: Project Control File.** Siyagah's live Project Control File
-> (PCF) is https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC, a claude.ai page shared by the owner and Claude, with its data in
-> the page's database (`ArtifactData`: collections `jobs`, `guides`, doc
-> `meta/project`). **Every session reads the PCF first and updates it before
-> finishing**; nothing is reported as done unless it is recorded there. Reply under
-> each owner change marked New, clear the marks, stamp `claudeSeenAt`; pin every
-> write with `if_version`; never write `layout`; never hide or delete the owner's
-> text. A scheduled check reads it every 4 hours (Sydney time). The rules are also
-> in `claude/PROJECT-RULES.md`. The pinned status issue #52 stays as a mirror for
-> the builder. Set up 12 Oct 2026 (v05.09).
+> **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
+> Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
+> the doc `p/siy` (Siyagah's own rules, `news`, `claudeSeenAt`), `p/siy/jobs/<J..>` and
+> `p/siy/guides/<G..>` in the page's database (`ArtifactData`). **Every session reads
+> it first and updates it before finishing**; nothing is reported as done unless it
+> is recorded there. **Write only under `p/siy`**: never `meta/global`, the layout,
+> the inbox or another project's section. Reply under each owner change marked New,
+> clear the marks, stamp `p/siy` `claudeSeenAt`; pin every write with `if_version`;
+> never hide or delete the owner's text. The general rules (R1–R13) are the shared
+> file's; Siyagah's own are in `p/siy` and copied in `claude/PROJECT-RULES.md`. A
+> scheduled check reads the section every 4 hours (Sydney time). The first, separate
+> Siyagah sheet (https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC) is a read-only backup. The pinned status issue #52 stays
+> as a mirror for the builder. Set up 12 Oct 2026 (v05.09).
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -27,9 +30,9 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
-- **v05.09** (12 Oct 2026) — The Project Control File (Architect): the PCF is live at
-  https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC (jobs, rules, what waits on the owner, guides),
-  read first and updated last by every session; the permanent rule above, `claude/PROJECT-RULES.md`,
+- **v05.09** (12 Oct 2026) — The Project Control File (Architect): Siyagah's section SIY of the
+  owner's shared PCF https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ (jobs, rules, what waits on the owner,
+  guides), read first and updated last by every session; the permanent rule above, `claude/PROJECT-RULES.md`,
   and ARCHITECT.md's Handover now point to it. Words only: no app code changed.
 - **v05.08** (11 Oct 2026) — P1, the phone keyboard no longer freezes a big notebook (Architect, found
   measuring item 5). Any change to `<html>`'s own style restyles every element; J2 flipped `--jeb-h` there on
