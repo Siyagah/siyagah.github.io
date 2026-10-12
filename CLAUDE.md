@@ -3,7 +3,28 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.08.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.09.** Live at `siyagah.github.io`, served from `main`.
+
+> **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
+> Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
+> the doc `p/siy` (Siyagah's own rules, `news`, `claudeSeenAt`), `p/siy/jobs/<J..>` and
+> `p/siy/guides/<G..>` in the page's database (`ArtifactData`). **Every session reads
+> it first and updates it before finishing**; nothing is reported as done unless it
+> is recorded there. **Write only under `p/siy`**: never `meta/global`, the layout,
+> the inbox or another project's section. Reply under each owner change marked New,
+> clear the marks, stamp `p/siy` `claudeSeenAt`; pin every write with `if_version`;
+> never hide or delete the owner's text. The general rules (R1–R13) are the shared
+> file's; Siyagah's own are in `p/siy` and copied in `claude/PROJECT-RULES.md`. A
+> scheduled check reads the section every 4 hours (Sydney time). The first, separate
+> Siyagah sheet (https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC) is a read-only backup. The pinned status issue #52 stays
+> as a mirror for the builder. Set up 12 Oct 2026 (v05.09).
+> **Programme Lead (approved 12 Oct):** Claude in the BWN chat leads every project's
+> Architect. At the start of every session act on any "PL ▸" line in Siyagah's jobs
+> first and reply under it; clear a 📣 Notify flag (`p/siy.notify`) once checked.
+> Keep `p/siy.monitor` ({text, at}, "Who's working on what") current at the start and
+> end of each piece of work, the About tab (`p/siy.about`) current, and every feature
+> in the User Manual tab (`p/siy.manual`: one heading per feature, then What it does ·
+> Benefit · How to use). The owner's word always overrides the PL.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -16,6 +37,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.09** (12 Oct 2026) — The Project Control File (Architect): Siyagah's section SIY of the
+  owner's shared PCF https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ (jobs, rules, what waits on the owner,
+  guides), read first and updated last by every session; the permanent rule above, `claude/PROJECT-RULES.md`,
+  and ARCHITECT.md's Handover now point to it. Words only: no app code changed.
 - **v05.08** (11 Oct 2026) — P1, the phone keyboard no longer freezes a big notebook (Architect, found
   measuring item 5). Any change to `<html>`'s own style restyles every element; J2 flipped `--jeb-h` there on
   each keyboard up/down: ~0.9 s at 9,000 notes on a ×4 phone. `--jeb-h` is now `@property … inherits:false`, set
@@ -37,13 +62,6 @@ must never accumulate here instead of there.
   apple title). Words only: every internal name (`DB.jeb`, `jeb*`, `#jeb-*`, `fromJeb`,
   `_JEB_APP`, `?jeb=1`, `manifest-jeb.json`, `icons/icon-jeb*`) is unchanged; no migration.
   Check: block 66, `tools/zab-z1.mjs`. Architect: full `app-check` **3535/3535, twice in a row**; unpatched `--only 66` 130/290.
-- **v05.04** (10 Oct 2026) — J5, "Siyagah Jeb" (issue #156): the same `index.html`
-  opened as `/?jeb=1` is a second home-screen icon showing only Jeb. `const _JEB_APP` +
-  `html.jeb-app` are set once in `<script id="jeb-mode">` in `<head>`, which also swaps the
-  manifest (`manifest-jeb.json`), title and icons. Header `#jeb-app-hd` (sync words read from
-  `#sync-dot`, ⚠ mirror, 📱 Install, 📓 Open Siyagah), the always-on bar, a docked panel that
-  never closes to nothing, `DB.theme.jebAppView` (written only on a switch). 🧰 → "👝 Siyagah
-  Jeb"; `?open=<id>` opens a note in the full app. Checks: block 65, `tools/jeb-j5.mjs`. Architect: full `app-check` **3245/3245, twice in a row**; unpatched `--only 65` 0/3.
 ---
 
 ## What this is
@@ -470,6 +488,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
 | **D5** | **Every feature ships on ALL THREE platforms in the round it is built — "always do all platforms as adaptible, don't wait for doing next".** Adapt the SHAPE to the layout (a phone gets a sheet where a laptop gets a floating window); never adapt by omitting the feature. A platform left out is not a scope decision Claude may take on its own. Confirmed 12 Sep 2026, after v04.33 shipped the pop-ups to the desktop only and reported the phone and tablet gap as deliberate. |
 | **D6** | **A folder that holds notes cannot be deleted** — counting notes in any of its subfolders (`cntOf`). The owner moves or deletes the notes first. **Deleting an EMPTY folder must sync:** every path that removes a folder writes its tombstone. "a folder should not be deleted with notes in it … but empty folders deleted should be synced", confirmed 30 Sep 2026 (first for MMSA, then "yes, same rule for Siyagah"). Enforced in `trashFolder()` itself (`_folderDelRefusal()`), v04.77. |
 | **D7** | **The Architect merges a green round without asking.** "don't wait for permission for merging", 30 Sep 2026. |
+| **D8** | **A round the Architect built itself may be merged by the Architect — but only after a FULL RECHECK**: the whole `app-check` re-run on the exact commit being merged, plus `ship-check`. "Merge it. But after FULL RECHECK", PCF job J06, 12 Oct 2026. |
 
 ## Standing lessons — earned the hard way, do not relearn them
 

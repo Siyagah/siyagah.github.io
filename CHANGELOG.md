@@ -9447,3 +9447,41 @@ save, the 30 s checkpoint, a 500-note import batch and a reload at ~45 MB).
   keyboard-down can still land in the receive window; it is now cheap.
 
 **Totals (Architect):** full `app-check` **3808/3808, twice in a row** on `8c96a7c`; `ship-check` 14/14; `--only 60,65,69` 487/487; `jebh-p1.mjs` alone 26/26; unpatched (v05.07 `index.html` + `sw.js`) `--only 69` **17/28**. The 10 that fail on v05.07 are the planted-rule catch and both `<html>` checks at each of three sizes, plus the cost (580–763 ms of style per flip), plus the exit line. The sweep (69a) passes on v05.07 only because the old value inherits. The Save flow (69d) is unchanged behaviour. Screenshots at 390/820/1440: the panes end at the bar's top; on the desktop the bar starts at the sidebar's edge.
+
+## v05.09 — The Project Control File (12 Oct 2026, Architect)
+
+The owner's PCF Setup Brief v01.02 (12 Oct 2026). The PCF is a live claude.ai page,
+https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC. It holds the jobs, the project
+rules, everything waiting on the owner, and guides. The owner and Claude both read
+and write it, and it replaces the chat as the record. **Words only: no app code
+changed; the version moves because `CLAUDE.md` did.**
+
+- **The page** is the brief's template (Basheera Wa Nazeera v01.17), byte for byte,
+  with Siyagah's eight job types, the live link and a seed snapshot filled in. Its
+  data lives in the page's database: `meta/project` (rules R1–R13 plus Siyagah's,
+  and the owner's layout), `jobs/J00…J12` (11 open), `guides/G01…G03`. All of it
+  was built from the repo, `ARCHITECT.md` and status issue #52.
+- **A scheduled check** runs every 4 hours, Sydney time, at minute 29 (the
+  scheduler moved it from 0). It reads the page, replies under the owner's changes
+  and stamps "Claude last checked". It is the routine `trig_01XX9qXVe61EynYb49jBDyYo`.
+- **The permanent rule** is at the top of `CLAUDE.md`. `claude/PROJECT-RULES.md`
+  holds the same rules. `ARCHITECT.md`'s Handover now names the PCF as the main
+  record, with issue #52 as a mirror.
+- **Offline backup** "Siyagah - PCF v01.00 - 2026-10-12.html" was given to the owner
+  as a download. It is not in the repo.
+- **Not done:** the owner has not yet confirmed the two rules Claude suggested, or
+  the project summary (PCF job J11). This change waits on J06 (may the Architect
+  merge its own rounds?) before going live.
+- **Moved the same day into the owner's ONE shared PCF** (https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ),
+  section SIY. Siyagah's rules (decided and suggested), jobs J00–J12 and guides
+  G01–G03 now live under `p/siy`, and the shared file's placeholder J01 was replaced.
+  The general rules R1–R13 belong to the shared file, so they were not copied. The
+  4-hourly check now reads `p/siy` and writes nowhere else. The first sheet
+  (https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC) stays as a read-only backup. CLAUDE.md, ARCHITECT.md and
+  `claude/PROJECT-RULES.md` point to the shared file.
+- **Totals (Architect):** full `app-check` **3808/3808** on `aa66e34` (the words
+  change only); `ship-check` 14/14.
+- **Owner's answers, 12 Oct (shared PCF):** J06 "Merge it. But after FULL RECHECK"
+  is recorded as **D8** in `CLAUDE.md`. The Programme Lead duties (PL lines first,
+  📣 Notify, "Who's working on what", About, User Manual) are in the permanent rule.
+

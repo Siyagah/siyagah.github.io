@@ -247,6 +247,13 @@ replaced, and everything held only in it is gone. The record lives in the
 repository and in the **pinned status issue**, `📋 Siyagah — what's happening
 now`.
 
+**Since 12 Oct 2026 the main record is the owner's shared Project Control File
+(PCF):** https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ, Siyagah's section SIY (`p/siy`; write nothing outside it). Read it first in every session and update it before finishing (see the
+permanent rule in `CLAUDE.md` and `claude/PROJECT-RULES.md`). The owner answers
+there, and a scheduled check reads it every 4 hours. Keep the status issue as a
+short mirror of the PCF's "Now" for the builder; where the two disagree, the PCF
+wins.
+
 1. **Keep the status issue current after every step** — not at the end of a
    job, after every step. Its description must be enough on its own for a
    fresh session to carry on without reading a word of chat:
