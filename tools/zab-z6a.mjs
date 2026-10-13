@@ -15,7 +15,7 @@
         last, the choice remembered per pocket; "All pockets" shows compact rows and no filters at every size
    70f  the rest: → Note content, 📎 Attach, the deck card, Trash and restore, drag ⠿ on a link item
    70g  sync: people/issues set on device A arrive on device B (two devices, one fake cloud)
-   70h  scale: 300 link items at 390, CPU x4: the panel paints in <= 300 ms
+   70h  scale: 300 link items at 390, CPU x4: the panel paints in <= 300 ms (median of 4 openings; all printed)
    70i  contrast of the new text on the five presets (phone and laptop shapes, panel and deck)
 
    `--only=70a,70c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 70). */
@@ -356,7 +356,11 @@ try {
       const rows = await on(d, () => document.querySelectorAll('#jeb-panel .jl-it').length);
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
       console.log('Z6A-SCALE ' + JSON.stringify({ items: 300, times }));
-      check(rows === 300 && Math.max(...times) <= 300, `70h 300 link items at 390, CPU ×4: the panel paints in ≤ 300 ms (${times.join(' / ')} ms)`, JSON.stringify({ rows, times }));
+      /* Architect, review of v05.10: judged on the MEDIAN of the four openings, not the worst. Run alone the worst of 12 was
+         249 ms; inside the full suite one cold first opening read 313 ms once (machine load, not the page). The median still
+         fails if the paint really gets slower; every figure is printed. */
+      const med = [...times].sort((a, b) => a - b)[Math.floor(times.length / 2)];
+      check(rows === 300 && med <= 300, `70h 300 link items at 390, CPU ×4: the panel paints in ≤ 300 ms, median of 4 (${times.join(' / ')} ms; median ${med})`, JSON.stringify({ rows, times }));
       noErr(d, '70h');
     } finally { await d.ctx.close(); }
   }
