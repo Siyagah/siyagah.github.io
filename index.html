@@ -23374,7 +23374,7 @@ function _jebQtyOpen(){ if(_jebQtyId&&!document.querySelector('#jeb-panel .jk-qi
 function _jebQtyEdit(iid){
   const it=_jebItem(iid); if(!it) return;
   _jebHideMenu();
-  const row=document.querySelector('#jeb-panel .jeb-it[data-iid="'+iid+'"]'), b=row&&row.querySelector('.jk-q');
+  const row=document.querySelector('#jeb-panel.on .jeb-it[data-iid="'+iid+'"]'), b=row&&row.querySelector('.jk-q');
   if(!b){   /* a card in the deck has no room: the app's dialog */
     showModal('<div class="mt">🔢 Quantity</div><input class="mi" id="jk-qm" data-jeb="1" maxlength="24" autocomplete="off" placeholder="e.g. 2, 500 g, 1 dozen" aria-label="Quantity" value="'+esc(it.qty||'')+'"><div class="ma"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn bp" id="jk-qm-ok">Save</button></div>');
     const mb=_jebEl('mb'), inp=mb.querySelector('#jk-qm'), ok=()=>{ jebEditItem(iid,{qty:inp.value}); closeModal(); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); };
