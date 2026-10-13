@@ -29,6 +29,8 @@ const argv = process.argv.slice(2);
 const onlyArg = argv.find((a) => a.startsWith('--only='));
 const onlySet = onlyArg ? new Set(onlyArg.slice(7).split(',')) : null;
 const want = (t) => !onlySet || onlySet.has(t);
+/* --fails: print only the failing lines (the passing ones and their detail line are dropped) - for iterating */
+if (argv.includes('--fails')) { const o = console.log; let skip = false; console.log = (...x) => { const t = x.join(' '); if (/^\s+ok\s/.test(t)) { skip = true; return; } if (skip && /^\s{6,}\S/.test(t)) { skip = false; return; } skip = false; o(...x); }; }
 
 const VPS = [{ name: '390', w: 390, h: 844, touch: true }, { name: '820', w: 820, h: 1180, touch: true }, { name: '1440', w: 1440, h: 900, touch: false }];
 const T0 = '2026-10-01T00:00:00.000Z';
@@ -218,7 +220,7 @@ try {
     const stepsBefore = JSON.stringify(it.steps);
     await act(d, vp, '#jeb-panel .jeb-it[data-iid="t6"] .jeb-tick'); await sleep(400);
     check((await item(d, 't6')).done === true && JSON.stringify((await item(d, 't6')).steps) === stepsBefore, `${t} ticking the item itself marks it done and leaves its steps exactly as they were`, JSON.stringify(await item(d, 't6')));
-    await on(d, () => { jebToggleDone('t6'); }); await sleep(400);
+    await on(d, () => { jebToggleDone('t6'); jebRefresh(); }); await sleep(400);
     /* the counter folds and opens the steps */
     const open1 = await on(d, () => !!document.querySelector('#jeb-panel .jeb-it[data-iid="t6"] .jt-steps'));
     await act(d, vp, '#jeb-panel .jeb-it[data-iid="t6"] .jt-cnt'); await sleep(300);
@@ -287,7 +289,7 @@ try {
       check(t2.journal === true && t2.due === today(), `${t} 📎 Attach (Journal) works on a task and its date stays`, JSON.stringify(t2));
       await act(d, vp, '#jeb-att .ja-x'); await sleep(200);
       /* Move to a plain pocket and back */
-      await on(d, () => { jebEditItem('t4', { pri: 1, steps: [{ id: 'q1', t: 'step q', d: 1 }] }); }); await sleep(300);
+      await on(d, () => { jebEditItem('t4', { pri: 1, steps: [{ id: 'q1', t: 'step q', d: 1 }] }); jebRefresh(); }); await sleep(300);
       await menuItem(d, vp, 't4', 'Move to pocket'); await act(d, vp, '#jeb-menu .jm:has-text("Ideas")'); await sleep(400);
       const mv = await item(d, 't4');
       check(mv.pocketId === 'jp-idea' && mv.due === day(1) && mv.pri === 1 && mv.steps.length === 1, `${t} Move to pocket: nothing is stripped from the item (I1)`, JSON.stringify(mv));
@@ -312,7 +314,7 @@ try {
       await on(d, () => { jebEditItem('t3', { steps: [{ id: 's1', t: 'a', d: 1 }, { id: 's2', t: 'b' }, { id: 's3', t: 'c' }] }); });
       await openPanel(d, vp);
       await act(d, vp, '#jeb-panel .jeb-px'); await d.page.waitForSelector('#jeb-deck.on .jeb-card'); await sleep(700);
-      const dk = await on(d, () => { const c = document.querySelector('#jeb-deck .jeb-card[data-iid="t3"]'); const m = c.querySelector('.jt-meta'); return { kids: [...c.children].map((e) => e.className.split(' ')[0]), chip: m.querySelector('.jt-due').textContent, flag: !!m.querySelector('.jt-flag'), cnt: m.querySelector('.jt-cnt').textContent, under: m.getBoundingClientRect().top >= c.querySelector('.jeb-tx').getBoundingClientRect().bottom - 1, red: (() => { const o = document.querySelector('#jeb-deck .jeb-card[data-iid="t1"] .jt-due'); return o && o.textContent; })() }; });
+      const dk = await on(d, () => { const c = document.querySelector('#jeb-deck .jeb-card[data-iid="t3"]'); const m = c.querySelector('.jt-meta'); return { kids: [...c.children].map((e) => e.className.split(' ')[0]), chip: m.querySelector('.jt-due').textContent, flag: !!m.querySelector('.jt-flag'), cnt: m.querySelector('.jt-cnt').textContent, under: m.offsetTop >= c.querySelector('.jeb-tx').offsetTop + c.querySelector('.jeb-tx').offsetHeight - 1 /* layout, not the rotated bounding box */, red: (() => { const o = document.querySelector('#jeb-deck .jeb-card[data-iid="t1"] .jt-due'); return o && o.textContent; })() }; });
       check(dk.chip === 'Today' && dk.flag && dk.cnt === '1/3' && dk.under && dk.red === 'Overdue · 1 d', `${t} the deck card shows the due chip, the flag and the step counter under the text`, JSON.stringify(dk));
       await act(d, vp, '#jeb-deck .jeb-card[data-iid="t2"] .jt-due'); await d.page.waitForSelector('#jeb-due'); await sleep(250);
       const q = await rect(d, '#jeb-due');
@@ -333,17 +335,17 @@ try {
       const badge = () => on(d, () => { const c = document.querySelector('#jeb-bar .jeb-chip[data-pid="jp-task"]'); const ct = c.querySelector('.jeb-ct'); return { n: ct.textContent, red: ct.classList.contains('jt-red'), bg: getComputedStyle(ct).backgroundColor, title: c.title }; });
       let b = await badge();
       check(b.n === '3' && b.red && b.bg === 'rgb(180, 35, 24)' && /due today and overdue/.test(b.title) && /red/.test(b.title), `${t} overdue + due today = 3, shown red, and the chip's title says the rule`, JSON.stringify(b));
-      await on(d, () => { jebEditItem('t1', { due: _jebDay(_jebToday(), 3) }); }); await sleep(300);
+      await on(d, () => { jebEditItem('t1', { due: _jebDay(_jebToday(), 3) }); jebRefresh(); }); await sleep(300);
       b = await badge();
       check(b.n === '2' && !b.red, `${t} nothing overdue: 2 due today, not red`, JSON.stringify(b));
-      await on(d, () => { jebEditItem('t2', { due: _jebDay(_jebToday(), 3) }); jebEditItem('t3', { due: _jebDay(_jebToday(), 3) }); }); await sleep(300);
+      await on(d, () => { jebEditItem('t2', { due: _jebDay(_jebToday(), 3) }); jebEditItem('t3', { due: _jebDay(_jebToday(), 3) }); jebRefresh(); }); await sleep(300);
       b = await badge();
       check(b.n === '7' && !b.red && b.title === 'Quick tasks', `${t} nothing due: it keeps today's count of open tasks (7) and a plain title`, JSON.stringify(b));
       const other = await on(d, () => { const c = document.querySelector('#jeb-bar .jeb-chip[data-pid="jp-idea"] .jeb-ct'); return c.textContent + (c.classList.contains('jt-red') ? 'red' : ''); });
       check(other === '1', `${t} another pocket's badge is unchanged`, other);
       /* All pockets */
       await act(d, vp, '#jeb-bar .jeb-chip.jeb-all .jeb-main'); await d.page.waitForSelector('#jeb-panel.on'); await sleep(500);
-      await on(d, () => { jebEditItem('t1', { due: _jebDay(_jebToday(), -2) }); }); await sleep(300);
+      await on(d, () => { jebEditItem('t1', { due: _jebDay(_jebToday(), -2) }); jebRefresh(); }); await sleep(300);
       const all = await on(d, () => { const g = document.querySelector('#jeb-panel .jeb-gh[data-pid="jp-task"]'); const heads = []; let e = g.nextElementSibling; while (e && !e.classList.contains('jeb-gh')) { if (e.classList.contains('jt-gh')) heads.push(e.querySelector('b').textContent); e = e.nextElementSibling; } return { heads, due: document.querySelectorAll('#jeb-panel .jeb-gl[data-pid="jp-task"] .jt-due').length, done: document.querySelectorAll('#jeb-panel .jeb-gl[data-pid="jp-task"] .jeb-it.done').length, flag: document.querySelectorAll('#jeb-panel .jeb-gl[data-pid="jp-task"] .jt-flag').length }; });
       check(all.heads.join() === 'Overdue,Tomorrow,Later,No date' && all.due >= 3 && all.done === 0 && all.flag === 1, `${t} "All pockets": the tasks group shows Overdue / Tomorrow / Later / No date as small headers with chips and flags, and no Done group`, JSON.stringify(all));
       noErr(d, t);
