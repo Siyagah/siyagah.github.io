@@ -11952,6 +11952,24 @@ await r.block('71-zab-tasks', async () => {
   r.check(out.status === 0, 'the Z6b Tasks check exits cleanly', `exit ${out.status}`);
 });
 
+/* 72 — v05.12, Z6c: the Ideas pocket (stars, topics, Sort, Group by) and the Shopping pocket (quantity, shop, the basket, quick
+   typing). tools/zab-z6c.mjs runs 72a–72k at 390/820/1440 with real taps or clicks: stars by tap and by the ⋯ chooser; the
+   topic picker, Group by Topic and Sort by stars, kept over a reload; the inline quantity edit; the shop picker and filter row;
+   ticked items under "In the basket (n)" and Clear basket through Trash; quick typing ("2 milk", "500g flour @Coles") and the
+   one-time hint; → Note, "All pockets", deck cards, Attach, Move to a plain pocket and back, Trash; layout at 390/820/1440 and
+   Zab mode; two-device sync; 300 items of each kind at ×4 CPU; contrast on five presets. Each printed ok/FAIL line becomes one check. */
+await r.block('72-zab-ideas-shop', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-z6c.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the Z6c Ideas and Shopping check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z6c: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Z6c Ideas and Shopping check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

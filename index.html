@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.11">
+<meta name="app-version" content="05.12">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -976,8 +976,8 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jl-frow,.jl-bar{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;overflow-x:auto;padding:2px 0}
 .jl-bar{padding:8px 12px;border-bottom:1px solid var(--border)}
 .jl-fl{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--t2)}
-.jl-fc,.jl-gb{flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font-size:13px;cursor:pointer;white-space:nowrap;touch-action:manipulation}
-.jl-fc.on,.jl-gb.on{background:var(--green);border-color:var(--green);color:var(--on-accent);font-weight:700}
+.jl-fc,.jl-gb,.js-fc,.ji-sb,.ji-gb{flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font-size:13px;cursor:pointer;white-space:nowrap;touch-action:manipulation}
+.jl-fc.on,.jl-gb.on,.js-fc.on,.ji-sb.on,.ji-gb.on{background:var(--green);border-color:var(--green);color:var(--on-accent);font-weight:700}
 .jl-gh{display:flex;gap:8px;align-items:baseline;padding:10px 12px 4px;color:var(--t1);font-size:14px}
 .jl-gh small{color:var(--t2);font-size:12px}
 .jl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:4px 12px 8px}
@@ -1024,6 +1024,26 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jt-md{max-height:50vh;overflow-y:auto;margin-bottom:10px}
 .jeb-ct.jt-red{background:#B42318;color:#fff}
 .jeb-card .jt-meta{padding:0 8px 6px}
+/* v05.12 · Z6c — Ideas and Shopping. A filled star carries its own paper and ink (dark brown on pale amber, ~9:1) so it reads the same on all five
+   presets and on a card's colour; everything else uses the pane inks. */
+.jk-it:not(.jk-editing){content-visibility:auto;contain-intrinsic-size:auto 96px}   /* 300 rows: those off the screen cost no layout */
+.jk-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 2px 4px}
+.ji-stars{display:inline-flex;gap:2px}
+.ji-star{width:36px;height:36px;padding:0;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font-size:20px;line-height:1;cursor:pointer;touch-action:manipulation}
+.ji-star.on{background:#FEF0C7;border-color:#EBC96B;color:#7A2E0E}
+.jk-meta .jc-tp,.jk-meta .jc-q,.jk-meta .jc-sh{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 10px;border:1px solid var(--border2);border-radius:999px;font-size:12px;color:var(--t1);background:var(--paper)}
+.jk-meta .jc-tp{cursor:pointer}
+.jk-q,.jk-s{min-height:36px;max-width:100%;padding:0 12px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font-size:12.5px;font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;touch-action:manipulation}
+.jk-q.jk-0,.jk-s.jk-0{border-style:dashed;font-weight:500}
+.jk-qin{width:110px;max-width:100%;min-height:36px;box-sizing:border-box;padding:0 10px;border:1px solid var(--green);border-radius:999px;background:var(--paper);color:var(--t1);font:inherit;font-size:13px;outline:none}
+.ji-bar .jl-frow,.js-filters .jl-frow{gap:4px}
+.ji-bar .ji-sb,.ji-bar .ji-gb{padding:0 9px;font-size:12.5px}
+.js-basket{padding-top:12px;border-top:1px solid var(--border2)}
+.js-basket b{color:var(--t1)}
+.jeb-card .jk-meta{padding:0 8px 6px}
+.jeb-card .jk-meta .ji-star{background:rgba(255,255,255,.6);color:#2A2418;border-color:rgba(42,36,24,.25)}
+.jeb-card .jk-meta .ji-star.on{background:#FEF0C7;border-color:#EBC96B;color:#7A2E0E}
+.jeb-card .jk-meta .jc-tp,.jeb-card .jk-meta .jc-q,.jeb-card .jk-meta .jc-sh{background:rgba(255,255,255,.55);color:#2A2418;border-color:rgba(42,36,24,.25)}
 #jeb-due{position:fixed;z-index:9150;display:flex;flex-direction:column;background:var(--white);color:var(--t1);border:1px solid var(--border2);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.28);width:300px;max-width:calc(100vw - 12px);padding:4px;box-sizing:border-box}
 @media(max-width:639.98px){#jeb-due{left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;max-width:none;border-radius:16px 16px 0 0;padding-bottom:max(10px,env(safe-area-inset-bottom))}}
 .jdu-hd{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 4px 10px;font-size:14px}
@@ -3554,7 +3574,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.11</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.12</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -22205,6 +22225,10 @@ function jebEditItem(id,patch){
     const st=patch.steps.filter(x=>x&&x.id).map(x=>{ const o={id:String(x.id),t:String(x.t==null?'':x.t)}; if(x.d) o.d=1; return o; });
     if(st.length) it.steps=st; else delete it.steps;
   }
+  /* v05.12 · Z6c — idea fields (stars 1–3 as a number; topics = strings) and shopping fields (qty, shop = short strings). Absent when empty. */
+  if('stars' in patch){ const n=Math.floor(+patch.stars); if(n>=1) it.stars=Math.min(3,n); else delete it.stars; }
+  if(Array.isArray(patch.topics)){ const tp=[]; patch.topics.forEach(x=>{ const s=String(x==null?'':x).trim(); if(s&&!tp.some(y=>y.toLowerCase()===s.toLowerCase())) tp.push(s); }); if(tp.length) it.topics=tp; else delete it.topics; }
+  ['qty','shop'].forEach(k=>{ if(k in patch){ const s=String(patch[k]==null?'':patch[k]).trim().replace(/\s+/g,' '); if(s) it[k]=s; else delete it[k]; } });
   it.updatedAt=_jebNow(); persist(); return true;
 }
 /* ── v05.11 · Z6b — task items. A task's due/pri/steps ride the item record, so they sync with the item
@@ -22264,6 +22288,35 @@ function _jebQuickParse(text){
   }
   return {text:t,due,pri};
 }
+/* v05.12 · Z6c — "2 milk" -> qty "2"; "500g flour" / "500 g flour" -> qty "500 g"; "milk @Coles" -> shop "Coles". Markers are stripped
+   only when text is left; anything else stays literal. */
+const _JEB_QTY_UNITS='kg|g|mg|l|ml|lb|lbs|oz|dozen|doz|pack|packs|pk|tin|tins|can|cans|bottle|bottles|box|boxes|bag|bags|loaf|loaves';
+function _jebShopParse(text){
+  let t=String(text==null?'':text).replace(/\s+$/,''), qty='', shop='';
+  let m=/(^|\s)@([^\s@][^@]*)$/.exec(t);
+  if(m&&t.slice(0,m.index).trim()){ shop=m[2].trim().replace(/\s+/g,' '); t=t.slice(0,m.index).replace(/\s+$/,''); }
+  m=new RegExp('^(\\d+(?:[.,]\\d+)?)\\s*('+_JEB_QTY_UNITS+')?\\s+(\\S[\\s\\S]*)$','i').exec(t);
+  if(m){ qty=m[1]+(m[2]?' '+m[2].toLowerCase():''); t=m[3]; }
+  return {text:t,qty,shop};
+}
+/* ── v05.12 · Z6c — Ideas and Shopping. The item carries stars/topics (ideas) and qty/shop (shopping) whatever pocket it sits in; a pocket of another kind
+   keeps them and does not draw them. The view choices live in DB.theme.zabIdeaView[pid]={s,g} and DB.theme.zabShopView[pid]={f}. ── */
+function _jebIdeaView(pid){ const v=(DB.theme&&DB.theme.zabIdeaView&&DB.theme.zabIdeaView[pid])||{}; return {s:v.s==='stars'?'stars':'new',g:v.g==='topic'?'topic':'none'}; }
+function _jebIdeaSetView(pid,patch){
+  if(!DB.theme) DB.theme={};
+  const all=Object.assign({},DB.theme.zabIdeaView||{}); all[pid]=Object.assign({},_jebIdeaView(pid),patch);
+  DB.theme.zabIdeaView=all; persist();
+}
+function _jebShopView(pid){ const v=(DB.theme&&DB.theme.zabShopView&&DB.theme.zabShopView[pid])||{}; return {f:String(v.f||'')}; }
+function _jebShopSetView(pid,patch){
+  if(!DB.theme) DB.theme={};
+  const all=Object.assign({},DB.theme.zabShopView||{}); all[pid]=Object.assign({},_jebShopView(pid),patch);
+  DB.theme.zabShopView=all; persist();
+}
+/* the part of an item's signature that belongs to its kind (a field is drawn only in its own kind, but a change must always repaint) */
+function _jebKindSig(i){ return [i.stars||0,(i.topics||[]).join(','),i.qty||'',i.shop||''].join('^'); }
+/* in "All pockets" and the deck a shopping pocket lists its ticked items last */
+function _jebBasketLast(pk,items){ return _jebType(pk)==='shop'?items.filter(i=>!i.done).concat(items.filter(i=>i.done)):items; }
 /* ── v05.10 · Z6a — link items. url/ttl/ch/th/people/issues are optional fields on the item. ── */
 function _jebUrlIn(text){
   const m=/https?:\/\/[^\s<>"'\])]+/i.exec(String(text==null?'':text));
@@ -22371,6 +22424,14 @@ function jebToNote(id){
       const meta=[it.due?'📅 due '+_jebDateLabel(it.due,true):'',(it.pri>0)?'⚑ high':''].filter(Boolean).join(' · ');
       const st=_jebSteps(it);
       note.content+=(meta?'<p>'+esc(meta)+'</p>':'')+(st.length?'<ul>'+st.map(x=>'<li>'+(x.d?'☑ ':'☐ ')+esc(x.t)+'</li>').join('')+'</ul>':'');
+    }
+    if(pk&&_jebType(pk)==='ideas'){   /* v05.12 · Z6c — the text, then "★★ · # topic, # topic" */
+      const ln=[it.stars>0?'★'.repeat(Math.min(3,Math.floor(+it.stars))):'',(it.topics||[]).map(x=>'# '+x).join(', ')].filter(Boolean).join(' · ');
+      if(ln) note.content+='<p>'+esc(ln)+'</p>';
+    }
+    if(pk&&_jebType(pk)==='shop'){   /* "qty text" as the title, then "🏪 shop" */
+      if(it.qty) note.title=(it.qty+' '+note.title).slice(0,120);
+      if(it.shop) note.content+='<p>'+esc('🏪 '+it.shop)+'</p>';
     }
     if(it.kind){ note.kind=it.kind; note.kinds=[it.kind]; }
     if(it.journal) _ensureJournalTag(note);
@@ -22695,7 +22756,12 @@ function _jebMakePanel(){
     if(gb){ _jebLinkSetView(gb.closest('.jl-bar').dataset.pid,{g:gb.dataset.g}); _jebPanelSig=''; jebRefresh(); return; }
     const gd=t.closest('.jt-gdone');   /* v05.11 · Z6b — the folded Done group */
     if(gd){ const q=gd.dataset.pid; if(_jebDoneOpen.has(q)) _jebDoneOpen.delete(q); else _jebDoneOpen.add(q); _jebPanelSig=''; jebRefresh(); return; }
+    const sb=t.closest('.ji-sb,.ji-gb');   /* v05.12 · Z6c — Ideas: Sort and Group by */
+    if(sb){ _jebIdeaSetView(sb.closest('.ji-bar').dataset.pid,{[sb.classList.contains('ji-sb')?'s':'g']:sb.dataset.v}); _jebPanelSig=''; jebRefresh(); return; }
+    const sc=t.closest('.js-fc');   /* Shopping: the Shop filter */
+    if(sc){ _jebShopSetView(sc.closest('.js-filters').dataset.pid,{f:sc.dataset.fv}); _jebPanelSig=''; jebRefresh(); return; }
     const row=t.closest('.jeb-it'); if(!row) return;
+    const kd=_jebKindTap(t,row.dataset.iid); if(kd) return;
     const jd=t.closest('.jt-due,.jt-flag'); if(jd){ _jebDueOpen(row.dataset.iid,jd); return; }
     if(t.closest('.jt-cnt')){ _jebStepsToggle(row.dataset.iid); return; }
     if(t.closest('.jl-sug')){ const x=_jebItem(row.dataset.iid); if(x&&x.ch) { jebEditItem(x.id,{people:[x.ch]}); _jebPanelSig=''; jebRefresh(); } return; }
@@ -22741,7 +22807,7 @@ function _jebLinkSetView(pid,patch){
   DB.theme.zabLinkView=all; persist();
 }
 function _jebLinkNames(items,field){
-  const seen=new Map(); items.forEach(i=>(i[field]||[]).forEach(n=>{ const k=String(n).toLowerCase(); if(!seen.has(k)) seen.set(k,n); }));
+  const seen=new Map(); items.forEach(i=>[].concat(i[field]==null?[]:i[field]).forEach(n=>{ if(n==null||n==='') return; const k=String(n).toLowerCase(); if(!seen.has(k)) seen.set(k,n); }));   /* v05.12: a single-value field (shop) is a string */
   return [...seen.values()].sort((a,b)=>String(a).localeCompare(String(b)));
 }
 const _jebWide=()=>window.innerWidth>=640;
@@ -22808,11 +22874,61 @@ function _jebTaskMultiHTML(pk,items){
   return _jebTaskGroups(items,false).map(g=>'<div class="jt-gh jt-gs jt-g-'+g.k+'" data-g="'+g.k+'"><b>'+g.label+'</b> <small>'+g.items.length+'</small></div><div class="jeb-gl jl-list jt-list" data-pid="'+pid+'" data-g="'+g.k+'">'+g.items.map(i=>_jebTaskRowHTML(i,pk,'c')).join('')+'</div>').join('')
     ||('<div class="jeb-gl" data-pid="'+pid+'"></div>');
 }
-function _jebItemSig(i){ return [i.id,i.text,i.done?1:0,i.url||'',i.ttl||'',i.ch||'',i.th||'',i.due||'',i.pri||0,_jebSteps(i).map(x=>x.id+':'+x.t+':'+(x.d?1:0)).join(','),_jebChipsHTML(i)].join('~'); }
+/* ── v05.12 · Z6c — idea and shopping rows. The meta line sits UNDER the text at every panel width, so no layout here depends on the window. ── */
+const _JEB_ROW_ACTS='<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div>';
+function _jebStarsHTML(i){
+  const n=i.stars>0?Math.min(3,Math.floor(+i.stars)):0;
+  return '<span class="ji-stars" role="group" aria-label="Stars: '+n+' of 3">'+[1,2,3].map(k=>'<button type="button" class="ji-star'+(k<=n?' on':'')+'" data-n="'+k+'" aria-label="'+k+(k===1?' star':' stars')+'" aria-pressed="'+(k<=n)+'">'+(k<=n?'★':'☆')+'</button>').join('')+'</span>';
+}
+function _jebTopicChipsHTML(i){ return (i.topics||[]).map(n=>'<span class="jc-tp" role="button" tabindex="0" title="Change topics"># '+esc(n)+'</span>').join(''); }
+/* the second line of a row or card: stars + topics (ideas) or quantity + shop (shopping). card = read-only chips, no placeholders */
+function _jebKindMeta(i,pk,card){
+  const ty=_jebType(pk);
+  if(ty==='ideas'){ const s=(card&&!(i.stars>0))?'':_jebStarsHTML(i), t=_jebTopicChipsHTML(i); return (s||t)?'<div class="jk-meta">'+s+t+'</div>':''; }
+  if(ty==='shop'){
+    if(card){ const c=(i.qty?'<span class="jc-q">'+esc(i.qty)+'</span>':'')+(i.shop?'<span class="jc-sh">🏪 '+esc(i.shop)+'</span>':''); return c?'<div class="jk-meta">'+c+'</div>':''; }
+    return '<div class="jk-meta"><button type="button" class="jk-q'+(i.qty?'':' jk-0')+'" title="Quantity">'+(i.qty?esc(i.qty):'＋ Qty')+'</button><button type="button" class="jk-s'+(i.shop?'':' jk-0')+'" title="Which shop">🏪 '+(i.shop?esc(i.shop):'Shop')+'</button></div>';
+  }
+  return '';
+}
+function _jebKindRowHTML(i,pk){
+  return '<div class="jeb-it jk-it'+(_jebType(pk)==='ideas'?' ji-it':' js-it')+(i.done?' done':'')+'" data-iid="'+esc(i.id)+'"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"'+(i.done?' checked':'')+'>'
+    +'<div class="jeb-body"><div class="jeb-tx">'+esc(i.text)+'</div>'+_jebKindMeta(i,pk,false)+_jebChipsHTML(i)+_JEB_ROW_ACTS+'</div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>';
+}
+const _jebRows=(pk,l)=>l.map(i=>_jebKindRowHTML(i,pk)).join('');
+/* Ideas: a view bar (Sort · Group by), then the list or one group per topic */
+function _jebIdeaPanelHTML(pk,items){
+  if(!items.length) return '<div class="jeb-empty">Nothing here yet — jot an idea above.</div>';
+  const v=_jebIdeaView(pk.id), pid=esc(pk.id);
+  const srt=v.s==='stars'?items.map((x,n)=>[x,n]).sort((a,b)=>((b[0].stars|0)-(a[0].stars|0))||(a[1]-b[1])).map(x=>x[0]):items;
+  const b=(cls,k,val,lb)=>'<button type="button" class="'+cls+(v[k]===val?' on':'')+'" data-v="'+val+'" aria-pressed="'+(v[k]===val)+'">'+lb+'</button>';
+  const bar='<div class="jl-filters ji-bar" data-pid="'+pid+'"><div class="jl-frow"><span class="jl-fl">Sort</span>'+b('ji-sb','s','new','Newest')+b('ji-sb','s','stars','★ Stars')
+    +'<span class="jl-fl">Group by</span>'+b('ji-gb','g','none','None')+b('ji-gb','g','topic','Topic')+'</div></div>';
+  if(v.g!=='topic') return bar+'<div class="jeb-gl jl-list" data-pid="'+pid+'">'+_jebRows(pk,srt)+'</div>';
+  const names=_jebLinkNames(srt,'topics');
+  const groups=names.map(n=>({n,l:srt.filter(i=>(i.topics||[]).some(x=>String(x).toLowerCase()===String(n).toLowerCase()))}));
+  const rest=srt.filter(i=>!(i.topics||[]).length); if(rest.length) groups.push({n:'No topic yet',l:rest,none:true});
+  return bar+groups.map(g=>'<div class="jl-gh ji-gh"><b>'+(g.none?'':'# ')+esc(g.n)+'</b> <small>'+g.l.length+'</small></div><div class="jeb-gl jl-list" data-pid="'+pid+'">'+_jebRows(pk,g.l)+'</div>').join('');
+}
+/* Shopping: a Shop filter row, the open items in their order, then "In the basket (n)" — ticked, struck through, never folded */
+function _jebShopPanelHTML(pk,items){
+  if(!items.length) return '<div class="jeb-empty">Nothing here yet — add what you need above.</div>';
+  const pid=esc(pk.id), shops=_jebLinkNames(items,'shop'), fv=_jebShopView(pk.id).f.toLowerCase();
+  const f=shops.find(s=>s.toLowerCase()===fv)||'';
+  const shown=f?items.filter(i=>String(i.shop||'').toLowerCase()===f.toLowerCase()):items;
+  const open=shown.filter(i=>!i.done), got=shown.filter(i=>i.done);
+  const bar='<div class="jl-filters js-filters" data-pid="'+pid+'"><div class="jl-frow" role="group" aria-label="Shop"><span class="jl-fl">🏪 Shop</span><button type="button" class="js-fc'+(f?'':' on')+'" data-fv="" aria-pressed="'+!f+'">All</button>'
+    +shops.map(s=>'<button type="button" class="js-fc'+(f===s?' on':'')+'" data-fv="'+esc(s)+'" aria-pressed="'+(f===s)+'">'+esc(s)+'</button>').join('')+'</div></div>';
+  return bar+'<div class="jeb-gl jl-list" data-pid="'+pid+'" data-g="open">'+_jebRows(pk,open)+'</div>'
+    +(got.length?'<div class="jt-gh js-basket"><b>In the basket ('+got.length+')</b></div><div class="jeb-gl jl-list" data-pid="'+pid+'" data-g="basket">'+_jebRows(pk,got)+'</div>':'')
+    +(shown.length?'':'<div class="jeb-empty">No items for this shop.</div>');
+}
+function _jebItemSig(i){ return [i.id,i.text,i.done?1:0,i.url||'',i.ttl||'',i.ch||'',i.th||'',i.due||'',i.pri||0,_jebSteps(i).map(x=>x.id+':'+x.t+':'+(x.d?1:0)).join(','),_jebKindSig(i),_jebChipsHTML(i)].join('~'); }
 function _jebRowHTML(i){
   const lpk=_jebPocket(i.pocketId);
   if(lpk&&_jebType(lpk)==='links') return _jebLinkRowHTML(i,lpk,'c');
   if(lpk&&_jebType(lpk)==='tasks') return _jebTaskRowHTML(i,lpk,_jebTaskMode());   /* v05.11 · Z6b */
+  if(lpk&&(_jebType(lpk)==='ideas'||_jebType(lpk)==='shop')) return _jebKindRowHTML(i,lpk);   /* v05.12 · Z6c */
   return `<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body"><div class="jeb-tx">${esc(i.text)}</div>${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`;
 }
 function _jebPaintPanel(){
@@ -22822,15 +22938,17 @@ function _jebPaintPanel(){
   p.classList.add('on');
   const pks=ids.map(_jebPocket), groups=pks.map(pk=>jebItems(pk.id));
   const all=[].concat(...groups), open=all.filter(i=>!i.done).length, done=all.length-open;
-  if(!multi&&_jebType(pks[0])==='tasks'&&!(DB.theme&&DB.theme.zabTaskHint)&&!_jebHintPid){   /* the one-line typing hint shows the first time only; the flag is stored just after it is on screen */
+  const hk=multi?null:({tasks:'zabTaskHint',shop:'zabShopHint'})[_jebType(pks[0])];   /* v05.12: shopping has a typing hint too */
+  if(hk&&!(DB.theme&&DB.theme[hk])&&_jebHintPid!==pks[0].id){   /* the one-line typing hint shows the first time only; the flag is stored just after it is on screen */
     _jebHintPid=pks[0].id;
-    setTimeout(()=>{ if(!DB.theme) DB.theme={}; DB.theme.zabTaskHint=1; persist(); },0);
+    setTimeout(()=>{ if(!DB.theme) DB.theme={}; DB.theme[hk]=1; persist(); },0);
   }
   const tkSig=pk=>_jebToday()+(_jebTaskMode()==='w'?'W':'N')+(_jebDoneOpen.has(pk.id)?'D':'')+(_jebHintPid===pk.id?'H':'')+[..._jebStepsOpen].join(',');
-  const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W':'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):''),groups[k].map(_jebItemSig).join('|')].join('#')).join('@@')].join('%');
+  const kvSig=pk=>{ const ty=_jebType(pk); return (ty==='ideas'?JSON.stringify(_jebIdeaView(pk.id)):ty==='shop'?JSON.stringify(_jebShopView(pk.id)):'')+(_jebHintPid===pk.id?'H':''); };   /* v05.12 · Z6c */
+  const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W':'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):kvSig(pk)),groups[k].map(_jebItemSig).join('|')].join('#')).join('@@')].join('%');
   if(sig===_jebPanelSig) return;
   /* never repaint under an item being typed in or dragged: it repaints when that ends */
-  if(_jebEditId||_jebDrag||_jebStepTyping()) return;
+  if(_jebEditId||_jebDrag||_jebStepTyping()||_jebQtyOpen()) return;
   _jebPanelSig=sig;
   const px=`<button class="jeb-px" aria-label="Spread as cards" title="Spread as cards">▦</button>`;
   const addBox=p.querySelector('.jeb-add'); if(addBox) addBox.style.display=multi?'none':'';
@@ -22838,21 +22956,26 @@ function _jebPaintPanel(){
     const pk=pks[0], items=groups[0];
     p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this pocket</small></div>${px}<button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
     const lk=_jebType(pk)==='links', tk=_jebType(pk)==='tasks';
-    const hn=p.querySelector('.jt-hint'); if(hn){ const on=tk&&_jebHintPid===pk.id; hn.hidden=!on; hn.textContent=on?'Tip: end a task with ! for high priority, or with today or tomorrow to set its date.':''; }
+    const id=_jebType(pk)==='ideas', sh=_jebType(pk)==='shop';
+    const hn=p.querySelector('.jt-hint'); if(hn){
+      const on=(tk||sh)&&_jebHintPid===pk.id; hn.hidden=!on;
+      hn.textContent=!on?'':(sh?'Tip: start with a quantity (2 milk, 500g flour) and end with @shop (milk @Coles).':'Tip: end a task with ! for high priority, or with today or tomorrow to set its date.');
+    }
     p.classList.toggle('jl-wide',lk&&_jebWide());
     p.querySelector('.jeb-add textarea').placeholder=lk?'Paste a link…':'Jot something…';
-    p.querySelector('.jeb-list').innerHTML=lk?_jebLinkPanelHTML(pk,items):tk?_jebTaskPanelHTML(pk,items):(items.length?items.map(i=>_jebRowHTML(i)).join(''):'<div class="jeb-empty">Nothing here yet — jot something above.</div>');
+    p.querySelector('.jeb-list').innerHTML=lk?_jebLinkPanelHTML(pk,items):tk?_jebTaskPanelHTML(pk,items):id?_jebIdeaPanelHTML(pk,items):sh?_jebShopPanelHTML(pk,items):(items.length?items.map(i=>_jebRowHTML(i)).join(''):'<div class="jeb-empty">Nothing here yet — jot something above.</div>');
     if(lk) _jebLinkScan(items);
   }else{
     p.classList.remove('jl-wide'); p.querySelector('.jeb-add textarea').placeholder='Jot something…'; const hn2=p.querySelector('.jt-hint'); if(hn2) hn2.hidden=true;
     p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:#EDE6D6">▤</span><div class="jeb-pt"><b>${esc(_jebSelTitle(sel,pks))}</b><small>${open} open · ${all.length} in all</small></div>${px}<button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
     p.querySelector('.jeb-list').innerHTML=pks.map((pk,k)=>{
       const items=groups[k], o=items.filter(i=>!i.done).length;
-      return `<div class="jeb-gh" data-pid="${esc(pk.id)}"><span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><b>${esc(pk.name)}</b><small>${o} open</small><button class="jeb-gadd" data-pid="${esc(pk.id)}" aria-label="Add an item to ${esc(pk.name)}" title="Add an item to ${esc(pk.name)}">＋</button></div>${_jebType(pk)==='tasks'?_jebTaskMultiHTML(pk,items):`<div class="jeb-gl${_jebType(pk)==='links'?' jl-list':''}" data-pid="${esc(pk.id)}">${items.map(i=>_jebRowHTML(i)).join('')}</div>`}`;
+      return `<div class="jeb-gh" data-pid="${esc(pk.id)}"><span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><b>${esc(pk.name)}</b><small>${o} open</small><button class="jeb-gadd" data-pid="${esc(pk.id)}" aria-label="Add an item to ${esc(pk.name)}" title="Add an item to ${esc(pk.name)}">＋</button></div>${_jebType(pk)==='tasks'?_jebTaskMultiHTML(pk,items):`<div class="jeb-gl${['links','ideas','shop'].includes(_jebType(pk))?' jl-list':''}" data-pid="${esc(pk.id)}">${_jebBasketLast(pk,items).map(i=>_jebRowHTML(i)).join('')}</div>`}`;
     }).join('');
     pks.forEach((pk,k)=>{ if(_jebType(pk)==='links') _jebLinkScan(groups[k]); });
   }
-  p.querySelector('.jeb-foot').innerHTML=done>0?`<button class="btn" data-act="clear" style="min-height:40px">🧹 Clear done (${done})</button>`:'';
+  const basket=!multi&&_jebType(pks[0])==='shop';   /* v05.12: a shopping pocket's footer clears the basket (to Trash, as Clear done does) */
+  p.querySelector('.jeb-foot').innerHTML=done>0?`<button class="btn" data-act="clear" style="min-height:40px">🧹 Clear ${basket?'basket':'done'} (${done})</button>`:'';
 }
 /* focus in a step's text box: a repaint would take the caret away (a step action forces one) */
 function _jebStepTyping(){ const a=document.activeElement; return !_jebForce&&!!a&&!!a.matches&&a.matches('#jeb-panel .jt-sti,#jeb-panel .jt-addin'); }
@@ -22869,8 +22992,10 @@ function _jebAddFromInput(){
   const ta=_jebEl('jeb-add-in'); if(!ta||!_jebOpen||_jebOpen==='*') return;
   const v=ta.value.replace(/\s+$/,''); if(!v.trim()) return;
   const pk=_jebPocket(_jebOpen), q=(pk&&_jebType(pk)==='tasks')?_jebQuickParse(v):null;   /* v05.11 · Z6b — a trailing ! / today / tomorrow */
-  const id=jebAddItem(_jebOpen,q&&(q.due||q.pri)?q.text:v);
+  const sp=(pk&&_jebType(pk)==='shop')?_jebShopParse(v):null, sq=sp&&(sp.qty||sp.shop)?sp:null;   /* v05.12 · Z6c — a leading quantity, a trailing @shop */
+  const id=jebAddItem(_jebOpen,q&&(q.due||q.pri)?q.text:(sq?sq.text:v));
   if(id&&q&&(q.due||q.pri)){ const pt={}; if(q.due) pt.due=q.due; if(q.pri) pt.pri=1; jebEditItem(id,pt); }
+  if(id&&sq){ const pt={}; if(sq.qty) pt.qty=sq.qty; if(sq.shop) pt.shop=sq.shop; jebEditItem(id,pt); }
   if(id) jebMoveItem(id,_jebOpen,0);   /* the newest goes on top */
   ta.value=''; ta.style.height='auto';
   _jebPanelSig=''; jebRefresh(); ta.focus({preventScroll:true});
@@ -22976,6 +23101,7 @@ function _jebMakeDeck(){
     const card=t.closest('.jeb-card'); if(!card) return;
     const iid=card.dataset.iid;
     if(t.closest('.jl-sug')){ const x=_jebItem(iid); if(x&&x.ch){ jebEditItem(x.id,{people:[x.ch]}); _jebDeckSig=''; jebRefresh(); } return; }
+    if(_jebKindTap(t,iid)) return;   /* v05.12 · Z6c */
     if(t.closest('.jc-tick')){ jebToggleDone(iid); jebRefresh(); return; }
     const jd=t.closest('.jt-due,.jt-flag'); if(jd){ _jebDueOpen(iid,jd); return; }
     if(t.closest('.jt-cnt')){ _jebStepsModal(iid); return; }
@@ -22992,14 +23118,14 @@ function _jebMakeDeck(){
 }
 function _jebCardHTML(i,pk){
   const lk=_jebType(pk)==='links', tk=_jebType(pk)==='tasks', L=lk?_jebLinkOf(i):null;   /* v05.10: a link card = thumbnail on top, then the title */
-  return `<div class="jeb-card${i.done?' done':''}${lk?' jl-dcard':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another pocket" aria-label="Drag handle">⠿</div>${lk?_jebThumbHTML(L,pk):''}<div class="jeb-tx">${esc(lk?L.title:i.text)}</div>${tk?(()=>{ const pcs=_jebTaskPieces(i,_jebToday(),true); return pcs?'<div class="jt-meta">'+pcs+'</div>':''; })():''}${lk?`<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`:''}${_jebChipsHTML(i)}${lk?_jebLinkSugHTML(i):''}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
+  return `<div class="jeb-card${i.done?' done':''}${lk?' jl-dcard':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another pocket" aria-label="Drag handle">⠿</div>${lk?_jebThumbHTML(L,pk):''}<div class="jeb-tx">${esc(lk?L.title:i.text)}</div>${tk?(()=>{ const pcs=_jebTaskPieces(i,_jebToday(),true); return pcs?'<div class="jt-meta">'+pcs+'</div>':''; })():''}${_jebKindMeta(i,pk,true)}${lk?`<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`:''}${_jebChipsHTML(i)}${lk?_jebLinkSugHTML(i):''}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
 }
 function _jebPaintDeck(){
   const sel=_jebDeck, ids=_jebSelIds(sel);
   if(!ids.length){ jebCloseDeck(); return; }
   let d=_jebEl('jeb-deck'); if(!d) d=_jebMakeDeck();
   d.classList.add('on');
-  const pks=ids.map(_jebPocket), groups=pks.map(pk=>jebItems(pk.id));
+  const pks=ids.map(_jebPocket), groups=pks.map(pk=>_jebBasketLast(pk,jebItems(pk.id)));   /* v05.12: a shopping pocket's ticked cards last */
   const sig=(sel.all?'A':'')+'%'+pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='tasks'?_jebToday():'',groups[k].map(_jebItemSig).join('|')].join('#')).join('@@');
   if(sig===_jebDeckSig) return;
   /* never repaint under a card being typed in or dragged: it repaints when that ends */
@@ -23113,6 +23239,8 @@ function _jebItemMenu(iid,anchor){
       {t:'📅 Due…',f:()=>_jebDueOpen(iid,anchor)},
       {t:(it.pri>0?'☑ ':'☐ ')+'⚑ High priority',f:()=>{ const x=_jebItem(iid); if(x){ jebEditItem(iid,{pri:x.pri>0?0:1}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } }},
       {t:'☑ Steps…',f:()=>_jebStepsToggle(iid,true)}]:[]),
+    ...(_jebType(_jebPocket(it.pocketId))==='ideas'?[{t:'★ Stars…',f:()=>_jebStarsOpen(iid)},{t:'# Topic…',f:()=>_jebPickOpen(iid,'topics')}]:[]),   /* v05.12 · Z6c */
+    ...(_jebType(_jebPocket(it.pocketId))==='shop'?[{t:'🔢 Quantity…',f:()=>_jebQtyEdit(iid)},{t:'🏪 Shop…',f:()=>_jebPickOpen(iid,'shop')}]:[]),
     {t:'📎 Attach',f:()=>_jebAttOpen(iid,anchor)},
     {t:'→ Note',f:()=>_jebToNoteUI(iid)},
     {t:'📂 Move to pocket ▸',keep:true,f:()=>{
@@ -23190,9 +23318,9 @@ function _jebStepsModal(iid){
 function _jebPickOpen(iid,field){
   const it=_jebItem(iid); if(!it) return;
   _jebHideMenu(); _jebAttClose();
-  const people=field==='people', pid=it.pocketId;
-  const cur=()=>{ const x=_jebItem(iid); return x?(x[field]||[]):[]; };
-  showModal(`<div class="mt">${people?'👤 Person':'# Issue'}</div><div class="jl-pklist" id="jl-pk-list"></div>`
+  const pid=it.pocketId, single=field==='shop';   /* v05.12: topics are many-of; shop is one-of (a string on the item), picking one replaces the last */
+  const cur=()=>{ const x=_jebItem(iid); return x?[].concat(x[field]==null||x[field]===''?[]:x[field]):[]; };
+  showModal(`<div class="mt">${{people:'👤 Person',issues:'# Issue',topics:'# Topic',shop:'🏪 Shop'}[field]||'Pick'}</div><div class="jl-pklist" id="jl-pk-list"></div>`
     +`<div class="jl-pknew"><input class="mi" id="jl-pk-in" data-jeb="1" maxlength="60" autocomplete="off" placeholder="New…" aria-label="New name"><button class="btn" id="jl-pk-add">Add</button></div>`
     +`<div class="ma"><button class="btn bp" id="jl-pk-done">Done</button></div>`);
   const mb=_jebEl('mb'), list=mb.querySelector('#jl-pk-list'), inp=mb.querySelector('#jl-pk-in');
@@ -23201,22 +23329,76 @@ function _jebPickOpen(iid,field){
     const names=_jebLinkNames(jebItems(pid).concat(it),field);
     list.innerHTML=names.length?names.map(n=>`<label class="jl-pkrow"><input type="checkbox" data-n="${esc(n)}"${on.has(String(n).toLowerCase())?' checked':''}><span>${esc(n)}</span></label>`).join(''):'<div class="jeb-empty">No names yet — add one below.</div>';
   };
-  const save=arr=>{ jebEditItem(iid,{[field]:arr}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); paint(); };
+  const save=arr=>{ jebEditItem(iid,{[field]:single?(arr[0]||''):arr}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); paint(); };
   list.addEventListener('change',e=>{
     const b=e.target.closest('input[data-n]'); if(!b) return;
-    const n=b.dataset.n, a=cur().filter(x=>String(x).toLowerCase()!==n.toLowerCase());
+    const n=b.dataset.n, a=single?[]:cur().filter(x=>String(x).toLowerCase()!==n.toLowerCase());
     if(b.checked) a.push(n);
     save(a);
   });
   const add=()=>{
     const n=inp.value.trim().replace(/\s+/g,' '); if(!n) return;
-    const a=cur().slice(); if(!a.some(x=>String(x).toLowerCase()===n.toLowerCase())) a.push(n);
+    const a=single?[]:cur().slice(); if(!a.some(x=>String(x).toLowerCase()===n.toLowerCase())) a.push(n);
     inp.value=''; save(a);
   };
   mb.querySelector('#jl-pk-add').addEventListener('click',add);
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); add(); } });
   mb.querySelector('#jl-pk-done').addEventListener('click',()=>closeModal());
   paint();
+}
+/* ── v05.12 · Z6c — stars, the stars chooser, and the quantity edit ── */
+/* a tap on one of the kind's own controls (a star, a topic chip, the quantity, the shop) in a row or card; true when it was one */
+function _jebKindTap(t,iid){
+  const st=t.closest('.ji-star'); if(st){ _jebSetStars(iid,+st.dataset.n); return true; }
+  if(t.closest('.jc-tp')){ _jebPickOpen(iid,'topics'); return true; }
+  if(t.closest('.jk-q')){ _jebQtyEdit(iid); return true; }
+  if(t.closest('.jk-s')){ _jebPickOpen(iid,'shop'); return true; }
+  return false;
+}
+function _jebSetStars(iid,n){ const x=_jebItem(iid); if(!x) return; jebEditItem(iid,{stars:(x.stars|0)===n?0:n}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); }
+function _jebStarsOpen(iid){
+  if(!_jebItem(iid)) return;
+  _jebHideMenu(); _jebAttClose();
+  showModal('<div class="mt">★ Stars</div><div class="jl-pklist" id="jk-st-list"></div><div class="ma"><button class="btn bp" id="jk-st-done">Done</button></div>');
+  const mb=_jebEl('mb'), list=mb.querySelector('#jk-st-list');
+  const paint=()=>{ const n=(_jebItem(iid)||{}).stars|0; list.innerHTML=[[0,'None'],[1,'★'],[2,'★★'],[3,'★★★']].map(r=>'<label class="jl-pkrow"><input type="checkbox" data-n="'+r[0]+'"'+(n===r[0]?' checked':'')+'><span>'+r[1]+'</span></label>').join(''); };
+  list.addEventListener('change',e=>{
+    const b=e.target.closest('input[data-n]'); if(!b) return;
+    jebEditItem(iid,{stars:b.checked?+b.dataset.n:0}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); paint();
+  });
+  mb.querySelector('#jk-st-done').addEventListener('click',()=>closeModal());
+  paint();
+}
+let _jebQtyId=null;   /* the item whose quantity box is open: the panel is not repainted under it */
+function _jebQtyOpen(){ if(_jebQtyId&&!document.querySelector('#jeb-panel .jk-qin')) _jebQtyId=null; return !!_jebQtyId; }   /* a box removed with its panel leaves no stuck lock */
+function _jebQtyEdit(iid){
+  const it=_jebItem(iid); if(!it) return;
+  _jebHideMenu();
+  const row=document.querySelector('#jeb-panel.on .jeb-it[data-iid="'+iid+'"]'), b=row&&row.querySelector('.jk-q');
+  if(!b){   /* a card in the deck has no room: the app's dialog */
+    showModal('<div class="mt">🔢 Quantity</div><input class="mi" id="jk-qm" data-jeb="1" maxlength="24" autocomplete="off" placeholder="e.g. 2, 500 g, 1 dozen" aria-label="Quantity" value="'+esc(it.qty||'')+'"><div class="ma"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn bp" id="jk-qm-ok">Save</button></div>');
+    const mb=_jebEl('mb'), inp=mb.querySelector('#jk-qm'), ok=()=>{ jebEditItem(iid,{qty:inp.value}); closeModal(); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); };
+    mb.querySelector('#jk-qm-ok').addEventListener('click',ok);
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); ok(); } });
+    inp.focus(); return;
+  }
+  if(_jebQtyOpen()) return;
+  _jebQtyId=iid; row.classList.add('jk-editing');
+  const inp=document.createElement('input'); inp.className='jk-qin'; inp.setAttribute('data-jeb','1'); inp.maxLength=24; inp.value=it.qty||'';
+  inp.setAttribute('aria-label','Quantity'); inp.setAttribute('placeholder','e.g. 2, 500 g'); inp.autocomplete='off'; inp.enterKeyHint='done';
+  b.replaceWith(inp); inp.focus(); inp.select();
+  let cancel=false;
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); inp.blur(); }
+    else if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); cancel=true; inp.blur(); }
+  });
+  inp.addEventListener('blur',()=>{
+    if(_jebQtyId!==iid) return;
+    _jebQtyId=null;
+    const cur=_jebItem(iid), v=inp.value.trim().replace(/\s+/g,' ');
+    if(!cancel&&cur&&v!==(cur.qty||'')) jebEditItem(iid,{qty:v});
+    _jebPanelSig=''; _jebDeckSig=''; jebRefresh();
+  });
 }
 /* ── v05.02 · J3 — what is attached, 📎 Attach, → Note ── */
 function _jebFolderName(fid){ const p=pathOf(fid); return p.length?p[p.length-1].name:''; }
