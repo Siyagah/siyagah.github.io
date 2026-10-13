@@ -37,6 +37,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.13** (14 Oct 2026) — S4a, Evernote import, the dry run (issue #173, PCF J01). 🧰 → Create → "📥 Evernote import" reads an
+  evernote-backup export (folder pick on tablet/laptop, `.enex` files on every layout, a phone gets a sheet) by streaming and shows
+  totals, a stack ▸ notebook table, "already in Siyagah", and 📋 Copy summary. Nothing is written anywhere. Check: block 73,
+  `tools/enex-s4a.mjs`. Builder: `--only 73,59,65,69` **581/581**, `ship-check` 14/14; the Architect runs the full `app-check`.
 - **v05.12** (13 Oct 2026) — Z6c, the Ideas and Shopping pockets (issue #171, PCF J15). Idea fields `stars` (1–3, a number) and
   `topics[]`; shopping fields `qty` and `shop` (short strings). Ideas: tappable ☆/★, `# topic` chips, a Sort (Newest | ★ Stars) and
   Group by (None | Topic) bar kept in `DB.theme.zabIdeaView[pid]`. Shopping: quantity chip edited inline, shop chip, a 🏪 Shop filter
@@ -56,11 +60,6 @@ must never accumulate here instead of there.
   owner's shared PCF https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ (jobs, rules, what waits on the owner,
   guides), read first and updated last by every session; the permanent rule above, `claude/PROJECT-RULES.md`,
   and ARCHITECT.md's Handover now point to it. Words only: no app code changed.
-- **v05.08** (11 Oct 2026) — P1, the phone keyboard no longer freezes a big notebook (Architect, found
-  measuring item 5). Any change to `<html>`'s own style restyles every element; J2 flipped `--jeb-h` there on
-  each keyboard up/down: ~0.9 s at 9,000 notes on a ×4 phone. `--jeb-h` is now `@property … inherits:false`, set
-  on its 10 users only (`<html>` always reads 0px; read `#p2`); `--jeb-l` goes on `#jeb-bar`/`#jeb-deck`. Now
-  ~12 ms of style. Check: block 69, `tools/jebh-p1.mjs`. Architect: full `app-check` **3808/3808, twice in a row**; unpatched `--only 69` 17/28.
 ---
 
 ## What this is
@@ -488,6 +487,18 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `_jebStarsOpen`; quantity: `_jebQtyEdit` (inline in the panel, the app's dialog on a deck card; `_jebQtyOpen()` stops a repaint
   under the open box). Quick typing: `_jebShopParse`. A new field of these kinds goes in `_jebKindSig`; their typing hint reuses
   `.jt-hint` (`zabShopHint`). Not drawn outside their own kind, never stripped by a move (I1).
+- **Evernote import, the dry run (v05.13, S4a — S4b writes notes, S4c pictures, S4d merges earlier imports).** `openEnexImport()` →
+  `#enx-modal` (own overlay like `#remmail-modal`: dialog ≥ 640, bottom sheet < 640, z 10060, over the Zab bar on purpose so it is not
+  in the `--jeb-h` lists). State is only the global `_enx` (the last result is `_enx.res`, in memory): **nothing goes in `DB`,
+  `DB.theme`, localStorage, IndexedDB or the cloud** (block 73e compares DB, the `notebook` record, localStorage and the cloud log).
+  Files are streamed (`file.stream()` → byte counter → `TextDecoderStream`) into `_enxScanner(onNote)`, a small state machine that
+  keeps only each note's small text (title, dates, tags, resource mime/name) and COUNTS `<content>` and every `<data>` as they pass
+  (base64 length ×3/4 − padding); a new `<note>` before `</note>` ends the earlier one as unterminated. Yields every 1 MB / 50 notes.
+  Evernote dates `YYYYMMDDTHHMMSSZ` → `_enxDate()`. A broken note (bad date, cut-short CDATA, unterminated) is listed per notebook and never
+  stops the run. "Already in Siyagah" = trimmed lower-case title + created second against `DB.articles` (a Set, built once), the
+  rule S4d will merge on. Distinct tags are exact strings; the overlap with Siyagah's tags is case-insensitive. Stacks: the folder
+  between the export root and the file (`webkitRelativePath`); files picked singly have none. 146 MB / 2,000 notes: 1.3 s, no long
+  task at 1440; at 390 ×4 CPU 3.8 s, worst long task 68 ms, heap +32 MB.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,

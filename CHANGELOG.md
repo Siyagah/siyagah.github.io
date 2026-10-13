@@ -9622,3 +9622,35 @@ Shopping pockets are those kinds.
   items (remove and re-add). The meta line is not moved to a side column in Zab mode.
 **Totals (Builder):** `ship-check` 14/14; `app-check --only 72,60,64,65,69,70,71` **1630/1630** (no old assertion needed changing: blocks 60 and 64–71 untouched). The Architect runs the full `app-check`.
 **Totals (Architect):** no changes asked in review. Full `app-check` **4701/4701, twice** on `8fe411a`; `ship-check` 14/14; unpatched (v05.11 `index.html` + `sw.js`) `--only 72` 0/4.
+
+## v05.13 — S4a, Evernote import: the dry run (issue #173, PCF J01)
+
+The first step of the owner's Evernote import. It **reads** an Evernote export and shows what an import would bring in. **Nothing is
+written** to the notebook, localStorage, IndexedDB or the cloud; the last result lives only in memory (`_enx`).
+
+- **Where.** 🧰 → Create → **📥 Evernote import**. It opens its own overlay: a **dialog** on tablet and laptop (≥ 640 px), a
+  **bottom sheet** on a phone (< 640 px). It sits over the Zab bar on purpose, so it is not in block 69's `--jeb-h` lists; nothing is
+  written to `<html>`'s style.
+- **Choosing.** **📁 Choose the export folder** (`webkitdirectory`; tablet and laptop; the stack is the folder between the export root
+  and the file) and **📄 Choose .enex files** (every layout; no stacks). A phone shows only the files button, as the primary one. The line
+  "Stacks come from the folder; files picked one by one go in without a stack" is on the start screen. Other files are counted ("1 other file skipped").
+- **Reading.** Streamed (`file.stream()` through `TextDecoderStream`), never `text()`/`readAsText`/`DOMParser`. A small incremental
+  scanner (`_enxScanner`) keeps only title, created/updated, tags, source-url and each resource's mime, file name and byte count;
+  `<content>` and `<data>` are counted as they pass and discarded (bytes = base64 characters × 3/4 − padding). Yields to the page
+  every 1 MB or 50 notes. Progress line "Reading <notebook> — 1,234 notes so far · 210 MB of 620 MB" with **✕ Stop**.
+  A broken note (bad date, content cut short, no end) is listed per notebook by title (or #n) and never stops the run.
+- **Already in Siyagah.** Trimmed, case-insensitive title + the same created second, against `DB.articles` (not Trash), in one Set.
+- **Result.** Totals: notebooks, stacks, notes, distinct tags (and how many already exist, case-insensitive), pictures / PDFs / audio /
+  other files (count and MB), oldest and newest created date, already in Siyagah, could not be read, other files skipped. A table per
+  stack ▸ notebook (notes, pictures, MB, already in); the stacks are open on tablet/laptop and **folded on a phone**. The dry-run line
+  at the bottom. **📋 Copy summary** (plain text; a selectable box when the clipboard is refused) and ↩ Choose another export.
+- **Layouts (D5).** Dialog on 820/1440, sheet on 390, tables and totals fit all three; summary rows are 44 px on a phone.
+- **Check.** Block 73 `73-evernote-dryrun`, `tools/enex-s4a.mjs`, 73a–73i at 390/820/1440 with real taps or clicks. The fixtures are
+  written by the test (two stacks, four notebooks, unicode titles, `]]&gt;` in an attribute, `en-media`, image/PDF/audio/zip
+  resources, a bad date, a cut-off note, a non-.enex file, a note Siyagah already holds and a one-second near miss). 73g: a generated
+  146 MB file (2,000 notes): **1440** 1.3 s, no long task, heap +25 MB; **390 with CPU ×4** 3.8 s, worst long task **68 ms** (8 over 50 ms),
+  heap +32 MB; 112,000,000 picture bytes counted exactly. Builder run: `--only 73,59,65,69` **581/581**, `ship-check` 14/14.
+  Not run on the unpatched build by the builder (the Architect does it); 73a cannot pass there (the menu item does not exist).
+- **Not done:** writing the notes into Siyagah (S4b); the pictures (S4c); merging earlier imports (S4d). Drag-and-drop of a folder is
+  not offered. A very large single note (over ~1 MB of text outside `<content>`/`<data>`) is reported as unreadable.
+**Totals (Builder):** `ship-check` 14/14; `app-check --only 73,59,65,69` **581/581**. The Architect runs the full `app-check`.
