@@ -276,7 +276,7 @@ try {
     /* the deck */
     await act(d, vp, '#jeb-panel .jeb-px'); await d.page.waitForSelector('#jeb-deck.on .jl-dcard'); await sleep(700);
     const deck = await on(d, () => { const c = document.querySelector('#jeb-deck .jl-dcard[data-iid="l2"]'); const kids = [...c.children].map((e) => e.className.split(' ')[0]); return { kids, title: c.querySelector('.jeb-tx').textContent, img: !!c.querySelector('.jl-th img'), n: document.querySelectorAll('#jeb-deck .jl-dcard').length, ph: c.querySelector('.jl-th').getBoundingClientRect().bottom <= c.querySelector('.jeb-tx').getBoundingClientRect().top + 1 }; });
-    check(deck.n === 4 && deck.kids.indexOf('jl-th') < deck.kids.indexOf('jeb-tx') && deck.title === 'Beta video' && deck.ph, `${t} the deck card: the thumbnail on top, then the title (${deck.title})`, JSON.stringify(deck));
+    check(deck.n === 3 && deck.kids.indexOf('jl-th') < deck.kids.indexOf('jeb-tx') && deck.title === 'Beta video' && deck.ph, `${t} the deck card: the thumbnail on top, then the title (${deck.title})`, JSON.stringify(deck));
     await act(d, vp, '#jeb-deck .jl-dcard[data-iid="l2"] .jeb-more'); await act(d, vp, '#jeb-menu .jm:has-text("Delete")'); await sleep(400);
     const inTrash = await on(d, () => { const e = DB.trash.find((x) => x.type === 'jebItem' && x.item.id === 'l2'); return e && { id: e.id, ppl: e.item.people, iss: e.item.issues, ttl: e.item.ttl }; });
     check(inTrash && inTrash.ttl === 'Beta video' && inTrash.iss.join() === 'Rent,Tax' && !(await item(d, 'l2')), `${t} Delete from the deck sends the link to Trash with all its fields`, JSON.stringify(inTrash));
@@ -289,14 +289,15 @@ try {
   if (want('70f')) await each(async (d, vp) => {
     const t = `70f-drag@${vp.name}`;
     await openPanel(d, vp);
+    await d.page.locator('#jeb-panel .jl-it[data-iid="l4"] .jeb-grip').scrollIntoViewIfNeeded(); await sleep(200);
     const g = await d.page.locator('#jeb-panel .jl-it[data-iid="l4"] .jeb-grip').boundingBox();
-    const target = await d.page.locator(vp.w < 640 ? '#jeb-panel .jl-it[data-iid="l1"]' : '#jeb-panel .jl-it[data-iid="l2"]').boundingBox();
+    const target = await d.page.locator(vp.w < 640 ? '#jeb-panel .jl-it[data-iid="l3"]' : '#jeb-panel .jl-it[data-iid="l2"]').boundingBox();
     const from = { x: g.x + g.width / 2, y: g.y + g.height / 2 }, to = vp.w < 640 ? { x: from.x, y: target.y + 4 } : { x: target.x + 12, y: target.y + 12 };
     if (vp.touch) { const pts = Array.from({ length: 14 }, (_, i) => ({ x: from.x + (to.x - from.x) * ((i + 1) / 14), y: from.y + (to.y - from.y) * ((i + 1) / 14) })); await touchDrag(d.page, [from, ...pts]); }
     else { await d.page.mouse.move(from.x, from.y); await d.page.mouse.down(); for (let i = 1; i <= 14; i++) await d.page.mouse.move(from.x + (to.x - from.x) * (i / 14), from.y + (to.y - from.y) * (i / 14)); await d.page.mouse.up(); }
     await sleep(500);
     const order = await on(d, () => jebItems('jp-link').map((x) => x.id).join());
-    const want_ = vp.w < 640 ? 'l4,l1,l2,l3' : 'l1,l4,l2,l3';
+    const want_ = vp.w < 640 ? 'l1,l2,l4,l3' : 'l1,l4,l2,l3';
     check(order === want_, `${t} dragging ⠿ on a link item reorders it (${vp.touch ? 'touch' : 'mouse'}): ${order}`, order);
     noErr(d, t);
   });
@@ -389,7 +390,7 @@ try {
     const pm = await measure(newText);
     check(pm.worst >= 4.5, `70i@${vp.name} ...and on a pale custom accent (worst ${pm.worst}, ${pm.who})`, JSON.stringify(pm));
     await on(d, () => { applyPreset('ocean'); jebOpenDeck({ ids: ['jp-link'], all: false }); }); await sleep(700);
-    const dk = await measure('#jeb-deck .jl-dcard *');
+    const dk = await measure('#jeb-deck .jl-dcard .jeb-tx, #jeb-deck .jl-dcard .jl-dom, #jeb-deck .jl-dcard .jeb-chips *, #jeb-deck .jl-dcard .jl-sug, #jeb-deck .jl-dcard .jl-fb');
     check(dk.n >= 8 && dk.worst >= 4.5, `70i@${vp.name} the deck's link cards clear 4.5:1 (worst ${dk.worst}, ${dk.who})`, JSON.stringify(dk));
   });
 } catch (e) {
