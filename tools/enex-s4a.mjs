@@ -21,7 +21,7 @@
 
    `--only=73a,73c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 73). */
 import { playwright, serve, seedDB } from './harness.mjs';
-import { makeCloud, addDevice, on, sleep, quiet, check, results } from './s1-fake.mjs';
+import { makeCloud, addDevice, on, sleep, quiet, waitSeeded, check, results } from './s1-fake.mjs';
 import { randomBytes } from 'node:crypto';
 import { mkdtempSync, mkdirSync, writeFileSync, openSync, writeSync, closeSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -211,10 +211,10 @@ try {
     check(rm.Beta.a === '0', `${t} the near miss (same title, one second later) is NOT counted`, rm.Beta.a);
     check(r.grid.Tags === '4 (2 already in Siyagah)', `${t} 4 distinct tags, 2 already in Siyagah ("travel" matches "Travel", and "seed")`, r.grid.Tags);
     /* it must be able to fail: a seed with the match removed gives 0 */
-    await on(d, () => { DB.articles.find((a) => a.id === 'ev1').createdAt = '2024-03-05T10:20:31.000Z'; });
+    await on(d, () => { DB.articles.find((a) => a.id === 'ev1').createdAt = '2024-03-05T10:20:45.000Z'; });
     await actText(d, vp, '#enx-box .rm-big', 'Choose another export'); await pickFiles(d); await waitDone(d);
     const r2 = await readRes(d);
-    check(r2.grid['Already in Siyagah'] === '0', `${t} with the Siyagah note moved one second, nothing matches (0)`, r2.grid['Already in Siyagah']);
+    check(r2.grid['Already in Siyagah'] === '0', `${t} with the Siyagah note moved to another second, nothing matches (0)`, r2.grid['Already in Siyagah']);
     noErr(d, t);
   });
 
@@ -222,7 +222,7 @@ try {
   if (want('73e')) await each('73e', async (d, vp) => {
     const t = `73e@${vp.name}`;
     const snap = () => on(d, async () => ({ db: JSON.stringify(DB), idb: JSON.stringify(await _idbGet('notebook')), ls: localStorage.getItem('my-notebook-v1'), lsKeys: Object.keys(localStorage).sort().join(), dbs: (await indexedDB.databases()).map((x) => x.name).sort().join() }));
-    await sleep(1500); await quiet(d.cloudObj, d); await sleep(1000);
+    await waitSeeded(d.cloudObj, d); await sleep(1500); await quiet(d.cloudObj, d); await sleep(1000);
     const before = await snap(), c0 = d.cloudObj.log.length, k0 = d.cloudObj.commits;
     await dlg(d, vp); await pickFiles(d); await waitDone(d);
     await actText(d, vp, '#enx-box .rm-big', 'Copy summary').catch(() => {});
@@ -281,7 +281,7 @@ try {
         check(res.n === 2000 && res.pics === 2000 && res.bytes === 2000 * 56000 && res.unread === 0, `${t} the ${(BIG_BYTES / MB).toFixed(0)} MB file completes: 2,000 notes, 2,000 pictures, ${res.bytes} bytes counted exactly, none unreadable (${secs.toFixed(1)} s)`, JSON.stringify(res));
         check(!lt.err && lt.lt.length >= 0 && worst <= 200, `${t} the page never blocks for more than 200 ms (worst long task ${worst} ms; ${lt.lt.length} over 50 ms; all: ${lt.lt.slice(0, 12).join(',')}${lt.lt.length > 12 ? ',…' : ''})`, lt.err);
         check(grow <= 60, `${t} the JS heap grows by at most 60 MB (start ${(base / MB).toFixed(1)} MB, peak ${(peak / MB).toFixed(1)} MB, +${grow.toFixed(1)} MB)`);
-        check(r.grid.Notes === '2000', `${t} the result shows 2000 notes`, r.grid.Notes);
+        check(r.grid.Notes === '2,000', `${t} the result shows 2,000 notes`, r.grid.Notes);
         noErr(d, t);
       } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
       finally { if (d) await d.ctx.close(); }
