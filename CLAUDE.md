@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.12.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.13.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -18,13 +18,13 @@ stay short enough to read in full before starting work.
 > scheduled check reads the section every 4 hours (Sydney time). The first, separate
 > Siyagah sheet (https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC) is a read-only backup. The pinned status issue #52 stays
 > as a mirror for the builder. Set up 12 Oct 2026 (v05.09).
-> **Programme Lead (approved 12 Oct):** Claude in the BWN chat leads every project's
-> Architect. At the start of every session act on any "PL ▸" line in Siyagah's jobs
+> **Programme Lead (approved 12 Oct):** the Project Chief Architect (PCA) in the shared PCF leads every project's Master Architect (since 14 Oct; earlier, the Programme Lead in the BWN chat). At the start of every session act on any "PCA ▸" (or older "PL ▸"/"PM ▸") line in Siyagah's jobs
 > first and reply under it; clear a 📣 Notify flag (`p/siy.notify`) once checked.
 > Keep `p/siy.monitor` ({text, at}, "Who's working on what") current at the start and
 > end of each piece of work, the About tab (`p/siy.about`) current, and every feature
 > in the User Manual tab (`p/siy.manual`: one heading per feature, then What it does ·
 > Benefit · How to use). The owner's word always overrides the PL.
+> **Keep working, never idle (owner's general rule, 14 Oct 2026).** Every Master Architect and every builder works continuously. Stop and ask only when a decision or answer from the owner is needed: ask it with tick boxes, then carry on with everything else meanwhile. When a job is done, take the next one at once and keep a builder round running. When no job is left, audit the app feature by feature (the User Manual list is the checklist) on phone, tablet and desktop, record every defect found as a job, and fix it with the usual checks. The Project Chief Architect (PCA, who now leads every project's Master Architect in the shared PCF) does the same across all projects.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -41,7 +41,7 @@ must never accumulate here instead of there.
   `topics[]`; shopping fields `qty` and `shop` (short strings). Ideas: tappable ☆/★, `# topic` chips, a Sort (Newest | ★ Stars) and
   Group by (None | Topic) bar kept in `DB.theme.zabIdeaView[pid]`. Shopping: quantity chip edited inline, shop chip, a 🏪 Shop filter
   (`zabShopView[pid]`), ticked items under "In the basket (n)", quick typing ("2 milk", "milk @Coles"), 🧹 Clear basket. Check: block 72,
-  `tools/zab-z6c.mjs`. Builder: `--only 72,60,64,65,69,70,71` **1630/1630**, `ship-check` 14/14; the Architect runs the full `app-check`.
+  `tools/zab-z6c.mjs`. Architect: full `app-check` **4701/4701, twice**; unpatched `--only 72` 0/4.
 - **v05.11** (13 Oct 2026) — Z6b, the Tasks pocket (issue #169, PCF J15). Task fields on the item: `due` ('YYYY-MM-DD', device-local
   day via `_jebToday()`), `pri` (1 = high, a number), `steps` ([{id,t,d}], sync with the item: last write wins on the whole item).
   List grouped Overdue/Today/Tomorrow/Later/No date/Done (folded); chips, ⚑, "2/5" counter; chooser (popover ≥640, bottom sheet

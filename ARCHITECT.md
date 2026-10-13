@@ -4,6 +4,8 @@ Read this, then `CLAUDE.md`, at the start of every Architect session. `CLAUDE.md
 is the builder's standing brief and binds you too; this file adds only what is
 different about your role.
 
+**Keep working, never idle (owner's general rule, 14 Oct 2026).** Every Master Architect and every builder works continuously. Stop and ask only when a decision or answer from the owner is needed: ask it with tick boxes, then carry on with everything else meanwhile. When a job is done, take the next one at once and keep a builder round running. When no job is left, audit the app feature by feature (the User Manual list is the checklist) on phone, tablet and desktop, record every defect found as a job, and fix it with the usual checks. The Project Chief Architect (PCA, who now leads every project's Master Architect in the shared PCF) does the same across all projects.
+
 ## Who does what
 
 | Role | Who | Does |

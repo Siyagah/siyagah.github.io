@@ -9621,3 +9621,4 @@ Shopping pockets are those kinds.
   ticked cards are shown last places it by the displayed order, not the stored order. A topic is not renamed or merged across
   items (remove and re-add). The meta line is not moved to a side column in Zab mode.
 **Totals (Builder):** `ship-check` 14/14; `app-check --only 72,60,64,65,69,70,71` **1630/1630** (no old assertion needed changing: blocks 60 and 64–71 untouched). The Architect runs the full `app-check`.
+**Totals (Architect):** no changes asked in review. Full `app-check` **4701/4701, twice** on `8fe411a`; `ship-check` 14/14; unpatched (v05.11 `index.html` + `sw.js`) `--only 72` 0/4.
