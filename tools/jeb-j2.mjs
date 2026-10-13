@@ -147,6 +147,9 @@ try {
     await openPanel(d, vp, 'Quick tasks');
     const row = (txt) => `#jeb-panel .jeb-it:has(.jeb-tx:text-is("${txt}"))`;
     await act(d, vp, `${row('Alpha')} .jeb-tick`); await sleep(300);
+    /* v05.11 (Z6b), updated in place: Quick tasks is a Tasks pocket, so a ticked item moves into the folded Done group;
+       "the item stays, struck through" is now read after unfolding it (the same rows, one tap further). */
+    await act(d, vp, '#jeb-panel .jt-gdone'); await sleep(300);
     let c = (await chipCounts(d))[0], done = await on(d, () => document.querySelector('#jeb-panel .jeb-it.done .jeb-tx') && [...document.querySelectorAll('#jeb-panel .jeb-it.done')].length);
     check(c === 'Quick tasks:1' && done === 2, `${t} ticking an item: count 2 -> 1, the item stays, struck through`, c + ' done rows ' + done);
     await act(d, vp, `${row('Alpha')} .jeb-tick`); await sleep(300);
@@ -190,8 +193,10 @@ try {
   if (want('60e')) await each(async (d, vp) => {
     const t = `60e@${vp.name}`;
     await openPanel(d, vp, 'Quick tasks');
-    /* order now: Alpha, Bravo, Done one -> drag "Done one" above "Alpha" */
-    const g = await d.page.locator('#jeb-panel .jeb-it:has(.jeb-tx:text-is("Done one")) .jeb-grip').boundingBox();
+    /* order now: Alpha, Bravo, Done one -> drag "Done one" above "Alpha".
+       v05.11 (Z6b), updated in place: Quick tasks is a Tasks pocket, where a done item sits in the folded Done group and a drag
+       stays inside its group - so the same drag is made with "Bravo" (same group as Alpha) and the done item is not drawn. */
+    const g = await d.page.locator('#jeb-panel .jeb-it:has(.jeb-tx:text-is("Bravo")) .jeb-grip').boundingBox();
     const a = await d.page.locator('#jeb-panel .jeb-it:has(.jeb-tx:text-is("Alpha"))').boundingBox();
     const from = { x: g.x + g.width / 2, y: g.y + g.height / 2 }, to = { x: from.x, y: a.y + 4 };
     if (vp.touch) {
@@ -204,14 +209,14 @@ try {
     }
     await sleep(500);
     const tx = await itemTexts(d);
-    check(tx.join('|') === 'Done one|Alpha|Bravo', `${t} dragging ⠿ moves "Done one" to the top (${vp.touch ? 'real touch drag' : 'mouse'})`, tx.join('|'));
+    check(tx.join('|') === 'Bravo|Alpha', `${t} dragging ⠿ moves "Bravo" to the top (${vp.touch ? 'real touch drag' : 'mouse'})`, tx.join('|'));
     await sleep(600);
     await d.page.reload({ waitUntil: 'domcontentloaded' });
     await d.page.waitForFunction(() => window.__appBooted === true && !!document.getElementById('jeb-bar'));
     await sleep(500);
     await openPanel(d, vp, 'Quick tasks');
     const tx2 = await itemTexts(d);
-    check(tx2.join('|') === 'Done one|Alpha|Bravo', `${t} the new order persists across a reload`, tx2.join('|'));
+    check(tx2.join('|') === 'Bravo|Alpha', `${t} the new order persists across a reload`, tx2.join('|'));
     noErr(d, t);
   });
 
