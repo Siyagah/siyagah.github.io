@@ -11917,6 +11917,23 @@ await r.block('69-keyboard-restyle', async () => {
   r.check(out.status === 0, 'the P1 keyboard-restyle check exits cleanly', `exit ${out.status}`);
 });
 
+/* 70 — v05.10, Z6a: pocket kinds and the Links pocket. tools/zab-z6a.mjs runs 70a–70i at 390/820/1440 with real taps or
+   clicks and every network call (oEmbed, thumbnails) routed to local fixtures: the derived kinds and the "🧩 Pocket kind"
+   menu; YouTube title/channel/thumbnail and the quiet failures; the 👤 and # pickers; the phone's combining filters; the
+   tablet/laptop grid with Group by; → Note, Attach, deck, Trash; two-device sync; 300 links at ×4 CPU; contrast on five
+   presets. Each printed ok/FAIL line becomes one check. */
+await r.block('70-zab-links', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-z6a.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the Z6a Links check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z6a: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Z6a Links check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
