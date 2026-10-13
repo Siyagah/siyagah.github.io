@@ -9577,3 +9577,4 @@ seeded "Quick tasks" pocket is one) groups its items by day, flags high priority
   full `app-check`.
 - **Not done:** Ideas and Shopping (Z6c, v05.12); times of day; repeating tasks; reminder emails for task dates. A task's steps
   have no drag-to-reorder. A checklist button in the editor.
+**Totals (Architect):** one review fix asked (task rows laid out by the panel's width, check 71j: failed at 820/1440 on the first cut). Full `app-check` **4310/4310, twice** on `829ccb4`; `ship-check` 14/14; unpatched (v05.10 `index.html` + `sw.js`) `--only 71` 0/6.

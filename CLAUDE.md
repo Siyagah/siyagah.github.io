@@ -41,7 +41,7 @@ must never accumulate here instead of there.
   day via `_jebToday()`), `pri` (1 = high, a number), `steps` ([{id,t,d}], sync with the item: last write wins on the whole item).
   List grouped Overdue/Today/Tomorrow/Later/No date/Done (folded); chips, ⚑, "2/5" counter; chooser (popover ≥640, bottom sheet
   <640); quick typing "!"/today/tomorrow; red bar badge. Check: block 71, `tools/zab-z6b.mjs`. 60d/60e updated in place (Done group).
-  Builder: block 71 + 60/64/65/69/70 only; the Architect runs the full `app-check`.
+  Architect: full `app-check` **4310/4310, twice**; unpatched `--only 71` 0/6.
 - **v05.10** (13 Oct 2026) — Z6a, pocket kinds and the Links pocket (issue #167, PCF J15). A pocket gets an optional
   `ztype` (`plain|links|tasks|ideas|shop`, derived from the seed id when absent, read only by `_jebType(pk)`); only
   `links` differs. Link items carry `url ttl ch th people[] issues[]`; YouTube title/channel by oEmbed, quiet on failure;
