@@ -9578,3 +9578,46 @@ seeded "Quick tasks" pocket is one) groups its items by day, flags high priority
 - **Not done:** Ideas and Shopping (Z6c, v05.12); times of day; repeating tasks; reminder emails for task dates. A task's steps
   have no drag-to-reorder. A checklist button in the editor.
 **Totals (Architect):** one review fix asked (task rows laid out by the panel's width, check 71j: failed at 820/1440 on the first cut). Full `app-check` **4310/4310, twice** on `829ccb4`; `ship-check` 14/14; unpatched (v05.10 `index.html` + `sw.js`) `--only 71` 0/6.
+
+## v05.12 — Z6c, the Ideas and Shopping pockets (issue #171, PCF J15)
+
+The last two pocket kinds with their own features. `_jebType(pk)` is still the only switch (`ideas`, `shop`); the seeded Ideas and
+Shopping pockets are those kinds.
+
+- **Fields (optional, additive, I8, no migration).** Ideas: `stars` = 1–3 (a number; absent = none), `topics` = strings. Shopping:
+  `qty` (a short string: "2", "500 g", "1 dozen") and `shop` (a string). All go through `jebEditItem`'s allow-list (empty = the key
+  is deleted; topics are de-duplicated without regard to case) and into `_jebItemSig` (`_jebKindSig`).
+- **Ideas.** Each row: three tappable stars ☆/★ (36×36 px; tap one to set that many, tap the current top star again to clear) and
+  `# topic` chips. A bar above the list: **Sort** Newest | ★ Stars and **Group by** None | Topic, kept per pocket in
+  `DB.theme.zabIdeaView[pid]={s,g}`. *Newest* is the pocket's own order (new items go on top, a drag is kept); ★ Stars is stars high
+  to low, ties in that order. Group by Topic: one group per topic with a count, an idea with several topics under each, "No topic
+  yet" last. ⋯ menu: **★ Stars…** (a chooser with boxes: None / ★ / ★★ / ★★★) and **# Topic…** (the Z6a picker, `_jebPickOpen`, now
+  also serving `topics`: the names used in the pocket with tick boxes, New…, Done). A topic no idea uses any more stops being listed.
+- **Shopping.** Each row: tick, text, a quantity chip (tap it: a small text field, Enter or tapping away saves, empty clears, Escape
+  cancels; "＋ Qty" when none) and a shop chip ("🏪 Coles" or "🏪 Shop"; the same picker, one shop per item, picking replaces).
+  **Ticked items drop under "In the basket (n)"**, struck through, never folded; unticking returns the item to its place. A
+  **🏪 Shop** filter row (All + each shop used) is kept in `DB.theme.zabShopView[pid]={f}` and falls back to All when no item uses
+  that shop. **Quick typing** in the add box (shopping pockets only): a leading quantity ("2 milk", "500g flour" / "500 g flour" →
+  "500 g", "1 dozen eggs") and a trailing "@shop" ("milk @Coles"); markers are stripped only when text is left; one hint line the
+  first time (`zabShopHint`). **🧹 Clear basket (n)** replaces Clear done in a shopping pocket; it goes to Trash exactly like Clear
+  done and restores. ⋯ menu: **🔢 Quantity…**, **🏪 Shop…**.
+- **→ Note.** Idea: the text, then "★★ · # topic, # topic". Shopping: the title is "qty text", then "🏪 shop".
+- **"All pockets" and the deck.** Rows in "All pockets" are the same rows (tappable stars, chips), with no view bar or filter; a
+  shopping group lists ticked items last. Deck cards show stars and topic chips (or quantity and shop chips) under the text; a star
+  on a card is tappable, a card with no stars shows none (⋯ → ★ Stars… adds them), and ⋯ → 🔢 Quantity… on a card uses the app's
+  dialog. Ticked shopping cards are last.
+- **Moving between pockets.** Nothing is stripped (I1): an idea's stars and topics, a shopping item's quantity and shop, and a task's
+  date/flag/steps stay on the item and are drawn only where its kind draws them; a task moved into Shopping is drawn as a shopping
+  row. Trash and restore carry the whole item.
+- **Layouts (D5).** The meta line sits **under the text at every panel width**, so nothing here follows the window (the v05.11
+  lesson); the view and filter bars are one horizontally scrollable line and fit 390 px without scrolling. No new bottom-fixed
+  element (the stars chooser and pickers use the app's dialog), so block 69's lists are unchanged. Filled ★ carries its own paper
+  and ink (dark brown on pale amber, as the task flag).
+- **Cost.** Rows carry `content-visibility:auto`. 300 ideas at 390, CPU ×4: **76 / 46 / 49 / 47 ms**; 300 shopping items:
+  **87 / 45 / 41 / 47 ms** (median ≤ 300 ms).
+- **Check.** Block 72 `72-zab-ideas-shop`, `tools/zab-z6c.mjs`, 72a–72k at 390/820/1440 (72h also at 1440 + `/?jeb=1`) with real
+  taps or clicks. On the unpatched build (v05.11 `index.html`) it throws at its first step (0/2).
+- **Not done:** prices and totals; shared shopping lists; recurring items. Dragging a card in the deck of a shopping pocket while
+  ticked cards are shown last places it by the displayed order, not the stored order. A topic is not renamed or merged across
+  items (remove and re-add). The meta line is not moved to a side column in Zab mode.
+**Totals (Builder):** `ship-check` 14/14; `app-check --only 72,60,64,65,69,70,71` **1630/1630** (no old assertion needed changing: blocks 60 and 64–71 untouched). The Architect runs the full `app-check`.

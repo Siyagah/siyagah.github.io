@@ -37,6 +37,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.12** (13 Oct 2026) — Z6c, the Ideas and Shopping pockets (issue #171, PCF J15). Idea fields `stars` (1–3, a number) and
+  `topics[]`; shopping fields `qty` and `shop` (short strings). Ideas: tappable ☆/★, `# topic` chips, a Sort (Newest | ★ Stars) and
+  Group by (None | Topic) bar kept in `DB.theme.zabIdeaView[pid]`. Shopping: quantity chip edited inline, shop chip, a 🏪 Shop filter
+  (`zabShopView[pid]`), ticked items under "In the basket (n)", quick typing ("2 milk", "milk @Coles"), 🧹 Clear basket. Check: block 72,
+  `tools/zab-z6c.mjs`. Builder: `--only 72,60,64,65,69,70,71` **1630/1630**, `ship-check` 14/14; the Architect runs the full `app-check`.
 - **v05.11** (13 Oct 2026) — Z6b, the Tasks pocket (issue #169, PCF J15). Task fields on the item: `due` ('YYYY-MM-DD', device-local
   day via `_jebToday()`), `pri` (1 = high, a number), `steps` ([{id,t,d}], sync with the item: last write wins on the whole item).
   List grouped Overdue/Today/Tomorrow/Later/No date/Done (folded); chips, ⚑, "2/5" counter; chooser (popover ≥640, bottom sheet
@@ -56,10 +61,6 @@ must never accumulate here instead of there.
   each keyboard up/down: ~0.9 s at 9,000 notes on a ×4 phone. `--jeb-h` is now `@property … inherits:false`, set
   on its 10 users only (`<html>` always reads 0px; read `#p2`); `--jeb-l` goes on `#jeb-bar`/`#jeb-deck`. Now
   ~12 ms of style. Check: block 69, `tools/jebh-p1.mjs`. Architect: full `app-check` **3808/3808, twice in a row**; unpatched `--only 69` 17/28.
-- **v05.07** (10 Oct 2026) — V1, the sidebar fold arrows are readable (issue #163). `#sb`
-  `.sec-tog` 10 px → 16 px, `.tr-tog` 22 px (`.sf-grp-tog` is Pane 2 only); all inked full `--sb-ink` (was
-  `-dim`). Row heights and tap areas unchanged. Pane 2/3 arrows left small (listed in
-  CHANGELOG). Check: block 68, `tools/arrows-v1.mjs`. Architect: full `app-check` **3780/3780, twice in a row**.
 ---
 
 ## What this is
@@ -475,6 +476,18 @@ A failing check is a wrong assertion surprisingly often — investigate before
   overdue, red if any overdue, else the open count; the chip's title states the rule only then). A 20 s timer + `visibilitychange` repaint
   when the day changes (`_jebLastDay`); the panel/deck signatures carry today for tasks. → Note: the editor has NO checklist button, so
   steps become a plain `<ul>` with ☑/☐ in the text. A new task field goes in `_jebItemSig`; an API edit from a test needs `jebRefresh()`.
+- **The Ideas and Shopping pockets (v05.12, Z6c — same shape again: `_jebType(pk)` is the only switch).** Item fields `stars` (1–3, a
+  number; absent = none), `topics` (strings, de-duplicated without regard to case), `qty` and `shop` (trimmed strings) all go through
+  `jebEditItem` (empty = the key is deleted) and `_jebKindSig` (inside `_jebItemSig`). Both kinds are drawn by `_jebKindRowHTML` (one
+  row shape; `_jebKindMeta(i,pk,card)` is the stars/topics or quantity/shop line, read-only chips on a deck card) from `_jebRowHTML` and
+  `_jebCardHTML`; the line sits UNDER the text at every width, so nothing here follows the window. Ideas: `_jebIdeaPanelHTML` (view bar
+  `.ji-bar`; Newest = the pocket's own order, new items on top; Group by Topic puts a multi-topic idea under each topic, "No topic yet"
+  last). Shopping: `_jebShopPanelHTML` (filter row `.js-filters`, open items, then `.js-basket` "In the basket (n)", never folded);
+  `_jebBasketLast` puts ticked items last in "All pockets" and the deck. `_jebPickOpen` serves `topics` (many) and `shop` (one, as a
+  string; `single`) as well as people/issues; `_jebLinkNames` accepts a string field. Stars: `_jebKindTap` (panel and deck) and
+  `_jebStarsOpen`; quantity: `_jebQtyEdit` (inline in the panel, the app's dialog on a deck card; `_jebQtyOpen()` stops a repaint
+  under the open box). Quick typing: `_jebShopParse`. A new field of these kinds goes in `_jebKindSig`; their typing hint reuses
+  `.jt-hint` (`zabShopHint`). Not drawn outside their own kind, never stripped by a move (I1).
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
