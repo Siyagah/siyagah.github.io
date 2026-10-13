@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.10.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.11.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -37,11 +37,16 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.11** (13 Oct 2026) — Z6b, the Tasks pocket (issue #169, PCF J15). Task fields on the item: `due` ('YYYY-MM-DD', device-local
+  day via `_jebToday()`), `pri` (1 = high, a number), `steps` ([{id,t,d}], sync with the item: last write wins on the whole item).
+  List grouped Overdue/Today/Tomorrow/Later/No date/Done (folded); chips, ⚑, "2/5" counter; chooser (popover ≥640, bottom sheet
+  <640); quick typing "!"/today/tomorrow; red bar badge. Check: block 71, `tools/zab-z6b.mjs`. 60d/60e updated in place (Done group).
+  Builder: block 71 + 60/64/65/69/70 only; the Architect runs the full `app-check`.
 - **v05.10** (13 Oct 2026) — Z6a, pocket kinds and the Links pocket (issue #167, PCF J15). A pocket gets an optional
   `ztype` (`plain|links|tasks|ideas|shop`, derived from the seed id when absent, read only by `_jebType(pk)`); only
   `links` differs. Link items carry `url ttl ch th people[] issues[]`; YouTube title/channel by oEmbed, quiet on failure;
   phone = compact rows + combining Person/Issue filters, tablet/laptop = card grid + Group by. Check: block 70,
-  `tools/zab-z6a.mjs`. 300 links at ×4 CPU paint in ~115–191 ms (459–681 ms before `content-visibility`). Builder: block 70 + 60/64/65/69 only; the Architect runs the full `app-check`.
+  `tools/zab-z6a.mjs`. 300 links at ×4 CPU paint in ~115–191 ms (459–681 ms before `content-visibility`). Architect: full `app-check` **4009/4009, twice**; unpatched `--only 70` 0/3.
 - **v05.09** (12 Oct 2026) — The Project Control File (Architect): Siyagah's section SIY of the
   owner's shared PCF https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ (jobs, rules, what waits on the owner,
   guides), read first and updated last by every session; the permanent rule above, `claude/PROJECT-RULES.md`,
@@ -55,12 +60,6 @@ must never accumulate here instead of there.
   `.sec-tog` 10 px → 16 px, `.tr-tog` 22 px (`.sf-grp-tog` is Pane 2 only); all inked full `--sb-ink` (was
   `-dim`). Row heights and tap areas unchanged. Pane 2/3 arrows left small (listed in
   CHANGELOG). Check: block 68, `tools/arrows-v1.mjs`. Architect: full `app-check` **3780/3780, twice in a row**.
-- **v05.06** (10 Oct 2026) — R1, reminder emails (issue #160). `DB.theme.remindMail={on,hour}`;
-  while on, a synced device writes one cloud doc `notebooks/{nb}/remind/v1` (`_remTick`,
-  `_remList`); a helper in the owner's own Google account (Apps Script, text built by
-  `_remGs()` / `_remJson()`) emails them from their own Gmail. Panel: 🧰 → 🔔 Reminder
-  emails and a line in the reminder dialog (dialog on PC/tablet, sheet on a phone).
-  Check: block 67, `tools/remind-r1.mjs`. Not done: My Calendar events, phone push, repeats. Architect: full `app-check` **3652/3652, twice in a row**; unpatched `--only 67` 0/6.
 ---
 
 ## What this is
@@ -463,6 +462,19 @@ A failing check is a wrong assertion surprisingly often — investigate before
   and deck repaint signatures use `_jebItemSig(item)`: **a new item field goes there**. Rows use `content-visibility:auto`
   (300 links painted in 459–681 ms without it). The 👤/# pickers are the app's modal, not a new fixed element. → Note on a link
   uses a plain `<img src>` for the thumbnail (no CORS, so no bytes to store as a picture reference).
+- **The Tasks pocket (v05.11, Z6b — same shape as Z6a: `_jebType(pk)==='tasks'` is the only switch).** Item fields `due` (date only), `pri`
+  (number, 1 = high), `steps` [{id,t,d}] — all through `jebEditItem`'s allow-list (`due`/`pri` deleted when empty, `steps` deep-copied)
+  and `_jebItemSig`; steps are part of the ONE item record, so they sync with it (whole-item last write wins). "Today" comes only from
+  `_jebToday()`; groups from `_jebTaskGroups` (high priority first, then `order`; Done folded, per pocket in the session set
+  `_jebDoneOpen`). Rows are `_jebTaskRowHTML` (mode from `_jebTaskMode()` = the PANEL's measured width: `w` = chip/flag/counter in a right-hand column only when `#jeb-panel` ≥ 560 px (Zab mode), `c` = under the text at every window size, and in
+  "All pockets"); the panel list `_jebTaskPanelHTML` / `_jebTaskMultiHTML`; the group lists carry `jl-list` so a drag is placed against
+  its neighbours and never changes a date. The chooser `#jeb-due` (`_jebDueOpen`; popover measured and clamped ≥640, bottom sheet <640,
+  z 9150, sits over the bar on purpose so it is NOT in the `--jeb-h` lists). Steps: `_jebStepsHTML`, events delegated from
+  `_jebWireOnce`; a step action repaints with `_jebStepsAfter` (`_jebForce`), because a repaint is otherwise skipped while the caret is in
+  a step box (`_jebStepTyping`); a card in the deck shows steps in the app's modal. The bar number is `_jebChipInfo` (due today +
+  overdue, red if any overdue, else the open count; the chip's title states the rule only then). A 20 s timer + `visibilitychange` repaint
+  when the day changes (`_jebLastDay`); the panel/deck signatures carry today for tasks. → Note: the editor has NO checklist button, so
+  steps become a plain `<ul>` with ☑/☐ in the text. A new task field goes in `_jebItemSig`; an API edit from a test needs `jebRefresh()`.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
