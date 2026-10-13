@@ -9485,3 +9485,7 @@ changed; the version moves because `CLAUDE.md` did.**
   is recorded as **D8** in `CLAUDE.md`. The Programme Lead duties (PL lines first,
   📣 Notify, "Who's working on what", About, User Manual) are in the permanent rule.
 
+
+## v05.10 — Z6a, pocket kinds and the Links pocket (issue #167, PCF J15)
+
+- Stub: work in progress. Final entry follows in this same round.
