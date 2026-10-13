@@ -41,7 +41,7 @@ must never accumulate here instead of there.
   `ztype` (`plain|links|tasks|ideas|shop`, derived from the seed id when absent, read only by `_jebType(pk)`); only
   `links` differs. Link items carry `url ttl ch th people[] issues[]`; YouTube title/channel by oEmbed, quiet on failure;
   phone = compact rows + combining Person/Issue filters, tablet/laptop = card grid + Group by. Check: block 70,
-  `tools/zab-z6a.mjs`. 300 links at ×4 CPU paint in ~115–191 ms (459–681 ms before `content-visibility`). Builder: block 70 + 60/64/65/69 only; the Architect runs the full `app-check`.
+  `tools/zab-z6a.mjs`. 300 links at ×4 CPU paint in ~115–191 ms (459–681 ms before `content-visibility`). Architect: full `app-check` **4009/4009, twice**; unpatched `--only 70` 0/3.
 - **v05.09** (12 Oct 2026) — The Project Control File (Architect): Siyagah's section SIY of the
   owner's shared PCF https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ (jobs, rules, what waits on the owner,
   guides), read first and updated last by every session; the permanent rule above, `claude/PROJECT-RULES.md`,

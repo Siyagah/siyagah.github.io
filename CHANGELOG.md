@@ -9523,3 +9523,4 @@ phone and A on a tablet and laptop.
   with the layout cost (above).
 - **Not done:** Tasks, Ideas and Shopping behave as before (Z6b/Z6c). Dragging a link between groups or across a filter
   only reorders within what is shown; it does not change a person or issue. Phone filters pick one name per row.
+**Totals (Architect):** full `app-check` **4009/4009** on `44776a2`, then 4004/4006 (two 52d checks; a test-script `TypeError` reading `title`, not reproduced in 240 standalone trials on the branch or on `main`), then **4009/4009** again; `ship-check` 14/14; unpatched (v05.09 `index.html` + `sw.js`) `--only 70` 0/3. 70h now judges the median of four openings (one cold opening read 313 ms under full-suite load; 249 ms worst alone).
