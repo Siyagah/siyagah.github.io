@@ -9524,3 +9524,52 @@ phone and A on a tablet and laptop.
 - **Not done:** Tasks, Ideas and Shopping behave as before (Z6b/Z6c). Dragging a link between groups or across a filter
   only reorders within what is shown; it does not change a person or issue. Phone filters pick one name per row.
 **Totals (Architect):** full `app-check` **4009/4009** on `44776a2`, then 4004/4006 (two 52d checks; a test-script `TypeError` reading `title`, not reproduced in 240 standalone trials on the branch or on `main`), then **4009/4009** again; `ship-check` 14/14; unpatched (v05.09 `index.html` + `sw.js`) `--only 70` 0/3. 70h now judges the median of four openings (one cold opening read 313 ms under full-suite load; 249 ms worst alone).
+
+## v05.11 — Z6b, the Tasks pocket (issue #169, PCF J15)
+
+The second pocket kind with its own features. A pocket whose kind is **Tasks** (`_jebType(pk)==='tasks'`, the only switch; the
+seeded "Quick tasks" pocket is one) groups its items by day, flags high priority and holds sub-steps you tick.
+
+- **Fields (optional, additive, I8, no migration).** `due` = `'YYYY-MM-DD'` (a date, no time; absent = no date). `pri` = `1`
+  for high (a number, so more levels fit later; absent = normal). `steps` = `[{id,t,d}]` (`d:1` when done; ids from `uid()`, the
+  generator items use). All three go through `jebEditItem`'s allow-list (`due`/`pri` validated and deleted when empty; `steps`
+  deep-copied) and into `_jebItemSig`. **The item is one record, so steps sync with it: last write wins on the whole item, as
+  `text` does** - two devices editing different steps of the same task at once keep the newer device's whole item.
+  New API: `jebAddStep`, `jebEditStep`, `jebDeleteStep`. "Today" is the device's local date, from one helper, `_jebToday()`.
+- **The list (all sizes).** Overdue (red), Today, Tomorrow, Later, No date, and last Done (folded, with its count); empty groups
+  are not drawn. Inside a group: high priority first, then the pocket's own `order`. A drag reorders inside its group and never
+  sets a date. Each row: tick, text, a due chip ("Today", "Tomorrow", "Overdue · 3 d", else a short date in the owner's
+  locale), a "⚑ High" flag, and a steps counter "2/5". Tapping the counter opens the steps inside the row (tick box, text edited
+  in place, ✕, and a "＋ Step" box where Enter adds one and keeps the caret). Ticking the item leaves its steps alone.
+- **Setting a date and the flag.** The item ⋯ menu (in Z6a's marked slot): **📅 Due…**, **☐/☑ ⚑ High priority**, **☑ Steps…**. The
+  chooser lists Today · Tomorrow · Next week (Mon) · Pick a date (the native date input) · No date, a box for each, plus a ⚑ row;
+  the due chip and the flag open the same chooser. Quick typing in the add box (tasks pockets only): a trailing " !" is high
+  priority, a trailing " today" / " tomorrow" sets the date, the marker is stripped, never when nothing would be left or without a
+  space before it. A one-line hint shows under the add box the first time only (`DB.theme.zabTaskHint`).
+- **Layouts (D5).** Phone (<640): the groups as a sheet, chip/flag/counter under the text, the chooser a bottom sheet. Tablet and
+  laptop (≥640): chip, flag and counter in a column on the right of the row, the chooser a popover anchored to the chip (measured,
+  clamped to the window). "All pockets": a tasks pocket shows Overdue / Today / Tomorrow / Later / No date as small headers, no
+  Done group. The deck: a task card shows chip, flag and counter under its text (the counter opens the steps in the app's dialog).
+  The bar chip: a tasks pocket's number is **due today + overdue** when there are any, red when anything is overdue, else the open
+  count; its `title` states the rule while the number means that (it stays the plain name otherwise, so nothing that finds a chip by
+  its name changed).
+- **→ Note on a task.** Text, then "📅 due <date> · ⚑ high", then the steps as a list with ☑/☐ in front. **The editor has no
+  checklist button** (it has bullet and numbered lists, no checkbox list), so there is no checklist markup to copy: the steps are a
+  plain `<ul><li>☑ …</li></ul>`, which the editor already handles. A real checklist would be its own round.
+- **Move to another pocket / Trash.** Fields are kept and not shown outside a tasks pocket; moving back shows them. Trash and
+  restore carry the whole item (`JSON` copy).
+- **Midnight.** The panel, deck and bar signatures carry today's date for tasks, and a 20 s timer (plus `visibilitychange`) repaints
+  when the day changes, so a panel left open overnight regroups. **New bottom-fixed elements:** none (the chooser is a popover or
+  a sheet that sits over the bar on purpose, like the Attach sheet), so block 69's lists are unchanged.
+- **Cost.** Rows carry `content-visibility:auto`. 300 tasks at 390, CPU ×4: **109 / 86 / 85 / 73 ms** alone, 108 / 79 / 72 / 75 ms in
+  the combined run (median ≤ 300 ms).
+- **Checks.** Block 71 `71-zab-tasks`, `tools/zab-z6b.mjs`, 71a–71i at 390/820/1440, **291 checks**. 71a moves the clock with
+  `page.clock` (`addDevice` got an `opts.clock`). On the unpatched build (v05.10 `index.html`) it fails its first checks and then
+  throws: 0/4. Two assertions of block 60 were **updated in place** because this round deliberately changed what they describe:
+  60d ("the item stays, struck through" - a ticked task now sits in the folded Done group, so the check unfolds it first) and 60e
+  (the drag of the done item "Done one" - a done task is not drawn and a drag stays in its group, so the same drag is made with
+  Bravo). Blocks 64–70 untouched. Builder: `--only 71,60,64,65,69,70`: block 71 291/291, 60 203/203 after the update (the first
+  combined run was 1087/1091, the four failures all in 60d/60e), 64, 65, 69, 70 green; `ship-check` 14/14. The Architect runs the
+  full `app-check`.
+- **Not done:** Ideas and Shopping (Z6c, v05.12); times of day; repeating tasks; reminder emails for task dates. A task's steps
+  have no drag-to-reorder. A checklist button in the editor.
