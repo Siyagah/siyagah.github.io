@@ -132,7 +132,9 @@ try {
     check(JSON.stringify((await item(d, 'd5')).topics) === '["Home"]', `${t} New… adds a topic and ticks it`, JSON.stringify((await item(d, 'd5')).topics));
     await act(d, vp, '#mb input[data-n="Home"]'); await sleep(250);
     check(!('topics' in (await item(d, 'd5'))), `${t} unticking the last topic removes the key`, JSON.stringify(await item(d, 'd5')));
-    await act(d, vp, '#mb input[data-n="Home"]'); await sleep(250);
+    check(!(await on(d, () => !!document.querySelector('#mb input[data-n="Home"]'))), `${t} a topic no item uses any more is no longer listed`);
+    await act(d, vp, '#jl-pk-in'); await d.page.keyboard.type('Home'); await d.page.keyboard.press('Enter'); await sleep(300);
+    check(JSON.stringify((await item(d, 'd5')).topics) === '["Home"]', `${t} New… + Enter adds it again`);
     await act(d, vp, '#jl-pk-done'); await sleep(250);
     /* the view bar */
     const bar = await on(d, () => [...document.querySelectorAll('#jeb-panel .ji-bar button')].map((e) => e.textContent + (e.classList.contains('on') ? '*' : '')).join('|'));
