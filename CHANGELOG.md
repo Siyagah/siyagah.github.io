@@ -9485,3 +9485,41 @@ changed; the version moves because `CLAUDE.md` did.**
   is recorded as **D8** in `CLAUDE.md`. The Programme Lead duties (PL lines first,
   📣 Notify, "Who's working on what", About, User Manual) are in the permanent rule.
 
+
+## v05.10 — Z6a, pocket kinds and the Links pocket (issue #167, PCF J15)
+
+Zab pockets get a **kind**, and the first kind with its own features is **Links**. The owner chose design C on a
+phone and A on a tablet and laptop.
+
+- **Kind.** Optional `ztype` on a pocket (`plain|links|tasks|ideas|shop`; never `kind`, which on an item means Note
+  Type). Absent = derived from the seed id (`jp-link`→links, `jp-task`→tasks, `jp-idea`→ideas, `jp-shop`→shop, else
+  plain): nothing written, no migration. One reader, `_jebType(pk)`. `jebEditPocket` takes `ztype` (a bad value is
+  ignored). Pocket menu → **🧩 Pocket kind ▸**: five boxes, the current one ☑ and ✓. Only `links` differs this round.
+- **Link items.** Optional item fields `url ttl ch th people[] issues[]` (additive, I8). `url` follows the text in a links
+  pocket (`_jebLinkSync`); a changed url drops the fetched title/channel/thumbnail. The screen derives everything it
+  needs from the text (`_jebLinkOf`), so text typed before the pocket became Links still shows as a link.
+  YouTube (`watch?v=`, `youtu.be/`, `shorts/`, `www.`/`m.`): thumbnail `https://i.ytimg.com/vi/ID/mqdefault.jpg` built from the
+  id; title and channel from oEmbed, stored in one `jebEditItem` (one stamp). A failure is silent: no toast, one retry
+  per item per session on the next repaint (`_jebLinkTry`), at most 3 fetches per paint, no fetch from a `file:` copy.
+  Other sites: no fetch; the text is the title, the domain is under it. A picture that fails (`onerror`) becomes a ▶ box
+  in the pocket's colour with the domain; non-YouTube links show the same box. Person suggestion "👤 Add <channel>?"
+  (never automatic). 👤 / # pickers (the app's modal; names used in THIS pocket, a tick box each, "New…", Done), reached
+  from two buttons on the row and from the item's ⋯ menu.
+- **Layouts.** Phone: compact rows (96 px 16:9 thumbnail) under two filter chip rows, 👤 Person and # Issue, which combine.
+  Tablet/laptop: the panel widens (`#jeb-panel.jl-wide`, 780 px max) and shows cards in a grid (min 200 px) with
+  **Group by: People | Issues** and counts; "No person yet" / "No issue yet" last. The choices live in
+  `DB.theme.zabLinkView[pocketId] = {g,p,i}` (merged per sub-key: nothing extra to sync). "All pockets" shows the compact
+  rows at every size, no filters. Deck: a link card is the thumbnail on top, then the title. The repaint signatures of
+  the panel and the deck now come from one `_jebItemSig(item)` that includes every new field.
+- **→ Note on a link.** Title (or the item text) as a link to the URL, then the thumbnail, then "👤 Ann · # Rent, # Tax". The
+  thumbnail is a plain `<img src="https://i.ytimg.com/…">`, not a picture reference: the bytes live with YouTube, a
+  reference needs the bytes in the picture store and cross-origin bytes cannot be read (no CORS), so a reference would
+  only ever have been an empty one. Offline it shows as a missing image inside the note (it is not Zab's box).
+- **Cost.** 300 links at 390, CPU ×4 first took 459–681 ms to paint (layout of 300 rows: 229 ms). Rows now carry
+  `content-visibility:auto`: **115–191 ms**. The unpatched number is the evidence that the check can fail.
+- **New bottom-fixed elements:** none (the pickers use the app's modal), so block 69's lists are unchanged.
+- **Check:** block 70 `70-zab-links`, `tools/zab-z6a.mjs`, 70a–70i, at 390/820/1440. On the unpatched build the script
+  throws at its first line (`_jebType` does not exist), so every check fails with it; the scale check was also seen failing
+  with the layout cost (above).
+- **Not done:** Tasks, Ideas and Shopping behave as before (Z6b/Z6c). Dragging a link between groups or across a filter
+  only reorders within what is shown; it does not change a person or issue. Phone filters pick one name per row.

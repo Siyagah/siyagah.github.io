@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.09.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.10.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -37,6 +37,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.10** (13 Oct 2026) — Z6a, pocket kinds and the Links pocket (issue #167, PCF J15). A pocket gets an optional
+  `ztype` (`plain|links|tasks|ideas|shop`, derived from the seed id when absent, read only by `_jebType(pk)`); only
+  `links` differs. Link items carry `url ttl ch th people[] issues[]`; YouTube title/channel by oEmbed, quiet on failure;
+  phone = compact rows + combining Person/Issue filters, tablet/laptop = card grid + Group by. Check: block 70,
+  `tools/zab-z6a.mjs`. 300 links at ×4 CPU paint in ~115–191 ms (459–681 ms before `content-visibility`). Builder: block 70 + 60/64/65/69 only; the Architect runs the full `app-check`.
 - **v05.09** (12 Oct 2026) — The Project Control File (Architect): Siyagah's section SIY of the
   owner's shared PCF https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ (jobs, rules, what waits on the owner,
   guides), read first and updated last by every session; the permanent rule above, `claude/PROJECT-RULES.md`,
@@ -56,12 +61,6 @@ must never accumulate here instead of there.
   `_remGs()` / `_remJson()`) emails them from their own Gmail. Panel: 🧰 → 🔔 Reminder
   emails and a line in the reminder dialog (dialog on PC/tablet, sheet on a phone).
   Check: block 67, `tools/remind-r1.mjs`. Not done: My Calendar events, phone push, repeats. Architect: full `app-check` **3652/3652, twice in a row**; unpatched `--only 67` 0/6.
-- **v05.05** (10 Oct 2026) — Z1, "Jeb" becomes **"Zab"** on every screen the owner sees
-  (issue #158): bar, menus, "👝 from Zab", Smart View "(12) From Zab", Trash labels,
-  "Show Zab bar", the second icon "Siyagah Zab" (manifest `name`/`short_name`, title,
-  apple title). Words only: every internal name (`DB.jeb`, `jeb*`, `#jeb-*`, `fromJeb`,
-  `_JEB_APP`, `?jeb=1`, `manifest-jeb.json`, `icons/icon-jeb*`) is unchanged; no migration.
-  Check: block 66, `tools/zab-z1.mjs`. Architect: full `app-check` **3535/3535, twice in a row**; unpatched `--only 66` 130/290.
 ---
 
 ## What this is
@@ -454,6 +453,16 @@ A failing check is a wrong assertion surprisingly often — investigate before
   the owner pastes them into Google Apps Script. `check()` emails an item once per
   `id|at` (36 h late limit), so editing a time emails again. Tests execute the
   generated `Code.gs` in Node `vm` against mocks (block 67).
+- **Pocket kinds and the Links pocket (v05.10, Z6a — an extension of the Zab section above).** `ztype` on a pocket, **never `kind`** (an item's `kind` is its Note Type);
+  absent = derived (`jp-link`→links, `jp-task`→tasks, `jp-idea`→ideas, `jp-shop`→shop, else plain), nothing written, read
+  only through `_jebType(pk)`. 🧩 Pocket kind ▸ is in `_jebPocketMenu`. For `links`: item fields `url ttl ch th people[] issues[]`
+  (`jebEditItem` allow-list; `_jebLinkSync` keeps `url` with the text; `_jebLinkOf` derives what is drawn). YouTube thumbnail is
+  built from the id; title/channel by oEmbed (`_jebLinkFetch`, silent on failure, one retry a session). Rows are drawn by
+  `_jebLinkRowHTML` (mode `c` compact, `card` grid); the list by `_jebLinkPanelHTML` (<640: `.jl-filters`; ≥640: `.jl-bar` Group by +
+  `.jl-grid`, panel class `jl-wide`); choices in `DB.theme.zabLinkView[pid]={g,p,i}`. "All pockets" always uses compact rows. The panel
+  and deck repaint signatures use `_jebItemSig(item)`: **a new item field goes there**. Rows use `content-visibility:auto`
+  (300 links painted in 459–681 ms without it). The 👤/# pickers are the app's modal, not a new fixed element. → Note on a link
+  uses a plain `<img src>` for the thumbnail (no CORS, so no bytes to store as a picture reference).
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
