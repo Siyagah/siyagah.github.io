@@ -179,7 +179,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
   page.on('dialog', (x) => x.accept().catch(() => {}));
   page.on('pageerror', (e) => d.errors.push('pageerror: ' + e));
   page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) d.errors.push('console: ' + m.text()); });
-  await page.goto(base + '/', { waitUntil: 'domcontentloaded' });
+  await page.goto(base + (opts.path || '/'), { waitUntil: 'domcontentloaded' });
   await boot(d);
   cloud.devices.push(d);
   return d;

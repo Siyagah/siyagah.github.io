@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* tools/zab-z6b.mjs — v05.11, Z6b: the Tasks pocket (checks 71a–71i).
+/* tools/zab-z6b.mjs — v05.11, Z6b: the Tasks pocket (checks 71a–71j).
 
    Every check runs at 390x844, 820x1180 and 1440x900 (unless it names a size) against a booted app, with real taps
    (touch viewports) or clicks (1440). Nothing touches the network.
@@ -19,6 +19,8 @@
         "All pockets", Move to a plain pocket and back (fields kept), Trash and restore
    71g  sync: due, pri and steps set on device A arrive on device B (one fake cloud)
    71h  scale: 300 tasks at 390, CPU x4: the panel paints in <= 300 ms (median of 4 openings; all printed)
+   71j  layout: due chip / flag / counter follow the PANEL's width (< 560 under the text, >= 560 in the side column), not the window's;
+        Attach and → Note stay on one line and no row overflows (390, 820, 1440, and 1440 + /?jeb=1)
    71i  contrast of the new text on the five presets (headers, chips, Overdue red, flag, counter, badge, chooser, deck)
 
    `--only=71a,71c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 71). */
@@ -92,8 +94,8 @@ try {
       await act(d, vp, '#jeb-panel .jt-gdone'); await sleep(200);
       /* layout of one row */
       const geo = await on(d, () => { const r = (s) => { const e = document.querySelector(s); return e && e.getBoundingClientRect(); }; return { tx: r('#jeb-panel .jeb-it[data-iid="t3"] .jeb-tx'), due: r('#jeb-panel .jeb-it[data-iid="t3"] .jt-due'), flag: r('#jeb-panel .jeb-it[data-iid="t3"] .jt-flag'), body: r('#jeb-panel .jeb-it[data-iid="t3"] .jeb-body'), more: r('#jeb-panel .jeb-it[data-iid="t3"] .jeb-more') }; });
-      if (vp.w >= 640) check(geo.due.left >= geo.body.right - 2 && geo.flag.left >= geo.body.right - 2 && geo.due.right <= geo.more.left + 1, `${t} tablet/laptop: the due chip and flag sit on the right of the row, beside the text`, JSON.stringify(geo));
-      else check(geo.due.top >= geo.tx.bottom - 1 && geo.flag.top >= geo.tx.bottom - 1 && geo.due.right <= 390, `${t} phone: the due chip and flag sit under the text`, JSON.stringify(geo));
+      /* review fix (v05.11): the side column follows the PANEL's width (>= 560, Zab mode, see 71j); this panel is 380px at every window size */
+      check(geo.due.top >= geo.tx.bottom - 1 && geo.flag.top >= geo.tx.bottom - 1 && geo.due.right <= vp.w, `${t} ${vp.w >= 640 ? 'tablet/laptop (380px panel)' : 'phone'}: the due chip and flag sit under the text`, JSON.stringify(geo));
       /* a drag keeps the group and never changes a date */
       const before = { t6: await item(d, 't6'), t9: await item(d, 't9') };
       await on(d, () => { document.querySelector('#jeb-panel .jeb-it[data-iid="t9"]').scrollIntoView({ block: 'center' }); }); await sleep(250);
@@ -408,9 +410,34 @@ try {
     } finally { await d.ctx.close(); }
   }
 
+  /* ══ 71j — the row layout follows the panel, not the window ══ */
+  if (want('71j')) {
+    const cases = [...VPS.map((vp) => ({ vp, path: '/', tag: vp.name })), { vp: VPS[2], path: '/?jeb=1', tag: '1440-zab' }];
+    for (const c of cases) {
+      const d = await dev(makeCloud(), 'L' + c.tag, c.vp, seed((db) => { db.jeb.find((x) => x.id === 't3').steps = [{ id: 's1', t: 'a', d: 1 }, { id: 's2', t: 'b' }]; }), { path: c.path });
+      try {
+        await openPanel(d, c.vp);
+        const m = await on(d, () => {
+          const pw = document.getElementById('jeb-panel').clientWidth;
+          const rows = [...document.querySelectorAll('#jeb-panel .jt-it')];
+          const tops = rows.map((r) => { const a = r.querySelector('.jeb-att-b'), n = r.querySelector('.jeb-note-b'); return a && n ? [Math.round(a.getBoundingClientRect().top), Math.round(n.getBoundingClientRect().top)] : null; });
+          const split = tops.filter((t) => !t || t[0] !== t[1]).length;
+          const over = rows.filter((r) => r.scrollWidth > r.clientWidth).length;
+          const withDue = rows.filter((r) => r.querySelector('.jt-due, .jt-flag, .jt-cnt'));
+          const side = withDue.filter((r) => r.querySelector('.jt-side')).length, meta = withDue.filter((r) => r.querySelector('.jt-meta')).length;
+          return { pw, n: rows.length, split, over, side, meta, withDue: withDue.length };
+        });
+        const wide = m.pw >= 560;
+        const shapeOk = wide ? m.side === m.withDue && m.meta === 0 : m.meta === m.withDue && m.side === 0;
+        check(m.n >= 7 && m.withDue >= 5 && m.split === 0 && m.over === 0 && shapeOk, `71j@${c.tag} panel ${m.pw}px: chips ${wide ? 'in the side column' : 'under the text'}, Attach and → Note on one line in all ${m.n} rows, no row overflows`, JSON.stringify(m));
+        noErr(d, '71j@' + c.tag);
+      } finally { await d.ctx.close(); }
+    }
+  }
+
   /* ══ 71i — contrast ══ */
   if (want('71i')) await each(async (d, vp) => {
-    const wide = vp.w >= 640;
+    const wide = false;   /* v05.11 fix: a single tasks panel is 380px at every window size, so the chips are always under the text here */
     await on(d, () => { jebEditItem('t3', { steps: [{ id: 's1', t: 'a', d: 1 }, { id: 's2', t: 'b' }] }); });
     await openPanel(d, vp);
     await act(d, vp, '#jeb-panel .jeb-it[data-iid="t6"] .jt-cnt, #jeb-panel .jeb-it[data-iid="t3"] .jt-cnt'); await sleep(300);

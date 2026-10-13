@@ -9546,9 +9546,13 @@ seeded "Quick tasks" pocket is one) groups its items by day, flags high priority
   the due chip and the flag open the same chooser. Quick typing in the add box (tasks pockets only): a trailing " !" is high
   priority, a trailing " today" / " tomorrow" sets the date, the marker is stripped, never when nothing would be left or without a
   space before it. A one-line hint shows under the add box the first time only (`DB.theme.zabTaskHint`).
-- **Layouts (D5).** Phone (<640): the groups as a sheet, chip/flag/counter under the text, the chooser a bottom sheet. Tablet and
-  laptop (≥640): chip, flag and counter in a column on the right of the row, the chooser a popover anchored to the chip (measured,
-  clamped to the window). "All pockets": a tasks pocket shows Overdue / Today / Tomorrow / Later / No date as small headers, no
+- **Layouts (D5).** The row shape follows the **panel's own width**, not the window's (`_jebTaskMode()`, measured from `#jeb-panel`;
+  review fix). A single tasks panel is 380 px at every window size, so **phone, tablet and laptop all get chip, flag and counter
+  under the text** (the phone's panel is a sheet, the tablet's and laptop's a 380 px side panel). Only a panel ≥ 560 px wide (Zab
+  mode, `/?jeb=1`, 720 px on a laptop, full width on a tablet) puts them in a column on the right of the row. The chooser is a
+  bottom sheet <640 and a popover anchored to the chip (measured, clamped to the window) at ≥640. Check 71j: at 390, 820, 1440 and
+  1440 + `/?jeb=1`, Attach and → Note share a line in every row and nothing overflows; on the first cut it failed at 820 and 1440
+  (panel 379 px, side column, 2 of 7 rows split Attach from → Note). "All pockets": a tasks pocket shows Overdue / Today / Tomorrow / Later / No date as small headers, no
   Done group. The deck: a task card shows chip, flag and counter under its text (the counter opens the steps in the app's dialog).
   The bar chip: a tasks pocket's number is **due today + overdue** when there are any, red when anything is overdue, else the open
   count; its `title` states the rule while the number means that (it stays the plain name otherwise, so nothing that finds a chip by

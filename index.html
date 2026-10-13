@@ -22431,8 +22431,8 @@ function _jebKbCheck(){
 function _jebWireOnce(){
   if(_jebWired) return; _jebWired=true;
   try{ new ResizeObserver(jebLayout).observe(_jebEl('sb')); }catch(e){}
-  let wasWide=_jebWide();
-  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_jebWide()!==wasWide){ wasWide=_jebWide(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
+  let wasWide=_jebWide(), wasTk=_jebTaskMode();
+  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
   document.addEventListener('focusin',_jebKbCheck);
   document.addEventListener('focusout',()=>setTimeout(_jebKbCheck,0));
   document.addEventListener('pointerdown',e=>{
@@ -22777,6 +22777,11 @@ function _jebStepsHTML(i){
   return '<div class="jt-steps" data-iid="'+esc(i.id)+'">'+_jebSteps(i).map(x=>'<div class="jt-st" data-sid="'+esc(x.id)+'"><input type="checkbox" class="jt-stk" aria-label="Step done"'+(x.d?' checked':'')+'><input class="jt-sti'+(x.d?' done':'')+'" data-jeb="1" value="'+esc(x.t)+'" aria-label="Step" autocomplete="off"><button type="button" class="jt-stx" aria-label="Delete step" title="Delete step">✕</button></div>').join('')
     +'<div class="jt-st jt-stadd"><input class="jt-addin" data-jeb="1" placeholder="＋ Step" aria-label="Add a step" autocomplete="off" enterkeyhint="done"></div></div>';
 }
+/* v05.11: the side column is chosen by the PANEL's own width, never the window's (a single panel is 380px at any window size) */
+function _jebTaskMode(){
+  const p=_jebEl('jeb-panel'), w=p&&p.classList.contains('on')?p.clientWidth:0;
+  return (w?w:(_JEB_APP?window.innerWidth:0))>=560?'w':'c';
+}
 function _jebTaskRowHTML(i,pk,mode){
   const today=_jebToday(), wide=mode==='w', pcs=_jebTaskPieces(i,today,false), open=_jebStepsOpen.has(i.id);
   return '<div class="jeb-it jt-it'+(i.done?' done':'')+(wide?' jt-w':'')+(open?' jt-open':'')+'" data-iid="'+esc(i.id)+'"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"'+(i.done?' checked':'')+'>'
@@ -22787,7 +22792,7 @@ function _jebTaskRowHTML(i,pk,mode){
 /* the single-pocket list: Overdue, Today, Tomorrow, Later, No date, then Done (folded, with its count) */
 function _jebTaskPanelHTML(pk,items){
   if(!items.length) return '<div class="jeb-empty">Nothing here yet — jot a task above.</div>';
-  const mode=_jebWide()?'w':'c', pid=esc(pk.id);
+  const mode=_jebTaskMode(), pid=esc(pk.id);
   return _jebTaskGroups(items,true).map(g=>{
     const rows=g.items.map(i=>_jebTaskRowHTML(i,pk,mode)).join('');
     if(g.k==='done'){
@@ -22807,7 +22812,7 @@ function _jebItemSig(i){ return [i.id,i.text,i.done?1:0,i.url||'',i.ttl||'',i.ch
 function _jebRowHTML(i){
   const lpk=_jebPocket(i.pocketId);
   if(lpk&&_jebType(lpk)==='links') return _jebLinkRowHTML(i,lpk,'c');
-  if(lpk&&_jebType(lpk)==='tasks') return _jebTaskRowHTML(i,lpk,_jebWide()?'w':'c');   /* v05.11 · Z6b */
+  if(lpk&&_jebType(lpk)==='tasks') return _jebTaskRowHTML(i,lpk,_jebTaskMode());   /* v05.11 · Z6b */
   return `<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body"><div class="jeb-tx">${esc(i.text)}</div>${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`;
 }
 function _jebPaintPanel(){
@@ -22821,7 +22826,7 @@ function _jebPaintPanel(){
     _jebHintPid=pks[0].id;
     setTimeout(()=>{ if(!DB.theme) DB.theme={}; DB.theme.zabTaskHint=1; persist(); },0);
   }
-  const tkSig=pk=>_jebToday()+(_jebWide()?'W':'N')+(_jebDoneOpen.has(pk.id)?'D':'')+(_jebHintPid===pk.id?'H':'')+[..._jebStepsOpen].join(',');
+  const tkSig=pk=>_jebToday()+(_jebTaskMode()==='w'?'W':'N')+(_jebDoneOpen.has(pk.id)?'D':'')+(_jebHintPid===pk.id?'H':'')+[..._jebStepsOpen].join(',');
   const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W':'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):''),groups[k].map(_jebItemSig).join('|')].join('#')).join('@@')].join('%');
   if(sig===_jebPanelSig) return;
   /* never repaint under an item being typed in or dragged: it repaints when that ends */

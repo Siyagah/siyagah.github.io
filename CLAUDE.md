@@ -466,7 +466,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   (number, 1 = high), `steps` [{id,t,d}] — all through `jebEditItem`'s allow-list (`due`/`pri` deleted when empty, `steps` deep-copied)
   and `_jebItemSig`; steps are part of the ONE item record, so they sync with it (whole-item last write wins). "Today" comes only from
   `_jebToday()`; groups from `_jebTaskGroups` (high priority first, then `order`; Done folded, per pocket in the session set
-  `_jebDoneOpen`). Rows are `_jebTaskRowHTML` (mode `w` = chip/flag/counter in a right-hand column at ≥640, `c` = under the text and in
+  `_jebDoneOpen`). Rows are `_jebTaskRowHTML` (mode from `_jebTaskMode()` = the PANEL's measured width: `w` = chip/flag/counter in a right-hand column only when `#jeb-panel` ≥ 560 px (Zab mode), `c` = under the text at every window size, and in
   "All pockets"); the panel list `_jebTaskPanelHTML` / `_jebTaskMultiHTML`; the group lists carry `jl-list` so a drag is placed against
   its neighbours and never changes a date. The chooser `#jeb-due` (`_jebDueOpen`; popover measured and clamped ≥640, bottom sheet <640,
   z 9150, sits over the bar on purpose so it is NOT in the `--jeb-h` lists). Steps: `_jebStepsHTML`, events delegated from
