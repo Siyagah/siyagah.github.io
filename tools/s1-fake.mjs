@@ -175,6 +175,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
   const page = await ctx.newPage();
   d.page = page;
   if (opts.throttle) { d.cdp = await ctx.newCDPSession(page); await d.cdp.send('Emulation.setCPUThrottlingRate', { rate: opts.throttle }); }   /* v04.90 measurements: a phone's CPU */
+  if (opts.clock) await page.clock.install({ time: opts.clock });   /* v05.11 (71a): a fake clock, installed before the page loads; it still runs in real time until the test moves it */
   page.on('dialog', (x) => x.accept().catch(() => {}));
   page.on('pageerror', (e) => d.errors.push('pageerror: ' + e));
   page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) d.errors.push('console: ' + m.text()); });

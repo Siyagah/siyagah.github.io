@@ -22611,7 +22611,7 @@ function _jebOpenCounts(){
 function _jebChipInfo(p,cnt){
   if(_jebType(p)==='tasks'){
     const b=_jebTaskBadge(p.id);
-    return {n:b.n,red:b.red,title:p.name+' — the number counts tasks due today and overdue (red when any are overdue); when none is due it counts all open tasks'};
+    return {n:b.n,red:b.red,title:!b.due?p.name:p.name+' — the number counts tasks due today and overdue (red when any are overdue); when none is due it counts all open tasks'};
   }
   return {n:cnt[p.id]||0,red:false,title:p.name};
 }
