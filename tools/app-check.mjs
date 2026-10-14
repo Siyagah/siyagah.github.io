@@ -2525,7 +2525,10 @@ await r.block('6o-1-menu-reorg', async () => {
     /* v05.04 (issue #156, J5) — 👝 Siyagah Jeb in 🧰 Tools, added on purpose. */
     'openJebApp',
     /* v05.06 (issue #160, R1) — 🔔 Reminder emails in 🧰 Tools, added on purpose. */
-    'openRemindMail'];
+    'openRemindMail',
+    /* v05.13 (issue #173, S4a) — 📥 Evernote import in 🧰 Tools → Create, added on purpose
+       (the Architect's full run caught this list missing it: block 73 alone does not run 6o-1). */
+    'openEnexImport'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
   const lost = V0420.filter((f) => !now.includes(f));
   const added = [...new Set(now)].filter((f) => !V0420.includes(f));
