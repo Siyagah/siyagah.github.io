@@ -44,7 +44,7 @@ const linkItems = () => [
   mk('l4', 'https://example.org/x', 3),
   { id: 'z1', pocketId: 'jp-task', text: 'A task', done: false, folderIds: [], tags: [], kind: null, journal: false, order: 0, createdAt: T0, updatedAt: T0, people: ['Zed'] },
 ];
-const seed = (extra) => { const db = seedDB(T0); db.jeb = linkItems(); if (extra) extra(db); return db; };
+const seed = (extra) => { const db = seedDB(T0); db.jeb = linkItems(); if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.17: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
 const dev = async (cloud, name, vp, db, mode = {}) => {
   const d = await addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed());
   d.mode = { oembed: 'ok', thumb: 'ok', ...mode }; d.hits = { oembed: [], thumb: 0 };

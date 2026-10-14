@@ -9693,6 +9693,7 @@ The owner: "No it doesn't work offline. App opens on the page it was last opened
 - **Not done:** the inline layout state listed above is still in the file (needs an owner decision); a first-ever visit with no connection cannot load (nothing is cached yet); Google Fonts need the network on the first visit and then fall back to the system font offline; Drive backup and Google sign-in still need the network.
 - **Unpatched (the v05.13 `index.html` + `sw.js`, served by the same check):** `tools/offline-o1.mjs` **86/128, 42 FAILED**. 74a (clean offline) passes there, as the Architect measured. **74b fails at 390, 820 and 1440** (never boots), **74c fails at all three** (never boots with only Google hanging), and the failed lines of 74d–74h are the ones that describe this round: page errors on the offline device and the offline changes not reaching device B (74d), sync not starting and no retry after going online (74e), the Save File copy carrying `<script src>` and `<body style>` (74g), no "Offline" status or plain wording (74h), and a network silent for 5 s not being answered from the cache at 3 s (74f). I did not investigate the old build's page errors further. 74i is a check of this build's `ship-check` and passes there by construction.
 **Totals (Builder):** `ship-check` 15/15 (was 14: the new guard); `tools/offline-o1.mjs` 74a–74i all green on this build at 390/820/1440; `app-check --only 74,16,32,51,52,59,53d` **453/453** (74 = the O1 block; 16 boot incl. 16i service worker registers (I3); 32 sync audit; 51; 52; 59; 53d Save File opens offline from disk (I4)). The Architect runs the full `app-check` twice and the unpatched run.
+**Totals (Architect):** no change asked in review (the builder ended without opening its PR; the Architect opened #176). Full `app-check` **5069/5069, twice** (on `a7579bd` and `a6d6b4f`, which differ by one CHANGELOG line); `ship-check` 15/15; unpatched (v05.13 `index.html` + `sw.js`) `--only 74` 86/130, 44 failed.
 
 ## v05.15 — T1, on a phone the note's buttons sit on their own row and the title wraps in full (issue #177, PCF J16)
 
@@ -9712,6 +9713,7 @@ The owner, with a phone screenshot: "Move those buttons up from title bar. Make 
 - Check: block 75, `tools/title-t1.mjs` (75a edit layout at 360/390 with a 120-character title; 75b reading mode, reached by a real tap on ✕; 75c real typing, an inserted line break, Enter, autosave, reload, focus kept over a repaint, `pagehide`; 75d tablet/laptop unchanged; 75e both pop-ups; 75f contrast on five presets).
 - **Unpatched (`--unpatched`, v05.14 served as the build under test):** 39/72, **33 FAILED** (75a, 75b, 75c Enter/autosave/repaint, 75e, 75f); 75d passes there by construction, since it compares v05.14 with itself.
 - **Not done:** the empty title's placeholder measures 4.2–4.5:1 on four of the five presets (the browser's default placeholder colour, the same on the old `<input>`). The issue said the placeholder stays as it is, so I left it and dropped it from 75f; it is a one-line fix if the owner wants it. The pop-ups' title row on a phone still shares its row with ‹ › and ✚ New / Edit (that row is the pop-up's own layout, not the note's); the title wraps in the width that is left.**Totals (Builder):** `ship-check` 15/15; `tools/title-t1.mjs` 72/72; `app-check --only 75,6p,6k-4,6h,19,21c,6e,6f` **230/230** after one assertion was updated in place: 6p-01's "✕ stop-editing moved onto the title row" now looks for ✕ in `.p3c-actrow` and asserts it is NOT in the title bar (this round deliberately moved it). The Architect runs the full `app-check`.
+**Totals (Architect):** the Architect updated 37a (the pop-up title is a textarea on a phone) in place. Full `app-check` **5143/5143, twice** on `3a0ba38`; `ship-check` 15/15; unpatched (v05.14) `--only 75` 40/74. PR #178 was merged into the v05.14 branch by mistake; PR #181 brought the same tree onto `main`.
 
 
 ## v05.16 — N1, pockets inside pockets, no depth limit (issue #179, PCF J20, first half)
@@ -9735,3 +9737,85 @@ The owner (14 Oct) chose **pockets inside pockets, with no depth limit**. The de
 - **Unpatched (v05.15's `index.html` put back, `app-check --only 76`):** **0/4 passed, 4 FAILED** — the first check fails (the pocket menu has no "Move into…") and the run stops there.
 - **Architect's review: one change, plain item rows skip layout off the screen.** The Architect's first full run failed 76f's "All pockets" (54 groups, 300 items, 390, CPU ×4): median 364 ms against 300 (twice more alone: 374, 467). Measured on v05.15 with the same notebook, the same panel took 374–470 ms, so N1 did not cause it: plain rows were the only Zab rows without the `content-visibility:auto` that links, tasks and ideas/shopping rows already had. Added for plain rows only (not link, task, idea or shopping rows, which keep their own sizes, and not a row being edited): 191–238 ms.
 - **Totals (Builder):** `ship-check` 15/15; `app-check --only 76` **313/313**; `app-check --only 59,60,63,64,65,70,71,72` **1834/1834**. No old assertion needed changing. The Architect runs the full `app-check`.
+
+
+## v05.17 — N2, on a phone Zab is one corner button with three layouts the owner chooses (issue #182, PCF J20, second half)
+
+The owner (14 Oct): "liked all three. Enable all three for user to chose and change". Built on N1 (v05.16), whose readers (`jebChildren`, `jebPath`, `_jebTree`, `_jebRoll`) it uses; the pocket tree is not re-derived. This branch also carries N1, because PR #180 had not merged when it was cut.
+
+- **The setting.** `DB.theme.zabPhoneLayout` = `'rail' | 'drawer' | 'cols' | 'bar'`, absent = `'rail'`. An ordinary `DB.theme` key, so it syncs and follows the owner to any phone. Nothing else is stored; which drawer rows are open and which column is shown are session state. `'bar'` is the N1 bar exactly, offered only in 🧰 → 🎨 Appearance. `jebBar===false` still hides Zab everywhere.
+- **The button (phone, < 640, a phone in landscape stays a phone).** Unless the layout is `'bar'`, the bottom bar is not drawn and `--jeb-h` is `0px` (`html.zab-btn` replaces `html.jeb-on`). `#zab-btn`: 52 px round ▤ (text glyph), `--green` with `--on-accent`, bottom right above the safe area; badge = the "All pockets" total, red when a task is overdue; hidden with `html.jeb-kb`. Title/aria-label: "Zab: your pockets (press and hold to change the layout)". Other fixed controls and the last line of the note list / read note / edited note were measured and given room (a margin on the last child, phone only). Nothing on the notes screen moves until the button is tapped.
+- **Choosing.** Press and hold (500 ms) or right-click opens a card anchored to the button, clamped to the screen, with three ticked rows (Rail · Drawer · Columns) and "More in 🧰 → 🎨 Appearance"; a row switches at once and closes the card. Appearance shows "Zab on the phone" on every screen size (so a laptop can set it), with a line saying it applies to phones.
+- **Rail** (the start): top-level pockets as round bubbles rising up the right edge above the button (icon on its colour, name, N1's rolled-up count, ▸ if it holds pockets); scrolls if tall; last bubbles "▤ All pockets" and "＋".
+- **Drawer:** a panel from the right (85 %, ≤ 360 px); every pocket a row, indented by depth; ▸/▾ folds (this session); tap a name for its panel; "▤ All pockets" on top, "＋ New pocket" at the bottom.
+- **Columns:** top-level pockets in a column; a pocket holding pockets opens a second column headed "Its items (n)" (opens that pocket's panel); deeper shifts the columns along with a "‹" back; a pocket with nothing inside opens its panel directly.
+- All three reach any depth and end in the existing `#jeb-panel` as a bottom sheet (path line, child chips, ＋ Pocket as in N1) — no second item list. Long-press or right-click on a pocket opens `_jebPocketMenu`. Web Animations; none under `prefers-reduced-motion`. z-index: layouts 141, button 142, card 143 (below Attach 9150, menus 9200, modals 10000).
+- **Addresses in items.** Plain rows did NOT already do this, so it was built: an address in an item's text is a tappable link (new tab); tapping the rest of the item still edits. A links pocket keeps its own rows.
+- **Tablet and laptop (≥ 640) — D5:** unchanged, the N1 bar and panel; the corner button is never drawn. Zab mode (`/?jeb=1`) unchanged.
+- **Check:** block 77, `tools/zab-n2.mjs` (77a button, 77b each layout by real taps to the 4th level with an item added and counted up the chain, 77c choosing + Appearance incl. `'bar'` + second device both ways, 77d nothing moved and last lines scroll clear, 77e addresses, 77f scale, 77g contrast on five presets, 77h reduced motion).
+- **Scale (390, CPU ×4):** 50 pockets over 5 levels and 300 items: rail 30 ms, drawer 28 ms, columns 27 ms to open (medians of 4; limit 300). 9,003 notes (45,383 elements): opening/closing a layout 12 / 3 / 3 / 4 ms, button hide/show with the keyboard 15 ms (limit 50).
+- **Old assertions updated in place, with the reason:** checks 60 (J2), 63 (J3), 64 (J4), 65 (J5), 69 (P1), 70–72 (Z6a–c) and 76 (N1) test the bottom bar by tapping it on a phone. This round deliberately removed that bar on a phone, so their notebooks now seed `zabPhoneLayout:'bar'` (the bar exactly as before). No assertion was loosened or deleted.
+- **Unpatched (v05.16's `index.html` and `sw.js` put back, `app-check --only 77`):** **0/8 passed, 8 FAILED** (no button; the run stops at the first).
+- **Not done:** Back (the phone's back gesture) does not close the layouts, since the app does not wire Back for sheets. No drag-and-drop of a pocket between levels. The full `app-check` was not run (told not to); the Architect runs it.
+- **Totals (Builder):** `ship-check` 15/15; `app-check` block 77 **191/191**; 76 **313/313**; 59, 60, 63, 64 **685/685**; 65, 69 **284/284**; 70, 71, 72 **893/893** (run in separate groups of blocks).
+
+
+## v05.18 — P2, redraw only what changed after a received edit and after undo (issue #184, PCF J08)
+
+### Before (measured first, on the v05.17 code; `node tools/sync-s1d.mjs --profile`, 9,000 notes ≈ 47 MB)
+
+The harness now also wraps the per-pane functions (`renderP2H`, `renderP3H`, `renderP3C`, `renderTabBar`, `updateTrashBtn`, `adjustP3Layout`, `_applyHeadingStyles`, `_updateSearchAccessUI`, `jebRefresh`). Inclusive ms, one run on a GitHub runner (so lower than the Architect's earlier 317–426 ms; the shape is what matters). Note n77 (received) is NOT the open note; n42 is open.
+
+| ms | (b) receive, phone ×4 | (b) receive, laptop | (c) undo, phone ×4 | (c) undo, laptop |
+|---|---|---|---|---|
+| `renderTree` | 8.3 | 2.6 | 9.0 | 2.9 |
+| `renderP2H` | 6.5 | 1.0 | 6.2 | 1.0 |
+| `renderP2C` | **69.3** | 19.2 | **85.7** | 25.1 |
+| `renderTabBar` | 33.9 | 0.1 | 37.1 | 0.0 |
+| `renderP3H` | 38.7 | 11.4 | 41.0 | 12.4 |
+| `renderP3C` | **68.7** | 14.0 | 1.5 | 0.4 |
+| `adjustP3Layout` | 3.3 | 1.1 | 0 | 0.3 |
+| `jebRefresh` | 33.4 | 8.0 | 29.4 | 8.4 |
+| **`render()` total** | **228.4** | **57.5** | **175.4** | **50.7** |
+| whole step, main thread | 642 | 258 | 442 | 140 |
+
+(The two laptop whole-step lines were already over their 52a targets on this runner, 258 > 250 and 140 > 125, before any change.)
+
+### What changed
+
+`_renderFor(changed)` is the one place that decides what a received merge or an undo/redo touches. It takes the sets the merge diff and the undo frame already hold (never a stringify of the notebook), redraws only the affected cards, sidebar parts and open note, and **falls back to the caller's own full draw** for anything it cannot prove safe (settings, folders, Trash, new or gone notes, unknown collections, 41 or more notes, a Multi window open, the Calendar shown). `_renderPreserveEdit()`'s rule stands: an editor being typed in is never rebuilt. The redraw path writes nothing and does not change `DB` (78d).
+
+### After (`node tools/sync-s1d.mjs --profile`, same runner and seed as Before)
+
+| ms | Before | After |
+|---|---|---|
+| (b) receive, phone ×4, whole step | 642 | **346** |
+| (b) receive, laptop, whole step | 258 | **183** |
+| (c) undo, phone ×4, whole step | 442 | **154** |
+| (c) undo, laptop, whole step | 140 | **42** |
+| `render()` inside (b) phone ×4 / laptop | 228.4 / 57.5 | `_renderFor` 6.7 / 2.1 |
+| `render()` inside (c) phone ×4 / laptop | 175.4 / 50.7 | `_renderFor` 36.3 / 9.7 |
+
+The 52a targets all pass, including the two laptop lines that were over before (183 ≤ 250, 42 ≤ 125). Most of what is left in (b) is merge, stamp and snapshot work, not drawing.
+
+### Block 78 speed (9,000 notes, median of 5, redraw only)
+
+| | target | phone ×4 | laptop |
+|---|---|---|---|
+| received edit, note not open | ≤ 60 | **5.2** | 1.5 |
+| received edit, the open note | ≤ 150 | **85.4** | 21.2 |
+| one undo | ≤ 120 | **33.9** | 8.5 |
+
+Every one of the 45 timed draws took the targeted path.
+
+### Checks
+
+New block 78 (`tools/redraw-p2.mjs`): the oracle (targeted redraw vs a full `render()`, identical `#sb`/`#p2`/`#p3` HTML) for the twelve changes, received and by undo/redo, at 390, 820 and 1440; 78b speed; 78c fallback; 78d no writes. The oracle was shown failing on purpose with `--break`. Blocks 32, 51, 52, 59, 60, 76 and 77 stay green.
+
+### Not done
+
+- The windowed list (drawing only the visible part of the note list): needs the owner's decision in J08, not built.
+- Un-selecting a tag still redraws the whole list (J08's third item).
+- The full `app-check` was not run (told not to); the Architect runs it, plus the unpatched run.
+
+**Totals (Builder):** `ship-check` 15/15; `app-check --only 78` **505/505**; `--only 32,51,52` **208/208**; `--only 59,60,76,77` **781/781**; profile 8/8 passed.

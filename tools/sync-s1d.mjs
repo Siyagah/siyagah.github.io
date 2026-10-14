@@ -40,6 +40,7 @@ const INSTR = String.raw`(() => {
   ['persist2','snapshotState','_save','_stampThemeTouches','_stampRecordTouches','_flushAllEditors','mergeDB','_seedThemeSnap','_seedRecSnap',
    '_s1DirtyFromDiff','_renderPreserveEdit','_edApplyRemote','_syncDigest','_s1AssembleRep','_mergeRemoteIn','_pullRecsMerge','_s1OnSnap',
    '_doPush','_pushWrite','_s1TakeSnap','_s1Snap','_edAutoSave','_flushEd','undo','redo','scheduleAutoSave','render','renderTree','renderP2C',
+   'renderP2H','renderP3H','renderP3C','renderTabBar','updateTrashBtn','adjustP3Layout','_applyHeadingStyles','_updateSearchAccessUI','jebRefresh','_renderFor',
    '_idbPut','_s1Run','_s1RepSave','pushToCloud','_recSig','_collect','_ljSave','_ljCheckpoint','_histCapture','_histApply','_histStep','_s1SnapDirty','_s1AssembleMap'].forEach(wrap);
   /* JSON and localStorage calls are many and small: timing each one costs more than the call, so only with --json (the CPU profile names them anyway) */
   if (window.__JSONWRAP) {

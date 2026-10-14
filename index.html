@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.16">
+<meta name="app-version" content="05.18">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -819,9 +819,9 @@ html{--jeb-h:0px;--jeb-l:0px;--jeb-hd:0px}
    (which always says 0px). A browser without @property inherits it from the
    listed element as before. */
 @property --jeb-h{syntax:'<length>';inherits:false;initial-value:0px}
-html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn){--jeb-h:56px}
-html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn){--jeb-h:0px}
-html.jeb-kb #jeb-bar{display:none!important}
+html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:56px}
+html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:0px}
+html.jeb-kb #jeb-bar,html.jeb-kb #zab-btn,html.jeb-kb #zab-lay{display:none!important}
 @media(min-width:1200px){#p2,#p3{margin-bottom:var(--jeb-h)}}
 #jeb-bar{position:fixed;left:var(--jeb-l);right:0;bottom:0;height:56px;z-index:140;display:flex;align-items:center;gap:8px;padding:0 10px;overflow-x:auto;overflow-y:hidden;background:var(--white);border-top:1px solid var(--border2);scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
 #jeb-bar::-webkit-scrollbar{display:none}
@@ -898,6 +898,56 @@ html.jeb-kb #jeb-bar{display:none!important}
 @media(max-width:639.98px){
   #jeb-panel{top:auto;left:0;right:0;width:auto;max-width:none;height:72vh;border-left:none;border-top:1px solid var(--border2);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.2)}
   #jeb-panel.on{animation:jebUp .2s ease}
+}
+@media(prefers-reduced-motion:reduce){#jeb-panel.on{animation:none}}
+/* ══ v05.17 · N2 — on a phone Zab is one corner button (html.zab-btn: a phone, Zab on, layout not 'bar') and three layouts.
+   z-index: layouts 141 (the panel's level — never both at once), the button 142, the long-press card 143; all below Attach 9150,
+   menus 9200 and modals 10000. Nothing here is drawn at 640px and up. Inks are pane inks on the pane surface; only the
+   bubble's glyph sits on the owner's pocket colour (dark ink, as .jeb-sw). ══ */
+#zab-btn,#zab-lay,#zab-card{display:none}
+html.zab-btn #zab-btn{display:flex}
+#zab-lay.on{display:block}
+#zab-btn{position:fixed;right:14px;bottom:calc(16px + var(--jeb-h) + env(safe-area-inset-bottom,0px));width:52px;height:52px;border-radius:50%;border:none;padding:0;z-index:142;align-items:center;justify-content:center;background:var(--green);color:var(--on-accent);font:inherit;font-size:24px;line-height:1;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#zab-btn.up{bottom:calc(72vh + 12px)}
+.zb-n{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:10px;background:var(--white);color:var(--t1);border:1px solid var(--border2);font-size:11.5px;font-weight:700;line-height:18px;text-align:center;font-family:var(--ui)}
+.zb-n.jt-red{background:#B42318;color:#fff;border-color:#B42318}
+#zab-lay{position:fixed;left:0;right:0;top:0;bottom:var(--jeb-h);z-index:141}
+.zl-bd{position:absolute;inset:0;background:rgba(0,0,0,.22)}
+.zl-rail{position:absolute;right:14px;bottom:calc(16px + 52px + 10px + env(safe-area-inset-bottom,0px));max-height:calc(100% - 100px - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column-reverse;align-items:flex-end;gap:6px;overflow-y:auto;overscroll-behavior:contain;padding:4px 2px;scrollbar-width:none}
+.zl-rail::-webkit-scrollbar{display:none}
+.zr-b{flex:0 0 auto;display:flex;align-items:center;gap:8px;min-height:48px;border:none;background:transparent;padding:0;font:inherit;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.zr-lb{padding:7px 12px;border-radius:999px;background:var(--white);color:var(--t1);border:1px solid var(--border2);font-size:13px;font-weight:600;max-width:62vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zr-c{position:relative;flex:0 0 auto;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;color:#2A2418;font-weight:700;border:2px solid var(--white);box-shadow:0 2px 8px rgba(0,0,0,.28);box-sizing:border-box;background:var(--paper)}
+.zl-dr,.zl-cols{position:absolute;top:0;right:0;bottom:0;display:flex;background:var(--white);color:var(--t1);border-left:1px solid var(--border2);box-shadow:-6px 0 24px rgba(0,0,0,.25)}
+.zl-dr{width:min(360px,85%);flex-direction:column}
+.zd-hd,.zc-hd{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--border);min-height:52px;box-sizing:border-box}
+.zd-list,.zc-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 0 96px}
+.zd-row,.zc-row{display:flex;align-items:center;min-height:44px;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.zd-fold{flex:0 0 40px;height:44px;border:none;background:transparent;color:var(--t2);font-size:14px;cursor:pointer;touch-action:manipulation}
+.zd-sp{flex:0 0 40px}
+.zd-nm,.zc-nm{flex:1;min-width:0;display:flex;align-items:center;gap:8px;min-height:44px;border:none;background:transparent;color:var(--t1);font:inherit;font-size:14px;text-align:left;cursor:pointer;padding:0 6px;touch-action:manipulation}
+.zd-nm span.zs,.zc-nm span.zs{flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;color:#2A2418;font-weight:700}
+.zd-nm span.zn,.zc-nm span.zn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zd-ct{flex:0 0 auto;margin-right:10px;min-width:20px;padding:1px 7px;border-radius:999px;background:var(--hover);color:var(--t1);font-size:12px;text-align:center}
+.zd-ct.jt-red{background:#B42318;color:#fff}
+.zd-row.on,.zc-row.on{background:var(--hover)}
+.zd-act{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:0 14px;border:none;border-bottom:1px solid var(--border);background:transparent;color:var(--t1);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer;touch-action:manipulation}
+.zd-act.new{border-bottom:none;border-top:1px solid var(--border);color:var(--t1)}
+.zc-col{width:min(176px,46vw);display:flex;flex-direction:column;min-height:0;box-sizing:border-box}
+.zc-col+.zc-col{border-left:1px solid var(--border)}
+.zc-hd button{flex:1;min-width:0;min-height:44px;border:none;background:transparent;color:var(--t1);font:inherit;font-size:13.5px;font-weight:700;text-align:left;cursor:pointer;touch-action:manipulation;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 6px}
+#zab-card{position:fixed;z-index:143;width:min(300px,calc(100vw - 24px));background:var(--white);color:var(--t1);border:1px solid var(--border2);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);padding:6px;box-sizing:border-box}
+#zab-card.on{display:block}
+.zc-r{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:6px 10px;border:none;border-radius:8px;background:transparent;color:var(--t1);font:inherit;font-size:13.5px;text-align:left;cursor:pointer;touch-action:manipulation}
+.zc-r:hover{background:var(--hover)}
+.zc-tk{flex:0 0 auto;font-size:18px;line-height:1}
+.zc-more{padding:8px 10px 6px;font-size:12.5px;color:var(--t2)}
+a.jeb-lnk{color:var(--accent);text-decoration:underline;overflow-wrap:anywhere;padding:11px 0}
+.jeb-card a.jeb-lnk{color:#2A2418}
+@media(max-width:639.98px){
+  html.zab-btn :is(#tree,#p2c,#p3c)>:last-child:not(.lp){margin-bottom:84px}   /* room to scroll the last line clear of the button; the centred landing page is left alone */
+  html.zab-btn .toast{bottom:calc(84px + var(--jeb-h) + env(safe-area-inset-bottom,0px))}
+  html.zab-btn #toc-float-btn{bottom:calc(84px + var(--jeb-h) + env(safe-area-inset-bottom,0px))}
 }
 /* ══ v05.04 · J5 — Siyagah Jeb: the page in Jeb mode (html.jeb-app). Notes surfaces are
    hidden, not removed (sync, the sync dot and every alarm keep running); the header
@@ -3637,7 +3687,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.16</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.18</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4775,8 +4825,8 @@ function _cleanExportRoot(){
            that also carries pocket names and item text, and a toast can carry
            a note title. jeb-app would hide the sidebar of a plain copy (I4).
            The head goes back to what _JEB_FACE0 recorded before the swap. */
-    root.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,.toast').forEach(function(el){ el.remove(); });
-    root.classList.remove('jeb-app','jeb-on','jeb-kb');
+    root.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,#zab-btn,#zab-lay,#zab-card,.toast').forEach(function(el){ el.remove(); });
+    root.classList.remove('jeb-app','jeb-on','jeb-kb','zab-btn');
     root.style.removeProperty('--jeb-h'); root.style.removeProperty('--jeb-l');
     if(!root.getAttribute('style')) root.removeAttribute('style');
     if(!root.getAttribute('class')) root.removeAttribute('class');
@@ -5849,6 +5899,169 @@ function _renderPreserveEdit(){
   }
 }
 
+/* ── v05.18 — P2: redraw only what a change touches ──────────────────────────────────────────
+   After a received merge and after undo/redo the screen used to be drawn whole (render()) for a change that
+   is usually one note: at 9,000 notes that was 175–230 ms on a phone with the CPU slowed ×4. _renderFor() is
+   the ONE place that decides what such a change touches. It is handed WHAT CHANGED, never derived by
+   comparing the notebook as text:
+     ch = { keys:[{c,id,b,a}|{c,id,eb,ea}], ord:[collections whose order moved], head:bool, unknown:bool }
+   a merge builds it from the two collections it already collects (_rdChangeOfMerge), undo from the frame it is
+   applying (_rdChangeOfFrame). `b`/`a` = the record before / after, `eb`/`ea` = the record cache entries.
+   Anything it cannot place — a new, removed, trashed or moved note, any folder / section / tag / theme / type
+   change, a calendar, a Single or Multi pop-up open, more than 40 notes — returns null and the caller's own
+   full draw runs. A missed redraw is a wrong screen; a slow one is only slow. Block 78 compares every
+   targeted draw with a full render() afterwards. Never writes: no persist(), no DB change. */
+const _RD_MAX=40;
+let _rdLast=null;   /* what the last _renderFor() did, for the checks: {mode:'targeted'|'full', plan, ms} */
+function _rdSame(x,y){
+  if(x===y) return true;
+  if(x&&y&&typeof x==='object'&&typeof y==='object') return JSON.stringify(x)===JSON.stringify(y);
+  return false;
+}
+/* the fields that differ between two versions of one record (noteHistory is bookkeeping, never drawn from another note) */
+function _rdFields(b,a){
+  const out=[], seen={};
+  for(const k in b){ seen[k]=1; if(k==='noteHistory') continue; if(!_rdSame(b[k],a[k])) out.push(k); }
+  for(const k in a){ if(!seen[k]&&k!=='noteHistory'&&a[k]!==undefined) out.push(k); }
+  return out;
+}
+/* a record as it was when its cache entry was built (the entry copies what can change in place) */
+function _rdRecOf(e){
+  const o={};
+  for(let i=0;i<e.ks.length;i++){ const j=e.js[i]; o[e.ks[i]]=(typeof j==='string')?JSON.parse(j):(Array.isArray(j)?j:e.vs[i]); }
+  return o;
+}
+/* what differs between two heads (see _headOf): the top-level keys, and for `theme` its own keys as 'theme.<key>';
+   null when it cannot be told */
+function _rdHeadDelta(hb,ha){
+  try{
+    const b=JSON.parse(hb||'{}'), a=JSON.parse(ha||'{}'), out=[];
+    new Set(Object.keys(b).concat(Object.keys(a))).forEach(k=>{
+      if(_rdSame(b[k],a[k])) return;
+      if(k==='theme'&&b.theme&&a.theme&&typeof b.theme==='object'&&typeof a.theme==='object')
+        new Set(Object.keys(b.theme).concat(Object.keys(a.theme))).forEach(s=>{ if(!_rdSame(b.theme[s],a.theme[s])) out.push('theme.'+s); });
+      else out.push(k);
+    });
+    return out;
+  }catch(e){ return null; }
+}
+function _rdChangeOfMerge(pre,post,hdPre){
+  if(!pre||!post||hdPre==null) return {unknown:true};
+  const keys=[], add=(k,ea,eb)=>{ const i=k.indexOf('~'); keys.push({c:k.slice(0,i),id:decodeURIComponent(k.slice(i+1)),ea:ea,eb:eb}); };
+  post.map.forEach((ea,k)=>{ const eb=pre.map.get(k); if(eb!==ea) add(k,ea,eb); });
+  pre.map.forEach((eb,k)=>{ if(!post.map.has(k)) add(k,undefined,eb); });
+  const ord=[];
+  _LJ_COLLS.forEach(c=>{ const a=pre.c[c], b=post.c[c]; if(!a||!b||a.isArr!==b.isArr||!_sameKeys(a.keys,b.keys)) ord.push(c); });
+  const hdPost=_headOf(DB,post);
+  return {keys:keys,ord:ord,head:hdPost===hdPre?false:_rdHeadDelta(hdPre,hdPost)};
+}
+/* undo / redo: the frame names every record it changes; the live copy before it is applied is `b`, after `a` */
+function _rdFrameBefore(fr){
+  const keys=[], m=new Map(); let have=false;
+  if(fr.ch.length>_RD_MAX) return {unknown:true};
+  fr.ch.forEach(x=>{ const k=x[0], i=k.indexOf('~'); keys.push({c:k.slice(0,i),id:decodeURIComponent(k.slice(i+1))}); if(k.slice(0,i)==='articles') have=true; });
+  if(have) (DB.articles||[]).forEach(a=>{ if(a&&a.id!=null) m.set(String(a.id),a); });
+  keys.forEach(x=>{ if(x.c==='articles') x.b=m.get(x.id)||null; });
+  return {keys:keys,ord:fr.ord?Object.keys(fr.ord):[],head:fr.head?_rdHeadDelta(fr.head[0],fr.head[1]):false,byId:m};
+}
+function _rdFrameAfter(ch){
+  if(!ch||ch.unknown) return ch||{unknown:true};
+  const m=new Map(); if(ch.keys.some(x=>x.c==='articles')) (DB.articles||[]).forEach(a=>{ if(a&&a.id!=null) m.set(String(a.id),a); });
+  ch.keys.forEach(x=>{ if(x.c==='articles') x.a=m.get(x.id)||null; });
+  return ch;
+}
+/* the plan: what to draw, or null = draw everything */
+let _rdWhy='';   /* why the last plan gave up (for the checks and the console) */
+function _rdNo(why){ _rdWhy=why; return null; }
+function _rdPlan(ch,opts){
+  if(!ch||ch.unknown) return _rdNo('the change is not known');
+  if(ch.ord&&ch.ord.length) return _rdNo('the order of '+ch.ord.join(', ')+' moved');
+  /* the head (settings and bookkeeping): only these differences are known to draw nothing, or only the landing page */
+  let landing=false;
+  if(ch.head){
+    if(!Array.isArray(ch.head)) return _rdNo('a setting changed that cannot be read');
+    for(const k of ch.head){
+      if(k==='themeAt'||k==='theme.lastArticle'||k==='theme.lastFolder') continue;
+      if(k==='theme.lastEditedArticle'){ landing=true; continue; }
+      return _rdNo('a setting changed: '+k);
+    }
+  }
+  if(ch.keys.length>_RD_MAX+8) return _rdNo('more than '+_RD_MAX+' records');
+  const arts=[]; let jeb=false;
+  for(const x of ch.keys){
+    if(x.c==='jeb'||x.c==='jebPockets'){ jeb=true; continue; }
+    if(x.c!=='articles') return _rdNo('a change to '+x.c);
+    let b=x.b, a=x.a;
+    if(x.eb!==undefined||x.ea!==undefined||(b===undefined&&a===undefined)){ if(!x.eb||!x.ea) return _rdNo('a note added or removed'); b=_rdRecOf(x.eb); a=x.ea.r; }
+    if(!b||!a) return _rdNo('a note added or removed');
+    const f=_rdFields(b,a);
+    if(!f.length&&b.updatedAt===a.updatedAt) continue;   /* an equal copy of the same note: nothing to draw */
+    arts.push({id:String(x.id),b:b,a:a,f:f});
+  }
+  if(arts.length>_RD_MAX) return _rdNo('more than '+_RD_MAX+' notes');
+  const prev=(opts&&opts.prev!==undefined)?opts.prev:ST.article;
+  if(ST.mrjQ||ST.calEditEvt||ST.calManageCats||ST.article==='cal'||prev==='cal'||ST.noteModal||(typeof ST.folder==='string'&&ST.folder.startsWith('db-'))) return _rdNo('a calendar, review or pop-up is showing');
+  if(document.querySelector('.float-win')) return _rdNo('a Multi window is open');
+  const p={sb:false,p2h:false,p2c:false,p3:false,tab:false,jeb:jeb,ids:[]};
+  const cur=ST.article, curA=(cur!=null)?DB.articles.find(a=>a.id===cur):null;
+  if(landing&&!curA) p.p3=true;   /* the landing page names the last edited note */
+  /* the open note was closed (undo): its highlight in the list (and in the sidebar's search results) goes with it */
+  if(opts&&opts.p3){ p.p3=true; p.p2c=true; if(ST.search&&ST.search.trim()) p.sb=true; }
+  if(!arts.length) return p;
+  const folderView=DB.folders.some(f=>f.id===ST.folder);
+  const now=new Date(), T=Math.min(new Date(now.getFullYear(),now.getMonth()-1,1).getTime(),new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime()-((now.getDay()+6)%7+7)*864e5);
+  const inTime=(r)=>new Date(r.updatedAt||r.createdAt||0).getTime()>=T;
+  const sbSafe=(f,b,a)=>f==='content'||f==='noteHistory'
+    ||(f==='title'&&typeof _dateTitleRe!=='undefined'&&_dateTitleRe.test(b.title||'')===_dateTitleRe.test(a.title||''))
+    ||(f==='updatedAt'&&inTime(b)===inTime(a));
+  const lastEd=DB.theme&&DB.theme.lastEditedArticle;
+  /* a tab shows its note's title and colour: the bar needs drawing only for a note that owns or sits in a tab group */
+  const tm=_tabsMap(), inTabs=(id)=>Object.keys(tm).some(k=>k===id||(Array.isArray(tm[k])&&tm[k].indexOf(id)>-1));
+  p.p2c=true;
+  if(ST.search&&ST.search.trim()) p.sb=true;
+  arts.forEach(x=>{
+    p.ids.push(x.id);
+    x.f.forEach(f=>{ if(!sbSafe(f,x.b,x.a)) p.sb=true; if(f==='folderIds') p.p2h=true; if((f==='title'||f==='tabColor')&&inTabs(x.id)) p.tab=true; });
+    if(!folderView) p.p2h=true;   /* a Smart View / tag / type header may count the notes */
+    if(x.id===String(cur)){ p.p3=true; return; }
+    if(!curA){ if(lastEd!=null&&x.id===String(lastEd)) p.p3=true; return; }
+    const need='data-art="'+curA.id+'"', mine='data-art="'+x.id+'"';
+    if(String(x.b.content||'').includes(need)||String(x.a.content||'').includes(need)
+      ||(x.b.linkedNotes||[]).includes(curA.id)||(x.a.linkedNotes||[]).includes(curA.id)
+      ||String(curA.content||'').includes(mine)||(curA.linkedNotes||[]).includes(x.id)
+      ||(curA.versionGroupId&&(x.a.versionGroupId===curA.versionGroupId||x.b.versionGroupId===curA.versionGroupId))) p.p3=true;
+  });
+  return p;
+}
+function _rdRun(p){
+  const ed=document.getElementById('ed'), editing=!!(ST.editing&&ed&&ed.dataset.aid===ST.article);
+  if(p.sb) renderTree();
+  if(p.p2h) renderP2H();
+  if(p.p2c&&!_p2cTry(p.ids)) renderP2C();
+  if(p.p3&&!editing){
+    const avw=document.querySelector('.avw'), sa=ST.article, ss=avw?avw.scrollTop:0;
+    renderP3H(); renderP3C(); adjustP3Layout();   /* renderP3H() draws the tab bar */
+    if(ss&&ST.article===sa){ const a2=document.querySelector('.avw'); if(a2) a2.scrollTop=ss; }
+  }else if(p.tab) renderTabBar();
+  _updateSearchAccessUI();
+  if(p.jeb){ try{jebRefresh();}catch(e){console.error('jebRefresh:',e);} }
+}
+/* The one decision. `fullFn` is the caller's own full draw (render, or _renderPreserveEdit on the merge path).
+   Returns 'targeted' or 'full'. */
+function _renderFor(ch,fullFn,opts){
+  const t0=performance.now();
+  let p=null;
+  try{ p=_rdPlan(ch,opts); }catch(e){ console.error('_rdPlan:',e); p=null; }
+  if(p){
+    try{ _rdRun(p); _rdLast={mode:'targeted',plan:p,ms:performance.now()-t0}; return 'targeted'; }
+    catch(e){ console.error('_rdRun:',e); }
+  }
+  const why=p?'a draw threw':_rdWhy;
+  fullFn();
+  _rdLast={mode:'full',plan:null,why:why,ms:performance.now()-t0};
+  return 'full';
+}
+
 function _searchWords(q){return q.toLowerCase().split(/\s+/).filter(Boolean);}
 function _matchesAllWords(text,words){const t=text.toLowerCase();return words.every(w=>t.includes(w));}
 function renderTree(){
@@ -6284,7 +6497,60 @@ function renderP2C(){
   /* MyWALL subfolders: group notes by type, collapsed by default */
   if(isMyWallSubfolder(curF.id)){el.innerHTML=renderMyWallSubfolder(curF);return;}
   if(curF.journalMode){el.innerHTML=_renderJournalFolder(curF);return;}
-  const subs=chOf(curF.id),arts=artsIn(curF.id);
+  const arts=artsIn(curF.id);
+  let h=_p2cFolderHead(curF,arts);
+  if(!arts.length){
+    h+=`<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl)"><div style="color:var(--t3);font-size:13px;margin-bottom:10px">No articles yet</div><button class="btn bp" onclick="openModal('art','${curF.id}')" style="font-size:12px">Add article</button></div>`;
+  } else if(!curF.structured){
+    /* v04.91 — S1d: one card = one element, so a change that touches a few cards
+       rewrites those cards, not the whole list (see _p2cPaint) */
+    const cards=arts.map(a=>artCard(a,ST.article===a.id,true));
+    _p2cPaint(el,h+'<div class="al">',cards,'</div></div>',arts.map(a=>a.id),curF.id);
+    return;
+  } else {
+    h+='<div class="al">';
+    arts.forEach(a=>{ h+=artCard(a,ST.article===a.id,true); if(curF.structured)h+=_fieldChipsHTML(a,curF); });
+    h+='</div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+}
+/* v04.91 — S1d. Painting a folder's list rebuilt every card, every time: with 9,000
+   notes in one folder that was 0.6 s on a laptop and 2.5 s on a ×4 phone, to show a
+   change to one title that arrived from another device, or one undo. The list is
+   painted once whole, marked; the next paint of the same folder (same header, same
+   number of cards) rewrites only the cards whose HTML differs — unless more than
+   _P2C_PATCH_MAX did, which is no longer "a change to a card" but a new list. If the
+   mark is gone (another view wrote into the pane) it is painted whole again. */
+let _p2cLast=null, _p2cSeq=0, _P2C_PATCH_MAX=40;
+/* `ids` (the note id of each card, in order) and `fid` (the folder) are what v05.18's _p2cTry() needs to
+   rebuild only the cards of the notes that changed; the paint also notes the selected note and the day it
+   drew (a card's date and its reminder badge are read against "today"). */
+function _p2cPaint(el,head,cards,tail,ids,fid){
+  const L=_p2cLast;
+  const note=(o)=>{ o.ids=ids||null; o.fid=fid||null; o.sel=ST.article; o.day=todayStr(); o.snip=ST.snippet; };
+  if(L&&L.el===el&&L.head===head&&L.tail===tail&&L.cards.length===cards.length){
+    const fv=el.firstElementChild, al=(fv&&fv.getAttribute('data-p2c')===L.mark)?fv.querySelector(':scope > .al'):null;
+    if(al&&al.children.length===cards.length){
+      const diff=[];
+      for(let i=0;i<cards.length&&diff.length<=_P2C_PATCH_MAX;i++) if(cards[i]!==L.cards[i]) diff.push(i);
+      if(diff.length<=_P2C_PATCH_MAX){
+        const t=document.createElement('template');
+        diff.forEach(i=>{ t.innerHTML=cards[i]; const n=t.content.firstElementChild; if(n) al.children[i].replaceWith(n); });
+        L.cards=cards; note(L);
+        return;
+      }
+    }
+  }
+  const mark=String(++_p2cSeq);
+  el.innerHTML=head.replace('<div class="fv">','<div class="fv" data-p2c="'+mark+'">')+cards.join('')+tail;
+  _p2cLast={el:el,head:head,tail:tail,cards:cards,mark:mark};
+  note(_p2cLast);
+}
+/* v05.18 — P2. The part of a folder's list above its cards, built in one place so that the full draw and the
+   targeted one (_p2cTry) cannot drift apart: equal text here is the proof that nothing above the cards moved. */
+function _p2cFolderHead(curF,arts){
+  const subs=chOf(curF.id);
   let h='<div class="fv">';
   if(subs.length&&ST.p2hCardView){
     h+=`<div class="slbl">Subfolders</div><div class="sg">`;
@@ -6304,48 +6570,28 @@ function renderP2C(){
     +` onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">`
     +`<button class="qt-go" onclick="qtSave('${curF.id}')" tabindex="-1">Save</button>`
     +`</div>`;
-  if(!arts.length){
-    h+=`<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl)"><div style="color:var(--t3);font-size:13px;margin-bottom:10px">No articles yet</div><button class="btn bp" onclick="openModal('art','${curF.id}')" style="font-size:12px">Add article</button></div>`;
-  } else if(!curF.structured){
-    /* v04.91 — S1d: one card = one element, so a change that touches a few cards
-       rewrites those cards, not the whole list (see _p2cPaint) */
-    const cards=arts.map(a=>artCard(a,ST.article===a.id,true));
-    _p2cPaint(el,h+'<div class="al">',cards,'</div></div>');
-    return;
-  } else {
-    h+='<div class="al">';
-    arts.forEach(a=>{ h+=artCard(a,ST.article===a.id,true); if(curF.structured)h+=_fieldChipsHTML(a,curF); });
-    h+='</div>';
-  }
-  h+='</div>';
-  el.innerHTML=h;
+  return h;
 }
-/* v04.91 — S1d. Painting a folder's list rebuilt every card, every time: with 9,000
-   notes in one folder that was 0.6 s on a laptop and 2.5 s on a ×4 phone, to show a
-   change to one title that arrived from another device, or one undo. The list is
-   painted once whole, marked; the next paint of the same folder (same header, same
-   number of cards) rewrites only the cards whose HTML differs — unless more than
-   _P2C_PATCH_MAX did, which is no longer "a change to a card" but a new list. If the
-   mark is gone (another view wrote into the pane) it is painted whole again. */
-let _p2cLast=null, _p2cSeq=0, _P2C_PATCH_MAX=40;
-function _p2cPaint(el,head,cards,tail){
-  const L=_p2cLast;
-  if(L&&L.el===el&&L.head===head&&L.tail===tail&&L.cards.length===cards.length){
-    const fv=el.firstElementChild, al=(fv&&fv.getAttribute('data-p2c')===L.mark)?fv.querySelector(':scope > .al'):null;
-    if(al&&al.children.length===cards.length){
-      const diff=[];
-      for(let i=0;i<cards.length&&diff.length<=_P2C_PATCH_MAX;i++) if(cards[i]!==L.cards[i]) diff.push(i);
-      if(diff.length<=_P2C_PATCH_MAX){
-        const t=document.createElement('template');
-        diff.forEach(i=>{ t.innerHTML=cards[i]; const n=t.content.firstElementChild; if(n) al.children[i].replaceWith(n); });
-        L.cards=cards;
-        return;
-      }
-    }
-  }
-  const mark=String(++_p2cSeq);
-  el.innerHTML=head.replace('<div class="fv">','<div class="fv" data-p2c="'+mark+'">')+cards.join('')+tail;
-  _p2cLast={el:el,head:head,tail:tail,cards:cards,mark:mark};
+/* Redraw a plain folder's list when only the notes in `ids` changed and none of them moved: the same
+   notes in the same places, the same text above the cards. Builds the cards of those notes (and of the one
+   that WAS selected and the one that IS, since the highlight moves) and keeps every other card's text from
+   the last paint. Returns false, having touched nothing, whenever any of that cannot be shown to hold. */
+function _p2cTry(ids){
+  const L=_p2cLast, el=document.getElementById('p2c');
+  if(!L||!L.ids||!el||L.el!==el||ST.kind||ST.tag||ST.secSF) return false;
+  const curF=DB.folders.find(f=>f.id===ST.folder);
+  if(!curF||L.fid!==curF.id||curF.pinHash||curF.journalMode||curF.structured||isMyWallSubfolder(curF.id)) return false;
+  if(L.day!==todayStr()||L.snip!==ST.snippet) return false;
+  const arts=artsIn(curF.id);
+  if(!arts.length||arts.length!==L.ids.length) return false;
+  for(let i=0;i<arts.length;i++) if(arts[i].id!==L.ids[i]) return false;
+  const head=_p2cFolderHead(curF,arts)+'<div class="al">';
+  if(head!==L.head) return false;
+  const redo=new Set(ids.map(String)); if(L.sel!=null) redo.add(String(L.sel)); if(ST.article!=null) redo.add(String(ST.article));
+  const cards=L.cards.slice();
+  for(let i=0;i<arts.length;i++){ const a=arts[i]; if(redo.has(String(a.id))) cards[i]=artCard(a,ST.article===a.id,true); }
+  _p2cPaint(el,head,cards,'</div></div>',L.ids,curF.id);
+  return true;
 }
 
 /* v03.15.04 — shared nav buttons; ride with the title (below NTI) in edit mode */
@@ -21519,6 +21765,16 @@ function renderThemeModal(){
   h+='<div class="fs-sub" style="margin:-2px 0 8px">The strip of pockets along the bottom of the screen</div>';
   h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="checkbox" id="th-jebbar"'+(_jebBarOn()?' checked':'')+' onchange="setJebBar(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show Zab bar</label></div>';
 
+  /* Zab on the phone (v05.17, N2) — DB.theme.zabPhoneLayout, absent = rail. Shown on every screen size so it can be set from a laptop. */
+  h+='<div class="theme-divider"></div>';
+  h+='<div class="theme-sect" id="th-zpl"><div class="theme-sect-lbl">Zab on the phone</div>';
+  h+='<div class="fs-sub" style="margin:-2px 0 8px">This applies to phones (screens under 640 px wide). Tablets and laptops keep the bar along the bottom. “Show Zab bar” above switches Zab off everywhere.</div>';
+  const _zplCur=(typeof _zabLayout==='function')?_zabLayout():'rail';
+  [['rail','Rail','bubbles up the right edge'],['drawer','Drawer','a list, ▸ opens the pockets inside'],['cols','Columns','the pockets inside in a second column'],['bar','Bar along the bottom (as before)','']].forEach(function(o){
+    h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="radio" name="th-zpl" value="'+o[0]+'"'+(_zplCur===o[0]?' checked':'')+' onchange="setZabPhoneLayout(this.value)" style="width:20px;height:20px;accent-color:var(--green)"> <span><b>'+o[1]+'</b>'+(o[2]?' · '+o[2]:'')+'</span></label>';
+  });
+  h+='</div>';
+
   /* Heading styles launcher */
   h+='<div class="theme-divider"></div>';
   h+='<div class="theme-sect">';
@@ -22123,6 +22379,7 @@ function _histApply(fr,dir){
   return {changed:changed,gone:goneKeys};
 }
 function _histStep(fr,dir){
+  let _rdCh=null; try{ _rdCh=_rdFrameBefore(fr); }catch(e){ _rdCh={unknown:true}; }   /* v05.18 — P2: the records as they are before the frame is applied */
   const r=_histApply(fr,dir);
   /* v04.68 — NOT swept as an edit: stepping back also rolls back anything merged
      in from another device since the frame was taken; stamping that rollback "now"
@@ -22132,9 +22389,11 @@ function _histStep(fr,dir){
   const sw=_seedRecSnap(true);
   try{ if(sw) _histCapture(sw,true); else _hMap=null; }catch(e){ _hMap=null; }
   _save(undefined,sw);
+  const _prevArt=ST.article, _hadOpen=_prevArt!=null||ST.editing;
   ST.editing=false; ST.article=null;
   applyTheme(DB.theme||{preset:'forest',custom:{}});
-  render(); updateUndoRedoBtns();
+  try{ _rdCh=_rdFrameAfter(_rdCh); }catch(e){ _rdCh={unknown:true}; }
+  _renderFor(_rdCh,render,{prev:_prevArt,p3:_hadOpen}); updateUndoRedoBtns();   /* v05.18 — P2 */
 }
 
 function undo(){
@@ -22510,6 +22769,16 @@ function _jebUrlIn(text){
   const m=/https?:\/\/[^\s<>"'\])]+/i.exec(String(text==null?'':text));
   return m?m[0].replace(/[.,;:!?]+$/,''):'';
 }
+/* v05.17 · N2 — an item's text, escaped, with each web address a link that opens in a new tab; a tap on the rest still edits */
+function _jebTxHTML(text){
+  const s=String(text==null?'':text), re=/https?:\/\/[^\s<>"'\])]+/gi; let out='', last=0, m;
+  while((m=re.exec(s))){
+    const u=m[0].replace(/[.,;:!?]+$/,''); if(!u) continue;
+    out+=esc(s.slice(last,m.index))+'<a class="jeb-lnk" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a>';
+    last=m.index+u.length; re.lastIndex=last;
+  }
+  return out+esc(s.slice(last));
+}
 /* the YouTube video id of a link, or '' (watch?v=, youtu.be/, shorts/, with www./m.) */
 function _jebYtId(url){
   try{
@@ -22681,15 +22950,16 @@ function _jebKbCheck(){
 function _jebWireOnce(){
   if(_jebWired) return; _jebWired=true;
   try{ new ResizeObserver(jebLayout).observe(_jebEl('sb')); }catch(e){}
-  let wasWide=_jebWide(), wasTk=_jebTaskMode();
-  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
+  let wasWide=_jebWide(), wasTk=_jebTaskMode(), wasPhone=_zabPhone();
+  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_zabPhone()!==wasPhone){ wasPhone=_zabPhone(); jebRefresh(); } else if(_zabOpen) _zabPaint(); if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
   document.addEventListener('focusin',_jebKbCheck);
   document.addEventListener('focusout',()=>setTimeout(_jebKbCheck,0));
   document.addEventListener('pointerdown',e=>{
     const t=e.target;
     if(_jebEl('jeb-menu')&&!t.closest('#jeb-menu')) _jebHideMenu();
     if(_jebEl('jeb-due')&&!t.closest('#jeb-due,.jt-due,.jt-flag')) _jebDueClose();
-    if(_jebOpen&&!_JEB_APP&&!t.closest('#jeb-panel,#jeb-bar,#jeb-deck,#jeb-menu,#jeb-att,#jeb-due,.toast-act,#ov')) jebClosePanel();   /* Jeb mode: the panel never closes to an empty screen */
+    if(_jebEl('zab-card')&&!t.closest('#zab-card')) _zabCardClose();
+    if(_jebOpen&&!_JEB_APP&&!t.closest('#jeb-panel,#jeb-bar,#jeb-deck,#jeb-menu,#jeb-att,#jeb-due,.toast-act,#ov,#zab-btn,#zab-lay,#zab-card')) jebClosePanel();   /* Jeb mode: the panel never closes to an empty screen */
   },true);
   /* v05.11 · Z6b — the steps editor lives in a row, a card's modal or the panel: its events are delegated from here */
   document.addEventListener('click',e=>{
@@ -22716,11 +22986,13 @@ function _jebWireOnce(){
   setInterval(dayCheck,20000); document.addEventListener('visibilitychange',dayCheck);
   document.addEventListener('keydown',e=>{
     if(e.key!=='Escape') return;
+    if(_jebEl('zab-card')){ _zabCardClose(); return; }
     if(e.target.closest&&e.target.closest('.jt-steps')){ e.target.blur(); return; }
     if(_jebEl('jeb-due')){ _jebDueClose(); return; }
     if(_jebEl('jeb-menu')){ _jebHideMenu(); return; }
     if(_jebAtt){ _jebAttClose(); return; }
     if(_jebEditId||_jebEl('ov')?.classList.contains('on')) return;
+    if(_zabOpen){ _zabClose(); return; }
     if(_jebDeck){ jebCloseDeckUser(); return; }
     if(!_jebOpen||_JEB_APP) return;
     jebClosePanel();
@@ -22731,25 +23003,197 @@ function jebRefresh(){
   if(typeof DB==='undefined'||!DB||!_dbLoaded) return;
   if(!_jebStaleSwept){   /* a copy saved by an older build may carry dead Jeb surfaces: this session builds its own */
     _jebStaleSwept=true;
-    document.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd').forEach(el=>el.remove());
+    document.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,#zab-btn,#zab-lay,#zab-card').forEach(el=>el.remove());
   }
   _jebWireOnce();
-  const root=document.documentElement, on=_jebBarOn();
-  root.classList.toggle('jeb-on',on);
+  const root=document.documentElement, on=_jebBarOn(), btn=on&&_zabBtnOn();   /* v05.17 · N2: a phone shows the corner button, not the bar */
+  root.classList.toggle('jeb-on',on&&!btn);
+  root.classList.toggle('zab-btn',btn);
   let bar=_jebEl('jeb-bar');
   if(!on){
     if(bar){ bar.remove(); _jebBarSig=''; }
-    jebCloseDeck(); jebClosePanel(); jebLayout(); return;
+    jebCloseDeck(); jebClosePanel(); jebLayout(); _zabSync(false); return;
   }
-  if(!bar){ bar=_jebMakeBar(); _jebBarSig=''; }
-  _jebPaintBar(bar);
+  if(btn){ if(bar){ bar.remove(); _jebBarSig=''; } }
+  else{ if(!bar){ bar=_jebMakeBar(); _jebBarSig=''; } _jebPaintBar(bar); }
   jebLayout();
+  _zabSync(btn);
   if(_jebOpen) _jebPaintPanel();
   if(_jebDeck) _jebPaintDeck();
   if(_jebAtt) _jebAttList();
   if(_JEB_APP) _jebAppEnsure();
   _jebLastDay=_jebToday();
 }
+/* ══ v05.17 · N2 — Zab on a phone: one corner button and three layouts ═════════
+   DB.theme.zabPhoneLayout = 'rail' | 'drawer' | 'cols' | 'bar' (absent = rail). It is the only thing stored; which drawer rows are
+   unfolded (_zabUnfold) and which columns are shown (_zabPath) are this session's. Under 640px, unless 'bar', the bar is not drawn
+   (html.zab-btn instead of html.jeb-on, so --jeb-h is 0) and #zab-btn sits in the right corner. Every layout ends in the one
+   #jeb-panel; none draws an item list of its own. Reads the tree only through _jebTree/jebChildren/_jebRoll. Switching a layout
+   writes the setting and nothing else (I1). */
+const _ZAB_LAYOUTS=['rail','drawer','cols','bar'];
+function _zabLayout(){ const v=DB&&DB.theme&&DB.theme.zabPhoneLayout; return _ZAB_LAYOUTS.includes(v)?v:'rail'; }
+function _zabPhone(){ return !_JEB_APP&&window.innerWidth<640; }
+function _zabBtnOn(){ return _zabPhone()&&_zabLayout()!=='bar'; }
+let _zabOpen=false, _zabUnfold=new Set(), _zabPath=[], _zabBtnSig='', _zabLaySig='', _zabLP=0;
+function _zabSync(on){
+  let b=_jebEl('zab-btn');
+  if(!on){ if(b) b.remove(); _zabBtnSig=''; _zabCardClose(); if(_zabOpen||_jebEl('zab-lay')) _zabClose(); return; }
+  if(!b) b=_zabMakeBtn();
+  const cnt=_jebOpenCounts(), roll=_jebRoll(cnt), total=_jebTree().flat.reduce((n,x)=>n+(cnt[x.id]||0),0);   /* the same number as "All pockets" */
+  let red=false; roll.forEach(a=>{ if(a.red) red=true; });
+  const sig=total+'|'+(red?1:0);
+  if(sig!==_zabBtnSig){ _zabBtnSig=sig; const n=b.querySelector('.zb-n'); n.textContent=total; n.hidden=!total; n.classList.toggle('jt-red',red); }
+  b.classList.toggle('up',!!_jebOpen);   /* with a panel open the button rides above its top edge, so it can still close it */
+  b.setAttribute('aria-expanded',_zabOpen?'true':'false');
+  if(_zabOpen) _zabPaint();
+}
+function _zabMakeBtn(){
+  const b=document.createElement('button'); b.type='button'; b.id='zab-btn';
+  const L='Zab: your pockets (press and hold to change the layout)';
+  b.title=L; b.setAttribute('aria-label',L); b.setAttribute('aria-haspopup','true'); b.setAttribute('aria-expanded','false');
+  b.innerHTML='<span aria-hidden="true">▤</span><span class="zb-n" aria-hidden="true" hidden></span>';
+  document.body.appendChild(b);
+  b.addEventListener('click',()=>{
+    if(Date.now()-_zabLP<700) return;   /* the tap that ended a long-press */
+    if(_jebOpen){ jebClosePanel(); return; }
+    if(_zabOpen) _zabClose(); else _zabOpenLay();
+  });
+  b.addEventListener('contextmenu',e=>{ e.preventDefault(); _zabLP=Date.now(); _zabCardOpen(); });
+  let lp=null, lx=0, ly=0;
+  b.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1) return; lx=e.touches[0].clientX; ly=e.touches[0].clientY;
+    clearTimeout(lp); lp=setTimeout(()=>{ _zabLP=Date.now(); _zabCardOpen(); },500);
+  },{passive:true});
+  b.addEventListener('touchmove',e=>{ const t=e.touches[0]; if(lp&&(Math.abs(t.clientX-lx)>8||Math.abs(t.clientY-ly)>8)){ clearTimeout(lp); lp=null; } },{passive:true});
+  ['touchend','touchcancel'].forEach(n=>b.addEventListener(n,()=>{ clearTimeout(lp); lp=null; },{passive:true}));
+  return b;
+}
+function _zabOpenLay(){
+  if(_zabOpen) return;
+  _jebHideMenu(); _zabCardClose();
+  _zabOpen=true; _zabLaySig='';
+  let lay=_jebEl('zab-lay');
+  if(!lay){ lay=document.createElement('div'); lay.id='zab-lay'; document.body.appendChild(lay); _zabWireLay(lay); }
+  lay.classList.add('on');
+  _zabPaint(true);
+  const b=_jebEl('zab-btn'); if(b) b.setAttribute('aria-expanded','true');
+}
+function _zabClose(){
+  _zabOpen=false; _zabLaySig='';
+  const lay=_jebEl('zab-lay'); if(lay) lay.remove();
+  const b=_jebEl('zab-btn'); if(b) b.setAttribute('aria-expanded','false');
+}
+function _zabPaint(anim){
+  const lay=_jebEl('zab-lay'); if(!lay) return;
+  const L=_zabLayout(), t=_jebTree(), cnt=_jebOpenCounts(), roll=_jebRoll(cnt), R=id=>roll.get(id)||{n:0,red:false,kids:false};
+  const total=t.flat.reduce((n,x)=>n+(cnt[x.id]||0),0);
+  const num=a=>'<span class="zb-n'+(a.red?' jt-red':'')+'">'+a.n+'</span>';
+  const sw=p=>'<span class="zs" style="background:'+esc(p.color)+'" aria-hidden="true">'+esc(p.icon)+'</span>';
+  const newB=(par)=>'<button type="button" class="zd-act new" data-zact="new" data-par="'+esc(par||'')+'">＋ New pocket</button>';
+  let h='';
+  if(L==='drawer'){
+    const vis=new Set(); let rows='';
+    t.flat.forEach(x=>{
+      const par=t.eff.get(x.id); if(par&&!(vis.has(par)&&_zabUnfold.has(par))) return;
+      vis.add(x.id);
+      const p=t.byId.get(x.id), a=R(x.id), open=_zabUnfold.has(x.id), nm=esc(p.name);
+      rows+='<div class="zd-row" data-pid="'+esc(p.id)+'" style="padding-left:'+Math.min(x.depth,8)*16+'px">'
+        +(a.kids?'<button type="button" class="zd-fold" data-zact="fold" aria-expanded="'+open+'" aria-label="'+(open?'Fold':'Unfold')+' the pockets inside '+nm+'">'+(open?'▾':'▸')+'</button>':'<span class="zd-sp"></span>')
+        +'<button type="button" class="zd-nm">'+sw(p)+'<span class="zn">'+nm+'</span></button><span class="zd-ct'+(a.red?' jt-red':'')+'">'+a.n+'</span></div>';
+    });
+    h='<div class="zl-bd"></div><div class="zl-dr" role="dialog" aria-label="Zab pockets"><div class="zd-hd"><button type="button" class="zd-act" style="border:none" data-zact="all">▤ All pockets <span class="zd-ct">'+total+'</span></button></div><div class="zd-list">'+rows+newB('')+'</div></div>';
+  }else if(L==='cols'){
+    let path=[], prev=null;
+    for(const id of _zabPath){ if(!t.byId.has(id)||(t.eff.get(id)||null)!==prev) break; path.push(id); prev=id; }
+    while(path.length&&!(t.kids.get(path[path.length-1])||[]).length) path.pop();
+    _zabPath=path;
+    const crow=(p,lvl,sel)=>{ const a=R(p.id); return '<div class="zc-row'+(p.id===sel?' on':'')+'" data-pid="'+esc(p.id)+'" data-lvl="'+lvl+'"><button type="button" class="zc-nm">'+sw(p)+'<span class="zn">'+esc(p.name)+'</span>'+(a.kids?'<span aria-hidden="true">▸</span>':'')+'</button><span class="zd-ct'+(a.red?' jt-red':'')+'">'+a.n+'</span></div>'; };
+    const n=path.length, leftPar=n>=2?path[n-2]:'', sel=n?path[n-1]:null;
+    const leftHd=n?'<button type="button" data-zact="back" aria-label="Back up one level">‹ '+esc(n>=2?t.byId.get(path[n-2]).name:'All pockets')+'</button>':'<button type="button" data-zact="all">▤ All pockets ('+total+')</button>';
+    let cols='<div class="zc-col"><div class="zc-hd">'+leftHd+'</div><div class="zc-list">'+jebChildren(leftPar).map(p=>crow(p,n?n-1:0,sel)).join('')+(n?'':newB(''))+'</div></div>';
+    if(n){
+      const cur=t.byId.get(path[n-1]);
+      cols+='<div class="zc-col"><div class="zc-hd"><button type="button" data-zact="items" data-pid="'+esc(cur.id)+'">Its items ('+(cnt[cur.id]||0)+')</button></div><div class="zc-list">'+jebChildren(cur.id).map(p=>crow(p,n,null)).join('')+newB(cur.id)+'</div></div>';
+    }
+    h='<div class="zl-bd"></div><div class="zl-cols" role="dialog" aria-label="Zab pockets">'+cols+'</div>';
+  }else{
+    const bub=p=>{ const a=R(p.id); return '<button type="button" class="zr-b" data-pid="'+esc(p.id)+'" aria-label="'+esc(p.name)+(a.kids?' (holds pockets)':'')+'"><span class="zr-lb">'+esc(p.name)+(a.kids?' ▸':'')+'</span><span class="zr-c" style="background:'+esc(p.color)+'" aria-hidden="true">'+esc(p.icon)+num(a)+'</span></button>'; };
+    h='<div class="zl-bd"></div><div class="zl-rail" role="menu" aria-label="Zab pockets">'+jebChildren('').map(bub).join('')
+      +'<button type="button" class="zr-b" data-zact="all" aria-label="All pockets"><span class="zr-lb">All pockets</span><span class="zr-c" style="background:var(--paper)" aria-hidden="true">▤<span class="zb-n">'+total+'</span></span></button>'
+      +'<button type="button" class="zr-b" data-zact="new" data-par="" aria-label="New pocket"><span class="zr-lb">New pocket</span><span class="zr-c" style="background:var(--paper)" aria-hidden="true">＋</span></button></div>';
+  }
+  const sig=L+'|'+h; if(sig===_zabLaySig) return; _zabLaySig=sig;
+  const keep=[...lay.querySelectorAll('.zl-rail,.zd-list,.zc-list')].map(e=>e.scrollTop);
+  lay.innerHTML=h;
+  lay.querySelectorAll('.zl-rail,.zd-list,.zc-list').forEach((e,i)=>{ if(keep[i]) e.scrollTop=keep[i]; });
+  if(anim&&!_jebReduced()&&lay.animate){   /* none under prefers-reduced-motion */
+    const bd=lay.querySelector('.zl-bd'); if(bd) bd.animate([{opacity:0},{opacity:1}],{duration:160,easing:'ease-out'});
+    const pn=lay.querySelector('.zl-dr,.zl-cols'); if(pn) pn.animate([{transform:'translateX(100%)'},{transform:'none'}],{duration:200,easing:'ease-out'});
+    lay.querySelectorAll('.zr-b').forEach((e,i)=>e.animate([{opacity:0,transform:'translateY(14px) scale(.85)'},{opacity:1,transform:'none'}],{duration:170,delay:Math.min(i,8)*18,easing:'ease-out',fill:'backwards'}));
+  }
+}
+function _zabWireLay(lay){
+  lay.addEventListener('click',e=>{
+    if(Date.now()-_jebLPAt<700) return;   /* the tap that ended a long-press */
+    const t=e.target;
+    if(t.closest('.zl-bd')){ _zabClose(); return; }
+    const za=t.closest('[data-zact]'), row=t.closest('[data-pid]');
+    if(za){
+      const a=za.dataset.zact;
+      if(a==='all'){ _zabClose(); jebOpenPanelSel({ids:[],all:true}); }
+      else if(a==='new') jebNewPocketDialog(za.dataset.par||null);
+      else if(a==='fold'&&row){ const id=row.dataset.pid; if(_zabUnfold.has(id)) _zabUnfold.delete(id); else _zabUnfold.add(id); _zabPaint(); }
+      else if(a==='back'){ _zabPath=_zabPath.slice(0,-1); _zabPaint(); }
+      else if(a==='items'){ const id=za.dataset.pid; _zabClose(); jebOpenPanel(id); }
+      return;
+    }
+    if(!row) return;
+    const id=row.dataset.pid;
+    if(_zabLayout()==='cols'&&row.dataset.lvl!=null){   /* a pocket that holds pockets opens the next column; one with nothing inside opens its panel */
+      const lvl=+row.dataset.lvl, kids=jebChildren(id).length;
+      if(kids&&_zabPath[lvl]!==id){ _zabPath=_zabPath.slice(0,lvl).concat(id); _zabPaint(); return; }
+    }
+    _zabClose(); jebOpenPanel(id);
+  });
+  lay.addEventListener('contextmenu',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; e.preventDefault(); _jebPocketMenu(r.dataset.pid,null,null,r); });
+  let lp=null, lx=0, ly=0;   /* long-press on a pocket = its menu, as on the bar */
+  lay.addEventListener('touchstart',e=>{
+    const r=e.target.closest('[data-pid]'); if(!r||e.touches.length!==1) return;
+    lx=e.touches[0].clientX; ly=e.touches[0].clientY; clearTimeout(lp);
+    lp=setTimeout(()=>{ _jebLPAt=Date.now(); _jebPocketMenu(r.dataset.pid,null,null,r); },500);
+  },{passive:true});
+  lay.addEventListener('touchmove',e=>{ const t=e.touches[0]; if(lp&&(Math.abs(t.clientX-lx)>8||Math.abs(t.clientY-ly)>8)){ clearTimeout(lp); lp=null; } },{passive:true});
+  ['touchend','touchcancel'].forEach(n=>lay.addEventListener(n,()=>{ clearTimeout(lp); lp=null; },{passive:true}));
+}
+function _zabCardClose(){ const c=_jebEl('zab-card'); if(c) c.remove(); }
+/* the small card anchored to the button: placed by measuring, clamped to the screen */
+function _zabCardOpen(){
+  if(_jebEl('zab-card')) return;
+  const b=_jebEl('zab-btn'); if(!b) return;
+  _jebHideMenu();
+  const cur=_zabLayout();
+  const rows=[['rail','Rail','bubbles up the right edge'],['drawer','Drawer','a list, ▸ opens the pockets inside'],['cols','Columns','the pockets inside in a second column']];
+  const c=document.createElement('div'); c.id='zab-card'; c.className='on'; c.setAttribute('role','dialog'); c.setAttribute('aria-label','Zab layout');
+  c.innerHTML=rows.map(r=>'<button type="button" class="zc-r" data-k="'+r[0]+'" role="menuitemradio" aria-checked="'+(cur===r[0])+'"><span class="zc-tk">'+(cur===r[0]?'☑':'☐')+' </span><span><b>'+r[1]+'</b> · '+r[2]+'</span></button>').join('')
+    +'<div class="zc-more">More in 🧰 → 🎨 Appearance</div>';
+  c.style.visibility='hidden'; document.body.appendChild(c);
+  const r=b.getBoundingClientRect(), w=c.offsetWidth, hh=c.offsetHeight, vw=window.innerWidth, vh=window.innerHeight;
+  const left=Math.max(8,Math.min(r.right-w,vw-w-8)), top=Math.max(8,Math.min(r.top-hh-8,vh-hh-8));
+  c.style.left=left+'px'; c.style.top=top+'px'; c.style.visibility='';
+  c.addEventListener('click',e=>{ const x=e.target.closest('.zc-r'); if(x) _zabSetLayout(x.dataset.k); });
+  if(!_jebReduced()&&c.animate) c.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:140,easing:'ease-out'});
+}
+/* the setting is the only thing written; no pocket or item is touched */
+function _zabSetLayout(k){
+  if(!_ZAB_LAYOUTS.includes(k)) return;
+  if(!DB.theme) DB.theme={};
+  if(DB.theme.zabPhoneLayout!==k){ DB.theme.zabPhoneLayout=k; persist(); }
+  _zabCardClose(); _zabClose(); _zabBtnSig=''; _jebBarSig='';
+  jebRefresh();
+  const m=document.getElementById('theme-modal');
+  if(m&&m.style.display&&m.style.display!=='none'&&typeof renderThemeModal==='function') renderThemeModal();
+}
+function setZabPhoneLayout(k){ _zabSetLayout(k); }
 /* ══ v05.04 · J5 — Siyagah Jeb (the page in Jeb mode) ═════════════════════════
    The header, the docked panel that never closes to nothing, and the view that
    opens first (DB.theme.jebAppView = {sel:{ids,all}, deck}). Nothing here touches
@@ -22920,7 +23364,7 @@ function jebTogglePanel(pid){ if(_jebOpen===pid){ if(!_JEB_APP) jebClosePanel();
 function jebToggleAllPanel(){ if(_jebOpen==='*'&&_jebMulti&&_jebMulti.all){ if(!_JEB_APP) jebClosePanel(); } else jebOpenPanelSel({ids:[],all:true}); }
 function jebOpenPanel(pid){
   if(!_jebPocket(pid)) return;
-  jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen=pid; _jebMulti=null; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  _zabClose(); jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen=pid; _jebMulti=null; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
   _jebAppRemember({ids:[pid],all:false},false);
   jebRefresh();
   const ta=_jebEl('jeb-add-in'); if(ta&&!_jebAppBusy) try{ ta.focus({preventScroll:true}); }catch(e){}   /* not at boot: no keyboard on a phone */
@@ -22930,7 +23374,7 @@ function jebOpenPanelSel(sel){
   const ids=_jebSelIds(sel);
   if(!sel.all&&ids.length===1){ jebOpenPanel(ids[0]); return; }
   if(!ids.length) return;
-  jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen='*'; _jebMulti={ids:sel.all?[]:ids.slice(),all:!!sel.all}; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  _zabClose(); jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen='*'; _jebMulti={ids:sel.all?[]:ids.slice(),all:!!sel.all}; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
   _jebAppRemember(sel,false);
   jebRefresh();
 }
@@ -22940,6 +23384,7 @@ function jebClosePanel(){
   _jebEditId=null; _jebDrag=null; _jebNewId=null;
   if(_jebOpen!==null){ _jebOpen=null; _jebMulti=null; _jebBarSig=''; _jebPanelSig=''; }
   if(p) p.classList.remove('on');
+  const zb=_jebEl('zab-btn'); if(zb) zb.classList.remove('up');   /* v05.17 */
   const bar=_jebEl('jeb-bar'); if(bar&&_jebBarOn()) _jebPaintBar(bar);
 }
 function _jebMakePanel(){
@@ -22982,6 +23427,7 @@ function _jebMakePanel(){
     if(t.closest('.jeb-more')){ _jebItemMenu(row.dataset.iid,t.closest('.jeb-more')); return; }
     if(t.closest('.jeb-att-b')){ _jebAttOpen(row.dataset.iid,t.closest('.jeb-att-b')); return; }
     if(t.closest('.jeb-note-b')){ _jebToNoteUI(row.dataset.iid); return; }
+    if(t.closest('a.jeb-lnk')) return;   /* v05.17: the address opens in a new tab; the rest of the text edits */
     if(t.closest('.jeb-tx')) _jebStartEdit(row.dataset.iid);
   });
   p.addEventListener('contextmenu',e=>{ const k=e.target.closest('.jx-kid'); if(!k) return; e.preventDefault(); _jebPocketMenu(k.dataset.pid,e.clientX,e.clientY); });
@@ -23072,7 +23518,7 @@ function _jebTaskMode(){
 function _jebTaskRowHTML(i,pk,mode){
   const today=_jebToday(), wide=mode==='w', pcs=_jebTaskPieces(i,today,false), open=_jebStepsOpen.has(i.id);
   return '<div class="jeb-it jt-it'+(i.done?' done':'')+(wide?' jt-w':'')+(open?' jt-open':'')+'" data-iid="'+esc(i.id)+'"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"'+(i.done?' checked':'')+'>'
-    +'<div class="jeb-body"><div class="jeb-tx">'+esc(i.text)+'</div>'+((!wide&&pcs)?'<div class="jt-meta">'+pcs+'</div>':'')+_jebChipsHTML(i)+(open?_jebStepsHTML(i):'')
+    +'<div class="jeb-body"><div class="jeb-tx">'+_jebTxHTML(i.text)+'</div>'+((!wide&&pcs)?'<div class="jt-meta">'+pcs+'</div>':'')+_jebChipsHTML(i)+(open?_jebStepsHTML(i):'')
     +'<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div>'
     +((wide&&pcs)?'<div class="jt-side">'+pcs+'</div>':'')+'<button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>';
 }
@@ -23114,7 +23560,7 @@ function _jebKindMeta(i,pk,card){
 }
 function _jebKindRowHTML(i,pk){
   return '<div class="jeb-it jk-it'+(_jebType(pk)==='ideas'?' ji-it':' js-it')+(i.done?' done':'')+'" data-iid="'+esc(i.id)+'"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"'+(i.done?' checked':'')+'>'
-    +'<div class="jeb-body"><div class="jeb-tx">'+esc(i.text)+'</div>'+_jebKindMeta(i,pk,false)+_jebChipsHTML(i)+_JEB_ROW_ACTS+'</div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>';
+    +'<div class="jeb-body"><div class="jeb-tx">'+_jebTxHTML(i.text)+'</div>'+_jebKindMeta(i,pk,false)+_jebChipsHTML(i)+_JEB_ROW_ACTS+'</div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>';
 }
 const _jebRows=(pk,l)=>l.map(i=>_jebKindRowHTML(i,pk)).join('');
 /* Ideas: a view bar (Sort · Group by), then the list or one group per topic */
@@ -23150,7 +23596,7 @@ function _jebRowHTML(i){
   if(lpk&&_jebType(lpk)==='links') return _jebLinkRowHTML(i,lpk,'c');
   if(lpk&&_jebType(lpk)==='tasks') return _jebTaskRowHTML(i,lpk,_jebTaskMode());   /* v05.11 · Z6b */
   if(lpk&&(_jebType(lpk)==='ideas'||_jebType(lpk)==='shop')) return _jebKindRowHTML(i,lpk);   /* v05.12 · Z6c */
-  return `<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body"><div class="jeb-tx">${esc(i.text)}</div>${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`;
+  return `<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body"><div class="jeb-tx">${_jebTxHTML(i.text)}</div>${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`;
 }
 function _jebPaintPanel(){
   const sel=_jebPanelSel(), ids=_jebSelIds(sel), multi=_jebOpen==='*';
@@ -23347,6 +23793,7 @@ function _jebMakeDeck(){
     if(t.closest('.jeb-more')){ _jebItemMenu(iid,t.closest('.jeb-more')); return; }
     if(t.closest('.jeb-att-b')){ _jebAttOpen(iid,t.closest('.jeb-att-b')); return; }
     if(t.closest('.jeb-note-b')){ _jebToNoteUI(iid); return; }
+    if(t.closest('a.jeb-lnk')) return;   /* v05.17: the address opens in a new tab; the rest of the text edits */
     if(t.closest('.jeb-tx')) _jebStartEdit(iid);
   });
   d.addEventListener('pointerdown',e=>{
@@ -23357,7 +23804,7 @@ function _jebMakeDeck(){
 }
 function _jebCardHTML(i,pk){
   const lk=_jebType(pk)==='links', tk=_jebType(pk)==='tasks', L=lk?_jebLinkOf(i):null;   /* v05.10: a link card = thumbnail on top, then the title */
-  return `<div class="jeb-card${i.done?' done':''}${lk?' jl-dcard':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another pocket" aria-label="Drag handle">⠿</div>${lk?_jebThumbHTML(L,pk):''}<div class="jeb-tx">${esc(lk?L.title:i.text)}</div>${tk?(()=>{ const pcs=_jebTaskPieces(i,_jebToday(),true); return pcs?'<div class="jt-meta">'+pcs+'</div>':''; })():''}${_jebKindMeta(i,pk,true)}${lk?`<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`:''}${_jebChipsHTML(i)}${lk?_jebLinkSugHTML(i):''}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
+  return `<div class="jeb-card${i.done?' done':''}${lk?' jl-dcard':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another pocket" aria-label="Drag handle">⠿</div>${lk?_jebThumbHTML(L,pk):''}<div class="jeb-tx">${lk?esc(L.title):_jebTxHTML(i.text)}</div>${tk?(()=>{ const pcs=_jebTaskPieces(i,_jebToday(),true); return pcs?'<div class="jt-meta">'+pcs+'</div>':''; })():''}${_jebKindMeta(i,pk,true)}${lk?`<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`:''}${_jebChipsHTML(i)}${lk?_jebLinkSugHTML(i):''}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
 }
 function _jebPaintDeck(){
   const sel=_jebDeck, ids=_jebSelIds(sel);
@@ -27902,7 +28349,8 @@ function _mergeRemoteIn(remoteDB, remoteT){
        typist's text is newer and wins, an untouched open note is a no-op
        flush and correctly loses to the incoming change. */
     _flushAllEditors();
-    _stampRecordTouches();   /* v04.68 — see syncNow() */
+    const _swPre=_stampRecordTouches();   /* v04.68 — see syncNow() */
+    let _hdPre=null; try{ if(_swPre) _hdPre=_headOf(DB,_swPre); }catch(e){}   /* v05.18 — P2: the notebook as it stood, for _renderFor */
     const _s1Old=_recSnap;   /* v04.90 — S1c: what the merge changes is the difference of the two baselines */
     DB=mergeDB(DB, remoteDB);                  /* MERGE — never replace, so nothing is lost */
     _remMerged=true;   /* v05.06 — the reminder list may be written only after a read */
@@ -27911,7 +28359,9 @@ function _mergeRemoteIn(remoteDB, remoteT){
     _s1DirtyFromDiff(_s1Old,_recSnap);
     const after=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
     _save(undefined,_sw);
-    _renderPreserveEdit();
+    /* v05.18 — P2: redraw what the merge touched (or everything, when that cannot be shown) */
+    let _rdCh; try{ _rdCh=_rdChangeOfMerge(_swPre,_sw,_hdPre); }catch(e){ _rdCh={unknown:true}; }
+    _renderFor(_rdCh,_renderPreserveEdit);
     _edApplyRemote();   /* let the merged text reach an open, idle editor */
     try{ _picMigKick(2000); }catch(e){}   /* v04.95 — a merge may have brought in data: pictures */
     if(remoteT>_lastSyncTime){_lastSyncTime=remoteT;localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);}

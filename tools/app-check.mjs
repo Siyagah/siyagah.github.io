@@ -12046,6 +12046,46 @@ await r.block('76-zab-tree', async () => {
   r.check(out.status === 0, 'the N1 pocket-tree check exits cleanly', `exit ${out.status}`);
 });
 
+/* 77 — v05.17, N2: on a phone Zab is one corner button with three layouts the owner chooses (Rail, Drawer, Columns).
+   tools/zab-n2.mjs runs 77a–77h with real taps and a real long-press at 360/390, real clicks at 1440: the button (present, no bar,
+   --jeb-h 0, overlaps nothing, badge = All pockets, red when overdue, hides with the keyboard; absent with the N1 bar at 820/1440),
+   each layout to the 4th level of a 4-deep chain, an item added and counted all the way up, the pocket menu by long-press, All
+   pockets and ＋; the choosing card, Appearance incl. 'bar', the second device both ways; nothing moved on the notes screens and the
+   last lines scroll clear; an address in an item opens a new tab; 50 pockets × 5 levels × 300 items and 9,000 notes; contrast on
+   five presets; no motion under prefers-reduced-motion. Each printed ok/FAIL line becomes one check. */
+await r.block('77-zab-phone', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-n2.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the N2 phone-Zab check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'N2: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the N2 phone-Zab check exits cleanly', `exit ${out.status}`);
+});
+
+/* 78 — v05.18, P2: after a received edit and after undo / redo only what the change touches is redrawn (_renderFor).
+   tools/redraw-p2.mjs runs 78a–78d at 390 / 820 / 1440. 78a, THE ORACLE: after each of 13 kinds of change (a text edit of a
+   note that is not open, the open note, a title that moves in a Smart View, a note moved, a tag added and removed, Trash and
+   restore, a new note, a folder renamed, Favourite + Pinned, a Zab item, a Zab pocket moved into another, a change under a
+   search / a tag filter, a change while the open note is being edited), received from a second device on the fake cloud and
+   applied by undo then redo, the visible state of #sb, #p2, #p3 and Zab is snapshotted, the full render() is called, and the two
+   must be identical; which panes were drawn is asserted too. 78b speed at 9,000 notes (phone x4 and laptop, median of 5);
+   78c every change the classifier cannot place draws everything; 78d the redraw writes nothing and leaves DB alone.
+   Each printed ok/FAIL line becomes one check. */
+await r.block('78-redraw-p2', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./redraw-p2.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 200, 'the P2 redraw check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'P2: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the P2 redraw check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
