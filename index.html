@@ -2186,6 +2186,21 @@ sup.ann-sup:hover{text-decoration:underline}
   .p3h-edit-bar{min-height:44px;padding:3px 8px;gap:3px}
   .p3h-title-bar{min-height:48px;padding:6px 10px}
   .p3h-title-bar #ti{font-size:16px}}
+/* v05.15 (T1) — PHONE ONLY. Editing: ✕ and the Saved flash on a row above the title; the title is a
+   growing <textarea> at the full pane width. Reading: the title wraps in full (no 2-line clamp).
+   Pop-ups: the title wraps instead of an ellipsis. Tablet and laptop are untouched. */
+@media(max-width:639.98px){
+  .p3c-actrow{display:flex;align-items:center;justify-content:flex-end;gap:6px;position:relative;
+    padding:3px 10px;min-height:44px;border-bottom:1px solid var(--border2);background:var(--paper);flex-shrink:0}
+  .p3c-actrow .save-flash{position:static;transform:none;margin-right:auto}
+  .p3c-actrow .p3c-stop{margin-left:0}
+  .p3h-title-bar.p3c-ph{align-items:flex-start;padding:8px 14px}
+  textarea#ti,.pf-title-row textarea.pf-ti{display:block;resize:none;overflow:hidden;white-space:pre-wrap;
+    overflow-wrap:anywhere;line-height:1.3;font-family:var(--ui)}
+  .p3h-title-bar #ti{padding:4px 0}
+  .p3c-vt .tbt{display:block;-webkit-line-clamp:unset;overflow:visible;overflow-wrap:anywhere;text-overflow:clip;white-space:normal}
+  .pf-title-row .fw-title-disp{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+}
 
 /* ── Context menu sub-panels ─────────────────────────────────────────────── */
 .ci-sub{display:flex!important;align-items:center;justify-content:space-between}
@@ -4248,6 +4263,40 @@ function _tiScheduleAutoSave(){
   const d=Math.max(0,Math.min(_ED_AUTOSAVE_MS,_ED_AUTOSAVE_MAX_MS-(now-_tiAsSince)));
   _tiAsT=setTimeout(function(){_tiAsSince=0;_edAutoSave();},d);
 }
+/* v05.15 (T1) — on a phone the title is a <textarea> that grows, so a long title wraps in
+   full instead of being cut off (an <input> cannot wrap). A title never holds a line break:
+   a pasted one becomes a space, Enter moves the caret into the note's text. `main` is the
+   main editor's #ti (ST.etitle + autosave); Single's #ti is the same field; Multi's
+   fw-ti-<aid> keeps its own listener and is only cleaned and grown here. */
+function _tiGrow(t){
+  if(!t||t.tagName!=='TEXTAREA')return;
+  t.style.height='auto';t.style.height=t.scrollHeight+'px';
+}
+function _tiGrowAll(){
+  document.querySelectorAll('textarea#ti,textarea.pf-ti').forEach(_tiGrow);
+}
+function _tiInput(t,main){
+  let v=t.value;
+  if(/[\r\n]/.test(v)){
+    const s=t.selectionStart;
+    const pre=v.slice(0,s).replace(/[ \t]*[\r\n]+[ \t]*/g,' ').length;
+    v=v.replace(/[ \t]*[\r\n]+[ \t]*/g,' ');
+    t.value=v;
+    try{t.setSelectionRange(pre,pre);}catch(e){}
+  }
+  if(main){ST.etitle=v;_tiScheduleAutoSave();}
+  _tiGrow(t);
+}
+function _tiKey(e,t){
+  if(e.key!=='Enter'||e.isComposing)return;
+  e.preventDefault();
+  const w=t.closest('.float-win');
+  const ed=w?w.querySelector('.fw-ed'):document.getElementById('ed');
+  if(!ed)return;
+  ed.focus();
+  try{const r=document.createRange();r.setStart(ed,0);r.collapse(true);const s=getSelection();s.removeAllRanges();s.addRange(r);}catch(x){}
+}
+window.addEventListener('resize',function(){try{_tiGrowAll();}catch(e){}});
 /* v03.92.02 — when the user last typed into ANY editor, and how long after
    that an incoming remote change is allowed to refresh the editor on screen.
    "Edit mode is open" is not the same as "actively typing": a note can sit
@@ -6603,9 +6652,14 @@ function _renderP3CInner(){
          rendered it here at all. And at every size under 1200px the version
          strip, the dates and the section-tools ⋯ are one line now, not three. */
       el.innerHTML=(_mobE2&&!_p3OneBar()?kindBarHTML(curA):'')
-        +`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML(true)}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span>${_p3OneBar()?'<button class="btn bn bi p3c-stop" onclick="cancelEdit()" title="Stop editing — everything you typed is already saved">✕</button>':''}</div>`
+        +(_p3OneBar()
+          /* v05.15 (T1) — phone: ✕ and the Saved flash sit on a row of their own ABOVE the title, and the
+             title is a growing <textarea> at the full width below (the one bar above has no room left). */
+          ?`<div class="p3c-actrow"><span id="save-flash" class="save-flash">✓ Saved</span><button class="btn bn bi p3c-stop" onclick="cancelEdit()" title="Stop editing — everything you typed is already saved">✕</button></div><div class="p3h-title-bar p3c-titlebar p3c-ph"><textarea id="ti" rows="1" placeholder="Article title…" oninput="_tiInput(this,true)" onkeydown="_tiKey(event,this)">${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}</textarea></div>`
+          :`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML(true)}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span></div>`)
         +_p3MetaRowHTML(curA,_mobE2)+_fieldsPanelHTML(curA)+`<div id="ed" data-aid="${curA.id}" contenteditable="true" spellcheck="true"></div>`;
     }
+    _tiGrowAll();requestAnimationFrame(_tiGrowAll);
     if(_tiF2){const _tin=document.getElementById('ti');if(_tin){_tin.focus({preventScroll:true});try{_tin.setSelectionRange(_s2,_e2);}catch(e){}}}
     const ed=document.getElementById('ed');ed.innerHTML=curA.content;if(_isPlaceholder(curA.content))ed.innerHTML='';initRichPaste(ed);
     wireAnnEditor(ed,curA);
@@ -12905,6 +12959,7 @@ function _fwCreate(aid){
   }
   const ti=win.querySelector('.fw-ti');
   if(ti)ti.addEventListener('input',()=>_fwScheduleAutoSave(aid));
+  _tiGrowAll();requestAnimationFrame(_tiGrowAll);   /* v05.15 — phone: a long title wraps */
   _captureNoteHistory(a,'session-start');
   _fwFocus(aid);
   _fwSyncCloseAllChip();
@@ -13197,10 +13252,14 @@ function _fwFlashSaved(aid){
    id="fw-ti-<aid>" — and Single's read view gets plain text that still
    right-click-edits. `title` is the already-escaped display title. */
 function _popTitleHTML(aid,mode,a,title){
+  /* v05.15 (T1) — on a phone both pop-ups' titles are growing <textarea>s, so a long one wraps in full */
+  const ph=_p3OneBar();
   if(mode==='float')
-    return '<input class="fw-ti pf-ti" id="fw-ti-'+aid+'" data-pf="title" data-ps="title" value="'+esc((a&&a.title)||'')+'" placeholder="Title…" title="Title">';
+    return ph?'<textarea rows="1" class="fw-ti pf-ti" id="fw-ti-'+aid+'" data-pf="title" data-ps="title" placeholder="Title…" title="Title" oninput="_tiInput(this,false)" onkeydown="_tiKey(event,this)">'+esc((a&&a.title)||'')+'</textarea>'
+      :'<input class="fw-ti pf-ti" id="fw-ti-'+aid+'" data-pf="title" data-ps="title" value="'+esc((a&&a.title)||'')+'" placeholder="Title…" title="Title">';
   if(ST.editing&&ST.noteModal&&ST.article===aid)
-    return '<input class="pf-ti" id="ti" data-pf="title" data-ps="title" value="'+esc(ST.etitle!=null?ST.etitle:((a&&a.title)||''))+'" placeholder="Article title…" title="Title" oninput="ST.etitle=this.value;_tiScheduleAutoSave()">';
+    return ph?'<textarea rows="1" class="pf-ti" id="ti" data-pf="title" data-ps="title" placeholder="Article title…" title="Title" oninput="_tiInput(this,true)" onkeydown="_tiKey(event,this)">'+esc(ST.etitle!=null?ST.etitle:((a&&a.title)||''))+'</textarea>'
+      :'<input class="pf-ti" id="ti" data-pf="title" data-ps="title" value="'+esc(ST.etitle!=null?ST.etitle:((a&&a.title)||''))+'" placeholder="Article title…" title="Title" oninput="ST.etitle=this.value;_tiScheduleAutoSave()">';
   return '<span class="fw-title-disp" data-pf="title" data-ps="title" title="Right-click to edit — '+title+'" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">'+title+'</span>';
 }
 /* v04.80 — ✚ New + ✏️ Edit / 💾 Save. Rendered in BOTH rows; CSS shows the
@@ -13324,6 +13383,7 @@ function _popFrameSync(){
   const tb=document.getElementById('tab-bar'),slot=hd.querySelector('.pf-tabs-slot');
   if(tb&&slot)slot.appendChild(tb);
   _wireModalFrameDrag(hd);
+  _tiGrowAll();requestAnimationFrame(_tiGrowAll);
   if(_tiFocus){const t=document.getElementById('ti');if(t){t.focus({preventScroll:true});try{t.setSelectionRange(_s,_e);}catch(e){}}}
 }
 /* v04.79 — #tab-bar's home is between the frame and #p3h; it only visits the
