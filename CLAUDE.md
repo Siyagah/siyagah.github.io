@@ -11,7 +11,7 @@ stay short enough to read in full before starting work.
 > `p/siy/guides/<G..>` in the page's database (`ArtifactData`). **Every session reads
 > it first and updates it before finishing**; nothing is reported as done unless it
 > is recorded there. **Write only under `p/siy`**: never `meta/global`, the layout,
-> the inbox or another project's section. Reply under each owner change marked New,
+> the inbox or another project's section. Shared jobs: in another project's job whose `also` includes `siy`, Siyagah's Architect may add lines and replies only when the owner ticked "Also for" Siyagah; it never changes that job's other lines, status or project, and otherwise replies under `p/siy`. Reply under each owner change marked New,
 > clear the marks, stamp `p/siy` `claudeSeenAt`; pin every write with `if_version`;
 > never hide or delete the owner's text. The general rules (R1–R13) are the shared
 > file's; Siyagah's own are in `p/siy` and copied in `claude/PROJECT-RULES.md`. A
