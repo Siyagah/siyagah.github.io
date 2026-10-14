@@ -28091,6 +28091,7 @@ async function _enxImport(items){
     _enxPersist();
     I.took+=list.length; _enxTick();
     await _enxYield();
+    if(window.__enxDelay>0) await new Promise(r=>setTimeout(r,window.__enxDelay));   /* test-only: slows each batch so a check can pause or close the page between them */
   };
   const onNote=(info,it)=>{
     if(info.err){ I.broken++; return; }
@@ -28162,7 +28163,8 @@ function _enxImpHTML(){
       +(w.room>0?'':'<div class="enx-sub">Continue after '+esc(_enxWhen(w.next,now))+'</div>')+(I.note?'<div class="enx-sub" id="enx-inote">'+esc(I.note)+'</div>':'')+skip+pics;
   }else if(I.state==='done'){
     h+='<div class="enx-prog" id="enx-idone" role="status">✅ Done. '+N(I.took)+' notes brought in this time; '+N(brought)+' from Evernote in all.</div>'+skip+pics
-      +'<div class="enx-sub">They are in My Notebooks ▸ Evernote, and in the Smart View "(13) From Evernote".</div>';
+      +'<div class="enx-sub">They are in My Notebooks ▸ Evernote, and in the Smart View "(13) From Evernote".</div>'
+      +'<button class="rm-big alt" onclick="_enxAgain()">↩ Choose another export</button>';
   }
   return h;
 }
