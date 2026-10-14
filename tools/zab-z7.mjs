@@ -19,6 +19,10 @@
    `--only=81a,81c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 81). */
 import { playwright, serve, seedDB } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, push, check, results } from './s1-fake.mjs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const argv = process.argv.slice(2);
 const onlyArg = argv.find((a) => a.startsWith('--only='));
@@ -28,8 +32,15 @@ if (argv.includes('--fails')) { const o = console.log; let skip = false; console
 
 const P390 = { name: '390', w: 390, h: 844, touch: true }, T820 = { name: '820', w: 820, h: 1180, touch: true }, D1440 = { name: '1440', w: 1440, h: 900, touch: false };
 const T0 = '2026-10-01T00:00:00.000Z';
+/* `--unpatched` serves the app as it was before the drag was written (the step-0 version-bump commit): every check must fail there */
+function makeBase() {
+  const dir = mkdtempSync(join(tmpdir(), 'zab-z7-base-'));
+  const sha = execFileSync('git', ['log', '--format=%H', '-n', '1', '--grep=step 0: bump to 05.21'], { encoding: 'utf8' }).trim();
+  for (const f of ['index.html', 'sw.js', 'manifest.json']) { try { writeFileSync(join(dir, f), execFileSync('git', ['show', `${sha}:${f}`], { encoding: 'buffer', maxBuffer: 1 << 28 })); } catch {} }
+  return dir;
+}
 const pw = await playwright();
-const srv = await serve();
+const srv = await serve(argv.includes('--unpatched') ? makeBase() : undefined);
 const browser = await pw.chromium.launch();
 
 const LET = 'ABCDEFGHIJKLMNOPQRST'.split('');
