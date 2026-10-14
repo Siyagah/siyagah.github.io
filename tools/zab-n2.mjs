@@ -302,7 +302,7 @@ try {
         check(nowL === 'cols' && !(await btnRect(d)) && !!(await on(d, () => document.getElementById('jeb-bar'))), `${t} choosing Columns at 1440 stores it; the laptop still has its bar and no button`);
         await on(d, () => closeTheme());
         await d.page.setViewportSize({ width: 390, height: 844 }); await sleep(700);
-        await openLay(d, P390, '.zl-cols');
+        await openLay(d, D1440, '.zl-cols');   /* a mouse context, narrowed: clicks */
         check(true, `${t} ...and the same notebook narrowed to a phone opens Columns`);
       } finally { await d.ctx.close(); }
     }
@@ -366,6 +366,7 @@ try {
       c = await clear('.avw p:last-of-type, .av-body p:last-of-type, #p3c p:last-of-type');
       check(c.lastBottom <= c.btnTop, `${t} the last line of a long note being read is clear of the button (${c.lastBottom} <= ${c.btnTop})`, JSON.stringify(c));
       await on(d, () => startEdit()); await sleep(700); await toEnd(); await sleep(200);
+      await on(d, () => document.documentElement.classList.remove('jeb-kb'));   /* the keyboard hid the button while typing; it is back once the keyboard is down */
       c = await clear('#ed > p:last-of-type');
       check(c.lastBottom <= c.btnTop, `${t} the last line of a long note being edited is clear of the button (${c.lastBottom} <= ${c.btnTop})`, JSON.stringify(c));
       noErr(d, t);

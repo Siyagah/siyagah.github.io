@@ -945,7 +945,7 @@ html.zab-btn #zab-btn{display:flex}
 a.jeb-lnk{color:var(--accent);text-decoration:underline;overflow-wrap:anywhere;padding:11px 0}
 .jeb-card a.jeb-lnk{color:#2A2418}
 @media(max-width:639.98px){
-  html.zab-btn #tree,html.zab-btn #p2c,html.zab-btn #p3c{padding-bottom:84px}
+  html.zab-btn :is(#tree,#p2c,#p3c)>:last-child:not(.lp){margin-bottom:84px}   /* room to scroll the last line clear of the button; the centred landing page is left alone */
   html.zab-btn .toast{bottom:calc(84px + var(--jeb-h) + env(safe-area-inset-bottom,0px))}
   html.zab-btn #toc-float-btn{bottom:calc(84px + var(--jeb-h) + env(safe-area-inset-bottom,0px))}
 }
