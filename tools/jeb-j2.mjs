@@ -37,7 +37,7 @@ const mkItem = (id, pocketId, text, order, done = false) => ({ id, pocketId, tex
 /* Alpha, Bravo open + "Done one" done in Quick tasks (count 2); Idea in Ideas (count 1) */
 const baseItems = () => [mkItem('t1', 'jp-task', 'Alpha', 0), mkItem('t2', 'jp-task', 'Bravo', 1), mkItem('t3', 'jp-task', 'Done one', 2, true), mkItem('i1', 'jp-idea', 'Idea', 0)];
 const longNote = () => ({ id: 'long1', title: 'A long note', content: '<h2>One</h2><h2>Two</h2><h2>Three</h2>' + Array.from({ length: 140 }, (_, i) => `<p>Paragraph number ${i} of the long note, with enough words to wrap on a phone screen.</p>`).join('') + '<p id="the-end">THE END</p>', folderIds: ['f1'], tags: [], createdAt: T0, updatedAt: T0, kind: 'general' });
-const seed = (extra) => { const db = seedDB(T0); db.jeb = baseItems(); db.articles.push(longNote()); if (extra) extra(db); return db; };
+const seed = (extra) => { const db = seedDB(T0); db.jeb = baseItems(); db.articles.push(longNote()); if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.17: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
 const dev = (cloud, name, vp, db) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed());
 const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
