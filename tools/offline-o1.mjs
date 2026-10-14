@@ -194,6 +194,7 @@ try {
       await tap('#ctx .ci:has-text("Add article here")');
       await A.page.waitForSelector('#ov.on #inp'); await A.page.locator('#inp').fill('Offline new note'); await A.page.keyboard.press('Enter');
       await sleep(900);
+      await A.page.evaluate(() => { if (window.innerWidth < 1200) showPane('p3'); });   /* navigation only: a phone shows one pane at a time */
       await A.page.locator('#ed').first().click(); await A.page.keyboard.type('typed while offline');
       await sleep(3200);
       /* 3. edit another note (a2) */
@@ -205,7 +206,9 @@ try {
       await tap('button:has-text("Edit")'); await A.page.waitForSelector('#ed');
       await A.page.locator('#ed').first().click(); await A.page.keyboard.press('Control+End'); await A.page.keyboard.type(' EDITED-OFFLINE');
       await sleep(3200);
-      /* 4. a Zab item */
+      /* 4. a Zab item (the keyboard is put away first: a phone hides the bar while one is up) */
+      await A.page.evaluate(() => { if (ST.editing) { try { saveArt(); } catch (e) {} } if (document.activeElement) document.activeElement.blur(); });
+      await sleep(500);
       await tap('#jeb-bar .jeb-chip[data-pid="jp-idea"] .jeb-main'); await A.page.waitForSelector('#jeb-panel.on', { timeout: 4000 }); await sleep(400);
       await tap('#jeb-add-in'); await A.page.keyboard.type('Offline zab item'); await A.page.keyboard.press('Enter'); await sleep(900);
       await tap('#jeb-panel .jeb-x'); await sleep(300);
