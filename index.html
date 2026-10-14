@@ -4269,11 +4269,21 @@ function _tiScheduleAutoSave(){
    main editor's #ti (ST.etitle + autosave); Single's #ti is the same field; Multi's
    fw-ti-<aid> keeps its own listener and is only cleaned and grown here. */
 function _tiGrow(t){
-  if(!t||t.tagName!=='TEXTAREA')return;
-  t.style.height='auto';t.style.height=t.scrollHeight+'px';
+  if(!t||t.tagName!=='TEXTAREA'||!t.offsetWidth)return;
+  t.style.height='auto';t.style.height=(t.scrollHeight+t.offsetHeight-t.clientHeight)+'px';
+  t._tiW=t.offsetWidth;
 }
+/* a title box that is laid out later, or at another width (a sheet sliding in, a turned phone), grows again by itself */
+let _tiRO=null;
 function _tiGrowAll(){
-  document.querySelectorAll('textarea#ti,textarea.pf-ti').forEach(_tiGrow);
+  document.querySelectorAll('textarea#ti,textarea.pf-ti').forEach(t=>{
+    _tiGrow(t);
+    if(window.ResizeObserver&&!t._tiObs){
+      t._tiObs=1;
+      if(!_tiRO)_tiRO=new ResizeObserver(es=>es.forEach(e=>{const x=e.target;if(x.isConnected&&x.offsetWidth!==x._tiW)_tiGrow(x);}));
+      _tiRO.observe(t);
+    }
+  });
 }
 function _tiInput(t,main){
   let v=t.value;

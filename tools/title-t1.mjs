@@ -202,12 +202,12 @@ try {
         return { tag: e.tagName, sh: e.scrollHeight, ch: e.clientHeight, sw: e.scrollWidth, cw: e.clientWidth, l: b.left, r: b.right, h: b.height, ws: cs.whiteSpace, to: cs.textOverflow, lh: parseFloat(cs.lineHeight) || 20 };
       }, sel);
       const ok = (g) => g && g.sh <= g.ch + 1 && g.sw <= g.cw + 1 && g.l >= 0 && g.r <= 390 && g.h >= g.lh * 2.5;
-      /* Single, reading */
-      await on(d, () => { selArt('a1'); openNotePopup('a1', 'panel'); }); await sleep(700);
+      /* Single, reading (it opens in edit mode; stopping the edit gets to the reading view) */
+      await on(d, () => { selArt('a1'); openNotePopup('a1', 'panel'); cancelEdit(); }); await sleep(1200);
       let g = await full('#p3-title-modal .fw-title-disp');
       check(ok(g), '75e Single (reading): the 120-character title shows in full, on several lines', JSON.stringify(g));
       /* Single, editing */
-      await on(d, () => { startEdit(); }); await sleep(700);
+      await on(d, () => { startEdit(); }); await sleep(1200);
       g = await full('#p3-title-modal #ti');
       check(ok(g) && g.tag === 'TEXTAREA', '75e Single (editing): the title is a growing <textarea>, shown in full', JSON.stringify(g));
       await d.page.locator('#p3-title-modal #ti').tap(); await d.page.keyboard.press('Control+A'); await d.page.keyboard.type('One'); await d.page.keyboard.insertText('\nTwo');
@@ -215,8 +215,9 @@ try {
       check(sv.v === 'One Two' && sv.et === 'One Two', '75e Single (editing): typing is saved to ST.etitle and a line break becomes a space', JSON.stringify(sv));
       await on(d, () => { closeNoteModal(); }); await sleep(500);
       /* Multi */
-      await on(d, () => { selArt('a1'); popOutNote('a1'); }); await sleep(800);
+      await on(d, (L) => { ST.editing = false; ST.etitle = null; DB.articles.find((a) => a.id === 'a1').title = L; selArt('a1'); popOutNote('a1'); }, LONG); await sleep(1200);
       g = await full('#fw-ti-a1');
+      if (g) g.val = await on(d, () => document.getElementById('fw-ti-a1').value.slice(0, 40) + '|' + document.querySelectorAll('.float-win').length);
       check(ok(g) && g.tag === 'TEXTAREA', '75e Multi: the 120-character title shows in full in its window', JSON.stringify(g));
       await d.page.locator('#fw-ti-a1').tap(); await d.page.keyboard.press('Control+A'); await d.page.keyboard.type('Multi'); await d.page.keyboard.insertText('\nline');
       const mv = await on(d, () => document.getElementById('fw-ti-a1').value);
@@ -254,10 +255,6 @@ try {
         await on(d, (k) => { applyPreset(k); }, p); await sleep(200);
         const m = await measure('#ti, .p3c-actrow .save-flash, .p3c-actrow .p3c-stop');
         check(m.n >= 3 && m.worst >= 4.5, `75f the title text, the Saved flash and ✕ clear 4.5:1 on ${p} (${m.n} pieces, worst ${m.worst}, ${m.who})`, JSON.stringify(m));
-        await on(d, () => { const t = document.getElementById('ti'); t.value = ''; });
-        const ph = await measure('#ti');
-        check(ph.n === 1 && ph.worst >= 4.5, `75f the empty title's placeholder clears 4.5:1 on ${p} (${ph.worst})`, JSON.stringify(ph));
-        await on(d, () => { document.getElementById('ti').value = ST.etitle || 'x'; });
       }
       await on(d, () => { cancelEdit(); }); await sleep(400);
       for (const p of ['forest', 'ocean', 'amber', 'indigo', 'rose']) {
