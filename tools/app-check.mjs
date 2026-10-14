@@ -9737,7 +9737,10 @@ await r.block(`37a-title-once-${vp.name}-${mode}`, async () => {
   const inRow = await page.evaluate((S) => { const t = document.querySelector(S.title); const f = document.querySelector(S.frame); const row = document.querySelector(S.titlerow);
     if (!t || !f || !row) return { t: !!t, f: !!f, row: !!row };
     const fb = f.getBoundingClientRect(), rb = row.getBoundingClientRect();
-    return { input: t.tagName === 'INPUT', inRow: row.contains(t), notInBar: !f.contains(t), under: rb.top >= fb.bottom - 1.5 && rb.top <= fb.bottom + 1.5 }; }, S);
+    /* v05.15 (T1) — updated in place: on a phone (< 640 px) the pop-ups' title is a growing <textarea>, so a
+       long title wraps in full (the owner, J16: "Make the title wraps below"); elsewhere it is still an <input>.
+       Either is "the editable title"; which one is expected is fixed by the width. */
+    return { input: t.tagName === (window.innerWidth < 640 ? 'TEXTAREA' : 'INPUT'), inRow: row.contains(t), notInBar: !f.contains(t), under: rb.top >= fb.bottom - 1.5 && rb.top <= fb.bottom + 1.5 }; }, S);
   r.check(inRow.input && inRow.inRow && inRow.notInBar && inRow.under, `${vp.name} ${mode}: that one title is the editable input, in its own row directly under the window bar`, JSON.stringify(inRow));
   if (mode === 'single') {
     /* Read mode: plain text in the window bar, right-click starts editing. */
