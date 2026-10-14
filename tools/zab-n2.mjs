@@ -92,6 +92,21 @@ try {
         check(+g.z === 142, `${t} z-index 142 (below Attach 9150, menus 9200, modals 10000)`, String(g.z));
         let ov = await overlaps(d);
         check(ov.length === 0, `${t} on the notes list it overlaps no other fixed control`, ov.join());
+        /* v05.18 (Architect review) — the folder screen: the sidebar's bottom row (New Note · Recent · MyWall · Folders) is not
+           position:fixed, so the check above never saw it; the button hid "Folders". Every visible control in the sidebar now. */
+        await on(d, () => { showPane('sb'); }); await sleep(300);
+        const sbo = await on(d, () => { const b = document.getElementById('zab-btn').getBoundingClientRect(), hit = [];
+          document.querySelectorAll('#sb button, #sb a, #sb input, #sb [role="button"], #sb [onclick]').forEach((e) => { const r = e.getBoundingClientRect(); if (!r.width || !r.height || getComputedStyle(e).visibility === 'hidden') return;
+            if (r.left < b.right - 1 && r.right > b.left + 1 && r.top < b.bottom - 1 && r.bottom > b.top + 1) hit.push((e.textContent || e.title || e.tagName).trim().slice(0, 24)); });
+          const tb = document.getElementById('sb-toolbar').getBoundingClientRect(); return { hit, gap: Math.round(tb.top - b.bottom), right: Math.round(innerWidth - b.right) }; });
+        check(sbo.hit.length === 0 && sbo.gap >= 4 && sbo.right >= 10, `${t} on the folder screen it covers no control of the sidebar: it sits ${sbo.gap}px above the New Note · Recent · MyWall · Folders row`, JSON.stringify(sbo));
+        await openLay(d, vp, '.zl-rail');
+        const rl = await on(d, () => { const r = document.querySelector('#zab-lay .zl-rail').getBoundingClientRect(), b = document.getElementById('zab-btn').getBoundingClientRect(); return { railBottom: Math.round(r.bottom), btnTop: Math.round(b.top) }; });
+        check(rl.railBottom <= rl.btnTop, `${t} ...and the Rail's bubbles rise from above the button there (${rl.railBottom} <= ${rl.btnTop})`, JSON.stringify(rl));
+        await tapEl(d, vp, '#zab-btn'); await sleep(250);
+        await on(d, () => { showPane('p2'); }); await sleep(300);
+        const back = await on(d, () => { const b = document.getElementById('zab-btn'); return { inline: b.style.bottom, bottom: Math.round(innerHeight - b.getBoundingClientRect().bottom) }; });
+        check(back.inline === '' && back.bottom >= 10 && back.bottom <= 40, `${t} ...on the notes list it is back in the corner (${back.bottom}px from the bottom)`, JSON.stringify(back));
         await on(d, () => toast('A longer message that fills most of the width of the screen'));
         await sleep(200); ov = await overlaps(d);
         const tt = await on(d, () => { const e = document.querySelector('.toast'), b = document.getElementById('zab-btn'); return e ? { bot: Math.round(e.getBoundingClientRect().bottom), btop: Math.round(b.getBoundingClientRect().top) } : null; });

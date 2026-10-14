@@ -22752,7 +22752,7 @@ function _jebWireOnce(){
   if(_jebWired) return; _jebWired=true;
   try{ new ResizeObserver(jebLayout).observe(_jebEl('sb')); }catch(e){}
   let wasWide=_jebWide(), wasTk=_jebTaskMode(), wasPhone=_zabPhone();
-  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_zabPhone()!==wasPhone){ wasPhone=_zabPhone(); jebRefresh(); } else if(_zabOpen) _zabPaint(); if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
+  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_zabPhone()!==wasPhone){ wasPhone=_zabPhone(); jebRefresh(); } else if(_zabOpen) _zabPaint(); _zabPlace(); if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
   document.addEventListener('focusin',_jebKbCheck);
   document.addEventListener('focusout',()=>setTimeout(_jebKbCheck,0));
   document.addEventListener('pointerdown',e=>{
@@ -22847,6 +22847,19 @@ function _zabSync(on){
   b.classList.toggle('up',!!_jebOpen);   /* with a panel open the button rides above its top edge, so it can still close it */
   b.setAttribute('aria-expanded',_zabOpen?'true':'false');
   if(_zabOpen) _zabPaint();
+  _zabPlace();
+}
+/* v05.18 (Architect review) — on a phone's folder screen the sidebar's bottom row (New Note · Recent · MyWall · Folders) is where the
+   corner would be, and the button hid "Folders". While that screen shows, the button sits just above the row, measured (never a
+   constant); the Rail's bubbles follow the button. Written on the button and the rail themselves, never on <html>. */
+function _zabPlace(){
+  const b=_jebEl('zab-btn'); if(!b) return;
+  const sb=_jebEl('sb'), tb=_jebEl('sb-toolbar');
+  let v='';
+  if(!_jebOpen&&sb&&tb&&!sb.classList.contains('closed')){ const r=tb.getBoundingClientRect(); if(r.height>0&&r.top<innerHeight) v=Math.round(innerHeight-r.top+10)+'px'; }
+  if(b.style.bottom!==v) b.style.bottom=v;
+  const rail=document.querySelector('#zab-lay .zl-rail');
+  if(rail){ const w=v?'calc('+v+' + 62px)':''; if(rail.style.bottom!==w) rail.style.bottom=w; }
 }
 function _zabMakeBtn(){
   const b=document.createElement('button'); b.type='button'; b.id='zab-btn';
@@ -22926,6 +22939,7 @@ function _zabPaint(anim){
   const sig=L+'|'+h; if(sig===_zabLaySig) return; _zabLaySig=sig;
   const keep=[...lay.querySelectorAll('.zl-rail,.zd-list,.zc-list')].map(e=>e.scrollTop);
   lay.innerHTML=h;
+  _zabPlace();
   lay.querySelectorAll('.zl-rail,.zd-list,.zc-list').forEach((e,i)=>{ if(keep[i]) e.scrollTop=keep[i]; });
   if(anim&&!_jebReduced()&&lay.animate){   /* none under prefers-reduced-motion */
     const bd=lay.querySelector('.zl-bd'); if(bd) bd.animate([{opacity:0},{opacity:1}],{duration:160,easing:'ease-out'});
@@ -25459,6 +25473,7 @@ function showPane(name){
   if(name==='sb')  sb.classList.remove('closed');
   if(name==='p2')  p2.classList.add('mob-open');
   if(name==='p3')  p3.classList.add('mob-open');
+  if(typeof _zabPlace==='function') _zabPlace();   /* v05.18 — the corner button clears the folder screen's bottom row */
 }
 
 /* ── Cloud Sync (Firebase Firestore) ─────────────────────────────────────
