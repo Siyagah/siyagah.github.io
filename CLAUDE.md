@@ -37,6 +37,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.20** (14 Oct 2026) — S4b, the Evernote notes come in, at most 6,000 in any rolling 24 hours (issue #187, PCF J01; pictures/audio/files
+  are S4c, merging earlier imports S4d). 📥 Bring them in on the dry run's result → My Notebooks ▸ Evernote ▸ stack ▸ notebook, batches of
+  250, Pause / Continue, `fromEvernote` mark, Smart View `sf-enx` "(13) From Evernote", a toast once per session. See *The Evernote
+  import, the notes* below. 2,000 notes at 390 ×4: worst long task 108 ms. Check: block 80, `tools/enex-s4b.mjs`.
 - **v05.18** (14 Oct 2026) — P2, a received edit and an undo redraw only what changed (issue #184, PCF J08). `_renderFor(changed)` decides;
   anything it cannot prove safe calls the caller's full draw. At 9,000 notes, phone ×4: received edit not open 5 ms, open note 85 ms, undo 34 ms
   (were ~70–230 ms of `render()`). Check: block 78, `tools/redraw-p2.mjs`. Not done: the windowed list; un-selecting a tag still redraws the whole list.
@@ -56,12 +60,6 @@ must never accumulate here instead of there.
   growing `<textarea id="ti">` (`_tiInput`/`_tiKey`/`_tiGrow`/`_tiGrowAll`: a line break becomes a space, Enter moves the caret into the
   note's text); reading drops the 2-line clamp on `.tbt`; both pop-ups' titles are the same textarea (Single `#ti`, Multi `#fw-ti-<aid>`).
   Tablet and laptop markup is byte-identical to v05.14. Check: block 75, `tools/title-t1.mjs` (`--unpatched` serves v05.14: 33 of 72 fail). Architect: full `app-check` **5143/5143, twice**; unpatched `--only 75` 40/74.
-- **v05.14** (14 Oct 2026) — O1, Siyagah opens and works on a dead connection (issue #175, PCF J11, owner: IMPORTANT). The saved-page
-  leftovers are out of the source (three parser-blocking Firebase `<script src>`, `<style></style>`, the baked `<style id="dyn-hs">`,
-  `<body style="">`), and so is a second blocker found on the way: the Google Fonts `<link rel="stylesheet">` is now loaded on the side
-  (`media="print"` + `onload`). `_loadScript()` is honest (waits, removes a failed tag, 15 s limit, retried when back online); the
-  service worker serves the cached page if the network is silent for 3 s; the offline dot says so in plain words. Check: block 74,
-  `tools/offline-o1.mjs`; `ship-check` has a guard for the class. See *Loading Firebase and the service worker's time limit* below. Architect: full `app-check` **5069/5069, twice**; unpatched `--only 74` 86/130.
 ---
 
 ## What this is
@@ -527,6 +525,22 @@ A failing check is a wrong assertion surprisingly often — investigate before
   rule S4d will merge on. Distinct tags are exact strings; the overlap with Siyagah's tags is case-insensitive. Stacks: the folder
   between the export root and the file (`webkitRelativePath`); files picked singly have none. 146 MB / 2,000 notes: 1.3 s, no long
   task at 1440; at 390 ×4 CPU 3.8 s, worst long task 68 ms, heap +32 MB.
+- **The Evernote import, the notes (v05.20, S4b — S4c brings pictures/audio/files and replaces the markers by hash, S4d merges earlier imports).**
+  `_enxScanner(onNote,{content:true})` also hands over one note's CDATA body (cap 20 M characters, then "too large") and each resource's
+  `hash` (from the recognition index's `objID`; `<en-media hash>` is the md5 of the data, so S4c must hash the data for the rest); the dry run
+  passes no option and counts exactly as before. `_enxConvert` = ENML → note HTML (☑/☐ as text, `.enx-crypt`, `.enx-media[data-enx-hash,
+  data-mime,data-name]`, `_enxClean` for script/iframe/object/embed/style, `on*=`, `javascript:`/`data:` → `#`). A note's `k` = notebook path
+  + created second + lower-case title + raw content length; **its id is `_enxId('enx-n-',k)`**, so the same note from a second run or a second
+  device is the same record. Skipped (and counted) when its id or `k` is in `DB.articles`, Trash or the tombstones; skipped as "already in
+  Siyagah" on title + created second against notes that are NOT `fromEvernote`. Folders: `enx-root`, `enx-s-<hash>`, `enx-b-<hash>`, each with
+  `enx:{kind,name}`, found by id (a tombstoned id gets `-2`, `-3`…); the section is "My Notebooks" else the first. **The cap:** `_enxWindow(now)` counts
+  `fromEvernote.at` in the last 24 h over `DB.articles` AND Trash (so deleting imported notes does not free the window); `_ENX_DAY_CAP` 6000;
+  `__enxCap` / `__enxNow` / `__enxDelay` are test hooks. **Writing:** `_enxImport(items)` → 250-note `flush`: folders, notes, then `_enxPersist()`
+  = `persist()` without the undo frame (`_histCapture(sw,true)`); it yields before each save and every 25 ms. **State:** `_enx.imp` (in memory) and
+  the device's own database `siyagah-enx-v1` (store `job`: `{total,already,handle?,at}`; deleted when an import finishes), never `DB`. The dialog
+  views are `pick` / `reading` / `done` (dry run) / `import`; `_enxContinue` uses the files in memory, else the saved folder handle (asking
+  permission), else asks for the files again (`_enx.resume`). `_enxBootToast` shows the toast once per session, only when the window allows.
+  Not in `--jeb-h` (the dialog sits over the bar on purpose).
 - **Loading Firebase and the service worker's time limit (v05.14, O1).** Nothing in the source may block the first paint or the boot
   script on another origin: no `<script src>` to another origin, no plain `<link rel="stylesheet">` to one (Google Fonts is
   `media="print" onload="this.media='all'"`), no baked runtime markup. The Firebase SDK is loaded ONLY by `_loadScript(src)` (from
