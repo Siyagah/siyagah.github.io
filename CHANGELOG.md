@@ -9659,3 +9659,4 @@ written** to the notebook, localStorage, IndexedDB or the cloud; the last result
 - **Not done:** writing the notes into Siyagah (S4b); the pictures (S4c); merging earlier imports (S4d). Drag-and-drop of a folder is
   not offered. A very large single note (over ~1 MB of text outside `<content>`/`<data>`) is reported as unreadable.
 **Totals (Builder):** `ship-check` 14/14; `app-check --only 73,59,65,69` **590/590**. The Architect runs the full `app-check`.
+**Totals (Architect):** one fix asked in review (an empty note, `<en-note/>`, was reported as unreadable: 73j), and the Architect updated the v04.20 menu inventory (6o-1) in place for 📥 Evernote import. Full `app-check` **4933/4933, twice** on `28c3755`; `ship-check` 14/14; unpatched (v05.12 `index.html` + `sw.js`) `--only 73` 0/30.

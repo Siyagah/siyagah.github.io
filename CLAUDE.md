@@ -40,7 +40,7 @@ must never accumulate here instead of there.
 - **v05.13** (14 Oct 2026) — S4a, Evernote import, the dry run (issue #173, PCF J01). 🧰 → Create → "📥 Evernote import" reads an
   evernote-backup export (folder pick on tablet/laptop, `.enex` files on every layout, a phone gets a sheet) by streaming and shows
   totals, a stack ▸ notebook table, "already in Siyagah", and 📋 Copy summary. Nothing is written anywhere. Check: block 73,
-  `tools/enex-s4a.mjs`. Builder: `--only 73,59,65,69` **590/590**, `ship-check` 14/14; the Architect runs the full `app-check`.
+  `tools/enex-s4a.mjs`. Architect: full `app-check` **4933/4933, twice**; unpatched `--only 73` 0/30.
 - **v05.12** (13 Oct 2026) — Z6c, the Ideas and Shopping pockets (issue #171, PCF J15). Idea fields `stars` (1–3, a number) and
   `topics[]`; shopping fields `qty` and `shop` (short strings). Ideas: tappable ☆/★, `# topic` chips, a Sort (Newest | ★ Stars) and
   Group by (None | Topic) bar kept in `DB.theme.zabIdeaView[pid]`. Shopping: quantity chip edited inline, shop chip, a 🏪 Shop filter
