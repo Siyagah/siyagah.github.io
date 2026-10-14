@@ -2916,14 +2916,15 @@ await r.block('6p-01-phone-one-bar', async () => {
 
   /* ✕ left the tag bar with it, so it has to be somewhere the eye lands. */
   const stop = await sPh.page.evaluate(() => {
-    const b = document.querySelector('.p3c-titlebar .p3c-stop');
+    /* v05.15 (T1) — updated in place: ✕ now sits on its own row (.p3c-actrow) ABOVE the title, no longer in the title bar */
+    const b = document.querySelector('.p3c-actrow .p3c-stop');
     if (!b || !b.offsetParent) return null;
     const q = b.getBoundingClientRect();
-    return { fn: b.getAttribute('onclick'), w: Math.round(q.width), h: Math.round(q.height) };
+    return { fn: b.getAttribute('onclick'), w: Math.round(q.width), h: Math.round(q.height), inBar: !!document.querySelector('.p3c-titlebar .p3c-stop') };
   });
-  r.check(!!stop && /cancelEdit\(\)/.test(stop.fn) && stop.w >= 38 && stop.h >= 38,
-    'phone: ✕ stop-editing moved onto the title row and can be hit',
-    stop ? `${stop.w}×${stop.h}, onclick="${stop.fn}"` : 'no ✕ on the title row');
+  r.check(!!stop && /cancelEdit\(\)/.test(stop.fn) && stop.w >= 38 && stop.h >= 38 && !stop.inBar,
+    'phone: ✕ stop-editing sits on the row above the title (not in the title bar) and can be hit',
+    stop ? `${stop.w}×${stop.h}, onclick="${stop.fn}"` : 'no ✕ on the row above the title');
 
   /* 3. Save on the bar really saves. A real click, and the typed words are
      read back out of DB — "it did not throw" is not a saved note. */
