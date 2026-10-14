@@ -69,7 +69,7 @@ const browser = await pw.chromium.launch();
 const GOOGLE = ['**googleapis.com/**', '**gstatic.com/**', '**firebaseapp.com/**', '**firebaseio.com/**'];
 const T0 = new Date().toISOString();
 /* the seed: a2 sits in f1 beside a1, so one folder click shows both notes */
-const seed = () => { const db = seedDB(T0); db.articles.find((a) => a.id === 'a2').folderIds = ['f1']; return db; };
+const seed = () => { const db = seedDB(T0); db.articles.find((a) => a.id === 'a2').folderIds = ['f1']; db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.18 (updated in place, Architect review): a phone's Zab is a corner button now; 74d opens a pocket from the bar, so the notebook chooses the bar */
 const tapper = (page, vp) => (sel) => (vp.touch ? page.locator(sel).first().tap() : page.locator(sel).first().click());
 const realErr = (m) => m.type() === 'error' && !/ERR_|Failed to load resource|net::|timed out|failed to load/i.test(m.text());
 
