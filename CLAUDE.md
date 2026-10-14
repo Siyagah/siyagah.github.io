@@ -37,6 +37,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.17** (14 Oct 2026) — N2, on a phone Zab is one corner button with three layouts the owner chooses: Rail (the start), Drawer,
+  Columns (issue #182, PCF J20). `DB.theme.zabPhoneLayout` `'rail'|'drawer'|'cols'|'bar'` (absent = rail; `'bar'` = the N1 bar, offered
+  only in 🧰 → 🎨 Appearance). < 640 only; ≥ 640 is the N1 bar unchanged. Long-press (500 ms) or right-click on the button chooses.
+  Addresses in plain items are tappable. See *Zab on the phone* below. Check: block 77, `tools/zab-n2.mjs`. Old phone checks (65, 69–72, 76)
+  now seed `zabPhoneLayout:'bar'` in place, because they are about the bar.
 - **v05.16** (14 Oct 2026) — N1, pockets inside pockets, no depth limit (issue #179, PCF J20; the phone corner button and its layouts
   are N2, not done). A pocket gets `parentId` (absent/null = top level; nothing written to existing pockets) and `order` is the place
   among siblings. Readers `jebChildren(id|null)`, `jebPath(id)`, `jebDescendants(id)`; writer `jebMovePocketInto(id,parentId|null,toIndex)`
@@ -58,11 +63,6 @@ must never accumulate here instead of there.
   evernote-backup export (folder pick on tablet/laptop, `.enex` files on every layout, a phone gets a sheet) by streaming and shows
   totals, a stack ▸ notebook table, "already in Siyagah", and 📋 Copy summary. Nothing is written anywhere. Check: block 73,
   `tools/enex-s4a.mjs`. Architect: full `app-check` **4933/4933, twice**; unpatched `--only 73` 0/30.
-- **v05.12** (13 Oct 2026) — Z6c, the Ideas and Shopping pockets (issue #171, PCF J15). Idea fields `stars` (1–3, a number) and
-  `topics[]`; shopping fields `qty` and `shop` (short strings). Ideas: tappable ☆/★, `# topic` chips, a Sort (Newest | ★ Stars) and
-  Group by (None | Topic) bar kept in `DB.theme.zabIdeaView[pid]`. Shopping: quantity chip edited inline, shop chip, a 🏪 Shop filter
-  (`zabShopView[pid]`), ticked items under "In the basket (n)", quick typing ("2 milk", "milk @Coles"), 🧹 Clear basket. Check: block 72,
-  `tools/zab-z6c.mjs`. Architect: full `app-check` **4701/4701, twice**; unpatched `--only 72` 0/4.
 ---
 
 ## What this is
@@ -506,6 +506,16 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `.jx-mv`, greyed rows say why). All pockets: sub-groups indented by `data-depth`, `.jx-fold` per session (`_jebFold`, never stored; a
   fold hides the group's own items and the groups inside). Deck: `.jx-ins` "inside:" chips. Choose lists every pocket at any depth
   (nested ones marked ↳) in place of the bar's top-level-only view. Nothing new is fixed to the bottom, nothing is written to `<html>`.
+- **Zab on the phone (v05.17, N2 — extends the Zab section).** `_zabPhone()` is the one tier decision (< 640, the existing rule); the
+  setting is read only through `_zabLayout()` (default `'rail'`). Unless `'bar'` (or `jebBar===false`, or Zab mode), the bottom bar is not
+  drawn and the class is `html.zab-btn` instead of `html.jeb-on`, so `--jeb-h` is `0px`; `#zab-btn` (52 px, bottom right, badge = the "All
+  pockets" total, red when anything is overdue) is built by `_zabMakeBtn`, painted by `_zabPaint`. **z-index: layout `#zab-lay` 141 (the
+  panel's level; never both open), `#zab-btn` 142, the long-press card `#zab-card` 143** — all below Attach 9150, menus 9200 and modals
+  10000. `#zab-btn` and `#zab-lay` are in BOTH `--jeb-h` lists; `html.jeb-kb` hides them. Layouts (`_zabOpenLay`, `_zabWireLay`, `_zabClose`):
+  Rail, Drawer, Columns; each reaches any depth through `jebChildren`/`_jebTree` and ends in the existing `#jeb-panel` (no second item
+  list). Open/fold/column state is session-only; nothing but `zabPhoneLayout` is stored, and switching writes nothing to a pocket or item
+  (I1). Pocket long-press/right-click → `_jebPocketMenu`. Last-line room is a margin on the last child of the scroll containers, phone
+  only. Addresses in items: `a.jeb-lnk` (new tab; the rest of the item still edits). A new user of `--jeb-h` still joins both lists.
 - **Evernote import, the dry run (v05.13, S4a — S4b writes notes, S4c pictures, S4d merges earlier imports).** `openEnexImport()` →
   `#enx-modal` (own overlay like `#remmail-modal`: dialog ≥ 640, bottom sheet < 640, z 10060, over the Zab bar on purpose so it is not
   in the `--jeb-h` lists). State is only the global `_enx` (the last result is `_enx.res`, in memory): **nothing goes in `DB`,
