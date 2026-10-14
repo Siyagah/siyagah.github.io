@@ -5930,6 +5930,20 @@ function _rdRecOf(e){
   for(let i=0;i<e.ks.length;i++){ const j=e.js[i]; o[e.ks[i]]=(typeof j==='string')?JSON.parse(j):(Array.isArray(j)?j:e.vs[i]); }
   return o;
 }
+/* what differs between two heads (see _headOf): the top-level keys, and for `theme` its own keys as 'theme.<key>';
+   null when it cannot be told */
+function _rdHeadDelta(hb,ha){
+  try{
+    const b=JSON.parse(hb||'{}'), a=JSON.parse(ha||'{}'), out=[];
+    new Set(Object.keys(b).concat(Object.keys(a))).forEach(k=>{
+      if(_rdSame(b[k],a[k])) return;
+      if(k==='theme'&&b.theme&&a.theme&&typeof b.theme==='object'&&typeof a.theme==='object')
+        new Set(Object.keys(b.theme).concat(Object.keys(a.theme))).forEach(s=>{ if(!_rdSame(b.theme[s],a.theme[s])) out.push('theme.'+s); });
+      else out.push(k);
+    });
+    return out;
+  }catch(e){ return null; }
+}
 function _rdChangeOfMerge(pre,post,hdPre){
   if(!pre||!post||hdPre==null) return {unknown:true};
   const keys=[], add=(k,ea,eb)=>{ const i=k.indexOf('~'); keys.push({c:k.slice(0,i),id:decodeURIComponent(k.slice(i+1)),ea:ea,eb:eb}); };
@@ -5937,7 +5951,8 @@ function _rdChangeOfMerge(pre,post,hdPre){
   pre.map.forEach((eb,k)=>{ if(!post.map.has(k)) add(k,undefined,eb); });
   const ord=[];
   _LJ_COLLS.forEach(c=>{ const a=pre.c[c], b=post.c[c]; if(!a||!b||a.isArr!==b.isArr||!_sameKeys(a.keys,b.keys)) ord.push(c); });
-  return {keys:keys,ord:ord,head:_headOf(DB,post)!==hdPre};
+  const hdPost=_headOf(DB,post);
+  return {keys:keys,ord:ord,head:hdPost===hdPre?false:_rdHeadDelta(hdPre,hdPost)};
 }
 /* undo / redo: the frame names every record it changes; the live copy before it is applied is `b`, after `a` */
 function _rdFrameBefore(fr){
@@ -5946,7 +5961,7 @@ function _rdFrameBefore(fr){
   fr.ch.forEach(x=>{ const k=x[0], i=k.indexOf('~'); keys.push({c:k.slice(0,i),id:decodeURIComponent(k.slice(i+1))}); if(k.slice(0,i)==='articles') have=true; });
   if(have) (DB.articles||[]).forEach(a=>{ if(a&&a.id!=null) m.set(String(a.id),a); });
   keys.forEach(x=>{ if(x.c==='articles') x.b=m.get(x.id)||null; });
-  return {keys:keys,ord:fr.ord?Object.keys(fr.ord):[],head:!!fr.head,byId:m};
+  return {keys:keys,ord:fr.ord?Object.keys(fr.ord):[],head:fr.head?_rdHeadDelta(fr.head[0],fr.head[1]):false,byId:m};
 }
 function _rdFrameAfter(ch){
   if(!ch||ch.unknown) return ch||{unknown:true};
@@ -5956,7 +5971,17 @@ function _rdFrameAfter(ch){
 }
 /* the plan: what to draw, or null = draw everything */
 function _rdPlan(ch,opts){
-  if(!ch||ch.unknown||ch.head||(ch.ord&&ch.ord.length)) return null;
+  if(!ch||ch.unknown||(ch.ord&&ch.ord.length)) return null;
+  /* the head (settings and bookkeeping): only these differences are known to draw nothing, or only the landing page */
+  let landing=false;
+  if(ch.head){
+    if(!Array.isArray(ch.head)) return null;
+    for(const k of ch.head){
+      if(k==='themeAt'||k==='theme.lastArticle'||k==='theme.lastFolder') continue;
+      if(k==='theme.lastEditedArticle'){ landing=true; continue; }
+      return null;
+    }
+  }
   if(ch.keys.length>_RD_MAX+8) return null;
   const arts=[]; let jeb=false;
   for(const x of ch.keys){
@@ -5974,8 +5999,10 @@ function _rdPlan(ch,opts){
   if(ST.mrjQ||ST.calEditEvt||ST.calManageCats||ST.article==='cal'||prev==='cal'||ST.noteModal||(typeof ST.folder==='string'&&ST.folder.startsWith('db-'))) return null;
   if(document.querySelector('.float-win')) return null;
   const p={sb:false,p2h:false,p2c:false,p3:false,tab:false,jeb:jeb,ids:[]};
-  if(!arts.length) return p;
   const cur=ST.article, curA=(cur!=null)?DB.articles.find(a=>a.id===cur):null;
+  if(landing&&!curA) p.p3=true;   /* the landing page names the last edited note */
+  if(opts&&opts.p3) p.p3=true;
+  if(!arts.length) return p;
   const folderView=DB.folders.some(f=>f.id===ST.folder);
   const now=new Date(), T=Math.min(new Date(now.getFullYear(),now.getMonth()-1,1).getTime(),new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime()-((now.getDay()+6)%7+7)*864e5);
   const inTime=(r)=>new Date(r.updatedAt||r.createdAt||0).getTime()>=T;
@@ -5997,7 +6024,6 @@ function _rdPlan(ch,opts){
       ||String(curA.content||'').includes(mine)||(curA.linkedNotes||[]).includes(x.id)
       ||(curA.versionGroupId&&(x.a.versionGroupId===curA.versionGroupId||x.b.versionGroupId===curA.versionGroupId))) p.p3=true;
   });
-  if(opts&&opts.p3) p.p3=true;
   return p;
 }
 function _rdRun(p){
