@@ -45,7 +45,8 @@ const dir = await mkdtemp(join(tmpdir(), 't1-base-'));
 const git = spawnSync('git', ['show', `${BASE_REV}:index.html`], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 });
 if (git.status !== 0) { console.log(' FAIL  could not read v05.14 from git: ' + git.stderr); process.exit(1); }
 await writeFile(join(dir, 'index.html'), git.stdout);
-const srvNew = await serveDir(SRC), srvOld = await serveDir(dir);
+/* --unpatched: the build under test IS v05.14, so 75a/75b/75e must FAIL (75d compares it with itself) */
+const srvNew = await serveDir(argv.includes('--unpatched') ? dir : SRC), srvOld = await serveDir(dir);
 const pw = await playwright();
 const browser = await pw.chromium.launch();
 
