@@ -23327,7 +23327,8 @@ function _zxCfg(c){
 function _zxBegin(cfg,px,py){
   const {c,box,sibs,axis}=cfg, X=axis==='x', r0=sibs.map(n=>n.getBoundingClientRect()), oi=sibs.indexOf(c);
   const gap=X&&sibs.length>1?Math.max(0,r0[1].left-r0[0].right):0;
-  _zxDrag={cfg,r0,oi,gap,s0:X?box.scrollLeft:box.scrollTop,px0:px,py0:py,px,py,idx:oi,out:false,tm:null};
+  const ext=(X?box.scrollWidth-box.clientWidth:box.scrollHeight-box.clientHeight), s0=X?box.scrollLeft:box.scrollTop;
+  _zxDrag={cfg,r0,oi,gap,s0,lo:cfg.rev?-ext:0,hi:cfg.rev?0:ext,px0:px,py0:py,px,py,idx:oi,out:false,tm:null};
   _jebDrag={zx:1};   /* the panel and the deck skip a repaint while this is set */
   box.classList.add('zx-box'); if(!_jebReduced()) box.classList.add('zx-anim');
   c.classList.add('zx-lift'); sibs.forEach(n=>{ if(n!==c) n.classList.add('zx-o'); });
@@ -23340,7 +23341,8 @@ function _zxAuto(){
   const v=X?d.px:d.py, lo=X?br.left:br.top, hi=X?br.right:br.bottom, Z=48; let dv=0;
   if(v<lo+Z) dv=-Math.ceil(14*Math.min(1,(lo+Z-v)/Z)); else if(v>hi-Z) dv=Math.ceil(14*Math.min(1,(v-(hi-Z))/Z));
   if(!dv) return;
-  const was=X?box.scrollLeft:box.scrollTop; if(X) box.scrollLeft+=dv; else box.scrollTop+=dv;
+  const was=X?box.scrollLeft:box.scrollTop, to=Math.max(d.lo,Math.min(d.hi,was+dv));   /* the lifted capsule's own transform must not stretch the scroll range */
+  if(X) box.scrollLeft=to; else box.scrollTop=to;
   if((X?box.scrollLeft:box.scrollTop)!==was) _zxUpdate();
 }
 function _zxMove(x,y){ const d=_zxDrag; if(!d) return; d.px=x; d.py=y; _zxUpdate(); }
@@ -23368,7 +23370,7 @@ function _zxEnd(commit){
   const {c,box,sibs,pid}=d.cfg;
   c.style.transform=''; c.classList.remove('zx-lift'); sibs.forEach(n=>{ n.style.transform=''; n.classList.remove('zx-o','zx-b','zx-a'); });
   box.classList.remove('zx-box','zx-anim');
-  _jebLPAt=Date.now();   /* the click that ends a drag is not a tap */
+  _jebLPAt=Date.now()-600;   /* the click that ends a drag is not a tap (swallowed for 100 ms, not the full 700 a menu holds) */
   if(commit&&!d.out&&d.idx!==d.oi) jebMovePocket(pid,d.idx);   /* one persist, only if the place really changed */
   _jebBarSig=''; _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); if(_zabOpen) _zabPaint();
 }

@@ -115,7 +115,8 @@ try {
       /* the bar scrolls sideways with a finger as ever: only the lifted capsule is touch-action:none */
       const ta = await on(d, () => getComputedStyle(document.querySelector('#jeb-bar .jeb-chip[data-pid="A"]')).touchAction);
       check(ta !== 'none', `${t} an ordinary capsule is not touch-action:none (${ta}), so the bar still scrolls`);
-      await on(d, () => { document.getElementById('jeb-bar').scrollLeft = 0; });
+      const toLeft = (pid) => on(d, (p) => { const b = document.getElementById('jeb-bar'), c = b.querySelector(`.jeb-chip[data-pid="${p}"]`); b.scrollLeft += c.getBoundingClientRect().left - b.getBoundingClientRect().left - 8; }, pid);
+      await toLeft('A'); await sleep(200);
       const A = await ctr(d, chip('A')), B = await ctr(d, chip('B'));
       /* hold + move drags */
       let lifted = null;
@@ -126,6 +127,7 @@ try {
       check(await noDrag(d), `${t} ...and nothing stays lifted`);
       /* hold without moving = the menu */
       const before = await snap(d);
+      await toLeft('A'); await sleep(200);
       const C = await ctr(d, chip('C'));
       await fdrag(d, C, C, { steps: 0, holdMs: 700 });
       await sleep(300);
@@ -135,7 +137,7 @@ try {
       await on(d, () => _jebHideMenu()); await sleep(200);
       /* a short tap opens the pocket */
       await on(d, () => { jebClosePanel(); });
-      await sleep(300);
+      await sleep(300); await toLeft('A'); await sleep(200);
       const Dc = await ctr(d, chip('D') + ' .jeb-main'); await tapAt(d, Dc.x, Dc.y); await sleep(300);
       check(await on(d, () => _jebOpen === 'D'), `${t} a short tap opens the pocket`);
       check((await snap(d)) === before, `${t} ...and writes nothing`);
@@ -161,11 +163,12 @@ try {
       await on(d, () => { document.getElementById('jeb-bar').scrollLeft = 0; });
       const mx = await on(d, () => { const b = document.getElementById('jeb-bar'); return b.scrollWidth - b.clientWidth; });
       check(mx > 200, `${t} 20 pockets overflow the bar (${mx} px to scroll)`);
+      await on(d, () => { const b = document.getElementById('jeb-bar'); b.scrollLeft += b.querySelector('.jeb-chip[data-pid="A"]').getBoundingClientRect().left - b.getBoundingClientRect().left - 8; }); await sleep(200);
       const A = await ctr(d, chip('A')); const br = await on(d, () => { const r = document.getElementById('jeb-bar').getBoundingClientRect(); return { l: r.left, r: r.right, y: r.top + r.height / 2 }; });
       let sl = 0;
       await drag(d, vp, A, { x: br.r - 12, y: br.y }, {
         steps: 8, release: false,
-        hold: async () => { for (let i = 0; i < 160; i++) { await sleep(40); sl = await on(d, () => { const b = document.getElementById('jeb-bar'); return b.scrollLeft >= b.scrollWidth - b.clientWidth - 2 ? -1 : b.scrollLeft; }); if (sl === -1) break; } },
+        hold: async () => { for (let i = 0; i < 160; i++) { await sleep(40); sl = await on(d, (m) => { const b = document.getElementById('jeb-bar'); return b.scrollLeft >= m - 2 ? -1 : b.scrollLeft; }, mx); if (sl === -1) break; } },
       });
       check(sl === -1, `${t} holding the first capsule at the right edge scrolls the bar to its end by itself`, 'scrollLeft ' + (await on(d, () => document.getElementById('jeb-bar').scrollLeft)));
       if (vp.touch) { d.tcdp = d.tcdp || await d.ctx.newCDPSession(d.page); await d.tcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); } else await d.page.mouse.up();
@@ -258,9 +261,8 @@ try {
         await fdrag(d, await r('K3'), { x: (await r('K1')).x, y: (await r('K1')).y - 12 });
         check(same(await on(d, () => jebChildren('A').map((p) => p.id)), ['K3', 'K1', 'K2']), `${t} a pocket inside, dragged up in the list: K3 K1 K2 among its siblings`, (await on(d, () => jebChildren('A').map((p) => p.id))).join(' '));
         check(same(await dbOrder(d), ['A', 'B', 'C', 'D']), `${t} the top level did not move`);
-        const snapB = await snap(d);
         await fdrag(d, await r('K1'), { x: (await r('C')).x, y: (await r('C')).y });
-        check((await snap(d)) === snapB, `${t} dragging a nested row far onto the top-level rows changes nothing: only among siblings of the same parent`);
+        check(same(await on(d, () => jebChildren('A').map((p) => p.id)), ['K3', 'K2', 'K1']) && same(await dbOrder(d), ['A', 'B', 'C', 'D']), `${t} dragging a nested row far down over the top-level rows only moves it among its own siblings: K3 K2 K1, top level unchanged`, (await on(d, () => jebChildren('A').map((p) => p.id))).join(' '));
         check((await on(d, () => JSON.stringify(DB.jebPockets.map((p) => [p.id, p.parentId || null])))) === par0, `${t} no parentId changed`);
         await fdrag(d, await r('D'), { x: (await r('B')).x, y: (await r('B')).y - 12 });
         check(same(await dbOrder(d), ['A', 'D', 'B', 'C']), `${t} a top-level row dragged up past B: A D B C`, (await dbOrder(d)).join(' '));
