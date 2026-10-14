@@ -35,8 +35,16 @@ const BIGN = +((argv.find((a) => a.startsWith('--notes=')) || '').slice(8)) || 2
 if (argv.includes('--fails')) { const o = console.log; let skip = false; console.log = (...x) => { const t = x.join(' '); if (/^\s+ok\s/.test(t)) { skip = true; return; } if (skip && /^\s{6,}\S/.test(t)) { skip = false; return; } skip = false; o(...x); }; }
 
 const VPS = [{ name: '390', w: 390, h: 844, touch: true }, { name: '820', w: 820, h: 1180, touch: true }, { name: '1440', w: 1440, h: 900, touch: false }];
+/* the app as it was before the import was written (the S4b version-bump commit): for 80h's "before", and for `--unpatched`, which runs
+   every check against it — they must fail there (they do: the import is not in it) */
+function makeBase() {
+  const dir = mkdtempSync(join(tmpdir(), 'enex-s4b-base-'));
+  const sha = execFileSync('git', ['log', '--format=%H', '-n', '1', '--grep=S4b: version bump'], { encoding: 'utf8' }).trim();
+  for (const f of ['index.html', 'sw.js', 'manifest.json']) { try { writeFileSync(join(dir, f), execFileSync('git', ['show', `${sha}:${f}`], { encoding: 'buffer', maxBuffer: 1 << 28 })); } catch {} }
+  return dir;
+}
 const pw = await playwright();
-const srv = await serve();
+const srv = await serve(argv.includes('--unpatched') ? makeBase() : undefined);
 const browser = await pw.chromium.launch({ args: ['--js-flags=--max-old-space-size=8192'] });
 const TMP = mkdtempSync(join(tmpdir(), 'enex-s4b-'));
 const DAY = 86400000;
@@ -404,13 +412,8 @@ try {
   /* ══ 80h — scale ══ */
   if (want('80h')) {
     /* the base build, for "before": index.html of the commit before the import was written */
-    const baseDir = join(TMP, 'base'); mkdirSync(baseDir, { recursive: true });
     let baseSrv = null;
-    try {
-      const sha = execFileSync('git', ['log', '--format=%H', '-n', '1', '--grep=S4b: version bump'], { encoding: 'utf8' }).trim();
-      for (const f of ['index.html', 'sw.js', 'manifest.json']) { try { writeFileSync(join(baseDir, f), execFileSync('git', ['show', `${sha}:${f}`], { encoding: 'buffer', maxBuffer: 1 << 28 })); } catch {} }
-      baseSrv = await serve(baseDir);
-    } catch (e) { console.log('(no base build: ' + e.message + ')'); }
+    try { baseSrv = await serve(makeBase()); } catch (e) { console.log('(no base build: ' + e.message + ')'); }
     /* 80h-1 the import of 2,000 notes at 390, CPU x4, into a 9,000-note notebook */
     {
       const vp = VPS[0], t = '80h@390 CPU x4';

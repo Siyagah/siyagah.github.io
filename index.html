@@ -28060,8 +28060,10 @@ async function _enxImport(items){
   (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item){ ids.add(t.item.id); if(t.item.fromEvernote&&t.item.fromEvernote.k) ks.add(t.item.fromEvernote.k); } });
   (DB.tombstones||[]).forEach(t=>{ if(t){ tomb.add(t.id); ids.add(t.id); } });   /* deleted for good: its stable id stays taken */
   const pend=[];
+  await _enxYield();   /* the sets above and the first read are separate tasks from the first save */
   const flush=async list=>{
     if(!list.length) return;
+    await _enxYield();   /* converting a chunk and saving a batch are separate tasks: a phone never holds the page for both at once */
     const at=new Date(_enxNowMs()).toISOString();
     const fById=new Map((DB.folders||[]).map(f=>[f.id,f])), kids=new Map();
     DB.folders.forEach(f=>{ const p=f.parentId||''; kids.set(p,(kids.get(p)||0)+1); });
