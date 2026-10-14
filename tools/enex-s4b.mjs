@@ -494,7 +494,7 @@ try {
     for (const p of presets) { await on(d, (k) => applyPreset(k), p); await sleep(150); const m = await measure(); check(m.n >= 20 && m.worst >= 4.5, `${t} the "Bring them in" screen (${m.n} pieces) clears 4.5:1 on ${p} (worst ${m.worst}, ${m.who})`, JSON.stringify(m)); }
     await on(d, () => applyPreset('forest')); await act(d, vp, '#enx-bring'); await waitState(d, ['capped']);
     for (const p of presets) { await on(d, (k) => applyPreset(k), p); await sleep(150); const m = await measure(); check(m.n >= 4 && m.worst >= 4.5, `${t} the stopped-for-today screen with its disabled Continue (${m.n} pieces) clears 4.5:1 on ${p} (worst ${m.worst}, ${m.who})`, JSON.stringify(m)); }
-    await on(d, () => { window.__enxCap = 6000; applyPreset('forest'); }); await act(d, vp, '#enx-cont'); await waitState(d, ['done']);
+    await on(d, () => { window.__enxCap = 6000; applyPreset('forest'); }); await actText(d, vp, '#enx-box .rem-btn', 'Close'); await dlg(d, vp); await act(d, vp, '#enx-cont'); await waitState(d, ['done']);
     for (const p of presets) { await on(d, (k) => applyPreset(k), p); await sleep(150); const m = await measure(); check(m.n >= 4 && m.worst >= 4.5, `${t} the done screen (${m.n} pieces) clears 4.5:1 on ${p} (worst ${m.worst}, ${m.who})`, JSON.stringify(m)); }
     await actText(d, vp, '#enx-box .rem-btn', 'Close');
     await on(d, () => { const a = DB.articles.find((x) => x.fromEvernote && x.content.includes('enx-media')) || DB.articles.find((x) => x.fromEvernote); ST.folder = a.folderIds[0]; render(); selArt(a.id); });
