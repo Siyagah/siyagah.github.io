@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.13.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.14.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -37,10 +37,16 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.14** (14 Oct 2026) — O1, Siyagah opens and works on a dead connection (issue #175, PCF J11, owner: IMPORTANT). The saved-page
+  leftovers are out of the source (three parser-blocking Firebase `<script src>`, `<style></style>`, the baked `<style id="dyn-hs">`,
+  `<body style="">`), and so is a second blocker found on the way: the Google Fonts `<link rel="stylesheet">` is now loaded on the side
+  (`media="print"` + `onload`). `_loadScript()` is honest (waits, removes a failed tag, 15 s limit, retried when back online); the
+  service worker serves the cached page if the network is silent for 3 s; the offline dot says so in plain words. Check: block 74,
+  `tools/offline-o1.mjs`; `ship-check` has a guard for the class. See *Loading Firebase and the service worker's time limit* below.
 - **v05.13** (14 Oct 2026) — S4a, Evernote import, the dry run (issue #173, PCF J01). 🧰 → Create → "📥 Evernote import" reads an
   evernote-backup export (folder pick on tablet/laptop, `.enex` files on every layout, a phone gets a sheet) by streaming and shows
   totals, a stack ▸ notebook table, "already in Siyagah", and 📋 Copy summary. Nothing is written anywhere. Check: block 73,
-  `tools/enex-s4a.mjs`. Builder: `--only 73,59,65,69` **590/590**, `ship-check` 14/14; the Architect runs the full `app-check`.
+  `tools/enex-s4a.mjs`. Architect: full `app-check` **4933/4933, twice**; unpatched `--only 73` 0/30.
 - **v05.12** (13 Oct 2026) — Z6c, the Ideas and Shopping pockets (issue #171, PCF J15). Idea fields `stars` (1–3, a number) and
   `topics[]`; shopping fields `qty` and `shop` (short strings). Ideas: tappable ☆/★, `# topic` chips, a Sort (Newest | ★ Stars) and
   Group by (None | Topic) bar kept in `DB.theme.zabIdeaView[pid]`. Shopping: quantity chip edited inline, shop chip, a 🏪 Shop filter
@@ -56,10 +62,6 @@ must never accumulate here instead of there.
   `links` differs. Link items carry `url ttl ch th people[] issues[]`; YouTube title/channel by oEmbed, quiet on failure;
   phone = compact rows + combining Person/Issue filters, tablet/laptop = card grid + Group by. Check: block 70,
   `tools/zab-z6a.mjs`. 300 links at ×4 CPU paint in ~115–191 ms (459–681 ms before `content-visibility`). Architect: full `app-check` **4009/4009, twice**; unpatched `--only 70` 0/3.
-- **v05.09** (12 Oct 2026) — The Project Control File (Architect): Siyagah's section SIY of the
-  owner's shared PCF https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ (jobs, rules, what waits on the owner,
-  guides), read first and updated last by every session; the permanent rule above, `claude/PROJECT-RULES.md`,
-  and ARCHITECT.md's Handover now point to it. Words only: no app code changed.
 ---
 
 ## What this is
@@ -499,6 +501,19 @@ A failing check is a wrong assertion surprisingly often — investigate before
   rule S4d will merge on. Distinct tags are exact strings; the overlap with Siyagah's tags is case-insensitive. Stacks: the folder
   between the export root and the file (`webkitRelativePath`); files picked singly have none. 146 MB / 2,000 notes: 1.3 s, no long
   task at 1440; at 390 ×4 CPU 3.8 s, worst long task 68 ms, heap +32 MB.
+- **Loading Firebase and the service worker's time limit (v05.14, O1).** Nothing in the source may block the first paint or the boot
+  script on another origin: no `<script src>` to another origin, no plain `<link rel="stylesheet">` to one (Google Fonts is
+  `media="print" onload="this.media='all'"`), no baked runtime markup. The Firebase SDK is loaded ONLY by `_loadScript(src)` (from
+  `initAuth()`, `initSync()`, `_migrateNotebook()`); every other use of the `firebase` global (`_picUpload`, the recs reader/writer,
+  `_remTick`'s writes, `doLogin`, `backupToGDrive`) is reachable only after one of those has run, because it needs `_syncFsDb` or
+  `_authInstance`. `_loadScript` resolves only when the script has run, shares one promise per src, removes a failed or timed-out tag
+  (15 s) and rejects so a later call fetches again. A failed load is **not an alarm**: the dot goes to `offline`, nothing is toasted,
+  and `_fbRetryArm()` retries once on the `online` event or after 20 s. The `offline` window event also sets the dot. Save File
+  (`_cleanExportRoot`) removes every `script[src]` and the `dyn-hs` style from the copy. `sw.js` serves a navigation network-first
+  but gives the network `NAV_WAIT_MS` (3 s); after that the cached `index.html` is served and the late network answer still
+  refreshes the cache (`waitUntil`). A network that answers, even slowly (< 3 s), still wins (I3). The boot flag waits at most 1.5 s
+  for `document.fonts.ready`. Check 74 serves the app from its own server (ok / dead / hang) because a service worker's own requests
+  cannot be failed from a browser route reliably.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
@@ -666,6 +681,11 @@ traps belong in `tools/README.md`, not here.)*
   what the file CONTAINS. Edit the source; never replace it with a saved
   page. `ship-check` now fails on the fingerprints. Cost: private note
   titles on a public web address, found by chance in a builder's review.
+  **A third time (v05.14):** the same saved page had also baked in three parser-blocking Firebase `<script src>` tags, so for
+  every connection that was up but silent (weak signal, Wi-Fi with no internet) the app showed nothing at all, and the owner had no
+  offline use from v04.62 to v05.13. Nothing threw: the offline check used `setOffline`, where every request fails at once, and
+  a hanging network was never tried. Test a dead connection AND a silent one. The Google Fonts stylesheet in `<head>` was the same
+  fault in another costume. `ship-check` now fails on both classes.
   **Its twin, paid for one round later:** v04.58's clean-up looked for the
   surfaces it had been shown (the tab picker) and missed the tab bar right
   beside it, which held two more titles. When cleaning a class of leak,

@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.13">
+<meta name="app-version" content="05.14">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -74,7 +74,8 @@ if(_JEB_APP){
 -->
 <script id="nd" type="application/json">{"folders":[],"articles":[],"sections":[],"trash":[]}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&amp;family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&amp;display=swap" rel="stylesheet">
+<!-- v05.14 — not render-blocking: a plain stylesheet link waits for Google before the page may paint or its script run, so a connection that is up but silent froze the app. media="print" loads it on the side; onload turns it on. -->
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&amp;family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&amp;display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 :root{
   --forest:#0D1A12;--forest2:#172315;--green:#1B7A46;--green2:#155F37;
@@ -3555,12 +3556,8 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
   .sg-flt-item input[type=checkbox]{width:20px;height:20px}
 }
 </style>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script><style></style><style id="dyn-hs">.av-body h1,#ed h1,.fw-ed h1{border-left:3px solid #0f766e;background:#f0fdfa;padding-left:10px;border-radius:0 4px 4px 0}
-.av-body h2,#ed h2,.fw-ed h2{border-left:3px solid #4338ca;background:#eef2ff;padding-left:10px;border-radius:0 4px 4px 0}
-.av-body h3,#ed h3,.fw-ed h3{border-left:3px solid #b45309;background:#fffbeb;padding-left:10px;border-radius:0 4px 4px 0}
-.av-body h4,#ed h4,.fw-ed h4{border-left:3px solid #475569;background:#f8fafc;padding-left:10px;border-radius:0 4px 4px 0}
-</style></head>
-<body style="">
+</head>
+<body>
 
 <!-- ── Login Overlay ──────────────────────────────────────────────────── -->
 <div id="login-overlay" style="display: none;">
@@ -3599,7 +3596,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.13</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.14</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4645,18 +4642,21 @@ const persist = () => { if(!_dbLoaded) return; _stampThemeTouches(); const sw=_s
    nothing the user is looking at can be disturbed. It uses an explicit
    allow-list of the only external scripts and stylesheet ids this app
    legitimately owns; anything else is treated as session residue. */
-const _EXPORT_SCRIPT_ALLOW = 'https://www.gstatic.com/firebasejs/';
-const _EXPORT_STYLE_ID_OK  = /^(mywall-style|dyn-hs|jcss-)/;
+/* v05.14 — no external script is allowed into a saved file any more. The Firebase tags
+   used to be kept here, and a page saved with them in it blocked its own parse when
+   Google did not answer (offline); the app loads Firebase itself, on demand
+   (_loadScript), so a copy never needs a script tag. dyn-hs is made by
+   _applyHeadingStyles() on every render, so it is not baked either. */
+const _EXPORT_STYLE_ID_OK  = /^(mywall-style|jcss-)/;
 function _cleanExportRoot(){
   let root;
   try{ root = document.documentElement.cloneNode(true); }
   catch(e){ console.error('export clone failed:', e); return document.documentElement.outerHTML; }
   try{
-    /* 1 ─ External scripts: keep only the Firebase SDK. Inline scripts have
-           no src, so the app itself and the #nd data tag are never touched. */
-    root.querySelectorAll('script[src]').forEach(function(el){
-      if((el.getAttribute('src')||'').indexOf(_EXPORT_SCRIPT_ALLOW) !== 0) el.remove();
-    });
+    /* 1 ─ External scripts: none are kept (v05.14; the Firebase SDK was, and it is
+           loaded on demand now). Inline scripts have no src, so the app itself
+           and the #nd data tag are never touched. */
+    root.querySelectorAll('script[src]').forEach(function(el){ el.remove(); });
     /* 2 ─ Foreign stylesheets. Every <style> this app writes is either bare
            or carries one of our own ids; none of them set a type attribute,
            which is the reliable extension tell. */
@@ -25030,6 +25030,7 @@ function _getOrCreateFirebaseApp(firebaseConfig){
   }
 }
 
+function _initAuthRetry(){ if(!_authInstance)return initAuth(); }
 async function initAuth(){
   /* Load auth SDK if not already present.
      v03.80 — firebase-auth-compat registers itself onto the global `firebase`
@@ -25044,7 +25045,10 @@ async function initAuth(){
     await _loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
     await _loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js');
   }catch(e){
-    console.error('Auth SDK failed to load:',e);
+    /* v05.14 — offline: say so calmly, and try again when the connection is back. */
+    console.warn('Auth SDK not loaded (offline?):',e&&e.message);
+    if(getSyncConfig())setSyncStatus('offline');
+    _fbRetryArm(_initAuthRetry);
     return;
   }
 
@@ -25146,18 +25150,49 @@ function setSyncStatus(s){
   };
   const m=M[s]||M.off;
   el.className='sync-dot-tb '+m.cls;
-  el.title={'off':'☁ Sync off — click to set up','conn':'☁ Connecting…','live':'☁ Live — synced','busy':'☁ Syncing…','err':'☁ Sync error','offline':'☁ Offline — can\'t reach the cloud right now. Your notes are safe on this device and will sync when the connection is back.'}[s]||'☁ Sync';
+  el.title={'off':'☁ Sync off — click to set up','conn':'☁ Connecting…','live':'☁ Live — synced','busy':'☁ Syncing…','err':'☁ Sync error','offline':'☁ Offline — changes are saved on this device and will sync when you\'re back online'}[s]||'☁ Sync';
   if(probTitle) el.title=probTitle;
   el.textContent=m.txt;
 }
 
-function _loadScript(src){
-  return new Promise((res,rej)=>{
-    if(document.querySelector(`script[src="${src}"]`)){res();return;}
+/* v05.14 — an honest loader. Resolves only when the script has really run: a tag still
+   loading is waited for (one shared promise per src); a failed or timed-out tag is
+   removed and rejected, so the next call (back online) fetches it for real instead of
+   believing a dead tag. A hanging network cannot freeze a caller: 15 s, then reject. */
+const _lsDone={}, _lsWait={};
+function _loadScript(src,ms){
+  if(_lsDone[src])return Promise.resolve();
+  if(_lsWait[src])return _lsWait[src];
+  const p=new Promise((res,rej)=>{
     const s=document.createElement('script');
-    s.src=src;s.onload=res;s.onerror=rej;
+    let over=false,t=null;
+    const end=(ok,err)=>{
+      if(over)return;over=true;clearTimeout(t);delete _lsWait[src];
+      if(ok){_lsDone[src]=1;res();}
+      else{try{s.remove();}catch(e){}rej(err);}
+    };
+    s.onload=()=>end(true);
+    s.onerror=()=>end(false,new Error('script failed to load: '+src));
+    t=setTimeout(()=>end(false,new Error('script timed out: '+src)),ms||15000);
+    s.src=src;
     document.head.appendChild(s);
   });
+  _lsWait[src]=p;
+  return p;
+}
+/* v05.14 — when the Firebase SDK could not be loaded (offline, a dead connection), the
+   caller shows the calm "offline" dot and arms ONE retry: the 'online' event, or 20 s
+   later. fn() returns whether it is still needed. Never a page error. */
+let _fbRetryFns=[],_fbRetryT=null;
+function _fbRetryArm(fn){
+  if(_fbRetryFns.indexOf(fn)<0)_fbRetryFns.push(fn);
+  if(_fbRetryT)return;
+  _fbRetryT=setTimeout(_fbRetryNow,20000);
+}
+function _fbRetryNow(){
+  clearTimeout(_fbRetryT);_fbRetryT=null;
+  const fns=_fbRetryFns;_fbRetryFns=[];
+  fns.forEach(f=>{try{const r=f();if(r&&r.catch)r.catch(()=>{});}catch(e){}});
 }
 
 /* v03.96 — the deepest sync bug found wasn't a race at all: it was
@@ -25201,14 +25236,17 @@ function _syncErrorToast(err){
   }catch(e){}
 }
 
+function _initSyncRetry(){ const sc=getSyncConfig(); if(sc&&sc.firebaseConfig&&!_syncFsDb)return initSync(sc); }
 async function initSync(cfg){
   setSyncStatus('conn');
   try{
     await _loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
     await _loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js');
   }catch(e){
-    setSyncStatus('err');
-    toast('☁ Firebase SDK failed to load — check your internet connection');
+    /* v05.14 — not an alarm: the SDK could not be fetched, which is what offline looks like. */
+    console.warn('Sync SDK not loaded (offline?):',e&&e.message);
+    setSyncStatus('offline');
+    _fbRetryArm(_initSyncRetry);
     return;
   }
 
@@ -30950,7 +30988,8 @@ function _sgMount(root,state,editable){
      have run. Setting it straight after render() made the harness's fixed
      settle land at a variable point and the suite non-deterministic (see
      CHANGELOG v04.50). Not awaited — nothing in the app waits on it. */
-  Promise.resolve(document.fonts&&document.fonts.ready).catch(()=>{})
+  /* v05.14 — fonts.ready is waited for at most 1.5 s: a font file that never arrives (a silent connection) must not hold the app's "booted" flag. */
+  Promise.race([Promise.resolve(document.fonts&&document.fonts.ready),new Promise(r=>setTimeout(r,1500))]).catch(()=>{})
     .then(()=>{try{autoFit(true);}catch(e){}})   /* the sidebar fit — see the note where it used to live */
     .then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))
     .then(()=>{ window.__appBooted=true; });
@@ -31047,11 +31086,15 @@ window.addEventListener('pagehide',()=>{ _flushEverythingOut(); });
 /* Losing the network mid-push leaves work queued; send it the moment the
    connection is back instead of waiting for the next edit to trigger one. */
 window.addEventListener('online',()=>{
+  try{ _fbRetryNow(); }catch(e){}   /* v05.14 — the Firebase SDK that could not load offline */
   try{ flushPendingPush(); }catch(e){}
   /* v04.72 — and fetch what arrived while offline, now, rather than on the
      next 15s reconcile tick. */
   try{ _reconcileNow(); }catch(e){}
 });
+
+/* v05.14 — losing the connection is said plainly and calmly, not left as a stale "Live". */
+window.addEventListener('offline',()=>{ try{ if(getSyncConfig())setSyncStatus('offline'); }catch(e){} });
 
 // Warn before unload when there are unsaved changes and no FSA link
 window.addEventListener('beforeunload',(ev)=>{

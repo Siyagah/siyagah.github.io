@@ -24,8 +24,9 @@
    no longer drift apart. Bumping this is what evicts the previous cache;
    without it, devices keep serving the old index.html for non-navigation
    requests and never receive a sync fix at all. */
-const VERSION = 'v05.13.01';
+const VERSION = 'v05.14.01';
 const CACHE   = 'siyagah-' + VERSION;
+const NAV_WAIT_MS = 3000;   // v05.14 — how long a page load waits for the network before the cached copy is served
 /* addAll() is all-or-nothing, so every entry here must exist — a single
    404 silently skips the whole precache. */
 const CORE    = ['./', './index.html', './manifest.json',
@@ -74,18 +75,29 @@ self.addEventListener('fetch', (e) => {
     req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html');
   if (isHTML) {
-    // Network-first: fresh code whenever online; cache only as offline fallback.
-    e.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-          return res;
-        })
-        .catch(() =>
-          caches.match(req).then((r) => r || caches.match('./index.html'))
-        )
-    );
+    // Network-first: fresh code whenever the network answers; the cached copy is the
+    // fallback. v05.14 — with a time limit: a connection that is up but never answers
+    // (weak signal, Wi-Fi with no internet, a captive portal) used to hang the page
+    // forever. After NAV_WAIT_MS the cached page is served, and the network response,
+    // if it ever arrives, still refreshes the cache for the next load.
+    const fromCache = () =>
+      caches.match(req).then((r) => r || caches.match('./index.html'));
+    const net = fetch(req).then((res) => {
+      if (res && res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+      }
+      return res;
+    });
+    const timed = new Promise((resolve) => {
+      setTimeout(() => {
+        fromCache().then((r) => { if (r) resolve(r); });   // nothing cached: keep waiting for the network
+      }, NAV_WAIT_MS);
+    });
+    // A network failure falls back at once; the timer wins only when the network is silent.
+    const first = net.catch(() => fromCache().then((r) => r || Promise.reject(new Error('offline'))));
+    e.respondWith(Promise.race([first, timed]).catch(() => net));
+    e.waitUntil(net.catch(() => {}));   // keep the worker alive so a late response still updates the cache
     return;
   }
   // Everything else (same-origin only): stale-while-revalidate.
