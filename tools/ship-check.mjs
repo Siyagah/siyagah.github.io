@@ -8,7 +8,8 @@ import { join } from 'node:path';
 import { ROOT, report, pngSize } from './harness.mjs';
 
 const r = report('ship-check — version, data tag, service worker, manifest, legacy');
-const html = await readFile(join(ROOT, 'index.html'), 'utf8');
+/* SHIP_HTML points the check at a scratch copy (block 74i proves the guards can fail). */
+const html = await readFile(process.env.SHIP_HTML || join(ROOT, 'index.html'), 'utf8');
 const sw = await readFile(join(ROOT, 'sw.js'), 'utf8');
 const claudeMd = await readFile(join(ROOT, 'CLAUDE.md'), 'utf8');
 const manifest = JSON.parse(await readFile(join(ROOT, 'manifest.json'), 'utf8'));
@@ -151,5 +152,20 @@ const debris = [
 ].filter(([re]) => re.test(html)).map(([, what]) => what);
 r.check(debris.length === 0, 'index.html carries no markup captured from a running page',
   debris.length ? `found: ${debris.join('; ')}` : 'clean');
+
+/* ── 7. no saved-page leftovers that block the first paint (v05.14) ─────
+   v04.62 baked three gstatic <script src> tags, an empty <style>, the runtime
+   <style id="dyn-hs"> and <body style=""> into the source: the same class as
+   section 6. The scripts are parser-blocking, so on a connection that is up
+   but silent (weak signal, a captive portal) the page never painted, and the
+   owner had no offline use from v04.62 to v05.13. The app loads Firebase
+   itself, on demand, through _loadScript(). */
+const leftovers = [
+  [/<script\b[^>]*\bsrc\s*=\s*["']?(?:https?:)?\/\//i, 'a <script src> to another origin (parser-blocking when that server is silent)'],
+  [/<style\b[^>]*\bid="dyn-hs"/, 'a baked <style id="dyn-hs"> (made at run time by _applyHeadingStyles)'],
+  [/<body\b[^>]*\sstyle=/i, 'a <body style=...> (a saved page)'],
+].filter(([re]) => re.test(html.replace(/<script id="nd"[\s\S]*?<\/script>/, ''))).map(([, what]) => what);
+r.check(leftovers.length === 0, 'index.html carries no blocking external script or saved-page style',
+  leftovers.length ? `found: ${leftovers.join('; ')}` : 'clean');
 
 process.exit(r.finish() ? 1 : 0);
