@@ -12007,6 +12007,22 @@ await r.block('74-offline-o1', async () => {
   r.check(out.status === 0, 'the O1 offline check exits cleanly', `exit ${out.status}`);
 });
 
+/* 75 — v05.15, T1: on a phone the note's buttons sit on their own row and the title wraps in full. tools/title-t1.mjs runs 75a–75f:
+   edit and reading layout at 360/390 with a 120-character title, real typing / a line break / Enter / autosave / reload, tablet and
+   laptop title bars identical to v05.14's (served from git in the same run), the two pop-ups on a phone, contrast on five presets.
+   Each printed ok/FAIL line becomes one check. */
+await r.block('75-phone-title', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./title-t1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 60, 'the T1 phone-title check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'T1: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the T1 phone-title check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
