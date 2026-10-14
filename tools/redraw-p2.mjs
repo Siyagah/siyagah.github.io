@@ -40,8 +40,8 @@ const want = (t) => !onlySet || onlySet.has(t);
 const vpArg = (argv.find((a) => a.startsWith('--vp=')) || '').slice(5), scArg = (argv.find((a) => a.startsWith('--scen=')) || '').slice(7);   /* narrowing, for iterating on one failure */
 const NOTES = +((argv.find((a) => a.startsWith('--notes=')) || '').slice(8)) || 9000;
 
-let root = process.env.RDP2_ROOT || undefined;
-if (process.env.RDP2_BREAK) {
+let root = process.env.RDP2_ROOT || (argv.find((a) => a.startsWith('--root=')) || '').slice(7) || undefined;
+if (process.env.RDP2_BREAK || argv.includes('--break')) {
   root = mkdtempSync(join(tmpdir(), 'siyagah-rdp2-break-'));
   for (const f of ['sw.js', 'manifest.json']) { try { copyFileSync(join(ROOT, f), join(root, f)); } catch {} }
   const src = readFileSync(join(ROOT, 'index.html'), 'utf8');
@@ -60,6 +60,7 @@ const seed = () => {
   const db = seedDB(T0);
   for (let i = 1; i <= 40; i++) db.articles.push({ id: 'n' + i, title: 'Note ' + i, content: '<p>Body of note ' + i + '</p>', folderIds: ['f1'], tags: i % 5 === 0 ? ['five'] : [], createdAt: T0, updatedAt: T0, kind: 'general' });
   db.jebPockets = [{ id: 'pk1', name: 'Alpha', icon: '✶', color: '#CFE8FF', order: 0, createdAt: T0, updatedAt: T0 }, { id: 'pk2', name: 'Beta', icon: '✶', color: '#FFF1A8', order: 1, createdAt: T0, updatedAt: T0 }];
+  db.tabs = { n3: ['n3', 'n6'] };   /* the open note n3 owns a tab group that holds n6 */
   db.jeb = [{ id: 'jz1', pocketId: 'pk1', text: 'first item', done: false, folderIds: [], tags: [], kind: null, journal: false, order: 0, createdAt: T0, updatedAt: T0 }];
   return db;
 };
@@ -125,6 +126,7 @@ const SCEN = [
   { id: '10', label: 'a Zab item edited', view: VIEW_F1, steps: [{ fn: JEBEDIT, arg: { id: 'jz1', text: 'first item, edited' } }], recv: 'targeted', undo: 'targeted',
     recvCalls: (c) => c.jebRefresh >= 1 && !c.renderP2C && !c.renderP3C && !c.renderTree, why: 'Zab only' },
   { id: '10b', label: 'a Zab pocket moved into another pocket', view: VIEW_F1, steps: [{ fn: JEBMOVE, arg: { id: 'pk2', into: 'pk1' } }], recv: 'any', undo: 'any', why: 'Zab (or everything when the order moved)' },
+  { id: '13', label: "the title of a note in the open note's tab group", view: VIEW_F1, steps: [{ fn: EDIT, arg: { id: 'n6', title: 'Note 6 renamed, on a tab' } }], recv: 'targeted', undo: 'targeted', why: 'the tab bar follows' },
   { id: '11a', label: 'a change while a search is on', view: VIEW_SEARCH, steps: [{ fn: EDIT, arg: { id: 'n5', title: 'Note 5 found by the search' } }], recv: 'targeted', undo: 'targeted', recvCalls: (c) => c.renderTree >= 1, why: 'the search results in the sidebar' },
   { id: '11b', label: 'a change while a tag filter is on', view: VIEW_TAG, steps: [{ fn: EDIT, arg: { id: 'n10', content: '<p>Edited under the tag filter</p>' } }], recv: 'targeted', undo: 'targeted', recvCalls: (c) => c.renderP2C >= 1, why: 'the tag list' },
 ];
@@ -322,6 +324,9 @@ try {
       }
       /* one undo of a local edit, a note open */
       const und = [];
+      /* a fresh device's first history entry is its baseline, so its first undo is a no-op: take it out of the samples */
+      await on(d, () => { const a = DB.articles.find((x) => x.id === 'n99'); a.title = 'Local warm-up ' + Date.now(); a.updatedAt = new Date().toISOString(); persist(); undo(); });
+      await quietAll();
       for (let i = 0; i < 5; i++) {
         await on(d, (j) => { selArt('n42'); const a = DB.articles.find((x) => x.id === 'n' + (100 + j)); a.title = 'Local edit ' + Date.now(); a.updatedAt = new Date().toISOString(); persist(); }, i);
         await quietAll();

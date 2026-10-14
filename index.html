@@ -6014,11 +6014,13 @@ function _rdPlan(ch,opts){
     ||(f==='title'&&typeof _dateTitleRe!=='undefined'&&_dateTitleRe.test(b.title||'')===_dateTitleRe.test(a.title||''))
     ||(f==='updatedAt'&&inTime(b)===inTime(a));
   const lastEd=DB.theme&&DB.theme.lastEditedArticle;
+  /* a tab shows its note's title and colour: the bar needs drawing only for a note that owns or sits in a tab group */
+  const tm=_tabsMap(), inTabs=(id)=>Object.keys(tm).some(k=>k===id||(Array.isArray(tm[k])&&tm[k].indexOf(id)>-1));
   p.p2c=true;
   if(ST.search&&ST.search.trim()) p.sb=true;
   arts.forEach(x=>{
     p.ids.push(x.id);
-    x.f.forEach(f=>{ if(!sbSafe(f,x.b,x.a)) p.sb=true; if(f==='folderIds') p.p2h=true; if(f==='title'||f==='tabColor') p.tab=true; });
+    x.f.forEach(f=>{ if(!sbSafe(f,x.b,x.a)) p.sb=true; if(f==='folderIds') p.p2h=true; if((f==='title'||f==='tabColor')&&inTabs(x.id)) p.tab=true; });
     if(!folderView) p.p2h=true;   /* a Smart View / tag / type header may count the notes */
     if(x.id===String(cur)){ p.p3=true; return; }
     if(!curA){ if(lastEd!=null&&x.id===String(lastEd)) p.p3=true; return; }
