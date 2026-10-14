@@ -12027,6 +12027,25 @@ await r.block('75-phone-title', async () => {
   r.check(out.status === 0, 'the T1 phone-title check exits cleanly', `exit ${out.status}`);
 });
 
+/* 76 — v05.16, N1: pockets inside pockets, no depth limit. tools/zab-n1.mjs runs 76a–76g at 390/820/1440 with real taps or clicks:
+   "＋ New pocket inside" and "📂 Move into…" through the real menus, a 4-deep chain, the path line and the child chips, refused moves;
+   counts that include the pockets inside (and the tasks due/overdue rule) and the ▸ mark; delete refused while a pocket holds a
+   pocket, Trash and restore in either order; two-device sync (a move, a parent deleted while a pocket was moved into it, a
+   cross-move cycle) in both directions; All pockets indented and foldable, deck "inside:" chips, the item's Move to pocket tree,
+   Choose, kinds, → Note, Zab mode; 50 pockets × 5 levels × 300 items at ×4 CPU; contrast on five presets. Each printed ok/FAIL
+   line becomes one check. */
+await r.block('76-zab-tree', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-n1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the N1 pocket-tree check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'N1: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the N1 pocket-tree check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
