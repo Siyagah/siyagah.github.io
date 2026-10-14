@@ -280,7 +280,7 @@ try {
       srv.ver = '99.02';
       await s.page.reload({ waitUntil: 'domcontentloaded' }); await booted(s.page);
       check((await ver()) === '99.02', `${t} 99.02 served online: the very next load shows 99.02, not the cached 99.01`, await ver());
-      await sleep(1500);
+      await waitFor(async () => (await keys()).join() === 'siyagah-v99.02.01', 12000);   /* the new worker installs a second or two after the page */
       const k = await keys();
       check(k.includes('siyagah-v99.02.01') && !k.includes('siyagah-v99.01.01'), `${t} the new worker took over and purged the old cache`, k.join(','));
       /* an answering-but-slow network (1.5 s) still wins over the cache */
@@ -288,14 +288,16 @@ try {
       const t1 = Date.now();
       await s.page.reload({ waitUntil: 'domcontentloaded' }); await booted(s.page);
       check((await ver()) === '99.03', `${t} a network that answers in 1.5 s still wins (99.03)`, `${await ver()} after ${Date.now() - t1} ms`);
+      await waitFor(async () => (await keys()).join() === 'siyagah-v99.03.01', 12000);
       /* a silent-for-5 s network: the cache is served at about 3 s, the late answer refreshes the cache */
       srv.ver = '99.04'; srv.htmlDelay = 5000;
       const t2 = Date.now();
       await s.page.goto(srv.base + '/', { waitUntil: 'commit', timeout: 30000 }); await booted(s.page, 30000);
       const slowMs = Date.now() - t2;
       check((await ver()) === '99.03' && slowMs >= 2500 && slowMs < 4800, `${t} a network silent for 5 s: the cached page (99.03) opens after the 3 s limit`, `${await ver()} after ${slowMs} ms`);
-      await sleep(4500);
-      const cached = await s.page.evaluate(async () => { const r = await caches.match('./index.html'); return r ? (await r.text()).match(/name="app-version" content="([^"]+)"/)[1] : null; });
+      const readCache = () => s.page.evaluate(async () => { const r = await caches.match('./index.html'); return r ? (await r.text()).match(/name="app-version" content="([^"]+)"/)[1] : null; });
+      await waitFor(async () => (await readCache()) === '99.04', 12000);
+      const cached = await readCache();
       check(cached === '99.04', `${t} the late answer still refreshed the cache (${cached})`);
       srv.htmlDelay = 0;
       await s.page.reload({ waitUntil: 'domcontentloaded' }); await booted(s.page);
