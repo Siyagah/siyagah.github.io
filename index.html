@@ -818,6 +818,14 @@ html{--jeb-h:0px;--jeb-l:0px;--jeb-hd:0px}
    fails on one that does not. Read the bar's height from #p2, never <html>
    (which always says 0px). A browser without @property inherits it from the
    listed element as before. */
+/* v05.17 · B1 — the line shown while this device's copy of the notebook cannot be read (fixed ink on its own paper: ~12:1) */
+#idb-warn{position:fixed;top:0;left:0;right:0;z-index:9100;display:flex;align-items:center;gap:10px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:#FFF4D6;color:#3A2A00;border-bottom:1px solid #C9A227;font-size:13px;line-height:1.35;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+#idb-warn span{flex:1;min-width:0}
+#idb-warn button{flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid #8A6A00;border-radius:8px;background:#fff;color:#3A2A00;font:inherit;font-weight:600;cursor:pointer}
+#idb-warn .iw-show{display:none}
+#idb-warn.min{left:auto;right:6px;top:calc(6px + env(safe-area-inset-top,0px));padding:0;background:transparent;border:0;box-shadow:none}
+#idb-warn.min .iw-t,#idb-warn.min .iw-try,#idb-warn.min .iw-hide{display:none}
+#idb-warn.min .iw-show{display:block;width:40px;height:40px;padding:0;border-radius:50%;background:#FFF4D6;border:1px solid #C9A227;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 @property --jeb-h{syntax:'<length>';inherits:false;initial-value:0px}
 html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:56px}
 html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:0px}
@@ -3846,6 +3854,8 @@ let ST = {folder:null, article:null, exp:{}, editing:false, etitle:'', efolders:
    shape localStorage[SK] always held. */
 const IDB_NAME='siyagah-local-v1', IDB_STORE='kv', IDB_KEY='notebook';
 let _idbReady=false;          /* true once IndexedDB actually holds the authoritative copy */
+const _IDB_BOOT_TRIES=5, _IDB_BOOT_GAP_MS=300;   /* v05.17 · B1 — see _idbRecoverTry */
+let _idbBootFail=false, _idbRecT=0, _idbRecN=0, _idbRecBusy=false;
 /* v04.50 — false until loadDB() has put the REAL notebook into DB. Before
    this round loadDB() was synchronous, so nothing could run between the
    script starting and DB being loaded. Now loadDB() awaits IndexedDB, and
@@ -3862,13 +3872,30 @@ function _idbOpen(){
   _idbOpenPromise=new Promise((resolve)=>{
     if(!window.indexedDB){ resolve(null); return; }
     let req;
-    try{ req=indexedDB.open(IDB_NAME,1); }catch(e){ resolve(null); return; }
+    /* v05.17 · B1 — a FAILED open is not remembered (no IndexedDB at all still is): the next call opens again, so a
+       moment's failure at start (a crash's leftovers, a storage hiccup) is not this whole session's answer */
+    const fail=()=>{ _idbOpenPromise=null; resolve(null); };
+    try{ req=indexedDB.open(IDB_NAME,1); }catch(e){ fail(); return; }
     req.onupgradeneeded=()=>{ try{ req.result.createObjectStore(IDB_STORE); }catch(e){} };
     req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>resolve(null);
-    req.onblocked=()=>resolve(null);
+    req.onerror=fail;
+    req.onblocked=fail;
   });
   return _idbOpenPromise;
+}
+/* v05.17 · B1 — a read that tells "not there" from "could not be read": {ok:true,v} (v undefined = genuinely absent, or this
+   browser has no IndexedDB at all) or {ok:false}. _idbGet() keeps its old answer (undefined for both) for its other callers;
+   anything that DECIDES on the notebook's absence must use this. */
+function _idbRead(key){
+  if(!window.indexedDB) return Promise.resolve({ok:true,v:undefined});
+  return _idbOpen().then(db=>new Promise(resolve=>{
+    if(!db){ resolve({ok:false}); return; }
+    try{
+      const rq=db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
+      rq.onsuccess=()=>resolve({ok:true,v:rq.result});
+      rq.onerror=()=>resolve({ok:false});
+    }catch(e){ resolve({ok:false}); }
+  }));
 }
 function _idbGet(key){
   return _idbOpen().then(db=>new Promise(resolve=>{
@@ -3899,6 +3926,10 @@ function _idbIdSet(arr){ return (arr||[]).map(x=>x&&x.id).slice().sort().join(',
  *  does IndexedDB become authoritative for this session. */
 async function _idbMigrateFrom(db){
   try{
+    /* v05.17 · B1 — the first write of this device's copy happens only when a read has just SHOWN there is none:
+       never over a copy that is there, never over one that could not be read */
+    const cur=await _idbRead(IDB_KEY);
+    if(!cur.ok||(cur.v&&cur.v.folders)) return false;
     await _idbPut(IDB_KEY, db);
     const back=await _idbGet(IDB_KEY);
     if(!back) return false;
@@ -4111,7 +4142,16 @@ async function loadDB(){
      this version (IndexedDB empty) falls straight through to the exact
      localStorage/embedded logic this file has always used. */
   let _idb=null;
-  try{ _idb=await _idbGet(IDB_KEY); }catch(e){ _idb=null; }
+  /* v05.17 · B1 — a failed read used to look exactly like "no notebook on this device": boot then showed the starter set and its
+     first write could land over the real copy. Now it is tried again, and if it still fails this session never writes the copy
+     (see _idbBootFail) and joins it back in when it can be read (_idbRecoverTry). */
+  let _rd={ok:false};
+  for(let k=0;k<_IDB_BOOT_TRIES;k++){
+    try{ _rd=await _idbRead(IDB_KEY); }catch(e){ _rd={ok:false}; }
+    if(_rd.ok) break;
+    await new Promise(r=>setTimeout(r,_IDB_BOOT_GAP_MS));
+  }
+  if(_rd.ok) _idb=_rd.v||null; else _idbBootFail=true;
   if(_idb&&_idb.folders){
     _idbReady=true;
     /* v04.91 — a notebook saved in journal mode: the full copy plus what the journal
@@ -4123,7 +4163,7 @@ async function loadDB(){
   else if(_stored?.folders&&emb?.folders){DB=mergeDB(_stored,emb);}
   else if(emb?.folders){DB=JSON.parse(JSON.stringify(emb));}
   else if(_stored?.folders){DB=JSON.parse(JSON.stringify(_stored));}
-  else{DB=mkDefaults();}
+  else{DB=_idbBootFail?{folders:[],articles:[]}:mkDefaults();}   /* B1: never the starter set when the real copy is only unreadable — it would be joined into it */
   _dbLoaded=true;
   const roots = DB.folders.filter(f=>!f.parentId).sort((a,b)=>a.order-b.order);
   if(roots.length) ST.folder = roots[0].id;
@@ -4291,11 +4331,59 @@ async function loadDB(){
      from this version on. Runs once: the next boot finds IndexedDB already
      holding a notebook (the branch at the top of this function) and never
      reaches this code path again. */
+  if(_idbBootFail){ snapshotState(); _idbWarn(true); _idbRecoverArm(); return; }   /* v05.17 · B1 — nothing is written to this device's copy */
   if(!_idbReady){
     try{ _idbReady=await _idbMigrateFrom(DB); }catch(e){ _idbReady=false; }
+    /* B1 — the copy turned out to be there after all (read again just now): join it in, never write over it */
+    if(!_idbReady){ const again=await _idbRead(IDB_KEY).catch(()=>({ok:false})); if(!again.ok||(again.v&&again.v.folders)){ _idbBootFail=true; snapshotState(); _idbWarn(true); _idbRecoverTry(); return; } }
   }
   snapshotState();
 }
+/* ── v05.17 · B1 — this device's copy could not be read at start ─────────────────────
+   The session runs on what could be opened (the localStorage copy, a Save File's notes, or an EMPTY notebook — never the
+   starter set) and never writes the device copy (_idbReady stays false, so _save() writes only localStorage). A line at the
+   top says so. The read is tried again — every 3 s for 2 min, then every 30 s, and when the app is shown again — and when it
+   works the copy is joined in exactly as a received sync is (mergeDB: union, newest edit wins), so nothing added meanwhile is
+   lost, and the session carries on as normal. */
+function _idbRecoverArm(){
+  clearTimeout(_idbRecT); if(!_idbBootFail) return;
+  _idbRecT=setTimeout(_idbRecoverTry,_idbRecN<40?3000:30000);
+}
+async function _idbRecoverTry(){
+  if(!_idbBootFail||_idbRecBusy) return;
+  _idbRecBusy=true; _idbRecN++;
+  try{
+    const rd=await _idbRead(IDB_KEY).catch(()=>({ok:false}));
+    if(!rd.ok) return;
+    const idb=rd.v;
+    if(idb&&idb.folders){
+      try{ await _ljOverlay(idb); }catch(e){ console.error('local journal not applied (the full copy is used):',e); }
+      _flushAllEditors();
+      _stampRecordTouches();   /* stamp anything typed meanwhile, BEFORE the merge judges it (as a received sync does) */
+      const old=_recSnap;
+      DB=mergeDB(DB,idb);
+      _seedThemeSnap();
+      _seedRecSnap(true); _s1DirtyFromDiff(old,_recSnap);
+    }
+    _idbBootFail=false; _idbReady=true;
+    _save(); snapshotState();
+    _idbWarn(false);
+    try{ _renderPreserveEdit(); }catch(e){ render(); }
+    if(idb&&idb.folders) toast('✅ This device\'s copy of your notebook could be read again and is back');
+  }catch(e){ console.error('B1 recovery:',e); _idbBootFail=true; _idbReady=false; }
+  finally{ _idbRecBusy=false; if(_idbBootFail) _idbRecoverArm(); }
+}
+function _idbWarn(on){
+  let el=document.getElementById('idb-warn');
+  if(!on){ if(el) el.remove(); return; }
+  if(el) return;
+  el=document.createElement('div'); el.id='idb-warn'; el.setAttribute('role','alert');
+  el.innerHTML='<span class="iw-t">⚠ This device\'s copy of your notebook could not be read just now. Nothing is lost: what you add now is kept and joined in as soon as it can be read. Trying again…</span><button type="button" class="iw-try" onclick="_idbRecoverTry()">Try now</button><button type="button" class="iw-hide" onclick="_idbWarnMin(true)">Hide</button><button type="button" class="iw-show" onclick="_idbWarnMin(false)" aria-label="Show the notice about this device\'s copy" title="This device\'s copy of your notebook could not be read yet">⚠</button>';
+  document.body.appendChild(el);
+}
+/* Hide shrinks the line to a small ⚠ in the top-right corner (it sits over the header's buttons); ⚠ brings it back */
+function _idbWarnMin(on){ const el=document.getElementById('idb-warn'); if(el) el.classList.toggle('min',!!on); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&_idbBootFail) _idbRecoverTry(); });
 /* ── Local-save guard (v03.80) ────────────────────────────────────────
    localStorage is capped at roughly 5 MB per origin. When a notebook
    crosses that line setItem() throws QuotaExceededError.
