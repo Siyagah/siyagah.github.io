@@ -1024,6 +1024,31 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jt-hint[hidden]{display:none}
 .jt-md{max-height:50vh;overflow-y:auto;margin-bottom:10px}
 .jeb-ct.jt-red{background:#B42318;color:#fff}
+/* v05.16 · N1 — pockets inside pockets. Inks are the pane inks (--t1/--t2 on --white/--paper/--hover), so they hold on all five presets. */
+.jx-in{font-size:11px;color:var(--t2);margin:0 -2px 0 -2px}
+.jx-path{flex-shrink:0;padding:6px 12px;font-size:12.5px;color:var(--t2);border-bottom:1px solid var(--border);line-height:1.3}
+.jx-path[hidden],.jx-kids[hidden]{display:none}
+.jx-path nav{display:flex;flex-wrap:wrap;align-items:center}
+.jx-path button{border:0;background:none;padding:6px 2px;min-height:32px;color:var(--green2);font:inherit;text-decoration:underline;cursor:pointer;touch-action:manipulation}
+.jx-path b{color:var(--t1);font-weight:600;padding:6px 2px}
+.jx-kids{flex-shrink:0;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;border-bottom:1px solid var(--border)}
+.jx-kid,.jx-new{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 10px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font:inherit;font-size:13px;cursor:pointer;touch-action:manipulation}
+.jx-kid:hover,.jx-new:hover{background:var(--hover)}
+.jx-new{border-style:dashed;color:var(--t1)}
+.jx-kid .jeb-sw{width:22px;height:22px;font-size:13px}
+.jx-nm{max-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jeb-ph .jeb-pm{min-width:40px;min-height:40px;border:0;background:none;color:var(--t1);font-size:20px;cursor:pointer}
+.jeb-gh .jx-fold{border:0;background:none;min-width:32px;min-height:40px;color:var(--t1);font-size:14px;cursor:pointer;touch-action:manipulation}
+.jeb-gh.jx-sub{border-left:3px solid var(--border2)}
+.jx-ins{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 2px 8px;font-size:12.5px;color:var(--t2)}
+.jx-ins button{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 10px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font:inherit;font-size:13px;cursor:pointer}
+.jx-ins .jeb-sw{width:20px;height:20px;font-size:12px}
+.jx-mvl{max-height:55vh;overflow-y:auto;margin:8px 0}
+.jx-mv{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 10px;border:0;border-bottom:1px solid var(--border);background:none;color:var(--t1);font:inherit;font-size:14px;text-align:left;cursor:pointer;flex-wrap:wrap}
+.jx-mv:hover{background:var(--hover)}
+.jx-mv small{flex-basis:100%;margin-left:26px;color:var(--t2);font-size:12px}
+.jx-mv.off{cursor:default;color:var(--t2);font-style:italic}
+.jx-mv.off:hover{background:none}
 .jeb-card .jt-meta{padding:0 8px 6px}
 /* v05.12 · Z6c — Ideas and Shopping. A filled star carries its own paper and ink (dark brown on pale amber, ~9:1) so it reads the same on all five
    presets and on a card's colour; everything else uses the pane inks. */
@@ -22271,11 +22296,74 @@ function _jebPocket(id){ return (DB.jebPockets||[]).find(p=>p&&p.id===id); }
 function _jebItem(id){ return (DB.jeb||[]).find(i=>i&&i.id===id); }
 /* renumber a list 0..n-1, stamping only the records whose order changed */
 function _jebRenumber(list,now){ list.forEach((r,i)=>{ if(r.order!==i){ r.order=i; r.updatedAt=now; } }); }
-function jebAddPocket(name,icon,color){
+function jebAddPocket(name,icon,color,parentId){
   _jebEnsure(); const now=_jebNow();
+  const par=parentId&&_jebPocket(parentId)?parentId:null;   /* v05.16 · N1 — inside another pocket; absent = top level */
   const p={id:uid(),name:String(name==null?'':name).trim()||'New pocket',icon:icon||'✶',color:color||'#FFF1A8',
-    order:DB.jebPockets.reduce((m,x)=>Math.max(m,(x.order||0)+1),0),createdAt:now,updatedAt:now};
+    order:jebChildren(par).reduce((m,x)=>Math.max(m,(x.order||0)+1),0),createdAt:now,updatedAt:now};
+  if(par) p.parentId=par;
   DB.jebPockets.push(p); persist(); return p.id;
+}
+/* ══ v05.16 · N1 — pockets inside pockets, no depth limit ═══════════════════════
+   `parentId` on a pocket (absent/null = top level, so every older pocket is untouched); `order` is the place among
+   siblings. The DRAWN tree (_jebTree) is derived and forgiving: a pocket whose parent is missing (deleted elsewhere, not
+   arrived yet) is drawn at the top level and KEEPS its parentId; a pocket on a parent cycle (two devices moved A into B
+   and B into A) is drawn at the top level too. Nothing is ever hidden, and every walk carries a visited set. */
+let _jebTreeC=null;
+function _jebTree(){
+  _jebEnsure();
+  const raw=DB.jebPockets.filter(p=>p&&p.id!=null);
+  const key=raw.map(p=>p.id+'>'+(p.parentId||'')+'#'+(p.order||0)+'@'+(p.createdAt||'')).join(',');
+  const byId=new Map(raw.map(p=>[p.id,p]));   /* objects are always read fresh (a merge replaces them); only the SHAPE is cached */
+  if(_jebTreeC&&_jebTreeC.key===key){ _jebTreeC.byId=byId; return _jebTreeC; }
+  const eff=new Map();
+  raw.forEach(p=>{
+    let par=p.parentId&&p.parentId!==p.id&&byId.has(p.parentId)?p.parentId:null;
+    if(par){   /* on a cycle? walk up with a visited set; back at p = yes */
+      const seen=new Set([p.id]); let c=par;
+      while(c&&!seen.has(c)){ seen.add(c); const q=byId.get(c); c=q&&q.parentId&&byId.has(q.parentId)?q.parentId:null; }
+      if(c===p.id) par=null;
+    }
+    eff.set(p.id,par);
+  });
+  const kids=new Map(); kids.set('',[]);
+  raw.slice().sort(_jebByOrder).forEach(p=>{ const k=eff.get(p.id)||''; if(!kids.has(k)) kids.set(k,[]); kids.get(k).push(p.id); });
+  /* depth-first order with depths (the drawn order of "All pockets" and Choose) */
+  const flat=[], walk=(k,d)=>{ (kids.get(k)||[]).forEach(p=>{ flat.push({id:p,depth:d}); walk(p,d+1); }); };
+  walk('',0);
+  return (_jebTreeC={key,byId,eff,kids,flat});
+}
+function jebChildren(id){ const t=_jebTree(); return (t.kids.get(id||'')||[]).map(k=>t.byId.get(k)); }
+function jebPath(id){
+  const t=_jebTree(), out=[], seen=new Set(); let c=id;
+  while(c&&t.byId.has(c)&&!seen.has(c)){ seen.add(c); out.unshift(t.byId.get(c)); c=t.eff.get(c); }
+  return out;
+}
+function jebDescendants(id){
+  const t=_jebTree(), out=[], seen=new Set([id]), q=[id];
+  while(q.length){ (t.kids.get(q.shift())||[]).forEach(k=>{ if(!seen.has(k)){ seen.add(k); out.push(t.byId.get(k)); q.push(k); } }); }
+  return out;
+}
+/* is `id` the pocket `under`, or inside it, following the STORED parents (so a refusal also holds on a stored cycle) */
+function _jebInside(id,under){
+  const seen=new Set(); let c=id;
+  while(c&&!seen.has(c)){ if(c===under) return true; seen.add(c); const q=_jebPocket(c); c=q&&q.parentId; }
+  return false;
+}
+function _jebParentOf(id){ const pp=jebPath(id); return pp.length>1?pp[pp.length-2].id:null; }
+function jebMovePocketInto(id,parentId,toIndex){
+  _jebEnsure(); const p=_jebPocket(id); if(!p) return false;
+  const par=parentId||null;
+  if(par&&!_jebPocket(par)){ toast('That pocket is no longer there'); return false; }
+  if(par&&_jebInside(par,id)){ toast(par===id?'A pocket cannot be moved into itself':'A pocket cannot be moved into a pocket inside it'); return false; }
+  const now=_jebNow(), oldPar=_jebParentOf(id), from=jebChildren(oldPar).filter(x=>x.id!==id);
+  const list=(oldPar===par?from:jebChildren(par)).filter(x=>x.id!==id);
+  const at=toIndex==null?list.length:Math.max(0,Math.min(list.length,toIndex|0));
+  list.splice(at,0,p);
+  if((p.parentId||null)!==par){ if(par) p.parentId=par; else delete p.parentId; p.updatedAt=now; }
+  _jebRenumber(list,now);
+  if(oldPar!==par) _jebRenumber(from,now);
+  _jebTreeC=null; persist(); return true;
 }
 function jebEditPocket(id,patch){
   _jebEnsure(); const p=_jebPocket(id); if(!p||!patch) return false;
@@ -22290,13 +22378,13 @@ const _JEB_TYPE_LABEL={plain:'Plain',links:'Links',tasks:'Tasks',ideas:'Ideas',s
 const _JEB_TYPE_SEED={'jp-link':'links','jp-task':'tasks','jp-idea':'ideas','jp-shop':'shop'};
 function _jebType(pk){ if(!pk) return 'plain'; return _JEB_TYPES.includes(pk.ztype)?pk.ztype:(_JEB_TYPE_SEED[pk.id]||'plain'); }
 function jebMovePocket(id,toIndex){
-  _jebEnsure(); const list=jebPockets(), i=list.findIndex(p=>p.id===id); if(i<0) return false;
+  _jebEnsure(); const list=jebChildren(_jebParentOf(id)), i=list.findIndex(p=>p.id===id); if(i<0) return false;   /* v05.16: among siblings */
   const p=list.splice(i,1)[0]; list.splice(Math.max(0,Math.min(list.length,toIndex|0)),0,p);
   _jebRenumber(list,_jebNow()); persist(); return true;
 }
 function jebDeletePocket(id){
   _jebEnsure(); const p=_jebPocket(id); if(!p) return false;
-  if(DB.jeb.some(i=>i&&i.pocketId===id)){ toast('A pocket that holds items cannot be deleted — move or delete its items first'); return false; }
+  if(DB.jeb.some(i=>i&&i.pocketId===id)||DB.jebPockets.some(x=>x&&x.parentId===id)){ toast('A pocket that holds items or pockets cannot be deleted — move or delete them first'); return false; }
   const at=_jebNow();
   DB.trash.push({id:uid(),type:'jebPocket',item:JSON.parse(JSON.stringify(p)),deletedAt:at});
   _addTombstones([id],at);
@@ -22552,11 +22640,12 @@ let _jebBarSig='', _jebPanelSig='', _jebLPAt=0, _jebWired=false;
 /* v05.03 · J4 — several pockets in the panel (_jebOpen==='*' + _jebMulti), the card deck, ☑ Choose.
    A selection is {ids:[pocket ids], all:bool}; all:true follows the pockets as they come and go. */
 let _jebMulti=null, _jebDeck=null, _jebDeckSig='', _jebChoose=false, _jebChosen=new Set(), _jebNewId=null;
-function _jebSelIds(sel){ if(!sel) return []; const ps=jebPockets(); return (sel.all?ps:ps.filter(p=>(sel.ids||[]).includes(p.id))).map(p=>p.id); }
+function _jebSelIds(sel){ if(!sel) return []; const t=_jebTree(), ps=t.flat.map(x=>t.byId.get(x.id)); return (sel.all?ps:ps.filter(p=>(sel.ids||[]).includes(p.id))).map(p=>p.id); }
 function _jebPanelSel(){ return !_jebOpen?null:(_jebOpen==='*'?_jebMulti:{ids:[_jebOpen],all:false}); }
 function _jebReduced(){ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }
 /* v05.11 · Z6b — session-only view state of the tasks list: which items have their steps open, which pockets show Done, the first-time hint, the day last painted */
 let _jebStepsOpen=new Set(), _jebDoneOpen=new Set(), _jebForce=false, _jebHintPid=null, _jebLastDay='';
+let _jebFold=new Set();   /* v05.16 · N1 — "All pockets": the groups folded this session (their own items and the groups inside) */
 let _jebAtt=null;   /* the open 📎 Attach sheet: {iid,tab,q:{folder,tag},pool,anchor} */
 const _jebEl=id=>document.getElementById(id);
 function _jebBarOn(){ return _JEB_APP||!(DB&&DB.theme&&DB.theme.jebBar===false); }   /* Jeb mode (J5): always on; the stored setting is left alone */
@@ -22772,18 +22861,35 @@ function _jebChipInfo(p,cnt){
   }
   return {n:cnt[p.id]||0,red:false,title:p.name};
 }
+/* v05.16 · N1 — a chip counts its own pocket PLUS every pocket inside it. Per pocket the own number is _jebChipInfo's
+   (a tasks pocket: due today + overdue when any, else open); the roll-up adds them down the drawn tree, red if any part is red. */
+function _jebRoll(cnt){
+  const t=_jebTree(), acc=new Map();
+  for(let k=t.flat.length-1;k>=0;k--){   /* depth-first order lists a parent before its pockets, so backwards is children first */
+    const id=t.flat[k].id, p=t.byId.get(id), ci=_jebChipInfo(p,cnt), a=acc.get(id)||{n:0,red:false,kids:false};
+    a.n+=ci.n; a.red=a.red||ci.red; acc.set(id,a);
+    const par=t.eff.get(id);
+    if(par){ const b=acc.get(par)||{n:0,red:false,kids:false}; b.n+=a.n; b.red=b.red||a.red; b.kids=true; acc.set(par,b); }
+  }
+  return acc;
+}
+const _JEB_ROLL_TITLE=' — the number counts the open items in this pocket and in every pocket inside it';
 function _jebPaintBar(bar){
-  const ps=jebPockets(), cnt=_jebOpenCounts();
-  const ids=ps.map(p=>p.id);
+  const t=_jebTree(), cnt=_jebOpenCounts(), roll=_jebRoll(cnt);
+  const allP=t.flat.map(x=>t.byId.get(x.id)), ids=allP.map(p=>p.id);
+  /* the bar shows the top level; Choose lists every pocket (nested ones marked ↳), so any depth can be picked */
+  const rows=t.flat.filter(x=>_jebChoose||!t.eff.get(x.id)).map(x=>({p:t.byId.get(x.id),d:_jebChoose?x.depth:0}));
+  const ps=rows.map(r=>r.p);
   [..._jebChosen].forEach(id=>{ if(!ids.includes(id)) _jebChosen.delete(id); });
-  const chosen=ids.filter(id=>_jebChosen.has(id)), total=ps.reduce((n,p)=>n+(cnt[p.id]||0),0);
-  const sig=_jebOpen+'|'+(_jebChoose?'C'+chosen.join(','):'-')+'|'+total+'|'+ps.map(p=>{ const ci=_jebChipInfo(p,cnt); return [p.id,p.name,p.icon,p.color,ci.n,ci.red?1:0].join('~'); }).join('|');
+  const chosen=ids.filter(id=>_jebChosen.has(id)), total=allP.reduce((n,p)=>n+(cnt[p.id]||0),0);
+  const openRoot=(_jebOpen&&_jebOpen!=='*')?((jebPath(_jebOpen)[0]||{}).id||_jebOpen):null;
+  const sig=_jebOpen+'|'+(_jebChoose?'C'+chosen.join(','):'-')+'|'+total+'|'+rows.map(r=>{ const p=r.p, a=roll.get(p.id)||{n:0,red:false,kids:false}; return [p.id,p.name,p.icon,p.color,a.n,a.red?1:0,a.kids?1:0,r.d].join('~'); }).join('|');
   if(sig===_jebBarSig) return; _jebBarSig=sig;
   const allOn=_jebChoose&&ps.length>0&&chosen.length===ps.length, n=chosen.length;
   bar.classList.toggle('choosing',_jebChoose);
   bar.innerHTML=`<button type="button" class="jeb-choose" aria-pressed="${_jebChoose}" title="${_jebChoose?'Leave choose mode':'Choose several pockets'}">${_jebChoose?'✕ Cancel':'☑ Choose'}</button>`
     +`<div class="jeb-chip jeb-all${allOn?' chosen':''}${_jebOpen==='*'&&_jebMulti&&_jebMulti.all?' on':''}" data-all="1" role="group" aria-label="All pockets"><span class="jeb-main" role="button" tabindex="0" title="Open all pockets in the panel"><span class="jeb-tk" aria-hidden="true">${allOn?'✓':''}</span><span class="jeb-sw">▤</span><span class="jeb-nm">All pockets</span><span class="jeb-ct">${total}</span></span><span data-jeb-cards role="button" tabindex="0" aria-label="Spread all pockets as cards" title="Spread all pockets as cards">▦</span></div>`
-    +ps.map(p=>{ const on=_jebChosen.has(p.id), ci=_jebChipInfo(p,cnt); return `<div class="jeb-chip${p.id===_jebOpen?' on':''}${on?' chosen':''}" data-pid="${esc(p.id)}" role="group" aria-label="${esc(p.name)}" title="${esc(ci.title)}"><span class="jeb-main" role="button" tabindex="0"><span class="jeb-tk" aria-hidden="true">${on?'✓':''}</span><span class="jeb-sw" style="background:${esc(p.color)}">${esc(p.icon)}</span><span class="jeb-nm">${esc(p.name)}</span><span class="jeb-ct${ci.red?' jt-red':''}">${ci.n}</span></span><span data-jeb-cards role="button" tabindex="0" aria-label="Spread ${esc(p.name)} as cards" title="Spread ${esc(p.name)} as cards">▦</span></div>`; }).join('')
+    +rows.map(r=>{ const p=r.p, on=_jebChosen.has(p.id), ci=_jebChipInfo(p,cnt), a=roll.get(p.id)||{n:ci.n,red:ci.red,kids:false}; return `<div class="jeb-chip${(_jebChoose?p.id===_jebOpen:p.id===openRoot)?' on':''}${on?' chosen':''}" data-pid="${esc(p.id)}" role="group" aria-label="${esc(p.name)}" title="${esc(ci.title+(a.kids?_JEB_ROLL_TITLE:''))}"><span class="jeb-main" role="button" tabindex="0"><span class="jeb-tk" aria-hidden="true">${on?'✓':''}</span><span class="jeb-sw" style="background:${esc(p.color)}">${esc(p.icon)}</span><span class="jeb-nm">${r.d?'↳ ':''}${esc(p.name)}</span>${a.kids?'<span class="jx-in" aria-hidden="true" title="Holds pockets">▸</span>':''}<span class="jeb-ct${a.red?' jt-red':''}">${a.n}</span></span><span data-jeb-cards role="button" tabindex="0" aria-label="Spread ${esc(p.name)} as cards" title="Spread ${esc(p.name)} as cards">▦</span></div>`; }).join('')
     +'<div class="jeb-new" role="button" tabindex="0">＋ New pocket</div>'
     +(_jebChoose?`<button type="button" class="jeb-go" data-go="panel"${n?'':' disabled'}>▤ Panel (${n})</button><button type="button" class="jeb-go" data-go="cards"${n?'':' disabled'}>▦ Cards (${n})</button>`:'');
 }
@@ -22834,7 +22940,7 @@ function jebClosePanel(){
 }
 function _jebMakePanel(){
   const p=document.createElement('div'); p.id='jeb-panel';
-  p.innerHTML='<div class="jeb-ph"></div><div class="jeb-add"><textarea id="jeb-add-in" rows="1" placeholder="Jot something…" aria-label="New item"></textarea><button class="btn bp" data-act="add" style="min-height:40px">Add</button></div><div class="jt-hint" hidden></div><div class="jeb-list"></div><div class="jeb-foot"></div>';
+  p.innerHTML='<div class="jeb-ph"></div><div class="jx-path" hidden></div><div class="jx-kids" hidden></div><div class="jeb-add"><textarea id="jeb-add-in" rows="1" placeholder="Jot something…" aria-label="New item"></textarea><button class="btn bp" data-act="add" style="min-height:40px">Add</button></div><div class="jt-hint" hidden></div><div class="jeb-list"></div><div class="jeb-foot"></div>';
   document.body.appendChild(p);
   const add=p.querySelector('#jeb-add-in');
   add.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); _jebAddFromInput(); } });
@@ -22844,6 +22950,12 @@ function _jebMakePanel(){
     if(t.closest('.jeb-x')){ jebClosePanel(); return; }
     if(t.closest('.jeb-px')){ const s=_jebPanelSel(); if(s) jebOpenDeck(s); return; }
     if(t.closest('.jeb-gadd')){ _jebNewCard(t.closest('.jeb-gadd').dataset.pid); return; }
+    /* v05.16 · N1 — the path, the pockets inside, ＋ Pocket, the pocket menu, a group's fold */
+    const pb=t.closest('.jx-path button'); if(pb){ jebOpenPanel(pb.dataset.pid); return; }
+    const kb=t.closest('.jx-kid'); if(kb){ if(Date.now()-_jebLPAt<700) return; jebOpenPanel(kb.dataset.pid); return; }
+    if(t.closest('.jx-new')){ jebNewPocketDialog(_jebOpen); return; }
+    const pm=t.closest('.jeb-pm'); if(pm){ _jebPocketMenu(_jebOpen,null,null,pm); return; }
+    const fb=t.closest('.jx-fold'); if(fb){ const q=fb.dataset.pid; if(_jebFold.has(q)) _jebFold.delete(q); else _jebFold.add(q); _jebPanelSig=''; jebRefresh(); return; }
     if(t.closest('[data-act="add"]')){ _jebAddFromInput(); return; }
     if(t.closest('[data-act="clear"]')){ _jebClearDoneUI(_jebSelIds(_jebPanelSel())); return; }
     const fc=t.closest('.jl-fc');   /* v05.10 · Z6a — phone filter chips */
@@ -22868,6 +22980,15 @@ function _jebMakePanel(){
     if(t.closest('.jeb-note-b')){ _jebToNoteUI(row.dataset.iid); return; }
     if(t.closest('.jeb-tx')) _jebStartEdit(row.dataset.iid);
   });
+  p.addEventListener('contextmenu',e=>{ const k=e.target.closest('.jx-kid'); if(!k) return; e.preventDefault(); _jebPocketMenu(k.dataset.pid,e.clientX,e.clientY); });
+  let klp=null, kx=0, ky=0;   /* long-press on a pocket inside = its menu, as on the bar */
+  p.addEventListener('touchstart',e=>{
+    const k=e.target.closest('.jx-kid'); if(!k||e.touches.length!==1) return;
+    kx=e.touches[0].clientX; ky=e.touches[0].clientY; clearTimeout(klp);
+    klp=setTimeout(()=>{ _jebLPAt=Date.now(); _jebPocketMenu(k.dataset.pid,kx,ky); },500);
+  },{passive:true});
+  p.addEventListener('touchmove',e=>{ const t=e.touches[0]; if(klp&&(Math.abs(t.clientX-kx)>8||Math.abs(t.clientY-ky)>8)){ clearTimeout(klp); klp=null; } },{passive:true});
+  ['touchend','touchcancel'].forEach(n=>p.addEventListener(n,()=>{ clearTimeout(klp); klp=null; },{passive:true}));
   p.addEventListener('change',e=>{
     const k=e.target.closest('.jeb-tick'); if(!k) return;
     jebToggleDone(k.closest('.jeb-it').dataset.iid); _jebPanelSig=''; jebRefresh();
@@ -23034,6 +23155,9 @@ function _jebPaintPanel(){
   p.classList.add('on');
   const pks=ids.map(_jebPocket), groups=pks.map(pk=>jebItems(pk.id));
   const all=[].concat(...groups), open=all.filter(i=>!i.done).length, done=all.length-open;
+  const tr=_jebTree(), roll=_jebRoll(_jebOpenCounts());   /* v05.16 · N1 */
+  const depthOf=new Map(tr.flat.map(x=>[x.id,x.depth]));
+  const treeSig=pk=>jebPath(pk.id).map(x=>x.id+x.name).join('>')+'<'+jebChildren(pk.id).map(k=>{ const a=roll.get(k.id)||{n:0,red:false}; return [k.id,k.name,k.icon,k.color,a.n,a.red?1:0,(tr.kids.get(k.id)||[]).length?1:0].join('~'); }).join(',')+'<'+(depthOf.get(pk.id)||0)+(tr.kids.get(pk.id)||[]).length+(_jebFold.has(pk.id)?'F':'');
   const hk=multi?null:({tasks:'zabTaskHint',shop:'zabShopHint'})[_jebType(pks[0])];   /* v05.12: shopping has a typing hint too */
   if(hk&&!(DB.theme&&DB.theme[hk])&&_jebHintPid!==pks[0].id){   /* the one-line typing hint shows the first time only; the flag is stored just after it is on screen */
     _jebHintPid=pks[0].id;
@@ -23041,7 +23165,7 @@ function _jebPaintPanel(){
   }
   const tkSig=pk=>_jebToday()+(_jebTaskMode()==='w'?'W':'N')+(_jebDoneOpen.has(pk.id)?'D':'')+(_jebHintPid===pk.id?'H':'')+[..._jebStepsOpen].join(',');
   const kvSig=pk=>{ const ty=_jebType(pk); return (ty==='ideas'?JSON.stringify(_jebIdeaView(pk.id)):ty==='shop'?JSON.stringify(_jebShopView(pk.id)):'')+(_jebHintPid===pk.id?'H':''); };   /* v05.12 · Z6c */
-  const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W':'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):kvSig(pk)),groups[k].map(_jebItemSig).join('|')].join('#')).join('@@')].join('%');
+  const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W':'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):kvSig(pk)),treeSig(pk),groups[k].map(_jebItemSig).join('|')].join('#')).join('@@')].join('%');
   if(sig===_jebPanelSig) return;
   /* never repaint under an item being typed in or dragged: it repaints when that ends */
   if(_jebEditId||_jebDrag||_jebStepTyping()||_jebQtyOpen()) return;
@@ -23050,7 +23174,12 @@ function _jebPaintPanel(){
   const addBox=p.querySelector('.jeb-add'); if(addBox) addBox.style.display=multi?'none':'';
   if(!multi){
     const pk=pks[0], items=groups[0];
-    p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this pocket</small></div>${px}<button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
+    p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this pocket</small></div>${px}<button class="jeb-pm" aria-label="Pocket menu" title="Pocket menu: rename, move into another pocket, add a pocket inside">⋯</button><button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
+    const pth=jebPath(pk.id), kids=jebChildren(pk.id), pe=p.querySelector('.jx-path'), ke=p.querySelector('.jx-kids');
+    pe.hidden=pth.length<2;
+    pe.innerHTML=pth.length<2?'':'<nav aria-label="Where this pocket is">'+pth.map((x,k)=>k<pth.length-1?`<button type="button" data-pid="${esc(x.id)}">${esc(x.name)}</button><span aria-hidden="true"> › </span>`:`<b aria-current="true">${esc(x.name)}</b>`).join('')+'</nav>';
+    ke.hidden=!kids.length;
+    ke.innerHTML=!kids.length?'':kids.map(c=>{ const a=roll.get(c.id)||{n:0,red:false}, sub=(tr.kids.get(c.id)||[]).length>0; return `<button type="button" class="jx-kid" data-pid="${esc(c.id)}" title="${esc(c.name+(sub?_JEB_ROLL_TITLE:''))}"><span class="jeb-sw" style="background:${esc(c.color)}">${esc(c.icon)}</span><span class="jx-nm">${esc(c.name)}</span>${sub?'<span class="jx-in" aria-hidden="true">▸</span>':''}<span class="jeb-ct${a.red?' jt-red':''}">${a.n}</span></button>`; }).join('')+'<button type="button" class="jx-new" title="Make a new pocket inside this one">＋ Pocket</button>';
     const lk=_jebType(pk)==='links', tk=_jebType(pk)==='tasks';
     const id=_jebType(pk)==='ideas', sh=_jebType(pk)==='shop';
     const hn=p.querySelector('.jt-hint'); if(hn){
@@ -23063,10 +23192,19 @@ function _jebPaintPanel(){
     if(lk) _jebLinkScan(items);
   }else{
     p.classList.remove('jl-wide'); p.querySelector('.jeb-add textarea').placeholder='Jot something…'; const hn2=p.querySelector('.jt-hint'); if(hn2) hn2.hidden=true;
+    p.querySelector('.jx-path').hidden=true; p.querySelector('.jx-kids').hidden=true;
     p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:#EDE6D6">▤</span><div class="jeb-pt"><b>${esc(_jebSelTitle(sel,pks))}</b><small>${open} open · ${all.length} in all</small></div>${px}<button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
+    const inSel=new Set(ids);
     p.querySelector('.jeb-list').innerHTML=pks.map((pk,k)=>{
+      /* v05.16 · N1 — a pocket inside another is a sub-group, indented by its depth; a folded group hides its own items and the groups inside it */
+      const pa=jebPath(pk.id).slice(0,-1);
+      if(pa.some(x=>inSel.has(x.id)&&_jebFold.has(x.id))) return '';
+      const d=depthOf.get(pk.id)||0, hasK=(tr.kids.get(pk.id)||[]).length>0, folded=_jebFold.has(pk.id);
       const items=groups[k], o=items.filter(i=>!i.done).length;
-      return `<div class="jeb-gh" data-pid="${esc(pk.id)}"><span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><b>${esc(pk.name)}</b><small>${o} open</small><button class="jeb-gadd" data-pid="${esc(pk.id)}" aria-label="Add an item to ${esc(pk.name)}" title="Add an item to ${esc(pk.name)}">＋</button></div>${_jebType(pk)==='tasks'?_jebTaskMultiHTML(pk,items):`<div class="jeb-gl${['links','ideas','shop'].includes(_jebType(pk))?' jl-list':''}" data-pid="${esc(pk.id)}">${_jebBasketLast(pk,items).map(i=>_jebRowHTML(i)).join('')}</div>`}`;
+      const fold=(d>0||hasK)?`<button class="jx-fold" data-pid="${esc(pk.id)}" aria-expanded="${!folded}" aria-label="${folded?'Unfold':'Fold'} ${esc(pk.name)}" title="${folded?'Show':'Hide'} what is in ${esc(pk.name)}">${folded?'▸':'▾'}</button>`:'';
+      const head=`<div class="jeb-gh${d?' jx-sub':''}" data-pid="${esc(pk.id)}" data-depth="${d}" style="${d?'padding-left:'+(10+Math.min(d,8)*14)+'px':''}">${fold}<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><b>${esc(pk.name)}</b><small>${o} open</small><button class="jeb-gadd" data-pid="${esc(pk.id)}" aria-label="Add an item to ${esc(pk.name)}" title="Add an item to ${esc(pk.name)}">＋</button></div>`;
+      if(folded) return head;
+      return head+`${_jebType(pk)==='tasks'?_jebTaskMultiHTML(pk,items):`<div class="jeb-gl${['links','ideas','shop'].includes(_jebType(pk))?' jl-list':''}" data-pid="${esc(pk.id)}">${_jebBasketLast(pk,items).map(i=>_jebRowHTML(i)).join('')}</div>`}`;
     }).join('');
     pks.forEach((pk,k)=>{ if(_jebType(pk)==='links') _jebLinkScan(groups[k]); });
   }
@@ -23194,6 +23332,7 @@ function _jebMakeDeck(){
       else if(b.dataset.d==='clear') _jebClearDoneUI(_jebSelIds(_jebDeck));
       return;
     }
+    const ib=t.closest('.jx-in-b'); if(ib){ jebOpenDeck({ids:[ib.dataset.pid],all:false}); return; }   /* v05.16 · N1 */
     const card=t.closest('.jeb-card'); if(!card) return;
     const iid=card.dataset.iid;
     if(t.closest('.jl-sug')){ const x=_jebItem(iid); if(x&&x.ch){ jebEditItem(x.id,{people:[x.ch]}); _jebDeckSig=''; jebRefresh(); } return; }
@@ -23222,7 +23361,11 @@ function _jebPaintDeck(){
   let d=_jebEl('jeb-deck'); if(!d) d=_jebMakeDeck();
   d.classList.add('on');
   const pks=ids.map(_jebPocket), groups=pks.map(pk=>_jebBasketLast(pk,jebItems(pk.id)));   /* v05.12: a shopping pocket's ticked cards last */
-  const sig=(sel.all?'A':'')+'%'+pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='tasks'?_jebToday():'',groups[k].map(_jebItemSig).join('|')].join('#')).join('@@');
+  const inside=pk=>{   /* v05.16 · N1 — a pocket that holds pockets: small chips at the top of its cards, each opens that pocket's cards */
+    const ks=jebChildren(pk.id); if(!ks.length) return '';
+    return '<div class="jx-ins"><span>inside:</span>'+ks.map(c=>`<button type="button" class="jx-in-b" data-pid="${esc(c.id)}" title="Spread ${esc(c.name)} as cards"><span class="jeb-sw" style="background:${esc(c.color)}">${esc(c.icon)}</span>${esc(c.name)}</button>`).join('')+'</div>';
+  };
+  const sig=(sel.all?'A':'')+'%'+pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='tasks'?_jebToday():'',inside(pk),groups[k].map(_jebItemSig).join('|')].join('#')).join('@@');
   if(sig===_jebDeckSig) return;
   /* never repaint under a card being typed in or dragged: it repaints when that ends */
   if(_jebEditId||_jebDrag) return;
@@ -23235,9 +23378,9 @@ function _jebPaintDeck(){
     +'<button class="jd-x" aria-label="Close" title="Close">✕</button>';
   d.querySelector('.jd-wrap').innerHTML=pks.map((pk,k)=>{
     const g=`<div class="jd-grid" data-pid="${esc(pk.id)}">${groups[k].map(i=>_jebCardHTML(i,pk)).join('')}</div>`;
-    if(!multi) return `<section class="jd-grp" data-pid="${esc(pk.id)}">${g}</section>`;
+    if(!multi) return `<section class="jd-grp" data-pid="${esc(pk.id)}">${inside(pk)}${g}</section>`;
     const o=groups[k].filter(i=>!i.done).length;
-    return `<section class="jd-grp" data-pid="${esc(pk.id)}"><div class="jd-gh"><span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><b>${esc(pk.name)}</b><small>${o} open</small></div>${g}</section>`;
+    return `<section class="jd-grp" data-pid="${esc(pk.id)}"><div class="jd-gh"><span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><b>${esc(pk.name)}</b><small>${o} open</small></div>${inside(pk)}${g}</section>`;
   }).join('');
   pks.forEach((pk,k)=>{ if(_jebType(pk)==='links') _jebLinkScan(groups[k]); });
 }
@@ -23306,23 +23449,42 @@ function _jebShowMenu(rows,anchor,x,y){
   l=Math.max(6,Math.min(l,vw-w-6)); t=Math.max(6,Math.min(t,vh-h-6));
   m.style.left=l+'px'; m.style.top=t+'px'; m.style.visibility='visible';
 }
-function _jebPocketMenu(pid,x,y){
+/* v05.16 · N1 — the picker behind "📂 Move into…": every pocket as an indented tree, a tick on where it is now, "Top level" first;
+   a place it cannot go (itself, or inside it) is greyed and says why. Uses the app's modal (a dialog ≥ 640, a sheet below). */
+function _jebMoveIntoOpen(pid){
   const pk=_jebPocket(pid); if(!pk) return;
-  const ps=jebPockets(), i=ps.findIndex(p=>p.id===pid), done=jebItems(pid).filter(t=>t.done).length;
-  const anchor=document.querySelector(`#jeb-bar .jeb-chip[data-pid="${pid}"]`);
+  const t=_jebTree(), cur=_jebParentOf(pid)||'';
+  const row=(id,label,d,bad)=>`<button type="button" class="jx-mv${bad?' off':''}" data-to="${esc(id)}"${bad?' disabled':''} style="padding-left:${10+Math.min(d,8)*16}px"><span class="jx-box" aria-hidden="true">${id===cur?'☑':'☐'}</span><span class="jx-mt">${label}</span>${bad?`<small>${esc(bad)}</small>`:''}</button>`;
+  showModal(`<div class="mt">📂 Move “${esc(pk.name)}” into…</div><div class="jx-mvl">`
+    +row('','Top level',0,'')
+    +t.flat.map(x=>{ const q=t.byId.get(x.id), bad=q.id===pid?'this is the pocket being moved':(_jebInside(q.id,pid)?'it is inside this pocket':''); return row(q.id,esc(q.icon)+' '+esc(q.name),x.depth+1,bad); }).join('')
+    +`</div><div class="ma"><button class="btn" onclick="closeModal()">Cancel</button></div>`);
+  _jebEl('mb').querySelectorAll('.jx-mv').forEach(b=>b.addEventListener('click',()=>{
+    if(b.disabled) return;
+    const to=b.dataset.to||null; closeModal();
+    if(to===(cur||null)) return;
+    if(jebMovePocketInto(pid,to,null)){ toast('Moved '+pk.name+(to?' into '+(_jebPocket(to)||{}).name:' to the top level')); _jebBarSig=''; _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); }
+  }));
+}
+function _jebPocketMenu(pid,x,y,anchorEl){
+  const pk=_jebPocket(pid); if(!pk) return;
+  const ps=jebChildren(_jebParentOf(pid)), i=ps.findIndex(p=>p.id===pid), done=jebItems(pid).filter(t=>t.done).length;
+  const anchor=anchorEl||document.querySelector(`#jeb-bar .jeb-chip[data-pid="${pid}"]`);
   _jebShowMenu([
     {t:'✏️ Rename',f:()=>jebRenameDialog(pid)},
     {t:'🎨 Icon & colour',f:()=>jebIconColourDialog(pid)},
+    {t:'📂 Move into…',f:()=>_jebMoveIntoOpen(pid)},
+    {t:'＋ New pocket inside',f:()=>jebNewPocketDialog(pid)},
     {t:'🧩 Pocket kind ▸',keep:true,f:()=>{
       const cur=_jebType(pk);
       const rows=_JEB_TYPES.map(k=>({t:(k===cur?'☑ ':'☐ ')+_JEB_TYPE_LABEL[k]+(k===cur?' ✓':''),f:()=>{ jebEditPocket(pid,{ztype:k}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); }}));
-      rows.push({t:'◀ Back',keep:true,f:()=>_jebPocketMenu(pid,x,y)});
+      rows.push({t:'◀ Back',keep:true,f:()=>_jebPocketMenu(pid,x,y,anchorEl)});
       _jebShowMenu(rows,anchor&&(x==null)?anchor:null,x,y);
     }},
     {t:'◀ Move left',off:i<=0,f:()=>{ jebMovePocket(pid,i-1); jebRefresh(); }},
     {t:'Move right ▶',off:i>=ps.length-1,f:()=>{ jebMovePocket(pid,i+1); jebRefresh(); }},
     {t:'🧹 Clear done items ('+done+')',off:!done,f:()=>_jebClearDoneUI(pid)},
-    {t:'🗑 Delete pocket',d:true,f:()=>{ if(jebDeletePocket(pid)){ if(_jebOpen===pid) jebClosePanel(); toast('Pocket moved to Trash'); } jebRefresh(); }}
+    {t:'🗑 Delete pocket',d:true,f:()=>{ const par=_jebParentOf(pid); if(jebDeletePocket(pid)){ if(_jebOpen===pid){ if(par) jebOpenPanel(par); else jebClosePanel(); } toast('Pocket moved to Trash'); } _jebPanelSig=''; jebRefresh(); }}
   ],anchor&&(x==null)?anchor:null,x,y);
 }
 function _jebItemMenu(iid,anchor){
@@ -23340,8 +23502,8 @@ function _jebItemMenu(iid,anchor){
     {t:'📎 Attach',f:()=>_jebAttOpen(iid,anchor)},
     {t:'→ Note',f:()=>_jebToNoteUI(iid)},
     {t:'📂 Move to pocket ▸',keep:true,f:()=>{
-      const others=jebPockets().filter(p=>p.id!==it.pocketId);
-      const rows=others.map(p=>({t:p.icon+' '+p.name,f:()=>{ jebMoveItem(iid,p.id,0); toast('Moved to '+p.name); _jebPanelSig=''; jebRefresh(); }}));
+      const tt=_jebTree(), others=tt.flat.filter(x=>x.id!==it.pocketId).map(x=>({p:tt.byId.get(x.id),d:x.depth}));   /* v05.16 · N1 — as an indented tree */
+      const rows=others.map(({p,d})=>({t:'   '.repeat(Math.min(d,8))+p.icon+' '+p.name,f:()=>{ jebMoveItem(iid,p.id,0); toast('Moved to '+p.name); _jebPanelSig=''; jebRefresh(); }}));
       rows.push({t:'◀ Back',keep:true,f:back});
       _jebShowMenu(rows,anchor);
     }},
@@ -23671,10 +23833,14 @@ function _jebPocketForm(o){
   _jebEl('jeb-f-ok').addEventListener('click',ok);
   const n=_jebEl('jeb-f-name'); if(n) n.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); ok(); } });
 }
-function jebNewPocketDialog(){
-  _jebPocketForm({title:'＋ New pocket',name:'',pick:true,icon:_JEB_ICONS[1],color:_JEB_COLORS[0],ok:'Create',onOk:v=>{
-    jebAddPocket(v.name,v.icon,v.color); jebRefresh();
-    const bar=_jebEl('jeb-bar'); if(bar) bar.scrollLeft=bar.scrollWidth;
+function jebNewPocketDialog(parentId){
+  const par=parentId&&_jebPocket(parentId)?parentId:null;   /* v05.16 · N1 — inside another pocket */
+  _jebPocketForm({title:par?'＋ New pocket inside “'+_jebPocket(par).name+'”':'＋ New pocket',name:'',pick:true,icon:_JEB_ICONS[1],color:_JEB_COLORS[0],ok:'Create',onOk:v=>{
+    const nid=jebAddPocket(v.name,v.icon,v.color,par);
+    if(par){ _jebBarSig=''; _jebPanelSig=''; _jebDeckSig=''; if(_jebOpen!==par) jebOpenPanel(par); }
+    jebRefresh();
+    const bar=_jebEl('jeb-bar'); if(bar&&!par) bar.scrollLeft=bar.scrollWidth;
+    return nid;
   }});
 }
 function jebRenameDialog(pid){
