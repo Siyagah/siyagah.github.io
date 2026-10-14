@@ -27051,7 +27051,7 @@ function _enxScanner(onNote){
     if(um&&!_enxDate(um[1])) info.err=info.err||'the updated date is not valid';
     if(cSeen){
       const cd=/^\s*<!\[CDATA\[/.test(cHead);
-      if(cd&&(!/\]\]>\s*$/.test(cTail)||(cLen>0&&!/<\/en-note>/.test(cTail)))) info.err=info.err||'the content is cut short';
+      if(cd&&!/\]\]>\s*$/.test(cTail)) info.err=info.err||'the content is cut short';
     }
     const tr=/<tag>([\s\S]*?)<\/tag>/g; let m;
     while((m=tr.exec(nb))) info.tags.push(_enxUnent(m[1]));
@@ -27068,7 +27068,7 @@ function _enxScanner(onNote){
   function eatContent(s){
     cLen+=s.length;
     if(cHead.length<400) cHead+=s.slice(0,400-cHead.length);
-    cTail=(cTail+s.slice(-40)).slice(-40);
+    const w=s.slice(-400).replace(/\s+/g,''); if(w) cTail=(cTail+w).slice(-40);   /* whitespace-free, so a long run of spaces before ]]> cannot push it out */
   }
   function eatData(s){
     let n=0; for(let i=0,L=s.length;i<L;i++) if(s.charCodeAt(i)>32) n++;

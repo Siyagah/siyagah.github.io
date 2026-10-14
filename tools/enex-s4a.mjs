@@ -333,6 +333,23 @@ try {
     for (const p of presets) { await on(d, (k) => applyPreset(k), p); await sleep(200); const m = await measure(); check(m.n >= 30 && m.worst >= 4.5, `${t} the result (totals, table, broken list, dry-run line, buttons: ${m.n} pieces) clears 4.5:1 on ${p} (worst ${m.worst}, ${m.who})`, JSON.stringify(m)); }
     noErr(d, t);
   });
+
+  /* ══ 73j — empty and padded notes are readable; only a CDATA that is never closed is "cut short" ══ */
+  if (want('73j')) await each('73j', async (d, vp) => {
+    const t = `73j@${vp.name}`;
+    const dir = join(TMP, 'edge'); mkdirSync(dir, { recursive: true });
+    const enml = (tail) => `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">${tail}`;
+    const mk = (title, content) => `<note>\n<title>${title}</title>\n<created>20220101T000000Z</created>\n<updated>20220101T000000Z</updated>\n<content><![CDATA[${content}]]></content>\n</note>\n`;
+    const pad = ' \n'.repeat(100);
+    const file = join(dir, 'Edge.enex');
+    writeFileSync(file, HEAD + mk('Empty self-closing', enml('<en-note/>')) + mk('Empty with style', enml('<en-note style="x"/>')) + mk('Padded end', enml('<en-note><div>x</div></en-note>' + pad)) + mk('Plain', enml('<en-note><div>ok</div></en-note>'))
+      + `<note>\n<title>Cut in the middle</title>\n<created>20220101T000000Z</created>\n<content><![CDATA[<en-note><div>cut off in the middle of a sent`);
+    await dlg(d, vp); await d.page.setInputFiles('#enx-files', [file]); await waitDone(d);
+    const r = await readRes(d);
+    check(r.grid.Notes === '4', `${t} the four readable notes are counted (empty, empty with style, padded, plain)`, r.grid.Notes);
+    check(r.broken.length === 1 && /Cut in the middle/.test(r.broken[0]) && !/Empty|Padded|Plain/.test(r.broken.join('')), `${t} only the note cut off in the middle is listed as broken`, r.broken.join(' || '));
+    noErr(d, t);
+  });
 } catch (e) {
   console.log(' FAIL  enex-s4a threw: ' + (e && e.stack || e));
   results.push({ ok: false, label: 'threw' });

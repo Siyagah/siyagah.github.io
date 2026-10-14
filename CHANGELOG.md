@@ -9645,12 +9645,17 @@ written** to the notebook, localStorage, IndexedDB or the cloud; the last result
   stack ▸ notebook (notes, pictures, MB, already in); the stacks are open on tablet/laptop and **folded on a phone**. The dry-run line
   at the bottom. **📋 Copy summary** (plain text; a selectable box when the clipboard is refused) and ↩ Choose another export.
 - **Layouts (D5).** Dialog on 820/1440, sheet on 390, tables and totals fit all three; summary rows are 44 px on a phone.
-- **Check.** Block 73 `73-evernote-dryrun`, `tools/enex-s4a.mjs`, 73a–73i at 390/820/1440 with real taps or clicks. The fixtures are
+- **Check.** Block 73 `73-evernote-dryrun`, `tools/enex-s4a.mjs`, 73a–73j at 390/820/1440 with real taps or clicks. The fixtures are
   written by the test (two stacks, four notebooks, unicode titles, `]]&gt;` in an attribute, `en-media`, image/PDF/audio/zip
   resources, a bad date, a cut-off note, a non-.enex file, a note Siyagah already holds and a one-second near miss). 73g: a generated
   146 MB file (2,000 notes): **1440** 1.3 s, no long task, heap +25 MB; **390 with CPU ×4** 3.8 s, worst long task **68 ms** (8 over 50 ms),
-  heap +32 MB; 112,000,000 picture bytes counted exactly. Builder run: `--only 73,59,65,69` **581/581**, `ship-check` 14/14.
+  heap +32 MB; 112,000,000 picture bytes counted exactly. Builder run: `--only 73,59,65,69` **590/590**, `ship-check` 14/14.
+  **Review fix (Architect):** "content cut short" now means only that the CDATA was never closed (no `]]>` at the end, whitespace
+  ignored). Before, a self-closing `<en-note/>` or `<en-note style="x"/>`, or `</en-note>` followed by a long run of spaces, was
+  listed as unreadable and left out of the count. The tail is now kept without whitespace. 73j: 3 such notes + a plain one are
+  counted (4) and only the cut-off note is listed; on the previous head 73j failed 6 of 9 (1 note counted instead of 4, and 4 listed
+  as broken, at each of 390/820/1440).
   Not run on the unpatched build by the builder (the Architect does it); 73a cannot pass there (the menu item does not exist).
 - **Not done:** writing the notes into Siyagah (S4b); the pictures (S4c); merging earlier imports (S4d). Drag-and-drop of a folder is
   not offered. A very large single note (over ~1 MB of text outside `<content>`/`<data>`) is reported as unreadable.
-**Totals (Builder):** `ship-check` 14/14; `app-check --only 73,59,65,69` **581/581**. The Architect runs the full `app-check`.
+**Totals (Builder):** `ship-check` 14/14; `app-check --only 73,59,65,69` **590/590**. The Architect runs the full `app-check`.
