@@ -426,11 +426,12 @@ try {
         const cdp = d.cdp || (await d.ctx.newCDPSession(d.page));
         await waitSeeded(cl, d, 300000);
         await dlg(d, vp); await d.page.setInputFiles('#enx-files', files); await waitDone(d, 300000);
-        await on(d, () => { window.__lt = []; window.__bt = []; try { new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__lt.push(Math.round(e.duration)))).observe({ entryTypes: ['longtask'] }); } catch (e) {} const o = window._enxPersist; window._enxPersist = function () { const t0 = performance.now(); const r = o.apply(this, arguments); window.__bt.push(Math.round(performance.now() - t0)); return r; }; });
+        await on(d, () => { window.__lt = []; window.__bt = []; try { new PerformanceObserver((l) => l.getEntries().forEach((e) => { window.__lt.push(Math.round(e.duration)); (window.__lts = window.__lts || []).push([Math.round(e.startTime), Math.round(e.duration)]); })).observe({ entryTypes: ['longtask'] }); } catch (e) {} const o = window._enxPersist; window._enxPersist = function () { const t0 = performance.now(); const r = o.apply(this, arguments); window.__bt.push(Math.round(performance.now() - t0)); (window.__bts = window.__bts || []).push([Math.round(t0), Math.round(performance.now() - t0)]); return r; }; });
         await cdp.send('HeapProfiler.collectGarbage'); await sleep(300);
         const base = (await cdp.send('Runtime.getHeapUsage')).usedSize; let peak = base, stop = false;
         const poll = (async () => { while (!stop) { try { const u = (await cdp.send('Runtime.getHeapUsage')).usedSize; if (u > peak) peak = u; } catch {} await sleep(100); } })();
         const t0 = Date.now(); await act(d, vp, '#enx-bring'); await waitState(d, ['done', 'capped'], 600000); const secs = (Date.now() - t0) / 1000; stop = true; await poll;
+        console.log('# long tasks [start,dur]: ' + JSON.stringify(await on(d, () => window.__lts)) + ' persist [start,dur]: ' + JSON.stringify(await on(d, () => window.__bts)));
         const m = await on(d, () => ({ lt: window.__lt, bt: window.__bt, n: DB.articles.filter((a) => a.fromEvernote).length, tot: DB.articles.length, undo: HISTORY.length }));
         const worst = Math.max(0, ...m.lt), bworst = Math.max(0, ...m.bt), grow = (peak - base) / 1048576;
         console.log(`# 80h 2,000-note import at 390 CPU x4: ${secs.toFixed(1)} s, ${m.bt.length} batches, per batch (persist) median ${m.bt.slice().sort((a, b) => a - b)[m.bt.length >> 1]} ms worst ${bworst} ms, worst long task ${worst} ms (${m.lt.length} over 50 ms), heap +${grow.toFixed(1)} MB`);

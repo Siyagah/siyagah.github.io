@@ -28051,12 +28051,15 @@ async function _enxImport(items){
   _enxJobPut({total:I.total||0,already:I.skipAll||0,handle:_enx.lastHandle||(_enx.job&&_enx.job.handle)||null,at:new Date(now0).toISOString()});
   /* what is already here, built once */
   const ids=new Set(), ks=new Set(), have=new Set(), tomb=new Set();
-  (DB.articles||[]).forEach(a=>{
-    if(!a) return; ids.add(a.id);
-    if(a.fromEvernote){ if(a.fromEvernote.k) ks.add(a.fromEvernote.k); return; }
-    if(!a.createdAt) return; const t=Date.parse(a.createdAt); if(isNaN(t)) return;
+  const arts0=DB.articles||[];
+  for(let i=0;i<arts0.length;i++){   /* in slices, so a 27,000-note notebook on a phone is not one long task */
+    if(i&&i%1500===0) await _enxYield();
+    const a=arts0[i];
+    if(!a) continue; ids.add(a.id);
+    if(a.fromEvernote){ if(a.fromEvernote.k) ks.add(a.fromEvernote.k); continue; }
+    if(!a.createdAt) continue; const t=Date.parse(a.createdAt); if(isNaN(t)) continue;
     have.add(String(a.title||'').trim().toLowerCase()+'\u0001'+Math.floor(t/1000));
-  });
+  }
   (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item){ ids.add(t.item.id); if(t.item.fromEvernote&&t.item.fromEvernote.k) ks.add(t.item.fromEvernote.k); } });
   (DB.tombstones||[]).forEach(t=>{ if(t){ tomb.add(t.id); ids.add(t.id); } });   /* deleted for good: its stable id stays taken */
   const pend=[];
@@ -28122,9 +28125,12 @@ async function _enxImport(items){
         for(;;){
           if(I.pause||I.capHit||my!==I.runId){ try{ await rd.cancel(); }catch(x){} continue outer; }
           const {done,value}=await rd.read(); if(done) break;
-          sc.feed(value); read+=value.length;
-          while(pend.length>=_ENX_BATCH) await flush(pend.splice(0,_ENX_BATCH));
-          if(read-lastY>=1048576){ lastY=read; await _enxYield(); }
+          read+=value.length;
+          for(let o=0;o<value.length;o+=16384){   /* small slices, and a break whenever 25 ms have passed: never hold the page for long, however fast the disk */
+            sc.feed(value.slice(o,o+16384));
+            while(pend.length>=_ENX_BATCH) await flush(pend.splice(0,_ENX_BATCH));
+            if(performance.now()-lastY>25){ await _enxYield(); lastY=performance.now(); }
+          }
         }
         sc.end();
         while(pend.length>=_ENX_BATCH) await flush(pend.splice(0,_ENX_BATCH));
