@@ -985,6 +985,7 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jeb-add textarea::placeholder{color:var(--t3);opacity:1}
 .jeb-list{flex:1;min-height:0;overflow-y:auto;padding:4px 0;-webkit-overflow-scrolling:touch}
 .jeb-it{display:flex;align-items:flex-start;gap:6px;padding:6px 8px 6px 4px;border-bottom:1px solid var(--border);background:var(--white);position:relative}
+.jeb-it:not(.jl-it):not(.jt-it):not(.jk-it):not(:has(.jeb-edit)){content-visibility:auto;contain-intrinsic-size:auto 52px}   /* v05.16 · N1 (Architect): plain rows too, like links/tasks/ideas; "All pockets" with 54 groups and 300 items at 390 ×4 CPU: 301–405 ms → 191–238 ms */
 .jeb-it.jeb-drag{opacity:.55;background:var(--hover)}
 .jeb-it.jeb-before::before,.jeb-it.jeb-after::after{content:'';position:absolute;left:0;right:0;height:3px;background:var(--green)}
 .jeb-it.jeb-before::before{top:-2px}
