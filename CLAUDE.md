@@ -37,6 +37,9 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.18** (14 Oct 2026) — P2, a received edit and an undo redraw only what changed (issue #184, PCF J08). `_renderFor(changed)` decides;
+  anything it cannot prove safe calls the caller's full draw. At 9,000 notes, phone ×4: received edit not open 5 ms, open note 85 ms, undo 34 ms
+  (were ~70–230 ms of `render()`). Check: block 78, `tools/redraw-p2.mjs`. Not done: the windowed list; un-selecting a tag still redraws the whole list.
 - **v05.17** (14 Oct 2026) — N2, on a phone Zab is one corner button with three layouts the owner chooses: Rail (the start), Drawer,
   Columns (issue #182, PCF J20). `DB.theme.zabPhoneLayout` `'rail'|'drawer'|'cols'|'bar'` (absent = rail; `'bar'` = the N1 bar, offered
   only in 🧰 → 🎨 Appearance). < 640 only; ≥ 640 is the N1 bar unchanged. Long-press (500 ms) or right-click on the button chooses.
@@ -59,10 +62,6 @@ must never accumulate here instead of there.
   (`media="print"` + `onload`). `_loadScript()` is honest (waits, removes a failed tag, 15 s limit, retried when back online); the
   service worker serves the cached page if the network is silent for 3 s; the offline dot says so in plain words. Check: block 74,
   `tools/offline-o1.mjs`; `ship-check` has a guard for the class. See *Loading Firebase and the service worker's time limit* below. Architect: full `app-check` **5069/5069, twice**; unpatched `--only 74` 86/130.
-- **v05.13** (14 Oct 2026) — S4a, Evernote import, the dry run (issue #173, PCF J01). 🧰 → Create → "📥 Evernote import" reads an
-  evernote-backup export (folder pick on tablet/laptop, `.enex` files on every layout, a phone gets a sheet) by streaming and shows
-  totals, a stack ▸ notebook table, "already in Siyagah", and 📋 Copy summary. Nothing is written anywhere. Check: block 73,
-  `tools/enex-s4a.mjs`. Architect: full `app-check` **4933/4933, twice**; unpatched `--only 73` 0/30.
 ---
 
 ## What this is
@@ -541,6 +540,14 @@ A failing check is a wrong assertion surprisingly often — investigate before
   refreshes the cache (`waitUntil`). A network that answers, even slowly (< 3 s), still wins (I3). The boot flag waits at most 1.5 s
   for `document.fonts.ready`. Check 74 serves the app from its own server (ok / dead / hang) because a service worker's own requests
   cannot be failed from a browser route reliably.
+- **Targeted redraw after a received merge and after undo (v05.18, P2).** `_renderFor(changed)` is the ONE place that decides what a change
+  touches; the merge path (from its before/after diff, the same one that feeds `_s1Dirty`) and undo/redo (from the frame's records) call it. It
+  never re-derives the changed set by stringifying the notebook. Note list: only the changed cards are replaced, and only when each keeps its
+  membership and sort position; sidebar: only when a folder, section, tag, note folder/tags, Smart View membership or Trash could change;
+  open note: only when it changed, and an editor being typed in is never rebuilt (`_renderPreserveEdit()`'s rule). Settings, folders, Trash,
+  new or gone notes, unknown collections, 41+ notes, a Multi window and the Calendar fall back to the full draw. **A new kind of record or
+  a new thing the screen shows from `DB` must be classified in `_renderFor`, or it falls back (safe, slow).** The redraw path never calls
+  `persist()`/`_save()`. Check 78's oracle compares `#sb`/`#p2`/`#p3` after the targeted redraw with a full `render()`.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,

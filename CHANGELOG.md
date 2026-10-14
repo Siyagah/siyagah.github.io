@@ -9779,3 +9779,42 @@ The harness now also wraps the per-pane functions (`renderP2H`, `renderP3H`, `re
 | whole step, main thread | 642 | 258 | 442 | 140 |
 
 (The two laptop whole-step lines were already over their 52a targets on this runner, 258 > 250 and 140 > 125, before any change.)
+
+### What changed
+
+`_renderFor(changed)` is the one place that decides what a received merge or an undo/redo touches. It takes the sets the merge diff and the undo frame already hold (never a stringify of the notebook), redraws only the affected cards, sidebar parts and open note, and **falls back to the caller's own full draw** for anything it cannot prove safe (settings, folders, Trash, new or gone notes, unknown collections, 41 or more notes, a Multi window open, the Calendar shown). `_renderPreserveEdit()`'s rule stands: an editor being typed in is never rebuilt. The redraw path writes nothing and does not change `DB` (78d).
+
+### After (`node tools/sync-s1d.mjs --profile`, same runner and seed as Before)
+
+| ms | Before | After |
+|---|---|---|
+| (b) receive, phone ×4, whole step | 642 | **346** |
+| (b) receive, laptop, whole step | 258 | **183** |
+| (c) undo, phone ×4, whole step | 442 | **154** |
+| (c) undo, laptop, whole step | 140 | **42** |
+| `render()` inside (b) phone ×4 / laptop | 228.4 / 57.5 | `_renderFor` 6.7 / 2.1 |
+| `render()` inside (c) phone ×4 / laptop | 175.4 / 50.7 | `_renderFor` 36.3 / 9.7 |
+
+The 52a targets all pass, including the two laptop lines that were over before (183 ≤ 250, 42 ≤ 125). Most of what is left in (b) is merge, stamp and snapshot work, not drawing.
+
+### Block 78 speed (9,000 notes, median of 5, redraw only)
+
+| | target | phone ×4 | laptop |
+|---|---|---|---|
+| received edit, note not open | ≤ 60 | **5.2** | 1.5 |
+| received edit, the open note | ≤ 150 | **85.4** | 21.2 |
+| one undo | ≤ 120 | **33.9** | 8.5 |
+
+Every one of the 45 timed draws took the targeted path.
+
+### Checks
+
+New block 78 (`tools/redraw-p2.mjs`): the oracle (targeted redraw vs a full `render()`, identical `#sb`/`#p2`/`#p3` HTML) for the twelve changes, received and by undo/redo, at 390, 820 and 1440; 78b speed; 78c fallback; 78d no writes. The oracle was shown failing on purpose with `--break`. Blocks 32, 51, 52, 59, 60, 76 and 77 stay green.
+
+### Not done
+
+- The windowed list (drawing only the visible part of the note list): needs the owner's decision in J08, not built.
+- Un-selecting a tag still redraws the whole list (J08's third item).
+- The full `app-check` was not run (told not to); the Architect runs it, plus the unpatched run.
+
+**Totals (Builder):** `ship-check` 15/15; `app-check --only 78` **505/505**; `--only 32,51,52` **208/208**; `--only 59,60,76,77` **781/781**; profile 8/8 passed.
