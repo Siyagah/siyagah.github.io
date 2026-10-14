@@ -251,6 +251,10 @@ async function openPersistent(browser, base, vp, dir) {
     page.on('dialog', (x) => x.accept().catch(() => {}));
     await page.goto(base + '/', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => window.__appBooted === true && !!document.getElementById('tree'));
+    /* v05.17 · B1 — a browser killed a moment ago can leave the device copy unreadable for a moment. Since B1 the app then opens
+       with a warning line and joins the copy back in by itself (before, it opened EMPTY and could write that over the copy, which
+       is what made 52d fail now and then with 0 notes). So a reopen waits for that, up to 20 s, before it is read. */
+    await page.waitForFunction(() => typeof _idbBootFail === 'undefined' || !_idbBootFail, null, { timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(300);
     await page.evaluate(`window.__sig52=${SIG52};`);
     return { ctx, page, errors };
@@ -294,7 +298,7 @@ async function check52d(browser, srv) {
       state = got;
     }
     } catch (e) { failed = String(e && e.message || e); }
-    if (failed) { check(false, `52d ${vp.name}: the kill trials ran to the end (${seen.before} before · ${seen.after} after so far)`, failed); killProfile(dir); rmSync(dir, { recursive: true, force: true }); continue; }
+    if (failed) { check(false, `52d ${vp.name}: the kill trials ran to the end (${seen.before} before · ${seen.after} after so far)`, failed); killProfile(dir); rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); continue; }
     check(bad.length === 0, `52d ${vp.name}: 20 pages killed at random points inside a save reopen as the notebook before the save or after it, never fewer (${seen.before} before · ${seen.after} after)`, bad.slice(0, 4).join(' | '));
     check(errsAll.length === 0, `52d ${vp.name}: no reopen found the journal and the full copy out of step`, errsAll.slice(0, 3).join(' · '));
     /* a write that throws half-way (the 3rd record of a save): nothing of that save may be kept, the alarm must ring, and the next save repairs everything */
@@ -322,7 +326,7 @@ async function check52d(browser, srv) {
       const after2 = await re2.page.evaluate(() => window.__sig52());
       check(alarm2 === false && after2.sig === want.sig, `52d ${vp.name}: the next save puts everything right and the alarm clears (reopened exactly as saved)`, JSON.stringify({ alarm2, same: after2.sig === want.sig }));
     }
-    await closeQuiet(last || ctx); killProfile(dir); rmSync(dir, { recursive: true, force: true });
+    await closeQuiet(last || ctx); killProfile(dir); rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   }
 }
 
@@ -377,7 +381,7 @@ async function check52d2(browser, srv) {
       check(bad.length === 0, `52d2 ${vp.name}: ${nJ} kills inside a journal transaction reopen as the notebook before it; ${nC} inside a checkpoint's full-copy write reopen as the journaled notebook; never fewer (journal ${cnt.J.before} before · ${cnt.J.after} after; checkpoint ${cnt.C.before} before · ${cnt.C.after} after)`, bad.slice(0, 4).join(' | '));
       check(errsAll.length === 0, `52d2 ${vp.name}: no reopen found the journal and the full copy out of step`, errsAll.slice(0, 3).join(' · '));
     }
-    await closeQuiet(ctx); killProfile(dir); rmSync(dir, { recursive: true, force: true });
+    await closeQuiet(ctx); killProfile(dir); rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   }
 }
 

@@ -9735,3 +9735,70 @@ The owner (14 Oct) chose **pockets inside pockets, with no depth limit**. The de
 - **Unpatched (v05.15's `index.html` put back, `app-check --only 76`):** **0/4 passed, 4 FAILED** — the first check fails (the pocket menu has no "Move into…") and the run stops there.
 - **Architect's review: one change, plain item rows skip layout off the screen.** The Architect's first full run failed 76f's "All pockets" (54 groups, 300 items, 390, CPU ×4): median 364 ms against 300 (twice more alone: 374, 467). Measured on v05.15 with the same notebook, the same panel took 374–470 ms, so N1 did not cause it: plain rows were the only Zab rows without the `content-visibility:auto` that links, tasks and ideas/shopping rows already had. Added for plain rows only (not link, task, idea or shopping rows, which keep their own sizes, and not a row being edited): 191–238 ms.
 - **Totals (Builder):** `ship-check` 15/15; `app-check --only 76` **313/313**; `app-check --only 59,60,63,64,65,70,71,72` **1834/1834**. No old assertion needed changing. The Architect runs the full `app-check`.
+
+## v05.17 — B1, this device's copy of the notebook could not be read at start (PCF J25, IMPORTANT; built by the Architect)
+
+**Found** by the Architect while checking v05.16. 52d (kill a browser in the middle of a save, reopen it) sometimes reopened a 2,011-note
+notebook with **0 notes** (in two of three full runs on v05.16, and once in a v05.10-era run; 1 in 3 when 52b–52d run alone). The cause
+was in boot, not in the save:
+- `_idbGet()` answers `undefined` for **every** failure (a failed open, a failed request, a throw), exactly as for "not there".
+- So `loadDB()` took an unreadable device copy for "no notebook on this device". It fell through to localStorage, then the page's own
+  `<script id="nd">` (an EMPTY notebook on the website), and set `_dbLoaded`.
+- At the end of boot `_idbMigrateFrom(DB)` wrote that over the device copy whenever the open had worked and only the read had failed.
+
+On the owner's devices localStorage holds no copy (a big notebook does not fit), so that is: Siyagah opens empty, and that empty notebook
+can replace the device's copy. With sync on, the notes come back from the cloud; on a device without sync they would be gone from it.
+Present since v04.50 (when IndexedDB became the device copy). No report of it happening to the owner; found by a check.
+
+**What changed (index.html):**
+- `_idbOpen()` no longer remembers a FAILED open, so the next call opens again. "This browser has no IndexedDB" is still remembered.
+- `_idbRead(key)` is new: `{ok:true,v}` (v `undefined` = genuinely absent) or `{ok:false}`. `_idbGet()` keeps its old answer for its
+  other callers; anything that decides on the notebook's absence uses `_idbRead`.
+- **`loadDB()`** tries the read up to 5 times, 300 ms apart (`_IDB_BOOT_TRIES`, `_IDB_BOOT_GAP_MS`).
+  - A read that works on a retry boots exactly as before.
+  - One that keeps failing sets `_idbBootFail`. The session opens from what it can (the localStorage copy, the page's notes, or an
+    empty notebook; never `mkDefaults()`'s starter set, which would be joined into the real notebook later) and never writes the device
+    copy (`_idbReady` stays false, so `_save()` writes localStorage only).
+- **`_idbMigrateFrom()`** writes only after a read has just SHOWN there is no copy: never over one that is there, never over one that
+  could not be read. If boot ends with the copy there after all, it is joined in, never written over.
+- **`#idb-warn`**: a line across the top while the copy cannot be read. "⚠ This device's copy of your notebook could not be read just
+  now. Nothing is lost: what you add now is kept and joined in as soon as it can be read. Trying again…" plus **Try now**. Fixed ink on
+  its own paper (~12:1), z 9100 (under menus 9200 and modals 10000), top of the screen, so it is not in the `--jeb-h` lists. Same on
+  phone, tablet and laptop: full width, wrapping; the button is 40 px tall. **Hide** shrinks it to a 40 px ⚠ in the top-right corner (the full line
+  covers the header's buttons, which matters on a browser where the copy never becomes readable); ⚠ brings it back.
+- **`_idbRecoverTry()`** tries again every 3 s for the first 2 minutes, then every 30 s, and when the app is shown again. When the read
+  works it does what a received sync does:
+  - lays the local journal over the full copy (`_ljOverlay`);
+  - stamps anything typed meanwhile;
+  - `DB=mergeDB(DB, copy)`: union, newest edit wins, so nothing added meanwhile is lost;
+  - re-seeds the theme and record baselines, marks the merged-in records dirty for the cloud copy;
+  - saves through the normal path, so in journal mode only what differs from the copy is written, under a newer save number;
+  - repaints, removes the line, and says so in a toast.
+
+**Not done:**
+- A browser where IndexedDB exists but never opens (some private modes) now shows the line on every start; before, it used
+  localStorage silently.
+- If the local JOURNAL database cannot be opened while the full copy can, boot (and recovery) use the full copy alone, as before this
+  round (a pre-existing limit, unchanged).
+
+**Checks:**
+- **New block 79, `tools/boot-b1.mjs`** at 390 (touch), 820 (touch) and 1440, by real taps/clicks on **Try now**. An init script makes
+  `IDBObjectStore.get('notebook')` throw, or `indexedDB.open` fail, before the app runs (`--unpatched` serves `origin/main`'s app).
+  - 79a: two failed reads, then normal.
+  - 79b: get keeps failing, no other copy. Empty, not the starter set; the copy NOT written; the line measured; a note added meanwhile;
+    "Try now" joins it in (44 = 43 + 1); a reload shows 44.
+  - 79c: open keeps failing; recovered by the timer alone.
+  - 79d: journal mode with an edit only the journal holds; after recovery and a reload, both the edit and the new note are there.
+  - 79e: a new device starts as before and writes its copy.
+- **52d updated in place, with the reason (`tools/s1d-checks.mjs`):**
+  - a persistent reopen now waits (up to 20 s) for the app to join an unreadable copy back in before reading it, because since B1 a
+    reopen right after a kill may first show the warning line;
+  - its temporary-profile clean-up retries (`maxRetries`) instead of throwing `ENOTEMPTY`, which used to stop the whole S1d block after
+    a failed trial.
+
+**Unpatched (v05.16 `index.html` + `sw.js`):**
+- `boot-b1 --unpatched`: **3/10 passed, 7 FAILED**, then the run stops (no "Try now" to tap).
+- 79a: two failed reads opened the app with **0 notes**.
+- 79b: after one boot with a failing read the device copy held **0 notes instead of 43**: the empty notebook was written over it.
+
+**Totals (Architect):** `boot-b1` 78/78; ship-check and the full `app-check` are recorded in the PR.
