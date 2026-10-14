@@ -37,6 +37,12 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.16** (14 Oct 2026) — N1, pockets inside pockets, no depth limit (issue #179, PCF J20; the phone corner button and its layouts
+  are N2, not done). A pocket gets `parentId` (absent/null = top level; nothing written to existing pockets) and `order` is the place
+  among siblings. Readers `jebChildren(id|null)`, `jebPath(id)`, `jebDescendants(id)`; writer `jebMovePocketInto(id,parentId|null,toIndex)`
+  (refuses itself/its own descendants). The bar shows the top level, a chip counts its own open items plus every pocket inside it,
+  "▸" = holds pockets; the panel has a path line and a row of pocket chips; the pocket menu has "📂 Move into…" and "＋ New pocket
+  inside". See *Pockets inside pockets* below. Check: block 76, `tools/zab-n1.mjs`.
 - **v05.15** (14 Oct 2026) — T1, on a phone the note's buttons sit on their own row and the title wraps in full (issue #177, PCF J16).
   Phone only (< 640 via `_p3OneBar()`): editing puts ✕ and the "✓ Saved" flash on `.p3c-actrow` above the title, and the title is a
   growing `<textarea id="ti">` (`_tiInput`/`_tiKey`/`_tiGrow`/`_tiGrowAll`: a line break becomes a space, Enter moves the caret into the
@@ -57,11 +63,6 @@ must never accumulate here instead of there.
   Group by (None | Topic) bar kept in `DB.theme.zabIdeaView[pid]`. Shopping: quantity chip edited inline, shop chip, a 🏪 Shop filter
   (`zabShopView[pid]`), ticked items under "In the basket (n)", quick typing ("2 milk", "milk @Coles"), 🧹 Clear basket. Check: block 72,
   `tools/zab-z6c.mjs`. Architect: full `app-check` **4701/4701, twice**; unpatched `--only 72` 0/4.
-- **v05.11** (13 Oct 2026) — Z6b, the Tasks pocket (issue #169, PCF J15). Task fields on the item: `due` ('YYYY-MM-DD', device-local
-  day via `_jebToday()`), `pri` (1 = high, a number), `steps` ([{id,t,d}], sync with the item: last write wins on the whole item).
-  List grouped Overdue/Today/Tomorrow/Later/No date/Done (folded); chips, ⚑, "2/5" counter; chooser (popover ≥640, bottom sheet
-  <640); quick typing "!"/today/tomorrow; red bar badge. Check: block 71, `tools/zab-z6b.mjs`. 60d/60e updated in place (Done group).
-  Architect: full `app-check` **4310/4310, twice**; unpatched `--only 71` 0/6.
 ---
 
 ## What this is
@@ -489,6 +490,22 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `_jebStarsOpen`; quantity: `_jebQtyEdit` (inline in the panel, the app's dialog on a deck card; `_jebQtyOpen()` stops a repaint
   under the open box). Quick typing: `_jebShopParse`. A new field of these kinds goes in `_jebKindSig`; their typing hint reuses
   `.jt-hint` (`zabShopHint`). Not drawn outside their own kind, never stripped by a move (I1).
+- **Pockets inside pockets (v05.16, N1 — extends the Zab section; the names are shared with QuranRevival, keep them).** `parentId` on a
+  pocket (absent/null = top level) and `order` among siblings; kinds are NOT inherited (`_jebType(pk)` stays the only switch). Every
+  reader goes through `_jebTree()`, a derived, forgiving tree (shape cached by ids/parentId/order, objects always read fresh, because a
+  merge replaces them): a pocket whose parent is **missing** is drawn at the top level and **keeps** its `parentId` (it snaps back when the
+  parent arrives); a pocket on a **parent cycle** (two devices moved A into B and B into A) is drawn at the top level too; every walk
+  carries a visited set. `jebPockets()` is still the flat sorted list; `_jebSelIds()` returns depth-first tree order (All pockets, Choose,
+  the deck). `jebMovePocketInto` is the ONLY writer of `parentId` (`jebEditPocket` ignores it) and stamps only what it must: the moved
+  pocket, and a neighbour only if it would tie or sort before it — **renumbering every sibling stamped pockets nobody touched, and on a
+  second device that stamp beat a concurrent move of one of them (found by 76d)**. The list a pocket leaves keeps a gap. The refusal
+  follows the STORED parents (`_jebInside`). `jebDeletePocket` refuses a pocket holding items or pockets. `_jebRoll(cnt)` rolls the chip
+  number up the drawn tree (a tasks pocket's own number is `_jebChipInfo`'s: due + overdue when any), `_JEB_ROLL_TITLE` is the stated
+  rule. Panel: `.jx-path`, `.jx-kids` (`.jx-kid`, `.jx-new`), `.jeb-pm` (⋯ opens the pocket menu of the OPEN pocket, so a nested one
+  has a menu without a bar chip; long-press/right-click on a `.jx-kid` too); "📂 Move into…" is the app's modal (`_jebMoveIntoOpen`,
+  `.jx-mv`, greyed rows say why). All pockets: sub-groups indented by `data-depth`, `.jx-fold` per session (`_jebFold`, never stored; a
+  fold hides the group's own items and the groups inside). Deck: `.jx-ins` "inside:" chips. Choose lists every pocket at any depth
+  (nested ones marked ↳) in place of the bar's top-level-only view. Nothing new is fixed to the bottom, nothing is written to `<html>`.
 - **Evernote import, the dry run (v05.13, S4a — S4b writes notes, S4c pictures, S4d merges earlier imports).** `openEnexImport()` →
   `#enx-modal` (own overlay like `#remmail-modal`: dialog ≥ 640, bottom sheet < 640, z 10060, over the Zab bar on purpose so it is not
   in the `--jeb-h` lists). State is only the global `_enx` (the last result is `_enx.res`, in memory): **nothing goes in `DB`,
