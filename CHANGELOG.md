@@ -9737,7 +9737,7 @@ The owner (14 Oct) chose **pockets inside pockets, with no depth limit**. The de
 - **Totals (Builder):** `ship-check` 15/15; `app-check --only 76` **313/313**; `app-check --only 59,60,63,64,65,70,71,72` **1834/1834**. No old assertion needed changing. The Architect runs the full `app-check`.
 
 
-## v05.17 — N2, on a phone Zab is one corner button with three layouts the owner chooses (issue #182, PCF J20, second half)
+## v05.18 — N2, on a phone Zab is one corner button with three layouts the owner chooses (issue #182, PCF J20, second half)
 
 The owner (14 Oct): "liked all three. Enable all three for user to chose and change". Built on N1 (v05.16), whose readers (`jebChildren`, `jebPath`, `_jebTree`, `_jebRoll`) it uses; the pocket tree is not re-derived. This branch also carries N1, because PR #180 had not merged when it was cut.
 

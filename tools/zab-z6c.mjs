@@ -54,7 +54,7 @@ const items = () => [
   mk('s5', 'jp-shop', 'Rice', 4),
   mk('t1', 'jp-task', 'Pay rent', 0, { due: '2026-12-01', pri: 1, steps: [{ id: 'k1', t: 'call', d: 1 }] }),
 ];
-const seed = (extra) => { const db = seedDB(T0); db.jeb = items(); if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.17: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
+const seed = (extra) => { const db = seedDB(T0); db.jeb = items(); if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.18: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
 const dev = (cloud, name, vp, db, opts = {}) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed(), opts);
 const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);

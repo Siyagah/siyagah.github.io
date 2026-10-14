@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* tools/zab-n2.mjs — v05.17, N2: on a phone Zab is one corner button with three layouts (checks 77a–77h).
+/* tools/zab-n2.mjs — v05.18, N2: on a phone Zab is one corner button with three layouts (checks 77a–77h).
 
    Phones (touch, 360 and 390 wide) are driven with real taps and a real long-press (CDP touch events); 820 is touch, 1440 uses
    real clicks. Nothing touches the network (sync uses the fake cloud). `--notes=N` sets the size of the big notebook in 77f

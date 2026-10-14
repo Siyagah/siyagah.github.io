@@ -12046,7 +12046,7 @@ await r.block('76-zab-tree', async () => {
   r.check(out.status === 0, 'the N1 pocket-tree check exits cleanly', `exit ${out.status}`);
 });
 
-/* 77 — v05.17, N2: on a phone Zab is one corner button with three layouts the owner chooses (Rail, Drawer, Columns).
+/* 77 — v05.18, N2: on a phone Zab is one corner button with three layouts the owner chooses (Rail, Drawer, Columns).
    tools/zab-n2.mjs runs 77a–77h with real taps and a real long-press at 360/390, real clicks at 1440: the button (present, no bar,
    --jeb-h 0, overlaps nothing, badge = All pockets, red when overdue, hides with the keyboard; absent with the N1 bar at 820/1440),
    each layout to the 4th level of a 4-deep chain, an item added and counted all the way up, the pocket menu by long-press, All

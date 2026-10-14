@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.17">
+<meta name="app-version" content="05.18">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -900,7 +900,7 @@ html.jeb-kb #jeb-bar,html.jeb-kb #zab-btn,html.jeb-kb #zab-lay{display:none!impo
   #jeb-panel.on{animation:jebUp .2s ease}
 }
 @media(prefers-reduced-motion:reduce){#jeb-panel.on{animation:none}}
-/* ══ v05.17 · N2 — on a phone Zab is one corner button (html.zab-btn: a phone, Zab on, layout not 'bar') and three layouts.
+/* ══ v05.18 · N2 — on a phone Zab is one corner button (html.zab-btn: a phone, Zab on, layout not 'bar') and three layouts.
    z-index: layouts 141 (the panel's level — never both at once), the button 142, the long-press card 143; all below Attach 9150,
    menus 9200 and modals 10000. Nothing here is drawn at 640px and up. Inks are pane inks on the pane surface; only the
    bubble's glyph sits on the owner's pocket colour (dark ink, as .jeb-sw). ══ */
@@ -3687,7 +3687,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.17</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.18</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -21569,7 +21569,7 @@ function renderThemeModal(){
   h+='<div class="fs-sub" style="margin:-2px 0 8px">The strip of pockets along the bottom of the screen</div>';
   h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="checkbox" id="th-jebbar"'+(_jebBarOn()?' checked':'')+' onchange="setJebBar(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show Zab bar</label></div>';
 
-  /* Zab on the phone (v05.17, N2) — DB.theme.zabPhoneLayout, absent = rail. Shown on every screen size so it can be set from a laptop. */
+  /* Zab on the phone (v05.18, N2) — DB.theme.zabPhoneLayout, absent = rail. Shown on every screen size so it can be set from a laptop. */
   h+='<div class="theme-divider"></div>';
   h+='<div class="theme-sect" id="th-zpl"><div class="theme-sect-lbl">Zab on the phone</div>';
   h+='<div class="fs-sub" style="margin:-2px 0 8px">This applies to phones (screens under 640 px wide). Tablets and laptops keep the bar along the bottom. “Show Zab bar” above switches Zab off everywhere.</div>';
@@ -22570,7 +22570,7 @@ function _jebUrlIn(text){
   const m=/https?:\/\/[^\s<>"'\])]+/i.exec(String(text==null?'':text));
   return m?m[0].replace(/[.,;:!?]+$/,''):'';
 }
-/* v05.17 · N2 — an item's text, escaped, with each web address a link that opens in a new tab; a tap on the rest still edits */
+/* v05.18 · N2 — an item's text, escaped, with each web address a link that opens in a new tab; a tap on the rest still edits */
 function _jebTxHTML(text){
   const s=String(text==null?'':text), re=/https?:\/\/[^\s<>"'\])]+/gi; let out='', last=0, m;
   while((m=re.exec(s))){
@@ -22807,7 +22807,7 @@ function jebRefresh(){
     document.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,#zab-btn,#zab-lay,#zab-card').forEach(el=>el.remove());
   }
   _jebWireOnce();
-  const root=document.documentElement, on=_jebBarOn(), btn=on&&_zabBtnOn();   /* v05.17 · N2: a phone shows the corner button, not the bar */
+  const root=document.documentElement, on=_jebBarOn(), btn=on&&_zabBtnOn();   /* v05.18 · N2: a phone shows the corner button, not the bar */
   root.classList.toggle('jeb-on',on&&!btn);
   root.classList.toggle('zab-btn',btn);
   let bar=_jebEl('jeb-bar');
@@ -22825,7 +22825,7 @@ function jebRefresh(){
   if(_JEB_APP) _jebAppEnsure();
   _jebLastDay=_jebToday();
 }
-/* ══ v05.17 · N2 — Zab on a phone: one corner button and three layouts ═════════
+/* ══ v05.18 · N2 — Zab on a phone: one corner button and three layouts ═════════
    DB.theme.zabPhoneLayout = 'rail' | 'drawer' | 'cols' | 'bar' (absent = rail). It is the only thing stored; which drawer rows are
    unfolded (_zabUnfold) and which columns are shown (_zabPath) are this session's. Under 640px, unless 'bar', the bar is not drawn
    (html.zab-btn instead of html.jeb-on, so --jeb-h is 0) and #zab-btn sits in the right corner. Every layout ends in the one
@@ -23185,7 +23185,7 @@ function jebClosePanel(){
   _jebEditId=null; _jebDrag=null; _jebNewId=null;
   if(_jebOpen!==null){ _jebOpen=null; _jebMulti=null; _jebBarSig=''; _jebPanelSig=''; }
   if(p) p.classList.remove('on');
-  const zb=_jebEl('zab-btn'); if(zb) zb.classList.remove('up');   /* v05.17 */
+  const zb=_jebEl('zab-btn'); if(zb) zb.classList.remove('up');   /* v05.18 */
   const bar=_jebEl('jeb-bar'); if(bar&&_jebBarOn()) _jebPaintBar(bar);
 }
 function _jebMakePanel(){
@@ -23228,7 +23228,7 @@ function _jebMakePanel(){
     if(t.closest('.jeb-more')){ _jebItemMenu(row.dataset.iid,t.closest('.jeb-more')); return; }
     if(t.closest('.jeb-att-b')){ _jebAttOpen(row.dataset.iid,t.closest('.jeb-att-b')); return; }
     if(t.closest('.jeb-note-b')){ _jebToNoteUI(row.dataset.iid); return; }
-    if(t.closest('a.jeb-lnk')) return;   /* v05.17: the address opens in a new tab; the rest of the text edits */
+    if(t.closest('a.jeb-lnk')) return;   /* v05.18: the address opens in a new tab; the rest of the text edits */
     if(t.closest('.jeb-tx')) _jebStartEdit(row.dataset.iid);
   });
   p.addEventListener('contextmenu',e=>{ const k=e.target.closest('.jx-kid'); if(!k) return; e.preventDefault(); _jebPocketMenu(k.dataset.pid,e.clientX,e.clientY); });
@@ -23594,7 +23594,7 @@ function _jebMakeDeck(){
     if(t.closest('.jeb-more')){ _jebItemMenu(iid,t.closest('.jeb-more')); return; }
     if(t.closest('.jeb-att-b')){ _jebAttOpen(iid,t.closest('.jeb-att-b')); return; }
     if(t.closest('.jeb-note-b')){ _jebToNoteUI(iid); return; }
-    if(t.closest('a.jeb-lnk')) return;   /* v05.17: the address opens in a new tab; the rest of the text edits */
+    if(t.closest('a.jeb-lnk')) return;   /* v05.18: the address opens in a new tab; the rest of the text edits */
     if(t.closest('.jeb-tx')) _jebStartEdit(iid);
   });
   d.addEventListener('pointerdown',e=>{
