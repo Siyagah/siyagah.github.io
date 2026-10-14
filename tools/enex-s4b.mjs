@@ -259,10 +259,10 @@ try {
     await on(d, () => _enxContinue());
     const refused = await on(d, () => ({ n: DB.articles.filter((a) => a.fromEvernote).length, note: (document.getElementById('enx-inote') || {}).textContent }));
     check(refused.n === 300 && /Not yet/.test(refused.note || '') && (refused.note || '').includes(when(NOW + DAY, NOW)), `${t} Continue is refused until the window allows (nothing added), and says when`, JSON.stringify(refused));
-    await on(d, (n) => { window.__enxNow = n + DAY / 2; }, NOW);
+    await on(d, (n) => { window.__enxNow = n; }, NOW + DAY / 2);
     await actText(d, vp, '#enx-box .rem-btn', 'Close'); await dlg(d, vp);
     check(await on(d, () => document.getElementById('enx-cont').disabled), `${t} 12 hours later it is still shut (a rolling 24 hours)`);
-    await on(d, (n) => { window.__enxNow = n + DAY + 5000; }, NOW);
+    await on(d, (n) => { window.__enxNow = n; }, NOW + DAY + 5000);
     await actText(d, vp, '#enx-box .rem-btn', 'Close'); await dlg(d, vp);
     check(!(await on(d, () => document.getElementById('enx-cont').disabled)), `${t} after 24 hours "Continue" is enabled`);
     const first300 = (await enxTitles(d));
@@ -270,7 +270,7 @@ try {
     const t2 = await enxTitles(d);
     const exp600 = Array.from({ length: 600 }, (_, i) => 'Many ' + String(i + 1).padStart(5, '0'));
     check(t2.length === 600 && JSON.stringify(t2) === JSON.stringify(exp600) && first300.every((x) => t2.includes(x)), `${t} it resumes exactly where it stopped: notes 1–300 stay, 301–600 follow, none twice`, t2.length + ' ' + t2.slice(298, 302).join());
-    await on(d, (n) => { window.__enxNow = n + 2 * DAY + 20000; }, NOW);
+    await on(d, (n) => { window.__enxNow = n; }, NOW + 2 * DAY + 20000);
     await actText(d, vp, '#enx-box .rem-btn', 'Close'); await dlg(d, vp);
     await act(d, vp, '#enx-cont'); await waitState(d, ['done', 'capped']);
     const t3 = await enxTitles(d);

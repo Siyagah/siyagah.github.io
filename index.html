@@ -27873,7 +27873,7 @@ function _enxScanner(onNote,opts){
 const _ENX_DAY_CAP=6000, _ENX_BATCH=250, _ENX_DAY_MS=86400000;
 const _enxCap=()=>{ const c=window.__enxCap; return (c>0)?(c|0):_ENX_DAY_CAP; };
 const _enxNowMs=()=>{ const n=window.__enxNow; return (n!=null&&!isNaN(+n))?+n:Date.now(); };
-_enx.imp={state:'idle',run:false,runId:0,took:0,goal:0,total:0,already:0,earlier:0,broken:0,sameKey:0,commaTags:0,newFolders:0,pause:false,capHit:false,items:null,note:''};
+_enx.imp={state:'idle',run:false,runId:0,took:0,goal:0,total:0,skipAll:0,already:0,earlier:0,broken:0,sameKey:0,commaTags:0,newFolders:0,pause:false,capHit:false,items:null,note:''};
 _enx.job=null; _enx.toasted=false; _enx.resume=false; _enx.lastItems=null; _enx.lastHandle=null;
 function _enxH(str,seed){   /* 2 x 32 bits (cyrb53 style) */
   let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;
@@ -28002,13 +28002,13 @@ async function _enxPickDir(){
 }
 function _enxPrepare(items,skipped){
   if(_enx.resume){ _enx.resume=false; _enx.lastItems=items; return _enxImport(items); }
-  _enx.lastItems=items; Object.assign(_enx.imp,{items:null,state:'idle',total:0,already:0,note:''});
+  _enx.lastItems=items; Object.assign(_enx.imp,{items:null,state:'idle',total:0,skipAll:0,note:''});
   return _enxRun(items,skipped);
 }
 /* "📥 Bring them in" / "Continue" */
 function _enxBring(){
   const I=_enx.imp; if(I.run) return;
-  if(_enx.res){ const t=_enxTotals(_enx.res); I.total=t.notes; I.already=t.already; }
+  if(_enx.res){ const t=_enxTotals(_enx.res); I.total=t.notes; I.skipAll=t.already; }
   if(_enx.lastItems&&_enx.lastItems.length) return _enxImport(_enx.lastItems);
 }
 async function _enxContinue(){
@@ -28042,13 +28042,13 @@ async function _enxImport(items){
   const I=_enx.imp; if(I.run||!items||!items.length) return;
   const now0=_enxNowMs(), w0=_enxWindow(now0);
   I.items=items;
-  if(!I.total&&_enx.job&&_enx.job.total){ I.total=_enx.job.total; I.already=_enx.job.already||0; }
+  if(!I.total&&_enx.job&&_enx.job.total){ I.total=_enx.job.total; I.skipAll=_enx.job.already||0; }
   if(w0.room<=0){ I.state='capped'; I.took=0; _enx.view='import'; _enxPaint(); return; }
   const my=++I.runId;
-  const brought0=_enxBrought(), togo=I.total?Math.max(0,I.total-brought0-I.already):Infinity;
-  Object.assign(I,{run:true,state:'running',pause:false,capHit:false,took:0,goal:Math.min(w0.room,togo>0?togo:w0.room),earlier:0,broken:0,sameKey:0,commaTags:0,newFolders:0,note:''});
+  const brought0=_enxBrought(), togo=I.total?Math.max(0,I.total-brought0-I.skipAll):Infinity;
+  Object.assign(I,{run:true,state:'running',pause:false,capHit:false,took:0,already:0,goal:Math.min(w0.room,togo>0?togo:w0.room),earlier:0,broken:0,sameKey:0,commaTags:0,newFolders:0,note:''});
   _enx.view='import'; _enxPaint();
-  _enxJobPut({total:I.total||0,already:I.already||0,handle:_enx.lastHandle||(_enx.job&&_enx.job.handle)||null,at:new Date(now0).toISOString()});
+  _enxJobPut({total:I.total||0,already:I.skipAll||0,handle:_enx.lastHandle||(_enx.job&&_enx.job.handle)||null,at:new Date(now0).toISOString()});
   /* what is already here, built once */
   const ids=new Set(), ks=new Set(), have=new Set(), tomb=new Set();
   (DB.articles||[]).forEach(a=>{
@@ -28058,7 +28058,7 @@ async function _enxImport(items){
     have.add(String(a.title||'').trim().toLowerCase()+'\u0001'+Math.floor(t/1000));
   });
   (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item){ ids.add(t.item.id); if(t.item.fromEvernote&&t.item.fromEvernote.k) ks.add(t.item.fromEvernote.k); } });
-  (DB.tombstones||[]).forEach(t=>{ if(t) tomb.add(t.id); });
+  (DB.tombstones||[]).forEach(t=>{ if(t){ tomb.add(t.id); ids.add(t.id); } });   /* deleted for good: its stable id stays taken */
   const pend=[];
   const flush=async list=>{
     if(!list.length) return;
@@ -28142,7 +28142,7 @@ async function _enxImport(items){
 }
 function _enxImpHTML(){
   const I=_enx.imp, now=_enxNowMs(), w=_enxWindow(now), brought=_enxBrought();
-  const togo=I.total?Math.max(0,I.total-brought-I.already):0, N=_enxN;
+  const togo=I.total?Math.max(0,I.total-brought-I.skipAll):0, N=_enxN;
   const skip='<div class="enx-sub" id="enx-isum">Left as they were: '+N(I.already)+' already in Siyagah · '+N(I.earlier)+' brought in earlier · '+N(I.broken)+' could not be read'
     +(I.commaTags?' · '+N(I.commaTags)+' tag'+(I.commaTags===1?'':'s')+' had a comma taken out':'')+'.</div>';
   const pics='<div class="enx-sub">Pictures, audio and files are not in yet: each one shows a marker where it will go (the next import step).</div>';
@@ -28217,7 +28217,7 @@ function closeEnexImport(){
   if(_enx.busy) _enx.stop=true;
   const m=document.getElementById('enx-modal'); if(m) m.classList.remove('open');
 }
-function _enxAgain(){ _enx.view='pick'; _enx.res=null; if(!_enx.imp.run) Object.assign(_enx.imp,{items:null,state:'idle',total:0,already:0,note:''}); _enxPaint(); }
+function _enxAgain(){ _enx.view='pick'; _enx.res=null; if(!_enx.imp.run) Object.assign(_enx.imp,{items:null,state:'idle',total:0,skipAll:0,note:''}); _enxPaint(); }
 function _enxStop(){ _enx.stop=true; const p=document.getElementById('enx-prog'); if(p) p.textContent='Stopping…'; }
 function _enxPicked(inp,dir){
   const files=Array.from(inp.files||[]); inp.value='';
