@@ -1890,6 +1890,14 @@ sup.ann-sup:hover{text-decoration:underline}
 .enx-t th:first-child,.enx-t td:first-child{text-align:left;word-break:break-word}
 .enx-broken{margin:0;padding-left:20px;line-height:1.45;color:var(--t1)}
 .enx-dry{padding:9px 12px;border:1px solid var(--border2);border-radius:8px;background:var(--white);color:var(--t1);line-height:1.45;font-weight:600}
+/* v05.20 · S4b — the import: progress, the notes' own markers */
+.enx-sub{font-size:12px;line-height:1.45;color:var(--t2)}
+.enx-bar{height:8px;border-radius:4px;background:var(--hover);overflow:hidden}
+.enx-bar>i{display:block;height:100%;width:0;background:var(--green);transition:width .2s}
+.rm-big:disabled{background:var(--hover);color:var(--t2);cursor:not-allowed}
+.enx-media,.enx-crypt{display:inline-block;padding:3px 8px;border:1px dashed var(--border2);border-radius:6px;background:var(--hover);color:var(--t2);font-size:.9em}
+.enx-src{font-size:.9em;color:var(--t2)}
+.toast-enx{cursor:pointer}
 .enx-fb{width:100%;box-sizing:border-box;height:140px;font-family:monospace;font-size:11px}
 @media(max-width:639.98px){
   .enx-dirbtn{display:none}
@@ -6477,7 +6485,7 @@ function renderP2C(){
       return;
     }
     const arts=getSmartArts(_sf.id);
-    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any article and choose ⭐ Add to Favourites','sf-pinned':'No pinned articles yet — right-click (or hold on mobile) any article and choose 📌 Pin','sf-new':'No articles yet. Create your first article!','sf-recent':'No recently edited articles.','sf-jeb':'Notes you make from Zab appear here.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
+    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any article and choose ⭐ Add to Favourites','sf-pinned':'No pinned articles yet — right-click (or hold on mobile) any article and choose 📌 Pin','sf-new':'No articles yet. Create your first article!','sf-recent':'No recently edited articles.','sf-jeb':'Notes you make from Zab appear here.','sf-enx':'Notes brought in from Evernote appear here.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
     let h='<div class="fv">'+`<div class="slbl">${_sf.name} (${arts.length})</div>`;
     h+=_sfQtBarHTML(_sf.id,null);
     if(!arts.length){
@@ -6966,6 +6974,7 @@ function _renderP3CInner(){
       ${ST.noteModal?'':`<div class="p3h-title-bar p3c-titlebar p3c-vt"><div class="tbt" title="Right-click to edit" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">${esc(curA.title)||'<em style="color:var(--t3)">Untitled</em>'}</div></div>`}
       ${_p3MetaRowHTML(curA)}
       ${curA.fromJeb?`<div class="av-jeb">👝 from ${esc(curA.fromJeb.pocket||'Zab')}</div>`:''}
+      ${curA.fromEvernote?`<div class="av-jeb av-enx">📥 from Evernote · ${esc(curA.fromEvernote.nb||'')}</div>`:''}
       ${reminderStripHTML(curA)}
       <div class="av-tags">${tags}</div>
       ${(curA.tags||[]).length
@@ -9253,6 +9262,7 @@ function getSecSmartArts(secId,sfId){
     case 'sf-remind': return sa.filter(a=>a.reminder&&a.reminder.dt)
                              .sort((a,b)=>a.reminder.dt.localeCompare(b.reminder.dt));
     case 'sf-jeb':    return sa.filter(a=>a.fromJeb).sort((a,b)=>String(b.fromJeb.at||'').localeCompare(String(a.fromJeb.at||'')));
+    case 'sf-enx':    return sa.filter(a=>a.fromEvernote).sort((a,b)=>String(b.fromEvernote.at||'').localeCompare(String(a.fromEvernote.at||'')));
     default: return [];
   }
 }
@@ -25400,6 +25410,7 @@ function artCard(a, sel, showFolderCount, showNag, customMeta){
   const _m0=fmtDs(a.updatedAt)
     + (showFolderCount && a.folderIds.length>1 ? ` · in ${a.folderIds.length} folders` : '')
     + (a.fromJeb ? ` · <span class="ar-jeb">👝 from ${esc(a.fromJeb.pocket||'Zab')}</span>` : '')
+    + (a.fromEvernote ? ` · <span class="ar-jeb ar-enx">📥 from Evernote · ${esc(a.fromEvernote.nb||'')}</span>` : '')
     + (showNag && isNagNote(a) ? ` · <span class="ar-nag">⏳ untouched ${untouchedDays(a)}d</span>` : '');
   const meta=customMeta!==undefined?customMeta:_m0;
   return `<div class="ar${expanded}${sel?' sel':''}" data-aid="${a.id}" `
@@ -27763,17 +27774,20 @@ function _enxKind(mime){
   return mime.startsWith('image/')?'img':mime==='application/pdf'?'pdf':mime.startsWith('audio/')?'audio':'other';
 }
 /* The incremental scanner. feed(text) as it arrives, end() when the file is done; onNote gets one small object per <note>. */
-function _enxScanner(onNote){
-  let buf='',mode=0,nb='',idx=0,cLen=0,cHead='',cTail='',cSeen=false,dN=0,dTail='',over=false;
+function _enxScanner(onNote,opts){
+  let buf='',mode=0,nb='',idx=0,cLen=0,cHead='',cTail='',cSeen=false,dN=0,dTail='',over=false,cBuf='',cOver=false;
+  const keep=!!(opts&&opts.content), CMAX=(opts&&opts.contentMax)||20000000;   /* v05.20 · S4b — the import also takes the note's content, ONE note at a time; the dry run does not */
   const KEEP=12;
   function finish(unterminated){
     const g=re=>{ const m=re.exec(nb); return m?_enxUnent(m[1]):null; };
     const info={n:idx,title:g(/<title>([\s\S]*?)<\/title>/),err:null,tags:[],res:[],cIso:null,sec:null,srcUrl:null,contentLen:cLen};
     if(unterminated) info.err='the note is cut short (no end)';
     if(over) info.err=info.err||'the note is too large to read';
+    if(keep&&cOver) info.err=info.err||'the content is too large to read';
     const cm=/<created>([^<]*)<\/created>/.exec(nb), um=/<updated>([^<]*)<\/updated>/.exec(nb);
     if(cm){ const d=_enxDate(cm[1]); if(d){ info.cIso=d.iso; info.sec=d.sec; } else info.err=info.err||'the created date is not valid'; }
     if(um&&!_enxDate(um[1])) info.err=info.err||'the updated date is not valid';
+    if(um){ const ud=_enxDate(um[1]); if(ud) info.uIso=ud.iso; }
     if(cSeen){
       const cd=/^\s*<!\[CDATA\[/.test(cHead);
       if(cd&&!/\]\]>\s*$/.test(cTail)) info.err=info.err||'the content is cut short';
@@ -27785,13 +27799,17 @@ function _enxScanner(onNote){
     const rr=/<resource>([\s\S]*?)<\/resource>/g;
     while((m=rr.exec(nb))){
       const b=/<data-bytes>(\d+)<\/data-bytes>/.exec(m[1]), mi=/<mime>([\s\S]*?)<\/mime>/.exec(m[1]), fn=/<file-name>([\s\S]*?)<\/file-name>/.exec(m[1]);
-      info.res.push({mime:mi?_enxUnent(mi[1]).trim():'',name:fn?_enxUnent(fn[1]):'',bytes:b?+b[1]:0});
+      const ho=/objID="([0-9a-fA-F]{32})"/.exec(m[1]);   /* the md5 an <en-media hash> points at, when Evernote's recognition index carries it */
+      info.res.push({mime:mi?_enxUnent(mi[1]).trim():'',name:fn?_enxUnent(fn[1]):'',bytes:b?+b[1]:0,hash:ho?ho[1].toLowerCase():''});
     }
+    if(keep){ info.content=cSeen?cBuf:null; }
+    cBuf=''; cOver=false;
     onNote(info);
     nb=''; mode=0;
   }
   function eatContent(s){
     cLen+=s.length;
+    if(keep){ if(cBuf.length+s.length<=CMAX) cBuf+=s; else cOver=true; }
     if(cHead.length<400) cHead+=s.slice(0,400-cHead.length);
     const w=s.slice(-400).replace(/\s+/g,''); if(w) cTail=(cTail+w).slice(-40);   /* whitespace-free, so a long run of spaces before ]]> cannot push it out */
   }
@@ -27820,7 +27838,7 @@ function _enxScanner(onNote){
           buf=buf.slice(nn+6); finish(true); mode=1; nb=''; idx++; cLen=0; cHead=''; cTail=''; cSeen=false; over=false; continue;
         }
         if(p>=0){
-          if(useC){ if(nb.length<1e6) nb+=seg.slice(0,p); buf=buf.slice(p+9); mode=2; cSeen=true; cLen=0; cHead=''; cTail=''; continue; }
+          if(useC){ if(nb.length<1e6) nb+=seg.slice(0,p); buf=buf.slice(p+9); mode=2; cSeen=true; cLen=0; cHead=''; cTail=''; cBuf=''; cOver=false; continue; }
           const j=buf.indexOf('>',p); if(j<0) return;
           if(nb.length<1e6) nb+=seg.slice(0,p); buf=buf.slice(j+1); mode=3; dN=0; dTail=''; continue;
         }
@@ -27844,6 +27862,342 @@ function _enxScanner(onNote){
   }
   return {feed,end(){ if(mode!==0) finish(true); }};
 }
+/* ── v05.20 · S4b — Evernote import, the NOTES (S4c brings pictures, audio and files, S4d merges earlier imports). ──
+   · A note is a plain new record with a STABLE id derived from its key (`k`), so a second run, or another device running the same export,
+     finds the same record and never makes a copy; a note whose id is in DB.articles, Trash or the tombstones is skipped (a deleted one stays deleted).
+   · At most _ENX_DAY_CAP notes in any rolling 24 hours, counted from the notes themselves (fromEvernote.at, Trash included), so every device
+     sees the same count (the cloud quota is shared). The rest continues later from where it stopped: the skip rule above is what makes a re-read safe.
+   · 250 notes per batch: that batch's folders, then its notes, then ONE save. In journal mode that is one transaction, so a closed page leaves
+     whole batches. An import never makes an undo frame (_enxPersist rebases the undo baseline instead).
+   · Test hooks only: window.__enxCap (the cap) and window.__enxNow (the clock, ms). */
+const _ENX_DAY_CAP=6000, _ENX_BATCH=250, _ENX_DAY_MS=86400000;
+const _enxCap=()=>{ const c=window.__enxCap; return (c>0)?(c|0):_ENX_DAY_CAP; };
+const _enxNowMs=()=>{ const n=window.__enxNow; return (n!=null&&!isNaN(+n))?+n:Date.now(); };
+_enx.imp={state:'idle',run:false,runId:0,took:0,goal:0,total:0,already:0,earlier:0,broken:0,sameKey:0,commaTags:0,newFolders:0,pause:false,capHit:false,items:null,note:''};
+_enx.job=null; _enx.toasted=false; _enx.resume=false; _enx.lastItems=null; _enx.lastHandle=null;
+function _enxH(str,seed){   /* 2 x 32 bits (cyrb53 style) */
+  let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;
+  for(let i=0;i<str.length;i++){ const c=str.charCodeAt(i); h1=Math.imul(h1^c,2654435761); h2=Math.imul(h2^c,1597334677); }
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (h2>>>0).toString(16).padStart(8,'0')+(h1>>>0).toString(16).padStart(8,'0');
+}
+const _enxId=(pre,s)=>pre+_enxH(s,0)+_enxH(s,7).slice(0,6);
+/* how many notes the last 24 h hold, how many more may come now, and when the window next allows */
+function _enxWindow(now){
+  const lo=now-_ENX_DAY_MS, ats=[];
+  const add=a=>{ const f=a&&a.fromEvernote; if(!f||!f.at) return; const t=Date.parse(f.at); if(t>lo) ats.push(t); };
+  (DB.articles||[]).forEach(add); (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article') add(t.item); });
+  ats.sort((a,b)=>a-b);
+  const cap=_enxCap(), room=Math.max(0,cap-ats.length);
+  return {used:ats.length,room,cap,next:room>0?null:ats[ats.length-cap]+_ENX_DAY_MS};
+}
+function _enxBrought(){
+  let n=0; (DB.articles||[]).forEach(a=>{ if(a&&a.fromEvernote) n++; });
+  (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item&&t.item.fromEvernote) n++; });
+  return n;
+}
+function _enxWhen(ms,now){
+  const d=new Date(ms), n=new Date(now), h=d.getHours(), mi=d.getMinutes();
+  const t=(h%12||12)+(mi?':'+String(mi).padStart(2,'0'):':00')+(h<12?'am':'pm');
+  const day0=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const dd=Math.round((day0(d)-day0(n))/_ENX_DAY_MS);
+  const w=dd<=0?'today':dd===1?'tomorrow':d.toLocaleDateString('en-US',{weekday:'long'});
+  return t+' '+w;
+}
+/* ── ENML → the app's note HTML ── */
+function _enxClean(h){
+  h=h.replace(/<(script|iframe|object|embed|style)\b[\s\S]*?<\/\1\s*>/gi,'').replace(/<\/?(script|iframe|object|embed|style)\b[^>]*>/gi,'');
+  return h.replace(/<[a-zA-Z][^>]*>/g,tag=>{
+    tag=tag.replace(/(?:\s|\/)+(?:on[a-z0-9_-]+|srcdoc|formaction)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi,'');
+    return tag.replace(/(\s(?:xlink:)?(?:href|src|action|poster|background))\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,(m,a,d,s,u)=>{
+      const v=d!=null?d:s!=null?s:(u||'');
+      const flat=_enxUnent(v).replace(/&(colon|tab|newline);/gi,(x,e)=>e.toLowerCase()==='colon'?':':'').replace(/[\u0000-\u0020\u007f-\u009f]/g,'').toLowerCase();
+      return /^(javascript|data|vbscript):/.test(flat)?a+'="#"':m;
+    });
+  });
+}
+function _enxConvert(raw,info){
+  let h=String(raw==null?'':raw);
+  h=h.replace(/^\s*<!\[CDATA\[/,'').replace(/\]\]>\s*$/,'');
+  h=h.replace(/<\?xml[\s\S]*?\?>/gi,'').replace(/<!DOCTYPE[\s\S]*?>/gi,'');
+  h=h.replace(/<\/?en-note\b[^>]*>/gi,'');
+  h=_enxClean(h);
+  const byHash=new Map(); (info.res||[]).forEach(r=>{ if(r.hash) byHash.set(r.hash,r); });
+  h=h.replace(/<en-todo\b([^>]*?)\/?>(\s*<\/en-todo>)?/gi,(m,a)=>/checked\s*=\s*["']?true/i.test(a)?'☑ ':'☐ ');
+  const CRYPT='<span class="enx-crypt" contenteditable="false">🔒 encrypted text (Evernote; not imported)</span>';
+  h=h.replace(/<en-crypt\b[^>]*\/>/gi,CRYPT).replace(/<en-crypt\b[^>]*>[\s\S]*?<\/en-crypt>/gi,CRYPT);
+  h=h.replace(/<en-media\b([^>]*?)\/?>(\s*<\/en-media>)?/gi,(m,a)=>{
+    const at=n=>{ const x=new RegExp('\\b'+n+'\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\')','i').exec(a); return x?_enxUnent(x[1]!=null?x[1]:x[2]):''; };
+    const hash=at('hash'), rs=byHash.get(hash.toLowerCase());
+    const mime=(at('type')||(rs&&rs.mime)||'').trim(), name=(rs&&rs.name)||'', k=_enxKind(mime);
+    const lbl=k==='img'?'🖼 picture':k==='audio'?'🎧 audio':'📎 file';
+    return '<span class="enx-media" contenteditable="false" data-enx-hash="'+esc(hash)+'" data-mime="'+esc(mime)+'" data-name="'+esc(name)+'">'+lbl+' — arrives with the next import step</span>';
+  });
+  if(info.srcUrl){
+    const u=String(info.srcUrl).trim(), flat=u.replace(/[\u0000-\u0020\u007f-\u009f]/g,'').toLowerCase();
+    h='<p class="enx-src">Source: '+(/^(javascript|data|vbscript):/.test(flat)?esc(u):'<a href="'+esc(u)+'">'+esc(u)+'</a>')+'</p>'+h;
+  }
+  return h;
+}
+function _enxSection(){
+  const secs=(DB.sections||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  return secs.find(s=>s.name==='My Notebooks')||secs[0]||null;
+}
+/* an undo frame of 250 notes is not wanted: take the baseline, make no frame (_histCapture silent), then save as persist() does */
+function _enxPersist(){
+  if(!_dbLoaded) return;
+  _stampThemeTouches(); const sw=_stampRecordTouches();
+  try{ _histCapture(sw,true); }catch(e){ try{ _histReset(); }catch(_){} }
+  _save(undefined,sw); scheduleAutoSave(); pushToCloud();
+}
+/* ── the device's own memory of an unfinished import: a NEW database, never an upgrade of another ── */
+function _enxDb(){
+  return new Promise((res,rej)=>{
+    if(!window.indexedDB) return rej(new Error('no IndexedDB'));
+    const r=indexedDB.open('siyagah-enx-v1',1);
+    r.onupgradeneeded=()=>{ r.result.createObjectStore('job'); };
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+  });
+}
+async function _enxJobOp(mode,fn){
+  const d=await _enxDb();
+  try{ return await new Promise((res,rej)=>{ const tx=d.transaction('job',mode), q=fn(tx.objectStore('job')); tx.oncomplete=()=>res(q&&q.result); tx.onerror=tx.onabort=()=>rej(tx.error); }); }
+  finally{ d.close(); }
+}
+const _enxJobGet=async()=>{ try{ return (await _enxJobOp('readonly',s=>s.get('job')))||null; }catch(e){ return null; } };
+async function _enxJobPut(v){
+  try{ await _enxJobOp('readwrite',s=>s.put(v,'job')); }
+  catch(e){ if(v.handle){ const w=Object.assign({},v); delete w.handle; try{ await _enxJobOp('readwrite',s=>s.put(w,'job')); }catch(_){} } }
+}
+const _enxJobDel=async()=>{ try{ await _enxJobOp('readwrite',s=>s.delete('job')); }catch(e){} _enx.job=null; };
+async function _enxWalk(dir,prefix,out){
+  for await (const [name,h] of dir.entries()){
+    if(h.kind==='directory') await _enxWalk(h,prefix.concat(name),out);
+    else out.push({h,name,stack:prefix.join(' / ')});
+  }
+}
+async function _enxItemsFromHandle(dir){
+  const ents=[]; await _enxWalk(dir,[],ents);
+  const items=[]; let skipped=0;
+  for(const e of ents){
+    if(!/\.enex$/i.test(e.name)){ skipped++; continue; }
+    items.push({file:await e.h.getFile(),stack:e.stack,name:e.name.replace(/\.enex$/i,'')});
+  }
+  items.sort((a,b)=>a.stack.localeCompare(b.stack)||a.name.localeCompare(b.name));
+  return {items,skipped};
+}
+/* a folder handle (picker, or a test): read it exactly as a picked folder is read */
+async function _enxUseHandle(h){
+  const r=await _enxItemsFromHandle(h);
+  _enx.lastHandle=h; _enx.lastItems=r.items;
+  return _enxPrepare(r.items,r.skipped);
+}
+async function _enxPickDir(){
+  if(window.showDirectoryPicker&&window.innerWidth>=640){
+    let h; try{ h=await window.showDirectoryPicker({mode:'read'}); }catch(e){ return; }
+    return _enxUseHandle(h);
+  }
+  document.getElementById('enx-dir').click();
+}
+function _enxPrepare(items,skipped){
+  if(_enx.resume){ _enx.resume=false; _enx.lastItems=items; return _enxImport(items); }
+  _enx.lastItems=items; Object.assign(_enx.imp,{items:null,state:'idle',total:0,already:0,note:''});
+  return _enxRun(items,skipped);
+}
+/* "📥 Bring them in" / "Continue" */
+function _enxBring(){
+  const I=_enx.imp; if(I.run) return;
+  if(_enx.res){ const t=_enxTotals(_enx.res); I.total=t.notes; I.already=t.already; }
+  if(_enx.lastItems&&_enx.lastItems.length) return _enxImport(_enx.lastItems);
+}
+async function _enxContinue(){
+  const I=_enx.imp; if(I.run) return;
+  const w=_enxWindow(_enxNowMs());
+  if(w.room<=0){ I.note='Not yet — the free cloud plan allows about '+_enxN(w.cap)+' notes a day. Continue after '+_enxWhen(w.next,_enxNowMs())+'.'; _enxPaint(); return; }
+  I.note='';
+  if(I.items&&I.items.length) return _enxImport(I.items);
+  const job=_enx.job||await _enxJobGet();
+  if(job&&job.handle){
+    try{
+      let p=await job.handle.queryPermission({mode:'read'});
+      if(p!=='granted') p=await job.handle.requestPermission({mode:'read'});
+      if(p==='granted'){ const r=await _enxItemsFromHandle(job.handle); _enx.job=job; _enx.lastHandle=job.handle; return _enxImport(r.items); }
+    }catch(e){}
+    I.note='The saved folder could not be opened. Choose the export again.';
+  }
+  _enx.resume=true; _enx.view='pick'; _enxPaint();
+}
+function _enxPause(){ const I=_enx.imp; if(!I.run) return; I.pause=true; const p=document.getElementById('enx-iprog'); if(p) p.textContent='Pausing after this batch…'; }
+function _enxIProg(){
+  const I=_enx.imp, total=I.total?' · '+_enxN(I.total)+' in all':'';
+  return 'Bringing in… '+_enxN(I.took)+' of '+_enxN(I.goal)+' this time'+total;
+}
+function _enxTick(){
+  const I=_enx.imp, p=document.getElementById('enx-iprog'), b=document.getElementById('enx-ibar');
+  if(p) p.textContent=I.pause?'Pausing after this batch…':_enxIProg();
+  if(b) b.style.width=(I.goal?Math.min(100,Math.round(I.took*100/I.goal)):0)+'%';
+}
+async function _enxImport(items){
+  const I=_enx.imp; if(I.run||!items||!items.length) return;
+  const now0=_enxNowMs(), w0=_enxWindow(now0);
+  I.items=items;
+  if(!I.total&&_enx.job&&_enx.job.total){ I.total=_enx.job.total; I.already=_enx.job.already||0; }
+  if(w0.room<=0){ I.state='capped'; I.took=0; _enx.view='import'; _enxPaint(); return; }
+  const my=++I.runId;
+  const brought0=_enxBrought(), togo=I.total?Math.max(0,I.total-brought0-I.already):Infinity;
+  Object.assign(I,{run:true,state:'running',pause:false,capHit:false,took:0,goal:Math.min(w0.room,togo>0?togo:w0.room),earlier:0,broken:0,sameKey:0,commaTags:0,newFolders:0,note:''});
+  _enx.view='import'; _enxPaint();
+  _enxJobPut({total:I.total||0,already:I.already||0,handle:_enx.lastHandle||(_enx.job&&_enx.job.handle)||null,at:new Date(now0).toISOString()});
+  /* what is already here, built once */
+  const ids=new Set(), ks=new Set(), have=new Set(), tomb=new Set();
+  (DB.articles||[]).forEach(a=>{
+    if(!a) return; ids.add(a.id);
+    if(a.fromEvernote){ if(a.fromEvernote.k) ks.add(a.fromEvernote.k); return; }
+    if(!a.createdAt) return; const t=Date.parse(a.createdAt); if(isNaN(t)) return;
+    have.add(String(a.title||'').trim().toLowerCase()+'\u0001'+Math.floor(t/1000));
+  });
+  (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item){ ids.add(t.item.id); if(t.item.fromEvernote&&t.item.fromEvernote.k) ks.add(t.item.fromEvernote.k); } });
+  (DB.tombstones||[]).forEach(t=>{ if(t) tomb.add(t.id); });
+  const pend=[];
+  const flush=async list=>{
+    if(!list.length) return;
+    const at=new Date(_enxNowMs()).toISOString();
+    const fById=new Map((DB.folders||[]).map(f=>[f.id,f])), kids=new Map();
+    DB.folders.forEach(f=>{ const p=f.parentId||''; kids.set(p,(kids.get(p)||0)+1); });
+    const sec=_enxSection();
+    const ensure=(base,name,parentId,kind)=>{
+      let id=base, n=1;
+      while(!fById.has(id)&&tomb.has(id)) id=base+'-'+(++n);   /* the owner deleted an empty one of ours: never revive its id */
+      if(fById.has(id)) return id;
+      let order;
+      if(parentId){ order=(kids.get(parentId)||0)+1; kids.set(parentId,order); }
+      else order=1+Math.max(0,...DB.folders.filter(f=>!f.parentId&&(f.sectionId||null)===(sec?sec.id:null)).map(f=>f.order||0));
+      const f={id,name,parentId:parentId||null,order,enx:{kind,name},updatedAt:at};
+      if(!parentId&&sec) f.sectionId=sec.id;
+      DB.folders.push(f); fById.set(id,f); I.newFolders++;
+      return id;
+    };
+    const root=ensure('enx-root','Evernote',null,'root'), cache=new Map();
+    list.forEach(e=>{
+      const ck=e.stack+'\u0001'+e.nb;
+      if(!cache.has(ck)){
+        const par=e.stack?ensure(_enxId('enx-s-',e.stack),e.stack,root,'stack'):root;
+        cache.set(ck,ensure(_enxId('enx-b-',ck),e.nb,par,'nb'));
+      }
+      e.rec.folderIds=[cache.get(ck)]; e.rec.fromEvernote.at=at;
+      DB.articles.push(e.rec);
+    });
+    _enxPersist();
+    I.took+=list.length; _enxTick();
+    await _enxYield();
+  };
+  const onNote=(info,it)=>{
+    if(info.err){ I.broken++; return; }
+    if(I.capHit) return;
+    const title=String(info.title==null?'':info.title).trim()||'Untitled (Evernote)';
+    const k=it.stack+'/'+it.name+'\u0001'+(info.sec==null?'':info.sec)+'\u0001'+title.toLowerCase()+'\u0001'+info.contentLen;
+    const id=_enxId('enx-n-',k);
+    if(ids.has(id)||ks.has(k)){ I.earlier++; return; }
+    if(info.sec!=null&&have.has(String(info.title==null?'':info.title).trim().toLowerCase()+'\u0001'+info.sec)){ I.already++; return; }
+    if(I.took+pend.length>=I.goal){ I.capHit=true; return; }
+    const tags=[]; (info.tags||[]).forEach(t=>{ if(String(t).includes(',')) I.commaTags++; const c=_cleanTag(t); if(c&&!tags.includes(c)) tags.push(c); });
+    const nowIso=new Date(_enxNowMs()).toISOString();
+    const cr=info.sec!=null?new Date(info.sec*1000).toISOString():nowIso;
+    const up=info.uIso?new Date(Date.parse(info.uIso)).toISOString():cr;
+    pend.push({stack:it.stack,nb:it.name,rec:{id,title,content:_enxConvert(info.content,info),folderIds:[],tags,createdAt:cr,updatedAt:up,fromEvernote:{nb:it.name,stack:it.stack,k,at:nowIso}}});
+    ids.add(id); ks.add(k);
+  };
+  let finished=false;
+  try{
+    let lastY=0,read=0;
+    outer: for(const it of items){
+      if(I.pause||I.capHit||my!==I.runId) break;
+      const sc=_enxScanner(info=>onNote(info,it),{content:true});
+      try{
+        const rd=it.file.stream().pipeThrough(new TextDecoderStream()).getReader();
+        for(;;){
+          if(I.pause||I.capHit||my!==I.runId){ try{ await rd.cancel(); }catch(x){} continue outer; }
+          const {done,value}=await rd.read(); if(done) break;
+          sc.feed(value); read+=value.length;
+          while(pend.length>=_ENX_BATCH) await flush(pend.splice(0,_ENX_BATCH));
+          if(read-lastY>=1048576){ lastY=read; await _enxYield(); }
+        }
+        sc.end();
+        while(pend.length>=_ENX_BATCH) await flush(pend.splice(0,_ENX_BATCH));
+      }catch(e){ console.error('Evernote import: a file failed',it.name,e); I.broken++; }
+    }
+    if(!I.pause) await flush(pend.splice(0));   /* a pause stops after the batch in hand; the unwritten rest is read again later */
+    finished=!I.pause&&!I.capHit&&my===I.runId;
+  }finally{
+    if(my===I.runId){
+      I.run=false;
+      I.state=I.pause?'paused':I.capHit?'capped':finished?'done':'paused';
+      if(I.state==='done') await _enxJobDel();
+      try{ render(); }catch(e){}
+      _enxPaint();
+    }
+  }
+}
+function _enxImpHTML(){
+  const I=_enx.imp, now=_enxNowMs(), w=_enxWindow(now), brought=_enxBrought();
+  const togo=I.total?Math.max(0,I.total-brought-I.already):0, N=_enxN;
+  const skip='<div class="enx-sub" id="enx-isum">Left as they were: '+N(I.already)+' already in Siyagah · '+N(I.earlier)+' brought in earlier · '+N(I.broken)+' could not be read'
+    +(I.commaTags?' · '+N(I.commaTags)+' tag'+(I.commaTags===1?'':'s')+' had a comma taken out':'')+'.</div>';
+  const pics='<div class="enx-sub">Pictures, audio and files are not in yet: each one shows a marker where it will go (the next import step).</div>';
+  let h='';
+  if(I.state==='running'){
+    h+='<div class="enx-prog" id="enx-iprog" role="status">'+esc(I.pause?'Pausing after this batch…':_enxIProg())+'</div>'
+      +'<div class="enx-bar" role="progressbar"><i id="enx-ibar" style="width:'+(I.goal?Math.min(100,Math.round(I.took*100/I.goal)):0)+'%"></i></div>'
+      +'<button class="rm-big alt" id="enx-pause" onclick="_enxPause()">⏸ Pause</button>'
+      +'<div class="enx-sub">You can close this window — the import goes on. Nothing in your notebook is changed or deleted.</div>';
+  }else if(I.state==='capped'){
+    h+='<div class="enx-prog" id="enx-icap" role="status">'+N(w.used)+' brought in today. '+(I.total?N(togo)+' to go. ':'')
+      +(w.room>0?'You can continue now.':'Continue after '+esc(_enxWhen(w.next,now)))+'</div>'
+      +'<button class="rm-big" id="enx-cont" onclick="_enxContinue()"'+(w.room>0?'':' disabled')+'>Continue</button>'
+      +(I.note?'<div class="enx-sub" id="enx-inote">'+esc(I.note)+'</div>':'')+skip+pics;
+  }else if(I.state==='paused'){
+    h+='<div class="enx-prog" id="enx-ipaused" role="status">Paused after '+N(I.took)+' notes this time. '+(I.total?N(togo)+' to go.':'')+'</div>'
+      +'<button class="rm-big" id="enx-cont" onclick="_enxContinue()"'+(w.room>0?'':' disabled')+'>Continue</button>'
+      +(w.room>0?'':'<div class="enx-sub">Continue after '+esc(_enxWhen(w.next,now))+'</div>')+(I.note?'<div class="enx-sub" id="enx-inote">'+esc(I.note)+'</div>':'')+skip+pics;
+  }else if(I.state==='done'){
+    h+='<div class="enx-prog" id="enx-idone" role="status">✅ Done. '+N(I.took)+' notes brought in this time; '+N(brought)+' from Evernote in all.</div>'+skip+pics
+      +'<div class="enx-sub">They are in My Notebooks ▸ Evernote, and in the Smart View "(13) From Evernote".</div>';
+  }
+  return h;
+}
+/* the dry-run result, or the first screen, gets the way in */
+function _enxBringHTML(){
+  return '<button class="rm-big" id="enx-bring" onclick="_enxBring()">📥 Bring them in</button>'
+    +'<div class="enx-sub" id="enx-bringnote">Up to '+_enxN(_enxCap())+' notes now (the free cloud plan allows about that much a day). The rest continues later from here. Nothing in your notebook is changed or deleted.</div>';
+}
+function _enxUnfinishedHTML(){
+  const j=_enx.job; if(!j||!j.total||_enx.imp.run) return '';
+  const brought=_enxBrought(); if(brought>=j.total) return '';
+  const now=_enxNowMs(), w=_enxWindow(now);
+  return '<div class="enx-prog" id="enx-unfinished" role="status">📥 An import is unfinished: '+_enxN(brought)+' of '+_enxN(j.total)+' brought in. '
+    +(w.room>0?'':'Continue after '+esc(_enxWhen(w.next,now))+'.')+'</div>'
+    +'<button class="rm-big" id="enx-cont" onclick="_enxContinue()"'+(w.room>0?'':' disabled')+'>Continue</button>'
+    +(_enx.imp.note?'<div class="enx-sub" id="enx-inote">'+esc(_enx.imp.note)+'</div>':'');
+}
+/* once per session, calm: only on the device that ran the import (the memory of it is in this device's own database) */
+async function _enxBootToast(){
+  if(_enx.toasted||_enx.imp.run) return;
+  const j=await _enxJobGet(); if(!j||!j.total) return;
+  _enx.job=j;
+  const brought=_enxBrought(); if(brought>=j.total) return;
+  if(_enxWindow(_enxNowMs()).room<=0) return;
+  _enx.toasted=true;
+  document.querySelectorAll('.toast-enx').forEach(x=>x.remove());
+  const t=document.createElement('div'); t.className='toast toast-act toast-enx'; t.setAttribute('role','button'); t.tabIndex=0;
+  t.innerHTML=esc('📥 Evernote: '+_enxN(brought)+' of '+_enxN(j.total)+' brought in — ')+'<b class="toast-open">Continue</b>';
+  const go=()=>{ t.remove(); openEnexImport(); };
+  t.addEventListener('click',go);
+  t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); },9000);
+}
+(function _enxBootWatch(){ if(!_dbLoaded){ setTimeout(_enxBootWatch,1000); return; } setTimeout(()=>{ try{ _enxBootToast(); }catch(e){} },4000); })();
 function openEnexImport(){
   let m=document.getElementById('enx-modal');
   if(!m){
@@ -27852,19 +28206,20 @@ function openEnexImport(){
     m.innerHTML='<div id="enx-box" role="dialog" aria-label="Evernote import"></div>';
     document.body.appendChild(m);
   }
-  if(_enx.view!=='reading'&&_enx.view!=='done'){ _enx.view='pick'; }
+  if(_enx.view!=='reading'&&_enx.view!=='done'&&!(_enx.view==='import'&&_enx.imp.state!=='idle')){ _enx.view='pick'; }
   _enxPaint();
   m.classList.add('open');
+  _enxJobGet().then(j=>{ _enx.job=j; if(m.classList.contains('open')&&_enx.view==='pick') _enxPaint(); });
 }
 function closeEnexImport(){
   if(_enx.busy) _enx.stop=true;
   const m=document.getElementById('enx-modal'); if(m) m.classList.remove('open');
 }
-function _enxAgain(){ _enx.view='pick'; _enx.res=null; _enxPaint(); }
+function _enxAgain(){ _enx.view='pick'; _enx.res=null; if(!_enx.imp.run) Object.assign(_enx.imp,{items:null,state:'idle',total:0,already:0,note:''}); _enxPaint(); }
 function _enxStop(){ _enx.stop=true; const p=document.getElementById('enx-prog'); if(p) p.textContent='Stopping…'; }
 function _enxPicked(inp,dir){
   const files=Array.from(inp.files||[]); inp.value='';
-  if(!files.length||_enx.busy) return;
+  if(!files.length||_enx.busy||_enx.imp.run) return;
   const items=[]; let skipped=0;
   files.forEach(f=>{
     if(!/\.enex$/i.test(f.name)){ skipped++; return; }
@@ -27876,7 +28231,8 @@ function _enxPicked(inp,dir){
     items.push({file:f,stack,name:f.name.replace(/\.enex$/i,'')});
   });
   items.sort((a,b)=>a.stack.localeCompare(b.stack)||a.name.localeCompare(b.name));
-  _enxRun(items,skipped);
+  _enx.lastHandle=null;
+  _enxPrepare(items,skipped);
 }
 function _enxProgText(){
   return 'Reading '+(_enx.cur||'…')+' — '+_enxN(_enx.notes)+' notes so far · '+Math.round(_enx.read/1048576)+' MB of '+Math.round(_enx.total/1048576)+' MB';
@@ -28003,12 +28359,17 @@ function _enxPaint(){
     });
     const bad=r.books.filter(b=>b.broken.length);
     if(bad.length) h+='<ul class="enx-broken" id="enx-broken">'+bad.map(b=>'<li>'+b.broken.length+' note'+(b.broken.length===1?'':'s')+' could not be read in '+esc(b.name)+': '+esc(b.broken.join(', '))+'</li>').join('')+'</ul>';
-    h+='<div class="enx-dry" id="enx-dry">This was a dry run: nothing was added to your notebook. The import itself comes in the next update.</div>'
+    h+=_enxBringHTML()
+      +'<div class="enx-dry" id="enx-dry">This was a dry run: nothing was added to your notebook. The import itself comes in the next update.</div>'
       +'<button class="rm-big" onclick="_enxCopy()">📋 Copy summary</button><div id="enx-fb"></div>'
       +'<button class="rm-big alt" onclick="_enxAgain()">↩ Choose another export</button>';
+  }else if(v==='import'){
+    h+=_enxImpHTML();
   }else{
-    h+='<p class="rm-p">See what an import of your Evernote export would bring in. This is a dry run: nothing is added to your notebook.</p>'
-      +'<button class="rm-big enx-dirbtn" onclick="document.getElementById(\'enx-dir\').click()">📁 Choose the export folder</button>'
+    h+=_enxUnfinishedHTML()
+      +(_enx.resume?'<p class="rm-p" id="enx-resume">Choose the same export again. Notes already brought in are skipped, so it is safe.</p>':'')
+      +'<p class="rm-p">See what an import of your Evernote export would bring in. This is a dry run: nothing is added to your notebook.</p>'
+      +'<button class="rm-big enx-dirbtn" onclick="_enxPickDir()">📁 Choose the export folder</button>'
       +'<button class="rm-big alt enx-filebtn" onclick="document.getElementById(\'enx-files\').click()">📄 Choose .enex files</button>'
       +'<p class="rm-p">Stacks come from the folder; files picked one by one go in without a stack.</p>'
       +'<input type="file" id="enx-dir" webkitdirectory multiple style="display:none" onchange="_enxPicked(this,true)">'
@@ -28784,6 +29145,7 @@ const SF=[
   {id:'sf-murajaa',name:'(10) Murāja\'ah Review',  icon:'📖', smart:'murajaa'},
   {id:'sf-practice',name:'(11) In Practice',           icon:'🌱', smart:'practice'},
   {id:'sf-jeb',     name:'(12) From Zab',              icon:'👝', smart:'jeb'},
+  {id:'sf-enx',     name:'(13) From Evernote',         icon:'📥', smart:'enx'},
 ];
 const SF_IDS=new Set(SF.map(s=>s.id));
 
@@ -29415,6 +29777,8 @@ function getSmartArts(sfId){
         .sort(function(a,b){return (a.practice==='done'?1:0)-(b.practice==='done'?1:0);});
     case 'sf-jeb':
       return live.filter(a=>a.fromJeb).sort((a,b)=>String(b.fromJeb.at||'').localeCompare(String(a.fromJeb.at||'')));
+    case 'sf-enx':
+      return live.filter(a=>a.fromEvernote).sort((a,b)=>String(b.fromEvernote.at||'').localeCompare(String(a.fromEvernote.at||'')));
     default: return [];
   }
 }
