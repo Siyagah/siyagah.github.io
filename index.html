@@ -22361,8 +22361,11 @@ function jebMovePocketInto(id,parentId,toIndex){
   const at=toIndex==null?list.length:Math.max(0,Math.min(list.length,toIndex|0));
   list.splice(at,0,p);
   if((p.parentId||null)!==par){ if(par) p.parentId=par; else delete p.parentId; p.updatedAt=now; }
-  _jebRenumber(list,now);
-  if(oldPar!==par) _jebRenumber(from,now);
+  /* `order` only has to sort among siblings, so stamp as little as possible: the moved pocket always, a neighbour only if it would
+     otherwise tie or sort before it. (Renumbering every sibling stamped pockets nobody touched - and on a second device, that
+     stamp beat a concurrent move of one of them. The list it left keeps a gap, which sorts the same.) */
+  let prev=-1;
+  list.forEach(r=>{ if(r===p||(r.order|0)<=prev||r.order==null){ if(r.order!==prev+1){ r.order=prev+1; r.updatedAt=now; } } prev=r.order|0; });
   _jebTreeC=null; persist(); return true;
 }
 function jebEditPocket(id,patch){

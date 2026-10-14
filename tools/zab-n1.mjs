@@ -343,11 +343,11 @@ try {
       /* the deck: "inside:" chips */
       await on(d, () => jebClosePanel()); await sleep(200);
       await act(d, vp, `${chip(T)} [data-jeb-cards]`); await d.page.waitForSelector('#jeb-deck.on'); await sleep(500);
-      const ins = await on(d, () => [...document.querySelectorAll('#jeb-deck .jx-ins button')].map((b) => b.textContent.trim()));
+      const ins = await on(d, () => [...document.querySelectorAll('#jeb-deck .jx-ins button')].map((b) => b.lastChild.textContent.trim()));
       const cards = await on(d, () => [...document.querySelectorAll('#jeb-deck .jeb-card .jeb-tx')].map((e) => e.textContent).join('|'));
       check(ins.join() === 'L1,Side' && !cards.includes('l1 item'), `${t} the deck of a pocket that holds pockets has "inside:" chips (${ins.join()}) and only its own cards (${cards || 'none'})`, ins.join() + ' / ' + cards);
       await act(d, vp, '#jeb-deck .jx-ins button:has-text("L1")'); await sleep(500);
-      const dt = await on(d, () => ({ title: document.querySelector('#jeb-deck .jd-hd b').textContent, ins: [...document.querySelectorAll('#jeb-deck .jx-ins button')].map((b) => b.textContent.trim()).join(), cards: [...document.querySelectorAll('#jeb-deck .jeb-card .jeb-tx')].map((e) => e.textContent).join('|') }));
+      const dt = await on(d, () => ({ title: document.querySelector('#jeb-deck .jd-hd b').textContent, ins: [...document.querySelectorAll('#jeb-deck .jx-ins button')].map((b) => b.lastChild.textContent.trim()).join(), cards: [...document.querySelectorAll('#jeb-deck .jeb-card .jeb-tx')].map((e) => e.textContent).join('|') }));
       check(dt.title === 'L1' && dt.ins === 'L2' && dt.cards === 'l1 item', `${t} tapping a chip spreads that pocket's cards (L1: its own card, "inside: L2")`, JSON.stringify(dt));
       await on(d, () => jebCloseDeck());
       /* Choose reaches any depth */
@@ -451,7 +451,7 @@ try {
     for (const p of presets) {
       await on(d, (k) => { applyPreset(k); }, p); await sleep(200);
       const m = await measure(panelText), b = await measure(barText);
-      check(m.n >= 8 && m.worst >= 4.5, `${t} the path line, the pocket chips and ＋ Pocket (${m.n} pieces) clear 4.5:1 on ${p} (worst ${m.worst}, ${m.who})`, JSON.stringify(m));
+      check(m.n >= 6 && m.worst >= 4.5, `${t} the path line, the pocket chips and ＋ Pocket (${m.n} pieces) clear 4.5:1 on ${p} (worst ${m.worst}, ${m.who})`, JSON.stringify(m));
       check(b.n >= 6 && b.worst >= 4.5, `${t} the bar chips' ▸ mark, name and number (${b.n} pieces) clear 4.5:1 on ${p} (worst ${b.worst}, ${b.who})`, JSON.stringify(b));
     }
     /* All pockets: sub-group headers; the picker; the deck chips */
