@@ -9757,3 +9757,25 @@ The owner (14 Oct): "liked all three. Enable all three for user to chose and cha
 - **Unpatched (v05.16's `index.html` and `sw.js` put back, `app-check --only 77`):** **0/8 passed, 8 FAILED** (no button; the run stops at the first).
 - **Not done:** Back (the phone's back gesture) does not close the layouts, since the app does not wire Back for sheets. No drag-and-drop of a pocket between levels. The full `app-check` was not run (told not to); the Architect runs it.
 - **Totals (Builder):** `ship-check` 15/15; `app-check` block 77 **191/191**; 76 **313/313**; 59, 60, 63, 64 **685/685**; 65, 69 **284/284**; 70, 71, 72 **893/893** (run in separate groups of blocks).
+
+
+## v05.18 — P2, redraw only what changed after a received edit and after undo (issue #184, PCF J08)
+
+### Before (measured first, on the v05.17 code; `node tools/sync-s1d.mjs --profile`, 9,000 notes ≈ 47 MB)
+
+The harness now also wraps the per-pane functions (`renderP2H`, `renderP3H`, `renderP3C`, `renderTabBar`, `updateTrashBtn`, `adjustP3Layout`, `_applyHeadingStyles`, `_updateSearchAccessUI`, `jebRefresh`). Inclusive ms, one run on a GitHub runner (so lower than the Architect's earlier 317–426 ms; the shape is what matters). Note n77 (received) is NOT the open note; n42 is open.
+
+| ms | (b) receive, phone ×4 | (b) receive, laptop | (c) undo, phone ×4 | (c) undo, laptop |
+|---|---|---|---|---|
+| `renderTree` | 8.3 | 2.6 | 9.0 | 2.9 |
+| `renderP2H` | 6.5 | 1.0 | 6.2 | 1.0 |
+| `renderP2C` | **69.3** | 19.2 | **85.7** | 25.1 |
+| `renderTabBar` | 33.9 | 0.1 | 37.1 | 0.0 |
+| `renderP3H` | 38.7 | 11.4 | 41.0 | 12.4 |
+| `renderP3C` | **68.7** | 14.0 | 1.5 | 0.4 |
+| `adjustP3Layout` | 3.3 | 1.1 | 0 | 0.3 |
+| `jebRefresh` | 33.4 | 8.0 | 29.4 | 8.4 |
+| **`render()` total** | **228.4** | **57.5** | **175.4** | **50.7** |
+| whole step, main thread | 642 | 258 | 442 | 140 |
+
+(The two laptop whole-step lines were already over their 52a targets on this runner, 258 > 250 and 140 > 125, before any change.)
