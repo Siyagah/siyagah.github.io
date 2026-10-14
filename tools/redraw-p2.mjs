@@ -37,6 +37,7 @@ const argv = process.argv.slice(2);
 const onlyArg = argv.find((a) => a.startsWith('--only='));
 const onlySet = onlyArg ? new Set(onlyArg.slice(7).split(',')) : null;
 const want = (t) => !onlySet || onlySet.has(t);
+const vpArg = (argv.find((a) => a.startsWith('--vp=')) || '').slice(5), scArg = (argv.find((a) => a.startsWith('--scen=')) || '').slice(7);   /* narrowing, for iterating on one failure */
 const NOTES = +((argv.find((a) => a.startsWith('--notes=')) || '').slice(8)) || 9000;
 
 let root = process.env.RDP2_ROOT || undefined;
@@ -76,7 +77,7 @@ const HOOK = String.raw`(() => {
     R.calls = {}; R.writes = {}; R.counting = true;
     const db0 = R.oracle ? JSON.stringify(DB) : null;
     let mode; try { mode = o.apply(this, arguments); } finally { R.counting = false; }
-    const rec = { mode, nkeys: (ch && ch.keys) ? ch.keys.length : -1, calls: Object.assign({}, R.calls), writes: Object.assign({}, R.writes), plan: _rdLast && _rdLast.plan, ms: _rdLast && _rdLast.ms };
+    const rec = { mode, nkeys: (ch && ch.keys) ? ch.keys.length : -1, calls: Object.assign({}, R.calls), writes: Object.assign({}, R.writes), plan: _rdLast && _rdLast.plan, why: _rdLast && _rdLast.why, ms: _rdLast && _rdLast.ms };
     if (db0 !== null) rec.dbSame = JSON.stringify(DB) === db0;
     if (R.oracle) {
       const a = snap();
@@ -135,11 +136,18 @@ const firstDiff = (r) => (r.find((x) => x.eq === false) || {}).diff || '';
 try {
   /* ══ 78a — the oracle, at three layouts ══ */
   if (want('78a')) {
-    for (const vp of VPS) {
+    for (const vp of VPS.filter((v) => !vpArg || v.name === vpArg)) {
       const cloud = makeCloud(), A = await dev(cloud, 'A' + vp.name, vp), B = await dev(cloud, 'B' + vp.name, vp);
       await sleep(1500); await settle(cloud, A, B);
       await on(A, HOOK);
-      for (const s of SCEN) {
+      /* warm-up: the first frame of a fresh notebook also carries first-render defaults (note types, settings), which is a
+         legitimate whole draw; one throw-away edit, undo and redo puts the history in its everyday state */
+      for (const w of ['warm up', 'warm up again']) {
+        A.offline = true;
+        await on(A, VIEW_F1); await on(A, EDIT, { id: 'n1', title: w }); await on(A, () => { render(); undo(); redo(); });
+        A.offline = false; await settle(cloud, A, B);
+      }
+      for (const s of SCEN.filter((x) => !scArg || scArg.split(',').includes(x.id))) {
         const t = `78a-${s.id}@${vp.name}`;
         /* ── received from the second device ── */
         await on(A, s.view); await settle(cloud, A, B);
@@ -155,7 +163,7 @@ try {
           check(got, `${t} received: the change reached the device and was drawn`, got ? '' : 'nothing arrived');
           check(eqAll(r), `${t} received: the targeted draw equals a full render() (${s.label})`, firstDiff(r));
           const smp = sample(r);
-          if (s.recv !== 'any') check(smp.length > 0 && smp.every((x) => x.mode === s.recv), `${t} received: drawn ${s.recv === 'full' ? 'whole (the classifier does not place it)' : 'by the targeted path — ' + s.why}`, JSON.stringify(smp.map((x) => ({ mode: x.mode, calls: x.calls }))));
+          if (s.recv !== 'any') check(smp.length > 0 && smp.every((x) => x.mode === s.recv), `${t} received: drawn ${s.recv === 'full' ? 'whole (the classifier does not place it)' : 'by the targeted path — ' + s.why}`, JSON.stringify(smp.map((x) => ({ mode: x.mode, why: x.why, calls: x.calls }))));
           if (s.recvCalls && st === s.steps[0]) check(smp.length > 0 && smp.some((x) => x.mode === 'targeted' && s.recvCalls(x.calls)), `${t} received: panes drawn = ${s.why}`, JSON.stringify(smp.map((x) => x.calls)));
           check(smp.every((x) => !Object.keys(x.writes || {}).length && x.dbSame !== false), `${t} received: the redraw wrote nothing and did not change DB`, JSON.stringify(smp.map((x) => [x.writes, x.dbSame])));
         }
@@ -167,12 +175,13 @@ try {
           await resetOrc(A);
           await on(A, () => { undo(); }); const ru = await on(A, () => __orc.res.slice());
           check(ru.length >= 1 && eqAll(ru), `${t} undo${s.steps.length > 1 ? ' #' + (i + 1) : ''}: the targeted draw equals a full render()`, ru.length ? firstDiff(ru) : 'undo drew nothing through _renderFor');
-          if (s.undo !== 'any') check(ru.length >= 1 && ru.every((x) => x.mode === s.undo), `${t} undo${s.steps.length > 1 ? ' #' + (i + 1) : ''}: drawn ${s.undo === 'full' ? 'whole' : 'by the targeted path'}`, JSON.stringify(ru.map((x) => ({ mode: x.mode, calls: x.calls }))));
+          if (s.undo !== 'any') check(ru.length >= 1 && ru.every((x) => x.mode === s.undo), `${t} undo${s.steps.length > 1 ? ' #' + (i + 1) : ''}: drawn ${s.undo === 'full' ? 'whole' : 'by the targeted path'}`, JSON.stringify(ru.map((x) => ({ mode: x.mode, why: x.why, calls: x.calls }))));
           await resetOrc(A);
           await on(A, () => { redo(); }); const rr = await on(A, () => __orc.res.slice());
           check(rr.length >= 1 && eqAll(rr), `${t} redo${s.steps.length > 1 ? ' #' + (i + 1) : ''}: the targeted draw equals a full render()`, rr.length ? firstDiff(rr) : 'redo drew nothing through _renderFor');
-          if (s.undo !== 'any') check(rr.length >= 1 && rr.every((x) => x.mode === s.undo), `${t} redo${s.steps.length > 1 ? ' #' + (i + 1) : ''}: drawn ${s.undo === 'full' ? 'whole' : 'by the targeted path'}`, JSON.stringify(rr.map((x) => ({ mode: x.mode, calls: x.calls }))));
-          check(ru.concat(rr).every((x) => !Object.keys(x.writes || {}).length && x.dbSame !== false), `${t} undo/redo: the redraw wrote nothing and did not change DB`, JSON.stringify(ru.concat(rr).map((x) => [x.writes, x.dbSame])));
+          if (s.undo !== 'any') check(rr.length >= 1 && rr.every((x) => x.mode === s.undo), `${t} redo${s.steps.length > 1 ? ' #' + (i + 1) : ''}: drawn ${s.undo === 'full' ? 'whole' : 'by the targeted path'}`, JSON.stringify(rr.map((x) => ({ mode: x.mode, why: x.why, calls: x.calls }))));
+          /* only the targeted draw is held to "never touches DB": a whole render() may legitimately create a default (ensureNoteKinds) */
+          check(ru.concat(rr).every((x) => x.mode !== 'targeted' || (!Object.keys(x.writes || {}).length && x.dbSame !== false)), `${t} undo/redo: the redraw wrote nothing and did not change DB`, JSON.stringify(ru.concat(rr).map((x) => [x.mode, x.writes, x.dbSame])));
           if (i < s.steps.length - 1) { await on(A, () => { render(); }); }
         }
         A.offline = false; await settle(cloud, A, B);

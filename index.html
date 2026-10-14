@@ -5970,38 +5970,42 @@ function _rdFrameAfter(ch){
   return ch;
 }
 /* the plan: what to draw, or null = draw everything */
+let _rdWhy='';   /* why the last plan gave up (for the checks and the console) */
+function _rdNo(why){ _rdWhy=why; return null; }
 function _rdPlan(ch,opts){
-  if(!ch||ch.unknown||(ch.ord&&ch.ord.length)) return null;
+  if(!ch||ch.unknown) return _rdNo('the change is not known');
+  if(ch.ord&&ch.ord.length) return _rdNo('the order of '+ch.ord.join(', ')+' moved');
   /* the head (settings and bookkeeping): only these differences are known to draw nothing, or only the landing page */
   let landing=false;
   if(ch.head){
-    if(!Array.isArray(ch.head)) return null;
+    if(!Array.isArray(ch.head)) return _rdNo('a setting changed that cannot be read');
     for(const k of ch.head){
       if(k==='themeAt'||k==='theme.lastArticle'||k==='theme.lastFolder') continue;
       if(k==='theme.lastEditedArticle'){ landing=true; continue; }
-      return null;
+      return _rdNo('a setting changed: '+k);
     }
   }
-  if(ch.keys.length>_RD_MAX+8) return null;
+  if(ch.keys.length>_RD_MAX+8) return _rdNo('more than '+_RD_MAX+' records');
   const arts=[]; let jeb=false;
   for(const x of ch.keys){
     if(x.c==='jeb'||x.c==='jebPockets'){ jeb=true; continue; }
-    if(x.c!=='articles') return null;
+    if(x.c!=='articles') return _rdNo('a change to '+x.c);
     let b=x.b, a=x.a;
-    if(x.eb!==undefined||x.ea!==undefined||(b===undefined&&a===undefined)){ if(!x.eb||!x.ea) return null; b=_rdRecOf(x.eb); a=x.ea.r; }
-    if(!b||!a) return null;
+    if(x.eb!==undefined||x.ea!==undefined||(b===undefined&&a===undefined)){ if(!x.eb||!x.ea) return _rdNo('a note added or removed'); b=_rdRecOf(x.eb); a=x.ea.r; }
+    if(!b||!a) return _rdNo('a note added or removed');
     const f=_rdFields(b,a);
     if(!f.length&&b.updatedAt===a.updatedAt) continue;   /* an equal copy of the same note: nothing to draw */
     arts.push({id:String(x.id),b:b,a:a,f:f});
   }
-  if(arts.length>_RD_MAX) return null;
+  if(arts.length>_RD_MAX) return _rdNo('more than '+_RD_MAX+' notes');
   const prev=(opts&&opts.prev!==undefined)?opts.prev:ST.article;
-  if(ST.mrjQ||ST.calEditEvt||ST.calManageCats||ST.article==='cal'||prev==='cal'||ST.noteModal||(typeof ST.folder==='string'&&ST.folder.startsWith('db-'))) return null;
-  if(document.querySelector('.float-win')) return null;
+  if(ST.mrjQ||ST.calEditEvt||ST.calManageCats||ST.article==='cal'||prev==='cal'||ST.noteModal||(typeof ST.folder==='string'&&ST.folder.startsWith('db-'))) return _rdNo('a calendar, review or pop-up is showing');
+  if(document.querySelector('.float-win')) return _rdNo('a Multi window is open');
   const p={sb:false,p2h:false,p2c:false,p3:false,tab:false,jeb:jeb,ids:[]};
   const cur=ST.article, curA=(cur!=null)?DB.articles.find(a=>a.id===cur):null;
   if(landing&&!curA) p.p3=true;   /* the landing page names the last edited note */
-  if(opts&&opts.p3) p.p3=true;
+  /* the open note was closed (undo): its highlight in the list (and in the sidebar's search results) goes with it */
+  if(opts&&opts.p3){ p.p3=true; p.p2c=true; if(ST.search&&ST.search.trim()) p.sb=true; }
   if(!arts.length) return p;
   const folderView=DB.folders.some(f=>f.id===ST.folder);
   const now=new Date(), T=Math.min(new Date(now.getFullYear(),now.getMonth()-1,1).getTime(),new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime()-((now.getDay()+6)%7+7)*864e5);
@@ -6049,8 +6053,9 @@ function _renderFor(ch,fullFn,opts){
     try{ _rdRun(p); _rdLast={mode:'targeted',plan:p,ms:performance.now()-t0}; return 'targeted'; }
     catch(e){ console.error('_rdRun:',e); }
   }
+  const why=p?'a draw threw':_rdWhy;
   fullFn();
-  _rdLast={mode:'full',plan:null,ms:performance.now()-t0};
+  _rdLast={mode:'full',plan:null,why:why,ms:performance.now()-t0};
   return 'full';
 }
 
