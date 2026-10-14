@@ -837,6 +837,12 @@ html.jeb-kb #jeb-bar,html.jeb-kb #zab-btn,html.jeb-kb #zab-lay{display:none!impo
 .jeb-chip.chosen .jeb-tk{background:var(--green);border-color:var(--green)}
 .jeb-chip.chosen{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
 #jeb-bar.choosing [data-jeb-cards]{display:none!important}
+/* v05.21 · Z7 — dragging a pocket: only the lifted one is touch-action:none (the bar still scrolls with a finger); nothing is fixed */
+.zx-box{user-select:none;-webkit-user-select:none}
+.zx-lift{position:relative;z-index:5;touch-action:none;box-shadow:0 6px 18px rgba(0,0,0,.3);transition:none!important}
+.zx-b{box-shadow:inset 0 3px 0 var(--green)}
+.zx-a{box-shadow:inset 0 -3px 0 var(--green)}
+@media (prefers-reduced-motion:no-preference){.zx-box.zx-anim .zx-o{transition:transform .15s ease}}
 .jeb-all .jeb-sw{background:conic-gradient(#FFF1A8 0 25%,#FFD9B8 0 50%,#CFE8FF 0 75%,#F6D2E4 0)}
 @media(max-width:639.98px){#jeb-bar.choosing .jeb-new{display:none}}
 .jeb-chip.on{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
@@ -22652,7 +22658,9 @@ const _JEB_TYPE_SEED={'jp-link':'links','jp-task':'tasks','jp-idea':'ideas','jp-
 function _jebType(pk){ if(!pk) return 'plain'; return _JEB_TYPES.includes(pk.ztype)?pk.ztype:(_JEB_TYPE_SEED[pk.id]||'plain'); }
 function jebMovePocket(id,toIndex){
   _jebEnsure(); const list=jebChildren(_jebParentOf(id)), i=list.findIndex(p=>p.id===id); if(i<0) return false;   /* v05.16: among siblings */
+  const was=list.map(x=>x.id).join('|');
   const p=list.splice(i,1)[0]; list.splice(Math.max(0,Math.min(list.length,toIndex|0)),0,p);
+  if(list.map(x=>x.id).join('|')===was) return false;   /* v05.21 · Z7: the same place is not a change - nothing stamped, nothing written */
   _jebRenumber(list,_jebNow()); persist(); return true;
 }
 function jebDeletePocket(id){
@@ -23094,7 +23102,7 @@ function _zabClose(){
   const b=_jebEl('zab-btn'); if(b) b.setAttribute('aria-expanded','false');
 }
 function _zabPaint(anim){
-  const lay=_jebEl('zab-lay'); if(!lay) return;
+  const lay=_jebEl('zab-lay'); if(!lay||_zxDrag) return;
   const L=_zabLayout(), t=_jebTree(), cnt=_jebOpenCounts(), roll=_jebRoll(cnt), R=id=>roll.get(id)||{n:0,red:false,kids:false};
   const total=t.flat.reduce((n,x)=>n+(cnt[x.id]||0),0);
   const num=a=>'<span class="zb-n'+(a.red?' jt-red':'')+'">'+a.n+'</span>';
@@ -23165,15 +23173,8 @@ function _zabWireLay(lay){
     }
     _zabClose(); jebOpenPanel(id);
   });
-  lay.addEventListener('contextmenu',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; e.preventDefault(); _jebPocketMenu(r.dataset.pid,null,null,r); });
-  let lp=null, lx=0, ly=0;   /* long-press on a pocket = its menu, as on the bar */
-  lay.addEventListener('touchstart',e=>{
-    const r=e.target.closest('[data-pid]'); if(!r||e.touches.length!==1) return;
-    lx=e.touches[0].clientX; ly=e.touches[0].clientY; clearTimeout(lp);
-    lp=setTimeout(()=>{ _jebLPAt=Date.now(); _jebPocketMenu(r.dataset.pid,null,null,r); },500);
-  },{passive:true});
-  lay.addEventListener('touchmove',e=>{ const t=e.touches[0]; if(lp&&(Math.abs(t.clientX-lx)>8||Math.abs(t.clientY-ly)>8)){ clearTimeout(lp); lp=null; } },{passive:true});
-  ['touchend','touchcancel'].forEach(n=>lay.addEventListener(n,()=>{ clearTimeout(lp); lp=null; },{passive:true}));
+  lay.addEventListener('contextmenu',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; e.preventDefault(); if(_zxHold) return; _jebPocketMenu(r.dataset.pid,null,null,r); });
+  _zabWireDrag(lay,(c)=>_jebPocketMenu(c.dataset.pid,null,null,c));   /* v05.21 · Z7: press-hold-move reorders up and down among siblings; a long-press released in place = the menu, as on the bar */
 }
 function _zabCardClose(){ const c=_jebEl('zab-card'); if(c) c.remove(); }
 /* the small card anchored to the button: placed by measuring, clamped to the screen */
@@ -23295,18 +23296,118 @@ function _jebMakeBar(){
   bar.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.matches('.jeb-main,[data-jeb-cards],.jeb-new,.jeb-choose')){ e.preventDefault(); e.target.click(); } });
   bar.addEventListener('contextmenu',e=>{
     const c=e.target.closest('.jeb-chip'); if(!c||!c.dataset.pid) return;
-    e.preventDefault(); _jebPocketMenu(c.dataset.pid,e.clientX,e.clientY);
+    e.preventDefault(); if(_zxHold) return;   /* a held finger lifts the capsule (Z7): the menu waits for the release */
+    _jebPocketMenu(c.dataset.pid,e.clientX,e.clientY);
   });
-  let lp=null, lx=0, ly=0;
-  bar.addEventListener('touchstart',e=>{
-    const c=e.target.closest('.jeb-chip'); if(!c||!c.dataset.pid||e.touches.length!==1) return;
-    lx=e.touches[0].clientX; ly=e.touches[0].clientY;
-    clearTimeout(lp);
-    lp=setTimeout(()=>{ _jebLPAt=Date.now(); _jebPocketMenu(c.dataset.pid,lx,ly); },500);
-  },{passive:true});
-  bar.addEventListener('touchmove',e=>{ const t=e.touches[0]; if(lp&&(Math.abs(t.clientX-lx)>8||Math.abs(t.clientY-ly)>8)){ clearTimeout(lp); lp=null; } },{passive:true});
-  ['touchend','touchcancel'].forEach(n=>bar.addEventListener(n,()=>{ clearTimeout(lp); lp=null; },{passive:true}));
+  _zabWireDrag(bar,(c,x,y)=>_jebPocketMenu(c.dataset.pid,x,y));   /* v05.21 · Z7: press-and-drag with a mouse, press-hold-drag with a finger; a held finger released without moving = the menu, as before */
   return bar;
+}
+/* ══ v05.21 · Z7 — drag a pocket to its own place among its siblings ═══════════
+   One engine for every place a row of pockets is drawn: the bar (x), a pocket's row of pockets inside (x), the phone's Rail (y, drawn
+   bottom-up, so `rev`), Drawer (y, only rows of the same parent) and Columns (y, one column). A drop is ALWAYS a place among the same
+   siblings, through jebMovePocket(id,toIndex) - never into another pocket (that is "📂 Move into…"). Mouse: press and move > 5 px.
+   Finger: a 500 ms hold lifts the capsule; moving > 8 px then drags, a release without moving opens the menu as before; a swipe that
+   starts without the hold is not ours (the bar scrolls). Nothing is written to <html>; the lifted capsule and the ones sliding aside
+   carry only a transform on themselves (the bar/list is the positioned parent, no new fixed element). While a drag runs the bar, the
+   layouts and the panel are not repainted; the drop repaints. */
+let _zxDrag=null, _zxHold=null;
+const _ZX_SEL='#jeb-bar>.jeb-chip[data-pid],.jx-kid,.zr-b[data-pid],.zd-row[data-pid],.zc-row[data-pid]';
+function _zxCfg(c){
+  if(!c||!c.dataset||!c.dataset.pid||_zxDrag) return null;
+  const pid=c.dataset.pid, box=c.parentElement; let sibs, axis='x', rev=false, slide=true;
+  if(c.matches('#jeb-bar>.jeb-chip')){ if(_jebChoose) return null; sibs=[...box.children].filter(n=>n.matches('.jeb-chip[data-pid]')); }   /* Choose: ticking, no dragging */
+  else if(c.matches('.jx-kid')) sibs=[...box.querySelectorAll('.jx-kid')];
+  else if(c.matches('.zr-b')){ sibs=[...box.children].filter(n=>n.matches('.zr-b[data-pid]')); axis='y'; rev=true; slide=false; }
+  else if(c.matches('.zd-row')){ const par=_jebParentOf(pid)||''; sibs=[...box.querySelectorAll('.zd-row[data-pid]')].filter(n=>(_jebParentOf(n.dataset.pid)||'')===par); axis='y'; slide=false; }
+  else if(c.matches('.zc-row')){ sibs=[...box.querySelectorAll('.zc-row[data-pid]')]; axis='y'; slide=false; }
+  else return null;
+  if(sibs.length<2||!sibs.includes(c)) return null;
+  return {c,pid,box,sibs,axis,rev,slide};
+}
+function _zxBegin(cfg,px,py){
+  const {c,box,sibs,axis}=cfg, X=axis==='x', r0=sibs.map(n=>n.getBoundingClientRect()), oi=sibs.indexOf(c);
+  const gap=X&&sibs.length>1?Math.max(0,r0[1].left-r0[0].right):0;
+  _zxDrag={cfg,r0,oi,gap,s0:X?box.scrollLeft:box.scrollTop,px0:px,py0:py,px,py,idx:oi,out:false,tm:null};
+  _jebDrag={zx:1};   /* the panel and the deck skip a repaint while this is set */
+  box.classList.add('zx-box'); if(!_jebReduced()) box.classList.add('zx-anim');
+  c.classList.add('zx-lift'); sibs.forEach(n=>{ if(n!==c) n.classList.add('zx-o'); });
+  document.addEventListener('keydown',_zxKey,true);
+  _zxDrag.tm=setInterval(_zxAuto,16);   /* the bar scrolls by itself while a capsule is held near its edge */
+}
+function _zxKey(e){ if(e.key==='Escape'&&_zxDrag){ e.preventDefault(); e.stopImmediatePropagation(); _zxEnd(false); } }
+function _zxAuto(){
+  const d=_zxDrag; if(!d||d.out) return; const {box,axis}=d.cfg, X=axis==='x', br=box.getBoundingClientRect();
+  const v=X?d.px:d.py, lo=X?br.left:br.top, hi=X?br.right:br.bottom, Z=48; let dv=0;
+  if(v<lo+Z) dv=-Math.ceil(14*Math.min(1,(lo+Z-v)/Z)); else if(v>hi-Z) dv=Math.ceil(14*Math.min(1,(v-(hi-Z))/Z));
+  if(!dv) return;
+  const was=X?box.scrollLeft:box.scrollTop; if(X) box.scrollLeft+=dv; else box.scrollTop+=dv;
+  if((X?box.scrollLeft:box.scrollTop)!==was) _zxUpdate();
+}
+function _zxMove(x,y){ const d=_zxDrag; if(!d) return; d.px=x; d.py=y; _zxUpdate(); }
+function _zxUpdate(){
+  const d=_zxDrag; if(!d) return; const {c,box,sibs,axis,rev,slide}=d.cfg, X=axis==='x', r0=d.r0, oi=d.oi;
+  const ds=(X?box.scrollLeft:box.scrollTop)-d.s0, p=X?d.px-d.px0:d.py-d.py0, mid=r=>X?(r.left+r.right)/2:(r.top+r.bottom)/2;
+  c.style.transform=(X?'translateX(':'translateY(')+(p+ds)+'px) scale(1.04)';
+  const br=box.getBoundingClientRect(), M=X?16:24;
+  d.out=d.px<br.left-M||d.px>br.right+M||d.py<br.top-M||d.py>br.bottom+M;   /* outside the bar / list = put back */
+  const dc=mid(r0[oi])+p; let idx=0;
+  sibs.forEach((n,i)=>{ if(i===oi) return; const m=mid(r0[i])-ds; if(rev?m>dc:m<dc) idx++; });
+  d.idx=d.out?oi:idx;
+  sibs.forEach(n=>n.classList.remove('zx-b','zx-a'));
+  if(slide){
+    const sh=r0[oi].width+d.gap;
+    sibs.forEach((n,i)=>{ if(i===oi) return; const k=i<oi?i:i-1, f=k<d.idx?k:k+1, dl=f-i; n.style.transform=dl?'translateX('+(dl*sh)+'px)':''; });
+  }else if(!d.out&&d.idx!==oi){
+    const others=sibs.filter((n,i)=>i!==oi), before=d.idx<others.length, t=before?others[d.idx]:others[others.length-1];
+    t.classList.add(before!==rev?'zx-b':'zx-a');
+  }
+}
+function _zxEnd(commit){
+  const d=_zxDrag; if(!d) return; _zxDrag=null; _jebDrag=null; clearInterval(d.tm);
+  document.removeEventListener('keydown',_zxKey,true);
+  const {c,box,sibs,pid}=d.cfg;
+  c.style.transform=''; c.classList.remove('zx-lift'); sibs.forEach(n=>{ n.style.transform=''; n.classList.remove('zx-o','zx-b','zx-a'); });
+  box.classList.remove('zx-box','zx-anim');
+  _jebLPAt=Date.now();   /* the click that ends a drag is not a tap */
+  if(commit&&!d.out&&d.idx!==d.oi) jebMovePocket(pid,d.idx);   /* one persist, only if the place really changed */
+  _jebBarSig=''; _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); if(_zabOpen) _zabPaint();
+}
+function _zxHoldEnd(){ const h=_zxHold; _zxHold=null; if(!h) return; clearTimeout(h.lp); h.c.classList.remove('zx-lift'); if(h.begun) _zxEnd(false); }
+function _zabWireDrag(root,menu){
+  root.addEventListener('pointerdown',e=>{   /* mouse (and pen): press, move > 5 px */
+    if(e.pointerType==='touch'||e.button) return;
+    const c=e.target.closest(_ZX_SEL), cfg=_zxCfg(c); if(!cfg) return;
+    const sx=e.clientX, sy=e.clientY; let begun=false;
+    const off=()=>{ document.removeEventListener('pointermove',mv,true); document.removeEventListener('pointerup',up,true); document.removeEventListener('pointercancel',cn,true); };
+    const mv=ev=>{ if(!begun){ if(Math.hypot(ev.clientX-sx,ev.clientY-sy)<=5) return; begun=true; _zxBegin(cfg,sx,sy); } _zxMove(ev.clientX,ev.clientY); };
+    const up=()=>{ off(); if(begun) _zxEnd(true); };
+    const cn=()=>{ off(); if(begun) _zxEnd(false); };
+    document.addEventListener('pointermove',mv,true); document.addEventListener('pointerup',up,true); document.addEventListener('pointercancel',cn,true);
+  });
+  root.addEventListener('touchstart',e=>{
+    _zxHoldEnd();
+    const c=e.target.closest(_ZX_SEL); if(!c||!c.dataset.pid||e.touches.length!==1) return;
+    const t=e.touches[0], h=_zxHold={c,x:t.clientX,y:t.clientY,lifted:false,cfg:null,begun:false,lp:null};
+    h.lp=setTimeout(()=>{
+      h.lp=null; h.lifted=true; h.cfg=_zxCfg(c);
+      if(h.cfg) c.classList.add('zx-lift');
+      else{ _jebLPAt=Date.now(); menu(c,h.x,h.y); }   /* nothing to reorder (Choose, or a single pocket): the menu, as before */
+    },500);
+  },{passive:true});
+  root.addEventListener('touchmove',e=>{
+    const h=_zxHold; if(!h) return; const t=e.touches[0], moved=Math.hypot(t.clientX-h.x,t.clientY-h.y);
+    if(!h.lifted){ if(moved>8){ clearTimeout(h.lp); _zxHold=null; } return; }   /* a swipe without the hold: the bar scrolls */
+    if(!h.cfg) return;
+    if(e.cancelable) e.preventDefault();
+    if(!h.begun){ if(moved<=8) return; h.begun=true; _zxBegin(h.cfg,h.x,h.y); }
+    _zxMove(t.clientX,t.clientY);
+  },{passive:false});
+  const fin=e=>{
+    const h=_zxHold; if(!h) return; _zxHold=null; clearTimeout(h.lp);
+    if(h.begun){ h.c.classList.remove('zx-lift'); _zxEnd(e.type==='touchend'); }
+    else if(h.lifted){ h.c.classList.remove('zx-lift'); if(h.cfg&&e.type==='touchend'){ _jebLPAt=Date.now(); menu(h.c,h.x,h.y); } }
+  };
+  ['touchend','touchcancel'].forEach(n=>root.addEventListener(n,fin,{passive:true}));
 }
 function _jebOpenCounts(){
   const m={}; (DB.jeb||[]).forEach(i=>{ if(i&&!i.done) m[i.pocketId]=(m[i.pocketId]||0)+1; }); return m;
@@ -23333,6 +23434,7 @@ function _jebRoll(cnt){
 }
 const _JEB_ROLL_TITLE=' — the number counts the open items in this pocket and in every pocket inside it';
 function _jebPaintBar(bar){
+  if(_zxDrag) return;   /* v05.21 · Z7: never repainted under a dragged capsule; the drop repaints */
   const t=_jebTree(), cnt=_jebOpenCounts(), roll=_jebRoll(cnt);
   const allP=t.flat.map(x=>t.byId.get(x.id)), ids=allP.map(p=>p.id);
   /* the bar shows the top level; Choose lists every pocket (nested ones marked ↳), so any depth can be picked */
@@ -23440,15 +23542,8 @@ function _jebMakePanel(){
     if(t.closest('a.jeb-lnk')) return;   /* v05.17: the address opens in a new tab; the rest of the text edits */
     if(t.closest('.jeb-tx')) _jebStartEdit(row.dataset.iid);
   });
-  p.addEventListener('contextmenu',e=>{ const k=e.target.closest('.jx-kid'); if(!k) return; e.preventDefault(); _jebPocketMenu(k.dataset.pid,e.clientX,e.clientY); });
-  let klp=null, kx=0, ky=0;   /* long-press on a pocket inside = its menu, as on the bar */
-  p.addEventListener('touchstart',e=>{
-    const k=e.target.closest('.jx-kid'); if(!k||e.touches.length!==1) return;
-    kx=e.touches[0].clientX; ky=e.touches[0].clientY; clearTimeout(klp);
-    klp=setTimeout(()=>{ _jebLPAt=Date.now(); _jebPocketMenu(k.dataset.pid,kx,ky); },500);
-  },{passive:true});
-  p.addEventListener('touchmove',e=>{ const t=e.touches[0]; if(klp&&(Math.abs(t.clientX-kx)>8||Math.abs(t.clientY-ky)>8)){ clearTimeout(klp); klp=null; } },{passive:true});
-  ['touchend','touchcancel'].forEach(n=>p.addEventListener(n,()=>{ clearTimeout(klp); klp=null; },{passive:true}));
+  p.addEventListener('contextmenu',e=>{ const k=e.target.closest('.jx-kid'); if(!k) return; e.preventDefault(); if(_zxHold) return; _jebPocketMenu(k.dataset.pid,e.clientX,e.clientY); });
+  _zabWireDrag(p,(c,x,y)=>_jebPocketMenu(c.dataset.pid,x,y));   /* v05.21 · Z7: a pocket inside reorders among its siblings; a long-press released in place = its menu, as on the bar */
   p.addEventListener('change',e=>{
     const k=e.target.closest('.jeb-tick'); if(!k) return;
     jebToggleDone(k.closest('.jeb-it').dataset.iid); _jebPanelSig=''; jebRefresh();
