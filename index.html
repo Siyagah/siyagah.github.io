@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.12">
+<meta name="app-version" content="05.13">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1795,6 +1795,31 @@ sup.ann-sup:hover{text-decoration:underline}
 .rm-big{display:block;width:100%;box-sizing:border-box;margin:4px 0;padding:11px 14px;border:none;border-radius:8px;
   background:var(--green);color:var(--on-accent);font-family:var(--ui);font-size:14px;font-weight:600;cursor:pointer;min-height:44px}
 #rm-fbt{font-family:monospace;font-size:11px}
+/* v05.13 · S4a — Evernote import (dry run). A dialog on a tablet and laptop, a bottom sheet on a phone; it sits over the Zab bar on purpose, so it is not in the --jeb-h lists. */
+#enx-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10060;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
+#enx-modal.open{display:flex}
+#enx-box{background:var(--paper);border-radius:12px;padding:18px 22px;width:min(640px,94vw);max-height:90vh;overflow-y:auto;box-sizing:border-box;
+  box-shadow:0 8px 32px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px;color:var(--t1);font-size:13px}
+.rm-big.alt{background:var(--hover);color:var(--t1)}
+.enx-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
+.enx-grid dt{color:var(--t2)}
+.enx-grid dd{margin:0;color:var(--t1);font-weight:600}
+.enx-prog{padding:9px 12px;background:var(--hover);border-radius:8px;line-height:1.4;color:var(--t1)}
+.enx-stack{border:1px solid var(--border2);border-radius:8px;background:var(--white);color:var(--t1)}
+.enx-stack>summary{cursor:pointer;padding:10px 12px;min-height:24px;font-weight:600;color:var(--t1)}
+.enx-t{width:100%;border-collapse:collapse;font-size:12.5px;color:var(--t1)}
+.enx-t th{text-align:right;color:var(--t2);font-weight:600;padding:4px 8px}
+.enx-t td{text-align:right;padding:5px 8px;border-top:1px solid var(--border)}
+.enx-t th:first-child,.enx-t td:first-child{text-align:left;word-break:break-word}
+.enx-broken{margin:0;padding-left:20px;line-height:1.45;color:var(--t1)}
+.enx-dry{padding:9px 12px;border:1px solid var(--border2);border-radius:8px;background:var(--white);color:var(--t1);line-height:1.45;font-weight:600}
+.enx-fb{width:100%;box-sizing:border-box;height:140px;font-family:monospace;font-size:11px}
+@media(max-width:639.98px){
+  .enx-dirbtn{display:none}
+  .enx-filebtn{background:var(--green);color:var(--on-accent)}
+  #enx-modal{align-items:flex-end}
+  #enx-box{width:100%;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+  .enx-stack>summary{min-height:44px;display:flex;align-items:center}}
 @media(max-width:639.98px){
   #remmail-modal{align-items:flex-end}
   #remmail-box{width:100%;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}}
@@ -3574,7 +3599,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.12</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.13</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3606,6 +3631,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <button class="sb-mi" onclick="addRootFolder();closeSBTools()">📁 New Folder</button>
           <div class="sb-mi" onclick="addStarterMyDatabaseFolders();closeSBTools()" title="Adds MyResources, MyIdeas, MyMemories, MyPlanning, MyBuy-MyShopping, MyQueries, MyTravel under MyDatabase — safe to run more than once">🗂 Add Starter MyDatabase Folders</div>
           <div class="sb-mi" onclick="syncKnowledgeBase();closeSBTools()" title="Update the built-in guide notes to the latest version">📚 Sync Knowledge Base</div>
+          <div class="sb-mi" onclick="openEnexImport();closeSBTools()" title="Read an Evernote export and see what an import would bring in. A dry run: nothing is added.">📥 Evernote import</div>
           <div class="sb-mi-hd">Reference &amp; dates</div>
           <div class="sb-mi" onclick="openCiteModal();closeSBTools()" title="Insert Qurʿan or Hadith reference into note">📖 Insert Reference</div>
           <div class="sb-mi" onclick="openCalSettings();closeSBTools()" title="Set your country for public holidays">📅 Calendar Country</div>
@@ -26982,6 +27008,288 @@ function setup() {
 function _remJson(){
   let tz='UTC'; try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'; }catch(e){}
   return JSON.stringify({timeZone:tz,exceptionLogging:'STACKDRIVER',runtimeVersion:'V8',oauthScopes:_REM_SCOPES},null,2)+'\n';
+}
+/* ── v05.13 · S4a — Evernote import, the DRY RUN. Reads an evernote-backup export (one .enex per notebook, a folder per stack) and shows what an
+   import would bring in. NOTHING is written: not DB, DB.theme, localStorage, IndexedDB or the cloud; the last result lives only in _enx.res.
+   A file is never held whole: it is streamed, and the scanner keeps only the small text of each note (title, dates, tags, resource names). The
+   <content> and every <data> are COUNTED as they pass and thrown away. ── */
+const _enx={view:'pick',run:0,stop:false,busy:false,res:null,read:0,total:0,notes:0,cur:'',skipped:0,fb:''};
+const _enxYield=()=>new Promise(r=>setTimeout(r,0));
+const _enxMB=b=>(b/1048576).toFixed(1)+' MB';
+const _enxN=n=>Number(n).toLocaleString('en-US');
+function _enxUnent(s){
+  s=String(s).replace(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/,'$1');
+  return s.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi,(m,e)=>{
+    e=e.toLowerCase();
+    if(e==='amp') return '&'; if(e==='lt') return '<'; if(e==='gt') return '>'; if(e==='quot') return '"'; if(e==='apos') return "'";
+    const c=e[1]==='x'?parseInt(e.slice(2),16):parseInt(e.slice(1),10);
+    try{ return String.fromCodePoint(c); }catch(x){ return m; }
+  });
+}
+/* 'YYYYMMDDTHHMMSSZ' -> {iso, sec} (sec = whole seconds since 1970, the "same second" the import will match on), or null */
+function _enxDate(s){
+  const m=/^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z$/.exec(String(s).trim()); if(!m) return null;
+  const y=+m[1],mo=+m[2],d=+m[3],h=+m[4],mi=+m[5],se=+m[6], ms=Date.UTC(y,mo-1,d,h,mi,se);
+  const t=new Date(ms); if(isNaN(ms)||t.getUTCFullYear()!==y||t.getUTCMonth()!==mo-1||t.getUTCDate()!==d||h>23||mi>59||se>59) return null;
+  return {iso:t.toISOString().replace('.000Z','Z'),sec:Math.floor(ms/1000)};
+}
+function _enxKind(mime){
+  mime=String(mime||'').toLowerCase();
+  return mime.startsWith('image/')?'img':mime==='application/pdf'?'pdf':mime.startsWith('audio/')?'audio':'other';
+}
+/* The incremental scanner. feed(text) as it arrives, end() when the file is done; onNote gets one small object per <note>. */
+function _enxScanner(onNote){
+  let buf='',mode=0,nb='',idx=0,cLen=0,cHead='',cTail='',cSeen=false,dN=0,dTail='',over=false;
+  const KEEP=12;
+  function finish(unterminated){
+    const g=re=>{ const m=re.exec(nb); return m?_enxUnent(m[1]):null; };
+    const info={n:idx,title:g(/<title>([\s\S]*?)<\/title>/),err:null,tags:[],res:[],cIso:null,sec:null,srcUrl:null,contentLen:cLen};
+    if(unterminated) info.err='the note is cut short (no end)';
+    if(over) info.err=info.err||'the note is too large to read';
+    const cm=/<created>([^<]*)<\/created>/.exec(nb), um=/<updated>([^<]*)<\/updated>/.exec(nb);
+    if(cm){ const d=_enxDate(cm[1]); if(d){ info.cIso=d.iso; info.sec=d.sec; } else info.err=info.err||'the created date is not valid'; }
+    if(um&&!_enxDate(um[1])) info.err=info.err||'the updated date is not valid';
+    if(cSeen){
+      const cd=/^\s*<!\[CDATA\[/.test(cHead);
+      if(cd&&!/\]\]>\s*$/.test(cTail)) info.err=info.err||'the content is cut short';
+    }
+    const tr=/<tag>([\s\S]*?)<\/tag>/g; let m;
+    while((m=tr.exec(nb))) info.tags.push(_enxUnent(m[1]));
+    const na=/<note-attributes>([\s\S]*?)<\/note-attributes>/.exec(nb);
+    if(na){ const s=/<source-url>([\s\S]*?)<\/source-url>/.exec(na[1]); if(s) info.srcUrl=_enxUnent(s[1]); }
+    const rr=/<resource>([\s\S]*?)<\/resource>/g;
+    while((m=rr.exec(nb))){
+      const b=/<data-bytes>(\d+)<\/data-bytes>/.exec(m[1]), mi=/<mime>([\s\S]*?)<\/mime>/.exec(m[1]), fn=/<file-name>([\s\S]*?)<\/file-name>/.exec(m[1]);
+      info.res.push({mime:mi?_enxUnent(mi[1]).trim():'',name:fn?_enxUnent(fn[1]):'',bytes:b?+b[1]:0});
+    }
+    onNote(info);
+    nb=''; mode=0;
+  }
+  function eatContent(s){
+    cLen+=s.length;
+    if(cHead.length<400) cHead+=s.slice(0,400-cHead.length);
+    const w=s.slice(-400).replace(/\s+/g,''); if(w) cTail=(cTail+w).slice(-40);   /* whitespace-free, so a long run of spaces before ]]> cannot push it out */
+  }
+  function eatData(s){
+    let n=0; for(let i=0,L=s.length;i<L;i++) if(s.charCodeAt(i)>32) n++;
+    dN+=n;
+    if(n) dTail=(dTail+s.slice(-8).replace(/\s/g,'')).slice(-4);
+  }
+  function dataAt(seg){
+    let from=0;
+    for(;;){ const p=seg.indexOf('<data',from); if(p<0) return -1; const c=seg.charAt(p+5); if(c===' '||c==='>'||c==='\n'||c==='\t'||c==='\r') return p; from=p+5; }
+  }
+  function feed(s){
+    buf+=s;
+    for(;;){
+      if(mode===0){
+        const i=buf.indexOf('<note>');
+        if(i<0){ buf=buf.slice(-6); return; }
+        buf=buf.slice(i+6); mode=1; nb=''; idx++; cLen=0; cHead=''; cTail=''; cSeen=false; over=false;
+      }else if(mode===1){
+        const e=buf.indexOf('</note>'), seg=e>=0?buf.slice(0,e):buf;
+        const a=seg.indexOf('<content>'), d=dataAt(seg);
+        const useC=a>=0&&(d<0||a<d), p=useC?a:d, nn=seg.indexOf('<note>');
+        if(nn>=0&&(p<0||nn<p)){   /* a new <note> before this one ended: this one is unterminated; the next is not lost with it */
+          if(nb.length<1e6) nb+=seg.slice(0,nn);
+          buf=buf.slice(nn+6); finish(true); mode=1; nb=''; idx++; cLen=0; cHead=''; cTail=''; cSeen=false; over=false; continue;
+        }
+        if(p>=0){
+          if(useC){ if(nb.length<1e6) nb+=seg.slice(0,p); buf=buf.slice(p+9); mode=2; cSeen=true; cLen=0; cHead=''; cTail=''; continue; }
+          const j=buf.indexOf('>',p); if(j<0) return;
+          if(nb.length<1e6) nb+=seg.slice(0,p); buf=buf.slice(j+1); mode=3; dN=0; dTail=''; continue;
+        }
+        if(e>=0){ if(nb.length<1e6) nb+=seg; buf=buf.slice(e+7); finish(false); continue; }
+        if(nb.length<1e6) nb+=buf.slice(0,-KEEP); else over=true;
+        buf=buf.slice(-KEEP); return;
+      }else if(mode===2){
+        const k=buf.indexOf('</content>');
+        if(k<0){ eatContent(buf.slice(0,-KEEP)); buf=buf.slice(-KEEP); return; }
+        eatContent(buf.slice(0,k)); buf=buf.slice(k+10);
+        if(/^\s*<!\[CDATA\[/.test(cHead)&&!/\]\]>\s*$/.test(cTail)){ eatContent('</content>'); continue; }   /* a literal </content> inside the CDATA */
+        mode=1;
+      }else{
+        const k=buf.indexOf('</data>');
+        if(k<0){ eatData(buf.slice(0,-7)); buf=buf.slice(-7); return; }
+        eatData(buf.slice(0,k)); buf=buf.slice(k+7);
+        const pad=dTail.endsWith('==')?2:dTail.endsWith('=')?1:0;
+        nb+='<data-bytes>'+Math.max(0,Math.floor(dN*3/4)-pad)+'</data-bytes>'; mode=1;
+      }
+    }
+  }
+  return {feed,end(){ if(mode!==0) finish(true); }};
+}
+function openEnexImport(){
+  let m=document.getElementById('enx-modal');
+  if(!m){
+    m=document.createElement('div'); m.id='enx-modal';
+    m.addEventListener('click',e=>{ if(e.target===m) closeEnexImport(); });
+    m.innerHTML='<div id="enx-box" role="dialog" aria-label="Evernote import"></div>';
+    document.body.appendChild(m);
+  }
+  if(_enx.view!=='reading'&&_enx.view!=='done'){ _enx.view='pick'; }
+  _enxPaint();
+  m.classList.add('open');
+}
+function closeEnexImport(){
+  if(_enx.busy) _enx.stop=true;
+  const m=document.getElementById('enx-modal'); if(m) m.classList.remove('open');
+}
+function _enxAgain(){ _enx.view='pick'; _enx.res=null; _enxPaint(); }
+function _enxStop(){ _enx.stop=true; const p=document.getElementById('enx-prog'); if(p) p.textContent='Stopping…'; }
+function _enxPicked(inp,dir){
+  const files=Array.from(inp.files||[]); inp.value='';
+  if(!files.length||_enx.busy) return;
+  const items=[]; let skipped=0;
+  files.forEach(f=>{
+    if(!/\.enex$/i.test(f.name)){ skipped++; return; }
+    let stack='';
+    if(dir){
+      const parts=String(f.webkitRelativePath||'').split('/').filter(Boolean);
+      if(parts.length>=3) stack=parts.slice(1,-1).join(' / ');
+    }
+    items.push({file:f,stack,name:f.name.replace(/\.enex$/i,'')});
+  });
+  items.sort((a,b)=>a.stack.localeCompare(b.stack)||a.name.localeCompare(b.name));
+  _enxRun(items,skipped);
+}
+function _enxProgText(){
+  return 'Reading '+(_enx.cur||'…')+' — '+_enxN(_enx.notes)+' notes so far · '+Math.round(_enx.read/1048576)+' MB of '+Math.round(_enx.total/1048576)+' MB';
+}
+async function _enxRun(items,skipped){
+  const my=++_enx.run;
+  Object.assign(_enx,{view:'reading',stop:false,busy:true,res:null,read:0,notes:0,cur:'',skipped,total:items.reduce((s,i)=>s+i.file.size,0)});
+  _enxPaint();
+  const have=new Set();
+  for(const a of (DB.articles||[])){
+    if(!a||!a.createdAt) continue;
+    const t=Date.parse(a.createdAt); if(isNaN(t)) continue;
+    have.add(String(a.title||'').trim().toLowerCase()+'\u0001'+Math.floor(t/1000));
+  }
+  const mine=new Set(_tagList().map(t=>String(t).toLowerCase()));
+  const res={books:[],tags:new Set(),skipped,minC:null,maxC:null,types:{img:{n:0,b:0},pdf:{n:0,b:0},audio:{n:0,b:0},other:{n:0,b:0}},unread:0};
+  let lastY=0,lastN=0;
+  try{
+    for(const it of items){
+      if(_enx.stop||my!==_enx.run) break;
+      const bk={stack:it.stack,name:it.name,notes:0,pics:0,bytes:0,already:0,broken:[],failed:''};
+      res.books.push(bk); _enx.cur=it.name;
+      const sc=_enxScanner(info=>{
+        if(info.err){ bk.broken.push((info.title||'#'+info.n)+(info.err?' ('+info.err+')':'')); res.unread++; return; }
+        bk.notes++; _enx.notes++;
+        info.tags.forEach(t=>res.tags.add(t));
+        if(info.sec!=null){
+          if(res.minC==null||info.sec<res.minC.sec) res.minC={sec:info.sec,iso:info.cIso};
+          if(res.maxC==null||info.sec>res.maxC.sec) res.maxC={sec:info.sec,iso:info.cIso};
+          if(have.has(String(info.title||'').trim().toLowerCase()+'\u0001'+info.sec)) bk.already++;
+        }
+        info.res.forEach(r=>{ const k=_enxKind(r.mime); res.types[k].n++; res.types[k].b+=r.bytes; bk.bytes+=r.bytes; if(k==='img') bk.pics++; });
+      });
+      try{
+        const rd=it.file.stream()
+          .pipeThrough(new TransformStream({transform(c,ctl){ _enx.read+=c.byteLength; ctl.enqueue(c); }}))
+          .pipeThrough(new TextDecoderStream()).getReader();
+        for(;;){
+          if(_enx.stop||my!==_enx.run){ try{ await rd.cancel(); }catch(x){} break; }
+          const {done,value}=await rd.read(); if(done) break;
+          sc.feed(value);
+          if(_enx.read-lastY>=1048576||_enx.notes-lastN>=50){
+            lastY=_enx.read; lastN=_enx.notes;
+            const p=document.getElementById('enx-prog'); if(p) p.textContent=_enxProgText();
+            await _enxYield();
+          }
+        }
+        if(!_enx.stop&&my===_enx.run) sc.end();
+      }catch(e){ bk.failed=String(e&&e.message||e); }
+    }
+  }finally{
+    if(my===_enx.run){
+      _enx.busy=false;
+      if(_enx.stop){ _enx.view='stopped'; }
+      else{ res.stacks=new Set(res.books.map(b=>b.stack).filter(Boolean)).size; res.tagsMine=[...res.tags].filter(t=>mine.has(t.toLowerCase())).length; _enx.res=res; _enx.view='done'; }
+      _enxPaint();
+    }
+  }
+}
+function _enxTotals(r){
+  const sum=k=>r.books.reduce((s,b)=>s+b[k],0), t=r.types;
+  const d=x=>x?x.iso.slice(0,10):'—';
+  return {notebooks:r.books.length,stacks:r.stacks,notes:sum('notes'),tags:r.tags.size,tagsMine:r.tagsMine,
+    pics:t.img.n,picB:t.img.b,pdf:t.pdf.n,pdfB:t.pdf.b,audio:t.audio.n,audioB:t.audio.b,other:t.other.n,otherB:t.other.b,
+    oldest:d(r.minC),newest:d(r.maxC),already:sum('already'),unread:r.unread,skipped:r.skipped};
+}
+function _enxSummary(){
+  const r=_enx.res; if(!r) return '';
+  const t=_enxTotals(r), L=[];
+  L.push('Evernote import — dry run (Siyagah v'+(document.querySelector('meta[name="app-version"]')||{}).content+')');
+  L.push('Notebooks: '+t.notebooks+' · Stacks: '+t.stacks+' · Notes: '+t.notes);
+  L.push('Tags: '+t.tags+' ('+t.tagsMine+' already in Siyagah)');
+  L.push('Pictures: '+t.pics+' ('+_enxMB(t.picB)+') · PDFs: '+t.pdf+' ('+_enxMB(t.pdfB)+') · Audio: '+t.audio+' ('+_enxMB(t.audioB)+') · Other files: '+t.other+' ('+_enxMB(t.otherB)+')');
+  L.push('Oldest note: '+t.oldest+' · Newest note: '+t.newest);
+  L.push('Already in Siyagah: '+t.already+' · Could not be read: '+t.unread+' · Other files skipped: '+t.skipped);
+  L.push('');
+  L.push('Stack ▸ Notebook | Notes | Pictures | MB | Already in');
+  r.books.forEach(b=>L.push((b.stack?b.stack+' ▸ ':'')+b.name+' | '+b.notes+' | '+b.pics+' | '+(b.bytes/1048576).toFixed(1)+' | '+b.already));
+  r.books.filter(b=>b.broken.length).forEach(b=>L.push(b.broken.length+' notes could not be read in '+b.name+': '+b.broken.join(', ')));
+  L.push('This was a dry run: nothing was added to your notebook.');
+  return L.join('\n');
+}
+async function _enxCopy(){
+  const text=_enxSummary();
+  try{
+    if(!navigator.clipboard||!navigator.clipboard.writeText) throw new Error('no clipboard');
+    await navigator.clipboard.writeText(text);
+    toast('📋 Copied');
+  }catch(e){
+    const fb=document.getElementById('enx-fb'); if(!fb) return;
+    fb.innerHTML='<div class="rm-sub">The clipboard is not available — select this text and copy it:</div><textarea class="enx-fb" id="enx-fbt" readonly></textarea>';
+    const ta=document.getElementById('enx-fbt'); ta.value=text; ta.focus(); ta.select();
+  }
+}
+function _enxPaint(){
+  const box=document.getElementById('enx-box'); if(!box) return;
+  const v=_enx.view;
+  let h='<div class="rm-hd"><div class="rem-title">📥 Evernote import</div><button class="rem-btn cancel" onclick="closeEnexImport()">✕ Close</button></div>';
+  if(v==='reading'){
+    h+='<div class="enx-prog" id="enx-prog" role="status">'+esc(_enxProgText())+'</div><button class="rm-big alt" onclick="_enxStop()">✕ Stop</button>';
+  }else if(v==='stopped'){
+    h+='<div class="enx-prog" id="enx-stopped" role="status">Stopped after '+_enxN(_enx.notes)+' notes. Nothing was added to your notebook.</div>'
+      +'<button class="rm-big" onclick="_enxAgain()">↩ Start again</button>';
+  }else if(v==='done'&&_enx.res){
+    const r=_enx.res, t=_enxTotals(r), row=(a,b)=>'<dt>'+a+'</dt><dd>'+b+'</dd>';
+    h+='<dl class="enx-grid" id="enx-totals">'
+      +row('Notebooks',t.notebooks)+row('Stacks',t.stacks)+row('Notes',_enxN(t.notes))
+      +row('Tags',t.tags+' ('+t.tagsMine+' already in Siyagah)')
+      +row('Pictures',_enxN(t.pics)+' · '+_enxMB(t.picB))+row('PDFs',_enxN(t.pdf)+' · '+_enxMB(t.pdfB))
+      +row('Audio',_enxN(t.audio)+' · '+_enxMB(t.audioB))+row('Other files',_enxN(t.other)+' · '+_enxMB(t.otherB))
+      +row('Oldest note',t.oldest)+row('Newest note',t.newest)
+      +row('Already in Siyagah',_enxN(t.already))+row('Could not be read',t.unread)
+      +'</dl>';
+    if(t.skipped) h+='<div class="rm-p" id="enx-skipped">'+t.skipped+' other file'+(t.skipped===1?'':'s')+' skipped</div>';
+    const groups=new Map(); r.books.forEach(b=>{ if(!groups.has(b.stack)) groups.set(b.stack,[]); groups.get(b.stack).push(b); });
+    const phone=window.innerWidth<640;
+    groups.forEach((bs,st)=>{
+      const sum=k=>bs.reduce((s,b)=>s+b[k],0);
+      h+='<details class="enx-stack" data-stack="'+esc(st)+'"'+(phone?'':' open')+'><summary>'+esc(st||'(no stack)')+' — '+_enxN(sum('notes'))+' notes</summary>'
+        +'<table class="enx-t"><thead><tr><th>Notebook</th><th>Notes</th><th>Pictures</th><th>MB</th><th>Already in</th></tr></thead><tbody>'
+        +bs.map(b=>'<tr data-stack="'+esc(st)+'" data-nb="'+esc(b.name)+'"><td>'+esc(b.name)+(b.failed?' (could not open it)':'')+'</td><td class="enx-c-n">'+b.notes+'</td><td class="enx-c-p">'+b.pics
+          +'</td><td class="enx-c-m">'+(b.bytes/1048576).toFixed(1)+'</td><td class="enx-c-a">'+b.already+'</td></tr>').join('')
+        +'</tbody></table></details>';
+    });
+    const bad=r.books.filter(b=>b.broken.length);
+    if(bad.length) h+='<ul class="enx-broken" id="enx-broken">'+bad.map(b=>'<li>'+b.broken.length+' note'+(b.broken.length===1?'':'s')+' could not be read in '+esc(b.name)+': '+esc(b.broken.join(', '))+'</li>').join('')+'</ul>';
+    h+='<div class="enx-dry" id="enx-dry">This was a dry run: nothing was added to your notebook. The import itself comes in the next update.</div>'
+      +'<button class="rm-big" onclick="_enxCopy()">📋 Copy summary</button><div id="enx-fb"></div>'
+      +'<button class="rm-big alt" onclick="_enxAgain()">↩ Choose another export</button>';
+  }else{
+    h+='<p class="rm-p">See what an import of your Evernote export would bring in. This is a dry run: nothing is added to your notebook.</p>'
+      +'<button class="rm-big enx-dirbtn" onclick="document.getElementById(\'enx-dir\').click()">📁 Choose the export folder</button>'
+      +'<button class="rm-big alt enx-filebtn" onclick="document.getElementById(\'enx-files\').click()">📄 Choose .enex files</button>'
+      +'<p class="rm-p">Stacks come from the folder; files picked one by one go in without a stack.</p>'
+      +'<input type="file" id="enx-dir" webkitdirectory multiple style="display:none" onchange="_enxPicked(this,true)">'
+      +'<input type="file" id="enx-files" accept=".enex" multiple style="display:none" onchange="_enxPicked(this,false)">';
+  }
+  box.innerHTML=h;
 }
 function openRemindMail(){
   let m=document.getElementById('remmail-modal');

@@ -2525,7 +2525,10 @@ await r.block('6o-1-menu-reorg', async () => {
     /* v05.04 (issue #156, J5) — 👝 Siyagah Jeb in 🧰 Tools, added on purpose. */
     'openJebApp',
     /* v05.06 (issue #160, R1) — 🔔 Reminder emails in 🧰 Tools, added on purpose. */
-    'openRemindMail'];
+    'openRemindMail',
+    /* v05.13 (issue #173, S4a) — 📥 Evernote import in 🧰 Tools → Create, added on purpose
+       (the Architect's full run caught this list missing it: block 73 alone does not run 6o-1). */
+    'openEnexImport'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
   const lost = V0420.filter((f) => !now.includes(f));
   const added = [...new Set(now)].filter((f) => !V0420.includes(f));
@@ -11968,6 +11971,23 @@ await r.block('72-zab-ideas-shop', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the Z6c Ideas and Shopping check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, 'Z6c: ' + row.label, row.detail);
   r.check(out.status === 0, 'the Z6c Ideas and Shopping check exits cleanly', `exit ${out.status}`);
+});
+
+/* 73 — v05.13, S4a: the Evernote import DRY RUN. tools/enex-s4a.mjs writes its own .enex fixtures (two stacks, four notebooks, a
+   broken date, a cut-off note, a non-.enex file, a note the notebook already holds) and runs 73a–73j at 390/820/1440 with real
+   taps or clicks: reachable from 🧰 (dialog or sheet); folder pick and file pick equal the generator's counts; "already in
+   Siyagah"; nothing written (DB, IndexedDB, localStorage, the fake cloud); Stop; a generated 150 MB file at 1440 and at 390 with
+   CPU ×4 (long tasks ≤ 200 ms, heap growth ≤ 60 MB); Copy summary; contrast on five presets. Each printed ok/FAIL line becomes one check. */
+await r.block('73-evernote-dryrun', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./enex-s4a.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 60, 'the S4a Evernote dry-run check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'S4a: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the S4a Evernote dry-run check exits cleanly', `exit ${out.status}`);
 });
 
 /* ── run everything registered above, or a --only subset ─────────────────

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.12.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.13.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -18,13 +18,13 @@ stay short enough to read in full before starting work.
 > scheduled check reads the section every 4 hours (Sydney time). The first, separate
 > Siyagah sheet (https://claude.ai/artifact/6q7MAjf4qyponES5h8kcUC) is a read-only backup. The pinned status issue #52 stays
 > as a mirror for the builder. Set up 12 Oct 2026 (v05.09).
-> **Programme Lead (approved 12 Oct):** Claude in the BWN chat leads every project's
-> Architect. At the start of every session act on any "PL ▸" line in Siyagah's jobs
+> **Programme Lead (approved 12 Oct):** the Project Chief Architect (PCA) in the shared PCF leads every project's Master Architect (since 14 Oct; earlier, the Programme Lead in the BWN chat). At the start of every session act on any "PCA ▸" (or older "PL ▸"/"PM ▸") line in Siyagah's jobs
 > first and reply under it; clear a 📣 Notify flag (`p/siy.notify`) once checked.
 > Keep `p/siy.monitor` ({text, at}, "Who's working on what") current at the start and
 > end of each piece of work, the About tab (`p/siy.about`) current, and every feature
 > in the User Manual tab (`p/siy.manual`: one heading per feature, then What it does ·
 > Benefit · How to use). The owner's word always overrides the PL.
+> **Keep working, never idle (owner's general rule, 14 Oct 2026).** Every Master Architect and every builder works continuously. Stop and ask only when a decision or answer from the owner is needed: ask it with tick boxes, then carry on with everything else meanwhile. When a job is done, take the next one at once and keep a builder round running. When no job is left, audit the app feature by feature (the User Manual list is the checklist) on phone, tablet and desktop, record every defect found as a job, and fix it with the usual checks. The Project Chief Architect (PCA, who now leads every project's Master Architect in the shared PCF) does the same across all projects.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -37,11 +37,15 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.13** (14 Oct 2026) — S4a, Evernote import, the dry run (issue #173, PCF J01). 🧰 → Create → "📥 Evernote import" reads an
+  evernote-backup export (folder pick on tablet/laptop, `.enex` files on every layout, a phone gets a sheet) by streaming and shows
+  totals, a stack ▸ notebook table, "already in Siyagah", and 📋 Copy summary. Nothing is written anywhere. Check: block 73,
+  `tools/enex-s4a.mjs`. Builder: `--only 73,59,65,69` **590/590**, `ship-check` 14/14; the Architect runs the full `app-check`.
 - **v05.12** (13 Oct 2026) — Z6c, the Ideas and Shopping pockets (issue #171, PCF J15). Idea fields `stars` (1–3, a number) and
   `topics[]`; shopping fields `qty` and `shop` (short strings). Ideas: tappable ☆/★, `# topic` chips, a Sort (Newest | ★ Stars) and
   Group by (None | Topic) bar kept in `DB.theme.zabIdeaView[pid]`. Shopping: quantity chip edited inline, shop chip, a 🏪 Shop filter
   (`zabShopView[pid]`), ticked items under "In the basket (n)", quick typing ("2 milk", "milk @Coles"), 🧹 Clear basket. Check: block 72,
-  `tools/zab-z6c.mjs`. Builder: `--only 72,60,64,65,69,70,71` **1630/1630**, `ship-check` 14/14; the Architect runs the full `app-check`.
+  `tools/zab-z6c.mjs`. Architect: full `app-check` **4701/4701, twice**; unpatched `--only 72` 0/4.
 - **v05.11** (13 Oct 2026) — Z6b, the Tasks pocket (issue #169, PCF J15). Task fields on the item: `due` ('YYYY-MM-DD', device-local
   day via `_jebToday()`), `pri` (1 = high, a number), `steps` ([{id,t,d}], sync with the item: last write wins on the whole item).
   List grouped Overdue/Today/Tomorrow/Later/No date/Done (folded); chips, ⚑, "2/5" counter; chooser (popover ≥640, bottom sheet
@@ -56,11 +60,6 @@ must never accumulate here instead of there.
   owner's shared PCF https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ (jobs, rules, what waits on the owner,
   guides), read first and updated last by every session; the permanent rule above, `claude/PROJECT-RULES.md`,
   and ARCHITECT.md's Handover now point to it. Words only: no app code changed.
-- **v05.08** (11 Oct 2026) — P1, the phone keyboard no longer freezes a big notebook (Architect, found
-  measuring item 5). Any change to `<html>`'s own style restyles every element; J2 flipped `--jeb-h` there on
-  each keyboard up/down: ~0.9 s at 9,000 notes on a ×4 phone. `--jeb-h` is now `@property … inherits:false`, set
-  on its 10 users only (`<html>` always reads 0px; read `#p2`); `--jeb-l` goes on `#jeb-bar`/`#jeb-deck`. Now
-  ~12 ms of style. Check: block 69, `tools/jebh-p1.mjs`. Architect: full `app-check` **3808/3808, twice in a row**; unpatched `--only 69` 17/28.
 ---
 
 ## What this is
@@ -488,6 +487,18 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `_jebStarsOpen`; quantity: `_jebQtyEdit` (inline in the panel, the app's dialog on a deck card; `_jebQtyOpen()` stops a repaint
   under the open box). Quick typing: `_jebShopParse`. A new field of these kinds goes in `_jebKindSig`; their typing hint reuses
   `.jt-hint` (`zabShopHint`). Not drawn outside their own kind, never stripped by a move (I1).
+- **Evernote import, the dry run (v05.13, S4a — S4b writes notes, S4c pictures, S4d merges earlier imports).** `openEnexImport()` →
+  `#enx-modal` (own overlay like `#remmail-modal`: dialog ≥ 640, bottom sheet < 640, z 10060, over the Zab bar on purpose so it is not
+  in the `--jeb-h` lists). State is only the global `_enx` (the last result is `_enx.res`, in memory): **nothing goes in `DB`,
+  `DB.theme`, localStorage, IndexedDB or the cloud** (block 73e compares DB, the `notebook` record, localStorage and the cloud log).
+  Files are streamed (`file.stream()` → byte counter → `TextDecoderStream`) into `_enxScanner(onNote)`, a small state machine that
+  keeps only each note's small text (title, dates, tags, resource mime/name) and COUNTS `<content>` and every `<data>` as they pass
+  (base64 length ×3/4 − padding); a new `<note>` before `</note>` ends the earlier one as unterminated. Yields every 1 MB / 50 notes.
+  Evernote dates `YYYYMMDDTHHMMSSZ` → `_enxDate()`. A broken note (bad date, cut-short CDATA, unterminated) is listed per notebook and never
+  stops the run. "Already in Siyagah" = trimmed lower-case title + created second against `DB.articles` (a Set, built once), the
+  rule S4d will merge on. Distinct tags are exact strings; the overlap with Siyagah's tags is case-insensitive. Stacks: the folder
+  between the export root and the file (`webkitRelativePath`); files picked singly have none. 146 MB / 2,000 notes: 1.3 s, no long
+  task at 1440; at 390 ×4 CPU 3.8 s, worst long task 68 ms, heap +32 MB.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
