@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.14.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.15.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -37,6 +37,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.15** (14 Oct 2026) — T1, on a phone the note's buttons sit on their own row and the title wraps in full (issue #177, PCF J16).
+  Phone only (< 640 via `_p3OneBar()`): editing puts ✕ and the "✓ Saved" flash on `.p3c-actrow` above the title, and the title is a
+  growing `<textarea id="ti">` (`_tiInput`/`_tiKey`/`_tiGrow`/`_tiGrowAll`: a line break becomes a space, Enter moves the caret into the
+  note's text); reading drops the 2-line clamp on `.tbt`; both pop-ups' titles are the same textarea (Single `#ti`, Multi `#fw-ti-<aid>`).
+  Tablet and laptop markup is byte-identical to v05.14. Check: block 75, `tools/title-t1.mjs` (`--unpatched` serves v05.14: 33 of 72 fail).
 - **v05.14** (14 Oct 2026) — O1, Siyagah opens and works on a dead connection (issue #175, PCF J11, owner: IMPORTANT). The saved-page
   leftovers are out of the source (three parser-blocking Firebase `<script src>`, `<style></style>`, the baked `<style id="dyn-hs">`,
   `<body style="">`), and so is a second blocker found on the way: the Google Fonts `<link rel="stylesheet">` is now loaded on the side
@@ -57,11 +62,6 @@ must never accumulate here instead of there.
   List grouped Overdue/Today/Tomorrow/Later/No date/Done (folded); chips, ⚑, "2/5" counter; chooser (popover ≥640, bottom sheet
   <640); quick typing "!"/today/tomorrow; red bar badge. Check: block 71, `tools/zab-z6b.mjs`. 60d/60e updated in place (Done group).
   Architect: full `app-check` **4310/4310, twice**; unpatched `--only 71` 0/6.
-- **v05.10** (13 Oct 2026) — Z6a, pocket kinds and the Links pocket (issue #167, PCF J15). A pocket gets an optional
-  `ztype` (`plain|links|tasks|ideas|shop`, derived from the seed id when absent, read only by `_jebType(pk)`); only
-  `links` differs. Link items carry `url ttl ch th people[] issues[]`; YouTube title/channel by oEmbed, quiet on failure;
-  phone = compact rows + combining Person/Issue filters, tablet/laptop = card grid + Group by. Check: block 70,
-  `tools/zab-z6a.mjs`. 300 links at ×4 CPU paint in ~115–191 ms (459–681 ms before `content-visibility`). Architect: full `app-check` **4009/4009, twice**; unpatched `--only 70` 0/3.
 ---
 
 ## What this is
