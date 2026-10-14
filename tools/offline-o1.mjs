@@ -108,15 +108,24 @@ async function timedBoot(s) {
   try { await booted(s.page, 30000); } catch { return -1; }
   return Date.now() - t0;
 }
+/* the sidebar on screen with the notebook section open (the sections start folded) */
+async function openTree(page, vp) {
+  const tap = tapper(page, vp);
+  await page.evaluate(() => { if (window.innerWidth < 1200) showPane('sb'); });
+  if (!(await page.locator('.tr-row[data-fid="f1"]').first().isVisible().catch(() => false))) await tap('#tree >> text=/my notebooks/i');
+  await page.waitForSelector('.tr-row[data-fid="f1"]', { state: 'visible', timeout: 5000 });
+}
 /* sidebar -> folder -> note list -> note, by real taps/clicks */
 async function browse(s) {
   const tap = tapper(s.page, s.vp);
   try {
-    await s.page.evaluate(() => { if (window.innerWidth < 1200) showPane('sb'); });
+    await openTree(s.page, s.vp);
     await tap('.tr-row[data-fid="f1"]');
     await s.page.waitForSelector('.ar[data-aid="a1"]', { state: 'visible', timeout: 5000 });
-    await tap('.ar[data-aid="a1"]');
-    await s.page.waitForFunction(() => ST.article === 'a1' && /Body of the first seeded note/.test(document.body.innerText), null, { timeout: 5000 });
+    /* aim at the left end of the card: a1 is a favourite and pinned, and its badges sit in the middle */
+    const card = s.page.locator('.ar[data-aid="a1"]').first();
+    await (s.vp.touch ? card.tap({ position: { x: 30, y: 14 } }) : card.click({ position: { x: 30, y: 14 } }));
+    await s.page.waitForFunction(() => ST.article === 'a1' && /Body of the first seeded note/.test(document.body.textContent), null, { timeout: 5000 });
     return true;
   } catch (e) { return String(e).split('\n')[0]; }
 }
@@ -173,14 +182,14 @@ try {
       await goOffline(A);
       await reopen(A);   /* an offline boot */
       const tap = tapper(A.page, vp);
-      await A.page.evaluate(() => { if (window.innerWidth < 1200) showPane('sb'); });
+      await openTree(A.page, vp);
       /* 1. rename folder f2 */
       await A.page.locator('.tr-row[data-fid="f2"]').first().click({ button: 'right' });
       await tap('#ctx .ci:has-text("Rename folder")');
       await A.page.waitForSelector('#ov.on #inp'); await A.page.locator('#inp').fill('(002) Renamed Offline'); await A.page.keyboard.press('Enter');
       await sleep(500);
       /* 2. a new note in f1 */
-      await A.page.evaluate(() => { if (window.innerWidth < 1200) showPane('sb'); });
+      await openTree(A.page, vp);
       await A.page.locator('.tr-row[data-fid="f1"]').first().click({ button: 'right' });
       await tap('#ctx .ci:has-text("Add article here")');
       await A.page.waitForSelector('#ov.on #inp'); await A.page.locator('#inp').fill('Offline new note'); await A.page.keyboard.press('Enter');
@@ -188,7 +197,8 @@ try {
       await A.page.locator('#ed').first().click(); await A.page.keyboard.type('typed while offline');
       await sleep(3200);
       /* 3. edit another note (a2) */
-      await A.page.evaluate(() => { if (ST.editing) { try { saveArt(); } catch (e) {} } if (window.innerWidth < 1200) showPane('sb'); });
+      await A.page.evaluate(() => { if (ST.editing) { try { saveArt(); } catch (e) {} } });
+      await openTree(A.page, vp);
       await tap('.tr-row[data-fid="f1"]');
       await A.page.waitForSelector('.ar[data-aid="a2"]', { state: 'visible' }); await tap('.ar[data-aid="a2"]');
       await A.page.waitForFunction(() => ST.article === 'a2');
@@ -352,6 +362,7 @@ try {
         ['a static gstatic <script src>', html.replace('</head>', '<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script></head>')],
         ['a baked <style id="dyn-hs">', html.replace('</head>', '<style id="dyn-hs">h1{color:red}</style></head>')],
         ['a <body style="">', html.replace(/<body\b/, '<body style=""')],
+        ['a render-blocking Google Fonts <link>', html.replace(' media="print" onload="this.media=\'all\'"', '')],
       ];
       for (const [what, text] of variants) {
         const f = join(dir, 'scratch.html'); await writeFile(f, text);

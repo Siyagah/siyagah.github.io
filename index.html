@@ -74,7 +74,8 @@ if(_JEB_APP){
 -->
 <script id="nd" type="application/json">{"folders":[],"articles":[],"sections":[],"trash":[]}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&amp;family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&amp;display=swap" rel="stylesheet">
+<!-- v05.14 — not render-blocking: a plain stylesheet link waits for Google before the page may paint or its script run, so a connection that is up but silent froze the app. media="print" loads it on the side; onload turns it on. -->
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&amp;family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&amp;display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 :root{
   --forest:#0D1A12;--forest2:#172315;--green:#1B7A46;--green2:#155F37;
@@ -30987,7 +30988,8 @@ function _sgMount(root,state,editable){
      have run. Setting it straight after render() made the harness's fixed
      settle land at a variable point and the suite non-deterministic (see
      CHANGELOG v04.50). Not awaited — nothing in the app waits on it. */
-  Promise.resolve(document.fonts&&document.fonts.ready).catch(()=>{})
+  /* v05.14 — fonts.ready is waited for at most 1.5 s: a font file that never arrives (a silent connection) must not hold the app's "booted" flag. */
+  Promise.race([Promise.resolve(document.fonts&&document.fonts.ready),new Promise(r=>setTimeout(r,1500))]).catch(()=>{})
     .then(()=>{try{autoFit(true);}catch(e){}})   /* the sidebar fit — see the note where it used to live */
     .then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))
     .then(()=>{ window.__appBooted=true; });

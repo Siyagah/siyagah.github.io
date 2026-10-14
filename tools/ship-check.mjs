@@ -164,6 +164,8 @@ const leftovers = [
   [/<script\b[^>]*\bsrc\s*=\s*["']?(?:https?:)?\/\//i, 'a <script src> to another origin (parser-blocking when that server is silent)'],
   [/<style\b[^>]*\bid="dyn-hs"/, 'a baked <style id="dyn-hs"> (made at run time by _applyHeadingStyles)'],
   [/<body\b[^>]*\sstyle=/i, 'a <body style=...> (a saved page)'],
+  /* a stylesheet from another origin blocks the first paint and every later script the same way, unless it is loaded on the side (media="print" + onload) */
+  [/<link\b(?![^>]*media="print")[^>]*\brel="stylesheet"[^>]*\bhref="(?:https?:)?\/\/|<link\b(?![^>]*media="print")[^>]*\bhref="(?:https?:)?\/\/[^"]*"[^>]*\brel="stylesheet"/i, 'a render-blocking <link rel="stylesheet"> to another origin'],
 ].filter(([re]) => re.test(html.replace(/<script id="nd"[\s\S]*?<\/script>/, ''))).map(([, what]) => what);
 r.check(leftovers.length === 0, 'index.html carries no blocking external script or saved-page style',
   leftovers.length ? `found: ${leftovers.join('; ')}` : 'clean');
