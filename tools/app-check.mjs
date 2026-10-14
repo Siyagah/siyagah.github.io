@@ -2916,14 +2916,15 @@ await r.block('6p-01-phone-one-bar', async () => {
 
   /* ✕ left the tag bar with it, so it has to be somewhere the eye lands. */
   const stop = await sPh.page.evaluate(() => {
-    const b = document.querySelector('.p3c-titlebar .p3c-stop');
+    /* v05.15 (T1) — updated in place: ✕ now sits on its own row (.p3c-actrow) ABOVE the title, no longer in the title bar */
+    const b = document.querySelector('.p3c-actrow .p3c-stop');
     if (!b || !b.offsetParent) return null;
     const q = b.getBoundingClientRect();
-    return { fn: b.getAttribute('onclick'), w: Math.round(q.width), h: Math.round(q.height) };
+    return { fn: b.getAttribute('onclick'), w: Math.round(q.width), h: Math.round(q.height), inBar: !!document.querySelector('.p3c-titlebar .p3c-stop') };
   });
-  r.check(!!stop && /cancelEdit\(\)/.test(stop.fn) && stop.w >= 38 && stop.h >= 38,
-    'phone: ✕ stop-editing moved onto the title row and can be hit',
-    stop ? `${stop.w}×${stop.h}, onclick="${stop.fn}"` : 'no ✕ on the title row');
+  r.check(!!stop && /cancelEdit\(\)/.test(stop.fn) && stop.w >= 38 && stop.h >= 38 && !stop.inBar,
+    'phone: ✕ stop-editing sits on the row above the title (not in the title bar) and can be hit',
+    stop ? `${stop.w}×${stop.h}, onclick="${stop.fn}"` : 'no ✕ on the row above the title');
 
   /* 3. Save on the bar really saves. A real click, and the typed words are
      read back out of DB — "it did not throw" is not a saved note. */
@@ -9736,7 +9737,10 @@ await r.block(`37a-title-once-${vp.name}-${mode}`, async () => {
   const inRow = await page.evaluate((S) => { const t = document.querySelector(S.title); const f = document.querySelector(S.frame); const row = document.querySelector(S.titlerow);
     if (!t || !f || !row) return { t: !!t, f: !!f, row: !!row };
     const fb = f.getBoundingClientRect(), rb = row.getBoundingClientRect();
-    return { input: t.tagName === 'INPUT', inRow: row.contains(t), notInBar: !f.contains(t), under: rb.top >= fb.bottom - 1.5 && rb.top <= fb.bottom + 1.5 }; }, S);
+    /* v05.15 (T1) — updated in place: on a phone (< 640 px) the pop-ups' title is a growing <textarea>, so a
+       long title wraps in full (the owner, J16: "Make the title wraps below"); elsewhere it is still an <input>.
+       Either is "the editable title"; which one is expected is fixed by the width. */
+    return { input: t.tagName === (window.innerWidth < 640 ? 'TEXTAREA' : 'INPUT'), inRow: row.contains(t), notInBar: !f.contains(t), under: rb.top >= fb.bottom - 1.5 && rb.top <= fb.bottom + 1.5 }; }, S);
   r.check(inRow.input && inRow.inRow && inRow.notInBar && inRow.under, `${vp.name} ${mode}: that one title is the editable input, in its own row directly under the window bar`, JSON.stringify(inRow));
   if (mode === 'single') {
     /* Read mode: plain text in the window bar, right-click starts editing. */
@@ -12005,6 +12009,22 @@ await r.block('74-offline-o1', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the O1 offline check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, 'O1: ' + row.label, row.detail);
   r.check(out.status === 0, 'the O1 offline check exits cleanly', `exit ${out.status}`);
+});
+
+/* 75 — v05.15, T1: on a phone the note's buttons sit on their own row and the title wraps in full. tools/title-t1.mjs runs 75a–75f:
+   edit and reading layout at 360/390 with a 120-character title, real typing / a line break / Enter / autosave / reload, tablet and
+   laptop title bars identical to v05.14's (served from git in the same run), the two pop-ups on a phone, contrast on five presets.
+   Each printed ok/FAIL line becomes one check. */
+await r.block('75-phone-title', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./title-t1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 60, 'the T1 phone-title check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'T1: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the T1 phone-title check exits cleanly', `exit ${out.status}`);
 });
 
 /* ── run everything registered above, or a --only subset ─────────────────
