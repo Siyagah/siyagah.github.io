@@ -34,7 +34,7 @@ const onlySet = onlyArg ? new Set(onlyArg.slice(7).split(',')) : null;
 const want = (t) => !onlySet || onlySet.has(t);
 if (argv.includes('--fails')) { const o = console.log; let skip = false; console.log = (...x) => { const t = x.join(' '); if (/^\s+ok\s/.test(t)) { skip = true; return; } if (skip && /^\s{6,}\S/.test(t)) { skip = false; return; } skip = false; o(...x); }; }
 
-const SRC = process.env.O1_ROOT || ROOT;
+const SRC = (argv.find((a) => a.startsWith('--root=')) || '').slice(7) || process.env.O1_ROOT || ROOT;
 const VPS = [{ name: '390', w: 390, h: 844, touch: true }, { name: '820', w: 820, h: 1180, touch: true }, { name: '1440', w: 1440, h: 900, touch: false }];
 const pw = await playwright();
 
@@ -104,8 +104,10 @@ async function install(s) {
 }
 async function timedBoot(s) {
   const t0 = Date.now();
-  await s.page.goto(srv.base + '/', { waitUntil: 'commit', timeout: 30000 });
-  try { await booted(s.page, 30000); } catch { return -1; }
+  try {
+    await s.page.goto(srv.base + '/', { waitUntil: 'commit', timeout: 20000 });
+    await booted(s.page, Math.max(1000, 30000 - (Date.now() - t0)));
+  } catch { return -1; }   /* never answered / never booted: the check reports it, the run goes on */
   return Date.now() - t0;
 }
 /* the sidebar on screen with the notebook section open (the sections start folded) */
@@ -361,8 +363,10 @@ try {
       const run = (file) => spawnSync(process.execPath, [join(ROOT, 'tools/ship-check.mjs')], { encoding: 'utf8', env: { ...process.env, SHIP_HTML: file } });
       const LINE = /index\.html carries no blocking external script or saved-page style/;
       const okLine = (o) => (o.stdout.split('\n').find((l) => LINE.test(l)) || '');
+      /* the detail must not start with ok/FAIL, or app-check would read it as a check of its own */
+      const say = (l) => l.trim().replace(/^ok\s+/, 'the guard passes: ').replace(/^FAIL\s+/, 'the guard fails: ');
       const real = run(join(ROOT, 'index.html'));
-      check(/^\s*ok\s/.test(okLine(real)), '74i the guard passes on the real index.html', okLine(real));
+      check(/^\s*ok\s/.test(okLine(real)), '74i the guard passes on the real index.html', say(okLine(real)));
       const variants = [
         ['a static gstatic <script src>', html.replace('</head>', '<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script></head>')],
         ['a baked <style id="dyn-hs">', html.replace('</head>', '<style id="dyn-hs">h1{color:red}</style></head>')],
@@ -372,7 +376,7 @@ try {
       for (const [what, text] of variants) {
         const f = join(dir, 'scratch.html'); await writeFile(f, text);
         const o = run(f);
-        check(/^\s*FAIL\s/.test(okLine(o)) && o.status !== 0, `74i the guard FAILS on a scratch copy with ${what} put back`, okLine(o));
+        check(/^\s*FAIL\s/.test(okLine(o)) && o.status !== 0, `74i the guard FAILS on a scratch copy with ${what} put back`, say(okLine(o)));
       }
     } finally { await rm(dir, { recursive: true, force: true }).catch(() => {}); }
   }
