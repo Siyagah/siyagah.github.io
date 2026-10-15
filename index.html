@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.21">
+<meta name="app-version" content="05.22">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3712,7 +3712,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.21</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.22</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6478,6 +6478,7 @@ function renderP2H(){
 
 function renderP2C(){
   const el=document.getElementById('p2c');
+  _listKeep=_listJob; _listJob=null;   /* v05.22 — P3: a new draw ends the slices of the old list (a patch of the same list may take them back) */
   if(ST.kind){
     const k=kindById(ST.kind);
     const arts=DB.articles.filter(a=>artKinds(a).includes(ST.kind));
@@ -6487,9 +6488,8 @@ function renderP2C(){
       h+='<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl)">'
          +'<div style="color:var(--t3);font-size:13px">No notes of this type yet</div></div>';
     } else {
-      h+='<div class="al">';
-      arts.forEach(a=>{ h+=artCard(a,ST.article===a.id,false); });
-      h+='</div>';
+      _listPaint(el,h+'<div class="al">',new Array(arts.length),arts.length,i=>artCardC(arts[i],ST.article===arts[i].id,false),'</div></div>');
+      return;
     }
     el.innerHTML=h+'</div>';
     return;
@@ -6502,9 +6502,8 @@ function renderP2C(){
       h+='<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl)">'
          +'<div style="color:var(--t3);font-size:13px">No articles with this tag yet</div></div>';
     } else {
-      h+='<div class="al">';
-      arts.forEach(a=>{ h+=artCard(a,ST.article===a.id,false); });
-      h+='</div>';
+      _listPaint(el,h+'<div class="al">',new Array(arts.length),arts.length,i=>artCardC(arts[i],ST.article===arts[i].id,false),'</div></div>');
+      return;
     }
     el.innerHTML=h+'</div>';
     return;
@@ -6536,7 +6535,7 @@ function renderP2C(){
     h+=_sfQtBarHTML(sfId,secId);
     if(!arts.length){
       h+=`<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl);color:var(--t3);font-size:13px;line-height:1.6">No ${esc(sfName.toLowerCase())} in ${esc(_ssec.name)}</div>`;
-    }else{h+='<div class="al">';arts.forEach(a=>{h+=artCard(a,ST.article===a.id,true);});h+='</div>';}
+    }else{ _listPaint(el,h+'<div class="al">',new Array(arts.length),arts.length,i=>artCardC(arts[i],ST.article===arts[i].id,true),'</div></div>'); return; }
     el.innerHTML=h+'</div>';return;
   }
   const curF=DB.folders.find(f=>f.id===ST.folder);
@@ -6592,9 +6591,8 @@ function renderP2C(){
     if(!arts.length){
       h+=`<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl);color:var(--t3);font-size:13px;line-height:1.6">${empty[_sf.id]||''}</div>`;
     }else{
-      h+='<div class="al">';
-      arts.forEach(a=>{h+=artCard(a,ST.article===a.id,true);});
-      h+='</div>';
+      _listPaint(el,h+'<div class="al">',new Array(arts.length),arts.length,i=>artCardC(arts[i],ST.article===arts[i].id,true),'</div></div>');
+      return;
     }
     el.innerHTML=h+'</div>';
     return;
@@ -6613,8 +6611,7 @@ function renderP2C(){
   } else if(!curF.structured){
     /* v04.91 — S1d: one card = one element, so a change that touches a few cards
        rewrites those cards, not the whole list (see _p2cPaint) */
-    const cards=arts.map(a=>artCard(a,ST.article===a.id,true));
-    _p2cPaint(el,h+'<div class="al">',cards,'</div></div>',arts.map(a=>a.id),curF.id);
+    _p2cPaint(el,h+'<div class="al">',new Array(arts.length),'</div></div>',arts.map(a=>a.id),curF.id,i=>artCardC(arts[i],ST.article===arts[i].id,true));
     return;
   } else {
     h+='<div class="al">';
@@ -6635,26 +6632,131 @@ let _p2cLast=null, _p2cSeq=0, _P2C_PATCH_MAX=40;
 /* `ids` (the note id of each card, in order) and `fid` (the folder) are what v05.18's _p2cTry() needs to
    rebuild only the cards of the notes that changed; the paint also notes the selected note and the day it
    drew (a card's date and its reminder badge are read against "today"). */
-function _p2cPaint(el,head,cards,tail,ids,fid){
-  const L=_p2cLast;
+/* v05.22 — P3: `cards` is an array of n card texts, any of which may still be `undefined`; `mk(i)` builds card i. A list
+   longer than _LIST_MIN is drawn as its first screens only and the rest follows in slices (_listPaint); the cards drawn so far
+   are the ones in `cards`. The patch below needs only the cards that are in the page (and, for the rest, the same notes in
+   the same order — `ids`); a paused job (_listKeep: renderP2C() took it off the clock) is put back on the clock afterwards. */
+function _p2cPaint(el,head,cards,tail,ids,fid,mk){
+  const L=_p2cLast, n=cards.length;
   const note=(o)=>{ o.ids=ids||null; o.fid=fid||null; o.sel=ST.article; o.day=todayStr(); o.snip=ST.snippet; };
-  if(L&&L.el===el&&L.head===head&&L.tail===tail&&L.cards.length===cards.length){
+  _cardCtxCheck();
+  if(L&&L.el===el&&L.head===head&&L.tail===tail&&L.cards.length===n){
     const fv=el.firstElementChild, al=(fv&&fv.getAttribute('data-p2c')===L.mark)?fv.querySelector(':scope > .al'):null;
-    if(al&&al.children.length===cards.length){
+    const kp=(_listKeep&&_listKeep.al===al)?_listKeep:null;
+    const rest=kp?kp.rest:null, alN=al?al.children.length:0;
+    const drawn=al?alN+(rest?rest.children.length:0):-1;
+    let same=!kp&&drawn===n;
+    if(kp&&drawn===kp.i&&drawn<=n){ same=true; if(drawn<n){ same=!!(L.ids&&ids&&L.ids.length===n&&ids.length===n); for(let i=drawn;same&&i<n;i++) if(String(L.ids[i])!==String(ids[i])) same=false; } }
+    if(al&&same){
       const diff=[];
-      for(let i=0;i<cards.length&&diff.length<=_P2C_PATCH_MAX;i++) if(cards[i]!==L.cards[i]) diff.push(i);
+      for(let i=0;i<drawn&&diff.length<=_P2C_PATCH_MAX;i++){ if(cards[i]===undefined) cards[i]=mk(i); if(cards[i]!==L.cards[i]) diff.push(i); }
       if(diff.length<=_P2C_PATCH_MAX){
         const t=document.createElement('template');
-        diff.forEach(i=>{ t.innerHTML=cards[i]; const n=t.content.firstElementChild; if(n) al.children[i].replaceWith(n); });
-        L.cards=cards; note(L);
+        diff.forEach(i=>{ t.innerHTML=cards[i]; const nd=t.content.firstElementChild; const old=i<alN?al.children[i]:rest.children[i-alN]; if(nd&&old) old.replaceWith(nd); L.cards[i]=cards[i]; });
+        note(L);
+        if(kp){ kp.mk=mk; _listJob=kp; _listSched(kp); }
         return;
       }
     }
   }
   const mark=String(++_p2cSeq);
-  el.innerHTML=head.replace('<div class="fv">','<div class="fv" data-p2c="'+mark+'">')+cards.join('')+tail;
+  _listPaint(el,head.replace('<div class="fv">','<div class="fv" data-p2c="'+mark+'">'),cards,n,mk,tail);
   _p2cLast={el:el,head:head,tail:tail,cards:cards,mark:mark};
   note(_p2cLast);
+}
+/* v05.22 — P3. A big list is not drawn in one go. The first screenful (and one more below it) is put in the page at once,
+   the rest is appended in slices between frames: ~200 cards, fewer when a slice runs long. Every card still ends up in the
+   page, so Ctrl+F finds it. A new draw of the list (renderP2C) ends the old slices; scrolling toward the end of what is
+   drawn takes the next slice at once; anything that needs the whole list calls _listFinish(). Nothing here writes. */
+let _LIST_MIN=300; const _LIST_SLICE=200, _LIST_SLICE_MAX=1000, _LIST_REVEAL=1500, _CARD_CAP=30000;   /* _LIST_MIN is `let` only so that check 82's oracle can ask for the whole draw */
+let _listJob=null, _listKeep=null, _listWired=false, _cardC=new Map(), _cardCtx='', _cardN=0;
+function _listPending(){ return !!_listJob; }
+function _listCancel(){ _listJob=null; }
+function _listFinish(){ const j=_listJob; if(j) _listStep(j,true); }
+function _listFirstN(){ const p=document.getElementById('p2c'); return Math.max(30,Math.ceil(2*Math.max((p&&p.clientHeight)||0,window.innerHeight||0)/50)); }   /* the visible part and one screen below it, at ≥ 50 px a card */
+function _listSched(job,building){
+  let f=false; const go=()=>{ if(f) return; f=true; _listStep(job,false); };
+  if(building){ setTimeout(go,0); return; }   /* building shows nothing: no need to wait for a frame */
+  requestAnimationFrame(()=>setTimeout(go,0)); setTimeout(go,120);
+}
+/* The page draws a frame after every append, and a frame costs time in proportion to everything already drawn (measured: 30 ms
+   at 260 cards, 130 ms at 10,000, ×4 CPU), so thousands of small appends took 10–23 s. The rest of the list is therefore built
+   OUT of sight, in a hidden `.al-tail` right after the visible `.al` (parsing only, no frame to pay), and then moved into the
+   visible list a chunk per frame. When it is all moved, the tail is removed and the page holds exactly what a whole draw gives. */
+function _listBuild(job,end){
+  const cs=job.cards; let s='';
+  for(let i=job.i;i<end;i++){ if(cs[i]===undefined) cs[i]=job.mk(i); s+=cs[i]; }
+  job.rest.insertAdjacentHTML('beforeend',s);
+  job.i=end;
+}
+function _listReveal(job,cnt){
+  const r=job.rest, f=document.createDocumentFragment(); let c=0;
+  while(r.firstChild&&c<cnt){ f.appendChild(r.firstChild); c++; }
+  job.al.appendChild(f);
+}
+function _listEnd(job){ if(job.rest.parentNode) job.rest.remove(); if(_listJob===job) _listJob=null; }
+function _listStep(job,all){
+  if(_listJob!==job) return;
+  if(!job.al.isConnected){ _listJob=null; return; }
+  _cardCtxCheck();
+  if(all){ _listBuild(job,job.n); _listReveal(job,1e9); _listEnd(job); return; }
+  if(job.i<job.n){
+    const t=performance.now();
+    _listBuild(job,Math.min(job.n,job.i+job.S));
+    const ms=performance.now()-t;
+    if(ms>35) job.S=Math.max(40,Math.floor(job.S*0.6));
+    else if(ms<18) job.S=Math.min(_LIST_SLICE_MAX,Math.ceil(job.S*1.5));
+    _listSched(job,true);
+    return;
+  }
+  _listReveal(job,_LIST_REVEAL);
+  if(!job.rest.firstChild){ _listEnd(job); return; }
+  _listSched(job,false);
+}
+/* scrolling toward the end of what is drawn: show the next cards at once (building them first if need be) */
+function _listShow(job){
+  if(_listJob!==job||!job.al.isConnected) return;
+  _cardCtxCheck();
+  const need=job.al.children.length+400;
+  if(job.i<need) _listBuild(job,Math.min(job.n,need));
+  _listReveal(job,400);
+  if(job.i>=job.n&&!job.rest.firstChild) _listEnd(job);
+}
+function _listPaint(el,head,cards,n,mk,tail){
+  _cardCtxCheck();
+  _listJob=null;
+  const k=n<=_LIST_MIN?n:Math.min(n,_listFirstN());
+  let s=head;
+  for(let i=0;i<k;i++){ if(cards[i]===undefined) cards[i]=mk(i); s+=cards[i]; }
+  el.innerHTML=s+tail;
+  if(k>=n) return;
+  const als=el.querySelectorAll(':scope > .fv > .al'), al=als[als.length-1];
+  if(!al) return;
+  const rest=document.createElement('div'); rest.className='al al-tail'; rest.style.display='none'; al.after(rest);
+  _listJob={al:al,rest:rest,n:n,i:k,cards:cards,mk:mk,S:_LIST_SLICE};
+  if(!_listWired){
+    _listWired=true;
+    el.addEventListener('scroll',()=>{ const j=_listJob; if(j&&el.scrollHeight-el.scrollTop-el.clientHeight<1.5*el.clientHeight+200) _listShow(j); },{passive:true});
+  }
+  _listSched(_listJob,true);
+}
+/* The text of a card is a function of the note and of a few things around it. It is kept per note (session memory only,
+   never saved) under a signature of every field artCard() reads; the things around it (preview on/off, today, the time
+   zone, the note types' names) are in _cardCtx and drop the whole cache when they change, as does a notebook that
+   changes size by more than a tenth. A selected card and the preview view are never cached. */
+function _cardCtxCheck(){
+  const n=DB.articles.length;
+  const c=(ST.snippet?'s':'t')+'|'+todayStr()+'|'+new Date().getTimezoneOffset()+'|'+(DB.noteKinds||[]).map(k=>k.id+':'+k.name).join(',');
+  if(c!==_cardCtx||Math.abs(n-_cardN)>Math.max(50,_cardN/10)||_cardC.size>_CARD_CAP){ _cardC.clear(); _cardCtx=c; _cardN=n; }
+}
+function artCardC(a,sel,sfc){
+  if(sel||ST.snippet) return artCard(a,sel,sfc);
+  const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'');
+  const e=_cardC.get(a.id);
+  if(e&&e.s===s) return e.h;
+  const h=artCard(a,false,sfc);
+  _cardC.set(a.id,{s:s,h:h});
+  return h;
 }
 /* v05.19 — P2. The part of a folder's list above its cards, built in one place so that the full draw and the
    targeted one (_p2cTry) cannot drift apart: equal text here is the proof that nothing above the cards moved. */
@@ -6697,9 +6799,10 @@ function _p2cTry(ids){
   const head=_p2cFolderHead(curF,arts)+'<div class="al">';
   if(head!==L.head) return false;
   const redo=new Set(ids.map(String)); if(L.sel!=null) redo.add(String(L.sel)); if(ST.article!=null) redo.add(String(ST.article));
+  _listFinish();   /* v05.22 — P3: the targeted draw works on a list that is whole */
   const cards=L.cards.slice();
-  for(let i=0;i<arts.length;i++){ const a=arts[i]; if(redo.has(String(a.id))) cards[i]=artCard(a,ST.article===a.id,true); }
-  _p2cPaint(el,head,cards,'</div></div>',L.ids,curF.id);
+  for(let i=0;i<arts.length;i++){ const a=arts[i]; if(redo.has(String(a.id))) cards[i]=artCard(a,ST.article===a.id,true); else if(cards[i]===undefined) return false; }
+  _p2cPaint(el,head,cards,'</div></div>',L.ids,curF.id,i=>artCardC(arts[i],ST.article===arts[i].id,true));
   return true;
 }
 
