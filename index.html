@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.18">
+<meta name="app-version" content="05.19">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -818,6 +818,14 @@ html{--jeb-h:0px;--jeb-l:0px;--jeb-hd:0px}
    fails on one that does not. Read the bar's height from #p2, never <html>
    (which always says 0px). A browser without @property inherits it from the
    listed element as before. */
+/* v05.17 · B1 — the line shown while this device's copy of the notebook cannot be read (fixed ink on its own paper: ~12:1) */
+#idb-warn{position:fixed;top:0;left:0;right:0;z-index:9100;display:flex;align-items:center;gap:10px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:#FFF4D6;color:#3A2A00;border-bottom:1px solid #C9A227;font-size:13px;line-height:1.35;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+#idb-warn span{flex:1;min-width:0}
+#idb-warn button{flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid #8A6A00;border-radius:8px;background:#fff;color:#3A2A00;font:inherit;font-weight:600;cursor:pointer}
+#idb-warn .iw-show{display:none}
+#idb-warn.min{left:auto;right:6px;top:calc(6px + env(safe-area-inset-top,0px));padding:0;background:transparent;border:0;box-shadow:none}
+#idb-warn.min .iw-t,#idb-warn.min .iw-try,#idb-warn.min .iw-hide{display:none}
+#idb-warn.min .iw-show{display:block;width:40px;height:40px;padding:0;border-radius:50%;background:#FFF4D6;border:1px solid #C9A227;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 @property --jeb-h{syntax:'<length>';inherits:false;initial-value:0px}
 html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:56px}
 html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:0px}
@@ -900,7 +908,7 @@ html.jeb-kb #jeb-bar,html.jeb-kb #zab-btn,html.jeb-kb #zab-lay{display:none!impo
   #jeb-panel.on{animation:jebUp .2s ease}
 }
 @media(prefers-reduced-motion:reduce){#jeb-panel.on{animation:none}}
-/* ══ v05.17 · N2 — on a phone Zab is one corner button (html.zab-btn: a phone, Zab on, layout not 'bar') and three layouts.
+/* ══ v05.18 · N2 — on a phone Zab is one corner button (html.zab-btn: a phone, Zab on, layout not 'bar') and three layouts.
    z-index: layouts 141 (the panel's level — never both at once), the button 142, the long-press card 143; all below Attach 9150,
    menus 9200 and modals 10000. Nothing here is drawn at 640px and up. Inks are pane inks on the pane surface; only the
    bubble's glyph sits on the owner's pocket colour (dark ink, as .jeb-sw). ══ */
@@ -945,7 +953,10 @@ html.zab-btn #zab-btn{display:flex}
 a.jeb-lnk{color:var(--accent);text-decoration:underline;overflow-wrap:anywhere;padding:11px 0}
 .jeb-card a.jeb-lnk{color:#2A2418}
 @media(max-width:639.98px){
-  html.zab-btn :is(#tree,#p2c,#p3c)>:last-child:not(.lp){margin-bottom:84px}   /* room to scroll the last line clear of the button; the centred landing page is left alone */
+  /* room to scroll the last line clear of the button; the centred landing page is left alone. A spacer AFTER the content, never a
+     margin on the last element: that element is #ed while editing, and a margin there made the phone's editor differ from the
+     pop-up editor's (v05.18, Architect review). All three containers are display:block. */
+  html.zab-btn :is(#tree,#p2c,#p3c):not(:has(>.lp:last-child))::after{content:'';display:block;height:84px}
   html.zab-btn .toast{bottom:calc(84px + var(--jeb-h) + env(safe-area-inset-bottom,0px))}
   html.zab-btn #toc-float-btn{bottom:calc(84px + var(--jeb-h) + env(safe-area-inset-bottom,0px))}
 }
@@ -985,6 +996,7 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jeb-add textarea::placeholder{color:var(--t3);opacity:1}
 .jeb-list{flex:1;min-height:0;overflow-y:auto;padding:4px 0;-webkit-overflow-scrolling:touch}
 .jeb-it{display:flex;align-items:flex-start;gap:6px;padding:6px 8px 6px 4px;border-bottom:1px solid var(--border);background:var(--white);position:relative}
+.jeb-it:not(.jl-it):not(.jt-it):not(.jk-it):not(:has(.jeb-edit)){content-visibility:auto;contain-intrinsic-size:auto 52px}   /* v05.16 · N1 (Architect): plain rows too, like links/tasks/ideas; "All pockets" with 54 groups and 300 items at 390 ×4 CPU: 301–405 ms → 191–238 ms */
 .jeb-it.jeb-drag{opacity:.55;background:var(--hover)}
 .jeb-it.jeb-before::before,.jeb-it.jeb-after::after{content:'';position:absolute;left:0;right:0;height:3px;background:var(--green)}
 .jeb-it.jeb-before::before{top:-2px}
@@ -3686,7 +3698,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.18</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.19</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3845,6 +3857,8 @@ let ST = {folder:null, article:null, exp:{}, editing:false, etitle:'', efolders:
    shape localStorage[SK] always held. */
 const IDB_NAME='siyagah-local-v1', IDB_STORE='kv', IDB_KEY='notebook';
 let _idbReady=false;          /* true once IndexedDB actually holds the authoritative copy */
+const _IDB_BOOT_TRIES=5, _IDB_BOOT_GAP_MS=300;   /* v05.17 · B1 — see _idbRecoverTry */
+let _idbBootFail=false, _idbRecT=0, _idbRecN=0, _idbRecBusy=false;
 /* v04.50 — false until loadDB() has put the REAL notebook into DB. Before
    this round loadDB() was synchronous, so nothing could run between the
    script starting and DB being loaded. Now loadDB() awaits IndexedDB, and
@@ -3861,13 +3875,30 @@ function _idbOpen(){
   _idbOpenPromise=new Promise((resolve)=>{
     if(!window.indexedDB){ resolve(null); return; }
     let req;
-    try{ req=indexedDB.open(IDB_NAME,1); }catch(e){ resolve(null); return; }
+    /* v05.17 · B1 — a FAILED open is not remembered (no IndexedDB at all still is): the next call opens again, so a
+       moment's failure at start (a crash's leftovers, a storage hiccup) is not this whole session's answer */
+    const fail=()=>{ _idbOpenPromise=null; resolve(null); };
+    try{ req=indexedDB.open(IDB_NAME,1); }catch(e){ fail(); return; }
     req.onupgradeneeded=()=>{ try{ req.result.createObjectStore(IDB_STORE); }catch(e){} };
     req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>resolve(null);
-    req.onblocked=()=>resolve(null);
+    req.onerror=fail;
+    req.onblocked=fail;
   });
   return _idbOpenPromise;
+}
+/* v05.17 · B1 — a read that tells "not there" from "could not be read": {ok:true,v} (v undefined = genuinely absent, or this
+   browser has no IndexedDB at all) or {ok:false}. _idbGet() keeps its old answer (undefined for both) for its other callers;
+   anything that DECIDES on the notebook's absence must use this. */
+function _idbRead(key){
+  if(!window.indexedDB) return Promise.resolve({ok:true,v:undefined});
+  return _idbOpen().then(db=>new Promise(resolve=>{
+    if(!db){ resolve({ok:false}); return; }
+    try{
+      const rq=db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
+      rq.onsuccess=()=>resolve({ok:true,v:rq.result});
+      rq.onerror=()=>resolve({ok:false});
+    }catch(e){ resolve({ok:false}); }
+  }));
 }
 function _idbGet(key){
   return _idbOpen().then(db=>new Promise(resolve=>{
@@ -3898,6 +3929,10 @@ function _idbIdSet(arr){ return (arr||[]).map(x=>x&&x.id).slice().sort().join(',
  *  does IndexedDB become authoritative for this session. */
 async function _idbMigrateFrom(db){
   try{
+    /* v05.17 · B1 — the first write of this device's copy happens only when a read has just SHOWN there is none:
+       never over a copy that is there, never over one that could not be read */
+    const cur=await _idbRead(IDB_KEY);
+    if(!cur.ok||(cur.v&&cur.v.folders)) return false;
     await _idbPut(IDB_KEY, db);
     const back=await _idbGet(IDB_KEY);
     if(!back) return false;
@@ -4110,7 +4145,16 @@ async function loadDB(){
      this version (IndexedDB empty) falls straight through to the exact
      localStorage/embedded logic this file has always used. */
   let _idb=null;
-  try{ _idb=await _idbGet(IDB_KEY); }catch(e){ _idb=null; }
+  /* v05.17 · B1 — a failed read used to look exactly like "no notebook on this device": boot then showed the starter set and its
+     first write could land over the real copy. Now it is tried again, and if it still fails this session never writes the copy
+     (see _idbBootFail) and joins it back in when it can be read (_idbRecoverTry). */
+  let _rd={ok:false};
+  for(let k=0;k<_IDB_BOOT_TRIES;k++){
+    try{ _rd=await _idbRead(IDB_KEY); }catch(e){ _rd={ok:false}; }
+    if(_rd.ok) break;
+    await new Promise(r=>setTimeout(r,_IDB_BOOT_GAP_MS));
+  }
+  if(_rd.ok) _idb=_rd.v||null; else _idbBootFail=true;
   if(_idb&&_idb.folders){
     _idbReady=true;
     /* v04.91 — a notebook saved in journal mode: the full copy plus what the journal
@@ -4122,7 +4166,7 @@ async function loadDB(){
   else if(_stored?.folders&&emb?.folders){DB=mergeDB(_stored,emb);}
   else if(emb?.folders){DB=JSON.parse(JSON.stringify(emb));}
   else if(_stored?.folders){DB=JSON.parse(JSON.stringify(_stored));}
-  else{DB=mkDefaults();}
+  else{DB=_idbBootFail?{folders:[],articles:[]}:mkDefaults();}   /* B1: never the starter set when the real copy is only unreadable — it would be joined into it */
   _dbLoaded=true;
   const roots = DB.folders.filter(f=>!f.parentId).sort((a,b)=>a.order-b.order);
   if(roots.length) ST.folder = roots[0].id;
@@ -4290,11 +4334,59 @@ async function loadDB(){
      from this version on. Runs once: the next boot finds IndexedDB already
      holding a notebook (the branch at the top of this function) and never
      reaches this code path again. */
+  if(_idbBootFail){ snapshotState(); _idbWarn(true); _idbRecoverArm(); return; }   /* v05.17 · B1 — nothing is written to this device's copy */
   if(!_idbReady){
     try{ _idbReady=await _idbMigrateFrom(DB); }catch(e){ _idbReady=false; }
+    /* B1 — the copy turned out to be there after all (read again just now): join it in, never write over it */
+    if(!_idbReady){ const again=await _idbRead(IDB_KEY).catch(()=>({ok:false})); if(!again.ok||(again.v&&again.v.folders)){ _idbBootFail=true; snapshotState(); _idbWarn(true); _idbRecoverTry(); return; } }
   }
   snapshotState();
 }
+/* ── v05.17 · B1 — this device's copy could not be read at start ─────────────────────
+   The session runs on what could be opened (the localStorage copy, a Save File's notes, or an EMPTY notebook — never the
+   starter set) and never writes the device copy (_idbReady stays false, so _save() writes only localStorage). A line at the
+   top says so. The read is tried again — every 3 s for 2 min, then every 30 s, and when the app is shown again — and when it
+   works the copy is joined in exactly as a received sync is (mergeDB: union, newest edit wins), so nothing added meanwhile is
+   lost, and the session carries on as normal. */
+function _idbRecoverArm(){
+  clearTimeout(_idbRecT); if(!_idbBootFail) return;
+  _idbRecT=setTimeout(_idbRecoverTry,_idbRecN<40?3000:30000);
+}
+async function _idbRecoverTry(){
+  if(!_idbBootFail||_idbRecBusy) return;
+  _idbRecBusy=true; _idbRecN++;
+  try{
+    const rd=await _idbRead(IDB_KEY).catch(()=>({ok:false}));
+    if(!rd.ok) return;
+    const idb=rd.v;
+    if(idb&&idb.folders){
+      try{ await _ljOverlay(idb); }catch(e){ console.error('local journal not applied (the full copy is used):',e); }
+      _flushAllEditors();
+      _stampRecordTouches();   /* stamp anything typed meanwhile, BEFORE the merge judges it (as a received sync does) */
+      const old=_recSnap;
+      DB=mergeDB(DB,idb);
+      _seedThemeSnap();
+      _seedRecSnap(true); _s1DirtyFromDiff(old,_recSnap);
+    }
+    _idbBootFail=false; _idbReady=true;
+    _save(); snapshotState();
+    _idbWarn(false);
+    try{ _renderPreserveEdit(); }catch(e){ render(); }
+    if(idb&&idb.folders) toast('✅ This device\'s copy of your notebook could be read again and is back');
+  }catch(e){ console.error('B1 recovery:',e); _idbBootFail=true; _idbReady=false; }
+  finally{ _idbRecBusy=false; if(_idbBootFail) _idbRecoverArm(); }
+}
+function _idbWarn(on){
+  let el=document.getElementById('idb-warn');
+  if(!on){ if(el) el.remove(); return; }
+  if(el) return;
+  el=document.createElement('div'); el.id='idb-warn'; el.setAttribute('role','alert');
+  el.innerHTML='<span class="iw-t">⚠ This device\'s copy of your notebook could not be read just now. Nothing is lost: what you add now is kept and joined in as soon as it can be read. Trying again…</span><button type="button" class="iw-try" onclick="_idbRecoverTry()">Try now</button><button type="button" class="iw-hide" onclick="_idbWarnMin(true)">Hide</button><button type="button" class="iw-show" onclick="_idbWarnMin(false)" aria-label="Show the notice about this device\'s copy" title="This device\'s copy of your notebook could not be read yet">⚠</button>';
+  document.body.appendChild(el);
+}
+/* Hide shrinks the line to a small ⚠ in the top-right corner (it sits over the header's buttons); ⚠ brings it back */
+function _idbWarnMin(on){ const el=document.getElementById('idb-warn'); if(el) el.classList.toggle('min',!!on); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&_idbBootFail) _idbRecoverTry(); });
 /* ── Local-save guard (v03.80) ────────────────────────────────────────
    localStorage is capped at roughly 5 MB per origin. When a notebook
    crosses that line setItem() throws QuotaExceededError.
@@ -5898,7 +5990,7 @@ function _renderPreserveEdit(){
   }
 }
 
-/* ── v05.18 — P2: redraw only what a change touches ──────────────────────────────────────────
+/* ── v05.19 — P2: redraw only what a change touches ──────────────────────────────────────────
    After a received merge and after undo/redo the screen used to be drawn whole (render()) for a change that
    is usually one note: at 9,000 notes that was 175–230 ms on a phone with the CPU slowed ×4. _renderFor() is
    the ONE place that decides what such a change touches. It is handed WHAT CHANGED, never derived by
@@ -6546,7 +6638,7 @@ function _p2cPaint(el,head,cards,tail,ids,fid){
   _p2cLast={el:el,head:head,tail:tail,cards:cards,mark:mark};
   note(_p2cLast);
 }
-/* v05.18 — P2. The part of a folder's list above its cards, built in one place so that the full draw and the
+/* v05.19 — P2. The part of a folder's list above its cards, built in one place so that the full draw and the
    targeted one (_p2cTry) cannot drift apart: equal text here is the proof that nothing above the cards moved. */
 function _p2cFolderHead(curF,arts){
   const subs=chOf(curF.id);
@@ -21764,7 +21856,7 @@ function renderThemeModal(){
   h+='<div class="fs-sub" style="margin:-2px 0 8px">The strip of pockets along the bottom of the screen</div>';
   h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="checkbox" id="th-jebbar"'+(_jebBarOn()?' checked':'')+' onchange="setJebBar(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show Zab bar</label></div>';
 
-  /* Zab on the phone (v05.17, N2) — DB.theme.zabPhoneLayout, absent = rail. Shown on every screen size so it can be set from a laptop. */
+  /* Zab on the phone (v05.18, N2) — DB.theme.zabPhoneLayout, absent = rail. Shown on every screen size so it can be set from a laptop. */
   h+='<div class="theme-divider"></div>';
   h+='<div class="theme-sect" id="th-zpl"><div class="theme-sect-lbl">Zab on the phone</div>';
   h+='<div class="fs-sub" style="margin:-2px 0 8px">This applies to phones (screens under 640 px wide). Tablets and laptops keep the bar along the bottom. “Show Zab bar” above switches Zab off everywhere.</div>';
@@ -22378,7 +22470,7 @@ function _histApply(fr,dir){
   return {changed:changed,gone:goneKeys};
 }
 function _histStep(fr,dir){
-  let _rdCh=null; try{ _rdCh=_rdFrameBefore(fr); }catch(e){ _rdCh={unknown:true}; }   /* v05.18 — P2: the records as they are before the frame is applied */
+  let _rdCh=null; try{ _rdCh=_rdFrameBefore(fr); }catch(e){ _rdCh={unknown:true}; }   /* v05.19 — P2: the records as they are before the frame is applied */
   const r=_histApply(fr,dir);
   /* v04.68 — NOT swept as an edit: stepping back also rolls back anything merged
      in from another device since the frame was taken; stamping that rollback "now"
@@ -22392,7 +22484,7 @@ function _histStep(fr,dir){
   ST.editing=false; ST.article=null;
   applyTheme(DB.theme||{preset:'forest',custom:{}});
   try{ _rdCh=_rdFrameAfter(_rdCh); }catch(e){ _rdCh={unknown:true}; }
-  _renderFor(_rdCh,render,{prev:_prevArt,p3:_hadOpen}); updateUndoRedoBtns();   /* v05.18 — P2 */
+  _renderFor(_rdCh,render,{prev:_prevArt,p3:_hadOpen}); updateUndoRedoBtns();   /* v05.19 — P2 */
 }
 
 function undo(){
@@ -22768,7 +22860,7 @@ function _jebUrlIn(text){
   const m=/https?:\/\/[^\s<>"'\])]+/i.exec(String(text==null?'':text));
   return m?m[0].replace(/[.,;:!?]+$/,''):'';
 }
-/* v05.17 · N2 — an item's text, escaped, with each web address a link that opens in a new tab; a tap on the rest still edits */
+/* v05.18 · N2 — an item's text, escaped, with each web address a link that opens in a new tab; a tap on the rest still edits */
 function _jebTxHTML(text){
   const s=String(text==null?'':text), re=/https?:\/\/[^\s<>"'\])]+/gi; let out='', last=0, m;
   while((m=re.exec(s))){
@@ -22950,7 +23042,7 @@ function _jebWireOnce(){
   if(_jebWired) return; _jebWired=true;
   try{ new ResizeObserver(jebLayout).observe(_jebEl('sb')); }catch(e){}
   let wasWide=_jebWide(), wasTk=_jebTaskMode(), wasPhone=_zabPhone();
-  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_zabPhone()!==wasPhone){ wasPhone=_zabPhone(); jebRefresh(); } else if(_zabOpen) _zabPaint(); if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
+  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_zabPhone()!==wasPhone){ wasPhone=_zabPhone(); jebRefresh(); } else if(_zabOpen) _zabPaint(); _zabPlace(); if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
   document.addEventListener('focusin',_jebKbCheck);
   document.addEventListener('focusout',()=>setTimeout(_jebKbCheck,0));
   document.addEventListener('pointerdown',e=>{
@@ -23005,7 +23097,7 @@ function jebRefresh(){
     document.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,#zab-btn,#zab-lay,#zab-card').forEach(el=>el.remove());
   }
   _jebWireOnce();
-  const root=document.documentElement, on=_jebBarOn(), btn=on&&_zabBtnOn();   /* v05.17 · N2: a phone shows the corner button, not the bar */
+  const root=document.documentElement, on=_jebBarOn(), btn=on&&_zabBtnOn();   /* v05.18 · N2: a phone shows the corner button, not the bar */
   root.classList.toggle('jeb-on',on&&!btn);
   root.classList.toggle('zab-btn',btn);
   let bar=_jebEl('jeb-bar');
@@ -23023,7 +23115,7 @@ function jebRefresh(){
   if(_JEB_APP) _jebAppEnsure();
   _jebLastDay=_jebToday();
 }
-/* ══ v05.17 · N2 — Zab on a phone: one corner button and three layouts ═════════
+/* ══ v05.18 · N2 — Zab on a phone: one corner button and three layouts ═════════
    DB.theme.zabPhoneLayout = 'rail' | 'drawer' | 'cols' | 'bar' (absent = rail). It is the only thing stored; which drawer rows are
    unfolded (_zabUnfold) and which columns are shown (_zabPath) are this session's. Under 640px, unless 'bar', the bar is not drawn
    (html.zab-btn instead of html.jeb-on, so --jeb-h is 0) and #zab-btn sits in the right corner. Every layout ends in the one
@@ -23045,6 +23137,19 @@ function _zabSync(on){
   b.classList.toggle('up',!!_jebOpen);   /* with a panel open the button rides above its top edge, so it can still close it */
   b.setAttribute('aria-expanded',_zabOpen?'true':'false');
   if(_zabOpen) _zabPaint();
+  _zabPlace();
+}
+/* v05.18 (Architect review) — on a phone's folder screen the sidebar's bottom row (New Note · Recent · MyWall · Folders) is where the
+   corner would be, and the button hid "Folders". While that screen shows, the button sits just above the row, measured (never a
+   constant); the Rail's bubbles follow the button. Written on the button and the rail themselves, never on <html>. */
+function _zabPlace(){
+  const b=_jebEl('zab-btn'); if(!b) return;
+  const sb=_jebEl('sb'), tb=_jebEl('sb-toolbar');
+  let v='';
+  if(!_jebOpen&&sb&&tb&&!sb.classList.contains('closed')){ const r=tb.getBoundingClientRect(); if(r.height>0&&r.top<innerHeight) v=Math.round(innerHeight-r.top+10)+'px'; }
+  if(b.style.bottom!==v) b.style.bottom=v;
+  const rail=document.querySelector('#zab-lay .zl-rail');
+  if(rail){ const w=v?'calc('+v+' + 62px)':''; if(rail.style.bottom!==w) rail.style.bottom=w; }
 }
 function _zabMakeBtn(){
   const b=document.createElement('button'); b.type='button'; b.id='zab-btn';
@@ -23124,6 +23229,7 @@ function _zabPaint(anim){
   const sig=L+'|'+h; if(sig===_zabLaySig) return; _zabLaySig=sig;
   const keep=[...lay.querySelectorAll('.zl-rail,.zd-list,.zc-list')].map(e=>e.scrollTop);
   lay.innerHTML=h;
+  _zabPlace();
   lay.querySelectorAll('.zl-rail,.zd-list,.zc-list').forEach((e,i)=>{ if(keep[i]) e.scrollTop=keep[i]; });
   if(anim&&!_jebReduced()&&lay.animate){   /* none under prefers-reduced-motion */
     const bd=lay.querySelector('.zl-bd'); if(bd) bd.animate([{opacity:0},{opacity:1}],{duration:160,easing:'ease-out'});
@@ -23383,7 +23489,7 @@ function jebClosePanel(){
   _jebEditId=null; _jebDrag=null; _jebNewId=null;
   if(_jebOpen!==null){ _jebOpen=null; _jebMulti=null; _jebBarSig=''; _jebPanelSig=''; }
   if(p) p.classList.remove('on');
-  const zb=_jebEl('zab-btn'); if(zb) zb.classList.remove('up');   /* v05.17 */
+  const zb=_jebEl('zab-btn'); if(zb) zb.classList.remove('up');   /* v05.18 */
   const bar=_jebEl('jeb-bar'); if(bar&&_jebBarOn()) _jebPaintBar(bar);
 }
 function _jebMakePanel(){
@@ -23426,7 +23532,7 @@ function _jebMakePanel(){
     if(t.closest('.jeb-more')){ _jebItemMenu(row.dataset.iid,t.closest('.jeb-more')); return; }
     if(t.closest('.jeb-att-b')){ _jebAttOpen(row.dataset.iid,t.closest('.jeb-att-b')); return; }
     if(t.closest('.jeb-note-b')){ _jebToNoteUI(row.dataset.iid); return; }
-    if(t.closest('a.jeb-lnk')) return;   /* v05.17: the address opens in a new tab; the rest of the text edits */
+    if(t.closest('a.jeb-lnk')) return;   /* v05.18: the address opens in a new tab; the rest of the text edits */
     if(t.closest('.jeb-tx')) _jebStartEdit(row.dataset.iid);
   });
   p.addEventListener('contextmenu',e=>{ const k=e.target.closest('.jx-kid'); if(!k) return; e.preventDefault(); _jebPocketMenu(k.dataset.pid,e.clientX,e.clientY); });
@@ -23792,7 +23898,7 @@ function _jebMakeDeck(){
     if(t.closest('.jeb-more')){ _jebItemMenu(iid,t.closest('.jeb-more')); return; }
     if(t.closest('.jeb-att-b')){ _jebAttOpen(iid,t.closest('.jeb-att-b')); return; }
     if(t.closest('.jeb-note-b')){ _jebToNoteUI(iid); return; }
-    if(t.closest('a.jeb-lnk')) return;   /* v05.17: the address opens in a new tab; the rest of the text edits */
+    if(t.closest('a.jeb-lnk')) return;   /* v05.18: the address opens in a new tab; the rest of the text edits */
     if(t.closest('.jeb-tx')) _jebStartEdit(iid);
   });
   d.addEventListener('pointerdown',e=>{
@@ -25657,6 +25763,7 @@ function showPane(name){
   if(name==='sb')  sb.classList.remove('closed');
   if(name==='p2')  p2.classList.add('mob-open');
   if(name==='p3')  p3.classList.add('mob-open');
+  if(typeof _zabPlace==='function') _zabPlace();   /* v05.18 — the corner button clears the folder screen's bottom row */
 }
 
 /* ── Cloud Sync (Firebase Firestore) ─────────────────────────────────────
@@ -28349,7 +28456,7 @@ function _mergeRemoteIn(remoteDB, remoteT){
        flush and correctly loses to the incoming change. */
     _flushAllEditors();
     const _swPre=_stampRecordTouches();   /* v04.68 — see syncNow() */
-    let _hdPre=null; try{ if(_swPre) _hdPre=_headOf(DB,_swPre); }catch(e){}   /* v05.18 — P2: the notebook as it stood, for _renderFor */
+    let _hdPre=null; try{ if(_swPre) _hdPre=_headOf(DB,_swPre); }catch(e){}   /* v05.19 — P2: the notebook as it stood, for _renderFor */
     const _s1Old=_recSnap;   /* v04.90 — S1c: what the merge changes is the difference of the two baselines */
     DB=mergeDB(DB, remoteDB);                  /* MERGE — never replace, so nothing is lost */
     _remMerged=true;   /* v05.06 — the reminder list may be written only after a read */
@@ -28358,7 +28465,7 @@ function _mergeRemoteIn(remoteDB, remoteT){
     _s1DirtyFromDiff(_s1Old,_recSnap);
     const after=(DB.articles||[]).length+(DB.folders||[]).length+(DB.trash||[]).length;
     _save(undefined,_sw);
-    /* v05.18 — P2: redraw what the merge touched (or everything, when that cannot be shown) */
+    /* v05.19 — P2: redraw what the merge touched (or everything, when that cannot be shown) */
     let _rdCh; try{ _rdCh=_rdChangeOfMerge(_swPre,_sw,_hdPre); }catch(e){ _rdCh={unknown:true}; }
     _renderFor(_rdCh,_renderPreserveEdit);
     _edApplyRemote();   /* let the merged text reach an open, idle editor */

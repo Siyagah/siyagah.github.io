@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* tools/redraw-p2.mjs — v05.18, P2: redraw only what changed after a received edit and after undo / redo (checks 78a–78d).
+/* tools/redraw-p2.mjs — v05.19, P2: redraw only what changed after a received edit and after undo / redo (checks 78a–78d).
 
    What it proves. After a merge from another device and after undo / redo, the app draws only what the change touches
    (`_renderFor`). The ORACLE: right after every such draw the page snapshots #sb, #p2, #p3 (and Zab's #jeb-bar, #jeb-panel,
@@ -24,7 +24,7 @@
         caller's own full draw runs
    78d  no new writes: the redraw never calls _save / _stampThemeTouches / scheduleAutoSave / pushToCloud and never changes DB
 
-   `--only=78a,78c` runs just those. `RDP2_ROOT=<dir>` serves another build (the unpatched run: v05.17's index.html + sw.js);
+   `--only=78a,78c` runs just those. `RDP2_ROOT=<dir>` serves another build (the unpatched run: v05.18's index.html + sw.js);
    `RDP2_BREAK=1` serves a scratch copy of this build with ONE targeted path broken (the list does not rebuild the card of the
    note that changed) to show the oracle failing. Each printed ok/FAIL line becomes one app-check check (block 78). */
 import { playwright, serve, seedDB, ROOT } from './harness.mjs';

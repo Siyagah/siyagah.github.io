@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.18.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.19.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -25,6 +25,12 @@ stay short enough to read in full before starting work.
 > in the User Manual tab (`p/siy.manual`: one heading per feature, then What it does ·
 > Benefit · How to use). The owner's word always overrides the PL.
 > **Keep working, never idle (owner's general rule, 14 Oct 2026).** Every Master Architect and every builder works continuously. Stop and ask only when a decision or answer from the owner is needed: ask it with tick boxes, then carry on with everything else meanwhile. When a job is done, take the next one at once and keep a builder round running. When no job is left, audit the app feature by feature (the User Manual list is the checklist) on phone, tablet and desktop, record every defect found as a job, and fix it with the usual checks. The Project Chief Architect (PCA, who now leads every project's Master Architect in the shared PCF) does the same across all projects.
+> **How we work: W-T-P-E-O (the owner's rule, 15 Oct 2026, PCA J39).** **Wise:** every job serves the owner's long-term aim; check
+> it fits; keep the owner's rules. **Timely:** a next step and a time for every job; the status line (`p/siy.monitor`) at every
+> step; relays within minutes. **Precise:** real clock times (read the clock in its own step before any write that carries a
+> time); nothing is "done" until tested on a phone and a computer; exact job names and full links. **Elegant:** calm, tidy pages,
+> plain words, short "What I need from you" tick lists. **Optimal:** the fewest owner taps, free tools, no credits, no duplicate
+> work. Every finished job ends with a one-line W-T-P-E-O check in its Done line.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -37,14 +43,19 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
-- **v05.18** (14 Oct 2026) — P2, a received edit and an undo redraw only what changed (issue #184, PCF J08). `_renderFor(changed)` decides;
+- **v05.19** (15 Oct 2026) — P2, a received edit and an undo redraw only what changed (issue #184, PCF J08). `_renderFor(changed)` decides;
   anything it cannot prove safe calls the caller's full draw. At 9,000 notes, phone ×4: received edit not open 5 ms, open note 85 ms, undo 34 ms
   (were ~70–230 ms of `render()`). Check: block 78, `tools/redraw-p2.mjs`. Not done: the windowed list; un-selecting a tag still redraws the whole list.
-- **v05.17** (14 Oct 2026) — N2, on a phone Zab is one corner button with three layouts the owner chooses: Rail (the start), Drawer,
+- **v05.18** (14 Oct 2026) — N2, on a phone Zab is one corner button with three layouts the owner chooses: Rail (the start), Drawer,
   Columns (issue #182, PCF J20). `DB.theme.zabPhoneLayout` `'rail'|'drawer'|'cols'|'bar'` (absent = rail; `'bar'` = the N1 bar, offered
   only in 🧰 → 🎨 Appearance). < 640 only; ≥ 640 is the N1 bar unchanged. Long-press (500 ms) or right-click on the button chooses.
   Addresses in plain items are tappable. See *Zab on the phone* below. Check: block 77, `tools/zab-n2.mjs`. Old phone checks (65, 69–72, 76)
   now seed `zabPhoneLayout:'bar'` in place, because they are about the bar.
+- **v05.17** (15 Oct 2026) — B1, this device's copy of the notebook could not be read at start (PCF J25, IMPORTANT; built by the
+  Architect). A failed IndexedDB read used to look like "no notebook here": boot opened EMPTY and `_idbMigrateFrom` could write that
+  over the device copy (unpatched check: 43 notes → 0). Now the read is retried; if it keeps failing the session opens from what it can
+  (never the starter set), never writes the device copy, shows `#idb-warn` with **Try now**, and joins the copy back in like a received
+  sync when it can be read. See *Reading the device copy at start* below. Check: block 79, `tools/boot-b1.mjs`; 52d updated in place.
 - **v05.16** (14 Oct 2026) — N1, pockets inside pockets, no depth limit (issue #179, PCF J20; the phone corner button and its layouts
   are N2, not done). A pocket gets `parentId` (absent/null = top level; nothing written to existing pockets) and `order` is the place
   among siblings. Readers `jebChildren(id|null)`, `jebPath(id)`, `jebDescendants(id)`; writer `jebMovePocketInto(id,parentId|null,toIndex)`
@@ -55,13 +66,8 @@ must never accumulate here instead of there.
   Phone only (< 640 via `_p3OneBar()`): editing puts ✕ and the "✓ Saved" flash on `.p3c-actrow` above the title, and the title is a
   growing `<textarea id="ti">` (`_tiInput`/`_tiKey`/`_tiGrow`/`_tiGrowAll`: a line break becomes a space, Enter moves the caret into the
   note's text); reading drops the 2-line clamp on `.tbt`; both pop-ups' titles are the same textarea (Single `#ti`, Multi `#fw-ti-<aid>`).
-  Tablet and laptop markup is byte-identical to v05.14. Check: block 75, `tools/title-t1.mjs` (`--unpatched` serves v05.14: 33 of 72 fail). Architect: full `app-check` **5143/5143, twice**; unpatched `--only 75` 40/74.
-- **v05.14** (14 Oct 2026) — O1, Siyagah opens and works on a dead connection (issue #175, PCF J11, owner: IMPORTANT). The saved-page
-  leftovers are out of the source (three parser-blocking Firebase `<script src>`, `<style></style>`, the baked `<style id="dyn-hs">`,
-  `<body style="">`), and so is a second blocker found on the way: the Google Fonts `<link rel="stylesheet">` is now loaded on the side
-  (`media="print"` + `onload`). `_loadScript()` is honest (waits, removes a failed tag, 15 s limit, retried when back online); the
-  service worker serves the cached page if the network is silent for 3 s; the offline dot says so in plain words. Check: block 74,
-  `tools/offline-o1.mjs`; `ship-check` has a guard for the class. See *Loading Firebase and the service worker's time limit* below. Architect: full `app-check` **5069/5069, twice**; unpatched `--only 74` 86/130.
+  Tablet and laptop markup is byte-identical to v05.14. Check: block 75, `tools/title-t1.mjs` (`--unpatched` serves v05.14: 33 of 72 fail).
+
 ---
 
 ## What this is
@@ -505,7 +511,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `.jx-mv`, greyed rows say why). All pockets: sub-groups indented by `data-depth`, `.jx-fold` per session (`_jebFold`, never stored; a
   fold hides the group's own items and the groups inside). Deck: `.jx-ins` "inside:" chips. Choose lists every pocket at any depth
   (nested ones marked ↳) in place of the bar's top-level-only view. Nothing new is fixed to the bottom, nothing is written to `<html>`.
-- **Zab on the phone (v05.17, N2 — extends the Zab section).** `_zabPhone()` is the one tier decision (< 640, the existing rule); the
+- **Zab on the phone (v05.18, N2 — extends the Zab section).** `_zabPhone()` is the one tier decision (< 640, the existing rule); the
   setting is read only through `_zabLayout()` (default `'rail'`). Unless `'bar'` (or `jebBar===false`, or Zab mode), the bottom bar is not
   drawn and the class is `html.zab-btn` instead of `html.jeb-on`, so `--jeb-h` is `0px`; `#zab-btn` (52 px, bottom right, badge = the "All
   pockets" total, red when anything is overdue) is built by `_zabMakeBtn`, painted by `_zabPaint`. **z-index: layout `#zab-lay` 141 (the
@@ -540,7 +546,13 @@ A failing check is a wrong assertion surprisingly often — investigate before
   refreshes the cache (`waitUntil`). A network that answers, even slowly (< 3 s), still wins (I3). The boot flag waits at most 1.5 s
   for `document.fonts.ready`. Check 74 serves the app from its own server (ok / dead / hang) because a service worker's own requests
   cannot be failed from a browser route reliably.
-- **Targeted redraw after a received merge and after undo (v05.18, P2).** `_renderFor(changed)` is the ONE place that decides what a change
+- **Reading the device copy at start (v05.17, B1).** Anything that DECIDES the notebook is absent uses `_idbRead(key)`
+  (`{ok:true,v}` / `{ok:false}`), never `_idbGet()` (which answers `undefined` for a failure too). `loadDB()` retries 5 × 300 ms; a
+  read that keeps failing sets `_idbBootFail`: the session never writes the device copy (`_idbReady` false), never starts from
+  `mkDefaults()`, shows `#idb-warn`, and `_idbRecoverTry()` (3 s, then 30 s, and on `visibilitychange`) joins the copy back in the way
+  a received sync does (`_ljOverlay`, `_stampRecordTouches`, `mergeDB`, `_seedRecSnap(true)`, `_s1DirtyFromDiff`, `_save`).
+  `_idbMigrateFrom()` writes only after a read has just shown there is no copy. `_idbOpen()` does not remember a FAILED open.
+- **Targeted redraw after a received merge and after undo (v05.19, P2).** `_renderFor(changed)` is the ONE place that decides what a change
   touches; the merge path (from its before/after diff, the same one that feeds `_s1Dirty`) and undo/redo (from the frame's records) call it. It
   never re-derives the changed set by stringifying the notebook. Note list: only the changed cards are replaced, and only when each keeps its
   membership and sort position; sidebar: only when a folder, section, tag, note folder/tags, Smart View membership or Trash could change;
@@ -590,6 +602,13 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **"Could not read it" is not "it is not there" — a read that decides absence must be able to fail.** `_idbGet()` answered
+  `undefined` for a failed open, a failed request and a missing key alike, so a moment's storage failure at start made boot take the
+  device copy for absent: it opened EMPTY and its first write could land over the real notebook (unpatched: 43 notes → 0). It hid for
+  thirteen rounds as "the 52d flake", because the only check that ever made the read fail did so by accident, under load, 1 time in 3,
+  and a flake is easy to file and stop looking at. Two rules: an absence that leads to a WRITE must come from a read that says it
+  worked; and a check that fails "now and then" on a data path is investigated to its cause before the round merges, never filed as
+  noise. Cost: present from v04.50 to v05.16; found in the v05.16 review, fixed in v05.17.
 - **A change to `<html>`'s own style restyles the whole page — on a big notebook that is a freeze.**
   J2 put the Zab bar's height in a custom property on `<html>` and flipped it with the phone keyboard.
   Every check passed, because every check ran on a 3-note notebook, where a whole-page restyle costs
