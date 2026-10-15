@@ -6594,7 +6594,7 @@ function renderP2C(){
       return;
     }
     const arts=getSmartArts(_sf.id);
-    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any article and choose ⭐ Favourite','sf-pinned':'No pinned articles yet — right-click (or hold on mobile) any article and choose 📌 Pin','sf-new':'No articles yet. Create your first article!','sf-recent':'No recently edited articles.','sf-jeb':'Notes you make from Zab appear here.','sf-enx':'Notes brought in from Evernote appear here.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
+    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any note and choose ⭐ Favourite','sf-pinned':'No pinned notes yet — right-click (or hold on mobile) any note and choose 📌 Pin','sf-new':'No notes yet. Create your first note!','sf-recent':'No recently edited notes.','sf-jeb':'Notes you make from Zab appear here.','sf-enx':'Notes brought in from Evernote appear here.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
     let h='<div class="fv">'+`<div class="slbl">${_sf.name} (${arts.length})</div>`;
     h+=_sfQtBarHTML(_sf.id,null);
     if(!arts.length){

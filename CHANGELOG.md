@@ -10123,6 +10123,10 @@ the bump commit): `f1.mjs` 16 of 40 fail, 80j 9 of 18 fail. The ones that pass o
 is "⭐ Favourite", the title sits below the row, "▸" comes before the count, tablet/laptop have no row, no page errors, the first batch and the
 Trash step of 80j).
 
+### Architect's review
+
+- **The empty Smart View texts said "article"**, the code's word, where the owner's word is "note" (CLAUDE.md, *Terminology*): Favourites, Pinned, New and Recent now say "note". Same line as fav14; no check quoted the old words.
+
 ### Not done
 
 - z6af1 (the YouTube picture stored in the note), z6af2 (the wide Links grid), the fold arrows (i0001m): not in this round, as the issue said.
