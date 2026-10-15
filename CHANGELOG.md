@@ -10139,4 +10139,23 @@ Trash step of 80j).
 
 ## v05.25 — Z9: a title for any Zab item (issue #197, PCF J36)
 
-(stub — the full entry is written at the end of the round)
+The owner (J36): "Enable a title to a Quick note/link". All three layouts (390 / 820 / 1440) built and measured.
+
+1. **New item field `title`** — the owner's own, trimmed, absent when empty (never `""`); through `jebEditItem` and `_jebItemSig`; syncs with the
+   item record. Not `ttl` (the fetched YouTube title): where both exist `title` wins on screen, `ttl` is untouched.
+2. **Setting it.** "✎ Title" beside 📎 Attach and → Note on every row kind (plain, Links, Tasks, Ideas, Shopping), in All pockets, and "✎" on a deck
+   card; also "✎ Title…" in the ⋯ menu. It opens the app's modal (OK / Clear / Cancel; Enter saves, Escape cancels) — the app's own modal at every
+   size (measured on screen at 390 / 820 / 1440; the phone button is 44 px). **Deviation:** the issue asked for a bottom sheet on a phone; the modal there is
+   the app's centred box (as `_jebQtyEdit`'s card dialog), not a sheet. Option A of J36, as asked.
+3. **Showing it.** `_jebMainHTML`: the title bold, the text (the link) small, one line, ellipsised, under it; `a.jeb-lnk` still opens in a new tab;
+   a tap on the small text edits the TEXT; a tap on the title opens the dialog. Links: the title replaces the fetched line.
+4. **→ Note** uses the title as the note's title (a Links note's link text too; a Shopping item's quantity is not prefixed to it); the text goes in the body.
+5. **Search inside Zab:** nothing in Zab searches items (no add-box filter, Choose lists pockets), so there was nothing to extend.
+
+**Checks.** New block 85, `tools/zab-z9.mjs` (131 checks in app-check). `--unpatched` (the build before this round): 30 of 33 run fail (the run stops at
+the first dialog that never opens); the 3 that pass are "no page errors". The two-device check calls `mergeDB` both ways on copies (as 59/jeb-j1 do)
+rather than the `s1-fake` cloud. "Same HTML as v05.24" (85d) compares the panel and deck with the button removed, since the button is new on every row.
+
+### Not done
+
+- The full `app-check` was not run (told not to); the Architect runs it.
