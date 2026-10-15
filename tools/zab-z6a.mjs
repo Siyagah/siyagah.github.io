@@ -19,7 +19,7 @@
    70i  contrast of the new text on the five presets (phone and laptop shapes, panel and deck)
 
    `--only=70a,70c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 70). */
-import { playwright, serve, seedDB, touchDrag } from './harness.mjs';
+import { playwright, serve, seedDB, touchDrag, hostLimit } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, check, results } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -360,7 +360,8 @@ try {
          249 ms; inside the full suite one cold first opening read 313 ms once (machine load, not the page). The median still
          fails if the paint really gets slower; every figure is printed. */
       const med = [...times].sort((a, b) => a - b)[Math.floor(times.length / 2)];
-      check(rows === 300 && med <= 300, `70h 300 link items at 390, CPU ×4: the panel paints in ≤ 300 ms, median of 4 (${times.join(' / ')} ms; median ${med})`, JSON.stringify({ rows, times }));
+      const H = hostLimit(300);   /* v05.24 (hs520): the runner's 300 ms × this computer's factor (≥ 1) */
+      check(rows === 300 && med <= H.ms, `70h 300 link items at 390, CPU ×4: the panel paints in ≤ ${H.text} ms, median of 4 (${times.join(' / ')} ms; median ${med})`, JSON.stringify({ rows, times }));
       noErr(d, '70h');
     } finally { await d.ctx.close(); }
   }

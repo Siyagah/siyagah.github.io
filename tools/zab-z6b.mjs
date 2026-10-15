@@ -24,7 +24,7 @@
    71i  contrast of the new text on the five presets (headers, chips, Overdue red, flag, counter, badge, chooser, deck)
 
    `--only=71a,71c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 71). */
-import { playwright, serve, seedDB, touchDrag } from './harness.mjs';
+import { playwright, serve, seedDB, touchDrag, hostLimit } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, check, results } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -405,7 +405,8 @@ try {
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
       console.log('Z6B-SCALE ' + JSON.stringify({ items: 300, times }));
       const med = [...times].sort((a, b) => a - b)[Math.floor(times.length / 2)];
-      check(rows === 300 && med <= 300, `71h 300 tasks at 390, CPU ×4: the panel paints in ≤ 300 ms, median of 4 (${times.join(' / ')} ms; median ${med})`, JSON.stringify({ rows, times }));
+      const H = hostLimit(300);   /* v05.24 (hs520): the runner's 300 ms × this computer's factor (≥ 1) */
+      check(rows === 300 && med <= H.ms, `71h 300 tasks at 390, CPU ×4: the panel paints in ≤ ${H.text} ms, median of 4 (${times.join(' / ')} ms; median ${med})`, JSON.stringify({ rows, times }));
       noErr(d, '71h');
     } finally { await d.ctx.close(); }
   }

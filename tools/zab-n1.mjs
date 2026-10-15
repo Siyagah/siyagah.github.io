@@ -19,7 +19,7 @@
    76g  contrast of the new text on the five presets
 
    `--only=76a,76c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 76). */
-import { playwright, serve, seedDB } from './harness.mjs';
+import { playwright, serve, seedDB, hostLimit } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, push, check, results } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -417,9 +417,10 @@ try {
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
       console.log('N1-SCALE ' + JSON.stringify({ bar, panel, allPockets: deep }));
       const med = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
-      check(med(bar) <= 300, `76f the bar paints in <= 300 ms at 390, CPU x4, median of 4 (${bar.join(' / ')} ms; median ${med(bar)})`, JSON.stringify(bar));
-      check(med(panel) <= 300, `76f a pocket's panel (with its pockets inside) paints in <= 300 ms (${panel.join(' / ')} ms; median ${med(panel)})`, JSON.stringify(panel));
-      check(med(deep) <= 300, `76f "All pockets" (50 pockets as indented groups, 300 items) paints in <= 300 ms (${deep.join(' / ')} ms; median ${med(deep)})`, JSON.stringify(deep));
+      const H = hostLimit(300);   /* v05.24 (hs520): the runner's 300 ms × this computer's factor (≥ 1) */
+      check(med(bar) <= H.ms, `76f the bar paints in <= ${H.text} ms at 390, CPU x4, median of 4 (${bar.join(' / ')} ms; median ${med(bar)})`, JSON.stringify(bar));
+      check(med(panel) <= H.ms, `76f a pocket's panel (with its pockets inside) paints in <= ${H.text} ms (${panel.join(' / ')} ms; median ${med(panel)})`, JSON.stringify(panel));
+      check(med(deep) <= H.ms, `76f "All pockets" (50 pockets as indented groups, 300 items) paints in <= ${H.text} ms (${deep.join(' / ')} ms; median ${med(deep)})`, JSON.stringify(deep));
       noErr(d, '76f');
     } finally { await d.ctx.close(); }
   }

@@ -20,7 +20,7 @@
    80i  contrast of the new text on the five presets
 
    `--only=80a,80c` runs just those; `--notes=N` sets the size of the big notebook in 80h. Each printed ok/FAIL line becomes one app-check check. */
-import { playwright, serve, seedDB } from './harness.mjs';
+import { playwright, serve, seedDB, hostLimit } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, waitSeeded, check, results, boot } from './s1-fake.mjs';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -436,7 +436,8 @@ try {
         const worst = Math.max(0, ...m.lt), bworst = Math.max(0, ...m.bt), grow = (peak - base) / 1048576;
         console.log(`# 80h 2,000-note import at 390 CPU x4: ${secs.toFixed(1)} s, ${m.bt.length} batches, per batch (persist) median ${m.bt.slice().sort((a, b) => a - b)[m.bt.length >> 1]} ms worst ${bworst} ms, worst long task ${worst} ms (${m.lt.length} over 50 ms), heap +${grow.toFixed(1)} MB`);
         check(m.n === 2000 && m.tot === 9000 + 4 + 2000, `${t} 2,000 notes came in to a notebook of ${9000 + 4} (now ${m.tot})`, JSON.stringify({ n: m.n, tot: m.tot }));
-        check(worst <= 200, `${t} no long task over 200 ms (worst ${worst} ms; ${m.lt.length} over 50 ms; time per batch: median ${m.bt.slice().sort((a, b) => a - b)[m.bt.length >> 1]} ms, worst ${bworst} ms; ${secs.toFixed(1)} s in all)`, m.lt.join());
+        const HL = hostLimit(200);   /* v05.24 (hs520): the runner's limit × this computer's factor (≥ 1) */
+        check(worst <= HL.ms, `${t} no long task over ${HL.text} ms (worst ${worst} ms; ${m.lt.length} over 50 ms; time per batch: median ${m.bt.slice().sort((a, b) => a - b)[m.bt.length >> 1]} ms, worst ${bworst} ms; ${secs.toFixed(1)} s in all)`, m.lt.join());
         check(grow <= 150, `${t} the JS heap grows by at most 150 MB (start ${(base / 1048576).toFixed(1)}, peak ${(peak / 1048576).toFixed(1)}, +${grow.toFixed(1)} MB)`);
         check(m.undo <= 2, `${t} the import made no undo frames (history length ${m.undo})`);
         noErr(d, t);
@@ -464,8 +465,9 @@ try {
           const rend = await page.evaluate(() => { const r = []; for (let i = 0; i < 3; i++) { const a = performance.now(); render(); r.push(Math.round(performance.now() - a)); } return r; });
           const n = await page.evaluate(() => DB.articles.length);
           console.log(`# 80h ${label} ${vp.name}${vp.touch ? ' CPU x4' : ''}: ${n} notes, boot ${boot} ms, render() ${rend.join('/')} ms`);
-          check(n >= BIGN - 10 && boot < (vp.touch ? 120000 : 60000), `${t}: boots in ${boot} ms (limit ${vp.touch ? 120 : 60} s)`);
-          check(Math.min(...rend) < (vp.touch ? 8000 : 3000), `${t}: render() takes ${rend.join('/')} ms (limit ${vp.touch ? 8000 : 3000} ms)`);
+          const HB = hostLimit(vp.touch ? 120000 : 60000), HR = hostLimit(vp.touch ? 8000 : 3000);   /* v05.24 (hs520) */
+          check(n >= BIGN - 10 && boot < HB.ms, `${t}: boots in ${boot} ms (limit ${HB.raw / 1000} s × host ${HB.factor})`);
+          check(Math.min(...rend) < HR.ms, `${t}: render() takes ${rend.join('/')} ms (limit ${HR.raw} ms × host ${HR.factor})`);
           await ctx.close();
         } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
       }

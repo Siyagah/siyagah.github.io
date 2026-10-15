@@ -10,6 +10,37 @@ import { pathToFileURL } from 'node:url';
 
 export const ROOT = resolve(new URL('..', import.meta.url).pathname);
 
+/* Host calibration (v05.24, hs520). A speed check's millisecond limit was set on the GitHub runner; on a slower
+   computer the same check misses with nothing wrong in the app. hostFactor() times a short fixed CPU workload once
+   per process (median of 5) and divides by HOST_REF_MS, the median measured on the runner: 1.0 there, clamped to
+   [1, 4], so a limit is NEVER tighter than the runner's. A check multiplies its limit by it and prints both
+   (see hostLimit). The workload is plain integer/float arithmetic plus array and string churn, the kind of work
+   the app's own paths do, so it scales with the browser's speed. */
+const HOST_REF_MS = 23;   /* measured on the GitHub runner, 15 Oct 2026: 21.3–22.3 ms over 5 processes */
+let _hf = null;
+export function hostFactor() {
+  if (_hf) return _hf;
+  const once = () => {
+    const t = performance.now();
+    let x = 1, s = 0; const a = [];
+    for (let i = 0; i < 2e6; i++) { x = (x * 1103515245 + 12345) & 0x7fffffff; s += x % 7; if (i % 64 === 0) a.push('k' + x); }
+    a.sort(); s += a.join('').length;
+    if (s < 0) console.log(s);   /* keeps the result alive */
+    return performance.now() - t;
+  };
+  once();   /* warm-up, not counted */
+  const r = [once(), once(), once(), once(), once()].sort((p, q) => p - q);
+  const med = r[2];
+  const f = Math.min(4, Math.max(1, med / HOST_REF_MS));
+  _hf = { factor: Math.round(f * 100) / 100, medianMs: Math.round(med * 10) / 10 };
+  return _hf;
+}
+/* A limit scaled for this computer, and the text a check prints: `limit` (raw, as on the runner) × factor. */
+export function hostLimit(limit) {
+  const f = hostFactor().factor;
+  return { ms: Math.round(limit * f), raw: limit, factor: f, text: f === 1 ? `${limit}` : `${Math.round(limit * f)} (${limit} × host ${f})` };
+}
+
 /* Playwright is installed globally in this sandbox, and ESM ignores
    NODE_PATH — so fall back to the global root by path. A repo-local
    `npm install playwright` also works and is picked up by the first try. */

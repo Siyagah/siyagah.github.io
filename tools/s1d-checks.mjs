@@ -262,6 +262,17 @@ async function openPersistent(browser, base, vp, dir) {
 }
 const killProfile = (dir) => { try { execFileSync('pkill', ['-9', '-f', '--', 'user-data-dir=' + dir]); } catch (e) { /* none left */ } };
 const closeQuiet = (ctx) => withTimeout(ctx.close(), 15000, 'close').catch(() => {});
+/* v05.24 (z6af3) — wait on a SIGNAL, not on time: after the kill, the next launch on the same profile must not start while any process
+   of the old browser is still alive (it still holds the profile's lock and files), and the old context's close must have settled
+   (it was fire-and-forget before, so it could race the new launch). pgrep finds nothing = all of them are gone; kill again each round. */
+const profileAlive = (dir) => { try { execFileSync('pgrep', ['-f', '--', 'user-data-dir=' + dir], { stdio: 'pipe' }); return true; } catch (e) { return false; } };
+async function killAndWait(dir, ctx) {
+  const t0 = Date.now();
+  killProfile(dir);
+  while (profileAlive(dir) && Date.now() - t0 < 15000) { await sleep(25); killProfile(dir); }
+  if (profileAlive(dir)) throw new Error('the killed browser is still running after 15 s');
+  if (ctx) await closeQuiet(ctx);
+}
 
 async function check52d(browser, srv) {
   for (const vp of [VPS[2], VPS[0]]) {
@@ -285,9 +296,7 @@ async function check52d(browser, srv) {
         return window.__sig52();
       }, { i, ck: i % 2 ? 1 : 30000 });
       await sleep(Math.floor(Math.random() * 30));   /* anywhere from "before the transaction began" to "after it ended" */
-      killProfile(dir);   /* SIGKILL: a dead browser, not a closed one — no unload handler, no chance to finish */
-      await sleep(300);
-      closeQuiet(ctx);
+      await killAndWait(dir, ctx);   /* SIGKILL: a dead browser, not a closed one — no unload handler, no chance to finish; then wait until every process is gone */
       ({ ctx, page, errors } = await openPersistent(browser, srv.base, vp, dir));
       errsAll.push(...errors.filter((e) => /local journal/.test(e)));
       const got = await page.evaluate(() => window.__sig52());
@@ -346,8 +355,11 @@ async function check52d2(browser, srv) {
       state = await page.evaluate(() => window.__sig52());
       for (let i = 0; i < nJ + nC; i++) {
         const kind = i < nJ ? 'J' : 'C';
-        let killed = null;
-        const onLog = (m) => { if (m.text() === 'LJ_HOLD' && !killed) { killed = Date.now(); killProfile(dir); } };
+        /* v05.24 (z6af3) — the log line only SIGNALS that the transaction is held; the kill waits until the trial's own
+           answer (the sig of what it saved) has been read. Killing on the log line itself raced that answer: a kill that
+           landed first left `r` null, and the checkpoint trials, which need that sig, then failed in the script, not the app. */
+        let held = null, killed = null;
+        const onLog = (m) => { if (m.text() === 'LJ_HOLD' && !held) held = Date.now(); };
         page.on('console', onLog);
         const r = await page.evaluate(async ({ i, kind }) => {
           _LJ_CKPT_MS = 30000; window.__ljHold = 0;
@@ -359,10 +371,10 @@ async function check52d2(browser, srv) {
           return window.__sig52();
         }, { i, kind }).catch(() => null);
         const t0 = Date.now();
-        while (!killed && Date.now() - t0 < 10000) await sleep(20);
-        if (!killed) { bad.push(`trial ${i} (${kind}): the app never reached the held transaction`); killProfile(dir); }
-        await sleep(300);
-        closeQuiet(ctx);
+        while (!held && Date.now() - t0 < 10000) await sleep(20);
+        if (!held) bad.push(`trial ${i} (${kind}): the app never reached the held transaction`);
+        else killed = Date.now();
+        await killAndWait(dir, ctx);   /* the transaction is still held (2 s) when this lands; then wait until every process is gone */
         ({ ctx, page, errors } = await openPersistent(browser, srv.base, vp, dir));
         errsAll.push(...errors.filter((e) => /local journal/.test(e)));
         const got = await page.evaluate(() => window.__sig52());
