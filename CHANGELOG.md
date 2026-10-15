@@ -10088,4 +10088,44 @@ The owner: "When I click on one of the Zabs it should open Sub Zabs exactly like
 
 ## v05.24 — F1: small follow-ups (issue #195, PCF J10)
 
-*(stub — filled in at the end of the round)*
+Seven small fixes from the owner's follow-up list. All three layouts (390 / 820 / 1440) were measured.
+
+1. **fav14 — Favourites wording.** The empty Favourites Smart View now says "choose ⭐ Favourite", the word on the note menu. Swept the source for
+   `Add to Favourites`: that was the only place (the sealed `legacy/` copy is untouched).
+2. **enxf2 — Evernote menu hover text.** 🧰 → 📥 Evernote import now says: "Reads your Evernote export and shows what it found; then, when you say OK,
+   brings the notes into My Notebooks ▸ Evernote." (the dialog's own first screen still describes the dry run step, which is still its first step).
+3. **enxf1 — an emptied Evernote folder in Trash.** The import's folder-id sets were read once, when the import began, so a folder the owner emptied
+   and put in Trash *between two batches* was invisible to them and the next batch made a second folder with the same id (two ids equal, one in
+   `DB.folders`, one in Trash). Each batch now also reads the folders in Trash (`trashF`) and takes the next free suffix (`-2`, `-3`…), as the
+   tombstone path already did. The trashed folder is left exactly as it is in Trash (the "restore it" option was not taken: a restore would put
+   a folder back that the owner just removed, in the middle of a run; the owner can still restore it from Trash by hand). Check: 80j (new).
+4. **t1f — phone ✕ row while editing.** The ✕ could not go on the one bar above: that bar is full at 390 (v05.15 moved ✕ off it for that reason),
+   so the row stays but is slimmer: **44 → 36 px** (37 with its line), the ✕ button keeps a **44 × 44** touch target (it spills 4 px above and
+   below the row). The title moves up 8 px. **Tablet and laptop are unchanged** (they have no such row). Measured in 84c. No screenshot image
+   is attached: this run could not post images; the numbers are in the check.
+5. **hs520 — speed checks calibrated to the computer.** `hostFactor()` / `hostLimit()` in `tools/harness.mjs`: a fixed CPU workload timed once
+   per process (median of 5 after a warm-up), divided by 23 ms (the runner's median, 21.3–22.3), clamped to [1, 4]; 1.0 on the runner. 57d,
+   58g, 70h, 71h, 76f, 78b, 80h and 82e multiply their millisecond limits by it and print the raw limit and the factor (`≤ 150 ms × host 2.4`).
+   78b's open-note limit goes back from 225 to the issue's 150 (the 225 was a concession to the slower machine, which the factor now does). Not
+   scaled: counts, heap size, "before vs after". Documented in `tools/README.md`.
+6. **z6af3 — 52d sturdier.** Two places raced the script, not the app: (a) 52d2 killed the browser the moment the `LJ_HOLD` log line arrived,
+   which could be before the trial's own answer (the sig of what it saved) was read, leaving the checkpoint trials nothing to compare with;
+   the log line now only marks "held" and the kill waits for the answer; (b) both waited a fixed 300 ms after the kill and did not wait for the old
+   context's close, so the next launch could begin while the old browser was still dying; `killAndWait()` kills until `pgrep` finds no process
+   of the profile, then awaits the close. I could not reproduce the one-in-240 failure here, so this is a fix by reading the race, not by seeing it fail.
+7. **z8f1 — the count lines up.** `.jx-nm` had a second rule, `max-width:14ch`, that beat its `flex:1`, so the name stopped growing and the
+   count sat partway along the line. The rule is gone: the name takes the free space (and cuts with "…" when long), and "▸" and the count sit
+   at the right end. Measured at 390, 820 and 1440: the count's right edge is 12 px from the line's (limit 16).
+
+**Checks.** New block 84, `tools/f1.mjs` (84a fav14, 84b enxf2, 84c t1f, 84d z8f1; 42 checks), and 80j in block 80 (`tools/enex-s4b.mjs`).
+`ship-check` 15/15; `--only 84` 42/42; `--only 80` 289/289. Run against the build before this round (`index.html` and `sw.js` of the parent of
+the bump commit): `f1.mjs` 16 of 40 fail, 80j 9 of 18 fail. The ones that pass on the old build are the baseline sanity checks (the menu item
+is "⭐ Favourite", the title sits below the row, "▸" comes before the count, tablet/laptop have no row, no page errors, the first batch and the
+Trash step of 80j).
+
+### Not done
+
+- z6af1 (the YouTube picture stored in the note), z6af2 (the wide Links grid), the fold arrows (i0001m): not in this round, as the issue said.
+- The full `app-check` was not run (told not to); the Architect runs it. The speed checks' factor was only ever 1.0 here, so its scaling has been
+  read, not seen; the first run on the Architect's computer will show its factor in the lines.
+- 52d: see item 6.

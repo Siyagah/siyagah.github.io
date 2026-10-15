@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.23.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.24.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,12 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.24** (15 Oct 2026) — F1, seven small follow-ups (issue #195, PCF J10). Favourites' empty text says "choose ⭐ Favourite" (the menu's
+  word); the Evernote menu's hover text says it imports; an Evernote folder put in Trash while an import runs is never given its id again
+  (`trashF` in `_enxImport`'s `ensure`: next free suffix); phone ✕ row while editing 44 → 36 px (button still 44 × 44; tablet/laptop
+  unchanged); the pockets-inside list puts the count and "▸" at the line's right end (`.jx-nm` lost its `max-width:14ch`); **speed checks
+  multiply their limit by `hostFactor()` in `tools/harness.mjs`** (1.0 on the runner, [1,4]; a new speed check must too); 52d/52d2 wait on a
+  signal, not time. Check: block 84, `tools/f1.mjs`; 80j. See `tools/README.md` *Speed limits and the host factor*.
 - **v05.23** (15 Oct 2026) — Z8, the pockets inside a pocket are a vertical list (issue #193, PCF J30). Opening a pocket that holds pockets
   shows them one per line (icon, name, rolled count, "▸") between the path line and its own items; tap goes down, long-press/right-click
   is the menu, drag reorders among siblings (Z7). Nothing inside = the panel is byte-identical to v05.21. Check: block 83, `tools/zab-z8.mjs`;
@@ -65,9 +71,6 @@ must never accumulate here instead of there.
   are S4c, merging earlier imports S4d). 📥 Bring them in on the dry run's result → My Notebooks ▸ Evernote ▸ stack ▸ notebook, batches of
   250, Pause / Continue, `fromEvernote` mark, Smart View `sf-enx` "(13) From Evernote", a toast once per session. See *The Evernote
   import, the notes* below. 2,000 notes at 390 ×4: worst long task 108 ms. Check: block 80, `tools/enex-s4b.mjs`.
-- **v05.19** (15 Oct 2026) — P2, a received edit and an undo redraw only what changed (issue #184, PCF J08). `_renderFor(changed)` decides;
-  anything it cannot prove safe calls the caller's full draw. At 9,000 notes, phone ×4: received edit not open 5 ms, open note 85 ms, undo 34 ms
-  (were ~70–230 ms of `render()`). Check: block 78, `tools/redraw-p2.mjs`. Not done: the windowed list; un-selecting a tag still redraws the whole list.
 
 ---
 
