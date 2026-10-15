@@ -36,7 +36,7 @@ const browser = await pw.chromium.launch();
 async function dev(vp) {
   const ctx = await browser.newContext(vp.touch ? { viewport: { width: vp.w, height: vp.h }, hasTouch: true, isMobile: true } : { viewport: { width: vp.w, height: vp.h } });
   for (const p of BLOCKED) await ctx.route(p, (r) => r.abort());
-  await ctx.addInitScript((d) => { try { localStorage.setItem('my-notebook-v1', JSON.stringify(d)); } catch {} }, Object.assign(seedDB(), { theme: { zabPhoneLayout: 'bar' } }));   /* v05.17: this check is about the bar on a phone (block 77 covers the button) */
+  await ctx.addInitScript((d) => { try { localStorage.setItem('my-notebook-v1', JSON.stringify(d)); } catch {} }, Object.assign(seedDB(), { theme: { zabPhoneLayout: 'bar' } }));   /* v05.18: this check is about the bar on a phone (block 77 covers the button) */
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));

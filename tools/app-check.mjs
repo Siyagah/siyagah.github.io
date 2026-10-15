@@ -12046,7 +12046,7 @@ await r.block('76-zab-tree', async () => {
   r.check(out.status === 0, 'the N1 pocket-tree check exits cleanly', `exit ${out.status}`);
 });
 
-/* 77 — v05.17, N2: on a phone Zab is one corner button with three layouts the owner chooses (Rail, Drawer, Columns).
+/* 77 — v05.18, N2: on a phone Zab is one corner button with three layouts the owner chooses (Rail, Drawer, Columns).
    tools/zab-n2.mjs runs 77a–77h with real taps and a real long-press at 360/390, real clicks at 1440: the button (present, no bar,
    --jeb-h 0, overlaps nothing, badge = All pockets, red when overdue, hides with the keyboard; absent with the N1 bar at 820/1440),
    each layout to the 4th level of a 4-deep chain, an item added and counted all the way up, the pocket menu by long-press, All
@@ -12065,7 +12065,24 @@ await r.block('77-zab-phone', async () => {
   r.check(out.status === 0, 'the N2 phone-Zab check exits cleanly', `exit ${out.status}`);
 });
 
-/* 78 — v05.18, P2: after a received edit and after undo / redo only what the change touches is redrawn (_renderFor).
+/* 79 — v05.17, B1: this device's copy of the notebook cannot be read at start. tools/boot-b1.mjs makes the IndexedDB read (or
+   the open) fail on purpose before the app runs, at 390/820/1440: a read that fails twice then works boots normally; one that
+   keeps failing opens empty (never the starter set), never writes the device copy, shows the warning line, and joins the copy back
+   in when it can be read ("Try now", or the 3 s timer), including in journal mode; a new device starts as before. Each printed
+   ok/FAIL line becomes one check. */
+await r.block('79-boot-read', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./boot-b1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1500000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 60, 'the B1 boot-read check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'B1: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the B1 boot-read check exits cleanly', `exit ${out.status}`);
+});
+
+/* 78 — v05.19, P2: after a received edit and after undo / redo only what the change touches is redrawn (_renderFor).
    tools/redraw-p2.mjs runs 78a–78d at 390 / 820 / 1440. 78a, THE ORACLE: after each of 13 kinds of change (a text edit of a
    note that is not open, the open note, a title that moves in a Smart View, a note moved, a tag added and removed, Trash and
    restore, a new note, a folder renamed, Favourite + Pinned, a Zab item, a Zab pocket moved into another, a change under a

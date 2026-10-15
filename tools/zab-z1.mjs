@@ -36,6 +36,7 @@ const seed = () => {
   db.jeb = [mkItem('t1', 'jp-task', 'Alpha', 0), mkItem('t2', 'jp-task', 'Bravo', 1), mkItem('t3', 'jp-task', 'Charlie', 2), mkItem('i1', 'jp-idea', 'Idea one', 0), mkItem('s1', 'jp-shop', 'Milk', 0)];
   /* a note made from Zab whose pocket name was never stored: the card and the read view show the fallback word */
   db.articles.push({ id: 'zn1', title: 'Made from a pocket', content: '<p>Body</p>', folderIds: [], tags: [], kind: 'general', createdAt: T0, updatedAt: T0, fromJeb: { pocket: '', at: T0 } });
+  db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' });   /* v05.18 (updated in place, Architect review): a phone's Zab is a corner button now; this sweep is about the bar's surfaces, so the notebook chooses the bar (block 77 sweeps the button and its layouts) */
   return db;
 };
 async function ctxFor(vp, db) {
