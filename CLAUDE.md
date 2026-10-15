@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.20.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.21.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.21** (15 Oct 2026) — Z7, drag the Zab capsules into your own order (issue #189, PCF J24). Mouse: press and move > 5 px; finger: the
+  500 ms hold lifts the capsule, then > 8 px is a drag, released in place it opens the menu as before; a swipe without the hold still scrolls
+  the bar. Bar, a pocket's row of pockets inside, and the phone's Rail / Drawer / Columns, always among the same siblings through
+  `jebMovePocket` (never "into"); Escape or a drop outside puts it back; no dragging in Choose; none of the slide under reduced motion.
+  See *Dragging pockets* below. Check: block 81, `tools/zab-z7.mjs` (`--unpatched`: 34 of 105 fail). Zab moves are not undoable (as before).
 - **v05.20** (15 Oct 2026) — S4b, the Evernote notes come in, at most 6,000 in any rolling 24 hours (issue #187, PCF J01; pictures/audio/files
   are S4c, merging earlier imports S4d). 📥 Bring them in on the dry run's result → My Notebooks ▸ Evernote ▸ stack ▸ notebook, batches of
   250, Pause / Continue, `fromEvernote` mark, Smart View `sf-enx` "(13) From Evernote", a toast once per session. See *The Evernote
@@ -64,12 +69,6 @@ must never accumulate here instead of there.
   over the device copy (unpatched check: 43 notes → 0). Now the read is retried; if it keeps failing the session opens from what it can
   (never the starter set), never writes the device copy, shows `#idb-warn` with **Try now**, and joins the copy back in like a received
   sync when it can be read. See *Reading the device copy at start* below. Check: block 79, `tools/boot-b1.mjs`; 52d updated in place.
-- **v05.16** (14 Oct 2026) — N1, pockets inside pockets, no depth limit (issue #179, PCF J20; the phone corner button and its layouts
-  are N2, not done). A pocket gets `parentId` (absent/null = top level; nothing written to existing pockets) and `order` is the place
-  among siblings. Readers `jebChildren(id|null)`, `jebPath(id)`, `jebDescendants(id)`; writer `jebMovePocketInto(id,parentId|null,toIndex)`
-  (refuses itself/its own descendants). The bar shows the top level, a chip counts its own open items plus every pocket inside it,
-  "▸" = holds pockets; the panel has a path line and a row of pocket chips; the pocket menu has "📂 Move into…" and "＋ New pocket
-  inside". See *Pockets inside pockets* below. Check: block 76, `tools/zab-n1.mjs`.
 
 ---
 
@@ -514,6 +513,17 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `.jx-mv`, greyed rows say why). All pockets: sub-groups indented by `data-depth`, `.jx-fold` per session (`_jebFold`, never stored; a
   fold hides the group's own items and the groups inside). Deck: `.jx-ins` "inside:" chips. Choose lists every pocket at any depth
   (nested ones marked ↳) in place of the bar's top-level-only view. Nothing new is fixed to the bottom, nothing is written to `<html>`.
+- **Dragging pockets (v05.21, Z7).** ONE engine for every row of pockets: `_zabWireDrag(root,menu)` (mouse `pointerdown` + 5 px; finger
+  `touchstart` → 500 ms hold lifts → 8 px drags, release in place = `menu`) wired on the bar, `#jeb-panel` (`.jx-kid`) and `#zab-lay`
+  (Rail `.zr-b`, Drawer `.zd-row`, Columns `.zc-row`); `_zxCfg(c)` names the box, the siblings, the axis (`rev` = the Rail is drawn
+  bottom-up) and whether the others slide (x) or a line marks the place (y). A drop is `jebMovePocket(id,idx)` among the same siblings only,
+  never `parentId` (that is "📂 Move into…"); `jebMovePocket` returns false and writes nothing when the order is unchanged. While dragging,
+  `_zxDrag` stops `_jebPaintBar`/`_zabPaint` and `_jebDrag` stops the panel and deck; the drop repaints once. The lifted capsule and the
+  sliding ones carry only an inline `transform`; `.zx-lift` alone is `touch-action:none`. **The auto-scroll is clamped to the range
+  measured before the drag** (a transformed child stretches `scrollWidth`; unclamped it chased itself to 4,500 px). `contextmenu` is
+  ignored while a finger is held (`_zxHold`). A drag swallows the click after it for 100 ms (`_jebLPAt=now-600`), a menu for 700.
+  Escape (capture) or a drop outside the box + 16/24 px puts it back. The slide is CSS in `prefers-reduced-motion:no-preference`, and
+  `.zx-anim` is added only when motion is allowed. Zab moves are not undoable.
 - **Zab on the phone (v05.18, N2 — extends the Zab section).** `_zabPhone()` is the one tier decision (< 640, the existing rule); the
   setting is read only through `_zabLayout()` (default `'rail'`). Unless `'bar'` (or `jebBar===false`, or Zab mode), the bottom bar is not
   drawn and the class is `html.zab-btn` instead of `html.jeb-on`, so `--jeb-h` is `0px`; `#zab-btn` (52 px, bottom right, badge = the "All
