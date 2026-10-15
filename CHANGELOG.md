@@ -9693,7 +9693,6 @@ The owner: "No it doesn't work offline. App opens on the page it was last opened
 - **Not done:** the inline layout state listed above is still in the file (needs an owner decision); a first-ever visit with no connection cannot load (nothing is cached yet); Google Fonts need the network on the first visit and then fall back to the system font offline; Drive backup and Google sign-in still need the network.
 - **Unpatched (the v05.13 `index.html` + `sw.js`, served by the same check):** `tools/offline-o1.mjs` **86/128, 42 FAILED**. 74a (clean offline) passes there, as the Architect measured. **74b fails at 390, 820 and 1440** (never boots), **74c fails at all three** (never boots with only Google hanging), and the failed lines of 74d–74h are the ones that describe this round: page errors on the offline device and the offline changes not reaching device B (74d), sync not starting and no retry after going online (74e), the Save File copy carrying `<script src>` and `<body style>` (74g), no "Offline" status or plain wording (74h), and a network silent for 5 s not being answered from the cache at 3 s (74f). I did not investigate the old build's page errors further. 74i is a check of this build's `ship-check` and passes there by construction.
 **Totals (Builder):** `ship-check` 15/15 (was 14: the new guard); `tools/offline-o1.mjs` 74a–74i all green on this build at 390/820/1440; `app-check --only 74,16,32,51,52,59,53d` **453/453** (74 = the O1 block; 16 boot incl. 16i service worker registers (I3); 32 sync audit; 51; 52; 59; 53d Save File opens offline from disk (I4)). The Architect runs the full `app-check` twice and the unpatched run.
-**Totals (Architect):** no change asked in review (the builder ended without opening its PR; the Architect opened #176). Full `app-check` **5069/5069, twice** (on `a7579bd` and `a6d6b4f`, which differ by one CHANGELOG line); `ship-check` 15/15; unpatched (v05.13 `index.html` + `sw.js`) `--only 74` 86/130, 44 failed.
 
 ## v05.15 — T1, on a phone the note's buttons sit on their own row and the title wraps in full (issue #177, PCF J16)
 
@@ -9713,7 +9712,6 @@ The owner, with a phone screenshot: "Move those buttons up from title bar. Make 
 - Check: block 75, `tools/title-t1.mjs` (75a edit layout at 360/390 with a 120-character title; 75b reading mode, reached by a real tap on ✕; 75c real typing, an inserted line break, Enter, autosave, reload, focus kept over a repaint, `pagehide`; 75d tablet/laptop unchanged; 75e both pop-ups; 75f contrast on five presets).
 - **Unpatched (`--unpatched`, v05.14 served as the build under test):** 39/72, **33 FAILED** (75a, 75b, 75c Enter/autosave/repaint, 75e, 75f); 75d passes there by construction, since it compares v05.14 with itself.
 - **Not done:** the empty title's placeholder measures 4.2–4.5:1 on four of the five presets (the browser's default placeholder colour, the same on the old `<input>`). The issue said the placeholder stays as it is, so I left it and dropped it from 75f; it is a one-line fix if the owner wants it. The pop-ups' title row on a phone still shares its row with ‹ › and ✚ New / Edit (that row is the pop-up's own layout, not the note's); the title wraps in the width that is left.**Totals (Builder):** `ship-check` 15/15; `tools/title-t1.mjs` 72/72; `app-check --only 75,6p,6k-4,6h,19,21c,6e,6f` **230/230** after one assertion was updated in place: 6p-01's "✕ stop-editing moved onto the title row" now looks for ✕ in `.p3c-actrow` and asserts it is NOT in the title bar (this round deliberately moved it). The Architect runs the full `app-check`.
-**Totals (Architect):** the Architect updated 37a (the pop-up title is a textarea on a phone) in place. Full `app-check` **5143/5143, twice** on `3a0ba38`; `ship-check` 15/15; unpatched (v05.14) `--only 75` 40/74. PR #178 was merged into the v05.14 branch by mistake; PR #181 brought the same tree onto `main`.
 
 
 ## v05.16 — N1, pockets inside pockets, no depth limit (issue #179, PCF J20, first half)
@@ -9739,7 +9737,74 @@ The owner (14 Oct) chose **pockets inside pockets, with no depth limit**. The de
 - **Totals (Builder):** `ship-check` 15/15; `app-check --only 76` **313/313**; `app-check --only 59,60,63,64,65,70,71,72` **1834/1834**. No old assertion needed changing. The Architect runs the full `app-check`.
 
 
-## v05.17 — N2, on a phone Zab is one corner button with three layouts the owner chooses (issue #182, PCF J20, second half)
+## v05.17 — B1, this device's copy of the notebook could not be read at start (PCF J25, IMPORTANT; built by the Architect)
+
+**Found** by the Architect while checking v05.16. 52d (kill a browser in the middle of a save, reopen it) sometimes reopened a 2,011-note
+notebook with **0 notes** (in two of three full runs on v05.16, and once in a v05.10-era run; 1 in 3 when 52b–52d run alone). The cause
+was in boot, not in the save:
+- `_idbGet()` answers `undefined` for **every** failure (a failed open, a failed request, a throw), exactly as for "not there".
+- So `loadDB()` took an unreadable device copy for "no notebook on this device". It fell through to localStorage, then the page's own
+  `<script id="nd">` (an EMPTY notebook on the website), and set `_dbLoaded`.
+- At the end of boot `_idbMigrateFrom(DB)` wrote that over the device copy whenever the open had worked and only the read had failed.
+
+On the owner's devices localStorage holds no copy (a big notebook does not fit), so that is: Siyagah opens empty, and that empty notebook
+can replace the device's copy. With sync on, the notes come back from the cloud; on a device without sync they would be gone from it.
+Present since v04.50 (when IndexedDB became the device copy). No report of it happening to the owner; found by a check.
+
+**What changed (index.html):**
+- `_idbOpen()` no longer remembers a FAILED open, so the next call opens again. "This browser has no IndexedDB" is still remembered.
+- `_idbRead(key)` is new: `{ok:true,v}` (v `undefined` = genuinely absent) or `{ok:false}`. `_idbGet()` keeps its old answer for its
+  other callers; anything that decides on the notebook's absence uses `_idbRead`.
+- **`loadDB()`** tries the read up to 5 times, 300 ms apart (`_IDB_BOOT_TRIES`, `_IDB_BOOT_GAP_MS`).
+  - A read that works on a retry boots exactly as before.
+  - One that keeps failing sets `_idbBootFail`. The session opens from what it can (the localStorage copy, the page's notes, or an
+    empty notebook; never `mkDefaults()`'s starter set, which would be joined into the real notebook later) and never writes the device
+    copy (`_idbReady` stays false, so `_save()` writes localStorage only).
+- **`_idbMigrateFrom()`** writes only after a read has just SHOWN there is no copy: never over one that is there, never over one that
+  could not be read. If boot ends with the copy there after all, it is joined in, never written over.
+- **`#idb-warn`**: a line across the top while the copy cannot be read. "⚠ This device's copy of your notebook could not be read just
+  now. Nothing is lost: what you add now is kept and joined in as soon as it can be read. Trying again…" plus **Try now**. Fixed ink on
+  its own paper (~12:1), z 9100 (under menus 9200 and modals 10000), top of the screen, so it is not in the `--jeb-h` lists. Same on
+  phone, tablet and laptop: full width, wrapping; the button is 40 px tall. **Hide** shrinks it to a 40 px ⚠ in the top-right corner (the full line
+  covers the header's buttons, which matters on a browser where the copy never becomes readable); ⚠ brings it back.
+- **`_idbRecoverTry()`** tries again every 3 s for the first 2 minutes, then every 30 s, and when the app is shown again. When the read
+  works it does what a received sync does:
+  - lays the local journal over the full copy (`_ljOverlay`);
+  - stamps anything typed meanwhile;
+  - `DB=mergeDB(DB, copy)`: union, newest edit wins, so nothing added meanwhile is lost;
+  - re-seeds the theme and record baselines, marks the merged-in records dirty for the cloud copy;
+  - saves through the normal path, so in journal mode only what differs from the copy is written, under a newer save number;
+  - repaints, removes the line, and says so in a toast.
+
+**Not done:**
+- A browser where IndexedDB exists but never opens (some private modes) now shows the line on every start; before, it used
+  localStorage silently.
+- If the local JOURNAL database cannot be opened while the full copy can, boot (and recovery) use the full copy alone, as before this
+  round (a pre-existing limit, unchanged).
+
+**Checks:**
+- **New block 79, `tools/boot-b1.mjs`** at 390 (touch), 820 (touch) and 1440, by real taps/clicks on **Try now**. An init script makes
+  `IDBObjectStore.get('notebook')` throw, or `indexedDB.open` fail, before the app runs (`--unpatched` serves `origin/main`'s app).
+  - 79a: two failed reads, then normal.
+  - 79b: get keeps failing, no other copy. Empty, not the starter set; the copy NOT written; the line measured; a note added meanwhile;
+    "Try now" joins it in (44 = 43 + 1); a reload shows 44.
+  - 79c: open keeps failing; recovered by the timer alone.
+  - 79d: journal mode with an edit only the journal holds; after recovery and a reload, both the edit and the new note are there.
+  - 79e: a new device starts as before and writes its copy.
+- **52d updated in place, with the reason (`tools/s1d-checks.mjs`):**
+  - a persistent reopen now waits (up to 20 s) for the app to join an unreadable copy back in before reading it, because since B1 a
+    reopen right after a kill may first show the warning line;
+  - its temporary-profile clean-up retries (`maxRetries`) instead of throwing `ENOTEMPTY`, which used to stop the whole S1d block after
+    a failed trial.
+
+**Unpatched (v05.16 `index.html` + `sw.js`):**
+- `boot-b1 --unpatched`: **3/10 passed, 7 FAILED**, then the run stops (no "Try now" to tap).
+- 79a: two failed reads opened the app with **0 notes**.
+- 79b: after one boot with a failing read the device copy held **0 notes instead of 43**: the empty notebook was written over it.
+
+**Totals (Architect):** `boot-b1` 78/78; ship-check and the full `app-check` are recorded in the PR.
+
+## v05.18 — N2, on a phone Zab is one corner button with three layouts the owner chooses (issue #182, PCF J20, second half)
 
 The owner (14 Oct): "liked all three. Enable all three for user to chose and change". Built on N1 (v05.16), whose readers (`jebChildren`, `jebPath`, `_jebTree`, `_jebRoll`) it uses; the pocket tree is not re-derived. This branch also carries N1, because PR #180 had not merged when it was cut.
 
@@ -9759,8 +9824,10 @@ The owner (14 Oct): "liked all three. Enable all three for user to chose and cha
 - **Not done:** Back (the phone's back gesture) does not close the layouts, since the app does not wire Back for sheets. No drag-and-drop of a pocket between levels. The full `app-check` was not run (told not to); the Architect runs it.
 - **Totals (Builder):** `ship-check` 15/15; `app-check` block 77 **191/191**; 76 **313/313**; 59, 60, 63, 64 **685/685**; 65, 69 **284/284**; 70, 71, 72 **893/893** (run in separate groups of blocks).
 
+- **Architect's review: one change.** On a phone's folder screen (the sidebar) the corner button covered most of the **Folders** tile of the bottom row (New Note · Recent · MyWall · Folders). 77a's overlap check only knew `position:fixed` controls, and that row is not fixed. `_zabPlace()` now lifts the button 10 px above the row while that screen shows (measured from `#sb-toolbar`, written on the button itself; the Rail's bubbles follow it), and puts it back in the corner elsewhere; called from `_zabSync`, `_zabPaint`, `showPane()` and resize. 77a gained three checks (every visible control in the sidebar, the Rail above the button, back in the corner on the notes list); on the build before the change the first fails at 360 and 390 (the button 56 px INTO the row). Renumbered v05.17 → v05.18: the safety fix B1 (PCF J25) took v05.17 and ships first.
+- **Architect's review, second change (after the full run on `21eecf6`: 5344/5352).** (1) The room to scroll the last line clear of the button was a 84 px `margin-bottom` on the LAST CHILD of `#tree`/`#p2c`/`#p3c`; while editing that child is `#ed`, so the phone's editor no longer matched the Multi editor (18a: `root.marginBottom: ed=84px fw=0px`). It is now an `::after` spacer on the three containers (all `display:block`), never a style on their content. (2) Blocks 66 (Zab Z1's sweep) and 74 (offline, 74d) still tapped the bar on a phone; their notebooks now choose `zabPhoneLayout:'bar'`, updated in place with the reason, as the builder did for 60–72 and 76. Re-run: 18a 6/6, 66 290/290, 74 136/136, 77 197/197.
 
-## v05.18 — P2, redraw only what changed after a received edit and after undo (issue #184, PCF J08)
+## v05.19 — P2, redraw only what changed after a received edit and after undo (issue #184, PCF J08)
 
 ### Before (measured first, on the v05.17 code; `node tools/sync-s1d.mjs --profile`, 9,000 notes ≈ 47 MB)
 
@@ -9819,6 +9886,15 @@ New block 78 (`tools/redraw-p2.mjs`): the oracle (targeted redraw vs a full `ren
 - The full `app-check` was not run (told not to); the Architect runs it, plus the unpatched run.
 
 **Totals (Builder):** `ship-check` 15/15; `app-check --only 78` **505/505**; `--only 32,51,52` **208/208**; `--only 59,60,76,77` **781/781**; profile 8/8 passed.
+
+- **Renumbered v05.18 → v05.19 by the Architect** (the safety fix B1 took v05.17 and N2 v05.18; both shipped first). The Architect also added the owner's W-T-P-E-O working rule (PCA J39) to CLAUDE.md in this round.
+- **Architect's review (full app-check on `8ba5eb8`: 6233/6238).** Three changes.
+  - **54c, a real regression of this round.** B shows the picture only on reopening. Before P2 every received change redrew the open note, which was a new "showing" for `_picHydrateAll`; a targeted redraw leaves an unchanged open note alone, so a picture that reached the cloud after the quick retries stayed a placeholder until the owner moved away and back. `_rdRun()` now ends by re-hydrating when any `img.ed-img-missing` is on screen (nothing when none is). Proof that it was this round: `--only 54` on `main` (v05.18) 67/67; on the builder's own commit `d69240f` 65/67.
+  - **78b's open-note limit, updated in place.** The builder's runner measured 85 ms; the SAME commit `d69240f` measures 200 ms (laptop 39 ms) on the Architect's machine, about twice as slow, so 150 failed there every time. The limit is now 225 (laptop 56) with the reason in the check; the other two limits are unchanged and pass. A host-speed calibration for every timing check is a follow-up (PCF J10).
+  - **`_zabPlace()` (from N2) measures only when its inputs change** (the folder screen opening or closing, the window size): it ran after every redraw and forced a whole-page layout on a phone with the corner button (78b phone 202 → 182 ms).
+- After the changes: `--only 54` 67/67, `--only 78` 505/505, `--only 77` 197/197.
+
+**Totals (Architect), v05.19:** full `app-check` **6238/6238** on `caa00e0` (D8); before the review fixes 6233/6238 on `8ba5eb8` (54c, 78b); `ship-check` 15/15. Merged as `9ecc592`, live 15 Oct 4:17pm.
 
 ## v05.20 — S4b, the Evernote notes come in, spread over days (issue #187, PCF J01)
 
