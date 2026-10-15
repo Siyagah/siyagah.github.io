@@ -9893,3 +9893,48 @@ New block 78 (`tools/redraw-p2.mjs`): the oracle (targeted redraw vs a full `ren
   - **78b's open-note limit, updated in place.** The builder's runner measured 85 ms; the SAME commit `d69240f` measures 200 ms (laptop 39 ms) on the Architect's machine, about twice as slow, so 150 failed there every time. The limit is now 225 (laptop 56) with the reason in the check; the other two limits are unchanged and pass. A host-speed calibration for every timing check is a follow-up (PCF J10).
   - **`_zabPlace()` (from N2) measures only when its inputs change** (the folder screen opening or closing, the window size): it ran after every redraw and forced a whole-page layout on a phone with the corner button (78b phone 202 → 182 ms).
 - After the changes: `--only 54` 67/67, `--only 78` 505/505, `--only 77` 197/197.
+
+**Totals (Architect), v05.19:** full `app-check` **6238/6238** on `caa00e0` (D8); before the review fixes 6233/6238 on `8ba5eb8` (54c, 78b); `ship-check` 15/15. Merged as `9ecc592`, live 15 Oct 4:17pm.
+
+## v05.20 — S4b, the Evernote notes come in, spread over days (issue #187, PCF J01)
+
+The dry run (v05.13) on the owner's real export showed 490 notebooks in 63 stacks, 17,756 notes, 5,260 tags, 0 unreadable, 0 already in Siyagah. This round brings the **notes** in. Pictures, audio and files come later (S4c); each shows a marker where it will go.
+
+### What it does
+
+- **📥 Bring them in**, on the dry run's result, with one plain line under it. Progress with a bar, **Pause** (after the batch in hand), the dialog can be closed and reopened while it goes on. When the day's share is done: "6,000 brought in today. 11,756 to go. Continue after 7:30am tomorrow" and a **Continue** button that is enabled only when the window allows.
+- **At most 6,000 notes in any rolling 24 hours** (`_ENX_DAY_CAP`), counted from the notes themselves (`fromEvernote.at`, Trash included), so every device sees the same count and the shared cloud quota is respected. The rest continues later from where it stopped; the skip rule below makes re-reading the files safe.
+- **Where they go:** My Notebooks (by name, else the first section) ▸ Evernote ▸ stack ▸ notebook; a notebook with no stack is directly under Evernote. Folder ids are derived from the names (`enx-root`, `enx-s-…`, `enx-b-…`) and every folder carries `enx:{kind,name}`; a later run finds them by id, never by name (80a renames the root and a stack and a later note still lands in the right folder).
+- **Never twice, never over the owner's notes:** the note's id is derived from its key `k` (notebook path + created second + title + content length). A note whose id or `k` is in the notebook, in Trash or in the tombstones is skipped (a deleted one stays deleted). A note matching an existing one by title + created second is skipped and counted; nothing is overwritten.
+- **Converting:** prologue and `<en-note>` dropped; `<en-todo>` → ☑ / ☐ as text; `<en-crypt>` → a locked marker (the cipher text is not kept); `<en-media>` → a marker keeping hash, mime and file name (`data-enx-hash`, `data-mime`, `data-name`) for S4c; `script`, `iframe`, `object`, `embed`, `style` and every `on*=` removed; `javascript:` / `data:` addresses become `#`; Evernote's own styling stays. Title, created and updated dates, tags (through `_cleanTag`; a tag with a comma loses the comma and is counted and said) and the source address as a first paragraph.
+- **The mark:** `fromEvernote:{nb,stack,k,at}`, the Smart View **(13) From Evernote** (`sf-enx`, 📥, newest-imported first, in both Smart View lists), and "📥 from Evernote · <notebook>" on the Pane 2 card and in the read view.
+- **Writing:** batches of 250: that batch's folders, then its notes, then one save. In journal mode that is one transaction, so a closed page leaves whole batches. The import takes the undo baseline without making a frame (history length stays 1). Reading is in slices of 16 KB with a break every 25 ms.
+- **Continuing another day:** the device keeps its own memory of an unfinished import in a NEW database `siyagah-enx-v1` (the total, and the picked folder's handle where the browser has `showDirectoryPicker`: Chrome/Edge on a PC). Continue asks for read permission again with the owner's tap; without a handle it asks for the files again. A calm toast "📥 Evernote: 6,000 of 17,756 brought in — Continue" once per session, only when the window allows and only on the device that ran the import.
+- **Layouts (D5):** ≥ 640 the dialog, < 640 the bottom sheet, z 10060 as in S4a; the folder button is `showDirectoryPicker` where it exists (≥ 640) and the folder input otherwise; on a phone the files button.
+
+### Figures (this runner)
+
+| | |
+|---|---|
+| 2,000 notes into a 9,004-note notebook, 390 wide, CPU ×4 | 1.5 s; 8 batches; save per batch median 81 ms, worst 88 ms; **worst long task 108 ms**; heap +27 MB; undo history length 1 |
+| boot, 27,000 notes, 390 ×4: after / before | 5,936 ms / 6,003 ms |
+| `render()`, 27,000 notes, 390 ×4: after / before | 194/192/152 ms / 184/189/146 ms |
+| boot, 27,000 notes, 1440: after / before | 1,065 ms / 1,076 ms |
+| `render()`, 27,000 notes, 1440: after / before | 102/84/31 ms / 116/62/37 ms |
+
+("Before" is the same app without the import, served from git in the same run.) The first cut had a 289 ms long task (the sets built from 9,000 notes and 250 conversions in one task); it now yields before each save, builds in slices and reads in slices.
+
+### Checks
+
+New block 80 (`tools/enex-s4b.mjs`): 80a structure and stable ids, nothing pre-existing changed; 80b content, card, read view, Smart View; 80c never twice (a run twice, Trash, deleted for good, the existing note untouched, a one-second near miss comes in); 80d the cap, the message and time, refusal, resuming exactly, another device's notes counted; 80e the page closed between batches and inside an open journal transaction; 80f two devices, edits both ways; 80g real taps through Bring, Pause, Continue, the toast; 80h scale; 80i contrast on five presets. Test hooks: `window.__enxCap`, `__enxNow`, `__enxDelay`. Blocks 73, 32, 51, 52, 59, 76, 77, 78 stay green.
+
+### Notes for the Architect
+
+- Block 73 asserts the dry-run line "…The import itself comes in the next update." word for word, and the brief says it stays green unchanged, so that sentence is still on the dry run's result although the import now exists. It needs a one-line change in `_enxPaint` and 73b together.
+- The ENEX `<resource>` has no hash of its own: `<en-media hash>` is the md5 of the data. It is read from the recognition index (`objID`) when Evernote wrote one (images); the marker keeps the hash from `<en-media>` either way, and S4c computes the md5 of the data for the rest.
+
+### Not done
+
+- **Pictures, audio and other files (S4c):** only markers.
+- **Merging with earlier imports (S4d):** a note matching an existing note is skipped and counted, never merged.
+- The full `app-check` was not run (told not to).

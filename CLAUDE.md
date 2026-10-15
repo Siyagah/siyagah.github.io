@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.19.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.20.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -31,6 +31,10 @@ stay short enough to read in full before starting work.
 > time); nothing is "done" until tested on a phone and a computer; exact job names and full links. **Elegant:** calm, tidy pages,
 > plain words, short "What I need from you" tick lists. **Optimal:** the fewest owner taps, free tools, no credits, no duplicate
 > work. Every finished job ends with a one-line W-T-P-E-O check in its Done line.
+> **Times and What's New (the owner's rules, 15 Oct 2026, PCA J45 and J46).** Every line, comment, Done line, tick and edit written
+> in the PCF carries its full time: `at` is UTC from `date -u +%Y-%m-%dT%H:%M:%SZ`, never a bare date. Every release adds, in the
+> same step, one line at the top of the User Manual (`p/siy.manual`) under the heading "🆕 What's New (newest first)":
+> "vX.YY · date time (Sydney) · what changed in plain words, and where to find it (job)".
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -43,6 +47,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.20** (15 Oct 2026) — S4b, the Evernote notes come in, at most 6,000 in any rolling 24 hours (issue #187, PCF J01; pictures/audio/files
+  are S4c, merging earlier imports S4d). 📥 Bring them in on the dry run's result → My Notebooks ▸ Evernote ▸ stack ▸ notebook, batches of
+  250, Pause / Continue, `fromEvernote` mark, Smart View `sf-enx` "(13) From Evernote", a toast once per session. See *The Evernote
+  import, the notes* below. 2,000 notes at 390 ×4: worst long task 108 ms. Check: block 80, `tools/enex-s4b.mjs`.
 - **v05.19** (15 Oct 2026) — P2, a received edit and an undo redraw only what changed (issue #184, PCF J08). `_renderFor(changed)` decides;
   anything it cannot prove safe calls the caller's full draw. At 9,000 notes, phone ×4: received edit not open 5 ms, open note 85 ms, undo 34 ms
   (were ~70–230 ms of `render()`). Check: block 78, `tools/redraw-p2.mjs`. Not done: the windowed list; un-selecting a tag still redraws the whole list.
@@ -62,11 +70,6 @@ must never accumulate here instead of there.
   (refuses itself/its own descendants). The bar shows the top level, a chip counts its own open items plus every pocket inside it,
   "▸" = holds pockets; the panel has a path line and a row of pocket chips; the pocket menu has "📂 Move into…" and "＋ New pocket
   inside". See *Pockets inside pockets* below. Check: block 76, `tools/zab-n1.mjs`.
-- **v05.15** (14 Oct 2026) — T1, on a phone the note's buttons sit on their own row and the title wraps in full (issue #177, PCF J16).
-  Phone only (< 640 via `_p3OneBar()`): editing puts ✕ and the "✓ Saved" flash on `.p3c-actrow` above the title, and the title is a
-  growing `<textarea id="ti">` (`_tiInput`/`_tiKey`/`_tiGrow`/`_tiGrowAll`: a line break becomes a space, Enter moves the caret into the
-  note's text); reading drops the 2-line clamp on `.tbt`; both pop-ups' titles are the same textarea (Single `#ti`, Multi `#fw-ti-<aid>`).
-  Tablet and laptop markup is byte-identical to v05.14. Check: block 75, `tools/title-t1.mjs` (`--unpatched` serves v05.14: 33 of 72 fail).
 
 ---
 
@@ -560,6 +563,22 @@ A failing check is a wrong assertion surprisingly often — investigate before
   new or gone notes, unknown collections, 41+ notes, a Multi window and the Calendar fall back to the full draw. **A new kind of record or
   a new thing the screen shows from `DB` must be classified in `_renderFor`, or it falls back (safe, slow).** The redraw path never calls
   `persist()`/`_save()`. Check 78's oracle compares `#sb`/`#p2`/`#p3` after the targeted redraw with a full `render()`.
+- **The Evernote import, the notes (v05.20, S4b — S4c brings pictures/audio/files and replaces the markers by hash, S4d merges earlier imports).**
+  `_enxScanner(onNote,{content:true})` also hands over one note's CDATA body (cap 20 M characters, then "too large") and each resource's
+  `hash` (from the recognition index's `objID`; `<en-media hash>` is the md5 of the data, so S4c must hash the data for the rest); the dry run
+  passes no option and counts exactly as before. `_enxConvert` = ENML → note HTML (☑/☐ as text, `.enx-crypt`, `.enx-media[data-enx-hash,
+  data-mime,data-name]`, `_enxClean` for script/iframe/object/embed/style, `on*=`, `javascript:`/`data:` → `#`). A note's `k` = notebook path
+  + created second + lower-case title + raw content length; **its id is `_enxId('enx-n-',k)`**, so the same note from a second run or a second
+  device is the same record. Skipped (and counted) when its id or `k` is in `DB.articles`, Trash or the tombstones; skipped as "already in
+  Siyagah" on title + created second against notes that are NOT `fromEvernote`. Folders: `enx-root`, `enx-s-<hash>`, `enx-b-<hash>`, each with
+  `enx:{kind,name}`, found by id (a tombstoned id gets `-2`, `-3`…); the section is "My Notebooks" else the first. **The cap:** `_enxWindow(now)` counts
+  `fromEvernote.at` in the last 24 h over `DB.articles` AND Trash (so deleting imported notes does not free the window); `_ENX_DAY_CAP` 6000;
+  `__enxCap` / `__enxNow` / `__enxDelay` are test hooks. **Writing:** `_enxImport(items)` → 250-note `flush`: folders, notes, then `_enxPersist()`
+  = `persist()` without the undo frame (`_histCapture(sw,true)`); it yields before each save and every 25 ms. **State:** `_enx.imp` (in memory) and
+  the device's own database `siyagah-enx-v1` (store `job`: `{total,already,handle?,at}`; deleted when an import finishes), never `DB`. The dialog
+  views are `pick` / `reading` / `done` (dry run) / `import`; `_enxContinue` uses the files in memory, else the saved folder handle (asking
+  permission), else asks for the files again (`_enx.resume`). `_enxBootToast` shows the toast once per session, only when the window allows.
+  Not in `--jeb-h` (the dialog sits over the bar on purpose).
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
