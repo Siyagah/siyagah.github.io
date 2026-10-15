@@ -9894,6 +9894,8 @@ New block 78 (`tools/redraw-p2.mjs`): the oracle (targeted redraw vs a full `ren
   - **`_zabPlace()` (from N2) measures only when its inputs change** (the folder screen opening or closing, the window size): it ran after every redraw and forced a whole-page layout on a phone with the corner button (78b phone 202 → 182 ms).
 - After the changes: `--only 54` 67/67, `--only 78` 505/505, `--only 77` 197/197.
 
+**Totals (Architect), v05.19:** full `app-check` **6238/6238** on `caa00e0` (D8); before the review fixes 6233/6238 on `8ba5eb8` (54c, 78b); `ship-check` 15/15. Merged as `9ecc592`, live 15 Oct 4:17pm.
+
 ## v05.20 — S4b, the Evernote notes come in, spread over days (issue #187, PCF J01)
 
 The dry run (v05.13) on the owner's real export showed 490 notebooks in 63 stacks, 17,756 notes, 5,260 tags, 0 unreadable, 0 already in Siyagah. This round brings the **notes** in. Pictures, audio and files come later (S4c); each shows a marker where it will go.
@@ -9937,6 +9939,8 @@ New block 80 (`tools/enex-s4b.mjs`): 80a structure and stable ids, nothing pre-e
 - **Merging with earlier imports (S4d):** a note matching an existing note is skipped and counted, never merged.
 - The full `app-check` was not run (told not to).
 
+**Totals (Architect), v05.20:** full `app-check` on `5ef9d5a` **6503/6509**; the six misses were timing only (76f, 78b, 80h). Block 80 and block 76 green when run alone; 78b measured equal to `main` run turn about (main 206.7/200.1 ms, S4b 211.9/187.8 ms).
+
 ---
 
 ## v05.21 — Z7: drag the Zab capsules into your own order (issue #189, PCF J24)
@@ -9970,6 +9974,93 @@ New block 81 (`tools/zab-z7.mjs`, 105 checks): 81a bar with the mouse (4th to 1s
 - No "Move left / Move right" menu rows were removed; the menu keeps them.
 - Dragging is not offered in the deck, All pockets, or ☑ Choose (the issue lists them as not drop places).
 - This branch is built on the v05.20 branch (PR #188), which does not carry v05.17 (B1) that is on `main`; `main` must be merged in when #188 lands.
+
+**Totals (Architect), v05.21:** `main` (v05.20) merged in as `f2d2956`. Full `app-check` on `f2d2956` **6600/6616**: all 16 misses phone ×4 timing checks (57d, 58g, 70h, 71h, 76f, 78b, 80h) in code Z7 does not touch; turn about with `main`: 76f main 453/404 ms vs Z7 405, 70h main 407 vs 369, 71h main 340 vs 306. `--only 81` 107/107; `zab-z7.mjs --unpatched` 34 of 105 fail; `--only 60,63,64` 611/611; `ship-check` 15/15.
+
+## v05.22 — P3, un-selecting a tag no longer freezes a big notebook (issue #191, PCF J08)
+
+**What was wrong.** Selecting a tag, un-selecting it, switching tags and going back to a big folder each built and drew the whole note
+list in one go: 5.8 s for 25,000 cards on a phone slowed ×4 (a 5.0 s freeze), and the owner's notebook is heading for ~27,000 notes.
+
+**What changed (all in `index.html`, nothing saved, nothing in `DB`).**
+- **First screenful at once, the rest out of sight, then moved in.** A list over 300 cards (`_LIST_MIN`) paints the cards that fill the
+  window plus one screen below (`_listFirstN()`, 30–45 cards) and returns. The rest is built by `_listBuild` into a hidden
+  `div.al.al-tail` right after the visible `.al` (slices of 200 cards, growing to 1,000 while a slice stays under ~18 ms of script),
+  then moved into the visible list 1,500 cards per frame (`_listReveal`), and the tail is removed. When it ends the page holds exactly
+  what a whole draw gives. **Why not simply append in slices:** the first cut did, and measured *worse* (23 s for 25,000 cards on a phone
+  ×4): every frame the page draws after an append costs time in proportion to what is already in it (30 ms at 260 cards, 130 ms at
+  10,000; Chrome trace: IntersectionObserver 37 ms, Layout 22, PrePaint 14, Paint 11, HitTest 11 per frame at 8,000 cards). Fewer, later
+  frames is the whole saving. Cards built in a `display:none` tail cost no frame.
+- **`.al>.ar{content-visibility:auto;contain-intrinsic-size:auto 56px}`** — a card off the screen costs no layout (the app already does
+  this for Zab rows). Cards stay in the DOM, so a script's `textContent` and Chrome's find-in-page reach them.
+- **A card's text is kept** (`artCardC`, `_cardC`: session memory only, never saved, ≤ 30,000 entries, emptied when the notebook changes
+  size by more than a tenth or when preview on/off, today, the time zone or a note type's name changes). Key = note id + a signature of
+  every field `artCard()` reads (updatedAt, title, favourite, pinned, archived, reminder date, mrjDue, practice, kind, kinds, number of
+  folders, the 👝 and 📥 marks, "in N folders"); a selected card and the preview view are never cached. Nothing else reads a card's inputs.
+- **Where it is used:** the tag list, the Note Type list, a Smart View and a Section Smart View list, and a plain folder's list
+  (`_p2cPaint`, which keeps P2's patch of the cards that changed; with slices running it patches the cards in the page and the hidden tail
+  by position and takes the slices back, `_listKeep`). `renderP2C()` ends the slices of the old list at its top.
+- **A change that arrives while slices run:** P2's targeted redraw (`_p2cTry`) calls `_listFinish()` first (builds and shows everything
+  at once, ~15 ms per 1,300 cards on a laptop), so it works on a whole list. Scrolling within 1.5 screens of the end of what is drawn calls
+  `_listShow()` — builds and shows the next 400 cards at once.
+- **Everything that needs "all cards drawn"** (the issue asks for a list): `_p2cTry` (finishes first); the P2 patch path (handles a
+  list in progress); the folder's count and "Articles (N)" header (read from the data, not the DOM); the checks (`_listFinish()` / settle).
+  **There is no select-all, copy or keyboard-to-the-end on the note list to keep** — the cards are `user-select:none` and the list has no
+  key handling — so nothing there needed changing; 82d checks the page text instead.
+- **Filtering 27,000 notes by tag** was measured inside the first-paint call and is a few milliseconds; no tag index was added.
+- Also found and **not caused by this round**: with a tag selected, `renderP2H()` takes 0.7–1 s the *first* time after a list was
+  inserted and not yet laid out (it forces the page's layout); a list that has been on screen costs 2 ms. The measurement waits for the
+  setup list to be laid out before acting, as a user does.
+
+**Before → after (phone = CPU slowed ×4 at 390 wide, laptop = 1440; median of 3 before, of 5 after; ms).** "first" = to the first
+screenful painted (the next frame), "all" = until every card is in the page, "long" = worst long task. `tools/list-p3.mjs --measure`.
+
+| notes | scenario (cards) | phone first | phone all | phone long | laptop first | laptop all |
+|---|---|---|---|---|---|---|
+| 9,000 | select a tag (3,000) | 763 → 80 | 764 → 411 | 666 → 66 | 154 → 20 | 154 → 107 |
+| 9,000 | **un-select it** (7,000) | 1,568 → 59 | 1,571 → 1,095 | 1,369 → 117 | 312 → 13 | 312 → 224 |
+| 9,000 | switch tags (1,800) | 433 → 56 | 434 → 274 | 376 → 61 | 92 → 12 | 92 → 75 |
+| 9,000 | clear a search (7,000) | 98 → 99 | 100 → 101 | 62 → 64 | 14 → 17 | 15 → 17 |
+| 9,000 | back to a folder of 2,000 | 493 → 60 | 493 → 278 | 423 → 61 | 103 → 14 | 103 → 79 |
+| 27,000 | select a tag (9,000) | 2,509 → 176 | 2,513 → 1,445 | 2,212 → 156 | 478 → 44 | 479 → 340 |
+| 27,000 | **un-select it** (25,000) | 5,788 → 101 | 5,797 → 5,967 | 5,019 → 399 | 1,213 → 25 | 1,215 → 1,255 |
+| 27,000 | switch tags (5,400) | 1,347 → 102 | 1,348 → 837 | 1,150 → 102 | 285 → 23 | 285 → 176 |
+| 27,000 | clear a search (25,000) | 313 → 302 | 322 → 310 | 171 → 201 | 50 → 64 | 52 → 66 |
+| 27,000 | back to a folder of 2,000 | 629 → 106 | 629 → 339 | 560 → 86 | 140 → 24 | 140 → 95 |
+
+("clear a search" only repaints the sidebar; the list is not drawn. It is in the table because the issue asked, and it did not move.)
+The heap the page reports is coarse and moved 54 → 61 MB (phone) / 54 → 73 MB (laptop) at 27,000 notes — the card text kept.
+
+**Targets (phone ×4, 27,000 notes).** First screenful ≤ 200 ms: **met** (101–176 ms; 5,788 ms before). No long task over 100 ms while the rest
+is appended: **not met** — 399 ms at the worst (un-select, 25,000 cards; was 5,019 ms), 156 ms for a 9,000-card tag, 102 ms for 5,400.
+The whole list in the page within 3 s: **met for lists up to 9,000 cards, not for 25,000** (5.97 s; was 5.80 s). Both misses have one cause:
+the page's per-frame cost grows with the cards already drawn. **What would close the gap: the windowed list** (draw only the cards on
+screen), which waits on the owner's tick box in J08 because Ctrl+F would then miss cards that are not drawn. Nothing else got slower:
+`render()`-time, P2's figures and boot are untouched code paths (block 78 re-run, below).
+
+**Checks.** New block 82 `82-list-slices`, `tools/list-p3.mjs`, at 390 (touch) / 820 (touch) / 1440: **82a** the list, once complete, equals a
+cache-free whole draw (`_cardC` emptied, `_p2cLast` forgotten, `_LIST_MIN` huge) after select, un-select, switch, a search cleared, a folder
+change, an edit, a favourite and a pin, a folder renamed, a tag renamed, a note to Trash and back, an edit under a tag, a Note Type list, a
+Smart View (twice), and a title and a tag change RECEIVED from a second device on the fake cloud; only ` data-p2c="N"` is stripped (the
+mark a whole paint puts on the list so the next paint can find it; it counts up on every paint), and the first paint is a part of the list
+wherever the list is over 300 cards (except an edit that leaves the same notes in place, which is P2's patch). **82b** every card is in the
+page and the last note's title is in the DOM. **82c** a second list begun while the first is being built: none of the first list's
+cards is appended after it. **82d** `_listFinish()`, a card opened mid-slices stays the one marked card, a targeted redraw during the
+slices, scrolling to the end, the page text holds the last title, the folder's counts. **82e** speed (above; asserts the first screenful,
+*prints* the two unmet targets as `note … target not met`, and guards against being worse than before). **82f** drawing the list calls none of
+`persist`/`_save`/`scheduleAutoSave`/`pushToCloud`/`_stampThemeTouches`, and `DB` is byte-identical. The unpatched build (v05.21 + the version
+bump, served from a clean copy) fails 82a/82c at 390 (the oracle needs `_cardC`; no list is ever pending).
+
+### Not done
+
+- **The windowed list** (drawing only the cards on screen) — told not to; it waits on the owner's tick box in J08. It is what would bring
+  the 25,000-card case under 3 s and 100 ms.
+- Chrome's native Ctrl+F was not driven by a test (a script cannot); what the checks prove is that every card is in the page text. Until the
+  slices finish (up to ~6 s for 25,000 cards on a slowed phone), the cards still in the hidden tail are not found by Ctrl+F.
+- A tag index for filtering by tag — not added: the filter is a few milliseconds even at 27,000 notes.
+- The full `app-check` was not run (told not to).
+
+**Totals (Architect), v05.22:** Z7 and `main` merged in; full `app-check` on `f1e9f27`, run in two halves because one full pass now exceeds the Architect container's 2-hour background limit: blocks 1–59 **2325/2330**, blocks 60–82 **4512/4532**, `self-check-*` 2/2 → **6839/6864** over all 449 blocks. Every miss is a speed limit (57d, 58g, 70h, 71h, 76f, 78b, 80h, 82e) that misses on `main` on the same container. Same container, `list-p3.mjs --measure --notes=27000`, phone ×4, `main` (v05.21) → P3: un-select a tag first screenful 14,009 → 459 ms, worst long task 12,491 → 1,470 ms; select a tag 5,023 → 916 / 4,348 → 881 ms; clear a search 582 → 755 / 409 → 583 ms (slightly worse); the whole 25,000-card list is complete later (14.1 → 19.8 s) without freezing. `ship-check` 15/15.
 
 ## v05.23 — Z8, the pockets inside a pocket as a vertical list (issue #193, PCF J30)
 

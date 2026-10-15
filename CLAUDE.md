@@ -31,6 +31,10 @@ stay short enough to read in full before starting work.
 > time); nothing is "done" until tested on a phone and a computer; exact job names and full links. **Elegant:** calm, tidy pages,
 > plain words, short "What I need from you" tick lists. **Optimal:** the fewest owner taps, free tools, no credits, no duplicate
 > work. Every finished job ends with a one-line W-T-P-E-O check in its Done line.
+> **Times and What's New (the owner's rules, 15 Oct 2026, PCA J45 and J46).** Every line, comment, Done line, tick and edit written
+> in the PCF carries its full time: `at` is UTC from `date -u +%Y-%m-%dT%H:%M:%SZ`, never a bare date. Every release adds, in the
+> same step, one line at the top of the User Manual (`p/siy.manual`) under the heading "🆕 What's New (newest first)":
+> "vX.YY · date time (Sydney) · what changed in plain words, and where to find it (job)".
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -47,23 +51,23 @@ must never accumulate here instead of there.
   shows them one per line (icon, name, rolled count, "▸") between the path line and its own items; tap goes down, long-press/right-click
   is the menu, drag reorders among siblings (Z7). Nothing inside = the panel is byte-identical to v05.21. Check: block 83, `tools/zab-z8.mjs`;
   76e and 81e updated in place (chip row → list). See *Dragging pockets* below.
+- **v05.22** (15 Oct 2026) — P3, a big note list is drawn first screenful at once and the rest after (issue #191, PCF J08). The cards
+  that fill the window come first; the rest is built in a hidden tail and moved in, a chunk per frame; a card's text is kept per note
+  (session memory). Phone ×4, 27,000 notes: un-select a tag first screenful 5,788 → 101 ms. **Not met without the windowed list:** the
+  25,000-card list is whole in ~6 s (was 5.8 s) and the worst long task is 399 ms. See *The sliced note list* below. Check: block 82,
+  `tools/list-p3.mjs`.
 - **v05.21** (15 Oct 2026) — Z7, drag the Zab capsules into your own order (issue #189, PCF J24). Mouse: press and move > 5 px; finger: the
   500 ms hold lifts the capsule, then > 8 px is a drag, released in place it opens the menu as before; a swipe without the hold still scrolls
   the bar. Bar, a pocket's row of pockets inside, and the phone's Rail / Drawer / Columns, always among the same siblings through
   `jebMovePocket` (never "into"); Escape or a drop outside puts it back; no dragging in Choose; none of the slide under reduced motion.
   See *Dragging pockets* below. Check: block 81, `tools/zab-z7.mjs` (`--unpatched`: 34 of 105 fail). Zab moves are not undoable (as before).
-- **v05.20** (14 Oct 2026) — S4b, the Evernote notes come in, at most 6,000 in any rolling 24 hours (issue #187, PCF J01; pictures/audio/files
+- **v05.20** (15 Oct 2026) — S4b, the Evernote notes come in, at most 6,000 in any rolling 24 hours (issue #187, PCF J01; pictures/audio/files
   are S4c, merging earlier imports S4d). 📥 Bring them in on the dry run's result → My Notebooks ▸ Evernote ▸ stack ▸ notebook, batches of
   250, Pause / Continue, `fromEvernote` mark, Smart View `sf-enx` "(13) From Evernote", a toast once per session. See *The Evernote
   import, the notes* below. 2,000 notes at 390 ×4: worst long task 108 ms. Check: block 80, `tools/enex-s4b.mjs`.
 - **v05.19** (15 Oct 2026) — P2, a received edit and an undo redraw only what changed (issue #184, PCF J08). `_renderFor(changed)` decides;
   anything it cannot prove safe calls the caller's full draw. At 9,000 notes, phone ×4: received edit not open 5 ms, open note 85 ms, undo 34 ms
   (were ~70–230 ms of `render()`). Check: block 78, `tools/redraw-p2.mjs`. Not done: the windowed list; un-selecting a tag still redraws the whole list.
-- **v05.18** (14 Oct 2026) — N2, on a phone Zab is one corner button with three layouts the owner chooses: Rail (the start), Drawer,
-  Columns (issue #182, PCF J20). `DB.theme.zabPhoneLayout` `'rail'|'drawer'|'cols'|'bar'` (absent = rail; `'bar'` = the N1 bar, offered
-  only in 🧰 → 🎨 Appearance). < 640 only; ≥ 640 is the N1 bar unchanged. Long-press (500 ms) or right-click on the button chooses.
-  Addresses in plain items are tappable. See *Zab on the phone* below. Check: block 77, `tools/zab-n2.mjs`. Old phone checks (65, 69–72, 76)
-  now seed `zabPhoneLayout:'bar'` in place, because they are about the bar.
 
 ---
 
@@ -543,22 +547,6 @@ A failing check is a wrong assertion surprisingly often — investigate before
   rule S4d will merge on. Distinct tags are exact strings; the overlap with Siyagah's tags is case-insensitive. Stacks: the folder
   between the export root and the file (`webkitRelativePath`); files picked singly have none. 146 MB / 2,000 notes: 1.3 s, no long
   task at 1440; at 390 ×4 CPU 3.8 s, worst long task 68 ms, heap +32 MB.
-- **The Evernote import, the notes (v05.20, S4b — S4c brings pictures/audio/files and replaces the markers by hash, S4d merges earlier imports).**
-  `_enxScanner(onNote,{content:true})` also hands over one note's CDATA body (cap 20 M characters, then "too large") and each resource's
-  `hash` (from the recognition index's `objID`; `<en-media hash>` is the md5 of the data, so S4c must hash the data for the rest); the dry run
-  passes no option and counts exactly as before. `_enxConvert` = ENML → note HTML (☑/☐ as text, `.enx-crypt`, `.enx-media[data-enx-hash,
-  data-mime,data-name]`, `_enxClean` for script/iframe/object/embed/style, `on*=`, `javascript:`/`data:` → `#`). A note's `k` = notebook path
-  + created second + lower-case title + raw content length; **its id is `_enxId('enx-n-',k)`**, so the same note from a second run or a second
-  device is the same record. Skipped (and counted) when its id or `k` is in `DB.articles`, Trash or the tombstones; skipped as "already in
-  Siyagah" on title + created second against notes that are NOT `fromEvernote`. Folders: `enx-root`, `enx-s-<hash>`, `enx-b-<hash>`, each with
-  `enx:{kind,name}`, found by id (a tombstoned id gets `-2`, `-3`…); the section is "My Notebooks" else the first. **The cap:** `_enxWindow(now)` counts
-  `fromEvernote.at` in the last 24 h over `DB.articles` AND Trash (so deleting imported notes does not free the window); `_ENX_DAY_CAP` 6000;
-  `__enxCap` / `__enxNow` / `__enxDelay` are test hooks. **Writing:** `_enxImport(items)` → 250-note `flush`: folders, notes, then `_enxPersist()`
-  = `persist()` without the undo frame (`_histCapture(sw,true)`); it yields before each save and every 25 ms. **State:** `_enx.imp` (in memory) and
-  the device's own database `siyagah-enx-v1` (store `job`: `{total,already,handle?,at}`; deleted when an import finishes), never `DB`. The dialog
-  views are `pick` / `reading` / `done` (dry run) / `import`; `_enxContinue` uses the files in memory, else the saved folder handle (asking
-  permission), else asks for the files again (`_enx.resume`). `_enxBootToast` shows the toast once per session, only when the window allows.
-  Not in `--jeb-h` (the dialog sits over the bar on purpose).
 - **Loading Firebase and the service worker's time limit (v05.14, O1).** Nothing in the source may block the first paint or the boot
   script on another origin: no `<script src>` to another origin, no plain `<link rel="stylesheet">` to one (Google Fonts is
   `media="print" onload="this.media='all'"`), no baked runtime markup. The Firebase SDK is loaded ONLY by `_loadScript(src)` (from
@@ -586,6 +574,36 @@ A failing check is a wrong assertion surprisingly often — investigate before
   new or gone notes, unknown collections, 41+ notes, a Multi window and the Calendar fall back to the full draw. **A new kind of record or
   a new thing the screen shows from `DB` must be classified in `_renderFor`, or it falls back (safe, slow).** The redraw path never calls
   `persist()`/`_save()`. Check 78's oracle compares `#sb`/`#p2`/`#p3` after the targeted redraw with a full `render()`.
+- **The Evernote import, the notes (v05.20, S4b — S4c brings pictures/audio/files and replaces the markers by hash, S4d merges earlier imports).**
+  `_enxScanner(onNote,{content:true})` also hands over one note's CDATA body (cap 20 M characters, then "too large") and each resource's
+  `hash` (from the recognition index's `objID`; `<en-media hash>` is the md5 of the data, so S4c must hash the data for the rest); the dry run
+  passes no option and counts exactly as before. `_enxConvert` = ENML → note HTML (☑/☐ as text, `.enx-crypt`, `.enx-media[data-enx-hash,
+  data-mime,data-name]`, `_enxClean` for script/iframe/object/embed/style, `on*=`, `javascript:`/`data:` → `#`). A note's `k` = notebook path
+  + created second + lower-case title + raw content length; **its id is `_enxId('enx-n-',k)`**, so the same note from a second run or a second
+  device is the same record. Skipped (and counted) when its id or `k` is in `DB.articles`, Trash or the tombstones; skipped as "already in
+  Siyagah" on title + created second against notes that are NOT `fromEvernote`. Folders: `enx-root`, `enx-s-<hash>`, `enx-b-<hash>`, each with
+  `enx:{kind,name}`, found by id (a tombstoned id gets `-2`, `-3`…); the section is "My Notebooks" else the first. **The cap:** `_enxWindow(now)` counts
+  `fromEvernote.at` in the last 24 h over `DB.articles` AND Trash (so deleting imported notes does not free the window); `_ENX_DAY_CAP` 6000;
+  `__enxCap` / `__enxNow` / `__enxDelay` are test hooks. **Writing:** `_enxImport(items)` → 250-note `flush`: folders, notes, then `_enxPersist()`
+  = `persist()` without the undo frame (`_histCapture(sw,true)`); it yields before each save and every 25 ms. **State:** `_enx.imp` (in memory) and
+  the device's own database `siyagah-enx-v1` (store `job`: `{total,already,handle?,at}`; deleted when an import finishes), never `DB`. The dialog
+  views are `pick` / `reading` / `done` (dry run) / `import`; `_enxContinue` uses the files in memory, else the saved folder handle (asking
+  permission), else asks for the files again (`_enx.resume`). `_enxBootToast` shows the toast once per session, only when the window allows.
+  Not in `--jeb-h` (the dialog sits over the bar on purpose).
+- **The sliced note list and the card cache (v05.22, P3).** A list over `_LIST_MIN` (300) cards is painted by `_listPaint` (tag, Note Type,
+  Smart View, Section Smart View) or `_p2cPaint` (a plain folder): the first `_listFirstN()` cards go in at once; the rest is built by
+  `_listBuild` into a hidden `div.al.al-tail` beside the visible `.al` (parsing only; no frame to pay) and moved in `_LIST_REVEAL` (1,500)
+  per frame by `_listReveal`; at the end the tail is removed, so the finished page is byte-identical to a whole draw. **Why a hidden tail:**
+  every frame after an append costs time in proportion to the cards already drawn (30 ms at 260, 130 ms at 10,000, ×4 CPU), so appending
+  in many small visible slices took 23 s for 25,000 cards; fewer, later frames is the saving. **Anything that needs the whole list calls
+  `_listFinish()`** (`_p2cTry` does); `renderP2C()` takes the running job off the clock (`_listKeep`) and `_p2cPaint` may put it back when
+  the same list is only patched (the patch works by position over the visible cards and the tail); `_listPending()` says a job is running.
+  The page's own DOM is never the source of a count (the header and `cntOf` read the data). `.al>.ar` is `content-visibility:auto`.
+  `artCardC(a,sel,sfc)` is `artCard` with a per-note cache (`_cardC`, session only, ≤ 30,000 entries): key = note id, value = signature of
+  every field `artCard()` reads + the text; **a new thing `artCard()` reads goes in that signature** (or in `_cardCtxCheck()` if it is
+  global), and a selected card and preview mode bypass the cache. Check 82's oracle compares the finished list with a cache-free whole draw
+  (`_LIST_MIN=1e9`, `_cardC.clear()`, `_p2cLast=null`). The windowed list is NOT built (Ctrl+F; waits on the owner's J08 tick box): the
+  25,000-card list is still whole only after ~6 s on a ×4 phone and its frames reach 400 ms.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
