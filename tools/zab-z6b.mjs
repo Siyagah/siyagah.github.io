@@ -55,7 +55,7 @@ const taskItems = (from) => [
   mk('t9', 'Water plants', 7),
   { id: 'i1', pocketId: 'jp-idea', text: 'An idea', done: false, folderIds: [], tags: [], kind: null, journal: false, order: 0, createdAt: T0, updatedAt: T0 },
 ];
-const seed = (extra, from) => { const db = seedDB(T0); db.jeb = taskItems(from); if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.17: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
+const seed = (extra, from) => { const db = seedDB(T0); db.jeb = taskItems(from); if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.18: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
 const dev = (cloud, name, vp, db, opts = {}) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed(), opts);
 const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const until = async (fn, ms = 8000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await sleep(150); } return false; };
