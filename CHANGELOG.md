@@ -9975,6 +9975,8 @@ New block 81 (`tools/zab-z7.mjs`, 105 checks): 81a bar with the mouse (4th to 1s
 - Dragging is not offered in the deck, All pockets, or ☑ Choose (the issue lists them as not drop places).
 - This branch is built on the v05.20 branch (PR #188), which does not carry v05.17 (B1) that is on `main`; `main` must be merged in when #188 lands.
 
+**Totals (Architect), v05.21:** `main` (v05.20) merged in as `f2d2956`. Full `app-check` on `f2d2956` **6600/6616**: all 16 misses phone ×4 timing checks (57d, 58g, 70h, 71h, 76f, 78b, 80h) in code Z7 does not touch; turn about with `main`: 76f main 453/404 ms vs Z7 405, 70h main 407 vs 369, 71h main 340 vs 306. `--only 81` 107/107; `zab-z7.mjs --unpatched` 34 of 105 fail; `--only 60,63,64` 611/611; `ship-check` 15/15.
+
 ## v05.22 — P3, un-selecting a tag no longer freezes a big notebook (issue #191, PCF J08)
 
 **What was wrong.** Selecting a tag, un-selecting it, switching tags and going back to a big folder each built and drew the whole note
