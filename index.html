@@ -6136,6 +6136,10 @@ function _rdRun(p){
   }else if(p.tab) renderTabBar();
   _updateSearchAccessUI();
   if(p.jeb){ try{jebRefresh();}catch(e){console.error('jebRefresh:',e);} }
+  /* v05.19 (Architect review): a picture still showing its placeholder is tried again. Before P2 every received change redrew the
+     open note, which was a new "showing" for _picHydrateAll; a targeted redraw leaves an unchanged open note alone, so a picture that
+     arrived after the quick retries stayed grey until the owner moved away and back (54c). Costs nothing when none is missing. */
+  try{ if(document.querySelector('img.ed-img-missing')) _picHydrateAll(document.body); }catch(e){ console.error('picture retry',e); }
 }
 /* The one decision. `fullFn` is the caller's own full draw (render, or _renderPreserveEdit on the merge path).
    Returns 'targeted' or 'full'. */
@@ -23142,11 +23146,20 @@ function _zabSync(on){
 /* v05.18 (Architect review) — on a phone's folder screen the sidebar's bottom row (New Note · Recent · MyWall · Folders) is where the
    corner would be, and the button hid "Folders". While that screen shows, the button sits just above the row, measured (never a
    constant); the Rail's bubbles follow the button. Written on the button and the rail themselves, never on <html>. */
-function _zabPlace(){
+/* v05.19 (Architect review of P2) — it runs from every jebRefresh(), i.e. after every redraw, and reading a position right after a redraw
+   forces a whole-page layout: ~100 ms at 9,000 notes on a ×4 phone (78b: a received edit to the open note 85 → 202 ms). The row's place
+   only changes with the folder screen opening/closing, the window's size or a sheet opening, so it is measured only when one of those
+   changed (or when the layout list was just repainted: `force`). */
+let _zabPlaceKey='';
+function _zabPlace(force){
   const b=_jebEl('zab-btn'); if(!b) return;
   const sb=_jebEl('sb'), tb=_jebEl('sb-toolbar');
+  const open=!!(!_jebOpen&&sb&&tb&&!sb.classList.contains('closed'));
+  const key=(open?1:0)+'|'+innerWidth+'x'+innerHeight;
+  if(!force&&key===_zabPlaceKey) return;
+  _zabPlaceKey=key;
   let v='';
-  if(!_jebOpen&&sb&&tb&&!sb.classList.contains('closed')){ const r=tb.getBoundingClientRect(); if(r.height>0&&r.top<innerHeight) v=Math.round(innerHeight-r.top+10)+'px'; }
+  if(open){ const r=tb.getBoundingClientRect(); if(r.height>0&&r.top<innerHeight) v=Math.round(innerHeight-r.top+10)+'px'; }
   if(b.style.bottom!==v) b.style.bottom=v;
   const rail=document.querySelector('#zab-lay .zl-rail');
   if(rail){ const w=v?'calc('+v+' + 62px)':''; if(rail.style.bottom!==w) rail.style.bottom=w; }
@@ -23229,7 +23242,7 @@ function _zabPaint(anim){
   const sig=L+'|'+h; if(sig===_zabLaySig) return; _zabLaySig=sig;
   const keep=[...lay.querySelectorAll('.zl-rail,.zd-list,.zc-list')].map(e=>e.scrollTop);
   lay.innerHTML=h;
-  _zabPlace();
+  _zabPlace(true);
   lay.querySelectorAll('.zl-rail,.zd-list,.zc-list').forEach((e,i)=>{ if(keep[i]) e.scrollTop=keep[i]; });
   if(anim&&!_jebReduced()&&lay.animate){   /* none under prefers-reduced-motion */
     const bd=lay.querySelector('.zl-bd'); if(bd) bd.animate([{opacity:0},{opacity:1}],{duration:160,easing:'ease-out'});
