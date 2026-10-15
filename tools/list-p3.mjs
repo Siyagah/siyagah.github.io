@@ -26,7 +26,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const NOTES_LIST = (arg('notes') || '9000,27000').split(',').map(Number);
 const med = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
 const onlySet = arg('only') ? new Set(arg('only').split(',')) : null;
-const want = (t) => !onlySet || onlySet.has(t);
+const want = (t) => !onlySet || [...onlySet].some((o) => t.startsWith(o));
 const VPS = [{ n: 390, w: 390, h: 844, touch: true }, { n: 820, w: 820, h: 1180, touch: true }, { n: 1440, w: 1440, h: 900, touch: false }]
   .filter((v) => !arg('vp') || String(v.n) === arg('vp'));
 

@@ -12122,6 +12122,24 @@ await r.block('81-zab-drag', async () => {
   r.check(out.status === 0, 'the Z7 drag check exits cleanly', `exit ${out.status}`);
 });
 
+/* 82 — v05.22, P3: a big note list is drawn in slices from reused card text. tools/list-p3.mjs runs 82a–82f at 390 / 820 / 1440:
+   82a the list, once complete, equals a whole cache-free draw after select / un-select / switch of a tag, a search cleared, a
+   folder change, an edit, a favourite and a pin, a folder or tag renamed, Trash and back, a Smart View and a received edit; 82b every
+   card ends up in the page (and the last title is in the DOM); 82c a new change cancels the old slices; 82d everything that needs the
+   whole list (finish, open a card mid-slices, a targeted redraw, scrolling, select-all, counts); 82e speed at 9,000 and 27,000 notes
+   (phone x4 and laptop, median of 5); 82f drawing the list writes nothing. Each printed ok/FAIL line becomes one check. */
+await r.block('82-list-slices', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./list-p3.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 150, 'the P3 list check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'P3: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the P3 list check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

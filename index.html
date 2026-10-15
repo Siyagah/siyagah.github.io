@@ -6549,15 +6549,16 @@ function _p2cPaint(el,head,cards,tail,ids,fid,mk){
   if(L&&L.el===el&&L.head===head&&L.tail===tail&&L.cards.length===n){
     const fv=el.firstElementChild, al=(fv&&fv.getAttribute('data-p2c')===L.mark)?fv.querySelector(':scope > .al'):null;
     const kp=(_listKeep&&_listKeep.al===al)?_listKeep:null;
-    const drawn=al?al.children.length:-1;
-    let same=drawn===n;
-    if(!same&&kp&&drawn===kp.i&&drawn<n&&L.ids&&ids&&L.ids.length===n&&ids.length===n){ same=true; for(let i=drawn;i<n;i++) if(String(L.ids[i])!==String(ids[i])){ same=false; break; } }
+    const rest=kp?kp.rest:null, alN=al?al.children.length:0;
+    const drawn=al?alN+(rest?rest.children.length:0):-1;
+    let same=!kp&&drawn===n;
+    if(kp&&drawn===kp.i&&drawn<=n){ same=true; if(drawn<n){ same=!!(L.ids&&ids&&L.ids.length===n&&ids.length===n); for(let i=drawn;same&&i<n;i++) if(String(L.ids[i])!==String(ids[i])) same=false; } }
     if(al&&same){
       const diff=[];
       for(let i=0;i<drawn&&diff.length<=_P2C_PATCH_MAX;i++){ if(cards[i]===undefined) cards[i]=mk(i); if(cards[i]!==L.cards[i]) diff.push(i); }
       if(diff.length<=_P2C_PATCH_MAX){
         const t=document.createElement('template');
-        diff.forEach(i=>{ t.innerHTML=cards[i]; const nd=t.content.firstElementChild; if(nd) al.children[i].replaceWith(nd); L.cards[i]=cards[i]; });
+        diff.forEach(i=>{ t.innerHTML=cards[i]; const nd=t.content.firstElementChild; const old=i<alN?al.children[i]:rest.children[i-alN]; if(nd&&old) old.replaceWith(nd); L.cards[i]=cards[i]; });
         note(L);
         if(kp){ kp.mk=mk; _listJob=kp; _listSched(kp); }
         return;
@@ -6573,28 +6574,59 @@ function _p2cPaint(el,head,cards,tail,ids,fid,mk){
    the rest is appended in slices between frames: ~200 cards, fewer when a slice runs long. Every card still ends up in the
    page, so Ctrl+F finds it. A new draw of the list (renderP2C) ends the old slices; scrolling toward the end of what is
    drawn takes the next slice at once; anything that needs the whole list calls _listFinish(). Nothing here writes. */
-let _LIST_MIN=300; const _LIST_SLICE=200, _CARD_CAP=30000;   /* _LIST_MIN is `let` only so that check 82's oracle can ask for the whole draw */
+let _LIST_MIN=300; const _LIST_SLICE=200, _LIST_SLICE_MAX=1000, _LIST_REVEAL=1500, _CARD_CAP=30000;   /* _LIST_MIN is `let` only so that check 82's oracle can ask for the whole draw */
 let _listJob=null, _listKeep=null, _listWired=false, _cardC=new Map(), _cardCtx='', _cardN=0;
 function _listPending(){ return !!_listJob; }
 function _listCancel(){ _listJob=null; }
 function _listFinish(){ const j=_listJob; if(j) _listStep(j,true); }
-function _listFirstN(){ const p=document.getElementById('p2c'); return Math.max(60,Math.ceil(2*Math.max((p&&p.clientHeight)||0,window.innerHeight||0)/40)); }
-function _listSched(job){
+function _listFirstN(){ const p=document.getElementById('p2c'); return Math.max(30,Math.ceil(2*Math.max((p&&p.clientHeight)||0,window.innerHeight||0)/50)); }   /* the visible part and one screen below it, at ≥ 50 px a card */
+function _listSched(job,building){
   let f=false; const go=()=>{ if(f) return; f=true; _listStep(job,false); };
+  if(building){ setTimeout(go,0); return; }   /* building shows nothing: no need to wait for a frame */
   requestAnimationFrame(()=>setTimeout(go,0)); setTimeout(go,120);
 }
+/* The page draws a frame after every append, and a frame costs time in proportion to everything already drawn (measured: 30 ms
+   at 260 cards, 130 ms at 10,000, ×4 CPU), so thousands of small appends took 10–23 s. The rest of the list is therefore built
+   OUT of sight, in a hidden `.al-tail` right after the visible `.al` (parsing only, no frame to pay), and then moved into the
+   visible list a chunk per frame. When it is all moved, the tail is removed and the page holds exactly what a whole draw gives. */
+function _listBuild(job,end){
+  const cs=job.cards; let s='';
+  for(let i=job.i;i<end;i++){ if(cs[i]===undefined) cs[i]=job.mk(i); s+=cs[i]; }
+  job.rest.insertAdjacentHTML('beforeend',s);
+  job.i=end;
+}
+function _listReveal(job,cnt){
+  const r=job.rest, f=document.createDocumentFragment(); let c=0;
+  while(r.firstChild&&c<cnt){ f.appendChild(r.firstChild); c++; }
+  job.al.appendChild(f);
+}
+function _listEnd(job){ if(job.rest.parentNode) job.rest.remove(); if(_listJob===job) _listJob=null; }
 function _listStep(job,all){
   if(_listJob!==job) return;
   if(!job.al.isConnected){ _listJob=null; return; }
   _cardCtxCheck();
-  const t=performance.now(), end=all?job.n:Math.min(job.n,job.i+job.S), cs=job.cards;
-  let s='';
-  for(let i=job.i;i<end;i++){ if(cs[i]===undefined) cs[i]=job.mk(i); s+=cs[i]; }
-  job.al.insertAdjacentHTML('beforeend',s);
-  job.i=end;
-  if(end>=job.n){ _listJob=null; return; }
-  if(performance.now()-t>30) job.S=Math.max(40,Math.floor(job.S*0.6));
-  _listSched(job);
+  if(all){ _listBuild(job,job.n); _listReveal(job,1e9); _listEnd(job); return; }
+  if(job.i<job.n){
+    const t=performance.now();
+    _listBuild(job,Math.min(job.n,job.i+job.S));
+    const ms=performance.now()-t;
+    if(ms>35) job.S=Math.max(40,Math.floor(job.S*0.6));
+    else if(ms<18) job.S=Math.min(_LIST_SLICE_MAX,Math.ceil(job.S*1.5));
+    _listSched(job,true);
+    return;
+  }
+  _listReveal(job,_LIST_REVEAL);
+  if(!job.rest.firstChild){ _listEnd(job); return; }
+  _listSched(job,false);
+}
+/* scrolling toward the end of what is drawn: show the next cards at once (building them first if need be) */
+function _listShow(job){
+  if(_listJob!==job||!job.al.isConnected) return;
+  _cardCtxCheck();
+  const need=job.al.children.length+400;
+  if(job.i<need) _listBuild(job,Math.min(job.n,need));
+  _listReveal(job,400);
+  if(job.i>=job.n&&!job.rest.firstChild) _listEnd(job);
 }
 function _listPaint(el,head,cards,n,mk,tail){
   _cardCtxCheck();
@@ -6606,12 +6638,13 @@ function _listPaint(el,head,cards,n,mk,tail){
   if(k>=n) return;
   const als=el.querySelectorAll(':scope > .fv > .al'), al=als[als.length-1];
   if(!al) return;
-  _listJob={al:al,n:n,i:k,cards:cards,mk:mk,S:_LIST_SLICE};
+  const rest=document.createElement('div'); rest.className='al al-tail'; rest.style.display='none'; al.after(rest);
+  _listJob={al:al,rest:rest,n:n,i:k,cards:cards,mk:mk,S:_LIST_SLICE};
   if(!_listWired){
     _listWired=true;
-    el.addEventListener('scroll',()=>{ const j=_listJob; if(j&&el.scrollHeight-el.scrollTop-el.clientHeight<1.5*el.clientHeight+200) _listStep(j,false); },{passive:true});
+    el.addEventListener('scroll',()=>{ const j=_listJob; if(j&&el.scrollHeight-el.scrollTop-el.clientHeight<1.5*el.clientHeight+200) _listShow(j); },{passive:true});
   }
-  _listSched(_listJob);
+  _listSched(_listJob,true);
 }
 /* The text of a card is a function of the note and of a few things around it. It is kept per note (session memory only,
    never saved) under a signature of every field artCard() reads; the things around it (preview on/off, today, the time
