@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.21.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.22.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -37,6 +37,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.22** (15 Oct 2026) — P3, a big note list is drawn first screenful at once and the rest after (issue #191, PCF J08). The cards
+  that fill the window come first; the rest is built in a hidden tail and moved in, a chunk per frame; a card's text is kept per note
+  (session memory). Phone ×4, 27,000 notes: un-select a tag first screenful 5,788 → 101 ms. **Not met without the windowed list:** the
+  25,000-card list is whole in ~6 s (was 5.8 s) and the worst long task is 399 ms. See *The sliced note list* below. Check: block 82,
+  `tools/list-p3.mjs`.
 - **v05.21** (15 Oct 2026) — Z7, drag the Zab capsules into your own order (issue #189, PCF J24). Mouse: press and move > 5 px; finger: the
   500 ms hold lifts the capsule, then > 8 px is a drag, released in place it opens the menu as before; a swipe without the hold still scrolls
   the bar. Bar, a pocket's row of pockets inside, and the phone's Rail / Drawer / Columns, always among the same siblings through
@@ -54,12 +59,6 @@ must never accumulate here instead of there.
   only in 🧰 → 🎨 Appearance). < 640 only; ≥ 640 is the N1 bar unchanged. Long-press (500 ms) or right-click on the button chooses.
   Addresses in plain items are tappable. See *Zab on the phone* below. Check: block 77, `tools/zab-n2.mjs`. Old phone checks (65, 69–72, 76)
   now seed `zabPhoneLayout:'bar'` in place, because they are about the bar.
-- **v05.16** (14 Oct 2026) — N1, pockets inside pockets, no depth limit (issue #179, PCF J20; the phone corner button and its layouts
-  are N2, not done). A pocket gets `parentId` (absent/null = top level; nothing written to existing pockets) and `order` is the place
-  among siblings. Readers `jebChildren(id|null)`, `jebPath(id)`, `jebDescendants(id)`; writer `jebMovePocketInto(id,parentId|null,toIndex)`
-  (refuses itself/its own descendants). The bar shows the top level, a chip counts its own open items plus every pocket inside it,
-  "▸" = holds pockets; the panel has a path line and a row of pocket chips; the pocket menu has "📂 Move into…" and "＋ New pocket
-  inside". See *Pockets inside pockets* below. Check: block 76, `tools/zab-n1.mjs`.
 ---
 
 ## What this is
@@ -573,6 +572,20 @@ A failing check is a wrong assertion surprisingly often — investigate before
   new or gone notes, unknown collections, 41+ notes, a Multi window and the Calendar fall back to the full draw. **A new kind of record or
   a new thing the screen shows from `DB` must be classified in `_renderFor`, or it falls back (safe, slow).** The redraw path never calls
   `persist()`/`_save()`. Check 78's oracle compares `#sb`/`#p2`/`#p3` after the targeted redraw with a full `render()`.
+- **The sliced note list and the card cache (v05.22, P3).** A list over `_LIST_MIN` (300) cards is painted by `_listPaint` (tag, Note Type,
+  Smart View, Section Smart View) or `_p2cPaint` (a plain folder): the first `_listFirstN()` cards go in at once; the rest is built by
+  `_listBuild` into a hidden `div.al.al-tail` beside the visible `.al` (parsing only; no frame to pay) and moved in `_LIST_REVEAL` (1,500)
+  per frame by `_listReveal`; at the end the tail is removed, so the finished page is byte-identical to a whole draw. **Why a hidden tail:**
+  every frame after an append costs time in proportion to the cards already drawn (30 ms at 260, 130 ms at 10,000, ×4 CPU), so appending
+  in many small visible slices took 23 s for 25,000 cards; fewer, later frames is the saving. **Anything that needs the whole list calls
+  `_listFinish()`** (`_p2cTry` does); `renderP2C()` takes the running job off the clock (`_listKeep`) and `_p2cPaint` may put it back when
+  the same list is only patched (the patch works by position over the visible cards and the tail); `_listPending()` says a job is running.
+  The page's own DOM is never the source of a count (the header and `cntOf` read the data). `.al>.ar` is `content-visibility:auto`.
+  `artCardC(a,sel,sfc)` is `artCard` with a per-note cache (`_cardC`, session only, ≤ 30,000 entries): key = note id, value = signature of
+  every field `artCard()` reads + the text; **a new thing `artCard()` reads goes in that signature** (or in `_cardCtxCheck()` if it is
+  global), and a selected card and preview mode bypass the cache. Check 82's oracle compares the finished list with a cache-free whole draw
+  (`_LIST_MIN=1e9`, `_cardC.clear()`, `_p2cLast=null`). The windowed list is NOT built (Ctrl+F; waits on the owner's J08 tick box): the
+  25,000-card list is still whole only after ~6 s on a ×4 phone and its frames reach 400 ms.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
