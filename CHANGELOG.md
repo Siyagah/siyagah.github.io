@@ -10134,3 +10134,9 @@ Trash step of 80j).
 - The full `app-check` was not run (told not to); the Architect runs it. The speed checks' factor was only ever 1.0 here, so its scaling has been
   read, not seen; the first run on the Architect's computer will show its factor in the lines.
 - 52d: see item 6.
+
+**Totals (Architect), v05.24:** full `app-check` on `97a19e6` (two halves): 2328/2332 + 4707/4721 — 75a@360/390 failed (the ✕ really a 37 px target), fixed in review. D8 full recheck on `85e710d`: blocks 1–59 + `self-check` **2330/2332**, blocks 60–84 **4716/4723** → **7046/7055** over all 451 blocks; every miss a speed limit (57d, 78b, 82e). `--only 84` 42/42; `title-t1 --only=75a` 22/22; `ship-check` 15/15. The host factor is measured per process while a full run loads the machine, so it varies (1.32–1.69 in one run).
+
+## v05.25 — Z9: a title for any Zab item (issue #197, PCF J36)
+
+(stub — the full entry is written at the end of the round)
