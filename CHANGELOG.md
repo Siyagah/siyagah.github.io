@@ -9862,3 +9862,37 @@ New block 80 (`tools/enex-s4b.mjs`): 80a structure and stable ids, nothing pre-e
 - **Pictures, audio and other files (S4c):** only markers.
 - **Merging with earlier imports (S4d):** a note matching an existing note is skipped and counted, never merged.
 - The full `app-check` was not run (told not to).
+
+---
+
+## v05.21 — Z7: drag the Zab capsules into your own order (issue #189, PCF J24)
+
+The owner's quick task: "Make the capsules moveable left right." A pocket used to move one step at a time from its menu (◀ Move left / Move right ▶). Now it is dragged straight to its place.
+
+### What it does, per layout (D5 — all three in this round)
+
+- **Laptop (1440, mouse):** press a capsule and move more than 5 px: it lifts and follows the pointer along the bar, the others slide aside (transform + a 150 ms transition) to show the landing place; release drops it. A click without movement still opens the pocket. The bar scrolls by itself while a capsule is held within 48 px of its left or right edge.
+- **Tablet (820) and the phone's "Bar" layout (390), finger:** the 500 ms long press now lifts the capsule first. Moving more than 8 px is then a drag; released without moving, the pocket menu opens exactly as before. A short tap still opens the pocket; a sideways swipe that starts without the hold still scrolls the bar. Only the lifted capsule is `touch-action:none`.
+- **Inside a pocket:** the panel's row of pockets inside (`.jx-kid`) reorders the same way (x), among its siblings.
+- **Phone corner button (N2):** Rail (a bubble pulled up or down; the rail is drawn bottom-up, so the engine reads it reversed), Drawer (only among rows of the same parent) and Columns (within a column) take the same press-hold-move; a line on the row shows where it will land (the lists do not slide).
+- **Never into another pocket:** a drop is always a place among the same siblings, through `jebMovePocket(id,toIndex)`. A drop outside the bar / list, or Escape, puts it back and writes nothing. In ☑ Choose mode nothing lifts.
+- **Motion:** the slide is a CSS transition inside `@media (prefers-reduced-motion:no-preference)`, and the class that enables it is only added when motion is allowed. Under reduced motion the others still step aside, instantly, and the drop simply jumps.
+
+### How
+
+One engine, `_zxCfg/_zxBegin/_zxUpdate/_zxEnd` and `_zabWireDrag(root,menu)` in `index.html`, replacing the three copies of the long-press code (bar, panel kids, Zab layouts). The drop index is read from the siblings' positions at the start of the drag, shifted by how far the box has scrolled; the lifted capsule and the slid-aside ones carry only an inline `transform` on themselves, nothing is fixed and nothing is written to `<html>`. The bar, the layouts and the panel are not repainted while a drag runs (`_zxDrag`, `_jebDrag`); the drop repaints once. The auto-scroll is clamped to the scroll range measured before the drag, because the lifted capsule's own transform would otherwise stretch the bar's scroll width and the scroll would chase it forever (found by 81c). While a finger is held, `contextmenu` is ignored (Chrome fires it on a long press and would open the menu over the drag).
+
+`jebMovePocket` now returns `false` and writes nothing when the new order equals the old, so a drop in the same place is not a change. When it does change, `_jebRenumber` stamps only the pockets whose `order` differs. One drop is one `persist()`.
+
+**Undo:** Zab moves are not undoable today (the same as ◀ / ▶ before them); this round does not change that.
+
+### Checks
+
+New block 81 (`tools/zab-z7.mjs`, 105 checks): 81a bar with the mouse (4th to 1st, 1st to last, only changed pockets stamped, same place writes nothing, a click opens); 81b finger (hold + move drags, hold alone opens the menu, tap opens, swipe scrolls, `touch-action` only on the lifted one) at 390 and 820; 81c auto-scroll with 20 pockets (mouse, finger); 81d Escape and a drop outside leave `DB.jebPockets` byte-identical; 81e pockets inside (never nests); 81f Rail, Drawer (siblings only), Columns; 81g two devices through the fake cloud both ways and two concurrent drags; 81h reduced motion (and the same run with motion on, so it can fail); 81i Choose mode, no page errors. `--unpatched` serves the step-0 commit: 34 of 105 fail there. Blocks 60, 63, 64 (611/611) and 76, 77 (504/504) stay green with nothing changed in them. `ship-check` 15/15; block 81 through `app-check --only 81`: 107/107.
+
+### Not done
+
+- The full `app-check` was not run (told not to).
+- No "Move left / Move right" menu rows were removed; the menu keeps them.
+- Dragging is not offered in the deck, All pockets, or ☑ Choose (the issue lists them as not drop places).
+- This branch is built on the v05.20 branch (PR #188), which does not carry v05.17 (B1) that is on `main`; `main` must be merged in when #188 lands.
