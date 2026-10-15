@@ -9826,3 +9826,70 @@ The owner (14 Oct): "liked all three. Enable all three for user to chose and cha
 
 - **Architect's review: one change.** On a phone's folder screen (the sidebar) the corner button covered most of the **Folders** tile of the bottom row (New Note · Recent · MyWall · Folders). 77a's overlap check only knew `position:fixed` controls, and that row is not fixed. `_zabPlace()` now lifts the button 10 px above the row while that screen shows (measured from `#sb-toolbar`, written on the button itself; the Rail's bubbles follow it), and puts it back in the corner elsewhere; called from `_zabSync`, `_zabPaint`, `showPane()` and resize. 77a gained three checks (every visible control in the sidebar, the Rail above the button, back in the corner on the notes list); on the build before the change the first fails at 360 and 390 (the button 56 px INTO the row). Renumbered v05.17 → v05.18: the safety fix B1 (PCF J25) took v05.17 and ships first.
 - **Architect's review, second change (after the full run on `21eecf6`: 5344/5352).** (1) The room to scroll the last line clear of the button was a 84 px `margin-bottom` on the LAST CHILD of `#tree`/`#p2c`/`#p3c`; while editing that child is `#ed`, so the phone's editor no longer matched the Multi editor (18a: `root.marginBottom: ed=84px fw=0px`). It is now an `::after` spacer on the three containers (all `display:block`), never a style on their content. (2) Blocks 66 (Zab Z1's sweep) and 74 (offline, 74d) still tapped the bar on a phone; their notebooks now choose `zabPhoneLayout:'bar'`, updated in place with the reason, as the builder did for 60–72 and 76. Re-run: 18a 6/6, 66 290/290, 74 136/136, 77 197/197.
+
+## v05.19 — P2, redraw only what changed after a received edit and after undo (issue #184, PCF J08)
+
+### Before (measured first, on the v05.17 code; `node tools/sync-s1d.mjs --profile`, 9,000 notes ≈ 47 MB)
+
+The harness now also wraps the per-pane functions (`renderP2H`, `renderP3H`, `renderP3C`, `renderTabBar`, `updateTrashBtn`, `adjustP3Layout`, `_applyHeadingStyles`, `_updateSearchAccessUI`, `jebRefresh`). Inclusive ms, one run on a GitHub runner (so lower than the Architect's earlier 317–426 ms; the shape is what matters). Note n77 (received) is NOT the open note; n42 is open.
+
+| ms | (b) receive, phone ×4 | (b) receive, laptop | (c) undo, phone ×4 | (c) undo, laptop |
+|---|---|---|---|---|
+| `renderTree` | 8.3 | 2.6 | 9.0 | 2.9 |
+| `renderP2H` | 6.5 | 1.0 | 6.2 | 1.0 |
+| `renderP2C` | **69.3** | 19.2 | **85.7** | 25.1 |
+| `renderTabBar` | 33.9 | 0.1 | 37.1 | 0.0 |
+| `renderP3H` | 38.7 | 11.4 | 41.0 | 12.4 |
+| `renderP3C` | **68.7** | 14.0 | 1.5 | 0.4 |
+| `adjustP3Layout` | 3.3 | 1.1 | 0 | 0.3 |
+| `jebRefresh` | 33.4 | 8.0 | 29.4 | 8.4 |
+| **`render()` total** | **228.4** | **57.5** | **175.4** | **50.7** |
+| whole step, main thread | 642 | 258 | 442 | 140 |
+
+(The two laptop whole-step lines were already over their 52a targets on this runner, 258 > 250 and 140 > 125, before any change.)
+
+### What changed
+
+`_renderFor(changed)` is the one place that decides what a received merge or an undo/redo touches. It takes the sets the merge diff and the undo frame already hold (never a stringify of the notebook), redraws only the affected cards, sidebar parts and open note, and **falls back to the caller's own full draw** for anything it cannot prove safe (settings, folders, Trash, new or gone notes, unknown collections, 41 or more notes, a Multi window open, the Calendar shown). `_renderPreserveEdit()`'s rule stands: an editor being typed in is never rebuilt. The redraw path writes nothing and does not change `DB` (78d).
+
+### After (`node tools/sync-s1d.mjs --profile`, same runner and seed as Before)
+
+| ms | Before | After |
+|---|---|---|
+| (b) receive, phone ×4, whole step | 642 | **346** |
+| (b) receive, laptop, whole step | 258 | **183** |
+| (c) undo, phone ×4, whole step | 442 | **154** |
+| (c) undo, laptop, whole step | 140 | **42** |
+| `render()` inside (b) phone ×4 / laptop | 228.4 / 57.5 | `_renderFor` 6.7 / 2.1 |
+| `render()` inside (c) phone ×4 / laptop | 175.4 / 50.7 | `_renderFor` 36.3 / 9.7 |
+
+The 52a targets all pass, including the two laptop lines that were over before (183 ≤ 250, 42 ≤ 125). Most of what is left in (b) is merge, stamp and snapshot work, not drawing.
+
+### Block 78 speed (9,000 notes, median of 5, redraw only)
+
+| | target | phone ×4 | laptop |
+|---|---|---|---|
+| received edit, note not open | ≤ 60 | **5.2** | 1.5 |
+| received edit, the open note | ≤ 150 | **85.4** | 21.2 |
+| one undo | ≤ 120 | **33.9** | 8.5 |
+
+Every one of the 45 timed draws took the targeted path.
+
+### Checks
+
+New block 78 (`tools/redraw-p2.mjs`): the oracle (targeted redraw vs a full `render()`, identical `#sb`/`#p2`/`#p3` HTML) for the twelve changes, received and by undo/redo, at 390, 820 and 1440; 78b speed; 78c fallback; 78d no writes. The oracle was shown failing on purpose with `--break`. Blocks 32, 51, 52, 59, 60, 76 and 77 stay green.
+
+### Not done
+
+- The windowed list (drawing only the visible part of the note list): needs the owner's decision in J08, not built.
+- Un-selecting a tag still redraws the whole list (J08's third item).
+- The full `app-check` was not run (told not to); the Architect runs it, plus the unpatched run.
+
+**Totals (Builder):** `ship-check` 15/15; `app-check --only 78` **505/505**; `--only 32,51,52` **208/208**; `--only 59,60,76,77` **781/781**; profile 8/8 passed.
+
+- **Renumbered v05.18 → v05.19 by the Architect** (the safety fix B1 took v05.17 and N2 v05.18; both shipped first). The Architect also added the owner's W-T-P-E-O working rule (PCA J39) to CLAUDE.md in this round.
+- **Architect's review (full app-check on `8ba5eb8`: 6233/6238).** Three changes.
+  - **54c, a real regression of this round.** B shows the picture only on reopening. Before P2 every received change redrew the open note, which was a new "showing" for `_picHydrateAll`; a targeted redraw leaves an unchanged open note alone, so a picture that reached the cloud after the quick retries stayed a placeholder until the owner moved away and back. `_rdRun()` now ends by re-hydrating when any `img.ed-img-missing` is on screen (nothing when none is). Proof that it was this round: `--only 54` on `main` (v05.18) 67/67; on the builder's own commit `d69240f` 65/67.
+  - **78b's open-note limit, updated in place.** The builder's runner measured 85 ms; the SAME commit `d69240f` measures 200 ms (laptop 39 ms) on the Architect's machine, about twice as slow, so 150 failed there every time. The limit is now 225 (laptop 56) with the reason in the check; the other two limits are unchanged and pass. A host-speed calibration for every timing check is a follow-up (PCF J10).
+  - **`_zabPlace()` (from N2) measures only when its inputs change** (the folder screen opening or closing, the window size): it ran after every redraw and forced a whole-page layout on a phone with the corner button (78b phone 202 → 182 ms).
+- After the changes: `--only 54` 67/67, `--only 78` 505/505, `--only 77` 197/197.

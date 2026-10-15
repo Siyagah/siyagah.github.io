@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.18.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.19.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -25,6 +25,12 @@ stay short enough to read in full before starting work.
 > in the User Manual tab (`p/siy.manual`: one heading per feature, then What it does ·
 > Benefit · How to use). The owner's word always overrides the PL.
 > **Keep working, never idle (owner's general rule, 14 Oct 2026).** Every Master Architect and every builder works continuously. Stop and ask only when a decision or answer from the owner is needed: ask it with tick boxes, then carry on with everything else meanwhile. When a job is done, take the next one at once and keep a builder round running. When no job is left, audit the app feature by feature (the User Manual list is the checklist) on phone, tablet and desktop, record every defect found as a job, and fix it with the usual checks. The Project Chief Architect (PCA, who now leads every project's Master Architect in the shared PCF) does the same across all projects.
+> **How we work: W-T-P-E-O (the owner's rule, 15 Oct 2026, PCA J39).** **Wise:** every job serves the owner's long-term aim; check
+> it fits; keep the owner's rules. **Timely:** a next step and a time for every job; the status line (`p/siy.monitor`) at every
+> step; relays within minutes. **Precise:** real clock times (read the clock in its own step before any write that carries a
+> time); nothing is "done" until tested on a phone and a computer; exact job names and full links. **Elegant:** calm, tidy pages,
+> plain words, short "What I need from you" tick lists. **Optimal:** the fewest owner taps, free tools, no credits, no duplicate
+> work. Every finished job ends with a one-line W-T-P-E-O check in its Done line.
 
 **The Architect's brief is `ARCHITECT.md`.** It says who does what, how a job
 becomes rounds, and when to stop and ask the owner. Everything in this file
@@ -37,6 +43,9 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.19** (15 Oct 2026) — P2, a received edit and an undo redraw only what changed (issue #184, PCF J08). `_renderFor(changed)` decides;
+  anything it cannot prove safe calls the caller's full draw. At 9,000 notes, phone ×4: received edit not open 5 ms, open note 85 ms, undo 34 ms
+  (were ~70–230 ms of `render()`). Check: block 78, `tools/redraw-p2.mjs`. Not done: the windowed list; un-selecting a tag still redraws the whole list.
 - **v05.18** (14 Oct 2026) — N2, on a phone Zab is one corner button with three layouts the owner chooses: Rail (the start), Drawer,
   Columns (issue #182, PCF J20). `DB.theme.zabPhoneLayout` `'rail'|'drawer'|'cols'|'bar'` (absent = rail; `'bar'` = the N1 bar, offered
   only in 🧰 → 🎨 Appearance). < 640 only; ≥ 640 is the N1 bar unchanged. Long-press (500 ms) or right-click on the button chooses.
@@ -58,12 +67,6 @@ must never accumulate here instead of there.
   growing `<textarea id="ti">` (`_tiInput`/`_tiKey`/`_tiGrow`/`_tiGrowAll`: a line break becomes a space, Enter moves the caret into the
   note's text); reading drops the 2-line clamp on `.tbt`; both pop-ups' titles are the same textarea (Single `#ti`, Multi `#fw-ti-<aid>`).
   Tablet and laptop markup is byte-identical to v05.14. Check: block 75, `tools/title-t1.mjs` (`--unpatched` serves v05.14: 33 of 72 fail).
-- **v05.14** (14 Oct 2026) — O1, Siyagah opens and works on a dead connection (issue #175, PCF J11, owner: IMPORTANT). The saved-page
-  leftovers are out of the source (three parser-blocking Firebase `<script src>`, `<style></style>`, the baked `<style id="dyn-hs">`,
-  `<body style="">`), and so is a second blocker found on the way: the Google Fonts `<link rel="stylesheet">` is now loaded on the side
-  (`media="print"` + `onload`). `_loadScript()` is honest (waits, removes a failed tag, 15 s limit, retried when back online); the
-  service worker serves the cached page if the network is silent for 3 s; the offline dot says so in plain words. Check: block 74,
-  `tools/offline-o1.mjs`; `ship-check` has a guard for the class. See *Loading Firebase and the service worker's time limit* below.
 
 ---
 
@@ -549,6 +552,14 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `mkDefaults()`, shows `#idb-warn`, and `_idbRecoverTry()` (3 s, then 30 s, and on `visibilitychange`) joins the copy back in the way
   a received sync does (`_ljOverlay`, `_stampRecordTouches`, `mergeDB`, `_seedRecSnap(true)`, `_s1DirtyFromDiff`, `_save`).
   `_idbMigrateFrom()` writes only after a read has just shown there is no copy. `_idbOpen()` does not remember a FAILED open.
+- **Targeted redraw after a received merge and after undo (v05.19, P2).** `_renderFor(changed)` is the ONE place that decides what a change
+  touches; the merge path (from its before/after diff, the same one that feeds `_s1Dirty`) and undo/redo (from the frame's records) call it. It
+  never re-derives the changed set by stringifying the notebook. Note list: only the changed cards are replaced, and only when each keeps its
+  membership and sort position; sidebar: only when a folder, section, tag, note folder/tags, Smart View membership or Trash could change;
+  open note: only when it changed, and an editor being typed in is never rebuilt (`_renderPreserveEdit()`'s rule). Settings, folders, Trash,
+  new or gone notes, unknown collections, 41+ notes, a Multi window and the Calendar fall back to the full draw. **A new kind of record or
+  a new thing the screen shows from `DB` must be classified in `_renderFor`, or it falls back (safe, slow).** The redraw path never calls
+  `persist()`/`_save()`. Check 78's oracle compares `#sb`/`#p2`/`#p3` after the targeted redraw with a full `render()`.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
