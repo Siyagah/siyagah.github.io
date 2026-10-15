@@ -9970,3 +9970,25 @@ New block 81 (`tools/zab-z7.mjs`, 105 checks): 81a bar with the mouse (4th to 1s
 - No "Move left / Move right" menu rows were removed; the menu keeps them.
 - Dragging is not offered in the deck, All pockets, or ☑ Choose (the issue lists them as not drop places).
 - This branch is built on the v05.20 branch (PR #188), which does not carry v05.17 (B1) that is on `main`; `main` must be merged in when #188 lands.
+
+## v05.23 — Z8, the pockets inside a pocket as a vertical list (issue #193, PCF J30)
+
+The owner: "When I click on one of the Zabs it should open Sub Zabs exactly like them, vertical, and then the final Zab should open as note." Option B was ticked: a pocket that holds pockets shows **those pockets as a vertical list, then its own items below**. Tapping an inner pocket does the same again, at any depth.
+
+- The sideways row of chips (`.jx-kids`) is now a vertical list. Class names kept: `.jx-kids`, `.jx-kid`, `.jx-new`. One line per inner pocket: icon, name, rolled count (`_jebRoll`, same number and `_JEB_ROLL_TITLE` rule as the bar chip), "▸" when it holds pockets. Each line is a full-width row of at least 48 px; "＋ New pocket inside" is the last line. Between the path line and the pocket's own items.
+- Tap opens that pocket in the same panel; long-press / right-click is that pocket's menu; a drag reorders among siblings through Z7's engine (`axis:'y'`, a line marks the place, never "into").
+- With any pocket inside, `#jeb-panel` gets the class `jx-has` and the **panel scrolls as one** (header sticky, list, then items, add box, foot); with none, the panel is byte-identical to v05.21 (no list, no class), checked against the previous build in 83c.
+- Only the lifted line is `touch-action:none` (`.jx-kid.zx-lift`, declared after `.jx-kid`).
+- Nothing changes the data shape; nothing new is fixed to the bottom; nothing is written to `<html>`. The panel's repaint signature already carried the children (ids, names, icons, colours, rolled counts); it still never repaints under an open drag or edit.
+
+**Shapes (D5).** Phone (< 640): the bottom sheet, lines full width. Tablet and laptop: the floating panel, lines full panel width. Zab mode (`/?jeb=1`): the docked panel, the same list.
+
+**Not changed:** All pockets (indented groups, folds), the deck (`.jx-ins` chips), Choose, the bar itself, N2's Rail / Drawer / Columns.
+
+**Checks.** New block 83, `tools/zab-z8.mjs` (83a–83h at 390 touch, 820 touch, 1440 mouse, plus Zab mode): `--only 83` 129/129; unpatched (`--unpatched`, the build before this round) 21 of 127 fail. Updated in place with the reason: 76e (the old limit "one calm line, kh ≤ 64" is now "full rows, kh ≥ 132") and 81e ("past the last" is below the last line, not to its right). Then `--only 76,81` 420/420 (77: 195/195 earlier in the round), `--only 60,63,64` 611/611. `ship-check` 15/15.
+
+### Not done
+
+- The full `app-check` was not run (told not to).
+- While dragging a line, the panel does not auto-scroll when the finger reaches its edge (the Z7 auto-scroll works on the list box, which no longer scrolls on its own); a long list is reordered in steps.
+- This branch is built on the Z7 branch (PR #190); `main` was merged in once (v05.19) and must be merged again when #190 lands.

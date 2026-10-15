@@ -43,6 +43,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.23** (15 Oct 2026) — Z8, the pockets inside a pocket are a vertical list (issue #193, PCF J30). Opening a pocket that holds pockets
+  shows them one per line (icon, name, rolled count, "▸") between the path line and its own items; tap goes down, long-press/right-click
+  is the menu, drag reorders among siblings (Z7). Nothing inside = the panel is byte-identical to v05.21. Check: block 83, `tools/zab-z8.mjs`;
+  76e and 81e updated in place (chip row → list). See *Dragging pockets* below.
 - **v05.21** (15 Oct 2026) — Z7, drag the Zab capsules into your own order (issue #189, PCF J24). Mouse: press and move > 5 px; finger: the
   500 ms hold lifts the capsule, then > 8 px is a drag, released in place it opens the menu as before; a swipe without the hold still scrolls
   the bar. Bar, a pocket's row of pockets inside, and the phone's Rail / Drawer / Columns, always among the same siblings through
@@ -60,17 +64,6 @@ must never accumulate here instead of there.
   only in 🧰 → 🎨 Appearance). < 640 only; ≥ 640 is the N1 bar unchanged. Long-press (500 ms) or right-click on the button chooses.
   Addresses in plain items are tappable. See *Zab on the phone* below. Check: block 77, `tools/zab-n2.mjs`. Old phone checks (65, 69–72, 76)
   now seed `zabPhoneLayout:'bar'` in place, because they are about the bar.
-- **v05.17** (15 Oct 2026) — B1, this device's copy of the notebook could not be read at start (PCF J25, IMPORTANT; built by the
-  Architect). A failed IndexedDB read used to look like "no notebook here": boot opened EMPTY and `_idbMigrateFrom` could write that
-  over the device copy (unpatched check: 43 notes → 0). Now the read is retried; if it keeps failing the session opens from what it can
-  (never the starter set), never writes the device copy, shows `#idb-warn` with **Try now**, and joins the copy back in like a received
-  sync when it can be read. See *Reading the device copy at start* below. Check: block 79, `tools/boot-b1.mjs`; 52d updated in place.
-- **v05.16** (14 Oct 2026) — N1, pockets inside pockets, no depth limit (issue #179, PCF J20; the phone corner button and its layouts
-  are N2, not done). A pocket gets `parentId` (absent/null = top level; nothing written to existing pockets) and `order` is the place
-  among siblings. Readers `jebChildren(id|null)`, `jebPath(id)`, `jebDescendants(id)`; writer `jebMovePocketInto(id,parentId|null,toIndex)`
-  (refuses itself/its own descendants). The bar shows the top level, a chip counts its own open items plus every pocket inside it,
-  "▸" = holds pockets; the panel has a path line and a row of pocket chips; the pocket menu has "📂 Move into…" and "＋ New pocket
-  inside". See *Pockets inside pockets* below. Check: block 76, `tools/zab-n1.mjs`.
 
 ---
 
@@ -525,7 +518,9 @@ A failing check is a wrong assertion surprisingly often — investigate before
   measured before the drag** (a transformed child stretches `scrollWidth`; unclamped it chased itself to 4,500 px). `contextmenu` is
   ignored while a finger is held (`_zxHold`). A drag swallows the click after it for 100 ms (`_jebLPAt=now-600`), a menu for 700.
   Escape (capture) or a drop outside the box + 16/24 px puts it back. The slide is CSS in `prefers-reduced-motion:no-preference`, and
-  `.zx-anim` is added only when motion is allowed. Zab moves are not undoable.
+  `.zx-anim` is added only when motion is allowed. Zab moves are not undoable. **Z8 (v05.23):** `.jx-kids` is a vertical list of full-width
+  rows (`.jx-kid` ≥ 48 px, `.jx-new` last); `_zxCfg` gives it `axis:'y'`, no slide. With any pocket inside, the panel gets `jx-has` and the
+  PANEL scrolls as one (sticky header; `.jeb-list` stops scrolling on its own); with none, nothing is drawn and no class is added.
 - **Zab on the phone (v05.18, N2 — extends the Zab section).** `_zabPhone()` is the one tier decision (< 640, the existing rule); the
   setting is read only through `_zabLayout()` (default `'rail'`). Unless `'bar'` (or `jebBar===false`, or Zab mode), the bottom bar is not
   drawn and the class is `html.zab-btn` instead of `html.jeb-on`, so `--jeb-h` is `0px`; `#zab-btn` (52 px, bottom right, badge = the "All
