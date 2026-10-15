@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.22">
+<meta name="app-version" content="05.23">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1099,11 +1099,19 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jx-path nav{display:flex;flex-wrap:wrap;align-items:center}
 .jx-path button{border:0;background:none;padding:6px 2px;min-height:32px;color:var(--green2);font:inherit;text-decoration:underline;cursor:pointer;touch-action:manipulation}
 .jx-path b{color:var(--t1);font-weight:600;padding:6px 2px}
-.jx-kids{flex-shrink:0;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;border-bottom:1px solid var(--border)}
-.jx-kid,.jx-new{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 10px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font:inherit;font-size:13px;cursor:pointer;touch-action:manipulation}
+/* v05.23 · Z8 — the pockets inside are a vertical list, one per line; with any inside, the whole panel scrolls as one (list, then items) */
+.jx-kids{flex-shrink:0;display:flex;flex-direction:column;padding:0;border-bottom:1px solid var(--border);position:relative}
+.jx-kid,.jx-new{flex:0 0 auto;display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;min-height:48px;padding:6px 12px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:var(--white);color:var(--t1);font:inherit;font-size:14px;text-align:left;cursor:pointer;touch-action:manipulation}
+.jx-kids>:last-child{border-bottom:0}
+.jx-kid.zx-lift{touch-action:none}   /* only the lifted line (Z7); declared after .jx-kid so the later rule does not win */
 .jx-kid:hover,.jx-new:hover{background:var(--hover)}
-.jx-new{border-style:dashed;color:var(--t1)}
-.jx-kid .jeb-sw{width:22px;height:22px;font-size:13px}
+.jx-new{color:var(--t2)}
+.jx-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jx-in{color:var(--t2);font-size:13px}
+.jx-kid .jeb-sw{width:28px;height:28px;font-size:16px;flex-shrink:0}
+#jeb-panel.jx-has{overflow-y:auto;-webkit-overflow-scrolling:touch}
+#jeb-panel.jx-has>.jeb-ph{position:sticky;top:0;z-index:2;background:var(--white)}
+#jeb-panel.jx-has>.jeb-list{flex:0 0 auto;overflow:visible;min-height:0}
 .jx-nm{max-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .jeb-ph .jeb-pm{min-width:40px;min-height:40px;border:0;background:none;color:var(--t1);font-size:20px;cursor:pointer}
 .jeb-gh .jx-fold{border:0;background:none;min-width:32px;min-height:40px;color:var(--t1);font-size:14px;cursor:pointer;touch-action:manipulation}
@@ -3712,7 +3720,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.22</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.23</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -23537,7 +23545,7 @@ function _zxCfg(c){
   if(!c||!c.dataset||!c.dataset.pid||_zxDrag) return null;
   const pid=c.dataset.pid, box=c.parentElement; let sibs, axis='x', rev=false, slide=true;
   if(c.matches('#jeb-bar>.jeb-chip')){ if(_jebChoose) return null; sibs=[...box.children].filter(n=>n.matches('.jeb-chip[data-pid]')); }   /* Choose: ticking, no dragging */
-  else if(c.matches('.jx-kid')) sibs=[...box.querySelectorAll('.jx-kid')];
+  else if(c.matches('.jx-kid')){ sibs=[...box.querySelectorAll('.jx-kid')]; axis='y'; slide=false; }   /* v05.23 · Z8: a vertical list */
   else if(c.matches('.zr-b')){ sibs=[...box.children].filter(n=>n.matches('.zr-b[data-pid]')); axis='y'; rev=true; slide=false; }
   else if(c.matches('.zd-row')){ const par=_jebParentOf(pid)||''; sibs=[...box.querySelectorAll('.zd-row[data-pid]')].filter(n=>(_jebParentOf(n.dataset.pid)||'')===par); axis='y'; slide=false; }
   else if(c.matches('.zc-row')){ sibs=[...box.querySelectorAll('.zc-row[data-pid]')]; axis='y'; slide=false; }
@@ -23957,7 +23965,8 @@ function _jebPaintPanel(){
     pe.hidden=pth.length<2;
     pe.innerHTML=pth.length<2?'':'<nav aria-label="Where this pocket is">'+pth.map((x,k)=>k<pth.length-1?`<button type="button" data-pid="${esc(x.id)}">${esc(x.name)}</button><span aria-hidden="true"> › </span>`:`<b aria-current="true">${esc(x.name)}</b>`).join('')+'</nav>';
     ke.hidden=!kids.length;
-    ke.innerHTML=!kids.length?'':kids.map(c=>{ const a=roll.get(c.id)||{n:0,red:false}, sub=(tr.kids.get(c.id)||[]).length>0; return `<button type="button" class="jx-kid" data-pid="${esc(c.id)}" title="${esc(c.name+(sub?_JEB_ROLL_TITLE:''))}"><span class="jeb-sw" style="background:${esc(c.color)}">${esc(c.icon)}</span><span class="jx-nm">${esc(c.name)}</span>${sub?'<span class="jx-in" aria-hidden="true">▸</span>':''}<span class="jeb-ct${a.red?' jt-red':''}">${a.n}</span></button>`; }).join('')+'<button type="button" class="jx-new" title="Make a new pocket inside this one">＋ Pocket</button>';
+    if(kids.length) p.classList.add('jx-has'); else if(p.classList.contains('jx-has')) p.classList.remove('jx-has');   /* v05.23 · Z8 — with pockets inside, the panel scrolls as one */
+    ke.innerHTML=!kids.length?'':kids.map(c=>{ const a=roll.get(c.id)||{n:0,red:false}, sub=(tr.kids.get(c.id)||[]).length>0; return `<button type="button" class="jx-kid" data-pid="${esc(c.id)}" title="${esc(c.name+(sub?_JEB_ROLL_TITLE:''))}"><span class="jeb-sw" style="background:${esc(c.color)}">${esc(c.icon)}</span><span class="jx-nm">${esc(c.name)}</span>${sub?'<span class="jx-in" aria-hidden="true">▸</span>':''}<span class="jeb-ct${a.red?' jt-red':''}">${a.n}</span></button>`; }).join('')+'<button type="button" class="jx-new" title="Make a new pocket inside this one">＋ New pocket inside</button>';
     const lk=_jebType(pk)==='links', tk=_jebType(pk)==='tasks';
     const id=_jebType(pk)==='ideas', sh=_jebType(pk)==='shop';
     const hn=p.querySelector('.jt-hint'); if(hn){
@@ -23970,7 +23979,7 @@ function _jebPaintPanel(){
     if(lk) _jebLinkScan(items);
   }else{
     p.classList.remove('jl-wide'); p.querySelector('.jeb-add textarea').placeholder='Jot something…'; const hn2=p.querySelector('.jt-hint'); if(hn2) hn2.hidden=true;
-    p.querySelector('.jx-path').hidden=true; p.querySelector('.jx-kids').hidden=true;
+    p.querySelector('.jx-path').hidden=true; p.querySelector('.jx-kids').hidden=true; if(p.classList.contains('jx-has')) p.classList.remove('jx-has');
     p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:#EDE6D6">▤</span><div class="jeb-pt"><b>${esc(_jebSelTitle(sel,pks))}</b><small>${open} open · ${all.length} in all</small></div>${px}<button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
     const inSel=new Set(ids);
     p.querySelector('.jeb-list').innerHTML=pks.map((pk,k)=>{

@@ -10059,3 +10059,27 @@ bump, served from a clean copy) fails 82a/82c at 390 (the oracle needs `_cardC`;
   slices finish (up to ~6 s for 25,000 cards on a slowed phone), the cards still in the hidden tail are not found by Ctrl+F.
 - A tag index for filtering by tag — not added: the filter is a few milliseconds even at 27,000 notes.
 - The full `app-check` was not run (told not to).
+
+**Totals (Architect), v05.22:** Z7 and `main` merged in; full `app-check` on `f1e9f27`, run in two halves because one full pass now exceeds the Architect container's 2-hour background limit: blocks 1–59 **2325/2330**, blocks 60–82 **4512/4532**, `self-check-*` 2/2 → **6839/6864** over all 449 blocks. Every miss is a speed limit (57d, 58g, 70h, 71h, 76f, 78b, 80h, 82e) that misses on `main` on the same container. Same container, `list-p3.mjs --measure --notes=27000`, phone ×4, `main` (v05.21) → P3: un-select a tag first screenful 14,009 → 459 ms, worst long task 12,491 → 1,470 ms; select a tag 5,023 → 916 / 4,348 → 881 ms; clear a search 582 → 755 / 409 → 583 ms (slightly worse); the whole 25,000-card list is complete later (14.1 → 19.8 s) without freezing. `ship-check` 15/15.
+
+## v05.23 — Z8, the pockets inside a pocket as a vertical list (issue #193, PCF J30)
+
+The owner: "When I click on one of the Zabs it should open Sub Zabs exactly like them, vertical, and then the final Zab should open as note." Option B was ticked: a pocket that holds pockets shows **those pockets as a vertical list, then its own items below**. Tapping an inner pocket does the same again, at any depth.
+
+- The sideways row of chips (`.jx-kids`) is now a vertical list. Class names kept: `.jx-kids`, `.jx-kid`, `.jx-new`. One line per inner pocket: icon, name, rolled count (`_jebRoll`, same number and `_JEB_ROLL_TITLE` rule as the bar chip), "▸" when it holds pockets. Each line is a full-width row of at least 48 px; "＋ New pocket inside" is the last line. Between the path line and the pocket's own items.
+- Tap opens that pocket in the same panel; long-press / right-click is that pocket's menu; a drag reorders among siblings through Z7's engine (`axis:'y'`, a line marks the place, never "into").
+- With any pocket inside, `#jeb-panel` gets the class `jx-has` and the **panel scrolls as one** (header sticky, list, then items, add box, foot); with none, the panel is byte-identical to v05.21 (no list, no class), checked against the previous build in 83c.
+- Only the lifted line is `touch-action:none` (`.jx-kid.zx-lift`, declared after `.jx-kid`).
+- Nothing changes the data shape; nothing new is fixed to the bottom; nothing is written to `<html>`. The panel's repaint signature already carried the children (ids, names, icons, colours, rolled counts); it still never repaints under an open drag or edit.
+
+**Shapes (D5).** Phone (< 640): the bottom sheet, lines full width. Tablet and laptop: the floating panel, lines full panel width. Zab mode (`/?jeb=1`): the docked panel, the same list.
+
+**Not changed:** All pockets (indented groups, folds), the deck (`.jx-ins` chips), Choose, the bar itself, N2's Rail / Drawer / Columns.
+
+**Checks.** New block 83, `tools/zab-z8.mjs` (83a–83h at 390 touch, 820 touch, 1440 mouse, plus Zab mode): `--only 83` 129/129; unpatched (`--unpatched`, the build before this round) 21 of 127 fail. Updated in place with the reason: 76e (the old limit "one calm line, kh ≤ 64" is now "full rows, kh ≥ 132") and 81e ("past the last" is below the last line, not to its right). Then `--only 76,81` 420/420 (77: 195/195 earlier in the round), `--only 60,63,64` 611/611. `ship-check` 15/15.
+
+### Not done
+
+- The full `app-check` was not run (told not to).
+- While dragging a line, the panel does not auto-scroll when the finger reaches its edge (the Z7 auto-scroll works on the list box, which no longer scrolls on its own); a long list is reordered in steps.
+- This branch is built on the Z7 branch (PR #190); `main` was merged in once (v05.19) and must be merged again when #190 lands.

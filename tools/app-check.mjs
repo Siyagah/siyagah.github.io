@@ -12157,6 +12157,23 @@ await r.block('82-list-slices', async () => {
   r.check(out.status === 0, 'the P3 list check exits cleanly', `exit ${out.status}`);
 });
 
+/* 83 — v05.23, Z8: the pockets inside a pocket as a vertical list. tools/zab-z8.mjs runs 83a–83h: opening A shows A1 and A2 as full-width
+   lines (>= 44 px, rolled counts, "▸" only where pockets are inside) before A's own items, tapping goes down and the path goes back,
+   a pocket with nothing inside is byte-identical to the build before, long press / right-click and "＋ New pocket inside", dragging a
+   line reorders among siblings only, a received merge repaints the lines (and not during a drag), 40 inside scroll as one at 390, Zab
+   mode, no page errors. Each printed ok/FAIL line becomes one check. */
+await r.block('83-zab-subzabs', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-z8.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 60, 'the Z8 sub-pockets check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z8: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Z8 sub-pockets check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

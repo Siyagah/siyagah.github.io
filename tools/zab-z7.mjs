@@ -228,14 +228,17 @@ try {
       const parents = () => on(d, () => JSON.stringify(DB.jebPockets.map((p) => [p.id, p.parentId || null])));
       const par0 = await parents(), top0 = await dbOrder(d);
       const k = (id) => ctr(d, `#jeb-panel .jx-kid[data-pid="${id}"]`);
-      await drag(d, vp, await k('K3'), leftOf(await k('K1')));
+      const k1 = await k('K1');
+      await drag(d, vp, await k('K3'), { x: k1.x, y: k1.b.y + 3 });   /* v05.23 Z8: vertical list, "before K1" is its top edge */
       check(same(await kids(), ['K3', 'K1', 'K2', 'K4']) && same(await on(d, () => jebChildren('P').map((p) => p.id)), ['K3', 'K1', 'K2', 'K4']), `${t} a pocket inside dragged to the first place among its siblings: K3 K1 K2 K4 on screen and in DB`, (await kids()).join(' '));
       check((await parents()) === par0 && same(await dbOrder(d), top0), `${t} no parentId changed and the top level did not move`);
       /* dragged down onto the bar's other capsule: not a place, so it is put back; never nests */
       const snapK = await snap(d);
       await drag(d, vp, await k('K2'), await ctr(d, chip('R')));
       check((await snap(d)) === snapK && (await parents()) === par0, `${t} a drop on another pocket's capsule changes nothing: a drop is never "into" (parentIds identical)`);
-      await drag(d, vp, await k('K3'), rightOf(await k('K4')));
+      /* v05.23 Z8: the list is vertical now, so "past the last" is below the last line, not to its right */
+      const k4 = await k('K4');
+      await drag(d, vp, await k('K3'), { x: k4.x, y: k4.b.y + k4.b.height - 3 });
       check(same(await kids(), ['K1', 'K2', 'K4', 'K3']) && (await parents()) === par0, `${t} past the last: K1 K2 K4 K3`, (await kids()).join(' '));
       noErr(d, t);
     } finally { await d.ctx.close(); }

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.22.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.23.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.23** (15 Oct 2026) — Z8, the pockets inside a pocket are a vertical list (issue #193, PCF J30). Opening a pocket that holds pockets
+  shows them one per line (icon, name, rolled count, "▸") between the path line and its own items; tap goes down, long-press/right-click
+  is the menu, drag reorders among siblings (Z7). Nothing inside = the panel is byte-identical to v05.21. Check: block 83, `tools/zab-z8.mjs`;
+  76e and 81e updated in place (chip row → list). See *Dragging pockets* below.
 - **v05.22** (15 Oct 2026) — P3, a big note list is drawn first screenful at once and the rest after (issue #191, PCF J08). The cards
   that fill the window come first; the rest is built in a hidden tail and moved in, a chunk per frame; a card's text is kept per note
   (session memory). Phone ×4, 27,000 notes: un-select a tag first screenful 5,788 → 101 ms. **Not met without the windowed list:** the
@@ -64,11 +68,6 @@ must never accumulate here instead of there.
 - **v05.19** (15 Oct 2026) — P2, a received edit and an undo redraw only what changed (issue #184, PCF J08). `_renderFor(changed)` decides;
   anything it cannot prove safe calls the caller's full draw. At 9,000 notes, phone ×4: received edit not open 5 ms, open note 85 ms, undo 34 ms
   (were ~70–230 ms of `render()`). Check: block 78, `tools/redraw-p2.mjs`. Not done: the windowed list; un-selecting a tag still redraws the whole list.
-- **v05.18** (14 Oct 2026) — N2, on a phone Zab is one corner button with three layouts the owner chooses: Rail (the start), Drawer,
-  Columns (issue #182, PCF J20). `DB.theme.zabPhoneLayout` `'rail'|'drawer'|'cols'|'bar'` (absent = rail; `'bar'` = the N1 bar, offered
-  only in 🧰 → 🎨 Appearance). < 640 only; ≥ 640 is the N1 bar unchanged. Long-press (500 ms) or right-click on the button chooses.
-  Addresses in plain items are tappable. See *Zab on the phone* below. Check: block 77, `tools/zab-n2.mjs`. Old phone checks (65, 69–72, 76)
-  now seed `zabPhoneLayout:'bar'` in place, because they are about the bar.
 
 ---
 
@@ -523,7 +522,9 @@ A failing check is a wrong assertion surprisingly often — investigate before
   measured before the drag** (a transformed child stretches `scrollWidth`; unclamped it chased itself to 4,500 px). `contextmenu` is
   ignored while a finger is held (`_zxHold`). A drag swallows the click after it for 100 ms (`_jebLPAt=now-600`), a menu for 700.
   Escape (capture) or a drop outside the box + 16/24 px puts it back. The slide is CSS in `prefers-reduced-motion:no-preference`, and
-  `.zx-anim` is added only when motion is allowed. Zab moves are not undoable.
+  `.zx-anim` is added only when motion is allowed. Zab moves are not undoable. **Z8 (v05.23):** `.jx-kids` is a vertical list of full-width
+  rows (`.jx-kid` ≥ 48 px, `.jx-new` last); `_zxCfg` gives it `axis:'y'`, no slide. With any pocket inside, the panel gets `jx-has` and the
+  PANEL scrolls as one (sticky header; `.jeb-list` stops scrolling on its own); with none, nothing is drawn and no class is added.
 - **Zab on the phone (v05.18, N2 — extends the Zab section).** `_zabPhone()` is the one tier decision (< 640, the existing rule); the
   setting is read only through `_zabLayout()` (default `'rail'`). Unless `'bar'` (or `jebBar===false`, or Zab mode), the bottom bar is not
   drawn and the class is `html.zab-btn` instead of `html.jeb-on`, so `--jeb-h` is `0px`; `#zab-btn` (52 px, bottom right, badge = the "All
