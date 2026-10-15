@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.19.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.23.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -43,6 +43,15 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.21** (15 Oct 2026) — Z7, drag the Zab capsules into your own order (issue #189, PCF J24). Mouse: press and move > 5 px; finger: the
+  500 ms hold lifts the capsule, then > 8 px is a drag, released in place it opens the menu as before; a swipe without the hold still scrolls
+  the bar. Bar, a pocket's row of pockets inside, and the phone's Rail / Drawer / Columns, always among the same siblings through
+  `jebMovePocket` (never "into"); Escape or a drop outside puts it back; no dragging in Choose; none of the slide under reduced motion.
+  See *Dragging pockets* below. Check: block 81, `tools/zab-z7.mjs` (`--unpatched`: 34 of 105 fail). Zab moves are not undoable (as before).
+- **v05.20** (14 Oct 2026) — S4b, the Evernote notes come in, at most 6,000 in any rolling 24 hours (issue #187, PCF J01; pictures/audio/files
+  are S4c, merging earlier imports S4d). 📥 Bring them in on the dry run's result → My Notebooks ▸ Evernote ▸ stack ▸ notebook, batches of
+  250, Pause / Continue, `fromEvernote` mark, Smart View `sf-enx` "(13) From Evernote", a toast once per session. See *The Evernote
+  import, the notes* below. 2,000 notes at 390 ×4: worst long task 108 ms. Check: block 80, `tools/enex-s4b.mjs`.
 - **v05.19** (15 Oct 2026) — P2, a received edit and an undo redraw only what changed (issue #184, PCF J08). `_renderFor(changed)` decides;
   anything it cannot prove safe calls the caller's full draw. At 9,000 notes, phone ×4: received edit not open 5 ms, open note 85 ms, undo 34 ms
   (were ~70–230 ms of `render()`). Check: block 78, `tools/redraw-p2.mjs`. Not done: the windowed list; un-selecting a tag still redraws the whole list.
@@ -62,11 +71,6 @@ must never accumulate here instead of there.
   (refuses itself/its own descendants). The bar shows the top level, a chip counts its own open items plus every pocket inside it,
   "▸" = holds pockets; the panel has a path line and a row of pocket chips; the pocket menu has "📂 Move into…" and "＋ New pocket
   inside". See *Pockets inside pockets* below. Check: block 76, `tools/zab-n1.mjs`.
-- **v05.15** (14 Oct 2026) — T1, on a phone the note's buttons sit on their own row and the title wraps in full (issue #177, PCF J16).
-  Phone only (< 640 via `_p3OneBar()`): editing puts ✕ and the "✓ Saved" flash on `.p3c-actrow` above the title, and the title is a
-  growing `<textarea id="ti">` (`_tiInput`/`_tiKey`/`_tiGrow`/`_tiGrowAll`: a line break becomes a space, Enter moves the caret into the
-  note's text); reading drops the 2-line clamp on `.tbt`; both pop-ups' titles are the same textarea (Single `#ti`, Multi `#fw-ti-<aid>`).
-  Tablet and laptop markup is byte-identical to v05.14. Check: block 75, `tools/title-t1.mjs` (`--unpatched` serves v05.14: 33 of 72 fail).
 
 ---
 
@@ -511,6 +515,17 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `.jx-mv`, greyed rows say why). All pockets: sub-groups indented by `data-depth`, `.jx-fold` per session (`_jebFold`, never stored; a
   fold hides the group's own items and the groups inside). Deck: `.jx-ins` "inside:" chips. Choose lists every pocket at any depth
   (nested ones marked ↳) in place of the bar's top-level-only view. Nothing new is fixed to the bottom, nothing is written to `<html>`.
+- **Dragging pockets (v05.21, Z7).** ONE engine for every row of pockets: `_zabWireDrag(root,menu)` (mouse `pointerdown` + 5 px; finger
+  `touchstart` → 500 ms hold lifts → 8 px drags, release in place = `menu`) wired on the bar, `#jeb-panel` (`.jx-kid`) and `#zab-lay`
+  (Rail `.zr-b`, Drawer `.zd-row`, Columns `.zc-row`); `_zxCfg(c)` names the box, the siblings, the axis (`rev` = the Rail is drawn
+  bottom-up) and whether the others slide (x) or a line marks the place (y). A drop is `jebMovePocket(id,idx)` among the same siblings only,
+  never `parentId` (that is "📂 Move into…"); `jebMovePocket` returns false and writes nothing when the order is unchanged. While dragging,
+  `_zxDrag` stops `_jebPaintBar`/`_zabPaint` and `_jebDrag` stops the panel and deck; the drop repaints once. The lifted capsule and the
+  sliding ones carry only an inline `transform`; `.zx-lift` alone is `touch-action:none`. **The auto-scroll is clamped to the range
+  measured before the drag** (a transformed child stretches `scrollWidth`; unclamped it chased itself to 4,500 px). `contextmenu` is
+  ignored while a finger is held (`_zxHold`). A drag swallows the click after it for 100 ms (`_jebLPAt=now-600`), a menu for 700.
+  Escape (capture) or a drop outside the box + 16/24 px puts it back. The slide is CSS in `prefers-reduced-motion:no-preference`, and
+  `.zx-anim` is added only when motion is allowed. Zab moves are not undoable.
 - **Zab on the phone (v05.18, N2 — extends the Zab section).** `_zabPhone()` is the one tier decision (< 640, the existing rule); the
   setting is read only through `_zabLayout()` (default `'rail'`). Unless `'bar'` (or `jebBar===false`, or Zab mode), the bottom bar is not
   drawn and the class is `html.zab-btn` instead of `html.jeb-on`, so `--jeb-h` is `0px`; `#zab-btn` (52 px, bottom right, badge = the "All
@@ -533,6 +548,22 @@ A failing check is a wrong assertion surprisingly often — investigate before
   rule S4d will merge on. Distinct tags are exact strings; the overlap with Siyagah's tags is case-insensitive. Stacks: the folder
   between the export root and the file (`webkitRelativePath`); files picked singly have none. 146 MB / 2,000 notes: 1.3 s, no long
   task at 1440; at 390 ×4 CPU 3.8 s, worst long task 68 ms, heap +32 MB.
+- **The Evernote import, the notes (v05.20, S4b — S4c brings pictures/audio/files and replaces the markers by hash, S4d merges earlier imports).**
+  `_enxScanner(onNote,{content:true})` also hands over one note's CDATA body (cap 20 M characters, then "too large") and each resource's
+  `hash` (from the recognition index's `objID`; `<en-media hash>` is the md5 of the data, so S4c must hash the data for the rest); the dry run
+  passes no option and counts exactly as before. `_enxConvert` = ENML → note HTML (☑/☐ as text, `.enx-crypt`, `.enx-media[data-enx-hash,
+  data-mime,data-name]`, `_enxClean` for script/iframe/object/embed/style, `on*=`, `javascript:`/`data:` → `#`). A note's `k` = notebook path
+  + created second + lower-case title + raw content length; **its id is `_enxId('enx-n-',k)`**, so the same note from a second run or a second
+  device is the same record. Skipped (and counted) when its id or `k` is in `DB.articles`, Trash or the tombstones; skipped as "already in
+  Siyagah" on title + created second against notes that are NOT `fromEvernote`. Folders: `enx-root`, `enx-s-<hash>`, `enx-b-<hash>`, each with
+  `enx:{kind,name}`, found by id (a tombstoned id gets `-2`, `-3`…); the section is "My Notebooks" else the first. **The cap:** `_enxWindow(now)` counts
+  `fromEvernote.at` in the last 24 h over `DB.articles` AND Trash (so deleting imported notes does not free the window); `_ENX_DAY_CAP` 6000;
+  `__enxCap` / `__enxNow` / `__enxDelay` are test hooks. **Writing:** `_enxImport(items)` → 250-note `flush`: folders, notes, then `_enxPersist()`
+  = `persist()` without the undo frame (`_histCapture(sw,true)`); it yields before each save and every 25 ms. **State:** `_enx.imp` (in memory) and
+  the device's own database `siyagah-enx-v1` (store `job`: `{total,already,handle?,at}`; deleted when an import finishes), never `DB`. The dialog
+  views are `pick` / `reading` / `done` (dry run) / `import`; `_enxContinue` uses the files in memory, else the saved folder handle (asking
+  permission), else asks for the files again (`_enx.resume`). `_enxBootToast` shows the toast once per session, only when the window allows.
+  Not in `--jeb-h` (the dialog sits over the bar on purpose).
 - **Loading Firebase and the service worker's time limit (v05.14, O1).** Nothing in the source may block the first paint or the boot
   script on another origin: no `<script src>` to another origin, no plain `<link rel="stylesheet">` to one (Google Fonts is
   `media="print" onload="this.media='all'"`), no baked runtime markup. The Firebase SDK is loaded ONLY by `_loadScript(src)` (from

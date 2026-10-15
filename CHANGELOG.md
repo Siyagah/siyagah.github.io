@@ -9893,3 +9893,80 @@ New block 78 (`tools/redraw-p2.mjs`): the oracle (targeted redraw vs a full `ren
   - **78b's open-note limit, updated in place.** The builder's runner measured 85 ms; the SAME commit `d69240f` measures 200 ms (laptop 39 ms) on the Architect's machine, about twice as slow, so 150 failed there every time. The limit is now 225 (laptop 56) with the reason in the check; the other two limits are unchanged and pass. A host-speed calibration for every timing check is a follow-up (PCF J10).
   - **`_zabPlace()` (from N2) measures only when its inputs change** (the folder screen opening or closing, the window size): it ran after every redraw and forced a whole-page layout on a phone with the corner button (78b phone 202 → 182 ms).
 - After the changes: `--only 54` 67/67, `--only 78` 505/505, `--only 77` 197/197.
+
+## v05.20 — S4b, the Evernote notes come in, spread over days (issue #187, PCF J01)
+
+The dry run (v05.13) on the owner's real export showed 490 notebooks in 63 stacks, 17,756 notes, 5,260 tags, 0 unreadable, 0 already in Siyagah. This round brings the **notes** in. Pictures, audio and files come later (S4c); each shows a marker where it will go.
+
+### What it does
+
+- **📥 Bring them in**, on the dry run's result, with one plain line under it. Progress with a bar, **Pause** (after the batch in hand), the dialog can be closed and reopened while it goes on. When the day's share is done: "6,000 brought in today. 11,756 to go. Continue after 7:30am tomorrow" and a **Continue** button that is enabled only when the window allows.
+- **At most 6,000 notes in any rolling 24 hours** (`_ENX_DAY_CAP`), counted from the notes themselves (`fromEvernote.at`, Trash included), so every device sees the same count and the shared cloud quota is respected. The rest continues later from where it stopped; the skip rule below makes re-reading the files safe.
+- **Where they go:** My Notebooks (by name, else the first section) ▸ Evernote ▸ stack ▸ notebook; a notebook with no stack is directly under Evernote. Folder ids are derived from the names (`enx-root`, `enx-s-…`, `enx-b-…`) and every folder carries `enx:{kind,name}`; a later run finds them by id, never by name (80a renames the root and a stack and a later note still lands in the right folder).
+- **Never twice, never over the owner's notes:** the note's id is derived from its key `k` (notebook path + created second + title + content length). A note whose id or `k` is in the notebook, in Trash or in the tombstones is skipped (a deleted one stays deleted). A note matching an existing one by title + created second is skipped and counted; nothing is overwritten.
+- **Converting:** prologue and `<en-note>` dropped; `<en-todo>` → ☑ / ☐ as text; `<en-crypt>` → a locked marker (the cipher text is not kept); `<en-media>` → a marker keeping hash, mime and file name (`data-enx-hash`, `data-mime`, `data-name`) for S4c; `script`, `iframe`, `object`, `embed`, `style` and every `on*=` removed; `javascript:` / `data:` addresses become `#`; Evernote's own styling stays. Title, created and updated dates, tags (through `_cleanTag`; a tag with a comma loses the comma and is counted and said) and the source address as a first paragraph.
+- **The mark:** `fromEvernote:{nb,stack,k,at}`, the Smart View **(13) From Evernote** (`sf-enx`, 📥, newest-imported first, in both Smart View lists), and "📥 from Evernote · <notebook>" on the Pane 2 card and in the read view.
+- **Writing:** batches of 250: that batch's folders, then its notes, then one save. In journal mode that is one transaction, so a closed page leaves whole batches. The import takes the undo baseline without making a frame (history length stays 1). Reading is in slices of 16 KB with a break every 25 ms.
+- **Continuing another day:** the device keeps its own memory of an unfinished import in a NEW database `siyagah-enx-v1` (the total, and the picked folder's handle where the browser has `showDirectoryPicker`: Chrome/Edge on a PC). Continue asks for read permission again with the owner's tap; without a handle it asks for the files again. A calm toast "📥 Evernote: 6,000 of 17,756 brought in — Continue" once per session, only when the window allows and only on the device that ran the import.
+- **Layouts (D5):** ≥ 640 the dialog, < 640 the bottom sheet, z 10060 as in S4a; the folder button is `showDirectoryPicker` where it exists (≥ 640) and the folder input otherwise; on a phone the files button.
+
+### Figures (this runner)
+
+| | |
+|---|---|
+| 2,000 notes into a 9,004-note notebook, 390 wide, CPU ×4 | 1.5 s; 8 batches; save per batch median 81 ms, worst 88 ms; **worst long task 108 ms**; heap +27 MB; undo history length 1 |
+| boot, 27,000 notes, 390 ×4: after / before | 5,936 ms / 6,003 ms |
+| `render()`, 27,000 notes, 390 ×4: after / before | 194/192/152 ms / 184/189/146 ms |
+| boot, 27,000 notes, 1440: after / before | 1,065 ms / 1,076 ms |
+| `render()`, 27,000 notes, 1440: after / before | 102/84/31 ms / 116/62/37 ms |
+
+("Before" is the same app without the import, served from git in the same run.) The first cut had a 289 ms long task (the sets built from 9,000 notes and 250 conversions in one task); it now yields before each save, builds in slices and reads in slices.
+
+### Checks
+
+New block 80 (`tools/enex-s4b.mjs`): 80a structure and stable ids, nothing pre-existing changed; 80b content, card, read view, Smart View; 80c never twice (a run twice, Trash, deleted for good, the existing note untouched, a one-second near miss comes in); 80d the cap, the message and time, refusal, resuming exactly, another device's notes counted; 80e the page closed between batches and inside an open journal transaction; 80f two devices, edits both ways; 80g real taps through Bring, Pause, Continue, the toast; 80h scale; 80i contrast on five presets. Test hooks: `window.__enxCap`, `__enxNow`, `__enxDelay`. Blocks 73, 32, 51, 52, 59, 76, 77, 78 stay green.
+
+### Notes for the Architect
+
+- Block 73 asserts the dry-run line "…The import itself comes in the next update." word for word, and the brief says it stays green unchanged, so that sentence is still on the dry run's result although the import now exists. It needs a one-line change in `_enxPaint` and 73b together.
+- The ENEX `<resource>` has no hash of its own: `<en-media hash>` is the md5 of the data. It is read from the recognition index (`objID`) when Evernote wrote one (images); the marker keeps the hash from `<en-media>` either way, and S4c computes the md5 of the data for the rest.
+
+### Not done
+
+- **Pictures, audio and other files (S4c):** only markers.
+- **Merging with earlier imports (S4d):** a note matching an existing note is skipped and counted, never merged.
+- The full `app-check` was not run (told not to).
+
+---
+
+## v05.21 — Z7: drag the Zab capsules into your own order (issue #189, PCF J24)
+
+The owner's quick task: "Make the capsules moveable left right." A pocket used to move one step at a time from its menu (◀ Move left / Move right ▶). Now it is dragged straight to its place.
+
+### What it does, per layout (D5 — all three in this round)
+
+- **Laptop (1440, mouse):** press a capsule and move more than 5 px: it lifts and follows the pointer along the bar, the others slide aside (transform + a 150 ms transition) to show the landing place; release drops it. A click without movement still opens the pocket. The bar scrolls by itself while a capsule is held within 48 px of its left or right edge.
+- **Tablet (820) and the phone's "Bar" layout (390), finger:** the 500 ms long press now lifts the capsule first. Moving more than 8 px is then a drag; released without moving, the pocket menu opens exactly as before. A short tap still opens the pocket; a sideways swipe that starts without the hold still scrolls the bar. Only the lifted capsule is `touch-action:none`.
+- **Inside a pocket:** the panel's row of pockets inside (`.jx-kid`) reorders the same way (x), among its siblings.
+- **Phone corner button (N2):** Rail (a bubble pulled up or down; the rail is drawn bottom-up, so the engine reads it reversed), Drawer (only among rows of the same parent) and Columns (within a column) take the same press-hold-move; a line on the row shows where it will land (the lists do not slide).
+- **Never into another pocket:** a drop is always a place among the same siblings, through `jebMovePocket(id,toIndex)`. A drop outside the bar / list, or Escape, puts it back and writes nothing. In ☑ Choose mode nothing lifts.
+- **Motion:** the slide is a CSS transition inside `@media (prefers-reduced-motion:no-preference)`, and the class that enables it is only added when motion is allowed. Under reduced motion the others still step aside, instantly, and the drop simply jumps.
+
+### How
+
+One engine, `_zxCfg/_zxBegin/_zxUpdate/_zxEnd` and `_zabWireDrag(root,menu)` in `index.html`, replacing the three copies of the long-press code (bar, panel kids, Zab layouts). The drop index is read from the siblings' positions at the start of the drag, shifted by how far the box has scrolled; the lifted capsule and the slid-aside ones carry only an inline `transform` on themselves, nothing is fixed and nothing is written to `<html>`. The bar, the layouts and the panel are not repainted while a drag runs (`_zxDrag`, `_jebDrag`); the drop repaints once. The auto-scroll is clamped to the scroll range measured before the drag, because the lifted capsule's own transform would otherwise stretch the bar's scroll width and the scroll would chase it forever (found by 81c). While a finger is held, `contextmenu` is ignored (Chrome fires it on a long press and would open the menu over the drag).
+
+`jebMovePocket` now returns `false` and writes nothing when the new order equals the old, so a drop in the same place is not a change. When it does change, `_jebRenumber` stamps only the pockets whose `order` differs. One drop is one `persist()`.
+
+**Undo:** Zab moves are not undoable today (the same as ◀ / ▶ before them); this round does not change that.
+
+### Checks
+
+New block 81 (`tools/zab-z7.mjs`, 105 checks): 81a bar with the mouse (4th to 1st, 1st to last, only changed pockets stamped, same place writes nothing, a click opens); 81b finger (hold + move drags, hold alone opens the menu, tap opens, swipe scrolls, `touch-action` only on the lifted one) at 390 and 820; 81c auto-scroll with 20 pockets (mouse, finger); 81d Escape and a drop outside leave `DB.jebPockets` byte-identical; 81e pockets inside (never nests); 81f Rail, Drawer (siblings only), Columns; 81g two devices through the fake cloud both ways and two concurrent drags; 81h reduced motion (and the same run with motion on, so it can fail); 81i Choose mode, no page errors. `--unpatched` serves the step-0 commit: 34 of 105 fail there. Blocks 60, 63, 64 (611/611) and 76, 77 (504/504) stay green with nothing changed in them. `ship-check` 15/15; block 81 through `app-check --only 81`: 107/107.
+
+### Not done
+
+- The full `app-check` was not run (told not to).
+- No "Move left / Move right" menu rows were removed; the menu keeps them.
+- Dragging is not offered in the deck, All pockets, or ☑ Choose (the issue lists them as not drop places).
+- This branch is built on the v05.20 branch (PR #188), which does not carry v05.17 (B1) that is on `main`; `main` must be merged in when #188 lands.

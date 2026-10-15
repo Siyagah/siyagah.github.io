@@ -12103,6 +12103,42 @@ await r.block('78-redraw-p2', async () => {
   r.check(out.status === 0, 'the P2 redraw check exits cleanly', `exit ${out.status}`);
 });
 
+/* 80 — v05.20, S4b: the Evernote import itself, for the notes. tools/enex-s4b.mjs writes its own .enex fixtures and runs 80a–80i at
+   390/820/1440 through the real dialog: Evernote ▸ stack ▸ notebook folders with stable ids and nothing else changed; the converted
+   content (☑/☐, crypt and media markers, script/on*=/javascript: removed, source line, dates, tags, Bengali); never twice (a run
+   twice, Trash, a note already in Siyagah); the daily cap on a rolling 24 hours incl. another device's notes; a page closed
+   between batches and inside a journal transaction; two-device sync; Pause / Continue / the toast once per session; 2,000 notes at
+   ×4 CPU and 27,000-note boot / render() before and after; contrast on five presets. Each printed ok/FAIL line becomes one check. */
+await r.block('80-enex-import', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./enex-s4b.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the S4b Evernote import check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'S4b: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the S4b Evernote import check exits cleanly', `exit ${out.status}`);
+});
+
+/* 81 — v05.21, Z7: drag the Zab capsules into your own order. tools/zab-z7.mjs runs 81a–81i with real mouse drags (1440) and real
+   finger drags through CDP touch events (390, 820): the bar (4th to 1st place, 1st to last, only changed pockets stamped, a click
+   still opens), a held finger lifts then drags / opens the menu / a tap opens / a swipe scrolls, auto-scroll at the edge with 20
+   pockets, Escape and a drop outside put it back byte-identical, the row of pockets inside among siblings only, the phone corner
+   button (Rail, Drawer, Columns), two-device sync incl. two concurrent drags, reduced motion, Choose mode, no page errors. Each
+   printed ok/FAIL line becomes one check. */
+await r.block('81-zab-drag', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-z7.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 60, 'the Z7 drag check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z7: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Z7 drag check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
