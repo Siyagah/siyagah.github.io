@@ -373,7 +373,6 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .al{display:flex;flex-direction:column;gap:5px}
 .ar{padding:10px 13px;background:var(--white);border:1px solid var(--border);border-radius:var(--rl);cursor:pointer;display:flex;align-items:center;gap:10px;transition:border-color .12s,background .12s;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .ar:hover{border-color:var(--green);background:var(--greenlt)}
-.al>.ar{content-visibility:auto;contain-intrinsic-size:auto 56px}   /* v05.22 · P3: a card off the screen costs no layout — appending thousands of cards in slices was re-laying-out all of them every frame. Still in the page: Ctrl+F finds it */
 .ar.sel{background:var(--greenlt)!important;border-color:var(--green)!important;border-width:1.5px!important}
 .ar-t{font-weight:500;font-size:var(--fs-list);color:var(--t1);line-height:1.4;word-break:break-word}
 .ar-m{font-size:var(--fs-list-meta);color:var(--t3);margin-top:1px}
