@@ -40,6 +40,7 @@ const seed = (extra) => {
   db.jeb = [mkItem('t1', 'jp-task', 'Alpha', 0), mkItem('t2', 'jp-task', 'Bravo', 1), mkItem('t3', 'jp-task', 'Charlie', 2),
     mkItem('i1', 'jp-idea', 'Idea one', 0), mkItem('i2', 'jp-idea', 'Idea two', 1), mkItem('l1', 'jp-link', 'Link one', 0), mkItem('s1', 'jp-shop', 'Milk', 0)];
   if (extra) extra(db);
+  db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' });   /* v05.18: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
   return db;
 };
 const dev = (cloud, name, vp, db) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed());

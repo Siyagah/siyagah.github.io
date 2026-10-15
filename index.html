@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.17">
+<meta name="app-version" content="05.18">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -827,9 +827,9 @@ html{--jeb-h:0px;--jeb-l:0px;--jeb-hd:0px}
 #idb-warn.min .iw-t,#idb-warn.min .iw-try,#idb-warn.min .iw-hide{display:none}
 #idb-warn.min .iw-show{display:block;width:40px;height:40px;padding:0;border-radius:50%;background:#FFF4D6;border:1px solid #C9A227;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 @property --jeb-h{syntax:'<length>';inherits:false;initial-value:0px}
-html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn){--jeb-h:56px}
-html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn){--jeb-h:0px}
-html.jeb-kb #jeb-bar{display:none!important}
+html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:56px}
+html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:0px}
+html.jeb-kb #jeb-bar,html.jeb-kb #zab-btn,html.jeb-kb #zab-lay{display:none!important}
 @media(min-width:1200px){#p2,#p3{margin-bottom:var(--jeb-h)}}
 #jeb-bar{position:fixed;left:var(--jeb-l);right:0;bottom:0;height:56px;z-index:140;display:flex;align-items:center;gap:8px;padding:0 10px;overflow-x:auto;overflow-y:hidden;background:var(--white);border-top:1px solid var(--border2);scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
 #jeb-bar::-webkit-scrollbar{display:none}
@@ -906,6 +906,59 @@ html.jeb-kb #jeb-bar{display:none!important}
 @media(max-width:639.98px){
   #jeb-panel{top:auto;left:0;right:0;width:auto;max-width:none;height:72vh;border-left:none;border-top:1px solid var(--border2);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.2)}
   #jeb-panel.on{animation:jebUp .2s ease}
+}
+@media(prefers-reduced-motion:reduce){#jeb-panel.on{animation:none}}
+/* ══ v05.18 · N2 — on a phone Zab is one corner button (html.zab-btn: a phone, Zab on, layout not 'bar') and three layouts.
+   z-index: layouts 141 (the panel's level — never both at once), the button 142, the long-press card 143; all below Attach 9150,
+   menus 9200 and modals 10000. Nothing here is drawn at 640px and up. Inks are pane inks on the pane surface; only the
+   bubble's glyph sits on the owner's pocket colour (dark ink, as .jeb-sw). ══ */
+#zab-btn,#zab-lay,#zab-card{display:none}
+html.zab-btn #zab-btn{display:flex}
+#zab-lay.on{display:block}
+#zab-btn{position:fixed;right:14px;bottom:calc(16px + var(--jeb-h) + env(safe-area-inset-bottom,0px));width:52px;height:52px;border-radius:50%;border:none;padding:0;z-index:142;align-items:center;justify-content:center;background:var(--green);color:var(--on-accent);font:inherit;font-size:24px;line-height:1;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#zab-btn.up{bottom:calc(72vh + 12px)}
+.zb-n{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:10px;background:var(--white);color:var(--t1);border:1px solid var(--border2);font-size:11.5px;font-weight:700;line-height:18px;text-align:center;font-family:var(--ui)}
+.zb-n.jt-red{background:#B42318;color:#fff;border-color:#B42318}
+#zab-lay{position:fixed;left:0;right:0;top:0;bottom:var(--jeb-h);z-index:141}
+.zl-bd{position:absolute;inset:0;background:rgba(0,0,0,.22)}
+.zl-rail{position:absolute;right:14px;bottom:calc(16px + 52px + 10px + env(safe-area-inset-bottom,0px));max-height:calc(100% - 100px - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column-reverse;align-items:flex-end;gap:6px;overflow-y:auto;overscroll-behavior:contain;padding:4px 2px;scrollbar-width:none}
+.zl-rail::-webkit-scrollbar{display:none}
+.zr-b{flex:0 0 auto;display:flex;align-items:center;gap:8px;min-height:48px;border:none;background:transparent;padding:0;font:inherit;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.zr-lb{padding:7px 12px;border-radius:999px;background:var(--white);color:var(--t1);border:1px solid var(--border2);font-size:13px;font-weight:600;max-width:62vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zr-c{position:relative;flex:0 0 auto;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;color:#2A2418;font-weight:700;border:2px solid var(--white);box-shadow:0 2px 8px rgba(0,0,0,.28);box-sizing:border-box;background:var(--paper)}
+.zl-dr,.zl-cols{position:absolute;top:0;right:0;bottom:0;display:flex;background:var(--white);color:var(--t1);border-left:1px solid var(--border2);box-shadow:-6px 0 24px rgba(0,0,0,.25)}
+.zl-dr{width:min(360px,85%);flex-direction:column}
+.zd-hd,.zc-hd{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--border);min-height:52px;box-sizing:border-box}
+.zd-list,.zc-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 0 96px}
+.zd-row,.zc-row{display:flex;align-items:center;min-height:44px;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.zd-fold{flex:0 0 40px;height:44px;border:none;background:transparent;color:var(--t2);font-size:14px;cursor:pointer;touch-action:manipulation}
+.zd-sp{flex:0 0 40px}
+.zd-nm,.zc-nm{flex:1;min-width:0;display:flex;align-items:center;gap:8px;min-height:44px;border:none;background:transparent;color:var(--t1);font:inherit;font-size:14px;text-align:left;cursor:pointer;padding:0 6px;touch-action:manipulation}
+.zd-nm span.zs,.zc-nm span.zs{flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;color:#2A2418;font-weight:700}
+.zd-nm span.zn,.zc-nm span.zn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zd-ct{flex:0 0 auto;margin-right:10px;min-width:20px;padding:1px 7px;border-radius:999px;background:var(--hover);color:var(--t1);font-size:12px;text-align:center}
+.zd-ct.jt-red{background:#B42318;color:#fff}
+.zd-row.on,.zc-row.on{background:var(--hover)}
+.zd-act{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:0 14px;border:none;border-bottom:1px solid var(--border);background:transparent;color:var(--t1);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer;touch-action:manipulation}
+.zd-act.new{border-bottom:none;border-top:1px solid var(--border);color:var(--t1)}
+.zc-col{width:min(176px,46vw);display:flex;flex-direction:column;min-height:0;box-sizing:border-box}
+.zc-col+.zc-col{border-left:1px solid var(--border)}
+.zc-hd button{flex:1;min-width:0;min-height:44px;border:none;background:transparent;color:var(--t1);font:inherit;font-size:13.5px;font-weight:700;text-align:left;cursor:pointer;touch-action:manipulation;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 6px}
+#zab-card{position:fixed;z-index:143;width:min(300px,calc(100vw - 24px));background:var(--white);color:var(--t1);border:1px solid var(--border2);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);padding:6px;box-sizing:border-box}
+#zab-card.on{display:block}
+.zc-r{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:6px 10px;border:none;border-radius:8px;background:transparent;color:var(--t1);font:inherit;font-size:13.5px;text-align:left;cursor:pointer;touch-action:manipulation}
+.zc-r:hover{background:var(--hover)}
+.zc-tk{flex:0 0 auto;font-size:18px;line-height:1}
+.zc-more{padding:8px 10px 6px;font-size:12.5px;color:var(--t2)}
+a.jeb-lnk{color:var(--accent);text-decoration:underline;overflow-wrap:anywhere;padding:11px 0}
+.jeb-card a.jeb-lnk{color:#2A2418}
+@media(max-width:639.98px){
+  /* room to scroll the last line clear of the button; the centred landing page is left alone. A spacer AFTER the content, never a
+     margin on the last element: that element is #ed while editing, and a margin there made the phone's editor differ from the
+     pop-up editor's (v05.18, Architect review). All three containers are display:block. */
+  html.zab-btn :is(#tree,#p2c,#p3c):not(:has(>.lp:last-child))::after{content:'';display:block;height:84px}
+  html.zab-btn .toast{bottom:calc(84px + var(--jeb-h) + env(safe-area-inset-bottom,0px))}
+  html.zab-btn #toc-float-btn{bottom:calc(84px + var(--jeb-h) + env(safe-area-inset-bottom,0px))}
 }
 /* ══ v05.04 · J5 — Siyagah Jeb: the page in Jeb mode (html.jeb-app). Notes surfaces are
    hidden, not removed (sync, the sync dot and every alarm keep running); the header
@@ -3645,7 +3698,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.17</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.18</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4863,8 +4916,8 @@ function _cleanExportRoot(){
            that also carries pocket names and item text, and a toast can carry
            a note title. jeb-app would hide the sidebar of a plain copy (I4).
            The head goes back to what _JEB_FACE0 recorded before the swap. */
-    root.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,.toast').forEach(function(el){ el.remove(); });
-    root.classList.remove('jeb-app','jeb-on','jeb-kb');
+    root.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,#zab-btn,#zab-lay,#zab-card,.toast').forEach(function(el){ el.remove(); });
+    root.classList.remove('jeb-app','jeb-on','jeb-kb','zab-btn');
     root.style.removeProperty('--jeb-h'); root.style.removeProperty('--jeb-l');
     if(!root.getAttribute('style')) root.removeAttribute('style');
     if(!root.getAttribute('class')) root.removeAttribute('class');
@@ -21607,6 +21660,16 @@ function renderThemeModal(){
   h+='<div class="fs-sub" style="margin:-2px 0 8px">The strip of pockets along the bottom of the screen</div>';
   h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="checkbox" id="th-jebbar"'+(_jebBarOn()?' checked':'')+' onchange="setJebBar(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show Zab bar</label></div>';
 
+  /* Zab on the phone (v05.18, N2) — DB.theme.zabPhoneLayout, absent = rail. Shown on every screen size so it can be set from a laptop. */
+  h+='<div class="theme-divider"></div>';
+  h+='<div class="theme-sect" id="th-zpl"><div class="theme-sect-lbl">Zab on the phone</div>';
+  h+='<div class="fs-sub" style="margin:-2px 0 8px">This applies to phones (screens under 640 px wide). Tablets and laptops keep the bar along the bottom. “Show Zab bar” above switches Zab off everywhere.</div>';
+  const _zplCur=(typeof _zabLayout==='function')?_zabLayout():'rail';
+  [['rail','Rail','bubbles up the right edge'],['drawer','Drawer','a list, ▸ opens the pockets inside'],['cols','Columns','the pockets inside in a second column'],['bar','Bar along the bottom (as before)','']].forEach(function(o){
+    h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="radio" name="th-zpl" value="'+o[0]+'"'+(_zplCur===o[0]?' checked':'')+' onchange="setZabPhoneLayout(this.value)" style="width:20px;height:20px;accent-color:var(--green)"> <span><b>'+o[1]+'</b>'+(o[2]?' · '+o[2]:'')+'</span></label>';
+  });
+  h+='</div>';
+
   /* Heading styles launcher */
   h+='<div class="theme-divider"></div>';
   h+='<div class="theme-sect">';
@@ -22598,6 +22661,16 @@ function _jebUrlIn(text){
   const m=/https?:\/\/[^\s<>"'\])]+/i.exec(String(text==null?'':text));
   return m?m[0].replace(/[.,;:!?]+$/,''):'';
 }
+/* v05.18 · N2 — an item's text, escaped, with each web address a link that opens in a new tab; a tap on the rest still edits */
+function _jebTxHTML(text){
+  const s=String(text==null?'':text), re=/https?:\/\/[^\s<>"'\])]+/gi; let out='', last=0, m;
+  while((m=re.exec(s))){
+    const u=m[0].replace(/[.,;:!?]+$/,''); if(!u) continue;
+    out+=esc(s.slice(last,m.index))+'<a class="jeb-lnk" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a>';
+    last=m.index+u.length; re.lastIndex=last;
+  }
+  return out+esc(s.slice(last));
+}
 /* the YouTube video id of a link, or '' (watch?v=, youtu.be/, shorts/, with www./m.) */
 function _jebYtId(url){
   try{
@@ -22769,15 +22842,16 @@ function _jebKbCheck(){
 function _jebWireOnce(){
   if(_jebWired) return; _jebWired=true;
   try{ new ResizeObserver(jebLayout).observe(_jebEl('sb')); }catch(e){}
-  let wasWide=_jebWide(), wasTk=_jebTaskMode();
-  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
+  let wasWide=_jebWide(), wasTk=_jebTaskMode(), wasPhone=_zabPhone();
+  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_zabPhone()!==wasPhone){ wasPhone=_zabPhone(); jebRefresh(); } else if(_zabOpen) _zabPaint(); _zabPlace(); if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
   document.addEventListener('focusin',_jebKbCheck);
   document.addEventListener('focusout',()=>setTimeout(_jebKbCheck,0));
   document.addEventListener('pointerdown',e=>{
     const t=e.target;
     if(_jebEl('jeb-menu')&&!t.closest('#jeb-menu')) _jebHideMenu();
     if(_jebEl('jeb-due')&&!t.closest('#jeb-due,.jt-due,.jt-flag')) _jebDueClose();
-    if(_jebOpen&&!_JEB_APP&&!t.closest('#jeb-panel,#jeb-bar,#jeb-deck,#jeb-menu,#jeb-att,#jeb-due,.toast-act,#ov')) jebClosePanel();   /* Jeb mode: the panel never closes to an empty screen */
+    if(_jebEl('zab-card')&&!t.closest('#zab-card')) _zabCardClose();
+    if(_jebOpen&&!_JEB_APP&&!t.closest('#jeb-panel,#jeb-bar,#jeb-deck,#jeb-menu,#jeb-att,#jeb-due,.toast-act,#ov,#zab-btn,#zab-lay,#zab-card')) jebClosePanel();   /* Jeb mode: the panel never closes to an empty screen */
   },true);
   /* v05.11 · Z6b — the steps editor lives in a row, a card's modal or the panel: its events are delegated from here */
   document.addEventListener('click',e=>{
@@ -22804,11 +22878,13 @@ function _jebWireOnce(){
   setInterval(dayCheck,20000); document.addEventListener('visibilitychange',dayCheck);
   document.addEventListener('keydown',e=>{
     if(e.key!=='Escape') return;
+    if(_jebEl('zab-card')){ _zabCardClose(); return; }
     if(e.target.closest&&e.target.closest('.jt-steps')){ e.target.blur(); return; }
     if(_jebEl('jeb-due')){ _jebDueClose(); return; }
     if(_jebEl('jeb-menu')){ _jebHideMenu(); return; }
     if(_jebAtt){ _jebAttClose(); return; }
     if(_jebEditId||_jebEl('ov')?.classList.contains('on')) return;
+    if(_zabOpen){ _zabClose(); return; }
     if(_jebDeck){ jebCloseDeckUser(); return; }
     if(!_jebOpen||_JEB_APP) return;
     jebClosePanel();
@@ -22819,25 +22895,211 @@ function jebRefresh(){
   if(typeof DB==='undefined'||!DB||!_dbLoaded) return;
   if(!_jebStaleSwept){   /* a copy saved by an older build may carry dead Jeb surfaces: this session builds its own */
     _jebStaleSwept=true;
-    document.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd').forEach(el=>el.remove());
+    document.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,#zab-btn,#zab-lay,#zab-card').forEach(el=>el.remove());
   }
   _jebWireOnce();
-  const root=document.documentElement, on=_jebBarOn();
-  root.classList.toggle('jeb-on',on);
+  const root=document.documentElement, on=_jebBarOn(), btn=on&&_zabBtnOn();   /* v05.18 · N2: a phone shows the corner button, not the bar */
+  root.classList.toggle('jeb-on',on&&!btn);
+  root.classList.toggle('zab-btn',btn);
   let bar=_jebEl('jeb-bar');
   if(!on){
     if(bar){ bar.remove(); _jebBarSig=''; }
-    jebCloseDeck(); jebClosePanel(); jebLayout(); return;
+    jebCloseDeck(); jebClosePanel(); jebLayout(); _zabSync(false); return;
   }
-  if(!bar){ bar=_jebMakeBar(); _jebBarSig=''; }
-  _jebPaintBar(bar);
+  if(btn){ if(bar){ bar.remove(); _jebBarSig=''; } }
+  else{ if(!bar){ bar=_jebMakeBar(); _jebBarSig=''; } _jebPaintBar(bar); }
   jebLayout();
+  _zabSync(btn);
   if(_jebOpen) _jebPaintPanel();
   if(_jebDeck) _jebPaintDeck();
   if(_jebAtt) _jebAttList();
   if(_JEB_APP) _jebAppEnsure();
   _jebLastDay=_jebToday();
 }
+/* ══ v05.18 · N2 — Zab on a phone: one corner button and three layouts ═════════
+   DB.theme.zabPhoneLayout = 'rail' | 'drawer' | 'cols' | 'bar' (absent = rail). It is the only thing stored; which drawer rows are
+   unfolded (_zabUnfold) and which columns are shown (_zabPath) are this session's. Under 640px, unless 'bar', the bar is not drawn
+   (html.zab-btn instead of html.jeb-on, so --jeb-h is 0) and #zab-btn sits in the right corner. Every layout ends in the one
+   #jeb-panel; none draws an item list of its own. Reads the tree only through _jebTree/jebChildren/_jebRoll. Switching a layout
+   writes the setting and nothing else (I1). */
+const _ZAB_LAYOUTS=['rail','drawer','cols','bar'];
+function _zabLayout(){ const v=DB&&DB.theme&&DB.theme.zabPhoneLayout; return _ZAB_LAYOUTS.includes(v)?v:'rail'; }
+function _zabPhone(){ return !_JEB_APP&&window.innerWidth<640; }
+function _zabBtnOn(){ return _zabPhone()&&_zabLayout()!=='bar'; }
+let _zabOpen=false, _zabUnfold=new Set(), _zabPath=[], _zabBtnSig='', _zabLaySig='', _zabLP=0;
+function _zabSync(on){
+  let b=_jebEl('zab-btn');
+  if(!on){ if(b) b.remove(); _zabBtnSig=''; _zabCardClose(); if(_zabOpen||_jebEl('zab-lay')) _zabClose(); return; }
+  if(!b) b=_zabMakeBtn();
+  const cnt=_jebOpenCounts(), roll=_jebRoll(cnt), total=_jebTree().flat.reduce((n,x)=>n+(cnt[x.id]||0),0);   /* the same number as "All pockets" */
+  let red=false; roll.forEach(a=>{ if(a.red) red=true; });
+  const sig=total+'|'+(red?1:0);
+  if(sig!==_zabBtnSig){ _zabBtnSig=sig; const n=b.querySelector('.zb-n'); n.textContent=total; n.hidden=!total; n.classList.toggle('jt-red',red); }
+  b.classList.toggle('up',!!_jebOpen);   /* with a panel open the button rides above its top edge, so it can still close it */
+  b.setAttribute('aria-expanded',_zabOpen?'true':'false');
+  if(_zabOpen) _zabPaint();
+  _zabPlace();
+}
+/* v05.18 (Architect review) — on a phone's folder screen the sidebar's bottom row (New Note · Recent · MyWall · Folders) is where the
+   corner would be, and the button hid "Folders". While that screen shows, the button sits just above the row, measured (never a
+   constant); the Rail's bubbles follow the button. Written on the button and the rail themselves, never on <html>. */
+function _zabPlace(){
+  const b=_jebEl('zab-btn'); if(!b) return;
+  const sb=_jebEl('sb'), tb=_jebEl('sb-toolbar');
+  let v='';
+  if(!_jebOpen&&sb&&tb&&!sb.classList.contains('closed')){ const r=tb.getBoundingClientRect(); if(r.height>0&&r.top<innerHeight) v=Math.round(innerHeight-r.top+10)+'px'; }
+  if(b.style.bottom!==v) b.style.bottom=v;
+  const rail=document.querySelector('#zab-lay .zl-rail');
+  if(rail){ const w=v?'calc('+v+' + 62px)':''; if(rail.style.bottom!==w) rail.style.bottom=w; }
+}
+function _zabMakeBtn(){
+  const b=document.createElement('button'); b.type='button'; b.id='zab-btn';
+  const L='Zab: your pockets (press and hold to change the layout)';
+  b.title=L; b.setAttribute('aria-label',L); b.setAttribute('aria-haspopup','true'); b.setAttribute('aria-expanded','false');
+  b.innerHTML='<span aria-hidden="true">▤</span><span class="zb-n" aria-hidden="true" hidden></span>';
+  document.body.appendChild(b);
+  b.addEventListener('click',()=>{
+    if(Date.now()-_zabLP<700) return;   /* the tap that ended a long-press */
+    if(_jebOpen){ jebClosePanel(); return; }
+    if(_zabOpen) _zabClose(); else _zabOpenLay();
+  });
+  b.addEventListener('contextmenu',e=>{ e.preventDefault(); _zabLP=Date.now(); _zabCardOpen(); });
+  let lp=null, lx=0, ly=0;
+  b.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1) return; lx=e.touches[0].clientX; ly=e.touches[0].clientY;
+    clearTimeout(lp); lp=setTimeout(()=>{ _zabLP=Date.now(); _zabCardOpen(); },500);
+  },{passive:true});
+  b.addEventListener('touchmove',e=>{ const t=e.touches[0]; if(lp&&(Math.abs(t.clientX-lx)>8||Math.abs(t.clientY-ly)>8)){ clearTimeout(lp); lp=null; } },{passive:true});
+  ['touchend','touchcancel'].forEach(n=>b.addEventListener(n,()=>{ clearTimeout(lp); lp=null; },{passive:true}));
+  return b;
+}
+function _zabOpenLay(){
+  if(_zabOpen) return;
+  _jebHideMenu(); _zabCardClose();
+  _zabOpen=true; _zabLaySig='';
+  let lay=_jebEl('zab-lay');
+  if(!lay){ lay=document.createElement('div'); lay.id='zab-lay'; document.body.appendChild(lay); _zabWireLay(lay); }
+  lay.classList.add('on');
+  _zabPaint(true);
+  const b=_jebEl('zab-btn'); if(b) b.setAttribute('aria-expanded','true');
+}
+function _zabClose(){
+  _zabOpen=false; _zabLaySig='';
+  const lay=_jebEl('zab-lay'); if(lay) lay.remove();
+  const b=_jebEl('zab-btn'); if(b) b.setAttribute('aria-expanded','false');
+}
+function _zabPaint(anim){
+  const lay=_jebEl('zab-lay'); if(!lay) return;
+  const L=_zabLayout(), t=_jebTree(), cnt=_jebOpenCounts(), roll=_jebRoll(cnt), R=id=>roll.get(id)||{n:0,red:false,kids:false};
+  const total=t.flat.reduce((n,x)=>n+(cnt[x.id]||0),0);
+  const num=a=>'<span class="zb-n'+(a.red?' jt-red':'')+'">'+a.n+'</span>';
+  const sw=p=>'<span class="zs" style="background:'+esc(p.color)+'" aria-hidden="true">'+esc(p.icon)+'</span>';
+  const newB=(par)=>'<button type="button" class="zd-act new" data-zact="new" data-par="'+esc(par||'')+'">＋ New pocket</button>';
+  let h='';
+  if(L==='drawer'){
+    const vis=new Set(); let rows='';
+    t.flat.forEach(x=>{
+      const par=t.eff.get(x.id); if(par&&!(vis.has(par)&&_zabUnfold.has(par))) return;
+      vis.add(x.id);
+      const p=t.byId.get(x.id), a=R(x.id), open=_zabUnfold.has(x.id), nm=esc(p.name);
+      rows+='<div class="zd-row" data-pid="'+esc(p.id)+'" style="padding-left:'+Math.min(x.depth,8)*16+'px">'
+        +(a.kids?'<button type="button" class="zd-fold" data-zact="fold" aria-expanded="'+open+'" aria-label="'+(open?'Fold':'Unfold')+' the pockets inside '+nm+'">'+(open?'▾':'▸')+'</button>':'<span class="zd-sp"></span>')
+        +'<button type="button" class="zd-nm">'+sw(p)+'<span class="zn">'+nm+'</span></button><span class="zd-ct'+(a.red?' jt-red':'')+'">'+a.n+'</span></div>';
+    });
+    h='<div class="zl-bd"></div><div class="zl-dr" role="dialog" aria-label="Zab pockets"><div class="zd-hd"><button type="button" class="zd-act" style="border:none" data-zact="all">▤ All pockets <span class="zd-ct">'+total+'</span></button></div><div class="zd-list">'+rows+newB('')+'</div></div>';
+  }else if(L==='cols'){
+    let path=[], prev=null;
+    for(const id of _zabPath){ if(!t.byId.has(id)||(t.eff.get(id)||null)!==prev) break; path.push(id); prev=id; }
+    while(path.length&&!(t.kids.get(path[path.length-1])||[]).length) path.pop();
+    _zabPath=path;
+    const crow=(p,lvl,sel)=>{ const a=R(p.id); return '<div class="zc-row'+(p.id===sel?' on':'')+'" data-pid="'+esc(p.id)+'" data-lvl="'+lvl+'"><button type="button" class="zc-nm">'+sw(p)+'<span class="zn">'+esc(p.name)+'</span>'+(a.kids?'<span aria-hidden="true">▸</span>':'')+'</button><span class="zd-ct'+(a.red?' jt-red':'')+'">'+a.n+'</span></div>'; };
+    const n=path.length, leftPar=n>=2?path[n-2]:'', sel=n?path[n-1]:null;
+    const leftHd=n?'<button type="button" data-zact="back" aria-label="Back up one level">‹ '+esc(n>=2?t.byId.get(path[n-2]).name:'All pockets')+'</button>':'<button type="button" data-zact="all">▤ All pockets ('+total+')</button>';
+    let cols='<div class="zc-col"><div class="zc-hd">'+leftHd+'</div><div class="zc-list">'+jebChildren(leftPar).map(p=>crow(p,n?n-1:0,sel)).join('')+(n?'':newB(''))+'</div></div>';
+    if(n){
+      const cur=t.byId.get(path[n-1]);
+      cols+='<div class="zc-col"><div class="zc-hd"><button type="button" data-zact="items" data-pid="'+esc(cur.id)+'">Its items ('+(cnt[cur.id]||0)+')</button></div><div class="zc-list">'+jebChildren(cur.id).map(p=>crow(p,n,null)).join('')+newB(cur.id)+'</div></div>';
+    }
+    h='<div class="zl-bd"></div><div class="zl-cols" role="dialog" aria-label="Zab pockets">'+cols+'</div>';
+  }else{
+    const bub=p=>{ const a=R(p.id); return '<button type="button" class="zr-b" data-pid="'+esc(p.id)+'" aria-label="'+esc(p.name)+(a.kids?' (holds pockets)':'')+'"><span class="zr-lb">'+esc(p.name)+(a.kids?' ▸':'')+'</span><span class="zr-c" style="background:'+esc(p.color)+'" aria-hidden="true">'+esc(p.icon)+num(a)+'</span></button>'; };
+    h='<div class="zl-bd"></div><div class="zl-rail" role="menu" aria-label="Zab pockets">'+jebChildren('').map(bub).join('')
+      +'<button type="button" class="zr-b" data-zact="all" aria-label="All pockets"><span class="zr-lb">All pockets</span><span class="zr-c" style="background:var(--paper)" aria-hidden="true">▤<span class="zb-n">'+total+'</span></span></button>'
+      +'<button type="button" class="zr-b" data-zact="new" data-par="" aria-label="New pocket"><span class="zr-lb">New pocket</span><span class="zr-c" style="background:var(--paper)" aria-hidden="true">＋</span></button></div>';
+  }
+  const sig=L+'|'+h; if(sig===_zabLaySig) return; _zabLaySig=sig;
+  const keep=[...lay.querySelectorAll('.zl-rail,.zd-list,.zc-list')].map(e=>e.scrollTop);
+  lay.innerHTML=h;
+  _zabPlace();
+  lay.querySelectorAll('.zl-rail,.zd-list,.zc-list').forEach((e,i)=>{ if(keep[i]) e.scrollTop=keep[i]; });
+  if(anim&&!_jebReduced()&&lay.animate){   /* none under prefers-reduced-motion */
+    const bd=lay.querySelector('.zl-bd'); if(bd) bd.animate([{opacity:0},{opacity:1}],{duration:160,easing:'ease-out'});
+    const pn=lay.querySelector('.zl-dr,.zl-cols'); if(pn) pn.animate([{transform:'translateX(100%)'},{transform:'none'}],{duration:200,easing:'ease-out'});
+    lay.querySelectorAll('.zr-b').forEach((e,i)=>e.animate([{opacity:0,transform:'translateY(14px) scale(.85)'},{opacity:1,transform:'none'}],{duration:170,delay:Math.min(i,8)*18,easing:'ease-out',fill:'backwards'}));
+  }
+}
+function _zabWireLay(lay){
+  lay.addEventListener('click',e=>{
+    if(Date.now()-_jebLPAt<700) return;   /* the tap that ended a long-press */
+    const t=e.target;
+    if(t.closest('.zl-bd')){ _zabClose(); return; }
+    const za=t.closest('[data-zact]'), row=t.closest('[data-pid]');
+    if(za){
+      const a=za.dataset.zact;
+      if(a==='all'){ _zabClose(); jebOpenPanelSel({ids:[],all:true}); }
+      else if(a==='new') jebNewPocketDialog(za.dataset.par||null);
+      else if(a==='fold'&&row){ const id=row.dataset.pid; if(_zabUnfold.has(id)) _zabUnfold.delete(id); else _zabUnfold.add(id); _zabPaint(); }
+      else if(a==='back'){ _zabPath=_zabPath.slice(0,-1); _zabPaint(); }
+      else if(a==='items'){ const id=za.dataset.pid; _zabClose(); jebOpenPanel(id); }
+      return;
+    }
+    if(!row) return;
+    const id=row.dataset.pid;
+    if(_zabLayout()==='cols'&&row.dataset.lvl!=null){   /* a pocket that holds pockets opens the next column; one with nothing inside opens its panel */
+      const lvl=+row.dataset.lvl, kids=jebChildren(id).length;
+      if(kids&&_zabPath[lvl]!==id){ _zabPath=_zabPath.slice(0,lvl).concat(id); _zabPaint(); return; }
+    }
+    _zabClose(); jebOpenPanel(id);
+  });
+  lay.addEventListener('contextmenu',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; e.preventDefault(); _jebPocketMenu(r.dataset.pid,null,null,r); });
+  let lp=null, lx=0, ly=0;   /* long-press on a pocket = its menu, as on the bar */
+  lay.addEventListener('touchstart',e=>{
+    const r=e.target.closest('[data-pid]'); if(!r||e.touches.length!==1) return;
+    lx=e.touches[0].clientX; ly=e.touches[0].clientY; clearTimeout(lp);
+    lp=setTimeout(()=>{ _jebLPAt=Date.now(); _jebPocketMenu(r.dataset.pid,null,null,r); },500);
+  },{passive:true});
+  lay.addEventListener('touchmove',e=>{ const t=e.touches[0]; if(lp&&(Math.abs(t.clientX-lx)>8||Math.abs(t.clientY-ly)>8)){ clearTimeout(lp); lp=null; } },{passive:true});
+  ['touchend','touchcancel'].forEach(n=>lay.addEventListener(n,()=>{ clearTimeout(lp); lp=null; },{passive:true}));
+}
+function _zabCardClose(){ const c=_jebEl('zab-card'); if(c) c.remove(); }
+/* the small card anchored to the button: placed by measuring, clamped to the screen */
+function _zabCardOpen(){
+  if(_jebEl('zab-card')) return;
+  const b=_jebEl('zab-btn'); if(!b) return;
+  _jebHideMenu();
+  const cur=_zabLayout();
+  const rows=[['rail','Rail','bubbles up the right edge'],['drawer','Drawer','a list, ▸ opens the pockets inside'],['cols','Columns','the pockets inside in a second column']];
+  const c=document.createElement('div'); c.id='zab-card'; c.className='on'; c.setAttribute('role','dialog'); c.setAttribute('aria-label','Zab layout');
+  c.innerHTML=rows.map(r=>'<button type="button" class="zc-r" data-k="'+r[0]+'" role="menuitemradio" aria-checked="'+(cur===r[0])+'"><span class="zc-tk">'+(cur===r[0]?'☑':'☐')+' </span><span><b>'+r[1]+'</b> · '+r[2]+'</span></button>').join('')
+    +'<div class="zc-more">More in 🧰 → 🎨 Appearance</div>';
+  c.style.visibility='hidden'; document.body.appendChild(c);
+  const r=b.getBoundingClientRect(), w=c.offsetWidth, hh=c.offsetHeight, vw=window.innerWidth, vh=window.innerHeight;
+  const left=Math.max(8,Math.min(r.right-w,vw-w-8)), top=Math.max(8,Math.min(r.top-hh-8,vh-hh-8));
+  c.style.left=left+'px'; c.style.top=top+'px'; c.style.visibility='';
+  c.addEventListener('click',e=>{ const x=e.target.closest('.zc-r'); if(x) _zabSetLayout(x.dataset.k); });
+  if(!_jebReduced()&&c.animate) c.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:140,easing:'ease-out'});
+}
+/* the setting is the only thing written; no pocket or item is touched */
+function _zabSetLayout(k){
+  if(!_ZAB_LAYOUTS.includes(k)) return;
+  if(!DB.theme) DB.theme={};
+  if(DB.theme.zabPhoneLayout!==k){ DB.theme.zabPhoneLayout=k; persist(); }
+  _zabCardClose(); _zabClose(); _zabBtnSig=''; _jebBarSig='';
+  jebRefresh();
+  const m=document.getElementById('theme-modal');
+  if(m&&m.style.display&&m.style.display!=='none'&&typeof renderThemeModal==='function') renderThemeModal();
+}
+function setZabPhoneLayout(k){ _zabSetLayout(k); }
 /* ══ v05.04 · J5 — Siyagah Jeb (the page in Jeb mode) ═════════════════════════
    The header, the docked panel that never closes to nothing, and the view that
    opens first (DB.theme.jebAppView = {sel:{ids,all}, deck}). Nothing here touches
@@ -23008,7 +23270,7 @@ function jebTogglePanel(pid){ if(_jebOpen===pid){ if(!_JEB_APP) jebClosePanel();
 function jebToggleAllPanel(){ if(_jebOpen==='*'&&_jebMulti&&_jebMulti.all){ if(!_JEB_APP) jebClosePanel(); } else jebOpenPanelSel({ids:[],all:true}); }
 function jebOpenPanel(pid){
   if(!_jebPocket(pid)) return;
-  jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen=pid; _jebMulti=null; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  _zabClose(); jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen=pid; _jebMulti=null; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
   _jebAppRemember({ids:[pid],all:false},false);
   jebRefresh();
   const ta=_jebEl('jeb-add-in'); if(ta&&!_jebAppBusy) try{ ta.focus({preventScroll:true}); }catch(e){}   /* not at boot: no keyboard on a phone */
@@ -23018,7 +23280,7 @@ function jebOpenPanelSel(sel){
   const ids=_jebSelIds(sel);
   if(!sel.all&&ids.length===1){ jebOpenPanel(ids[0]); return; }
   if(!ids.length) return;
-  jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen='*'; _jebMulti={ids:sel.all?[]:ids.slice(),all:!!sel.all}; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  _zabClose(); jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen='*'; _jebMulti={ids:sel.all?[]:ids.slice(),all:!!sel.all}; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
   _jebAppRemember(sel,false);
   jebRefresh();
 }
@@ -23028,6 +23290,7 @@ function jebClosePanel(){
   _jebEditId=null; _jebDrag=null; _jebNewId=null;
   if(_jebOpen!==null){ _jebOpen=null; _jebMulti=null; _jebBarSig=''; _jebPanelSig=''; }
   if(p) p.classList.remove('on');
+  const zb=_jebEl('zab-btn'); if(zb) zb.classList.remove('up');   /* v05.18 */
   const bar=_jebEl('jeb-bar'); if(bar&&_jebBarOn()) _jebPaintBar(bar);
 }
 function _jebMakePanel(){
@@ -23070,6 +23333,7 @@ function _jebMakePanel(){
     if(t.closest('.jeb-more')){ _jebItemMenu(row.dataset.iid,t.closest('.jeb-more')); return; }
     if(t.closest('.jeb-att-b')){ _jebAttOpen(row.dataset.iid,t.closest('.jeb-att-b')); return; }
     if(t.closest('.jeb-note-b')){ _jebToNoteUI(row.dataset.iid); return; }
+    if(t.closest('a.jeb-lnk')) return;   /* v05.18: the address opens in a new tab; the rest of the text edits */
     if(t.closest('.jeb-tx')) _jebStartEdit(row.dataset.iid);
   });
   p.addEventListener('contextmenu',e=>{ const k=e.target.closest('.jx-kid'); if(!k) return; e.preventDefault(); _jebPocketMenu(k.dataset.pid,e.clientX,e.clientY); });
@@ -23160,7 +23424,7 @@ function _jebTaskMode(){
 function _jebTaskRowHTML(i,pk,mode){
   const today=_jebToday(), wide=mode==='w', pcs=_jebTaskPieces(i,today,false), open=_jebStepsOpen.has(i.id);
   return '<div class="jeb-it jt-it'+(i.done?' done':'')+(wide?' jt-w':'')+(open?' jt-open':'')+'" data-iid="'+esc(i.id)+'"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"'+(i.done?' checked':'')+'>'
-    +'<div class="jeb-body"><div class="jeb-tx">'+esc(i.text)+'</div>'+((!wide&&pcs)?'<div class="jt-meta">'+pcs+'</div>':'')+_jebChipsHTML(i)+(open?_jebStepsHTML(i):'')
+    +'<div class="jeb-body"><div class="jeb-tx">'+_jebTxHTML(i.text)+'</div>'+((!wide&&pcs)?'<div class="jt-meta">'+pcs+'</div>':'')+_jebChipsHTML(i)+(open?_jebStepsHTML(i):'')
     +'<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div>'
     +((wide&&pcs)?'<div class="jt-side">'+pcs+'</div>':'')+'<button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>';
 }
@@ -23202,7 +23466,7 @@ function _jebKindMeta(i,pk,card){
 }
 function _jebKindRowHTML(i,pk){
   return '<div class="jeb-it jk-it'+(_jebType(pk)==='ideas'?' ji-it':' js-it')+(i.done?' done':'')+'" data-iid="'+esc(i.id)+'"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"'+(i.done?' checked':'')+'>'
-    +'<div class="jeb-body"><div class="jeb-tx">'+esc(i.text)+'</div>'+_jebKindMeta(i,pk,false)+_jebChipsHTML(i)+_JEB_ROW_ACTS+'</div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>';
+    +'<div class="jeb-body"><div class="jeb-tx">'+_jebTxHTML(i.text)+'</div>'+_jebKindMeta(i,pk,false)+_jebChipsHTML(i)+_JEB_ROW_ACTS+'</div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>';
 }
 const _jebRows=(pk,l)=>l.map(i=>_jebKindRowHTML(i,pk)).join('');
 /* Ideas: a view bar (Sort · Group by), then the list or one group per topic */
@@ -23238,7 +23502,7 @@ function _jebRowHTML(i){
   if(lpk&&_jebType(lpk)==='links') return _jebLinkRowHTML(i,lpk,'c');
   if(lpk&&_jebType(lpk)==='tasks') return _jebTaskRowHTML(i,lpk,_jebTaskMode());   /* v05.11 · Z6b */
   if(lpk&&(_jebType(lpk)==='ideas'||_jebType(lpk)==='shop')) return _jebKindRowHTML(i,lpk);   /* v05.12 · Z6c */
-  return `<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body"><div class="jeb-tx">${esc(i.text)}</div>${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`;
+  return `<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body"><div class="jeb-tx">${_jebTxHTML(i.text)}</div>${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`;
 }
 function _jebPaintPanel(){
   const sel=_jebPanelSel(), ids=_jebSelIds(sel), multi=_jebOpen==='*';
@@ -23435,6 +23699,7 @@ function _jebMakeDeck(){
     if(t.closest('.jeb-more')){ _jebItemMenu(iid,t.closest('.jeb-more')); return; }
     if(t.closest('.jeb-att-b')){ _jebAttOpen(iid,t.closest('.jeb-att-b')); return; }
     if(t.closest('.jeb-note-b')){ _jebToNoteUI(iid); return; }
+    if(t.closest('a.jeb-lnk')) return;   /* v05.18: the address opens in a new tab; the rest of the text edits */
     if(t.closest('.jeb-tx')) _jebStartEdit(iid);
   });
   d.addEventListener('pointerdown',e=>{
@@ -23445,7 +23710,7 @@ function _jebMakeDeck(){
 }
 function _jebCardHTML(i,pk){
   const lk=_jebType(pk)==='links', tk=_jebType(pk)==='tasks', L=lk?_jebLinkOf(i):null;   /* v05.10: a link card = thumbnail on top, then the title */
-  return `<div class="jeb-card${i.done?' done':''}${lk?' jl-dcard':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another pocket" aria-label="Drag handle">⠿</div>${lk?_jebThumbHTML(L,pk):''}<div class="jeb-tx">${esc(lk?L.title:i.text)}</div>${tk?(()=>{ const pcs=_jebTaskPieces(i,_jebToday(),true); return pcs?'<div class="jt-meta">'+pcs+'</div>':''; })():''}${_jebKindMeta(i,pk,true)}${lk?`<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`:''}${_jebChipsHTML(i)}${lk?_jebLinkSugHTML(i):''}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
+  return `<div class="jeb-card${i.done?' done':''}${lk?' jl-dcard':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another pocket" aria-label="Drag handle">⠿</div>${lk?_jebThumbHTML(L,pk):''}<div class="jeb-tx">${lk?esc(L.title):_jebTxHTML(i.text)}</div>${tk?(()=>{ const pcs=_jebTaskPieces(i,_jebToday(),true); return pcs?'<div class="jt-meta">'+pcs+'</div>':''; })():''}${_jebKindMeta(i,pk,true)}${lk?`<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`:''}${_jebChipsHTML(i)}${lk?_jebLinkSugHTML(i):''}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
 }
 function _jebPaintDeck(){
   const sel=_jebDeck, ids=_jebSelIds(sel);
@@ -25299,6 +25564,7 @@ function showPane(name){
   if(name==='sb')  sb.classList.remove('closed');
   if(name==='p2')  p2.classList.add('mob-open');
   if(name==='p3')  p3.classList.add('mob-open');
+  if(typeof _zabPlace==='function') _zabPlace();   /* v05.18 — the corner button clears the folder screen's bottom row */
 }
 
 /* ── Cloud Sync (Firebase Firestore) ─────────────────────────────────────

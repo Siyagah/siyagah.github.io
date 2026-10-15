@@ -36,7 +36,7 @@ const srv = await serve();
 const browser = await pw.chromium.launch();
 
 const mk = (id, pocketId, text, order, extra = {}) => ({ id, pocketId, text, done: false, folderIds: [], tags: [], kind: null, journal: false, order, createdAt: T0, updatedAt: T0, ...extra });
-const seed = (extra) => { const db = seedDB(T0); if (extra) extra(db); return db; };
+const seed = (extra) => { const db = seedDB(T0); if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.18: a phone's Zab is a corner button now; this check is about the bar, so the notebook chooses it (block 77 covers the button) */
 /* the four seed pockets (as the app seeds them) plus named ones, for the sync check where both devices must start identical */
 const SEEDS = [['jp-task', 'Quick tasks', '✓', '#FFF1A8'], ['jp-idea', 'Ideas', '✶', '#FFD9B8'], ['jp-link', 'Links to read', '↗', '#CFE8FF'], ['jp-shop', 'Shopping', '◫', '#F6D2E4']];
 const pockets = (names) => [...SEEDS.map(([id, name, icon, color], i) => ({ id, name, icon, color, order: i, createdAt: SEED_AT, updatedAt: SEED_AT })),

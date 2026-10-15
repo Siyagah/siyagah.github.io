@@ -36,6 +36,7 @@ const seed = (extra) => {
   const db = seedDB(T0);
   db.jeb = [mkItem('t1', 'jp-task', 'Alpha', 0), mkItem('t2', 'jp-task', 'Bravo', 1), mkItem('i1', 'jp-idea', 'Idea one', 0), mkItem('s1', 'jp-shop', 'Milk', 0)];
   if (extra) extra(db);
+  db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' });   /* v05.18: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
   return db;
 };
 /* a fresh context (its own storage) with the notebook seeded once, never over a later save */
