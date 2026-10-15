@@ -1112,7 +1112,7 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 #jeb-panel.jx-has{overflow-y:auto;-webkit-overflow-scrolling:touch}
 #jeb-panel.jx-has>.jeb-ph{position:sticky;top:0;z-index:2;background:var(--white)}
 #jeb-panel.jx-has>.jeb-list{flex:0 0 auto;overflow:visible;min-height:0}
-.jx-nm{max-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jx-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}   /* v05.24 · F1: no max-width, so the name takes the free space and the count sits at the right end */
 .jeb-ph .jeb-pm{min-width:40px;min-height:40px;border:0;background:none;color:var(--t1);font-size:20px;cursor:pointer}
 .jeb-gh .jx-fold{border:0;background:none;min-width:32px;min-height:40px;color:var(--t1);font-size:14px;cursor:pointer;touch-action:manipulation}
 .jeb-gh.jx-sub{border-left:3px solid var(--border2)}
@@ -2300,9 +2300,10 @@ sup.ann-sup:hover{text-decoration:underline}
    Pop-ups: the title wraps instead of an ellipsis. Tablet and laptop are untouched. */
 @media(max-width:639.98px){
   .p3c-actrow{display:flex;align-items:center;justify-content:flex-end;gap:6px;position:relative;
-    padding:3px 10px;min-height:44px;border-bottom:1px solid var(--border2);background:var(--paper);flex-shrink:0}
+    padding:0 10px;min-height:36px;border-bottom:1px solid var(--border2);background:var(--paper);flex-shrink:0}
   .p3c-actrow .save-flash{position:static;transform:none;margin-right:auto}
-  .p3c-actrow .p3c-stop{margin-left:0}
+  /* v05.24 · F1 (t1f): the ROW is slimmer (36 px, was 44); the BUTTON keeps a 44 px touch target, spilling 4 px above and below */
+  .p3c-actrow .p3c-stop{margin:-4px 0;min-width:44px!important;min-height:44px!important}
   .p3h-title-bar.p3c-ph{align-items:flex-start;padding:8px 14px}
   textarea#ti,.pf-title-row textarea.pf-ti{display:block;resize:none;overflow:hidden;white-space:pre-wrap;
     overflow-wrap:anywhere;line-height:1.3;font-family:var(--ui)}
@@ -3752,7 +3753,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <button class="sb-mi" onclick="addRootFolder();closeSBTools()">📁 New Folder</button>
           <div class="sb-mi" onclick="addStarterMyDatabaseFolders();closeSBTools()" title="Adds MyResources, MyIdeas, MyMemories, MyPlanning, MyBuy-MyShopping, MyQueries, MyTravel under MyDatabase — safe to run more than once">🗂 Add Starter MyDatabase Folders</div>
           <div class="sb-mi" onclick="syncKnowledgeBase();closeSBTools()" title="Update the built-in guide notes to the latest version">📚 Sync Knowledge Base</div>
-          <div class="sb-mi" onclick="openEnexImport();closeSBTools()" title="Read an Evernote export and see what an import would bring in. A dry run: nothing is added.">📥 Evernote import</div>
+          <div class="sb-mi" onclick="openEnexImport();closeSBTools()" title="Reads your Evernote export and shows what it found; then, when you say OK, brings the notes into My Notebooks ▸ Evernote.">📥 Evernote import</div>
           <div class="sb-mi-hd">Reference &amp; dates</div>
           <div class="sb-mi" onclick="openCiteModal();closeSBTools()" title="Insert Qurʿan or Hadith reference into note">📖 Insert Reference</div>
           <div class="sb-mi" onclick="openCalSettings();closeSBTools()" title="Set your country for public holidays">📅 Calendar Country</div>
@@ -6593,7 +6594,7 @@ function renderP2C(){
       return;
     }
     const arts=getSmartArts(_sf.id);
-    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any article and choose ⭐ Add to Favourites','sf-pinned':'No pinned articles yet — right-click (or hold on mobile) any article and choose 📌 Pin','sf-new':'No articles yet. Create your first article!','sf-recent':'No recently edited articles.','sf-jeb':'Notes you make from Zab appear here.','sf-enx':'Notes brought in from Evernote appear here.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
+    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any article and choose ⭐ Favourite','sf-pinned':'No pinned articles yet — right-click (or hold on mobile) any article and choose 📌 Pin','sf-new':'No articles yet. Create your first article!','sf-recent':'No recently edited articles.','sf-jeb':'Notes you make from Zab appear here.','sf-enx':'Notes brought in from Evernote appear here.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
     let h='<div class="fv">'+`<div class="slbl">${_sf.name} (${arts.length})</div>`;
     h+=_sfQtBarHTML(_sf.id,null);
     if(!arts.length){
@@ -28399,9 +28400,10 @@ async function _enxImport(items){
     const fById=new Map((DB.folders||[]).map(f=>[f.id,f])), kids=new Map();
     DB.folders.forEach(f=>{ const p=f.parentId||''; kids.set(p,(kids.get(p)||0)+1); });
     const sec=_enxSection();
+    const trashF=new Set(); (DB.trash||[]).forEach(t=>{ if(t&&t.type==='folder'){ if(t.item&&t.item.id) trashF.add(t.item.id); ((t.subtree&&t.subtree.folders)||[]).forEach(f=>{ if(f&&f.id) trashF.add(f.id); }); } });
     const ensure=(base,name,parentId,kind)=>{
       let id=base, n=1;
-      while(!fById.has(id)&&tomb.has(id)) id=base+'-'+(++n);   /* the owner deleted an empty one of ours: never revive its id */
+      while(!fById.has(id)&&(tomb.has(id)||trashF.has(id))) id=base+'-'+(++n);   /* the owner deleted an empty one of ours: never revive its id; one still in Trash keeps its id (v05.24, enxf1: no id in DB.folders equals one in Trash) */
       if(fById.has(id)) return id;
       let order;
       if(parentId){ order=(kids.get(parentId)||0)+1; kids.set(parentId,order); }
