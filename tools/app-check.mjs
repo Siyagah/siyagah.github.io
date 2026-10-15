@@ -12190,6 +12190,21 @@ await r.block('84-f1-followups', async () => {
   r.check(out.status === 0, 'the F1 follow-ups check exits cleanly', `exit ${out.status}`);
 });
 
+/* 85 — v05.25, Z9: a title for any Zab item. tools/zab-z9.mjs runs 85a–85h: the ✎ Title button on every row kind, the deck card and All
+   pockets; set / show / edit the text / clear; the no-title HTML equal to v05.24's; the title over the fetched `ttl`; → Note; merge both
+   ways; 360 wide. Each printed ok/FAIL line becomes one check. */
+await r.block('85-zab-z9-item-title', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-z9.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1500000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the Z9 item-title check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z9: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Z9 item-title check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
