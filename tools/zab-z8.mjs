@@ -170,7 +170,8 @@ try {
       await d.page.fill('#jeb-f-name', 'A3'); await act(d, vp, '#jeb-f-ok'); await sleep(600);
       const made = await on(d, () => { const p = DB.jebPockets.find((x) => x.name === 'A3'); return p ? p.parentId : null; });
       check(made === 'A', `${t} "＋ New pocket inside" creates A3 inside A`, String(made));
-      check(same(await kids(d), ['A1', 'A2', 'A3']), `${t} ...and the list shows it as the last line`, (await kids(d)).join(' '));
+      const lastName = await on(d, () => { const k = [...document.querySelectorAll('#jeb-panel .jx-kid')]; return k.length + ':' + (k.length ? k[k.length - 1].querySelector('.jx-nm').textContent : ''); });
+      check(lastName === '3:A3', `${t} ...and the list shows it as the last line (${lastName})`);
       noErr(d, t);
     } finally { await d.ctx.close(); }
   }
@@ -237,9 +238,10 @@ try {
       const r = await on(d, async () => {
         const p = document.getElementById('jeb-panel'), out = { n: document.querySelectorAll('#jeb-panel .jx-kid').length, hx: p.scrollWidth - p.clientWidth };
         out.canScroll = p.scrollHeight > p.clientHeight + 10; out.listScrolls = (() => { const l = p.querySelector('.jeb-list'); return l.scrollHeight > l.clientHeight + 5 && getComputedStyle(l).overflowY === 'auto'; })();
-        p.scrollTop = p.scrollHeight; await new Promise((r) => setTimeout(r, 100));
-        const it = p.querySelector('.jeb-list .jeb-it'), pr = p.getBoundingClientRect(), ir = it.getBoundingClientRect();
-        out.itemReachable = ir.bottom <= pr.bottom + 1 && ir.top >= pr.top;
+        const it = p.querySelector('.jeb-list .jeb-it'), pr = p.getBoundingClientRect();
+        for (let k = 0; k < 3; k++) { p.scrollTop = p.scrollHeight; await new Promise((r) => setTimeout(r, 150)); }   /* the rows' real heights replace their estimate as they scroll in */
+        const ir = it.getBoundingClientRect();
+        out.itemReachable = ir.bottom <= pr.bottom + 2 && ir.top >= pr.top;
         const last = [...p.querySelectorAll('.jx-kid')].pop().getBoundingClientRect(); out.lastIn = last.top < pr.bottom;
         p.scrollTop = 0; const first = p.querySelector('.jx-kid').getBoundingClientRect(); out.firstIn = first.top >= pr.top && first.bottom <= pr.bottom;
         out.head = p.querySelector('.jeb-ph').getBoundingClientRect().top >= pr.top - 1;

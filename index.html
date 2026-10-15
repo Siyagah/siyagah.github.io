@@ -1103,6 +1103,7 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jx-kids{flex-shrink:0;display:flex;flex-direction:column;padding:0;border-bottom:1px solid var(--border);position:relative}
 .jx-kid,.jx-new{flex:0 0 auto;display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;min-height:48px;padding:6px 12px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:var(--white);color:var(--t1);font:inherit;font-size:14px;text-align:left;cursor:pointer;touch-action:manipulation}
 .jx-kids>:last-child{border-bottom:0}
+.jx-kid.zx-lift{touch-action:none}   /* only the lifted line (Z7); declared after .jx-kid so the later rule does not win */
 .jx-kid:hover,.jx-new:hover{background:var(--hover)}
 .jx-new{color:var(--t2)}
 .jx-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
