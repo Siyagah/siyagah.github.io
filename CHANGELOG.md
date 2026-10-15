@@ -10083,3 +10083,9 @@ The owner: "When I click on one of the Zabs it should open Sub Zabs exactly like
 - The full `app-check` was not run (told not to).
 - While dragging a line, the panel does not auto-scroll when the finger reaches its edge (the Z7 auto-scroll works on the list box, which no longer scrolls on its own); a long list is reordered in steps.
 - This branch is built on the Z7 branch (PR #190); `main` was merged in once (v05.19) and must be merged again when #190 lands.
+
+**Totals (Architect), v05.23:** `main` (v05.22) merged in as `5f88e19`. Full `app-check` on `5f88e19` in two halves (one pass exceeds the Architect container's 2-hour limit): blocks 1–59 + `self-check` **2325/2332**, blocks 60–83 **4641/4661** → **6966/6993** over all 450 blocks; every miss is a speed limit that misses on `main` on the same container (57d, 58g, 70h, 71h, 76f, 78b, 80h, 82e). `--only 83` 129/129; `zab-z8.mjs --unpatched` 21 of 127 fail; `--only 76,77,81` 615/617 (76f timing); `ship-check` 15/15.
+
+## v05.24 — F1: small follow-ups (issue #195, PCF J10)
+
+*(stub — filled in at the end of the round)*
