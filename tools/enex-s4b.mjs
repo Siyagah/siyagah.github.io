@@ -254,6 +254,38 @@ try {
     noErr(d, t);
   });
 
+  /* ══ 80j — an emptied Evernote folder in Trash (v05.24, enxf1) ══ */
+  if (want('80j')) await each('80j', async (d, vp) => {
+    const t = `80j@${vp.name}`;
+    /* The case: the owner empties an Evernote folder and puts it in Trash WHILE an import is running; the next batch of the same
+       notebook must not create a second folder with the trashed one's id. (The id sets were read when the import began, so a folder
+       trashed after that was invisible to them.) 700 notes, the first notebook has 420: two batches reach it. */
+    const files = makeMany('many-j', 700);
+    await on(d, () => { window.__enxDelay = 700; });
+    await dlg(d, vp); await d.page.setInputFiles('#enx-files', files); await waitDone(d); await act(d, vp, '#enx-bring');
+    await d.page.waitForFunction(() => DB.articles.filter((a) => a.fromEvernote).length >= 250, null, { timeout: 30000 });
+    const f0 = await on(d, () => { const f = DB.folders.find((x) => x.enx && x.enx.kind === 'nb' && x.name === 'Many one'); return f ? f.id : null; });
+    check(!!f0 && /^enx-b-/.test(f0), `${t} the first batch made the notebook folder "Many one" (${f0})`);
+    /* empty it (its notes go to Trash) and put the empty folder in Trash, between two batches */
+    const tr = await on(d, (id) => {
+      DB.articles.filter((a) => a.fromEvernote && a.folderIds.includes(id)).forEach((a) => deleteNote(a.id));
+      trashFolder(id);
+      return { inFolders: DB.folders.some((x) => x.id === id), inTrash: DB.trash.some((x) => x.type === 'folder' && x.item && x.item.id === id), running: !!_enx.imp.run };
+    }, f0);
+    check(!tr.inFolders && tr.inTrash && tr.running, `${t} the emptied folder is in Trash while the import is still running`, JSON.stringify(tr));
+    await waitState(d, ['done']);
+    const r = await on(d, (id) => {
+      const a = DB.articles.find((x) => x.fromEvernote && x.fromEvernote.nb === 'Many one'), fol = a && DB.folders.find((x) => x.id === a.folderIds[0]);
+      const trashIds = new Set(); DB.trash.forEach((x) => { if (x.type === 'folder') { if (x.item) trashIds.add(x.item.id); ((x.subtree && x.subtree.folders) || []).forEach((f) => trashIds.add(f.id)); } });
+      const ids = DB.folders.map((f) => f.id);
+      return { came: !!a, folder: fol ? fol.id : null, name: fol ? fol.name : null, clash: ids.filter((i) => trashIds.has(i)), dupIds: new Set(ids).size !== ids.length, stillTrashed: DB.trash.some((x) => x.type === 'folder' && x.item && x.item.id === id), oldGone: !DB.folders.some((f) => f.id === id) };
+    }, f0);
+    check(r.came && r.name === 'Many one' && r.folder !== f0 && /^enx-b-.*-2$/.test(r.folder || ''), `${t} the next batch makes a new "Many one" with the next free id (${f0} → ${r.folder}), not the trashed id`, JSON.stringify(r));
+    check(r.clash.length === 0 && !r.dupIds, `${t} no folder id in the folder list equals one in Trash, and none is doubled`, JSON.stringify(r.clash));
+    check(r.stillTrashed && r.oldGone, `${t} the trashed folder is still in Trash, untouched (nothing lost)`);
+    noErr(d, t);
+  });
+
   /* ══ 80d — the cap ══ */
   if (want('80d')) await each('80d', async (d, vp) => {
     const t = `80d@${vp.name}`;

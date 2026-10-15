@@ -12174,6 +12174,22 @@ await r.block('83-zab-subzabs', async () => {
   r.check(out.status === 0, 'the Z8 sub-pockets check exits cleanly', `exit ${out.status}`);
 });
 
+/* 84 — v05.24, F1: small follow-ups. tools/f1.mjs runs 84a–84d: the empty Favourites text names the menu item as the menu shows it,
+   the Evernote menu's hover text says what it does now, the phone's ✕ row while editing is slimmer (button still >= 44 px; tablet and
+   laptop unchanged), and the count and "▸" sit at the right end of every line of the pockets inside a pocket. Each printed ok/FAIL line
+   becomes one check. (enxf1 is in block 80; the host factor and 52d are in the harness.) */
+await r.block('84-f1-followups', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./f1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1200000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 40, 'the F1 follow-ups check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'F1: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the F1 follow-ups check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
