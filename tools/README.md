@@ -65,6 +65,24 @@ to get just one.
 and a small fake suite run through the real `report()`/`block()`/`run()` —
 with no browser, because it is testing the harness, not the app.
 
+## Speed limits and the host factor (v05.24, hs520)
+
+A millisecond limit was set on the GitHub runner. On a slower computer (the Architect's cloud one is 2–3× slower) the same check misses
+with nothing wrong in the app, and the miss is the same on `main`. `tools/harness.mjs` has **one** calibration: `hostFactor()` times a
+short fixed CPU workload once per process (median of 5, after a warm-up) and divides it by `HOST_REF_MS` (23 ms, measured on the runner:
+21.3–22.3), clamped to **[1, 4]**, so it is 1.0 on the runner and a limit is never tighter than the runner's. `hostLimit(ms)` gives
+`{ms, raw, factor, text}`. The speed checks 57d, 58g, 70h, 71h, 76f, 78b, 80h and 82e multiply their limit by it and print both the raw
+limit and the factor in their line (`≤ 150 ms × host 2.4`). **A new speed check does the same**; a fixed ms limit in a check is a defect.
+Not scaled: counts, sizes, heap limits, and "before vs after" comparisons. 78b's open-note limit is back to the issue's 150 ms (it was 225
+for the slower machine, which the factor now does).
+
+**52d / 52d2 (z6af3).** The kill trials race the script, not the app, in two places, both fixed by waiting on a signal: (1) 52d2 killed
+the browser the moment the `LJ_HOLD` log line arrived, which could land before the trial's own answer (the sig of what it had saved) was read,
+so a checkpoint trial had nothing to compare with; the log line now only marks "held" and the kill waits until that answer is in (the
+transaction is held for 2 s). (2) Both waited a fixed 300 ms after the kill and closed the old context without waiting, so the next launch on the
+same profile could start while the old browser was still dying; `killAndWait()` now kills until `pgrep` finds no process of the profile, then
+awaits the old context's close.
+
 ## What each one actually proves
 
 **`ship-check.mjs`** — the things that make an update fail to *reach a device*,

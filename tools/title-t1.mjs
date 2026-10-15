@@ -82,6 +82,7 @@ const geo = (d) => on(d, () => {
     clamp: tbt && getComputedStyle(tbt).webkitLineClamp, tbtLH: tbt && parseFloat(getComputedStyle(tbt).lineHeight),
     btnsInBar: tb ? tb.querySelectorAll('button').length : -1,
     stopInBar: tb ? !!tb.querySelector('.p3c-stop') : false, flashInBar: tb ? !!tb.querySelector('#save-flash') : false,
+    stopHit: (() => { if (!stop) return null; const b = stop.getBoundingClientRect(), cx = (b.left + b.right) / 2, at = (y) => { const e = document.elementFromPoint(cx, y); return !!(e && e.closest('.p3c-stop')); }; return { top: at(b.top + 1), bottom: at(b.bottom - 1), h: Math.round(b.height) }; })(),
     stops: document.querySelectorAll('#p3c .p3c-stop').length, flashes: document.querySelectorAll('#save-flash').length,
     pane: r(document.getElementById('p3c')), vw: innerWidth, docSW: document.documentElement.scrollWidth,
   };
@@ -96,7 +97,10 @@ try {
       const g = await geo(d); const t = `75a@${w}`;
       check(g.tag === 'TEXTAREA', `${t} the title is a <textarea> (an input cannot wrap)`, String(g.tag));
       check(g.btnsInBar === 0 && !g.stopInBar && !g.flashInBar, `${t} no button and no Saved flash in the title bar (${g.btnsInBar} buttons)`, JSON.stringify({ n: g.btnsInBar, stop: g.stopInBar, flash: g.flashInBar }));
-      check(g.stops === 1 && g.flashes === 1 && !!g.row && !!g.stop && g.stop.t >= g.row.t - 1 && g.stop.b <= g.row.b + 1, `${t} ✕ and the Saved flash exist once, each on the row of buttons`, JSON.stringify({ stops: g.stops, flashes: g.flashes, stop: g.stop, row: g.row }));
+      check(g.stops === 1 && g.flashes === 1 && !!g.row && !!g.stop && g.stop.t >= g.row.t - 1 && g.stop.b <= g.row.b + 9, `${t} ✕ and the Saved flash exist once, each on the row of buttons`, JSON.stringify({ stops: g.stops, flashes: g.flashes, stop: g.stop, row: g.row }));
+      /* v05.24 (t1f), updated in place by the Architect: the row is 36 px and the ✕ keeps a 44 px target whose extra 8 px hang below it
+         (hence +9 below). Measured in review: a 4 px spill above is clipped by the pane and one below lost the tap to the title bar, so the target was really 37 px. */
+      check(!!g.stopHit && g.stopHit.h >= 44 && g.stopHit.top && g.stopHit.bottom, `${t} the whole 44 px ✕ takes a tap, its top and bottom edges included`, JSON.stringify(g.stopHit));
       check(!!g.row && !!g.tb && g.row.b <= g.tb.t + 1, `${t} the row of buttons sits above the title`, JSON.stringify({ row: g.row && g.row.b, title: g.tb && g.tb.t }));
       check(!!g.ti && !!g.pane && g.ti.w >= g.pane.w - 40 && g.ti.l >= g.pane.l && g.ti.r <= g.pane.r, `${t} the title is the full pane width (${g.ti && Math.round(g.ti.w)} of ${g.pane && Math.round(g.pane.w)})`, JSON.stringify({ ti: g.ti, pane: g.pane }));
       check(g.tiSH <= g.tiCH + 1 && g.tiSW <= g.tiCW + 1, `${t} the title's text is fully visible (scroll ${g.tiSW}x${g.tiSH}, box ${g.tiCW}x${g.tiCH})`, JSON.stringify({ sh: g.tiSH, ch: g.tiCH }));

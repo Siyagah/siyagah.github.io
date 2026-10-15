@@ -15,7 +15,7 @@
    57e  every tag stays reachable: the cap, the "+N more" line, and typing finds a tag past the first 100
 
    `--only=57a,57c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 57). */
-import { openApp, seedDB } from './harness.mjs';
+import { openApp, seedDB, hostLimit } from './harness.mjs';
 
 const argv = process.argv.slice(2);
 const onlyArg = argv.find((a) => a.startsWith('--only='));
@@ -446,7 +446,9 @@ async function timeIt(page, src, n = 15, pre = '', post = '') {   /* v05.01: 15 
 }
 
 async function speed() {
-  const T = { open: 150, key: 60, attach: 150, treeClosed: 30 };
+  /* the runner's limits; hostLimit() scales them to this computer (v05.24, hs520); TX prints raw × factor */
+  const T0 = { open: 150, key: 60, attach: 150, treeClosed: 30 };
+  const T = {}, TX = {}; for (const k in T0) { const h = hostLimit(T0[k]); T[k] = h.ms; TX[k] = h.text; }
   for (const vp of [{ name: 'phone', w: 390, h: 844, throttle: 4, touch: true }, { name: 'laptop', w: 1440, h: 900, throttle: 1, touch: false }]) {
     const A = await openApp({ viewport: { width: vp.w, height: vp.h }, db: seedDB(), hasTouch: vp.touch });
     const p = A.page;
@@ -474,10 +476,10 @@ async function speed() {
       const L = (s) => `57d ${vp.name} (${vp.throttle > 1 ? 'CPU x' + vp.throttle + ', ' : ''}3,000 tags / 9,000 notes): ${s}`;
       check(info.notes === 9000 && info.tags >= 3000, L('seed is 9,000 notes and ≥ 3,000 tags'), JSON.stringify(info));
       check(r.addTagModal_rows > 0 && r.addTagModal_rows <= 100, L(`the Add tag modal draws ≤ 100 rows (drew ${r.addTagModal_rows})`));
-      check(r.addTagModal_open <= T.open, L(`Add tag modal opens in ≤ ${T.open} ms (${r.addTagModal_open} ms)`));
-      check(r.addTagModal_keystroke <= T.key, L(`each keystroke in the modal ≤ ${T.key} ms (${r.addTagModal_keystroke} ms)`));
-      check(r.imgAttachTag_open <= T.attach, L(`imgAttachTag opens in ≤ ${T.attach} ms (${r.imgAttachTag_open} ms)`));
-      check(r.renderTree_tagsClosed <= T.treeClosed, L(`renderTree() with Tags closed ≤ ${T.treeClosed} ms (${r.renderTree_tagsClosed} ms)`));
+      check(r.addTagModal_open <= T.open, L(`Add tag modal opens in ≤ ${TX.open} ms (${r.addTagModal_open} ms)`));
+      check(r.addTagModal_keystroke <= T.key, L(`each keystroke in the modal ≤ ${TX.key} ms (${r.addTagModal_keystroke} ms)`));
+      check(r.imgAttachTag_open <= T.attach, L(`imgAttachTag opens in ≤ ${TX.attach} ms (${r.imgAttachTag_open} ms)`));
+      check(r.renderTree_tagsClosed <= T.treeClosed, L(`renderTree() with Tags closed ≤ ${TX.treeClosed} ms (${r.renderTree_tagsClosed} ms)`));
       check(!r.errors.length, L('no page errors'), r.errors.join(' | '));
     } finally { await A.close(); }
   }

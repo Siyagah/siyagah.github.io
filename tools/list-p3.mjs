@@ -17,7 +17,7 @@
    82e  speed at --notes (default 9000,27000), phone x4 and laptop, median of 5
    82f  no new writes: drawing the list never calls persist / _save / scheduleAutoSave / pushToCloud / _stampThemeTouches, DB is untouched
    Each printed ok/FAIL line becomes one app-check check (block 82). */
-import { openApp, seedDB, playwright, serve } from './harness.mjs';
+import { openApp, seedDB, playwright, serve, hostLimit } from './harness.mjs';
 import { makeCloud, addDevice, on, quiet } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -340,9 +340,11 @@ async function chkE() {
     if (!longOk) console.log(`  note  ${L}: target not met — worst long task ${row.worst} ms (target ≤ 100 ms)`);
     if (!allOk) console.log(`  note  ${L}: target not met — whole list in ${row.all} ms (target ≤ 3,000 ms)`);
     /* guards: much better than the build before this round (first screenful up to 5,788 ms, long task up to 5,019 ms) */
-    check(row.first <= 500, `${L}: first screenful ${row.first} ms (guard ≤ 500 ms; target 200)`);
-    check(row.worst <= 800, `${L}: worst long task ${row.worst} ms (guard ≤ 800 ms; target 100)`);
-    check(row.all !== null && row.cards === row.want && row.all <= (row.want > 9000 ? 10000 : 3000), `${L}: the whole list is in the page in ${row.all} ms (${row.cards} of ${row.want}; guard ≤ ${row.want > 9000 ? 10 : 3} s; target 3 s)`);
+    /* v05.24 (hs520): each guard is the runner's limit × this computer's factor (≥ 1), both printed */
+    const G1 = hostLimit(500), G2 = hostLimit(800), G3 = hostLimit(row.want > 9000 ? 10000 : 3000);
+    check(row.first <= G1.ms, `${L}: first screenful ${row.first} ms (guard ≤ ${G1.raw} ms × host ${G1.factor}; target 200)`);
+    check(row.worst <= G2.ms, `${L}: worst long task ${row.worst} ms (guard ≤ ${G2.raw} ms × host ${G2.factor}; target 100)`);
+    check(row.all !== null && row.cards === row.want && row.all <= G3.ms, `${L}: the whole list is in the page in ${row.all} ms (${row.cards} of ${row.want}; guard ≤ ${G3.raw / 1000} s × host ${G3.factor}; target 3 s)`);
   }
 }
 

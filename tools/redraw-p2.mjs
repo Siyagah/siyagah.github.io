@@ -27,7 +27,7 @@
    `--only=78a,78c` runs just those. `RDP2_ROOT=<dir>` serves another build (the unpatched run: v05.18's index.html + sw.js);
    `RDP2_BREAK=1` serves a scratch copy of this build with ONE targeted path broken (the list does not rebuild the card of the
    note that changed) to show the oracle failing. Each printed ok/FAIL line becomes one app-check check (block 78). */
-import { playwright, serve, seedDB, ROOT } from './harness.mjs';
+import { playwright, serve, seedDB, ROOT, hostLimit } from './harness.mjs';
 import { mkdtempSync, writeFileSync, readFileSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -277,7 +277,10 @@ try {
        85 ms). Updated in place by the Architect (v05.19 review): the SAME commit (d69240f) measures 200 ms (laptop 39 ms) on the
        Architect's machine, about 2x slower, so 150 failed there on every run. 225 keeps a margin on the slower machine; a host-speed
        calibration for every timing check is a follow-up (PCF J10). */
-    const TARGET = { recvAway: 60, recvOpen: 225, undo: 120 };
+    /* v05.24 (hs520): recvOpen is back to the issue's 150 (the runner's limit); the host factor (tools/harness.mjs hostFactor)
+       now does what the 225 did for the Architect's slower machine. */
+    const HF = hostLimit(1).factor;
+    const TARGET = { recvAway: 60 * HF, recvOpen: 150 * HF, undo: 120 * HF };
     const cloud = makeCloud();
     const L = await dev(cloud, 'L', { w: 1440, h: 900, touch: false }, seedDB('2026-01-01T00:00:00.000Z'));
     await sleep(1500);
@@ -345,9 +348,9 @@ try {
       const m = { away: med(away.map((x) => x.ms)), open: med(open.map((x) => x.ms)), undo: med(und.map((x) => x.ms)) };
       results9[name] = m;
       check(away.every((x) => x.mode === 'targeted') && open.every((x) => x.mode === 'targeted') && und.every((x) => x.mode === 'targeted'), `78b ${name}: all fifteen draws were the targeted path`, JSON.stringify({ away: away.map((x) => x.mode), open: open.map((x) => x.mode), und: und.map((x) => x.mode) }));
-      check(m.away <= TARGET.recvAway / (4 / k), `78b ${name}: a received edit to a note that is not open redraws in ${Math.round(m.away * 10) / 10} ms, median of 5 (limit ${TARGET.recvAway / (4 / k)}) [${fmt(away)}]`);
-      check(m.open <= TARGET.recvOpen / (4 / k), `78b ${name}: a received edit to the OPEN note redraws in ${Math.round(m.open * 10) / 10} ms, median of 5 (limit ${TARGET.recvOpen / (4 / k)}) [${fmt(open)}]`);
-      check(m.undo <= TARGET.undo / (4 / k), `78b ${name}: one undo redraws in ${Math.round(m.undo * 10) / 10} ms, median of 5 (limit ${TARGET.undo / (4 / k)}) [${fmt(und)}]`);
+      check(m.away <= TARGET.recvAway / (4 / k), `78b ${name}: a received edit to a note that is not open redraws in ${Math.round(m.away * 10) / 10} ms, median of 5 (limit ${Math.round(TARGET.recvAway / (4 / k))} = ${60 / (4 / k)} × host ${HF}) [${fmt(away)}]`);
+      check(m.open <= TARGET.recvOpen / (4 / k), `78b ${name}: a received edit to the OPEN note redraws in ${Math.round(m.open * 10) / 10} ms, median of 5 (limit ${Math.round(TARGET.recvOpen / (4 / k))} = ${150 / (4 / k)} × host ${HF}) [${fmt(open)}]`);
+      check(m.undo <= TARGET.undo / (4 / k), `78b ${name}: one undo redraws in ${Math.round(m.undo * 10) / 10} ms, median of 5 (limit ${Math.round(TARGET.undo / (4 / k))} = ${120 / (4 / k)} × host ${HF}) [${fmt(und)}]`);
     }
     console.log('SPEED_JSON ' + JSON.stringify(results9));
     for (const d of [L, F1, F2]) { noErr(d, '78b ' + d.name); await d.ctx.close().catch(() => {}); }

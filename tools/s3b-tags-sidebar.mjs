@@ -16,7 +16,7 @@
    58h  layout (no overflow, nothing clipped) and box text / placeholder contrast on the five presets
 
    `--only=58a,58c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 58). */
-import { openApp, seedDB } from './harness.mjs';
+import { openApp, seedDB, hostLimit } from './harness.mjs';
 
 const argv = process.argv.slice(2);
 const onlyArg = argv.find((a) => a.startsWith('--only='));
@@ -281,7 +281,9 @@ async function timeIt(page, src, n = 15, pre = '', post = '') {   /* v05.01: 15 
   return Math.round(med(out));
 }
 async function speed() {
-  const T = { treePhone: 60, treeLaptop: 30, keyPhone: 50, colour: 60 };
+  /* the runner's limits; hostLimit() scales them to this computer (v05.24, hs520); TX prints raw × factor */
+  const T0 = { treePhone: 60, treeLaptop: 30, keyPhone: 50, colour: 60 };
+  const T = {}, TX = {}; for (const k in T0) { const h = hostLimit(T0[k]); T[k] = h.ms; TX[k] = h.text; }
   for (const vp of [{ name: 'phone', w: 390, h: 844, th: 4, touch: true }, { name: 'tablet', w: 820, h: 1180, th: 1, touch: true }, { name: 'laptop', w: 1440, h: 900, th: 1, touch: false }]) {
     const A = await openApp({ viewport: { width: vp.w, height: vp.h }, db: seedDB(), hasTouch: vp.touch });
     const p = A.page;
@@ -302,14 +304,14 @@ async function speed() {
       r.colour_open = await colour(true);
       console.log('P58g ' + vp.name + ' ' + JSON.stringify(r));
       const L = (s) => `58g ${vp.name}${vp.th > 1 ? ' (CPU x' + vp.th + ')' : ''}: ${s}`;
-      const tt = vp.name === 'phone' ? T.treePhone : T.treeLaptop;
+      const tt = vp.name === 'phone' ? T.treePhone : T.treeLaptop, ttx = vp.name === 'phone' ? TX.treePhone : TX.treeLaptop;
       check(info.notes === 9000 && info.tags >= 3000, L('seed is 9,000 notes and 3,000 tags'), JSON.stringify(info));
-      check(r.renderTree_open <= tt, L(`renderTree() with Tags open ≤ ${tt} ms (${r.renderTree_open} ms; closed ${r.renderTree_closed} ms)`));
-      if (vp.name === 'phone') check(r.keystroke <= T.keyPhone && r.keystroke_wide <= T.keyPhone, L(`a keystroke in the box ≤ ${T.keyPhone} ms (${r.keystroke} ms; wide query ${r.keystroke_wide} ms)`));
+      check(r.renderTree_open <= tt, L(`renderTree() with Tags open ≤ ${ttx} ms (${r.renderTree_open} ms; closed ${r.renderTree_closed} ms)`));
+      if (vp.name === 'phone') check(r.keystroke <= T.keyPhone && r.keystroke_wide <= T.keyPhone, L(`a keystroke in the box ≤ ${TX.keyPhone} ms (${r.keystroke} ms; wide query ${r.keystroke_wide} ms)`));
       else check(true, L(`a keystroke in the box: ${r.keystroke} ms (wide query ${r.keystroke_wide} ms)`));
-      if (vp.name !== 'tablet') check(r.render_open - r.render_closed <= T.colour, L(`render() open costs ≤ ${T.colour} ms more than closed (open ${r.render_open} ms, closed ${r.render_closed} ms)`));
+      if (vp.name !== 'tablet') check(r.render_open - r.render_closed <= T.colour, L(`render() open costs ≤ ${TX.colour} ms more than closed (open ${r.render_open} ms, closed ${r.render_closed} ms)`));
       else check(true, L(`render() open ${r.render_open} ms, closed ${r.render_closed} ms`));
-      if (vp.name !== 'tablet') check(r.colour_open - r.colour_closed <= T.colour, L(`a tag colour change with Tags open costs ≤ ${T.colour} ms more than closed (open ${r.colour_open} ms, closed ${r.colour_closed} ms)`));
+      if (vp.name !== 'tablet') check(r.colour_open - r.colour_closed <= T.colour, L(`a tag colour change with Tags open costs ≤ ${TX.colour} ms more than closed (open ${r.colour_open} ms, closed ${r.colour_closed} ms)`));
       else check(true, L(`tag colour change: open ${r.colour_open} ms, closed ${r.colour_closed} ms`));
       check(!A.errors.length, L('no page errors'), A.errors.slice(0, 5).join(' | '));
     } finally { await A.close(); }

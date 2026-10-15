@@ -20,7 +20,7 @@
    80i  contrast of the new text on the five presets
 
    `--only=80a,80c` runs just those; `--notes=N` sets the size of the big notebook in 80h. Each printed ok/FAIL line becomes one app-check check. */
-import { playwright, serve, seedDB } from './harness.mjs';
+import { playwright, serve, seedDB, hostLimit } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, waitSeeded, check, results, boot } from './s1-fake.mjs';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -254,6 +254,38 @@ try {
     noErr(d, t);
   });
 
+  /* ══ 80j — an emptied Evernote folder in Trash (v05.24, enxf1) ══ */
+  if (want('80j')) await each('80j', async (d, vp) => {
+    const t = `80j@${vp.name}`;
+    /* The case: the owner empties an Evernote folder and puts it in Trash WHILE an import is running; the next batch of the same
+       notebook must not create a second folder with the trashed one's id. (The id sets were read when the import began, so a folder
+       trashed after that was invisible to them.) 700 notes, the first notebook has 420: two batches reach it. */
+    const files = makeMany('many-j', 700);
+    await on(d, () => { window.__enxDelay = 700; });
+    await dlg(d, vp); await d.page.setInputFiles('#enx-files', files); await waitDone(d); await act(d, vp, '#enx-bring');
+    await d.page.waitForFunction(() => DB.articles.filter((a) => a.fromEvernote).length >= 250, null, { timeout: 30000 });
+    const f0 = await on(d, () => { const f = DB.folders.find((x) => x.enx && x.enx.kind === 'nb' && x.name === 'Many one'); return f ? f.id : null; });
+    check(!!f0 && /^enx-b-/.test(f0), `${t} the first batch made the notebook folder "Many one" (${f0})`);
+    /* empty it (its notes go to Trash) and put the empty folder in Trash, between two batches */
+    const tr = await on(d, (id) => {
+      DB.articles.filter((a) => a.fromEvernote && a.folderIds.includes(id)).forEach((a) => deleteNote(a.id));
+      trashFolder(id);
+      return { inFolders: DB.folders.some((x) => x.id === id), inTrash: DB.trash.some((x) => x.type === 'folder' && x.item && x.item.id === id), running: !!_enx.imp.run };
+    }, f0);
+    check(!tr.inFolders && tr.inTrash && tr.running, `${t} the emptied folder is in Trash while the import is still running`, JSON.stringify(tr));
+    await waitState(d, ['done']);
+    const r = await on(d, (id) => {
+      const a = DB.articles.find((x) => x.fromEvernote && x.fromEvernote.nb === 'Many one'), fol = a && DB.folders.find((x) => x.id === a.folderIds[0]);
+      const trashIds = new Set(); DB.trash.forEach((x) => { if (x.type === 'folder') { if (x.item) trashIds.add(x.item.id); ((x.subtree && x.subtree.folders) || []).forEach((f) => trashIds.add(f.id)); } });
+      const ids = DB.folders.map((f) => f.id);
+      return { came: !!a, folder: fol ? fol.id : null, name: fol ? fol.name : null, clash: ids.filter((i) => trashIds.has(i)), dupIds: new Set(ids).size !== ids.length, stillTrashed: DB.trash.some((x) => x.type === 'folder' && x.item && x.item.id === id), oldGone: !DB.folders.some((f) => f.id === id) };
+    }, f0);
+    check(r.came && r.name === 'Many one' && r.folder !== f0 && /^enx-b-.*-2$/.test(r.folder || ''), `${t} the next batch makes a new "Many one" with the next free id (${f0} → ${r.folder}), not the trashed id`, JSON.stringify(r));
+    check(r.clash.length === 0 && !r.dupIds, `${t} no folder id in the folder list equals one in Trash, and none is doubled`, JSON.stringify(r.clash));
+    check(r.stillTrashed && r.oldGone, `${t} the trashed folder is still in Trash, untouched (nothing lost)`);
+    noErr(d, t);
+  });
+
   /* ══ 80d — the cap ══ */
   if (want('80d')) await each('80d', async (d, vp) => {
     const t = `80d@${vp.name}`;
@@ -436,7 +468,8 @@ try {
         const worst = Math.max(0, ...m.lt), bworst = Math.max(0, ...m.bt), grow = (peak - base) / 1048576;
         console.log(`# 80h 2,000-note import at 390 CPU x4: ${secs.toFixed(1)} s, ${m.bt.length} batches, per batch (persist) median ${m.bt.slice().sort((a, b) => a - b)[m.bt.length >> 1]} ms worst ${bworst} ms, worst long task ${worst} ms (${m.lt.length} over 50 ms), heap +${grow.toFixed(1)} MB`);
         check(m.n === 2000 && m.tot === 9000 + 4 + 2000, `${t} 2,000 notes came in to a notebook of ${9000 + 4} (now ${m.tot})`, JSON.stringify({ n: m.n, tot: m.tot }));
-        check(worst <= 200, `${t} no long task over 200 ms (worst ${worst} ms; ${m.lt.length} over 50 ms; time per batch: median ${m.bt.slice().sort((a, b) => a - b)[m.bt.length >> 1]} ms, worst ${bworst} ms; ${secs.toFixed(1)} s in all)`, m.lt.join());
+        const HL = hostLimit(200);   /* v05.24 (hs520): the runner's limit × this computer's factor (≥ 1) */
+        check(worst <= HL.ms, `${t} no long task over ${HL.text} ms (worst ${worst} ms; ${m.lt.length} over 50 ms; time per batch: median ${m.bt.slice().sort((a, b) => a - b)[m.bt.length >> 1]} ms, worst ${bworst} ms; ${secs.toFixed(1)} s in all)`, m.lt.join());
         check(grow <= 150, `${t} the JS heap grows by at most 150 MB (start ${(base / 1048576).toFixed(1)}, peak ${(peak / 1048576).toFixed(1)}, +${grow.toFixed(1)} MB)`);
         check(m.undo <= 2, `${t} the import made no undo frames (history length ${m.undo})`);
         noErr(d, t);
@@ -464,8 +497,9 @@ try {
           const rend = await page.evaluate(() => { const r = []; for (let i = 0; i < 3; i++) { const a = performance.now(); render(); r.push(Math.round(performance.now() - a)); } return r; });
           const n = await page.evaluate(() => DB.articles.length);
           console.log(`# 80h ${label} ${vp.name}${vp.touch ? ' CPU x4' : ''}: ${n} notes, boot ${boot} ms, render() ${rend.join('/')} ms`);
-          check(n >= BIGN - 10 && boot < (vp.touch ? 120000 : 60000), `${t}: boots in ${boot} ms (limit ${vp.touch ? 120 : 60} s)`);
-          check(Math.min(...rend) < (vp.touch ? 8000 : 3000), `${t}: render() takes ${rend.join('/')} ms (limit ${vp.touch ? 8000 : 3000} ms)`);
+          const HB = hostLimit(vp.touch ? 120000 : 60000), HR = hostLimit(vp.touch ? 8000 : 3000);   /* v05.24 (hs520) */
+          check(n >= BIGN - 10 && boot < HB.ms, `${t}: boots in ${boot} ms (limit ${HB.raw / 1000} s × host ${HB.factor})`);
+          check(Math.min(...rend) < HR.ms, `${t}: render() takes ${rend.join('/')} ms (limit ${HR.raw} ms × host ${HR.factor})`);
           await ctx.close();
         } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
       }
