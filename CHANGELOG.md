@@ -10126,6 +10126,7 @@ Trash step of 80j).
 ### Architect's review
 
 - **The empty Smart View texts said "article"**, the code's word, where the owner's word is "note" (CLAUDE.md, *Terminology*): Favourites, Pinned, New and Recent now say "note". Same line as fav14; no check quoted the old words.
+- **t1f's ✕ was really a 37 px target, not 44.** Measured with `elementFromPoint`: the 4 px it spilled above the row were clipped by the note pane (a scroll container that starts at the row), and the 4 px below lost the tap to the title bar. Now its top is flush with the 36 px row, the 8 px it needs hang below over the title bar's top padding, and `position:relative;z-index:1` makes them take the tap. 75a updated in place with the reason (the ✕ may reach 9 px below the row) and a new check that taps the ✕'s top and bottom edges; it fails on the builder's commit (top edge) and passes now. Screenshot at 390 with a two-line title: the title is not covered.
 
 ### Not done
 
