@@ -10228,3 +10228,11 @@ The `_folderNoteRecoveryV1` key is a per-device boot mark and is ignored in the 
 - The per-batch saves while the import runs (93–128 ms each) are unchanged; the issue calls them acceptable.
 - 820 was not measured separately (same code path).
 - The full `app-check` was not run (told not to).
+
+### Architect's review
+
+**Totals (Architect), v05.26:** `ship-check` 15/15; `--only 86` 47/47 (worst task 141 ms `recs`, 154 ms `both`, 390 ×4); sync blocks `--only 32,51,52,53,54,59,80` 730/730; `push-p4 --unpatched` 10 of 41 fail. Full `app-check` on `ddf626f` (two halves): blocks 1–59 + `self-check` **2332/2332**, blocks 60–86 **4890/4901** → **7222/7233** over all 453 blocks; every miss a speed limit under the full run's load (78b, 80h, 82e, 86; 86 passes alone on the same commit).
+
+## v05.27 — S4c: the Evernote pictures, audio and files come in, with a cloud space guard (issue #201, PCF J01)
+
+_(work in progress — entry completed at the end of the round)_
