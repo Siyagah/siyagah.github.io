@@ -5,7 +5,7 @@
    `node tools/push-p4.mjs [--only=86a,86c] [--notes=9000] [--unpatched]` runs the checks; each printed ok/FAIL line is one app-check check.
    `--unpatched` serves the build before this round (the P4 version-bump commit's parent), where the new checks must fail. */
 import { playwright, serve, seedDB, hostLimit } from './harness.mjs';
-import { makeCloud, addDevice, on, sleep, quiet, waitSeeded, check, results, liveDB } from './s1-fake.mjs';
+import { makeCloud, addDevice, on, sleep, quiet, waitSeeded, check, results, liveDB, probeInstall, probeRead, assembleEquals, reopen } from './s1-fake.mjs';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -121,5 +121,188 @@ if (PROFILE) {
   process.exit(0);
 }
 
-/* the checks follow in block 86 */
-export { importInto, newDevice, makeExport, VP, VPD, dev, act, actText, dlg, pick, waitState, want, check, results, liveDB, hostLimit, seed, BIGN, IMPN, srv, browser };
+/* ═══════════════ the checks (block 86) ═══════════════ */
+const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
+const HL = hostLimit(200);
+const SYN_BIG = 300, SYN_IMP = 600;   /* the sync checks need many slices, not many notes: a small notebook, the slices held open by a test hook */
+const polled = async (fn, ms = 120000, every = 150) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await sleep(every); } return false; };
+const holdSlices = (d, hold) => on(d, (h) => { window.__s1SliceHold = h; _S1_SLICE_MS = 1; }, hold);   /* test-only: a 1 ms slice and `hold` ms of waiting at every yield */
+const impCount = (d) => on(d, () => DB.articles.filter((a) => a.fromEvernote).length);
+const enxFolders = (d) => on(d, () => DB.folders.filter((f) => f.enx).map((f) => f.id).sort().join(','));
+const startImport = async (d, vp, files) => { await pick(d, vp, files); await act(d, vp, '#enx-bring'); };
+const done = (d) => waitState(d, ['done', 'capped']);
+const readBlob = (cloud) => {   /* the main doc, then its chunks, as a reader assembles them */
+  const md = cloud.store.get('notebooks/nb-s1'); if (!md) return null;
+  let b64 = ''; for (let i = 0; i < md.n; i++) { const c = cloud.store.get(`notebooks/nb-s1/chunks/${md.g ? md.g + '_' + i : i}`); if (!c) return { missing: i }; b64 += c.p; }
+  try { return { md, db: JSON.parse(Buffer.from(b64, 'base64').toString('utf8')) }; } catch (e) { return { bad: String(e) }; }
+};
+
+/* 86a/86b/86c — the profile, and the pause: a 2,000-note import into 9,000 notes at 390 × CPU 4, both plans; then 1440 */
+async function pauseCase(plan, vp, label, throttle) {
+  const t = `86@${label} ${plan}`;
+  let d = null;
+  try {
+    d = await newDevice('Q-' + plan + label, vp, throttle ? { throttle } : {});
+    await on(d, probeInstall);
+    const files = makeExport('pause-' + plan + label, IMPN);
+    await on(d, (p) => { window._s1OlderActive = () => p === 'both'; }, plan);
+    await pick(d, vp, files);
+    const from = await on(d, () => performance.now());
+    await act(d, vp, '#enx-bring'); await waitState(d, ['done', 'capped']);
+    await quiet(d.cloudObj, d, 300000);
+    const lts = await on(d, probeRead, from), n = await impCount(d);
+    const worst = Math.max(0, ...lts.map((x) => x.app)), top = lts.slice().sort((a, b) => b.app - a.app).slice(0, 5);
+    console.log(`# ${t}: long tasks [start ms, total, fake cloud, app] worst 5: ${top.map((x) => `[${x.start}, ${x.dur}, ${x.fake}, ${x.app}]`).join(' ')}; clicked at ${Math.round(from)}; ${lts.length} over 50 ms`);
+    check(n === IMPN, `${t} ${IMPN} notes came in (${n})`);
+    check(worst <= HL.ms, `${t} no long task over ${HL.text} ms from the click until the push returned (worst ${worst} ms of the app's own work; ${lts.length} over 50 ms)`, JSON.stringify(top));
+    const w = await on(d, () => ({ s: window._s1Stat && window._s1Stat.lastWritten, st: window._s1SliceStat }));
+    check(w.st && w.st.builds >= 1, `${t} the snapshot was built by the sliced builder (${JSON.stringify(w.st)})`);
+    noErr(d, t);
+  } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
+  finally { if (d) await d.ctx.close(); }
+}
+
+/* 86d–86g — sync unchanged, edit while slicing, interrupted, the blob */
+async function syncCases() {
+  const vp = VP;
+  /* 86d — import on A, B receives every note and folder */
+  if (want('86d')) {
+    const t = '86d';
+    let A = null, B = null;
+    try {
+      const cl = makeCloud(); A = await dev(cl, 'A', vp, {}, seed(SYN_BIG)); A.cloudObj = cl; A.page.setDefaultTimeout(60000);
+      await waitSeeded(cl, A, 120000);
+      B = await dev(cl, 'B', vp, {}, seed(SYN_BIG)); B.page.setDefaultTimeout(60000);
+      const files = makeExport('sync-d', SYN_IMP);
+      await startImport(A, vp, files); await done(A); await quiet(cl, A, 120000);
+      const okB = await polled(async () => (await impCount(B)) === SYN_IMP, 120000);
+      check(await impCount(A) === SYN_IMP, `${t} A imported ${SYN_IMP}`);
+      check(okB, `${t} B received all ${SYN_IMP} notes (${await impCount(B)})`);
+      check(await enxFolders(A) === await enxFolders(B) && (await enxFolders(A)).length > 0, `${t} B received the folders (${(await enxFolders(A)).split(',').length})`);
+      noErr(A, t + ' A'); noErr(B, t + ' B');
+    } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
+    finally { if (A) await A.ctx.close(); if (B) await B.ctx.close(); }
+  }
+  /* 86e — an edit made WHILE the snapshot is being built reaches B, and nothing is mixed */
+  if (want('86e')) {
+    const t = '86e';
+    let A = null, B = null;
+    try {
+      const cl = makeCloud(); A = await dev(cl, 'A', vp, {}, seed(SYN_BIG)); A.cloudObj = cl; A.page.setDefaultTimeout(60000);
+      await waitSeeded(cl, A, 120000);
+      B = await dev(cl, 'B', vp, {}, seed(SYN_BIG)); B.page.setDefaultTimeout(60000);
+      await holdSlices(A, 120);
+      await on(A, () => { window._s1OlderActive = () => false; });
+      const files = makeExport('sync-e', SYN_IMP);
+      await startImport(A, vp, files); await done(A);
+      const sliced = await polled(() => on(A, () => !!window.__s1Slicing), 60000, 20);
+      check(sliced, `${t} the snapshot was being built in slices when the edit was made`);
+      const before = await on(A, () => (window._s1SliceStat || {}).restarts || 0);
+      await on(A, () => { const a = DB.articles.find((x) => x.id === 'bn5'); a.title = 'Edited while slicing'; a.content = '<p>edited while slicing</p>'; persist(); const n = DB.articles.find((x) => x.id === 'bn6'); n.title = 'Edited twice'; persist(); });
+      await on(A, () => { window.__s1SliceHold = 0; });
+      await quiet(cl, A, 120000);
+      const okB = await polled(async () => (await impCount(B)) === SYN_IMP && (await on(B, () => { const a = DB.articles.find((x) => x.id === 'bn5'); return !!a && a.title === 'Edited while slicing'; })), 120000);
+      const after = await on(A, () => (window._s1SliceStat || {}).restarts || 0);
+      check(after > before, `${t} the half-built snapshot was thrown away and started again (restarts ${before} → ${after})`);
+      const pick5 = (d) => on(d, () => { const g = (id) => { const a = DB.articles.find((x) => x.id === id); return a ? [a.title, a.content, a.updatedAt] : null; }; return JSON.stringify([g('bn5'), g('bn6')]); });
+      check(okB, `${t} B received the import and the edit`);
+      check(await pick5(A) === await pick5(B), `${t} the records B holds equal A's latest`, (await pick5(A)) + ' vs ' + (await pick5(B)));
+      const cloudEq = await assembleEquals(cl, A);
+      check(cloudEq.ok, `${t} the cloud's records assemble to exactly A's notebook`, cloudEq.why);
+      noErr(A, t + ' A'); noErr(B, t + ' B');
+    } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
+    finally { if (A) await A.ctx.close(); if (B) await B.ctx.close(); }
+  }
+  /* 86f — the page closed in the middle of a build: nothing half-written, and the next session pushes the rest */
+  if (want('86f')) {
+    const t = '86f';
+    let A = null, B = null;
+    try {
+      const cl = makeCloud(); A = await dev(cl, 'A', vp, {}, seed(SYN_BIG)); A.cloudObj = cl; A.page.setDefaultTimeout(60000);
+      await waitSeeded(cl, A, 120000);
+      B = await dev(cl, 'B', vp, {}, seed(SYN_BIG)); B.page.setDefaultTimeout(60000);
+      await holdSlices(A, 150);
+      await on(A, () => { window._s1OlderActive = () => false; });
+      const files = makeExport('sync-f', SYN_IMP);
+      await startImport(A, vp, files); await done(A);
+      const sliced = await polled(() => on(A, () => !!window.__s1Slicing), 60000, 20);
+      const cloudBefore = cl.log.filter((o) => o.t === 'set' && o.p.includes('/recs/articles~enx-n-')).length;
+      check(sliced && cloudBefore === 0, `${t} the page was closed mid-build with none of the new notes written yet (slicing ${sliced}; ${cloudBefore} written)`);
+      await reopen(A);   /* the page is gone; the device copy (the journal) stays */
+      check(await impCount(A) === SYN_IMP, `${t} the next session still holds all ${SYN_IMP} notes`);
+      await quiet(cl, A, 180000);
+      const okB = await polled(async () => (await impCount(B)) === SYN_IMP, 120000);
+      check(okB, `${t} the next session pushed the rest: B received all ${SYN_IMP} (${await impCount(B)})`);
+      const cloudEq = await assembleEquals(cl, A);
+      check(cloudEq.ok, `${t} the cloud's records assemble to exactly A's notebook`, cloudEq.why);
+      noErr(A, t + ' A');
+    } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
+    finally { if (A) await A.ctx.close(); if (B) await B.ctx.close(); }
+  }
+  /* 86g — the `both` plan: one blob that parses and holds every note, written with the recs */
+  if (want('86g')) {
+    const t = '86g';
+    let A = null;
+    try {
+      const cl = makeCloud(); A = await dev(cl, 'A', vp, {}, seed(SYN_BIG)); A.cloudObj = cl; A.page.setDefaultTimeout(60000);
+      await waitSeeded(cl, A, 120000);
+      await on(A, () => { window._s1OlderActive = () => true; });
+      const files = makeExport('sync-g', SYN_IMP);
+      const from = cl.log.length;
+      await startImport(A, vp, files); await done(A); await quiet(cl, A, 180000);
+      const bl = readBlob(cl);
+      const live = await liveDB(A);
+      check(!!bl && !!bl.db, `${t} the blob parses (${bl && (bl.bad || (bl.missing != null ? 'chunk ' + bl.missing + ' missing' : 'ok'))})`);
+      const ids = bl && bl.db ? new Set(bl.db.articles.map((a) => a.id)) : new Set();
+      check(live.articles.every((a) => ids.has(a.id)) && ids.size === live.articles.length, `${t} the blob holds every note (${ids.size} of ${live.articles.length})`);
+      check(bl && bl.md && bl.md.s1c, `${t} the blob is marked (the recs were written first)`);
+      const recsW = cl.log.slice(from).filter((o) => o.t === 'set' && o.p.includes('/recs/articles~enx-n-')).length;
+      check(recsW >= SYN_IMP, `${t} the recs were written too (${recsW})`);
+      const blobsW = new Set(cl.log.slice(from).filter((o) => o.t === 'set' && o.p === 'notebooks/nb-s1').map((o) => o.ms)).size;
+      check(blobsW >= 1, `${t} the main doc was written (${blobsW} times)`);
+      noErr(A, t);
+    } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
+    finally { if (A) await A.ctx.close(); }
+  }
+}
+
+/* 86h — the sliced builders give exactly what the whole ones give */
+async function sameBytes() {
+  const t = '86h';
+  let A = null;
+  try {
+    const cl = makeCloud(); A = await dev(cl, 'A', VP, {}, seed(1500)); A.cloudObj = cl;
+    const r = await on(A, async () => {
+      const out = {};
+      const strs = ['', 'abc', 'é☕𝒳ন', 'x'.repeat(100000) + 'é' + 'y'.repeat(70001), JSON.stringify(DB), JSON.stringify(DB).repeat(3)];
+      out.b64 = (await Promise.all(strs.map(async (s) => (await _b64encAsync(s)) === _b64enc(s)))).every(Boolean);
+      out.sig = (await Promise.all(strs.map(async (s) => (await _syncSigAsync(s)) === _syncSig(s)))).every(Boolean);
+      const cmp = (a, b) => a.size === b.size && [...a].every(([k, v]) => b.has(k) && b.get(k).sig === v.sig && b.get(k).json === v.json) && a.partial === b.partial && a.seq === b.seq;
+      _S1_SLICE_MS = 0;   /* a slice per record */
+      _s1Dirty.full = true; const whole = _s1Snap(); const sl = await _s1TakeSnapAsync();
+      out.full = cmp(whole, sl); out.fullN = sl.size;
+      const ids = DB.articles.slice(0, 40).map((a) => _s1DirtyKey('articles', a.id));
+      ids.forEach((k) => _s1Dirty.keys.add(k)); const wholeD = _s1SnapDirty(); const slD = await _s1TakeSnapAsync();
+      out.dirty = cmp(wholeD, slD) && !_s1Dirty.keys.size && !_s1Dirty.full; out.dirtyN = slD.size;
+      return out;
+    });
+    check(r.b64, `${t} _b64encAsync gives the same text as _b64enc (ASCII, accents, an emoji, Bengali, 100 KB+, the whole notebook)`);
+    check(r.sig, `${t} _syncSigAsync gives the same signature as _syncSig`);
+    check(r.full && r.fullN > 1500, `${t} a sliced full snapshot equals the whole one (${r.fullN} records)`);
+    check(r.dirty, `${t} a sliced dirty-set snapshot equals the whole one, and clears the dirty set (${r.dirtyN} records)`);
+    noErr(A, t);
+  } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
+  finally { if (A) await A.ctx.close(); }
+}
+
+try {
+  if (want('86a')) { for (const plan of ['recs', 'both']) await profile(plan); check(true, '86a the profile table was printed for both plans (see the # lines; not asserted)'); }
+  if (want('86b')) { await pauseCase('recs', VP, '390 CPU x4', 4); await pauseCase('both', VP, '390 CPU x4', 4); }
+  if (want('86c')) { await pauseCase('recs', VPD, '1440', 0); await pauseCase('both', VPD, '1440', 0); }
+  if (['86d', '86e', '86f', '86g'].some(want)) await syncCases();
+  if (want('86h')) await sameBytes();
+} catch (e) { check(false, `block 86 threw: ${String(e && e.message || e).split('\n')[0]}`); }
+const bad = results.filter((r) => !r.ok).length;
+console.log(`\n${results.length - bad}/${results.length} passed${bad ? ', ' + bad + ' FAILED' : ''}`);
+await browser.close(); srv.close && srv.close();
+process.exit(bad ? 1 : 0);

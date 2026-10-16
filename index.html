@@ -27241,6 +27241,7 @@ function _s1TakeSnap(){
    as it always did, and a page closed half-way starts the next session with `full` set. Test hooks: window.__s1SliceHold (ms to wait at
    every yield), window.__s1Slicing (true while a build is running). */
 let _S1_SLICE_MS=25, _S1_SLICE_TRIES=3;
+var _s1SliceStat={builds:0, restarts:0};   /* diagnostics (and the checks): sliced builds finished / thrown away */
 function _yieldTask(){ return new Promise(res=>{ try{ const c=new MessageChannel(); c.port1.onmessage=()=>{ c.port1.close(); res(); }; c.port2.postMessage(0); }catch(e){ setTimeout(res,0); } }); }
 async function _s1TakeSnapAsync(){
   for(let tries=0; tries<_S1_SLICE_TRIES; tries++){
@@ -27267,7 +27268,8 @@ async function _s1TakeSnapAsync(){
       throw e;
     }finally{ window.__s1Slicing=false; }
     if(!moved&&(_dbRev!==rev0||_s1MergeSeq!==seq0)) moved=true;
-    if(!moved){ if(full) _s1LastFull=now; snap.seq=seq0; return snap; }
+    if(!moved){ if(full) _s1LastFull=now; snap.seq=seq0; _s1SliceStat.builds++; return snap; }
+    _s1SliceStat.restarts++;
     keys.forEach(k=>_s1Dirty.keys.add(k)); gone.forEach(k=>_s1Dirty.gone.add(k)); if(full) _s1Dirty.full=true; _s1LastFull=lastFull0;
   }
   return _s1TakeSnap();   /* kept changing under the slices: built whole, in one tick */
