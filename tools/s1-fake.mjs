@@ -30,16 +30,17 @@ const FAKE_SDK = String.raw`(function(){
   function docRef(path){ return { _path: path, id: path.split('/').pop(),
     collection: (n) => collRef(path + '/' + n),
     async get(opts){ const r = await window.__fsGet(path, (opts && opts.source) || 'default'); if (r.error) throw mkErr(r.error); return snap(r.data); },
-    async set(data){ const r = await window.__fsCommit([{ t: 'set', p: path, d: JSON.parse(JSON.stringify(data)) }]); if (r.error) throw mkErr(r.error); },
+    async set(data, opts){ const r = await window.__fsCommit([{ t: 'set', p: path, d: JSON.parse(JSON.stringify(data)), m: !!(opts && opts.merge) }]); if (r.error) throw mkErr(r.error); },
     onSnapshot(cb){ (listeners[path] = listeners[path] || []).push(cb); window.__fsListen(path); return () => { listeners[path] = (listeners[path] || []).filter((x) => x !== cb); }; } }; }
-  function collRef(path){ return { doc: (id) => docRef(path + '/' + id), where: (f, op, v) => query(path, v) }; }
+  function collRef(path){ return { doc: (id) => docRef(path + '/' + id), where: (f, op, v) => query(path, v),
+    async get(){ const r = await window.__fsList(path); const rows = r.docs.map((x) => ({ id: x.id, data: () => conv(x.d) })); return { size: rows.length, forEach: (cb) => rows.forEach(cb) }; } }; }
   function batch(){ const ops = []; const b = {
     set(ref, data){ ops.push({ t: 'set', p: ref._path, d: JSON.parse(JSON.stringify(data)) }); return b; },
     delete(ref){ ops.push({ t: 'del', p: ref._path }); return b; },
     async commit(){ const r = await window.__fsCommit(ops); if (r.error) throw mkErr(r.error); } }; return b; }
   const fs = { collection: (n) => collRef(n), batch, settings(){} };
   fb.firestore = function(){ return fs; };
-  fb.firestore.FieldValue = { serverTimestamp: () => ({ __sts: 1 }) };
+  fb.firestore.FieldValue = { serverTimestamp: () => ({ __sts: 1 }), increment: (n) => ({ __inc: n }) };   /* v05.27 — S4c: the usage counter */
   fb.firestore.Timestamp = TS;
   fb.firestore.Blob = FB;
   fb.auth = function(){ return { setPersistence: async () => {}, signInWithPopup: async () => ({}), signOut: async () => {},
@@ -120,7 +121,8 @@ function makeCloud() {
     if (committer) cloud.deliverPending(committer, ops);
     for (const o of ops) {
       if (o.t === 'del') { cloud.store.delete(o.p); cloud.log.push({ t: 'del', p: o.p, dev: committer && committer.name }); continue; }
-      const d = JSON.parse(JSON.stringify(o.d));
+      let d = JSON.parse(JSON.stringify(o.d));
+      if (o.m) { const old = cloud.store.get(o.p) || {}; for (const k of Object.keys(d)) if (d[k] && typeof d[k].__inc === 'number') d[k] = (typeof old[k] === 'number' ? old[k] : 0) + d[k].__inc; d = { ...old, ...d }; }   /* v05.27 — set(…, {merge:true}) and FieldValue.increment */
       for (const k of Object.keys(d)) if (d[k] && d[k].__sts) d[k] = at;
       cloud.store.set(o.p, d);
       cloud.ver.set(o.p, (cloud.ver.get(o.p) || 0) + 1);
@@ -154,6 +156,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
     await sleep(10 + Math.random() * 30);
     return { data: cloud.store.has(path) ? cloud.store.get(path) : null };
   });
+  await ctx.exposeBinding('__fsList', async (_s, path) => { await sleep(10); const docs = []; for (const [p, v] of cloud.store) if (p.startsWith(path + '/') && !p.slice(path.length + 1).includes('/')) docs.push({ id: p.split('/').pop(), d: v }); cloud.reads.push({ p: path + '/*', dev: d.name }); return { docs }; });
   await ctx.exposeBinding('__fsListen', async (_s, path) => { d.listens.add(path); const data = cloud.store.has(path) ? cloud.store.get(path) : null; setTimeout(() => d.page.evaluate(([p, x]) => window.__fsDeliver && window.__fsDeliver(p, x), [path, data]).catch(() => {}), 50); });
   await ctx.exposeBinding('__fsListenQ', async (_s, id, path, cur) => { d.qsubs.set(id, { path, cur, sent: new Map() }); setTimeout(() => cloud.deliverQ(d, id, true), 50); });
   await ctx.exposeBinding('__fsUnlistenQ', async (_s, id) => { d.qsubs.delete(id); });
