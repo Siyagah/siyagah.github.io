@@ -10228,3 +10228,25 @@ The `_folderNoteRecoveryV1` key is a per-device boot mark and is ignored in the 
 - The per-batch saves while the import runs (93–128 ms each) are unchanged; the issue calls them acceptable.
 - 820 was not measured separately (same code path).
 - The full `app-check` was not run (told not to).
+
+### Architect's review
+
+**Totals (Architect), v05.26:** `ship-check` 15/15; `--only 86` 47/47 (worst task 141 ms `recs`, 154 ms `both`, 390 ×4); sync blocks `--only 32,51,52,53,54,59,80` 730/730; `push-p4 --unpatched` 10 of 41 fail. Full `app-check` on `ddf626f` (two halves): blocks 1–59 + `self-check` **2332/2332**, blocks 60–86 **4890/4901** → **7222/7233** over all 453 blocks; every miss a speed limit under the full run's load (78b, 80h, 82e, 86; 86 passes alone on the same commit).
+
+## v05.27 — S4c: the Evernote pictures, audio and files come in, with a cloud space guard (issue #201, PCF J01)
+
+S4b left a marker (`span.enx-media`) where each picture, audio file and file sat. This round replaces them. The upload of imported pictures to the cloud is **held** until the owner answers PCF J01 (s4cq1: shrunk / full size / paid plan); a later round wires the answer in.
+
+- **Bytes.** `_enxScanner(onNote,{content:true,data:true})` hands over each resource's bytes, base64-decoded as a stream, with its md5 (computed from the bytes) and sha256. No option = counts exactly as before.
+- **Pictures** → `_picPut` (by reference, S2a) and `img.ed-img[data-pic][data-mime]`; marked `enx:1` on the store record. If `_s2RefsOk()` says no the markers stay and the result says "Pictures wait: …"; nothing is ever inlined as `data:`.
+- **Audio and files** → new device database `siyagah-files-v1` (key sha256: `{b,mime,name,n}`); the marker becomes `span.enx-file[data-file][data-mime][data-name]`. Tap plays audio in an `<audio controls>` made at display time (object URL, not in `a.content`); a device without the bytes says "kept on the computer that imported it".
+- **Notes imported by S4b** are upgraded by a later run (markers matched by md5): per note all-or-nothing, never an open note, `updatedAt` = own + 1 ms, only the markers change, a note in Trash likewise; a second run changes nothing.
+- **Held upload.** `_picUploadPending()` skips `enx:1` pictures while `DB.theme.enxMediaCloud` is absent; hand-added pictures upload as before.
+- **Cloud space guard.** `notebooks/{nb}/usage/v1 {picBytes, at}` (`FieldValue.increment` after each upload; first counted once from the `pics` metas). Over `_PIC_CLOUD_CAP` (600 MB, hook `__picCap`) a picture stays on the device and is not retried until the cap changes; 🧰 → Sync shows "Cloud picture space: X MB of 600 MB". No toast, no alarm.
+- **Writes per day** share S4b's window; **resume** carries the media step in the `siyagah-enx-v1` job; the dialog counts pictures / audio / files.
+
+**Check:** block 87, `tools/enex-s4c.mjs` (87a–87j at 390 / 820 / 1440). Standalone run: all pass. Memory: 2,000 notes / 300 pictures / 395 MB file, heap peak 17 MB. 390 ×4 media step: 0 long tasks over 50 ms (limit 200). `--unpatched`: stops at the first check (`_md5New` does not exist), so 0 of 1 run — the whole block fails on the old app.
+
+**Totals (builder runs + Architect), v05.27:** both builder runs ended at the Actions time limit (the PR was opened in the second); the Architect ran the checks. `ship-check` 15/15; `--only 87` **175/175**; sync blocks `--only 32,51,52,53,54,59,73,80,86` **1004/1009**, every miss a speed limit while the machine was loaded (80h 697 ms, 86 309/326 ms); 80h alone on this commit 299 and 283 ms (limits 276 and 308 with the host factor), the same as v05.26 — no slowdown from this round. 80h's heap growth is +100–113 MB (limit 150; v05.24 measured +44–49): noted, not a failure.
+
+**Not done:** the cloud upload of imported media (waits for the owner's answer); no inlining of audio in Save File (chip left as it is, as asked).

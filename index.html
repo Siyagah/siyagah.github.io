@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.26">
+<meta name="app-version" content="05.27">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1930,6 +1930,12 @@ sup.ann-sup:hover{text-decoration:underline}
 .enx-bar>i{display:block;height:100%;width:0;background:var(--green);transition:width .2s}
 .rm-big:disabled{background:var(--hover);color:var(--t2);cursor:not-allowed}
 .enx-media,.enx-crypt{display:inline-block;padding:3px 8px;border:1px dashed var(--border2);border-radius:6px;background:var(--hover);color:var(--t2);font-size:.9em}
+.enx-file{display:inline-block;max-width:100%;padding:3px 8px;border:1px solid var(--border2);border-radius:6px;background:var(--hover);color:var(--t2);font-size:.9em;vertical-align:middle}
+.enx-file.enx-file-ok{cursor:pointer;color:var(--t1)}
+.enx-file.enx-file-off{border-style:dashed}
+.enx-file .enx-off{font-size:.9em;color:var(--t2)}
+.enx-file .enx-aud{display:block;width:100%;min-width:min(260px,calc(100vw - 80px));max-width:360px;margin-top:6px}
+@media(max-width:639.98px){.enx-file{display:block}}
 .enx-src{font-size:.9em;color:var(--t2)}
 .toast-enx{cursor:pointer}
 .enx-fb{width:100%;box-sizing:border-box;height:140px;font-family:monospace;font-size:11px}
@@ -3730,7 +3736,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.26</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.27</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4984,6 +4990,7 @@ function _cleanExportRoot(){
 const _PIC_URL_MAX=64;
 const _picKnown=new Set();            /* shas known to be in the store */
 const _picNotUp=new Set();            /* v04.93 — shas in the store whose cloud copy is not known to exist (no `up` on the record) */
+const _picEnx=new Set();              /* v05.27 — S4c: of those, the ones the Evernote import stored (`enx:1`): held back from the cloud until DB.theme.enxMediaCloud is set */
 const _picUrls=new Map();             /* sha -> object URL (insertion order = recency) */
 const _picUrlSha=new Map();           /* object URL -> {sha,t} */
 let _picDBp=null;
@@ -5001,7 +5008,7 @@ function _picDB(){
           const k=db.transaction('pics','readonly').objectStore('pics').openCursor();
           k.onsuccess=function(){
             const c=k.result;
-            if(c){_picKnown.add(c.key);if(!(c.value&&c.value.up))_picNotUp.add(c.key);c.continue();}
+            if(c){_picKnown.add(c.key);if(!(c.value&&c.value.up)){_picNotUp.add(c.key);if(c.value&&c.value.enx)_picEnx.add(c.key);}c.continue();}
             else res(db);
           };
           k.onerror=function(){res(db);};
@@ -5023,24 +5030,38 @@ async function _picSha(buf){
   let h='';for(let i=0;i<d.length;i++)h+=(d[i]<16?'0':'')+d[i].toString(16);
   return h;
 }
-async function _picWrite(sha,blob,t,up){
+async function _picWrite(sha,blob,t,up,enx){
   const db=await _picDB();if(!db)throw new Error('no picture store');
   const rec={b:blob,t:t,n:blob.size,at:Date.now()};
   if(up)rec.up=1;   /* v04.93 — fetched from the cloud: it is there already */
+  else if(enx)rec.enx=1;   /* v05.27 — S4c: stored by the Evernote import; not uploaded until the owner has answered (enxMediaCloud) */
   await new Promise(function(res,rej){
     const tx=db.transaction('pics','readwrite');
     tx.objectStore('pics').put(rec,sha);
     tx.oncomplete=function(){res();};tx.onerror=tx.onabort=function(){rej(tx.error||new Error('write'));};
   });
   _picKnown.add(sha);
-  if(!up)_picNotUp.add(sha);
+  if(!up){_picNotUp.add(sha);if(enx)_picEnx.add(sha);}
 }
-async function _picPut(x,mime){
+/* v05.27 — the owner adds by hand a picture the import already stored: it is theirs now, so it uploads like any other */
+async function _picUnhold(sha){
+  _picEnx.delete(sha);
+  const db=await _picDB();if(!db)return;
+  await new Promise(function(res){
+    try{
+      const tx=db.transaction('pics','readwrite'),st=tx.objectStore('pics'),g=st.get(sha);
+      g.onsuccess=function(){const v=g.result;if(v&&v.enx){delete v.enx;st.put(v,sha);}};
+      tx.oncomplete=function(){res();};tx.onerror=tx.onabort=function(){res();};
+    }catch(e){res();}
+  });
+}
+async function _picPut(x,mime,opt){
   const buf=await _picBytes(x);
   const t=mime||(x&&x.type)||'image/jpeg';
   const sha=await _picSha(buf);
   await _picDB();
-  if(!_picKnown.has(sha))await _picWrite(sha,new Blob([buf],{type:t}),t);
+  if(!_picKnown.has(sha))await _picWrite(sha,new Blob([buf],{type:t}),t,false,!!(opt&&opt.enx));
+  else if(!(opt&&opt.enx)&&_picEnx.has(sha))await _picUnhold(sha);
   return sha;
 }
 async function _picGet(sha){
@@ -5103,6 +5124,7 @@ async function _picAdopt(sha,src,mime){
 }
 function _picHydrateAll(root){
   if(!root||!root.querySelectorAll)return;
+  try{_enxFilesHydrate(root);}catch(e){}   /* v05.27 — S4c: the Evernote file chips */
   root.querySelectorAll('img[data-pic]').forEach(function(img){
     const sha=img.getAttribute('data-pic');
     if(!/^[0-9a-f]{64}$/.test(sha||''))return;
@@ -5240,7 +5262,29 @@ async function _picMarkUp(sha){
       tx.oncomplete=function(){res();};tx.onerror=tx.onabort=function(){res();};
     }catch(e){res();}
   });
-  _picNotUp.delete(sha);
+  _picNotUp.delete(sha);_picEnx.delete(sha);
+}
+/* ── v05.27 · S4c — the cloud space guard. The free plan holds 1 GB in all; pictures may use _PIC_CLOUD_CAP of it.
+   notebooks/{nb}/usage/v1 {picBytes, at} is the running total, moved with FieldValue.increment after each upload's meta doc is written. The first
+   time it is unknown it is counted once from the pics meta docs (`n`), then kept. Over the cap a picture stays on the device, and is not asked
+   again until the cap changes. Never a toast, never an alarm: the diagnostics and 🧰 → Sync say it. __picCap is a test hook. ── */
+const _PIC_CLOUD_CAP=600*1024*1024;
+const _picCap=function(){const c=window.__picCap;return (c>0)?+c:_PIC_CLOUD_CAP;};
+let _picUseBytes=null;                 /* what the cloud holds, as last read or counted; null = not known yet */
+const _picCapHit=new Map();            /* sha -> the cap that refused it */
+async function _picUsage(nb){
+  if(_picUseBytes!=null)return _picUseBytes;
+  const ref=nb.collection('usage').doc('v1'),d=await ref.get({source:'server'});
+  if(d.exists&&d.data()&&typeof d.data().picBytes==='number'){_picUseBytes=_picUseLast=d.data().picBytes;return _picUseBytes;}
+  let sum=0;const q=await nb.collection('pics').get({source:'server'});
+  q.forEach(function(x){const m=x.data();if(m&&typeof m.n==='number')sum+=m.n;});
+  await ref.set({picBytes:sum,at:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  _picUseBytes=_picUseLast=sum;return sum;
+}
+let _picUseLast=null;                  /* the last figure seen, for the Sync panel */
+function _picUseText(){
+  const cap=_picCap(),mb=function(b){return (b/1048576).toFixed(b<1048576*10?1:0);};
+  return _picUseLast==null?'not counted yet (of '+mb(cap)+' MB)':mb(_picUseLast)+' MB of '+mb(cap)+' MB'+(_picCapHit.size?' · '+_picCapHit.size+' picture'+(_picCapHit.size>1?'s':'')+' kept on this device (over the limit)':'');
 }
 async function _picUpload(sha){
   const cfg=getSyncConfig();
@@ -5250,26 +5294,37 @@ async function _picUpload(sha){
   if(ex.exists){await _picMarkUp(sha);_picUpStat.have++;return 'have';}
   const blob=await _picGet(sha);
   if(!blob){_picNotUp.delete(sha);return 'gone';}
+  const used=await _picUsage(nb);
+  if(used+blob.size>_picCap()){_picCapHit.set(sha,_picCap());return 'cap';}
+  _picCapHit.delete(sha);
   const u8=new Uint8Array(await blob.arrayBuffer());
   const n=Math.max(1,Math.ceil(u8.length/_PIC_PART));
+  if(_picEnx.has(sha)){const bud=await _premigBudget(0);if(bud.n+n+1>_PICMIG_CAP)return 'wait';}   /* the day's document writes are shared with the notes and the migration */
   for(let i=0;i<n;i++){
     const b=_syncFsDb.batch();
     b.set(partsC.doc(sha+'~'+i),{d:firebase.firestore.Blob.fromUint8Array(u8.subarray(i*_PIC_PART,(i+1)*_PIC_PART))});
     await b.commit();
   }
   await metaRef.set({n:u8.length,t:blob.type||'image/jpeg',p:n,at:firebase.firestore.FieldValue.serverTimestamp(),b:_S2_BUILD()});
+  _picUseBytes=_picUseLast=used+u8.length;
+  try{await nb.collection('usage').doc('v1').set({picBytes:firebase.firestore.FieldValue.increment(u8.length),at:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});}catch(e){_picUseBytes=null;}
+  const wasEnx=_picEnx.has(sha);
   await _picMarkUp(sha);_picUpStat.uploaded++;
-  if(_picMigShas.has(sha))await _premigBudget(n+1);   /* v04.95 — a migrated picture's document writes count against the day's cap, whoever uploads it */
+  if(wasEnx)await _premigBudget(n+1);
+  else if(_picMigShas.has(sha))await _premigBudget(n+1);   /* v04.95 — a migrated picture's document writes count against the day's cap, whoever uploads it */
   return 'up';
 }
 /* Called from _pushWrite(), NOT awaited. Nothing to upload = no await, no read. */
 function _picUploadPending(){
   if(!_picNotUp.size)return null;
+  const held=!(DB.theme&&DB.theme.enxMediaCloud);   /* v05.27 — S4c: the Evernote pictures wait for the owner's answer */
+  if(held&&_picEnx.size>=_picNotUp.size)return null;
   if(_picUpRun)return _picUpRun;
   if(!getSyncConfig()||!_syncFsDb)return null;
   _picUpRun=(async function(){
     const now=Date.now();
-    const q=Array.from(_picNotUp).filter(function(s){const st=_picUpS.get(s);return !st||now>=st.next;});
+    _picUseBytes=null;   /* one small read per run: another device may have uploaded */
+    const q=Array.from(_picNotUp).filter(function(s){const st=_picUpS.get(s);return (!st||now>=st.next)&&!(held&&_picEnx.has(s))&&_picCapHit.get(s)!==_picCap();});
     const worker=async function(){
       while(q.length){
         const sha=q.shift();
@@ -5357,6 +5412,8 @@ async function _picShowAll(sha){
 }
 function _picDiagText(){
   let t=_picNotUp.size?(_picNotUp.size+' waiting to upload'):'all uploaded';
+  if(_picEnx.size)t+=' ('+_picEnx.size+' from the Evernote import'+(DB.theme&&DB.theme.enxMediaCloud?'':', held until you choose how they go up')+')';
+  if(_picCapHit.size)t+=' · '+_picCapHit.size+' not uploaded: cloud picture space is full';
   if(_picUpStat.refused)t+=' · cloud refused picture upload (permission-denied)';
   else if(_picUpStat.lastErr)t+=' · last upload error: '+_picUpStat.lastErr.code;
   if(_picFetchStat.lastErr&&_picFS.size)t+=' · '+_picFS.size+' not fetched yet';
@@ -5364,6 +5421,87 @@ function _picDiagText(){
   try{t+=' · '+_picMigDiagText();}catch(e){}
   return t;
 }
+
+/* ── v05.27 · S4c — audio and other files from an Evernote import: a NEW device database, siyagah-files-v1, keyed by sha256, {b:Blob,mime,name,n}.
+   Never uploaded, never in DB, never in an export: the note holds only span.enx-file[data-file=<sha256>] (a static chip). What is live — the
+   audio player, the "kept on the computer that imported it" line, the classes, tabindex — is added at display time and stripped by
+   _enxFileCanon() (from _edColClean) on every save path. ── */
+let _fileDBp=null;
+function _fileDB(){
+  if(_fileDBp)return _fileDBp;
+  _fileDBp=new Promise(function(res){
+    try{
+      if(!window.indexedDB){res(null);return;}
+      const rq=indexedDB.open('siyagah-files-v1',1);
+      rq.onupgradeneeded=function(){try{rq.result.createObjectStore('files');}catch(e){}};
+      rq.onsuccess=function(){res(rq.result);};
+      rq.onerror=rq.onblocked=function(){res(null);};
+    }catch(e){res(null);}
+  });
+  return _fileDBp;
+}
+async function _filePut(sha,blob,mime,name){
+  const db=await _fileDB();if(!db)throw new Error('no file store');
+  await new Promise(function(res,rej){
+    const tx=db.transaction('files','readwrite'),st=tx.objectStore('files'),g=st.get(sha);
+    g.onsuccess=function(){if(!g.result)st.put({b:blob,mime:mime||'',name:name||'',n:blob.size},sha);};
+    tx.oncomplete=function(){res();};tx.onerror=tx.onabort=function(){rej(tx.error||new Error('write'));};
+  });
+}
+async function _fileGet(sha){
+  const db=await _fileDB();if(!db||!sha)return null;
+  return await new Promise(function(res){
+    try{const rq=db.transaction('files','readonly').objectStore('files').get(sha);rq.onsuccess=function(){res(rq.result||null);};rq.onerror=function(){res(null);};}catch(e){res(null);}
+  });
+}
+window._fileGet=_fileGet;
+const _enxFileSeen=new WeakSet();
+const _enxFileUrls=new Map();   /* object URL -> the audio element showing it */
+function _enxFilesHydrate(root){
+  if(!root||!root.querySelectorAll)return;
+  root.querySelectorAll('.enx-file[data-file]').forEach(function(chip){
+    if(_enxFileSeen.has(chip))return;_enxFileSeen.add(chip);
+    const sha=chip.getAttribute('data-file');if(!/^[0-9a-f]{64}$/.test(sha||''))return;
+    _fileGet(sha).then(function(r){
+      if(!chip.isConnected)return;
+      if(r&&r.b){chip.classList.add('enx-file-ok');chip.setAttribute('tabindex','0');chip.setAttribute('role','button');}
+      else{
+        chip.classList.add('enx-file-off');
+        if(!chip.querySelector('.enx-off')){const s=document.createElement('small');s.className='enx-off';s.setAttribute('contenteditable','false');s.textContent=' — kept on the computer that imported it';chip.appendChild(s);}
+      }
+    });
+  });
+}
+/* the stored shape: no player, no note, no state classes */
+function _enxFileCanon(node){
+  if(!node||!node.querySelectorAll)return;
+  node.querySelectorAll('.enx-file .enx-aud,.enx-file .enx-off').forEach(function(n){n.remove();});
+  node.querySelectorAll('.enx-file').forEach(function(c){c.classList.remove('enx-file-ok','enx-file-off');c.removeAttribute('tabindex');c.removeAttribute('role');});
+}
+async function _enxFileOpen(chip){
+  const sha=chip.getAttribute('data-file'),old=chip.querySelector('.enx-aud');
+  if(old){const u=old.getAttribute('src');old.pause();old.remove();if(u){URL.revokeObjectURL(u);_enxFileUrls.delete(u);}return;}
+  const r=await _fileGet(sha);if(!r||!r.b)return;
+  const mime=r.mime||chip.getAttribute('data-mime')||'',url=URL.createObjectURL(new Blob([r.b],{type:mime}));
+  if(_enxKind(mime)==='audio'){
+    const a=document.createElement('audio');a.className='enx-aud';a.controls=true;a.preload='metadata';a.setAttribute('contenteditable','false');a.src=url;
+    chip.appendChild(a);_enxFileUrls.set(url,a);try{a.play().catch(function(){});}catch(e){}
+  }else{
+    const l=document.createElement('a');l.href=url;l.download=r.name||chip.getAttribute('data-name')||'file';l.style.display='none';document.body.appendChild(l);l.click();l.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},60000);
+  }
+}
+document.addEventListener('click',function(e){
+  const c=e.target&&e.target.closest&&e.target.closest('.enx-file.enx-file-ok');
+  if(!c||e.target.closest('.enx-aud'))return;
+  e.preventDefault();_enxFileOpen(c);
+});
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const c=e.target&&e.target.classList&&e.target.classList.contains('enx-file-ok')?e.target:null;
+  if(c){e.preventDefault();_enxFileOpen(c);}
+});
+setInterval(function(){_enxFileUrls.forEach(function(a,u){if(!a.isConnected){URL.revokeObjectURL(u);_enxFileUrls.delete(u);}});},15000);
 
 /* ── Pictures: moving the existing inline pictures out of note text (v04.95, S2d) ──
    A note saved before v04.94 holds each picture as a base64 data: src. This pass
@@ -16814,6 +16952,7 @@ function _edColHeads(ed){
 function _edColClean(node){
   if(!node)return;
   try{_picCanon(node);}catch(e){}   /* v04.92 — a picture goes back to its reference, never an object URL */
+  try{_enxFileCanon(node);}catch(e){}   /* v05.27 — S4c: no player, no state classes in a stored note */
   try{_sgCanon(node);}catch(e){}   /* v04.52 — a live spreadsheet goes back to its stored shape */
   node.querySelectorAll('.ed-col-arr,.ed-col-grip,.ed-col-preview').forEach(function(n){n.remove();});
   node.querySelectorAll('.ed-col-hidden').forEach(function(n){n.classList.remove('ed-col-hidden');if(n.getAttribute('class')==='')n.removeAttribute('class');});
@@ -28235,11 +28374,53 @@ function _enxKind(mime){
   mime=String(mime||'').toLowerCase();
   return mime.startsWith('image/')?'img':mime==='application/pdf'?'pdf':mime.startsWith('audio/')?'audio':'other';
 }
-/* The incremental scanner. feed(text) as it arrives, end() when the file is done; onNote gets one small object per <note>. */
+/* v05.27 — S4c: an incremental MD5 (Evernote's <en-media hash> is the md5 of the data; WebCrypto has none). update(Uint8Array) as the bytes stream
+   past, digest() once. Checked against Node's crypto in block 87. */
+const _MD5K=new Int32Array(64),_MD5S=[7,12,17,22,5,9,14,20,4,11,16,23,6,10,15,21],_MD5M=new Int32Array(16);
+for(let i=0;i<64;i++)_MD5K[i]=Math.floor(Math.abs(Math.sin(i+1))*4294967296)|0;
+function _md5New(){ return {h:new Int32Array([0x67452301,0xefcdab89|0,0x98badcfe|0,0x10325476]),b:new Uint8Array(64),bl:0,len:0}; }
+function _md5Block(h,b,o){
+  const M=_MD5M; for(let i=0;i<16;i++) M[i]=b[o+4*i]|(b[o+4*i+1]<<8)|(b[o+4*i+2]<<16)|(b[o+4*i+3]<<24);
+  let a=h[0],bb=h[1],c=h[2],d=h[3];
+  for(let i=0;i<64;i++){
+    let f,g;
+    if(i<16){ f=(bb&c)|(~bb&d); g=i; } else if(i<32){ f=(d&bb)|(~d&c); g=(5*i+1)&15; } else if(i<48){ f=bb^c^d; g=(3*i+5)&15; } else { f=c^(bb|~d); g=(7*i)&15; }
+    const t=d, x=(a+f+_MD5K[i]+M[g])|0, s=_MD5S[(i>>4)*4+(i&3)];
+    d=c; c=bb; bb=(bb+((x<<s)|(x>>>(32-s))))|0; a=t;
+  }
+  h[0]=(h[0]+a)|0; h[1]=(h[1]+bb)|0; h[2]=(h[2]+c)|0; h[3]=(h[3]+d)|0;
+}
+function _md5Update(st,u8){
+  st.len+=u8.length; let i=0;
+  if(st.bl){ while(i<u8.length&&st.bl<64) st.b[st.bl++]=u8[i++]; if(st.bl<64) return; _md5Block(st.h,st.b,0); st.bl=0; }
+  for(;i+64<=u8.length;i+=64) _md5Block(st.h,u8,i);
+  while(i<u8.length) st.b[st.bl++]=u8[i++];
+}
+function _md5Digest(st){
+  const len=st.len, bits=len*8, r=(len+1)%64, pad=new Uint8Array(1+(r<=56?56-r:120-r)+8);
+  pad[0]=0x80; const lo=bits>>>0, hi=Math.floor(bits/4294967296)>>>0, n=pad.length;
+  for(let k=0;k<4;k++){ pad[n-8+k]=(lo>>>(8*k))&255; pad[n-4+k]=(hi>>>(8*k))&255; }
+  _md5Update(st,pad);
+  let out=''; for(let w=0;w<4;w++) for(let k=0;k<4;k++){ const v=(st.h[w]>>>(8*k))&255; out+=(v<16?'0':'')+v.toString(16); }
+  return out;
+}
+/* The incremental scanner. feed(text) as it arrives, end() when the file is done; onNote gets one small object per <note>.
+   v05.27 — S4c: opts.data also decodes each <data> as it streams (base64 in small pieces, never the whole string): per resource its md5 and
+   a Blob (info.res[i].md5 / .blob), only when the note has as many <data> as <resource>. No option = exactly as before. */
 function _enxScanner(onNote,opts){
   let buf='',mode=0,nb='',idx=0,cLen=0,cHead='',cTail='',cSeen=false,dN=0,dTail='',over=false,cBuf='',cOver=false;
+  const wantData=!!(opts&&opts.data); let dCarry='',dMd5=null,dChunks=[],dBad=false,dList=[];
   const keep=!!(opts&&opts.content), CMAX=(opts&&opts.contentMax)||20000000;   /* v05.20 · S4b — the import also takes the note's content, ONE note at a time; the dry run does not */
   const KEEP=12;
+  function dec(s,last){
+    if(!dMd5||dBad) return;
+    const t=dCarry+s.replace(/\s+/g,''), n=last?t.length:t.length-(t.length%4);
+    dCarry=t.slice(n);
+    if(n>0){
+      try{ const bin=atob(t.slice(0,n)), u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); _md5Update(dMd5,u8); dChunks.push(u8); }
+      catch(e){ dBad=true; }
+    }
+  }
   function finish(unterminated){
     const g=re=>{ const m=re.exec(nb); return m?_enxUnent(m[1]):null; };
     const info={n:idx,title:g(/<title>([\s\S]*?)<\/title>/),err:null,tags:[],res:[],cIso:null,sec:null,srcUrl:null,contentLen:cLen};
@@ -28265,6 +28446,8 @@ function _enxScanner(onNote,opts){
       info.res.push({mime:mi?_enxUnent(mi[1]).trim():'',name:fn?_enxUnent(fn[1]):'',bytes:b?+b[1]:0,hash:ho?ho[1].toLowerCase():''});
     }
     if(keep){ info.content=cSeen?cBuf:null; }
+    if(wantData&&dList.length===info.res.length) dList.forEach((d,i)=>{ if(d){ info.res[i].md5=d.md5; info.res[i].blob=d.blob; } });
+    dList=[];
     cBuf=''; cOver=false;
     onNote(info);
     nb=''; mode=0;
@@ -28276,6 +28459,7 @@ function _enxScanner(onNote,opts){
     const w=s.slice(-400).replace(/\s+/g,''); if(w) cTail=(cTail+w).slice(-40);   /* whitespace-free, so a long run of spaces before ]]> cannot push it out */
   }
   function eatData(s){
+    if(wantData) dec(s,false);
     let n=0; for(let i=0,L=s.length;i<L;i++) if(s.charCodeAt(i)>32) n++;
     dN+=n;
     if(n) dTail=(dTail+s.slice(-8).replace(/\s/g,'')).slice(-4);
@@ -28302,7 +28486,9 @@ function _enxScanner(onNote,opts){
         if(p>=0){
           if(useC){ if(nb.length<1e6) nb+=seg.slice(0,p); buf=buf.slice(p+9); mode=2; cSeen=true; cLen=0; cHead=''; cTail=''; cBuf=''; cOver=false; continue; }
           const j=buf.indexOf('>',p); if(j<0) return;
-          if(nb.length<1e6) nb+=seg.slice(0,p); buf=buf.slice(j+1); mode=3; dN=0; dTail=''; continue;
+          if(nb.length<1e6) nb+=seg.slice(0,p); buf=buf.slice(j+1); mode=3; dN=0; dTail='';
+          if(wantData){ dCarry=''; dMd5=_md5New(); dChunks=[]; dBad=false; }
+          continue;
         }
         if(e>=0){ if(nb.length<1e6) nb+=seg; buf=buf.slice(e+7); finish(false); continue; }
         if(nb.length<1e6) nb+=buf.slice(0,-KEEP); else over=true;
@@ -28317,6 +28503,10 @@ function _enxScanner(onNote,opts){
         const k=buf.indexOf('</data>');
         if(k<0){ eatData(buf.slice(0,-7)); buf=buf.slice(-7); return; }
         eatData(buf.slice(0,k)); buf=buf.slice(k+7);
+        if(wantData){
+          dec('',true);
+          dList.push((!dBad&&dMd5)?{md5:_md5Digest(dMd5),blob:new Blob(dChunks)}:null); dMd5=null; dChunks=[];
+        }
         const pad=dTail.endsWith('==')?2:dTail.endsWith('=')?1:0;
         nb+='<data-bytes>'+Math.max(0,Math.floor(dN*3/4)-pad)+'</data-bytes>'; mode=1;
       }
@@ -28379,13 +28569,24 @@ function _enxClean(h){
     });
   });
 }
-function _enxConvert(raw,info){
+/* v05.27 — S4c: what stands where a media marker stood. e = {k:'img'|'audio'|'file', sha, n}; mime and name are already escaped for an attribute. */
+function _enxSize(n){ return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?Math.round(n/1024)+' KB':n+' B'; }
+function _enxMediaHTML(e,mime,name){
+  if(e.k==='img') return '<img class="ed-img" data-pic="'+e.sha+'" data-mime="'+mime+'" alt="">';
+  return '<span class="enx-file" contenteditable="false" data-file="'+e.sha+'" data-mime="'+mime+'" data-name="'+name+'">'+(e.k==='audio'?'🎧 ':'📎 ')+(name||(e.k==='audio'?'audio':'file'))+' · '+_enxSize(e.n)+'</span>';
+}
+/* every marker in `html` whose hash the map holds becomes its picture / chip; every other character stays. Same function for a new note and an old one (S4b). */
+const _ENX_MARK_RE=/<span class="enx-media" contenteditable="false" data-enx-hash="([^"]*)" data-mime="([^"]*)" data-name="([^"]*)">[^<]*<\/span>/g;
+function _enxRewrite(html,media){
+  return html.replace(_ENX_MARK_RE,(m,h,mime,name)=>{ const e=media&&media.get(h.toLowerCase()); return e?_enxMediaHTML(e,mime,name):m; });
+}
+function _enxConvert(raw,info,media){
   let h=String(raw==null?'':raw);
   h=h.replace(/^\s*<!\[CDATA\[/,'').replace(/\]\]>\s*$/,'');
   h=h.replace(/<\?xml[\s\S]*?\?>/gi,'').replace(/<!DOCTYPE[\s\S]*?>/gi,'');
   h=h.replace(/<\/?en-note\b[^>]*>/gi,'');
   h=_enxClean(h);
-  const byHash=new Map(); (info.res||[]).forEach(r=>{ if(r.hash) byHash.set(r.hash,r); });
+  const byHash=new Map(); (info.res||[]).forEach(r=>{ if(r.hash) byHash.set(r.hash,r); if(r.md5) byHash.set(r.md5,r); });
   h=h.replace(/<en-todo\b([^>]*?)\/?>(\s*<\/en-todo>)?/gi,(m,a)=>/checked\s*=\s*["']?true/i.test(a)?'☑ ':'☐ ');
   const CRYPT='<span class="enx-crypt" contenteditable="false">🔒 encrypted text (Evernote; not imported)</span>';
   h=h.replace(/<en-crypt\b[^>]*\/>/gi,CRYPT).replace(/<en-crypt\b[^>]*>[\s\S]*?<\/en-crypt>/gi,CRYPT);
@@ -28396,6 +28597,7 @@ function _enxConvert(raw,info){
     const lbl=k==='img'?'🖼 picture':k==='audio'?'🎧 audio':'📎 file';
     return '<span class="enx-media" contenteditable="false" data-enx-hash="'+esc(hash)+'" data-mime="'+esc(mime)+'" data-name="'+esc(name)+'">'+lbl+' — arrives with the next import step</span>';
   });
+  if(media&&media.size) h=_enxRewrite(h,media);
   if(info.srcUrl){
     const u=String(info.srcUrl).trim(), flat=u.replace(/[\u0000-\u0020\u007f-\u009f]/g,'').toLowerCase();
     h='<p class="enx-src">Source: '+(/^(javascript|data|vbscript):/.test(flat)?esc(u):'<a href="'+esc(u)+'">'+esc(u)+'</a>')+'</p>'+h;
@@ -28492,8 +28694,71 @@ async function _enxContinue(){
 }
 function _enxPause(){ const I=_enx.imp; if(!I.run) return; I.pause=true; const p=document.getElementById('enx-iprog'); if(p) p.textContent='Pausing after this batch…'; }
 function _enxIProg(){
-  const I=_enx.imp, total=I.total?' · '+_enxN(I.total)+' in all':'';
-  return 'Bringing in… '+_enxN(I.took)+' of '+_enxN(I.goal)+' this time'+total;
+  const I=_enx.imp, total=I.total?' · '+_enxN(I.total)+' in all':'', N=_enxN, mt=I.mt;
+  const med=(mt&&(mt.p||mt.a||mt.f))?' · '+N(I.md.p)+' of '+N(mt.p)+' pictures · '+N(I.md.a)+' of '+N(mt.a)+' audio · '+N(I.md.f)+' of '+N(mt.f)+' files':'';
+  return 'Bringing in… '+_enxN(I.took)+' of '+_enxN(I.goal)+' this time'+total+med;
+}
+/* ── v05.27 · S4c — the pictures, audio and files of an import, on the importing computer.
+   · The scanner (data:true) hands each resource's bytes and md5; a marker `span.enx-media[data-enx-hash]` is matched on the md5 only.
+   · A picture goes in siyagah-pics-v1 by reference (enx:1: held back from the cloud until DB.theme.enxMediaCloud, see _picUploadPending) and needs
+     _s2RefsOk(); without it the markers stay and the result says so (never data: pictures). Audio and files go in siyagah-files-v1 (_filePut).
+   · A note an earlier run (S4b) already made is upgraded in place by _enxUpgrade: per note all-or-nothing, never an open note, re-checked after
+     the awaits, updatedAt = its own + 1 ms (_picMigStamp), nothing but markers touched. A second run finds no markers and changes nothing.
+   · The job record (siyagah-enx-v1) carries mt (totals from the dry run), md (done so far) and mk (notes still holding a marker), so a closed
+     tab or the next day carries on: re-reading the export is what finds the markers left. ── */
+function _enxMarkers(){
+  let n=0; const has=a=>a&&typeof a.content==='string'&&a.content.indexOf('class="enx-media"')>=0;
+  (DB.articles||[]).forEach(a=>{ if(a&&a.fromEvernote&&has(a)) n++; });
+  (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item&&t.item.fromEvernote&&has(t.item)) n++; });
+  return n;
+}
+const _enxPicWhy=()=>window.indexedDB?'this computer is not ready to keep pictures yet (sync has not caught up, or an older version of Siyagah wrote in the last 48 hours)':'this browser cannot keep pictures';
+/* store what `info` carries; returns Map md5 → {k,sha,n} for the resources that are now in a store */
+async function _enxMediaStore(info,allow){
+  const I=_enx.imp, media=new Map(), picOk=_s2RefsOk();
+  if(!allow){   /* a new note: only what its own <en-media> tags point at */
+    allow=new Set(); (String(info.content||'').match(/<en-media\b[^>]*>/gi)||[]).forEach(t=>{ const m=/\bhash\s*=\s*["']([0-9a-fA-F]{32})["']/.exec(t); if(m) allow.add(m[1].toLowerCase()); });
+  }
+  for(const r of info.res){
+    if(!r.blob||!r.md5||media.has(r.md5)||!allow.has(r.md5)) continue;
+    const k=_enxKind(r.mime), blob=r.blob; r.blob=null;
+    if(k==='img'&&!picOk){ I.picWait++; continue; }
+    const sha=await _picSha(await blob.arrayBuffer());
+    if(k==='img'){
+      await _picDB();
+      if(!_picKnown.has(sha)) await _picWrite(sha,new Blob([blob],{type:r.mime}),r.mime,false,true);
+      media.set(r.md5,{k:'img',sha,n:blob.size}); I.md.p++;
+    }else{
+      await _filePut(sha,new Blob([blob],{type:r.mime}),r.mime,r.name);
+      media.set(r.md5,{k:k==='audio'?'audio':'file',sha,n:blob.size}); if(k==='audio') I.md.a++; else I.md.f++;
+    }
+  }
+  return media;
+}
+/* an old note (made by S4b) holding markers: replace the ones this export can answer */
+async function _enxUpgrade(q){
+  const I=_enx.imp, st=I.upSt||(I.upSt={map:null,seq:-1});
+  const look=()=>{
+    if(!st.map||st.seq!==_s1MergeSeq){ st.map=new Map(); st.seq=_s1MergeSeq;
+      (DB.articles||[]).forEach(a=>{ if(a&&a.fromEvernote) st.map.set(a.id,{obj:a}); });
+      (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item&&t.item.fromEvernote) st.map.set(t.item.id,{obj:t.item,entry:t}); }); }
+    return st.map.get(q.id);
+  };
+  let o=look(); if(!o) return;
+  const c0=o.obj.content, u0=o.obj.updatedAt;
+  if(typeof c0!=='string'||c0.indexOf('class="enx-media"')<0) return;
+  const have=new Set(q.info.res.map(r=>r.md5).filter(Boolean)), allow=new Set(); c0.replace(_ENX_MARK_RE,(m,h)=>{ if(have.has(h.toLowerCase())) allow.add(h.toLowerCase()); return m; });
+  if(!allow.size) return;
+  if(_picMigOpen(o.obj.id)){ I.openLeft++; return; }
+  const stamp=_picMigStamp(u0); if(!stamp) return;
+  const media=await _enxMediaStore(q.info,allow);
+  if(!media.size) return;
+  o=look();
+  if(!o||o.obj.content!==c0||o.obj.updatedAt!==u0||_picMigOpen(o.obj.id)) return;   /* it moved while we stored: left for the next run */
+  const nc=_enxRewrite(c0,media); if(nc===c0) return;
+  if(o.entry){ const i=DB.trash.indexOf(o.entry); if(i<0) return; DB.trash[i]=Object.assign({},o.entry,{item:Object.assign({},o.obj,{content:nc,updatedAt:stamp})}); st.seq=-1; }
+  else{ o.obj.content=nc; o.obj.updatedAt=stamp; }
+  I.upDirty++; if(nc.indexOf('class="enx-media"')<0) I.mkLeft--;
 }
 function _enxTick(){
   const I=_enx.imp, p=document.getElementById('enx-iprog'), b=document.getElementById('enx-ibar');
@@ -28505,12 +28770,16 @@ async function _enxImport(items){
   const now0=_enxNowMs(), w0=_enxWindow(now0);
   I.items=items;
   if(!I.total&&_enx.job&&_enx.job.total){ I.total=_enx.job.total; I.skipAll=_enx.job.already||0; }
+  const mk0=_enxMarkers();   /* v05.27 — S4c: notes still holding a media marker; a day whose note window is used up waits for the next day, as S4b did */
   if(w0.room<=0){ I.state='capped'; I.took=0; _enx.view='import'; _enxPaint(); return; }
   const my=++I.runId;
   const brought0=_enxBrought(), togo=I.total?Math.max(0,I.total-brought0-I.skipAll):Infinity;
-  Object.assign(I,{run:true,state:'running',pause:false,capHit:false,took:0,already:0,goal:Math.min(w0.room,togo>0?togo:w0.room),earlier:0,broken:0,sameKey:0,commaTags:0,newFolders:0,note:''});
+  Object.assign(I,{run:true,state:'running',pause:false,capHit:false,took:0,already:0,goal:Math.min(w0.room,togo>0?togo:w0.room),earlier:0,broken:0,sameKey:0,commaTags:0,newFolders:0,note:'',picWait:0,mediaErr:0,openLeft:0,upDirty:0,mkLeft:mk0,upSt:null});
+  const jb=_enx.job||{}, rt=_enx.res&&_enxTotals(_enx.res);
+  I.mt=rt?{p:rt.pics,a:rt.audio,f:rt.pdf+rt.other}:(jb.mt||I.mt||null); I.md=Object.assign({p:0,a:0,f:0},jb.md||I.md||{});
   _enx.view='import'; _enxPaint();
-  _enxJobPut({total:I.total||0,already:I.skipAll||0,handle:_enx.lastHandle||(_enx.job&&_enx.job.handle)||null,at:new Date(now0).toISOString()});
+  const jobNow=()=>({total:I.total||0,already:I.skipAll||0,handle:_enx.lastHandle||(_enx.job&&_enx.job.handle)||null,at:new Date(now0).toISOString(),mt:I.mt,md:I.md,mk:I.mkLeft});
+  _enxJobPut(jobNow()); _enx.job=jobNow();
   /* what is already here, built once */
   const ids=new Set(), ks=new Set(), have=new Set(), tomb=new Set();
   const arts0=DB.articles||[];
@@ -28556,25 +28825,40 @@ async function _enxImport(items){
       e.rec.folderIds=[cache.get(ck)]; e.rec.fromEvernote.at=at;
       DB.articles.push(e.rec);
     });
-    _enxPersist();
+    _enxPersist(); I.upDirty=0;
     I.took+=list.length; _enxTick();
+    _enx.job=jobNow(); _enxJobPut(_enx.job);
     await _enxYield();
     if(window.__enxDelay>0) await new Promise(r=>setTimeout(r,window.__enxDelay));   /* test-only: slows each batch so a check can pause or close the page between them */
   };
+  const medQ=[];   /* v05.27 — S4c: notes whose resources' bytes are in hand and not yet stored; drained after every feed, so at most a note's worth is ever held */
+  const finalize=(j,media)=>pend.push({stack:j.it.stack,nb:j.it.name,rec:{id:j.id,title:j.title,content:_enxConvert(j.info.content,j.info,media),folderIds:[],tags:j.tags,createdAt:j.cr,updatedAt:j.up,fromEvernote:{nb:j.it.name,stack:j.it.stack,k:j.k,at:j.nowIso}}});
+  const drain=async()=>{
+    while(medQ.length){
+      const q=medQ.shift();
+      try{ if(q.up) await _enxUpgrade(q); else finalize(q.j,await _enxMediaStore(q.j.info)); }
+      catch(e){ console.error('Evernote import: media failed',e); I.mediaErr++; if(!q.up) finalize(q.j,null); }
+      (q.up?q:q.j).info.res.forEach(r=>{ r.blob=null; });
+      if(I.upDirty>=50){ _enxPersist(); I.upDirty=0; }
+      if(performance.now()-lastY>25){ await _enxYield(); lastY=performance.now(); }
+    }
+  };
+  let lastY=0;
   const onNote=(info,it)=>{
     if(info.err){ I.broken++; return; }
     if(I.capHit) return;
     const title=String(info.title==null?'':info.title).trim()||'Untitled (Evernote)';
     const k=it.stack+'/'+it.name+'\u0001'+(info.sec==null?'':info.sec)+'\u0001'+title.toLowerCase()+'\u0001'+info.contentLen;
     const id=_enxId('enx-n-',k);
-    if(ids.has(id)||ks.has(k)){ I.earlier++; return; }
+    if(ids.has(id)||ks.has(k)){ I.earlier++; if(I.mkLeft>0&&info.res.some(r=>r.blob)) medQ.push({up:true,id,info}); return; }
     if(info.sec!=null&&have.has(String(info.title==null?'':info.title).trim().toLowerCase()+'\u0001'+info.sec)){ I.already++; return; }
-    if(I.took+pend.length>=I.goal){ I.capHit=true; return; }
+    if(I.took+pend.length+medQ.length>=I.goal){ I.capHit=true; return; }
     const tags=[]; (info.tags||[]).forEach(t=>{ if(String(t).includes(',')) I.commaTags++; const c=_cleanTag(t); if(c&&!tags.includes(c)) tags.push(c); });
     const nowIso=new Date(_enxNowMs()).toISOString();
     const cr=info.sec!=null?new Date(info.sec*1000).toISOString():nowIso;
     const up=info.uIso?new Date(Date.parse(info.uIso)).toISOString():cr;
-    pend.push({stack:it.stack,nb:it.name,rec:{id,title,content:_enxConvert(info.content,info),folderIds:[],tags,createdAt:cr,updatedAt:up,fromEvernote:{nb:it.name,stack:it.stack,k,at:nowIso}}});
+    const j={id,title,k,tags,cr,up,nowIso,info,it};
+    if(info.res.some(r=>r.blob)) medQ.push({j}); else finalize(j,null);
     ids.add(id); ks.add(k);
   };
   let finished=false;
@@ -28582,7 +28866,7 @@ async function _enxImport(items){
     let lastY=0,read=0;
     outer: for(const it of items){
       if(I.pause||I.capHit||my!==I.runId) break;
-      const sc=_enxScanner(info=>onNote(info,it),{content:true});
+      const sc=_enxScanner(info=>onNote(info,it),{content:true,data:true});
       try{
         const rd=it.file.stream().pipeThrough(new TextDecoderStream()).getReader();
         for(;;){
@@ -28591,21 +28875,25 @@ async function _enxImport(items){
           read+=value.length;
           for(let o=0;o<value.length;o+=16384){   /* small slices, and a break whenever 25 ms have passed: never hold the page for long, however fast the disk */
             sc.feed(value.slice(o,o+16384));
+            if(medQ.length) await drain();
             while(pend.length>=_ENX_BATCH) await flush(pend.splice(0,_ENX_BATCH));
             if(performance.now()-lastY>25){ await _enxYield(); lastY=performance.now(); }
           }
         }
-        sc.end();
+        sc.end(); await drain();
         while(pend.length>=_ENX_BATCH) await flush(pend.splice(0,_ENX_BATCH));
       }catch(e){ console.error('Evernote import: a file failed',it.name,e); I.broken++; }
     }
     if(!I.pause) await flush(pend.splice(0));   /* a pause stops after the batch in hand; the unwritten rest is read again later */
+    if(I.upDirty){ _enxPersist(); I.upDirty=0; }
     finished=!I.pause&&!I.capHit&&my===I.runId;
   }finally{
     if(my===I.runId){
       I.run=false;
       I.state=I.pause?'paused':I.capHit?'capped':finished?'done':'paused';
-      if(I.state==='done') await _enxJobDel();
+      I.mkLeft=_enxMarkers();
+      if(I.state==='done'){ if(I.mkLeft>0&&I.picWait>0){ _enx.job=jobNow(); await _enxJobPut(_enx.job); } else await _enxJobDel(); }
+      else if(I.state==='paused'||I.state==='capped'){ _enx.job=jobNow(); _enxJobPut(_enx.job); }
       try{ render(); }catch(e){}
       _enxPaint();
     }
@@ -28616,7 +28904,13 @@ function _enxImpHTML(){
   const togo=I.total?Math.max(0,I.total-brought-I.skipAll):0, N=_enxN;
   const skip='<div class="enx-sub" id="enx-isum">Left as they were: '+N(I.already)+' already in Siyagah · '+N(I.earlier)+' brought in earlier · '+N(I.broken)+' could not be read'
     +(I.commaTags?' · '+N(I.commaTags)+' tag'+(I.commaTags===1?'':'s')+' had a comma taken out':'')+'.</div>';
-  const pics='<div class="enx-sub">Pictures, audio and files are not in yet: each one shows a marker where it will go (the next import step).</div>';
+  const mt=I.mt, md=I.md||{p:0,a:0,f:0};
+  const pics='<div class="enx-sub" id="enx-imed">'
+    +(mt&&(mt.p||mt.a||mt.f)?'In: '+N(md.p)+' of '+N(mt.p)+' pictures · '+N(md.a)+' of '+N(mt.a)+' audio · '+N(md.f)+' of '+N(mt.f)+' files (kept on this computer; pictures reach your other devices later). ':'')
+    +(I.picWait?'Pictures wait: '+esc(_enxPicWhy())+'. Run the import again when it is ready; nothing is lost. ':'')
+    +(I.mkLeft>0&&!I.picWait?N(I.mkLeft)+' note'+(I.mkLeft===1?'':'s')+' still show'+(I.mkLeft===1?'s':'')+' a marker where a file is not in this export. ':'')
+    +(I.openLeft?N(I.openLeft)+' open note'+(I.openLeft===1?'':'s')+' left for next time. ':'')
+    +'</div>';
   let h='';
   if(I.state==='running'){
     h+='<div class="enx-prog" id="enx-iprog" role="status">'+esc(I.pause?'Pausing after this batch…':_enxIProg())+'</div>'
@@ -28646,7 +28940,7 @@ function _enxBringHTML(){
 }
 function _enxUnfinishedHTML(){
   const j=_enx.job; if(!j||!j.total||_enx.imp.run) return '';
-  const brought=_enxBrought(); if(brought>=j.total) return '';
+  const brought=_enxBrought(); if(brought>=j.total&&!(j.mk>0)) return '';
   const now=_enxNowMs(), w=_enxWindow(now);
   return '<div class="enx-prog" id="enx-unfinished" role="status">📥 An import is unfinished: '+_enxN(brought)+' of '+_enxN(j.total)+' brought in. '
     +(w.room>0?'':'Continue after '+esc(_enxWhen(w.next,now))+'.')+'</div>'
@@ -28658,7 +28952,7 @@ async function _enxBootToast(){
   if(_enx.toasted||_enx.imp.run) return;
   const j=await _enxJobGet(); if(!j||!j.total) return;
   _enx.job=j;
-  const brought=_enxBrought(); if(brought>=j.total) return;
+  const brought=_enxBrought(); if(brought>=j.total&&!(j.mk>0)) return;
   if(_enxWindow(_enxNowMs()).room<=0) return;
   _enx.toasted=true;
   document.querySelectorAll('.toast-enx').forEach(x=>x.remove());
@@ -29248,6 +29542,7 @@ function _syncDiagnosticsHTML(){
     ['Pull failures since load', String(_pullFailures||0)],
     ['Per-note copy', _s1DiagText()],
     ['Pictures', _picDiagText()],
+    ['Cloud picture space', _picUseText()],
   ];
   let h='<table style="width:100%;font-size:11px;border-collapse:collapse">'
     +rows.map(([k,v])=>`<tr><td style="padding:2px 8px 2px 0;color:var(--t3);white-space:nowrap">${k}</td><td style="padding:2px 0;font-family:monospace">${esc(String(v))}</td></tr>`).join('')
