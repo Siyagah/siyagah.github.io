@@ -407,8 +407,10 @@ try {
     const many = makeMany('many-g', 700);
     await on(d, () => { window.__enxCap = 600; window.__enxDelay = 700; });
     await dlg(d, vp);
-    const first = await on(d, () => ({ h: document.getElementById('enx-box').textContent }));
-    check(!/Bring them in/.test(first.h), `${t} the first screen offers the dry run only (no Bring button before there is a result)`);
+    /* v05.28 (A1) made the first screen's text say that nothing is added until "Bring them in", so the words now appear on it; what
+       80g means is that the BUTTON is not there before a result. Updated in place in the Architect's review of v05.28. */
+    const first = await on(d, () => ({ h: document.getElementById('enx-box').textContent, btn: !!document.getElementById('enx-bring') }));
+    check(!first.btn, `${t} the first screen offers the dry run only (no Bring button before there is a result)`);
     await d.page.setInputFiles('#enx-files', many); await waitDone(d);
     const br = await on(d, () => ({ b: document.getElementById('enx-bring').textContent, n: document.getElementById('enx-bringnote').textContent, dry: document.getElementById('enx-dry').textContent }));
     check(br.b === '📥 Bring them in' && br.n === 'Up to 600 notes now (the free cloud plan allows about that much a day). The rest continues later from here. Nothing in your notebook is changed or deleted.', `${t} "📥 Bring them in" with its one plain line`, br.n);
