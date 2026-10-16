@@ -5006,7 +5006,8 @@ function _cleanExportRoot(){
 const _PIC_URL_MAX=64;
 const _picKnown=new Set();            /* shas known to be in the store */
 const _picNotUp=new Set();            /* v04.93 — shas in the store whose cloud copy is not known to exist (no `up` on the record) */
-const _picEnx=new Set();              /* v05.27 — S4c: of those, the ones the Evernote import stored (`enx:1`): held back from the cloud until DB.theme.enxMediaCloud is set */
+const _picEnx=new Set();              /* v05.27 — S4c: of those, the ones the Evernote import stored (`enx:1`): they go up shrunk (v05.31, S4e), or not at all while DB.theme.enxMediaCloud is 'hold' */
+const _picSm=new Set();               /* v05.31 — S4e: shas whose store record holds only the SMALL copy fetched from the cloud (`sm:1`); a full-size arrival may replace it, never the reverse */
 const _picUrls=new Map();             /* sha -> object URL (insertion order = recency) */
 const _picUrlSha=new Map();           /* object URL -> {sha,t} */
 let _picDBp=null;
@@ -5024,7 +5025,7 @@ function _picDB(){
           const k=db.transaction('pics','readonly').objectStore('pics').openCursor();
           k.onsuccess=function(){
             const c=k.result;
-            if(c){_picKnown.add(c.key);if(!(c.value&&c.value.up)){_picNotUp.add(c.key);if(c.value&&c.value.enx)_picEnx.add(c.key);}c.continue();}
+            if(c){_picKnown.add(c.key);if(c.value&&c.value.sm)_picSm.add(c.key);if(!(c.value&&c.value.up)){_picNotUp.add(c.key);if(c.value&&c.value.enx)_picEnx.add(c.key);}c.continue();}
             else res(db);
           };
           k.onerror=function(){res(db);};
@@ -5046,9 +5047,10 @@ async function _picSha(buf){
   let h='';for(let i=0;i<d.length;i++)h+=(d[i]<16?'0':'')+d[i].toString(16);
   return h;
 }
-async function _picWrite(sha,blob,t,up,enx){
+async function _picWrite(sha,blob,t,up,enx,sm){
   const db=await _picDB();if(!db)throw new Error('no picture store');
   const rec={b:blob,t:t,n:blob.size,at:Date.now()};
+  if(sm){rec.sm=1;_picSm.add(sha);}else _picSm.delete(sha);   /* v05.31 — S4e: only the smaller copy came down */
   if(up)rec.up=1;   /* v04.93 — fetched from the cloud: it is there already */
   else if(enx)rec.enx=1;   /* v05.27 — S4c: stored by the Evernote import; not uploaded until the owner has answered (enxMediaCloud) */
   await new Promise(function(res,rej){
@@ -5076,7 +5078,7 @@ async function _picPut(x,mime,opt){
   const t=mime||(x&&x.type)||'image/jpeg';
   const sha=await _picSha(buf);
   await _picDB();
-  if(!_picKnown.has(sha))await _picWrite(sha,new Blob([buf],{type:t}),t,false,!!(opt&&opt.enx));
+  if(!_picKnown.has(sha)||_picSm.has(sha))await _picWrite(sha,new Blob([buf],{type:t}),t,false,!!(opt&&opt.enx));   /* v05.31: a full-size arrival replaces the small copy */
   else if(!(opt&&opt.enx)&&_picEnx.has(sha))await _picUnhold(sha);
   return sha;
 }
@@ -5135,7 +5137,7 @@ async function _picAdopt(sha,src,mime){
     for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
     if(await _picSha(u8.buffer)!==sha)return;
     await _picDB();
-    if(!_picKnown.has(sha)){const t=mime||m[1]||'image/jpeg';await _picWrite(sha,new Blob([u8],{type:t}),t);}
+    if(!_picKnown.has(sha)||_picSm.has(sha)){const t=mime||m[1]||'image/jpeg';await _picWrite(sha,new Blob([u8],{type:t}),t);}
   }catch(e){}
 }
 function _picHydrateAll(root){
@@ -5330,10 +5332,77 @@ async function _picUpload(sha){
   else if(_picMigShas.has(sha))await _premigBudget(n+1);   /* v04.95 — a migrated picture's document writes count against the day's cap, whoever uploads it */
   return 'up';
 }
+/* ── v05.31 · S4e — the Evernote pictures go up SMALLER. The owner's answer (choice A): at most 2,000 px wide, the full original stays on the importing computer.
+   DB.theme.enxMediaCloud, read only through _enxCloudMode(): absent / 'small' = small copies; 'hold' = nothing imported goes up; anything else (the v05.27 `true`) = full size.
+   The small copy's bytes go up as picparts/{s2}~i (s2 = their own sha256), then the meta of the ORIGINAL sha LAST, with sm:s2 (+ w, h, and n = the small bytes).
+   The note's HTML and DB are not touched. A picture that is already ≤ 2,000 px wide and ≤ 1 MB, an animated GIF, or one the reduction would not make smaller, goes up unchanged. ── */
+const _PIC_SMALL_W=2000,_PIC_SMALL_BYTES=1048576;
+function _enxCloudMode(){const v=DB.theme&&DB.theme.enxMediaCloud;return (v===undefined||v===null||v===false||v===''||v==='small')?'small':(v==='hold'?'hold':'full');}
+/* → {same:true} or {blob,w,h,t}. Never throws (a failure means "unchanged"). Decode and resize happen off the main thread (createImageBitmap). */
+async function _picShrink(blob){
+  const same={same:true},t=blob.type||'image/jpeg';
+  if(t==='image/gif'||t==='image/svg+xml'||typeof createImageBitmap!=='function')return same;
+  let bm=null,rs=null;
+  try{
+    bm=await createImageBitmap(blob);
+    const W=bm.width,H=bm.height;
+    bm.close();bm=null;
+    if(!(W>0&&H>0)||(W<=_PIC_SMALL_W&&blob.size<=_PIC_SMALL_BYTES))return same;
+    const k=Math.min(1,_PIC_SMALL_W/W),w=Math.max(1,Math.round(W*k)),h=Math.max(1,Math.round(H*k));
+    let out=t==='image/webp'?'image/webp':'image/jpeg';
+    if(t==='image/png'){   /* transparency: colour type 4 or 6, or a tRNS chunk before the data */
+      const hd=new Uint8Array(await blob.slice(0,4096).arrayBuffer());
+      const ct=hd[25];let tr=false;
+      for(let i=33;i<hd.length-4&&!tr;i++)if(hd[i]===0x74&&hd[i+1]===0x52&&hd[i+2]===0x4E&&hd[i+3]===0x53)tr=true;
+      if(ct===4||ct===6||tr)out='image/png';
+    }
+    await _yieldTask();
+    rs=k<1?await createImageBitmap(blob,{resizeWidth:w,resizeHeight:h,resizeQuality:'high'}):await createImageBitmap(blob);
+    const cv=(typeof OffscreenCanvas==='function')?new OffscreenCanvas(w,h):Object.assign(document.createElement('canvas'),{width:w,height:h});
+    const cx=cv.getContext('2d');
+    if(out==='image/jpeg'){cx.fillStyle='#fff';cx.fillRect(0,0,w,h);}
+    cx.imageSmoothingQuality='high';
+    cx.drawImage(rs,0,0,w,h);
+    rs.close();rs=null;
+    const sm=cv.convertToBlob?await cv.convertToBlob({type:out,quality:0.85}):await new Promise(function(r){cv.toBlob(r,out,0.85);});
+    if(!sm||sm.type!==out||sm.size>=blob.size)return same;
+    return {blob:sm,w:w,h:h,t:out};
+  }catch(e){return same;}
+  finally{try{if(bm)bm.close();if(rs)rs.close();}catch(e){}}
+}
+async function _picUploadSmall(sha){
+  const cfg=getSyncConfig();
+  const nb=_syncFsDb.collection('notebooks').doc(cfg.notebookId);
+  const metaRef=nb.collection('pics').doc(sha),partsC=nb.collection('picparts');
+  const ex=await metaRef.get({source:'server'});
+  if(ex.exists){await _picMarkUp(sha);_picUpStat.have++;return 'have';}
+  const blob=await _picGet(sha);
+  if(!blob){_picNotUp.delete(sha);return 'gone';}
+  const sh=await _picShrink(blob);
+  if(sh.same)return await _picUpload(sha);
+  const u8=new Uint8Array(await sh.blob.arrayBuffer());
+  const s2=await _picSha(u8.buffer);
+  const used=await _picUsage(nb);
+  if(used+u8.length>_picCap()){_picCapHit.set(sha,_picCap());return 'cap';}
+  _picCapHit.delete(sha);
+  const n=Math.max(1,Math.ceil(u8.length/_PIC_PART));
+  const bud=await _premigBudget(0);if(bud.n+n+1>_PICMIG_CAP)return 'wait';
+  for(let i=0;i<n;i++){
+    const b=_syncFsDb.batch();
+    b.set(partsC.doc(s2+'~'+i),{d:firebase.firestore.Blob.fromUint8Array(u8.subarray(i*_PIC_PART,(i+1)*_PIC_PART))});
+    await b.commit();
+  }
+  await metaRef.set({n:u8.length,t:sh.t,p:n,sm:s2,w:sh.w,h:sh.h,at:firebase.firestore.FieldValue.serverTimestamp(),b:_S2_BUILD()});
+  _picUseBytes=_picUseLast=used+u8.length;
+  try{await nb.collection('usage').doc('v1').set({picBytes:firebase.firestore.FieldValue.increment(u8.length),at:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});}catch(e){_picUseBytes=null;}
+  await _picMarkUp(sha);_picUpStat.uploaded++;
+  await _premigBudget(n+1);
+  return 'up';
+}
 /* Called from _pushWrite(), NOT awaited. Nothing to upload = no await, no read. */
 function _picUploadPending(){
   if(!_picNotUp.size)return null;
-  const held=!(DB.theme&&DB.theme.enxMediaCloud);   /* v05.27 — S4c: the Evernote pictures wait for the owner's answer */
+  const mode=_enxCloudMode(),held=mode==='hold';   /* v05.31 — S4e: 'hold' keeps the Evernote pictures off the cloud; otherwise they go up (small, unless 'full') */
   if(held&&_picEnx.size>=_picNotUp.size)return null;
   if(_picUpRun)return _picUpRun;
   if(!getSyncConfig()||!_syncFsDb)return null;
@@ -5345,7 +5414,8 @@ function _picUploadPending(){
       while(q.length){
         const sha=q.shift();
         try{
-          await _picUpload(sha);
+          if(mode==='small'&&_picEnx.has(sha))await _picUploadSmall(sha);
+          else await _picUpload(sha);
           _picUpS.delete(sha);_picUpStat.refused=null;_picUpStat.lastErr=null;
         }catch(e){
           const code=(e&&e.code)||'error',st=_picUpS.get(sha)||{fails:0,next:0};
@@ -5368,9 +5438,11 @@ async function _picFetch(sha,mime){
   if(!ms.exists)throw new Error('picture is not in the cloud');
   const m=ms.data(),p=+m.p;
   if(!(p>=1&&p<=5000))throw new Error('picture meta is wrong');
+  const sm=(typeof m.sm==='string'&&/^[0-9a-f]{64}$/.test(m.sm))?m.sm:null;   /* v05.31 — S4e: the bytes are the smaller copy, stored under their own sha */
+  const want=sm||sha;
   const parts=[];let tot=0;
   for(let i=0;i<p;i++){
-    const ps=await nb.collection('picparts').doc(sha+'~'+i).get();
+    const ps=await nb.collection('picparts').doc(want+'~'+i).get();
     if(!ps.exists)throw new Error('picture part '+i+' is missing');
     const d=ps.data().d,u8=(d&&typeof d.toUint8Array==='function')?d.toUint8Array():null;
     if(!u8)throw new Error('picture part '+i+' is not bytes');
@@ -5379,10 +5451,10 @@ async function _picFetch(sha,mime){
   const all=new Uint8Array(tot);let off=0;
   parts.forEach(function(u){all.set(u,off);off+=u.length;});
   if(m.n!=null&&+m.n!==tot)throw new Error('picture is the wrong size');
-  if(await _picSha(all.buffer)!==sha)throw new Error('picture failed its check');   /* a wrong picture is never stored or shown */
+  if(await _picSha(all.buffer)!==want)throw new Error('picture failed its check');   /* a wrong picture is never stored or shown */
   const t=m.t||mime||'image/jpeg',blob=new Blob([all],{type:t});
   await _picDB();
-  if(!_picKnown.has(sha))await _picWrite(sha,blob,t,true);
+  if(!_picKnown.has(sha))await _picWrite(sha,blob,t,true,false,!!sm);
   return blob;
 }
 const _picFS=new Map();   /* sha -> {fails,timer,busy,last,mime} — memory only */
@@ -5428,7 +5500,7 @@ async function _picShowAll(sha){
 }
 function _picDiagText(){
   let t=_picNotUp.size?(_picNotUp.size+' waiting to upload'):'all uploaded';
-  if(_picEnx.size)t+=' ('+_picEnx.size+' from the Evernote import'+(DB.theme&&DB.theme.enxMediaCloud?'':', held until you choose how they go up')+')';
+  if(_picEnx.size)t+=' ('+_picEnx.size+' from the Evernote import'+(_enxCloudMode()==='hold'?', kept on this computer':_enxCloudMode()==='small'?', going up at a smaller size':'')+')';
   if(_picCapHit.size)t+=' · '+_picCapHit.size+' not uploaded: cloud picture space is full';
   if(_picUpStat.refused)t+=' · cloud refused picture upload (permission-denied)';
   else if(_picUpStat.lastErr)t+=' · last upload error: '+_picUpStat.lastErr.code;
