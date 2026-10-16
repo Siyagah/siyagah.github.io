@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.24">
+<meta name="app-version" content="05.25">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1160,6 +1160,15 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jeb-acts button{min-height:40px;padding:0 12px;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation}
 .jeb-acts button:hover{background:var(--hover)}
 .jeb-acts .jeb-note-b{color:var(--green2)}
+/* v05.25 · Z9 — an item's own title: bold main line; its text (the link) small underneath on one line */
+.jeb-ttl{padding:8px 2px 0;font-size:14px;font-weight:700;line-height:1.35;color:var(--t1);overflow-wrap:anywhere;cursor:pointer}
+.jeb-it.done .jeb-ttl{text-decoration:line-through;color:var(--t2)}
+.jeb-tx.jeb-sub{flex:none;padding:0 2px 6px;font-size:12px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t2)}
+.jeb-card .jeb-ttl{padding:2px 10px 0;color:#2A2418}
+.jeb-card .jeb-tx.jeb-sub{padding:0 10px 8px;color:#2A2418}
+.jl-tt .jeb-ttl{padding:0 2px}
+.jeb-acts .jeb-ttl-b{color:var(--t1)}
+@media(max-width:639.98px){.jeb-acts .jeb-ttl-b{min-height:44px;min-width:44px}.jc-acts .jeb-ttl-b{min-height:44px}}
 #jeb-att{position:fixed;z-index:9150;display:flex;flex-direction:column;background:var(--white);color:var(--t1);border:1px solid var(--border2);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.28);width:340px;max-width:calc(100vw - 12px);overflow:hidden}
 @media(max-width:639.98px){#jeb-att{left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;max-width:none;height:80vh!important;border-radius:16px 16px 0 0}}
 .ja-hd{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -3721,7 +3730,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.24</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.25</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -22901,6 +22910,8 @@ function jebEditItem(id,patch){
   if('stars' in patch){ const n=Math.floor(+patch.stars); if(n>=1) it.stars=Math.min(3,n); else delete it.stars; }
   if(Array.isArray(patch.topics)){ const tp=[]; patch.topics.forEach(x=>{ const s=String(x==null?'':x).trim(); if(s&&!tp.some(y=>y.toLowerCase()===s.toLowerCase())) tp.push(s); }); if(tp.length) it.topics=tp; else delete it.topics; }
   ['qty','shop'].forEach(k=>{ if(k in patch){ const s=String(patch[k]==null?'':patch[k]).trim().replace(/\s+/g,' '); if(s) it[k]=s; else delete it[k]; } });
+  /* v05.25 · Z9 — the owner's own title: a trimmed string, absent when empty (never ""); not `ttl`, the fetched YouTube title */
+  if('title' in patch){ const s=String(patch.title==null?'':patch.title).trim().replace(/\s+/g,' '); if(s) it.title=s; else delete it.title; }
   it.updatedAt=_jebNow(); persist(); return true;
 }
 /* ── v05.11 · Z6b — task items. A task's due/pri/steps ride the item record, so they sync with the item
@@ -23091,11 +23102,16 @@ function jebToNote(id){
       content:lines.slice(1).filter(l=>l.trim()!=='').map(l=>'<p>'+esc(l)+'</p>').join(''),
       folderIds:(it.folderIds||[]).filter(fid=>DB.folders.some(f=>f.id===fid)),tags:(it.tags||[]).slice(),
       fromJeb:{pocket:pk?pk.name:'',at:now},createdAt:it.createdAt||now,updatedAt:now};
+    if(it.title){   /* v05.25 · Z9 — the owner's title is the note's title; the whole text goes in the body (below, the kind-specific lines still follow) */
+      note.title=it.title.slice(0,120);
+      note.content=lines.filter(l=>l.trim()!=='').map(l=>'<p>'+esc(l)+'</p>').join('');
+    }
     if(pk&&_jebType(pk)==='links'){
       const L=_jebLinkOf(it);
       if(L.url){   /* title as a link, the thumbnail as a plain <img src> (the bytes stay with YouTube: nothing to store, nothing to sync), then people and issues */
+        if(it.title) L.title=it.title;   /* the owner's title wins over the fetched one (a copy: `ttl` stays) */
         note.title=String(L.title).split(/\r?\n/)[0].slice(0,120)||L.domain||'Link';
-        const rest=lines.slice(1).filter(l=>l.trim()!==''&&l.trim()!==L.url).map(l=>'<p>'+esc(l)+'</p>').join('');
+        const rest=(it.title?lines:lines.slice(1)).filter(l=>l.trim()!==''&&l.trim()!==L.url).map(l=>'<p>'+esc(l)+'</p>').join('');
         const ppl=(it.people||[]).join(', '), iss=(it.issues||[]).map(x=>'# '+x).join(', ');
         note.content='<p><a href="'+esc(L.url)+'">'+esc(L.title.split(/\r?\n/)[0])+'</a></p>'
           +(L.th?'<p><img src="'+esc(L.th)+'" alt=""></p>':'')
@@ -23112,7 +23128,7 @@ function jebToNote(id){
       if(ln) note.content+='<p>'+esc(ln)+'</p>';
     }
     if(pk&&_jebType(pk)==='shop'){   /* "qty text" as the title, then "🏪 shop" */
-      if(it.qty) note.title=(it.qty+' '+note.title).slice(0,120);
+      if(it.qty&&!it.title) note.title=(it.qty+' '+note.title).slice(0,120);
       if(it.shop) note.content+='<p>'+esc('🏪 '+it.shop)+'</p>';
     }
     if(it.kind){ note.kind=it.kind; note.kinds=[it.kind]; }
@@ -23769,6 +23785,7 @@ function _jebMakePanel(){
     if(t.closest('.jl-p-b')){ _jebPickOpen(row.dataset.iid,'people'); return; }
     if(t.closest('.jl-i-b')){ _jebPickOpen(row.dataset.iid,'issues'); return; }
     if(t.closest('.jeb-more')){ _jebItemMenu(row.dataset.iid,t.closest('.jeb-more')); return; }
+    if(t.closest('.jeb-ttl-b,.jeb-ttl')){ _jebTitleEdit(row.dataset.iid); return; }   /* v05.25 · Z9 */
     if(t.closest('.jeb-att-b')){ _jebAttOpen(row.dataset.iid,t.closest('.jeb-att-b')); return; }
     if(t.closest('.jeb-note-b')){ _jebToNoteUI(row.dataset.iid); return; }
     if(t.closest('a.jeb-lnk')) return;   /* v05.18: the address opens in a new tab; the rest of the text edits */
@@ -23795,8 +23812,8 @@ function _jebThumbHTML(L,pk){
 function _jebLinkSugHTML(i){ return (i.ch&&!(i.people||[]).length)?`<button class="jl-sug" title="Add the channel as the person">👤 Add ${esc(i.ch)}?</button>`:''; }
 function _jebLinkRowHTML(i,pk,mode){
   const L=_jebLinkOf(i), th=_jebThumbHTML(L,pk);
-  const tt=`<div class="jeb-tx">${esc(L.title)}</div><div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`;
-  const acts=`<div class="jeb-acts"><button class="jl-p-b" title="Who is this about">👤 Person</button><button class="jl-i-b" title="Which issue is this about"># Issue</button><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div>`;
+  const tt=`${_jebMainHTML(i,i.title?_jebTxHTML(i.text):esc(L.title))}<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`;
+  const acts=`<div class="jeb-acts"><button class="jl-p-b" title="Who is this about">👤 Person</button><button class="jl-i-b" title="Which issue is this about"># Issue</button><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button>${_JEB_TTL_B}<button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div>`;
   const ctl=`<span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}>`;
   const more='<button class="jeb-more" aria-label="Item menu" title="More">⋯</button>';
   const cls=`jeb-it jl-it jl-${mode}${i.done?' done':''}`;
@@ -23855,8 +23872,8 @@ function _jebTaskMode(){
 function _jebTaskRowHTML(i,pk,mode){
   const today=_jebToday(), wide=mode==='w', pcs=_jebTaskPieces(i,today,false), open=_jebStepsOpen.has(i.id);
   return '<div class="jeb-it jt-it'+(i.done?' done':'')+(wide?' jt-w':'')+(open?' jt-open':'')+'" data-iid="'+esc(i.id)+'"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"'+(i.done?' checked':'')+'>'
-    +'<div class="jeb-body"><div class="jeb-tx">'+_jebTxHTML(i.text)+'</div>'+((!wide&&pcs)?'<div class="jt-meta">'+pcs+'</div>':'')+_jebChipsHTML(i)+(open?_jebStepsHTML(i):'')
-    +'<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div>'
+    +'<div class="jeb-body">'+_jebMainHTML(i,_jebTxHTML(i.text))+((!wide&&pcs)?'<div class="jt-meta">'+pcs+'</div>':'')+_jebChipsHTML(i)+(open?_jebStepsHTML(i):'')
+    +_JEB_ROW_ACTS+'</div>'
     +((wide&&pcs)?'<div class="jt-side">'+pcs+'</div>':'')+'<button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>';
 }
 /* the single-pocket list: Overdue, Today, Tomorrow, Later, No date, then Done (folded, with its count) */
@@ -23879,7 +23896,8 @@ function _jebTaskMultiHTML(pk,items){
     ||('<div class="jeb-gl" data-pid="'+pid+'"></div>');
 }
 /* ── v05.12 · Z6c — idea and shopping rows. The meta line sits UNDER the text at every panel width, so no layout here depends on the window. ── */
-const _JEB_ROW_ACTS='<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div>';
+const _JEB_TTL_B='<button class="jeb-ttl-b" title="Give this item a title">✎ Title</button>';
+const _JEB_ROW_ACTS='<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button>'+_JEB_TTL_B+'<button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div>';
 function _jebStarsHTML(i){
   const n=i.stars>0?Math.min(3,Math.floor(+i.stars)):0;
   return '<span class="ji-stars" role="group" aria-label="Stars: '+n+' of 3">'+[1,2,3].map(k=>'<button type="button" class="ji-star'+(k<=n?' on':'')+'" data-n="'+k+'" aria-label="'+k+(k===1?' star':' stars')+'" aria-pressed="'+(k<=n)+'">'+(k<=n?'★':'☆')+'</button>').join('')+'</span>';
@@ -23897,7 +23915,7 @@ function _jebKindMeta(i,pk,card){
 }
 function _jebKindRowHTML(i,pk){
   return '<div class="jeb-it jk-it'+(_jebType(pk)==='ideas'?' ji-it':' js-it')+(i.done?' done':'')+'" data-iid="'+esc(i.id)+'"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"'+(i.done?' checked':'')+'>'
-    +'<div class="jeb-body"><div class="jeb-tx">'+_jebTxHTML(i.text)+'</div>'+_jebKindMeta(i,pk,false)+_jebChipsHTML(i)+_JEB_ROW_ACTS+'</div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>';
+    +'<div class="jeb-body">'+_jebMainHTML(i,_jebTxHTML(i.text))+_jebKindMeta(i,pk,false)+_jebChipsHTML(i)+_JEB_ROW_ACTS+'</div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>';
 }
 const _jebRows=(pk,l)=>l.map(i=>_jebKindRowHTML(i,pk)).join('');
 /* Ideas: a view bar (Sort · Group by), then the list or one group per topic */
@@ -23927,13 +23945,17 @@ function _jebShopPanelHTML(pk,items){
     +(got.length?'<div class="jt-gh js-basket"><b>In the basket ('+got.length+')</b></div><div class="jeb-gl jl-list" data-pid="'+pid+'" data-g="basket">'+_jebRows(pk,got)+'</div>':'')
     +(shown.length?'':'<div class="jeb-empty">No items for this shop.</div>');
 }
-function _jebItemSig(i){ return [i.id,i.text,i.done?1:0,i.url||'',i.ttl||'',i.ch||'',i.th||'',i.due||'',i.pri||0,_jebSteps(i).map(x=>x.id+':'+x.t+':'+(x.d?1:0)).join(','),_jebKindSig(i),_jebChipsHTML(i)].join('~'); }
+/* v05.25 · Z9 — the main lines of a row or card. No title = exactly the old single .jeb-tx; a title = bold .jeb-ttl, the text small under it (still .jeb-tx, so a tap edits the text) */
+function _jebMainHTML(i,inner){
+  return i.title?'<div class="jeb-ttl" title="Change the title">'+esc(i.title)+'</div><div class="jeb-tx jeb-sub">'+inner+'</div>':'<div class="jeb-tx">'+inner+'</div>';
+}
+function _jebItemSig(i){ return [i.id,i.title||'',i.text,i.done?1:0,i.url||'',i.ttl||'',i.ch||'',i.th||'',i.due||'',i.pri||0,_jebSteps(i).map(x=>x.id+':'+x.t+':'+(x.d?1:0)).join(','),_jebKindSig(i),_jebChipsHTML(i)].join('~'); }
 function _jebRowHTML(i){
   const lpk=_jebPocket(i.pocketId);
   if(lpk&&_jebType(lpk)==='links') return _jebLinkRowHTML(i,lpk,'c');
   if(lpk&&_jebType(lpk)==='tasks') return _jebTaskRowHTML(i,lpk,_jebTaskMode());   /* v05.11 · Z6b */
   if(lpk&&(_jebType(lpk)==='ideas'||_jebType(lpk)==='shop')) return _jebKindRowHTML(i,lpk);   /* v05.12 · Z6c */
-  return `<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body"><div class="jeb-tx">${_jebTxHTML(i.text)}</div>${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button><button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`;
+  return `<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body">${_jebMainHTML(i,_jebTxHTML(i.text))}${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button>${_JEB_TTL_B}<button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`;
 }
 function _jebPaintPanel(){
   const sel=_jebPanelSel(), ids=_jebSelIds(sel), multi=_jebOpen==='*';
@@ -24129,6 +24151,7 @@ function _jebMakeDeck(){
     const jd=t.closest('.jt-due,.jt-flag'); if(jd){ _jebDueOpen(iid,jd); return; }
     if(t.closest('.jt-cnt')){ _jebStepsModal(iid); return; }
     if(t.closest('.jeb-more')){ _jebItemMenu(iid,t.closest('.jeb-more')); return; }
+    if(t.closest('.jeb-ttl-b,.jeb-ttl')){ _jebTitleEdit(iid); return; }   /* v05.25 · Z9 */
     if(t.closest('.jeb-att-b')){ _jebAttOpen(iid,t.closest('.jeb-att-b')); return; }
     if(t.closest('.jeb-note-b')){ _jebToNoteUI(iid); return; }
     if(t.closest('a.jeb-lnk')) return;   /* v05.18: the address opens in a new tab; the rest of the text edits */
@@ -24142,7 +24165,7 @@ function _jebMakeDeck(){
 }
 function _jebCardHTML(i,pk){
   const lk=_jebType(pk)==='links', tk=_jebType(pk)==='tasks', L=lk?_jebLinkOf(i):null;   /* v05.10: a link card = thumbnail on top, then the title */
-  return `<div class="jeb-card${i.done?' done':''}${lk?' jl-dcard':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another pocket" aria-label="Drag handle">⠿</div>${lk?_jebThumbHTML(L,pk):''}<div class="jeb-tx">${lk?esc(L.title):_jebTxHTML(i.text)}</div>${tk?(()=>{ const pcs=_jebTaskPieces(i,_jebToday(),true); return pcs?'<div class="jt-meta">'+pcs+'</div>':''; })():''}${_jebKindMeta(i,pk,true)}${lk?`<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`:''}${_jebChipsHTML(i)}${lk?_jebLinkSugHTML(i):''}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
+  return `<div class="jeb-card${i.done?' done':''}${lk?' jl-dcard':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another pocket" aria-label="Drag handle">⠿</div>${lk?_jebThumbHTML(L,pk):''}${_jebMainHTML(i,lk&&!i.title?esc(L.title):_jebTxHTML(i.text))}${tk?(()=>{ const pcs=_jebTaskPieces(i,_jebToday(),true); return pcs?'<div class="jt-meta">'+pcs+'</div>':''; })():''}${_jebKindMeta(i,pk,true)}${lk?`<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`:''}${_jebChipsHTML(i)}${lk?_jebLinkSugHTML(i):''}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-ttl-b" aria-label="Title" title="Give this item a title">✎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
 }
 function _jebPaintDeck(){
   const sel=_jebDeck, ids=_jebSelIds(sel);
@@ -24288,6 +24311,7 @@ function _jebItemMenu(iid,anchor){
       {t:'☑ Steps…',f:()=>_jebStepsToggle(iid,true)}]:[]),
     ...(_jebType(_jebPocket(it.pocketId))==='ideas'?[{t:'★ Stars…',f:()=>_jebStarsOpen(iid)},{t:'# Topic…',f:()=>_jebPickOpen(iid,'topics')}]:[]),   /* v05.12 · Z6c */
     ...(_jebType(_jebPocket(it.pocketId))==='shop'?[{t:'🔢 Quantity…',f:()=>_jebQtyEdit(iid)},{t:'🏪 Shop…',f:()=>_jebPickOpen(iid,'shop')}]:[]),
+    {t:'✎ Title…',f:()=>_jebTitleEdit(iid)},
     {t:'📎 Attach',f:()=>_jebAttOpen(iid,anchor)},
     {t:'→ Note',f:()=>_jebToNoteUI(iid)},
     {t:'📂 Move to pocket ▸',keep:true,f:()=>{
@@ -24415,6 +24439,22 @@ function _jebStarsOpen(iid){
   });
   mb.querySelector('#jk-st-done').addEventListener('click',()=>closeModal());
   paint();
+}
+/* v05.25 · Z9 — the title dialog: the app's own modal (a bottom sheet on a phone, centred and clamped above it), OK / Clear / Cancel; Enter saves, Escape cancels */
+function _jebTitleEdit(iid){
+  const it=_jebItem(iid); if(!it) return;
+  _jebHideMenu();
+  showModal('<div class="mt">✎ Title</div><input class="mi" id="jt-tm" data-jeb="1" maxlength="200" autocomplete="off" enterkeyhint="done" placeholder="A title for this item" aria-label="Title" value="'+esc(it.title||'')+'"><div class="ma"><button class="btn" id="jt-tm-x">Cancel</button>'+(it.title?'<button class="btn" id="jt-tm-c">Clear</button>':'')+'<button class="btn bp" id="jt-tm-ok">OK</button></div>');
+  const mb=_jebEl('mb'), inp=mb.querySelector('#jt-tm');
+  const save=v=>{ jebEditItem(iid,{title:v}); closeModal(); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); };
+  mb.querySelector('#jt-tm-ok').addEventListener('click',()=>save(inp.value));
+  mb.querySelector('#jt-tm-x').addEventListener('click',()=>closeModal());
+  const cl=mb.querySelector('#jt-tm-c'); if(cl) cl.addEventListener('click',()=>save(''));
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); save(inp.value); }
+    else if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeModal(); }
+  });
+  inp.focus(); inp.select();
 }
 let _jebQtyId=null;   /* the item whose quantity box is open: the panel is not repainted under it */
 function _jebQtyOpen(){ if(_jebQtyId&&!document.querySelector('#jeb-panel .jk-qin')) _jebQtyId=null; return !!_jebQtyId; }   /* a box removed with its panel leaves no stuck lock */

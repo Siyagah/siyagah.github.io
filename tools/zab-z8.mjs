@@ -144,8 +144,10 @@ try {
     try {
       const html = async (d, pid) => { await sleep(900); await on(d, (p) => { jebOpenPanel(p); }, pid); await sleep(600); return on(d, () => document.getElementById('jeb-panel').outerHTML); };
       for (const pid of ['A1', 'B', 'A2a']) {
-        const a = await html(dn, pid), b = await html(dold, pid);
-        check(a === b, `${t} pocket ${pid} (nothing inside): the panel's HTML is byte-identical to the previous build's`, a === b ? '' : `new ${a.length} bytes, old ${b.length}`);
+        /* v05.25 (Z9, J36), updated in place by the Architect: every item row now carries a "✎ Title" button, so the new build's panel is compared
+           with that one button removed; anything else that differs still fails. */
+        const a = (await html(dn, pid)).split('<button class="jeb-ttl-b" title="Give this item a title">✎ Title</button>').join(''), b = await html(dold, pid);
+        check(a === b, `${t} pocket ${pid} (nothing inside): the panel's HTML is byte-identical to the previous build's (apart from v05.25's ✎ Title button)`, a === b ? '' : `new ${a.length} bytes, old ${b.length}`);
       }
       const k = await on(dn, () => { const e = document.querySelector('#jeb-panel .jx-kids'); return { hidden: e.hidden, empty: e.innerHTML === '', has: document.getElementById('jeb-panel').classList.contains('jx-has') }; });
       check(k.hidden && k.empty && !k.has, `${t} no list, no heading, no scroll-as-one class`, JSON.stringify(k));

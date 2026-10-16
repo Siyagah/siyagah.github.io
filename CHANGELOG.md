@@ -10134,3 +10134,34 @@ Trash step of 80j).
 - The full `app-check` was not run (told not to); the Architect runs it. The speed checks' factor was only ever 1.0 here, so its scaling has been
   read, not seen; the first run on the Architect's computer will show its factor in the lines.
 - 52d: see item 6.
+
+**Totals (Architect), v05.24:** full `app-check` on `97a19e6` (two halves): 2328/2332 + 4707/4721 — 75a@360/390 failed (the ✕ really a 37 px target), fixed in review. D8 full recheck on `85e710d`: blocks 1–59 + `self-check` **2330/2332**, blocks 60–84 **4716/4723** → **7046/7055** over all 451 blocks; every miss a speed limit (57d, 78b, 82e). `--only 84` 42/42; `title-t1 --only=75a` 22/22; `ship-check` 15/15. The host factor is measured per process while a full run loads the machine, so it varies (1.32–1.69 in one run).
+
+## v05.25 — Z9: a title for any Zab item (issue #197, PCF J36)
+
+The owner (J36): "Enable a title to a Quick note/link". All three layouts (390 / 820 / 1440) built and measured.
+
+1. **New item field `title`** — the owner's own, trimmed, absent when empty (never `""`); through `jebEditItem` and `_jebItemSig`; syncs with the
+   item record. Not `ttl` (the fetched YouTube title): where both exist `title` wins on screen, `ttl` is untouched.
+2. **Setting it.** "✎ Title" beside 📎 Attach and → Note on every row kind (plain, Links, Tasks, Ideas, Shopping), in All pockets, and "✎" on a deck
+   card; also "✎ Title…" in the ⋯ menu. It opens the app's modal (OK / Clear / Cancel; Enter saves, Escape cancels) — the app's own modal at every
+   size (measured on screen at 390 / 820 / 1440; the phone button is 44 px). **Deviation:** the issue asked for a bottom sheet on a phone; the modal there is
+   the app's centred box (as `_jebQtyEdit`'s card dialog), not a sheet. Option A of J36, as asked.
+3. **Showing it.** `_jebMainHTML`: the title bold, the text (the link) small, one line, ellipsised, under it; `a.jeb-lnk` still opens in a new tab;
+   a tap on the small text edits the TEXT; a tap on the title opens the dialog. Links: the title replaces the fetched line.
+4. **→ Note** uses the title as the note's title (a Links note's link text too; a Shopping item's quantity is not prefixed to it); the text goes in the body.
+5. **Search inside Zab:** nothing in Zab searches items (no add-box filter, Choose lists pockets), so there was nothing to extend.
+
+**Checks.** New block 85, `tools/zab-z9.mjs` (131 checks in app-check). `--unpatched` (the build before this round): 30 of 33 run fail (the run stops at
+the first dialog that never opens); the 3 that pass are "no page errors". The two-device check calls `mergeDB` both ways on copies (as 59/jeb-j1 do)
+rather than the `s1-fake` cloud. "Same HTML as v05.24" (85d) compares the panel and deck with the button removed, since the button is new on every row.
+
+### Architect's review
+
+- The builder's run ended without opening a PR (all four commits pushed); the Architect opened PR #198.
+- **83c updated in place:** it compared a pocket's panel with the v05.21 build byte for byte, and every item row now carries "✎ Title", so the new build's panel is compared with that one button removed (anything else that differs still fails). It had failed at 390 / 820 / 1440 for A1 and A2a (pockets with items); B (no items) passed.
+- Screenshots at 390 and 1440 with a titled link: the title bold, the link small under it, "✎ Title" beside Attach and → Note; on a phone the dialog is the app's centred box in the upper half of the screen (clear of the keyboard), accepted in place of a bottom sheet.
+
+### Not done
+
+- The full `app-check` was not run (told not to); the Architect runs it.

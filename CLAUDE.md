@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.24.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.25.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,9 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.25** (15 Oct 2026) — Z9, a title for any Zab item (issue #197, PCF J36). New item field `title` (the owner's; trimmed, absent when empty);
+  "✎ Title" beside 📎 Attach / → Note on every row kind, the deck card (✎) and the ⋯ menu ("✎ Title…"); the title shows bold, the text (link) small
+  under it; Links: `title` wins over `ttl`; → Note uses it as the note's title. Check: block 85, `tools/zab-z9.mjs` (`--unpatched`: 30 of 33 run fail).
 - **v05.24** (15 Oct 2026) — F1, seven small follow-ups (issue #195, PCF J10). Favourites' empty text says "choose ⭐ Favourite" (the menu's
   word); the Evernote menu's hover text says it imports; an Evernote folder put in Trash while an import runs is never given its id again
   (`trashF` in `_enxImport`'s `ensure`: next free suffix); phone ✕ row while editing 44 → 36 px (button still 44 × 44; tablet/laptop
@@ -67,10 +70,6 @@ must never accumulate here instead of there.
   the bar. Bar, a pocket's row of pockets inside, and the phone's Rail / Drawer / Columns, always among the same siblings through
   `jebMovePocket` (never "into"); Escape or a drop outside puts it back; no dragging in Choose; none of the slide under reduced motion.
   See *Dragging pockets* below. Check: block 81, `tools/zab-z7.mjs` (`--unpatched`: 34 of 105 fail). Zab moves are not undoable (as before).
-- **v05.20** (15 Oct 2026) — S4b, the Evernote notes come in, at most 6,000 in any rolling 24 hours (issue #187, PCF J01; pictures/audio/files
-  are S4c, merging earlier imports S4d). 📥 Bring them in on the dry run's result → My Notebooks ▸ Evernote ▸ stack ▸ notebook, batches of
-  250, Pause / Continue, `fromEvernote` mark, Smart View `sf-enx` "(13) From Evernote", a toast once per session. See *The Evernote
-  import, the notes* below. 2,000 notes at 390 ×4: worst long task 108 ms. Check: block 80, `tools/enex-s4b.mjs`.
 
 ---
 
@@ -515,6 +514,10 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `.jx-mv`, greyed rows say why). All pockets: sub-groups indented by `data-depth`, `.jx-fold` per session (`_jebFold`, never stored; a
   fold hides the group's own items and the groups inside). Deck: `.jx-ins` "inside:" chips. Choose lists every pocket at any depth
   (nested ones marked ↳) in place of the bar's top-level-only view. Nothing new is fixed to the bottom, nothing is written to `<html>`.
+- **Item titles (v05.25, Z9).** `title` on an item is the owner's own title (through `jebEditItem`: trimmed, key deleted when empty, never `""`); it is NOT
+  `ttl` (the title fetched for a YouTube link), and where both exist `title` wins on screen while `ttl` is kept untouched. Drawn only by `_jebMainHTML(i,inner)`
+  (no title = the old single `.jeb-tx`, byte for byte; a title = bold `.jeb-ttl` + the text as a small `.jeb-tx.jeb-sub`, so a tap on the text still edits the
+  TEXT and a tap on the title opens the dialog); set by `_jebTitleEdit` (the app's modal; OK / Clear / Cancel). **A new item field goes in `_jebItemSig`.**
 - **Dragging pockets (v05.21, Z7).** ONE engine for every row of pockets: `_zabWireDrag(root,menu)` (mouse `pointerdown` + 5 px; finger
   `touchstart` → 500 ms hold lifts → 8 px drags, release in place = `menu`) wired on the bar, `#jeb-panel` (`.jx-kid`) and `#zab-lay`
   (Rail `.zr-b`, Drawer `.zd-row`, Columns `.zc-row`); `_zxCfg(c)` names the box, the siblings, the axis (`rev` = the Rail is drawn
