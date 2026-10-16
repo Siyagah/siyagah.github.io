@@ -10156,6 +10156,12 @@ The owner (J36): "Enable a title to a Quick note/link". All three layouts (390 /
 the first dialog that never opens); the 3 that pass are "no page errors". The two-device check calls `mergeDB` both ways on copies (as 59/jeb-j1 do)
 rather than the `s1-fake` cloud. "Same HTML as v05.24" (85d) compares the panel and deck with the button removed, since the button is new on every row.
 
+### Architect's review
+
+- The builder's run ended without opening a PR (all four commits pushed); the Architect opened PR #198.
+- **83c updated in place:** it compared a pocket's panel with the v05.21 build byte for byte, and every item row now carries "✎ Title", so the new build's panel is compared with that one button removed (anything else that differs still fails). It had failed at 390 / 820 / 1440 for A1 and A2a (pockets with items); B (no items) passed.
+- Screenshots at 390 and 1440 with a titled link: the title bold, the link small under it, "✎ Title" beside Attach and → Note; on a phone the dialog is the app's centred box in the upper half of the screen (clear of the keyboard), accepted in place of a bottom sheet.
+
 ### Not done
 
 - The full `app-check` was not run (told not to); the Architect runs it.
