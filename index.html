@@ -3455,6 +3455,13 @@ sup.ann-sup:hover{text-decoration:underline}
   opacity:.4;transition:opacity .15s,background .15s;cursor:pointer}
 .cal-layer-btn.on{opacity:1;border-color:var(--accent)}
 .cal-layers{display:flex;gap:3px;flex-shrink:0;margin-left:2px}
+/* v05.28 · A1 — on a phone the calendar's header was one row too wide: the month title shrank to nothing and the last layer buttons ran off the screen. Two rows: ≡ ◄ title ► ◄ over Today · Y M W D · layers. */
+@media(max-width:639.98px){
+  #p3h:has(>.cal-layers){flex-wrap:wrap;padding-top:6px;padding-bottom:6px;row-gap:6px}
+  #p3h:has(>.cal-layers)>span{min-width:96px}
+  #p3h:has(>.cal-layers)>.cal-view-tog,#p3h:has(>.cal-layers)>.cal-layers{order:5}
+  #p3h:has(>.cal-layers)>.cal-layers{margin-left:auto}
+}
 .cal-week-evt{font-size:10px;padding:1px 4px;margin:1px 0;
   border-radius:3px;cursor:pointer;overflow:hidden;
   white-space:nowrap;text-overflow:ellipsis}
@@ -3741,7 +3748,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
-    <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Article list">≡</button>
+    <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
     <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.28</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
@@ -6566,7 +6573,7 @@ function renderP2H(){
       'sf-favs'  :`<button class="btn bp p2-new-btn" onclick="newStarredNote()" title="New note — added to Favourites">⭐ Note</button>`,
       'sf-pinned':`<button class="btn bp p2-new-btn" onclick="newPinnedNote()" title="New note — pinned">📌 Note</button>`,
       'sf-remind':`<button class="btn bp p2-new-btn" onclick="newNoteWithReminder()" title="New note — with reminder">🔔 Note</button>`,
-      'sf-new'   :`<button class="btn bp p2-new-btn" onclick="quickCapture()" title="New article note">📰 Note</button>`,
+      'sf-new'   :`<button class="btn bp p2-new-btn" onclick="quickCapture()" title="New note">📰 Note</button>`,
       'sf-murajaa':`<button class="btn bp p2-new-btn" onclick="mrjStart()" title="Start Murājaʿah review session">▶ Review</button>`,
     };
     const _sfBtn=_sfNewBtns[_sfDef.id]||newBtn;
@@ -6661,10 +6668,10 @@ function renderP2C(){
   if(ST.tag){
     const arts=DB.articles.filter(a=>(a.tags||[]).includes(ST.tag));
     let h='<div class="fv">';
-    h+=`<div class="slbl">🏷 #${esc(ST.tag)} &nbsp;·&nbsp; ${arts.length} article${arts.length!==1?'s':''}</div>`;
+    h+=`<div class="slbl">🏷 #${esc(ST.tag)} &nbsp;·&nbsp; ${arts.length} note${arts.length!==1?'s':''}</div>`;
     if(!arts.length){
       h+='<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl)">'
-         +'<div style="color:var(--t3);font-size:13px">No articles with this tag yet</div></div>';
+         +'<div style="color:var(--t3);font-size:13px">No notes with this tag yet</div></div>';
     } else {
       _listPaint(el,h+'<div class="al">',new Array(arts.length),arts.length,i=>artCardC(arts[i],ST.article===arts[i].id,false),'</div></div>');
       return;
@@ -6771,7 +6778,7 @@ function renderP2C(){
   const arts=artsIn(curF.id);
   let h=_p2cFolderHead(curF,arts);
   if(!arts.length){
-    h+=`<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl)"><div style="color:var(--t3);font-size:13px;margin-bottom:10px">No articles yet</div><button class="btn bp" onclick="openModal('art','${curF.id}')" style="font-size:12px">Add article</button></div>`;
+    h+=`<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl)"><div style="color:var(--t3);font-size:13px;margin-bottom:10px">No notes yet</div><button class="btn bp" onclick="openModal('art','${curF.id}')" style="font-size:12px">Add note</button></div>`;
   } else if(!curF.structured){
     /* v04.91 — S1d: one card = one element, so a change that touches a few cards
        rewrites those cards, not the whole list (see _p2cPaint) */
@@ -6936,7 +6943,7 @@ function _p2cFolderHead(curF,arts){
      nothing for a folder without a usable report, so plain and structured
      folders alike look exactly as they did. */
   h+=_dbReportHTML(curF,arts);
-  h+=`<div class="slbl">Articles (${arts.length})</div>`;
+  h+=`<div class="slbl">Notes (${arts.length})</div>`;
   /* ── Quick inline title bar ── */
   h+=`<div class="qt-bar">`
     +`<span class="qt-ic">✚</span>`
@@ -6978,7 +6985,7 @@ function _p2cTry(ids){
 function _navBtnsHTML(dup){
   if(dup&&_p3OneBar())return '';
   if(window.innerWidth<1200)
-    return `<button class="btn bn bi" onclick="openP2()" style="font-size:18px;flex-shrink:0" title="Back to article list">◀</button><button class="btn bn bi" onclick="backFromP3()" style="font-size:19px;flex-shrink:0" title="Folders">📁</button>`;
+    return `<button class="btn bn bi" onclick="openP2()" style="font-size:18px;flex-shrink:0" title="Back to note list">◀</button><button class="btn bn bi" onclick="backFromP3()" style="font-size:19px;flex-shrink:0" title="Folders">📁</button>`;
   if(document.getElementById('sb')?.classList.contains('closed'))
     return `<button class="btn bn bi" onclick="toggleSB()" style="font-size:14px" title="Open sidebar">☰</button>`;
   return '';
@@ -7015,7 +7022,7 @@ function renderP3H(){
   let h='';
   if(window.innerWidth<1200){
     // Mobile/tablet: ◀ = back to the article-list (Title) pane this note belongs to
-    h+=`<button class="btn bn bi" onclick="openP2()" style="font-size:18px;flex-shrink:0" title="Back to article list">◀</button>`;
+    h+=`<button class="btn bn bi" onclick="openP2()" style="font-size:18px;flex-shrink:0" title="Back to note list">◀</button>`;
     // ≡ = open folders / sidebar
     h+=`<button class="btn bn bi" onclick="backFromP3()" style="font-size:19px;flex-shrink:0" title="Folders">📁</button>`;
   } else if(document.getElementById('sb').classList.contains('closed')){
@@ -7117,7 +7124,7 @@ function renderP3H(){
       h+='<div class="p3h-nav-edit-row">'
         +'<div class="nav-l">'
           +_p3HomeBtnHTML(_p3OneBar())
-          +'<button class="btn bn bi" onclick="openP2()" style="font-size:16px" title="Back to article list">◀</button>'
+          +'<button class="btn bn bi" onclick="openP2()" style="font-size:16px" title="Back to note list">◀</button>'
           +'<button class="btn bn bi" onclick="backFromP3()" style="font-size:17px" title="Folders">📁</button>'
         +'</div>'
         +'<div class="nav-r">'+_p3EditIconsHTML(curA)+'</div>'
@@ -7313,8 +7320,8 @@ function _renderP3CInner(){
         +(_p3OneBar()
           /* v05.15 (T1) — phone: ✕ and the Saved flash sit on a row of their own ABOVE the title, and the
              title is a growing <textarea> at the full width below (the one bar above has no room left). */
-          ?`<div class="p3c-actrow"><span id="save-flash" class="save-flash">✓ Saved</span><button class="btn bn bi p3c-stop" onclick="cancelEdit()" title="Stop editing — everything you typed is already saved">✕</button></div><div class="p3h-title-bar p3c-titlebar p3c-ph"><textarea id="ti" rows="1" placeholder="Article title…" oninput="_tiInput(this,true)" onkeydown="_tiKey(event,this)">${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}</textarea></div>`
-          :`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML(true)}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Article title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span></div>`)
+          ?`<div class="p3c-actrow"><span id="save-flash" class="save-flash">✓ Saved</span><button class="btn bn bi p3c-stop" onclick="cancelEdit()" title="Stop editing — everything you typed is already saved">✕</button></div><div class="p3h-title-bar p3c-titlebar p3c-ph"><textarea id="ti" rows="1" placeholder="Note title…" oninput="_tiInput(this,true)" onkeydown="_tiKey(event,this)">${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}</textarea></div>`
+          :`<div class="p3h-title-bar p3c-titlebar">${_navBtnsHTML(true)}<input id="ti" value="${esc(ST.etitle!=null?ST.etitle:(curA.title||''))}" placeholder="Note title…" oninput="ST.etitle=this.value;_tiScheduleAutoSave()"><span id="save-flash" class="save-flash">✓ Saved</span></div>`)
         +_p3MetaRowHTML(curA,_mobE2)+_fieldsPanelHTML(curA)+`<div id="ed" data-aid="${curA.id}" contenteditable="true" spellcheck="true"></div>`;
     }
     _tiGrowAll();requestAnimationFrame(_tiGrowAll);
@@ -13918,8 +13925,8 @@ function _popTitleHTML(aid,mode,a,title){
     return ph?'<textarea rows="1" class="fw-ti pf-ti" id="fw-ti-'+aid+'" data-pf="title" data-ps="title" placeholder="Title…" title="Title" oninput="_tiInput(this,false)" onkeydown="_tiKey(event,this)">'+esc((a&&a.title)||'')+'</textarea>'
       :'<input class="fw-ti pf-ti" id="fw-ti-'+aid+'" data-pf="title" data-ps="title" value="'+esc((a&&a.title)||'')+'" placeholder="Title…" title="Title">';
   if(ST.editing&&ST.noteModal&&ST.article===aid)
-    return ph?'<textarea rows="1" class="pf-ti" id="ti" data-pf="title" data-ps="title" placeholder="Article title…" title="Title" oninput="_tiInput(this,true)" onkeydown="_tiKey(event,this)">'+esc(ST.etitle!=null?ST.etitle:((a&&a.title)||''))+'</textarea>'
-      :'<input class="pf-ti" id="ti" data-pf="title" data-ps="title" value="'+esc(ST.etitle!=null?ST.etitle:((a&&a.title)||''))+'" placeholder="Article title…" title="Title" oninput="ST.etitle=this.value;_tiScheduleAutoSave()">';
+    return ph?'<textarea rows="1" class="pf-ti" id="ti" data-pf="title" data-ps="title" placeholder="Note title…" title="Title" oninput="_tiInput(this,true)" onkeydown="_tiKey(event,this)">'+esc(ST.etitle!=null?ST.etitle:((a&&a.title)||''))+'</textarea>'
+      :'<input class="pf-ti" id="ti" data-pf="title" data-ps="title" value="'+esc(ST.etitle!=null?ST.etitle:((a&&a.title)||''))+'" placeholder="Note title…" title="Title" oninput="ST.etitle=this.value;_tiScheduleAutoSave()">';
   return '<span class="fw-title-disp" data-pf="title" data-ps="title" title="Right-click to edit — '+title+'" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">'+title+'</span>';
 }
 /* v04.80 — ✚ New + ✏️ Edit / 💾 Save. Rendered in BOTH rows; CSS shows the
@@ -20104,7 +20111,7 @@ function _buildFolderCtxMain(fid){
     : '';
   const hasMoveSec=_f&&!_f.parentId&&DB.sections&&DB.sections.some(s=>s.id!==_f.sectionId);
   return `<div class="ci" onclick="hideCtx();openModal('folder','${fid}')">📁 Add subfolder</div>
-    <div class="ci" onclick="hideCtx();openModal('art','${fid}')">📄 Add article here</div>
+    <div class="ci" onclick="hideCtx();openModal('art','${fid}')">📄 Add note here</div>
     <div class="ci" onclick="hideCtx();openModal('rename','${fid}')">✏️ Rename folder</div>
     <div class="ci" onclick="hideCtx();openFolderPopout('${fid}')">🗗 Pop out into window</div>
     ${_topRow}
@@ -20420,8 +20427,8 @@ function openModal(type,target){
       <div class="ma"><button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn bp" onclick="mkFolder('${target||''}',document.getElementById('inp').value);closeModal()">Create</button></div>`);
   } else if(type==='art'){
-    showModal(`<div class="mt">New article</div>
-      <input class="mi" id="inp" placeholder="Article title" onkeydown="if(event.key==='Enter'){mkArt('${target||''}',this.value);closeModal();}if(event.key==='Escape')closeModal()">
+    showModal(`<div class="mt">New note</div>
+      <input class="mi" id="inp" placeholder="Note title" onkeydown="if(event.key==='Enter'){mkArt('${target||''}',this.value);closeModal();}if(event.key==='Escape')closeModal()">
       <div class="ma"><button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn bp" onclick="mkArt('${target||''}',document.getElementById('inp').value);closeModal()">Create</button></div>`);
   } else if(type==='rename'){
@@ -21646,7 +21653,7 @@ function renderTagPanel(){
   list.style.display='block';
   const tags=getAllTags();
   if(!tags.length){
-    list.innerHTML='<div style="padding:4px 12px 10px;color:#4A5A4C;font-size:11.5px;font-style:italic">No tags yet — add them while editing articles</div>';
+    list.innerHTML='<div style="padding:4px 12px 10px;color:#4A5A4C;font-size:11.5px;font-style:italic">No tags yet — add them while editing notes</div>';
     return;
   }
   list.innerHTML=tags.map(({tag,count})=>
@@ -22097,8 +22104,8 @@ function renderThemeModal(){
   const _fl=[
     {k:'global',  l:'Global',       sub:'scales all panes together'},
     {k:'sidebar', l:'Sidebar',      sub:'folder names & section headers'},
-    {k:'list',    l:'Article list', sub:'titles & dates in pane 2'},
-    {k:'content', l:'Article body', sub:'reading & editing text in pane 3'},
+    {k:'list',    l:'Note list', sub:'titles & dates in pane 2'},
+    {k:'content', l:'Note body', sub:'reading & editing text in pane 3'},
   ];
   _fl.forEach(({k,l,sub})=>{
     const v=_fz[k]||100;
@@ -25182,8 +25189,8 @@ function detachArt(aid,fid){
   if(!art)return;
   if(art.folderIds.length<=1){
     showModal(`<div class="mt">Cannot remove</div>
-      <div class="mm">An article must belong to at least one folder. ` +
-      `To delete the article entirely, open it and use the delete button.</div>
+      <div class="mm">A note must belong to at least one folder. ` +
+      `To delete the note entirely, open it and use the delete button.</div>
       <div class="ma"><button class="btn bp" onclick="closeModal()">OK</button></div>`);
     return;
   }
@@ -25311,7 +25318,7 @@ function toggleArtFolder(aid,fid){
   if(!art)return;
   if(art.folderIds.includes(fid)){
     if(art.folderIds.length<=1){
-      toast('An article must stay in at least one folder');
+      toast('A note must stay in at least one folder');
       return;
     }
     art.folderIds=art.folderIds.filter(x=>x!==fid);
@@ -30857,7 +30864,7 @@ function finRenameTag(oldTag,newRaw){
   persist();renderTree();renderP2H();renderP2C();
 }
 function deleteTag(tag){
-  if(!confirm(`Delete tag "${tag}" from all articles?`))return;
+  if(!confirm(`Delete tag "${tag}" from all notes?`))return;
   DB.articles.forEach(a=>{if(a.tags)a.tags=a.tags.filter(t=>t!==tag);});
   if(DB.globalTags)DB.globalTags=DB.globalTags.filter(t=>t!==tag);
   if(ST.tag===tag){ST.tag=null;renderP2H();renderP2C();}
@@ -30972,8 +30979,8 @@ function renderTagSection(){
 }
 function startRenameArtTitle(aid){
   const art=DB.articles.find(a=>a.id===aid);if(!art)return;
-  showModal(`<div class="mt">Rename article</div>
-    <input class="mi" id="art-ren-inp" value="${esc(art.title)}" placeholder="Article title…"
+  showModal(`<div class="mt">Rename note</div>
+    <input class="mi" id="art-ren-inp" value="${esc(art.title)}" placeholder="Note title…"
       onkeydown="if(event.key==='Enter'){finRenameArtTitle('${aid}',this.value);closeModal();}if(event.key==='Escape')closeModal()">
     <div class="ma">
       <button class="btn" onclick="closeModal()">Cancel</button>
@@ -33185,13 +33192,13 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
         <span class="fs-val">100%</span>
         <button class="fs-btn" onclick="setFontSize('sidebar',1)">A+</button>
       </div></div><div class="fs-row">
-      <div><span class="fs-lbl">Article list</span><span class="fs-sub">titles &amp; dates in pane 2</span></div>
+      <div><span class="fs-lbl">Note list</span><span class="fs-sub">titles &amp; dates in pane 2</span></div>
       <div class="fs-ctrl">
         <button class="fs-btn" onclick="setFontSize('list',-1)">A−</button>
         <span class="fs-val">100%</span>
         <button class="fs-btn" onclick="setFontSize('list',1)">A+</button>
       </div></div><div class="fs-row">
-      <div><span class="fs-lbl">Article body</span><span class="fs-sub">reading &amp; editing text in pane 3</span></div>
+      <div><span class="fs-lbl">Note body</span><span class="fs-sub">reading &amp; editing text in pane 3</span></div>
       <div class="fs-ctrl">
         <button class="fs-btn" onclick="setFontSize('content',-1)">A−</button>
         <span class="fs-val">100%</span>

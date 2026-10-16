@@ -71,6 +71,21 @@ const SURF = {
   note: async (p) => { await p.evaluate(() => selArt(DB.articles.find((a) => !a.deleted).id)); await sleep(500); },
   edit: async (p) => { await p.evaluate(() => { selArt(DB.articles.find((a) => !a.deleted).id); startEdit(); }); await sleep(900); },
   smartviews: async (p) => { for (const id of ['sf-favs', 'sf-pinned', 'sf-timeline', 'sf-archived', 'sf-review', 'sf-practice']) { try { await p.evaluate((i) => selFolder(i), id); } catch {} await sleep(300); } },
+  zabAll: async (p) => { await SURF.zabPanel(p); const a = p.locator('.jeb-chip.jeb-all, #zab-lay >> text=All pockets').first(); await a.waitFor({ state: 'visible', timeout: 4000 }); await (p.viewportSize().width < 1000 ? a.tap() : a.click()); await sleep(600); },
+  zabLinks: async (p) => { await p.evaluate(() => { _jebOpen = 'jp-link'; jebRefresh(); }); await sleep(500); },
+  zabTasks: async (p) => { await p.evaluate(() => { _jebOpen = 'jp-task'; jebRefresh(); }); await sleep(500); },
+  zabIdeas: async (p) => { await p.evaluate(() => { _jebOpen = 'jp-idea'; jebRefresh(); }); await sleep(500); },
+  zabShop: async (p) => { await p.evaluate(() => { _jebOpen = 'jp-shop'; jebRefresh(); }); await sleep(500); },
+  zabApp: async (p) => { await p.goto(srv.base + '/?jeb=1'); await p.waitForFunction(() => window.__appBooted === true); await sleep(900); },
+  cal: async (p) => { await p.evaluate(() => _calOpen()); await sleep(800); },
+  calWeek: async (p) => { await p.evaluate(() => { _calOpen(); }); await sleep(500); const b = p.locator('text=Week').first(); if (await b.count()) { await (p.viewportSize().width < 1000 ? b.tap() : b.click()); await sleep(500); } },
+  calYear: async (p) => { await p.evaluate(() => { _calOpen(); }); await sleep(500); const b = p.locator('text=Year').first(); if (await b.count()) { await (p.viewportSize().width < 1000 ? b.tap() : b.click()); await sleep(500); } },
+  popup: async (p) => { await p.evaluate(() => popOutNote(DB.articles.find((a) => !a.deleted).id)); await sleep(900); },
+  search: async (p) => { await p.locator('#sq').first().tap().catch(() => {}); await p.fill('#sq', 'seed'); await sleep(700); },
+  sections: async (p) => { for (const h of await p.locator('.sec-hd').all()) { try { await h.click({ timeout: 1500 }); await sleep(200); } catch {} } await sleep(400); },
+  tagsSec: async (p) => { const h = p.locator('.sec-hd', { hasText: 'TAGS' }).first(); await h.click(); await sleep(500); },
+  noteMenu: async (p) => { await p.evaluate(() => selArt(DB.articles.find((a) => !a.deleted).id)); await sleep(500); const b = p.locator('#p3 button', { hasText: '⋯' }).first(); await b.click(); await sleep(500); },
+  trashFull: async (p) => { await p.evaluate(() => { const a = DB.articles.find((x) => !x.deleted); trashArt && trashArt(a.id); }).catch(() => {}); await toolsItem(p, 'Trash'); },
   zabBar: async (p) => { await p.evaluate(() => { const b = document.getElementById('jeb-bar'); if (b) b.scrollIntoView(); }); },
   zabPanel: async (p) => { const c = p.locator('#jeb-bar .jeb-chip[data-pid] .jeb-main, #zab-btn').first(); await c.waitFor({ state: 'visible', timeout: 4000 }); await (p.viewportSize().width < 1000 ? c.tap() : c.click()); await sleep(600); },
   calendar: async (p) => { await p.evaluate(() => { try { openCalendar(); } catch (e) { } }); await sleep(600); },
@@ -80,7 +95,12 @@ const results = []; const base = {};
 for (const vp of VPS) {
   const ctx = await browser.newContext(vp.touch ? { viewport: { width: vp.w, height: vp.h }, hasTouch: true, isMobile: true } : { viewport: { width: vp.w, height: vp.h } });
   for (const pat of ['**googleapis.com/**', '**gstatic.com/**', '**firebaseapp.com/**', '**firebaseio.com/**']) await ctx.route(pat, (r) => r.abort());
-  const db = seedDB(new Date().toISOString());
+  const db = seedDB(new Date().toISOString()); const T0 = new Date().toISOString();
+  const pk = (id, i, extra = {}) => ({ id, name: id, icon: '✶', color: '#CFE8FF', order: i, createdAt: T0, updatedAt: T0, ...extra });
+  const mk = (id, pocketId, text, order, extra = {}) => ({ id, pocketId, text, done: false, folderIds: [], tags: [], kind: null, journal: false, order, createdAt: T0, updatedAt: T0, ...extra });
+  db.jebPockets = [pk('jp-link', 0, { name: 'Links', icon: '🔗' }), pk('jp-task', 1, { name: 'Tasks', icon: '✅' }), pk('jp-idea', 2, { name: 'Ideas', icon: '💡' }), pk('jp-shop', 3, { name: 'Shopping', icon: '🛒' }), pk('jp-sub', 4, { name: 'Sub', parentId: 'jp-idea' })];
+  db.jeb = [mk('l1', 'jp-link', 'https://example.com/a', 0, { url: 'https://example.com/a', title: 'My titled link' }), mk('t1', 'jp-task', 'Call the bank', 0, { due: T0.slice(0, 10), pri: 1, steps: [{ id: 's1', t: 'dial', d: false }] }), mk('i1', 'jp-idea', 'An idea about things', 0, { stars: 2, topics: ['alpha'] }), mk('s1', 'jp-shop', 'Milk', 0, { qty: '2', shop: 'Aldi' }), mk('x1', 'jp-sub', 'inside', 0)];
+  db.theme = Object.assign({}, db.theme, {});
   await ctx.addInitScript((d) => { try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(d)); } catch {} }, db);
   for (const [name, fn] of Object.entries(SURF)) {
     if (onlyArg && !onlyArg.includes(name)) continue;
