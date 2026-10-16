@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.25.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.26.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.26** (16 Oct 2026) — P4, no pause when the new notes go to the cloud after an import (issue #199, PCF J01). The per-record snapshot is
+  built in 25 ms slices with a macrotask between them (`_s1TakeSnapAsync`), and restarts if `DB` moved (**the one-state rule**, see the S1 section);
+  the blob's signature and base64 are sliced (`_syncSigAsync`, `_b64encAsync`), its `JSON.stringify(DB)` is not (own task, ≈140 ms at ×4); records go to
+  the SDK in slices. Phone ×4, 9,000 + 2,000 notes: worst long task of the app's own work 315–576 → 141–154 ms. 80h now measures the app only, until the push has returned
+  (`probeInstall`/`probeRead` in `s1-fake.mjs`). Check: block 86, `tools/push-p4.mjs` (`--unpatched`: 10 of 41 fail; `--profile` prints the table).
 - **v05.25** (15 Oct 2026) — Z9, a title for any Zab item (issue #197, PCF J36). New item field `title` (the owner's; trimmed, absent when empty);
   "✎ Title" beside 📎 Attach / → Note on every row kind, the deck card (✎) and the ⋯ menu ("✎ Title…"); the title shows bold, the text (link) small
   under it; Links: `title` wins over `ttl`; → Note uses it as the note's title. Check: block 85, `tools/zab-z9.mjs` (`--unpatched`: 30 of 33 run fail).
@@ -65,11 +70,6 @@ must never accumulate here instead of there.
   (session memory). Phone ×4, 27,000 notes: un-select a tag first screenful 5,788 → 101 ms. **Not met without the windowed list:** the
   25,000-card list is whole in ~6 s (was 5.8 s) and the worst long task is 399 ms. See *The sliced note list* below. Check: block 82,
   `tools/list-p3.mjs`.
-- **v05.21** (15 Oct 2026) — Z7, drag the Zab capsules into your own order (issue #189, PCF J24). Mouse: press and move > 5 px; finger: the
-  500 ms hold lifts the capsule, then > 8 px is a drag, released in place it opens the menu as before; a swipe without the hold still scrolls
-  the bar. Bar, a pocket's row of pockets inside, and the phone's Rail / Drawer / Columns, always among the same siblings through
-  `jebMovePocket` (never "into"); Escape or a drop outside puts it back; no dragging in Choose; none of the slide under reduced motion.
-  See *Dragging pockets* below. Check: block 81, `tools/zab-z7.mjs` (`--unpatched`: 34 of 105 fail). Zab moves are not undoable (as before).
 
 ---
 
@@ -332,6 +332,12 @@ A failing check is a wrong assertion surprisingly often — investigate before
   snapshot is built from a dirty set (`_s1Dirty`, fed by
   `_stampRecordTouches()` and by the before/after diff in a merge); a full
   `_s1Snap()` runs at start, after any failed run and hourly (`_S1_FULL_MS`).
+- **The snapshot is built in slices (v05.26, P4) — and from ONE state.** `_s1TakeSnapAsync()` drives the generator builders (`_s1SnapG`,
+  `_s1SnapDirtyG`; the sync `_s1Snap`/`_s1SnapDirty` run the same ones to the end) with a macrotask (`_yieldTask`) between 25 ms slices. **Every
+  `_save()` bumps `_dbRev` and every received merge bumps `_s1MergeSeq`; if either moved during a yield the half-built snapshot is discarded, the
+  dirty set it took is given back, and it restarts (3 tries, then built whole in one tick).** Never add an `await` between reading `DB` for a
+  snapshot or a blob and the check of those two counters. `JSON.stringify(DB)` for the blob is deliberately NOT sliced (two states in one blob);
+  only its signature and base64, functions of the fixed string, are. A new mutation of `DB` that skips `_save()` would not restart a build.
 - **The local journal and undo frames (v04.91, S1d).** `notebook` in
   `siyagah-local-v1` stays the FULL copy and is what every build reads at
   boot. The per-record journal lives in a NEW database, `siyagah-localrecs-v1`

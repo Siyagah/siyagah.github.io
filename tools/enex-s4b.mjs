@@ -21,7 +21,7 @@
 
    `--only=80a,80c` runs just those; `--notes=N` sets the size of the big notebook in 80h. Each printed ok/FAIL line becomes one app-check check. */
 import { playwright, serve, seedDB, hostLimit } from './harness.mjs';
-import { makeCloud, addDevice, on, sleep, quiet, waitSeeded, check, results, boot } from './s1-fake.mjs';
+import { makeCloud, addDevice, on, sleep, quiet, waitSeeded, check, results, boot, probeInstall, probeRead } from './s1-fake.mjs';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -458,15 +458,19 @@ try {
         const cdp = d.cdp || (await d.ctx.newCDPSession(d.page));
         await waitSeeded(cl, d, 300000);
         await dlg(d, vp); await d.page.setInputFiles('#enx-files', files); await waitDone(d, 300000);
+        await on(d, probeInstall);   /* v05.26 (P4): the app's own long tasks, the fake cloud's clone taken out (s1-fake.mjs) */
         await on(d, () => { window.__lt = []; window.__bt = []; try { new PerformanceObserver((l) => l.getEntries().forEach((e) => { window.__lt.push(Math.round(e.duration)); (window.__lts = window.__lts || []).push([Math.round(e.startTime), Math.round(e.duration)]); })).observe({ entryTypes: ['longtask'] }); } catch (e) {} const o = window._enxPersist; window._enxPersist = function () { const t0 = performance.now(); const r = o.apply(this, arguments); window.__bt.push(Math.round(performance.now() - t0)); (window.__bts = window.__bts || []).push([Math.round(t0), Math.round(performance.now() - t0)]); return r; }; });
         await cdp.send('HeapProfiler.collectGarbage'); await sleep(300);
         const base = (await cdp.send('Runtime.getHeapUsage')).usedSize; let peak = base, stop = false;
         const poll = (async () => { while (!stop) { try { const u = (await cdp.send('Runtime.getHeapUsage')).usedSize; if (u > peak) peak = u; } catch {} await sleep(100); } })();
-        const t0 = Date.now(); await act(d, vp, '#enx-bring'); await waitState(d, ['done', 'capped'], 600000); const secs = (Date.now() - t0) / 1000; stop = true; await poll;
+        const pFrom = await on(d, () => performance.now()); const t0 = Date.now(); await act(d, vp, '#enx-bring'); await waitState(d, ['done', 'capped'], 600000); const secs = (Date.now() - t0) / 1000;
+        await quiet(cl, d, 300000);   /* v05.26 (P4): measured until the app's push of the new notes has returned too, not only until the import is done */
+        stop = true; await poll; const probe = await on(d, probeRead, pFrom);
         console.log('# long tasks [start,dur]: ' + JSON.stringify(await on(d, () => window.__lts)) + ' persist [start,dur]: ' + JSON.stringify(await on(d, () => window.__bts)));
         const m = await on(d, () => ({ lt: window.__lt, bt: window.__bt, n: DB.articles.filter((a) => a.fromEvernote).length, tot: DB.articles.length, undo: HISTORY.length }));
-        const worst = Math.max(0, ...m.lt), bworst = Math.max(0, ...m.bt), grow = (peak - base) / 1048576;
-        console.log(`# 80h 2,000-note import at 390 CPU x4: ${secs.toFixed(1)} s, ${m.bt.length} batches, per batch (persist) median ${m.bt.slice().sort((a, b) => a - b)[m.bt.length >> 1]} ms worst ${bworst} ms, worst long task ${worst} ms (${m.lt.length} over 50 ms), heap +${grow.toFixed(1)} MB`);
+        const worst = Math.max(0, ...probe.map((x) => x.app)), rawWorst = Math.max(0, ...m.lt), bworst = Math.max(0, ...m.bt), grow = (peak - base) / 1048576;
+        console.log(`# 80h 2,000-note import at 390 CPU x4: ${secs.toFixed(1)} s, ${m.bt.length} batches, per batch (persist) median ${m.bt.slice().sort((a, b) => a - b)[m.bt.length >> 1]} ms worst ${bworst} ms, worst long task ${worst} ms of the app's own work (${rawWorst} ms raw, the rest the fake cloud's clone; ${m.lt.length} over 50 ms), heap +${grow.toFixed(1)} MB`);
+        console.log("# long tasks, worst 6 by the app's own time [start ms, total, fake cloud, app]: " + probe.slice().sort((a, b) => b.app - a.app).slice(0, 6).map((x) => `[${x.start}, ${x.dur}, ${x.fake}, ${x.app}]`).join(' ') + '; clicked at ' + Math.round(pFrom));
         check(m.n === 2000 && m.tot === 9000 + 4 + 2000, `${t} 2,000 notes came in to a notebook of ${9000 + 4} (now ${m.tot})`, JSON.stringify({ n: m.n, tot: m.tot }));
         const HL = hostLimit(200);   /* v05.24 (hs520): the runner's limit × this computer's factor (≥ 1) */
         check(worst <= HL.ms, `${t} no long task over ${HL.text} ms (worst ${worst} ms; ${m.lt.length} over 50 ms; time per batch: median ${m.bt.slice().sort((a, b) => a - b)[m.bt.length >> 1]} ms, worst ${bworst} ms; ${secs.toFixed(1)} s in all)`, m.lt.join());

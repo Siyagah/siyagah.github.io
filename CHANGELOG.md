@@ -10162,6 +10162,69 @@ rather than the `s1-fake` cloud. "Same HTML as v05.24" (85d) compares the panel 
 - **83c updated in place:** it compared a pocket's panel with the v05.21 build byte for byte, and every item row now carries "✎ Title", so the new build's panel is compared with that one button removed (anything else that differs still fails). It had failed at 390 / 820 / 1440 for A1 and A2a (pockets with items); B (no items) passed.
 - Screenshots at 390 and 1440 with a titled link: the title bold, the link small under it, "✎ Title" beside Attach and → Note; on a phone the dialog is the app's centred box in the upper half of the screen (clear of the keyboard), accepted in place of a bottom sheet.
 
+**Totals (Architect), v05.25:** PR #198 opened by the Architect (the builder's run ended without one). `ship-check` 15/15; `--only 85` 131/131; `zab-z9 --unpatched` 30 of 33 fail; 83c updated in place for the ✎ Title button. Full `app-check` on `5f76cc2` (two halves): blocks 1–59 + `self-check` **2330/2332**, blocks 60–85 **4849/4854** → **7179/7186** over all 452 blocks; every miss a speed limit (57d, 78b, 82e).
+
 ### Not done
 
 - The full `app-check` was not run (told not to); the Architect runs it.
+
+## v05.26 — P4: no pause when the new notes go to the cloud after an import (issue #199, PCF J01)
+
+The owner's J01: after a big import the phone stopped for about a second when the new notes went to the cloud. Nothing visible changes; the work
+is cut into pieces of about 25 ms. Measured at 390 × CPU 4 (the phone) and 1440; 820 runs the same code path (no layout code is touched) and was
+not measured separately.
+
+### The profile (390 × CPU 4, 9,000 + 2,000 notes; milliseconds; `node tools/push-p4.mjs --profile`)
+
+Inclusive time of one call, from the click on 📥 Bring them in. "Before" = v05.25, "after" = this round. A long task is a piece of work the page
+could not breathe during; the fake cloud's own copying (`s1-fake`) is shown apart and taken out of every number below it.
+
+| step | plan | before | after |
+|---|---|---|---|
+| `_doPush` first task (flush editors + `_stampRecordTouches` sweep + the rest of `_pushWrite` up to its first wait) | recs | 179 | 105 |
+| `_s1TakeSnap` (the dirty-set snapshot: walk 11,000 records, JSON + hash of the 2,000 new ones) | both / recs | 96 in ONE task with the above | sliced, 25 ms pieces |
+| `JSON.stringify(DB)` of the whole notebook | both | ~140 in the same task | ~140, **not sliced** (own task now) |
+| `_syncSig` of that string (9 MB) | both | ~100 | sliced |
+| `_b64enc` of that string | both | 269 | sliced |
+| hand the 2,000 records to the SDK (`batch.set`, the fake's copying ≈ 600 ms in all, worst 114) | both / recs | one run of 130 ms pieces | pieces of 25 ms, harness copying taken out |
+| the per-batch saves while importing (`_enxPersist` 8×, of which `_stampRecordTouches` 80–110) | both / recs | 93–128 | unchanged (acceptable, as the issue says) |
+| worst long task, **the app's own work**, from the click until the push returned | recs | 315 (334 in the unpatched run) | **141** |
+| same | both | 518–576 | **154** |
+| same at 1440, no throttle | recs / both | 45 / 97 | 36 / 52 |
+
+### What changed
+
+1. **The snapshot is built in slices** (`_s1TakeSnapAsync`; `_s1SnapG` and `_s1SnapDirtyG` are the old builders turned into generators, driven to the
+   end in one tick by `_s1Snap()` / `_s1SnapDirty()` as before, so there is ONE code path). A slice is `_S1_SLICE_MS` (25) and a macrotask
+   (`_yieldTask`, a `MessageChannel`, because a background tab throttles `setTimeout` to a second) lies between slices.
+   **The one-state rule:** `_save()` bumps `_dbRev`, a received merge bumps `_s1MergeSeq`; if either moved while the page was breathing, the half-built
+   snapshot is thrown away, the dirty set it took is given back (union with what the edit marked meanwhile) and the build starts again, at most three
+   times, then it is built whole in one tick (correct, only slower). Nothing is written until a snapshot is complete; `_s1WriteGate()` still guards
+   the write in `_s1Exec`; the dirty set is in memory only (as it was), a page closed half-way starts the next session with `full` set and pushes everything the map does not hold.
+2. **The blob (`both` plan).** `JSON.stringify(DB)` **cannot be sliced** without risking a blob of two states, so it is left (measured ≈ 140 ms at ×4
+   for 11,000 notes) but made a task of its own: `_pushWrite` yields once between `_doPush`'s sweep and the stringify, and if `_dbRev` / `_s1MergeSeq`
+   moved in that yield the sweep is run again in the same tick as the stringify (`sw2`, a full `_collect` so the journal misses nothing). The signature
+   (`_syncSigAsync`) and the base64 (`_b64encAsync`, `TextEncoder` + 48 KB steps, the same text as `_b64enc`) are functions of the FIXED string, so they are sliced.
+   The recs snapshot in the `both`/`blob` plans is taken after the blob string, so it can be a little newer than the blob, never older; the blob it travels with is still one JSON of one state.
+3. **Records handed to the SDK in pieces:** the write loop in `_s1Exec` yields every 25 ms.
+4. **80h** measures from the click until the import is `done` AND the cloud has been quiet (`quiet()`), and takes the fake cloud's own copying out of every
+   long task (`probeInstall` / `probeRead` in `s1-fake.mjs`: the time spent in `batch.set`, `batch.commit` and `doc.set` is subtracted). It prints the
+   start time of the worst tasks. Every other 80h assertion is unchanged: the worst 142 ms of the app's own work (369 ms raw).
+
+**Checks.** New block 86, `tools/push-p4.mjs` (`--profile` prints the table only; `--unpatched` serves v05.25): 86a the profile printed (not asserted);
+86b the pause at 390 × CPU 4, both plans; 86c at 1440; 86d sync unchanged (B receives 600 notes and the folders); 86e an edit made WHILE the snapshot is
+being built (a test hook holds every yield) throws the half-built one away (restarts 0 → 1) and reaches B, the records B holds equal A's, the cloud's
+records assemble to A's notebook; 86f the page closed mid-build with none of the new notes written, the next session still holds them and pushes the rest; 86g the `both`
+plan: one blob that parses and holds every note, marked, with the recs written; 86h the sliced builders give the same Map / text / signature as the whole ones.
+`--unpatched`: **31 of 41 pass, 10 fail** (the pause 390 recs 202 and both 415 ms; the sliced builder missing ×4; the two "while slicing" checks and 86f's "mid-build", and 86h). The 31 that pass
+are the ones that describe what must NOT change (86d, 86g, the cloud equality, "notes came in", "no page errors") and the 1440 pause checks (36–97 ms there even before: the pause is a phone's).
+The `_folderNoteRecoveryV1` key is a per-device boot mark and is ignored in the cloud-equality comparison, as `sync-e2e.mjs` does.
+
+**Totals (builder), v05.26:** `ship-check` 15/15; `app-check --only 86` **47/47**; `--only 32,51,52,53,54,59,80` **730/730** (18 blocks); `push-p4 --unpatched` 31 of 41 pass, 10 fail.
+
+### Not done
+
+- `JSON.stringify(DB)` for the `both` plan (above). A phone at ×4 with 11,000 notes has one ~140 ms task there, still under the 200 ms limit.
+- The per-batch saves while the import runs (93–128 ms each) are unchanged; the issue calls them acceptable.
+- 820 was not measured separately (same code path).
+- The full `app-check` was not run (told not to).
