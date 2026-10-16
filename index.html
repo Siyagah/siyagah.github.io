@@ -3780,6 +3780,23 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
   .sync-dot-tb,#jeb-app-hd button,#jeb-app-hd #jah-sync{min-height:44px;min-width:44px}
   #jeb-app-hd{--jeb-hd:56px}
   html.jeb-app{--jeb-hd:56px}
+  /* the ⭐ / 📌 on a note card toggle it: 44 px wide and tall to hit, the row keeps its height (the vertical room is borrowed from the card's padding) */
+  .ac-badge[onclick]{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-16px 0;box-sizing:border-box}
+  /* the right-click / ⋯ menus: rows and the colour swatches (the swatch stays ~22 px DRAWN, inside a 44 px target) */
+  #ctx .ci{min-height:44px;box-sizing:border-box}
+  .ctx-colors{gap:0}
+  .ctx-sw{box-sizing:border-box;width:44px;height:44px;padding:11px;border:0;background-clip:content-box;outline:1.5px solid rgba(0,0,0,.12);outline-offset:-11px}
+  .ctx-sw.active{box-shadow:none;outline:2px solid currentColor;outline-offset:-8px}
+  .ctx-sw[title="#FFFFFF"]{border:0!important;outline:1.5px solid rgba(0,0,0,.28);outline-offset:-11px}
+  .ctx-sw:hover{transform:none}
+  .ctx-sw-clear,.ctx-sw-bold{position:relative;box-sizing:border-box;width:44px;height:44px;border:0;font-size:12px}
+  .ctx-sw-clear::before,.ctx-sw-bold::before{content:'';position:absolute;inset:11px;border:1.5px solid var(--border2);border-radius:50%;z-index:-1}
+  .ctx-sw-bold::before{border-radius:4px}
+  .ctx-sw-clear,.ctx-sw-bold{isolation:isolate}
+  .ctx-sw-clear:hover::before{border-color:#EF4444}
+  .ctx-sw-bold:hover::before{border-color:var(--green)}
+  .ctx-sw-bold.active{background:none}
+  .ctx-sw-bold.active::before{background:var(--greenlt);border-color:var(--green)}
 }
 </style>
 </head>
