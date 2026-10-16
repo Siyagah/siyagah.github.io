@@ -233,9 +233,10 @@ try {
   /* ══ 87e — held from the cloud; a hand-added picture goes ══ */
   if (want('87e')) await each('87e', async (d, vp, cl) => {
     const t = `87e@${vp.name}`;
+    await on(d, () => { DB.theme = DB.theme || {}; DB.theme.enxMediaCloud = 'hold'; persist(); });   /* v05.31 (S4e): absent now means 'small', so the hold is asked for by name */
     await bring(d, vp, FILE); await quiet(cl, d);
     const picW = () => cl.log.filter((o) => o.t === 'set' && /\/(pics|picparts)\//.test(o.p)).map((o) => o.p.slice(NB.length + 1));
-    check(picW().length === 0, `${t} nothing of the import's pictures is written to the cloud while enxMediaCloud is absent`, picW().join(' '));
+    check(picW().length === 0, `${t} nothing of the import's pictures is written to the cloud while enxMediaCloud is 'hold'`, picW().join(' '));
     const hand = randomBytes(900); hand[0] = 0x89; hand[1] = 0x50;
     await on(d, async (b64) => { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < u.length; i++) u[i] = bin.charCodeAt(i); await _picPut(u, 'image/png'); persist(); flushPendingPush(); }, hand.toString('base64'));
     const handSha = sha256(hand);
@@ -245,10 +246,10 @@ try {
     const useOf = () => { const u = cl.store.get(NB + '/usage/v1'); return u ? u.picBytes : null; };
     const metaSum = () => [...cl.store].filter(([p]) => p.startsWith(NB + '/pics/')).reduce((s, [, v]) => s + v.n, 0);
     check(useOf() === hand.length && metaSum() === hand.length, `${t} usage/v1 moved by exactly the bytes uploaded (${useOf()} = ${hand.length})`);
-    await on(d, () => { DB.theme = DB.theme || {}; DB.theme.enxMediaCloud = true; persist(); flushPendingPush(); });
+    await on(d, () => { DB.theme = DB.theme || {}; DB.theme.enxMediaCloud = 'small'; persist(); flushPendingPush(); });
     const okAll = await poll(() => picW().some((p) => p === 'pics/' + SHA.png) && picW().some((p) => p === 'pics/' + SHA.jpg), 30000);
     await quiet(cl, d);
-    check(okAll, `${t} once DB.theme.enxMediaCloud is set the two pictures go up`, picW().join(' '));
+    check(okAll, `${t} once enxMediaCloud is 'small' the two pictures go up (too small to shrink: unchanged)`, picW().join(' '));
     check(useOf() === hand.length + PNG.length + JPG.length && useOf() === metaSum(), `${t} usage/v1 = every byte in pics/ (${useOf()} = ${hand.length + PNG.length + JPG.length})`);
     noErr(d, t);
   });
