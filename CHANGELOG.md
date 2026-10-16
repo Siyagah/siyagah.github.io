@@ -10250,3 +10250,61 @@ S4b left a marker (`span.enx-media`) where each picture, audio file and file sat
 **Totals (builder runs + Architect), v05.27:** both builder runs ended at the Actions time limit (the PR was opened in the second); the Architect ran the checks. `ship-check` 15/15; `--only 87` **175/175**; sync blocks `--only 32,51,52,53,54,59,73,80,86` **1004/1009**, every miss a speed limit while the machine was loaded (80h 697 ms, 86 309/326 ms); 80h alone on this commit 299 and 283 ms (limits 276 and 308 with the host factor), the same as v05.26 — no slowdown from this round. 80h's heap growth is +100–113 MB (limit 150; v05.24 measured +44–49): noted, not a failure.
 
 **Not done:** the cloud upload of imported media (waits for the owner's answer); no inlining of audio in Save File (chip left as it is, as asked).
+
+**Totals (Architect), v05.27:** both builder runs ended at the Actions time limit; the Architect ran the checks. `ship-check` 15/15; `--only 87` 175/175; sync blocks 1004/1009 (speed only); `enex-s4c --unpatched` stops at 87a. Full `app-check` on `866b80b` (two halves): blocks 1–59 + `self-check` **2332/2332**, blocks 60–87 **5064/5076** → **7396/7408** over all 454 blocks; every miss a speed limit (70h, 78b, 82e, 86). Block 86 turn about against `main` (7d72c09): main 359/317 and 383/359 ms, this round 316/330 and 220/472 ms — same range.
+
+## v05.28 — A1: audit of every feature on phone, tablet and laptop (issue #203, PCF J13)
+
+The owner's "never idle" round: every open job waits on the owner, so the User Manual was the checklist. `tools/audit-explore.mjs` (the crawler; not a check) boots the app with a seed of pockets of every kind and opens each surface by real taps/clicks at 390 × 844, 820 × 1180 and 1440 × 900. Per surface it reports sideways overflow, controls cut by the screen's edge, phone tap targets under 32 px, and text under 4.5:1 (alpha-composited). Screenshots of the crawl are in `tools/audit-a1-shots/` (390 wide).
+
+### Fixed (block 88, `tools/audit-a1.mjs`, real clicks at 390 / 820 / 1440)
+
+- **88a — the Evernote dialog said it was a dry run, with the import "in the next update".** True until v05.20. First screen now: "Choose your Evernote export. Siyagah reads it and shows what it found first; nothing is added until you tap “Bring them in”." Last line of the result: "This was a look at the export: nothing has been added to your notebook yet. Tap “Bring them in” to import." (73's matching check updated in place, reason in its label; the clipboard summary still says "dry run" because it describes the dry run.)
+- **88b — the 🧰 menu's "💾 Save File", "● Unsaved to file" and "✓ File saved" read at 2.66 / 2.94 / 2.7:1** on the menu's white (their colours were chosen for the dark sidebar). Now 4.84 / 5.35 / 5.35:1, on that menu only (`.sb-tools-dd`); the sidebar's own are unchanged.
+- **88c — phone dialog buttons were 26 px tall** (New Section's Cancel/Create, Cloud Sync's Connect/↻, Storage & Backup's Export/Import/Close). `#mb .btn, #sync-mb .btn` are 44 px under 640; tablet and laptop keep 26–27 px.
+- **88d — the phone calendar's header was one row too wide:** the month title shrank to nothing and the last layer buttons (🌍 🏫 📅 📓) ran off the screen. At < 640 it is two rows (≡ ◄ title ► Today ◄ / Y M W D + layers); 820 and 1440 are one row, as before.
+- **88e — the word "article" on screen** (Terminology: Note). "Article title…" (the field while editing, in 5 places), "Add article" / "No articles yet" (empty folder), "No articles with this tag yet", "N articles" (tag header), "Articles (n)" (folder header), "New article", "Rename article", "Add article here" (menu), "Back to article list" / "Article list" (hover texts), "Article list / Article body" (Appearance ▸ fonts), "An article must belong to…" (two messages), "…from all articles?", "editing articles". Updated in place: `app-check` P3_UNCHANGED lists, `offline-o1` "Add note here", `list-p3` "Notes (n)".
+
+### Heap in block 80h (+30 → +106 MB): not the app
+
+Measured by running 80h against each merge commit: v05.24 **+30.3**, v05.25 **+29.9**, v05.26 **+106.1**, v05.27 **+106.1**. Then v05.26's app with v05.25's checks: **+30.7**. So the growth arrived with v05.26's *check* (80h now waits until the push has returned), whose window now includes the harness's fake cloud holding a copy of the 11,000 notes' records and blob in the page. The app's own memory did not change. Limit 150 MB is kept; nothing to fix. (The "+44–49" in the issue was an earlier reading of the same measure.)
+
+### Findings table (feature × size → ok / fixed / found)
+
+"ok" = crawled and clean on the three measures above, or covered by an existing check that was not changed. 390 / 820 / 1440.
+
+| Feature | 390 | 820 | 1440 |
+|---|---|---|---|
+| Notes (open, edit) · Folders and sections · Tags · Note Types · Search · Smart Views (list) | found 1 (tap targets) / found 2 (wording "New Articles") | ok | ok |
+| Folding headings · Tables · Pictures · Line spacing · Quran references · Undo | ok (existing blocks 6, 17, 25–29, 46, 47, 53–56; not re-walked) | ok | ok |
+| Tabs and the calendar | **fixed (88d)** | ok | ok |
+| MyWall / MyDatabase | MyDatabase section crawled ok; MyWall cards not re-walked (block 50) | same | same |
+| Reminders and reminder emails (dialog) | ok | ok | ok |
+| Sync across devices (setup dialog) | **fixed (88c)** · live panel with the picture-space line not walked (needs a live cloud; block 87 covers it) | ok | ok |
+| Works offline / installs · Save File | not walked (blocks 74, 53d); 🧰 "Save File" **fixed (88b)** | **fixed (88b)** | **fixed (88b)** |
+| Backup and Restore (Storage & Backup, Automatic Backups) | **fixed (88c)** · found 3 (name) | ok | ok |
+| Trash | found 1 (✕ 25 × 31, Restore 26 px) | ok | ok |
+| Zab: pockets, items, cards, All pockets, Choose, Attach, → Note, kinds (Links / Tasks / Ideas / Shopping), pockets inside pockets, Zab on the phone, item titles, Siyagah Zab (`/?jeb=1`) | ok except found 1 (✓ box 20 × 20, # chip 26 px) | ok | ok |
+| Dragging pockets · Dragging a tab out · Tab short names | ok (blocks 81, 49, 48; not re-walked) | ok | ok |
+| Appearance | found 1 (✨ Choose 19 px, hex boxes 31 px) | ok | ok |
+| Pop-up note windows | found 4 (folder tag clipped 99 → 70 px) | ok | ok |
+| Smart Views: Favourites, Pinned, Timeline, Archived, Murāja'ah, In Practice | found 1 (rows 22–26 px) | ok | ok |
+| Evernote import (dialog, 🎧 / 📎 chips) | **fixed (88a)** | **fixed (88a)** | **fixed (88a)** |
+| Export PDF, Backup Export | ok (menu rows only; the files were not opened) | ok | ok |
+| Hijri dates, holidays | ok (calendar header **fixed**, the toggle not re-walked) | ok | ok |
+
+### Found, not fixed
+
+1. **Phone tap targets under 44 px in the app's own chrome** (390, `tools/audit-a1-shots/home-390.png`, `sections-390.png`, `search-390.png`, `trashFull-390.png`, `zabAll-390.png`): section ⋯ / ＋ / ⇅ 20–22 × 21; the pane-2 path chips 22–24 px high ("🌳 Full tree", "📁 child", "➕ New folder"); "◀" 23 × 28; "≡" 26 × 40; "▤ Preview" 71 × 21; "🏠 Home" / "🔍 Search" 27 px; Smart View / tree rows 26 px; search result rows 26 px; Trash ✕ 25 × 31 and Restore 26 px; the Zab ✓ box 20 × 20 and the "# topic" chip 26 px; the sync dot 19 px; Appearance "✨ Choose" 19 px. Not small and local: enlarging them changes the rows' rhythm on every screen and the count of rows that fit, so it wants the owner's choice of one touch size (and its own round, measured at 9,000 notes).
+2. **The Smart View is named "New Articles"** (`(01) New Articles`, sidebar and path chips, every size). The name is generated into stored data; renaming needs a migration. Also `sf-new`'s menu text.
+3. **The Backup dialog's title is "⚙ Backup & Restore", the menu item that opens it "💽 Storage & Backup"** (every size; `backup-390.png` not kept). One of them should change; which is the owner's word.
+4. **Pop-up window, phone: the folder tag (`ftag-nav`) is clipped** by an ellipsis (99 → 70 px) beside the title bar (`popup-390.png`). By design as drawn; noted.
+5. **Decorative `|` between path chips at 1.5:1** (`smartviews-390.png`, all sizes) and the 🔍 emoji at 1.06:1 are separators/emoji, not text; the crawler lists them, no change.
+
+**Totals (builder), v05.28:** `ship-check` 15/15; `--only 88` **51/51** (`audit-a1.mjs` alone 49/49; `--unpatched` 17/49, 32 fail); `--only 73,74,82,20f,20g,6h,6o,6i,13,14,15,33,5` (40 blocks, the ones the edited words, menu, dialogs and header touch) **737/737**. Block 80 (heap, `enex-s4b --only=80h` alone): 13/13, +106 MB as above. The full `app-check` was not run.
+
+### Not done
+
+- The full `app-check` (told not to); the blocks run are in the totals above.
+- Not walked by hand: Save File's output, PDF export, PWA install, live Sync panel (listed in the table).
+- No pixel-level screenshot comparison; the crawler's measures are the evidence.

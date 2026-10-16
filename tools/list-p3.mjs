@@ -294,7 +294,7 @@ async function chkD(vp) {
       /* the cards are user-select:none, so there is no select-all-and-copy of the list's text in the app to keep; what a script or
          Ctrl+F can reach is the text of the page (a card off the screen is skipped by the painter, not removed) */
       const txt = el.textContent;
-      const m = /Articles \((\d+)\)/.exec(el.textContent);
+      const m = /Notes \((\d+)\)/.exec(el.textContent);
       return { has: txt.includes(last), last, head: m ? +m[1] : -1, n: a.length, f1: cntOf('f1') };
     });
     check(r.has, tag(`the text of the page holds the last note's title (“${r.last}”), as select-all / Ctrl+F need`));

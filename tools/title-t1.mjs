@@ -192,8 +192,12 @@ try {
       } finally { await d.ctx.close(); }
     };
     const a = await snap(srvOld.base), b = await snap(srvNew.base);
+    /* v05.28 (A1) changed the word "article" to "note" in on-screen text (the owner's word, Terminology table): put the old words back
+       in the new build's markup before comparing, so 75d still proves nothing ELSE in the title bar moved. Updated in place in the
+       Architect's review of v05.28. */
+    if (b) b.html = b.html.split('title="Back to note list"').join('title="Back to article list"').split('placeholder="Note title…"').join('placeholder="Article title…"');
     const t = `75d@${w} ${mode}`;
-    check(!!a && !!b && a.html === b.html, `${t} the title bar's markup is identical to v05.14's`, a && b && a.html !== b.html ? 'old: ' + a.html.slice(0, 300) + '\n         new: ' + b.html.slice(0, 300) : '');
+    { const dl = []; if (a && b && a.html !== b.html) { let i = 0; while (a.html[i] === b.html[i]) i++; dl.push(a.html.slice(i - 40, i + 120), b.html.slice(i - 40, i + 120)); } check(!!a && !!b && a.html === b.html, `${t} the title bar's markup is identical to v05.14's`, dl.join("\n         new: ")); }
     check(!!a && !!b && JSON.stringify(a.rects) === JSON.stringify(b.rects), `${t} the title bar's box sizes and places are identical (${a && a.rects.length} boxes)`, a && b ? JSON.stringify(a.rects) + ' vs ' + JSON.stringify(b.rects) : '');
     check(!!a && !!b && a.prevSibling === b.prevSibling, `${t} nothing new sits above the title bar (${b && b.prevSibling})`);
   }

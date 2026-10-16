@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.27.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.28.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.28** (16 Oct 2026) — A1, the audit of every feature at 390 / 820 / 1440 (issue #203, PCF J13). Crawler `tools/audit-explore.mjs` (not a check) opens ~35 surfaces by real
+  clicks and reports overflow, off-screen controls, small phone targets, contrast. Fixed: the Evernote dialog's stale "dry run / next update" words; the 🧰 menu's
+  "Save File" / "Unsaved to file" at 2.7–2.9:1 (now ≥ 4.8, menu only); phone dialog buttons 26 → 44 px (`#mb`, `#sync-mb`); the phone calendar header (title squeezed to 0, layer
+  buttons off screen → two rows); "article" → "note" on ~25 visible strings (the Smart View *name* "New Articles" is stored, so left). **80h's heap +30 → +106 MB came in v05.26 with the
+  test, not the app** (the fake cloud's copy is now inside the measured window). Check: block 88, `tools/audit-a1.mjs` (`--unpatched`: 32 of 49 fail).
 - **v05.27** (16 Oct 2026) — S4c, the Evernote pictures, audio and files come in on the importing computer, with a cloud space guard (issue #201, PCF J01).
   Markers become `img.ed-img[data-pic]` (pictures, `_picPut`, `enx:1`) or `span.enx-file` (audio/files, device database `siyagah-files-v1`); earlier-imported notes
   are upgraded (own `updatedAt` + 1 ms). Imported pictures are held back from the cloud until `DB.theme.enxMediaCloud` is set; `usage/v1` + `_PIC_CLOUD_CAP` (600 MB)
@@ -65,10 +70,6 @@ must never accumulate here instead of there.
   unchanged); the pockets-inside list puts the count and "▸" at the line's right end (`.jx-nm` lost its `max-width:14ch`); **speed checks
   multiply their limit by `hostFactor()` in `tools/harness.mjs`** (1.0 on the runner, [1,4]; a new speed check must too); 52d/52d2 wait on a
   signal, not time. Check: block 84, `tools/f1.mjs`; 80j. See `tools/README.md` *Speed limits and the host factor*.
-- **v05.23** (15 Oct 2026) — Z8, the pockets inside a pocket are a vertical list (issue #193, PCF J30). Opening a pocket that holds pockets
-  shows them one per line (icon, name, rolled count, "▸") between the path line and its own items; tap goes down, long-press/right-click
-  is the menu, drag reorders among siblings (Z7). Nothing inside = the panel is byte-identical to v05.21. Check: block 83, `tools/zab-z8.mjs`;
-  76e and 81e updated in place (chip row → list). See *Dragging pockets* below.
 
 ---
 

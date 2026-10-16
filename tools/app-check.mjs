@@ -6116,8 +6116,8 @@ await r.block('20f-section-tools-everywhere', async () => {
    content change this round MEANT to make, not a layout change to guard
    against, and out of scope for THIS check the same way v04.53's shared
    `#ed`/`.fw-ed` CSS was out of scope for the checks it did not touch. */
-const P3_UNCHANGED_1440 = ["seed×","×","[+ tag…]","✕","🏠","Aa","H","≡","+","↺","📋","🔍","Multi","Single","General","📎 Attach (1) ▾","💾 Save","📦","⋯","[Article title…]","🔀 Start Versioning","[date]","▼","▼"];
-const P3_UNCHANGED_820 = ["🏠","◀","📁","Aa","H","≡","+","↺","📋","🔍","Multi","Single","seed×","×","[+ tag…]","✕","General","📎 Attach (1) ▾","💾 Save","📦","◀","📁","[Article title…]","🔀 Start Versioning","[date]","⋯","▼","▼"];
+const P3_UNCHANGED_1440 = ["seed×","×","[+ tag…]","✕","🏠","Aa","H","≡","+","↺","📋","🔍","Multi","Single","General","📎 Attach (1) ▾","💾 Save","📦","⋯","[Note title…]","🔀 Start Versioning","[date]","▼","▼"];
+const P3_UNCHANGED_820 = ["🏠","◀","📁","Aa","H","≡","+","↺","📋","🔍","Multi","Single","seed×","×","[+ tag…]","✕","General","📎 Attach (1) ▾","💾 Save","📦","◀","📁","[Note title…]","🔀 Start Versioning","[date]","⋯","▼","▼"];
 async function p3ControlLabels(page) {
   return page.evaluate(() => {
     const out = [];
@@ -12235,6 +12235,21 @@ await r.block('87-enex-media', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the S4c media check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, 'S4c: ' + row.label, row.detail);
   r.check(out.status === 0, 'the S4c media check exits cleanly', `exit ${out.status}`);
+});
+
+/* 88 — v05.28, A1: the audit's fixes. tools/audit-a1.mjs runs 88a–88f at 390 / 820 / 1440 with real clicks: the Evernote dialog's words, the 🧰
+   menu's contrast, the phone dialogs' buttons, the calendar header on a phone, "article" → "note" on screen. Each printed ok/FAIL line
+   becomes one check. (tools/audit-explore.mjs is the crawler, not a check.) */
+await r.block('88-audit-a1', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./audit-a1.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1500000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the A1 audit check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'A1: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the A1 audit check exits cleanly', `exit ${out.status}`);
 });
 
 /* ── run everything registered above, or a --only subset ─────────────────

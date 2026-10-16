@@ -193,7 +193,7 @@ try {
       /* 2. a new note in f1 */
       await openTree(A.page, vp);
       await A.page.locator('.tr-row[data-fid="f1"]').first().click({ button: 'right' });
-      await tap('#ctx .ci:has-text("Add article here")');
+      await tap('#ctx .ci:has-text("Add note here")');
       await A.page.waitForSelector('#ov.on #inp'); await A.page.locator('#inp').fill('Offline new note'); await A.page.keyboard.press('Enter');
       await sleep(900);
       await A.page.evaluate(() => { if (window.innerWidth < 1200) showPane('p3'); });   /* navigation only: a phone shows one pane at a time */
