@@ -10220,6 +10220,8 @@ plan: one blob that parses and holds every note, marked, with the recs written; 
 are the ones that describe what must NOT change (86d, 86g, the cloud equality, "notes came in", "no page errors") and the 1440 pause checks (36–97 ms there even before: the pause is a phone's).
 The `_folderNoteRecoveryV1` key is a per-device boot mark and is ignored in the cloud-equality comparison, as `sync-e2e.mjs` does.
 
+**Totals (builder), v05.26:** `ship-check` 15/15; `app-check --only 86` **47/47**; `--only 32,51,52,53,54,59,80` **730/730** (18 blocks); `push-p4 --unpatched` 31 of 41 pass, 10 fail.
+
 ### Not done
 
 - `JSON.stringify(DB)` for the `both` plan (above). A phone at ×4 with 11,000 notes has one ~140 ms task there, still under the 200 ms limit.
