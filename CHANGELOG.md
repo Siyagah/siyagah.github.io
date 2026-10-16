@@ -10327,6 +10327,12 @@ Check: block 89, `tools/f2.mjs` (89a–89c at 390 / 820 / 1440; `--unpatched` 17
 
 **Totals (builder), v05.29:** `ship-check` 15/15; `--only 89,15,75,84,88` **224/224**. No existing check named the old words. The full `app-check` was not run (told not to).
 
+**Totals (Architect), v05.29:** full `app-check` on `cdd253a` (two halves): blocks 1–59 + `self-check` **2332/2332**, blocks 60–89 **5168/5170** → **7500/7502** over all 456 blocks; the one miss is 82e's speed limit on the Architect's container. `ship-check` 15/15.
+
 ### Not done
 
 - The full `app-check`. Not hand-walked: Save File's output with a renamed Smart View.
+
+## v05.31 — S4e: imported Evernote pictures go to the cloud at a smaller size (issue #209, PCF J01 s4cq1, owner's choice A)
+
+(stub — build in progress)
