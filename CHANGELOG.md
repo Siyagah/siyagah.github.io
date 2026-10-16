@@ -10250,3 +10250,9 @@ S4b left a marker (`span.enx-media`) where each picture, audio file and file sat
 **Totals (builder runs + Architect), v05.27:** both builder runs ended at the Actions time limit (the PR was opened in the second); the Architect ran the checks. `ship-check` 15/15; `--only 87` **175/175**; sync blocks `--only 32,51,52,53,54,59,73,80,86` **1004/1009**, every miss a speed limit while the machine was loaded (80h 697 ms, 86 309/326 ms); 80h alone on this commit 299 and 283 ms (limits 276 and 308 with the host factor), the same as v05.26 — no slowdown from this round. 80h's heap growth is +100–113 MB (limit 150; v05.24 measured +44–49): noted, not a failure.
 
 **Not done:** the cloud upload of imported media (waits for the owner's answer); no inlining of audio in Save File (chip left as it is, as asked).
+
+**Totals (Architect), v05.27:** both builder runs ended at the Actions time limit; the Architect ran the checks. `ship-check` 15/15; `--only 87` 175/175; sync blocks 1004/1009 (speed only); `enex-s4c --unpatched` stops at 87a. Full `app-check` on `866b80b` (two halves): blocks 1–59 + `self-check` **2332/2332**, blocks 60–87 **5064/5076** → **7396/7408** over all 454 blocks; every miss a speed limit (70h, 78b, 82e, 86). Block 86 turn about against `main` (7d72c09): main 359/317 and 383/359 ms, this round 316/330 and 220/472 ms — same range.
+
+## v05.28 — A1: audit of every feature on phone, tablet and laptop (issue #203, PCF J13)
+
+*Audit in progress — findings table to follow.*
