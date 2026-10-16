@@ -10303,8 +10303,30 @@ Measured by running 80h against each merge commit: v05.24 **+30.3**, v05.25 **+2
 
 **Totals (builder), v05.28:** `ship-check` 15/15; `--only 88` **51/51** (`audit-a1.mjs` alone 49/49; `--unpatched` 17/49, 32 fail); `--only 73,74,82,20f,20g,6h,6o,6i,13,14,15,33,5` (40 blocks, the ones the edited words, menu, dialogs and header touch) **737/737**. Block 80 (heap, `enex-s4b --only=80h` alone): 13/13, +106 MB as above. The full `app-check` was not run.
 
+**Totals (Architect), v05.28:** full `app-check` on `0fc774c` (two halves): blocks 1–59 + `self-check` **2332/2332**, blocks 60–88 **5113/5127**. 75d (title bar byte-identical to v05.14) and 80g (no "Bring them in" text on the first screen) failed on this round's own wording change and were updated in place in the review (`af852b0`); `--only 75,80` then **365/365**. The rest are speed limits (78b, 82e, 86). `--only 88` 51/51; `ship-check` 15/15.
+
 ### Not done
 
 - The full `app-check` (told not to); the blocks run are in the totals above.
 - Not walked by hand: Save File's output, PDF export, PWA install, live Sync panel (listed in the table).
 - No pixel-level screenshot comparison; the crawler's measures are the evidence.
+
+## v05.29 — F2: "New Notes", the Backup window's title, the phone pop-up folder tag (issue #205, PCF J43, J44)
+
+Three small defects the A1 audit found and v05.28 listed under "Found, not fixed" (items 2–4).
+
+- **J43 — "(01) New Notes".** The `sf-new` constant and its comment say "New Notes". One helper, `_sfName(sf)`, is now the only reader of a Smart View's name (sidebar,
+  Pane 2 header and its Smart View list, path chips, the section's Smart View list, the Pick-a-scope lists, the Smart View heading, the rename dialog's start value). A stored
+  name that is exactly `(01) New Articles` shows the new default; every other stored name shows as stored. **Nothing is written to `DB`** (no migration, no stamp, nothing synced: I1, I2).
+  Side effect: the Pane 2 header used the constant and ignored a rename; it now follows it like the sidebar does.
+- **J44a — the Backup window's title.** The window the 🧰 menu's "💽 Storage & Backup" opens carries the same title (was "⚙ Backup & Restore"); the message after choosing
+  "Replace everything" says "restore it from 🧰 → 💽 Storage & Backup". Only that one message (plus a code comment) named the old title in `index.html`; no second message was found.
+- **J44b — the phone pop-up's folder tag.** `.pop-details-line .ftag` `max-width:100%` under 640 px (was 32%): a 12-character name is whole, a 60-character name at 360 px still ends in an ellipsis and the window does not overflow. Tablet and laptop keep 32%.
+
+Check: block 89, `tools/f2.mjs` (89a–89c at 390 / 820 / 1440; `--unpatched` 17/41, 24 fail).
+
+**Totals (builder), v05.29:** `ship-check` 15/15; `--only 89,15,75,84,88` **224/224**. No existing check named the old words. The full `app-check` was not run (told not to).
+
+### Not done
+
+- The full `app-check`. Not hand-walked: Save File's output with a renamed Smart View.
