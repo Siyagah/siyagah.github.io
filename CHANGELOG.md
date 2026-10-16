@@ -10303,8 +10303,14 @@ Measured by running 80h against each merge commit: v05.24 **+30.3**, v05.25 **+2
 
 **Totals (builder), v05.28:** `ship-check` 15/15; `--only 88` **51/51** (`audit-a1.mjs` alone 49/49; `--unpatched` 17/49, 32 fail); `--only 73,74,82,20f,20g,6h,6o,6i,13,14,15,33,5` (40 blocks, the ones the edited words, menu, dialogs and header touch) **737/737**. Block 80 (heap, `enex-s4b --only=80h` alone): 13/13, +106 MB as above. The full `app-check` was not run.
 
+**Totals (Architect), v05.28:** full `app-check` on `0fc774c` (two halves): blocks 1–59 + `self-check` **2332/2332**, blocks 60–88 **5113/5127**. 75d (title bar byte-identical to v05.14) and 80g (no "Bring them in" text on the first screen) failed on this round's own wording change and were updated in place in the review (`af852b0`); `--only 75,80` then **365/365**. The rest are speed limits (78b, 82e, 86). `--only 88` 51/51; `ship-check` 15/15.
+
 ### Not done
 
 - The full `app-check` (told not to); the blocks run are in the totals above.
 - Not walked by hand: Save File's output, PDF export, PWA install, live Sync panel (listed in the table).
 - No pixel-level screenshot comparison; the crawler's measures are the evidence.
+
+## v05.29 — F2: "New Notes", the Backup window's title, the phone pop-up folder tag (issue #205, PCF J43, J44)
+
+(in progress)
