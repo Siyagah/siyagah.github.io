@@ -6,6 +6,7 @@
    `--unpatched` serves the build before this round (the P4 version-bump commit's parent), where the new checks must fail. */
 import { playwright, serve, seedDB, hostLimit } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, waitSeeded, check, results, liveDB, probeInstall, probeRead, assembleEquals, reopen } from './s1-fake.mjs';
+import { canonDB, diffDB } from './s1-assemble.mjs';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -122,6 +123,8 @@ if (PROFILE) {
 }
 
 /* ═══════════════ the checks (block 86) ═══════════════ */
+/* the cloud's records assembled = the device's notebook; _folderNoteRecoveryV1 is a per-device boot mark (sync-e2e.mjs ignores it too) */
+const cloudEq = async (cl, d) => { const r = await assembleEquals(cl, d); if (r.ok || !r.db || !r.dev) return r; delete r.db._folderNoteRecoveryV1; delete r.dev._folderNoteRecoveryV1; const ok = canonDB(r.db) === canonDB(r.dev); return { ok, why: ok ? '' : diffDB(r.db, r.dev) }; };
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
 const HL = hostLimit(200);
 const SYN_BIG = 300, SYN_IMP = 600;   /* the sync checks need many slices, not many notes: a small notebook, the slices held open by a test hook */
@@ -207,8 +210,8 @@ async function syncCases() {
       const pick5 = (d) => on(d, () => { const g = (id) => { const a = DB.articles.find((x) => x.id === id); return a ? [a.title, a.content, a.updatedAt] : null; }; return JSON.stringify([g('bn5'), g('bn6')]); });
       check(okB, `${t} B received the import and the edit`);
       check(await pick5(A) === await pick5(B), `${t} the records B holds equal A's latest`, (await pick5(A)) + ' vs ' + (await pick5(B)));
-      const cloudEq = await assembleEquals(cl, A);
-      check(cloudEq.ok, `${t} the cloud's records assemble to exactly A's notebook`, cloudEq.why);
+      const ce = await cloudEq(cl, A);
+      check(ce.ok, `${t} the cloud's records assemble to exactly A's notebook`, ce.why);
       noErr(A, t + ' A'); noErr(B, t + ' B');
     } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
     finally { if (A) await A.ctx.close(); if (B) await B.ctx.close(); }
@@ -233,8 +236,8 @@ async function syncCases() {
       await quiet(cl, A, 180000);
       const okB = await polled(async () => (await impCount(B)) === SYN_IMP, 120000);
       check(okB, `${t} the next session pushed the rest: B received all ${SYN_IMP} (${await impCount(B)})`);
-      const cloudEq = await assembleEquals(cl, A);
-      check(cloudEq.ok, `${t} the cloud's records assemble to exactly A's notebook`, cloudEq.why);
+      const ce = await cloudEq(cl, A);
+      check(ce.ok, `${t} the cloud's records assemble to exactly A's notebook`, ce.why);
       noErr(A, t + ' A');
     } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
     finally { if (A) await A.ctx.close(); if (B) await B.ctx.close(); }
