@@ -2965,6 +2965,9 @@ sup.ann-sup:hover{text-decoration:underline}
   .pop-details-line .ver-pill{min-height:36px}}
 @media(max-width:639.98px){
   .pop-details-line .pdl-tags,.pop-details-line .pdl-attach,.pop-details-line .pdl-arch{display:none}}
+/* v05.29 (F2) — phone: the folder tag takes the room the row has (it was cut at 32% even when empty space was left); it still shrinks to an ellipsis when there is none */
+@media(max-width:639.98px){
+  .pop-details-line .ftag{max-width:100%}}
 /* v03.NotePane.G5 — "Close all" chip, shown only once a 2nd window is open */
 #fw-closeall{position:fixed;bottom:calc(14px + var(--jeb-h));left:50%;transform:translateX(-50%);
   background:var(--paper);color:var(--t1);border:1px solid var(--border2);
@@ -6554,7 +6557,7 @@ function renderP2H(){
     const ham=window.innerWidth<1200?`<button class="btn bn bi" onclick="showPane('sb')" style="font-size:24px;flex-shrink:0">≡</button>`:'';
     const cls=window.innerWidth<1200?`<button class="btn bn bi" onclick="closeP2()" style="font-size:14px;flex-shrink:0">◀</button>`:'';
     el.innerHTML=ham
-      +`<span class="tbt" style="flex:1;min-width:0;overflow:hidden;font-size:12px">${_ssf?.icon||'📊'} ${esc((_ssf&&(DB.sfItems?.[_ssf.id]?.name||_ssf.name))||'')} <span style="font-weight:400;opacity:.6">· ${esc(_ssec?.name||'')}</span></span>`
+      +`<span class="tbt" style="flex:1;min-width:0;overflow:hidden;font-size:12px">${_ssf?.icon||'📊'} ${esc((_ssf&&_sfName(_ssf))||'')} <span style="font-weight:400;opacity:.6">· ${esc(_ssec?.name||'')}</span></span>`
       +fbBtn+newBtn+previewBtn+cls;
     /* v04.20 — the same second row a folder gets, scoped to this section. */
     if(_pathHost0)_pathHost0.innerHTML=_sfPathRowHTML(ST.secSF.sfId,ST.secSF.secId);
@@ -6685,7 +6688,7 @@ function renderP2C(){
     const _ssec=DB.sections.find(s=>s.id===secId);
     const _ssf=SF.find(s=>s.id===sfId);
     if(!_ssec||!_ssf){ST.secSF=null;renderP2C();return;}
-    const sfName=(_ssf&&(DB.sfItems?.[sfId]?.name||_ssf.name))||'';
+    const sfName=(_ssf&&_sfName(_ssf))||'';
     const grps=getSecSmartGroups(secId,sfId);
     if(grps){
       const tot=getSecSmartArts(secId,sfId).length;
@@ -6733,7 +6736,7 @@ function renderP2C(){
     const groups=getSmartGroups(_sf.id);
     if(groups){
       const total=getSmartArts(_sf.id).length;
-      const dispName=(DB.sfItems?.[_sf.id]?.name)||_sf.name;
+      const dispName=_sfName(_sf);
       let h='<div class="fv">'+`<div class="slbl">${_sf.icon} ${esc(dispName)} (${total})</div>`;
       h+=_sfQtBarHTML(_sf.id,null);
       if(!ST.sfGrpOpen)ST.sfGrpOpen={};
@@ -9576,7 +9579,7 @@ function renderSecSF(secId){
     sfOrdered().forEach(sf=>{
       const cnt=getSecSmartArts(secId,sf.id).length;
       const active=ST.secSF&&ST.secSF.secId===secId&&ST.secSF.sfId===sf.id;
-      const sfName=(DB.sfItems?.[sf.id]?.name)||sf.name;
+      const sfName=_sfName(sf);
       const _it=DB.sfItems?.[sf.id]||{};
       const sfClr=(_it.color?`color:${_it.color};`:'')+(_it.bold?'font-weight:700':'');
       h+=`<div class="sec-sf-item${active?' sel':''}" onclick="selSecSF('${secId}','${sf.id}')" oncontextmenu="showSfItemCtx(event,'${sf.id}')">`
@@ -10417,7 +10420,7 @@ function _confirmReplaceImport(){
   const rec=_saveRecoveryCopy(DB);
   _pendingImportRecovery=rec;
   const safeMsg=rec.ok
-    ? `A copy of your current notebook has been saved on this device — restore it from ⚙ Backup & Restore if anything goes wrong.`
+    ? `A copy of your current notebook has been saved on this device — restore it from 🧰 → 💽 Storage & Backup if anything goes wrong.`
     : `⚠ No copy could be kept (${esc(rec.reason)}). If you replace now, your current notebook cannot be recovered on this device.`;
   showModal(`<div class="mt">⚠ Replace everything?</div>
     <div class="mm">
@@ -10639,7 +10642,7 @@ function _storageAdviceHTML(br,recSnap){
     +'<strong>💾 Save File</strong> keeps a full copy safe either way — if the notebook itself has outgrown '
     +'this device’s storage, shrinking it needs a further round.</div>';
 }
-/** Shared by the ⚙ Backup & Restore modal and openStorageWarnDetails() — one
+/** Shared by the 💽 Storage & Backup modal and openStorageWarnDetails() — one
  *  block, so the numbers can never drift between the two places they show. */
 function _storageSectionHTML(){
   const br=_storageBreakdown();
@@ -19975,7 +19978,7 @@ function _sfPathRowHTML(sfId,secId){
   const others=sfOrdered().filter(s=>s.id!==sfId);
   if(others.length&&(grps||dest))h+='<span class="p2h-path-sep">|</span>';
   others.forEach(s=>{
-    const nm=(DB.sfItems?.[s.id]?.name)||s.name;
+    const nm=_sfName(s);
     const cnt=secId?getSecSmartArts(secId,s.id).length:getSmartArts(s.id).length;
     const go=secId?`selSecSF('${secId}','${s.id}')`:`selFolder('${s.id}')`;
     h+=`<button class="p2h-path-child" onclick="${go}" oncontextmenu="showSfItemCtx(event,'${s.id}')" title="Open &quot;${esc(nm)}&quot; · right-click for options">${s.icon} ${esc(nm)} <span class="p2h-path-cnt">${cnt}</span></button>`;
@@ -20438,7 +20441,7 @@ function openModal(type,target){
       <div class="ma"><button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn bp" onclick="rnFolder('${target}',document.getElementById('inp').value);closeModal()">Save</button></div>`);
   } else if(type==='settings'){
-    showModal(`<div class="mt">⚙ Backup & Restore</div>
+    showModal(`<div class="mt">💽 Storage & Backup</div>
       <div class="mm">Export a JSON backup, or restore from one.</div>
       <div class="ma" style="flex-direction:column;gap:8px;align-items:stretch">
         <button class="btn bp" onclick="exportJSON();closeModal()">⬇ Export data as JSON backup</button>
@@ -20999,7 +21002,7 @@ function _pkSmartListHTML(){
   const items=sfOrdered();
   if(!items.length)return '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12.5px">No smart views</div>';
   return items.map(sf=>{
-    const nm=(DB.sfItems&&DB.sfItems[sf.id]&&DB.sfItems[sf.id].name)||sf.name;
+    const nm=_sfName(sf);
     return `<div class="pnav" data-name="${esc(nm.toLowerCase())}" onclick="pkNavScope('sf','${esc(sf.id)}')">`
       +`<span style="font-size:14px">${sf.icon}</span>`
       +`<span class="pnav-nm">${esc(nm)}</span>`
@@ -21155,7 +21158,7 @@ function _pkGlobalSearchHTML(q){
   const folderHits=DB.folders.filter(f=>_matchesAllWords(f.name,words));
   const noteHits=DB.articles.filter(a=>_matchesAllWords(a.title||'',words));
   const smartHits=sfOrdered().filter(sf=>{
-    const nm=(DB.sfItems&&DB.sfItems[sf.id]&&DB.sfItems[sf.id].name)||sf.name;
+    const nm=_sfName(sf);
     return _matchesAllWords(nm,words);
   });
   const tagHits=getAllTags().filter(t=>_matchesAllWords(t.tag,words));
@@ -21177,7 +21180,7 @@ function _pkGlobalSearchHTML(q){
   }
   if(smartHits.length){
     h+=grpHd('⚡ Smart Views')+smartHits.map(sf=>{
-      const nm=(DB.sfItems&&DB.sfItems[sf.id]&&DB.sfItems[sf.id].name)||sf.name;
+      const nm=_sfName(sf);
       return `<div class="pnav" onclick="pkNavScope('sf','${esc(sf.id)}')" style="padding-left:8px">`
         +`<span style="font-size:14px">${sf.icon}</span>`
         +`<span class="pnav-nm">${esc(nm)}</span>`
@@ -29908,13 +29911,13 @@ document.addEventListener('dragover',ev=>ev.preventDefault());
 document.addEventListener('drop',ev=>ev.preventDefault());
 /* ── Smart Folders ──────────────────────────────────────────────────────
    Virtual read-only views — no DB mutations, pure filtering.
-   (001) New Articles  — all articles sorted by createdAt desc (auto)
+   (001) New Notes     — all notes sorted by createdAt desc (auto)
    (002) Recently Edited — top 20 by updatedAt desc
    (003) Favourites    — articles where a.favourite===true
    (004) Pinned        — articles where a.pinned===true
 ──────────────────────────────────────────────────────────────────────── */
 const SF=[
-  {id:'sf-new',    name:'(01) New Articles',    icon:'📥', smart:'new'},
+  {id:'sf-new',    name:'(01) New Notes',       icon:'📥', smart:'new'},
   {id:'sf-recent', name:'(02) Recently Edited', icon:'🕐', smart:'recent'},
   {id:'sf-favs',   name:'(03) Favourites',      icon:'⭐', smart:'favs'},
   {id:'sf-pinned', name:'(04) Pinned',           icon:'📌', smart:'pinned'},
@@ -29929,6 +29932,13 @@ const SF=[
   {id:'sf-enx',     name:'(13) From Evernote',         icon:'📥', smart:'enx'},
 ];
 const SF_IDS=new Set(SF.map(s=>s.id));
+/* v05.29 (F2) — the ONE place a Smart View's name is read. The owner's own rename wins; a stored name that is exactly the
+   old default "(01) New Articles" (a rename dialog confirmed unchanged) shows the new default. Reads only: nothing is written to DB. */
+function _sfName(sf){
+  const n=DB.sfItems?.[sf.id]?.name;
+  if(!n||(sf.id==='sf-new'&&n==='(01) New Articles'))return sf.name;
+  return n;
+}
 
 /* Smart-View display order — each item's position can be overridden by the
    user (stored as DB.sfItems[id].order); falls back to the array order. */
@@ -30184,7 +30194,7 @@ function mwToggleViewMode(){
   renderP2C();
 }
 function renderMyWall(sf){
-  const dispName=(DB.sfItems?.[sf.id]?.name)||sf.name;
+  const dispName=_sfName(sf);
   if(!ST.sfGrpOpen)ST.sfGrpOpen={};
   if(!ST.mwCatOpen)ST.mwCatOpen={};
   const mwPreview=DB.theme?.mwViewMode==='preview';
@@ -30571,7 +30581,7 @@ function renderSmartSection(){
   const body=open?('<div class="sec-body">'+sfOrdered().map(sf=>{
       const cnt=getSmartArts(sf.id).length;
       const active=ST.folder===sf.id;
-      const sfName=(DB.sfItems?.[sf.id]?.name)||sf.name;
+      const sfName=_sfName(sf);
       const _it=DB.sfItems?.[sf.id]||{};
       const sfClr=(_it.color?`color:${_it.color};`:'')+(_it.bold?'font-weight:700':'');
       return `<div class="tr-row sf-row${active?' sel':''}" style="padding-left:13px;cursor:pointer" data-sfid="${sf.id}" onclick="selFolder('${sf.id}')" oncontextmenu="showSfItemCtx(event,'${sf.id}')">`
@@ -30714,7 +30724,7 @@ function showSfItemCtx(ev,sfid){
 }
 function renameSfItem(sfid){
   const sf=SF.find(s=>s.id===sfid);if(!sf)return;
-  const cur=(DB.sfItems?.[sfid]?.name)||sf.name;
+  const cur=_sfName(sf);
   showModal(`<div class="mt">Rename Smart View</div>
     <input class="mi" id="sf-ren-inp" value="${esc(cur)}" placeholder="View name…"
       onkeydown="if(event.key==='Enter'){finRenameSfItem('${sfid}',this.value);closeModal();}if(event.key==='Escape')closeModal()">
