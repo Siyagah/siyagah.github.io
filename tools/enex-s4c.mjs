@@ -117,8 +117,9 @@ const closeDlg = (d, vp) => actText(d, vp, '#enx-box .rem-btn', 'Close');
 /* what the picture store and the files store hold, read with the app's own database names but our own code */
 const idbAll = (d, dbName, store) => on(d, ([n, s]) => new Promise((res) => {
   const rq = indexedDB.open(n);
-  rq.onsuccess = () => { const db = rq.result; if (!db.objectStoreNames.contains(s)) { db.close(); return res([]); } const out = [], c = db.transaction(s).objectStore(s).openCursor();
-    c.onsuccess = async () => { const cur = c.result; if (cur) { const v = cur.value; const buf = v && v.b ? new Uint8Array(await v.b.arrayBuffer()) : null; let h = ''; if (buf) { const dg = new Uint8Array(await crypto.subtle.digest('SHA-256', buf)); dg.forEach((x) => { h += (x < 16 ? '0' : '') + x.toString(16); }); } out.push({ key: cur.key, enx: v && v.enx, up: v && v.up, mime: v && v.mime, name: v && v.name, n: v && v.n, size: buf ? buf.length : -1, sha: h }); cur.continue(); } else { db.close(); res(out); } }; };
+  rq.onsuccess = () => { const db = rq.result; if (!db.objectStoreNames.contains(s)) { db.close(); return res([]); } const st = db.transaction(s).objectStore(s), ks = st.getAllKeys(), vs = st.getAll();   /* read first; hash after (a transaction does not wait for a hash) */
+    db.transaction(s).oncomplete = null;
+    vs.onsuccess = async () => { const out = []; for (let i = 0; i < vs.result.length; i++) { const v = vs.result[i]; const buf = v && v.b ? new Uint8Array(await v.b.arrayBuffer()) : null; let h = ''; if (buf) { const dg = new Uint8Array(await crypto.subtle.digest('SHA-256', buf)); dg.forEach((x) => { h += (x < 16 ? '0' : '') + x.toString(16); }); } out.push({ key: ks.result[i], enx: v && v.enx, up: v && v.up, mime: v && v.mime, name: v && v.name, n: v && v.n, size: buf ? buf.length : -1, sha: h }); } db.close(); res(out); }; };
   rq.onerror = () => res([]);
 }), [dbName, store]);
 const picStore = (d) => idbAll(d, 'siyagah-pics-v1', 'pics');
@@ -218,7 +219,7 @@ try {
     await on(d, () => { window.__realGate = _s2RefsOk; _s2RefsOk = () => false; });
     await bring(d, vp, FILE);
     const a1 = await art(d, 'Media one');
-    check(markers(a1.content) === 3 && !/<img/.test(a1.content) && /enx-file/.test(a1.content), `${t} with _s2RefsOk() false the 3 picture markers stay; the audio and the PDF still come in`, a1.content.slice(0, 120));
+    check(markers(a1.content) === 2 && !/<img/.test(a1.content) && /enx-file/.test(a1.content), `${t} with _s2RefsOk() false the 2 picture markers of the note stay; the audio and the PDF still come in`, a1.content.slice(0, 120));
     check(!/data:/.test(a1.content) && (await picStore(d)).length === 0, `${t} nothing inline as data:, nothing in the picture store`);
     const txt = await on(d, () => (document.getElementById('enx-imed') || {}).textContent || '');
     check(/Pictures wait: /.test(txt), `${t} the result says "Pictures wait: …" ("${txt.slice(0, 120)}")`);
@@ -300,7 +301,7 @@ try {
     check((await on(d, (id) => DB.articles.find((x) => x.id === id).content, a1.id)) === before && !/<audio|blob:/.test(before), `${t} a.content did not change and holds no player and no blob:`);
     await on(d, () => _flushEd && _flushEd());
     check((await on(d, (id) => DB.articles.find((x) => x.id === id).content, a1.id)) === before, `${t} even after a save pass the stored note is the same`);
-    if (vp.touch) await chip.tap(); else await chip.click();
+    if (vp.touch) await chip.tap({ position: { x: 8, y: 6 } }); else await chip.click({ position: { x: 8, y: 6 } });   /* the label, not the player under it */
     await d.page.waitForFunction(() => !document.querySelector('#p3 .enx-aud'), null, { timeout: 5000 });
     check(true, `${t} a second tap takes the player away again`);
     /* a device that does not hold the bytes */
@@ -311,7 +312,7 @@ try {
       await d2.page.waitForSelector('#p3 .enx-file .enx-off', { timeout: 10000 });
       const off = await on(d2, () => [...document.querySelectorAll('#p3 .enx-file')].map((c) => c.textContent.trim()).filter((x) => /kept on the computer/.test(x)));
       check(off.length === 2 && off.every((x) => /kept on the computer that imported it/.test(x)) && /tone\.wav/.test(off.join()), `${t} a device without the bytes says "kept on the computer that imported it" on both chips ("${off[0] || ''}")`);
-      await d2.page.locator('#p3 .enx-file', { hasText: 'tone.wav' }).first().click({ force: true }); await sleep(400);
+      await d2.page.locator('#p3 .enx-file', { hasText: 'tone.wav' }).first().evaluate((e) => e.click()); await sleep(400);
       check(!(await on(d2, () => !!document.querySelector('#p3 .enx-aud'))), `${t} and a tap makes no broken player`);
       check((await on(d2, (id) => DB.articles.find((x) => x.id === id).content, a1.id)) === before, `${t} the note's stored text is the same there`);
       const ph = await on(d2, () => [...document.querySelectorAll('#p3 img.ed-img')].map((i) => i.classList.contains('ed-img-missing')));
@@ -325,7 +326,7 @@ try {
   if (want('87h')) {
     const N = 600, dir = join(TMP, 'resume'); mkdirSync(dir, { recursive: true });
     let s = HEAD;
-    for (let i = 0; i < N; i++) { const c = new Date(Date.UTC(2015, 0, 1) + i * 61000).toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z'); s += noteXML({ title: 'Resume ' + String(i).padStart(4, '0'), created: c, res: [{ mime: 'image/png', name: 'p' + i + '.png', bytes: withTail(Buffer.from([0x89, 0x50, 0x4e, 0x47]), 200, i) }] }); }
+    for (let i = 0; i < N; i++) { const c = new Date(Date.UTC(2015, 0, 1) + i * 61000).toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z'); s += noteXML({ title: 'Resume ' + String(i).padStart(4, '0'), created: c, res: [{ mime: 'image/png', name: 'p' + i + '.png', bytes: withTail(Buffer.from([0x89, 0x50, 0x4e, 0x47, ...Buffer.from('#' + i)]), 200, i) }] }); }
     writeFileSync(join(dir, 'Resume.enex'), s + '</en-export>\n');
     for (const vp of [VPS[0], VPS[2]]) {
       let d = null; const t = `87h@${vp.name}`;
@@ -342,7 +343,7 @@ try {
         await dlg(d, vp); await act(d, vp, '#enx-cont'); await d.page.waitForSelector('#enx-resume'); await d.page.setInputFiles('#enx-files', join(dir, 'Resume.enex')); await waitState(d, ['done']);
         const fin = await on(d, () => { const a = DB.articles.filter((x) => x.fromEvernote), ids = DB.articles.map((x) => x.id); return { n: a.length, uniq: new Set(a.map((x) => x.title)).size, dup: new Set(ids).size !== ids.length, left: a.filter((x) => x.content.includes('class="enx-media"')).length, imgs: a.filter((x) => (x.content.match(/<img class="ed-img" data-pic/g) || []).length === 1).length }; });
         check(fin.n === N && fin.uniq === N && !fin.dup && fin.left === 0 && fin.imgs === N, `${t} Continue finishes it: ${N} notes, no duplicate, every marker replaced, one picture each`, JSON.stringify(fin));
-        check((await picStore(d)).length === N, `${t} the store holds ${N} pictures, none doubled`);
+        { const ps = await picStore(d); check(ps.length === N && new Set(ps.map((p) => p.key)).size === N, `${t} the store holds ${N} pictures, none doubled`, String(ps.length)); }
         noErr(d, t);
       } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
       finally { if (d) await d.ctx.close(); }
@@ -365,9 +366,11 @@ try {
     try {
       const cl = makeCloud(); d = await dev(cl, 'M', VPS[2]); d.page.setDefaultTimeout(30000); await waitSeeded(cl, d); await gate(d);
       await dlg(d, VPS[2]); await d.page.setInputFiles('#enx-files', f); await waitDone(d, 300000);
-      await d.page.evaluate(() => { window.__heap = { start: performance.memory.usedJSHeapSize, peak: 0 }; window.__hi = setInterval(() => { window.__heap.peak = Math.max(window.__heap.peak, performance.memory.usedJSHeapSize); }, 100); });
+      const cdp = await d.ctx.newCDPSession(d.page); await cdp.send('HeapProfiler.collectGarbage'); await sleep(300);
+      const heap = { start: (await cdp.send('Runtime.getHeapUsage')).usedSize, peak: 0 }; heap.peak = heap.start; let stopH = false;
+      const pollH = (async () => { while (!stopH) { try { const u = (await cdp.send('Runtime.getHeapUsage')).usedSize; if (u > heap.peak) heap.peak = u; } catch {} await sleep(50); } })();
       const t0 = Date.now(); await act(d, VPS[2], '#enx-bring'); await waitState(d, ['done', 'capped'], 600000);
-      const h = await on(d, () => { clearInterval(window.__hi); return { ...window.__heap, end: performance.memory.usedJSHeapSize }; });
+      stopH = true; await pollH; await cdp.send('HeapProfiler.collectGarbage'); const h = { ...heap, end: (await cdp.send('Runtime.getHeapUsage')).usedSize };
       const mb = (x) => Math.round(x / 1048576);
       console.log(`  heap  87i  ${NN} notes, ${BIGPICS} pictures, ${mb(bytes + BIGPICS * PER * 1.34)} MB file: start ${mb(h.start)} MB, peak ${mb(h.peak)} MB, end ${mb(h.end)} MB, ${Math.round((Date.now() - t0) / 1000)} s`);
       const st = await on(d, () => ({ n: DB.articles.filter((a) => a.fromEvernote).length, left: DB.articles.filter((a) => a.fromEvernote && a.content.includes('class="enx-media"')).length }));
@@ -397,6 +400,9 @@ try {
       check(worst.app <= lim.ms, `${t} no long task over ${lim.text} ms in the media step (worst ${worst.app} ms, started ${worst.start} ms)`, JSON.stringify(lt.slice(0, 4)));
       const st = await on(d, () => ({ n: DB.articles.filter((a) => a.fromEvernote).length, left: DB.articles.filter((a) => a.fromEvernote && a.content.includes('class="enx-media"')).length }));
       check(st.n === 150 && st.left === 0, `${t} all 150 notes in, no marker left`, JSON.stringify(st));
+      await sleep(300); const f2 = await on(d, () => performance.now()); await on(d, () => { setTimeout(() => { const t0 = performance.now(); while (performance.now() - t0 < 160); }, 10); }); await sleep(600);   /* a task of its own: a block run inside the evaluate itself is not a long task */
+      const probe = (await on(d, probeRead, f2)).filter((x) => x.dur >= 150);
+      check(probe.length >= 1, `${t} (the probe itself) sees a deliberate 160 ms block, so zero long tasks above means zero`, JSON.stringify(probe));
       noErr(d, t);
     } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
     finally { if (d) await d.ctx.close(); }
