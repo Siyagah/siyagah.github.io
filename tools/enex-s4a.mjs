@@ -182,7 +182,7 @@ try {
     check(r.rows.length === BOOKS.length, `${t} one row per notebook`, String(r.rows.length));
     check(r.broken.length === 2 && r.broken.some((l) => /1 note could not be read in Beta: Broken date/.test(l)) && r.broken.some((l) => /1 note could not be read in Loose: Cut off here/.test(l)), `${t} the two unreadable notes are listed by notebook and title`, r.broken.join(' || '));
     check(/^1 other file skipped$/.test(r.skipped), `${t} the non-.enex file is counted: "1 other file skipped"`, r.skipped);
-    check(/This was a dry run: nothing was added to your notebook\. The import itself comes in the next update\./.test(r.dry), `${t} the dry-run line is at the bottom`, r.dry);
+    check(/This was a look at the export: nothing has been added to your notebook yet\. Tap .Bring them in. to import\./.test(r.dry), `${t} the look-only line is at the bottom (v05.28 A1: the old "next update" wording was stale since S4b)`, r.dry);
     noErr(d, t);
   }, VPS.slice(1));
 

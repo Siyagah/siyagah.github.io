@@ -676,6 +676,8 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .mi::placeholder{color:var(--t3);opacity:1}
 .mi:focus{border-color:var(--green)}
 .ma{display:flex;gap:8px;justify-content:flex-end}
+/* v05.28 · A1 — the dialogs' buttons were 26 px tall on a phone (Cancel, Create, Close, Connect, Export JSON): a 44 px tap target, phone only */
+@media(max-width:639.98px){#mb .btn,#sync-mb .btn{min-height:44px}}
 .mm{font-size:13.5px;color:var(--t2);margin-bottom:16px;line-height:1.55}
 /* v04.39 — the import-consent dialogs (#mb, same on phone/tablet/desktop):
    three explicit actions stacked full-width so each clears a 44px touch
@@ -1705,6 +1707,10 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 #sb-toolbar .sb-tb-btn .tb-ico{font-size:20px}
 @media(max-width:1199.98px){#sb-toolbar .sb-tb-btn{min-height:56px;font-size:14px}}
 .sb-exp-tb{color:#B89050!important}
+/* v05.28 · A1 — the same colours on the WHITE 🧰 menu were 2.9:1 ("Save File", "Unsaved to file", "File saved" 2.7:1); darker on that surface only */
+.sb-tools-dd .sb-exp-tb{color:#8A6420!important}
+.sb-tools-dd .save-lbl.busy{color:#8A6420}
+.sb-tools-dd .save-lbl.ok{color:#2F7A45}
 .sb-exp-tb.dirty{background:rgba(184,135,58,.1)!important;
                  border-color:rgba(184,135,58,.25)!important}
 /* White swatch needs a visible border */
@@ -29127,7 +29133,7 @@ function _enxPaint(){
     const bad=r.books.filter(b=>b.broken.length);
     if(bad.length) h+='<ul class="enx-broken" id="enx-broken">'+bad.map(b=>'<li>'+b.broken.length+' note'+(b.broken.length===1?'':'s')+' could not be read in '+esc(b.name)+': '+esc(b.broken.join(', '))+'</li>').join('')+'</ul>';
     h+=_enxBringHTML()
-      +'<div class="enx-dry" id="enx-dry">This was a dry run: nothing was added to your notebook. The import itself comes in the next update.</div>'
+      +'<div class="enx-dry" id="enx-dry">This was a look at the export: nothing has been added to your notebook yet. Tap “Bring them in” to import.</div>'
       +'<button class="rm-big" onclick="_enxCopy()">📋 Copy summary</button><div id="enx-fb"></div>'
       +'<button class="rm-big alt" onclick="_enxAgain()">↩ Choose another export</button>';
   }else if(v==='import'){
@@ -29135,7 +29141,7 @@ function _enxPaint(){
   }else{
     h+=_enxUnfinishedHTML()
       +(_enx.resume?'<p class="rm-p" id="enx-resume">Choose the same export again. Notes already brought in are skipped, so it is safe.</p>':'')
-      +'<p class="rm-p">See what an import of your Evernote export would bring in. This is a dry run: nothing is added to your notebook.</p>'
+      +'<p class="rm-p">Choose your Evernote export. Siyagah reads it and shows what it found first; nothing is added until you tap “Bring them in”.</p>'
       +'<button class="rm-big enx-dirbtn" onclick="_enxPickDir()">📁 Choose the export folder</button>'
       +'<button class="rm-big alt enx-filebtn" onclick="document.getElementById(\'enx-files\').click()">📄 Choose .enex files</button>'
       +'<p class="rm-p">Stacks come from the folder; files picked one by one go in without a stack.</p>'
