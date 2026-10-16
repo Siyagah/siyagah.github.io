@@ -10313,4 +10313,20 @@ Measured by running 80h against each merge commit: v05.24 **+30.3**, v05.25 **+2
 
 ## v05.29 — F2: "New Notes", the Backup window's title, the phone pop-up folder tag (issue #205, PCF J43, J44)
 
-(in progress)
+Three small defects the A1 audit found and v05.28 listed under "Found, not fixed" (items 2–4).
+
+- **J43 — "(01) New Notes".** The `sf-new` constant and its comment say "New Notes". One helper, `_sfName(sf)`, is now the only reader of a Smart View's name (sidebar,
+  Pane 2 header and its Smart View list, path chips, the section's Smart View list, the Pick-a-scope lists, the Smart View heading, the rename dialog's start value). A stored
+  name that is exactly `(01) New Articles` shows the new default; every other stored name shows as stored. **Nothing is written to `DB`** (no migration, no stamp, nothing synced: I1, I2).
+  Side effect: the Pane 2 header used the constant and ignored a rename; it now follows it like the sidebar does.
+- **J44a — the Backup window's title.** The window the 🧰 menu's "💽 Storage & Backup" opens carries the same title (was "⚙ Backup & Restore"); the message after choosing
+  "Replace everything" says "restore it from 🧰 → 💽 Storage & Backup". Only that one message (plus a code comment) named the old title in `index.html`; no second message was found.
+- **J44b — the phone pop-up's folder tag.** `.pop-details-line .ftag` `max-width:100%` under 640 px (was 32%): a 12-character name is whole, a 60-character name at 360 px still ends in an ellipsis and the window does not overflow. Tablet and laptop keep 32%.
+
+Check: block 89, `tools/f2.mjs` (89a–89c at 390 / 820 / 1440; `--unpatched` 17/41, 24 fail).
+
+**Totals (builder), v05.29:** `ship-check` 15/15; `--only 89,15,75,84,88` **224/224**. No existing check named the old words. The full `app-check` was not run (told not to).
+
+### Not done
+
+- The full `app-check`. Not hand-walked: Save File's output with a renamed Smart View.

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.28.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.29.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.29** (16 Oct 2026) — F2, three small fixes from the A1 audit (issue #205, PCF J43, J44). The Smart View `sf-new` is "(01) New Notes"; **every read of a
+  Smart View's name goes through `_sfName(sf)`** (a stored name that is exactly the old default `(01) New Articles` shows the new one; any other stored name as stored;
+  nothing written to `DB`; the Pane 2 header now follows a rename too). The 🧰 "💽 Storage & Backup" window carries that title (was "⚙ Backup & Restore") and the import
+  message names it. Phone pop-up: `.pop-details-line .ftag` `max-width:100%` under 640 px (was 32%). Check: block 89, `tools/f2.mjs` (`--unpatched`: 24 of 41 fail).
+
 - **v05.28** (16 Oct 2026) — A1, the audit of every feature at 390 / 820 / 1440 (issue #203, PCF J13). Crawler `tools/audit-explore.mjs` (not a check) opens ~35 surfaces by real
   clicks and reports overflow, off-screen controls, small phone targets, contrast. Fixed: the Evernote dialog's stale "dry run / next update" words; the 🧰 menu's
   "Save File" / "Unsaved to file" at 2.7–2.9:1 (now ≥ 4.8, menu only); phone dialog buttons 26 → 44 px (`#mb`, `#sync-mb`); the phone calendar header (title squeezed to 0, layer
@@ -64,12 +69,6 @@ must never accumulate here instead of there.
 - **v05.25** (15 Oct 2026) — Z9, a title for any Zab item (issue #197, PCF J36). New item field `title` (the owner's; trimmed, absent when empty);
   "✎ Title" beside 📎 Attach / → Note on every row kind, the deck card (✎) and the ⋯ menu ("✎ Title…"); the title shows bold, the text (link) small
   under it; Links: `title` wins over `ttl`; → Note uses it as the note's title. Check: block 85, `tools/zab-z9.mjs` (`--unpatched`: 30 of 33 run fail).
-- **v05.24** (15 Oct 2026) — F1, seven small follow-ups (issue #195, PCF J10). Favourites' empty text says "choose ⭐ Favourite" (the menu's
-  word); the Evernote menu's hover text says it imports; an Evernote folder put in Trash while an import runs is never given its id again
-  (`trashF` in `_enxImport`'s `ensure`: next free suffix); phone ✕ row while editing 44 → 36 px (button still 44 × 44; tablet/laptop
-  unchanged); the pockets-inside list puts the count and "▸" at the line's right end (`.jx-nm` lost its `max-width:14ch`); **speed checks
-  multiply their limit by `hostFactor()` in `tools/harness.mjs`** (1.0 on the runner, [1,4]; a new speed check must too); 52d/52d2 wait on a
-  signal, not time. Check: block 84, `tools/f1.mjs`; 80j. See `tools/README.md` *Speed limits and the host factor*.
 
 ---
 
