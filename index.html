@@ -4613,6 +4613,7 @@ let _recSnap;        /* {coll:{id:[sig,updatedAt,noteHistory length]}} — undef
    see). Declared HERE, beside _recSnap, so a sweep can never meet it
    uninitialised. */
 let _s1Dirty={keys:new Set(), gone:new Set(), full:true};
+let _dbRev=0;   /* v05.26 — P4: counts every _save(); with _s1MergeSeq it tells a snapshot built in slices that DB moved under it */
 function _s1DirtyKey(c,id){ return c+'~'+encodeURIComponent(String(id)).replace(/\./g,'%2E'); }   /* = _s1Key() */
 /* ── v04.91 · S1d — one cached view of each record ───────────────────────
    Until v04.90 every sweep (_stampRecordTouches), every reseed and every undo
@@ -4862,6 +4863,7 @@ function _markSaveFailure(e){
      that raises it, and an IndexedDB write failing in journal mode raises it too. */
 function _save(pre,sw){
   if(!_dbLoaded) return false;   /* never write the pre-load placeholder over the real notebook — see _dbLoaded */
+  _dbRev++;   /* v05.26 — P4: a snapshot built in slices restarts if this moved (see _s1TakeSnapAsync) */
   _stampThemeTouches();
   if(!sw) sw=_stampRecordTouches();   /* v04.68 */
   const jm=_idbReady&&_ljWanted();
@@ -26755,6 +26757,19 @@ function mergeDB(local, remote){
 /* ── Chunked cloud storage: bypass Firestore's 1 MiB per-document limit ── */
 function _b64enc(s){ return btoa(unescape(encodeURIComponent(s))); }
 function _b64dec(s){ return decodeURIComponent(escape(atob(s))); }
+/* v05.26 — P4: _b64enc() of a fixed string, in slices (a macrotask between them). Same bytes: UTF-8, then base64 in steps of a multiple of
+   3 bytes, so only the last step pads. (JSON.stringify output has no lone surrogates, the one case where this and _b64enc() differ.) */
+async function _b64encAsync(s){
+  const u=new TextEncoder().encode(s), STEP=3*16384, parts=[];
+  let t0=performance.now();
+  for(let i=0;i<u.length;i+=STEP){
+    const end=Math.min(i+STEP,u.length); let bin='';
+    for(let j=i;j<end;j+=8192) bin+=String.fromCharCode.apply(null,u.subarray(j,Math.min(j+8192,end)));
+    parts.push(btoa(bin));
+    if(performance.now()-t0>=_S1_SLICE_MS){ await _yieldTask(); t0=performance.now(); }
+  }
+  return parts.join('');
+}
 var _SYNC_CHUNK=900000;
 /* v04.82 — chunk documents are named by generation; see _writeCloudDB().
    A main doc with no `g` was written by v04.81 or older (or a frozen build)
@@ -26771,6 +26786,16 @@ function _syncSleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 function _syncSig(s){
   let h=0x811c9dc5;
   for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=(h*0x01000193)>>>0; }
+  return s.length+':'+h.toString(36);
+}
+/* v05.26 — P4: the same signature of a fixed string, in slices (the hash carries across them). */
+async function _syncSigAsync(s){
+  if(s.length<400000) return _syncSig(s);
+  let h=0x811c9dc5, t0=performance.now();
+  for(let i=0;i<s.length;i++){
+    h^=s.charCodeAt(i); h=(h*0x01000193)>>>0;
+    if((i&0x3ffff)===0x3ffff&&performance.now()-t0>=_S1_SLICE_MS){ await _yieldTask(); t0=performance.now(); }
+  }
   return s.length+':'+h.toString(36);
 }
 
@@ -27111,28 +27136,38 @@ function _s1Canon(v){
   if(Array.isArray(v)) return '['+v.map(_s1Canon).join(',')+']';
   return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+_s1Canon(v[k])).join(',')+'}';
 }
-function _s1Snap(db){
+/* v05.26 — P4: both snapshot builders are generators that `yield` every _S1_YIELD_EVERY records. _s1Snap() / _s1SnapDirty() run one to
+   the end in the same tick (exactly what they always did); _s1TakeSnapAsync() lets the page breathe between slices. ONE code path, so the
+   sliced snapshot is the same Map the whole one is. */
+const _S1_YIELD_EVERY=64;
+function _s1Drive(g){ let r; do{ r=g.next(); }while(!r.done); return r.value; }
+function* _s1SnapG(db){
   db=db||DB;
   const out=new Map(), head={};
   Object.keys(db).forEach(k=>{ if(_S1_COLLS.indexOf(k)<0) head[k]=db[k]; });
-  _S1_COLLS.forEach(c=>{
+  let n=0;
+  for(const c of _S1_COLLS){
     const arr=db[c];
-    if(!Array.isArray(arr)){ if(c in db) head[c]=arr; return; }
+    if(!Array.isArray(arr)){ if(c in db) head[c]=arr; continue; }
     const odd=[];   /* no id, or an id already taken: kept in the head */
     const shallow=(c==='trash'||c==='tombstones');
-    arr.forEach((x,i)=>{
-      if(!x||typeof x!=='object'||x.id==null){ odd.push(x); return; }
+    for(let i=0;i<arr.length;i++){
+      const x=arr[i];
+      if(!x||typeof x!=='object'||x.id==null){ odd.push(x); continue; }
       const e=_rcEntry(x,shallow), key=_rcKey(c,x,e);   /* v04.91 — the record's JSON and its hash are kept while it does not change */
-      if(out.has(key)){ odd.push(x); return; }
+      if(out.has(key)){ odd.push(x); continue; }
       out.set(key,{c:c, id:x.id, o:i, json:_rcJson(e), e:e});
-    });
+      if(++n%_S1_YIELD_EVERY===0) yield;
+    }
     head[c]=odd;
-  });
+  }
   out.set('_head~0',{c:'_head', id:'0', json:JSON.stringify(head), canon:_s1Canon(head)});
-  out.forEach(r=>{ r.sig=r.e?(r.e.ssig||(r.e.ssig=_syncSig(r.json))):_syncSig(r.canon||r.json); });
+  yield;
+  for(const r of out.values()){ r.sig=r.e?(r.e.ssig||(r.e.ssig=_syncSig(r.json))):_syncSig(r.canon||r.json); if(++n%_S1_YIELD_EVERY===0) yield; }
   out.seq=_s1MergeSeq;
   return out;
 }
+function _s1Snap(db){ return _s1Drive(_s1SnapG(db)); }
 /* Detached and single-flight: never awaited by a push. v04.89 — a real
    single-flight (the 90 s time-out of v04.88 is gone): no second run beside a
    slow first one, and the latest pending snapshot runs after it. A commit
@@ -27163,29 +27198,33 @@ async function _s1Run(nbId, snap){
    after any failed run or reseed, and once an hour (_S1_FULL_MS), so a change
    that never marked itself is caught. */
 let _S1_FULL_MS=3600000, _s1LastFull=0, _s1BusyP=Promise.resolve();
-function _s1SnapDirty(){
-  const keys=_s1Dirty.keys, goneIn=_s1Dirty.gone;
+function* _s1SnapDirtyG(keys, goneIn){
   const out=new Map(), head={}, seen=new Set();
   Object.keys(DB).forEach(k=>{ if(_S1_COLLS.indexOf(k)<0) head[k]=DB[k]; });
-  _S1_COLLS.forEach(c=>{
+  let n=0;
+  for(const c of _S1_COLLS){
     const arr=DB[c];
-    if(!Array.isArray(arr)){ if(c in DB) head[c]=arr; return; }
+    if(!Array.isArray(arr)){ if(c in DB) head[c]=arr; continue; }
     const odd=[], all=(c==='trash'||c==='tombstones');
-    arr.forEach((x,i)=>{
-      if(!x||typeof x!=='object'||x.id==null){ odd.push(x); return; }
+    for(let i=0;i<arr.length;i++){
+      const x=arr[i];
+      if(!x||typeof x!=='object'||x.id==null){ odd.push(x); continue; }
       const e0=_RC.get(x), key=(e0&&e0.kc===c)?e0.k:_s1Key(c,x.id);   /* v04.91 — the sweep has just keyed every record */
-      if(seen.has(key)){ odd.push(x); return; }
+      if(seen.has(key)){ odd.push(x); continue; }
       seen.add(key);
       if(all||keys.has(key)){ const e=_rcEntry(x,all); out.set(key,{c:c, id:x.id, o:i, json:_rcJson(e), e:e}); }
-    });
+      if(++n%(_S1_YIELD_EVERY*4)===0) yield;
+    }
     head[c]=odd;
-  });
+  }
   out.set('_head~0',{c:'_head', id:'0', json:JSON.stringify(head), canon:_s1Canon(head)});
-  out.forEach(r=>{ r.sig=r.e?(r.e.ssig||(r.e.ssig=_syncSig(r.json))):_syncSig(r.canon||r.json); });
+  yield;
+  for(const r of out.values()){ r.sig=r.e?(r.e.ssig||(r.e.ssig=_syncSig(r.json))):_syncSig(r.canon||r.json); if(++n%_S1_YIELD_EVERY===0) yield; }
   out.partial=true; out.seq=_s1MergeSeq;
   out.goneKeys=new Set(); goneIn.forEach(k=>{ if(!seen.has(k)) out.goneKeys.add(k); });
   return out;
 }
+function _s1SnapDirty(){ return _s1Drive(_s1SnapDirtyG(_s1Dirty.keys, _s1Dirty.gone)); }
 function _s1TakeSnap(){
   const now=Date.now();
   let snap;
@@ -27193,6 +27232,45 @@ function _s1TakeSnap(){
   else snap=_s1SnapDirty();
   _s1Dirty.keys=new Set(); _s1Dirty.gone=new Set(); _s1Dirty.full=false;
   return snap;
+}
+/* v05.26 — P4: the same snapshot, built in slices of ~_S1_SLICE_MS with a macrotask between them, so a 2,000-note import's push is no
+   longer one 300–500 ms task on a phone. THE ONE-STATE RULE: a snapshot must come from ONE state of DB. Every _save() bumps _dbRev and every
+   received merge bumps _s1MergeSeq; if either moved while the page was breathing, the half-built snapshot is thrown away, the dirty set it
+   took is given back (union with whatever the edit marked meanwhile), and the build starts again (at most _S1_SLICE_TRIES times, then it is
+   built whole in one tick, as before — correct, only slower). Nothing is written until it is complete; the dirty set stays in memory only,
+   as it always did, and a page closed half-way starts the next session with `full` set. Test hooks: window.__s1SliceHold (ms to wait at
+   every yield), window.__s1Slicing (true while a build is running). */
+let _S1_SLICE_MS=25, _S1_SLICE_TRIES=3;
+function _yieldTask(){ return new Promise(res=>{ try{ const c=new MessageChannel(); c.port1.onmessage=()=>{ c.port1.close(); res(); }; c.port2.postMessage(0); }catch(e){ setTimeout(res,0); } }); }
+async function _s1TakeSnapAsync(){
+  for(let tries=0; tries<_S1_SLICE_TRIES; tries++){
+    const rev0=_dbRev, seq0=_s1MergeSeq, now=Date.now();
+    const full=_s1Dirty.full||!_recSnap||now-_s1LastFull>=_S1_FULL_MS;
+    const keys=_s1Dirty.keys, gone=_s1Dirty.gone, lastFull0=_s1LastFull;
+    _s1Dirty.keys=new Set(); _s1Dirty.gone=new Set(); _s1Dirty.full=false;
+    const g=full?_s1SnapG():_s1SnapDirtyG(keys, gone);
+    let snap=null, moved=false, t0=performance.now();
+    window.__s1Slicing=true;
+    try{
+      for(;;){
+        const r=g.next();
+        if(r.done){ snap=r.value; break; }
+        if(performance.now()-t0<_S1_SLICE_MS) continue;
+        await _yieldTask();
+        if(window.__s1SliceHold>0) await new Promise(res=>setTimeout(res,window.__s1SliceHold));
+        if(_dbRev!==rev0||_s1MergeSeq!==seq0){ moved=true; break; }
+        t0=performance.now();
+      }
+    }catch(e){
+      /* the build failed: nothing was taken */
+      keys.forEach(k=>_s1Dirty.keys.add(k)); gone.forEach(k=>_s1Dirty.gone.add(k)); if(full) _s1Dirty.full=true;
+      throw e;
+    }finally{ window.__s1Slicing=false; }
+    if(!moved&&(_dbRev!==rev0||_s1MergeSeq!==seq0)) moved=true;
+    if(!moved){ if(full) _s1LastFull=now; snap.seq=seq0; return snap; }
+    keys.forEach(k=>_s1Dirty.keys.add(k)); gone.forEach(k=>_s1Dirty.gone.add(k)); if(full) _s1Dirty.full=true; _s1LastFull=lastFull0;
+  }
+  return _s1TakeSnap();   /* kept changing under the slices: built whole, in one tick */
 }
 /* Put a snapshot's contents back into the dirty set (it was not written). */
 function _s1Redirty(snap){
@@ -27313,7 +27391,10 @@ async function _s1Exec(nbId, snap){
     batch.set(ref,data); nOps++; nBytes+=size;
     if(entry) done.push(entry);
   };
+  let yt0=performance.now();
   for(const [key,r] of work){
+    /* v05.26 — P4: a long list of records is handed to the SDK in slices, a macrotask between them (the rows are already built; nothing here reads DB) */
+    if(performance.now()-yt0>=_S1_SLICE_MS){ await _yieldTask(); yt0=performance.now(); }
     const ref=recsC.doc(key);
     /* v04.89 — the reader may have recorded this very version as the cloud's
        while this run waited: nothing left to write for it. */
@@ -27799,23 +27880,33 @@ async function _pushWrite(cfg, o){
     }
   }
   let json=null, sig=null;
-  const buildBlob=()=>{ json=JSON.stringify(DB); sig=_syncSig(json); };
+  /* v05.26 — P4: the string is built in one tick (one state of DB; JSON.stringify cannot be sliced), but the signature and the base64 are
+     functions of that FIXED string, so they are computed in slices. */
+  const buildBlob=async()=>{ json=JSON.stringify(DB); sig=await _syncSigAsync(json); };
   if(plan==='recs'){
     if(_s1Dirty.keys.size||_s1Dirty.gone.size||_s1Dirty.full){ try{ _save(undefined,swNow); }catch(e){} }
   }else{
-    buildBlob();
-    if(!manual&&sig===_lastPushedSig) return 'same';
+    /* v05.26 — P4: the sweep that _doPush() just ran and the stringify below (which cannot be sliced) are two tasks, not one. If DB moved in
+       between (a save, a merge), the sweep is stale: it is run again here, in the same tick as the stringify. */
+    const rev0=_dbRev, seq0=_s1MergeSeq;
+    await _yieldTask();
+    let sw2=swNow;
+    if(_dbRev!==rev0||_s1MergeSeq!==seq0){ try{ _flushAllEditors(); _stampThemeTouches(); _stampRecordTouches(); sw2=_collect(DB,null); }catch(e){ sw2=null; } }   /* the first sweep's records are in the full collect, so the journal misses none */
+    json=JSON.stringify(DB);
     /* The flush may have pulled text out of an editor that no local save has seen
-       yet, so persist it here too — reusing the string just built. */
-    try{ _save(json,swNow); }catch(e){}
+       yet, so persist it here too — reusing the string just built (same tick, before the first await). */
+    try{ _save(json,sw2); }catch(e){}
+    sig=await _syncSigAsync(json);
+    if(!manual&&sig===_lastPushedSig) return 'same';
   }
-  /* The per-record list, from the same DB as json (same tick). */
-  let snap=null; try{ if(_s1Eligible()) snap=_s1TakeSnap(); }catch(e){ _s1Fail(e); }
+  /* The per-record list: a snapshot of ONE state of DB, built in slices (restarts if DB moved; see _s1TakeSnapAsync). In the blob plans it
+     can be a little newer than json, never older; the blob it travels with is still one JSON of one state. */
+  let snap=null; try{ if(_s1Eligible()) snap=await _s1TakeSnapAsync(); }catch(e){ _s1Fail(e); }
   setSyncStatus('busy');
   const blobWrite=async(marked)=>{
     const ver=_newPushVer();   /* v04.73 — unique per push; see _newPushVer() */
     _myLastPushVer=ver;
-    await _writeCloudDB(nb, ver, _b64enc(json), marked, !marked);   /* not marked = a v04.90 fallback (s1c + s1fb) */
+    await _writeCloudDB(nb, ver, await _b64encAsync(json), marked, !marked);   /* not marked = a v04.90 fallback (s1c + s1fb) */
     _lastPushedSig=sig;
   };
   if(plan==='blob'){
@@ -27849,7 +27940,7 @@ async function _pushWrite(cfg, o){
     _s1FallbackToasted=true;
     toast('☁ The cloud refused the per-note copy — syncing the old way for now. Nothing is lost.', 8000);
   }
-  buildBlob();
+  await buildBlob();
   await blobWrite(false);
   return 'blob';
 }

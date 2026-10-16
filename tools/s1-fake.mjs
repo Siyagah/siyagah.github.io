@@ -190,6 +190,24 @@ async function boot(d) {
 }
 async function reopen(d) { d.qsubs.clear(); d.qDelivered = 0; d.qChangeLog = []; await d.page.reload({ waitUntil: 'domcontentloaded' }); await boot(d); }
 
+/* v05.26 (P4) — the APP's long tasks, without the fake cloud's own work. Install in the page BEFORE the thing to measure; it records every long
+   task [start, dur] and the time the fake SDK spends cloning data in batch.set / doc.set / commit (the part of a write that real Firestore does
+   on its own threads); probeRead() returns the tasks with that time taken out. Nothing the app does is hidden: only those three calls. */
+function probeInstall() {
+  window.__pr = { lt: [], fake: [] };
+  try { new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__pr.lt.push([e.startTime, e.duration]))).observe({ entryTypes: ['longtask'] }); } catch (e) {}
+  const rec = (t0) => window.__pr.fake.push([t0, performance.now() - t0]);
+  const fs = firebase.firestore();
+  const ob = fs.batch.bind(fs);
+  fs.batch = function () { const b = ob(), os = b.set, oc = b.commit; b.set = function () { const t = performance.now(); const r = os.apply(this, arguments); rec(t); return r; }; b.commit = function () { const t = performance.now(); const r = oc.apply(this, arguments); rec(t); return r; }; return b; };
+  const wrapRef = (ref) => { const os = ref.set, oc = ref.collection; if (os) ref.set = function () { const t = performance.now(); const r = os.apply(this, arguments); rec(t); return r; }; if (oc) ref.collection = function () { return wrapColl(oc.apply(this, arguments)); }; return ref; };
+  const wrapColl = (c) => { const od = c.doc; c.doc = function () { return wrapRef(od.apply(this, arguments)); }; return c; };
+  const oc0 = fs.collection; fs.collection = function () { return wrapColl(oc0.apply(this, arguments)); };
+}
+function probeRead(from = 0) {
+  const p = window.__pr, ov = (s, e) => p.fake.reduce((a, [t, d]) => a + Math.max(0, Math.min(e, t + d) - Math.max(s, t)), 0);
+  return p.lt.filter(([s]) => s >= from).map(([s, d]) => ({ start: Math.round(s), dur: Math.round(d), fake: Math.round(ov(s, s + d)), app: Math.round(d - ov(s, s + d)) }));
+}
 const on = (d, fn, arg) => d.page.evaluate(fn, arg);
 const recWrites = (cloud, from) => cloud.log.slice(from).filter((o) => o.t === 'set' && o.p.startsWith(NB + '/recs/')).map((o) => o.p.slice((NB + '/recs/').length));
 const partWrites = (cloud, from) => cloud.log.slice(from).filter((o) => o.t === 'set' && o.p.startsWith(NB + '/recparts/'));
@@ -223,4 +241,4 @@ async function freshDevice(browser, base, vp, seed = seedDB(), cloud = makeCloud
   const d = await addDevice(browser, base, cloud, 'dev', { width: vp.w, height: vp.h }, vp.touch, seed);
   return { cloud, d };
 }
-export { FAKE_SDK, NB, MAX_DOC, MAX_REQ, sleep, results, check, makeCloud, addDevice, boot, reopen, on, recWrites, partWrites, quiet, push, liveDB, stat, waitSeeded, assembleEquals, freshDevice };
+export { probeInstall, probeRead, FAKE_SDK, NB, MAX_DOC, MAX_REQ, sleep, results, check, makeCloud, addDevice, boot, reopen, on, recWrites, partWrites, quiet, push, liveDB, stat, waitSeeded, assembleEquals, freshDevice };
