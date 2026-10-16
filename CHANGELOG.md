@@ -10247,4 +10247,6 @@ S4b left a marker (`span.enx-media`) where each picture, audio file and file sat
 
 **Check:** block 87, `tools/enex-s4c.mjs` (87a–87j at 390 / 820 / 1440). Standalone run: all pass. Memory: 2,000 notes / 300 pictures / 395 MB file, heap peak 17 MB. 390 ×4 media step: 0 long tasks over 50 ms (limit 200). `--unpatched`: stops at the first check (`_md5New` does not exist), so 0 of 1 run — the whole block fails on the old app.
 
+**Totals (builder runs + Architect), v05.27:** both builder runs ended at the Actions time limit (the PR was opened in the second); the Architect ran the checks. `ship-check` 15/15; `--only 87` **175/175**; sync blocks `--only 32,51,52,53,54,59,73,80,86` **1004/1009**, every miss a speed limit while the machine was loaded (80h 697 ms, 86 309/326 ms); 80h alone on this commit 299 and 283 ms (limits 276 and 308 with the host factor), the same as v05.26 — no slowdown from this round. 80h's heap growth is +100–113 MB (limit 150; v05.24 measured +44–49): noted, not a failure.
+
 **Not done:** the cloud upload of imported media (waits for the owner's answer); no inlining of audio in Save File (chip left as it is, as asked).
