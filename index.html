@@ -6583,7 +6583,7 @@ function renderP2H(){
     const _mwCatBtn=_sfDef.id==='sf-mywall'
       ?`<button class="btn bn p2-new-btn" onclick="addNtiCat()" title="Add a new Note-Type category">📁 Category</button>`:'';
     el.innerHTML=ham
-      +`<span class="tbt" style="flex:1;min-width:0;overflow:hidden">${_sfDef.icon} ${esc(_sfDef.name)}</span>`
+      +`<span class="tbt" style="flex:1;min-width:0;overflow:hidden">${_sfDef.icon} ${esc(_sfName(_sfDef))}</span>`
       +fbBtn+_sfBtn+_mwCatBtn+previewBtn+cls;
     /* v04.20 — the second row a Smart View never had; see _sfPathRowHTML(). */
     if(_pathHost0)_pathHost0.innerHTML=_sfPathRowHTML(_sfDef.id,null);
@@ -6760,7 +6760,7 @@ function renderP2C(){
     }
     const arts=getSmartArts(_sf.id);
     const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any note and choose ⭐ Favourite','sf-pinned':'No pinned notes yet — right-click (or hold on mobile) any note and choose 📌 Pin','sf-new':'No notes yet. Create your first note!','sf-recent':'No recently edited notes.','sf-jeb':'Notes you make from Zab appear here.','sf-enx':'Notes brought in from Evernote appear here.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
-    let h='<div class="fv">'+`<div class="slbl">${_sf.name} (${arts.length})</div>`;
+    let h='<div class="fv">'+`<div class="slbl">${esc(_sfName(_sf))} (${arts.length})</div>`;
     h+=_sfQtBarHTML(_sf.id,null);
     if(!arts.length){
       h+=`<div style="padding:22px 14px;text-align:center;background:var(--paper);border:1.5px dashed var(--border2);border-radius:var(--rl);color:var(--t3);font-size:13px;line-height:1.6">${empty[_sf.id]||''}</div>`;
