@@ -47,6 +47,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.27** (16 Oct 2026) — S4c, the Evernote pictures, audio and files come in on the importing computer, with a cloud space guard (issue #201, PCF J01).
+  Markers become `img.ed-img[data-pic]` (pictures, `_picPut`, `enx:1`) or `span.enx-file` (audio/files, device database `siyagah-files-v1`); earlier-imported notes
+  are upgraded (own `updatedAt` + 1 ms). Imported pictures are held back from the cloud until `DB.theme.enxMediaCloud` is set; `usage/v1` + `_PIC_CLOUD_CAP` (600 MB)
+  guard every picture upload. Check: block 87, `tools/enex-s4c.mjs`.
 - **v05.26** (16 Oct 2026) — P4, no pause when the new notes go to the cloud after an import (issue #199, PCF J01). The per-record snapshot is
   built in 25 ms slices with a macrotask between them (`_s1TakeSnapAsync`), and restarts if `DB` moved (**the one-state rule**, see the S1 section);
   the blob's signature and base64 are sliced (`_syncSigAsync`, `_b64encAsync`), its `JSON.stringify(DB)` is not (own task, ≈140 ms at ×4); records go to
@@ -65,11 +69,6 @@ must never accumulate here instead of there.
   shows them one per line (icon, name, rolled count, "▸") between the path line and its own items; tap goes down, long-press/right-click
   is the menu, drag reorders among siblings (Z7). Nothing inside = the panel is byte-identical to v05.21. Check: block 83, `tools/zab-z8.mjs`;
   76e and 81e updated in place (chip row → list). See *Dragging pockets* below.
-- **v05.22** (15 Oct 2026) — P3, a big note list is drawn first screenful at once and the rest after (issue #191, PCF J08). The cards
-  that fill the window come first; the rest is built in a hidden tail and moved in, a chunk per frame; a card's text is kept per note
-  (session memory). Phone ×4, 27,000 notes: un-select a tag first screenful 5,788 → 101 ms. **Not met without the windowed list:** the
-  25,000-card list is whole in ~6 s (was 5.8 s) and the worst long task is 399 ms. See *The sliced note list* below. Check: block 82,
-  `tools/list-p3.mjs`.
 
 ---
 
@@ -602,6 +601,11 @@ A failing check is a wrong assertion surprisingly often — investigate before
   views are `pick` / `reading` / `done` (dry run) / `import`; `_enxContinue` uses the files in memory, else the saved folder handle (asking
   permission), else asks for the files again (`_enx.resume`). `_enxBootToast` shows the toast once per session, only when the window allows.
   Not in `--jeb-h` (the dialog sits over the bar on purpose).
+- **Evernote media (v05.27, S4c).** `_enxScanner(…,{data:true})` also gives each resource's bytes (streamed) with md5 and sha256. Pictures → `_picPut`, `enx:1` on
+  the store record (held from the cloud while `DB.theme.enxMediaCloud` is absent), `img.ed-img[data-pic]`; needs `_s2RefsOk()` or the markers stay. Audio/files →
+  device database `siyagah-files-v1` (sha256 → `{b,mime,name,n}`), `span.enx-file[data-file]`; the player is made at display time, never in `a.content`. Earlier-
+  imported notes get their markers replaced by md5 (own `updatedAt` + 1 ms, never an open note). **Cloud space guard** (all picture uploads): `notebooks/{nb}/usage/v1`
+  `{picBytes}` by `increment`, cap `_PIC_CLOUD_CAP` 600 MB (`__picCap`); over it a picture stays on the device, no toast.
 - **The sliced note list and the card cache (v05.22, P3).** A list over `_LIST_MIN` (300) cards is painted by `_listPaint` (tag, Note Type,
   Smart View, Section Smart View) or `_p2cPaint` (a plain folder): the first `_listFirstN()` cards go in at once; the rest is built by
   `_listBuild` into a hidden `div.al.al-tail` beside the visible `.al` (parsing only; no frame to pay) and moved in `_LIST_REVEAL` (1,500)
