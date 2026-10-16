@@ -10162,6 +10162,12 @@ rather than the `s1-fake` cloud. "Same HTML as v05.24" (85d) compares the panel 
 - **83c updated in place:** it compared a pocket's panel with the v05.21 build byte for byte, and every item row now carries "✎ Title", so the new build's panel is compared with that one button removed (anything else that differs still fails). It had failed at 390 / 820 / 1440 for A1 and A2a (pockets with items); B (no items) passed.
 - Screenshots at 390 and 1440 with a titled link: the title bold, the link small under it, "✎ Title" beside Attach and → Note; on a phone the dialog is the app's centred box in the upper half of the screen (clear of the keyboard), accepted in place of a bottom sheet.
 
+**Totals (Architect), v05.25:** PR #198 opened by the Architect (the builder's run ended without one). `ship-check` 15/15; `--only 85` 131/131; `zab-z9 --unpatched` 30 of 33 fail; 83c updated in place for the ✎ Title button. Full `app-check` on `5f76cc2` (two halves): blocks 1–59 + `self-check` **2330/2332**, blocks 60–85 **4849/4854** → **7179/7186** over all 452 blocks; every miss a speed limit (57d, 78b, 82e).
+
 ### Not done
 
 - The full `app-check` was not run (told not to); the Architect runs it.
+
+## v05.26 — P4: no pause when the new notes go to the cloud after an import (issue #199, PCF J01)
+
+*(stub — in progress; the profile table, the change and the totals follow.)*
