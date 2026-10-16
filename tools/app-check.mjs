@@ -6203,8 +6203,12 @@ await r.block(`20h-20i-20j-strip-geometry-${vp.name}`, async () => {
   for (const [name, x] of [['Multi', m], ['Single', g]]) {
     r.check(oneRow(x.type, x.attach, x.archive) && oneRow(x.folders, x.versions),
       `${vp.name} ${name}: Type · Attach · 📦 share one row, and so do folders · versions (20h)`, JSON.stringify(x));
-    r.check(x.gap != null && x.gap <= 190,
-      `${vp.name} ${name}: title to formatting row is ≤ 190px (20i)`, `${x.gap}px`);
+    /* v05.30 (T2, J42): the owner chose 44 px tap targets on the phone, so the folders · versions row grew from ~36 to 44 px and
+       the formatting row sits 2–4 px lower (192/194 measured). Phone limit 190 → 200, updated in place in the Architect's review;
+       tablet and laptop keep 190. */
+    const lim20i = vp.width < 640 ? 200 : 190;
+    r.check(x.gap != null && x.gap <= lim20i,
+      `${vp.name} ${name}: title to formatting row is ≤ ${lim20i}px (20i)`, `${x.gap}px`);
     const spread = Math.max(...x.rowLefts) - Math.min(...x.rowLefts);
     r.check(spread <= 2, `${vp.name} ${name}: every strip row starts at the same inset (20j)`, JSON.stringify(x.rowLefts));
   }
