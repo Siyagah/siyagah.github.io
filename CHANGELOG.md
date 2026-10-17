@@ -10327,6 +10327,8 @@ Check: block 89, `tools/f2.mjs` (89a–89c at 390 / 820 / 1440; `--unpatched` 17
 
 **Totals (builder), v05.29:** `ship-check` 15/15; `--only 89,15,75,84,88` **224/224**. No existing check named the old words. The full `app-check` was not run (told not to).
 
+**Totals (Architect), v05.29:** full `app-check` on `cdd253a` (two halves): blocks 1–59 + `self-check` **2332/2332**, blocks 60–89 **5168/5170** → **7500/7502** over all 456 blocks; the one miss is 82e's speed limit on the Architect's container. `ship-check` 15/15.
+
 ### Not done
 
 - The full `app-check`. Not hand-walked: Save File's output with a renamed Smart View.
@@ -10349,7 +10351,42 @@ The owner chose **A: 44 px for every button on the phone** (J42). Under 640 px o
 
 **Totals (builder), v05.30:** `ship-check` 15/15; `--only 90` 17/17; `--only 11,12,21,22` 61/61; `--only 70,75,76` 199+74+311 passed (the "FAIL" text in 70's output is a YouTube test id); `--only 81,83,84,88,89` 370/372 before the 88d update, `--only 88` then 51/51. The full `app-check` was not run (told not to).
 
+**Totals (Architect), v05.30:** full `app-check` on `77cb7f3` (two halves): blocks 1–59 + `self-check` **2330/2332** (20i phone limit 190 → 200 px for the 44 px rows, updated in place in `77cb7f3`; `--only 20h-20i` 21/21), blocks 60–90 **5178/5187** (78b, 82e speed limits; 85b fixed by the builder in `1f5c242`: the address stays inline in a titled item's sub-line, 44 px hit area by `::after`). Recheck on `1f5c242`: `--only 70,71,72,76,77,81,83,85,88,90` **1838/1838**; `ship-check` 15/15.
+
 ### Not done
 
 - The full `app-check`. Not hand-walked on a real phone: the colour swatches' look, the ⭐ / 📌 tap on a card.
 - The baseline for 90d is the v05.29 build (the issue said v05.28; v05.29 is what is on `main`).
+
+## v05.31 — S4e: imported Evernote pictures go to the cloud at a smaller size (issue #209, PCF J01 s4cq1, owner's choice A)
+
+The owner chose **A** (J01, 17 Oct 9:14am): the Evernote pictures go to the cloud **shrunk to at most 2,000 px wide**; the full originals stay on the
+computer that imported them. Built by the builder (issue #209, PR #210, two runs, the second ended without pushing its record); checked, merged with v05.30 and
+recorded by the Architect.
+
+- **`DB.theme.enxMediaCloud`** is read only through `_enxCloudMode()`: absent / `'small'` = small copies (the new default, so the owner has nothing to switch
+  on); `'hold'` = nothing imported goes up; anything else (v05.27's `true`) = full size. A picture added by hand (paste, drop, 🖼) is never shrunk.
+- **`_picShrink(blob)`** decodes and resizes with `createImageBitmap` (off the main thread), draws onto an `OffscreenCanvas` and encodes at quality 0.85:
+  JPEG, or PNG when the PNG has transparency (colour type 4/6 or `tRNS`), or WebP for WebP. A picture already ≤ 2,000 px wide and ≤ 1 MB, a GIF, an SVG, or one
+  the reduction would not make smaller goes up unchanged. It never throws (a failure = unchanged).
+- **`_picUploadSmall(sha)`**: the small bytes go up as `picparts/{s2}~i` (`s2` = their own sha256), then the ORIGINAL sha's meta LAST (the pointer) with
+  `sm:s2`, `w`, `h` and `n` = the small size. The space guard (`usage/v1`, `_PIC_CLOUD_CAP`) counts the SMALL bytes. The note's HTML and `DB` are not touched.
+- **`_picFetch`** follows `sm`: it reads `s2`'s parts and verifies their sha256 against `s2`; the store keeps them under the ORIGINAL sha with `sm:1`
+  (`_picSm`). A full-size arrival later (`_picPut` / `_picAdopt`) replaces a small copy, never the reverse.
+- **Measured (91a, at all three sizes):** 5 test pictures 13.64 MB → **4.39 MB in the cloud (32 %)**: a 4,000 × 3,000 photo 2.28 → 0.15 MB, a 3,000 px PNG with
+  transparency 10.39 → 3.31 MB (kept PNG, corner still transparent), a 2,200 px screenshot 0.66 → 0.63 MB; the 600 px and 1,200 px ones unchanged. 91f: 50 large
+  pictures reduced on a ×4 phone with **no long task over 50 ms** (the probe's own 160 ms block was seen, so zero means zero).
+- Check: block 91, `tools/enex-s4e.mjs` (91a–91f at 390 / 820 / 1440). 87e and 87g updated in place: each asks for `'hold'` by name (absent now means small, so a
+  second device shows the pictures instead of the placeholder 87g looked for).
+
+**Totals (Architect), v05.31:** `ship-check` 15/15; `--only 91` **138/138**; `tools/enex-s4e.mjs --unpatched` (the v05.30-base build) **12/28, 16 fail** (91a–91f
+all fail or throw: no `_picShrink`, nothing small reaches the cloud, `'hold'` is not known).
+Full `app-check` on `5fbb25a` (two halves): blocks 1–59 + `self-check` **2332/2332**; blocks 60–91 **5319/5325** → **7651/7657**. The misses: 86@390's speed
+limit (worst 286 ms against 258; host speed, it misses on `main` on this container too) and 87g ×3 + its exit line (it expected the old default, held; updated in place
+in the next commit, `--only=87g` then **36/36**). `index.html` did not change after the full run.
+
+### Not done
+
+- A picture already uploaded full size is not re-sent small (the cloud copy is immutable). None exists: the owner has not imported yet.
+- A second device shows (and exports) the small copy; only the importing computer holds the original. That is the owner's choice A.
+

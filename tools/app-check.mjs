@@ -12284,6 +12284,22 @@ await r.block('90-tap-t2', async () => {
   r.check(out.status === 0, 'the T2 check exits cleanly', `exit ${out.status}`);
 });
 
+/* 91 — v05.31, S4e: the Evernote pictures go to the cloud at a smaller size (≤ 2,000 px wide), the originals stay on the importing computer.
+   tools/enex-s4e.mjs runs 91a–91f at 390 / 820 / 1440: the small parts and the pointer written last, a second device showing and verifying them, the
+   originals and the notes untouched, 'hold' and hand-added pictures, the space guard on the small bytes, and the long-task limit. Each printed ok/FAIL
+   line becomes one check. */
+await r.block('91-enex-s4e', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./enex-s4e.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 60, 'the S4e check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'S4e: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the S4e check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
