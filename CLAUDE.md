@@ -47,6 +47,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.31** (17 Oct 2026) — S4e, the Evernote pictures go to the cloud at most 2,000 px wide; the originals stay on the importing computer (issue #209, PCF J01, owner's choice A).
+  `_enxCloudMode()` (default small), `_picShrink`, `_picUploadSmall` (meta `sm:<sha of the small bytes>`, written last), `_picFetch` verifies the small copy (`_picSm`). Test set 13.6 → 4.4 MB (32 %).
+  Check: block 91, `tools/enex-s4e.mjs` (`--unpatched`: 16 of 28 fail).
+
 - **v05.30** (16 Oct 2026) — T2, every tappable control on a phone (< 640) is at least 44 × 44 px (issue #207, PCF J42, owner's choice A). One CSS block last in the stylesheet; hit area grows,
   drawing may not (Zab ✓ box 20 px inside 44, colour swatches, ⭐ / 📌 borrow card padding). Tablet and laptop unchanged. On 390 × 844: tree rows 19 → 12, note cards 10 → 9.
   **A new phone control must be ≥ 44.** Check: block 90, `tools/tap-t2.mjs` (size, hit test, overflow, overlap at 360 / 390; 820 / 1440 equal the build before; `--unpatched`: 90a fails).
@@ -65,11 +69,6 @@ must never accumulate here instead of there.
   Markers become `img.ed-img[data-pic]` (pictures, `_picPut`, `enx:1`) or `span.enx-file` (audio/files, device database `siyagah-files-v1`); earlier-imported notes
   are upgraded (own `updatedAt` + 1 ms). Imported pictures are held back from the cloud until `DB.theme.enxMediaCloud` is set; `usage/v1` + `_PIC_CLOUD_CAP` (600 MB)
   guard every picture upload. Check: block 87, `tools/enex-s4c.mjs`.
-- **v05.26** (16 Oct 2026) — P4, no pause when the new notes go to the cloud after an import (issue #199, PCF J01). The per-record snapshot is
-  built in 25 ms slices with a macrotask between them (`_s1TakeSnapAsync`), and restarts if `DB` moved (**the one-state rule**, see the S1 section);
-  the blob's signature and base64 are sliced (`_syncSigAsync`, `_b64encAsync`), its `JSON.stringify(DB)` is not (own task, ≈140 ms at ×4); records go to
-  the SDK in slices. Phone ×4, 9,000 + 2,000 notes: worst long task of the app's own work 315–576 → 141–154 ms. 80h now measures the app only, until the push has returned
-  (`probeInstall`/`probeRead` in `s1-fake.mjs`). Check: block 86, `tools/push-p4.mjs` (`--unpatched`: 10 of 41 fail; `--profile` prints the table).
 
 ---
 
@@ -603,10 +602,13 @@ A failing check is a wrong assertion surprisingly often — investigate before
   permission), else asks for the files again (`_enx.resume`). `_enxBootToast` shows the toast once per session, only when the window allows.
   Not in `--jeb-h` (the dialog sits over the bar on purpose).
 - **Evernote media (v05.27, S4c).** `_enxScanner(…,{data:true})` also gives each resource's bytes (streamed) with md5 and sha256. Pictures → `_picPut`, `enx:1` on
-  the store record (held from the cloud while `DB.theme.enxMediaCloud` is absent), `img.ed-img[data-pic]`; needs `_s2RefsOk()` or the markers stay. Audio/files →
+  the store record (since v05.31 they go up small unless `enxMediaCloud` is `'hold'`), `img.ed-img[data-pic]`; needs `_s2RefsOk()` or the markers stay. Audio/files →
   device database `siyagah-files-v1` (sha256 → `{b,mime,name,n}`), `span.enx-file[data-file]`; the player is made at display time, never in `a.content`. Earlier-
   imported notes get their markers replaced by md5 (own `updatedAt` + 1 ms, never an open note). **Cloud space guard** (all picture uploads): `notebooks/{nb}/usage/v1`
   `{picBytes}` by `increment`, cap `_PIC_CLOUD_CAP` 600 MB (`__picCap`); over it a picture stays on the device, no toast.
+  **Smaller in the cloud (v05.31, S4e):** `_enxCloudMode()` is the only reader of `enxMediaCloud` (absent/`'small'` = small, `'hold'` = none, else full). An imported
+  picture goes up via `_picUploadSmall`: `_picShrink` (≤ 2,000 px wide, `createImageBitmap`), parts under the small bytes' own sha `s2`, then the ORIGINAL sha's meta with
+  `sm:s2` last; the guard counts the small bytes. `_picFetch` verifies `s2`, stores under the original sha with `sm:1` (`_picSm`); a full-size copy replaces a small one, never the reverse.
 - **The sliced note list and the card cache (v05.22, P3).** A list over `_LIST_MIN` (300) cards is painted by `_listPaint` (tag, Note Type,
   Smart View, Section Smart View) or `_p2cPaint` (a plain folder): the first `_listFirstN()` cards go in at once; the rest is built by
   `_listBuild` into a hidden `div.al.al-tail` beside the visible `.al` (parsing only; no frame to pay) and moved in `_LIST_REVEAL` (1,500)
