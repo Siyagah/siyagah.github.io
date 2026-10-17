@@ -8,6 +8,7 @@ import { mkdirSync } from 'node:fs';
 const argv = process.argv.slice(2);
 const vpArg = argv.find((a) => a.startsWith('--vp='))?.slice(5);
 const onlyArg = argv.find((a) => a.startsWith('--only='))?.slice(7).split(',');
+const MIN = +(argv.find((a) => a.startsWith('--min='))?.slice(6) || 32); /* --min=44: the T2 limit for a phone tap target */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const VPS = [{ name: '390', w: 390, h: 844, touch: true }, { name: '820', w: 820, h: 1180, touch: true }, { name: '1440', w: 1440, h: 900, touch: false }].filter((v) => !vpArg || v.name === vpArg);
 const OUT = '/tmp/audit-a1'; mkdirSync(OUT, { recursive: true });
@@ -35,7 +36,7 @@ const MEASURE = () => {
     }
     if (e.scrollWidth > e.clientWidth + 2 && /^(hidden|clip)$/.test(cs.overflowX) && e.clientWidth > 0 && own) out.over.push(desc(e) + ` sw${e.scrollWidth}>cw${e.clientWidth}`);
     const clickable = e.matches('button,a[href],select,input:not([type=hidden]),[onclick],[role=button]') && !e.closest('[contenteditable=true]');
-    if (clickable && vw < 640 && (r.height < 32 || r.width < 32) && r.height > 0 && !e.closest('.ed,.fw-ed,#ed')) { /* a tap target is the element or its parent row */ out.small.push(desc(e) + ` ${Math.round(r.width)}x${Math.round(r.height)}`); }
+    if (clickable && vw < 640 && (r.height < (window.__min || 32) || r.width < (window.__min || 32)) && r.height > 0 && !e.closest('.ed,.fw-ed,#ed')) { /* a tap target is the element or its parent row */ out.small.push(desc(e) + ` ${Math.round(r.width)}x${Math.round(r.height)}`); }
     if (own && cs.fontSize) {
       const fg = parse(cs.color); const bg = bgOf(e); const a = fg[3];
       const f = [fg[0] * a + bg[0] * (1 - a), fg[1] * a + bg[1] * (1 - a), fg[2] * a + bg[2] * (1 - a)];
@@ -111,7 +112,7 @@ for (const vp of VPS) {
     await sleep(700);
     let err = null;
     try { await fn(page); } catch (e) { err = String(e).split('\n')[0]; }
-    const m = await page.evaluate(MEASURE);
+    await page.evaluate((v) => { window.__min = v; }, MIN); const m = await page.evaluate(MEASURE);
     await page.screenshot({ path: `${OUT}/${name}-${vp.name}.png` });
     results.push({ vp: vp.name, name, err, errors, ...m });
     console.log(`\n== ${name} @${vp.name}${err ? '  OPEN-FAILED: ' + err : ''}${errors.length ? '  ERRORS: ' + errors.join(' | ') : ''}${m.pageOverflow ? '  PAGE-OVERFLOW' : ''}`);
