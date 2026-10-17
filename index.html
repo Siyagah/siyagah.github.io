@@ -3764,6 +3764,8 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
   .jt-st{min-height:44px}
   .jk-meta .jc-tp,.jk-meta .jc-q,.jk-meta .jc-sh{min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box}
   a.jeb-lnk{display:inline-block;min-height:44px;box-sizing:border-box;padding:12px 0}
+  .jeb-sub a.jeb-lnk{display:inline;min-height:0;padding:0;position:relative}
+  .jeb-sub a.jeb-lnk::after{content:'';position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}
   .jeb-tick,.jt-stk{appearance:none;-webkit-appearance:none;display:grid;place-items:center;width:44px;height:44px;margin:0 0 0 -4px;background:none;border:0;padding:0}
   .jeb-tick::before,.jt-stk::before{content:'';box-sizing:border-box;width:20px;height:20px;border:2px solid var(--green);border-radius:4px;background:var(--white);color:var(--on-accent);font-size:14px;font-weight:700;line-height:16px;text-align:center}
   .jeb-tick:checked::before,.jt-stk:checked::before{content:'✓';background:var(--green)}
