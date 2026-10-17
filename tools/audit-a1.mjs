@@ -146,7 +146,7 @@ try {
       });
       check(m !== null && m.n === 5 && m.inside, `${t} all five layer buttons are inside the screen`, JSON.stringify(m));
       check(m !== null && m.titleW >= 80 && /\d{4}/.test(m.titleTxt), `${t} the month title is visible (${m && Math.round(m.titleW)} px wide: "${m && m.titleTxt.replace(/\s+/g, ' ')}")`);
-      if (vp.name === '390') check(m !== null && m.h > 70 && m.h < 130, `${t} the header is two rows on a phone (${m && Math.round(m.h)} px)`);
+      if (vp.name === '390') check(m !== null && m.h > 70 && m.h < 180, `${t} the header is two rows on a phone (${m && Math.round(m.h)} px; v05.30 T2: its buttons are 44 px tall now, so two rows are ~157 px — the limit was 130)`);
       else check(m !== null && m.h < 70, `${t} the header stays one row (${m && Math.round(m.h)} px)`);
       errorsAll.push(...d.errors);
     } finally { await d.ctx.close(); }

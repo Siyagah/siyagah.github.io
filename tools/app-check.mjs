@@ -6203,8 +6203,12 @@ await r.block(`20h-20i-20j-strip-geometry-${vp.name}`, async () => {
   for (const [name, x] of [['Multi', m], ['Single', g]]) {
     r.check(oneRow(x.type, x.attach, x.archive) && oneRow(x.folders, x.versions),
       `${vp.name} ${name}: Type · Attach · 📦 share one row, and so do folders · versions (20h)`, JSON.stringify(x));
-    r.check(x.gap != null && x.gap <= 190,
-      `${vp.name} ${name}: title to formatting row is ≤ 190px (20i)`, `${x.gap}px`);
+    /* v05.30 (T2, J42): the owner chose 44 px tap targets on the phone, so the folders · versions row grew from ~36 to 44 px and
+       the formatting row sits 2–4 px lower (192/194 measured). Phone limit 190 → 200, updated in place in the Architect's review;
+       tablet and laptop keep 190. */
+    const lim20i = vp.width < 640 ? 200 : 190;
+    r.check(x.gap != null && x.gap <= lim20i,
+      `${vp.name} ${name}: title to formatting row is ≤ ${lim20i}px (20i)`, `${x.gap}px`);
     const spread = Math.max(...x.rowLefts) - Math.min(...x.rowLefts);
     r.check(spread <= 2, `${vp.name} ${name}: every strip row starts at the same inset (20j)`, JSON.stringify(x.rowLefts));
   }
@@ -12264,6 +12268,20 @@ await r.block('89-f2', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the F2 check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, 'F2: ' + row.label, row.detail);
   r.check(out.status === 0, 'the F2 check exits cleanly', `exit ${out.status}`);
+});
+
+/* 90 — v05.30, T2: every tappable control on a phone (< 640) is at least 44 x 44 (PCF J42). tools/tap-t2.mjs runs 90a–90e at 360 / 390
+   (size, hit test, fit, overlap) and 820 / 1440 (boxes equal the build before this round). Each printed ok/FAIL line becomes one check. */
+await r.block('90-tap-t2', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./tap-t2.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1500000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 14, 'the T2 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'T2: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the T2 check exits cleanly', `exit ${out.status}`);
 });
 
 /* ── run everything registered above, or a --only subset ─────────────────

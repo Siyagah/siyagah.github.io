@@ -24,7 +24,7 @@
    no longer drift apart. Bumping this is what evicts the previous cache;
    without it, devices keep serving the old index.html for non-navigation
    requests and never receive a sync fix at all. */
-const VERSION = 'v05.29.01';
+const VERSION = 'v05.30.01';
 const CACHE   = 'siyagah-' + VERSION;
 const NAV_WAIT_MS = 3000;   // v05.14 — how long a page load waits for the network before the cached copy is served
 /* addAll() is all-or-nothing, so every entry here must exist — a single

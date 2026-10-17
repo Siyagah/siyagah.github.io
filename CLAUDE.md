@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.29.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.30.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.30** (16 Oct 2026) — T2, every tappable control on a phone (< 640) is at least 44 × 44 px (issue #207, PCF J42, owner's choice A). One CSS block last in the stylesheet; hit area grows,
+  drawing may not (Zab ✓ box 20 px inside 44, colour swatches, ⭐ / 📌 borrow card padding). Tablet and laptop unchanged. On 390 × 844: tree rows 19 → 12, note cards 10 → 9.
+  **A new phone control must be ≥ 44.** Check: block 90, `tools/tap-t2.mjs` (size, hit test, overflow, overlap at 360 / 390; 820 / 1440 equal the build before; `--unpatched`: 90a fails).
+
 - **v05.29** (16 Oct 2026) — F2, three small fixes from the A1 audit (issue #205, PCF J43, J44). The Smart View `sf-new` is "(01) New Notes"; **every read of a
   Smart View's name goes through `_sfName(sf)`** (a stored name that is exactly the old default `(01) New Articles` shows the new one; any other stored name as stored;
   nothing written to `DB`; the Pane 2 header now follows a rename too). The 🧰 "💽 Storage & Backup" window carries that title (was "⚙ Backup & Restore") and the import
@@ -66,9 +70,6 @@ must never accumulate here instead of there.
   the blob's signature and base64 are sliced (`_syncSigAsync`, `_b64encAsync`), its `JSON.stringify(DB)` is not (own task, ≈140 ms at ×4); records go to
   the SDK in slices. Phone ×4, 9,000 + 2,000 notes: worst long task of the app's own work 315–576 → 141–154 ms. 80h now measures the app only, until the push has returned
   (`probeInstall`/`probeRead` in `s1-fake.mjs`). Check: block 86, `tools/push-p4.mjs` (`--unpatched`: 10 of 41 fail; `--profile` prints the table).
-- **v05.25** (15 Oct 2026) — Z9, a title for any Zab item (issue #197, PCF J36). New item field `title` (the owner's; trimmed, absent when empty);
-  "✎ Title" beside 📎 Attach / → Note on every row kind, the deck card (✎) and the ⋯ menu ("✎ Title…"); the title shows bold, the text (link) small
-  under it; Links: `title` wins over `ttl`; → Note uses it as the note's title. Check: block 85, `tools/zab-z9.mjs` (`--unpatched`: 30 of 33 run fail).
 
 ---
 

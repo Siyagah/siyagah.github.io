@@ -10330,3 +10330,26 @@ Check: block 89, `tools/f2.mjs` (89a–89c at 390 / 820 / 1440; `--unpatched` 17
 ### Not done
 
 - The full `app-check`. Not hand-walked: Save File's output with a renamed Smart View.
+
+## v05.30 — T2: every tap target on the phone is at least 44 × 44 px (issue #207, PCF J42)
+
+The owner chose **A: 44 px for every button on the phone** (J42). Under 640 px only; tablet and laptop do not change.
+
+- **One CSS block**, last in the stylesheet (`@media(max-width:639.98px)`, "v05.30 · T2"), plus two older phone rules raised (the edit bar's buttons 38/40 → 44, `#ed-col-btn` 34 → 44). It covers the header
+  buttons, section ⋯ ＋ ⇅ and fold arrows, tree / search-result / Smart View rows, the folder path chips and ◀ ≡, Preview, Trash ✕ / Restore, Zab (chips, ＋, ✨ Choose, rows, steps,
+  stars, due / flag, menu rows), calendar, the pop-up note's bars, the Appearance and dialog controls, the ⋯ / right-click menus' rows and colour swatches, and the ⭐ / 📌 on a note card.
+- **Hit area, not drawing.** The Zab ✓ box stays 20 px drawn inside a 44 px target (`::before`); colour swatches stay ~22 px drawn inside 44; the ⭐ / 📌 badges borrow their height from the
+  card's padding (negative vertical margin) so a card does not grow.
+- **Rows on a 390 × 844 phone (measured, `tools/tap-t2.mjs`):** folder tree **19 → 12** rows fully on screen; note list **10 → 9** cards (the cards were already close to 44 px).
+- Check: block 90, `tools/tap-t2.mjs` — 90a size, 90b hit test (centre + 2 px inside each edge), 90c no overflow / no overlap (360 and 390, 21 surfaces, ~330 targets each),
+  90d tablet / laptop boxes equal the v05.29 build (820: 258 elements, 1440: 497), 90e no page errors. Allowed exceptions (printed in the check): an address inside a sentence, a
+  20 px tick box inside a ≥ 44 px label, typing / slider fields. The floating Zab button over the end of a list is not counted as covering it. `--unpatched` (the v05.29 build): 90a fails at both widths (≈ 220 targets under 44).
+- Updated in place: 88d's limit for the phone calendar header (two rows of 44 px buttons are ~157 px; was < 130).
+- The crawler `tools/audit-explore.mjs` takes `--min=44`.
+
+**Totals (builder), v05.30:** `ship-check` 15/15; `--only 90` 17/17; `--only 11,12,21,22` 61/61; `--only 70,75,76` 199+74+311 passed (the "FAIL" text in 70's output is a YouTube test id); `--only 81,83,84,88,89` 370/372 before the 88d update, `--only 88` then 51/51. The full `app-check` was not run (told not to).
+
+### Not done
+
+- The full `app-check`. Not hand-walked on a real phone: the colour swatches' look, the ⭐ / 📌 tap on a card.
+- The baseline for 90d is the v05.29 build (the issue said v05.28; v05.29 is what is on `main`).
