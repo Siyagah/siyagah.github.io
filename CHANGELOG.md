@@ -10376,10 +10376,14 @@ recorded by the Architect.
 - **Measured (91a, at all three sizes):** 5 test pictures 13.64 MB → **4.39 MB in the cloud (32 %)**: a 4,000 × 3,000 photo 2.28 → 0.15 MB, a 3,000 px PNG with
   transparency 10.39 → 3.31 MB (kept PNG, corner still transparent), a 2,200 px screenshot 0.66 → 0.63 MB; the 600 px and 1,200 px ones unchanged. 91f: 50 large
   pictures reduced on a ×4 phone with **no long task over 50 ms** (the probe's own 160 ms block was seen, so zero means zero).
-- Check: block 91, `tools/enex-s4e.mjs` (91a–91f at 390 / 820 / 1440). 87e updated in place: it asks for `'hold'` by name (absent now means small, not held).
+- Check: block 91, `tools/enex-s4e.mjs` (91a–91f at 390 / 820 / 1440). 87e and 87g updated in place: each asks for `'hold'` by name (absent now means small, so a
+  second device shows the pictures instead of the placeholder 87g looked for).
 
 **Totals (Architect), v05.31:** `ship-check` 15/15; `--only 91` **138/138**; `tools/enex-s4e.mjs --unpatched` (the v05.30-base build) **12/28, 16 fail** (91a–91f
 all fail or throw: no `_picShrink`, nothing small reaches the cloud, `'hold'` is not known).
+Full `app-check` on `5fbb25a` (two halves): blocks 1–59 + `self-check` **2332/2332**; blocks 60–91 **5319/5325** → **7651/7657**. The misses: 86@390's speed
+limit (worst 286 ms against 258; host speed, it misses on `main` on this container too) and 87g ×3 + its exit line (it expected the old default, held; updated in place
+in the next commit, `--only=87g` then **36/36**). `index.html` did not change after the full run.
 
 ### Not done
 

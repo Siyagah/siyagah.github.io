@@ -285,6 +285,7 @@ try {
   /* ══ 87g — on screen ══ */
   if (want('87g')) await each('87g', async (d, vp, cl) => {
     const t = `87g@${vp.name}`;
+    await on(d, () => { DB.theme = DB.theme || {}; DB.theme.enxMediaCloud = 'hold'; persist(); });   /* v05.31 (S4e): absent now means 'small' (they go up), so the hold is asked for by name, as in 87e */
     await bring(d, vp, FILE); await quiet(cl, d);
     await closeDlg(d, vp);
     const a1 = await art(d, 'Media one'); const before = a1.content;
