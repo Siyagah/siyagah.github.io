@@ -10390,3 +10390,8 @@ in the next commit, `--only=87g` then **36/36**). `index.html` did not change af
 - A picture already uploaded full size is not re-sent small (the cloud copy is immutable). None exists: the owner has not imported yet.
 - A second device shows (and exports) the small copy; only the importing computer holds the original. That is the owner's choice A.
 
+
+
+## v05.32 — Z10: the scrolling titles band (issue #211, PCF J48)
+
+(In progress, stub. The full entry follows when the round is finished.)
