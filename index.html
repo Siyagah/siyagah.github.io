@@ -24845,7 +24845,8 @@ function _jebItemMenu(iid,anchor){
   _jebShowMenu([
     {t:it.done?'☐ Not done':'☑ Done',f:()=>{ if(jebToggleDone(iid)){ _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } }},   /* v05.32 · Z10 — status, from the scrolling band and every other item menu */
     {t:'✏️ Edit',f:()=>{
-      if(!document.querySelector(`#jeb-deck .jeb-card[data-iid="${iid}"],#jeb-panel .jeb-it[data-iid="${iid}"]`)){ const x=_jebItem(iid); if(x) jebOpenPanel(x.pocketId); }   /* from the band: open that Zab's panel first */
+      const shown=(_jebDeck&&document.querySelector(`#jeb-deck .jeb-card[data-iid="${iid}"]`))||(_jebOpen&&document.querySelector(`#jeb-panel .jeb-it[data-iid="${iid}"]`));   /* a closed panel keeps its rows in the page */
+      if(!shown){ const x=_jebItem(iid); if(x) jebOpenPanel(x.pocketId); }   /* from the band: open that Zab's panel first */
       _jebStartEdit(iid);
     }},
     ...(_jebType(_jebPocket(it.pocketId))==='links'?[{t:'👤 Person…',f:()=>_jebPickOpen(iid,'people')},{t:'# Issue…',f:()=>_jebPickOpen(iid,'issues')}]:[]),

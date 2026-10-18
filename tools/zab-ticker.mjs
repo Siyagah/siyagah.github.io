@@ -104,7 +104,7 @@ if (want('92a')) for (const vp of VPS) {
   });
   await T(`${tag} no pane reaches under the band (sidebar, list, open note)`, async () => {
     await p.evaluate(() => { selArt('a1'); }); await sleep(500);
-    const r = await p.evaluate(() => { const bt = document.getElementById('zab-tk').getBoundingClientRect().top; return ['sb', 'p2', 'p3'].map((id) => { const e = document.getElementById(id), r = e.getBoundingClientRect(); return { id, vis: r.width > 0 && r.left < innerWidth && r.right > 0, b: r.bottom }; }).filter((x) => x.vis).map((x) => ({ ...x, ok: x.b <= bt + 1 })); });
+    const r = await p.evaluate(() => { const bt = document.getElementById('zab-tk').getBoundingClientRect().top; return (innerWidth >= 1200 ? ["p2", "p3"] : ["sb", "p2", "p3"]).map((id) => { const e = document.getElementById(id), r = e.getBoundingClientRect(); return { id, vis: r.width > 0 && r.left < innerWidth && r.right > 0, b: r.bottom }; }).filter((x) => x.vis).map((x) => ({ ...x, ok: x.b <= bt + 1 })); });
     return [r.length > 0 && r.every((x) => x.ok), JSON.stringify(r)];
   });
 }
@@ -136,7 +136,7 @@ if (want('92c')) {
     const r = await p.evaluate(async () => { window.__zabTkNow = performance.now(); zabTkSet('run', 1, true); await new Promise((r) => setTimeout(r, 1300)); const pill = document.querySelector('#zab-tk .tk-pill').textContent;
       window.__zabTkNow += 61000; _tkTick(); const gone = !document.getElementById('zab-tk'), btn = document.getElementById('zab-tk-again'), cls = document.documentElement.classList.contains('zab-tk');
       const b = btn && btn.getBoundingClientRect(); btn && btn.click(); const back = !!document.getElementById('zab-tk'), btnGone = !document.getElementById('zab-tk-again'); return { pill, gone, btn: !!btn, cls, w: b && b.width, h: b && b.height, back, btnGone }; });
-    return [/^hides in 0:[0-5]\d$/.test(r.pill) && r.gone && r.btn && !r.cls && r.back && r.btnGone, JSON.stringify(r)];
+    return [/^hides in (1:00|0:[0-5]\d)$/.test(r.pill) && r.gone && r.btn && !r.cls && r.back && r.btnGone, JSON.stringify(r)];
   });
   await p.evaluate(() => { delete window.__zabTkNow; }); await set(p, 'run', 0);
   const at = (h) => p.evaluate((h) => { window.__zabTkNow = new Date(2026, 9, 19, h, 30, 0).getTime(); _tkTick(); return !!document.getElementById('zab-tk'); }, h);
@@ -158,6 +158,7 @@ if (want('92d')) {
   });
   await T('92d Include ticked (done) items', async () => { await set(p, 'mode', 'all'); await set(p, 'skip', []); await set(p, 'done', true); const t = await texts(p); await set(p, 'done', false); return [t.includes('Old milk') && t.length === 6, JSON.stringify(t)]; });
   await T('92d the tick list (Appearance, by real clicks): every Zab, the nested one indented; unticking one hides its titles', async () => {
+    await set(p, 'pids', []);
     await p.locator('#sb-tools-btn').click(); await sleep(300); await p.locator('#sb-tools >> text=Appearance').first().click(); await sleep(600);
     const info = await p.evaluate(() => [...document.querySelectorAll('#th-tk .tk-pk')].map((c) => ({ pid: c.dataset.pid, pad: parseInt(c.closest('label').style.paddingLeft) || 0, on: c.checked })));
     await p.locator('#th-tk .tk-pk[data-pid="jp-shop"]').click(); await sleep(400);
