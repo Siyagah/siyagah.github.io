@@ -829,9 +829,34 @@ html{--jeb-h:0px;--jeb-l:0px;--jeb-hd:0px}
 #idb-warn.min .iw-t,#idb-warn.min .iw-try,#idb-warn.min .iw-hide{display:none}
 #idb-warn.min .iw-show{display:block;width:40px;height:40px;padding:0;border-radius:50%;background:#FFF4D6;border:1px solid #C9A227;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 @property --jeb-h{syntax:'<length>';inherits:false;initial-value:0px}
-html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:56px}
-html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:0px}
-html.jeb-kb #jeb-bar,html.jeb-kb #zab-btn,html.jeb-kb #zab-lay{display:none!important}
+html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:56px}
+html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:0px}
+html.jeb-kb #jeb-bar,html.jeb-kb #zab-btn,html.jeb-kb #zab-lay,html.jeb-kb #zab-tk,html.jeb-kb #zab-tk-again{display:none!important}
+/* v05.32 · Z10 — the scrolling titles band sits directly above the bar (#zab-tk's own --jeb-h is the bar's 56px, so its bottom edge is the bar's top edge).
+   While it is shown (html.zab-tk, a plain class: it costs nothing) everything else that is offset by --jeb-h gains its height: 34px (44 on a phone, where the
+   titles are tap targets), and with the round button (html.zab-btn, no bar) the band is at the very bottom and --jeb-h is its height alone. */
+html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:90px}
+html.zab-btn.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:calc(44px + env(safe-area-inset-bottom,0px))}
+@media(max-width:639.98px){html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:100px}}
+#zab-tk{position:fixed;left:var(--jeb-l);right:0;bottom:var(--jeb-h);height:34px;z-index:139;overflow:hidden;background:#16422C;color:#E9F6EE;border-top:1px solid rgba(255,255,255,.14);font-size:13px;contain:layout paint}
+@media(max-width:1199.98px){#zab-tk,#zab-tk-again{left:0}}
+@media(max-width:639.98px){#zab-tk{height:44px}}
+html.zab-btn #zab-tk{height:calc(44px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}
+#zab-tk .tk-track{position:absolute;left:0;top:0;height:100%;display:flex;align-items:center;white-space:nowrap;will-change:transform;padding-right:24px}
+html.zab-btn #zab-tk .tk-track{height:44px}
+#zab-tk .tk-it{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:100%;min-width:44px;padding:0 4px;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;touch-action:manipulation;white-space:nowrap}
+@media(min-width:640px){#zab-tk .tk-it{min-width:0}}
+#zab-tk .tk-it:hover,#zab-tk .tk-it:focus-visible{background:rgba(255,255,255,.12);outline:none}
+#zab-tk .tk-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 1px rgba(255,255,255,.5)}
+#zab-tk .tk-sep{flex:0 0 auto;padding:0 10px;opacity:.55}
+#zab-tk .tk-pill{position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:2px 9px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;pointer-events:none}
+#zab-tk .tk-pill[hidden]{display:none}
+#zab-tk.tk-rm .tk-track{position:static;padding:0 12px;justify-content:center;height:100%}
+#zab-tk.tk-rm .tk-it:not(.cur),#zab-tk.tk-rm .tk-sep{display:none}
+#zab-tk-again{position:fixed;left:calc(var(--jeb-l) + 10px);bottom:calc(var(--jeb-h) + 8px);z-index:139;min-height:34px;padding:0 14px;border:1px solid rgba(255,255,255,.3);border-radius:999px;background:#16422C;color:#E9F6EE;font:inherit;font-size:13px;cursor:pointer;touch-action:manipulation;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+@media(max-width:1199.98px){#zab-tk-again{left:10px}}
+@media(max-width:639.98px){#zab-tk-again{min-height:44px;min-width:44px}}
+html.zab-btn #zab-tk-again{bottom:calc(var(--jeb-h) + 8px + env(safe-area-inset-bottom,0px))}
 @media(min-width:1200px){#p2,#p3{margin-bottom:var(--jeb-h)}}
 #jeb-bar{position:fixed;left:var(--jeb-l);right:0;bottom:0;height:56px;z-index:140;display:flex;align-items:center;gap:8px;padding:0 10px;overflow-x:auto;overflow-y:hidden;background:var(--white);border-top:1px solid var(--border2);scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
 #jeb-bar::-webkit-scrollbar{display:none}
@@ -5061,8 +5086,8 @@ function _cleanExportRoot(){
            that also carries pocket names and item text, and a toast can carry
            a note title. jeb-app would hide the sidebar of a plain copy (I4).
            The head goes back to what _JEB_FACE0 recorded before the swap. */
-    root.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,#zab-btn,#zab-lay,#zab-card,.toast').forEach(function(el){ el.remove(); });
-    root.classList.remove('jeb-app','jeb-on','jeb-kb','zab-btn');
+    root.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,#zab-btn,#zab-lay,#zab-card,#zab-tk,#zab-tk-again,.toast').forEach(function(el){ el.remove(); });
+    root.classList.remove('jeb-app','jeb-on','jeb-kb','zab-btn','zab-tk');
     root.style.removeProperty('--jeb-h'); root.style.removeProperty('--jeb-l');
     if(!root.getAttribute('style')) root.removeAttribute('style');
     if(!root.getAttribute('class')) root.removeAttribute('class');
@@ -22314,6 +22339,7 @@ function renderThemeModal(){
   h+='<div class="theme-sect"><div class="theme-sect-lbl">Zab bar</div>';
   h+='<div class="fs-sub" style="margin:-2px 0 8px">The strip of pockets along the bottom of the screen</div>';
   h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="checkbox" id="th-jebbar"'+(_jebBarOn()?' checked':'')+' onchange="setJebBar(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show Zab bar</label></div>';
+  h+=_tkSettingsHTML();   /* v05.32 · Z10 */
 
   /* Zab on the phone (v05.18, N2) — DB.theme.zabPhoneLayout, absent = rail. Shown on every screen size so it can be set from a laptop. */
   h+='<div class="theme-divider"></div>';
@@ -23486,7 +23512,7 @@ function jebLayout(){
   const sb=_jebEl('sb'); let l=0;
   if(!_JEB_APP&&window.innerWidth>=1200&&sb) l=Math.max(0,Math.round(sb.getBoundingClientRect().right));
   /* v05.08 — onto its two users, never <html> (see the CSS note at --jeb-h) */
-  ['jeb-bar','jeb-deck'].forEach(id=>{ const e=_jebEl(id); if(e&&e.style.getPropertyValue('--jeb-l')!==l+'px') e.style.setProperty('--jeb-l',l+'px'); });
+  ['jeb-bar','jeb-deck','zab-tk','zab-tk-again'].forEach(id=>{ const e=_jebEl(id); if(e&&e.style.getPropertyValue('--jeb-l')!==l+'px') e.style.setProperty('--jeb-l',l+'px'); });
 }
 /* a phone with the keyboard up for anything outside Jeb: focus is in a text field that is not Jeb's */
 function _jebKbWanted(){
@@ -23510,7 +23536,7 @@ function _jebWireOnce(){
   if(_jebWired) return; _jebWired=true;
   try{ new ResizeObserver(jebLayout).observe(_jebEl('sb')); }catch(e){}
   let wasWide=_jebWide(), wasTk=_jebTaskMode(), wasPhone=_zabPhone();
-  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_zabPhone()!==wasPhone){ wasPhone=_zabPhone(); jebRefresh(); } else if(_zabOpen) _zabPaint(); _zabPlace(); if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
+  window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_zabPhone()!==wasPhone){ wasPhone=_zabPhone(); jebRefresh(); } else if(_zabOpen) _zabPaint(); _zabPlace(); _tkMeasure=true; if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
   document.addEventListener('focusin',_jebKbCheck);
   document.addEventListener('focusout',()=>setTimeout(_jebKbCheck,0));
   document.addEventListener('pointerdown',e=>{
@@ -23518,7 +23544,7 @@ function _jebWireOnce(){
     if(_jebEl('jeb-menu')&&!t.closest('#jeb-menu')) _jebHideMenu();
     if(_jebEl('jeb-due')&&!t.closest('#jeb-due,.jt-due,.jt-flag')) _jebDueClose();
     if(_jebEl('zab-card')&&!t.closest('#zab-card')) _zabCardClose();
-    if(_jebOpen&&!_JEB_APP&&!t.closest('#jeb-panel,#jeb-bar,#jeb-deck,#jeb-menu,#jeb-att,#jeb-due,.toast-act,#ov,#zab-btn,#zab-lay,#zab-card')) jebClosePanel();   /* Jeb mode: the panel never closes to an empty screen */
+    if(_jebOpen&&!_JEB_APP&&!t.closest('#jeb-panel,#jeb-bar,#jeb-deck,#jeb-menu,#jeb-att,#jeb-due,.toast-act,#ov,#zab-btn,#zab-lay,#zab-card,#zab-tk,#zab-tk-again')) jebClosePanel();   /* Jeb mode: the panel never closes to an empty screen */
   },true);
   /* v05.11 · Z6b — the steps editor lives in a row, a card's modal or the panel: its events are delegated from here */
   document.addEventListener('click',e=>{
@@ -23562,7 +23588,7 @@ function jebRefresh(){
   if(typeof DB==='undefined'||!DB||!_dbLoaded) return;
   if(!_jebStaleSwept){   /* a copy saved by an older build may carry dead Jeb surfaces: this session builds its own */
     _jebStaleSwept=true;
-    document.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,#zab-btn,#zab-lay,#zab-card').forEach(el=>el.remove());
+    document.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,#zab-btn,#zab-lay,#zab-card,#zab-tk,#zab-tk-again').forEach(el=>el.remove());
   }
   _jebWireOnce();
   const root=document.documentElement, on=_jebBarOn(), btn=on&&_zabBtnOn();   /* v05.18 · N2: a phone shows the corner button, not the bar */
@@ -23571,7 +23597,7 @@ function jebRefresh(){
   let bar=_jebEl('jeb-bar');
   if(!on){
     if(bar){ bar.remove(); _jebBarSig=''; }
-    jebCloseDeck(); jebClosePanel(); jebLayout(); _zabSync(false); return;
+    jebCloseDeck(); jebClosePanel(); jebLayout(); _zabSync(false); _tkSync(); return;
   }
   if(btn){ if(bar){ bar.remove(); _jebBarSig=''; } }
   else{ if(!bar){ bar=_jebMakeBar(); _jebBarSig=''; } _jebPaintBar(bar); }
@@ -23582,6 +23608,199 @@ function jebRefresh(){
   if(_jebAtt) _jebAttList();
   if(_JEB_APP) _jebAppEnsure();
   _jebLastDay=_jebToday();
+  _tkSync();
+}
+/* ══ v05.32 · Z10 — the scrolling titles band (#zab-tk) ═════════════════════════════════════════════════════════════════════
+   DB.theme.zabTicker (a plain object, absent = defaults) is read ONLY through _zabTk(). The band is built by _tkSync() (called from jebRefresh() and
+   whenever a Zab opens or closes) and repainted only when its list changes (_tkSig); a round is a translateX() of ONE element (.tk-track) driven by
+   requestAnimationFrame from elapsed time, so px/s holds at any frame rate; nothing is written to <html> but the plain class html.zab-tk (the band takes
+   room: the --jeb-h lists in the stylesheet), and the loop reads layout only at the start of a round. The run clock, the pause between rounds and
+   the "hides in" countdown are this session's (never stored). Test hook: window.__zabTkNow (ms) replaces performance.now() for those clocks and,
+   for "only between hours", is read as epoch ms. Nothing in a note or an item is touched (I1). */
+const _TK_GAPS=[0,5,30,60,300], _TK_RUNS=[0,1,5,15], _TK_MODES=['all','only','open'], _TK_PHONE=['bottom','none','open'];
+function _zabTk(){
+  const s=(DB&&DB.theme&&_isPlainObj(DB.theme.zabTicker))?DB.theme.zabTicker:{}, h=_isPlainObj(s.hours)?s.hours:{};
+  const n=(v,lo,hi,d)=>{ v=Math.round(+v); return (isFinite(v)&&v>=lo&&v<=hi)?v:d; };
+  const ids=a=>Array.isArray(a)?a.filter(x=>typeof x==='string'):[];
+  return {
+    on:s.on!==false,
+    speed:n(s.speed,15,180,60),
+    gap:_TK_GAPS.includes(s.gap)?s.gap:5,
+    run:_TK_RUNS.includes(s.run)?s.run:0,
+    hours:{on:h.on===true,from:n(h.from,0,23,8),to:n(h.to,0,23,22)},
+    mode:_TK_MODES.includes(s.mode)?s.mode:'all',
+    pids:ids(s.pids),    /* "Only the ones I tick" */
+    skip:ids(s.skip),    /* "All, except the ones I untick": the unticked, so a Zab made later is shown */
+    done:s.done===true,
+    phone:_TK_PHONE.includes(s.phone)?s.phone:'bottom'
+  };
+}
+let _tkRunAt=null, _tkRunKey='', _tkExpired=false, _tkSig='', _tkMeasure=true, _tkX=null, _tkVw=0, _tkTw=0, _tkPhase='run', _tkGapEnd=0, _tkRaf=0, _tkLast=0;
+let _tkHover=false, _tkHold=false, _tkHoldUntil=0, _tkState0='', _tkPill='', _tkCur=-1, _tkRmAt=0, _tkWired=false;
+function _tkNow(){ const h=window.__zabTkNow; return typeof h==='number'?h:performance.now(); }
+function _tkDate(){ const h=window.__zabTkNow; return typeof h==='number'?new Date(h):new Date(); }
+function _tkHoursOk(hr){
+  if(!hr.on||hr.from===hr.to) return true;
+  const h=_tkDate().getHours();
+  return hr.from<hr.to?(h>=hr.from&&h<hr.to):(h>=hr.from||h<hr.to);   /* from > to wraps past midnight */
+}
+/* 'off' | 'again' (the run is up) | 'on' */
+function _tkState(c){
+  if(!_jebBarOn()||!c.on) return 'off';
+  if(_zabPhone()&&_zabBtnOn()){ if(c.phone==='none') return 'off'; if(c.phone==='open'&&!(_zabOpen||_jebOpen)) return 'off'; }
+  if(!_tkHoursOk(c.hours)) return 'off';
+  return (c.run&&_tkExpired)?'again':'on';
+}
+function _tkItems(c){
+  const t=_jebTree(); let ok;
+  if(c.mode==='open'){ const sel=_jebPanelSel(), s=new Set(sel?_jebSelIds(sel):[]); ok=id=>s.has(id); }
+  else if(c.mode==='only'){ const s=new Set(c.pids); ok=id=>s.has(id); }
+  else{ const s=new Set(c.skip); ok=id=>!s.has(id); }
+  const out=[];
+  t.flat.forEach(x=>{
+    if(!ok(x.id)) return;
+    const p=t.byId.get(x.id); if(!p) return;
+    jebItems(x.id).forEach(i=>{
+      if(i.done&&!c.done) return;
+      let tx=String(i.title||i.text||'').replace(/\s+/g,' ').trim(); if(!tx) return;
+      if(tx.length>80) tx=tx.slice(0,79).trimEnd()+'…';
+      out.push({id:i.id,tx,color:p.color||'#FFF1A8',icon:p.icon||'✶',done:!!i.done});
+    });
+  });
+  return out;
+}
+function _tkMake(){
+  const b=document.createElement('div'); b.id='zab-tk'; b.setAttribute('role','region'); b.setAttribute('aria-label','Scrolling titles');
+  b.innerHTML='<div class="tk-track"></div><span class="tk-pill" hidden></span>';
+  document.body.appendChild(b);
+  b.addEventListener('click',e=>{
+    const it=e.target.closest&&e.target.closest('.tk-it'); if(!it) return;
+    _jebItemMenu(it.dataset.iid,it);
+  });
+  b.addEventListener('pointerenter',e=>{ if(e.pointerType==='mouse') _tkHover=true; });
+  b.addEventListener('pointerleave',e=>{ if(e.pointerType==='mouse') _tkHover=false; });
+  b.addEventListener('pointerdown',e=>{ if(e.pointerType!=='mouse') _tkHold=true; });
+  ['pointerup','pointercancel'].forEach(n=>b.addEventListener(n,e=>{ if(e.pointerType!=='mouse'&&_tkHold){ _tkHold=false; _tkHoldUntil=performance.now()+1500; } }));
+  return b;
+}
+function _tkAgainShow(on){
+  let a=_jebEl('zab-tk-again');
+  if(!on){ if(a) a.remove(); return; }
+  if(a) return;
+  a=document.createElement('button'); a.type='button'; a.id='zab-tk-again'; a.textContent='▶ Show the titles again';
+  a.addEventListener('click',()=>{ _tkExpired=false; _tkRunAt=_tkNow(); _tkSync(); });
+  document.body.appendChild(a);
+  jebLayout();
+}
+function _tkPaused(){ return _tkHover||_tkHold||performance.now()<_tkHoldUntil||!!_jebEl('jeb-menu')||!!_jebEl('jeb-due')||!!_jebAtt||!!_jebEditId; }
+function _tkPillText(c){
+  if(_tkPaused()) return 'paused';
+  if(_tkPhase==='gap'){ const s=Math.max(0,Math.ceil((_tkGapEnd-_tkNow())/1000)); return 'next round in '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+  if(c.run&&!_tkExpired){ const s=Math.max(0,Math.ceil((c.run*60000-(_tkNow()-_tkRunAt))/1000)); return 'hides in '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+  return '';
+}
+function _tkLoop(ts){
+  _tkRaf=0;
+  const band=_jebEl('zab-tk'); if(!band||document.hidden||band.classList.contains('tk-rm')){ _tkLast=0; return; }
+  _tkRaf=requestAnimationFrame(_tkLoop);
+  const dt=_tkLast?Math.min(ts-_tkLast,250):0; _tkLast=ts;
+  if(document.documentElement.classList.contains('jeb-kb')) return;
+  const track=band.firstChild;
+  if(_tkMeasure){ _tkMeasure=false; _tkVw=band.clientWidth; _tkTw=track.offsetWidth; if(_tkX===null||_tkPhase==='run'&&_tkX>_tkVw) _tkX=_tkVw; }
+  if(_tkPhase==='gap'){ if(_tkNow()<_tkGapEnd) return; _tkPhase='run'; _tkX=_tkVw; }
+  if(_tkPaused()) return;
+  const c=_zabTk();
+  _tkX-=c.speed*dt/1000;
+  if(_tkX<=-_tkTw){
+    if(c.gap>0){ _tkPhase='gap'; _tkGapEnd=_tkNow()+c.gap*1000; }
+    _tkX=_tkVw;
+    if(c.gap>0){ track.style.transform='translate3d('+(-_tkTw)+'px,0,0)'; return; }
+  }
+  track.style.transform='translate3d('+_tkX.toFixed(2)+'px,0,0)';
+}
+function _tkSync(){
+  if(typeof DB==='undefined'||!DB||!_dbLoaded) return;
+  const root=document.documentElement, c=_zabTk();
+  const key=c.on+'|'+c.run; if(key!==_tkRunKey||_tkRunAt===null){ _tkRunKey=key; _tkRunAt=_tkNow(); _tkExpired=false; }
+  const st=_tkState(c), items=st==='on'?_tkItems(c):[];
+  let band=_jebEl('zab-tk');
+  _tkState0=st;
+  _tkAgainShow(st==='again');
+  if(st!=='on'||!items.length){ if(band) band.remove(); _tkSig=''; _tkX=null; root.classList.toggle('zab-tk',false); return; }
+  const rm=_jebReduced();
+  if(!band){ band=_tkMake(); _tkSig=''; _tkX=null; _tkPhase='run'; _tkMeasure=true; jebLayout(); }
+  root.classList.toggle('zab-tk',true);
+  band.classList.toggle('tk-rm',rm);
+  const sig=items.map(i=>i.id+'|'+i.tx+'|'+i.color+'|'+i.icon+'|'+(i.done?1:0)).join('\n')+'#'+(rm?1:0);
+  if(sig!==_tkSig){
+    _tkSig=sig; _tkMeasure=true; _tkCur=-1;
+    band.firstChild.innerHTML=items.map((i,k)=>(k?'<span class="tk-sep" aria-hidden="true">•</span>':'')
+      +'<button type="button" class="tk-it" data-iid="'+esc(i.id)+'" title="'+esc(i.tx)+'"><span class="tk-dot" style="background:'+esc(i.color)+'" aria-hidden="true"></span><span aria-hidden="true">'+esc(i.icon)+'</span><span class="tk-tx">'+esc(i.tx)+'</span></button>').join('');
+    if(rm) band.firstChild.style.transform='';
+  }
+  if(!_tkWired){ _tkWired=true; document.addEventListener('visibilitychange',()=>{ _tkLast=0; _tkEnsureLoop(); }); setInterval(_tkTick,1000); }
+  _tkTick(); _tkEnsureLoop();
+}
+function _tkEnsureLoop(){ const band=_jebEl('zab-tk'); if(band&&!_tkRaf&&!document.hidden&&!band.classList.contains('tk-rm')){ _tkLast=0; _tkRaf=requestAnimationFrame(_tkLoop); } }
+/* once a second: the run clock, the hours, the countdown pill, and (reduced motion) the title that is showing */
+function _tkTick(){
+  if(typeof DB==='undefined'||!DB||!_dbLoaded||document.hidden) return;
+  const c=_zabTk();
+  if(c.run&&!_tkExpired&&_tkRunAt!==null&&_tkNow()-_tkRunAt>=c.run*60000) _tkExpired=true;
+  if(_tkState(c)!==_tkState0){ _tkSync(); return; }
+  const band=_jebEl('zab-tk'); if(!band) return;
+  const pill=band.lastChild, pt=_tkPillText(c);
+  if(pt!==_tkPill){ _tkPill=pt; pill.textContent=pt; pill.hidden=!pt; }
+  if(band.classList.contains('tk-rm')){
+    const its=band.querySelectorAll('.tk-it'); if(!its.length) return;
+    if(!_tkRmAt) _tkRmAt=_tkNow();
+    const k=Math.floor((_tkNow()-_tkRmAt)/4000)%its.length;
+    if(k!==_tkCur){ _tkCur=k; its.forEach((el,j)=>el.classList.toggle('cur',j===k)); }
+  }
+}
+/* settings: one write, through persist() */
+function zabTkSet(k,v,quiet){
+  if(!DB.theme) DB.theme={};
+  const cur=_isPlainObj(DB.theme.zabTicker)?DB.theme.zabTicker:{};
+  DB.theme.zabTicker=Object.assign({},cur,{[k]:v});
+  persist();
+  _tkRunAt=_tkNow(); _tkExpired=false; _tkRunKey=null;
+  _tkSync();
+  if(!quiet&&typeof renderThemeModal==='function') renderThemeModal();
+}
+function zabTkPick(pid,on){
+  const c=_zabTk();
+  if(c.mode==='only') zabTkSet('pids',on?c.pids.concat(c.pids.includes(pid)?[]:[pid]):c.pids.filter(x=>x!==pid),true);
+  else zabTkSet('skip',on?c.skip.filter(x=>x!==pid):c.skip.concat(c.skip.includes(pid)?[]:[pid]),true);
+}
+function zabTkHours(k,v){ const c=_zabTk(); zabTkSet('hours',Object.assign({},c.hours,{[k]:v}),true); }
+/* the 🎞 Scrolling titles section of 🧰 → 🎨 Appearance */
+function _tkSettingsHTML(){
+  const c=_zabTk(), row='display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:44px';
+  const sel=(id,label,cur,opts,fn)=>'<label style="'+row+'"><span style="flex:1">'+label+'</span><select id="'+id+'" onchange="'+fn+'" style="min-height:44px;font:inherit;max-width:60%">'
+    +opts.map(o=>'<option value="'+o[0]+'"'+(String(o[0])===String(cur)?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>';
+  const hr=[];for(let h=0;h<24;h++) hr.push([h,(h%12||12)+(h<12?' am':' pm')]);
+  let h='<div class="theme-divider"></div><div class="theme-sect" id="th-tk"><div class="theme-sect-lbl">🎞 Scrolling titles</div>';
+  h+='<div class="fs-sub" style="margin:-2px 0 8px">The titles of the things in your Zabs, moving right to left above the Zab bar. Tap one to open its menu.</div>';
+  h+='<label style="'+row+'"><input type="checkbox" id="th-tk-on"'+(c.on?' checked':'')+' onchange="zabTkSet(\'on\',this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show scrolling titles</label>';
+  h+='<div class="fs-sub" style="margin:6px 0 4px">Speed</div><div class="ls-row">'+[['Slow',30],['Medium',60],['Fast',110]].map(o=>'<button type="button" class="ls-btn tk-sp'+(c.speed===o[1]?' on':'')+'" style="min-height:44px" onclick="zabTkSet(\'speed\','+o[1]+')">'+o[0]+'</button>').join('')+'</div>';
+  h+='<label style="'+row+'"><input type="range" id="th-tk-speed" min="15" max="180" step="5" value="'+c.speed+'" oninput="document.getElementById(\'th-tk-sv\').textContent=this.value+\' px/s\'" onchange="zabTkSet(\'speed\',+this.value)" style="flex:1;min-height:44px;accent-color:var(--green)" aria-label="Speed in pixels per second"><span id="th-tk-sv" style="min-width:64px;text-align:right">'+c.speed+' px/s</span></label>';
+  h+=sel('th-tk-gap','Pause between rounds',c.gap,[[0,'None'],[5,'5 seconds'],[30,'30 seconds'],[60,'1 minute'],[300,'5 minutes']],"zabTkSet('gap',+this.value)");
+  h+=sel('th-tk-run','Run for',c.run,[[0,'Always'],[1,'1 minute'],[5,'5 minutes'],[15,'15 minutes']],"zabTkSet('run',+this.value)");
+  h+='<label style="'+row+'"><input type="checkbox" id="th-tk-hon"'+(c.hours.on?' checked':'')+' onchange="zabTkHours(\'on\',this.checked);renderThemeModal()" style="width:20px;height:20px;accent-color:var(--green)"> Only between certain hours</label>';
+  if(c.hours.on){
+    h+=sel('th-tk-from','From',c.hours.from,hr,"zabTkHours('from',+this.value)");
+    h+=sel('th-tk-to','Until',c.hours.to,hr,"zabTkHours('to',+this.value)");
+  }
+  h+=sel('th-tk-mode','Which Zabs',c.mode,[['all','All, except the ones I untick'],['only','Only the ones I tick'],['open','Only the Zab that is open']],"zabTkSet('mode',this.value)");
+  if(c.mode!=='open'){
+    const t=_jebTree();
+    h+='<div id="th-tk-list">'+t.flat.map(x=>{ const p=t.byId.get(x.id), on=c.mode==='only'?c.pids.includes(p.id):!c.skip.includes(p.id);
+      return '<label style="'+row+';padding-left:'+(Math.min(x.depth,8)*16)+'px"><input type="checkbox" class="tk-pk" data-pid="'+esc(p.id)+'"'+(on?' checked':'')+' onchange="zabTkPick(this.dataset.pid,this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> <span>'+esc(p.icon)+' '+esc(p.name)+'</span></label>'; }).join('')+'</div>';
+  }
+  h+='<label style="'+row+'"><input type="checkbox" id="th-tk-done"'+(c.done?' checked':'')+' onchange="zabTkSet(\'done\',this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Include ticked (done) items</label>';
+  h+=sel('th-tk-phone','On a phone',c.phone,[['bottom','Along the bottom of the screen'],['none','No band on the phone'],['open','Only while Zab is open']],"zabTkSet('phone',this.value)");
+  return h+'</div>';
 }
 /* ══ v05.18 · N2 — Zab on a phone: one corner button and three layouts ═════════
    DB.theme.zabPhoneLayout = 'rail' | 'drawer' | 'cols' | 'bar' (absent = rail). It is the only thing stored; which drawer rows are
@@ -23658,11 +23877,13 @@ function _zabOpenLay(){
   lay.classList.add('on');
   _zabPaint(true);
   const b=_jebEl('zab-btn'); if(b) b.setAttribute('aria-expanded','true');
+  _tkSync();
 }
 function _zabClose(){
   _zabOpen=false; _zabLaySig='';
   const lay=_jebEl('zab-lay'); if(lay) lay.remove();
   const b=_jebEl('zab-btn'); if(b) b.setAttribute('aria-expanded','false');
+  _tkSync();
 }
 function _zabPaint(anim){
   const lay=_jebEl('zab-lay'); if(!lay||_zxDrag) return;
@@ -24064,6 +24285,7 @@ function jebClosePanel(){
   if(p) p.classList.remove('on');
   const zb=_jebEl('zab-btn'); if(zb) zb.classList.remove('up');   /* v05.18 */
   const bar=_jebEl('jeb-bar'); if(bar&&_jebBarOn()) _jebPaintBar(bar);
+  _tkSync();
 }
 function _jebMakePanel(){
   const p=document.createElement('div'); p.id='jeb-panel';
@@ -24621,7 +24843,11 @@ function _jebItemMenu(iid,anchor){
   const it=_jebItem(iid); if(!it) return;
   const back=()=>_jebItemMenu(iid,anchor);
   _jebShowMenu([
-    {t:'✏️ Edit',f:()=>_jebStartEdit(iid)},
+    {t:it.done?'☐ Not done':'☑ Done',f:()=>{ if(jebToggleDone(iid)){ _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } }},   /* v05.32 · Z10 — status, from the scrolling band and every other item menu */
+    {t:'✏️ Edit',f:()=>{
+      if(!document.querySelector(`#jeb-deck .jeb-card[data-iid="${iid}"],#jeb-panel .jeb-it[data-iid="${iid}"]`)){ const x=_jebItem(iid); if(x) jebOpenPanel(x.pocketId); }   /* from the band: open that Zab's panel first */
+      _jebStartEdit(iid);
+    }},
     ...(_jebType(_jebPocket(it.pocketId))==='links'?[{t:'👤 Person…',f:()=>_jebPickOpen(iid,'people')},{t:'# Issue…',f:()=>_jebPickOpen(iid,'issues')}]:[]),
     ...(_jebType(_jebPocket(it.pocketId))==='tasks'?[
       {t:'📅 Due…',f:()=>_jebDueOpen(iid,anchor)},
@@ -24632,7 +24858,7 @@ function _jebItemMenu(iid,anchor){
     {t:'✎ Title…',f:()=>_jebTitleEdit(iid)},
     {t:'📎 Attach',f:()=>_jebAttOpen(iid,anchor)},
     {t:'→ Note',f:()=>_jebToNoteUI(iid)},
-    {t:'📂 Move to pocket ▸',keep:true,f:()=>{
+    {t:'📂 Move to Zab ▸',keep:true,f:()=>{
       const tt=_jebTree(), others=tt.flat.filter(x=>x.id!==it.pocketId).map(x=>({p:tt.byId.get(x.id),d:x.depth}));   /* v05.16 · N1 — as an indented tree */
       const rows=others.map(({p,d})=>({t:'   '.repeat(Math.min(d,8))+p.icon+' '+p.name,f:()=>{ jebMoveItem(iid,p.id,0); toast('Moved to '+p.name); _jebPanelSig=''; jebRefresh(); }}));
       rows.push({t:'◀ Back',keep:true,f:back});
