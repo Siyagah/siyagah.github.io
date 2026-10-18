@@ -55,7 +55,10 @@ function seed() {
 async function open(s, w, h, touch, goto) {
   const ctx = await browser.newContext(touch ? { viewport: { width: w, height: h }, hasTouch: true, isMobile: true } : { viewport: { width: w, height: h } });
   for (const p of ['**googleapis.com/**', '**gstatic.com/**', '**firebaseapp.com/**', '**firebaseio.com/**']) await ctx.route(p, (r) => r.abort());
-  await ctx.addInitScript((d) => { try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(d)); } catch {} }, seed());
+  /* v05.32 (Z10): 90d compares tablet / laptop boxes with the build before, which had no scrolling titles band; the band (block 92) moves the panes up by its height, so it is
+     off for those two sizes. The phone sizes keep it ON: 90a–90c measure its titles and settings too. */
+  const sd = seed(); if (w >= 640) sd.theme = Object.assign({}, sd.theme, { zabTicker: { on: false } });
+  await ctx.addInitScript((d) => { try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(d)); } catch {} }, sd);
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e));
   page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) errors.push('console: ' + m.text()); });

@@ -268,10 +268,10 @@ try {
     await act(d, vp, '#jeb-att .ja-x'); await sleep(200);
     const chip = await on(d, () => /Journal/.test(document.querySelector('#jeb-panel .jl-it[data-iid="l3"] .jeb-chips').textContent));
     check(chip, `${t} ...and the chip shows on the row`);
-    /* Move to pocket + back keeps the fields */
-    await act(d, vp, '#jeb-panel .jl-it[data-iid="l4"] .jeb-more'); await act(d, vp, '#jeb-menu .jm:has-text("Move to pocket")'); await act(d, vp, '#jeb-menu .jm:has-text("Ideas")'); await sleep(400);
+    /* Move to Zab + back keeps the fields */
+    await act(d, vp, '#jeb-panel .jl-it[data-iid="l4"] .jeb-more'); await act(d, vp, '#jeb-menu .jm:has-text("Move to Zab")'); await act(d, vp, '#jeb-menu .jm:has-text("Ideas")'); await sleep(400);
     const mv = await on(d, () => { const x = DB.jeb.find((i) => i.id === 'l4'); return x.pocketId; });
-    check(mv === 'jp-idea' && !(await rowIds(d)).includes('l4'), `${t} Move to pocket works on a link item`, mv);
+    check(mv === 'jp-idea' && !(await rowIds(d)).includes('l4'), `${t} Move to Zab works on a link item`, mv);
     await on(d, () => { jebMoveItem('l4', 'jp-link', 0); }); await sleep(200);
     /* the deck */
     await act(d, vp, '#jeb-panel .jeb-px'); await d.page.waitForSelector('#jeb-deck.on .jl-dcard'); await sleep(700);

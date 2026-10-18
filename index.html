@@ -26242,7 +26242,9 @@ function _sbDDFit(el){
   if(!el||!el.classList.contains('open')) return;
   el.style.maxHeight='';el.style.right='';     /* measure it unclamped first */
   let b=el.getBoundingClientRect();
-  el.style.maxHeight=Math.max(180,Math.round(window.innerHeight-b.top-12))+'px';
+  /* v05.32 (Z10): and above whatever is fixed along the bottom (the scrolling titles band, the Zab bar): they sit over this menu, so its last rows were under them */
+  const sbEl=document.getElementById('sb'), lowH=(sbEl&&document.documentElement.classList.contains('zab-tk'))?(parseFloat(getComputedStyle(sbEl).getPropertyValue('--jeb-h'))||0):0;
+  el.style.maxHeight=Math.max(180,Math.round(window.innerHeight-b.top-12-lowH))+'px';
   /* The menu is anchored right:0 to a button that sits near the LEFT edge of
      a narrow sidebar, so a 238px menu hung off the side of the screen and its
      labels were cut in half — found by a screenshot in v04.21, on a sidebar

@@ -71,7 +71,7 @@ async function openDev(vp, o = {}) {
   return { ctx, page, errors, vp };
 }
 const texts = (p) => p.evaluate(() => [...document.querySelectorAll('#zab-tk .tk-it .tk-tx')].map((e) => e.textContent));
-const set = (p, k, v) => p.evaluate(([k, v]) => zabTkSet(k, v, true), [k, v]);
+const set = (p, k, v) => p.evaluate(([k, v]) => zabTkSet(k, v, true), [k, v]).catch(() => {});   /* the build before this round has no zabTkSet: the check that follows says so */
 const rect = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
 const hasBand = (p) => p.evaluate(() => !!document.getElementById('zab-tk'));
 /* a title brought fully on screen, then its centre */
@@ -142,7 +142,7 @@ if (want('92c')) {
   const at = (h) => p.evaluate((h) => { window.__zabTkNow = new Date(2026, 9, 19, h, 30, 0).getTime(); _tkTick(); return !!document.getElementById('zab-tk'); }, h);
   await T('92c hours 8 am–10 pm: shown at noon, hidden at 11 pm', async () => { await p.evaluate(() => zabTkSet('hours', { on: true, from: 8, to: 22 }, true)); const a = await at(12), b = await at(23), c = await at(7); return [a && !b && !c, `${a} ${b} ${c}`]; });
   await T('92c hours 10 pm–6 am (past midnight): shown at 11 pm and 3 am, hidden at noon', async () => { await p.evaluate(() => zabTkSet('hours', { on: true, from: 22, to: 6 }, true)); const a = await at(23), b = await at(3), c = await at(12); return [a && b && !c, `${a} ${b} ${c}`]; });
-  await p.evaluate(() => { delete window.__zabTkNow; zabTkSet('hours', { on: false, from: 8, to: 22 }, true); });
+  await p.evaluate(() => { delete window.__zabTkNow; zabTkSet('hours', { on: false, from: 8, to: 22 }, true); }).catch(() => {});
   await sleep(300);
 }
 

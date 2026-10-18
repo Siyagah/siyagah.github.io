@@ -127,8 +127,8 @@ try {
       await openPocket(d, vp, 'jp-task');
       await act(d, vp, '#jeb-panel .jeb-it[data-iid="t2"] .jeb-more'); await d.page.waitForSelector('#jeb-menu', { timeout: 3000 });
       await sweep(d, `${t} item ⋯ menu`, /Attach/);
-      await d.page.locator('#jeb-menu .jm', { hasText: 'Move to pocket' }).first().click(); await sleep(250);
-      await sweep(d, `${t} item ⋯ → Move to pocket`, /Back/);
+      await d.page.locator('#jeb-menu .jm', { hasText: 'Move to Zab' }).first().click(); await sleep(250);
+      await sweep(d, `${t} item ⋯ → Move to Zab`, /Back/);
       await reset(d);
       /* the pocket menu (right-click / long-press), and its two dialogs */
       await longPress(d, vp, chip('jp-idea')); await d.page.waitForSelector('#jeb-menu', { timeout: 3000 });

@@ -375,7 +375,7 @@ try {
       check(a1.journal === true && a1.stars === 3 && a1.topics.join() === 'Garden', `${t} 📎 Attach (Journal) works on an idea and its stars and topics stay`, JSON.stringify(a1));
       await act(d, vp, '#jeb-att .ja-x'); await sleep(200);
       /* Ideas → plain and back */
-      await menuItem(d, vp, 'd1', 'Move to pocket'); await act(d, vp, '#jeb-menu .jm:has-text("Plainy")'); await sleep(400);
+      await menuItem(d, vp, 'd1', 'Move to Zab'); await act(d, vp, '#jeb-menu .jm:has-text("Plainy")'); await sleep(400);
       const mv = await item(d, 'd1');
       check(mv.pocketId === plain && mv.stars === 3 && mv.topics.join() === 'Garden', `${t} Move to a plain pocket: nothing is stripped from the idea (I1)`, JSON.stringify(mv));
       await closePanel(d, vp); await openPanel(d, vp, plain);

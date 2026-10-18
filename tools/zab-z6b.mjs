@@ -292,9 +292,9 @@ try {
       await act(d, vp, '#jeb-att .ja-x'); await sleep(200);
       /* Move to a plain pocket and back */
       await on(d, () => { jebEditItem('t4', { pri: 1, steps: [{ id: 'q1', t: 'step q', d: 1 }] }); jebRefresh(); }); await sleep(300);
-      await menuItem(d, vp, 't4', 'Move to pocket'); await act(d, vp, '#jeb-menu .jm:has-text("Ideas")'); await sleep(400);
+      await menuItem(d, vp, 't4', 'Move to Zab'); await act(d, vp, '#jeb-menu .jm:has-text("Ideas")'); await sleep(400);
       const mv = await item(d, 't4');
-      check(mv.pocketId === 'jp-idea' && mv.due === day(1) && mv.pri === 1 && mv.steps.length === 1, `${t} Move to pocket: nothing is stripped from the item (I1)`, JSON.stringify(mv));
+      check(mv.pocketId === 'jp-idea' && mv.due === day(1) && mv.pri === 1 && mv.steps.length === 1, `${t} Move to Zab: nothing is stripped from the item (I1)`, JSON.stringify(mv));
       await closePanel(d, vp); await openPanel(d, vp, 'jp-idea');
       const plain = await on(d, () => ({ row: !!document.querySelector('#jeb-panel .jeb-it[data-iid="t4"]'), chips: document.querySelectorAll('#jeb-panel .jt-due,#jeb-panel .jt-flag,#jeb-panel .jt-cnt,#jeb-panel .jt-gh').length }));
       check(plain.row && plain.chips === 0, `${t} in a non-tasks pocket the fields are kept but not shown`, JSON.stringify(plain));
