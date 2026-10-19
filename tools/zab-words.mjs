@@ -93,7 +93,7 @@ if (wantRun) {
     await d.page.waitForSelector('#jeb-panel.on', { timeout: 4000 }); await sleep(300);
   }
   const esc = async (d) => { await d.page.keyboard.press('Escape'); await sleep(250); };
-  const closeAll = async (d) => { await esc(d); await d.page.evaluate(() => { try { if (typeof closeModal === 'function') closeModal(); } catch {} try { if (typeof jebCloseDeck === 'function') jebCloseDeck(); } catch {} try { if (_jebOpen && !_JEB_APP) jebClosePanel(); } catch {} try { if (typeof _zabClose === 'function' && window._zabOpen) _zabClose(); } catch {} try { if (_jebChoose) { _jebChoose = false; _jebBarSig = ''; jebRefresh(); } } catch {} }); await sleep(250); };
+  const closeAll = async (d) => { await esc(d); await d.page.evaluate(() => { try { if (typeof closeModal === 'function') closeModal(); } catch {} try { closeTheme(); } catch {} try { closeTrash(); } catch {} try { if (typeof jebCloseDeck === 'function') jebCloseDeck(); } catch {} try { if (_jebOpen && !_JEB_APP) jebClosePanel(); } catch {} try { _zabClose(); } catch {} try { if (_jebChoose) { _jebChoose = false; _jebBarSig = ''; jebRefresh(); } } catch {} }); await sleep(250); };
 
   /* every visible word and every title / aria-label / placeholder that says "pocket" */
   const sweep = (d) => d.page.evaluate(() => {
@@ -107,7 +107,7 @@ if (wantRun) {
     return bad;
   });
   const menuRow = async (d, re) => { const l = d.page.locator('#jeb-menu').locator(`text=${re}`).first(); await l.waitFor({ state: 'visible', timeout: 4000 }); if (d.vp.touch) await l.tap(); else await l.click(); await sleep(400); };
-  const dbKey = (d) => on(d, () => JSON.stringify([DB.folders, DB.articles, DB.jeb, DB.jebPockets, DB.theme]));
+  const dbKey = (d) => on(d, () => JSON.stringify([DB.folders, DB.articles, DB.jeb, DB.jebPockets, Object.assign({}, DB.theme, { jebAppView: 0 })])   /* Zab mode writes jebAppView on a real view switch (by design), so it is left out */);
 
   const devs = {};
   for (const vp of VPS) devs[vp.name] = await openDev(vp);
@@ -197,14 +197,15 @@ if (wantRun) {
       });
     }
     await step(d, "→ Note's toast", async () => {
+      if (phone(d)) { await d.page.evaluate(() => setZabPhoneLayout('rail')); await sleep(300); }
       await openZab(d, 'zl');
       await d.page.evaluate(() => _jebToNoteUI('l2')); await sleep(500);
       return !!(await d.page.$('#toast, .toast, #jeb-toast'));
     });
     await step(d, 'Trash with a deleted Zab', async () => {
-      await d.page.evaluate(() => { jebDeletePocket('zo'); persist(); }); await sleep(300);
-      await d.page.evaluate(() => openTrash()); await sleep(600);
-      return /Zab: zo/.test(await d.page.evaluate(() => document.body.innerText));
+      const r = await d.page.evaluate(() => { const ok = jebDeletePocket('zo'); persist(); openTrash(); return { ok, txt: document.getElementById('trash-body').innerText.slice(0, 120) }; }); await sleep(600);
+      if (!/Zab: Other/.test(r.txt)) throw new Error('Trash shows ' + JSON.stringify(r));
+      return true;
     });
     await d.ctx.close();
   }
