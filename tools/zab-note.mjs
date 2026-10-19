@@ -37,6 +37,8 @@ function makeBase() {   /* the app as it was just before this round */
   for (const f of ['index.html', 'sw.js', 'manifest.json']) { try { writeFileSync(join(dir, f), execFileSync('git', ['show', `${sha}~1:${f}`], { encoding: 'buffer', maxBuffer: 1 << 28 })); } catch {} }
   return dir;
 }
+/* a setup step outside a check (the build before this round has no _zabNoteOf) stops the run: say so as a failure and print the totals */
+for (const ev of ['unhandledRejection', 'uncaughtException']) process.on(ev, (e) => { check(false, 'the check script stopped early', String(e && e.message || e).split('\n')[0]); const bad = results.filter((r) => !r.ok).length; console.log(`\n${results.length - bad}/${results.length} passed, ${bad} FAILED`); process.exit(1); });
 const pw = await playwright();
 const srv = await serve(argv.includes('--unpatched') ? makeBase() : undefined);
 const browser = await pw.chromium.launch();
@@ -74,12 +76,13 @@ async function openZab(d, pid, jebMode) {
 const closeAll = async (d) => { await d.page.keyboard.press('Escape'); await sleep(300); await d.page.evaluate(() => { if (_jebOpen) jebClosePanel(); if (typeof _zabClose === 'function' && window._zabOpen) _zabClose(); }); await sleep(200); };
 const area = (d) => on(d, () => { const e = document.querySelector('#jeb-panel.on .zn-area'); return e && !e.hidden ? e.textContent.replace(/\s+/g, ' ').trim() : null; });
 const zabNotes = (d) => on(d, () => DB.articles.filter((a) => a.zabNote).map((a) => ({ id: a.id, pid: a.zabNote.pid, f: a.folderIds, c: a.content, t: a.title })));
-const typeNote = async (d, id, text) => {
+/* a step that cannot happen (the build before this round has no window to type in) is not a throw here: the check after it says so */
+const typeNote = async (d, id, text) => { try {
   await d.page.waitForSelector(`#fw-${id} #fw-ed-${id}`, { timeout: 5000 });
   await d.page.locator(`#fw-ed-${id}`).click(); await sleep(150);
   await d.page.keyboard.type(text, { delay: 15 });
-};
-const closeWin = async (d, id) => { await tap(d, `#fw-${id} .fw-close`); await sleep(300); };
+} catch {} };
+const closeWin = async (d, id) => { try { await tap(d, `#fw-${id} .fw-close`); } catch {} await sleep(300); };
 const waitFor = async (fn, ms = 8000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await sleep(250); } return false; };
 
 const devs = {};
