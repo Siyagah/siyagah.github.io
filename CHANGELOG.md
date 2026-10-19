@@ -10450,6 +10450,10 @@ I did not measure the build before in this container, so there is no before/afte
 **Checks.** Block 93, `tools/zab-note.mjs`, 66 checks at 390 / 820 / 1440 and Zab mode at 390 / 1440: all pass. Unpatched (the build before this round): the run stops at 93e's setup (no `_zabNoteOf`); of the 34 checks it reached **19 fail** (15 pass: the negative ones that hold
 without a feature: "looking creates nothing", "no area on a Zab with Zabs", "none in All Zabs / the deck", the items checks). `--only 76,77,79,85,92`: 788/788; `--only 80`: 289/289; `ship-check` 15/15. The full `app-check` was not run (as asked).
 
+**Review fix (Architect).** A note edit received by sync took the targeted redraw (`_renderFor`), which did not count a note carrying `zabNote` as a Zab change, so an open Zab's
+note area kept the old text until something else repainted the panel. `_renderFor` now sets `jeb` for such a note (the redraw stays targeted). New check **93j** (two devices: B edits the note,
+A has that Zab open): failed before the fix (area still "text from B newer", mode targeted), passes after.
+
 ### Not done
 
 - Opening the note in **Single** (the other pop-up, from its ⇄ button) is not hooked: closing that one does not repaint the area at once (it repaints on the next change). The tap always opens the Multi window.

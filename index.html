@@ -6479,6 +6479,7 @@ function _rdPlan(ch,opts){
     let b=x.b, a=x.a;
     if(x.eb!==undefined||x.ea!==undefined||(b===undefined&&a===undefined)){ if(!x.eb||!x.ea) return _rdNo('a note added or removed'); b=_rdRecOf(x.eb); a=x.ea.r; }
     if(!b||!a) return _rdNo('a note added or removed');
+    if(a.zabNote||b.zabNote) jeb=true;   /* v05.33 · Z11 — a Zab's note is drawn in the Zab panel too */
     const f=_rdFields(b,a);
     if(!f.length&&b.updatedAt===a.updatedAt) continue;   /* an equal copy of the same note: nothing to draw */
     arts.push({id:String(x.id),b:b,a:a,f:f});

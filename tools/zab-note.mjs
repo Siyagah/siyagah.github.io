@@ -12,6 +12,7 @@
    93f  area     Show all / Show less, the fold ▾, ✏️ Edit, pictures hydrate; Pane 2's card and the read view say "📝 note of Zab <name>" and a tap opens the Zab
    93g  phone    44 x 44 for every new control; nothing under the round button; no page errors
    93h  find     search finds the note's text; Save File's copy contains it
+   93j  sync     an edit received by sync repaints the open Zab's note area (the targeted redraw counts a zabNote note as a Zab change)
    93i  zab mode the same in the docked panel (390 and 1440): the note area, a write in the pop-up window, the text back in the area
 
    `--only=93a,93d` runs just those; `--unpatched` serves the build before this round (so the checks must FAIL). Each ok/FAIL line becomes one app-check check. */
@@ -302,6 +303,19 @@ if (want('93d')) {
     if (seen) { await C.page.locator('#jeb-bar .jeb-chip[data-pid="zl"] .jeb-main').first().click(); await sleep(500); txt = await on(C, () => { const e = document.querySelector('#jeb-panel.on .zn-area'); return e ? e.textContent : null; }); }
     const stable = (await on(A, () => DB.articles.filter((a) => a.zabNote).length)) === 1;
     return [ia === 'zabn-zl' && ib === 'zabn-zl' && ok && stable && !!txt && txt.includes('from B newer'), JSON.stringify({ ia, ib, ok, stable, txt: txt && txt.slice(0, 60), errs: [...A.errors, ...B.errors, ...C.errors].slice(0, 2) })];
+  });
+  /* 93j (Architect, review of #214): an edit of the note received by sync repaints the OPEN Zab's note area — the targeted redraw (_renderFor) must count a
+     note carrying zabNote as a Zab change, or the area keeps the old text until something else repaints the panel */
+  await T('93j an edit of the note made on another device shows in the OPEN Zab\'s note area after sync (targeted redraw)', async () => {
+    await A.page.locator('#jeb-bar .jeb-chip[data-pid="zl"] .jeb-main').first().click(); await sleep(500);
+    const before = await on(A, () => { const e = document.querySelector('#jeb-panel.on .zn-area'); return e ? e.textContent : null; });
+    await on(B, () => { const a = _zabNoteOf('zl'); a.content = '<p>synced needle 93j</p>'; a.updatedAt = new Date().toISOString(); persist(); });
+    await push(cloud, B);
+    const got = await waitFor(async () => on(A, () => (_zabNoteOf('zl') || {}).content?.includes('synced needle 93j')), 40000);
+    await sleep(800);
+    const after = await on(A, () => { const e = document.querySelector('#jeb-panel.on .zn-area'); return e ? e.textContent : null; });
+    const mode = await on(A, () => _rdLast && _rdLast.mode);
+    return [got && !!before && before.includes('from B newer') && !!after && after.includes('synced needle 93j'), JSON.stringify({ got, before: before && before.slice(0, 40), after: after && after.slice(0, 40), mode })];
   });
 }
 
