@@ -10432,6 +10432,26 @@ still holds the row); Due, priority, Steps, Title, Attach, → Note, Move to **Z
 
 **Totals (Architect), review-fix commit `05e0005`:** blocks 60–92 **5384/5392** (78b, 80h, 82e, 86: speed limits on the Architect's container; 80h re-measured three times each against `main`: worst long task 341–379 ms vs 308–395 ms, overlapping; batch median 214–251 ms vs 199–205 ms, so ~25 ms per batch from the band at ×4, fixed in v05.33); blocks 1–59 + `self-check` **2332/2332** on `a8f4743` (the review fix touched only Zab placement). Merged as `e153457`.
 
-## v05.33 — Z11: a Zab's own note (issue #213, PCF J30) — in progress
+## v05.33 — Z11: a Zab's own note (issue #213, PCF J30, the owner's choice A)
 
-(stub: filled in when the round is finished)
+The owner asked that the last Zab in a chain "open as a note", and chose "a note you write in, kept in that pocket", the note at the top and the Zab's items below it on one sheet.
+
+**Built.** In `#jeb-panel` (phone sheet, tablet, laptop and Zab mode's docked panel) a Zab with no Zabs inside it shows, above the add box and its items, one quiet row "📝 Write a note for this Zab" (44 px).
+With a note it shows the text as the read view (pictures hydrate), clipped to 8 lines with "Show all" / "Show less" (only when the text is longer), a ✏️ Edit button and a ▾ fold (both session only). A Zab that HAS Zabs inside shows the area only once it
+has a note. All Zabs, the deck and Choose show none. A tap on the row, the text or ✏️ Edit opens the note in the existing pop-up note window (`popOutNote`: a sheet on a phone); the panel stays open under it (a tap inside that window no longer closes it);
+closing repaints the area. No second editor.
+**The note is a normal note**: id `zabn-<pid>` (a deleted or Trashed id gets `-2`, `-3`…, so two devices writing the first note of one Zab at once make ONE note), folder "📝 Zab notes" (`zab-notes`, created when first needed, first section), field `zabNote:{pid}`,
+title = the Zab's name at creation. `_zabNoteOf(pid)` finds it by `zabNote.pid` (a plain scan: one property read per note, well under a frame at 25,000, so no cache). Created on the first tap, and dropped again (tombstone, no Trash entry) if the window is closed with nothing written.
+Pane 2's card and the read view say "📝 note of Zab <name>" (tap = open that Zab; "(Zab deleted)" when it is gone). Trash the note → "Write a note" again; restore → back; deleting an empty Zab, moving it, renaming it: the note stays (I1).
+**Zab mode** hides every pop-up window; a Zab's note window carries `zn-win` and is the one exception.
+**The band and imports (item 6).** `_enxPersist()` holds `_tkSync()` while a batch is written (`_tkEnxHold`) and repaints once, just after (`setTimeout`, only if something asked). 80h in this container (not the Architect's): 2,000 notes at 390 ×4, batch median **77 ms**, worst 102 ms, worst long task 158 ms.
+I did not measure the build before in this container, so there is no before/after pair here; the Architect's 214–251 ms vs 199–205 ms are on a different machine.
+
+**Checks.** Block 93, `tools/zab-note.mjs`, 66 checks at 390 / 820 / 1440 and Zab mode at 390 / 1440: all pass. Unpatched (the build before this round): the run stops at 93e's setup (no `_zabNoteOf`); of the 34 checks it reached **19 fail** (15 pass: the negative ones that hold
+without a feature: "looking creates nothing", "no area on a Zab with Zabs", "none in All Zabs / the deck", the items checks). `--only 76,77,79,85,92`: 788/788; `--only 80`: 289/289; `ship-check` 15/15. The full `app-check` was not run (as asked).
+
+### Not done
+
+- Opening the note in **Single** (the other pop-up, from its ⇄ button) is not hooked: closing that one does not repaint the area at once (it repaints on the next change). The tap always opens the Multi window.
+- A note opened and left blank leaves a tombstone, so the next first note of that Zab is `zabn-<pid>-2`. Two devices doing that at the same moment still agree on the id.
+- "Pocket" is still the word on every existing screen (J49); only the words this round adds say Zab.

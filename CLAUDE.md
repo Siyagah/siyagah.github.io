@@ -47,6 +47,9 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.33** (19 Oct 2026) — Z11, a Zab's own note (issue #213, PCF J30, owner's choice A). A leaf Zab (or one that already has a note) shows a note area at the top of `#jeb-panel`, above its items; the note is written in the existing
+  pop-up window (`popOutNote`, no second editor) and is a normal note: id `zabn-<pid>`, folder `zab-notes` ("📝 Zab notes"), field `zabNote:{pid}`, found only by `_zabNoteOf(pid)`. Opened and left blank = dropped again. Zab mode shows the
+  window through `.zn-win`. Also: `_tkSync()` waits while `_enxPersist()` writes an import batch. Check: block 93, `tools/zab-note.mjs` (`--unpatched`: 19 of the 34 it reaches fail).
 - **v05.32** (18 Oct 2026) — Z10, the scrolling titles band `#zab-tk` above the Zab bar (issue #211, PCF J48, the owner's answers 19 Oct). Titles of Zab items move right to left; speed, pause between rounds, run-for, hours,
   which Zabs, done items and the phone placement are `DB.theme.zabTicker`, read only through `_zabTk()`; tap a title → `_jebItemMenu` (new top row ☑ Done / ☐ Not done; "Move to pocket" now says "Move to Zab").
   The band joins BOTH `--jeb-h` lists and a plain class `html.zab-tk` gives everything else its height (34 px; 44 on a phone). On the phone the band is a 44 px tap target. Check: block 92, `tools/zab-ticker.mjs`
@@ -58,11 +61,6 @@ must never accumulate here instead of there.
 - **v05.30** (16 Oct 2026) — T2, every tappable control on a phone (< 640) is at least 44 × 44 px (issue #207, PCF J42, owner's choice A). One CSS block last in the stylesheet; hit area grows,
   drawing may not (Zab ✓ box 20 px inside 44, colour swatches, ⭐ / 📌 borrow card padding). Tablet and laptop unchanged. On 390 × 844: tree rows 19 → 12, note cards 10 → 9.
   **A new phone control must be ≥ 44.** Check: block 90, `tools/tap-t2.mjs` (size, hit test, overflow, overlap at 360 / 390; 820 / 1440 equal the build before; `--unpatched`: 90a fails).
-
-- **v05.29** (16 Oct 2026) — F2, three small fixes from the A1 audit (issue #205, PCF J43, J44). The Smart View `sf-new` is "(01) New Notes"; **every read of a
-  Smart View's name goes through `_sfName(sf)`** (a stored name that is exactly the old default `(01) New Articles` shows the new one; any other stored name as stored;
-  nothing written to `DB`; the Pane 2 header now follows a rename too). The 🧰 "💽 Storage & Backup" window carries that title (was "⚙ Backup & Restore") and the import
-  message names it. Phone pop-up: `.pop-details-line .ftag` `max-width:100%` under 640 px (was 32%). Check: block 89, `tools/f2.mjs` (`--unpatched`: 24 of 41 fail).
 
 
 ---
@@ -545,6 +543,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `_zabTk()`, the ONLY reader of `DB.theme.zabTicker` (`on speed gap run hours mode pids skip done phone`; `skip` = the unticked in "All, except…"). A round is `translateX` on `.tk-track`, driven by `_tkLoop` (rAF, elapsed
   time; layout read only at round start). **It joins BOTH `--jeb-h` lists** and a plain class `html.zab-tk` raises everything else's `--jeb-h` by its height (90 / 100 px with the bar, 44 px alone on a phone's round button);
   nothing is written to `<html>`'s style. Run clock, pause and "hides in" are session-only; test hook `window.__zabTkNow`. `_sbDDFit()` caps a 🧰 menu above the band when it shows.
+- **A Zab's own note (v05.33, Z11).** `_zabNoteOf(pid)` (by `zabNote.pid`, never by title) → the note `zabn-<pid>` (`-2`, `-3`… if that id is tombstoned or in Trash) in folder `zab-notes`, field `zabNote:{pid}`; made by `_zabNoteEnsure` on the first tap, written in `popOutNote`, dropped by `_zabNoteClosed` if left blank. Painted by `_zabNoteHTML` into `.zn-area` (in the panel's repaint signature via `_zabNoteSig`); a Zab deleted keeps its note ("(Zab deleted)").
 - **Evernote import, the dry run (v05.13, S4a — S4b writes notes, S4c pictures, S4d merges earlier imports).** `openEnexImport()` →
   `#enx-modal` (own overlay like `#remmail-modal`: dialog ≥ 640, bottom sheet < 640, z 10060, over the Zab bar on purpose so it is not
   in the `--jeb-h` lists). State is only the global `_enx` (the last result is `_enx.res`, in memory): **nothing goes in `DB`,
