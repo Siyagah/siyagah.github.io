@@ -10490,3 +10490,9 @@ band. Both `makeBase()`s now throw when the commit is missing; the trap is in `t
 CLAUDE.md and the PR. The Architect finished it: CLAUDE.md, this entry, the remaining older checks, a missing space restored in the Drawer's "▤ All Zabs <count>", the PR.
 
 **Totals (Architect, before the full run):** `ship-check` 15/15; `--only 60,64,65,66,70,76,77,83,90,94` **1945/1945**; `tools/zab-words.mjs --unpatched` 7/87 (80 fail, as they must). The full `app-check` totals are recorded on the PR and in the next round's entry.
+
+**Totals (Architect), full app-check on `8293863`:** blocks 1–59 + `self-check` **2332/2332**; blocks 60–94 **5545/5548** (78b only: a speed limit on the Architect's container, also missed on v05.32 and v05.33). An earlier full run on `d6b45f9` found 85d (deck vs v05.24's words), fixed in `8293863` with the same word map and missing-commit guard. Merged as `47ea8ce`.
+
+## v05.35 — Z13a: News, round 1 of 2 — the helper, the settings and fetching (issue #217, PCF J50)
+
+*(stub — the full entry follows when the round is finished)*
