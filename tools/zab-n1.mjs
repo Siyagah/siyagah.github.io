@@ -14,7 +14,7 @@
         top level with its parentId kept, and snaps back when the parent is restored); a cross-move cycle made on two devices: both
         pockets visible at the top level, no hang; each in both directions
    76e  everything else: the panel shows only its own items, All pockets (indented, foldable, fold not stored), the deck's "inside:" chips,
-        the item's "Move to pocket" tree, Choose at any depth, kinds not inherited, → Note from a nested pocket, Zab mode (/?jeb=1)
+        the item's "Move to Zab" tree, Choose at any depth, kinds not inherited, → Note from a nested pocket, Zab mode (/?jeb=1)
    76f  scale: 50 pockets over 5 levels with 300 items at 390, CPU x4: the bar and a panel each paint in <= 300 ms (median of 4)
    76g  contrast of the new text on the five presets
 
@@ -329,15 +329,15 @@ try {
       check(!JSON.stringify(await on(d, () => DB.theme)).includes('fold'), `${t} the fold is per session: nothing is stored in the notebook`);
       await act(d, vp, `#jeb-panel .jx-fold[data-pid="${T}"]`); await act(d, vp, `#jeb-panel .jx-fold[data-pid="${L1}"]`); await sleep(300);
       check((await on(d, () => document.querySelectorAll('#jeb-panel .jeb-gh').length)) === 8, `${t} unfolding both brings all eight groups back`);
-      /* the item's Move to pocket, as a tree */
+      /* the item's Move to Zab, as a tree */
       await on(d, () => jebClosePanel());
       await openTop(d, vp, T);
       await act(d, vp, `#jeb-panel .jeb-it[data-iid="${it0}"] .jeb-more`); await d.page.waitForSelector('#jeb-menu');
-      await act(d, vp, '#jeb-menu .jm:has-text("Move to pocket")'); await sleep(250);
+      await act(d, vp, '#jeb-menu .jm:has-text("Move to Zab")'); await sleep(250);
       const mrows = await on(d, () => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent));
       const ind = mrows.filter((r) => /^ +\S/.test(r)).map((r) => r.replace(/ /g, '·'));
       const iL1 = mrows.findIndex((r) => /L1$/.test(r)), iL2 = mrows.findIndex((r) => /L2$/.test(r));
-      check(iL1 > 0 && iL2 === iL1 + 1 && /^ +/.test(mrows[iL1]) && mrows[iL2].match(/^ */)[0].length > mrows[iL1].match(/^ */)[0].length, `${t} item "📂 Move to pocket ▸" lists pockets as an indented tree (L1 under Tree, L2 under L1, deeper)`, ind.join(' / '));
+      check(iL1 > 0 && iL2 === iL1 + 1 && /^ +/.test(mrows[iL1]) && mrows[iL2].match(/^ */)[0].length > mrows[iL1].match(/^ */)[0].length, `${t} item "📂 Move to Zab ▸" lists pockets as an indented tree (L1 under Tree, L2 under L1, deeper)`, ind.join(' / '));
       await act(d, vp, '#jeb-menu .jm:has-text("L2")'); await sleep(400);
       check((await on(d, (i) => jebMoveItem && DB.jeb.find((x) => x.id === i).pocketId, it0)) === L2, `${t} picking L2 moves the item into the nested pocket`);
       /* the deck: "inside:" chips */

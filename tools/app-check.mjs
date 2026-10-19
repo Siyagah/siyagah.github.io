@@ -12300,6 +12300,21 @@ await r.block('91-enex-s4e', async () => {
   r.check(out.status === 0, 'the S4e check exits cleanly', `exit ${out.status}`);
 });
 
+/* 92 — v05.32, Z10: the scrolling titles band above the Zab bar (PCF J48). tools/zab-ticker.mjs runs 92a–92k at 390 / 820 / 1440: what it draws and where,
+   its measured speed, the clocks (pause between rounds, run for, hours), Which Zabs, the phone placement, the item menu from a title, settings that sync,
+   reduced motion, the 9,000-note cost, I1, and 44 px targets. Each printed ok/FAIL line becomes one check. */
+await r.block('92-zab-ticker', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-ticker.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 40, 'the Z10 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z10: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Z10 check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

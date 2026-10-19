@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.31.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.32.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,10 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.32** (18 Oct 2026) — Z10, the scrolling titles band `#zab-tk` above the Zab bar (issue #211, PCF J48, the owner's answers 19 Oct). Titles of Zab items move right to left; speed, pause between rounds, run-for, hours,
+  which Zabs, done items and the phone placement are `DB.theme.zabTicker`, read only through `_zabTk()`; tap a title → `_jebItemMenu` (new top row ☑ Done / ☐ Not done; "Move to pocket" now says "Move to Zab").
+  The band joins BOTH `--jeb-h` lists and a plain class `html.zab-tk` gives everything else its height (34 px; 44 on a phone). On the phone the band is a 44 px tap target. Check: block 92, `tools/zab-ticker.mjs`
+  (`--unpatched`: 63 of 65 fail). Older checks updated in place: jeb-j2 (band off, "Move to Zab"), tap-t2 (band off at 820 / 1440), the other Zab tools' "Move to Zab".
 - **v05.31** (17 Oct 2026) — S4e, the Evernote pictures go to the cloud at most 2,000 px wide; the originals stay on the importing computer (issue #209, PCF J01, owner's choice A).
   `_enxCloudMode()` (default small), `_picShrink`, `_picUploadSmall` (meta `sm:<sha of the small bytes>`, written last), `_picFetch` verifies the small copy (`_picSm`). Test set 13.6 → 4.4 MB (32 %).
   Check: block 91, `tools/enex-s4e.mjs` (`--unpatched`: 16 of 28 fail).
@@ -60,15 +64,6 @@ must never accumulate here instead of there.
   nothing written to `DB`; the Pane 2 header now follows a rename too). The 🧰 "💽 Storage & Backup" window carries that title (was "⚙ Backup & Restore") and the import
   message names it. Phone pop-up: `.pop-details-line .ftag` `max-width:100%` under 640 px (was 32%). Check: block 89, `tools/f2.mjs` (`--unpatched`: 24 of 41 fail).
 
-- **v05.28** (16 Oct 2026) — A1, the audit of every feature at 390 / 820 / 1440 (issue #203, PCF J13). Crawler `tools/audit-explore.mjs` (not a check) opens ~35 surfaces by real
-  clicks and reports overflow, off-screen controls, small phone targets, contrast. Fixed: the Evernote dialog's stale "dry run / next update" words; the 🧰 menu's
-  "Save File" / "Unsaved to file" at 2.7–2.9:1 (now ≥ 4.8, menu only); phone dialog buttons 26 → 44 px (`#mb`, `#sync-mb`); the phone calendar header (title squeezed to 0, layer
-  buttons off screen → two rows); "article" → "note" on ~25 visible strings (the Smart View *name* "New Articles" is stored, so left). **80h's heap +30 → +106 MB came in v05.26 with the
-  test, not the app** (the fake cloud's copy is now inside the measured window). Check: block 88, `tools/audit-a1.mjs` (`--unpatched`: 32 of 49 fail).
-- **v05.27** (16 Oct 2026) — S4c, the Evernote pictures, audio and files come in on the importing computer, with a cloud space guard (issue #201, PCF J01).
-  Markers become `img.ed-img[data-pic]` (pictures, `_picPut`, `enx:1`) or `span.enx-file` (audio/files, device database `siyagah-files-v1`); earlier-imported notes
-  are upgraded (own `updatedAt` + 1 ms). Imported pictures are held back from the cloud until `DB.theme.enxMediaCloud` is set; `usage/v1` + `_PIC_CLOUD_CAP` (600 MB)
-  guard every picture upload. Check: block 87, `tools/enex-s4c.mjs`.
 
 ---
 
@@ -546,6 +541,10 @@ A failing check is a wrong assertion surprisingly often — investigate before
   list). Open/fold/column state is session-only; nothing but `zabPhoneLayout` is stored, and switching writes nothing to a pocket or item
   (I1). Pocket long-press/right-click → `_jebPocketMenu`. Last-line room is a margin on the last child of the scroll containers, phone
   only. Addresses in items: `a.jeb-lnk` (new tab; the rest of the item still edits). A new user of `--jeb-h` still joins both lists.
+- **The scrolling titles band (v05.32, Z10).** `#zab-tk` (+ `#zab-tk-again`, the "▶ Show the titles again" button) is built by `_tkSync()` (end of `jebRefresh()`, and `_zabOpenLay`/`_zabClose`/`jebClosePanel`) from
+  `_zabTk()`, the ONLY reader of `DB.theme.zabTicker` (`on speed gap run hours mode pids skip done phone`; `skip` = the unticked in "All, except…"). A round is `translateX` on `.tk-track`, driven by `_tkLoop` (rAF, elapsed
+  time; layout read only at round start). **It joins BOTH `--jeb-h` lists** and a plain class `html.zab-tk` raises everything else's `--jeb-h` by its height (90 / 100 px with the bar, 44 px alone on a phone's round button);
+  nothing is written to `<html>`'s style. Run clock, pause and "hides in" are session-only; test hook `window.__zabTkNow`. `_sbDDFit()` caps a 🧰 menu above the band when it shows.
 - **Evernote import, the dry run (v05.13, S4a — S4b writes notes, S4c pictures, S4d merges earlier imports).** `openEnexImport()` →
   `#enx-modal` (own overlay like `#remmail-modal`: dialog ≥ 640, bottom sheet < 640, z 10060, over the Zab bar on purpose so it is not
   in the `--jeb-h` lists). State is only the global `_enx` (the last result is `_enx.res`, in memory): **nothing goes in `DB`,

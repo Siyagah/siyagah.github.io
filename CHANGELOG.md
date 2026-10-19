@@ -10390,3 +10390,42 @@ in the next commit, `--only=87g` then **36/36**). `index.html` did not change af
 - A picture already uploaded full size is not re-sent small (the cloud copy is immutable). None exists: the owner has not imported yet.
 - A second device shows (and exports) the small copy; only the importing computer holds the original. That is the owner's choice A.
 
+
+
+## v05.32 — Z10: the scrolling titles band (issue #211, PCF J48)
+
+The owner asked for the titles of the things in a Zab to scroll right to left above the Zab bar, with a speed and a time setting; shown the demo they answered "Enable all
+options… Build exactly as demo. Enable clicking on a scrolling Task to edit, delete, set status, moveable between Zabs."
+
+**Built.** `#zab-tk`, a 34 px dark-green band (44 px on a phone, where its titles are tap targets) directly above the Zab bar; on a phone with the round button it sits at the very bottom
+and the button rides above it. One `<button>` per item: a dot in the Zab's colour, the Zab's icon, the title (`title`, else the text; one line, 80 characters), `•` between.
+The motion is a `translateX` on one element from `requestAnimationFrame`, by elapsed time (px/s at any frame rate; measured 30.0 / 60.0 / 110.0 at all three sizes). A pill at the right end says
+"paused" / "next round in 0:04" / "hides in 4:32". It waits while the pointer is over it, a finger is down (and 1.5 s after), an item menu, the due chooser, Attach or an edit is open.
+`prefers-reduced-motion`: no movement, one title at a time, every 4 s. Hidden while the phone keyboard is up.
+**Settings** (🧰 → 🎨 Appearance → "🎞 Scrolling titles", all in `DB.theme.zabTicker`, read only through `_zabTk()`): on, speed (Slow 30 / Medium 60 / Fast 110 + slider 15–180), pause between rounds (none / 5 s / 30 s /
+1 min / 5 min), run for (always / 1 / 5 / 15 min, then "▶ Show the titles again"), only between hours (wraps past midnight), which Zabs (all except unticked / only ticked / only the open one; the tick list shows every Zab at any depth),
+include done items, and on a phone: along the bottom / no band / only while Zab is open.
+**The menu.** A tap or click on a title opens the item's existing menu, anchored at it, with a new top row ☑ Done / ☐ Not done; Edit opens that item's Zab with the item in edit mode (it now also works when a closed panel
+still holds the row); Due, priority, Steps, Title, Attach, → Note, Move to **Zab** (was "Move to pocket") and Delete all work from the band.
+**Room.** Everything offset by `--jeb-h` gains the band's height through the same mechanism (`html.zab-tk`, a plain class; the band is in both `--jeb-h` lists). The 🧰 menus stop above the band (`_sbDDFit`).
+
+**Checks.** Block 92, `tools/zab-ticker.mjs`, 67 checks at 390 / 820 / 1440: all pass. Unpatched (the build before this round): **63 of 65 fail**; the two that pass are negative checks that hold without a band
+("phone: no band → no band, no room taken" and "no page errors"). Older checks updated in place, with the reason: `jeb-j2` (the bar-only check turns the band off; 60c rests the panel on the band when it shows; "Move to Zab"),
+`tap-t2` (90d compares tablet / laptop boxes with the build before, which had no band, so the band is off at 820 / 1440; the phone keeps it on so 90a–90c measure it), "Move to pocket" → "Move to Zab" in `zab-n1`, `zab-z1`, `zab-z6a`, `zab-z6b`, `zab-z6c`.
+
+### Not done
+
+- "Pocket" is still the word on every existing screen: the owner said to rename those in a separate round. Only the words this round adds say "Zab".
+- Two devices that BOTH change a Zab-titles setting for the very first time at once (the key does not exist on either) settle by the newest write, like any new theme key; after the first change they merge setting by setting (92g starts from an existing key).
+- The full `app-check` was not run (the Architect runs it in review). Other Zab tools (z6, n2, z7…) that count pixels from the bottom of the screen were not run by me; they may need the band off or measured with it.
+
+### Review fixes (v05.32, after the Architect's first pass on `a8f4743`)
+
+**Totals (Architect), first pass on `a8f4743`:** blocks 1–59 + `self-check` 2332/2332; blocks 60–92 5364/5392 (73g, 78b, 82e host speed; 64g, 65e, 77a sent back).
+
+- **77a — a real app defect, fixed in the app.** With the round button on a phone, the band took 44 px from the bottom and `#sb` (fixed, `bottom:var(--jeb-h)`) rose with it, but `_zabPlace()` measured the sidebar's bottom row once and did not measure again when the band appeared, so the button stayed where it was and covered "Folders" (−34 px). `_zabPlace()` now has the band in its key and `_tkSync()` calls it when the band is shown or removed. And `#zab-btn.up` was `72vh + 12px` while the panel's foot is now `--jeb-h` higher, so the button no longer cleared the panel's top edge: it is now `72vh + 12px + var(--jeb-h)`.
+- **77a, check only.** `--jeb-h` stays the room the fixed bottom things leave, so with the band it is the band's 44 (never the bar's 56; 0 without a band): the check says "0, or only the band's 44 px". "Back in the corner" = just above the band when it shows. The N1 bar at 820 is still 56 px tall (`bh === 56`); only the `--jeb-h` it also read (56, now 90 = bar + band) accepts the band.
+- **64g — app is right, check updated.** The deck already stops at the band's top (bottom 1090 = 1180 − 90) with band and bar both visible; the check now says "stops at the band's top, or the bar's when there is no band".
+- **65e — app is right, check updated.** In Zab mode with `jebBar===false` the bar still shows and the stored value is still `false`; only the `--jeb-h` it read changed (56 → 90, 100 on a phone, bar + band). The check accepts 56 or bar + band.
+
+**Totals (builder, review fixes):** `ship-check` 15/15; `--only 64` 248/248; `--only 65` 254/254; `--only 77` 195/195; `--only 92` 65/65; `--only 90` 15/15.

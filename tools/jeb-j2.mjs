@@ -8,7 +8,7 @@
    60a  the bar + its 4 pockets in order + counts; PC: left edge = #sb right edge, follows #rsz and the collapse
    60b  nothing hides behind the bar (Pane 2, a long note, the phone sidebar buttons)
    60c  the panel: opens, closes three ways, sheet on a phone; add (Enter / Shift+Enter), newest on top
-   60d  tick, edit in place, Move to pocket, Delete -> Trash -> Restore, Clear done
+   60d  tick, edit in place, Move to Zab, Delete -> Trash -> Restore, Clear done
    60e  drag ⠿ to reorder (mouse at 1440, a real touch drag on the others); persists across a reload
    60f  pockets: New, Rename, Icon & colour, Move left/right, Delete (empty ok, non-empty refused)
    60g  two devices: an item added on A reaches B's bar and OPEN panel live; B's edit in progress survives
@@ -37,7 +37,7 @@ const mkItem = (id, pocketId, text, order, done = false) => ({ id, pocketId, tex
 /* Alpha, Bravo open + "Done one" done in Quick tasks (count 2); Idea in Ideas (count 1) */
 const baseItems = () => [mkItem('t1', 'jp-task', 'Alpha', 0), mkItem('t2', 'jp-task', 'Bravo', 1), mkItem('t3', 'jp-task', 'Done one', 2, true), mkItem('i1', 'jp-idea', 'Idea', 0)];
 const longNote = () => ({ id: 'long1', title: 'A long note', content: '<h2>One</h2><h2>Two</h2><h2>Three</h2>' + Array.from({ length: 140 }, (_, i) => `<p>Paragraph number ${i} of the long note, with enough words to wrap on a phone screen.</p>`).join('') + '<p id="the-end">THE END</p>', folderIds: ['f1'], tags: [], createdAt: T0, updatedAt: T0, kind: 'general' });
-const seed = (extra) => { const db = seedDB(T0); db.jeb = baseItems(); db.articles.push(longNote()); if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.18: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
+const seed = (extra) => { const db = seedDB(T0); db.jeb = baseItems(); db.articles.push(longNote()); if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar', zabTicker: { on: false } }); return db; };   /* v05.32 (Z10): this check is about the bar alone (--jeb-h is the bar's 56 px); the scrolling titles band, which adds its own height, is block 92's */   /* v05.18: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
 const dev = (cloud, name, vp, db) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed());
 const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
@@ -106,7 +106,9 @@ try {
   if (want('60c')) await each(async (d, vp) => {
     const t = `60c@${vp.name}`;
     await openPanel(d, vp, 'Quick tasks');
-    const pr = await rect(d, '#jeb-panel'), bar = await rect(d, '#jeb-bar');
+    /* v05.32 (Z10): with the scrolling titles band shown the panel rests on the band, which rests on the bar */
+    const pr = await rect(d, '#jeb-panel'), bar0 = await rect(d, '#jeb-bar'), tk = await d.page.evaluate(() => { const e = document.getElementById('zab-tk'); return e ? e.getBoundingClientRect().top : null; });
+    const bar = { ...bar0, t: tk == null ? bar0.t : tk };
     if (vp.w < 640) check(Math.abs(pr.w - vp.w) <= 1 && Math.abs(pr.h - vp.h * 0.72) <= 8 && Math.abs(pr.b - bar.t) <= 1, `${t} phone: a bottom sheet, full width, ~72% high, resting on the bar`, JSON.stringify({ pr, barTop: bar.t }));
     else check(Math.abs(pr.w - 380) <= 2 && Math.abs(pr.r - vp.w) <= 1 && pr.t <= 1 && Math.abs(pr.b - bar.t) <= 1, `${t} a ~380px panel on the right, over Pane 3, above the bar`, JSON.stringify(pr));
     const head = await on(d, () => document.querySelector('#jeb-panel .jeb-ph').textContent);
@@ -165,10 +167,10 @@ try {
     check(st.i.find((x) => x.id === 't1').text === 'Alpha edited' && (await on(d, () => document.getElementById('jeb-panel').classList.contains('on'))), `${t} Escape cancels the edit (and does not close the panel)`);
     /* move */
     await act(d, vp, `${row('Bravo')} .jeb-more`);
-    await act(d, vp, '#jeb-menu .jm:has-text("Move to pocket")');
+    await act(d, vp, '#jeb-menu .jm:has-text("Move to Zab")');
     await act(d, vp, '#jeb-menu .jm:has-text("Ideas")'); await sleep(300);
     st = await jebState(d);
-    check(st.i.find((x) => x.id === 't2').pocketId === 'jp-idea' && (await chipCounts(d)).slice(0, 2).join('|') === 'Quick tasks:1|Ideas:2', `${t} ⋯ → Move to pocket → Ideas`, (await chipCounts(d)).join('|'));
+    check(st.i.find((x) => x.id === 't2').pocketId === 'jp-idea' && (await chipCounts(d)).slice(0, 2).join('|') === 'Quick tasks:1|Ideas:2', `${t} ⋯ → Move to Zab → Ideas`, (await chipCounts(d)).join('|'));
     /* delete -> trash -> restore from the Trash modal */
     await act(d, vp, `${row('Alpha edited')} .jeb-more`);
     await act(d, vp, '#jeb-menu .jm:has-text("Delete")'); await sleep(300);

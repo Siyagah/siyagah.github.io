@@ -191,7 +191,7 @@ try {
   if (want('65e')) await each(async (d, vp) => {
     const t = `65e@${vp.name}`;
     const st = await on(d, () => ({ bar: !!document.getElementById('jeb-bar') && getComputedStyle(document.getElementById('jeb-bar')).display !== 'none', stored: DB.theme.jebBar, hh: getComputedStyle(document.getElementById('p2')).getPropertyValue('--jeb-h').trim() }));
-    check(st.bar && st.stored === false && st.hh === '56px', `${t} jebBar=false: the bar still shows in Jeb mode, the stored value is still false`, JSON.stringify(st));
+    check(st.bar && st.stored === false && (st.hh === '56px' || st.hh === (vp.w < 640 ? '100px' : '90px')), `${t} jebBar=false: the bar still shows in Jeb mode (--jeb-h is the bar's 56, or bar + the scrolling titles band, v05.32), the stored value is still false`, JSON.stringify(st));
     await d.page.reload({ waitUntil: 'domcontentloaded' }); await booted(d.page);
     check(await visible(d, '#jeb-bar') && (await on(d, () => DB.theme.jebBar)) === false, `${t} ... also after a reload`);
     noErr(d, t);
