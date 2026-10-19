@@ -47,7 +47,7 @@ const fake = { mode: 'ok', delay: 0, failChan: '', calls: [], lastUrl: '' };
 function fakeBody(u) {
   const c = JSON.parse(u.searchParams.get('c') || '[]'), n = +u.searchParams.get('n') || 10;
   return JSON.stringify({ at: new Date().toISOString(), chans: c.map((x) => fake.failChan === x.id ? { id: x.id, ok: false, items: [], err: 'the site answered 403' }
-    : { id: x.id, ok: true, name: x.id, items: Array.from({ length: Math.min(n, 25) }, (_, k) => ({ t: `ZZNEWS ${x.id} headline ${k}`, s: `short line ${k} of ${x.id}`, u: `https://news-story.test/${x.id}/${k}`, d: new Date(Date.now() - k * 60000).toISOString() })) })) });
+    : { id: x.id, ok: true, name: x.id, items: Array.from({ length: Math.min(n, 25) }, (_, k) => ({ t: `ZZNEWS ${x.id} headline ${k}`, s: `short line ${k} of ${x.id}`, u: `https://news-story.test/${x.id}/${k}`, d: new Date(Date.now() - k * 60000).toISOString() })) }) });
 }
 async function wireHelper(ctx) {
   await ctx.route('https://news-helper.test/**', async (route) => {
@@ -283,6 +283,7 @@ if (want('95d')) {
   fake.mode = 'ok'; fake.failChan = ''; fake.delay = 0;
   const cloud = makeCloud(), vp = VPS[2];
   const A = await addDevice(browser, srv.base, cloud, 'A', { width: vp.w, height: vp.h }, false, seed());
+  await wireHelper(A.ctx);
   await T('95d DB.jeb / DB.trash / DB.articles / DB.jebPockets and the Zab bar are byte-identical with news on vs off; no headline in DB, localStorage, the cloud or Save File', async () => {
     await waitSeeded(cloud, A);
     const snap = () => on(A, () => JSON.stringify([DB.jeb, DB.trash, DB.articles, DB.jebPockets, DB.folders, DB.sections]));

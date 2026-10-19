@@ -5090,6 +5090,9 @@ function _cleanExportRoot(){
     /* 4 ─ Whole nodes some extensions append to the document. */
     root.querySelectorAll('grammarly-extension,[data-grammarly-shadow-root],[class*="recall-"]')
       .forEach(function(el){ el.remove(); });
+    /* 4b ─ v05.35: the News preview (headlines from the net) is never part of a saved copy, even if the Appearance window's markup is in the page. */
+    root.querySelectorAll('#nw-prev').forEach(function(el){ el.innerHTML = ''; });
+    root.querySelectorAll('#nw-status').forEach(function(el){ el.textContent = ''; });
     /* 5 ─ Transient UI that must never be serialised. The drag ghost is the
            important one: it holds a REAL note title, which leaked private
            content into Deploy Export files that are meant to be empty shells. */
@@ -23917,7 +23920,7 @@ function zabNewsAdd(){
 function _newsSettingsHTML(){
   const c=_zabNews(), row='display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:44px;min-width:44px';
   const cbs='width:24px;height:24px;accent-color:var(--green);flex:none';
-  const sel=(id,label,cur,opts,fn)=>'<label style="'+row+';flex-wrap:wrap"><span style="flex:1;min-width:140px">'+label+'</span><select id="'+id+'" onchange="'+fn+'" style="min-height:44px;font:inherit;max-width:100%">'
+  const sel=(id,label,cur,opts,fn)=>'<label style="'+row+';flex-wrap:wrap"><span style="flex:1;min-width:140px">'+label+'</span><select id="'+id+'" onchange="'+fn+'" style="min-height:44px;min-width:64px;font:inherit;max-width:100%">'
     +opts.map(o=>'<option value="'+o[0]+'"'+(String(o[0])===String(cur)?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>';
   let h='<div class="theme-divider"></div><div class="theme-sect" id="th-nw"><div class="theme-sect-lbl">📰 News</div>';
   h+='<div class="fs-sub" style="margin:-2px 0 8px">Headlines from the news sites you choose, fetched by your own Google helper. Only the channel addresses are sent; nothing about your notes ever leaves Siyagah.</div>';
