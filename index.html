@@ -999,7 +999,7 @@ a.jeb-lnk{color:var(--accent);text-decoration:underline;overflow-wrap:anywhere;p
    compact header; tablet: full width; PC: a centred column, 720px at most. ══ */
 html.jeb-app{--jeb-hd:52px}
 html.jeb-app #sb,html.jeb-app #p2,html.jeb-app #p3,html.jeb-app #sb-toggle,html.jeb-app #rsz,html.jeb-app #rsz2,
-html.jeb-app #p2-ov,html.jeb-app #mob-ov,html.jeb-app #note-modal-bg,html.jeb-app .float-win,html.jeb-app #fw-closeall,
+html.jeb-app #p2-ov,html.jeb-app #mob-ov,html.jeb-app #note-modal-bg,html.jeb-app .float-win:not(.zn-win),html.jeb-app #fw-closeall,
 html.jeb-app #fw-switch,html.jeb-app #toc-float-btn,html.jeb-app #ann-bubble{display:none!important}
 #jeb-app-hd{display:none}
 html.jeb-app #jeb-app-hd{display:flex;position:fixed;top:0;left:0;right:0;height:var(--jeb-hd);z-index:142;align-items:center;gap:8px;padding:0 12px;background:var(--white);color:var(--t1);border-bottom:1px solid var(--border2)}
@@ -25311,6 +25311,7 @@ function _zabNoteEnsure(pid){
 function _zabNoteOpen(pid){
   const a=_zabNoteEnsure(pid); if(!a) return;
   popOutNote(a.id);
+  const w=document.getElementById('fw-'+a.id); if(w) w.classList.add('zn-win');   /* Zab mode hides every pop-up except a Zab's note */
 }
 /* the pop-up closed: a note made by a tap and never written in is dropped again (tombstone, no Trash entry, as jebDiscardEmpty does); either way the area repaints */
 function _zabNoteClosed(aid){
