@@ -110,11 +110,11 @@ try {
     noErr(d, t);
   });
 
-  /* ══ 64b — All pockets ══ */
+  /* ══ 64b — All pockets ══ (v05.34 · Z12: the screens say "All Zabs" / "2 Zabs" now; only the words changed) */
   if (want('64b')) await each(async (d, vp) => {
     const t = `64b@${vp.name}`;
     const first = await on(d, () => { const b = document.getElementById('jeb-bar'); const k = b.firstElementChild; const a = b.querySelector('.jeb-all'); return { firstIsChoose: k.classList.contains('jeb-choose'), allIsNext: k.nextElementSibling === a, bg: getComputedStyle(a.querySelector('.jeb-sw')).backgroundImage, name: a.querySelector('.jeb-nm').textContent }; });
-    check(first.firstIsChoose && first.allIsNext && first.name === 'All pockets' && /conic-gradient/.test(first.bg) && /255, 241, 168/.test(first.bg) && /255, 217, 184/.test(first.bg) && /207, 232, 255/.test(first.bg) && /246, 210, 228/.test(first.bg), `${t} "☑ Choose" then "All pockets" start the bar; the swatch mixes four seed pastels`, JSON.stringify(first));
+    check(first.firstIsChoose && first.allIsNext && first.name === 'All Zabs' && /conic-gradient/.test(first.bg) && /255, 241, 168/.test(first.bg) && /255, 217, 184/.test(first.bg) && /207, 232, 255/.test(first.bg) && /246, 210, 228/.test(first.bg), `${t} "☑ Choose" then "All pockets" start the bar; the swatch mixes four seed pastels`, JSON.stringify(first));
     await act(d, vp, '#jeb-bar .jeb-all .jeb-main'); await d.page.waitForSelector('#jeb-panel.on'); await sleep(400);
     const heads = await on(d, () => [...document.querySelectorAll('#jeb-panel .jeb-gh')].map((h) => h.querySelector('b').textContent + ':' + h.querySelector('small').textContent));
     check(heads.join('|') === 'Quick tasks:3 open|Ideas:2 open|Links to read:1 open|Shopping:1 open', `${t} All pockets ▤: a header per pocket, in order, with counts`, heads.join('|'));
@@ -128,7 +128,7 @@ try {
     const g2 = [];
     for (const p of PIDS) g2.push((await cardIds(d, p)).join('+'));
     check(g2.join('|') === 't1+t2+t3|i1+i2|l1|s1', `${t} each card is under its own pocket`, g2.join('|'));
-    check((await txt(d, '#jeb-deck .jd-hd b')) === 'All pockets' && (await txt(d, '#jeb-deck .jd-hd small')) === '7 open', `${t} the title is "All pockets" and says "7 open"`, await txt(d, '#jeb-deck .jd-hd'));
+    check((await txt(d, '#jeb-deck .jd-hd b')) === 'All Zabs' && (await txt(d, '#jeb-deck .jd-hd small')) === '7 open', `${t} the title is "All Zabs" and says "7 open"`, await txt(d, '#jeb-deck .jd-hd'));
     check((await on(d, () => document.querySelectorAll('#jeb-deck [data-d="add"]').length)) === 0, `${t} ＋ Card is for one pocket only (absent here)`);
     noErr(d, t);
   });
@@ -159,7 +159,7 @@ try {
     /* Cards (2) */
     await act(d, vp, '#jeb-bar .jeb-go[data-go="cards"]'); await d.page.waitForSelector('#jeb-deck.on'); await sleep(1200);
     const gh = await on(d, () => [...document.querySelectorAll('#jeb-deck .jd-gh b')].map((b) => b.textContent));
-    check(gh.join('|') === 'Quick tasks|Shopping' && (await txt(d, '#jeb-deck .jd-hd b')) === '2 pockets' && (await cardIds(d)).join() === 't1,t2,t3,s1', `${t} Cards (2): only those two groups, titled "2 pockets"`, gh.join('|') + ' ' + (await cardIds(d)).join());
+    check(gh.join('|') === 'Quick tasks|Shopping' && (await txt(d, '#jeb-deck .jd-hd b')) === '2 Zabs' && (await cardIds(d)).join() === 't1,t2,t3,s1', `${t} Cards (2): only those two groups, titled "2 Zabs"`, gh.join('|') + ' ' + (await cardIds(d)).join());
     check(!(await on(d, () => document.getElementById('jeb-bar').classList.contains('choosing'))), `${t} choosing ends once the cards are open`);
     await closeDeck(d, vp);
     /* Panel (2) with a working ＋ on each group */

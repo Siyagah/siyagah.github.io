@@ -72,7 +72,7 @@ const SURF = {
   note: async (p) => { await p.evaluate(() => selArt(DB.articles.find((a) => !a.deleted).id)); await sleep(500); },
   edit: async (p) => { await p.evaluate(() => { selArt(DB.articles.find((a) => !a.deleted).id); startEdit(); }); await sleep(900); },
   smartviews: async (p) => { for (const id of ['sf-favs', 'sf-pinned', 'sf-timeline', 'sf-archived', 'sf-review', 'sf-practice']) { try { await p.evaluate((i) => selFolder(i), id); } catch {} await sleep(300); } },
-  zabAll: async (p) => { await SURF.zabPanel(p); const a = p.locator('.jeb-chip.jeb-all, #zab-lay >> text=All pockets').first(); await a.waitFor({ state: 'visible', timeout: 4000 }); await (p.viewportSize().width < 1000 ? a.tap() : a.click()); await sleep(600); },
+  zabAll: async (p) => { await SURF.zabPanel(p); const a = p.locator('.jeb-chip.jeb-all, #zab-lay >> text=All Zabs').first(); await a.waitFor({ state: 'visible', timeout: 4000 }); await (p.viewportSize().width < 1000 ? a.tap() : a.click()); await sleep(600); },
   zabLinks: async (p) => { await p.evaluate(() => { _jebOpen = 'jp-link'; jebRefresh(); }); await sleep(500); },
   zabTasks: async (p) => { await p.evaluate(() => { _jebOpen = 'jp-task'; jebRefresh(); }); await sleep(500); },
   zabIdeas: async (p) => { await p.evaluate(() => { _jebOpen = 'jp-idea'; jebRefresh(); }); await sleep(500); },

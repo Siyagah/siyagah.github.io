@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.33.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.34.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,9 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.34** (20 Oct 2026) — Z12, "Zab" for a pocket on every screen (issue #215, PCF J49, the owner's rule 19 Oct). Words only: every visible "pocket" (labels, menus, titles, aria-labels, placeholders, toasts, Trash,
+  `manifest-jeb.json`) says Zab / Zabs; the bottom strip is the "Zab bar"; the default name of a new one is "New Zab". Identifiers, ids, classes and stored keys keep `jeb`/`pocket`. **A new visible string never says pocket.**
+  Check: block 94, `tools/zab-words.mjs` (94b sweeps the source). Older checks' expected words updated in place. Built by the builder; finished by the Architect after the run hit its time limit.
 - **v05.33** (19 Oct 2026) — Z11, a Zab's own note (issue #213, PCF J30, owner's choice A). A leaf Zab (or one that already has a note) shows a note area at the top of `#jeb-panel`, above its items; the note is written in the existing
   pop-up window (`popOutNote`, no second editor) and is a normal note: id `zabn-<pid>`, folder `zab-notes` ("📝 Zab notes"), field `zabNote:{pid}`, found only by `_zabNoteOf(pid)`. Opened and left blank = dropped again. Zab mode shows the
   window through `.zn-win`. Also: `_tkSync()` waits while `_enxPersist()` writes an import batch. Check: block 93, `tools/zab-note.mjs` (`--unpatched`: 19 of the 34 it reaches fail).
@@ -57,11 +60,6 @@ must never accumulate here instead of there.
 - **v05.31** (17 Oct 2026) — S4e, the Evernote pictures go to the cloud at most 2,000 px wide; the originals stay on the importing computer (issue #209, PCF J01, owner's choice A).
   `_enxCloudMode()` (default small), `_picShrink`, `_picUploadSmall` (meta `sm:<sha of the small bytes>`, written last), `_picFetch` verifies the small copy (`_picSm`). Test set 13.6 → 4.4 MB (32 %).
   Check: block 91, `tools/enex-s4e.mjs` (`--unpatched`: 16 of 28 fail).
-
-- **v05.30** (16 Oct 2026) — T2, every tappable control on a phone (< 640) is at least 44 × 44 px (issue #207, PCF J42, owner's choice A). One CSS block last in the stylesheet; hit area grows,
-  drawing may not (Zab ✓ box 20 px inside 44, colour swatches, ⭐ / 📌 borrow card padding). Tablet and laptop unchanged. On 390 × 844: tree rows 19 → 12, note cards 10 → 9.
-  **A new phone control must be ≥ 44.** Check: block 90, `tools/tap-t2.mjs` (size, hit test, overflow, overlap at 360 / 390; 820 / 1440 equal the build before; `--unpatched`: 90a fails).
-
 
 ---
 
@@ -640,8 +638,8 @@ A failing check is a wrong assertion surprisingly often — investigate before
 | **Note Type / NTI** — a note's single-select character (`art.kind`) | not "tag" — tags are separate and multiple |
 | **Frozen build** — a sealed copy under `legacy/` | not "old version", not "backup" |
 | **Save File** — the export that bakes notes into a copy of the app | not "download" |
-| **Zab** — the bar of pockets along the bottom (the owner's name since v05.05; the code still says `jeb`) | not "Jeb" on any screen, not "pockets bar", not "basket" |
-| **Pocket** — one container on Zab (`DB.jebPockets`) | not "folder", not "list" |
+| **Zab** — one container of quick items (`DB.jebPockets`; the code says pocket/`jeb`). The owner's word since v05.34 ("Zab is the Bangla meaning of pocket") | not "pocket" on any screen, not "Jeb", not "folder", not "list" |
+| **Zab bar** — the strip of Zabs along the bottom | not "pockets bar", not "basket" |
 | **Item** — one thing in a pocket (`DB.jeb`) | not "note" — it becomes a note only via → Note |
 
 ## Decisions confirmed by the owner

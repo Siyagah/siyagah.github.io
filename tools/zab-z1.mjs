@@ -106,7 +106,7 @@ try {
       await openPocket(d, vp, 'jp-task');
       await sweep(d, `${t} single panel`, /Alpha/);
       await openAll(d, vp);
-      await sweep(d, `${t} All pockets`, /All pockets/);
+      await sweep(d, `${t} All Zabs`, /All Zabs/);   /* v05.34 · Z12: the screens say "Zab" now; words only */
       /* ☑ Choose */
       await act(d, vp, '#jeb-bar .jeb-choose'); await sleep(300);
       await sweep(d, `${t} ☑ Choose`, /Cancel/);
@@ -137,7 +137,7 @@ try {
       await sweep(d, `${t} Icon & colour dialog`, /Icon & colour/);
       await reset(d);
       await act(d, vp, '#jeb-bar .jeb-new'); await sleep(400);
-      await sweep(d, `${t} New pocket dialog`, /New pocket/);
+      await sweep(d, `${t} New Zab dialog`, /New Zab/);
       await reset(d);
       /* Trash holding a deleted item (real ⋯ → Delete) */
       await openPocket(d, vp, 'jp-task');

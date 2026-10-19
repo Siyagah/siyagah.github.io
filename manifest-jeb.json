@@ -2,7 +2,7 @@
   "id": "/?jeb=1",
   "name": "Siyagah Zab",
   "short_name": "Zab",
-  "description": "Siyagah's Zab on its own: your pockets of quick items, on the home screen. The same notebook, sync and offline behaviour as Siyagah.",
+  "description": "Siyagah's Zab on its own: your Zabs of quick items, on the home screen. The same notebook, sync and offline behaviour as Siyagah.",
   "start_url": "/?jeb=1",
   "scope": "/",
   "display": "standalone",

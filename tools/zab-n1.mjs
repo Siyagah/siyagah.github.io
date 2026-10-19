@@ -73,8 +73,8 @@ try {
     /* ＋ New pocket inside, through the real long-press / right-click menu */
     await menuOn(d, vp, T);
     const rows = await on(d, () => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent));
-    check(rows.some((r) => r.includes('Move into…')) && rows.some((r) => r.includes('New pocket inside')), `${t} the pocket menu carries "📂 Move into…" and "＋ New pocket inside" (words, not glyphs)`, rows.join(' / '));
-    await menuRow(d, vp, 'New pocket inside'); await fillCreate(d, vp, 'L1');
+    check(rows.some((r) => r.includes('Move into…')) && rows.some((r) => r.includes('New Zab inside')), `${t} the Zab menu carries "📂 Move into…" and "＋ New Zab inside" (words, not glyphs)`, rows.join(' / '));   /* v05.34 · Z12: the rows say Zab now; words only */
+    await menuRow(d, vp, 'New Zab inside'); await fillCreate(d, vp, 'L1');
     const L1 = await on(d, () => DB.jebPockets.find((p) => p.name === 'L1').id);
     const p1 = await pocket(d, L1);
     check(p1.parentId === T && (await panelName(d)) === 'Tree' && (await kidsText(d)).join() === 'L1 0', `${t} it makes L1 inside Tree (parentId set), and Tree's panel opens with L1 in the row of pockets inside`, JSON.stringify({ p1, kids: await kidsText(d) }));
@@ -83,13 +83,13 @@ try {
     await tapKid(d, vp, L1);
     check((await panelName(d)) === 'L1' && (await pathText(d)) === 'Tree › L1', `${t} tapping the chip opens L1 in the same panel; the path reads "Tree › L1"`, await pathText(d));
     /* a 4-deep chain: L1 > L2 > L3 > L4 (five levels with Tree); L2 and L3 by the ⋯ menu in the panel */
-    await pm(d, vp); await menuRow(d, vp, 'New pocket inside'); await fillCreate(d, vp, 'L2');
+    await pm(d, vp); await menuRow(d, vp, 'New Zab inside'); await fillCreate(d, vp, 'L2');
     const L2 = await on(d, () => DB.jebPockets.find((p) => p.name === 'L2').id);
     await tapKid(d, vp, L2);
-    await pm(d, vp); await menuRow(d, vp, 'New pocket inside'); await fillCreate(d, vp, 'L3');
+    await pm(d, vp); await menuRow(d, vp, 'New Zab inside'); await fillCreate(d, vp, 'L3');
     const L3 = await on(d, () => DB.jebPockets.find((p) => p.name === 'L3').id);
     await tapKid(d, vp, L3);
-    await pm(d, vp); await menuRow(d, vp, 'New pocket inside'); await fillCreate(d, vp, 'L4');
+    await pm(d, vp); await menuRow(d, vp, 'New Zab inside'); await fillCreate(d, vp, 'L4');
     const L4 = await on(d, () => DB.jebPockets.find((p) => p.name === 'L4').id);
     check((await panelName(d)) === 'L3' && (await pathText(d)) === 'Tree › L1 › L2 › L3' && (await kidsText(d)).join() === 'L4 0', `${t} a chain Tree › L1 › L2 › L3 › L4 (no depth limit): L3's path reads "Tree › L1 › L2 › L3", L4 in its row`, (await pathText(d)) + ' / ' + (await kidsText(d)).join());
     check((await on(d, (i) => jebPath(i).map((p) => p.name).join('>'), L4)) === 'Tree>L1>L2>L3>L4', `${t} jebPath(L4) = [root … L4]`);
@@ -145,7 +145,8 @@ try {
     await sleep(300);
     let ci = await chipInfo(d, T);
     check(ci && ci.n === '6' && !ci.red, `${t} Tree's chip counts its own 1 open + L1's 2 + L2's 3 = 6 (a done item adds nothing)`, JSON.stringify(ci));
-    check(ci.title.includes('every pocket inside it'), `${t} the chip's title states the rule`, ci.title);
+    check(ci.title.includes('every Zab inside it'),   /* v05.34 · Z12: the title says Zab now; words only */
+      `${t} the chip's title states the rule`, ci.title);
     check(ci.kids, `${t} the ▸ mark is on Tree`);
     const lf = await chipInfo(d, LEAF);
     check(lf.n === '4' && !lf.kids && !lf.title.includes('inside it'), `${t} a pocket with nothing inside counts only itself (4), has no ▸ mark and the plain title`, JSON.stringify(lf));
@@ -182,20 +183,20 @@ try {
     const P = await mkP(d, 'Parent'), C = await mkP(d, 'Child', P);
     const it = await on(d, (p) => jebAddItem(p, 'inside the child'), C);
     const r1 = await on(d, (p) => jebDeletePocket(p), P);
-    check(r1 === false && /holds items or pockets/.test(await toastText(d)) && !!(await pocket(d, P)), `${t} a pocket that holds a pocket cannot be deleted - the toast says "A pocket that holds items or pockets cannot be deleted — move or delete them first"`, await toastText(d));
-    await menuOn(d, vp, P); await menuRow(d, vp, 'Delete pocket'); await sleep(350);
+    check(r1 === false && /holds items or Zabs/.test(await toastText(d))   /* v05.34 · Z12: words only */ && !!(await pocket(d, P)), `${t} a pocket that holds a pocket cannot be deleted - the toast says "A pocket that holds items or pockets cannot be deleted — move or delete them first"`, await toastText(d));
+    await menuOn(d, vp, P); await menuRow(d, vp, 'Delete Zab'); await sleep(350);
     check(!!(await pocket(d, P)) && (await on(d, () => DB.trash.filter((x) => x.type === 'jebPocket').length)) === 0, `${t} ...and the real menu's "🗑 Delete pocket" refuses too (Parent and Child are still there, Trash empty)`);
     const r2 = await on(d, (p) => jebDeletePocket(p), C);
     check(r2 === false && /items/.test(await toastText(d)), `${t} a pocket that holds an item cannot be deleted either`);
     await on(d, (i) => { jebDeleteItem(i); jebRefresh(); }, it);
     /* the child, deleted from its own ⋯ menu inside the parent's panel */
     await openTop(d, vp, P); await tapKid(d, vp, C);
-    await pm(d, vp); await menuRow(d, vp, 'Delete pocket'); await sleep(450);
+    await pm(d, vp); await menuRow(d, vp, 'Delete Zab'); await sleep(450);
     const trC = await on(d, () => DB.trash.filter((x) => x.type === 'jebPocket').map((x) => ({ id: x.id, pid: x.item.id, par: x.item.parentId })));
     check(trC.length === 1 && trC[0].par === P && !(await pocket(d, C)) && (await panelName(d)) === 'Parent', `${t} the empty child goes to Trash (with its parentId); the panel steps up to Parent`, JSON.stringify(trC) + ' ' + (await panelName(d)));
     check((await on(d, (i) => DB.tombstones ? JSON.stringify(DB.tombstones).includes(i) : true, C)), `${t} ...and its tombstone is written`);
     await on(d, () => jebClosePanel());
-    await menuOn(d, vp, P); await menuRow(d, vp, 'Delete pocket'); await sleep(450);
+    await menuOn(d, vp, P); await menuRow(d, vp, 'Delete Zab'); await sleep(450);
     const tr = await on(d, () => DB.trash.filter((x) => x.type === 'jebPocket').map((x) => ({ id: x.id, pid: x.item.id })));
     check(tr.length === 2 && !(await pocket(d, P)), `${t} now Parent is empty and goes to Trash too (2 entries)`, JSON.stringify(tr));
     /* restore: Parent first, then Child - the tree is back */

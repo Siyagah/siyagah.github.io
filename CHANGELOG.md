@@ -10459,3 +10459,34 @@ A has that Zab open): failed before the fix (area still "text from B newer", mod
 - Opening the note in **Single** (the other pop-up, from its ⇄ button) is not hooked: closing that one does not repaint the area at once (it repaints on the next change). The tap always opens the Multi window.
 - A note opened and left blank leaves a tombstone, so the next first note of that Zab is `zabn-<pid>-2`. Two devices doing that at the same moment still agree on the id.
 - "Pocket" is still the word on every existing screen (J49); only the words this round adds say Zab.
+
+**Totals (Architect), review-fix commit `ea1c82d`:** blocks 1–59 + `self-check` **2332/2332**; blocks 60–93 **5386/5392** (78b, 82e, 86: speed limits on the Architect's container, the same ones missed in v05.32's review; 80h now passes). The review fix (`_renderFor` counts a `zabNote` note as a Zab change, check 93j) is in the v05.33 entry already. Merged as `2bcc725`.
+
+## v05.34 — Z12: say "Zab" for a pocket on every screen (issue #215, PCF J49)
+
+The owner (19 Oct): *"Btw call pocket as Zab, Zab is the Bangla meaning of pocket."*
+
+**Built (words only).** Every visible "pocket" in `index.html` now says Zab / Zabs: bar chips ("▤ All Zabs", "＋ New Zab"), the panel header ("N open · M in this Zab", "⋯" = "Zab menu"),
+the path line, "＋ New Zab inside", the Zab menu ("🧩 Zab kind ▸", "✏️ Rename Zab", "🗑 Delete Zab", "Zab moved to Trash"), "📂 Move into…" and its greyed reasons, the refusal toasts,
+`_JEB_ROLL_TITLE`, Choose, the deck, the Rail / Drawer / Columns layouts and their aria-labels ("Your Zabs"), the bar's aria-label ("Zab bar"), the 🧰 Appearance lines, the Zab form's
+placeholder ("Zab name"), Trash ("Zab: <name>", was "Zab pocket: <name>"), the 🧰 "👝 Siyagah Zab" title and `manifest-jeb.json`'s description. The default name of a Zab created with
+an empty name is "New Zab" (new ones only; nothing stored is rewritten). Identifiers, ids, classes, stored keys and the Trash type `jebPocket` are unchanged (I1). CLAUDE.md's Terminology:
+**Zab** = one container, **Zab bar** = the strip; "pocket" is never on screen.
+
+**Checks.** Block 94, `tools/zab-words.mjs`: 94a opens every Zab surface by real taps at 390 / 820 / 1440 and in Zab mode (390 / 1440) and finds no visible text, title, aria-label or
+placeholder matching /pocket/i; 94b sweeps the source (comments, identifiers and keys skipped); 94c no new label clips or wraps; 94d DB is byte-identical after opening and closing
+everything. `--unpatched`: **80 of 87 fail** (the 7 that pass are 94c/94d, which hold on any build, and the no-error lines).
+
+Older checks updated in place, with the reason in a comment: jeb-j2, jeb-j4, jeb-j5, zab-z1, zab-z6a, zab-z8, zab-n1, zab-n2, tap-t2, audit-explore (the builder: the expected words);
+zab-n1 76b/76c and the "Delete Zab" menu row, zab-n2 77a (the Architect). **83c and 90d compare with an older build**, so they now apply the same word changes to that build first
+(`tools/z12-words.mjs`, old → new phrases); every other difference still fails.
+
+**Found while doing it: 83c and 90d passed on v05.33 without measuring anything.** This container's clone is shallow; `makeBase()` could not find the old commit, `git show :index.html`
+then served the CURRENT file, and the check compared the build with itself. Measured honestly, both fail from v05.33 on because v05.33's note area (`.zn-area`, 44 px) sits at the top of a
+leaf Zab's panel. 83c now removes that area (and the `zn-has` class) from the new side, as it already did for v05.25's ✎ Title; 90d hides it at 820 / 1440, as it already did for the
+band. Both `makeBase()`s now throw when the commit is missing; the trap is in `tools/README.md`.
+
+**How the round went.** The builder's run hit the workflow's 90-minute limit after pushing the version bump, the word changes, block 94 and the older checks, before the CHANGELOG,
+CLAUDE.md and the PR. The Architect finished it: CLAUDE.md, this entry, the remaining older checks, a missing space restored in the Drawer's "▤ All Zabs <count>", the PR.
+
+**Totals (Architect, before the full run):** `ship-check` 15/15; `--only 60,64,65,66,70,76,77,83,90,94` **1945/1945**; `tools/zab-words.mjs --unpatched` 7/87 (80 fail, as they must). The full `app-check` totals are recorded on the PR and in the next round's entry.

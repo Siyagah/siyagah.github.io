@@ -15,8 +15,9 @@
 
    `--only=85a,85d` runs just those; `--unpatched` serves the build before this round (the parent of the "v05.25: version bump" commit).
    Each ok/FAIL line becomes one app-check check. */
+import { z12Words } from './z12-words.mjs';
 import { playwright, serve, seedDB } from './harness.mjs';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -35,7 +36,11 @@ const T0 = '2026-10-01T00:00:00.000Z';
 function makeBase() {
   const dir = mkdtempSync(join(tmpdir(), 'z9-base-'));
   const sha = execFileSync('git', ['log', '--format=%H', '-n', '1', '--grep=v05.25: version bump'], { encoding: 'utf8' }).trim();
+  if (!sha) throw new Error('the v05.24 build ("v05.25: version bump"~1) is not in this clone - fetch more history (git fetch --unshallow)');   /* never compare the build with itself */
   for (const f of ['index.html', 'sw.js', 'manifest.json']) { try { writeFileSync(join(dir, f), execFileSync('git', ['show', `${sha}~1:${f}`], { encoding: 'buffer', maxBuffer: 1 << 28 })); } catch {} }
+  /* v05.34 (Z12), updated in place by the Architect: the owner's word is "Zab" now (the deck card's grip says "…move to another Zab"), so the v05.24 build gets the same
+     word changes (tools/z12-words.mjs) before it is compared; every other difference still fails. */
+  try { const f = join(dir, 'index.html'); writeFileSync(f, z12Words(readFileSync(f, 'utf8'))); } catch {}
   return dir;
 }
 const pw = await playwright();

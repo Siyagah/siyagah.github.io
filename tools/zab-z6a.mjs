@@ -76,8 +76,9 @@ try {
     check(np[0] === 'plain' && np[1] === false && np[2] === false, `${t} a new pocket is plain, and no ztype is written until the owner chooses one`, JSON.stringify(np));
     await menuOf(d, 'Links to read');
     const rows = await on(d, () => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent));
-    check(rows.some((r) => r.includes('Pocket kind')), `${t} the pocket menu carries "🧩 Pocket kind ▸"`, rows.join(' / '));
-    await act(d, vp, '#jeb-menu .jm:has-text("Pocket kind")'); await sleep(150);
+    /* v05.34 · Z12: the menu row says "🧩 Zab kind ▸" now; only the word changed */
+    check(rows.some((r) => r.includes('Zab kind')), `${t} the Zab menu carries "🧩 Zab kind ▸"`, rows.join(' / '));
+    await act(d, vp, '#jeb-menu .jm:has-text("Zab kind")'); await sleep(150);
     const sub = await on(d, () => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent));
     const ticked = sub.filter((r) => r.includes('✓'));
     check(['Plain', 'Links', 'Tasks', 'Ideas', 'Shopping'].every((k) => sub.some((r) => r.includes(k))) && ticked.length === 1 && ticked[0].includes('Links') && sub.filter((r) => /^[☑☐]/.test(r)).length === 5, `${t} five boxes, the current kind (Links) is the ticked one`, sub.join(' / '));
@@ -86,7 +87,7 @@ try {
     await openPanel(d, vp);
     const asPlain = await on(d, () => ({ link: document.querySelectorAll('#jeb-panel .jl-it').length, rows: document.querySelectorAll('#jeb-panel .jeb-it').length, filt: document.querySelectorAll('#jeb-panel .jl-filters,#jeb-panel .jl-bar').length, ph: document.getElementById('jeb-add-in').placeholder }));
     check(asPlain.link === 0 && asPlain.rows === 4 && asPlain.filt === 0 && asPlain.ph === 'Jot something…', `${t} as a Plain pocket the same 4 items show as ordinary rows`, JSON.stringify(asPlain));
-    await menuOf(d, 'Links to read'); await act(d, vp, '#jeb-menu .jm:has-text("Pocket kind")'); await act(d, vp, '#jeb-menu .jm:has-text("Links")'); await sleep(400);
+    await menuOf(d, 'Links to read'); await act(d, vp, '#jeb-menu .jm:has-text("Zab kind")'); await act(d, vp, '#jeb-menu .jm:has-text("Links")'); await sleep(400);
     const asLinks = await on(d, () => ({ link: document.querySelectorAll('#jeb-panel .jl-it').length, filt: document.querySelectorAll('#jeb-panel .jl-filters,#jeb-panel .jl-bar').length, ph: document.getElementById('jeb-add-in').placeholder, kind: _jebType(_jebPocket('jp-link')) }));
     check(asLinks.link === 4 && asLinks.filt === 1 && asLinks.kind === 'links' && asLinks.ph === 'Paste a link…', `${t} switching back to Links brings the link layout back`, JSON.stringify(asLinks));
     const tasks = await on(d, () => { jebEditPocket('jp-idea', { ztype: 'tasks' }); jebEditPocket('jp-shop', { ztype: 'nonsense' }); return [_jebType(_jebPocket('jp-idea')), _jebType(_jebPocket('jp-shop'))]; });
