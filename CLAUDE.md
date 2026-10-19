@@ -47,6 +47,9 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.35** (20 Oct 2026) — Z13a, News round 1 of 2: the helper, the settings, fetching (issue #217, PCF J50, the owner's answers 19 Oct). 🧰 → 🎨 Appearance gets a **📰 News** section (after 🎞 Scrolling titles): the owner's own Google Apps
+  Script helper (`_newsGs()`, pasted once), five default channels + ＋ Add channel (site, feed, `t.me/name`, `@name`), a headline preview. **The band is NOT changed** (round 2, Z13b, v05.36, puts the headlines into `_tkItems`).
+  Check: block 95, `tools/zab-news.mjs` (`--unpatched`: 36 of 37 fail). Found by the check: the hidden Appearance markup put headlines into Save File's copy; `_cleanExportRoot` now empties `#nw-prev`.
 - **v05.34** (20 Oct 2026) — Z12, "Zab" for a pocket on every screen (issue #215, PCF J49, the owner's rule 19 Oct). Words only: every visible "pocket" (labels, menus, titles, aria-labels, placeholders, toasts, Trash,
   `manifest-jeb.json`) says Zab / Zabs; the bottom strip is the "Zab bar"; the default name of a new one is "New Zab". Identifiers, ids, classes and stored keys keep `jeb`/`pocket`. **A new visible string never says pocket.**
   Check: block 94, `tools/zab-words.mjs` (94b sweeps the source). Older checks' expected words updated in place. Built by the builder; finished by the Architect after the run hit its time limit.
@@ -57,9 +60,6 @@ must never accumulate here instead of there.
   which Zabs, done items and the phone placement are `DB.theme.zabTicker`, read only through `_zabTk()`; tap a title → `_jebItemMenu` (new top row ☑ Done / ☐ Not done; "Move to pocket" now says "Move to Zab").
   The band joins BOTH `--jeb-h` lists and a plain class `html.zab-tk` gives everything else its height (34 px; 44 on a phone). On the phone the band is a 44 px tap target. Check: block 92, `tools/zab-ticker.mjs`
   (`--unpatched`: 63 of 65 fail). Older checks updated in place: jeb-j2 (band off, "Move to Zab"), tap-t2 (band off at 820 / 1440), the other Zab tools' "Move to Zab".
-- **v05.31** (17 Oct 2026) — S4e, the Evernote pictures go to the cloud at most 2,000 px wide; the originals stay on the importing computer (issue #209, PCF J01, owner's choice A).
-  `_enxCloudMode()` (default small), `_picShrink`, `_picUploadSmall` (meta `sm:<sha of the small bytes>`, written last), `_picFetch` verifies the small copy (`_picSm`). Test set 13.6 → 4.4 MB (32 %).
-  Check: block 91, `tools/enex-s4e.mjs` (`--unpatched`: 16 of 28 fail).
 
 ---
 
@@ -541,6 +541,13 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `_zabTk()`, the ONLY reader of `DB.theme.zabTicker` (`on speed gap run hours mode pids skip done phone`; `skip` = the unticked in "All, except…"). A round is `translateX` on `.tk-track`, driven by `_tkLoop` (rAF, elapsed
   time; layout read only at round start). **It joins BOTH `--jeb-h` lists** and a plain class `html.zab-tk` raises everything else's `--jeb-h` by its height (90 / 100 px with the bar, 44 px alone on a phone's round button);
   nothing is written to `<html>`'s style. Run clock, pause and "hides in" are session-only; test hook `window.__zabTkNow`. `_sbDDFit()` caps a 🧰 menu above the band when it shows.
+- **News, round 1 (v05.35, Z13a).** `DB.theme.zabNews` (`on url chans per every mix short`; absent = defaults) is read ONLY through `_zabNews()`; `on` is true only with a valid `https://` `url`; `chans` = `[{id,name,src,color,on}]` is an
+  array, so for sync it is **one whole key, last write wins** (two devices editing the list at once keep the newer list, not a union). Writers: `zabNewsSet`, `zabNewsUrl`, `zabNewsChan`, `zabNewsAdd`, `zabNewsRemove`. **The helper** is a Google
+  Apps Script web app built as text by `_newsGs()` (`String.raw`: its regexes keep their backslashes; no `${` or backtick inside) and run in Node `vm` by block 95e; `doGet(?c=<JSON [{id,src}]>&n=<per>)` → `{at,chans:[{id,ok,name?,src?,items:[{t,s,u,d}],err?}]}`;
+  RSS 2.0, Atom, a site page (alternate link), Telegram `t.me/s/<name>`; browser User-Agent; `CacheService` 5 min. Only channel addresses are sent. The app calls it with a **plain GET** (`fetch(url+'?c=…')`, no headers, no preflight).
+  **Headlines are never in `DB`:** `_newsCache` (memory) + the device's own database `siyagah-news-v1` (store `kv`, key `last`; never an upgrade of another). `_newsTick()` (5 s timer, `online`/`offline`/`visibilitychange`) fetches when `on` + `url`, visible, online,
+  every `every` minutes; a failure shows only in the status line (`_newsStatusText`) and is retried a minute later; 20 s timeout. Steps window: `openNewsHelper()` reuses `#remmail-modal`. Preview: `#nw-status` / `#nw-prev` (`_newsPaint`, in place — typing is never
+  repainted); `_cleanExportRoot` empties both. Test hooks: `window.__zabNewsNow` (ms), `window.__zabNewsTimeout` (ms). `mix` is stored and shown but used only by round 2.
 - **A Zab's own note (v05.33, Z11).** `_zabNoteOf(pid)` (by `zabNote.pid`, never by title) → the note `zabn-<pid>` (`-2`, `-3`… if that id is tombstoned or in Trash) in folder `zab-notes`, field `zabNote:{pid}`; made by `_zabNoteEnsure` on the first tap, written in `popOutNote`, dropped by `_zabNoteClosed` if left blank. Painted by `_zabNoteHTML` into `.zn-area` (in the panel's repaint signature via `_zabNoteSig`); a Zab deleted keeps its note ("(Zab deleted)").
 - **Evernote import, the dry run (v05.13, S4a — S4b writes notes, S4c pictures, S4d merges earlier imports).** `openEnexImport()` →
   `#enx-modal` (own overlay like `#remmail-modal`: dialog ≥ 640, bottom sheet < 640, z 10060, over the Zab bar on purpose so it is not

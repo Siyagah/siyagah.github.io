@@ -10495,4 +10495,20 @@ CLAUDE.md and the PR. The Architect finished it: CLAUDE.md, this entry, the rema
 
 ## v05.35 — Z13a: News, round 1 of 2 — the helper, the settings and fetching (issue #217, PCF J50)
 
-*(stub — the full entry follows when the round is finished)*
+**Built.** 🧰 → 🎨 Appearance → 🎞 Scrolling titles → new section **📰 News** (the scrolling band itself is untouched; round 2, Z13b / v05.36, uses the headlines there).
+- *Settings* `DB.theme.zabNews`, read only through `_zabNews()`: on/off, the helper's address, channels (five defaults — Al Jazeera, Middle East Eye, TRT World, Arab News, 5Pillars — each its own colour; on/off, colour, ✕; ＋ Add channel takes a site,
+  a feed, `t.me/name` or `@name`), headlines per channel 3/5/10/20 (20), refresh 15/30/60 (15), band mix (stored; "used by the band from the next update"), the short line. A garbage value falls back to the default. `chans` is one whole key for sync.
+- *The helper* `_newsGs()`: a Google Apps Script web app the owner pastes once (📋 Copy the helper opens the plain-word steps). RSS 2.0, Atom, a site address (finds its alternate feed), public Telegram channels; a failing channel never fails the
+  others; browser User-Agent; 5-minute `CacheService`. Only channel addresses are sent. The app asks with a plain GET (no headers, no preflight).
+- *Fetching* `_newsTick()`: every `every` minutes while visible and online; silent on failure (status line says why, tried again a minute later; no toast, no alarm); 20 s timeout. Headlines in memory + the device's own `siyagah-news-v1`, so
+  they are there offline and at start. Nothing but the settings is in `DB` (not Trash, recs, backups).
+- *Preview* under the status line: up to 5 newest per channel (colour dot, name, headline, short line), each a link in a new tab (`rel="noopener"`).
+- Shape (D5): 390 (every control ≥ 44 × 44, rows wrap), 820, 1440, and Zab mode (`/?jeb=1`).
+
+**Checks.** Block 95, `tools/zab-news.mjs`, against a FAKE helper (a Playwright route; never the real network): 95a settings (real taps at 3 sizes, defaults, persistence + reload, garbage, a two-device merge), 95b preview (colour, per, short, a tap
+opens the story, the band identical), 95c fetch (timing, one failing channel, a 500, a wrong address, a slow helper, offline, a reload from `siyagah-news-v1`), 95d apart (DB / localStorage / cloud / Save File), 95e the generated `Code.gs` in Node `vm`
+(RSS, Atom, site page, Telegram, failures, User-Agent, `n`, cache), 95f 44 px + Zab mode + no page errors. `--unpatched`: **36 of 37 fail** (the one that passes is "no page errors").
+**Found by the check:** with the Appearance window's markup in the page, Save File's copy carried the headlines; `_cleanExportRoot` now empties `#nw-prev` / `#nw-status`. Also a `<select>` of one digit measured 38 px wide at 390; given a minimum width.
+
+**Not done / for the owner:** the real helper has not been run against the real sites (the check uses a fake one; the owner's first fetch is the real test, and the status line says why if it fails). Not in this round: the band, tap-to-open from the band,
+mixing with items (round 2).
