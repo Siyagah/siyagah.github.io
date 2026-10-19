@@ -1136,9 +1136,27 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jx-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .jx-in{color:var(--t2);font-size:13px}
 .jx-kid .jeb-sw{width:28px;height:28px;font-size:16px;flex-shrink:0}
-#jeb-panel.jx-has{overflow-y:auto;-webkit-overflow-scrolling:touch}
-#jeb-panel.jx-has>.jeb-ph{position:sticky;top:0;z-index:2;background:var(--white)}
-#jeb-panel.jx-has>.jeb-list{flex:0 0 auto;overflow:visible;min-height:0}
+#jeb-panel.jx-has,#jeb-panel.zn-has{overflow-y:auto;-webkit-overflow-scrolling:touch}
+#jeb-panel.jx-has>.jeb-ph,#jeb-panel.zn-has>.jeb-ph{position:sticky;top:0;z-index:2;background:var(--white)}
+#jeb-panel.jx-has>.jeb-list,#jeb-panel.zn-has>.jeb-list{flex:0 0 auto;overflow:visible;min-height:0}
+/* v05.33 · Z11 — a Zab's own note, at the top of the sheet, above the add box and the items */
+.zn-area{flex:0 0 auto;border-bottom:1px solid var(--border);background:var(--white)}
+.zn-area[hidden]{display:none}
+.zn-write{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;min-height:44px;padding:6px 12px;border:0;background:none;color:var(--t2);font:inherit;font-size:14px;text-align:left;cursor:pointer;touch-action:manipulation}
+.zn-write:hover{background:var(--hover)}
+.zn-hd{display:flex;align-items:center;gap:4px;padding:0 6px 0 2px;min-height:44px}
+.zn-ttl{flex:1;font-size:13px;color:var(--t2)}
+.zn-fold,.zn-edit,.zn-more{border:0;background:none;color:var(--green2);font:inherit;font-size:13px;min-height:44px;min-width:44px;padding:0 10px;cursor:pointer;touch-action:manipulation}
+.zn-fold{color:var(--t1);font-size:14px;padding:0}
+.zn-edit{border:1px solid var(--border2);border-radius:8px;min-height:36px;min-width:44px;color:var(--t1)}
+.zn-more{display:block;text-decoration:underline}
+.zn-more[hidden]{display:none}
+.zn-body{padding:0 14px 6px;font-size:14px;line-height:1.5;color:var(--t1);overflow-wrap:anywhere;cursor:text}
+.zn-body.zn-clip{max-height:12em;overflow:hidden}
+.zn-body img{max-width:100%;height:auto}
+.zn-empty{color:var(--t3)}
+.av-zn-b{border:0;background:none;padding:6px 0;min-height:32px;color:var(--green2);font:inherit;text-decoration:underline;cursor:pointer}
+.ar-zn{cursor:pointer;text-decoration:underline}
 .jx-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}   /* v05.24 · F1: no max-width, so the name takes the free space and the count sits at the right end */
 .jeb-ph .jeb-pm{min-width:40px;min-height:40px;border:0;background:none;color:var(--t1);font-size:20px;cursor:pointer}
 .jeb-gh .jx-fold{border:0;background:none;min-width:32px;min-height:40px;color:var(--t1);font-size:14px;cursor:pointer;touch-action:manipulation}
@@ -3758,6 +3776,8 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
   /* Zab: the bar, the panel and its rows (the ✓ box is 20 px DRAWN, 44 px to hit) */
   #mb .btn,#sync-mb .btn{min-width:44px}
   #jeb-panel .jeb-add .btn[data-act=add]{min-height:44px!important}   /* beats the inline 40 px, which tablet and laptop keep */
+  .zn-edit{min-height:44px}   /* v05.33 · Z11 — the note's Edit button; the others are already 44 */
+  .av-zn-b{min-height:44px}
   .sb-logo{min-height:44px}
   #save-lbl{min-height:44px;display:flex;align-items:center;box-sizing:border-box}
   .tr-tog{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin:-12px -10px -12px -14px}
@@ -7111,7 +7131,7 @@ function _cardCtxCheck(){
 }
 function artCardC(a,sel,sfc){
   if(sel||ST.snippet) return artCard(a,sel,sfc);
-  const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'');
+  const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'')+(a.zabNote?_zabNoteLabel(a):'');
   const e=_cardC.get(a.id);
   if(e&&e.s===s) return e.h;
   const h=artCard(a,false,sfc);
@@ -7539,6 +7559,7 @@ function _renderP3CInner(){
       ${_p3MetaRowHTML(curA)}
       ${curA.fromJeb?`<div class="av-jeb">👝 from ${esc(curA.fromJeb.pocket||'Zab')}</div>`:''}
       ${curA.fromEvernote?`<div class="av-jeb av-enx">📥 from Evernote · ${esc(curA.fromEvernote.nb||'')}</div>`:''}
+      ${curA.zabNote?`<div class="av-jeb av-zn"><button type="button" class="av-zn-b" onclick="_zabNoteGo('${esc(curA.zabNote.pid)}')" title="Open this Zab">${esc(_zabNoteLabel(curA))}</button></div>`:''}
       ${reminderStripHTML(curA)}
       <div class="av-tags">${tags}</div>
       ${(curA.tags||[]).length
@@ -14654,6 +14675,7 @@ function closeFloatWin(aid,quiet){
     if(!quiet){persist();renderTree();renderP2C();renderP3H();renderP3C();renderTabBar();}}
   const win=document.getElementById('fw-'+aid);if(win)win.remove();
   _fwSyncCloseAllChip();
+  _zabNoteClosed(aid);   /* v05.33 · Z11 — a Zab's note: drop it if nothing was written, repaint the note area */
   if(_fwFocusedAid===aid){
     const rest=Array.from(document.querySelectorAll('.float-win'));
     _fwFocusedAid=rest.length?rest.reduce((a,b)=>(+a.style.zIndex>+b.style.zIndex?a:b)).id.slice(3):null;
@@ -23544,7 +23566,7 @@ function _jebWireOnce(){
     if(_jebEl('jeb-menu')&&!t.closest('#jeb-menu')) _jebHideMenu();
     if(_jebEl('jeb-due')&&!t.closest('#jeb-due,.jt-due,.jt-flag')) _jebDueClose();
     if(_jebEl('zab-card')&&!t.closest('#zab-card')) _zabCardClose();
-    if(_jebOpen&&!_JEB_APP&&!t.closest('#jeb-panel,#jeb-bar,#jeb-deck,#jeb-menu,#jeb-att,#jeb-due,.toast-act,#ov,#zab-btn,#zab-lay,#zab-card,#zab-tk,#zab-tk-again')) jebClosePanel();   /* Jeb mode: the panel never closes to an empty screen */
+    if(_jebOpen&&!_JEB_APP&&!_zabNoteWin(t)&&!t.closest('#jeb-panel,#jeb-bar,#jeb-deck,#jeb-menu,#jeb-att,#jeb-due,.toast-act,#ov,#zab-btn,#zab-lay,#zab-card,#zab-tk,#zab-tk-again')) jebClosePanel();   /* Jeb mode: the panel never closes to an empty screen */
   },true);
   /* v05.11 · Z6b — the steps editor lives in a row, a card's modal or the panel: its events are delegated from here */
   document.addEventListener('click',e=>{
@@ -23718,8 +23740,10 @@ function _tkLoop(ts){
   }
   track.style.transform='translate3d('+_tkX.toFixed(2)+'px,0,0)';
 }
+let _tkEnxHold=false, _tkEnxDue=false;   /* v05.33 · Z11 — set by _enxPersist() while an import batch is being written */
 function _tkSync(){
   if(typeof DB==='undefined'||!DB||!_dbLoaded) return;
+  if(_tkEnxHold){ _tkEnxDue=true; return; }
   const root=document.documentElement, c=_zabTk();
   const key=c.on+'|'+c.run; if(key!==_tkRunKey||_tkRunAt===null){ _tkRunKey=key; _tkRunAt=_tkNow(); _tkExpired=false; }
   const st=_tkState(c), items=st==='on'?_tkItems(c):[];
@@ -24290,7 +24314,7 @@ function jebClosePanel(){
 }
 function _jebMakePanel(){
   const p=document.createElement('div'); p.id='jeb-panel';
-  p.innerHTML='<div class="jeb-ph"></div><div class="jx-path" hidden></div><div class="jx-kids" hidden></div><div class="jeb-add"><textarea id="jeb-add-in" rows="1" placeholder="Jot something…" aria-label="New item"></textarea><button class="btn bp" data-act="add" style="min-height:40px">Add</button></div><div class="jt-hint" hidden></div><div class="jeb-list"></div><div class="jeb-foot"></div>';
+  p.innerHTML='<div class="jeb-ph"></div><div class="jx-path" hidden></div><div class="jx-kids" hidden></div><div class="zn-area" hidden></div><div class="jeb-add"><textarea id="jeb-add-in" rows="1" placeholder="Jot something…" aria-label="New item"></textarea><button class="btn bp" data-act="add" style="min-height:40px">Add</button></div><div class="jt-hint" hidden></div><div class="jeb-list"></div><div class="jeb-foot"></div>';
   document.body.appendChild(p);
   const add=p.querySelector('#jeb-add-in');
   add.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); _jebAddFromInput(); } });
@@ -24304,6 +24328,7 @@ function _jebMakePanel(){
     const pb=t.closest('.jx-path button'); if(pb){ jebOpenPanel(pb.dataset.pid); return; }
     const kb=t.closest('.jx-kid'); if(kb){ if(Date.now()-_jebLPAt<700) return; jebOpenPanel(kb.dataset.pid); return; }
     if(t.closest('.jx-new')){ jebNewPocketDialog(_jebOpen); return; }
+    const zn=t.closest('[data-zn]'); if(zn){ _zabNoteTap(zn.dataset.zn,t); return; }   /* v05.33 · Z11 */
     const pm=t.closest('.jeb-pm'); if(pm){ _jebPocketMenu(_jebOpen,null,null,pm); return; }
     const fb=t.closest('.jx-fold'); if(fb){ const q=fb.dataset.pid; if(_jebFold.has(q)) _jebFold.delete(q); else _jebFold.add(q); _jebPanelSig=''; jebRefresh(); return; }
     if(t.closest('[data-act="add"]')){ _jebAddFromInput(); return; }
@@ -24515,7 +24540,7 @@ function _jebPaintPanel(){
   }
   const tkSig=pk=>_jebToday()+(_jebTaskMode()==='w'?'W':'N')+(_jebDoneOpen.has(pk.id)?'D':'')+(_jebHintPid===pk.id?'H':'')+[..._jebStepsOpen].join(',');
   const kvSig=pk=>{ const ty=_jebType(pk); return (ty==='ideas'?JSON.stringify(_jebIdeaView(pk.id)):ty==='shop'?JSON.stringify(_jebShopView(pk.id)):'')+(_jebHintPid===pk.id?'H':''); };   /* v05.12 · Z6c */
-  const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W':'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):kvSig(pk)),treeSig(pk),groups[k].map(_jebItemSig).join('|')].join('#')).join('@@')].join('%');
+  const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W':'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):kvSig(pk)),treeSig(pk),groups[k].map(_jebItemSig).join('|'),multi?'':_zabNoteSig(pk)].join('#')).join('@@')].join('%');
   if(sig===_jebPanelSig) return;
   /* never repaint under an item being typed in or dragged: it repaints when that ends */
   if(_jebEditId||_jebDrag||_jebStepTyping()||_jebQtyOpen()) return;
@@ -24531,6 +24556,10 @@ function _jebPaintPanel(){
     ke.hidden=!kids.length;
     if(kids.length) p.classList.add('jx-has'); else if(p.classList.contains('jx-has')) p.classList.remove('jx-has');   /* v05.23 · Z8 — with pockets inside, the panel scrolls as one */
     ke.innerHTML=!kids.length?'':kids.map(c=>{ const a=roll.get(c.id)||{n:0,red:false}, sub=(tr.kids.get(c.id)||[]).length>0; return `<button type="button" class="jx-kid" data-pid="${esc(c.id)}" title="${esc(c.name+(sub?_JEB_ROLL_TITLE:''))}"><span class="jeb-sw" style="background:${esc(c.color)}">${esc(c.icon)}</span><span class="jx-nm">${esc(c.name)}</span>${sub?'<span class="jx-in" aria-hidden="true">▸</span>':''}<span class="jeb-ct${a.red?' jt-red':''}">${a.n}</span></button>`; }).join('')+'<button type="button" class="jx-new" title="Make a new pocket inside this one">＋ New pocket inside</button>';
+    const zn=p.querySelector('.zn-area'), zh=_zabNoteHTML(pk);   /* v05.33 · Z11 — the Zab's own note, above its items */
+    zn.hidden=!zh; zn.innerHTML=zh;
+    p.classList.toggle('zn-has',!!zh);
+    if(zh) _zabNoteAfterPaint(zn);
     const lk=_jebType(pk)==='links', tk=_jebType(pk)==='tasks';
     const id=_jebType(pk)==='ideas', sh=_jebType(pk)==='shop';
     const hn=p.querySelector('.jt-hint'); if(hn){
@@ -24542,6 +24571,7 @@ function _jebPaintPanel(){
     p.querySelector('.jeb-list').innerHTML=lk?_jebLinkPanelHTML(pk,items):tk?_jebTaskPanelHTML(pk,items):id?_jebIdeaPanelHTML(pk,items):sh?_jebShopPanelHTML(pk,items):(items.length?items.map(i=>_jebRowHTML(i)).join(''):'<div class="jeb-empty">Nothing here yet — jot something above.</div>');
     if(lk) _jebLinkScan(items);
   }else{
+    const zn0=p.querySelector('.zn-area'); zn0.hidden=true; zn0.innerHTML=''; p.classList.remove('zn-has');   /* All Zabs: no note area */
     p.classList.remove('jl-wide'); p.querySelector('.jeb-add textarea').placeholder='Jot something…'; const hn2=p.querySelector('.jt-hint'); if(hn2) hn2.hidden=true;
     p.querySelector('.jx-path').hidden=true; p.querySelector('.jx-kids').hidden=true; if(p.classList.contains('jx-has')) p.classList.remove('jx-has');
     p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:#EDE6D6">▤</span><div class="jeb-pt"><b>${esc(_jebSelTitle(sel,pks))}</b><small>${open} open · ${all.length} in all</small></div>${px}<button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
@@ -25192,6 +25222,108 @@ function jebOpenNote(nid){
   if(fid!=='sf-jeb') pathOf(fid).forEach(f=>{ ST.exp[f.id]=true; });
   ST.tag=null; ST.kind=null; ST.secSF=null; ST.folder=fid; ST.article=null; ST.editing=false;
   render(); selArt(nid);
+}
+/* ══ v05.33 · Z11 — a Zab's own note. A normal note in DB.articles: id `zabn-<pid>`, folder `zab-notes`, field `zabNote:{pid}`.
+   Written in the app's existing pop-up note window (popOutNote); no second editor. The first write creates it. ══ */
+const _znFold=new Set(), _znAll=new Set(), _znFresh=new Map();   /* session only: folded, "Show all"; notes made by a tap and not yet written in (id → title) */
+/* the note of a Zab: found by zabNote.pid, never by title. A plain scan (no cache): it is a property read per note, far below a frame even at 25,000. */
+function _zabNoteOf(pid){
+  let best=null;
+  const arts=DB.articles||[];
+  for(let i=0;i<arts.length;i++){
+    const a=arts[i];
+    if(!a||!a.zabNote||a.zabNote.pid!==pid) continue;
+    if(!best||String(a.createdAt||'')<String(best.createdAt||'')||(a.createdAt===best.createdAt&&a.id<best.id)) best=a;
+  }
+  return best;
+}
+function _zabNoteLabel(a){
+  const pk=a&&a.zabNote?_jebPocket(a.zabNote.pid):null;
+  return pk?'📝 note of Zab '+pk.name:'📝 note of a Zab (Zab deleted)';
+}
+function _zabNoteGo(pid){
+  if(!_jebPocket(pid)){ toast('That Zab was deleted'); return; }
+  jebOpenPanel(pid);
+}
+/* is this tapped node inside the pop-up window of a Zab's note? (the panel then stays open under it) */
+function _zabNoteWin(t){
+  const w=t&&t.closest?t.closest('.float-win'):null; if(!w) return false;
+  const a=(DB.articles||[]).find(x=>x.id===w.id.slice(3));
+  return !!(a&&a.zabNote);
+}
+function _zabNoteSig(pk){
+  const a=_zabNoteOf(pk.id);
+  if(!a) return jebChildren(pk.id).length?'':'W';
+  return ['N',a.id,a.updatedAt,(a.content||'').length,_znFold.has(pk.id)?1:0,_znAll.has(pk.id)?1:0].join('~');
+}
+function _zabNoteHTML(pk){
+  const a=_zabNoteOf(pk.id);
+  if(!a){
+    if(jebChildren(pk.id).length) return '';   /* a Zab with Zabs inside shows the area only once it has a note */
+    return '<button type="button" class="zn-write" data-zn="write">📝 Write a note for this Zab</button>';
+  }
+  const fold=_znFold.has(pk.id), all=_znAll.has(pk.id);
+  return `<div class="zn-hd"><button type="button" class="zn-fold" data-zn="fold" aria-expanded="${!fold}" aria-label="${fold?'Unfold':'Fold'} the note" title="${fold?'Show':'Hide'} the note">${fold?'▸':'▾'}</button><span class="zn-ttl">📝 Note</span><button type="button" class="zn-edit" data-zn="edit" title="Write in this note">✏️ Edit</button></div>`
+    +(fold?'':`<div class="zn-body av-body${all?'':' zn-clip'}" data-zn="text">${a.content||'<em class="zn-empty">Empty — tap Edit to write.</em>'}</div><button type="button" class="zn-more" data-zn="more" hidden>${all?'Show less':'Show all'}</button>`);
+}
+/* pictures hydrate as in the read view; "Show all" appears only when the text is longer than the clip */
+function _zabNoteAfterPaint(zn){
+  try{ upgradeViewCards(zn); }catch(e){}
+  const b=zn.querySelector('.zn-body'), m=zn.querySelector('.zn-more'); if(!b||!m) return;
+  const lim=parseFloat(getComputedStyle(b).fontSize)*12;
+  m.hidden=!(b.scrollHeight>lim+2);
+}
+function _zabNoteTap(kind,t){
+  const pid=_jebOpen; if(!pid||pid==='*'||!_jebPocket(pid)) return;
+  if(kind==='text'&&t.closest('a,.sgx,button,input')) return;
+  if(kind==='write'||kind==='edit'||kind==='text'){ _zabNoteOpen(pid); return; }
+  const S=kind==='fold'?_znFold:_znAll;
+  if(S.has(pid)) S.delete(pid); else S.add(pid);
+  _jebPanelSig=''; jebRefresh();
+}
+/* the note's folder: one, id `zab-notes`, in the first section; a deleted id is never revived (`-2`, `-3`…), one in Trash keeps its id */
+function _zabNoteFolder(at){
+  const tomb=new Set((DB.tombstones||[]).map(t=>t&&t.id)), trashF=new Set();
+  (DB.trash||[]).forEach(t=>{ if(t&&t.type==='folder'){ if(t.item&&t.item.id) trashF.add(t.item.id); ((t.subtree&&t.subtree.folders)||[]).forEach(f=>{ if(f&&f.id) trashF.add(f.id); }); } });
+  let id='zab-notes', n=1;
+  while(!DB.folders.some(f=>f.id===id)&&(tomb.has(id)||trashF.has(id))) id='zab-notes-'+(++n);
+  if(DB.folders.some(f=>f.id===id)) return id;
+  const sec=(DB.sections||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0))[0]||null;
+  const f={id,name:'📝 Zab notes',parentId:null,order:1+Math.max(0,...DB.folders.filter(x=>!x.parentId&&(x.sectionId||null)===(sec?sec.id:null)).map(x=>x.order||0)),updatedAt:at};
+  if(sec) f.sectionId=sec.id;
+  DB.folders.push(f);
+  return id;
+}
+function _zabNoteEnsure(pid){
+  const pk=_jebPocket(pid); if(!pk) return null;
+  const have=_zabNoteOf(pid); if(have) return have;
+  const at=new Date().toISOString();
+  const tomb=new Set((DB.tombstones||[]).map(t=>t&&t.id)), trashA=new Set((DB.trash||[]).filter(t=>t&&t.type==='article'&&t.item).map(t=>t.item.id));
+  let id='zabn-'+pid, n=1;
+  while(DB.articles.some(x=>x.id===id)||tomb.has(id)||trashA.has(id)) id='zabn-'+pid+'-'+(++n);   /* two devices writing the first note of one Zab at once pick the same id: ONE note */
+  const fid=_zabNoteFolder(at);
+  const a={id,title:pk.name,content:'',folderIds:[fid],tags:[],zabNote:{pid},createdAt:at,updatedAt:at};
+  DB.articles.push(a);
+  _znFresh.set(id,a.title);
+  persist(); renderTree(); renderP2C();
+  return a;
+}
+function _zabNoteOpen(pid){
+  const a=_zabNoteEnsure(pid); if(!a) return;
+  popOutNote(a.id);
+}
+/* the pop-up closed: a note made by a tap and never written in is dropped again (tombstone, no Trash entry, as jebDiscardEmpty does); either way the area repaints */
+function _zabNoteClosed(aid){
+  const a=(DB.articles||[]).find(x=>x.id===aid); if(!a||!a.zabNote) return;
+  if(_znFresh.has(aid)){
+    const t0=_znFresh.get(aid); _znFresh.delete(aid);
+    const blank=!String(a.content||'').replace(/<[^>]*>|&nbsp;|\s/g,'');
+    if(blank&&a.title===t0){
+      const i=DB.articles.findIndex(x=>x.id===aid);
+      if(i>-1){ _addTombstones([aid],new Date().toISOString()); DB.articles.splice(i,1); persist(); renderTree(); renderP2C(); }
+    }
+  }
+  _jebPanelSig=''; jebRefresh();
 }
 /* ── pocket forms (the app's own modal) ── */
 function _jebPocketForm(o){
@@ -26327,6 +26459,7 @@ function artCard(a, sel, showFolderCount, showNag, customMeta){
     + (showFolderCount && a.folderIds.length>1 ? ` · in ${a.folderIds.length} folders` : '')
     + (a.fromJeb ? ` · <span class="ar-jeb">👝 from ${esc(a.fromJeb.pocket||'Zab')}</span>` : '')
     + (a.fromEvernote ? ` · <span class="ar-jeb ar-enx">📥 from Evernote · ${esc(a.fromEvernote.nb||'')}</span>` : '')
+    + (a.zabNote ? ` · <span class="ar-jeb ar-zn" onclick="event.stopPropagation();_zabNoteGo('${esc(a.zabNote.pid)}')" title="Open this Zab">${esc(_zabNoteLabel(a))}</span>` : '')
     + (showNag && isNagNote(a) ? ` · <span class="ar-nag">⏳ untouched ${untouchedDays(a)}d</span>` : '');
   const meta=customMeta!==undefined?customMeta:_m0;
   return `<div class="ar${expanded}${sel?' sel':''}" data-aid="${a.id}" `
@@ -29018,9 +29151,15 @@ function _enxSection(){
 /* an undo frame of 250 notes is not wanted: take the baseline, make no frame (_histCapture silent), then save as persist() does */
 function _enxPersist(){
   if(!_dbLoaded) return;
-  _stampThemeTouches(); const sw=_stampRecordTouches();
-  try{ _histCapture(sw,true); }catch(e){ try{ _histReset(); }catch(_){} }
-  _save(undefined,sw); scheduleAutoSave(); pushToCloud();
+  _tkEnxHold=true;   /* v05.33 · Z11 — the scrolling band is not rebuilt or measured while a batch is written; it repaints once just after */
+  try{
+    _stampThemeTouches(); const sw=_stampRecordTouches();
+    try{ _histCapture(sw,true); }catch(e){ try{ _histReset(); }catch(_){} }
+    _save(undefined,sw); scheduleAutoSave(); pushToCloud();
+  }finally{
+    _tkEnxHold=false;
+    if(_tkEnxDue){ _tkEnxDue=false; setTimeout(_tkSync,0); }
+  }
 }
 /* ── the device's own memory of an unfinished import: a NEW database, never an upgrade of another ── */
 function _enxDb(){
