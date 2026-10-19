@@ -166,7 +166,7 @@ if (want('93b') || want('93c')) for (const vp of VPS) {
 /* ── 93e ── */
 if (want('93e')) {
   const d = devs['1440'], tag = '93e@1440';
-  await on(d, () => { const a = _zabNoteOf('zl'); if (!a) { _zabNoteEnsure('zl'); const n = _zabNoteOf('zl'); n.content = '<p>Lifecycle needle</p>'; n.updatedAt = new Date().toISOString(); persist(); } });
+  await on(d, () => { if (!_zabNoteOf('zl')) { _zabNoteEnsure('zl'); _znFresh.clear(); } const n = _zabNoteOf('zl'); n.content = '<p>Lifecycle needle</p>'; n.updatedAt = new Date().toISOString(); persist(); });
   await closeAll(d);
   await T(`${tag} Trash the note → the Zab shows "Write a note" again; restore → the note is back`, async () => {
     await on(d, () => trashArt('zabn-zl')); await openZab(d, 'zl'); const a1 = await area(d); await closeAll(d);
@@ -222,10 +222,11 @@ if (want('93f')) for (const vp of VPS) {
     return [!!r && r.w > 0 && r.src === 'blob:', JSON.stringify(r)];
   });
   await T(`${tag} ✏️ Edit opens the note in the pop-up window, and the text opens it too`, async () => {
-    await tap(d, '#jeb-panel .zn-edit'); const a = await d.page.waitForSelector(`#fw-zabn-${pid}`, { timeout: 5000 }).then(() => true, () => false);
-    await closeWin(d, 'zabn-' + pid); await tap(d, '#jeb-panel .zn-body');
-    const b = await d.page.waitForSelector(`#fw-zabn-${pid}`, { timeout: 5000 }).then(() => true, () => false);
-    await closeWin(d, 'zabn-' + pid);
+    const nid = await on(d, (p) => _zabNoteOf(p).id, pid);
+    await tap(d, '#jeb-panel .zn-edit'); const a = await d.page.waitForSelector(`#fw-${nid}`, { timeout: 5000 }).then(() => true, () => false);
+    await closeWin(d, nid); await tap(d, '#jeb-panel .zn-body');
+    const b = await d.page.waitForSelector(`#fw-${nid}`, { timeout: 5000 }).then(() => true, () => false);
+    await closeWin(d, nid);
     return [a && b, JSON.stringify({ a, b })];
   });
   await closeAll(d);
