@@ -949,7 +949,7 @@ html.zab-btn #zab-tk-again{bottom:calc(var(--jeb-h) + 8px + env(safe-area-inset-
 html.zab-btn #zab-btn{display:flex}
 #zab-lay.on{display:block}
 #zab-btn{position:fixed;right:14px;bottom:calc(16px + var(--jeb-h) + env(safe-area-inset-bottom,0px));width:52px;height:52px;border-radius:50%;border:none;padding:0;z-index:142;align-items:center;justify-content:center;background:var(--green);color:var(--on-accent);font:inherit;font-size:24px;line-height:1;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-#zab-btn.up{bottom:calc(72vh + 12px)}
+#zab-btn.up{bottom:calc(72vh + 12px + var(--jeb-h))}
 .zb-n{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:10px;background:var(--white);color:var(--t1);border:1px solid var(--border2);font-size:11.5px;font-weight:700;line-height:18px;text-align:center;font-family:var(--ui)}
 .zb-n.jt-red{background:#B42318;color:#fff;border-color:#B42318}
 #zab-lay{position:fixed;left:0;right:0;top:0;bottom:var(--jeb-h);z-index:141}
@@ -23726,10 +23726,11 @@ function _tkSync(){
   let band=_jebEl('zab-tk');
   _tkState0=st;
   _tkAgainShow(st==='again');
-  if(st!=='on'||!items.length){ if(band) band.remove(); _tkSig=''; _tkX=null; root.classList.toggle('zab-tk',false); return; }
+  if(st!=='on'||!items.length){ if(band) band.remove(); _tkSig=''; _tkX=null; root.classList.toggle('zab-tk',false); _zabPlace(); return; }
   const rm=_jebReduced();
   if(!band){ band=_tkMake(); _tkSig=''; _tkX=null; _tkPhase='run'; _tkMeasure=true; jebLayout(); }
   root.classList.toggle('zab-tk',true);
+  _zabPlace();
   band.classList.toggle('tk-rm',rm);
   const sig=items.map(i=>i.id+'|'+i.tx+'|'+i.color+'|'+i.icon+'|'+(i.done?1:0)).join('\n')+'#'+(rm?1:0);
   if(sig!==_tkSig){
@@ -23838,7 +23839,7 @@ function _zabPlace(force){
   const b=_jebEl('zab-btn'); if(!b) return;
   const sb=_jebEl('sb'), tb=_jebEl('sb-toolbar');
   const open=!!(!_jebOpen&&sb&&tb&&!sb.classList.contains('closed'));
-  const key=(open?1:0)+'|'+innerWidth+'x'+innerHeight;
+  const key=(open?1:0)+'|'+innerWidth+'x'+innerHeight+'|'+(document.documentElement.classList.contains('zab-tk')?1:0);   /* v05.32: the band moves the sidebar's foot */
   if(!force&&key===_zabPlaceKey) return;
   _zabPlaceKey=key;
   let v='';

@@ -86,7 +86,8 @@ try {
         const T = await mkP(d, 'Tree'); await addItems(d, T, 2); await addItems(d, 'jp-idea', 3); await addItems(d, 'jp-idea', 1, { done: true }); await sleep(300);
         const g = await on(d, () => { const b = document.getElementById('zab-btn'), r = b && b.getBoundingClientRect(), cs = b && getComputedStyle(b); return { has: !!b, w: r && Math.round(r.width), h: r && Math.round(r.height), right: r && Math.round(innerWidth - r.right), bottom: r && Math.round(innerHeight - r.bottom), bar: !!document.getElementById('jeb-bar'), on: document.documentElement.classList.contains('jeb-on'), btnCls: document.documentElement.classList.contains('zab-btn'), jh: getComputedStyle(document.getElementById('p2')).getPropertyValue('--jeb-h'), title: b && b.title, aria: b && b.getAttribute('aria-label'), glyph: b && b.firstElementChild.textContent, bg: cs && cs.backgroundColor, ink: cs && cs.color, z: cs && cs.zIndex, shape: cs && cs.borderRadius }; });
         check(g.has && g.w === 52 && g.h === 52 && g.right >= 10 && g.bottom >= 10, `${t} the corner button is there: 52 px round, ${g.right}px from the right edge and ${g.bottom}px from the bottom`, JSON.stringify(g));
-        check(!g.bar && !g.on && g.btnCls && g.jh === '0px', `${t} the bar is not drawn and --jeb-h is 0 (${g.jh})`, JSON.stringify(g));
+        /* v05.32 (Z10): --jeb-h is the room the fixed bottom things leave, so with the scrolling titles band (on by default, 44 px on a phone) it is the BAND's 44, never the bar's 56; it is 0 without the band */
+        check(!g.bar && !g.on && g.btnCls && (g.jh === '0px' || g.jh === '44px'), `${t} the bar is not drawn and --jeb-h is 0, or only the titles band's 44 px (${g.jh})`, JSON.stringify(g));
         const L = 'Zab: your pockets (press and hold to change the layout)';
         check(g.title === L && g.aria === L && g.glyph === '▤', `${t} its title and aria-label read "${L}"; the glyph is the text glyph ▤`, JSON.stringify(g));
         check(+g.z === 142, `${t} z-index 142 (below Attach 9150, menus 9200, modals 10000)`, String(g.z));
@@ -105,8 +106,8 @@ try {
         check(rl.railBottom <= rl.btnTop, `${t} ...and the Rail's bubbles rise from above the button there (${rl.railBottom} <= ${rl.btnTop})`, JSON.stringify(rl));
         await tapEl(d, vp, '#zab-btn'); await sleep(250);
         await on(d, () => { showPane('p2'); }); await sleep(300);
-        const back = await on(d, () => { const b = document.getElementById('zab-btn'); return { inline: b.style.bottom, bottom: Math.round(innerHeight - b.getBoundingClientRect().bottom) }; });
-        check(back.inline === '' && back.bottom >= 10 && back.bottom <= 40, `${t} ...on the notes list it is back in the corner (${back.bottom}px from the bottom)`, JSON.stringify(back));
+        const back = await on(d, () => { const b = document.getElementById('zab-btn'); const tk = document.getElementById('zab-tk'); return { inline: b.style.bottom, bottom: Math.round(innerHeight - b.getBoundingClientRect().bottom), band: tk ? Math.round(tk.getBoundingClientRect().height) : 0 }; });   /* v05.32: back in the corner = just above the titles band when it shows */
+        check(back.inline === '' && back.bottom >= 10 && back.bottom <= 40 + (back.band || 0), `${t} ...on the notes list it is back in the corner (${back.bottom}px from the bottom)`, JSON.stringify(back));
         await on(d, () => toast('A longer message that fills most of the width of the screen'));
         await sleep(200); ov = await overlaps(d);
         const tt = await on(d, () => { const e = document.querySelector('.toast'), b = document.getElementById('zab-btn'); return e ? { bot: Math.round(e.getBoundingClientRect().bottom), btop: Math.round(b.getBoundingClientRect().top) } : null; });
@@ -150,7 +151,7 @@ try {
         await addItems(d, 'jp-idea', 3); await setLayout(d, 'drawer'); await sleep(300);
         const g = await on(d, () => { const bar = document.getElementById('jeb-bar'), r = bar && bar.getBoundingClientRect(); return { btn: !!document.getElementById('zab-btn'), lay: !!document.getElementById('zab-lay'), bar: !!bar, bh: r && Math.round(r.height), bb: r && Math.round(innerHeight - r.bottom), on: document.documentElement.classList.contains('jeb-on'), zb: document.documentElement.classList.contains('zab-btn'), jh: getComputedStyle(document.getElementById('p2')).getPropertyValue('--jeb-h'), all: bar && bar.querySelector('.jeb-all .jeb-ct').textContent, chips: bar && [...bar.querySelectorAll('.jeb-chip[data-pid] .jeb-nm')].map((e) => e.textContent).join() }; });
         check(!g.btn && !g.lay && !g.zb, `${t} the corner button is never drawn (even with the phone layout set to Drawer)`, JSON.stringify(g));
-        check(g.bar && g.on && g.bh === 56 && g.bb === 0 && (vp.w >= 1200 || g.jh === '56px') && g.all === '3' && /Quick tasks,Ideas,Links to read,Shopping/.test(g.chips), `${t} the N1 bar is exactly as before: 56 px tall at the bottom, ${g.chips}, All pockets ${g.all}`, JSON.stringify(g));
+        check(g.bar && g.on && g.bh === 56 && g.bb === 0 && (vp.w >= 1200 || g.jh === '56px' || g.jh === '90px') && g.all === '3' && /Quick tasks,Ideas,Links to read,Shopping/.test(g.chips), `${t} the N1 bar is exactly as before: 56 px tall at the bottom, ${g.chips}, All pockets ${g.all}`, JSON.stringify(g));
         noErr(d, t);
       } finally { await d.ctx.close(); }
     }

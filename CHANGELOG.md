@@ -10418,3 +10418,14 @@ still holds the row); Due, priority, Steps, Title, Attach, → Note, Move to **Z
 - "Pocket" is still the word on every existing screen: the owner said to rename those in a separate round. Only the words this round adds say "Zab".
 - Two devices that BOTH change a Zab-titles setting for the very first time at once (the key does not exist on either) settle by the newest write, like any new theme key; after the first change they merge setting by setting (92g starts from an existing key).
 - The full `app-check` was not run (the Architect runs it in review). Other Zab tools (z6, n2, z7…) that count pixels from the bottom of the screen were not run by me; they may need the band off or measured with it.
+
+### Review fixes (v05.32, after the Architect's first pass on `a8f4743`)
+
+**Totals (Architect), first pass on `a8f4743`:** blocks 1–59 + `self-check` 2332/2332; blocks 60–92 5364/5392 (73g, 78b, 82e host speed; 64g, 65e, 77a sent back).
+
+- **77a — a real app defect, fixed in the app.** With the round button on a phone, the band took 44 px from the bottom and `#sb` (fixed, `bottom:var(--jeb-h)`) rose with it, but `_zabPlace()` measured the sidebar's bottom row once and did not measure again when the band appeared, so the button stayed where it was and covered "Folders" (−34 px). `_zabPlace()` now has the band in its key and `_tkSync()` calls it when the band is shown or removed. And `#zab-btn.up` was `72vh + 12px` while the panel's foot is now `--jeb-h` higher, so the button no longer cleared the panel's top edge: it is now `72vh + 12px + var(--jeb-h)`.
+- **77a, check only.** `--jeb-h` stays the room the fixed bottom things leave, so with the band it is the band's 44 (never the bar's 56; 0 without a band): the check says "0, or only the band's 44 px". "Back in the corner" = just above the band when it shows. The N1 bar at 820 is still 56 px tall (`bh === 56`); only the `--jeb-h` it also read (56, now 90 = bar + band) accepts the band.
+- **64g — app is right, check updated.** The deck already stops at the band's top (bottom 1090 = 1180 − 90) with band and bar both visible; the check now says "stops at the band's top, or the bar's when there is no band".
+- **65e — app is right, check updated.** In Zab mode with `jebBar===false` the bar still shows and the stored value is still `false`; only the `--jeb-h` it read changed (56 → 90, 100 on a phone, bar + band). The check accepts 56 or bar + band.
+
+**Totals (builder, review fixes):** `ship-check` 15/15; `--only 64` 248/248; `--only 65` 254/254; `--only 77` 195/195; `--only 92` 65/65; `--only 90` 15/15.
