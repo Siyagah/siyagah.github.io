@@ -22363,6 +22363,7 @@ function renderThemeModal(){
   h+='<div class="fs-sub" style="margin:-2px 0 8px">The strip of Zabs along the bottom of the screen</div>';
   h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="checkbox" id="th-jebbar"'+(_jebBarOn()?' checked':'')+' onchange="setJebBar(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show Zab bar</label></div>';
   h+=_tkSettingsHTML();   /* v05.32 · Z10 */
+  h+=_newsSettingsHTML();   /* v05.35 · Z13a */
 
   /* Zab on the phone (v05.18, N2) — DB.theme.zabPhoneLayout, absent = rail. Shown on every screen size so it can be set from a laptop. */
   h+='<div class="theme-divider"></div>';
@@ -23826,6 +23827,121 @@ function _tkSettingsHTML(){
   }
   h+='<label style="'+row+'"><input type="checkbox" id="th-tk-done"'+(c.done?' checked':'')+' onchange="zabTkSet(\'done\',this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Include ticked (done) items</label>';
   h+=sel('th-tk-phone','On a phone',c.phone,[['bottom','Along the bottom of the screen'],['none','No band on the phone'],['open','Only while Zab is open']],"zabTkSet('phone',this.value)");
+  return h+'</div>';
+}
+/* ══ v05.35 · Z13a — News, round 1: the settings ════════════════════════════════════════════════════════════════════════════
+   DB.theme.zabNews (a plain object, absent = defaults) is read ONLY through _zabNews(). It rides DB.theme like every setting: a scalar key is one whole key,
+   last write wins, and `chans` (an array) is ONE whole key too, so two devices editing the channel list at once keep the newer list, not a union.
+   Headlines are never in DB (see _newsCache below). Round 2 (Z13b) puts them into the band; this round touches nothing in _tkItems / _tkSync. */
+const _NEWS_DEF=[
+  {id:'aljazeera',name:'Al Jazeera',src:'https://www.aljazeera.com/xml/rss/all.xml',color:'#E8A200'},
+  {id:'mee',name:'Middle East Eye',src:'https://www.middleeasteye.net/rss',color:'#2E8B57'},
+  {id:'trt',name:'TRT World',src:'https://www.trtworld.com/feed/rss.xml',color:'#D62839'},
+  {id:'arabnews',name:'Arab News',src:'https://www.arabnews.com/rss.xml',color:'#1E6FD9'},
+  {id:'5pillars',name:'5Pillars',src:'https://5pillarsuk.com/feed',color:'#8E44AD'}
+];
+const _NEWS_PAL=['#00A6A6','#E67E22','#C2185B','#6D4C41','#7F8C8D','#3F51B5','#9C7A00'];
+const _NEWS_PER=[3,5,10,20], _NEWS_EVERY=[15,30,60], _NEWS_MIX=['mix','news','items'];
+function _zabNews(){
+  const s=(DB&&DB.theme&&_isPlainObj(DB.theme.zabNews))?DB.theme.zabNews:{};
+  let chans;
+  if(Array.isArray(s.chans)){
+    const seen=new Set(); chans=[];
+    s.chans.forEach((x,k)=>{
+      if(!_isPlainObj(x)||typeof x.id!=='string'||!x.id||seen.has(x.id)||typeof x.src!=='string'||!/^https?:\/\/\S+$/i.test(x.src.trim())) return;
+      seen.add(x.id);
+      chans.push({id:x.id,name:(typeof x.name==='string'&&x.name.trim())?x.name.trim().slice(0,60):x.src.replace(/^https?:\/\/(www\.)?/i,'').split('/')[0],src:x.src.trim(),
+        color:(typeof x.color==='string'&&/^#[0-9a-f]{6}$/i.test(x.color))?x.color:_NEWS_PAL[k%_NEWS_PAL.length],on:x.on!==false});
+    });
+  }else chans=_NEWS_DEF.map(x=>Object.assign({on:true},x));
+  const url=(typeof s.url==='string'&&/^https:\/\/\S+$/i.test(s.url.trim()))?s.url.trim():'';
+  return {
+    on:s.on===true&&!!url,
+    url,
+    chans,
+    per:_NEWS_PER.includes(s.per)?s.per:20,
+    every:_NEWS_EVERY.includes(s.every)?s.every:15,
+    mix:_NEWS_MIX.includes(s.mix)?s.mix:'mix',
+    short:s.short!==false
+  };
+}
+function zabNewsSet(k,v,quiet){
+  if(!DB.theme) DB.theme={};
+  const cur=_isPlainObj(DB.theme.zabNews)?DB.theme.zabNews:{};
+  DB.theme.zabNews=Object.assign({},cur,{[k]:v});
+  persist();
+  setTimeout(()=>{ if(typeof _newsTick==='function') _newsTick(); },0);
+  if(!quiet&&typeof renderThemeModal==='function') renderThemeModal();
+}
+function zabNewsUrl(v){
+  v=String(v||'').trim();
+  if(v&&!/^https:\/\/\S+$/i.test(v)){ toast('That is not a web address. Paste the address Google gives you at the end of Deploy.'); renderThemeModal(); return; }
+  const cur=_isPlainObj(DB.theme&&DB.theme.zabNews)?DB.theme.zabNews:{};
+  if(!DB.theme) DB.theme={};
+  DB.theme.zabNews=Object.assign({},cur,{url:v},(v&&cur.on===undefined)?{on:true}:{});
+  persist();
+  setTimeout(()=>{ if(typeof _newsTick==='function') _newsTick(); },0);
+  renderThemeModal();
+}
+function zabNewsChan(cid,k,v){
+  const list=_zabNews().chans.map(x=>x.id===cid?Object.assign({},x,{[k]:v}):Object.assign({},x));
+  zabNewsSet('chans',list,k==='color');
+}
+function zabNewsRemove(cid){ zabNewsSet('chans',_zabNews().chans.filter(x=>x.id!==cid)); }
+/* "https://…", "www.site.com", "t.me/name" or "@name" -> {src,name} or null */
+function _newsParseAdd(v){
+  v=String(v||'').trim(); if(!v||/\s/.test(v)) return null;
+  let m;
+  if((m=/^@([A-Za-z][A-Za-z0-9_]{3,})$/.exec(v))) return {src:'https://t.me/'+m[1],name:'@'+m[1]};
+  if(!/^https?:\/\//i.test(v)) v='https://'+v;
+  let u; try{ u=new URL(v); }catch(e){ return null; }
+  if(!/^https?:$/.test(u.protocol)||!/\./.test(u.hostname)) return null;
+  if(/^(www\.)?(t|telegram)\.me$/i.test(u.hostname)){
+    const seg=u.pathname.split('/').filter(Boolean); const nm=(seg[0]==='s'?seg[1]:seg[0])||'';
+    if(!/^[A-Za-z][A-Za-z0-9_]{3,}$/.test(nm)) return null;
+    return {src:'https://t.me/'+nm,name:'@'+nm};
+  }
+  return {src:u.href,name:u.hostname.replace(/^www\./i,'')};
+}
+function zabNewsAdd(){
+  const el=document.getElementById('th-nw-add'); const p=_newsParseAdd(el&&el.value);
+  if(!p){ toast('Paste a site address, a feed address, or a Telegram channel like t.me/name or @name.'); return; }
+  const cur=_zabNews().chans;
+  if(cur.some(x=>x.src===p.src)){ toast('That channel is already in the list.'); return; }
+  const used=new Set(cur.map(x=>x.color.toLowerCase()));
+  const color=_NEWS_PAL.concat(['#FF5722','#009688','#795548']).find(c=>!used.has(c.toLowerCase()))||_NEWS_PAL[cur.length%_NEWS_PAL.length];
+  const id='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  zabNewsSet('chans',cur.map(x=>Object.assign({},x)).concat([{id,name:p.name,src:p.src,color,on:true}]));
+}
+/* the 📰 News section of 🧰 → 🎨 Appearance → 🎞 Scrolling titles */
+function _newsSettingsHTML(){
+  const c=_zabNews(), row='display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:44px;min-width:44px';
+  const cbs='width:24px;height:24px;accent-color:var(--green);flex:none';
+  const sel=(id,label,cur,opts,fn)=>'<label style="'+row+';flex-wrap:wrap"><span style="flex:1;min-width:140px">'+label+'</span><select id="'+id+'" onchange="'+fn+'" style="min-height:44px;font:inherit;max-width:100%">'
+    +opts.map(o=>'<option value="'+o[0]+'"'+(String(o[0])===String(cur)?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>';
+  let h='<div class="theme-divider"></div><div class="theme-sect" id="th-nw"><div class="theme-sect-lbl">📰 News</div>';
+  h+='<div class="fs-sub" style="margin:-2px 0 8px">Headlines from the news sites you choose, fetched by your own Google helper. Only the channel addresses are sent; nothing about your notes ever leaves Siyagah.</div>';
+  h+='<label style="'+row+'"><input type="checkbox" id="th-nw-on"'+(c.on?' checked':'')+' onchange="zabNewsSet(\'on\',this.checked)" style="'+cbs+'"> Fetch the news</label>';
+  h+='<div class="fs-sub" style="margin:6px 0 4px">Your helper’s address</div>';
+  h+='<input type="url" id="th-nw-url" value="'+esc(c.url)+'" placeholder="https://script.google.com/macros/s/…/exec" onchange="zabNewsUrl(this.value)" style="width:100%;box-sizing:border-box;min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--bd,#ccc);border-radius:8px" aria-label="Helper address" autocomplete="off" spellcheck="false">';
+  h+='<button type="button" class="ls-btn" id="th-nw-copy" style="min-height:44px;margin:6px 0" onclick="openNewsHelper()">📋 Copy the helper</button>';
+  h+='<div class="fs-sub" style="margin:6px 0 2px">Channels</div><div id="th-nw-chans">';
+  c.chans.forEach(x=>{
+    h+='<div class="nw-ch" data-cid="'+esc(x.id)+'" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:44px">'
+      +'<label style="'+row+'"><input type="checkbox" class="nw-con"'+(x.on?' checked':'')+' onchange="zabNewsChan(this.closest(\'.nw-ch\').dataset.cid,\'on\',this.checked)" style="'+cbs+'" aria-label="Show '+esc(x.name)+'"></label>'
+      +'<input type="color" class="nw-col" value="'+esc(x.color)+'" onchange="zabNewsChan(this.closest(\'.nw-ch\').dataset.cid,\'color\',this.value)" style="width:44px;height:44px;padding:2px;border:1px solid var(--bd,#ccc);border-radius:8px;background:none;flex:none" aria-label="Colour of '+esc(x.name)+'">'
+      +'<span class="nw-nm" style="flex:1;min-width:120px;font-size:13.5px;overflow-wrap:anywhere" title="'+esc(x.src)+'">'+esc(x.name)+'</span>'
+      +'<button type="button" class="ls-btn nw-rm" style="min-width:44px;min-height:44px" onclick="zabNewsRemove(this.closest(\'.nw-ch\').dataset.cid)" aria-label="Remove '+esc(x.name)+'">✕</button></div>';
+  });
+  h+='</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><input type="text" id="th-nw-add" placeholder="Site, feed, t.me/name or @name" onkeydown="if(event.key===\'Enter\'){event.preventDefault();zabNewsAdd()}" style="flex:1;min-width:180px;box-sizing:border-box;min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--bd,#ccc);border-radius:8px" aria-label="Add a channel" autocomplete="off" spellcheck="false">'
+    +'<button type="button" class="ls-btn" id="th-nw-addb" style="min-height:44px" onclick="zabNewsAdd()">＋ Add channel</button></div>';
+  h+=sel('th-nw-per','Headlines per channel',c.per,_NEWS_PER.map(n=>[n,n]),"zabNewsSet('per',+this.value)");
+  h+=sel('th-nw-every','Refresh every',c.every,_NEWS_EVERY.map(n=>[n,n+' minutes']),"zabNewsSet('every',+this.value)");
+  h+=sel('th-nw-mix','The band shows',c.mix,[['mix','Items and news mixed'],['news','News only'],['items','My items only']],"zabNewsSet('mix',this.value)");
+  h+='<div class="fs-sub" style="margin:-2px 0 4px">Used by the band from the next update.</div>';
+  h+='<label style="'+row+'"><input type="checkbox" id="th-nw-short"'+(c.short?' checked':'')+' onchange="zabNewsSet(\'short\',this.checked)" style="'+cbs+'"> Show the short line after each headline</label>';
+  h+='<div id="nw-status" class="fs-sub" role="status" style="margin:8px 0 4px">'+esc(typeof _newsStatusText==='function'?_newsStatusText():'')+'</div>';
+  h+='<div id="nw-prev">'+(typeof _newsPreviewHTML==='function'?_newsPreviewHTML():'')+'</div>';
   return h+'</div>';
 }
 /* ══ v05.18 · N2 — Zab on a phone: one corner button and three layouts ═════════
