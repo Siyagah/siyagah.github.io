@@ -141,7 +141,7 @@ try {
     const shape = vp.w >= 1200 ? (p.w <= 721 && p.w >= 600 && Math.abs((p.l + p.r) / 2 - vp.w / 2) < 2 && b.l <= 1 && b.r >= vp.w - 1) : (p.w >= vp.w - 2);
     check(shape, `${t} shape: ${vp.w >= 1200 ? 'a centred column of about 720px with the bar full width' : 'the panel is full width'}`, `panel ${Math.round(p.w)}px at ${Math.round(p.l)}; bar ${Math.round(b.l)}–${Math.round(b.r)}`);
     const all = await on(d, () => ({ open: _jebOpen, multi: _jebMulti && _jebMulti.all, title: document.querySelector('#jeb-panel .jeb-pt b').textContent, groups: document.querySelectorAll('#jeb-panel .jeb-gh').length }));
-    check(all.open === '*' && all.multi && all.title === 'All pockets' && all.groups === 4, `${t} it opens on "All pockets", a header per pocket`, JSON.stringify(all));
+    check(all.open === '*' && all.multi && all.title === 'All Zabs' && all.groups === 4, `${t} it opens on "All Zabs", a header per pocket`, JSON.stringify(all));
     check(!(await on(d, () => document.getElementById('jeb-add-in') === document.activeElement)), `${t} opening did not put the caret in a box (no keyboard on a phone)`);
     /* typing in Jeb must not hide the bar (the jeb-kb rule) */
     await act(d, vp, chip('jp-task')); await sleep(300);

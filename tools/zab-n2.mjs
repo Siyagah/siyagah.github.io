@@ -217,7 +217,7 @@ try {
           await tapEl(d, vp, '#zab-lay [data-zact="back"]'); await sleep(200); seen.push(await read());
           const top = seen[3];
           check(/L2 1,L3 1/.test(seen[0]) && /L1 1,L2 1/.test(seen[1]) && /Tree 1,L1 1/.test(seen[2]) && /Tree 1/.test(top), `${t} reopened: ‹ walks up and every level counts 1 (${seen.join(' / ')})`);
-          check(/All pockets/.test(await on(d, () => document.querySelector('#zab-lay .zc-hd').textContent)), `${t} at the top the left header is "▤ All pockets" (no ‹)`);
+          check(/All Zabs/.test(await on(d, () => document.querySelector('#zab-lay .zc-hd').textContent)), `${t} at the top the left header is "▤ All pockets" (no ‹)`);
           for (const k of [T, L1, L2]) { await tapEl(d, vp, `#zab-lay .zc-row[data-pid="${k}"] .zc-nm`); await sleep(220); }
           await tapEl(d, vp, `#zab-lay .zc-row[data-pid="${L3}"] .zc-nm`); await sleep(350);
         }
@@ -229,7 +229,7 @@ try {
         const lpPid = L === 'cols' ? await on(d, () => document.querySelector('#zab-lay .zc-row[data-pid]').dataset.pid) : T;
         await longPress(d, lpSel);
         const mr = await on(d, () => { const m = document.getElementById('jeb-menu'); if (!m) return null; const r = m.getBoundingClientRect(); return { rows: [...m.querySelectorAll('.jm')].map((e) => e.textContent), in: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight }; });
-        check(mr && ['Rename', 'Move into…', 'Pocket kind', 'Delete pocket'].every((w) => mr.rows.some((r) => r.includes(w))) && mr.in, `${t} a long-press on a pocket opens the existing pocket menu, inside the screen (${mr && mr.rows.join(' / ')})`, JSON.stringify(mr));
+        check(mr && ['Rename', 'Move into…', 'Zab kind', 'Delete Zab']   /* v05.34 · Z12: the rows say Zab now */.every((w) => mr.rows.some((r) => r.includes(w))) && mr.in, `${t} a long-press on a pocket opens the existing pocket menu, inside the screen (${mr && mr.rows.join(' / ')})`, JSON.stringify(mr));
         await tapEl(d, vp, '#jeb-menu .jm:has-text("Rename")'); await modalOpen(d); await sleep(150);
         await d.page.fill('#jeb-f-name', 'Renamed ' + L); await tapEl(d, vp, '#jeb-f-ok'); await sleep(450);
         const rn = await on(d, ([p]) => ({ name: DB.jebPockets.find((x) => x.id === p).name, shown: document.getElementById('zab-lay') ? document.getElementById('zab-lay').textContent.includes('Renamed') : false }), [lpPid]);
@@ -262,7 +262,7 @@ try {
         const c = await on(d, () => { const e = document.getElementById('zab-card'), r = e.getBoundingClientRect(), b = document.getElementById('zab-btn').getBoundingClientRect(); return { l: Math.round(r.left), r: Math.round(r.right), t: Math.round(r.top), b: Math.round(r.bottom), vw: innerWidth, vh: innerHeight, btop: Math.round(b.top), rows: [...e.querySelectorAll('.zc-r')].map((x) => x.textContent.replace(/\s+/g, ' ').trim()), hs: [...e.querySelectorAll('.zc-r')].map((x) => Math.round(x.getBoundingClientRect().height)), more: e.querySelector('.zc-more').textContent, z: getComputedStyle(e).zIndex, open: !!document.getElementById('zab-lay') }; });
         check(c.l >= 8 && c.r <= c.vw - 8 && c.t >= 8 && c.b <= c.vh - 8, `${t} a long-press (700 ms, real touch) opens the card, measured inside the screen (${c.l}–${c.r} × ${c.t}–${c.b} of ${c.vw}×${c.vh})`, JSON.stringify(c));
         check(c.b <= c.btop, `${t} ...anchored above the button (card bottom ${c.b} <= button top ${c.btop})`);
-        check(c.rows.join(' / ') === '☑ Rail · bubbles up the right edge / ☐ Drawer · a list, ▸ opens the pockets inside / ☐ Columns · the pockets inside in a second column' && c.more === 'More in 🧰 → 🎨 Appearance', `${t} it holds the three rows with tick boxes and the Appearance line`, JSON.stringify(c.rows));
+        check(c.rows.join(' / ') === '☑ Rail · bubbles up the right edge / ☐ Drawer · a list, ▸ opens the Zabs inside / ☐ Columns · the Zabs inside in a second column' && c.more === 'More in 🧰 → 🎨 Appearance', `${t} it holds the three rows with tick boxes and the Appearance line`, JSON.stringify(c.rows));
         check(c.hs.every((h) => h >= 40) && !c.open && +c.z === 143, `${t} every row is >= 40 px tall (${c.hs.join('/')}); the long-press did not also open the layout; z 143`);
         await d.page.mouse.click(30, 60); await sleep(250);
         check(!(await on(d, () => !!document.getElementById('zab-card'))), `${t} a tap outside closes the card`);

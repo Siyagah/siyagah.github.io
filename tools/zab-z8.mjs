@@ -165,7 +165,7 @@ try {
       else await d.page.locator(kidSel('A1')).first().click({ button: 'right' });
       await sleep(300);
       const menu = await on(d, () => { const m = document.getElementById('jeb-menu'); return m ? [...m.querySelectorAll('.jm')].map((x) => x.textContent) : null; });
-      check(menu && menu.some((x) => /Rename/.test(x)) && menu.some((x) => /New pocket inside/.test(x)), `${t} ${vp.touch ? 'a long press' : 'a right-click'} on a line opens that pocket's menu`, JSON.stringify(menu && menu.slice(0, 4)));
+      check(menu && menu.some((x) => /Rename/.test(x)) && menu.some((x) => /New Zab inside/.test(x))   /* v05.34 · Z12: words only */, `${t} ${vp.touch ? 'a long press' : 'a right-click'} on a line opens that pocket's menu`, JSON.stringify(menu && menu.slice(0, 4)));
       check((await on(d, () => _jebOpen)) === 'A' && (await on(d, () => JSON.stringify(DB.jebPockets))) === before, `${t} ...A stays open and nothing is written`);
       await on(d, () => _jebHideMenu()); await sleep(200);
       await act(d, vp, '#jeb-panel .jx-new'); await d.page.waitForSelector('#jeb-f-name', { timeout: 4000 }); await sleep(150);

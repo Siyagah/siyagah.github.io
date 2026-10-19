@@ -57,8 +57,9 @@ try {
     check(names.join('|') === 'Quick tasks:2|Ideas:1|Links to read:0|Shopping:0', `${t} the bar has the 4 seeded pockets in order with the right not-done counts`, names.join('|'));
     const bar = await rect(d, '#jeb-bar');
     check(!!bar && Math.abs(bar.b - vp.h) <= 1 && bar.h >= 40, `${t} the bar sits at the bottom of the viewport`, JSON.stringify(bar));
-    const hasNew = await on(d, () => /New pocket/.test(document.querySelector('#jeb-bar .jeb-new')?.textContent || ''));
-    check(hasNew, `${t} "＋ New pocket" follows the last pocket`);
+    /* v05.34 · Z12: the word on screen is "Zab" now ("＋ New Zab"); only the words changed */
+    const hasNew = await on(d, () => /New Zab/.test(document.querySelector('#jeb-bar .jeb-new')?.textContent || ''));
+    check(hasNew, `${t} "＋ New Zab" follows the last Zab`);
     if (vp.w >= 1200) {
       const sbR = async () => (await rect(d, '#sb')).r;
       check(Math.abs(bar.l - (await sbR())) <= 1, `${t} PC: the bar's left edge = the sidebar's right edge`, `${bar.l} vs ${await sbR()}`);
@@ -112,7 +113,7 @@ try {
     if (vp.w < 640) check(Math.abs(pr.w - vp.w) <= 1 && Math.abs(pr.h - vp.h * 0.72) <= 8 && Math.abs(pr.b - bar.t) <= 1, `${t} phone: a bottom sheet, full width, ~72% high, resting on the bar`, JSON.stringify({ pr, barTop: bar.t }));
     else check(Math.abs(pr.w - 380) <= 2 && Math.abs(pr.r - vp.w) <= 1 && pr.t <= 1 && Math.abs(pr.b - bar.t) <= 1, `${t} a ~380px panel on the right, over Pane 3, above the bar`, JSON.stringify(pr));
     const head = await on(d, () => document.querySelector('#jeb-panel .jeb-ph').textContent);
-    check(/Quick tasks/.test(head) && /2 open · 3 in this pocket/.test(head), `${t} header: name and "N open · M in this pocket"`, head);
+    check(/Quick tasks/.test(head) && /2 open · 3 in this Zab/.test(head), `${t} header: name and "N open · M in this Zab"`, head);   /* v05.34 · Z12: words only */
     /* close three ways */
     await act(d, vp, '#jeb-panel .jeb-x'); await sleep(250);
     check(!(await on(d, () => document.getElementById('jeb-panel').classList.contains('on'))), `${t} ✕ closes it`);
@@ -237,7 +238,7 @@ try {
     const menuOf = async (name) => { await d.page.locator(`#jeb-bar .jeb-chip[title="${name}"]`).first().click({ button: 'right' }); await d.page.waitForSelector('#jeb-menu'); await sleep(100); };
     await menuOf('Reading');
     const rows = await on(d, () => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent));
-    check(['Rename', 'Icon & colour', 'Move left', 'Move right', 'Clear done items', 'Delete pocket'].every((w) => rows.some((r) => r.includes(w))) && rows.every((r) => /[A-Za-z]/.test(r)), `${t} the pocket menu: every row carries a word`, rows.join(' / '));
+    check(['Rename', 'Icon & colour', 'Move left', 'Move right', 'Clear done items', 'Delete Zab'].every((w) => rows.some((r) => r.includes(w))) && rows.every((r) => /[A-Za-z]/.test(r)), `${t} the Zab menu: every row carries a word`, rows.join(' / '));
     await act(d, vp, '#jeb-menu .jm:has-text("Rename")');
     await d.page.waitForSelector('#jeb-f-name'); await d.page.locator('#jeb-f-name').fill('Reading list'); await d.page.keyboard.press('Enter'); await sleep(300);
     st = await jebState(d);
@@ -251,12 +252,12 @@ try {
     check((await chipCounts(d)).map((x) => x.split(':')[0]).join('|') === 'Quick tasks|Ideas|Links to read|Reading list|Shopping', `${t} Move left`, (await chipCounts(d)).join('|'));
     await menuOf('Reading list'); await act(d, vp, '#jeb-menu .jm:has-text("Move right")'); await sleep(300);
     check((await chipCounts(d)).pop().startsWith('Reading list'), `${t} Move right`);
-    await menuOf('Reading list'); await act(d, vp, '#jeb-menu .jm:has-text("Delete pocket")'); await sleep(300);
+    await menuOf('Reading list'); await act(d, vp, '#jeb-menu .jm:has-text("Delete Zab")');   /* v05.34 · Z12: words only */ await sleep(300);
     st = await jebState(d);
     check(!st.p.some((p) => p.id === np.id) && st.trash === 1, `${t} deleting an EMPTY pocket works (to Trash)`);
     const before = JSON.stringify((await jebState(d)).p.map((p) => p.id));
     await on(d, () => { window.__toasts.length = 0; });
-    await menuOf('Quick tasks'); await act(d, vp, '#jeb-menu .jm:has-text("Delete pocket")'); await sleep(300);
+    await menuOf('Quick tasks'); await act(d, vp, '#jeb-menu .jm:has-text("Delete Zab")'); await sleep(300);
     const toasts = await on(d, () => window.__toasts.join(' / '));
     check(JSON.stringify((await jebState(d)).p.map((p) => p.id)) === before && /holds items/.test(toasts), `${t} deleting a pocket that holds items is refused with the toast, nothing changes`, toasts);
     noErr(d, t);

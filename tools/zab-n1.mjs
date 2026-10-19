@@ -73,8 +73,8 @@ try {
     /* ＋ New pocket inside, through the real long-press / right-click menu */
     await menuOn(d, vp, T);
     const rows = await on(d, () => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent));
-    check(rows.some((r) => r.includes('Move into…')) && rows.some((r) => r.includes('New pocket inside')), `${t} the pocket menu carries "📂 Move into…" and "＋ New pocket inside" (words, not glyphs)`, rows.join(' / '));
-    await menuRow(d, vp, 'New pocket inside'); await fillCreate(d, vp, 'L1');
+    check(rows.some((r) => r.includes('Move into…')) && rows.some((r) => r.includes('New Zab inside')), `${t} the Zab menu carries "📂 Move into…" and "＋ New Zab inside" (words, not glyphs)`, rows.join(' / '));   /* v05.34 · Z12: the rows say Zab now; words only */
+    await menuRow(d, vp, 'New Zab inside'); await fillCreate(d, vp, 'L1');
     const L1 = await on(d, () => DB.jebPockets.find((p) => p.name === 'L1').id);
     const p1 = await pocket(d, L1);
     check(p1.parentId === T && (await panelName(d)) === 'Tree' && (await kidsText(d)).join() === 'L1 0', `${t} it makes L1 inside Tree (parentId set), and Tree's panel opens with L1 in the row of pockets inside`, JSON.stringify({ p1, kids: await kidsText(d) }));
@@ -83,13 +83,13 @@ try {
     await tapKid(d, vp, L1);
     check((await panelName(d)) === 'L1' && (await pathText(d)) === 'Tree › L1', `${t} tapping the chip opens L1 in the same panel; the path reads "Tree › L1"`, await pathText(d));
     /* a 4-deep chain: L1 > L2 > L3 > L4 (five levels with Tree); L2 and L3 by the ⋯ menu in the panel */
-    await pm(d, vp); await menuRow(d, vp, 'New pocket inside'); await fillCreate(d, vp, 'L2');
+    await pm(d, vp); await menuRow(d, vp, 'New Zab inside'); await fillCreate(d, vp, 'L2');
     const L2 = await on(d, () => DB.jebPockets.find((p) => p.name === 'L2').id);
     await tapKid(d, vp, L2);
-    await pm(d, vp); await menuRow(d, vp, 'New pocket inside'); await fillCreate(d, vp, 'L3');
+    await pm(d, vp); await menuRow(d, vp, 'New Zab inside'); await fillCreate(d, vp, 'L3');
     const L3 = await on(d, () => DB.jebPockets.find((p) => p.name === 'L3').id);
     await tapKid(d, vp, L3);
-    await pm(d, vp); await menuRow(d, vp, 'New pocket inside'); await fillCreate(d, vp, 'L4');
+    await pm(d, vp); await menuRow(d, vp, 'New Zab inside'); await fillCreate(d, vp, 'L4');
     const L4 = await on(d, () => DB.jebPockets.find((p) => p.name === 'L4').id);
     check((await panelName(d)) === 'L3' && (await pathText(d)) === 'Tree › L1 › L2 › L3' && (await kidsText(d)).join() === 'L4 0', `${t} a chain Tree › L1 › L2 › L3 › L4 (no depth limit): L3's path reads "Tree › L1 › L2 › L3", L4 in its row`, (await pathText(d)) + ' / ' + (await kidsText(d)).join());
     check((await on(d, (i) => jebPath(i).map((p) => p.name).join('>'), L4)) === 'Tree>L1>L2>L3>L4', `${t} jebPath(L4) = [root … L4]`);

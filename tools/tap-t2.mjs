@@ -90,7 +90,7 @@ const SURF = {
   noteMenu: async (p) => { await p.evaluate(() => selArt(DB.articles.find((a) => !a.deleted).id)); await sleep(500); await p.evaluate(() => { const b = [...document.querySelectorAll('#p3 button')].find((e) => e.textContent.trim() === '⋯' && e.getBoundingClientRect().width > 0); b && b.click(); }); await sleep(500); },
   popup: async (p) => { await p.evaluate(() => popOutNote(DB.articles.find((a) => !a.deleted).id)); await sleep(900); },
   zabPanel: async (p) => { const c = p.locator('#jeb-bar .jeb-chip[data-pid] .jeb-main, #zab-btn').first(); await c.waitFor({ state: 'visible', timeout: 4000 }); await (p.viewportSize().width < 1000 ? c.tap() : c.click()); await sleep(600); },
-  zabAll: async (p) => { await SURF.zabPanel(p); const a = p.locator('.jeb-chip.jeb-all, #zab-lay >> text=All pockets').first(); await a.waitFor({ state: 'visible', timeout: 4000 }); await (p.viewportSize().width < 1000 ? a.tap() : a.click()); await sleep(600); },
+  zabAll: async (p) => { await SURF.zabPanel(p); const a = p.locator('.jeb-chip.jeb-all, #zab-lay >> text=All Zabs').first(); await a.waitFor({ state: 'visible', timeout: 4000 }); await (p.viewportSize().width < 1000 ? a.tap() : a.click()); await sleep(600); },
   zabLinks: pocket('jp-link'), zabTasks: pocket('jp-task'), zabIdeas: pocket('jp-idea'), zabShop: pocket('jp-shop'),
   cal: async (p) => { await p.evaluate(() => _calOpen()); await sleep(800); },
 };
