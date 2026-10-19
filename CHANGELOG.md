@@ -10489,4 +10489,4 @@ band. Both `makeBase()`s now throw when the commit is missing; the trap is in `t
 **How the round went.** The builder's run hit the workflow's 90-minute limit after pushing the version bump, the word changes, block 94 and the older checks, before the CHANGELOG,
 CLAUDE.md and the PR. The Architect finished it: CLAUDE.md, this entry, the remaining older checks, a missing space restored in the Drawer's "▤ All Zabs <count>", the PR.
 
-<J49-TOTALS>
+**Totals (Architect, before the full run):** `ship-check` 15/15; `--only 60,64,65,66,70,76,77,83,90,94` **1945/1945**; `tools/zab-words.mjs --unpatched` 7/87 (80 fail, as they must). The full `app-check` totals are recorded on the PR and in the next round's entry.
