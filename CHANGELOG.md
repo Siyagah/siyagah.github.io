@@ -10459,3 +10459,9 @@ A has that Zab open): failed before the fix (area still "text from B newer", mod
 - Opening the note in **Single** (the other pop-up, from its ⇄ button) is not hooked: closing that one does not repaint the area at once (it repaints on the next change). The tap always opens the Multi window.
 - A note opened and left blank leaves a tombstone, so the next first note of that Zab is `zabn-<pid>-2`. Two devices doing that at the same moment still agree on the id.
 - "Pocket" is still the word on every existing screen (J49); only the words this round adds say Zab.
+
+**Totals (Architect), review-fix commit `ea1c82d`:** blocks 1–59 + `self-check` **2332/2332**; blocks 60–93 **5386/5392** (78b, 82e, 86: speed limits on the Architect's container, the same ones missed in v05.32's review; 80h now passes). The review fix (`_renderFor` counts a `zabNote` note as a Zab change, check 93j) is in the v05.33 entry already. Merged as `2bcc725`.
+
+## v05.34 — Z12: say "Zab" for a pocket on every screen (issue #215, PCF J49)
+
+(stub — filled in at the end of the round)
