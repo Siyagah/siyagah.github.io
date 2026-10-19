@@ -10429,3 +10429,9 @@ still holds the row); Due, priority, Steps, Title, Attach, → Note, Move to **Z
 - **65e — app is right, check updated.** In Zab mode with `jebBar===false` the bar still shows and the stored value is still `false`; only the `--jeb-h` it read changed (56 → 90, 100 on a phone, bar + band). The check accepts 56 or bar + band.
 
 **Totals (builder, review fixes):** `ship-check` 15/15; `--only 64` 248/248; `--only 65` 254/254; `--only 77` 195/195; `--only 92` 65/65; `--only 90` 15/15.
+
+**Totals (Architect), review-fix commit `05e0005`:** blocks 60–92 **5384/5392** (78b, 80h, 82e, 86: speed limits on the Architect's container; 80h re-measured three times each against `main`: worst long task 341–379 ms vs 308–395 ms, overlapping; batch median 214–251 ms vs 199–205 ms, so ~25 ms per batch from the band at ×4, fixed in v05.33); blocks 1–59 + `self-check` **2332/2332** on `a8f4743` (the review fix touched only Zab placement). Merged as `e153457`.
+
+## v05.33 — Z11: a Zab's own note (issue #213, PCF J30) — in progress
+
+(stub: filled in when the round is finished)
