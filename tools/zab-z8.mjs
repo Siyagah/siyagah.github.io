@@ -15,9 +15,10 @@
    83h  no page errors; Zab mode (/?jeb=1) shows the same list
 
    `--only=83a,83c` runs just those; `--unpatched` serves the build before this round. Each ok/FAIL line becomes one app-check check. */
+import { z12Words } from './z12-words.mjs';
 import { playwright, serve, seedDB } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, push, check, results } from './s1-fake.mjs';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -34,7 +35,11 @@ const T0 = '2026-10-01T00:00:00.000Z';
 function makeBase() {
   const dir = mkdtempSync(join(tmpdir(), 'zab-z8-base-'));
   const sha = execFileSync('git', ['log', '--format=%H', '-n', '1', '--grep=Z8 step 0'], { encoding: 'utf8' }).trim();
+  if (!sha) throw new Error('the build before Z8 (commit "Z8 step 0") is not in this clone - fetch more history (git fetch --unshallow)');   /* never compare the build with itself */
   for (const f of ['index.html', 'sw.js', 'manifest.json']) { try { writeFileSync(join(dir, f), execFileSync('git', ['show', `${sha}:${f}`], { encoding: 'buffer', maxBuffer: 1 << 28 })); } catch {} }
+  /* v05.34 (Z12), updated in place by the Architect: the owner's word is "Zab" now ("All Zabs" is narrower than "All pockets"), so the older build gets the same word
+     changes (tools/z12-words.mjs) before it is compared; every other difference still fails. */
+  try { const f = join(dir, 'index.html'); writeFileSync(f, z12Words(readFileSync(f, 'utf8'))); } catch {}
   return dir;
 }
 const pw = await playwright();
@@ -146,8 +151,12 @@ try {
       for (const pid of ['A1', 'B', 'A2a']) {
         /* v05.25 (Z9, J36), updated in place by the Architect: every item row now carries a "✎ Title" button, so the new build's panel is compared
            with that one button removed; anything else that differs still fails. */
-        const a = (await html(dn, pid)).split('<button class="jeb-ttl-b" title="Give this item a title">✎ Title</button>').join(''), b = await html(dold, pid);
-        check(a === b, `${t} pocket ${pid} (nothing inside): the panel's HTML is byte-identical to the previous build's (apart from v05.25's ✎ Title button)`, a === b ? '' : `new ${a.length} bytes, old ${b.length}`);
+        /* v05.34 (Z12), updated in place by the Architect: v05.33 (Z11, J30) put a Zab's own note area at the top of a Zab with nothing inside
+           (`.zn-area` + the panel class `zn-has`), so that is removed from the new build's panel too; anything else that differs still fails. (This check
+           passed on v05.33 only because a shallow clone could not find the old commit and compared the build with itself; makeBase() now refuses that.) */
+        const a = (await html(dn, pid)).split('<button class="jeb-ttl-b" title="Give this item a title">✎ Title</button>').join('')
+          .replace(/<div class="zn-area"[^>]*>[\s\S]*?<\/div>/, '').replace(' class="on zn-has"', ' class="on"'), b = await html(dold, pid);
+        check(a === b, `${t} pocket ${pid} (nothing inside): the panel's HTML is byte-identical to the previous build's (apart from v05.25's ✎ Title button)`, a === b ? '' : (() => { let i = 0; while (i < a.length && a[i] === b[i]) i++; return `new ${a.length} bytes, old ${b.length}; first difference at ${i}: new …${a.slice(Math.max(0, i - 60), i + 120)}… old …${b.slice(Math.max(0, i - 60), i + 120)}…`; })());
       }
       const k = await on(dn, () => { const e = document.querySelector('#jeb-panel .jx-kids'); return { hidden: e.hidden, empty: e.innerHTML === '', has: document.getElementById('jeb-panel').classList.contains('jx-has') }; });
       check(k.hidden && k.empty && !k.has, `${t} no list, no heading, no scroll-as-one class`, JSON.stringify(k));

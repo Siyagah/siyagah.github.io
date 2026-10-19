@@ -13,8 +13,9 @@
 
    `--only=90a,90d` runs just those; `--unpatched` serves the v05.28 build as the build under test (so 90a–90c must FAIL). Each ok/FAIL line
    becomes one app-check check. */
+import { z12Words } from './z12-words.mjs';
 import { playwright, serve, seedDB } from './harness.mjs';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -30,7 +31,11 @@ function check(ok, label, detail = '') { results.push({ ok, label }); console.lo
 function makeBase() {
   const dir = mkdtempSync(join(tmpdir(), 't2-base-'));
   const sha = execFileSync('git', ['log', '--format=%H', '-n', '1', '--grep=Merge pull request #206'], { encoding: 'utf8' }).trim(); /* v05.29, the build on main before this round */
+  if (!sha) throw new Error('the v05.29 build ("Merge pull request #206") is not in this clone - fetch more history (git fetch --unshallow)');   /* never compare the build with itself */
   for (const f of ['index.html', 'sw.js', 'manifest.json']) { try { writeFileSync(join(dir, f), execFileSync('git', ['show', `${sha}:${f}`], { encoding: 'buffer', maxBuffer: 1 << 28 })); } catch {} }
+  /* v05.34 (Z12), updated in place by the Architect: the owner's word is "Zab" now ("All Zabs" is narrower than "All pockets"), so the older build gets the same word
+     changes (tools/z12-words.mjs) before it is compared; every other difference still fails. */
+  try { const f = join(dir, 'index.html'); writeFileSync(f, z12Words(readFileSync(f, 'utf8'))); } catch {}
   return dir;
 }
 const pw = await playwright();
@@ -59,6 +64,9 @@ async function open(s, w, h, touch, goto) {
      off for those two sizes. The phone sizes keep it ON: 90a–90c measure its titles and settings too. */
   const sd = seed(); if (w >= 640) sd.theme = Object.assign({}, sd.theme, { zabTicker: { on: false } });
   await ctx.addInitScript((d) => { try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(d)); } catch {} }, sd);
+  /* v05.34 (Z12), updated in place by the Architect: v05.33 (Z11) put a Zab's own note row (`.zn-area`, 44 px) at the top of a leaf Zab's panel, which moves the
+     items below it down; like the band above, it is hidden for the two sizes compared with v05.29. Its own size is checked by 93g, and 90a–90c at the phone sizes keep it. */
+  if (w >= 640) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.zn-area{display:none!important}'; document.head.appendChild(st); }); });
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e));
   page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) errors.push('console: ' + m.text()); });

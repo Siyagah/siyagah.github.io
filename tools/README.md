@@ -319,6 +319,11 @@ assertions miss.
 
 ## Traps in this harness — learned the hard way, round 1
 
+- **A check that compares with an older build must find that build — a shallow clone hides it, and then the check compares the build with
+  itself.** `makeBase()` in a tool runs `git log --grep=…` for the old commit and `git show <sha>:index.html`; with no sha that is
+  `git show :index.html`, the CURRENT file, so "byte-identical to the build before" passes whatever changed. 83c (zab-z8) and 90d (tap-t2) passed
+  that way on v05.33 in a shallow clone while v05.33's note area really did change both. Since v05.34 both `makeBase()`s throw when the commit
+  is missing (`git fetch --unshallow` fixes it). Any new `makeBase()` must do the same.
 - **`DB`, `ST` and `SF` are NOT on `window`.** They are `let`/`const` at the top
   level of a classic script, so they live in the global *lexical* scope:
   `window.DB` is `undefined`, bare `DB` works. Functions declared with

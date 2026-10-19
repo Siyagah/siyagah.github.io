@@ -145,7 +145,8 @@ try {
     await sleep(300);
     let ci = await chipInfo(d, T);
     check(ci && ci.n === '6' && !ci.red, `${t} Tree's chip counts its own 1 open + L1's 2 + L2's 3 = 6 (a done item adds nothing)`, JSON.stringify(ci));
-    check(ci.title.includes('every pocket inside it'), `${t} the chip's title states the rule`, ci.title);
+    check(ci.title.includes('every Zab inside it'),   /* v05.34 · Z12: the title says Zab now; words only */
+      `${t} the chip's title states the rule`, ci.title);
     check(ci.kids, `${t} the ▸ mark is on Tree`);
     const lf = await chipInfo(d, LEAF);
     check(lf.n === '4' && !lf.kids && !lf.title.includes('inside it'), `${t} a pocket with nothing inside counts only itself (4), has no ▸ mark and the plain title`, JSON.stringify(lf));
@@ -182,20 +183,20 @@ try {
     const P = await mkP(d, 'Parent'), C = await mkP(d, 'Child', P);
     const it = await on(d, (p) => jebAddItem(p, 'inside the child'), C);
     const r1 = await on(d, (p) => jebDeletePocket(p), P);
-    check(r1 === false && /holds items or pockets/.test(await toastText(d)) && !!(await pocket(d, P)), `${t} a pocket that holds a pocket cannot be deleted - the toast says "A pocket that holds items or pockets cannot be deleted — move or delete them first"`, await toastText(d));
-    await menuOn(d, vp, P); await menuRow(d, vp, 'Delete pocket'); await sleep(350);
+    check(r1 === false && /holds items or Zabs/.test(await toastText(d))   /* v05.34 · Z12: words only */ && !!(await pocket(d, P)), `${t} a pocket that holds a pocket cannot be deleted - the toast says "A pocket that holds items or pockets cannot be deleted — move or delete them first"`, await toastText(d));
+    await menuOn(d, vp, P); await menuRow(d, vp, 'Delete Zab'); await sleep(350);
     check(!!(await pocket(d, P)) && (await on(d, () => DB.trash.filter((x) => x.type === 'jebPocket').length)) === 0, `${t} ...and the real menu's "🗑 Delete pocket" refuses too (Parent and Child are still there, Trash empty)`);
     const r2 = await on(d, (p) => jebDeletePocket(p), C);
     check(r2 === false && /items/.test(await toastText(d)), `${t} a pocket that holds an item cannot be deleted either`);
     await on(d, (i) => { jebDeleteItem(i); jebRefresh(); }, it);
     /* the child, deleted from its own ⋯ menu inside the parent's panel */
     await openTop(d, vp, P); await tapKid(d, vp, C);
-    await pm(d, vp); await menuRow(d, vp, 'Delete pocket'); await sleep(450);
+    await pm(d, vp); await menuRow(d, vp, 'Delete Zab'); await sleep(450);
     const trC = await on(d, () => DB.trash.filter((x) => x.type === 'jebPocket').map((x) => ({ id: x.id, pid: x.item.id, par: x.item.parentId })));
     check(trC.length === 1 && trC[0].par === P && !(await pocket(d, C)) && (await panelName(d)) === 'Parent', `${t} the empty child goes to Trash (with its parentId); the panel steps up to Parent`, JSON.stringify(trC) + ' ' + (await panelName(d)));
     check((await on(d, (i) => DB.tombstones ? JSON.stringify(DB.tombstones).includes(i) : true, C)), `${t} ...and its tombstone is written`);
     await on(d, () => jebClosePanel());
-    await menuOn(d, vp, P); await menuRow(d, vp, 'Delete pocket'); await sleep(450);
+    await menuOn(d, vp, P); await menuRow(d, vp, 'Delete Zab'); await sleep(450);
     const tr = await on(d, () => DB.trash.filter((x) => x.type === 'jebPocket').map((x) => ({ id: x.id, pid: x.item.id })));
     check(tr.length === 2 && !(await pocket(d, P)), `${t} now Parent is empty and goes to Trash too (2 entries)`, JSON.stringify(tr));
     /* restore: Parent first, then Child - the tree is back */

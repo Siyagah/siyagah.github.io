@@ -88,7 +88,7 @@ try {
         check(g.has && g.w === 52 && g.h === 52 && g.right >= 10 && g.bottom >= 10, `${t} the corner button is there: 52 px round, ${g.right}px from the right edge and ${g.bottom}px from the bottom`, JSON.stringify(g));
         /* v05.32 (Z10): --jeb-h is the room the fixed bottom things leave, so with the scrolling titles band (on by default, 44 px on a phone) it is the BAND's 44, never the bar's 56; it is 0 without the band */
         check(!g.bar && !g.on && g.btnCls && (g.jh === '0px' || g.jh === '44px'), `${t} the bar is not drawn and --jeb-h is 0, or only the titles band's 44 px (${g.jh})`, JSON.stringify(g));
-        const L = 'Zab: your pockets (press and hold to change the layout)';
+        const L = 'Zab: your Zabs (press and hold to change the layout)';   /* v05.34 · Z12: words only */
         check(g.title === L && g.aria === L && g.glyph === '▤', `${t} its title and aria-label read "${L}"; the glyph is the text glyph ▤`, JSON.stringify(g));
         check(+g.z === 142, `${t} z-index 142 (below Attach 9150, menus 9200, modals 10000)`, String(g.z));
         let ov = await overlaps(d);

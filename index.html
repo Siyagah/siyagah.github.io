@@ -23929,7 +23929,7 @@ function _zabPaint(anim){
         +(a.kids?'<button type="button" class="zd-fold" data-zact="fold" aria-expanded="'+open+'" aria-label="'+(open?'Fold':'Unfold')+' the Zabs inside '+nm+'">'+(open?'▾':'▸')+'</button>':'<span class="zd-sp"></span>')
         +'<button type="button" class="zd-nm">'+sw(p)+'<span class="zn">'+nm+'</span></button><span class="zd-ct'+(a.red?' jt-red':'')+'">'+a.n+'</span></div>';
     });
-    h='<div class="zl-bd"></div><div class="zl-dr" role="dialog" aria-label="Your Zabs"><div class="zd-hd"><button type="button" class="zd-act" style="border:none" data-zact="all">▤ All Zabs<span class="zd-ct">'+total+'</span></button></div><div class="zd-list">'+rows+newB('')+'</div></div>';
+    h='<div class="zl-bd"></div><div class="zl-dr" role="dialog" aria-label="Your Zabs"><div class="zd-hd"><button type="button" class="zd-act" style="border:none" data-zact="all">▤ All Zabs <span class="zd-ct">'+total+'</span></button></div><div class="zd-list">'+rows+newB('')+'</div></div>';
   }else if(L==='cols'){
     let path=[], prev=null;
     for(const id of _zabPath){ if(!t.byId.has(id)||(t.eff.get(id)||null)!==prev) break; path.push(id); prev=id; }
