@@ -10532,3 +10532,36 @@ a failing helper, 96d news alone with no items / news off, 96e 44 px + hit box +
 line is gone, and the band is byte-identical on/off only for "My items only" (Mixed now adds headlines). Block 92 unchanged and green (news off is the default).
 
 **Not done / for the owner:** the real helper has not been run against the real sites; a changed news setting reaches the band on its next 1 s tick, not instantly. The full `app-check` is the Architect's.
+
+**Totals (Architect), full app-check on `2137726`:** blocks 1–59 + `self-check` **2332/2332**; blocks 60–96 **5602/5612** (78b, 82e, 86: speed limits on the Architect's container; half 2 re-run after a container restart; 82e measured alternately against `8089dd6`, within main's own spread). Merged as `7a8f442`.
+
+## v05.37 — Z13c: Siyagah's own news service (PCF J50, built by the Architect)
+
+**Why.** The owner set up the Google helper (v05.35) and the app answered "Could not fetch the news: NetworkError when attempting to fetch resource." Opened in a
+signed-in tab the helper answered correctly (`{"at":…,"chans":[]}`); in a private window it answered with Google Drive's "Sorry, unable to open the file at
+present", even after the owner chose "Anyone". The app's request carries no Google sign-in, so the helper could not be used. The owner asked for the way that
+needs the least of them: no helper at all.
+
+- **The service.** `.github/workflows/news.yml` runs at :07/:22/:37/:52 every hour and by hand. `news/fetch.mjs` runs the SAME helper the app hands out
+  (`_newsGs()` read from `index.html`, never a copy) in a Node `vm`, with `UrlFetchApp` served by `curl` (browser User-Agent, 25 s), for the channels in
+  `news/channels.json` (= the app's five defaults, a check holds them equal), and adds `q` (the address asked for) to each answer. The result is published as
+  `news.json`, the only file on the branch `news`: one orphan commit, force-pushed, so the branch never grows. A run where every channel failed publishes
+  nothing (the app keeps the last good headlines). Tried from the Architect's container on 21 Oct: all five channels, 20 headlines each, in 2.4 s.
+- **The app.** `_NEWS_SRV` = `https://raw.githubusercontent.com/Siyagah/siyagah.github.io/news/news.json` (CORS `*`, 5-minute cache; test hook
+  `window.__zabNewsSrv`). `_newsFetch` reads it first and finds a channel by its address (`_newsKey`: trimmed, lower case, no trailing `/`); only channels the
+  service does not carry go to the owner's helper, when an address is set (and every channel does when the service cannot be reached). With no helper, such a
+  channel says "Siyagah's news service does not carry this channel yet". `_zabNews().on` no longer needs a helper address. `_newsNetErr` puts Chrome's "Failed
+  to fetch", Firefox's "NetworkError when attempting to fetch resource." and Safari's "Load failed" in plain words ("it could not be reached").
+- **Settings.** 📰 News says the headlines are "collected every 15 minutes by Siyagah's own news service"; the helper address and 📋 Copy the helper moved into
+  a fold "Optional: your own Google helper" (open when an address is set), "Only for channels you add that Siyagah's news service does not carry yet".
+  The same shape at every width (a fold of 44 px).
+
+**Checks.** Block 97, `tools/zab-news-srv.mjs` (FAKE service + FAKE helper + a fake `curl`): 97a the five channels from the service with no helper, the fold,
+at 390 / 820 / 1440; 97b an added channel to the helper alone, fallback when the service is down; 97c plain words; 97d the band; 97e `news/fetch.mjs` and
+`channels.json`; 97f the wiring. `--unpatched`: **11 of 17 fail**; the 6 that pass are the old helper-only fallback (97b, the same behaviour before and after),
+"nothing in DB", and 97e/97f, which read the repository's files rather than the served build. Blocks 95 and 96 route the service to a 404 so their fake helper
+is asked for every channel exactly as before: 37/37 and 23/23, no assertion changed.
+
+**Not done / for the owner:** a channel the owner adds reaches the band only when it is added to `news/channels.json` (or through their own helper); GitHub
+runs a scheduled job late when it is busy (often 5–20 minutes), so "every 15 minutes" is "about every 15–30"; GitHub stops a scheduled job after 60 days with no
+activity in the repository (this repository is changed most days).

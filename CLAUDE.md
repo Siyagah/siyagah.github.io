@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.36.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.37.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,9 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.37** (21 Oct 2026) — Z13c, Siyagah's own news service (PCF J50; the owner's Google helper would not open for the app: Drive's "unable to open the file"). `.github/workflows/news.yml` (every 15 min) runs `news/fetch.mjs` = the
+  app's own `_newsGs()` in Node `vm` with curl, for `news/channels.json`, and force-pushes `news.json` alone to the branch `news`; the app reads `_NEWS_SRV` (raw.githubusercontent.com) first and asks the helper only for channels the
+  service does not carry. Check: block 97, `tools/zab-news-srv.mjs` (`--unpatched`: 11 of 17 fail). Built by the Architect.
 - **v05.36** (20 Oct 2026) — Z13b, News round 2 of 2: the headlines in the scrolling band (issue #219, PCF J50). `_tkItems` follows `_zabNews().mix` (`items` = the old band byte for byte, `news`, `mix` = a headline after each item);
   a headline is `a.tk-it.tk-nw` (new tab, never `_jebItemMenu`). The band reads a snapshot `_tkNewsRef` of `_newsCache`, renewed only at a round start / a settings change / when there is no band. Check: block 96, `tools/zab-news-band.mjs`
   (`--unpatched`: 15 of 23 fail). Block 95 updated in place (no "next update" line; band byte-identical only for "My items only").
@@ -56,10 +59,6 @@ must never accumulate here instead of there.
 - **v05.34** (20 Oct 2026) — Z12, "Zab" for a pocket on every screen (issue #215, PCF J49, the owner's rule 19 Oct). Words only: every visible "pocket" (labels, menus, titles, aria-labels, placeholders, toasts, Trash,
   `manifest-jeb.json`) says Zab / Zabs; the bottom strip is the "Zab bar"; the default name of a new one is "New Zab". Identifiers, ids, classes and stored keys keep `jeb`/`pocket`. **A new visible string never says pocket.**
   Check: block 94, `tools/zab-words.mjs` (94b sweeps the source). Older checks' expected words updated in place. Built by the builder; finished by the Architect after the run hit its time limit.
-- **v05.33** (19 Oct 2026) — Z11, a Zab's own note (issue #213, PCF J30, owner's choice A). A leaf Zab (or one that already has a note) shows a note area at the top of `#jeb-panel`, above its items; the note is written in the existing
-  pop-up window (`popOutNote`, no second editor) and is a normal note: id `zabn-<pid>`, folder `zab-notes` ("📝 Zab notes"), field `zabNote:{pid}`, found only by `_zabNoteOf(pid)`. Opened and left blank = dropped again. Zab mode shows the
-  window through `.zn-win`. Also: `_tkSync()` waits while `_enxPersist()` writes an import batch. Check: block 93, `tools/zab-note.mjs` (`--unpatched`: 19 of the 34 it reaches fail).
-
 ---
 
 ## What this is
@@ -79,6 +78,7 @@ tools/              the verification harness — see tools/README.md
 legacy/v03.99/      a sealed, frozen build — never edited
 CHANGELOG.md        the full history
 ZAB-PLAN.md         the owner's Zab plan (rename, a Zab-first app, QuranRevival)
+news/               Siyagah's own news service: fetch.mjs + channels.json, run by .github/workflows/news.yml
 ```
 
 It saves in four places: `localStorage`, a linked local file (File System
@@ -543,7 +543,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
 - **News, round 1 (v05.35, Z13a).** `DB.theme.zabNews` (`on url chans per every mix short`; absent = defaults) is read ONLY through `_zabNews()`; `on` is true only with a valid `https://` `url`; `chans` = `[{id,name,src,color,on}]` is an
   array, so for sync it is **one whole key, last write wins** (two devices editing the list at once keep the newer list, not a union). Writers: `zabNewsSet`, `zabNewsUrl`, `zabNewsChan`, `zabNewsAdd`, `zabNewsRemove`. **The helper** is a Google
   Apps Script web app built as text by `_newsGs()` (`String.raw`: its regexes keep their backslashes; no `${` or backtick inside) and run in Node `vm` by block 95e; `doGet(?c=<JSON [{id,src}]>&n=<per>)` → `{at,chans:[{id,ok,name?,src?,items:[{t,s,u,d}],err?}]}`;
-  RSS 2.0, Atom, a site page (alternate link), Telegram `t.me/s/<name>`; browser User-Agent; `CacheService` 5 min. Only channel addresses are sent. The app calls it with a **plain GET** (`fetch(url+'?c=…')`, no headers, no preflight).
+  RSS 2.0, Atom, a site page (alternate link), Telegram `t.me/s/<name>`; browser User-Agent; `CacheService` 5 min. Only channel addresses are sent. The app calls it with a **plain GET** (`fetch(url+'?c=…')`, no headers, no preflight). **Since v05.37 (Z13c) the helper is optional:** `_newsFetch` reads Siyagah's own news service first (`_NEWS_SRV`, the file `news.json` on the branch `news`, written by `.github/workflows/news.yml` → `news/fetch.mjs`, which runs this same helper text; a channel is matched by `q`, its address), and asks the helper only for the rest; `on` no longer needs `url`. A new default channel goes in BOTH `_NEWS_DEF` and `news/channels.json` (block 97e holds them equal).
   **Headlines are never in `DB`:** `_newsCache` (memory) + the device's own database `siyagah-news-v1` (store `kv`, key `last`; never an upgrade of another). `_newsTick()` (5 s timer, `online`/`offline`/`visibilitychange`) fetches when `on` + `url`, visible, online,
   every `every` minutes; a failure shows only in the status line (`_newsStatusText`) and is retried a minute later; 20 s timeout. Steps window: `openNewsHelper()` reuses `#remmail-modal`. Preview: `#nw-status` / `#nw-prev` (`_newsPaint`, in place — typing is never
   repainted); `_cleanExportRoot` empties both. Test hooks: `window.__zabNewsNow` (ms), `window.__zabNewsTimeout` (ms). **In the band (v05.36, Z13b):** `_tkItems` = `_tkNewsList` (round-robin over the switched-on channels, `per` each, `short` adds " — s") merged with `_tkOwnItems` per `mix`; `_tkItems` reads `_tkNewsRef`, a snapshot of `_newsCache`
