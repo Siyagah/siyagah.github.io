@@ -12344,6 +12344,21 @@ await r.block('94-zab-words', async () => {
   r.check(out.status === 0, 'the Z12 check exits cleanly', `exit ${out.status}`);
 });
 
+/* 95 — v05.35, Z13a: News, round 1 — the helper, the settings and fetching (PCF J50). tools/zab-news.mjs runs 95a–95f against a FAKE helper: the 📰 News settings
+   reached by real taps at 390 / 820 / 1440, defaults, persistence and a two-device merge; the preview (colour, per, short, a tap opens the story); fetch timing,
+   failures, offline and the siyagah-news-v1 copy; nothing in DB / the cloud / Save File; the generated Code.gs run in Node vm; 44 px targets. Each ok/FAIL line becomes one check. */
+await r.block('95-zab-news', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-news.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the Z13a check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z13a: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Z13a check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

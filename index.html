@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.34">
+<meta name="app-version" content="05.35">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3886,7 +3886,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.34</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.35</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -5090,6 +5090,9 @@ function _cleanExportRoot(){
     /* 4 ─ Whole nodes some extensions append to the document. */
     root.querySelectorAll('grammarly-extension,[data-grammarly-shadow-root],[class*="recall-"]')
       .forEach(function(el){ el.remove(); });
+    /* 4b ─ v05.35: the News preview (headlines from the net) is never part of a saved copy, even if the Appearance window's markup is in the page. */
+    root.querySelectorAll('#nw-prev').forEach(function(el){ el.innerHTML = ''; });
+    root.querySelectorAll('#nw-status').forEach(function(el){ el.textContent = ''; });
     /* 5 ─ Transient UI that must never be serialised. The drag ghost is the
            important one: it holds a REAL note title, which leaked private
            content into Deploy Export files that are meant to be empty shells. */
@@ -22363,6 +22366,7 @@ function renderThemeModal(){
   h+='<div class="fs-sub" style="margin:-2px 0 8px">The strip of Zabs along the bottom of the screen</div>';
   h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="checkbox" id="th-jebbar"'+(_jebBarOn()?' checked':'')+' onchange="setJebBar(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show Zab bar</label></div>';
   h+=_tkSettingsHTML();   /* v05.32 · Z10 */
+  h+=_newsSettingsHTML();   /* v05.35 · Z13a */
 
   /* Zab on the phone (v05.18, N2) — DB.theme.zabPhoneLayout, absent = rail. Shown on every screen size so it can be set from a laptop. */
   h+='<div class="theme-divider"></div>';
@@ -23827,6 +23831,454 @@ function _tkSettingsHTML(){
   h+='<label style="'+row+'"><input type="checkbox" id="th-tk-done"'+(c.done?' checked':'')+' onchange="zabTkSet(\'done\',this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Include ticked (done) items</label>';
   h+=sel('th-tk-phone','On a phone',c.phone,[['bottom','Along the bottom of the screen'],['none','No band on the phone'],['open','Only while Zab is open']],"zabTkSet('phone',this.value)");
   return h+'</div>';
+}
+/* ══ v05.35 · Z13a — News, round 1: the settings ════════════════════════════════════════════════════════════════════════════
+   DB.theme.zabNews (a plain object, absent = defaults) is read ONLY through _zabNews(). It rides DB.theme like every setting: a scalar key is one whole key,
+   last write wins, and `chans` (an array) is ONE whole key too, so two devices editing the channel list at once keep the newer list, not a union.
+   Headlines are never in DB (see _newsCache below). Round 2 (Z13b) puts them into the band; this round touches nothing in _tkItems / _tkSync. */
+const _NEWS_DEF=[
+  {id:'aljazeera',name:'Al Jazeera',src:'https://www.aljazeera.com/xml/rss/all.xml',color:'#E8A200'},
+  {id:'mee',name:'Middle East Eye',src:'https://www.middleeasteye.net/rss',color:'#2E8B57'},
+  {id:'trt',name:'TRT World',src:'https://www.trtworld.com/feed/rss.xml',color:'#D62839'},
+  {id:'arabnews',name:'Arab News',src:'https://www.arabnews.com/rss.xml',color:'#1E6FD9'},
+  {id:'5pillars',name:'5Pillars',src:'https://5pillarsuk.com/feed',color:'#8E44AD'}
+];
+const _NEWS_PAL=['#00A6A6','#E67E22','#C2185B','#6D4C41','#7F8C8D','#3F51B5','#9C7A00'];
+const _NEWS_PER=[3,5,10,20], _NEWS_EVERY=[15,30,60], _NEWS_MIX=['mix','news','items'];
+function _zabNews(){
+  const s=(DB&&DB.theme&&_isPlainObj(DB.theme.zabNews))?DB.theme.zabNews:{};
+  let chans;
+  if(Array.isArray(s.chans)){
+    const seen=new Set(); chans=[];
+    s.chans.forEach((x,k)=>{
+      if(!_isPlainObj(x)||typeof x.id!=='string'||!x.id||seen.has(x.id)||typeof x.src!=='string'||!/^https?:\/\/\S+$/i.test(x.src.trim())) return;
+      seen.add(x.id);
+      chans.push({id:x.id,name:(typeof x.name==='string'&&x.name.trim())?x.name.trim().slice(0,60):x.src.replace(/^https?:\/\/(www\.)?/i,'').split('/')[0],src:x.src.trim(),
+        color:(typeof x.color==='string'&&/^#[0-9a-f]{6}$/i.test(x.color))?x.color:_NEWS_PAL[k%_NEWS_PAL.length],on:x.on!==false});
+    });
+  }else chans=_NEWS_DEF.map(x=>Object.assign({on:true},x));
+  const url=(typeof s.url==='string'&&/^https:\/\/\S+$/i.test(s.url.trim()))?s.url.trim():'';
+  return {
+    on:s.on===true&&!!url,
+    url,
+    chans,
+    per:_NEWS_PER.includes(s.per)?s.per:20,
+    every:_NEWS_EVERY.includes(s.every)?s.every:15,
+    mix:_NEWS_MIX.includes(s.mix)?s.mix:'mix',
+    short:s.short!==false
+  };
+}
+function zabNewsSet(k,v,quiet){
+  if(!DB.theme) DB.theme={};
+  const cur=_isPlainObj(DB.theme.zabNews)?DB.theme.zabNews:{};
+  DB.theme.zabNews=Object.assign({},cur,{[k]:v});
+  persist();
+  setTimeout(()=>{ if(typeof _newsTick==='function') _newsTick(); },0);
+  if(!quiet&&typeof renderThemeModal==='function') renderThemeModal();
+}
+function zabNewsUrl(v){
+  v=String(v||'').trim();
+  if(v&&!/^https:\/\/\S+$/i.test(v)){ toast('That is not a web address. Paste the address Google gives you at the end of Deploy.'); renderThemeModal(); return; }
+  const cur=_isPlainObj(DB.theme&&DB.theme.zabNews)?DB.theme.zabNews:{};
+  if(!DB.theme) DB.theme={};
+  DB.theme.zabNews=Object.assign({},cur,{url:v},(v&&cur.on===undefined)?{on:true}:{});
+  persist();
+  setTimeout(()=>{ if(typeof _newsTick==='function') _newsTick(); },0);
+  renderThemeModal();
+}
+function zabNewsChan(cid,k,v){
+  const list=_zabNews().chans.map(x=>x.id===cid?Object.assign({},x,{[k]:v}):Object.assign({},x));
+  zabNewsSet('chans',list,k==='color');
+}
+function zabNewsRemove(cid){ zabNewsSet('chans',_zabNews().chans.filter(x=>x.id!==cid)); }
+/* "https://…", "www.site.com", "t.me/name" or "@name" -> {src,name} or null */
+function _newsParseAdd(v){
+  v=String(v||'').trim(); if(!v||/\s/.test(v)) return null;
+  let m;
+  if((m=/^@([A-Za-z][A-Za-z0-9_]{3,})$/.exec(v))) return {src:'https://t.me/'+m[1],name:'@'+m[1]};
+  if(!/^https?:\/\//i.test(v)) v='https://'+v;
+  let u; try{ u=new URL(v); }catch(e){ return null; }
+  if(!/^https?:$/.test(u.protocol)||!/\./.test(u.hostname)) return null;
+  if(/^(www\.)?(t|telegram)\.me$/i.test(u.hostname)){
+    const seg=u.pathname.split('/').filter(Boolean); const nm=(seg[0]==='s'?seg[1]:seg[0])||'';
+    if(!/^[A-Za-z][A-Za-z0-9_]{3,}$/.test(nm)) return null;
+    return {src:'https://t.me/'+nm,name:'@'+nm};
+  }
+  return {src:u.href,name:u.hostname.replace(/^www\./i,'')};
+}
+function zabNewsAdd(){
+  const el=document.getElementById('th-nw-add'); const p=_newsParseAdd(el&&el.value);
+  if(!p){ toast('Paste a site address, a feed address, or a Telegram channel like t.me/name or @name.'); return; }
+  const cur=_zabNews().chans;
+  if(cur.some(x=>x.src===p.src)){ toast('That channel is already in the list.'); return; }
+  const used=new Set(cur.map(x=>x.color.toLowerCase()));
+  const color=_NEWS_PAL.concat(['#FF5722','#009688','#795548']).find(c=>!used.has(c.toLowerCase()))||_NEWS_PAL[cur.length%_NEWS_PAL.length];
+  const id='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  zabNewsSet('chans',cur.map(x=>Object.assign({},x)).concat([{id,name:p.name,src:p.src,color,on:true}]));
+}
+/* the 📰 News section of 🧰 → 🎨 Appearance → 🎞 Scrolling titles */
+function _newsSettingsHTML(){
+  const c=_zabNews(), row='display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:44px;min-width:44px';
+  const cbs='width:24px;height:24px;accent-color:var(--green);flex:none';
+  const sel=(id,label,cur,opts,fn)=>'<label style="'+row+';flex-wrap:wrap"><span style="flex:1;min-width:140px">'+label+'</span><select id="'+id+'" onchange="'+fn+'" style="min-height:44px;min-width:64px;font:inherit;max-width:100%">'
+    +opts.map(o=>'<option value="'+o[0]+'"'+(String(o[0])===String(cur)?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>';
+  let h='<div class="theme-divider"></div><div class="theme-sect" id="th-nw"><div class="theme-sect-lbl">📰 News</div>';
+  h+='<div class="fs-sub" style="margin:-2px 0 8px">Headlines from the news sites you choose, fetched by your own Google helper. Only the channel addresses are sent; nothing about your notes ever leaves Siyagah.</div>';
+  h+='<label style="'+row+'"><input type="checkbox" id="th-nw-on"'+(c.on?' checked':'')+' onchange="zabNewsSet(\'on\',this.checked)" style="'+cbs+'"> Fetch the news</label>';
+  h+='<div class="fs-sub" style="margin:6px 0 4px">Your helper’s address</div>';
+  h+='<input type="url" id="th-nw-url" value="'+esc(c.url)+'" placeholder="https://script.google.com/macros/s/…/exec" onchange="zabNewsUrl(this.value)" style="width:100%;box-sizing:border-box;min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--bd,#ccc);border-radius:8px" aria-label="Helper address" autocomplete="off" spellcheck="false">';
+  h+='<button type="button" class="ls-btn" id="th-nw-copy" style="min-height:44px;margin:6px 0" onclick="openNewsHelper()">📋 Copy the helper</button>';
+  h+='<div class="fs-sub" style="margin:6px 0 2px">Channels</div><div id="th-nw-chans">';
+  c.chans.forEach(x=>{
+    h+='<div class="nw-ch" data-cid="'+esc(x.id)+'" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:44px">'
+      +'<label style="'+row+'"><input type="checkbox" class="nw-con"'+(x.on?' checked':'')+' onchange="zabNewsChan(this.closest(\'.nw-ch\').dataset.cid,\'on\',this.checked)" style="'+cbs+'" aria-label="Show '+esc(x.name)+'"></label>'
+      +'<input type="color" class="nw-col" value="'+esc(x.color)+'" onchange="zabNewsChan(this.closest(\'.nw-ch\').dataset.cid,\'color\',this.value)" style="width:44px;height:44px;padding:2px;border:1px solid var(--bd,#ccc);border-radius:8px;background:none;flex:none" aria-label="Colour of '+esc(x.name)+'">'
+      +'<span class="nw-nm" style="flex:1;min-width:120px;font-size:13.5px;overflow-wrap:anywhere" title="'+esc(x.src)+'">'+esc(x.name)+'</span>'
+      +'<button type="button" class="ls-btn nw-rm" style="min-width:44px;min-height:44px" onclick="zabNewsRemove(this.closest(\'.nw-ch\').dataset.cid)" aria-label="Remove '+esc(x.name)+'">✕</button></div>';
+  });
+  h+='</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><input type="text" id="th-nw-add" placeholder="Site, feed, t.me/name or @name" onkeydown="if(event.key===\'Enter\'){event.preventDefault();zabNewsAdd()}" style="flex:1;min-width:180px;box-sizing:border-box;min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--bd,#ccc);border-radius:8px" aria-label="Add a channel" autocomplete="off" spellcheck="false">'
+    +'<button type="button" class="ls-btn" id="th-nw-addb" style="min-height:44px" onclick="zabNewsAdd()">＋ Add channel</button></div>';
+  h+=sel('th-nw-per','Headlines per channel',c.per,_NEWS_PER.map(n=>[n,n]),"zabNewsSet('per',+this.value)");
+  h+=sel('th-nw-every','Refresh every',c.every,_NEWS_EVERY.map(n=>[n,n+' minutes']),"zabNewsSet('every',+this.value)");
+  h+=sel('th-nw-mix','The band shows',c.mix,[['mix','Items and news mixed'],['news','News only'],['items','My items only']],"zabNewsSet('mix',this.value)");
+  h+='<div class="fs-sub" style="margin:-2px 0 4px">Used by the band from the next update.</div>';
+  h+='<label style="'+row+'"><input type="checkbox" id="th-nw-short"'+(c.short?' checked':'')+' onchange="zabNewsSet(\'short\',this.checked)" style="'+cbs+'"> Show the short line after each headline</label>';
+  h+='<div id="nw-status" class="fs-sub" role="status" style="margin:8px 0 4px">'+esc(typeof _newsStatusText==='function'?_newsStatusText():'')+'</div>';
+  h+='<div id="nw-prev">'+(typeof _newsPreviewHTML==='function'?_newsPreviewHTML():'')+'</div>';
+  return h+'</div>';
+}
+/* ══ v05.35 · Z13a — News, round 1: the helper (text), fetching, the offline copy, the preview ═══════════════════════════════
+   The helper is a Google Apps Script web app the owner pastes once (_newsGs(), String.raw so its regexes keep their backslashes). The app calls it with a
+   plain GET (no custom headers, so no preflight). Headlines live in _newsCache (memory) and in the device's own database siyagah-news-v1 — never in DB,
+   Trash, recs, a backup or Save File (I1). Test hooks: window.__zabNewsNow (ms, replaces Date.now()), window.__zabNewsTimeout (ms). */
+function _newsGs(){
+  return String.raw`/* Siyagah news helper — paste this whole file, save, then Deploy → New deployment → Web app. Nothing about your notes is ever sent here: only channel addresses. */
+var UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+var CACHE_S = 300;
+var MAX_CHANNELS = 40;
+
+function doGet(e) {
+  var p = (e && e.parameter) || {};
+  var list = [];
+  try { list = JSON.parse(p.c || '[]'); } catch (x) { list = []; }
+  if (!Array.isArray(list)) list = [];
+  var n = Math.max(1, Math.min(50, parseInt(p.n, 10) || 10));
+  var out = { at: new Date().toISOString(), chans: [] };
+  list.slice(0, MAX_CHANNELS).forEach(function (c) { out.chans.push(one_(c, n)); });
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function one_(c, n) {
+  var id = String((c && c.id) || '');
+  var src = String((c && c.src) || '').replace(/^\s+|\s+$/g, '');
+  var key = ('nw1|' + n + '|' + src).slice(0, 240);
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (x) { cache = null; }
+  var r = null;
+  try {
+    var hit = cache && cache.get(key);
+    if (hit) r = JSON.parse(hit);
+  } catch (x) { r = null; }
+  if (!r) {
+    try {
+      if (!/^https?:\/\//i.test(src)) throw new Error('that is not a web address');
+      r = /^https?:\/\/(www\.)?(t|telegram)\.me\//i.test(src) ? telegram_(src, n) : feed_(src, n);
+      r.ok = true;
+      try { if (cache) { var s = JSON.stringify(r); if (s.length < 90000) cache.put(key, s, CACHE_S); } } catch (x) { }
+    } catch (err) {
+      r = { ok: false, err: String((err && err.message) || err).slice(0, 200), items: [] };
+    }
+  }
+  var o = { id: id, ok: !!r.ok, items: r.items || [] };
+  if (r.name) o.name = r.name;
+  if (r.src) o.src = r.src;
+  if (r.err) o.err = r.err;
+  return o;
+}
+
+function get_(url) {
+  var res = UrlFetchApp.fetch(url, { headers: { 'User-Agent': UA, 'Accept': 'text/html,application/xhtml+xml,application/xml,application/rss+xml,application/atom+xml;q=0.9,*/*;q=0.8' }, muteHttpExceptions: true, followRedirects: true });
+  var code = res.getResponseCode();
+  if (code < 200 || code >= 300) throw new Error('the site answered ' + code);
+  return res.getContentText();
+}
+
+function dec_(s) {
+  return String(s).replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, function (m, e) {
+    e = e.toLowerCase();
+    if (e === 'amp') return '&';
+    if (e === 'lt') return '<';
+    if (e === 'gt') return '>';
+    if (e === 'quot') return '"';
+    if (e === 'apos') return "'";
+    if (e === 'nbsp') return ' ';
+    var cp = e.charAt(1) === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+    try { return String.fromCodePoint(cp); } catch (x) { return m; }
+  });
+}
+
+function txt_(s) {
+  s = String(s == null ? '' : s).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
+  s = dec_(s).replace(/<br\s*\/?>/gi, ' ').replace(/<\/p>/gi, ' ').replace(/<[^>]*>/g, ' ');
+  return dec_(s).replace(/\s+/g, ' ').replace(/^ | $/g, '');
+}
+
+function cut_(s, n) {
+  if (s.length <= n) return s;
+  var t = s.slice(0, n - 1);
+  var k = t.lastIndexOf(' ');
+  if (k > n * 0.6) t = t.slice(0, k);
+  return t.replace(/[ ,;:.\-]+$/, '') + '\u2026';
+}
+
+function tag_(x, name) {
+  var m = new RegExp('<' + name + '(?:\\s[^>]*)?>([\\s\\S]*?)</' + name + '>', 'i').exec(x);
+  return m ? m[1] : '';
+}
+
+function iso_(s) {
+  var t = Date.parse(txt_(s));
+  return isNaN(t) ? '' : new Date(t).toISOString();
+}
+
+function origin_(u) {
+  var m = /^(https?:\/\/[^\/?#]+)/i.exec(u);
+  return m ? m[1] : '';
+}
+
+function abs_(href, base) {
+  href = dec_(href);
+  if (/^https?:\/\//i.test(href)) return href;
+  if (href.indexOf('//') === 0) return 'https:' + href;
+  if (href.charAt(0) === '/') return origin_(base) + href;
+  return base.replace(/[?#].*$/, '').replace(/[^\/]*$/, '') + href;
+}
+
+function attr_(t, name) {
+  var m = new RegExp('\\b' + name + '\\s*=\\s*("([^"]*)"|\'([^\']*)\')', 'i').exec(t);
+  return m ? (m[2] !== undefined ? m[2] : m[3]) : '';
+}
+
+function parse_(xml, n, base) {
+  var head = xml.split(/<item[\s>]|<entry[\s>]/i)[0];
+  var name = txt_(tag_(head, 'title'));
+  var blocks = xml.match(/<item[\s>][\s\S]*?<\/item>|<entry[\s>][\s\S]*?<\/entry>/gi) || [];
+  var items = [];
+  blocks.forEach(function (b, i) {
+    var t = txt_(tag_(b, 'title'));
+    if (!t) return;
+    var u = '';
+    var lm = /<link>([\s\S]*?)<\/link>/i.exec(b);
+    if (lm) u = txt_(lm[1]);
+    if (!u) {
+      (b.match(/<link\b[^>]*>/gi) || []).forEach(function (l) {
+        var rel = attr_(l, 'rel'), h = attr_(l, 'href');
+        if (!u && h && (!rel || rel === 'alternate')) u = h;
+      });
+    }
+    if (!u) { var g = txt_(tag_(b, 'guid')); if (/^https?:\/\//i.test(g)) u = g; }
+    if (!u) return;
+    u = abs_(u, base);
+    var d = tag_(b, 'pubDate') || tag_(b, 'published') || tag_(b, 'updated') || tag_(b, 'dc:date');
+    var s = txt_(tag_(b, 'description') || tag_(b, 'summary') || tag_(b, 'content:encoded') || tag_(b, 'content'));
+    if (s === t) s = '';
+    items.push({ t: cut_(t, 200), s: cut_(s, 160), u: u, d: iso_(d), i: i });
+  });
+  items.sort(function (a, b) { return (b.d > a.d ? 1 : b.d < a.d ? -1 : 0) || (a.i - b.i); });
+  return { name: name, items: items.slice(0, n).map(function (x) { return { t: x.t, s: x.s, u: x.u, d: x.d }; }) };
+}
+
+function feed_(src, n) {
+  var body = get_(src);
+  var used = src, site = '';
+  if (!/<(rss|feed|rdf:RDF)[\s>]/i.test(body.slice(0, 3000))) {
+    var m = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(body);
+    var og = /<meta[^>]*property\s*=\s*["']og:site_name["'][^>]*>/i.exec(body);
+    site = txt_(og ? attr_(og[0], 'content') : (m ? m[1] : ''));
+    var href = '';
+    (body.match(/<link\b[^>]*>/gi) || []).forEach(function (l) {
+      if (!href && /alternate/i.test(attr_(l, 'rel')) && /(rss|atom)\+xml/i.test(attr_(l, 'type'))) href = attr_(l, 'href');
+    });
+    if (!href) throw new Error('no news feed found at that address');
+    used = abs_(href, src);
+    body = get_(used);
+  }
+  var r = parse_(body, n, used);
+  if (!r.items.length) throw new Error('the feed has no headlines');
+  r.name = site || r.name;
+  r.src = used;
+  return r;
+}
+
+function telegram_(src, n) {
+  var m = /\.me\/(?:s\/)?([A-Za-z0-9_]+)/i.exec(src);
+  if (!m) throw new Error('not a Telegram channel address');
+  var name = m[1];
+  var body = get_('https://t.me/s/' + name);
+  var og = /<meta[^>]*property\s*=\s*["']og:title["'][^>]*>/i.exec(body);
+  var parts = body.split(/data-post\s*=\s*"/i).slice(1);
+  var items = [];
+  parts.forEach(function (p) {
+    var post = p.slice(0, p.indexOf('"'));
+    var tm = /class\s*=\s*"tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)<\/div>/i.exec(p);
+    if (!tm) return;
+    var lines = dec_(tm[1].replace(/<br\s*\/?>/gi, String.fromCharCode(10))).replace(/<[^>]*>/g, '').split(String.fromCharCode(10));
+    lines = lines.map(function (l) { return l.replace(/\s+/g, ' ').replace(/^ | $/g, ''); }).filter(function (l) { return l; });
+    if (!lines.length) return;
+    var dm = /<time[^>]*datetime\s*=\s*"([^"]+)"/i.exec(p);
+    items.push({ t: cut_(lines[0], 200), s: cut_(lines.slice(1).join(' '), 160), u: 'https://t.me/' + post, d: dm ? iso_(dm[1]) : '' });
+  });
+  if (!items.length) throw new Error('no posts found (the channel must be public, with its web preview on)');
+  items.reverse();
+  return { name: og ? txt_(attr_(og[0], 'content')) : '@' + name, items: items.slice(0, n) };
+}
+`;
+}
+const _newsDbName='siyagah-news-v1';
+let _newsCache=null, _newsErr='', _newsBusy=false, _newsLast=-1, _newsSig='', _newsLoaded=false, _newsOffline=false, _newsTm=0;
+function _newsNow(){ const h=window.__zabNewsNow; return typeof h==='number'?h:Date.now(); }
+function _newsIdb(){
+  return new Promise(res=>{
+    try{
+      const rq=indexedDB.open(_newsDbName,1);
+      rq.onupgradeneeded=()=>{ try{ rq.result.createObjectStore('kv'); }catch(e){} };
+      rq.onsuccess=()=>res(rq.result); rq.onerror=()=>res(null); rq.onblocked=()=>res(null);
+    }catch(e){ res(null); }
+  });
+}
+async function _newsIdbPut(v){
+  const d=await _newsIdb(); if(!d) return;
+  try{ const tx=d.transaction('kv','readwrite'); tx.objectStore('kv').put(v,'last'); await new Promise(r=>{ tx.oncomplete=tx.onerror=tx.onabort=()=>r(); }); }catch(e){}
+  try{ d.close(); }catch(e){}
+}
+async function _newsIdbLoad(){
+  const d=await _newsIdb(); if(!d) return null; let v=null;
+  try{ const tx=d.transaction('kv','readonly'), rq=tx.objectStore('kv').get('last'); v=await new Promise(r=>{ rq.onsuccess=()=>r(rq.result||null); rq.onerror=()=>r(null); }); }catch(e){ v=null; }
+  try{ d.close(); }catch(e){}
+  return v;
+}
+function _newsCleanItems(a,per){
+  const s=(v,n)=>String(v==null?'':v).slice(0,n);
+  return (Array.isArray(a)?a:[]).filter(x=>x&&typeof x.t==='string'&&x.t&&typeof x.u==='string'&&/^https?:\/\//i.test(x.u)).slice(0,per).map(x=>({t:s(x.t,300),s:s(x.s,200),u:s(x.u,1000),d:s(x.d,40)}));
+}
+function _newsTime(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } }
+function _newsCount(){
+  if(!_newsCache) return 0; const ids=new Set(_zabNews().chans.filter(x=>x.on).map(x=>x.id)); let n=0;
+  Object.keys(_newsCache.chans).forEach(id=>{ if(ids.has(id)) n+=_newsCache.chans[id].items.length; });
+  return n;
+}
+function _newsStatusText(){
+  const c=_zabNews(), last=_newsCache?('Showing the headlines from '+_newsTime(_newsCache.ts)+'.'):'';
+  if(!c.url) return 'Not set up yet. Copy the helper, follow the steps, then paste its address above.';
+  if(!c.on) return 'The news is switched off.'+(last?' '+last:'');
+  if(_newsOffline) return 'You are offline. '+(last||'No headlines saved on this device yet.');
+  if(_newsErr) return 'Could not fetch the news: '+_newsErr+'. '+(last||'Trying again in a minute.');
+  if(_newsBusy&&!_newsCache) return 'Fetching the news…';
+  if(!_newsCache) return 'Waiting to fetch the news…';
+  let bad=[]; c.chans.forEach(x=>{ const r=_newsCache.chans[x.id]; if(x.on&&r&&!r.ok) bad.push(x.name+' ('+(r.err||'did not answer')+')'); });
+  return 'Last fetched '+_newsTime(_newsCache.ts)+' · '+_newsCount()+' headlines'+(bad.length?' · did not answer: '+bad.join(', '):'');
+}
+function _newsPreviewHTML(){
+  const c=_zabNews(); if(!_newsCache) return '';
+  let h='';
+  c.chans.forEach(x=>{
+    const r=_newsCache.chans[x.id]; if(!x.on||!r||!r.items.length) return;
+    r.items.slice(0,Math.min(5,c.per)).forEach(i=>{
+      h+='<a class="nw-it" href="'+esc(i.u)+'" target="_blank" rel="noopener" style="display:block;min-height:44px;box-sizing:border-box;padding:6px 4px;font-size:13px;line-height:1.35;color:inherit;text-decoration:none;border-bottom:1px solid var(--bd,#e6e6e6);overflow-wrap:anywhere">'
+        +'<span class="nw-dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+esc(x.color)+';margin-right:6px" aria-hidden="true"></span>'
+        +'<b class="nw-cn">'+esc(x.name)+'</b> <span class="nw-t">'+esc(i.t)+'</span>'
+        +(c.short&&i.s?' <span class="nw-s" style="opacity:.7">— '+esc(i.s)+'</span>':'')+'</a>';
+    });
+  });
+  return h;
+}
+function _newsPaint(){
+  const st=document.getElementById('nw-status'); if(st) st.textContent=_newsStatusText();
+  const pv=document.getElementById('nw-prev'); if(pv){ const h=_newsPreviewHTML(); if(pv.innerHTML!==h) pv.innerHTML=h; }
+}
+async function _newsFetch(c){
+  _newsBusy=true; _newsErr=''; _newsPaint();
+  const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(), typeof window.__zabNewsTimeout==='number'?window.__zabNewsTimeout:20000);
+  let ok=false;
+  try{
+    const ch=c.chans.filter(x=>x.on);
+    if(!ch.length) throw new Error('no channel is switched on');
+    const u=c.url+(c.url.indexOf('?')<0?'?':'&')+'c='+encodeURIComponent(JSON.stringify(ch.map(x=>({id:x.id,src:x.src}))))+'&n='+c.per;
+    const r=await fetch(u,{signal:ctl.signal,cache:'no-store'});
+    if(!r.ok) throw new Error('the helper answered '+r.status);
+    const body=await r.text(); let j=null; try{ j=JSON.parse(body); }catch(e){}
+    if(!j||!Array.isArray(j.chans)) throw new Error('that address did not answer like the helper (use the Web app address that ends in /exec)');
+    const prev=_newsCache?_newsCache.chans:{}, out={};
+    ch.forEach(x=>{
+      const g=j.chans.find(y=>y&&y.id===x.id), old=prev[x.id];
+      if(g&&g.ok) out[x.id]={ok:true,name:typeof g.name==='string'?g.name.slice(0,80):'',items:_newsCleanItems(g.items,c.per)};
+      else out[x.id]={ok:false,err:String((g&&g.err)||'no answer').slice(0,120),items:old?old.items:[]};
+    });
+    _newsCache={ts:_newsNow(),chans:out}; ok=true;
+    _newsIdbPut(_newsCache);
+  }catch(e){
+    _newsErr=(e&&e.name==='AbortError')?'the helper took too long to answer':String((e&&e.message)||e).replace(/^TypeError: /,'').replace(/^Failed to fetch$/,'the helper could not be reached').slice(0,160);
+  }
+  clearTimeout(to);
+  _newsLast=ok?_newsNow():_newsNow()-c.every*60000+60000;   /* a failure is tried again in a minute */
+  _newsBusy=false; _newsPaint();
+}
+async function _newsBoot(){
+  _newsLoaded=true;
+  const v=await _newsIdbLoad();
+  if(v&&v.chans&&typeof v.ts==='number'&&!_newsCache){
+    const out={}; Object.keys(v.chans).forEach(id=>{ const r=v.chans[id]; if(r) out[id]={ok:!!r.ok,name:r.name||'',err:r.err||'',items:_newsCleanItems(r.items,50)}; });
+    _newsCache={ts:v.ts,chans:out}; _newsPaint();
+  }
+}
+function _newsTick(){
+  if(typeof DB==='undefined'||!DB||!_dbLoaded) return;
+  if(!_newsLoaded) _newsBoot();
+  const c=_zabNews(), sig=c.on+'|'+c.url+'|'+c.per+'|'+c.chans.filter(x=>x.on).map(x=>x.id+x.src).join(',');
+  if(sig!==_newsSig){ _newsSig=sig; _newsLast=-1; _newsErr=''; }
+  const was=_newsOffline; _newsOffline=navigator.onLine===false;
+  if(was!==_newsOffline) _newsPaint();
+  if(!c.on||!c.url||document.hidden||_newsBusy||_newsOffline) return;
+  if(_newsLast>=0&&_newsNow()-_newsLast<c.every*60000) return;
+  _newsFetch(c);
+}
+setTimeout(_newsTick,1500); setInterval(_newsTick,5000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) _newsTick(); });
+window.addEventListener('online',()=>setTimeout(_newsTick,0)); window.addEventListener('offline',()=>setTimeout(_newsTick,0));
+/* the steps (reuses the reminder-email window: same look, same z-index, over the Zab bar on purpose) */
+function openNewsHelper(){
+  let m=document.getElementById('remmail-modal');
+  if(!m){
+    m=document.createElement('div'); m.id='remmail-modal';
+    m.addEventListener('click',e=>{ if(e.target===m) closeRemindMail(); });
+    m.innerHTML='<div id="remmail-box"></div>';
+    document.body.appendChild(m);
+  }
+  const box=document.getElementById('remmail-box');
+  box.innerHTML='<div class="rm-hd"><div class="rem-title">📰 News helper</div><button class="rem-btn cancel" onclick="closeRemindMail()" aria-label="Close">✕</button></div>'
+    +'<p class="rm-p">A small Google program of your own fetches the headlines for Siyagah. Set it up once (best on a laptop). It never sees your notes.</p>'
+    +'<ol class="rm-steps">'
+    +'<li><button class="rm-big" id="nw-copy-gs" onclick="_newsCopy()">📋 Copy the helper</button></li>'
+    +'<li><button class="rm-big" onclick="window.open(\'https://script.google.com/home/projects/create\',\'_blank\',\'noopener\')">↗ Open Google Apps Script</button> (New project)</li>'
+    +'<li>Select everything in the editor and paste. Press 💾 Save.</li>'
+    +'<li>Press <b>Deploy → New deployment</b>, choose the type <b>Web app</b>.</li>'
+    +'<li>Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b>, then press Deploy.</li>'
+    +'<li>Google asks for permission. It warns “Google hasn’t verified this app” — this is your own helper. Press <b>Advanced → Go to (unsafe) → Allow</b>.</li>'
+    +'<li>Copy the <b>Web app</b> address (it ends in <code>/exec</code>) and paste it into Siyagah, in the box “Your helper’s address”.</li></ol>'
+    +'<div id="rm-fb"></div>';
+  m.classList.add('open');
+}
+async function _newsCopy(){
+  const text=_newsGs();
+  try{
+    if(!navigator.clipboard||!navigator.clipboard.writeText) throw new Error('no clipboard');
+    await navigator.clipboard.writeText(text);
+    toast('📋 Copied');
+  }catch(e){
+    const fb=document.getElementById('rm-fb'); if(!fb) return;
+    fb.innerHTML='<div class="rm-p">Copy did not work here. Select all of this text and copy it:</div><textarea id="rm-fbt" class="rem-inp" rows="8" readonly></textarea>';
+    const t=document.getElementById('rm-fbt'); t.value=text; t.focus(); t.select();
+  }
 }
 /* ══ v05.18 · N2 — Zab on a phone: one corner button and three layouts ═════════
    DB.theme.zabPhoneLayout = 'rail' | 'drawer' | 'cols' | 'bar' (absent = rail). It is the only thing stored; which drawer rows are
