@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.35.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.36.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,9 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.36** (20 Oct 2026) — Z13b, News round 2 of 2: the headlines in the scrolling band (issue #219, PCF J50). `_tkItems` follows `_zabNews().mix` (`items` = the old band byte for byte, `news`, `mix` = a headline after each item);
+  a headline is `a.tk-it.tk-nw` (new tab, never `_jebItemMenu`). The band reads a snapshot `_tkNewsRef` of `_newsCache`, renewed only at a round start / a settings change / when there is no band. Check: block 96, `tools/zab-news-band.mjs`
+  (`--unpatched`: 15 of 23 fail). Block 95 updated in place (no "next update" line; band byte-identical only for "My items only").
 - **v05.35** (20 Oct 2026) — Z13a, News round 1 of 2: the helper, the settings, fetching (issue #217, PCF J50, the owner's answers 19 Oct). 🧰 → 🎨 Appearance gets a **📰 News** section (after 🎞 Scrolling titles): the owner's own Google Apps
   Script helper (`_newsGs()`, pasted once), five default channels + ＋ Add channel (site, feed, `t.me/name`, `@name`), a headline preview. **The band is NOT changed** (round 2, Z13b, v05.36, puts the headlines into `_tkItems`).
   Check: block 95, `tools/zab-news.mjs` (`--unpatched`: 36 of 37 fail). Found by the check: the hidden Appearance markup put headlines into Save File's copy; `_cleanExportRoot` now empties `#nw-prev`.
@@ -56,10 +59,6 @@ must never accumulate here instead of there.
 - **v05.33** (19 Oct 2026) — Z11, a Zab's own note (issue #213, PCF J30, owner's choice A). A leaf Zab (or one that already has a note) shows a note area at the top of `#jeb-panel`, above its items; the note is written in the existing
   pop-up window (`popOutNote`, no second editor) and is a normal note: id `zabn-<pid>`, folder `zab-notes` ("📝 Zab notes"), field `zabNote:{pid}`, found only by `_zabNoteOf(pid)`. Opened and left blank = dropped again. Zab mode shows the
   window through `.zn-win`. Also: `_tkSync()` waits while `_enxPersist()` writes an import batch. Check: block 93, `tools/zab-note.mjs` (`--unpatched`: 19 of the 34 it reaches fail).
-- **v05.32** (18 Oct 2026) — Z10, the scrolling titles band `#zab-tk` above the Zab bar (issue #211, PCF J48, the owner's answers 19 Oct). Titles of Zab items move right to left; speed, pause between rounds, run-for, hours,
-  which Zabs, done items and the phone placement are `DB.theme.zabTicker`, read only through `_zabTk()`; tap a title → `_jebItemMenu` (new top row ☑ Done / ☐ Not done; "Move to pocket" now says "Move to Zab").
-  The band joins BOTH `--jeb-h` lists and a plain class `html.zab-tk` gives everything else its height (34 px; 44 on a phone). On the phone the band is a 44 px tap target. Check: block 92, `tools/zab-ticker.mjs`
-  (`--unpatched`: 63 of 65 fail). Older checks updated in place: jeb-j2 (band off, "Move to Zab"), tap-t2 (band off at 820 / 1440), the other Zab tools' "Move to Zab".
 
 ---
 
@@ -547,7 +546,9 @@ A failing check is a wrong assertion surprisingly often — investigate before
   RSS 2.0, Atom, a site page (alternate link), Telegram `t.me/s/<name>`; browser User-Agent; `CacheService` 5 min. Only channel addresses are sent. The app calls it with a **plain GET** (`fetch(url+'?c=…')`, no headers, no preflight).
   **Headlines are never in `DB`:** `_newsCache` (memory) + the device's own database `siyagah-news-v1` (store `kv`, key `last`; never an upgrade of another). `_newsTick()` (5 s timer, `online`/`offline`/`visibilitychange`) fetches when `on` + `url`, visible, online,
   every `every` minutes; a failure shows only in the status line (`_newsStatusText`) and is retried a minute later; 20 s timeout. Steps window: `openNewsHelper()` reuses `#remmail-modal`. Preview: `#nw-status` / `#nw-prev` (`_newsPaint`, in place — typing is never
-  repainted); `_cleanExportRoot` empties both. Test hooks: `window.__zabNewsNow` (ms), `window.__zabNewsTimeout` (ms). `mix` is stored and shown but used only by round 2.
+  repainted); `_cleanExportRoot` empties both. Test hooks: `window.__zabNewsNow` (ms), `window.__zabNewsTimeout` (ms). **In the band (v05.36, Z13b):** `_tkItems` = `_tkNewsList` (round-robin over the switched-on channels, `per` each, `short` adds " — s") merged with `_tkOwnItems` per `mix`; `_tkItems` reads `_tkNewsRef`, a snapshot of `_newsCache`
+  renewed ONLY by `_tkSync` when the band is absent or a news setting changed (`_tkNewsCfgSig`, seen on the 1 s `_tkTick`) and by `_tkNewsRoundStart()` from `_tkLoop` at a round end — never mid-scroll. A headline is `a.tk-it.tk-nw`
+  (the band's click handler skips it, so it never opens `_jebItemMenu`). A new field of a headline goes in `_tkSync`'s signature.
 - **A Zab's own note (v05.33, Z11).** `_zabNoteOf(pid)` (by `zabNote.pid`, never by title) → the note `zabn-<pid>` (`-2`, `-3`… if that id is tombstoned or in Trash) in folder `zab-notes`, field `zabNote:{pid}`; made by `_zabNoteEnsure` on the first tap, written in `popOutNote`, dropped by `_zabNoteClosed` if left blank. Painted by `_zabNoteHTML` into `.zn-area` (in the panel's repaint signature via `_zabNoteSig`); a Zab deleted keeps its note ("(Zab deleted)").
 - **Evernote import, the dry run (v05.13, S4a — S4b writes notes, S4c pictures, S4d merges earlier imports).** `openEnexImport()` →
   `#enx-modal` (own overlay like `#remmail-modal`: dialog ≥ 640, bottom sheet < 640, z 10060, over the Zab bar on purpose so it is not

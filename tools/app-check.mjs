@@ -12359,6 +12359,21 @@ await r.block('95-zab-news', async () => {
   r.check(out.status === 0, 'the Z13a check exits cleanly', `exit ${out.status}`);
 });
 
+/* 96 — v05.36, Z13b: News, round 2 — the headlines in the scrolling band (PCF J50). tools/zab-news-band.mjs runs 96a–96e against a FAKE helper: the order
+   (Mixed / News only / My items only, per, a channel off), a tap on a headline opens the story and never an item menu (390 / 820 / 1440 / Zab mode), headlines
+   enter at a round start and never mid-scroll, news alone with no items, 44 px targets, nothing in DB. Each ok/FAIL line becomes one check. */
+await r.block('96-zab-news-band', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-news-band.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 14, 'the Z13b check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z13b: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Z13b check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

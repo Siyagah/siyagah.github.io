@@ -114,7 +114,7 @@ if (want('95a')) {
     });
     await T(`${tag} the section lists the channels, the helper address, Copy the helper, Add channel, the pickers and a status line; the page does not scroll sideways`, async () => {
       const r = await p.evaluate(() => { const s = document.getElementById('th-nw'); const m = s.closest('[id*=theme],.theme-modal,.modal-box,div') ; let e = s, sc = null; while (e) { if (e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX !== 'visible' && e !== document.documentElement) { sc = e.id || e.className; break; } e = e.parentElement; }
-        return { rows: s.querySelectorAll('.nw-ch').length, url: !!s.querySelector('#th-nw-url'), copy: !!s.querySelector('#th-nw-copy'), add: !!s.querySelector('#th-nw-addb'), sel: ['th-nw-per', 'th-nw-every', 'th-nw-mix'].every((i) => !!s.querySelector('#' + i)), st: !!s.querySelector('#nw-status'), hint: /next update/.test(s.innerText), side: sc, page: document.documentElement.scrollWidth > innerWidth + 1 }; });
+        return { rows: s.querySelectorAll('.nw-ch').length, url: !!s.querySelector('#th-nw-url'), copy: !!s.querySelector('#th-nw-copy'), add: !!s.querySelector('#th-nw-addb'), sel: ['th-nw-per', 'th-nw-every', 'th-nw-mix'].every((i) => !!s.querySelector('#' + i)), st: !!s.querySelector('#nw-status'), hint: !/next update/.test(s.innerText) /* v05.36: the "Used by the band from the next update" line is gone */, side: sc, page: document.documentElement.scrollWidth > innerWidth + 1 }; });
       return [r.rows === 5 && r.url && r.copy && r.add && r.sel && r.st && r.hint && !r.side && !r.page, JSON.stringify(r)];
     });
     await p.evaluate(() => { const b = document.querySelector('.theme-hd-x,.theme-close,[onclick*="closeTheme"]'); b && b.click(); }).catch(() => {});
@@ -203,8 +203,9 @@ if (want('95b')) {
     const url = pop.url(); await pop.close().catch(() => {});
     return [/^https:\/\/news-story\.test\/aljazeera\/0$/.test(url) && /noopener/.test(rel) && tg === '_blank', url + ' ' + rel + ' ' + tg];
   });
-  await T('95b the scrolling band is byte-identical with news on and off (round 2 changes that)', async () => {
-    const on1 = await bandHtml(p); await p.evaluate(() => zabNewsSet('on', false, true)); await sleep(300); const off = await bandHtml(p); await p.evaluate(() => zabNewsSet('on', true, true));
+  await T('95b the scrolling band is byte-identical with news on and off when the band shows "My items only" (v05.36: Mixed now adds headlines — block 96)', async () => {
+    await p.evaluate(() => zabNewsSet('mix', 'items', true)); await sleep(1400);   /* the band follows a changed setting on its 1 s tick */
+    const on1 = await bandHtml(p); await p.evaluate(() => zabNewsSet('on', false, true)); await sleep(1400); const off = await bandHtml(p); await p.evaluate(() => { zabNewsSet('on', true, true); zabNewsSet('mix', 'mix', true); });
     return [band0.length > 50 && band0 === on1 && on1 === off && !/ZZNEWS/.test(on1), `${band0.length} ${on1.length} ${off.length}`];
   });
   d.ctx.close().catch(() => {});

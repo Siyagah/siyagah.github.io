@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.35">
+<meta name="app-version" content="05.36">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -847,6 +847,8 @@ html.zab-btn #zab-tk .tk-track{height:44px}
 #zab-tk .tk-it{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:100%;min-width:44px;padding:0 4px;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;touch-action:manipulation;white-space:nowrap}
 @media(min-width:640px){#zab-tk .tk-it{min-width:0}}
 #zab-tk .tk-it:hover,#zab-tk .tk-it:focus-visible{background:rgba(255,255,255,.12);outline:none}
+#zab-tk a.tk-it{text-decoration:none}
+#zab-tk .tk-cn{font-weight:700}
 #zab-tk .tk-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 1px rgba(255,255,255,.5)}
 #zab-tk .tk-sep{flex:0 0 auto;padding:0 10px;opacity:.55}
 #zab-tk .tk-pill{position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:2px 9px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;pointer-events:none}
@@ -3886,7 +3888,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.35</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.36</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -23678,7 +23680,36 @@ function _tkState(c){
   if(!_tkHoursOk(c.hours)) return 'off';
   return (c.run&&_tkExpired)?'again':'on';
 }
+/* v05.36 · Z13b — headlines in the band. The band reads a SNAPSHOT of _newsCache (_tkNewsRef) that is renewed only when the band is built
+   from nothing, when the news settings change, and at the start of a round (_tkLoop) — so a fetch never rebuilds the band mid-scroll. */
+let _tkNewsRef=null, _tkNewsCfg='';
+function _tkNewsCfgSig(){ const n=_zabNews(); return n.on+'|'+n.mix+'|'+n.per+'|'+(n.short?1:0)+'|'+n.chans.map(x=>x.id+x.name+x.color+(x.on?1:0)).join(','); }
+/* the headlines to show, round-robin across the switched-on channels, newest first per channel, at most `per` from each; `max` caps the count */
+function _tkNewsList(max){
+  const n=_zabNews(), ref=_tkNewsRef; if(!n.on||n.mix==='items'||!ref||!ref.chans) return [];
+  const cols=n.chans.filter(x=>x.on&&ref.chans[x.id]).map(x=>({x,it:(ref.chans[x.id].items||[]).slice(0,n.per)}));
+  const out=[];
+  for(let k=0;k<n.per&&out.length<max;k++) cols.forEach(o=>{
+    const h=o.it[k]; if(!h||out.length>=max) return;
+    let tx=String(h.t||'').replace(/\s+/g,' ').trim(); if(!tx) return;
+    const sh=n.short?String(h.s||'').replace(/\s+/g,' ').trim():'';
+    if(sh) tx+=' — '+sh;
+    if(tx.length>80) tx=tx.slice(0,79).trimEnd()+'…';
+    out.push({id:'nw|'+o.x.id+'|'+k,news:true,u:h.u,cn:o.x.name,tx,color:o.x.color,icon:'',done:false});
+  });
+  return out;
+}
 function _tkItems(c){
+  const nw=_zabNews(), mixed=nw.on&&nw.mix==='mix', only=nw.on&&nw.mix==='news';
+  if(only) return _tkNewsList(1e9);
+  const own=_tkOwnItems(c);
+  if(!mixed) return own;
+  if(!own.length) return _tkNewsList(1e9);
+  const hl=_tkNewsList(own.length), out=[];
+  own.forEach((i,k)=>{ out.push(i); if(hl[k]) out.push(hl[k]); });
+  return out;
+}
+function _tkOwnItems(c){
   const t=_jebTree(); let ok;
   if(c.mode==='open'){ const sel=_jebPanelSel(), s=new Set(sel?_jebSelIds(sel):[]); ok=id=>s.has(id); }
   else if(c.mode==='only'){ const s=new Set(c.pids); ok=id=>s.has(id); }
@@ -23702,6 +23733,7 @@ function _tkMake(){
   document.body.appendChild(b);
   b.addEventListener('click',e=>{
     const it=e.target.closest&&e.target.closest('.tk-it'); if(!it) return;
+    if(it.classList.contains('tk-nw')) return;   /* a headline is a link (new tab); it never opens an item menu */
     _jebItemMenu(it.dataset.iid,it);
   });
   b.addEventListener('pointerenter',e=>{ if(e.pointerType==='mouse') _tkHover=true; });
@@ -23741,9 +23773,16 @@ function _tkLoop(ts){
   if(_tkX<=-_tkTw){
     if(c.gap>0){ _tkPhase='gap'; _tkGapEnd=_tkNow()+c.gap*1000; }
     _tkX=_tkVw;
+    if(_newsCache!==_tkNewsRef&&_tkNewsRoundStart()){ _tkVw=band.clientWidth; _tkTw=track.offsetWidth; _tkMeasure=false; _tkX=_tkVw; }   /* new headlines enter only here */
     if(c.gap>0){ track.style.transform='translate3d('+(-_tkTw)+'px,0,0)'; return; }
   }
   track.style.transform='translate3d('+_tkX.toFixed(2)+'px,0,0)';
+}
+/* a round has just ended: take the latest headlines; true when the band was rebuilt */
+function _tkNewsRoundStart(){
+  _tkNewsRef=_newsCache;
+  const before=_tkSig; _tkSync();
+  const band=_jebEl('zab-tk'); return !!band&&_tkSig!==before;
 }
 let _tkEnxHold=false, _tkEnxDue=false;   /* v05.33 · Z11 — set by _enxPersist() while an import batch is being written */
 function _tkSync(){
@@ -23751,21 +23790,24 @@ function _tkSync(){
   if(_tkEnxHold){ _tkEnxDue=true; return; }
   const root=document.documentElement, c=_zabTk();
   const key=c.on+'|'+c.run; if(key!==_tkRunKey||_tkRunAt===null){ _tkRunKey=key; _tkRunAt=_tkNow(); _tkExpired=false; }
-  const st=_tkState(c), items=st==='on'?_tkItems(c):[];
   let band=_jebEl('zab-tk');
+  const ncfg=_tkNewsCfgSig(); if(!band||ncfg!==_tkNewsCfg){ _tkNewsRef=_newsCache; } _tkNewsCfg=ncfg;
+  const st=_tkState(c), items=st==='on'?_tkItems(c):[];
   _tkState0=st;
   _tkAgainShow(st==='again');
+  if(!_tkWired){ _tkWired=true; document.addEventListener('visibilitychange',()=>{ _tkLast=0; _tkEnsureLoop(); }); setInterval(_tkTick,1000); }   /* also while there is no band: headlines can arrive later */
   if(st!=='on'||!items.length){ if(band) band.remove(); _tkSig=''; _tkX=null; root.classList.toggle('zab-tk',false); _zabPlace(); return; }
   const rm=_jebReduced();
   if(!band){ band=_tkMake(); _tkSig=''; _tkX=null; _tkPhase='run'; _tkMeasure=true; jebLayout(); }
   root.classList.toggle('zab-tk',true);
   _zabPlace();
   band.classList.toggle('tk-rm',rm);
-  const sig=items.map(i=>i.id+'|'+i.tx+'|'+i.color+'|'+i.icon+'|'+(i.done?1:0)).join('\n')+'#'+(rm?1:0);
+  const sig=items.map(i=>i.id+'|'+i.tx+'|'+i.color+'|'+i.icon+'|'+(i.done?1:0)+(i.news?'|'+i.u+'|'+i.cn:'')).join('\n')+'#'+(rm?1:0);
   if(sig!==_tkSig){
     _tkSig=sig; _tkMeasure=true; _tkCur=-1;
     band.firstChild.innerHTML=items.map((i,k)=>(k?'<span class="tk-sep" aria-hidden="true">•</span>':'')
-      +'<button type="button" class="tk-it" data-iid="'+esc(i.id)+'" title="'+esc(i.tx)+'"><span class="tk-dot" style="background:'+esc(i.color)+'" aria-hidden="true"></span><span aria-hidden="true">'+esc(i.icon)+'</span><span class="tk-tx">'+esc(i.tx)+'</span></button>').join('');
+      +(i.news?'<a class="tk-it tk-nw" href="'+esc(i.u)+'" target="_blank" rel="noopener" title="'+esc(i.cn+': '+i.tx)+'"><span class="tk-dot" style="background:'+esc(i.color)+'" aria-hidden="true"></span><b class="tk-cn">'+esc(i.cn)+'</b><span class="tk-tx">'+esc(i.tx)+'</span></a>'
+      :'<button type="button" class="tk-it" data-iid="'+esc(i.id)+'" title="'+esc(i.tx)+'"><span class="tk-dot" style="background:'+esc(i.color)+'" aria-hidden="true"></span><span aria-hidden="true">'+esc(i.icon)+'</span><span class="tk-tx">'+esc(i.tx)+'</span></button>')).join('');
     if(rm) band.firstChild.style.transform='';
   }
   if(!_tkWired){ _tkWired=true; document.addEventListener('visibilitychange',()=>{ _tkLast=0; _tkEnsureLoop(); }); setInterval(_tkTick,1000); }
@@ -23778,7 +23820,12 @@ function _tkTick(){
   const c=_zabTk();
   if(c.run&&!_tkExpired&&_tkRunAt!==null&&_tkNow()-_tkRunAt>=c.run*60000) _tkExpired=true;
   if(_tkState(c)!==_tkState0){ _tkSync(); return; }
-  const band=_jebEl('zab-tk'); if(!band) return;
+  const band=_jebEl('zab-tk');
+  /* headlines (Z13b): a changed news setting applies at once; a fetch applies when there is no band yet, or (no motion) at once; else at the next round start */
+  const cfgChg=_tkNewsCfgSig()!==_tkNewsCfg, cacheNow=_newsCache!==_tkNewsRef&&(!band||band.classList.contains('tk-rm'));
+  if(cacheNow) _tkNewsRef=_newsCache;
+  if(cfgChg||cacheNow){ _tkSync(); return; }
+  if(!band) return;
   const pill=band.lastChild, pt=_tkPillText(c);
   if(pt!==_tkPill){ _tkPill=pt; pill.textContent=pt; pill.hidden=!pt; }
   if(band.classList.contains('tk-rm')){
@@ -23941,7 +23988,6 @@ function _newsSettingsHTML(){
   h+=sel('th-nw-per','Headlines per channel',c.per,_NEWS_PER.map(n=>[n,n]),"zabNewsSet('per',+this.value)");
   h+=sel('th-nw-every','Refresh every',c.every,_NEWS_EVERY.map(n=>[n,n+' minutes']),"zabNewsSet('every',+this.value)");
   h+=sel('th-nw-mix','The band shows',c.mix,[['mix','Items and news mixed'],['news','News only'],['items','My items only']],"zabNewsSet('mix',this.value)");
-  h+='<div class="fs-sub" style="margin:-2px 0 4px">Used by the band from the next update.</div>';
   h+='<label style="'+row+'"><input type="checkbox" id="th-nw-short"'+(c.short?' checked':'')+' onchange="zabNewsSet(\'short\',this.checked)" style="'+cbs+'"> Show the short line after each headline</label>';
   h+='<div id="nw-status" class="fs-sub" role="status" style="margin:8px 0 4px">'+esc(typeof _newsStatusText==='function'?_newsStatusText():'')+'</div>';
   h+='<div id="nw-prev">'+(typeof _newsPreviewHTML==='function'?_newsPreviewHTML():'')+'</div>';
