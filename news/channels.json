@@ -1,0 +1,27 @@
+[
+ {
+  "id": "aljazeera",
+  "name": "Al Jazeera",
+  "src": "https://www.aljazeera.com/xml/rss/all.xml"
+ },
+ {
+  "id": "mee",
+  "name": "Middle East Eye",
+  "src": "https://www.middleeasteye.net/rss"
+ },
+ {
+  "id": "trt",
+  "name": "TRT World",
+  "src": "https://www.trtworld.com/feed/rss.xml"
+ },
+ {
+  "id": "arabnews",
+  "name": "Arab News",
+  "src": "https://www.arabnews.com/rss.xml"
+ },
+ {
+  "id": "5pillars",
+  "name": "5Pillars",
+  "src": "https://5pillarsuk.com/feed"
+ }
+]

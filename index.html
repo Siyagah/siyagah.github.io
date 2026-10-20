@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.36">
+<meta name="app-version" content="05.37">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3888,7 +3888,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.36</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.37</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -23906,7 +23906,7 @@ function _zabNews(){
   }else chans=_NEWS_DEF.map(x=>Object.assign({on:true},x));
   const url=(typeof s.url==='string'&&/^https:\/\/\S+$/i.test(s.url.trim()))?s.url.trim():'';
   return {
-    on:s.on===true&&!!url,
+    on:s.on===true,
     url,
     chans,
     per:_NEWS_PER.includes(s.per)?s.per:20,
@@ -23970,11 +23970,8 @@ function _newsSettingsHTML(){
   const sel=(id,label,cur,opts,fn)=>'<label style="'+row+';flex-wrap:wrap"><span style="flex:1;min-width:140px">'+label+'</span><select id="'+id+'" onchange="'+fn+'" style="min-height:44px;min-width:64px;font:inherit;max-width:100%">'
     +opts.map(o=>'<option value="'+o[0]+'"'+(String(o[0])===String(cur)?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>';
   let h='<div class="theme-divider"></div><div class="theme-sect" id="th-nw"><div class="theme-sect-lbl">📰 News</div>';
-  h+='<div class="fs-sub" style="margin:-2px 0 8px">Headlines from the news sites you choose, fetched by your own Google helper. Only the channel addresses are sent; nothing about your notes ever leaves Siyagah.</div>';
+  h+='<div class="fs-sub" style="margin:-2px 0 8px">Headlines from the news sites you choose, collected every 15 minutes by Siyagah’s own news service. Nothing about your notes ever leaves Siyagah.</div>';
   h+='<label style="'+row+'"><input type="checkbox" id="th-nw-on"'+(c.on?' checked':'')+' onchange="zabNewsSet(\'on\',this.checked)" style="'+cbs+'"> Fetch the news</label>';
-  h+='<div class="fs-sub" style="margin:6px 0 4px">Your helper’s address</div>';
-  h+='<input type="url" id="th-nw-url" value="'+esc(c.url)+'" placeholder="https://script.google.com/macros/s/…/exec" onchange="zabNewsUrl(this.value)" style="width:100%;box-sizing:border-box;min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--bd,#ccc);border-radius:8px" aria-label="Helper address" autocomplete="off" spellcheck="false">';
-  h+='<button type="button" class="ls-btn" id="th-nw-copy" style="min-height:44px;margin:6px 0" onclick="openNewsHelper()">📋 Copy the helper</button>';
   h+='<div class="fs-sub" style="margin:6px 0 2px">Channels</div><div id="th-nw-chans">';
   c.chans.forEach(x=>{
     h+='<div class="nw-ch" data-cid="'+esc(x.id)+'" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:44px">'
@@ -23985,6 +23982,11 @@ function _newsSettingsHTML(){
   });
   h+='</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><input type="text" id="th-nw-add" placeholder="Site, feed, t.me/name or @name" onkeydown="if(event.key===\'Enter\'){event.preventDefault();zabNewsAdd()}" style="flex:1;min-width:180px;box-sizing:border-box;min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--bd,#ccc);border-radius:8px" aria-label="Add a channel" autocomplete="off" spellcheck="false">'
     +'<button type="button" class="ls-btn" id="th-nw-addb" style="min-height:44px" onclick="zabNewsAdd()">＋ Add channel</button></div>';
+  h+='<details id="th-nw-own" style="margin:8px 0"'+(c.url?' open':'')+'><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:13.5px">Optional: your own Google helper</summary><div class="fs-sub" style="margin:2px 0 4px">Only for channels you add that Siyagah’s news service does not carry yet. Not needed for the five channels above.</div>';
+  h+='<div class="fs-sub" style="margin:6px 0 4px">Your helper’s address</div>';
+  h+='<input type="url" id="th-nw-url" value="'+esc(c.url)+'" placeholder="https://script.google.com/macros/s/…/exec" onchange="zabNewsUrl(this.value)" style="width:100%;box-sizing:border-box;min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--bd,#ccc);border-radius:8px" aria-label="Helper address" autocomplete="off" spellcheck="false">';
+  h+='<button type="button" class="ls-btn" id="th-nw-copy" style="min-height:44px;margin:6px 0" onclick="openNewsHelper()">📋 Copy the helper</button>';
+  h+='</details>';
   h+=sel('th-nw-per','Headlines per channel',c.per,_NEWS_PER.map(n=>[n,n]),"zabNewsSet('per',+this.value)");
   h+=sel('th-nw-every','Refresh every',c.every,_NEWS_EVERY.map(n=>[n,n+' minutes']),"zabNewsSet('every',+this.value)");
   h+=sel('th-nw-mix','The band shows',c.mix,[['mix','Items and news mixed'],['news','News only'],['items','My items only']],"zabNewsSet('mix',this.value)");
@@ -24215,7 +24217,6 @@ function _newsCount(){
 }
 function _newsStatusText(){
   const c=_zabNews(), last=_newsCache?('Showing the headlines from '+_newsTime(_newsCache.ts)+'.'):'';
-  if(!c.url) return 'Not set up yet. Copy the helper, follow the steps, then paste its address above.';
   if(!c.on) return 'The news is switched off.'+(last?' '+last:'');
   if(_newsOffline) return 'You are offline. '+(last||'No headlines saved on this device yet.');
   if(_newsErr) return 'Could not fetch the news: '+_newsErr+'. '+(last||'Trying again in a minute.');
@@ -24242,6 +24243,23 @@ function _newsPaint(){
   const st=document.getElementById('nw-status'); if(st) st.textContent=_newsStatusText();
   const pv=document.getElementById('nw-prev'); if(pv){ const h=_newsPreviewHTML(); if(pv.innerHTML!==h) pv.innerHTML=h; }
 }
+/* v05.37 (Z13c): the headlines come first from Siyagah's own news service, a file news/fetch.mjs writes every 15 minutes
+   (.github/workflows/news.yml, branch `news`), read with a plain GET from raw.githubusercontent.com (CORS *); a channel is found there by the
+   address it was asked for (`q`). The owner's own Google helper, when an address is set, is asked only for the channels the service does not carry. */
+const _NEWS_SRV='https://raw.githubusercontent.com/Siyagah/siyagah.github.io/news/news.json';
+function _newsKey(u){ return String(u||'').trim().replace(/\/+$/,'').toLowerCase(); }
+function _newsNetErr(e){
+  if(e&&e.name==='AbortError') return 'it took too long to answer';
+  const m=String((e&&e.message)||e).replace(/^TypeError: /,'');
+  return /NetworkError|Failed to fetch|Load failed|network/i.test(m)?'it could not be reached':m.slice(0,160);
+}
+async function _newsGet(u,sig,bad){
+  const r=await fetch(u,{signal:sig,cache:'no-store'});
+  if(!r.ok) throw new Error('it answered '+r.status);
+  let j=null; try{ j=JSON.parse(await r.text()); }catch(e){}
+  if(!j||!Array.isArray(j.chans)) throw new Error(bad||'its answer was not news');
+  return j;
+}
 async function _newsFetch(c){
   _newsBusy=true; _newsErr=''; _newsPaint();
   const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(), typeof window.__zabNewsTimeout==='number'?window.__zabNewsTimeout:20000);
@@ -24249,21 +24267,28 @@ async function _newsFetch(c){
   try{
     const ch=c.chans.filter(x=>x.on);
     if(!ch.length) throw new Error('no channel is switched on');
-    const u=c.url+(c.url.indexOf('?')<0?'?':'&')+'c='+encodeURIComponent(JSON.stringify(ch.map(x=>({id:x.id,src:x.src}))))+'&n='+c.per;
-    const r=await fetch(u,{signal:ctl.signal,cache:'no-store'});
-    if(!r.ok) throw new Error('the helper answered '+r.status);
-    const body=await r.text(); let j=null; try{ j=JSON.parse(body); }catch(e){}
-    if(!j||!Array.isArray(j.chans)) throw new Error('that address did not answer like the helper (use the Web app address that ends in /exec)');
+    const got={}, errs=[];
+    let srv=null;
+    try{ srv=await _newsGet(typeof window.__zabNewsSrv==='string'?window.__zabNewsSrv:_NEWS_SRV,ctl.signal); }catch(e){ errs.push('Siyagah’s news service: '+_newsNetErr(e)); }
+    if(srv){ const by={}; srv.chans.forEach(g=>{ if(g&&typeof g.q==='string') by[_newsKey(g.q)]=g; }); ch.forEach(x=>{ const g=by[_newsKey(x.src)]; if(g) got[x.id]=g; }); }
+    const rest=ch.filter(x=>!got[x.id]);
+    if(rest.length&&c.url){
+      try{
+        const j=await _newsGet(c.url+(c.url.indexOf('?')<0?'?':'&')+'c='+encodeURIComponent(JSON.stringify(rest.map(x=>({id:x.id,src:x.src}))))+'&n='+c.per,ctl.signal,'that address did not answer like the helper (use the Web app address that ends in /exec)');
+        rest.forEach(x=>{ const g=j.chans.find(y=>y&&y.id===x.id); if(g) got[x.id]=g; });
+      }catch(e){ errs.push('your Google helper: '+_newsNetErr(e)); }
+    }
+    if(!Object.keys(got).length&&errs.length) throw new Error(errs.join('; '));
     const prev=_newsCache?_newsCache.chans:{}, out={};
     ch.forEach(x=>{
-      const g=j.chans.find(y=>y&&y.id===x.id), old=prev[x.id];
+      const g=got[x.id], old=prev[x.id];
       if(g&&g.ok) out[x.id]={ok:true,name:typeof g.name==='string'?g.name.slice(0,80):'',items:_newsCleanItems(g.items,c.per)};
-      else out[x.id]={ok:false,err:String((g&&g.err)||'no answer').slice(0,120),items:old?old.items:[]};
+      else out[x.id]={ok:false,err:String((g&&g.err)||(errs.length?errs.join('; '):srv?'Siyagah’s news service does not carry this channel yet':'no answer')).slice(0,120),items:old?old.items:[]};
     });
     _newsCache={ts:_newsNow(),chans:out}; ok=true;
     _newsIdbPut(_newsCache);
   }catch(e){
-    _newsErr=(e&&e.name==='AbortError')?'the helper took too long to answer':String((e&&e.message)||e).replace(/^TypeError: /,'').replace(/^Failed to fetch$/,'the helper could not be reached').slice(0,160);
+    _newsErr=String((e&&e.message)||e).slice(0,240);
   }
   clearTimeout(to);
   _newsLast=ok?_newsNow():_newsNow()-c.every*60000+60000;   /* a failure is tried again in a minute */
@@ -24284,7 +24309,7 @@ function _newsTick(){
   if(sig!==_newsSig){ _newsSig=sig; _newsLast=-1; _newsErr=''; }
   const was=_newsOffline; _newsOffline=navigator.onLine===false;
   if(was!==_newsOffline) _newsPaint();
-  if(!c.on||!c.url||document.hidden||_newsBusy||_newsOffline) return;
+  if(!c.on||document.hidden||_newsBusy||_newsOffline) return;
   if(_newsLast>=0&&_newsNow()-_newsLast<c.every*60000) return;
   _newsFetch(c);
 }

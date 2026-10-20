@@ -67,6 +67,9 @@ async function openDev(vp, o = {}) {
   const ctx = await browser.newContext({ viewport: { width: vp.w, height: vp.h }, ...(vp.touch ? { hasTouch: true, isMobile: true } : {}) });
   for (const p of ['**googleapis.com/**', '**gstatic.com/**', '**firebaseapp.com/**', '**firebaseio.com/**']) await ctx.route(p, (r) => r.abort());
   await wireHelper(ctx);
+  /* v05.37 (Z13c): the app asks Siyagah's own news service first; here it is a fake that answers 404, so every channel falls through to the fake helper as before */
+  await ctx.addInitScript(() => { window.__zabNewsSrv = 'https://news-srv.test/news.json'; });
+  await ctx.route('https://news-srv.test/**', (r) => r.fulfill({ status: 404, headers: { 'access-control-allow-origin': '*' }, contentType: 'text/plain', body: 'none' }));
   await ctx.addInitScript((d) => { try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(d)); } catch {} }, o.db || seed());
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e));
