@@ -10517,4 +10517,18 @@ mixing with items (round 2).
 
 ## v05.36 — Z13b: News, round 2 of 2 — the headlines in the scrolling band (issue #219, PCF J50)
 
-*(stub — filled in at the end of the round)*
+The headlines fetched in v05.35 now scroll in the band (`#zab-tk`).
+
+- `_tkItems(c)` follows `_zabNews().mix`: `items` = the band exactly as before (byte-identical); `news` = headlines only; `mix` = one headline after each of your items (round-robin across the switched-on channels, newest first, at most `per`
+  from each); Mixed with no items shows the news alone; with no headlines the band is as v05.35. Your own items are now built by `_tkOwnItems`.
+- A headline is `<a class="tk-it tk-nw" target="_blank" rel="noopener">`: channel colour dot + bold channel name + headline (+ " — short line"), cut at 80 characters like the items. The band's click handler ignores `.tk-nw`, so a headline
+  never opens `_jebItemMenu`; an item still does. 44 px tall like the items on a phone. The rebuild signature carries the link and channel name.
+- **Never mid-scroll:** the band reads a snapshot (`_tkNewsRef`) of `_newsCache`. It is renewed when the band is built from nothing, when a news setting changes (checked on the band's 1 s tick), and at a round start (`_tkLoop`, after the
+  band has scrolled off; remeasured at once). The 1 s timer is now wired even while there is no band, so headlines arriving later can raise it (News only with no Zab items).
+- "Used by the band from the next update." removed. Headlines are still never in `DB`.
+
+**Checks.** Block 96, `tools/zab-news-band.mjs` (FAKE helper): 96a order/per/channel off/short/items-only byte-identical, 96b tap at 390 / 820 / 1440 / Zab mode (popup, no menu; an item still opens its menu), 96c refresh at a round start and
+a failing helper, 96d news alone with no items / news off, 96e 44 px + hit box + no errors + DB untouched. `--unpatched`: **15 of 23 fail** (the 8 that pass describe behaviour that must not change). Block 95 updated in place: the "next update"
+line is gone, and the band is byte-identical on/off only for "My items only" (Mixed now adds headlines). Block 92 unchanged and green (news off is the default).
+
+**Not done / for the owner:** the real helper has not been run against the real sites; a changed news setting reaches the band on its next 1 s tick, not instantly. The full `app-check` is the Architect's.

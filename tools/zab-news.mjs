@@ -204,8 +204,8 @@ if (want('95b')) {
     return [/^https:\/\/news-story\.test\/aljazeera\/0$/.test(url) && /noopener/.test(rel) && tg === '_blank', url + ' ' + rel + ' ' + tg];
   });
   await T('95b the scrolling band is byte-identical with news on and off when the band shows "My items only" (v05.36: Mixed now adds headlines — block 96)', async () => {
-    await p.evaluate(() => zabNewsSet('mix', 'items', true)); await sleep(300);
-    const on1 = await bandHtml(p); await p.evaluate(() => zabNewsSet('on', false, true)); await sleep(300); const off = await bandHtml(p); await p.evaluate(() => { zabNewsSet('on', true, true); zabNewsSet('mix', 'mix', true); });
+    await p.evaluate(() => zabNewsSet('mix', 'items', true)); await sleep(1400);   /* the band follows a changed setting on its 1 s tick */
+    const on1 = await bandHtml(p); await p.evaluate(() => zabNewsSet('on', false, true)); await sleep(1400); const off = await bandHtml(p); await p.evaluate(() => { zabNewsSet('on', true, true); zabNewsSet('mix', 'mix', true); });
     return [band0.length > 50 && band0 === on1 && on1 === off && !/ZZNEWS/.test(on1), `${band0.length} ${on1.length} ${off.length}`];
   });
   d.ctx.close().catch(() => {});
