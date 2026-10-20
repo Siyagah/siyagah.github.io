@@ -10512,3 +10512,9 @@ opens the story, the band identical), 95c fetch (timing, one failing channel, a 
 
 **Not done / for the owner:** the real helper has not been run against the real sites (the check uses a fake one; the owner's first fetch is the real test, and the status line says why if it fails). Not in this round: the band, tap-to-open from the band,
 mixing with items (round 2).
+
+**Totals (Architect), full app-check on `2466f5f`:** blocks 1–59 + `self-check` **2332/2332**; blocks 60–95 **5580/5587** (78b, 82e, 86: speed limits on the Architect's container, also missed on v05.32–v05.34; block 95 all green). Merged as `8089dd6`.
+
+## v05.36 — Z13b: News, round 2 of 2 — the headlines in the scrolling band (issue #219, PCF J50)
+
+*(stub — filled in at the end of the round)*
