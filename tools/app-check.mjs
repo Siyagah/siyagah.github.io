@@ -12374,6 +12374,21 @@ await r.block('96-zab-news-band', async () => {
   r.check(out.status === 0, 'the Z13b check exits cleanly', `exit ${out.status}`);
 });
 
+/* 97 — v05.37, Z13c: Siyagah's own news service (PCF J50). tools/zab-news-srv.mjs runs 97a–97f against a FAKE service file and a FAKE helper: with no helper
+   the five channels come from the service (390 / 820 / 1440), an added channel goes to the helper alone, plain words when the service cannot be reached
+   (Firefox's NetworkError too), the headlines in the band, news/fetch.mjs through a fake curl, news/channels.json = the app's defaults, the news.yml wiring. */
+await r.block('97-zab-news-srv', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-news-srv.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 17, 'the Z13c check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z13c: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Z13c check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
