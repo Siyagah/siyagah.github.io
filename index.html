@@ -23791,10 +23791,11 @@ function _tkSync(){
   const root=document.documentElement, c=_zabTk();
   const key=c.on+'|'+c.run; if(key!==_tkRunKey||_tkRunAt===null){ _tkRunKey=key; _tkRunAt=_tkNow(); _tkExpired=false; }
   let band=_jebEl('zab-tk');
-  const ncfg=_tkNewsCfgSig(); if(!band||ncfg!==_tkNewsCfg||(!_tkNewsRef&&_newsCache)){ _tkNewsRef=_newsCache; } _tkNewsCfg=ncfg;
+  const ncfg=_tkNewsCfgSig(); if(!band||ncfg!==_tkNewsCfg){ _tkNewsRef=_newsCache; } _tkNewsCfg=ncfg;
   const st=_tkState(c), items=st==='on'?_tkItems(c):[];
   _tkState0=st;
   _tkAgainShow(st==='again');
+  if(!_tkWired){ _tkWired=true; document.addEventListener('visibilitychange',()=>{ _tkLast=0; _tkEnsureLoop(); }); setInterval(_tkTick,1000); }   /* also while there is no band: headlines can arrive later */
   if(st!=='on'||!items.length){ if(band) band.remove(); _tkSig=''; _tkX=null; root.classList.toggle('zab-tk',false); _zabPlace(); return; }
   const rm=_jebReduced();
   if(!band){ band=_tkMake(); _tkSig=''; _tkX=null; _tkPhase='run'; _tkMeasure=true; jebLayout(); }
