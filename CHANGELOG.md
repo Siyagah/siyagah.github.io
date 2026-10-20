@@ -10565,3 +10565,20 @@ is asked for every channel exactly as before: 37/37 and 23/23, no assertion chan
 **Not done / for the owner:** a channel the owner adds reaches the band only when it is added to `news/channels.json` (or through their own helper); GitHub
 runs a scheduled job late when it is busy (often 5–20 minutes), so "every 15 minutes" is "about every 15–30"; GitHub stops a scheduled job after 60 days with no
 activity in the repository (this repository is changed most days).
+
+**Totals (Architect), full app-check on `e054b9a`:** blocks 1–59 + `self-check` **2330/2332** (58g keystroke 62 ms vs 57 with both halves running at once; alone 90/90); blocks 60–97 **5623/5631** (78b, 82e: speed limits on the Architect's container, the same set as v05.36). Re-run `--only 58,78` alone 595/597 (78b phone ×4). Merged as `9c81a0a`; the news job's first run on GitHub published all five channels.
+
+## v05.38 — Z14: "🔗 Open link" in an item's menu (PCF J57, built by the Architect)
+
+**Why.** The owner tapped one of their own Zab items in the scrolling band, a saved Facebook address, and got the item menu (☑ Done, ✏️ Edit, 👤 Person…,
+…) with no way to open the address: "where's the open button?". A tap on an item in the band opens its menu by design (v05.32; a headline opens its story).
+
+- `_jebItemMenu` puts **🔗 Open link** first when the item holds a web address: its stored `url` (a Links Zab item), else the first address in its text
+  (`_jebUrlIn`, which drops a trailing full stop or comma). A tap opens it in a new tab (`window.open(…,'_blank','noopener')`, inside the menu's click, so no
+  popup blocker). The menu is the same in the band, the panel and the deck, so every place and every width gets it at once. Nothing is written.
+
+**Checks.** Block 98, `tools/zab-open-link.mjs`: 98a a real tap in the band → menu → 🔗 Open link → the address opens, at 390 / 820 / 1440 / Zab mode; 98b an
+address mid-text, a Links Zab's stored `url`, no row for an item without an address; 98c `DB.jeb` unchanged, no page errors. `--unpatched`: **6 of 9 fail**
+(the 3 that pass: no row without an address, DB unchanged, no errors — all must hold before and after).
+
+**Not done:** an item with several addresses offers only the first.

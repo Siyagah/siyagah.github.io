@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.37.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.38.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,8 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.38** (21 Oct 2026) — Z14, "🔗 Open link" first in `_jebItemMenu` when an item holds a web address (stored `url`, else `_jebUrlIn(text)`); the owner tapped a saved link in the band and had no way to open it (PCF J57).
+  Check: block 98, `tools/zab-open-link.mjs` (`--unpatched`: 6 of 9 fail). Built by the Architect.
 - **v05.37** (21 Oct 2026) — Z13c, Siyagah's own news service (PCF J50; the owner's Google helper would not open for the app: Drive's "unable to open the file"). `.github/workflows/news.yml` (every 15 min) runs `news/fetch.mjs` = the
   app's own `_newsGs()` in Node `vm` with curl, for `news/channels.json`, and force-pushes `news.json` alone to the branch `news`; the app reads `_NEWS_SRV` (raw.githubusercontent.com) first and asks the helper only for channels the
   service does not carry. Check: block 97, `tools/zab-news-srv.mjs` (`--unpatched`: 11 of 17 fail). Built by the Architect.
@@ -56,9 +58,6 @@ must never accumulate here instead of there.
 - **v05.35** (20 Oct 2026) — Z13a, News round 1 of 2: the helper, the settings, fetching (issue #217, PCF J50, the owner's answers 19 Oct). 🧰 → 🎨 Appearance gets a **📰 News** section (after 🎞 Scrolling titles): the owner's own Google Apps
   Script helper (`_newsGs()`, pasted once), five default channels + ＋ Add channel (site, feed, `t.me/name`, `@name`), a headline preview. **The band is NOT changed** (round 2, Z13b, v05.36, puts the headlines into `_tkItems`).
   Check: block 95, `tools/zab-news.mjs` (`--unpatched`: 36 of 37 fail). Found by the check: the hidden Appearance markup put headlines into Save File's copy; `_cleanExportRoot` now empties `#nw-prev`.
-- **v05.34** (20 Oct 2026) — Z12, "Zab" for a pocket on every screen (issue #215, PCF J49, the owner's rule 19 Oct). Words only: every visible "pocket" (labels, menus, titles, aria-labels, placeholders, toasts, Trash,
-  `manifest-jeb.json`) says Zab / Zabs; the bottom strip is the "Zab bar"; the default name of a new one is "New Zab". Identifiers, ids, classes and stored keys keep `jeb`/`pocket`. **A new visible string never says pocket.**
-  Check: block 94, `tools/zab-words.mjs` (94b sweeps the source). Older checks' expected words updated in place. Built by the builder; finished by the Architect after the run hit its time limit.
 ---
 
 ## What this is
