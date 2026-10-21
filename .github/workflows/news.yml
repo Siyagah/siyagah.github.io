@@ -1,7 +1,11 @@
-# Siyagah's own news service (v05.37, Z13c). Every 15 minutes it runs news/fetch.mjs (the app's own news helper, in Node) for the
+# Siyagah's own news service (v05.37, Z13c; loop since 22 Oct). It runs news/fetch.mjs (the app's own news helper, in Node) for the
 # channels in news/channels.json and publishes the answer as news.json, the ONLY file on the branch `news` (one commit, force-pushed,
 # so the branch never grows a history). The app reads it from raw.githubusercontent.com. Nothing about the owner's notes is involved.
-# A run where every channel failed publishes nothing, so the app keeps the last good headlines.
+# A round where every channel failed publishes nothing, so the app keeps the last good headlines.
+#
+# Why a loop: GitHub ran the 15-minute schedule only 3 times in its first 14 hours (about every 5 hours). So ONE run now stays up for
+# about 5.5 hours, fetching every 15 minutes, and then starts the next run itself (a workflow_dispatch made with this run's token).
+# The schedule stays as a back-up that restarts the chain if it ever breaks; the concurrency group lets only one run work at a time.
 name: News
 on:
   schedule:
@@ -9,28 +13,43 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write
 concurrency:
   group: news
   cancel-in-progress: false
 jobs:
   news:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
-      - name: Fetch the headlines
-        run: |
-          node news/fetch.mjs > "$RUNNER_TEMP/news.json"
-          node -e "const j=require(process.argv[1]);if(!j.chans.some(c=>c.ok))process.exit(1)" "$RUNNER_TEMP/news.json"
-      - name: Publish to the news branch
+      - name: Fetch and publish every 15 minutes for about 5.5 hours
         env:
           TOKEN: ${{ github.token }}
         run: |
-          d=$(mktemp -d); cd "$d"
-          git init -q; git checkout -q --orphan news
-          cp "$RUNNER_TEMP/news.json" news.json
-          git add news.json
-          git -c user.name='Siyagah news' -c user.email='news@users.noreply.github.com' commit -qm "news $(date -u +%Y-%m-%dT%H:%MZ)"
-          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" news
+          publish() {
+            d=$(mktemp -d)
+            cp "$RUNNER_TEMP/news.json" "$d/news.json"
+            ( cd "$d"
+              git init -q; git checkout -q --orphan news
+              git add news.json
+              git -c user.name='Siyagah news' -c user.email='news@users.noreply.github.com' commit -qm "news $(date -u +%Y-%m-%dT%H:%MZ)"
+              git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" news
+            )
+            rm -rf "$d"
+          }
+          for i in $(seq 1 22); do
+            if node news/fetch.mjs > "$RUNNER_TEMP/news.json" && node -e "const j=require(process.argv[1]);if(!j.chans.some(c=>c.ok))process.exit(1)" "$RUNNER_TEMP/news.json"; then
+              publish || echo "round $i: publish failed"
+            else
+              echo "round $i: every channel failed; nothing published"
+            fi
+            if [ "$i" -lt 22 ]; then sleep 900; fi
+          done
+      - name: Start the next run
+        if: success() || failure()   # a run cancelled by hand stops the chain; a failed or timed-out one still starts the next
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run news.yml --ref main --repo "$GITHUB_REPOSITORY"

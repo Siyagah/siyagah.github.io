@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.38.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.39.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,8 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.39** (22 Oct 2026) — Z13d, the news job loops: GitHub ran its 15-minute schedule about every 5 hours, so one run of `.github/workflows/news.yml` fetches 22 times, 15 minutes apart,
+  then starts the next itself (`gh workflow run`, `actions: write`); the schedule is the back-up. App unchanged. Check: 97f updated in place.
 - **v05.38** (21 Oct 2026) — Z14, "🔗 Open link" first in `_jebItemMenu` when an item holds a web address (stored `url`, else `_jebUrlIn(text)`); the owner tapped a saved link in the band and had no way to open it (PCF J57).
   Check: block 98, `tools/zab-open-link.mjs` (`--unpatched`: 6 of 9 fail). Built by the Architect.
 - **v05.37** (21 Oct 2026) — Z13c, Siyagah's own news service (PCF J50; the owner's Google helper would not open for the app: Drive's "unable to open the file"). `.github/workflows/news.yml` (every 15 min) runs `news/fetch.mjs` = the
@@ -55,9 +57,6 @@ must never accumulate here instead of there.
 - **v05.36** (20 Oct 2026) — Z13b, News round 2 of 2: the headlines in the scrolling band (issue #219, PCF J50). `_tkItems` follows `_zabNews().mix` (`items` = the old band byte for byte, `news`, `mix` = a headline after each item);
   a headline is `a.tk-it.tk-nw` (new tab, never `_jebItemMenu`). The band reads a snapshot `_tkNewsRef` of `_newsCache`, renewed only at a round start / a settings change / when there is no band. Check: block 96, `tools/zab-news-band.mjs`
   (`--unpatched`: 15 of 23 fail). Block 95 updated in place (no "next update" line; band byte-identical only for "My items only").
-- **v05.35** (20 Oct 2026) — Z13a, News round 1 of 2: the helper, the settings, fetching (issue #217, PCF J50, the owner's answers 19 Oct). 🧰 → 🎨 Appearance gets a **📰 News** section (after 🎞 Scrolling titles): the owner's own Google Apps
-  Script helper (`_newsGs()`, pasted once), five default channels + ＋ Add channel (site, feed, `t.me/name`, `@name`), a headline preview. **The band is NOT changed** (round 2, Z13b, v05.36, puts the headlines into `_tkItems`).
-  Check: block 95, `tools/zab-news.mjs` (`--unpatched`: 36 of 37 fail). Found by the check: the hidden Appearance markup put headlines into Save File's copy; `_cleanExportRoot` now empties `#nw-prev`.
 ---
 
 ## What this is

@@ -10582,3 +10582,22 @@ address mid-text, a Links Zab's stored `url`, no row for an item without an addr
 (the 3 that pass: no row without an address, DB unchanged, no errors — all must hold before and after).
 
 **Not done:** an item with several addresses offers only the first.
+
+**Totals (Architect), full app-check on `da8e9be`:** blocks 1–59 + `self-check` **2332/2332**; blocks 60–98 **5637/5642** (78b phone ×4, 82e ×2: speed limits on the Architect's container, the same set as v05.36/v05.37; half 2 re-run after a container restart). Merged as `9f7d5d2`.
+
+## v05.39 — Z13d: the news service loops every 15 minutes (PCF J50, built by the Architect)
+
+**Why.** In its first 14 hours GitHub ran the news job's 15-minute schedule only 3 times (01:41, 06:37, 12:28 UTC on 21 Oct), so the headlines were up
+to 5 hours old. GitHub starts scheduled runs late or skips them when it is busy, and more so for a new schedule.
+
+- `.github/workflows/news.yml`: ONE run now fetches and publishes 22 times, 15 minutes apart (about 5.5 h; `timeout-minutes: 350`, under the 6 h job
+  limit), then starts the next run itself (`gh workflow run news.yml`, allowed with the run's own token: `actions: write`). It does so after a success or
+  a failure (a timed-out run starts the next too), not after a cancel, so cancelling a run by hand stops the chain. The schedule stays as the back-up that
+  restarts a broken chain; the `news` concurrency group keeps one run working and at most one waiting. A round where every channel failed publishes
+  nothing; a failed push is logged and the loop goes on. Public repository: the minutes cost nothing.
+- The app is unchanged (only the version).
+
+**Checks.** 97f updated in place: it also asks for the loop (`sleep 900`, `gh workflow run news.yml`, `actions: write`, a timeout under 360 minutes, the
+success-or-failure condition). Block 97 17/17.
+
+**Not done:** a channel the owner adds still needs adding to `news/channels.json`.
