@@ -12404,6 +12404,20 @@ await r.block('98-zab-open-link', async () => {
   r.check(out.status === 0, 'the Z14 check exits cleanly', `exit ${out.status}`);
 });
 
+/* 99 — v05.40, Z15: the Zab bar's overflow "▸ N more", ＋ New Zab first, a 📰 News chip and view (PCF J60). tools/zab-bar-more.mjs runs 99a–99e: ＋ New Zab on screen,
+   the fold lists every hidden Zab and keeps the open one, the News view groups fake headlines by channel (390 / 820 / 1440 / Zab mode), the Rail has a News bubble, DB untouched. */
+await r.block('99-zab-bar-more', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-bar-more.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 15, 'the Z15 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z15: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Z15 check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
