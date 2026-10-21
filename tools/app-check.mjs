@@ -12389,6 +12389,21 @@ await r.block('97-zab-news-srv', async () => {
   r.check(out.status === 0, 'the Z13c check exits cleanly', `exit ${out.status}`);
 });
 
+/* 98 — v05.38, Z14: "🔗 Open link" in an item's menu (PCF J57). tools/zab-open-link.mjs runs 98a–98c: a real tap on a link item in the band opens its menu with
+   "🔗 Open link" first and a tap on that opens the address (390 / 820 / 1440 / Zab mode); an address mid-text, a Links Zab's stored url, no row without an address;
+   DB untouched. */
+await r.block('98-zab-open-link', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-open-link.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 9, 'the Z14 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'Z14: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the Z14 check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
