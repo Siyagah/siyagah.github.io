@@ -24838,26 +24838,31 @@ let _jebFoldKey='', _jebFoldRO=null;
 function _jebFoldBar(bar){
   if(!bar||_zxDrag) return;
   const more=bar.querySelector('.jeb-more'), chips=[...bar.querySelectorAll(':scope>.jeb-chip[data-pid]')];
-  if(!more){ chips.forEach(c=>c.classList.remove('jx-over')); return; }
+  if(!more){ bar.querySelectorAll(':scope>.jx-over').forEach(c=>c.classList.remove('jx-over')); return; }
   const w=bar.clientWidth; if(!w) return;
   const key=w+'|'+_jebBarSig; if(key===_jebFoldKey) return; _jebFoldKey=key;
   if(!_jebFoldRO&&window.ResizeObserver){ try{ _jebFoldRO=new ResizeObserver(()=>{ const b=_jebEl('jeb-bar'); if(b) _jebFoldBar(b); }); _jebFoldRO.observe(bar); }catch(e){} }
-  chips.forEach(c=>c.classList.remove('jx-over')); more.hidden=true;
+  bar.querySelectorAll(':scope>.jx-over').forEach(c=>c.classList.remove('jx-over')); more.hidden=true;
   if(bar.scrollWidth<=bar.clientWidth+1) return;
   more.hidden=false; more.querySelector('.jeb-nm').textContent='▸ '+chips.length+' more';
   const openRoot=(_jebOpen&&_jebOpen!=='*')?((jebPath(_jebOpen)[0]||{}).id||_jebOpen):null;
-  const hid=[];
-  for(let k=chips.length-1;k>=0&&bar.scrollWidth>bar.clientWidth+1;k--){ if(chips[k].dataset.pid===openRoot) continue; chips[k].classList.add('jx-over'); hid.push(chips[k]); }
+  const hid=[], over=()=>bar.scrollWidth>bar.clientWidth+1;
+  for(let k=chips.length-1;k>=0&&over();k--){ if(chips[k].dataset.pid===openRoot) continue; chips[k].classList.add('jx-over'); hid.push(chips[k]); }
+  /* last resort, only when every Zab chip that may go has gone and the row still does not fit (a phone): 📰 News, then All Zabs, move into the list too */
+  [bar.querySelector(':scope>.jeb-nws'),bar.querySelector(':scope>.jeb-all')].forEach(e=>{ if(e&&over()){ e.classList.add('jx-over'); hid.push(e); } });
   let sum=0, red=false;
-  hid.forEach(c=>{ const ct=c.querySelector('.jeb-main>.jeb-ct'); sum+=parseInt(ct&&ct.textContent,10)||0; if(ct&&ct.classList.contains('jt-red')) red=true; });
+  hid.forEach(c=>{ if(!c.dataset.pid) return; const ct=c.querySelector('.jeb-main>.jeb-ct'); sum+=parseInt(ct&&ct.textContent,10)||0; if(ct&&ct.classList.contains('jt-red')) red=true; });
   more.querySelector('.jeb-nm').textContent='▸ '+hid.length+' more';
   const ct=more.querySelector('.jeb-ct'); ct.textContent=sum; ct.classList.toggle('jt-red',red);
   more.title=hid.length+' more Zab'+(hid.length===1?'':'s')+' — tap to list them';
 }
 function _jebMoreMenu(anchor){
   const bar=_jebEl('jeb-bar'); if(!bar) return;
-  const rows=[...bar.querySelectorAll(':scope>.jeb-chip.jx-over[data-pid]')].map(c=>{
-    const p=_jebPocket(c.dataset.pid); if(!p) return null; const ct=c.querySelector('.jeb-main>.jeb-ct');
+  const rows=[...bar.querySelectorAll(':scope>.jeb-chip.jx-over')].map(c=>{
+    const ct=c.querySelector('.jeb-main>.jeb-ct');
+    if(c.dataset.news) return {t:'📰 News  ·  '+(ct?ct.textContent:'0'),f:()=>_newsViewOpen()};
+    if(c.dataset.all) return {t:'▤ All Zabs  ·  '+(ct?ct.textContent:'0'),f:()=>jebToggleAllPanel()};
+    const p=_jebPocket(c.dataset.pid); if(!p) return null;
     return {t:p.icon+' '+p.name+'  ·  '+(ct?ct.textContent:'0'),f:()=>jebTogglePanel(p.id)};
   }).filter(Boolean);
   if(rows.length) _jebShowMenu(rows,anchor);

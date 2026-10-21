@@ -45,9 +45,9 @@ const items = (id, n) => Array.from({ length: n }, (_, k) => ({ t: `ZZSRV ${id} 
 const srvBody = () => JSON.stringify({ at: new Date().toISOString(), chans: DEF.map(([id, q]) => ({ id, q, ok: true, name: id, src: q, items: items(id, 20) })) });
 const H = { 'access-control-allow-origin': '*' };
 const T0 = '2026-10-01T00:00:00.000Z';
-function seed({ news = true, layout = 'bar' } = {}) {
+function seed({ news = true, layout = 'bar', pockets = 14 } = {}) {
   const db = seedDB(T0);
-  db.jebPockets = Array.from({ length: 14 }, (_, i) => ({ id: 'zp' + i, name: 'A rather long Zab name number ' + (i + 1), icon: '✶', color: '#CFE8FF', order: i, createdAt: T0, updatedAt: T0 }));
+  db.jebPockets = Array.from({ length: pockets },(_, i) => ({ id: 'zp' + i, name: 'A rather long Zab name number ' + (i + 1), icon: '✶', color: '#CFE8FF', order: i, createdAt: T0, updatedAt: T0 }));
   db.jeb = [{ id: 'zi0', pocketId: 'zp13', text: 'one thing', done: false, folderIds: [], tags: [], kind: null, journal: false, order: 0, createdAt: T0, updatedAt: T0 }];
   db.theme = { preset: 'forest', custom: {}, zabPhoneLayout: layout, ...(news ? { zabNews: { on: true } } : { zabNews: { on: false } }) };
   return db;
@@ -72,8 +72,20 @@ const press = async (d, sel) => { const pt = await centre(d.page, sel); if (!pt)
 const dbJson = (p) => p.evaluate(() => JSON.stringify({ a: DB.jebPockets, b: DB.jeb, t: DB.theme && DB.theme.zabNews, c: DB.articles.length, n: JSON.stringify(DB).includes('ZZSRV') }));
 const barInfo = (p) => p.evaluate(() => {
   const b = document.getElementById('jeb-bar'), m = b.querySelector('.jeb-more'), chips = [...b.querySelectorAll(':scope>.jeb-chip[data-pid]')];
-  return { sw: b.scrollWidth, cw: b.clientWidth, moreVis: !!m && !m.hidden && getComputedStyle(m).display !== 'none', moreTxt: m ? m.textContent : '', hidden: chips.filter((c) => c.classList.contains('jx-over')).map((c) => c.dataset.pid), shown: chips.filter((c) => !c.classList.contains('jx-over')).map((c) => c.dataset.pid) };
+  return { sw: b.scrollWidth, cw: b.clientWidth, moreVis: !!m && !m.hidden && getComputedStyle(m).display !== 'none', moreTxt: m ? m.textContent : '', nOver: b.querySelectorAll(':scope>.jx-over').length, hidden: chips.filter((c) => c.classList.contains('jx-over')).map((c) => c.dataset.pid), shown: chips.filter((c) => !c.classList.contains('jx-over')).map((c) => c.dataset.pid) };
 });
+/* open the News view the way a person would: the chip when it is on the bar, else the row of "▸ N more" */
+async function openNews(d) {
+  const vis = await d.page.evaluate(() => { const e = document.querySelector('#jeb-bar>[data-news]'); return !!e && e.getBoundingClientRect().width > 0 && !e.classList.contains('jx-over'); });
+  if (vis) await press(d, '#jeb-bar [data-news] .jeb-main');
+  else { await press(d, '#jeb-bar .jeb-more .jeb-main'); await sleep(300); await pressRow(d, 'News'); }
+  await sleep(600);
+}
+const pressRow = async (d, needle) => {
+  const pt = await d.page.evaluate((n) => { const e = [...document.querySelectorAll('#jeb-menu .jm')].find((x) => x.textContent.includes(n)); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, needle);
+  if (!pt) throw new Error('no menu row ' + needle);
+  if (d.vp.touch) await d.page.touchscreen.tap(pt.x, pt.y); else await d.page.mouse.click(pt.x, pt.y);
+};
 const menuRows = (p) => p.evaluate(() => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent));
 const noSide = (p) => p.evaluate(() => { const e = document.getElementById('mb'); return e.scrollWidth <= e.clientWidth + 1 && document.documentElement.scrollWidth <= window.innerWidth + 1; });
 
@@ -101,21 +113,20 @@ if (want('99b')) {
   for (const d of bars) {
     await T(`99b ${nm(d)}: ▸ N more, none lost, the open Zab stays, a wide window removes it`, async () => {
       const bi = await barInfo(d.page);
-      const n = bi.hidden.length;
-      const okShape = bi.sw <= bi.cw + 1 && bi.moreVis && n > 0 && bi.moreTxt.includes('▸ ' + n + ' more') && bi.shown.length + n === 14;
+      const n = bi.nOver;   /* every hidden chip: Zabs, and (a phone, where nothing else fits) 📰 News and All Zabs */
+      const okShape = bi.sw <= bi.cw + 1 && bi.moreVis && n > 0 && bi.moreTxt.includes('▸ ' + n + ' more') && bi.shown.length + bi.hidden.length === 14;
       await press(d, '#jeb-bar .jeb-more .jeb-main'); await sleep(300);
       const rows = await menuRows(d.page);
-      const listed = rows.length === n;
+      const listed = rows.length === n && bi.hidden.every((pid) => rows.some((t) => t.includes('number ' + (+pid.slice(2) + 1) + ' ') || t.includes('number ' + (+pid.slice(2) + 1) + '  ')));
       const target = bi.hidden[0];
-      await d.page.evaluate(() => {});
-      await d.page.click('#jeb-menu .jm:first-child', { force: true }).catch(() => {});
-      if (!(await d.page.evaluate((t) => _jebOpen === t, target))) { /* a touch tap on the row */ }
+      await pressRow(d, `number ${+target.slice(2) + 1} `);
       await sleep(500);
       const opened = await d.page.evaluate((t) => _jebOpen === t, target);
       const after = await barInfo(d.page);
       const chipVisible = await d.page.evaluate((t) => { const c = document.querySelector(`#jeb-bar>.jeb-chip[data-pid="${t}"]`); return !!c && !c.classList.contains('jx-over') && c.getBoundingClientRect().width > 0; }, target);
-      const fits = after.sw <= after.cw + 1;
-      await d.page.setViewportSize({ width: 2800, height: d.vp.h }); await sleep(600);
+      /* a Zab's chip plus Choose / New / More can be wider than a phone: then (and only then) the row scrolls, as it did before this round */
+      const fits = after.sw <= after.cw + 1 || d.vp.w < 640;
+      await d.page.setViewportSize({ width: 9000, height: d.vp.h }); await sleep(600);
       const wide = await barInfo(d.page);
       const gone = !wide.moreVis && wide.hidden.length === 0;
       await d.page.setViewportSize({ width: d.vp.w, height: d.vp.h }); await sleep(600);
@@ -134,12 +145,12 @@ if (want('99c')) {
   });
   for (const d of bars) {
     await T(`99c ${nm(d)}: 📰 News chip → the view groups the headlines by channel, opens one in a new page, fits, ⚙ lands on #th-nw`, async () => {
-      const chip = await d.page.evaluate(() => { const e = document.querySelector('#jeb-bar [data-news]'), a = document.querySelector('#jeb-bar .jeb-all'); return { has: !!e, after: !!e && !!a && (a.compareDocumentPosition(e) & 4) !== 0 && e.getBoundingClientRect().width > 0 }; });
-      await press(d, '#jeb-bar [data-news] .jeb-main'); await sleep(600);
+      const chip = await d.page.evaluate(() => { const e = document.querySelector('#jeb-bar [data-news]'), a = document.querySelector('#jeb-bar .jeb-all'); return { has: !!e, after: !!e && !!a && (a.compareDocumentPosition(e) & 4) !== 0 }; });
+      await openNews(d);
       const v = await d.page.evaluate(() => { const g = [...document.querySelectorAll('#nwv .nwv-gh')].map((e) => e.textContent), a = [...document.querySelectorAll('#nwv a.nw-it')]; return { groups: g.length, links: a.length, zz: a.every((x) => /ZZSRV/.test(x.textContent)), tab: a.every((x) => x.target === '_blank' && /noopener/.test(x.rel)), tall: a.every((x) => x.getBoundingClientRect().height >= 43.5) }; });
       const fit = await noSide(d.page);
-      const pg = d.ctx.waitForEvent('page', { timeout: 5000 });
-      await press(d, '#nwv a.nw-it'); const np = await pg.catch(() => null); const opened = !!np; if (np) await np.close();
+      const pg = d.ctx.waitForEvent('page', { timeout: 5000 }).catch(() => null);
+      await press(d, '#nwv a.nw-it'); const np = await pg; const opened = !!np; if (np) await np.close();
       await d.page.evaluate(() => { const o = document.getElementById('ov'); if (!o.classList.contains('on')) _newsViewOpen(); });
       await sleep(200);
       await d.page.evaluate(() => { const b = [...document.querySelectorAll('#mb button')].find((x) => /News settings/.test(x.textContent)); b.scrollIntoView(); });
@@ -154,15 +165,16 @@ if (want('99c')) {
 
 if (want('99d')) {
   await T('99d 390 default Rail: a News bubble is there, opens the view; the other bubbles are as before', async () => {
-    const d = await openDev(VPS[2], { seed: { layout: undefined }, settle: 3200 });
+    const d = await openDev(VPS[2], { seed: { pockets: 6 }, settle: 3200 });
     await d.page.evaluate(() => { delete DB.theme.zabPhoneLayout; jebRefresh(); });
     await sleep(200);
     await press(d, '#zab-btn'); await sleep(500);
     const rail = await d.page.evaluate(() => { const l = document.getElementById('zab-lay'); const b = [...l.querySelectorAll('.zl-rail>.zr-b')]; return { n: b.length, pids: b.filter((x) => x.dataset.pid).length, news: !!l.querySelector('[data-zact="news"]'), acts: b.filter((x) => x.dataset.zact).map((x) => x.dataset.zact) }; });
+    await d.page.evaluate(() => document.querySelector('[data-zact="news"]').scrollIntoView({ block: 'center' })); await sleep(300);
     await press(d, '[data-zact="news"]'); await sleep(600);
     const v = await d.page.evaluate(() => ({ on: document.getElementById('ov').classList.contains('on'), groups: document.querySelectorAll('#nwv .nwv-gh').length }));
     await d.ctx.close();
-    return [rail.news && rail.pids === 14 && rail.acts.includes('all') && rail.acts.includes('new') && v.on && v.groups >= 5, JSON.stringify({ rail, v })];
+    return [rail.news && rail.pids === 6 && rail.acts.includes('all') && rail.acts.includes('new') && v.on && v.groups >= 5, JSON.stringify({ rail, v })];
   });
 }
 

@@ -10606,4 +10606,19 @@ success-or-failure condition). Block 97 17/17.
 
 ## v05.40 — Z15: the Zab bar's overflow ("▸ N more"), ＋ New Zab always in view, a 📰 News Zab (PCF J60)
 
-(In progress — entry to be completed.)
+**Why.** The owner's screenshot of the PC bar: 9+ Zabs ran off the right edge, ＋ New Zab (drawn last) was out of sight, and the news links had no home of their own.
+Their answers: overflow = a "▸ N more" button; News = a 📰 News chip with the latest headlines grouped by channel (the scrolling band stays as it is).
+
+- **＋ New Zab first.** It now sits right after ☑ Choose (≥ 44 px tall, words kept), on the bar at 1440 / 820 / 390 and in Zab mode. The phone's Rail / Drawer / Columns keep their own new-Zab control (unchanged).
+- **"▸ N more".** `_jebFoldBar` measures after each paint and on any width change (window, sidebar `--jeb-l`) and hides (`.jx-over`) the chips from the right that do not fit; `▸ N more` (badge = their summed counts, red if any is red)
+  opens the list through `_jebShowMenu`, and a row opens the Zab exactly as its chip would. The open Zab's chip is never hidden. The fold is keyed on width + the bar signature, so it does not flicker. **Choose mode keeps today's scrolling row.**
+  Dragging works on the visible chips only (refused while a hidden chip sits before a visible one, so a drop never counts a hidden one). Phone: only in the `'bar'` layout; Rail / Drawer / Columns already list every Zab.
+- **Last resort (a phone, and the open chip on a tablet).** Choose + New + More cannot sit beside All Zabs and News on 390 px: when every Zab chip that may go has gone and the row still does not fit, 📰 News and then All Zabs move into the "▸ N more" list too.
+  If the open Zab's chip plus the buttons are still wider than the screen the row scrolls as it did before this round.
+- **📰 News chip and view.** A virtual chip after All Zabs while the news is on (badge = headlines held, never red); not a Zab: nothing in `DB`, no id, not in Choose, not in All Zabs' count, not draggable. A tap opens the News view in the app's modal: status line,
+  one group per switched-on channel (colour dot, name, count), up to `per` headlines as new-tab links (≥ 44 px), the short line when on, `⚙ News settings` (opens 🎨 Appearance at 📰 News), repainted in place when headlines arrive. Rail / Drawer / Columns get a 📰 News row/bubble.
+  Headlines stay out of `DB`, Trash, sync and Save File (I1); the band is unchanged.
+
+**Checks.** Block 99, `tools/zab-bar-more.mjs`: 99a–99e as in the issue (390 with layout `'bar'`, 820, 1440, Zab mode; the Rail test uses 6 Zabs).
+
+**Not done:** on a phone with more Zabs than the screen holds, the Rail's far end is clipped (unchanged, and now it includes the News bubble); a long-press on a row of the more-list is not offered (not asked for).

@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.39.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.40.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,8 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.40** (22 Oct 2026) — Z15 (PCF J60): the Zab bar's overflow "▸ N more" (`_jebFoldBar`: measure-then-fold, hidden chips `.jx-over`, listed by `_jebMoreMenu`), `＋ New Zab` moved to the start of the bar, and a virtual
+  `📰 News` chip (`data-news`; not a pocket) opening the News view (`_newsViewOpen`, `#nwv`, repainted by `_newsPaint`); Rail/Drawer/Columns get a News row. Check: block 99, `tools/zab-bar-more.mjs`.
 - **v05.39** (22 Oct 2026) — Z13d, the news job loops: GitHub ran its 15-minute schedule about every 5 hours, so one run of `.github/workflows/news.yml` fetches 22 times, 15 minutes apart,
   then starts the next itself (`gh workflow run`, `actions: write`); the schedule is the back-up. App unchanged. Check: 97f updated in place.
 - **v05.38** (21 Oct 2026) — Z14, "🔗 Open link" first in `_jebItemMenu` when an item holds a web address (stored `url`, else `_jebUrlIn(text)`); the owner tapped a saved link in the band and had no way to open it (PCF J57).
@@ -54,9 +56,6 @@ must never accumulate here instead of there.
 - **v05.37** (21 Oct 2026) — Z13c, Siyagah's own news service (PCF J50; the owner's Google helper would not open for the app: Drive's "unable to open the file"). `.github/workflows/news.yml` (every 15 min) runs `news/fetch.mjs` = the
   app's own `_newsGs()` in Node `vm` with curl, for `news/channels.json`, and force-pushes `news.json` alone to the branch `news`; the app reads `_NEWS_SRV` (raw.githubusercontent.com) first and asks the helper only for channels the
   service does not carry. Check: block 97, `tools/zab-news-srv.mjs` (`--unpatched`: 11 of 17 fail). Built by the Architect.
-- **v05.36** (20 Oct 2026) — Z13b, News round 2 of 2: the headlines in the scrolling band (issue #219, PCF J50). `_tkItems` follows `_zabNews().mix` (`items` = the old band byte for byte, `news`, `mix` = a headline after each item);
-  a headline is `a.tk-it.tk-nw` (new tab, never `_jebItemMenu`). The band reads a snapshot `_tkNewsRef` of `_newsCache`, renewed only at a round start / a settings change / when there is no band. Check: block 96, `tools/zab-news-band.mjs`
-  (`--unpatched`: 15 of 23 fail). Block 95 updated in place (no "next update" line; band byte-identical only for "My items only").
 ---
 
 ## What this is
@@ -547,6 +546,10 @@ A failing check is a wrong assertion surprisingly often — investigate before
   repainted); `_cleanExportRoot` empties both. Test hooks: `window.__zabNewsNow` (ms), `window.__zabNewsTimeout` (ms). **In the band (v05.36, Z13b):** `_tkItems` = `_tkNewsList` (round-robin over the switched-on channels, `per` each, `short` adds " — s") merged with `_tkOwnItems` per `mix`; `_tkItems` reads `_tkNewsRef`, a snapshot of `_newsCache`
   renewed ONLY by `_tkSync` when the band is absent or a news setting changed (`_tkNewsCfgSig`, seen on the 1 s `_tkTick`) and by `_tkNewsRoundStart()` from `_tkLoop` at a round end — never mid-scroll. A headline is `a.tk-it.tk-nw`
   (the band's click handler skips it, so it never opens `_jebItemMenu`). A new field of a headline goes in `_tkSync`'s signature.
+- **The bar's overflow and the News Zab (v05.40, Z15).** `_jebPaintBar` draws Choose, `＋ New Zab`, All Zabs, `📰 News` (only while `_zabNews().on`, never in Choose), the Zab chips, then `.jeb-more`. `_jebFoldBar` runs after every paint (also a skipped one) and from a
+  ResizeObserver on the bar, keyed on width + `_jebBarSig`: it hides chips from the right (`.jx-over`) until `scrollWidth` fits, never the open Zab's chip; only when nothing else can go does it move 📰 News and then All Zabs into the list (a phone), and if the open chip still does not fit the
+  row scrolls as before. Choose keeps the scrolling row. A drag is refused while a hidden chip precedes a visible one. **The News chip is virtual:** `data-news`, no `data-pid`, nothing in `DB`; the News view is `_newsViewOpen()` (`#nwv`, repainted in place by `_newsPaint`, which also repaints the bar and the layouts).
+  A new thing in the bar's signature goes in `sig`; a new fixed control joins the last-resort list in `_jebFoldBar`. Rail with more Zabs than the screen holds clips its far end (unchanged).
 - **A Zab's own note (v05.33, Z11).** `_zabNoteOf(pid)` (by `zabNote.pid`, never by title) → the note `zabn-<pid>` (`-2`, `-3`… if that id is tombstoned or in Trash) in folder `zab-notes`, field `zabNote:{pid}`; made by `_zabNoteEnsure` on the first tap, written in `popOutNote`, dropped by `_zabNoteClosed` if left blank. Painted by `_zabNoteHTML` into `.zn-area` (in the panel's repaint signature via `_zabNoteSig`); a Zab deleted keeps its note ("(Zab deleted)").
 - **Evernote import, the dry run (v05.13, S4a — S4b writes notes, S4c pictures, S4d merges earlier imports).** `openEnexImport()` →
   `#enx-modal` (own overlay like `#remmail-modal`: dialog ≥ 640, bottom sheet < 640, z 10060, over the Zab bar on purpose so it is not
