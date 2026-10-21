@@ -10601,3 +10601,9 @@ to 5 hours old. GitHub starts scheduled runs late or skips them when it is busy,
 success-or-failure condition). Block 97 17/17.
 
 **Not done:** a channel the owner adds still needs adding to `news/channels.json`.
+
+**Totals (Architect), full app-check on `2560315`:** blocks 1–59 + `self-check` **2328/2332** (56k 640 ms vs 600, 57d 66 ms vs 51; re-run `--only 56,57` alone: 155/155); blocks 60–98 **5626/5641** (72j, 78b, 80h, 82e, 86: speed limits and a 27,000-note timeout on a container measuring host ×1.85–2.26). Merged as `67c2c1c`.
+
+## v05.40 — Z15: the Zab bar's overflow ("▸ N more"), ＋ New Zab always in view, a 📰 News Zab (PCF J60)
+
+(In progress — entry to be completed.)
