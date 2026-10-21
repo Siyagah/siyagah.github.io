@@ -175,7 +175,7 @@ process.stdout.write(x + '</channel></rss>\\n200');
   });
 }
 if (want('97f')) {
-  await T('97f the app reads news.json from this repository\'s `news` branch; news.yml: schedule + by hand, publishes only news.json force-pushed to `news`, nothing when all failed', async () => {
+  await T('97f the app reads news.json from this repository\'s `news` branch; news.yml: schedule + by hand, publishes only news.json force-pushed to `news`, nothing when all failed, loops every 15 minutes and starts its next run', async () => {
     const html = readFileSync(join(ROOT, 'index.html'), 'utf8'), y = readFileSync(join(ROOT, '.github/workflows/news.yml'), 'utf8');
     const m = /const _NEWS_SRV='([^']+)'/.exec(html);
     const r = {
@@ -183,7 +183,9 @@ if (want('97f')) {
       sched: /schedule:\s*\n\s*- cron: '[^']+'/.test(y) && /workflow_dispatch:/.test(y),
       only: /git add news\.json\n/.test(y) && !/git add (-A|\.)/.test(y) && /--orphan news/.test(y) && /push -qf [^\n]+ news\n/.test(y),
       guard: /if\(!j\.chans\.some\(c=>c\.ok\)\)process\.exit\(1\)/.test(y),
-      write: /contents: write/.test(y)
+      write: /contents: write/.test(y),
+      /* 22 Oct: GitHub ran the 15-minute schedule about every 5 hours, so one run loops every 15 minutes and starts the next itself */
+      loop: /sleep 900/.test(y) && /gh workflow run news\.yml/.test(y) && /actions: write/.test(y) && /timeout-minutes: 3[0-5]\d/.test(y) && /if: success\(\) \|\| failure\(\)/.test(y)
     };
     return [Object.values(r).every(Boolean), JSON.stringify(r)];
   });
