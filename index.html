@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.41">
+<meta name="app-version" content="05.42">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3897,7 +3897,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.41</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.42</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4872,6 +4872,41 @@ function _rcTok(e,r){
   return e.tok;
 }
 function _rcJson(e){ if(e.json===null) e.json=JSON.stringify(e.r); return e.json; }
+/* v05.42 — P6. An entry is the record AS SEEN when it was built, so what _rcTok() / _rcJson() would have said then can be said later
+   from the entry alone, with the record already edited in place: a primitive from `vs`, a small object or array from the JSON copy
+   in `js`, noteHistory from its array cut back to the length seen (it is only ever pushed to or replaced; the sweep already relies on
+   "same array, same length, same last element"). That lets the start take a baseline without hashing or stringifying a single note. */
+function _rcValE(e,i){
+  const v=e.vs[i];
+  if(v===null||typeof v!=='object'||e.sh) return v;
+  const j=e.js[i];
+  return typeof j==='string'?JSON.parse(j):j.slice();
+}
+function _rcTokE(e){
+  if(e.tok===null){
+    const ks=e.ks, ix=[]; for(let i=0;i<ks.length;i++) ix.push(i);
+    ix.sort((a,b)=>ks[a]<ks[b]?-1:(ks[a]>ks[b]?1:0));
+    const o={}; for(let x=0;x<ix.length;x++){ const i=ix[x]; if(!_RC_NOSIG[ks[i]]) o[ks[i]]=_rcValE(e,i); }
+    e.tok=_rcHash(JSON.stringify(o));
+  }
+  return e.tok;
+}
+/* the record's JSON text as it was when `e` was built; null = it cannot be said (noteHistory no longer ends where it did) */
+function _rcJsonOld(e){
+  if(e.json!==null) return e.json;
+  const ks=e.ks, o={};
+  for(let i=0;i<ks.length;i++){
+    const k=ks[i];
+    if(k==='noteHistory'&&Array.isArray(e.vs[i])){
+      const a=e.vs[i];
+      if(a.length<e.nhn||(e.nhn>0&&a[e.nhn-1]!==e.nhl)) return null;
+      o[k]=a.length===e.nhn?a:a.slice(0,e.nhn);
+    }else o[k]=(k==='noteHistory')?e.vs[i]:_rcValE(e,i);
+  }
+  return JSON.stringify(o);
+}
+/* a baseline entry [tok,updatedAt,history length,entry]: tok is null until someone needs it */
+function _pTok(p){ if(p[0]===null) p[0]=_rcTokE(p[3]); return p[0]; }
 function _rcKey(c,r,e){ if(e.kc!==c){ e.kc=c; e.k=_s1Key(c,r.id); } return e.k; }
 /* One pass over the notebook's eleven id-keyed arrays. `visit(c,r,e)` is called for
    every element that has an id (duplicates included) and returns true if it changed
@@ -4897,7 +4932,7 @@ function _collect(db,visit){
   }
   return out;
 }
-function _recEnt(r){ const e=_rcEntry(r); return [_rcTok(e,r), r.updatedAt, Array.isArray(r.noteHistory)?r.noteHistory.length:0]; }
+function _recEnt(r){ const e=_rcEntry(r); return [_rcTok(e,r), r.updatedAt, Array.isArray(r.noteHistory)?r.noteHistory.length:0, e]; }
 /* A merge replaces _recSnap wholesale (_seedRecSnap), so what the merge changed
    is the difference between the baseline before it and the one after. */
 function _s1DirtyFromDiff(oldS,newS){
@@ -4905,7 +4940,7 @@ function _s1DirtyFromDiff(oldS,newS){
     if(!oldS||!newS){ _s1Dirty.full=true; return; }
     _REC_COLLS.forEach(c=>{
       const a=oldS[c]||{}, b=newS[c]||{};
-      Object.keys(b).forEach(id=>{ const p=a[id], q=b[id]; if(!p||p[0]!==q[0]||p[1]!==q[1]||p[2]!==q[2]) _s1Dirty.keys.add(_s1DirtyKey(c,id)); });
+      Object.keys(b).forEach(id=>{ const p=a[id], q=b[id]; if(!p||!(p===q||p[3]===q[3]||_pTok(p)===_pTok(q))||p[1]!==q[1]||p[2]!==q[2]) _s1Dirty.keys.add(_s1DirtyKey(c,id)); });
       Object.keys(a).forEach(id=>{ if(!b[id]) _s1Dirty.gone.add(_s1DirtyKey(c,id)); });
     });
   }catch(_){ _s1Dirty.full=true; }
@@ -4922,8 +4957,9 @@ function _recSnapOf(db){
   const old=(db===DB)?_recSnap:undefined;   /* an entry that has not moved is kept, not rebuilt */
   const sw=_collect(db,(c,r,e)=>{
     const m=s[c]; if(!m) return false;
-    const tok=_rcTok(e,r), ua=r.updatedAt, nh=Array.isArray(r.noteHistory)?r.noteHistory.length:0, p=old&&old[c]?old[c][r.id]:undefined;
-    m[r.id]=(p&&p[0]===tok&&p[1]===ua&&p[2]===nh)?p:[tok,ua,nh];
+    /* v05.42 — P6: no token is made here. The entry keeps the record's fingerprint and the token is worked out from it only if someone asks (_pTok) */
+    const ua=r.updatedAt, nh=Array.isArray(r.noteHistory)?r.noteHistory.length:0, p=old&&old[c]?old[c][r.id]:undefined;
+    m[r.id]=(p&&p[3]===e&&p[1]===ua&&p[2]===nh)?p:[null,ua,nh,e];
     return false;
   });
   s.__tags=((db&&db.globalTags)||[]).slice();
@@ -4941,15 +4977,17 @@ function _stampRecordTouches(){
     _REC_COLLS.forEach(c=>{ next[c]={}; });
     let sw=_collect(DB,(c,r,e)=>{
       const m=next[c]; if(!m) return false;
-      const prev=_recSnap[c], p=prev?prev[r.id]:undefined, tok=_rcTok(e,r);
+      const prev=_recSnap[c], p=prev?prev[r.id]:undefined;
+      /* v05.42 — P6: the same fingerprint entry as the baseline's is the same token, so nothing is hashed for a record that has not moved */
+      const same=!!p&&(p[3]===e||_pTok(p)===_rcTok(e,r));
       /* "its updatedAt did not move FORWARD" — not just "is unchanged": undo()
          puts back the older copy, stamp and all, and that is a change too. */
       const moved=r.updatedAt!=null&&(p?(p[1]==null||r.updatedAt>p[1]):true);
       let stamped=false;
-      if(p && p[0]!==tok && !moved){ r.updatedAt=now; stamped=true; }
+      if(p && !same && !moved){ r.updatedAt=now; stamped=true; }
       const ua=r.updatedAt, nh=Array.isArray(r.noteHistory)?r.noteHistory.length:0;
-      if(p&&p[0]===tok&&p[1]===ua&&p[2]===nh) m[r.id]=p;
-      else{ m[r.id]=[tok,ua,nh]; _s1Dirty.keys.add(_s1DirtyKey(c,r.id)); }   /* v04.90 — S1c */
+      if(p&&same&&p[1]===ua&&p[2]===nh) m[r.id]=p;
+      else{ m[r.id]=[p?(same?p[0]:_rcTok(e,r)):null,ua,nh,stamped?_rcEntry(r):e]; _s1Dirty.keys.add(_s1DirtyKey(c,r.id)); }   /* v04.90 — S1c */
       return stamped;
     });
     _REC_COLLS.forEach(c=>{
@@ -22978,15 +23016,28 @@ function _sameKeys(a,b){
 function _histCapture(sw,silent){
   const cur=sw.map, first=(_hMap===null);
   if(first){ _hMap=new Map(); _hJson=new Map(); _hOrd={}; _hHead=null; }
-  const ch=[]; let bytes=0;
-  cur.forEach((e,k)=>{
-    if(_hMap.get(k)===e) return;
-    const j=_rcJson(e), bj=_hJson.get(k);
-    if(bj===j) return;
-    if(!silent){ ch.push([k,bj===undefined?null:bj,j]); bytes+=(bj?bj.length:0)+j.length+60; }
-    _hJson.set(k,j);
-  });
-  _hMap.forEach((e,k)=>{ if(!cur.has(k)){ const bj=_hJson.get(k); if(!silent){ ch.push([k,bj===undefined?null:bj,null]); bytes+=(bj?bj.length:0)+60; } _hJson.delete(k); } });
+  const ch=[]; let bytes=0, lost=false;
+  /* v05.42 — P6: a record's "before" text is kept only once it has changed; until then it is said from the baseline's entry (_rcJsonOld),
+     so taking a baseline stringifies nothing. null = it cannot be said: the frame is dropped with the older ones, never written wrong. */
+  if(!(first&&silent)){
+    cur.forEach((e,k)=>{
+      const be=_hMap.get(k);
+      if(be===e) return;
+      if(silent){ _hJson.delete(k); return; }
+      let bj=_hJson.get(k);
+      if(bj===undefined&&be!==undefined){ bj=_rcJsonOld(be); if(bj===null){ lost=true; bj=undefined; } }
+      const j=_rcJson(e);
+      if(bj===j) return;
+      if(!lost){ ch.push([k,bj===undefined?null:bj,j]); bytes+=(bj?bj.length:0)+j.length+60; }
+      _hJson.set(k,j);
+    });
+    _hMap.forEach((e,k)=>{ if(!cur.has(k)){
+      let bj=_hJson.get(k);
+      if(bj===undefined&&!silent){ bj=_rcJsonOld(e); if(bj===null){ lost=true; bj=undefined; } }
+      if(!silent&&!lost){ ch.push([k,bj===undefined?null:bj,null]); bytes+=(bj?bj.length:0)+60; }
+      _hJson.delete(k);
+    } });
+  }
   _hMap=cur;
   let ord=null;
   _LJ_COLLS.forEach(c=>{
@@ -22995,6 +23046,7 @@ function _histCapture(sw,silent){
   });
   const hs=_headOf(DB,sw); let head=null;
   if(hs!==_hHead){ if(!silent&&!first) head=[_hHead,hs]; bytes+=0; _hHead=hs; }
+  if(lost&&!silent&&!first) return {lost:true,ch:[],ord:null,head:null,bytes:0};
   if(silent||first||(!ch.length&&!ord&&!head)) return null;
   if(head) bytes+=head[0].length+head[1].length;
   return {ch:ch,ord:ord,head:head,bytes:bytes};
@@ -23011,7 +23063,7 @@ function snapshotState(sw){
       const fr=_histCapture(sw,false);
       if(fr){
         if(HIST_POS < HISTORY.length-1) HISTORY.splice(HIST_POS+1);   /* Invalidate any redo future */
-        if(fr.bytes>_H_MAX_BYTES){ HISTORY.length=0; HISTORY.push({base:true}); }   /* one step bigger than the whole budget (a restored backup, an import): nothing older can be undone past it, so none is kept */
+        if(fr.lost||fr.bytes>_H_MAX_BYTES){ HISTORY.length=0; HISTORY.push({base:true}); }   /* one step bigger than the whole budget (a restored backup, an import): nothing older can be undone past it, so none is kept */
         else{
           HISTORY.push(fr);
           while(HISTORY.length>_H_MAX_FRAMES+1||(HISTORY.length>2&&_histBytes()>_H_MAX_BYTES)) HISTORY.splice(1,1);

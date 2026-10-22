@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.41.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.42.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,8 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.42** (22 Oct 2026) — P6 (PCF J61, round 2 of 2), a faster start: the record baseline (`_recSnap`) and the undo baseline (`_hMap`/`_hJson`) no longer hash or stringify every note at start. A baseline entry is `[tok|null, updatedAt, history length, e]` (`e` = the
+  record's fingerprint entry); the token is worked out from `e` only when needed (`_pTok` → `_rcTokE`), and an undo "before" text is said from the baseline's entry when the record first changes (`_rcJsonOld`; if it cannot be said exactly, the older undo frames are dropped, never written wrong). Check: block 101, `tools/perf-p6.mjs`.
 - **v05.41** (22 Oct 2026) — P5 (PCF J61, round 1 of 2), speed at the owner's scale (12,500 notes): the journal's full copy (`_ljCheckpoint`) is made on hide / after 3,000 puts / 10 min without a save, never on the 30 s idle,
   and a settings-only save starts no timer; opening a note moves `.sel` between two cards (`_selFastMove`, only while `_p2cDrawn` is still the page) instead of redrawing the list, `getBacklinks` reads each note's links once (`_blIdx`),
   `_zabPhone()` reads a width cached on resize; the sidebar's counts come from one pass per draw (`_cntC`: `cntOf`, `smartCount`, `secSmartCount`). Check: block 100, `tools/perf-p5.mjs`.
@@ -54,8 +56,6 @@ must never accumulate here instead of there.
   `📰 News` chip (`data-news`; not a pocket) opening the News view (`_newsViewOpen`, `#nwv`, repainted by `_newsPaint`); Rail/Drawer/Columns get a News row. Check: block 99, `tools/zab-bar-more.mjs`.
 - **v05.39** (22 Oct 2026) — Z13d, the news job loops: GitHub ran its 15-minute schedule about every 5 hours, so one run of `.github/workflows/news.yml` fetches 22 times, 15 minutes apart,
   then starts the next itself (`gh workflow run`, `actions: write`); the schedule is the back-up. App unchanged. Check: 97f updated in place.
-- **v05.38** (21 Oct 2026) — Z14, "🔗 Open link" first in `_jebItemMenu` when an item holds a web address (stored `url`, else `_jebUrlIn(text)`); the owner tapped a saved link in the band and had no way to open it (PCF J57).
-  Check: block 98, `tools/zab-open-link.mjs` (`--unpatched`: 6 of 9 fail). Built by the Architect.
 ---
 
 ## What this is
@@ -324,6 +324,10 @@ A failing check is a wrong assertion surprisingly often — investigate before
   dirty set it took is given back, and it restarts (3 tries, then built whole in one tick).** Never add an `await` between reading `DB` for a
   snapshot or a blob and the check of those two counters. `JSON.stringify(DB)` for the blob is deliberately NOT sliced (two states in one blob);
   only its signature and base64, functions of the fixed string, are. A new mutation of `DB` that skips `_save()` would not restart a build.
+- **Since v05.42 (P6) neither baseline is made at start.** `_recSnap[c][id]` is `[tok|null, updatedAt, noteHistory length, e]`: `p[3]===e` (the record's current fingerprint entry is the one the baseline saw) means "same token" with nothing hashed; otherwise
+  `_pTok(p)` works the old token out from `e`'s own copy of the values (`_rcTokE`) and it is compared with the new one. `_s1DirtyFromDiff` does the same. The undo baseline keeps no text: `_hJson` holds a record's text only after it has changed, and the "before" of any other is
+  `_rcJsonOld(_hMap.get(k))` (the entry's primitives and JSON copies, noteHistory cut back to the length it had). That returns null when `noteHistory` was cut from the same array (the app only pushes, or replaces the array): the frame is then dropped with every older one (`fr.lost`).
+  **A new field on a record that is an object must be copied by `_rcBuild`'s `js` (it is) — never read a live value in `_rcValE`.**
 - **Since v05.41 (P5) the checkpoint is not on the 30 s idle.** `_ljSave` arms the timer (`_LJ_CKPT_MS` = 10 min) only when a save wrote more than the head (`h`); `visibilitychange`→hidden and `pagehide` call `_ljHiddenCkpt`;
   3,000 puts still checkpoint at once. The journal holds every change meanwhile, so boot's overlay is longer, never wrong. **A test that needs a checkpoint calls `_ljCheckpoint()` itself.**
 - **The local journal and undo frames (v04.91, S1d).** `notebook` in
@@ -333,9 +337,9 @@ A failing check is a wrong assertion surprisingly often — investigate before
   the records that changed, plus `notebook-seq` in `siyagah-local-v1` saying
   how far the full copy has caught up. Boot reads the full copy, then
   overlays the journal past that seq. A checkpoint rewrites the full copy
-  after 30 s idle or 3,000 puts. A failed journal write drops to a full-copy
+  when the page is hidden, after 3,000 puts, or 10 minutes after the last save. A failed journal write drops to a full-copy
   save and rings the alarm. A build older than v04.91 reads only the full
-  copy, so it can be up to 30 s behind. A per-record cache serves the merge
+  copy, so it can be up to 10 minutes behind. A per-record cache serves the merge
   and the list (which is patched, not rebuilt). Undo keeps byte-bounded
   frames (changed records only), not 60 whole-notebook copies. The test-only
   `window.__ljHold` (ms) holds a journal or checkpoint transaction open and
