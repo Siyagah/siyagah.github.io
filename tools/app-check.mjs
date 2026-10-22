@@ -12433,6 +12433,21 @@ await r.block('100-perf-p5', async () => {
   r.check(out.status === 0, 'the P5 check exits cleanly', `exit ${out.status}`);
 });
 
+/* 101 — v05.42, P6: a faster start, round 2 (PCF J61). tools/perf-p6.mjs runs 101a–101e on a 6,000-note Evernote-shaped notebook at the laptop and the phone ×4: no long task
+   from the start to booted and booted sooner than the build before; an edit within a second of booted is stamped (only it), reaches the dirty set, undoes to the exact text,
+   survives a kill; a received merge marks exactly what it changed; a cut-off noteHistory drops the older undo frames; no page errors. */
+await r.block('101-perf-p6', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./perf-p6.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 13, 'the P6 check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'P6: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the P6 check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

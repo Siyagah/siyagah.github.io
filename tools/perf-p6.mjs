@@ -96,7 +96,7 @@ for (const vp of VPS) {
     await srv.close(); srv = await serveFixed(MAIN);
     const mb = med(mine.map((x) => x.booted)), tb = med(theirs.map((x) => x.booted)), mw = Math.max(...mine.map((x) => x.worst)), tw = Math.max(...theirs.map((x) => x.worst));
     timing[vp.name] = { mb, tb, mw, tw };
-    const lim = hostLimit(1500);
+    const lim = hostLimit(1500).ms;
     if (vp.th > 1) {
       check(mw <= lim, `101a ${vp.name}: no main-thread task over ${lim} ms from the start to booted`, `worst ${mw} ms (the build before: ${tw} ms)`);
       check(mb <= tb * 0.75, `101a ${vp.name}: booted ≥ 25% sooner than the build before this round`, `${mb} ms against ${tb} ms (${((1 - mb / tb) * 100).toFixed(0)}% sooner); runs ${mine.map((x) => x.booted)} / ${theirs.map((x) => x.booted)}`);
@@ -150,10 +150,8 @@ for (const vp of VPS) {
     /* an edit after the baseline has been in use, and a cut-off history */
     const u = await page.evaluate(async () => {
       const a = DB.articles[300], t0 = JSON.stringify(a); a.title = 'LATE'; a.content += '<div>late</div>'; persist(); const ok1 = (() => { undo(); return JSON.stringify(DB.articles.find((x) => x.id === a.id)) === t0; })();
-      const n = DB.articles[100]; /* i % 50 === 0 → has a noteHistory */
-      const nid = n.id, n0 = JSON.stringify(n);
-      n.title = 'CUT 1'; persist();
-      const framesBefore = HISTORY.length;
+      const n = DB.articles[150]; /* i % 50 === 0 → has a noteHistory; not touched since the baseline, so its "before" is only in the entry */
+      const nid = n.id, framesBefore = HISTORY.length;
       n.noteHistory.shift(); n.title = 'CUT 2'; persist();   /* the same array cut from the front: the old "before" cannot be said (the app only ever pushes, or replaces the array) */
       const base = HISTORY.length === 1 && HISTORY[0].base === true;
       undo();
