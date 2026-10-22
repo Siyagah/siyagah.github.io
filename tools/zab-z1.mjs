@@ -12,7 +12,7 @@
    66d  a pocket name the owner typed (even "Jeb") is shown as typed, never rewritten
 
    `--only=66a` runs one. Each printed ok/FAIL line becomes one app-check check (block 66). */
-import { playwright, serve, seedDB, BLOCKED } from './harness.mjs';
+import { playwright, serve, seedDB, BLOCKED, zabAct, zabShow, zabTap } from './harness.mjs';
 import { sleep, check, results } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -57,7 +57,8 @@ async function open(vp, path, db = seed()) {
   return d;
 }
 const on = (d, fn, arg) => d.page.evaluate(fn, arg);
-const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
+const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const chip = (pid) => `#jeb-bar .jeb-chip[data-pid="${pid}"] .jeb-main`;
 
 /* every string the owner could read or hover: rendered text nodes, then title / aria-label / placeholder / alt */
@@ -131,7 +132,7 @@ try {
       await sweep(d, `${t} item ⋯ → Move to Zab`, /Back/);
       await reset(d);
       /* the pocket menu (right-click / long-press), and its two dialogs */
-      await longPress(d, vp, chip('jp-idea')); await d.page.waitForSelector('#jeb-menu', { timeout: 3000 });
+      await zabShow(d.page, chip('jp-idea'), { touch: vp.touch }); /* v05.40 · Z15: a folded chip is opened from the list first (the open Zab's chip is never folded) */ await longPress(d, vp, chip('jp-idea')); await d.page.waitForSelector('#jeb-menu', { timeout: 3000 });
       await sweep(d, `${t} pocket menu (${vp.touch ? 'long-press' : 'right-click'})`, /Icon & colour/);
       await d.page.locator('#jeb-menu .jm', { hasText: 'Icon & colour' }).first().click(); await sleep(400);
       await sweep(d, `${t} Icon & colour dialog`, /Icon & colour/);

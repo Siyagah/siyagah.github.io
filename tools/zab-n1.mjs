@@ -19,7 +19,7 @@
    76g  contrast of the new text on the five presets
 
    `--only=76a,76c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 76). */
-import { playwright, serve, seedDB, hostLimit } from './harness.mjs';
+import { playwright, serve, seedDB, hostLimit, zabAct, zabTap, zabShow } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, push, check, results } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -42,17 +42,19 @@ const SEEDS = [['jp-task', 'Quick tasks', '✓', '#FFF1A8'], ['jp-idea', 'Ideas'
 const pockets = (names) => [...SEEDS.map(([id, name, icon, color], i) => ({ id, name, icon, color, order: i, createdAt: SEED_AT, updatedAt: SEED_AT })),
   ...names.map((n, i) => ({ id: n, name: n, icon: '✶', color: '#CFE8FF', order: 4 + i, createdAt: T0, updatedAt: T0 }))];
 const dev = (cloud, name, vp, db, opts = {}) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed(), opts);
-const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
+const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
 const each = async (fn, vps = VPS, opts, db) => { for (const vp of vps) { const d = await dev(makeCloud(), 'D' + vp.name, vp, db ? db() : null, opts); try { await fn(d, vp); } finally { await d.ctx.close(); } } };
 const chip = (pid) => `#jeb-bar .jeb-chip[data-pid="${pid}"]`;
 const mkP = (d, name, par, ty) => on(d, ([n, p, t]) => { const id = jebAddPocket(n, '✶', '#CFE8FF', p || null); if (t) jebEditPocket(id, { ztype: t }); jebRefresh(); return id; }, [name, par, ty]);
 const addItems = (d, pid, n, extra = {}) => on(d, ([p, k, x]) => { for (let i = 0; i < k; i++) jebEditItem(jebAddItem(p, 'item ' + i), x); jebRefresh(); }, [pid, n, extra]);
 const pocket = (d, id) => on(d, (i) => JSON.parse(JSON.stringify(DB.jebPockets.find((x) => x.id === i) || null)), id);
-const menuOn = async (d, vp, pid) => { await d.page.locator(chip(pid)).first().click({ button: 'right' }); await d.page.waitForSelector('#jeb-menu'); await sleep(120); };
+const menuOn = async (d, vp, pid) => { /* v05.40 · Z15: a folded chip is opened from "▸ N more" first (the open Zab's chip is never folded), then right-clicked */ await zabShow(d.page, chip(pid), { touch: vp.touch }); await d.page.locator(chip(pid)).first().click({ button: 'right' }); await d.page.waitForSelector('#jeb-menu'); await sleep(120); };
 const menuRow = (d, vp, label) => act(d, vp, `#jeb-menu .jm:has-text("${label}")`);
 const pm = async (d, vp) => { await act(d, vp, '#jeb-panel .jeb-pm'); await d.page.waitForSelector('#jeb-menu'); await sleep(120); };
-const openTop = async (d, vp, pid) => { await act(d, vp, `${chip(pid)} .jeb-main`); await d.page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await sleep(350); };
+/* v05.40 · Z15: menuOn may already have opened this Zab (a folded chip is opened from the list first); a second tap would close it */
+const openTop = async (d, vp, pid) => { if (!(await on(d, (p) => _jebOpen === p && document.getElementById('jeb-panel').classList.contains('on'), pid))) await act(d, vp, `${chip(pid)} .jeb-main`); await d.page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await sleep(350); };
 const tapKid = async (d, vp, pid) => { await act(d, vp, `#jeb-panel .jx-kid[data-pid="${pid}"]`); await sleep(350); };
 const pathText = (d) => on(d, () => { const e = document.querySelector('#jeb-panel .jx-path'); return !e || e.hidden ? '' : e.textContent.replace(/\s+/g, ' ').trim(); });
 const kidsText = (d) => on(d, () => { const e = document.querySelector('#jeb-panel .jx-kids'); return !e || e.hidden ? [] : [...e.querySelectorAll('.jx-kid')].map((k) => k.querySelector('.jx-nm').textContent + ' ' + k.querySelector('.jeb-ct').textContent); });
