@@ -6354,7 +6354,49 @@ function _isPlaceholder(html){
 function chOf(pid){return DB.folders.filter(f=>f.parentId===pid).sort((a,b)=>a.order-b.order);}
 function descOf(fid){const ids=[fid];function go(p){chOf(p).forEach(c=>{ids.push(c.id);go(c.id);});}go(fid);return ids;}
 function pathOf(fid){const p=[];let id=fid;while(id){const f=DB.folders.find(x=>x.id===id);if(!f)break;p.unshift(f);id=f.parentId;}return p;}
-function cntOf(fid){const ids=descOf(fid);return DB.articles.filter(a=>a.folderIds.some(x=>ids.includes(x))).length;}
+/* v05.41 — P5. While the sidebar is being drawn (_cntC set by renderTree, dropped when it ends) every count comes from one pass,
+   not a walk of every note per row. The folder map counts a note once per folder whose subtree holds any of its folders (the
+   same answer as descOf + some); the Smart View counts are made without copying or sorting (the same filters as getSmartArts /
+   getSecSmartArts, which still build the lists themselves). Outside a sidebar draw nothing is cached. */
+let _cntC=null;
+function _cntFolders(){
+  const C=_cntC; if(C.fo) return C.fo;
+  const byId=new Map(); DB.folders.forEach(f=>byId.set(f.id,f));
+  const anc=new Map(), ancOf=fid=>{ let r=anc.get(fid); if(r) return r; r=[]; const seen=new Set(); let c=fid; while(c!=null&&c!==''&&!seen.has(c)){ seen.add(c); r.push(c); const f=byId.get(c); c=f?f.parentId:null; } anc.set(fid,r); return r; };
+  const m=new Map();
+  DB.articles.forEach(a=>{
+    const fs=a.folderIds||[];
+    if(fs.length===1){ ancOf(fs[0]).forEach(x=>m.set(x,(m.get(x)||0)+1)); return; }
+    if(!fs.length) return;
+    const s=new Set(); fs.forEach(f=>ancOf(f).forEach(x=>s.add(x))); s.forEach(x=>m.set(x,(m.get(x)||0)+1));
+  });
+  return (C.fo=m);
+}
+function cntOf(fid){
+  if(_cntC) return _cntFolders().get(fid)||0;
+  const ids=descOf(fid);return DB.articles.filter(a=>a.folderIds.some(x=>ids.includes(x))).length;
+}
+const _SF_CNT={'sf-favs':a=>a.favourite,'sf-pinned':a=>a.pinned,'sf-journal':a=>isJournal(a),'sf-arch':a=>a.archived,'sf-mywall':a=>isMyWallNote(a),'sf-remind':a=>a.reminder&&a.reminder.dt,'sf-jeb':a=>a.fromJeb,'sf-enx':a=>a.fromEvernote};
+function _cntOver(arts,sfId){
+  if(sfId==='sf-new'||sfId==='sf-time') return arts.length;
+  if(sfId==='sf-recent') return Math.min(20,arts.length);
+  const p=_SF_CNT[sfId]; if(!p) return -1;
+  let r=0; for(let i=0;i<arts.length;i++) if(p(arts[i])) r++;
+  return r;
+}
+function smartCount(sfId){
+  if(!_cntC) return getSmartArts(sfId).length;
+  const C=_cntC; if(C.sf.has(sfId)) return C.sf.get(sfId);
+  let r=sfId==='sf-time'?-1:_cntOver(DB.articles,sfId); if(r<0) r=getSmartArts(sfId).length;
+  C.sf.set(sfId,r); return r;
+}
+function secSmartCount(secId,sfId){
+  if(!_cntC) return getSecSmartArts(secId,sfId).length;
+  const C=_cntC, k=secId+'|'+sfId; if(C.sc.has(k)) return C.sc.get(k);
+  let sa=C.sa.get(secId); if(!sa){ sa=getSecArts(secId); C.sa.set(secId,sa); }
+  let r=_cntOver(sa,sfId); if(r<0) r=getSecSmartArts(secId,sfId).length;
+  C.sc.set(k,r); return r;
+}
 function artsIn(fid){return DB.articles.filter(a=>a.folderIds.includes(fid));}
 /* Once a note is deliberately filed into a real folder (or journal event),
    it should leave the 'Primary' quick-capture catch-all automatically —
@@ -6626,7 +6668,9 @@ function renderTree(){
      would lose its keyboard); put them back on the rebuilt input */
   const _tf=document.activeElement,_tfOn=_tf&&_tf.id==='tag-find';
   const _tfS=_tfOn?_tf.selectionStart:0,_tfE=_tfOn?_tf.selectionEnd:0;
-  el.innerHTML=renderSmartSection()+renderDatabaseSection()+_secs.map(s=>renderSection(s)).join('')+renderTagSection()+renderNTISection();
+  _cntC={fo:null,sf:new Map(),sa:new Map(),sc:new Map()};   /* v05.41 — P5: counts are worked out once for this draw and dropped with it, so they can never be stale */
+  try{ el.innerHTML=renderSmartSection()+renderDatabaseSection()+_secs.map(s=>renderSection(s)).join('')+renderTagSection()+renderNTISection(); }
+  finally{ _cntC=null; }
   if(_tfOn){
     const n=document.getElementById('tag-find');
     if(n){n.focus({preventScroll:true});try{n.setSelectionRange(_tfS,_tfE);}catch(e){}}
@@ -9837,7 +9881,7 @@ function renderSecSF(secId){
     +'</div>';
   if(open){
     sfOrdered().forEach(sf=>{
-      const cnt=getSecSmartArts(secId,sf.id).length;
+      const cnt=secSmartCount(secId,sf.id);
       const active=ST.secSF&&ST.secSF.secId===secId&&ST.secSF.sfId===sf.id;
       const sfName=_sfName(sf);
       const _it=DB.sfItems?.[sf.id]||{};
@@ -9880,8 +9924,8 @@ function getSectionFolderIds(secId){
   return ids;
 }
 function getSecArts(secId){
-  const fids=getSectionFolderIds(secId);
-  return DB.articles.filter(a=>a.folderIds&&a.folderIds.some(id=>fids.includes(id)));
+  const fids=new Set(getSectionFolderIds(secId));
+  return DB.articles.filter(a=>a.folderIds&&a.folderIds.some(id=>fids.has(id)));
 }
 
 /* ── Section-scoped smart arts ───────────────────────────────────────────── */
@@ -31769,7 +31813,7 @@ function renderSmartSection(){
   const label=DB.sfLabel||'Smart Views';
   const clr=(DB.sfColor?`color:${DB.sfColor};`:'')+(DB.sfBold?'font-weight:700':'');
   const body=open?('<div class="sec-body">'+sfOrdered().map(sf=>{
-      const cnt=getSmartArts(sf.id).length;
+      const cnt=smartCount(sf.id);
       const active=ST.folder===sf.id;
       const sfName=_sfName(sf);
       const _it=DB.sfItems?.[sf.id]||{};
