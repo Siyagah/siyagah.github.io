@@ -6879,8 +6879,34 @@ function renderP2H(){
   if(_pathHost)_pathHost.innerHTML=_folderPathRowHTML(curF);
 }
 
+/* v05.41 — P5. Opening a note from the list used to repaint the whole list (12,000 cards) to move one highlight. The list
+   painters (_listPaint, _p2cPaint's patch) note what they drew in _p2cDrawn: the pane's first child, and _dbRev / _s1MergeSeq at
+   that moment. selArt moves the `sel` class between two cards instead only while that is still exactly the page (same node,
+   no job still building, nothing saved or merged since); anything else takes the whole draw as before. */
+let _p2cDrawn=null;
+function _p2cMark(el){ const fv=el.firstElementChild; _p2cDrawn=fv?{el:el,fv:fv,rev:_dbRev,mseq:_s1MergeSeq}:null; }
+function _selFastOk(){
+  const D=_p2cDrawn, el=document.getElementById('p2c');
+  return !!(D&&el&&D.el===el&&el.firstElementChild===D.fv&&D.rev===_dbRev&&D.mseq===_s1MergeSeq&&!_listJob&&!ST.search&&!ST.editing);
+}
+function _selFastMove(prev,id){
+  const D=_p2cDrawn, el=document.getElementById('p2c');
+  if(!D||!el||D.el!==el) return false;
+  const nw=el.querySelectorAll('.ar[data-aid="'+CSS.escape(String(id))+'"]');
+  if(!nw.length) return false;
+  el.querySelectorAll('.ar.sel').forEach(o=>o.classList.remove('sel'));
+  nw.forEach(o=>o.classList.add('sel'));
+  D.rev=_dbRev; D.mseq=_s1MergeSeq;
+  const L=_p2cLast;   /* keep the patch path's memory of the cards in step, so its next comparison sees what is on the page */
+  if(L&&L.el===el&&L.ids&&L.cards){
+    [prev,id].forEach(x=>{ if(x==null) return; const i=L.ids.findIndex(y=>String(y)===String(x)); if(i<0||L.cards[i]===undefined) return; const a=DB.articles.find(q=>q.id===x); if(a) L.cards[i]=artCard(a,ST.article===a.id,true); });
+    L.sel=ST.article;
+  }
+  return true;
+}
 function renderP2C(){
   const el=document.getElementById('p2c');
+  _p2cDrawn=null;
   _listKeep=_listJob; _listJob=null;   /* v05.22 — P3: a new draw ends the slices of the old list (a patch of the same list may take them back) */
   if(ST.kind){
     const k=kindById(ST.kind);
@@ -7058,6 +7084,7 @@ function _p2cPaint(el,head,cards,tail,ids,fid,mk){
         diff.forEach(i=>{ t.innerHTML=cards[i]; const nd=t.content.firstElementChild; const old=i<alN?al.children[i]:rest.children[i-alN]; if(nd&&old) old.replaceWith(nd); L.cards[i]=cards[i]; });
         note(L);
         if(kp){ kp.mk=mk; _listJob=kp; _listSched(kp); }
+        _p2cMark(el);
         return;
       }
     }
@@ -7132,6 +7159,7 @@ function _listPaint(el,head,cards,n,mk,tail){
   let s=head;
   for(let i=0;i<k;i++){ if(cards[i]===undefined) cards[i]=mk(i); s+=cards[i]; }
   el.innerHTML=s+tail;
+  _p2cMark(el);
   if(k>=n) return;
   const als=el.querySelectorAll(':scope > .fv > .al'), al=als[als.length-1];
   if(!al) return;
@@ -7650,9 +7678,11 @@ function selFolder(id){_trackLastFolder(id);
 }
 function selArt(id){
   if(ST.editing)saveArt();
+  const _prevA=ST.article, _fast=_selFastOk();
   ST.article=id;ST.editing=false;clearSearch();
   if(!DB.theme)DB.theme={};DB.theme.lastArticle=id;_save();
-  renderP2C();renderP3H();renderP3C();
+  if(!(_fast&&_selFastMove(_prevA,id))) renderP2C();
+  renderP3H();renderP3C();
   adjustP3Layout();
   if(window.innerWidth<1200) showPane('p3');
 }
@@ -16668,10 +16698,22 @@ function getOutLinks(art,liveHTML){
   return [...new Set(ids)].filter(id=>id!==art.id)
     .map(id=>DB.articles.find(a=>a.id===id)).filter(Boolean);
 }
+/* v05.41 — P5: opening a note scanned every note's text (51 MB at the owner's size) for "data-art=…". Each note's link targets
+   are now read once and kept (session memory) against the very content string they came from; an edited note has a new string
+   and is read again. Same answer, same order. */
+const _blIdx=new Map();
+function _blTargets(a){
+  const c=a.content||'', e=_blIdx.get(a.id);
+  if(e&&e.c===c) return e.t;
+  const t=new Set();
+  if(c.includes('data-art="')) for(const m of c.matchAll(/data-art="([^"]*)"/g)) t.add(m[1]);
+  _blIdx.set(a.id,{c:c,t:t});
+  return t;
+}
 function getBacklinks(artId){
-  const needle='data-art="'+artId+'"';
+  if(_blIdx.size>DB.articles.length*2) _blIdx.clear();
   return DB.articles.filter(a=>a.id!==artId&&
-    ((a.content||'').includes(needle)||(a.linkedNotes||[]).includes(artId)));
+    (_blTargets(a).has(String(artId))||(a.linkedNotes||[]).includes(artId)));
 }
 function _blSnippet(content,artId){
   try{
@@ -24402,7 +24444,12 @@ async function _newsCopy(){
    writes the setting and nothing else (I1). */
 const _ZAB_LAYOUTS=['rail','drawer','cols','bar'];
 function _zabLayout(){ const v=DB&&DB.theme&&DB.theme.zabPhoneLayout; return _ZAB_LAYOUTS.includes(v)?v:'rail'; }
-function _zabPhone(){ return !_JEB_APP&&window.innerWidth<640; }
+/* v05.41 — P5: window.innerWidth forces a layout when styles are dirty; the band's 1 s tick read it in the middle of a long list
+   build. The width is read once and again on resize (and orientationchange). */
+let _zabW=window.innerWidth;
+window.addEventListener('resize',()=>{ _zabW=window.innerWidth; });
+window.addEventListener('orientationchange',()=>{ _zabW=window.innerWidth; });
+function _zabPhone(){ return !_JEB_APP&&_zabW<640; }
 function _zabBtnOn(){ return _zabPhone()&&_zabLayout()!=='bar'; }
 let _zabOpen=false, _zabUnfold=new Set(), _zabPath=[], _zabBtnSig='', _zabLaySig='', _zabLP=0;
 function _zabSync(on){
