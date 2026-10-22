@@ -323,9 +323,14 @@ export async function zabTap(page, sel, { touch = false } = {}) {
   const centre = (s) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, s);
   const folded = await page.evaluate((s) => { const e = document.querySelector(s); const c = e && e.closest('#jeb-bar>.jeb-chip'); return !!(c && c.classList.contains('jx-over')); }, sel);
   if (!folded) { const pt = await centre(sel); if (!pt) throw new Error('zabTap: no ' + sel); await press(pt.x, pt.y); return 'chip'; }
-  const label = await page.evaluate((s) => { const c = document.querySelector(s).closest('#jeb-bar>.jeb-chip'); const p = c.dataset.pid ? (window.DB.jebPockets.find((x) => x.id === c.dataset.pid) || {}) : {}; return c.dataset.news ? 'News' : c.dataset.all ? 'All Zabs' : p.name; }, sel);
-  const m = await centre('#jeb-bar .jeb-more .jeb-main'); if (!m) throw new Error('zabTap: no ▸ N more');
-  await press(m.x, m.y); await page.waitForSelector('#jeb-menu', { timeout: 3000 });
+  const label = await page.evaluate((s) => { const c = document.querySelector(s).closest('#jeb-bar>.jeb-chip'); const p = c.dataset.pid ? (DB.jebPockets.find((x) => x.id === c.dataset.pid) || {}) : {}; return c.dataset.news ? 'News' : c.dataset.all ? 'All Zabs' : p.name; }, sel);
+  /* the bar may be re-laid-out a moment after a keyboard/blur or a resize: wait for the more chip to have a box, and press again once if no list came */
+  await page.waitForFunction(() => { const e = document.querySelector('#jeb-bar .jeb-more .jeb-main'); return !!e && e.getBoundingClientRect().width > 0; }, null, { timeout: 5000 });
+  for (let k = 0; k < 3; k++) {
+    const m = await centre('#jeb-bar .jeb-more .jeb-main'); if (!m) throw new Error('zabTap: no ▸ N more');
+    await press(m.x, m.y);
+    try { await page.waitForSelector('#jeb-menu', { timeout: 1500 }); break; } catch (e) { if (k === 2) throw e; await new Promise((r) => setTimeout(r, 300)); }
+  }
   const row = await page.evaluate((l) => { const r = [...document.querySelectorAll('#jeb-menu .jm')].find((e) => e.textContent.includes(l)); if (!r) return null; const b = r.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }, label);
   if (!row) throw new Error('zabTap: no row "' + label + '" in the more-list');
   await press(row.x, row.y); return 'more';
