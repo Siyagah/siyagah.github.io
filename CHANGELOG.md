@@ -10624,3 +10624,11 @@ Their answers: overflow = a "▸ N more" button; News = a 📰 News chip with th
 **Not done:** on a phone with more Zabs than the screen holds, the Rail's far end is clipped (unchanged, and now it includes the News bubble); a long-press on a row of the more-list is not offered (not asked for).
 
 **Older checks updated in place (Architect review of f1bf36b, after the fold hid chips they tapped).** New harness helpers `zabTap` / `zabAct` / `zabShow` / `zabVisible` / `zabOpen` (`tools/harness.mjs`) reach a folded Zab the way the owner does: open "▸ N more", press its row (a folded chip's ▦ half: open it from the list, then the ▦ in the panel header). Updated, each with a one-line reason in the file: `jeb-j2` (60j: 12 Zabs now fold and ＋ New Zab is first, no sideways scroll), `jeb-j3`, `jeb-j4` (64a opens a folded Zab before measuring its ▦ half; 64b order is Choose, ＋ New Zab, All Zabs; 64c ＋ New Zab is not drawn while choosing, and the Cancel comparison ignores the fold), `jeb-j5`, `zab-z1`, `zab-z6a`/`b`/`c`, `offline-o1`, `zab-n1`, `zab-n2`, `zab-note`, `zab-words`, `zab-z8`, `zab-z7` (81b/81d no longer at 390, where the bar holds no two capsules to drag: the finger drag is 81f; 81c is now "20 Zabs fold, the bar does not scroll" instead of auto-scroll), `tap-t2` (90d leaves the bar's own boxes out: they changed on purpose and block 99 measures them), `zab-news` (95d compares the bar without the 📰 chip and the fold). The app is unchanged by these.
+
+**Totals (Architect), full app-check on `1ed393f`:** blocks 1–59 + `self-check` **2332/2332**; blocks 60–99 **5632/5638** (78b phone ×4 225.7 vs 204 ms and 82e 13.3 s vs 13.1 s: speed limits on the Architect's container; 60c@390 panel measured mid-slide under load, 3/3 alone). Block 99 `--unpatched`: 14 of 15 fail (99c "off" holds before and after). Merged as `02475bd`.
+
+---
+
+## v05.41 — P5: speed at the owner's scale, round 1 (PCF J61)
+
+*Stub — in progress: Fix A (checkpoint trigger), Fix B (no list redraw on open), Fix C (sidebar counts once).*
