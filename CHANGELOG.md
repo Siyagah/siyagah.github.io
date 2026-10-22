@@ -10646,3 +10646,11 @@ The owner: "With Evernote export, does this made the app heavy? Experiencing slo
 **`--unpatched`** (the build before this round): 8 of 15 pass, 7 fail: 100c ×2 (list rebuilt), 100d phone ratio (1.0×), 100a idle ×2 (a checkpoint at 30 s), 100a hide ×2. Passing while unpatched, on purpose: the 100d number-equality checks (the counts must be the same before and after), 100a reload and 100b kill (the journal guarantee exists already; they guard it), 100e, and 100d's laptop ratio (reported, not asserted).
 
 **Not done:** the "From Evernote" list is still drawn whole in ~8 s on a ×4 phone (the windowed list is waiting on the owner's J08 tick); start → booted (6.5 s ×4) and `_head~0`/`mergeDB` costs are round 2.
+
+**Totals (Architect), full app-check on `c4407e3`** (two halves at once): blocks 1–59 + `self-check` **2322/2325** (51t/51y: the v04.89 build was missing from a shallow clone; after `git fetch --unshallow`, block 51 **109/109**); blocks 60–100 **5649/5655** (70h 458 vs 438 ms, **199/199** alone; 80h 272 vs 266 ms; 86@390 both 313 vs 310 ms). Alone: 80 286/287, 86 43/45. v05.40 on the same container: 80 and 86 336/336 once, then 86@390 "both" failed on v05.40 too (356 vs 330 ms). 86@390 worst task (the app's own work), all runs: v05.41 263–441 ms; v05.40 231–370 ms. Owner scale (`tools/perf-enx`, 12,500 notes, phone ×4, median of 3, v05.40 → v05.41): sidebar redraw 250 → 85 ms; Smart Views open 876 → 483 ms; a section's Smart Views 1,655 → 569 ms; "From Evernote" whole 21.4 → 14.2 s, worst task 7.5 → 2.5 s; open a big note 1.64 → 1.12 s; `selArt` probe 1,212/763 → 725/489 ms (first/second open). Merged as `435db6c`.
+
+---
+
+## v05.42 — P6: a faster start at the owner's scale, round 2 (PCF J61) — in progress
+
+Stub: the record baseline (`_seedRecSnap`) and the undo baseline (`_histCapture(sw,true)`) are taken off the start. Details follow when built.

@@ -333,9 +333,9 @@ A failing check is a wrong assertion surprisingly often — investigate before
   the records that changed, plus `notebook-seq` in `siyagah-local-v1` saying
   how far the full copy has caught up. Boot reads the full copy, then
   overlays the journal past that seq. A checkpoint rewrites the full copy
-  after 30 s idle or 3,000 puts. A failed journal write drops to a full-copy
+  when the page is hidden, after 3,000 puts, or 10 minutes after the last save. A failed journal write drops to a full-copy
   save and rings the alarm. A build older than v04.91 reads only the full
-  copy, so it can be up to 30 s behind. A per-record cache serves the merge
+  copy, so it can be up to 10 minutes behind. A per-record cache serves the merge
   and the list (which is patched, not rebuilt). Undo keeps byte-bounded
   frames (changed records only), not 60 whole-notebook copies. The test-only
   `window.__ljHold` (ms) holds a journal or checkpoint transaction open and
