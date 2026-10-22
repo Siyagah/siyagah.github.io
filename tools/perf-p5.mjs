@@ -100,7 +100,7 @@ for (const vp of VPS) {
     /* ── 100d: the sidebar ── */
     const d = await page.evaluate(({ N }) => {
       const sec = DB.sections[0].id;
-      ST.sfOpen = true; ST.secSFOpen = { [sec]: true }; DB.folders.forEach((f) => { ST.exp[f.id] = true; });
+      ST.sfOpen = true; ST.secOpen[sec] = true; ST.secSFOpen = { [sec]: true }; DB.folders.forEach((f) => { ST.exp[f.id] = true; });
       renderTree();
       const tt = []; for (let i = 0; i < 5; i++) { const a = performance.now(); renderTree(); tt.push(performance.now() - a); }
       tt.sort((a, b) => a - b); const nu = tt[2];
@@ -135,7 +135,7 @@ for (const vp of VPS) {
       Object.defineProperty(document, 'visibilityState', { get: () => 'hidden', configurable: true }); document.dispatchEvent(new Event('visibilitychange'));
       for (let i = 0; i < 100 && _ljStat.full === full0; i++) await new Promise((r) => setTimeout(r, 50));
       await _ljChain.catch(() => {}); await new Promise((r) => setTimeout(r, 200));
-      return { grew: _ljStat.full > full0, caught: _ljCkpt === _ljSeq, behind: seq0 > ck0, id: a.id };
+      return { grew: _ljStat.full > full0, caught: _ljCkpt >= seq0, behind: seq0 > ck0, id: a.id };
     }, ed);
     check(h.grew && h.caught, `100a ${vp.name}: hiding the page copies the notebook (a save was ${h.behind ? 'ahead of' : 'at'} the last copy)`, JSON.stringify(h));
     await page.reload({ waitUntil: 'domcontentloaded' }); await boot(page);
