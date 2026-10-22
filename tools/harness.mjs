@@ -324,6 +324,9 @@ export async function zabTap(page, sel, { touch = false } = {}) {
   const folded = await page.evaluate((s) => { const e = document.querySelector(s); const c = e && e.closest('#jeb-bar>.jeb-chip'); return !!(c && c.classList.contains('jx-over')); }, sel);
   if (!folded) { const pt = await centre(sel); if (!pt) throw new Error('zabTap: no ' + sel); await press(pt.x, pt.y); return 'chip'; }
   const label = await page.evaluate((s) => { const c = document.querySelector(s).closest('#jeb-bar>.jeb-chip'); const p = c.dataset.pid ? (DB.jebPockets.find((x) => x.id === c.dataset.pid) || {}) : {}; return c.dataset.news ? 'News' : c.dataset.all ? 'All Zabs' : p.name; }, sel);
+  /* a phone hides the bar while a field has the keyboard up: put the keyboard away first, as a person would */
+  await page.evaluate(() => { const a = document.activeElement; if (a && a !== document.body && /^(INPUT|TEXTAREA)$/.test(a.tagName)) a.blur(); });
+  await new Promise((r) => setTimeout(r, 300));
   /* the bar may be re-laid-out a moment after a keyboard/blur or a resize: wait for the more chip to have a box, and press again once if no list came */
   await page.waitForFunction(() => { const e = document.querySelector('#jeb-bar .jeb-more .jeb-main'); return !!e && e.getBoundingClientRect().width > 0; }, null, { timeout: 5000 });
   for (let k = 0; k < 3; k++) {

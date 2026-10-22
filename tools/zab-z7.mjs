@@ -17,7 +17,7 @@
    81i  no page errors; Choose mode: no dragging
 
    `--only=81a,81c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 81). */
-import { playwright, serve, seedDB } from './harness.mjs';
+import { playwright, serve, seedDB, zabVisible, zabAct, zabTap } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, push, check, results } from './s1-fake.mjs';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -48,7 +48,8 @@ const pk = (id, i, extra = {}) => ({ id, name: id, icon: '✶', color: '#CFE8FF'
 const seed = (ids, layout, extra) => { const db = seedDB(T0); db.jebPockets = ids.map((id, i) => pk(id, i)); db.jeb = []; if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: layout || 'bar' }); return db; };
 const dev = (cloud, name, vp, db) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db, {});
 const mkDev = (vp, ids, layout, extra) => dev(makeCloud(), 'D' + vp.name, vp, seed(ids, layout, extra));
-const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
+const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
 const chip = (pid) => `#jeb-bar .jeb-chip[data-pid="${pid}"]`;
 const screenOrder = (d) => on(d, () => [...document.querySelectorAll('#jeb-bar .jeb-chip[data-pid]')].map((c) => c.dataset.pid));
@@ -119,7 +120,7 @@ try {
   }
 
   /* ══ 81b — the bar, a finger ══ */
-  if (want('81b')) for (const vp of [P390, T820]) {
+  if (want('81b')) for (const vp of [T820]) {   /* v05.40 · Z15: at 390 the bar folds every capsule but the open one (Choose + ＋ New Zab + ▸ N more fill the row), so there are not two to drag: the phone's finger drag is 81f; 820 keeps this check */
     const d = await mkDev(vp, LET.slice(0, 5)), t = `81b (${vp.name}, touch)`;
     try {
       await sleep(900);
@@ -139,7 +140,7 @@ try {
       /* hold without moving = the menu */
       const before = await snap(d);
       await toLeft('A'); await sleep(200);
-      const C = await ctr(d, chip('C'));
+      const C = await ctr(d, chip('A'));   /* v05.40 · Z15: A, not C — at 820 only two capsules are on the bar */
       await fdrag(d, C, C, { steps: 0, holdMs: 700 });
       await sleep(300);
       const menu = await on(d, () => { const m = document.getElementById('jeb-menu'); return m ? [...m.querySelectorAll('.jm')].map((x) => x.textContent) : null; });
@@ -149,56 +150,46 @@ try {
       /* a short tap opens the pocket */
       await on(d, () => { jebClosePanel(); });
       await sleep(300); await toLeft('A'); await sleep(200);
-      const Dc = await ctr(d, chip('D') + ' .jeb-main'); await tapAt(d, Dc.x, Dc.y); await sleep(300);
-      check(await on(d, () => _jebOpen === 'D'), `${t} a short tap opens the pocket`);
+      const Dc = await ctr(d, chip('B') + ' .jeb-main'); await tapAt(d, Dc.x, Dc.y); await sleep(300);   /* v05.40 · Z15: B, not D */
+      check(await on(d, () => _jebOpen === 'B'), `${t} a short tap opens the pocket`);
       check((await snap(d)) === before, `${t} ...and writes nothing`);
-      /* a quick swipe (no hold) scrolls the bar and does not drag: needs overflow, so add pockets first */
+      /* v05.40 · Z15: the bar folds instead of scrolling, so a quick sideways swipe (no hold) is checked for what is left of it: it drags nothing and writes nothing */
       await on(d, () => { for (let i = 0; i < 12; i++) jebAddPocket('Z' + i, '✶', '#CFE8FF'); jebClosePanel(); jebRefresh(); });
       await sleep(500);
-      const snap0 = await snap(d), sl0 = await on(d, () => document.getElementById('jeb-bar').scrollLeft);
-      const E = await ctr(d, chip('E'));
-      await fdrag(d, { x: Math.min(E.x, vp.w - 60), y: E.y }, { x: 20, y: E.y }, { holdMs: 0, steps: 10, stepMs: 20 });
+      const snap0 = await snap(d);
+      const E = await ctr(d, chip('A'));
+      await fdrag(d, { x: E.x, y: E.y }, { x: E.x - 60, y: E.y }, { holdMs: 0, steps: 10, stepMs: 20 });
       await sleep(500);
-      const sl1 = await on(d, () => document.getElementById('jeb-bar').scrollLeft);
-      check(sl1 > sl0 + 20, `${t} a quick sideways swipe scrolls the bar (${sl0} → ${sl1})`);
-      check((await snap(d)) === snap0 && await noDrag(d), `${t} ...and does not drag anything`);
+      check((await snap(d)) === snap0 && await noDrag(d), `${t} a quick sideways swipe (no hold) drags nothing and writes nothing`);
+      check(await on(d, () => { const b = document.getElementById('jeb-bar'); return b.scrollWidth <= b.clientWidth + 1; }), `${t} 17 pockets fold into "▸ N more": the bar does not scroll sideways`);
       noErr(d, t);
     } finally { await d.ctx.close(); }
   }
 
   /* ══ 81c — auto-scroll ══ */
-  if (want('81c')) for (const vp of [D1440, P390]) {
+  if (want('81c')) for (const vp of [D1440]) {   /* v05.40 · Z15: the bar no longer scrolls, so there is nothing to auto-scroll; this check now holds the first capsule at the right edge of the visible ones and expects it to land after the last visible capsule, every pocket once */
     const d = await mkDev(vp, LET), t = `81c (${vp.name}${vp.touch ? ', touch' : ', mouse'})`;
     try {
       await sleep(900);
-      await on(d, () => { document.getElementById('jeb-bar').scrollLeft = 0; });
-      const mx = await on(d, () => { const b = document.getElementById('jeb-bar'); return b.scrollWidth - b.clientWidth; });
-      check(mx > 200, `${t} 20 pockets overflow the bar (${mx} px to scroll)`);
-      await on(d, () => { const b = document.getElementById('jeb-bar'); b.scrollLeft += b.querySelector('.jeb-chip[data-pid="A"]').getBoundingClientRect().left - b.getBoundingClientRect().left - 8; }); await sleep(200);
-      const A = await ctr(d, chip('A')); const br = await on(d, () => { const r = document.getElementById('jeb-bar').getBoundingClientRect(); return { l: r.left, r: r.right, y: r.top + r.height / 2 }; });
-      let sl = 0;
-      await drag(d, vp, A, { x: br.r - 12, y: br.y }, {
-        steps: 8, release: false,
-        hold: async () => { for (let i = 0; i < 160; i++) { await sleep(40); sl = await on(d, (m) => { const b = document.getElementById('jeb-bar'); return b.scrollLeft >= m - 2 ? -1 : b.scrollLeft; }, mx); if (sl === -1) break; } },
-      });
-      check(sl === -1, `${t} holding the first capsule at the right edge scrolls the bar to its end by itself`, 'scrollLeft ' + (await on(d, () => document.getElementById('jeb-bar').scrollLeft)));
-      if (vp.touch) { d.tcdp = d.tcdp || await d.ctx.newCDPSession(d.page); await d.tcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); } else await d.page.mouse.up();
+      check(await on(d, () => { const b = document.getElementById('jeb-bar'); return b.scrollWidth <= b.clientWidth + 1 && !!b.querySelector('.jeb-more') && !b.querySelector('.jeb-more').hidden; }), `${t} 20 pockets fold into "▸ N more"; the bar does not overflow sideways`);
+      const A = await ctr(d, chip('A')); const br = await on(d, () => { const r = document.getElementById('jeb-bar').getBoundingClientRect(); const v = [...document.querySelectorAll('#jeb-bar>.jeb-chip[data-pid]:not(.jx-over)')].pop().getBoundingClientRect(); return { r: v.right - 4, y: r.top + r.height / 2 }; });
+      await drag(d, vp, A, { x: br.r, y: br.y }, {});
       await sleep(500);
-      const o = await dbOrder(d);
-      check(o[19] === 'A' && o.length === 20 && new Set(o).size === 20, `${t} released there it lands last: A is 20th, every pocket once (${o.join('')})`);
+      const o = await dbOrder(d), sh = await screenOrder(d);
+      check(o.length === 20 && new Set(o).size === 20 && o[0] !== 'A' && o.indexOf('A') > 0, `${t} dropped past the last visible capsule, A moves back and every pocket is there once (${o.join('')})`);
       check(same(await screenOrder(d), o), `${t} the screen shows the same order`);
       noErr(d, t);
     } finally { await d.ctx.close(); }
   }
 
   /* ══ 81d — put back ══ */
-  if (want('81d')) for (const vp of [D1440, P390]) {
+  if (want('81d')) for (const vp of [D1440, T820]) {   /* v05.40 · Z15: at 390 the bar has room for one capsule at most (see 81b); put-back is the same code at 820 */
     const d = await mkDev(vp, ['A', 'B', 'C', 'D']), t = `81d (${vp.name}${vp.touch ? ', touch' : ', mouse'})`;
     try {
       await sleep(900);
       const before = await snap(d);
       /* Escape in the middle */
-      await drag(d, vp, await ctr(d, chip('A')), rightOf(await ctr(d, chip('C'))), {
+      await drag(d, vp, await ctr(d, chip('A')), rightOf(await ctr(d, chip('B'))), {   /* v05.40 · Z15: B, not C — at 820 the bar holds two capsules */
         release: false,
         hold: async () => {
           const mid = await on(d, () => ({ lift: !!document.querySelector('.zx-lift'), moved: [...document.querySelectorAll('#jeb-bar .jeb-chip')].some((c) => c.style.transform) }));
@@ -234,7 +225,8 @@ try {
       check((await parents()) === par0 && same(await dbOrder(d), top0), `${t} no parentId changed and the top level did not move`);
       /* dragged down onto the bar's other capsule: not a place, so it is put back; never nests */
       const snapK = await snap(d);
-      await drag(d, vp, await k('K2'), await ctr(d, chip('R')));
+      /* v05.40 · Z15: R may be folded into "▸ N more"; the drop then lands on that chip, which is another Zab's place on the bar all the same */
+      await drag(d, vp, await k('K2'), await ctr(d, (await zabVisible(d.page, chip('R'))) ? chip('R') : '#jeb-bar .jeb-more'));
       check((await snap(d)) === snapK && (await parents()) === par0, `${t} a drop on another pocket's capsule changes nothing: a drop is never "into" (parentIds identical)`);
       /* v05.23 Z8: the list is vertical now, so "past the last" is below the last line, not to its right */
       const k4 = await k('K4');
