@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.40.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.41.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,15 +47,15 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.41** (22 Oct 2026) — P5 (PCF J61, round 1 of 2), speed at the owner's scale (12,500 notes): the journal's full copy (`_ljCheckpoint`) is made on hide / after 3,000 puts / 10 min without a save, never on the 30 s idle,
+  and a settings-only save starts no timer; opening a note moves `.sel` between two cards (`_selFastMove`, only while `_p2cDrawn` is still the page) instead of redrawing the list, `getBacklinks` reads each note's links once (`_blIdx`),
+  `_zabPhone()` reads a width cached on resize; the sidebar's counts come from one pass per draw (`_cntC`: `cntOf`, `smartCount`, `secSmartCount`). Check: block 100, `tools/perf-p5.mjs`.
 - **v05.40** (22 Oct 2026) — Z15 (PCF J60): the Zab bar's overflow "▸ N more" (`_jebFoldBar`: measure-then-fold, hidden chips `.jx-over`, listed by `_jebMoreMenu`), `＋ New Zab` moved to the start of the bar, and a virtual
   `📰 News` chip (`data-news`; not a pocket) opening the News view (`_newsViewOpen`, `#nwv`, repainted by `_newsPaint`); Rail/Drawer/Columns get a News row. Check: block 99, `tools/zab-bar-more.mjs`.
 - **v05.39** (22 Oct 2026) — Z13d, the news job loops: GitHub ran its 15-minute schedule about every 5 hours, so one run of `.github/workflows/news.yml` fetches 22 times, 15 minutes apart,
   then starts the next itself (`gh workflow run`, `actions: write`); the schedule is the back-up. App unchanged. Check: 97f updated in place.
 - **v05.38** (21 Oct 2026) — Z14, "🔗 Open link" first in `_jebItemMenu` when an item holds a web address (stored `url`, else `_jebUrlIn(text)`); the owner tapped a saved link in the band and had no way to open it (PCF J57).
   Check: block 98, `tools/zab-open-link.mjs` (`--unpatched`: 6 of 9 fail). Built by the Architect.
-- **v05.37** (21 Oct 2026) — Z13c, Siyagah's own news service (PCF J50; the owner's Google helper would not open for the app: Drive's "unable to open the file"). `.github/workflows/news.yml` (every 15 min) runs `news/fetch.mjs` = the
-  app's own `_newsGs()` in Node `vm` with curl, for `news/channels.json`, and force-pushes `news.json` alone to the branch `news`; the app reads `_NEWS_SRV` (raw.githubusercontent.com) first and asks the helper only for channels the
-  service does not carry. Check: block 97, `tools/zab-news-srv.mjs` (`--unpatched`: 11 of 17 fail). Built by the Architect.
 ---
 
 ## What this is
@@ -324,6 +324,8 @@ A failing check is a wrong assertion surprisingly often — investigate before
   dirty set it took is given back, and it restarts (3 tries, then built whole in one tick).** Never add an `await` between reading `DB` for a
   snapshot or a blob and the check of those two counters. `JSON.stringify(DB)` for the blob is deliberately NOT sliced (two states in one blob);
   only its signature and base64, functions of the fixed string, are. A new mutation of `DB` that skips `_save()` would not restart a build.
+- **Since v05.41 (P5) the checkpoint is not on the 30 s idle.** `_ljSave` arms the timer (`_LJ_CKPT_MS` = 10 min) only when a save wrote more than the head (`h`); `visibilitychange`→hidden and `pagehide` call `_ljHiddenCkpt`;
+  3,000 puts still checkpoint at once. The journal holds every change meanwhile, so boot's overlay is longer, never wrong. **A test that needs a checkpoint calls `_ljCheckpoint()` itself.**
 - **The local journal and undo frames (v04.91, S1d).** `notebook` in
   `siyagah-local-v1` stays the FULL copy and is what every build reads at
   boot. The per-record journal lives in a NEW database, `siyagah-localrecs-v1`
@@ -614,6 +616,10 @@ A failing check is a wrong assertion surprisingly often — investigate before
   **Smaller in the cloud (v05.31, S4e):** `_enxCloudMode()` is the only reader of `enxMediaCloud` (absent/`'small'` = small, `'hold'` = none, else full). An imported
   picture goes up via `_picUploadSmall`: `_picShrink` (≤ 2,000 px wide, `createImageBitmap`), parts under the small bytes' own sha `s2`, then the ORIGINAL sha's meta with
   `sm:s2` last; the guard counts the small bytes. `_picFetch` verifies `s2`, stores under the original sha with `sm:1` (`_picSm`); a full-size copy replaces a small one, never the reverse.
+- **Opening a note does not redraw the list, and the sidebar counts once (v05.41, P5).** `selArt` calls `_selFastOk()` BEFORE its own `_save()`: true only while `_p2cDrawn` (set by `_listPaint` and `_p2cPaint`'s patch via `_p2cMark`) is
+  still the pane's first child, `_dbRev` and `_s1MergeSeq` have not moved since that paint, no slice job is running and nothing is being edited or searched; then `_selFastMove` toggles `sel` on the cards (byte-identical to a whole draw —
+  check 100c compares) and keeps `_p2cLast.cards` in step. Anything else takes the whole draw as before. `renderTree` sets `_cntC` for one draw and drops it after: while set, `cntOf` is a one-pass map and the Smart View numbers are
+  `smartCount` / `secSmartCount` (count-only; the lists still come from `getSmartArts`/`getSecSmartArts`). **A new Smart View with a plain filter goes in `_SF_CNT`; any other falls back to the list and is still right.**
 - **The sliced note list and the card cache (v05.22, P3).** A list over `_LIST_MIN` (300) cards is painted by `_listPaint` (tag, Note Type,
   Smart View, Section Smart View) or `_p2cPaint` (a plain folder): the first `_listFirstN()` cards go in at once; the rest is built by
   `_listBuild` into a hidden `div.al.al-tail` beside the visible `.al` (parsing only; no frame to pay) and moved in `_LIST_REVEAL` (1,500)

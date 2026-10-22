@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.40">
+<meta name="app-version" content="05.41">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3897,7 +3897,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.40</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.41</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4161,7 +4161,7 @@ async function _idbMigrateFrom(db){
    plus 'notebook-seq' (written in the same transaction): the save number the full
    copy already holds. At boot the journal entries NEWER than that are laid over it
    (_ljOverlay). A full copy is written (a) the first time a notebook enters
-   journal mode, (b) in the idle after the last save (_LJ_CKPT_MS), (c) after
+   journal mode, (b) when the page is hidden, or 10 min after the last save (_LJ_CKPT_MS; v05.41 — a settings-only save starts no timer), (c) after
    _LJ_CKPT_PUTS journal writes; the entries it makes redundant are then removed.
    If a journal write fails the journal is dropped and the next save writes a full
    copy again — the failure raises the same ⚠ alarm any failed save always has.
@@ -4169,7 +4169,7 @@ async function _idbMigrateFrom(db){
    up to _LJ_CKPT_MS behind. Nobody downgrades (the service worker only moves
    forward); the frozen builds under legacy/ read-only and do not write. */
 const _LJ_NAME='siyagah-localrecs-v1', _LJ_STORE='kv';
-let _LJ_MIN_NOTES=1500, _LJ_CKPT_MS=30000, _LJ_CKPT_PUTS=3000;
+let _LJ_MIN_NOTES=1500, _LJ_CKPT_MS=600000, _LJ_CKPT_PUTS=3000;
 let _ljDbP=null, _ljOn=false, _ljDead=false, _ljSeq=0, _ljCkpt=0, _ljBase=null, _ljOrd=null, _ljHead=null;
 let _ljEpoch=0, _ljChain=Promise.resolve(), _ljCkptTimer=null, _ljCkptBusy=false, _ljPuts=0;
 window._ljStat={writes:0,puts:0,full:0,lastMs:0};
@@ -4269,10 +4269,18 @@ function _ljSave(sw){
   const m={seq:seq,n:_ljCounts(sw)};
   _ljStat.puts+=puts.length; _ljPuts+=puts.length;
   const p=_ljRun(epoch,()=>_ljTx(puts,m,null));
+  /* v05.41 (P5): the full copy is one task proportional to the whole notebook (1.9 s at 58 MB on a phone), and opening a note
+     saves (lastArticle), so a 30 s idle timer fired after almost anything. Now: a save that changed only the head (settings)
+     starts no timer; otherwise the copy is made on hide, after _LJ_CKPT_PUTS puts, or after _LJ_CKPT_MS (10 min) without a save.
+     The journal holds every change meanwhile and boot overlays it, so nothing is lost if the tab is killed. */
+  if(puts.every(x=>x[0]==='h')) return p;
   clearTimeout(_ljCkptTimer);
   _ljCkptTimer=setTimeout(_ljCheckpoint,_ljPuts>=_LJ_CKPT_PUTS?0:_LJ_CKPT_MS);
   return p;
 }
+function _ljHiddenCkpt(){ if(_ljOn&&!_ljCkptBusy&&_ljSeq>_ljCkpt&&(_ljCkptTimer||_ljPuts>0)) _ljCheckpoint(); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') _ljHiddenCkpt(); });
+window.addEventListener('pagehide',_ljHiddenCkpt);
 /* a full copy of the notebook as it is now, then the removal of what it makes redundant */
 function _ljCheckpoint(){
   clearTimeout(_ljCkptTimer); _ljCkptTimer=null;
@@ -6346,7 +6354,49 @@ function _isPlaceholder(html){
 function chOf(pid){return DB.folders.filter(f=>f.parentId===pid).sort((a,b)=>a.order-b.order);}
 function descOf(fid){const ids=[fid];function go(p){chOf(p).forEach(c=>{ids.push(c.id);go(c.id);});}go(fid);return ids;}
 function pathOf(fid){const p=[];let id=fid;while(id){const f=DB.folders.find(x=>x.id===id);if(!f)break;p.unshift(f);id=f.parentId;}return p;}
-function cntOf(fid){const ids=descOf(fid);return DB.articles.filter(a=>a.folderIds.some(x=>ids.includes(x))).length;}
+/* v05.41 — P5. While the sidebar is being drawn (_cntC set by renderTree, dropped when it ends) every count comes from one pass,
+   not a walk of every note per row. The folder map counts a note once per folder whose subtree holds any of its folders (the
+   same answer as descOf + some); the Smart View counts are made without copying or sorting (the same filters as getSmartArts /
+   getSecSmartArts, which still build the lists themselves). Outside a sidebar draw nothing is cached. */
+let _cntC=null;
+function _cntFolders(){
+  const C=_cntC; if(C.fo) return C.fo;
+  const byId=new Map(); DB.folders.forEach(f=>byId.set(f.id,f));
+  const anc=new Map(), ancOf=fid=>{ let r=anc.get(fid); if(r) return r; r=[]; const seen=new Set(); let c=fid; while(c!=null&&c!==''&&!seen.has(c)){ seen.add(c); r.push(c); const f=byId.get(c); c=f?f.parentId:null; } anc.set(fid,r); return r; };
+  const m=new Map();
+  DB.articles.forEach(a=>{
+    const fs=a.folderIds||[];
+    if(fs.length===1){ ancOf(fs[0]).forEach(x=>m.set(x,(m.get(x)||0)+1)); return; }
+    if(!fs.length) return;
+    const s=new Set(); fs.forEach(f=>ancOf(f).forEach(x=>s.add(x))); s.forEach(x=>m.set(x,(m.get(x)||0)+1));
+  });
+  return (C.fo=m);
+}
+function cntOf(fid){
+  if(_cntC) return _cntFolders().get(fid)||0;
+  const ids=descOf(fid);return DB.articles.filter(a=>a.folderIds.some(x=>ids.includes(x))).length;
+}
+const _SF_CNT={'sf-favs':a=>a.favourite,'sf-pinned':a=>a.pinned,'sf-journal':a=>isJournal(a),'sf-arch':a=>a.archived,'sf-mywall':a=>isMyWallNote(a),'sf-remind':a=>a.reminder&&a.reminder.dt,'sf-jeb':a=>a.fromJeb,'sf-enx':a=>a.fromEvernote};
+function _cntOver(arts,sfId){
+  if(sfId==='sf-new'||sfId==='sf-time') return arts.length;
+  if(sfId==='sf-recent') return Math.min(20,arts.length);
+  const p=_SF_CNT[sfId]; if(!p) return -1;
+  let r=0; for(let i=0;i<arts.length;i++) if(p(arts[i])) r++;
+  return r;
+}
+function smartCount(sfId){
+  if(!_cntC) return getSmartArts(sfId).length;
+  const C=_cntC; if(C.sf.has(sfId)) return C.sf.get(sfId);
+  let r=sfId==='sf-time'?-1:_cntOver(DB.articles,sfId); if(r<0) r=getSmartArts(sfId).length;
+  C.sf.set(sfId,r); return r;
+}
+function secSmartCount(secId,sfId){
+  if(!_cntC) return getSecSmartArts(secId,sfId).length;
+  const C=_cntC, k=secId+'|'+sfId; if(C.sc.has(k)) return C.sc.get(k);
+  let sa=C.sa.get(secId); if(!sa){ sa=getSecArts(secId); C.sa.set(secId,sa); }
+  let r=_cntOver(sa,sfId); if(r<0) r=getSecSmartArts(secId,sfId).length;
+  C.sc.set(k,r); return r;
+}
 function artsIn(fid){return DB.articles.filter(a=>a.folderIds.includes(fid));}
 /* Once a note is deliberately filed into a real folder (or journal event),
    it should leave the 'Primary' quick-capture catch-all automatically —
@@ -6618,7 +6668,9 @@ function renderTree(){
      would lose its keyboard); put them back on the rebuilt input */
   const _tf=document.activeElement,_tfOn=_tf&&_tf.id==='tag-find';
   const _tfS=_tfOn?_tf.selectionStart:0,_tfE=_tfOn?_tf.selectionEnd:0;
-  el.innerHTML=renderSmartSection()+renderDatabaseSection()+_secs.map(s=>renderSection(s)).join('')+renderTagSection()+renderNTISection();
+  _cntC={fo:null,sf:new Map(),sa:new Map(),sc:new Map()};   /* v05.41 — P5: counts are worked out once for this draw and dropped with it, so they can never be stale */
+  try{ el.innerHTML=renderSmartSection()+renderDatabaseSection()+_secs.map(s=>renderSection(s)).join('')+renderTagSection()+renderNTISection(); }
+  finally{ _cntC=null; }
   if(_tfOn){
     const n=document.getElementById('tag-find');
     if(n){n.focus({preventScroll:true});try{n.setSelectionRange(_tfS,_tfE);}catch(e){}}
@@ -6871,8 +6923,34 @@ function renderP2H(){
   if(_pathHost)_pathHost.innerHTML=_folderPathRowHTML(curF);
 }
 
+/* v05.41 — P5. Opening a note from the list used to repaint the whole list (12,000 cards) to move one highlight. The list
+   painters (_listPaint, _p2cPaint's patch) note what they drew in _p2cDrawn: the pane's first child, and _dbRev / _s1MergeSeq at
+   that moment. selArt moves the `sel` class between two cards instead only while that is still exactly the page (same node,
+   no job still building, nothing saved or merged since); anything else takes the whole draw as before. */
+let _p2cDrawn=null;
+function _p2cMark(el){ const fv=el.firstElementChild; _p2cDrawn=fv?{el:el,fv:fv,rev:_dbRev,mseq:_s1MergeSeq}:null; }
+function _selFastOk(){
+  const D=_p2cDrawn, el=document.getElementById('p2c');
+  return !!(D&&el&&D.el===el&&el.firstElementChild===D.fv&&D.rev===_dbRev&&D.mseq===_s1MergeSeq&&!_listJob&&!ST.search&&!ST.editing);
+}
+function _selFastMove(prev,id){
+  const D=_p2cDrawn, el=document.getElementById('p2c');
+  if(!D||!el||D.el!==el) return false;
+  const nw=el.querySelectorAll('.ar[data-aid="'+CSS.escape(String(id))+'"]');
+  if(!nw.length) return false;
+  el.querySelectorAll('.ar.sel').forEach(o=>o.classList.remove('sel'));
+  nw.forEach(o=>o.classList.add('sel'));
+  D.rev=_dbRev; D.mseq=_s1MergeSeq;
+  const L=_p2cLast;   /* keep the patch path's memory of the cards in step, so its next comparison sees what is on the page */
+  if(L&&L.el===el&&L.ids&&L.cards){
+    [prev,id].forEach(x=>{ if(x==null) return; const i=L.ids.findIndex(y=>String(y)===String(x)); if(i<0||L.cards[i]===undefined) return; const a=DB.articles.find(q=>q.id===x); if(a) L.cards[i]=artCard(a,ST.article===a.id,true); });
+    L.sel=ST.article;
+  }
+  return true;
+}
 function renderP2C(){
   const el=document.getElementById('p2c');
+  _p2cDrawn=null;
   _listKeep=_listJob; _listJob=null;   /* v05.22 — P3: a new draw ends the slices of the old list (a patch of the same list may take them back) */
   if(ST.kind){
     const k=kindById(ST.kind);
@@ -7050,6 +7128,7 @@ function _p2cPaint(el,head,cards,tail,ids,fid,mk){
         diff.forEach(i=>{ t.innerHTML=cards[i]; const nd=t.content.firstElementChild; const old=i<alN?al.children[i]:rest.children[i-alN]; if(nd&&old) old.replaceWith(nd); L.cards[i]=cards[i]; });
         note(L);
         if(kp){ kp.mk=mk; _listJob=kp; _listSched(kp); }
+        _p2cMark(el);
         return;
       }
     }
@@ -7124,6 +7203,7 @@ function _listPaint(el,head,cards,n,mk,tail){
   let s=head;
   for(let i=0;i<k;i++){ if(cards[i]===undefined) cards[i]=mk(i); s+=cards[i]; }
   el.innerHTML=s+tail;
+  _p2cMark(el);
   if(k>=n) return;
   const als=el.querySelectorAll(':scope > .fv > .al'), al=als[als.length-1];
   if(!al) return;
@@ -7642,9 +7722,11 @@ function selFolder(id){_trackLastFolder(id);
 }
 function selArt(id){
   if(ST.editing)saveArt();
+  const _prevA=ST.article, _fast=_selFastOk();
   ST.article=id;ST.editing=false;clearSearch();
   if(!DB.theme)DB.theme={};DB.theme.lastArticle=id;_save();
-  renderP2C();renderP3H();renderP3C();
+  if(!(_fast&&_selFastMove(_prevA,id))) renderP2C();
+  renderP3H();renderP3C();
   adjustP3Layout();
   if(window.innerWidth<1200) showPane('p3');
 }
@@ -9799,7 +9881,7 @@ function renderSecSF(secId){
     +'</div>';
   if(open){
     sfOrdered().forEach(sf=>{
-      const cnt=getSecSmartArts(secId,sf.id).length;
+      const cnt=secSmartCount(secId,sf.id);
       const active=ST.secSF&&ST.secSF.secId===secId&&ST.secSF.sfId===sf.id;
       const sfName=_sfName(sf);
       const _it=DB.sfItems?.[sf.id]||{};
@@ -9842,8 +9924,8 @@ function getSectionFolderIds(secId){
   return ids;
 }
 function getSecArts(secId){
-  const fids=getSectionFolderIds(secId);
-  return DB.articles.filter(a=>a.folderIds&&a.folderIds.some(id=>fids.includes(id)));
+  const fids=new Set(getSectionFolderIds(secId));
+  return DB.articles.filter(a=>a.folderIds&&a.folderIds.some(id=>fids.has(id)));
 }
 
 /* ── Section-scoped smart arts ───────────────────────────────────────────── */
@@ -16660,10 +16742,22 @@ function getOutLinks(art,liveHTML){
   return [...new Set(ids)].filter(id=>id!==art.id)
     .map(id=>DB.articles.find(a=>a.id===id)).filter(Boolean);
 }
+/* v05.41 — P5: opening a note scanned every note's text (51 MB at the owner's size) for "data-art=…". Each note's link targets
+   are now read once and kept (session memory) against the very content string they came from; an edited note has a new string
+   and is read again. Same answer, same order. */
+const _blIdx=new Map();
+function _blTargets(a){
+  const c=a.content||'', e=_blIdx.get(a.id);
+  if(e&&e.c===c) return e.t;
+  const t=new Set();
+  if(c.includes('data-art="')) for(const m of c.matchAll(/data-art="([^"]*)"/g)) t.add(m[1]);
+  _blIdx.set(a.id,{c:c,t:t});
+  return t;
+}
 function getBacklinks(artId){
-  const needle='data-art="'+artId+'"';
+  if(_blIdx.size>DB.articles.length*2) _blIdx.clear();
   return DB.articles.filter(a=>a.id!==artId&&
-    ((a.content||'').includes(needle)||(a.linkedNotes||[]).includes(artId)));
+    (_blTargets(a).has(String(artId))||(a.linkedNotes||[]).includes(artId)));
 }
 function _blSnippet(content,artId){
   try{
@@ -24394,7 +24488,12 @@ async function _newsCopy(){
    writes the setting and nothing else (I1). */
 const _ZAB_LAYOUTS=['rail','drawer','cols','bar'];
 function _zabLayout(){ const v=DB&&DB.theme&&DB.theme.zabPhoneLayout; return _ZAB_LAYOUTS.includes(v)?v:'rail'; }
-function _zabPhone(){ return !_JEB_APP&&window.innerWidth<640; }
+/* v05.41 — P5: window.innerWidth forces a layout when styles are dirty; the band's 1 s tick read it in the middle of a long list
+   build. The width is read once and again on resize (and orientationchange). */
+let _zabW=window.innerWidth;
+window.addEventListener('resize',()=>{ _zabW=window.innerWidth; });
+window.addEventListener('orientationchange',()=>{ _zabW=window.innerWidth; });
+function _zabPhone(){ return !_JEB_APP&&_zabW<640; }
 function _zabBtnOn(){ return _zabPhone()&&_zabLayout()!=='bar'; }
 let _zabOpen=false, _zabUnfold=new Set(), _zabPath=[], _zabBtnSig='', _zabLaySig='', _zabLP=0;
 function _zabSync(on){
@@ -31714,7 +31813,7 @@ function renderSmartSection(){
   const label=DB.sfLabel||'Smart Views';
   const clr=(DB.sfColor?`color:${DB.sfColor};`:'')+(DB.sfBold?'font-weight:700':'');
   const body=open?('<div class="sec-body">'+sfOrdered().map(sf=>{
-      const cnt=getSmartArts(sf.id).length;
+      const cnt=smartCount(sf.id);
       const active=ST.folder===sf.id;
       const sfName=_sfName(sf);
       const _it=DB.sfItems?.[sf.id]||{};
