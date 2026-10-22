@@ -1,71 +1,71 @@
 {
  "run": 1,
  "boot": {
-  "booted": 2478,
-  "firstTree": 2387,
-  "dcl": 554,
-  "worst": 1010,
-  "longSum": 2007,
+  "booted": 2528,
+  "firstTree": 2439,
+  "dcl": 567,
+  "worst": 1053,
+  "longSum": 2057,
   "notes": 12500
  },
  "openSection": {
-  "first": 106,
-  "whole": 106,
-  "worst": 73,
-  "longSum": 73,
-  "wall": 451
+  "first": 122,
+  "whole": 122,
+  "worst": 81,
+  "longSum": 81,
+  "wall": 468
  },
  "expandRoot": {
-  "first": 93,
-  "whole": 93,
+  "first": 94,
+  "whole": 94,
   "worst": 66,
   "longSum": 66,
-  "wall": 433,
+  "wall": 434,
   "rows": 21
  },
- "renderTreeMs": 38,
+ "renderTreeMs": 43,
  "cntOfRoot": {
   "n": 12000,
-  "ms": 17
+  "ms": 16
  },
  "clickRoot": {
   "first": 227,
-  "whole": 228,
-  "worst": 195,
-  "longSum": 195,
+  "whole": 227,
+  "worst": 201,
+  "longSum": 201,
   "wall": 567,
   "cards": 0
  },
  "rootExpAfterClick": false,
  "clickBig": {
-  "first": 200,
-  "whole": 1142,
-  "worst": 470,
-  "longSum": 883,
-  "wall": 1483,
+  "first": 211,
+  "whole": 1140,
+  "worst": 442,
+  "longSum": 873,
+  "wall": 1479,
   "cards": 2581,
   "notes": 2581
  },
  "openSmart": {
   "first": 209,
   "whole": 209,
-  "worst": 179,
-  "longSum": 179,
+  "worst": 175,
+  "longSum": 175,
   "wall": 551
  },
- "renderTreeSmartOpenMs": 140,
+ "renderTreeSmartOpenMs": 142,
  "getSmartArtsMs": {
   "sf-new": [
    12500,
-   38
+   44
   ],
   "sf-recent": [
    20,
-   37
+   35
   ],
   "sf-favs": [
    0,
-   1
+   2
   ],
   "sf-pinned": [
    0,
@@ -73,7 +73,7 @@
   ],
   "sf-time": [
    712,
-   109
+   120
   ],
   "sf-arch": [
    0,
@@ -81,7 +81,7 @@
   ],
   "sf-mywall": [
    12500,
-   33
+   39
   ],
   "sf-remind": [
    0,
@@ -89,7 +89,7 @@
   ],
   "sf-murajaa": [
    0,
-   1
+   0
   ],
   "sf-practice": [
    0,
@@ -101,48 +101,48 @@
   ],
   "sf-enx": [
    12000,
-   9
+   10
   ]
  },
  "clickSfEnx": {
-  "first": 1205,
-  "whole": 6086,
+  "first": 837,
+  "whole": 5773,
   "worst": 739,
-  "longSum": 5002,
-  "wall": 6445,
+  "longSum": 5041,
+  "wall": 6142,
   "cards": 12000
  },
- "renderTreeSecSFMs": 144,
+ "renderTreeSecSFMs": 148,
  "openNote": {
-  "first": 682,
-  "whole": 682,
-  "worst": 410,
-  "longSum": 858,
-  "wall": 1170
+  "first": 699,
+  "whole": 699,
+  "worst": 421,
+  "longSum": 898,
+  "wall": 1188
  },
  "openBig": {
-  "first": 406,
-  "whole": 406,
-  "worst": 358,
-  "longSum": 358,
+  "first": 407,
+  "whole": 407,
+  "worst": 361,
+  "longSum": 361,
   "wall": 750,
   "kb": 146
  },
  "keystroke": {
-  "keyToPaint": 38,
+  "keyToPaint": 42,
   "longTasks": [
-   118
+   126
   ],
-  "worst": 118,
+  "worst": 126,
   "saved": false
  },
  "direct": {
   "jsonMB": 57.9,
-  "stringifyMs": 1031,
-  "stampRecordTouchesMs": 126,
-  "collectMs": 52,
-  "syncDigestMs": 30,
-  "persistMs": 107
+  "stringifyMs": 1076,
+  "stampRecordTouchesMs": 168,
+  "collectMs": 65,
+  "syncDigestMs": 35,
+  "persistMs": 120
  },
  "errors": [],
  "sessionSec": 39
