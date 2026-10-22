@@ -1,0 +1,149 @@
+{
+ "run": 1,
+ "boot": {
+  "booted": 2478,
+  "firstTree": 2387,
+  "dcl": 554,
+  "worst": 1010,
+  "longSum": 2007,
+  "notes": 12500
+ },
+ "openSection": {
+  "first": 106,
+  "whole": 106,
+  "worst": 73,
+  "longSum": 73,
+  "wall": 451
+ },
+ "expandRoot": {
+  "first": 93,
+  "whole": 93,
+  "worst": 66,
+  "longSum": 66,
+  "wall": 433,
+  "rows": 21
+ },
+ "renderTreeMs": 38,
+ "cntOfRoot": {
+  "n": 12000,
+  "ms": 17
+ },
+ "clickRoot": {
+  "first": 227,
+  "whole": 228,
+  "worst": 195,
+  "longSum": 195,
+  "wall": 567,
+  "cards": 0
+ },
+ "rootExpAfterClick": false,
+ "clickBig": {
+  "first": 200,
+  "whole": 1142,
+  "worst": 470,
+  "longSum": 883,
+  "wall": 1483,
+  "cards": 2581,
+  "notes": 2581
+ },
+ "openSmart": {
+  "first": 209,
+  "whole": 209,
+  "worst": 179,
+  "longSum": 179,
+  "wall": 551
+ },
+ "renderTreeSmartOpenMs": 140,
+ "getSmartArtsMs": {
+  "sf-new": [
+   12500,
+   38
+  ],
+  "sf-recent": [
+   20,
+   37
+  ],
+  "sf-favs": [
+   0,
+   1
+  ],
+  "sf-pinned": [
+   0,
+   1
+  ],
+  "sf-time": [
+   712,
+   109
+  ],
+  "sf-arch": [
+   0,
+   1
+  ],
+  "sf-mywall": [
+   12500,
+   33
+  ],
+  "sf-remind": [
+   0,
+   1
+  ],
+  "sf-murajaa": [
+   0,
+   1
+  ],
+  "sf-practice": [
+   0,
+   1
+  ],
+  "sf-jeb": [
+   0,
+   1
+  ],
+  "sf-enx": [
+   12000,
+   9
+  ]
+ },
+ "clickSfEnx": {
+  "first": 1205,
+  "whole": 6086,
+  "worst": 739,
+  "longSum": 5002,
+  "wall": 6445,
+  "cards": 12000
+ },
+ "renderTreeSecSFMs": 144,
+ "openNote": {
+  "first": 682,
+  "whole": 682,
+  "worst": 410,
+  "longSum": 858,
+  "wall": 1170
+ },
+ "openBig": {
+  "first": 406,
+  "whole": 406,
+  "worst": 358,
+  "longSum": 358,
+  "wall": 750,
+  "kb": 146
+ },
+ "keystroke": {
+  "keyToPaint": 38,
+  "longTasks": [
+   118
+  ],
+  "worst": 118,
+  "saved": false
+ },
+ "direct": {
+  "jsonMB": 57.9,
+  "stringifyMs": 1031,
+  "stampRecordTouchesMs": 126,
+  "collectMs": 52,
+  "syncDigestMs": 30,
+  "persistMs": 107
+ },
+ "errors": [],
+ "sessionSec": 39
+}

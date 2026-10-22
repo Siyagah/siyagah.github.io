@@ -1,0 +1,147 @@
+{
+ "run": 1,
+ "boot": {
+  "booted": 637,
+  "firstTree": 573,
+  "dcl": 149,
+  "worst": 244,
+  "longSum": 382,
+  "notes": 12500
+ },
+ "openSection": {
+  "first": 46,
+  "whole": 46,
+  "worst": 0,
+  "longSum": 0,
+  "wall": 383
+ },
+ "expandRoot": {
+  "first": 46,
+  "whole": 46,
+  "worst": 0,
+  "longSum": 0,
+  "wall": 383,
+  "rows": 21
+ },
+ "renderTreeMs": 9,
+ "cntOfRoot": {
+  "n": 12000,
+  "ms": 4
+ },
+ "clickRoot": {
+  "first": 47,
+  "whole": 47,
+  "worst": 0,
+  "longSum": 0,
+  "wall": 383,
+  "cards": 0
+ },
+ "rootExpAfterClick": false,
+ "clickBig": {
+  "first": 55,
+  "whole": 221,
+  "worst": 91,
+  "longSum": 156,
+  "wall": 557,
+  "cards": 2581,
+  "notes": 2581
+ },
+ "openSmart": {
+  "first": 64,
+  "whole": 64,
+  "worst": 0,
+  "longSum": 0,
+  "wall": 400
+ },
+ "renderTreeSmartOpenMs": 30,
+ "getSmartArtsMs": {
+  "sf-new": [
+   12500,
+   10
+  ],
+  "sf-recent": [
+   20,
+   8
+  ],
+  "sf-favs": [
+   0,
+   0
+  ],
+  "sf-pinned": [
+   0,
+   0
+  ],
+  "sf-time": [
+   712,
+   26
+  ],
+  "sf-arch": [
+   0,
+   0
+  ],
+  "sf-mywall": [
+   12500,
+   8
+  ],
+  "sf-remind": [
+   0,
+   0
+  ],
+  "sf-murajaa": [
+   0,
+   0
+  ],
+  "sf-practice": [
+   0,
+   0
+  ],
+  "sf-jeb": [
+   0,
+   0
+  ],
+  "sf-enx": [
+   12000,
+   2
+  ]
+ },
+ "clickSfEnx": {
+  "first": 169,
+  "whole": 1247,
+  "worst": 125,
+  "longSum": 988,
+  "wall": 1588,
+  "cards": 12000
+ },
+ "renderTreeSecSFMs": 31,
+ "openNote": {
+  "first": 160,
+  "whole": 160,
+  "worst": 99,
+  "longSum": 99,
+  "wall": 533
+ },
+ "openBig": {
+  "first": 113,
+  "whole": 113,
+  "worst": 72,
+  "longSum": 72,
+  "wall": 450,
+  "kb": 146
+ },
+ "keystroke": {
+  "keyToPaint": 27,
+  "longTasks": [],
+  "worst": 0,
+  "saved": false
+ },
+ "direct": {
+  "jsonMB": 57.9,
+  "stringifyMs": 242,
+  "stampRecordTouchesMs": 36,
+  "collectMs": 19,
+  "syncDigestMs": 17,
+  "persistMs": 27
+ },
+ "errors": [],
+ "sessionSec": 27
+}

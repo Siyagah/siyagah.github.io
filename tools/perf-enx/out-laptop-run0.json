@@ -1,0 +1,297 @@
+{
+ "run": 0,
+ "boot": {
+  "booted": 682,
+  "firstTree": 617,
+  "dcl": 167,
+  "worst": 257,
+  "longSum": 400,
+  "notes": 12500
+ },
+ "idle": {
+  "seconds": 20,
+  "mainThreadMs": 133,
+  "longTasks": 1,
+  "worst": 89,
+  "profile": {
+   "wallMs": 20001,
+   "idle": 19906,
+   "self": [
+    [
+     "walk index.html:5920",
+     52
+    ],
+    [
+     "(anon) index.html:5909",
+     36
+    ],
+    [
+     "_picMigCands index.html:5907",
+     1
+    ],
+    [
+     "appendChild",
+     0
+    ],
+    [
+     "(anon) index.html:30269",
+     0
+    ],
+    [
+     "_zabNews index.html:24050",
+     0
+    ],
+    [
+     "(anon) index.html:29519",
+     0
+    ],
+    [
+     "(anon) index.html:6055",
+     0
+    ],
+    [
+     "(anon) index.html:6042",
+     0
+    ],
+    [
+     "_zabTk index.html:23805",
+     0
+    ],
+    [
+     "(garbage collector)",
+     0
+    ],
+    [
+     "_tkState index.html:23832",
+     0
+    ],
+    [
+     "_tkNewsCfgSig index.html:23841",
+     0
+    ],
+    [
+     "_jebYmd index.html:23448",
+     0
+    ]
+   ],
+   "total": [
+    [
+     "(anon) index.html:6055",
+     89
+    ],
+    [
+     "(anon) index.html:6017",
+     89
+    ],
+    [
+     "_picMigrate index.html:6015",
+     89
+    ],
+    [
+     "walk index.html:5920",
+     52
+    ],
+    [
+     "_picMigSweepFields index.html:5918",
+     52
+    ],
+    [
+     "_picMigCands index.html:5907",
+     37
+    ],
+    [
+     "(anon) index.html:5909",
+     36
+    ],
+    [
+     "_tkTick index.html:23973",
+     1
+    ],
+    [
+     "_tkNewsCfgSig index.html:23841",
+     1
+    ],
+    [
+     "appendChild",
+     0
+    ],
+    [
+     "(anon) index.html:27670",
+     0
+    ],
+    [
+     "_loadScript index.html:27667",
+     0
+    ],
+    [
+     "initAuth index.html:27538",
+     0
+    ],
+    [
+     "_initAuthRetry index.html:27537",
+     0
+    ],
+    [
+     "(anon) index.html:27699",
+     0
+    ],
+    [
+     "_fbRetryNow index.html:27696",
+     0
+    ],
+    [
+     "(anon) index.html:30269",
+     0
+    ],
+    [
+     "_zabNews index.html:24050",
+     0
+    ],
+    [
+     "(anon) index.html:29519",
+     0
+    ],
+    [
+     "(anon) index.html:6042",
+     0
+    ]
+   ]
+  }
+ },
+ "openSection": {
+  "first": 44,
+  "whole": 44,
+  "worst": 0,
+  "longSum": 0,
+  "wall": 383
+ },
+ "expandRoot": {
+  "first": 47,
+  "whole": 47,
+  "worst": 0,
+  "longSum": 0,
+  "wall": 383,
+  "rows": 21
+ },
+ "renderTreeMs": 10,
+ "cntOfRoot": {
+  "n": 12000,
+  "ms": 4
+ },
+ "clickRoot": {
+  "first": 47,
+  "whole": 47,
+  "worst": 0,
+  "longSum": 0,
+  "wall": 383,
+  "cards": 0
+ },
+ "rootExpAfterClick": false,
+ "clickBig": {
+  "first": 63,
+  "whole": 255,
+  "worst": 98,
+  "longSum": 189,
+  "wall": 592,
+  "cards": 2581,
+  "notes": 2581
+ },
+ "openSmart": {
+  "first": 80,
+  "whole": 80,
+  "worst": 0,
+  "longSum": 0,
+  "wall": 416
+ },
+ "renderTreeSmartOpenMs": 29,
+ "getSmartArtsMs": {
+  "sf-new": [
+   12500,
+   10
+  ],
+  "sf-recent": [
+   20,
+   7
+  ],
+  "sf-favs": [
+   0,
+   0
+  ],
+  "sf-pinned": [
+   0,
+   0
+  ],
+  "sf-time": [
+   712,
+   21
+  ],
+  "sf-arch": [
+   0,
+   0
+  ],
+  "sf-mywall": [
+   12500,
+   8
+  ],
+  "sf-remind": [
+   0,
+   0
+  ],
+  "sf-murajaa": [
+   0,
+   0
+  ],
+  "sf-practice": [
+   0,
+   0
+  ],
+  "sf-jeb": [
+   0,
+   0
+  ],
+  "sf-enx": [
+   12000,
+   2
+  ]
+ },
+ "clickSfEnx": {
+  "first": 155,
+  "whole": 1255,
+  "worst": 127,
+  "longSum": 995,
+  "wall": 1596,
+  "cards": 12000
+ },
+ "renderTreeSecSFMs": 31,
+ "openNote": {
+  "first": 160,
+  "whole": 160,
+  "worst": 104,
+  "longSum": 104,
+  "wall": 500
+ },
+ "openBig": {
+  "first": 112,
+  "whole": 112,
+  "worst": 84,
+  "longSum": 84,
+  "wall": 449,
+  "kb": 146
+ },
+ "keystroke": {
+  "keyToPaint": 26,
+  "longTasks": [],
+  "worst": 0,
+  "saved": false
+ },
+ "direct": {
+  "jsonMB": 57.9,
+  "stringifyMs": 243,
+  "stampRecordTouchesMs": 39,
+  "collectMs": 18,
+  "syncDigestMs": 14,
+  "persistMs": 24
+ },
+ "errors": [],
+ "sessionSec": 47
+}

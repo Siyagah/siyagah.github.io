@@ -1,0 +1,323 @@
+{
+ "run": 0,
+ "boot": {
+  "booted": 2423,
+  "firstTree": 2338,
+  "dcl": 569,
+  "worst": 982,
+  "longSum": 1910,
+  "notes": 12500
+ },
+ "idle": {
+  "seconds": 20,
+  "mainThreadMs": 572,
+  "longTasks": 1,
+  "worst": 365,
+  "profile": {
+   "wallMs": 20002,
+   "idle": 19603,
+   "self": [
+    [
+     "walk index.html:5920",
+     204
+    ],
+    [
+     "(anon) index.html:5909",
+     155
+    ],
+    [
+     "_tkTick index.html:23973",
+     3
+    ],
+    [
+     "_picMigCands index.html:5907",
+     3
+    ],
+    [
+     "_tkNewsCfgSig index.html:23841",
+     1
+    ],
+    [
+     "(anon) index.html:6055",
+     1
+    ],
+    [
+     "(anon) index.html:30269",
+     1
+    ],
+    [
+     "transaction",
+     1
+    ],
+    [
+     "_picMigSweepFields index.html:5918",
+     1
+    ],
+    [
+     "_bkCfg index.html:26847",
+     1
+    ],
+    [
+     "_remStateRefresh index.html:29535",
+     1
+    ],
+    [
+     "(anon) index.html:29519",
+     1
+    ],
+    [
+     "appendChild",
+     1
+    ],
+    [
+     "_zabNews index.html:24050",
+     1
+    ],
+    [
+     "(anon) index.html:6017",
+     1
+    ],
+    [
+     "(anon) index.html:27670",
+     0
+    ],
+    [
+     "(anon) index.html:24061",
+     0
+    ],
+    [
+     "_jebBarOn index.html:23693",
+     0
+    ],
+    [
+     "_newsTick index.html:24486",
+     0
+    ],
+    [
+     "open",
+     0
+    ]
+   ],
+   "total": [
+    [
+     "(anon) index.html:6055",
+     365
+    ],
+    [
+     "(anon) index.html:6017",
+     364
+    ],
+    [
+     "_picMigrate index.html:6015",
+     364
+    ],
+    [
+     "_picMigSweepFields index.html:5918",
+     205
+    ],
+    [
+     "walk index.html:5920",
+     204
+    ],
+    [
+     "_picMigCands index.html:5907",
+     158
+    ],
+    [
+     "(anon) index.html:5909",
+     155
+    ],
+    [
+     "_tkTick index.html:23973",
+     5
+    ],
+    [
+     "_tkNewsCfgSig index.html:23841",
+     2
+    ],
+    [
+     "(anon) index.html:29519",
+     2
+    ],
+    [
+     "(anon) index.html:30269",
+     1
+    ],
+    [
+     "_enxJobOp index.html:29929",
+     1
+    ],
+    [
+     "(anon) index.html:27670",
+     1
+    ],
+    [
+     "_loadScript index.html:27667",
+     1
+    ],
+    [
+     "initAuth index.html:27538",
+     1
+    ],
+    [
+     "_initAuthRetry index.html:27537",
+     1
+    ],
+    [
+     "(anon) index.html:27699",
+     1
+    ],
+    [
+     "_fbRetryNow index.html:27696",
+     1
+    ],
+    [
+     "_zabNews index.html:24050",
+     1
+    ],
+    [
+     "_newsTick index.html:24486",
+     1
+    ]
+   ]
+  }
+ },
+ "openSection": {
+  "first": 105,
+  "whole": 105,
+  "worst": 68,
+  "longSum": 68,
+  "wall": 451
+ },
+ "expandRoot": {
+  "first": 107,
+  "whole": 107,
+  "worst": 51,
+  "longSum": 51,
+  "wall": 451,
+  "rows": 21
+ },
+ "renderTreeMs": 38,
+ "cntOfRoot": {
+  "n": 12000,
+  "ms": 14
+ },
+ "clickRoot": {
+  "first": 211,
+  "whole": 211,
+  "worst": 179,
+  "longSum": 179,
+  "wall": 550,
+  "cards": 0
+ },
+ "rootExpAfterClick": false,
+ "clickBig": {
+  "first": 203,
+  "whole": 1202,
+  "worst": 543,
+  "longSum": 996,
+  "wall": 1542,
+  "cards": 2581,
+  "notes": 2581
+ },
+ "openSmart": {
+  "first": 209,
+  "whole": 209,
+  "worst": 175,
+  "longSum": 175,
+  "wall": 550
+ },
+ "renderTreeSmartOpenMs": 132,
+ "getSmartArtsMs": {
+  "sf-new": [
+   12500,
+   39
+  ],
+  "sf-recent": [
+   20,
+   36
+  ],
+  "sf-favs": [
+   0,
+   2
+  ],
+  "sf-pinned": [
+   0,
+   1
+  ],
+  "sf-time": [
+   712,
+   97
+  ],
+  "sf-arch": [
+   0,
+   1
+  ],
+  "sf-mywall": [
+   12500,
+   39
+  ],
+  "sf-remind": [
+   0,
+   1
+  ],
+  "sf-murajaa": [
+   0,
+   1
+  ],
+  "sf-practice": [
+   0,
+   1
+  ],
+  "sf-jeb": [
+   0,
+   1
+  ],
+  "sf-enx": [
+   12000,
+   8
+  ]
+ },
+ "clickSfEnx": {
+  "first": 835,
+  "whole": 5701,
+  "worst": 743,
+  "longSum": 4625,
+  "wall": 6062,
+  "cards": 12000
+ },
+ "renderTreeSecSFMs": 137,
+ "openNote": {
+  "first": 667,
+  "whole": 667,
+  "worst": 413,
+  "longSum": 855,
+  "wall": 1154
+ },
+ "openBig": {
+  "first": 409,
+  "whole": 409,
+  "worst": 344,
+  "longSum": 344,
+  "wall": 751,
+  "kb": 146
+ },
+ "keystroke": {
+  "keyToPaint": 37,
+  "longTasks": [
+   115
+  ],
+  "worst": 115,
+  "saved": false
+ },
+ "direct": {
+  "jsonMB": 57.9,
+  "stringifyMs": 1048,
+  "stampRecordTouchesMs": 193,
+  "collectMs": 66,
+  "syncDigestMs": 38,
+  "persistMs": 121
+ },
+ "errors": [],
+ "sessionSec": 59
+}

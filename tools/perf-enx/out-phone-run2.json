@@ -1,0 +1,149 @@
+{
+ "run": 2,
+ "boot": {
+  "booted": 2444,
+  "firstTree": 2364,
+  "dcl": 544,
+  "worst": 1046,
+  "longSum": 2024,
+  "notes": 12500
+ },
+ "openSection": {
+  "first": 104,
+  "whole": 104,
+  "worst": 80,
+  "longSum": 80,
+  "wall": 450
+ },
+ "expandRoot": {
+  "first": 93,
+  "whole": 93,
+  "worst": 67,
+  "longSum": 67,
+  "wall": 434,
+  "rows": 21
+ },
+ "renderTreeMs": 40,
+ "cntOfRoot": {
+  "n": 12000,
+  "ms": 19
+ },
+ "clickRoot": {
+  "first": 245,
+  "whole": 245,
+  "worst": 215,
+  "longSum": 215,
+  "wall": 583,
+  "cards": 0
+ },
+ "rootExpAfterClick": false,
+ "clickBig": {
+  "first": 217,
+  "whole": 1180,
+  "worst": 439,
+  "longSum": 901,
+  "wall": 1521,
+  "cards": 2581,
+  "notes": 2581
+ },
+ "openSmart": {
+  "first": 210,
+  "whole": 210,
+  "worst": 172,
+  "longSum": 172,
+  "wall": 551
+ },
+ "renderTreeSmartOpenMs": 132,
+ "getSmartArtsMs": {
+  "sf-new": [
+   12500,
+   37
+  ],
+  "sf-recent": [
+   20,
+   33
+  ],
+  "sf-favs": [
+   0,
+   2
+  ],
+  "sf-pinned": [
+   0,
+   1
+  ],
+  "sf-time": [
+   712,
+   92
+  ],
+  "sf-arch": [
+   0,
+   2
+  ],
+  "sf-mywall": [
+   12500,
+   33
+  ],
+  "sf-remind": [
+   0,
+   2
+  ],
+  "sf-murajaa": [
+   0,
+   1
+  ],
+  "sf-practice": [
+   0,
+   0
+  ],
+  "sf-jeb": [
+   0,
+   2
+  ],
+  "sf-enx": [
+   12000,
+   9
+  ]
+ },
+ "clickSfEnx": {
+  "first": 1190,
+  "whole": 6121,
+  "worst": 768,
+  "longSum": 5087,
+  "wall": 6479,
+  "cards": 12000
+ },
+ "renderTreeSecSFMs": 161,
+ "openNote": {
+  "first": 715,
+  "whole": 715,
+  "worst": 442,
+  "longSum": 918,
+  "wall": 1138
+ },
+ "openBig": {
+  "first": 436,
+  "whole": 436,
+  "worst": 374,
+  "longSum": 374,
+  "wall": 784,
+  "kb": 146
+ },
+ "keystroke": {
+  "keyToPaint": 41,
+  "longTasks": [
+   164
+  ],
+  "worst": 164,
+  "saved": false
+ },
+ "direct": {
+  "jsonMB": 57.9,
+  "stringifyMs": 1052,
+  "stampRecordTouchesMs": 142,
+  "collectMs": 70,
+  "syncDigestMs": 43,
+  "persistMs": 143
+ },
+ "errors": [],
+ "sessionSec": 39
+}
