@@ -17,7 +17,7 @@
    65j  the header reads the sidebar's own sync dot and ⚠; 📱 Install follows _pwaPrompt
 
    `--only=65a,65c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 65). */
-import { playwright, serve, seedDB, BLOCKED } from './harness.mjs';
+import { playwright, serve, seedDB, BLOCKED, zabAct, zabTap } from './harness.mjs';
 import { sleep, check, results } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -62,7 +62,8 @@ function hook(d, page) {
 const booted = async (page) => { await page.waitForFunction(() => window.__appBooted === true && !!document.getElementById('tree')); await sleep(500); };
 const open = async (vp, path, db = seed()) => pageOn(await ctxFor(vp, db), path);
 const on = (d, fn, arg) => d.page.evaluate(fn, arg);
-const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
+const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const rect = (d, sel) => on(d, (s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
 const visible = (d, sel) => on(d, (s) => { const e = document.querySelector(s); if (!e) return false; const c = getComputedStyle(e), r = e.getBoundingClientRect(); return c.display !== 'none' && c.visibility !== 'hidden' && r.width > 0 && r.height > 0; }, sel);
 const panelIds = (d) => on(d, () => [...document.querySelectorAll('#jeb-panel .jeb-it')].map((c) => c.dataset.iid));

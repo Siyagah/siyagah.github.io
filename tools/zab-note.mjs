@@ -16,7 +16,7 @@
    93i  zab mode the same in the docked panel (390 and 1440): the note area, a write in the pop-up window, the text back in the area
 
    `--only=93a,93d` runs just those; `--unpatched` serves the build before this round (so the checks must FAIL). Each ok/FAIL line becomes one app-check check. */
-import { playwright, serve, seedDB } from './harness.mjs';
+import { playwright, serve, seedDB, zabTap } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, waitSeeded, push } from './s1-fake.mjs';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -71,7 +71,7 @@ const tap = async (d, sel) => { const l = d.page.locator(sel).first(); await l.w
 /* a real tap on the Zab: the bar's chip (≥ 640), the round button's Rail (phone), the docked bar (Zab mode) */
 async function openZab(d, pid, jebMode) {
   if (d.vp.w < 640 && !jebMode) { await tap(d, '#zab-btn'); await tap(d, `#zab-lay .zr-b[data-pid="${pid}"]`); }
-  else await tap(d, `#jeb-bar .jeb-chip[data-pid="${pid}"] .jeb-main`);
+  else { /* v05.40 · Z15: the chip may be folded into "▸ N more"; reach it through the list as the owner does */ await zabTap(d.page, `#jeb-bar .jeb-chip[data-pid="${pid}"] .jeb-main`, { touch: d.vp.touch }); await sleep(400); }
   await d.page.waitForSelector('#jeb-panel.on', { timeout: 4000 }); await sleep(300);
 }
 const closeAll = async (d) => { await d.page.keyboard.press('Escape'); await sleep(300); await d.page.evaluate(() => { if (_jebOpen) jebClosePanel(); if (typeof _zabClose === 'function' && window._zabOpen) _zabClose(); }); await sleep(200); };
@@ -300,14 +300,14 @@ if (want('93d')) {
     const C = await addDevice(browser, srv.base, cloud, 'C', { width: vp.w, height: vp.h }, false, sd());
     const seen = await waitFor(async () => on(C, () => !!_zabNoteOf('zl')), 40000);
     let txt = null;
-    if (seen) { await C.page.locator('#jeb-bar .jeb-chip[data-pid="zl"] .jeb-main').first().click(); await sleep(500); txt = await on(C, () => { const e = document.querySelector('#jeb-panel.on .zn-area'); return e ? e.textContent : null; }); }
+    if (seen) { await zabTap(C.page, '#jeb-bar .jeb-chip[data-pid="zl"] .jeb-main'); await sleep(500); txt = await on(C, () => { const e = document.querySelector('#jeb-panel.on .zn-area'); return e ? e.textContent : null; }); }
     const stable = (await on(A, () => DB.articles.filter((a) => a.zabNote).length)) === 1;
     return [ia === 'zabn-zl' && ib === 'zabn-zl' && ok && stable && !!txt && txt.includes('from B newer'), JSON.stringify({ ia, ib, ok, stable, txt: txt && txt.slice(0, 60), errs: [...A.errors, ...B.errors, ...C.errors].slice(0, 2) })];
   });
   /* 93j (Architect, review of #214): an edit of the note received by sync repaints the OPEN Zab's note area — the targeted redraw (_renderFor) must count a
      note carrying zabNote as a Zab change, or the area keeps the old text until something else repaints the panel */
   await T('93j an edit of the note made on another device shows in the OPEN Zab\'s note area after sync (targeted redraw)', async () => {
-    await A.page.locator('#jeb-bar .jeb-chip[data-pid="zl"] .jeb-main').first().click(); await sleep(500);
+    await zabTap(A.page, '#jeb-bar .jeb-chip[data-pid="zl"] .jeb-main'); await sleep(500);
     const before = await on(A, () => { const e = document.querySelector('#jeb-panel.on .zn-area'); return e ? e.textContent : null; });
     await on(B, () => { const a = _zabNoteOf('zl'); a.content = '<p>synced needle 93j</p>'; a.updatedAt = new Date().toISOString(); persist(); });
     await push(cloud, B);

@@ -291,7 +291,8 @@ if (want('95d')) {
   await T('95d DB.jeb / DB.trash / DB.articles / DB.jebPockets and the Zab bar are byte-identical with news on vs off; no headline in DB, localStorage, the cloud or Save File', async () => {
     await waitSeeded(cloud, A);
     const snap = () => on(A, () => JSON.stringify([DB.jeb, DB.trash, DB.articles, DB.jebPockets, DB.folders, DB.sections]));
-    const bar = () => on(A, () => document.getElementById('jeb-bar').innerHTML);
+    /* v05.40 · Z15: the 📰 News chip (.jeb-nws) is on the bar on purpose while the news is on, and the fold ("▸ N more", jx-over) depends on the width; compare the bar without them */
+    const bar = () => on(A, () => { const c = document.getElementById('jeb-bar').cloneNode(true); c.querySelectorAll('.jeb-nws,.jeb-more').forEach((e) => e.remove()); c.querySelectorAll('.jx-over').forEach((e) => e.classList.remove('jx-over')); return c.innerHTML; });
     const a = await snap(), barA = await bar();
     await on(A, (u) => { zabNewsUrl(u); }, HELPER).catch(() => {}); await on(A, () => { zabNewsSet('on', true, true); _newsTick(); });
     await sleep(3000); await push(cloud, A); await sleep(1500);

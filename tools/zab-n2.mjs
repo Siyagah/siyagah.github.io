@@ -21,7 +21,7 @@
    77h  no animation runs under prefers-reduced-motion (and one does without it, so the check can fail)
 
    `--only=77a,77c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 77). */
-import { playwright, serve, seedDB } from './harness.mjs';
+import { playwright, serve, seedDB, zabTap } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, check, results } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -297,7 +297,7 @@ try {
         await on(d, () => closeTheme());
         const bar = await on(d, () => { const b = document.getElementById('jeb-bar'), r = b && b.getBoundingClientRect(); return { btn: !!document.getElementById('zab-btn'), bar: !!b, h: r && Math.round(r.height), bot: r && Math.round(innerHeight - r.bottom), on: document.documentElement.classList.contains('jeb-on'), jh: getComputedStyle(document.getElementById('p2')).getPropertyValue('--jeb-h'), pb: Math.round(innerHeight - document.getElementById('p2').getBoundingClientRect().bottom), chips: [...document.querySelectorAll('#jeb-bar .jeb-chip .jeb-nm')].map((e) => e.textContent).join() }; });
         check(!bar.btn && bar.bar && bar.h === 56 && bar.bot === 0 && bar.on && bar.jh === '56px' && bar.pb === 56, `${t} "Bar along the bottom (as before)" gives back the N1 bar exactly: no button, 56 px bar, panes end above it (--jeb-h ${bar.jh})`, JSON.stringify(bar));
-        await tapEl(d, vp, '#jeb-bar .jeb-chip[data-pid="jp-idea"] .jeb-main'); await d.page.waitForSelector('#jeb-panel.on'); await sleep(350);
+        /* v05.40 · Z15: the chip may be folded into "▸ N more"; reach it through the list as the owner does */ await zabTap(d.page, '#jeb-bar .jeb-chip[data-pid="jp-idea"] .jeb-main', { touch: vp.touch }); await d.page.waitForSelector('#jeb-panel.on'); await sleep(350);
         const sheet = await on(d, () => { const r = document.getElementById('jeb-panel').getBoundingClientRect(); return Math.round(innerHeight - r.bottom); });
         check(sheet === 56, `${t} ...and a panel opened from it sits above the bar as before (${sheet}px)`);
         await on(d, () => jebClosePanel());

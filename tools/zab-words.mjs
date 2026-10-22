@@ -12,7 +12,7 @@
    94d  data     DB (folders, articles, jeb, jebPockets, theme) is byte-identical before and after opening and closing every surface that does not change anything.
 
    `--only=94a,94b` runs just those; `--unpatched` serves the build before this round (94a and 94b must FAIL there). Each ok/FAIL line becomes one app-check check. */
-import { playwright, serve, seedDB } from './harness.mjs';
+import { playwright, serve, seedDB, zabAct } from './harness.mjs';
 import { sleep, on } from './s1-fake.mjs';
 import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -85,7 +85,8 @@ if (wantRun) {
     await sleep(900);
     return { ctx, page, errors, vp };
   }
-  const tap = async (d, sel) => { const l = d.page.locator(sel).first(); await l.waitFor({ state: 'visible', timeout: 5000 }); if (d.vp.touch) await l.tap(); else await l.click(); await sleep(400); };
+  /* v05.40 · Z15: a bar chip the bar has folded into "▸ N more" is reached through the list, as the owner does (harness zabAct) */
+  const tap = async (d, sel) => { if (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel)) { await zabAct(d.page, sel, { touch: d.vp.touch }); await sleep(400); return; } const l = d.page.locator(sel).first(); await l.waitFor({ state: 'visible', timeout: 5000 }); if (d.vp.touch) await l.tap(); else await l.click(); await sleep(400); };
   const phone = (d) => d.vp.w < 640 && !d.vp.jeb;   /* no bar: the round button */
   async function openZab(d, pid) {
     if (phone(d)) { await tap(d, '#zab-btn'); await tap(d, `#zab-lay .zr-b[data-pid="${pid}"]`); }

@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.39">
+<meta name="app-version" content="05.40">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -883,7 +883,16 @@ html.zab-btn #zab-tk-again{bottom:calc(var(--jeb-h) + 8px + env(safe-area-inset-
 .jeb-all .jeb-sw{background:conic-gradient(#FFF1A8 0 25%,#FFD9B8 0 50%,#CFE8FF 0 75%,#F6D2E4 0)}
 @media(max-width:639.98px){#jeb-bar.choosing .jeb-new{display:none}}
 .jeb-chip.on{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
-.jeb-new{padding:0 14px;color:var(--t2)}
+.jeb-new{padding:0 12px;color:var(--t2);height:44px}
+/* v05.40 · Z15 — the bar folds what does not fit into "▸ N more"; the 📰 News chip is virtual (no pocket) */
+.jeb-chip.jx-over,.jeb-more[hidden]{display:none!important}
+.jeb-aux .jeb-main{padding:0 12px 0 8px}
+.jeb-aux .jeb-sw{background:var(--paper);border:1px solid var(--border2)}
+.nwv{max-height:min(62vh,520px);overflow-y:auto;overflow-x:hidden;min-width:0}
+.nwv .nwv-st{font-size:13px;color:var(--t2);margin:0 0 8px;overflow-wrap:anywhere}
+.nwv .nwv-gh{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;margin:10px 0 2px}
+.nwv .nwv-gh small{font-weight:400;color:var(--t2)}
+.nwv .nwv-em{font-size:13.5px;color:var(--t2);padding:10px 0}
 .jeb-sw{flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;color:#2A2418;font-weight:700}
 .jeb-ct{min-width:20px;padding:1px 6px;border-radius:999px;background:var(--hover);color:var(--t1);font-size:12px;text-align:center}
 [data-jeb-cards]{display:flex;align-items:center;justify-content:center;align-self:stretch;min-width:40px;border-left:1px solid var(--border2);font-size:16px;color:var(--t2);cursor:pointer}
@@ -3888,7 +3897,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.39</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.40</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -24239,7 +24248,33 @@ function _newsPreviewHTML(){
   });
   return h;
 }
+/* v05.40 · Z15 — the News view (the 📰 News chip / row): the headlines held, by channel, in the app's modal; repainted in place by _newsPaint */
+function _newsViewHTML(){
+  const c=_zabNews();
+  let h='<div class="nwv-st">'+esc(_newsStatusText())+'</div>', any=false;
+  if(c.on&&_newsCache) c.chans.forEach(x=>{
+    const r=_newsCache.chans[x.id]; if(!x.on||!r||!r.items.length) return; any=true;
+    const its=r.items.slice(0,c.per);
+    h+='<div class="nwv-gh"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+esc(x.color)+'" aria-hidden="true"></span><span>'+esc(x.name)+'</span><small>'+its.length+'</small></div>';
+    its.forEach(i=>{ h+='<a class="nw-it" href="'+esc(i.u)+'" target="_blank" rel="noopener" style="display:block;min-height:44px;box-sizing:border-box;padding:6px 4px;font-size:13px;line-height:1.35;color:inherit;text-decoration:none;border-bottom:1px solid var(--bd,#e6e6e6);overflow-wrap:anywhere"><span class="nw-t">'+esc(i.t)+'</span>'+(c.short&&i.s?' <span class="nw-s" style="opacity:.7">— '+esc(i.s)+'</span>':'')+'</a>'; });
+  });
+  if(!any) h+='<div class="nwv-em">'+(!c.on?'The news is switched off. Turn it on in News settings.':(_newsBusy?'Fetching the headlines…':'No headlines yet.'))+'</div>';
+  return h;
+}
+function _newsViewOpen(){
+  _jebHideMenu(); _zabClose();
+  showModal('<div class="mt">📰 News</div><div id="nwv" class="nwv">'+_newsViewHTML()+'</div><div class="ma"><button class="btn" onclick="_newsViewSettings()" style="min-height:44px">⚙ News settings</button><button class="btn bp" onclick="closeModal()" style="min-height:44px">Close</button></div>');
+}
+function _newsViewSettings(){
+  closeModal(); openTheme();
+  const go=()=>{ const e=document.getElementById('th-nw'); if(e) e.scrollIntoView({block:'start'}); };
+  go(); setTimeout(go,80);
+}
 function _newsPaint(){
+  const nv=document.getElementById('nwv'), ov=document.getElementById('ov');
+  if(nv&&nv.isConnected&&ov&&ov.classList.contains('on')){ const h=_newsViewHTML(); if(nv.innerHTML!==h) nv.innerHTML=h; }
+  const jb=_jebEl('jeb-bar'); if(jb&&_dbLoaded) _jebPaintBar(jb);
+  if(_zabOpen) _zabPaint();
   const st=document.getElementById('nw-status'); if(st) st.textContent=_newsStatusText();
   const pv=document.getElementById('nw-prev'); if(pv){ const h=_newsPreviewHTML(); if(pv.innerHTML!==h) pv.innerHTML=h; }
 }
@@ -24306,7 +24341,7 @@ function _newsTick(){
   if(typeof DB==='undefined'||!DB||!_dbLoaded) return;
   if(!_newsLoaded) _newsBoot();
   const c=_zabNews(), sig=c.on+'|'+c.url+'|'+c.per+'|'+c.chans.filter(x=>x.on).map(x=>x.id+x.src).join(',');
-  if(sig!==_newsSig){ _newsSig=sig; _newsLast=-1; _newsErr=''; }
+  if(sig!==_newsSig){ _newsSig=sig; _newsLast=-1; _newsErr=''; _newsPaint(); }
   const was=_newsOffline; _newsOffline=navigator.onLine===false;
   if(was!==_newsOffline) _newsPaint();
   if(!c.on||document.hidden||_newsBusy||_newsOffline) return;
@@ -24440,6 +24475,7 @@ function _zabPaint(anim){
   const total=t.flat.reduce((n,x)=>n+(cnt[x.id]||0),0);
   const num=a=>'<span class="zb-n'+(a.red?' jt-red':'')+'">'+a.n+'</span>';
   const sw=p=>'<span class="zs" style="background:'+esc(p.color)+'" aria-hidden="true">'+esc(p.icon)+'</span>';
+  const nwOn=_zabNews().on, nwB=(cls,inner)=>'<button type="button" class="'+cls+'" data-zact="news">'+inner+'</button>';
   const newB=(par)=>'<button type="button" class="zd-act new" data-zact="new" data-par="'+esc(par||'')+'">＋ New Zab</button>';
   let h='';
   if(L==='drawer'){
@@ -24452,7 +24488,7 @@ function _zabPaint(anim){
         +(a.kids?'<button type="button" class="zd-fold" data-zact="fold" aria-expanded="'+open+'" aria-label="'+(open?'Fold':'Unfold')+' the Zabs inside '+nm+'">'+(open?'▾':'▸')+'</button>':'<span class="zd-sp"></span>')
         +'<button type="button" class="zd-nm">'+sw(p)+'<span class="zn">'+nm+'</span></button><span class="zd-ct'+(a.red?' jt-red':'')+'">'+a.n+'</span></div>';
     });
-    h='<div class="zl-bd"></div><div class="zl-dr" role="dialog" aria-label="Your Zabs"><div class="zd-hd"><button type="button" class="zd-act" style="border:none" data-zact="all">▤ All Zabs <span class="zd-ct">'+total+'</span></button></div><div class="zd-list">'+rows+newB('')+'</div></div>';
+    h='<div class="zl-bd"></div><div class="zl-dr" role="dialog" aria-label="Your Zabs"><div class="zd-hd"><button type="button" class="zd-act" style="border:none" data-zact="all">▤ All Zabs <span class="zd-ct">'+total+'</span></button></div><div class="zd-list">'+(nwOn?nwB('zd-act','📰 News <span class="zd-ct">'+_newsCount()+'</span>'):'')+rows+newB('')+'</div></div>';
   }else if(L==='cols'){
     let path=[], prev=null;
     for(const id of _zabPath){ if(!t.byId.has(id)||(t.eff.get(id)||null)!==prev) break; path.push(id); prev=id; }
@@ -24461,7 +24497,7 @@ function _zabPaint(anim){
     const crow=(p,lvl,sel)=>{ const a=R(p.id); return '<div class="zc-row'+(p.id===sel?' on':'')+'" data-pid="'+esc(p.id)+'" data-lvl="'+lvl+'"><button type="button" class="zc-nm">'+sw(p)+'<span class="zn">'+esc(p.name)+'</span>'+(a.kids?'<span aria-hidden="true">▸</span>':'')+'</button><span class="zd-ct'+(a.red?' jt-red':'')+'">'+a.n+'</span></div>'; };
     const n=path.length, leftPar=n>=2?path[n-2]:'', sel=n?path[n-1]:null;
     const leftHd=n?'<button type="button" data-zact="back" aria-label="Back up one level">‹ '+esc(n>=2?t.byId.get(path[n-2]).name:'All Zabs')+'</button>':'<button type="button" data-zact="all">▤ All Zabs ('+total+')</button>';
-    let cols='<div class="zc-col"><div class="zc-hd">'+leftHd+'</div><div class="zc-list">'+jebChildren(leftPar).map(p=>crow(p,n?n-1:0,sel)).join('')+(n?'':newB(''))+'</div></div>';
+    let cols='<div class="zc-col"><div class="zc-hd">'+leftHd+'</div><div class="zc-list">'+(nwOn&&!n?nwB('zd-act','📰 News <span class="zd-ct">'+_newsCount()+'</span>'):'')+jebChildren(leftPar).map(p=>crow(p,n?n-1:0,sel)).join('')+(n?'':newB(''))+'</div></div>';
     if(n){
       const cur=t.byId.get(path[n-1]);
       cols+='<div class="zc-col"><div class="zc-hd"><button type="button" data-zact="items" data-pid="'+esc(cur.id)+'">Its items ('+(cnt[cur.id]||0)+')</button></div><div class="zc-list">'+jebChildren(cur.id).map(p=>crow(p,n,null)).join('')+newB(cur.id)+'</div></div>';
@@ -24471,7 +24507,7 @@ function _zabPaint(anim){
     const bub=p=>{ const a=R(p.id); return '<button type="button" class="zr-b" data-pid="'+esc(p.id)+'" aria-label="'+esc(p.name)+(a.kids?' (holds Zabs)':'')+'"><span class="zr-lb">'+esc(p.name)+(a.kids?' ▸':'')+'</span><span class="zr-c" style="background:'+esc(p.color)+'" aria-hidden="true">'+esc(p.icon)+num(a)+'</span></button>'; };
     h='<div class="zl-bd"></div><div class="zl-rail" role="menu" aria-label="Your Zabs">'+jebChildren('').map(bub).join('')
       +'<button type="button" class="zr-b" data-zact="all" aria-label="All Zabs"><span class="zr-lb">All Zabs</span><span class="zr-c" style="background:var(--paper)" aria-hidden="true">▤<span class="zb-n">'+total+'</span></span></button>'
-      +'<button type="button" class="zr-b" data-zact="new" data-par="" aria-label="New Zab"><span class="zr-lb">New Zab</span><span class="zr-c" style="background:var(--paper)" aria-hidden="true">＋</span></button></div>';
+      +'<button type="button" class="zr-b" data-zact="new" data-par="" aria-label="New Zab"><span class="zr-lb">New Zab</span><span class="zr-c" style="background:var(--paper)" aria-hidden="true">＋</span></button>'+(nwOn?nwB('zr-b','<span class="zr-lb">News</span><span class="zr-c" style="background:var(--paper)" aria-hidden="true">📰<span class="zb-n">'+_newsCount()+'</span></span>'):'')+'</div>';
   }
   const sig=L+'|'+h; if(sig===_zabLaySig) return; _zabLaySig=sig;
   const keep=[...lay.querySelectorAll('.zl-rail,.zd-list,.zc-list')].map(e=>e.scrollTop);
@@ -24494,6 +24530,7 @@ function _zabWireLay(lay){
       const a=za.dataset.zact;
       if(a==='all'){ _zabClose(); jebOpenPanelSel({ids:[],all:true}); }
       else if(a==='new') jebNewPocketDialog(za.dataset.par||null);
+      else if(a==='news') _newsViewOpen();
       else if(a==='fold'&&row){ const id=row.dataset.pid; if(_zabUnfold.has(id)) _zabUnfold.delete(id); else _zabUnfold.add(id); _zabPaint(); }
       else if(a==='back'){ _zabPath=_zabPath.slice(0,-1); _zabPaint(); }
       else if(a==='items'){ const id=za.dataset.pid; _zabClose(); jebOpenPanel(id); }
@@ -24616,6 +24653,8 @@ function _jebMakeBar(){
     const go=t.closest('.jeb-go');
     if(go){ if(!go.disabled) _jebChooseGo(go.dataset.go); return; }
     const c=t.closest('.jeb-chip');
+    if(c&&c.dataset.more){ _jebMoreMenu(c); return; }
+    if(c&&c.dataset.news){ _newsViewOpen(); return; }
     if(c){
       if(_jebChoose){ _jebChooseTap(c); return; }
       const cards=!!t.closest('[data-jeb-cards]');
@@ -24649,7 +24688,7 @@ const _ZX_SEL='#jeb-bar>.jeb-chip[data-pid],.jx-kid,.zr-b[data-pid],.zd-row[data
 function _zxCfg(c){
   if(!c||!c.dataset||!c.dataset.pid||_zxDrag) return null;
   const pid=c.dataset.pid, box=c.parentElement; let sibs, axis='x', rev=false, slide=true;
-  if(c.matches('#jeb-bar>.jeb-chip')){ if(_jebChoose) return null; sibs=[...box.children].filter(n=>n.matches('.jeb-chip[data-pid]')); }   /* Choose: ticking, no dragging */
+  if(c.matches('#jeb-bar>.jeb-chip')){ if(_jebChoose) return null; const all=[...box.children].filter(n=>n.matches('.jeb-chip[data-pid]')); sibs=all.filter(n=>!n.classList.contains('jx-over')); if(!sibs.every((n,i)=>n===all[i])) return null; }   /* v05.40: a hidden chip is never dragged, and a drop is never counted among them; Choose: ticking, no dragging */
   else if(c.matches('.jx-kid')){ sibs=[...box.querySelectorAll('.jx-kid')]; axis='y'; slide=false; }   /* v05.23 · Z8: a vertical list */
   else if(c.matches('.zr-b')){ sibs=[...box.children].filter(n=>n.matches('.zr-b[data-pid]')); axis='y'; rev=true; slide=false; }
   else if(c.matches('.zd-row')){ const par=_jebParentOf(pid)||''; sibs=[...box.querySelectorAll('.zd-row[data-pid]')].filter(n=>(_jebParentOf(n.dataset.pid)||'')===par); axis='y'; slide=false; }
@@ -24779,15 +24818,54 @@ function _jebPaintBar(bar){
   [..._jebChosen].forEach(id=>{ if(!ids.includes(id)) _jebChosen.delete(id); });
   const chosen=ids.filter(id=>_jebChosen.has(id)), total=allP.reduce((n,p)=>n+(cnt[p.id]||0),0);
   const openRoot=(_jebOpen&&_jebOpen!=='*')?((jebPath(_jebOpen)[0]||{}).id||_jebOpen):null;
-  const sig=_jebOpen+'|'+(_jebChoose?'C'+chosen.join(','):'-')+'|'+total+'|'+rows.map(r=>{ const p=r.p, a=roll.get(p.id)||{n:0,red:false,kids:false}; return [p.id,p.name,p.icon,p.color,a.n,a.red?1:0,a.kids?1:0,r.d].join('~'); }).join('|');
-  if(sig===_jebBarSig) return; _jebBarSig=sig;
+  const nwOn=!_jebChoose&&_zabNews().on, nwN=nwOn?_newsCount():0;
+  const sig=_jebOpen+'|'+(_jebChoose?'C'+chosen.join(','):'-')+'|'+total+'|N'+(nwOn?nwN:'-')+'|'+rows.map(r=>{ const p=r.p, a=roll.get(p.id)||{n:0,red:false,kids:false}; return [p.id,p.name,p.icon,p.color,a.n,a.red?1:0,a.kids?1:0,r.d].join('~'); }).join('|');
+  if(sig===_jebBarSig){ _jebFoldBar(bar); return; } _jebBarSig=sig; _jebFoldKey='';
   const allOn=_jebChoose&&ps.length>0&&chosen.length===ps.length, n=chosen.length;
   bar.classList.toggle('choosing',_jebChoose);
   bar.innerHTML=`<button type="button" class="jeb-choose" aria-pressed="${_jebChoose}" title="${_jebChoose?'Leave choose mode':'Choose several Zabs'}">${_jebChoose?'✕ Cancel':'☑ Choose'}</button>`
+    +(_jebChoose?'':'<div class="jeb-new" role="button" tabindex="0">＋ New Zab</div>')
     +`<div class="jeb-chip jeb-all${allOn?' chosen':''}${_jebOpen==='*'&&_jebMulti&&_jebMulti.all?' on':''}" data-all="1" role="group" aria-label="All Zabs"><span class="jeb-main" role="button" tabindex="0" title="Open all Zabs in the panel"><span class="jeb-tk" aria-hidden="true">${allOn?'✓':''}</span><span class="jeb-sw">▤</span><span class="jeb-nm">All Zabs</span><span class="jeb-ct">${total}</span></span><span data-jeb-cards role="button" tabindex="0" aria-label="Spread all Zabs as cards" title="Spread all Zabs as cards">▦</span></div>`
+    +(nwOn?`<div class="jeb-chip jeb-aux jeb-nws" data-news="1" role="group" aria-label="News"><span class="jeb-main" role="button" tabindex="0" title="The latest headlines, by channel"><span class="jeb-sw" aria-hidden="true">📰</span><span class="jeb-nm">News</span><span class="jeb-ct">${nwN}</span></span></div>`:'')
     +rows.map(r=>{ const p=r.p, on=_jebChosen.has(p.id), ci=_jebChipInfo(p,cnt), a=roll.get(p.id)||{n:ci.n,red:ci.red,kids:false}; return `<div class="jeb-chip${(_jebChoose?p.id===_jebOpen:p.id===openRoot)?' on':''}${on?' chosen':''}" data-pid="${esc(p.id)}" role="group" aria-label="${esc(p.name)}" title="${esc(ci.title+(a.kids?_JEB_ROLL_TITLE:''))}"><span class="jeb-main" role="button" tabindex="0"><span class="jeb-tk" aria-hidden="true">${on?'✓':''}</span><span class="jeb-sw" style="background:${esc(p.color)}">${esc(p.icon)}</span><span class="jeb-nm">${r.d?'↳ ':''}${esc(p.name)}</span>${a.kids?'<span class="jx-in" aria-hidden="true" title="Holds Zabs">▸</span>':''}<span class="jeb-ct${a.red?' jt-red':''}">${a.n}</span></span><span data-jeb-cards role="button" tabindex="0" aria-label="Spread ${esc(p.name)} as cards" title="Spread ${esc(p.name)} as cards">▦</span></div>`; }).join('')
-    +'<div class="jeb-new" role="button" tabindex="0">＋ New Zab</div>'
+    +(_jebChoose?'':'<div class="jeb-chip jeb-aux jeb-more" data-more="1" role="group" aria-label="More Zabs" hidden><span class="jeb-main" role="button" tabindex="0" aria-haspopup="menu"><span class="jeb-nm"></span><span class="jeb-ct"></span></span></div>')
     +(_jebChoose?`<button type="button" class="jeb-go" data-go="panel"${n?'':' disabled'}>▤ Panel (${n})</button><button type="button" class="jeb-go" data-go="cards"${n?'':' disabled'}>▦ Cards (${n})</button>`:'');
+  _jebFoldBar(bar);
+}
+/* v05.40 · Z15 — the bar stays ONE row: after a paint, and whenever its width changes, the chips from the right that do not fit are hidden
+   (class jx-over) and "▸ N more" lists them. Measured, never a width constant; Choose keeps its scrolling row; the open Zab's chip is never hidden. */
+let _jebFoldKey='', _jebFoldRO=null;
+function _jebFoldBar(bar){
+  if(!bar||_zxDrag) return;
+  const more=bar.querySelector('.jeb-more'), chips=[...bar.querySelectorAll(':scope>.jeb-chip[data-pid]')];
+  if(!more){ bar.querySelectorAll(':scope>.jx-over').forEach(c=>c.classList.remove('jx-over')); return; }
+  const w=bar.clientWidth; if(!w) return;
+  const key=w+'|'+_jebBarSig; if(key===_jebFoldKey) return; _jebFoldKey=key;
+  if(!_jebFoldRO&&window.ResizeObserver){ try{ _jebFoldRO=new ResizeObserver(()=>{ const b=_jebEl('jeb-bar'); if(b) _jebFoldBar(b); }); _jebFoldRO.observe(bar); }catch(e){} }
+  bar.querySelectorAll(':scope>.jx-over').forEach(c=>c.classList.remove('jx-over')); more.hidden=true;
+  if(bar.scrollWidth<=bar.clientWidth+1) return;
+  more.hidden=false; more.querySelector('.jeb-nm').textContent='▸ '+chips.length+' more';
+  const openRoot=(_jebOpen&&_jebOpen!=='*')?((jebPath(_jebOpen)[0]||{}).id||_jebOpen):null;
+  const hid=[], over=()=>bar.scrollWidth>bar.clientWidth+1;
+  for(let k=chips.length-1;k>=0&&over();k--){ if(chips[k].dataset.pid===openRoot) continue; chips[k].classList.add('jx-over'); hid.push(chips[k]); }
+  /* last resort, only when every Zab chip that may go has gone and the row still does not fit (a phone): 📰 News, then All Zabs, move into the list too */
+  [bar.querySelector(':scope>.jeb-nws'),bar.querySelector(':scope>.jeb-all')].forEach(e=>{ if(e&&over()){ e.classList.add('jx-over'); hid.push(e); } });
+  let sum=0, red=false;
+  hid.forEach(c=>{ if(!c.dataset.pid) return; const ct=c.querySelector('.jeb-main>.jeb-ct'); sum+=parseInt(ct&&ct.textContent,10)||0; if(ct&&ct.classList.contains('jt-red')) red=true; });
+  more.querySelector('.jeb-nm').textContent='▸ '+hid.length+' more';
+  const ct=more.querySelector('.jeb-ct'); ct.textContent=sum; ct.classList.toggle('jt-red',red);
+  more.title=hid.length+' more Zab'+(hid.length===1?'':'s')+' — tap to list them';
+}
+function _jebMoreMenu(anchor){
+  const bar=_jebEl('jeb-bar'); if(!bar) return;
+  const rows=[...bar.querySelectorAll(':scope>.jeb-chip.jx-over')].map(c=>{
+    const ct=c.querySelector('.jeb-main>.jeb-ct');
+    if(c.dataset.news) return {t:'📰 News  ·  '+(ct?ct.textContent:'0'),f:()=>_newsViewOpen()};
+    if(c.dataset.all) return {t:'▤ All Zabs  ·  '+(ct?ct.textContent:'0'),f:()=>jebToggleAllPanel()};
+    const p=_jebPocket(c.dataset.pid); if(!p) return null;
+    return {t:p.icon+' '+p.name+'  ·  '+(ct?ct.textContent:'0'),f:()=>jebTogglePanel(p.id)};
+  }).filter(Boolean);
+  if(rows.length) _jebShowMenu(rows,anchor);
 }
 /* ── ☑ Choose ── */
 function _jebChooseToggle(){

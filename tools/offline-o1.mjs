@@ -20,7 +20,7 @@
 
    O1_ROOT=<dir> serves another build (the unpatched run uses a copy of the previous version). `--only=74a,74c` runs just those.
    Each printed ok/FAIL line becomes one app-check check (block 74). */
-import { playwright, seedDB, ROOT } from './harness.mjs';
+import { playwright, seedDB, ROOT, zabTap } from './harness.mjs';
 import { makeCloud, addDevice, reopen, on, sleep, quiet, waitSeeded, check, results, liveDB } from './s1-fake.mjs';
 import { createServer } from 'node:http';
 import { readFile, mkdtemp, writeFile, rm } from 'node:fs/promises';
@@ -211,7 +211,7 @@ try {
       /* 4. a Zab item (the keyboard is put away first: a phone hides the bar while one is up) */
       await A.page.evaluate(() => { if (ST.editing) { try { saveArt(); } catch (e) {} } if (document.activeElement) document.activeElement.blur(); });
       await sleep(500);
-      await tap('#jeb-bar .jeb-chip[data-pid="jp-idea"] .jeb-main'); await A.page.waitForSelector('#jeb-panel.on', { timeout: 4000 }); await sleep(400);
+      /* v05.40 · Z15: the chip may be folded into "▸ N more"; reach it through the list as the owner does */ await zabTap(A.page, '#jeb-bar .jeb-chip[data-pid="jp-idea"] .jeb-main', { touch: vp.touch }); await A.page.waitForSelector('#jeb-panel.on', { timeout: 4000 }); await sleep(400);
       await tap('#jeb-add-in'); await A.page.keyboard.type('Offline zab item'); await A.page.keyboard.press('Enter'); await sleep(900);
       await tap('#jeb-panel .jeb-x'); await sleep(300);
       const have = async (d) => {

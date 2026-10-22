@@ -19,7 +19,7 @@
    60l  the bottom-fixed sweep: each element against the bar
 
    `--only=60a,60c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 60). */
-import { playwright, serve, seedDB, touchDrag } from './harness.mjs';
+import { playwright, serve, seedDB, touchDrag, zabAct, zabTap, zabShow } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, check, results, NB } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -39,7 +39,8 @@ const baseItems = () => [mkItem('t1', 'jp-task', 'Alpha', 0), mkItem('t2', 'jp-t
 const longNote = () => ({ id: 'long1', title: 'A long note', content: '<h2>One</h2><h2>Two</h2><h2>Three</h2>' + Array.from({ length: 140 }, (_, i) => `<p>Paragraph number ${i} of the long note, with enough words to wrap on a phone screen.</p>`).join('') + '<p id="the-end">THE END</p>', folderIds: ['f1'], tags: [], createdAt: T0, updatedAt: T0, kind: 'general' });
 const seed = (extra) => { const db = seedDB(T0); db.jeb = baseItems(); db.articles.push(longNote()); if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar', zabTicker: { on: false } }); return db; };   /* v05.32 (Z10): this check is about the bar alone (--jeb-h is the bar's 56 px); the scrolling titles band, which adds its own height, is block 92's */   /* v05.18: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
 const dev = (cloud, name, vp, db) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed());
-const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
+const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
 const jebState = (d) => on(d, () => JSON.parse(JSON.stringify({ p: DB.jebPockets, i: DB.jeb, trash: (DB.trash || []).filter((t) => /^jeb/.test(t.type)).length })));
 const chipCounts = (d) => on(d, () => [...document.querySelectorAll('#jeb-bar .jeb-chip[data-pid]')].map((c) => c.querySelector('.jeb-nm').textContent + ':' + c.querySelector('.jeb-ct').textContent));
@@ -235,7 +236,7 @@ try {
     let st = await jebState(d);
     const np = st.p.find((p) => p.name === 'Reading');
     check(!!np && np.icon === '★' && np.color === '#E6DCF7' && (await chipCounts(d)).pop() === 'Reading:0', `${t} ＋ New pocket: name, icon and colour are kept; the chip appears last`, JSON.stringify(np));
-    const menuOf = async (name) => { await d.page.locator(`#jeb-bar .jeb-chip[title="${name}"]`).first().click({ button: 'right' }); await d.page.waitForSelector('#jeb-menu'); await sleep(100); };
+    const menuOf = async (name) => { /* v05.40 · Z15: a folded chip is opened from "▸ N more" first (the open Zab's chip is never folded), then right-clicked */ await zabShow(d.page, `#jeb-bar .jeb-chip[title="${name}"]`, { touch: d.page.viewportSize().width < 1000 }); await d.page.locator(`#jeb-bar .jeb-chip[title="${name}"]`).first().click({ button: 'right' }); await d.page.waitForSelector('#jeb-menu'); await sleep(100); };
     await menuOf('Reading');
     const rows = await on(d, () => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent));
     check(['Rename', 'Icon & colour', 'Move left', 'Move right', 'Clear done items', 'Delete Zab'].every((w) => rows.some((r) => r.includes(w))) && rows.every((r) => /[A-Za-z]/.test(r)), `${t} the Zab menu: every row carries a word`, rows.join(' / '));
@@ -368,16 +369,11 @@ try {
     await on(d, () => { for (let i = 0; i < 8; i++) jebAddPocket('Pocket number ' + (i + 5), '★', '#D8F0D2'); jebRefresh(); });
     await sleep(300);
     const m = await on(d, () => { const b = document.getElementById('jeb-bar'); return { chips: b.querySelectorAll('.jeb-chip[data-pid]').length, sw: b.scrollWidth, cw: b.clientWidth, docW: document.documentElement.scrollWidth, innerW: innerWidth, bodyW: document.body.scrollWidth }; });
-    check(m.chips === 12 && m.sw > m.cw, `${t} 12 pockets overflow the bar sideways (scrollable)`, JSON.stringify(m));
+    /* v05.40 · Z15 changed this on purpose: 12 Zabs no longer scroll the bar sideways; what does not fit folds into "▸ N more", and ＋ New Zab is drawn first */
+    const fm = await on(d, () => { const bar = document.getElementById('jeb-bar'), more = bar.querySelector('.jeb-more'), n = bar.querySelector('.jeb-new').getBoundingClientRect(), br = bar.getBoundingClientRect(); return { sw: bar.scrollWidth, cw: bar.clientWidth, moreVis: !!more && !more.hidden, over: bar.querySelectorAll(':scope>.jx-over').length, newL: n.left, newR: n.right, barL: br.left, barR: br.right, first: bar.querySelector('.jeb-new') === [...bar.children].find((e) => e.matches('.jeb-new,.jeb-chip')) }; });
+    check(m.chips === 12 && fm.sw <= fm.cw + 1 && fm.moreVis && fm.over > 0, `${t} 12 Zabs fold into "▸ N more"; the bar does not scroll sideways`, JSON.stringify({ m, fm }));
     check(m.docW <= m.innerW && m.bodyW <= m.innerW, `${t} no page-level horizontal overflow`, JSON.stringify(m));
-    await d.page.mouse.move(vp.w / 2, vp.h - 28);
-    await d.page.mouse.wheel(0, 3000); await sleep(300);
-    const sl = await on(d, () => document.getElementById('jeb-bar').scrollLeft);
-    check(sl > 50, `${t} a vertical mouse wheel over the bar scrolls it sideways`, String(sl));
-    await on(d, () => { const b = document.getElementById('jeb-bar'); b.scrollLeft = b.scrollWidth; });
-    await sleep(200);
-    const last = await on(d, () => { const b = document.getElementById('jeb-bar'), n = b.querySelector('.jeb-new').getBoundingClientRect(), br = b.getBoundingClientRect(); return { right: n.right, barRight: br.right, left: n.left }; });
-    check(last.right <= last.barRight + 1 && last.left >= 0, `${t} the last item ("＋ New pocket") is reachable`, JSON.stringify(last));
+    check(fm.newL >= fm.barL - 1 && fm.newR <= fm.barR + 1 && fm.first, `${t} "＋ New Zab" is first and fully in view`, JSON.stringify(fm));
     noErr(d, t);
   });
 

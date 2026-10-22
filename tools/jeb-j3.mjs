@@ -18,7 +18,7 @@
         overflow in the panel with 6 tags attached
 
    `--only=63a,63c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 63). */
-import { playwright, serve, seedDB } from './harness.mjs';
+import { playwright, serve, seedDB, zabAct, zabTap } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, check, results, reopen } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -35,7 +35,8 @@ const browser = await pw.chromium.launch();
 const mkItem = (id, pocketId, text, order, extra = {}) => ({ id, pocketId, text, done: false, folderIds: [], tags: [], kind: null, journal: false, order, createdAt: T0, updatedAt: T0, ...extra });
 const seed = (extra) => { const db = seedDB(T0); db.jeb = [mkItem('t1', 'jp-task', 'Alpha item\nsecond line of alpha', 0), mkItem('t2', 'jp-task', 'Bravo', 1), mkItem('t3', 'jp-task', 'Charlie', 2)]; if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.18: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
 const dev = (cloud, name, vp, db) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed());
-const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
+const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
 const item = (d, id) => on(d, (i) => JSON.parse(JSON.stringify((DB.jeb || []).find((x) => x.id === i) || null)), id);
 const openPanel = async (d, vp, name) => { await act(d, vp, `#jeb-bar .jeb-chip[title="${name}"]`); await d.page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await sleep(300); };

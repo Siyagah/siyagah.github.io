@@ -19,7 +19,7 @@
    70i  contrast of the new text on the five presets (phone and laptop shapes, panel and deck)
 
    `--only=70a,70c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 70). */
-import { playwright, serve, seedDB, touchDrag, hostLimit } from './harness.mjs';
+import { playwright, serve, seedDB, touchDrag, hostLimit, zabAct, zabTap, zabShow } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, check, results } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -56,13 +56,15 @@ const dev = async (cloud, name, vp, db, mode = {}) => {
   await d.ctx.route('**/i.ytimg.com/**', (r) => { d.hits.thumb++; return d.mode.thumb === 'fail' ? r.abort() : r.fulfill({ status: 200, contentType: 'image/png', body: PNG }); });
   return d;
 };
-const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
+const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const until = async (fn, ms = 8000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await sleep(150); } return false; };
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
 const item = (d, id) => on(d, (i) => JSON.parse(JSON.stringify(DB.jeb.find((x) => x.id === i) || null)), id);
-const openPanel = async (d, vp, name = 'Links to read') => { await act(d, vp, `#jeb-bar .jeb-chip[title="${name}"]`); await d.page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await sleep(400); };
+/* v05.40 · Z15: menuOf may already have opened this Zab (a folded chip is opened from the list first), and a second tap would close it */
+const openPanel = async (d, vp, name = 'Links to read') => { if (!(await on(d, (n) => { const p = DB.jebPockets.find((x) => x.name === n); return !!p && _jebOpen === p.id && document.getElementById('jeb-panel').classList.contains('on'); }, name))) await act(d, vp, `#jeb-bar .jeb-chip[title="${name}"]`); await d.page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await sleep(400); };
 const rowIds = (d) => on(d, () => [...document.querySelectorAll('#jeb-panel .jeb-it')].map((e) => e.dataset.iid));
-const menuOf = async (d, name) => { await d.page.locator(`#jeb-bar .jeb-chip[title="${name}"]`).first().click({ button: 'right' }); await d.page.waitForSelector('#jeb-menu'); await sleep(100); };
+const menuOf = async (d, name) => { /* v05.40 · Z15: a folded chip is opened from "▸ N more" first (the open Zab's chip is never folded), then right-clicked */ await zabShow(d.page, `#jeb-bar .jeb-chip[title="${name}"]`, { touch: d.page.viewportSize().width < 1000 }); await d.page.locator(`#jeb-bar .jeb-chip[title="${name}"]`).first().click({ button: 'right' }); await d.page.waitForSelector('#jeb-menu'); await sleep(100); };
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
 const each = async (fn, vps = VPS, mode) => { for (const vp of vps) { const d = await dev(makeCloud(), 'D' + vp.name, vp, null, mode); try { await fn(d, vp); } finally { await d.ctx.close(); } } };
 
