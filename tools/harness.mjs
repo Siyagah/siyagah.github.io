@@ -328,7 +328,8 @@ export async function zabTap(page, sel, { touch = false } = {}) {
   await page.evaluate(() => { const a = document.activeElement; if (a && a !== document.body && /^(INPUT|TEXTAREA)$/.test(a.tagName)) a.blur(); });
   await new Promise((r) => setTimeout(r, 300));
   /* the bar may be re-laid-out a moment after a keyboard/blur or a resize: wait for the more chip to have a box, and press again once if no list came */
-  await page.waitForFunction(() => { const e = document.querySelector('#jeb-bar .jeb-more .jeb-main'); return !!e && e.getBoundingClientRect().width > 0; }, null, { timeout: 5000 });
+  try { await page.waitForFunction((s) => { const e = document.querySelector('#jeb-bar .jeb-more .jeb-main'); if (e && e.getBoundingClientRect().width > 0) return true; const t = document.querySelector(s); return !!t && !t.closest('.jx-over'); }, sel, { timeout: 5000 }); } catch (e) { /* neither: fall through to the error below */ }
+  if (!(await page.evaluate((s) => { const t = document.querySelector(s); return !!t && !!t.closest('#jeb-bar>.jeb-chip.jx-over'); }, sel))) { const pt = await centre(sel); if (pt) { await press(pt.x, pt.y); return 'chip'; } }   /* the bar re-laid-out meanwhile: the chip is on it now */
   for (let k = 0; k < 3; k++) {
     /* at 390 with a Zab open, its chip + the buttons are wider than the row (the app lets it scroll): scroll "▸ N more" into view first, as a finger would */
     await page.evaluate(() => { const e = document.querySelector('#jeb-bar .jeb-more'); if (e) e.scrollIntoView({ inline: 'nearest', block: 'nearest' }); });
