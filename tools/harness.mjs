@@ -309,3 +309,25 @@ export function pngSize(buf) {
   if (buf.length < 24 || buf.readUInt32BE(0) !== 0x89504e47) return null;
   return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
 }
+
+/* v05.40 · Z15 — the Zab bar folds the chips that do not fit into "▸ N more" (class jx-over on the hidden chip). A check that needs a Zab
+   reaches it the way the owner does. `zabTap(page, sel, {touch})` presses `sel` with a real tap/click; when `sel` is a bar chip that is folded
+   (jx-over, or "All Zabs"/"News" moved in on a phone) it opens "▸ N more" and presses that Zab's row instead. Returns 'chip' or 'more'.
+   `zabOpen(page, name, {touch})` is the same for "the chip titled <name>". A folded chip has no box: a check that needs the CHIP ITSELF
+   (its ▦ half, its geometry, a drag) must not use this; it makes room instead (fewer/shorter Zabs, or a wider window) and says so. */
+export async function zabVisible(page, sel) {
+  return page.evaluate((s) => { const e = document.querySelector(s); if (!e) return false; if (e.closest('.jx-over')) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }, sel);
+}
+export async function zabTap(page, sel, { touch = false } = {}) {
+  const press = async (x, y) => (touch ? page.touchscreen.tap(x, y) : page.mouse.click(x, y));
+  const centre = (s) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, s);
+  const folded = await page.evaluate((s) => { const e = document.querySelector(s); const c = e && e.closest('#jeb-bar>.jeb-chip'); return !!(c && c.classList.contains('jx-over')); }, sel);
+  if (!folded) { const pt = await centre(sel); if (!pt) throw new Error('zabTap: no ' + sel); await press(pt.x, pt.y); return 'chip'; }
+  const label = await page.evaluate((s) => { const c = document.querySelector(s).closest('#jeb-bar>.jeb-chip'); const p = c.dataset.pid ? (window.DB.jebPockets.find((x) => x.id === c.dataset.pid) || {}) : {}; return c.dataset.news ? 'News' : c.dataset.all ? 'All Zabs' : p.name; }, sel);
+  const m = await centre('#jeb-bar .jeb-more .jeb-main'); if (!m) throw new Error('zabTap: no ▸ N more');
+  await press(m.x, m.y); await page.waitForSelector('#jeb-menu', { timeout: 3000 });
+  const row = await page.evaluate((l) => { const r = [...document.querySelectorAll('#jeb-menu .jm')].find((e) => e.textContent.includes(l)); if (!r) return null; const b = r.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }, label);
+  if (!row) throw new Error('zabTap: no row "' + label + '" in the more-list');
+  await press(row.x, row.y); return 'more';
+}
+export const zabOpen = (page, name, o) => zabTap(page, `#jeb-bar .jeb-chip[title="${name}"]`, o);
