@@ -4161,7 +4161,7 @@ async function _idbMigrateFrom(db){
    plus 'notebook-seq' (written in the same transaction): the save number the full
    copy already holds. At boot the journal entries NEWER than that are laid over it
    (_ljOverlay). A full copy is written (a) the first time a notebook enters
-   journal mode, (b) in the idle after the last save (_LJ_CKPT_MS), (c) after
+   journal mode, (b) when the page is hidden, or 10 min after the last save (_LJ_CKPT_MS; v05.41 — a settings-only save starts no timer), (c) after
    _LJ_CKPT_PUTS journal writes; the entries it makes redundant are then removed.
    If a journal write fails the journal is dropped and the next save writes a full
    copy again — the failure raises the same ⚠ alarm any failed save always has.
@@ -4169,7 +4169,7 @@ async function _idbMigrateFrom(db){
    up to _LJ_CKPT_MS behind. Nobody downgrades (the service worker only moves
    forward); the frozen builds under legacy/ read-only and do not write. */
 const _LJ_NAME='siyagah-localrecs-v1', _LJ_STORE='kv';
-let _LJ_MIN_NOTES=1500, _LJ_CKPT_MS=30000, _LJ_CKPT_PUTS=3000;
+let _LJ_MIN_NOTES=1500, _LJ_CKPT_MS=600000, _LJ_CKPT_PUTS=3000;
 let _ljDbP=null, _ljOn=false, _ljDead=false, _ljSeq=0, _ljCkpt=0, _ljBase=null, _ljOrd=null, _ljHead=null;
 let _ljEpoch=0, _ljChain=Promise.resolve(), _ljCkptTimer=null, _ljCkptBusy=false, _ljPuts=0;
 window._ljStat={writes:0,puts:0,full:0,lastMs:0};
@@ -4269,10 +4269,18 @@ function _ljSave(sw){
   const m={seq:seq,n:_ljCounts(sw)};
   _ljStat.puts+=puts.length; _ljPuts+=puts.length;
   const p=_ljRun(epoch,()=>_ljTx(puts,m,null));
+  /* v05.41 (P5): the full copy is one task proportional to the whole notebook (1.9 s at 58 MB on a phone), and opening a note
+     saves (lastArticle), so a 30 s idle timer fired after almost anything. Now: a save that changed only the head (settings)
+     starts no timer; otherwise the copy is made on hide, after _LJ_CKPT_PUTS puts, or after _LJ_CKPT_MS (10 min) without a save.
+     The journal holds every change meanwhile and boot overlays it, so nothing is lost if the tab is killed. */
+  if(puts.every(x=>x[0]==='h')) return p;
   clearTimeout(_ljCkptTimer);
   _ljCkptTimer=setTimeout(_ljCheckpoint,_ljPuts>=_LJ_CKPT_PUTS?0:_LJ_CKPT_MS);
   return p;
 }
+function _ljHiddenCkpt(){ if(_ljOn&&!_ljCkptBusy&&_ljSeq>_ljCkpt&&(_ljCkptTimer||_ljPuts>0)) _ljCheckpoint(); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') _ljHiddenCkpt(); });
+window.addEventListener('pagehide',_ljHiddenCkpt);
 /* a full copy of the notebook as it is now, then the removal of what it makes redundant */
 function _ljCheckpoint(){
   clearTimeout(_ljCkptTimer); _ljCkptTimer=null;
