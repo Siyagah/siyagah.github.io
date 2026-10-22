@@ -337,7 +337,8 @@ export async function zabTap(page, sel, { touch = false } = {}) {
     }
   }
   let row = null;
-  for (let k = 0; k < 6 && !row; k++) { if (k) await new Promise((r) => setTimeout(r, 200)); row = await page.evaluate((l) => { const r = [...document.querySelectorAll('#jeb-menu .jm')].find((e) => e.textContent.includes(l)); if (!r) return null; const b = r.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }, label); }
+  for (let k = 0; k < 6 && !row; k++) { if (k) await new Promise((r) => setTimeout(r, 200)); row = await page.evaluate((l) => { const r = [...document.querySelectorAll('#jeb-menu .jm')].find((e) => e.textContent.replace(/^\S+\s+/, '').split('  ·  ')[0] === l); if (!r) return null; const b = r.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }, label); }
+  if (!row && await zabVisible(page, sel)) { /* the bar re-laid-out meanwhile and the chip is on it now */ await page.keyboard.press('Escape'); const pt = await centre(sel); await press(pt.x, pt.y); return 'chip'; }
   if (!row) throw new Error('zabTap: no row "' + label + '" in the more-list: ' + JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent))));
   await press(row.x, row.y); return 'more';
 }
