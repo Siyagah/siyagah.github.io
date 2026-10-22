@@ -24,7 +24,7 @@ import { join } from 'node:path';
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => +((argv.find((a) => a.startsWith(`--${k}=`)) || '').split('=')[1]) || d;
-const NOTES = arg('notes', 6000), RUNS = arg('runs', 3);
+const NOTES = arg('notes', 8000), RUNS = arg('runs', 3);
 const results = [];
 function check(ok, label, detail = '') { results.push({ ok, label }); console.log((ok ? '  ok   ' : ' FAIL  ') + label + (detail ? '\n         ' + String(detail).slice(0, 600) : '')); }
 function makeBase() {
@@ -55,7 +55,7 @@ async function seed(page) {
     for (let i = 0; i < 20; i++) DB.folders.push({ id: 'p6-b' + i, name: 'Notebook ' + i, parentId: 'p6-root', order: i + 1, updatedAt: iso(now) });
     for (let i = 0; i < N; i++) {
       const cr = now - 864e5 * (3 + rnd() * 3000), up = cr + rnd() * (now - 864e5 * 3 - cr), nb = 'Notebook ' + (i % 20);
-      let c = ''; while (c.length < 2500) c += '<div>' + words(10 + ((rnd() * 30) | 0)) + '</div>';
+      let c = ''; while (c.length < 5000) c += '<div>' + words(10 + ((rnd() * 30) | 0)) + '</div>';
       const a = { id: 'p6-n' + i, title: words(3 + (i % 5)).trim() + ' ' + i, content: c, folderIds: ['p6-b' + (i % 20)], tags: ['t' + (i % 7)], createdAt: iso(cr - (cr % 1000)), updatedAt: iso(up - (up % 1000)), fromEvernote: { nb, stack: '', k: 'k' + i, at: iso(now - i * 1000) } };
       if (i % 50 === 0) a.noteHistory = [{ id: 'h1-' + i, ts: iso(now - 9e6), title: 'old', content: 'old text ' + i, reason: 'auto' }, { id: 'h2-' + i, ts: iso(now - 8e6), title: 'old2', content: 'old text two ' + i, reason: 'auto' }];
       DB.articles.push(a);
