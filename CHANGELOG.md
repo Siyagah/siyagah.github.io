@@ -10651,6 +10651,25 @@ The owner: "With Evernote export, does this made the app heavy? Experiencing slo
 
 ---
 
-## v05.42 — P6: a faster start at the owner's scale, round 2 (PCF J61) — in progress
+## v05.42 — P6: a faster start at the owner's scale, round 2 (PCF J61)
 
-Stub: the record baseline (`_seedRecSnap`) and the undo baseline (`_histCapture(sw,true)`) are taken off the start. Details follow when built.
+The two start-up steps the profile put on top were both over the whole notebook's text: `_seedRecSnap()` hashed every record (`_rcTok`) and `_histCapture(sw,true)` stringified every record (`_rcJson`). Measured first on this build with `tools/perf-enx` (12,500 notes, 58 MB, phone ×4): they were still the top. Shapes (D5): nothing new is drawn; every fix is the same at 390 / 820 / 1440.
+
+**Fix A — the record baseline (`_recSnap`) is lazy, and still exact.** I chose "make each token lazy" over slices after the first paint: slices would leave a window in which a record edited in place (before its slice ran) is baselined AFTER the edit and the edit never syncs (I2), and every reader would have to force the build. A baseline entry is now `[tok|null, updatedAt, noteHistory length, e]`, `e` being the record's fingerprint entry (`_rcEntry`, which `_collect` builds anyway). `_stampRecordTouches` calls a record unchanged when the entry it finds is the baseline's own (`p[3]===e`: the fingerprint has not moved, so the token cannot have); otherwise `_pTok(p)` works the old token out from `e`'s own copy of the values (`_rcTokE`: primitives from `vs`, small objects/arrays from the JSON copy in `js`, the same bytes `_rcTok` would have hashed) and compares it with the new one. `_s1DirtyFromDiff` does the same; `_recSnapOf` reuses an entry when `e`, `updatedAt` and the history length are the same. No reader sees a half-built baseline, because there is no build step to wait for.
+
+**Fix B — the undo baseline stringifies nothing.** `_hJson` now holds a record's text only after that record has changed (it is set when a frame is made). The "before" text of any other record is said from the baseline's entry at the moment it first changes (`_rcJsonOld(_hMap.get(k))`: the entry's primitives and JSON copies; `noteHistory` is the array cut back to the length seen). The app only ever pushes onto `noteHistory` or replaces the array (checked: `noteHistory.push`, `a.noteHistory=h`), both of which this reads exactly. If the same array was cut from the front (not done anywhere; guarded anyway) the text cannot be said: `_histCapture` returns `{lost:true}` and `snapshotState` drops that frame and every older one (as an over-budget step already does) — a frame is never written with a wrong "before". A silent re-baseline (`_histRebase`) deletes the text of the records that moved instead of making it. **Undo reaches an edit made in the first second after start** (101c): nothing was lost from the history to get the speed.
+
+**Measured** (`tools/perf-enx`, 12,500 notes, 58 MB, phone ×4, median of 2, this container, v05.41 `435db6c` → v05.42):
+
+| | v05.41 | v05.42 |
+|---|---|---|
+| start → booted | 4.7 s | 2.5 s (−48%) |
+| worst task before booted | 2.9 s | 1.0 s |
+| start → booted, laptop (v05.42 only) | — | 0.67 s, worst task 257 ms |
+| `_stampRecordTouches` in the sync profile (block 86 profile, 9,000 + 2,000 notes, phone ×4) | 780 ms (worst 108) | 645 ms (worst 82) |
+
+**Checks.** Block 101 (`tools/perf-p6.mjs`, 8,000 notes of 5 KB, laptop and phone ×4): 101a no task over `hostLimit(1500)` before booted, and booted ≥ 25% sooner than the build before (phone: 1,085 ms against 1,688 ms, −36%; laptop −30%, reported); 101b an edit within a second of booted stamps that note only (every record's `updatedAt` compared before/after), reaches the dirty set; a received merge (`mergeDB` + reseed) marks exactly the two records it changed, a `persist()` after it stamps nothing, the next local edit stamps just itself; 101c undo gives the exact text back (also a note whose `noteHistory` grew in the same edit), redo returns it, an edit after the baseline has been used undoes exactly, a `noteHistory` cut from the front drops the older frames; 101d a SIGKILL right after the early edit boots with it; 101e no page errors. `--unpatched` (the build before this round): 101a's ratio fails (−2%) and both 101c "cut off" checks fail; the others pass there, as they should — the old build is slow, not wrong, and its worst task at 8,000 notes (≈ 0.9 s) is under the limit.
+
+**Block 86, looked at, not chased.** `tools/push-p4.mjs --profile --plan=both` on this build and on a worktree of `435db6c~1` (v05.40): the worst task is `_writeCloudDB` (383 vs 400 ms), the same step on both; `_enxPersist` 666 vs 814 ms total. None of round 1's changes (`_cntC`, `_selFastMove`, `_blIdx`, the checkpoint trigger) is in the worst tasks. Nothing changed.
+
+**Not done:** the "From Evernote" list is still drawn whole (~8 s on a ×4 phone; waits on the owner's J08 tick box); `_head~0`/`mergeDB` costs.
