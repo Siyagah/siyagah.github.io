@@ -12448,6 +12448,20 @@ await r.block('101-perf-p6', async () => {
   r.check(out.status === 0, 'the P6 check exits cleanly', `exit ${out.status}`);
 });
 
+/* 102 — v05.43, R2 (PCF J65): a replica whose cursor has passed records it never kept is read again from the start. tools/reread-r2.mjs runs
+   102a–102e (two devices on the S1 fake; B loses its own copy and keeps 16 replica records; the button from the real ⚙ menu at 390/820/1440). */
+await r.block('102-reread-r2', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./reread-r2.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1200000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 12, 'the R2 re-read check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, 'R2: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the R2 re-read check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
