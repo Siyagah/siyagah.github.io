@@ -16,7 +16,7 @@
 
    `--only=83a,83c` runs just those; `--unpatched` serves the build before this round. Each ok/FAIL line becomes one app-check check. */
 import { z12Words } from './z12-words.mjs';
-import { playwright, serve, seedDB } from './harness.mjs';
+import { playwright, serve, seedDB, zabVisible, zabAct, zabTap } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, push, check, results } from './s1-fake.mjs';
 import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -57,7 +57,8 @@ const tree = (s, extra) => {
 };
 const seed = (extra) => { const db = seedDB(T0); tree(db, extra); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };
 const mkDev = (vp, extra, cloud) => addDevice(browser, srv.base, cloud || makeCloud(), 'D' + vp.name, { width: vp.w, height: vp.h }, vp.touch, seed(extra), {});
-const act = (d, vp, sel) => (vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
+const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
 const chip = (pid) => `#jeb-bar .jeb-chip[data-pid="${pid}"]`;
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -204,7 +205,8 @@ try {
       /* put back: a drop on the bar */
       const snap = await on(d, () => JSON.stringify(DB.jebPockets));
       const f2 = await ctr(d, kidSel('A1'));
-      await drag(d, vp, f2, await ctr(d, chip('B')));
+      /* v05.40 · Z15: B's capsule may be folded into "▸ N more" (no box); the drop then lands on that chip, which is another Zab's place on the bar all the same */
+      await drag(d, vp, f2, await ctr(d, (await zabVisible(d.page, chip('B'))) ? chip('B') : '#jeb-bar .jeb-more'));
       check((await on(d, () => JSON.stringify(DB.jebPockets))) === snap && (await parents(d)) === par0, `${t} a drop on another pocket's capsule changes nothing (never "into")`);
       check(await on(d, () => !document.querySelector('.zx-lift,.zx-o,.zx-b,.zx-a') && [...document.querySelectorAll('.jx-kid')].every((e) => !e.style.transform)), `${t} nothing stays lifted or shifted`);
       noErr(d, t);

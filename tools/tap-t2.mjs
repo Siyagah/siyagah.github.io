@@ -126,7 +126,7 @@ const MEASURE = () => {
     /* a label that only wraps a control that is itself in the list, or a container that holds other targets, is not a target of its own */
     if (e.tagName === 'LABEL' && !e.querySelector('input,select,button') && !e.getAttribute('onclick')) continue;
     if (e.matches('[onclick]') && e.querySelectorAll('button,a[href],[onclick],input,select').length && r.height >= 44) continue;
-    const t = { key: key(e), text: text(e), x: r.left, y: r.top, w: r.width, h: r.height, edges: [] };
+    const t = { key: key(e), bar: !!e.closest('#jeb-bar'), text: text(e), x: r.left, y: r.top, w: r.width, h: r.height, edges: [] };
     /* the part of the box that is on the screen (a menu's last row may end at the screen's edge) */
     let L = Math.max(r.left, 0), R = Math.min(r.right, vw), T = Math.max(r.top, 0), B = Math.min(r.bottom, vh);
     for (let p = e.parentElement; p && p !== document.documentElement; p = p.parentElement) { /* …and the part not clipped by a scrolling or clipping parent */
@@ -222,7 +222,8 @@ try {
       for (const name of WIDE_SURF) {
         const a = cur.out[name], b = old.out[name];
         if (a.err || b.err) { diffs.push(`${name}: could not open (${a.err || b.err})`); continue; }
-        const sig = (m) => m.rows.map((t) => `${t.key}|${t.text.replace(/v\d\d\.\d\d/, 'vX')}|${Math.round(t.x)},${Math.round(t.y)},${Math.round(t.w)}x${Math.round(t.h)}`).sort();
+        /* v05.40 · Z15, updated in place: the Zab bar's tappable boxes changed ON PURPOSE (＋ New Zab is first, what does not fit folds into "▸ N more", a 📰 News chip); they are compared by block 99 (tools/zab-bar-more.mjs), so the bar's rows are left out of this comparison with the v05.29 build */
+        const sig = (m) => m.rows.filter((t) => !t.bar).map((t) => `${t.key}|${t.text.replace(/v\d\d\.\d\d/, 'vX')}|${Math.round(t.x)},${Math.round(t.y)},${Math.round(t.w)}x${Math.round(t.h)}`).sort();
         const A = sig(a), B = sig(b); n += A.length;
         const sa = new Set(A), sb = new Set(B);
         for (const x of A) if (!sb.has(x)) diffs.push(`${name}: now ${x}`);
