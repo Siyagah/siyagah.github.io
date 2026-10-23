@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.43.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.44.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,8 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.44** (24 Oct 2026) — J67 (built by the Architect): on the owner's Android phone the note's bar slid off the top while writing far down a note: since Chrome 108 the keyboard only covers the page, and Chrome pans the whole page to show the caret. The viewport meta now carries
+  `interactive-widget=resizes-content`, so the page is laid out above the keyboard and only the note scrolls. iOS Safari ignores it (backlog). Check: block 103, `tools/kb-j67.mjs`.
 - **v05.43** (23 Oct 2026) — R2 (PCF J65, built by the Architect): the owner's laptop showed an empty notebook as "☁ Live": its replica held 16 of 12,500 records and its cursor had passed the rest, and the reader only asks for records
   newer than the cursor. `_s1ReadStart` now reads the whole notebook again (cursor 0) once per page load when this device holds no notes or folders and the replica fewer than `_S1_REREAD_MIN` (50) records, or the replica holds fewer than half of this device's own notes + folders; Cloud Sync →
   "⟳ Read everything again" (`_s1ReRead`) does it by hand; the diagnostics say so. Reading again only adds. Check: block 102, `tools/reread-r2.mjs` (`--unpatched`: 5 of 10 fail; B stays at 15 of 203 notes).
@@ -57,8 +59,6 @@ must never accumulate here instead of there.
   `_zabPhone()` reads a width cached on resize; the sidebar's counts come from one pass per draw (`_cntC`: `cntOf`, `smartCount`, `secSmartCount`). Check: block 100, `tools/perf-p5.mjs`.
 - **v05.40** (22 Oct 2026) — Z15 (PCF J60): the Zab bar's overflow "▸ N more" (`_jebFoldBar`: measure-then-fold, hidden chips `.jx-over`, listed by `_jebMoreMenu`), `＋ New Zab` moved to the start of the bar, and a virtual
   `📰 News` chip (`data-news`; not a pocket) opening the News view (`_newsViewOpen`, `#nwv`, repainted by `_newsPaint`); Rail/Drawer/Columns get a News row. Check: block 99, `tools/zab-bar-more.mjs`.
-- **v05.39** (22 Oct 2026) — Z13d, the news job loops: GitHub ran its 15-minute schedule about every 5 hours, so one run of `.github/workflows/news.yml` fetches 22 times, 15 minutes apart,
-  then starts the next itself (`gh workflow run`, `actions: write`); the schedule is the back-up. App unchanged. Check: 97f updated in place.
 ---
 
 ## What this is
@@ -642,6 +642,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   global), and a selected card and preview mode bypass the cache. Check 82's oracle compares the finished list with a cache-free whole draw
   (`_LIST_MIN=1e9`, `_cardC.clear()`, `_p2cLast=null`). The windowed list is NOT built (Ctrl+F; waits on the owner's J08 tick box): the
   25,000-card list is still whole only after ~6 s on a ×4 phone and its frames reach 400 ms.
+- **The keyboard lays the page out above itself (v05.44, J67).** The viewport meta's `interactive-widget=resizes-content` makes Android Chrome shrink the layout viewport (and `body`'s `100dvh`) when the keyboard opens, as before Chrome 108; without it the keyboard only covers the page and Chrome pans the whole page to the caret, taking `#p3h` off the top. Never drop it from the meta.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
