@@ -29084,7 +29084,7 @@ async function _s1ReadStart(cfg){
        per page load. Reading again only adds: a record already held at the same time is skipped, and the merge never removes a note. */
     if(_s1Rep.cursor>0&&!_s1ReReadDone.has(nb)){
       let own=0; ['articles','folders'].forEach(c=>{ (DB&&DB[c]||[]).forEach(x=>{ if(x&&x.id!=null&&!String(x.id).startsWith('kb-')) own++; }); });
-      if(st.records<_S1_REREAD_MIN||st.records*2<own){ _s1ReReadDone.add(nb); st.reread={at:Date.now(), was:st.records, own:own, auto:true}; _s1Rep.cursor=0; console.warn('S1 read: reading the whole notebook again',st.records,own); }
+      if((own===0&&st.records<_S1_REREAD_MIN)||st.records*2<own){ _s1ReReadDone.add(nb); st.reread={at:Date.now(), was:st.records, own:own, auto:true}; _s1Rep.cursor=0; console.warn('S1 read: reading the whole notebook again',st.records,own); }
     }
     st.cursor=_s1Rep.cursor;
     /* A replica loaded from disk may hold records no merge ever saw (a cut-off

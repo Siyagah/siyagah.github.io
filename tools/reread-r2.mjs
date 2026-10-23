@@ -50,7 +50,7 @@ try {
   const cut = await B.page.evaluate(async () => {
     const del = (n) => new Promise((ok) => { const r = indexedDB.deleteDatabase(n); r.onsuccess = r.onerror = r.onblocked = () => ok(); });
     await del('siyagah-local-v1'); await del('siyagah-localrecs-v1');
-    try { localStorage.removeItem('my-notebook-v1'); } catch (e) {}
+    try { const e = JSON.parse(localStorage.getItem('my-notebook-v1') || 'null'); if (e) { e.articles = []; e.folders = []; localStorage.setItem('my-notebook-v1', JSON.stringify(e)); } else localStorage.removeItem('my-notebook-v1'); } catch (e) {}   /* like the owner's laptop: no notes, no folders */
     return await new Promise((ok) => {
       const o = indexedDB.open('siyagah-s1-v1');
       o.onsuccess = () => {
