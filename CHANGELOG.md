@@ -10688,3 +10688,19 @@ The owner (23 Oct, 8:30am): "I have signed in with my email but I don't see my f
 
 **Not done:** the "☁ Live" dot still says Live while a re-read runs (the diagnostics say what is happening); the cause of the laptop's empty local copy is open (J65).
 
+
+**Totals (Architect), full app-check on `b97ccb5`, the merged head** (two halves at once): blocks 1–59 + `self-check` **2332/2332**; blocks 60–102 **5531/5538**. The misses: 60 (jeb-j2) a 3 s `waitForSelector`, then 200/200 alone on v05.43 and on v05.42; 78b undo redraw 166 vs 158 ms; 82e first screenful 747 ms — speed limits this container misses on v05.41/42 too. The first run on `1c96478` failed 51l (the first rule re-read every small notebook) → narrowed. `--only 51,100,102`: 140/142 (100d phone 2.8× vs 3×). `reread-r2 --unpatched`: 5 of 10 fail. Merged as `ce21796`.
+
+---
+
+## v05.44 — J67: the note's bar stays on a phone with the keyboard up (built by the Architect)
+
+The owner (24 Oct, 7:30am, Android phone, Chrome, a screenshot of a long Bangla note being written with the keyboard up and no Siyagah bar above the text): "In deeper down scrolling, the menu bar disappears. Fix."
+
+**Cause.** Since Chrome 108 (Android) the on-screen keyboard resizes only the *visual* viewport; the layout viewport, and with it `100dvh` on `body`, stays full height. The app is a fixed-height page whose panes scroll inside it, so the lower part of `#p3c` sits behind the keyboard; when the caret goes there Chrome pans the visual viewport down to show it, and `#p3h` (the note's bar) at the top of the layout viewport slides off the screen. Writing near the top of a note never pans, which is why it showed only "deeper down".
+
+**The fix.** One attribute: `<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">`. Chrome then lays the page out above the keyboard, as before Chrome 108: `body` (`100dvh`) shrinks, the panes shrink with it, only the note scrolls, and the bar stays. Nothing else changes: `_jebKbWanted`/`html.jeb-kb` (the Zab bar hiding while typing) already listened to `resize` and still does. Save File copies the head, so a saved copy carries it (I4). Shapes (D5): phone and tablet get the page above the keyboard; a desktop has no on-screen keyboard, so nothing changes there.
+
+**Checks.** Block 103, `tools/kb-j67.mjs`. Headless Chromium has no on-screen keyboard, so the keyboard is played by shrinking the viewport, which is exactly what Chrome does with the fix in place: 103a the meta asks for `resizes-content`; 103b/103c at 390 (420 px left) and 820 (760 px left), touch: typing at the end of a 120-paragraph note leaves the page itself unscrolled, `#p3h` on screen and the caret below it; 103d a Save File copy keeps the meta; 103e no page errors. **7/7** (`--only 103`). On the build before this round: **103a and 103d fail**; 103b/103c pass there, as they should — the app's own layout was right once the page is shrunk, which is the point of the fix.
+
+**Not done:** iOS Safari ignores `interactive-widget` and still pans the page under the keyboard (the owner's devices are Android and a PC; filed on the backlog, not built). The panning itself cannot be reproduced in headless Chromium, so the owner's phone is the final check.
