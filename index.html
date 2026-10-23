@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.42">
+<meta name="app-version" content="05.43">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3897,7 +3897,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.42</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.43</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -29022,6 +29022,23 @@ async function _s1ResolveRec(nbRef, key, d){
   }
   return null;
 }
+/* v05.43 — R2: read the whole notebook from the cloud again (Cloud Sync → "⟳ Read everything again", and the automatic case in _s1ReadStart) */
+const _S1_REREAD_MIN=50, _s1ReReadDone=new Set();
+function _s1ReRead(){
+  const cfg=getSyncConfig();
+  if(!cfg||!_syncFsDb||!_s1Rep) return false;
+  const st=_s1Stat.rd||{};
+  _s1ReReadDone.add(cfg.notebookId);
+  st.reread={at:Date.now(), was:st.records||0, auto:false};
+  _s1Rep.cursor=0;
+  _s1ReadStart(cfg);
+  return true;
+}
+function _s1ReReadUI(){
+  if(!_s1ReRead()){ toast('Cloud Sync is not running on this device'); return; }
+  toast('Reading your whole notebook from the cloud again — this can take a few minutes');
+  setTimeout(()=>{ const d=document.getElementById('sync-diag'); if(d) d.innerHTML=_syncDiagnosticsHTML(); },500);
+}
 function _s1ReadStop(){
   _s1RdGen++;
   clearTimeout(_s1RdTimer); _s1RdTimer=null;
@@ -29061,6 +29078,14 @@ async function _s1ReadStart(cfg){
       _s1RecsMerged=false;
     }
     st.records=0; _s1Rep.map.forEach((e,k)=>{ if(!e.gone&&k!=='_head~0') st.records++; });
+    /* v05.43 — R2 (PCF J65): the reader asks only for records written AFTER its cursor, so a replica whose cursor has moved past
+       records it never kept could never get them back: the owner's laptop held 16 of 12,500 and showed an empty notebook as "Live".
+       A replica that holds almost nothing, or far fewer records than this device's own notebook, is read again from the start once
+       per page load. Reading again only adds: a record already held at the same time is skipped, and the merge never removes a note. */
+    if(_s1Rep.cursor>0&&!_s1ReReadDone.has(nb)){
+      let own=0; ['articles','folders'].forEach(c=>{ (DB&&DB[c]||[]).forEach(x=>{ if(x&&x.id!=null&&!String(x.id).startsWith('kb-')) own++; }); });
+      if((own===0&&st.records<_S1_REREAD_MIN)||st.records*2<own){ _s1ReReadDone.add(nb); st.reread={at:Date.now(), was:st.records, own:own, auto:true}; _s1Rep.cursor=0; console.warn('S1 read: reading the whole notebook again',st.records,own); }
+    }
     st.cursor=_s1Rep.cursor;
     /* A replica loaded from disk may hold records no merge ever saw (a cut-off
        between its write and the merge): merge it once per page load. */
@@ -29227,7 +29252,8 @@ function _s1DiagText(){
   const r=_s1Stat.rd;
   if(!r) return 'off — not started';
   if(!r.on) return 'off — '+(r.reason||'not started');
-  return 'on · '+r.records.toLocaleString('en-US')+' records · last received '+_syncAgo(r.lastRecv)+(r.err?(' · last error: '+r.err.code):'')+(_s1Plan()==='recs'?' · whole-notebook copy: off':' · whole-notebook copy: on');
+  return 'on · '+r.records.toLocaleString('en-US')+' records · last received '+_syncAgo(r.lastRecv)+(r.err?(' · last error: '+r.err.code):'')+(_s1Plan()==='recs'?' · whole-notebook copy: off':' · whole-notebook copy: on')
+    +(r.reread?(' · reading everything again since '+_syncAgo(r.reread.at)+(r.reread.auto?' (automatic: this device held '+r.reread.was+')':'')+(_s1RdCaught?' — done':' — in progress')):'');
 }
 
 /* ── Push scheduling ──────────────────────────────────────────────────────
@@ -30877,7 +30903,11 @@ function openSyncModal(){
     </div>
     <div class="mm" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2)">
       <div style="font-size:11.5px;font-weight:600;color:var(--t2);margin-bottom:6px">🩺 Diagnostics — on THIS device</div>
-      ${_syncDiagnosticsHTML()}
+      <div id="sync-diag">${_syncDiagnosticsHTML()}</div>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn" id="s1-reread-btn" onclick="_s1ReRead&&_s1ReReadUI()">⟳ Read everything again</button>
+        <small style="color:var(--t3);font-size:11px;line-height:1.4;flex:1;min-width:160px">If notes your other devices have are missing here: fetches the whole notebook from the cloud again. Only adds; never removes a note.</small>
+      </div>
     </div>
     <div class="mm" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2)">
       <div style="font-size:11.5px;font-weight:600;color:var(--t2);margin-bottom:6px">🔄 Migrating from a previous setup?</div>
