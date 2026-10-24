@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.44.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.46.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,8 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.46** (25 Oct 2026) — Z16 (PCF J70): a 📰 News Zab of the owner's own. Zab kind `news` (🧩 Zab kind ▸); each item is a channel (`src`, `color`, `off`); `_zabNews().chans` reads the News Zabs' items when one exists (else the settings array, left as the backup);
+  the panel has the channel ticks, "Also scroll these Zabs" (= `zabTicker.pids`) and `▶ Scroll these` (`_jebNewsGo`). Check: block 104, `tools/zab-news-zab.mjs` (`--unpatched`: 21 of 22 fail).
 - **v05.44** (24 Oct 2026) — J67 (built by the Architect): on the owner's Android phone the note's bar slid off the top while writing far down a note: since Chrome 108 the keyboard only covers the page, and Chrome pans the whole page to show the caret. The viewport meta now carries
   `interactive-widget=resizes-content`, so the page is laid out above the keyboard and only the note scrolls. iOS Safari ignores it (backlog). Check: block 103, `tools/kb-j67.mjs`.
 - **v05.43** (23 Oct 2026) — R2 (PCF J65, built by the Architect): the owner's laptop showed an empty notebook as "☁ Live": its replica held 16 of 12,500 records and its cursor had passed the rest, and the reader only asks for records
@@ -57,8 +59,6 @@ must never accumulate here instead of there.
 - **v05.41** (22 Oct 2026) — P5 (PCF J61, round 1 of 2), speed at the owner's scale (12,500 notes): the journal's full copy (`_ljCheckpoint`) is made on hide / after 3,000 puts / 10 min without a save, never on the 30 s idle,
   and a settings-only save starts no timer; opening a note moves `.sel` between two cards (`_selFastMove`, only while `_p2cDrawn` is still the page) instead of redrawing the list, `getBacklinks` reads each note's links once (`_blIdx`),
   `_zabPhone()` reads a width cached on resize; the sidebar's counts come from one pass per draw (`_cntC`: `cntOf`, `smartCount`, `secSmartCount`). Check: block 100, `tools/perf-p5.mjs`.
-- **v05.40** (22 Oct 2026) — Z15 (PCF J60): the Zab bar's overflow "▸ N more" (`_jebFoldBar`: measure-then-fold, hidden chips `.jx-over`, listed by `_jebMoreMenu`), `＋ New Zab` moved to the start of the bar, and a virtual
-  `📰 News` chip (`data-news`; not a pocket) opening the News view (`_newsViewOpen`, `#nwv`, repainted by `_newsPaint`); Rail/Drawer/Columns get a News row. Check: block 99, `tools/zab-bar-more.mjs`.
 ---
 
 ## What this is
@@ -560,6 +560,9 @@ A failing check is a wrong assertion surprisingly often — investigate before
   ResizeObserver on the bar, keyed on width + `_jebBarSig`: it hides chips from the right (`.jx-over`) until `scrollWidth` fits, never the open Zab's chip; only when nothing else can go does it move 📰 News and then All Zabs into the list (a phone), and if the open chip still does not fit the
   row scrolls as before. Choose keeps the scrolling row. A drag is refused while a hidden chip precedes a visible one. **The News chip is virtual:** `data-news`, no `data-pid`, nothing in `DB`; the News view is `_newsViewOpen()` (`#nwv`, repainted in place by `_newsPaint`, which also repaints the bar and the layouts).
   A new thing in the bar's signature goes in `sig`; a new fixed control joins the last-resort list in `_jebFoldBar`. Rail with more Zabs than the screen holds clips its far end (unchanged).
+- **The News Zab (v05.46, Z16 — same shape as the other kinds: `_jebType(pk)==='news'` is the only switch).** Items are channels: `text` = name, `src`, `color`, `off` (all through `jebEditItem`, in `_jebKindSig`). `_newsZabs()` lists the News Zabs; when one exists `_zabNews().chans` is built from their items
+  (`id` = item id, `on` = `!off`) and `DB.theme.zabNews.chans` is NOT read or written (it stays the backup; `_jebNewsFill` copies it in once, when an empty Zab becomes `news`). `_tkOwnItems` skips News Zabs; `_jebChipInfo` counts ticked channels. Panel: `_jebNewsPanelHTML` / `_jebNewsRowHTML`
+  (own events: `.jn-tick`, `.jn-col`, `.jn-zt`, `.jn-addb`, `.jn-go`, `.jn-fold` in `_jebWireOnce`; the add box `#jn-add-in` blocks a repaint while focused). The Zab ticks ARE `zabTicker.pids`; `_jebNewsGo` is the only writer of `mode:'only'`/`zabNews.mix` for it. A new channel field goes in `_jebKindSig`.
 - **A Zab's own note (v05.33, Z11).** `_zabNoteOf(pid)` (by `zabNote.pid`, never by title) → the note `zabn-<pid>` (`-2`, `-3`… if that id is tombstoned or in Trash) in folder `zab-notes`, field `zabNote:{pid}`; made by `_zabNoteEnsure` on the first tap, written in `popOutNote`, dropped by `_zabNoteClosed` if left blank. Painted by `_zabNoteHTML` into `.zn-area` (in the panel's repaint signature via `_zabNoteSig`); a Zab deleted keeps its note ("(Zab deleted)").
 - **Evernote import, the dry run (v05.13, S4a — S4b writes notes, S4c pictures, S4d merges earlier imports).** `openEnexImport()` →
   `#enx-modal` (own overlay like `#remmail-modal`: dialog ≥ 640, bottom sheet < 640, z 10060, over the Zab bar on purpose so it is not

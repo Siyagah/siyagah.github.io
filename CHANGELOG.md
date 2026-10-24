@@ -10704,3 +10704,22 @@ The owner (24 Oct, 7:30am, Android phone, Chrome, a screenshot of a long Bangla 
 **Checks.** Block 103, `tools/kb-j67.mjs`. Headless Chromium has no on-screen keyboard, so the keyboard is played by shrinking the viewport, which is exactly what Chrome does with the fix in place: 103a the meta asks for `resizes-content`; 103b/103c at 390 (420 px left) and 820 (760 px left), touch: typing at the end of a 120-paragraph note leaves the page itself unscrolled, `#p3h` on screen and the caret below it; 103d a Save File copy keeps the meta; 103e no page errors. **7/7** (`--only 103`). On the build before this round: **103a and 103d fail**; 103b/103c pass there, as they should — the app's own layout was right once the page is shrunk, which is the point of the fix.
 
 **Not done:** iOS Safari ignores `interactive-widget` and still pans the page under the keyboard (the owner's devices are Android and a PC; filed on the backlog, not built). The panning itself cannot be reproduced in headless Chromium, so the owner's phone is the final check.
+
+**Totals (Architect), full app-check on `c85a47b`, the merged head** (two halves at once): blocks 1–59 + `self-check` **2332/2332**; blocks 60–103 **5575/5577** (the 2 misses: block 72, Z6c, broke off under two-halves load; re-run alone **391/391**). Merged as `786b446`.
+
+## v05.46 — Z16: a 📰 News Zab of the owner's own (PCF J70)
+
+The owner (24 Oct, 9:20pm, a phone screenshot of the Rail with their own empty Zab named "News"): "Enable an option that whatever channel I choose and list in that Zab, I can click it to scroll all." Demo approved 25 Oct, with "enable choice for other selected Zabs to scroll as well". Choices: 1A tapping the News Zab opens its channel list; 2A while it scrolls the band shows only the ticked channels (+ the ticked Zabs); 3A the five channels move into the News Zab.
+
+**What changed.**
+- **A new Zab kind `news`** (`ztype:'news'`, "📰 News" in 🧩 Zab kind ▸). `_jebType` stays the only switch; a Zab named "News" is not turned into one by its name.
+- **Each item is one channel**: text = name, new item fields `src`, `color`, `off` (true = unticked), through `jebEditItem` (empty = key deleted), `_jebKindSig` and so `_jebItemSig`. Channels therefore sync as ordinary Zab items.
+- **3A**: switching an empty Zab to `news` (`jebEditPocket` → `_jebNewsFill`) adds the settings list's channels as items. `DB.theme.zabNews.chans` is left untouched as the backup (I8).
+- **One source**: `_zabNews().chans` reads the items of every News Zab (`_newsZabs()`, tree order) when one exists, else the settings array as before — so `_newsFetch`, the 📰 News chip/view, the band and the settings preview follow.
+- **The panel** (`_jebNewsPanelHTML`): a row per channel (44 px tick, colour dot, name, "20 new" / "not fetched yet"; the item menu works), ＋ Add channel (`_newsParseAdd`), "Also scroll these Zabs" (= `zabTicker.pids`; folds under ▸ when more than 6), and `▶ Scroll these (n)` (`_jebNewsGo`: `zabTicker.on/mode='only'`, `zabNews.on`, `mix` = mix with ticked Zabs else news) with a status line. `_tkOwnItems` skips News Zabs; the chip number counts ticked channels.
+- **Settings**: while a News Zab exists the channel list is one line "Your channels are in the 📰 <name> Zab" + `Open`.
+- Shapes (D5): the same `#jeb-panel` at 1440, 820, 390 (via Rail/Drawer/Columns) and in Zab mode.
+
+**Checks.** Block 104, `tools/zab-news-zab.mjs` (fake news service): 104a–104e at 1440, 820, 390 (Rail) and Zab mode (menu fill with the settings array byte-identical; two unticked → exactly two `off`; ▶ starts the band with only the three ticked channels; two Zabs ticked → `pids`, their items + the channels' headlines, nothing else, no channel as an item; add → merge both ways → delete goes to Trash; no sideways scroll, ticks 44 px, no headline in DB, no page errors). **22/22** (`--only 104`). `--unpatched` (the build before this round): **21 of 22 fail** (only "no page errors" passes, as it should).
+
+**Not done:** the full suite (the Architect runs it); on 390/820 and for the Zab mode the News Zab's menu was opened with the panel's ⋯ (a held finger on a bar chip is not reproducible in headless Chromium), on 1440 with a real right-click. Headlines from a channel the news service does not carry still need the owner's helper.
