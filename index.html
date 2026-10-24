@@ -1084,6 +1084,21 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jl-bar{padding:8px 12px;border-bottom:1px solid var(--border)}
 .jl-fl{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--t2)}
 .jl-fc,.jl-gb,.js-fc,.ji-sb,.ji-gb{flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font-size:13px;cursor:pointer;white-space:nowrap;touch-action:manipulation}
+/* v05.46 · Z16 — the 📰 News Zab: channel rows (tick, colour, name, count), the add box, "Also scroll these Zabs", ▶ Scroll these */
+.jn-wrap{display:flex;flex-direction:column;gap:6px;min-width:0;box-sizing:border-box}
+.jn-lbl{font-size:12.5px;font-weight:700;color:var(--t2);margin:8px 2px 0}.jn-lbl small{font-weight:400;color:var(--t3);margin-left:6px}
+.jn-it{align-items:center;gap:6px;min-width:0}.jn-it .jeb-body{flex:1;min-width:0}.jn-it.jn-off .jeb-tx{opacity:.55}
+.jn-tick{appearance:none;-webkit-appearance:none;flex:0 0 auto;display:grid;place-items:center;width:44px;height:44px;margin:0;background:none;border:0;padding:0;cursor:pointer}
+.jn-tick::before{content:'';box-sizing:border-box;width:22px;height:22px;border:2px solid var(--green);border-radius:4px;background:var(--white);color:var(--on-accent);font-size:15px;font-weight:700;line-height:18px;text-align:center}
+.jn-tick:checked::before{content:'✓';background:var(--green)}
+.jn-col{flex:0 0 auto;width:34px;height:34px;padding:2px;border:1px solid var(--border2);border-radius:50%;background:none;cursor:pointer}
+.jn-st{font-size:12px;color:var(--t3);margin-top:2px}
+.jn-add{display:flex;gap:8px;flex-wrap:wrap}.jn-add input{flex:1;min-width:150px;box-sizing:border-box;min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1)}
+.jn-addb,.jn-fold{min-height:44px;padding:0 14px;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font-size:13px;cursor:pointer;touch-action:manipulation}
+.jn-fold{text-align:left}.jn-hint{font-size:12px;color:var(--t3)}
+.jn-z{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;min-width:0}.jn-zn{flex:1;min-width:0;overflow-wrap:anywhere;font-size:13.5px}
+.jn-go{min-height:48px;margin-top:10px;font-weight:700;background:var(--green);border-color:var(--green);color:var(--on-accent)}
+.jn-status{font-size:12.5px;color:var(--t2);margin-bottom:6px;overflow-wrap:anywhere}
 .jl-fc.on,.jl-gb.on,.js-fc.on,.ji-sb.on,.ji-gb.on{background:var(--green);border-color:var(--green);color:var(--on-accent);font-weight:700}
 .jl-gh{display:flex;gap:8px;align-items:baseline;padding:10px 12px 4px;color:var(--t1);font-size:14px}
 .jl-gh small{color:var(--t2);font-size:12px}
@@ -23391,13 +23406,16 @@ function jebMovePocketInto(id,parentId,toIndex){
 function jebEditPocket(id,patch){
   _jebEnsure(); const p=_jebPocket(id); if(!p||!patch) return false;
   ['name','icon','color'].forEach(k=>{ if(k in patch&&patch[k]!=null) p[k]=(k==='name'?String(patch[k]).trim()||p.name:patch[k]); });
+  const wasNews=_jebType(p)==='news';
   if(_JEB_TYPES.includes(patch.ztype)) p.ztype=patch.ztype;   /* v05.10 · Z6a */
-  p.updatedAt=_jebNow(); persist(); return true;
+  p.updatedAt=_jebNow(); persist();
+  if(!wasNews&&_jebType(p)==='news') _jebNewsFill(id);   /* v05.46 · Z16 — 3A: an empty News Zab is filled with the channels of the settings list */
+  return true;
 }
 /* v05.10 · Z6a — a pocket's kind. `ztype`, never `kind` (an item's kind is its Note Type).
    Absent = derived from the seed id, nothing written, no migration. */
-const _JEB_TYPES=['plain','links','tasks','ideas','shop'];
-const _JEB_TYPE_LABEL={plain:'Plain',links:'Links',tasks:'Tasks',ideas:'Ideas',shop:'Shopping'};
+const _JEB_TYPES=['plain','links','tasks','ideas','shop','news'];
+const _JEB_TYPE_LABEL={plain:'Plain',links:'Links',tasks:'Tasks',ideas:'Ideas',shop:'Shopping',news:'📰 News'};
 const _JEB_TYPE_SEED={'jp-link':'links','jp-task':'tasks','jp-idea':'ideas','jp-shop':'shop'};
 function _jebType(pk){ if(!pk) return 'plain'; return _JEB_TYPES.includes(pk.ztype)?pk.ztype:(_JEB_TYPE_SEED[pk.id]||'plain'); }
 function jebMovePocket(id,toIndex){
@@ -23440,6 +23458,10 @@ function jebEditItem(id,patch){
   ['qty','shop'].forEach(k=>{ if(k in patch){ const s=String(patch[k]==null?'':patch[k]).trim().replace(/\s+/g,' '); if(s) it[k]=s; else delete it[k]; } });
   /* v05.25 · Z9 — the owner's own title: a trimmed string, absent when empty (never ""); not `ttl`, the fetched YouTube title */
   if('title' in patch){ const s=String(patch.title==null?'':patch.title).trim().replace(/\s+/g,' '); if(s) it.title=s; else delete it.title; }
+  /* v05.46 · Z16 — a channel in a News Zab: src (address), color (#rrggbb), off (true = unticked). Absent when empty. */
+  if('src' in patch){ const s=String(patch.src==null?'':patch.src).trim(); if(s) it.src=s; else delete it.src; }
+  if('color' in patch){ const s=String(patch.color==null?'':patch.color).trim(); if(/^#[0-9a-f]{6}$/i.test(s)) it.color=s; else delete it.color; }
+  if('off' in patch){ if(patch.off) it.off=true; else delete it.off; }
   it.updatedAt=_jebNow(); persist(); return true;
 }
 /* ── v05.11 · Z6b — task items. A task's due/pri/steps ride the item record, so they sync with the item
@@ -23525,7 +23547,7 @@ function _jebShopSetView(pid,patch){
   DB.theme.zabShopView=all; persist();
 }
 /* the part of an item's signature that belongs to its kind (a field is drawn only in its own kind, but a change must always repaint) */
-function _jebKindSig(i){ return [i.stars||0,(i.topics||[]).join(','),i.qty||'',i.shop||''].join('^'); }
+function _jebKindSig(i){ return [i.stars||0,(i.topics||[]).join(','),i.qty||'',i.shop||'',i.src||'',i.color||'',i.off?1:0].join('^'); }
 /* in "All pockets" and the deck a shopping pocket lists its ticked items last */
 function _jebBasketLast(pk,items){ return _jebType(pk)==='shop'?items.filter(i=>!i.done).concat(items.filter(i=>i.done)):items; }
 /* ── v05.10 · Z6a — link items. url/ttl/ch/th/people/issues are optional fields on the item. ── */
@@ -23872,7 +23894,7 @@ function _tkOwnItems(c){
   const out=[];
   t.flat.forEach(x=>{
     if(!ok(x.id)) return;
-    const p=t.byId.get(x.id); if(!p) return;
+    const p=t.byId.get(x.id); if(!p||_jebType(p)==='news') return;   /* v05.46 · Z16 — a News Zab's items are channels, shown as headlines, never as items */
     jebItems(x.id).forEach(i=>{
       if(i.done&&!c.done) return;
       let tx=String(i.title||i.text||'').replace(/\s+/g,' ').trim(); if(!tx) return;
@@ -24050,7 +24072,16 @@ const _NEWS_PER=[3,5,10,20], _NEWS_EVERY=[15,30,60], _NEWS_MIX=['mix','news','it
 function _zabNews(){
   const s=(DB&&DB.theme&&_isPlainObj(DB.theme.zabNews))?DB.theme.zabNews:{};
   let chans;
-  if(Array.isArray(s.chans)){
+  const nz=_newsZabs();
+  if(nz.length){   /* v05.46 · Z16 — with a News Zab, its items ARE the channels (the settings array stays untouched as the backup) */
+    const seen=new Set(); chans=[];
+    nz.forEach(pk=>jebItems(pk.id).forEach((x,k)=>{
+      const src=typeof x.src==='string'?x.src.trim():''; if(!/^https?:\/\/\S+$/i.test(src)||seen.has(x.id)) return;
+      seen.add(x.id);
+      chans.push({id:x.id,name:String(x.text||'').trim().slice(0,60)||src.replace(/^https?:\/\/(www\.)?/i,'').split('/')[0],src,
+        color:/^#[0-9a-f]{6}$/i.test(x.color||'')?x.color:_NEWS_PAL[chans.length%_NEWS_PAL.length],on:!x.off});
+    }));
+  }else if(Array.isArray(s.chans)){
     const seen=new Set(); chans=[];
     s.chans.forEach((x,k)=>{
       if(!_isPlainObj(x)||typeof x.id!=='string'||!x.id||seen.has(x.id)||typeof x.src!=='string'||!/^https?:\/\/\S+$/i.test(x.src.trim())) return;
@@ -24069,6 +24100,19 @@ function _zabNews(){
     mix:_NEWS_MIX.includes(s.mix)?s.mix:'mix',
     short:s.short!==false
   };
+}
+/* v05.46 · Z16 — every Zab of kind news, in tree order (empty when there is none; never seeds or writes) */
+function _newsZabs(){
+  if(!DB||!Array.isArray(DB.jebPockets)||!DB.jebPockets.some(p=>p&&p.ztype==='news')) return [];
+  const t=_jebTree(); return t.flat.map(x=>t.byId.get(x.id)).filter(p=>p&&_jebType(p)==='news');
+}
+/* 3A: a News Zab with no items gets the channels of the settings list; the settings array is left as it is */
+function _jebNewsFill(pid){
+  if(jebItems(pid).length) return;
+  const s=(DB.theme&&_isPlainObj(DB.theme.zabNews))?DB.theme.zabNews:{}, list=[];
+  if(Array.isArray(s.chans)) s.chans.forEach((x,k)=>{ if(_isPlainObj(x)&&typeof x.src==='string'&&/^https?:\/\/\S+$/i.test(x.src.trim())) list.push({name:(typeof x.name==='string'&&x.name.trim())||x.src.replace(/^https?:\/\/(www\.)?/i,'').split('/')[0],src:x.src.trim(),color:(typeof x.color==='string'&&/^#[0-9a-f]{6}$/i.test(x.color))?x.color:_NEWS_PAL[k%_NEWS_PAL.length],off:x.on===false}); });
+  else _NEWS_DEF.forEach(x=>list.push({name:x.name,src:x.src,color:x.color,off:false}));
+  list.forEach(x=>{ const id=jebAddItem(pid,x.name); if(id) jebEditItem(id,{src:x.src,color:x.color,off:x.off}); });
 }
 function zabNewsSet(k,v,quiet){
   if(!DB.theme) DB.theme={};
@@ -24127,6 +24171,9 @@ function _newsSettingsHTML(){
   let h='<div class="theme-divider"></div><div class="theme-sect" id="th-nw"><div class="theme-sect-lbl">📰 News</div>';
   h+='<div class="fs-sub" style="margin:-2px 0 8px">Headlines from the news sites you choose, collected every 15 minutes by Siyagah’s own news service. Nothing about your notes ever leaves Siyagah.</div>';
   h+='<label style="'+row+'"><input type="checkbox" id="th-nw-on"'+(c.on?' checked':'')+' onchange="zabNewsSet(\'on\',this.checked)" style="'+cbs+'"> Fetch the news</label>';
+  const nz0=_newsZabs();
+  if(nz0.length) h+='<div id="th-nw-zab" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0"><span class="fs-sub" style="flex:1;min-width:160px;margin:0">Your channels are in the 📰 '+esc(nz0[0].name)+' Zab</span><button type="button" class="ls-btn" id="th-nw-open" style="min-height:44px" onclick="_newsOpenZab('+_ja(nz0[0].id)+')">Open</button></div>';
+  else{
   h+='<div class="fs-sub" style="margin:6px 0 2px">Channels</div><div id="th-nw-chans">';
   c.chans.forEach(x=>{
     h+='<div class="nw-ch" data-cid="'+esc(x.id)+'" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:44px">'
@@ -24137,6 +24184,7 @@ function _newsSettingsHTML(){
   });
   h+='</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><input type="text" id="th-nw-add" placeholder="Site, feed, t.me/name or @name" onkeydown="if(event.key===\'Enter\'){event.preventDefault();zabNewsAdd()}" style="flex:1;min-width:180px;box-sizing:border-box;min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--bd,#ccc);border-radius:8px" aria-label="Add a channel" autocomplete="off" spellcheck="false">'
     +'<button type="button" class="ls-btn" id="th-nw-addb" style="min-height:44px" onclick="zabNewsAdd()">＋ Add channel</button></div>';
+  }
   h+='<details id="th-nw-own" style="margin:8px 0"'+(c.url?' open':'')+'><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:13.5px">Optional: your own Google helper</summary><div class="fs-sub" style="margin:2px 0 4px">Only for channels you add that Siyagah’s news service does not carry yet. Not needed for the five channels above.</div>';
   h+='<div class="fs-sub" style="margin:6px 0 4px">Your helper’s address</div>';
   h+='<input type="url" id="th-nw-url" value="'+esc(c.url)+'" placeholder="https://script.google.com/macros/s/…/exec" onchange="zabNewsUrl(this.value)" style="width:100%;box-sizing:border-box;min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--bd,#ccc);border-radius:8px" aria-label="Helper address" autocomplete="off" spellcheck="false">';
@@ -24940,6 +24988,7 @@ function _jebOpenCounts(){
 }
 /* what a chip shows: a tasks pocket counts due today + overdue when there are any (red if any overdue), else its open count */
 function _jebChipInfo(p,cnt){
+  if(_jebType(p)==='news') return {n:(DB.jeb||[]).filter(i=>i&&i.pocketId===p.id&&!i.off).length,red:false,title:p.name+' — the number counts the channels that are ticked'};   /* v05.46 · Z16 */
   if(_jebType(p)==='tasks'){
     const b=_jebTaskBadge(p.id);
     return {n:b.n,red:b.red,title:!b.due?p.name:p.name+' — the number counts tasks due today and overdue (red when any are overdue); when none is due it counts all open tasks'};
@@ -25096,6 +25145,10 @@ function _jebMakePanel(){
     if(sb){ _jebIdeaSetView(sb.closest('.ji-bar').dataset.pid,{[sb.classList.contains('ji-sb')?'s':'g']:sb.dataset.v}); _jebPanelSig=''; jebRefresh(); return; }
     const sc=t.closest('.js-fc');   /* Shopping: the Shop filter */
     if(sc){ _jebShopSetView(sc.closest('.js-filters').dataset.pid,{f:sc.dataset.fv}); _jebPanelSig=''; jebRefresh(); return; }
+    if(t.closest('.jn-addb')){ _jebNewsAdd(t.closest('.jn-wrap').dataset.pid); return; }   /* v05.46 · Z16 */
+    if(t.closest('.jn-go')){ _jebNewsGo(); return; }
+    const jf=t.closest('.jn-fold'); if(jf){ const q=jf.closest('.jn-wrap').dataset.pid; if(_jnOpen.has(q)) _jnOpen.delete(q); else _jnOpen.add(q); _jebPanelSig=''; jebRefresh(); return; }
+    if(t.closest('.jn-tick,.jn-col,.jn-z')) return;
     const row=t.closest('.jeb-it'); if(!row) return;
     const kd=_jebKindTap(t,row.dataset.iid); if(kd) return;
     const jd=t.closest('.jt-due,.jt-flag'); if(jd){ _jebDueOpen(row.dataset.iid,jd); return; }
@@ -25112,7 +25165,15 @@ function _jebMakePanel(){
   });
   p.addEventListener('contextmenu',e=>{ const k=e.target.closest('.jx-kid'); if(!k) return; e.preventDefault(); if(_zxHold) return; _jebPocketMenu(k.dataset.pid,e.clientX,e.clientY); });
   _zabWireDrag(p,(c,x,y)=>_jebPocketMenu(c.dataset.pid,x,y));   /* v05.21 · Z7: a pocket inside reorders among its siblings; a long-press released in place = its menu, as on the bar */
+  p.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.id==='jn-add-in'&&!e.isComposing){ e.preventDefault(); _jebNewsAdd(e.target.closest('.jn-wrap').dataset.pid); } });
   p.addEventListener('change',e=>{
+    const nt=e.target.closest('.jn-tick');   /* v05.46 · Z16 — a channel's tick, a Zab's tick, a channel's colour */
+    if(nt){
+      if(nt.classList.contains('jn-zt')){ const c=_zabTk(), q=nt.dataset.pid; zabTkSet('pids',nt.checked?c.pids.filter(x=>x!==q).concat([q]):c.pids.filter(x=>x!==q),true); }
+      else jebEditItem(nt.closest('.jeb-it').dataset.iid,{off:!nt.checked});
+      _jebPanelSig=''; jebRefresh(); return;
+    }
+    const nc=e.target.closest('.jn-col'); if(nc){ jebEditItem(nc.closest('.jeb-it').dataset.iid,{color:nc.value}); _jebPanelSig=''; jebRefresh(); return; }
     const k=e.target.closest('.jeb-tick'); if(!k) return;
     jebToggleDone(k.closest('.jeb-it').dataset.iid); _jebPanelSig=''; jebRefresh();
   });
@@ -25268,10 +25329,75 @@ function _jebShopPanelHTML(pk,items){
 function _jebMainHTML(i,inner){
   return i.title?'<div class="jeb-ttl" title="Change the title">'+esc(i.title)+'</div><div class="jeb-tx jeb-sub">'+inner+'</div>':'<div class="jeb-tx">'+inner+'</div>';
 }
+/* ── v05.46 · Z16 — the 📰 News Zab. Each item is one channel (text = name, src, color, off); the panel lists them with a tick, then "Also scroll these Zabs"
+   (the band's own "Only the ones I tick" list, DB.theme.zabTicker.pids), then ▶ Scroll these. Headlines are never items (they stay in _newsCache). ── */
+let _jnOpen=new Set();   /* News Zabs whose "Also scroll these Zabs" list is unfolded this session */
+function _jebNewsOthers(){ const t=_jebTree(); return t.flat.map(x=>({p:t.byId.get(x.id),d:x.depth})).filter(x=>x.p&&_jebType(x.p)!=='news'); }
+function _jebNewsCnt(id){ const r=_newsCache&&_newsCache.chans&&_newsCache.chans[id]; return r&&r.items?r.items.length:0; }
+function _jebNewsRowHTML(i){
+  const n=_jebNewsCnt(i.id), r=_newsCache&&_newsCache.chans&&_newsCache.chans[i.id];
+  const st=!/^https?:\/\//i.test(i.src||'')?'no address yet':(n?n+' new':(r&&r.ok===false?'did not answer':'not fetched yet'));
+  const col=/^#[0-9a-f]{6}$/i.test(i.color||'')?i.color:'#888888', nm=esc(String(i.text||'').trim()||'channel');
+  return '<div class="jeb-it jn-it'+(i.off?' jn-off':'')+'" data-iid="'+esc(i.id)+'"><input type="checkbox" class="jn-tick" aria-label="Scroll '+nm+'"'+(i.off?'':' checked')+'>'
+    +'<input type="color" class="jn-col" value="'+esc(col)+'" aria-label="Colour of '+nm+'">'
+    +'<div class="jeb-body">'+_jebMainHTML(i,_jebTxHTML(i.text))+'<div class="jn-st" title="'+esc(i.src||'')+'">'+st+'</div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>';
+}
+function _jebNewsSig(pk){
+  const c=_zabTk(), n=_zabNews();
+  return [c.on?1:0,c.mode,c.pids.join(','),n.on?1:0,n.mix,_jnOpen.has(pk.id)?'O':'',jebItems(pk.id).map(i=>i.id+':'+_jebNewsCnt(i.id)).join(','),_jebNewsOthers().map(x=>x.p.id+x.p.name+x.d).join(','),
+    n.chans.filter(x=>x.on).map(x=>x.name).join(',')].join('|');
+}
+function _jebNewsStatus(){
+  const c=_zabTk(), n=_zabNews(); if(!(c.on&&n.on&&c.mode==='only')) return 'Not scrolling yet — tick what you want, then press ▶ Scroll these.';
+  const names=n.chans.filter(x=>x.on).map(x=>x.name), z=c.pids.filter(id=>_jebNewsOthers().some(o=>o.p.id===id)).length;
+  return 'Scrolling now: '+(names.slice(0,3).join(', ')||'no channels')+(names.length>3?' + '+(names.length-3)+' more':'')+(z?' + '+z+(z===1?' Zab':' Zabs'):'');
+}
+function _jebNewsPanelHTML(pk,items){
+  const c=_zabTk(), others=_jebNewsOthers(), pset=new Set(c.pids), tz=others.filter(o=>pset.has(o.p.id)).length;
+  const total=_zabNews().chans.filter(x=>x.on).length+tz;
+  let h='<div class="jn-wrap" data-pid="'+esc(pk.id)+'"><div class="jn-lbl">Channels <small>tick the ones to scroll</small></div>';
+  h+=items.length?'<div class="jn-list" data-pid="'+esc(pk.id)+'">'+items.map(_jebNewsRowHTML).join('')+'</div>':'<div class="jeb-empty">No channels yet — add one below.</div>';
+  h+='<div class="jn-add"><input type="text" id="jn-add-in" placeholder="Site, feed, t.me/name or @name" aria-label="Add a channel" autocomplete="off" spellcheck="false"><button type="button" class="jn-addb">＋ Add channel</button></div>';
+  h+='<div class="jn-hint">A channel Siyagah’s news service does not carry yet is fetched through your own helper (🧰 → 🎨 Appearance → 🎞 → 📰 News).</div>';
+  if(others.length){
+    const fold=others.length>6, open=!fold||_jnOpen.has(pk.id);
+    h+='<div class="jn-lbl">Also scroll these Zabs'+(tz?' <small>'+tz+' ticked</small>':'')+'</div>';
+    if(fold) h+='<button type="button" class="jn-fold" aria-expanded="'+open+'">'+(open?'▾ Hide the Zabs':'▸ Show the '+others.length+' Zabs')+'</button>';
+    if(open) h+='<div class="jn-zabs">'+others.map(o=>'<label class="jn-z" style="padding-left:'+(6+Math.min(o.d,6)*16)+'px"><input type="checkbox" class="jn-tick jn-zt" data-pid="'+esc(o.p.id)+'"'+(pset.has(o.p.id)?' checked':'')+' aria-label="Scroll the items of '+esc(o.p.name)+'"><span class="jeb-sw" style="background:'+esc(o.p.color)+'">'+esc(o.p.icon)+'</span><span class="jn-zn">'+esc(o.p.name)+'</span></label>').join('')+'</div>';
+  }
+  h+='<button type="button" class="jn-go btn">▶ Scroll these ('+total+')</button><div class="jn-status" role="status">'+esc(_jebNewsStatus())+'</div></div>';
+  return h;
+}
+function _jebNewsAdd(pid){
+  const el=_jebEl('jn-add-in'), p=_newsParseAdd(el&&el.value);
+  if(!p){ toast('Paste a site address, a feed address, or a Telegram channel like t.me/name or @name.'); return; }
+  const have=[]; _newsZabs().forEach(z=>jebItems(z.id).forEach(i=>{ if(i.src) have.push(i); }));
+  if(have.some(x=>x.src===p.src)){ toast('That channel is already in the list.'); return; }
+  const used=new Set(have.map(x=>String(x.color||'').toLowerCase()));
+  const color=_NEWS_PAL.concat(['#FF5722','#009688','#795548']).find(x=>!used.has(x.toLowerCase()))||_NEWS_PAL[have.length%_NEWS_PAL.length];
+  const id=jebAddItem(pid,p.name); if(!id) return;
+  jebEditItem(id,{src:p.src,color});
+  if(el){ el.value=''; el.blur(); }
+  setTimeout(()=>{ if(typeof _newsTick==='function') _newsTick(); },0);
+  _jebPanelSig=''; jebRefresh();
+}
+function _jebNewsGo(){
+  const ok=new Set(_jebNewsOthers().map(o=>o.p.id)), pids=_zabTk().pids.filter(x=>ok.has(x));
+  if(!DB.theme) DB.theme={};
+  DB.theme.zabTicker=Object.assign({},_isPlainObj(DB.theme.zabTicker)?DB.theme.zabTicker:{},{on:true,mode:'only',pids});
+  DB.theme.zabNews=Object.assign({},_isPlainObj(DB.theme.zabNews)?DB.theme.zabNews:{},{on:true,mix:pids.length?'mix':'news'});
+  persist();
+  _tkRunAt=_tkNow(); _tkExpired=false; _tkRunKey=null;
+  _tkSync();
+  setTimeout(()=>{ if(typeof _newsTick==='function') _newsTick(); },0);
+  _jebPanelSig=''; jebRefresh();
+}
+function _newsOpenZab(pid){ closeModal(); jebOpenPanel(pid); }
 function _jebItemSig(i){ return [i.id,i.title||'',i.text,i.done?1:0,i.url||'',i.ttl||'',i.ch||'',i.th||'',i.due||'',i.pri||0,_jebSteps(i).map(x=>x.id+':'+x.t+':'+(x.d?1:0)).join(','),_jebKindSig(i),_jebChipsHTML(i)].join('~'); }
 function _jebRowHTML(i){
   const lpk=_jebPocket(i.pocketId);
   if(lpk&&_jebType(lpk)==='links') return _jebLinkRowHTML(i,lpk,'c');
+  if(lpk&&_jebType(lpk)==='news') return _jebNewsRowHTML(i);   /* v05.46 · Z16 */
   if(lpk&&_jebType(lpk)==='tasks') return _jebTaskRowHTML(i,lpk,_jebTaskMode());   /* v05.11 · Z6b */
   if(lpk&&(_jebType(lpk)==='ideas'||_jebType(lpk)==='shop')) return _jebKindRowHTML(i,lpk);   /* v05.12 · Z6c */
   return `<div class="jeb-it${i.done?' done':''}" data-iid="${esc(i.id)}"><span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}><div class="jeb-body">${_jebMainHTML(i,_jebTxHTML(i.text))}${_jebChipsHTML(i)}<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button>${_JEB_TTL_B}<button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div></div><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div>`;
@@ -25293,13 +25419,13 @@ function _jebPaintPanel(){
   }
   const tkSig=pk=>_jebToday()+(_jebTaskMode()==='w'?'W':'N')+(_jebDoneOpen.has(pk.id)?'D':'')+(_jebHintPid===pk.id?'H':'')+[..._jebStepsOpen].join(',');
   const kvSig=pk=>{ const ty=_jebType(pk); return (ty==='ideas'?JSON.stringify(_jebIdeaView(pk.id)):ty==='shop'?JSON.stringify(_jebShopView(pk.id)):'')+(_jebHintPid===pk.id?'H':''); };   /* v05.12 · Z6c */
-  const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W':'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):kvSig(pk)),treeSig(pk),groups[k].map(_jebItemSig).join('|'),multi?'':_zabNoteSig(pk)].join('#')).join('@@')].join('%');
+  const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W':'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):_jebType(pk)==='news'?_jebNewsSig(pk):kvSig(pk)),treeSig(pk),groups[k].map(_jebItemSig).join('|'),multi?'':_zabNoteSig(pk)].join('#')).join('@@')].join('%');
   if(sig===_jebPanelSig) return;
   /* never repaint under an item being typed in or dragged: it repaints when that ends */
-  if(_jebEditId||_jebDrag||_jebStepTyping()||_jebQtyOpen()) return;
+  if(_jebEditId||_jebDrag||_jebStepTyping()||_jebQtyOpen()||(document.activeElement&&document.activeElement.id==='jn-add-in')) return;
   _jebPanelSig=sig;
   const px=`<button class="jeb-px" aria-label="Spread as cards" title="Spread as cards">▦</button>`;
-  const addBox=p.querySelector('.jeb-add'); if(addBox) addBox.style.display=multi?'none':'';
+  const addBox=p.querySelector('.jeb-add'); if(addBox) addBox.style.display=(multi||_jebType(pks[0])==='news')?'none':'';
   if(!multi){
     const pk=pks[0], items=groups[0];
     p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this Zab</small></div>${px}<button class="jeb-pm" aria-label="Zab menu" title="Zab menu: rename, move into another Zab, add a Zab inside">⋯</button><button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
@@ -25321,7 +25447,7 @@ function _jebPaintPanel(){
     }
     p.classList.toggle('jl-wide',lk&&_jebWide());
     p.querySelector('.jeb-add textarea').placeholder=lk?'Paste a link…':'Jot something…';
-    p.querySelector('.jeb-list').innerHTML=lk?_jebLinkPanelHTML(pk,items):tk?_jebTaskPanelHTML(pk,items):id?_jebIdeaPanelHTML(pk,items):sh?_jebShopPanelHTML(pk,items):(items.length?items.map(i=>_jebRowHTML(i)).join(''):'<div class="jeb-empty">Nothing here yet — jot something above.</div>');
+    p.querySelector('.jeb-list').innerHTML=lk?_jebLinkPanelHTML(pk,items):tk?_jebTaskPanelHTML(pk,items):id?_jebIdeaPanelHTML(pk,items):sh?_jebShopPanelHTML(pk,items):_jebType(pk)==='news'?_jebNewsPanelHTML(pk,items):(items.length?items.map(i=>_jebRowHTML(i)).join(''):'<div class="jeb-empty">Nothing here yet — jot something above.</div>');
     if(lk) _jebLinkScan(items);
   }else{
     const zn0=p.querySelector('.zn-area'); zn0.hidden=true; zn0.innerHTML=''; p.classList.remove('zn-has');   /* All Zabs: no note area */
