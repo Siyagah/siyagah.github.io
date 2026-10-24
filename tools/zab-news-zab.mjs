@@ -84,7 +84,8 @@ async function openZab(d, pid) {
   } else await press(d, `#jeb-bar .jeb-chip[data-pid="${pid}"] .jeb-main`);
   await d.page.waitForSelector('#jeb-panel.on', { timeout: 4000 }); await sleep(500);
 }
-const bandInfo = (p) => p.evaluate(() => [...document.querySelectorAll('#zab-tk .tk-it')].map((e) => ({ nw: e.classList.contains('tk-nw'), t: e.textContent })));
+/* a headline in the band reads "<channel name><headline>"; an item reads "<icon><text>" — ch is the channel id inside the fake headline, own the item text */
+const bandInfo = (p) => p.evaluate(() => [...document.querySelectorAll('#zab-tk .tk-it')].map((e) => { const nw = e.classList.contains('tk-nw'), t = e.textContent; return { nw, ch: nw ? ((/ZZSRV (\S+) headline/.exec(t) || [])[1] || '?') : '', t: nw ? t : t.replace(/^[^A-Za-z]+/, '') }; }));
 const waitBand = (p, fn) => p.waitForFunction(fn, null, { timeout: 20000 }).then(() => true, () => false);
 
 const out = {};
@@ -106,7 +107,7 @@ for (const vp of VPS) {
     const off = await p.evaluate(() => jebItems('zp0').map((i) => !!i.off));
     await press(d, '#jeb-panel .jn-go');
     const ok = await waitBand(p, () => document.querySelectorAll('#zab-tk a.tk-nw').length > 0);
-    const band = await bandInfo(p), ch = new Set(band.filter((b) => b.nw).map((b) => b.t.split(' ')[1]));
+    const band = await bandInfo(p), ch = new Set(band.filter((b) => b.nw).map((b) => b.ch));
     const st = await p.evaluate(() => document.querySelector('#jeb-panel .jn-status').textContent);
     const want = ['trt', 'arabnews', '5pillars'];
     return [ok && off.join() === 'true,true,false,false,false' && [...ch].every((c) => want.includes(c)) && ch.size === 3 && band.every((b) => b.nw) && /^Scrolling now: TRT World, Arab News, 5Pillars/.test(st) && /\(3\)/.test(await p.evaluate(() => document.querySelector('#jeb-panel .jn-go').textContent)),
@@ -118,7 +119,7 @@ for (const vp of VPS) {
     const pids = await p.evaluate(() => (DB.theme.zabTicker || {}).pids);
     await press(d, '#jeb-panel .jn-go');
     const ok = await waitBand(p, () => [...document.querySelectorAll('#zab-tk .tk-it')].some((e) => /Alpha one/.test(e.textContent)));
-    const band = await bandInfo(p), own = band.filter((b) => !b.nw).map((b) => b.t), nws = new Set(band.filter((b) => b.nw).map((b) => b.t.split(' ')[1]));
+    const band = await bandInfo(p), own = band.filter((b) => !b.nw).map((b) => b.t), nws = new Set(band.filter((b) => b.nw).map((b) => b.ch));
     const th = await p.evaluate(() => ({ m: DB.theme.zabTicker.mode, mix: DB.theme.zabNews.mix, on: DB.theme.zabNews.on }));
     const names = DEF.map((x) => x[1]);
     return [ok && JSON.stringify(pids) === '["zp1","zp2"]' && own.length > 0 && own.every((t) => /^(Alpha|Beta) /.test(t)) && !own.some((t) => names.includes(t)) && nws.size > 0 && [...nws].every((c) => ['trt', 'arabnews', '5pillars'].includes(c)) && th.m === 'only' && th.mix === 'mix' && th.on,
