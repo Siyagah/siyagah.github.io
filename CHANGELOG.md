@@ -10704,3 +10704,9 @@ The owner (24 Oct, 7:30am, Android phone, Chrome, a screenshot of a long Bangla 
 **Checks.** Block 103, `tools/kb-j67.mjs`. Headless Chromium has no on-screen keyboard, so the keyboard is played by shrinking the viewport, which is exactly what Chrome does with the fix in place: 103a the meta asks for `resizes-content`; 103b/103c at 390 (420 px left) and 820 (760 px left), touch: typing at the end of a 120-paragraph note leaves the page itself unscrolled, `#p3h` on screen and the caret below it; 103d a Save File copy keeps the meta; 103e no page errors. **7/7** (`--only 103`). On the build before this round: **103a and 103d fail**; 103b/103c pass there, as they should — the app's own layout was right once the page is shrunk, which is the point of the fix.
 
 **Not done:** iOS Safari ignores `interactive-widget` and still pans the page under the keyboard (the owner's devices are Android and a PC; filed on the backlog, not built). The panning itself cannot be reproduced in headless Chromium, so the owner's phone is the final check.
+
+**Totals (Architect), full app-check on `c85a47b`, the merged head** (two halves at once): blocks 1–59 + `self-check` **2332/2332**; blocks 60–103 **5575/5577** (the 2 misses: block 72, Z6c, broke off under two-halves load; re-run alone **391/391**). Merged as `786b446`.
+
+## v05.46 — Z16: a 📰 News Zab of the owner's own (PCF J70) — in progress
+
+Stub; the full entry follows when the round is built.
