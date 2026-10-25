@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.44.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.45.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.45** (25 Oct 2026) — J71 (built by the Architect): the owner's PC and tablet had the same Notebook ID and account but read 942 vs 19,285 records — the Firebase project is the other half of a cloud's address and was shown nowhere. Diagnostics now name the **Cloud project**; "📋 Copy sync setup" (`_syncCopySetup`) copies project + ID, and pasting it on another device's setup screen uses both (`_syncSetupOf`, `_syncSetupPasted`). Checks: block 105 `tools/sync-setup-j71.mjs`, block 106 `tools/sync-scale.mjs --notes=3000` (J69).
 - **v05.44** (24 Oct 2026) — J67 (built by the Architect): on the owner's Android phone the note's bar slid off the top while writing far down a note: since Chrome 108 the keyboard only covers the page, and Chrome pans the whole page to show the caret. The viewport meta now carries
   `interactive-widget=resizes-content`, so the page is laid out above the keyboard and only the note scrolls. iOS Safari ignores it (backlog). Check: block 103, `tools/kb-j67.mjs`.
 - **v05.43** (23 Oct 2026) — R2 (PCF J65, built by the Architect): the owner's laptop showed an empty notebook as "☁ Live": its replica held 16 of 12,500 records and its cursor had passed the rest, and the reader only asks for records
@@ -57,8 +58,6 @@ must never accumulate here instead of there.
 - **v05.41** (22 Oct 2026) — P5 (PCF J61, round 1 of 2), speed at the owner's scale (12,500 notes): the journal's full copy (`_ljCheckpoint`) is made on hide / after 3,000 puts / 10 min without a save, never on the 30 s idle,
   and a settings-only save starts no timer; opening a note moves `.sel` between two cards (`_selFastMove`, only while `_p2cDrawn` is still the page) instead of redrawing the list, `getBacklinks` reads each note's links once (`_blIdx`),
   `_zabPhone()` reads a width cached on resize; the sidebar's counts come from one pass per draw (`_cntC`: `cntOf`, `smartCount`, `secSmartCount`). Check: block 100, `tools/perf-p5.mjs`.
-- **v05.40** (22 Oct 2026) — Z15 (PCF J60): the Zab bar's overflow "▸ N more" (`_jebFoldBar`: measure-then-fold, hidden chips `.jx-over`, listed by `_jebMoreMenu`), `＋ New Zab` moved to the start of the bar, and a virtual
-  `📰 News` chip (`data-news`; not a pocket) opening the News view (`_newsViewOpen`, `#nwv`, repainted by `_newsPaint`); Rail/Drawer/Columns get a News row. Check: block 99, `tools/zab-bar-more.mjs`.
 ---
 
 ## What this is
