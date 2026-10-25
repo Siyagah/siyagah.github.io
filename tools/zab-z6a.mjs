@@ -5,7 +5,7 @@
    (touch viewports) or clicks (1440). The network is never touched: www.youtube.com/oembed and i.ytimg.com are
    routed to local fixtures (page.route), and "offline" is a route.abort().
 
-   70a  kind: the seed pockets' derived kinds; "🧩 Pocket kind" through the real pocket menu (five boxes, current one
+   70a  kind: the seed pockets' derived kinds; "🧩 Pocket kind" through the real pocket menu (six boxes since v05.46, current one
         ticked); Links -> Plain -> Links changes the layout; nothing is written until the owner chooses
    70b  YouTube: a pasted link fills title, channel and thumbnail (one stamp); another site fetches nothing; a failing
         oEmbed leaves a usable item with no error and at most one retry; a failing thumbnail draws the fallback box
@@ -83,7 +83,8 @@ try {
     await act(d, vp, '#jeb-menu .jm:has-text("Zab kind")'); await sleep(150);
     const sub = await on(d, () => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent));
     const ticked = sub.filter((r) => r.includes('✓'));
-    check(['Plain', 'Links', 'Tasks', 'Ideas', 'Shopping'].every((k) => sub.some((r) => r.includes(k))) && ticked.length === 1 && ticked[0].includes('Links') && sub.filter((r) => /^[☑☐]/.test(r)).length === 5, `${t} five boxes, the current kind (Links) is the ticked one`, sub.join(' / '));
+    /* v05.46 (Z16) added a sixth kind, 📰 News, on purpose: six boxes since then */
+    check(['Plain', 'Links', 'Tasks', 'Ideas', 'Shopping', 'News'].every((k) => sub.some((r) => r.includes(k))) && ticked.length === 1 && ticked[0].includes('Links') && sub.filter((r) => /^[☑☐]/.test(r)).length === 6, `${t} six boxes, the current kind (Links) is the ticked one`, sub.join(' / '));
     await act(d, vp, '#jeb-menu .jm:has-text("Plain")'); await sleep(300);
     check((await item(d, 'l1')) && (await on(d, () => DB.jebPockets.find((p) => p.id === 'jp-link').ztype)) === 'plain', `${t} choosing Plain stores ztype on the pocket`);
     await openPanel(d, vp);
