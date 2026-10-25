@@ -10757,3 +10757,8 @@ The owner (26 Oct, with the PCA, BWN J27): "with no internet, Siyagah with all n
 **Totals (Architect), full app-check on this branch** (two halves at once): blocks 1–59 + `self-check` **2330/2332**; blocks 60–107 **5406/5422**. Re-run alone, `--only 56,64,72,78,80`: 64, 72, 78 and 80 all pass (64 and 72 had broken off on a `waitForSelector` under the two-halves load, 78b and 80h were speed limits); **56k fails the same way on `origin/main` (v05.46) in this container** — Chromium refused the 187 MB notebook's one IndexedDB put ("max=133169152 bytes"), a limit of this container's Chromium, not of this round (block 107 and the keeper do not run with sync off, as in 56). Recorded, not changed.
 
 **Not done:** pictures inside Note History versions are not fetched ahead (shown only in Note History); audio and files from the Evernote import stay on the computer that imported them (they were never uploaded, S4c). Automatic Save File backups still run unattended only where the browser allows a folder (the PC); a phone or tablet backup needs a tap.
+
+
+## v05.48 — J74 ②: the Mapping My Journey import (PCF SIY J74, BWN J27 Stage 1, built by the builder)
+
+In progress.
