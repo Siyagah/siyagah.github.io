@@ -43,11 +43,11 @@ const setup = async (page, opts) => page.evaluate(async ([cfg, o]) => {
   shas.slice(0, last).forEach((s, i) => DB.articles.push({ id: 'pk' + i, title: 'Pic note ' + i, content: '<p>x</p>' + img(s) + (i === 0 ? img(s) : ''), folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now }));
   DB.trash.push({ id: 'tr-pk', type: 'article', item: { id: 'pk-tr', title: 'Trashed pic', content: img(shas[last]), folderIds: [], tags: [], createdAt: now, updatedAt: now }, deletedAt: now });
   window.__reads = reads; window.__shas = shas;
-  if (o.cap != null) _PIC_KEEP_DAY = o.cap;
+  if (o.cap != null && typeof _PIC_KEEP_DAY !== 'undefined') _PIC_KEEP_DAY = o.cap;
   if (o.off) DB.theme.picKeepAll = false;
   return { shas, before: JSON.stringify([DB.articles, DB.trash]) };
 }, [CFG, opts]);
-const runTick = async (page, times = 1) => page.evaluate(async (k) => { for (let i = 0; i < k; i++) { _picKeepBad.forEach((v) => { if (v.n < 3) v.until = 0; });   /* the 30 s-style gap is skipped; the 3-try wait is not */ await _picKeepTick(); } }, times);
+const runTick = async (page, times = 1) => page.evaluate(async (k) => { if (typeof _picKeepTick !== 'function') { await new Promise((ok) => setTimeout(ok, 1500)); return; } for (let i = 0; i < k; i++) { _picKeepBad.forEach((v) => { if (v.n < 3) v.until = 0; });   /* the 30 s-style gap is skipped; the 3-try wait is not */ await _picKeepTick(); } }, times);
 const known = async (page) => page.evaluate(async () => { const out = []; for (const s of window.__shas) out.push(!!(await _picGet(s))); return out; });
 
 /* 107a / 107g */
@@ -60,11 +60,11 @@ const known = async (page) => page.evaluate(async () => { const out = []; for (c
     await runTick(page);
     const k = await known(page);
     const after = await page.evaluate(() => JSON.stringify([DB.articles, DB.trash]));
-    const st = await page.evaluate(() => ({ ...window._picKeep, reads: window.__reads.n, txt: _picKeepText() }));
+    const st = await page.evaluate(() => ({ ...window._picKeep, reads: window.__reads.n, txt: typeof _picKeepText === 'function' ? _picKeepText() : '' }));
     r.check(k.every(Boolean) && after === s.before && st.missing === 0 && st.want === 5,
       '107a every picture in a note or a trashed note is fetched and kept on the device; no note changes', JSON.stringify({ k, same: after === s.before, st }).slice(0, 260));
-    await page.evaluate(async () => { await _storeProtect(); });
-    const pv = await page.evaluate(() => window._storeProt.v);
+    await page.evaluate(async () => { if (typeof _storeProtect === 'function') await _storeProtect(); });
+    const pv = await page.evaluate(() => window._storeProt && window._storeProt.v);
     r.check(typeof pv === 'string' && pv.length > 1, '107g the storage-protection answer is recorded', String(pv));
     errs.push(...app.errors);
   } finally { await app.close(); }
@@ -94,7 +94,7 @@ for (const mode of ['off', 'offline']) {
     await setup(page, { n: 4, missing: 1 });
     await runTick(page, 5);
     const k = await known(page);
-    const st = await page.evaluate(() => ({ reads: window.__reads.n, bad: [..._picKeepBad.values()].map((v) => v.n), failed: window._picKeep.failed }));
+    const st = await page.evaluate(() => ({ reads: window.__reads.n, bad: typeof _picKeepBad === 'undefined' ? [] : [..._picKeepBad.values()].map((v) => v.n), failed: window._picKeep ? window._picKeep.failed : 0 }));
     r.check(k[0] && !k[1] && k[2] && k[3] && st.bad.length === 1 && st.bad[0] === 3 && st.failed === 3,
       '107d a picture missing from the cloud fails without stopping the others, and is not asked for after 3 tries', JSON.stringify({ k, st }));
     errs.push(...app.errors);
@@ -108,7 +108,7 @@ for (const mode of ['off', 'offline']) {
     await setup(page, { n: 5, cap: 4 });
     await runTick(page, 2);
     const k = await known(page);
-    const txt = await page.evaluate(() => _picKeepText());
+    const txt = await page.evaluate(() => typeof _picKeepText === 'function' ? _picKeepText() : '');
     r.check(k.filter(Boolean).length === 2 && /share of cloud reads/.test(txt), '107e the day\'s share of cloud reads is kept to, and the Diagnostics say so', JSON.stringify({ k, txt }));
     errs.push(...app.errors);
   } finally { await app.close(); }
