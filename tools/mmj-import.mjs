@@ -102,7 +102,7 @@ async function serveSite(ctx, S, o = {}) {
 
 const openMenu = async (page) => {
   await page.evaluate(() => { try { closeModal(); } catch (e) {} if (window.innerWidth < 640 && typeof showPane === 'function') showPane('sb'); });
-  await page.click('#sb-menu-btn'); await page.waitForTimeout(250);
+  await page.click('#sb-tools-btn'); await page.waitForTimeout(300);
 };
 const readVia = async (page) => { await page.evaluate(() => { openMmjImport(); _mmjRead(); }); await page.waitForSelector('#mmj-go, #mmj-err', { timeout: 60000 }); };
 const importNow = async (page) => { await page.evaluate(() => { _mmjImport(); }); await page.waitForSelector('#mmj-done, #mmj-err', { timeout: 120000 }); };
@@ -276,7 +276,7 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     });
     const okSync = Object.values(sy.res).every((x) => x.f === 41 && x.n === 32 && x.sec && x.tomb === 0);
     r.check(okSync, '108g sync: the import merged into a stale copy and back (mergeDB both ways) keeps every MMJ folder and note, no tombstone', JSON.stringify(sy));
-    errs.push(...app.errors);
+    errs.push(...app.errors.filter((e) => !/status of 404/.test(e)));   /* the one deliberately missing picture */
   } finally { await app.close(); }
 }
 
@@ -333,7 +333,7 @@ for (const [w, h, touch, th] of [[1440, 900, false, 1], [390, 844, true, 4]]) {
       const sel = tm(() => selFolder('mmj-c-' + deep));
       return { tree, sel, depth: ids.length };
     }, BIG.deep);
-    const vis = await page.evaluate(() => { const n = document.querySelector('#tree .tr-row.sel'); if (!n) return null; const b = n.getBoundingClientRect(); const nm = n.querySelector('.tr-name'); return { w: Math.round(b.width), nm: nm ? Math.round(nm.getBoundingClientRect().width) : -1 }; });
+    const vis = await page.evaluate(async () => { if (window.innerWidth < 640 && typeof showPane === 'function') showPane('sb'); await new Promise((ok) => setTimeout(ok, 300)); const n = document.querySelector('#tree .tr-row.sel'); if (!n) return null; const b = n.getBoundingClientRect(); const nm = n.querySelector('.tr-name'); return { w: Math.round(b.width), nm: nm ? Math.round(nm.getBoundingClientRect().width) : -1, sb: Math.round(document.getElementById('tree').getBoundingClientRect().width), left: Math.round(nm ? nm.getBoundingClientRect().left : -1) }; });
     perf.push({ w, secs, ...res, ...sp, vis });
     r.check(res.f === BIG.cats.length + 1 && res.n === 586 && res.imp === 'done',
       `108h@${w}${th > 1 ? ' ×' + th : ''} the owner's scale (1,464 folders / 586 notes, on ${NOTES} notes) imports with the right counts · ${secs} s · longest task ${res.lt} ms · renderTree ${sp.tree} ms · open a ${sp.depth}-deep path ${sp.sel} ms · name ${vis ? vis.nm : '?'} px wide`,
