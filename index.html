@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.44">
+<meta name="app-version" content="05.45">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3897,7 +3897,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.44</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.45</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -30863,6 +30863,7 @@ function _syncDiagnosticsHTML(){
   const dotEl=document.getElementById('sync-dot');
   const statusTxt=dotEl?dotEl.title:'unknown';
   const rows=[
+    ['Cloud project', (()=>{ const c=getSyncConfig(); return (c&&c.firebaseConfig&&c.firebaseConfig.projectId)||'—'; })()],
     ['Realtime listener', _syncUnsub?('connected — '+statusTxt):'not connected'],
     ['Reconcile poll (15s safety net)', _reconcileTimer?'running':'not running'],
     ['Last successful sync', _syncAgo(_lastSyncTime)],
@@ -30900,6 +30901,11 @@ function openSyncModal(){
         <button class="btn bp" onclick="navigator.clipboard.writeText('${nbId}').then(()=>toast('Copied ✓'))">Copy</button>
       </div>
       <small style="color:var(--t3);font-size:11px">Use this same ID on every device</small>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn" id="sync-copy-btn" onclick="_syncCopySetup()">📋 Copy sync setup</button>
+        <small style="color:var(--t3);font-size:11px;line-height:1.4;flex:1;min-width:160px">To make another device use exactly this cloud: copy here, then on that device ⚙ → ☁ → Disconnect, paste into the Firebase config box, Connect. Its notes are kept and joined in.</small>
+      </div>
+      <div id="sync-copy-fb"></div>
     </div>
     <div class="mm" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2)">
       <div style="font-size:11.5px;font-weight:600;color:var(--t2);margin-bottom:6px">🩺 Diagnostics — on THIS device</div>
@@ -30934,7 +30940,7 @@ function openSyncModal(){
       </ol>
     </div>
     <label style="font-size:12px;font-weight:500;color:var(--t2);display:block;margin-bottom:4px">Firebase config (paste JSON)</label>
-    <textarea id="fb-cfg" class="sync-area" rows="7" placeholder='{\n  "apiKey": "AIzaSy...",\n  "authDomain": "yourapp.firebaseapp.com",\n  "projectId": "yourapp",\n  "storageBucket": "yourapp.appspot.com",\n  "messagingSenderId": "123456789",\n  "appId": "1:123:web:abc"\n}'>${cfgStr}</textarea>
+    <textarea id="fb-cfg" class="sync-area" rows="7" oninput="_syncSetupPasted(this.value)" placeholder='{\n  "apiKey": "AIzaSy...",\n  "authDomain": "yourapp.firebaseapp.com",\n  "projectId": "yourapp",\n  "storageBucket": "yourapp.appspot.com",\n  "messagingSenderId": "123456789",\n  "appId": "1:123:web:abc"\n}'>${cfgStr}</textarea>
     <label style="font-size:12px;font-weight:500;color:var(--t2);display:block;margin:10px 0 4px">Notebook ID</label>
     <div style="display:flex;gap:6px;align-items:center">
       <input class="mi" id="nb-id-inp" value="${nbId}" placeholder="Paste your Notebook ID here" style="font-size:11px;font-family:monospace;flex:1">
@@ -30951,6 +30957,31 @@ function openSyncModal(){
 
 function closeSyncModal(){document.getElementById('sync-modal').style.display='none';}
 
+/* v05.45 · J71 — two devices showed the same Notebook ID but read different clouds (the PC 942 records, the tablet 19,285): the ID is
+   only half of the address, the Firebase project is the other half. "📋 Copy sync setup" copies both; pasting it on another device's
+   setup screen uses both. */
+function _syncSetupOf(o){
+  if(!o||typeof o!=='object'||!o.firebaseConfig||typeof o.firebaseConfig!=='object') return null;
+  const nb=typeof o.notebookId==='string'?o.notebookId.trim():'';
+  return nb?{firebaseConfig:o.firebaseConfig, notebookId:nb}:null;
+}
+function _syncSetupPasted(v){
+  let o=null; try{ o=_syncSetupOf(parseFirebaseConfig(v)); }catch(e){}
+  const ni=document.getElementById('nb-id-inp'); if(o&&ni) ni.value=o.notebookId;
+}
+async function _syncCopySetup(){
+  const c=getSyncConfig(); if(!c||!c.firebaseConfig) return;
+  const text=JSON.stringify({siyagahSync:1, firebaseConfig:c.firebaseConfig, notebookId:c.notebookId},null,2);
+  try{
+    if(!navigator.clipboard||!navigator.clipboard.writeText) throw new Error('no clipboard');
+    await navigator.clipboard.writeText(text);
+    toast('📋 Sync setup copied');
+  }catch(e){
+    const fb=document.getElementById('sync-copy-fb'); if(!fb) return;
+    fb.innerHTML='<div style="font-size:11px;color:var(--t3);margin:6px 0 4px">Copy did not work here. Select all of this text and copy it:</div><textarea id="sync-copy-t" class="sync-area" rows="6" readonly></textarea>';
+    const t=document.getElementById('sync-copy-t'); t.value=text; t.focus(); t.select();
+  }
+}
 function parseFirebaseConfig(input){
   let txt=(input||'').trim();
   // Strip markdown links like [x](http://x) that some paste apps inject
@@ -30976,6 +31007,9 @@ async function connectSync(){
   try{
     const raw=document.getElementById('fb-cfg').value.trim();
     firebaseConfig=parseFirebaseConfig(raw);
+    /* v05.45 · J71 — a setup copied from another device (📋 Copy sync setup) carries its notebook ID too: use both, so this device reads exactly that cloud */
+    const cp=_syncSetupOf(firebaseConfig);
+    if(cp){ firebaseConfig=cp.firebaseConfig; const ni=document.getElementById('nb-id-inp'); if(ni) ni.value=cp.notebookId; }
     if(!firebaseConfig.apiKey||!firebaseConfig.projectId)
       throw new Error('Missing required fields (apiKey, projectId)');
   }catch(e){errEl.textContent='Invalid config: '+e.message;errEl.style.display='block';return;}
@@ -34558,7 +34592,7 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
       </ol>
     </div>
     <label style="font-size:12px;font-weight:500;color:var(--t2);display:block;margin-bottom:4px">Firebase config (paste JSON)</label>
-    <textarea id="fb-cfg" class="sync-area" rows="7" placeholder="{
+    <textarea id="fb-cfg" class="sync-area" rows="7" oninput="_syncSetupPasted(this.value)" placeholder="{
   &quot;apiKey&quot;: &quot;AIzaSy...&quot;,
   &quot;authDomain&quot;: &quot;yourapp.firebaseapp.com&quot;,
   &quot;projectId&quot;: &quot;yourapp&quot;,
