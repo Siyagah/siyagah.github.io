@@ -1982,9 +1982,9 @@ sup.ann-sup:hover{text-decoration:underline}
   background:var(--green);color:var(--on-accent);font-family:var(--ui);font-size:14px;font-weight:600;cursor:pointer;min-height:44px}
 #rm-fbt{font-family:monospace;font-size:11px}
 /* v05.13 · S4a — Evernote import (dry run). A dialog on a tablet and laptop, a bottom sheet on a phone; it sits over the Zab bar on purpose, so it is not in the --jeb-h lists. */
-#enx-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10060;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
-#enx-modal.open{display:flex}
-#enx-box{background:var(--paper);border-radius:12px;padding:18px 22px;width:min(640px,94vw);max-height:90vh;overflow-y:auto;box-sizing:border-box;
+#enx-modal,#mmj-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10060;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
+#enx-modal.open,#mmj-modal.open{display:flex}
+#enx-box,#mmj-box{background:var(--paper);border-radius:12px;padding:18px 22px;width:min(640px,94vw);max-height:90vh;overflow-y:auto;box-sizing:border-box;
   box-shadow:0 8px 32px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px;color:var(--t1);font-size:13px}
 .rm-big.alt{background:var(--hover);color:var(--t1)}
 .enx-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
@@ -2017,8 +2017,8 @@ sup.ann-sup:hover{text-decoration:underline}
 @media(max-width:639.98px){
   .enx-dirbtn{display:none}
   .enx-filebtn{background:var(--green);color:var(--on-accent)}
-  #enx-modal{align-items:flex-end}
-  #enx-box{width:100%;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+  #enx-modal,#mmj-modal{align-items:flex-end}
+  #enx-box,#mmj-box{width:100%;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
   .enx-stack>summary{min-height:44px;display:flex;align-items:center}}
 @media(max-width:639.98px){
   #remmail-modal{align-items:flex-end}
@@ -3945,6 +3945,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <div class="sb-mi" onclick="addStarterMyDatabaseFolders();closeSBTools()" title="Adds MyResources, MyIdeas, MyMemories, MyPlanning, MyBuy-MyShopping, MyQueries, MyTravel under MyDatabase — safe to run more than once">🗂 Add Starter MyDatabase Folders</div>
           <div class="sb-mi" onclick="syncKnowledgeBase();closeSBTools()" title="Update the built-in guide notes to the latest version">📚 Sync Knowledge Base</div>
           <div class="sb-mi" onclick="openEnexImport();closeSBTools()" title="Reads your Evernote export and shows what it found; then, when you say OK, brings the notes into My Notebooks ▸ Evernote.">📥 Evernote import</div>
+          <div class="sb-mi" onclick="openMmjImport();closeSBTools()" title="Reads mappingmyjourney.com and shows what it found; then, when you say OK, backs up and brings every category and post into the section Mapping My Journey.">🗺 Mapping My Journey import</div>
           <div class="sb-mi-hd">Reference &amp; dates</div>
           <div class="sb-mi" onclick="openCiteModal();closeSBTools()" title="Insert Qurʿan or Hadith reference into note">📖 Insert Reference</div>
           <div class="sb-mi" onclick="openCalSettings();closeSBTools()" title="Set your country for public holidays">📅 Calendar Country</div>
@@ -20669,6 +20670,7 @@ function stripNumPrefix(name){
 //          2nd-level pos 1 under root pos 2 → "002.001"
 //          3rd-level pos 4 → "002.001.04"
 function getHierNum(fid){
+  if(pathOf(fid).some(f=>f.mmj)) return '';   /* v05.48 · J74 ② — a Mapping My Journey folder is never numbered */
   return pathOf(fid).map((f,lvl)=>{
     // Root level → count only within the same section (independent numbering).
     // Deeper levels → count among siblings with the same parent (unchanged).
@@ -20689,17 +20691,19 @@ function autoNumberAll(silent=false){
   // Step 1: ensure root-folder order is sequential and unique within each
   // section before computing numbers — fixes duplicate order values that
   // arise when folders are moved between sections.
-  const _sids=[...new Set(DB.folders.filter(f=>!f.parentId).map(f=>f.sectionId||null))];
+  /* v05.48 · J74 ② — a folder from the Mapping My Journey import (f.mmj) keeps its name and order exactly as the site has them */
+  const _sids=[...new Set(DB.folders.filter(f=>!f.parentId&&!f.mmj).map(f=>f.sectionId||null))];
   _sids.forEach(sid=>{
     const _roots=DB.folders
-      .filter(f=>!f.parentId&&(f.sectionId||null)===sid)
+      .filter(f=>!f.parentId&&!f.mmj&&(f.sectionId||null)===sid)
       .sort((a,b)=>a.order-b.order);
     _roots.forEach((f,i)=>f.order=i+1);
   });
 
   // Step 2: strip old prefix and apply new per-section number
   DB.folders.forEach(f=>{
-    const num=getHierNum(f.id);
+    if(f.mmj) return;
+    const num=getHierNum(f.id); if(!num) return;
     const clean=stripNumPrefix(f.name)||f.name;
     f.name=`(${num}) ${clean}`;
   });
@@ -30521,6 +30525,316 @@ async function _enxBootToast(){
   setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); },9000);
 }
 (function _enxBootWatch(){ if(!_dbLoaded){ setTimeout(_enxBootWatch,1000); return; } setTimeout(()=>{ try{ _enxBootToast(); }catch(e){} },4000); })();
+/* ── v05.48 · J74 ② — the Mapping My Journey import (BWN J27 Stage 1). The site is WordPress; its REST feed is open and answers CORS, so the browser reads it
+   directly. Read (and the dry run) writes NOTHING; "Back up, then import" backs up, then adds folders + notes with the Evernote import's no-undo-frame save.
+   State is only the global _mmj (memory): never DB.theme, localStorage or the cloud. Ids are stable (mmj-c-<cat>, mmj-p-<post>, mmj-g-<page>), so a second
+   run skips what is here; it never edits an existing record (round ③ brings changes). ── */
+const _MMJ_SITE='https://mappingmyjourney.com';
+const _MMJ_BATCH=250;
+const _mmj={view:'pick',busy:false,run:false,stop:false,res:null,err:'',prog:'',imp:null,note:''};
+const _mmjSite=()=>String(window.__mmjSite||_MMJ_SITE).replace(/\/+$/,'');
+const _mmjTA=document.createElement('textarea');   /* detached: innerHTML on a textarea is text with entities decoded, never markup */
+function _mmjDec(s){ _mmjTA.innerHTML=String(s==null?'':s).replace(/</g,'&lt;'); return _mmjTA.value; }
+async function _mmjGet(url){
+  let last=null;
+  for(let t=0;t<2;t++){
+    const ac=new AbortController(), to=setTimeout(()=>ac.abort(),window.__mmjTimeout||20000);
+    try{
+      const r=await fetch(url,{signal:ac.signal});
+      if(!r.ok) throw new Error('the site answered '+r.status);
+      const j=await r.json();
+      return {j,tp:parseInt(r.headers.get('X-WP-TotalPages'),10)||1,tot:parseInt(r.headers.get('X-WP-Total'),10)||0};
+    }catch(e){ last=e; }
+    finally{ clearTimeout(to); }
+  }
+  throw last||new Error('no answer');
+}
+async function _mmjAll(path,tick){
+  const base=_mmjSite()+'/wp-json/wp/v2/'+path+(path.includes('?')?'&':'?')+'per_page=100&page=';
+  const first=await _mmjGet(base+1); if(!Array.isArray(first.j)) throw new Error('an unexpected answer from the site');
+  let out=first.j.slice(); if(tick) tick(out.length,first.tot);
+  for(let p=2;p<=first.tp;p++){
+    if(_mmj.stop) throw new Error('stopped');
+    const g=await _mmjGet(base+p); if(!Array.isArray(g.j)) throw new Error('an unexpected answer from the site');
+    out=out.concat(g.j); if(tick) tick(out.length,first.tot);
+  }
+  return out;
+}
+async function _mmjByIds(path,ids,fields){
+  let out=[];
+  for(let i=0;i<ids.length;i+=100){
+    if(_mmj.stop) throw new Error('stopped');
+    out=out.concat(await _mmjAll(path+'?include='+ids.slice(i,i+100).join(',')+'&_fields='+fields));
+  }
+  return out;
+}
+const _mmjAttr=(tag,n)=>{ const x=new RegExp('(?:^|[\\s"\'])'+n+'\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\')','i').exec(tag); return x?_enxUnent(x[1]!=null?x[1]:x[2]).trim():''; };
+function _mmjUrl(u,site){
+  u=String(u||'').trim();
+  if(/^\/\//.test(u)) u='https:'+u; else if(/^\//.test(u)) u=site+u;
+  return u;
+}
+/* iframes become links; images become tokens (cleaning would turn a data: src into #); then script/style/on*= go. Returns the html with [[MMJIMG:n]] and the urls. */
+function _mmjPrep(html,site){
+  const imgs=[];
+  html=String(html==null?'':html);
+  html=html.replace(/<iframe\b([^>]*)>(?:\s*<\/iframe\s*>)?/gi,(m,a)=>{
+    const u=_mmjUrl(_mmjAttr(' '+a,'src'),site);
+    return /^https?:\/\//i.test(u)?'<p class="mmj-embed"><a href="'+esc(u)+'">▶ '+esc(u)+'</a></p>':'';
+  });
+  html=html.replace(/<img\b[^>]*>/gi,m=>{
+    let u=_mmjAttr(m,'src'); const lz=_mmjAttr(m,'data-src')||_mmjAttr(m,'data-lazy-src');
+    if(lz&&(!u||/^data:/i.test(u))) u=lz;
+    u=_mmjUrl(u,site);
+    if(!/^(https?:\/\/|data:)/i.test(u)) return '';
+    imgs.push(u); return '[[MMJIMG:'+(imgs.length-1)+']]';
+  });
+  return {html:_enxClean(html),imgs};
+}
+function _mmjRead_tags(posts){ const s=new Set(); posts.forEach(p=>(p.tags||[]).forEach(t=>s.add(t))); return Array.from(s); }
+async function _mmjRead(){
+  if(_mmj.busy||_mmj.run) return;
+  _mmj.busy=true; _mmj.stop=false; _mmj.err=''; _mmj.res=null; _mmj.view='reading'; _mmj.prog='Reading categories…'; _mmjPaint();
+  const say=t=>{ _mmj.prog=t; const p=document.getElementById('mmj-prog'); if(p) p.textContent=t; };
+  try{
+    const site=_mmjSite();
+    const cats=await _mmjAll('categories?orderby=name&order=asc&_fields=id,name,parent,slug,link,count',(n,t)=>say('Reading categories… '+_enxN(n)+(t?' of '+_enxN(t):'')));
+    const posts=await _mmjAll('posts?_fields=id,date_gmt,modified_gmt,link,slug,title,content,categories,tags,featured_media',(n,t)=>say('Reading posts… '+_enxN(n)+(t?' of '+_enxN(t):'')));
+    const pages=await _mmjAll('pages?_fields=id,date_gmt,modified_gmt,link,slug,title,content,parent,menu_order,featured_media',(n,t)=>say('Reading pages… '+_enxN(n)+(t?' of '+_enxN(t):'')));
+    say('Reading tags and pictures…');
+    const tagRows=await _mmjByIds('tags',_mmjRead_tags(posts),'id,name');
+    const fids=Array.from(new Set(posts.concat(pages).map(p=>p.featured_media).filter(x=>x>0)));
+    const medRows=await _mmjByIds('media',fids,'id,source_url,mime_type,media_details');
+    const tagName=new Map(tagRows.map(t=>[t.id,_mmjDec(t.name).trim()]));
+    const media=new Map();
+    medRows.forEach(m=>{
+      const lg=m.media_details&&m.media_details.sizes&&m.media_details.sizes.large;
+      const url=_mmjUrl((lg&&lg.source_url)||m.source_url||'',site), mime=String(m.mime_type||'').toLowerCase();
+      if(url&&(!mime||mime.startsWith('image/'))) media.set(m.id,url);
+    });
+    const byId=new Map(cats.map(c=>[c.id,c])), parentOf=new Map();
+    cats.forEach(c=>{   /* a parent that is missing, or a loop, makes it a root */
+      let p=c.parent||0, ok=p&&byId.has(p), q=p, n=0;
+      while(ok&&q&&n++<64){ if(q===c.id){ ok=false; break; } const x=byId.get(q); q=x?x.parent:0; }
+      if(ok&&q&&n>=64) ok=false;
+      parentOf.set(c.id,ok?p:0);
+    });
+    const mk=(p,type)=>{
+      const pre=_mmjPrep(p.content&&p.content.rendered,site);
+      const f=media.get(p.featured_media)||'';
+      return {id:p.id,type,title:_mmjDec(p.title&&p.title.rendered).trim()||'Untitled',link:p.link||'',date:p.date_gmt||'',mod:p.modified_gmt||'',
+        cats:type==='post'?(p.categories||[]).filter(c=>byId.has(c)):[],tags:type==='post'?(p.tags||[]).map(t=>tagName.get(t)).filter(Boolean):[],
+        parent:p.parent||0,feat:f&&!pre.imgs.includes(f)?f:'',html:pre.html,imgs:pre.imgs};
+    };
+    const items=posts.map(p=>mk(p,'post')).concat(pages.map(p=>mk(p,'page')));
+    const cl=cats.map(c=>({id:c.id,name:_mmjDec(c.name),slug:c.slug||'',link:c.link||'',parent:parentOf.get(c.id)}));
+    _mmj.res={site,cats:cl,items,at:Date.now()};
+    _mmj.view='done';
+  }catch(e){
+    _mmj.res=null;
+    if(e&&e.message==='stopped'){ _mmj.view='pick'; _mmj.note='Stopped. Nothing was added to your notebook.'; }
+    else{ _mmj.view='error'; _mmj.err='Could not read Mapping My Journey ('+((e&&e.message)||'no answer')+'). Nothing was added to your notebook. Check the connection and try again.'; }
+  }finally{ _mmj.busy=false; _mmjPaint(); }
+}
+function _mmjTaken(){
+  const t=new Set();
+  (DB.folders||[]).forEach(f=>{ if(f) t.add(f.id); });
+  (DB.articles||[]).forEach(a=>{ if(a) t.add(a.id); });
+  (DB.trash||[]).forEach(x=>{ if(!x) return; if(x.item&&x.item.id) t.add(x.item.id); const s=x.subtree; if(s){ (s.folders||[]).forEach(f=>{ if(f&&f.id) t.add(f.id); }); (s.articles||[]).forEach(a=>{ if(a&&a.id) t.add(a.id); }); } });
+  (DB.tombstones||[]).forEach(x=>{ if(x&&x.id) t.add(x.id); });
+  return t;
+}
+function _mmjStats(R){
+  const byId=new Map(R.cats.map(c=>[c.id,c])), lv={}, own=new Set();
+  R.items.forEach(i=>i.cats.forEach(c=>own.add(c)));
+  const dep=c=>{ let d=1,p=c; while(p.parent&&byId.has(p.parent)&&d<64){ p=byId.get(p.parent); d++; } return d; };
+  let empty=0, maxd=0;
+  R.cats.forEach(c=>{ const d=dep(c); lv[d]=(lv[d]||0)+1; if(d>maxd) maxd=d; if(!own.has(c.id)) empty++; });
+  const posts=R.items.filter(i=>i.type==='post'), pages=R.items.filter(i=>i.type==='page');
+  const pics=new Set(); R.items.forEach(i=>{ i.imgs.forEach(u=>pics.add(u)); if(i.feat) pics.add(i.feat); });
+  const tags=new Set(); posts.forEach(p=>p.tags.forEach(t=>tags.add(t)));
+  const taken=_mmjTaken();
+  return {folders:R.cats.length,lv,maxd,empty,posts:posts.length,pages:pages.length,places:posts.reduce((s,p)=>s+p.cats.length,0)+pages.length,
+    pics:pics.size,tags:tags.size,already:R.cats.filter(c=>taken.has('mmj-c-'+c.id)).length+R.items.filter(i=>taken.has((i.type==='post'?'mmj-p-':'mmj-g-')+i.id)).length};
+}
+async function _mmjPicOne(u){
+  let bytes,mime;
+  if(/^data:/i.test(u)){ const d=_dataUrlBytes(u); if(!d) return null; bytes=d.bytes; mime=d.mime; }
+  else{
+    const ac=new AbortController(), to=setTimeout(()=>ac.abort(),window.__mmjTimeout||30000);
+    try{
+      const r=await fetch(u,{signal:ac.signal}); if(!r.ok) return null;
+      bytes=await r.arrayBuffer(); mime=String(r.headers.get('content-type')||'').split(';')[0].trim().toLowerCase();
+    }finally{ clearTimeout(to); }
+  }
+  if(!bytes||!(bytes.byteLength||bytes.length)) return null;
+  if(!/^image\//.test(mime)){
+    const x=/\.(png|jpe?g|gif|webp|avif|bmp|svg)(?:[?#]|$)/i.exec(u.split('?')[0]+'?');
+    if(!x) return null; const e=x[1].toLowerCase(); mime='image/'+(e==='jpg'?'jpeg':e==='svg'?'svg+xml':e);
+  }
+  return {sha:await _picPut(bytes,mime),mime};
+}
+const _mmjFmtDate=iso=>{ const d=new Date(iso); if(isNaN(d)) return ''; return d.getUTCDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()]+' '+d.getUTCFullYear(); };
+const _mmjIso=(s,fb)=>{ const t=s?Date.parse(/Z|[+-]\d\d:?\d\d$/.test(s)?s:s+'Z'):NaN; return isNaN(t)?fb:new Date(t).toISOString(); };
+function _mmjImgHTML(u,got){
+  if(got) return '<img class="ed-img" data-pic="'+got.sha+'" data-mime="'+esc(got.mime)+'" alt="">';
+  return /^https?:\/\//i.test(u)?'<img src="'+esc(u)+'">':'';
+}
+function _mmjNote(it,pics,sec){
+  const link=/^https?:\/\//i.test(it.link)?it.link:'#', d=_mmjFmtDate(it.date);
+  let h='<p class="mmj-src">🔗 <a href="'+esc(link)+'">on Mapping My Journey</a>'+(d?' · '+d:'')+'</p>';
+  if(it.feat) h+='<p>'+_mmjImgHTML(it.feat,pics.get(it.feat))+'</p>';
+  h+=it.html.replace(/\[\[MMJIMG:(\d+)\]\]/g,(m,n)=>{ const u=it.imgs[+n]; return u==null?'':_mmjImgHTML(u,pics.get(u)); });
+  return h;
+}
+function _mmjTick(){
+  const I=_mmj.imp; if(!I) return;
+  const p=document.getElementById('mmj-iprog'); if(p) p.textContent=I.stage;
+  const b=document.getElementById('mmj-ibar'); if(b) b.style.width=(I.goal?Math.min(100,Math.round(I.took*100/I.goal)):0)+'%';
+}
+async function _mmjImport(){
+  const R=_mmj.res; if(!R||_mmj.run) return;
+  if(!_s2RefsOk()){
+    _mmj.view='error'; _mmj.err='Pictures cannot be saved on this device just now (the cloud copy is still being read, or an older version of Siyagah was used in the last two days). Nothing was added. Try again in a minute.'; _mmjPaint(); return;
+  }
+  _mmj.run=true;
+  const I=_mmj.imp={state:'running',stage:'Getting ready…',took:0,goal:0,fAdd:0,fSkip:0,nAdd:0,nSkip:0,picOk:0,picFail:0,err:''};
+  _mmj.view='import'; _mmjPaint();
+  try{
+    const taken=_mmjTaken(), idOf=i=>(i.type==='post'?'mmj-p-':'mmj-g-')+i.id;
+    const newCats=R.cats.filter(c=>!taken.has('mmj-c-'+c.id)), newItems=R.items.filter(i=>!taken.has(idOf(i)));
+    I.fSkip=R.cats.length-newCats.length; I.nSkip=R.items.length-newItems.length;
+    I.goal=newCats.length+newItems.length+(taken.has('mmj-pages')?0:1);
+    /* A: the pictures, 4 at a time, each address once */
+    const urls=new Set(); newItems.forEach(i=>{ i.imgs.forEach(u=>urls.add(u)); if(i.feat) urls.add(i.feat); });
+    const list=Array.from(urls), pics=new Map(); let next=0, done=0;
+    const worker=async()=>{
+      for(;;){
+        const k=next++; if(k>=list.length) return;
+        let got=null; try{ got=await _mmjPicOne(list[k]); }catch(e){ got=null; }
+        pics.set(list[k],got); if(got) I.picOk++; else I.picFail++;
+        done++; I.stage='Pictures… '+_enxN(done)+' of '+_enxN(list.length); _mmjTick();
+      }
+    };
+    await Promise.all([1,2,3,4].map(worker));
+    /* B: the section and the folders */
+    const at=new Date().toISOString();
+    let sec=(DB.sections||[]).find(s=>s.id==='mmj-sec');
+    const fById=new Map((DB.folders||[]).map(f=>[f.id,f]));
+    const sib=new Map();   /* order among siblings = the site's own list order */
+    const orderOf=pid=>{ const k=pid||''; const n=(sib.get(k)||0)+1; sib.set(k,n); return n; };
+    const flushF=async arr=>{
+      await _enxYield();
+      if(!sec){ sec={id:'mmj-sec',name:'Mapping My Journey',order:1+Math.max(0,...DB.sections.map(s=>s.order||0)),mmj:{site:R.site}}; DB.sections.push(sec); }
+      arr.forEach(f=>{ DB.folders.push(f); fById.set(f.id,f); I.fAdd++; });
+      _enxPersist(); I.took+=arr.length; I.stage='Folders… '+_enxN(I.fAdd)+' of '+_enxN(newCats.length); _mmjTick(); await _enxYield();
+    };
+    let buf=[];
+    for(const c of R.cats){
+      const o=orderOf(c.parent?'mmj-c-'+c.parent:null);   /* counted for every category, so a skipped one keeps its place */
+      if(taken.has('mmj-c-'+c.id)) continue;
+      const f={id:'mmj-c-'+c.id,name:c.name,parentId:c.parent?'mmj-c-'+c.parent:null,order:o,mmj:{id:c.id,slug:c.slug,link:c.link},updatedAt:at};
+      if(!f.parentId) f.sectionId='mmj-sec';
+      buf.push(f); if(buf.length>=_MMJ_BATCH){ await flushF(buf); buf=[]; }
+    }
+    if(!taken.has('mmj-pages')) buf.push({id:'mmj-pages',name:'Pages',parentId:null,sectionId:'mmj-sec',order:orderOf(null),mmj:{pages:true},updatedAt:at});
+    if(buf.length||!sec) await flushF(buf);
+    /* C: the notes */
+    let nb=[];
+    const flushN=async arr=>{
+      await _enxYield();
+      arr.forEach(a=>{ DB.articles.push(a); I.nAdd++; });
+      _enxPersist(); I.took+=arr.length; I.stage='Notes… '+_enxN(I.nAdd)+' of '+_enxN(newItems.length); _mmjTick(); await _enxYield();
+    };
+    for(const it of newItems){
+      const fids=it.type==='page'?['mmj-pages']:it.cats.map(c=>'mmj-c-'+c);
+      const now=new Date().toISOString(), cr=_mmjIso(it.date,now), up=_mmjIso(it.mod,cr);
+      const tags=[]; it.tags.forEach(t=>{ const c=_cleanTag(t); if(c&&!tags.includes(c)) tags.push(c); });
+      nb.push({id:idOf(it),title:it.title,content:_mmjNote(it,pics,sec),folderIds:fids.filter(x=>fById.has(x)),tags,createdAt:cr,updatedAt:up,
+        fromMmj:{id:it.id,type:it.type,link:it.link,modified:it.mod}});
+      if(nb.length>=_MMJ_BATCH){ await flushN(nb); nb=[]; }
+    }
+    if(nb.length) await flushN(nb);
+    I.state='done';
+  }catch(e){
+    console.error('Mapping My Journey import failed',e);
+    I.state='error'; I.err=(e&&e.message)||String(e);
+  }finally{
+    _mmj.run=false;
+    try{ render(); }catch(e){}
+    _mmjPaint();
+  }
+}
+async function _mmjBackupGo(){
+  if(_mmj.run||!_mmj.res) return;
+  _mmj.run=true; _mmj.view='backup'; _mmjPaint();
+  let ok=false;
+  try{ ok=await runBackupNow(false); }catch(e){ ok=false; }
+  if(!ok){ try{ await downloadDatedBackup(); ok=true; }catch(e){ ok=false; } }
+  _mmj.run=false;
+  if(!ok){ _mmj.view='error'; _mmj.err='The backup did not work, so nothing was imported. Your notebook is unchanged.'; _mmjPaint(); return; }
+  await _mmjImport();
+}
+function _mmjOpenSec(){
+  closeMmjImport();
+  ST.secOpen=ST.secOpen||{}; ST.secOpen['mmj-sec']=true;
+  if(DB.theme&&DB.theme.accordionSec) DB.sections.forEach(s=>{ if(s.id!=='mmj-sec') ST.secOpen[s.id]=false; });
+  try{ render(); }catch(e){ renderTree(); }
+}
+function _mmjAgain(){ if(_mmj.run||_mmj.busy) return; _mmj.view='pick'; _mmj.res=null; _mmj.err=''; _mmj.note=''; _mmj.imp=null; _mmjPaint(); }
+function _mmjPaint(){
+  const box=document.getElementById('mmj-box'); if(!box) return;
+  const v=_mmj.view, N=_enxN;
+  let h='<div class="rm-hd"><div class="rem-title">🗺 Mapping My Journey import</div><button class="rem-btn cancel" id="mmj-close" onclick="closeMmjImport()">✕ Close</button></div>';
+  if(v==='pick'){
+    h+='<div class="rm-p">Brings <b>mappingmyjourney.com</b> into Siyagah as a true copy: every category as a folder (same place, same depth, empty ones too), every published post and page as a note with its pictures, date and a link back. A note in several categories is one note shown in each. Nothing is changed or deleted in your notebook.</div>'
+      +(_mmj.note?'<div class="enx-sub" id="mmj-note">'+esc(_mmj.note)+'</div>':'')
+      +'<button class="rm-big" id="mmj-read" onclick="_mmjRead()">🔎 Look at the site</button>'
+      +'<div class="enx-sub">This only reads the site and shows what it found. Nothing is added until you say so.</div>';
+  }else if(v==='reading'){
+    h+='<div class="enx-prog" id="mmj-prog" role="status">'+esc(_mmj.prog)+'</div><button class="rm-big alt" id="mmj-stop" onclick="_mmj.stop=true">✕ Stop</button>';
+  }else if(v==='error'){
+    h+='<div class="enx-prog" id="mmj-err" role="alert">'+esc(_mmj.err)+'</div><button class="rm-big" id="mmj-retry" onclick="_mmjAgain()">↩ Start again</button>';
+  }else if(v==='done'&&_mmj.res){
+    const s=_mmjStats(_mmj.res), row=(a,b,id)=>'<dt>'+a+'</dt><dd'+(id?' id="mmj-t-'+id+'"':'')+'>'+b+'</dd>';
+    let lv=''; for(let d=1;d<=s.maxd;d++) lv+=row('Level '+d,N(s.lv[d]||0),'lv'+d);
+    h+='<dl class="enx-grid" id="mmj-totals">'+row('Folders',N(s.folders),'folders')+lv+row('Empty folders',N(s.empty),'empty')
+      +row('Posts',N(s.posts),'posts')+row('Pages',N(s.pages),'pages')+row('Note-in-folder places',N(s.places),'places')
+      +row('Pictures',N(s.pics),'pics')+row('Tags',N(s.tags),'tags')+row('Already in Siyagah',N(s.already),'already')+'</dl>'
+      +'<button class="rm-big" id="mmj-go" onclick="_mmjBackupGo()">🗄 Back up, then import</button>'
+      +'<div class="enx-dry" id="mmj-dry">This was a look at the site: nothing has been added to your notebook yet. “Back up, then import” saves a backup copy first.</div>';
+  }else if(v==='backup'){
+    h+='<div class="enx-prog" id="mmj-bk" role="status">🗄 Making a backup first…</div>';
+  }else if(v==='import'&&_mmj.imp){
+    const I=_mmj.imp;
+    if(I.state==='running'){
+      h+='<div class="enx-prog" id="mmj-iprog" role="status">'+esc(I.stage)+'</div><div class="enx-bar" role="progressbar"><i id="mmj-ibar" style="width:'+(I.goal?Math.min(100,Math.round(I.took*100/I.goal)):0)+'%"></i></div>'
+        +'<div class="enx-sub">Nothing in your notebook is changed or deleted.</div>';
+    }else{
+      h+=(I.state==='error'?'<div class="enx-prog" id="mmj-err" role="alert">The import stopped: '+esc(I.err)+'. What was already added is kept; run it again to carry on.</div>'
+          :'<div class="enx-prog" id="mmj-done" role="status">✅ Done. Added '+N(I.fAdd)+' folders and '+N(I.nAdd)+' notes.</div>')
+        +'<div class="enx-sub" id="mmj-isum">Left as they were: '+N(I.fSkip)+' folders and '+N(I.nSkip)+' notes already in Siyagah. Pictures: '+N(I.picOk)+' brought in, '+N(I.picFail)+' not brought in'+(I.picFail?' (kept as links to the original)':'')+'.</div>'
+        +'<button class="rm-big" id="mmj-open" onclick="_mmjOpenSec()">🗺 Open Mapping My Journey</button>';
+    }
+  }
+  box.innerHTML=h;
+}
+function openMmjImport(){
+  let m=document.getElementById('mmj-modal');
+  if(!m){
+    m=document.createElement('div'); m.id='mmj-modal';
+    m.addEventListener('click',e=>{ if(e.target===m) closeMmjImport(); });
+    m.innerHTML='<div id="mmj-box" role="dialog" aria-label="Mapping My Journey import"></div>';
+    document.body.appendChild(m);
+  }
+  if(!_mmj.busy&&!_mmj.run&&_mmj.view!=='done') _mmj.view='pick';
+  _mmjPaint();
+  m.classList.add('open');
+}
+function closeMmjImport(){
+  if(_mmj.busy) _mmj.stop=true;
+  const m=document.getElementById('mmj-modal'); if(m) m.classList.remove('open');
+}
 function openEnexImport(){
   let m=document.getElementById('enx-modal');
   if(!m){
