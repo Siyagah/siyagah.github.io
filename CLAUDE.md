@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.46.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.47.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.47** (26 Oct 2026) — J74 ① (BWN J27 Stage 1, built by the Architect): "🖼 Keep every picture on this device" (Cloud Sync window; `DB.theme.picKeepAll`, absent = on, read by `_picKeepOn()`): `_picKeepTick()` fetches, one at a time through `_picFetch`, every `data-pic` in notes and Trash not yet on the device; ≤ `_PIC_KEEP_DAY` (8,000) cloud reads a device a UTC day (`siyagah-premig-v1` meta `keep`), paused at 90 % storage; `_storeProtect()` asks `navigator.storage.persist()`. Diagnostics: Pictures kept here, Storage protected. Check: block 107, `tools/pickeep-j74.mjs`.
 - **v05.46** (25 Oct 2026) — Z16 (PCF J70): a 📰 News Zab of the owner's own. Zab kind `news` (🧩 Zab kind ▸); each item is a channel (`src`, `color`, `off`); `_zabNews().chans` reads the News Zabs' items when one exists (else the settings array, left as the backup);
   the panel has the channel ticks, "Also scroll these Zabs" (= `zabTicker.pids`) and `▶ Scroll these` (`_jebNewsGo`). Check: block 104, `tools/zab-news-zab.mjs` (`--unpatched`: 21 of 22 fail).
 - **v05.45** (25 Oct 2026) — J71 (built by the Architect): the owner's PC and tablet had the same Notebook ID and account but read 942 vs 19,285 records — the Firebase project is the other half of a cloud's address and was shown nowhere. Diagnostics now name the **Cloud project**; "📋 Copy sync setup" (`_syncCopySetup`) copies project + ID, and pasting it on another device's setup screen uses both (`_syncSetupOf`, `_syncSetupPasted`). Checks: block 105 `tools/sync-setup-j71.mjs`, block 106 `tools/sync-scale.mjs --notes=3000` (J69).
@@ -55,8 +56,6 @@ must never accumulate here instead of there.
 - **v05.43** (23 Oct 2026) — R2 (PCF J65, built by the Architect): the owner's laptop showed an empty notebook as "☁ Live": its replica held 16 of 12,500 records and its cursor had passed the rest, and the reader only asks for records
   newer than the cursor. `_s1ReadStart` now reads the whole notebook again (cursor 0) once per page load when this device holds no notes or folders and the replica fewer than `_S1_REREAD_MIN` (50) records, or the replica holds fewer than half of this device's own notes + folders; Cloud Sync →
   "⟳ Read everything again" (`_s1ReRead`) does it by hand; the diagnostics say so. Reading again only adds. Check: block 102, `tools/reread-r2.mjs` (`--unpatched`: 5 of 10 fail; B stays at 15 of 203 notes).
-- **v05.42** (22 Oct 2026) — P6 (PCF J61, round 2 of 2), a faster start: the record baseline (`_recSnap`) and the undo baseline (`_hMap`/`_hJson`) no longer hash or stringify every note at start. A baseline entry is `[tok|null, updatedAt, history length, e]` (`e` = the
-  record's fingerprint entry); the token is worked out from `e` only when needed (`_pTok` → `_rcTokE`), and an undo "before" text is said from the baseline's entry when the record first changes (`_rcJsonOld`; if it cannot be said exactly, the older undo frames are dropped, never written wrong). Check: block 101, `tools/perf-p6.mjs`.
 ---
 
 ## What this is
@@ -390,6 +389,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `updatedAt` to the ORIGINAL + 1 ms, never "now", so any later real edit wins
   (I1). Gate `_s2RefsOk()`; never an open note; 4,000 picture writes per
   device per UTC day (`_PICMIG_CAP`).
+- **Every picture kept on the device (v05.47, J74 ①).** `_picKeepTick()` fetches every `data-pic` in notes and Trash that the store lacks, one at a time through `_picFetch` (never `a.content`), while `_picKeepOn()` (`DB.theme.picKeepAll !== false`), visible, online and signed in; ≤ `_PIC_KEEP_DAY` cloud reads a UTC day (`siyagah-premig-v1` meta `keep`); paused at 90 % storage. **A new place that holds note HTML with pictures must be added to `_picKeepShas()`**, or offline it shows empty frames.
 - **Free text in an inline handler goes through `_ja(s)`** (v04.96) — never
   `'${esc(x)}'` (`esc()` leaves `'` alone) or a hand-rolled `\x27`. A typed or
   renamed tag goes through `_cleanTag()` (keeps every character but the comma).
