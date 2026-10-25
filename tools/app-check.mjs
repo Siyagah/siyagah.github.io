@@ -12490,6 +12490,32 @@ await r.block('104-zab-news-zab', async () => {
   r.check(out.status === 0, 'the Z16 News Zab check exits cleanly', `exit ${out.status}`);
 });
 
+/* 105 — v05.45, J71: the Cloud Sync window names the cloud project; "📋 Copy sync setup" copies project + notebook ID; pasting it on another device uses both. tools/sync-setup-j71.mjs runs 105a–105e at 390 / 820 / 1440. */
+await r.block('105-sync-setup-j71', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./sync-setup-j71.mjs', import.meta.url).pathname, ...[]], { encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 11, 'the sync-setup-j71.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '105: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the sync-setup-j71.mjs check exits cleanly', `exit ${out.status}`);
+});
+
+/* 106 — v05.45, J69: the sync path at size, two devices on the S1 fake, 3,000 notes in 60 folders (tools/sync-scale.mjs; --notes=12500 is the owner's size, run by hand): a new device receives all, an edit and a Trash move cross, a device that lost its own copy shows every note again, nothing but the deleted note is marked gone, then quiet. */
+await r.block('106-sync-scale', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./sync-scale.mjs', import.meta.url).pathname, ...['--notes=3000']], { encoding: 'utf8', timeout: 1200000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 7, 'the sync-scale.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '106: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the sync-scale.mjs check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

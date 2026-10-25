@@ -10707,6 +10707,20 @@ The owner (24 Oct, 7:30am, Android phone, Chrome, a screenshot of a long Bangla 
 
 **Totals (Architect), full app-check on `c85a47b`, the merged head** (two halves at once): blocks 1–59 + `self-check` **2332/2332**; blocks 60–103 **5575/5577** (the 2 misses: block 72, Z6c, broke off under two-halves load; re-run alone **391/391**). Merged as `786b446`.
 
+---
+
+## v05.45 — J71: which cloud a device reads (the Cloud Sync window names the project; copy the setup to another device) + J69's size check (built by the Architect)
+
+The owner (25 Oct, 6:29am): "Two recent folder tab n pc. Why they don't sync?" The tablet held 18,190 notes (Evernote 17,747); the PC 414, no Evernote, every Zab at 0. First the PC was not connected at all (the setup screen, its settings still saved); after Connect and Google sign-in, both devices said "Sync is active", the same Notebook ID (`nb-mriuc27o-f44402`), the same account — and the per-note copy read **942 records on the PC, 19,285 on the tablet**, with "⟳ Read everything again" and a sign-out/in changing nothing. A device that reads the whole of its cloud and still has 942 records is reading a different cloud: the Notebook ID is only half of the address, the Firebase project (`firebaseConfig.projectId`) is the other half, and nothing on screen showed it. Not yet proven on the owner's devices (the tablet's project could not be seen before this round); this round makes it visible and gives the fix.
+
+**The change.** Cloud Sync → Diagnostics has a first row **Cloud project** (the saved `projectId`). Under the Notebook ID, **📋 Copy sync setup** (`_syncCopySetup`) copies `{siyagahSync:1, firebaseConfig, notebookId}` (clipboard; a select-all box when the clipboard refuses). On a device's setup screen, pasting that text into the Firebase config box fills the Notebook ID too (`_syncSetupPasted`), and Connect uses both (`_syncSetupOf` in `connectSync`). Connecting a device to another cloud keeps its own notes and joins them in (merge is a union, I1/I2); the cloud it leaves is untouched. Shapes (D5): the same dialog at 390 / 820 / 1440 (a full-width sheet on the phone); measured reachable from the real ⚙ → ☁ at all three.
+
+**Checks.** Block 105, `tools/sync-setup-j71.mjs`: 105a the project is named, 105b the button is reached and tappable at 390 / 820 / 1440, 105c the copy carries project + ID, 105d pasting it on another device's setup screen and Connect save exactly that project and ID, 105e no page errors. **11/11**; on v05.44 **7 of 8 fail**. Block 106, `tools/sync-scale.mjs --notes=3000` (J69, 24 Oct, on branch `claude/j69-sync-scale` until now): two devices on the S1 fake; a new device receives every note and folder, an edit and a Trash move cross both ways, a device that lost its own copy shows every note again, nothing but the deleted note is marked gone, then no writes. **7/7** (at the owner's 12,500 notes, run by hand on 24 Oct: 7/7, a new device complete in 8 s).
+
+**Not done:** the automatic re-read for a device that holds far fewer records than its cloud (it needs the cloud's count; it waits on whether J71's cause is the project, which this round lets the owner see). Why the PC held another project's settings is not known (an older setup on that browser is the likely story).
+
+---
+
 ## v05.46 — Z16: a 📰 News Zab of the owner's own (PCF J70)
 
 The owner (24 Oct, 9:20pm, a phone screenshot of the Rail with their own empty Zab named "News"): "Enable an option that whatever channel I choose and list in that Zab, I can click it to scroll all." Demo approved 25 Oct, with "enable choice for other selected Zabs to scroll as well". Choices: 1A tapping the News Zab opens its channel list; 2A while it scrolls the band shows only the ticked channels (+ the ticked Zabs); 3A the five channels move into the News Zab.

@@ -49,6 +49,7 @@ must never accumulate here instead of there.
 
 - **v05.46** (25 Oct 2026) — Z16 (PCF J70): a 📰 News Zab of the owner's own. Zab kind `news` (🧩 Zab kind ▸); each item is a channel (`src`, `color`, `off`); `_zabNews().chans` reads the News Zabs' items when one exists (else the settings array, left as the backup);
   the panel has the channel ticks, "Also scroll these Zabs" (= `zabTicker.pids`) and `▶ Scroll these` (`_jebNewsGo`). Check: block 104, `tools/zab-news-zab.mjs` (`--unpatched`: 21 of 22 fail).
+- **v05.45** (25 Oct 2026) — J71 (built by the Architect): the owner's PC and tablet had the same Notebook ID and account but read 942 vs 19,285 records — the Firebase project is the other half of a cloud's address and was shown nowhere. Diagnostics now name the **Cloud project**; "📋 Copy sync setup" (`_syncCopySetup`) copies project + ID, and pasting it on another device's setup screen uses both (`_syncSetupOf`, `_syncSetupPasted`). Checks: block 105 `tools/sync-setup-j71.mjs`, block 106 `tools/sync-scale.mjs --notes=3000` (J69).
 - **v05.44** (24 Oct 2026) — J67 (built by the Architect): on the owner's Android phone the note's bar slid off the top while writing far down a note: since Chrome 108 the keyboard only covers the page, and Chrome pans the whole page to show the caret. The viewport meta now carries
   `interactive-widget=resizes-content`, so the page is laid out above the keyboard and only the note scrolls. iOS Safari ignores it (backlog). Check: block 103, `tools/kb-j67.mjs`.
 - **v05.43** (23 Oct 2026) — R2 (PCF J65, built by the Architect): the owner's laptop showed an empty notebook as "☁ Live": its replica held 16 of 12,500 records and its cursor had passed the rest, and the reader only asks for records
@@ -56,9 +57,6 @@ must never accumulate here instead of there.
   "⟳ Read everything again" (`_s1ReRead`) does it by hand; the diagnostics say so. Reading again only adds. Check: block 102, `tools/reread-r2.mjs` (`--unpatched`: 5 of 10 fail; B stays at 15 of 203 notes).
 - **v05.42** (22 Oct 2026) — P6 (PCF J61, round 2 of 2), a faster start: the record baseline (`_recSnap`) and the undo baseline (`_hMap`/`_hJson`) no longer hash or stringify every note at start. A baseline entry is `[tok|null, updatedAt, history length, e]` (`e` = the
   record's fingerprint entry); the token is worked out from `e` only when needed (`_pTok` → `_rcTokE`), and an undo "before" text is said from the baseline's entry when the record first changes (`_rcJsonOld`; if it cannot be said exactly, the older undo frames are dropped, never written wrong). Check: block 101, `tools/perf-p6.mjs`.
-- **v05.41** (22 Oct 2026) — P5 (PCF J61, round 1 of 2), speed at the owner's scale (12,500 notes): the journal's full copy (`_ljCheckpoint`) is made on hide / after 3,000 puts / 10 min without a save, never on the 30 s idle,
-  and a settings-only save starts no timer; opening a note moves `.sel` between two cards (`_selFastMove`, only while `_p2cDrawn` is still the page) instead of redrawing the list, `getBacklinks` reads each note's links once (`_blIdx`),
-  `_zabPhone()` reads a width cached on resize; the sidebar's counts come from one pass per draw (`_cntC`: `cntOf`, `smartCount`, `secSmartCount`). Check: block 100, `tools/perf-p5.mjs`.
 ---
 
 ## What this is
