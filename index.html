@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.46">
+<meta name="app-version" content="05.47">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3912,7 +3912,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.46</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.47</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -5718,6 +5718,108 @@ function _picDiagText(){
   try{t+=' · '+_picMigDiagText();}catch(e){}
   return t;
 }
+
+/* ── v05.47 · J74 ① — keep every picture on this device, so a note never opened here still shows its pictures offline.
+   DB.theme.picKeepAll: absent/true = on, false = off; read ONLY through _picKeepOn(). _picKeepTick() (20 s timer, `online`,
+   `visibilitychange`) scans notes and trashed notes for data-pic shas (a note is rescanned only when its updatedAt moved; yields every
+   12 ms), then fetches the missing ones ONE at a time through _picFetch (verified, stored, never touches a.content), only while on,
+   visible, online, signed in, and the browser's storage is under 90 % full. A sha that fails 3 times waits 6 h; at most _PIC_KEEP_DAY cloud reads a UTC day (counted in siyagah-premig-v1 meta 'keep'). Never writes DB. */
+const _picKeep={want:0,missing:0,fetched:0,failed:0,running:false,full:false,cap:false,last:0,err:null};
+const _picKeepScan=new Map();   /* note/trash id -> [updatedAt, shas[]] */
+const _picKeepBad=new Map();    /* sha -> {n,until} */
+let _picKeepDirty=true;
+let _PIC_KEEP_DAY=8000;   /* cloud reads per device per UTC day for this keeper (the free plan allows 50,000 a day for everything) */
+async function _picKeepBudget(add){
+  const db=await _premigDB();if(!db)return {n:_PIC_KEEP_DAY};   /* no counter: no background fetches */
+  return await new Promise(function(res){
+    let out={day:_premigDay(),n:0};
+    try{
+      const tx=db.transaction('meta','readwrite'),st=tx.objectStore('meta'),g=st.get('keep');
+      g.onsuccess=function(){ const v=g.result,day=_premigDay(); out=(v&&v.day===day)?{day:day,n:+v.n||0}:{day:day,n:0}; if(add){out.n+=add;st.put(out,'keep');} };
+      tx.oncomplete=function(){res(out);};tx.onerror=tx.onabort=function(){res(out);};
+    }catch(e){res(out);}
+  });
+}
+function _picKeepOn(){ try{ return !(DB&&DB.theme&&DB.theme.picKeepAll===false); }catch(e){ return true; } }
+function _picKeepSet(on){ DB.theme.picKeepAll=!!on; persist(); _picKeepDirty=true; if(on) setTimeout(_picKeepTick,500); try{ const d=document.getElementById('sync-diag'); if(d) d.innerHTML=_syncDiagnosticsHTML(); }catch(e){} }
+async function _picKeepShas(){
+  const want=new Set(),seen=new Set(),re=/data-pic="([0-9a-f]{64})"/g;
+  let t0=performance.now();
+  const one=async function(id,u,html){
+    seen.add(id);
+    let c=_picKeepScan.get(id);
+    if(!c||c[0]!==u){ const s=[];if(typeof html==='string'&&html.indexOf('data-pic')!==-1){let m;re.lastIndex=0;while((m=re.exec(html)))s.push(m[1]);} c=[u,s];_picKeepScan.set(id,c); }
+    c[1].forEach(function(x){want.add(x);});
+    if(performance.now()-t0>12){ await _yieldTask(); t0=performance.now(); }
+  };
+  const arts=(DB.articles||[]).slice(),tr=(DB.trash||[]).slice();
+  for(const a of arts){ if(a&&a.id) await one('a|'+a.id,a.updatedAt||'',a.content); }
+  for(const x of tr){ if(x&&x.type==='article'&&x.item) await one('t|'+x.id,x.item.updatedAt||'',x.item.content); }
+  _picKeepScan.forEach(function(v,k){ if(!seen.has(k)) _picKeepScan.delete(k); });
+  return want;
+}
+async function _picKeepFull(){
+  try{ if(navigator.storage&&navigator.storage.estimate){ const e=await navigator.storage.estimate(); return !!(e.quota&&e.usage/e.quota>0.9); } }catch(e){}
+  return false;
+}
+function _picKeepCan(){ return _dbLoaded&&_picKeepOn()&&document.visibilityState==='visible'&&navigator.onLine!==false&&_picCanCloud(); }
+async function _picKeepTick(){
+  if(_picKeep.running||!_picKeepCan())return;
+  _picKeep.running=true;
+  try{
+    await _picDB();
+    const want=await _picKeepShas();
+    const miss=[];want.forEach(function(s){ if(!_picKnown.has(s)) miss.push(s); });
+    _picKeep.want=want.size;_picKeep.missing=miss.length;_picKeep.last=Date.now();
+    _picKeep.full=await _picKeepFull();_picKeep.cap=false;
+    if(_picKeep.full)return;
+    for(const sha of miss){
+      if(!_picKeepCan())break;
+      if(_picKnown.has(sha)){ _picKeep.missing--; continue; }
+      const bad=_picKeepBad.get(sha);if(bad&&bad.n>=3&&Date.now()<bad.until)continue;
+      const fs=_picFS.get(sha);if(fs&&fs.busy)continue;   /* already being fetched for a note on screen */
+      const bud=await _picKeepBudget(0);if(bud.n+2>_PIC_KEEP_DAY){ _picKeep.cap=true; break; }
+      await _picKeepBudget(2);   /* a fetch is about two cloud reads (the meta doc + one part) */
+      try{
+        const b=await _picFetch(sha);
+        if(b){ _picKeep.fetched++;_picKeep.missing--;_picKeepBad.delete(sha); try{ await _picShowAll(sha); }catch(e){} }
+      }catch(e){
+        _picKeep.failed++;_picKeep.err=String((e&&e.message)||e).slice(0,80);
+        const n=((bad&&bad.n)||0)+1;_picKeepBad.set(sha,{n:n,until:n>=3?Date.now()+21600000:0});
+      }
+      if(_picKeep.fetched%25===0&&(await _picKeepFull())){ _picKeep.full=true; break; }
+    }
+  }catch(e){ _picKeep.err=String((e&&e.message)||e).slice(0,80); }
+  finally{ _picKeep.running=false; }
+}
+function _picKeepText(){
+  if(!_picKeepOn())return 'off — pictures are fetched only when a note is shown';
+  if(!_picKeep.last)return 'on — not checked yet (needs Cloud Sync and the internet)';
+  let t=(_picKeep.want-_picKeep.missing)+' of '+_picKeep.want+' on this device';
+  if(_picKeep.missing>0)t+=' · '+_picKeep.missing+' still to fetch'+(_picKeep.running?' (fetching now)':'');
+  if(_picKeep.full)t+=' · paused: the browser’s storage is over 90 % full';
+  if(_picKeep.cap)t+=' · today’s share of cloud reads is used; more tomorrow';
+  if(_picKeep.failed)t+=' · '+_picKeep.failed+' failed'+(_picKeep.err?' ('+_picKeep.err+')':'');
+  return t;
+}
+window._picKeep=_picKeep;window._picKeepTick=_picKeepTick;window._picKeepSet=_picKeepSet;
+setInterval(function(){ try{ _picKeepTick(); }catch(e){} },20000);
+window.addEventListener('online',function(){ setTimeout(_picKeepTick,3000); });
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') setTimeout(_picKeepTick,3000); });
+
+/* ── v05.47 · J74 ① — ask the browser to protect this app's storage from being cleared when the device runs short of space.
+   Chrome answers without a prompt (yes for an installed app or a much-used site). Asked once per page load, after start;
+   the answer shows in Cloud Sync → Diagnostics ("Storage protected"). Writes nothing. */
+const _storeProt={asked:false,v:null};
+async function _storeProtect(){
+  try{
+    if(!(navigator.storage&&navigator.storage.persisted)){ _storeProt.v='not offered by this browser'; return; }
+    let p=await navigator.storage.persisted();
+    if(!p&&navigator.storage.persist&&!_storeProt.asked){ _storeProt.asked=true; p=await navigator.storage.persist(); }
+    _storeProt.v=p?'yes':'no — the browser said no (it may clear this app’s storage if the device runs out of space; installing the app usually allows it)';
+  }catch(e){ _storeProt.v='could not ask ('+String((e&&e.message)||e).slice(0,60)+')'; }
+}
+window._storeProt=_storeProt;window._storeProtect=_storeProtect;
 
 /* ── v05.27 · S4c — audio and other files from an Evernote import: a NEW device database, siyagah-files-v1, keyed by sha256, {b:Blob,mime,name,n}.
    Never uploaded, never in DB, never in an export: the note holds only span.enx-file[data-file=<sha256>] (a static chip). What is live — the
@@ -30998,6 +31100,8 @@ function _syncDiagnosticsHTML(){
     ['Per-note copy', _s1DiagText()],
     ['Pictures', _picDiagText()],
     ['Cloud picture space', _picUseText()],
+    ['Pictures kept here', _picKeepText()],
+    ['Storage protected', _storeProt.v||'checking…'],
   ];
   let h='<table style="width:100%;font-size:11px;border-collapse:collapse">'
     +rows.map(([k,v])=>`<tr><td style="padding:2px 8px 2px 0;color:var(--t3);white-space:nowrap">${k}</td><td style="padding:2px 0;font-family:monospace">${esc(String(v))}</td></tr>`).join('')
@@ -31040,6 +31144,10 @@ function openSyncModal(){
         <button class="btn" id="s1-reread-btn" onclick="_s1ReRead&&_s1ReReadUI()">⟳ Read everything again</button>
         <small style="color:var(--t3);font-size:11px;line-height:1.4;flex:1;min-width:160px">If notes your other devices have are missing here: fetches the whole notebook from the cloud again. Only adds; never removes a note.</small>
       </div>
+      <label id="pickeep-row" style="margin-top:8px;display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:1.4;cursor:pointer;min-height:44px">
+        <input type="checkbox" id="pickeep-cb" ${_picKeepOn()?'checked':''} onchange="_picKeepSet(this.checked)" style="width:20px;height:20px;flex:none;margin:0">
+        <span><strong>🖼 Keep every picture on this device</strong><br><small style="color:var(--t3);font-size:11px">So every note shows its pictures with no internet. Fetched quietly in the background.</small></span>
+      </label>
     </div>
     <div class="mm" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2)">
       <div style="font-size:11.5px;font-weight:600;color:var(--t2);margin-bottom:6px">🔄 Migrating from a previous setup?</div>
@@ -34339,6 +34447,8 @@ function _sgMount(root,state,editable){
      purpose: building the file clones the whole document and stringifies the
      notebook, and that must never land on top of the first paint. */
   setTimeout(()=>{try{_bkMaybeAuto();}catch(e){}},6000);
+  setTimeout(()=>{try{_storeProtect();}catch(e){}},4000);   /* v05.47 · J74 ① */
+  setTimeout(()=>{try{_picKeepTick();}catch(e){}},9000);    /* v05.47 · J74 ① */
   (()=>{
     const _sw=localStorage.getItem('siyagah-sb-w');
     const sb=document.getElementById('sb');
