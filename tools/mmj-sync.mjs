@@ -11,6 +11,7 @@
    109g sync: the check's changes merged into a stale copy both ways keep everything; a second device running the same check produces the same records;
    109h the dialog row at 390 / 820 / 1440 is reached from the real 🧰 and tappable; ⟳ Check now works; the read-view lines wrap at 390;
    109i no page errors.
+   109j (Architect, in review) a device whose cloud reader has not caught up changes nothing; once caught up, the change is applied.
    `node tools/mmj-sync.mjs` */
 import { createHash } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
@@ -303,6 +304,28 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       && /not yet/.test(lastBefore) && !/not yet/.test(lastAfter) && wp(seen) > n0 && /^\d+ added, \d+ updated, \d+ kept \(you had changed them\), \d+ marked removed$/.test(sumTxt),
       `109h@${w} the "Keep matching" row is reached from the real 🧰, 44 px and tappable (${w < 640 ? 'bottom sheet' : 'dialog'}); ⟳ Check now checks the site and shows the totals`, JSON.stringify({ gOn, gNow, sheet, lastBefore, lastAfter, sumTxt }));
     errs.push(...app.errors.filter((e) => !/status of 404/.test(e)));
+  } finally { await app.close(); }
+}
+/* 109j — v05.49 review (Architect): a device whose cloud reader has not caught up changes nothing (it could put the site's text over an edit the owner
+   made on another device that has not arrived yet); once caught up, the same check applies the change */
+{
+  const S2 = makeSmall();
+  const app = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
+  try {
+    const { page, ctx } = app;
+    await serveSite(ctx, S2);
+    await page.waitForTimeout(400);
+    await importAll(page);
+    Object.assign(S2.posts.find((p) => p.id === 101), { title: { rendered: 'Post 1 — gated edit' }, modified_gmt: '2025-02-01T00:00:00' });
+    await setNow(page, '2025-02-02T00:00:00Z');
+    const before = JSON.stringify(await art(page, 'mmj-p-101'));
+    const g = await page.evaluate(async () => { const keep = window._s1Stat.rd; window._s1Stat.rd = { on: true, perm: false }; _s1RdCaught = false; const s = await _mmjSyncRun(true); const msg = _mmjS.msg; window._s1Stat.rd = keep; return { s, msg }; });
+    const mid = JSON.stringify(await art(page, 'mmj-p-101'));
+    const s2 = await page.evaluate(async () => { _mmjS.retryAt = 0; return await _mmjSyncRun(true); });
+    const after = await art(page, 'mmj-p-101');
+    r.check(g.s === null && /Waiting/.test(g.msg) && mid === before && s2 && after.title === 'Post 1 — gated edit',
+      '109j a device that has not caught up with the cloud changes nothing; once caught up, the same check applies the site\'s change', JSON.stringify({ g, s2, t: after.title }));
+    errs.push(...app.errors.filter((e) => !/status of 404/.test(e)));   /* the fake site's "missing" picture answers 404 on purpose */
   } finally { await app.close(); }
 }
 r.check(errs.length === 0, '109i no page errors', errs.slice(0, 3).join(' | '));

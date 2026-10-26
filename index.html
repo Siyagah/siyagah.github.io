@@ -30945,6 +30945,9 @@ async function _mmjSyncRun(manual){
       await Promise.all([1,2,3,4].map(worker));
     }
     if(_mmj.run||_mmj.busy) return null;
+    /* v05.49 review (Architect): a device that has not yet read what the cloud holds could put the site's text over an edit the owner made on another
+       device; it changes nothing until its reader has caught up (no sync = always caught up) */
+    if(!_s1WriteGate()){ _mmjS.msg='Waiting for this device to finish reading your notebook from the cloud. Will try again.'; _mmjS.retryAt=_mmjNow()+60000; return null; }
     /* from here to the save there is no await: DB is read and changed in one go */
     const at=new Date().toISOString(), dead=_mmjDead();
     sum={added:0,updated:0,kept:0,gone:0}; let ch=0;
