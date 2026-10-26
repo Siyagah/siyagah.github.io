@@ -12545,6 +12545,19 @@ await r.block('108-mmj-import', async () => {
   r.check(out.status === 0, 'the mmj-import.mjs check exits cleanly', `exit ${out.status}`);
 });
 
+/* 109 — v05.49, J74 ③: keep Mapping My Journey and Siyagah matching — the same fake site, changed between checks: nothing runs without the section / switched off / offline; new category, post and page arrive; a rename and move follows unless the owner changed the folder; a changed post replaces an untouched note and only flags an edited one ("newer version", Show it); what the site lost is marked, never deleted, and clears when it returns; Trash and deleted folders stay gone; sync both ways and a second device agree; the dialog row at three sizes. tools/mmj-sync.mjs runs 109a–109i. */
+await r.block('109-mmj-sync', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./mmj-sync.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1500000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 12, 'the mmj-sync.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '109: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the mmj-sync.mjs check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
