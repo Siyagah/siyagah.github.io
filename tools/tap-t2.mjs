@@ -66,7 +66,9 @@ async function open(s, w, h, touch, goto) {
   await ctx.addInitScript((d) => { try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(d)); } catch {} }, sd);
   /* v05.34 (Z12), updated in place by the Architect: v05.33 (Z11) put a Zab's own note row (`.zn-area`, 44 px) at the top of a leaf Zab's panel, which moves the
      items below it down; like the band above, it is hidden for the two sizes compared with v05.29. Its own size is checked by 93g, and 90a–90c at the phone sizes keep it. */
-  if (w >= 640) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.zn-area{display:none!important}'; document.head.appendChild(st); }); });
+  /* v05.48 (J74 ②), updated in place by the Architect: 🗺 Mapping My Journey import is a new 🧰 row (44 / 31 px) under 📥 Evernote import, which moves the rows below it down;
+     hidden for the two sizes compared with v05.29, like the two above. Its own reach and size are checked by 108a, and 90a–90c at the phone sizes keep it. */
+  if (w >= 640) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.zn-area{display:none!important}.sb-mi[onclick^="openMmjImport"]{display:none!important}'; document.head.appendChild(st); }); });
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e));
   page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) errors.push('console: ' + m.text()); });

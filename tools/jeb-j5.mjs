@@ -255,6 +255,9 @@ try {
     const d = await open(vp, '/');
     try {
       await act(d, vp, '#sb-tools-btn'); await sleep(400);
+      /* v05.48 (J74 ②), updated in place by the Architect: the 🧰 menu grew a row (🗺 Mapping My Journey import) and on a 390×844 phone it is now taller than the screen,
+         so the row is brought into view by scrolling the MENU, as the owner's finger does; "whole and on the screen" is then measured as before. */
+      await on(d, () => { const e = document.getElementById('jeb-app-mi'); if (e) e.scrollIntoView({ block: 'nearest' }); }); await sleep(200);
       const item = await rect(d, '#jeb-app-mi');
       check(item && item.w > 60 && item.l >= 0 && item.r <= vp.w + 0.5 && item.t >= 0 && item.b <= vp.h + 0.5, `${t} 🧰 shows "👝 Siyagah Jeb", whole and on the screen`, JSON.stringify(item));
       const title = await on(d, () => document.getElementById('jeb-app-mi').title);
