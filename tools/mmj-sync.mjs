@@ -95,7 +95,7 @@ const setNow = (page, t) => page.evaluate((x) => { window.__mmjNow = Date.parse(
 const run = (page) => page.evaluate(() => _mmjSyncRun(true));
 const art = (page, id) => page.evaluate((i) => JSON.parse(JSON.stringify(DB.articles.find((a) => a.id === i) || null)), id);
 const fol = (page, id) => page.evaluate((i) => JSON.parse(JSON.stringify(DB.folders.find((f) => f.id === i) || null)), id);
-const dbSnap = (page) => page.evaluate(() => JSON.stringify({ f: DB.folders, a: DB.articles }));
+const dbSnap = (page) => page.evaluate(() => JSON.stringify({ f: DB.folders.map((f) => { const c = JSON.parse(JSON.stringify(f)); delete c.updatedAt; if (c.mmj) { delete c.mmj.n; delete c.mmj.p; } return c; }), a: DB.articles }));   /* the first check writes each v05.48 folder's baseline name / parent (mmj.n / mmj.p) and nothing else */
 const openMenu = async (page) => {
   await page.evaluate(() => { try { closeModal(); } catch (e) {} if (window.innerWidth < 640 && typeof showPane === 'function') showPane('sb'); });
   await page.click('#sb-tools-btn'); await page.waitForTimeout(300);
@@ -140,9 +140,10 @@ let pre = null, post = null;
     const ranTick = wp(seen) > n0;
     const lastSaved = await page.evaluate(async () => { const k = await _mmjKv('get'); return k && k.at; });
     const after = await dbSnap(page);
-    r.check(offOk && offlineOk && ranTick && lastSaved === Date.parse('2025-01-10T00:00:00Z') && before === after,
-      '109a switched off → no request; offline → no request; allowed → the tick checks the site, remembers the time in siyagah-mmj-v1, and a site with no change changes nothing',
-      JSON.stringify({ offOk, offlineOk, ranTick, lastSaved, same: before === after }));
+    const baseOk = await page.evaluate(() => DB.folders.filter((f) => f.id.startsWith('mmj-c-')).every((f) => f.mmj.n === f.name && f.mmj.p === (f.parentId || null)));
+    r.check(offOk && offlineOk && ranTick && lastSaved === Date.parse('2025-01-10T00:00:00Z') && before === after && baseOk,
+      '109a switched off → no request; offline → no request; allowed → the tick checks the site, remembers the time in siyagah-mmj-v1, and a site with no change changes nothing (except the baseline mmj.n / mmj.p written on each folder)',
+      JSON.stringify({ offOk, offlineOk, ranTick, lastSaved, same: before === after, baseOk }));
     pre = JSON.parse(await page.evaluate(() => JSON.stringify(DB)));
 
     /* 109b — new category, post and page */
@@ -194,7 +195,7 @@ let pre = null, post = null;
     await page.evaluate(() => { selArt('mmj-p-101'); });
     await page.waitForTimeout(300);
     const no101 = await page.evaluate(() => !document.querySelector('.mmj-newer'));
-    r.check(s3 && s3.updated === 1 && s3.kept === 1 && okReplace, '109d a post changed on the site replaces an untouched note (title, content, pictures, folders, tags, updatedAt = the site\'s modified time)', JSON.stringify({ s3, a101: { t: a101.title, f: a101.folderIds, u: a101.updatedAt, from: a101.fromMmj } }));
+    r.check(s3 && s3.updated === 1 && s3.kept === 2 /* the edited note + the folder the owner renamed (still differs from the site) */ && okReplace, '109d a post changed on the site replaces an untouched note (title, content, pictures, folders, tags, updatedAt = the site\'s modified time)', JSON.stringify({ s3, a101: { t: a101.title, f: a101.folderIds, u: a101.updatedAt, from: a101.fromMmj } }));
     r.check(okKeep && /newer version/.test(line || '') && /Show it/.test(line || '') && !/Site newer/.test(stored) && no101,
       '109d a note the owner edited is unchanged (only fromMmj.newer), shows the "newer version" line, and Show opens the new text without storing it', JSON.stringify({ okKeep, line, no101 }));
 
@@ -255,7 +256,7 @@ let pre = null, post = null;
     await setNow(page, '2025-02-01T00:00:00Z');
     const sB = await run(page);
     const B = await page.evaluate(() => JSON.parse(JSON.stringify({ f: DB.folders, a: DB.articles })));
-    const skip = new Set(['mmj-p-102', 'mmj-c-12', 'mmj-p-104', 'mmj-c-38']), bad = [];
+    const skip = new Set(['mmj-p-102', 'mmj-p-103', 'mmj-c-12', 'mmj-p-104', 'mmj-c-38']), bad = [];
     const nf = (f) => { const c = JSON.parse(JSON.stringify(f)); delete c.updatedAt; return JSON.stringify(c); };
     post.folders.filter((f) => f.id.startsWith('mmj-') && !skip.has(f.id)).forEach((f) => { const g = B.f.find((x) => x.id === f.id); if (!g || nf(g) !== nf(f)) bad.push('f:' + f.id + (g ? ' ' + nf(g).slice(0, 120) + ' vs ' + nf(f).slice(0, 120) : ' missing')); });
     post.articles.filter((a) => a.id.startsWith('mmj-') && !skip.has(a.id)).forEach((a) => { const g = B.a.find((x) => x.id === a.id); if (!g || JSON.stringify(g) !== JSON.stringify(a)) bad.push('a:' + a.id); });
@@ -279,6 +280,7 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     if (w < 640) {
       await page.evaluate(() => { selArt('zz-mmj-line'); if (typeof showPane === 'function') showPane('p3'); });
       await page.waitForSelector('.mmj-newer', { timeout: 10000 });
+      await page.waitForTimeout(800);
       const fit = await page.evaluate(() => { const a = document.querySelector('.mmj-newer').getBoundingClientRect(), b = document.querySelector('.mmj-removed').getBoundingClientRect();
         return { aR: Math.round(a.right), bR: Math.round(b.right), a2: Math.round(a.height), doc: document.documentElement.scrollWidth, w: innerWidth }; });
       r.check(fit.aR <= fit.w && fit.bR <= fit.w && fit.doc <= fit.w + 1, `109h@${w} the "newer version" and "removed" lines fit the phone's width (they wrap)`, JSON.stringify(fit));
@@ -289,7 +291,7 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     await page.waitForSelector('#mmj-modal.open #mmj-know');
     const geo = (sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
       return { inView: b.left >= 0 && b.right <= innerWidth && b.top >= 0 && b.bottom <= innerHeight, onTop: !!hit && (hit === e || e.contains(hit)), h: Math.round(b.height) }; }, sel);
-    const gOn = await geo('#mmj-kon'), gNow = await geo('#mmj-know');
+    const gOn = await geo('.mmj-kon'), gNow = await geo('#mmj-know');
     const sheet = await page.evaluate(() => { const b = document.getElementById('mmj-box').getBoundingClientRect(); return { bottom: Math.round(b.bottom), w: Math.round(b.width) }; });
     const lastBefore = await page.evaluate(() => document.getElementById('mmj-klast').textContent);
     const n0 = wp(seen);

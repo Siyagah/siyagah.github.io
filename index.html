@@ -30970,7 +30970,11 @@ async function _mmjSyncRun(manual){
     }
     A.cats.forEach(c=>{
       const f=fById.get('mmj-c-'+c.id); if(!f||freshIds.has(f.id)||!f.mmj) return;
-      const m=f.mmj, bn=m.n!==undefined?m.n:f.name, bp=m.p!==undefined?m.p:(f.parentId||null);
+      let m=f.mmj;
+      if(m.n===undefined){   /* a v05.48 folder: its name and parent right now are what the site last gave it; written down once, 1 ms after its own stamp so no other device's edit is beaten */
+        m=Object.assign({},m,{n:f.name,p:f.parentId||null}); f.mmj=m; f.updatedAt=_mmjPlus(f.updatedAt||at); ch++;
+      }
+      const bn=m.n, bp=m.p;
       const pid=c.parent?'mmj-c-'+c.parent:null, pOk=!pid||fById.has(pid), np=pOk?pid:bp;
       if(c.name===bn&&np===bp){ if(m.gone){ f.mmj=Object.assign({},m); delete f.mmj.gone; f.updatedAt=at; ch++; } return; }
       if(f.name!==bn||(f.parentId||null)!==bp){ sum.kept++; return; }
