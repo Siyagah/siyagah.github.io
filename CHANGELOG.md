@@ -10796,4 +10796,6 @@ The owner (26 Oct, after running the Mapping My Journey import): "these links do
 
 **Checks.** Block 110, `tools/link-j77.mjs`: at 390 / 820 (touch) and 1440, 110a a real tap on a Mapping My Journey link leaves the menu open, on screen, with the three items; 110b 🐙 Open on GitHub opens a new tab at the GitHub address, same path; 110c a plain link's menu stays open and 🌐 Open in new tab opens it; 110d no page errors. **10/10**; on v05.49 **9 of 10 fail** (110d passes there).
 
+**Totals (Architect), full app-check on `de022d8`** (main v05.49 merged in; two halves at once): 1–59 + `self-check` **2330/2332**, 60–110 **5483/5490**. The misses: 56k and 91f (fail the same way on v05.46–v05.49 in this container); 80h (fails alone on v05.49 too: a ×4 long-task limit on this host); 72 (Z6c, a 3 s `waitForSelector` broken off under the two-halves load; alone on this commit 391/391, and `tools/zab-z6c.mjs` 389/389).
+
 **Not done:** links inside a pop-up note window or an editor are unchanged (in the editor a tap places the caret, as before).
