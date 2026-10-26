@@ -1271,6 +1271,15 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .toast-open{display:inline-block;margin-left:10px;padding:4px 0;text-decoration:underline}
 .ar-jeb{white-space:nowrap}
 .av-jeb{font-size:var(--fs-list-meta);color:var(--t3);margin:2px 12px 8px}
+.mmj-line{overflow-wrap:anywhere;line-height:1.5}
+.mmj-newer-b{min-height:32px;padding:2px 10px;border:1px solid var(--green2);border-radius:8px;background:transparent;color:var(--green2);font:inherit;cursor:pointer}
+.mmj-gone{margin-left:4px;font-size:10px;opacity:.75}
+.mmj-keep{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:6px 0 10px}
+.mmj-kon{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-weight:600}
+.mmj-kon input{width:22px;height:22px}
+.mmj-keep .mmj-know{width:auto;min-height:44px;margin:0;padding:0 14px}
+.mmj-keep .enx-sub{flex-basis:100%}
+.mmj-newer-body{max-height:60vh;overflow:auto;overflow-wrap:anywhere}.mmj-newer-body img{max-width:100%;height:auto}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 @media(max-width:639.98px){
@@ -6838,7 +6847,7 @@ function trNode(f,depth){
   return `<div class="tr-row${active?' sel':''}"
     style="padding-left:${13+depth*13}px"
     draggable="true"
-    title="${esc(f.name)}"
+    title="${esc(f.name)}${f.mmj&&f.mmj.gone?' — removed from Mapping My Journey':''}"
     data-fid="${f.id}"
     onclick="selFolder('${f.id}')"
     oncontextmenu="showCtx(event,'${f.id}')"
@@ -6850,7 +6859,7 @@ function trNode(f,depth){
     <span class="tr-tog" onclick="togExp(event,'${f.id}')">${kids.length?(open?'▾':'▸'):''}</span>
     <span class="tr-ico">${open&&kids.length?'📂':'📁'}</span>
     ${f.color?`<span class="f-dot" style="background:${f.color}"></span>`:''}
-    <span class="tr-name" ${(f.color||f.bold)?`style="${f.color?`color:${f.color};`:''}${f.bold?'font-weight:700':''}"`:''} >${esc(f.name)}</span>    <span class="tr-cnt">${cnt}</span>
+    <span class="tr-name" ${(f.color||f.bold)?`style="${f.color?`color:${f.color};`:''}${f.bold?'font-weight:700':''}"`:''} >${esc(f.name)}</span>${f.mmj&&f.mmj.gone?'<span class="mmj-gone" title="removed from Mapping My Journey">🗺✕</span>':''}    <span class="tr-cnt">${cnt}</span>
   </div>${open?trGroupedKids(f.id,depth+1):''}`;
 }
 
@@ -7810,6 +7819,8 @@ function _renderP3CInner(){
       ${_p3MetaRowHTML(curA)}
       ${curA.fromJeb?`<div class="av-jeb">👝 from ${esc(curA.fromJeb.pocket||'Zab')}</div>`:''}
       ${curA.fromEvernote?`<div class="av-jeb av-enx">📥 from Evernote · ${esc(curA.fromEvernote.nb||'')}</div>`:''}
+      ${curA.fromMmj&&curA.fromMmj.gone?'<div class="av-jeb mmj-line mmj-removed">🗺 removed from Mapping My Journey</div>':''}
+      ${curA.fromMmj&&curA.fromMmj.newer?`<div class="av-jeb mmj-line mmj-newer">🗺 Mapping My Journey has a newer version (${esc(_mmjFmtDate(curA.fromMmj.newer.modified))}) — <button type="button" class="mmj-newer-b" onclick="_mmjShowNewer('${curA.id}')">Show it</button></div>`:''}
       ${curA.zabNote?`<div class="av-jeb av-zn"><button type="button" class="av-zn-b" onclick="_zabNoteGo('${esc(curA.zabNote.pid)}')" title="Open this Zab">${esc(_zabNoteLabel(curA))}</button></div>`:''}
       ${reminderStripHTML(curA)}
       <div class="av-tags">${tags}</div>
@@ -30592,6 +30603,36 @@ function _mmjPrep(html,site){
   return {html:_enxClean(html),imgs};
 }
 function _mmjRead_tags(posts){ const s=new Set(); posts.forEach(p=>(p.tags||[]).forEach(t=>s.add(t))); return Array.from(s); }
+/* v05.49 — the import's builders, shared with the keep-matching check: raw categories / posts / pages in, {cats, items} out */
+async function _mmjAssemble(site,cats,posts,pages){
+  const tagRows=await _mmjByIds('tags',_mmjRead_tags(posts),'id,name');
+  const fids=Array.from(new Set(posts.concat(pages).map(p=>p.featured_media).filter(x=>x>0)));
+  const medRows=await _mmjByIds('media',fids,'id,source_url,mime_type,media_details');
+  const tagName=new Map(tagRows.map(t=>[t.id,_mmjDec(t.name).trim()]));
+  const media=new Map();
+  medRows.forEach(m=>{
+    const lg=m.media_details&&m.media_details.sizes&&m.media_details.sizes.large;
+    const url=_mmjUrl((lg&&lg.source_url)||m.source_url||'',site), mime=String(m.mime_type||'').toLowerCase();
+    if(url&&(!mime||mime.startsWith('image/'))) media.set(m.id,url);
+  });
+  const byId=new Map(cats.map(c=>[c.id,c])), parentOf=new Map();
+  cats.forEach(c=>{   /* a parent that is missing, or a loop, makes it a root */
+    let p=c.parent||0, ok=p&&byId.has(p), q=p, n=0;
+    while(ok&&q&&n++<64){ if(q===c.id){ ok=false; break; } const x=byId.get(q); q=x?x.parent:0; }
+    if(ok&&q&&n>=64) ok=false;
+    parentOf.set(c.id,ok?p:0);
+  });
+  const mk=(p,type)=>{
+    const pre=_mmjPrep(p.content&&p.content.rendered,site);
+    const f=media.get(p.featured_media)||'';
+    return {id:p.id,type,title:_mmjDec(p.title&&p.title.rendered).trim()||'Untitled',link:p.link||'',date:p.date_gmt||'',mod:p.modified_gmt||'',
+      cats:type==='post'?(p.categories||[]).filter(c=>byId.has(c)):[],tags:type==='post'?(p.tags||[]).map(t=>tagName.get(t)).filter(Boolean):[],
+      parent:p.parent||0,feat:f&&!pre.imgs.includes(f)?f:'',html:pre.html,imgs:pre.imgs};
+  };
+  const items=posts.map(p=>mk(p,'post')).concat(pages.map(p=>mk(p,'page')));
+  const cl=cats.map(c=>({id:c.id,name:_mmjDec(c.name),slug:c.slug||'',link:c.link||'',parent:parentOf.get(c.id)}));
+  return {cats:cl,items};
+}
 async function _mmjRead(){
   if(_mmj.busy||_mmj.run) return;
   _mmj.busy=true; _mmj.stop=false; _mmj.err=''; _mmj.res=null; _mmj.view='reading'; _mmj.prog='Reading categories…'; _mmjPaint();
@@ -30602,33 +30643,8 @@ async function _mmjRead(){
     const posts=await _mmjAll('posts?_fields=id,date_gmt,modified_gmt,link,slug,title,content,categories,tags,featured_media',(n,t)=>say('Reading posts… '+_enxN(n)+(t?' of '+_enxN(t):'')));
     const pages=await _mmjAll('pages?_fields=id,date_gmt,modified_gmt,link,slug,title,content,parent,menu_order,featured_media',(n,t)=>say('Reading pages… '+_enxN(n)+(t?' of '+_enxN(t):'')));
     say('Reading tags and pictures…');
-    const tagRows=await _mmjByIds('tags',_mmjRead_tags(posts),'id,name');
-    const fids=Array.from(new Set(posts.concat(pages).map(p=>p.featured_media).filter(x=>x>0)));
-    const medRows=await _mmjByIds('media',fids,'id,source_url,mime_type,media_details');
-    const tagName=new Map(tagRows.map(t=>[t.id,_mmjDec(t.name).trim()]));
-    const media=new Map();
-    medRows.forEach(m=>{
-      const lg=m.media_details&&m.media_details.sizes&&m.media_details.sizes.large;
-      const url=_mmjUrl((lg&&lg.source_url)||m.source_url||'',site), mime=String(m.mime_type||'').toLowerCase();
-      if(url&&(!mime||mime.startsWith('image/'))) media.set(m.id,url);
-    });
-    const byId=new Map(cats.map(c=>[c.id,c])), parentOf=new Map();
-    cats.forEach(c=>{   /* a parent that is missing, or a loop, makes it a root */
-      let p=c.parent||0, ok=p&&byId.has(p), q=p, n=0;
-      while(ok&&q&&n++<64){ if(q===c.id){ ok=false; break; } const x=byId.get(q); q=x?x.parent:0; }
-      if(ok&&q&&n>=64) ok=false;
-      parentOf.set(c.id,ok?p:0);
-    });
-    const mk=(p,type)=>{
-      const pre=_mmjPrep(p.content&&p.content.rendered,site);
-      const f=media.get(p.featured_media)||'';
-      return {id:p.id,type,title:_mmjDec(p.title&&p.title.rendered).trim()||'Untitled',link:p.link||'',date:p.date_gmt||'',mod:p.modified_gmt||'',
-        cats:type==='post'?(p.categories||[]).filter(c=>byId.has(c)):[],tags:type==='post'?(p.tags||[]).map(t=>tagName.get(t)).filter(Boolean):[],
-        parent:p.parent||0,feat:f&&!pre.imgs.includes(f)?f:'',html:pre.html,imgs:pre.imgs};
-    };
-    const items=posts.map(p=>mk(p,'post')).concat(pages.map(p=>mk(p,'page')));
-    const cl=cats.map(c=>({id:c.id,name:_mmjDec(c.name),slug:c.slug||'',link:c.link||'',parent:parentOf.get(c.id)}));
-    _mmj.res={site,cats:cl,items,at:Date.now()};
+    const A=await _mmjAssemble(site,cats,posts,pages);
+    _mmj.res={site,cats:A.cats,items:A.items,at:Date.now()};
     _mmj.view='done';
   }catch(e){
     _mmj.res=null;
@@ -30785,7 +30801,7 @@ function _mmjAgain(){ if(_mmj.run||_mmj.busy) return; _mmj.view='pick'; _mmj.res
 function _mmjPaint(){
   const box=document.getElementById('mmj-box'); if(!box) return;
   const v=_mmj.view, N=_enxN;
-  let h='<div class="rm-hd"><div class="rem-title">🗺 Mapping My Journey import</div><button class="rem-btn cancel" id="mmj-close" onclick="closeMmjImport()">✕ Close</button></div>';
+  let h='<div class="rm-hd"><div class="rem-title">🗺 Mapping My Journey import</div><button class="rem-btn cancel" id="mmj-close" onclick="closeMmjImport()">✕ Close</button></div>'+_mmjKeepHTML();
   if(v==='pick'){
     h+='<div class="rm-p">Brings <b>mappingmyjourney.com</b> into Siyagah as a true copy: every category as a folder (same place, same depth, empty ones too), every published post and page as a note with its pictures, date and a link back. A note in several categories is one note shown in each. Nothing is changed or deleted in your notebook.</div>'
       +(_mmj.note?'<div class="enx-sub" id="mmj-note">'+esc(_mmj.note)+'</div>':'')
@@ -30830,11 +30846,203 @@ function openMmjImport(){
   if(!_mmj.busy&&!_mmj.run&&_mmj.view!=='done') _mmj.view='pick';
   _mmjPaint();
   m.classList.add('open');
+  _mmjLoadLast().then(()=>{ if(m.classList.contains('open')) _mmjKeepRefresh(); });
 }
 function closeMmjImport(){
   if(_mmj.busy) _mmj.stop=true;
   const m=document.getElementById('mmj-modal'); if(m) m.classList.remove('open');
 }
+/* ── v05.49 · J74 ③ — keep Mapping My Journey and Siyagah matching. One way (site → Siyagah), never deletes, the owner's own edits win. Runs only on a device
+   whose DB has the section mmj-sec. The time of the last good check lives in the device's own database siyagah-mmj-v1 (store kv, key last), never DB or
+   localStorage. A note the sync wrote carries fromMmj.u = the updatedAt it wrote: updatedAt !== u means the owner edited it since. ── */
+const _MMJ_SYNC_MS=6*3600*1000, _MMJ_FULL_MS=24*3600*1000, _MMJ_RETRY_MS=10*60*1000;
+const _mmjS={busy:false,loaded:false,last:0,full:0,sum:null,msg:'',retryAt:0};
+const _mmjNow=()=>window.__mmjNow!=null?+window.__mmjNow:Date.now();
+function _mmjSyncOn(){ return !(DB&&DB.theme&&DB.theme.mmjSync===false); }
+const _mmjHasSec=()=>(DB.sections||[]).some(s=>s&&s.id==='mmj-sec');
+function _mmjKv(op,val){
+  return new Promise((res,rej)=>{
+    let q; try{ q=indexedDB.open('siyagah-mmj-v1',1); }catch(e){ rej(e); return; }
+    q.onupgradeneeded=()=>{ if(!q.result.objectStoreNames.contains('kv')) q.result.createObjectStore('kv'); };
+    q.onerror=()=>rej(q.error);
+    q.onsuccess=()=>{
+      const db=q.result;
+      try{
+        const tx=db.transaction('kv',op==='get'?'readonly':'readwrite'), st=tx.objectStore('kv'), rq=op==='get'?st.get('last'):st.put(val,'last');
+        tx.oncomplete=()=>{ db.close(); res(op==='get'?rq.result:true); };
+        tx.onerror=tx.onabort=()=>{ db.close(); rej(tx.error); };
+      }catch(e){ db.close(); rej(e); }
+    };
+  });
+}
+async function _mmjLoadLast(){
+  if(_mmjS.loaded) return;
+  try{ const k=await _mmjKv('get'); if(k&&typeof k==='object'){ _mmjS.last=+k.at||0; _mmjS.full=+k.full||0; } }catch(e){}
+  _mmjS.loaded=true;
+}
+function _mmjDead(){
+  const t=new Set();
+  (DB.trash||[]).forEach(x=>{ if(!x) return; if(x.item&&x.item.id) t.add(x.item.id); const s=x.subtree; if(s){ (s.folders||[]).forEach(f=>{ if(f&&f.id) t.add(f.id); }); (s.articles||[]).forEach(a=>{ if(a&&a.id) t.add(a.id); }); } });
+  (DB.tombstones||[]).forEach(x=>{ if(x&&x.id) t.add(x.id); });
+  return t;
+}
+function _mmjEdited(a){
+  if(ST.editing&&typeof curA!=='undefined'&&curA&&curA.id===a.id) return true;
+  const m=a.fromMmj||{};
+  return m.u?a.updatedAt!==m.u:Date.parse(a.updatedAt)!==Date.parse(_mmjIso(m.modified,''));
+}
+const _mmjPlus=iso=>new Date((Date.parse(iso)||Date.now())+1).toISOString();
+/* change a note's fromMmj without making the owner's untouched note look edited */
+function _mmjMarkNote(a,patch,drop){
+  const was=!_mmjEdited(a), nu=_mmjPlus(a.updatedAt), m=Object.assign({},a.fromMmj,patch);
+  (drop||[]).forEach(k=>{ delete m[k]; });
+  a.updatedAt=nu; if(was) m.u=nu; a.fromMmj=m;
+}
+function _mmjNoteRec(it,pics,fById,at){
+  const fids=it.type==='page'?['mmj-pages']:it.cats.map(c=>'mmj-c-'+c), cr=_mmjIso(it.date,at), up=_mmjIso(it.mod,cr);
+  const tags=[]; it.tags.forEach(t=>{ const c=_cleanTag(t); if(c&&!tags.includes(c)) tags.push(c); });
+  return {id:(it.type==='post'?'mmj-p-':'mmj-g-')+it.id,title:it.title,content:_mmjNote(it,pics),folderIds:fids.filter(x=>fById.has(x)),tags,createdAt:cr,updatedAt:up,
+    fromMmj:{id:it.id,type:it.type,link:it.link,modified:it.mod,u:up}};
+}
+async function _mmjSyncTick(){
+  if(!_mmjSyncOn()||!_dbLoaded||!_mmjHasSec()||document.visibilityState==='hidden'||navigator.onLine===false||_mmj.run||_mmj.busy||_mmjS.busy) return;
+  await _mmjLoadLast();
+  const now=_mmjNow();
+  if(_mmjS.retryAt>now||(_mmjS.last&&now-_mmjS.last<_MMJ_SYNC_MS)) return;
+  await _mmjSyncRun(false);
+}
+async function _mmjSyncRun(manual){
+  if(_mmjS.busy||_mmj.run||_mmj.busy||!_dbLoaded||!_mmjHasSec()) return null;
+  if(navigator.onLine===false){ _mmjS.msg='You are offline.'; _mmjKeepRefresh(); return null; }
+  _mmjS.busy=true; _mmjS.msg='Checking Mapping My Journey…'; _mmjKeepRefresh();
+  let sum=null;
+  try{
+    await _mmjLoadLast();
+    const site=_mmjSite(), t0=_mmjNow();
+    const since=_mmjS.last?new Date(_mmjS.last-86400000).toISOString().slice(0,19):'';
+    const mq=since?'&modified_after='+encodeURIComponent(since):'';
+    const catsRaw=await _mmjAll('categories?orderby=name&order=asc&_fields=id,name,parent,slug,link,count');
+    const posts=await _mmjAll('posts?_fields=id,date_gmt,modified_gmt,link,slug,title,content,categories,tags,featured_media'+mq);
+    const pages=await _mmjAll('pages?_fields=id,date_gmt,modified_gmt,link,slug,title,content,parent,menu_order,featured_media'+mq);
+    const doFull=!_mmjS.full||t0-_mmjS.full>=_MMJ_FULL_MS;
+    let idsP=null, idsG=null;
+    if(doFull){
+      idsP=new Set((await _mmjAll('posts?_fields=id')).map(x=>x.id));
+      idsG=new Set((await _mmjAll('pages?_fields=id')).map(x=>x.id));
+    }
+    const A=await _mmjAssemble(site,catsRaw,posts,pages);
+    /* pictures for what will be written */
+    const idOf=i=>(i.type==='post'?'mmj-p-':'mmj-g-')+i.id;
+    const aBy=new Map((DB.articles||[]).map(a=>[a.id,a])), dead0=_mmjDead();
+    const newer=(it,a)=>{ const m=a&&a.fromMmj; return !m||Date.parse(_mmjIso(it.mod,''))>Date.parse(_mmjIso(m.modified,'')); };
+    const need=A.items.filter(it=>!dead0.has(idOf(it))&&(!aBy.has(idOf(it))||(aBy.get(idOf(it)).fromMmj&&newer(it,aBy.get(idOf(it))))));
+    const urls=new Set(); need.forEach(i=>{ i.imgs.forEach(u=>urls.add(u)); if(i.feat) urls.add(i.feat); });
+    const pics=new Map();
+    if(urls.size){
+      if(!_s2RefsOk()){ _mmjS.msg='Waiting: pictures cannot be saved on this device just now. Will try again.'; _mmjS.retryAt=_mmjNow()+_MMJ_RETRY_MS; return null; }
+      const list=Array.from(urls); let next=0;
+      const worker=async()=>{ for(;;){ const k=next++; if(k>=list.length) return; let got=null; try{ got=await _mmjPicOne(list[k]); }catch(e){ got=null; } pics.set(list[k],got); } };
+      await Promise.all([1,2,3,4].map(worker));
+    }
+    if(_mmj.run||_mmj.busy) return null;
+    /* from here to the save there is no await: DB is read and changed in one go */
+    const at=new Date().toISOString(), dead=_mmjDead();
+    sum={added:0,updated:0,kept:0,gone:0}; let ch=0;
+    const fById=new Map((DB.folders||[]).map(f=>[f.id,f]));
+    const sibMax=pid=>{ let m=0; (DB.folders||[]).forEach(f=>{ if((f.parentId||null)===pid&&f.order>m) m=f.order; }); return m; };
+    /* folders: new first (so notes can sit in them), then follow renames and moves */
+    const catIds=new Set(A.cats.map(c=>c.id)), fresh=[];
+    A.cats.forEach(c=>{
+      const id='mmj-c-'+c.id; if(fById.has(id)||dead.has(id)) return;
+      fresh.push(c);
+    });
+    const freshIds=new Set(fresh.map(c=>'mmj-c-'+c.id)), ord=new Map();
+    fresh.forEach(c=>{
+      const pid='mmj-c-'+c.parent, par=c.parent&&(fById.has(pid)||freshIds.has(pid))?pid:null;
+      const k=par||'', o=(ord.has(k)?ord.get(k):sibMax(par))+1; ord.set(k,o);
+      const f={id:'mmj-c-'+c.id,name:c.name,parentId:par,order:o,mmj:{id:c.id,slug:c.slug,link:c.link,n:c.name,p:par},updatedAt:at};
+      if(!par) f.sectionId='mmj-sec';
+      DB.folders.push(f); fById.set(f.id,f); sum.added++;
+    });
+    if(!fById.has('mmj-pages')&&!dead.has('mmj-pages')&&A.items.some(i=>i.type==='page')){
+      const f={id:'mmj-pages',name:'Pages',parentId:null,sectionId:'mmj-sec',order:sibMax(null)+1,mmj:{pages:true},updatedAt:at};
+      DB.folders.push(f); fById.set(f.id,f); ch++;
+    }
+    A.cats.forEach(c=>{
+      const f=fById.get('mmj-c-'+c.id); if(!f||freshIds.has(f.id)||!f.mmj) return;
+      const m=f.mmj, bn=m.n!==undefined?m.n:f.name, bp=m.p!==undefined?m.p:(f.parentId||null);
+      const pid=c.parent?'mmj-c-'+c.parent:null, pOk=!pid||fById.has(pid), np=pOk?pid:bp;
+      if(c.name===bn&&np===bp){ if(m.gone){ f.mmj=Object.assign({},m); delete f.mmj.gone; f.updatedAt=at; ch++; } return; }
+      if(f.name!==bn||(f.parentId||null)!==bp){ sum.kept++; return; }
+      f.name=c.name; f.parentId=np;
+      if(np) delete f.sectionId; else f.sectionId='mmj-sec';
+      f.mmj=Object.assign({},m,{n:c.name,p:np}); delete f.mmj.gone; f.updatedAt=at; sum.updated++; ch++;
+    });
+    if(catIds.size) (DB.folders||[]).forEach(f=>{
+      if(!f.mmj||f.mmj.id==null||f.mmj.pages) return;
+      if(!catIds.has(f.mmj.id)){ if(!f.mmj.gone){ f.mmj=Object.assign({},f.mmj,{gone:true}); f.updatedAt=at; sum.gone++; ch++; } }
+      else if(f.mmj.gone){ f.mmj=Object.assign({},f.mmj); delete f.mmj.gone; f.updatedAt=at; ch++; }
+    });
+    /* notes */
+    A.items.forEach(it=>{
+      const id=idOf(it), a=aBy.get(id);
+      if(!a){
+        if(dead.has(id)) return;
+        DB.articles.push(_mmjNoteRec(it,pics,fById,at)); sum.added++; ch++; return;
+      }
+      const m=a.fromMmj; if(!m||!newer(it,a)) return;
+      if(_mmjEdited(a)){
+        if(!(m.newer&&m.newer.modified===it.mod)) { _mmjMarkNote(a,{newer:{modified:it.mod,link:it.link}}); ch++; }
+        sum.kept++; return;
+      }
+      const rec=_mmjNoteRec(it,pics,fById,at), keepF=(a.folderIds||[]).filter(x=>!/^mmj-c-/.test(x)&&x!=='mmj-pages');
+      const nu=Date.parse(rec.updatedAt)>Date.parse(a.updatedAt)?rec.updatedAt:_mmjPlus(a.updatedAt);
+      a.title=rec.title; a.content=rec.content; a.tags=rec.tags;
+      a.folderIds=rec.folderIds.concat(keepF.filter(x=>!rec.folderIds.includes(x)));
+      a.fromMmj={id:it.id,type:it.type,link:it.link,modified:it.mod,u:nu}; a.updatedAt=nu; sum.updated++; ch++;
+    });
+    if(doFull) (DB.articles||[]).forEach(a=>{
+      const m=a.fromMmj; if(!m||m.id==null) return;
+      const set=m.type==='page'?idsG:idsP; if(!set||!set.size) return;
+      if(!set.has(m.id)){ if(!m.gone){ _mmjMarkNote(a,{gone:true}); sum.gone++; ch++; } }
+      else if(m.gone){ _mmjMarkNote(a,null,['gone']); ch++; }
+    });
+    if(ch) _enxPersist();
+    try{ render(); }catch(e){}
+    _mmjS.last=t0; if(doFull) _mmjS.full=t0;
+    try{ await _mmjKv('put',{at:_mmjS.last,full:_mmjS.full}); }catch(e){}
+    _mmjS.sum=sum; _mmjS.msg=''; _mmjS.retryAt=0;
+    return sum;
+  }catch(e){
+    _mmjS.msg='Could not check just now ('+((e&&e.message)||'no answer')+'). Nothing was changed.'; _mmjS.retryAt=_mmjNow()+_MMJ_RETRY_MS;
+    return null;
+  }finally{ _mmjS.busy=false; _mmjKeepRefresh(); }
+}
+function _mmjKeepHTML(){
+  if(!_mmjHasSec()) return '';
+  const on=_mmjSyncOn(), s=_mmjS.sum;
+  return '<div class="mmj-keep" id="mmj-keep"><label class="mmj-kon"><input type="checkbox" id="mmj-kon"'+(on?' checked':'')+' onchange="_mmjKeepSet(this.checked)"> Keep matching: '+(on?'on':'off')+'</label>'
+    +'<span class="mmj-klast" id="mmj-klast">last checked '+(_mmjS.last?esc(new Date(_mmjS.last).toLocaleString()):'not yet')+'</span>'
+    +'<button class="rm-big alt mmj-know" id="mmj-know" onclick="_mmjSyncRun(true)"'+(_mmjS.busy?' disabled':'')+'>⟳ Check now</button>'
+    +(_mmjS.msg?'<div class="enx-sub" id="mmj-kmsg" role="status">'+esc(_mmjS.msg)+'</div>':'')
+    +(s&&!_mmjS.msg?'<div class="enx-sub" id="mmj-ksum" role="status">'+_enxN(s.added)+' added, '+_enxN(s.updated)+' updated, '+_enxN(s.kept)+' kept (you had changed them), '+_enxN(s.gone)+' marked removed</div>':'')
+    +'</div>';
+}
+function _mmjKeepRefresh(){ const e=document.getElementById('mmj-keep'); if(e) e.outerHTML=_mmjKeepHTML()||''; else if(document.getElementById('mmj-box')&&_mmjHasSec()) _mmjPaint(); }
+function _mmjKeepSet(on){ DB.theme=DB.theme||{}; DB.theme.mmjSync=!!on; persist(); _mmjKeepRefresh(); }
+async function _mmjShowNewer(aid){
+  const a=(DB.articles||[]).find(x=>x.id===aid); if(!a||!a.fromMmj) return;
+  const m=a.fromMmj;
+  showModal('<div class="mt">🗺 Newer version</div><div class="mmj-newer-body" id="mmj-newer-body">Loading…</div><div class="ma"><button class="btn bp" id="mmj-newer-ok" onclick="closeModal()">Close</button></div>');
+  const box=()=>document.getElementById('mmj-newer-body');
+  try{
+    const site=_mmjSite(), r=await _mmjGet(site+'/wp-json/wp/v2/'+(m.type==='page'?'pages':'posts')+'/'+m.id+'?_fields=id,title,content');
+    const pre=_mmjPrep(r.j.content&&r.j.content.rendered,site);
+    const h=pre.html.replace(/\[\[MMJIMG:(\d+)\]\]/g,(x,n)=>{ const u=pre.imgs[+n]; return u==null?'':_mmjImgHTML(u,null); });
+    if(box()) box().innerHTML='<h3>'+esc(_mmjDec(r.j.title&&r.j.title.rendered))+'</h3>'+h;
+  }catch(e){ if(box()) box().textContent='Could not read the newer version just now.'; }
+}
+(function _mmjSyncBoot(){ setTimeout(()=>{ const go=()=>{ try{ _mmjSyncTick(); }catch(e){} }; go(); setInterval(go,60000); },60000); })();
 function openEnexImport(){
   let m=document.getElementById('enx-modal');
   if(!m){

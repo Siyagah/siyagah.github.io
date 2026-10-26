@@ -10776,4 +10776,9 @@ The owner (26 Oct 2026, "Bismillah! Yes, go — all recommended options") asked 
 
 ## v05.49 — J74 ③: keep Mapping My Journey and Siyagah matching (PCF SIY J74, BWN J27 Stage 1, built by the builder)
 
-In progress: automatic MMJ → Siyagah check (`_mmjSyncTick`), never deletes, the owner's edits win.
+The owner chose (26 Oct, 3B) that Siyagah keeps matching Mapping My Journey afterwards: site → Siyagah only, automatic, never deletes, the owner's own edits win.
+
+- `_mmjSyncTick()` (60 s after start, then every 6 h, plus "⟳ Check now" in the import dialog's new "Keep matching" row; `DB.theme.mmjSync`, absent = on, read only by `_mmjSyncOn()`) runs only where `mmj-sec` exists. The time of the last good check lives in the device's own database `siyagah-mmj-v1` (store `kv`, key `last`).
+- It reads all categories and `posts`/`pages` changed since (last check − 1 day); once a day it also reads every id. A failed request writes nothing.
+- New categories/posts/pages are added as the import adds them (the import's builders are now `_mmjAssemble`, shared). A renamed/moved category is followed only if the owner has not changed the folder (`mmj.n`/`mmj.p`). A changed post replaces an untouched note (`fromMmj.u` = the `updatedAt` the sync wrote); an edited note only gets `fromMmj.newer` and a read-view line "Mapping My Journey has a newer version — Show it". What the site no longer has is only marked (`gone`), and the mark clears if it returns. Trash and tombstones are never undone.
+- Not done: nothing goes from Siyagah to MMJ (needs a WordPress password; later stage).
