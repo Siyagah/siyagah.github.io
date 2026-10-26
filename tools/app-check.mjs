@@ -12571,6 +12571,19 @@ await r.block('110-link-j77', async () => {
   r.check(out.status === 0, 'the link-j77.mjs check exits cleanly', `exit ${out.status}`);
 });
 
+/* 111 — v05.51, J71: the per-note reader's start — the replica is loaded in batches into exactly what the database holds; an open that never answers is given up, reported as "did not open" and tried again; Diagnostics name the starting step at 390 / 820 / 1440. tools/replica-load-j71.mjs runs 111a–111f. */
+await r.block('111-replica-load-j71', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./replica-load-j71.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 13, 'the replica-load-j71.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '111: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the replica-load-j71.mjs check exits cleanly', `exit ${out.status}`);
+});
+
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs

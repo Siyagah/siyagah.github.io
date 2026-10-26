@@ -10799,3 +10799,16 @@ The owner (26 Oct, after running the Mapping My Journey import): "these links do
 **Totals (Architect), full app-check on `de022d8`** (main v05.49 merged in; two halves at once): 1–59 + `self-check` **2330/2332**, 60–110 **5483/5490**. The misses: 56k and 91f (fail the same way on v05.46–v05.49 in this container); 80h (fails alone on v05.49 too: a ×4 long-task limit on this host); 72 (Z6c, a 3 s `waitForSelector` broken off under the two-halves load; alone on this commit 391/391, and `tools/zab-z6c.mjs` 389/389).
 
 **Not done:** links inside a pop-up note window or an editor are unchanged (in the editor a tap places the caret, as before).
+---
+
+## v05.51 — J71: the per-note reader cannot stay "starting" for good, and Diagnostics say where a start is (built by the Architect)
+
+The owner's phone (Diagnostics photo, 26 Oct 5:43pm) showed "Per-note copy: off — starting" and held 12,045 of 17,747 Evernote notes: its per-record reader never started, so new and changed notes (and the Mapping My Journey folders) never reached it.
+
+**Cause (one path proven, not yet proven to be the phone's).** `_s1ReadStart` sets `starting`, then awaits `_s1RepLoad(nb)` before anything else: `_s1RdDb()` (an `indexedDB.open` with no time limit, its promise kept for the session) and ONE `getAll` of the whole replica (on the owner's devices ~19,000 records, each with the record's full JSON). Nothing between `starting` and `on` was visible. Shown here: an open that never answers leaves the v05.50 reader "off — starting" for ever (111c/111d on v05.50).
+
+**The change.** `_s1RdDb()` gives up after `_S1_OPEN_MS` (30 s), forgets the promise so the next start opens again, and counts it (`_s1RdDbHung`); `_s1ReadStart` then reports "the device copy did not open; trying again in a minute" (NOT `no-indexeddb`, which would switch the reader off for good) and tries again 60 s later. `_s1RepLoad(nb, prog)` reads the replica in batches of `_S1_LOAD_STEP` (500) records, one short transaction each with a yield between, and keeps `_s1Stat.rd.load` = `{step: open|read|done|failed, n, since, stepAt}`; `_s1DiagText()` shows it while starting: "starting: opening the device copy (for N s)" / "reading the device copy, 12,000 records so far (for N min)" / "connecting to the cloud". Test hooks `window.__s1OpenMs`, `__s1OpenRetryMs`, `__s1LoadStep`.
+
+**Checks.** Block 111, `tools/replica-load-j71.mjs`: 111a the batched load (step 37) equals the database exactly, cursor included; 111b a reload starts the reader with every note; 111c a hung open shows "opening the device copy (for N s)", then "did not open" (not "no IndexedDB"); 111d the retry opens it, every note, no `gone` written; 111e the wording of each step; 111f the line from ⚙ → ☁ at 390 / 820 / 1440, no page errors. **13/13**; on v05.50 **8 of 13 fail** (111c ×2, 111d, 111e, 111f ×3, and 111a since v05.50 keeps no progress).
+
+**Not done:** whether the phone's start hangs at the open, at the read or later is not known yet; the owner's next Diagnostics photo will say, in words, which step and for how long.
