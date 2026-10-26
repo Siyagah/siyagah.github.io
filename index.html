@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.50">
+<meta name="app-version" content="05.51">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3921,7 +3921,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.50</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.51</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -29164,32 +29164,56 @@ let _S1_GRACE_MS=6000;   /* wait for the originating device's recs before writin
 let _s1Rep=null, _s1RdUnsub=null, _s1RdChain=Promise.resolve(), _s1RdGen=0, _s1RdTimer=null;
 let _s1RdDbP=null, _s1KickTimer=null, _s1RecsMergeQueued=false, _s1RecsMerged=false;
 function _s1AtMs(t){ return (t&&typeof t.seconds==='number')?t.seconds*1000+(t.nanoseconds||0)/1e6:null; }
+/* v05.51 — J71: an open that never answers (seen as a phone stuck on "Per-note copy: off — starting") gives up after
+   _S1_OPEN_MS and is forgotten, so the next start opens again; `_s1RdDbHung` says it happened (Diagnostics). */
+let _S1_OPEN_MS=30000, _s1RdDbHung=0;
 function _s1RdDb(){
   if(_s1RdDbP) return _s1RdDbP;
-  _s1RdDbP=new Promise(resolve=>{
+  const p=_s1RdDbP=new Promise(resolve=>{
     if(!window.indexedDB){ resolve(null); return; }
-    let rq; try{ rq=indexedDB.open(_S1R_DB,1); }catch(e){ resolve(null); return; }
+    let rq, done=false;
+    const fin=v=>{ if(done){ if(v&&v.close) try{ v.close(); }catch(e){} return; } done=true; clearTimeout(t); resolve(v); };
+    const t=setTimeout(()=>{ if(done) return; _s1RdDbHung++; if(_s1RdDbP===p) _s1RdDbP=null; done=true; resolve(undefined); },window.__s1OpenMs||_S1_OPEN_MS);   /* __s1OpenMs: test-only */
+    try{ rq=indexedDB.open(_S1R_DB,1); }catch(e){ fin(null); return; }
     rq.onupgradeneeded=()=>{ try{ rq.result.createObjectStore('recs'); rq.result.createObjectStore('meta'); }catch(e){} };
-    rq.onsuccess=()=>resolve(rq.result);
-    rq.onerror=()=>resolve(null);
-    rq.onblocked=()=>resolve(null);
+    rq.onsuccess=()=>fin(rq.result);
+    rq.onerror=()=>fin(null);
+    rq.onblocked=()=>fin(null);
   });
-  return _s1RdDbP;
+  return p;
 }
-async function _s1RepLoad(nb){
-  const db=await _s1RdDb(); if(!db) return null;
-  return new Promise(resolve=>{
-    try{
-      const range=IDBKeyRange.bound(nb+'|', nb+'|￿');
-      const tx=db.transaction(['recs','meta'],'readonly'), st=tx.objectStore('recs');
-      const rk=st.getAllKeys(range), rv=st.getAll(range), rc=tx.objectStore('meta').get('cursor|'+nb), ro=tx.objectStore('meta').get('older|'+nb);
-      tx.oncomplete=()=>{
-        const map=new Map(); rk.result.forEach((k,i)=>map.set(String(k).slice(nb.length+1), rv.result[i]));
-        resolve({map:map, cursor:+rc.result||0, older:+ro.result||0});
-      };
-      tx.onerror=()=>resolve(null); tx.onabort=()=>resolve(null);
-    }catch(e){ resolve(null); }
-  });
+/* v05.51 — J71: the replica is read in batches of _S1_LOAD_STEP records (one short transaction each, a yield between),
+   never in one getAll of the whole notebook: on a phone holding ~19,000 note texts the single read never finished and
+   the reader stayed "starting" for good. `prog` (= _s1Stat.rd.load) shows the step, the count and the time in
+   Diagnostics. Returns the replica, null (no IndexedDB / a read failed) or undefined (the open did not answer). */
+let _S1_LOAD_STEP=500;
+async function _s1RepLoad(nb, prog){
+  prog=prog||{}; prog.step='open'; prog.n=0; prog.since=Date.now(); prog.stepAt=prog.since;
+  const db=await _s1RdDb(); if(!db) return db;
+  const hi=nb+'|\uffff', map=new Map(); let lo=nb+'|', open=false, cursor=0, older=0;
+  prog.step='read'; prog.stepAt=Date.now();
+  const step=window.__s1LoadStep||_S1_LOAD_STEP;   /* __s1LoadStep: test-only */
+  for(;;){
+    const part=await new Promise(resolve=>{
+      try{
+        const range=IDBKeyRange.bound(lo, hi, open, false);
+        const tx=db.transaction(['recs','meta'],'readonly'), st=tx.objectStore('recs');
+        const rk=st.getAllKeys(range,step), rv=st.getAll(range,step);
+        const rc=cursor?null:tx.objectStore('meta').get('cursor|'+nb), ro=cursor?null:tx.objectStore('meta').get('older|'+nb);
+        tx.oncomplete=()=>resolve({k:rk.result, v:rv.result, c:rc&&rc.result, o:ro&&ro.result});
+        tx.onerror=()=>resolve(null); tx.onabort=()=>resolve(null);
+      }catch(e){ resolve(null); }
+    });
+    if(!part){ prog.step='failed'; return null; }
+    if(cursor===0){ cursor=+part.c||0; older=+part.o||0; if(!cursor) cursor=-1; }
+    part.k.forEach((k,i)=>map.set(String(k).slice(nb.length+1), part.v[i]));
+    prog.n=map.size; prog.stepAt=Date.now();
+    if(part.k.length<step) break;
+    lo=String(part.k[part.k.length-1]); open=true;
+    await _yieldTask();
+  }
+  prog.step='done';
+  return {map:map, cursor:cursor>0?cursor:0, older:older};
 }
 /* Small batches, one put per changed key; the cursor goes with the LAST batch,
    so a cut-off write re-delivers rather than skips. */
@@ -29328,8 +29352,11 @@ async function _s1ReadStart(cfg){
     const nbRef=_syncFsDb.collection('notebooks').doc(nb), recsC=nbRef.collection('recs');
     if(typeof recsC.where!=='function'||!(firebase.firestore.Timestamp)){ _s1RdOff(st,'no-query-support'); return; }
     if(!_s1Rep||_s1Rep.nb!==nb){
-      const L=await _s1RepLoad(nb);
+      st.load={};
+      const L=await _s1RepLoad(nb, st.load);
       if(gen!==_s1RdGen) return;
+      /* v05.51 — J71: an open that did not answer is not "no IndexedDB": say so, and try again in a minute */
+      if(L===undefined){ _s1RdOff(st,'the device copy did not open; trying again in a minute'); clearTimeout(_s1RdTimer); _s1RdTimer=setTimeout(()=>{ const c=getSyncConfig(); if(c&&_syncFsDb) _s1ReadStart(c); },window.__s1OpenRetryMs||60000); return; }   /* __s1OpenRetryMs: test-only */
       if(!L){ _s1RdOff(st,'no-indexeddb'); return; }
       _s1Rep={nb:nb, map:L.map, cursor:L.cursor, older:L.older||0};
       _s1RecsMerged=false;
@@ -29508,7 +29535,13 @@ function _s1Heartbeat(){
 function _s1DiagText(){
   const r=_s1Stat.rd;
   if(!r) return 'off — not started';
-  if(!r.on) return 'off — '+(r.reason||'not started');
+  if(!r.on){
+    /* v05.51 — J71: while starting, say which step and since when (a stuck start is visible in a photo) */
+    const L=r.load;
+    if(r.reason==='starting'&&L&&L.step) return 'off — starting: '+(L.step==='open'?'opening the device copy':L.step==='read'?'reading the device copy, '+(L.n||0).toLocaleString('en-US')+' records so far':L.step==='done'?'connecting to the cloud':'reading the device copy failed')
+      +' (for '+(t=>t<60?t+' s':Math.round(t/60)+' min')(Math.max(0,Math.round((Date.now()-(L.stepAt||L.since))/1000)))+')'+(_s1RdDbHung?' · the device copy did not open '+_s1RdDbHung+'×':'');
+    return 'off — '+(r.reason||'not started')+(_s1RdDbHung?' ('+_s1RdDbHung+'×)':'');
+  }
   return 'on · '+r.records.toLocaleString('en-US')+' records · last received '+_syncAgo(r.lastRecv)+(r.err?(' · last error: '+r.err.code):'')+(_s1Plan()==='recs'?' · whole-notebook copy: off':' · whole-notebook copy: on')
     +(r.reread?(' · reading everything again since '+_syncAgo(r.reread.at)+(r.reread.auto?' (automatic: this device held '+r.reread.was+')':'')+(_s1RdCaught?' — done':' — in progress')):'');
 }
