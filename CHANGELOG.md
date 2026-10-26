@@ -10772,3 +10772,8 @@ The owner (26 Oct 2026, "Bismillah! Yes, go — all recommended options") asked 
 **Architect review.** A real-site run (the live mappingmyjourney.com, into a test notebook in this container): dry run 1,464 folders (L1 32 · L2 155 · L3 491 · L4 581 · L5 176 · L6 29), 722 empty, 564 posts + 22 pages, 1,659 places, 735 pictures, 1,364 tags, in 37 s; import 1,465 folders (with "Pages") + 586 notes, 715 pictures brought in, 20 kept as links (their hosts send no CORS header), 54 s; a second run added nothing. The owner chose to bring in all 1,364 tags (26 Oct). **Totals, full app-check** (two halves at once, on `442ecd1`): 1–59 + `self-check` **2329/2332**, 60–108 **5635/5651**. Three checks described the 🧰 menu as it was before this round's new row and were **updated in place** (`de53762`): 6o-1's action list gains `openMmjImport`; 65h scrolls the menu to 👝 Siyagah Zab before measuring (the menu is now taller than a 390×844 screen); 90d hides the new row at 820/1440 like the band and the Zab note before it. Re-run alone: 6o-1, 63, 65, 82, 90, 100, 108 pass; 80h passes alone on v05.47 and here; 91f (long task while shrinking 50 pictures, ×4) fails alone by the same margin on v05.46 (610 ms), v05.47 (760 ms) and here (717 ms) — this container, not this round; 56k as recorded in v05.47.
 
 **Not done:** changes made on the site after the first import are not brought in (round ③); a page's parent is kept only in the note's `fromMmj`/not as a folder (pages are flat in "Pages").
+
+
+## v05.49 — J74 ③: keep Mapping My Journey and Siyagah matching (PCF SIY J74, BWN J27 Stage 1, built by the builder)
+
+In progress: automatic MMJ → Siyagah check (`_mmjSyncTick`), never deletes, the owner's edits win.
