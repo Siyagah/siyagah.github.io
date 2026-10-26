@@ -10782,3 +10782,17 @@ The owner chose (26 Oct, 3B) that Siyagah keeps matching Mapping My Journey afte
 - It reads all categories and `posts`/`pages` changed since (last check − 1 day); once a day it also reads every id. A failed request writes nothing.
 - New categories/posts/pages are added as the import adds them (the import's builders are now `_mmjAssemble`, shared). A renamed/moved category is followed only if the owner has not changed the folder (`mmj.n`/`mmj.p`). A changed post replaces an untouched note (`fromMmj.u` = the `updatedAt` the sync wrote); an edited note only gets `fromMmj.newer` and a read-view line "Mapping My Journey has a newer version — Show it". What the site no longer has is only marked (`gone`), and the mark clears if it returns. Trash and tombstones are never undone.
 - Not done: nothing goes from Siyagah to MMJ (needs a WordPress password; later stage).
+
+---
+
+## v05.50 — J77: a link in a note opens again, and a Mapping My Journey link also offers its GitHub copy (built by the Architect)
+
+The owner (26 Oct, after running the Mapping My Journey import): "these links doesn't open to the site. (Is it may be it takes some more time to settle?)", then: "I meant the mmj site already in github … https://mappingmyjourney.github.io/MappingMyJourney/".
+
+**Cause (measured, 390 and 1440).** A tap on a link in a note's read view reached `_promptOpenLink()` (the document click listener at the "Plain inserted links" comment), which filled `#ctx` with 🌐 Open in new tab · 📋 Copy link and called `stopPropagation()`. The general closer `document.addEventListener('click',(e)=>{ hideCtx(); …})` is registered LATER on the SAME node, so `stopPropagation()` never reached it and it hid the menu in the same tick (a trace of `hideCtx` showed exactly those two calls). Every link in a note, every 🔖 bookmark card and every video mention in read view has been affected since the closer was written. The same fault as the v04.12 standing lesson, in a third costume.
+
+**The change.** `_promptOpenLink` marks the event (`ev.__keepCtx=true`) and the closer skips `hideCtx()` for that one event; everything else it closes still closes. `_LINK_MIRRORS` (one row: `mappingmyjourney.com` → `https://mappingmyjourney.github.io/MappingMyJourney/`) and `_linkMirror(url)`: a link to a mirrored site gets 🌐 Open on mappingmyjourney.com · 🐙 Open on GitHub · 📋 Copy link; the note keeps its own address. Checked live 26 Oct: all 586 imported posts and pages answer 200 at the GitHub copy under the same path. A new site is one more row.
+
+**Checks.** Block 110, `tools/link-j77.mjs`: at 390 / 820 (touch) and 1440, 110a a real tap on a Mapping My Journey link leaves the menu open, on screen, with the three items; 110b 🐙 Open on GitHub opens a new tab at the GitHub address, same path; 110c a plain link's menu stays open and 🌐 Open in new tab opens it; 110d no page errors. **10/10**; on v05.49 **9 of 10 fail** (110d passes there).
+
+**Not done:** links inside a pop-up note window or an editor are unchanged (in the editor a tap places the caret, as before).
