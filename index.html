@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.49">
+<meta name="app-version" content="05.50">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3921,7 +3921,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.49</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.50</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -18060,13 +18060,27 @@ function initRichPaste(ed){
    mode, not while actively editing) — settings/help links elsewhere in the
    app are untouched. Uses real closures (not string-embedded onclick) so an
    unusual URL (containing a quote, etc.) can never break the menu. */
+/* v05.50 · J77 — sites whose pages also live on a GitHub copy at the same path (checked 26 Oct: 586 of 586 Mapping My Journey posts and pages).
+   A link to one offers both; the note keeps its own address. A new site is one more row. */
+const _LINK_MIRRORS=[{re:/^https?:\/\/(?:www\.)?mappingmyjourney\.com\//i,to:'https://mappingmyjourney.github.io/MappingMyJourney/',name:'mappingmyjourney.com'}];
+function _linkMirror(url){
+  const u=String(url||'');
+  for(const m of _LINK_MIRRORS){ const x=m.re.exec(u); if(x) return {m,alt:m.to+u.slice(x[0].length)}; }
+  return null;
+}
 function _promptOpenLink(url,ev){
-  if(ev){ev.preventDefault();ev.stopPropagation();}
+  /* v05.50 · J77 — __keepCtx: this listener and the document's "close any menu on a click" one (registered later, on the same node) see the
+     same event, so stopPropagation() never stopped it and the menu was shut in the same tick; the closer now leaves a menu this click opened */
+  if(ev){ev.preventDefault();ev.stopPropagation();ev.__keepCtx=true;}
   hideCtx();
   const m=document.getElementById('ctx');
   m.innerHTML='';
   const mk=(label,fn)=>{const d=document.createElement('div');d.className='ci';d.textContent=label;d.onclick=()=>{hideCtx();fn();};m.appendChild(d);};
-  mk('🌐 Open in new tab',()=>window.open(url,'_blank','noopener'));
+  const mi=_linkMirror(url);
+  if(mi){
+    mk('🌐 Open on '+mi.m.name,()=>window.open(url,'_blank','noopener'));
+    mk('🐙 Open on GitHub',()=>window.open(mi.alt,'_blank','noopener'));
+  }else mk('🌐 Open in new tab',()=>window.open(url,'_blank','noopener'));
   mk('📋 Copy link',()=>{navigator.clipboard.writeText(url).then(()=>toast('🔗 Link copied'));});
   _ctxPos(m,ev);
 }
@@ -31810,7 +31824,7 @@ function disconnectSync(){
 
 
 document.addEventListener('click',(e)=>{
-  hideCtx();
+  if(!e.__keepCtx) hideCtx();   /* v05.50 · J77 — a link's menu opened by this very click stays open */
   if(!e.target.closest('#sb-menu-wrap')) closeSBMenu();
   if(!e.target.closest('#sb-tools-wrap')) closeSBTools();
   if(!e.target.closest('#sb-home-wrap')) closeSBHome();

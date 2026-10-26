@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.49.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.50.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,12 +47,12 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.50** (26 Oct 2026) — J77 (built by the Architect): a tap on a link in a note's read view opened its menu and the document's later-registered "close any menu" listener shut it in the same tick. `_promptOpenLink` sets `ev.__keepCtx` and that closer skips `hideCtx()` for it. `_LINK_MIRRORS` / `_linkMirror()`: a Mapping My Journey link also offers 🐙 Open on GitHub (same path on mappingmyjourney.github.io/MappingMyJourney/). Check: block 110, `tools/link-j77.mjs`.
 - **v05.49** (26 Oct 2026) — J74 ③ (BWN J27 Stage 1, built by the builder): "Keep matching" for Mapping My Journey: `_mmjSyncTick()` (60 s after start, then every 6 h, ⟳ Check now in `#mmj-modal`) reads the site and, one way (site → Siyagah), adds new categories/posts/pages, follows a renamed/moved category (`mmj.n`/`mmj.p`) and a changed post (`fromMmj.u`) only if the owner has not changed them, else marks `fromMmj.newer` (read-view line + Show it); what the site no longer has is only marked `gone`, never deleted. Last check: device database `siyagah-mmj-v1`. Check: block 109, `tools/mmj-sync.mjs`.
 - **v05.48** (26 Oct 2026) — J74 ② (BWN J27 Stage 1, built by the builder): 🧰 → "🗺 Mapping My Journey import" (`openMmjImport`, `#mmj-modal`) reads the open WordPress feed of mappingmyjourney.com with `fetch()` (no helper), shows a dry run, backs up, then adds the section `mmj-sec`, one folder per category (`mmj-c-<id>`, exact names, same depth, empty ones too) and one note per post/page (`mmj-p-<id>` / `mmj-g-<id>`) in ALL its folders, pictures by reference. Re-runnable (existing ids skipped, never edited); `autoNumberAll()` leaves `f.mmj` folders alone. Check: block 108, `tools/mmj-import.mjs`.
 - **v05.47** (26 Oct 2026) — J74 ① (BWN J27 Stage 1, built by the Architect): "🖼 Keep every picture on this device" (Cloud Sync window; `DB.theme.picKeepAll`, absent = on, read by `_picKeepOn()`): `_picKeepTick()` fetches, one at a time through `_picFetch`, every `data-pic` in notes and Trash not yet on the device; ≤ `_PIC_KEEP_DAY` (8,000) cloud reads a device a UTC day (`siyagah-premig-v1` meta `keep`), paused at 90 % storage; `_storeProtect()` asks `navigator.storage.persist()`. Diagnostics: Pictures kept here, Storage protected. Check: block 107, `tools/pickeep-j74.mjs`.
 - **v05.46** (25 Oct 2026) — Z16 (PCF J70): a 📰 News Zab of the owner's own. Zab kind `news` (🧩 Zab kind ▸); each item is a channel (`src`, `color`, `off`); `_zabNews().chans` reads the News Zabs' items when one exists (else the settings array, left as the backup);
   the panel has the channel ticks, "Also scroll these Zabs" (= `zabTicker.pids`) and `▶ Scroll these` (`_jebNewsGo`). Check: block 104, `tools/zab-news-zab.mjs` (`--unpatched`: 21 of 22 fail).
-- **v05.45** (25 Oct 2026) — J71 (built by the Architect): the owner's PC and tablet had the same Notebook ID and account but read 942 vs 19,285 records — the Firebase project is the other half of a cloud's address and was shown nowhere. Diagnostics now name the **Cloud project**; "📋 Copy sync setup" (`_syncCopySetup`) copies project + ID, and pasting it on another device's setup screen uses both (`_syncSetupOf`, `_syncSetupPasted`). Checks: block 105 `tools/sync-setup-j71.mjs`, block 106 `tools/sync-scale.mjs --notes=3000` (J69).
 ---
 
 ## What this is
