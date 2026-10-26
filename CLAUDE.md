@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.47.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.48.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,15 +47,13 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.48** (26 Oct 2026) — J74 ② (BWN J27 Stage 1, built by the builder): 🧰 → "🗺 Mapping My Journey import" (`openMmjImport`, `#mmj-modal`) reads the open WordPress feed of mappingmyjourney.com with `fetch()` (no helper), shows a dry run, backs up, then adds the section `mmj-sec`, one folder per category (`mmj-c-<id>`, exact names, same depth, empty ones too) and one note per post/page (`mmj-p-<id>` / `mmj-g-<id>`) in ALL its folders, pictures by reference. Re-runnable (existing ids skipped, never edited); `autoNumberAll()` leaves `f.mmj` folders alone. Check: block 108, `tools/mmj-import.mjs`.
 - **v05.47** (26 Oct 2026) — J74 ① (BWN J27 Stage 1, built by the Architect): "🖼 Keep every picture on this device" (Cloud Sync window; `DB.theme.picKeepAll`, absent = on, read by `_picKeepOn()`): `_picKeepTick()` fetches, one at a time through `_picFetch`, every `data-pic` in notes and Trash not yet on the device; ≤ `_PIC_KEEP_DAY` (8,000) cloud reads a device a UTC day (`siyagah-premig-v1` meta `keep`), paused at 90 % storage; `_storeProtect()` asks `navigator.storage.persist()`. Diagnostics: Pictures kept here, Storage protected. Check: block 107, `tools/pickeep-j74.mjs`.
 - **v05.46** (25 Oct 2026) — Z16 (PCF J70): a 📰 News Zab of the owner's own. Zab kind `news` (🧩 Zab kind ▸); each item is a channel (`src`, `color`, `off`); `_zabNews().chans` reads the News Zabs' items when one exists (else the settings array, left as the backup);
   the panel has the channel ticks, "Also scroll these Zabs" (= `zabTicker.pids`) and `▶ Scroll these` (`_jebNewsGo`). Check: block 104, `tools/zab-news-zab.mjs` (`--unpatched`: 21 of 22 fail).
 - **v05.45** (25 Oct 2026) — J71 (built by the Architect): the owner's PC and tablet had the same Notebook ID and account but read 942 vs 19,285 records — the Firebase project is the other half of a cloud's address and was shown nowhere. Diagnostics now name the **Cloud project**; "📋 Copy sync setup" (`_syncCopySetup`) copies project + ID, and pasting it on another device's setup screen uses both (`_syncSetupOf`, `_syncSetupPasted`). Checks: block 105 `tools/sync-setup-j71.mjs`, block 106 `tools/sync-scale.mjs --notes=3000` (J69).
 - **v05.44** (24 Oct 2026) — J67 (built by the Architect): on the owner's Android phone the note's bar slid off the top while writing far down a note: since Chrome 108 the keyboard only covers the page, and Chrome pans the whole page to show the caret. The viewport meta now carries
   `interactive-widget=resizes-content`, so the page is laid out above the keyboard and only the note scrolls. iOS Safari ignores it (backlog). Check: block 103, `tools/kb-j67.mjs`.
-- **v05.43** (23 Oct 2026) — R2 (PCF J65, built by the Architect): the owner's laptop showed an empty notebook as "☁ Live": its replica held 16 of 12,500 records and its cursor had passed the rest, and the reader only asks for records
-  newer than the cursor. `_s1ReadStart` now reads the whole notebook again (cursor 0) once per page load when this device holds no notes or folders and the replica fewer than `_S1_REREAD_MIN` (50) records, or the replica holds fewer than half of this device's own notes + folders; Cloud Sync →
-  "⟳ Read everything again" (`_s1ReRead`) does it by hand; the diagnostics say so. Reading again only adds. Check: block 102, `tools/reread-r2.mjs` (`--unpatched`: 5 of 10 fail; B stays at 15 of 203 notes).
 ---
 
 ## What this is
@@ -562,6 +560,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   (`id` = item id, `on` = `!off`) and `DB.theme.zabNews.chans` is NOT read or written (it stays the backup; `_jebNewsFill` copies it in once, when an empty Zab becomes `news`). `_tkOwnItems` skips News Zabs; `_jebChipInfo` counts ticked channels. Panel: `_jebNewsPanelHTML` / `_jebNewsRowHTML`
   (own events: `.jn-tick`, `.jn-col`, `.jn-zt`, `.jn-addb`, `.jn-go`, `.jn-fold` in `_jebWireOnce`; the add box `#jn-add-in` blocks a repaint while focused). The Zab ticks ARE `zabTicker.pids`; `_jebNewsGo` is the only writer of `mode:'only'`/`zabNews.mix` for it. A new channel field goes in `_jebKindSig`.
 - **A Zab's own note (v05.33, Z11).** `_zabNoteOf(pid)` (by `zabNote.pid`, never by title) → the note `zabn-<pid>` (`-2`, `-3`… if that id is tombstoned or in Trash) in folder `zab-notes`, field `zabNote:{pid}`; made by `_zabNoteEnsure` on the first tap, written in `popOutNote`, dropped by `_zabNoteClosed` if left blank. Painted by `_zabNoteHTML` into `.zn-area` (in the panel's repaint signature via `_zabNoteSig`); a Zab deleted keeps its note ("(Zab deleted)").
+- **The Mapping My Journey import (v05.48, J74 ②).** `_mmjRead()` → `_mmj.res` (memory only: `cats`, `items` with the html already prepared by `_mmjPrep`: iframes → `p.mmj-embed` links, every `<img>` a `[[MMJIMG:n]]` token because `_enxClean` would turn a `data:` src into `#`). `_mmjImport()` needs `_s2RefsOk()`, fetches each distinct picture once (4 at a time, `_mmjPicOne` → `_picPut`, not `enx`), then writes folders and notes in 250s through `_enxPersist`. Ids are the identity: `mmj-c-<cat>`, `mmj-p-<post>`, `mmj-g-<page>`, `mmj-pages`, `mmj-sec`; anything already in `DB`, Trash or the tombstones is skipped. `f.mmj` marks a folder that numbering must not touch (`autoNumberAll`, `getHierNum`). A parent that is missing or in a loop makes a category a root. Round ③ will bring site changes.
 - **Evernote import, the dry run (v05.13, S4a — S4b writes notes, S4c pictures, S4d merges earlier imports).** `openEnexImport()` →
   `#enx-modal` (own overlay like `#remmail-modal`: dialog ≥ 640, bottom sheet < 640, z 10060, over the Zab bar on purpose so it is not
   in the `--jeb-h` lists). State is only the global `_enx` (the last result is `_enx.res`, in memory): **nothing goes in `DB`,

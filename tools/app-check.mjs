@@ -2528,7 +2528,10 @@ await r.block('6o-1-menu-reorg', async () => {
     'openRemindMail',
     /* v05.13 (issue #173, S4a) — 📥 Evernote import in 🧰 Tools → Create, added on purpose
        (the Architect's full run caught this list missing it: block 73 alone does not run 6o-1). */
-    'openEnexImport'];
+    'openEnexImport',
+    /* v05.48 (issue #237, J74 ②) — 🗺 Mapping My Journey import in 🧰 Tools, under 📥 Evernote import, added on purpose
+       (the Architect's full run caught it; updated in place). */
+    'openMmjImport'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
   const lost = V0420.filter((f) => !now.includes(f));
   const added = [...new Set(now)].filter((f) => !V0420.includes(f));
@@ -12527,6 +12530,19 @@ await r.block('107-pickeep-j74', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 10, 'the pickeep-j74.mjs check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, '107: ' + row.label, row.detail);
   r.check(out.status === 0, 'the pickeep-j74.mjs check exits cleanly', `exit ${out.status}`);
+});
+
+/* 108 — v05.48, J74 ②: the Mapping My Journey import — a fake WordPress site (REST headers, 100 a page, entity names, real PNG bytes, a 404 picture, an iframe, a script) read by the browser; the dry run counts exactly and writes nothing; folders at the same depth with exact names, ONE note per post in all its folders, pictures by reference, re-run adds nothing, Trash respected, numbering leaves the section alone, sync both ways, the owner's 1,464 / 586 scale on 9,000 notes. tools/mmj-import.mjs runs 108a–108i. */
+await r.block('108-mmj-import', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./mmj-import.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1500000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 12, 'the mmj-import.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '108: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the mmj-import.mjs check exits cleanly', `exit ${out.status}`);
 });
 
 /* ── run everything registered above, or a --only subset ─────────────────
