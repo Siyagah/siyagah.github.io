@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.51">
+<meta name="app-version" content="05.52">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -134,7 +134,7 @@ if(_JEB_APP){
 body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:var(--paper);color:var(--t1);font-size:14px}
 
 /* Sidebar */
-#sb{width:280px;background:var(--forest);display:flex;flex-direction:column;flex-shrink:0;min-width:160px;max-width:540px;transition:width .2s ease,min-width .2s ease}
+#sb{width:280px;background:var(--forest);display:flex;flex-direction:column;flex-shrink:0;min-width:160px;max-width:none;transition:width .2s ease,min-width .2s ease}
 #sb.closed{width:0!important;min-width:0!important;overflow:hidden;border-right:none}
 /* ── Sidebar header (v04.14) ────────────────────────────────────────────
    Everything in this block is drawn in translucent black or white OVER
@@ -204,6 +204,9 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 }
 /* Search row — same translucent-white treatment, for the same reason. */
 .sb-s{padding:0 12px 10px;border-bottom:1px solid var(--sb-hair);flex-shrink:0}
+/* v05.52 · J82 — 🪟 beside the search box: the header already wraps on a narrow side pane, so a header button cost a whole row */
+.sb-srow{display:flex;align-items:stretch;gap:6px}.sb-srow>.sb-si{flex:1 1 auto;min-width:0}.sb-srow>.sb-pp-btn{flex-shrink:0;padding:0 9px;min-width:36px}
+@media(max-width:1199.98px){.sb-srow>.sb-pp-btn{min-width:44px;min-height:44px}}
 .sb-si{display:flex;align-items:center;background:var(--sb-strip);
        border:1px solid var(--sb-line);border-radius:9px;padding:6px 10px;gap:7px;
        transition:background .12s,border-color .12s}
@@ -272,7 +275,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .ac-badge:hover{opacity:1}
 
 /* 3-pane layout */
-#p2{width:300px;min-width:180px;max-width:520px;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);background:var(--white);flex-shrink:0}
+#p2{width:300px;min-width:180px;max-width:none;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);background:var(--white);flex-shrink:0}
 #p2h{padding:0 12px;display:flex;align-items:center;min-height:48px;flex-shrink:0;border-bottom:1px solid var(--border);gap:8px}
 #p2h-path:empty{display:none}
 .p2h-path-row{display:flex;align-items:center;gap:5px;padding:5px 10px;
@@ -783,6 +786,43 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .rsz-nw{top:-6px;left:-6px;width:16px;height:16px;cursor:nwse-resize;z-index:7}
 .rsz-se{bottom:-6px;right:-6px;width:16px;height:16px;cursor:nwse-resize;z-index:7}
 .rsz-sw{bottom:-6px;left:-6px;width:16px;height:16px;cursor:nesw-resize;z-index:7}
+/* v05.52 · J82 — a pane popped out as a window (#sb / #p2 with class .pp). Its place and size are CSS variables on the pane itself
+   (never on <html>); it beats every tier's docked rule (.closed, .mob-open, width:100%!important). It sits over the Zab bar on purpose,
+   below the note pop-ups (5001) and menus. On a phone it is a sheet as wide as the screen: only its top and bottom edges resize. */
+#sb.pp,#p2.pp{position:fixed!important;left:var(--pp-l,0px)!important;top:var(--pp-t,0px)!important;width:var(--pp-w,320px)!important;height:var(--pp-h,70vh)!important;
+  right:auto!important;bottom:auto!important;min-width:0!important;max-width:none!important;z-index:4500;transition:none!important;
+  box-shadow:0 12px 40px rgba(0,0,0,.38);border:1px solid var(--border2);border-radius:10px;overflow:visible}
+#sb.pp.pp-top,#p2.pp.pp-top{z-index:4501}
+.pp-bar{display:flex;align-items:center;gap:6px;flex-shrink:0;min-height:40px;padding:0 6px 0 10px;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;
+  border-radius:9px 9px 0 0;background:rgba(0,0,0,.28);color:#fff;font-size:13px;font-weight:600}
+#p2 .pp-bar{background:var(--green);color:var(--on-accent)}
+.pp-ttl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pp-b{min-height:32px;min-width:36px;padding:0 10px;border-radius:7px;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.14);color:inherit;font:inherit;font-size:13px;cursor:pointer;touch-action:manipulation}
+.pp-b:hover{background:rgba(255,255,255,.28)}
+.pp>.rsz{touch-action:none}
+@media(max-width:1199.98px){
+  .pp-b{min-height:40px;min-width:44px}
+  .pp>.rsz-n,.pp>.rsz-s{height:22px;left:28px;right:28px}.pp>.rsz-n{top:-11px}.pp>.rsz-s{bottom:-11px}
+  .pp>.rsz-e,.pp>.rsz-w{width:22px;top:28px;bottom:28px}.pp>.rsz-e{right:-11px}.pp>.rsz-w{left:-11px}
+  .pp>.rsz-ne,.pp>.rsz-nw,.pp>.rsz-se,.pp>.rsz-sw{width:30px;height:30px}
+  .pp>.rsz-ne,.pp>.rsz-nw{top:-12px}.pp>.rsz-se,.pp>.rsz-sw{bottom:-12px}.pp>.rsz-ne,.pp>.rsz-se{right:-12px}.pp>.rsz-nw,.pp>.rsz-sw{left:-12px}
+}
+@media(max-width:639.98px){
+  #sb.pp,#p2.pp{border-radius:12px 12px 0 0}
+  .pp>.rsz-n{top:-6px}.pp>.rsz-s{bottom:-6px}
+  .pp>.rsz-e,.pp>.rsz-w,.pp>.rsz-ne,.pp>.rsz-nw,.pp>.rsz-se,.pp>.rsz-sw{display:none}
+}
+/* v05.52 · J82 — one docked pane across the whole window (PC). A popped-out pane is not hidden by it. */
+@media(min-width:1200px){
+  body.pw-sb #p2:not(.pp),body.pw-sb #p3,body.pw-sb #rsz,body.pw-sb #rsz2,body.pw-sb #sb-toggle,
+  body.pw-p2 #sb:not(.pp),body.pw-p2 #p3,body.pw-p2 #rsz,body.pw-p2 #rsz2,body.pw-p2 #sb-toggle,
+  body.pw-p3 #sb:not(.pp),body.pw-p3 #p2:not(.pp),body.pw-p3 #rsz,body.pw-p3 #rsz2,body.pw-p3 #sb-toggle{display:none!important}
+  body.pw-sb #sb,body.pw-p2 #p2{flex:1 1 auto;width:auto!important}
+  body.pw-sb #sb .pp-bar,body.pw-p2 #p2 .pp-bar{display:none}
+}
+#pw-back{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:4400;min-width:30px;min-height:64px;padding:4px;border:1px solid var(--border2);border-right:0;
+  border-radius:9px 0 0 9px;background:var(--green);color:var(--on-accent);font:inherit;font-size:15px;cursor:pointer;box-shadow:-2px 2px 8px rgba(0,0,0,.2);display:none}
+body.pw-sb #pw-back,body.pw-p2 #pw-back,body.pw-p3 #pw-back{display:block}
 .rn-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .rn-lbl{font-size:11.5px;color:var(--t3);display:block;margin-bottom:4px}
 
@@ -3921,7 +3961,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.51</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.52</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -3962,6 +4002,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <div class="sb-mi" onclick="toggleHijri();closeSBTools()" title="Toggle Hijri dates in the calendar">☪ Hijri Dates</div>
           <div class="sb-mi-hd">View</div>
           <div class="sb-mi" onclick="openTheme();closeSBTools()">🎨 Appearance</div>
+          <div class="sb-mi sb-pp-mi" onclick="_ppMenu(event,'sb');closeSBTools()" title="Pop the side pane out as a window you can move and resize, or make it full width">🪟 Side pane: pop out or full width</div>
           <div class="sb-mi" onclick="autoFit();closeSBTools()">↔ Auto-fit width</div>
           <div class="sb-mi" onclick="autoNumberAll();closeSBTools()">🔢 Auto-number all</div>
           <div class="sb-mi" onclick="toggleAccordionSec();closeSBTools()" id="accordion-sec-btn" title="When ON: opening a section closes all others">📂 Accordion sections: <span id="accordion-sec-lbl">OFF</span></div>
@@ -4005,10 +4046,13 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
     </div>
   </div>
   <div class="sb-s">
+    <div class="sb-srow">
     <div class="sb-si">
       <span class="sb-si-ico">🔍</span>
       <input type="text" id="sq" placeholder="Search notes, folders, tags, types…" oninput="doSearch(this.value)" autocomplete="off">
       <span id="sqx" class="sb-si-x" onclick="clearSearch()" style="display: none;">✕</span>
+    </div>
+    <button class="btn sb-act sb-pp-btn" onclick="_ppMenu(event,'sb')" title="This pane: pop it out as a window you can move and resize, or make it full width">🪟</button>
     </div>
     <button id="bts-sb" class="btn sb-bts" onclick="restoreLastSearch()" title="Back to your last search results">🔍↺ Back to search results</button>
   </div>
@@ -4035,7 +4079,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <div id="p2" style="width: 520px;" class="">
   <div id="p2h"></div>
   <div id="p2h-path"></div>
-  <div id="p2-srch-bar"><div class="mini-srch-row"><button class="btn bn bi" onclick="goHome()" title="Home — reset search/filters and show the folder list" style="font-size:12.5px">🏠 Home</button><button class="btn bn bi" onclick="focusSidebarSearch()" title="Search notes, folders, tags, types…" style="font-size:12.5px">🔍 Search</button><button class="btn bn bi" onclick="restoreLastSearch()" title="Back to search results: 'khutbah'" style="font-size:12.5px">🔍↺ Back to results</button></div></div>
+  <div id="p2-srch-bar"></div>
   <div id="p2c"></div>
 </div>
 
@@ -7883,6 +7927,7 @@ function selFolder(id){_trackLastFolder(id);
   }
   ST.tag=null;ST.kind=null;ST.secSF=null;
   ST.folder=id;ST.article=null;ST.editing=false;
+  if(_pwMode) _pwLeaveFor('p2');   /* v05.52 · J82 */
   /* Mobile/tablet: open article list so user can see folder contents */
   if(window.innerWidth<1200) openP2();
   render();
@@ -7891,6 +7936,7 @@ function selArt(id){
   if(ST.editing)saveArt();
   const _prevA=ST.article, _fast=_selFastOk();
   ST.article=id;ST.editing=false;clearSearch();
+  if(_pwMode&&_pwMode!=='p3') _pwSet(null);   /* v05.52 · J82 */
   if(!DB.theme)DB.theme={};DB.theme.lastArticle=id;_save();
   if(!(_fast&&_selFastMove(_prevA,id))) renderP2C();
   renderP3H();renderP3C();
@@ -7928,6 +7974,7 @@ function updateSbToggle(){
      transitioning-to value via the CSS inline width, not the animated value. */
   const targetLeft=closed?0:parseInt(sb.style.width)||sb.offsetWidth||262;
   btn.style.left=targetLeft+'px';
+  btn.style.display=sb.classList.contains('pp')?'none':'';   /* v05.52 · J82: a popped-out side pane has no edge tab */
 }
 /* v04.56 — ST.etags/ST.efolders are staged fields, exactly like ST.etitle,
    but nothing committed them except saveArt() — so backgrounding the app
@@ -8039,6 +8086,7 @@ function _renderP2SearchBar(){
     +'<button class="btn bn bi" onclick="goHome()" title="Home — reset search/filters and show the folder list" style="font-size:12.5px">🏠 Home</button>'
     +'<button class="btn bn bi" onclick="focusSidebarSearch()" title="Search notes, folders, tags, types…" style="font-size:12.5px">🔍 Search</button>'
     +(show?'<button class="btn bn bi" onclick="restoreLastSearch()" title="Back to search results: \''+esc(ST.lastSearch)+'\'" style="font-size:12.5px">🔍↺ Back to results</button>':'')
+    +'<button class="btn bn bi p2-pp-btn" onclick="_ppMenu(event,\'p2\')" title="This pane: pop it out as a window, or make it full width" style="font-size:12.5px">🪟 Pane</button>'
     +'</div>';
 }
 function _renderP3SearchBar(){
@@ -18126,9 +18174,9 @@ document.getElementById('rsz').addEventListener('mousedown',e=>{
 });
 document.addEventListener('mousemove',e=>{
   if(!_rz)return;
-  const w=Math.max(160,Math.min(540,_rzW+(e.clientX-_rzX)));
+  const w=_sbClampW(_rzW+(e.clientX-_rzX));
   document.getElementById('sb').style.width=w+'px';
-  updateSbToggle();
+  updateSbToggle();jebLayout();
 });
 document.addEventListener('mouseup',()=>{
   if(!_rz)return;_rz=false;document.getElementById('rsz').classList.remove('act');
@@ -18142,7 +18190,7 @@ document.getElementById('rsz').addEventListener('touchstart',e=>{
 },{passive:false});
 document.addEventListener('touchmove',e=>{
   if(!_rz)return;
-  const w=Math.max(160,Math.min(540,_rzW+(e.touches[0].clientX-_rzX)));
+  const w=_sbClampW(_rzW+(e.touches[0].clientX-_rzX));
   document.getElementById('sb').style.width=w+'px';
 },{passive:false});
 document.addEventListener('touchend',()=>{
@@ -18160,19 +18208,160 @@ document.getElementById('rsz2').addEventListener('mousedown',e=>{
   e.preventDefault();
 });
 document.addEventListener('mousemove',e=>{
-  if(_rz2){const w=Math.max(180,Math.min(520,_rz2W+(e.clientX-_rz2X)));document.getElementById('p2').style.width=w+'px';}
+  if(_rz2){const w=_p2ClampW(_rz2W+(e.clientX-_rz2X));document.getElementById('p2').style.width=w+'px';}
 });
 document.addEventListener('mouseup',()=>{
   if(!_rz2)return;_rz2=false;document.getElementById('rsz2').classList.remove('act');
   document.body.style.cursor='';document.body.style.userSelect='';
+  _p2SaveW();
 });
 document.getElementById('rsz2').addEventListener('touchstart',e=>{
   _rz2=true;_rz2X=e.touches[0].clientX;_rz2W=document.getElementById('p2').offsetWidth;e.preventDefault();
 },{passive:false});
 document.addEventListener('touchmove',e=>{
-  if(_rz2){const w=Math.max(180,Math.min(520,_rz2W+(e.touches[0].clientX-_rz2X)));document.getElementById('p2').style.width=w+'px';}
+  if(_rz2){const w=_p2ClampW(_rz2W+(e.touches[0].clientX-_rz2X));document.getElementById('p2').style.width=w+'px';}
 },{passive:false});
-document.addEventListener('touchend',()=>{_rz2=false;});
+document.addEventListener('touchend',()=>{if(!_rz2)return;_rz2=false;_p2SaveW();});
+
+/* ── v05.52 · J82 — the docked dividers clamp to the WINDOW (the note pane keeps _PW_P3_MIN), not to 540 / 520 px ── */
+const _PW_P3_MIN=320;
+function _sbClampW(w){
+  const p2=document.getElementById('p2'), p2w=(p2&&!p2.classList.contains('pp')&&p2.offsetParent)?p2.offsetWidth:0;
+  return Math.round(Math.max(160,Math.min(w,window.innerWidth-p2w-_PW_P3_MIN-12)));   /* 12: the two dividers */
+}
+function _p2ClampW(w){
+  const sb=document.getElementById('sb'), sbr=(sb&&!sb.classList.contains('pp'))?Math.max(0,sb.getBoundingClientRect().right):0;
+  return Math.round(Math.max(180,Math.min(w,window.innerWidth-sbr-_PW_P3_MIN-12)));
+}
+function _p2SaveW(){ const w=document.getElementById('p2')?.style.width; if(w) try{ localStorage.setItem('siyagah-p2-w',w); }catch(e){} }
+
+/* ── v05.52 · J82 — a pane popped out as a window ─────────────────────────────────────────
+   #sb (the side pane) or #p2 (the note list) itself gets the class .pp and floats: nothing is drawn twice, every render keeps
+   writing into the same pane. Its place and size are fractions of the window, kept per pane on this device only
+   (localStorage 'siyagah-pp-v1', like the pop-up dialog's: a window size is not something to sync to a phone). Moved by its bar,
+   resized from all four sides and corners (a phone: a sheet, top and bottom edges). Never touches DB. */
+const _PP_KEY='siyagah-pp-v1', _PP_NAME={sb:'📁 Folders',p2:'🗂 Notes'}, _PP_MIN_W=260, _PP_MIN_H=200;
+let _ppState={}, _ppRsz=null, _pwMode=null;
+function _ppTier(){ return window.innerWidth<640?'phone':window.innerWidth<1200?'tablet':'pc'; }
+function _ppLoad(){ try{ const v=JSON.parse(localStorage.getItem(_PP_KEY)||'{}'); _ppState=(v&&typeof v==='object')?v:{}; }catch(e){ _ppState={}; } }
+function _ppSave(){ try{ localStorage.setItem(_PP_KEY,JSON.stringify(_ppState)); }catch(e){} }
+function _ppOn(p){ const e=document.getElementById(p); return !!(e&&e.classList.contains('pp')); }
+function _ppDefault(p){
+  if(_ppTier()==='phone') return {l:0,t:.3,w:1,h:.62};
+  const W=window.innerWidth;
+  return p==='sb'?{l:.03,t:.08,w:Math.min(.45,Math.max(320,W*.3)/W),h:.8}:{l:.32,t:.1,w:Math.min(.5,Math.max(360,W*.34)/W),h:.78};
+}
+/* the window's place in px, kept inside the screen (a phone: full width) */
+function _ppPx(g){
+  const W=window.innerWidth, H=window.innerHeight, ph=_ppTier()==='phone';
+  let w=ph?W:Math.min(W,Math.max(_PP_MIN_W,g.w*W)), h=Math.min(H,Math.max(_PP_MIN_H,g.h*H));
+  let l=ph?0:Math.max(0,Math.min(g.l*W,W-w)), t=Math.max(0,Math.min(g.t*H,H-h));
+  return {l:Math.round(l),t:Math.round(t),w:Math.round(w),h:Math.round(h)};
+}
+function _ppApply(p){
+  const el=document.getElementById(p); if(!el||!el.classList.contains('pp')) return;
+  const st=_ppState[p]||(_ppState[p]={});
+  const g=st.mx?{l:0,t:0,w:1,h:1}:(st.g||_ppDefault(p)), r=_ppPx(g);
+  el.style.setProperty('--pp-l',r.l+'px'); el.style.setProperty('--pp-t',r.t+'px'); el.style.setProperty('--pp-w',r.w+'px'); el.style.setProperty('--pp-h',r.h+'px');
+}
+function _ppChromeHTML(p){
+  const h=['n','s','e','w','ne','nw','se','sw'].map(d=>'<div class="rsz rsz-'+d+'" onpointerdown="_ppGrab(event,\''+p+'\',\''+d+'\')"></div>').join('');
+  return '<div class="pp-bar" onpointerdown="_ppGrab(event,\''+p+'\',\'move\')" title="Drag to move"><span class="pp-ttl">⠿ '+_PP_NAME[p]+'</span>'
+    +'<button class="pp-b pp-max" onpointerdown="event.stopPropagation()" onclick="_ppMax(\''+p+'\')" title="Fill the screen, or back to its own size">⤢</button>'
+    +'<button class="pp-b pp-dock" onpointerdown="event.stopPropagation()" onclick="_ppSet(\''+p+'\',false)" title="Put this pane back in its place">⇲ Dock</button></div>'+h;
+}
+function _ppSet(p,on,quiet){
+  const el=document.getElementById(p); if(!el) return;
+  el.querySelectorAll(':scope>.pp-bar,:scope>.rsz').forEach(x=>x.remove());
+  if(on){
+    if(_pwMode===p) _pwSet(null);
+    el.insertAdjacentHTML('afterbegin',_ppChromeHTML(p));
+    el.classList.add('pp'); _ppFront(p); _ppApply(p);
+  }else{
+    el.classList.remove('pp','pp-top'); ['--pp-l','--pp-t','--pp-w','--pp-h'].forEach(k=>el.style.removeProperty(k)); el.style.zIndex='';
+  }
+  (_ppState[p]||(_ppState[p]={})).on=!!on;
+  if(!quiet) _ppSave();
+  try{ updateSbToggle(); }catch(e){}
+  try{ jebLayout(); }catch(e){}
+  if(!on&&!quiet&&window.innerWidth<1200) showPane(p);
+  try{ adjustP3Layout(); }catch(e){}
+}
+function _ppFront(p){ ['sb','p2'].forEach(q=>{ const e=document.getElementById(q); if(e) e.classList.toggle('pp-top',q===p); }); }
+function _ppMax(p){ const st=_ppState[p]||(_ppState[p]={}); st.mx=!st.mx; _ppApply(p); _ppSave(); }
+function _ppGrab(ev,p,dir){
+  if(ev.button>0) return;
+  ev.preventDefault(); ev.stopPropagation();
+  const el=document.getElementById(p); if(!el) return;
+  _ppFront(p);
+  const r=el.getBoundingClientRect();
+  _ppRsz={p,dir,x:ev.clientX,y:ev.clientY,l:r.left,t:r.top,w:r.width,h:r.height,moved:false};
+  document.addEventListener('pointermove',_ppMove); document.addEventListener('pointerup',_ppStop); document.addEventListener('pointercancel',_ppStop);
+  document.body.style.userSelect='none';
+}
+function _ppMove(ev){
+  const R=_ppRsz; if(!R) return;
+  const el=document.getElementById(R.p); if(!el) return;
+  const W=window.innerWidth, H=window.innerHeight, ph=_ppTier()==='phone', dx=ev.clientX-R.x, dy=ev.clientY-R.y, d=R.dir;
+  let l=R.l,t=R.t,w=R.w,h=R.h;
+  if(d==='move'){ l=R.l+dx; t=R.t+dy; }
+  else{
+    if(d.includes('e')) w=Math.max(_PP_MIN_W,Math.min(W-R.l,R.w+dx));
+    if(d.includes('s')) h=Math.max(_PP_MIN_H,Math.min(H-R.t,R.h+dy));
+    if(d.includes('w')){ w=Math.max(_PP_MIN_W,Math.min(R.l+R.w,R.w-dx)); l=R.l+R.w-w; }
+    if(d.includes('n')){ h=Math.max(_PP_MIN_H,Math.min(R.t+R.h,R.h-dy)); t=R.t+R.h-h; }
+  }
+  if(ph){ l=0; w=W; }
+  l=Math.max(0,Math.min(l,W-w)); t=Math.max(0,Math.min(t,H-h));
+  R.moved=true;
+  const st=_ppState[R.p]||(_ppState[R.p]={}); st.mx=false;
+  st.g={l:l/W,t:t/H,w:w/W,h:h/H};
+  _ppApply(R.p);
+}
+function _ppStop(){
+  if(!_ppRsz) return;
+  _ppRsz=null;
+  document.removeEventListener('pointermove',_ppMove); document.removeEventListener('pointerup',_ppStop); document.removeEventListener('pointercancel',_ppStop);
+  document.body.style.userSelect='';
+  _ppSave();
+}
+/* ── one docked pane across the whole window (PC only; the ⤡ tab at the right edge brings the others back) ── */
+function _pwSet(m){
+  const b=document.body;
+  b.classList.remove('pw-sb','pw-p2','pw-p3'); _pwMode=null;
+  if(m&&window.innerWidth>=1200&&!_ppOn(m)){
+    if(m==='sb') document.getElementById('sb')?.classList.remove('closed');
+    b.classList.add('pw-'+m); _pwMode=m;
+    if(!document.getElementById('pw-back')){
+      const t=document.createElement('button'); t.id='pw-back'; t.type='button'; t.textContent='⤡'; t.title='Back to all panes';
+      t.setAttribute('aria-label','Back to all panes'); t.onclick=()=>_pwSet(null); document.body.appendChild(t);
+    }
+  }
+  try{ updateSbToggle(); }catch(e){}
+  try{ jebLayout(); }catch(e){}
+  try{ adjustP3Layout(); }catch(e){}
+}
+/* a click that needs another pane leaves full width (a folder → its notes; a note → the note) */
+function _pwLeaveFor(need){ if(_pwMode&&_pwMode!==need&&!(need==='p2'&&_pwMode==='p3')) _pwSet(null); }
+function _ppMenu(ev,p){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); ev.__keepCtx=true; }
+  hideCtx();
+  const m=document.getElementById('ctx'); m.innerHTML='';
+  const mk=(label,fn)=>{ const d=document.createElement('div'); d.className='ci'; d.textContent=label; d.onclick=()=>{ hideCtx(); fn(); }; m.appendChild(d); };
+  const pc=window.innerWidth>=1200, nm=p==='sb'?'side pane':'note list';
+  if(_ppOn(p)) mk('⇲ Put the '+nm+' back in its place',()=>_ppSet(p,false));
+  else mk('🪟 Pop out the '+nm+' as a window',()=>_ppSet(p,true));
+  if(pc&&!_ppOn(p)){
+    if(_pwMode===p) mk('⤡ Back to all panes',()=>_pwSet(null));
+    else mk('⤢ The '+nm+' full width',()=>_pwSet(p));
+  }
+  if(pc) mk(_pwMode==='p3'?'⤡ Back to all panes':'⤢ The note full width',()=>_pwSet(_pwMode==='p3'?null:'p3'));
+  _ctxPos(m,ev);
+}
+window.addEventListener('resize',()=>{
+  ['sb','p2'].forEach(p=>{ if(_ppOn(p)) _ppApply(p); });
+  if(_pwMode&&window.innerWidth<1200) _pwSet(null);
+});
 
 
 function autoFit(silent=false){
@@ -23847,7 +24036,7 @@ function _jebBarOn(){ return _JEB_APP||!(DB&&DB.theme&&DB.theme.jebBar===false);
 /* the bar's left edge: PC = the sidebar's right edge (0 when collapsed), else 0; Jeb mode has no sidebar */
 function jebLayout(){
   const sb=_jebEl('sb'); let l=0;
-  if(!_JEB_APP&&window.innerWidth>=1200&&sb) l=Math.max(0,Math.round(sb.getBoundingClientRect().right));
+  if(!_JEB_APP&&window.innerWidth>=1200&&sb&&!sb.classList.contains('pp')) l=Math.max(0,Math.round(sb.getBoundingClientRect().right));
   /* v05.08 — onto its two users, never <html> (see the CSS note at --jeb-h) */
   ['jeb-bar','jeb-deck','zab-tk','zab-tk-again'].forEach(id=>{ const e=_jebEl(id); if(e&&e.style.getPropertyValue('--jeb-l')!==l+'px') e.style.setProperty('--jeb-l',l+'px'); });
 }
@@ -27718,6 +27907,7 @@ function backFromP3(){
    itself and should never be called for that breakpoint. */
 function showPane(name){
   if(window.innerWidth>=1200) return;
+  if((name==='sb'||name==='p2')&&_ppOn(name)){ _ppFront(name); return; }   /* v05.52 · J82 */
   var sb=document.getElementById('sb');
   var p2=document.getElementById('p2');
   var p3=document.getElementById('p3');
@@ -35029,6 +35219,9 @@ function _sgMount(root,state,editable){
     const _sw=localStorage.getItem('siyagah-sb-w');
     const sb=document.getElementById('sb');
     if(_sw&&sb){sb.style.width=_sw;}
+    /* v05.52 · J82 — the note list's width, and the panes popped out on this device */
+    try{ const _pw=localStorage.getItem('siyagah-p2-w'), p2=document.getElementById('p2'); if(_pw&&p2&&/^\d+px$/.test(_pw)) p2.style.width=_pw; }catch(e){}
+    try{ _ppLoad(); ['sb','p2'].forEach(p=>{ if(_ppState[p]&&_ppState[p].on) _ppSet(p,true,true); }); }catch(e){}
   })();
   updateSbToggle();
 

@@ -2531,7 +2531,9 @@ await r.block('6o-1-menu-reorg', async () => {
     'openEnexImport',
     /* v05.48 (issue #237, J74 ②) — 🗺 Mapping My Journey import in 🧰 Tools, under 📥 Evernote import, added on purpose
        (the Architect's full run caught it; updated in place). */
-    'openMmjImport'];
+    'openMmjImport',
+    /* v05.52 (J82) — 🪟 Side pane: pop out or full width in 🧰 Tools → View, added on purpose (the Architect's full run caught it; updated in place). */
+    '_ppMenu'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
   const lost = V0420.filter((f) => !now.includes(f));
   const added = [...new Set(now)].filter((f) => !V0420.includes(f));
@@ -12582,6 +12584,19 @@ await r.block('111-replica-load-j71', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 13, 'the replica-load-j71.mjs check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, '111: ' + row.label, row.detail);
   r.check(out.status === 0, 'the replica-load-j71.mjs check exits cleanly', `exit ${out.status}`);
+});
+
+/* 112 — v05.52, J82: the side pane and the note list pop out as windows (moved by their bar, resized from all sides and corners; a phone: a full-width sheet), a reload keeps them, ⇲ Dock puts them back; on the PC the dividers widen past the old limits and each pane can go full width. tools/pane-pop-j82.mjs runs 112a–112j at 390 / 820 / 1440. */
+await r.block('112-pane-pop-j82', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./pane-pop-j82.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 24, 'the pane-pop-j82.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '112: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the pane-pop-j82.mjs check exits cleanly', `exit ${out.status}`);
 });
 
 /* ── run everything registered above, or a --only subset ─────────────────
