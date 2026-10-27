@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 /* tools/list-p3.mjs — v05.22, P3: the note list after a tag change is drawn in slices, from reused card text (checks 82a–82f).
+   v05.53 — J08 W1, changed in place: a list over 300 cards is now a WINDOW (only the cards around the screen are in the page), so
+   "complete" means "the window is drawn", the oracle compares the cards in the window with a whole cache-free draw AT THE SAME
+   PLACES (and everything around the list byte for byte, the find bar aside), and the checks that asked for every card in the page
+   (82b, 82c's slices, 82d's _listFinish and select-all) now ask what replaces them: the last note reached by scrolling and by
+   "Find in this list", a new list leaving nothing of the old one, the window drawn at once. Lists of 300 or fewer are compared
+   whole, exactly as before.
 
    `--measure` prints the before/after table only (no checks):  node tools/list-p3.mjs --measure [--notes=9000,27000] [--reps=3]
    Otherwise runs the checks (`--only=82a,82c`; `--vp=390` narrows to one layout; `--notes=9000,27000` sets 82e's sizes).
@@ -67,7 +73,9 @@ const MEASURE = async ({ pre, act, want }) => {
   const first = cards();
   let tAll = null;
   while (performance.now() - t0 < 60000) {
-    if (cards() >= want && !(typeof _listPending === 'function' && _listPending())) { tAll = performance.now() - t0; break; }
+    /* v05.53: a list over 300 cards is complete when its window is drawn (only the cards around the screen are in the page) */
+    const win = typeof _listWin !== 'undefined' && _listWin && _listWin.al.isConnected && _listWin.n === want;
+    if ((cards() >= want || (win && cards() > 0)) && !(typeof _listPending === 'function' && _listPending())) { tAll = performance.now() - t0; break; }
     await new Promise((r) => setTimeout(r, 20));
   }
   await new Promise((r) => setTimeout(r, 150));
@@ -132,24 +140,51 @@ const HOOK = String.raw`(() => {
     return artsIn(ST.folder).length;
   };
   L.cards = () => document.querySelectorAll('#p2c .ar').length;
+  L.win = () => { const J = typeof _listWin !== 'undefined' ? _listWin : null; return !!(J && J.al.isConnected && document.getElementById('p2c').contains(J.al)); };
+  /* the page with the list's cards taken out (and, for a window, the find bar): what must equal the whole draw around the list */
+  L.frame = (el, win) => { const c = el.cloneNode(true); if (win) { c.querySelectorAll('.lf-bar').forEach((x) => x.remove()); c.querySelectorAll('.al-win').forEach((x) => { const d = document.createElement('div'); d.className = 'al'; x.replaceWith(d); }); } else { const als = c.querySelectorAll('.fv > .al'); if (als.length) als[als.length - 1].innerHTML = ''; } return L.strip(c.innerHTML); };
   L.oracle = () => {
     const out = {};
     try {
-      const p2c = document.getElementById('p2c'), a = L.strip(p2c.innerHTML);
+      const p2c = document.getElementById('p2c'), win = L.win();
+      const a = L.strip(p2c.innerHTML), J = win ? _listWin : null;
+      const fa = win ? L.frame(p2c, true) : null, wc = win ? [...J.al.children].map((x) => L.strip(x.outerHTML)) : null, r0 = win ? J.r0 : 0;
+      const idx = win ? wc.map((_, k) => _lwI(J, r0 + k)) : null;
       _cardC.clear(); _p2cLast = null; const keep = _LIST_MIN; _LIST_MIN = 1e9;
       try { renderP2C(); } finally { _LIST_MIN = keep; }
       const b = L.strip(p2c.innerHTML);
-      out.eq = a === b;
-      if (a !== b) { let k = 0; while (k < a.length && a[k] === b[k]) k++; out.diff = '@' + k + ' cached «' + a.slice(Math.max(0, k - 60), k + 100) + '» full «' + b.slice(Math.max(0, k - 60), k + 100) + '»'; }
+      if (!win) {
+        out.eq = a === b;
+        if (a !== b) { let k = 0; while (k < a.length && a[k] === b[k]) k++; out.diff = '@' + k + ' cached «' + a.slice(Math.max(0, k - 60), k + 100) + '» full «' + b.slice(Math.max(0, k - 60), k + 100) + '»'; }
+      } else {
+        const als = p2c.querySelectorAll('.fv > .al'), whole = als.length ? [...als[als.length - 1].children].map((x) => L.strip(x.outerHTML)) : [];
+        const fb = L.frame(p2c, false);
+        let bad = -1; for (let k = 0; k < wc.length; k++) if (wc[k] !== whole[idx[k]]) { bad = k; break; }
+        out.eq = fa === fb && bad < 0 && wc.length > 0;
+        out.win = { r0, k: wc.length, n: whole.length };
+        if (fa !== fb) { let k = 0; while (k < fa.length && fa[k] === fb[k]) k++; out.diff = 'around the list @' + k + ' window «' + fa.slice(Math.max(0, k - 60), k + 100) + '» whole «' + fb.slice(Math.max(0, k - 60), k + 100) + '»'; }
+        else if (bad >= 0) out.diff = 'card ' + idx[bad] + ': window «' + wc[bad].slice(0, 160) + '» whole «' + String(whole[idx[bad]]).slice(0, 160) + '»';
+        else if (!wc.length) out.diff = 'the window is empty';
+      }
     } catch (e) { out.err = String(e); }
     return out;
+  };
+  /* the visible part of the list is covered by drawn cards (no blank rows on the screen) */
+  L.covered = () => {
+    if (!L.win()) return true;
+    const J = _listWin, el = document.getElementById('p2c'), ch = J.al.children, e = el.getBoundingClientRect(), a = J.al.getBoundingClientRect();
+    if (!ch.length) return _lwM(J) === 0;
+    const top = ch[0].getBoundingClientRect().top, bot = ch[ch.length - 1].getBoundingClientRect().bottom;
+    const vt = Math.max(e.top, a.top + parseFloat(J.al.style.paddingTop || 0) - 1), vb = Math.min(e.bottom, a.bottom);
+    return (J.r0 === 0 || top <= vt + 1) && (J.r1 >= _lwM(J) || bot >= vb - 1);
   };
   /* run an action, note how much was in the page straight away, then once complete compare with a whole cache-free draw */
   L.run = async (src) => {
     (0, eval)(src);
     const first = L.cards();
     await L.settle();
-    const out = { first, n: L.want(), cards: L.cards() };
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const out = { first, n: L.want(), cards: L.cards(), win: L.win(), covered: L.covered() };
     return Object.assign(out, L.oracle());
   };
 })();`;
@@ -185,15 +220,28 @@ async function chkA(vp) {
       const r = await p.evaluate((src) => __lp.run(src), s.src);
       if (want('82a')) {
         check(!r.err && r.eq === true, `${tag('82a')} ${s.id}: the list (${r.n} cards) equals a whole cache-free draw`, r.err || r.diff || '');
-        /* an edit that leaves the same notes in the same places is patched in the finished list (P2), not drawn again in slices */
-        if (r.n > 300 && !s.patch) check(r.first < r.n, `${tag('82a')} ${s.id}: the first paint was a part of the list (${r.first} of ${r.n}), the rest followed in slices`);
+        /* v05.53: a list over 300 cards is a window: only the cards around the screen are in the page, from the first paint on */
+        if (r.n > 300) check(r.win && r.first < r.n && r.cards <= 200, `${tag('82a')} ${s.id}: only a window of the list is in the page (${r.cards} of ${r.n} cards)`);
       }
-      if (want('82b')) check(r.cards === r.n, `${tag('82b')} ${s.id}: every card is in the page (${r.cards} of ${r.n})`);
+      if (want('82b')) check(r.n > 300 ? r.covered : r.cards === r.n, r.n > 300 ? `${tag('82b')} ${s.id}: the visible part of the list is covered by drawn cards` : `${tag('82b')} ${s.id}: every card is in the page (${r.cards} of ${r.n})`);
     }
     if (want('82b')) {
       await p.evaluate(() => { selFolder('f1'); return __lp.settle(); });
-      const last = await p.evaluate(() => { const a = artsIn(ST.folder); const t = a.length ? a[a.length - 1].title : ''; return { t, inDom: document.getElementById('p2c').textContent.includes(t), n: a.length }; });
-      check(last.n > 0 && last.inDom, `${tag('82b')} the last note's title (“${last.t}”) is in the page: Ctrl+F finds it`);
+      const last = await p.evaluate(async () => {
+        const a = artsIn(ST.folder), t = a.length ? a[a.length - 1].title : '', el = document.getElementById('p2c');
+        el.scrollTop = el.scrollHeight; await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const card = el.querySelector('.ar[data-aid="' + a[a.length - 1].id + '"]'), cr = card && card.getBoundingClientRect(), er = el.getBoundingClientRect();
+        const seen = !!card && cr.bottom <= er.bottom + 1 && cr.top >= er.top - 1;
+        el.scrollTop = 0; await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const inp = document.getElementById('lf-q'); inp.value = t; _lfInput(t);
+        for (let i = 0; i < 300 && !(_listWin.q === t && !_listWin.busy); i++) await new Promise((r) => setTimeout(r, 20));
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const found = [...el.querySelectorAll('.ar')].map((x) => x.getAttribute('data-aid')), lbl = document.getElementById('lf-n').textContent;
+        _lfClear(); await new Promise((r) => setTimeout(r, 50));
+        return { t, n: a.length, seen, found, lbl, id: a[a.length - 1].id };
+      });
+      check(last.n > 300 && last.seen, `${tag('82b')} scrolling to the end shows the last note's card (“${last.t}”, ${last.n} notes)`);
+      check(last.found.length === 1 && last.found[0] === last.id && /^1 of /.test(last.lbl), `${tag('82b')} "Find in this list" finds the last note by its title (${JSON.stringify(last.found)}, “${last.lbl}”): the place of Ctrl+F in a window`);
     }
     check(A.errors.length === 0, `${tag('82a')} no page errors`, A.errors.slice(0, 3).join(' | '));
   } finally { await A.close(); }
@@ -217,7 +265,7 @@ async function chkRecv(vp, pw, srv, browser) {
       await quiet(cloud, A, 60000);
       const r = await on(A, async () => { await __lp.settle(); return Object.assign({ n: __lp.want(), cards: __lp.cards() }, __lp.oracle()); });
       check(got, `${tag('82a')} received ${s.id}: it reached the device`);
-      check(!r.err && r.eq === true && r.cards === r.n, `${tag('82a')} received ${s.id}: the list (${r.cards} of ${r.n} cards) equals a whole cache-free draw`, r.err || r.diff || '');
+      check(!r.err && r.eq === true && (r.n > 300 ? r.cards < r.n : r.cards === r.n), `${tag('82a')} received ${s.id}: the list (${r.cards} of ${r.n} cards in the page) equals a whole cache-free draw`, r.err || r.diff || '');
     }
     check(A.errors.length === 0, `${tag('82a')} received: no page errors`, A.errors.slice(0, 3).join(' | '));
   } finally { await A.page.context().close().catch(() => {}); await B.page.context().close().catch(() => {}); }
@@ -229,23 +277,23 @@ async function chkC(vp) {
   try {
     await seed(p, NBIG, F2); await sleep(300); await p.evaluate(HOOK);
     await p.evaluate(() => { ST.search = ''; selFolder('f1'); return __lp.settle(); });
+    /* v05.53: there are no slices left to cancel. What 82c guards is the same: a new list leaves nothing of the old one in the page,
+       now or later (a frame, a scroll, a timer of the old list) */
     const r = await p.evaluate(async () => {
       const p2c = document.getElementById('p2c'), late = [];
       const mo = new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1 && n.classList && n.classList.contains('ar')) late.push(n.getAttribute('data-aid')); })));
-      mo.observe(p2c, { childList: true, subtree: true });
       selTag('big');
-      await new Promise((r) => requestAnimationFrame(r));
-      const pendingAtSwitch = __lp.pending(), drawnA = __lp.cards();
-      late.length = 0;
-      selTag('mid');   /* switch to another tag while the first list is still being appended */
-      await __lp.settle(); await new Promise((r) => setTimeout(r, 300)); mo.disconnect();
+      p2c.scrollTop = 4000; await new Promise((r) => requestAnimationFrame(r));
+      mo.observe(p2c, { childList: true, subtree: true });
+      selTag('mid');   /* switch to another tag while the first list has just been scrolled */
+      await new Promise((r) => setTimeout(r, 300));
+      p2c.scrollTop += 2500; await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); await new Promise((r) => setTimeout(r, 200)); mo.disconnect();
       const inMid = new Set(DB.articles.filter((a) => (a.tags || []).includes('mid')).map((a) => a.id));
       const stray = late.filter((id) => !inMid.has(id)), dom = [...document.querySelectorAll('#p2c .ar')].map((e) => e.getAttribute('data-aid'));
-      return { pendingAtSwitch, drawnA, nBig: DB.articles.filter((a) => (a.tags || []).includes('big')).length, stray: stray.length, domStray: dom.filter((id) => !inMid.has(id)).length, dom: dom.length, mid: inMid.size, late: late.length };
+      return { stray: stray.length, domStray: dom.filter((id) => !inMid.has(id)).length, dom: dom.length, mid: inMid.size, late: late.length, covered: __lp.covered() };
     });
-    check(r.pendingAtSwitch && r.drawnA < r.nBig, `${tag} the first list was still being appended when the second began (${r.drawnA} of ${r.nBig} drawn)`);
-    check(r.stray === 0 && r.domStray === 0, `${tag} no card of the old list was appended after the new one began (${r.stray} stray appended, ${r.domStray} stray in the page)`);
-    check(r.dom === r.mid && r.late > 0, `${tag} the new list is complete (${r.dom} of ${r.mid}), appended after the switch (${r.late} cards)`);
+    check(r.stray === 0 && r.domStray === 0, `${tag} no card of the old list was added after the new one began (${r.stray} stray added, ${r.domStray} stray in the page)`);
+    check(r.dom > 0 && r.dom < r.mid && r.late > 0 && r.covered, `${tag} the new list is a window (${r.dom} of ${r.mid} cards) that follows the scroll (${r.late} cards drawn after the switch), covering the screen`);
     check(A.errors.length === 0, `${tag} no page errors`, A.errors.slice(0, 3).join(' | '));
   } finally { await A.close(); }
 }
@@ -256,48 +304,58 @@ async function chkD(vp) {
   try {
     await seed(p, NBIG, F2); await sleep(300); await p.evaluate(HOOK);
     await p.evaluate(() => { ST.search = ''; selFolder('f1'); return __lp.settle(); });
-    /* (i) _listFinish() completes at once */
-    let r = await p.evaluate(() => { selTag('big'); const first = __lp.cards(); const t = performance.now(); _listFinish(); return { first, now: __lp.cards(), want: __lp.want(), pending: __lp.pending(), ms: Math.round(performance.now() - t) }; });
-    check(r.first < r.want && r.now === r.want && !r.pending, tag(`_listFinish() puts every card in the page at once (${r.first} → ${r.now} of ${r.want}, ${r.ms} ms)`));
-    /* (ii) a card opened while the slices run stays marked, and the list still completes */
+    /* (i) the window is drawn at once: nothing is added to the page afterwards while nobody scrolls (v05.53; was: _listFinish()) */
+    let r = await p.evaluate(async () => {
+      const p2c = document.getElementById('p2c'); let late = 0;
+      const mo = new MutationObserver((ms) => ms.forEach((m) => { late += m.addedNodes.length; }));
+      selTag('big'); const first = __lp.cards();
+      mo.observe(p2c, { childList: true, subtree: true });
+      await new Promise((r) => setTimeout(r, 600)); mo.disconnect();
+      return { first, late, want: __lp.want(), pending: __lp.pending(), covered: __lp.covered() };
+    });
+    check(r.first > 0 && r.first < r.want && r.late === 0 && !r.pending && r.covered, tag(`the window is complete at once (${r.first} of ${r.want} cards, ${r.late} added in the next 600 ms)`));
+    /* (ii) a card opened from elsewhere is marked and brought into view; a click in the list does not move it */
     r = await p.evaluate(async () => {
-      selFolder('f1'); const first = __lp.cards(); const pend = __lp.pending();
+      selFolder('f1'); const el = document.getElementById('p2c'); el.scrollTop = 0;
+      await new Promise((r) => requestAnimationFrame(r));
       selArt('n1200'); await new Promise((r) => requestAnimationFrame(r)); selArt('n3999');
-      await __lp.settle();
-      return { first, pend, sel: [...document.querySelectorAll('#p2c .ar.sel')].map((e) => e.getAttribute('data-aid')), cards: __lp.cards(), want: __lp.want(), ...__lp.oracle() };
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const s = el.querySelector('.ar.sel'), sr = s && s.getBoundingClientRect(), er = el.getBoundingClientRect();
+      const inView = !!s && sr.top >= er.top - 1 && sr.bottom <= er.bottom + 1;
+      const st = el.scrollTop, bb = document.querySelector('.lf-bar').getBoundingClientRect().bottom;   /* a card in full view, not under the sticky find bar */
+      const other = [...el.querySelectorAll('.ar')].find((x) => x !== s && x.getBoundingClientRect().top > Math.max(er.top, bb) && x.getBoundingClientRect().bottom < er.bottom);
+      if (other) other.click(); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      return { sel: [...document.querySelectorAll('#p2c .ar.sel')].map((e) => e.getAttribute('data-aid')), inView, still: el.scrollTop === st, other: other && other.getAttribute('data-aid'), ...__lp.oracle() };
     });
-    check(r.pend && r.sel.length === 1 && r.sel[0] === 'n3999' && r.cards === r.want, tag(`a card opened while the slices run: one marked card (${JSON.stringify(r.sel)}), ${r.cards} of ${r.want} cards`));
-    check(r.eq === true, tag('…and the list equals a whole cache-free draw'), r.diff || r.err || '');
-    /* (iii) a received edit's targeted redraw while slices are pending */
+    check(r.inView && r.sel.length === 1 && r.sel[0] === r.other, tag(`a note opened from elsewhere is brought into view, and a click in the list then marks only the clicked card (${JSON.stringify(r.sel)})`));
+    check(r.still, tag('…the click does not move the list'));
+    check(r.eq === true, tag('…and the window equals a whole cache-free draw'), r.diff || r.err || '');
+    /* (iii) a received edit's targeted redraw works on the window */
     r = await p.evaluate(async () => {
-      selFolder('f2'); selFolder('f1'); const pend = __lp.pending();
-      const a = DB.articles.find((x) => x.id === 'n1300'); a.title = 'Edited while drawing'; a.updatedAt = new Date().toISOString();
-      const got = _p2cTry(['n1300']);
-      await __lp.settle();
-      const el = document.querySelector('#p2c .ar[data-aid="n1300"]');
-      return { pend, got, shown: !!el && el.textContent.includes('Edited while drawing'), cards: __lp.cards(), want: __lp.want(), ...__lp.oracle() };
+      selFolder('f2'); selFolder('f1'); const el = document.getElementById('p2c'); el.scrollTop = 0; await new Promise((r) => requestAnimationFrame(r));
+      const vis = el.querySelector('.ar'), id = vis.getAttribute('data-aid');
+      const a = DB.articles.find((x) => x.id === id); a.title = 'Edited while drawn'; a.updatedAt = new Date().toISOString();
+      const node = el.firstElementChild, got = _p2cTry([id]);
+      const c = el.querySelector('.ar[data-aid="' + id + '"]');
+      return { got, same: el.firstElementChild === node, shown: !!c && c.textContent.includes('Edited while drawn'), ...__lp.oracle() };
     });
-    check(r.pend && (r.got === true || r.got === false) && r.shown && r.cards === r.want, tag(`a targeted redraw during the slices (${r.got ? 'targeted' : 'fell back'}): the edit shows, ${r.cards} of ${r.want} cards`));
+    check(r.got === true && r.same && r.shown, tag(`a targeted redraw works on the window: the edit shows, the page around it is the same node (${r.got ? 'targeted' : 'fell back'})`));
     check(r.eq === true, tag('…and equals a whole cache-free draw'), r.diff || r.err || '');
-    /* (iv) scrolling to the end draws on */
+    /* (iv) scrolling to the end draws the last cards */
     r = await p.evaluate(async () => {
-      selFolder('f2'); selFolder('f1'); const first = __lp.cards(), el = document.getElementById('p2c');
+      selFolder('f2'); selFolder('f1'); const el = document.getElementById('p2c');
       el.scrollTop = el.scrollHeight; await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      const after = __lp.cards(); el.scrollTop = el.scrollHeight;
-      await __lp.settle();
-      return { first, after, cards: __lp.cards(), want: __lp.want() };
+      const a = artsIn(ST.folder), last = a[a.length - 1].id;
+      return { has: !!el.querySelector('.ar[data-aid="' + last + '"]'), covered: __lp.covered(), cards: __lp.cards(), ...__lp.oracle() };
     });
-    check(r.after > r.first && r.cards === r.want, tag(`scrolling to the end draws the next slices (${r.first} → ${r.after} within two frames → ${r.cards} of ${r.want})`));
-    /* (v) select-all takes in the last title; (vi) the counts follow the data */
+    check(r.has && r.covered, tag(`scrolling to the end draws the last card (${r.cards} cards in the window)`));
+    check(r.eq === true, tag('…and the window at the end equals a whole cache-free draw'), r.diff || r.err || '');
+    /* (v) the counts follow the data (the list's own header) */
     r = await p.evaluate(() => {
-      const el = document.getElementById('p2c'), a = artsIn(ST.folder), last = a[a.length - 1].title;
-      /* the cards are user-select:none, so there is no select-all-and-copy of the list's text in the app to keep; what a script or
-         Ctrl+F can reach is the text of the page (a card off the screen is skipped by the painter, not removed) */
-      const txt = el.textContent;
+      selFolder('f1'); const el = document.getElementById('p2c'), a = artsIn(ST.folder);
       const m = /Notes \((\d+)\)/.exec(el.textContent);
-      return { has: txt.includes(last), last, head: m ? +m[1] : -1, n: a.length, f1: cntOf('f1') };
+      return { head: m ? +m[1] : -1, n: a.length, f1: cntOf('f1') };
     });
-    check(r.has, tag(`the text of the page holds the last note's title (“${r.last}”), as select-all / Ctrl+F need`));
     check(r.head === r.n && r.f1 === r.n, tag(`the folder's counts follow the data (header ${r.head}, list ${r.n}, cntOf ${r.f1})`));
     check(A.errors.length === 0, tag('no page errors'), A.errors.slice(0, 3).join(' | '));
   } finally { await A.close(); }
@@ -316,35 +374,33 @@ async function chkF(vp) {
         if ('tag' in st) ST.tag = st.tag; if ('folder' in st) { ST.folder = st.folder; ST.tag = null; }
         renderP2C(); await __lp.settle();
       }
+      /* v05.53: scrolling the window and finding in it write nothing either */
+      const el = document.getElementById('p2c'); el.scrollTop = el.scrollHeight / 2; await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      _lfInput('Note 12'); await new Promise((r) => setTimeout(r, 600)); _lfClear(); await new Promise((r) => setTimeout(r, 100));
       const w = Object.assign({}, __lp.writes), same = JSON.stringify(DB) === db0;
-      return { w, same, cards: __lp.cards(), want: __lp.want() };
+      return { w, same, cards: __lp.cards(), want: __lp.want(), covered: __lp.covered() };
     });
-    check(Object.keys(r.w).length === 0, `${tag} drawing the list (tag, un-select, switch, folder, back) wrote nothing`, JSON.stringify(r.w));
+    check(Object.keys(r.w).length === 0, `${tag} drawing the list (tag, un-select, switch, folder, back), scrolling it and finding in it wrote nothing`, JSON.stringify(r.w));
     check(r.same, `${tag} …and DB is byte-identical afterwards`);
-    check(r.cards === r.want, `${tag} …and the list is complete (${r.cards} of ${r.want})`);
+    check(r.cards > 0 && r.cards < r.want && r.covered, `${tag} …and the list is a window covering the screen (${r.cards} of ${r.want})`);
   } finally { await A.close(); }
 }
 
-/* 82e — speed. Targets (phone x4, 27,000 notes): first screenful ≤ 200 ms; no long task over 100 ms; the whole list in the page within 3 s. */
+/* 82e — speed. Targets (phone x4, 27,000 notes): first screenful ≤ 200 ms; no long task over 100 ms; the list complete within 3 s.
+   v05.53 (J08 W1), changed in place: a list over 300 cards is complete when its window is drawn, so the old regression guards (the
+   build before v05.22: 5.8 s, a 5.0 s long task) are replaced by the window's own targets as guards, scaled by this computer's
+   factor. Measured on v05.52 for the record: un-selecting a tag of 25,000 complete in ~21 s with a 1.7–1.8 s long task (phone x4). */
 async function chkE() {
   const rows = await measure('P82e', null);
   for (const row of rows) {
     if (row.scen === 'clear a search') continue;   /* the sidebar only: the list is not drawn */
     const L = `82e ${row.vp} ${row.N.toLocaleString('en')} notes, ${row.scen} (${row.want} cards)`;
-    /* the issue's three targets. The first is a hard check. The other two cannot be met for a list of 25,000 cards without the
-       windowed list (every frame the page draws costs time in proportion to the cards already in it): where one is missed it is
-       PRINTED as "note … target not met" (reported in the CHANGELOG), and a regression guard holds instead — never worse than
-       the build before this round (the whole list in 5.8 s, a 5.0 s long task at 27,000 notes, phone x4) */
-    const firstOk = row.first <= 200, longOk = row.worst <= 100, allOk = row.all !== null && row.all <= 3000;
-    if (!firstOk) console.log(`  note  ${L}: target not met — first screenful ${row.first} ms (target ≤ 200 ms)`);
-    if (!longOk) console.log(`  note  ${L}: target not met — worst long task ${row.worst} ms (target ≤ 100 ms)`);
-    if (!allOk) console.log(`  note  ${L}: target not met — whole list in ${row.all} ms (target ≤ 3,000 ms)`);
-    /* guards: much better than the build before this round (first screenful up to 5,788 ms, long task up to 5,019 ms) */
+    if (row.worst > 100) console.log(`  note  ${L}: target not met — worst long task ${row.worst} ms (target ≤ 100 ms)`);
     /* v05.24 (hs520): each guard is the runner's limit × this computer's factor (≥ 1), both printed */
-    const G1 = hostLimit(500), G2 = hostLimit(800), G3 = hostLimit(row.want > 9000 ? 10000 : 3000);
-    check(row.first <= G1.ms, `${L}: first screenful ${row.first} ms (guard ≤ ${G1.raw} ms × host ${G1.factor}; target 200)`);
+    const G1 = hostLimit(200), G2 = hostLimit(200), G3 = hostLimit(400);
+    check(row.first <= G1.ms, `${L}: first screenful ${row.first} ms (≤ ${G1.raw} ms × host ${G1.factor})`);
     check(row.worst <= G2.ms, `${L}: worst long task ${row.worst} ms (guard ≤ ${G2.raw} ms × host ${G2.factor}; target 100)`);
-    check(row.all !== null && row.cards === row.want && row.all <= G3.ms, `${L}: the whole list is in the page in ${row.all} ms (${row.cards} of ${row.want}; guard ≤ ${G3.raw / 1000} s × host ${G3.factor}; target 3 s)`);
+    check(row.all !== null && row.all <= G3.ms && (row.want <= 300 ? row.cards === row.want : row.cards > 0 && row.cards < row.want), `${L}: the list is complete in ${row.all} ms (${row.cards} of ${row.want} cards in the page; ≤ ${G3.raw} ms × host ${G3.factor}; target 3 s)`);
   }
 }
 

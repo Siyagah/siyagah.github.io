@@ -8,7 +8,8 @@
                   a save followed by visibilitychange→hidden DOES checkpoint; a reload after it boots with the edit
    100b  crash    a save, then every process of the profile killed with SIGKILL before any checkpoint (journal only): the next boot has the edit (the journal overlay)
    100c  list     clicking a note in the finished list: the list node is the SAME one, exactly two cards changed class, the page equals a whole draw (_LIST_MIN=1e9,
-                  _cardC.clear()), and the read view is there in < 400 ms (laptop) / < 1500 ms (phone ×4)
+                  _cardC.clear()), and the read view is there in < 400 ms (laptop) / < 1500 ms (phone ×4). v05.53: the list is a window; "equals" compares its
+                  cards with the whole draw's at the same places, and the page around the list
    100d  sidebar  with Smart Views and a section's Smart Views open: every number in the sidebar equals the one the old way gives (getSmartArts / getSecSmartArts
                   lengths, descOf + some), and the redraw is ≥ 3× faster than the old counting alone costs (phone ×4; the laptop's ratio is reported)
    100e  errors   no page errors
@@ -89,10 +90,16 @@ for (const vp of VPS) {
       const after = [...document.querySelectorAll('#p2c .ar')].map((e) => e.className);
       let changed = 0; before.forEach((b, i) => { if (after[i] !== b) changed++; });
       const read = !!document.getElementById('p3c') && ST.article === id && document.getElementById('p3c').textContent.length > 20;
-      const page1 = document.getElementById('p2c').innerHTML;
       const same = document.querySelector('#p2c .al') === window.__al;
-      const lm = _LIST_MIN; _LIST_MIN = 1e9; _cardC.clear(); _p2cLast = null; renderP2C(); const whole = document.getElementById('p2c').innerHTML; _LIST_MIN = lm;
-      return { ms, changed, same, read, equal: page1 === whole, cards: before.length };
+      /* v05.53 (J08 W1), changed in place: a list of 6,000 is a window, so "equals a whole draw" means its cards equal the whole draw's
+         cards at the same places and the page around the list (the find bar aside) is byte for byte the same */
+      const p2c = document.getElementById('p2c'), J = _listWin, r0 = J.r0;
+      const frame = (win) => { const c = p2c.cloneNode(true); if (win) { c.querySelectorAll('.lf-bar').forEach((x) => x.remove()); c.querySelectorAll('.al-win').forEach((x) => { const d = document.createElement('div'); d.className = 'al'; x.replaceWith(d); }); } else { const a = c.querySelectorAll('.fv > .al'); a[a.length - 1].innerHTML = ''; } return c.innerHTML; };
+      const fa = frame(true), wc = [...J.al.children].map((x) => x.outerHTML), idx = wc.map((_, k) => _lwI(J, r0 + k));
+      const lm = _LIST_MIN; _LIST_MIN = 1e9; _cardC.clear(); _p2cLast = null; renderP2C(); _LIST_MIN = lm;
+      const als = p2c.querySelectorAll('.fv > .al'), whole = [...als[als.length - 1].children].map((x) => x.outerHTML);
+      const equal = fa === frame(false) && wc.length > 0 && wc.every((h, k) => h === whole[idx[k]]);
+      return { ms, changed, same, read, equal, cards: before.length };
     });
     check(c1.same && c1.changed === 2 && c1.equal && c1.read && c1.ms < vp.clickMs, `100c ${vp.name}: a click in a ${c1.cards}+ card list moves the highlight only`,
       `same node ${c1.same} · cards changed ${c1.changed} (want 2) · equals a whole draw ${c1.equal} · read view ${c1.read} · ${c1.ms} ms (limit ${vp.clickMs})`);

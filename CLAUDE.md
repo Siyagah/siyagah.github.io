@@ -626,20 +626,23 @@ A failing check is a wrong assertion surprisingly often — investigate before
   still the pane's first child, `_dbRev` and `_s1MergeSeq` have not moved since that paint, no slice job is running and nothing is being edited or searched; then `_selFastMove` toggles `sel` on the cards (byte-identical to a whole draw —
   check 100c compares) and keeps `_p2cLast.cards` in step. Anything else takes the whole draw as before. `renderTree` sets `_cntC` for one draw and drops it after: while set, `cntOf` is a one-pass map and the Smart View numbers are
   `smartCount` / `secSmartCount` (count-only; the lists still come from `getSmartArts`/`getSecSmartArts`). **A new Smart View with a plain filter goes in `_SF_CNT`; any other falls back to the list and is still right.**
-- **The sliced note list and the card cache (v05.22, P3).** A list over `_LIST_MIN` (300) cards is painted by `_listPaint` (tag, Note Type,
-  Smart View, Section Smart View) or `_p2cPaint` (a plain folder): the first `_listFirstN()` cards go in at once; the rest is built by
-  `_listBuild` into a hidden `div.al.al-tail` beside the visible `.al` (parsing only; no frame to pay) and moved in `_LIST_REVEAL` (1,500)
-  per frame by `_listReveal`; at the end the tail is removed, so the finished page is byte-identical to a whole draw. **Why a hidden tail:**
-  every frame after an append costs time in proportion to the cards already drawn (30 ms at 260, 130 ms at 10,000, ×4 CPU), so appending
-  in many small visible slices took 23 s for 25,000 cards; fewer, later frames is the saving. **Anything that needs the whole list calls
-  `_listFinish()`** (`_p2cTry` does); `renderP2C()` takes the running job off the clock (`_listKeep`) and `_p2cPaint` may put it back when
-  the same list is only patched (the patch works by position over the visible cards and the tail); `_listPending()` says a job is running.
-  The page's own DOM is never the source of a count (the header and `cntOf` read the data). `.al>.ar` is `content-visibility:auto`.
-  `artCardC(a,sel,sfc)` is `artCard` with a per-note cache (`_cardC`, session only, ≤ 30,000 entries): key = note id, value = signature of
-  every field `artCard()` reads + the text; **a new thing `artCard()` reads goes in that signature** (or in `_cardCtxCheck()` if it is
-  global), and a selected card and preview mode bypass the cache. Check 82's oracle compares the finished list with a cache-free whole draw
-  (`_LIST_MIN=1e9`, `_cardC.clear()`, `_p2cLast=null`). The windowed list is NOT built (Ctrl+F; waits on the owner's J08 tick box): the
-  25,000-card list is still whole only after ~6 s on a ×4 phone and its frames reach 400 ms.
+- **The windowed note list and the card cache (v05.53, J08 W1; replaced v05.22's slices).** A list over `_LIST_MIN` (300) cards (tag, Note Type,
+  Smart View, Section Smart View via `_listPaint`; a plain folder via `_p2cPaint`) is a WINDOW: `.al.al-win` holds only the cards from one
+  screen above the visible part to one screen below; its `padding-top`/`padding-bottom` stand in for the rest, from `h[i]` (each card's
+  measured height + the gap) or `est` (the first cards' average, fixed for the list). `_listWin` is the one window (`r0`/`r1` rows drawn,
+  `rows` = the find's matches or null, `_lwI(J,r)` row → card index); `_lwDraw` redraws it when the spare half screen runs out (scroll,
+  one per frame) and `ResizeObserver` (a width change forgets the heights). The card texts stay the source (`cards[i]` built when first
+  drawn). **The same list drawn again** (same head, tail, length and `_lfViewKey()`) keeps its place, heights and find words and rebuilds
+  only the window, so `_p2cTry` works on it (undrawn cards stay `undefined`); `_selFastMove` handles a window itself. **Nothing may read the
+  DOM for the whole list** (a card off screen is not in the page): use the data (`arts`, `_listWin.arts`). **"Find in this list"** (`_lf*`,
+  `.lf-bar` sticky above the window, `#lf-q`): every word in the title or the text (not the markup; `_lfPlain`), any case, searched in 12 ms
+  slices; Enter opens the first; Ctrl+F after working in `#p2` focuses it (the owner's choice: "Keep Ctrl+F working"). Opening a note from
+  anywhere brings its card into view (`_lwSelSeen`). Lists of 300 or fewer are drawn whole, byte for byte as before, with no bar.
+  `_listPending()` stays (always false) for the checks. `artCardC(a,sel,sfc)` is `artCard` with a per-note cache (`_cardC`, session only,
+  ≤ 30,000 entries): key = note id, value = signature of every field `artCard()` reads + the text; **a new thing `artCard()` reads goes in
+  that signature** (or in `_cardCtxCheck()` if it is global), and a selected card and preview mode bypass the cache. Check 82's oracle
+  compares the window's cards with a cache-free whole draw at the same places (`_LIST_MIN=1e9`, `_cardC.clear()`, `_p2cLast=null`) and the
+  page around the list byte for byte. Measured (27,000 notes, phone ×4): un-selecting a 25,000-note tag ~21 s → ~0.06 s.
 - **The keyboard lays the page out above itself (v05.44, J67).** The viewport meta's `interactive-widget=resizes-content` makes Android Chrome shrink the layout viewport (and `body`'s `100dvh`) when the keyboard opens, as before Chrome 108; without it the keyboard only covers the page and Chrome pans the whole page to the caret, taking `#p3h` off the top. Never drop it from the meta.
 - **A pane popped out as a window (v05.52, J82).** `#sb` / `#p2` with class `.pp` are the SAME panes, floated (`_ppSet`); every `.pp` rule beats the tiers' docked rules, so `.closed` / `.mob-open` do not hide a popped-out pane, and `showPane()` returns early for one. **Anything that measures the side pane's edge (`jebLayout`, `updateSbToggle`, `_p2ClampW`) must skip a `.pp` side pane.** Window places are device-local (`siyagah-pp-v1`), never `DB`.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
