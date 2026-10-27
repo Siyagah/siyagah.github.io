@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.54">
+<meta name="app-version" content="05.55">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1241,6 +1241,8 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .ar-zn{cursor:pointer;text-decoration:underline}
 .jx-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}   /* v05.24 · F1: no max-width, so the name takes the free space and the count sits at the right end */
 .jeb-ph .jeb-pm{min-width:40px;min-height:40px;border:0;background:none;color:var(--t1);font-size:20px;cursor:pointer}
+.jeb-ph .jeb-set{min-width:40px;min-height:40px;border:0;background:none;color:var(--t1);font-size:18px;cursor:pointer;border-radius:8px}
+.jeb-ph .jeb-set:hover{background:var(--hover)}
 .jeb-gh .jx-fold{border:0;background:none;min-width:32px;min-height:40px;color:var(--t1);font-size:14px;cursor:pointer;touch-action:manipulation}
 .jeb-gh.jx-sub{border-left:3px solid var(--border2)}
 .jx-ins{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 2px 8px;font-size:12.5px;color:var(--t2)}
@@ -1480,6 +1482,7 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .mini-srch-row{display:flex;gap:6px;padding:5px 10px;border-bottom:1px solid var(--border2);flex-wrap:wrap}
 
 /* ── Theme customiser ───────────────────────────────────────────────── */
+#theme-modal.zab-set{z-index:10000}   /* v05.55 · J86: over the Zab cards (8000) and panel, like the other modals */
 #theme-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;
              display:none;align-items:center;justify-content:center}
 .theme-box{background:var(--white);border-radius:14px;padding:22px 24px;
@@ -3883,7 +3886,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
   .jeb-chip{height:46px}
   [data-jeb-cards]{min-width:44px}
   .jeb-new,.jeb-choose,.jeb-go{height:44px}
-  .jeb-ph .jeb-pm{min-width:44px;min-height:44px}
+  .jeb-ph .jeb-pm,.jeb-ph .jeb-set{min-width:44px;min-height:44px}
   .jeb-add .btn{min-width:44px;min-height:44px}
   .jk-q,.jk-s,.jl-fc,.js-fc{min-width:44px}
   .cal-layer-btn{min-width:44px;min-height:44px;font-size:15px}
@@ -3977,7 +3980,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.54</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.55</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -22901,14 +22904,30 @@ function resetTheme(){
   renderThemeModal();
 }
 
-function openTheme(){
+function openTheme(top){
+  _themeZab=false;
   const el=document.getElementById('theme-modal');
+  el.classList.toggle('zab-set',!!top); _themeHd('🎨 Appearance');   /* top: opened from ⚙ Zab settings, so it stays over the Zab cards */
   el.style.display='flex';
   renderThemeModal();
 }
+/* v05.55 — J86: "⚙ Zab settings" is the same dialog showing only the Zab parts (the Zab bar, Zab on the phone, 🎞 Scrolling titles,
+   📰 News), reached from every Zab panel and cards header and every Zab's menu — Zab mode has no side pane, so no 🧰 to reach them by.
+   It sits above the cards and the panel (class zab-set: the modals' level); "🎨 All appearance settings" shows the rest. */
+let _themeZab=false;
+function _themeHd(t){ const e=document.querySelector('#theme-modal .theme-hd-t'); if(e) e.textContent=t; }
+function openZabSettings(){
+  _themeZab=true;
+  const el=document.getElementById('theme-modal');
+  el.classList.add('zab-set'); _themeHd('⚙ Zab settings');
+  el.style.display='flex';
+  renderThemeModal();
+  const b=el.querySelector('.theme-box'); if(b) b.scrollTop=0;
+}
 
 function closeTheme(){
-  document.getElementById('theme-modal').style.display='none';
+  const el=document.getElementById('theme-modal');
+  el.style.display='none'; el.classList.remove('zab-set'); _themeZab=false; _themeHd('🎨 Appearance');
 }
 
 function renderThemeModal(){
@@ -23006,8 +23025,9 @@ function renderThemeModal(){
   h+='</div>';
 
   /* Jeb bar switch (v04.99, J2) — DB.theme.jebBar, default on */
+  const _zabFrom=h.length;   /* v05.55 · J86: from here to the end of "Zab on the phone" is what ⚙ Zab settings shows */
   h+='<div class="theme-divider"></div>';
-  h+='<div class="theme-sect"><div class="theme-sect-lbl">Zab bar</div>';
+  h+='<div class="theme-sect" id="th-zab"><div class="theme-sect-lbl">Zab bar</div>';
   h+='<div class="fs-sub" style="margin:-2px 0 8px">The strip of Zabs along the bottom of the screen</div>';
   h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="checkbox" id="th-jebbar"'+(_jebBarOn()?' checked':'')+' onchange="setJebBar(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> Show Zab bar</label></div>';
   h+=_tkSettingsHTML();   /* v05.32 · Z10 */
@@ -23022,6 +23042,11 @@ function renderThemeModal(){
     h+='<label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;min-height:40px"><input type="radio" name="th-zpl" value="'+o[0]+'"'+(_zplCur===o[0]?' checked':'')+' onchange="setZabPhoneLayout(this.value)" style="width:20px;height:20px;accent-color:var(--green)"> <span><b>'+o[1]+'</b>'+(o[2]?' · '+o[2]:'')+'</span></label>';
   });
   h+='</div>';
+  if(_themeZab){
+    body.innerHTML=h.slice(_zabFrom).replace('<div class="theme-divider"></div>','')
+      +'<div class="theme-divider"></div><button class="theme-reset" style="width:auto;font-size:13px;padding:8px 14px;min-height:44px" onclick="openTheme(true)">🎨 All appearance settings…</button>';
+    return;
+  }
 
   /* Heading styles launcher */
   h+='<div class="theme-divider"></div>';
@@ -24514,6 +24539,17 @@ function zabTkPick(pid,on){
   if(c.mode==='only') zabTkSet('pids',on?c.pids.concat(c.pids.includes(pid)?[]:[pid]):c.pids.filter(x=>x!==pid),true);
   else zabTkSet('skip',on?c.skip.filter(x=>x!==pid):c.skip.concat(c.skip.includes(pid)?[]:[pid]),true);
 }
+/* v05.55 · J86 — is this Zab's line in the band, and switch it from its menu. "Only the Zab that is open" becomes "Only the ones I tick"
+   with this one ticked (the owner asked for one Zab, or several, to scroll); a band that is off is switched on when a Zab is added. */
+function _zabTkHas(pid){ const c=_zabTk(); if(!c.on) return false; if(c.mode==='only') return c.pids.includes(pid); if(c.mode==='all') return !c.skip.includes(pid); return _jebOpen===pid; }
+function _zabTkToggle(pid){
+  const c=_zabTk(), on=!_zabTkHas(pid);
+  if(c.mode==='open'){ zabTkSet('pids',on?[pid]:[],true); zabTkSet('mode','only',true); }
+  else zabTkPick(pid,on);
+  if(on&&!c.on) zabTkSet('on',true,true);
+  const n=_jebPocket(pid); toast((on?'🎞 Scrolling: ':'🎞 Not scrolling: ')+(n?n.name:'this Zab'));
+  const m=document.getElementById('theme-modal'); if(m&&m.style.display==='flex') renderThemeModal();
+}
 function zabTkHours(k,v){ const c=_zabTk(); zabTkSet('hours',Object.assign({},c.hours,{[k]:v}),true); }
 /* the 🎞 Scrolling titles section of 🧰 → 🎨 Appearance */
 function _tkSettingsHTML(){
@@ -25611,6 +25647,7 @@ function _jebMakePanel(){
   p.addEventListener('click',e=>{
     const t=e.target;
     if(t.closest('.jeb-x')){ jebClosePanel(); return; }
+    if(t.closest('.jeb-set')){ openZabSettings(); return; }   /* v05.55 · J86 */
     if(t.closest('.jeb-px')){ const s=_jebPanelSel(); if(s) jebOpenDeck(s); return; }
     if(t.closest('.jeb-gadd')){ _jebNewCard(t.closest('.jeb-gadd').dataset.pid); return; }
     /* v05.16 · N1 — the path, the pockets inside, ＋ Pocket, the pocket menu, a group's fold */
@@ -25915,7 +25952,7 @@ function _jebPaintPanel(){
   const addBox=p.querySelector('.jeb-add'); if(addBox) addBox.style.display=(multi||_jebType(pks[0])==='news')?'none':'';
   if(!multi){
     const pk=pks[0], items=groups[0];
-    p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this Zab</small></div>${px}<button class="jeb-pm" aria-label="Zab menu" title="Zab menu: rename, move into another Zab, add a Zab inside">⋯</button><button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
+    p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this Zab</small></div>${px}<button class="jeb-pm" aria-label="Zab menu" title="Zab menu: rename, move into another Zab, add a Zab inside">⋯</button><button class="jeb-set" aria-label="Zab settings" title="Zab settings: the Zab bar, the scrolling titles, News">⚙</button><button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
     const pth=jebPath(pk.id), kids=jebChildren(pk.id), pe=p.querySelector('.jx-path'), ke=p.querySelector('.jx-kids');
     pe.hidden=pth.length<2;
     pe.innerHTML=pth.length<2?'':'<nav aria-label="Where this Zab is">'+pth.map((x,k)=>k<pth.length-1?`<button type="button" data-pid="${esc(x.id)}">${esc(x.name)}</button><span aria-hidden="true"> › </span>`:`<b aria-current="true">${esc(x.name)}</b>`).join('')+'</nav>';
@@ -25940,7 +25977,7 @@ function _jebPaintPanel(){
     const zn0=p.querySelector('.zn-area'); zn0.hidden=true; zn0.innerHTML=''; p.classList.remove('zn-has');   /* All Zabs: no note area */
     p.classList.remove('jl-wide'); p.querySelector('.jeb-add textarea').placeholder='Jot something…'; const hn2=p.querySelector('.jt-hint'); if(hn2) hn2.hidden=true;
     p.querySelector('.jx-path').hidden=true; p.querySelector('.jx-kids').hidden=true; if(p.classList.contains('jx-has')) p.classList.remove('jx-has');
-    p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:#EDE6D6">▤</span><div class="jeb-pt"><b>${esc(_jebSelTitle(sel,pks))}</b><small>${open} open · ${all.length} in all</small></div>${px}<button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
+    p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:#EDE6D6">▤</span><div class="jeb-pt"><b>${esc(_jebSelTitle(sel,pks))}</b><small>${open} open · ${all.length} in all</small></div>${px}<button class="jeb-set" aria-label="Zab settings" title="Zab settings: the Zab bar, the scrolling titles, News">⚙</button><button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
     const inSel=new Set(ids);
     p.querySelector('.jeb-list').innerHTML=pks.map((pk,k)=>{
       /* v05.16 · N1 — a pocket inside another is a sub-group, indented by its depth; a folded group hides its own items and the groups inside it */
@@ -26077,6 +26114,7 @@ function _jebMakeDeck(){
       if(b.dataset.d==='panel'){ const s=_jebDeckSelNow(); if(s) jebOpenPanelSel(s); }
       else if(b.dataset.d==='add'){ const ids=_jebSelIds(_jebDeck); if(ids.length===1) _jebNewCard(ids[0]); }
       else if(b.dataset.d==='clear') _jebClearDoneUI(_jebSelIds(_jebDeck));
+      else if(b.dataset.d==='set') openZabSettings();   /* v05.55 · J86 */
       return;
     }
     const ib=t.closest('.jx-in-b'); if(ib){ jebOpenDeck({ids:[ib.dataset.pid],all:false}); return; }   /* v05.16 · N1 */
@@ -26123,6 +26161,7 @@ function _jebPaintDeck(){
   d.querySelector('.jd-hd').innerHTML=`<b>${esc(_jebSelTitle(sel,pks))}</b><small>${open} open</small><span class="jd-sp"></span>`
     +(done?`<button data-d="clear" title="Move the done cards to Trash">🧹 Clear done (${done})</button>`:'')
     +`<button data-d="panel" title="Show these Zabs in the panel">▤ Panel</button>`
+    +`<button data-d="set" title="Zab settings: the Zab bar, the scrolling titles, News">⚙ Settings</button>`
     +(multi?'':'<button data-d="add" title="Add a card">＋ Card</button>')
     +'<button class="jd-x" aria-label="Close" title="Close">✕</button>';
   d.querySelector('.jd-wrap').innerHTML=pks.map((pk,k)=>{
@@ -26233,6 +26272,8 @@ function _jebPocketMenu(pid,x,y,anchorEl){
     {t:'◀ Move left',off:i<=0,f:()=>{ jebMovePocket(pid,i-1); jebRefresh(); }},
     {t:'Move right ▶',off:i>=ps.length-1,f:()=>{ jebMovePocket(pid,i+1); jebRefresh(); }},
     {t:'🧹 Clear done items ('+done+')',off:!done,f:()=>_jebClearDoneUI(pid)},
+    {t:(_zabTkHas(pid)?'☑':'☐')+' 🎞 In the scrolling titles',f:()=>_zabTkToggle(pid)},   /* v05.55 · J86 — one tap per Zab */
+    {t:'⚙ Zab settings…',f:()=>openZabSettings()},
     {t:'🗑 Delete Zab',d:true,f:()=>{ const par=_jebParentOf(pid); if(jebDeletePocket(pid)){ if(_jebOpen===pid){ if(par) jebOpenPanel(par); else jebClosePanel(); } toast('Zab moved to Trash'); } _jebPanelSig=''; jebRefresh(); }}
   ],anchor&&(x==null)?anchor:null,x,y);
 }

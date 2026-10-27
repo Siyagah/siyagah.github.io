@@ -10867,3 +10867,18 @@ Round 2 of J08 (the owner, 27 Oct: "*How can make loading and navigating faster?
 **Not done:** the side pane's text is still built whole on every draw (~170 ms of the phone's 400 at 800 open folders); drawing only the rows on screen would need the sections, Smart Views, tags and Note Types to be rows of one list — left until a notebook needs it.
 
 **Review totals of v05.53 (recorded here).** Full app-check on `59e0a9b` (two halves at once): 1–59 + `self-check` 2330/2332 (56k), 60–113 5900/5902 (100d: the sidebar ratio 2.97× against 3×; block 100 alone 15/15). Block 113 on v05.52: 7 of 11 fail.
+---
+
+## v05.55 — J86: a Zab Settings button, and choosing which Zabs scroll (built by the Architect)
+
+The owner (28 Oct, with a screenshot of Siyagah Zab's All Zabs cards): "*Enable a Zab Settings button here. *How do I set a particular Single/ Multiple Zab scrolling?*"
+
+**Found.** In Zab mode (`/?jeb=1`) the side pane, and so 🧰, is hidden: the Zab settings (Zab bar, Zab on the phone, 🎞 Scrolling titles, 📰 News, all under 🧰 → 🎨 Appearance) could not be reached from there at all. Choosing which Zabs scroll already existed (Scrolling titles → Which Zabs → "Only the ones I tick"), three menus deep.
+
+**The change.** `openZabSettings()` opens the Appearance dialog as "⚙ Zab settings": with `_themeZab` set, `renderThemeModal()` shows only the part from the Zab bar to Zab on the phone (`th-zab` … `th-zpl`, the same HTML as Appearance, so nothing is drawn twice), then "🎨 All appearance settings…" (`openTheme(true)`, the whole dialog, still on top). `#theme-modal.zab-set` puts it at z 10000 (over the cards at 8000, like the other modals); `closeTheme()` and a plain `openTheme()` take the class off. Reached from: the cards' header row "⚙ Settings" (`data-d="set"`), the ⚙ in a Zab panel's header (`.jeb-set`, one Zab and All Zabs; 44 px on a phone), and every Zab's menu ("⚙ Zab settings…"). The Zab menu (⋯, or a long press / right-click on a chip) also has "☑/☐ 🎞 In the scrolling titles" (`_zabTkHas`, `_zabTkToggle`): it ticks or unticks that one Zab in whichever "Which Zabs" mode is set; from "Only the Zab that is open" it makes "Only the ones I tick" (with that Zab, or none when it was the open one); turning a Zab on switches a band that is off on. A toast says which.
+
+**Shapes.** PC and tablet: the buttons in the header rows, the settings as the usual dialog; phone: the same buttons (44 px), the dialog as tall as the screen allows.
+
+**Checks.** Block 115, `tools/zab-set-j86.mjs`, at 390 / 820 (touch) and 1440: 115a Zab mode, All Zabs as cards: "⚙ Settings" in the header row opens ⚙ Zab settings on top (the point at its middle is inside it), with the Zab parts and no theme presets; 115b the panel header's ⚙ (All Zabs and one Zab) in Zab mode and in the notes app; 115c "All appearance settings…" on top, ✕ closes, 🧰 → Appearance afterwards is the plain dialog; 115d the menu's "🎞 In the scrolling titles" off / on (titles leave and come back), from "only the open Zab", with the band off; 115e "Only the ones I tick" with two Zabs: only their titles in the band; 115f no page errors. **31/31.**
+
+**Not done:** nothing in the settings themselves changed.
