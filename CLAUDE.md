@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.51.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.52.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,11 +47,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.52** (27 Oct 2026) — J82 (built by the Architect): 🪟 (beside the side pane's search box, 🧰 → View, and "🪟 Pane" in the note list's row) → `_ppMenu`: "Pop out" floats `#sb` / `#p2` itself (class `.pp`, `_ppSet`; place/size `--pp-*` on the pane, fractions in `localStorage` `siyagah-pp-v1`; bar ⤢ / ⇲ Dock; 8 handles, one engine `_ppGrab`; a phone: a full-width sheet). PC docked: dividers clamp to the window (`_sbClampW`/`_p2ClampW`, note pane ≥ 320), the list's width kept (`siyagah-p2-w`), "⤢ full width" = `body.pw-*` (`_pwSet`), ⤡ `#pw-back`. Check: block 112, `tools/pane-pop-j82.mjs`.
 - **v05.51** (26 Oct 2026) — J71 (built by the Architect): the phone's per-note reader stayed "off — starting". `_s1RdDb()` now gives up an open after `_S1_OPEN_MS` (30 s) and retries in 60 s ("the device copy did not open", never `no-indexeddb`); `_s1RepLoad(nb, prog)` reads the replica in batches of `_S1_LOAD_STEP` (500), and Diagnostics show the starting step, count and time (`_s1Stat.rd.load`). Check: block 111, `tools/replica-load-j71.mjs`.
 - **v05.50** (26 Oct 2026) — J77 (built by the Architect): a tap on a link in a note's read view opened its menu and the document's later-registered "close any menu" listener shut it in the same tick. `_promptOpenLink` sets `ev.__keepCtx` and that closer skips `hideCtx()` for it. `_LINK_MIRRORS` / `_linkMirror()`: a Mapping My Journey link also offers 🐙 Open on GitHub (same path on mappingmyjourney.github.io/MappingMyJourney/). Check: block 110, `tools/link-j77.mjs`.
 - **v05.49** (26 Oct 2026) — J74 ③ (BWN J27 Stage 1, built by the builder): "Keep matching" for Mapping My Journey: `_mmjSyncTick()` (60 s after start, then every 6 h, ⟳ Check now in `#mmj-modal`) reads the site and, one way (site → Siyagah), adds new categories/posts/pages, follows a renamed/moved category (`mmj.n`/`mmj.p`) and a changed post (`fromMmj.u`) only if the owner has not changed them, else marks `fromMmj.newer` (read-view line + Show it); what the site no longer has is only marked `gone`, never deleted. Last check: device database `siyagah-mmj-v1`. Check: block 109, `tools/mmj-sync.mjs`.
 - **v05.48** (26 Oct 2026) — J74 ② (BWN J27 Stage 1, built by the builder): 🧰 → "🗺 Mapping My Journey import" (`openMmjImport`, `#mmj-modal`) reads the open WordPress feed of mappingmyjourney.com with `fetch()` (no helper), shows a dry run, backs up, then adds the section `mmj-sec`, one folder per category (`mmj-c-<id>`, exact names, same depth, empty ones too) and one note per post/page (`mmj-p-<id>` / `mmj-g-<id>`) in ALL its folders, pictures by reference. Re-runnable (existing ids skipped, never edited); `autoNumberAll()` leaves `f.mmj` folders alone. Check: block 108, `tools/mmj-import.mjs`.
-- **v05.47** (26 Oct 2026) — J74 ① (BWN J27 Stage 1, built by the Architect): "🖼 Keep every picture on this device" (Cloud Sync window; `DB.theme.picKeepAll`, absent = on, read by `_picKeepOn()`): `_picKeepTick()` fetches, one at a time through `_picFetch`, every `data-pic` in notes and Trash not yet on the device; ≤ `_PIC_KEEP_DAY` (8,000) cloud reads a device a UTC day (`siyagah-premig-v1` meta `keep`), paused at 90 % storage; `_storeProtect()` asks `navigator.storage.persist()`. Diagnostics: Pictures kept here, Storage protected. Check: block 107, `tools/pickeep-j74.mjs`.
 ---
 
 ## What this is
@@ -641,6 +641,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   (`_LIST_MIN=1e9`, `_cardC.clear()`, `_p2cLast=null`). The windowed list is NOT built (Ctrl+F; waits on the owner's J08 tick box): the
   25,000-card list is still whole only after ~6 s on a ×4 phone and its frames reach 400 ms.
 - **The keyboard lays the page out above itself (v05.44, J67).** The viewport meta's `interactive-widget=resizes-content` makes Android Chrome shrink the layout viewport (and `body`'s `100dvh`) when the keyboard opens, as before Chrome 108; without it the keyboard only covers the page and Chrome pans the whole page to the caret, taking `#p3h` off the top. Never drop it from the meta.
+- **A pane popped out as a window (v05.52, J82).** `#sb` / `#p2` with class `.pp` are the SAME panes, floated (`_ppSet`); every `.pp` rule beats the tiers' docked rules, so `.closed` / `.mob-open` do not hide a popped-out pane, and `showPane()` returns early for one. **Anything that measures the side pane's edge (`jebLayout`, `updateSbToggle`, `_p2ClampW`) must skip a `.pp` side pane.** Window places are device-local (`siyagah-pp-v1`), never `DB`.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
   `_p3EditIconsHTML()` and each float window's toolbar in `_fwRenderBody()`.
 - **`sw.js`'s `CORE` is all-or-nothing.** `addAll()` rejects if one entry 404s,
