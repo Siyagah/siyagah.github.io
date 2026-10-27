@@ -10848,3 +10848,22 @@ The owner (27 Oct, about 4pm): "*I know the volume of note has an impact on load
 **Not done:** grouped Smart Views, structured (database) folders and journal folders still draw their cards whole (each open group is small); the side pane is round 2 of J08.
 
 **Review totals of the two rounds before (recorded here; they ride this round).** v05.51, full app-check on `6563664`: 1–59 + `self-check` 2325/2329, 60–111 5342/5356; 52d, 70, 72 and 82e each passed alone (52 93/93, 70 + 72 592/592, 82 248/248); 56k and 91f known. v05.52: the first run on `12fa597` found three faults (6m `--pp-*` fallbacks; 6o-1 `_ppMenu`; tap-t2 90c/90d), fixed in `8ab6e33`; the full re-check on `8ab6e33`: 2330/2332 (56k) and 5817/5834 (70 passes alone; 78b and 82e also miss on v05.51 side by side; 80h and 91f known; 86: extra pushes mid-import when the import's flushes span more than `_PUSH_MAX_MS` 2.5 s, on either build — filed).
+---
+
+## v05.54 — J08 W2: the side pane with many folders (built by the Architect)
+
+Round 2 of J08 (the owner, 27 Oct: "*How can make loading and navigating faster? We still have to import other notebook*").
+
+**Measured first (v05.53, 27,000 notes, 800 folders, phone ×4 / laptop).** Opening a folder with every folder open: 994 ms / 161 ms to the next frame; with every folder closed 293 ms on the phone. Profiled: (1) `isJournal` (the Daily Journal Smart View's count, drawn in every side-pane draw) searched every folder for every folder of every note — 27,000 × 800; (2) `chOf` filtered all 800 folders once per drawn row; (3) the rest is laying out ~4,000 elements of the side pane, paid by whichever function next measures the page (`renderP2H` on a phone, `_p3FitToolbar` on a PC).
+
+**The change.** (1) `_jrnPred()` builds the set of journal folders once and `isJournal(a, fs)` uses it; the three filters over many notes (`getSmartArts`, `getSecSmartArts`, `_cntOver`) use `_jrnPred()`. (2) `chOf` keeps a children map only while the side pane is being drawn (`_cntC.ch`, dropped with `_cntC` when the draw ends); outside a draw it filters as before, so a folder made, moved or renamed is seen at once. (3) `#tree .tr-row{content-visibility:auto; contain-intrinsic-size:auto 28px}`: a folder row off the screen is not laid out, and keeps its last measured height (nothing on a row draws outside it; the drop markers are inset shadows). The side pane's text is byte for byte what v05.53 draws.
+
+**After (same notebook).** Opening a folder with 800 folders open: phone ×4 **~350–410 ms** (was 994), laptop **~60 ms** (was 161).
+
+**Also:** the Khutbah outline template's heading "Salawat to Rasulullah" now reads "Salawat to Rasulullah Sallallahu A'laihi Wa Sallam" (the owner's general rule saw128, 28 Oct). Notes already made from the template are not changed.
+
+**Checks.** Block 114, `tools/tree-w2.mjs`, at 390 / 820 (touch) and 1440: 114a the side pane with every folder closed and every folder open, the journal Smart View's list and count and the folder counts are byte-identical to the same drawn with v05.53's `chOf` / `isJournal` swapped back in; 114b outside a draw a new, moved folder and a new journal folder are seen at once; 114c rows off the screen are `content-visibility:auto`, a row on the screen is drawn, a folder far down can be scrolled to and tapped / clicked; 114d the speed (phone ×4 ≤ 700 ms, laptop ≤ 150 ms, × host factor); 114e opening folders writes nothing; 114f no page errors. **20/20.**
+
+**Not done:** the side pane's text is still built whole on every draw (~170 ms of the phone's 400 at 800 open folders); drawing only the rows on screen would need the sections, Smart Views, tags and Note Types to be rows of one list — left until a notebook needs it.
+
+**Review totals of v05.53 (recorded here).** Full app-check on `59e0a9b` (two halves at once): 1–59 + `self-check` 2330/2332 (56k), 60–113 5900/5902 (100d: the sidebar ratio 2.97× against 3×; block 100 alone 15/15). Block 113 on v05.52: 7 of 11 fail.

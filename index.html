@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.53">
+<meta name="app-version" content="05.54">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -234,6 +234,8 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .sb-bts:hover{background:var(--sb-strip-hi)!important;border-color:var(--sb-ink-dim)!important}
 @media(max-width:1199.98px){.sb-bts{min-height:40px;font-size:12.5px}}
 #tree{flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 0}
+/* v05.54 — J08 W2: a folder row off the screen is not laid out (800 open folders: opening a folder on a phone ×4 0.99 s → 0.5 s); it keeps its last measured height */
+#tree .tr-row{content-visibility:auto;contain-intrinsic-size:auto 28px}
 .sb-ft{padding:8px 10px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:5px;flex-shrink:0}
 .sb-btn{width:100%;padding:6px;border-radius:7px;cursor:pointer;font-size:11.5px;font-family:var(--ui);display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid}
 .sb-new{background:rgba(27,122,70,.1);border-color:rgba(27,122,70,.25);color:#6DC994}
@@ -3975,7 +3977,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.53</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.54</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6574,7 +6576,14 @@ function _isPlaceholder(html){
   const t=(d.textContent||'').trim();
   return t===''||t==='Start writing here...';
 }
-function chOf(pid){return DB.folders.filter(f=>f.parentId===pid).sort((a,b)=>a.order-b.order);}
+/* v05.54 — J08 W2: while the side pane is being drawn (_cntC, below), every folder's children come from one pass over the
+   folders (a draw with 800 folders open filtered the whole list once per row). Outside a draw nothing is kept, as before. */
+function chOf(pid){
+  const C=_cntC;
+  if(!C) return DB.folders.filter(f=>f.parentId===pid).sort((a,b)=>a.order-b.order);
+  if(!C.ch){ C.ch=new Map(); DB.folders.forEach(f=>{ const k=f.parentId; let a=C.ch.get(k); if(!a){ a=[]; C.ch.set(k,a); } a.push(f); }); }
+  const a=C.ch.get(pid); return a?a.slice().sort((x,y)=>x.order-y.order):[];
+}
 function descOf(fid){const ids=[fid];function go(p){chOf(p).forEach(c=>{ids.push(c.id);go(c.id);});}go(fid);return ids;}
 function pathOf(fid){const p=[];let id=fid;while(id){const f=DB.folders.find(x=>x.id===id);if(!f)break;p.unshift(f);id=f.parentId;}return p;}
 /* v05.41 — P5. While the sidebar is being drawn (_cntC set by renderTree, dropped when it ends) every count comes from one pass,
@@ -6603,7 +6612,7 @@ const _SF_CNT={'sf-favs':a=>a.favourite,'sf-pinned':a=>a.pinned,'sf-journal':a=>
 function _cntOver(arts,sfId){
   if(sfId==='sf-new'||sfId==='sf-time') return arts.length;
   if(sfId==='sf-recent') return Math.min(20,arts.length);
-  const p=_SF_CNT[sfId]; if(!p) return -1;
+  const p=sfId==='sf-journal'?_jrnPred():_SF_CNT[sfId]; if(!p) return -1;
   let r=0; for(let i=0;i<arts.length;i++) if(p(arts[i])) r++;
   return r;
 }
@@ -10310,7 +10319,7 @@ function getSecSmartArts(secId,sfId){
     case 'sf-favs':   return sa.filter(a=>a.favourite).sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
     case 'sf-pinned': return sa.filter(a=>a.pinned).sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
     case 'sf-time':   return [...sa].sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
-    case 'sf-journal':return sa.filter(isJournal).sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+    case 'sf-journal':return sa.filter(_jrnPred()).sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
     case 'sf-arch':   return sa.filter(a=>a.archived).sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
     case 'sf-mywall': return sa.filter(isMyWallNote)
       .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
@@ -32813,14 +32822,17 @@ function renderMyWall(sf){
 /* A note counts as a Daily Journal when tagged "journal"/"daily" or when
    its title contains a date (e.g. 12.06.26 / 12-06-2026 / 2026-06-12). */
 const _dateTitleRe=/(\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4})|(\d{4}-\d{2}-\d{2})/;
-function isJournal(a){
-  const tags=(a.tags||[]).map(t=>String(t).toLowerCase());
-  if(tags.includes('journal')||tags.includes('daily'))return true;
+/* v05.54 — J08 W2: a filter over many notes builds the set of journal folders once (_jrnPred), instead of searching every
+   folder for every folder of every note (27,000 notes × 800 folders: ~35 ms a side-pane draw on a laptop, ~150 ms on a phone ×4). */
+function _jrnFolders(){ const s=new Set(); DB.folders.forEach(f=>{ if(f&&f.journalMode) s.add(f.id); }); return s; }
+function _jrnPred(){ const fs=_jrnFolders(); return a=>isJournal(a,fs); }
+function isJournal(a,fs){
+  const tags=a.tags||[];
+  for(let i=0;i<tags.length;i++){ const t=String(tags[i]).toLowerCase(); if(t==='journal'||t==='daily') return true; }
   if(_dateTitleRe.test(a.title||''))return true;
-  return (a.folderIds||[]).some(fid=>{
-    const f=DB.folders.find(x=>x.id===fid);
-    return f&&f.journalMode;
-  });
+  if(!fs) fs=_jrnFolders();
+  if(!fs.size) return false;
+  return (a.folderIds||[]).some(fid=>fs.has(fid));
 }
 /* Virtual sub-folders (date buckets) for Timeline & Archived Notes.
    Computed live from each note's updatedAt — no data migration needed. */
@@ -33059,7 +33071,7 @@ function getSmartArts(sfId){
     case 'sf-time':
       return _groupUnion('sf-time');
     case 'sf-journal':
-      return live.filter(isJournal).sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+      return live.filter(_jrnPred()).sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
     case 'sf-arch':
       return live.filter(a=>a.archived)
         .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
