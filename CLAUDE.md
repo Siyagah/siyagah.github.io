@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.52.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.53.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,11 +47,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.53** (27 Oct 2026) — J08 W1 (built by the Architect): a note list over 300 cards is a window (`_listWin`, `_lwDraw`: only the cards from a screen above to a screen below are in `.al.al-win`, padding stands for the rest, measured heights); the slices are gone. "Find in this list" (`.lf-bar`, `_lf*`): title or text, every word, Enter opens the first, Ctrl+F in the list goes to it. Opening a note elsewhere brings its card into view. 27,000 notes, phone ×4: un-select a tag ~21 s → 0.06 s. Check: block 113, `tools/list-w1.mjs`; 82 and 100c changed in place.
 - **v05.52** (27 Oct 2026) — J82 (built by the Architect): 🪟 (beside the side pane's search box, 🧰 → View, and "🪟 Pane" in the note list's row) → `_ppMenu`: "Pop out" floats `#sb` / `#p2` itself (class `.pp`, `_ppSet`; place/size `--pp-*` on the pane, fractions in `localStorage` `siyagah-pp-v1`; bar ⤢ / ⇲ Dock; 8 handles, one engine `_ppGrab`; a phone: a full-width sheet). PC docked: dividers clamp to the window (`_sbClampW`/`_p2ClampW`, note pane ≥ 320), the list's width kept (`siyagah-p2-w`), "⤢ full width" = `body.pw-*` (`_pwSet`), ⤡ `#pw-back`. Check: block 112, `tools/pane-pop-j82.mjs`.
 - **v05.51** (26 Oct 2026) — J71 (built by the Architect): the phone's per-note reader stayed "off — starting". `_s1RdDb()` now gives up an open after `_S1_OPEN_MS` (30 s) and retries in 60 s ("the device copy did not open", never `no-indexeddb`); `_s1RepLoad(nb, prog)` reads the replica in batches of `_S1_LOAD_STEP` (500), and Diagnostics show the starting step, count and time (`_s1Stat.rd.load`). Check: block 111, `tools/replica-load-j71.mjs`.
 - **v05.50** (26 Oct 2026) — J77 (built by the Architect): a tap on a link in a note's read view opened its menu and the document's later-registered "close any menu" listener shut it in the same tick. `_promptOpenLink` sets `ev.__keepCtx` and that closer skips `hideCtx()` for it. `_LINK_MIRRORS` / `_linkMirror()`: a Mapping My Journey link also offers 🐙 Open on GitHub (same path on mappingmyjourney.github.io/MappingMyJourney/). Check: block 110, `tools/link-j77.mjs`.
 - **v05.49** (26 Oct 2026) — J74 ③ (BWN J27 Stage 1, built by the builder): "Keep matching" for Mapping My Journey: `_mmjSyncTick()` (60 s after start, then every 6 h, ⟳ Check now in `#mmj-modal`) reads the site and, one way (site → Siyagah), adds new categories/posts/pages, follows a renamed/moved category (`mmj.n`/`mmj.p`) and a changed post (`fromMmj.u`) only if the owner has not changed them, else marks `fromMmj.newer` (read-view line + Show it); what the site no longer has is only marked `gone`, never deleted. Last check: device database `siyagah-mmj-v1`. Check: block 109, `tools/mmj-sync.mjs`.
-- **v05.48** (26 Oct 2026) — J74 ② (BWN J27 Stage 1, built by the builder): 🧰 → "🗺 Mapping My Journey import" (`openMmjImport`, `#mmj-modal`) reads the open WordPress feed of mappingmyjourney.com with `fetch()` (no helper), shows a dry run, backs up, then adds the section `mmj-sec`, one folder per category (`mmj-c-<id>`, exact names, same depth, empty ones too) and one note per post/page (`mmj-p-<id>` / `mmj-g-<id>`) in ALL its folders, pictures by reference. Re-runnable (existing ids skipped, never edited); `autoNumberAll()` leaves `f.mmj` folders alone. Check: block 108, `tools/mmj-import.mjs`.
 ---
 
 ## What this is
