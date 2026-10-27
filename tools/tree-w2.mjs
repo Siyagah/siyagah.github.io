@@ -7,7 +7,7 @@
         chOf / isJournal in the same task;
    114c a folder row off the screen is not laid out (content-visibility:auto), a row on the screen is, and the open folder's row can be
         scrolled to and tapped / clicked;
-   114d speed: opening a folder with 800 folders open, phone ×4 ≤ 700 ms and laptop ≤ 150 ms to the next frame (× this computer's factor);
+   114d speed: opening a folder with 800 folders open, phone ×4 ≤ 550 ms and laptop ≤ 150 ms to the next frame (× this computer's factor);
         measured before this round on the same notebook: 994 ms and 161 ms;
    114e opening folders and drawing the side pane writes nothing;
    114f no page errors.
@@ -91,7 +91,7 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
 }
 
 /* 114d / 114e — speed and no writes */
-for (const vp of [{ name: 'phone ×4', w: 390, h: 844, th: 4, lim: 700 }, { name: 'laptop', w: 1440, h: 900, th: 1, lim: 150 }]) {
+for (const vp of [{ name: 'phone ×4', w: 390, h: 844, th: 4, lim: 550 }, { name: 'laptop', w: 1440, h: 900, th: 1, lim: 150 }]) {
   const app = await openApp({ viewport: { width: vp.w, height: vp.h }, hasTouch: vp.w < 1200 });
   const { page } = app;
   try {
