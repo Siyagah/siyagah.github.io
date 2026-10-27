@@ -68,7 +68,9 @@ async function open(s, w, h, touch, goto) {
      items below it down; like the band above, it is hidden for the two sizes compared with v05.29. Its own size is checked by 93g, and 90a–90c at the phone sizes keep it. */
   /* v05.48 (J74 ②), updated in place by the Architect: 🗺 Mapping My Journey import is a new 🧰 row (44 / 31 px) under 📥 Evernote import, which moves the rows below it down;
      hidden for the two sizes compared with v05.29, like the two above. Its own reach and size are checked by 108a, and 90a–90c at the phone sizes keep it. */
-  if (w >= 640) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.zn-area{display:none!important}.sb-mi[onclick^="openMmjImport"]{display:none!important}'; document.head.appendChild(st); }); });
+  /* v05.52 (J82), updated in place by the Architect: 🪟 beside the side pane's search box, "🪟 Pane" in the note list's row and the 🧰 row "🪟 Side pane" are new, and the
+     search box gives the 🪟 its room; hidden for the two sizes compared with v05.29, like the three above. Their reach and size are checked by 112a, and 90a–90c at the phone sizes keep them. */
+  if (w >= 640) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.zn-area{display:none!important}.sb-mi[onclick^="openMmjImport"]{display:none!important}.sb-pp-btn,.p2-pp-btn,.sb-pp-mi{display:none!important}'; document.head.appendChild(st); }); });
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e));
   page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) errors.push('console: ' + m.text()); });
@@ -145,6 +147,7 @@ const MEASURE = () => {
     t.labelH = e.tagName === 'INPUT' && e.closest('label') ? e.closest('label').getBoundingClientRect().height : 0;
     t.inline = e.tagName === 'A' && getComputedStyle(e).display === 'inline';
     t.sbRow = !!e.closest('#tree') && e.matches('.sr,.tr-row,.sec-hd');
+    t.vis = { x: L, y: T, w: Math.max(0, R - L), h: Math.max(0, B - T) };   /* v05.52: the part that can be tapped (see overlaps) */
     rows.push(t);
   }
   /* page-level overflow, and the same for the open overlay */
@@ -161,7 +164,10 @@ const verdict = (t) => { for (const ex of EXCEPT) if (ex.re(t) && (!ex.ok || ex.
 const overlaps = (rows) => {
   const out = [];
   for (let i = 0; i < rows.length; i++) for (let j = i + 1; j < rows.length; j++) {
-    const a = rows[i], b = rows[j];
+    /* v05.52 (J82), updated in place by the Architect: compare the parts that can be TAPPED (on screen, not clipped by a scrolling parent).
+       The whole box made a folder row's ⋯ scrolled up under the side pane's search row "overlap" the new 🪟 beside the search box, by the 5 px
+       of the ⋯ that #tree hides; no tap can reach that part. */
+    const a = rows[i].vis ? Object.assign({}, rows[i], rows[i].vis) : rows[i], b = rows[j].vis ? Object.assign({}, rows[j], rows[j].vis) : rows[j];
     if (a.key.includes('#zab-btn') || b.key.includes('#zab-btn')) continue; /* floating button over a scrolling list: see the hit test */
     const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
     if (ox <= 3 || oy <= 3) continue;

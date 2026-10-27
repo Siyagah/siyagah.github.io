@@ -789,7 +789,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 /* v05.52 · J82 — a pane popped out as a window (#sb / #p2 with class .pp). Its place and size are CSS variables on the pane itself
    (never on <html>); it beats every tier's docked rule (.closed, .mob-open, width:100%!important). It sits over the Zab bar on purpose,
    below the note pop-ups (5001) and menus. On a phone it is a sheet as wide as the screen: only its top and bottom edges resize. */
-#sb.pp,#p2.pp{position:fixed!important;left:var(--pp-l)!important;top:var(--pp-t)!important;width:var(--pp-w)!important;height:var(--pp-h)!important;
+#sb.pp,#p2.pp{position:fixed!important;left:var(--pp-l,0px)!important;top:var(--pp-t,0px)!important;width:var(--pp-w,320px)!important;height:var(--pp-h,70vh)!important;
   right:auto!important;bottom:auto!important;min-width:0!important;max-width:none!important;z-index:4500;transition:none!important;
   box-shadow:0 12px 40px rgba(0,0,0,.38);border:1px solid var(--border2);border-radius:10px;overflow:visible}
 #sb.pp.pp-top,#p2.pp.pp-top{z-index:4501}
@@ -4002,7 +4002,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <div class="sb-mi" onclick="toggleHijri();closeSBTools()" title="Toggle Hijri dates in the calendar">☪ Hijri Dates</div>
           <div class="sb-mi-hd">View</div>
           <div class="sb-mi" onclick="openTheme();closeSBTools()">🎨 Appearance</div>
-          <div class="sb-mi sb-pp-mi" onclick="closeSBTools();_ppMenu(event,'sb')" title="Pop the side pane out as a window you can move and resize, or make it full width">🪟 Side pane: pop out or full width</div>
+          <div class="sb-mi sb-pp-mi" onclick="_ppMenu(event,'sb');closeSBTools()" title="Pop the side pane out as a window you can move and resize, or make it full width">🪟 Side pane: pop out or full width</div>
           <div class="sb-mi" onclick="autoFit();closeSBTools()">↔ Auto-fit width</div>
           <div class="sb-mi" onclick="autoNumberAll();closeSBTools()">🔢 Auto-number all</div>
           <div class="sb-mi" onclick="toggleAccordionSec();closeSBTools()" id="accordion-sec-btn" title="When ON: opening a section closes all others">📂 Accordion sections: <span id="accordion-sec-lbl">OFF</span></div>

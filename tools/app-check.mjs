@@ -2531,7 +2531,9 @@ await r.block('6o-1-menu-reorg', async () => {
     'openEnexImport',
     /* v05.48 (issue #237, J74 ②) — 🗺 Mapping My Journey import in 🧰 Tools, under 📥 Evernote import, added on purpose
        (the Architect's full run caught it; updated in place). */
-    'openMmjImport'];
+    'openMmjImport',
+    /* v05.52 (J82) — 🪟 Side pane: pop out or full width in 🧰 Tools → View, added on purpose (the Architect's full run caught it; updated in place). */
+    '_ppMenu'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
   const lost = V0420.filter((f) => !now.includes(f));
   const added = [...new Set(now)].filter((f) => !V0420.includes(f));
