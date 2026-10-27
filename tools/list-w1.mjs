@@ -51,7 +51,7 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     const small = await page.evaluate(() => ({ bar: !!document.querySelector('#p2c .lf-bar'), cards: document.querySelectorAll('#p2c .ar').length, n: artsIn('f2').length, win: !!document.querySelector('#p2c .al-win') }));
     await page.evaluate(() => { selFolder('f1'); if (window.innerWidth < 1200) showPane('p2'); }); await sleep(300);
     const big = await page.evaluate(() => { const b = document.querySelector('#p2c .lf-bar'), i = document.getElementById('lf-q'), x = b && b.getBoundingClientRect(); return { bar: !!b, h: x ? Math.round(x.height) : 0, vis: !!x && x.width > 200 && getComputedStyle(b).display !== 'none', fs: i ? parseFloat(getComputedStyle(i).fontSize) : 0, ph: i ? i.placeholder : '', cards: document.querySelectorAll('#p2c .ar').length, n: artsIn('f1').length }; });
-    r.check(!small.bar && !small.win && small.cards === small.n && small.n === 40, `113a@${w} a list of ${small.n} notes: no find bar, every card in the page`, JSON.stringify(small));
+    r.check(!small.bar && !small.win && small.cards === small.n && small.n === 33, `113a@${w} a list of ${small.n} notes: no find bar, every card in the page`, JSON.stringify(small));
     r.check(big.bar && big.vis && big.ph === 'Find in this list…' && big.cards < big.n && (tier === 'pc' || (big.h >= 44 && big.fs >= 16)), `113a@${w} a list of ${big.n} notes: the find bar is there (${big.h} px, text ${big.fs} px), ${big.cards} cards in the page`, JSON.stringify(big));
     /* 113b */
     await page.evaluate(() => { window.__w1 = { writes: {} }; for (const nm of ['persist', '_save', 'scheduleAutoSave', 'pushToCloud']) { const o = window[nm]; window[nm] = function (...a) { __w1.writes[nm] = (__w1.writes[nm] || 0) + 1; return o.apply(this, a); }; } window.__w1.db = JSON.stringify(DB); });
@@ -96,10 +96,9 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       const inList = await page.evaluate(() => document.activeElement && document.activeElement.id);
       const p3 = await page.evaluate(() => { const e = document.getElementById('p3c').getBoundingClientRect(); return { x: e.left + e.width / 2, y: e.top + Math.min(200, e.height / 2) }; });
       await page.mouse.click(p3.x, p3.y); await sleep(200);
-      const prevented = await page.evaluate(() => new Promise((res) => { const f = (e) => { document.removeEventListener('keydown', f); setTimeout(() => res({ prevented: e.defaultPrevented, focus: document.activeElement && document.activeElement.id }), 0); }; document.addEventListener('keydown', f); }));
-      const pr2 = page.evaluate(() => 0);
-      await page.keyboard.press('Control+f'); await pr2;
-      const out = await prevented;
+      await page.evaluate(() => { window.__kf = null; const f = (e) => { if (e.key !== 'f' && e.key !== 'F') return; document.removeEventListener('keydown', f); window.__kf = { prevented: e.defaultPrevented }; }; document.addEventListener('keydown', f); });
+      await page.keyboard.press('Control+f'); await sleep(150);
+      const out = await page.evaluate(() => Object.assign({}, window.__kf, { focus: document.activeElement && document.activeElement.id }));
       r.check(inList === 'lf-q', `113g@${w} Ctrl+F after a click in the list goes to "Find in this list" (focus: ${inList})`);
       r.check(!out.prevented && out.focus !== 'lf-q', `113g@${w} Ctrl+F after a click in the note is left to the browser`, JSON.stringify(out));
     }

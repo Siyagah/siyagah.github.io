@@ -7185,6 +7185,7 @@ function _selFastMove(prev,id){
 function renderP2C(){
   const el=document.getElementById('p2c');
   _p2cDrawn=null;
+  if(_listWin&&_listWin.vk!==_lfViewKey()) _listWin=null;   /* v05.53: another view: the window and its find words are forgotten */
   if(ST.kind){
     const k=kindById(ST.kind);
     const arts=DB.articles.filter(a=>artKinds(a).includes(ST.kind));
@@ -7544,11 +7545,13 @@ function _lfRun(J,now){
   if(!q||!J.arts){ J.rows=q?[]:null; J.busy=false; _lfLabel(J); J.el.querySelector('.lf-bar')?.classList.toggle('on',!!q); _lwDraw(J,true); return; }
   J.el.querySelector('.lf-bar')?.classList.add('on');
   const ws=q.toLowerCase().split(/\s+/).filter(Boolean).slice(0,8);
-  const res=ws.map(w=>({re:new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'),raw:!/[&<>"']/.test(w)}));
+  const esc1=(c)=>c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  /* `rw` tests the stored text: the word with any tags allowed between its letters (re<b>d</b>ux), so only candidates are stripped */
+  const res=ws.map(w=>({re:new RegExp(esc1(w),'i'),raw:!/[&<>"']/.test(w),rw:new RegExp([...w].map(esc1).join('(?:<[^>]*>)*'),'i')}));
   const A=J.arts, rows=[]; let i=0;
   const hit=(a)=>{
     const t=a.title||'', c=a.content||''; let need=null;
-    for(const w of res){ if(w.re.test(t)) continue; if(w.raw&&!w.re.test(c)) return false; (need||(need=[])).push(w); }
+    for(const w of res){ if(w.re.test(t)) continue; if(w.raw&&!w.rw.test(c)) return false; (need||(need=[])).push(w); }
     if(!need) return true;
     const p=_lfPlain(c);
     for(const w of need) if(!w.re.test(p)) return false;
