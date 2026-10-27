@@ -76,7 +76,7 @@ for (const vp of VPS) {
 
     /* ── 100c: the list ── */
     await page.evaluate(() => { selFolder('sf-enx'); });
-    await page.waitForFunction(() => !_listPending() && document.querySelectorAll('#p2c .ar').length > 100, null, { timeout: 300000 });
+    await page.waitForFunction(() => !_listPending() && document.querySelectorAll('#p2c .ar').length > 10 && _listWin && _listWin.n > 100, null, { timeout: 300000 });   /* v05.53: a window of a 100+ note list (was: 100 cards in the page) */
     await page.evaluate(() => { const c = document.querySelectorAll('#p2c .ar'); selArt(c[2].getAttribute('data-aid')); });   /* the first open: a whole draw, and a previous selection for the next */
     await page.waitForFunction(() => !_listPending() && document.querySelector('#p2c .ar.sel'), null, { timeout: 300000 });
     await page.waitForTimeout(500);
