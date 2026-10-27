@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.52.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.53.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,11 +47,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.53** (27 Oct 2026) — J08 W1 (built by the Architect): a note list over 300 cards is a window (`_listWin`, `_lwDraw`: only the cards from a screen above to a screen below are in `.al.al-win`, padding stands for the rest, measured heights); the slices are gone. "Find in this list" (`.lf-bar`, `_lf*`): title or text, every word, Enter opens the first, Ctrl+F in the list goes to it. Opening a note elsewhere brings its card into view. 27,000 notes, phone ×4: un-select a tag ~21 s → 0.06 s. Check: block 113, `tools/list-w1.mjs`; 82 and 100c changed in place.
 - **v05.52** (27 Oct 2026) — J82 (built by the Architect): 🪟 (beside the side pane's search box, 🧰 → View, and "🪟 Pane" in the note list's row) → `_ppMenu`: "Pop out" floats `#sb` / `#p2` itself (class `.pp`, `_ppSet`; place/size `--pp-*` on the pane, fractions in `localStorage` `siyagah-pp-v1`; bar ⤢ / ⇲ Dock; 8 handles, one engine `_ppGrab`; a phone: a full-width sheet). PC docked: dividers clamp to the window (`_sbClampW`/`_p2ClampW`, note pane ≥ 320), the list's width kept (`siyagah-p2-w`), "⤢ full width" = `body.pw-*` (`_pwSet`), ⤡ `#pw-back`. Check: block 112, `tools/pane-pop-j82.mjs`.
 - **v05.51** (26 Oct 2026) — J71 (built by the Architect): the phone's per-note reader stayed "off — starting". `_s1RdDb()` now gives up an open after `_S1_OPEN_MS` (30 s) and retries in 60 s ("the device copy did not open", never `no-indexeddb`); `_s1RepLoad(nb, prog)` reads the replica in batches of `_S1_LOAD_STEP` (500), and Diagnostics show the starting step, count and time (`_s1Stat.rd.load`). Check: block 111, `tools/replica-load-j71.mjs`.
 - **v05.50** (26 Oct 2026) — J77 (built by the Architect): a tap on a link in a note's read view opened its menu and the document's later-registered "close any menu" listener shut it in the same tick. `_promptOpenLink` sets `ev.__keepCtx` and that closer skips `hideCtx()` for it. `_LINK_MIRRORS` / `_linkMirror()`: a Mapping My Journey link also offers 🐙 Open on GitHub (same path on mappingmyjourney.github.io/MappingMyJourney/). Check: block 110, `tools/link-j77.mjs`.
 - **v05.49** (26 Oct 2026) — J74 ③ (BWN J27 Stage 1, built by the builder): "Keep matching" for Mapping My Journey: `_mmjSyncTick()` (60 s after start, then every 6 h, ⟳ Check now in `#mmj-modal`) reads the site and, one way (site → Siyagah), adds new categories/posts/pages, follows a renamed/moved category (`mmj.n`/`mmj.p`) and a changed post (`fromMmj.u`) only if the owner has not changed them, else marks `fromMmj.newer` (read-view line + Show it); what the site no longer has is only marked `gone`, never deleted. Last check: device database `siyagah-mmj-v1`. Check: block 109, `tools/mmj-sync.mjs`.
-- **v05.48** (26 Oct 2026) — J74 ② (BWN J27 Stage 1, built by the builder): 🧰 → "🗺 Mapping My Journey import" (`openMmjImport`, `#mmj-modal`) reads the open WordPress feed of mappingmyjourney.com with `fetch()` (no helper), shows a dry run, backs up, then adds the section `mmj-sec`, one folder per category (`mmj-c-<id>`, exact names, same depth, empty ones too) and one note per post/page (`mmj-p-<id>` / `mmj-g-<id>`) in ALL its folders, pictures by reference. Re-runnable (existing ids skipped, never edited); `autoNumberAll()` leaves `f.mmj` folders alone. Check: block 108, `tools/mmj-import.mjs`.
 ---
 
 ## What this is
@@ -626,20 +626,23 @@ A failing check is a wrong assertion surprisingly often — investigate before
   still the pane's first child, `_dbRev` and `_s1MergeSeq` have not moved since that paint, no slice job is running and nothing is being edited or searched; then `_selFastMove` toggles `sel` on the cards (byte-identical to a whole draw —
   check 100c compares) and keeps `_p2cLast.cards` in step. Anything else takes the whole draw as before. `renderTree` sets `_cntC` for one draw and drops it after: while set, `cntOf` is a one-pass map and the Smart View numbers are
   `smartCount` / `secSmartCount` (count-only; the lists still come from `getSmartArts`/`getSecSmartArts`). **A new Smart View with a plain filter goes in `_SF_CNT`; any other falls back to the list and is still right.**
-- **The sliced note list and the card cache (v05.22, P3).** A list over `_LIST_MIN` (300) cards is painted by `_listPaint` (tag, Note Type,
-  Smart View, Section Smart View) or `_p2cPaint` (a plain folder): the first `_listFirstN()` cards go in at once; the rest is built by
-  `_listBuild` into a hidden `div.al.al-tail` beside the visible `.al` (parsing only; no frame to pay) and moved in `_LIST_REVEAL` (1,500)
-  per frame by `_listReveal`; at the end the tail is removed, so the finished page is byte-identical to a whole draw. **Why a hidden tail:**
-  every frame after an append costs time in proportion to the cards already drawn (30 ms at 260, 130 ms at 10,000, ×4 CPU), so appending
-  in many small visible slices took 23 s for 25,000 cards; fewer, later frames is the saving. **Anything that needs the whole list calls
-  `_listFinish()`** (`_p2cTry` does); `renderP2C()` takes the running job off the clock (`_listKeep`) and `_p2cPaint` may put it back when
-  the same list is only patched (the patch works by position over the visible cards and the tail); `_listPending()` says a job is running.
-  The page's own DOM is never the source of a count (the header and `cntOf` read the data). `.al>.ar` is `content-visibility:auto`.
-  `artCardC(a,sel,sfc)` is `artCard` with a per-note cache (`_cardC`, session only, ≤ 30,000 entries): key = note id, value = signature of
-  every field `artCard()` reads + the text; **a new thing `artCard()` reads goes in that signature** (or in `_cardCtxCheck()` if it is
-  global), and a selected card and preview mode bypass the cache. Check 82's oracle compares the finished list with a cache-free whole draw
-  (`_LIST_MIN=1e9`, `_cardC.clear()`, `_p2cLast=null`). The windowed list is NOT built (Ctrl+F; waits on the owner's J08 tick box): the
-  25,000-card list is still whole only after ~6 s on a ×4 phone and its frames reach 400 ms.
+- **The windowed note list and the card cache (v05.53, J08 W1; replaced v05.22's slices).** A list over `_LIST_MIN` (300) cards (tag, Note Type,
+  Smart View, Section Smart View via `_listPaint`; a plain folder via `_p2cPaint`) is a WINDOW: `.al.al-win` holds only the cards from one
+  screen above the visible part to one screen below; its `padding-top`/`padding-bottom` stand in for the rest, from `h[i]` (each card's
+  measured height + the gap) or `est` (the first cards' average, fixed for the list). `_listWin` is the one window (`r0`/`r1` rows drawn,
+  `rows` = the find's matches or null, `_lwI(J,r)` row → card index); `_lwDraw` redraws it when the spare half screen runs out (scroll,
+  one per frame) and `ResizeObserver` (a width change forgets the heights). The card texts stay the source (`cards[i]` built when first
+  drawn). **The same list drawn again** (same head, tail, length and `_lfViewKey()`) keeps its place, heights and find words and rebuilds
+  only the window, so `_p2cTry` works on it (undrawn cards stay `undefined`); `_selFastMove` handles a window itself. **Nothing may read the
+  DOM for the whole list** (a card off screen is not in the page): use the data (`arts`, `_listWin.arts`). **"Find in this list"** (`_lf*`,
+  `.lf-bar` sticky above the window, `#lf-q`): every word in the title or the text (not the markup; `_lfPlain`), any case, searched in 12 ms
+  slices; Enter opens the first; Ctrl+F after working in `#p2` focuses it (the owner's choice: "Keep Ctrl+F working"). Opening a note from
+  anywhere brings its card into view (`_lwSelSeen`). Lists of 300 or fewer are drawn whole, byte for byte as before, with no bar.
+  `_listPending()` stays (always false) for the checks. `artCardC(a,sel,sfc)` is `artCard` with a per-note cache (`_cardC`, session only,
+  ≤ 30,000 entries): key = note id, value = signature of every field `artCard()` reads + the text; **a new thing `artCard()` reads goes in
+  that signature** (or in `_cardCtxCheck()` if it is global), and a selected card and preview mode bypass the cache. Check 82's oracle
+  compares the window's cards with a cache-free whole draw at the same places (`_LIST_MIN=1e9`, `_cardC.clear()`, `_p2cLast=null`) and the
+  page around the list byte for byte. Measured (27,000 notes, phone ×4): un-selecting a 25,000-note tag ~21 s → ~0.06 s.
 - **The keyboard lays the page out above itself (v05.44, J67).** The viewport meta's `interactive-widget=resizes-content` makes Android Chrome shrink the layout viewport (and `body`'s `100dvh`) when the keyboard opens, as before Chrome 108; without it the keyboard only covers the page and Chrome pans the whole page to the caret, taking `#p3h` off the top. Never drop it from the meta.
 - **A pane popped out as a window (v05.52, J82).** `#sb` / `#p2` with class `.pp` are the SAME panes, floated (`_ppSet`); every `.pp` rule beats the tiers' docked rules, so `.closed` / `.mob-open` do not hide a popped-out pane, and `showPane()` returns early for one. **Anything that measures the side pane's edge (`jebLayout`, `updateSbToggle`, `_p2ClampW`) must skip a `.pp` side pane.** Window places are device-local (`siyagah-pp-v1`), never `DB`.
 - **Anything on the edit toolbar belongs in two places** — Pane 3's
