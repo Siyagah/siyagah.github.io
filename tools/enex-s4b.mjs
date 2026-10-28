@@ -496,8 +496,10 @@ try {
           const cdp = await ctx.newCDPSession(page); if (vp.touch) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
           await page.goto(base + '/', { waitUntil: 'domcontentloaded' });
           await page.waitForFunction(() => window.__appBooted === true);
-          await page.evaluate((arts) => { DB.articles.push(...arts); persist(); }, db.articles.slice(4));
-          await sleep(1500);
+          /* v05.56: wait for the save itself, not a fixed 1.5 s. On a busy host the first journal save of 27,000 notes (a full copy) was not
+             committed when the reload came, so the start found the 4-note seed and waited for 27,000 notes that never arrived (both builds). */
+          await page.evaluate(async (arts) => { DB.articles.push(...arts); persist(); await _ljChain.catch(() => {}); }, db.articles.slice(4));
+          await sleep(500);
           await page.reload({ waitUntil: 'domcontentloaded' });
           const t0 = Date.now(); await page.waitForFunction((n0) => window.__appBooted === true && !!document.getElementById('tree') && DB.articles.length > n0, BIGN - 100, { timeout: 300000 }); const boot = Date.now() - t0;
           const rend = await page.evaluate(() => { const r = []; for (let i = 0; i < 3; i++) { const a = performance.now(); render(); r.push(Math.round(performance.now() - a)); } return r; });
