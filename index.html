@@ -26223,8 +26223,12 @@ function _jebShowMenu(rows,anchor,x,y){
   _jebHideMenu();
   const m=document.createElement('div'); m.id='jeb-menu';
   m.innerHTML=rows.map((r,i)=>`<div class="jm${r.off?' off':''}${r.d?' d':''}" data-i="${i}">${esc(r.t)}</div>`).join('');
+  const t0=performance.now();
   m.addEventListener('click',e=>{
     const el=e.target.closest('.jm'); if(!el) return;
+    /* v05.55 review: a menu opened by a long press can open under the finger (a long menu on a phone is pushed up over its button); the tap the
+       browser makes when that finger lifts must not choose a row. A real tap on a row comes later than this. */
+    if(performance.now()-t0<250) return;
     const r=rows[+el.dataset.i]; if(!r.keep) _jebHideMenu();
     r.f();
   });
