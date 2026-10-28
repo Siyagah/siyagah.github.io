@@ -10906,4 +10906,6 @@ The owner (28 Oct, with a screenshot of Siyagah Zab's All Zabs cards): "*Enable 
 
 **Record (v05.55 review, riding this round).** Full app-check on `0b1f308` (= PR #245's head): 1–59 + `self-check` 2330/2332 (56k known), 60–115 5953/5957 (91f known; 100d 2.6× under load, alone 3.0×, block 100 15/15).
 
+**Review (Architect).** Full app-check on `670fd69` (two halves at once): 1–59 + `self-check` 2330/2332 (56k known); 60–116 5987/5993 — 91f known; 80h 342 ms against 298 under the two-halves load (alone: 289/289, worst 305 against 344); 116g failed once: on a fast run the scans finished inside one 25 ms slice, so no pause happened to be seen. Fixed in the check, not by luck: a test hook `window.__picMigSliceMs` (unset = 25 ms) and 116g sets 1 ms, so the pause is certain (26 timer turns, 36/36).
+
 **Not done, and why:** the 9–13 s on a slowed phone before the notebook can be USED is still the single read of the whole device copy; only keeping that copy as one record per note removes it — round 4 (it is also what makes every save touch only what changed). The picture is not updated by changes that arrive from other devices while the app is hidden (it shows the last screen this device drew, for seconds). iOS: untested (the owner's devices are Android and a PC).

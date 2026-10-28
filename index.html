@@ -6101,7 +6101,7 @@ function _picMigGet(c){
 }
 /* v05.56 · J08 R3 — both scans yield every 25 ms (_picMigYield): at 27,000 notes they were one 1.2 s freeze (phone ×4) ~10 s
    after the start and every hour. Safe in pieces: the list is only a plan, _picMigNote re-reads each note before it acts. */
-async function _picMigYield(t){ if(performance.now()-t.t>25){ await new Promise(function(r){setTimeout(r,0);}); t.t=performance.now(); } }
+async function _picMigYield(t){ if(performance.now()-t.t>(window.__picMigSliceMs||25)){   /* __picMigSliceMs: test hook (ms) */ await new Promise(function(r){setTimeout(r,0);}); t.t=performance.now(); } }
 async function _picMigCands(){
   const out=[],t={t:performance.now()},A=(DB.articles||[]).slice(),T=(DB.trash||[]).slice();
   for(let i=0;i<A.length;i++){

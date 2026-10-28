@@ -125,9 +125,10 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       DB.theme.r3probe = { deep: [pic] };
       const old = () => { const out = {}; const walk = (v, p, d) => { if (typeof v === 'string') { if (v.length > 20 && v.indexOf('data:image') !== -1) { const m = v.match(/\bsrc=["']data:image/g); if (m) out[p] = (out[p] || 0) + m.length; } return; } if (!v || typeof v !== 'object' || d > 7) return; if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) walk(v[i], p, d + 1); return; } const ks = Object.keys(v); for (let i = 0; i < ks.length; i++) walk(v[ks[i]], p ? p + '.' + ks[i] : ks[i], d + 1); }; walk(DB, '', 0); return out; };
       const oldC = () => { const out = []; DB.articles.forEach((a) => { if (a && typeof a.content === 'string' && a.content.indexOf('data:image') !== -1) { const n = _picMigFind(a.content).length; if (n) out.push({ coll: 'articles', id: a.id, n }); } }); DB.trash.forEach((t) => { if (t && t.type === 'article' && t.item && typeof t.item.content === 'string' && t.item.content.indexOf('data:image') !== -1) { const n = _picMigFind(t.item.content).length; if (n) out.push({ coll: 'trash', id: t.id, n }); } }); return out; };
-      let ticks = 0; const iv = setInterval(() => ticks++, 0);
+      /* a 1 ms slice (test hook) so the pause is certain on any machine; a timer must run between the slices */
+      window.__picMigSliceMs = 1; let ticks = 0; const iv = setInterval(() => ticks++, 0);
       const f = await _picMigSweepFields(), c = await _picMigCands();
-      clearInterval(iv);
+      clearInterval(iv); delete window.__picMigSliceMs;
       const of = old(), oc = oldC(); delete DB.theme.r3probe;
       return { same: JSON.stringify(Object.entries(f).sort()) === JSON.stringify(Object.entries(of).sort()) && JSON.stringify(c) === JSON.stringify(oc), f, n: c.length, ticks };
     });
