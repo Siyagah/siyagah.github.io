@@ -70,7 +70,9 @@ async function open(s, w, h, touch, goto) {
      hidden for the two sizes compared with v05.29, like the two above. Its own reach and size are checked by 108a, and 90a–90c at the phone sizes keep it. */
   /* v05.52 (J82), updated in place by the Architect: 🪟 beside the side pane's search box, "🪟 Pane" in the note list's row and the 🧰 row "🪟 Side pane" are new, and the
      search box gives the 🪟 its room; hidden for the two sizes compared with v05.29, like the three above. Their reach and size are checked by 112a, and 90a–90c at the phone sizes keep them. */
-  if (w >= 640) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.zn-area{display:none!important}.sb-mi[onclick^="openMmjImport"]{display:none!important}.sb-pp-btn,.p2-pp-btn,.sb-pp-mi{display:none!important}'; document.head.appendChild(st); }); });
+  /* v05.55 (J86), updated in place by the Architect: the ⚙ Zab settings button in a Zab panel's header and the cards' "⚙ Settings" are new; hidden
+     for the comparison with v05.29 like the ones above. Their reach and size are checked by 115a–115b. */
+  if (w >= 640) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.zn-area{display:none!important}.sb-mi[onclick^="openMmjImport"]{display:none!important}.sb-pp-btn,.p2-pp-btn,.sb-pp-mi{display:none!important}.jeb-ph .jeb-set,#jeb-deck .jd-hd button[data-d="set"]{display:none!important}'; document.head.appendChild(st); }); });
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e));
   page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) errors.push('console: ' + m.text()); });

@@ -156,7 +156,10 @@ try {
            (`.zn-area` + the panel class `zn-has`), so that is removed from the new build's panel too; anything else that differs still fails. (This check
            passed on v05.33 only because a shallow clone could not find the old commit and compared the build with itself; makeBase() now refuses that.) */
         const a = (await html(dn, pid)).split('<button class="jeb-ttl-b" title="Give this item a title">✎ Title</button>').join('')
-          .replace(/<div class="zn-area"[^>]*>[\s\S]*?<\/div>/, '').replace(' class="on zn-has"', ' class="on"'), b = await html(dold, pid);
+          .replace(/<div class="zn-area"[^>]*>[\s\S]*?<\/div>/, '').replace(' class="on zn-has"', ' class="on"')
+          /* v05.55 (J86), updated in place by the Architect: the panel header now carries the ⚙ Zab settings button (.jeb-set); removed from the new
+             build's panel like the two above; anything else that differs still fails. */
+          .split('<button class="jeb-set" aria-label="Zab settings" title="Zab settings: the Zab bar, the scrolling titles, News">⚙</button>').join(''), b = await html(dold, pid);
         check(a === b, `${t} pocket ${pid} (nothing inside): the panel's HTML is byte-identical to the previous build's (apart from v05.25's ✎ Title button)`, a === b ? '' : (() => { let i = 0; while (i < a.length && a[i] === b[i]) i++; return `new ${a.length} bytes, old ${b.length}; first difference at ${i}: new …${a.slice(Math.max(0, i - 60), i + 120)}… old …${b.slice(Math.max(0, i - 60), i + 120)}…`; })());
       }
       const k = await on(dn, () => { const e = document.querySelector('#jeb-panel .jx-kids'); return { hidden: e.hidden, empty: e.innerHTML === '', has: document.getElementById('jeb-panel').classList.contains('jx-has') }; });
