@@ -4,3 +4,4 @@ node_modules/
 # perf-enx run output (v05.42: a run once committed a 46 MB browser profile)
 tools/perf-enx/profile-run/
 tools/perf-enx/out-*.json
+tools/perf-enx/profile-prime/

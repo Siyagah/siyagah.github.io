@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.55">
+<meta name="app-version" content="05.56">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -855,6 +855,11 @@ body.pw-sb #pw-back,body.pw-p2 #pw-back,body.pw-p3 #pw-back{display:block}
 .sr-grp-hd:first-of-type{border-top:none;margin-top:0}
 #ti{flex:1;font-size:14px;font-weight:500;border:none;outline:none;background:transparent;color:var(--t1);font-family:var(--ui)}
 .toast-err{background:#c0392b!important;}
+/* v05.56 · J08 R3 — the last screen while the notebook is read (_bvShow) */
+html.bv #sb,html.bv #p2,html.bv #p3{pointer-events:none}
+html.bv #bts-sb{display:none}
+html.bv #p2c,html.bv #tree,html.bv #p3c{opacity:.8}
+#bv-pill{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:99998;background:#14301F;color:#fff;padding:7px 16px;border-radius:14px;font-size:13px;line-height:1.4;box-shadow:0 2px 10px rgba(0,0,0,.25);pointer-events:none;white-space:nowrap}
 .toast{position:fixed;bottom:calc(22px + var(--jeb-h));left:50%;transform:translateX(-50%);background:#1B7A46;color:#fff;padding:9px 18px;border-radius:14px;font-size:13px;z-index:99999;pointer-events:none;transition:opacity .3s;white-space:normal;word-break:break-word;max-width:min(420px,88vw);text-align:center;line-height:1.5}
 /* ══ JEB bar + panel (v04.99 · J2) ═══════════════════════════════════════════
    --jeb-h is the bar's height (0 when the bar is off, or while a phone
@@ -3980,7 +3985,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.55</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.56</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6094,30 +6099,36 @@ function _picMigGet(c){
   const t=(DB.trash||[]).find(function(x){return x&&x.id===c.id;});
   return (t&&t.type==='article'&&t.item)?{obj:t.item,entry:t,noteId:t.item.id}:null;
 }
-function _picMigCands(){
-  const out=[];
-  (DB.articles||[]).forEach(function(a){
+/* v05.56 · J08 R3 — both scans yield every 25 ms (_picMigYield): at 27,000 notes they were one 1.2 s freeze (phone ×4) ~10 s
+   after the start and every hour. Safe in pieces: the list is only a plan, _picMigNote re-reads each note before it acts. */
+async function _picMigYield(t){ if(performance.now()-t.t>25){ await new Promise(function(r){setTimeout(r,0);}); t.t=performance.now(); } }
+async function _picMigCands(){
+  const out=[],t={t:performance.now()},A=(DB.articles||[]).slice(),T=(DB.trash||[]).slice();
+  for(let i=0;i<A.length;i++){
+    const a=A[i];
     if(a&&typeof a.content==='string'&&a.content.indexOf('data:image')!==-1){const n=_picMigFind(a.content).length;if(n)out.push({coll:'articles',id:a.id,n:n});}
-  });
-  (DB.trash||[]).forEach(function(t){
-    if(t&&t.type==='article'&&t.item&&typeof t.item.content==='string'&&t.item.content.indexOf('data:image')!==-1){const n=_picMigFind(t.item.content).length;if(n)out.push({coll:'trash',id:t.id,n:n});}
-  });
+    if((i&127)===127)await _picMigYield(t);
+  }
+  for(let i=0;i<T.length;i++){
+    const x=T[i];
+    if(x&&x.type==='article'&&x.item&&typeof x.item.content==='string'&&x.item.content.indexOf('data:image')!==-1){const n=_picMigFind(x.item.content).length;if(n)out.push({coll:'trash',id:x.id,n:n});}
+    if((i&127)===127)await _picMigYield(t);
+  }
   return out;
 }
-/* the count, per collection.field, of src="data:image in EVERY string field of DB (read-only) */
-function _picMigSweepFields(){
-  const out={};
-  const walk=function(v,p,d){
+/* the count, per collection.field, of src="data:image in EVERY string field of DB (read-only); an explicit stack, not recursion, so it can pause */
+async function _picMigSweepFields(){
+  const out={},st=[[DB,'',0]],t={t:performance.now()};let k=0;
+  while(st.length){
+    const it=st.pop(),v=it[0],p=it[1],d=it[2];
     if(typeof v==='string'){
       if(v.length>20&&v.indexOf('data:image')!==-1){const m=v.match(/\bsrc=["']data:image/g);if(m)out[p]=(out[p]||0)+m.length;}
-      return;
+    }else if(v&&typeof v==='object'&&d<=7){
+      if(Array.isArray(v)){for(let i=v.length-1;i>=0;i--)st.push([v[i],p,d+1]);}
+      else{const ks=Object.keys(v);for(let i=ks.length-1;i>=0;i--)st.push([v[ks[i]],p?p+'.'+ks[i]:ks[i],d+1]);}
     }
-    if(!v||typeof v!=='object'||d>7)return;
-    if(Array.isArray(v)){for(let i=0;i<v.length;i++)walk(v[i],p,d+1);return;}
-    const ks=Object.keys(v);
-    for(let i=0;i<ks.length;i++)walk(v[ks[i]],p?p+'.'+ks[i]:ks[i],d+1);
-  };
-  walk(DB,'',0);
+    if((++k&511)===0)await _picMigYield(t);
+  }
   return out;
 }
 function _picIdle(){return new Promise(function(r){if(window.requestIdleCallback)requestIdleCallback(function(){r();},{timeout:2000});else setTimeout(r,50);});}
@@ -6209,9 +6220,9 @@ function _picMigrate(){
     st.wait={budget:0,upload:0,gate:0,open:0,changed:0,other:0};st.capHit=false;st.lastErr=null;
     if(!_dbLoaded)return;
     _picMigT=performance.now();
-    if(_picMigFull||!st.runs){st.fields=_picMigSweepFields();_picMigFull=false;}
+    if(_picMigFull||!st.runs){st.fields=await _picMigSweepFields();_picMigFull=false;}
     st.runs++;st.last=Date.now();
-    const cands=_picMigCands();
+    const cands=await _picMigCands();
     st.remain=cands.reduce(function(s,c){return s+c.n;},0);
     if(!cands.length)return;
     if(!_s2RefsOk()){st.wait.gate=st.remain;return;}
@@ -6227,7 +6238,7 @@ function _picMigrate(){
         bp=0;bb=0;await _picIdle();_picMigT=performance.now();
       }
     }
-    if(dirty){try{persist();}catch(e){console.error('picture migration save',e);}st.fields=_picMigSweepFields();}
+    if(dirty){try{persist();}catch(e){console.error('picture migration save',e);}st.fields=await _picMigSweepFields();}
   })().catch(function(e){console.error('picture migration',e);_picMig.lastErr=String((e&&e.message)||e).slice(0,100);})
     .then(function(){
       _picMigRun=null;
@@ -35383,6 +35394,114 @@ function _sgMount(root,state,editable){
   return self;
 }
 
+/* v05.56 · J08 R3 — the last screen, shown at start (the "boot view"). At 27,000 notes reading the device copy is ONE
+   structured clone of ~120 MB: 15–21 s on a phone ×4, with nothing on screen. So the side pane, the note list and the open note
+   are kept as plain HTML in the device's own database `siyagah-boot-v1` (store `kv`, key `last`; never an upgrade of another),
+   written when the page is hidden, and painted at the very start of _boot, before loadDB(). It is a PICTURE: ids are renamed
+   (data-bvid), every on* handler, contenteditable, script and every src that would fetch or die (blob:, iframe, media) is
+   stripped when it is written, and the three panes are `inert` while it shows. _bvEnd() puts the panes back exactly as the page
+   had them, in the same task as boot's render(), so nothing of it is ever drawn over, read by, or saved from the real app.
+   Never in DB, localStorage, the cloud or an export; shown only for the same app version and the same screen tier (<640,
+   <1200, else); not in Zab mode; a read slower than _BV_READ_MS is not waited for. */
+const _BV_DB='siyagah-boot-v1', _BV_KEY='last', _BV_READ_MS=400, _BV_MAX=3e6;
+const _BV_IDS=['tree','p2h','p2h-path','p2-srch-bar','p2c','tab-bar','p3h','p3c'], _BV_W=[['sb','width'],['p2','width'],['sb-toggle','left']];
+let _bvDbP=null, _bvOn=null, _bvSt=null;
+function _bvTier(){ const w=window.innerWidth; return w<640?0:w<1200?1:2; }
+function _bvDb(){
+  if(_bvDbP) return _bvDbP;
+  _bvDbP=new Promise(res=>{
+    try{
+      if(!window.indexedDB){ res(null); return; }
+      const q=indexedDB.open(_BV_DB,1);
+      q.onupgradeneeded=()=>{ try{ q.result.createObjectStore('kv'); }catch(e){} };
+      q.onsuccess=()=>res(q.result); q.onerror=()=>res(null); q.onblocked=()=>res(null);
+    }catch(e){ res(null); }
+  }).then(db=>{ if(!db) _bvDbP=null; return db; });   /* a failed open is not remembered (B1's rule) */
+  return _bvDbP;
+}
+/* one pane's HTML as a picture: parsed in an inert <template>, everything live taken out */
+function _bvClean(html){
+  const t=document.createElement('template'); t.innerHTML=html;
+  t.content.querySelectorAll('script,iframe,object,embed,video,audio,source,link,style[id]').forEach(e=>e.remove());
+  t.content.querySelectorAll('*').forEach(e=>{
+    for(const a of [...e.attributes]){
+      const n=a.name;
+      if(n.startsWith('on')||n==='contenteditable'||n==='autofocus'||n==='tabindex') e.removeAttribute(n);
+      else if(n==='id'){ e.setAttribute('data-bvid',a.value); e.removeAttribute('id'); }
+      else if((n==='src'||n==='srcset')&&/^\s*blob:/i.test(a.value)) e.removeAttribute(n);
+    }
+  });
+  return t.innerHTML;
+}
+function _bvCapture(){
+  try{
+    if(_JEB_APP||!_dbLoaded||_idbBootFail||_bvOn) return;
+    const rec={v:APP_VERSION,tier:_bvTier(),at:Date.now(),theme:DB.theme?{preset:DB.theme.preset,custom:DB.theme.custom,fonts:DB.theme.fonts,lineSpacing:DB.theme.lineSpacing}:null,el:{},w:{},sc:{}};
+    let size=0;
+    for(const id of _BV_IDS){ const e=document.getElementById(id); if(!e) continue; const h=_bvClean(e.innerHTML); size+=h.length; rec.el[id]=h; }
+    if(size>_BV_MAX){ rec.el.p3c=''; rec.el['tab-bar']=''; size=Object.values(rec.el).reduce((n,h)=>n+h.length,0); }
+    if(size>_BV_MAX) return;
+    _BV_W.forEach(([id,k])=>{ const e=document.getElementById(id); if(e&&e.style[k]) rec.w[id]=e.style[k]; });
+    /* where the owner is: the open folder (only a plain folder or Smart View) and what is unfolded; device-local, never DB */
+    rec.st={exp:ST.exp||{},secOpen:ST.secOpen||{},sfOpen:!!ST.sfOpen};
+    if(ST.folder&&!ST.tag&&!ST.kind&&!ST.secSF&&!ST.search) rec.st.folder=ST.folder;
+    ['tree','p2c'].forEach(id=>{ const e=document.getElementById(id); if(e&&e.scrollTop) rec.sc[id]=[-1,e.scrollTop]; });
+    const p3c=document.getElementById('p3c');
+    if(p3c){ const all=p3c.querySelectorAll('*'); for(let i=0;i<all.length;i++){ if(all[i].scrollTop>0){ rec.sc.p3c=[i,all[i].scrollTop]; break; } } }
+    _bvDb().then(db=>{ if(!db) return; try{ db.transaction('kv','readwrite').objectStore('kv').put(rec,_BV_KEY); }catch(e){} });
+  }catch(e){ console.error('boot view not kept',e); }
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') _bvCapture(); });
+window.addEventListener('pagehide',_bvCapture);
+/* paint the last screen; resolves once it is on screen (or at once when there is none) */
+async function _bvShow(){
+  try{
+    if(_JEB_APP) return;
+    const rec=await Promise.race([
+      _bvDb().then(db=>!db?null:new Promise(res=>{ try{ const q=db.transaction('kv','readonly').objectStore('kv').get(_BV_KEY); q.onsuccess=()=>res(q.result||null); q.onerror=()=>res(null); }catch(e){ res(null); } })),
+      new Promise(res=>setTimeout(()=>res(null),_BV_READ_MS))
+    ]);
+    if(!rec||rec.tier!==_bvTier()||_dbLoaded) return;
+    _bvSt=rec.st||null;   /* the place is kept across an update; the picture only for the same version */
+    if(rec.v!==APP_VERSION||!rec.el) return;
+    const keep={el:{},w:{}};
+    for(const id of _BV_IDS){ const e=document.getElementById(id); if(!e||rec.el[id]==null) continue; keep.el[id]=e.innerHTML; e.innerHTML=rec.el[id]; }
+    _BV_W.forEach(([id,k])=>{ const e=document.getElementById(id); if(!e||!rec.w||!rec.w[id]) return; keep.w[id]=[k,e.style[k]]; e.style[k]=rec.w[id]; });
+    ['sb','p2','p3'].forEach(id=>{ const e=document.getElementById(id); if(e) e.inert=true; });
+    if(rec.theme){ try{ applyTheme(rec.theme); }catch(e){} }
+    const pill=document.createElement('div'); pill.id='bv-pill'; pill.setAttribute('role','status'); pill.textContent='⏳ Opening your notebook…'; document.body.appendChild(pill);
+    document.documentElement.classList.add('bv');
+    _bvOn=keep;
+    for(const [id,v] of Object.entries(rec.sc||{})){
+      const e=document.getElementById(id); if(!e) continue;
+      if(v[0]<0) e.scrollTop=v[1]; else { const x=e.querySelectorAll('*')[v[0]]; if(x) x.scrollTop=v[1]; }
+    }
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  }catch(e){ console.error('boot view not shown',e); try{ _bvEnd(); }catch(e2){} }
+}
+/* after loadDB(), before the first render(): open where the owner left this device (the folder, what was unfolded). Only ids that
+   still exist; a folder gone since (deleted, or another device's change) leaves loadDB()'s choice as it is. */
+function _bvPlace(){
+  const st=_bvSt; _bvSt=null; if(!st) return;
+  try{
+    const has=id=>DB.folders.some(f=>f.id===id);
+    if(st.exp) Object.keys(st.exp).forEach(id=>{ if(st.exp[id]&&has(id)) ST.exp[id]=true; });
+    if(st.secOpen){ ST.secOpen=ST.secOpen||{}; Object.keys(st.secOpen).forEach(id=>{ if(st.secOpen[id]&&(DB.sections||[]).some(x=>x.id===id)) ST.secOpen[id]=true; }); }
+    if(st.sfOpen) ST.sfOpen=true;
+    if(st.folder&&(has(st.folder)||SF_IDS.has(st.folder))) ST.folder=st.folder;
+  }catch(e){ console.error('last place not restored',e); }
+}
+/* take the picture away: every pane exactly as the page had it, so boot's render() draws on what it always drew on */
+function _bvEnd(){
+  const k=_bvOn; if(!k) return; _bvOn=null;
+  for(const [id,h] of Object.entries(k.el)){ const e=document.getElementById(id); if(e) e.innerHTML=h; }
+  for(const [id,[p,v]] of Object.entries(k.w)){ const e=document.getElementById(id); if(e) e.style[p]=v; }
+  ['sb','p2','p3'].forEach(id=>{ const e=document.getElementById(id); if(e) e.inert=false; });
+  /* the colours are left as they are: loadDB()'s applyTheme(DB.theme) has already set every one the picture's applyTheme set */
+  document.documentElement.classList.remove('bv');
+  const p=document.getElementById('bv-pill'); if(p) p.remove();
+}
+
 /* v04.50 — loadDB() now reads IndexedDB first (async), so the boot
    sequence that depends on DB being settled — the calendar defaults,
    render(), and everything below that reads DB — has to wait for it.
@@ -35395,6 +35514,7 @@ function _sgMount(root,state,editable){
    this wrapper: they only touch DB from inside a callback that fires much
    later, never at registration time, so they don't need to wait. */
 (async function _boot(){
+  await _bvShow();   /* v05.56 · J08 R3 — the last screen first; never throws */
   await loadDB();
   if(!DB.calEvents)DB.calEvents=[];
   if(!DB.calCategories||!DB.calCategories.length)DB.calCategories=[
@@ -35406,6 +35526,8 @@ function _sgMount(root,state,editable){
   ];
   if(!DB.theme)DB.theme={};
   if(!DB.theme.calLayers)DB.theme.calLayers={notes:true,publicHols:true,schoolHols:true,personal:true,journal:true};
+  _bvPlace();   /* v05.56 — open where this device left off */
+  _bvEnd();   /* v05.56 — in the same task as render(): the picture is never painted over a half-drawn app */
   render();
   _openFromQuery();   /* v05.04 — ?open=<id> from Siyagah Jeb */
   _seedRecSnap();   /* v04.68 — record-stamp baseline: everything boot, its migrations and the first render settled on (see _stampRecordTouches) */
