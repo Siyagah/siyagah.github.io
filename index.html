@@ -6118,16 +6118,19 @@ async function _picMigCands(){
 }
 /* the count, per collection.field, of src="data:image in EVERY string field of DB (read-only); an explicit stack, not recursion, so it can pause */
 async function _picMigSweepFields(){
-  const out={},st=[[DB,'',0]],t={t:performance.now()};let k=0;
-  while(st.length){
-    const it=st.pop(),v=it[0],p=it[1],d=it[2];
-    if(typeof v==='string'){
-      if(v.length>20&&v.indexOf('data:image')!==-1){const m=v.match(/\bsrc=["']data:image/g);if(m)out[p]=(out[p]||0)+m.length;}
-    }else if(v&&typeof v==='object'&&d<=7){
-      if(Array.isArray(v)){for(let i=v.length-1;i>=0;i--)st.push([v[i],p,d+1]);}
-      else{const ks=Object.keys(v);for(let i=ks.length-1;i>=0;i--)st.push([v[ks[i]],p?p+'.'+ks[i]:ks[i],d+1]);}
+  /* strings are counted where they are found; only objects go on the stack (three plain arrays, no per-node allocation: a
+     27,000-note notebook has ~300,000 values, and an array per value made a garbage-collection pause of ~0.4 s on a phone ×4) */
+  const out={},sv=[DB],sp=[''],sd=[0],t={t:performance.now()};let k=0;
+  const str=function(v,p){ if(v.length>20&&v.indexOf('data:image')!==-1){const m=v.match(/\bsrc=["']data:image/g);if(m)out[p]=(out[p]||0)+m.length;} };
+  while(sv.length){
+    const v=sv.pop(),p=sp.pop(),d=sd.pop();
+    if(Array.isArray(v)){
+      for(let i=v.length-1;i>=0;i--){ const x=v[i]; if(typeof x==='string') str(x,p); else if(x&&typeof x==='object'&&d+1<=7){ sv.push(x); sp.push(p); sd.push(d+1); } }
+    }else{
+      const ks=Object.keys(v);
+      for(let i=ks.length-1;i>=0;i--){ const x=v[ks[i]]; if(typeof x==='string') str(x,p?p+'.'+ks[i]:ks[i]); else if(x&&typeof x==='object'&&d+1<=7){ sv.push(x); sp.push(p?p+'.'+ks[i]:ks[i]); sd.push(d+1); } }
     }
-    if((++k&511)===0)await _picMigYield(t);
+    if((++k&255)===0)await _picMigYield(t);
   }
   return out;
 }
