@@ -10848,3 +10848,41 @@ The owner (27 Oct, about 4pm): "*I know the volume of note has an impact on load
 **Not done:** grouped Smart Views, structured (database) folders and journal folders still draw their cards whole (each open group is small); the side pane is round 2 of J08.
 
 **Review totals of the two rounds before (recorded here; they ride this round).** v05.51, full app-check on `6563664`: 1–59 + `self-check` 2325/2329, 60–111 5342/5356; 52d, 70, 72 and 82e each passed alone (52 93/93, 70 + 72 592/592, 82 248/248); 56k and 91f known. v05.52: the first run on `12fa597` found three faults (6m `--pp-*` fallbacks; 6o-1 `_ppMenu`; tap-t2 90c/90d), fixed in `8ab6e33`; the full re-check on `8ab6e33`: 2330/2332 (56k) and 5817/5834 (70 passes alone; 78b and 82e also miss on v05.51 side by side; 80h and 91f known; 86: extra pushes mid-import when the import's flushes span more than `_PUSH_MAX_MS` 2.5 s, on either build — filed).
+---
+
+## v05.54 — J08 W2: the side pane with many folders (built by the Architect)
+
+Round 2 of J08 (the owner, 27 Oct: "*How can make loading and navigating faster? We still have to import other notebook*").
+
+**Measured first (v05.53, 27,000 notes, 800 folders, phone ×4 / laptop).** Opening a folder with every folder open: 994 ms / 161 ms to the next frame; with every folder closed 293 ms on the phone. Profiled: (1) `isJournal` (the Daily Journal Smart View's count, drawn in every side-pane draw) searched every folder for every folder of every note — 27,000 × 800; (2) `chOf` filtered all 800 folders once per drawn row; (3) the rest is laying out ~4,000 elements of the side pane, paid by whichever function next measures the page (`renderP2H` on a phone, `_p3FitToolbar` on a PC).
+
+**The change.** (1) `_jrnPred()` builds the set of journal folders once and `isJournal(a, fs)` uses it; the three filters over many notes (`getSmartArts`, `getSecSmartArts`, `_cntOver`) use `_jrnPred()`. (2) `chOf` keeps a children map only while the side pane is being drawn (`_cntC.ch`, dropped with `_cntC` when the draw ends); outside a draw it filters as before, so a folder made, moved or renamed is seen at once. (3) `#tree .tr-row{content-visibility:auto; contain-intrinsic-size:auto 28px}`: a folder row off the screen is not laid out, and keeps its last measured height (nothing on a row draws outside it; the drop markers are inset shadows). The side pane's text is byte for byte what v05.53 draws.
+
+**After (same notebook).** Opening a folder with 800 folders open: phone ×4 **~350–410 ms** (was 994), laptop **~60 ms** (was 161).
+
+**Also:** the Khutbah outline template's heading "Salawat to Rasulullah" now reads "Salawat to Rasulullah Sallallahu A'laihi Wa Sallam" (the owner's general rule saw128, 28 Oct). Notes already made from the template are not changed.
+
+**Checks.** Block 114, `tools/tree-w2.mjs`, at 390 / 820 (touch) and 1440: 114a the side pane with every folder closed and every folder open, the journal Smart View's list and count and the folder counts are byte-identical to the same drawn with v05.53's `chOf` / `isJournal` swapped back in; 114b outside a draw a new, moved folder and a new journal folder are seen at once; 114c rows off the screen are `content-visibility:auto`, a row on the screen is drawn, a folder far down can be scrolled to and tapped / clicked; 114d the speed (phone ×4 ≤ 550 ms, laptop ≤ 150 ms, × host factor); 114e opening folders writes nothing; 114f no page errors. **20/20.**
+
+**Not done:** the side pane's text is still built whole on every draw (~170 ms of the phone's 400 at 800 open folders); drawing only the rows on screen would need the sections, Smart Views, tags and Note Types to be rows of one list — left until a notebook needs it.
+
+**Review totals of v05.53 (recorded here).** Full app-check on `59e0a9b` (two halves at once): 1–59 + `self-check` 2330/2332 (56k), 60–113 5900/5902 (100d: the sidebar ratio 2.97× against 3×; block 100 alone 15/15). Block 113 on v05.52: 7 of 11 fail.
+---
+
+## v05.55 — J86: a Zab Settings button, and choosing which Zabs scroll (built by the Architect)
+
+The owner (28 Oct, with a screenshot of Siyagah Zab's All Zabs cards): "*Enable a Zab Settings button here. *How do I set a particular Single/ Multiple Zab scrolling?*"
+
+**Found.** In Zab mode (`/?jeb=1`) the side pane, and so 🧰, is hidden: the Zab settings (Zab bar, Zab on the phone, 🎞 Scrolling titles, 📰 News, all under 🧰 → 🎨 Appearance) could not be reached from there at all. Choosing which Zabs scroll already existed (Scrolling titles → Which Zabs → "Only the ones I tick"), three menus deep.
+
+**The change.** `openZabSettings()` opens the Appearance dialog as "⚙ Zab settings": with `_themeZab` set, `renderThemeModal()` shows only the part from the Zab bar to Zab on the phone (`th-zab` … `th-zpl`, the same HTML as Appearance, so nothing is drawn twice), then "🎨 All appearance settings…" (`openTheme(true)`, the whole dialog, still on top). `#theme-modal.zab-set` puts it at z 10000 (over the cards at 8000, like the other modals); `closeTheme()` and a plain `openTheme()` take the class off. Reached from: the cards' header row "⚙ Settings" (`data-d="set"`), the ⚙ in a Zab panel's header (`.jeb-set`, one Zab and All Zabs; 44 px on a phone), and every Zab's menu ("⚙ Zab settings…"). The Zab menu (⋯, or a long press / right-click on a chip) also has "☑/☐ 🎞 In the scrolling titles" (`_zabTkHas`, `_zabTkToggle`): it ticks or unticks that one Zab in whichever "Which Zabs" mode is set; from "Only the Zab that is open" it makes "Only the ones I tick" (with that Zab, or none when it was the open one); turning a Zab on switches a band that is off on. A toast says which.
+
+**Shapes.** PC and tablet: the buttons in the header rows, the settings as the usual dialog; phone: the same buttons (44 px), the dialog as tall as the screen allows.
+
+**Checks.** Block 115, `tools/zab-set-j86.mjs`, at 390 / 820 (touch) and 1440: 115a Zab mode, All Zabs as cards: "⚙ Settings" in the header row opens ⚙ Zab settings on top (the point at its middle is inside it), with the Zab parts and no theme presets; 115b the panel header's ⚙ (All Zabs and one Zab) in Zab mode and in the notes app; 115c "All appearance settings…" on top, ✕ closes, 🧰 → Appearance afterwards is the plain dialog; 115d the menu's "🎞 In the scrolling titles" off / on (titles leave and come back), from "only the open Zab", with the band off; 115e "Only the ones I tick" with two Zabs: only their titles in the band; 115f no page errors. **31/31.**
+
+**Found in review, fixed:** with two more rows, a Zab's menu opened by a long press on the phone's Rail is pushed up over the finger that is still pressing, and the tap the browser makes when that finger lifts chose a row (the menu closed at once, a setting could change). `_jebEatLift(m)`: a menu that opens while a finger is down, or within 80 ms of one lifting, and not from a click, swallows the next click if it lands in the menu, the one the lifting finger makes; the next touch or 700 ms ends the watch, and a mouse or a later tap is never touched. (A first cut ignored every tap for 250 ms after opening; it broke 14 Zab checks whose taps come faster, and so would a quick hand.) Check 77b (long-press → the menu, then Rename) failed on the first cut of this round and passes now.
+
+**Review (Architect).** Full app-check on `b6ed9df` (two halves at once): 1–59 + `self-check` 2309/2314 — 52d threw once at its 6th kill (the reopened app was still joining its device copy back in, B1, after the test's 20 s wait; alone, twice, 52d 8/8 each time, 80 of 80 kills reopened exactly as saved; `s1d-checks.mjs` now waits up to 60 s and names that case), 56k known; 60–115 5792/5815 — 64h (now three header controls), 83c and 90d (the new ⚙ in the panel header) updated in place with the reason, 77b the menu fault above, 91f known.
+
+**Not done:** nothing in the settings themselves changed.

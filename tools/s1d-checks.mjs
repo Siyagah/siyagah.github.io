@@ -254,7 +254,10 @@ async function openPersistent(browser, base, vp, dir) {
     /* v05.17 · B1 — a browser killed a moment ago can leave the device copy unreadable for a moment. Since B1 the app then opens
        with a warning line and joins the copy back in by itself (before, it opened EMPTY and could write that over the copy, which
        is what made 52d fail now and then with 0 notes). So a reopen waits for that, up to 20 s, before it is read. */
-    await page.waitForFunction(() => typeof _idbBootFail === 'undefined' || !_idbBootFail, null, { timeout: 20000 }).catch(() => {});
+    /* v05.55 review: under a full suite's load (two halves at once) the join-back took longer than 20 s once, and the trial then read the
+       still-empty screen and threw on it. Wait up to 60 s, and if the app is still joining its copy back in, say exactly that. */
+    const joined = await page.waitForFunction(() => typeof _idbBootFail === 'undefined' || !_idbBootFail, null, { timeout: 60000 }).then(() => true, () => false);
+    if (!joined) throw new Error('the reopened app was still joining its device copy back in after 60 s (B1 recovery: nothing is written meanwhile)');
     await page.waitForTimeout(300);
     await page.evaluate(`window.__sig52=${SIG52};`);
     return { ctx, page, errors };
