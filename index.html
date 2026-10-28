@@ -4250,6 +4250,8 @@ async function _idbMigrateFrom(db){
      `s` is a save number (a millisecond clock that never goes back).
    Each save is ONE transaction, so a save cut off half-way leaves the notebook as it
    was before it, never a notebook with fewer notes.
+   (v05.57: the checkpoint now writes the PIECES (_lp*, below) and the start reads the newer of them and the full copy — the
+   text from here on describes the full copy, which a device keeps from before its first pieces.)
    siyagah-local-v1 'notebook' stays the full copy, read at boot exactly as before,
    plus 'notebook-seq' (written in the same transaction): the save number the full
    copy already holds. At boot the journal entries NEWER than that are laid over it
@@ -4526,7 +4528,7 @@ async function _lpRead(nseq){
   const partial=!got.po||!got.ph||got.P.some(x=>!x||!Array.isArray(x.r));
   const maps={}, fresh=[];
   got.P.forEach(p=>{ if(p&&Array.isArray(p.r)) p.r.forEach(x=>{ const k=x[0], c=k.slice(0,k.indexOf('~')); (maps[c]||(maps[c]=new Map())).set(k,x[1]); }); });
-  const ord=(got.po&&got.po.o)||{}; let head=got.ph?JSON.parse(got.ph.j):{}, m=null;
+  const stored=(got.po&&got.po.o)||{}, ord=Object.assign({},stored); let head=got.ph?JSON.parse(got.ph.j):{}, m=null;   /* `stored` = what Po holds: an order the journal changed is written at the next checkpoint */
   got.ks.forEach((k,i)=>{
     const v=got.vs[i];
     if(k==='m'){ m=v; return; }
@@ -4548,7 +4550,7 @@ async function _lpRead(nseq){
   _ljOn=true; _ljSeq=Math.max(m?(+m.seq||0):0,pm.seq,_ljSeq); _ljCkpt=pm.seq;
   const sw=_collect(db,null); _ljBase=sw.map; _ljOrd=_ljOrdOf(sw); _ljHead=_headOf(db,sw); _ljPuts=0;
   fresh.forEach(k=>_lpDirty.add(k));
-  _lpOrdSeen=ord; _lpHeadSeen=got.ph?got.ph.j:null;
+  _lpOrdSeen=stored; _lpHeadSeen=got.ph?got.ph.j:null;
   return {ok:true,db:db};
 }
 /* The device copy as the start (and the B1 recovery) reads it: {ok:false} = could not be read (the caller must not take that for

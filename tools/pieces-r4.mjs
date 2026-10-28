@@ -120,7 +120,8 @@ try {
   r.check((await sig(page)) === s2, '117c … byte for byte', '');
 
   /* 117d */
-  await save(page, () => { const n = DB.articles.find((x) => x.id === 'r4-n4'); n.title = 'R4 journal only'; n.updatedAt = new Date().toISOString(); });
+  await save(page, () => { const n = DB.articles.find((x) => x.id === 'r4-n4'); n.title = 'R4 journal only'; n.updatedAt = new Date().toISOString();
+    const i = DB.articles.findIndex((x) => x.id === 'r4-n20'); const [x] = DB.articles.splice(i, 1); DB.articles.unshift(x); });   /* and an ORDER change (o:articles) */
   await page.evaluate(async () => { trashArt('r4-n5'); await _ljChain.catch(() => {}); });
   const kvd = await raw(page);
   const s3 = await sig(page);
@@ -128,7 +129,12 @@ try {
   const d = await page.evaluate(() => ({ via: _lpStat.via, t: (DB.articles.find((x) => x.id === 'r4-n4') || {}).title, gone: !DB.articles.find((x) => x.id === 'r4-n5') }));
   r.check(!!kvd['r:articles~r4-n4'] && kvd['r:articles~r4-n4'].s > kvd.Pm.seq, '117d (the edit is in the journal only, newer than the pieces)', JSON.stringify({ s: (kvd['r:articles~r4-n4'] || {}).s, pm: kvd.Pm.seq }));
   r.check(d.via === 'pieces' && d.t === 'R4 journal only' && d.gone, '117d the journal is laid over the pieces: the edit and the deletion come back', JSON.stringify(d));
-  r.check((await sig(page)) === s3, '117d … byte for byte', '');
+  r.check((await sig(page)) === s3, '117d … byte for byte (the order included)', '');
+  /* the order the journal changed must reach Po at the next checkpoint (its o: entry is then cleared) */
+  await ckpt(page);
+  const kvo = await raw(page);
+  await reboot(page);
+  r.check(!kvo['o:articles'] && (kvo.Po.o.articles || [])[0] === 'articles~r4-n20' && (await sig(page)) === s3, '117d … a checkpoint after that start writes the changed order, and the next start is byte for byte', JSON.stringify({ first: (kvo.Po.o.articles || [])[0], oEntry: !!kvo['o:articles'] }));
 
   /* 117e */
   await save(page, () => { const n = DB.articles.find((x) => x.id === 'r4-n6'); n.title = 'R4 cut off'; n.updatedAt = new Date().toISOString(); });
@@ -189,6 +195,7 @@ try {
 
   /* 117i — the journal's database will not open at the start */
   const nBefore = await page.evaluate(() => DB.articles.length);
+  const pmBefore = (await raw(page)).Pm.seq;
   await page.evaluate(() => sessionStorage.setItem('r4fail', '1000000'));
   await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForFunction(() => window.__appBooted === true, null, { timeout: 90000 }); await sleep(300);
   const i1 = await page.evaluate(() => ({ fail: _idbBootFail, ready: _idbReady, warn: !!document.getElementById('idb-warn'), notes: DB.articles.map((x) => x.id), fails: window.__r4.fails }));
@@ -197,7 +204,7 @@ try {
   /* (what B1 then shows is its own business — boot-b1.mjs: never the starter set over a copy it could not read; here the harness's small
      localStorage copy, as a device that once saved there has) */
   r.check(i1.fail === true && i1.ready === false && i1.warn && i1.fails > 0 && !i1.notes.some((id) => id.startsWith('r4-')), '117i the journal cannot be read at the start: "could not read" (B1), the warning, the device copy not taken for read', JSON.stringify(i1));
-  r.check(!!rawi.Pm && rawi.Pm.seq === kvg.Pm.seq || rawi.Pm.seq >= kvg.Pm.seq, '117i … and nothing was written meanwhile', '');
+  r.check(!!rawi.Pm && rawi.Pm.seq === pmBefore && !Object.keys(rawi).some((k) => k.startsWith('r:')), '117i … and nothing was written meanwhile', JSON.stringify({ pm: rawi.Pm && rawi.Pm.seq, pmBefore, r: Object.keys(rawi).filter((k) => k.startsWith('r:')).length }));
   await page.evaluate(async () => { sessionStorage.removeItem('r4fail'); await _idbRecoverTry(); });
   const i2 = await page.evaluate(() => ({ fail: _idbBootFail, n: DB.articles.length, warn: !!document.getElementById('idb-warn') }));
   r.check(i2.fail === false && i2.n === nBefore && !i2.warn, '117i … the copy is joined back in once it opens', JSON.stringify({ i2, nBefore, kvi }));
