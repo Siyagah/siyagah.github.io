@@ -5,3 +5,7 @@ node_modules/
 tools/perf-enx/profile-run/
 tools/perf-enx/out-*.json
 tools/perf-enx/profile-prime/
+tools/perf-enx/profile-r4/
+tools/perf-enx/profile-r4c/
+tools/perf-enx/profile-r4c-run/
+tools/perf-enx/profile-r4*/

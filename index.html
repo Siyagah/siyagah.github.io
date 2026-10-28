@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.56">
+<meta name="app-version" content="05.57">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3985,7 +3985,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.56</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.57</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4270,11 +4270,14 @@ function _ljOpen(){
   if(_ljDbP) return _ljDbP;
   _ljDbP=new Promise(resolve=>{
     if(!window.indexedDB){ resolve(null); return; }
-    let rq; try{ rq=indexedDB.open(_LJ_NAME,1); }catch(e){ resolve(null); return; }
+    /* v05.57 — a FAILED open is not remembered (as _idbOpen since B1): since the journal also holds the device copy (_lp*), a
+       moment's failure must not make this whole session take it for absent */
+    const fail=()=>{ _ljDbP=null; resolve(null); };
+    let rq; try{ rq=indexedDB.open(_LJ_NAME,1); }catch(e){ fail(); return; }
     rq.onupgradeneeded=()=>{ try{ rq.result.createObjectStore(_LJ_STORE); }catch(e){} };
     rq.onsuccess=()=>resolve(rq.result);
-    rq.onerror=()=>resolve(null);
-    rq.onblocked=()=>resolve(null);
+    rq.onerror=fail;
+    rq.onblocked=fail;
   });
   return _ljDbP;
 }
@@ -4315,7 +4318,7 @@ function _ljTx(puts,m,cleanSeq){
       tx.onerror=()=>reject(tx.error||new Error('journal write failed'));
       tx.onabort=()=>reject(tx.error||new Error('journal write aborted'));
       if(cleanSeq!=null){
-        const cr=st.openCursor();
+        const cr=st.openCursor(_LJ_RANGE());   /* v05.57 — the journal's own keys only, never the pieces (_lp*) */
         cr.onsuccess=()=>{ const c=cr.result; if(!c) return; if(c.key!=='m'&&c.value&&c.value.s<=cleanSeq) c.delete(); c.continue(); };
       }
       puts.forEach(p=>st.put(p[1],p[0]));
@@ -4346,14 +4349,14 @@ function _ljSave(sw){
     const p=_ljRun(epoch,()=>_ljOpen().then(ldb=>{
       /* no second database on this device: save the old way, whole, for good */
       if(!ldb){ _ljDead=true; _ljOn=false; return _idbPut(IDB_KEY,DB); }
-      return _ljFullPut(seq).then(()=>_ljTx([],{seq:seq,n:n},seq)).then(()=>{ _ljCkpt=seq; return true; });
+      return _ljFullPut(seq).then(()=>_ljTx([],{seq:seq,n:n},seq)).then(()=>{ _ljCkpt=seq; _lpAll=true; _lpAllGen++; _lpArm(); return true; });
     }));
     _ljStat.lastMs=performance.now()-t0;
     return p;
   }
   const epoch=_ljEpoch, seq=_ljSeq=Math.max(_ljSeq+1,Date.now()), puts=[], cur=sw.map;
-  cur.forEach((e,k)=>{ if(_ljBase.get(k)!==e) puts.push(['r:'+k,{s:seq,j:_rcJson(e)}]); });
-  _ljBase.forEach((e,k)=>{ if(!cur.has(k)) puts.push(['r:'+k,{s:seq,g:1}]); });
+  cur.forEach((e,k)=>{ if(_ljBase.get(k)!==e){ puts.push(['r:'+k,{s:seq,j:_rcJson(e)}]); _lpDirty.add(k); } });
+  _ljBase.forEach((e,k)=>{ if(!cur.has(k)){ puts.push(['r:'+k,{s:seq,g:1}]); _lpDirty.add(k); } });
   _LJ_COLLS.forEach(c=>{ const a=sw.c[c].keys; if(!_sameKeys(a,_ljOrd[c])){ puts.push(['o:'+c,{s:seq,j:JSON.stringify(a)}]); _ljOrd[c]=a; } });
   const hs=_headOf(DB,sw); if(hs!==_ljHead){ puts.push(['h',{s:seq,j:hs}]); _ljHead=hs; }
   _ljBase=cur;
@@ -4371,17 +4374,19 @@ function _ljSave(sw){
   _ljCkptTimer=setTimeout(_ljCheckpoint,_ljPuts>=_LJ_CKPT_PUTS?0:_LJ_CKPT_MS);
   return p;
 }
-function _ljHiddenCkpt(){ if(_ljOn&&!_ljCkptBusy&&_ljSeq>_ljCkpt&&(_ljCkptTimer||_ljPuts>0)) _ljCheckpoint(); }
+function _ljHiddenCkpt(){ if(_ljOn&&!_ljCkptBusy&&((_ljSeq>_ljCkpt&&(_ljCkptTimer||_ljPuts>0))||_lpAll)) _ljCheckpoint(); }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') _ljHiddenCkpt(); });
 window.addEventListener('pagehide',_ljHiddenCkpt);
-/* a full copy of the notebook as it is now, then the removal of what it makes redundant */
+/* a copy of the notebook as it is now, then the removal of what it makes redundant. v05.57 (J08 R4): the copy is the PIECES
+   (_lpWrite: only the pieces that changed since the last one, in short steps), no longer the whole `notebook` record, whose
+   one put froze a phone ×4 for 5.8 s at 27,000 notes. Returns a promise (true = written) for the checks. */
 function _ljCheckpoint(){
   clearTimeout(_ljCkptTimer); _ljCkptTimer=null;
-  if(!_ljOn||_ljCkptBusy||!_dbLoaded) return;
+  if(!_ljOn||_ljCkptBusy||!_dbLoaded) return Promise.resolve(false);
   const epoch=_ljEpoch, seq=_ljSeq; _ljCkptBusy=true;
-  _ljRun(epoch,()=>_ljFullPut(seq).then(()=>_ljTx([],null,seq)),true)
-    .then(()=>{ _ljCkpt=seq; if(_ljSeq===seq) _ljPuts=0; _ljStat.full++; })
-    .catch(e=>{ if(_ljOn) console.warn('local journal: full copy not written (the journal still holds every change):',e); })
+  return _lpWrite(epoch,seq)
+    .then(()=>{ _ljCkpt=seq; if(_ljSeq===seq) _ljPuts=0; _ljStat.full++; return true; })
+    .catch(e=>{ if(_ljOn) console.warn('local journal: the pieces were not written (the journal still holds every change):',e); return false; })
     .finally(()=>{ _ljCkptBusy=false; });
 }
 /* Boot: lay the journal entries newer than the full copy over `db` (the full copy, as read).
@@ -4389,7 +4394,7 @@ function _ljCheckpoint(){
 async function _ljOverlay(db){
   const ldb=await _ljOpen(); if(!ldb) return false;
   const all=await new Promise(res=>{
-    try{ const tx=ldb.transaction(_LJ_STORE,'readonly'), st=tx.objectStore(_LJ_STORE), ks=st.getAllKeys(), vs=st.getAll();
+    try{ const tx=ldb.transaction(_LJ_STORE,'readonly'), st=tx.objectStore(_LJ_STORE), ks=st.getAllKeys(_LJ_RANGE()), vs=st.getAll(_LJ_RANGE());
       tx.oncomplete=()=>res([ks.result,vs.result]); tx.onerror=()=>res(null); tx.onabort=()=>res(null); }catch(e){ res(null); }
   });
   if(!all) return false;
@@ -4420,9 +4425,162 @@ async function _ljOverlay(db){
   if(m.n) Object.keys(m.n).forEach(c=>{ if(Array.isArray(db[c])&&db[c].length!==m.n[c]) console.error('local journal: '+c+' holds '+db[c].length+' after the overlay, the last save had '+m.n[c]); });
   _ljOn=true; _ljSeq=Math.max(+m.seq||0,baseSeq,_ljSeq); _ljCkpt=baseSeq;
   const sw=_collect(db,null); _ljBase=sw.map; _ljOrd=_ljOrdOf(sw); _ljHead=_headOf(db,sw); _ljPuts=0;
+  _lpAll=true; _lpAllGen++; _lpArm();   /* v05.57 — read from the full copy: the pieces are written whole at the next checkpoint */
   return true;
 }
 
+/* ── v05.57 · J08 R4 — the device copy in pieces ─────────────────────────────
+   Until v05.56 the device copy was ONE record, `notebook` in siyagah-local-v1: the start read it in one step that no code can split
+   (27,000 notes, ~127 MB: 3.7 s frozen on a phone ×4) and every checkpoint wrote it whole (5.8 s frozen on that phone). Now the
+   checkpoint writes the notebook's records in PIECES, in the journal's own database and store (no upgrade of anything):
+     'P:<i>'  {ps, r:[[key, record], …]}   piece i of Pm.P: every record whose key (_s1Key) hashes to i (_lpIdx)
+     'Po'     {ps, o:{coll:[key|null, …]}}   the slot order of every array (as the journal's 'o:<coll>')
+     'Ph'     {ps, j}                        the head (_headOf: every key that is not an id-keyed array, and id-less elements)
+     'Pm'     {seq, P, n}                    written LAST: the save number the pieces hold, how many pieces, the arrays' lengths
+   The keys start with a capital letter and the stamp is `ps`, not `s`: the journal's own keys are lower-case (_LJ_RANGE), so its
+   reads and its clean-up never see a piece, and a build older than this one (whose clean-up deletes any entry with an old `s`)
+   leaves them alone too.
+   A checkpoint (_lpWrite) writes only the pieces holding a record saved since the last one (_lpDirty; all of them after a start
+   from the full copy, _lpAll), from the records of the last save (_ljBase), a few per transaction (_LP_SLICE_MS), OUTSIDE the
+   journal's queue; then, in the queue, Po/Ph (when they changed), Pm and the removal of the journal entries it makes redundant.
+   A piece may hold a record NEWER than Pm.seq (written in a later step); the journal entries newer than Pm.seq are laid over the
+   pieces at the start, and they are the last save of every record they name, so the result is the last save either way. A
+   checkpoint cut off half-way leaves Pm as it was: the old pieces, some new ones, and every journal entry since the old Pm.
+   The start (_devRead) reads whichever copy is NEWER — the pieces (Pm.seq) or the full copy (notebook-seq; an older build in an
+   old tab may still write it) — and lays the journal over it. The full copy is no longer rewritten after a device has pieces; it
+   stays as it was (I8). If the journal's database cannot be read while a journal exists, that is "could not read" (B1), never
+   "absent". */
+const _LP_MIN=64, _LP_PER=800, _LP_SLICE_MS=25, _LP_FIRST_MS=15000;
+let _lpN=0, _lpAll=false, _lpAllGen=0, _lpDirty=new Set(), _lpOrdSeen=null, _lpHeadSeen=null, _lpArmT=null;
+window._lpStat={via:'',readMs:0,ckpt:0,pieces:0,steps:0,worst:0,lastMs:0,partial:0};
+function _LJ_RANGE(){ return IDBKeyRange.lowerBound('a'); }   /* the journal's keys: h, m, o:<coll>, r:<key> (the pieces start with 'P') */
+function _lpIdx(k,n){ let x=2166136261; for(let i=0;i<k.length;i++) x=Math.imul(x^k.charCodeAt(i),16777619); return (x>>>0)%n; }
+function _lpCount(notes){ let n=_LP_MIN; while(n*_LP_PER<notes&&n<4096) n*=2; return n; }
+/* the pieces are wanted whole (a start from the full copy, or the first journal save): write them soon, in short steps */
+function _lpArm(){
+  clearTimeout(_lpArmT);
+  const ms=typeof window.__lpFirstMs==='number'?window.__lpFirstMs:_LP_FIRST_MS;
+  _lpArmT=setTimeout(()=>{ if(_lpAll&&_ljOn&&_dbLoaded&&!_ljCkptBusy) _ljCheckpoint(); else if(_lpAll&&_ljOn) _lpArm(); },ms);
+}
+async function _lpWrite(epoch,seq){
+  const t0=performance.now();
+  const ldb=await _ljOpen(); if(!ldb) throw new Error('journal database unavailable');
+  const gen=_lpAllGen, all=_lpAll||!_lpN, n=_lpN||_lpCount(((DB&&DB.articles)||[]).length);
+  const dirty=_lpDirty; _lpDirty=new Set();   /* what is saved from here on marks the next checkpoint */
+  try{
+    const want=new Map();
+    if(all) for(let i=0;i<n;i++) want.set(i,[]); else dirty.forEach(k=>{ const i=_lpIdx(k,n); if(!want.has(i)) want.set(i,[]); });
+    _ljBase.forEach((e,k)=>{ const a=want.get(_lpIdx(k,n)); if(a) a.push([k,e.r]); });
+    const ids=[...want.keys()].sort((a,b)=>a-b);
+    let i=0;
+    while(i<ids.length){
+      if(epoch!==_ljEpoch||!_ljOn) throw new Error('local journal restarted');
+      await new Promise((res,rej)=>{
+        let tx=null;
+        try{
+          tx=ldb.transaction(_LJ_STORE,'readwrite'); const st=tx.objectStore(_LJ_STORE);
+          tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error||new Error('piece write failed')); tx.onabort=()=>rej(tx.error||new Error('piece write aborted'));
+          const s0=performance.now();
+          do{ const id=ids[i++]; st.put({ps:seq,r:want.get(id)},'P:'+id); _lpStat.pieces++; }while(i<ids.length&&performance.now()-s0<_LP_SLICE_MS);
+          const d=performance.now()-s0; _lpStat.steps++; if(d>_lpStat.worst) _lpStat.worst=d;
+          _ljHoldOpen(st);
+        }catch(e){ try{ if(tx) tx.abort(); }catch(_){} rej(e); }
+      });
+    }
+    /* the last step, in the journal's queue (every save up to `seq` is committed before it): order, head, the marker, the clean-up */
+    const ord=_ljOrd, head=_ljHead, puts=[];
+    const ordCh=all||!_lpOrdSeen||_LJ_COLLS.some(c=>!_sameKeys(ord[c],_lpOrdSeen[c]));
+    if(ordCh) puts.push(['Po',{ps:seq,o:Object.assign({},ord)}]);
+    if(all||head!==_lpHeadSeen) puts.push(['Ph',{ps:seq,j:head}]);
+    const cnt={}; _LJ_COLLS.forEach(c=>{ if(ord[c]) cnt[c]=ord[c].length; });
+    puts.push(['Pm',{seq:seq,P:n,n:cnt}]);
+    await _ljRun(epoch,()=>_ljTx(puts,null,seq),true);
+    _lpN=n; _lpOrdSeen=Object.assign({},ord); _lpHeadSeen=head; if(_lpAllGen===gen) _lpAll=false;
+    _lpStat.ckpt++; _lpStat.lastMs=Math.round(performance.now()-t0);
+    return true;
+  }catch(e){ dirty.forEach(k=>_lpDirty.add(k)); throw e; }
+}
+/* The start's read of the pieces. {ok:false} = could not be read; {ok:true,db:null} = none, or older than the full copy
+   (nseq); {ok:true,db} = the notebook (the journal's state is then set from it, as _ljOverlay does); partial:true = a piece is
+   missing (nothing but damage does that): the caller joins it with the full copy (mergeDB, so nothing in either is lost). */
+async function _lpRead(nseq){
+  const ldb=await _ljOpen(); if(!ldb) return {ok:false};
+  const t0=performance.now();
+  let pm;
+  try{ pm=await new Promise((res,rej)=>{ const q=ldb.transaction(_LJ_STORE,'readonly').objectStore(_LJ_STORE).get('Pm'); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+  catch(e){ return {ok:false}; }
+  if(!pm||!(pm.P>0)) return {ok:true,db:null};
+  _lpN=pm.P;
+  if(!(pm.seq>=nseq)) return {ok:true,db:null};   /* the full copy is newer: it is read, and the pieces written whole */
+  const got=await new Promise(res=>{
+    try{
+      const tx=ldb.transaction(_LJ_STORE,'readonly'), st=tx.objectStore(_LJ_STORE), P=new Array(pm.P), o={};
+      /* every piece asked for at once: the database reads the next while this page unpacks the last, each in its own task */
+      for(let i=0;i<pm.P;i++){ const q=st.get('P:'+i); q.onsuccess=()=>{ P[i]=q.result; }; }
+      const qo=st.get('Po'), qh=st.get('Ph'), qk=st.getAllKeys(_LJ_RANGE()), qv=st.getAll(_LJ_RANGE());
+      qo.onsuccess=()=>{ o.po=qo.result; }; qh.onsuccess=()=>{ o.ph=qh.result; };
+      tx.oncomplete=()=>res({P:P,po:o.po,ph:o.ph,ks:qk.result,vs:qv.result}); tx.onerror=()=>res(null); tx.onabort=()=>res(null);
+    }catch(e){ res(null); }
+  });
+  if(!got) return {ok:false};
+  const partial=!got.po||!got.ph||got.P.some(x=>!x||!Array.isArray(x.r));
+  const maps={}, fresh=[];
+  got.P.forEach(p=>{ if(p&&Array.isArray(p.r)) p.r.forEach(x=>{ const k=x[0], c=k.slice(0,k.indexOf('~')); (maps[c]||(maps[c]=new Map())).set(k,x[1]); }); });
+  const ord=(got.po&&got.po.o)||{}; let head=got.ph?JSON.parse(got.ph.j):{}, m=null;
+  got.ks.forEach((k,i)=>{
+    const v=got.vs[i];
+    if(k==='m'){ m=v; return; }
+    if(!v||!(v.s>pm.seq)) return;
+    if(k.startsWith('r:')){ const key=k.slice(2), c=key.slice(0,key.indexOf('~')), mp=maps[c]||(maps[c]=new Map()); if(v.g) mp.delete(key); else mp.set(key,JSON.parse(v.j)); fresh.push(key); }
+    else if(k.startsWith('o:')) ord[k.slice(2)]=JSON.parse(v.j);
+    else if(k==='h') head=JSON.parse(v.j);
+  });
+  const db={}, odd=head.__odd||{}, has=Array.isArray(head.__has)?head.__has:[];
+  Object.keys(head).forEach(k=>{ if(k!=='__odd'&&k!=='__has') db[k]=head[k]; });
+  _LJ_COLLS.forEach(c=>{
+    if(has.indexOf(c)<0&&!(maps[c]&&maps[c].size)&&!odd[c]) return;   /* nothing is dropped: records with no array in the head still get one */
+    db[c]=_applyToColl(c,[],maps[c]||new Map(),ord[c]||null,odd[c]||[]);
+  });
+  _headHas(db,head);
+  _lpStat.readMs=Math.round(performance.now()-t0);
+  if(partial){ _lpStat.partial++; console.error('the device copy: a piece is missing; joined with the full copy'); return {ok:true,db:db,partial:true}; }
+  if(m&&m.n) Object.keys(m.n).forEach(c=>{ if(m.seq>pm.seq&&Array.isArray(db[c])&&db[c].length!==m.n[c]) console.error('the device copy: '+c+' holds '+db[c].length+', the last save had '+m.n[c]); });
+  _ljOn=true; _ljSeq=Math.max(m?(+m.seq||0):0,pm.seq,_ljSeq); _ljCkpt=pm.seq;
+  const sw=_collect(db,null); _ljBase=sw.map; _ljOrd=_ljOrdOf(sw); _ljHead=_headOf(db,sw); _ljPuts=0;
+  fresh.forEach(k=>_lpDirty.add(k));
+  _lpOrdSeen=ord; _lpHeadSeen=got.ph?got.ph.j:null;
+  return {ok:true,db:db};
+}
+/* The device copy as the start (and the B1 recovery) reads it: {ok:false} = could not be read (the caller must not take that for
+   "absent"), {ok:true,v} = the notebook (undefined/null = genuinely none). */
+async function _devRead(){
+  const sq=await _idbRead('notebook-seq'); if(!sq.ok) return {ok:false};
+  const nseq=+sq.v||0;
+  let pc={ok:true,db:null};
+  if(nseq>0){ pc=await _lpRead(nseq); if(!pc.ok) return {ok:false}; }   /* a journal exists: it holds what the full copy lacks */
+  if(pc.db&&!pc.partial){ _lpStat.via='pieces'; return {ok:true,v:pc.db}; }
+  const rd=await _idbRead(IDB_KEY); if(!rd.ok) return {ok:false};
+  let v=rd.v;
+  if(v&&v.folders){ try{ await _ljOverlay(v); }catch(e){ console.error('local journal not applied (the full copy is used):',e); } }
+  if(pc.partial){ v=(v&&v.folders)?mergeDB(v,pc.db):pc.db; _lpAll=true; _lpAllGen++; _lpArm(); }
+  _lpStat.via='full';
+  return {ok:true,v:v};
+}
+
+/* v05.57 — the live page carries an EMPTY built-in notebook ({"folders":[],"articles":[],"sections":[],"trash":[]}), and an empty
+   list still counted as "present", so every start merged the whole device copy with nothing (0.6 s on a phone ×4 at 27,000 notes).
+   A Save File copy carries notes (or any other key), and is merged exactly as before. */
+/* what that merge did with an empty notebook: only the empty containers it gives a notebook that lacks one (myFavCats, tombstones,
+   tagColors, …). Taken from merging two empty notebooks, so the list is mergeDB's own; added in mergeDB's order (block 117 compares
+   the result byte for byte with the merge). */
+function _embShape(db,emb){
+  const z=mergeDB({folders:[],articles:[],sections:[],trash:[]},JSON.parse(JSON.stringify(emb)));
+  Object.keys(z).forEach(k=>{ if(!(k in db)) db[k]=z[k]; });
+}
+function _embHas(emb){
+  if(!emb||!emb.folders) return false;
+  return Object.keys(emb).some(k=>!(Array.isArray(emb[k])&&emb[k].length===0));
+}
 async function loadDB(){
   const el = document.getElementById('nd');
   let emb = null;
@@ -4450,18 +4608,16 @@ async function loadDB(){
      (see _idbBootFail) and joins it back in when it can be read (_idbRecoverTry). */
   let _rd={ok:false};
   for(let k=0;k<_IDB_BOOT_TRIES;k++){
-    try{ _rd=await _idbRead(IDB_KEY); }catch(e){ _rd={ok:false}; }
+    try{ _rd=await _devRead(); }catch(e){ _rd={ok:false}; }   /* v05.57 — the pieces or the full copy, whichever is newer, with the journal laid over */
     if(_rd.ok) break;
     await new Promise(r=>setTimeout(r,_IDB_BOOT_GAP_MS));
   }
   if(_rd.ok) _idb=_rd.v||null; else _idbBootFail=true;
   if(_idb&&_idb.folders){
     _idbReady=true;
-    /* v04.91 — a notebook saved in journal mode: the full copy plus what the journal
-       holds newer than it (see _ljOverlay). Without a journal this does nothing. */
-    try{ await _ljOverlay(_idb); }catch(e){ console.error('local journal not applied (the full copy is used):',e); }
-    if(emb?.folders){DB=mergeDB(_idb,emb);}
-    else{DB=_idb;}   /* v04.91 — `_idb` is this boot's own read (a structured clone): copying it again cost two whole-notebook passes */
+    /* v04.91 — the journal is laid over the device copy inside _devRead() (v05.57) */
+    if(_embHas(emb)){DB=mergeDB(_idb,emb);}
+    else{ DB=_idb; if(emb?.folders) _embShape(DB,emb); }   /* v04.91 — `_idb` is this boot's own read (a structured clone): copying it again cost two whole-notebook passes */
   }
   else if(_stored?.folders&&emb?.folders){DB=mergeDB(_stored,emb);}
   else if(emb?.folders){DB=JSON.parse(JSON.stringify(emb));}
@@ -4656,11 +4812,10 @@ async function _idbRecoverTry(){
   if(!_idbBootFail||_idbRecBusy) return;
   _idbRecBusy=true; _idbRecN++;
   try{
-    const rd=await _idbRead(IDB_KEY).catch(()=>({ok:false}));
+    const rd=await _devRead().catch(()=>({ok:false}));   /* v05.57 — the same read as the start (pieces or full copy, journal laid over) */
     if(!rd.ok) return;
     const idb=rd.v;
     if(idb&&idb.folders){
-      try{ await _ljOverlay(idb); }catch(e){ console.error('local journal not applied (the full copy is used):',e); }
       _flushAllEditors();
       _stampRecordTouches();   /* stamp anything typed meanwhile, BEFORE the merge judges it (as a received sync does) */
       const old=_recSnap;
@@ -17153,7 +17308,21 @@ function _blTargets(a){
   _blIdx.set(a.id,{c:c,t:t});
   return t;
 }
+/* v05.57 · J08 R4 — the start's first draw does not wait for the backlinks scan (every note read once: 0.56 s on a phone ×4 at 27,000
+   notes). During that one draw (_blBoot) the open note's "Linked from" is left out; the scan then runs in 25 ms slices (_blWarm) and
+   refreshBacklinks() fills it in, in place. Every later draw computes it as before. */
+let _blBoot=true, _blWarmState=0;
+function _blWarm(){
+  if(_blWarmState) return; _blWarmState=1;
+  (async()=>{
+    try{ const arr=DB.articles; let i=0;
+      while(i<arr.length){ const s0=performance.now(); while(i<arr.length&&performance.now()-s0<25) _blTargets(arr[i++]); await _yieldTask(); }
+    }catch(e){}
+    _blWarmState=2; refreshBacklinks();
+  })();
+}
 function getBacklinks(artId){
+  if(_blBoot){ _blWarm(); return []; }
   if(_blIdx.size>DB.articles.length*2) _blIdx.clear();
   return DB.articles.filter(a=>a.id!==artId&&
     (_blTargets(a).has(String(artId))||(a.linkedNotes||[]).includes(artId)));
@@ -17197,6 +17366,7 @@ function refreshBacklinks(){
     let bl=document.getElementById('backlinks');
     if(bl){if(html){const t=document.createElement('template');t.innerHTML=html;bl.replaceWith(t.content);}else bl.remove();}
     else if(html&&ed){const t=document.createElement('template');t.innerHTML=html;ed.after(t.content);}
+    else if(html){ const av=document.querySelector('#p3c .av'); if(av) av.insertAdjacentHTML('beforeend',html); }   /* v05.57 — the read view (filled in after the start) */
   }catch(e){console.error('refreshBacklinks',e);}
 }
 
@@ -35532,6 +35702,7 @@ function _bvEnd(){
   _bvPlace();   /* v05.56 — open where this device left off */
   _bvEnd();   /* v05.56 — in the same task as render(): the picture is never painted over a half-drawn app */
   render();
+  _blBoot=false;   /* v05.57 — only this first draw leaves "Linked from" to _blWarm */
   _openFromQuery();   /* v05.04 — ?open=<id> from Siyagah Jeb */
   _seedRecSnap();   /* v04.68 — record-stamp baseline: everything boot, its migrations and the first render settled on (see _stampRecordTouches) */
   /* v04.50 — the flag means "settled", not "render() returned": fonts
