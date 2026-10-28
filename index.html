@@ -26219,20 +26219,36 @@ function _jebCardDrag(g0,e){
 /* ── menus ── */
 function _jebHideMenu(){ const m=_jebEl('jeb-menu'); if(m) m.remove(); }
 /* rows: [{t, f, off?, d?, keep?}]; placed by measuring (anchor = an element, else x/y) */
+/* v05.55 review — a menu opened by a finger (a long press, or released in place) can open UNDER that finger: a long menu on a phone is
+   pushed up over its button. The one click the browser makes when that finger lifts must not choose a row. So when a menu opens while a
+   finger is down, or within 80 ms of one lifting (never from a click itself), the next click is swallowed if it lands in the menu; the next touch, or 700 ms, ends
+   the watch. A mouse, or a later tap, is never touched. */
+let _jebTouchLive=false, _jebTouchEndAt=0;
+document.addEventListener('touchstart',()=>{ _jebTouchLive=true; },{capture:true,passive:true});
+document.addEventListener('touchend',()=>{ _jebTouchLive=false; _jebTouchEndAt=performance.now(); },{capture:true,passive:true});
+document.addEventListener('touchcancel',()=>{ _jebTouchLive=false; _jebTouchEndAt=performance.now(); },{capture:true,passive:true});
+function _jebEatLift(m){
+  const ev=window.event; if(ev&&ev.type==='click') return;   /* opened by a tap or a click: that click is over, the next one is meant */
+  if(!_jebTouchLive&&performance.now()-_jebTouchEndAt>80) return;
+  let armed=!_jebTouchLive;   /* a finger still down: wait for it to lift, then the next click is its own */
+  const off=()=>{ document.removeEventListener('click',eat,true); document.removeEventListener('touchstart',next,true); document.removeEventListener('touchend',lift,true); clearTimeout(t); };
+  const eat=(e)=>{ if(!armed) return; off(); if(m.contains(e.target)){ e.stopPropagation(); e.preventDefault(); } };
+  const lift=()=>{ armed=true; clearTimeout(t); t=setTimeout(off,700); };
+  const next=()=>{ if(armed) off(); };
+  let t=setTimeout(off,armed?700:10000);
+  document.addEventListener('click',eat,true); document.addEventListener('touchstart',next,true); document.addEventListener('touchend',lift,true);
+}
 function _jebShowMenu(rows,anchor,x,y){
   _jebHideMenu();
   const m=document.createElement('div'); m.id='jeb-menu';
   m.innerHTML=rows.map((r,i)=>`<div class="jm${r.off?' off':''}${r.d?' d':''}" data-i="${i}">${esc(r.t)}</div>`).join('');
-  const t0=performance.now();
   m.addEventListener('click',e=>{
     const el=e.target.closest('.jm'); if(!el) return;
-    /* v05.55 review: a menu opened by a long press can open under the finger (a long menu on a phone is pushed up over its button); the tap the
-       browser makes when that finger lifts must not choose a row. A real tap on a row comes later than this. */
-    if(performance.now()-t0<250) return;
     const r=rows[+el.dataset.i]; if(!r.keep) _jebHideMenu();
     r.f();
   });
   document.body.appendChild(m);
+  _jebEatLift(m);
   const w=m.offsetWidth, h=m.offsetHeight, vw=window.innerWidth, vh=window.innerHeight;
   let l, t;
   if(anchor&&anchor.isConnected){
