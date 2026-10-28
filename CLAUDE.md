@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.56.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.57.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,11 +47,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.57** (29 Oct 2026) — J08 R4 rebuilt (built by the Architect): the full device copy (`notebook`, one put of the whole notebook: ~10 s frozen on a phone ×4 at 27,000 notes) is written ONLY while the page is hidden — `_ljCkptWant`, `_ljHiddenCkpt` on hide / `pagehide` (`_ljPageGone`), or `_LJ_CKPT_MS` after a save made while hidden; no visible 10-minute timer, no visible 3,000-put trigger. The empty built-in notebook is no longer merged (`_embHas`/`_embShape`); "Linked from" is filled in after the first draw (`_blBoot`, `_blWarm`); `_ljOpen` forgets a failed open. The first design (the copy in 64 pieces, PR #247) was withdrawn: 52d. Check: block 117, `tools/hidden-r4.mjs`; `tools/perf-enx/r4-hidden.mjs`.
 - **v05.56** (28 Oct 2026) — J08 R3 (built by the Architect): a faster start. `_bvCapture` (page hidden) keeps the panes as a cleaned picture in `siyagah-boot-v1`; `_bvShow` paints it before `loadDB()` (inert, "Opening your notebook…"), `_bvEnd` restores the panes in the same task as `render()`; `_bvPlace` reopens the device's last folder. `_picMigSweepFields`/`_picMigCands` pause every 25 ms. 27,000 notes, phone ×4: notes on screen 15–21 s → 1.5 s; no freeze after. Check: block 116, `tools/boot-r3.mjs`; `tools/perf-enx/boot.mjs`.
 - **v05.55** (28 Oct 2026) — J86 (built by the Architect): "⚙ Zab settings" (`openZabSettings`: the Appearance dialog with `_themeZab` showing only the Zab bar, 🎞 Scrolling titles, 📰 News and Zab on the phone; `#theme-modal.zab-set` at z 10000, over the cards) from the cards' "⚙ Settings" (`data-d="set"`), the panel header's `.jeb-set` ⚙ and every Zab's menu; the Zab menu's "🎞 In the scrolling titles" (`_zabTkHas` / `_zabTkToggle`). Zab mode has no 🧰, so this is its only way in. Check: block 115, `tools/zab-set-j86.mjs`.
 - **v05.54** (28 Oct 2026) — J08 W2 (built by the Architect): the side pane with many folders. `chOf` uses one children map per side-pane draw (`_cntC.ch`; outside a draw it filters as before); journal filters build the journal-folder set once (`_jrnPred`, `isJournal(a,fs)`); `#tree .tr-row` is `content-visibility:auto` (a row off the screen is not laid out). 800 folders open, phone ×4: opening a folder 0.99 s → ~0.4 s. The Khutbah template says "Rasulullah Sallallahu A'laihi Wa Sallam" (rule saw128). Check: block 114, `tools/tree-w2.mjs`.
 - **v05.53** (27 Oct 2026) — J08 W1 (built by the Architect): a note list over 300 cards is a window (`_listWin`, `_lwDraw`: only the cards from a screen above to a screen below are in `.al.al-win`, padding stands for the rest, measured heights); the slices are gone. "Find in this list" (`.lf-bar`, `_lf*`): title or text, every word, Enter opens the first, Ctrl+F in the list goes to it. Opening a note elsewhere brings its card into view. 27,000 notes, phone ×4: un-select a tag ~21 s → 0.06 s. Check: block 113, `tools/list-w1.mjs`; 82 and 100c changed in place.
-- **v05.52** (27 Oct 2026) — J82 (built by the Architect): 🪟 (beside the side pane's search box, 🧰 → View, and "🪟 Pane" in the note list's row) → `_ppMenu`: "Pop out" floats `#sb` / `#p2` itself (class `.pp`, `_ppSet`; place/size `--pp-*` on the pane, fractions in `localStorage` `siyagah-pp-v1`; bar ⤢ / ⇲ Dock; 8 handles, one engine `_ppGrab`; a phone: a full-width sheet). PC docked: dividers clamp to the window (`_sbClampW`/`_p2ClampW`, note pane ≥ 320), the list's width kept (`siyagah-p2-w`), "⤢ full width" = `body.pw-*` (`_pwSet`), ⤡ `#pw-back`. Check: block 112, `tools/pane-pop-j82.mjs`.
 ---
 
 ## What this is
@@ -325,8 +325,9 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `_pTok(p)` works the old token out from `e`'s own copy of the values (`_rcTokE`) and it is compared with the new one. `_s1DirtyFromDiff` does the same. The undo baseline keeps no text: `_hJson` holds a record's text only after it has changed, and the "before" of any other is
   `_rcJsonOld(_hMap.get(k))` (the entry's primitives and JSON copies, noteHistory cut back to the length it had). That returns null when `noteHistory` was cut from the same array (the app only pushes, or replaces the array): the frame is then dropped with every older one (`fr.lost`).
   **A new field on a record that is an object must be copied by `_rcBuild`'s `js` (it is) — never read a live value in `_rcValE`.**
-- **Since v05.41 (P5) the checkpoint is not on the 30 s idle.** `_ljSave` arms the timer (`_LJ_CKPT_MS` = 10 min) only when a save wrote more than the head (`h`); `visibilitychange`→hidden and `pagehide` call `_ljHiddenCkpt`;
-  3,000 puts still checkpoint at once. The journal holds every change meanwhile, so boot's overlay is longer, never wrong. **A test that needs a checkpoint calls `_ljCheckpoint()` itself.**
+- **Since v05.57 (J08 R4) the checkpoint runs ONLY while the page is hidden.** A save that wrote more than the head (`h`) sets `_ljCkptWant`; `visibilitychange`→hidden and `pagehide`
+  (`_ljPageGone`, for a window closed while visible) call `_ljHiddenCkpt`, which does nothing while visible; a save made while already hidden arms `_LJ_CKPT_MS` (10 min), cleared when the page comes back into view.
+  `_LJ_CKPT_PUTS` is no longer a trigger. The journal holds every change meanwhile, so boot's overlay is longer, never wrong. **Never start a whole-notebook write while the page is visible.** **A test that needs a checkpoint calls `_ljCheckpoint()` itself.**
 - **The local journal and undo frames (v04.91, S1d).** `notebook` in
   `siyagah-local-v1` stays the FULL copy and is what every build reads at
   boot. The per-record journal lives in a NEW database, `siyagah-localrecs-v1`
@@ -334,9 +335,9 @@ A failing check is a wrong assertion surprisingly often — investigate before
   the records that changed, plus `notebook-seq` in `siyagah-local-v1` saying
   how far the full copy has caught up. Boot reads the full copy, then
   overlays the journal past that seq. A checkpoint rewrites the full copy
-  when the page is hidden, after 3,000 puts, or 10 minutes after the last save. A failed journal write drops to a full-copy
+  only while the page is hidden (v05.57). A failed journal write drops to a full-copy
   save and rings the alarm. A build older than v04.91 reads only the full
-  copy, so it can be up to 10 minutes behind. A per-record cache serves the merge
+  copy, so it can be behind by everything saved since the page was last hidden. A per-record cache serves the merge
   and the list (which is patched, not rebuilt). Undo keeps byte-bounded
   frames (changed records only), not 60 whole-notebook copies. The test-only
   `window.__ljHold` (ms) holds a journal or checkpoint transaction open and

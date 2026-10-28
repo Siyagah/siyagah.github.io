@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.56">
+<meta name="app-version" content="05.57">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3985,7 +3985,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.56</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.57</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4254,27 +4254,33 @@ async function _idbMigrateFrom(db){
    plus 'notebook-seq' (written in the same transaction): the save number the full
    copy already holds. At boot the journal entries NEWER than that are laid over it
    (_ljOverlay). A full copy is written (a) the first time a notebook enters
-   journal mode, (b) when the page is hidden, or 10 min after the last save (_LJ_CKPT_MS; v05.41 — a settings-only save starts no timer), (c) after
-   _LJ_CKPT_PUTS journal writes; the entries it makes redundant are then removed.
+   journal mode, (b) when the page is hidden (v05.41 — a settings-only save asks for none), or (c) while it stays hidden,
+   _LJ_CKPT_MS after a save made meanwhile; the entries it makes redundant are then removed. v05.57 (J08 R4): NEVER while
+   the page is visible — the one put of the whole notebook froze a phone ×4 for 5.8 s at 27,000 notes, so the visible
+   10-minute timer and the visible _LJ_CKPT_PUTS (3,000 puts) trigger are gone; the journal holds every change meanwhile
+   and boot lays it over the full copy, so a start is a little longer, never wrong.
    If a journal write fails the journal is dropped and the next save writes a full
    copy again — the failure raises the same ⚠ alarm any failed save always has.
    Not covered: a build older than v04.91 reads only the full copy, which can be
-   up to _LJ_CKPT_MS behind. Nobody downgrades (the service worker only moves
+   behind by everything saved since the page was last hidden. Nobody downgrades (the service worker only moves
    forward); the frozen builds under legacy/ read-only and do not write. */
 const _LJ_NAME='siyagah-localrecs-v1', _LJ_STORE='kv';
 let _LJ_MIN_NOTES=1500, _LJ_CKPT_MS=600000, _LJ_CKPT_PUTS=3000;
 let _ljDbP=null, _ljOn=false, _ljDead=false, _ljSeq=0, _ljCkpt=0, _ljBase=null, _ljOrd=null, _ljHead=null;
-let _ljEpoch=0, _ljChain=Promise.resolve(), _ljCkptTimer=null, _ljCkptBusy=false, _ljPuts=0;
+let _ljEpoch=0, _ljChain=Promise.resolve(), _ljCkptTimer=null, _ljCkptBusy=false, _ljPuts=0, _ljCkptWant=false;
 window._ljStat={writes:0,puts:0,full:0,lastMs:0};
 function _ljOpen(){
   if(_ljDbP) return _ljDbP;
   _ljDbP=new Promise(resolve=>{
     if(!window.indexedDB){ resolve(null); return; }
-    let rq; try{ rq=indexedDB.open(_LJ_NAME,1); }catch(e){ resolve(null); return; }
+    /* v05.57 — a FAILED open is not remembered (as _idbOpen since B1): a moment's failure must not switch the journal off for
+       the whole session */
+    const fail=()=>{ _ljDbP=null; resolve(null); };
+    let rq; try{ rq=indexedDB.open(_LJ_NAME,1); }catch(e){ fail(); return; }
     rq.onupgradeneeded=()=>{ try{ rq.result.createObjectStore(_LJ_STORE); }catch(e){} };
     rq.onsuccess=()=>resolve(rq.result);
-    rq.onerror=()=>resolve(null);
-    rq.onblocked=()=>resolve(null);
+    rq.onerror=fail;
+    rq.onblocked=fail;
   });
   return _ljDbP;
 }
@@ -4363,24 +4369,35 @@ function _ljSave(sw){
   _ljStat.puts+=puts.length; _ljPuts+=puts.length;
   const p=_ljRun(epoch,()=>_ljTx(puts,m,null));
   /* v05.41 (P5): the full copy is one task proportional to the whole notebook (1.9 s at 58 MB on a phone), and opening a note
-     saves (lastArticle), so a 30 s idle timer fired after almost anything. Now: a save that changed only the head (settings)
-     starts no timer; otherwise the copy is made on hide, after _LJ_CKPT_PUTS puts, or after _LJ_CKPT_MS (10 min) without a save.
-     The journal holds every change meanwhile and boot overlays it, so nothing is lost if the tab is killed. */
+     saves (lastArticle), so a 30 s idle timer fired after almost anything. Then: a save that changed only the head (settings)
+     starts no timer; otherwise the copy was made on hide, after _LJ_CKPT_PUTS puts, or after _LJ_CKPT_MS (10 min) without a save.
+     The journal holds every change meanwhile and boot overlays it, so nothing is lost if the tab is killed.
+     v05.57 (J08 R4): the copy is made ONLY while the page is hidden. A save asks for one (_ljCkptWant); it is made on hide, or,
+     for a save made while already hidden (a sync received in the background), _LJ_CKPT_MS later if the page is still hidden. */
   if(puts.every(x=>x[0]==='h')) return p;
-  clearTimeout(_ljCkptTimer);
-  _ljCkptTimer=setTimeout(_ljCheckpoint,_ljPuts>=_LJ_CKPT_PUTS?0:_LJ_CKPT_MS);
+  _ljCkptWant=true;
+  if(document.visibilityState==='hidden'){ clearTimeout(_ljCkptTimer); _ljCkptTimer=setTimeout(_ljHiddenCkpt,_LJ_CKPT_MS); }
   return p;
 }
-function _ljHiddenCkpt(){ if(_ljOn&&!_ljCkptBusy&&_ljSeq>_ljCkpt&&(_ljCkptTimer||_ljPuts>0)) _ljCheckpoint(); }
-document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') _ljHiddenCkpt(); });
-window.addEventListener('pagehide',_ljHiddenCkpt);
+function _ljHiddenCkpt(){
+  clearTimeout(_ljCkptTimer); _ljCkptTimer=null;
+  if(document.visibilityState!=='hidden'&&!_ljPageGone) return;
+  if(_ljOn&&!_ljCkptBusy&&_ljSeq>_ljCkpt&&(_ljCkptWant||_ljPuts>0)) _ljCheckpoint();
+}
+let _ljPageGone=false;
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden') _ljHiddenCkpt();
+  else{ clearTimeout(_ljCkptTimer); _ljCkptTimer=null; }   /* back in view: no copy is started while the owner is using the app */
+});
+window.addEventListener('pagehide',()=>{ _ljPageGone=true; _ljHiddenCkpt(); });
+window.addEventListener('pageshow',()=>{ _ljPageGone=false; });
 /* a full copy of the notebook as it is now, then the removal of what it makes redundant */
 function _ljCheckpoint(){
   clearTimeout(_ljCkptTimer); _ljCkptTimer=null;
   if(!_ljOn||_ljCkptBusy||!_dbLoaded) return;
   const epoch=_ljEpoch, seq=_ljSeq; _ljCkptBusy=true;
   _ljRun(epoch,()=>_ljFullPut(seq).then(()=>_ljTx([],null,seq)),true)
-    .then(()=>{ _ljCkpt=seq; if(_ljSeq===seq) _ljPuts=0; _ljStat.full++; })
+    .then(()=>{ _ljCkpt=seq; if(_ljSeq===seq){ _ljPuts=0; _ljCkptWant=false; } _ljStat.full++; })
     .catch(e=>{ if(_ljOn) console.warn('local journal: full copy not written (the journal still holds every change):',e); })
     .finally(()=>{ _ljCkptBusy=false; });
 }
@@ -4423,6 +4440,19 @@ async function _ljOverlay(db){
   return true;
 }
 
+/* v05.57 · J08 R4 — the live page carries an EMPTY built-in notebook ({"folders":[],"articles":[],"sections":[],"trash":[]}), and an
+   empty list still counted as "present", so every start merged the whole device copy with nothing (0.6 s on a phone ×4 at 27,000
+   notes). A Save File copy carries notes (or any other key), and is merged exactly as before. _embShape adds only what that merge
+   did with an empty notebook: the empty containers it gives a notebook that lacks one (myFavCats, tombstones, tagColors, …), taken
+   from merging two empty notebooks, so the list is mergeDB's own (block 117 compares the result byte for byte with the merge). */
+function _embShape(db,emb){
+  const z=mergeDB({folders:[],articles:[],sections:[],trash:[]},JSON.parse(JSON.stringify(emb)));
+  Object.keys(z).forEach(k=>{ if(!(k in db)) db[k]=z[k]; });
+}
+function _embHas(emb){
+  if(!emb||!emb.folders) return false;
+  return Object.keys(emb).some(k=>!(Array.isArray(emb[k])&&emb[k].length===0));
+}
 async function loadDB(){
   const el = document.getElementById('nd');
   let emb = null;
@@ -4460,8 +4490,8 @@ async function loadDB(){
     /* v04.91 — a notebook saved in journal mode: the full copy plus what the journal
        holds newer than it (see _ljOverlay). Without a journal this does nothing. */
     try{ await _ljOverlay(_idb); }catch(e){ console.error('local journal not applied (the full copy is used):',e); }
-    if(emb?.folders){DB=mergeDB(_idb,emb);}
-    else{DB=_idb;}   /* v04.91 — `_idb` is this boot's own read (a structured clone): copying it again cost two whole-notebook passes */
+    if(_embHas(emb)){DB=mergeDB(_idb,emb);}
+    else{ DB=_idb; if(emb?.folders) _embShape(DB,emb); }   /* v05.57 — an empty built-in notebook is not merged (_embHas). v04.91 — `_idb` is this boot's own read (a structured clone): copying it again cost two whole-notebook passes */
   }
   else if(_stored?.folders&&emb?.folders){DB=mergeDB(_stored,emb);}
   else if(emb?.folders){DB=JSON.parse(JSON.stringify(emb));}
@@ -17153,7 +17183,21 @@ function _blTargets(a){
   _blIdx.set(a.id,{c:c,t:t});
   return t;
 }
+/* v05.57 · J08 R4 — the start's first draw does not wait for the backlinks scan (every note read once: 0.56 s on a phone ×4 at 27,000
+   notes). During that one draw (_blBoot) the open note's "Linked from" is left out; the scan then runs in 25 ms slices (_blWarm) and
+   refreshBacklinks() fills it in, in place. Every later draw computes it as before. */
+let _blBoot=true, _blWarmState=0;
+function _blWarm(){
+  if(_blWarmState) return; _blWarmState=1;
+  (async()=>{
+    try{ const arr=DB.articles; let i=0;
+      while(i<arr.length){ const s0=performance.now(); while(i<arr.length&&performance.now()-s0<25) _blTargets(arr[i++]); await _yieldTask(); }
+    }catch(e){}
+    _blWarmState=2; refreshBacklinks();
+  })();
+}
 function getBacklinks(artId){
+  if(_blBoot){ _blWarm(); return []; }
   if(_blIdx.size>DB.articles.length*2) _blIdx.clear();
   return DB.articles.filter(a=>a.id!==artId&&
     (_blTargets(a).has(String(artId))||(a.linkedNotes||[]).includes(artId)));
@@ -17197,6 +17241,7 @@ function refreshBacklinks(){
     let bl=document.getElementById('backlinks');
     if(bl){if(html){const t=document.createElement('template');t.innerHTML=html;bl.replaceWith(t.content);}else bl.remove();}
     else if(html&&ed){const t=document.createElement('template');t.innerHTML=html;ed.after(t.content);}
+    else if(html){ const av=document.querySelector('#p3c .av'); if(av) av.insertAdjacentHTML('beforeend',html); }   /* v05.57 — the read view (filled in after the start) */
   }catch(e){console.error('refreshBacklinks',e);}
 }
 
@@ -35532,6 +35577,7 @@ function _bvEnd(){
   _bvPlace();   /* v05.56 — open where this device left off */
   _bvEnd();   /* v05.56 — in the same task as render(): the picture is never painted over a half-drawn app */
   render();
+  _blBoot=false;   /* v05.57 — only this first draw leaves "Linked from" to _blWarm */
   _openFromQuery();   /* v05.04 — ?open=<id> from Siyagah Jeb */
   _seedRecSnap();   /* v04.68 — record-stamp baseline: everything boot, its migrations and the first render settled on (see _stampRecordTouches) */
   /* v04.50 — the flag means "settled", not "render() returned": fonts
