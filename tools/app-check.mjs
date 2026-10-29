@@ -12659,6 +12659,21 @@ await r.block('116-boot-r3', async () => {
   for (const row of rows) r.check(row.ok, '116: ' + row.label, row.detail);
   r.check(out.status === 0, 'the boot-r3.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 117 — v05.57, J08 R4 (rebuilt): the full copy only while the page is hidden. tools/hidden-r4.mjs runs 117a–117m: a visible page starts no
+   checkpoint (no 10-minute timer, no 3,000-put trigger) and a reload still has every save; hiding, a save while hidden, pagehide write it; a
+   failed open of the journal is asked again; the empty built-in notebook is no longer merged (byte for byte the merge's result); "Linked from"
+   filled in after the start's first draw at 390 / 820 / 1440. (The withdrawn first design, the copy in pieces, used this number too: PR #247.) */
+await r.block('117-hidden-r4', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./hidden-r4.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 19, 'the hidden-r4.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '117: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the hidden-r4.mjs check exits cleanly', `exit ${out.status}`);
+});
 
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —

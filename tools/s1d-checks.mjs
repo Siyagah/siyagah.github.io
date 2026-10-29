@@ -287,17 +287,19 @@ async function check52d(browser, srv) {
     await seedInPage(page, 2000); await idle(page);
     state = await page.evaluate(() => window.__sig52());
     for (let i = 0; i < 20; i++) {
-      /* every other trial the full copy is also written straight after the save, so a kill can land inside that one too */
+      /* every other trial the full copy is also written straight after the save, so a kill can land inside that one too.
+         v05.57 (J08 R4): a visible page no longer starts a checkpoint on a timer (`_LJ_CKPT_MS = 1` did it before), so the odd
+         trials call _ljCheckpoint() themselves, right after the save — the same write, queued behind the save as the timer's was */
       const r = await page.evaluate(({ i, ck }) => {
-        _LJ_CKPT_MS = ck;
         const n0 = DB.articles.length;
         /* a save big enough to take a few milliseconds to commit: 6 new notes of 250 KB, 3 edited, sometimes one deleted */
         for (let k = 0; k < 6; k++) DB.articles.push({ id: 'k' + i + '-' + k, title: 'Killed ' + i, content: '<p>' + 'z'.repeat(250000) + '</p>', folderIds: ['f1'], tags: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), kind: 'general' });
         for (let k = 0; k < 3; k++) { const a = DB.articles[(i * 13 + k * 101) % n0]; a.title += '!'; a.content += '<p>' + i + '</p>'; a.updatedAt = new Date(Date.now() + i * 1000 + k).toISOString(); }
         if (i % 3 === 0) trashArt(DB.articles[(i * 29) % n0].id);
         persist();
+        if (ck) _ljCheckpoint();
         return window.__sig52();
-      }, { i, ck: i % 2 ? 1 : 30000 });
+      }, { i, ck: i % 2 });
       await sleep(Math.floor(Math.random() * 30));   /* anywhere from "before the transaction began" to "after it ended" */
       await killAndWait(dir, ctx);   /* SIGKILL: a dead browser, not a closed one — no unload handler, no chance to finish; then wait until every process is gone */
       ({ ctx, page, errors } = await openPersistent(browser, srv.base, vp, dir));
