@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.58.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.59.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,11 +47,11 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.59** (29 Oct 2026) — J92 (built by the Architect): when the browser LOSES the device copy (52d under load, ~1 kill in 400: the site's whole IndexedDB store recreated, every read fine and empty), Siyagah says so. Cookie `siyagah_had=1` (`_hadGet`/`_hadSet`, outside IndexedDB) + a read that works and finds nothing → `_idbLost`: no starter set, `_idbLostWarn()` (`#idb-warn.lost`). 52d prints the page and storage state when a trial finds no notes. Check: block 118, `tools/lost-j92.mjs`.
 - **v05.58** (29 Oct 2026) — J85 (built by the Architect): an import's batches no longer each start a push. `_enxPersist` → `_enxPushHeld()` (the first batch pushes; then at most one push per `_ENX_PUSH_MS`, 60 s, trailing timer; test hook `__enxPushMs`); `_enxPushEnd()` at the end of an Evernote or Mapping My Journey import. A slow 2,000-note import: 8 pushes → 2, blob in the `both` plan 42.2 → 10.6 MB. Check: 86i in `tools/push-p4.mjs` (`--count` prints the numbers).
 - **v05.57** (29 Oct 2026) — J08 R4 rebuilt (built by the Architect): the full device copy (`notebook`, one put of the whole notebook: ~10 s frozen on a phone ×4 at 27,000 notes) is written ONLY while the page is hidden — `_ljCkptWant`, `_ljHiddenCkpt` on hide / `pagehide` (`_ljPageGone`), or `_LJ_CKPT_MS` after a save made while hidden; no visible 10-minute timer, no visible 3,000-put trigger. The empty built-in notebook is no longer merged (`_embHas`/`_embShape`); "Linked from" is filled in after the first draw (`_blBoot`, `_blWarm`); `_ljOpen` forgets a failed open. The first design (the copy in 64 pieces, PR #247) was withdrawn: 52d. Check: block 117, `tools/hidden-r4.mjs`; `tools/perf-enx/r4-hidden.mjs`.
 - **v05.56** (28 Oct 2026) — J08 R3 (built by the Architect): a faster start. `_bvCapture` (page hidden) keeps the panes as a cleaned picture in `siyagah-boot-v1`; `_bvShow` paints it before `loadDB()` (inert, "Opening your notebook…"), `_bvEnd` restores the panes in the same task as `render()`; `_bvPlace` reopens the device's last folder. `_picMigSweepFields`/`_picMigCands` pause every 25 ms. 27,000 notes, phone ×4: notes on screen 15–21 s → 1.5 s; no freeze after. Check: block 116, `tools/boot-r3.mjs`; `tools/perf-enx/boot.mjs`.
 - **v05.55** (28 Oct 2026) — J86 (built by the Architect): "⚙ Zab settings" (`openZabSettings`: the Appearance dialog with `_themeZab` showing only the Zab bar, 🎞 Scrolling titles, 📰 News and Zab on the phone; `#theme-modal.zab-set` at z 10000, over the cards) from the cards' "⚙ Settings" (`data-d="set"`), the panel header's `.jeb-set` ⚙ and every Zab's menu; the Zab menu's "🎞 In the scrolling titles" (`_zabTkHas` / `_zabTkToggle`). Zab mode has no 🧰, so this is its only way in. Check: block 115, `tools/zab-set-j86.mjs`.
-- **v05.54** (28 Oct 2026) — J08 W2 (built by the Architect): the side pane with many folders. `chOf` uses one children map per side-pane draw (`_cntC.ch`; outside a draw it filters as before); journal filters build the journal-folder set once (`_jrnPred`, `isJournal(a,fs)`); `#tree .tr-row` is `content-visibility:auto` (a row off the screen is not laid out). 800 folders open, phone ×4: opening a folder 0.99 s → ~0.4 s. The Khutbah template says "Rasulullah Sallallahu A'laihi Wa Sallam" (rule saw128). Check: block 114, `tools/tree-w2.mjs`.
 ---
 
 ## What this is
@@ -591,6 +591,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   `mkDefaults()`, shows `#idb-warn`, and `_idbRecoverTry()` (3 s, then 30 s, and on `visibilitychange`) joins the copy back in the way
   a received sync does (`_ljOverlay`, `_stampRecordTouches`, `mergeDB`, `_seedRecSnap(true)`, `_s1DirtyFromDiff`, `_save`).
   `_idbMigrateFrom()` writes only after a read has just shown there is no copy. `_idbOpen()` does not remember a FAILED open.
+- **A device copy LOST by the browser (v05.59, J92).** Not B1 (could not read): the read works and finds nothing. The cookie `siyagah_had=1` (never localStorage, which is full on the owner's devices; never in `DB`) is the only witness; `_hadSet()` runs when a start reads a copy or `_idbMigrateFrom` writes the first. `_idbLost` → no `mkDefaults()`, `_idbLostWarn()`. Do not set the cookie anywhere else, and never clear it in code.
 - **Targeted redraw after a received merge and after undo (v05.19, P2).** `_renderFor(changed)` is the ONE place that decides what a change
   touches; the merge path (from its before/after diff, the same one that feeds `_s1Dirty`) and undo/redo (from the frame's records) call it. It
   never re-derives the changed set by stringifying the notebook. Note list: only the changed cards are replaced, and only when each keeps its

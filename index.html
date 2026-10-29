@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.58">
+<meta name="app-version" content="05.59">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3985,7 +3985,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.58</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.59</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4485,8 +4485,9 @@ async function loadDB(){
     await new Promise(r=>setTimeout(r,_IDB_BOOT_GAP_MS));
   }
   if(_rd.ok) _idb=_rd.v||null; else _idbBootFail=true;
+  if(_rd.ok&&!(_idb&&_idb.folders)&&_hadGet()) _idbLost=true;   /* v05.59 · J92 — read fine, nothing there, but this device HAD a notebook */
   if(_idb&&_idb.folders){
-    _idbReady=true;
+    _idbReady=true; _hadSet();
     /* v04.91 — a notebook saved in journal mode: the full copy plus what the journal
        holds newer than it (see _ljOverlay). Without a journal this does nothing. */
     try{ await _ljOverlay(_idb); }catch(e){ console.error('local journal not applied (the full copy is used):',e); }
@@ -4496,7 +4497,7 @@ async function loadDB(){
   else if(_stored?.folders&&emb?.folders){DB=mergeDB(_stored,emb);}
   else if(emb?.folders){DB=JSON.parse(JSON.stringify(emb));}
   else if(_stored?.folders){DB=JSON.parse(JSON.stringify(_stored));}
-  else{DB=_idbBootFail?{folders:[],articles:[]}:mkDefaults();}   /* B1: never the starter set when the real copy is only unreadable — it would be joined into it */
+  else{DB=(_idbBootFail||_idbLost)?{folders:[],articles:[]}:mkDefaults();}   /* v05.59 · J92 — nor when the copy was lost (the starter set would join the real notebook from the cloud) */   /* B1: never the starter set when the real copy is only unreadable — it would be joined into it */
   _dbLoaded=true;
   const roots = DB.folders.filter(f=>!f.parentId).sort((a,b)=>a.order-b.order);
   if(roots.length) ST.folder = roots[0].id;
@@ -4665,8 +4666,10 @@ async function loadDB(){
      holding a notebook (the branch at the top of this function) and never
      reaches this code path again. */
   if(_idbBootFail){ snapshotState(); _idbWarn(true); _idbRecoverArm(); return; }   /* v05.17 · B1 — nothing is written to this device's copy */
+  if(_idbLost) _idbLostWarn();   /* v05.59 · J92 */
   if(!_idbReady){
     try{ _idbReady=await _idbMigrateFrom(DB); }catch(e){ _idbReady=false; }
+    if(_idbReady) _hadSet();   /* v05.59 · J92 — from now on this device holds a notebook */
     /* B1 — the copy turned out to be there after all (read again just now): join it in, never write over it */
     if(!_idbReady){ const again=await _idbRead(IDB_KEY).catch(()=>({ok:false})); if(!again.ok||(again.v&&again.v.folders)){ _idbBootFail=true; snapshotState(); _idbWarn(true); _idbRecoverTry(); return; } }
   }
@@ -4705,6 +4708,26 @@ async function _idbRecoverTry(){
     if(idb&&idb.folders) toast('✅ This device\'s copy of your notebook could be read again and is back');
   }catch(e){ console.error('B1 recovery:',e); _idbBootFail=true; _idbReady=false; }
   finally{ _idbRecBusy=false; if(_idbBootFail) _idbRecoverArm(); }
+}
+/* ── v05.59 · J92 — this device's copy was LOST (not merely unreadable) ─────────────────────
+   Under load, a browser killed in the middle of a save was seen (app-check 52d, about 1 kill in 400) to come back with the site's
+   whole IndexedDB storage empty: every database read fine and held nothing, so the app opened as a new device, silently. A mark
+   kept OUTSIDE IndexedDB says this device held a notebook: a cookie (its own store; a full localStorage does not stop it; never
+   read by anything but this code, and only "1"). When the read works, finds nothing, and the mark is there (_idbLost): no starter
+   set, and a line at the top says what happened. The cloud copy comes back by itself (the reader's replica is in the same lost
+   storage, so the R2 re-read runs); what only this device held may be missing. */
+const _HAD_CK='siyagah_had';
+let _idbLost=false;
+function _hadGet(){ try{ return document.cookie.split(/;\s*/).indexOf(_HAD_CK+'=1')>=0; }catch(e){ return false; } }
+function _hadSet(){ try{ if(!_hadGet()) document.cookie=_HAD_CK+'=1; max-age=315360000; path=/; SameSite=Lax'+(location.protocol==='https:'?'; Secure':''); }catch(e){} }
+function _idbLostWarn(){
+  if(document.getElementById('idb-warn')) return;
+  const sync=!!getSyncConfig();
+  const el=document.createElement('div'); el.id='idb-warn'; el.className='lost'; el.setAttribute('role','alert');
+  el.innerHTML='<span class="iw-t">⚠ The browser lost this device\'s saved copy of Siyagah (it can happen when the app is closed in the middle of saving). '
+    +(sync?'Your notes are being brought back from the cloud now. Changes made on this device that had not reached the cloud yet may be missing.':'This device is not connected to Cloud Sync: use 🧰 → 💽 Storage &amp; Backup to bring back your last backup.')
+    +'</span><button type="button" class="iw-hide" onclick="_idbWarnMin(true)">Hide</button><button type="button" class="iw-show" onclick="_idbWarnMin(false)" aria-label="Show the notice about this device\'s copy" title="This device\'s saved copy was lost by the browser">⚠</button>';
+  document.body.appendChild(el);
 }
 function _idbWarn(on){
   let el=document.getElementById('idb-warn');

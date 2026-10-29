@@ -7,7 +7,7 @@
 
    No cloud here: these run the real app on its own. */
 import { execFileSync } from 'node:child_process';
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ROOT } from './harness.mjs';
@@ -292,6 +292,8 @@ async function check52d(browser, srv) {
          trials call _ljCheckpoint() themselves, right after the save — the same write, queued behind the save as the timer's was */
       const r = await page.evaluate(({ i, ck }) => {
         const n0 = DB.articles.length;
+        /* v05.59 (J92) — a trial that finds no notes says what the page was doing, instead of throwing on an undefined note */
+        if (!(n0 > 0)) throw new Error('no notes in DB at the start of trial ' + i + ': ' + JSON.stringify({ n0, booted: window.__appBooted, bootFail: typeof _idbBootFail === 'undefined' ? 'n/a' : _idbBootFail, loaded: typeof _dbLoaded === 'undefined' ? 'n/a' : _dbLoaded, sigKept: typeof window.__sig52, nav: (performance.getEntriesByType('navigation')[0] || {}).type, ms: Math.round(performance.now()), folders: DB.folders.length, trash: DB.trash.length, lostNoticed: typeof _idbLost === 'undefined' ? 'n/a' : _idbLost }));
         /* a save big enough to take a few milliseconds to commit: 6 new notes of 250 KB, 3 edited, sometimes one deleted */
         for (let k = 0; k < 6; k++) DB.articles.push({ id: 'k' + i + '-' + k, title: 'Killed ' + i, content: '<p>' + 'z'.repeat(250000) + '</p>', folderIds: ['f1'], tags: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), kind: 'general' });
         for (let k = 0; k < 3; k++) { const a = DB.articles[(i * 13 + k * 101) % n0]; a.title += '!'; a.content += '<p>' + i + '</p>'; a.updatedAt = new Date(Date.now() + i * 1000 + k).toISOString(); }
@@ -308,6 +310,15 @@ async function check52d(browser, srv) {
       const isBefore = got.sig === state.sig, isAfter = got.sig === r.sig;
       if (isBefore) seen.before++; else if (isAfter) seen.after++;
       if (!isBefore && !isAfter) bad.push(`trial ${i}: reopened with ${got.n} notes / ${got.trash} in Trash; before the save ${state.n}/${state.trash}, after ${r.n}/${r.trash}`);
+      /* v05.59 (J92) — a reopen that is neither: what the browser's storage holds (database names; the profile's IndexedDB files) */
+      if (!isBefore && !isAfter) {
+        const dbs = await page.evaluate(async () => { try { return (await indexedDB.databases()).map((d) => d.name + '@' + d.version); } catch (e) { return String(e); } }).catch((e) => String(e));
+        const walk = (d) => { try { return readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name).slice(dir.length) + ':' + statSync(join(d, e.name)).size]); } catch (e) { return []; } };
+        const files = walk(join(dir, 'Default', 'IndexedDB'));
+        bad.push(`trial ${i} storage: databases ${JSON.stringify(dbs)}; IndexedDB files ${files.length}: ${files.filter((f) => /MANIFEST|CURRENT|\.log|LOG$/.test(f)).join(' ')}`);
+        console.log('J92 EVIDENCE trial ' + i + ' ' + JSON.stringify({ dbs, files }));
+        for (const f of files.filter((x) => /\/LOG(\.old)?:/.test(x))) { try { console.log('J92 LOG ' + f + '\n' + readFileSync(join(dir, f.split(':')[0]), 'utf8').slice(-3000)); } catch (e) {} }
+      }
       if (got.n < Math.min(state.n, r.n)) bad.push(`trial ${i}: FEWER notes (${got.n} < ${Math.min(state.n, r.n)})`);
       state = got;
     }
