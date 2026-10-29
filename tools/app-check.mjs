@@ -12216,8 +12216,9 @@ await r.block('85-zab-z9-item-title', async () => {
 
 /* 86 — v05.26, P4: no pause when the new notes go to the cloud after an import. tools/push-p4.mjs runs 86a–86h: the profile table, no long task
    over the host limit from the click until the push has returned (both plans, 390 × CPU 4 and 1440), sync unchanged (two devices; an edit made
-   while the snapshot is built; a page closed half-way; the blob), and the sliced builders equal the whole ones. Each printed ok/FAIL line
-   becomes one check. */
+   while the snapshot is built; a page closed half-way; the blob), and the sliced builders equal the whole ones; v05.58 (J85) adds 86i: an
+   import's batches do not each start a push (at most one per window, the held one as the import ends, the cloud then equal). Each printed
+   ok/FAIL line becomes one check. */
 await r.block('86-push-p4-no-pause', async () => {
   const { spawnSync } = await import('node:child_process');
   const out = spawnSync(process.execPath, [new URL('./push-p4.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 27 });
@@ -12225,7 +12226,7 @@ await r.block('86-push-p4-no-pause', async () => {
   const lines = txt.split('\n');
   const rows = [];
   lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
-  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 40, 'the P4 push check ran to the end', txt.slice(-400));
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 51, 'the P4 push check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, 'P4: ' + row.label, row.detail);
   r.check(out.status === 0, 'the P4 push check exits cleanly', `exit ${out.status}`);
 });
