@@ -12,7 +12,9 @@
    116e no picture for another screen tier, in Zab mode (/?jeb=1, which also keeps none), or before the notebook is in (_bvCapture refuses);
    116f the picture is kept only on the device: not in DB, localStorage or the notebook record;
    116g the picture-migration scans give the same answer as before and pause (a timer runs during them) on a 4,000-note notebook;
-   116h no page errors.
+   116h no page errors;
+   116i (v05.60, J94) before the start the bare page's "Back to search results" is hidden; a picture kept by another version is shown too;
+        with no picture a start slower than the label's delay shows "Opening your notebook…" on the bare page, and booted it is gone.
    `node tools/boot-r3.mjs` */
 import { openApp, report } from './harness.mjs';
 
@@ -21,6 +23,11 @@ const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 /* recorded at document start: the moment html.bv appears, what is on screen */
 const WATCH = () => {
   window.__bvSeen = null;
+  /* v05.60 (J94): the bare page before the start — the button's state at the first paint, and whether the label appeared before booted */
+  if (sessionStorage.getItem('pill0')) window.__bvPillMs = 0;
+  window.__pre = { bts: null, pill: false };
+  document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('bts-sb'); window.__pre.bts = b ? getComputedStyle(b).display : 'none'; });
+  new MutationObserver(() => { if (!window.__pre.pill && window.__appBooted !== true && document.getElementById('bv-pill') && !document.documentElement.classList.contains('bv')) window.__pre.pill = true; }).observe(document, { subtree: true, childList: true });
   new MutationObserver(() => {
     if (window.__bvSeen || !document.documentElement.classList.contains('bv')) return;
     const q = (s) => document.querySelectorAll(s).length, panes = ['#sb', '#p2', '#p3'].map((s) => document.querySelector(s));
@@ -67,14 +74,31 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     r.check(!after.bv && !after.bvid && !after.pill && !after.inert, `116c${t} booted: the picture is gone (no class, no renamed element, no pill, nothing inert)`, JSON.stringify(after));
     const got = await place(page);
     r.check(got.folder === before.folder && got.article === before.article && got.exp, `116d${t} the start opens where this device left off: folder ${got.folder}, note ${got.article}, folder A unfolded`, JSON.stringify({ before, got }));
-    /* 116c oracle: the same record, another version -> place kept, no picture; the panes must be identical */
+    /* 116c oracle: the same record without its picture -> place kept, no picture; the panes must be identical.
+       (v05.60, J94: was "another version", which until then meant no picture; a picture from another version is now shown, 116i) */
     const withPic = await panes(page);
-    await setRec(page, (v) => { v.v = '00.00'; });
+    await setRec(page, (v) => { delete v.el; });
     await page.evaluate(() => { window.__bvSeen = null; });
     await reboot(page);
     const noPic = await panes(page), s2 = await page.evaluate(() => window.__bvSeen);
     const diff = Object.keys(withPic).filter((k) => withPic[k] !== noPic[k]);
-    r.check(!s2 && diff.length === 0, `116c${t} the panes after the picture are byte for byte those of a start without it (another version: no picture, ${diff.length} pane(s) differ)`, diff.map((k) => k + ' ' + withPic[k].length + '/' + noPic[k].length).join(' ') + (s2 ? ' picture shown for another version' : ''));
+    r.check(!s2 && diff.length === 0, `116c${t} the panes after the picture are byte for byte those of a start without it (the record without its picture, ${diff.length} pane(s) differ)`, diff.map((k) => k + ' ' + withPic[k].length + '/' + noPic[k].length).join(' ') + (s2 ? ' picture shown without one' : ''));
+    /* 116i the bare page (v05.60, J94): button hidden before the start; another version's picture shown; no picture -> the label */
+    const pre = await page.evaluate(() => window.__pre);
+    r.check(pre && pre.bts === 'none', `116i${t} before the start, the bare page's "Back to search results" is hidden`, JSON.stringify(pre));
+    await hide(page);
+    await setRec(page, (v) => { v.v = '00.00'; });
+    await page.evaluate(() => { window.__bvSeen = null; });
+    await reboot(page);
+    const s3 = await page.evaluate(() => window.__bvSeen);
+    r.check(!!s3 && !s3.booted && s3.pill, `116i${t} a picture kept by another version is shown too`, JSON.stringify(s3 && { booted: s3.booted, pill: s3.pill, sec: s3.sec }));
+    await hide(page);
+    await setRec(page, (v) => { delete v.el; });
+    await page.evaluate(() => sessionStorage.setItem('pill0', '1'));
+    await reboot(page);
+    const p4 = await page.evaluate(() => ({ pre: window.__pre, now: !!document.getElementById('bv-pill') }));
+    await page.evaluate(() => sessionStorage.removeItem('pill0'));
+    r.check(p4.pre.pill && !p4.now, `116i${t} no picture: the bare page says "Opening your notebook…" until booted, then it is gone`, JSON.stringify(p4));
     /* 116d a folder gone since: loadDB's choice */
     await hide(page);
     await setRec(page, (v) => { v.st.folder = 'r3-gone'; });
