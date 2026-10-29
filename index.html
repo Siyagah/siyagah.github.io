@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.59">
+<meta name="app-version" content="05.60">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3985,7 +3985,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.59</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.60</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4078,7 +4078,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
     </div>
     <button class="btn sb-act sb-pp-btn" onclick="_ppMenu(event,'sb')" title="This pane: pop it out as a window you can move and resize, or make it full width">🪟</button>
     </div>
-    <button id="bts-sb" class="btn sb-bts" onclick="restoreLastSearch()" title="Back to your last search results">🔍↺ Back to search results</button>
+    <button id="bts-sb" class="btn sb-bts" onclick="restoreLastSearch()" title="Back to your last search results" style="display:none">🔍↺ Back to search results</button>
   </div>
   <div id="tree"></div>
 
@@ -35543,22 +35543,30 @@ function _bvCapture(){
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') _bvCapture(); });
 window.addEventListener('pagehide',_bvCapture);
 /* paint the last screen; resolves once it is on screen (or at once when there is none) */
+/* v05.60 · J94 — with no picture (a first start, another screen size), the bare page gets the same label once the start has taken
+   _BV_PILL_MS, so it never looks like an empty notebook; a quick start shows nothing. */
+const _BV_PILL_MS=300;
+let _bvPillT=null;
+function _bvPill(){ if(document.getElementById('bv-pill')) return; const pill=document.createElement('div'); pill.id='bv-pill'; pill.setAttribute('role','status'); pill.textContent='⏳ Opening your notebook…'; document.body.appendChild(pill); }
 async function _bvShow(){
   try{
     if(_JEB_APP) return;
+    if(!_bvPillT) _bvPillT=setTimeout(()=>{ _bvPillT=null; if(!_dbLoaded&&!_bvOn) _bvPill(); },typeof window.__bvPillMs==='number'?window.__bvPillMs:_BV_PILL_MS);
     const rec=await Promise.race([
       _bvDb().then(db=>!db?null:new Promise(res=>{ try{ const q=db.transaction('kv','readonly').objectStore('kv').get(_BV_KEY); q.onsuccess=()=>res(q.result||null); q.onerror=()=>res(null); }catch(e){ res(null); } })),
       new Promise(res=>setTimeout(()=>res(null),_BV_READ_MS))
     ]);
     if(!rec||rec.tier!==_bvTier()||_dbLoaded) return;
-    _bvSt=rec.st||null;   /* the place is kept across an update; the picture only for the same version */
-    if(rec.v!==APP_VERSION||!rec.el) return;
+    _bvSt=rec.st||null;   /* the place is kept across an update */
+    /* v05.60 · J94 — the picture too: it is only cleaned, inert HTML, and the first start after every update otherwise showed the bare
+       page (an empty side pane) for the whole read. A picture from an older version may look slightly different for those seconds. */
+    if(!rec.el) return;
     const keep={el:{},w:{}};
     for(const id of _BV_IDS){ const e=document.getElementById(id); if(!e||rec.el[id]==null) continue; keep.el[id]=e.innerHTML; e.innerHTML=rec.el[id]; }
     _BV_W.forEach(([id,k])=>{ const e=document.getElementById(id); if(!e||!rec.w||!rec.w[id]) return; keep.w[id]=[k,e.style[k]]; e.style[k]=rec.w[id]; });
     ['sb','p2','p3'].forEach(id=>{ const e=document.getElementById(id); if(e) e.inert=true; });
     if(rec.theme){ try{ applyTheme(rec.theme); }catch(e){} }
-    const pill=document.createElement('div'); pill.id='bv-pill'; pill.setAttribute('role','status'); pill.textContent='⏳ Opening your notebook…'; document.body.appendChild(pill);
+    _bvPill();
     document.documentElement.classList.add('bv');
     _bvOn=keep;
     for(const [id,v] of Object.entries(rec.sc||{})){
@@ -35582,6 +35590,8 @@ function _bvPlace(){
 }
 /* take the picture away: every pane exactly as the page had it, so boot's render() draws on what it always drew on */
 function _bvEnd(){
+  clearTimeout(_bvPillT); _bvPillT=null;
+  { const p=document.getElementById('bv-pill'); if(p) p.remove(); }   /* v05.60 — also the label shown on the bare page */
   const k=_bvOn; if(!k) return; _bvOn=null;
   for(const [id,h] of Object.entries(k.el)){ const e=document.getElementById(id); if(e) e.innerHTML=h; }
   for(const [id,[p,v]] of Object.entries(k.w)){ const e=document.getElementById(id); if(e) e.style[p]=v; }

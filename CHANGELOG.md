@@ -10969,3 +10969,19 @@ The owner (28 Oct, with a screenshot of Siyagah Zab's All Zabs cards): "*Enable 
 **Record (v05.58 review, riding this round).** Full app-check on `729e261` (= PR #249's head): 1–59 + `self-check` 2330/2332 (56k known); 60–117 6023/6025 (91f known); 86 including 86i passed.
 
 **Not done, and why:** nothing can bring back what only the device held once the browser has dropped it; the defence is the cloud copy (and 💽 Storage & Backup). Whether a real phone does this (rather than a container killing every browser process under heavy disk load) is not known; the notice makes it visible if it ever does. A Save File copy opened from disk (`file://`) has no cookie, so it behaves as before.
+
+## v05.60 — J94: no bare page with "Back to search results" before the start (29 Oct 2026, built by the Architect)
+
+**Asked.** The owner (29 Oct, a phone screenshot of v05.59): "This became the landing page for a few sec before the actual landing page." The screenshot: the side pane with the search box, "🔍↺ Back to search results" and an empty folder list, nothing else, no "Opening your notebook…" label.
+
+**Found.** It is the page as it is before the app has started, not v05.56's last-screen picture (that hides `#bts-sb` and always carries the label). Two causes: (1) `_bvShow()` used the picture only when it was kept by the SAME version (`rec.v!==APP_VERSION`), so the first start after every update showed the bare page for the whole read of the device copy — and v05.57–v05.59 all shipped today; (2) in the markup `#bts-sb` had no `display:none`: only the started app hides it (`renderTree` → `sb.style.display`).
+
+**The change.** `#bts-sb` starts hidden in the markup. The picture is used after an update too (it is cleaned, inert HTML; one from an older version may look slightly different for those seconds); only a record without a picture is refused. With no picture (a first start, another screen tier, a record without one) `_bvPill()` shows "⏳ Opening your notebook…" on the bare page once the start has taken `_BV_PILL_MS` (300 ms; test hook `window.__bvPillMs`), so a quick start shows nothing; `_bvEnd()` now always removes the label and its timer, picture or not.
+
+**Shapes (D5).** The label is the v05.56 one (top centre) at all three sizes; the picture is per screen tier as before.
+
+**Checks.** 116i (`tools/boot-r3.mjs`) at 390 / 820 / 1440: before the start the bare page's button is hidden; a picture kept by another version is shown; with no picture the bare page shows the label until booted, then it is gone — 43/43; on v05.59 the nine 116i rows fail. **Changed in place:** 116c's oracle ("the same record with ANOTHER VERSION gives a start without the picture") now deletes the record's picture instead, because another version's picture is now shown on purpose.
+
+**Record (v05.59 review, riding this round).** Full app-check on `0865ea8` (= PR #250's head): 1–59 + `self-check` 2330/2332 (56k known); 60–118 6046/6048 (91f known).
+
+**Not done, and why:** a phone that has never kept a picture (or after its storage was lost, J92) still shows the bare page for the read; now it says it is opening.
