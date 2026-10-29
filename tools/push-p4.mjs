@@ -3,9 +3,11 @@
 
    `node tools/push-p4.mjs --profile [--plan=recs|both] [--notes=9000]`  prints the profile table (no checks)
    `node tools/push-p4.mjs [--only=86a,86c] [--notes=9000] [--unpatched]` runs the checks; each printed ok/FAIL line is one app-check check.
-   `--unpatched` serves the build before this round (the P4 version-bump commit's parent), where the new checks must fail. */
+   `--unpatched` serves the build before this round (the P4 version-bump commit's parent), where the new checks must fail.
+   `node tools/push-p4.mjs --count [--plan=recs|both] [--delay=<ms between batches>] [--phone]` (v05.58, J85) prints how many pushes and
+   cloud writes a 2,000-note import makes (no checks). 86i (v05.58) checks the import's held pushes. */
 import { playwright, serve, seedDB, hostLimit } from './harness.mjs';
-import { makeCloud, addDevice, on, sleep, quiet, waitSeeded, check, results, liveDB, probeInstall, probeRead, assembleEquals, reopen } from './s1-fake.mjs';
+import { makeCloud, addDevice, on, sleep, quiet, waitSeeded, check, results, liveDB, probeInstall, probeRead, assembleEquals, reopen, recWrites } from './s1-fake.mjs';
 import { canonDB, diffDB } from './s1-assemble.mjs';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -114,6 +116,26 @@ async function profile(plan) {
     console.log('long tasks (worst 8) [start, dur]: ' + JSON.stringify(lts) + ' push returned at ' + JSON.stringify(r.rets));
     const fk = r.fake.filter(([t]) => t >= r.t0); console.log(`fake SDK time in batch.set/commit: ${fk.length} calls, total ${Math.round(fk.reduce((s, x) => s + x[1], 0))} ms, worst ${Math.round(Math.max(0, ...fk.map((x) => x[1])))} ms`);
   } finally { await d.ctx.close(); }
+}
+
+/* `--count` (v05.58, J85): how many pushes and cloud writes a 2,000-note import makes (no checks; prints one line per plan) */
+if (argv.includes('--count')) {
+  for (const plan of (arg('plan') ? [arg('plan')] : ['recs', 'both'])) {
+    const vp = argv.includes('--phone') ? VP : VPD;
+    const d = await newDevice('C-' + plan, vp, argv.includes('--phone') ? { throttle: 4 } : {});
+    try {
+      const cl = d.cloudObj, from = cl.log.length, t0 = Date.now();
+      await importInto(d, vp, makeExport('count-' + plan, IMPN), { plan, hook: (x) => on(x, (ms) => { window.__enxDelay = ms; }, +arg('delay', 0)) });   /* --delay=<ms> between batches: a slow import (pictures, a slow phone) */
+      const sets = cl.log.slice(from).filter((o) => o.t === 'set');
+      const recs = recWrites(cl, from), head = recs.filter((k) => k === '_head~0').length;
+      const blob = sets.filter((o) => o.p === 'notebooks/nb-s1' || o.p.startsWith('notebooks/nb-s1/chunks/'));
+      const rets = await on(d, () => (window.__pushRets || []).length);
+      const mb = (a) => (a.reduce((x, o) => x + (o.bytes || 0), 0) / 1e6).toFixed(1);
+      console.log(`COUNT plan=${plan} ${vp.w}px notes=${IMPN} delay=${arg('delay', 0)}: pushes ${rets} · cloud writes ${sets.length} (${mb(sets)} MB) · rec writes ${recs.length} · head rec ${head} · blob docs ${blob.length} (${mb(blob)} MB) · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+    } finally { await d.ctx.close(); }
+  }
+  await browser.close(); srv.close && srv.close();
+  process.exit(0);
 }
 
 if (PROFILE) {
@@ -298,7 +320,40 @@ async function sameBytes() {
   finally { if (A) await A.ctx.close(); }
 }
 
+/* 86i — v05.58, J85: an import's batches do not each start a push. A slow import (a pause between batches) with the window cut to 4 s
+   (`__enxPushMs`): fewer pushes than batches, no two pushes started by the import closer than the window, the held push goes as soon as
+   the import ends, and the cloud then holds the device's notebook byte for byte (both plans: the blob is the costly part). */
+async function heldPushes(plan) {
+  const t = `86i ${plan}`;
+  let d = null;
+  try {
+    d = await newDevice('H-' + plan, VPD, {}, SYN_BIG);
+    await on(d, (p) => { window._s1OlderActive = () => p === 'both'; window.__enxPushMs = 4000; window.__enxDelay = 1200;
+      window.__dp = []; const o = window._doPush; window._doPush = function () { window.__dp.push(Date.now()); return o.apply(this, arguments); };
+      window.__pe = []; const e = window._enxPushEnd; window._enxPushEnd = function () { window.__pe.push([Date.now(), !!_enxPushT]); return e.apply(this, arguments); }; }, plan);
+    await pick(d, VPD, makeExport('held-' + plan, IMPN));
+    const t0 = await on(d, () => Date.now());
+    await act(d, VPD, '#enx-bring'); await waitState(d, ['done', 'capped']);
+    const tEnd = await on(d, () => Date.now());
+    await quiet(d.cloudObj, d, 300000);
+    const r = await on(d, () => ({ dp: window.__dp.slice(), pe: window.__pe.slice() }));
+    const during = r.dp.filter((x) => x >= t0 && x <= tEnd), batches = Math.ceil(IMPN / 250);
+    const gaps = during.slice(1).map((x, i) => x - during[i]);
+    const endPush = r.pe.length && r.pe[r.pe.length - 1][1] ? r.dp.some((x) => x >= r.pe[r.pe.length - 1][0] && x - r.pe[r.pe.length - 1][0] < 3000) : r.dp.some((x) => x >= tEnd - 4000);
+    const n = await impCount(d);
+    check(n === IMPN && during.length < batches, `${t} a ${batches}-batch import (${((tEnd - t0) / 1000).toFixed(1)} s) started ${during.length} pushes, fewer than its batches`, JSON.stringify({ n, during: during.map((x) => x - t0) }));
+    check(gaps.every((g) => g >= 3500), `${t} no two of the import's pushes closer than the window (4 s)`, JSON.stringify(gaps));
+    check(endPush, `${t} the held push goes as soon as the import ends`, JSON.stringify({ pe: r.pe.map((x) => [x[0] - t0, x[1]]), dp: r.dp.map((x) => x - t0), end: tEnd - t0 }));
+    const eq = await cloudEq(d.cloudObj, d);
+    check(eq.ok, `${t} the cloud then holds the device's notebook, byte for byte`, eq.why);
+    if (plan === 'both') { const b = readBlob(d.cloudObj); check(!!(b && b.db && b.db.articles.filter((a) => a.fromEvernote).length === IMPN), `${t} the blob holds every imported note`, JSON.stringify(b && (b.missing ?? b.bad ?? b.db.articles.length))); }
+    noErr(d, t);
+  } catch (e) { check(false, `${t} threw: ${String(e && e.message || e).split('\n')[0]}`); }
+  finally { if (d) await d.ctx.close(); }
+}
+
 try {
+  if (want('86i')) { await heldPushes('recs'); await heldPushes('both'); }
   if (want('86a')) { for (const plan of ['recs', 'both']) await profile(plan); check(true, '86a the profile table was printed for both plans (see the # lines; not asserted)'); }
   if (want('86b')) { await pauseCase('recs', VP, '390 CPU x4', 4); await pauseCase('both', VP, '390 CPU x4', 4); }
   if (want('86c')) { await pauseCase('recs', VPD, '1440', 0); await pauseCase('both', VPD, '1440', 0); }

@@ -10933,3 +10933,21 @@ The owner (28 Oct, with a screenshot of Siyagah Zab's All Zabs cards): "*Enable 
 **Record (v05.56 review, riding this round).** Final full app-check on `a628354` (= PR #246's head): 1–59 + `self-check` 2328/2332 (56k known; 59f the v04.97 build, alone 59 + 70 275/275), 60–116 5910/5923 (Z6a threw under load, alone passes; 72j, 73g, 80h, 86, 91f timing — alone 73, 80 pass; 72j and 86 run 3× each side by side with v05.55: the same spread, e.g. 86 worst 338/328/299 ms on v05.55 against 310/351/277 on v05.56). PR #247 (the withdrawn design) on `1513cb5`: 2307/2315 (56k, 59f known; 52d — the wipe above) and 6009/6018 (91f known; 80h timing; Z6c threw under load).
 
 **Not done, and why:** the start's total time on a slowed phone is still mostly the one read of the whole device copy (~2 s here) and building the journal's state (`_collect`); one record per note was measured SLOWER to read (6 s + 5.7 s parse against 3.7 s), and the pieces that were faster are withdrawn (above). The hidden checkpoint still costs ~10 s of CPU on a slowed phone at this size: off screen, but a page brought back within those seconds waits for it (as in v05.56). A tab left visible for days writes no full copy (the journal holds it all).
+
+## v05.58 — J85: fewer cloud saves during a big import (29 Oct 2026, built by the Architect)
+
+**Asked.** J85 (found in J08 round 3's review): every import batch (250 notes, `_enxPersist`) called `pushToCloud`, whose wait is at most `_PUSH_MAX_MS` (2.5 s), so a long import pushed after nearly every batch; each push rewrites the head rec and, while an older build is active (the `both` plan), the whole blob.
+
+**Measured first** (`node tools/push-p4.mjs --count`, new: a 2,000-note import into 9,000 notes against the fake cloud). The notes themselves are written once whatever happens (2,002 rec writes in every run; the head rec was not rewritten in these runs). The cost is the blob: a fast import (laptop 6 s, slowed phone 14 s) made 1 push either way (blob 10 docs, 7.3 MB); **a slow one (`--delay=3000` between batches, as pictures or a busy phone make it) made 8 pushes and wrote the blob 8 times: 59 docs, 42.2 MB** (`recs` plan: 8 pushes, no blob).
+
+**The change.** `_enxPersist` calls `_enxPushHeld()` instead of `pushToCloud()`: the first batch pushes as before; after it, at most one push every `_ENX_PUSH_MS` (60 s) through a trailing timer, so a batch goes up at most that long after it is saved; `_enxPushEnd()` pushes at once when an import ends (Evernote `_enxImport`'s `finally`, Mapping My Journey `_mmjImport`'s `finally`, and after the keep-matching save in `_mmjSyncRun`). Every batch is still saved on the device at once; a push for any other save is untouched, and hiding the page still sends everything (`flushPendingPush`). Test hook `window.__enxPushMs`.
+
+**Shapes (D5).** Nothing on screen changes, on any size.
+
+**Measured after** (same `--count --delay=3000`): **2 pushes** (was 8); `both` plan blob **15 docs, 10.6 MB** (was 59 docs, 42.2 MB); rec writes unchanged (2,002).
+
+**Checks.** Block 86 gains 86i (`tools/push-p4.mjs`), both plans, a 2,000-note import with 1.2 s between batches and a 4 s window: 3 pushes for 8 batches, none closer than the window, the held push as the import ends, the cloud then equal to the device byte for byte, the blob holding every imported note, no page errors — 11/11; on v05.57 4 of 11 fail (8 pushes, gaps under the window).
+
+**Record (v05.57 review, riding this round).** Full app-check on `91f46cd` (= PR #248's head): 1–59 + `self-check` 2330/2332 (56k known); 60–117 6007/6014 — 80h, 86 and 91f timing under load (the first run of this half was killed by a container restart and re-run alone); `--only 80,86` alone 336/336 on v05.57 twice and on v05.56 twice. 52d under load (6 runs each, beside a half of app-check): v05.57 6/6; v05.56 5/6 — one reopened page had no notes yet when the trial read it (`DB.articles[…]` undefined at trial 4), the B1 rejoin under load seen in v05.55's review; not touched by v05.57.
+
+**Not done, and why:** the head rec and the blob are still rewritten on every push outside an import; a single save of 3,000 notes still takes its own ~2 s task on a slowed phone (it is the save itself, not the push).

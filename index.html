@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.57">
+<meta name="app-version" content="05.58">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3985,7 +3985,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.57</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.58</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -30697,6 +30697,22 @@ function _enxSection(){
   const secs=(DB.sections||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0));
   return secs.find(s=>s.name==='My Notebooks')||secs[0]||null;
 }
+/* v05.58 · J85 — an import's batches (250 notes each) do not each start a push: every push rewrites the head rec, and while an older
+   build is active (the `both` plan) the WHOLE blob (a 2,000-note import with a pause between batches: 8 pushes, 42 MB of blob against
+   7 MB for one). The first batch pushes as before; after it, at most one push every _ENX_PUSH_MS (a trailing timer, so the last batch
+   goes up at most that long after it is saved), and _enxPushEnd() pushes at once when an import ends. A push for any other save is
+   untouched, and hiding the page still sends everything (flushPendingPush). Nothing is held on the device: every batch is saved at once. */
+const _ENX_PUSH_MS=60000;
+let _enxPushAt=0, _enxPushT=null;
+function _enxPushHeld(){
+  const ms=typeof window.__enxPushMs==='number'?window.__enxPushMs:_ENX_PUSH_MS, wait=_enxPushAt+ms-Date.now();
+  if(wait<=0){ clearTimeout(_enxPushT); _enxPushT=null; _enxPushAt=Date.now(); pushToCloud(); return; }
+  if(!_enxPushT) _enxPushT=setTimeout(()=>{ _enxPushT=null; _enxPushAt=Date.now(); pushToCloud(); },wait);
+}
+function _enxPushEnd(){
+  if(!_enxPushT) return;
+  clearTimeout(_enxPushT); _enxPushT=null; _enxPushAt=0; pushToCloud();
+}
 /* an undo frame of 250 notes is not wanted: take the baseline, make no frame (_histCapture silent), then save as persist() does */
 function _enxPersist(){
   if(!_dbLoaded) return;
@@ -30704,7 +30720,7 @@ function _enxPersist(){
   try{
     _stampThemeTouches(); const sw=_stampRecordTouches();
     try{ _histCapture(sw,true); }catch(e){ try{ _histReset(); }catch(_){} }
-    _save(undefined,sw); scheduleAutoSave(); pushToCloud();
+    _save(undefined,sw); scheduleAutoSave(); _enxPushHeld();   /* v05.58 · J85 — not a push per batch */
   }finally{
     _tkEnxHold=false;
     if(_tkEnxDue){ _tkEnxDue=false; setTimeout(_tkSync,0); }
@@ -30987,6 +31003,7 @@ async function _enxImport(items){
       I.run=false;
       I.state=I.pause?'paused':I.capHit?'capped':finished?'done':'paused';
       I.mkLeft=_enxMarkers();
+      _enxPushEnd();   /* v05.58 · J85 — the held push goes now */
       if(I.state==='done'){ if(I.mkLeft>0&&I.picWait>0){ _enx.job=jobNow(); await _enxJobPut(_enx.job); } else await _enxJobDel(); }
       else if(I.state==='paused'||I.state==='capped'){ _enx.job=jobNow(); _enxJobPut(_enx.job); }
       try{ render(); }catch(e){}
@@ -31301,6 +31318,7 @@ async function _mmjImport(){
     I.state='error'; I.err=(e&&e.message)||String(e);
   }finally{
     _mmj.run=false;
+    _enxPushEnd();   /* v05.58 · J85 — the held push goes now */
     try{ render(); }catch(e){}
     _mmjPaint();
   }
@@ -31538,7 +31556,7 @@ async function _mmjSyncRun(manual){
       if(!set.has(m.id)){ if(!m.gone){ _mmjMarkNote(a,{gone:true}); sum.gone++; ch++; } }
       else if(m.gone){ _mmjMarkNote(a,null,['gone']); ch++; }
     });
-    if(ch) _enxPersist();
+    if(ch){ _enxPersist(); _enxPushEnd(); }   /* v05.58 · J85 — one save, so its push is not held */
     try{ render(); }catch(e){}
     _mmjS.last=t0; if(doFull) _mmjS.full=t0;
     try{ await _mmjKv('put',{at:_mmjS.last,full:_mmjS.full}); }catch(e){}
