@@ -12675,6 +12675,20 @@ await r.block('117-hidden-r4', async () => {
   for (const row of rows) r.check(row.ok, '117: ' + row.label, row.detail);
   r.check(out.status === 0, 'the hidden-r4.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 118 — v05.59, J92: this device's copy LOST by the browser (the site's whole IndexedDB storage emptied after a kill, seen by 52d under load).
+   tools/lost-j92.mjs runs 118a–118f at 390 / 820 / 1440: the mark (`siyagah_had` cookie) set on a first start; the storage emptied behind the
+   app's back → it says so (#idb-warn.lost, inside the screen), Hide / ⚠; the next start quiet; site data cleared on purpose → a plain start. */
+await r.block('118-lost-j92', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./lost-j92.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 21, 'the lost-j92.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '118: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the lost-j92.mjs check exits cleanly', `exit ${out.status}`);
+});
 
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
