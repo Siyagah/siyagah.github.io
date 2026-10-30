@@ -12689,6 +12689,19 @@ await r.block('118-lost-j92', async () => {
   for (const row of rows) r.check(row.ok, '118: ' + row.label, row.detail);
   r.check(out.status === 0, 'the lost-j92.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 119 — v05.61, J96 (the owner: "This is not ideal having a second card from a button"): 🎨 Colour and ↕ Spacing pressed inside the edit
+   bar's card open their choices as a section of that same card. tools/card-j96.mjs, real clicks, 390 / 820 / 1440 and a pop-out window. */
+await r.block('119-card-j96', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./card-j96.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 20, 'the card-j96.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '119: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the card-j96.mjs check exits cleanly', `exit ${out.status}`);
+});
 
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —

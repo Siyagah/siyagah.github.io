@@ -10985,3 +10985,19 @@ The owner (28 Oct, with a screenshot of Siyagah Zab's All Zabs cards): "*Enable 
 **Record (v05.59 review, riding this round).** Full app-check on `0865ea8` (= PR #250's head): 1–59 + `self-check` 2330/2332 (56k known); 60–118 6046/6048 (91f known).
 
 **Not done, and why:** a phone that has never kept a picture (or after its storage was lost, J92) still shows the bare page for the read; now it says it is opening.
+
+## v05.61 — J96: 🎨 Colour and ↕ Spacing open inside their card (30 Oct 2026, built by the Architect)
+
+**Asked.** The owner (30 Oct, a laptop screenshot of a pop-out note: Aa open, then 🎨, with the Text/Mark colour card floating over the Aa card): "This is not ideal having a second card from a button. Fix."
+
+**Found.** Two buttons in the edit bar's Aa card open a second floating card: 🎨 (`_openColorPop`, `.clr-pop`, fixed at the click point) and ↕ Spacing (`_openSpacingPop`, `#spc-pop`, fixed under the button; a bottom sheet on a phone). Both in Pane 3 (`_buildEBSub`) and in pop-out windows (`_fwBuildEBSub`), at every size.
+
+**The change.** `_inCard(ev)` finds the edit bar's card (`.fl-pop`) the button sits in; when there is one, `_cardSec(card,p)` puts the colours or the spacing choices INTO that card, under its buttons and above its own Close (class `.in-card`: no frame or shadow of its own, a line above it). The card grows to hold them while the screen has room below it (its height had been capped to what it held when it opened); only a card that still cannot fit scrolls to the new section. The same button closes its section again; 🎨 and ↕ Spacing replace each other (never both). The section's own "✕ Close" is hidden in a card (the card keeps its own Close). A swatch or a spacing choice works exactly as before, and the card stays open for another. Outside a card (nothing calls it that way today) they still float as before.
+
+**Shapes (D5).** Phone: the Aa card runs edge to edge, so the colours sit under its buttons at full width (no bottom sheet for Spacing any more inside the card). Tablet and laptop: the card under its button grows downward. Pop-out windows: the same.
+
+**Checks.** Block 119, `tools/card-j96.mjs` (real clicks / taps), 20 rows: at 390 / 820 / 1440 — 119a Aa ▸ 🎨: one colour section, inside the Aa card, the card inside the screen, a swatch on top where it is drawn; 119b a swatch colours the selected word and the card stays; 119c 🎨 again closes the colours, the card stays; 119d ↕ Spacing inside the same card, a choice applies to the paragraph; 119e 🎨 while Spacing is open swaps them; 119f no page errors; 119g a pop-out window at 1440. 20/20; on v05.60 every 119a/c/d/e/g row fails. Block 47 (↕ Spacing, Word-like) passes unchanged, 39/39 (it finds `#spc-pop` by id, which is kept).
+
+**Record (v05.60 review, riding this round).** Full app-check on `95ed48c` (= PR #251's head): 1–59 + `self-check` 2330/2332 (56k known); 60–118 6055/6057 (91f known).
+
+**Not done:** other cards that open a card of their own (a right-click menu's 🎨 Folder colour, Note Type colours) were not part of this ask and are unchanged; the rule is written in CLAUDE.md for the next one touched.
