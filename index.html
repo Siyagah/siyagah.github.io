@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.60">
+<meta name="app-version" content="05.61">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2419,6 +2419,9 @@ sup.ann-sup:hover{text-decoration:underline}
   border:1px solid var(--border2,#ccc);border-radius:10px;padding:8px;
   box-shadow:0 8px 28px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:6px}
 .clr-row{display:flex;align-items:center;gap:5px}
+/* v05.61 · J96 — a choice section inside its card (the edit bar's .fl-pop), not a second card */
+.fl-pop .clr-pop.in-card .clr-pop-x,.fl-pop .spc-pop.in-card .spc-foot .spc-b:last-child{display:none}   /* the button that opened it closes it; the card keeps its own Close */
+.fl-pop .clr-pop.in-card,.fl-pop .spc-pop.in-card{position:static;inset:auto;z-index:auto;width:auto;max-width:none;box-shadow:none;border:0;border-top:1px solid var(--border2,#ddd);border-radius:0;margin:8px 0 0;padding:8px 2px 2px;background:transparent;flex-basis:100%}
 .clr-lbl{font-size:11px;color:var(--t3,#888);width:34px;flex-shrink:0}
 .clr-sw{width:24px;height:24px;border:1px solid var(--border,#bbb);border-radius:6px;
   cursor:pointer;font-size:12px;font-weight:700;display:inline-flex;
@@ -3985,7 +3988,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.60</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.61</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -17479,8 +17482,24 @@ function edMarkDone(ev){
 const _TX_FG=[['Default',''],['#C0392B','#C0392B'],['#E67E22','#E67E22'],['#27AE60','#27AE60'],['#2980B9','#2980B9'],['#8E44AD','#8E44AD']];
 const _TX_BG=[['None','transparent'],['#FFF2A8','#FFF2A8'],['#C9F2C7','#C9F2C7'],['#BFE3FF','#BFE3FF'],['#FFD6E7','#FFD6E7'],['#E2E2E2','#E2E2E2']];
 let _clrPop=null;
+/* v05.61 · J96 — the owner (a screenshot of Aa ▸ 🎨): "This is not ideal having a second card from a button." A button INSIDE a card
+   (the edit bar's .fl-pop: Aa in Pane 3 and in a pop-out window) now opens its choices as a section of that same card, under the
+   buttons, instead of a second floating card over it; the same button closes it again. Outside a card it still floats, as before. */
+function _inCard(ev){ const b=ev&&ev.target&&ev.target.closest?ev.target.closest('button'):null; return b?b.closest('.fl-pop'):null; }
+function _cardSec(card,p){
+  p.classList.add('in-card');
+  const x=card.querySelector(':scope > .fl-pop-x');
+  if(x) card.insertBefore(p,x); else card.appendChild(p);
+  /* the card grows to hold the section while the screen has room below it (its height was capped to what it held when it opened);
+     only a card that still cannot fit scrolls, and then only as far as needed to show the new section */
+  const r=card.getBoundingClientRect(), room=Math.max(120,window.innerHeight-Math.max(0,r.top)-6);
+  card.style.maxHeight=room+'px';
+  if(card.scrollHeight>card.clientHeight+1){ try{ p.scrollIntoView({block:'nearest'}); }catch(e){} }
+}
 function edColorBtn(ev){
   if(ev&&ev.preventDefault)ev.preventDefault();
+  const card=_inCard(ev);
+  if(card&&_clrPop&&card.contains(_clrPop)){ _closeColorPop(); return; }   /* the same button closes its section */
   const ed=_edActive();if(!ed)return;
   const s=window.getSelection();
   if(s&&s.rangeCount&&_isED(s.anchorNode))_edRange=s.getRangeAt(0).cloneRange();
@@ -17504,6 +17523,8 @@ const _SPC_GAP=[['None','0px'],['Small','4px'],['Normal',''],['Large','24px']];
 let _spcPop=null,_spcRange=null,_spcEd=null;
 function edSpacingBtn(ev){
   if(ev&&ev.preventDefault)ev.preventDefault();
+  const card=_inCard(ev);
+  if(card&&_spcPop&&card.contains(_spcPop)){ _closeSpacingPop(); return; }   /* v05.61 · J96 — the same button closes its section */
   const ed=_edActive();if(!ed)return;
   const s=window.getSelection();
   _spcEd=ed;_spcRange=(s&&s.rangeCount&&ed.contains(s.anchorNode))?s.getRangeAt(0).cloneRange():null;
@@ -17558,6 +17579,8 @@ function _openSpacingPop(ev){
     +'<button type="button" class="spc-b" onmousedown="event.preventDefault()" onclick="_closeSpacingPop()">✕ Close</button></div>';
   const p=document.createElement('div');
   p.className='spc-pop';p.id='spc-pop';p.innerHTML=html;
+  const card=_inCard(ev);
+  if(card){ _cardSec(card,p); _spcPop=p; _spcMark(); setTimeout(()=>document.addEventListener('mousedown',_spcPopAway,true),0); return; }   /* v05.61 · J96 */
   document.body.appendChild(p);_spcPop=p;
   const btn=ev&&ev.target&&ev.target.closest?ev.target.closest('button'):null;
   const br=btn?btn.getBoundingClientRect():{left:(ev&&ev.clientX)||120,bottom:(ev&&ev.clientY)||120,top:(ev&&ev.clientY)||120};
@@ -17682,7 +17705,7 @@ function _clrPopAway(e){
 }
 function _closeColorPop(){if(_clrPop){_clrPop.remove();_clrPop=null;document.removeEventListener('mousedown',_clrPopAway,true);}}
 function _openColorPop(ev){
-  _closeColorPop();
+  _closeColorPop();_closeSpacingPop();
   const ed=document.getElementById('ed');
   const defFg=(ed?getComputedStyle(ed).color:'')||'inherit';
   const sw=function(label,val,kind){
@@ -17703,6 +17726,8 @@ function _openColorPop(ev){
     +'<button type="button" class="clr-pop-x" onmousedown="event.preventDefault()" onclick="_closeColorPop()" title="Close">✕ Close</button>';
   const p=document.createElement('div');
   p.className='clr-pop';p.innerHTML=html;
+  const card=_inCard(ev);
+  if(card){ _cardSec(card,p); _clrPop=p; setTimeout(function(){document.addEventListener('mousedown',_clrPopAway,true);},0); return; }
   document.body.appendChild(p);
   const x=(ev&&ev.clientX!=null)?ev.clientX:120,y=(ev&&ev.clientY!=null)?ev.clientY:120;
   const r=p.getBoundingClientRect();
