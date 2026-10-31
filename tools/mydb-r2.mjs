@@ -26,11 +26,11 @@ const PAGE_BYTES = Buffer.from(PAGE);
 const MMJ_PATH = 'Mapping My Journey › Section 04 Testing Ground › (521–600) Understanding the MISGUIDANCE › Know the RESPONSIBILITY of ULEMA';
 
 function makeStore() {
-  const st = { head: 'h1', requests: [], badPageSha: false, files: {} };
+  const st = { head: 'h1', requests: [], refused: [], refuse: false, badPageSha: false, files: {} };
   st.cards = () => [
     { id: 'c1', pid: 'mmsa', name: st.c1name || 'Ulema card', what: 'About <b>ulema</b>', kind: 'Report', status: 'Done', url: 'https://example.com/c1', at: '2026-10-30T10:00:00Z', by: 'x', folder: MMJ_PATH, topics: ['responsibility'] },
     { id: 'c2', pid: 'bwn', name: 'Plain card', what: st.c2what || 'A plain one', kind: 'Demo', status: 'Open', url: 'https://example.com/c2', at: '2026-10-29T10:00:00Z', by: 'x' },
-    { id: 'c3', pid: 'khutbah', name: 'Live page', what: 'Shows live data', kind: 'Demo', status: 'Done', url: 'https://claude.ai/x', at: '2026-10-31T10:00:00Z', by: 'x', page: 'pages/khutbah~c3.html', pageAt: '2026-10-28T00:00:00Z',
+    { id: 'c3', pid: 'khutbah', name: 'Live page', what: st.c3what || 'Shows live data', kind: 'Demo', status: 'Done', url: 'https://claude.ai/x', at: '2026-10-31T10:00:00Z', by: 'x', page: 'pages/khutbah~c3.html', pageAt: '2026-10-28T00:00:00Z',
       pageSha: st.badPageSha ? sha('something else') : sha(PAGE_BYTES), live: true,
       files: [{ path: 'files/art1/thumb-a.jpg', size: PNG.length, sha: sha(PNG) }], filesHeld: [{ path: 'files/art1/sound.mp3', size: 9, sha: 'ab', reason: 'sound' }] },
   ].filter((c) => !(st.drop || []).includes(c.id));
@@ -40,6 +40,7 @@ async function install(ctx, st) {
   await ctx.route('https://api.github.com/**', async (route) => {
     const rq = route.request(), u = new URL(rq.url()), cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization,accept,x-github-api-version', 'access-control-allow-methods': 'GET' };
     if (rq.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    if (st.refuse) { st.refused.push(u.pathname); return route.abort('internetdisconnected'); }
     st.requests.push(u.pathname + u.search);
     if (rq.headers().authorization !== 'Bearer ' + GOOD) return route.fulfill({ status: 401, headers: cors, contentType: 'application/json', body: '{"message":"Bad credentials"}' });
     if (u.pathname.endsWith('/commits/main')) return route.fulfill({ status: 200, headers: cors, contentType: 'text/plain', body: st.head });
@@ -140,12 +141,22 @@ const notes = (page) => page.evaluate(() => Object.fromEntries((DB.articles || [
     const idbProbe = await fr.evaluate(() => new Promise((res) => { try { const q = indexedDB.open('siyagah-mydb-v1'); q.onerror = () => res('error'); q.onsuccess = () => { try { const has = q.result.objectStoreNames.length; q.result.close(); res('own-db-empty:' + has); } catch (e) { res('x'); } }; q.onupgradeneeded = () => {}; } catch (e) { res(e.name); } }));
     r.check(/SecurityError|error|own-db-empty:0/.test(idbProbe), '120g script inside the copy cannot see Siyagah\'s IndexedDB (an opaque origin: error, or an empty database of its own)', idbProbe);
     await pop.close();
-    /* h: offline, cached */
-    await app.ctx.setOffline(true);
+    /* review (v05.62): an hourly sync that changes a DIFFERENT card must not rebuild the editor under the caret */
+    await page.evaluate(() => { selArt('mydb-mmsa~c1'); startEdit(); }); await sleep(500);
+    const ed0 = await page.evaluate(() => { const e = document.getElementById('ed'); e.__mark = 'same'; const w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT); let n = w.nextNode(); while (n && !n.textContent.trim()) n = w.nextNode(); const g = getSelection(), rg = document.createRange(); rg.setStart(n, 2); rg.collapse(true); g.removeAllRanges(); g.addRange(rg); return { off: g.anchorOffset, txt: n.textContent.slice(0, 20), editing: !!ST.editing }; });
+    st.c3what = 'Live data changed by the store'; st.head = 'h6';
+    await page.evaluate(() => _mydbSyncRun(true)); await sleep(500);
+    const ed1 = await page.evaluate(() => { const e = document.getElementById('ed'), g = getSelection(); return { same: !!e && e.__mark === 'same', editing: !!ST.editing, off: g.anchorOffset, inEd: !!(e && g.anchorNode && e.contains(g.anchorNode)), txt: g.anchorNode ? g.anchorNode.textContent.slice(0, 20) : '', c3: (DB.articles.find((a) => a.id === 'mydb-khutbah~c3') || {}).content || '' }; });
+    r.check(ed0.editing && ed1.same && ed1.editing && ed1.inEd && ed1.off === ed0.off && ed1.txt === ed0.txt && /changed by the store/.test(ed1.c3), '120l a sync that changes a different card leaves #ed the same element with the caret where it was', JSON.stringify({ ed0, ed1: { ...ed1, c3: ed1.c3.slice(0, 40) } }));
+    await page.evaluate(() => { cancelEdit(); selArt('mydb-khutbah~c3'); }); await sleep(500);
+    /* h: offline, cached — nothing may reach api.github.com */
+    await app.ctx.setOffline(true); st.refuse = true;
+    const reqN = st.requests.length;
     const [pop2] = await Promise.all([app.ctx.waitForEvent('page'), page.locator('[data-mydb="copy"]').first().click()]);
-    await pop2.waitForSelector('iframe', { timeout: 15000 });
-    r.check(true, '120h offline after a first open, the cached copy still opens');
-    await pop2.close(); await app.ctx.setOffline(false);
+    await pop2.waitForSelector('iframe', { timeout: 15000 }); await sleep(500);
+    const sd = await pop2.evaluate(() => document.querySelector('iframe').getAttribute('srcdoc') || '');
+    r.check(/<h1>Copied<\/h1>/.test(sd) && /data:image\/jpeg;base64,/.test(sd) && st.requests.length === reqN && st.refused.length === 0, '120h offline after a first open, the cached copy still opens: its text is in the iframe and no request reached api.github.com', JSON.stringify({ sd: sd.slice(0, 80), reqs: st.requests.length - reqN, refused: st.refused }));
+    await pop2.close(); await app.ctx.setOffline(false); st.refuse = false;
     const errs = app.errors.filter((e) => !/status of 401/.test(e));   /* the wrong key's 401 is the browser's own line for the answer this row asks for */
     r.check(errs.length === 0, '120k no page errors in the main flow', errs.slice(0, 3).join(' | '));
   } catch (e) { r.check(false, '120 main flow threw', String(e && e.stack || e)); }

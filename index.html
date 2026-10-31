@@ -28021,7 +28021,7 @@ function artCard(a, sel, showFolderCount, showNag, customMeta){
     + (a.fromJeb ? ` · <span class="ar-jeb">👝 from ${esc(a.fromJeb.pocket||'Zab')}</span>` : '')
     + (a.fromEvernote ? ` · <span class="ar-jeb ar-enx">📥 from Evernote · ${esc(a.fromEvernote.nb||'')}</span>` : '')
     + (a.fromMydb ? ` · <span class="ar-jeb ar-mydb">🗄 ${esc(_mydbProjName(a.fromMydb.pid))} · ${esc(a.fromMydb.kind||'Other')}</span>` : '')
-    + (a.zabNote ? ` · <span class="ar-jeb ar-zn"onclick="event.stopPropagation();_zabNoteGo('${esc(a.zabNote.pid)}')" title="Open this Zab">${esc(_zabNoteLabel(a))}</span>` : '')
+    + (a.zabNote ? ` · <span class="ar-jeb ar-zn" onclick="event.stopPropagation();_zabNoteGo('${esc(a.zabNote.pid)}')" title="Open this Zab">${esc(_zabNoteLabel(a))}</span>` : '')
     + (showNag && isNagNote(a) ? ` · <span class="ar-nag">⏳ untouched ${untouchedDays(a)}d</span>` : '');
   const meta=customMeta!==undefined?customMeta:_m0;
   return `<div class="ar${expanded}${sel?' sel':''}" data-aid="${a.id}" `
@@ -31629,8 +31629,7 @@ async function _mmjSyncRun(manual){
       if(!set.has(m.id)){ if(!m.gone){ _mmjMarkNote(a,{gone:true}); sum.gone++; ch++; } }
       else if(m.gone){ _mmjMarkNote(a,null,['gone']); ch++; }
     });
-    if(ch){ _enxPersist(); _enxPushEnd(); }   /* v05.58 · J85 — one save, so its push is not held */
-    try{ render(); }catch(e){}
+    if(ch){ _enxPersist(); _enxPushEnd(); try{ _renderPreserveEdit(); }catch(e){} }   /* v05.58 · J85 — one save, so its push is not held; v05.62 review: not render() (it rebuilds #ed under the caret), and only when something changed */
     _mmjS.last=t0; if(doFull) _mmjS.full=t0;
     try{ await _mmjKv('put',{at:_mmjS.last,full:_mmjS.full}); }catch(e){}
     _mmjS.sum=sum; _mmjS.msg=''; _mmjS.retryAt=0;
@@ -31674,7 +31673,7 @@ async function _mmjShowNewer(aid){
    (the copy runs in an opaque origin and cannot reach Siyagah's storage), never a blob: URL of the page. Pages and files are cached in siyagah-mydb-v1
    (store pages), verified against their sha256 first. Everything read from the store is untrusted text. ── */
 const _MYDB_SYNC_MS=60*60*1000, _MYDB_RETRY_MS=10*60*1000;
-const _mydbS={key:'',keyLoaded:false,cloudRead:false,cloudDirty:false,busy:false,keeping:false,last:null,msg:'',next:0,connecting:false,pages:0};
+const _mydbS={key:'',keyLoaded:false,cloudRead:false,cloudFails:0,cloudNext:0,cloudDirty:false,busy:false,keeping:false,last:null,msg:'',next:0,connecting:false,pages:0};
 const _mydbNow=()=>window.__mydbNow!=null?+window.__mydbNow:Date.now();
 const _MYDB_PROJ={bwn:'Basheera wa Nazeera',khutbah:'Khutbah',mmsa:'MSA',siy:'Siyagah',web:'Web',qr:'QuranRevival',pl:'Programme'};
 const _mydbProjName=pid=>_MYDB_PROJ[pid]||String(pid||'');
@@ -31719,19 +31718,21 @@ function _mydbCloudDoc(){
 }
 async function _mydbCloudStep(){
   const doc=_mydbCloudDoc(); if(!doc||!_dbLoaded||!_s1WriteGate()) return;
+  if(_mydbS.cloudNext>_mydbNow()) return;   /* v05.62 review: after a failure wait 1 min, then 5, then 30 (not every 5 s) */
+  const fail=()=>{ _mydbS.cloudFails++; _mydbS.cloudNext=_mydbNow()+[60000,300000,1800000][Math.min(_mydbS.cloudFails,3)-1]; };
   if(!_mydbS.cloudRead){
     try{
-      const snap=await doc.get(); _mydbS.cloudRead=true;
+      const snap=await doc.get(); _mydbS.cloudRead=true; _mydbS.cloudFails=0; _mydbS.cloudNext=0;
       const d=snap.exists?(snap.data()||{}):null;
       if(d&&typeof d.k==='string'&&d.k&&!_mydbS.key){ _mydbS.key=d.k; try{ await _mydbIdb('kv','put','key',d.k); }catch(e){} _mydbS.next=0; }
       else if(_mydbS.key&&!(d&&d.k===_mydbS.key)) _mydbS.cloudDirty=true;
-    }catch(e){ return; }
+    }catch(e){ fail(); return; }
   }
   if(_mydbS.cloudDirty&&_mydbS.key){
     try{
       await doc.set({k:_mydbS.key,at:firebase.firestore.FieldValue.serverTimestamp(),b:document.querySelector('meta[name="app-version"]').content});
-      _mydbS.cloudDirty=false;
-    }catch(e){}
+      _mydbS.cloudDirty=false; _mydbS.cloudFails=0; _mydbS.cloudNext=0;
+    }catch(e){ fail(); }
   }
 }
 /* ── the store, over the GitHub REST API (read only) ── */
@@ -31871,8 +31872,7 @@ async function _mydbSyncRun(manual){
       const m=a.fromMydb; if(!m||seen.has(a.id)||m.gone) return;
       _mydbMark(a,{gone:true}); sum.gone++; ch++;
     });
-    if(ch){ _enxPersist(); _enxPushEnd(); }   /* v05.58 · J85 */
-    try{ render(); }catch(e){}
+    if(ch){ _enxPersist(); _enxPushEnd(); try{ _renderPreserveEdit(); }catch(e){} }   /* v05.58 · J85; v05.62 review: not render() (rebuilds #ed under the caret), only when something changed */
     _mydbS.last={sha:head,at:new Date(t0).toISOString(),ok:true}; try{ await _mydbIdb('kv','put','last',_mydbS.last); }catch(e){}
     _mydbS.msg=''; _mydbS.sum=sum; _mydbS.next=t0+_MYDB_SYNC_MS;
     setTimeout(()=>{ try{ _mydbKeepRun(); }catch(e){} },0);
