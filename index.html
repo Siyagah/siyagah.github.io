@@ -32015,7 +32015,7 @@ function openMydb(){
     document.body.appendChild(m);
   }
   _mydbPaint(); m.classList.add('open');
-  _mydbLoadKey().then(()=>{ if(m.classList.contains('open')) _mydbPaint(); });
+  _mydbLoadKey().then(()=>{ if(m.classList.contains('open')) _mydbRefresh(); });   /* the status only: a repaint of the box would empty what is being typed */
 }
 function closeMydb(){ const m=document.getElementById('mydb-modal'); if(m) m.classList.remove('open'); }
 function _mydbKeepSet(on){ DB.theme=DB.theme||{}; DB.theme.mydbKeep=!!on; persist(); if(on) setTimeout(()=>{ try{ _mydbKeepRun(); }catch(e){} },0); }
