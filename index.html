@@ -2055,9 +2055,9 @@ sup.ann-sup:hover{text-decoration:underline}
   background:var(--green);color:var(--on-accent);font-family:var(--ui);font-size:14px;font-weight:600;cursor:pointer;min-height:44px}
 #rm-fbt{font-family:monospace;font-size:11px}
 /* v05.13 · S4a — Evernote import (dry run). A dialog on a tablet and laptop, a bottom sheet on a phone; it sits over the Zab bar on purpose, so it is not in the --jeb-h lists. */
-#enx-modal,#mmj-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10060;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
-#enx-modal.open,#mmj-modal.open{display:flex}
-#enx-box,#mmj-box{background:var(--paper);border-radius:12px;padding:18px 22px;width:min(640px,94vw);max-height:90vh;overflow-y:auto;box-sizing:border-box;
+#enx-modal,#mmj-modal,#mydb-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10060;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
+#enx-modal.open,#mmj-modal.open,#mydb-modal.open{display:flex}
+#enx-box,#mmj-box,#mydb-box{background:var(--paper);border-radius:12px;padding:18px 22px;width:min(640px,94vw);max-height:90vh;overflow-y:auto;box-sizing:border-box;
   box-shadow:0 8px 32px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px;color:var(--t1);font-size:13px}
 .rm-big.alt{background:var(--hover);color:var(--t1)}
 .enx-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
@@ -2086,12 +2086,29 @@ sup.ann-sup:hover{text-decoration:underline}
 @media(max-width:639.98px){.enx-file{display:block}}
 .enx-src{font-size:.9em;color:var(--t2)}
 .toast-enx{cursor:pointer}
+/* v05.62 · J98 R2 — MyDatabase: the dialog (shares the Evernote dialog's overlay and box) and the card's note */
+.mydb-hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mydb-x{min-width:44px;min-height:44px;border:1px solid var(--border2);border-radius:8px;background:var(--hover);color:var(--t1);font:inherit;font-size:16px;cursor:pointer}
+.mydb-steps{margin:0;padding-left:22px;line-height:1.55;overflow-wrap:anywhere}
+.mydb-in{width:100%;box-sizing:border-box;min-height:44px;padding:0 12px;border:1px solid var(--border2);border-radius:8px;background:var(--white);color:var(--t1);font:inherit}
+.mydb-row{display:flex;flex-wrap:wrap;gap:8px}
+.mydb-row .rm-big{width:auto;min-height:44px;margin:0;padding:0 14px}
+.mydb-st{padding:9px 12px;background:var(--hover);border-radius:8px;line-height:1.5;color:var(--t1);overflow-wrap:anywhere}
+.mydb-keep{display:flex;align-items:center;gap:8px;min-height:44px}
+.mydb-keep input{width:22px;height:22px;flex:none}
+.mydb-t{border-collapse:collapse;margin:8px 0}
+.mydb-t th{text-align:left;color:var(--t2);font-weight:600;padding:3px 14px 3px 0;vertical-align:top;white-space:nowrap}
+.mydb-t td{padding:3px 0;overflow-wrap:anywhere}
+.mydb-btns{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.mydb-b{min-height:44px;padding:0 16px;border:1px solid var(--green2);border-radius:8px;background:transparent;color:var(--green2);font:inherit;font-weight:600;cursor:pointer}
+.mydb-held{color:var(--t2);font-size:.92em}
+@media(max-width:639.98px){.mydb-btns{flex-direction:column}.mydb-b{width:100%;min-height:48px}}
 .enx-fb{width:100%;box-sizing:border-box;height:140px;font-family:monospace;font-size:11px}
 @media(max-width:639.98px){
   .enx-dirbtn{display:none}
   .enx-filebtn{background:var(--green);color:var(--on-accent)}
-  #enx-modal,#mmj-modal{align-items:flex-end}
-  #enx-box,#mmj-box{width:100%;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+  #enx-modal,#mmj-modal,#mydb-modal{align-items:flex-end}
+  #enx-box,#mmj-box,#mydb-box{width:100%;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
   .enx-stack>summary{min-height:44px;display:flex;align-items:center}}
 @media(max-width:639.98px){
   #remmail-modal{align-items:flex-end}
@@ -4021,6 +4038,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <div class="sb-mi" onclick="addStarterMyDatabaseFolders();closeSBTools()" title="Adds MyResources, MyIdeas, MyMemories, MyPlanning, MyBuy-MyShopping, MyQueries, MyTravel under MyDatabase — safe to run more than once">🗂 Add Starter MyDatabase Folders</div>
           <div class="sb-mi" onclick="syncKnowledgeBase();closeSBTools()" title="Update the built-in guide notes to the latest version">📚 Sync Knowledge Base</div>
           <div class="sb-mi" onclick="openEnexImport();closeSBTools()" title="Reads your Evernote export and shows what it found; then, when you say OK, brings the notes into My Notebooks ▸ Evernote.">📥 Evernote import</div>
+          <div class="sb-mi" onclick="openMydb();closeSBTools()" title="Your private cards from the store Siyagah/MyDB: the key, check now, and the notes they become.">🗄 MyDatabase…</div>
           <div class="sb-mi" onclick="openMmjImport();closeSBTools()" title="Reads mappingmyjourney.com and shows what it found; then, when you say OK, backs up and brings every category and post into the section Mapping My Journey.">🗺 Mapping My Journey import</div>
           <div class="sb-mi-hd">Reference &amp; dates</div>
           <div class="sb-mi" onclick="openCiteModal();closeSBTools()" title="Insert Qurʿan or Hadith reference into note">📖 Insert Reference</div>
@@ -5299,6 +5317,8 @@ function _cleanExportRoot(){
     /* 4b ─ v05.35: the News preview (headlines from the net) is never part of a saved copy, even if the Appearance window's markup is in the page. */
     root.querySelectorAll('#nw-prev').forEach(function(el){ el.innerHTML = ''; });
     root.querySelectorAll('#nw-status').forEach(function(el){ el.textContent = ''; });
+    /* 4c ─ v05.62: the MyDatabase window (the key box) is never part of a saved copy. */
+    root.querySelectorAll('#mydb-modal').forEach(function(el){ el.remove(); });
     /* 5 ─ Transient UI that must never be serialised. The drag ghost is the
            important one: it holds a REAL note title, which leaked private
            content into Deploy Export files that are meant to be empty shells. */
@@ -6681,7 +6701,7 @@ function cntOf(fid){
   if(_cntC) return _cntFolders().get(fid)||0;
   const ids=descOf(fid);return DB.articles.filter(a=>a.folderIds.some(x=>ids.includes(x))).length;
 }
-const _SF_CNT={'sf-favs':a=>a.favourite,'sf-pinned':a=>a.pinned,'sf-journal':a=>isJournal(a),'sf-arch':a=>a.archived,'sf-mywall':a=>isMyWallNote(a),'sf-remind':a=>a.reminder&&a.reminder.dt,'sf-jeb':a=>a.fromJeb,'sf-enx':a=>a.fromEvernote};
+const _SF_CNT={'sf-favs':a=>a.favourite,'sf-pinned':a=>a.pinned,'sf-journal':a=>isJournal(a),'sf-arch':a=>a.archived,'sf-mywall':a=>isMyWallNote(a),'sf-remind':a=>a.reminder&&a.reminder.dt,'sf-jeb':a=>a.fromJeb,'sf-enx':a=>a.fromEvernote,'sf-mydb':a=>a.fromMydb};
 function _cntOver(arts,sfId){
   if(sfId==='sf-new'||sfId==='sf-time') return arts.length;
   if(sfId==='sf-recent') return Math.min(20,arts.length);
@@ -7374,7 +7394,7 @@ function renderP2C(){
       return;
     }
     const arts=getSmartArts(_sf.id);
-    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any note and choose ⭐ Favourite','sf-pinned':'No pinned notes yet — right-click (or hold on mobile) any note and choose 📌 Pin','sf-new':'No notes yet. Create your first note!','sf-recent':'No recently edited notes.','sf-jeb':'Notes you make from Zab appear here.','sf-enx':'Notes brought in from Evernote appear here.','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
+    const empty={'sf-favs':'No favourites yet — right-click (or hold on mobile) any note and choose ⭐ Favourite','sf-pinned':'No pinned notes yet — right-click (or hold on mobile) any note and choose 📌 Pin','sf-new':'No notes yet. Create your first note!','sf-recent':'No recently edited notes.','sf-jeb':'Notes you make from Zab appear here.','sf-enx':'Notes brought in from Evernote appear here.','sf-mydb':'Your MyDatabase cards appear here once Siyagah has the key — 🧰 Tools → 🗄 MyDatabase…<br><button type="button" class="rm-big" id="mydb-empty-btn" style="margin-top:10px;width:auto;padding:0 16px" onclick="openMydb()">🗄 MyDatabase…</button>','sf-journal':'No journal notes yet — tag a note "journal" or "daily", or include a date in its title (e.g. 12.06.26).'};
     let h='<div class="fv">'+`<div class="slbl">${esc(_sfName(_sf))} (${arts.length})</div>`;
     h+=_sfQtBarHTML(_sf.id,null);
     if(!arts.length){
@@ -7676,7 +7696,7 @@ function _cardCtxCheck(){
 }
 function artCardC(a,sel,sfc){
   if(sel||ST.snippet) return artCard(a,sel,sfc);
-  const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'')+(a.zabNote?_zabNoteLabel(a):'');
+  const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'')+(a.fromMydb?(a.fromMydb.pid+'|'+(a.fromMydb.kind||'')+(a.fromMydb.gone?'g':'')+(a.fromMydb.newer?'n':'')):'')+(a.zabNote?_zabNoteLabel(a):'');
   const e=_cardC.get(a.id);
   if(e&&e.s===s) return e.h;
   const h=artCard(a,false,sfc);
@@ -8105,6 +8125,9 @@ function _renderP3CInner(){
       ${curA.fromEvernote?`<div class="av-jeb av-enx">📥 from Evernote · ${esc(curA.fromEvernote.nb||'')}</div>`:''}
       ${curA.fromMmj&&curA.fromMmj.gone?'<div class="av-jeb mmj-line mmj-removed">🗺 removed from Mapping My Journey</div>':''}
       ${curA.fromMmj&&curA.fromMmj.newer?`<div class="av-jeb mmj-line mmj-newer">🗺 Mapping My Journey has a newer version (${esc(_mmjFmtDate(curA.fromMmj.newer.modified))}) — <button type="button" class="mmj-newer-b" onclick="_mmjShowNewer('${curA.id}')">Show it</button></div>`:''}
+      ${curA.fromMydb?`<div class="av-jeb av-mydb">🗄 from MyDatabase · ${esc(_mydbProjName(curA.fromMydb.pid))} · ${esc(curA.fromMydb.kind||'Other')}</div>`:''}
+      ${curA.fromMydb&&curA.fromMydb.gone?'<div class="av-jeb mmj-line mydb-gone">🗄 removed from MyDatabase (this note is kept)</div>':''}
+      ${curA.fromMydb&&curA.fromMydb.newer?`<div class="av-jeb mmj-line mydb-newer">🗄 There is a newer version in the store — <button type="button" class="mmj-newer-b" onclick="_mydbUseNewer('${curA.id}')">Use the store's version</button></div>`:''}
       ${curA.zabNote?`<div class="av-jeb av-zn"><button type="button" class="av-zn-b" onclick="_zabNoteGo('${esc(curA.zabNote.pid)}')" title="Open this Zab">${esc(_zabNoteLabel(curA))}</button></div>`:''}
       ${reminderStripHTML(curA)}
       <div class="av-tags">${tags}</div>
@@ -10400,6 +10423,7 @@ function getSecSmartArts(secId,sfId){
                              .sort((a,b)=>a.reminder.dt.localeCompare(b.reminder.dt));
     case 'sf-jeb':    return sa.filter(a=>a.fromJeb).sort((a,b)=>String(b.fromJeb.at||'').localeCompare(String(a.fromJeb.at||'')));
     case 'sf-enx':    return sa.filter(a=>a.fromEvernote).sort((a,b)=>String(b.fromEvernote.at||'').localeCompare(String(a.fromEvernote.at||'')));
+    case 'sf-mydb':   return sa.filter(a=>a.fromMydb).sort((a,b)=>String(b.fromMydb.at||'').localeCompare(String(a.fromMydb.at||'')));
     default: return [];
   }
 }
@@ -21161,7 +21185,7 @@ function stripNumPrefix(name){
 //          2nd-level pos 1 under root pos 2 → "002.001"
 //          3rd-level pos 4 → "002.001.04"
 function getHierNum(fid){
-  if(pathOf(fid).some(f=>f.mmj)) return '';   /* v05.48 · J74 ② — a Mapping My Journey folder is never numbered */
+  if(pathOf(fid).some(f=>f.mmj||f.mydb)) return '';   /* v05.48 · J74 ② — a Mapping My Journey folder is never numbered */
   return pathOf(fid).map((f,lvl)=>{
     // Root level → count only within the same section (independent numbering).
     // Deeper levels → count among siblings with the same parent (unchanged).
@@ -21183,17 +21207,17 @@ function autoNumberAll(silent=false){
   // section before computing numbers — fixes duplicate order values that
   // arise when folders are moved between sections.
   /* v05.48 · J74 ② — a folder from the Mapping My Journey import (f.mmj) keeps its name and order exactly as the site has them */
-  const _sids=[...new Set(DB.folders.filter(f=>!f.parentId&&!f.mmj).map(f=>f.sectionId||null))];
+  const _sids=[...new Set(DB.folders.filter(f=>!f.parentId&&!f.mmj&&!f.mydb).map(f=>f.sectionId||null))];
   _sids.forEach(sid=>{
     const _roots=DB.folders
-      .filter(f=>!f.parentId&&!f.mmj&&(f.sectionId||null)===sid)
+      .filter(f=>!f.parentId&&!f.mmj&&!f.mydb&&(f.sectionId||null)===sid)
       .sort((a,b)=>a.order-b.order);
     _roots.forEach((f,i)=>f.order=i+1);
   });
 
   // Step 2: strip old prefix and apply new per-section number
   DB.folders.forEach(f=>{
-    if(f.mmj) return;
+    if(f.mmj||f.mydb) return;
     const num=getHierNum(f.id); if(!num) return;
     const clean=stripNumPrefix(f.name)||f.name;
     f.name=`(${num}) ${clean}`;
@@ -27996,7 +28020,8 @@ function artCard(a, sel, showFolderCount, showNag, customMeta){
     + (showFolderCount && a.folderIds.length>1 ? ` · in ${a.folderIds.length} folders` : '')
     + (a.fromJeb ? ` · <span class="ar-jeb">👝 from ${esc(a.fromJeb.pocket||'Zab')}</span>` : '')
     + (a.fromEvernote ? ` · <span class="ar-jeb ar-enx">📥 from Evernote · ${esc(a.fromEvernote.nb||'')}</span>` : '')
-    + (a.zabNote ? ` · <span class="ar-jeb ar-zn" onclick="event.stopPropagation();_zabNoteGo('${esc(a.zabNote.pid)}')" title="Open this Zab">${esc(_zabNoteLabel(a))}</span>` : '')
+    + (a.fromMydb ? ` · <span class="ar-jeb ar-mydb">🗄 ${esc(_mydbProjName(a.fromMydb.pid))} · ${esc(a.fromMydb.kind||'Other')}</span>` : '')
+    + (a.zabNote ? ` · <span class="ar-jeb ar-zn"onclick="event.stopPropagation();_zabNoteGo('${esc(a.zabNote.pid)}')" title="Open this Zab">${esc(_zabNoteLabel(a))}</span>` : '')
     + (showNag && isNagNote(a) ? ` · <span class="ar-nag">⏳ untouched ${untouchedDays(a)}d</span>` : '');
   const meta=customMeta!==undefined?customMeta:_m0;
   return `<div class="ar${expanded}${sel?' sel':''}" data-aid="${a.id}" `
@@ -31640,6 +31665,391 @@ async function _mmjShowNewer(aid){
   }catch(e){ if(box()) box().textContent='Could not read the newer version just now.'; }
 }
 (function _mmjSyncBoot(){ setTimeout(()=>{ const go=()=>{ try{ _mmjSyncTick(); }catch(e){} }; go(); setInterval(go,60000); },60000); })();
+/* ── v05.62 · J98 R2 — 🗄 MyDatabase. The owner's private cards, read from the private GitHub store Siyagah/MyDB with a read-only key.
+   The KEY is never in DB, DB.theme, localStorage, a backup or a Save File copy: it lives in the device's own database siyagah-mydb-v1 (store kv, key
+   'key'), and in the small cloud doc notebooks/{nb}/mydb/v1 {k,at,b} (written like remind/v1: through _s1WriteGate(); not in recs, the blob,
+   _S1_COLLS or mergeDB()). Each card is a note mydb-<pid>~<id> with fromMydb:{pid,id,u,sha,raw,at,kind}; same pattern as the Mapping My Journey
+   keeping-matching: one await-free stretch decides and writes, the owner's edits win, nothing is ever deleted, a note is never moved after it is made.
+   A copied page opens ONLY in a new window holding one <iframe sandbox="allow-scripts allow-popups allow-forms" srcdoc> — never allow-same-origin
+   (the copy runs in an opaque origin and cannot reach Siyagah's storage), never a blob: URL of the page. Pages and files are cached in siyagah-mydb-v1
+   (store pages), verified against their sha256 first. Everything read from the store is untrusted text. ── */
+const _MYDB_SYNC_MS=60*60*1000, _MYDB_RETRY_MS=10*60*1000;
+const _mydbS={key:'',keyLoaded:false,cloudRead:false,cloudDirty:false,busy:false,keeping:false,last:null,msg:'',next:0,connecting:false,pages:0};
+const _mydbNow=()=>window.__mydbNow!=null?+window.__mydbNow:Date.now();
+const _MYDB_PROJ={bwn:'Basheera wa Nazeera',khutbah:'Khutbah',mmsa:'MSA',siy:'Siyagah',web:'Web',qr:'QuranRevival',pl:'Programme'};
+const _mydbProjName=pid=>_MYDB_PROJ[pid]||String(pid||'');
+const _mydbKindName=k=>({List:'List',Demo:'Demo',Database:'Database',Report:'Report'})[k]||'Other';
+const _MYDB_KIND_FOLDER={List:'Lists',Demo:'Demos',Database:'Databases',Report:'Reports',Other:'Other'};
+const _mydbEnc=s=>String(s==null?'':s).replace(/[^A-Za-z0-9._-]/g,ch=>'_'+ch.charCodeAt(0).toString(16)+'_');
+const _mydbNoteId=c=>'mydb-'+_mydbEnc(c.pid)+'~'+_mydbEnc(c.id);
+const _mydbHttps=u=>{ try{ const x=new URL(String(u)); return x.protocol==='https:'?x.href:''; }catch(e){ return ''; } };
+const _mydbDate=iso=>{ const t=Date.parse(iso); return isNaN(t)?'':new Date(t).toISOString().slice(0,10); };
+const _mydbHint=k=>k?'••••'+String(k).slice(-4):'';
+/* the device's own database: a NEW one, never an upgrade of another. A read never creates it (a device that never uses MyDatabase never gets it). */
+function _mydbIdb(store,op,key,val){
+  return new Promise((res,rej)=>{
+    if(!window.indexedDB) return rej(new Error('no IndexedDB'));
+    let q, absent=false; try{ q=indexedDB.open('siyagah-mydb-v1',1); }catch(e){ rej(e); return; }
+    q.onupgradeneeded=()=>{
+      if(op==='get'){ absent=true; try{ q.transaction.abort(); }catch(e){} return; }
+      ['kv','pages'].forEach(n=>{ if(!q.result.objectStoreNames.contains(n)) q.result.createObjectStore(n); });
+    };
+    q.onerror=()=>{ if(absent) res(undefined); else rej(q.error); };
+    q.onsuccess=()=>{
+      const db=q.result;
+      try{
+        const tx=db.transaction(store,op==='get'?'readonly':'readwrite'), st=tx.objectStore(store), rq=op==='get'?st.get(key):op==='put'?st.put(val,key):st.delete(key);
+        tx.oncomplete=()=>{ db.close(); res(op==='get'?rq.result:true); };
+        tx.onerror=tx.onabort=()=>{ db.close(); rej(tx.error); };
+      }catch(e){ db.close(); rej(e); }
+    };
+  });
+}
+async function _mydbLoadKey(){
+  if(_mydbS.keyLoaded) return;
+  try{ const k=await _mydbIdb('kv','get','key'); if(typeof k==='string'&&k) _mydbS.key=k; }catch(e){}
+  try{ const l=await _mydbIdb('kv','get','last'); if(l&&typeof l==='object') _mydbS.last=l; }catch(e){}
+  _mydbS.keyLoaded=true;
+}
+/* ── the cloud copy of the key: so pasting it on one device makes it work on every signed-in device ── */
+function _mydbCloudDoc(){
+  const cfg=getSyncConfig();
+  if(!cfg||!cfg.notebookId||!_syncFsDb) return null;
+  return _syncFsDb.collection('notebooks').doc(cfg.notebookId).collection('mydb').doc('v1');
+}
+async function _mydbCloudStep(){
+  const doc=_mydbCloudDoc(); if(!doc||!_dbLoaded||!_s1WriteGate()) return;
+  if(!_mydbS.cloudRead){
+    try{
+      const snap=await doc.get(); _mydbS.cloudRead=true;
+      const d=snap.exists?(snap.data()||{}):null;
+      if(d&&typeof d.k==='string'&&d.k&&!_mydbS.key){ _mydbS.key=d.k; try{ await _mydbIdb('kv','put','key',d.k); }catch(e){} _mydbS.next=0; }
+      else if(_mydbS.key&&!(d&&d.k===_mydbS.key)) _mydbS.cloudDirty=true;
+    }catch(e){ return; }
+  }
+  if(_mydbS.cloudDirty&&_mydbS.key){
+    try{
+      await doc.set({k:_mydbS.key,at:firebase.firestore.FieldValue.serverTimestamp(),b:document.querySelector('meta[name="app-version"]').content});
+      _mydbS.cloudDirty=false;
+    }catch(e){}
+  }
+}
+/* ── the store, over the GitHub REST API (read only) ── */
+async function _mydbReq(path,accept,key){
+  let r;
+  try{ r=await fetch('https://api.github.com/repos/Siyagah/MyDB/'+path,{headers:{'Accept':accept,'Authorization':'Bearer '+key,'X-GitHub-Api-Version':'2022-11-28'},cache:'no-store'}); }
+  catch(e){ const er=new Error('offline'); er.kind='offline'; throw er; }
+  if(!r.ok){ const er=new Error('HTTP '+r.status); er.status=r.status; er.kind=r.status===401?'key':(r.status===403||r.status===404)?'access':'http'; throw er; }
+  return r;
+}
+const _mydbHead=async key=>String(await (await _mydbReq('commits/main','application/vnd.github.sha',key)).text()).trim();
+const _mydbCPath=p=>'contents/'+String(p).split('/').map(encodeURIComponent).join('/')+'?ref=main';
+async function _mydbBytes(path,size,key){
+  if(size>1048576){   /* over 1 MB: the blob by its sha, from the tree */
+    const t=await (await _mydbReq('git/trees/main?recursive=1','application/vnd.github+json',key)).json();
+    const e=((t&&t.tree)||[]).find(x=>x&&x.path===path&&x.sha);
+    if(e) return await (await _mydbReq('git/blobs/'+e.sha,'application/vnd.github.raw',key)).arrayBuffer();
+  }
+  return await (await _mydbReq(_mydbCPath(path),'application/vnd.github.raw',key)).arrayBuffer();
+}
+async function _mydbHex(buf){ return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buf))).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+/* a page or a file: the cached copy if it is the right one, else fetched, VERIFIED, and only then stored. Throws {kind:'offline'|'mismatch'|'nokey'|…} */
+async function _mydbEnsure(path,sha,size){
+  let rec=null; try{ rec=await _mydbIdb('pages','get',path); }catch(e){}
+  if(rec&&rec.b&&(!sha||rec.sha===sha)) return rec.b;
+  if(!_mydbS.key){ const er=new Error('no key'); er.kind='nokey'; throw er; }
+  if(navigator.onLine===false){ const er=new Error('offline'); er.kind='offline'; throw er; }
+  const buf=await _mydbBytes(path,size||0,_mydbS.key), h=await _mydbHex(buf);
+  if(sha&&h!==String(sha).toLowerCase()){ const er=new Error('sha mismatch'); er.kind='mismatch'; throw er; }
+  try{ await _mydbIdb('pages','put',path,{b:buf,sha:h,at:new Date().toISOString()}); }catch(e){}
+  return buf;
+}
+const _mydbKeepOn=()=>!(DB&&DB.theme&&DB.theme.mydbKeep===false);
+/* "Keep a copy on this device": every page and file of the cards, one at a time, while visible and online */
+async function _mydbKeepRun(){
+  if(_mydbS.keeping||!_mydbS.key||!_mydbKeepOn()||!_dbLoaded) return;
+  _mydbS.keeping=true;
+  try{
+    for(const a of (DB.articles||[]).slice()){
+      if(document.visibilityState==='hidden'||navigator.onLine===false) break;
+      const c=a&&a.fromMydb&&!a.fromMydb.gone?_mydbRawCard(a):null; if(!c||!c.page) continue;
+      try{ await _mydbEnsure(c.page,c.pageSha,0); for(const f of (Array.isArray(c.files)?c.files:[])) if(f&&f.path) await _mydbEnsure(f.path,f.sha,f.size); _mydbS.pages++; }catch(e){}
+    }
+  }finally{ _mydbS.keeping=false; }
+}
+function _mydbRawCard(a){ try{ const c=JSON.parse(a.fromMydb.raw); return c&&typeof c==='object'?c:null; }catch(e){ return null; } }
+/* ── a card drawn as note HTML: the ONE function ── */
+function _mydbCardHTML(c){
+  const id=_mydbNoteId(c), arr=x=>Array.isArray(x)?x.filter(s=>typeof s==='string'&&s).join(', '):'';
+  const row=(k,v)=>(v==null||v==='')?'':'<tr><th>'+k+'</th><td>'+esc(String(v))+'</td></tr>';
+  let h='';
+  if(c.what) h+='<p class="mydb-what">'+esc(String(c.what)).replace(/\n/g,'<br>')+'</p>';
+  h+='<table class="mydb-t"><tbody>'+row('Type',_mydbKindName(c.kind))+row('Project',_mydbProjName(c.pid))+row('Status',c.status)+row('Version',c.ver)+row('Date',_mydbDate(c.at))+row('Topics',arr(c.topics))+row('Projects',arr(c.projects))+'</tbody></table>';
+  const btn=(w,t)=>'<button type="button" class="mydb-b" data-mydb="'+w+'" data-mydb-id="'+esc(id)+'" contenteditable="false">'+t+'</button>';
+  let b=''; if(typeof c.page==='string'&&c.page) b+=btn('copy','▶ Open the copy'); if(_mydbHttps(c.url)) b+=btn('orig','↗ Open the original');
+  if(b) h+='<div class="mydb-btns" contenteditable="false">'+b+'</div>';
+  const held=Array.isArray(c.filesHeld)?c.filesHeld.length:0;
+  if(held) h+='<p class="mydb-held" contenteditable="false">🎬 '+held+' sound/video file'+(held===1?'':'s')+': go to Google Drive in a later round (R3)</p>';
+  return h;
+}
+function _mydbTags(c){
+  const t=['mydb']; (Array.isArray(c.topics)?c.topics:[]).forEach(x=>{ const k=_cleanTag(x); if(k&&!t.includes(k)) t.push(k); });
+  return t;
+}
+/* the folder a NEW note goes in: the card's own path matched against the folder tree, else 🗄 MyDatabase › project › type */
+function _mydbMatch(path){
+  const segs=String(path||'').split('›').map(s=>s.trim().toLowerCase()).filter(Boolean); if(!segs.length) return null;
+  const nm=f=>[String(f.name||'').trim().toLowerCase(),String(stripNumPrefix(f.name)||'').trim().toLowerCase()];
+  let best=null, bestD=-1;
+  const walk=(f,i,d)=>{
+    if(!nm(f).includes(segs[i])) return;
+    if(i===segs.length-1){ if(d>bestD){ best=f; bestD=d; } return; }
+    (DB.folders||[]).forEach(k=>{ if(k.parentId===f.id) walk(k,i+1,d+1); });
+  };
+  (DB.folders||[]).forEach(f=>{ if(!f.parentId) walk(f,0,0); });
+  return best;
+}
+async function _mydbSyncRun(manual){
+  if(_mydbS.busy||!_dbLoaded) return null;
+  await _mydbLoadKey();
+  if(!_mydbS.key){ _mydbS.msg='No key yet. Paste it below and press Connect.'; _mydbRefresh(); return null; }
+  if(navigator.onLine===false){ _mydbS.msg='You are offline.'; _mydbRefresh(); return null; }
+  _mydbS.busy=true; _mydbS.msg='Checking MyDatabase…'; _mydbRefresh();
+  let sum=null;
+  try{
+    const key=_mydbS.key, head=await _mydbHead(key), t0=_mydbNow();
+    if(_mydbS.last&&_mydbS.last.sha===head&&_mydbS.last.ok){
+      _mydbS.last=Object.assign({},_mydbS.last,{at:new Date(t0).toISOString(),checked:true}); try{ await _mydbIdb('kv','put','last',_mydbS.last); }catch(e){}
+      _mydbS.msg='Up to date — nothing new in MyDatabase.'; _mydbS.next=t0+_MYDB_SYNC_MS; return null;
+    }
+    const j=JSON.parse(new TextDecoder().decode(await _mydbBytes('cards.json',0,key)));
+    if(!j||!Array.isArray(j.cards)) throw new Error('cards.json is not what was expected');
+    if(!_s1WriteGate()){ _mydbS.msg='Waiting for this device to finish reading your notebook from the cloud. Will try again.'; _mydbS.next=_mydbNow()+60000; return null; }
+    /* from here to the save there is no await: DB is read and changed in one go */
+    const at=new Date().toISOString(), dead=_mmjDead(), cards=j.cards.filter(c=>c&&typeof c==='object'&&c.id!=null&&c.pid!=null&&c.vis!=='hide');
+    sum={added:0,updated:0,kept:0,gone:0}; let ch=0;
+    const aBy=new Map((DB.articles||[]).map(a=>[a.id,a])), fById=new Map((DB.folders||[]).map(f=>[f.id,f])), seen=new Set();
+    const trashF=new Set(); (DB.trash||[]).forEach(t=>{ if(t&&t.type==='folder'){ if(t.item&&t.item.id) trashF.add(t.item.id); ((t.subtree&&t.subtree.folders)||[]).forEach(f=>{ if(f&&f.id) trashF.add(f.id); }); } });
+    const tomb=new Set((DB.tombstones||[]).map(t=>t&&t.id)), sec=_enxSection();
+    const ensure=(base,name,parentId)=>{
+      let id=base, n=1;
+      while(!fById.has(id)&&(tomb.has(id)||trashF.has(id))) id=base+'-'+(++n);   /* the owner deleted an empty one of ours: never revive its id */
+      if(fById.has(id)) return id;
+      let order=1+Math.max(0,...(DB.folders||[]).filter(f=>(f.parentId||null)===(parentId||null)&&(parentId||(f.sectionId||null)===(sec?sec.id:null))).map(f=>f.order||0));
+      const f={id,name,parentId:parentId||null,order,mydb:{n:name,p:parentId||null},updatedAt:at};
+      if(!parentId&&sec) f.sectionId=sec.id;
+      DB.folders.push(f); fById.set(id,f); ch++;
+      return id;
+    };
+    const folderFor=c=>{
+      if(typeof c.folder==='string'&&c.folder.trim()){ const m=_mydbMatch(c.folder); if(m) return m.id; }
+      const root=ensure('mydb-root','🗄 MyDatabase',null), pid='mydb-p-'+_mydbEnc(c.pid), pf=ensure(pid,_mydbProjName(c.pid),root);
+      const kn=_mydbKindName(c.kind);
+      return ensure(pid+'-'+kn.toLowerCase(),_MYDB_KIND_FOLDER[kn],pf);
+    };
+    cards.forEach(c=>{
+      const id=_mydbNoteId(c), a=aBy.get(id), raw=JSON.stringify(c); seen.add(id);
+      if(!a){
+        if(dead.has(id)) return;
+        const cr=Date.parse(c.at)?new Date(Date.parse(c.at)).toISOString():at;
+        DB.articles.push({id,title:String(c.name||'(untitled)'),content:_mydbCardHTML(c),folderIds:[folderFor(c)],tags:_mydbTags(c),createdAt:cr,updatedAt:at,
+          fromMydb:{pid:String(c.pid),id:String(c.id),u:at,sha:c.pageSha||'',raw,at:String(c.at||''),kind:_mydbKindName(c.kind)}});
+        sum.added++; ch++; return;
+      }
+      const m=a.fromMydb; if(!m) return;
+      if(m.raw===raw){ if(m.gone){ _mydbMark(a,null,['gone']); ch++; } return; }
+      if(_mydbEdited(a)){
+        if(!(m.newer&&m.newer.raw===raw)){ _mydbMark(a,{newer:{raw,at:String(c.at||'')}}); ch++; }
+        sum.kept++; return;
+      }
+      const nu=_mmjPlus(a.updatedAt), nt=Date.parse(at)>Date.parse(nu)?at:nu;
+      a.title=String(c.name||'(untitled)'); a.content=_mydbCardHTML(c); a.tags=_mydbTags(c);
+      a.fromMydb={pid:String(c.pid),id:String(c.id),u:nt,sha:c.pageSha||'',raw,at:String(c.at||''),kind:_mydbKindName(c.kind)};
+      a.updatedAt=nt; sum.updated++; ch++;
+    });
+    if(cards.length) (DB.articles||[]).forEach(a=>{
+      const m=a.fromMydb; if(!m||seen.has(a.id)||m.gone) return;
+      _mydbMark(a,{gone:true}); sum.gone++; ch++;
+    });
+    if(ch){ _enxPersist(); _enxPushEnd(); }   /* v05.58 · J85 */
+    try{ render(); }catch(e){}
+    _mydbS.last={sha:head,at:new Date(t0).toISOString(),ok:true}; try{ await _mydbIdb('kv','put','last',_mydbS.last); }catch(e){}
+    _mydbS.msg=''; _mydbS.sum=sum; _mydbS.next=t0+_MYDB_SYNC_MS;
+    setTimeout(()=>{ try{ _mydbKeepRun(); }catch(e){} },0);
+    return sum;
+  }catch(e){
+    const why=_mydbWhy(e);
+    _mydbS.msg='Could not check just now: '+why+' Nothing was changed.'; _mydbS.next=_mydbNow()+_MYDB_RETRY_MS;
+    _mydbS.last=Object.assign({},_mydbS.last||{},{ok:false,err:why,at:new Date().toISOString()}); try{ await _mydbIdb('kv','put','last',_mydbS.last); }catch(_){}
+    return null;
+  }finally{ _mydbS.busy=false; _mydbRefresh(); }
+}
+function _mydbWhy(e){
+  const k=e&&e.kind;
+  if(k==='offline') return 'you are offline.';
+  if(k==='key') return 'wrong key — GitHub did not accept it.';
+  if(k==='access') return 'this key has no access to MyDB (or GitHub is limiting requests).';
+  if(k==='mismatch') return 'the file does not match its checksum, so it was not kept.';
+  return ((e&&e.message)||'no answer')+'.';
+}
+function _mydbEdited(a){
+  if(ST.editing&&typeof curA!=='undefined'&&curA&&curA.id===a.id) return true;
+  const m=a.fromMydb||{}; return !m.u||a.updatedAt!==m.u;
+}
+/* change a note's fromMydb without making the owner's untouched note look edited */
+function _mydbMark(a,patch,drop){
+  const was=!_mydbEdited(a), nu=_mmjPlus(a.updatedAt), m=Object.assign({},a.fromMydb,patch);
+  (drop||[]).forEach(k=>{ delete m[k]; });
+  a.updatedAt=nu; if(was) m.u=nu; a.fromMydb=m;
+}
+/* "Use the store's version": the owner's own choice, so it does replace their edits */
+function _mydbUseNewer(aid){
+  const a=(DB.articles||[]).find(x=>x.id===aid); if(!a||!a.fromMydb||!a.fromMydb.newer) return;
+  if(!confirm('Replace this note with the version in MyDatabase? Your own changes to it will be lost.')) return;
+  let c; try{ c=JSON.parse(a.fromMydb.newer.raw); }catch(e){ return; }
+  const nu=_mmjPlus(a.updatedAt);
+  a.title=String(c.name||'(untitled)'); a.content=_mydbCardHTML(c); a.tags=_mydbTags(c);
+  a.fromMydb={pid:String(c.pid),id:String(c.id),u:nu,sha:c.pageSha||'',raw:a.fromMydb.newer.raw,at:String(c.at||''),kind:_mydbKindName(c.kind)};
+  a.updatedAt=nu; persist(); try{ render(); }catch(e){}
+}
+async function _mydbTick(){
+  if(!_dbLoaded||document.visibilityState==='hidden') return;
+  if(!_mydbS.keyLoaded) await _mydbLoadKey();
+  try{ await _mydbCloudStep(); }catch(e){}
+  if(!_mydbS.key||_mydbS.busy||navigator.onLine===false||!_s1WriteGate()) return;
+  if(_mydbS.next>_mydbNow()) return;
+  await _mydbSyncRun(false);
+}
+setInterval(()=>{ try{ _mydbTick(); }catch(e){} },5000);
+/* ── a copied page: a NEW window with one sandboxed iframe, no allow-same-origin ── */
+const _MYDB_MIME={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml',css:'text/css',js:'text/javascript',json:'application/json',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',ico:'image/x-icon',html:'text/html'};
+function _mydbDataUrl(buf,name){
+  const ext=String(name).split('.').pop().toLowerCase(), u=new Uint8Array(buf); let s='';
+  for(let i=0;i<u.length;i+=8192) s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));
+  return 'data:'+(_MYDB_MIME[ext]||'application/octet-stream')+';base64,'+btoa(s);
+}
+async function _mydbPageHTML(c){
+  let html=new TextDecoder().decode(await _mydbEnsure(c.page,c.pageSha,0));
+  const files=(Array.isArray(c.files)?c.files:[]).filter(f=>f&&typeof f.path==='string'&&f.path), held=(Array.isArray(c.filesHeld)?c.filesHeld:[]).filter(f=>f&&typeof f.path==='string');
+  const base=p=>String(p).split('/').pop(), urls=new Map();
+  for(const f of files){ try{ urls.set(f,_mydbDataUrl(await _mydbEnsure(f.path,f.sha,f.size),f.path)); }catch(e){ if(e&&e.kind==='mismatch') throw e; } }
+  const norm=v=>{ let s=String(v).trim().replace(/[?#].*$/,'').replace(/^\.\//,'').replace(/^\/+/,''); try{ s=decodeURIComponent(s); }catch(e){} return s; };
+  const find=v=>{
+    if(/^[a-z][a-z0-9+.-]*:/i.test(v)||/^\/\//.test(v)) return null;
+    const n=norm(v); if(!n) return null;
+    if(held.some(f=>f.path===n||f.path.endsWith('/'+n)||base(f.path)===base(n))) return null;
+    const f=files.find(x=>x.path===n||x.path.endsWith('/'+n)||base(x.path)===base(n));
+    return f&&urls.has(f)?urls.get(f):null;
+  };
+  html=html.replace(/(\s(?:src|href|poster)\s*=\s*)(["'])([^"']*)\2/gi,(m,a,q,v)=>{ const d=find(v); return d?a+q+d+q:m; });
+  html=html.replace(/url\(\s*(["']?)([^)"']+)\1\s*\)/gi,(m,q,v)=>{ const d=find(v); return d?'url('+q+d+q+')':m; });
+  return html;
+}
+const _MYDB_WIN_CSS='html,body{margin:0;height:100%;font-family:system-ui,sans-serif}body{display:flex;flex-direction:column}.bar{flex:none;display:flex;align-items:center;gap:10px;padding:6px 12px;background:#f3efe6;color:#222;font-size:13px;border-bottom:1px solid #d8d2c4}.bar a{color:#1d5c3a}.bar span{flex:1}#x{min-height:36px;padding:0 12px;border:1px solid #888;border-radius:8px;background:#fff;color:#222;font:inherit}iframe{flex:1;width:100%;border:0;background:#fff}.m{padding:24px;font-size:15px;line-height:1.5}';
+async function _mydbOpenCopy(aid){
+  const a=(DB.articles||[]).find(x=>x.id===aid), c=a&&a.fromMydb?_mydbRawCard(a):null;
+  if(!c||typeof c.page!=='string'||!c.page) return;
+  const w=window.open('','_blank');   /* opened inside the click, before any await, or a pop-up blocker refuses it */
+  if(!w){ toast('⚠ Your browser blocked the new window. Allow pop-ups for Siyagah and try again.'); return; }
+  const say=(t)=>{ try{ w.document.open(); w.document.write('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(String(c.name||'MyDatabase'))+'</title><style>'+_MYDB_WIN_CSS+'</style><div class="m" id="m"></div><div class="bar"><span></span><button id="x" type="button">✕ Close</button></div>'); w.document.close(); w.document.getElementById('m').textContent=t; w.document.getElementById('x').onclick=()=>w.close(); }catch(e){} };
+  try{ w.opener=null; }catch(e){}
+  say('Opening the copy…');
+  let html;
+  try{ html=await _mydbPageHTML(c); }
+  catch(e){
+    const k=e&&e.kind;
+    say(k==='offline'||k==='nokey'?'This copy is not on this device yet, and Siyagah cannot fetch it now ('+(k==='nokey'?'no key':'you are offline')+'). Open it once while online and it will be kept.':k==='mismatch'?'This copy did not match its checksum, so it was not opened or kept.':'Could not open this copy: '+_mydbWhy(e));
+    return;
+  }
+  const orig=_mydbHttps(c.url), when=_mydbDate(c.pageAt||c.at);
+  const bar='<div class="bar"><span>'+(c.live?'Copy of '+esc(when)+' — it showed live data in Claude; '+(orig?'<a href="'+esc(orig)+'" target="_blank" rel="noopener">↗ the original</a>':''):esc(String(c.name||'')))+'</span><button id="x" type="button">✕ Close</button></div>';
+  const sd=html.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  try{
+    w.document.open();
+    w.document.write('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(String(c.name||'MyDatabase'))+'</title><style>'+_MYDB_WIN_CSS+'</style>'+bar+'<iframe sandbox="allow-scripts allow-popups allow-forms" srcdoc="'+sd+'"></iframe>');
+    w.document.close();
+    w.document.getElementById('x').onclick=()=>w.close();
+  }catch(e){ try{ w.close(); }catch(_){} }
+}
+document.addEventListener('click',e=>{
+  const b=e.target&&e.target.closest?e.target.closest('[data-mydb]'):null; if(!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const id=b.getAttribute('data-mydb-id'), a=(DB.articles||[]).find(x=>x.id===id);
+  if(b.getAttribute('data-mydb')==='copy') _mydbOpenCopy(id);
+  else if(b.getAttribute('data-mydb')==='orig'){ const c=a&&a.fromMydb?_mydbRawCard(a):null, u=c?_mydbHttps(c.url):''; if(u) window.open(u,'_blank','noopener'); }
+},true);
+/* ── the dialog ── */
+function _mydbStatusHTML(){
+  const L=_mydbS.last, s=_mydbS.sum;
+  let h='<div class="mydb-st" id="mydb-st" role="status">';
+  h+=_mydbS.key?'<div>🔑 Key saved: <b>'+esc(_mydbHint(_mydbS.key))+'</b></div>':'<div>🔑 No key yet.</div>';
+  if(L) h+='<div>Last check: '+esc(new Date(L.at).toLocaleString())+' — '+(L.ok?'worked':'did not work'+(L.err?' ('+esc(L.err)+')':''))+'</div>';
+  if(_mydbS.msg) h+='<div id="mydb-msg">'+esc(_mydbS.msg)+'</div>';
+  else if(s) h+='<div id="mydb-sum">'+s.added+' added, '+s.updated+' updated, '+s.kept+' kept (you had changed them), '+s.gone+' marked removed</div>';
+  return h+'</div>';
+}
+function _mydbRefresh(){ const e=document.getElementById('mydb-st'); if(e) e.outerHTML=_mydbStatusHTML(); const b=document.getElementById('mydb-check'); if(b) b.disabled=!!_mydbS.busy||!_mydbS.key; const c=document.getElementById('mydb-connect'); if(c) c.disabled=!!_mydbS.connecting; const f=document.getElementById('mydb-forget'); if(f) f.disabled=!_mydbS.key; }
+function _mydbPaint(){
+  const box=document.getElementById('mydb-box'); if(!box) return;
+  box.innerHTML='<div class="mydb-hd"><div class="mt">🗄 MyDatabase</div><button type="button" id="mydb-x" class="mydb-x" aria-label="Close" onclick="closeMydb()">✕</button></div>'
+    +'<div class="enx-sub">Your private cards, read from the private store <b>Siyagah/MyDB</b> on GitHub. Siyagah only reads it. It needs a read-only key, made once:</div>'
+    +'<ol class="mydb-steps"><li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">https://github.com/settings/personal-access-tokens/new</a></li>'
+    +'<li>Resource owner: <b>Siyagah</b> · Only select repositories: <b>MyDB</b></li>'
+    +'<li>Repository permissions → <b>Contents: Read-only</b></li>'
+    +'<li>Press <b>Generate</b>, then <b>Copy</b> the key and paste it here.</li></ol>'
+    +'<div class="enx-sub">If GitHub says the token is waiting for approval, open github.com/organizations/Siyagah/settings/personal-access-token-requests and approve it.</div>'
+    +'<input type="password" id="mydb-key" class="mydb-in" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste the key here" aria-label="The key">'
+    +'<div class="mydb-row"><button class="rm-big" id="mydb-connect" onclick="_mydbConnect()">Connect</button>'
+    +'<button class="rm-big alt" id="mydb-check" onclick="_mydbSyncRun(true)">⟳ Check now</button>'
+    +'<button class="rm-big alt" id="mydb-forget" onclick="_mydbForget()">Forget the key</button></div>'
+    +_mydbStatusHTML()
+    +'<label class="mydb-keep"><input type="checkbox" id="mydb-kon"'+(_mydbKeepOn()?' checked':'')+' onchange="_mydbKeepSet(this.checked)"> Keep a copy of the pages on this device (so they open offline)</label>';
+  _mydbRefresh();
+}
+function openMydb(){
+  let m=document.getElementById('mydb-modal');
+  if(!m){
+    m=document.createElement('div'); m.id='mydb-modal';
+    m.addEventListener('click',e=>{ if(e.target===m) closeMydb(); });
+    m.innerHTML='<div id="mydb-box" role="dialog" aria-label="MyDatabase"></div>';
+    document.body.appendChild(m);
+  }
+  _mydbPaint(); m.classList.add('open');
+  _mydbLoadKey().then(()=>{ if(m.classList.contains('open')) _mydbPaint(); });
+}
+function closeMydb(){ const m=document.getElementById('mydb-modal'); if(m) m.classList.remove('open'); }
+function _mydbKeepSet(on){ DB.theme=DB.theme||{}; DB.theme.mydbKeep=!!on; persist(); if(on) setTimeout(()=>{ try{ _mydbKeepRun(); }catch(e){} },0); }
+async function _mydbConnect(){
+  const inp=document.getElementById('mydb-key'), key=inp?inp.value.trim():'';
+  if(!key){ _mydbS.msg='Paste the key first.'; _mydbRefresh(); return; }
+  if(_mydbS.connecting) return;
+  _mydbS.connecting=true; _mydbS.msg='Testing the key…'; _mydbRefresh();
+  try{
+    if(navigator.onLine===false){ const er=new Error('offline'); er.kind='offline'; throw er; }
+    await _mydbHead(key);
+    _mydbS.key=key; _mydbS.keyLoaded=true;
+    await _mydbIdb('kv','put','key',key);
+    _mydbS.cloudDirty=true; try{ _mydbCloudStep(); }catch(e){}
+    if(inp) inp.value='';
+    _mydbS.msg='✅ Works — the key can read MyDatabase.'; _mydbS.next=0;
+    _mydbS.connecting=false; _mydbRefresh();
+    _mydbSyncRun(true).then(()=>{ if(!_mydbS.msg) _mydbS.msg=''; });
+    return;
+  }catch(e){
+    _mydbS.msg=e&&e.kind==='key'?'❌ Wrong key — GitHub did not accept it. Copy it again from GitHub.'
+      :e&&e.kind==='access'?'❌ This key has no access to MyDB. Check "Only select repositories: MyDB" and "Contents: Read-only", or approve the key if GitHub says it is waiting.'
+      :e&&e.kind==='offline'?'📴 You are offline. Connect when the internet is back.'
+      :'❌ Could not test the key: '+((e&&e.message)||'no answer');
+  }
+  _mydbS.connecting=false; _mydbRefresh();
+}
+async function _mydbForget(){
+  _mydbS.key=''; _mydbS.cloudDirty=false; _mydbS.last=null; _mydbS.sum=null; _mydbS.msg='The key was forgotten on this device and in the cloud.';
+  try{ await _mydbIdb('kv','delete','key'); }catch(e){}
+  try{ await _mydbIdb('kv','delete','last'); }catch(e){}
+  try{ const d=_mydbCloudDoc(); if(d) await d.delete(); }catch(e){ _mydbS.msg='The key was forgotten on this device. The cloud copy could not be removed just now.'; }
+  _mydbRefresh();
+}
 function openEnexImport(){
   let m=document.getElementById('enx-modal');
   if(!m){
@@ -32633,6 +33043,7 @@ const SF=[
   {id:'sf-practice',name:'(11) In Practice',           icon:'🌱', smart:'practice'},
   {id:'sf-jeb',     name:'(12) From Zab',              icon:'👝', smart:'jeb'},
   {id:'sf-enx',     name:'(13) From Evernote',         icon:'📥', smart:'enx'},
+  {id:'sf-mydb',    name:'(14) MyDatabase',            icon:'🗄', smart:'mydb'},
 ];
 const SF_IDS=new Set(SF.map(s=>s.id));
 /* v05.29 (F2) — the ONE place a Smart View's name is read. The owner's own rename wins; a stored name that is exactly the
@@ -33276,6 +33687,8 @@ function getSmartArts(sfId){
       return live.filter(a=>a.fromJeb).sort((a,b)=>String(b.fromJeb.at||'').localeCompare(String(a.fromJeb.at||'')));
     case 'sf-enx':
       return live.filter(a=>a.fromEvernote).sort((a,b)=>String(b.fromEvernote.at||'').localeCompare(String(a.fromEvernote.at||'')));
+    case 'sf-mydb':
+      return live.filter(a=>a.fromMydb).sort((a,b)=>String(b.fromMydb.at||'').localeCompare(String(a.fromMydb.at||'')));
     default: return [];
   }
 }
