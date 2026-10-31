@@ -2532,6 +2532,8 @@ await r.block('6o-1-menu-reorg', async () => {
     /* v05.48 (issue #237, J74 ②) — 🗺 Mapping My Journey import in 🧰 Tools, under 📥 Evernote import, added on purpose
        (the Architect's full run caught it; updated in place). */
     'openMmjImport',
+    /* v05.62 (J98 R2) — 🗄 MyDatabase… in 🧰 Tools, above 🗺 Mapping My Journey import, added on purpose (updated in place; block 120 proves a real click reaches it). */
+    'openMydb',
     /* v05.52 (J82) — 🪟 Side pane: pop out or full width in 🧰 Tools → View, added on purpose (the Architect's full run caught it; updated in place). */
     '_ppMenu'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
