@@ -11001,3 +11001,9 @@ The owner (28 Oct, with a screenshot of Siyagah Zab's All Zabs cards): "*Enable 
 **Record (v05.60 review, riding this round).** Full app-check on `95ed48c` (= PR #251's head): 1–59 + `self-check` 2330/2332 (56k known); 60–118 6055/6057 (91f known).
 
 **Not done:** other cards that open a card of their own (a right-click menu's 🎨 Folder colour, Note Type colours) were not part of this ask and are unchanged; the rule is written in CLAUDE.md for the next one touched.
+
+## v05.62 — J98 R2: 🗄 MyDatabase in Siyagah (31 Oct 2026, in progress)
+
+**Asked.** Issue #253: the owner's private cards, read from the private store `Siyagah/MyDB`, as notes (own folder or a matched Mapping My Journey folder), with a Smart View, a key dialog (`openMydb()`), and a sandboxed way to open the copied pages. R3 (recordings) and R4 (articles) are not in this round.
+
+**Record (v05.61 review, riding this round).** v05.61 review — full app-check on 094314a (= PR #252's head): 1–59 + self-check 2330/2332 (56k known); 60–119 5953/5960 (91f known; 63 hit its 3 s waitForSelector under load and 100d 2.0× under load — `--only 63,100` alone 175/175 on v05.61 AND on v05.60).

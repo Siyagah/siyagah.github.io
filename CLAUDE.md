@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.61.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.62.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.62** (31 Oct 2026) — J98 R2 (in progress): 🗄 MyDatabase — cards from the private store `Siyagah/MyDB` become notes (`fromMydb`), read with a read-only key kept in the cloud doc `mydb/v1` and the device database `siyagah-mydb-v1`; copied pages open only in a sandboxed iframe without `allow-same-origin`. Check: block 120, `tools/mydb-r2.mjs`.
 - **v05.61** (30 Oct 2026) — J96 (built by the Architect; the owner's screenshot: "This is not ideal having a second card from a button"): 🎨 Colour and ↕ Spacing pressed inside the edit bar's card (`.fl-pop`, Pane 3 and pop-out windows) open their choices as a section of that card (`_inCard`, `_cardSec`, class `.in-card`; the same button closes it; the card grows to fit, else scrolls to it); outside a card they still float. Check: block 119, `tools/card-j96.mjs`.
 - **v05.60** (29 Oct 2026) — J94 (built by the Architect; the owner's phone screenshot): the bare page before the start showed an empty side pane with "Back to search results" for seconds after every update. `#bts-sb` starts `display:none` in the markup; the last-screen picture is used after an update too (only `!rec.el` refuses it now); with no picture `_bvPill()` shows "⏳ Opening your notebook…" once the start has taken `_BV_PILL_MS` (300 ms, hook `__bvPillMs`); `_bvEnd()` always removes it. Check: 116i in `tools/boot-r3.mjs` (116c's oracle now deletes the picture instead of changing the version).
 - **v05.59** (29 Oct 2026) — J92 (built by the Architect): when the browser LOSES the device copy (52d under load, ~1 kill in 400: the site's whole IndexedDB store recreated, every read fine and empty), Siyagah says so. Cookie `siyagah_had=1` (`_hadGet`/`_hadSet`, outside IndexedDB) + a read that works and finds nothing → `_idbLost`: no starter set, `_idbLostWarn()` (`#idb-warn.lost`). 52d prints the page and storage state when a trial finds no notes. Check: block 118, `tools/lost-j92.mjs`.
