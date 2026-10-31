@@ -72,7 +72,9 @@ async function open(s, w, h, touch, goto) {
      search box gives the 🪟 its room; hidden for the two sizes compared with v05.29, like the three above. Their reach and size are checked by 112a, and 90a–90c at the phone sizes keep them. */
   /* v05.55 (J86), updated in place by the Architect: the ⚙ Zab settings button in a Zab panel's header and the cards' "⚙ Settings" are new; hidden
      for the comparison with v05.29 like the ones above. Their reach and size are checked by 115a–115b. */
-  if (w >= 640) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.zn-area{display:none!important}.sb-mi[onclick^="openMmjImport"]{display:none!important}.sb-pp-btn,.p2-pp-btn,.sb-pp-mi{display:none!important}.jeb-ph .jeb-set,#jeb-deck .jd-hd button[data-d="set"]{display:none!important}'; document.head.appendChild(st); }); });
+  /* v05.62 (J98 R2), updated in place by the Architect: 🗄 MyDatabase… is a new 🧰 row above 🗺 Mapping My Journey import, which moves the rows below it down, and so does the new Smart View row "🗄 (14) MyDatabase" (sf-mydb); both hidden
+     for the comparison with v05.29 like the ones above. The 🧰 row's reach at all three sizes is checked by 120i, and 90a–90c at the phone sizes keep it. */
+  if (w >= 640) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.zn-area{display:none!important}.sb-mi[onclick^="openMmjImport"]{display:none!important}.sb-mi[onclick^="openMydb"]{display:none!important}.sf-row[data-sfid="sf-mydb"]{display:none!important}.sb-pp-btn,.p2-pp-btn,.sb-pp-mi{display:none!important}.jeb-ph .jeb-set,#jeb-deck .jd-hd button[data-d="set"]{display:none!important}'; document.head.appendChild(st); }); });
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e));
   page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) errors.push('console: ' + m.text()); });
