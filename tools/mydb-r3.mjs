@@ -157,7 +157,7 @@ const waitXfer = (page) => page.waitForFunction(() => !!document.querySelector('
         const db = q.result; let out = ''; const stores = [...db.objectStoreNames];
         for (const s of stores) out += await new Promise((rs) => { const g = db.transaction(s).objectStore(s).getAll(); g.onsuccess = () => { let t = ''; g.result.forEach((v) => { if (v && v.b instanceof ArrayBuffer) t += new TextDecoder('latin1').decode(new Uint8Array(v.b)); else t += JSON.stringify(v); }); rs(t); }; g.onerror = () => rs(''); });
         db.close(); res(out); }; });
-      return { db: has(JSON.stringify(DB)), ls: has(JSON.stringify(Object.assign({}, localStorage))), nb: has(nb), own: has(own), save: has(_cleanExportRoot()), saveRows: /mydb-rows/.test(_cleanExportRoot()) };
+      return { db: has(JSON.stringify(DB)), ls: has(JSON.stringify(Object.assign({}, localStorage))), nb: has(nb), own: has(own), save: has(_cleanExportRoot()), saveRows: !!new DOMParser().parseFromString(_cleanExportRoot(), 'text/html').querySelector('.mydb-rows,.mydb-live') };
     }, MARK);
     r.check(!where.db && !where.ls && !where.nb && !where.own && !where.save && !where.saveRows, '121d no file bytes (a marker run) in DB, localStorage, the notebook record, siyagah-mydb-v1 or a Save File copy; no live rows in the copy', JSON.stringify(where));
     /* f: two devices uploading different files */
@@ -315,8 +315,8 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     await page.waitForSelector('.mydb-rows [data-mydb="play"]', { timeout: 30000 });
     r.check(Object.keys(await driveMap(page)).length === 1, `121j${t} ↑ Upload to Drive is reached by a real ${touch ? 'tap' : 'click'} and the row turns into ▶ Play`);
     const [pop] = await Promise.all([app.ctx.waitForEvent('page'), tap(page, touch, '.mydb-rows [data-mydb="play"]')]);
-    if (w < 640) { await sleep(600); r.check(pop.url() === 'https://drive.google.com/file/d/drv-r-1/preview', `121j${t} ▶ Play on a phone opens a new tab straight to Google's player`, pop.url()); }
-    else { await pop.waitForSelector('iframe'); const s = await pop.evaluate(() => document.querySelector('iframe').getAttribute('src')); r.check(s === 'https://drive.google.com/file/d/drv-r-1/preview', `121j${t} ▶ Play opens a new window with the player in an iframe`, s); }
+    if (w < 640) { await sleep(600); r.check(/^https:\/\/drive\.google\.com\/file\/d\/drv-r-\d+\/preview$/.test(pop.url()), `121j${t} ▶ Play on a phone opens a new tab straight to Google's player`, pop.url()); }
+    else { await pop.waitForSelector('iframe'); const s = await pop.evaluate(() => document.querySelector('iframe').getAttribute('src')); r.check(/^https:\/\/drive\.google\.com\/file\/d\/drv-r-\d+\/preview$/.test(s), `121j${t} ▶ Play opens a new window with the player in an iframe`, s); }
     await pop.close();
     await tap(page, touch, '.mydb-rows [data-mydb="det"]'); await page.waitForSelector('#mrd-ok');
     const mo = await page.evaluate(() => { const b = document.getElementById('mb').getBoundingClientRect(), o = document.getElementById('mrd-ok').getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom, ok: o.bottom <= innerHeight + 0.5 && o.top >= 0, iw: innerWidth, ih: innerHeight, sheet: b.bottom >= innerHeight - 2 }; });

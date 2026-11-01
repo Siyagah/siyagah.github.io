@@ -2114,7 +2114,7 @@ sup.ann-sup:hover{text-decoration:underline}
 .mydb-ab{min-height:44px;padding:0 16px;border:1px solid var(--green2);border-radius:8px;background:transparent;color:var(--green2);font:inherit;font-weight:600;cursor:pointer}
 .mydb-ms{margin-top:12px;display:flex;flex-direction:column;gap:8px}
 .mydb-fl{display:flex;flex-direction:column;gap:4px;margin:8px 0}
-@media(max-width:639.98px){.mydb-fa{width:100%;flex-direction:column;align-items:stretch}.mydb-ab{width:100%;min-height:48px}.mydb-rec{align-items:stretch}.mydb-ms .mydb-row .rm-big{flex:1 1 100%;min-height:48px}}
+@media(max-width:639.98px){#ov.mydb-sheet{align-items:flex-end}#ov.mydb-sheet #mb{width:100%;max-width:100vw;box-sizing:border-box;border-radius:13px 13px 0 0;max-height:92vh;overflow-y:auto}.mydb-fa{width:100%;flex-direction:column;align-items:stretch}.mydb-ab{width:100%;min-height:48px}.mydb-rec{align-items:stretch}.mydb-ms .mydb-row .rm-big{flex:1 1 100%;min-height:48px}}
 @media(max-width:639.98px){.mydb-btns{flex-direction:column}.mydb-b{width:100%;min-height:48px}}
 .enx-fb{width:100%;box-sizing:border-box;height:140px;font-family:monospace;font-size:11px}
 @media(max-width:639.98px){
@@ -21316,7 +21316,7 @@ function showModal(html){
    folder browser's live scroll offset, and a hidden (display:none) list
    reports scrollTop 0, which would save the browser as scrolled to the top
    no matter where it actually was. */
-function closeModal(){_pkSaveScope();document.getElementById('ov').classList.remove('on');if(_mbRsz)_mbResizeStop();if(_mbDrag)_mbDragStop();}
+function closeModal(){_pkSaveScope();document.getElementById('ov').classList.remove('on','mydb-sheet');if(_mbRsz)_mbResizeStop();if(_mbDrag)_mbDragStop();}
 
 /* ── Resizable-modal support (all 8 edges/corners) ─────────────────── */
 const _RSZ_HANDLES_HTML=
@@ -31883,7 +31883,8 @@ const _mydbInXfer=p=>!!(_mydbS.xfer&&_mydbS.xfer.set&&_mydbS.xfer.set.has(p));
 function _mydbMediaArt(ph){
   const id=ph.getAttribute('data-mydb-id'); if(id) return (DB.articles||[]).find(x=>x.id===id)||null;
   const ed=ph.closest('#ed,.fw-ed'); if(ed) return _edArtOf(ed);
-  return (typeof curA!=='undefined'&&curA&&curA.fromMydb)?curA:null;   /* R2's p.mydb-held has no id */
+  const cur=(DB.articles||[]).find(x=>x.id===ST.article);   /* R2's p.mydb-held has no id: it is the note open in the read view */
+  return cur&&cur.fromMydb?cur:null;
 }
 function _mydbRecLine(a){
   const r=(a&&a.rec)||{}, p=[]; if(r.lang) p.push('Language: '+r.lang); if(r.len) p.push('Length: '+r.len); if(r.given) p.push('Given by: '+r.given); if(r.job) p.push('Job: '+r.job);
@@ -32050,6 +32051,7 @@ function _mydbRecEdit(nid){
   showModal('<div class="mt">✏️ Recording details</div>'+inp('mrd-lang','Language',v.lang)+inp('mrd-len','Length (for example 12:30)',v.len)+inp('mrd-given','Given by',v.given)
     +'<label class="mydb-fl">Status<select class="mi" id="mrd-st"><option value="raw">raw</option><option value="edited">edited</option><option value="used">used in video</option></select></label>'
     +inp('mrd-job','Job',v.job)+'<div class="ma"><button class="btn" id="mrd-x">Cancel</button><button class="btn bp" id="mrd-ok">Save</button></div>');
+  document.getElementById('ov').classList.add('mydb-sheet');   /* a phone: a bottom sheet */
   const mb=document.getElementById('mb'); mb.querySelector('#mrd-st').value=st;
   mb.querySelector('#mrd-x').onclick=()=>closeModal();
   mb.querySelector('#mrd-ok').onclick=()=>{
