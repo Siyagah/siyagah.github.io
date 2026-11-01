@@ -809,6 +809,16 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
   right:auto!important;bottom:auto!important;min-width:0!important;max-width:none!important;z-index:4500;transition:none!important;
   box-shadow:0 12px 40px rgba(0,0,0,.38);border:1px solid var(--border2);border-radius:10px;overflow:visible}
 #sb.pp.pp-top,#p2.pp.pp-top{z-index:4501}
+/* v05.64 · J100 — folder windows: float at the pop-up level (5002+), below menus (9200) and modals (10000); positioned by top+height, never by bottom (so no --jeb-h) */
+.fwin{position:fixed;display:flex;flex-direction:column;background:var(--forest);color:var(--sb-ink);border:1px solid var(--border2);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.38);z-index:5002;min-width:0;min-height:0}
+.fwin-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:4px 0}
+.fwin-body .tr-row{content-visibility:auto;contain-intrinsic-size:auto 28px}
+.fwin>.rsz{touch-action:none}
+.fwin-sw{display:none}
+body.fw-tuck .fwin{display:none}
+#fw-pill{position:fixed;top:8px;right:8px;z-index:5003;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid rgba(255,255,255,.45);background:var(--forest);color:var(--sb-ink);font:inherit;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer}
+@media(max-width:639.98px){ .fwin>.rsz{display:none} .fwin .fwin-bar{cursor:default;touch-action:auto} .fwin.fw-multi .fwin-sw{display:inline-block} .fwin{border-radius:12px 12px 0 0} }
+@media(max-width:1199.98px){ .fwin>.rsz-n,.fwin>.rsz-s{height:22px;left:28px;right:28px}.fwin>.rsz-n{top:-11px}.fwin>.rsz-s{bottom:-11px}.fwin>.rsz-e,.fwin>.rsz-w{width:22px}.fwin>.rsz-e{right:-11px}.fwin>.rsz-w{left:-11px} }
 .pp-bar{display:flex;align-items:center;gap:6px;flex-shrink:0;min-height:40px;padding:0 6px 0 10px;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;
   border-radius:9px 9px 0 0;background:rgba(0,0,0,.28);color:#fff;font-size:13px;font-weight:600}
 #p2 .pp-bar{background:var(--green);color:var(--on-accent)}
@@ -6998,6 +7008,7 @@ function renderTree(){
       }
     }
     el.innerHTML=h;
+    _fwRedraw();
     return;
   }
   // Render sections then tags inline
@@ -7010,27 +7021,32 @@ function renderTree(){
   _cntC={fo:null,sf:new Map(),sa:new Map(),sc:new Map()};   /* v05.41 — P5: counts are worked out once for this draw and dropped with it, so they can never be stale */
   try{ el.innerHTML=renderSmartSection()+renderDatabaseSection()+_secs.map(s=>renderSection(s)).join('')+renderTagSection()+renderNTISection(); }
   finally{ _cntC=null; }
+  _fwRedraw();   /* v05.64 · J100 — the folder windows are repainted with the side pane */
   if(_tfOn){
     const n=document.getElementById('tag-find');
     if(n){n.focus({preventScroll:true});try{n.setSelectionRange(_tfS,_tfE);}catch(e){}}
   }
 }
 
+/* v05.64 · J100 — trNode is the ONE row drawer for the side pane AND the folder windows. While a window is being drawn, _trWin is that window's
+   folder id and _trExp its own unfolded-rows map; the side pane draws with both null (ST.exp), byte for byte as before. */
+let _trWin=null,_trExp=null;
 function trNode(f,depth){
-  const kids=chOf(f.id),open=ST.exp[f.id],active=ST.folder===f.id,cnt=cntOf(f.id);
+  const _ex=_trExp||ST.exp, _w=_trWin?",'"+_trWin+"'":'';
+  const kids=chOf(f.id),open=_ex[f.id],active=ST.folder===f.id,cnt=cntOf(f.id);
   return `<div class="tr-row${active?' sel':''}"
     style="padding-left:${13+depth*13}px"
     draggable="true"
     title="${esc(f.name)}${f.mmj&&f.mmj.gone?' — removed from Mapping My Journey':''}"
     data-fid="${f.id}"
-    onclick="selFolder('${f.id}')"
+    onclick="selFolder('${f.id}'${_w})"
     oncontextmenu="showCtx(event,'${f.id}')"
     ondragstart="dStart(event,'${f.id}')"
     ondragend="dEnd(event)"
     ondragover="dOver(event,'${f.id}')"
     ondragleave="dLeave(event)"
     ondrop="dDrop(event,'${f.id}')">
-    <span class="tr-tog" onclick="togExp(event,'${f.id}')">${kids.length?(open?'▾':'▸'):''}</span>
+    <span class="tr-tog" onclick="togExp(event,'${f.id}'${_w})">${kids.length?(open?'▾':'▸'):''}</span>
     <span class="tr-ico">${open&&kids.length?'📂':'📁'}</span>
     ${f.color?`<span class="f-dot" style="background:${f.color}"></span>`:''}
     <span class="tr-name" ${(f.color||f.bold)?`style="${f.color?`color:${f.color};`:''}${f.bold?'font-weight:700':''}"`:''} >${esc(f.name)}</span>${f.mmj&&f.mmj.gone?'<span class="mmj-gone" title="removed from Mapping My Journey">🗺✕</span>':''}    <span class="tr-cnt">${cnt}</span>
@@ -8189,19 +8205,23 @@ function _renderP3CInner(){
 /* ── Actions ─────────────────────────────────────────────────────── */
 let _wasDrag=false;
 // Collapse a folder and every folder nested inside it
-function collapseFolder(id){
-  delete ST.exp[id];
-  chOf(id).forEach(ch=>collapseFolder(ch.id));
+function collapseFolder(id,ex){
+  ex=ex||ST.exp;
+  delete ex[id];
+  chOf(id).forEach(ch=>collapseFolder(ch.id,ex));
 }
 
-function selFolder(id){_trackLastFolder(id);
+function selFolder(id,win){_trackLastFolder(id);
   if(_wasDrag)return;
   if(ST.editing)saveArt();
+  /* v05.64 · J100 — a row in a folder window folds in that window's own map, not the side pane's */
+  const _ex=(win&&_fwGet(win))?_fwGet(win).exp:ST.exp;
   // Smart folders have no tree state — skip expand/collapse
   if(!SF_IDS.has(id)){
-    if(ST.exp[id]) collapseFolder(id);
-    else ST.exp[id]=true;
+    if(_ex[id]) collapseFolder(id,_ex);
+    else _ex[id]=true;
   }
+  if(win&&window.innerWidth<640) _fwTuck(true);   /* a phone's sheet covers Pane 2: tuck the sheets away so the notes show */
   ST.tag=null;ST.kind=null;ST.secSF=null;
   ST.folder=id;ST.article=null;ST.editing=false;
   if(_pwMode) _pwLeaveFor('p2');   /* v05.52 · J82 */
@@ -8221,10 +8241,12 @@ function selArt(id){
   if(window.innerWidth<1200) showPane('p3');
 }
 function back(){ST.article=null;ST.editing=false;renderP3H();renderP3C();}
-function togExp(ev,id){
+function togExp(ev,id,win){
   ev.stopPropagation();
-  if(ST.exp[id]) collapseFolder(id); // close this + all nested
-  else ST.exp[id]=true;              // open just this level
+  const _ex=(win&&_fwGet(win))?_fwGet(win).exp:ST.exp;
+  if(_ex[id]) collapseFolder(id,_ex); // close this + all nested
+  else _ex[id]=true;                  // open just this level
+  if(_ex!==ST.exp){ _fwSave(win); _fwRedraw(); return; }
   renderTree();
 }
 function toggleSB(){
@@ -18718,6 +18740,173 @@ function _ppMenu(ev,p){
   if(pc) mk(_pwMode==='p3'?'⤡ Back to all panes':'⤢ The note full width',()=>_pwSet(_pwMode==='p3'?null:'p3'));
   _ctxPos(m,ev);
 }
+/* ── v05.64 · J100 — folder windows ─────────────────────────────────────────────────────────────────────────────────────────────
+   Every folder can float in its own window (several at once). A window's rows are drawn by trNode — the side pane's own row code,
+   with _trWin/_trExp set for the draw — so open, fold, counts, the folder menu, drag and drop and ＋ Add note all work as in the side
+   pane. Each window has its own unfolded rows (w.exp). Size: that of the pane or window the command came from (a window cascades
+   24 px). A phone (< 640) gets a full-width sheet instead (newest on top, "◀ n more" steps through them). Places, folder id and unfolded
+   rows live ONLY on this device, in the IndexedDB database 'siyagah-pp-v1' (store kv, key 'fw:<folderId>'), never in DB, never in
+   localStorage; a window is remembered only while it is open. _fwWins is in stacking order (last = in front). */
+let _fwWins=[], _fwCtxFrom=null, _fwTucked=false, _fwRestored=false, _fwRsz=null, _fwDbP=null, _fwLP=null;
+const _FW_MIN_W=240, _FW_MIN_H=160;
+function _fwGet(id){ return _fwWins.find(w=>w.id===id)||null; }
+function _fwEl(id){ return Array.from(document.querySelectorAll('.fwin')).find(e=>e.dataset.fwid===id)||null; }
+function _fwDbOpen(){
+  if(_fwDbP) return _fwDbP;
+  _fwDbP=new Promise(res=>{
+    try{ const r=indexedDB.open('siyagah-pp-v1',1); r.onupgradeneeded=()=>{ try{ r.result.createObjectStore('kv'); }catch(e){} }; r.onsuccess=()=>res(r.result); r.onerror=()=>res(null); r.onblocked=()=>res(null); }
+    catch(e){ res(null); }
+  });
+  return _fwDbP;
+}
+function _fwSave(id){
+  const w=_fwGet(id); if(!w) return;
+  const rec={l:w.l,t:w.t,w:w.w,h:w.h,exp:Object.assign({},w.exp),z:_fwWins.indexOf(w)};
+  _fwDbOpen().then(d=>{ if(!d) return; try{ d.transaction('kv','readwrite').objectStore('kv').put(rec,'fw:'+id); }catch(e){} });
+}
+function _fwForget(id){ _fwDbOpen().then(d=>{ if(!d) return; try{ d.transaction('kv','readwrite').objectStore('kv').delete('fw:'+id); }catch(e){} }); }
+function _fwRestore(){
+  if(_fwRestored) return; _fwRestored=true;
+  _fwDbOpen().then(d=>{
+    if(!d) return;
+    let kr,vr;
+    try{ const st=d.transaction('kv').objectStore('kv'); kr=st.getAllKeys(); vr=st.getAll(); }catch(e){ return; }
+    vr.onsuccess=()=>{
+      const ks=kr.result||[], vs=vr.result||[], arr=[];
+      ks.forEach((k,i)=>{ if(typeof k==='string'&&k.indexOf('fw:')===0&&vs[i]&&typeof vs[i]==='object') arr.push({id:k.slice(3),v:vs[i]}); });
+      arr.sort((a,b)=>(a.v.z||0)-(b.v.z||0));
+      arr.forEach(o=>{ if(_fwGet(o.id)) return; if(DB.folders.some(f=>f.id===o.id)) _fwAdd(o.id,o.v,true); else _fwForget(o.id); });
+      _fwLayout(); _fwRedraw();
+    };
+  });
+}
+function _fwClamp(w){
+  const W=window.innerWidth,H=window.innerHeight;
+  if(W<640){ w.l=0; w.w=W; w.t=Math.round(H*.1); w.h=Math.round(H*.74); return; }
+  w.w=Math.round(Math.min(W,Math.max(_FW_MIN_W,w.w))); w.h=Math.round(Math.min(H,Math.max(_FW_MIN_H,w.h)));
+  w.l=Math.round(Math.max(0,Math.min(w.l,W-w.w))); w.t=Math.round(Math.max(0,Math.min(w.t,H-w.h)));
+}
+function _fwAdd(id,g,restoring){
+  const f=DB.folders.find(x=>x.id===id); if(!f) return null;
+  const w={id,name:f.name,l:+g.l||0,t:+g.t||0,w:+g.w||320,h:+g.h||480,exp:Object.assign({},g.exp||{})};
+  if(!restoring) w.exp[id]=true;
+  _fwClamp(w); _fwWins.push(w);
+  const d=document.createElement('div'); d.className='fwin'; d.dataset.fwid=id; d.setAttribute('role','dialog'); d.setAttribute('aria-label','Folder window');
+  d.innerHTML='<div class="pp-bar fwin-bar" onpointerdown="_fwGrab(event,\''+id+'\',\'move\')" title="Drag to move"><span class="pp-ttl fwin-ttl"></span>'
+    +'<button class="pp-b fwin-sw" onpointerdown="event.stopPropagation()" onclick="_fwStep()" title="Show the next window"></button>'
+    +'<button class="pp-b fwin-x" onpointerdown="event.stopPropagation()" onclick="_fwClose(\''+id+'\')" title="Close this window" aria-label="Close this window">✕</button></div>'
+    +'<div class="fwin-body"></div>'
+    +['n','s','e','w','ne','nw','se','sw'].map(x=>'<div class="rsz rsz-'+x+'" onpointerdown="_fwGrab(event,\''+id+'\',\''+x+'\')"></div>').join('');
+  d.addEventListener('pointerdown',()=>_fwFront(id),true);
+  const body=d.querySelector('.fwin-body');
+  /* a finger held on a row opens the same folder menu a right-click does (the side pane's own rule, 600 ms) */
+  body.addEventListener('touchstart',e=>{
+    clearTimeout(_fwLP); const t=e.touches[0], row=e.target.closest&&e.target.closest('[data-fid]'); if(!row||!t) return;
+    const sx=t.clientX, sy=t.clientY;
+    _fwLP=setTimeout(()=>{ body._fwFired=true; if(navigator.vibrate) navigator.vibrate(25);
+      showCtx({clientX:sx,clientY:sy,target:row,preventDefault(){},stopPropagation(){}},row.dataset.fid); },600);
+  },{passive:true});
+  body.addEventListener('touchmove',e=>{ const t=e.touches[0]; if(t&&_fwLP) clearTimeout(_fwLP); },{passive:true});
+  body.addEventListener('touchend',()=>clearTimeout(_fwLP),{passive:true});
+  body.addEventListener('touchcancel',()=>clearTimeout(_fwLP),{passive:true});
+  body.addEventListener('click',e=>{ if(body._fwFired){ body._fwFired=false; e.stopImmediatePropagation(); e.preventDefault(); } },true);
+  document.body.appendChild(d);
+  return w;
+}
+function _fwLayout(){
+  const ph=window.innerWidth<640, n=_fwWins.length;
+  _fwWins.forEach((w,i)=>{
+    _fwClamp(w);
+    const e=_fwEl(w.id); if(!e) return;
+    e.style.left=w.l+'px'; e.style.top=w.t+'px'; e.style.width=w.w+'px'; e.style.height=w.h+'px'; e.style.zIndex=String(5002+i);
+    e.classList.toggle('fw-multi',ph&&n>1);
+    const sw=e.querySelector('.fwin-sw'); if(sw) sw.textContent='◀ '+(n-1)+' more';
+  });
+  document.body.classList.toggle('fw-tuck',_fwTucked&&n>0);
+  let pill=document.getElementById('fw-pill');
+  if(_fwTucked&&n>0){
+    if(!pill){ pill=document.createElement('button'); pill.id='fw-pill'; pill.type='button'; pill.onclick=()=>_fwTuck(false); document.body.appendChild(pill); }
+    pill.textContent='🗗 Folder windows ('+n+')';
+  }else if(pill) pill.remove();
+}
+function _fwFront(id){
+  const w=_fwGet(id); if(!w||_fwWins[_fwWins.length-1]===w) return;
+  _fwWins.splice(_fwWins.indexOf(w),1); _fwWins.push(w); _fwLayout();
+}
+function _fwStep(){ if(_fwWins.length>1) _fwFront(_fwWins[0].id); }
+function _fwTuck(on){ _fwTucked=!!on&&_fwWins.length>0; _fwLayout(); if(!_fwTucked) _fwRedraw(); }
+function _fwClose(id,quiet){
+  const w=_fwGet(id); if(!w) return;
+  _fwWins.splice(_fwWins.indexOf(w),1);
+  const e=_fwEl(id); if(e) e.remove();
+  _fwForget(id);
+  if(!_fwWins.length) _fwTucked=false;
+  _fwLayout();
+}
+function _fwPaint(w){
+  const e=_fwEl(w.id), f=DB.folders.find(x=>x.id===w.id); if(!e||!f) return;
+  w.name=f.name;
+  const ttl=e.querySelector('.fwin-ttl'), tx='⠿ 📁 '+f.name; if(ttl.textContent!==tx) ttl.textContent=tx;
+  let html='';
+  _trWin=w.id; _trExp=w.exp;
+  try{ html=trNode(f,0); }finally{ _trWin=null; _trExp=null; }
+  const b=e.querySelector('.fwin-body');
+  if(b._fwHtml!==html){ const st=b.scrollTop; b.innerHTML=html; b._fwHtml=html; b.scrollTop=st; }
+}
+/* repainted from renderTree() — so every local edit and every received merge reaches the windows with the side pane */
+function _fwRedraw(){
+  if(!_fwRestored&&typeof _dbLoaded!=='undefined'&&_dbLoaded) _fwRestore();
+  if(!_fwWins.length||_fwTucked) return;
+  if(_dragId||_artDragId) return;
+  _fwWins.filter(w=>!DB.folders.some(f=>f.id===w.id)).forEach(w=>{
+    const nm=w.name; _fwClose(w.id,true); toast('🗗 The window for "'+nm+'" closed — that folder is gone');
+  });
+  _fwWins.forEach(_fwPaint);
+}
+function openFolderWin(fid){
+  const f=DB.folders.find(x=>x.id===fid); if(!f) return;
+  const from=_fwCtxFrom&&_fwCtxFrom.isConnected?_fwCtxFrom:null; _fwCtxFrom=null;
+  if(_fwGet(fid)){ _fwTucked=false; _fwFront(fid); _fwLayout(); _fwRedraw(); return; }
+  let g={l:60,t:60,w:320,h:480};
+  const ph=window.innerWidth<640;
+  if(from){ const r=from.getBoundingClientRect(); g={l:r.left+24,t:r.top+24,w:r.width,h:r.height}; }
+  else{
+    const sb=document.getElementById('sb'), r=sb?sb.getBoundingClientRect():null;
+    if(r&&r.width>=_FW_MIN_W&&r.height>=_FW_MIN_H) g={l:(r.right+16+r.width<=window.innerWidth)?r.right+16:r.left+24,t:r.top+(r.height<window.innerHeight-60?0:24),w:r.width,h:r.height};
+  }
+  _fwTucked=false;
+  const w=_fwAdd(fid,g); if(!w) return;
+  _fwLayout(); _fwPaint(w); _fwSave(fid);
+  if(ph) toast('🗗 "'+f.name+'" is in its own window');
+}
+function _fwGrab(ev,id,dir){
+  if(ev.button>0) return;
+  const w=_fwGet(id), el=_fwEl(id); if(!w||!el) return;
+  if(window.innerWidth<640) return;   /* a phone's sheet does not move */
+  ev.preventDefault(); ev.stopPropagation(); _fwFront(id);
+  _fwRsz={id,dir,x:ev.clientX,y:ev.clientY,l:w.l,t:w.t,w:w.w,h:w.h};
+  document.addEventListener('pointermove',_fwMove); document.addEventListener('pointerup',_fwStop); document.addEventListener('pointercancel',_fwStop);
+  document.body.style.userSelect='none';
+}
+function _fwMove(ev){
+  const R=_fwRsz; if(!R) return; const w=_fwGet(R.id); if(!w) return;
+  const W=window.innerWidth,H=window.innerHeight,dx=ev.clientX-R.x,dy=ev.clientY-R.y,d=R.dir;
+  let l=R.l,t=R.t,ww=R.w,h=R.h;
+  if(d==='move'){ l=R.l+dx; t=R.t+dy; }
+  else{
+    if(d.includes('e')) ww=Math.max(_FW_MIN_W,Math.min(W-R.l,R.w+dx));
+    if(d.includes('s')) h=Math.max(_FW_MIN_H,Math.min(H-R.t,R.h+dy));
+    if(d.includes('w')){ ww=Math.max(_FW_MIN_W,Math.min(R.l+R.w,R.w-dx)); l=R.l+R.w-ww; }
+    if(d.includes('n')){ h=Math.max(_FW_MIN_H,Math.min(R.t+R.h,R.h-dy)); t=R.t+R.h-h; }
+  }
+  w.l=l; w.t=t; w.w=ww; w.h=h; _fwLayout();
+}
+function _fwStop(){
+  if(!_fwRsz) return; const id=_fwRsz.id; _fwRsz=null;
+  document.removeEventListener('pointermove',_fwMove); document.removeEventListener('pointerup',_fwStop); document.removeEventListener('pointercancel',_fwStop);
+  document.body.style.userSelect=''; _fwSave(id);
+}
+window.addEventListener('resize',()=>{ if(_fwWins.length) _fwLayout(); });
 window.addEventListener('resize',()=>{
   ['sb','p2'].forEach(p=>{ if(_ppOn(p)) _ppApply(p); });
   if(_pwMode&&window.innerWidth<1200) _pwSet(null);
@@ -18869,6 +19058,7 @@ function doMoveFolder(fid,targetId,pos){
     const existing=chOf(targetId).filter(f=>f.id!==fid);
     folder.order=existing.length+1;
     ST.exp[targetId]=true;
+    _fwWins.forEach(w=>{ w.exp[targetId]=true; });
   } else {
     // Before or after target → same parent level
     folder.parentId=target.parentId;
@@ -21185,7 +21375,7 @@ function _buildFolderCtxMain(fid){
   return `<div class="ci" onclick="hideCtx();openModal('folder','${fid}')">📁 Add subfolder</div>
     <div class="ci" onclick="hideCtx();openModal('art','${fid}')">📄 Add note here</div>
     <div class="ci" onclick="hideCtx();openModal('rename','${fid}')">✏️ Rename folder</div>
-    <div class="ci" onclick="hideCtx();openFolderPopout('${fid}')">🗗 Pop out into window</div>
+    <div class="ci" onclick="hideCtx();openFolderWin('${fid}')">🗗 Pop out into window</div>
     ${_topRow}
     <div class="ci" onclick="hideCtx();autoNumberAll()">🔢 Auto-number all folders</div>
     <div class="ci" onclick="hideCtx();offerRenumberManual('${fid}')">↕ Renumber siblings only</div>
@@ -21214,6 +21404,7 @@ function _buildFolderCtxMain(fid){
 function showCtx(ev,fid){
   if(_dragId)return;
   ev.preventDefault();ev.stopPropagation();
+  _fwCtxFrom=(ev.target&&ev.target.closest)?ev.target.closest('.fwin'):null;   /* v05.64 · J100 — which window the command came from */
   const m=document.getElementById('ctx');
   m.innerHTML=_buildFolderCtxMain(fid);
   m.style.display='block';
