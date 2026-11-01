@@ -2101,7 +2101,20 @@ sup.ann-sup:hover{text-decoration:underline}
 .mydb-t td{padding:3px 0;overflow-wrap:anywhere}
 .mydb-btns{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
 .mydb-b{min-height:44px;padding:0 16px;border:1px solid var(--green2);border-radius:8px;background:transparent;color:var(--green2);font:inherit;font-weight:600;cursor:pointer}
-.mydb-held{color:var(--t2);font-size:.92em}
+.mydb-held,.mydb-media{color:var(--t2);font-size:.92em;margin:8px 0}
+.mydb-live{display:none}
+.mydb-rows{margin:10px 0}
+.mydb-file{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border2)}
+.mydb-fn{min-width:0;flex:1 1 220px;overflow-wrap:anywhere}
+.mydb-fa{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mydb-dim{color:var(--t2);font-size:.92em}
+.mydb-ferr{flex:0 0 100%;color:#b3261e;font-size:.92em}
+.mydb-prog{color:var(--t2)}
+.mydb-rec{margin:10px 0;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.mydb-ab{min-height:44px;padding:0 16px;border:1px solid var(--green2);border-radius:8px;background:transparent;color:var(--green2);font:inherit;font-weight:600;cursor:pointer}
+.mydb-ms{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.mydb-fl{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+@media(max-width:639.98px){.mydb-fa{width:100%;flex-direction:column;align-items:stretch}.mydb-ab{width:100%;min-height:48px}.mydb-rec{align-items:stretch}.mydb-ms .mydb-row .rm-big{flex:1 1 100%;min-height:48px}}
 @media(max-width:639.98px){.mydb-btns{flex-direction:column}.mydb-b{width:100%;min-height:48px}}
 .enx-fb{width:100%;box-sizing:border-box;height:140px;font-family:monospace;font-size:11px}
 @media(max-width:639.98px){
@@ -5318,7 +5331,8 @@ function _cleanExportRoot(){
     root.querySelectorAll('#nw-prev').forEach(function(el){ el.innerHTML = ''; });
     root.querySelectorAll('#nw-status').forEach(function(el){ el.textContent = ''; });
     /* 4c ─ v05.62: the MyDatabase window (the key box) is never part of a saved copy. */
-    root.querySelectorAll('#mydb-modal').forEach(function(el){ el.remove(); });
+    root.querySelectorAll('#mydb-modal,.mydb-rows').forEach(function(el){ el.remove(); });
+    root.querySelectorAll('.mydb-live').forEach(function(el){ el.classList.remove('mydb-live'); });   /* v05.63: the live file list is never part of a saved copy */
     /* 5 ─ Transient UI that must never be serialised. The drag ghost is the
            important one: it holds a REAL note title, which leaked private
            content into Deploy Export files that are meant to be empty shells. */
@@ -7696,7 +7710,7 @@ function _cardCtxCheck(){
 }
 function artCardC(a,sel,sfc){
   if(sel||ST.snippet) return artCard(a,sel,sfc);
-  const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'')+(a.fromMydb?(a.fromMydb.pid+'|'+(a.fromMydb.kind||'')+(a.fromMydb.gone?'g':'')+(a.fromMydb.newer?'n':'')):'')+(a.zabNote?_zabNoteLabel(a):'');
+  const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'')+(a.fromMydb?(a.fromMydb.pid+'|'+(a.fromMydb.kind||'')+(a.fromMydb.gone?'g':'')+(a.fromMydb.newer?'n':'')+'m'+_mydbMediaCount(a)):(a.rec?'m'+_mydbMediaCount(a):''))+(a.zabNote?_zabNoteLabel(a):'');
   const e=_cardC.get(a.id);
   if(e&&e.s===s) return e.h;
   const h=artCard(a,false,sfc);
@@ -11056,15 +11070,40 @@ async function exportBackupPDF(){
 }
 
 /* ══ GOOGLE DRIVE BACKUP (Layer 2) ══════════════════════════════════════════ */
+/* v05.63 · J98 R3 — the ONE place a Drive token is asked for. It is kept in memory for ~55 min (a batch needs one popup); the test hook
+   window.__driveToken (a string) stands in for the popup and window.__driveAsks counts how many times a token was really asked for. */
+let _driveTok={t:'',at:0};
+const _driveHave=()=>!!((typeof window.__driveToken==='string'&&window.__driveToken)||(_driveTok.t&&Date.now()-_driveTok.at<55*60000));
+async function _driveToken(){
+  if(_driveTok.t&&Date.now()-_driveTok.at<55*60000) return _driveTok.t;
+  window.__driveAsks=(window.__driveAsks||0)+1;
+  let t='';
+  if(typeof window.__driveToken==='string'&&window.__driveToken) t=window.__driveToken;
+  else{
+    if(!_authInstance){ const e=new Error('Sign in first'); e.signin=true; throw e; }
+    const provider=new firebase.auth.GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/drive.file');
+    const result=await _authInstance.signInWithPopup(provider);
+    t=(result.credential&&result.credential.accessToken)||'';
+    if(!t){ const e=new Error('Could not get Drive access token'); e.noToken=true; throw e; }
+  }
+  _driveTok={t,at:Date.now()};
+  return t;
+}
+/* the plain-words classification of a Drive failure (was inline in backupToGDrive) */
+function _driveWhy(e,what){
+  const _em=String((e&&e.message)||e);
+  return _em.includes('disabled')||_em.includes('has not been used')||_em.includes('Drive API')
+    ?'⚠ Google Drive API not enabled\nGo to: console.cloud.google.com\nAPIs → Enable Google Drive API'
+    :_em.includes('401')||_em.includes('scope')||_em.includes('access')
+    ?'⚠ Drive access denied\nTry again — allow Drive permission in popup'
+    :'⚠ Drive '+(what||'backup')+' failed\nCheck browser console (F12) for details';
+}
 async function backupToGDrive(){
   if(!_authInstance){toast('⚠ Sign in first');return;}
   toast('⏳ Connecting to Drive…');
   try{
-    const provider=new firebase.auth.GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/drive.file');
-    const result=await _authInstance.signInWithPopup(provider);
-    const token=result.credential?.accessToken;
-    if(!token){toast('⚠ Could not get Drive access token');return;}
+    const token=await _driveToken();
     toast('⏳ Uploading to Drive…');
     const {html,name}=await generateBackupHTMLContent();
     const blob=new Blob([html],{type:'text/html;charset=utf-8'});
@@ -11072,15 +11111,10 @@ async function backupToGDrive(){
     await _uploadToDrive(token,folderId,name,blob);
     toast('✓ Saved to Google Drive\n📁 Siyagah Backups');
   }catch(e){
+    if(e.noToken){toast('⚠ Could not get Drive access token');return;}
     if(e.code==='auth/popup-closed-by-user'){toast('Drive backup cancelled');return;}
-    const _em=String(e.message||e);
-    const _short=_em.includes('disabled')||_em.includes('has not been used')||_em.includes('Drive API')
-      ?'⚠ Google Drive API not enabled\nGo to: console.cloud.google.com\nAPIs → Enable Google Drive API'
-      :_em.includes('401')||_em.includes('scope')||_em.includes('access')
-      ?'⚠ Drive access denied\nTry again — allow Drive permission in popup'
-      :'⚠ Drive backup failed\nCheck browser console (F12) for details';
-    toast(_short,8000,true);
-    console.error('Drive error:',_em);
+    toast(_driveWhy(e,'backup'),8000,true);
+    console.error('Drive error:',String(e.message||e));
   }
 }
 async function _getDriveFolder(token,name){
@@ -11095,14 +11129,27 @@ async function _getDriveFolder(token,name){
   if(!folder.id)throw new Error('Could not create Drive folder — check Drive API is enabled');
   return folder.id;
 }
-async function _uploadToDrive(token,folderId,name,blob){
-  const meta=JSON.stringify({name,parents:[folderId],mimeType:'text/html'});
+async function _uploadToDrive(token,folderId,name,blob,mime){
+  const meta=JSON.stringify({name,parents:[folderId],mimeType:mime||'text/html'});
   const form=new FormData();
   form.append('metadata',new Blob([meta],{type:'application/json'}));
   form.append('file',blob);
   const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:`Bearer ${token}`},body:form});
   if(!res.ok){const e=await res.text();throw new Error('Upload failed: '+e);}
   return res.json();
+}
+/* v05.63 · J98 R3 — Drive's RESUMABLE upload (files over 5 MB): one POST for the session address, then one PUT of the bytes (XHR, for progress) */
+async function _driveResumable(token,folderId,name,blob,mime,onProg){
+  const init=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':mime,'X-Upload-Content-Length':String(blob.size)},body:JSON.stringify({name,parents:[folderId],mimeType:mime})});
+  if(!init.ok){ const t=await init.text(); throw new Error('Upload failed: '+init.status+' '+t); }
+  const loc=init.headers.get('Location'); if(!loc) throw new Error('Upload failed: Drive gave no upload address');
+  return await new Promise((res,rej)=>{
+    const x=new XMLHttpRequest(); x.open('PUT',loc); x.setRequestHeader('Content-Type',mime);
+    x.upload.onprogress=ev=>{ if(onProg&&ev.lengthComputable) onProg(ev.loaded,ev.total); };
+    x.onerror=()=>rej(new Error('Upload failed: the connection dropped'));
+    x.onload=()=>{ if(x.status>=200&&x.status<300){ try{ res(JSON.parse(x.responseText||'{}')); }catch(e){ res({}); } } else rej(new Error('Upload failed: '+x.status+' '+String(x.responseText||'').slice(0,200))); };
+    x.send(blob);
+  });
 }
 
 
@@ -17302,6 +17349,7 @@ function upgradeViewCards(box){
   try{_ktRepair(box);}catch(e){}
   try{_sgHydrateAll(box,false);}catch(e){console.error('sheet mount',e);}
   try{_picHydrateAll(box);}catch(e){console.error('picture mount',e);}
+  try{_mydbMediaHydrate(box);}catch(e){console.error('mydb media',e);}
   try{
     /* anchors whose href or text is a video URL */
     box.querySelectorAll('a:not(.mention)').forEach(a=>{
@@ -17803,6 +17851,7 @@ function _edColClean(node){
   try{_picCanon(node);}catch(e){}   /* v04.92 — a picture goes back to its reference, never an object URL */
   try{_enxFileCanon(node);}catch(e){}   /* v05.27 — S4c: no player, no state classes in a stored note */
   try{_sgCanon(node);}catch(e){}   /* v04.52 — a live spreadsheet goes back to its stored shape */
+  try{_mydbMediaCanon(node);}catch(e){}   /* v05.63 — J98 R3: the live list of sound/video files is never stored */
   node.querySelectorAll('.ed-col-arr,.ed-col-grip,.ed-col-preview').forEach(function(n){n.remove();});
   node.querySelectorAll('.ed-col-hidden').forEach(function(n){n.classList.remove('ed-col-hidden');if(n.getAttribute('class')==='')n.removeAttribute('class');});
 }
@@ -17845,6 +17894,7 @@ function _edColInit(ed){
   try{_ktRepair(ed);}catch(e){}
   try{_sgHydrateAll(ed,true);}catch(e){console.error('sheet mount',e);}
   try{_picHydrateAll(ed);}catch(e){console.error('picture mount',e);}
+  try{_mydbMediaHydrate(ed);}catch(e){console.error('mydb media',e);}
   ed.querySelectorAll('.ed-col-arr,.ed-col-grip').forEach(function(n){n.remove();});
   const heads=_edColHeads(ed);
   /* E6 — each surface owns its own ⋯ wrapper, so a float showing headings
@@ -28020,7 +28070,7 @@ function artCard(a, sel, showFolderCount, showNag, customMeta){
     + (showFolderCount && a.folderIds.length>1 ? ` · in ${a.folderIds.length} folders` : '')
     + (a.fromJeb ? ` · <span class="ar-jeb">👝 from ${esc(a.fromJeb.pocket||'Zab')}</span>` : '')
     + (a.fromEvernote ? ` · <span class="ar-jeb ar-enx">📥 from Evernote · ${esc(a.fromEvernote.nb||'')}</span>` : '')
-    + (a.fromMydb ? ` · <span class="ar-jeb ar-mydb">🗄 ${esc(_mydbProjName(a.fromMydb.pid))} · ${esc(a.fromMydb.kind||'Other')}</span>` : '')
+    + (a.fromMydb ? ` · <span class="ar-jeb ar-mydb">🗄 ${esc(_mydbProjName(a.fromMydb.pid))} · ${esc(a.fromMydb.kind||'Other')}${_mydbMediaCount(a)?' · 🎬 '+_mydbMediaCount(a):''}</span>` : (a.rec&&_mydbMediaCount(a) ? ` · <span class="ar-jeb ar-mydb">🎬 ${_mydbMediaCount(a)}</span>` : ''))
     + (a.zabNote ? ` · <span class="ar-jeb ar-zn" onclick="event.stopPropagation();_zabNoteGo('${esc(a.zabNote.pid)}')" title="Open this Zab">${esc(_zabNoteLabel(a))}</span>` : '')
     + (showNag && isNagNote(a) ? ` · <span class="ar-nag">⏳ untouched ${untouchedDays(a)}d</span>` : '');
   const meta=customMeta!==undefined?customMeta:_m0;
@@ -31744,14 +31794,15 @@ async function _mydbReq(path,accept,key){
   return r;
 }
 const _mydbHead=async key=>String(await (await _mydbReq('commits/main','application/vnd.github.sha',key)).text()).trim();
-const _mydbCPath=p=>'contents/'+String(p).split('/').map(encodeURIComponent).join('/')+'?ref=main';
-async function _mydbBytes(path,size,key){
+const _mydbCPath=(p,ref)=>'contents/'+String(p).split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(ref||'main');
+async function _mydbBytes(path,size,key,ref){
+  ref=ref||'main';
   if(size>1048576){   /* over 1 MB: the blob by its sha, from the tree */
-    const t=await (await _mydbReq('git/trees/main?recursive=1','application/vnd.github+json',key)).json();
+    const t=await (await _mydbReq('git/trees/'+encodeURIComponent(ref)+'?recursive=1','application/vnd.github+json',key)).json();
     const e=((t&&t.tree)||[]).find(x=>x&&x.path===path&&x.sha);
     if(e) return await (await _mydbReq('git/blobs/'+e.sha,'application/vnd.github.raw',key)).arrayBuffer();
   }
-  return await (await _mydbReq(_mydbCPath(path),'application/vnd.github.raw',key)).arrayBuffer();
+  return await (await _mydbReq(_mydbCPath(path,ref),'application/vnd.github.raw',key)).arrayBuffer();
 }
 async function _mydbHex(buf){ return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buf))).map(b=>b.toString(16).padStart(2,'0')).join(''); }
 /* a page or a file: the cached copy if it is the right one, else fetched, VERIFIED, and only then stored. Throws {kind:'offline'|'mismatch'|'nokey'|…} */
@@ -31779,6 +31830,279 @@ async function _mydbKeepRun(){
   }finally{ _mydbS.keeping=false; }
 }
 function _mydbRawCard(a){ try{ const c=JSON.parse(a.fromMydb.raw); return c&&typeof c==='object'?c:null; }catch(e){ return null; } }
+/* ══ v05.63 · J98 R3 — sound and video: in the owner's Google Drive, never in Siyagah ═══════════════════════════════════════════════════
+   The bytes only PASS THROUGH (store branch `transfer` → verified → Drive → dropped); Siyagah keeps the link, DB.theme.mydbDrive[sha256]={id,name,mime,size,at}
+   (one per distinct file, shared by every card holding it), and for a ＋ Recording note rec.drive. The list of files is drawn at display time into
+   div.mydb-rows after the stored placeholder (div.mydb-media, or R2's p.mydb-held) and removed by _mydbMediaCanon() from _edColClean(). */
+const _MYDB_DRIVE_FOLDER='Siyagah MyDatabase', _MYDB_BIG=5*1024*1024, _MYDB_STATUS=['raw','edited','used'];
+const _mydbDriveId=s=>/^[A-Za-z0-9_-]{6,}$/.test(String(s||''))?String(s):'';
+const _mydbMB=n=>(n/1048576).toFixed(n>=10485760?0:1)+' MB';
+_mydbS.up={}; _mydbS.upErr={}; _mydbS.xfer=null; _mydbS.upBusy=false; _mydbS.msg2=''; _mydbS.recPending=null; _mydbS.driveFolder=null;
+const _mydbHeldMemo=new Map();
+function _mydbHeldOf(a){
+  const m=a&&a.fromMydb; if(!m||typeof m.raw!=='string') return [];
+  let r=_mydbHeldMemo.get(m.raw);
+  if(!r){
+    r=[]; try{ const c=JSON.parse(m.raw); (Array.isArray(c&&c.filesHeld)?c.filesHeld:[]).forEach(f=>{ if(f&&typeof f.path==='string'&&f.path) r.push({path:f.path,size:+f.size||0,sha:String(f.sha||'').toLowerCase(),name:f.name?String(f.name):''}); }); }catch(e){}
+    if(_mydbHeldMemo.size>500) _mydbHeldMemo.clear(); _mydbHeldMemo.set(m.raw,r);
+  }
+  return r;
+}
+const _mydbRecDrive=a=>{ const d=a&&a.rec&&a.rec.drive; return d&&_mydbDriveId(d.id)?d:null; };
+const _mydbMediaCount=a=>_mydbHeldOf(a).length+(_mydbRecDrive(a)?1:0);
+const _mydbMap=()=>(DB&&DB.theme&&DB.theme.mydbDrive&&typeof DB.theme.mydbDrive==='object')?DB.theme.mydbDrive:{};
+function _mydbFileName(f,card){
+  const base=f.name||String(f.path).split('/').pop(), dot=base.lastIndexOf('.'), stem=dot>0?base.slice(0,dot):base, ext=dot>0?base.slice(dot):'';
+  if(/^[0-9a-f]{8,}$/i.test(stem)) return String(card||'Recording')+' — '+stem.slice(0,8)+'…'+ext;
+  if(/^(main|file|video|audio|sound)$/i.test(stem)) return String(card||'Recording')+' — '+base;
+  return base;
+}
+const _MYDB_AV={mp4:'video/mp4',m4v:'video/mp4',mov:'video/quicktime',webm:'video/webm',mkv:'video/x-matroska',mp3:'audio/mpeg',m4a:'audio/mp4',wav:'audio/wav',ogg:'audio/ogg',oga:'audio/ogg',aac:'audio/aac',flac:'audio/flac'};
+const _mydbMime=(name,t)=>t||_MYDB_AV[String(name).split('.').pop().toLowerCase()]||'application/octet-stream';
+/* the files a note shows: its card's held files, and (a ＋ Recording note) the one in Drive */
+function _mydbMediaFiles(a){
+  const out=_mydbHeldOf(a).map(f=>({path:f.path,size:f.size,sha:f.sha,name:f.name||String(f.path).split('/').pop(),held:f}));
+  const d=_mydbRecDrive(a); if(d) out.push({path:'',size:+d.size||0,sha:'',name:String(d.name||'Recording'),drive:d});
+  return out;
+}
+/* ── the transfer place: which files the store's branch `transfer` holds (404 = none; quiet) ── */
+async function _mydbXferLoad(force){
+  if(_mydbS.xferBusy) return; const X=_mydbS.xfer;
+  if(!force&&X&&Date.now()-X.at<60000) return;
+  await _mydbLoadKey(); if(!_mydbS.key||navigator.onLine===false) return;
+  _mydbS.xferBusy=true;
+  try{
+    let set=new Set();
+    try{ const t=await (await _mydbReq('git/trees/transfer?recursive=1','application/vnd.github+json',_mydbS.key)).json(); ((t&&t.tree)||[]).forEach(x=>{ if(x&&x.type!=='tree'&&typeof x.path==='string') set.add(x.path); }); }
+    catch(e){ if(!(e&&e.kind==='access')) return; }   /* offline / wrong key: unknown, say nothing */
+    _mydbS.xfer={at:Date.now(),set};
+  }finally{ _mydbS.xferBusy=false; }
+  _mydbMediaRepaintAll(); _mydbMediaRefresh();
+}
+const _mydbInXfer=p=>!!(_mydbS.xfer&&_mydbS.xfer.set&&_mydbS.xfer.set.has(p));
+function _mydbMediaArt(ph){
+  const id=ph.getAttribute('data-mydb-id'); if(id) return (DB.articles||[]).find(x=>x.id===id)||null;
+  const ed=ph.closest('#ed,.fw-ed'); if(ed) return _edArtOf(ed);
+  return (typeof curA!=='undefined'&&curA&&curA.fromMydb)?curA:null;   /* R2's p.mydb-held has no id */
+}
+function _mydbRecLine(a){
+  const r=(a&&a.rec)||{}, p=[]; if(r.lang) p.push('Language: '+r.lang); if(r.len) p.push('Length: '+r.len); if(r.given) p.push('Given by: '+r.given); if(r.job) p.push('Job: '+r.job);
+  const st=_MYDB_STATUS.includes(r.status)?r.status:'', lab={raw:'raw',edited:'edited',used:'used in video'};
+  return '<div class="mydb-rec">'+(p.length?'<div class="mydb-rt">'+esc(p.join(' · '))+'</div>':'<div class="mydb-rt mydb-dim">No details yet.</div>')
+    +(st?'<div class="mydb-rt">Status: '+_MYDB_STATUS.map(s=>s===st?'<b>'+lab[s]+'</b>':lab[s]).join(' → ')+'</div>':'')
+    +'<button type="button" class="mydb-ab" data-mydb="det" data-mydb-id="'+esc(a.id)+'" contenteditable="false">✏️ Details</button></div>';
+}
+function _mydbMediaRowsHTML(a){
+  const files=_mydbMediaFiles(a); if(!files.length) return '';
+  const map=_mydbMap(), nid=esc(a.id);
+  const btn=(w,t,x)=>'<button type="button" class="mydb-ab" data-mydb="'+w+'" data-mydb-id="'+nid+'"'+(x||'')+' contenteditable="false">'+t+'</button>';
+  let h='<div class="mydb-files" contenteditable="false">';
+  files.forEach(f=>{
+    const d=f.drive||(f.sha&&map[f.sha]), did=d&&_mydbDriveId(d.id), up=f.sha&&_mydbS.up[f.sha], er=f.sha&&_mydbS.upErr[f.sha];
+    h+='<div class="mydb-file"><div class="mydb-fn"><b>'+esc(f.name)+'</b>'+(f.size?' <span class="mydb-dim">'+_mydbMB(f.size)+'</span>':'')+'</div><div class="mydb-fa">';
+    if(did) h+=btn('play','▶ Play',' data-drive="'+esc(did)+'"')+btn('drive','↗ Open in Drive',' data-drive="'+esc(did)+'"');
+    else if(up) h+='<span class="mydb-prog" role="status">⏳ '+esc(up.msg||'Uploading…')+'</span>';
+    else if(f.sha&&/^[0-9a-f]{64}$/.test(f.sha)&&_mydbInXfer(f.path)) h+=btn('up','↑ Upload to Drive',' data-sha="'+esc(f.sha)+'"');
+    else h+='<span class="mydb-dim">Not in your Drive yet</span>';
+    h+='</div>'+(er?'<div class="mydb-ferr" role="alert">'+esc(er)+'</div>':'')+'</div>';
+  });
+  return h+'</div>'+_mydbRecLine(a);
+}
+function _mydbMediaHydrate(root){
+  if(!root||!root.querySelectorAll) return; let need=false;
+  root.querySelectorAll('.mydb-media,.mydb-held').forEach(ph=>{
+    if(ph.closest('.mydb-rows')) return;
+    const a=_mydbMediaArt(ph); if(!a) return;
+    let rows=ph.nextElementSibling;
+    if(!(rows&&rows.classList.contains('mydb-rows'))){ rows=document.createElement('div'); rows.className='mydb-rows'; rows.setAttribute('contenteditable','false'); ph.after(rows); }
+    rows.setAttribute('data-mid',a.id); ph.classList.add('mydb-live'); rows.innerHTML=_mydbMediaRowsHTML(a);
+    if(_mydbMediaFiles(a).some(f=>f.sha&&!_mydbMap()[f.sha])) need=true;
+  });
+  if(need) _mydbXferLoad(false).catch(()=>{});
+}
+function _mydbMediaRepaintAll(){
+  document.querySelectorAll('.mydb-rows[data-mid]').forEach(r=>{
+    const a=(DB.articles||[]).find(x=>x.id===r.getAttribute('data-mid')); if(a) r.innerHTML=_mydbMediaRowsHTML(a);
+  });
+}
+function _mydbMediaCanon(node){
+  if(!node||!node.querySelectorAll) return;
+  node.querySelectorAll('.mydb-rows').forEach(n=>n.remove());
+  node.querySelectorAll('.mydb-live').forEach(n=>n.classList.remove('mydb-live'));
+}
+/* ── the dialog's line: "Sound and video: n of N in your Drive" ── */
+function _mydbMediaStat(){
+  const seen=new Map(); (DB.articles||[]).forEach(a=>{ if(a&&a.fromMydb) _mydbHeldOf(a).forEach(f=>{ const k=f.sha||f.path; if(!seen.has(k)) seen.set(k,{f,card:a.title}); }); });
+  const map=_mydbMap(), all=[...seen.values()], inD=all.filter(x=>x.f.sha&&map[x.f.sha]);
+  return {N:all.length,n:inD.length,todo:all.filter(x=>!(x.f.sha&&map[x.f.sha]))};
+}
+function _mydbMediaHTML(){
+  const s=_mydbMediaStat(), busy=_mydbS.upBusy, rp=_mydbS.recPending;
+  return '<div class="mydb-ms" id="mydb-ms"><div id="mydb-ms-line" role="status">🎬 '+(s.N===0?'Sound and video: none in your cards yet.':s.n===s.N?'Sound and video: All in your Drive ✓':'Sound and video: '+s.n+' of '+s.N+' in your Drive')+'</div>'
+    +'<div class="mydb-row"><button class="rm-big alt" id="mydb-moveall" onclick="_mydbMoveAll()"'+(busy||s.todo.length===0?' disabled':'')+'>↑ Move all to Drive</button>'
+    +'<button class="rm-big alt" id="mydb-newrec" onclick="_mydbNewRec()"'+(busy?' disabled':'')+'>＋ Recording</button></div>'
+    +(rp?'<div class="mydb-row"><button class="rm-big" id="mydb-recgo" onclick="_mydbRecUpload()">Allow Google Drive and upload “'+esc(rp.name)+'”</button></div>':'')
+    +(_mydbS.msg2?'<div id="mydb-ms-msg" role="status">'+esc(_mydbS.msg2)+'</div>':'')+'</div>';
+}
+function _mydbMediaRefresh(){ const e=document.getElementById('mydb-ms'); if(e) e.outerHTML=_mydbMediaHTML(); }
+/* ── one file to Drive: fetch from the transfer place, VERIFY, upload, drop ── */
+function _mydbUpWhy(e){
+  const k=e&&e.kind;
+  if(k==='mismatch') return 'The file does not match its checksum, so nothing was uploaded.';
+  if(k==='nosha') return 'This file has no checksum to verify, so nothing was uploaded.';
+  if(k==='nokey') return 'There is no key yet, so Siyagah cannot read the file.';
+  if(e&&e.code==='auth/popup-closed-by-user') return 'Cancelled — the Google window was closed.';
+  if(e&&e.signin) return 'Sign in to Siyagah with Google first.';
+  if(k==='offline'||navigator.onLine===false) return 'You are offline.';
+  if(k==='access'||k==='key') return _mydbWhy(e);
+  return _driveWhy(e,'upload').replace(/\n.*/,'').replace(/^⚠ /,'');
+}
+async function _mydbDriveFolder(tok){
+  if(_mydbS.driveFolder&&_mydbS.driveFolder.t===tok) return _mydbS.driveFolder.id;
+  const id=await _getDriveFolder(tok,_MYDB_DRIVE_FOLDER); _mydbS.driveFolder={t:tok,id}; return id;
+}
+async function _driveSend(tok,name,mime,blob,onProg){
+  const folder=await _mydbDriveFolder(tok);
+  const r=blob.size>_MYDB_BIG?await _driveResumable(tok,folder,name,blob,mime,onProg):await _uploadToDrive(tok,folder,name,blob,mime);
+  if(!r||!_mydbDriveId(r.id)) throw new Error('Upload failed: Drive did not answer with a file');
+  if(onProg) onProg(blob.size,blob.size);
+  return r;
+}
+function _mydbUpProg(sha,label){
+  let last=0;
+  return (d,t)=>{ _mydbS.up[sha]={msg:label+(t?' — '+(d/1048576).toFixed(d>=10485760?0:1)+' of '+_mydbMB(t):'')}; const n=Date.now(); if(n-last>120||d>=t){ last=n; _mydbMediaRepaintAll(); } };
+}
+async function _mydbUploadOne(f,card,tok){
+  const have=_mydbMap()[f.sha]; if(have&&have.id) return have;   /* another device (or an earlier press) already did it */
+  if(!/^[0-9a-f]{64}$/.test(f.sha||'')){ const e=new Error('no sha'); e.kind='nosha'; throw e; }
+  if(!_mydbS.key){ const e=new Error('no key'); e.kind='nokey'; throw e; }
+  const name=_mydbFileName(f,card), mime=_mydbMime(name);
+  _mydbS.up[f.sha]={msg:'Reading from the transfer place…'}; _mydbMediaRepaintAll();
+  let buf=await _mydbBytes(f.path,f.size||0,_mydbS.key,'transfer');
+  if((await _mydbHex(buf))!==f.sha){ const e=new Error('sha mismatch'); e.kind='mismatch'; throw e; }
+  _mydbS.up[f.sha]={msg:'Uploading…'}; _mydbMediaRepaintAll();
+  const r=await _driveSend(tok,name,mime,new Blob([buf],{type:mime}),_mydbUpProg(f.sha,'Uploading'));
+  buf=null;
+  const again=_mydbMap()[f.sha]; if(again&&again.id) return again;
+  const ent={id:String(r.id),name,mime,size:f.size||0,at:new Date().toISOString()};
+  DB.theme=DB.theme||{}; DB.theme.mydbDrive=Object.assign({},_mydbMap(),{[f.sha]:ent}); persist();
+  return ent;
+}
+/* ↑ Upload to Drive on one row. The FIRST await is the token: the Google window must open inside the tap. */
+async function _mydbUploadSha(sha){
+  if(_mydbS.upBusy||_mydbS.up[sha]) return;
+  const hit=(()=>{ for(const a of (DB.articles||[])) for(const f of _mydbHeldOf(a)) if(f.sha===sha) return {f,card:a.title}; return null; })(); if(!hit) return;
+  _mydbS.upBusy=true; delete _mydbS.upErr[sha];
+  try{
+    if(navigator.onLine===false){ const e=new Error('offline'); e.kind='offline'; throw e; }
+    const tok=await _driveToken();
+    await _mydbUploadOne(hit.f,hit.card,tok);
+  }catch(e){ const w=_mydbUpWhy(e); _mydbS.upErr[sha]=w; if(!(e&&e.code==='auth/popup-closed-by-user')) toast('⚠ '+w,6000); console.error('Drive upload:',String((e&&e.message)||e)); }
+  finally{ delete _mydbS.up[sha]; _mydbS.upBusy=false; _mydbMediaRepaintAll(); _mydbMediaRefresh(); }
+}
+async function _mydbMoveAll(){
+  if(_mydbS.upBusy) return;
+  const todo=_mydbMediaStat().todo; if(!todo.length) return;
+  _mydbS.upBusy=true; _mydbS.msg2=''; _mydbMediaRefresh();
+  let done=0, skipped=0;
+  try{
+    if(navigator.onLine===false){ const e=new Error('offline'); e.kind='offline'; throw e; }
+    const tok=await _driveToken();   /* one window for the whole batch */
+    await _mydbXferLoad(true);
+    for(let i=0;i<todo.length;i++){
+      const {f,card}=todo[i];
+      if(document.visibilityState==='hidden'||navigator.onLine===false){ _mydbS.msg2='Stopped after '+done+' — press ↑ Move all to Drive again to carry on.'; return; }
+      if(_mydbMap()[f.sha]) continue;
+      if(!_mydbInXfer(f.path)){ skipped++; continue; }
+      _mydbS.msg2='Uploading '+(i+1)+' of '+todo.length+': '+_mydbFileName(f,card); _mydbMediaRefresh();
+      _mydbS.up[f.sha]={msg:'Starting…'};
+      try{ await _mydbUploadOne(f,card,tok); done++; }
+      catch(e){ delete _mydbS.up[f.sha]; throw e; }
+      delete _mydbS.up[f.sha]; _mydbMediaRepaintAll();
+    }
+    _mydbS.msg2=done+' moved to your Drive.'+(skipped?' '+skipped+' not in the transfer place.':'');
+  }catch(e){ _mydbS.msg2='Stopped after '+done+': '+_mydbUpWhy(e); console.error('Drive upload:',String((e&&e.message)||e)); }
+  finally{ _mydbS.upBusy=false; _mydbMediaRepaintAll(); _mydbMediaRefresh(); }
+}
+/* ▶ Play: Google's player in a NEW window (a phone: a new tab straight to it); offline it says so */
+function _mydbPlay(did){
+  did=_mydbDriveId(did); if(!did) return;
+  const url='https://drive.google.com/file/d/'+did+'/preview';
+  if(innerWidth<640){ const w=window.open(url,'_blank','noopener'); if(!w) toast('⚠ Your browser blocked the new tab. Allow pop-ups for Siyagah and try again.'); return; }
+  const w=window.open('','_blank'); if(!w){ toast('⚠ Your browser blocked the new window. Allow pop-ups for Siyagah and try again.'); return; }
+  try{ w.opener=null; }catch(e){}
+  try{
+    w.document.open();
+    w.document.write('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recording</title><style>'+_MYDB_WIN_CSS+'</style>'
+      +(navigator.onLine===false?'<div class="m">Playing a recording needs the internet. Try again when you are online.</div>':'<iframe src="'+url+'" allow="autoplay; fullscreen" allowfullscreen></iframe>')
+      +'<div class="bar"><span></span><button id="x" type="button">✕ Close</button></div>');
+    w.document.close(); w.document.getElementById('x').onclick=()=>w.close();
+  }catch(e){ try{ w.close(); }catch(_){} }
+}
+/* ✏️ Details: the recording's own details, in the app's modal (a bottom sheet on a phone) */
+function _mydbRecEdit(nid){
+  const a=(DB.articles||[]).find(x=>x.id===nid); if(!a) return;
+  let c={}; if(a.fromMydb) c=_mydbRawCard(a)||{};
+  const r=a.rec||{}, pick=(k,alts)=>{ if(typeof r[k]==='string') return r[k]; for(const x of alts) if(c[x]!=null&&typeof c[x]!=='object') return String(c[x]); return ''; };
+  const v={lang:pick('lang',['lang','language']),len:pick('len',['len','length','duration']),given:pick('given',['given','givenBy','by']),job:pick('job',['job'])};
+  let st=_MYDB_STATUS.includes(r.status)?r.status:(_MYDB_STATUS.includes(c.status)?c.status:'raw');
+  const inp=(id,lab,val)=>'<label class="mydb-fl">'+lab+'<input class="mi" id="'+id+'" maxlength="200" autocomplete="off" value="'+esc(val)+'"></label>';
+  showModal('<div class="mt">✏️ Recording details</div>'+inp('mrd-lang','Language',v.lang)+inp('mrd-len','Length (for example 12:30)',v.len)+inp('mrd-given','Given by',v.given)
+    +'<label class="mydb-fl">Status<select class="mi" id="mrd-st"><option value="raw">raw</option><option value="edited">edited</option><option value="used">used in video</option></select></label>'
+    +inp('mrd-job','Job',v.job)+'<div class="ma"><button class="btn" id="mrd-x">Cancel</button><button class="btn bp" id="mrd-ok">Save</button></div>');
+  const mb=document.getElementById('mb'); mb.querySelector('#mrd-st').value=st;
+  mb.querySelector('#mrd-x').onclick=()=>closeModal();
+  mb.querySelector('#mrd-ok').onclick=()=>{
+    const g=i=>mb.querySelector('#'+i).value.trim();
+    const cur=(DB.articles||[]).find(x=>x.id===nid); if(!cur){ closeModal(); return; }
+    cur.rec=Object.assign({},cur.rec||{},{lang:g('mrd-lang'),len:g('mrd-len'),given:g('mrd-given'),status:mb.querySelector('#mrd-st').value,job:g('mrd-job')});
+    const nu=new Date().toISOString(); cur.updatedAt=nu>String(cur.updatedAt||'')?nu:_mmjPlus(cur.updatedAt);   /* an owner edit: a later card update only marks it newer */
+    closeModal(); persist(); if(ST.editing) _mydbMediaRepaintAll(); else { try{ render(); }catch(e){} }
+  };
+}
+/* ＋ Recording: pick a file → Drive → a new note. The bytes are never kept. */
+function _mydbNewRec(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='audio/*,video/*,.mp3,.m4a,.mp4,.mov,.wav,.webm,.ogg'; inp.style.display='none'; inp.id='mydb-recfile';
+  document.body.appendChild(inp);
+  inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; inp.remove(); if(f) _mydbRecStart(f); });
+  inp.addEventListener('cancel',()=>inp.remove());
+  inp.click();
+}
+function _mydbRecStart(file){
+  _mydbS.recPending=file; _mydbS.msg2='';
+  if(_driveHave()) _mydbRecUpload(); else { _mydbS.msg2='Google needs your OK once to put the file in your Drive.'; _mydbMediaRefresh(); }
+}
+function _mydbRecFolder(){
+  const at=new Date().toISOString(), fById=new Map((DB.folders||[]).map(f=>[f.id,f])), tomb=new Set((DB.tombstones||[]).map(t=>t&&t.id));
+  const trashF=new Set(); (DB.trash||[]).forEach(t=>{ if(t&&t.type==='folder'&&t.item&&t.item.id) trashF.add(t.item.id); });
+  const ensure=(base,name,parentId)=>{
+    let id=base, n=1; while(!fById.has(id)&&(tomb.has(id)||trashF.has(id))) id=base+'-'+(++n);
+    if(fById.has(id)) return id;
+    const sec=_enxSection(), order=1+Math.max(0,...(DB.folders||[]).filter(f=>(f.parentId||null)===(parentId||null)).map(f=>f.order||0));
+    const f={id,name,parentId:parentId||null,order,mydb:{n:name,p:parentId||null},updatedAt:at}; if(!parentId&&sec) f.sectionId=sec.id;
+    DB.folders.push(f); fById.set(id,f); return id;
+  };
+  return ensure('mydb-rec','Recordings',ensure('mydb-root','🗄 MyDatabase',null));
+}
+async function _mydbRecUpload(){
+  const file=_mydbS.recPending; if(!file||_mydbS.upBusy) return;
+  _mydbS.upBusy=true; _mydbS.msg2='';
+  try{
+    if(navigator.onLine===false){ const e=new Error('offline'); e.kind='offline'; throw e; }
+    const tok=await _driveToken();   /* first await: inside the tap */
+    _mydbS.recPending=null;
+    const mime=_mydbMime(file.name,file.type);
+    const r=await _driveSend(tok,file.name,mime,file,(d,t)=>{ _mydbS.msg2='Uploading “'+file.name+'” — '+(d/1048576).toFixed(1)+' of '+_mydbMB(t); _mydbMediaRefresh(); });
+    const f=DB.folders.find(x=>x.id===ST.folder), fid=f?f.id:_mydbRecFolder(), now=new Date().toISOString();
+    const id='rec-'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+    DB.articles.push({id,title:file.name.replace(/\.[^.]+$/,'')||'Recording',content:'<div class="mydb-media" data-mydb-id="'+id+'" contenteditable="false">🎬 1 sound/video file — kept in your Google Drive (open this note in Siyagah to play it)</div>',folderIds:[fid],tags:['recording'],createdAt:now,updatedAt:now,
+      rec:{lang:'',len:'',given:'',status:'raw',job:'',drive:{id:String(r.id),name:file.name,mime,size:file.size}}});
+    persist(); try{ render(); }catch(e){}
+    _mydbS.msg2='✅ Saved to your Drive and made a note: “'+file.name+'”.';
+    try{ selArt(id); }catch(e){}
+  }catch(e){ _mydbS.msg2='Could not upload: '+_mydbUpWhy(e); console.error('Drive upload:',String((e&&e.message)||e)); if(!(e&&(e.code==='auth/popup-closed-by-user'||e.signin))&&_mydbS.recPending===null) _mydbS.recPending=file; }
+  finally{ _mydbS.upBusy=false; _mydbMediaRefresh(); }
+}
 /* ── a card drawn as note HTML: the ONE function ── */
 function _mydbCardHTML(c){
   const id=_mydbNoteId(c), arr=x=>Array.isArray(x)?x.filter(s=>typeof s==='string'&&s).join(', '):'';
@@ -31789,8 +32113,9 @@ function _mydbCardHTML(c){
   const btn=(w,t)=>'<button type="button" class="mydb-b" data-mydb="'+w+'" data-mydb-id="'+esc(id)+'" contenteditable="false">'+t+'</button>';
   let b=''; if(typeof c.page==='string'&&c.page) b+=btn('copy','▶ Open the copy'); if(_mydbHttps(c.url)) b+=btn('orig','↗ Open the original');
   if(b) h+='<div class="mydb-btns" contenteditable="false">'+b+'</div>';
-  const held=Array.isArray(c.filesHeld)?c.filesHeld.length:0;
-  if(held) h+='<p class="mydb-held" contenteditable="false">🎬 '+held+' sound/video file'+(held===1?'':'s')+': go to Google Drive in a later round (R3)</p>';
+  const held=Array.isArray(c.filesHeld)?c.filesHeld.filter(f=>f&&typeof f.path==='string').length:0;
+  /* v05.63 · J98 R3 — one placeholder; the live list of files is drawn at display time (_mydbMediaHydrate) and never stored */
+  if(held) h+='<div class="mydb-media" data-mydb-id="'+esc(id)+'" contenteditable="false">🎬 '+held+' sound/video file'+(held===1?'':'s')+' — kept in your Google Drive (open this note in Siyagah to play them)</div>';
   return h;
 }
 function _mydbTags(c){
@@ -31975,7 +32300,12 @@ document.addEventListener('click',e=>{
   const b=e.target&&e.target.closest?e.target.closest('[data-mydb]'):null; if(!b) return;
   e.preventDefault(); e.stopPropagation();
   const id=b.getAttribute('data-mydb-id'), a=(DB.articles||[]).find(x=>x.id===id);
-  if(b.getAttribute('data-mydb')==='copy') _mydbOpenCopy(id);
+  const w=b.getAttribute('data-mydb');
+  if(w==='play') _mydbPlay(b.getAttribute('data-drive'));
+  else if(w==='drive'){ const d=_mydbDriveId(b.getAttribute('data-drive')); if(d) window.open('https://drive.google.com/file/d/'+d+'/view','_blank','noopener'); }
+  else if(w==='up') _mydbUploadSha(b.getAttribute('data-sha'));
+  else if(w==='det') _mydbRecEdit(id);
+  else if(w==='copy') _mydbOpenCopy(id);
   else if(b.getAttribute('data-mydb')==='orig'){ const c=a&&a.fromMydb?_mydbRawCard(a):null, u=c?_mydbHttps(c.url):''; if(u) window.open(u,'_blank','noopener'); }
 },true);
 /* ── the dialog ── */
@@ -31988,7 +32318,7 @@ function _mydbStatusHTML(){
   else if(s) h+='<div id="mydb-sum">'+s.added+' added, '+s.updated+' updated, '+s.kept+' kept (you had changed them), '+s.gone+' marked removed</div>';
   return h+'</div>';
 }
-function _mydbRefresh(){ const e=document.getElementById('mydb-st'); if(e) e.outerHTML=_mydbStatusHTML(); const b=document.getElementById('mydb-check'); if(b) b.disabled=!!_mydbS.busy||!_mydbS.key; const c=document.getElementById('mydb-connect'); if(c) c.disabled=!!_mydbS.connecting; const f=document.getElementById('mydb-forget'); if(f) f.disabled=!_mydbS.key; }
+function _mydbRefresh(){ const e=document.getElementById('mydb-st'); if(e) e.outerHTML=_mydbStatusHTML(); const b=document.getElementById('mydb-check'); if(b) b.disabled=!!_mydbS.busy||!_mydbS.key; const c=document.getElementById('mydb-connect'); if(c) c.disabled=!!_mydbS.connecting; const f=document.getElementById('mydb-forget'); if(f) f.disabled=!_mydbS.key; _mydbMediaRefresh(); }
 function _mydbPaint(){
   const box=document.getElementById('mydb-box'); if(!box) return;
   box.innerHTML='<div class="mydb-hd"><div class="mt">🗄 MyDatabase</div><button type="button" id="mydb-x" class="mydb-x" aria-label="Close" onclick="closeMydb()">✕</button></div>'
@@ -32003,7 +32333,8 @@ function _mydbPaint(){
     +'<button class="rm-big alt" id="mydb-check" onclick="_mydbSyncRun(true)">⟳ Check now</button>'
     +'<button class="rm-big alt" id="mydb-forget" onclick="_mydbForget()">Forget the key</button></div>'
     +_mydbStatusHTML()
-    +'<label class="mydb-keep"><input type="checkbox" id="mydb-kon"'+(_mydbKeepOn()?' checked':'')+' onchange="_mydbKeepSet(this.checked)"> Keep a copy of the pages on this device (so they open offline)</label>';
+    +'<label class="mydb-keep"><input type="checkbox" id="mydb-kon"'+(_mydbKeepOn()?' checked':'')+' onchange="_mydbKeepSet(this.checked)"> Keep a copy of the pages on this device (so they open offline)</label>'
+    +_mydbMediaHTML();
   _mydbRefresh();
 }
 function openMydb(){
@@ -32015,7 +32346,7 @@ function openMydb(){
     document.body.appendChild(m);
   }
   _mydbPaint(); m.classList.add('open');
-  _mydbLoadKey().then(()=>{ if(m.classList.contains('open')) _mydbRefresh(); });   /* the status only: a repaint of the box would empty what is being typed */
+  _mydbLoadKey().then(()=>{ if(m.classList.contains('open')){ _mydbRefresh(); _mydbXferLoad(false).catch(()=>{}); } });   /* the status only: a repaint of the box would empty what is being typed */
 }
 function closeMydb(){ const m=document.getElementById('mydb-modal'); if(m) m.classList.remove('open'); }
 function _mydbKeepSet(on){ DB.theme=DB.theme||{}; DB.theme.mydbKeep=!!on; persist(); if(on) setTimeout(()=>{ try{ _mydbKeepRun(); }catch(e){} },0); }
