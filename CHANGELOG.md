@@ -11048,3 +11048,9 @@ The owner (28 Oct, with a screenshot of Siyagah Zab's All Zabs cards): "*Enable 
 **Not done, and why.** ＋ Recording is in the dialog only: the Smart Views have no ＋ of their own. A ＋ Recording note is not listed in the 🗄 MyDatabase Smart View (it is not a card). The real Google popup and a real 15 MB Drive upload were not exercised (a fake Drive and `__driveToken`); the first real press needs the owner's Google OK and Drive API on (the owner says it is). The full app-check was not run (the Architect runs it).
 
 **Record debt.** v05.62 review — full app-check on 11062b2 (= PR #254 before the review fix): 1–59 + self-check 2330/2332 (56k known); 60–120 6106/6115 → 90d updated in place for the two new 🗄 rows (32bee5c, `--only 90` 17/17); 86 alone green; 91f fails on v05.61 too (known); 100d noise (4 alternating runs: v05.62 1.3×/4.0×, v05.61 2.7×/3.8×).
+
+## v05.64 — J100 folder windows · J101 rename 🗂 MyDatabase · Drive 401 (2 Nov 2026, issue #257)
+
+(In progress — see the PR for the final list.) Every folder pops out into its own floating window (a full-width sheet on a phone), at the size of the pane or window it came from, several at once, with the side pane's own rows and functions; the 🗂 MyDatabase heading can be renamed (links go by id); a Drive 401/403 clears the kept token.
+
+**Record debt.** v05.63 review — full app-check on fc534b3: 1–59 2328/2330 (56k known); 60–121 6164/6168 (91f fails on main too, known; 100d timing under load, `--only 100` alone 17/17 at 4.8×). Follow-up taken into v05.64: clear the Drive token after a 401.
