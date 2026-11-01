@@ -7238,7 +7238,7 @@ function renderP2H(){
              +`<button class="btn bn p2-new-btn" onclick="_calManageCats()" title="Manage categories">⚙</button>`
     };
     const _dbBtn=_dbBtns[ST.folder]||newBtn;
-    el.innerHTML=ham+`<span class="tbt" style="flex:1;min-width:0;overflow:hidden">${_dbNames[ST.folder]||'🗂 MyDatabase'}</span>`+fbBtn+_dbBtn+cls;
+    el.innerHTML=ham+`<span class="tbt" style="flex:1;min-width:0;overflow:hidden">${_dbNames[ST.folder]||'🗂 '+esc(_dbSecName())}</span>`+fbBtn+_dbBtn+cls;
     return;
   }
   /* ── No folder selected ── */
@@ -11090,6 +11090,14 @@ async function _driveToken(){
   _driveTok={t,at:Date.now()};
   return t;
 }
+/* v05.64 · J98 R3 follow-up — Drive said the token is no good (401, or an auth-type 403: permission withdrawn early): forget it, so the next press asks Google again.
+   A 403 for a rate limit or a quota is NOT an auth failure and keeps the token. */
+function _driveBad(status,text){
+  const tx=String(text||'');
+  const auth=status===401||(status===403&&/authError|insufficientPermissions|insufficientScopes|invalid_?credentials|invalid_?grant|PERMISSION_DENIED|unauthenticated/i.test(tx)&&!/rateLimit|quota/i.test(tx));
+  if(auth){ _driveTok={t:'',at:0}; window.__driveClears=(window.__driveClears||0)+1; }
+  return auth;
+}
 /* the plain-words classification of a Drive failure (was inline in backupToGDrive) */
 function _driveWhy(e,what){
   const _em=String((e&&e.message)||e);
@@ -11121,6 +11129,7 @@ async function _getDriveFolder(token,name){
   const q=encodeURIComponent(`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
   const search=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,{headers:{Authorization:`Bearer ${token}`}});
   const data=await search.json();
+  if(data.error)_driveBad(data.error.code,JSON.stringify(data.error));
   if(data.error)throw new Error('has not been used: '+(data.error.message||'code '+data.error.code));
   if(data.files?.length>0)return data.files[0].id;
   const create=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder'})});
@@ -11135,19 +11144,19 @@ async function _uploadToDrive(token,folderId,name,blob,mime){
   form.append('metadata',new Blob([meta],{type:'application/json'}));
   form.append('file',blob);
   const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:`Bearer ${token}`},body:form});
-  if(!res.ok){const e=await res.text();throw new Error('Upload failed: '+e);}
+  if(!res.ok){const e=await res.text();_driveBad(res.status,e);throw new Error('Upload failed: '+res.status+' '+e);}
   return res.json();
 }
 /* v05.63 · J98 R3 — Drive's RESUMABLE upload (files over 5 MB): one POST for the session address, then one PUT of the bytes (XHR, for progress) */
 async function _driveResumable(token,folderId,name,blob,mime,onProg){
   const init=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':mime,'X-Upload-Content-Length':String(blob.size)},body:JSON.stringify({name,parents:[folderId],mimeType:mime})});
-  if(!init.ok){ const t=await init.text(); throw new Error('Upload failed: '+init.status+' '+t); }
+  if(!init.ok){ const t=await init.text(); _driveBad(init.status,t); throw new Error('Upload failed: '+init.status+' '+t); }
   const loc=init.headers.get('Location'); if(!loc) throw new Error('Upload failed: Drive gave no upload address');
   return await new Promise((res,rej)=>{
     const x=new XMLHttpRequest(); x.open('PUT',loc); x.setRequestHeader('Content-Type',mime);
     x.upload.onprogress=ev=>{ if(onProg&&ev.lengthComputable) onProg(ev.loaded,ev.total); };
     x.onerror=()=>rej(new Error('Upload failed: the connection dropped'));
-    x.onload=()=>{ if(x.status>=200&&x.status<300){ try{ res(JSON.parse(x.responseText||'{}')); }catch(e){ res({}); } } else rej(new Error('Upload failed: '+x.status+' '+String(x.responseText||'').slice(0,200))); };
+    x.onload=()=>{ if(x.status===401||x.status===403) _driveBad(x.status,x.responseText); if(x.status>=200&&x.status<300){ try{ res(JSON.parse(x.responseText||'{}')); }catch(e){ res({}); } } else rej(new Error('Upload failed: '+x.status+' '+String(x.responseText||'').slice(0,200))); };
     x.send(blob);
   });
 }
@@ -11835,7 +11844,7 @@ function renderDatabaseSection(){
   return '<div class="sf-sec db-sec">'
     +'<div class="sec-hd db-hd-sec" onclick="ST.dbOpen=ST.dbOpen!==true;renderTree()" oncontextmenu="showDbSecCtx(event)" title="Right-click for new folders and options">'
     +'<span class="sec-tog">'+(open?'▾':'▸')+'</span>'
-    +'<span class="sec-nm db-sec-nm">🗂 MyDatabase</span>'
+    +'<span class="sec-nm db-sec-nm" ondblclick="event.stopPropagation();startRenDbSec()">🗂 '+esc(_dbSecName())+'</span>'
     +'</div>'+body+'</div>';
 }
 function _renderMyJournalDB(){return _renderJournalSmartView();}
@@ -19504,12 +19513,34 @@ function dbbApplyPreset(key){
 /** Right-click the "🗂 MyDatabase" header. Until now the header had no menu
  *  at all, so a new database folder could only appear via the fixed
  *  starter-folder list in Settings. */
+/* v05.64 · J101 — the heading's own name lives in the DB.sections record `db-section`; every link goes by id (db-section, mydb-root, mydb-p-*, mydb-rec, sf-mydb), never by this text */
+function _dbSecName(){ const s=(DB.sections||[]).find(x=>x.id==='db-section'); const n=s&&typeof s.name==='string'?s.name.trim():''; return n||'MyDatabase'; }
+function startRenDbSec(){
+  const el=document.querySelector('#tree .db-sec-nm'); if(!el) return;
+  el.outerHTML='<input class="sec-inp" id="sri-db-section" value="'+esc(_dbSecName())+'" onclick="event.stopPropagation()" onblur="finRenDbSec()" onkeydown="if(event.key===\'Enter\')finRenDbSec();if(event.key===\'Escape\'){this.onblur=null;renderTree();}">';
+  setTimeout(()=>{ const i=document.getElementById('sri-db-section'); if(i){ i.focus(); i.select(); } },0);
+}
+function finRenDbSec(){
+  const inp=document.getElementById('sri-db-section'); if(!inp) return;
+  inp.onblur=null;
+  const val=inp.value.trim(), cur=_dbSecName();
+  const sec=DB.sections.find(s=>s.id==='db-section');
+  if(val&&val!==cur){
+    const now=new Date().toISOString();
+    if(sec){ sec.name=val; sec.updatedAt=now; }
+    else DB.sections.push({id:'db-section',name:val,order:9999,updatedAt:now});
+    persist();
+  }
+  renderTree();
+}
 function showDbSecCtx(ev){
   ev.preventDefault();ev.stopPropagation();
   const m=document.getElementById('ctx');
   const n=DB.folders.filter(f=>f.sectionId==='db-section'&&!f.parentId&&!f.journalMode
     &&f.id!=='db-fav-folder'&&f.id!=='db-ct-folder').length;
-  m.innerHTML='<div class="ci" onclick="newDbFolder()">➕ New database folder…</div>'
+  m.innerHTML='<div class="ci" onclick="hideCtx();startRenDbSec()">✏️ Rename section</div>'
+    +'<div class="csep"></div>'
+    +'<div class="ci" onclick="newDbFolder()">➕ New database folder…</div>'
     +'<div class="ci" onclick="hideCtx();newPlainDbFolder()">📁 New plain folder</div>'
     +'<div class="csep"></div>'
     +'<div class="ci" onclick="hideCtx();addStarterMyDatabaseFolders()">🗂 Add the starter folders</div>'
@@ -36582,6 +36613,12 @@ document.addEventListener('keydown', function(ev){
         _fired=true;
         if(navigator.vibrate) navigator.vibrate(25);
         showSecCtx({clientX:_sx,clientY:_sy,preventDefault:()=>{},stopPropagation:()=>{}},sid);
+      },600);
+    } else if(e.target.closest('.db-hd-sec')){
+      _t=setTimeout(()=>{
+        _fired=true;
+        if(navigator.vibrate) navigator.vibrate(25);
+        showDbSecCtx({clientX:_sx,clientY:_sy,preventDefault:()=>{},stopPropagation:()=>{}});
       },600);
     } else if(e.target.closest('[data-smart-sec]')){
       _t=setTimeout(()=>{
