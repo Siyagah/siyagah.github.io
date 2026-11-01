@@ -157,7 +157,7 @@ const notes = (page) => page.evaluate(() => Object.fromEntries((DB.articles || [
     const sd = await pop2.evaluate(() => document.querySelector('iframe').getAttribute('srcdoc') || '');
     r.check(/<h1>Copied<\/h1>/.test(sd) && /data:image\/jpeg;base64,/.test(sd) && st.requests.length === reqN && st.refused.length === 0, '120h offline after a first open, the cached copy still opens: its text is in the iframe and no request reached api.github.com', JSON.stringify({ sd: sd.slice(0, 80), reqs: st.requests.length - reqN, refused: st.refused }));
     await pop2.close(); await app.ctx.setOffline(false); st.refuse = false;
-    const errs = app.errors.filter((e) => !/status of 401/.test(e));   /* the wrong key's 401 is the browser's own line for the answer this row asks for */
+    const errs = app.errors.filter((e) => !/status of (401|404)/.test(e));   /* the wrong key's 401 is the browser's own line for the answer this row asks for; v05.63 (R3): so is the 404 for the store's absent `transfer` branch (updated in place; block 121c proves the app itself is quiet about it) */
     r.check(errs.length === 0, '120k no page errors in the main flow', errs.slice(0, 3).join(' | '));
   } catch (e) { r.check(false, '120 main flow threw', String(e && e.stack || e)); }
   await app.close();
@@ -218,7 +218,8 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       r.check(/🗄 Khutbah · Demo/.test(ar) || /🗄/.test(ar), '120k@390 the Smart View is a normal list with the 🗄 project · type line', ar);
     }
   } catch (e) { r.check(false, `120i${t} threw`, String(e && e.stack || e)); }
-  r.check(app.errors.length === 0, `120k${t} no page errors`, app.errors.slice(0, 3).join(' | '));
+  const perrs = app.errors.filter((e) => !/status of 404/.test(e));   /* v05.63 (R3): the absent `transfer` branch answers 404, which the browser logs itself; updated in place */
+  r.check(perrs.length === 0, `120k${t} no page errors`, perrs.slice(0, 3).join(' | '));
   await app.close();
 }
 /* the empty Smart View reaches the dialog */
