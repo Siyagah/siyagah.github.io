@@ -23740,7 +23740,7 @@ function _buildSecCtxMain(sid){
     `<div class="ci" onclick="hideCtx();startRenSec('${sid}')">✏️ Rename section</div>`+
     `<div class="ci" onclick="hideCtx();openSecWin('${sid}')">🗗 Pop out into window</div>`+
     (_secIdx(sid)>0?`<div class="ci" onclick="hideCtx();moveSection('${sid}',-1)">⬆️ Move up</div>`:'')+
-    (_secIdx(sid)>=0&&_secIdx(sid)<DB.sections.length-1?`<div class="ci" onclick="hideCtx();moveSection('${sid}',1)">⬇️ Move down</div>`:'')+
+    (_secIdx(sid)>=0&&_secIdx(sid)<_secSorted().length-1?`<div class="ci" onclick="hideCtx();moveSection('${sid}',1)">⬇️ Move down</div>`:'')+
     `<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px">`+
       `<span class="ctx-clr-lbl">🎨 Section colour</span>`+
       `<div class="ctx-colors">${ctxSecColorSwatches(sid)}</div>`+
@@ -23749,15 +23749,18 @@ function _buildSecCtxMain(sid){
     (hasConvert?`<div class="ci ci-sub" onclick="_secCtxSub('${sid}','convert')">📁 Convert to folder<span class="ci-arr">▶</span></div>`:'')+
     (canDel?`<div class="ci d" onclick="hideCtx();delSection('${sid}')">🗑 Delete section</div>`:'');
 }
-/* v05.64 · J103 — ⬆️/⬇️ for a section. Every section whose number changes gets its own updatedAt, so the order wins a merge from either side. */
-function _secSorted(){ return [...DB.sections].sort((a,b)=>(a.order||0)-(b.order||0)); }
+/* v05.64 · J103 — ⬆️/⬇️ for a section, among the owner's OWN sections only (never db-/kb-: several places take the first section
+   by order as the default home of a new folder/note, so MyDatabase must keep its 9999). A move swaps the order numbers of the two
+   neighbours and stamps only those two (stamping untouched sections lets a stale stamp beat a concurrent move, the N1 lesson);
+   only a tie (two sections with the same number) renumbers the owner's sections 0…n-1. */
+function _secSorted(){ return [...DB.sections].filter(s=>!s.id.startsWith('db-')&&!s.id.startsWith('kb-')).sort((a,b)=>(a.order||0)-(b.order||0)); }
 function _secIdx(sid){ return _secSorted().findIndex(s=>s.id===sid); }
 function moveSection(sid,dir){
   const arr=_secSorted(), i=arr.findIndex(s=>s.id===sid), j=i+(dir<0?-1:1);
   if(i<0||j<0||j>=arr.length) return false;
-  const [m]=arr.splice(i,1); arr.splice(j,0,m);
-  const now=new Date().toISOString();
-  arr.forEach((s,k)=>{ const sec=DB.sections.find(x=>x.id===s.id); if(sec&&sec.order!==k){ sec.order=k; sec.updatedAt=now; } });
+  const now=new Date().toISOString(), a=arr[i], b=arr[j];
+  if((a.order||0)!==(b.order||0)){ const t=a.order||0; a.order=b.order||0; b.order=t; a.updatedAt=now; b.updatedAt=now; }
+  else { const [m]=arr.splice(i,1); arr.splice(j,0,m); arr.forEach((s,k)=>{ if(s.order!==k){ s.order=k; s.updatedAt=now; } }); }
   persist(); renderTree();
   return true;
 }

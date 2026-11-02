@@ -153,7 +153,6 @@ for (const [W, H, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     await menuAt('#tree .sec[data-sid="sec-1"] .sec-hd'); const gotUp = await pick(/Move up/);
     const back = await page.evaluate(() => [...DB.sections].filter((s) => /^sec-/.test(s.id)).sort((x, y) => x.order - y.order).map((s) => s.id).join(','));
     r.check(gotUp && back === 'sec-1,sec-2', `123f@${W} ⬆️ Move up puts it back`, back);
-
     /* 123g — B2 */
     await menuAt('#tree .sec[data-sid="sec-1"] .sec-hd'); const gotPop = await pick(/Pop out into window/);
     const S = await winRect(page, 'sec:sec-1');
@@ -165,6 +164,15 @@ for (const [W, H, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     const S2 = await winRect(page, 'sec:sec-2');
     r.check(gotPop && !!S && S.rows.includes('f1') && S.rows.includes('f2') && !S.rows.includes('f4') && !!S2 && S2.rows.includes('f4') && !picker, `123g@${W} a section's 🗗 Pop out and the ⧉ on its heading open a window of that section's root folders (not the picker)`, JSON.stringify({ S, S2, picker }));
     await page.evaluate(() => { _fwWins.slice().forEach((w) => _fwClose(w.id)); });
+    /* 123f2 (Architect, review of v05.64): the last owner section offers no ⬇️, and a move never touches MyDatabase (db-section keeps
+       order 9999 and its stamp), because several places take the FIRST section by order as the default home of a new folder or note. */
+    const dbBefore = await page.evaluate(() => { const d = DB.sections.find((s) => s.id === 'db-section'); return { o: d.order, u: d.updatedAt || null }; });
+    await menuAt('#tree .sec[data-sid="sec-2"] .sec-hd'); const lastItems = await menuItems();
+    await page.evaluate(() => hideCtx());
+    const past = await page.evaluate(() => moveSection('sec-2', 1));
+    const dbAfter = await page.evaluate(() => { const d = DB.sections.find((s) => s.id === 'db-section'); return { o: d.order, u: d.updatedAt || null, first: [...DB.sections].sort((a, b) => a.order - b.order)[0].id }; });
+    r.check(!lastItems.some((t) => /Move down/.test(t)) && past === false && dbAfter.o === 9999 && dbAfter.u === dbBefore.u && dbAfter.first !== 'db-section', `123f2@${W} the last own section has no ⬇️ and cannot move past MyDatabase; MyDatabase keeps order 9999 and its stamp`, JSON.stringify({ lastItems, past, dbBefore, dbAfter }));
+
 
     /* 123h — B3 */
     if (tier !== 'phone') {
