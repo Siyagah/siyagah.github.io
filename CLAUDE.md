@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.64.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.65.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.65** (2 Nov 2026) — J106/J107/J108 (built by the builder, issue #259): ONE search — `_searchAll(q)` serves the side-pane box and the 🔍 pop-up (notes' text, folders, tags, types; the pop-up's search becomes `ST.lastSearch`); Manage folders gets "Inside: ▾" and a ＋ per folder row (`_afIn`; the other two copies already had the 📍 pin); ONE menu builder `_menuHTML`/`_menuRows` (OPEN · MARK · ORGANISE · REMIND & PRACTISE · DELETE, headings are not rows) on the note, folder, section, tag, Smart View, Note Type, Zab and tab menus; the rest are named in the CHANGELOG. **A new item menu goes through the builder.** Check: block 124, `tools/menus-j108.mjs`.
 - **v05.64** (2 Nov 2026) — J100/J101 (built by the builder, issue #257): every folder pops out into its own floating window (a full-width sheet on a phone), at the size of the pane or window it came from; the 🗂 MyDatabase heading renames; a Drive 401 clears the token. Second pass: ⧉ on every folder row, a search box and (phone) a chip strip for windows, ↺ Back to “MyDatabase”, section ⬆️/⬇️ and section windows (`sec:<id>`), ONE resize engine (`_ppGrab(ev,'fw:<id>',dir)`) with findable handles, J104 🎞 Scroll in Choose (`_jebScrollThese`; `_zabChoose` on the phone layouts). Check: block 123, `tools/win-j103.mjs`.
 - **v05.63** (1 Nov 2026) — J98 R3 (built by the builder, issue #255): sound/video files live in the owner's Google Drive, never in Siyagah's cloud, `main`, `DB` or a backup. A card note lists its `filesHeld` at display time (`div.mydb-media`, stripped by `_edColClean`): ▶ Play (Drive preview in a new window), ↑ Upload to Drive (from the store's temporary branch `transfer`, sha-verified, resumable over 5 MB), link kept in `DB.theme.mydbDrive[sha]`; 🗄 dialog: "Move all to Drive", ＋ Recording; `rec:{lang,len,given,status,job,drive}` on a note. Check: block 121, `tools/mydb-r3.mjs`.
 - **v05.62** (31 Oct 2026) — J98 R2 (built by the builder, issue #253): 🗄 MyDatabase — cards from the private store `Siyagah/MyDB` become notes (`fromMydb`), read with a read-only key kept in the cloud doc `mydb/v1` and the device database `siyagah-mydb-v1`; copied pages open only in a sandboxed iframe without `allow-same-origin`. Check: block 120, `tools/mydb-r2.mjs`.

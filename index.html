@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.64">
+<meta name="app-version" content="05.65">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -686,6 +686,12 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .ci.d{color:#C0392B}
 .ci.d:hover{background:#FEF0EE}
 .csep{height:1px;background:var(--border);margin:3px 0}
+/* v05.65 · J108 — the group heading every item menu shows (not a row: no .ci, no click) */
+.ctx-gh{padding:6px 11px 2px;font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--t3);cursor:default;user-select:none}
+.ctx-gh:not(:first-child){border-top:1px solid var(--border);margin-top:3px;padding-top:7px}
+#jeb-menu .jm-h{padding:7px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--t3);cursor:default;user-select:none}
+#jeb-menu .jm-h:not(:first-child){border-top:1px solid var(--border);margin-top:3px;padding-top:8px}
+#jeb-menu{max-height:calc(100dvh - 12px);overflow-y:auto}
 
 /* Modal */
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:10000}
@@ -3770,6 +3776,11 @@ sup.ann-sup:hover{text-decoration:underline}
 .gs-r-path{font-size:11px;color:var(--t3);margin-top:1px}
 .gs-r-snip{font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
 .gs-r-snip mark{background:rgba(99,102,241,.1);color:var(--accent);border-radius:2px}
+.af-plus{margin-left:auto;flex-shrink:0;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border2);border-radius:8px;font-size:15px;color:var(--t2);cursor:pointer}
+.af-plus:hover{background:var(--hover);color:var(--t1)}
+@media(max-width:639.98px){.af-plus{min-width:44px;min-height:44px}#af-in{min-height:44px!important}}
+.gs-grp,.gs-cnt-row{padding:7px 16px 4px;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.03em;background:var(--hover)}
+@media(max-width:639.98px){#gs-overlay{padding-top:0}#gs-box{width:100vw;max-height:100dvh;height:100dvh;border-radius:0}#gs-results{max-height:none;flex:1}.gs-result{min-height:44px;justify-content:center}#gs-kbd{min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center}#gs-inp{font-size:16px;min-height:44px}}
 .gs-cnt{font-size:10px;font-weight:400;color:var(--t3);margin-left:auto;flex-shrink:0}
 
 /* v28.03 Hijri Calendar */
@@ -4057,7 +4068,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.64</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.65</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6996,14 +7007,19 @@ function _renderFor(ch,fullFn,opts){
 
 function _searchWords(q){return q.toLowerCase().split(/\s+/).filter(Boolean);}
 function _matchesAllWords(text,words){const t=text.toLowerCase();return words.every(w=>t.includes(w));}
+/* v05.65 · J106 — the ONE search: the side-pane box and the 🔍 pop-up both call this, so they can never find different things. */
+function _searchAll(q){
+  const words=_searchWords(q||'');
+  return {words,
+    noteHits:DB.articles.filter(a=>_matchesAllWords(a.title+' '+strip(a.content),words)),
+    folderHits:DB.folders.filter(f=>_matchesAllWords(f.name,words)),
+    tagHits:getAllTags().filter(t=>_matchesAllWords(t.tag,words)),
+    kindHits:noteKinds().filter(k=>_matchesAllWords(k.name,words))};
+}
 function renderTree(){
   const el=document.getElementById('tree');updateAccordionBtn();
   if(ST.search&&ST.search.trim()){
-    const words=_searchWords(ST.search);
-    const noteHits=DB.articles.filter(a=>_matchesAllWords(a.title+' '+strip(a.content),words));
-    const folderHits=DB.folders.filter(f=>_matchesAllWords(f.name,words));
-    const tagHits=getAllTags().filter(t=>_matchesAllWords(t.tag,words));
-    const kindHits=noteKinds().filter(k=>_matchesAllWords(k.name,words));
+    const {noteHits,folderHits,tagHits,kindHits}=_searchAll(ST.search);
     const total=noteHits.length+folderHits.length+tagHits.length+kindHits.length;
     let h=`<div class="srl">${total} result${total!==1?'s':''}</div>`;
     if(!total){
@@ -7132,10 +7148,11 @@ function showFolderGroupCtx(ev,gid){
   ev.preventDefault();ev.stopPropagation();
   const g=folderGroups().find(x=>x.id===gid);if(!g)return;
   const m=document.getElementById('ctx');
-  m.innerHTML=
-    `<div class="ci" onclick="hideCtx();addFolderGroup()">➕ New group</div>`+
-    `<div class="ci" onclick="hideCtx();renameFolderGroup('${gid}')">✏️ Rename</div>`+
-    (gid!=='fg-general'?`<div class="csep"></div><div class="ci d" onclick="hideCtx();deleteFolderGroup('${gid}')">🗑 Delete group</div>`:'');
+  m.innerHTML=_menuHTML([
+    ['open',`<div class="ci" onclick="hideCtx();renameFolderGroup('${gid}')">✏️ Rename</div>`],
+    ['organise',`<div class="ci" onclick="hideCtx();addFolderGroup()">➕ New group</div>`],
+    ['delete',gid!=='fg-general'?`<div class="ci d" onclick="hideCtx();deleteFolderGroup('${gid}')">🗑 Delete group</div>`:'']
+  ]);
   m.style.display='block';
   const vw=window.innerWidth,vh=window.innerHeight;
   let x=ev.clientX,y=ev.clientY;
@@ -10945,7 +10962,15 @@ function setNtiCatSize(catId,sz){hideCtx();const cat=noteKindCats().find(c=>c.id
 function showNtiCatMenu(ev,catId,aid){
   if(ev&&ev.preventDefault)ev.preventDefault();
   hideCtx();const cat=noteKindCats().find(c=>c.id===catId);if(!cat)return;const m=document.getElementById('ctx');
-  m.innerHTML=`<div class="ci" onclick="renNtiCat('${catId}','${aid}')">✏ Rename</div><div class="ci" onclick="openCatClrPicker(event,'${catId}')">🎨 Change colour</div><div class="ci" onclick="toggleNtiCatBold('${catId}')">${cat.bold?'☑':'☐'} Bold</div><div class="csep"></div><div class="ci" style="cursor:default;opacity:.65;font-size:11px;padding:4px 12px 0">Text size</div><div class="ci" onclick="setNtiCatSize('${catId}','sm')">${(!cat.fontSize||cat.fontSize==='sm')?'●':'○'} Small</div><div class="ci" onclick="setNtiCatSize('${catId}','md')">${cat.fontSize==='md'?'●':'○'} Medium</div><div class="ci" onclick="setNtiCatSize('${catId}','lg')">${cat.fontSize==='lg'?'●':'○'} Large</div><div class="csep"></div><div class="ci" onclick="hideCtx();addKindInCat('','${catId}')">➕ Add Note-Type here</div><div class="csep"></div><div class="ci" onclick="hideCtx();addNtiCat()">📁 New category</div><div class="csep"></div><div class="ci d" onclick="delNtiCat('${catId}','${aid}')">🗑 Delete</div>`;
+  m.innerHTML=_menuHTML([
+    ['open',`<div class="ci" onclick="renNtiCat('${catId}','${aid}')">✏ Rename</div>`],
+    ['mark',`<div class="ci" onclick="openCatClrPicker(event,'${catId}')">🎨 Change colour</div>`],
+    ['mark',`<div class="ci" onclick="toggleNtiCatBold('${catId}')">${cat.bold?'☑':'☐'} Bold</div>`],
+    ['mark',`<div class="ci" style="cursor:default;opacity:.65;font-size:11px;padding:4px 12px 0">Text size</div><div class="ci" onclick="setNtiCatSize('${catId}','sm')">${(!cat.fontSize||cat.fontSize==='sm')?'●':'○'} Small</div><div class="ci" onclick="setNtiCatSize('${catId}','md')">${cat.fontSize==='md'?'●':'○'} Medium</div><div class="ci" onclick="setNtiCatSize('${catId}','lg')">${cat.fontSize==='lg'?'●':'○'} Large</div>`],
+    ['organise',`<div class="ci" onclick="hideCtx();addKindInCat('','${catId}')">➕ Add Note-Type here</div>`],
+    ['organise',`<div class="ci" onclick="hideCtx();addNtiCat()">📁 New category</div>`],
+    ['delete',`<div class="ci d" onclick="delNtiCat('${catId}','${aid}')">🗑 Delete</div>`]
+  ]);
   _ctxPos(m,ev);
 }
 function showNtiSectionMenu(ev){
@@ -10953,12 +10978,12 @@ function showNtiSectionMenu(ev){
   if(ev&&ev.stopPropagation)ev.stopPropagation();
   hideCtx();
   const m=document.getElementById('ctx');
-  m.innerHTML=`<div class="ci" onclick="renNtiSectionLabel()">✏ Rename "Note Types" label</div>`
-    +`<div class="ci" onclick="openNtiSectionClrPicker(event)">🎨 Change label colour</div>`
-    +`<div class="csep"></div>`
-    +`<div class="ci" onclick="hideCtx();addNtiCat()">📁 New category</div>`
-    +`<div class="csep"></div>`
-    +`<div class="ci" onclick="hideCtx();ntiSbToggleAllCats()">⇅ Expand/Collapse all categories</div>`;
+  m.innerHTML=_menuHTML([
+    ['open',`<div class="ci" onclick="renNtiSectionLabel()">✏ Rename "Note Types" label</div>`],
+    ['mark',`<div class="ci" onclick="openNtiSectionClrPicker(event)">🎨 Change label colour</div>`],
+    ['organise',`<div class="ci" onclick="hideCtx();addNtiCat()">📁 New category</div>`],
+    ['organise',`<div class="ci" onclick="hideCtx();ntiSbToggleAllCats()">⇅ Expand/Collapse all categories</div>`]
+  ]);
   _ctxPos(m,ev);
 }
 function renNtiSectionLabel(){
@@ -12038,8 +12063,10 @@ function addFavCat(){
 function showFavCatCtx(ev,catId){
   const cat=_getFavCats().find(c=>c.id===catId);if(!cat)return;
   const m=document.getElementById('ctx');
-  m.innerHTML='<div class="ci" onclick="hideCtx();renameFavCat(\''+catId+'\')">✏ Rename "'+esc(cat.name)+'"</div>'
-    +'<div class="ci d" onclick="hideCtx();deleteFavCat(\''+catId+'\')">🗑 Delete "'+esc(cat.name)+'"</div>';
+  m.innerHTML=_menuHTML([
+    ['open','<div class="ci" onclick="hideCtx();renameFavCat(\''+catId+'\')">✏ Rename "'+esc(cat.name)+'"</div>'],
+    ['delete','<div class="ci d" onclick="hideCtx();deleteFavCat(\''+catId+'\')">🗑 Delete "'+esc(cat.name)+'"</div>']
+  ]);
   m.style.display='block';
   let x=ev.clientX,y=ev.clientY;
   setTimeout(()=>{
@@ -13189,10 +13216,12 @@ function showTabMenu(ev,id){
   const m=document.getElementById('ctx');
   const cur=_tabNameOf(id);
   m.innerHTML='<div class="ci-nti-hd">'+esc((a.title||'Untitled').slice(0,40))+'</div>'
-    +'<div class="ci" onclick="renameTab(\''+id+'\')">✏️ '+(cur?'Change the tab\'s short name':'Give this tab a short name')+'</div>'
-    +(cur?'<div class="ci" onclick="hideCtx();_setTabName(\''+id+'\',\'\')">↺ Show the full title again</div>':'')
-    +(beside?'<div class="ci" onclick="hideCtx();openTabBeside(\''+id+'\',_tabMenuOrig)">🗗 Open beside this note (Multi)</div>':'')
-    +'<div class="ci" onclick="event.stopPropagation();hideCtx();openTabClrPicker(event,\''+id+'\')">🎨 Tab colour</div>';
+    +_menuHTML([
+      ['open','<div class="ci" onclick="renameTab(\''+id+'\')">✏️ '+(cur?'Change the tab\'s short name':'Give this tab a short name')+'</div>'],
+      ['open',cur?'<div class="ci" onclick="hideCtx();_setTabName(\''+id+'\',\'\')">↺ Show the full title again</div>':''],
+      ['open',beside?'<div class="ci" onclick="hideCtx();openTabBeside(\''+id+'\',_tabMenuOrig)">🗗 Open beside this note (Multi)</div>':''],
+      ['mark','<div class="ci" onclick="event.stopPropagation();hideCtx();openTabClrPicker(event,\''+id+'\')">🎨 Tab colour</div>']
+    ]);
   m.style.display='block';
   const vw=window.innerWidth,vh=window.innerHeight,mw=m.offsetWidth||200,mh=m.offsetHeight||100;
   m.style.left=Math.max(5,Math.min(ev.clientX,vw-mw-5))+'px';m.style.top=Math.max(5,Math.min(ev.clientY,vh-mh-5))+'px';
@@ -15793,7 +15822,7 @@ function openGlobalSearch(){
   ov.innerHTML='<div id="gs-box">'
     +'<div id="gs-inp-row">'
     +'<span id="gs-inp-icon">🔍</span>'
-    +'<input id="gs-inp" placeholder="Search notes, tags, content…" autocomplete="off" spellcheck="false">'
+    +'<input id="gs-inp" placeholder="Search notes, folders, tags, types…" autocomplete="off" spellcheck="false">'
     +'<span id="gs-kbd" onclick="closeGlobalSearch()">Esc</span>'
     +'</div>'
     +'<div id="gs-results"><div class="gs-empty">Start typing to search…</div></div>'
@@ -15813,22 +15842,10 @@ function openGlobalSearch(){
 function closeGlobalSearch(){
   document.getElementById('gs-overlay')?.remove();
 }
+/* v05.65 · J106 — the pop-up asks _searchAll(), the same function the side-pane box asks: notes (title + text), folders, tags, Note Types. */
 function _gsSearch(q){
-  if(!q||q.length<2)return[];
-  const ql=q.toLowerCase();
-  return DB.articles.filter(a=>!a.trash).map(a=>{
-    let score=0;
-    const ti=(a.title||'').toLowerCase();
-    const tg=(a.tags||[]).join(' ').toLowerCase();
-    // Strip HTML + base64 blobs for content search
-    const raw=(a.body||'').replace(/src="data:[^"]+"/g,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,800).toLowerCase();
-    if(ti===ql)score+=120;
-    else if(ti.startsWith(ql))score+=90;
-    else if(ti.includes(ql))score+=60;
-    if(tg.includes(ql))score+=35;
-    if(raw.includes(ql))score+=15;
-    return {a,score};
-  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,10).map(x=>x.a);
+  if(!q||!q.trim())return null;
+  return _searchAll(q);
 }
 function _gsHL(text,q){
   if(!q||!text)return esc(text||'');
@@ -15838,26 +15855,49 @@ function _gsHL(text,q){
 }
 function _gsRender(q){
   const box=document.getElementById('gs-results');if(!box)return;
-  if(!q||q.length<2){
-    box.innerHTML='<div class="gs-empty">'+(q?'Keep typing…':'Start typing to search…')+'</div>';
+  if(!q||!q.trim()){
+    box.innerHTML='<div class="gs-empty">Start typing to search…</div>';
     return;
   }
-  const results=_gsSearch(q);
-  if(!results.length){box.innerHTML='<div class="gs-empty">No results for “'+esc(q)+'”</div>';return;}
-  let h='';
-  results.forEach(a=>{
-    const fol=DB.folders.find(f=>f.id===a.folderId);
-    const sec=fol?DB.sections.find(s=>s.id===fol.sectionId):null;
-    const path=[sec?.name,fol?.name].filter(Boolean).join(' › ');
-    const raw=(a.body||'').replace(/src="data:[^"]+"/g,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-    const qi=raw.toLowerCase().indexOf(q.toLowerCase());
-    const snip=qi>=0?'…'+raw.slice(Math.max(0,qi-25),qi+70).trim()+'…':raw.slice(0,80)+(raw.length>80?'…':'');
-    h+='<div class="gs-result" data-id="'+a.id+'" onclick="_gsOpen(\''+a.id+'\')">';
-    h+='<div class="gs-r-title">'+_gsHL(a.title||'Untitled',q)+'</div>';
-    if(path)h+='<div class="gs-r-path">'+esc(path)+'</div>';
-    if(snip)h+='<div class="gs-r-snip">'+_gsHL(snip,q)+'</div>';
-    h+='</div>';
-  });
+  const r=_gsSearch(q);
+  const total=r.noteHits.length+r.folderHits.length+r.tagHits.length+r.kindHits.length;
+  if(!total){box.innerHTML='<div class="gs-empty">No results for “'+esc(q)+'”</div>';return;}
+  const w0=r.words[0]||'';
+  const CAP=30;
+  let h='<div class="gs-cnt-row" role="presentation">'+total+' result'+(total!==1?'s':'')+'</div>';
+  const row=(kind,id,inner)=>'<div class="gs-result" role="option" data-kind="'+kind+'" data-id="'+esc(id)+'" onclick="_gsOpen(\''+kind+'\','+_ja(id)+')">'+inner+'</div>';
+  if(r.folderHits.length){
+    h+='<div class="gs-grp" role="presentation">📁 Folders</div>';
+    r.folderHits.slice(0,CAP).forEach(f=>{
+      const p=pathOf(f.id);
+      const crumb=p.length>1?p.slice(0,-1).map(x=>x.name).join(' › '):'';
+      h+=row('folder',f.id,'<div class="gs-r-title">'+_gsHL(f.name,w0)+'</div>'+(crumb?'<div class="gs-r-path">'+esc(crumb)+'</div>':''));
+    });
+  }
+  if(r.tagHits.length){
+    h+='<div class="gs-grp" role="presentation">🏷 Tags</div>';
+    r.tagHits.slice(0,CAP).forEach(t=>{
+      h+=row('tag',t.tag,'<div class="gs-r-title">#'+_gsHL(t.tag,w0)+' <span class="gs-cnt">'+t.count+'</span></div>');
+    });
+  }
+  if(r.kindHits.length){
+    h+='<div class="gs-grp" role="presentation">🔖 Note Types</div>';
+    r.kindHits.slice(0,CAP).forEach(k=>{
+      h+=row('kind',k.id,'<div class="gs-r-title"><span class="nti-dot" style="background:'+esc(k.color||'')+'"></span> '+_gsHL(k.name,w0)+'</div>');
+    });
+  }
+  if(r.noteHits.length){
+    h+='<div class="gs-grp" role="presentation">📄 Notes'+(r.noteHits.length>CAP?' (first '+CAP+')':'')+'</div>';
+    r.noteHits.slice(0,CAP).forEach(a=>{
+      const fol=DB.folders.find(f=>f.id===a.folderId);
+      const sec=fol?DB.sections.find(s=>s.id===fol.sectionId):null;
+      const path=[sec?.name,fol?.name].filter(Boolean).join(' › ');
+      const raw=strip(a.content||'').replace(/\s+/g,' ').trim();
+      const qi=w0?raw.toLowerCase().indexOf(w0):-1;
+      const snip=qi>=0?'…'+raw.slice(Math.max(0,qi-25),qi+70).trim()+'…':raw.slice(0,80)+(raw.length>80?'…':'');
+      h+=row('note',a.id,'<div class="gs-r-title">'+_gsHL(a.title||'Untitled',w0)+'</div>'+(path?'<div class="gs-r-path">'+esc(path)+'</div>':'')+(snip?'<div class="gs-r-snip">'+_gsHL(snip,w0)+'</div>':''));
+    });
+  }
   box.innerHTML=h;
   _gsSetActive(0);
 }
@@ -15873,11 +15913,17 @@ function _gsNav(dir){
 }
 function _gsConfirm(){
   const active=document.querySelector('.gs-result.gs-active');
-  if(active)_gsOpen(active.dataset.id);
+  if(active)_gsOpen(active.dataset.kind,active.dataset.id);
 }
-function _gsOpen(id){
+function _gsOpen(kind,id){
+  /* the pop-up's search becomes "Back to search results" (ST.lastSearch), same as the box */
+  const q=(document.getElementById('gs-inp')?.value||'').trim();
+  if(q){ST.lastSearch=q;ST.search='';_updateSearchAccessUI();}
   closeGlobalSearch();
-  tabSelect(id);
+  if(kind==='folder')selFolder(id);
+  else if(kind==='tag')selTag(id);
+  else if(kind==='kind')selKind(id);
+  else tabSelect(id);
 }
 
 
@@ -19823,17 +19869,16 @@ function showDbSecCtx(ev){
   const m=document.getElementById('ctx');
   const n=DB.folders.filter(f=>f.sectionId==='db-section'&&!f.parentId&&!f.journalMode
     &&f.id!=='db-fav-folder'&&f.id!=='db-ct-folder').length;
-  m.innerHTML='<div class="ci" onclick="hideCtx();startRenDbSec()">✏️ Rename section</div>'
-    +(_dbSecName()!=='MyDatabase'?'<div class="ci" onclick="hideCtx();resetDbSecName()">↺ Back to “MyDatabase”</div>':'')
-    +'<div class="csep"></div>'
-    +'<div class="ci" onclick="newDbFolder()">➕ New database folder…</div>'
-    +'<div class="ci" onclick="hideCtx();newPlainDbFolder()">📁 New plain folder</div>'
-    +'<div class="csep"></div>'
-    +'<div class="ci" onclick="hideCtx();addStarterMyDatabaseFolders()">🗂 Add the starter folders</div>'
-    +(n?'<div class="ci" onclick="hideCtx();autoNumberDbFolders()">🔢 Auto-number these '+n+' folders</div>':'')
-    +'<div class="csep"></div>'
-    +'<div class="ci" onclick="hideCtx();ST.dbOpen=true;renderTree()">▾ Expand section</div>'
-    +'<div class="ci" onclick="hideCtx();ST.dbOpen=false;renderTree()">▸ Collapse section</div>';
+  m.innerHTML=_menuHTML([
+    ['open','<div class="ci" onclick="hideCtx();startRenDbSec()">✏️ Rename section</div>'],
+    ['open',_dbSecName()!=='MyDatabase'?'<div class="ci" onclick="hideCtx();resetDbSecName()">↺ Back to “MyDatabase”</div>':''],
+    ['open','<div class="ci" onclick="hideCtx();ST.dbOpen=true;renderTree()">▾ Expand section</div>'],
+    ['open','<div class="ci" onclick="hideCtx();ST.dbOpen=false;renderTree()">▸ Collapse section</div>'],
+    ['organise','<div class="ci" onclick="newDbFolder()">➕ New database folder…</div>'],
+    ['organise','<div class="ci" onclick="hideCtx();newPlainDbFolder()">📁 New plain folder</div>'],
+    ['organise','<div class="ci" onclick="hideCtx();addStarterMyDatabaseFolders()">🗂 Add the starter folders</div>'],
+    ['organise',n?'<div class="ci" onclick="hideCtx();autoNumberDbFolders()">🔢 Auto-number these '+n+' folders</div>':'']
+  ]);
   m.style.display='block';
   const vw=window.innerWidth,vh=window.innerHeight;
   let x=ev.clientX,y=ev.clientY;
@@ -21468,34 +21513,34 @@ function _buildFolderCtxMain(fid){
     ? `<div class="ci" onclick="hideCtx();moveFolderToTop('${fid}')">⬆ Move to top level</div>`
     : '';
   const hasMoveSec=_f&&!_f.parentId&&DB.sections&&DB.sections.some(s=>s.id!==_f.sectionId);
-  return `<div class="ci" onclick="hideCtx();openModal('folder','${fid}')">📁 Add subfolder</div>
-    <div class="ci" onclick="hideCtx();openModal('art','${fid}')">📄 Add note here</div>
-    <div class="ci" onclick="hideCtx();openModal('rename','${fid}')">✏️ Rename folder</div>
-    <div class="ci" onclick="hideCtx();openFolderWin('${fid}')">🗗 Pop out into window</div>
-    ${_topRow}
-    <div class="ci" onclick="hideCtx();autoNumberAll()">🔢 Auto-number all folders</div>
-    <div class="ci" onclick="hideCtx();offerRenumberManual('${fid}')">↕ Renumber siblings only</div>
-    <div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px">
+  const O=h=>['open',h], M=h=>['mark',h], G=h=>['organise',h], R=h=>['remind',h];
+  return _menuHTML([
+    O(`<div class="ci" onclick="hideCtx();openModal('rename','${fid}')">✏️ Rename folder</div>`),
+    O(`<div class="ci" onclick="hideCtx();openFolderWin('${fid}')">🗗 Pop out into window</div>`),
+    M(`<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px">
       <span class="ctx-clr-lbl">🎨 Folder colour</span>
       <div class="ctx-colors">
         ${ctxColorSwatches(fid)}
       </div>
-    </div>
-    ${_f&&_f.parentId===MYWALL_ROOT_ID?`<div class="csep"></div>
-    <div class="ci" style="cursor:default;opacity:.65;font-size:11px;padding:4px 12px 0">📦 Move to group</div>
+    </div>`),
+    M(`<div class="ci" onclick="${_f&&_f.pinHash?'removeFolderPin':'setFolderPin'}('${fid}')">${_f&&_f.pinHash?'🔓 Remove PIN':'🔒 Set PIN'}</div>`),
+    G(`<div class="ci" onclick="hideCtx();openModal('folder','${fid}')">📁 Add subfolder</div>`),
+    G(`<div class="ci" onclick="hideCtx();openModal('art','${fid}')">📄 Add note here</div>`),
+    G(_topRow),
+    G(`<div class="ci" onclick="hideCtx();autoNumberAll()">🔢 Auto-number all folders</div>`),
+    G(`<div class="ci" onclick="hideCtx();offerRenumberManual('${fid}')">↕ Renumber siblings only</div>`),
+    G(_f&&_f.parentId===MYWALL_ROOT_ID?`<div class="ci" style="cursor:default;opacity:.65;font-size:11px;padding:4px 12px 0">📦 Move to group</div>
     ${folderGroups().filter(g=>g.id!==folderGroupOf(_f)).map(g=>`<div class="ci" onclick="hideCtx();moveFolderToGroup('${fid}','${g.id}')">${g.icon||'📁'} → ${esc(g.name)}</div>`).join('')}
-    <div class="ci" onclick="hideCtx();addFolderGroupThenMove('${fid}')">➕ New group…</div>`:''}
-    ${hasMoveSec?`<div class="ci ci-sub" onclick="_folderCtxSub('${fid}','movesec')">↗ Move to section<span class="ci-arr">▶</span></div>`:''}
-    ${_isSysFolder(fid)?'':`<div class="ci" onclick="hideCtx();convertFolderToSection('${fid}')">🗂 Convert to section</div>`}
-    <div class="ci" onclick="hideCtx();toggleJournalMode('${fid}')">${_f&&_f.journalMode?'📓 Remove Journal mode':'📓 Set as Journal'}</div>
-    ${_f&&_f.journalMode&&_f.sectionId!=='db-section'?`<div class="ci" onclick="hideCtx();moveToMyJournal('${fid}')">📓 Move to My Journal</div>`:''}
-    <div class="csep"></div>
-    <div class="ci" onclick="toggleFolderStructured('${fid}')">${_f&&_f.structured?'🗂 Turn off Structured mode':'🗂 Make Structured Folder'}</div>
-    ${_f&&_f.structured?`<div class="ci" onclick="openFieldBuilder('${fid}')">✏ Edit Fields</div>`:''}
-    <div class="ci" onclick="openDbFolderBuilder('${fid}')">📊 Set folder function — purpose, input, report…</div>
-    <div class="ci" onclick="${_f&&_f.pinHash?'removeFolderPin':'setFolderPin'}('${fid}')">${_f&&_f.pinHash?'🔓 Remove PIN':'🔒 Set PIN'}</div>
-    <div class="csep"></div>
-    <div class="ci d" onclick="hideCtx();confirmDel('folder','${fid}')">🗑 Delete folder</div>`;
+    <div class="ci" onclick="hideCtx();addFolderGroupThenMove('${fid}')">➕ New group…</div>`:''),
+    G(hasMoveSec?`<div class="ci ci-sub" onclick="_folderCtxSub('${fid}','movesec')">↗ Move to section<span class="ci-arr">▶</span></div>`:''),
+    G(_isSysFolder(fid)?'':`<div class="ci" onclick="hideCtx();convertFolderToSection('${fid}')">🗂 Convert to section</div>`),
+    G(`<div class="ci" onclick="toggleFolderStructured('${fid}')">${_f&&_f.structured?'🗂 Turn off Structured mode':'🗂 Make Structured Folder'}</div>`),
+    G(_f&&_f.structured?`<div class="ci" onclick="openFieldBuilder('${fid}')">✏ Edit Fields</div>`:''),
+    G(`<div class="ci" onclick="openDbFolderBuilder('${fid}')">📊 Set folder function — purpose, input, report…</div>`),
+    R(`<div class="ci" onclick="hideCtx();toggleJournalMode('${fid}')">${_f&&_f.journalMode?'📓 Remove Journal mode':'📓 Set as Journal'}</div>`),
+    R(_f&&_f.journalMode&&_f.sectionId!=='db-section'?`<div class="ci" onclick="hideCtx();moveToMyJournal('${fid}')">📓 Move to My Journal</div>`:''),
+    ['delete',`<div class="ci d" onclick="hideCtx();confirmDel('folder','${fid}')">🗑 Delete folder</div>`]
+  ],false);
 }
 function showCtx(ev,fid){
   if(_dragId)return;
@@ -23699,12 +23744,10 @@ function setSmartViewColor(col){
 function showSmartViewCtx(ev){
   ev.preventDefault();ev.stopPropagation();
   const m=document.getElementById('ctx');
-  m.innerHTML=
-    `<div class="ci" onclick="hideCtx();startRenSmartViews()">✏️ Rename section</div>`+
-    `<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px">`+
-      `<span class="ctx-clr-lbl">🎨 Section colour</span>`+
-      `<div class="ctx-colors">${ctxSfColorSwatches()}</div>`+
-    `</div>`;
+  m.innerHTML=_menuHTML([
+    ['open',`<div class="ci" onclick="hideCtx();startRenSmartViews()">✏️ Rename section</div>`],
+    ['mark',`<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px"><span class="ctx-clr-lbl">🎨 Section colour</span><div class="ctx-colors">${ctxSfColorSwatches()}</div></div>`]
+  ]);
   m.style.display='block';
   const x=ev.clientX||window.innerWidth/2, y=ev.clientY||100;
   const mw=m.offsetWidth||170,mh=m.offsetHeight||100;
@@ -23738,18 +23781,16 @@ function _buildSecCtxMain(sid){
   const canDel=DB.sections.length>1;
   const hasConvert=!sid.startsWith('db-')&&!sid.startsWith('kb-')&&
     DB.sections.some(s=>s.id!==sid&&!s.id.startsWith('db-')&&!s.id.startsWith('kb-'));
-  return `<div class="ci" onclick="hideCtx();addFolderInSec('${sid}')">📁 New folder here</div>`+
-    `<div class="ci" onclick="hideCtx();startRenSec('${sid}')">✏️ Rename section</div>`+
-    `<div class="ci" onclick="hideCtx();openSecWin('${sid}')">🗗 Pop out into window</div>`+
-    (_secIdx(sid)>0?`<div class="ci" onclick="hideCtx();moveSection('${sid}',-1)">⬆️ Move up</div>`:'')+
-    (_secIdx(sid)>=0&&_secIdx(sid)<_secSorted().length-1?`<div class="ci" onclick="hideCtx();moveSection('${sid}',1)">⬇️ Move down</div>`:'')+
-    `<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px">`+
-      `<span class="ctx-clr-lbl">🎨 Section colour</span>`+
-      `<div class="ctx-colors">${ctxSecColorSwatches(sid)}</div>`+
-    `</div>`+
-    (canDel||hasConvert?`<div class="csep"></div>`:'')+
-    (hasConvert?`<div class="ci ci-sub" onclick="_secCtxSub('${sid}','convert')">📁 Convert to folder<span class="ci-arr">▶</span></div>`:'')+
-    (canDel?`<div class="ci d" onclick="hideCtx();delSection('${sid}')">🗑 Delete section</div>`:'');
+  return _menuHTML([
+    ['open',`<div class="ci" onclick="hideCtx();startRenSec('${sid}')">✏️ Rename section</div>`],
+    ['open',`<div class="ci" onclick="hideCtx();openSecWin('${sid}')">🗗 Pop out into window</div>`],
+    ['mark',`<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px"><span class="ctx-clr-lbl">🎨 Section colour</span><div class="ctx-colors">${ctxSecColorSwatches(sid)}</div></div>`],
+    ['organise',`<div class="ci" onclick="hideCtx();addFolderInSec('${sid}')">📁 New folder here</div>`],
+    ['organise',_secIdx(sid)>0?`<div class="ci" onclick="hideCtx();moveSection('${sid}',-1)">⬆️ Move up</div>`:''],
+    ['organise',_secIdx(sid)>=0&&_secIdx(sid)<_secSorted().length-1?`<div class="ci" onclick="hideCtx();moveSection('${sid}',1)">⬇️ Move down</div>`:''],
+    ['organise',hasConvert?`<div class="ci ci-sub" onclick="_secCtxSub('${sid}','convert')">📁 Convert to folder<span class="ci-arr">▶</span></div>`:''],
+    ['delete',canDel?`<div class="ci d" onclick="hideCtx();delSection('${sid}')">🗑 Delete section</div>`:'']
+  ],false);
 }
 /* v05.64 · J103 — ⬆️/⬇️ for a section, among the owner's OWN sections only (never db-/kb-: several places take the first section
    by order as the default home of a new folder/note, so MyDatabase must keep its 9999). A move swaps the order numbers of the two
@@ -26791,7 +26832,7 @@ function _jebEatLift(m){
 function _jebShowMenu(rows,anchor,x,y){
   _jebHideMenu();
   const m=document.createElement('div'); m.id='jeb-menu';
-  m.innerHTML=rows.map((r,i)=>`<div class="jm${r.off?' off':''}${r.d?' d':''}" data-i="${i}">${esc(r.t)}</div>`).join('');
+  m.innerHTML=rows.map((r,i)=>r.h?`<div class="jm-h" role="presentation">${esc(r.h)}</div>`:`<div class="jm${r.off?' off':''}${r.d?' d':''}" data-i="${i}">${esc(r.t)}</div>`).join('');
   m.addEventListener('click',e=>{
     const el=e.target.closest('.jm'); if(!el) return;
     const r=rows[+el.dataset.i]; if(!r.keep) _jebHideMenu();
@@ -26828,55 +26869,57 @@ function _jebPocketMenu(pid,x,y,anchorEl){
   const pk=_jebPocket(pid); if(!pk) return;
   const ps=jebChildren(_jebParentOf(pid)), i=ps.findIndex(p=>p.id===pid), done=jebItems(pid).filter(t=>t.done).length;
   const anchor=anchorEl||document.querySelector(`#jeb-bar .jeb-chip[data-pid="${pid}"]`);
-  _jebShowMenu([
-    {t:'✏️ Rename',f:()=>jebRenameDialog(pid)},
-    {t:'🎨 Icon & colour',f:()=>jebIconColourDialog(pid)},
-    {t:'📂 Move into…',f:()=>_jebMoveIntoOpen(pid)},
-    {t:'＋ New Zab inside',f:()=>jebNewPocketDialog(pid)},
-    {t:'🧩 Zab kind ▸',keep:true,f:()=>{
+  _jebShowMenu(_menuRows([
+    ['open',{t:'✏️ Rename',f:()=>jebRenameDialog(pid)}],
+    ['open',{t:'⚙ Zab settings…',f:()=>openZabSettings()}],
+    ['mark',{t:'🎨 Icon & colour',f:()=>jebIconColourDialog(pid)}],
+    ['mark',{t:(_zabTkHas(pid)?'☑':'☐')+' 🎞 In the scrolling titles',f:()=>_zabTkToggle(pid)}],   /* v05.55 · J86 — one tap per Zab */
+    ['organise',{t:'📂 Move into…',f:()=>_jebMoveIntoOpen(pid)}],
+    ['organise',{t:'＋ New Zab inside',f:()=>jebNewPocketDialog(pid)}],
+    ['organise',{t:'🧩 Zab kind ▸',keep:true,f:()=>{
       const cur=_jebType(pk);
       const rows=_JEB_TYPES.map(k=>({t:(k===cur?'☑ ':'☐ ')+_JEB_TYPE_LABEL[k]+(k===cur?' ✓':''),f:()=>{ jebEditPocket(pid,{ztype:k}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); }}));
       rows.push({t:'◀ Back',keep:true,f:()=>_jebPocketMenu(pid,x,y,anchorEl)});
       _jebShowMenu(rows,anchor&&(x==null)?anchor:null,x,y);
-    }},
-    {t:'◀ Move left',off:i<=0,f:()=>{ jebMovePocket(pid,i-1); jebRefresh(); }},
-    {t:'Move right ▶',off:i>=ps.length-1,f:()=>{ jebMovePocket(pid,i+1); jebRefresh(); }},
-    {t:'🧹 Clear done items ('+done+')',off:!done,f:()=>_jebClearDoneUI(pid)},
-    {t:(_zabTkHas(pid)?'☑':'☐')+' 🎞 In the scrolling titles',f:()=>_zabTkToggle(pid)},   /* v05.55 · J86 — one tap per Zab */
-    {t:'⚙ Zab settings…',f:()=>openZabSettings()},
-    {t:'🗑 Delete Zab',d:true,f:()=>{ const par=_jebParentOf(pid); if(jebDeletePocket(pid)){ if(_jebOpen===pid){ if(par) jebOpenPanel(par); else jebClosePanel(); } toast('Zab moved to Trash'); } _jebPanelSig=''; jebRefresh(); }}
-  ],anchor&&(x==null)?anchor:null,x,y);
+    }}],
+    ['organise',{t:'◀ Move left',off:i<=0,f:()=>{ jebMovePocket(pid,i-1); jebRefresh(); }}],
+    ['organise',{t:'Move right ▶',off:i>=ps.length-1,f:()=>{ jebMovePocket(pid,i+1); jebRefresh(); }}],
+    ['mark',{t:'🧹 Clear done items ('+done+')',off:!done,f:()=>_jebClearDoneUI(pid)}],
+    ['delete',{t:'🗑 Delete Zab',d:true,f:()=>{ const par=_jebParentOf(pid); if(jebDeletePocket(pid)){ if(_jebOpen===pid){ if(par) jebOpenPanel(par); else jebClosePanel(); } toast('Zab moved to Trash'); } _jebPanelSig=''; jebRefresh(); }}]
+  ]),anchor&&(x==null)?anchor:null,x,y);
 }
 function _jebItemMenu(iid,anchor){
   const it=_jebItem(iid); if(!it) return;
   const back=()=>_jebItemMenu(iid,anchor);
   const lu=(typeof it.url==='string'&&/^https?:\/\//i.test(it.url))?it.url:_jebUrlIn(it.text);   /* v05.38 · Z14 — an item holding a web address opens it from its menu (the band, the panel, the deck) */
-  _jebShowMenu([
-    ...(lu?[{t:'🔗 Open link',f:()=>{ try{ window.open(lu,'_blank','noopener'); }catch(e){} }}]:[]),
-    {t:it.done?'☐ Not done':'☑ Done',f:()=>{ if(jebToggleDone(iid)){ _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } }},   /* v05.32 · Z10 — status, from the scrolling band and every other item menu */
-    {t:'✏️ Edit',f:()=>{
+  const ty=_jebType(_jebPocket(it.pocketId));
+  const O=(r)=>['open',r], M=(r)=>['mark',r], G=(r)=>['organise',r], R=(r)=>['remind',r];
+  _jebShowMenu(_menuRows([
+    ...(lu?[O({t:'🔗 Open link',f:()=>{ try{ window.open(lu,'_blank','noopener'); }catch(e){} }})]:[]),
+    M({t:it.done?'☐ Not done':'☑ Done',f:()=>{ if(jebToggleDone(iid)){ _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } }}),   /* v05.32 · Z10 — status, from the scrolling band and every other item menu */
+    O({t:'✏️ Edit',f:()=>{
       const shown=(_jebDeck&&document.querySelector(`#jeb-deck .jeb-card[data-iid="${iid}"]`))||(_jebOpen&&document.querySelector(`#jeb-panel .jeb-it[data-iid="${iid}"]`));   /* a closed panel keeps its rows in the page */
       if(!shown){ const x=_jebItem(iid); if(x) jebOpenPanel(x.pocketId); }   /* from the band: open that Zab's panel first */
       _jebStartEdit(iid);
-    }},
-    ...(_jebType(_jebPocket(it.pocketId))==='links'?[{t:'👤 Person…',f:()=>_jebPickOpen(iid,'people')},{t:'# Issue…',f:()=>_jebPickOpen(iid,'issues')}]:[]),
-    ...(_jebType(_jebPocket(it.pocketId))==='tasks'?[
-      {t:'📅 Due…',f:()=>_jebDueOpen(iid,anchor)},
-      {t:(it.pri>0?'☑ ':'☐ ')+'⚑ High priority',f:()=>{ const x=_jebItem(iid); if(x){ jebEditItem(iid,{pri:x.pri>0?0:1}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } }},
-      {t:'☑ Steps…',f:()=>_jebStepsToggle(iid,true)}]:[]),
-    ...(_jebType(_jebPocket(it.pocketId))==='ideas'?[{t:'★ Stars…',f:()=>_jebStarsOpen(iid)},{t:'# Topic…',f:()=>_jebPickOpen(iid,'topics')}]:[]),   /* v05.12 · Z6c */
-    ...(_jebType(_jebPocket(it.pocketId))==='shop'?[{t:'🔢 Quantity…',f:()=>_jebQtyEdit(iid)},{t:'🏪 Shop…',f:()=>_jebPickOpen(iid,'shop')}]:[]),
-    {t:'✎ Title…',f:()=>_jebTitleEdit(iid)},
-    {t:'📎 Attach',f:()=>_jebAttOpen(iid,anchor)},
-    {t:'→ Note',f:()=>_jebToNoteUI(iid)},
-    {t:'📂 Move to Zab ▸',keep:true,f:()=>{
+    }}),
+    ...(ty==='links'?[G({t:'👤 Person…',f:()=>_jebPickOpen(iid,'people')}),G({t:'# Issue…',f:()=>_jebPickOpen(iid,'issues')})]:[]),
+    ...(ty==='tasks'?[
+      R({t:'📅 Due…',f:()=>_jebDueOpen(iid,anchor)}),
+      M({t:(it.pri>0?'☑ ':'☐ ')+'⚑ High priority',f:()=>{ const x=_jebItem(iid); if(x){ jebEditItem(iid,{pri:x.pri>0?0:1}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } }}),
+      G({t:'☑ Steps…',f:()=>_jebStepsToggle(iid,true)})]:[]),
+    ...(ty==='ideas'?[M({t:'★ Stars…',f:()=>_jebStarsOpen(iid)}),G({t:'# Topic…',f:()=>_jebPickOpen(iid,'topics')})]:[]),   /* v05.12 · Z6c */
+    ...(ty==='shop'?[G({t:'🔢 Quantity…',f:()=>_jebQtyEdit(iid)}),G({t:'🏪 Shop…',f:()=>_jebPickOpen(iid,'shop')})]:[]),
+    O({t:'✎ Title…',f:()=>_jebTitleEdit(iid)}),
+    G({t:'📎 Attach',f:()=>_jebAttOpen(iid,anchor)}),
+    G({t:'→ Note',f:()=>_jebToNoteUI(iid)}),
+    G({t:'📂 Move to Zab ▸',keep:true,f:()=>{
       const tt=_jebTree(), others=tt.flat.filter(x=>x.id!==it.pocketId).map(x=>({p:tt.byId.get(x.id),d:x.depth}));   /* v05.16 · N1 — as an indented tree */
       const rows=others.map(({p,d})=>({t:'   '.repeat(Math.min(d,8))+p.icon+' '+p.name,f:()=>{ jebMoveItem(iid,p.id,0); toast('Moved to '+p.name); _jebPanelSig=''; jebRefresh(); }}));
       rows.push({t:'◀ Back',keep:true,f:back});
       _jebShowMenu(rows,anchor);
-    }},
-    {t:'🗑 Delete',d:true,f:()=>{ jebDeleteItem(iid); toast('Moved to Trash'); _jebPanelSig=''; jebRefresh(); }}
-  ],anchor);
+    }}),
+    ['delete',{t:'🗑 Delete',d:true,f:()=>{ jebDeleteItem(iid); toast('Moved to Trash'); _jebPanelSig=''; jebRefresh(); }}]
+  ]),anchor);
 }
 /* ── v05.11 · Z6b — the due-date chooser (a popover at ≥640, a bottom sheet under it) and the steps ── */
 function _jebDueClose(){ const a=_jebEl('jeb-due'); if(a) a.remove(); }
@@ -27593,25 +27636,25 @@ function _artCtxGroups(art,aid){
   const _canModal=true;   /* v04.34 — every platform has both pop-ups now */
   const sub=(key,ico,lbl,extra)=>`<div class="ci ci-sub" onclick="_ctxSub('${aid}','${key}')">${ico} ${lbl}${extra||''}<span class="ci-arr">▶</span></div>`;
   return [
-    {hd:'This note',items:[
+    {g:'open',items:[
       `<div class="ci" onclick="hideCtx();startRenameArtTitle('${aid}')">✏ Rename title</div>`,
       `<div class="ci" onclick="hideCtx();duplicateNote('${aid}')">⧉ Make a copy</div>`,
       `<div class="ci" onclick="openNoteHistory('${aid}')">🕐 Note History</div>`,
       ...(_canModal?[`<div class="ci ci-pop pop-multi" onclick="openNotePopup('${aid}','float')">${_popIcoHTML('float')} ${POP_KINDS.float.name}</div>`,
         `<div class="ci ci-pop pop-single" onclick="openNotePopup('${aid}','panel')">${_popIcoHTML('panel')} ${POP_KINDS.panel.name}</div>`]:[])]},
-    {hd:'Mark it',items:[
+    {g:'mark',items:[
       `<div class="ci" onclick="hideCtx();toggleFav('${aid}')">${art.favourite?'✅ In favourites':'⭐ Favourite'}</div>`,
       `<div class="ci" onclick="hideCtx();togglePin('${aid}')">${art.pinned?'📌 Unpin':'📌 Pin'}</div>`,
       `<div class="ci" onclick="hideCtx();toggleArchive('${aid}')">${art.archived?'📤 Unarchive':'📦 Archive'}</div>`,
       `<div class="ci" onclick="hideCtx();${art.finalised?'unfinishNote':'finishNote'}('${aid}')">${art.finalised?'↺ Reopen':'✓ Finish'}</div>`]},
-    {hd:'Put it in',items:[
+    {g:'organise',items:[
       sub('nti','🏷','NTI Types'),
       sub('tags','#','Tags'),
       sub('folders','📁','Folders'),
       sub('favs','❤️','My Favourites',art.favCat?'<span style="font-size:10px;margin-left:4px;opacity:.6">✓</span>':''),
-      `<div class="ci" onclick="hideCtx();toggleTab('${aid}')">${inTab?'📑 Remove Tab':'📑 Add to Tab'}</div>`,
-      `<div class="ci" onclick="hideCtx();openJournalPicker('${aid}',null)">📓 Add to Journal event</div>`]},
-    {hd:'Remind &amp; revise',items:[
+      `<div class="ci" onclick="hideCtx();toggleTab('${aid}')">${inTab?'📑 Remove Tab':'📑 Add to Tab'}</div>`]},
+    {g:'remind',items:[
+      `<div class="ci" onclick="hideCtx();openJournalPicker('${aid}',null)">📓 Add to Journal event</div>`,
       sub('reminder','🔔','Reminder'),
       `<div class="ci" onclick="hideCtx();mrjToggle('${aid}')">${art.mrjDue?"📖 Remove Murāja'ah":"📖 Add to Murāja'ah"}</div>`,
       ...(art.practice==='active'
@@ -27621,15 +27664,35 @@ function _artCtxGroups(art,aid){
         ?[`<div class="ci" onclick="hideCtx();practiceToggle('${aid}','active')">🌱 Still practising</div>`,
           `<div class="ci" onclick="hideCtx();practiceToggle('${aid}',null)">✂ Remove from practice</div>`]
         :[`<div class="ci" onclick="hideCtx();practiceToggle('${aid}','active')">🌱 Start practising</div>`])]},
-    {hd:'Remove',items:[
+    {g:'delete',items:[
       `<div class="ci d" onclick="hideCtx();deleteNote('${aid}')">🗑 Delete</div>`]},
-  ].filter(g=>g.items.length);
+  ];
 }
 function _buildArtCtxMain(art,aid){
-  const card=_ctxIsCard();
-  return _artCtxGroups(art,aid).map((g,i)=>
-    (card?`<div class="fl-pop-hd">${g.hd}</div>`:(i?'<div class="csep"></div>':''))
-    +g.items.join('')).join('');
+  return _menuHTML(_artCtxGroups(art,aid).flatMap(g=>g.items.map(h=>[g.g,h])),_ctxIsCard());
+}
+/* v05.65 · J108 — ONE builder for every item menu: the same five groups in the same order, each under a heading that is not a row
+   (role="presentation", never a .ci). items = [[group, rowHtml], …] in any order; a menu shows only the groups it has. On the phone's card
+   the heading also carries .fl-pop-hd (the strip the card already styled). Zab menus use _menuRows (same table, rows for #jeb-menu). */
+const _MENU_G=[['open','OPEN'],['mark','MARK'],['organise','ORGANISE'],['remind','REMIND &amp; PRACTISE'],['delete','DELETE']];
+function _menuHTML(items,card){
+  let h='';
+  _MENU_G.forEach(([k,l])=>{
+    const rows=items.filter(x=>x[0]===k&&x[1]);
+    if(!rows.length)return;
+    h+='<div class="ctx-gh'+(card?' fl-pop-hd':'')+'" role="presentation">'+l+'</div>'+rows.map(x=>x[1]).join('');
+  });
+  return h;
+}
+function _menuRows(items){
+  const out=[];
+  _MENU_G.forEach(([k,l])=>{
+    const rows=items.filter(x=>x[0]===k);
+    if(!rows.length)return;
+    out.push({h:l.replace('&amp;','&')});
+    rows.forEach(x=>out.push(x[1]));
+  });
+  return out;
 }
 function _ctxBack(aid){
   const art=DB.articles.find(a=>a.id===aid);if(!art)return;
@@ -27722,9 +27785,11 @@ function showArtFolderPicker(aid){
              `<div class="pc${checked?' on':''}">${checked?'✓':''}</div>` +
              `<span style="font-size:12px">📁</span>` +
              `<span style="font-size:13px;color:var(--t1)">${esc(f.name)}</span>` +
+             _afPlusHTML(f.id) +
              `</div>${kids.length?rows(kids,depth+1):''}`;
     }).join('');
   }
+  _afIn=null;
 
   const ttl=art.title.length>45?art.title.slice(0,45)+'…':art.title;
   const cnt=art.folderIds.length;
@@ -27732,7 +27797,11 @@ function showArtFolderPicker(aid){
     <div style="font-size:12px;color:var(--t3);margin-bottom:6px">${esc(ttl)}</div>
     <input class="im-search" id="fp-srch" placeholder="Search folders…" oninput="fpFilter('${aid}',this.value)" onmousedown="event.stopPropagation()">
     <div class="pl" id="fp-list">${rows(DB.folders.filter(f=>!f.parentId),0)}</div>
-    <div style="display:flex;gap:6px;margin-top:8px">
+    <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      <button type="button" class="btn af-in" id="af-in" style="flex:1 1 100%;min-height:36px;text-align:left" onclick="_afInOpen()">Inside: Top level ▾</button>
+    </div>
+    <div id="af-in-pop" style="display:none"></div>
+    <div style="display:flex;gap:6px;margin-top:6px">
       <input class="mi" id="npf" placeholder="New folder name…" style="flex:1;margin:0;min-width:0" onkeydown="if(event.key==='Enter')createFolderFromPicker('${aid}')">
       <button class="btn" style="flex-shrink:0" onclick="createFolderFromPicker('${aid}')">＋ New folder</button>
     </div>
@@ -27744,13 +27813,43 @@ function showArtFolderPicker(aid){
   setTimeout(()=>{document.getElementById('fp-srch')?.focus();document.getElementById('npf')?.blur();},80);
 }
 
-/** Create a root folder from inside a folder-picker modal.
+/* v05.65 · J107 — the note's Manage folders dialog: "Inside: …" chooses the parent of a new folder (the two other copies of this
+   dialog, openPicker and the pop-out browser, already do it with the 📍 pin and "New folder in:", which feed the same createFolderFromPicker). */
+let _afIn=null;
+function _afPlusHTML(fid){
+  return `<span class="af-plus" role="button" tabindex="0" title="Make a new folder inside this one" aria-label="New folder inside ${esc((DB.folders.find(x=>x.id===fid)||{}).name||'')}" onclick="event.stopPropagation();_afSetIn(${_ja(fid)},true)">＋</span>`;
+}
+function _afLabel(){
+  const f=_afIn&&DB.folders.find(x=>x.id===_afIn);
+  const b=document.getElementById('af-in');
+  if(b)b.textContent='Inside: '+(f?f.name:'Top level')+' ▾';
+}
+function _afSetIn(fid,focus){
+  _afIn=(fid&&DB.folders.some(x=>x.id===fid))?fid:null;
+  _afLabel();
+  const pop=document.getElementById('af-in-pop');if(pop)pop.style.display='none';
+  if(focus)document.getElementById('npf')?.focus();
+}
+function _afInRows(q){
+  const n=(q||'').toLowerCase().trim();
+  const list=DB.folders.filter(f=>!n||(f.name||'').toLowerCase().includes(n)).slice(0,80);
+  return `<div class="pr" style="min-height:44px" onclick="_afSetIn('')"><span style="font-size:13px">🏠 Top level</span></div>`
+    +list.map(f=>`<div class="pr" style="min-height:44px" onclick="_afSetIn(${_ja(f.id)})"><span style="font-size:12px">📁</span><span style="font-size:13px">${esc(pathOf(f.id).map(x=>x.name).join(' › '))}</span></div>`).join('');
+}
+function _afInOpen(){
+  const pop=document.getElementById('af-in-pop');if(!pop)return;
+  if(pop.style.display!=='none'){pop.style.display='none';return;}
+  pop.style.display='block';
+  pop.innerHTML=`<input class="im-search" id="af-in-q" placeholder="Search folders…" oninput="document.getElementById('af-in-l').innerHTML=_afInRows(this.value)"><div class="pl" id="af-in-l" style="max-height:160px;overflow:auto">${_afInRows('')}</div>`;
+  document.getElementById('af-in-q')?.focus();
+}
+/** Create a folder from inside a folder-picker modal.
  *  aid = article id (attach picker) or '' (editor 🏷 picker → ST.efolders). */
 function createFolderFromPicker(aid){
   const inp=document.getElementById('npf');
   const name=inp?.value;
   if(!name?.trim()){toast('Enter a folder name');return;}
-  const parentId=aid?null:_pkTarget;   // nest under the 📍-pinned folder, if any
+  const parentId=aid?(_afIn&&DB.folders.some(x=>x.id===_afIn)?_afIn:null):_pkTarget;   // note dialog: "Inside:"; the others: the 📍-pinned folder, if any
   // Section pop-out with nothing pinned: land the new root folder in THAT
   // section, not wherever the sidebar's active folder happens to be.
   if(!aid&&!parentId&&_pkMode==='browse'&&_pkSectionScope)ST.pendingSec=_pkSectionScope;
@@ -27765,6 +27864,7 @@ function createFolderFromPicker(aid){
       renderP2C();renderP3H();renderP3C();
     }
     showArtFolderPicker(aid);   // re-open picker with new folder checked
+    _afIn=parentId;_afLabel();  // J107 — "Inside:" stays on the chosen folder
   } else {
     if(_pkMode==='assign'){
       if(!ST.efolders.includes(nid)){ST.efolders.push(nid);ST.efolders=_autoLeavePrimary(ST.efolders);}
@@ -27797,6 +27897,7 @@ function fpFilter(aid,q){
           +`<div class="pc${checked?' on':''}">${checked?'✓':''}</div>`
           +`<span style="font-size:12px">📁</span>`
           +`<span style="font-size:13px;color:var(--t1)">${esc(f.name)}</span>`
+          +_afPlusHTML(f.id)
           +'</div>'+(kids.length?rows2(kids,depth+1):'');
       }).join('');
     }
@@ -27812,6 +27913,7 @@ function fpFilter(aid,q){
       +`<div class="pc${checked?' on':''}">${checked?'✓':''}</div>`
       +`<span style="font-size:12px">📁</span>`
       +`<span style="font-size:13px;color:var(--t1)">${esc(f.name)}</span>`
+      +_afPlusHTML(f.id)
       +'</div>';
   }).join('');
 }
@@ -34329,19 +34431,16 @@ function moveWallKind(kid,dir){
 function showWallKindCtx(ev,kid){
   ev.preventDefault();ev.stopPropagation();
   const m=document.getElementById('ctx');
-  m.innerHTML=
-    `<div class="ci" onclick="quickCaptureWithKind('${kid}')">✚ New note here</div>`+
-    `<div class="csep"></div>`+
-    `<div class="ci" onclick="hideCtx();renameNoteKind('${kid}')">✏️ Rename</div>`+
-    `<div class="ci" onclick="openKindClrPicker(event,'${kid}',null)">🎨 Change colour</div>`+
-    `<div class="ci" onclick="hideCtx();addNoteKindTab()">➕ Add category</div>`+
-    `<div class="csep"></div>`+
-    `<div class="ci" onclick="moveWallKind('${kid}',-1)">⬆️ Move up</div>`+
-    `<div class="ci" onclick="moveWallKind('${kid}',1)">⬇️ Move down</div>`+
-    `<div class="csep"></div>`+
-    `<div class="ci" onclick="hideCtx();openTheme()">🔠 Text size…</div>`+
-    `<div class="csep"></div>`+
-    `<div class="ci d" onclick="delNtiKind('${kid}',null)">🗑 Delete</div>`;
+  m.innerHTML=_menuHTML([
+    ['open',`<div class="ci" onclick="hideCtx();renameNoteKind('${kid}')">✏️ Rename</div>`],
+    ['open',`<div class="ci" onclick="hideCtx();openTheme()">🔠 Text size…</div>`],
+    ['mark',`<div class="ci" onclick="openKindClrPicker(event,'${kid}',null)">🎨 Change colour</div>`],
+    ['organise',`<div class="ci" onclick="quickCaptureWithKind('${kid}')">✚ New note here</div>`],
+    ['organise',`<div class="ci" onclick="hideCtx();addNoteKindTab()">➕ Add category</div>`],
+    ['organise',`<div class="ci" onclick="moveWallKind('${kid}',-1)">⬆️ Move up</div>`],
+    ['organise',`<div class="ci" onclick="moveWallKind('${kid}',1)">⬇️ Move down</div>`],
+    ['delete',`<div class="ci d" onclick="delNtiKind('${kid}',null)">🗑 Delete</div>`]
+  ]);
   m.style.display='block';
   const tx=(ev.touches&&ev.touches[0])?ev.touches[0].clientX:ev.clientX||window.innerWidth/2;
   const ty=(ev.touches&&ev.touches[0])?ev.touches[0].clientY:ev.clientY||100;
@@ -34529,14 +34628,12 @@ function showSfItemCtx(ev,sfid){
   ev.preventDefault();ev.stopPropagation();
   const sf=SF.find(s=>s.id===sfid);if(!sf)return;
   const m=document.getElementById('ctx');
-  m.innerHTML=
-    `<div class="ci" onclick="hideCtx();renameSfItem('${sfid}')">✏️ Rename</div>`+
-    `<div class="ci" onclick="moveSfItem('${sfid}',-1)">⬆️ Move up</div>`+
-    `<div class="ci" onclick="moveSfItem('${sfid}',1)">⬇️ Move down</div>`+
-    `<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px">`+
-      `<span class="ctx-clr-lbl">🎨 Colour</span>`+
-      `<div class="ctx-colors">${ctxSfItemColorSwatches(sfid)}</div>`+
-    `</div>`;
+  m.innerHTML=_menuHTML([
+    ['open',`<div class="ci" onclick="hideCtx();renameSfItem('${sfid}')">✏️ Rename</div>`],
+    ['mark',`<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px"><span class="ctx-clr-lbl">🎨 Colour</span><div class="ctx-colors">${ctxSfItemColorSwatches(sfid)}</div></div>`],
+    ['organise',`<div class="ci" onclick="moveSfItem('${sfid}',-1)">⬆️ Move up</div>`],
+    ['organise',`<div class="ci" onclick="moveSfItem('${sfid}',1)">⬇️ Move down</div>`]
+  ]);
   m.style.display='block';
   const x=ev.clientX||window.innerWidth/2,y=ev.clientY||100;
   const mw=m.offsetWidth||170,mh=m.offsetHeight||100;
@@ -34595,14 +34692,11 @@ function toggleTagSection(ev){
 function showTagSecCtx(ev){
   ev.preventDefault();ev.stopPropagation();
   const m=document.getElementById('ctx');
-  m.innerHTML=
-    `<div class="ci" onclick="hideCtx();promptAddGlobalTag()">🏷 New tag</div>`+
-    `<div class="csep"></div>`+
-    `<div class="ci" onclick="hideCtx();renameTagSection()">✏️ Rename section</div>`+
-    `<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px">`+
-      `<span class="ctx-clr-lbl">🎨 Section colour</span>`+
-      `<div class="ctx-colors">${ctxTagSecColorSwatches()}</div>`+
-    `</div>`;
+  m.innerHTML=_menuHTML([
+    ['open',`<div class="ci" onclick="hideCtx();renameTagSection()">✏️ Rename section</div>`],
+    ['mark',`<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px"><span class="ctx-clr-lbl">🎨 Section colour</span><div class="ctx-colors">${ctxTagSecColorSwatches()}</div></div>`],
+    ['organise',`<div class="ci" onclick="hideCtx();promptAddGlobalTag()">🏷 New tag</div>`]
+  ]);
   m.style.display='block';
   const x=ev.clientX||0,y=ev.clientY||0;
   const mw=m.offsetWidth||170,mh=m.offsetHeight||100;
@@ -34657,10 +34751,10 @@ function addGlobalTag(raw){
 function showTagCtx(ev,tag){
   ev.preventDefault();ev.stopPropagation();
   const m=document.getElementById('ctx');
-  m.innerHTML=
-    `<div class="ci" onclick="hideCtx();renameTag(${_ja(tag)})">✏️ Rename tag</div>`+
-    `<div class="csep"></div>`+
-    `<div class="ci d" onclick="hideCtx();deleteTag(${_ja(tag)})">🗑 Delete tag</div>`;
+  m.innerHTML=_menuHTML([
+    ['open',`<div class="ci" onclick="hideCtx();renameTag(${_ja(tag)})">✏️ Rename tag</div>`],
+    ['delete',`<div class="ci d" onclick="hideCtx();deleteTag(${_ja(tag)})">🗑 Delete tag</div>`]
+  ]);
   m.style.display='block';
   const x=ev.clientX||0,y=ev.clientY||0;
   const mw=m.offsetWidth||150,mh=m.offsetHeight||80;

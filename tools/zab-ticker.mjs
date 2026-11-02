@@ -206,7 +206,7 @@ if (want('92f')) for (const vp of VPS) {
     const m = await rect(p, '#jeb-menu'); if (!m) return [false, 'no menu'];
     const st = await stable(p, 600);
     const items = await p.evaluate(() => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent));
-    return [st && (Math.abs(m.b - pos.t) <= 8 || Math.abs(m.t - pos.b) <= 8) && items[0] === '☑ Done' && items.includes('📂 Move to Zab ▸') && items.includes('📅 Due…') && !items.some((x) => /Move to pocket/.test(x)), JSON.stringify({ m, pos, items, st })];
+    return [st && (Math.abs(m.b - pos.t) <= 8 || Math.abs(m.t - pos.b) <= 8) && items[0] === '✏️ Edit' && items.includes('☑ Done') && items.includes('📂 Move to Zab ▸') && items.includes('📅 Due…') && !items.some((x) => /Move to pocket/.test(x)), JSON.stringify({ m, pos, items, st })];
   });
   await T(`${tag} Due on a task opens the due chooser`, async () => { await pick(d, '📅 Due…'); const r = await p.evaluate(() => !!document.getElementById('jeb-due')); await p.evaluate(() => _jebDueClose()); return [r, String(r)]; });
   await T(`${tag} ✏️ Edit opens that item's Zab with the item in edit mode`, async () => {
@@ -227,7 +227,8 @@ if (want('92f')) for (const vp of VPS) {
   });
   await T(`${tag} ☐ Not done (with Include done on) puts it back`, async () => {
     await set(p, 'done', true); const pos = await titlePos(p, 't1'); await pressAt(d, pos.x, pos.y);
-    const first = await p.evaluate(() => document.querySelector('#jeb-menu .jm').textContent); await pick(d, '☐ Not done'); await sleep(400);
+    /* v05.65 (J108): the menu is grouped, so ✏️ Edit (OPEN) is first; the MARK group's first row is the done/not-done toggle */
+    const first = await p.evaluate(() => { const h = [...document.querySelectorAll('#jeb-menu .jm-h')].find((e) => /mark/i.test(e.textContent)); let n = h && h.nextElementSibling; while (n && !n.classList.contains('jm')) n = n.nextElementSibling; return n ? n.textContent : null; }); await pick(d, '☐ Not done'); await sleep(400);
     const r = await p.evaluate(() => ({ done: DB.jeb.find((i) => i.id === 't1').done, on: !!document.querySelector('#zab-tk .tk-it[data-iid="t1"]') })); await set(p, 'done', false);
     return [first === '☐ Not done' && r.done === false && r.on, JSON.stringify({ first, r })];
   });

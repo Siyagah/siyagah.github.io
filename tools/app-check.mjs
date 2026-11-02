@@ -3474,13 +3474,16 @@ await r.block('6p-12-tablet-laptop-anchored-menu', async () => {
       showArtCtx({ clientX: 40, clientY: 40, preventDefault() {}, stopPropagation() {} }, 'a1');
       const m = document.getElementById('ctx');
       return { card: m.classList.contains('ctx-card'), heads: m.querySelectorAll('.fl-pop-hd').length,
+        gh: m.querySelectorAll('.ctx-gh').length,
         seps: m.querySelectorAll('.csep').length, rows: m.querySelectorAll('.ci').length,
         wide: Math.round(m.getBoundingClientRect().width) };
     });
     await s.close();
-    r.check(!m.card && m.heads === 0 && m.seps >= 4 && m.rows >= 15 && m.wide <= 240,
-      `${vp.name}: the right-click menu is the anchored column it has always been`,
-      `card ${m.card} · ${m.rows} rows, ${m.seps} separators, ${m.wide}px wide`);
+    /* UPDATED for v05.65 (J108): the anchored column now names its groups too — the five .ctx-gh headings (not the phone card's
+       .fl-pop-hd strip, so heads is still 0) replace the unnamed separator lines (seps is now 0). Still the same column, rows unchanged. */
+    r.check(!m.card && m.heads === 0 && m.gh === 5 && m.seps === 0 && m.rows >= 15 && m.wide <= 240,
+      `${vp.name}: the right-click menu is the anchored column it has always been, now under five group headings`,
+      `card ${m.card} · ${m.rows} rows, ${m.gh} headings, ${m.seps} separators, ${m.wide}px wide`);
   }
 });
 
@@ -12756,6 +12759,32 @@ await r.block('123-win-j103', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the win-j103.mjs check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, '123: ' + row.label, row.detail);
   r.check(out.status === 0, 'the win-j103.mjs check exits cleanly', `exit ${out.status}`);
+});
+
+/* 124 — v05.65 J108: every item menu on the one builder (groups with headings, everything shown). tools/menus-j108.mjs. */
+await r.block('124-menus-j108', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./menus-j108.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1200000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the menus-j108.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '124: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the menus-j108.mjs check exits cleanly', `exit ${out.status}`);
+});
+
+/* 125 — v05.65 J106 (one search) + J107 (Inside: for a new folder). tools/search-j106.mjs. */
+await r.block('125-search-j106', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./search-j106.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim() }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 15, 'the search-j106.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '125: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the search-j106.mjs check exits cleanly', `exit ${out.status}`);
 });
 
 /* ── run everything registered above, or a --only subset ─────────────────
