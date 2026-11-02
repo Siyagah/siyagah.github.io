@@ -11,6 +11,7 @@
              the corner grips are painted (pixel check); hit areas ≥ 22 px on touch; hover lights an edge
    123i  C   J104: ☑ Choose two Zabs → 🎞 Scroll → DB.theme.zabTicker {on, mode:'only', pids}; the band shows only their titles (bar, Rail, Drawer, Columns)
    123j  no page errors
+   123k  (Architect's review) a float NOTE window's 💾 Save still saves — a second top-level _fwSave had replaced it
    `node tools/win-j103.mjs` */
 import { inflateSync } from 'node:zlib';
 import { openApp, report, seedDB } from './harness.mjs';
@@ -253,6 +254,17 @@ for (const [W, H, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       r.check(t.on === true && t.mode === 'only' && JSON.stringify([...(t.pids || [])].sort()) === '["zp1","zp3"]' && /alpha item/.test(out.tx) && /gamma item/.test(out.tx) && !/beta item/.test(out.tx) && /Scrolling: Alpha, Gamma/.test(out.toast) && !out.choose,
         `123i@${W}${tier === 'phone' ? ' ' + L : ''} Choose Alpha + Gamma → 🎞 Scroll: zabTicker {on, only, [zp1,zp3]}, the band shows only their titles, toast, Choose ended`, JSON.stringify(out));
     }
+    /* 123k (Architect, review of v05.64): the folder windows' first cut declared a second top-level `_fwSave`, which silently replaced
+       the float NOTE window's save, so its 💾 Save did nothing. A real click on that button must save the typed text and toast. */
+    await page.evaluate(() => { _fwWins.slice().forEach((w) => _fwClose(w.id)); hideCtx(); popOutNote('a1'); });
+    await page.waitForTimeout(900);
+    await page.locator('#fw-a1 .fw-ed').click(); await page.keyboard.press('End'); await page.keyboard.type(' typed123k');
+    await page.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove()));
+    const svBtn = page.locator('#fw-a1 [data-pf="save"]').filter({ visible: true }).first();
+    await press(svBtn); await page.waitForTimeout(500);
+    const k = await page.evaluate(() => ({ saved: /typed123k/.test(DB.articles.find((a) => a.id === 'a1').content), toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | '), noteSave: /_fwFlush/.test(String(_fwSave)) }));
+    r.check(k.saved && /Saved/.test(k.toast) && k.noteSave, `123k@${W} a float note window's 💾 Save (real ${touch ? 'tap' : 'click'}) saves the typed text and says "💾 Saved"`, JSON.stringify(k));
+    await page.evaluate(() => { try { closeAllPopouts(); } catch (e) {} });
     r.check(app.errors.length === 0, `123j@${W} no page errors`, app.errors.join(' | '));
   } catch (e) {
     r.check(false, `123@${W} the check ran to the end`, String(e && e.stack || e).slice(0, 700));

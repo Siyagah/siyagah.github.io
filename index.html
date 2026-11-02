@@ -8274,7 +8274,7 @@ function togExp(ev,id,win){
   const _ex=(win&&_fwGet(win))?_fwGet(win).exp:ST.exp;
   if(_ex[id]) collapseFolder(id,_ex); // close this + all nested
   else _ex[id]=true;                  // open just this level
-  if(_ex!==ST.exp){ _fwSave(win); _fwRedraw(); return; }
+  if(_ex!==ST.exp){ _fwinSave(win); _fwRedraw(); return; }
   renderTree();
 }
 function toggleSB(){
@@ -18758,7 +18758,7 @@ function _ppStop(){
   _ppRsz=null;
   document.removeEventListener('pointermove',_ppMove); document.removeEventListener('pointerup',_ppStop); document.removeEventListener('pointercancel',_ppStop);
   document.body.style.userSelect='';
-  if(fwId){ _fwSave(fwId); return; }
+  if(fwId){ _fwinSave(fwId); return; }
   _ppSave();
 }
 /* ── one docked pane across the whole window (PC only; the ⤡ tab at the right edge brings the others back) ── */
@@ -18813,7 +18813,8 @@ function _fwDbOpen(){
   });
   return _fwDbP;
 }
-function _fwSave(id){
+/* v05.64 review: named _fwinSave, NOT _fwSave — a second top-level _fwSave replaced the float NOTE window's save (its 💾 button did nothing) */
+function _fwinSave(id){
   const w=_fwGet(id); if(!w) return;
   const rec={l:w.l,t:w.t,w:w.w,h:w.h,exp:Object.assign({},w.exp),z:_fwWins.indexOf(w)};
   _fwDbOpen().then(d=>{ if(!d) return; try{ d.transaction('kv','readwrite').objectStore('kv').put(rec,'fw:'+id); }catch(e){} });
@@ -18969,7 +18970,7 @@ function openFolderWin(fid){
   }
   _fwTucked=false;
   const w=_fwAdd(fid,g); if(!w) return;
-  _fwLayout(); _fwPaint(w); _fwSave(fid);
+  _fwLayout(); _fwPaint(w); _fwinSave(fid);
   if(ph) toast('🗗 "'+f.name+'" is in its own window');
 }
 /* v05.64 · J103 — one engine: a folder/section window is resized and moved by _ppGrab/_ppMove/_ppStop ('fw:<id>'); _fwRsz is gone. */
@@ -18985,7 +18986,7 @@ function openSecWin(sid){
   _fwTucked=false;
   const w=_fwAdd(id,g); if(!w) return;
   w.exp={};
-  _fwLayout(); _fwPaint(w); _fwSave(id);
+  _fwLayout(); _fwPaint(w); _fwinSave(id);
   if(window.innerWidth<640) toast('🗗 "'+sec.name+'" is in its own window');
 }
 /* the ⧉ on a folder row: the window opens at the size of the pane or window the row is in */

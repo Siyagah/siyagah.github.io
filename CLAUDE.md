@@ -695,6 +695,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A second `function name(){}` at the top level silently replaces the first.** v05.64's folder windows added their own `_fwSave`, and the float note window's 💾 Save quietly called it and saved nothing. Nothing threw, and every check passed, because no check had ever clicked Save in a Multi window. Grep a new top-level name before using it; `ship-check` now fails on a duplicate. Cost: caught in the Architect's review of v05.64, one merge from the owner's notes.
 - **"Could not read it" is not "it is not there" — a read that decides absence must be able to fail.** `_idbGet()` answered
   `undefined` for a failed open, a failed request and a missing key alike, so a moment's storage failure at start made boot take the
   device copy for absent: it opened EMPTY and its first write could land over the real notebook (unpatched: 43 notes → 0). It hid for
