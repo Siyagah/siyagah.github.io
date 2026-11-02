@@ -263,6 +263,10 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .tr-tog{width:20px;flex-shrink:0;text-align:center;font-size:22px;color:var(--sb-ink);line-height:1}
 .tr-ico{font-size:14px;flex-shrink:0;line-height:1}
 .tr-name{flex:1;white-space:normal;word-break:break-word;line-height:1.3}
+.tr-pop{flex:0 0 auto;margin:-6px 0;min-width:30px;min-height:30px;padding:0 4px;border:none;border-radius:6px;background:transparent;color:var(--sb-ink-soft);font:inherit;font-size:15px;line-height:1;cursor:pointer;opacity:0;touch-action:manipulation}
+.tr-row:hover .tr-pop,.tr-pop:focus-visible{opacity:1}.tr-pop:hover{background:var(--sb-strip)}
+@media(hover:none),(max-width:639.98px){.tr-pop{opacity:.85}}
+@media(max-width:639.98px){.tr-pop{min-width:48px;min-height:48px;margin:-12px -4px -12px 0}}
 .tr-cnt{font-size:10px;background:var(--sb-strip);padding:1px 5px;border-radius:9px;flex-shrink:0;color:var(--sb-ink-soft)}
 .drag-hint{position:fixed;top:0;left:0;pointer-events:none;background:var(--forest);color:#B8E8C4;padding:4px 10px;border-radius:20px;font-size:12px;border:1px solid var(--green);opacity:0;transition:opacity .15s;z-index:9000}
 
@@ -815,10 +819,28 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .fwin-body .tr-row{content-visibility:auto;contain-intrinsic-size:auto 28px}
 .fwin>.rsz{touch-action:none}
 .fwin-sw{display:none}
+.fwin-qw{flex:0 0 auto;padding:6px 8px 2px}
+.fwin-q{width:100%;box-sizing:border-box;min-height:34px;padding:0 10px;border-radius:8px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.12);color:var(--sb-ink);font:inherit;font-size:13px}
+.fwin-q::placeholder{color:var(--sb-ink-soft)}
+.fwin-hit{padding:9px 12px;cursor:pointer;font-size:13px;color:var(--sb-ink);border-bottom:1px solid rgba(255,255,255,.08);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fwin-hit:hover{background:var(--sb-panel)}
+.fwin-none{padding:10px 14px;font-size:12.5px;color:var(--sb-ink-soft);font-style:italic}
+#fw-strip{position:fixed;top:0;left:0;right:0;z-index:5003;display:flex;gap:6px;padding:6px 8px;overflow-x:auto;background:var(--forest);border-bottom:1px solid rgba(255,255,255,.3);scrollbar-width:none}
+.fw-chip{flex:0 0 auto;max-width:44vw;min-height:36px;padding:0 12px;border-radius:18px;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12);color:var(--sb-ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fw-chip.on{background:var(--green);color:var(--on-accent);border-color:transparent}
+@media(min-width:640px){#fw-strip{display:none}}
 body.fw-tuck .fwin{display:none}
 #fw-pill{position:fixed;top:8px;right:8px;z-index:5003;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid rgba(255,255,255,.45);background:var(--forest);color:var(--sb-ink);font:inherit;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer}
-@media(max-width:639.98px){ .fwin>.rsz{display:none} .fwin .fwin-bar{cursor:default;touch-action:auto} .fwin.fw-multi .fwin-sw{display:inline-block} .fwin{border-radius:12px 12px 0 0} }
-@media(max-width:1199.98px){ .fwin>.rsz-n,.fwin>.rsz-s{height:22px;left:28px;right:28px}.fwin>.rsz-n{top:-11px}.fwin>.rsz-s{bottom:-11px}.fwin>.rsz-e,.fwin>.rsz-w{width:22px}.fwin>.rsz-e{right:-11px}.fwin>.rsz-w{left:-11px} }
+/* v05.64 · J103 — the handles can be found: a corner grip always painted, an edge that lights up with its resize cursor on hover (cursor is set per handle above); a phone's sheet keeps only the top edge (height) */
+.pp>.rsz-ne::after,.pp>.rsz-nw::after,.pp>.rsz-se::after,.pp>.rsz-sw::after,.fwin>.rsz-ne::after,.fwin>.rsz-nw::after,.fwin>.rsz-se::after,.fwin>.rsz-sw::after{content:'';position:absolute;width:9px;height:9px;pointer-events:none;border:0 solid rgba(128,128,128,.95);opacity:1}
+.pp>.rsz-se::after,.fwin>.rsz-se::after{right:7px;bottom:7px;border-right-width:3px;border-bottom-width:3px}
+.pp>.rsz-sw::after,.fwin>.rsz-sw::after{left:7px;bottom:7px;border-left-width:3px;border-bottom-width:3px}
+.pp>.rsz-ne::after,.fwin>.rsz-ne::after{right:7px;top:7px;border-right-width:3px;border-top-width:3px}
+.pp>.rsz-nw::after,.fwin>.rsz-nw::after{left:7px;top:7px;border-left-width:3px;border-top-width:3px}
+.pp>.rsz:hover,.fwin>.rsz:hover,.pp>.rsz:active,.fwin>.rsz:active{background:rgba(46,125,95,.45)}
+@media(max-width:639.98px){ .fwin>.rsz{display:none} .fwin>.rsz.rsz-n{display:block;left:0;right:0;top:-14px;height:22px;background:rgba(128,128,128,.35);border-radius:12px 12px 0 0} .fwin .fwin-bar{cursor:default;touch-action:auto} .fwin.fw-multi .fwin-sw{display:inline-block} .fwin{border-radius:12px 12px 0 0} }
+@media(max-width:1199.98px){ .fwin>.rsz-n,.fwin>.rsz-s{height:22px;left:28px;right:28px}.fwin>.rsz-n{top:-11px}.fwin>.rsz-s{bottom:-11px}.fwin>.rsz-e,.fwin>.rsz-w{width:22px;top:28px;bottom:28px}.fwin>.rsz-e{right:-11px}.fwin>.rsz-w{left:-11px}
+  .fwin>.rsz-ne,.fwin>.rsz-nw,.fwin>.rsz-se,.fwin>.rsz-sw{width:30px;height:30px}.fwin>.rsz-ne,.fwin>.rsz-nw{top:-12px}.fwin>.rsz-se,.fwin>.rsz-sw{bottom:-12px}.fwin>.rsz-ne,.fwin>.rsz-se{right:-12px}.fwin>.rsz-nw,.fwin>.rsz-sw{left:-12px} }
 .pp-bar{display:flex;align-items:center;gap:6px;flex-shrink:0;min-height:40px;padding:0 6px 0 10px;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;
   border-radius:9px 9px 0 0;background:rgba(0,0,0,.28);color:#fff;font-size:13px;font-weight:600}
 #p2 .pp-bar{background:var(--green);color:var(--on-accent)}
@@ -7054,7 +7076,7 @@ function trNode(f,depth){
     <span class="tr-tog" onclick="togExp(event,'${f.id}'${_w})">${kids.length?(open?'▾':'▸'):''}</span>
     <span class="tr-ico">${open&&kids.length?'📂':'📁'}</span>
     ${f.color?`<span class="f-dot" style="background:${f.color}"></span>`:''}
-    <span class="tr-name" ${(f.color||f.bold)?`style="${f.color?`color:${f.color};`:''}${f.bold?'font-weight:700':''}"`:''} >${esc(f.name)}</span>${f.mmj&&f.mmj.gone?'<span class="mmj-gone" title="removed from Mapping My Journey">🗺✕</span>':''}    <span class="tr-cnt">${cnt}</span>
+    <span class="tr-name" ${(f.color||f.bold)?`style="${f.color?`color:${f.color};`:''}${f.bold?'font-weight:700':''}"`:''} >${esc(f.name)}</span>${f.mmj&&f.mmj.gone?'<span class="mmj-gone" title="removed from Mapping My Journey">🗺✕</span>':''}    <button type="button" class="tr-pop" title="Open this folder in its own window" aria-label="Open ${esc(f.name)} in its own window" onclick="_fwPopBtn(event,'${f.id}')">⧉</button><span class="tr-cnt">${cnt}</span>
   </div>${open?trGroupedKids(f.id,depth+1):''}`;
 }
 
@@ -18678,6 +18700,17 @@ function _ppFront(p){ ['sb','p2'].forEach(q=>{ const e=document.getElementById(q
 function _ppMax(p){ const st=_ppState[p]||(_ppState[p]={}); st.mx=!st.mx; _ppApply(p); _ppSave(); }
 function _ppGrab(ev,p,dir){
   if(ev.button>0) return;
+  /* v05.64 · J103 — a folder window ('fw:<folderId>') uses this same engine (no second one): its place lives in _fwWins, not in _ppState */
+  const fw=p.indexOf('fw:')===0 ? _fwGet(p.slice(3)) : null;
+  if(p.indexOf('fw:')===0){
+    if(!fw) return;
+    if(window.innerWidth<640&&dir!=='n') return;   /* a phone's sheet resizes its height only, from the top edge */
+    ev.preventDefault(); ev.stopPropagation(); _fwFront(fw.id);
+    _ppRsz={p,fw,dir,x:ev.clientX,y:ev.clientY,l:fw.l,t:fw.t,w:fw.w,h:fw.h,moved:false};
+    document.addEventListener('pointermove',_ppMove); document.addEventListener('pointerup',_ppStop); document.addEventListener('pointercancel',_ppStop);
+    document.body.style.userSelect='none';
+    return;
+  }
   ev.preventDefault(); ev.stopPropagation();
   const el=document.getElementById(p); if(!el) return;
   _ppFront(p);
@@ -18688,6 +18721,19 @@ function _ppGrab(ev,p,dir){
 }
 function _ppMove(ev){
   const R=_ppRsz; if(!R) return;
+  if(R.fw){
+    const w=_fwGet(R.fw.id); if(!w) return;
+    const W=window.innerWidth,H=window.innerHeight,dx=ev.clientX-R.x,dy=ev.clientY-R.y,d=R.dir;
+    let l=R.l,t=R.t,ww=R.w,h=R.h;
+    if(d==='move'){ l=R.l+dx; t=R.t+dy; }
+    else{
+      if(d.includes('e')) ww=Math.max(_FW_MIN_W,Math.min(W-R.l,R.w+dx));
+      if(d.includes('s')) h=Math.max(_FW_MIN_H,Math.min(H-R.t,R.h+dy));
+      if(d.includes('w')){ ww=Math.max(_FW_MIN_W,Math.min(R.l+R.w,R.w-dx)); l=R.l+R.w-ww; }
+      if(d.includes('n')){ h=Math.max(_FW_MIN_H,Math.min(R.t+R.h,R.h-dy)); t=R.t+R.h-h; }
+    }
+    R.moved=true; w.l=l; w.t=t; w.w=ww; w.h=h; _fwLayout(); return;
+  }
   const el=document.getElementById(R.p); if(!el) return;
   const W=window.innerWidth, H=window.innerHeight, ph=_ppTier()==='phone', dx=ev.clientX-R.x, dy=ev.clientY-R.y, d=R.dir;
   let l=R.l,t=R.t,w=R.w,h=R.h;
@@ -18707,9 +18753,11 @@ function _ppMove(ev){
 }
 function _ppStop(){
   if(!_ppRsz) return;
+  const fwId=_ppRsz.fw?_ppRsz.fw.id:null;
   _ppRsz=null;
   document.removeEventListener('pointermove',_ppMove); document.removeEventListener('pointerup',_ppStop); document.removeEventListener('pointercancel',_ppStop);
   document.body.style.userSelect='';
+  if(fwId){ _fwSave(fwId); return; }
   _ppSave();
 }
 /* ── one docked pane across the whole window (PC only; the ⤡ tab at the right edge brings the others back) ── */
@@ -18752,7 +18800,7 @@ function _ppMenu(ev,p){
    24 px). A phone (< 640) gets a full-width sheet instead (newest on top, "◀ n more" steps through them). Places, folder id and unfolded
    rows live ONLY on this device, in the IndexedDB database 'siyagah-pp-v1' (store kv, key 'fw:<folderId>'), never in DB, never in
    localStorage; a window is remembered only while it is open. _fwWins is in stacking order (last = in front). */
-let _fwWins=[], _fwCtxFrom=null, _fwTucked=false, _fwRestored=false, _fwRsz=null, _fwDbP=null, _fwLP=null;
+let _fwWins=[], _fwCtxFrom=null, _fwTucked=false, _fwRestored=false, _fwDbP=null, _fwLP=null;
 const _FW_MIN_W=180, _FW_MIN_H=160;
 function _fwGet(id){ return _fwWins.find(w=>w.id===id)||null; }
 function _fwEl(id){ return Array.from(document.querySelectorAll('.fwin')).find(e=>e.dataset.fwid===id)||null; }
@@ -18780,28 +18828,35 @@ function _fwRestore(){
       const ks=kr.result||[], vs=vr.result||[], arr=[];
       ks.forEach((k,i)=>{ if(typeof k==='string'&&k.indexOf('fw:')===0&&vs[i]&&typeof vs[i]==='object') arr.push({id:k.slice(3),v:vs[i]}); });
       arr.sort((a,b)=>(a.v.z||0)-(b.v.z||0));
-      arr.forEach(o=>{ if(_fwGet(o.id)) return; if(DB.folders.some(f=>f.id===o.id)) _fwAdd(o.id,o.v,true); else _fwForget(o.id); });
+      arr.forEach(o=>{ if(_fwGet(o.id)) return; if(_fwExists(o.id)) _fwAdd(o.id,o.v,true); else _fwForget(o.id); });
       _fwLayout(); _fwRedraw();
     };
   });
 }
 function _fwClamp(w){
   const W=window.innerWidth,H=window.innerHeight;
-  if(W<640){ w.l=0; w.w=W; w.t=Math.round(H*.1); w.h=Math.round(H*.74); return; }
+  if(W<640){   /* a sheet: full width, its foot fixed at 84 % of the screen, its height the owner's (J103: dragged from the top edge) */
+    const foot=Math.round(H*.84), top0=50;
+    w.l=0; w.w=W; w.h=Math.round(Math.min(foot-top0,Math.max(_FW_MIN_H,w.h>0&&w.h<=H?w.h:H*.74))); w.t=foot-w.h; return;
+  }
   w.w=Math.round(Math.min(W,Math.max(_FW_MIN_W,w.w))); w.h=Math.round(Math.min(H,Math.max(_FW_MIN_H,w.h)));
   w.l=Math.round(Math.max(0,Math.min(w.l,W-w.w))); w.t=Math.round(Math.max(0,Math.min(w.t,H-w.h)));
 }
+/* v05.64 · J103 — a window shows a folder (id = the folder's id) or a section's root folders (id = 'sec:<sectionId>', kind 's') */
+function _fwIsSec(id){ return id.indexOf('sec:')===0; }
+function _fwExists(id){ return _fwIsSec(id)?DB.sections.some(s=>s.id===id.slice(4)):DB.folders.some(f=>f.id===id); }
+function _fwNameOf(id){ const o=_fwIsSec(id)?DB.sections.find(s=>s.id===id.slice(4)):DB.folders.find(f=>f.id===id); return o?o.name:''; }
 function _fwAdd(id,g,restoring){
-  const f=DB.folders.find(x=>x.id===id); if(!f) return null;
-  const w={id,name:f.name,l:+g.l||0,t:+g.t||0,w:+g.w||320,h:+g.h||480,exp:Object.assign({},g.exp||{})};
-  if(!restoring) w.exp[id]=true;
+  if(!_fwExists(id)) return null;
+  const w={id,kind:_fwIsSec(id)?'s':'f',name:_fwNameOf(id),l:+g.l||0,t:+g.t||0,w:+g.w||320,h:+g.h||480,exp:Object.assign({},g.exp||{}),q:''};
+  if(!restoring&&w.kind==='f') w.exp[id]=true;
   _fwClamp(w); _fwWins.push(w);
-  const d=document.createElement('div'); d.className='fwin'; d.dataset.fwid=id; d.setAttribute('role','dialog'); d.setAttribute('aria-label','Folder window');
-  d.innerHTML='<div class="pp-bar fwin-bar" onpointerdown="_fwGrab(event,\''+id+'\',\'move\')" title="Drag to move"><span class="pp-ttl fwin-ttl"></span>'
-    +'<button class="pp-b fwin-sw" onpointerdown="event.stopPropagation()" onclick="_fwStep()" title="Show the next window"></button>'
+  const d=document.createElement('div'); d.className='fwin'; d.dataset.fwid=id; d.setAttribute('role','dialog'); d.setAttribute('aria-label',w.kind==='s'?'Section window':'Folder window');
+  d.innerHTML='<div class="pp-bar fwin-bar" onpointerdown="_ppGrab(event,\'fw:'+id+'\',\'move\')" title="Drag to move"><span class="pp-ttl fwin-ttl"></span>'
     +'<button class="pp-b fwin-x" onpointerdown="event.stopPropagation()" onclick="_fwClose(\''+id+'\')" title="Close this window" aria-label="Close this window">✕</button></div>'
+    +'<div class="fwin-qw"><input type="search" class="fwin-q" placeholder="🔍 Search '+(w.kind==='s'?'this section':'this folder')+'…" aria-label="Search '+(w.kind==='s'?'this section':'this folder')+'" autocomplete="off" oninput="_fwSearch(\''+id+'\',this.value)" onpointerdown="event.stopPropagation()"></div>'
     +'<div class="fwin-body"></div>'
-    +['n','s','e','w','ne','nw','se','sw'].map(x=>'<div class="rsz rsz-'+x+'" onpointerdown="_fwGrab(event,\''+id+'\',\''+x+'\')"></div>').join('');
+    +['n','s','e','w','ne','nw','se','sw'].map(x=>'<div class="rsz rsz-'+x+'" onpointerdown="_ppGrab(event,\'fw:'+id+'\',\''+x+'\')"></div>').join('');
   d.addEventListener('pointerdown',()=>_fwFront(id),true);
   const body=d.querySelector('.fwin-body');
   /* a finger held on a row opens the same folder menu a right-click does (the side pane's own rule, 600 ms) */
@@ -18826,8 +18881,15 @@ function _fwLayout(){
     const e=_fwEl(w.id); if(!e) return;
     e.style.left=w.l+'px'; e.style.top=w.t+'px'; e.style.width=w.w+'px'; e.style.height=w.h+'px'; e.style.zIndex=String(5002+i);
     e.classList.toggle('fw-multi',ph&&n>1);
-    const sw=e.querySelector('.fwin-sw'); if(sw) sw.textContent='◀ '+(n-1)+' more';
   });
+  /* a phone: a strip of the open windows along the top, one chip each, the front one marked; a tap brings that window to the front */
+  let strip=document.getElementById('fw-strip');
+  if(ph&&n>1&&!_fwTucked){
+    if(!strip){ strip=document.createElement('div'); strip.id='fw-strip'; strip.setAttribute('role','tablist'); strip.setAttribute('aria-label','Open windows');
+      strip.addEventListener('click',ev=>{ const c=ev.target.closest('[data-fwid]'); if(c) _fwFront(c.dataset.fwid); }); document.body.appendChild(strip); }
+    const html=_fwWins.map((w,i)=>'<button type="button" class="fw-chip'+(i===n-1?' on':'')+'" role="tab" aria-selected="'+(i===n-1)+'" data-fwid="'+esc(w.id)+'">'+(w.kind==='s'?'🗂 ':'📁 ')+esc(w.name)+'</button>').join('');
+    if(strip._h!==html){ strip.innerHTML=html; strip._h=html; }
+  }else if(strip) strip.remove();
   document.body.classList.toggle('fw-tuck',_fwTucked&&n>0);
   let pill=document.getElementById('fw-pill');
   if(_fwTucked&&n>0){
@@ -18839,7 +18901,6 @@ function _fwFront(id){
   const w=_fwGet(id); if(!w||_fwWins[_fwWins.length-1]===w) return;
   _fwWins.splice(_fwWins.indexOf(w),1); _fwWins.push(w); _fwLayout();
 }
-function _fwStep(){ if(_fwWins.length>1) _fwFront(_fwWins[0].id); }
 function _fwTuck(on){ _fwTucked=!!on&&_fwWins.length>0; _fwLayout(); if(!_fwTucked) _fwRedraw(); }
 function _fwClose(id,quiet){
   const w=_fwGet(id); if(!w) return;
@@ -18849,13 +18910,38 @@ function _fwClose(id,quiet){
   if(!_fwWins.length) _fwTucked=false;
   _fwLayout();
 }
+/* the search box: the notes in this folder's subtree (or this section's folders), title or text, any case; at most 100 shown */
+function _fwSearch(id,v){ const w=_fwGet(id); if(!w) return; w.q=String(v||''); _fwPaint(w); }
+function _fwSearchHTML(w,q){
+  const roots=w.kind==='s'?DB.folders.filter(x=>!x.parentId&&x.sectionId===w.id.slice(4)).map(x=>x.id):[w.id];
+  const fids=new Set(); roots.forEach(r=>descOf(r).forEach(i=>fids.add(i)));
+  const words=q.split(/\s+/).filter(Boolean), out=[]; let more=false;
+  for(const a of DB.articles){
+    if(!a.folderIds||!a.folderIds.some(i=>fids.has(i))) continue;
+    const hay=((a.title||'')+' '+String(a.content||'').replace(/<[^>]*>/g,' ')).toLowerCase();
+    if(!words.every(x=>hay.includes(x))) continue;
+    if(out.length>=100){ more=true; break; }
+    out.push('<div class="fwin-hit" role="button" tabindex="0" data-aid="'+esc(a.id)+'" onclick="selArt(\''+esc(a.id)+'\')">📄 '+esc(a.title||'Untitled')+'</div>');
+  }
+  return '<div class="fwin-hits" data-n="'+out.length+'">'+(out.length?out.join(''):'<div class="fwin-none">No notes match “'+esc(q)+'”.</div>')+(more?'<div class="fwin-none">…more than 100 match; type more to narrow.</div>':'')+'</div>';
+}
 function _fwPaint(w){
-  const e=_fwEl(w.id), f=DB.folders.find(x=>x.id===w.id); if(!e||!f) return;
-  w.name=f.name;
-  const ttl=e.querySelector('.fwin-ttl'), tx='⠿ 📁 '+f.name; if(ttl.textContent!==tx) ttl.textContent=tx;
+  const e=_fwEl(w.id); if(!e||!_fwExists(w.id)) return;
+  const sec=w.kind==='s', f=sec?null:DB.folders.find(x=>x.id===w.id);
+  w.name=_fwNameOf(w.id);
+  const ttl=e.querySelector('.fwin-ttl'), tx='⠿ '+(sec?'🗂 ':'📁 ')+w.name; if(ttl.textContent!==tx) ttl.textContent=tx;
   let html='';
-  _trWin=w.id; _trExp=w.exp;
-  try{ html=trNode(f,0); }finally{ _trWin=null; _trExp=null; }
+  const q=(w.q||'').trim().toLowerCase();
+  if(q) html=_fwSearchHTML(w,q);
+  else{
+    _trWin=w.id; _trExp=w.exp;
+    try{
+      if(sec){
+        const rs=DB.folders.filter(x=>!x.parentId&&x.sectionId===w.id.slice(4)).sort((a,b)=>(a.order||0)-(b.order||0));
+        html=rs.map(x=>trNode(x,0)).join('')||'<div class="fwin-none">Empty — add a folder with ＋ in the side pane.</div>';
+      }else html=trNode(f,0);
+    }finally{ _trWin=null; _trExp=null; }
+  }
   const b=e.querySelector('.fwin-body');
   if(b._fwHtml!==html){ const st=b.scrollTop; b.innerHTML=html; b._fwHtml=html; b.scrollTop=st; }
 }
@@ -18864,8 +18950,8 @@ function _fwRedraw(){
   if(!_fwRestored&&typeof _dbLoaded!=='undefined'&&_dbLoaded) _fwRestore();
   if(!_fwWins.length||_fwTucked) return;
   if(_dragId||_artDragId) return;
-  _fwWins.filter(w=>!DB.folders.some(f=>f.id===w.id)).forEach(w=>{
-    const nm=w.name; _fwClose(w.id,true); toast('🗗 The window for "'+nm+'" closed — that folder is gone');
+  _fwWins.filter(w=>!_fwExists(w.id)).forEach(w=>{
+    const nm=w.name; _fwClose(w.id,true); toast('🗗 The window for "'+nm+'" closed — that '+(w.kind==='s'?'section':'folder')+' is gone');
   });
   _fwWins.forEach(_fwPaint);
 }
@@ -18885,32 +18971,27 @@ function openFolderWin(fid){
   _fwLayout(); _fwPaint(w); _fwSave(fid);
   if(ph) toast('🗗 "'+f.name+'" is in its own window');
 }
-function _fwGrab(ev,id,dir){
-  if(ev.button>0) return;
-  const w=_fwGet(id), el=_fwEl(id); if(!w||!el) return;
-  if(window.innerWidth<640) return;   /* a phone's sheet does not move */
-  ev.preventDefault(); ev.stopPropagation(); _fwFront(id);
-  _fwRsz={id,dir,x:ev.clientX,y:ev.clientY,l:w.l,t:w.t,w:w.w,h:w.h};
-  document.addEventListener('pointermove',_fwMove); document.addEventListener('pointerup',_fwStop); document.addEventListener('pointercancel',_fwStop);
-  document.body.style.userSelect='none';
+/* v05.64 · J103 — one engine: a folder/section window is resized and moved by _ppGrab/_ppMove/_ppStop ('fw:<id>'); _fwRsz is gone. */
+/* a section's window: its root folders (not the old browse picker) */
+function openSecWin(sid){
+  const sec=DB.sections.find(x=>x.id===sid); if(!sec) return;
+  const id='sec:'+sid;
+  _fwCtxFrom=null;
+  if(_fwGet(id)){ _fwTucked=false; _fwFront(id); _fwLayout(); _fwRedraw(); return; }
+  let g={l:60,t:60,w:320,h:480};
+  const sb=document.getElementById('sb'), r=sb?sb.getBoundingClientRect():null;
+  if(r&&r.width>=_FW_MIN_W&&r.height>=_FW_MIN_H) g={l:(r.right+16+r.width<=window.innerWidth)?r.right+16:r.left+24,t:r.top+(r.height<window.innerHeight-60?0:24),w:r.width,h:r.height};
+  _fwTucked=false;
+  const w=_fwAdd(id,g); if(!w) return;
+  w.exp={};
+  _fwLayout(); _fwPaint(w); _fwSave(id);
+  if(window.innerWidth<640) toast('🗗 "'+sec.name+'" is in its own window');
 }
-function _fwMove(ev){
-  const R=_fwRsz; if(!R) return; const w=_fwGet(R.id); if(!w) return;
-  const W=window.innerWidth,H=window.innerHeight,dx=ev.clientX-R.x,dy=ev.clientY-R.y,d=R.dir;
-  let l=R.l,t=R.t,ww=R.w,h=R.h;
-  if(d==='move'){ l=R.l+dx; t=R.t+dy; }
-  else{
-    if(d.includes('e')) ww=Math.max(_FW_MIN_W,Math.min(W-R.l,R.w+dx));
-    if(d.includes('s')) h=Math.max(_FW_MIN_H,Math.min(H-R.t,R.h+dy));
-    if(d.includes('w')){ ww=Math.max(_FW_MIN_W,Math.min(R.l+R.w,R.w-dx)); l=R.l+R.w-ww; }
-    if(d.includes('n')){ h=Math.max(_FW_MIN_H,Math.min(R.t+R.h,R.h-dy)); t=R.t+R.h-h; }
-  }
-  w.l=l; w.t=t; w.w=ww; w.h=h; _fwLayout();
-}
-function _fwStop(){
-  if(!_fwRsz) return; const id=_fwRsz.id; _fwRsz=null;
-  document.removeEventListener('pointermove',_fwMove); document.removeEventListener('pointerup',_fwStop); document.removeEventListener('pointercancel',_fwStop);
-  document.body.style.userSelect=''; _fwSave(id);
+/* the ⧉ on a folder row: the window opens at the size of the pane or window the row is in */
+function _fwPopBtn(ev,fid){
+  ev.stopPropagation(); ev.preventDefault();
+  _fwCtxFrom=ev.target.closest?ev.target.closest('.fwin,#sb,.pp'):null;
+  openFolderWin(fid);
 }
 window.addEventListener('resize',()=>{ if(_fwWins.length) _fwLayout(); });
 window.addEventListener('resize',()=>{
@@ -19729,12 +19810,18 @@ function finRenDbSec(){
   }
   renderTree();
 }
+/* v05.64 · J101 — only shown once renamed; the same write as a rename (name + updatedAt), so it merges the same way */
+function resetDbSecName(){
+  const sec=DB.sections.find(x=>x.id==='db-section'); if(!sec||_dbSecName()==='MyDatabase') return;
+  sec.name='MyDatabase'; sec.updatedAt=new Date().toISOString(); persist(); renderTree();
+}
 function showDbSecCtx(ev){
   ev.preventDefault();ev.stopPropagation();
   const m=document.getElementById('ctx');
   const n=DB.folders.filter(f=>f.sectionId==='db-section'&&!f.parentId&&!f.journalMode
     &&f.id!=='db-fav-folder'&&f.id!=='db-ct-folder').length;
   m.innerHTML='<div class="ci" onclick="hideCtx();startRenDbSec()">✏️ Rename section</div>'
+    +(_dbSecName()!=='MyDatabase'?'<div class="ci" onclick="hideCtx();resetDbSecName()">↺ Back to “MyDatabase”</div>':'')
     +'<div class="csep"></div>'
     +'<div class="ci" onclick="newDbFolder()">➕ New database folder…</div>'
     +'<div class="ci" onclick="hideCtx();newPlainDbFolder()">📁 New plain folder</div>'
@@ -23519,6 +23606,7 @@ function renderSection(sec){
       <span class="sec-tog">${open?'▾':'▸'}</span>
       <span class="sec-nm" ondblclick="event.stopPropagation();startRenSec('${sec.id}')" ${(sec.color||sec.bold)?`style="${sec.color?`color:${sec.color};`:''}${sec.bold?'font-weight:700':''}"`:''} >${esc(sec.name)}</span>
       <span class="sec-acts">
+        <span class="sec-act sec-pop" role="button" aria-label="Open ${esc(sec.name)} in its own window" onclick="event.stopPropagation();openSecWin('${sec.id}')" title="Open this section in its own window">⧉</span>
         <span class="sec-act" onclick="event.stopPropagation();addFolderInSec('${sec.id}')" title="New folder in this section">＋</span>
         <span class="sec-act" onclick="event.stopPropagation();showSecCtx(event,'${sec.id}')">⋯</span>
       </span>
@@ -23649,7 +23737,9 @@ function _buildSecCtxMain(sid){
     DB.sections.some(s=>s.id!==sid&&!s.id.startsWith('db-')&&!s.id.startsWith('kb-'));
   return `<div class="ci" onclick="hideCtx();addFolderInSec('${sid}')">📁 New folder here</div>`+
     `<div class="ci" onclick="hideCtx();startRenSec('${sid}')">✏️ Rename section</div>`+
-    `<div class="ci" onclick="hideCtx();openSectionPopout('${sid}')">🗗 Pop out into window</div>`+
+    `<div class="ci" onclick="hideCtx();openSecWin('${sid}')">🗗 Pop out into window</div>`+
+    (_secIdx(sid)>0?`<div class="ci" onclick="hideCtx();moveSection('${sid}',-1)">⬆️ Move up</div>`:'')+
+    (_secIdx(sid)>=0&&_secIdx(sid)<DB.sections.length-1?`<div class="ci" onclick="hideCtx();moveSection('${sid}',1)">⬇️ Move down</div>`:'')+
     `<div class="ci" style="flex-direction:column;align-items:flex-start;gap:0;cursor:default;padding:6px 0 4px">`+
       `<span class="ctx-clr-lbl">🎨 Section colour</span>`+
       `<div class="ctx-colors">${ctxSecColorSwatches(sid)}</div>`+
@@ -23657,6 +23747,18 @@ function _buildSecCtxMain(sid){
     (canDel||hasConvert?`<div class="csep"></div>`:'')+
     (hasConvert?`<div class="ci ci-sub" onclick="_secCtxSub('${sid}','convert')">📁 Convert to folder<span class="ci-arr">▶</span></div>`:'')+
     (canDel?`<div class="ci d" onclick="hideCtx();delSection('${sid}')">🗑 Delete section</div>`:'');
+}
+/* v05.64 · J103 — ⬆️/⬇️ for a section. Every section whose number changes gets its own updatedAt, so the order wins a merge from either side. */
+function _secSorted(){ return [...DB.sections].sort((a,b)=>(a.order||0)-(b.order||0)); }
+function _secIdx(sid){ return _secSorted().findIndex(s=>s.id===sid); }
+function moveSection(sid,dir){
+  const arr=_secSorted(), i=arr.findIndex(s=>s.id===sid), j=i+(dir<0?-1:1);
+  if(i<0||j<0||j>=arr.length) return false;
+  const [m]=arr.splice(i,1); arr.splice(j,0,m);
+  const now=new Date().toISOString();
+  arr.forEach((s,k)=>{ const sec=DB.sections.find(x=>x.id===s.id); if(sec&&sec.order!==k){ sec.order=k; sec.updatedAt=now; } });
+  persist(); renderTree();
+  return true;
 }
 function showSecCtx(ev,sid){
   ev.preventDefault();ev.stopPropagation();
