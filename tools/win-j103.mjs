@@ -54,6 +54,7 @@ for (const [W, H, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
   let held = false;
   const press = async (loc) => { if (touch) await loc.tap(); else await loc.click(); await page.waitForTimeout(250); };
   const menuAt = async (sel) => {
+    await page.evaluate(() => { hideCtx(); document.getElementById('ctx').innerHTML = ''; });   /* a stale menu must never answer for this one */
     const el = page.locator(sel).first(); await el.scrollIntoViewIfNeeded();
     if (!touch) await el.click({ button: 'right', position: { x: 40, y: 8 } });
     else { const b = await el.boundingBox(); const x = b.x + 40, y = b.y + b.height / 2; await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] }); await page.waitForTimeout(750); held = { x, y }; }
@@ -84,7 +85,7 @@ for (const [W, H, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     r.check(!!A && !!B && tapOk && (!touch || op > 0.5), `123a@${W} a ⧉ on a side-pane row and on a window row opens that folder's window${tier === 'phone' ? '; ≥ 48 px and visible without hover' : touch ? '; visible without hover' : ''}`, JSON.stringify({ A, B, pb, op }));
 
     /* 123b — A2 */
-    await page.evaluate(() => { _fwTuck(false); });
+    await page.evaluate(() => { _fwClose('f1a'); _fwTuck(false); });
     await page.locator('.fwin[data-fwid="f1"] .fwin-q').fill('second');
     await page.waitForTimeout(300);
     const hits = await page.evaluate(() => [...document.querySelectorAll('.fwin[data-fwid="f1"] .fwin-hit')].map((e) => e.textContent));
@@ -94,7 +95,7 @@ for (const [W, H, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     await page.locator('.fwin[data-fwid="f1"] .fwin-q').fill('second');
     await page.waitForTimeout(250);
     await press(page.locator('.fwin[data-fwid="f1"] .fwin-hit').first());
-    const cur = await page.evaluate(() => (typeof ST !== 'undefined' && ST.art) || (typeof curA !== 'undefined' && curA && curA.id) || null);
+    const cur = await page.evaluate(() => ST.article || null);
     r.check(hits.length === 1 && /Seeded note two/.test(hits[0]) && hits2 === 0 && !!cur, `123b@${W} the window's search lists the notes of that folder's subtree only (f1 → "Seeded note two", not the note in another folder); a hit opens the note`, JSON.stringify({ hits, hits2, cur }));
 
     /* 123c — A3 */
@@ -205,22 +206,27 @@ for (const [W, H, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       const g0 = await winRect(page, 'f1');
       const hn = await page.evaluate(() => { const e = document.querySelector('.fwin[data-fwid="f1"] > .rsz-n'); const c = e.getBoundingClientRect(); return { x: c.left + c.width / 2, y: c.top + c.height / 2, w: c.width, h: c.height, vis: getComputedStyle(e).display !== 'none' }; });
       const others = await page.evaluate(() => ['s', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map((d) => getComputedStyle(document.querySelector('.fwin[data-fwid="f1"] > .rsz-' + d)).display));
-      await page.mouse.move(hn.x, hn.y); await page.mouse.down(); await page.mouse.move(hn.x, hn.y - 40, { steps: 5 }); await page.mouse.up();
+      /* the sheet starts at its tallest: pull the top edge DOWN 120 (shorter), then UP 40 (taller) */
+      await page.mouse.move(hn.x, hn.y); await page.mouse.down(); await page.mouse.move(hn.x, hn.y + 120, { steps: 5 }); await page.mouse.up();
       const g1 = await winRect(page, 'f1');
-      await page.mouse.move(hn.x, g1.t); await page.mouse.down(); await page.mouse.move(hn.x, g1.t + 120, { steps: 5 }); await page.mouse.up();
+      const hn2 = await page.evaluate(() => { const c = document.querySelector('.fwin[data-fwid="f1"] > .rsz-n').getBoundingClientRect(); return { x: c.left + c.width / 2, y: c.top + c.height / 2 }; });
+      await page.mouse.move(hn2.x, hn2.y); await page.mouse.down(); await page.mouse.move(hn2.x, hn2.y - 40, { steps: 5 }); await page.mouse.up();
       const g2 = await winRect(page, 'f1');
-      r.check(hn.vis && hn.h >= 22 && others.every((d) => d === 'none') && g1.h - g0.h === 40 && g1.w === g0.w && g1.l === 0 && g2.h < g1.h && g2.w === g0.w, `123h@${W} a phone's sheet resizes its HEIGHT only, from a ≥ 22 px top edge (up +40 grew it, down shrank it; width and left never moved; no other handle)`, JSON.stringify({ g0, g1, g2, hn, others }));
+      r.check(hn.vis && hn.h >= 22 && others.every((d) => d === 'none') && g0.h - g1.h === 120 && g2.h - g1.h === 40 && g1.w === g0.w && g2.w === g0.w && g2.l === 0 && g1.t + g1.h === g0.t + g0.h && g2.t + g2.h === g0.t + g0.h, `123h@${W} a phone's sheet resizes its HEIGHT only, from a ≥ 22 px top edge (down 120 shortened it, up 40 grew it; the foot, width and left never moved; no other handle)`, JSON.stringify({ g0, g1, g2, hn, others }));
       await page.evaluate(() => { _fwWins.slice().forEach((w) => _fwClose(w.id)); });
     }
 
     /* 123i — J104 */
-    await page.evaluate(() => { if (innerWidth < 1200) showPane('sb'); });
+    await page.evaluate(() => { const a = document.activeElement; if (a && a !== document.body) a.blur(); if (innerWidth < 1200) showPane('sb'); });   /* a field with the keyboard up hides the Zab button */
+    await page.waitForTimeout(700);   /* the keyboard class is put away 300 ms after the field loses focus */
     const layouts = tier === 'phone' ? ['rail', 'drawer', 'cols'] : ['bar'];
     for (const L of layouts) {
       await page.evaluate((L) => { DB.theme.zabTicker = { on: false, mode: 'all', pids: [], skip: [] }; DB.theme.zabPhoneLayout = L; persist(); _zabBtnSig = ''; _jebBarSig = ''; jebRefresh(); }, L);
       await page.waitForTimeout(400);
       if (tier === 'phone') {
-        await page.locator('#zab-btn').tap(); await page.waitForTimeout(400);
+        const bs = await page.evaluate(() => { const b = document.getElementById('zab-btn'); const c = b && b.getBoundingClientRect(); const cs = b && getComputedStyle(b); return { cls: document.documentElement.className, display: cs && cs.display, vis: cs && cs.visibility, r: c && [Math.round(c.left), Math.round(c.top), Math.round(c.width), Math.round(c.height)], act: document.activeElement && document.activeElement.tagName + '.' + document.activeElement.className, layout: DB.theme.zabPhoneLayout }; });
+        r.check(!!bs.r && bs.r[2] > 0, `123i@${W} ${L} the Zab button is on screen`, JSON.stringify(bs));
+        await page.locator('#zab-btn').tap({ timeout: 5000 }); await page.waitForTimeout(400);
         await page.locator('#zab-lay [data-zact="choose"]').first().tap(); await page.waitForTimeout(300);
         for (const id of ['zp1', 'zp3']) { const row = page.locator(`#zab-lay [data-pid="${id}"]`).first(); await row.tap(); await page.waitForTimeout(250); }
         const dis0 = await page.evaluate(() => document.querySelector('#zab-lay [data-zact="go-scroll"]').disabled);

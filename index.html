@@ -1058,9 +1058,10 @@ html.zab-btn #zab-btn{display:flex}
 .zb-n.jt-red{background:#B42318;color:#fff;border-color:#B42318}
 #zab-lay{position:fixed;left:0;right:0;top:0;bottom:var(--jeb-h);z-index:141}
 .zl-bd{position:absolute;inset:0;background:rgba(0,0,0,.22)}
-.zl-ch{position:absolute;left:0;right:0;top:0;z-index:2;display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;background:var(--white);border-bottom:1px solid var(--border2);box-shadow:0 2px 10px rgba(0,0,0,.2)}
-.zl-ch .zd-act{flex:1 1 auto;width:auto;min-height:48px;justify-content:center;border:1px solid var(--border2);border-radius:999px}
+.zl-ch{position:absolute;left:0;right:0;top:0;z-index:2;display:flex;flex-wrap:nowrap;gap:6px;padding:8px 10px;box-sizing:border-box;height:65px;background:var(--white);border-bottom:1px solid var(--border2);box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.zl-ch .zd-act{flex:1 1 0;min-width:0;width:auto;min-height:48px;padding:0 4px;font-size:12px;white-space:nowrap;justify-content:center;border:1px solid var(--border2);border-radius:999px}
 .zl-ch .zd-act:disabled{opacity:.5}
+#zab-lay:has(.zl-ch) :is(.zl-dr,.zl-cols){top:65px}
 .zck{font-size:15px;margin-right:2px}
 .zch-b{min-height:48px}
 .zl-rail{position:absolute;right:14px;bottom:calc(16px + 52px + 10px + env(safe-area-inset-bottom,0px));max-height:calc(100% - 100px - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column-reverse;align-items:flex-end;gap:6px;overflow-y:auto;overscroll-behavior:contain;padding:4px 2px;scrollbar-width:none}
@@ -22991,7 +22992,7 @@ function renderNTISection(){
     body+='</div>';
   }
   return `<div class="sf-sec nti-sec">
-    <div class="sec-hd sf-hd-sec" onclick="toggleNtiSection(event)" oncontextmenu="showNtiSectionMenu(event)">
+    <div class="sec-hd sf-hd-sec" data-nti-sec="1" onclick="toggleNtiSection(event)" oncontextmenu="showNtiSectionMenu(event)">
       <span class="sec-tog">${open?'▾':'▸'}</span>
       <span class="sec-nm" style="${sectionColor?`color:${sectionColor}`:''}">${esc(sectionLabel)}</span>
       <span class="sec-acts">
@@ -24815,6 +24816,8 @@ function _jebWireOnce(){
 let _jebStaleSwept=false;
 function jebRefresh(){
   if(typeof DB==='undefined'||!DB||!_dbLoaded) return;
+  /* v05.64: a focused rename box that is REMOVED from the page (Enter in a rename) fires no focusout, so jeb-kb stayed and the Zab button / bar stayed hidden until the next focus; a redraw now re-asks */
+  if(document.documentElement.classList.contains('jeb-kb')&&!_jebKbWanted()) _jebKbCheck();
   if(!_jebStaleSwept){   /* a copy saved by an older build may carry dead Jeb surfaces: this session builds its own */
     _jebStaleSwept=true;
     document.querySelectorAll('#jeb-bar,#jeb-panel,#jeb-deck,#jeb-att,#jeb-menu,#jeb-app-hd,#zab-btn,#zab-lay,#zab-card,#zab-tk,#zab-tk-again').forEach(el=>el.remove());
@@ -25712,7 +25715,7 @@ function _zabPaint(anim){
   const sw=p=>ck(p)+'<span class="zs" style="background:'+esc(p.color)+'" aria-hidden="true">'+esc(p.icon)+'</span>';
   const chB='<button type="button" class="zd-act zch-b" data-zact="choose" aria-pressed="'+_zabChoose+'">'+(_zabChoose?'✕ Cancel':'☑ Choose')+'</button>';
   const chN=_jebChosen.size;
-  const chFoot=_zabChoose?'<div class="zl-ch" role="group" aria-label="Choose Zabs"><button type="button" class="zd-act" data-zact="choose">✕ Cancel</button><button type="button" class="zd-act" data-zact="go-panel"'+(chN?'':' disabled')+'>▤ Panel ('+chN+')</button><button type="button" class="zd-act" data-zact="go-cards"'+(chN?'':' disabled')+'>▦ Cards ('+chN+')</button><button type="button" class="zd-act" data-zact="go-scroll"'+(chN?'':' disabled')+'>🎞 Scroll ('+chN+')</button></div>':'';
+  const chFoot=_zabChoose?'<div class="zl-ch" role="group" aria-label="Choose Zabs"><button type="button" class="zd-act" data-zact="choose" aria-label="Cancel choosing">✕</button><button type="button" class="zd-act" data-zact="go-panel"'+(chN?'':' disabled')+'>▤ Panel ('+chN+')</button><button type="button" class="zd-act" data-zact="go-cards"'+(chN?'':' disabled')+'>▦ Cards ('+chN+')</button><button type="button" class="zd-act" data-zact="go-scroll"'+(chN?'':' disabled')+'>🎞 Scroll ('+chN+')</button></div>':'';
   const nwOn=_zabNews().on, nwB=(cls,inner)=>'<button type="button" class="'+cls+'" data-zact="news">'+inner+'</button>';
   const newB=(par)=>'<button type="button" class="zd-act new" data-zact="new" data-par="'+esc(par||'')+'">＋ New Zab</button>';
   let h='';
@@ -36971,6 +36974,13 @@ document.addEventListener('keydown', function(ev){
         _fired=true;
         if(navigator.vibrate) navigator.vibrate(25);
         showArtCtx({clientX:_sx,clientY:_sy,preventDefault:()=>{},stopPropagation:()=>{}},aid);
+      },600);
+    } else if(e.target.closest('[data-nti-sec]')){
+      /* v05.64 · J101 A5 — the Note Types heading had a right-click menu but no long-press: a finger could not rename it */
+      _t=setTimeout(()=>{
+        _fired=true;
+        if(navigator.vibrate) navigator.vibrate(25);
+        showNtiSectionMenu({clientX:_sx,clientY:_sy,preventDefault:()=>{},stopPropagation:()=>{}});
       },600);
     } else if(e.target.closest('[data-tag-sec]')){
       _t=setTimeout(()=>{
