@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* v05.65 (J108): the item menu is grouped (OPEN · MARK · …); a heading row takes a data-i of its own, so "the first row" is the first .jm,
+   not data-i="0", and an item with no address now starts with ✏️ Edit (OPEN), ☑ Done being first in MARK. Updated in place, not removed. */
 /* tools/zab-open-link.mjs — v05.38, Z14: "🔗 Open link" in an item's menu (PCF J57). Checks 98a–98c. The owner tapped a saved Facebook link in the scrolling band
    and got the item menu with no way to open the address. Nothing touches the real network: the address is https://link-target.test/…, answered by a route.
 
@@ -78,7 +80,7 @@ if (want('98a')) {
     await T(`98a@${cfg.tag} a tap on a link item in the band opens its menu with "🔗 Open link" first; tapping it opens the address in a new page and closes the menu`, async () => {
       const r = await bandMenu(d, 'l1');
       if (r[0] !== '🔗 Open link') return [false, 'menu: ' + JSON.stringify(r)];
-      const [pop] = await Promise.all([p.waitForEvent('popup', { timeout: 5000 }), press(d, await centre(p, '#jeb-menu .jm[data-i="0"]'))]);
+      const [pop] = await Promise.all([p.waitForEvent('popup', { timeout: 5000 }), press(d, await centre(p, '#jeb-menu .jm'))]);
       const url = pop.url(); await pop.close().catch(() => {}); await sleep(300);
       const open = await p.evaluate(() => !!document.getElementById('jeb-menu'));
       return [url === 'https://link-target.test/share/v/1E9CiUqF8h/' && !open, `${url} menu still open: ${open}`];
@@ -93,18 +95,18 @@ if (want('98b') || want('98c')) {
     await T('98b an address in the middle of the text is found (without the trailing full stop) and opened', async () => {
       const r = await bandMenu(d, 'l2');
       if (r[0] !== '🔗 Open link') return [false, 'menu: ' + JSON.stringify(r)];
-      const [pop] = await Promise.all([p.waitForEvent('popup', { timeout: 5000 }), press(d, await centre(p, '#jeb-menu .jm[data-i="0"]'))]);
+      const [pop] = await Promise.all([p.waitForEvent('popup', { timeout: 5000 }), press(d, await centre(p, '#jeb-menu .jm'))]);
       const url = pop.url(); await pop.close().catch(() => {});
       return [url === 'https://link-target.test/mid?a=1', url];
     });
     await T('98b an item with no address has no "Open link" row (its menu starts with ☑ Done, as before)', async () => {
       const r = await bandMenu(d, 'n1'); await p.keyboard.press('Escape'); await p.evaluate(() => _jebHideMenu());
-      return [r.length > 3 && r[0] === '☑ Done' && !r.some((t) => /Open link/.test(t)), JSON.stringify(r)];
+      return [r.length > 3 && r[0] === '✏️ Edit' && r.includes('☑ Done') && !r.some((t) => /Open link/.test(t)), JSON.stringify(r)];
     });
     await T('98b a Links Zab item opens its stored address', async () => {
       const r = await bandMenu(d, 'k1');
       if (r[0] !== '🔗 Open link') return [false, 'menu: ' + JSON.stringify(r)];
-      const [pop] = await Promise.all([p.waitForEvent('popup', { timeout: 5000 }), press(d, await centre(p, '#jeb-menu .jm[data-i="0"]'))]);
+      const [pop] = await Promise.all([p.waitForEvent('popup', { timeout: 5000 }), press(d, await centre(p, '#jeb-menu .jm'))]);
       const url = pop.url(); await pop.close().catch(() => {});
       return [url === 'https://link-target.test/stored', url];
     });

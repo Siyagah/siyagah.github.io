@@ -11118,3 +11118,10 @@ headings and no separator lines, rows and width unchanged — the owner asked fo
 the phone the Zab menu is opened with the real ⋯ in the open Zab's panel because the bar folds its chips away there): headings and their order, every
 v05.64 function/word still present, one real tap per group reaches its function under the right heading, the menu inside the screen, no page errors.
 Menus are opened with a real right-click (the real ⋯ tap for a Zab item); a timed long-press on a touch screen is not simulated.
+
+**Architect review (v05.65).** The full app-check on the builder's commit found two older checks describing the menu order J108 deliberately
+changed: 92f (a tap on a title in the band) expected ☑ Done as the item menu's first row, and 98a/98b (🔗 Open link) pressed `.jm[data-i="0"]`
+and expected an address-less item to start with ☑ Done. The grouped menu puts ✏️ Edit first (OPEN), ☑ Done first in MARK, keeps 🔗 Open link
+first of all for an item with an address, and gives each heading row a `data-i` of its own. Both checks were updated in place (`zab-ticker.mjs`,
+`zab-open-link.mjs`, reasons in their comments): 92f now asks for ✏️ Edit first and ☑ Done present, and reads "☐ Not done" as the MARK group's
+first row; 98a–98c press the first action row. The app was not changed. 92 + 98: 78/78.
