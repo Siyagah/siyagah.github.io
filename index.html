@@ -18748,7 +18748,7 @@ function _ppMenu(ev,p){
    rows live ONLY on this device, in the IndexedDB database 'siyagah-pp-v1' (store kv, key 'fw:<folderId>'), never in DB, never in
    localStorage; a window is remembered only while it is open. _fwWins is in stacking order (last = in front). */
 let _fwWins=[], _fwCtxFrom=null, _fwTucked=false, _fwRestored=false, _fwRsz=null, _fwDbP=null, _fwLP=null;
-const _FW_MIN_W=240, _FW_MIN_H=160;
+const _FW_MIN_W=180, _FW_MIN_H=160;
 function _fwGet(id){ return _fwWins.find(w=>w.id===id)||null; }
 function _fwEl(id){ return Array.from(document.querySelectorAll('.fwin')).find(e=>e.dataset.fwid===id)||null; }
 function _fwDbOpen(){
@@ -18801,14 +18801,15 @@ function _fwAdd(id,g,restoring){
   const body=d.querySelector('.fwin-body');
   /* a finger held on a row opens the same folder menu a right-click does (the side pane's own rule, 600 ms) */
   body.addEventListener('touchstart',e=>{
-    clearTimeout(_fwLP); const t=e.touches[0], row=e.target.closest&&e.target.closest('[data-fid]'); if(!row||!t) return;
+    clearTimeout(_fwLP); body._fwFired=false;   /* a new gesture: a press that fired earlier but never got its click must not eat this tap */
+    const t=e.touches[0], row=e.target.closest&&e.target.closest('[data-fid]'); if(!row||!t) return;
     const sx=t.clientX, sy=t.clientY;
     _fwLP=setTimeout(()=>{ body._fwFired=true; if(navigator.vibrate) navigator.vibrate(25);
       showCtx({clientX:sx,clientY:sy,target:row,preventDefault(){},stopPropagation(){}},row.dataset.fid); },600);
   },{passive:true});
   body.addEventListener('touchmove',e=>{ const t=e.touches[0]; if(t&&_fwLP) clearTimeout(_fwLP); },{passive:true});
-  body.addEventListener('touchend',()=>clearTimeout(_fwLP),{passive:true});
-  body.addEventListener('touchcancel',()=>clearTimeout(_fwLP),{passive:true});
+  body.addEventListener('touchend',()=>{ clearTimeout(_fwLP); setTimeout(()=>{ body._fwFired=false; },400); },{passive:true});   /* the browser's click, if any, comes at once; later ones are new taps */
+  body.addEventListener('touchcancel',()=>{ clearTimeout(_fwLP); body._fwFired=false; },{passive:true});
   body.addEventListener('click',e=>{ if(body._fwFired){ body._fwFired=false; e.stopImmediatePropagation(); e.preventDefault(); } },true);
   document.body.appendChild(d);
   return w;
