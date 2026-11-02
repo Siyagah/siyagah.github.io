@@ -170,4 +170,17 @@ const leftovers = [
 r.check(leftovers.length === 0, 'index.html carries no blocking external script or saved-page style',
   leftovers.length ? `found: ${leftovers.join('; ')}` : 'clean');
 
+/* ── A top-level function declared twice ───────────────────────────────
+   v05.64 (Architect's review): the folder windows added a second top-level
+   `function _fwSave`, and a later declaration silently REPLACES the earlier
+   one, so the float note window's 💾 Save called the folder-window code and
+   did nothing. Nothing throws. Any name declared twice at column 0 fails,
+   except `_edCleanHTML`, which was already declared twice on main before this
+   check existed (recorded for a later look, not blessed). */
+const DUP_KNOWN = new Set(['_edCleanHTML']);
+const decl = [...html.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]);
+const dups = [...new Set(decl.filter((n, i) => decl.indexOf(n) !== i))].filter((n) => !DUP_KNOWN.has(n));
+r.check(dups.length === 0, 'no top-level function is declared twice (a later declaration silently replaces the earlier one)',
+  dups.length ? `declared twice: ${dups.join(', ')}` : `${decl.length} declarations, no new duplicate`);
+
 process.exit(r.finish() ? 1 : 0);

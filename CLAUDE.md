@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.63.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.64.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.64** (2 Nov 2026) — J100/J101 (built by the builder, issue #257): every folder pops out into its own floating window (a full-width sheet on a phone), at the size of the pane or window it came from; the 🗂 MyDatabase heading renames; a Drive 401 clears the token. Second pass: ⧉ on every folder row, a search box and (phone) a chip strip for windows, ↺ Back to “MyDatabase”, section ⬆️/⬇️ and section windows (`sec:<id>`), ONE resize engine (`_ppGrab(ev,'fw:<id>',dir)`) with findable handles, J104 🎞 Scroll in Choose (`_jebScrollThese`; `_zabChoose` on the phone layouts). Check: block 123, `tools/win-j103.mjs`.
 - **v05.63** (1 Nov 2026) — J98 R3 (built by the builder, issue #255): sound/video files live in the owner's Google Drive, never in Siyagah's cloud, `main`, `DB` or a backup. A card note lists its `filesHeld` at display time (`div.mydb-media`, stripped by `_edColClean`): ▶ Play (Drive preview in a new window), ↑ Upload to Drive (from the store's temporary branch `transfer`, sha-verified, resumable over 5 MB), link kept in `DB.theme.mydbDrive[sha]`; 🗄 dialog: "Move all to Drive", ＋ Recording; `rec:{lang,len,given,status,job,drive}` on a note. Check: block 121, `tools/mydb-r3.mjs`.
 - **v05.62** (31 Oct 2026) — J98 R2 (built by the builder, issue #253): 🗄 MyDatabase — cards from the private store `Siyagah/MyDB` become notes (`fromMydb`), read with a read-only key kept in the cloud doc `mydb/v1` and the device database `siyagah-mydb-v1`; copied pages open only in a sandboxed iframe without `allow-same-origin`. Check: block 120, `tools/mydb-r2.mjs`.
 - **v05.61** (30 Oct 2026) — J96 (built by the Architect; the owner's screenshot: "This is not ideal having a second card from a button"): 🎨 Colour and ↕ Spacing pressed inside the edit bar's card (`.fl-pop`, Pane 3 and pop-out windows) open their choices as a section of that card (`_inCard`, `_cardSec`, class `.in-card`; the same button closes it; the card grows to fit, else scrolls to it); outside a card they still float. Check: block 119, `tools/card-j96.mjs`.
@@ -694,6 +695,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
 at least once. Add one the moment it is paid for, with what it cost. Harness
 traps belong in `tools/README.md`, not here.)*
 
+- **A second `function name(){}` at the top level silently replaces the first.** v05.64's folder windows added their own `_fwSave`, and the float note window's 💾 Save quietly called it and saved nothing. Nothing threw, and every check passed, because no check had ever clicked Save in a Multi window. Grep a new top-level name before using it; `ship-check` now fails on a duplicate. Cost: caught in the Architect's review of v05.64, one merge from the owner's notes.
 - **"Could not read it" is not "it is not there" — a read that decides absence must be able to fail.** `_idbGet()` answered
   `undefined` for a failed open, a failed request and a missing key alike, so a moment's storage failure at start made boot take the
   device copy for absent: it opened EMPTY and its first write could land over the real notebook (unpatched: 43 notes → 0). It hid for
