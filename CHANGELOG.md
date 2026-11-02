@@ -11059,4 +11059,6 @@ The owner (28 Oct, with a screenshot of Siyagah Zab's All Zabs cards): "*Enable 
 
 **Not done.** Block 120's fake-store sync was not re-run after the rename (122g checks the folders stay by id and the heading merges both ways); the full app-check was not run (the Architect runs it).
 
+**Second pass (started 2 Nov 2026).** Adds J100/J101 A1–A5, J103 sections, J104 🎞 Scroll in Choose; entries below as each lands.
+
 **Record debt.** v05.63 review — full app-check on fc534b3: 1–59 2328/2330 (56k known); 60–121 6164/6168 (91f fails on main too, known; 100d timing under load, `--only 100` alone 17/17 at 4.8×). Follow-up taken into v05.64: clear the Drive token after a 401.
