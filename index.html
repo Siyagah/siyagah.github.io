@@ -837,7 +837,8 @@ body.fw-tuck .fwin{display:none}
 .pp>.rsz-sw::after,.fwin>.rsz-sw::after{left:7px;bottom:7px;border-left-width:3px;border-bottom-width:3px}
 .pp>.rsz-ne::after,.fwin>.rsz-ne::after{right:7px;top:7px;border-right-width:3px;border-top-width:3px}
 .pp>.rsz-nw::after,.fwin>.rsz-nw::after{left:7px;top:7px;border-left-width:3px;border-top-width:3px}
-.pp>.rsz:hover,.fwin>.rsz:hover,.pp>.rsz:active,.fwin>.rsz:active{background:rgba(46,125,95,.45)}
+/* v05.64 review: the tint only where there is a mouse, and never :active — Chrome's touch adjustment treats an element with a :hover/:active rule as a tap target and pulled a finger on the title bar onto the top edge (block 112c/112d) */
+@media(hover:hover){.pp>.rsz:hover,.fwin>.rsz:hover{background:rgba(46,125,95,.45)}}
 @media(max-width:639.98px){ .fwin>.rsz{display:none} .fwin>.rsz.rsz-n{display:block;left:0;right:0;top:-14px;height:22px;background:rgba(128,128,128,.35);border-radius:12px 12px 0 0} .fwin .fwin-bar{cursor:default;touch-action:auto} .fwin.fw-multi .fwin-sw{display:inline-block} .fwin{border-radius:12px 12px 0 0} }
 @media(max-width:1199.98px){ .fwin>.rsz-n,.fwin>.rsz-s{height:22px;left:28px;right:28px}.fwin>.rsz-n{top:-11px}.fwin>.rsz-s{bottom:-11px}.fwin>.rsz-e,.fwin>.rsz-w{width:22px;top:28px;bottom:28px}.fwin>.rsz-e{right:-11px}.fwin>.rsz-w{left:-11px}
   .fwin>.rsz-ne,.fwin>.rsz-nw,.fwin>.rsz-se,.fwin>.rsz-sw{width:30px;height:30px}.fwin>.rsz-ne,.fwin>.rsz-nw{top:-12px}.fwin>.rsz-se,.fwin>.rsz-sw{bottom:-12px}.fwin>.rsz-ne,.fwin>.rsz-se{right:-12px}.fwin>.rsz-nw,.fwin>.rsz-sw{left:-12px} }

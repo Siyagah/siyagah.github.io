@@ -8,13 +8,14 @@
    123f  B1  ⬆️ / ⬇️ move a section; both stamped; the order wins a merge from either side
    123g  B2  a section's 🗗 Pop out and the ⧉ on its heading open a folder window of its root folders (not the picker)
    123h  B3  all 8 handles of a folder window (and of a popped-out pane) resize by a real drag; a phone's sheet: height only, from the top edge;
+   123h2     (review) a finger on a folder window's title bar moves it and never resizes it (tablet)
              the corner grips are painted (pixel check); hit areas ≥ 22 px on touch; hover lights an edge
    123i  C   J104: ☑ Choose two Zabs → 🎞 Scroll → DB.theme.zabTicker {on, mode:'only', pids}; the band shows only their titles (bar, Rail, Drawer, Columns)
    123j  no page errors
    123k  (Architect's review) a float NOTE window's 💾 Save still saves — a second top-level _fwSave had replaced it
    `node tools/win-j103.mjs` */
 import { inflateSync } from 'node:zlib';
-import { openApp, report, seedDB } from './harness.mjs';
+import { openApp, report, seedDB, touchDrag } from './harness.mjs';
 
 const r = report('J100/J101/J103/J104 — second pass of v05.64');
 const now = new Date().toISOString();
@@ -209,6 +210,22 @@ for (const [W, H, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       const hit22 = !touch || (Math.min(...geo.pn) >= 22 && Math.min(...geo.pe) >= 22);
       r.check(grey >= 12 && /nwse-resize/.test(hov) && hit22, `123h@${W} the handles can be found: the corner grip is painted (${grey} grey pixels), the resize cursor shows${touch ? ', edge hit areas ≥ 22 px' : ''}, hovering lights the corner`, JSON.stringify({ grey, hov, geo }));
       await page.evaluate(() => _ppSet('sb', false));
+      /* 123h2 (v05.64 review): a FINGER on a folder window's title bar moves it and never resizes it. A :hover/:active rule on the edges made Chrome's touch
+         adjustment pull a touch on the bar onto the top edge (J82's 112c/112d failed); the tint is now mouse-only. */
+      if (touch) {   /* on a fresh page: after the steps above, CDP's touch points no longer land where the page measures them (a harness trap, not the app) */
+        const a2 = await openApp({ viewport: { width: W, height: H }, hasTouch: true, db: seed() });
+        try {
+          const p2 = a2.page;
+          await p2.evaluate(() => { openFolderWin('f1'); const w = _fwGet('f1'); w.l = 200; w.t = 200; w.w = 360; w.h = 400; _fwLayout(); });
+          await p2.waitForTimeout(200);
+          const t0 = await winRect(p2, 'f1');
+          const bc = await p2.evaluate(() => { const e = document.querySelector('.fwin[data-fwid="f1"] > .pp-bar .pp-ttl'); const c = e.getBoundingClientRect(); return { x: c.left + Math.min(40, c.width / 2), y: c.top + c.height / 2 }; });
+          await touchDrag(p2, Array.from({ length: 9 }, (_, i) => ({ x: bc.x + 40 * i / 8, y: bc.y + 50 * i / 8 })));
+          await p2.waitForTimeout(200);
+          const t1 = await winRect(p2, 'f1');
+          r.check(t1.l - t0.l === 40 && t1.t - t0.t === 50 && t1.w === t0.w && t1.h === t0.h, `123h2@${W} a finger on a folder window's title bar moves it (+40/+50) and never resizes it`, JSON.stringify({ t0, t1 }));
+        } finally { await a2.close(); }
+      }
     } else {
       await page.evaluate(() => { _fwCtxFrom = null; openFolderWin('f1'); });
       await page.waitForTimeout(250);
