@@ -11069,3 +11069,52 @@ The owner (28 Oct, with a screenshot of Siyagah Zab's All Zabs cards): "*Enable 
 **Architect's review fixes (2 Nov).** (1) Sections move among the owner's own only (see J103 above; check 123f2). (2) The folder windows declared a second top-level `function _fwSave` (their place saver); a later declaration silently replaces the earlier one, so the float NOTE window's 💾 Save called the folder-window code and did nothing — no throw, no failing check, because no check had ever clicked Save in a Multi window. Renamed `_fwinSave` (4 callers); 123k clicks the float window's 💾 Save at 390/820/1440 (fails on the builder's cut, passes now); `ship-check` now fails on any top-level function declared twice (`_edCleanHTML` was already twice on main: recorded, not changed). (3) The edges' new tint was `:hover`/`:active`; Chrome's touch adjustment treats an element with such a rule as a tap target, so a finger on a window's title bar was pulled onto the top edge and RESIZED the window instead of moving it (J82's 112c/112d failed at 390/820; a folder window shrank 50 px under a 50 px drag). The tint is now `@media(hover:hover)` and `:hover` only; 123h2 drags a folder window's bar with a finger at 820 (fails on the builder's cut, passes now). (4) 90d (tap-t2) updated in place: the section heading's new ⧉ is hidden for the comparison with v05.29, like every earlier new control.
 
 **Record debt.** v05.63 review — full app-check on fc534b3: 1–59 2328/2330 (56k known); 60–121 6164/6168 (91f fails on main too, known; 100d timing under load, `--only 100` alone 17/17 at 4.8×). Follow-up taken into v05.64: clear the Drive token after a 401.
+
+## v05.65 — one search, a new folder inside a chosen folder, every menu organised (2 November 2026)
+
+Built by the builder (issue #259): PCF J106, J107, J108. All three layouts in this round (D5).
+
+**J106 — one search.** The owner: *"Are both search same? No! Why not?"* — chose "keep the pop-up, same engine". `_searchAll(q)` is now the ONE
+matcher: `renderTree()` (the side-pane box) and `_gsSearch()` (the 🔍 pop-up, Ctrl+K) both call it, so notes (title + `strip(content)`, no markup, no
+`data:`), folders, tags and Note Types are found identically. The old pop-up read `a.body` (notes have no such field) and so never saw a note's text.
+The pop-up groups results Folders · Tags · Note Types · Notes with a count, keeps ↑ ↓ Enter Esc, opens what the box's result opens
+(`selFolder` / `selTag` / `selKind` / `tabSelect`), and its search becomes `ST.lastSearch` ("🔍↺ Back to search results" works). Placeholder:
+"Search notes, folders, tags, types…". Phone: the pop-up is a full-screen sheet, rows ≥ 44 px, the input 16 px (no iOS zoom).
+
+**J107 — a new folder INSIDE a chosen folder.** The note's 📁 Manage folders dialog (`showArtFolderPicker`) gets **"Inside: Top level ▾"** (opens a
+searchable list of every folder with its path) and a **＋** on every folder row (32 px, 44 px on a phone, visible without hover) that sets "Inside:" to that
+folder and focuses the name box. ＋ New folder then calls `mkFolder(parentId, name)` — section from the parent, auto-numbering and stamps as for any
+folder made inside another — and the new folder is still ticked for the note. **The other two copies** (`openPicker`'s "Assign to folders" and the
+pop-out folder browser) already had this feature since v04.x as the 📍 pin + "New folder in: …" (`_pkTarget`), feeding the same
+`createFolderFromPicker`; they were left as they are, so nothing in them moved. The three share one function.
+
+**J108 — every menu organised.** ONE builder, `_menuHTML(items, card)` (for `#ctx` menus) and `_menuRows(items)` (for `#jeb-menu`): rows are
+`[group, row]` in any order; the builder prints the groups in the fixed order **OPEN · MARK · ORGANISE · REMIND & PRACTISE · DELETE**, each under a
+heading that is not a row (`.ctx-gh` / `.jm-h`, `role="presentation"`, no click), and only the groups the menu has. Every action keeps its word, its
+function and its submenu; nothing was moved under a "More". On the phone's card the heading is also `.fl-pop-hd` (the strip the card already had).
+The note menu's old five names ("This note / Mark it / Put it in / Remind & revise / Remove") are now the standard five; "Add to Journal event"
+moved to REMIND & PRACTISE as asked.
+
+*Inventory — converted (menu → groups shown):* note (`showArtCtx`): OPEN · MARK · ORGANISE · REMIND & PRACTISE · DELETE · folder (`showCtx`, also in
+folder windows): all five · section (`showSecCtx`): OPEN · MARK · ORGANISE (+ DELETE when more than one section) · MyDatabase section (`showDbSecCtx`):
+OPEN · ORGANISE · Smart Views heading (`showSmartViewCtx`): OPEN · MARK · a Smart View row (`showSfItemCtx`): OPEN · MARK · ORGANISE · Tags heading
+(`showTagSecCtx`): OPEN · MARK · ORGANISE · a tag (`showTagCtx`): OPEN · DELETE · Note Types heading (`showNtiSectionMenu`): OPEN · MARK · ORGANISE ·
+a Note-Type category (`showNtiCatMenu`): OPEN · MARK · ORGANISE · DELETE · a Note Type on the wall (`showWallKindCtx`): OPEN · MARK · ORGANISE · DELETE ·
+My Favourites category (`showFavCatCtx`): OPEN · DELETE · folder group (`showFolderGroupCtx`): OPEN · ORGANISE · DELETE · tab (`showTabMenu`):
+OPEN · MARK · Zab (`_jebPocketMenu`): OPEN · MARK · ORGANISE · DELETE · Zab item (`_jebItemMenu`): OPEN · MARK · ORGANISE · REMIND & PRACTISE · DELETE.
+
+*Inventory — NOT converted this round, and why:* the note's sub-panels (NTI / Tags / Folders / Reminder / My Favourites, `_ctxSub`) and the folder/section
+sub-panels — they are choice lists behind a ◀ Back, not action menus; the My Contacts / My Journal / My Calendar shortcut menu (`showDbItemCtx`),
+the version bar menu (`showVersionCtx`), the bookmark-card menu (`itemMenu`), the 🪟 Pane menu (`_ppMenu`), the Zab ⋯-in-the-bar overflow
+(`_jebMoreMenu`), the folder-browser row menus (`pkRowMenu`, `pkNoteRowMenu`, `pkFontMenu`) and the Templates / Quick-phrases / heading-status /
+heading-level menus — each is a 2–6 row shortcut list or an insert palette whose rows have no OPEN/MARK/ORGANISE meaning, so headings would only
+add height; the editor's own palettes (`#eb-pop`, `.fl-pop`) already carry their own named headings (v04.2x). They can move onto the same builder
+with one table each, in a later round, if the owner wants them.
+
+*Existing check updated in place:* block 6p-12 (tablet/laptop note menu): it asserted "no headings, ≥ 4 separators"; it now asserts five `.ctx-gh`
+headings and no separator lines, rows and width unchanged — the owner asked for exactly that change.
+
+*Check:* block 124, `tools/menus-j108.mjs` — 12 menus × 3 sizes (the tab strip is not drawn under 640 px, so the tab menu is 820 and 1440 only; on
+the phone the Zab menu is opened with the real ⋯ in the open Zab's panel because the bar folds its chips away there): headings and their order, every
+v05.64 function/word still present, one real tap per group reaches its function under the right heading, the menu inside the screen, no page errors.
+Menus are opened with a real right-click (the real ⋯ tap for a Zab item); a timed long-press on a touch screen is not simulated.
