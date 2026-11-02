@@ -151,7 +151,7 @@ try {
     const barH = (await rect(d, '#jeb-bar')).h;
     await act(d, vp, '#jeb-bar .jeb-choose'); await sleep(300);
     const m0 = await on(d, () => ({ label: document.querySelector('#jeb-bar .jeb-choose').textContent.trim(), tk: [...document.querySelectorAll('#jeb-bar .jeb-chip .jeb-tk')].filter((e) => getComputedStyle(e).display !== 'none').length, go: [...document.querySelectorAll('#jeb-bar .jeb-go')].map((b) => b.textContent.trim() + (b.disabled ? '#off' : '')), newShown: !!document.querySelector('#jeb-bar .jeb-new') && getComputedStyle(document.querySelector('#jeb-bar .jeb-new')).display !== 'none', cardsHalf: [...document.querySelectorAll('#jeb-bar [data-jeb-cards]')].filter((e) => getComputedStyle(e).display !== 'none').length }));
-    check(m0.label === '✕ Cancel' && m0.tk === 5 && m0.go.join('|') === '▤ Panel (0)#off|▦ Cards (0)#off', `${t} choose mode: the button reads ✕ Cancel, every chip shows a tick box, Panel (0) / Cards (0) are disabled`, JSON.stringify(m0));
+    check(m0.label === '✕ Cancel' && m0.tk === 5 && m0.go.join('|') === '▤ Panel (0)#off|▦ Cards (0)#off|🎞 Scroll (0)#off', `${t} choose mode: the button reads ✕ Cancel, every chip shows a tick box, Panel (0) / Cards (0) / Scroll (0) are disabled`, JSON.stringify(m0));
     /* v05.40 · Z15: while choosing, ＋ New Zab is not drawn at any width (the app leaves it out of the Choose row), so the check says that instead of the old per-width rule */
     check(!m0.newShown, `${t} while choosing, ＋ New Zab is not in the bar (the two buttons take its place)`, String(m0.newShown));
     check(Math.abs((await rect(d, '#jeb-bar')).h - barH) < 1, `${t} the bar does not grow in choose mode`);
@@ -160,7 +160,7 @@ try {
     check(!(await panelOn(d)) && !(await deckOn(d)), `${t} while choosing, tapping a chip opens nothing`);
     await act(d, vp, `${chip('jp-shop')} .jeb-main`); await sleep(250);
     const m2 = await on(d, () => ({ chosen: [...document.querySelectorAll('#jeb-bar .jeb-chip.chosen')].map((c) => c.dataset.pid), go: [...document.querySelectorAll('#jeb-bar .jeb-go')].map((b) => b.textContent.trim() + (b.disabled ? '#off' : '')) }));
-    check(m2.chosen.join() === 'jp-task,jp-shop' && m2.go.join('|') === '▤ Panel (2)|▦ Cards (2)', `${t} two ticked: Panel (2) and Cards (2), enabled`, JSON.stringify(m2));
+    check(m2.chosen.join() === 'jp-task,jp-shop' && m2.go.join('|') === '▤ Panel (2)|▦ Cards (2)|🎞 Scroll (2)', `${t} two ticked: Panel (2) and Cards (2), enabled`, JSON.stringify(m2));
     /* All pockets ticks and unticks every pocket */
     await act(d, vp, '#jeb-bar .jeb-all .jeb-main'); await sleep(250);
     const all4 = await on(d, () => document.querySelectorAll('#jeb-bar .jeb-chip.chosen[data-pid]').length);
