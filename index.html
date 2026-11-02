@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.64">
+<meta name="app-version" content="05.65">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3770,6 +3770,11 @@ sup.ann-sup:hover{text-decoration:underline}
 .gs-r-path{font-size:11px;color:var(--t3);margin-top:1px}
 .gs-r-snip{font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
 .gs-r-snip mark{background:rgba(99,102,241,.1);color:var(--accent);border-radius:2px}
+.af-plus{margin-left:auto;flex-shrink:0;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border2);border-radius:8px;font-size:15px;color:var(--t2);cursor:pointer}
+.af-plus:hover{background:var(--hover);color:var(--t1)}
+@media(max-width:639.98px){.af-plus{min-width:44px;min-height:44px}#af-in{min-height:44px!important}}
+.gs-grp,.gs-cnt-row{padding:7px 16px 4px;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.03em;background:var(--hover)}
+@media(max-width:639.98px){#gs-overlay{padding-top:0}#gs-box{width:100vw;max-height:100dvh;height:100dvh;border-radius:0}#gs-results{max-height:none;flex:1}.gs-result{min-height:44px;justify-content:center}#gs-kbd{min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center}#gs-inp{font-size:16px;min-height:44px}}
 .gs-cnt{font-size:10px;font-weight:400;color:var(--t3);margin-left:auto;flex-shrink:0}
 
 /* v28.03 Hijri Calendar */
@@ -4057,7 +4062,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.64</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.65</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6996,14 +7001,19 @@ function _renderFor(ch,fullFn,opts){
 
 function _searchWords(q){return q.toLowerCase().split(/\s+/).filter(Boolean);}
 function _matchesAllWords(text,words){const t=text.toLowerCase();return words.every(w=>t.includes(w));}
+/* v05.65 · J106 — the ONE search: the side-pane box and the 🔍 pop-up both call this, so they can never find different things. */
+function _searchAll(q){
+  const words=_searchWords(q||'');
+  return {words,
+    noteHits:DB.articles.filter(a=>_matchesAllWords(a.title+' '+strip(a.content),words)),
+    folderHits:DB.folders.filter(f=>_matchesAllWords(f.name,words)),
+    tagHits:getAllTags().filter(t=>_matchesAllWords(t.tag,words)),
+    kindHits:noteKinds().filter(k=>_matchesAllWords(k.name,words))};
+}
 function renderTree(){
   const el=document.getElementById('tree');updateAccordionBtn();
   if(ST.search&&ST.search.trim()){
-    const words=_searchWords(ST.search);
-    const noteHits=DB.articles.filter(a=>_matchesAllWords(a.title+' '+strip(a.content),words));
-    const folderHits=DB.folders.filter(f=>_matchesAllWords(f.name,words));
-    const tagHits=getAllTags().filter(t=>_matchesAllWords(t.tag,words));
-    const kindHits=noteKinds().filter(k=>_matchesAllWords(k.name,words));
+    const {noteHits,folderHits,tagHits,kindHits}=_searchAll(ST.search);
     const total=noteHits.length+folderHits.length+tagHits.length+kindHits.length;
     let h=`<div class="srl">${total} result${total!==1?'s':''}</div>`;
     if(!total){
@@ -15793,7 +15803,7 @@ function openGlobalSearch(){
   ov.innerHTML='<div id="gs-box">'
     +'<div id="gs-inp-row">'
     +'<span id="gs-inp-icon">🔍</span>'
-    +'<input id="gs-inp" placeholder="Search notes, tags, content…" autocomplete="off" spellcheck="false">'
+    +'<input id="gs-inp" placeholder="Search notes, folders, tags, types…" autocomplete="off" spellcheck="false">'
     +'<span id="gs-kbd" onclick="closeGlobalSearch()">Esc</span>'
     +'</div>'
     +'<div id="gs-results"><div class="gs-empty">Start typing to search…</div></div>'
@@ -15813,22 +15823,10 @@ function openGlobalSearch(){
 function closeGlobalSearch(){
   document.getElementById('gs-overlay')?.remove();
 }
+/* v05.65 · J106 — the pop-up asks _searchAll(), the same function the side-pane box asks: notes (title + text), folders, tags, Note Types. */
 function _gsSearch(q){
-  if(!q||q.length<2)return[];
-  const ql=q.toLowerCase();
-  return DB.articles.filter(a=>!a.trash).map(a=>{
-    let score=0;
-    const ti=(a.title||'').toLowerCase();
-    const tg=(a.tags||[]).join(' ').toLowerCase();
-    // Strip HTML + base64 blobs for content search
-    const raw=(a.body||'').replace(/src="data:[^"]+"/g,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,800).toLowerCase();
-    if(ti===ql)score+=120;
-    else if(ti.startsWith(ql))score+=90;
-    else if(ti.includes(ql))score+=60;
-    if(tg.includes(ql))score+=35;
-    if(raw.includes(ql))score+=15;
-    return {a,score};
-  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,10).map(x=>x.a);
+  if(!q||!q.trim())return null;
+  return _searchAll(q);
 }
 function _gsHL(text,q){
   if(!q||!text)return esc(text||'');
@@ -15838,26 +15836,49 @@ function _gsHL(text,q){
 }
 function _gsRender(q){
   const box=document.getElementById('gs-results');if(!box)return;
-  if(!q||q.length<2){
-    box.innerHTML='<div class="gs-empty">'+(q?'Keep typing…':'Start typing to search…')+'</div>';
+  if(!q||!q.trim()){
+    box.innerHTML='<div class="gs-empty">Start typing to search…</div>';
     return;
   }
-  const results=_gsSearch(q);
-  if(!results.length){box.innerHTML='<div class="gs-empty">No results for “'+esc(q)+'”</div>';return;}
-  let h='';
-  results.forEach(a=>{
-    const fol=DB.folders.find(f=>f.id===a.folderId);
-    const sec=fol?DB.sections.find(s=>s.id===fol.sectionId):null;
-    const path=[sec?.name,fol?.name].filter(Boolean).join(' › ');
-    const raw=(a.body||'').replace(/src="data:[^"]+"/g,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-    const qi=raw.toLowerCase().indexOf(q.toLowerCase());
-    const snip=qi>=0?'…'+raw.slice(Math.max(0,qi-25),qi+70).trim()+'…':raw.slice(0,80)+(raw.length>80?'…':'');
-    h+='<div class="gs-result" data-id="'+a.id+'" onclick="_gsOpen(\''+a.id+'\')">';
-    h+='<div class="gs-r-title">'+_gsHL(a.title||'Untitled',q)+'</div>';
-    if(path)h+='<div class="gs-r-path">'+esc(path)+'</div>';
-    if(snip)h+='<div class="gs-r-snip">'+_gsHL(snip,q)+'</div>';
-    h+='</div>';
-  });
+  const r=_gsSearch(q);
+  const total=r.noteHits.length+r.folderHits.length+r.tagHits.length+r.kindHits.length;
+  if(!total){box.innerHTML='<div class="gs-empty">No results for “'+esc(q)+'”</div>';return;}
+  const w0=r.words[0]||'';
+  const CAP=30;
+  let h='<div class="gs-cnt-row" role="presentation">'+total+' result'+(total!==1?'s':'')+'</div>';
+  const row=(kind,id,inner)=>'<div class="gs-result" role="option" data-kind="'+kind+'" data-id="'+esc(id)+'" onclick="_gsOpen(\''+kind+'\','+_ja(id)+')">'+inner+'</div>';
+  if(r.folderHits.length){
+    h+='<div class="gs-grp" role="presentation">📁 Folders</div>';
+    r.folderHits.slice(0,CAP).forEach(f=>{
+      const p=pathOf(f.id);
+      const crumb=p.length>1?p.slice(0,-1).map(x=>x.name).join(' › '):'';
+      h+=row('folder',f.id,'<div class="gs-r-title">'+_gsHL(f.name,w0)+'</div>'+(crumb?'<div class="gs-r-path">'+esc(crumb)+'</div>':''));
+    });
+  }
+  if(r.tagHits.length){
+    h+='<div class="gs-grp" role="presentation">🏷 Tags</div>';
+    r.tagHits.slice(0,CAP).forEach(t=>{
+      h+=row('tag',t.tag,'<div class="gs-r-title">#'+_gsHL(t.tag,w0)+' <span class="gs-cnt">'+t.count+'</span></div>');
+    });
+  }
+  if(r.kindHits.length){
+    h+='<div class="gs-grp" role="presentation">🔖 Note Types</div>';
+    r.kindHits.slice(0,CAP).forEach(k=>{
+      h+=row('kind',k.id,'<div class="gs-r-title"><span class="nti-dot" style="background:'+esc(k.color||'')+'"></span> '+_gsHL(k.name,w0)+'</div>');
+    });
+  }
+  if(r.noteHits.length){
+    h+='<div class="gs-grp" role="presentation">📄 Notes'+(r.noteHits.length>CAP?' (first '+CAP+')':'')+'</div>';
+    r.noteHits.slice(0,CAP).forEach(a=>{
+      const fol=DB.folders.find(f=>f.id===a.folderId);
+      const sec=fol?DB.sections.find(s=>s.id===fol.sectionId):null;
+      const path=[sec?.name,fol?.name].filter(Boolean).join(' › ');
+      const raw=strip(a.content||'').replace(/\s+/g,' ').trim();
+      const qi=w0?raw.toLowerCase().indexOf(w0):-1;
+      const snip=qi>=0?'…'+raw.slice(Math.max(0,qi-25),qi+70).trim()+'…':raw.slice(0,80)+(raw.length>80?'…':'');
+      h+=row('note',a.id,'<div class="gs-r-title">'+_gsHL(a.title||'Untitled',w0)+'</div>'+(path?'<div class="gs-r-path">'+esc(path)+'</div>':'')+(snip?'<div class="gs-r-snip">'+_gsHL(snip,w0)+'</div>':''));
+    });
+  }
   box.innerHTML=h;
   _gsSetActive(0);
 }
@@ -15873,11 +15894,17 @@ function _gsNav(dir){
 }
 function _gsConfirm(){
   const active=document.querySelector('.gs-result.gs-active');
-  if(active)_gsOpen(active.dataset.id);
+  if(active)_gsOpen(active.dataset.kind,active.dataset.id);
 }
-function _gsOpen(id){
+function _gsOpen(kind,id){
+  /* the pop-up's search becomes "Back to search results" (ST.lastSearch), same as the box */
+  const q=(document.getElementById('gs-inp')?.value||'').trim();
+  if(q){ST.lastSearch=q;ST.search='';_updateSearchAccessUI();}
   closeGlobalSearch();
-  tabSelect(id);
+  if(kind==='folder')selFolder(id);
+  else if(kind==='tag')selTag(id);
+  else if(kind==='kind')selKind(id);
+  else tabSelect(id);
 }
 
 
@@ -27722,9 +27749,11 @@ function showArtFolderPicker(aid){
              `<div class="pc${checked?' on':''}">${checked?'✓':''}</div>` +
              `<span style="font-size:12px">📁</span>` +
              `<span style="font-size:13px;color:var(--t1)">${esc(f.name)}</span>` +
+             _afPlusHTML(f.id) +
              `</div>${kids.length?rows(kids,depth+1):''}`;
     }).join('');
   }
+  _afIn=null;
 
   const ttl=art.title.length>45?art.title.slice(0,45)+'…':art.title;
   const cnt=art.folderIds.length;
@@ -27732,7 +27761,11 @@ function showArtFolderPicker(aid){
     <div style="font-size:12px;color:var(--t3);margin-bottom:6px">${esc(ttl)}</div>
     <input class="im-search" id="fp-srch" placeholder="Search folders…" oninput="fpFilter('${aid}',this.value)" onmousedown="event.stopPropagation()">
     <div class="pl" id="fp-list">${rows(DB.folders.filter(f=>!f.parentId),0)}</div>
-    <div style="display:flex;gap:6px;margin-top:8px">
+    <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      <button type="button" class="btn af-in" id="af-in" style="flex:1 1 100%;min-height:36px;text-align:left" onclick="_afInOpen()">Inside: Top level ▾</button>
+    </div>
+    <div id="af-in-pop" style="display:none"></div>
+    <div style="display:flex;gap:6px;margin-top:6px">
       <input class="mi" id="npf" placeholder="New folder name…" style="flex:1;margin:0;min-width:0" onkeydown="if(event.key==='Enter')createFolderFromPicker('${aid}')">
       <button class="btn" style="flex-shrink:0" onclick="createFolderFromPicker('${aid}')">＋ New folder</button>
     </div>
@@ -27744,13 +27777,43 @@ function showArtFolderPicker(aid){
   setTimeout(()=>{document.getElementById('fp-srch')?.focus();document.getElementById('npf')?.blur();},80);
 }
 
-/** Create a root folder from inside a folder-picker modal.
+/* v05.65 · J107 — the note's Manage folders dialog: "Inside: …" chooses the parent of a new folder (the two other copies of this
+   dialog, openPicker and the pop-out browser, already do it with the 📍 pin and "New folder in:", which feed the same createFolderFromPicker). */
+let _afIn=null;
+function _afPlusHTML(fid){
+  return `<span class="af-plus" role="button" tabindex="0" title="Make a new folder inside this one" aria-label="New folder inside ${esc((DB.folders.find(x=>x.id===fid)||{}).name||'')}" onclick="event.stopPropagation();_afSetIn(${_ja(fid)},true)">＋</span>`;
+}
+function _afLabel(){
+  const f=_afIn&&DB.folders.find(x=>x.id===_afIn);
+  const b=document.getElementById('af-in');
+  if(b)b.textContent='Inside: '+(f?f.name:'Top level')+' ▾';
+}
+function _afSetIn(fid,focus){
+  _afIn=(fid&&DB.folders.some(x=>x.id===fid))?fid:null;
+  _afLabel();
+  const pop=document.getElementById('af-in-pop');if(pop)pop.style.display='none';
+  if(focus)document.getElementById('npf')?.focus();
+}
+function _afInRows(q){
+  const n=(q||'').toLowerCase().trim();
+  const list=DB.folders.filter(f=>!n||(f.name||'').toLowerCase().includes(n)).slice(0,80);
+  return `<div class="pr" style="min-height:44px" onclick="_afSetIn('')"><span style="font-size:13px">🏠 Top level</span></div>`
+    +list.map(f=>`<div class="pr" style="min-height:44px" onclick="_afSetIn(${_ja(f.id)})"><span style="font-size:12px">📁</span><span style="font-size:13px">${esc(pathOf(f.id).map(x=>x.name).join(' › '))}</span></div>`).join('');
+}
+function _afInOpen(){
+  const pop=document.getElementById('af-in-pop');if(!pop)return;
+  if(pop.style.display!=='none'){pop.style.display='none';return;}
+  pop.style.display='block';
+  pop.innerHTML=`<input class="im-search" id="af-in-q" placeholder="Search folders…" oninput="document.getElementById('af-in-l').innerHTML=_afInRows(this.value)"><div class="pl" id="af-in-l" style="max-height:160px;overflow:auto">${_afInRows('')}</div>`;
+  document.getElementById('af-in-q')?.focus();
+}
+/** Create a folder from inside a folder-picker modal.
  *  aid = article id (attach picker) or '' (editor 🏷 picker → ST.efolders). */
 function createFolderFromPicker(aid){
   const inp=document.getElementById('npf');
   const name=inp?.value;
   if(!name?.trim()){toast('Enter a folder name');return;}
-  const parentId=aid?null:_pkTarget;   // nest under the 📍-pinned folder, if any
+  const parentId=aid?(_afIn&&DB.folders.some(x=>x.id===_afIn)?_afIn:null):_pkTarget;   // note dialog: "Inside:"; the others: the 📍-pinned folder, if any
   // Section pop-out with nothing pinned: land the new root folder in THAT
   // section, not wherever the sidebar's active folder happens to be.
   if(!aid&&!parentId&&_pkMode==='browse'&&_pkSectionScope)ST.pendingSec=_pkSectionScope;
@@ -27765,6 +27828,7 @@ function createFolderFromPicker(aid){
       renderP2C();renderP3H();renderP3C();
     }
     showArtFolderPicker(aid);   // re-open picker with new folder checked
+    _afIn=parentId;_afLabel();  // J107 — "Inside:" stays on the chosen folder
   } else {
     if(_pkMode==='assign'){
       if(!ST.efolders.includes(nid)){ST.efolders.push(nid);ST.efolders=_autoLeavePrimary(ST.efolders);}
@@ -27797,6 +27861,7 @@ function fpFilter(aid,q){
           +`<div class="pc${checked?' on':''}">${checked?'✓':''}</div>`
           +`<span style="font-size:12px">📁</span>`
           +`<span style="font-size:13px;color:var(--t1)">${esc(f.name)}</span>`
+          +_afPlusHTML(f.id)
           +'</div>'+(kids.length?rows2(kids,depth+1):'');
       }).join('');
     }
@@ -27812,6 +27877,7 @@ function fpFilter(aid,q){
       +`<div class="pc${checked?' on':''}">${checked?'✓':''}</div>`
       +`<span style="font-size:12px">📁</span>`
       +`<span style="font-size:13px;color:var(--t1)">${esc(f.name)}</span>`
+      +_afPlusHTML(f.id)
       +'</div>';
   }).join('');
 }
