@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.65">
+<meta name="app-version" content="05.67">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4068,7 +4068,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.65</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.67</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -21533,6 +21533,7 @@ function _buildFolderCtxMain(fid){
     ${folderGroups().filter(g=>g.id!==folderGroupOf(_f)).map(g=>`<div class="ci" onclick="hideCtx();moveFolderToGroup('${fid}','${g.id}')">${g.icon||'📁'} → ${esc(g.name)}</div>`).join('')}
     <div class="ci" onclick="hideCtx();addFolderGroupThenMove('${fid}')">➕ New group…</div>`:''),
     G(hasMoveSec?`<div class="ci ci-sub" onclick="_folderCtxSub('${fid}','movesec')">↗ Move to section<span class="ci-arr">▶</span></div>`:''),
+    G(`<div class="ci" onclick="hideCtx();openMoveFolder(${_ja(fid)})">📂 Move to folder…</div>`),   /* v05.67 · J111 */
     G(_isSysFolder(fid)?'':`<div class="ci" onclick="hideCtx();convertFolderToSection('${fid}')">🗂 Convert to section</div>`),
     G(`<div class="ci" onclick="toggleFolderStructured('${fid}')">${_f&&_f.structured?'🗂 Turn off Structured mode':'🗂 Make Structured Folder'}</div>`),
     G(_f&&_f.structured?`<div class="ci" onclick="openFieldBuilder('${fid}')">✏ Edit Fields</div>`:''),
@@ -27830,11 +27831,53 @@ function _afSetIn(fid,focus){
   const pop=document.getElementById('af-in-pop');if(pop)pop.style.display='none';
   if(focus)document.getElementById('npf')?.focus();
 }
-function _afInRows(q){
-  const n=(q||'').toLowerCase().trim();
+/* v05.67 · J111 — cfg = {pick:'fnName', bad:f=>reason|''} lets the folder-move picker use these same rows (one list, no second copy);
+   with no cfg the output is exactly what it was. */
+function _afInRows(q,cfg){
+  const n=(q||'').toLowerCase().trim(), pick=(cfg&&cfg.pick)||'_afSetIn', bad=cfg&&cfg.bad;
   const list=DB.folders.filter(f=>!n||(f.name||'').toLowerCase().includes(n)).slice(0,80);
-  return `<div class="pr" style="min-height:44px" onclick="_afSetIn('')"><span style="font-size:13px">🏠 Top level</span></div>`
-    +list.map(f=>`<div class="pr" style="min-height:44px" onclick="_afSetIn(${_ja(f.id)})"><span style="font-size:12px">📁</span><span style="font-size:13px">${esc(pathOf(f.id).map(x=>x.name).join(' › '))}</span></div>`).join('');
+  return `<div class="pr" style="min-height:44px" onclick="${pick}('')"><span style="font-size:13px">🏠 Top level</span></div>`
+    +list.map(f=>{
+      const why=bad?bad(f):'';
+      const path=esc(pathOf(f.id).map(x=>x.name).join(' › '));
+      if(why) return `<div class="pr af-off" aria-disabled="true" style="min-height:44px;opacity:.5;cursor:not-allowed"><span style="font-size:12px">📁</span><span style="font-size:13px">${path} <i style="font-size:11px">— ${esc(why)}</i></span></div>`;
+      return `<div class="pr" style="min-height:44px" onclick="${pick}(${_ja(f.id)})"><span style="font-size:12px">📁</span><span style="font-size:13px">${path}</span></div>`;
+    }).join('');
+}
+/* v05.67 · J111 — 📂 Move to folder… in the folder menu (sidebar, folder windows, phone long-press: all go through _buildFolderCtxMain) */
+let _mvFid=null;
+function _mvBad(f){
+  if(f.id===_mvFid) return 'this folder itself';
+  if(descOf(_mvFid).includes(f.id)) return 'inside this folder';
+  return '';
+}
+function openMoveFolder(fid){
+  const f=DB.folders.find(x=>x.id===fid); if(!f) return;
+  _mvFid=fid;
+  const nm=String(f.name||'');
+  showModal(`<div class="mt">📂 Move “${esc(nm.length>40?nm.slice(0,40)+'…':nm)}” to…</div>
+    <input class="im-search" id="mv-q" placeholder="Search folders…" oninput="document.getElementById('mv-l').innerHTML=_afInRows(this.value,_MV_CFG)" onmousedown="event.stopPropagation()">
+    <div class="pl" id="mv-l" style="max-height:min(60vh,360px);overflow:auto">${_afInRows('',_MV_CFG)}</div>
+    <div class="ma"><button class="btn" onclick="closeModal()">Cancel</button></div>`);
+  if(window.innerWidth<640) document.getElementById('ov').classList.add('mydb-sheet');
+  setTimeout(()=>document.getElementById('mv-q')?.focus(),80);
+}
+const _MV_CFG={pick:'moveFolderPicked',bad:_mvBad};
+function moveFolderPicked(targetId){
+  const fid=_mvFid, f=DB.folders.find(x=>x.id===fid); if(!f){ closeModal(); return; }
+  if(targetId){
+    if(targetId===fid||descOf(fid).includes(targetId)) return;
+    const t=DB.folders.find(x=>x.id===targetId); if(!t){ closeModal(); return; }
+    let r=t, g=0; while(r.parentId&&g++<100){ const p=DB.folders.find(x=>x.id===r.parentId); if(!p) break; r=p; }
+    if(r.sectionId) f.sectionId=r.sectionId;   /* into another section's folder: takes that section */
+    closeModal();
+    doMoveFolder(fid,targetId,'inside');       /* the drag path: last among the new siblings, persist() stamps updatedAt */
+    toast(`"${String(f.name||'').slice(0,28)}" moved ✓`);
+  }else{
+    closeModal();
+    if(!f.parentId){ toast('Already at the top level'); return; }
+    moveFolderToTop(fid);                      /* keeps the section of its root ancestor */
+  }
 }
 function _afInOpen(){
   const pop=document.getElementById('af-in-pop');if(!pop)return;
@@ -31343,7 +31386,7 @@ const _enxJobDel=async()=>{ try{ await _enxJobOp('readwrite',s=>s.delete('job'))
 async function _enxWalk(dir,prefix,out){
   for await (const [name,h] of dir.entries()){
     if(h.kind==='directory') await _enxWalk(h,prefix.concat(name),out);
-    else out.push({h,name,stack:prefix.join(' / ')});
+    else out.push({h,name,stack:prefix.join(' / '),dirs:prefix});
   }
 }
 async function _enxItemsFromHandle(dir){
@@ -31351,8 +31394,9 @@ async function _enxItemsFromHandle(dir){
   const items=[]; let skipped=0;
   for(const e of ents){
     if(!/\.enex$/i.test(e.name)){ skipped++; continue; }
-    items.push({file:await e.h.getFile(),stack:e.stack,name:e.name.replace(/\.enex$/i,'')});
+    items.push({file:await e.h.getFile(),stack:e.stack,dirs:e.dirs,name:e.name.replace(/\.enex$/i,'')});
   }
+  _enxTrimStacks(items);
   items.sort((a,b)=>a.stack.localeCompare(b.stack)||a.name.localeCompare(b.name));
   return {items,skipped};
 }
@@ -31486,17 +31530,17 @@ async function _enxImport(items){
   const jobNow=()=>({total:I.total||0,already:I.skipAll||0,handle:_enx.lastHandle||(_enx.job&&_enx.job.handle)||null,at:new Date(now0).toISOString(),mt:I.mt,md:I.md,mk:I.mkLeft});
   _enxJobPut(jobNow()); _enx.job=jobNow();
   /* what is already here, built once */
-  const ids=new Set(), ks=new Set(), have=new Set(), tomb=new Set();
+  const ids=new Set(), ks=new Set(), have=new Set(), tomb=new Set(), kp=new Set();   /* kp (v05.67 · J112): the identity of a note WITHOUT its path, of what was here before this run */
   const arts0=DB.articles||[];
   for(let i=0;i<arts0.length;i++){   /* in slices, so a 27,000-note notebook on a phone is not one long task */
     if(i&&i%1500===0) await _enxYield();
     const a=arts0[i];
     if(!a) continue; ids.add(a.id);
-    if(a.fromEvernote){ if(a.fromEvernote.k) ks.add(a.fromEvernote.k); continue; }
+    if(a.fromEvernote){ if(a.fromEvernote.k){ ks.add(a.fromEvernote.k); kp.add(_enxKeyNoPath(a.fromEvernote.k)); } continue; }
     if(!a.createdAt) continue; const t=Date.parse(a.createdAt); if(isNaN(t)) continue;
     have.add(String(a.title||'').trim().toLowerCase()+'\u0001'+Math.floor(t/1000));
   }
-  (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item){ ids.add(t.item.id); if(t.item.fromEvernote&&t.item.fromEvernote.k) ks.add(t.item.fromEvernote.k); } });
+  (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item){ ids.add(t.item.id); if(t.item.fromEvernote&&t.item.fromEvernote.k){ ks.add(t.item.fromEvernote.k); kp.add(_enxKeyNoPath(t.item.fromEvernote.k)); } } });
   (DB.tombstones||[]).forEach(t=>{ if(t){ tomb.add(t.id); ids.add(t.id); } });   /* deleted for good: its stable id stays taken */
   const pend=[];
   await _enxYield();   /* the sets above and the first read are separate tasks from the first save */
@@ -31556,6 +31600,7 @@ async function _enxImport(items){
     const k=it.stack+'/'+it.name+'\u0001'+(info.sec==null?'':info.sec)+'\u0001'+title.toLowerCase()+'\u0001'+info.contentLen;
     const id=_enxId('enx-n-',k);
     if(ids.has(id)||ks.has(k)){ I.earlier++; if(I.mkLeft>0&&info.res.some(r=>r.blob)) medQ.push({up:true,id,info}); return; }
+    if(kp.has(_enxKeyNoPath(k))){ I.already++; return; }   /* v05.67 · J112 — the same note brought in earlier under another path: counted, skipped, never re-keyed */
     if(info.sec!=null&&have.has(String(info.title==null?'':info.title).trim().toLowerCase()+'\u0001'+info.sec)){ I.already++; return; }
     if(I.took+pend.length+medQ.length>=I.goal){ I.capHit=true; return; }
     const tags=[]; (info.tags||[]).forEach(t=>{ if(String(t).includes(',')) I.commaTags++; const c=_cleanTag(t); if(c&&!tags.includes(c)) tags.push(c); });
@@ -31604,6 +31649,210 @@ async function _enxImport(items){
       _enxPaint();
     }
   }
+}
+/* ── v05.67 · J112 — 🧹 Remove duplicates. A duplicate set = live fromEvernote notes with the same note identity WITHOUT its path
+   (created second · lower-case title · raw length: _enxKeyNoPath). Dry run first; the owner's button then moves the extra copies to Trash
+   (each with its tombstone, so Restore works) and then the now-empty import-made folders of that tree (D6: counting subfolders).
+   · A copy the owner changed is NEVER removed: updatedAt later than the import time (fromEvernote.at), a folder other than its imported
+     notebook folder, or tags unlike another copy's. Two or more changed copies in a set: "kept both", untouched.
+   · Of the unchanged copies keep the one with the shortest stack path (the tree without the export folder's own name), else the earliest
+     imported. A copy open in an editor is skipped. Nothing that is not fromEvernote is read or touched.
+   · Batches of _ENX_BATCH through _enxPersist() + _enxPushEnd(); at most _enxCap() moved per rolling 24 h (counted from Trash), the rest on
+     another day (a fresh scan finds what is left). The folders touched are remembered in siyagah-enx-v1 (store job, key 'dup'). ── */
+function _enxChanged(a){
+  const f=a.fromEvernote||{}, at=Date.parse(f.at), up=Date.parse(a.updatedAt);
+  if(isNaN(at)||isNaN(up)||up>at) return true;
+  const fi=a.folderIds||[]; if(fi.length!==1) return true;
+  const exp=_enxId('enx-b-',(f.stack||'')+'\u0001'+(f.nb||''));
+  return !(fi[0]===exp||String(fi[0]).indexOf(exp+'-')===0);
+}
+const _enxDupPath=a=>{ const f=a.fromEvernote||{}; return (f.stack?f.stack+' / ':'')+(f.nb||'?'); };
+const _enxDupLabel=a=>{ const s=(a.fromEvernote||{}).stack||''; return s?s.split(' / ')[0]:'(no stack)'; };
+async function _enxDupScan(){
+  const arts=DB.articles||[], groups=new Map();
+  for(let i=0;i<arts.length;i++){
+    if(i&&i%1500===0) await _enxYield();
+    const a=arts[i]; if(!a||!a.fromEvernote||!a.fromEvernote.k) continue;
+    const key=_enxKeyNoPath(a.fromEvernote.k), g=groups.get(key);
+    if(g) g.push(a); else groups.set(key,[a]);
+  }
+  const res={sets:0,rm:[],both:[],trees:new Map(),ex:[],open:0};
+  const tr=l=>{ let t=res.trees.get(l); if(!t){ t={rm:0,keep:0}; res.trees.set(l,t); } return t; };
+  const tagSig=a=>(a.tags||[]).map(t=>String(t).toLowerCase()).sort().join('\u0001');
+  const segs=a=>{ const s=(a.fromEvernote||{}).stack||''; return s?s.split(' / ').length:0; };
+  let n=0;
+  for(const g of groups.values()){
+    if(g.length<2) continue;
+    if(++n%500===0) await _enxYield();
+    res.sets++;
+    const differ=new Set(g.map(tagSig)).size>1;
+    const chg=g.map(a=>differ||_enxChanged(a)), changed=g.filter((a,i)=>chg[i]), plain=g.filter((a,i)=>!chg[i]);
+    if(changed.length>=2){ res.both.push({t:g[0].title||'Untitled',paths:g.map(_enxDupPath)}); continue; }
+    let keep, gone;
+    if(changed.length===1){ keep=changed[0]; gone=plain; }
+    else{
+      plain.sort((x,y)=>segs(x)-segs(y)||_enxDupPath(x).length-_enxDupPath(y).length||String(x.fromEvernote.at||'').localeCompare(String(y.fromEvernote.at||''))||String(x.id).localeCompare(String(y.id)));
+      keep=plain[0]; gone=plain.slice(1);
+    }
+    gone.forEach(a=>{
+      if(_picMigOpen(a.id)){ res.open++; return; }
+      res.rm.push({id:a.id,u:a.updatedAt,keep:keep.id});
+      tr(_enxDupLabel(a)).rm++; tr(_enxDupLabel(keep)).keep++;
+      if(res.ex.length<10) res.ex.push({t:keep.title||'Untitled',keep:_enxDupPath(keep),gone:_enxDupPath(a)});
+    });
+  }
+  return res;
+}
+function _enxDupRoom(){
+  const now=_enxNowMs(), lo=now-_ENX_DAY_MS, ats=[];
+  (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item&&t.item.fromEvernote){ const d=Date.parse(t.deletedAt); if(d>lo) ats.push(d); } });
+  ats.sort((a,b)=>a-b);
+  const cap=_enxCap(), room=Math.max(0,cap-ats.length);
+  return {room,cap,next:room>0?null:ats[ats.length-cap]+_ENX_DAY_MS};
+}
+const _enxDupFidsGet=async()=>{ try{ return (await _enxJobOp('readonly',s=>s.get('dup')))||[]; }catch(e){ return []; } };
+const _enxDupFidsPut=async v=>{ try{ if(v&&v.length) await _enxJobOp('readwrite',s=>s.put(v,'dup')); else await _enxJobOp('readwrite',s=>s.delete('dup')); }catch(e){} };
+/* the empty folders the import made, among `cand` and their parents; returns {gone,stay:[{name,n}]} */
+function _enxDupFolders(cand,iso){
+  const fs=DB.folders||[], fById=new Map(fs.map(f=>[f.id,f])), kids=new Map(), direct=new Map();
+  fs.forEach(f=>{ const p=f.parentId||''; if(!kids.has(p)) kids.set(p,[]); kids.get(p).push(f.id); });
+  (DB.articles||[]).forEach(a=>(a.folderIds||[]).forEach(id=>direct.set(id,(direct.get(id)||0)+1)));
+  const memo=new Map(), emo=new Map();
+  const tot=id=>{ if(memo.has(id)) return memo.get(id); memo.set(id,0); let n=direct.get(id)||0; (kids.get(id)||[]).forEach(c=>{ n+=tot(c); }); memo.set(id,n); return n; };
+  const allEnx=id=>{ if(emo.has(id)) return emo.get(id); emo.set(id,true); const f=fById.get(id); let ok=!!(f&&f.enx); (kids.get(id)||[]).forEach(c=>{ if(!allEnx(c)) ok=false; }); emo.set(id,ok); return ok; };
+  const set=new Set();
+  cand.forEach(id=>{ let f=fById.get(id), g=0; while(f&&g++<100&&f.enx&&f.id!=='enx-root'){ set.add(f.id); f=f.parentId?fById.get(f.parentId):null; } });
+  const ok=id=>tot(id)===0&&allEnx(id);
+  const out={gone:0,stay:[]};
+  if(!DB.trash) DB.trash=[];
+  const rm=new Set();
+  set.forEach(id=>{
+    if(!ok(id)) return;
+    const f=fById.get(id);
+    if(f.parentId&&set.has(f.parentId)&&ok(f.parentId)) return;   /* its parent goes whole, with it */
+    const sub=[]; const walk=x=>(kids.get(x)||[]).forEach(c=>{ sub.push(c); walk(c); }); walk(id);
+    DB.trash.push({id:uid(),type:'folder',item:JSON.parse(JSON.stringify(f)),subtree:{folders:sub.map(c=>JSON.parse(JSON.stringify(fById.get(c)))),articles:[]},deletedAt:iso});
+    _addTombstones([id].concat(sub),iso);
+    rm.add(id); sub.forEach(c=>rm.add(c));
+  });
+  if(rm.size){
+    DB.folders=DB.folders.filter(f=>!rm.has(f.id));
+    if(rm.has(ST.folder)) ST.folder=null;
+  }
+  out.gone=rm.size;
+  set.forEach(id=>{ if(!rm.has(id)&&out.stay.length<30){ const f=fById.get(id); if(f&&tot(id)>0) out.stay.push({name:f.name,n:tot(id)}); } });
+  return out;
+}
+async function _enxDupOpen(){
+  const D0=_enx.dup; if((D0&&D0.run)||_enx.busy||_enx.imp.run) return;
+  const D=_enx.dup={state:'scan',run:false,res:null,moved:0,goal:0,fgone:0,stay:[],note:''};
+  _enx.view='dups'; _enxPaint();
+  const res=await _enxDupScan();
+  if(_enx.dup!==D||D.state!=='scan') return;
+  D.res=res; D.state=(res.rm.length||res.both.length)?'ready':'none';
+  _enxPaint();
+}
+function _enxDupStop(){ const D=_enx.dup; if(D&&D.run){ D.stop=true; const p=document.getElementById('enx-dprog'); if(p) p.textContent='Stopping after this batch…'; } }
+function _enxDupTick(){
+  const D=_enx.dup, p=document.getElementById('enx-dprog'), b=document.getElementById('enx-dbar'); if(!D) return;
+  if(p&&!D.stop) p.textContent='Moving to Trash… '+_enxN(D.moved)+' of '+_enxN(D.goal)+' this time';
+  if(b) b.style.width=(D.goal?Math.min(100,Math.round(D.moved*100/D.goal)):0)+'%';
+}
+async function _enxDupGo(){
+  const D=_enx.dup; if(!D||D.run||!D.res||!D.res.rm.length) return;
+  D.run=true; D.stop=false; D.state='run'; D.moved=0; D.fgone=0; D.stay=[]; D.note='';
+  const w=_enxDupRoom(); let room=w.room;
+  D.goal=Math.min(D.res.rm.length,room); _enxPaint();
+  const list=D.res.rm.slice(), fids=new Set(await _enxDupFidsGet());
+  let state='done';
+  try{
+    while(list.length&&room>0&&!D.stop){
+      await _enxYield();
+      const take=list.splice(0,Math.min(_ENX_BATCH,room));
+      const byId=new Map(); (DB.articles||[]).forEach(a=>byId.set(a.id,a));
+      const iso=new Date(_enxNowMs()).toISOString(), gone=new Set();
+      if(!DB.trash) DB.trash=[];
+      for(const r of take){
+        const a=byId.get(r.id), k=byId.get(r.keep);
+        if(!a||!k||a.updatedAt!==r.u||_picMigOpen(a.id)) continue;   /* it moved, or the copy to keep has gone, or it is open: left alone */
+        (a.folderIds||[]).forEach(f=>fids.add(f));
+        DB.trash.push({id:uid(),type:'article',item:JSON.parse(JSON.stringify(a)),deletedAt:iso});
+        gone.add(a.id);
+      }
+      if(gone.size){
+        _addTombstones(Array.from(gone),iso);
+        DB.articles=DB.articles.filter(a=>!gone.has(a.id));
+        _enxPersist();
+      }
+      D.moved+=gone.size; room-=Math.max(gone.size,1); _enxDupTick();
+      await _enxDupFidsPut(Array.from(fids));
+      if(window.__enxDelay>0) await new Promise(r=>setTimeout(r,window.__enxDelay));
+    }
+    if(D.stop) state='stopped'; else if(list.length) state='capped';
+    D.next=w.next;
+    const iso2=new Date(_enxNowMs()).toISOString();
+    const fr=_enxDupFolders(fids,iso2);
+    D.fgone=fr.gone; D.stay=fr.stay;
+    if(fr.gone) _enxPersist();
+    const left=new Set(); if(state!=='done') fids.forEach(id=>{ if((DB.folders||[]).some(f=>f.id===id)) left.add(id); });
+    await _enxDupFidsPut(Array.from(left));
+  }catch(e){ console.error('Remove duplicates failed',e); state='stopped'; D.note='Something went wrong: '+(e&&e.message||e)+'. Nothing was lost; run it again.'; }
+  finally{
+    D.run=false; D.state=state; D.res=null;
+    _enxPushEnd();
+    try{ render(); }catch(e){}
+    _enxPaint();
+  }
+}
+function _enxDupSummary(){
+  const D=_enx.dup, r=D&&D.res; if(!r) return '';
+  const L=['Evernote duplicates — dry run (Siyagah v'+(document.querySelector('meta[name="app-version"]')||{}).content+')'];
+  L.push('Duplicate sets: '+r.sets+' · Copies to move to Trash: '+r.rm.length+' · Both changed, kept both: '+r.both.length+(r.open?' · Open in the editor, skipped: '+r.open:''));
+  L.push('');
+  Array.from(r.trees.entries()).sort((a,b)=>b[1].rm-a[1].rm).forEach(([l,t])=>L.push(l+' / …: '+t.rm+' copies → Trash; kept: '+t.keep));
+  L.push('');
+  r.ex.forEach(e=>L.push('• '+e.t+' — kept in '+e.keep+' · to Trash from '+e.gone));
+  r.both.forEach(b=>L.push('Both changed: '+b.t+' — '+b.paths.join(' | ')));
+  L.push('This was a dry run: nothing was changed.');
+  return L.join('\n');
+}
+async function _enxDupCopy(){
+  const text=_enxDupSummary();
+  try{
+    if(!navigator.clipboard||!navigator.clipboard.writeText) throw new Error('no clipboard');
+    await navigator.clipboard.writeText(text); toast('📋 Copied');
+  }catch(e){
+    const fb=document.getElementById('enx-fb'); if(!fb) return;
+    fb.innerHTML='<div class="rm-sub">The clipboard is not available — select this text and copy it:</div><textarea class="enx-fb" id="enx-fbt" readonly></textarea>';
+    const ta=document.getElementById('enx-fbt'); ta.value=text; ta.focus(); ta.select();
+  }
+}
+function _enxDupHTML(){
+  const D=_enx.dup||{state:'scan'}, N=_enxN, back='<button class="rm-big alt" onclick="_enx.view=\'pick\';_enxPaint()">↩ Back</button>';
+  if(D.state==='scan') return '<div class="enx-prog" id="enx-dscan" role="status">Looking for duplicates…</div>';
+  if(D.state==='none') return '<div class="rm-p" id="enx-dnone">No duplicate Evernote notes were found.</div>'+back;
+  if(D.state==='run') return '<div class="enx-prog" id="enx-dprog" role="status">Moving to Trash… '+N(D.moved)+' of '+N(D.goal)+' this time</div><div class="enx-bar" role="progressbar"><i id="enx-dbar" style="width:0"></i></div><button class="rm-big alt" onclick="_enxDupStop()">✕ Stop</button>';
+  if(D.state==='done'||D.state==='capped'||D.state==='stopped'){
+    let h='<div class="rm-p" id="enx-ddone">'+N(D.moved)+' cop'+(D.moved===1?'y':'ies')+' moved to Trash (Restore works from there). '+N(D.fgone)+' empty folder'+(D.fgone===1?'':'s')+' removed.</div>';
+    if(D.state==='capped') h+='<div class="rm-p" id="enx-dcap">Not all at once — the free cloud plan allows about '+N(_enxCap())+' a day. Run “Remove duplicates” again'+(D.next?' after '+esc(_enxWhen(D.next,_enxNowMs())):' tomorrow')+'.</div>';
+    if(D.state==='stopped') h+='<div class="rm-p">Stopped. '+esc(D.note||'Run it again to carry on.')+'</div>';
+    if(D.stay&&D.stay.length) h+='<div class="rm-sub">Folders that stay (they still hold notes)</div><ul class="enx-broken" id="enx-dstay">'+D.stay.map(s=>'<li>'+esc(s.name)+' — '+N(s.n)+' note'+(s.n===1?'':'s')+'</li>').join('')+'</ul>';
+    return h+back;
+  }
+  const r=D.res; if(!r) return back;
+  const row=(a,b)=>'<dt>'+a+'</dt><dd>'+b+'</dd>';
+  let h='<dl class="enx-grid" id="enx-dtotals">'+row('Duplicate sets',N(r.sets))+row('Copies to move to Trash',N(r.rm.length))+row('Both changed — kept both',N(r.both.length))+(r.open?row('Open in the editor — skipped',N(r.open)):'')+'</dl>';
+  const trees=Array.from(r.trees.entries()).sort((a,b)=>b[1].rm-a[1].rm);
+  if(trees.length) h+='<table class="enx-t" id="enx-dtrees"><thead><tr><th>Tree</th><th>To Trash</th><th>Kept</th></tr></thead><tbody>'
+    +trees.slice(0,12).map(([l,t])=>'<tr><td>'+esc(l)+' / …</td><td>'+N(t.rm)+' cop'+(t.rm===1?'y':'ies')+' → Trash</td><td>'+N(t.keep)+'</td></tr>').join('')+'</tbody></table>'
+    +(trees.length>12?'<div class="rm-sub">and '+(trees.length-12)+' more</div>':'');
+  if(r.ex.length) h+='<div class="rm-sub">Examples</div><ul class="enx-broken" id="enx-dex">'+r.ex.map(e=>'<li><b>'+esc(e.t)+'</b><br>kept: '+esc(e.keep)+'<br>to Trash: '+esc(e.gone)+'</li>').join('')+'</ul>';
+  if(r.both.length) h+='<div class="rm-sub">Both changed — kept both</div><ul class="enx-broken" id="enx-dboth">'+r.both.slice(0,50).map(b=>'<li><b>'+esc(b.t)+'</b><br>'+b.paths.map(esc).join('<br>')+'</li>').join('')+'</ul>';
+  const w=_enxDupRoom();
+  if(r.rm.length) h+='<button class="rm-big" id="enx-dgo" onclick="_enxDupGo()">🗑 Move '+N(r.rm.length)+' cop'+(r.rm.length===1?'y':'ies')+' to Trash</button>'
+    +(r.rm.length>w.room?'<div class="rm-sub" id="enx-dday">Up to '+N(w.room)+' today (the free cloud plan); run it again for the rest.</div>':'');
+  h+='<div class="enx-dry">This is a look only: nothing has been changed yet.</div><button class="rm-big" onclick="_enxDupCopy()">📋 Copy summary</button><div id="enx-fb"></div>'+back;
+  return h;
 }
 function _enxImpHTML(){
   const I=_enx.imp, now=_enxNowMs(), w=_enxWindow(now), brought=_enxBrought();
@@ -32862,7 +33111,7 @@ function openEnexImport(){
     m.innerHTML='<div id="enx-box" role="dialog" aria-label="Evernote import"></div>';
     document.body.appendChild(m);
   }
-  if(_enx.view!=='reading'&&_enx.view!=='done'&&!(_enx.view==='import'&&_enx.imp.state!=='idle')){ _enx.view='pick'; }
+  if(_enx.view!=='reading'&&_enx.view!=='done'&&!(_enx.view==='import'&&_enx.imp.state!=='idle')&&!(_enx.view==='dups'&&_enx.dup&&_enx.dup.run)){ _enx.view='pick'; }
   _enxPaint();
   m.classList.add('open');
   _enxJobGet().then(j=>{ _enx.job=j; if(m.classList.contains('open')&&_enx.view==='pick') _enxPaint(); });
@@ -32873,19 +33122,31 @@ function closeEnexImport(){
 }
 function _enxAgain(){ _enx.view='pick'; _enx.res=null; if(!_enx.imp.run) Object.assign(_enx.imp,{items:null,state:'idle',total:0,skipAll:0,note:''}); _enxPaint(); }
 function _enxStop(){ _enx.stop=true; const p=document.getElementById('enx-prog'); if(p) p.textContent='Stopping…'; }
+/* v05.67 · J112 — a stack is the path RELATIVE TO THE DEEPEST FOLDER THAT HOLDS EVERY PICKED .enex FILE, so picking the export or the
+   folder above it gives the same stacks (the note identity `k` includes the stack; the folder's own name used to leak into it). */
+function _enxTrimStacks(items){
+  const ds=items.map(i=>i.dirs||[]); if(!ds.length) return items;
+  let n=Math.min(...ds.map(d=>d.length));
+  for(let c=0;c<n;c++){ if(ds.some(d=>d[c]!==ds[0][c])){ n=c; break; } }
+  items.forEach(i=>{ i.stack=(i.dirs||[]).slice(n).join(' / '); });
+  return items;
+}
+/* the identity of a note without its path: created second · lower-case title · raw length (k = path/name \u0001 sec \u0001 title \u0001 len) */
+function _enxKeyNoPath(k){ k=String(k); const i=k.indexOf('\u0001'); return i<0?k:k.slice(i+1); }
 function _enxPicked(inp,dir){
   const files=Array.from(inp.files||[]); inp.value='';
   if(!files.length||_enx.busy||_enx.imp.run) return;
   const items=[]; let skipped=0;
   files.forEach(f=>{
     if(!/\.enex$/i.test(f.name)){ skipped++; return; }
-    let stack='';
+    let dirs=[];
     if(dir){
       const parts=String(f.webkitRelativePath||'').split('/').filter(Boolean);
-      if(parts.length>=3) stack=parts.slice(1,-1).join(' / ');
+      dirs=parts.slice(0,-1);   /* v05.67 · J112 — kept whole; _enxTrimStacks cuts the part every file shares */
     }
-    items.push({file:f,stack,name:f.name.replace(/\.enex$/i,'')});
+    items.push({file:f,stack:'',dirs,name:f.name.replace(/\.enex$/i,'')});
   });
+  _enxTrimStacks(items);
   items.sort((a,b)=>a.stack.localeCompare(b.stack)||a.name.localeCompare(b.name));
   _enx.lastHandle=null;
   _enxPrepare(items,skipped);
@@ -33021,6 +33282,8 @@ function _enxPaint(){
       +'<button class="rm-big alt" onclick="_enxAgain()">↩ Choose another export</button>';
   }else if(v==='import'){
     h+=_enxImpHTML();
+  }else if(v==='dups'){
+    h+=_enxDupHTML();
   }else{
     h+=_enxUnfinishedHTML()
       +(_enx.resume?'<p class="rm-p" id="enx-resume">Choose the same export again. Notes already brought in are skipped, so it is safe.</p>':'')
@@ -33028,6 +33291,7 @@ function _enxPaint(){
       +'<button class="rm-big enx-dirbtn" onclick="_enxPickDir()">📁 Choose the export folder</button>'
       +'<button class="rm-big alt enx-filebtn" onclick="document.getElementById(\'enx-files\').click()">📄 Choose .enex files</button>'
       +'<p class="rm-p">Stacks come from the folder; files picked one by one go in without a stack.</p>'
+      +'<button class="rm-big alt enx-dupbtn" onclick="_enxDupOpen()">🧹 Remove duplicates</button>'
       +'<input type="file" id="enx-dir" webkitdirectory multiple style="display:none" onchange="_enxPicked(this,true)">'
       +'<input type="file" id="enx-files" accept=".enex" multiple style="display:none" onchange="_enxPicked(this,false)">';
   }

@@ -750,3 +750,7 @@ printed line into one check; `--only=54a,54c` runs a subset (~1 minute in all).
 - 54h prints its numbers as `P54h …` lines; they are measured against the
   fake (no network), so they show the number of operations and bytes, not real
   upload times.
+
+## `enx-dups.mjs` (v05.67, block 127)
+
+J111 (📂 Move to folder… in the folder menu) and J112 (the duplicate Evernote tree). Writes its own .enex fixtures; the dialog is driven through the real 🧰 menu. `--unpatched` serves origin/main (fetch it first): 127b must FAIL there (10/6 → 20/12), which proves it sees the bug. `--only=127a,127d`. 127d builds the second tree by cloning imported notes the way the old stack path did (`CLONE`), then edits some copies to prove they are kept. After a folder move the app may show its own numbering offer; the check looks for the picker, not for #ov closed.
