@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.65">
+<meta name="app-version" content="05.66">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1378,6 +1378,7 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .toast.toast-act{pointer-events:auto;cursor:pointer;padding:11px 18px}
 .toast-open{display:inline-block;margin-left:10px;padding:4px 0;text-decoration:underline}
 .ar-jeb{white-space:nowrap}
+.tr-vis{flex:0 0 auto;font-size:11px;margin-left:4px;opacity:.85}
 .av-jeb{font-size:var(--fs-list-meta);color:var(--t3);margin:2px 12px 8px}
 .mmj-line{overflow-wrap:anywhere;line-height:1.5}
 .mmj-newer-b{min-height:32px;padding:2px 10px;border:1px solid var(--green2);border-radius:8px;background:transparent;color:var(--green2);font:inherit;cursor:pointer}
@@ -4068,7 +4069,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.65</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.66</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -7094,7 +7095,7 @@ function trNode(f,depth){
     <span class="tr-tog" onclick="togExp(event,'${f.id}'${_w})">${kids.length?(open?'▾':'▸'):''}</span>
     <span class="tr-ico">${open&&kids.length?'📂':'📁'}</span>
     ${f.color?`<span class="f-dot" style="background:${f.color}"></span>`:''}
-    <span class="tr-name" ${(f.color||f.bold)?`style="${f.color?`color:${f.color};`:''}${f.bold?'font-weight:700':''}"`:''} >${esc(f.name)}</span>${f.mmj&&f.mmj.gone?'<span class="mmj-gone" title="removed from Mapping My Journey">🗺✕</span>':''}    <button type="button" class="tr-pop" title="Open this folder in its own window" aria-label="Open ${esc(f.name)} in its own window" onclick="_fwPopBtn(event,'${f.id}')">⧉</button><span class="tr-cnt">${cnt}</span>
+    <span class="tr-name" ${(f.color||f.bold)?`style="${f.color?`color:${f.color};`:''}${f.bold?'font-weight:700':''}"`:''} >${esc(f.name)}</span>${f.vis===1?'<span class="tr-vis" title="Visitors may see this folder">👁</span>':''}${f.mmj&&f.mmj.gone?'<span class="mmj-gone" title="removed from Mapping My Journey">🗺✕</span>':''}    <button type="button" class="tr-pop" title="Open this folder in its own window" aria-label="Open ${esc(f.name)} in its own window" onclick="_fwPopBtn(event,'${f.id}')">⧉</button><span class="tr-cnt">${cnt}</span>
   </div>${open?trGroupedKids(f.id,depth+1):''}`;
 }
 
@@ -7772,7 +7773,7 @@ function _cardCtxCheck(){
 }
 function artCardC(a,sel,sfc){
   if(sel||ST.snippet) return artCard(a,sel,sfc);
-  const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'')+(a.fromMydb?(a.fromMydb.pid+'|'+(a.fromMydb.kind||'')+(a.fromMydb.gone?'g':'')+(a.fromMydb.newer?'n':'')+'m'+_mydbMediaCount(a)):(a.rec?'m'+_mydbMediaCount(a):''))+(a.zabNote?_zabNoteLabel(a):'');
+  const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'')+(a.vis===1?'v':'')+(a.fromMydb?(a.fromMydb.pid+'|'+(a.fromMydb.kind||'')+(a.fromMydb.gone?'g':'')+(a.fromMydb.newer?'n':'')+'m'+_mydbMediaCount(a)):(a.rec?'m'+_mydbMediaCount(a):''))+(a.zabNote?_zabNoteLabel(a):'');
   const e=_cardC.get(a.id);
   if(e&&e.s===s) return e.h;
   const h=artCard(a,false,sfc);
@@ -8197,6 +8198,7 @@ function _renderP3CInner(){
     el.scrollTop=0;el.innerHTML=`<div class="avw"><div class="av">
       ${ST.noteModal?'':`<div class="p3h-title-bar p3c-titlebar p3c-vt"><div class="tbt" title="Right-click to edit" oncontextmenu="event.preventDefault();event.stopPropagation();startEdit()">${esc(curA.title)||'<em style="color:var(--t3)">Untitled</em>'}</div></div>`}
       ${_p3MetaRowHTML(curA)}
+      ${curA.vis===1?'<div class="av-jeb av-vis" title="Visitors may see this note">👁 Visitors may see this note</div>':''}
       ${curA.fromJeb?`<div class="av-jeb">👝 from ${esc(curA.fromJeb.pocket||'Zab')}</div>`:''}
       ${curA.fromEvernote?`<div class="av-jeb av-enx">📥 from Evernote · ${esc(curA.fromEvernote.nb||'')}</div>`:''}
       ${curA.fromMmj&&curA.fromMmj.gone?'<div class="av-jeb mmj-line mmj-removed">🗺 removed from Mapping My Journey</div>':''}
@@ -21524,6 +21526,7 @@ function _buildFolderCtxMain(fid){
       </div>
     </div>`),
     M(`<div class="ci" onclick="${_f&&_f.pinHash?'removeFolderPin':'setFolderPin'}('${fid}')">${_f&&_f.pinHash?'🔓 Remove PIN':'🔒 Set PIN'}</div>`),
+    M(_mmjVisRow('folder',fid)),
     G(`<div class="ci" onclick="hideCtx();openModal('folder','${fid}')">📁 Add subfolder</div>`),
     G(`<div class="ci" onclick="hideCtx();openModal('art','${fid}')">📄 Add note here</div>`),
     G(_topRow),
@@ -27646,7 +27649,8 @@ function _artCtxGroups(art,aid){
       `<div class="ci" onclick="hideCtx();toggleFav('${aid}')">${art.favourite?'✅ In favourites':'⭐ Favourite'}</div>`,
       `<div class="ci" onclick="hideCtx();togglePin('${aid}')">${art.pinned?'📌 Unpin':'📌 Pin'}</div>`,
       `<div class="ci" onclick="hideCtx();toggleArchive('${aid}')">${art.archived?'📤 Unarchive':'📦 Archive'}</div>`,
-      `<div class="ci" onclick="hideCtx();${art.finalised?'unfinishNote':'finishNote'}('${aid}')">${art.finalised?'↺ Reopen':'✓ Finish'}</div>`]},
+      `<div class="ci" onclick="hideCtx();${art.finalised?'unfinishNote':'finishNote'}('${aid}')">${art.finalised?'↺ Reopen':'✓ Finish'}</div>`,
+      _mmjVisRow('note',aid)]},
     {g:'organise',items:[
       sub('nti','🏷','NTI Types'),
       sub('tags','#','Tags'),
@@ -28557,6 +28561,7 @@ function artCard(a, sel, showFolderCount, showNag, customMeta){
     +(a.pinned?`<span class="ac-badge" onclick="event.stopPropagation();togglePin('${a.id}')" title="Unpin">📌</span>`:'')
     +(a.reminder?`<span class="ac-badge" title="Reminder: ${fmtRemDt(a.reminder.dt)}">🔔</span>`:'')
     +(a.archived?`<span class="ac-badge" title="Archived">📦</span>`:'')
+    +(a.vis===1?`<span class="ac-badge ac-vis" title="Visitors may see this note">👁</span>`:'')
     +(a.mrjDue&&a.mrjDue<=todayStr()?`<span class="ac-badge" title="Murāja'ah due">📖</span>`:'')
     +(a.practice==='active'?`<span class="ac-badge" title="In Practice">🌱</span>`:'')
     +(a.practice==='done'?`<span class="ac-badge" title="Practice complete">✅</span>`:'')
@@ -30923,6 +30928,215 @@ function _remStateRefresh(){
   const el=document.getElementById('rm-state'); if(el) el.textContent=_remStateText();
   const ln=document.getElementById('rem-mail-line'); if(ln) ln.textContent='📧 Email me reminders: '+(_remCfg().on?'On':'Set up');
 }
+/* ── v05.66 · J27 ① R1 — the MMJ set, the 👁 Visitors switch, and the shared copy other apps read (notebooks/{nb}/mmj).
+   `vis` = 1 on a folder or a note means visitors may see it; absent = private. Never 0/false: the key is removed.
+   The set is computed in ONE place (_mmjSet): folders whose top folder has sectionId 'mmj-sec' and everything below,
+   and the live notes with at least one folder in it. Cached on the save/merge counters + the array lengths. ── */
+let _mmjSetC=null;
+function _mmjSet(){
+  const fo=DB.folders||[], ar=DB.articles||[];
+  const key=_dbRev+'|'+_s1MergeSeq+'|'+fo.length+'|'+ar.length;
+  if(_mmjSetC&&_mmjSetC.key===key) return _mmjSetC;
+  const byId=new Map(); fo.forEach(f=>{ if(f&&f.id!=null) byId.set(f.id,f); });
+  const memo=new Map();
+  const inSet=f=>{
+    if(memo.has(f.id)) return memo.get(f.id);
+    let cur=f, seen=new Set(), res=false;
+    while(cur){
+      if(memo.has(cur.id)&&cur!==f){ res=memo.get(cur.id); break; }
+      if(seen.has(cur.id)) break;   /* a parent loop is never in the set */
+      seen.add(cur.id);
+      const p=cur.parentId!=null&&cur.parentId!==''?byId.get(cur.parentId):null;
+      if(!p){ res=cur.sectionId==='mmj-sec'; break; }
+      cur=p;
+    }
+    seen.forEach(id=>memo.set(id,res));
+    return res;
+  };
+  const folders=new Set(), notes=new Set();
+  fo.forEach(f=>{ if(f&&f.id!=null&&inSet(f)) folders.add(f.id); });
+  if(folders.size) ar.forEach(a=>{ if(a&&Array.isArray(a.folderIds)&&a.folderIds.some(id=>folders.has(id))) notes.add(a.id); });
+  _mmjSetC={key,folders,notes};
+  return _mmjSetC;
+}
+const _MMJ_VIS_TIP='Visitors who are not you can see this. Switching a folder does not switch the notes inside it: each note is your own choice.';
+function _mmjVisRow(kind,id){
+  const s=_mmjSet(); if(!(kind==='folder'?s.folders:s.notes).has(id)) return '';
+  const rec=kind==='folder'?(DB.folders||[]).find(x=>x.id===id):(DB.articles||[]).find(x=>x.id===id);
+  if(!rec) return '';
+  const on=rec.vis===1;
+  return `<div class="ci ci-vis" title="${esc(_MMJ_VIS_TIP)}" onclick="hideCtx();mmjToggleVis('${kind}',${_ja(id)})">${on?'🔒 Private (visitors can\'t see)':'👁 Visitors may see'}</div>`;
+}
+function mmjToggleVis(kind,id){
+  const s=_mmjSet(); if(!(kind==='folder'?s.folders:s.notes).has(id)) return;
+  const rec=kind==='folder'?(DB.folders||[]).find(x=>x.id===id):(DB.articles||[]).find(x=>x.id===id);
+  if(!rec) return;
+  if(rec.vis===1) delete rec.vis; else rec.vis=1;
+  rec.updatedAt=new Date().toISOString();
+  persist();
+  try{ if(kind==='folder') renderTree(); }catch(e){}
+  try{ render(); }catch(e){}
+  toast(rec.vis===1?'👁 Visitors may see this '+kind:'🔒 Private again');
+}
+
+/* The shared copy. t~0 = the tree; n~<encoded id> = one MMJ note; parts in mmjparts. Written only by Siyagah (this timer), only after
+   a first read (_s1WriteGate), never read back for Siyagah's own data. NOT in recs, the blob, _S1_COLLS, mergeDB() or any backup. */
+const _MS_OPS=400, _MS_BYTES=4*1024*1024, _MS_INLINE=700000, _MS_PART=300000, _MS_DAY=15000;
+const _msS={busy:false,last:0,written:0,docs:0,refused:0,err:null,why:null,retryAt:0,runs:0,seenKey:'',loaded:null,pending:0};
+function _msKv(op,key,val){
+  return new Promise((res,rej)=>{
+    let q; try{ q=indexedDB.open('siyagah-mmjshare-v1',1); }catch(e){ rej(e); return; }
+    q.onupgradeneeded=()=>{ if(!q.result.objectStoreNames.contains('kv')) q.result.createObjectStore('kv'); };
+    q.onerror=()=>rej(q.error);
+    q.onsuccess=()=>{
+      const db=q.result;
+      try{
+        const tx=db.transaction('kv',op==='get'?'readonly':'readwrite'), st=tx.objectStore('kv'), rq=op==='get'?st.get(key):st.put(val,key);
+        tx.oncomplete=()=>{ db.close(); res(op==='get'?rq.result:true); };
+        tx.onerror=tx.onabort=()=>{ db.close(); rej(tx.error); };
+      }catch(e){ db.close(); rej(e); }
+    };
+  });
+}
+const _msNoteSig=(a,fids)=>String(a.updatedAt)+'|'+(a.vis===1?1:0)+'|'+fids.join(',')+'|'+(typeof a.content==='string'?a.content.length:0)+'|'+(a.title||'').length;
+function _msNoteFids(a,S){ return (a.folderIds||[]).filter(id=>S.folders.has(id)); }
+/* the tree as the readers get it */
+function _msTree(S){
+  const sec=(DB.sections||[]).find(s=>s&&s.id==='mmj-sec');
+  const folders=[];
+  (DB.folders||[]).forEach(f=>{
+    if(!f||!S.folders.has(f.id)) return;
+    const o={id:f.id,n:String(f.name==null?'':f.name),p:f.parentId!=null&&f.parentId!==''?f.parentId:null,o:f.order==null?0:f.order,u:f.updatedAt==null?null:f.updatedAt};
+    if(f.vis===1) o.vis=1;
+    folders.push(o);
+  });
+  return {sec:{id:'mmj-sec',n:String(sec&&sec.name||'Mapping My Journey')},folders};
+}
+function _msStateText(){
+  if(!_msS.last&&!_msS.err) return _msS.why==='wait'?'waiting for the first sync to finish…':'nothing sent yet';
+  const e=_msS.err;
+  return 'last run '+_syncAgo(_msS.last)+' · '+_msS.written.toLocaleString('en-US')+' docs written (all runs '+_msS.docs.toLocaleString('en-US')+')'
+    +(_msS.refused?(' · refused '+_msS.refused+'×'):'')+(e?(' · last error: '+(e.code||e.message||e)):'');
+}
+async function _msTick(force){
+  if(_msS.busy) return;
+  const cfg=getSyncConfig();
+  if(!cfg||!cfg.notebookId||!_syncFsDb||!_dbLoaded){ _msS.why='nosync'; return; }
+  if(typeof navigator!=='undefined'&&navigator.onLine===false){ _msS.why='offline'; return; }
+  if(document.visibilityState==='hidden'){ _msS.why='hidden'; return; }
+  if(!(_s1WriteGate()&&(_s1RdCaught||_remMerged))){ _msS.why='wait'; return; }   /* never before the first read */
+  if(!(DB.sections||[]).some(s=>s&&s.id==='mmj-sec')){ _msS.why=null; return; }  /* no MMJ section on this device: nothing to share, nothing to retract */
+  if(!force&&Date.now()<_msS.retryAt) return;
+  const nb=cfg.notebookId, mapKey='sig|'+nb;
+  _msS.busy=true;
+  try{
+    const rev0=_dbRev+'|'+_s1MergeSeq;
+    let m=_msS.loaded&&_msS.loaded.nb===nb?_msS.loaded.m:null;
+    if(!m){
+      let v; try{ v=await _msKv('get',mapKey); }catch(e){ _msS.err=e; _msS.retryAt=Date.now()+60000; return; }
+      m=(v&&typeof v==='object'&&v.n)?v:{t:null,n:{},day:'',dn:0};
+      _msS.loaded={nb,m};
+      _msS.seenKey='';
+    }
+    if(!force&&_msS.seenKey===_dbRev+'|'+_s1MergeSeq+'|'+(_msS.pending?'p':'')){ _msS.why=null; return; }
+    /* ONE state: the change list is built with no await inside it */
+    const S=_mmjSet(), scanKey=_dbRev+'|'+_s1MergeSeq;
+    const work=[];   /* [id, note|null, sig] */
+    const seenIds=new Set();
+    (DB.articles||[]).forEach(a=>{
+      if(!a||!S.notes.has(a.id)) return;
+      seenIds.add(a.id);
+      const sig=_msNoteSig(a,_msNoteFids(a,S));
+      const cur=m.n[a.id]; const cs=cur&&typeof cur==='object'?cur.s:cur;
+      if(cs!==sig) work.push([a.id,a,sig]);
+    });
+    Object.keys(m.n).forEach(id=>{
+      if(seenIds.has(id)) return;
+      const cur=m.n[id], cs=cur&&typeof cur==='object'?cur.s:cur;
+      if(cs!=='gone') work.push([id,null,'gone']);
+    });
+    const tree=_msTree(S), treeSig=_rcHash(JSON.stringify(tree));
+    const treeChanged=m.t!==treeSig;
+    if(!work.length&&!treeChanged){ _msS.seenKey=scanKey+'|'+(_msS.pending?'p':''); _msS.why=null; _msS.err=null; return; }
+    /* daily budget (free tier: 20,000 writes a day) — a larger set is paced over days */
+    const day=new Date().toISOString().slice(0,10); if(m.day!==day){ m.day=day; m.dn=0; }
+    const cap=window.__msCap!=null?+window.__msCap:_MS_DAY;
+    let room=cap-(m.dn||0);
+    if(room<=0){ _msS.why='cap'; _msS.retryAt=Date.now()+30*60000; return; }
+    const nbRef=_syncFsDb.collection('notebooks').doc(nb), C=nbRef.collection('mmj'), P=nbRef.collection('mmjparts');
+    const ts=()=>firebase.firestore.FieldValue.serverTimestamp(), bld=_S2_BUILD();
+    const utf8=s=>new TextEncoder().encode(s).length;
+    let batch=null, nOps=0, nBytes=0, done=[], written=0, delsAfter=[];
+    const commit=async()=>{
+      if(!nOps) return;
+      const b=batch, d=done; batch=null; nOps=0; nBytes=0; done=[];
+      await b.commit();
+      d.forEach(e=>{ if(e.id==='t~0'){ m.t=e.sig; } else { const old=m.n[e.id]; if(old&&typeof old==='object'&&old.p&&(!e.parts||old.p[0]!==e.parts[0])) delsAfter.push({id:e.id,g:old.p[0],n:old.p[1]}); m.n[e.id]=e.parts?{s:e.sig,p:e.parts}:e.sig; } });
+      m.dn=(m.dn||0)+d.length; written+=d.length;
+      try{ await _msKv('put',mapKey,m); }catch(e){ throw e; }
+    };
+    const add=async(ref,data,size,entry)=>{
+      if(nOps>0&&(nOps+1>_MS_OPS||nBytes+size>_MS_BYTES)) await commit();
+      if(!batch) batch=_syncFsDb.batch();
+      batch.set(ref,data); nOps++; nBytes+=size;
+      if(entry) done.push(entry);
+    };
+    let yt0=performance.now();
+    /* the tree first (small): parts, then t~0 */
+    if(treeChanged&&room>0){
+      const js=JSON.stringify(tree.folders);
+      if(utf8(js)<=_MS_INLINE){
+        await add(C.doc('t~0'),{v:1,at:ts(),b:bld,sec:tree.sec,folders:tree.folders},utf8(js)+400,{id:'t~0',sig:treeSig});
+      } else {
+        const g=_syncNewGen(), chunks=[]; let cur=[],sz=0;
+        tree.folders.forEach(f=>{ const s=utf8(JSON.stringify(f)); if(cur.length&&sz+s>_MS_PART*2){ chunks.push(cur); cur=[]; sz=0; } cur.push(f); sz+=s; });
+        if(cur.length) chunks.push(cur);
+        for(let i=0;i<chunks.length;i++) await add(C.doc('t~'+(i+1)),{v:1,i:i+1,g,at:ts(),b:bld,folders:chunks[i]},utf8(JSON.stringify(chunks[i]))+400,null);
+        await commit();   /* the pieces land BEFORE the doc that names them */
+        await add(C.doc('t~0'),{v:1,at:ts(),b:bld,sec:tree.sec,n:chunks.length,g},800,{id:'t~0',sig:treeSig});
+      }
+      room--;
+    }
+    for(const [id,a,sig] of work){
+      if(room<=0) break;
+      if(performance.now()-yt0>=25){ await _yieldTask(); yt0=performance.now(); }
+      const ref=C.doc('n~'+encodeURIComponent(String(id)).replace(/\./g,'%2E'));
+      if(!a){ await add(ref,{id,gone:true,at:ts(),b:bld},300,{id,sig:'gone'}); room--; continue; }
+      /* built from the note as it is NOW and signed from the same read */
+      const fids=_msNoteFids(a,S), nsig=_msNoteSig(a,fids);
+      const content=typeof a.content==='string'?a.content:'';
+      const doc={id,title:a.title==null?'':String(a.title),tags:Array.isArray(a.tags)?a.tags.slice():[],folderIds:fids,kind:a.kind==null?null:a.kind,createdAt:a.createdAt==null?null:a.createdAt,updatedAt:a.updatedAt==null?null:a.updatedAt,at:ts(),b:bld};
+      if(a.vis===1) doc.vis=1;
+      const csz=utf8(content);
+      if(csz<=_MS_INLINE){ doc.content=content; await add(ref,doc,csz+1500,{id,sig:nsig}); }
+      else {
+        const g=_syncNewGen(), n=Math.ceil(content.length/_MS_PART);
+        const pk='n~'+encodeURIComponent(String(id)).replace(/\./g,'%2E');
+        for(let i=0;i<n;i++){ const s=content.slice(i*_MS_PART,(i+1)*_MS_PART); await add(P.doc(pk+'~'+g+'~'+i),{d:s,g},utf8(s)+300,null); }
+        await commit();
+        doc.parts=n; doc.g=g; doc.content='';
+        await add(ref,doc,1500,{id,sig:nsig,parts:[g,n]});
+      }
+      room--;
+    }
+    await commit();
+    /* the previous generation's pieces go only after the doc that replaced them has committed. Best effort. */
+    try{
+      for(let i=0;i<delsAfter.length;i++){
+        const o=delsAfter[i], pk='n~'+encodeURIComponent(String(o.id)).replace(/\./g,'%2E');
+        let b2=_syncFsDb.batch(); for(let j=0;j<o.n;j++) b2.delete(P.doc(pk+'~'+o.g+'~'+j)); await b2.commit();
+      }
+    }catch(e){}
+    _msS.last=Date.now(); _msS.written=written; _msS.docs+=written; _msS.runs++; _msS.err=null; _msS.why=null; _msS.retryAt=0;
+    _msS.pending=(room<=0)?1:0;
+    _msS.seenKey='';   /* look once more: anything that moved while writing is still in the map's difference */
+  }catch(e){
+    _msS.err=e; if(e&&e.code==='permission-denied') _msS.refused++;
+    _msS.retryAt=Date.now()+60000; _msS.seenKey='';
+  }finally{ _msS.busy=false; }
+}
+setInterval(()=>{ try{ _msTick(); }catch(e){} },5000);
+
 /* The helper, as text. One function builds both blocks so a downloaded copy has them (I4). */
 function _remGs(){
   const cfg=getSyncConfig()||{};
@@ -33431,6 +33645,7 @@ function _syncDiagnosticsHTML(){
     ['Push failures since load', String(_pushFailures||0)],
     ['Pull failures since load', String(_pullFailures||0)],
     ['Per-note copy', _s1DiagText()],
+    ['Shared MMJ copy', _msStateText()],
     ['Pictures', _picDiagText()],
     ['Cloud picture space', _picUseText()],
     ['Pictures kept here', _picKeepText()],
