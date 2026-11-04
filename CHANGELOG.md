@@ -11196,3 +11196,27 @@ new shared-folder rule correctly drops; a second stack (a note already imported)
 (`--unpatched` serves origin/main and the check FAILS there: 10/6 → 20/12); 127c path-free identity; 127d dry run, kept edited/both-edited/moved/
 tag-changed copies, Trash + tombstones, folders, byte-identical rest, stale-device merge both ways, Restore; 127e the cap over two days; 127f
 3,000 sets at 390 ×4 (longest task 134 ms, limit 200 × host). *Not measured:* the owner's ~17,756 copies (3,000 sets were).
+
+## v05.68 — J27 ① R2: other apps change the real MMJ folders and notes; the owner's new D6 (4 Nov 2026, issue #265)
+
+**The owner's words:** "I want to be able to work with MMJ folders and notes from everywhere. Add, move, edit, delete folders and notes." and "B, delete folders with notes, Trash with Undo."
+
+**Part 1 — D6 changed, in Siyagah itself.** A folder that holds notes can be deleted. `_folderDelPlan(fid)` splits the notes touching the subtree into *trash* (every existing folder
+of the note is inside) and *keep* (also in a folder outside). `confirmDel` / `pkDelete` show ONE confirmation (`_folderDelText`): "Delete “X”, its N subfolders and M notes? They go to
+Trash together; Undo or Restore brings them all back." + "K notes are also in other folders: they stay there." `_trashFolderCore` puts the folder, subfolders and *trash* notes in ONE
+`{type:'folder', item, subtree:{folders, articles, kept}}` entry; tombstones name exactly the folders and notes removed (never a kept note); a kept note loses the deleted folder ids and is
+stamped; `restoreItem` files the kept notes in the restored folders again. An empty folder deletes as before. `_folderDelRefusal()` answers '' (kept as the place for a future refusal).
+*Old checks updated in place, with the reason (the owner changed D6):* 30a, 41a, 41b (they asserted the refusal) and sync-audit F19.
+
+**Part 2 — the request box `notebooks/{nb}/mmjin/{reqId}`.** Ten ops (folder add/rename/move/delete/vis, note add/edit/move/delete/vis) created by other apps; Siyagah claims (Firestore
+transaction `new → work`, `by`, 2-min `lease`; `_miSweep` re-queues expired leases), validates (`_miApply`: targets and parents in `_mmjSet()`, names/titles trimmed and capped, tags through `_cleanTag`,
+content through `_enxClean` until it settles + a final refusal check, unknown op/field refused, stale `base` → "changed in Siyagah since" + `cur`, a note being edited → "open in Siyagah — try again",
+> 30 days → "too old"), applies as ONE `persist()`, redraws once per 25 requests, and writes `st`, `why`, `cur`, `res`, `doneAt` back. A note edit keeps the earlier version in Note History.
+≤ 200 claims a minute. Runs visible or hidden after the same gate as `_msTick`. 🔄 Cloud Sync diagnostics: "Requests from other apps". Nothing here is in recs, the blob or `mergeDB()`.
+*Decisions, stated:* `folder.add` does not run auto-numbering (it would rename the owner's folders); the listener is a `where('st','==','new')` snapshot plus a 60 s sweep for expired leases.
+**The honest limit:** every app signs in as the owner (same uid), so the cloud rules cannot tell the apps apart or stop an app writing elsewhere; the safety is the contract plus the validation. No rules change.
+*Not done:* cleaning request docs older than 30 days (a later round); a crash between applying and writing the outcome makes a re-claimed edit report "changed in Siyagah since".
+
+**Part 3 — `MMJ-SHARE.md` "Writing (R2)"** (shapes, ops, outcomes, reasons, "waiting for Siyagah", when requests apply, the D6 rule, the honest limit).
+
+*Check:* block 128, `tools/mmj-write.mjs` (89 checks) on the fake cloud (`s1-fake.mjs` gained `runTransaction`, equality queries and their listener). `--unpatched` serves origin/main and the request/D6 checks FAIL there.

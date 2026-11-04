@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.67">
+<meta name="app-version" content="05.68">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4069,7 +4069,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.67</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.68</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -21883,7 +21883,7 @@ function confirmDel(type,id){
   if(type!=='art'){
     const _refuse=_folderDelRefusal(id);
     if(_refuse){
-      showModal(`<div class="mt">This folder isn't empty</div>
+      showModal(`<div class="mt">This folder can't be deleted</div>
         <div class="mm">${esc(_refuse)}</div>
         <div class="ma"><button class="btn" onclick="closeModal()">Close</button>
         <button class="btn bp" onclick="closeModal();selFolder('${id}')">📂 Open the folder</button></div>`);
@@ -21891,11 +21891,12 @@ function confirmDel(type,id){
     }
   }
   const label=type==='art'?(DB.articles.find(a=>a.id===id)?.title||'this'):(DB.folders.find(f=>f.id===id)?.name||'this');
-  const msg=type==='art'?`Move "<strong>${esc(label)}</strong>" to Trash?`:`Move folder "<strong>${esc(label)}</strong>" and all its subfolders to Trash? You can restore them later.`;
-  showModal(`<div class="mt">Move to Trash</div>
-    <div class="mm">${msg}</div>
+  /* v05.68 — a folder that holds notes is no longer refused (the owner's new D6): one confirmation with the counts */
+  const msg=type==='art'?`Move "<strong>${esc(label)}</strong>" to Trash?`:esc(_folderDelText(id));
+  showModal(`<div class="mt">${type==='art'?'Move to Trash':'Delete folder'}</div>
+    <div class="mm" id="del-msg">${msg}</div>
     <div class="ma"><button class="btn" onclick="closeModal()">Cancel</button>
-    <button class="btn bd" onclick="${type==='art'?'trashArt':'trashFolder'}('${id}');closeModal()">Move to Trash</button></div>`);
+    <button class="btn bd" id="del-folder-ok" onclick="${type==='art'?'trashArt':'trashFolder'}('${id}');closeModal()">Move to Trash</button></div>`);
 }
 /* Folder-assign picker ("Assign to folders") — resizable from every edge/
    corner, folders can be renamed / deleted / dragged between layers, and
@@ -22745,10 +22746,7 @@ function pkDelete(fid){
   const _refuse=_folderDelRefusal(fid);
   if(_refuse){toast('🔒 '+_refuse,6000);return;}
   const removedIds=descOf(fid);
-  const subCount=removedIds.length-1;
-  const msg=subCount>0
-    ?`Delete folder "${f.name}" and its ${subCount} subfolder${subCount!==1?'s':''}? This moves them to Trash.`
-    :`Delete folder "${f.name}"? This moves it to Trash.`;
+  const msg=_folderDelText(fid);
   if(!confirm(msg))return;
   trashFolder(fid);
   ST.efolders=ST.efolders.filter(x=>!removedIds.includes(x));
@@ -24297,61 +24295,73 @@ function _tombstoneTrashEntry(t){
        deleted, so permanently deleting the folder must not tombstone them. */
   }
 }
-/* v04.77 — owner's rule (30 Sep 2026): "a folder should not be deleted with
-   notes in it". A folder that holds any note — directly or in any subfolder
-   (cntOf counts the whole subtree) — cannot be deleted; the owner moves or
-   deletes the notes first. Returns the refusal text, or '' when the folder
-   (and every subfolder) is empty and may go to Trash. Deleting an EMPTY
-   folder still tombstones it, so it disappears on every device. */
-function _folderDelRefusal(fid){
-  const f=DB.folders.find(x=>x.id===fid);if(!f)return '';
-  const n=cntOf(fid);if(!n)return '';
-  const sub=descOf(fid).length>1;
-  return `"${f.name}" still holds ${n} note${n===1?'':'s'}${sub?' (counting its subfolders)':''}. Move ${n===1?'it':'them'} to another folder or delete ${n===1?'it':'them'} first, then delete the folder.`;
+/* v04.77 — the owner's rule of 30 Sep 2026 refused to delete a folder that held notes. CHANGED by the owner on 4 Nov 2026 (v05.68, J27 R2,
+   "B, delete folders with notes, Trash with Undo"): a folder that holds notes CAN be deleted. The folder, its subfolders and the notes whose ONLY
+   folders are inside that subtree go to Trash as ONE group; a note that is also in a folder outside the subtree is kept and only loses the
+   deleted folder ids. _folderDelRefusal() stays as the one place a refusal would go; there is no other refusal today, so it answers ''. */
+function _folderDelRefusal(fid){ return ''; }
+/* what deleting a folder would do: ids = the folder and every subfolder; trash = notes whose every (existing) folder is inside; keep = notes also in a folder outside */
+function _folderDelPlan(fid){
+  const f=DB.folders.find(x=>x.id===fid);
+  if(!f) return {ids:[],set:new Set(),subN:0,trash:[],keep:[]};
+  const ids=descOf(fid), set=new Set(ids), live=new Set(DB.folders.map(x=>x.id));
+  const trash=[], keep=[];
+  DB.articles.forEach(a=>{
+    const fs=a.folderIds||[]; if(!fs.some(x=>set.has(x))) return;
+    if(fs.some(x=>!set.has(x)&&live.has(x))) keep.push(a); else trash.push(a);
+  });
+  return {ids,set,subN:ids.length-1,trash,keep};
+}
+const _plural=(n,w)=>n+' '+w+(n===1?'':'s');
+/* the confirmation's words (plain text; the caller escapes) */
+function _folderDelText(fid){
+  const f=DB.folders.find(x=>x.id===fid); if(!f) return '';
+  const P=_folderDelPlan(fid), nm=String(f.name||'');
+  if(!P.subN&&!P.trash.length&&!P.keep.length) return 'Move folder “'+nm+'” to Trash? You can restore it later.';
+  const parts=[]; if(P.subN) parts.push('its '+_plural(P.subN,'subfolder')); if(P.trash.length) parts.push(_plural(P.trash.length,'note'));
+  let t='Delete “'+nm+'”'+(parts.length?(parts.length===2?', '+parts[0]+' and '+parts[1]:' and '+parts[0]):'')+'? They go to Trash together; Undo or Restore brings them all back.';
+  if(P.keep.length) t+=' '+_plural(P.keep.length,'note')+(P.keep.length===1?' is':' are')+' also in other folders: '+(P.keep.length===1?'it stays':'they stay')+' there.';
+  return t;
+}
+/* the deletion itself, with no save and no redraw (the caller does both). Returns {entry,trashed,kept,subN} or null. */
+function _trashFolderCore(id){
+  const P=_folderDelPlan(id);
+  const cp=o=>JSON.parse(JSON.stringify(o));
+  const savedFolders=DB.folders.filter(f=>P.set.has(f.id)).map(cp);
+  const rootF=savedFolders.find(f=>f.id===id);
+  if(!rootF) return null;
+  if(!DB.trash) DB.trash=[];
+  const delAt=new Date().toISOString();
+  const entry={id:uid(),type:'folder',item:rootF,subtree:{folders:savedFolders.filter(f=>f.id!==id),articles:P.trash.map(cp)},deletedAt:delAt};
+  /* the notes that stay: only the deleted folder ids they were in, so Restore can file them there again */
+  if(P.keep.length) entry.subtree.kept=P.keep.map(a=>({id:a.id,folderIds:(a.folderIds||[]).filter(x=>P.set.has(x))}));
+  DB.trash.push(entry);
+  /* v04.65 + v05.68 — a tombstone names ONLY what is removed from DB: the folders and the notes that went to Trash. Never a kept note. */
+  const goneNotes=new Set(P.trash.map(a=>a.id));
+  _addTombstones([id,...savedFolders.filter(f=>f.id!==id).map(f=>f.id),...goneNotes],delAt);
+  DB.folders=DB.folders.filter(f=>!P.set.has(f.id));
+  if(goneNotes.size){
+    DB.articles=DB.articles.filter(a=>!goneNotes.has(a.id));
+    const m=_tabsMap();
+    goneNotes.forEach(aid=>{ delete m[aid]; Object.keys(m).forEach(k=>{ m[k]=(m[k]||[]).filter(t=>t!==aid); if(!m[k].length) delete m[k]; }); _tabStampPurge(aid); });
+    if(ST.tabOwner&&!m[ST.tabOwner]) ST.tabOwner=null;
+    if(goneNotes.has(ST.article)){ ST.article=null; ST.editing=false; }
+  }
+  /* a kept note loses the deleted folder ids and is stamped (it is a real change to that note) */
+  P.keep.forEach(a=>{ a.folderIds=a.folderIds.filter(x=>!P.set.has(x)); a.updatedAt=delAt; });
+  if(P.set.has(ST.folder)) ST.folder=null;
+  return {entry,trashed:goneNotes.size,kept:P.keep.length,subN:P.subN};
 }
 function trashFolder(id){
   if(!id) return false;
-  /* the one choke point every folder delete goes through — the menus check
-     first to show a proper message, this makes the rule hold for any caller */
+  /* the one choke point every folder delete goes through */
   const _refuse=_folderDelRefusal(id);
   if(_refuse){toast('🔒 '+_refuse,6000);return false;}
-  const ids = descOf(id);
-  const savedFolders = DB.folders.filter(f=>ids.includes(f.id)).map(f=>JSON.parse(JSON.stringify(f)));
-  const rootF = savedFolders.find(f=>f.id===id);
-  if(!rootF) return;
-  const savedArts = DB.articles
-    .filter(a=>a.folderIds.some(fid=>ids.includes(fid)))
-    .map(a=>JSON.parse(JSON.stringify(a)));
-
-  if(!DB.trash) DB.trash=[];
-  const _delAt=new Date().toISOString();
-  DB.trash.push({
-    id: uid(), type:'folder',
-    item: rootF,
-    subtree: {
-      folders: savedFolders.filter(f=>f.id!==id),
-      articles: savedArts
-    },
-    deletedAt: _delAt
-  });
-  /* v04.65 — tombstone the FOLDERS only. The notes inside a deleted folder
-     are not deleted: the line below only unfiles them, and they stay in
-     DB.articles. Until v04.64 their ids were tombstoned here too, so the
-     next mergeDB() (on every device, this one included) filtered them out
-     as deleted — deleting a folder silently deleted every note in it on
-     the next sync (I1). savedArts is still kept in the Trash entry: it is
-     what Restore uses to put the notes back INTO the restored folder. */
-  _addTombstones([id,...savedFolders.filter(f=>f.id!==id).map(f=>f.id)],_delAt);
-
-  DB.folders = DB.folders.filter(f=>!ids.includes(f.id));
-  const _unfiled=DB.articles.filter(a=>a.folderIds.some(x=>ids.includes(x)));
-  DB.articles.forEach(a=>{ a.folderIds=a.folderIds.filter(x=>!ids.includes(x)); });
-  /* v04.68 — unfiling is not an edit of those notes: mergeDB() unfiles them on
-     every device from the folder's tombstone, so they keep their updatedAt and
-     a concurrent edit elsewhere is never beaten by this deletion. */
-  _recUntouched('articles',_unfiled);
-  if(ids.includes(ST.folder)) ST.folder=null;
+  const r=_trashFolderCore(id);
+  if(!r) return;
   persist(); render();
+  if(r.trashed){ try{updateTrashBtn();}catch(e){} }
+  return true;
 }
 
 function trashArt(id){
@@ -27511,6 +27521,12 @@ function restoreItem(tid){
         saved.updatedAt=_now;
         DB.articles.push(saved);
       }
+    });
+    /* v05.68 — notes that stayed alive when the folder went: file them in the restored folders again */
+    (entry.subtree?.kept||[]).forEach(k=>{
+      const live=DB.articles.find(x=>x.id===k.id); if(!live) return;
+      (k.folderIds||[]).filter(fid=>restoredIds.includes(fid)).forEach(fid=>{ if(!live.folderIds.includes(fid)) live.folderIds.push(fid); });
+      live.updatedAt=_now;
     });
     // Select restored folder
     ST.folder=rf.id;
@@ -31180,6 +31196,260 @@ async function _msTick(force){
 }
 setInterval(()=>{ try{ _msTick(); }catch(e){} },5000);
 
+/* ── v05.68 · J27 ① R2 — requests from other apps: notebooks/{nb}/mmjin/{reqId}.
+   Other apps never write Siyagah's records. They CREATE a request {v:1,op,from,at,st:'new',…}; this code claims it (a transaction moves st
+   new→work with a 2-minute lease, so two Siyagah devices never apply one), validates every field as untrusted text, applies it with
+   Siyagah's own rules as ONE persist(), and writes the outcome back onto the same doc (st done|refused, why, cur, res, doneAt). A request doc
+   is never deleted. Runs after the same gate as _msTick (_s1WriteGate + a first read), visible or hidden. NOT in recs, the blob, _S1_COLLS,
+   mergeDB() or any backup. The honest limit: every app signs in as the owner, so the cloud rules cannot tell the apps apart; the safety is the
+   contract (apps only create mmjin docs) plus the validation here. MMJ-SHARE.md "Writing (R2)" is the readers' contract. ── */
+const _MI_SYS=['v','op','from','at','st','by','lease','why','doneAt','res','cur'];
+const _MI_OPS={
+  'folder.add':['id','name','parent'],'folder.rename':['id','name'],'folder.move':['id','parent'],'folder.delete':['id'],'folder.vis':['id','vis'],
+  'note.add':['id','title','content','tags','folderIds','kind'],'note.edit':['id','base','title','content','tags','kind'],
+  'note.move':['id','base','folderIds'],'note.delete':['id','base'],'note.vis':['id','vis']
+};
+const _MI_LEASE_MS=120000, _MI_PER_MIN=200, _MI_OLD_MS=30*86400000, _MI_NAME_MAX=200, _MI_TITLE_MAX=300, _MI_CONTENT_MAX=900000, _MI_SWEEP_MS=60000;
+const _MI_DEV='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const _miS={sub:null,subNb:null,q:new Map(),busy:false,last:0,done:0,refused:0,claimed:0,err:null,why:null,win:[],retryAt:0,sweepAt:0};
+function _miReady(){
+  const cfg=getSyncConfig();
+  return !!(cfg&&cfg.notebookId&&_syncFsDb&&_dbLoaded&&!(typeof navigator!=='undefined'&&navigator.onLine===false)&&_s1WriteGate()&&(_s1RdCaught||_remMerged)&&(DB.sections||[]).some(s=>s&&s.id==='mmj-sec'));
+}
+function _miText(v,max){
+  if(typeof v!=='string') return null;
+  const t=v.replace(/[\u0000-\u001f\u007f-\u009f]/g,' ').replace(/\s+/g,' ').trim().slice(0,max).trim();
+  return t||null;
+}
+function _miId(v){ return typeof v==='string'&&/^[\w.:~-]{1,120}$/.test(v)?v:null; }
+/* the same cleaner as the imports (_enxClean), run until it settles, plus the tags it does not know; null = refuse */
+function _miContent(v){
+  if(typeof v!=='string'||v.length>_MI_CONTENT_MAX) return null;
+  let h=v;
+  for(let i=0;i<6;i++){
+    const n=_enxClean(h).replace(/<\/?(base|link|meta|form|frame|frameset|applet|noscript)\b[^>]*>/gi,'');
+    if(n===h) break; h=n;
+  }
+  if(/<\s*\/?\s*(script|iframe|object|embed|style|base|link|meta|form|frame|frameset|applet)\b/i.test(h)) return null;
+  if(/<[a-zA-Z][^>]*[\s\/"'](on[a-z0-9_-]+|srcdoc|formaction)\s*=/i.test(h)) return null;
+  return h;
+}
+function _miTags(v){
+  if(v==null) return [];
+  if(!Array.isArray(v)||v.length>60) return null;
+  const out=[]; for(const t of v){ if(typeof t!=='string') return null; const c=_cleanTag(t); if(c&&!out.includes(c)) out.push(c); }
+  return out;
+}
+function _miDead(id){
+  return (DB.tombstones||[]).some(t=>t&&t.id===id)||(DB.trash||[]).some(t=>t&&((t.item&&t.item.id===id)||(t.subtree&&((t.subtree.folders||[]).some(f=>f&&f.id===id)||(t.subtree.articles||[]).some(a=>a&&a.id===id)))));
+}
+/* a note being edited (Pane 3 or a window) is never changed under the caret */
+function _miOpen(id){
+  if(ST.editing&&ST.article===id) return true;
+  try{ return Array.from(document.querySelectorAll('[contenteditable="true"]')).some(e=>e.dataset&&e.dataset.aid===id); }catch(e){ return false; }
+}
+function _miTrashNote(a){
+  const now=new Date().toISOString();
+  if(!DB.trash) DB.trash=[];
+  DB.trash.push({id:uid(),type:'article',item:JSON.parse(JSON.stringify(a)),deletedAt:now});
+  _addTombstones([a.id],now);
+  DB.articles=DB.articles.filter(x=>x.id!==a.id);
+  const m=_tabsMap(); delete m[a.id];
+  Object.keys(m).forEach(k=>{ m[k]=(m[k]||[]).filter(t=>t!==a.id); if(!m[k].length) delete m[k]; });
+  _tabStampPurge(a.id);
+  if(ST.tabOwner&&!m[ST.tabOwner]) ST.tabOwner=null;
+  if(ST.article===a.id){ ST.article=null; ST.editing=false; }
+}
+/* validate one request and apply it. No await inside: the notebook is read and changed in one stretch. Returns {st,why?,cur?,res?,changed?} */
+function _miApply(d){
+  const R=(why,cur)=>{ const o={st:'refused',why}; if(cur!=null) o.cur=cur; return o; };
+  const OK=(id,changed)=>{ const o={st:'done',changed:!!changed}; if(id!=null) o.res={id}; return o; };
+  if(!d||typeof d!=='object'||d.v!==1) return R('not a version 1 request');
+  const spec=_MI_OPS[typeof d.op==='string'?d.op:''];
+  if(!spec) return R('unknown op');
+  const allowed=new Set(spec.concat(_MI_SYS));
+  for(const k of Object.keys(d)) if(!allowed.has(k)) return R('unknown field "'+String(k).slice(0,40)+'"');
+  if(d.at&&typeof d.at.toMillis==='function'&&Date.now()-d.at.toMillis()>_MI_OLD_MS) return R('too old');
+  const S=_mmjSet(), now=new Date().toISOString();
+  const folder=id=>(DB.folders||[]).find(f=>f&&f.id===id), note=id=>(DB.articles||[]).find(a=>a&&a.id===id);
+  const NF='not a Mapping My Journey folder', NN='not a Mapping My Journey note', OPEN='open in Siyagah — try again', STALE='changed in Siyagah since';
+  const id=_miId(d.id); if(!id) return R('bad id');
+  const parentOf=()=>{ if(d.parent==null) return {p:null}; const p=_miId(d.parent); if(!p||!S.folders.has(p)) return {err:NF}; return {p}; };
+  const foldersOf=()=>{
+    const v=d.folderIds; if(!Array.isArray(v)||!v.length||v.length>20) return {err:'folderIds must be 1 to 20 folders'};
+    const out=[]; for(const x of v){ const f=_miId(x); if(!f||!S.folders.has(f)) return {err:NF}; if(!out.includes(f)) out.push(f); }
+    return {ids:out};
+  };
+  const base=()=>typeof d.base==='string'&&d.base?d.base:null;
+  switch(d.op){
+    case 'folder.add':{
+      const name=_miText(d.name,_MI_NAME_MAX); if(!name) return R('bad name');
+      const P=parentOf(); if(P.err) return R(P.err);
+      const ex=folder(id);
+      if(ex) return (S.folders.has(id)&&ex.name===name&&(ex.parentId||null)===P.p)?OK(id,false):R('id already used');
+      if(note(id)||_miDead(id)) return R('id already used');
+      const f={id,name,parentId:P.p,updatedAt:now};
+      if(P.p==null){ f.sectionId='mmj-sec'; f.order=DB.folders.filter(x=>!x.parentId&&x.sectionId==='mmj-sec').length+1; }
+      else f.order=DB.folders.filter(x=>x.parentId===P.p).length+1;
+      DB.folders.push(f); persist(); return OK(id,true);
+    }
+    case 'folder.rename':{
+      const name=_miText(d.name,_MI_NAME_MAX); if(!name) return R('bad name');
+      const f=folder(id); if(!f||!S.folders.has(id)) return R(NF);
+      if(f.name===name) return OK(id,false);
+      f.name=name; f.updatedAt=now; persist(); return OK(id,true);
+    }
+    case 'folder.move':{
+      const f=folder(id); if(!f||!S.folders.has(id)) return R(NF);
+      const P=parentOf(); if(P.err) return R(P.err);
+      if(P.p===id||(P.p!=null&&descOf(id).includes(P.p))) return R('cannot move a folder into itself or one of its own subfolders');
+      if((f.parentId||null)===P.p&&(P.p!=null||f.sectionId==='mmj-sec')) return OK(id,false);
+      if(P.p==null){ f.parentId=null; f.sectionId='mmj-sec'; f.order=DB.folders.filter(x=>!x.parentId&&x.id!==id&&x.sectionId==='mmj-sec').length+1; }
+      else { f.parentId=P.p; f.order=DB.folders.filter(x=>x.parentId===P.p&&x.id!==id).length+1; }
+      f.updatedAt=now; persist(); return OK(id,true);
+    }
+    case 'folder.delete':{
+      const f=folder(id);
+      if(!f) return (!note(id)&&_miDead(id))?OK(id,false):R(NF);
+      if(!S.folders.has(id)) return R(NF);
+      const P=_folderDelPlan(id);
+      if(P.trash.concat(P.keep).some(a=>_miOpen(a.id))) return R(OPEN);
+      if(!_trashFolderCore(id)) return R(NF);
+      persist(); return OK(id,true);
+    }
+    case 'folder.vis':case 'note.vis':{
+      if(d.vis!==1&&d.vis!==0) return R('vis must be 1 or 0');
+      const isF=d.op==='folder.vis', rec=isF?folder(id):note(id);
+      if(!rec||!(isF?S.folders:S.notes).has(id)) return R(isF?NF:NN);
+      if((rec.vis===1)===(d.vis===1)) return OK(id,false);
+      if(d.vis===1) rec.vis=1; else delete rec.vis;
+      rec.updatedAt=now; persist(); return OK(id,true);
+    }
+    case 'note.add':{
+      const title=_miText(d.title,_MI_TITLE_MAX); if(!title) return R('bad title');
+      const content=_miContent(d.content==null?'':d.content); if(content==null) return R('bad content');
+      const tags=_miTags(d.tags); if(!tags) return R('bad tags');
+      const F=foldersOf(); if(F.err) return R(F.err);
+      let kind; if(d.kind!=null){ if(typeof d.kind!=='string'||!/^[\w-]{1,40}$/.test(d.kind)) return R('bad kind'); kind=d.kind; }
+      const ex=note(id);
+      if(ex) return (S.notes.has(id)&&ex.title===title)?OK(id,false):R('id already used');
+      if(folder(id)||_miDead(id)) return R('id already used');
+      const a={id,title,content,folderIds:F.ids,tags,createdAt:now,updatedAt:now}; if(kind) a.kind=kind;
+      DB.articles.push(a); persist(); return OK(id,true);
+    }
+    case 'note.edit':case 'note.move':case 'note.delete':{
+      const a=note(id);
+      if(!a){ return (d.op==='note.delete'&&!folder(id)&&_miDead(id))?OK(id,false):R(NN); }
+      if(!S.notes.has(id)) return R(NN);
+      const b=base(); if(!b) return R('base is required');
+      if(b!==a.updatedAt) return R(STALE,a.updatedAt);
+      if(_miOpen(id)) return R(OPEN);
+      if(d.op==='note.delete'){ _miTrashNote(a); persist(); return OK(id,true); }
+      if(d.op==='note.move'){
+        const F=foldersOf(); if(F.err) return R(F.err);
+        a.folderIds=F.ids.concat((a.folderIds||[]).filter(x=>!S.folders.has(x)&&!F.ids.includes(x)));
+        a.updatedAt=now; persist(); return OK(id,true);
+      }
+      const has=k=>d[k]!==undefined;
+      if(!['title','content','tags','kind'].some(has)) return R('nothing to change');
+      let title,content,tags,kind;
+      if(has('title')){ title=_miText(d.title,_MI_TITLE_MAX); if(!title) return R('bad title'); }
+      if(has('content')){ content=_miContent(d.content); if(content==null) return R('bad content'); }
+      if(has('tags')){ tags=_miTags(d.tags); if(!tags) return R('bad tags'); }
+      if(has('kind')){ if(typeof d.kind!=='string'||!/^[\w-]{1,40}$/.test(d.kind)) return R('bad kind'); kind=d.kind; }
+      try{ _captureNoteHistory(a,'app request',true); }catch(e){}   /* the version before the app's edit stays in Note History (I1) */
+      if(title!==undefined) a.title=title;
+      if(content!==undefined) a.content=content;
+      if(tags!==undefined) a.tags=tags;
+      if(kind!==undefined) a.kind=kind;
+      a.updatedAt=now; persist(); return OK(id,true);
+    }
+  }
+  return R('unknown op');
+}
+/* the claim: st new → work, by this device, with a lease; null = somebody else has it (or it is gone / not due) */
+function _miClaim(ref){
+  return _syncFsDb.runTransaction(async tx=>{
+    const s=await tx.get(ref); if(!s.exists) return null;
+    const d=s.data(), t=Date.now();
+    if(!(d.st==='new'||(d.st==='work'&&Number(d.lease)<t))) return null;
+    tx.update(ref,{st:'work',by:_MI_DEV,lease:t+_MI_LEASE_MS});
+    return d;
+  });
+}
+async function _miFinish(ref,out){
+  const o={st:out.st,doneAt:firebase.firestore.FieldValue.serverTimestamp()};
+  if(out.why!=null) o.why=String(out.why); if(out.cur!=null) o.cur=out.cur; if(out.res) o.res=out.res;
+  let err=null;
+  for(let i=0;i<3;i++){ try{ await ref.set(o,{merge:true}); return true; }catch(e){ err=e; await new Promise(r=>setTimeout(r,400*(i+1))); } }
+  _miS.err=err; return false;
+}
+function _miRender(){ try{ _renderPreserveEdit(); }catch(e){} }
+async function _miDrain(){
+  if(_miS.busy) return;
+  _miS.busy=true;
+  let dirty=0;
+  try{
+    const cfg=getSyncConfig(); if(!cfg||!cfg.notebookId||!_syncFsDb) return;
+    const C=_syncFsDb.collection('notebooks').doc(cfg.notebookId).collection('mmjin');
+    const retry=[]; let yt0=performance.now(), n=0;
+    while(_miS.q.size){
+      if(!_miReady()){ _miS.why='wait'; break; }
+      const t=Date.now(); _miS.win=_miS.win.filter(x=>t-x<60000);
+      if(_miS.win.length>=_MI_PER_MIN){ _miS.why='pace'; break; }   /* the rest waits for the next minute (still st:new in the cloud) */
+      const reqId=_miS.q.keys().next().value; _miS.q.delete(reqId);
+      const ref=C.doc(reqId);
+      let d=null;
+      try{ d=await _miClaim(ref); }catch(e){ _miS.err=e; retry.push(reqId); continue; }
+      if(!d) continue;
+      _miS.win.push(Date.now()); _miS.claimed++;
+      if(!_miReady()){ retry.push(reqId); continue; }   /* the claim took a moment: the gate is asked again before the notebook is touched; the lease expires and it is claimed again */
+      let out; try{ out=_miApply(d); }catch(e){ out={st:'refused',why:'error while applying'}; }
+      if(out.changed){ dirty++; _miS.last=Date.now(); }
+      if(out.st==='done') _miS.done++; else _miS.refused++;
+      _miS.err=null;
+      await _miFinish(ref,out);
+      if(dirty&&++n%25===0){ _miRender(); dirty=0; }
+      if(performance.now()-yt0>=25){ await _yieldTask(); yt0=performance.now(); }
+    }
+    retry.forEach(id=>_miS.q.set(id,1));
+  }catch(e){ _miS.err=e; }
+  finally{ _miS.busy=false; if(dirty) _miRender(); }
+}
+function _miSubscribe(nb){
+  if(_miS.sub&&_miS.subNb===nb) return;
+  if(_miS.sub){ try{ _miS.sub(); }catch(e){} _miS.sub=null; }
+  const q=_syncFsDb.collection('notebooks').doc(nb).collection('mmjin').where('st','==','new').limit(300);
+  _miS.subNb=nb;
+  _miS.sub=q.onSnapshot(snap=>{
+    snap.docs.forEach(x=>_miS.q.set(x.id,1));
+    _miS.err=null;
+    try{ _miDrain(); }catch(e){}
+  },err=>{ _miS.err=err; _miS.sub=null; _miS.subNb=null; _miS.retryAt=Date.now()+60000; });
+}
+/* a request whose claimer vanished (lease over) is claimed again */
+async function _miSweep(nb){
+  try{
+    const s=await _syncFsDb.collection('notebooks').doc(nb).collection('mmjin').where('st','==','work').limit(100).get();
+    const t=Date.now();
+    s.forEach(x=>{ const d=x.data(); if(d&&Number(d.lease)<t) _miS.q.set(x.id,1); });
+  }catch(e){}
+}
+function _miTick(){
+  if(!_miReady()){ _miS.why='wait'; return; }
+  _miS.why=null;
+  const nb=getSyncConfig().notebookId;
+  if(!_miS.sub&&Date.now()>=_miS.retryAt) _miSubscribe(nb);
+  if(Date.now()-_miS.sweepAt>=_MI_SWEEP_MS){ _miS.sweepAt=Date.now(); _miSweep(nb); }
+  if(_miS.q.size&&!_miS.busy) _miDrain();
+}
+function _miStateText(){
+  const e=_miS.err;
+  if(!_miS.done&&!_miS.refused&&!e) return _miS.why==='wait'?'waiting for the first sync to finish…':(_miS.why==='pace'?'paced (200 a minute)':'none yet');
+  return 'last applied '+(_miS.last?_syncAgo(_miS.last):'never')+' · done '+_miS.done+' · refused '+_miS.refused+(_miS.q.size?(' · waiting '+_miS.q.size):'')+(e?(' · last error: '+(e.code||e.message||e)):'');
+}
+setInterval(()=>{ try{ _miTick(); }catch(e){} },5000);
+
 /* The helper, as text. One function builds both blocks so a downloaded copy has them (I4). */
 function _remGs(){
   const cfg=getSyncConfig()||{};
@@ -33910,6 +34180,7 @@ function _syncDiagnosticsHTML(){
     ['Pull failures since load', String(_pullFailures||0)],
     ['Per-note copy', _s1DiagText()],
     ['Shared MMJ copy', _msStateText()],
+    ['Requests from other apps', _miStateText()],
     ['Pictures', _picDiagText()],
     ['Cloud picture space', _picUseText()],
     ['Pictures kept here', _picKeepText()],

@@ -51,8 +51,9 @@ outside it. Where this file and the PCF disagree, the PCF wins.
   installed, and a new version really arrives; a downloaded copy still opens years
   from now with its notes. (I2–I4, D2)
 - Every feature ships on phone, tablet and laptop in the same round. (D5)
-- A folder that still holds notes cannot be deleted; deleting an empty folder must
-  sync. (D6)
+- A folder that holds notes CAN be deleted (changed by the owner 4 Nov 2026, "B, delete folders with notes, Trash with Undo"): one confirmation with the counts, then the folder, its
+  subfolders and the notes whose only folders are inside go to Trash as one group, with Undo / Restore; a note also in another folder stays. Deleting an empty folder must
+  sync. (D6; the old rule, 30 Sep 2026: "a folder should not be deleted with notes in it")
 - The Architect puts a green, checked round live without asking. (D7)
 - A round the Architect built itself may be merged by the Architect, but only after a
   FULL RECHECK on the exact commit. (D8, PCF J06, 12 Oct 2026)
