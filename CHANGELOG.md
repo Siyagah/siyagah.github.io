@@ -11126,6 +11126,40 @@ first of all for an item with an address, and gives each heading row a `data-i` 
 `zab-open-link.mjs`, reasons in their comments): 92f now asks for ✏️ Edit first and ☑ Done present, and reads "☐ Not done" as the MARK group's
 first row; 98a–98c press the first action row. The app was not changed. 92 + 98: 78/78.
 
+## v05.66 — J27 ① R1: the shared Mapping My Journey copy + 👁 Visitors (issue #261)
+
+Siyagah is the one master of the Mapping My Journey (MMJ) folders and notes. Other apps (BwN Library, MSA/QuranRevival) sign in to Siyagah's own
+Firebase project with the owner's account and need a copy they can READ that is small to start, updated record by record, and independent of
+Siyagah's sync internals. **R1 builds that copy and the 👁 switch. Nothing in R1 lets another app change Siyagah (writing is R2).**
+
+**Part A — 👁 Visitors.** `vis` on a folder and on a note: `1` = visitors may see it, absent = private. A number (more levels later, no migration);
+`vis:0`/`false` is never written — the key is removed. `_mmjSet()` is the ONE place that decides "the MMJ set": folders whose top folder has
+`sectionId:'mmj-sec'` and everything below (the owner's own folders too), and live notes with at least one folder in it (cached on `_dbRev`,
+`_s1MergeSeq` and the array lengths). The row **👁 Visitors may see** / **🔒 Private (visitors can't see)** sits in the MARK group of the folder and
+note menus, through `_menuHTML`, only for MMJ folders and notes (`_mmjVisRow`, `mmjToggleVis`); its title says a folder does not switch the notes
+inside it. Marks: 👁 after the folder name (`.tr-vis`, side pane and folder windows — the same row builder; the row keeps `content-visibility:auto`),
+👁 on the Pane 2 card (`.ac-vis`; `vis` is in `artCardC`'s signature) and a line in the note's read header (`.av-vis`). A change sets `updatedAt` and
+goes through `persist()`, so `_stampRecordTouches()` stamps it and it syncs both ways (I2).
+
+**Part B — `notebooks/{nb}/mmj`.** Written only by Siyagah's own 5 s timer (`_msTick`, the `_remTick` kind), only through `_s1WriteGate()` plus a proof of
+a first read, only signed in, online and visible; never read by Siyagah; NOT in recs, the blob, `_S1_COLLS`, `mergeDB()` or any backup. A failure never
+fails a push — it shows only in 🔄 Cloud Sync diagnostics ("Shared MMJ copy": last run, docs written, refused). The change list is built in one
+await-free stretch from one state (`_mmjSet()` + a cheap per-note signature `updatedAt|vis|folders|content length|title length`, no hashing of note text).
+A per-device signature map lives in the NEW database `siyagah-mmjshare-v1` (store `kv`, key `sig|<nb>`) and is saved after every commit; only what
+differs is written, ≤ 400 writes / 4 MB per commit; a daily write budget (15,000 per device per UTC day, hook `window.__msCap`) paces a larger set over
+days. The first run writes the whole set (about one write per MMJ note). Documents `t~0` (tree, split into `t~1…` over 700 KB), `n~<id>` (a note;
+content in `mmjparts` over 700 KB; `{id,gone:true,at}` when it leaves the set — never deleted). Contract for readers: `MMJ-SHARE.md`.
+
+*Docs:* `MMJ-SHARE.md` (new, repo root). *Rules:* the repo does not hold the Firestore rules, so the PR body says what to check.
+
+*Not done / on purpose:* a timed long-press on a touch screen is not simulated (menus are opened by a real right-click at all three sizes, as in
+block 124). Every device that has the MMJ section writes the whole set once on its first run (its map is per device); that is idempotent for readers.
+Writing from other apps (R2) and the visitors' copy (R3) are not in this round.
+
+*Check:* block 126, `tools/mmj-share.mjs` — 126a menu/marks/card cache at 390/820/1440, 126b sync both ways, 126c first run and exact fields,
+126d edits/gone/rename/move/second run, 126e not-yet-read device, 126f offline/hidden/refused, 126g parts (note and tree) and clean-up, 126h
+byte-identical around a run, 126i owner's scale (9,000 notes, 600 MMJ, 1,764 folders, phone ×4).
+
 ---
 
 ## v05.67 — J111 📂 Move to folder… · J112 the duplicate Evernote tree (built by the builder, issue #262)
