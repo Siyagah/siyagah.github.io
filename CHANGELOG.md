@@ -11159,3 +11159,40 @@ Writing from other apps (R2) and the visitors' copy (R3) are not in this round.
 *Check:* block 126, `tools/mmj-share.mjs` — 126a menu/marks/card cache at 390/820/1440, 126b sync both ways, 126c first run and exact fields,
 126d edits/gone/rename/move/second run, 126e not-yet-read device, 126f offline/hidden/refused, 126g parts (note and tree) and clean-up, 126h
 byte-identical around a run, 126i owner's scale (9,000 notes, 600 MMJ, 1,764 folders, phone ×4).
+
+---
+
+## v05.67 — J111 📂 Move to folder… · J112 the duplicate Evernote tree (built by the builder, issue #262)
+
+**J111.** The folder menu (sidebar, folder windows, the phone's long-press — all go through `_buildFolderCtxMain`) gets **📂 Move to folder…** in
+ORGANISE. It opens a picker made from `_afInRows` (the rows the note's 📁 Manage folders "Inside:" list already used; now `_afInRows(q,cfg)`
+with `cfg={pick,bad}`, byte-identical output with no cfg), "🏠 Top level" first, the folder itself and everything inside it greyed with the
+reason. A pick goes through the existing move path (`doMoveFolder(…,'inside')`: last among the new siblings, `persist()` stamps `updatedAt`, the
+numbering offer follows the existing rules); into another section's folder it takes that section; "Top level" is `moveFolderToTop`, which keeps the
+section. Phone: a full-width bottom sheet (`#ov.mydb-sheet`), rows ≥ 44 px.
+
+**J112 — stop it.** (a) A stack is now the path relative to the deepest folder that holds every picked `.enex` file (`_enxTrimStacks`, for a
+picked folder and for a folder handle), so picking the export or the folder above it gives the same stacks. (b) A note counts as already
+imported when another `fromEvernote` note — live or in Trash — has the same created second, lower-case title and raw length whatever its path
+(`_enxKeyNoPath`, a set built before the run, so notes this run adds never suppress each other); counted under "already in Siyagah". (c) Existing
+ids are never re-keyed. *Trade-off, stated plainly:* picking ONE stack folder alone now drops that stack's name (it is the shared folder);
+pick the export, or two stacks, to keep it. *Not done:* the dry run's "already in Siyagah" figure does not yet count path-free matches
+(it counts only non-Evernote notes); the import itself does.
+
+**J112 — remove what is there.** 🧰 → 📥 Evernote import → **🧹 Remove duplicates**: a dry run (`_enxDupScan`: sets, copies, the trees with counts,
+10 examples, the "both changed" list, 📋 Copy summary), then **🗑 Move N copies to Trash**. A duplicate set = live `fromEvernote` notes with the same
+path-free identity. Never removed: a copy the owner changed (`updatedAt` later than `fromEvernote.at`, a folder other than its imported notebook
+folder, or tags unlike another copy's); two or more changed → "both changed — kept both". Of unchanged copies the shortest stack path is kept,
+else the earliest imported; if exactly one copy was changed it is kept and the unchanged ones go. Removal: Trash entry + tombstone per note (Restore
+works), batches of 250 through `_enxPersist()` + `_enxPushEnd()`, at most `_enxCap()` per rolling 24 h (counted from Trash), the rest on another
+day; then the now-empty import-made folders (`f.enx`, every subfolder too, D6) with their tombstones, the others listed. Folders touched are
+remembered in `siyagah-enx-v1` (store `job`, key `dup`). Skipped: a copy open in an editor; notes that are not `fromEvernote`, Mapping My
+Journey, MyDatabase.
+
+*Existing check updated in place:* 80a (`enex-s4b.mjs`), "folders are found by their id": its second export held ONE stack folder, whose name the
+new shared-folder rule correctly drops; a second stack (a note already imported) was added so the picked root stays the shared folder.
+
+*Check:* block 127, `tools/enx-dups.mjs` — 127a J111 at 390/820/1440 with real right-clicks; 127b picking the export then its parent adds nothing
+(`--unpatched` serves origin/main and the check FAILS there: 10/6 → 20/12); 127c path-free identity; 127d dry run, kept edited/both-edited/moved/
+tag-changed copies, Trash + tombstones, folders, byte-identical rest, stale-device merge both ways, Restore; 127e the cap over two days; 127f
+3,000 sets at 390 ×4 (longest task 134 ms, limit 200 × host). *Not measured:* the owner's ~17,756 copies (3,000 sets were).

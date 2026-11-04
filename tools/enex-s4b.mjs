@@ -176,6 +176,10 @@ try {
     await on(d, () => { for (const [id, nm] of [['enx-root', 'Renamed by the owner'], [DB.folders.find((x) => x.enx && x.enx.name === 'Stack A').id, 'My own stack name']]) { const f = DB.folders.find((x) => x.id === id); f.name = nm; f.updatedAt = new Date().toISOString(); } persist(); });
     const dir2 = join(TMP, 'export2', 'Stack A'); mkdirSync(dir2, { recursive: true });
     writeFileSync(join(dir2, 'Alpha.enex'), HEAD + noteXML({ title: 'Late arrival', created: '20210101T000000Z' }) + '</en-export>\n');
+    /* v05.67 · J112 (changed in place): a stack is now the path relative to the deepest folder that holds EVERY picked file, so a pick with
+       one stack folder alone would drop that stack's name. A second stack (Gamma, a note already in) keeps the picked root the shared folder. */
+    const dir3 = join(TMP, 'export2', 'Stack B'); mkdirSync(dir3, { recursive: true });
+    writeFileSync(join(dir3, 'Gamma.enex'), HEAD + noteXML({ title: 'Gamma one', created: '20231231T235959Z' }) + '</en-export>\n');
     const nf = await on(d, () => DB.folders.length);
     await again(d, vp, join(TMP, 'export2'), ['done'], true);
     const late = await on(d, () => { const a = DB.articles.find((x) => x.title === 'Late arrival'); const f = a && DB.folders.find((x) => x.id === a.folderIds[0]); return { f: f && f.name, par: f && DB.folders.find((x) => x.id === f.parentId).name, nf: DB.folders.length }; });
