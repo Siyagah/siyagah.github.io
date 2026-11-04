@@ -71,7 +71,7 @@ outcome onto the same document. **Never write anything else** (not `mmj`, `recs`
 |---|---|---|
 | `folder.add` | `id` (your new id, unique, e.g. `x-bwn-<random>`), `name`, `parent` (an MMJ folder id, or `null` = top of the MMJ section) | makes the folder |
 | `folder.rename` | `id`, `name` | renames |
-| `folder.move` | `id`, `parent` (MMJ folder id or `null`) | moves; refused into itself or one of its own subfolders |
+| `folder.move` | `id`, `parent` (MMJ folder id or `null`), optional `before` (the id of a folder under that same parent) | moves; with `before` it goes in front of that folder (this is how you move a folder up or down among its siblings; absent = last). Refused into itself or one of its own subfolders, or a `before` that is not beside it |
 | `folder.delete` | `id` | the folder, its subfolders and the notes whose only folders are inside go to Trash as ONE group (see the D6 rule) |
 | `folder.vis` | `id`, `vis` (1 or 0) | 👁 on / off (0 removes the key) |
 | `note.add` | `id`, `title`, `content`, `tags[]`, `folderIds[]` (1–20 MMJ folders), `kind?` | new note |

@@ -90,6 +90,15 @@ try {
     const o4b = await send(cloud, { op: 'folder.move', id: 'x-bwn-f1', parent: null });
     const mv = await get(D, () => { const f = DB.folders.find((x) => x.id === 'x-bwn-f1'); return { p: f.parentId, s: f.sectionId }; });
     check(o4b.st === 'done' && mv.p === null && mv.s === 'mmj-sec', '128a folder.move to the top of the MMJ section', JSON.stringify(mv));
+    /* Architect's review: up/down. `before` places it in front of a sibling; only the moved folder is stamped */
+    const ord0 = await get(D, () => DB.folders.filter((f) => !f.parentId && f.sectionId === 'mmj-sec').sort((a, b) => (+a.order || 0) - (+b.order || 0)).map((f) => [f.id, f.updatedAt]));
+    const firstId = ord0[0][0];
+    const ob = await send(cloud, { op: 'folder.move', id: 'x-bwn-f1', parent: null, before: firstId });
+    const ord1 = await get(D, () => DB.folders.filter((f) => !f.parentId && f.sectionId === 'mmj-sec').sort((a, b) => (+a.order || 0) - (+b.order || 0)).map((f) => [f.id, f.updatedAt]));
+    const others = ord1.filter((x) => x[0] !== 'x-bwn-f1'), stampedOthers = others.filter((x) => { const o = ord0.find((y) => y[0] === x[0]); return o && o[1] !== x[1]; });
+    check(ob.st === 'done' && ord1[0][0] === 'x-bwn-f1' && stampedOthers.length === 0, '128a folder.move with before: moved up in front of the first folder, and no other folder stamped', JSON.stringify({ ob, first: ord1[0], stampedOthers }));
+    const obad = await send(cloud, { op: 'folder.move', id: 'x-bwn-f1', parent: null, before: 'x-bwn-f1' });
+    check(obad.st === 'refused' && /before must be a folder beside it/.test(obad.why || ''), '128a folder.move with a bad before is refused', JSON.stringify(obad));
     const o5 = await send(cloud, { op: 'folder.vis', id: 'x-bwn-f1', vis: 1 });
     const v1 = await get(D, () => DB.folders.find((f) => f.id === 'x-bwn-f1').vis);
     const o5b = await send(cloud, { op: 'folder.vis', id: 'x-bwn-f1', vis: 0 });
@@ -269,7 +278,9 @@ try {
         trash: DB.trash.map((t) => ({ type: t.type, id: t.item.id, fo: (t.subtree.folders || []).map((f) => f.id), ar: (t.subtree.articles || []).map((a) => a.id).sort(), kept: (t.subtree.kept || []).map((k) => k.id) })),
         tomb: DB.tombstones.map((t) => t.id).sort() }));
       check(!st.folders.includes('f1') && !st.folders.includes('f1a') && JSON.stringify(st.arts) === '["a3","a4"]' && st.trash.length === 1 && st.trash[0].type === 'folder' && JSON.stringify(st.trash[0].ar) === '["a1","a2"]' && JSON.stringify(st.trash[0].fo) === '["f1a"]' && JSON.stringify(st.trash[0].kept) === '["a4"]', `128f ${vp.name}: the folder, its subfolder and the notes whose only folders were inside went to Trash as ONE group; the multi-folder note stayed`, JSON.stringify(st.trash));
-      check(JSON.stringify(st.a4.folderIds) === '["f2"]' && st.a4.updatedAt > T0, `128f ${vp.name}: the kept note lost only the deleted folder id and was stamped`, JSON.stringify(st.a4));
+      /* Architect's review (v05.68): the kept note is NOT stamped (unfiling is not an edit; mergeDB() unfiles it from the folders' tombstones), so a
+         concurrent edit on another device is never beaten by the deletion's time. This check used to require a new updatedAt; updated in place. */
+      check(JSON.stringify(st.a4.folderIds) === '["f2"]' && st.a4.updatedAt === T0, `128f ${vp.name}: the kept note lost only the deleted folder id and was NOT stamped`, JSON.stringify(st.a4));
       check(JSON.stringify(st.tomb) === '["a1","a2","f1","f1a"]', `128f ${vp.name}: tombstones name only what was removed (f1, f1a, a1, a2) - never the kept note`, JSON.stringify(st.tomb));
       const mg = await on(D, (stale) => {
         const m1 = mergeDB(JSON.parse(JSON.stringify(stale)), JSON.parse(JSON.stringify(DB)));
@@ -279,6 +290,14 @@ try {
       }, stale);
       const w = { f: ['f2'], a: ['a3', 'a4'], a4: ['f2'], t: 1 };
       check(JSON.stringify(mg.m1) === JSON.stringify(w) && JSON.stringify(mg.m2) === JSON.stringify(w), `128f ${vp.name}: merged both ways with a stale device nothing comes back and the kept note is not lost`, JSON.stringify(mg));
+      /* Architect's review: the other device EDITED the kept note meanwhile (later than the seed, earlier than the deletion): its edit survives both ways */
+      const ce = await on(D, (stale) => {
+        const ed = JSON.parse(JSON.stringify(stale)); const n = ed.articles.find((a) => a.id === 'a4'); n.content = '<p>edited elsewhere</p>'; n.updatedAt = '2026-10-02T00:00:00.000Z';
+        const s = (m) => { const a = m.articles.find((x) => x.id === 'a4') || {}; return { c: a.content, f: a.folderIds }; };
+        return { m1: s(mergeDB(JSON.parse(JSON.stringify(ed)), JSON.parse(JSON.stringify(DB)))), m2: s(mergeDB(JSON.parse(JSON.stringify(DB)), JSON.parse(JSON.stringify(ed)))) };
+      }, stale);
+      const cw = { c: '<p>edited elsewhere</p>', f: ['f2'] };
+      check(JSON.stringify(ce.m1) === JSON.stringify(cw) && JSON.stringify(ce.m2) === JSON.stringify(cw), `128f ${vp.name}: an edit of the kept note made meanwhile on another device survives the deletion, both ways, and the note still leaves the deleted folder`, JSON.stringify(ce));
       /* Undo brings it all back */
       await on(D, () => { undo(); }); await sleep(400);
       const u = await on(D, () => ({ f: DB.folders.map((f) => f.id).sort(), a: DB.articles.map((a) => a.id).sort(), a4: DB.articles.find((a) => a.id === 'a4').folderIds.slice().sort(), t: DB.trash.length }));

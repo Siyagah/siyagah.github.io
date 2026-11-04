@@ -24348,7 +24348,10 @@ function _trashFolderCore(id){
     if(goneNotes.has(ST.article)){ ST.article=null; ST.editing=false; }
   }
   /* a kept note loses the deleted folder ids and is stamped (it is a real change to that note) */
-  P.keep.forEach(a=>{ a.folderIds=a.folderIds.filter(x=>!P.set.has(x)); a.updatedAt=delAt; });
+  /* Architect's review (v05.68): NOT stamped. Unfiling is not an edit of the note: mergeDB() unfiles it on every device from the
+     folders' tombstones (v04.68), so a text edit made meanwhile on another device is never beaten by this deletion's time (I1). */
+  P.keep.forEach(a=>{ a.folderIds=a.folderIds.filter(x=>!P.set.has(x)); });
+  _recUntouched('articles',P.keep);
   if(P.set.has(ST.folder)) ST.folder=null;
   return {entry,trashed:goneNotes.size,kept:P.keep.length,subN:P.subN};
 }
@@ -31205,7 +31208,7 @@ setInterval(()=>{ try{ _msTick(); }catch(e){} },5000);
    contract (apps only create mmjin docs) plus the validation here. MMJ-SHARE.md "Writing (R2)" is the readers' contract. ── */
 const _MI_SYS=['v','op','from','at','st','by','lease','why','doneAt','res','cur'];
 const _MI_OPS={
-  'folder.add':['id','name','parent'],'folder.rename':['id','name'],'folder.move':['id','parent'],'folder.delete':['id'],'folder.vis':['id','vis'],
+  'folder.add':['id','name','parent'],'folder.rename':['id','name'],'folder.move':['id','parent','before'],'folder.delete':['id'],'folder.vis':['id','vis'],
   'note.add':['id','title','content','tags','folderIds','kind'],'note.edit':['id','base','title','content','tags','kind'],
   'note.move':['id','base','folderIds'],'note.delete':['id','base'],'note.vis':['id','vis']
 };
@@ -31303,10 +31306,23 @@ function _miApply(d){
       const f=folder(id); if(!f||!S.folders.has(id)) return R(NF);
       const P=parentOf(); if(P.err) return R(P.err);
       if(P.p===id||(P.p!=null&&descOf(id).includes(P.p))) return R('cannot move a folder into itself or one of its own subfolders');
-      if((f.parentId||null)===P.p&&(P.p!=null||f.sectionId==='mmj-sec')) return OK(id,false);
-      if(P.p==null){ f.parentId=null; f.sectionId='mmj-sec'; f.order=DB.folders.filter(x=>!x.parentId&&x.id!==id&&x.sectionId==='mmj-sec').length+1; }
-      else { f.parentId=P.p; f.order=DB.folders.filter(x=>x.parentId===P.p&&x.id!==id).length+1; }
-      f.updatedAt=now; persist(); return OK(id,true);
+      /* Architect's review (v05.68): optional `before` = the sibling (under the new parent) this folder goes in front of, so other apps can
+         move a folder up or down (the owner asked BwN for it). Absent/null = last. Only the moved folder is stamped: its order is put
+         between its new neighbours; only on a tie are the siblings renumbered (the N1 lesson: never stamp folders nobody moved). */
+      let bef=null;
+      if(d.before!=null){ bef=_miId(d.before); const bf=bef&&folder(bef); if(!bf||!S.folders.has(bef)||bef===id||(bf.parentId||null)!==P.p||(P.p==null&&bf.sectionId!=='mmj-sec')) return R('before must be a folder beside it'); }
+      const sib=DB.folders.filter(x=>x.id!==id&&(P.p==null?(!x.parentId&&x.sectionId==='mmj-sec'):x.parentId===P.p)).sort((a,b)=>(+a.order||0)-(+b.order||0));
+      const same=(f.parentId||null)===P.p&&(P.p!=null||f.sectionId==='mmj-sec');
+      let ord;
+      if(bef==null){ ord=sib.length?(+sib[sib.length-1].order||0)+1:1; if(same&&sib.every(x=>(+x.order||0)<(+f.order||0))) return OK(id,false); }
+      else {
+        const i=sib.findIndex(x=>x.id===bef), nx=+sib[i].order||0, pv=i>0?(+sib[i-1].order||0):nx-1;
+        if(same&&i>0&&sib[i-1]&&(+f.order||0)>pv&&(+f.order||0)<nx) return OK(id,false);
+        if(pv<nx) ord=(pv+nx)/2;
+        else { sib.splice(i,0,f); sib.forEach((x,k)=>{ if(x!==f&&x.order!==k+1){ x.order=k+1; x.updatedAt=now; } }); ord=i+1; }
+      }
+      if(P.p==null){ f.parentId=null; f.sectionId='mmj-sec'; } else f.parentId=P.p;
+      f.order=ord; f.updatedAt=now; persist(); return OK(id,true);
     }
     case 'folder.delete':{
       const f=folder(id);

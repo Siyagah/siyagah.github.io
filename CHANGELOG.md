@@ -11220,3 +11220,13 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
 **Part 3 — `MMJ-SHARE.md` "Writing (R2)"** (shapes, ops, outcomes, reasons, "waiting for Siyagah", when requests apply, the D6 rule, the honest limit).
 
 *Check:* block 128, `tools/mmj-write.mjs` (89 checks) on the fake cloud (`s1-fake.mjs` gained `runTransaction`, equality queries and their listener). `--unpatched` serves origin/main and the request/D6 checks FAIL there.
+
+**Architect review (v05.68).** Two changes on the builder's branch before merging:
+1. **A note kept alive by a folder deletion is not stamped.** The builder's `_trashFolderCore` gave such a note (one also filed outside the deleted
+   subtree) a new `updatedAt`. Then a text edit made meanwhile on another device, at an earlier time than the deletion, would have been beaten at
+   the next merge (whole-record newest wins): an I1 loss. Unfiling is not an edit: `mergeDB()` already unfiles a note from a folder's tombstone on
+   every device (v04.68). The fix restores that: `_recUntouched('articles',P.keep)`, no stamp. 128f's "was stamped" check is updated in place to
+   "NOT stamped", and a new 128f check edits the kept note on a stale device and merges both ways: the edit survives and the note still leaves the folder.
+2. **`folder.move` takes an optional `before`** (the owner asked BwN to move folders up and down): the folder goes in front of that sibling,
+   and only the moved folder is stamped (its order is put between its neighbours; the siblings are renumbered only on a tie, the N1 lesson).
+   `MMJ-SHARE.md` documents it; 128a checks it and its refusal. Block 128: 94/94.
