@@ -131,7 +131,8 @@ t('F13 folder bold (setFolderBold)', 'Folders', { op: () => setFolderBold('f2') 
 t('F14 delete empty folder (trashFolder)', 'Folders', { setup: () => { DB.articles.forEach(a => { a.folderIds = a.folderIds.filter(f => f !== 'f2'); if (!a.folderIds.length) a.folderIds = ['f3']; }); persist(); }, op: () => trashFolder('f2') });
 t('F15 delete empty folder with subfolder (trashFolder f1)', 'Folders', { setup: () => { DB.articles.forEach(a => { a.folderIds = a.folderIds.filter(f => f !== 'f1' && f !== 'f1a'); if (!a.folderIds.length) a.folderIds = ['f3']; }); persist(); }, op: () => trashFolder('f1') });
 t('F16 restore folder (restoreItem)', 'Folders', { setup: () => { DB.articles.forEach(a => { a.folderIds = a.folderIds.filter(f => f !== 'f2'); if (!a.folderIds.length) a.folderIds = ['f3']; }); persist(); trashFolder('f2'); }, op: () => restoreItem(DB.trash[DB.trash.length - 1].id) });
-t('F19 delete a folder that still holds notes is REFUSED (v04.77)', 'Folders', { op: () => trashFolder('f1'), expectNoChange: true });
+/* v05.68 - updated in place: the owner changed D6 (4 Nov 2026); a folder that holds notes is deleted as one Trash group, and it must sync both ways like any other change */
+t('F19 delete a folder that holds notes (v05.68 D6: folder, subfolder and their notes to Trash as one group)', 'Folders', { op: () => trashFolder('f1') });
 t('F20 convert empty folder to section (_doFolderToSection) — the folder must not come back', 'Folders', { setup: () => { DB.articles.forEach(a => { a.folderIds = a.folderIds.filter(f => f !== 'f2'); if (!a.folderIds.length) a.folderIds = ['f3']; }); persist(); }, op: () => _doFolderToSection('f2') });
 t('F17 move root folder to another section (moveFolderToSec)', 'Folders', { op: () => moveFolderToSec('f2', 'sec-2') });
 t('F18 move folder to MyWall group (moveFolderToGroup)', 'Folders', { op: () => moveFolderToGroup('f2', 'fg-2') });

@@ -32,13 +32,20 @@ const FAKE_SDK = String.raw`(function(){
     async get(opts){ const r = await window.__fsGet(path, (opts && opts.source) || 'default'); if (r.error) throw mkErr(r.error); return snap(r.data); },
     async set(data, opts){ const r = await window.__fsCommit([{ t: 'set', p: path, d: JSON.parse(JSON.stringify(data)), m: !!(opts && opts.merge) }]); if (r.error) throw mkErr(r.error); },
     onSnapshot(cb){ (listeners[path] = listeners[path] || []).push(cb); window.__fsListen(path); return () => { listeners[path] = (listeners[path] || []).filter((x) => x !== cb); }; } }; }
-  function collRef(path){ return { doc: (id) => docRef(path + '/' + id), where: (f, op, v) => query(path, v),
+  let eqid = 0; const eqls = {};
+  window.__fsDeliverEq = (id, rows) => { const l = eqls[id]; if (!l) return; try { l.cb({ docs: rows.map((x) => ({ id: x.id, data: () => conv(x.d) })), size: rows.length }); } catch (e) { console.error(e); } };
+  window.__fsDeliverEqErr = (id, e) => { const l = eqls[id]; if (l && l.err) l.err(mkErr(e)); };
+  function eqQuery(path, f, v, lim){ const q = { limit: (n) => eqQuery(path, f, v, n),
+    async get(){ const r = await window.__fsListEq(path, f, v, lim || 0); const rows = r.docs.map((x) => ({ id: x.id, data: () => conv(x.d) })); return { size: rows.length, docs: rows, forEach: (cb) => rows.forEach(cb) }; },
+    onSnapshot(cb, err){ const id = ++eqid; eqls[id] = { cb, err }; window.__fsListenEq(id, path, f, v, lim || 0); return () => { delete eqls[id]; window.__fsUnlistenEq(id); }; } }; return q; }
+  function collRef(path){ return { doc: (id) => docRef(path + '/' + id), where: (f, op, v) => (op === '==' ? eqQuery(path, f, v, 0) : query(path, v)),
     async get(){ const r = await window.__fsList(path); const rows = r.docs.map((x) => ({ id: x.id, data: () => conv(x.d) })); return { size: rows.length, forEach: (cb) => rows.forEach(cb) }; } }; }
   function batch(){ const ops = []; const b = {
     set(ref, data){ ops.push({ t: 'set', p: ref._path, d: JSON.parse(JSON.stringify(data)) }); return b; },
     delete(ref){ ops.push({ t: 'del', p: ref._path }); return b; },
     async commit(){ const r = await window.__fsCommit(ops); if (r.error) throw mkErr(r.error); } }; return b; }
-  const fs = { collection: (n) => collRef(n), batch, settings(){} };
+  async function runTransaction(fn){ for (let i = 0; i < 8; i++) { const ops = [], exp = {}; const tx = { async get(ref){ const r = await window.__fsGet(ref._path, 'default'); if (r.error) throw mkErr(r.error); exp[ref._path] = r.ver || 0; return snap(r.data); }, update(ref, data){ ops.push({ t: 'set', p: ref._path, d: JSON.parse(JSON.stringify(data)), m: true }); return tx; }, set(ref, data){ ops.push({ t: 'set', p: ref._path, d: JSON.parse(JSON.stringify(data)) }); return tx; } }; const res = await fn(tx); if (!ops.length) return res; const r = await window.__fsCommit(ops, exp); if (!r.error) return res; if (r.error.code !== 'aborted') throw mkErr(r.error); } throw new Error('transaction kept aborting'); }
+  const fs = { collection: (n) => collRef(n), batch, runTransaction, settings(){} };
   fb.firestore = function(){ return fs; };
   fb.firestore.FieldValue = { serverTimestamp: () => ({ __sts: 1 }), increment: (n) => ({ __inc: n }) };   /* v05.27 — S4c: the usage counter */
   fb.firestore.Timestamp = TS;
@@ -104,8 +111,11 @@ function makeCloud() {
       if (changes.length) d.page.evaluate(([i, c]) => window.__fsDeliverQ && window.__fsDeliverQ(i, c), [id, changes]).catch(() => {});
     }
   };
+  cloud.eqRows = (sub) => { const rows = []; for (const [p, v] of cloud.store) { if (!p.startsWith(sub.path + '/') || p.slice(sub.path.length + 1).includes('/')) continue; if (v[sub.f] !== sub.v) continue; rows.push({ id: p.split('/').pop(), d: v }); if (sub.lim && rows.length >= sub.lim) break; } return rows; };
+  cloud.deliverEq = (d, only) => { if (d.offline) return; for (const [id, sub] of d.eqsubs) { if (only != null && only !== id) continue; const rows = cloud.eqRows(sub); const sig = JSON.stringify(rows.map((r) => [r.id, cloud.ver.get(sub.path + '/' + r.id)])); if (sub.sig === sig && only == null) continue; sub.sig = sig; d.qchain = d.qchain.then(async () => { await sleep(30 + Math.floor(Math.random() * 60)); await d.page.evaluate(([i, r]) => window.__fsDeliverEq && window.__fsDeliverEq(i, r), [id, rows]).catch(() => {}); }); } };
   cloud.reconnect = (d) => { for (const p of d.listens) deliverTo(d, p); for (const id of d.qsubs.keys()) cloud.deliverQ(d, id); };
-  cloud.apply = (ops, committer) => {
+  cloud.apply = (ops, committer, exp) => {
+    if (exp) for (const [p, v] of Object.entries(exp)) if ((cloud.ver.get(p) || 0) !== v) return { error: { code: 'aborted', message: 'transaction aborted' } };
     if (ops.some((o) => cloud.refuse.some((pre) => o.p.includes(pre)))) return { error: { code: 'permission-denied', message: 'Missing or insufficient permissions.' } };
     let total = 0;
     for (const o of ops) if (o.t === 'set') {
@@ -133,6 +143,7 @@ function makeCloud() {
     for (const dv of cloud.devices) {
       for (const p of touched) deliverTo(dv, p);
       for (const id of dv.qsubs.keys()) cloud.deliverQ(dv, id);
+      cloud.deliverEq(dv);
     }
     return {};
   };
@@ -147,20 +158,23 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
     try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(db)); localStorage.setItem('siyagah-sync-v1', JSON.stringify(c)); } catch {}
     if (recsOnly) window.__s1RecsOnly = true;   /* test-only: this device does not read the blob */
   }, [seed, cfg, !!opts.recsOnly]);
-  const d = { name, ctx, offline: false, listens: new Set(), errors: [], dieAfterRec: null, qsubs: new Map(), qchain: Promise.resolve(), qDelivered: 0, qChangeLog: [], partHook: null, holdQ: !!opts.holdQ, grace: opts.grace || 1500 };
+  const d = { name, ctx, offline: false, eqsubs: new Map(), listens: new Set(), errors: [], dieAfterRec: null, qsubs: new Map(), qchain: Promise.resolve(), qDelivered: 0, qChangeLog: [], partHook: null, holdQ: !!opts.holdQ, grace: opts.grace || 1500 };
   await ctx.exposeBinding('__fsGet', async (_s, path, src) => {
     if (d.offline && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get document because the client is offline.' } };
     if (cloud.refusedRead(path)) return { error: { code: 'permission-denied', message: 'Missing or insufficient permissions.' } };
     if (d.partHook && /\/recparts\//.test(path)) { const h = d.partHook; d.partHook = null; await h(path); }
     cloud.reads.push({ p: path, dev: d.name });
     await sleep(10 + Math.random() * 30);
-    return { data: cloud.store.has(path) ? cloud.store.get(path) : null };
+    return { data: cloud.store.has(path) ? cloud.store.get(path) : null, ver: cloud.ver.get(path) || 0 };
   });
+  await ctx.exposeBinding('__fsListEq', async (_s, path, f, v, lim) => { await sleep(10); if (d.offline) return { docs: [] }; return { docs: cloud.eqRows({ path, f, v, lim }) }; });
+  await ctx.exposeBinding('__fsListenEq', async (_s, id, path, f, v, lim) => { d.eqsubs.set(id, { path, f, v, lim, sig: null }); setTimeout(() => cloud.deliverEq(d, id), 50); });
+  await ctx.exposeBinding('__fsUnlistenEq', async (_s, id) => { d.eqsubs.delete(id); });
   await ctx.exposeBinding('__fsList', async (_s, path) => { await sleep(10); const docs = []; for (const [p, v] of cloud.store) if (p.startsWith(path + '/') && !p.slice(path.length + 1).includes('/')) docs.push({ id: p.split('/').pop(), d: v }); cloud.reads.push({ p: path + '/*', dev: d.name }); return { docs }; });
   await ctx.exposeBinding('__fsListen', async (_s, path) => { d.listens.add(path); const data = cloud.store.has(path) ? cloud.store.get(path) : null; setTimeout(() => d.page.evaluate(([p, x]) => window.__fsDeliver && window.__fsDeliver(p, x), [path, data]).catch(() => {}), 50); });
   await ctx.exposeBinding('__fsListenQ', async (_s, id, path, cur) => { d.qsubs.set(id, { path, cur, sent: new Map() }); setTimeout(() => cloud.deliverQ(d, id, true), 50); });
   await ctx.exposeBinding('__fsUnlistenQ', async (_s, id) => { d.qsubs.delete(id); });
-  await ctx.exposeBinding('__fsCommit', async (_s, ops) => {
+  await ctx.exposeBinding('__fsCommit', async (_s, ops, exp) => {
     /* Offline: the SDK queues the write and lands it on reconnect. */
     while (d.offline) await sleep(100);
     await sleep(10 + Math.random() * 30);
@@ -170,7 +184,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
       if (d.dieAfterRec <= 0) await new Promise(() => {});
       d.dieAfterRec--;
     }
-    const res = cloud.apply(ops, d);
+    const res = cloud.apply(ops, d, exp);
     /* test hook (51r): the commit lands, but this device is not told until released */
     if (d.holdAfterRec && !res.error && ops.some((o) => o.t === 'set' && o.p.endsWith('/recs/articles~a-big') && o.d.g)) { const h = d.holdAfterRec; d.holdAfterRec = null; await h; }
     return res;

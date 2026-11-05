@@ -9139,12 +9139,10 @@ await r.block('29j-clear-filter-390', async () => {
    folder dialog (sidebar 📚 Folders → 🗑 → confirm); the merge checks call
    mergeDB() directly, as sections 8/9 do — it is a data path. */
 function f30Snapshot(page) { return page.evaluate(() => JSON.parse(JSON.stringify(DB))); }
-/* v04.77 — updated in place. The owner's rule: "a folder should not be
-   deleted with notes in it". So the real 🗑 click on f1 (which holds a1, and
-   a2 in its subfolder f1a) is now REFUSED and changes nothing. The owner
-   then moves the notes out, and the same real click deletes the now-empty
-   folder — and that deletion must reach the other device (the owner's
-   "empty folders deleted should be synced"), with every note still there. */
+/* v05.68 — updated in place, with the reason: the owner CHANGED D6 on 4 Nov 2026 ("B, delete folders with notes, Trash with Undo"). Until v05.67
+   the real 🗑 click on f1 (which holds a1, and a2 in its subfolder f1a) was REFUSED. Now it deletes: the folder, its subfolder and the notes whose
+   only folders are inside go to Trash as ONE group, and the tombstones name exactly those four ids (the v04.65 lesson still holds: a note that is
+   NOT removed is never named). Every merge below is still the data path: a stale device must lose the deleted group and no kept note may vanish. */
 await r.block('30a-folder-delete-keeps-notes-1440', async () => {
   const s = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() });
   const { page } = s;
@@ -9155,34 +9153,25 @@ await r.block('30a-folder-delete-keeps-notes-1440', async () => {
   await page.waitForTimeout(450);
   await page.locator('#pkList .pr[data-fid="f1"] .pk-act[title="Delete"]').click();
   await page.waitForTimeout(300);
-  const refused = await page.evaluate(() => ({ f1: DB.folders.some((f) => f.id === 'f1'), f1a: DB.folders.some((f) => f.id === 'f1a'),
-    trash: (DB.trash || []).length, tombs: (DB.tombstones || []).length, a1: (DB.articles.find((a) => a.id === 'a1') || {}).folderIds,
-    toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | ') }));
-  r.check(refused.f1 && refused.f1a && refused.trash === 0 && refused.tombs === 0 && JSON.stringify(refused.a1) === '["f1"]',
-    '1440: a real 🗑 click on a folder that holds notes is REFUSED — nothing deleted, nothing unfiled', JSON.stringify(refused));
-  r.check(/still holds 2 notes/.test(refused.toast), '1440: the refusal says why and how many notes (counting subfolders)', refused.toast);
-  /* the owner moves the notes out, then deletes the now-empty folder */
-  await page.evaluate(() => { ['a1', 'a2'].forEach((id) => { const a = DB.articles.find((x) => x.id === id); a.folderIds = ['f2']; a.updatedAt = new Date().toISOString(); }); persist(); _pkRebuildList(); });
-  const other2 = await f30Snapshot(page);
-  await page.locator('#pkList .pr[data-fid="f1"] .pk-act[title="Delete"]').click();
-  await page.waitForTimeout(300);
-  const out = await page.evaluate(({ other, other2 }) => {
+  const out = await page.evaluate(({ other }) => {
     const ids = (d) => (d.articles || []).map((a) => a.id).sort();
-    const merged1 = mergeDB(JSON.parse(JSON.stringify(other2)), JSON.parse(JSON.stringify(DB)));
+    const merged1 = mergeDB(JSON.parse(JSON.stringify(other)), JSON.parse(JSON.stringify(DB)));
     const merged2 = mergeDB(JSON.parse(JSON.stringify(DB)), JSON.parse(JSON.stringify(other)));
+    const tr = DB.trash.filter((t) => t.type === 'folder');
     return {
       foldersGone: !DB.folders.some((f) => f.id === 'f1' || f.id === 'f1a'),
       local: ids(DB), tombs: (DB.tombstones || []).map((t) => t.id).sort(),
+      group: tr.length === 1 ? { root: tr[0].item.id, sub: tr[0].subtree.folders.map((f) => f.id), notes: tr[0].subtree.articles.map((a) => a.id).sort() } : tr.length,
       otherAfter: ids(merged1), localAfter: ids(merged2),
       otherFolders: merged1.folders.map((f) => f.id).sort(),
     };
-  }, { other, other2 });
-  r.check(out.foldersGone, '1440: once empty, a real 🗑 click deletes the folder and its subfolder', JSON.stringify(out));
-  r.check(JSON.stringify(out.local) === '["a1","a2","a3"]', '1440: every note is still in the notebook', JSON.stringify(out));
-  r.check(!out.tombs.includes('a1') && !out.tombs.includes('a2'), 'only the folders are marked deleted, never a note', JSON.stringify(out.tombs));
-  r.check(JSON.stringify(out.otherAfter) === '["a1","a2","a3"]', 'after a sync, the OTHER device still has every note', JSON.stringify(out.otherAfter));
-  r.check(JSON.stringify(out.localAfter) === '["a1","a2","a3"]', 'after a sync back from a stale copy, THIS device still has every note', JSON.stringify(out.localAfter));
-  r.check(!out.otherFolders.includes('f1') && !out.otherFolders.includes('f1a'), 'the empty folder\'s deletion reaches the other device', JSON.stringify(out.otherFolders));
+  }, { other });
+  r.check(out.foldersGone, '1440: a real 🗑 click on a folder that holds notes now deletes the folder and its subfolder (the owner\'s new D6)', JSON.stringify(out));
+  r.check(JSON.stringify(out.local) === '["a3"]' && JSON.stringify(out.group) === '{"root":"f1","sub":["f1a"],"notes":["a1","a2"]}', '1440: the notes whose only folders were inside went to Trash WITH the folder, as one group', JSON.stringify(out));
+  r.check(JSON.stringify(out.tombs) === '["a1","a2","f1","f1a"]', 'the tombstones name exactly what was removed (f1, f1a, a1, a2)', JSON.stringify(out.tombs));
+  r.check(JSON.stringify(out.otherAfter) === '["a3"]', 'after a sync, the OTHER (stale) device has lost the deleted group and kept every other note', JSON.stringify(out.otherAfter));
+  r.check(JSON.stringify(out.localAfter) === '["a3"]', 'after a sync back from a stale copy, nothing of the group comes back on THIS device', JSON.stringify(out.localAfter));
+  r.check(!out.otherFolders.includes('f1') && !out.otherFolders.includes('f1a'), 'the folders\' deletion reaches the other device', JSON.stringify(out.otherFolders));
   r.check(s.errors.length === 0, '1440: no page errors', s.errors.slice(0, 2).join(' · '));
   await s.close();
 });
@@ -10252,16 +10241,14 @@ await r.block('40c-edit-mode-folder-still-staged-1440', async () => {
   await s.close();
 });
 
-/* 41 — v04.77: a folder that holds notes cannot be deleted (owner's rule,
-   30 Sep 2026: "a folder should not be deleted with notes in it … but empty
-   folders deleted should be synced"). Real taps/clicks along the owner's
-   routes: the folder dialog's ⋯ row menu at 390/820 (touch), and the
-   sidebar's right-click menu at 1440. f1 holds a1 (and a2 in its subfolder
-   f1a); f9 is seeded EMPTY.
-   41a refused with the reason, nothing deleted; the empty folder deletes,
-       is tombstoned, and a stale device loses it at the next merge;
-   41b (1440) the refusal is a dialog with "📂 Open the folder", which opens
-       the folder so the owner can move its notes. */
+/* 41 — v04.77: a folder that holds notes could not be deleted (owner's rule, 30 Sep 2026). v05.68 — updated in place, with the reason: the owner
+   CHANGED D6 on 4 Nov 2026 ("B, delete folders with notes, Trash with Undo"). The same real routes now DELETE: the folder dialog's ⋯ row menu at
+   390/820 (touch) and the sidebar's right-click menu at 1440, with the new confirmation that counts. f1 holds a1 (and a2 in its subfolder f1a); f9 is
+   seeded EMPTY.
+   41a the folder holding notes deletes (⋯ → Delete, the dialog's confirm), notes whose only folders were inside go to Trash with it; the empty
+       folder still deletes, is tombstoned, and a stale device loses it at the next merge, every other note surviving;
+   41b (1440) right-click → Delete folder shows the confirmation with the counts ("its 1 subfolder and 2 notes"), Move to Trash deletes the group;
+       the EMPTY folder still goes through the same menu with the old wording. */
 function db41() { const d = seedDB(); d.folders.push({ id: 'f9', name: '(009) Empty Folder', parentId: null, order: 9, sectionId: 'sec-1', updatedAt: d.folders[0].updatedAt }); return d; }
 for (const vp of [{ name: '390', width: 390, height: 844 }, { name: '820', width: 820, height: 1180 }]) {
 await r.block(`41a-folder-dialog-delete-rule-${vp.name}`, async () => {
@@ -10280,15 +10267,15 @@ await r.block(`41a-folder-dialog-delete-rule-${vp.name}`, async () => {
   };
   await del('f1');
   const r1 = await page.evaluate(() => ({ f1: DB.folders.some((f) => f.id === 'f1'), f1a: DB.folders.some((f) => f.id === 'f1a'), trash: (DB.trash || []).length,
-    a1: (DB.articles.find((a) => a.id === 'a1') || {}).folderIds, dialogOpen: !!document.getElementById('pkList'),
+    arts: DB.articles.map((a) => a.id).sort(), grp: (DB.trash[0] && DB.trash[0].subtree.articles.map((a) => a.id).sort()) || null,
     toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | ') }));
-  r.check(r1.f1 && r1.f1a && r1.trash === 0 && JSON.stringify(r1.a1) === '["f1"]', `${vp.name}: ⋯ → Delete on a folder holding notes deletes NOTHING`, JSON.stringify(r1));
-  r.check(/still holds 2 notes/.test(r1.toast) && r1.dialogOpen, `${vp.name}: it says why ("still holds 2 notes") and the folder dialog stays open`, JSON.stringify(r1));
+  r.check(!r1.f1 && !r1.f1a && r1.trash === 1 && JSON.stringify(r1.arts) === '["a3"]' && JSON.stringify(r1.grp) === '["a1","a2"]', `${vp.name}: ⋯ → Delete on a folder holding notes deletes it, its subfolder and the notes inside, to Trash as one group`, JSON.stringify(r1));
+  r.check(!/still holds/.test(r1.toast), `${vp.name}: and there is no "still holds" refusal any more`, JSON.stringify(r1));
   await del('f9');
   const r2 = await page.evaluate((stale) => { const m = mergeDB(JSON.parse(JSON.stringify(stale)), JSON.parse(JSON.stringify(DB)));
-    return { gone: !DB.folders.some((f) => f.id === 'f9'), tomb: (DB.tombstones || []).some((t) => t.id === 'f9'), staleAfter: m.folders.some((f) => f.id === 'f9'), notes: m.articles.length }; }, stale);
+    return { gone: !DB.folders.some((f) => f.id === 'f9'), tomb: (DB.tombstones || []).some((t) => t.id === 'f9'), staleAfter: m.folders.some((f) => f.id === 'f9'), notes: m.articles.map((a) => a.id).sort() }; }, stale);
   r.check(r2.gone && r2.tomb, `${vp.name}: ⋯ → Delete on an EMPTY folder deletes it (and marks it deleted)`, JSON.stringify(r2));
-  r.check(!r2.staleAfter && r2.notes === 3, `${vp.name}: the empty folder's deletion reaches a stale device; every note survives`, JSON.stringify(r2));
+  r.check(!r2.staleAfter && JSON.stringify(r2.notes) === '["a3"]', `${vp.name}: the deletions reach a stale device; the notes that were not deleted survive`, JSON.stringify(r2));
   r.check(s.errors.length === 0, `${vp.name}: no page errors`, s.errors.slice(0, 2).join(' · '));
   await s.close();
 });
@@ -10304,12 +10291,12 @@ await r.block('41b-sidebar-delete-rule-1440', async () => {
   await page.waitForTimeout(300);
   const m1 = await page.evaluate(() => ({ text: (document.getElementById('mb') || {}).textContent || '', f1: DB.folders.some((f) => f.id === 'f1'),
     btn: [...document.querySelectorAll('#mb button')].map((b) => b.textContent.trim()) }));
-  r.check(/isn't empty/.test(m1.text) && /still holds 2 notes/.test(m1.text) && m1.f1 && !m1.btn.some((b) => /Move to Trash/.test(b)),
-    '1440: right-click → Delete folder on a folder holding notes shows "isn\'t empty … still holds 2 notes", with no delete button', JSON.stringify(m1));
-  await page.locator('#mb button', { hasText: 'Open the folder' }).click();
+  r.check(/its 1 subfolder and 2 notes\? They go to Trash together; Undo or Restore brings them all back\./.test(m1.text) && m1.f1 && m1.btn.some((b) => /Move to Trash/.test(b)),
+    '1440: right-click → Delete folder on a folder holding notes asks once, with the counts ("its 1 subfolder and 2 notes"), and deletes nothing yet', JSON.stringify(m1));
+  await page.locator('#mb button', { hasText: 'Move to Trash' }).click();
   await page.waitForTimeout(300);
-  const open = await page.evaluate(() => ({ folder: ST.folder, modal: !!(document.getElementById('mb') && document.getElementById('mb').offsetParent) }));
-  r.check(open.folder === 'f1' && !open.modal, '1440: "📂 Open the folder" closes the message and opens that folder', JSON.stringify(open));
+  const g1 = await page.evaluate(() => ({ f1: DB.folders.some((f) => f.id === 'f1'), trash: (DB.trash || []).some((t) => t.item && t.item.id === 'f1'), a1: DB.articles.some((a) => a.id === 'a1') }));
+  r.check(!g1.f1 && g1.trash && !g1.a1, '1440: Move to Trash deletes the folder group, notes included', JSON.stringify(g1));
   await page.evaluate(() => { ST.secOpen = { 'sec-1': true }; renderTree(); });
   await page.locator('#sb .tr-row[data-fid="f9"]').first().click({ button: 'right' });
   await page.waitForTimeout(250);
@@ -12811,6 +12798,19 @@ await r.block('127-enx-dups', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 40, 'the enx-dups.mjs check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, '127: ' + row.label, row.detail);
   r.check(out.status === 0, 'the enx-dups.mjs check exits cleanly', `exit ${out.status}`);
+});
+
+/* 128 — v05.68, J27 ① R2: other apps change the real MMJ folders and notes (requests in notebooks/{nb}/mmjin applied by Siyagah) + the owner's new D6 (a folder that holds notes can be deleted, as one Trash group). tools/mmj-write.mjs. */
+await r.block('128-mmj-write', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./mmj-write.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1500000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 85, 'the mmj-write.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '128: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the mmj-write.mjs check exits cleanly', `exit ${out.status}`);
 });
 
 /* ── run everything registered above, or a --only subset ─────────────────
