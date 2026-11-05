@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.68">
+<meta name="app-version" content="05.69">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4069,7 +4069,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.68</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.69</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -31080,14 +31080,79 @@ function _msStateText(){
   return 'last run '+_syncAgo(_msS.last)+' · '+_msS.written.toLocaleString('en-US')+' docs written (all runs '+_msS.docs.toLocaleString('en-US')+')'
     +(_msS.refused?(' · refused '+_msS.refused+'×'):'')+(e?(' · last error: '+(e.code||e.message||e)):'');
 }
+/* The batched writer both copies use (the private copy `mmj`, the visitors' copy `pub`): the map `m` = {t: tree sig, n: key -> sig | {s,p,pm}, day, dn}
+   saved to siyagah-mmjshare-v1 after every commit; <= _MS_OPS docs / _MS_BYTES a batch; a big note's pieces land BEFORE the doc that names them, and the
+   previous generation's pieces are removed only after the new doc committed. `pfx` is the doc-id prefix of pieces ('' in mmjparts, 'pubparts~' in pub). */
+function _msWriter(m,mapKey,C,P,pfx){
+  const W={written:0,delsAfter:[]};
+  const utf8=s=>new TextEncoder().encode(s).length;
+  const bld=_S2_BUILD(), ts=()=>firebase.firestore.FieldValue.serverTimestamp();
+  let batch=null, nOps=0, nBytes=0, done=[];
+  W.commit=async()=>{
+    if(!nOps) return;
+    const b=batch, d=done; batch=null; nOps=0; nBytes=0; done=[];
+    await b.commit();
+    d.forEach(e=>{
+      if(e.tree){ m.t=e.sig; return; }
+      const old=m.n[e.key];
+      if(old&&typeof old==='object'&&old.p&&(!e.parts||old.p[0]!==e.parts[0])) W.delsAfter.push({pk:e.pk,g:old.p[0],n:old.p[1]});
+      m.n[e.key]=(e.parts||e.pm)?Object.assign({s:e.sig},e.parts?{p:e.parts}:{},e.pm?{pm:1}:{}):e.sig;
+    });
+    m.dn=(m.dn||0)+d.length; W.written+=d.length;
+    await _msKv('put',mapKey,m);
+  };
+  W.add=async(ref,data,size,entry)=>{
+    if(nOps>0&&(nOps+1>_MS_OPS||nBytes+size>_MS_BYTES)) await W.commit();
+    if(!batch) batch=_syncFsDb.batch();
+    batch.set(ref,data); nOps++; nBytes+=size;
+    if(entry) done.push(entry);
+  };
+  /* the tree: inline (t~0) or, over 700 KB, pieces t~1...t~n and then t~0 naming them */
+  W.tree=async(folders,head,sig)=>{
+    const js=JSON.stringify(folders);
+    if(utf8(js)<=_MS_INLINE){
+      await W.add(C.doc('t~0'),Object.assign({v:1,at:ts(),b:bld},head,{folders}),utf8(js)+400,{tree:1,sig});
+      return;
+    }
+    const g=_syncNewGen(), chunks=[]; let cur=[],sz=0;
+    folders.forEach(f=>{ const s=utf8(JSON.stringify(f)); if(cur.length&&sz+s>_MS_PART*2){ chunks.push(cur); cur=[]; sz=0; } cur.push(f); sz+=s; });
+    if(cur.length) chunks.push(cur);
+    for(let i=0;i<chunks.length;i++) await W.add(C.doc('t~'+(i+1)),{v:1,i:i+1,g,at:ts(),b:bld,folders:chunks[i]},utf8(JSON.stringify(chunks[i]))+400,null);
+    await W.commit();   /* the pieces land BEFORE the doc that names them */
+    await W.add(C.doc('t~0'),Object.assign({v:1,at:ts(),b:bld},head,{n:chunks.length,g}),800,{tree:1,sig});
+  };
+  /* one note: `doc` has everything but `content`; `key` is the map key, `pk` the doc id; `x` = {pm:1} when a picture is still to come */
+  W.note=async(key,pk,doc,content,sig,x)=>{
+    const csz=utf8(content), pm=x&&x.pm?1:0;
+    if(csz<=_MS_INLINE){ doc.content=content; await W.add(C.doc(pk),doc,csz+1500,{key,pk,sig,pm}); return; }
+    const g=_syncNewGen(), n=Math.ceil(content.length/_MS_PART);
+    for(let i=0;i<n;i++){ const s=content.slice(i*_MS_PART,(i+1)*_MS_PART); await W.add(P.doc(pfx+pk+'~'+g+'~'+i),{d:s,g},utf8(s)+300,null); }
+    await W.commit();
+    doc.parts=n; doc.g=g; doc.content='';
+    await W.add(C.doc(pk),doc,1500,{key,pk,sig,parts:[g,n],pm});
+  };
+  W.cleanup=async()=>{
+    try{
+      for(let i=0;i<W.delsAfter.length;i++){
+        const o=W.delsAfter[i]; const b2=_syncFsDb.batch(); for(let j=0;j<o.n;j++) b2.delete(P.doc(pfx+o.pk+'~'+o.g+'~'+j)); await b2.commit();
+      }
+    }catch(e){}
+  };
+  return W;
+}
+/* The gate both copies share (v05.69): signed in, online, visible, a first read done, and an MMJ section on this device. Sets st.why; returns the sync config or null. */
+function _msGate(st){
+  const cfg=getSyncConfig();
+  if(!cfg||!cfg.notebookId||!_syncFsDb||!_dbLoaded){ st.why='nosync'; return null; }
+  if(typeof navigator!=='undefined'&&navigator.onLine===false){ st.why='offline'; return null; }
+  if(document.visibilityState==='hidden'){ st.why='hidden'; return null; }
+  if(!(_s1WriteGate()&&(_s1RdCaught||_remMerged))){ st.why='wait'; return null; }   /* never before the first read */
+  if(!(DB.sections||[]).some(s=>s&&s.id==='mmj-sec')){ st.why=null; return null; }  /* no MMJ section on this device: nothing to share, nothing to retract */
+  return cfg;
+}
 async function _msTick(force){
   if(_msS.busy) return;
-  const cfg=getSyncConfig();
-  if(!cfg||!cfg.notebookId||!_syncFsDb||!_dbLoaded){ _msS.why='nosync'; return; }
-  if(typeof navigator!=='undefined'&&navigator.onLine===false){ _msS.why='offline'; return; }
-  if(document.visibilityState==='hidden'){ _msS.why='hidden'; return; }
-  if(!(_s1WriteGate()&&(_s1RdCaught||_remMerged))){ _msS.why='wait'; return; }   /* never before the first read */
-  if(!(DB.sections||[]).some(s=>s&&s.id==='mmj-sec')){ _msS.why=null; return; }  /* no MMJ section on this device: nothing to share, nothing to retract */
+  const cfg=_msGate(_msS); if(!cfg) return;
   if(!force&&Date.now()<_msS.retryAt) return;
   const nb=cfg.notebookId, mapKey='sig|'+nb;
   _msS.busy=true;
@@ -31126,69 +31191,30 @@ async function _msTick(force){
     let room=cap-(m.dn||0);
     if(room<=0){ _msS.why='cap'; _msS.retryAt=Date.now()+30*60000; return; }
     const nbRef=_syncFsDb.collection('notebooks').doc(nb), C=nbRef.collection('mmj'), P=nbRef.collection('mmjparts');
-    const ts=()=>firebase.firestore.FieldValue.serverTimestamp(), bld=_S2_BUILD();
-    const utf8=s=>new TextEncoder().encode(s).length;
-    let batch=null, nOps=0, nBytes=0, done=[], written=0, delsAfter=[];
-    const commit=async()=>{
-      if(!nOps) return;
-      const b=batch, d=done; batch=null; nOps=0; nBytes=0; done=[];
-      await b.commit();
-      d.forEach(e=>{ if(e.id==='t~0'){ m.t=e.sig; } else { const old=m.n[e.id]; if(old&&typeof old==='object'&&old.p&&(!e.parts||old.p[0]!==e.parts[0])) delsAfter.push({id:e.id,g:old.p[0],n:old.p[1]}); m.n[e.id]=e.parts?{s:e.sig,p:e.parts}:e.sig; } });
-      m.dn=(m.dn||0)+d.length; written+=d.length;
-      try{ await _msKv('put',mapKey,m); }catch(e){ throw e; }
-    };
-    const add=async(ref,data,size,entry)=>{
-      if(nOps>0&&(nOps+1>_MS_OPS||nBytes+size>_MS_BYTES)) await commit();
-      if(!batch) batch=_syncFsDb.batch();
-      batch.set(ref,data); nOps++; nBytes+=size;
-      if(entry) done.push(entry);
-    };
+    const bld=_S2_BUILD(), ts=()=>firebase.firestore.FieldValue.serverTimestamp();
+    const W=_msWriter(m,mapKey,C,P,'');
     let yt0=performance.now();
     /* the tree first (small): parts, then t~0 */
     if(treeChanged&&room>0){
-      const js=JSON.stringify(tree.folders);
-      if(utf8(js)<=_MS_INLINE){
-        await add(C.doc('t~0'),{v:1,at:ts(),b:bld,sec:tree.sec,folders:tree.folders},utf8(js)+400,{id:'t~0',sig:treeSig});
-      } else {
-        const g=_syncNewGen(), chunks=[]; let cur=[],sz=0;
-        tree.folders.forEach(f=>{ const s=utf8(JSON.stringify(f)); if(cur.length&&sz+s>_MS_PART*2){ chunks.push(cur); cur=[]; sz=0; } cur.push(f); sz+=s; });
-        if(cur.length) chunks.push(cur);
-        for(let i=0;i<chunks.length;i++) await add(C.doc('t~'+(i+1)),{v:1,i:i+1,g,at:ts(),b:bld,folders:chunks[i]},utf8(JSON.stringify(chunks[i]))+400,null);
-        await commit();   /* the pieces land BEFORE the doc that names them */
-        await add(C.doc('t~0'),{v:1,at:ts(),b:bld,sec:tree.sec,n:chunks.length,g},800,{id:'t~0',sig:treeSig});
-      }
+      await W.tree(tree.folders,{sec:tree.sec},treeSig);
       room--;
     }
     for(const [id,a,sig] of work){
       if(room<=0) break;
       if(performance.now()-yt0>=25){ await _yieldTask(); yt0=performance.now(); }
-      const ref=C.doc('n~'+encodeURIComponent(String(id)).replace(/\./g,'%2E'));
-      if(!a){ await add(ref,{id,gone:true,at:ts(),b:bld},300,{id,sig:'gone'}); room--; continue; }
+      const pk='n~'+encodeURIComponent(String(id)).replace(/\./g,'%2E');
+      if(!a){ await W.add(C.doc(pk),{id,gone:true,at:ts(),b:bld},300,{key:id,sig:'gone'}); room--; continue; }
       /* built from the note as it is NOW and signed from the same read */
       const fids=_msNoteFids(a,S), nsig=_msNoteSig(a,fids);
       const content=typeof a.content==='string'?a.content:'';
       const doc={id,title:a.title==null?'':String(a.title),tags:Array.isArray(a.tags)?a.tags.slice():[],folderIds:fids,kind:a.kind==null?null:a.kind,createdAt:a.createdAt==null?null:a.createdAt,updatedAt:a.updatedAt==null?null:a.updatedAt,at:ts(),b:bld};
       if(a.vis===1) doc.vis=1;
-      const csz=utf8(content);
-      if(csz<=_MS_INLINE){ doc.content=content; await add(ref,doc,csz+1500,{id,sig:nsig}); }
-      else {
-        const g=_syncNewGen(), n=Math.ceil(content.length/_MS_PART);
-        const pk='n~'+encodeURIComponent(String(id)).replace(/\./g,'%2E');
-        for(let i=0;i<n;i++){ const s=content.slice(i*_MS_PART,(i+1)*_MS_PART); await add(P.doc(pk+'~'+g+'~'+i),{d:s,g},utf8(s)+300,null); }
-        await commit();
-        doc.parts=n; doc.g=g; doc.content='';
-        await add(ref,doc,1500,{id,sig:nsig,parts:[g,n]});
-      }
+      await W.note(id,pk,doc,content,nsig);
       room--;
     }
-    await commit();
-    /* the previous generation's pieces go only after the doc that replaced them has committed. Best effort. */
-    try{
-      for(let i=0;i<delsAfter.length;i++){
-        const o=delsAfter[i], pk='n~'+encodeURIComponent(String(o.id)).replace(/\./g,'%2E');
-        let b2=_syncFsDb.batch(); for(let j=0;j<o.n;j++) b2.delete(P.doc(pk+'~'+o.g+'~'+j)); await b2.commit();
-      }
-    }catch(e){}
+    await W.commit();
+    await W.cleanup();
+    const written=W.written;
     _msS.last=Date.now(); _msS.written=written; _msS.docs+=written; _msS.runs++; _msS.err=null; _msS.why=null; _msS.retryAt=0;
     _msS.pending=(room<=0)?1:0;
     _msS.seenKey='';   /* look once more: anything that moved while writing is still in the map's difference */
@@ -31198,6 +31224,155 @@ async function _msTick(force){
   }finally{ _msS.busy=false; }
 }
 setInterval(()=>{ try{ _msTick(); }catch(e){} },5000);
+
+/* ── v05.69 · J27 ① R3 — the visitors' copy: notebooks/{nb}/pub/…, readable WITHOUT sign-in (the owner adds one Firestore rule), holding ONLY what the
+   owner switched to 👁 (vis:1). Same gate, timer, writer (_msWriter), batching, daily budget and `gone` rule as the private copy; its own signature map
+   `pub|<nb>` in siyagah-mmjshare-v1. pub/t~0 = the visible folders {id,n,p,o} (p = the nearest VISIBLE ancestor, so a private parent's name never
+   appears); pub/n~<id> = a visible note {id,title,content (through _enxClean),tags,folderIds (visible folders only),createdAt,updatedAt,at,b}; big content in
+   pub/pubparts~n~<id>~<g>~<i>; pictures a visible note uses in pub/p~<sha> + pub/pp~<sha'>~<i>, bytes verified before they are written. Never published: anything
+   without vis:1, Trash, noteHistory, from*-internals, kind. NOT in recs, the blob, _S1_COLLS, mergeDB() or any backup; DB is never touched.
+   Map keys: 'n|<id>' a note, 'pic|<sha>' a picture. MMJ-SHARE.md "Visitors' copy (R3)" is the readers' contract. ── */
+const _MP_DAY=5000, _MP_PIC_PART=750000, _MP_PIC_MAX=10*1024*1024, _MP_PIC_BACKOFF=10*60000;
+const _mpS={busy:false,last:0,written:0,docs:0,refused:0,err:null,why:null,retryAt:0,runs:0,seenKey:'',loaded:null,pending:0,pics:0,visF:0,visN:0,picBad:new Map()};
+function _mpPicShas(html){
+  const out=[], re=/data-pic="([0-9a-f]{64})"/g; let r;
+  while((r=re.exec(html))){ if(out.indexOf(r[1])<0) out.push(r[1]); }
+  return out;
+}
+/* the folders visitors may see: MMJ folders with vis:1 */
+function _mpVisFolders(S){
+  const v=new Set(); (DB.folders||[]).forEach(f=>{ if(f&&f.vis===1&&S.folders.has(f.id)) v.add(f.id); });
+  return v;
+}
+function _mpTree(S,V){
+  const byId=new Map(); (DB.folders||[]).forEach(f=>{ if(f&&f.id!=null) byId.set(f.id,f); });
+  const folders=[];
+  (DB.folders||[]).forEach(f=>{
+    if(!f||!V.has(f.id)) return;
+    let p=null, cur=f.parentId, seen=new Set([f.id]);
+    while(cur!=null&&cur!==''){
+      if(seen.has(cur)) break;
+      seen.add(cur);
+      if(V.has(cur)){ p=cur; break; }
+      const pf=byId.get(cur); cur=pf?pf.parentId:null;
+    }
+    folders.push({id:f.id,n:String(f.name==null?'':f.name),p,o:f.order==null?0:f.order});
+  });
+  return folders;
+}
+const _mpNoteSig=(a,fids)=>'v|'+_msNoteSig(a,fids);
+function _mpStateText(){
+  if(!_mpS.last&&!_mpS.err) return _mpS.why==='wait'?'waiting for the first sync to finish…':(_mpS.visF||_mpS.visN)?'nothing sent yet':'nothing is switched to 👁 Visitors';
+  const e=_mpS.err;
+  return 'last run '+_syncAgo(_mpS.last)+' · '+_mpS.visN+' note'+(_mpS.visN===1?'':'s')+', '+_mpS.visF+' folder'+(_mpS.visF===1?'':'s')+' visible · '+_mpS.written.toLocaleString('en-US')+' docs written (all runs '+_mpS.docs.toLocaleString('en-US')+')'
+    +(_mpS.refused?(' · refused '+_mpS.refused+'×'):'')+(e?(' · last error: '+(e.code||e.message||e)):'');
+}
+/* one picture of a visible note. Bytes come from this device's store (or _picFetch), are hashed, and are written only if they are what the sha says —
+   or, when the store holds the cloud's SMALL copy, only if the private meta pics/{sha} names exactly that copy (sm). Returns true when published. */
+async function _mpPic(sha,nb,W,C,room){
+  try{
+    let blob=await _picGet(sha);
+    if(!blob){ try{ blob=await _picFetch(sha); }catch(e){ return false; } }
+    if(!blob||!blob.size||blob.size>_MP_PIC_MAX) return false;
+    const buf=await blob.arrayBuffer(), hash=await _picSha(buf);
+    let small=false;
+    if(hash!==sha){
+      const ms=await _syncFsDb.collection('notebooks').doc(nb).collection('pics').doc(sha).get();
+      if(!ms.exists||(ms.data()||{}).sm!==hash) return false;   /* neither the picture nor the cloud's own small copy: never published */
+      small=true;
+    }
+    const u8=new Uint8Array(buf), n=Math.ceil(u8.length/_MP_PIC_PART);
+    if(n>room()) return false;
+    const bld=_S2_BUILD(), ts=()=>firebase.firestore.FieldValue.serverTimestamp();
+    for(let i=0;i<n;i++) await W.add(C.doc('pp~'+hash+'~'+i),{d:firebase.firestore.Blob.fromUint8Array(u8.subarray(i*_MP_PIC_PART,(i+1)*_MP_PIC_PART))},Math.min(_MP_PIC_PART,u8.length-i*_MP_PIC_PART)+300,null);
+    const meta={n:u8.length,t:blob.type||'image/jpeg',p:n,at:ts(),b:bld};
+    if(small) meta.sm=hash;
+    await W.add(C.doc('p~'+sha),meta,600,{key:'pic|'+sha,pk:'',sig:small?'sm':'1'});
+    return n+1;
+  }catch(e){ return false; }
+}
+async function _mpTick(force){
+  if(_mpS.busy) return;
+  const cfg=_msGate(_mpS); if(!cfg) return;
+  if(!force&&Date.now()<_mpS.retryAt) return;
+  const nb=cfg.notebookId, mapKey='pub|'+nb;
+  _mpS.busy=true;
+  try{
+    let m=_mpS.loaded&&_mpS.loaded.nb===nb?_mpS.loaded.m:null;
+    if(!m){
+      let v; try{ v=await _msKv('get',mapKey); }catch(e){ _mpS.err=e; _mpS.retryAt=Date.now()+60000; return; }
+      m=(v&&typeof v==='object'&&v.n)?v:{t:null,n:{},day:'',dn:0};
+      _mpS.loaded={nb,m}; _mpS.seenKey='';
+    }
+    if(!force&&_mpS.seenKey===_dbRev+'|'+_s1MergeSeq+'|'+(_mpS.pending?'p':'')){ _mpS.why=null; return; }
+    /* ONE state: the change list is built with no await inside it */
+    const S=_mmjSet(), V=_mpVisFolders(S), scanKey=_dbRev+'|'+_s1MergeSeq, now=Date.now();
+    const work=[], seenIds=new Set(); let visN=0, hasPm=false;
+    (DB.articles||[]).forEach(a=>{
+      if(!a||a.vis!==1||!S.notes.has(a.id)) return;
+      visN++; seenIds.add(a.id);
+      const sig=_mpNoteSig(a,(a.folderIds||[]).filter(id=>V.has(id)));
+      const cur=m.n['n|'+a.id], cs=cur&&typeof cur==='object'?cur.s:cur;
+      if(cs!==sig){ work.push([a.id,sig]); return; }
+      if(cur&&typeof cur==='object'&&cur.pm){   /* a picture was still to come: try again when its back-off is over */
+        hasPm=true;
+        if(_mpPicShas(typeof a.content==='string'?a.content:'').some(h=>!m.n['pic|'+h]&&!((_mpS.picBad.get(h)||0)>now))) work.push([a.id,sig]);
+      }
+    });
+    Object.keys(m.n).forEach(k=>{
+      if(k.slice(0,2)!=='n|') return;
+      const id=k.slice(2); if(seenIds.has(id)) return;
+      const cur=m.n[k], cs=cur&&typeof cur==='object'?cur.s:cur;
+      if(cs!=='gone') work.push([id,'gone']);
+    });
+    const tree=_mpTree(S,V), treeSig=_rcHash(JSON.stringify(tree));
+    _mpS.visF=V.size; _mpS.visN=visN;
+    const treeChanged=m.t!==treeSig && !(m.t==null&&!tree.length&&!work.length);   /* nothing ever shared and nothing switched on: write nothing */
+    if(!work.length&&!treeChanged){ _mpS.seenKey=scanKey+'|'+(hasPm?'p':''); _mpS.pending=hasPm?1:0; _mpS.why=null; _mpS.err=null; return; }
+    const day=new Date().toISOString().slice(0,10); if(m.day!==day){ m.day=day; m.dn=0; }
+    const cap=window.__mpCap!=null?+window.__mpCap:_MP_DAY;
+    let room=cap-(m.dn||0);
+    if(room<=0){ _mpS.why='cap'; _mpS.retryAt=Date.now()+30*60000; return; }
+    const nbRef=_syncFsDb.collection('notebooks').doc(nb), C=nbRef.collection('pub');
+    const bld=_S2_BUILD(), ts=()=>firebase.firestore.FieldValue.serverTimestamp();
+    const W=_msWriter(m,mapKey,C,C,'pubparts~');
+    const pubd=new Set(); let pending=false;
+    if(treeChanged&&room>0){ await W.tree(tree,{},treeSig); room--; }
+    for(const [id,sig0] of work){
+      if(room<=0){ pending=true; break; }
+      const pk='n~'+encodeURIComponent(String(id)).replace(/\./g,'%2E');
+      if(sig0==='gone'){ await W.add(C.doc(pk),{id,gone:true,at:ts(),b:bld},300,{key:'n|'+id,pk,sig:'gone'}); room--; continue; }
+      /* pictures first, from the note as it is now; the doc follows from a fresh read of it */
+      let a=(DB.articles||[]).find(x=>x&&x.id===id);
+      if(!a||a.vis!==1) { pending=true; continue; }
+      const shas0=_mpPicShas(_enxClean(typeof a.content==='string'?a.content:''));
+      for(const h of shas0){
+        if(m.n['pic|'+h]||pubd.has(h)||(_mpS.picBad.get(h)||0)>Date.now()) continue;
+        const used=await _mpPic(h,nb,W,C,()=>room);
+        if(used){ pubd.add(h); room-=used; _mpS.pics++; } else _mpS.picBad.set(h,Date.now()+_MP_PIC_BACKOFF);
+      }
+      /* ONE state again: re-read the note, the set and the visible folders after the awaits */
+      const S2=_mmjSet(), V2=_mpVisFolders(S2);
+      a=(DB.articles||[]).find(x=>x&&x.id===id);
+      if(!a||a.vis!==1||!S2.notes.has(id)){ pending=true; continue; }   /* it changed while pictures were read: the next look decides */
+      const fids=(a.folderIds||[]).filter(f=>V2.has(f)), nsig=_mpNoteSig(a,fids);
+      const content=_enxClean(typeof a.content==='string'?a.content:'');
+      const pm=_mpPicShas(content).some(h=>!m.n['pic|'+h]&&!pubd.has(h));
+      const doc={id,title:a.title==null?'':String(a.title),content:'',tags:Array.isArray(a.tags)?a.tags.slice():[],folderIds:fids,createdAt:a.createdAt==null?null:a.createdAt,updatedAt:a.updatedAt==null?null:a.updatedAt,at:ts(),b:bld};
+      await W.note('n|'+id,pk,doc,content,nsig,{pm});
+      room--;
+    }
+    await W.commit();
+    await W.cleanup();
+    _mpS.last=Date.now(); _mpS.written=W.written; _mpS.docs+=W.written; _mpS.runs++; _mpS.err=null; _mpS.why=null; _mpS.retryAt=0;
+    _mpS.pending=(room<=0||pending)?1:0;
+    _mpS.seenKey='';
+  }catch(e){
+    _mpS.err=e; if(e&&e.code==='permission-denied') _mpS.refused++;
+    _mpS.retryAt=Date.now()+60000; _mpS.seenKey='';
+  }finally{ _mpS.busy=false; }
+}
+setInterval(()=>{ try{ _mpTick(); }catch(e){} },5000);
 
 /* ── v05.68 · J27 ① R2 — requests from other apps: notebooks/{nb}/mmjin/{reqId}.
    Other apps never write Siyagah's records. They CREATE a request {v:1,op,from,at,st:'new',…}; this code claims it (a transaction moves st
@@ -34196,6 +34371,7 @@ function _syncDiagnosticsHTML(){
     ['Pull failures since load', String(_pullFailures||0)],
     ['Per-note copy', _s1DiagText()],
     ['Shared MMJ copy', _msStateText()],
+    ['Visitors\' copy', _mpStateText()],
     ['Requests from other apps', _miStateText()],
     ['Pictures', _picDiagText()],
     ['Cloud picture space', _picUseText()],

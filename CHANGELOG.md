@@ -11230,3 +11230,17 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
 2. **`folder.move` takes an optional `before`** (the owner asked BwN to move folders up and down): the folder goes in front of that sibling,
    and only the moved folder is stamped (its order is put between its neighbours; the siblings are renumbered only on a tie, the N1 lesson).
    `MMJ-SHARE.md` documents it; 128a checks it and its refusal. Block 128: 94/94.
+
+## v05.69 — J27 ① R3: the visitors' copy (5 Nov 2026, issue #267)
+
+**What.** A second, public-readable copy of Mapping My Journey for the BwN visitor page: `notebooks/{nb}/pub/…`. It holds only what the owner switched to 👁 Visitors (v05.66).
+- `pub/t~0` `{v:1,at,b,folders:[{id,n,p,o}]}` — only `vis:1` MMJ folders; `p` is the nearest ancestor that is also visible (`_mpTree`), so a private parent's name or id never appears.
+- `pub/n~<id>` `{id,title,content,tags,folderIds,createdAt,updatedAt,at,b}` — only `vis:1` MMJ notes; `content` through `_enxClean`; `folderIds` visible folders only. `{id,gone:true,at,b}` once when a note stops being visible (👁 off, left MMJ, Trash, deleted). Big content: `pub/pubparts~n~<id>~<g>~<i>`.
+- Pictures of visible notes: `pub/p~<sha>` `{n,t,p,at,b[,sm]}` + `pub/pp~<h>~<i>` `{d:Bytes}`. Bytes come from the device store (or `_picFetch`), are hashed, and are written only if they equal the sha; the store's small copy is published only when the private `pics/{sha}` meta names exactly that hash (`sm`). Never unpublished, never more than the visible notes use.
+- Never published: anything without `vis:1`, Trash, `noteHistory`, `fromMydb`/`fromEvernote`/`fromMmj`, `kind`.
+
+**How.** `_mpTick` (5 s) shares the gate with `_msTick` (`_msGate`: signed in, online, visible, `_s1WriteGate()`, a first read, an MMJ section) and ONE batched writer (`_msWriter`: batching, parts-before-doc, generation clean-up, signature map saved after every commit) — `_msTick` was moved onto it (blocks 126/128 unchanged). Own map `pub|<nb>`; 5,000 docs a device a day; nothing switched on and nothing ever shared writes nothing (not even an empty tree). Diagnostics line "Visitors' copy". Contract: `MMJ-SHARE.md` "Visitors' copy (R3)". Owner action: paste the one rule (in the PR).
+
+**Check.** Block 129, `tools/mmj-pub.mjs` (40 checks): only vis:1; nearest-visible `p`; no private name in pub; visible folders only in `folderIds`; cleaned content; verified pictures only for visible notes (wrong bytes, small copy with and without the cloud's meta); the whole subtree equals the expected set; gone / folder off / Trash / private rename; 0 writes on a repeat; unread, offline, hidden, refused; DB byte-identical; big note in parts; 9,000 notes / 600 MMJ / 50 visible at phone ×4 (worst long task 80 ms, limit 222); a rules-model stand-in (s1-fake has no rules engine).
+
+**Not done.** The real Firestore rule is the owner's to paste, so a visitor read gets `permission-denied` until then; it cannot be tested from here. The visitor page itself is BwN's.
