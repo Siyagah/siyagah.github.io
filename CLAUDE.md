@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.68.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.70.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.70** (5 Nov 2026) — J116 (built by the builder, issue #269): a framed ＋ on every Note Type row (MyWall `.mw-kind`, a folder's MyWall `.mwsub-hd`, the side pane's `.nti-kind-row`), ONE builder `_ntiPlusBtn(kid)` → `ntiQuickNew` → `quickCaptureWithKind(kid,'pane')` (opens in Pane 3, title focused, the view does not move). **A new Note Type row uses `_ntiPlusBtn`.** Check: block 130, `tools/nti-quick.mjs`.
 - **v05.68** (4 Nov 2026) — J27 ① R2 (built by the builder, issue #265): **the owner's new D6** (a folder that holds notes CAN be deleted: `_folderDelPlan` / `_trashFolderCore` / `trashFolder`; one confirmation with the counts, `_folderDelText`; the folder, its subfolders and the notes whose ONLY folders are inside go to Trash as one `{type:'folder'}` group; a note also in an outside folder stays and loses the ids, NOT stamped (`_recUntouched`: `mergeDB()` unfiles it from the folders' tombstones, so a concurrent edit is never beaten), listed in `subtree.kept` for Restore; tombstones name only what was removed) and **the request box `notebooks/{nb}/mmjin/{reqId}`**: other apps CREATE a request, Siyagah claims it (transaction st new→work, 2-min lease), validates it (`_miApply`, content through `_enxClean`), applies it as ONE `persist()` and writes `st done|refused` back. Contract: `MMJ-SHARE.md` "Writing (R2)". Check: block 128, `tools/mmj-write.mjs`.
 - **v05.67** (3 Nov 2026) — J111/J112 (built by the builder, issue #262): the folder menu's ORGANISE gets 📂 Move to folder… (`openMoveFolder`; the picker is `_afInRows(q,{pick,bad})`, one list; the move is `doMoveFolder`/`moveFolderToTop`). The duplicate Evernote tree: a stack is the path relative to the deepest folder holding every picked file (`_enxTrimStacks`), a note already imported under another path is skipped by `_enxKeyNoPath(k)` (never re-keyed), and 🧹 Remove duplicates (`_enxDupScan` dry run → `_enxDupGo`: Trash + tombstone per copy, then the empty import-made folders, ≤ `_enxCap()` a day). **A changed copy is never removed** (`_enxChanged`). Check: block 127, `tools/enx-dups.mjs`.
 - **v05.66** (3 Nov 2026) — J27 ① R1 (built by the builder, issue #261): 👁 `vis:1` on MMJ folders and notes (`_mmjSet()` is the ONE decision of what is MMJ; row in MARK via `_menuHTML`, marks `.tr-vis`/`.ac-vis`/`.av-vis`) and the read-only shared copy `notebooks/{nb}/mmj` for other apps (`t~0` tree, `n~<id>` notes, parts in `mmjparts`, `gone:true`), written only by `_msTick` (5 s) through `_s1WriteGate()`, signature map in `siyagah-mmjshare-v1`; NOT in recs/blob/`mergeDB()`/backups. Readers' contract: `MMJ-SHARE.md`. Check: block 126, `tools/mmj-share.mjs`.
