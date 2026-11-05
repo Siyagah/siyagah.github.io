@@ -11230,3 +11230,11 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
 2. **`folder.move` takes an optional `before`** (the owner asked BwN to move folders up and down): the folder goes in front of that sibling,
    and only the moved folder is stamped (its order is put between its neighbours; the siblings are renumbered only on a tie, the N1 lesson).
    `MMJ-SHARE.md` documents it; 128a checks it and its refusal. Block 128: 94/94.
+
+## v05.71 — J117 faster search (first step; issue #271)
+
+**Done:** the side-pane search no longer works out every note's text on every key.
+1. `_stC` — a plain-text cache per note (id → `{u:updatedAt, ti:title, n:content length, t:lower-case title+text}`), session memory only, never `DB`/storage. `_stOf(a)` re-reads a note only when its `updatedAt`, title or content length differs. `_searchAll` (side pane AND the 🔍 pop-up) uses it, so both are faster and still find exactly what the old regex-over-everything compare found (same text, same words, same order).
+2. Typing in the box (`_searchTyped`) sets the box at once, waits 150 ms after the last key, builds the cache in 12 ms slices (a newer key cancels it), paints the first results from what is cached so far ("n results so far — still searching…"), then the full answer. `doSearch(q)` and `clearSearch()` stay synchronous and cancel a pending search.
+
+**Not done (honest):** no before/after measurement table at `--notes=36000`, no `tools/speed-j117.mjs` / block 131, and nothing yet for app start, folder/note/MyWall/Smart View opening. These need the measuring step first (Step 1 of the issue) and a longer run than this session covered; they remain open under J117.
