@@ -760,3 +760,7 @@ J111 (📂 Move to folder… in the folder menu) and J112 (the duplicate Evernot
 J27 R2: requests from other apps (`notebooks/{nb}/mmjin`) and the owner's new D6. Runs on the fake cloud; `s1-fake.mjs` now has `runTransaction` (version-checked commit, retries), `where(f,'==',v)` queries with `get()`, `limit()` and
 `onSnapshot`. A request is made with `cloud.apply([{t:'set',p:…/mmjin/<id>,d:{…,at:{__sts:1}}}], null)`. 128d wraps `_miApply` in the page to count applications per request. `--unpatched` serves origin/main (fetch it first): 128a/128f must FAIL.
 Trap: a first `persist()` stamps `themeAt` once, so a "DB is byte-identical" baseline is taken after one save. `mkFolder` auto-numbers when any folder name starts with "(001)" - use its returned id, not the name.
+
+## `mmj-pub.mjs` (v05.69, block 129)
+
+The visitors' copy `notebooks/{nb}/pub`, on the mock cloud. `node tools/mmj-pub.mjs [--only=129a,…] [--notes=9000] [--mmj=600] [--vis=50]`. s1-fake has no Firestore rules engine, so 129l is a stand-in model built from the rule text in `MMJ-SHARE.md` (the real rule cannot be tested here; the owner pastes it). Pictures are put in the device store with `_picPut`; 129d writes bytes straight into `siyagah-pics-v1` to make a wrong or a small copy.

@@ -12813,6 +12813,19 @@ await r.block('128-mmj-write', async () => {
   r.check(out.status === 0, 'the mmj-write.mjs check exits cleanly', `exit ${out.status}`);
 });
 
+/* 129 — v05.69, J27 ① R3: the visitors' copy notebooks/{nb}/pub (only 👁 vis:1 MMJ folders and notes, readable without sign-in). tools/mmj-pub.mjs. */
+await r.block('129-mmj-pub', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./mmj-pub.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1500000, maxBuffer: 1 << 27 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 35, 'the mmj-pub.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '129: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the mmj-pub.mjs check exits cleanly', `exit ${out.status}`);
+});
+
 /* 130 — v05.70, J116: a framed ＋ (quick new note with that Note Type) on every Note Type row. tools/nti-quick.mjs. */
 await r.block('130-nti-quick', async () => {
   const { spawnSync } = await import('node:child_process');
