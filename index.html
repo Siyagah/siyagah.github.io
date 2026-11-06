@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.70">
+<meta name="app-version" content="05.71">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4076,7 +4076,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.70</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.71</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4165,7 +4165,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
     <div class="sb-srow">
     <div class="sb-si">
       <span class="sb-si-ico">🔍</span>
-      <input type="text" id="sq" placeholder="Search notes, folders, tags, types…" oninput="doSearch(this.value)" autocomplete="off">
+      <input type="text" id="sq" placeholder="Search notes, folders, tags, types…" oninput="_searchTyped(this.value)" autocomplete="off">
       <span id="sqx" class="sb-si-x" onclick="clearSearch()" style="display: none;">✕</span>
     </div>
     <button class="btn sb-act sb-pp-btn" onclick="_ppMenu(event,'sb')" title="This pane: pop it out as a window you can move and resize, or make it full width">🪟</button>
@@ -7016,10 +7016,62 @@ function _renderFor(ch,fullFn,opts){
 function _searchWords(q){return q.toLowerCase().split(/\s+/).filter(Boolean);}
 function _matchesAllWords(text,words){const t=text.toLowerCase();return words.every(w=>t.includes(w));}
 /* v05.65 · J106 — the ONE search: the side-pane box and the 🔍 pop-up both call this, so they can never find different things. */
+/* v05.71 · J117 — plain-text cache per note: id → {c:content string, ti:title, t:lower-case title+text}. Session memory only (never DB,
+   never storage). A note is re-read only when its content string or title differs; the text is exactly what the old search compared. */
+/* Exact key: the entry keeps the content STRING it was built from (`e.c`, a reference, no copy) and the title; same string = same text, whatever
+   updatedAt says. Budget `_ST_CAP` characters: past it a note is read each time as before (no eviction — a search walks every note in turn, so
+   dropping the oldest would drop the very next one needed). */
+const _stC=new Map();let _stChars=0;let _ST_CAP=40e6;   /* `let` only so tools/speed-j117.mjs --measure can try other budgets */
+function _stOf(a){
+  const c=a.content||'',e=_stC.get(a.id);
+  if(e&&e.c===c&&e.ti===a.title)return e.t;
+  const t=(a.title+' '+strip(a.content)).toLowerCase();
+  if(e){_stChars-=e.t.length;_stC.delete(a.id);}
+  if(_stChars+t.length<=_ST_CAP){_stC.set(a.id,{c,ti:a.title,t});_stChars+=t.length;}
+  return t;
+}
+let _stTok=0,_stTimer=0,_stPart=null;
+/* typing in the box: the box state is set at once, the search waits 150 ms after the last key, builds the cache in 12 ms slices (a newer key cancels
+   it), paints the first results from what is cached so far, then the whole answer. */
+function _searchTyped(q){
+  ST.search=q;const x=document.getElementById('sqx');if(x)x.style.display=q?'block':'none';
+  const tok=++_stTok;clearTimeout(_stTimer);_stPart=null;
+  _stTimer=setTimeout(()=>_searchRunAsync(tok),150);
+  _updateSearchAccessUI();
+}
+async function _searchRunAsync(tok){
+  const q=ST.search;
+  if(!q||!q.trim()){_stPart=null;renderTree();return;}
+  const arts=DB.articles;let i=0,first=true,t0=performance.now();
+  while(i<arts.length){
+    const end=performance.now()+12;
+    while(i<arts.length&&performance.now()<end){_stOf(arts[i]);i++;}
+    if(tok!==_stTok)return;
+    if(i<arts.length){
+      if(first){first=false;_stPart={done:i,all:arts.length};renderTree();}
+      await _yieldTask();
+      if(tok!==_stTok)return;
+    }
+  }
+  _stPart=null;
+  if(tok===_stTok)renderTree();
+}
+/* Typing one more letter can only shrink the answer: when every word of the last COMPLETE answer is inside some word of the new query, the new
+   matches are a subset of the last matches, so only those are looked at. Valid only while nothing has changed since (`_dbRev`, `_s1MergeSeq`, the
+   same array and length); anything else searches every note. */
+let _stLast=null;
+function _searchNotes(words){
+  const L=_stLast,all=DB.articles;
+  let pool=all;
+  if(L&&L.arts===all&&L.len===all.length&&L.rev===_dbRev&&L.seq===_s1MergeSeq&&L.words.every(o=>words.some(w=>w.includes(o))))pool=L.hits;
+  const hits=pool.filter(a=>{if(_stPart&&!_stC.has(a.id))return false;const t=_stOf(a);return words.every(w=>t.includes(w));});
+  _stLast=_stPart?null:{arts:all,len:all.length,rev:_dbRev,seq:_s1MergeSeq,words,hits};
+  return hits;
+}
 function _searchAll(q){
   const words=_searchWords(q||'');
   return {words,
-    noteHits:DB.articles.filter(a=>_matchesAllWords(a.title+' '+strip(a.content),words)),
+    noteHits:_searchNotes(words),
     folderHits:DB.folders.filter(f=>_matchesAllWords(f.name,words)),
     tagHits:getAllTags().filter(t=>_matchesAllWords(t.tag,words)),
     kindHits:noteKinds().filter(k=>_matchesAllWords(k.name,words))};
@@ -7029,7 +7081,7 @@ function renderTree(){
   if(ST.search&&ST.search.trim()){
     const {noteHits,folderHits,tagHits,kindHits}=_searchAll(ST.search);
     const total=noteHits.length+folderHits.length+tagHits.length+kindHits.length;
-    let h=`<div class="srl">${total} result${total!==1?'s':''}</div>`;
+    let h=`<div class="srl">${total} result${total!==1?'s':''}${_stPart?' so far — still searching…':''}</div>`;
     if(!total){
       h+='<div class="sr" style="cursor:default;opacity:.75">No results</div>';
     } else {
@@ -8406,8 +8458,9 @@ function saveArt(){
    gets its own 🔍 button, matching the sidebar's search, since Pane 2 has
    no search access of its own on layouts where the sidebar isn't visible
    alongside it. */
-function doSearch(q){ST.search=q;const x=document.getElementById('sqx');if(x)x.style.display=q?'block':'none';renderTree();_updateSearchAccessUI();}
+function doSearch(q){_stTok++;clearTimeout(_stTimer);_stPart=null;ST.search=q;const x=document.getElementById('sqx');if(x)x.style.display=q?'block':'none';renderTree();_updateSearchAccessUI();}
 function clearSearch(){
+  _stTok++;clearTimeout(_stTimer);_stPart=null;
   if(!ST.search)return;
   ST.lastSearch=ST.search;
   ST.search='';
