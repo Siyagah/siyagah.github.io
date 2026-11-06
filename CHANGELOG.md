@@ -11231,6 +11231,64 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
    and only the moved folder is stamped (its order is put between its neighbours; the siblings are renumbered only on a tie, the N1 lesson).
    `MMJ-SHARE.md` documents it; 128a checks it and its refusal. Block 128: 94/94.
 
+## v05.72 — J117 part 2: a calmer start, faster Smart Views and MyWall (issue #273)
+
+The owner: "check app loading, page loading issues … enable faster loading everywhere." v05.71 did search; this round does the start and the screens the numbers showed to be slow.
+
+**Step 1 — measured first** (`node tools/speed-j117b.mjs --measure --notes=36000 --reps=3`, median of 3 starts, a notebook built in the page: 36,000 short notes, f2 holds 2,000; the v05.71 column is an untouched copy of the v05.71 source run the same way). Phone = 390 wide, CPU ×4. "Tap" = a card clicked right after booted until the next frame.
+
+| | laptop 1440 before → after | phone ×4 before → after |
+|---|---|---|
+| first paint | 128 → 112 ms | 548 → 336 ms |
+| boot's first `render()` (start → end) | 307→341 → 256→290 ms | 1145→1246 → 926→982 ms |
+| booted | 414 → 345 ms | 1383 → 1213 ms |
+| tap on a card opens the note | 68 → 58 ms | 267 → 182 ms |
+| longest task in the first 10 s | 165 → 150 ms | 491 → 554 ms (see below) |
+| open a 2,000-note folder / the 34,000-note folder | 12 / 11 → 14 / 13 ms | 57 / 50 → 102 / 90 ms (a single noisy run; see below) |
+| open a note | 32 → 34 ms | 255 → 226 ms |
+| 🧱 MyWall | 73 → **22** ms | 465 → **188** ms |
+| a Smart View (favourites) | 65 → **22** ms | 484 → **119** ms |
+
+Run-to-run noise on this machine is about ±20 % at ×4 (the first-paint and render rows moved with no code of mine in the path). Two rows are honestly **not better**: the longest start task (the single 600 ms task is boot's first `render()` itself, cold code at ×4; no job starts inside it — checked with a long-task list, the first job opens ~100 ms after it ends and none of them raised a long task) and the folder rows (never touched by this round; 57→102 is the same code on a different run).
+
+**Step 2 — every timer and job boot starts, and what it does at 36,000 notes** (one call each, this machine; offline and signed out, so a tick that needs the cloud returns at its gate — the cloud part cannot be timed here):
+
+| job | what it does at start | cost at 36,000 notes (laptop / phone ×4) | now |
+|---|---|---|---|
+| recs reader `_s1ReadStart` (+ the first-push gate `_s1WriteGate`) | reads the cloud copy, merges, opens the write gate (I2) | network-bound; not measurable offline | **not delayed** |
+| first full snapshot `_s1Snap` and the hourly one | builds every record's signature | 75 / 329 ms (sliced in 25 ms pieces when taken by the push) | not delayed (part of the push) |
+| `_idbRead`, `loadDB`, the device-copy overlay | boot's own reads (B1, J92) | the start itself | **not delayed** |
+| service-worker registration | I3 | ~0 | **not delayed** |
+| `pagehide` / `visibilitychange` saves | `_flushEverythingOut` → `_save()` (refuses before `_dbLoaded`) | — | **not delayed** |
+| `_remTick` (reminder mail, 5 s) | signature of the reminder list; writes only through the write gate | 0 / 1 ms offline | not delayed (the issue's list did not include it) |
+| `_picKeepTick` (20 s + one at start) | `_picKeepShas()` scans every note's pictures, then fetches the missing | scan 30 / 137 ms | **deferred** (was a 9 s timeout) |
+| `_picMigrate` | scan for inline `data:` pictures; runs only after a merge brought some (`_picMigKick`) | 14 / 50 ms | not started at boot; unchanged |
+| `_picUploadPending` | starts inside `_pushWrite`; returns at once when nothing waits | ~0 | unchanged |
+| `_newsTick` (5 s) | headlines (own news service first) | ~0 offline | **deferred** (was a 1.5 s timeout) |
+| `_msTick` (5 s) | writes the MMJ shared copy | ~0 offline, gated | **deferred** |
+| `_mpTick` (5 s) | writes the visitors' copy | ~0 offline, gated | **deferred** |
+| `_miTick` (5 s) | request box subscription | ~0 offline, gated | **deferred** |
+| `_mydbTick` (5 s) | MyDatabase matching | ~0 offline, gated | **deferred** |
+| `_mmjSyncTick` (60 s, first after 60 s) | Mapping My Journey keeping matching | ~1 ms offline | **deferred** (its first run is now the arm kick; later runs on its 60 s timer) |
+
+**What was built.** `_jobs`, `_jobOk(name)`, `_jobsArm()`, `_jobsArmIdle()` (top of the script, after `_dbLoaded`). Boot calls `_jobsArmIdle()` when `__appBooted` is set (after the first `render()`, the fonts wait and two frames); that waits for one idle moment (`requestIdleCallback`, timeout 2 s; `setTimeout` 800 ms where there is none) and `_jobsArm()` opens the seven gates one at a time, 350 ms apart (`_JOB_ORDER`: news, ms, mp, mi, pk, mydb, mmj) and calls each tick once as it opens. A 20 s fallback arms them even if boot never reaches its first render. **Only the timers and listeners are gated** (`setInterval` callbacks, `online`/`offline`/`visibilitychange` listeners of the news and picture jobs); a direct call — a button, a test, `_msTick(true)` — is never held. New background job → add its name to `_JOB_ORDER`, its kick to `_jobsArm`, and the gate to its timer.
+
+**Parse-time listeners and what they do inside the new delay** (the standing lesson): `pagehide` and `visibilitychange` → `_flushEverythingOut` → `_save()` / `flushPendingPush()`: not changed, `_save()` still refuses before `_dbLoaded`, and a save inside the delay works (132c). The picture job's `online`/`visibilitychange` listeners and the news `online`/`offline`/`visibilitychange` listeners now do nothing until their gate is open (they would only have started the deferred job early). The `load` listener for the service worker: not touched. The `pagehide` of the harness 132c fires every 5 ms through the whole start: nothing reached the device copy before `_dbLoaded`.
+
+**Step 3 — the worst of the rest, found with a CPU profile (not guessed).** Every Smart View, MyWall and the Timeline count went through `getSmartGroups`, which **sorted all notes newest first (`localeCompare` ×36,000) before looking at which view it was asked for** — 280 ms at ×4 for a view of 170 notes — and the Timeline number re-parsed every date four times. Fixed, same output:
+- `getSmartGroups`: the sorted copy is built only for the two date views, now in one pass with each date parsed once, sorting only each short list (a stable sort, so the lists are identical).
+- `smartCount(sfId)` outside a side-pane draw (Pane 2's header lists every other Smart View with its number — nine whole lists) now counts (`_cntOver`, and `_timeCount()` for Timeline, one pass; ISO dates compare as text).
+- `renderMyWall`: a closed Note Type is no longer sorted (a count and, in Preview, one scan for the newest note); `_kindLatest` is worked out once per type, not once per comparison of the sort. An open type is sorted as before.
+- No second list engine; `_listWin`, the card cache and `_renderFor` are untouched.
+
+**Not done (honest).**
+- Opening a note on a phone at 36,000 notes is still ~230 ms: ~90 ms of it is `_stampRecordTouches` (the whole-notebook change sweep every `_save()` runs, even when only `lastArticle` changed). That sweep is how every edit gets its stamp for sync (I2); I did not touch it in a round about start-up.
+- Boot's first `render()` at ×4 is one ~600 ms cold task; warm, the same `render()` is 65 ms. The cost is cold code and the first side-pane count, not a loop I could shorten safely.
+- The cloud side of every deferred job (the part after its gate) cannot be timed offline; only that each tick starts and the sync checks still pass.
+- Folder, 2,000-note folder and 34,000-note folder were not changed (they were already the windowed list).
+
+**Checks.** Block 132, `tools/speed-j117b.mjs` (27 checks at 390 / 820 / 1440): 132a the seven jobs start after the first render, 350 ms apart, within 5 s, and each timer then reaches its tick (a wrapped tick is seen), and a closed gate stops it; 132b two devices on the S1 fake — a change made on A before B started and one made while B was starting reach B with no tap, and B's later edit reaches A; 132c a `pagehide`/`hidden` fired through the whole start writes nothing to the device copy before `_dbLoaded` and the notebook is intact, and a `pagehide` inside the delay (jobs not yet started) still saves; 132d the oracle — Timeline lists, every Smart View number, MyWall (compact/preview × closed/open) and eight drawn screens (`#tree`, `#p2h`, `#p2c`) equal the v05.71 code byte for byte; 132e no page errors. `--measure` prints the table above.
+
 ## v05.71 — J117 faster search (first step; issue #271)
 
 **Done:** the side-pane search no longer works out every note's text on every key.
