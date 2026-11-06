@@ -116,3 +116,44 @@ Your app should confirm with the user first ("this also deletes N notes") — Si
 
 Every app signs in as the owner (the same uid), so Firestore's rules **cannot tell the apps apart or stop an app writing elsewhere**. The safety is this contract (apps only
 create `mmjin` documents with `st:'new'`) plus Siyagah validating every request. No rules change was made for R2.
+
+## Visitors' copy (R3) — readable WITHOUT sign-in
+
+Since **v05.69** Siyagah also keeps a second, smaller copy for **visitors** (people who are not the owner, with no Google sign-in) under
+`notebooks/{nb}/pub/…`. It holds **only what the owner switched to 👁 Visitors** (`vis:1`); everything else of Siyagah stays private.
+
+**The one Firestore rule the owner adds** (paste just before the last closing `}` of the rules; rules for the same path are combined with OR, so it opens nothing else):
+
+```
+    match /notebooks/{nb}/pub/{doc=**} {
+      allow read: if true;
+    }
+```
+
+Until it is pasted, a visitor read gets `permission-denied` (Siyagah's own writing works either way). Show "Not available yet" — do not retry in a loop.
+
+| Path (all inside the collection `notebooks/{nb}/pub`) | What |
+|---|---|
+| `t~0` | the tree of the visible folders |
+| `t~1 … t~N` | pieces of the tree, only over ~700 KB (same `n` / `g` rule as `mmj`) |
+| `n~<encodeURIComponent(noteId)>` | one visible note (a `.` in the id is written `%2E`) |
+| `pubparts~n~<id>~<g>~<i>` | pieces of one note's `content`, only over ~700 KB |
+| `p~<sha>` | a picture's meta `{n,t,p,at,b[,sm]}` |
+| `pp~<sha'>~<i>` | a picture's bytes, `{d: Bytes}`, ≤ 750,000 bytes a part |
+
+**`t~0`** — `{v:1, at, b, folders:[{id, n, p, o}]}`: `n` name · `p` the nearest ancestor that is ALSO visible (or `null`; a private parent is never named) · `o` order.
+Only folders with `vis:1`. No `u`, no `vis`, no section. *Big tree:* `{v:1, at, b, n, g}` with no `folders`; join `t~1…t~n` only when each piece's `g` equals `t~0.g`.
+
+**`n~<id>`** — `{id, title, content, tags[], folderIds[], createdAt, updatedAt, at, b}`. `folderIds` holds only the note's VISIBLE folders (possibly none).
+`content` is the saved HTML after Siyagah's cleaner: no `<script>`, `<iframe>`, `<object>`, `<embed>`, `<style>`, `on…=` handlers or `javascript:`/`data:` addresses.
+*Big note:* `parts:<n>`, `g`, `content:''`; read `pubparts~n~<id>~<g>~0 … <g>~<n-1>` (each `{d:<string>, g}`), concatenate in order. If a piece is missing, read the note again.
+*Gone:* `{id, gone:true, at, b}` — the owner switched 👁 off, the note left Mapping My Journey, went to Trash or was deleted. **Remove it.** A doc is never deleted.
+There is no `kind`, `vis`, history or import detail in this copy.
+
+**Pictures** stay references in `content` (`<img class="ed-img" data-pic="<sha>" …>`, no `src`). Fetch `p~<sha>` (meta), then `pp~<h>~0 … pp~<h>~<p-1>` where `h` = `sha`, or
+`h` = `meta.sm` when the meta has `sm` (the cloud holds a smaller copy: it has its own sha). Concatenate the `d` bytes, **verify the SHA-256 of the bytes equals `h`**, then show them.
+Never show bytes that fail. A picture that is not there yet (the note was published first) shows a placeholder; try again later.
+
+**Rules for a visitor page.** Read `pub` only. It contains exactly what the owner switched on and nothing more — **never fall back to the private copy (`mmj`, `pics`, …) for a visitor**,
+and never treat the absence of a note here as a reason to look elsewhere. Use `where('at','>',cursor).orderBy('at')` on the collection to follow changes, as for `mmj`.
+Copies are written by the owner's open Siyagah window within ~10 s (same gate as `mmj`); a closed Siyagah writes nothing. Siyagah writes at most 5,000 `pub` documents a device a day.

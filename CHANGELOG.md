@@ -11238,3 +11238,27 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
 2. Typing in the box (`_searchTyped`) sets the box at once, waits 150 ms after the last key, builds the cache in 12 ms slices (a newer key cancels it), paints the first results from what is cached so far ("n results so far — still searching…"), then the full answer. `doSearch(q)` and `clearSearch()` stay synchronous and cancel a pending search.
 
 **Not done (honest):** no before/after measurement table at `--notes=36000`, no `tools/speed-j117.mjs` / block 131, and nothing yet for app start, folder/note/MyWall/Smart View opening. These need the measuring step first (Step 1 of the issue) and a longer run than this session covered; they remain open under J117.
+## v05.70 — J116: ＋ quick new note on every Note Type row (issue #269)
+
+The owner (screenshot of MyWall, red box before the count): "Add quick new note button beside the NTI headings."
+
+- **One builder, `_ntiPlusBtn(kid)`**: a small framed ＋ titled "New note in <type>", always visible (no hover), 24 px on a laptop, a 44×44 tap area on phone and tablet (the frame is a `::before`, so the row does not grow). It stops mousedown / touchstart / dragstart / click, so the row neither toggles nor starts a drag.
+- **It reuses `quickCaptureWithKind(kid, where)`** (the function behind "New note here"), now with a `where` parameter. `ntiQuickNew(kid)` passes `'pane'`: the note is made in the same Primary folder choice as before, opens in Pane 3 (a phone: the note view) in edit mode with the title focused, and the view does NOT move (no folder is selected), so MyWall shows the note under its type. The right-click "✚ New note here" is unchanged (its own floating window).
+- **Surfaces with the ＋:** MyWall's Note Type rows (`.mw-kind`, before the count); a folder's MyWall sub-headings (`.mwsub-hd`); the side pane's NOTE TYPES rows (`.nti-kind-row`, before the count).
+- **Left out:** Pane 2 has no Note Type heading list (a Note Type list there is a flat list of notes under the sidebar row's own ＋); the search pop-up's and the Pick-navigator's Note Type hits are search results and navigation pickers, not headings.
+- **Menu:** `showWallKindCtx` already had "✚ New note here" (ORGANISE, through `_menuHTML`); no change.
+- No data shape changed: the new note is an ordinary note (syncs as any note, I2).
+- Check: block 130, `tools/nti-quick.mjs` (36 checks at 390 / 820 / 1440).
+## v05.69 — J27 ① R3: the visitors' copy (5 Nov 2026, issue #267)
+
+**What.** A second, public-readable copy of Mapping My Journey for the BwN visitor page: `notebooks/{nb}/pub/…`. It holds only what the owner switched to 👁 Visitors (v05.66).
+- `pub/t~0` `{v:1,at,b,folders:[{id,n,p,o}]}` — only `vis:1` MMJ folders; `p` is the nearest ancestor that is also visible (`_mpTree`), so a private parent's name or id never appears.
+- `pub/n~<id>` `{id,title,content,tags,folderIds,createdAt,updatedAt,at,b}` — only `vis:1` MMJ notes; `content` through `_enxClean`; `folderIds` visible folders only. `{id,gone:true,at,b}` once when a note stops being visible (👁 off, left MMJ, Trash, deleted). Big content: `pub/pubparts~n~<id>~<g>~<i>`.
+- Pictures of visible notes: `pub/p~<sha>` `{n,t,p,at,b[,sm]}` + `pub/pp~<h>~<i>` `{d:Bytes}`. Bytes come from the device store (or `_picFetch`), are hashed, and are written only if they equal the sha; the store's small copy is published only when the private `pics/{sha}` meta names exactly that hash (`sm`). Never unpublished, never more than the visible notes use.
+- Never published: anything without `vis:1`, Trash, `noteHistory`, `fromMydb`/`fromEvernote`/`fromMmj`, `kind`.
+
+**How.** `_mpTick` (5 s) shares the gate with `_msTick` (`_msGate`: signed in, online, visible, `_s1WriteGate()`, a first read, an MMJ section) and ONE batched writer (`_msWriter`: batching, parts-before-doc, generation clean-up, signature map saved after every commit) — `_msTick` was moved onto it (blocks 126/128 unchanged). Own map `pub|<nb>`; 5,000 docs a device a day; nothing switched on and nothing ever shared writes nothing (not even an empty tree). Diagnostics line "Visitors' copy". Contract: `MMJ-SHARE.md` "Visitors' copy (R3)". Owner action: paste the one rule (in the PR).
+
+**Check.** Block 129, `tools/mmj-pub.mjs` (40 checks): only vis:1; nearest-visible `p`; no private name in pub; visible folders only in `folderIds`; cleaned content; verified pictures only for visible notes (wrong bytes, small copy with and without the cloud's meta); the whole subtree equals the expected set; gone / folder off / Trash / private rename; 0 writes on a repeat; unread, offline, hidden, refused; DB byte-identical; big note in parts; 9,000 notes / 600 MMJ / 50 visible at phone ×4 (worst long task 80 ms, limit 222); a rules-model stand-in (s1-fake has no rules engine).
+
+**Not done.** The real Firestore rule is the owner's to paste, so a visitor read gets `permission-denied` until then; it cannot be tested from here. The visitor page itself is BwN's.
