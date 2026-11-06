@@ -11234,10 +11234,28 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
 ## v05.71 — J117 faster search (first step; issue #271)
 
 **Done:** the side-pane search no longer works out every note's text on every key.
-1. `_stC` — a plain-text cache per note (id → `{u:updatedAt, ti:title, n:content length, t:lower-case title+text}`), session memory only, never `DB`/storage. `_stOf(a)` re-reads a note only when its `updatedAt`, title or content length differs. `_searchAll` (side pane AND the 🔍 pop-up) uses it, so both are faster and still find exactly what the old regex-over-everything compare found (same text, same words, same order).
+1. `_stC` — a plain-text cache per note (id → `{c:content string, ti:title, t:lower-case title+text}`; first cut keyed on updatedAt/length, replaced in the review round below), session memory only, never `DB`/storage. `_stOf(a)` re-reads a note only when its content string or title differs. `_searchAll` (side pane AND the 🔍 pop-up) uses it, so both are faster and still find exactly what the old regex-over-everything compare found (same text, same words, same order).
 2. Typing in the box (`_searchTyped`) sets the box at once, waits 150 ms after the last key, builds the cache in 12 ms slices (a newer key cancels it), paints the first results from what is cached so far ("n results so far — still searching…"), then the full answer. `doSearch(q)` and `clearSearch()` stay synchronous and cancel a pending search.
 
-**Not done (honest):** no before/after measurement table at `--notes=36000`, no `tools/speed-j117.mjs` / block 131, and nothing yet for app start, folder/note/MyWall/Smart View opening. These need the measuring step first (Step 1 of the issue) and a longer run than this session covered; they remain open under J117.
+**Review round (Architect's five points).**
+- **Exact key:** the entry now keeps the content string (`{c, ti, t}`) and `_stOf` re-reads unless `e.c===c` and the title match (same string object = instant, no copy). `updatedAt` and length are no longer part of the key, so a same-length edit that does not move `updatedAt` is never shown stale.
+- **Refinement:** when every word of the last complete answer sits inside a word of the new query (one more letter typed), only the last hits are looked at (`_searchNotes`, `_stLast`). Valid only while `_dbRev`, `_s1MergeSeq`, the array and its length are unchanged; backspacing or anything else searches every note.
+- **Memory budget `_ST_CAP` = 40,000,000 characters** (about +41 MB of heap, measured). Past it a note is read each time as before. No LRU: a search walks every note in turn, so dropping the oldest entry drops the very next one needed.
+- **Check:** block 131, `tools/speed-j117.mjs` (21 checks at 390 / 820 / 1440): the new search equals the old `_matchesAllWords(title+' '+strip(content))` search (same notes, same order) for 13 queries; after a same-length edit with no `updatedAt` move, a title edit, undo, redo and a received merge; a note changing during a sliced search; typing letter by letter with a note added in between, then backspacing; the budget; the pause; no page errors. `--measure --notes=N` prints the numbers below.
+
+**Measured, 36,000 notes (~2.6 KB each; a 15-word vocabulary, so almost every note matches "lorem ipsum" — the worst case for the refinement), this container.**
+
+| search: first key / next key | desktop 1440 | phone ×4 CPU |
+|---|---|---|
+| no cache (the build before this round) | 889 / 575 ms | 3,597 / 2,656 ms |
+| cap 24 M chars (+25 MB heap) | 637 / 394 ms | 2,721 / 1,704 ms |
+| **cap 40 M chars (+41 MB heap) — shipped** | 648 / 276 ms | 2,823 / 1,261 ms |
+| no cap (+77 MB heap, all 36,008 notes) | 657 / 14 ms | 2,893 / 66 ms |
+
+Heap is `Runtime.getHeapUsage` after a collection: about 1 MB per million characters. Uncapped would be 77 MB, over the ~40 MB line, so it is capped; the first key is still one full pass, and next keys are fast only for the notes the cache holds (plus the refinement, which helps when the answer is smaller than the notebook).
+Opening, same build, 36,000 notes (this round did not touch these; measured once, so no before/after): 1440 — folder 24 ms · note 176 ms · MyWall 93 ms · a Smart View 94 ms; phone ×4 — folder 156 ms · note 784 ms · MyWall 741 ms · Smart View 612 ms.
+
+**Not done (honest).** Start-up time at 36,000 notes was not measured, and the start-up background jobs were NOT put off until after the first paint (moving boot work later touches I1–I3 and the "Making boot asynchronous" lesson; it needs its own measured round). Nothing was changed for opening a folder/note, MyWall or a Smart View. These remain open under J117.
 ## v05.70 — J116: ＋ quick new note on every Note Type row (issue #269)
 
 The owner (screenshot of MyWall, red box before the count): "Add quick new note button beside the NTI headings."
