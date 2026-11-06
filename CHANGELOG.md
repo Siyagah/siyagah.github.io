@@ -11231,6 +11231,17 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
    and only the moved folder is stamped (its order is put between its neighbours; the siblings are renumbered only on a tie, the N1 lesson).
    `MMJ-SHARE.md` documents it; 128a checks it and its refusal. Block 128: 94/94.
 
+## v05.70 — J116: ＋ quick new note on every Note Type row (issue #269)
+
+The owner (screenshot of MyWall, red box before the count): "Add quick new note button beside the NTI headings."
+
+- **One builder, `_ntiPlusBtn(kid)`**: a small framed ＋ titled "New note in <type>", always visible (no hover), 24 px on a laptop, a 44×44 tap area on phone and tablet (the frame is a `::before`, so the row does not grow). It stops mousedown / touchstart / dragstart / click, so the row neither toggles nor starts a drag.
+- **It reuses `quickCaptureWithKind(kid, where)`** (the function behind "New note here"), now with a `where` parameter. `ntiQuickNew(kid)` passes `'pane'`: the note is made in the same Primary folder choice as before, opens in Pane 3 (a phone: the note view) in edit mode with the title focused, and the view does NOT move (no folder is selected), so MyWall shows the note under its type. The right-click "✚ New note here" is unchanged (its own floating window).
+- **Surfaces with the ＋:** MyWall's Note Type rows (`.mw-kind`, before the count); a folder's MyWall sub-headings (`.mwsub-hd`); the side pane's NOTE TYPES rows (`.nti-kind-row`, before the count).
+- **Left out:** Pane 2 has no Note Type heading list (a Note Type list there is a flat list of notes under the sidebar row's own ＋); the search pop-up's and the Pick-navigator's Note Type hits are search results and navigation pickers, not headings.
+- **Menu:** `showWallKindCtx` already had "✚ New note here" (ORGANISE, through `_menuHTML`); no change.
+- No data shape changed: the new note is an ordinary note (syncs as any note, I2).
+- Check: block 130, `tools/nti-quick.mjs` (36 checks at 390 / 820 / 1440).
 ## v05.69 — J27 ① R3: the visitors' copy (5 Nov 2026, issue #267)
 
 **What.** A second, public-readable copy of Mapping My Journey for the BwN visitor page: `notebooks/{nb}/pub/…`. It holds only what the owner switched to 👁 Visitors (v05.66).

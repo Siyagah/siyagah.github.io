@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.69">
+<meta name="app-version" content="05.70">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -569,6 +569,13 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .mw-wall .wall-peek{padding:0 14px 6px 48px}
 .mw-wall .mw-notes{padding:2px 10px 8px 14px}
 @media(max-width:1199.98px){.mw-wall .mw-cat{min-height:52px}.mw-wall .mw-kind{min-height:44px}}
+/* v05.70 · J116 — the framed ＋ on a Note Type row: compact on a laptop, a 44×44 tap area on phone and tablet (the frame is the ::before). Always visible. */
+.nti-plus{flex:0 0 auto;position:relative;width:24px;height:24px;margin:0 2px;padding:0;border:0;background:transparent;color:inherit;font:700 15px/1 inherit;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.nti-plus::before{content:"";position:absolute;inset:0;border:1px solid currentColor;border-radius:6px;opacity:.55}
+.nti-plus:hover::before,.nti-plus:focus-visible::before{opacity:1;background:rgba(127,127,127,.15)}
+.mwsub-hd .nti-plus{color:var(--t2)}
+.mw-wall .nti-plus{color:var(--t2)}
+@media(max-width:1199.98px){.nti-plus{width:44px;height:44px;margin:-10px -6px}.nti-plus::before{inset:9px}}
 .mwsub-cat-hd{display:flex;align-items:center;gap:6px;padding:8px 10px 4px 12px;cursor:pointer;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--t3);user-select:none;-webkit-user-select:none}
 .mwsub-cat-hd:hover{color:var(--t1)}
 .mwsub-cat-hd .mw-tog{font-size:10px;flex-shrink:0;min-width:10px}
@@ -4069,7 +4076,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.69</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.70</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -9325,6 +9332,7 @@ function renderMyWallSubfolder(curF){
         +`<span class="mw-tog">${isOpen?'▾':'▸'}</span>`
         +`<span class="mw-dot" style="background:${k.color}"></span>`
         +`<span style="color:${k.color}">${esc(k.name)}</span>`
+        +_ntiPlusBtn(k.id)
         +`<span class="mw-cnt">${arr.length}</span>`
         +(relDate?`<span class="mw-rel-date">· ${relDate}</span>`:'')
         +'</div>';
@@ -23031,6 +23039,7 @@ function renderNTISection(){
             +`<span class="tr-tog"></span>`
             +`<span class="nti-dot" style="background:${k.color}"></span>`
             +`<span class="tr-name">${esc(k.name)}</span>`
+            +_ntiPlusBtn(k.id)
             +`<span class="tr-cnt">${cnt}</span>`
             +`</div>`;
         });
@@ -28817,7 +28826,20 @@ function quickCapture(where){
    pre-tagged with the NTI kind the user right-clicked in MyWALL, so it
    appears under that exact type the moment MyWALL re-renders — no separate
    trip to the NTI Types picker needed. */
-function quickCaptureWithKind(kid){
+/* v05.70 · J116 — the framed ＋ on a Note Type row. ONE builder for every surface that lists a Note Type
+   (MyWall, a folder's MyWall, the side pane's Note Types); it stops the click, so the row never toggles or drags. */
+function _ntiPlusBtn(kid){
+  const k=kindById(kid);
+  const t='New note in '+(k?k.name:'this type');
+  return `<button type="button" class="nti-plus" data-nti-plus="${esc(kid)}" title="${esc(t)}" aria-label="${esc(t)}" draggable="false" `
+    +`onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" ondragstart="event.preventDefault();event.stopPropagation()" `
+    +`onclick="event.stopPropagation();event.preventDefault();ntiQuickNew(${_ja(kid)})">＋</button>`;
+}
+/* Opens in Pane 3 (a phone: the note view), editing, title focused; the view stays where it is, so MyWall shows it under its type. */
+function ntiQuickNew(kid){
+  quickCaptureWithKind(kid,'pane');
+}
+function quickCaptureWithKind(kid,where){
   hideCtx();
   var pf=_dedupePrimaryFolders();
   if(!pf){
@@ -28835,7 +28857,8 @@ function quickCaptureWithKind(kid){
            tags:[],createdAt:_now,updatedAt:_now,kind:kid,kinds:[kid]};
   DB.articles.push(art);
   persist();
-  _openNewNoteWindow(art.id,pf.id);
+  if(where==='pane')_openNewNoteInPane(art.id);
+  else _openNewNoteWindow(art.id,pf.id);
   var k=kindById(kid);
   toast('✚ New note added under '+(k?k.name:'this type'));
 }
@@ -35149,7 +35172,7 @@ function renderMyWall(sf){
         oncontextmenu="showWallKindCtx(event,'${k.id}')"
         onclick="togSfGrp(${_ja(gkey)})" role="button">`
         +handle
-        +`${dot}<span class="mw-kname">${esc(k.name)}</span><span class="mw-pill mw-pill-s">${arr.length}</span><span class="mw-chev">${gOpen?'▾':'▸'}</span></div>`
+        +`${dot}<span class="mw-kname">${esc(k.name)}</span>${_ntiPlusBtn(k.id)}<span class="mw-pill mw-pill-s">${arr.length}</span><span class="mw-chev">${gOpen?'▾':'▸'}</span></div>`
         +peek;
       if(gOpen){
         h+='<div class="al mw-notes">';
