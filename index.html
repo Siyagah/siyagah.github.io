@@ -7016,14 +7016,18 @@ function _renderFor(ch,fullFn,opts){
 function _searchWords(q){return q.toLowerCase().split(/\s+/).filter(Boolean);}
 function _matchesAllWords(text,words){const t=text.toLowerCase();return words.every(w=>t.includes(w));}
 /* v05.65 · J106 — the ONE search: the side-pane box and the 🔍 pop-up both call this, so they can never find different things. */
-/* v05.71 · J117 — plain-text cache per note: id → {u:updatedAt, ti:title, n:content length, t:lower-case title+text}. Session memory only (never DB,
-   never storage). A note is re-read only when its updatedAt, title or content length differs; the text is exactly what the old search compared. */
-const _stC=new Map();
+/* v05.71 · J117 — plain-text cache per note: id → {c:content string, ti:title, t:lower-case title+text}. Session memory only (never DB,
+   never storage). A note is re-read only when its content string or title differs; the text is exactly what the old search compared. */
+/* Exact key: the entry keeps the content STRING it was built from (`e.c`, a reference, no copy) and the title; same string = same text, whatever
+   updatedAt says. Budget `_ST_CAP` characters: past it a note is read each time as before (no eviction — a search walks every note in turn, so
+   dropping the oldest would drop the very next one needed). */
+const _stC=new Map();let _stChars=0;const _ST_CAP=24e6;
 function _stOf(a){
   const c=a.content||'',e=_stC.get(a.id);
-  if(e&&e.u===a.updatedAt&&e.ti===a.title&&e.n===c.length)return e.t;
+  if(e&&e.c===c&&e.ti===a.title)return e.t;
   const t=(a.title+' '+strip(a.content)).toLowerCase();
-  _stC.set(a.id,{u:a.updatedAt,ti:a.title,n:c.length,t});
+  if(e){_stChars-=e.t.length;_stC.delete(a.id);}
+  if(_stChars+t.length<=_ST_CAP){_stC.set(a.id,{c,ti:a.title,t});_stChars+=t.length;}
   return t;
 }
 let _stTok=0,_stTimer=0,_stPart=null;
