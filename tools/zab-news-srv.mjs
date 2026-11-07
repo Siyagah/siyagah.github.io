@@ -92,7 +92,7 @@ if (want('97a')) {
       return [srvN >= 5 && chans.size === 5 && fake.calls.length === 0 && /^Last fetched/.test(r.st) && !/did not answer/.test(r.st), JSON.stringify({ srvN, chans: [...chans], calls: fake.calls, st: r.st.slice(0, 120) })];
     });
     await T(`97a ${vp.name}: the settings name Siyagah's news service; the helper box sits in a closed "Optional" fold; no sideways scroll`, async () => {
-      const r = await p.evaluate(() => { const s = document.getElementById('th-nw'), f = document.getElementById('th-nw-own');
+      const r = await p.evaluate(() => { const s = document.getElementById('th-nw'), f = document.getElementById('th-nw-own'), sw = s && s.querySelector(':scope > .th-fold'); if (sw && sw.getAttribute('aria-expanded') !== 'true') sw.click();   /* v05.74 J124: the News section is folded; open it as the owner would */
         return { txt: /Siyagah’s own news service/.test(s.innerText), fold: !!f && !f.open && !!f.querySelector('#th-nw-url') && !!f.querySelector('#th-nw-copy') && /Optional/.test(f.querySelector('summary').textContent),
           sumH: f ? f.querySelector('summary').getBoundingClientRect().height : 0, side: document.documentElement.scrollWidth > innerWidth + 1 }; });
       return [r.txt && r.fold && r.sumH >= 44 && !r.side, JSON.stringify(r)];

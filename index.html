@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.72">
+<meta name="app-version" content="05.74">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1552,6 +1552,16 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .theme-sect{margin-bottom:20px}
 .theme-sect-lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;
                 letter-spacing:.07em;color:var(--t3);margin-bottom:10px}
+/* v05.74 · J124: a section heading is an on/off switch that folds the section */
+.th-fold{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;margin:0;padding:4px 0;background:none;border:0;cursor:pointer;text-align:left;font-family:inherit;color:var(--t2)}
+.th-fold .th-ft{flex:1}
+.th-sw{flex:none;position:relative;width:38px;height:22px;border-radius:11px;background:rgba(0,0,0,.18);transition:background .15s}
+.th-sw>span{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .15s}
+.th-open>.th-fold .th-sw{background:var(--green)}
+.th-open>.th-fold .th-sw>span{left:19px}
+.th-f{margin-bottom:6px}
+.th-f>.th-bd{display:none;padding:4px 0 10px}
+.th-f.th-open>.th-bd{display:block}
 .theme-presets{display:flex;gap:9px;flex-wrap:wrap}
 .theme-card{cursor:pointer;border-radius:10px;overflow:hidden;width:82px;
             border:2.5px solid transparent;transition:border-color .15s,transform .1s}
@@ -1565,6 +1575,7 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .theme-card-nm{font-size:10.5px;text-align:center;padding:4px 2px 5px;
                background:var(--paper);color:var(--t2);border-top:1px solid var(--border)}
 .theme-divider{height:1px;background:var(--border);margin:18px 0}
+#theme-body .theme-divider{margin:4px 0}
 .theme-pick-row{display:flex;align-items:center;gap:10px;padding:9px 0;
                 border-bottom:1px solid var(--border)}
 .theme-pick-row:last-child{border-bottom:none}
@@ -4077,7 +4088,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.72</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.74</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -23654,7 +23665,7 @@ function renderThemeModal(){
   if(_themeZab){
     body.innerHTML=h.slice(_zabFrom).replace('<div class="theme-divider"></div>','')
       +'<div class="theme-divider"></div><button class="theme-reset" style="width:auto;font-size:13px;padding:8px 14px;min-height:44px" onclick="openTheme(true)">🎨 All appearance settings…</button>';
-    return;
+    return;   /* v05.74 · J124: ⚙ Zab settings is already short and focused, so it is not folded */
   }
 
   /* Heading styles launcher */
@@ -23668,7 +23679,33 @@ function renderThemeModal(){
   /* Reset */
   h+='<button class="theme-reset" onclick="resetTheme()">↺  Reset to Forest default</button>';
 
-  body.innerHTML=h;
+  body.innerHTML=h; _thFold(body);
+}
+/* v05.74 · J124 (the owner: "Enable all the sections here with on/off switch (it's now long)"): every Appearance section folds under its
+   heading, which carries an on/off switch. All closed at first; what is open is remembered for the session (_thOpen, keyed by the
+   section's id or heading), so a repaint after a change keeps it open. ONE place: _thFold, run after every full paint of #theme-body
+   (not ⚙ Zab settings, which shows only the Zab sections and is short already). */
+const _thOpen=new Set();
+function _thKey(sec){ const l=sec.querySelector('.theme-sect-lbl'); return sec.id||(l?l.textContent.trim():''); }
+function _thFold(body){
+  body.querySelectorAll(':scope > .theme-sect').forEach(sec=>{
+    const lbl=sec.querySelector(':scope > .theme-sect-lbl'); if(!lbl||sec.classList.contains('th-f')) return;
+    const k=_thKey(sec), open=_thOpen.has(k), bd=document.createElement('div');
+    bd.className='th-bd';
+    while(lbl.nextSibling) bd.appendChild(lbl.nextSibling);
+    sec.appendChild(bd); sec.classList.add('th-f'); sec.classList.toggle('th-open',open);
+    const b=document.createElement('button'); b.type='button'; b.className='theme-sect-lbl th-fold';
+    b.setAttribute('aria-expanded',open?'true':'false'); b.dataset.thk=k;
+    b.innerHTML='<span class="th-ft">'+lbl.innerHTML+'</span><span class="th-sw" aria-hidden="true"><span></span></span>';
+    b.onclick=()=>_thToggle(sec,b);
+    lbl.replaceWith(b);
+  });
+}
+function _thToggle(sec,b){
+  const k=b.dataset.thk, open=!sec.classList.contains('th-open');
+  if(open) _thOpen.add(k); else _thOpen.delete(k);
+  sec.classList.toggle('th-open',open); b.setAttribute('aria-expanded',open?'true':'false');
+  if(open) try{ sec.scrollIntoView({block:'nearest'}); }catch(e){}
 }
 
 /* ── Per-folder colours ────────────────────────────────────────────── */
@@ -25623,7 +25660,7 @@ function _newsViewOpen(){
   showModal('<div class="mt">📰 News</div><div id="nwv" class="nwv">'+_newsViewHTML()+'</div><div class="ma"><button class="btn" onclick="_newsViewSettings()" style="min-height:44px">⚙ News settings</button><button class="btn bp" onclick="closeModal()" style="min-height:44px">Close</button></div>');
 }
 function _newsViewSettings(){
-  closeModal(); openTheme();
+  _thOpen.add('th-nw'); closeModal(); openTheme();
   const go=()=>{ const e=document.getElementById('th-nw'); if(e) e.scrollIntoView({block:'start'}); };
   go(); setTimeout(go,80);
 }

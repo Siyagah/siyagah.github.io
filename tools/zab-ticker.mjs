@@ -160,6 +160,7 @@ if (want('92d')) {
   await T('92d the tick list (Appearance, by real clicks): every Zab, the nested one indented; unticking one hides its titles', async () => {
     await set(p, 'pids', []);
     await p.locator('#sb-tools-btn').click(); await sleep(300); await p.locator('#sb-tools >> text=Appearance').first().click(); await sleep(600);
+    await p.locator('#th-tk > .th-fold').click(); await sleep(250);   /* v05.74 · J124: the section opens under its switch */
     const info = await p.evaluate(() => [...document.querySelectorAll('#th-tk .tk-pk')].map((c) => ({ pid: c.dataset.pid, pad: parseInt(c.closest('label').style.paddingLeft) || 0, on: c.checked })));
     await p.locator('#th-tk .tk-pk[data-pid="jp-shop"]').click(); await sleep(400);
     const t = await texts(p);
@@ -323,7 +324,7 @@ if (want('92k')) {
     (await p.evaluate(() => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => { const r = e.getBoundingClientRect(); return { width: r.width, height: r.height }; }))).forEach((r, i) => note('menu row ' + i, r));
     await p.keyboard.press('Escape'); await p.evaluate(() => _jebHideMenu());
     await p.evaluate(() => { openTheme ? openTheme() : 0; }).catch(() => {}); await sleep(500);
-    await p.evaluate(() => { zabTkHours('on', true); renderThemeModal(); }); await sleep(300);
+    await p.evaluate(() => { zabTkHours('on', true); _thOpen.add('th-tk'); renderThemeModal(); }); await sleep(300);   /* v05.74 · J124: open the section, as a tap on its switch would */
     const ctl = await p.evaluate(() => [...document.querySelectorAll('#th-tk select,#th-tk .ls-btn,#th-tk input[type=range],#th-tk label')].map((e) => { const r = e.getBoundingClientRect(); return { n: (e.id || e.className || e.tagName) + '', width: r.width, height: r.height }; }));
     ctl.forEach((r) => note(r.n, r));
     return [tk.length === 5 && ctl.length > 10 && small.length === 0, `${tk.length} titles, ${ctl.length} settings controls; too small: ${small.slice(0, 6).join(', ') || 'none'}`];
