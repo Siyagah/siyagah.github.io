@@ -296,7 +296,10 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     const sheet = await page.evaluate(() => { const b = document.getElementById('mmj-box').getBoundingClientRect(); return { bottom: Math.round(b.bottom), w: Math.round(b.width) }; });
     const lastBefore = await page.evaluate(() => document.getElementById('mmj-klast').textContent);
     const n0 = wp(seen);
-    if (touch) { const b = await page.locator('#mmj-know').boundingBox(); await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); } else await page.click('#mmj-know');
+    /* v05.74 review: the box is redrawn (outerHTML) whenever a check ends, so a background check finishing here detached the button and boundingBox() was null
+       (failed on main too). Wait for a settled, enabled button and read its box again if it was replaced in between. */
+    if (touch) { let b = null; for (let i = 0; i < 40 && !b; i++) { await page.waitForSelector('#mmj-know:not([disabled])', { state: 'visible', timeout: 90000 }); b = await page.locator('#mmj-know').boundingBox(); if (!b) await page.waitForTimeout(100); }
+      await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); } else await page.click('#mmj-know');
     await page.waitForSelector('#mmj-ksum', { timeout: 90000 });
     const sumTxt = await page.evaluate(() => document.getElementById('mmj-ksum').textContent);
     const lastAfter = await page.evaluate(() => document.getElementById('mmj-klast').textContent);

@@ -287,7 +287,8 @@ try {
         await d.page.keyboard.press('Escape'); await sleep(200);
         check(!(await on(d, () => !!document.getElementById('zab-card'))), `${t} Escape closes it`);
         /* Appearance, through 🧰 → 🎨 Appearance */
-        const appearance = async () => { await tapEl(d, vp, '#sb-tools-btn'); await sleep(250); await tapEl(d, vp, '.sb-mi:has-text("Appearance")'); await d.page.waitForSelector('#th-zpl', { timeout: 3000 }); await sleep(250); };
+        const appearance = async () => { await tapEl(d, vp, '#sb-tools-btn'); await sleep(250); await tapEl(d, vp, '.sb-mi:has-text("Appearance")'); await d.page.waitForSelector('#th-zpl', { timeout: 3000 }); await sleep(250);
+          /* v05.74 · J124: the section is folded under its switch; tap it open as the owner does */ if ((await d.page.getAttribute('#th-zpl > .th-fold', 'aria-expanded')) !== 'true') { await tapEl(d, vp, '#th-zpl > .th-fold'); await sleep(250); } };
         await appearance();
         const ap = await on(d, () => { const s = document.getElementById('th-zpl'); return { txt: s.textContent.replace(/\s+/g, ' '), vals: [...s.querySelectorAll('input[type=radio]')].map((r) => r.value + (r.checked ? '*' : '')).join() }; });
         check(ap.vals === 'rail*,drawer,cols,bar' && /Bar along the bottom \(as before\)/.test(ap.txt) && /applies to phones/.test(ap.txt), `${t} 🎨 Appearance has "Zab on the phone" with Rail ticked, and says it applies to phones (${ap.vals})`, ap.txt);
@@ -310,7 +311,7 @@ try {
       /* from a laptop: set it at 1440, then the same device narrowed to a phone shows it */
       const vp = D1440, d = await dev(makeCloud(), 'c1440', vp); const t = '77c@1440';
       try {
-        await tapEl(d, vp, '#sb-tools-btn'); await sleep(250); await tapEl(d, vp, '.sb-mi:has-text("Appearance")'); await d.page.waitForSelector('#th-zpl'); await sleep(250);
+        await tapEl(d, vp, '#sb-tools-btn'); await sleep(250); await tapEl(d, vp, '.sb-mi:has-text("Appearance")'); await d.page.waitForSelector('#th-zpl'); await sleep(250); if ((await d.page.getAttribute('#th-zpl > .th-fold', 'aria-expanded')) !== 'true') { await tapEl(d, vp, '#th-zpl > .th-fold'); await sleep(250); }   /* v05.74 · J124: open the folded section */
         const note = await on(d, () => document.getElementById('th-zpl').textContent);
         check(/applies to phones/.test(note), `${t} the "Zab on the phone" choice is shown at 1440 with a line saying it applies to phones`);
         await tapEl(d, vp, '#th-zpl label:has(input[value="cols"])'); await sleep(400);
@@ -334,7 +335,7 @@ try {
         await longPress(A, '#zab-btn'); await A.page.waitForSelector('#zab-card'); await tapEl(A, P390, '#zab-card .zc-r[data-k="cols"]'); await sleep(300);
         await flush(A); await quiet(cloud, A);
         check(await wait(async () => (await layout(B)) === 'cols'), '77c the layout chosen on the phone (Columns) reaches the laptop through the cloud', 'B: ' + (await layout(B)));
-        await tapEl(B, D1440, '#sb-tools-btn'); await sleep(250); await tapEl(B, D1440, '.sb-mi:has-text("Appearance")'); await B.page.waitForSelector('#th-zpl'); await sleep(250);
+        await tapEl(B, D1440, '#sb-tools-btn'); await sleep(250); await tapEl(B, D1440, '.sb-mi:has-text("Appearance")'); await B.page.waitForSelector('#th-zpl'); await sleep(250); if ((await B.page.getAttribute('#th-zpl > .th-fold', 'aria-expanded')) !== 'true') { await tapEl(B, D1440, '#th-zpl > .th-fold'); await sleep(250); }   /* v05.74 · J124: open the folded section */
         const ticked = await on(B, () => document.querySelector('#th-zpl input:checked').value);
         check(ticked === 'cols', `77c ...and the laptop's Appearance shows it ticked (${ticked})`);
         await tapEl(B, D1440, '#th-zpl label:has(input[value="drawer"])'); await sleep(300); await on(B, () => closeTheme());
