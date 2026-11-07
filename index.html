@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.72">
+<meta name="app-version" content="05.73">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1148,7 +1148,8 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jeb-x,.jeb-more{border:none;background:transparent;color:var(--t2);font-size:18px;min-width:40px;height:40px;border-radius:8px;cursor:pointer}
 .jeb-x:hover,.jeb-more:hover{background:var(--hover)}
 .jeb-add{display:flex;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;align-items:flex-start}
-.jeb-add textarea,.jeb-edit{flex:1;min-width:0;resize:none;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font:inherit;font-size:14px;line-height:1.4;color:var(--t1);background:var(--paper);outline:none;min-height:40px;max-height:140px}
+.jeb-add textarea,.jeb-edit{flex:1;min-width:0;resize:none;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font:inherit;font-size:14px;line-height:1.4;color:var(--t1);background:var(--paper);outline:none;min-height:40px;box-sizing:border-box;max-height:40vh}
+.jeb-edit{max-height:60vh;overflow-y:auto}   /* v05.72 · J121: the edit box grows with the text (wrapped lines too), up to 60% of the screen, then scrolls */
 .jeb-add textarea:focus,.jeb-edit:focus{border-color:var(--green)}
 .jeb-add textarea::placeholder{color:var(--t3);opacity:1}
 .jeb-list{flex:1;min-height:0;overflow-y:auto;padding:4px 0;-webkit-overflow-scrolling:touch}
@@ -4076,7 +4077,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.72</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version">v05.73</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6807,7 +6808,7 @@ function smartCount(sfId){
 }
 /* v05.72 · J117b — the number beside "Timeline": how many notes are in This Week, Last Week, This Month or Last Month (each counted once).
    The four lists are two rays of dates (from the start of last week; from the start of last month), so a note is in at least one
-   exactly when its date is on or after the earlier start: one pass, no sorting. Same answer as the lists' union (block 132d compares). */
+   exactly when its date is on or after the earlier start: one pass, no sorting. Same answer as the lists' union (block 133d compares). */
 function _timeCount(){
   const now=new Date(),day=864e5, x=new Date(now); x.setHours(0,0,0,0);
   const weekStart=x.getTime()-((now.getDay()+6)%7)*day, lastWeekStart=weekStart-7*day;
@@ -26347,7 +26348,7 @@ function _jebMakePanel(){
   document.body.appendChild(p);
   const add=p.querySelector('#jeb-add-in');
   add.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); _jebAddFromInput(); } });
-  add.addEventListener('input',()=>{ add.style.height='auto'; add.style.height=Math.min(add.scrollHeight,140)+'px'; });
+  add.addEventListener('input',()=>_jebFit(add));
   p.addEventListener('click',e=>{
     const t=e.target;
     if(t.closest('.jeb-x')){ jebClosePanel(); return; }
@@ -26722,6 +26723,15 @@ function _jebAddFromInput(){
   ta.value=''; ta.style.height='auto';
   _jebPanelSig=''; jebRefresh(); ta.focus({preventScroll:true});
 }
+/* v05.72 · J121 — a Zab text box is as tall as its text, counting lines that WRAP (the old rows= counted only typed line breaks), up to its
+   CSS max-height (60vh while editing, 40vh for the add box); past that it scrolls and keeps the caret in view. */
+function _jebFit(ta){
+  if(!ta||!ta.isConnected) return;
+  const cs=getComputedStyle(ta), bd=(parseFloat(cs.borderTopWidth)||0)+(parseFloat(cs.borderBottomWidth)||0), mx=parseFloat(cs.maxHeight)||1e9;
+  ta.style.height='auto'; const h=ta.scrollHeight+bd; ta.style.height=Math.min(h,mx)+'px';
+  if(document.activeElement===ta){ const r=ta.getBoundingClientRect(), vv=window.visualViewport, bot=vv?vv.offsetTop+vv.height:innerHeight;
+    if(r.bottom>bot) try{ ta.scrollIntoView({block:'nearest'}); }catch(e){} }
+}
 function _jebStartEdit(iid){
   if(_jebEditId&&_jebEditId!==iid){ const cur=document.querySelector('#jeb-panel .jeb-edit,#jeb-deck .jeb-edit'); if(cur) cur.blur(); }
   const it=_jebItem(iid), row=document.querySelector(`#jeb-deck .jeb-card[data-iid="${iid}"],#jeb-panel .jeb-it[data-iid="${iid}"]`);
@@ -26731,6 +26741,7 @@ function _jebStartEdit(iid){
   ta.value=it.text; ta.rows=Math.max(1,Math.min(6,String(it.text).split('\n').length));
   row.querySelector('.jeb-tx').replaceWith(ta);
   ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length);
+  _jebFit(ta); ta.scrollTop=ta.scrollHeight; ta.addEventListener('input',()=>_jebFit(ta));
   ta.addEventListener('keydown',e=>{
     if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); ta.blur(); }
     else if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); _jebEditCancel=true; ta.blur(); }

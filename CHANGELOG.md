@@ -11231,7 +11231,7 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
    and only the moved folder is stamped (its order is put between its neighbours; the siblings are renumbered only on a tie, the N1 lesson).
    `MMJ-SHARE.md` documents it; 128a checks it and its refusal. Block 128: 94/94.
 
-## v05.72 — J117 part 2: a calmer start, faster Smart Views and MyWall (issue #273)
+## v05.73 — J117 part 2: a calmer start, faster Smart Views and MyWall (issue #273)
 
 The owner: "check app loading, page loading issues … enable faster loading everywhere." v05.71 did search; this round does the start and the screens the numbers showed to be slow.
 
@@ -11273,7 +11273,7 @@ Run-to-run noise on this machine is about ±20 % at ×4 (the first-paint and ren
 
 **What was built.** `_jobs`, `_jobOk(name)`, `_jobsArm()`, `_jobsArmIdle()` (top of the script, after `_dbLoaded`). Boot calls `_jobsArmIdle()` when `__appBooted` is set (after the first `render()`, the fonts wait and two frames); that waits for one idle moment (`requestIdleCallback`, timeout 2 s; `setTimeout` 800 ms where there is none) and `_jobsArm()` opens the seven gates one at a time, 350 ms apart (`_JOB_ORDER`: news, ms, mp, mi, pk, mydb, mmj) and calls each tick once as it opens. A 20 s fallback arms them even if boot never reaches its first render. **Only the timers and listeners are gated** (`setInterval` callbacks, `online`/`offline`/`visibilitychange` listeners of the news and picture jobs); a direct call — a button, a test, `_msTick(true)` — is never held. New background job → add its name to `_JOB_ORDER`, its kick to `_jobsArm`, and the gate to its timer.
 
-**Parse-time listeners and what they do inside the new delay** (the standing lesson): `pagehide` and `visibilitychange` → `_flushEverythingOut` → `_save()` / `flushPendingPush()`: not changed, `_save()` still refuses before `_dbLoaded`, and a save inside the delay works (132c). The picture job's `online`/`visibilitychange` listeners and the news `online`/`offline`/`visibilitychange` listeners now do nothing until their gate is open (they would only have started the deferred job early). The `load` listener for the service worker: not touched. The `pagehide` of the harness 132c fires every 5 ms through the whole start: nothing reached the device copy before `_dbLoaded`.
+**Parse-time listeners and what they do inside the new delay** (the standing lesson): `pagehide` and `visibilitychange` → `_flushEverythingOut` → `_save()` / `flushPendingPush()`: not changed, `_save()` still refuses before `_dbLoaded`, and a save inside the delay works (133c). The picture job's `online`/`visibilitychange` listeners and the news `online`/`offline`/`visibilitychange` listeners now do nothing until their gate is open (they would only have started the deferred job early). The `load` listener for the service worker: not touched. The `pagehide` of the harness 133c fires every 5 ms through the whole start: nothing reached the device copy before `_dbLoaded`.
 
 **Step 3 — the worst of the rest, found with a CPU profile (not guessed).** Every Smart View, MyWall and the Timeline count went through `getSmartGroups`, which **sorted all notes newest first (`localeCompare` ×36,000) before looking at which view it was asked for** — 280 ms at ×4 for a view of 170 notes — and the Timeline number re-parsed every date four times. Fixed, same output:
 - `getSmartGroups`: the sorted copy is built only for the two date views, now in one pass with each date parsed once, sorting only each short list (a stable sort, so the lists are identical).
@@ -11287,7 +11287,19 @@ Run-to-run noise on this machine is about ±20 % at ×4 (the first-paint and ren
 - The cloud side of every deferred job (the part after its gate) cannot be timed offline; only that each tick starts and the sync checks still pass.
 - Folder, 2,000-note folder and 34,000-note folder were not changed (they were already the windowed list).
 
-**Checks.** Block 132, `tools/speed-j117b.mjs` (27 checks at 390 / 820 / 1440): 132a the seven jobs start after the first render, 350 ms apart, within 5 s, and each timer then reaches its tick (a wrapped tick is seen), and a closed gate stops it; 132b two devices on the S1 fake — a change made on A before B started and one made while B was starting reach B with no tap, and B's later edit reaches A; 132c a `pagehide`/`hidden` fired through the whole start writes nothing to the device copy before `_dbLoaded` and the notebook is intact, and a `pagehide` inside the delay (jobs not yet started) still saves; 132d the oracle — Timeline lists, every Smart View number, MyWall (compact/preview × closed/open) and eight drawn screens (`#tree`, `#p2h`, `#p2c`) equal the v05.71 code byte for byte; 132e no page errors. `--measure` prints the table above.
+**Checks.** Block 133, `tools/speed-j117b.mjs` (27 checks at 390 / 820 / 1440): 133a the seven jobs start after the first render, 350 ms apart, within 5 s, and each timer then reaches its tick (a wrapped tick is seen), and a closed gate stops it; 133b two devices on the S1 fake — a change made on A before B started and one made while B was starting reach B with no tap, and B's later edit reaches A; 133c a `pagehide`/`hidden` fired through the whole start writes nothing to the device copy before `_dbLoaded` and the notebook is intact, and a `pagehide` inside the delay (jobs not yet started) still saves; 133d the oracle — Timeline lists, every Smart View number, MyWall (compact/preview × closed/open) and eight drawn screens (`#tree`, `#p2h`, `#p2c`) equal the v05.71 code byte for byte; 133e no page errors. `--measure` prints the table above.
+
+## v05.72 — J121: a Zab item's edit box grows with its text (7 Nov 2026, built by the Architect)
+
+**The owner** (phone screenshot: a long Bangla item in the Quick tasks Zab, cut to two lines while editing): "Fix typing/ edit space, should expand/ wrap to fit the text as long as writing".
+
+**Cause.** `_jebStartEdit` sized the box with `rows` = the number of typed line breaks (one paragraph = 1 row, at most 6) and never again while typing; `.jeb-edit` had `max-height:140px`. A long paragraph that WRAPS had a 2-line box with a hidden scroll.
+
+**Fix.** ONE function, `_jebFit(ta)`: height = `scrollHeight` + borders (box-sizing border-box), up to the box's CSS `max-height` — 60vh while editing an item (panel and deck cards), 40vh for the "Jot something…" add box (was 140 px); past that it scrolls inside, and the caret is kept in view above the keyboard (`visualViewport`). Run when the edit starts (caret at the end) and on every `input`. Every Zab kind uses the same edit box, so plain, Tasks, Ideas, Shopping, Links and News items all get it. Phone, tablet and computer: the same shape (the box is inside the item's row at every size).
+
+**Check.** Block 132, `tools/zab-edit-j121.mjs` (30 checks at 390/820/1440, a Tasks Zab and an Ideas Zab, a real tap/click on the text): the whole item shows (no hidden scroll), it grows while typing, a very long item stops at 60% of the screen and scrolls, the add box grows (≤ 40%), Enter saves the text exactly, no page errors. On v05.71's code the same check gives 15/30 (every growth check fails).
+
+**Not done.** Step boxes in a task and the Title dialog keep their own sizes (not what the owner pointed at).
 
 ## v05.71 — J117 faster search (first step; issue #271)
 

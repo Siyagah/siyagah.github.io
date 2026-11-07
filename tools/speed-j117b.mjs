@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* tools/speed-j117b.mjs — v05.72, J117 part 2 (block 132). A faster start, faster big folder / note / MyWall / Smart View.
+/* tools/speed-j117b.mjs — v05.73, J117 part 2 (block 133). A faster start, faster big folder / note / MyWall / Smart View.
    `node tools/speed-j117b.mjs --measure [--notes=36000] [--reps=2]`  prints the before/after table (not a check).
    Checks (390 / 820 / 1440) are in the second half of this file. */
 import { openApp, seedDB } from './harness.mjs';
@@ -82,15 +82,15 @@ async function measureAll() {
 }
 if (MEASURE) { await measureAll(); process.exit(0); }
 
-/* ───────────────────────────── the checks (block 132) ─────────────────────────────
-   132a the seven deferred jobs start after boot's first render(), one at a time (≥ 300 ms apart), each within 5 s of "booted", and each
+/* ───────────────────────────── the checks (block 133) ─────────────────────────────
+   133a the seven deferred jobs start after boot's first render(), one at a time (≥ 300 ms apart), each within 5 s of "booted", and each
         job's own timer then really calls its tick (a wrapped tick is seen);
-   132b a change made on device A before B's start — and one made right after B opened, inside the delay — reaches B with no tap;
-   132c a pagehide during the delay still saves; a pagehide/visibility "hidden" fired at every moment of the start writes NOTHING to the
+   133b a change made on device A before B's start — and one made right after B opened, inside the delay — reaches B with no tap;
+   133c a pagehide during the delay still saves; a pagehide/visibility "hidden" fired at every moment of the start writes NOTHING to the
         device copy before _dbLoaded, and the notebook is intact after;
-   132d oracle: the Smart View / Timeline counts and lists, MyWall (compact + preview, closed + open) and the screens drawn
+   133d oracle: the Smart View / Timeline counts and lists, MyWall (compact + preview, closed + open) and the screens drawn
         (#tree, #p2h, #p2c) are byte for byte what the v05.71 code draws;
-   132e no page errors. */
+   133e no page errors. */
 import { report, playwright, serve } from './harness.mjs';
 import { makeCloud, addDevice, on, quiet, waitSeeded } from './s1-fake.mjs';
 const r = report('J117 part 2 — a faster start, faster Smart Views and MyWall');
@@ -130,7 +130,7 @@ const OLD_TIME = `(() => {
 
 for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, false]]) {
   const t = `@${w}`;
-  /* ---- 132a ---- */
+  /* ---- 133a ---- */
   {
     const app = await openApp({ viewport: { width: w, height: h }, hasTouch: touch, db: seedDB(), initScript: WATCH });
     const p = app.page;
@@ -142,7 +142,7 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       });
       const ts = NAMES.map((n) => s.t[n]);
       const after = ts.every((x) => x >= s.render1), gaps = ts.slice(1).every((x, i) => x - ts[i] >= 300), within = ts.every((x) => x - s.origin <= 5000 + 1500);
-      r.check(after && gaps && within && NAMES.every((n) => s.ok[n]), `132a${t} the 7 deferred jobs start after the first render, 350 ms apart, all within 5 s`, JSON.stringify({ after, gaps, within, rel: ts.map((x) => x - s.origin), render1: s.render1 - s.origin }));
+      r.check(after && gaps && within && NAMES.every((n) => s.ok[n]), `133a${t} the 7 deferred jobs start after the first render, 350 ms apart, all within 5 s`, JSON.stringify({ after, gaps, within, rel: ts.map((x) => x - s.origin), render1: s.render1 - s.origin }));
       /* each job's own timer calls its tick: wrap the global tick after boot and wait one period */
       const calls = await p.evaluate(async () => {
         const c = {}; const names = { news: '_newsTick', ms: '_msTick', mp: '_mpTick', mi: '_miTick', mydb: '_mydbTick' };
@@ -150,19 +150,19 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
         await new Promise((res) => setTimeout(res, 5600));
         return c;
       });
-      r.check(Object.values(calls).every((n) => n >= 1), `132a2${t} after the start every 5-second job's timer reaches its tick`, JSON.stringify(calls));
+      r.check(Object.values(calls).every((n) => n >= 1), `133a2${t} after the start every 5-second job's timer reaches its tick`, JSON.stringify(calls));
       /* a held job does not run by timer: a fresh flag set false stops it, true lets it run (the gate is the timer's only condition) */
       const gate = await p.evaluate(async () => {
         let n = 0; const orig = window._msTick; window._msTick = function () { n++; return orig.apply(this, arguments); };
         _jobs.ok.ms = false; await new Promise((res) => setTimeout(res, 5600)); const held = n; _jobs.ok.ms = true; await new Promise((res) => setTimeout(res, 5600)); window._msTick = orig;
         return { held, released: n - held };
       });
-      r.check(gate.held === 0 && gate.released >= 1, `132a3${t} the timer runs a job only while its gate is open`, JSON.stringify(gate));
-    } catch (e) { r.check(false, `132a${t} threw`, String(e && e.stack || e).slice(0, 400)); }
-    r.check(app.errors.length === 0, `132e-a${t} no page errors`, app.errors.slice(0, 3).join(' | '));
+      r.check(gate.held === 0 && gate.released >= 1, `133a3${t} the timer runs a job only while its gate is open`, JSON.stringify(gate));
+    } catch (e) { r.check(false, `133a${t} threw`, String(e && e.stack || e).slice(0, 400)); }
+    r.check(app.errors.length === 0, `133e-a${t} no page errors`, app.errors.slice(0, 3).join(' | '));
     await app.close();
   }
-  /* ---- 132c ---- */
+  /* ---- 133c ---- */
   {
     /* a hook at document start: every write to the device copy is logged with whether the notebook had loaded; a slow idle callback widens the delay */
     const HOOK = () => {
@@ -181,7 +181,7 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     const p = app.page;
     try {
       const st = await p.evaluate(() => ({ early: window.__early.slice(0, 5), earlyN: window.__early.length, armed: _jobs.armed, n: DB.articles.length, folders: DB.folders.length }));
-      r.check(st.earlyN === 0 && st.n >= 3 && st.folders >= 1, `132c${t} pagehide/hidden fired through the whole start wrote nothing to the device copy before _dbLoaded, and the notebook is intact`, JSON.stringify(st));
+      r.check(st.earlyN === 0 && st.n >= 3 && st.folders >= 1, `133c${t} pagehide/hidden fired through the whole start wrote nothing to the device copy before _dbLoaded, and the notebook is intact`, JSON.stringify(st));
       /* inside the delay: an edit that only the pagehide path can save */
       await p.evaluate(() => { window.__armedAtEdit = _jobs.armed; DB.articles[0].title = 'saved by pagehide during the delay'; DB.articles[0].updatedAt = new Date().toISOString(); });
       const armed = await p.evaluate(() => window.__armedAtEdit);
@@ -190,11 +190,11 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       await p.reload({ waitUntil: 'domcontentloaded' });
       await p.waitForFunction(() => window.__appBooted === true, null, { timeout: 60000 });
       const title = await p.evaluate(() => (DB.articles.find((a) => a.title === 'saved by pagehide during the delay') || {}).title || null);
-      r.check(armed === false && title === 'saved by pagehide during the delay', `132c2${t} a pagehide inside the delay (jobs not yet started) still saves the edit`, JSON.stringify({ armed, title }));
-    } catch (e) { r.check(false, `132c${t} threw`, String(e && e.stack || e).slice(0, 400)); }
+      r.check(armed === false && title === 'saved by pagehide during the delay', `133c2${t} a pagehide inside the delay (jobs not yet started) still saves the edit`, JSON.stringify({ armed, title }));
+    } catch (e) { r.check(false, `133c${t} threw`, String(e && e.stack || e).slice(0, 400)); }
     await app.close();
   }
-  /* ---- 132d ---- */
+  /* ---- 133d ---- */
   {
     const app = await openApp({ viewport: { width: w, height: h }, hasTouch: touch, db: seedDB() });
     const p = app.page;
@@ -247,14 +247,14 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
         out.views = views.length; selFolder('f1');
         return out;
       }, OLD_TIME);
-      r.check(o.bad.length === 0, `132d${t} oracle: Timeline lists, the Smart View numbers, MyWall (4 states) and ${o.views} drawn screens equal the v05.71 code, byte for byte (Timeline holds ${o.timeN})`, o.bad.join(' | '));
-    } catch (e) { r.check(false, `132d${t} threw`, String(e && e.stack || e).slice(0, 500)); }
-    r.check(app.errors.length === 0, `132e-d${t} no page errors`, app.errors.slice(0, 3).join(' | '));
+      r.check(o.bad.length === 0, `133d${t} oracle: Timeline lists, the Smart View numbers, MyWall (4 states) and ${o.views} drawn screens equal the v05.71 code, byte for byte (Timeline holds ${o.timeN})`, o.bad.join(' | '));
+    } catch (e) { r.check(false, `133d${t} threw`, String(e && e.stack || e).slice(0, 500)); }
+    r.check(app.errors.length === 0, `133e-d${t} no page errors`, app.errors.slice(0, 3).join(' | '));
     await app.close();
   }
 }
 
-/* ---- 132b — sync with the existing two-device harness (S1 fake), once at 1440 and once as a phone ---- */
+/* ---- 133b — sync with the existing two-device harness (S1 fake), once at 1440 and once as a phone ---- */
 {
   const pw = await playwright(); const srv = await serve(); const browser = await pw.chromium.launch();
   const cloud = makeCloud(); let A = null, B = null;
@@ -272,14 +272,14 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     await on(A, () => { const a = DB.articles[1]; a.title = 'edited on A while B was starting'; a.updatedAt = new Date().toISOString(); persist(); });
     const t1 = await waitFor(() => on(B, (i) => (DB.articles.find((x) => x.id === i) || {}).title === 'edited on A before B started', id) , 90000).catch(() => -1);
     const t1b = await waitFor(() => on(B, (i) => (DB.articles.find((x) => x.id === i) || {}).title === 'edited on A while B was starting', id2), 90000).catch(() => -1);
-    r.check(t1 >= 0 && t1b >= 0, `132b a change made on A before B started, and one made while B was starting, reach B with no tap (${t1} ms, ${t1b} ms)`);
+    r.check(t1 >= 0 && t1b >= 0, `133b a change made on A before B started, and one made while B was starting, reach B with no tap (${t1} ms, ${t1b} ms)`);
     /* and the other way, once B's jobs are running */
     await on(B, () => { const a = DB.articles[2]; a.title = 'edited on B after its jobs started'; a.updatedAt = new Date().toISOString(); persist(); });
     const id3 = await on(B, () => DB.articles[2].id);
     const t2 = await waitFor(() => on(A, (i) => (DB.articles.find((x) => x.id === i) || {}).title === 'edited on B after its jobs started', id3), 90000).catch(() => -1);
-    r.check(t2 >= 0, `132b2 B's edit made after its jobs started reaches A (${t2} ms)`);
-    r.check([...A.errors, ...B.errors].length === 0, '132e-b no page errors on either device', [...A.errors, ...B.errors].slice(0, 3).join(' | '));
-  } catch (e) { r.check(false, `132b threw: ${String(e && e.stack || e).slice(0, 400)}`); }
+    r.check(t2 >= 0, `133b2 B's edit made after its jobs started reaches A (${t2} ms)`);
+    r.check([...A.errors, ...B.errors].length === 0, '133e-b no page errors on either device', [...A.errors, ...B.errors].slice(0, 3).join(' | '));
+  } catch (e) { r.check(false, `133b threw: ${String(e && e.stack || e).slice(0, 400)}`); }
   finally { await browser.close(); srv.close && srv.close(); }
 }
 process.exit(r.finish() ? 1 : 0);
