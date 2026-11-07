@@ -11302,7 +11302,9 @@ Built by the Architect (the owner's screenshot of 🎨 Appearance: "Enable all t
   in `_thOpen` (keyed by the section id or heading), so the repaint after every setting change keeps the section open. Nothing is stored.
 - ⚙ News settings (from the 📰 News view) opens the News section (`_thOpen.add('th-nw')`).
 - Checks updated in place, because the section they test is now closed until its switch is tapped: 60i (taps Zab bar's switch), 66a
-  (opens Zab bar), 92d (taps Scrolling titles' switch), 92k (opens it), 95a/95b/95f (tap News's switch). Recorded here as the reason.
+  (opens Zab bar), 92d (taps Scrolling titles' switch), 92k (opens it), 95a/95b/95f (tap News's switch), 94a (the "pocket" word sweep opens every section first, so it still reads every word), 97a and
+  104e (open News before reading its text), 77c (opens "Zab on the phone" before choosing). Also 109 (`tools/mmj-sync.mjs`): its phone tap read the
+  ⟳ Check now button's box just after a background check had redrawn it (null; it failed on main as well), so it now waits for a settled button.
 - Phone, tablet and computer: the same dialog, headings are 44 px targets; dividers between sections shrink to 4 px.
 - Check: block 134, `tools/theme-fold-j124.mjs` (134a–134g at 390/820/1440, reached by a real tap on 🧰 → 🎨 Appearance).
 
