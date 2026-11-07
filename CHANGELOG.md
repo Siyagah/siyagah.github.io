@@ -11231,6 +11231,18 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
    and only the moved folder is stamped (its order is put between its neighbours; the siblings are renumbered only on a tie, the N1 lesson).
    `MMJ-SHARE.md` documents it; 128a checks it and its refusal. Block 128: 94/94.
 
+## v05.72 — J121: a Zab item's edit box grows with its text (7 Nov 2026, built by the Architect)
+
+**The owner** (phone screenshot: a long Bangla item in the Quick tasks Zab, cut to two lines while editing): "Fix typing/ edit space, should expand/ wrap to fit the text as long as writing".
+
+**Cause.** `_jebStartEdit` sized the box with `rows` = the number of typed line breaks (one paragraph = 1 row, at most 6) and never again while typing; `.jeb-edit` had `max-height:140px`. A long paragraph that WRAPS had a 2-line box with a hidden scroll.
+
+**Fix.** ONE function, `_jebFit(ta)`: height = `scrollHeight` + borders (box-sizing border-box), up to the box's CSS `max-height` — 60vh while editing an item (panel and deck cards), 40vh for the "Jot something…" add box (was 140 px); past that it scrolls inside, and the caret is kept in view above the keyboard (`visualViewport`). Run when the edit starts (caret at the end) and on every `input`. Every Zab kind uses the same edit box, so plain, Tasks, Ideas, Shopping, Links and News items all get it. Phone, tablet and computer: the same shape (the box is inside the item's row at every size).
+
+**Check.** Block 132, `tools/zab-edit-j121.mjs` (30 checks at 390/820/1440, a Tasks Zab and an Ideas Zab, a real tap/click on the text): the whole item shows (no hidden scroll), it grows while typing, a very long item stops at 60% of the screen and scrolls, the add box grows (≤ 40%), Enter saves the text exactly, no page errors. On v05.71's code the same check gives 15/30 (every growth check fails).
+
+**Not done.** Step boxes in a task and the Title dialog keep their own sizes (not what the owner pointed at).
+
 ## v05.71 — J117 faster search (first step; issue #271)
 
 **Done:** the side-pane search no longer works out every note's text on every key.

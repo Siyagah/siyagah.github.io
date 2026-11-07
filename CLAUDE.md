@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.71.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.72.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.72** (7 Nov 2026) — J121 (built by the Architect; the owner's phone screenshot): a Zab item's edit box grows with its text, wrapped lines included. ONE `_jebFit(ta)` (scrollHeight + borders, up to the CSS max-height: 60vh editing, 40vh the add box; then it scrolls, caret kept above the keyboard), run at the start of an edit and on every `input`. **A new Zab text box uses `_jebFit`.** Check: block 132, `tools/zab-edit-j121.mjs`.
 - **v05.71** (6 Nov 2026) — J117 first step (built by the builder, issue #271): ONE plain-text cache for search, `_stOf(a)` (key = the content string itself, `e.c===c`; budget `_ST_CAP` 40 M characters ≈ +41 MB heap, no LRU), a 150 ms pause + 12 ms slices (`_searchTyped`/`_searchRunAsync`), and a refinement (`_searchNotes`/`_stLast`, valid only while `_dbRev`/`_s1MergeSeq` are unchanged). **A new place that searches note text goes through `_searchAll`.** Start-up and folder/note/MyWall/Smart View speed are NOT done. Check: block 131, `tools/speed-j117.mjs`.
 - **v05.70** (5 Nov 2026) — J116 (built by the builder, issue #269): a framed ＋ on every Note Type row (MyWall `.mw-kind`, a folder's MyWall `.mwsub-hd`, the side pane's `.nti-kind-row`), ONE builder `_ntiPlusBtn(kid)` → `ntiQuickNew` → `quickCaptureWithKind(kid,'pane')` (opens in Pane 3, title focused, the view does not move). **A new Note Type row uses `_ntiPlusBtn`.** Check: block 130, `tools/nti-quick.mjs`.
 - **v05.69** (5 Nov 2026) — J27 ① R3 (built by the builder, issue #267): **the visitors' copy** `notebooks/{nb}/pub/…`, readable WITHOUT sign-in (the owner adds ONE rule, text in `MMJ-SHARE.md`): only 👁 `vis:1` MMJ folders and notes. `_mpTick` (5 s, the `_msGate` gate shared with `_msTick`; own map `pub|<nb>`) writes `t~0` `{folders:[{id,n,p,o}]}` (`p` = nearest VISIBLE ancestor, `_mpTree`), `n~<id>` (content through `_enxClean`, `folderIds` visible only, no kind/vis/history/from*), `gone` once, pictures of visible notes `p~<sha>` + `pp~<h>~<i>` (hash verified; a small copy only when the private meta names it). Both copies write through ONE `_msWriter` (batching, parts, `gone`, cleanup). Contract: `MMJ-SHARE.md` "Visitors' copy (R3)". Check: block 129, `tools/mmj-pub.mjs`.
