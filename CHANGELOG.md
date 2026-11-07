@@ -11239,12 +11239,13 @@ Built by the Architect (the owner's screenshot of 🎨 Appearance: "Enable all t
 - Every section of 🎨 Appearance (Theme preset, Custom colours, Font sizes, Line spacing, MyWall text size, Zab bar, Scrolling titles, News,
   Zab on the phone, Heading styles) folds under its heading, and the heading carries an on/off switch. All sections start closed, so the
   whole dialog fits on one screen. Tap a heading to open its section (the switch turns green), and tap again to close it.
-- ONE place: `_thFold(body)` runs after every paint of `#theme-body` (the full dialog and ⚙ Zab settings). It wraps each `.theme-sect`'s
+- ONE place: `_thFold(body)` runs after every full paint of `#theme-body`. ⚙ Zab settings (opened from a Zab) is NOT folded: it shows
+  only the Zab sections and is short already. It wraps each `.theme-sect`'s
   content in `.th-bd` and turns its `.theme-sect-lbl` into `button.th-fold` (aria-expanded, `.th-sw`). What is open is kept for the session
   in `_thOpen` (keyed by the section id or heading), so the repaint after every setting change keeps the section open. Nothing is stored.
 - ⚙ News settings (from the 📰 News view) opens the News section (`_thOpen.add('th-nw')`).
-- Test hook `window.__thAllOpen`: every section is drawn open. The checks that open Appearance and click inside it (blocks 66, 92, 94, 95,
-  97, 104, 115) set it, because the switches would otherwise hide what they test. Recorded here as the reason.
+- Checks updated in place, because the section they test is now closed until its switch is tapped: 60i (taps Zab bar's switch), 66a
+  (opens Zab bar), 92d (taps Scrolling titles' switch), 92k (opens it), 95a/95b/95f (tap News's switch). Recorded here as the reason.
 - Phone, tablet and computer: the same dialog, headings are 44 px targets; dividers between sections shrink to 4 px.
 - Check: block 134, `tools/theme-fold-j124.mjs` (134a–134g at 390/820/1440, reached by a real tap on 🧰 → 🎨 Appearance).
 

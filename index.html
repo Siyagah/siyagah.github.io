@@ -23665,7 +23665,7 @@ function renderThemeModal(){
   if(_themeZab){
     body.innerHTML=h.slice(_zabFrom).replace('<div class="theme-divider"></div>','')
       +'<div class="theme-divider"></div><button class="theme-reset" style="width:auto;font-size:13px;padding:8px 14px;min-height:44px" onclick="openTheme(true)">🎨 All appearance settings…</button>';
-    _thFold(body); return;
+    return;   /* v05.74 · J124: ⚙ Zab settings is already short and focused, so it is not folded */
   }
 
   /* Heading styles launcher */
@@ -23683,13 +23683,14 @@ function renderThemeModal(){
 }
 /* v05.74 · J124 (the owner: "Enable all the sections here with on/off switch (it's now long)"): every Appearance section folds under its
    heading, which carries an on/off switch. All closed at first; what is open is remembered for the session (_thOpen, keyed by the
-   section's id or heading), so a repaint after a change keeps it open. ONE place: _thFold, run after every paint of #theme-body. */
+   section's id or heading), so a repaint after a change keeps it open. ONE place: _thFold, run after every full paint of #theme-body
+   (not ⚙ Zab settings, which shows only the Zab sections and is short already). */
 const _thOpen=new Set();
 function _thKey(sec){ const l=sec.querySelector('.theme-sect-lbl'); return sec.id||(l?l.textContent.trim():''); }
 function _thFold(body){
   body.querySelectorAll(':scope > .theme-sect').forEach(sec=>{
     const lbl=sec.querySelector(':scope > .theme-sect-lbl'); if(!lbl||sec.classList.contains('th-f')) return;
-    const k=_thKey(sec), open=!!window.__thAllOpen||_thOpen.has(k), bd=document.createElement('div');
+    const k=_thKey(sec), open=_thOpen.has(k), bd=document.createElement('div');
     bd.className='th-bd';
     while(lbl.nextSibling) bd.appendChild(lbl.nextSibling);
     sec.appendChild(bd); sec.classList.add('th-f'); sec.classList.toggle('th-open',open);

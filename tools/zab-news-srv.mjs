@@ -77,7 +77,7 @@ async function openDev(vp, o = {}) {
   await sleep(o.settle || 3200);   /* the first fetch runs 1.5 s after start */
   return { ctx, page, errors, vp };
 }
-const prev = (p) => p.evaluate(() => { if (typeof openTheme === 'function' && !document.getElementById('th-nw')) (window.__thAllOpen=1,openTheme()); return new Promise((r) => setTimeout(() => r({
+const prev = (p) => p.evaluate(() => { if (typeof openTheme === 'function' && !document.getElementById('th-nw')) openTheme(); return new Promise((r) => setTimeout(() => r({
   st: (document.getElementById('nw-status') || {}).textContent || '',
   cn: [...document.querySelectorAll('#nw-prev .nw-t')].map((e) => e.textContent) }), 400)); });
 const refetch = (p) => p.evaluate(async () => { _newsLast = -1; _newsTick(); for (let i = 0; i < 40 && _newsBusy; i++) await new Promise((r) => setTimeout(r, 100)); _newsPaint(); });

@@ -157,8 +157,9 @@ try {
       await reset(d);
       /* 🎨 Appearance */
       if (!isZ) { await act(d, vp, '#sb-tools-btn'); await sleep(400); await sweep(d, `${t} 🧰 menu`, /Siyagah Zab/); await d.page.locator('#sb-tools .sb-mi', { hasText: 'Appearance' }).first().click(); }
-      else await on(d, () => (window.__thAllOpen=1,openTheme()));
+      else await on(d, () => openTheme());
       await sleep(600);
+      await d.page.evaluate(() => { const b = document.querySelector('#th-zab > .th-fold'); if (b && b.getAttribute('aria-expanded') === 'false') b.click(); }); await sleep(200);   /* v05.74 · J124: sections fold */
       await sweep(d, `${t} 🎨 Appearance`, /Show Zab bar/);
       await reset(d);
       if (!isZ) {

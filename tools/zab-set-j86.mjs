@@ -115,7 +115,7 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     const l = page.locator('#jeb-panel .jeb-ph .jeb-set').first(); if (touch) await l.tap(); else await l.click(); await sleep(250);
     const n1 = await modal(page);
     await page.evaluate(() => closeTheme());
-    await page.evaluate(() => { jebClosePanel(); (window.__thAllOpen=1,openTheme()); }); await sleep(200);
+    await page.evaluate(() => { jebClosePanel(); openTheme(); }); await sleep(200);
     const n2 = await modal(page);
     await page.evaluate(() => closeTheme());
     r.check(n1.on && n1.onTop && n1.zab && !n1.preset, `115b@${w} the notes app: a Zab panel's ⚙ opens ⚙ Zab settings`, JSON.stringify(n1));
