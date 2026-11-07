@@ -11231,6 +11231,23 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
    and only the moved folder is stamped (its order is put between its neighbours; the siblings are renumbered only on a tie, the N1 lesson).
    `MMJ-SHARE.md` documents it; 128a checks it and its refusal. Block 128: 94/94.
 
+## v05.74 — J124 Appearance sections fold under on/off switches
+
+Built by the Architect (the owner's screenshot of 🎨 Appearance: "Enable all the sections here with on/off switch. (it's now long)").
+**v05.73 is the builder's faster start (J117 part 2, issue #273), which merges separately.**
+
+- Every section of 🎨 Appearance (Theme preset, Custom colours, Font sizes, Line spacing, MyWall text size, Zab bar, Scrolling titles, News,
+  Zab on the phone, Heading styles) folds under its heading, and the heading carries an on/off switch. All sections start closed, so the
+  whole dialog fits on one screen. Tap a heading to open its section (the switch turns green), and tap again to close it.
+- ONE place: `_thFold(body)` runs after every paint of `#theme-body` (the full dialog and ⚙ Zab settings). It wraps each `.theme-sect`'s
+  content in `.th-bd` and turns its `.theme-sect-lbl` into `button.th-fold` (aria-expanded, `.th-sw`). What is open is kept for the session
+  in `_thOpen` (keyed by the section id or heading), so the repaint after every setting change keeps the section open. Nothing is stored.
+- ⚙ News settings (from the 📰 News view) opens the News section (`_thOpen.add('th-nw')`).
+- Test hook `window.__thAllOpen`: every section is drawn open. The checks that open Appearance and click inside it (blocks 66, 92, 94, 95,
+  97, 104, 115) set it, because the switches would otherwise hide what they test. Recorded here as the reason.
+- Phone, tablet and computer: the same dialog, headings are 44 px targets; dividers between sections shrink to 4 px.
+- Check: block 134, `tools/theme-fold-j124.mjs` (134a–134g at 390/820/1440, reached by a real tap on 🧰 → 🎨 Appearance).
+
 ## v05.72 — J121: a Zab item's edit box grows with its text (7 Nov 2026, built by the Architect)
 
 **The owner** (phone screenshot: a long Bangla item in the Quick tasks Zab, cut to two lines while editing): "Fix typing/ edit space, should expand/ wrap to fit the text as long as writing".

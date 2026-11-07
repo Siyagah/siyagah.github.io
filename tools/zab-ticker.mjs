@@ -322,7 +322,7 @@ if (want('92k')) {
     const pos = await titlePos(p, 't1'); await pressAt(d, pos.x, pos.y);
     (await p.evaluate(() => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => { const r = e.getBoundingClientRect(); return { width: r.width, height: r.height }; }))).forEach((r, i) => note('menu row ' + i, r));
     await p.keyboard.press('Escape'); await p.evaluate(() => _jebHideMenu());
-    await p.evaluate(() => { openTheme ? openTheme() : 0; }).catch(() => {}); await sleep(500);
+    await p.evaluate(() => { openTheme ? (window.__thAllOpen=1,openTheme()) : 0; }).catch(() => {}); await sleep(500);
     await p.evaluate(() => { zabTkHours('on', true); renderThemeModal(); }); await sleep(300);
     const ctl = await p.evaluate(() => [...document.querySelectorAll('#th-tk select,#th-tk .ls-btn,#th-tk input[type=range],#th-tk label')].map((e) => { const r = e.getBoundingClientRect(); return { n: (e.id || e.className || e.tagName) + '', width: r.width, height: r.height }; }));
     ctl.forEach((r) => note(r.n, r));

@@ -150,7 +150,7 @@ for (const vp of VPS) {
 {
   const d = out['1440'];
   await T('104e settings: with a News Zab the channel list is replaced by "Your channels are in the 📰 News Zab" + Open; per / every / mix stay', async () => {
-    const r = await d.page.evaluate(() => { openTheme(); const s = document.getElementById('th-nw'); return { line: /Your channels are in the 📰 News Zab/.test(s.innerText), open: !!s.querySelector('#th-nw-open'), list: !!s.querySelector('#th-nw-chans'), per: !!s.querySelector('#th-nw-per'), mix: !!s.querySelector('#th-nw-mix') }; });
+    const r = await d.page.evaluate(() => { (window.__thAllOpen=1,openTheme()); const s = document.getElementById('th-nw'); return { line: /Your channels are in the 📰 News Zab/.test(s.innerText), open: !!s.querySelector('#th-nw-open'), list: !!s.querySelector('#th-nw-chans'), per: !!s.querySelector('#th-nw-per'), mix: !!s.querySelector('#th-nw-mix') }; });
     return [r.line && r.open && !r.list && r.per && r.mix, JSON.stringify(r)];
   });
 }

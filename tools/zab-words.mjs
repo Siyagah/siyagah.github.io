@@ -170,7 +170,7 @@ if (wantRun) {
       });
     }
     await step(d, '🧰 → Appearance (the Zab settings)', async () => {
-      await d.page.evaluate(() => openTheme()); await sleep(600);
+      await d.page.evaluate(() => (window.__thAllOpen=1,openTheme())); await sleep(600);
       return /Show Zab bar/.test(await d.page.evaluate(() => document.body.innerText));
     });
     await step(d, "an item's menu", async () => { await openZab(d, 'zl'); await tap(d, '#jeb-panel .jeb-it[data-iid="l1"] .jeb-more'); return !!(await d.page.$('#jeb-menu')); });

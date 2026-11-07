@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.72.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.74.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.74** (8 Nov 2026) — J124 (built by the Architect; the owner's screenshot: "Enable all the sections here with on/off switch. (it's now long)"): every 🎨 Appearance section folds under its heading, an on/off switch, all closed at first. ONE `_thFold(body)` after every paint of `#theme-body`; open ones kept for the session in `_thOpen`; hook `window.__thAllOpen` for checks that click inside. **A new Appearance section is a `.theme-sect` with a `.theme-sect-lbl` and folds by itself.** v05.73 = the builder's faster start (#273). Check: block 134, `tools/theme-fold-j124.mjs`.
 - **v05.72** (7 Nov 2026) — J121 (built by the Architect; the owner's phone screenshot): a Zab item's edit box grows with its text, wrapped lines included. ONE `_jebFit(ta)` (scrollHeight + borders, up to the CSS max-height: 60vh editing, 40vh the add box; then it scrolls, caret kept above the keyboard), run at the start of an edit and on every `input`. **A new Zab text box uses `_jebFit`.** Check: block 132, `tools/zab-edit-j121.mjs`.
 - **v05.71** (6 Nov 2026) — J117 first step (built by the builder, issue #271): ONE plain-text cache for search, `_stOf(a)` (key = the content string itself, `e.c===c`; budget `_ST_CAP` 40 M characters ≈ +41 MB heap, no LRU), a 150 ms pause + 12 ms slices (`_searchTyped`/`_searchRunAsync`), and a refinement (`_searchNotes`/`_stLast`, valid only while `_dbRev`/`_s1MergeSeq` are unchanged). **A new place that searches note text goes through `_searchAll`.** Start-up and folder/note/MyWall/Smart View speed are NOT done. Check: block 131, `tools/speed-j117.mjs`.
 - **v05.70** (5 Nov 2026) — J116 (built by the builder, issue #269): a framed ＋ on every Note Type row (MyWall `.mw-kind`, a folder's MyWall `.mwsub-hd`, the side pane's `.nti-kind-row`), ONE builder `_ntiPlusBtn(kid)` → `ntiQuickNew` → `quickCaptureWithKind(kid,'pane')` (opens in Pane 3, title focused, the view does not move). **A new Note Type row uses `_ntiPlusBtn`.** Check: block 130, `tools/nti-quick.mjs`.

@@ -126,7 +126,7 @@ if (want('95a')) {
   {
     const d = devs['1440'], p = d.page;
     await T('95a every choice persists through _zabNews() and a reload (address, on/off, per, every, mix, short, a channel off, a colour, ＋ Add, ✕ Remove)', async () => {
-      await p.evaluate(() => openTheme()); await sleep(500);
+      await p.evaluate(() => (window.__thAllOpen=1,openTheme())); await sleep(500);
       await p.evaluate(() => { const u = document.getElementById('th-nw-url'); u.value = 'https://news-helper.test/exec'; u.dispatchEvent(new Event('change', { bubbles: true })); }); await sleep(300);
       const afterUrl = await p.evaluate(() => ({ on: _zabNews().on, url: _zabNews().url }));
       const pickSel = (id, v) => p.evaluate(([id, v]) => { const s = document.getElementById(id); s.value = v; s.dispatchEvent(new Event('change', { bubbles: true })); }, [id, v]);
@@ -181,7 +181,7 @@ if (want('95b')) {
   await T('95b with the fake helper the preview lists each channel in its colour: 5 a channel (per 20), the newest first, name + headline + short line', async () => {
     await p.evaluate((u) => { zabNewsUrl(u); }, HELPER); await sleep(300);
     await p.evaluate(() => { _newsTick(); }); await p.waitForFunction(() => document.querySelector('#nw-prev .nw-it') || (window._newsCache), null, { timeout: 8000 }).catch(() => {}); await sleep(600);
-    await p.evaluate(() => openTheme()); await sleep(500);
+    await p.evaluate(() => (window.__thAllOpen=1,openTheme())); await sleep(500);
     const r = await p.evaluate(() => { const c = _zabNews(); return c.chans.map((x) => { const its = [...document.querySelectorAll('#nw-prev .nw-it')].filter((a) => a.querySelector('.nw-cn').textContent === x.name);
       return { id: x.id, n: its.length, first: its[0] && its[0].querySelector('.nw-t').textContent, dot: its[0] && getComputedStyle(its[0].querySelector('.nw-dot')).backgroundColor, want: x.color, short: its[0] && !!its[0].querySelector('.nw-s') }; }); });
     const hex = (h) => { const n = parseInt(h.slice(1), 16); return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`; };
@@ -236,7 +236,7 @@ if (want('95c')) {
   let t = base + 200 * 60000; const adv = async (m = 16) => { t += m * 60000; await clock(t); await tick(); await sleep(400); };
   await T('95c one channel failing leaves the others: its words in the status, the rest shown, its old headlines kept', async () => {
     fake.failChan = 'mee'; await adv();
-    const r = await p.evaluate(() => { openTheme(); return null; }); await sleep(400);
+    const r = await p.evaluate(() => { (window.__thAllOpen=1,openTheme()); return null; }); await sleep(400);
     const s = await p.evaluate(() => ({ st: document.getElementById('nw-status').textContent, aj: [...document.querySelectorAll('#nw-prev .nw-cn')].filter((e) => e.textContent === 'Al Jazeera').length, mee: [...document.querySelectorAll('#nw-prev .nw-cn')].filter((e) => e.textContent === 'Middle East Eye').length }));
     fake.failChan = '';
     return [/Middle East Eye/.test(s.st) && /403/.test(s.st) && s.aj > 0 && s.mee > 0, JSON.stringify(s)];
@@ -274,7 +274,7 @@ if (want('95c')) {
     const had = await p.evaluate(() => _newsCache && Object.keys(_newsCache.chans).length);
     fake.mode = 'abort';
     await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => window.__appBooted === true); await sleep(3500);
-    await p.evaluate(() => openTheme()); await sleep(600);
+    await p.evaluate(() => (window.__thAllOpen=1,openTheme())); await sleep(600);
     const r = await p.evaluate(async () => ({ dbs: (await indexedDB.databases()).map((x) => x.name), n: document.querySelectorAll('#nw-prev .nw-it').length, st: document.getElementById('nw-status').textContent, first: (document.querySelector('#nw-prev .nw-t') || {}).textContent }));
     fake.mode = 'ok';
     return [had === 5 && r.dbs.includes('siyagah-news-v1') && r.n > 0 && /ZZNEWS aljazeera headline 0/.test(r.first || '') && /Could not fetch|Showing/.test(r.st), JSON.stringify({ had, dbs: r.dbs.filter((x) => /news/.test(x)), n: r.n, st: r.st.slice(0, 100) })];
@@ -380,7 +380,7 @@ if (want('95f')) {
     const out = [];
     for (const vp of [VPS[0], VPS[2]]) {
       const z = await openDev(vp, { path: '/?jeb=1' });
-      await z.page.evaluate(() => openTheme()); await sleep(600);
+      await z.page.evaluate(() => (window.__thAllOpen=1,openTheme())); await sleep(600);
       out.push(await z.page.evaluate(() => ({ has: !!document.getElementById('th-nw'), side: document.documentElement.scrollWidth > innerWidth + 1 })));
       out.push(z.errors.length === 0); await z.ctx.close();
     }

@@ -157,7 +157,7 @@ try {
       await reset(d);
       /* 🎨 Appearance */
       if (!isZ) { await act(d, vp, '#sb-tools-btn'); await sleep(400); await sweep(d, `${t} 🧰 menu`, /Siyagah Zab/); await d.page.locator('#sb-tools .sb-mi', { hasText: 'Appearance' }).first().click(); }
-      else await on(d, () => openTheme());
+      else await on(d, () => (window.__thAllOpen=1,openTheme()));
       await sleep(600);
       await sweep(d, `${t} 🎨 Appearance`, /Show Zab bar/);
       await reset(d);
