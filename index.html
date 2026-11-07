@@ -4254,7 +4254,7 @@ let _idbBootFail=false, _idbRecT=0, _idbRecN=0, _idbRecBusy=false;
    localStorage (I1). _save() and persist() refuse to run until this is
    true. */
 let _dbLoaded=false;
-/* v05.72 · J117 part 2 — the background jobs that the first screen does not need wait until boot's first render() has been drawn and the
+/* v05.73 · J117 part 2 — the background jobs that the first screen does not need wait until boot's first render() has been drawn and the
    page has had one idle moment (requestIdleCallback, timeout 2 s; a setTimeout where there is none), then start ONE AT A TIME,
    _JOB_GAP ms apart, so they never share a tick. Gated by their TIMERS and listeners only (`_jobOk(name)`); a direct call (a button, a test) is
    never held. NOT held: the recs reader and the push gate (initAuth/initSync), loadDB()'s reads, the service worker, pagehide/visibilitychange saves,
@@ -6801,12 +6801,12 @@ function _cntOver(arts,sfId){
   return r;
 }
 function smartCount(sfId){
-  if(!_cntC){ const r0=sfId==='sf-time'?_timeCount():_cntOver(DB.articles,sfId); return r0<0?getSmartArts(sfId).length:r0; }   /* v05.72 · J117b */
+  if(!_cntC){ const r0=sfId==='sf-time'?_timeCount():_cntOver(DB.articles,sfId); return r0<0?getSmartArts(sfId).length:r0; }   /* v05.73 · J117b */
   const C=_cntC; if(C.sf.has(sfId)) return C.sf.get(sfId);
   let r=sfId==='sf-time'?_timeCount():_cntOver(DB.articles,sfId); if(r<0) r=getSmartArts(sfId).length;
   C.sf.set(sfId,r); return r;
 }
-/* v05.72 · J117b — the number beside "Timeline": how many notes are in This Week, Last Week, This Month or Last Month (each counted once).
+/* v05.73 · J117b — the number beside "Timeline": how many notes are in This Week, Last Week, This Month or Last Month (each counted once).
    The four lists are two rays of dates (from the start of last week; from the start of last month), so a note is in at least one
    exactly when its date is on or after the earlier start: one pass, no sorting. Same answer as the lists' union (block 133d compares). */
 function _timeCount(){
@@ -21477,7 +21477,7 @@ function _sfPathRowHTML(sfId,secId){
   if(others.length&&(grps||dest))h+='<span class="p2h-path-sep">|</span>';
   others.forEach(s=>{
     const nm=_sfName(s);
-    const cnt=secId?getSecSmartArts(secId,s.id).length:smartCount(s.id);   /* v05.72 · J117b: a count, not nine whole lists */
+    const cnt=secId?getSecSmartArts(secId,s.id).length:smartCount(s.id);   /* v05.73 · J117b: a count, not nine whole lists */
     const go=secId?`selSecSF('${secId}','${s.id}')`:`selFolder('${s.id}')`;
     h+=`<button class="p2h-path-child" onclick="${go}" oncontextmenu="showSfItemCtx(event,'${s.id}')" title="Open &quot;${esc(nm)}&quot; · right-click for options">${s.icon} ${esc(nm)} <span class="p2h-path-cnt">${cnt}</span></button>`;
   });
@@ -25739,7 +25739,7 @@ function _newsTick(){
   if(_newsLast>=0&&_newsNow()-_newsLast<c.every*60000) return;
   _newsFetch(c);
 }
-setInterval(()=>{ if(_jobOk('news')) _newsTick(); },5000);   /* v05.72: the first run is _jobsArm's kick (was setTimeout 1500) */
+setInterval(()=>{ if(_jobOk('news')) _newsTick(); },5000);   /* v05.73: the first run is _jobsArm's kick (was setTimeout 1500) */
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&_jobOk('news')) _newsTick(); });
 window.addEventListener('online',()=>setTimeout(()=>{ if(_jobOk('news')) _newsTick(); },0)); window.addEventListener('offline',()=>setTimeout(()=>{ if(_jobOk('news')) _newsTick(); },0));
 /* the steps (reuses the reminder-email window: same look, same z-index, over the Zab bar on purpose) */
@@ -35218,7 +35218,7 @@ function renderMyWall(sf){
 
   /* Sort kinds within a category: most pending notes first → latest edited
      as tiebreaker (unchanged from before — only the outer grouping is new). */
-  /* v05.72 · J117b — the latest edit of a kind is worked out once per kind, not once per comparison of the sort */
+  /* v05.73 · J117b — the latest edit of a kind is worked out once per kind, not once per comparison of the sort */
   const _klMemo={};
   const _kindLatest=k=>_klMemo[k.id]!==undefined?_klMemo[k.id]:(_klMemo[k.id]=(byKind[k.id]||[]).reduce((m,x)=>x.updatedAt>m?x.updatedAt:m,''));
   const _sortKinds=(a,b)=>{
@@ -35254,7 +35254,7 @@ function renderMyWall(sf){
     kinds.forEach(k=>{
       const gkey='sf-mywall|'+k.id;
       const gOpen=ST.sfGrpOpen[gkey]===true; /* default CLOSED */
-      /* v05.72 · J117b — a closed type needs only its count and (in Preview) its newest note, so it is NOT sorted: one scan finds the
+      /* v05.73 · J117b — a closed type needs only its count and (in Preview) its newest note, so it is NOT sorted: one scan finds the
          first of the stable newest-first order. Only an open type is sorted, exactly as before. */
       let arr=byKind[k.id]||[];
       if(gOpen) arr=arr.slice().sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
@@ -35309,7 +35309,7 @@ function getSmartGroups(sfId){
   const now=new Date(),day=864e5;
   const ts=a=>new Date(a.updatedAt||a.createdAt||0).getTime();
   const sod=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime();};
-  /* v05.72 · J117b — the newest-first copy is needed only by the two date views; every other Smart View used to sort all
+  /* v05.73 · J117b — the newest-first copy is needed only by the two date views; every other Smart View used to sort all
      the notes (36,000 localeCompares, ~280 ms on a phone ×4) and then throw the copy away. Built on first use, same order. */
   let _arts=null;
   const _A=()=>_arts||(_arts=[...DB.articles].sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')));
@@ -35319,7 +35319,7 @@ function getSmartGroups(sfId){
     const lastWeekStart=weekStart-7*day;
     const monthStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
     const lastMonthStart=new Date(now.getFullYear(),now.getMonth()-1,1).getTime();
-    /* v05.72 · J117b — one pass (each note's date worked out ONCE, not four times), then each short list is sorted newest first.
+    /* v05.73 · J117b — one pass (each note's date worked out ONCE, not four times), then each short list is sorted newest first.
        Sorting the pieces gives the same lists as filtering the sorted whole (the sort is stable), without sorting every note. */
     const g0=[],g1=[],g2=[],g3=[];
     const A0=DB.articles;
@@ -37939,7 +37939,7 @@ function _bvEnd(){
   if(!DB.theme.calLayers)DB.theme.calLayers={notes:true,publicHols:true,schoolHols:true,personal:true,journal:true};
   _bvPlace();   /* v05.56 — open where this device left off */
   _bvEnd();   /* v05.56 — in the same task as render(): the picture is never painted over a half-drawn app */
-  try{ performance.mark('siy-render0'); }catch(e){}   /* v05.72 · J117b — timing marks only */
+  try{ performance.mark('siy-render0'); }catch(e){}   /* v05.73 · J117b — timing marks only */
   render();
   try{ performance.mark('siy-render1'); }catch(e){}
   _blBoot=false;   /* v05.57 — only this first draw leaves "Linked from" to _blWarm */
