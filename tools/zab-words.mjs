@@ -170,7 +170,7 @@ if (wantRun) {
       });
     }
     await step(d, '🧰 → Appearance (the Zab settings)', async () => {
-      await d.page.evaluate(() => openTheme()); await sleep(600);
+      await d.page.evaluate(() => { openTheme(); /* v05.74 J124: every Appearance section is folded shut; open each one so the sweep sees all of its words */ document.querySelectorAll('#theme-body .th-fold[aria-expanded="false"]').forEach((b) => b.click()); }); await sleep(600);
       return /Show Zab bar/.test(await d.page.evaluate(() => document.body.innerText));
     });
     await step(d, "an item's menu", async () => { await openZab(d, 'zl'); await tap(d, '#jeb-panel .jeb-it[data-iid="l1"] .jeb-more'); return !!(await d.page.$('#jeb-menu')); });
