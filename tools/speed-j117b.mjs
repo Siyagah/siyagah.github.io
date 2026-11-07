@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* tools/speed-j117b.mjs — v05.73, J117 part 2 (block 133). A faster start, faster big folder / note / MyWall / Smart View.
+/* tools/speed-j117b.mjs — v05.75, J117 part 2 (block 133). A faster start, faster big folder / note / MyWall / Smart View.
    `node tools/speed-j117b.mjs --measure [--notes=36000] [--reps=2]`  prints the before/after table (not a check).
    Checks (390 / 820 / 1440) are in the second half of this file. */
 import { openApp, seedDB } from './harness.mjs';

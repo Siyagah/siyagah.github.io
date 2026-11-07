@@ -11231,7 +11231,7 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
    and only the moved folder is stamped (its order is put between its neighbours; the siblings are renumbered only on a tie, the N1 lesson).
    `MMJ-SHARE.md` documents it; 128a checks it and its refusal. Block 128: 94/94.
 
-## v05.73 — J117 part 2: a calmer start, faster Smart Views and MyWall (issue #273)
+## v05.75 — J117 part 2: a calmer start, faster Smart Views and MyWall (issue #273)
 
 The owner: "check app loading, page loading issues … enable faster loading everywhere." v05.71 did search; this round does the start and the screens the numbers showed to be slow.
 
@@ -11288,6 +11288,23 @@ Run-to-run noise on this machine is about ±20 % at ×4 (the first-paint and ren
 - Folder, 2,000-note folder and 34,000-note folder were not changed (they were already the windowed list).
 
 **Checks.** Block 133, `tools/speed-j117b.mjs` (27 checks at 390 / 820 / 1440): 133a the seven jobs start after the first render, 350 ms apart, within 5 s, and each timer then reaches its tick (a wrapped tick is seen), and a closed gate stops it; 133b two devices on the S1 fake — a change made on A before B started and one made while B was starting reach B with no tap, and B's later edit reaches A; 133c a `pagehide`/`hidden` fired through the whole start writes nothing to the device copy before `_dbLoaded` and the notebook is intact, and a `pagehide` inside the delay (jobs not yet started) still saves; 133d the oracle — Timeline lists, every Smart View number, MyWall (compact/preview × closed/open) and eight drawn screens (`#tree`, `#p2h`, `#p2c`) equal the v05.71 code byte for byte; 133e no page errors. `--measure` prints the table above.
+## v05.74 — J124 Appearance sections fold under on/off switches
+
+Built by the Architect (the owner's screenshot of 🎨 Appearance: "Enable all the sections here with on/off switch. (it's now long)").
+**The builder's faster start (J117 part 2, issue #273) merged after this round, as v05.75.**
+
+- Every section of 🎨 Appearance (Theme preset, Custom colours, Font sizes, Line spacing, MyWall text size, Zab bar, Scrolling titles, News,
+  Zab on the phone, Heading styles) folds under its heading, and the heading carries an on/off switch. All sections start closed, so the
+  whole dialog fits on one screen. Tap a heading to open its section (the switch turns green), and tap again to close it.
+- ONE place: `_thFold(body)` runs after every full paint of `#theme-body`. ⚙ Zab settings (opened from a Zab) is NOT folded: it shows
+  only the Zab sections and is short already. It wraps each `.theme-sect`'s
+  content in `.th-bd` and turns its `.theme-sect-lbl` into `button.th-fold` (aria-expanded, `.th-sw`). What is open is kept for the session
+  in `_thOpen` (keyed by the section id or heading), so the repaint after every setting change keeps the section open. Nothing is stored.
+- ⚙ News settings (from the 📰 News view) opens the News section (`_thOpen.add('th-nw')`).
+- Checks updated in place, because the section they test is now closed until its switch is tapped: 60i (taps Zab bar's switch), 66a
+  (opens Zab bar), 92d (taps Scrolling titles' switch), 92k (opens it), 95a/95b/95f (tap News's switch). Recorded here as the reason.
+- Phone, tablet and computer: the same dialog, headings are 44 px targets; dividers between sections shrink to 4 px.
+- Check: block 134, `tools/theme-fold-j124.mjs` (134a–134g at 390/820/1440, reached by a real tap on 🧰 → 🎨 Appearance).
 
 ## v05.72 — J121: a Zab item's edit box grows with its text (7 Nov 2026, built by the Architect)
 

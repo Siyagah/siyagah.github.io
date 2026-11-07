@@ -93,6 +93,7 @@ async function openAppearance(d) {   /* real taps: 🧰, then 🎨 Appearance */
   const l = d.page.locator('.sb-mi', { hasText: '🎨 Appearance' }).first(); await l.waitFor({ state: 'visible', timeout: 4000 });
   const r = await l.boundingBox(); if (d.vp.touch) await d.page.touchscreen.tap(r.x + r.width / 2, r.y + r.height / 2); else await d.page.mouse.click(r.x + r.width / 2, r.y + r.height / 2);
   await sleep(600);
+  if (await d.page.evaluate(() => { const s = document.getElementById('th-nw'); return !!s && !s.classList.contains('th-open'); })) await tap(d, '#th-nw > .th-fold');   /* v05.74 · J124: the News section opens under its switch */
   return d.page.evaluate(() => !!document.getElementById('th-nw'));
 }
 const DEFAULTS = { on: false, url: '', per: 20, every: 15, mix: 'mix', short: true };
@@ -200,6 +201,7 @@ if (want('95b')) {
     return [a === 0 && b.per === 3 && b.n === 15 && b.s === 15, JSON.stringify({ a, b })];
   });
   await T('95b a tap on a headline opens the story in a new page (noopener)', async () => {
+    await p.evaluate(() => { if (!document.querySelector('#th-nw.th-open')) document.querySelector('#th-nw > .th-fold').click(); }); await sleep(300);   /* v05.74 · J124: News opens under its switch */
     const link = p.locator('#nw-prev .nw-it').first(); await link.scrollIntoViewIfNeeded();
     const rel = await link.getAttribute('rel'), tg = await link.getAttribute('target');
     const [pop] = await Promise.all([p.waitForEvent('popup', { timeout: 5000 }), link.click()]);

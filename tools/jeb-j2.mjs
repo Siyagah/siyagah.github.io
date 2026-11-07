@@ -343,6 +343,7 @@ try {
         /* the real route: sidebar menu -> 🎨 Appearance -> the switch */
         await act(A, vp, '#sb-tools-btn'); await sleep(300);
         await act(A, vp, '.sb-mi:has-text("Appearance")'); await sleep(400);
+        await act(A, vp, '#th-zab > .th-fold'); await sleep(250);   /* v05.74 · J124: each Appearance section opens under its own switch */
         check(await A.page.locator('#th-jebbar').isVisible(), `${t} "Show Jeb bar" is on screen after clicking 🧰 -> Appearance`);
         check(await A.page.locator('#th-jebbar').isChecked(), `${t} it is on by default`);
         await act(A, vp, '#th-jebbar'); await sleep(400);

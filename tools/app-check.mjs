@@ -12862,8 +12862,21 @@ await r.block('132-zab-edit-j121', async () => {
   for (const row of rows) r.check(row.ok, '132: ' + row.label, row.detail);
   r.check(out.status === 0, 'the zab-edit-j121.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 134 — v05.74, J124: every 🎨 Appearance section folds under its heading, an on/off switch (the owner: "it's now long").
+   tools/theme-fold-j124.mjs runs 134a–134g at 390/820/1440, reached by a real tap on 🧰 → 🎨 Appearance. */
+await r.block('134-theme-fold-j124', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./theme-fold-j124.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 300000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 24, 'the theme-fold-j124.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '134: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the theme-fold-j124.mjs check exits cleanly', `exit ${out.status}`);
+});
 
-/* 133 — v05.73, J117 part 2: deferred start-up jobs, cheaper Smart Views and MyWall. tools/speed-j117b.mjs. */
+/* 133 — v05.75, J117 part 2: deferred start-up jobs, cheaper Smart Views and MyWall. tools/speed-j117b.mjs. */
 await r.block('133-speed-j117b', async () => {
   const { spawnSync } = await import('node:child_process');
   const out = spawnSync(process.execPath, [new URL('./speed-j117b.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 28 });
