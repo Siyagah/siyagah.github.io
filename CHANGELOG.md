@@ -11383,3 +11383,7 @@ The owner (screenshot of MyWall, red box before the count): "Add quick new note 
 **Check.** Block 129, `tools/mmj-pub.mjs` (40 checks): only vis:1; nearest-visible `p`; no private name in pub; visible folders only in `folderIds`; cleaned content; verified pictures only for visible notes (wrong bytes, small copy with and without the cloud's meta); the whole subtree equals the expected set; gone / folder off / Trash / private rename; 0 writes on a repeat; unread, offline, hidden, refused; DB byte-identical; big note in parts; 9,000 notes / 600 MMJ / 50 visible at phone ×4 (worst long task 80 ms, limit 222); a rules-model stand-in (s1-fake has no rules engine).
 
 **Not done.** The real Firestore rule is the owner's to paste, so a visitor read gets `permission-denied` until then; it cannot be tested from here. The visitor page itself is BwN's.
+
+## v05.77 — J128 · one daily import limit for every import; check 128h's long task (8 Nov 2026, builder, issue #279)
+
+Work in progress; the full entry is written when the round ends.
