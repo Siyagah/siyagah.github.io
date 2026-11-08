@@ -12,7 +12,12 @@
    128e  an applied request merged both ways with a stale device, and the shared copy follows
    128f  D6 in Siyagah: the right-click / long-press confirmation (3 sizes), the Trash group, the kept note, tombstones, stale merges, Undo, Restore
    128g  the gate (nothing before the first read), hidden page, the pace line
-   128h  200 queued requests at 390 ×4: no long task over the host-scaled 200 ms */
+   128h  200 queued requests at 390 ×4: no long task over the host-scaled 200 ms
+         v05.77 · J128 — the one long task (233–309 ms, 12–17 s into the run, on its own: `fake` 0) was NOT the requests. A long-animation-frame
+         profile named it: the continuation of `_mmjGet`'s `await r.json()` (`Response.json.then`), i.e. the Mapping My Journey keeping-matching
+         (`_mmjSyncRun`, J74 ③) reading mappingmyjourney.com — `mmjSeed()` has an `mmj-sec` section, so the sync timer ran and fetched the real site
+         (the CORS errors in the console are its picture fetches). `_miApply` + `persist()` per request cost 11–17 ms a task. 128h therefore turns the
+         sync off in its seed (`DB.theme.mmjSync=false`); the limit is unchanged. The sync's own 250 ms task at ×4 is a separate matter (see CHANGELOG). */
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -344,6 +349,7 @@ try {
   if (want('128h')) {
     const cloud = makeCloud();
     const db = mmjSeed();
+    db.theme = db.theme || {}; db.theme.mmjSync = false;   /* v05.77 · J128: see the header — keeping-matching is not what 128h measures */
     for (let i = 0; i < 1500; i++) db.articles.push({ id: 'bulk' + i, title: 'Bulk ' + i, content: '<p>b' + i + '</p>', folderIds: ['f2'], tags: [], createdAt: T0, updatedAt: T0 });
     const P = await dev(cloud, 'P', VPS[0], db, { throttle: 4 });
     await ready(P, 90000);

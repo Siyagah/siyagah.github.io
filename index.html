@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.76">
+<meta name="app-version" content="05.77">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4089,7 +4089,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.76</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.77</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -32100,8 +32100,10 @@ function _enxH(str,seed){   /* 2 x 32 bits (cyrb53 style) */
 }
 const _enxId=(pre,s)=>pre+_enxH(s,0)+_enxH(s,7).slice(0,6);
 /* how many notes the last 24 h hold, how many more may come now, and when the window next allows */
-function _enxWindow(now,flds){   /* v05.76 · J110 — flds: the import marks to count (Keep counts Evernote's too: one cloud quota) */
-  const lo=now-_ENX_DAY_MS, ats=[], fl=flds||['fromEvernote'];
+/* v05.77 · J128 — ONE list of import marks = ONE daily quota for every import. A new importer (OneNote/Notion) adds its mark HERE. */
+const _IMP_MARKS=['fromEvernote','fromKeep'];
+function _enxWindow(now,flds){   /* flds: the import marks to count; default _IMP_MARKS */
+  const lo=now-_ENX_DAY_MS, ats=[], fl=flds||_IMP_MARKS;
   const add=a=>{ if(!a) return; for(const k of fl){ const f=a[k]; if(!f||!f.at) continue; const t=Date.parse(f.at); if(t>lo) ats.push(t); } };
   (DB.articles||[]).forEach(add); (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article') add(t.item); });
   ats.sort((a,b)=>a-b);
@@ -34307,7 +34309,7 @@ function _kpTitle(o,f){
 const _kpJobGet=async()=>{ try{ return (await _enxJobOp('readonly',s=>s.get('job-keep')))||null; }catch(e){ return null; } };
 const _kpJobPut=async v=>{ try{ await _enxJobOp('readwrite',s=>s.put(v,'job-keep')); }catch(e){} };
 const _kpJobDel=async()=>{ try{ await _enxJobOp('readwrite',s=>s.delete('job-keep')); }catch(e){} _kp.job=null; };
-const _kpWindow=now=>_enxWindow(now,['fromEvernote','fromKeep']);
+const _kpWindow=now=>_enxWindow(now);
 function _kpBrought(){
   let n=0; (DB.articles||[]).forEach(a=>{ if(a&&a.fromKeep) n++; });
   (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item&&t.item.fromKeep) n++; });

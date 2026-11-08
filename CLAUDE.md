@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.76.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.77.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -46,6 +46,8 @@ below, because recent context is usually what a round actually needs. History
 must never accumulate here instead of there.
 
 ### The five most recent rounds
+
+- **v05.77** (8 Nov 2026) — J128 (built by the builder, issue #279): ONE daily import limit — `_IMP_MARKS` lists every importer's mark (`fromEvernote`, `fromKeep`) and is `_enxWindow`'s default, so an Evernote import counts Keep notes too. **A new importer (OneNote/Notion) adds its mark to `_IMP_MARKS`.** Check 128h's long task: see the CHANGELOG.
 
 - **v05.76** (8 Nov 2026) — J110 ① (built by the builder, issue #275): 🧰 → 📥 Keep import (Google Takeout ▸ Keep). Dry run writes nothing; 📥 Bring them in → My Notebooks ▸ "Keep (Imported)" (`kp-root`; archived → `kp-arch`), folders carry `kp:{kind,name}` (never auto-numbered). A note `kp-n-<hash of k>` (`k` = json name + created usec + text length), `createdAt` = `updatedAt` = Keep's created time, `fromKeep:{created,edited,pinned?,archived?,color?,file,k,at}`; Keep's pin is NOT `pinned`; Keep's Trash skipped. Rides the Evernote parts (`_enxPersist`, `_enxPushEnd`, `_enxWindow(now,flds)` cap shared with Evernote, `siyagah-enx-v1` key `job-keep`, `_picPut`, `_filePut`, `_enxClean`); generic `_impDialog`/`_impFolders` for OneNote/Notion next. Card/read line `_kpLine` (in `artCardC`'s signature), Smart View `sf-keep`. Check: block 135, `tools/keep-import.mjs`.
 - **v05.75** (6 Nov 2026) — J117 part 2 (built by the builder, issue #273): the background jobs the first screen does not need (news, MMJ share `_msTick`, visitors' copy `_mpTick`, request box `_miTick`, picture keeping, MyDatabase and MMJ matching) wait for boot's first `render()` + one idle moment (`requestIdleCallback`, 2 s), then open one at a time 350 ms apart (`_jobs`/`_jobOk(name)`/`_jobsArm`/`_jobsArmIdle`; ONLY their timers and listeners are gated, a direct call never is). **A new background job joins `_JOB_ORDER`, `_jobsArm`'s kick list and gates its own timer.** The sync reader/push gate, boot's reads, the service worker and the `pagehide`/`visibilitychange` saves are NOT delayed. Smart Views and MyWall no longer sort every note (`getSmartGroups` builds its sorted copy only for the date views; `smartCount` counts, `_timeCount()`; a closed MyWall type is not sorted): 36,000 notes, phone ×4, MyWall 465→188 ms, Smart View 484→119 ms. Still slow: opening a note (~90 ms is the `_stampRecordTouches` sweep) and the cold first `render()`. Check: block 133, `tools/speed-j117b.mjs` (`--measure` prints the table).
@@ -621,7 +623,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   + created second + lower-case title + raw content length; **its id is `_enxId('enx-n-',k)`**, so the same note from a second run or a second
   device is the same record. Skipped (and counted) when its id or `k` is in `DB.articles`, Trash or the tombstones; skipped as "already in
   Siyagah" on title + created second against notes that are NOT `fromEvernote`. Folders: `enx-root`, `enx-s-<hash>`, `enx-b-<hash>`, each with
-  `enx:{kind,name}`, found by id (a tombstoned id gets `-2`, `-3`…); the section is "My Notebooks" else the first. **The cap:** `_enxWindow(now)` counts
+  `enx:{kind,name}`, found by id (a tombstoned id gets `-2`, `-3`…); the section is "My Notebooks" else the first. **The cap (one for EVERY importer since v05.77: the marks are listed once, in `_IMP_MARKS`; a new importer adds its mark there):** `_enxWindow(now)` counts
   `fromEvernote.at` in the last 24 h over `DB.articles` AND Trash (so deleting imported notes does not free the window); `_ENX_DAY_CAP` 6000;
   `__enxCap` / `__enxNow` / `__enxDelay` are test hooks. **Writing:** `_enxImport(items)` → 250-note `flush`: folders, notes, then `_enxPersist()`
   = `persist()` without the undo frame (`_histCapture(sw,true)`); it yields before each save and every 25 ms. **State:** `_enx.imp` (in memory) and
