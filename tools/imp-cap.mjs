@@ -46,7 +46,7 @@ const setup = (d, spec) => on(d, (s) => {
 try {
   if (want('136a')) await each('136a', async (d, vp) => {
     const r = await setup(d, []);
-    check(r.marks.includes('fromEvernote') && r.marks.includes('fromKeep'), `136a@${vp.name} _IMP_MARKS holds fromEvernote and fromKeep`, JSON.stringify(r.marks));
+    check(r.marks.includes('fromEvernote') && r.marks.includes('fromKeep') && r.marks.includes('fromOneNote'), `136a@${vp.name} _IMP_MARKS holds fromEvernote, fromKeep and fromOneNote (v05.78)`, JSON.stringify(r.marks));
     check(r.enx === 10 && r.kp === 10, `136a@${vp.name} nothing imported: both rooms are the whole cap (10)`, JSON.stringify(r));
   });
   if (want('136b')) await each('136b', async (d, vp) => {
