@@ -117,6 +117,11 @@ export async function openApp({ viewport = { width: 1400, height: 900 }, db = se
   const browser = await pw.chromium.launch();
   const ctx = await browser.newContext(hasTouch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
   for (const pattern of BLOCKED) await ctx.route(pattern, (r) => r.abort());
+  /* v05.79 · J130 — the real mappingmyjourney.com is never reachable from a check: a request is a counted error (in `errors`), not a silent block.
+     Registered first, so a check that serves its own fake site with a later route (mmj-sync, mmj-import) wins; only an unserved request lands here. */
+  const realSiteHit = (r) => { errors.push('real-site request: ' + r.request().url()); r.abort(); };
+  await ctx.route('**://mappingmyjourney.com/**', realSiteHit);
+  await ctx.route('**://*.mappingmyjourney.com/**', realSiteHit);
   /* v04.50 — the ONLY way to genuinely exercise index.html's IndexedDB-
      unavailable fallback path in a real browser: delete window.indexedDB
      before the app's own script runs, so its own `if(!window.indexedDB)`

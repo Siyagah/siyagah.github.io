@@ -40,6 +40,7 @@ const HOSTILE = '<script>alert(1)</script><img src="x" onerror="alert(2)"><a hre
 function pubSeed() {
   const db = seedDB(T0);
   db.sections.push({ id: 'mmj-sec', name: 'Mapping My Journey', order: 1, updatedAt: T0, mmj: { site: 'https://x.invalid' } });
+  db.theme.mmjSync = false;   /* v05.79 · J130: keeping-matching is not what this check tests, and it would fetch the real site */
   db.folders.push(
     { id: 'mmj-c-1', name: SECRET_FOLDER, parentId: null, order: 1, sectionId: 'mmj-sec', updatedAt: T0, mmj: { n: 'x' } },
     { id: 'mmj-c-2', name: 'Stops', parentId: 'mmj-c-1', order: 1, sectionId: undefined, updatedAt: T0, mmj: { n: 'Stops' }, vis: 1 },
@@ -310,7 +311,7 @@ try {
   if (want('129k')) {
     const cloud = makeCloud();
     const db = seedDB(T0);
-    db.sections.push({ id: 'mmj-sec', name: 'Mapping My Journey', order: 1, updatedAt: T0 });
+    db.sections.push({ id: 'mmj-sec', name: 'Mapping My Journey', order: 1, updatedAt: T0 }); db.theme.mmjSync = false;   /* v05.79 · J130 */
     for (let i = 0; i < 1464; i++) db.folders.push({ id: 'mmj-f' + i, name: 'Place ' + i, parentId: i < 40 ? null : 'mmj-f' + (i % 40), order: i, sectionId: i < 40 ? 'mmj-sec' : undefined, updatedAt: T0, mmj: { n: 'x' }, ...(i % 29 === 0 ? { vis: 1 } : {}) });
     for (let i = 0; i < BIGN; i++) db.articles.push({ id: 'bn' + i, title: 'Bulk note ' + i, content: '<p>Body ' + i + ' lorem ipsum dolor sit amet</p>', folderIds: [i % 2 ? 'f1' : 'f2'], tags: [], createdAt: T0, updatedAt: T0, kind: 'general' });
     for (let i = 0; i < MMJN; i++) db.articles.push({ id: 'mm' + i, title: 'MMJ post ' + i, content: '<h1>Post ' + i + '</h1>' + ('<p>Mapping my journey paragraph lorem ipsum dolor sit amet consectetur. </p>').repeat(30 + (i % 10)), folderIds: ['mmj-f' + (40 + (i % 1400))], tags: ['mmj'], createdAt: T0, updatedAt: T0, kind: 'general', ...(i < VISN ? { vis: 1 } : {}) });

@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.78">
+<meta name="app-version" content="05.79">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4096,7 +4096,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.78</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.79</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -32788,21 +32788,30 @@ async function _mmjGet(url){
     try{
       const r=await fetch(url,{signal:ac.signal});
       if(!r.ok) throw new Error('the site answered '+r.status);
-      const j=await r.json();
+      const txt=await r.text();
+      await _yieldTask();   /* v05.79 · J130 — the parse is its own task, never glued to the fetch's continuation */
+      const j=JSON.parse(txt);
       return {j,tp:parseInt(r.headers.get('X-WP-TotalPages'),10)||1,tot:parseInt(r.headers.get('X-WP-Total'),10)||0};
     }catch(e){ last=e; }
     finally{ clearTimeout(to); }
   }
   throw last||new Error('no answer');
 }
-async function _mmjAll(path,tick){
-  const base=_mmjSite()+'/wp-json/wp/v2/'+path+(path.includes('?')?'&':'?')+'per_page=100&page=';
+/* v05.79 · J130 — `per` is the page size. The import keeps 100 (it shows its own progress and runs while the owner watches); the keeping-matching asks for
+   _MMJ_SYNC_PER (10) of posts/pages WITH content, because JSON.parse of 100 posts was one ~250 ms task at 390 ×4 and 10 are about a tenth of that.
+   A yield between pages lets typing and painting in. Only the reading is sliced; what is read is identical (window.__mmjPer overrides, for a check). */
+const _MMJ_SYNC_PER=10;
+async function _mmjAll(path,tick,per){
+  per=per||100;
+  const base=_mmjSite()+'/wp-json/wp/v2/'+path+(path.includes('?')?'&':'?')+'per_page='+per+'&page=';
   const first=await _mmjGet(base+1); if(!Array.isArray(first.j)) throw new Error('an unexpected answer from the site');
-  let out=first.j.slice(); if(tick) tick(out.length,first.tot);
+  const out=first.j.slice(); if(tick) tick(out.length,first.tot);
   for(let p=2;p<=first.tp;p++){
     if(_mmj.stop) throw new Error('stopped');
+    if(per<100) await _yieldTask();
     const g=await _mmjGet(base+p); if(!Array.isArray(g.j)) throw new Error('an unexpected answer from the site');
-    out=out.concat(g.j); if(tick) tick(out.length,first.tot);
+    for(let i=0;i<g.j.length;i++) out.push(g.j[i]);
+    if(tick) tick(out.length,first.tot);
   }
   return out;
 }
@@ -33158,8 +33167,9 @@ async function _mmjSyncRun(manual){
     const since=_mmjS.last?new Date(_mmjS.last-86400000).toISOString().slice(0,19):'';
     const mq=since?'&modified_after='+encodeURIComponent(since):'';
     const catsRaw=await _mmjAll('categories?orderby=name&order=asc&_fields=id,name,parent,slug,link,count');
-    const posts=await _mmjAll('posts?_fields=id,date_gmt,modified_gmt,link,slug,title,content,categories,tags,featured_media'+mq);
-    const pages=await _mmjAll('pages?_fields=id,date_gmt,modified_gmt,link,slug,title,content,parent,menu_order,featured_media'+mq);
+    const sper=window.__mmjPer||_MMJ_SYNC_PER;   /* v05.79 · J130 — small pages: no parse over ~25 ms at ×4 */
+    const posts=await _mmjAll('posts?_fields=id,date_gmt,modified_gmt,link,slug,title,content,categories,tags,featured_media'+mq,null,sper);
+    const pages=await _mmjAll('pages?_fields=id,date_gmt,modified_gmt,link,slug,title,content,parent,menu_order,featured_media'+mq,null,sper);
     const doFull=!_mmjS.full||t0-_mmjS.full>=_MMJ_FULL_MS;
     let idsP=null, idsG=null;
     if(doFull){
