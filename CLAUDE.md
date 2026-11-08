@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v05.74.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v05.76.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v05.76** (8 Nov 2026) — J110 ① (built by the builder, issue #275): 🧰 → 📥 Keep import (Google Takeout ▸ Keep). Dry run writes nothing; 📥 Bring them in → My Notebooks ▸ "Keep (Imported)" (`kp-root`; archived → `kp-arch`), folders carry `kp:{kind,name}` (never auto-numbered). A note `kp-n-<hash of k>` (`k` = json name + created usec + text length), `createdAt` = `updatedAt` = Keep's created time, `fromKeep:{created,edited,pinned?,archived?,color?,file,k,at}`; Keep's pin is NOT `pinned`; Keep's Trash skipped. Rides the Evernote parts (`_enxPersist`, `_enxPushEnd`, `_enxWindow(now,flds)` cap shared with Evernote, `siyagah-enx-v1` key `job-keep`, `_picPut`, `_filePut`, `_enxClean`); generic `_impDialog`/`_impFolders` for OneNote/Notion next. Card/read line `_kpLine` (in `artCardC`'s signature), Smart View `sf-keep`. Check: block 135, `tools/keep-import.mjs`.
 - **v05.74** (8 Nov 2026) — J124 (built by the Architect; the owner's screenshot: "Enable all the sections here with on/off switch. (it's now long)"): every 🎨 Appearance section folds under its heading, an on/off switch, all closed at first. ONE `_thFold(body)` after every paint of `#theme-body`; open ones kept for the session in `_thOpen`; ⚙ Zab settings is not folded. **A check that clicks inside an Appearance section taps its `.th-fold` first.** **A new Appearance section is a `.theme-sect` with a `.theme-sect-lbl` and folds by itself.** v05.73 = the builder's faster start (#273). Check: block 134, `tools/theme-fold-j124.mjs`.
 - **v05.72** (7 Nov 2026) — J121 (built by the Architect; the owner's phone screenshot): a Zab item's edit box grows with its text, wrapped lines included. ONE `_jebFit(ta)` (scrollHeight + borders, up to the CSS max-height: 60vh editing, 40vh the add box; then it scrolls, caret kept above the keyboard), run at the start of an edit and on every `input`. **A new Zab text box uses `_jebFit`.** Check: block 132, `tools/zab-edit-j121.mjs`.
 - **v05.71** (6 Nov 2026) — J117 first step (built by the builder, issue #271): ONE plain-text cache for search, `_stOf(a)` (key = the content string itself, `e.c===c`; budget `_ST_CAP` 40 M characters ≈ +41 MB heap, no LRU), a 150 ms pause + 12 ms slices (`_searchTyped`/`_searchRunAsync`), and a refinement (`_searchNotes`/`_stLast`, valid only while `_dbRev`/`_s1MergeSeq` are unchanged). **A new place that searches note text goes through `_searchAll`.** Start-up and folder/note/MyWall/Smart View speed are NOT done. Check: block 131, `tools/speed-j117.mjs`.

@@ -11312,3 +11312,15 @@ The owner (screenshot of MyWall, red box before the count): "Add quick new note 
 **Check.** Block 129, `tools/mmj-pub.mjs` (40 checks): only vis:1; nearest-visible `p`; no private name in pub; visible folders only in `folderIds`; cleaned content; verified pictures only for visible notes (wrong bytes, small copy with and without the cloud's meta); the whole subtree equals the expected set; gone / folder off / Trash / private rename; 0 writes on a repeat; unread, offline, hidden, refused; DB byte-identical; big note in parts; 9,000 notes / 600 MMJ / 50 visible at phone ×4 (worst long task 80 ms, limit 222); a rules-model stand-in (s1-fake has no rules engine).
 
 **Not done.** The real Firestore rule is the owner's to paste, so a visitor read gets `permission-denied` until then; it cannot be tested from here. The visitor page itself is BwN's.
+
+## v05.76 — J110 ① · 📥 Keep import (8 Nov 2026, builder, issue #275)
+
+**What.** 🧰 → 📥 Keep import reads a Google Takeout `Keep` folder (or many picked files where a folder cannot be picked). A dry run shows notes, checklists, pictures, voice memos/files, labels, pinned, archived, Keep's Trash (skipped), already in Siyagah, broken files and files a note names that are missing — and writes nothing. 📥 Bring them in puts the notes in My Notebooks ▸ Keep (Imported) (`kp-root`), archived ones in its subfolder Archived (`kp-arch`).
+
+**Dates.** `createdAt` = `updatedAt` = Keep's created time (else its last-edit time), so a Keep folder lists by original creation date and the card's date is that date. Keep's own last edit stays in `fromKeep.edited`. The card and read view say "📥 Keep · created 12 Mar 2019" (+ 📌 if pinned in Keep, + a dot in Keep's colour) and keep saying it after an edit.
+
+**How.** Rides the Evernote import: `_enxPersist` batches, `_enxPushEnd`, the daily cap (`_enxWindow(now,flds)`, shared with Evernote, Trash included), the job record (`siyagah-enx-v1`, key `job-keep`), pictures by reference (`_picPut`, held back like Evernote's), voice memos/files in `siyagah-files-v1`, `_enxClean` on every text. Generic parts `_impDialog` and `_impFolders` are reusable for OneNote/Notion. Smart View "(15) From Keep".
+
+**Check.** Block 135, `tools/keep-import.mjs`.
+
+**Not done.** Full app-check: run by the Architect.
