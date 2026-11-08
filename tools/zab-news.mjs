@@ -219,12 +219,13 @@ if (want('95b')) {
 /* ── 95c ── */
 if (want('95c')) {
   const d = await openDev(VPS[2], { db: seed({ zabNews: { on: true, url: HELPER, every: 15 } }) }), p = d.page;
+  const started = await p.evaluate(() => _newsLast >= 0);   /* v05.75 · J117: the start fetch now runs at the first idle moment, often before openDev returns, so it is read from the page, not from the counter reset below */
   fake.mode = 'ok'; fake.failChan = ''; fake.delay = 0; fake.calls = [];
   const clock = (ms) => p.evaluate((ms) => { window.__zabNewsNow = ms; }, ms);
   const tick = async () => { await p.evaluate(() => _newsTick()); await sleep(500); };
   const base = Date.now() + 3600000;
   await T('95c a fetch at start; then one every 15 minutes (not at 14, yes at 16); at "every 30" not at 20, yes at 31', async () => {
-    await sleep(2500); const c0 = fake.calls.length;
+    await sleep(2500); const c0 = fake.calls.length + (started ? 1 : 0);
     await clock(base); await tick(); await tick(); const c1 = fake.calls.length;   /* the first tick on the new clock: the last fetch was in real time, minus an hour */
     await clock(base + 14 * 60000); await tick(); const c2 = fake.calls.length;
     await clock(base + 31 * 60000); await tick(); const c3 = fake.calls.length;

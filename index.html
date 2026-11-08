@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.74">
+<meta name="app-version" content="05.75">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4088,7 +4088,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.74</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.75</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4265,6 +4265,24 @@ let _idbBootFail=false, _idbRecT=0, _idbRecN=0, _idbRecBusy=false;
    localStorage (I1). _save() and persist() refuse to run until this is
    true. */
 let _dbLoaded=false;
+/* v05.75 · J117 part 2 — the background jobs that the first screen does not need wait until boot's first render() has been drawn and the
+   page has had one idle moment (requestIdleCallback, timeout 2 s; a setTimeout where there is none), then start ONE AT A TIME,
+   _JOB_GAP ms apart, so they never share a tick. Gated by their TIMERS and listeners only (`_jobOk(name)`); a direct call (a button, a test) is
+   never held. NOT held: the recs reader and the push gate (initAuth/initSync), loadDB()'s reads, the service worker, pagehide/visibilitychange saves,
+   the reminder-mail writer. `_jobsArm()` is idempotent; a 20 s fallback arms it even if boot never reaches its first render. */
+const _JOB_ORDER=['news','ms','mp','mi','pk','mydb','mmj'], _JOB_GAP=350;
+const _jobs={armed:false,at:0,ok:{},t:{}};
+function _jobOk(n){ return !!_jobs.ok[n]; }
+function _jobsArm(){
+  if(_jobs.armed) return; _jobs.armed=true; _jobs.at=Date.now();
+  const kick={ news:()=>_newsTick(), ms:()=>_msTick(), mp:()=>_mpTick(), mi:()=>_miTick(), pk:()=>_picKeepTick(), mydb:()=>_mydbTick(), mmj:()=>_mmjSyncTick() };
+  _JOB_ORDER.forEach((n,i)=>setTimeout(()=>{ _jobs.ok[n]=true; _jobs.t[n]=Date.now(); try{ const r=kick[n](); if(r&&r.catch) r.catch(()=>{}); }catch(e){} },i*_JOB_GAP));
+}
+function _jobsArmIdle(){
+  if(_jobs.armed) return;
+  if(typeof requestIdleCallback==='function') requestIdleCallback(_jobsArm,{timeout:2000}); else setTimeout(_jobsArm,800);
+}
+setTimeout(_jobsArm,20000);
 let _idbOpenPromise=null;
 function _idbOpen(){
   if(_idbOpenPromise) return _idbOpenPromise;
@@ -6041,9 +6059,9 @@ function _picKeepText(){
   return t;
 }
 window._picKeep=_picKeep;window._picKeepTick=_picKeepTick;window._picKeepSet=_picKeepSet;
-setInterval(function(){ try{ _picKeepTick(); }catch(e){} },20000);
-window.addEventListener('online',function(){ setTimeout(_picKeepTick,3000); });
-document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') setTimeout(_picKeepTick,3000); });
+setInterval(function(){ try{ if(_jobOk('pk')) _picKeepTick(); }catch(e){} },20000);
+window.addEventListener('online',function(){ setTimeout(function(){ if(_jobOk('pk')) _picKeepTick(); },3000); });
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') setTimeout(function(){ if(_jobOk('pk')) _picKeepTick(); },3000); });
 
 /* ── v05.47 · J74 ① — ask the browser to protect this app's storage from being cleared when the device runs short of space.
    Chrome answers without a prompt (yes for an installed app or a much-used site). Asked once per page load, after start;
@@ -6794,10 +6812,26 @@ function _cntOver(arts,sfId){
   return r;
 }
 function smartCount(sfId){
-  if(!_cntC) return getSmartArts(sfId).length;
+  if(!_cntC){ const r0=sfId==='sf-time'?_timeCount():_cntOver(DB.articles,sfId); return r0<0?getSmartArts(sfId).length:r0; }   /* v05.75 · J117b */
   const C=_cntC; if(C.sf.has(sfId)) return C.sf.get(sfId);
-  let r=sfId==='sf-time'?-1:_cntOver(DB.articles,sfId); if(r<0) r=getSmartArts(sfId).length;
+  let r=sfId==='sf-time'?_timeCount():_cntOver(DB.articles,sfId); if(r<0) r=getSmartArts(sfId).length;
   C.sf.set(sfId,r); return r;
+}
+/* v05.75 · J117b — the number beside "Timeline": how many notes are in This Week, Last Week, This Month or Last Month (each counted once).
+   The four lists are two rays of dates (from the start of last week; from the start of last month), so a note is in at least one
+   exactly when its date is on or after the earlier start: one pass, no sorting. Same answer as the lists' union (block 133d compares). */
+function _timeCount(){
+  const now=new Date(),day=864e5, x=new Date(now); x.setHours(0,0,0,0);
+  const weekStart=x.getTime()-((now.getDay()+6)%7)*day, lastWeekStart=weekStart-7*day;
+  const lastMonthStart=new Date(now.getFullYear(),now.getMonth()-1,1).getTime(), from=Math.min(lastWeekStart,lastMonthStart);
+  const A=DB.articles, fromIso=new Date(from).toISOString(); let r=0;
+  for(let i=0;i<A.length;i++){
+    const a=A[i], s=a.updatedAt||a.createdAt||0;
+    /* an ISO date of the usual 24-character form compares as text, as the same instant; anything else is parsed as before */
+    if(typeof s==='string'&&s.length===24&&s.charCodeAt(10)===84&&s.charCodeAt(23)===90&&s>='0'&&s<'a'){ if(s>=fromIso) r++; }
+    else if(new Date(s).getTime()>=from) r++;
+  }
+  return r;
 }
 function secSmartCount(secId,sfId){
   if(!_cntC) return getSecSmartArts(secId,sfId).length;
@@ -21454,7 +21488,7 @@ function _sfPathRowHTML(sfId,secId){
   if(others.length&&(grps||dest))h+='<span class="p2h-path-sep">|</span>';
   others.forEach(s=>{
     const nm=_sfName(s);
-    const cnt=secId?getSecSmartArts(secId,s.id).length:getSmartArts(s.id).length;
+    const cnt=secId?getSecSmartArts(secId,s.id).length:smartCount(s.id);   /* v05.75 · J117b: a count, not nine whole lists */
     const go=secId?`selSecSF('${secId}','${s.id}')`:`selFolder('${s.id}')`;
     h+=`<button class="p2h-path-child" onclick="${go}" oncontextmenu="showSfItemCtx(event,'${s.id}')" title="Open &quot;${esc(nm)}&quot; · right-click for options">${s.icon} ${esc(nm)} <span class="p2h-path-cnt">${cnt}</span></button>`;
   });
@@ -25742,9 +25776,9 @@ function _newsTick(){
   if(_newsLast>=0&&_newsNow()-_newsLast<c.every*60000) return;
   _newsFetch(c);
 }
-setTimeout(_newsTick,1500); setInterval(_newsTick,5000);
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) _newsTick(); });
-window.addEventListener('online',()=>setTimeout(_newsTick,0)); window.addEventListener('offline',()=>setTimeout(_newsTick,0));
+setInterval(()=>{ if(_jobOk('news')) _newsTick(); },5000);   /* v05.75: the first run is _jobsArm's kick (was setTimeout 1500) */
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&_jobOk('news')) _newsTick(); });
+window.addEventListener('online',()=>setTimeout(()=>{ if(_jobOk('news')) _newsTick(); },0)); window.addEventListener('offline',()=>setTimeout(()=>{ if(_jobOk('news')) _newsTick(); },0));
 /* the steps (reuses the reminder-email window: same look, same z-index, over the Zab bar on purpose) */
 function openNewsHelper(){
   let m=document.getElementById('remmail-modal');
@@ -31347,7 +31381,7 @@ async function _msTick(force){
     _msS.retryAt=Date.now()+60000; _msS.seenKey='';
   }finally{ _msS.busy=false; }
 }
-setInterval(()=>{ try{ _msTick(); }catch(e){} },5000);
+setInterval(()=>{ try{ if(_jobOk('ms')) _msTick(); }catch(e){} },5000);
 
 /* ── v05.69 · J27 ① R3 — the visitors' copy: notebooks/{nb}/pub/…, readable WITHOUT sign-in (the owner adds one Firestore rule), holding ONLY what the
    owner switched to 👁 (vis:1). Same gate, timer, writer (_msWriter), batching, daily budget and `gone` rule as the private copy; its own signature map
@@ -31496,7 +31530,7 @@ async function _mpTick(force){
     _mpS.retryAt=Date.now()+60000; _mpS.seenKey='';
   }finally{ _mpS.busy=false; }
 }
-setInterval(()=>{ try{ _mpTick(); }catch(e){} },5000);
+setInterval(()=>{ try{ if(_jobOk('mp')) _mpTick(); }catch(e){} },5000);
 
 /* ── v05.68 · J27 ① R2 — requests from other apps: notebooks/{nb}/mmjin/{reqId}.
    Other apps never write Siyagah's records. They CREATE a request {v:1,op,from,at,st:'new',…}; this code claims it (a transaction moves st
@@ -31763,7 +31797,7 @@ function _miStateText(){
   if(!_miS.done&&!_miS.refused&&!e) return _miS.why==='wait'?'waiting for the first sync to finish…':(_miS.why==='pace'?'paced (200 a minute)':'none yet');
   return 'last applied '+(_miS.last?_syncAgo(_miS.last):'never')+' · done '+_miS.done+' · refused '+_miS.refused+(_miS.q.size?(' · waiting '+_miS.q.size):'')+(e?(' · last error: '+(e.code||e.message||e)):'');
 }
-setInterval(()=>{ try{ _miTick(); }catch(e){} },5000);
+setInterval(()=>{ try{ if(_jobOk('mi')) _miTick(); }catch(e){} },5000);
 
 /* The helper, as text. One function builds both blocks so a downloaded copy has them (I4). */
 function _remGs(){
@@ -33232,7 +33266,7 @@ async function _mmjShowNewer(aid){
     if(box()) box().innerHTML='<h3>'+esc(_mmjDec(r.j.title&&r.j.title.rendered))+'</h3>'+h;
   }catch(e){ if(box()) box().textContent='Could not read the newer version just now.'; }
 }
-(function _mmjSyncBoot(){ setTimeout(()=>{ const go=()=>{ try{ _mmjSyncTick(); }catch(e){} }; go(); setInterval(go,60000); },60000); })();
+(function _mmjSyncBoot(){ setTimeout(()=>{ const go=()=>{ try{ if(_jobOk('mmj')) _mmjSyncTick(); }catch(e){} }; go(); setInterval(go,60000); },60000); })();
 /* ── v05.62 · J98 R2 — 🗄 MyDatabase. The owner's private cards, read from the private GitHub store Siyagah/MyDB with a read-only key.
    The KEY is never in DB, DB.theme, localStorage, a backup or a Save File copy: it lives in the device's own database siyagah-mydb-v1 (store kv, key
    'key'), and in the small cloud doc notebooks/{nb}/mydb/v1 {k,at,b} (written like remind/v1: through _s1WriteGate(); not in recs, the blob,
@@ -33766,7 +33800,7 @@ async function _mydbTick(){
   if(_mydbS.next>_mydbNow()) return;
   await _mydbSyncRun(false);
 }
-setInterval(()=>{ try{ _mydbTick(); }catch(e){} },5000);
+setInterval(()=>{ try{ if(_jobOk('mydb')) _mydbTick(); }catch(e){} },5000);
 /* ── a copied page: a NEW window with one sandboxed iframe, no allow-same-origin ── */
 const _MYDB_MIME={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml',css:'text/css',js:'text/javascript',json:'application/json',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',ico:'image/x-icon',html:'text/html'};
 function _mydbDataUrl(buf,name){
@@ -35221,7 +35255,9 @@ function renderMyWall(sf){
 
   /* Sort kinds within a category: most pending notes first → latest edited
      as tiebreaker (unchanged from before — only the outer grouping is new). */
-  const _kindLatest=k=>(byKind[k.id]||[]).reduce((m,x)=>x.updatedAt>m?x.updatedAt:m,'');
+  /* v05.75 · J117b — the latest edit of a kind is worked out once per kind, not once per comparison of the sort */
+  const _klMemo={};
+  const _kindLatest=k=>_klMemo[k.id]!==undefined?_klMemo[k.id]:(_klMemo[k.id]=(byKind[k.id]||[]).reduce((m,x)=>x.updatedAt>m?x.updatedAt:m,''));
   const _sortKinds=(a,b)=>{
     const dc=_kindLatest(b).localeCompare(_kindLatest(a));if(dc!==0)return dc;
     return (byKind[b.id]||[]).length-(byKind[a.id]||[]).length;
@@ -35253,10 +35289,13 @@ function renderMyWall(sf){
     h+='<div class="mw-kinds">';
 
     kinds.forEach(k=>{
-      const arr=(byKind[k.id]||[]).slice()
-        .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
       const gkey='sf-mywall|'+k.id;
       const gOpen=ST.sfGrpOpen[gkey]===true; /* default CLOSED */
+      /* v05.75 · J117b — a closed type needs only its count and (in Preview) its newest note, so it is NOT sorted: one scan finds the
+         first of the stable newest-first order. Only an open type is sorted, exactly as before. */
+      let arr=byKind[k.id]||[];
+      if(gOpen) arr=arr.slice().sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+      else if(mwPreview&&arr.length){ let best=arr[0]; for(let i=1;i<arr.length;i++) if((arr[i].updatedAt||'').localeCompare(best.updatedAt||'')>0) best=arr[i]; arr=[best].concat(arr.length>1?new Array(arr.length-1):[]); }
       const dot=`<span class="wall-dot" style="background:${k.color}"></span>`;
       const handle=`<span class="wall-grp-handle" title="Drag to reorder · tap on mobile · right-click for options"
         onclick="event.stopPropagation()"
@@ -35307,23 +35346,33 @@ function getSmartGroups(sfId){
   const now=new Date(),day=864e5;
   const ts=a=>new Date(a.updatedAt||a.createdAt||0).getTime();
   const sod=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime();};
-  const arts=[...DB.articles].sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+  /* v05.75 · J117b — the newest-first copy is needed only by the two date views; every other Smart View used to sort all
+     the notes (36,000 localeCompares, ~280 ms on a phone ×4) and then throw the copy away. Built on first use, same order. */
+  let _arts=null;
+  const _A=()=>_arts||(_arts=[...DB.articles].sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')));
   if(sfId==='sf-time'){
     const dow=(now.getDay()+6)%7;            /* Monday start */
     const weekStart=sod(now)-dow*day;
     const lastWeekStart=weekStart-7*day;
     const monthStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
     const lastMonthStart=new Date(now.getFullYear(),now.getMonth()-1,1).getTime();
-    return [
-      ['📅 This Week', arts.filter(a=>ts(a)>=weekStart)],
-      ['📅 Last Week', arts.filter(a=>ts(a)>=lastWeekStart&&ts(a)<weekStart)],
-      ['🗓 This Month', arts.filter(a=>ts(a)>=monthStart)],
-      ['🗓 Last Month', arts.filter(a=>ts(a)>=lastMonthStart&&ts(a)<monthStart)],
-    ];
+    /* v05.75 · J117b — one pass (each note's date worked out ONCE, not four times), then each short list is sorted newest first.
+       Sorting the pieces gives the same lists as filtering the sorted whole (the sort is stable), without sorting every note. */
+    const g0=[],g1=[],g2=[],g3=[];
+    const A0=DB.articles;
+    for(let i=0;i<A0.length;i++){
+      const a=A0[i], t=ts(a);
+      if(t>=weekStart) g0.push(a);
+      if(t>=lastWeekStart&&t<weekStart) g1.push(a);
+      if(t>=monthStart) g2.push(a);
+      if(t>=lastMonthStart&&t<monthStart) g3.push(a);
+    }
+    const srt=g=>g.sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+    return [['📅 This Week', srt(g0)],['📅 Last Week', srt(g1)],['🗓 This Month', srt(g2)],['🗓 Last Month', srt(g3)]];
   }
   if(sfId==='sf-arch'){
     /* Only manually archived notes — no automatic age-based groups */
-    const manArch=arts.filter(a=>a.archived);
+    const manArch=_A().filter(a=>a.archived);
     if(!manArch.length)return null;
     return[['📦 Manually Archived',manArch]];
   }
@@ -37927,7 +37976,9 @@ function _bvEnd(){
   if(!DB.theme.calLayers)DB.theme.calLayers={notes:true,publicHols:true,schoolHols:true,personal:true,journal:true};
   _bvPlace();   /* v05.56 — open where this device left off */
   _bvEnd();   /* v05.56 — in the same task as render(): the picture is never painted over a half-drawn app */
+  try{ performance.mark('siy-render0'); }catch(e){}   /* v05.75 · J117b — timing marks only */
   render();
+  try{ performance.mark('siy-render1'); }catch(e){}
   _blBoot=false;   /* v05.57 — only this first draw leaves "Linked from" to _blWarm */
   _openFromQuery();   /* v05.04 — ?open=<id> from Siyagah Jeb */
   _seedRecSnap();   /* v04.68 — record-stamp baseline: everything boot, its migrations and the first render settled on (see _stampRecordTouches) */
@@ -37940,7 +37991,7 @@ function _bvEnd(){
   Promise.race([Promise.resolve(document.fonts&&document.fonts.ready),new Promise(r=>setTimeout(r,1500))]).catch(()=>{})
     .then(()=>{try{autoFit(true);}catch(e){}})   /* the sidebar fit — see the note where it used to live */
     .then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))
-    .then(()=>{ window.__appBooted=true; });
+    .then(()=>{ window.__appBooted=true; _jobsArmIdle(); });
   /* PWA SW. v04.50 — boot is async now, so on a fast load the window's
      `load` event can fire BEFORE this line runs; a listener added after it
      never fires, the service worker never registers, and updates stop
@@ -37967,7 +38018,6 @@ function _bvEnd(){
      notebook, and that must never land on top of the first paint. */
   setTimeout(()=>{try{_bkMaybeAuto();}catch(e){}},6000);
   setTimeout(()=>{try{_storeProtect();}catch(e){}},4000);   /* v05.47 · J74 ① */
-  setTimeout(()=>{try{_picKeepTick();}catch(e){}},9000);    /* v05.47 · J74 ① */
   (()=>{
     const _sw=localStorage.getItem('siyagah-sb-w');
     const sb=document.getElementById('sb');
