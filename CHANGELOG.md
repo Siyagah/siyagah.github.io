@@ -11231,6 +11231,18 @@ content through `_enxClean` until it settles + a final refusal check, unknown op
    and only the moved folder is stamped (its order is put between its neighbours; the siblings are renumbered only on a tie, the N1 lesson).
    `MMJ-SHARE.md` documents it; 128a checks it and its refusal. Block 128: 94/94.
 
+## v05.76 — J110 ① · 📥 Keep import (8 Nov 2026, builder, issue #275)
+
+**What.** 🧰 → 📥 Keep import reads a Google Takeout `Keep` folder (or many picked files where a folder cannot be picked). A dry run shows notes, checklists, pictures, voice memos/files, labels, pinned, archived, Keep's Trash (skipped), already in Siyagah, broken files and files a note names that are missing — and writes nothing. 📥 Bring them in puts the notes in My Notebooks ▸ Keep (Imported) (`kp-root`), archived ones in its subfolder Archived (`kp-arch`).
+
+**Dates.** `createdAt` = `updatedAt` = Keep's created time (else its last-edit time), so a Keep folder lists by original creation date and the card's date is that date. Keep's own last edit stays in `fromKeep.edited`. The card and read view say "📥 Keep · created 12 Mar 2019" (+ 📌 if pinned in Keep, + a dot in Keep's colour) and keep saying it after an edit.
+
+**How.** Rides the Evernote import: `_enxPersist` batches, `_enxPushEnd`, the daily cap (`_enxWindow(now,flds)`, shared with Evernote, Trash included), the job record (`siyagah-enx-v1`, key `job-keep`), pictures by reference (`_picPut`, held back like Evernote's), voice memos/files in `siyagah-files-v1`, `_enxClean` on every text. Generic parts `_impDialog` and `_impFolders` are reusable for OneNote/Notion. Smart View "(15) From Keep".
+
+**Check.** Block 135, `tools/keep-import.mjs`.
+
+**Not done.** Full app-check: run by the Architect.
+
 ## v05.75 — J117 part 2: a calmer start, faster Smart Views and MyWall (issue #273)
 
 The owner: "check app loading, page loading issues … enable faster loading everywhere." v05.71 did search; this round does the start and the screens the numbers showed to be slow.

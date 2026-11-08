@@ -2534,6 +2534,9 @@ await r.block('6o-1-menu-reorg', async () => {
     'openMmjImport',
     /* v05.62 (J98 R2) — 🗄 MyDatabase… in 🧰 Tools, above 🗺 Mapping My Journey import, added on purpose (updated in place; block 120 proves a real click reaches it). */
     'openMydb',
+    /* v05.76 (issue #275, J110 ①) — 📥 Keep import in 🧰 Tools → Create, under 📥 Evernote import, added on purpose
+       (the Architect's full run caught it; updated in place; block 135a proves a real tap reaches it). */
+    'openKeepImport',
     /* v05.52 (J82) — 🪟 Side pane: pop out or full width in 🧰 Tools → View, added on purpose (the Architect's full run caught it; updated in place). */
     '_ppMenu'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
@@ -12874,6 +12877,19 @@ await r.block('134-theme-fold-j124', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 24, 'the theme-fold-j124.mjs check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, '134: ' + row.label, row.detail);
   r.check(out.status === 0, 'the theme-fold-j124.mjs check exits cleanly', `exit ${out.status}`);
+});
+/* 135 — v05.76, J110 ①: 📥 Keep import (Google Takeout ▸ Keep). tools/keep-import.mjs runs 135a–135g at 390/820/1440
+   (the menu by a real tap, the dry run writes nothing, the import, the creation dates, a second run, Trash/tombstones, the cap, 3,000 notes). */
+await r.block('135-keep-import', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./keep-import.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1500000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 100, 'the keep-import.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '135: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the keep-import.mjs check exits cleanly', `exit ${out.status}`);
 });
 
 /* 133 — v05.75, J117 part 2: deferred start-up jobs, cheaper Smart Views and MyWall. tools/speed-j117b.mjs. */
