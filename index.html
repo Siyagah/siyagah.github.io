@@ -40,10 +40,11 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9Ijg4IiBmaWxsPSIjNjM2NkYxIi8+PHRleHQgeD0iMjU2IiB5PSIzNzAiIGZvbnQtc2l6ZT0iMzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiPiYjeDYzMzs8L3RleHQ+PC9zdmc+">
 <link rel="manifest" href="/manifest.json">
 <script id="on-popup">
-/* v05.78 · J110 ② — the OneNote sign-in popup lands back here with ?code=…&state=siyon.…; decided HERE, before anything else runs. With an opener and our own
-   state the page only hands the code back (see _onPopupBoot) and the app is never started: nothing is read, written or sent. */
+/* v05.78 · J110 ② — the OneNote sign-in popup lands back here with ?code=…&state=siyon.…; decided HERE, before anything else runs. A page carrying our own
+   state prefix only hands the code back (see _onPopupBoot: to window.opener when there is one, and on a BroadcastChannel in case the browser cut the opener
+   when the popup went through Microsoft's pages) and the app is never started: nothing is read, written or sent. */
 window.__onPopup=(function(){ try{ var q=new URLSearchParams(location.search), s=q.get('state')||'';
-  if(window.opener&&window.opener!==window&&/^siyon\./.test(s)&&(q.get('code')||q.get('error'))) return {code:q.get('code')||'',error:q.get('error_description')||q.get('error')||'',state:s}; }catch(e){} return null; })();
+  if(/^siyon\./.test(s)&&(q.get('code')||q.get('error'))) return {code:q.get('code')||'',error:q.get('error_description')||q.get('error')||'',state:s}; }catch(e){} return null; })();
 </script>
 <script id="jeb-mode">
 /* v05.04 · J5 — "Siyagah Jeb". The page is in Jeb mode when its address has

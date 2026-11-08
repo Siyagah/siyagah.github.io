@@ -2537,6 +2537,9 @@ await r.block('6o-1-menu-reorg', async () => {
     /* v05.76 (issue #275, J110 ①) — 📥 Keep import in 🧰 Tools → Create, under 📥 Evernote import, added on purpose
        (the Architect's full run caught it; updated in place; block 135a proves a real tap reaches it). */
     'openKeepImport',
+    /* v05.78 (issue #281, J110 ②) — 📥 OneNote import in 🧰 Tools → Create, under 📥 Keep import, added on purpose
+       (updated in place; block 137a proves a real tap reaches it). */
+    'openOneNoteImport',
     /* v05.52 (J82) — 🪟 Side pane: pop out or full width in 🧰 Tools → View, added on purpose (the Architect's full run caught it; updated in place). */
     '_ppMenu'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
@@ -12877,6 +12880,20 @@ await r.block('134-theme-fold-j124', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 24, 'the theme-fold-j124.mjs check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, '134: ' + row.label, row.detail);
   r.check(out.status === 0, 'the theme-fold-j124.mjs check exits cleanly', `exit ${out.status}`);
+});
+/* 137 — v05.78, J110 ②: 📥 OneNote import (Microsoft Graph, the owner's own sign-in, PKCE in a popup). tools/onenote-import.mjs runs 137a–137i at 390/820/1440
+   against a FAKE Microsoft (the menu by a real tap, the sign-in and PKCE, the token in no storage, the dry run writes nothing, the import, dates, levels,
+   pictures/files, 429, a second run, Trash/tombstones, the shared daily limit, an expired token, the popup-landing boot, 1,500 pages). */
+await r.block('137-onenote-import', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./onenote-import.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 2400000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 80, 'the onenote-import.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '137: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the onenote-import.mjs check exits cleanly', `exit ${out.status}`);
 });
 /* 135 — v05.76, J110 ①: 📥 Keep import (Google Takeout ▸ Keep). tools/keep-import.mjs runs 135a–135g at 390/820/1440
    (the menu by a real tap, the dry run writes nothing, the import, the creation dates, a second run, Trash/tombstones, the cap, 3,000 notes). */
