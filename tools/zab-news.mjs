@@ -91,6 +91,7 @@ const tap = async (d, sel) => { const l = d.page.locator(sel).first(); await l.s
 async function openAppearance(d) {   /* real taps: 🧰, then 🎨 Appearance */
   await tap(d, '#sb-tools-btn');
   const l = d.page.locator('.sb-mi', { hasText: '🎨 Appearance' }).first(); await l.waitFor({ state: 'visible', timeout: 4000 });
+  await l.scrollIntoViewIfNeeded();   /* v05.78: the 🧰 menu gained 📥 OneNote import, so at 390 the row sits below the menu's visible edge; the menu scrolls, as a thumb would */
   const r = await l.boundingBox(); if (d.vp.touch) await d.page.touchscreen.tap(r.x + r.width / 2, r.y + r.height / 2); else await d.page.mouse.click(r.x + r.width / 2, r.y + r.height / 2);
   await sleep(600);
   if (await d.page.evaluate(() => { const s = document.getElementById('th-nw'); return !!s && !s.classList.contains('th-open'); })) await tap(d, '#th-nw > .th-fold');   /* v05.74 · J124: the News section opens under its switch */
