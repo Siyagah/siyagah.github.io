@@ -39,6 +39,12 @@
      file:// copy of the app, where /icons/ does not resolve. -->
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9Ijg4IiBmaWxsPSIjNjM2NkYxIi8+PHRleHQgeD0iMjU2IiB5PSIzNzAiIGZvbnQtc2l6ZT0iMzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiPiYjeDYzMzs8L3RleHQ+PC9zdmc+">
 <link rel="manifest" href="/manifest.json">
+<script id="on-popup">
+/* v05.78 · J110 ② — the OneNote sign-in popup lands back here with ?code=…&state=siyon.…; decided HERE, before anything else runs. With an opener and our own
+   state the page only hands the code back (see _onPopupBoot) and the app is never started: nothing is read, written or sent. */
+window.__onPopup=(function(){ try{ var q=new URLSearchParams(location.search), s=q.get('state')||'';
+  if(window.opener&&window.opener!==window&&/^siyon\./.test(s)&&(q.get('code')||q.get('error'))) return {code:q.get('code')||'',error:q.get('error_description')||q.get('error')||'',state:s}; }catch(e){} return null; })();
+</script>
 <script id="jeb-mode">
 /* v05.04 · J5 — "Siyagah Jeb". The page is in Jeb mode when its address has
    ?jeb=1. Decided HERE, once, before first paint; everything else asks the
@@ -2120,10 +2126,10 @@ sup.ann-sup:hover{text-decoration:underline}
   background:var(--green);color:var(--on-accent);font-family:var(--ui);font-size:14px;font-weight:600;cursor:pointer;min-height:44px}
 #rm-fbt{font-family:monospace;font-size:11px}
 /* v05.13 · S4a — Evernote import (dry run). A dialog on a tablet and laptop, a bottom sheet on a phone; it sits over the Zab bar on purpose, so it is not in the --jeb-h lists. */
-#enx-modal,#kp-modal,#mmj-modal,#mydb-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10060;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
-#enx-modal.open,#kp-modal.open,#mmj-modal.open,#mydb-modal.open{display:flex}
+#enx-modal,#kp-modal,#on-modal,#mmj-modal,#mydb-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10060;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
+#enx-modal.open,#kp-modal.open,#on-modal.open,#mmj-modal.open,#mydb-modal.open{display:flex}
 .kp-dot{display:inline-block;width:9px;height:9px;border-radius:50%;border:1px solid var(--border2);vertical-align:middle}
-#enx-box,#kp-box,#mmj-box,#mydb-box{background:var(--paper);border-radius:12px;padding:18px 22px;width:min(640px,94vw);max-height:90vh;overflow-y:auto;box-sizing:border-box;
+#enx-box,#kp-box,#on-box,#mmj-box,#mydb-box{background:var(--paper);border-radius:12px;padding:18px 22px;width:min(640px,94vw);max-height:90vh;overflow-y:auto;box-sizing:border-box;
   box-shadow:0 8px 32px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px;color:var(--t1);font-size:13px}
 .rm-big.alt{background:var(--hover);color:var(--t1)}
 .enx-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
@@ -2186,8 +2192,8 @@ sup.ann-sup:hover{text-decoration:underline}
 @media(max-width:639.98px){
   .enx-dirbtn{display:none}
   .enx-filebtn{background:var(--green);color:var(--on-accent)}
-  #enx-modal,#kp-modal,#mmj-modal,#mydb-modal{align-items:flex-end}
-  #enx-box,#kp-box,#mmj-box,#mydb-box{width:100%;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+  #enx-modal,#kp-modal,#on-modal,#mmj-modal,#mydb-modal{align-items:flex-end}
+  #enx-box,#kp-box,#on-box,#mmj-box,#mydb-box{width:100%;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
   .enx-stack>summary{min-height:44px;display:flex;align-items:center}}
 @media(max-width:639.98px){
   #remmail-modal{align-items:flex-end}
@@ -4123,6 +4129,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <div class="sb-mi" onclick="syncKnowledgeBase();closeSBTools()" title="Update the built-in guide notes to the latest version">📚 Sync Knowledge Base</div>
           <div class="sb-mi" onclick="openEnexImport();closeSBTools()" title="Reads your Evernote export and shows what it found; then, when you say OK, brings the notes into My Notebooks ▸ Evernote.">📥 Evernote import</div>
           <div class="sb-mi" onclick="openKeepImport();closeSBTools()" title="Reads your Google Keep export (Takeout ▸ Keep) and shows what it found; then, when you say OK, brings the notes into My Notebooks ▸ Keep (Imported), each with its original creation date.">📥 Keep import</div>
+          <div class="sb-mi" onclick="openOneNoteImport();closeSBTools()" title="Reads your OneNote notebooks straight from Microsoft (you sign in to Microsoft yourself) and shows what it found; then, when you say OK, brings the pages into My Notebooks ▸ OneNote (Imported), each with its original dates.">📥 OneNote import</div>
           <div class="sb-mi" onclick="openMydb();closeSBTools()" title="Your private cards from the store Siyagah/MyDB: the key, check now, and the notes they become.">🗄 MyDatabase…</div>
           <div class="sb-mi" onclick="openMmjImport();closeSBTools()" title="Reads mappingmyjourney.com and shows what it found; then, when you say OK, backs up and brings every category and post into the section Mapping My Journey.">🗺 Mapping My Journey import</div>
           <div class="sb-mi-hd">Reference &amp; dates</div>
@@ -6805,7 +6812,7 @@ function cntOf(fid){
   if(_cntC) return _cntFolders().get(fid)||0;
   const ids=descOf(fid);return DB.articles.filter(a=>a.folderIds.some(x=>ids.includes(x))).length;
 }
-const _SF_CNT={'sf-favs':a=>a.favourite,'sf-pinned':a=>a.pinned,'sf-journal':a=>isJournal(a),'sf-arch':a=>a.archived,'sf-mywall':a=>isMyWallNote(a),'sf-remind':a=>a.reminder&&a.reminder.dt,'sf-jeb':a=>a.fromJeb,'sf-enx':a=>a.fromEvernote,'sf-keep':a=>a.fromKeep,'sf-mydb':a=>a.fromMydb};
+const _SF_CNT={'sf-favs':a=>a.favourite,'sf-pinned':a=>a.pinned,'sf-journal':a=>isJournal(a),'sf-arch':a=>a.archived,'sf-mywall':a=>isMyWallNote(a),'sf-remind':a=>a.reminder&&a.reminder.dt,'sf-jeb':a=>a.fromJeb,'sf-enx':a=>a.fromEvernote,'sf-keep':a=>a.fromKeep,'sf-onenote':a=>a.fromOneNote,'sf-mydb':a=>a.fromMydb};
 function _cntOver(arts,sfId){
   if(sfId==='sf-new'||sfId==='sf-time') return arts.length;
   if(sfId==='sf-recent') return Math.min(20,arts.length);
@@ -7880,7 +7887,7 @@ function _cardCtxCheck(){
 }
 function artCardC(a,sel,sfc){
   if(sel||ST.snippet) return artCard(a,sel,sfc);
-  const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'')+(a.fromKeep?('k'+(a.fromKeep.created||'')+(a.fromKeep.pinned?'p':'')+(a.fromKeep.color||'')):'')+(a.vis===1?'v':'')+(a.fromMydb?(a.fromMydb.pid+'|'+(a.fromMydb.kind||'')+(a.fromMydb.gone?'g':'')+(a.fromMydb.newer?'n':'')+'m'+_mydbMediaCount(a)):(a.rec?'m'+_mydbMediaCount(a):''))+(a.zabNote?_zabNoteLabel(a):'');
+  const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'')+(a.fromKeep?('k'+(a.fromKeep.created||'')+(a.fromKeep.pinned?'p':'')+(a.fromKeep.color||'')):'')+(a.fromOneNote?('o'+(a.fromOneNote.created||'')+'|'+(a.fromOneNote.nb||'')+'|'+(a.fromOneNote.sec||'')+'|'+(a.fromOneNote.level||0)):'')+(a.vis===1?'v':'')+(a.fromMydb?(a.fromMydb.pid+'|'+(a.fromMydb.kind||'')+(a.fromMydb.gone?'g':'')+(a.fromMydb.newer?'n':'')+'m'+_mydbMediaCount(a)):(a.rec?'m'+_mydbMediaCount(a):''))+(a.zabNote?_zabNoteLabel(a):'');
   const e=_cardC.get(a.id);
   if(e&&e.s===s) return e.h;
   const h=artCard(a,false,sfc);
@@ -8309,6 +8316,7 @@ function _renderP3CInner(){
       ${curA.fromJeb?`<div class="av-jeb">👝 from ${esc(curA.fromJeb.pocket||'Zab')}</div>`:''}
       ${curA.fromEvernote?`<div class="av-jeb av-enx">📥 from Evernote · ${esc(curA.fromEvernote.nb||'')}</div>`:''}
       ${curA.fromKeep?`<div class="av-jeb av-keep">${_kpLine(curA)}</div>`:''}
+      ${curA.fromOneNote?`<div class="av-jeb av-on">${_onLine(curA)}</div>`:''}
       ${curA.fromMmj&&curA.fromMmj.gone?'<div class="av-jeb mmj-line mmj-removed">🗺 removed from Mapping My Journey</div>':''}
       ${curA.fromMmj&&curA.fromMmj.newer?`<div class="av-jeb mmj-line mmj-newer">🗺 Mapping My Journey has a newer version (${esc(_mmjFmtDate(curA.fromMmj.newer.modified))}) — <button type="button" class="mmj-newer-b" onclick="_mmjShowNewer('${curA.id}')">Show it</button></div>`:''}
       ${curA.fromMydb?`<div class="av-jeb av-mydb">🗄 from MyDatabase · ${esc(_mydbProjName(curA.fromMydb.pid))} · ${esc(curA.fromMydb.kind||'Other')}</div>`:''}
@@ -10618,6 +10626,7 @@ function getSecSmartArts(secId,sfId){
     case 'sf-jeb':    return sa.filter(a=>a.fromJeb).sort((a,b)=>String(b.fromJeb.at||'').localeCompare(String(a.fromJeb.at||'')));
     case 'sf-enx':    return sa.filter(a=>a.fromEvernote).sort((a,b)=>String(b.fromEvernote.at||'').localeCompare(String(a.fromEvernote.at||'')));
     case 'sf-keep':   return sa.filter(a=>a.fromKeep).sort((a,b)=>String(b.fromKeep.created||'').localeCompare(String(a.fromKeep.created||'')));
+    case 'sf-onenote': return sa.filter(a=>a.fromOneNote).sort((a,b)=>String(b.fromOneNote.created||'').localeCompare(String(a.fromOneNote.created||'')));
     case 'sf-mydb':   return sa.filter(a=>a.fromMydb).sort((a,b)=>String(b.fromMydb.at||'').localeCompare(String(a.fromMydb.at||'')));
     default: return [];
   }
@@ -21713,7 +21722,7 @@ function stripNumPrefix(name){
 //          2nd-level pos 1 under root pos 2 → "002.001"
 //          3rd-level pos 4 → "002.001.04"
 function getHierNum(fid){
-  if(pathOf(fid).some(f=>f.mmj||f.mydb||f.kp)) return '';   /* v05.48 · J74 ② — a Mapping My Journey folder is never numbered */
+  if(pathOf(fid).some(f=>f.mmj||f.mydb||f.kp||f.on)) return '';   /* v05.48 · J74 ② — a Mapping My Journey folder is never numbered */
   return pathOf(fid).map((f,lvl)=>{
     // Root level → count only within the same section (independent numbering).
     // Deeper levels → count among siblings with the same parent (unchanged).
@@ -21735,17 +21744,17 @@ function autoNumberAll(silent=false){
   // section before computing numbers — fixes duplicate order values that
   // arise when folders are moved between sections.
   /* v05.48 · J74 ② — a folder from the Mapping My Journey import (f.mmj) keeps its name and order exactly as the site has them */
-  const _sids=[...new Set(DB.folders.filter(f=>!f.parentId&&!f.mmj&&!f.mydb&&!f.kp).map(f=>f.sectionId||null))];
+  const _sids=[...new Set(DB.folders.filter(f=>!f.parentId&&!f.mmj&&!f.mydb&&!f.kp&&!f.on).map(f=>f.sectionId||null))];
   _sids.forEach(sid=>{
     const _roots=DB.folders
-      .filter(f=>!f.parentId&&!f.mmj&&!f.mydb&&!f.kp&&(f.sectionId||null)===sid)
+      .filter(f=>!f.parentId&&!f.mmj&&!f.mydb&&!f.kp&&!f.on&&(f.sectionId||null)===sid)
       .sort((a,b)=>a.order-b.order);
     _roots.forEach((f,i)=>f.order=i+1);
   });
 
   // Step 2: strip old prefix and apply new per-section number
   DB.folders.forEach(f=>{
-    if(f.mmj||f.mydb||f.kp) return;
+    if(f.mmj||f.mydb||f.kp||f.on) return;
     const num=getHierNum(f.id); if(!num) return;
     const clean=stripNumPrefix(f.name)||f.name;
     f.name=`(${num}) ${clean}`;
@@ -28756,11 +28765,12 @@ function artCard(a, sel, showFolderCount, showNag, customMeta){
     + (a.fromJeb ? ` · <span class="ar-jeb">👝 from ${esc(a.fromJeb.pocket||'Zab')}</span>` : '')
     + (a.fromEvernote ? ` · <span class="ar-jeb ar-enx">📥 from Evernote · ${esc(a.fromEvernote.nb||'')}</span>` : '')
     + (a.fromKeep ? ` · <span class="ar-jeb ar-keep">${_kpLine(a)}</span>` : '')
+    + (a.fromOneNote ? ` · <span class="ar-jeb ar-on">${_onLine(a)}</span>` : '')
     + (a.fromMydb ? ` · <span class="ar-jeb ar-mydb">🗄 ${esc(_mydbProjName(a.fromMydb.pid))} · ${esc(a.fromMydb.kind||'Other')}${_mydbMediaCount(a)?' · 🎬 '+_mydbMediaCount(a):''}</span>` : (a.rec&&_mydbMediaCount(a) ? ` · <span class="ar-jeb ar-mydb">🎬 ${_mydbMediaCount(a)}</span>` : ''))
     + (a.zabNote ? ` · <span class="ar-jeb ar-zn" onclick="event.stopPropagation();_zabNoteGo('${esc(a.zabNote.pid)}')" title="Open this Zab">${esc(_zabNoteLabel(a))}</span>` : '')
     + (showNag && isNagNote(a) ? ` · <span class="ar-nag">⏳ untouched ${untouchedDays(a)}d</span>` : '');
   const meta=customMeta!==undefined?customMeta:_m0;
-  return `<div class="ar${expanded}${sel?' sel':''}" data-aid="${a.id}" `
+  return `<div class="ar${expanded}${sel?' sel':''}" data-aid="${a.id}"${a.fromOneNote&&a.fromOneNote.level>0?` data-on-level="${Math.min(4,a.fromOneNote.level|0)}" style="margin-left:${Math.min(4,a.fromOneNote.level|0)*14}px"`:''} `
     +`draggable="true" ondragstart="artDStart(event,'${a.id}')" `
     +`ondragend="artDEnd(event)" oncontextmenu="showArtCtx(event,'${a.id}')" `
     +`onclick="selArt('${a.id}')">`
@@ -34307,7 +34317,7 @@ function _kpTitle(o,f){
 const _kpJobGet=async()=>{ try{ return (await _enxJobOp('readonly',s=>s.get('job-keep')))||null; }catch(e){ return null; } };
 const _kpJobPut=async v=>{ try{ await _enxJobOp('readwrite',s=>s.put(v,'job-keep')); }catch(e){} };
 const _kpJobDel=async()=>{ try{ await _enxJobOp('readwrite',s=>s.delete('job-keep')); }catch(e){} _kp.job=null; };
-const _kpWindow=now=>_enxWindow(now,['fromEvernote','fromKeep']);
+const _kpWindow=now=>_enxWindow(now,['fromEvernote','fromKeep','fromOneNote']);   /* v05.78 · J110 ② — OneNote's notes share the same cloud quota */
 function _kpBrought(){
   let n=0; (DB.articles||[]).forEach(a=>{ if(a&&a.fromKeep) n++; });
   (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item&&t.item.fromKeep) n++; });
@@ -34487,6 +34497,444 @@ function _kpPaint(){
       +'<p class="rm-p">Where a folder cannot be picked (Android Chrome), choose the .json notes together with their pictures and voice memos.</p>'
       +'<input type="file" id="kp-dir" webkitdirectory multiple style="display:none" onchange="_kpPicked(this)">'
       +'<input type="file" id="kp-files" multiple style="display:none" onchange="_kpPicked(this)">';
+  }
+  box.innerHTML=h;
+}
+/* ── v05.78 · J110 ② — 📥 OneNote import, straight from Microsoft Graph with the owner's own Microsoft sign-in. Rides the Keep import's parts
+   (_impDialog, _impFolders, _enxPersist batches + _enxPushEnd, _enxWindow, the job record in siyagah-enx-v1 key 'job-onenote', _picPut/_filePut, _enxClean).
+   · SIGN-IN: OAuth 2.0 authorization code + PKCE written by hand (no MSAL, no script from another origin). The owner registers ONE app in Microsoft's portal and
+     pastes its Application (client) ID (not a secret). A popup is opened INSIDE the click; it lands back on this origin with ?code=&state=siyon.…; the page decides
+     that in <script id="on-popup"> before anything runs and _boot hands the code back (BroadcastChannel + opener.postMessage) and starts NOTHING (_onPopupBoot).
+   · THE TOKEN lives only in memory (_on.tok): never DB, DB.theme, localStorage, IndexedDB, a backup or a Save File copy; no refresh token (no offline_access).
+     It expires in about an hour: the import then pauses ("Sign in again to continue") and carries on where it stopped (done pages are skipped by id).
+   · THE CLIENT ID is kept in the device database siyagah-onenote-v1 (store kv; a NEW database; a read never creates it).
+   · Graph calls: only to https://graph.microsoft.com/, never more than 4 in flight (_onSlot); 429/503 wait Retry-After and retry the same request.
+   · A page: id _enxId('on-n-',page id); createdAt = createdDateTime, updatedAt = lastModifiedDateTime; fromOneNote:{id,nb,sec,created,edited,level,at}.
+     A page whose content cannot be read is NOT imported (counted; the next run tries it again). A picture/file that cannot be fetched is a plain line in the page. ── */
+const _on={view:'setup',busy:false,stop:false,run:0,tok:null,exp:0,state:'',ver:'',popup:null,cid:'',common:false,loaded:false,res:null,cur:'',n:0,total:0,slow:0,job:null,after:'',msg:'',err:'',
+  imp:{state:'idle',run:false,runId:0,took:0,goal:0,total:0,doneAll:0,already:0,earlier:0,broken:0,newFolders:0,pause:false,capHit:false,pics:0,fls:0,left:[],failed:[],note:''}};
+const _ON_G='https://graph.microsoft.com/v1.0/me/onenote';
+const _onRedir=()=>location.origin+'/';
+const _onAuth=()=>'https://login.microsoftonline.com/'+(_on.common?'common':'consumers');
+const _onB64u=buf=>btoa(String.fromCharCode.apply(null,new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const _onRand=n=>_onB64u(crypto.getRandomValues(new Uint8Array(n)));
+const _onUrlOk=u=>typeof u==='string'&&/^https:\/\/graph\.microsoft\.com\//i.test(u);
+function _onLine(a){
+  const f=(a&&a.fromOneNote)||{}; let d='';
+  if(f.created){ const t=new Date(f.created); if(!isNaN(t)) d=' · created '+esc(t.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})); }
+  const loc=[f.nb,f.sec].filter(Boolean).map(esc).join(' ▸ ');
+  return '📥 OneNote'+(loc?' · '+loc:'')+d+(f.level>0?' · ↳ sub-page':'');
+}
+/* the popup's whole job: hand the code back and stop. Nothing of the app has started (no DB, no storage write, no cloud call). */
+function _onPopupBoot(){
+  const m=window.__onPopup||{}, msg={siyOnenote:1,code:m.code||'',error:m.error||'',state:m.state||''};
+  try{ const bc=new BroadcastChannel('siyagah-onenote'); bc.postMessage(msg); setTimeout(()=>{ try{ bc.close(); }catch(e){} },1500); }catch(e){}
+  try{ if(window.opener) window.opener.postMessage(msg,location.origin); }catch(e){}
+  try{ document.body.innerHTML='<p style="font:16px system-ui,sans-serif;padding:24px">'+(m.error?'Sign-in did not finish. You can close this window.':'Signed in. You can close this window.')+'</p>'; }catch(e){}
+  setTimeout(()=>{ try{ window.close(); }catch(e){} },400);
+}
+function _onIdb(op,key,val){
+  return new Promise((res,rej)=>{
+    if(!window.indexedDB) return rej(new Error('no IndexedDB'));
+    let q, absent=false; try{ q=indexedDB.open('siyagah-onenote-v1',1); }catch(e){ rej(e); return; }
+    q.onupgradeneeded=()=>{
+      if(op==='get'){ absent=true; try{ q.transaction.abort(); }catch(e){} return; }
+      if(!q.result.objectStoreNames.contains('kv')) q.result.createObjectStore('kv');
+    };
+    q.onerror=()=>{ if(absent) res(undefined); else rej(q.error); };
+    q.onsuccess=()=>{
+      const db=q.result;
+      try{
+        const tx=db.transaction('kv',op==='get'?'readonly':'readwrite'), st=tx.objectStore('kv'), rq=op==='get'?st.get(key):st.put(val,key);
+        tx.oncomplete=()=>{ db.close(); res(op==='get'?rq.result:true); };
+        tx.onerror=tx.onabort=()=>{ db.close(); rej(tx.error); };
+      }catch(e){ db.close(); rej(e); }
+    };
+  });
+}
+async function _onLoadCfg(){
+  if(_on.loaded) return;
+  try{ const c=await _onIdb('get','cfg'); if(c&&typeof c==='object'){ if(typeof c.cid==='string') _on.cid=c.cid; _on.common=c.common===true; } }catch(e){}
+  _on.loaded=true;
+}
+const _onSaveCfg=()=>_onIdb('put','cfg',{cid:_on.cid,common:_on.common}).catch(()=>{});
+const _onValid=()=>!!_on.tok&&Date.now()<_on.exp;
+/* ── sign-in ── */
+let _onWired=false;
+function _onWire(){
+  if(_onWired) return; _onWired=true;
+  const got=m=>{ if(m&&m.siyOnenote===1&&_on.state&&m.state===_on.state) _onGotCode(m); };
+  try{ const bc=new BroadcastChannel('siyagah-onenote'); bc.onmessage=e=>got(e.data); }catch(e){}
+  window.addEventListener('message',e=>{ if(e.origin===location.origin) got(e.data); });
+}
+async function _onSignIn(){
+  const inp=document.getElementById('on-cid'), tick=document.getElementById('on-common');
+  if(inp) _on.cid=inp.value.trim().replace(/[^0-9a-zA-Z-]/g,''); if(tick) _on.common=tick.checked;
+  if(!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(_on.cid)){ _on.err='That does not look like an Application (client) ID: it is 36 characters with dashes, like 11111111-2222-3333-4444-555555555555.'; _onPaint(); return; }
+  _on.err='';
+  /* the popup is opened INSIDE the tap/click (before any await), then sent to Microsoft */
+  const pop=window.open('about:blank','siy-onenote','popup=yes,width=520,height=720');
+  if(!pop){ _on.err='Your browser blocked the sign-in window. Allow pop-ups for this site, then tap Sign in again.'; _onPaint(); return; }
+  _onWire(); _onSaveCfg();
+  _on.popup=pop; _on.ver=_onRand(48); _on.state='siyon.'+_onRand(18);
+  const ch=_onB64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(_on.ver)));
+  const q=new URLSearchParams({client_id:_on.cid,response_type:'code',redirect_uri:_onRedir(),response_mode:'query',scope:'Notes.Read',code_challenge:ch,code_challenge_method:'S256',state:_on.state,prompt:'select_account'});
+  _on.view='signing'; _onPaint();
+  try{ pop.location.href=_onAuth()+'/oauth2/v2.0/authorize?'+q.toString(); }catch(e){ _on.err='The sign-in window could not be opened.'; _on.view='setup'; _onPaint(); return; }
+  const my=_on.state, t0=Date.now();
+  const iv=setInterval(()=>{
+    if(_on.state!==my){ clearInterval(iv); return; }
+    let closed=false; try{ closed=pop.closed; }catch(e){}
+    if(closed||Date.now()-t0>600000){ clearInterval(iv); setTimeout(()=>{ if(_on.state===my){ _on.state=''; _on.ver=''; _on.err='The sign-in window was closed before it finished.'; _on.view=_on.res?'done':'setup'; _onPaint(); } },1200); }
+  },500);
+}
+async function _onGotCode(m){
+  _on.state=''; try{ if(_on.popup) _on.popup.close(); }catch(e){} _on.popup=null;
+  if(!m.code){ _on.err='Microsoft did not sign you in'+(m.error?': '+m.error:'')+'.'; _on.view='setup'; _onPaint(); return; }
+  try{
+    const body=new URLSearchParams({client_id:_on.cid,scope:'Notes.Read',code:m.code,redirect_uri:_onRedir(),grant_type:'authorization_code',code_verifier:_on.ver});
+    const r=await fetch(_onAuth()+'/oauth2/v2.0/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.access_token) throw new Error(j.error_description||j.error||('HTTP '+r.status));
+    _on.tok=j.access_token; _on.exp=Date.now()+Math.max(60,(+j.expires_in||3600)-120)*1000;
+  }catch(e){ _on.tok=null; _on.err='The sign-in did not complete: '+String(e&&e.message||e).split('\n')[0]; _on.ver=''; _on.view='setup'; _onPaint(); return; }
+  _on.ver=''; _on.err='';
+  const a=_on.after; _on.after='';
+  if(a==='import'&&_on.res){ _on.view='import'; _onImport(); }
+  else if(_on.res&&_on.view==='done'){ _onPaint(); }
+  else _onLook();
+}
+/* ── Graph ── */
+let _onFly=0; const _onQ=[];
+function _onSlot(fn){
+  return new Promise((res,rej)=>{
+    const go=()=>{ _onFly++; Promise.resolve().then(fn).then(res,rej).finally(()=>{ _onFly--; const n=_onQ.shift(); if(n) n(); }); };
+    if(_onFly<4) go(); else _onQ.push(go);
+  });
+}
+window.__onMaxFly=0;
+const _onExpired=()=>Object.assign(new Error('Sign in again to continue'),{expired:true});
+async function _onWait(s){
+  for(let i=s;i>0;i--){ _on.slow=i; _onTickText(); await new Promise(r=>setTimeout(r,1000)); }
+  _on.slow=0; _onTickText();
+}
+async function _onFetch(url,kind){
+  if(!_onUrlOk(url)) throw new Error('not a Microsoft Graph address');
+  for(let tr=0;;tr++){
+    if(!_onValid()) throw _onExpired();
+    const tok=_on.tok;
+    const r=await _onSlot(()=>{ window.__onMaxFly=Math.max(window.__onMaxFly,_onFly); return fetch(url,{headers:{Authorization:'Bearer '+tok}}); });
+    if(r.status===401){ _on.tok=null; throw _onExpired(); }
+    if((r.status===429||r.status===503)&&tr<8){ await _onWait(Math.min(120,Math.max(1,parseInt(r.headers.get('Retry-After'),10)||5))); continue; }
+    if(!r.ok) throw Object.assign(new Error('HTTP '+r.status),{status:r.status});
+    return kind==='blob'?await r.blob():kind==='text'?await r.text():await r.json();
+  }
+}
+async function _onList(url){
+  const out=[];
+  while(url){ const j=await _onFetch(url); (j.value||[]).forEach(x=>out.push(x)); const nx=j['@odata.nextLink']; url=_onUrlOk(nx)?nx:null; }
+  return out;
+}
+const _onPid=p=>_enxId('on-n-',String(p.id));
+async function _onHave(){
+  const ids=new Set(), arts=DB.articles||[];
+  for(let i=0;i<arts.length;i++){ if(i&&i%1500===0) await _enxYield(); if(arts[i]) ids.add(arts[i].id); }
+  (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item) ids.add(t.item.id); });
+  (DB.tombstones||[]).forEach(t=>{ if(t) ids.add(t.id); });
+  return ids;
+}
+/* a notebook's tree: {id,name,secs:[{id,name,pages:[]}],groups:[same]} — sections and groups of any depth */
+async function _onWalk(node,base,my){
+  const [secs,grps]=await Promise.all([_onList(base+'/sections?$select=id,displayName'),_onList(base+'/sectionGroups?$select=id,displayName')]);
+  const secObjs=secs.map(s=>({id:s.id,name:s.displayName||'Untitled section',pages:[]}));   /* made in Microsoft's order first: the fetches below finish in any order */
+  secObjs.forEach(x=>node.secs.push(x));
+  const grpObjs=grps.map(g=>({id:g.id,name:g.displayName||'Untitled group',secs:[],groups:[]}));
+  grpObjs.forEach(x=>node.groups.push(x));
+  await Promise.all(secs.map(async(s,si)=>{
+    const sec=secObjs[si];
+    const ps=await _onList(_ON_G+'/sections/'+encodeURIComponent(s.id)+'/pages?$select=id,title,createdDateTime,lastModifiedDateTime,level,order&$orderby=order&$top=100');
+    ps.forEach(p=>{ if(p&&p.id) sec.pages.push({id:p.id,title:p.title||'',created:p.createdDateTime||'',edited:p.lastModifiedDateTime||'',level:p.level|0,order:p.order|0}); });
+    _on.n+=sec.pages.length; _on.cur=sec.name; _onTickText();
+  }));
+  await Promise.all(grps.map((g,gi)=>_onWalk(grpObjs[gi],_ON_G+'/sectionGroups/'+encodeURIComponent(g.id),my)));
+}
+/* every section of a notebook, with the groups above it, in a stable depth-first order */
+function _onSecList(node,chain,out){
+  (node.secs||[]).forEach(s=>out.push({sec:s,chain:chain.concat([{id:s.id,name:s.name,kind:'section'}])}));
+  (node.groups||[]).forEach(g=>_onSecList(g,chain.concat([{id:g.id,name:g.name,kind:'group'}]),out));
+  return out;
+}
+async function _onLook(){
+  const my=++_on.run;
+  if(!_onValid()){ _on.after='look'; _on.view='setup'; _onPaint(); return; }
+  Object.assign(_on,{view:'reading',stop:false,busy:true,res:null,n:0,cur:'',err:''}); _onPaint();
+  let stopped=false;
+  try{
+    const nbs=await _onList(_ON_G+'/notebooks?$select=id,displayName');
+    const have=await _onHave(), R={nbs:[],sections:0,pages:0,already:0,failed:[]};
+    for(const nb of nbs){
+      if(_on.stop||my!==_on.run){ stopped=true; break; }
+      const node={id:nb.id,name:nb.displayName||'Untitled notebook',secs:[],groups:[]};
+      try{ await _onWalk(node,_ON_G+'/notebooks/'+encodeURIComponent(nb.id),my); }
+      catch(x){ if(x&&x.expired) throw x; R.failed.push(node.name); }
+      const secList=_onSecList(node,[{id:nb.id,name:node.name,kind:'notebook'}],[]);
+      let pages=0, already=0; secList.forEach(s=>s.sec.pages.forEach(p=>{ pages++; if(have.has(_onPid(p))) already++; }));
+      R.nbs.push({node,secList,sections:secList.length,pages,already,tick:true});
+      R.sections+=secList.length; R.pages+=pages; R.already+=already;
+    }
+    if(!stopped&&my===_on.run){ _on.res=R; _on.view='done'; }
+  }catch(x){
+    if(x&&x.expired){ _on.view='setup'; _on.err='Sign in again to continue.'; }
+    else{ console.error('OneNote import: the look failed',x); _on.view='setup'; _on.err='Could not read your notebooks from Microsoft: '+String(x&&x.message||x).split('\n')[0]; }
+  }
+  if(my!==_on.run) return;
+  _on.busy=false; if(stopped) _on.view='stopped';
+  _onPaint();
+}
+/* ── a page → note HTML ── */
+const _onAt=(tag,n)=>{ const x=new RegExp('\\s'+n+'\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\')','i').exec(tag); return x?_enxUnent(x[1]!=null?x[1]:x[2]):''; };
+const _ON_DROP=/^(position|left|top|right|bottom|width|height|min-width|max-width|z-index)$/i;
+function _onTag(tag){
+  tag=tag.replace(/\s(?:id|data-id|data-absolute-enabled)\s*=\s*(?:"[^"]*"|'[^']*')/gi,'');
+  return tag.replace(/\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/i,(m,d,s)=>{
+    const keep=String(d!=null?d:s).split(';').map(x=>x.trim()).filter(x=>x&&!_ON_DROP.test(x.split(':')[0].trim()));
+    return keep.length?' style="'+keep.join(';').replace(/"/g,'&quot;')+'"':'';
+  });
+}
+async function _onConvert(html,I){
+  let h=String(html==null?'':html);
+  const bm=/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i.exec(h);
+  h=bm?bm[1]:h.replace(/<head\b[\s\S]*?<\/head\s*>/i,'').replace(/<\/?(html|body)\b[^>]*>/gi,'');
+  const nonce='\u0001ON'+Math.random().toString(36).slice(2,8)+'_', res=[];
+  h=h.replace(/<img\b[^>]*>/gi,t=>{ res.push({k:'img',tag:t}); return nonce+(res.length-1)+'\u0002'; });
+  h=h.replace(/<object\b[^>]*>(?:\s*<\/object\s*>)?/gi,t=>{ res.push({k:'file',tag:t}); return nonce+(res.length-1)+'\u0002'; });
+  h=h.replace(/<[a-zA-Z][^>]*>/g,_onTag);
+  h=_enxClean(h);
+  const out=[];
+  for(const r of res){
+    const t=r.tag, name=(r.k==='img'?(_onAt(t,'alt')||'picture'):(_onAt(t,'data-attachment')||'file')).slice(0,120);
+    let html2;
+    try{
+      const url=r.k==='img'?(_onAt(t,'data-fullres-src')||_onAt(t,'src')):_onAt(t,'data');
+      if(!_onUrlOk(url)) throw new Error('not a Microsoft resource');
+      const blob=await _onFetch(url,'blob');
+      let mime=(r.k==='img'?(_onAt(t,'data-fullres-src-type')||_onAt(t,'data-src-type')):_onAt(t,'type'))||blob.type||'';
+      mime=String(mime).split(';')[0].trim();
+      if(r.k==='img'){
+        if(!/^image\//i.test(mime)) mime=/^image\//i.test(blob.type)?blob.type:'image/png';
+        const sha=await _picPut(blob,mime,{enx:true});
+        html2='<p>'+_enxMediaHTML({k:'img',sha,n:blob.size},esc(mime),'')+'</p>'; I.pics++;
+      }else{
+        const sha=await _picSha(await blob.arrayBuffer());
+        await _filePut(sha,blob,mime,name);
+        html2='<p>'+_enxMediaHTML({k:_enxKind(mime)==='audio'?'audio':'file',sha,n:blob.size},esc(mime),esc(name))+'</p>'; I.fls++;
+      }
+    }catch(x){
+      if(x&&x.expired) throw x;
+      console.error('OneNote import: a resource was left out',name,x);
+      I.left.push(name); html2='<p class="on-left">⚠ Left out (could not be fetched from OneNote): '+esc(name)+'</p>';
+    }
+    out.push(html2);
+  }
+  if(res.length) h=h.split(nonce).map((s,i)=>{ if(!i) return s; const m=/^(\d+)\u0002/.exec(s); return m?out[+m[1]]+s.slice(m[0].length):s; }).join('');
+  return h.trim();
+}
+async function _onBuild(p,secName,nbName,I){
+  let html;
+  try{ html=await _onFetch(_ON_G+'/pages/'+encodeURIComponent(p.id)+'/content','text'); }
+  catch(x){ if(x&&x.expired) throw x; I.broken++; I.failed.push(p.title||p.id); return null; }
+  const content=await _onConvert(html,I);
+  const ct=Date.parse(p.created), cr=new Date(isNaN(ct)?_enxNowMs():ct).toISOString(), ut=Date.parse(p.edited), up=isNaN(ut)?cr:new Date(ut).toISOString();
+  return {id:_onPid(p),title:String(p.title||'').trim()||'OneNote page',content,folderIds:[],tags:[],createdAt:cr,updatedAt:up,
+    fromOneNote:{id:p.id,nb:nbName,sec:secName,created:cr,edited:up,level:p.level|0,at:''}};
+}
+/* ── the job record, the cap ── */
+const _onJobGet=async()=>{ try{ return (await _enxJobOp('readonly',s=>s.get('job-onenote')))||null; }catch(e){ return null; } };
+const _onJobPut=async v=>{ try{ await _enxJobOp('readwrite',s=>s.put(v,'job-onenote')); }catch(e){} };
+const _onJobDel=async()=>{ try{ await _enxJobOp('readwrite',s=>s.delete('job-onenote')); }catch(e){} _on.job=null; };
+const _onWindow=now=>_enxWindow(now,['fromEvernote','fromKeep','fromOneNote']);
+function _onBrought(){
+  let n=0; (DB.articles||[]).forEach(a=>{ if(a&&a.fromOneNote) n++; });
+  (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item&&t.item.fromOneNote) n++; });
+  return n;
+}
+const _onIso=ms=>new Date(ms).toISOString();
+const _onFresh=R=>R.nbs.filter(n=>n.tick).reduce((s,n)=>s+n.pages-n.already,0);
+async function _onImport(){
+  const I=_on.imp, R=_on.res; if(I.run||!R) return;
+  if(!_onValid()){ I.state='signin'; _on.view='import'; _onPaint(); return; }
+  const now0=_enxNowMs(), w0=_onWindow(now0);
+  if(!_s2RefsOk()){ I.state='idle'; I.note='Pictures cannot be stored on this device right now (the picture store is not ready). Try again in a moment; nothing was changed.'; _on.view='done'; _onPaint(); return; }
+  if(w0.room<=0){ I.state='capped'; I.took=0; _on.view='import'; _onPaint(); return; }
+  const my=++I.runId;
+  if(!I.total) I.total=_onFresh(R);
+  Object.assign(I,{run:true,state:'running',pause:false,capHit:false,took:0,already:0,earlier:0,broken:0,newFolders:0,note:'',goal:w0.room});
+  if(!I.keepLeft){ I.left=[]; I.failed=[]; }
+  _on.view='import'; _onPaint();
+  const jobNow=()=>({app:'onenote',total:I.total||0,at:_onIso(now0)});
+  _onJobPut(jobNow()); _on.job=jobNow();
+  const have=await _onHave(), pend=[], chains=[];
+  const flush=async(list,last)=>{
+    if(!list.length&&!(last&&chains.length)) return;
+    await _enxYield();
+    const at=_onIso(_enxNowMs()), ens=_impFolders('on',at,()=>{ I.newFolders++; });
+    const ensChain=ch=>{ let pid=ens('on-root','OneNote (Imported)',null,'root'); for(const c of ch) pid=ens(_enxId('on-f-',c.id),c.name||'Untitled',pid,c.kind); return pid; };
+    chains.splice(0).forEach(ensChain);
+    list.forEach(e=>{ e.rec.folderIds=[ensChain(e.chain)]; e.rec.fromOneNote.at=at; DB.articles.push(e.rec); });
+    _enxPersist();
+    I.took+=list.length; I.doneAll+=list.length; _onTick();
+    _on.job=jobNow(); _onJobPut(_on.job);
+    await _enxYield();
+    if(window.__enxDelay>0) await new Promise(r=>setTimeout(r,window.__enxDelay));
+  };
+  let finished=false, expired=false;
+  try{
+    outer:
+    for(const nbE of R.nbs){
+      if(!nbE.tick) continue;
+      for(const S of nbE.secList){
+        if(I.pause||I.capHit||my!==I.runId) break outer;
+        chains.push(S.chain);
+        const pages=S.sec.pages;
+        for(let i=0;i<pages.length;i+=4){
+          if(I.pause||I.capHit||my!==I.runId) break outer;
+          const chunk=[];
+          for(const p of pages.slice(i,i+4)){ if(have.has(_onPid(p))) I.earlier++; else chunk.push(p); }
+          const room=I.goal-I.took-pend.length;
+          if(chunk.length>room){ chunk.length=Math.max(0,room); I.capHit=true; }
+          const built=await Promise.all(chunk.map(p=>_onBuild(p,S.sec.name,nbE.node.name,I)));
+          built.forEach(rec=>{ if(rec){ pend.push({rec,chain:S.chain}); have.add(rec.id); } });
+          while(pend.length>=_ENX_BATCH) await flush(pend.splice(0,_ENX_BATCH));
+          if(I.capHit) break outer;
+        }
+      }
+    }
+    if(!I.pause) await flush(pend.splice(0),true);
+    finished=!I.pause&&!I.capHit&&my===I.runId;
+  }catch(x){
+    if(x&&x.expired){ expired=true; try{ await flush(pend.splice(0),true); }catch(e){} }
+    else{ console.error('OneNote import failed',x); I.broken++; try{ await flush(pend.splice(0),true); }catch(e){} }
+  }finally{
+    if(my===I.runId){
+      I.run=false; I.state=expired?'signin':I.pause?'paused':I.capHit?'capped':finished?'done':'paused';
+      _enxPushEnd();
+      if(I.state==='done'&&!I.broken) await _onJobDel(); else { _on.job=jobNow(); _onJobPut(_on.job); }
+      try{ render(); }catch(x){}
+      _onPaint();
+    }
+  }
+}
+function _onProgText(){
+  const I=_on.imp;
+  if(_on.slow>0) return 'Microsoft asked us to slow down — waiting '+_on.slow+' s';
+  return I.pause?'Pausing after this batch…':'Bringing in… '+_enxN(I.took)+' of '+_enxN(I.goal)+' this time'+(I.total?' · '+_enxN(I.total)+' in all':'');
+}
+function _onTickText(){
+  const p=document.getElementById('on-iprog')||document.getElementById('on-prog'); if(!p) return;
+  p.textContent=_on.view==='reading'?(_on.slow>0?_onProgText():'Reading '+(_on.cur||'…')+' — '+_enxN(_on.n)+' pages so far'):_onProgText();
+}
+function _onTick(){
+  const I=_on.imp, p=document.getElementById('on-iprog'), b=document.getElementById('on-ibar');
+  if(p) p.textContent=_onProgText();
+  if(b) b.style.width=(I.goal?Math.min(100,Math.round(I.took*100/I.goal)):0)+'%';
+}
+function _onPause(){ const I=_on.imp; if(!I.run) return; I.pause=true; _onTick(); }
+function _onBring(){ const I=_on.imp; if(I.run) return; I.state='idle'; I.total=0; _onImport(); }
+async function _onContinue(){
+  const I=_on.imp; if(I.run) return;
+  const w=_onWindow(_enxNowMs());
+  if(w.room<=0){ I.note='Not yet — the free cloud plan allows about '+_enxN(w.cap)+' notes a day. Continue after '+_enxWhen(w.next,_enxNowMs())+'.'; _onPaint(); return; }
+  I.note='';
+  if(_on.res&&_onValid()) return _onImport();
+  _on.after=_on.res?'import':'look'; _onSignInAgain();
+}
+function _onSignInAgain(){ _on.view=_on.res&&_on.after==='import'?'import':'setup'; _onPaint(); const b=document.getElementById('on-signin'); if(b) b.focus(); }
+function openOneNoteImport(){
+  const m=_impDialog('on-modal','OneNote import','closeOneNoteImport');
+  if(_on.view!=='reading'&&_on.view!=='done'&&_on.view!=='signing'&&!(_on.view==='import'&&_on.imp.state!=='idle')) _on.view='setup';
+  _onPaint(); m.classList.add('open');
+  _onLoadCfg().then(()=>{ if(m.classList.contains('open')&&_on.view==='setup') _onPaint(); });
+  _onJobGet().then(j=>{ _on.job=j; if(m.classList.contains('open')&&_on.view==='setup') _onPaint(); });
+}
+function closeOneNoteImport(){ if(_on.busy) _on.stop=true; const m=document.getElementById('on-modal'); if(m) m.classList.remove('open'); }
+function _onAgain(){ _on.view='setup'; _on.res=null; if(!_on.imp.run) Object.assign(_on.imp,{state:'idle',total:0,doneAll:0,note:'',left:[],failed:[],pics:0,fls:0}); _onPaint(); }
+function _onStop(){ _on.stop=true; const p=document.getElementById('on-prog'); if(p) p.textContent='Stopping…'; }
+function _onTickNb(i,v){ const n=_on.res&&_on.res.nbs[i]; if(n) n.tick=!!v; const b=document.getElementById('on-bringnote'); if(b) b.textContent=_onBringNote(); }
+const _onBringNote=()=>{ const R=_on.res; return R?_enxN(_onFresh(R))+' new pages in the ticked notebooks. Up to '+_enxN(_enxCap())+' notes now (the free cloud plan allows about that much a day); the rest continues later from here. Nothing in your notebook is changed or deleted. Each page keeps its OneNote dates.':''; };
+function _onSetupHTML(){
+  const j=_on.job, signed=_onValid();
+  let h='';
+  if(j&&j.total&&!_on.imp.run) h+='<div class="enx-prog" id="on-unfinished" role="status">📥 A OneNote import is unfinished. Sign in and look again, then tap “Bring them in”: pages already brought in are skipped, so it is safe.</div>';
+  if(_on.err) h+='<div class="enx-dry" id="on-err" role="alert">'+esc(_on.err)+'</div>';
+  h+='<p class="rm-p">Reads your OneNote notebooks <b>straight from Microsoft</b> and shows what it found first; nothing is added until you tap “Bring them in”. Each page keeps its OneNote dates. Meant for a laptop, but it works on a tablet or phone too (the sign-in opens in a new window or tab).</p>'
+    +'<label class="rm-row">Application (client) ID <input type="text" id="on-cid" class="rem-inp" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="11111111-2222-3333-4444-555555555555" value="'+esc(_on.cid)+'"></label>'
+    +'<label class="rm-sw"><input type="checkbox" id="on-common"'+(_on.common?' checked':'')+'> A work or school account (not a personal Microsoft account)</label>'
+    +(signed?'<div class="enx-prog" id="on-signed" role="status">✅ Signed in to Microsoft (this stays only in memory; closing or reloading the page signs you out).</div><button class="rm-big" id="on-look" onclick="_onLook()">🔍 Look at my notebooks</button>':'')
+    +'<button class="rm-big'+(signed?' alt':'')+'" id="on-signin" onclick="_onSignIn()">'+(signed?'Sign in again':'Sign in with Microsoft')+'</button>'
+    +'<details class="rm-p" id="on-how"><summary><b>How to get this</b> (once, about 3 minutes, best on a laptop)</summary><ol class="rm-steps">'
+    +'<li>Open <a href="https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener">Microsoft Entra ▸ App registrations</a> (or portal.azure.com ▸ App registrations) and sign in with the same Microsoft account that holds your OneNote.</li>'
+    +'<li><b>New registration</b>. Name: <code>Siyagah</code>. Supported account types: <b>Personal Microsoft accounts only</b> (or “…any organizational directory and personal Microsoft accounts” if you tick the work/school box above).</li>'
+    +'<li>Redirect URI: platform <b>Single-page application (SPA)</b>, address <code>'+esc(_onRedir())+'</code>. Press <b>Register</b>.</li>'
+    +'<li><b>API permissions ▸ Add a permission ▸ Microsoft Graph ▸ Delegated ▸ Notes.Read</b>. Add it (no admin consent is needed for a personal account).</li>'
+    +'<li>On the app’s <b>Overview</b> page copy the <b>Application (client) ID</b> and paste it above. It is not a secret.</li>'
+    +'<li>Tap <b>Sign in with Microsoft</b>, choose your account and allow “Read your OneNote notebooks”. Siyagah never keeps your Microsoft password or a sign-in token.</li></ol></details>';
+  return h;
+}
+function _onNbRows(){
+  return _on.res.nbs.map((n,i)=>'<label class="rm-sw on-nb"><input type="checkbox" class="on-nb-tick" data-i="'+i+'"'+(n.tick?' checked':'')+' onchange="_onTickNb('+i+',this.checked)"> <b>'+esc(n.node.name)+'</b> — '
+    +_enxN(n.sections)+' sections · '+_enxN(n.pages)+' pages · '+_enxN(n.already)+' already in Siyagah</label>').join('');
+}
+function _onImpHTML(){
+  const I=_on.imp, now=_enxNowMs(), w=_onWindow(now), N=_enxN, togo=I.total?Math.max(0,I.total-I.doneAll):0;
+  const sum='<div class="enx-sub" id="on-isum">Left as they were: '+N(I.earlier)+' already in Siyagah · '+N(I.broken)+' pages could not be read (the next run tries them again). In: '+N(I.pics)+' pictures · '+N(I.fls)+' files (kept on this computer; pictures reach your other devices later).'
+    +(I.left.length?' Left out, could not be fetched: '+esc(I.left.slice(0,20).join(', '))+(I.left.length>20?' … and '+(I.left.length-20)+' more':'')+'.':'')
+    +(I.failed.length?' Pages not read: '+esc(I.failed.slice(0,20).join(', '))+(I.failed.length>20?' … and '+(I.failed.length-20)+' more':'')+'.':'')+'</div>';
+  let h='';
+  if(I.state==='running'){
+    h+='<div class="enx-prog" id="on-iprog" role="status">'+esc(_onProgText())+'</div>'
+      +'<div class="enx-bar" role="progressbar"><i id="on-ibar" style="width:'+(I.goal?Math.min(100,Math.round(I.took*100/I.goal)):0)+'%"></i></div>'
+      +'<button class="rm-big alt" id="on-pause" onclick="_onPause()">⏸ Pause</button>'
+      +'<div class="enx-sub">You can close this window — the import goes on. Nothing in your notebook is changed or deleted.</div>';
+  }else if(I.state==='signin'){
+    h+='<div class="enx-prog" id="on-resignin" role="status">🔑 Sign in again to continue. '+N(_onBrought())+' pages are in so far'+(I.total?'; '+N(togo)+' to go':'')+'. Your place is kept: pages already brought in are skipped.</div>'
+      +'<button class="rm-big" id="on-signin" onclick="_on.after=\'import\';_onSignIn()">Sign in with Microsoft</button>'
+      +'<input type="hidden" id="on-cid" value="'+esc(_on.cid)+'">'+sum;
+  }else if(I.state==='capped'||I.state==='paused'){
+    h+='<div class="enx-prog" id="on-icap" role="status">'+(I.state==='paused'?'Paused after '+N(I.took)+' notes this time. ':N(_onBrought())+' brought in so far. ')+(I.total?N(togo)+' to go. ':'')
+      +(w.room>0?'You can continue now.':'Continue after '+esc(_enxWhen(w.next,now)))+'</div>'
+      +'<button class="rm-big" id="on-cont" onclick="_onContinue()"'+(w.room>0?'':' disabled')+'>Continue</button>'
+      +(I.note?'<div class="enx-sub" id="on-inote">'+esc(I.note)+'</div>':'')+sum;
+  }else if(I.state==='done'){
+    h+='<div class="enx-prog" id="on-idone" role="status">✅ Done. '+N(I.took)+' pages brought in this time; '+N(_onBrought())+' from OneNote in all.</div>'+sum
+      +'<div class="enx-sub">They are in My Notebooks ▸ OneNote (Imported), and in the Smart View "(16) From OneNote". Each keeps its original OneNote dates.</div>'
+      +'<button class="rm-big alt" onclick="_onAgain()">↩ Start again</button>';
+  }
+  return h;
+}
+function _onPaint(){
+  const box=document.getElementById('on-box'); if(!box) return;
+  const v=_on.view;
+  let h='<div class="rm-hd"><div class="rem-title">📥 OneNote import</div><button class="rem-btn cancel" onclick="closeOneNoteImport()">✕ Close</button></div>';
+  if(v==='signing'){
+    h+='<div class="enx-prog" id="on-signing" role="status">Waiting for you to sign in to Microsoft in the other window…</div>';
+  }else if(v==='reading'){
+    h+='<div class="enx-prog" id="on-prog" role="status">'+esc('Reading '+(_on.cur||'…')+' — '+_enxN(_on.n)+' pages so far')+'</div><button class="rm-big alt" onclick="_onStop()">✕ Stop</button>';
+  }else if(v==='stopped'){
+    h+='<div class="enx-prog" id="on-stopped" role="status">Stopped. Nothing was added to your notebook.</div><button class="rm-big" onclick="_onAgain()">↩ Start again</button>';
+  }else if(v==='done'&&_on.res){
+    const r=_on.res, N=_enxN, row=(a,b)=>'<dt>'+a+'</dt><dd>'+b+'</dd>';
+    h+='<dl class="enx-grid" id="on-totals">'+row('Notebooks',N(r.nbs.length))+row('Sections',N(r.sections))+row('Pages',N(r.pages))+row('Already in Siyagah',N(r.already))+'</dl>';
+    if(r.failed.length) h+='<ul class="enx-broken" id="on-broken">'+r.failed.slice(0,50).map(n=>'<li>'+esc(n)+' could not be read</li>').join('')+'</ul>';
+    h+='<div id="on-nbs">'+_onNbRows()+'</div>'
+      +'<button class="rm-big" id="on-bring" onclick="_onBring()">📥 Bring them in</button>'
+      +'<div class="enx-sub" id="on-bringnote">'+esc(_onBringNote())+'</div>'
+      +(_on.imp.note?'<div class="enx-sub" id="on-inote">'+esc(_on.imp.note)+'</div>':'')
+      +'<div class="enx-dry" id="on-dry">This was a look at your notebooks: nothing has been added to your notebook yet. Tap “Bring them in” to import.</div>'
+      +'<button class="rm-big alt" onclick="_onAgain()">↩ Start again</button>';
+  }else if(v==='import'){
+    h+=_onImpHTML();
+  }else{
+    h+=_onSetupHTML();
   }
   box.innerHTML=h;
 }
@@ -35309,6 +35757,7 @@ const SF=[
   {id:'sf-enx',     name:'(13) From Evernote',         icon:'📥', smart:'enx'},
   {id:'sf-mydb',    name:'(14) MyDatabase',            icon:'🗄', smart:'mydb'},
   {id:'sf-keep',    name:'(15) From Keep',             icon:'📥', smart:'keep'},
+  {id:'sf-onenote', name:'(16) From OneNote',          icon:'📥', smart:'onenote'},
 ];
 const SF_IDS=new Set(SF.map(s=>s.id));
 /* v05.29 (F2) — the ONE place a Smart View's name is read. The owner's own rename wins; a stored name that is exactly the
@@ -35966,6 +36415,8 @@ function getSmartArts(sfId){
       return live.filter(a=>a.fromEvernote).sort((a,b)=>String(b.fromEvernote.at||'').localeCompare(String(a.fromEvernote.at||'')));
     case 'sf-keep':
       return live.filter(a=>a.fromKeep).sort((a,b)=>String(b.fromKeep.created||'').localeCompare(String(a.fromKeep.created||'')));
+    case 'sf-onenote':
+      return live.filter(a=>a.fromOneNote).sort((a,b)=>String(b.fromOneNote.created||'').localeCompare(String(a.fromOneNote.created||'')));
     case 'sf-mydb':
       return live.filter(a=>a.fromMydb).sort((a,b)=>String(b.fromMydb.at||'').localeCompare(String(a.fromMydb.at||'')));
     default: return [];
@@ -38325,6 +38776,7 @@ function _bvEnd(){
    this wrapper: they only touch DB from inside a callback that fires much
    later, never at registration time, so they don't need to wait. */
 (async function _boot(){
+  if(window.__onPopup){ _onPopupBoot(); return; }   /* v05.78 · J110 ② — the Microsoft sign-in popup: hand the code back and start NOTHING */
   await _bvShow();   /* v05.56 · J08 R3 — the last screen first; never throws */
   await loadDB();
   if(!DB.calEvents)DB.calEvents=[];
