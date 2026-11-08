@@ -156,7 +156,7 @@ if (want('96c')) {
   const before = await p.evaluate(() => ({ cache: typeof _newsCache !== 'undefined' && !!_newsCache, nw: document.querySelectorAll('#zab-tk .tk-nw').length, its: document.querySelectorAll('#zab-tk .tk-it').length }));
   const roundEnd = async () => { await p.evaluate(() => { _tkX = -_tkTw + 1; _tkPhase = 'run'; _tkGapEnd = 0; }); await sleep(700); };
   const texts = () => p.evaluate(() => [...document.querySelectorAll('#zab-tk .tk-nw .tk-tx')].map((e) => e.textContent).join('|'));
-  await T('96c the band was built (your items) before the first headlines arrived', async () => [!before.cache && before.nw === 0 && before.its === 3, JSON.stringify(before)]);
+  await T('96c the band was built (your items) before the first headlines arrived', async () => [before.nw === 0 && before.its === 3, JSON.stringify(before)]   /* v05.75 · J117: the first headlines may already be in _newsCache (the start fetch runs at the first idle moment); what matters is the band was built from your items and they did not enter mid-scroll */);
   await T('96c headlines that arrive mid-scroll do NOT rebuild the band; at the next round start they enter', async () => {
     await gotNews(p); await sleep(1500); const mid = await p.evaluate(() => document.querySelectorAll('#zab-tk .tk-nw').length);
     await roundEnd(); const after = await p.evaluate(() => document.querySelectorAll('#zab-tk .tk-nw').length);
