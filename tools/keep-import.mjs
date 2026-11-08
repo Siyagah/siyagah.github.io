@@ -178,11 +178,12 @@ try {
       const p = DB.articles.find((x) => x.fromKeep && x.fromKeep.file === 'n07.json'), pe = document.querySelector(`#p2 .ar[data-aid="${p.id}"] .ar-keep`);
       const bl = DB.articles.find((x) => x.fromKeep && x.fromKeep.file === 'n08.json'), be = document.querySelector(`#p2 .ar[data-aid="${bl.id}"] .ar-keep .kp-dot`);
       const exp = DB.articles.filter((x) => x.fromKeep && x.folderIds[0] === 'kp-root').sort((x, y) => y.fromKeep.created.localeCompare(x.fromKeep.created)).map((x) => x.id);
-      return { txt: el && el.textContent, want, pin: pe && pe.textContent, dot: !!be, ids, exp, meta: document.querySelector(`#p2 .ar[data-aid="${a.id}"]`).textContent };
+      const tt = (arr) => arr.slice(0, 5).map((i) => { const x = DB.articles.find((q) => q.id === i); return x.title + '@' + x.updatedAt.slice(0, 10); }).join(' | ');
+      return { txt: el && el.textContent, want, pin: pe && pe.textContent, dot: !!be, ids: ids.map((x) => x), exp, tt: tt(ids) + ' vs ' + tt(exp), meta: document.querySelector(`#p2 .ar[data-aid="${a.id}"]`).textContent };
     });
     check(card.txt && card.txt.startsWith('📥 Keep · created ') && card.txt.includes(card.want), `${t} the card says “${card.txt}”`, card.want);
     check(card.pin && card.pin.includes('📌') && card.dot, `${t} a pinned note shows 📌 and a Keep-colour dot on its card`, card.pin);
-    check(JSON.stringify(card.ids) === JSON.stringify(card.exp), `${t} the Keep folder lists the notes by creation date, newest first (${card.ids.length} cards)`, card.ids.slice(0, 4).join() + ' vs ' + card.exp.slice(0, 4).join());
+    check(JSON.stringify(card.ids) === JSON.stringify(card.exp), `${t} the Keep folder lists the notes by creation date, newest first (${card.ids.length} cards)`, card.tt);
     await on(d, () => { const a = DB.articles.find((x) => x.fromKeep && x.fromKeep.file === 'n01.json'); selArt(a.id); });
     await d.page.waitForSelector('.av-keep');
     const rv = await on(d, () => { const a = DB.articles.find((x) => x.fromKeep && x.fromKeep.file === 'n01.json'); return { t: document.querySelector('.av-keep').textContent, w: new Date(a.fromKeep.created).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) }; });

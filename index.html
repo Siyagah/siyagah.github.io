@@ -34194,6 +34194,7 @@ const _kpFind=(ix,name)=>{ const lc=name.toLowerCase(); return ix.byName.get(lc)
 /* the dry run: counts only, nothing is written anywhere */
 async function _kpRun(list){
   const my=++_kp.run, ix=_kpIndex(list);
+  ix.cr=new Map();
   Object.assign(_kp,{view:'reading',stop:false,busy:true,res:null,n:0,cur:'',files:list,ix,total:ix.jsons.length});
   _kpPaint();
   const R={notes:0,lists:0,pics:0,audio:0,other:0,labels:new Set(),pinned:0,archived:0,trashed:0,already:0,fresh:0,noDate:0,broken:[],missing:[],used:new Set(),jsons:ix.jsons.length,skipped:0};
@@ -34206,7 +34207,7 @@ async function _kpRun(list){
       let o=null; try{ o=_kpParse(await e.file.text()); }catch(x){ o=null; }
       if(!o||!_kpIsNote(o)){ if(!o) R.broken.push(e.name); else R.skipped++; }
       else{
-        const f=_kpFacts(o,e.name);
+        const f=_kpFacts(o,e.name); ix.cr.set(e.name,f.cr);
         if(f.trashed) R.trashed++;
         else{
           R.notes++; _kp.n=R.notes;
@@ -34223,6 +34224,18 @@ async function _kpRun(list){
   _kp.busy=false;
   if(stopped){ _kp.view='stopped'; } else { R.skipped+=ix.all-ix.jsons.length-R.used.size; if(R.skipped<0) R.skipped=0; _kp.res=R; _kp.view='done'; }
   _kpPaint();
+}
+/* A folder lists its notes in the order they were added, so the import adds them NEWEST FIRST by Keep's created time (the dates come from the dry run, else a quick pass) */
+async function _kpOrder(ix){
+  if(!ix.cr){
+    ix.cr=new Map(); let lastY=performance.now();
+    for(const e of ix.jsons){
+      try{ const o=_kpParse(await e.file.text()); if(o&&_kpIsNote(o)) ix.cr.set(e.name,_kpFacts(o,e.name).cr); }catch(x){}
+      if(performance.now()-lastY>25){ await _enxYield(); lastY=performance.now(); }
+    }
+  }
+  const v=n=>{ const x=ix.cr.get(n); return x==null?Infinity:x; };
+  return ix.jsons.slice().sort((a,b)=>{ const x=v(a.name), y=v(b.name); return x===y?a.name.localeCompare(b.name):(x>y?-1:1); });
 }
 function _kpProgText(){ return 'Reading '+(_kp.cur||'…')+' — '+_enxN(_kp.n)+' notes so far · file '+_enxN(_kp.n)+' of '+_enxN(_kp.total||0); }
 /* a note's text and its files → the note's content */
@@ -34278,7 +34291,7 @@ async function _kpImport(){
   _kp.view='import'; _kpPaint();
   const jobNow=()=>({app:'keep',total:I.total||0,at:_kpIso(now0)});
   _kpJobPut(jobNow()); _kp.job=jobNow();
-  const have=await _kpHave(), pend=[];
+  const have=await _kpHave(), pend=[], order=await _kpOrder(ix);
   const flush=async list=>{
     if(!list.length) return;
     await _enxYield();
@@ -34298,7 +34311,7 @@ async function _kpImport(){
   let finished=false;
   try{
     let lastY=performance.now();
-    for(const e of ix.jsons){
+    for(const e of order){
       if(I.pause||I.capHit||my!==I.runId) break;
       let o=null; try{ o=_kpParse(await e.file.text()); }catch(x){ o=null; }
       if(!o){ I.broken++; continue; }
