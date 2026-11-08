@@ -623,7 +623,7 @@ A failing check is a wrong assertion surprisingly often — investigate before
   + created second + lower-case title + raw content length; **its id is `_enxId('enx-n-',k)`**, so the same note from a second run or a second
   device is the same record. Skipped (and counted) when its id or `k` is in `DB.articles`, Trash or the tombstones; skipped as "already in
   Siyagah" on title + created second against notes that are NOT `fromEvernote`. Folders: `enx-root`, `enx-s-<hash>`, `enx-b-<hash>`, each with
-  `enx:{kind,name}`, found by id (a tombstoned id gets `-2`, `-3`…); the section is "My Notebooks" else the first. **The cap:** `_enxWindow(now)` counts
+  `enx:{kind,name}`, found by id (a tombstoned id gets `-2`, `-3`…); the section is "My Notebooks" else the first. **The cap (one for EVERY importer since v05.77: the marks are listed once, in `_IMP_MARKS`; a new importer adds its mark there):** `_enxWindow(now)` counts
   `fromEvernote.at` in the last 24 h over `DB.articles` AND Trash (so deleting imported notes does not free the window); `_ENX_DAY_CAP` 6000;
   `__enxCap` / `__enxNow` / `__enxDelay` are test hooks. **Writing:** `_enxImport(items)` → 250-note `flush`: folders, notes, then `_enxPersist()`
   = `persist()` without the undo frame (`_histCapture(sw,true)`); it yields before each save and every 25 ms. **State:** `_enx.imp` (in memory) and
