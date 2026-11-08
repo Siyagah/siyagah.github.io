@@ -34187,7 +34187,7 @@ function _kpIndex(list){
     if(!byName.has(lc)) byName.set(lc,e.file);
     const st=lc.replace(/\.[^.]*$/,''); if(!byStem.has(st)) byStem.set(st,e.file);
   });
-  jsons.sort((a,b)=>a.name.localeCompare(b.name));
+  jsons.sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0);   /* not localeCompare: 3,000 names cost ~1 s of one task on a phone */
   return {jsons,byName,byStem,all:list.length};
 }
 const _kpFind=(ix,name)=>{ const lc=name.toLowerCase(); return ix.byName.get(lc)||ix.byStem.get(lc.replace(/\.[^.]*$/,''))||null; };
@@ -34235,7 +34235,7 @@ async function _kpOrder(ix){
     }
   }
   const v=n=>{ const x=ix.cr.get(n); return x==null?Infinity:x; };
-  return ix.jsons.slice().sort((a,b)=>{ const x=v(a.name), y=v(b.name); return x===y?a.name.localeCompare(b.name):(x>y?-1:1); });
+  return ix.jsons.slice().sort((a,b)=>{ const x=v(a.name), y=v(b.name); return x===y?(a.name<b.name?-1:a.name>b.name?1:0):(x>y?-1:1); });
 }
 function _kpProgText(){ return 'Reading '+(_kp.cur||'…')+' — '+_enxN(_kp.n)+' notes so far · file '+_enxN(_kp.n)+' of '+_enxN(_kp.total||0); }
 /* a note's text and its files → the note's content */

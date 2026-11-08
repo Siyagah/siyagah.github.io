@@ -249,18 +249,24 @@ try {
       const t = `135g@${vp.name}`;
       await ready(d);
       const cdp = await d.ctx.newCDPSession(d.page); if (vp.w < 640) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-      await on(d, () => { window.__lt = []; try { new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__lt.push(e.duration))).observe({ entryTypes: ['longtask'] }); } catch (e) {} window.__enxCap = 10000; });
+      await on(d, () => { window.__lt = []; window.__ltl = []; try { new PerformanceObserver((l) => l.getEntries().forEach((e) => { window.__ltl.push(Math.round(e.startTime) + '+' + Math.round(e.duration)); if (window.__ks != null && e.startTime >= window.__ks - 2) window.__lt.push(e.duration); })).observe({ entryTypes: ['longtask'] }); } catch (e) {} window.__enxCap = 10000;
+        /* the browser's hand-over of 3,000 picked files (Playwright's setInputFiles) is one long task BEFORE the app's code runs: it is not counted; the app's own synchronous start of the look is timed here and counted */
+        const s = _kpStart; window._kpStart = function (l) { window.__ks = Math.round(performance.now()); const t = performance.now(); const p = s(l); window.__lt.push(performance.now() - t); return p; }; });
       await dlg(d, vp);
-      const h0 = await on(d, () => performance.memory ? performance.memory.usedJSHeapSize : 0);
+      await cdp.send('Performance.enable');
+      const heapNow = async () => { await cdp.send('HeapProfiler.collectGarbage'); const m = await cdp.send('Performance.getMetrics'); return (m.metrics.find((x) => x.name === 'JSHeapUsedSize') || { value: 0 }).value; };
+      const h0 = await heapNow();
       const t0 = Date.now();
       await d.page.setInputFiles('#kp-dir', BIG); await d.page.waitForSelector('#kp-totals', { timeout: 300000 });
       const tLook = Date.now() - t0, mxLook = await on(d, () => Math.max(0, ...window.__lt));
+      console.log('  note  long tasks while looking (start+ms), _kpStart called at', await on(d, () => window.__ks + ' : ' + window.__ltl.join(' ')));
       await on(d, () => { window.__lt.length = 0; });
       const t1 = Date.now();
       await act(d, vp, '#kp-bring');
       await d.page.waitForFunction(() => !_kp.imp.run && _kp.imp.state === 'done', null, { timeout: 600000 });
       const tImp = Date.now() - t1;
-      const r = await on(d, () => ({ n: DB.articles.filter((a) => a.fromKeep).length, mx: Math.max(0, ...window.__lt), heap: performance.memory ? performance.memory.usedJSHeapSize : 0 }));
+      const r = await on(d, () => ({ n: DB.articles.filter((a) => a.fromKeep).length, mx: Math.max(0, ...window.__lt) }));
+      r.heap = await heapNow();
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
       console.log(`  note  ${t}: look ${(tLook / 1000).toFixed(1)} s (longest task ${Math.round(mxLook)} ms) · import ${(tImp / 1000).toFixed(1)} s (longest task ${Math.round(r.mx)} ms) · heap +${Math.round((r.heap - h0) / 1048576)} MB`);
       check(r.n === 3000, `${t} 3,000 notes brought in`, JSON.stringify(r));
