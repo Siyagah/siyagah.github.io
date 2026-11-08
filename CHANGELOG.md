@@ -11288,6 +11288,8 @@ Run-to-run noise on this machine is about ±20 % at ×4 (the first-paint and ren
 - Folder, 2,000-note folder and 34,000-note folder were not changed (they were already the windowed list).
 
 **Checks.** Block 133, `tools/speed-j117b.mjs` (27 checks at 390 / 820 / 1440): 133a the seven jobs start after the first render, 350 ms apart, within 5 s, and each timer then reaches its tick (a wrapped tick is seen), and a closed gate stops it; 133b two devices on the S1 fake — a change made on A before B started and one made while B was starting reach B with no tap, and B's later edit reaches A; 133c a `pagehide`/`hidden` fired through the whole start writes nothing to the device copy before `_dbLoaded` and the notebook is intact, and a `pagehide` inside the delay (jobs not yet started) still saves; 133d the oracle — Timeline lists, every Smart View number, MyWall (compact/preview × closed/open) and eight drawn screens (`#tree`, `#p2h`, `#p2c`) equal the v05.71 code byte for byte; 133e no page errors. `--measure` prints the table above.
+
+**Checks updated in the Architect's review (reason: the start fetch of the news now runs at the first idle moment, earlier than the old fixed 1.5 s, often before the check's page is handed over).** 95c reads "a fetch at start" from the page (`_newsLast`) instead of the call counter it resets; 96c no longer demands that no headline has arrived yet, only that the band was built from the owner's items and none entered mid-scroll. The app was not changed.
 ## v05.74 — J124 Appearance sections fold under on/off switches
 
 Built by the Architect (the owner's screenshot of 🎨 Appearance: "Enable all the sections here with on/off switch. (it's now long)").
