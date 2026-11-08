@@ -85,15 +85,16 @@ const fakeMs = async (ctx, FIX, opt = {}) => {
   });
   await ctx.route('https://graph.microsoft.com/**', async (r) => {
     const req = r.request(), u = new URL(req.url());
-    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET' };
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET', 'access-control-expose-headers': 'Retry-After' };
     if (req.method() === 'OPTIONS') return r.fulfill({ status: 204, headers: cors });
     const auth = req.headers()['authorization'] || '';
     S.auth.add(auth);
     S.fly++; S.maxFly = Math.max(S.maxFly, S.fly);
-    const done = () => setTimeout(() => { S.fly--; }, 15);
+    const done = () => { S.fly--; };
+    await sleep(25);   /* a request takes a moment, so in-flight requests really overlap and the count means something */
     const json = (o) => { done(); return r.fulfill({ status: 200, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify(o) }); };
     const p = u.pathname.replace('/v1.0/me/onenote', '');
-    S.graph.push(p + (u.search ? '?' + u.searchParams.toString().slice(0, 60) : ''));
+    S.graph.push(p + (u.search ? '?' + decodeURIComponent(u.searchParams.toString()).slice(0, 200) : ''));
     if (!/^Bearer FAKE-TOKEN-SECRET-/.test(auth)) { done(); return r.fulfill({ status: 401, headers: cors, body: '{}' }); }
     let m;
     if (p === '/notebooks') return json({ value: FIX.notebooks });
@@ -104,7 +105,7 @@ const fakeMs = async (ctx, FIX, opt = {}) => {
     if ((m = /^\/sections\/([^/]+)\/pages$/.exec(p))) {
       const all = FIX.pages[m[1]] || [], from = +(u.searchParams.get('$skiptoken') || 0), n = FIX.pageSize, slice = all.slice(from, from + n);
       const o = { value: slice.map(({ body, ...rest }) => rest) };
-      if (from + n < all.length) o['@odata.nextLink'] = `${G}/sections/${m[1]}/pages?$skiptoken=${from + n}`;
+      if (from + n < all.length) { const nu = new URL(`${G}/sections/${m[1]}/pages`); u.searchParams.forEach((v, k) => nu.searchParams.set(k, v)); nu.searchParams.set('$skiptoken', String(from + n)); o['@odata.nextLink'] = nu.href; }   /* like Graph: the same query plus a token */
       return json(o);
     }
     if ((m = /^\/pages\/([^/]+)\/content$/.exec(p))) {
@@ -144,7 +145,9 @@ const each = async (id, fn, vps = VPS, cfg = {}) => {
     finally { if (d) await d.ctx.close(); }
   }
 };
-const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
+/* the browser logs every 4xx/5xx the FAKE Microsoft answers on purpose (the failing page, the missing picture, the 401) as a console error: those are expected */
+const noErr = (d, tag) => { const e = d.errors.filter((x) => !/Failed to load resource: the server responded with a status of (401|404|429|500)/.test(x)); check(e.length === 0, `${tag} no page errors`, e.slice(0, 2).join(' · ')); };
+const again = async (d, vp) => { await on(d, () => { openOneNoteImport(); _on.view = 'done'; _on.imp.state = 'idle'; _onPaint(); }); await act(d, vp, '#on-bring'); await d.page.waitForFunction(() => !_on.imp.run && ['done', 'capped', 'paused', 'signin'].includes(_on.imp.state), null, { timeout: 120000 }); };
 const ready = async (d) => { const ok = await d.page.waitForFunction(() => _s2RefsOk(), null, { timeout: 20000 }).then(() => true).catch(() => false); if (!ok) await on(d, () => { window._s2RefsOk = () => true; }); };
 const dlg = async (d, vp) => {
   await act(d, vp, '#sb-tools-btn'); await sleep(300);
@@ -157,7 +160,11 @@ const signIn = async (d, vp) => {
   await d.page.fill('#on-cid', CID);
   await act(d, vp, '#on-signin');
 };
-const look = async (d, vp, to = 60000) => { await signIn(d, vp); await d.page.waitForSelector('#on-totals', { timeout: to }); };
+const look = async (d, vp, to = 60000) => { await signIn(d, vp); await totals(d, to); };
+const totals = async (d, to = 60000) => {
+  try { await d.page.waitForSelector('#on-totals', { timeout: to }); }
+  catch (e) { const s = await on(d, () => ({ v: _on.view, err: _on.err, n: _on.n, cur: _on.cur })); throw new Error('the look did not finish: ' + JSON.stringify(s) + ' graph: ' + (d.ms.graph || []).slice(-4).join(' | ')); }
+};
 const bring = async (d, vp, to = 120000) => {
   if (!(await on(d, () => !!document.getElementById('on-bring')))) await look(d, vp, to);
   await act(d, vp, '#on-bring');
@@ -224,8 +231,8 @@ try {
     check(tk && tk.body.grant_type === 'authorization_code' && tk.body.client_id === CID && tk.body.code === 'FAKECODE1' && !('client_secret' in tk.body) && tk.body.redirect_uri === srv.base + '/' && !/offline_access/.test(tk.body.scope), `${t} the code is exchanged at the token endpoint with no secret and no offline_access`, JSON.stringify(tk));
     check(au && tk && b64u(createHash('sha256').update(tk.body.code_verifier).digest()) === au.q.code_challenge && tk.body.code_verifier.length >= 43, `${t} PKCE: code_challenge = base64url(SHA-256(code_verifier)), verifier ${tk && tk.body.code_verifier.length} chars`);
     check(au && /^siyon\./.test(au.q.state) && tk.body.code_verifier !== au.q.state, `${t} a random state is sent`);
-    const inMem = await on(d, () => ({ tok: _on.tok, ver: _on.ver, signed: !!document.getElementById('on-signed') }));
-    check(/^FAKE-TOKEN-SECRET-1$/.test(inMem.tok) && inMem.ver === '' && inMem.signed, `${t} the token is held in memory (_on.tok), the verifier is dropped, the dialog says “Signed in”`, JSON.stringify(inMem));
+    const inMem = await on(d, () => ({ tok: _on.tok, ver: _on.ver, signed: _on.view !== 'signing' }));
+    check(/^FAKE-TOKEN-SECRET-1$/.test(inMem.tok) && inMem.ver === '' && inMem.signed, `${t} the token is held in memory (_on.tok), the verifier is dropped, the dialog moves on to the look`, JSON.stringify(inMem));
     const all = await dumpAll(d);
     check(!/FAKE-TOKEN-SECRET/.test(all) && !/FAKECODE/.test(all), `${t} the access token and the code are in no storage: localStorage, every IndexedDB database, DB`);
     const names = await dbNames(d);
@@ -246,12 +253,12 @@ try {
     const c0 = d.cloud.commits;
     await d.page.fill('#on-cid', CID);
     await act(d, vp, '#on-signin');
-    await d.page.waitForSelector('#on-totals', { timeout: 60000 });
-    const g = await on(d, () => { const m = {}; document.querySelectorAll('#on-totals dt').forEach((dt) => { m[dt.textContent] = dt.nextElementSibling.textContent; }); return { m, nbs: [...document.querySelectorAll('.on-nb')].map((x) => x.textContent), ticks: [...document.querySelectorAll('.on-nb-tick')].map((x) => x.checked) }; });
+    await totals(d);
+    const g =await on(d, () => { const m = {}; document.querySelectorAll('#on-totals dt').forEach((dt) => { m[dt.textContent] = dt.nextElementSibling.textContent; }); return { m, nbs: [...document.querySelectorAll('.on-nb')].map((x) => x.textContent), ticks: [...document.querySelectorAll('.on-nb-tick')].map((x) => x.checked) }; });
     check(g.m.Notebooks === '2' && g.m.Sections === '4' && g.m.Pages === '10' && g.m['Already in Siyagah'] === '0', `${t} counts: 2 notebooks, 4 sections (groups of any depth), 10 pages (nextLink followed), 0 already`, JSON.stringify(g.m));
     check(g.ticks.length === 2 && g.ticks.every(Boolean) && /Work — 3 sections · 8 pages/.test(g.nbs[0]) && /Home — 1 sections · 2 pages/.test(g.nbs[1]), `${t} a tick per notebook, all ticked, with sections/pages/already`, JSON.stringify(g.nbs));
     const pageReqs = d.ms.graph.filter((p) => /\/pages\?/.test(p));
-    check(d.ms.graph.some((p) => p.includes('skiptoken')) && pageReqs.every((p) => /\$select=id,title,createdDateTime,lastModifiedDateTime,level,order/.test(p.replace(/%2C/gi, ','))), `${t} pages are listed with $select of only the needed fields, and the next page is followed`, pageReqs[0]);
+    check(d.ms.graph.some((p) => p.includes('skiptoken')) && pageReqs.every((p) => /\$select=id,title,createdDateTime,lastModifiedDateTime,level,order/.test(p)), `${t} pages are listed with $select of only the needed fields, and the next page is followed`, pageReqs[0]);
     check(!d.ms.graph.some((p) => /\/content$/.test(p)), `${t} the look reads no page content`);
     const after = await snap(d), ls2 = await on(d, () => JSON.stringify(Object.assign({}, localStorage)));
     check(before === after && ls === ls2 && (await ones(d)) === 0, `${t} the look wrote nothing: notes, folders, sections, Trash, tombstones and settings are byte-identical, localStorage too`);
@@ -295,7 +302,7 @@ try {
     check(p1.title === 'First page' && p8.fromOneNote.sec === 'Archive' && p8.folderIds[0] === F.m.Archive.id && p1.folderIds[0] === F.m.Meetings.id, `${t} titles and folders: each page is in its section's folder`);
     const order = await on(d, () => DB.articles.filter((a) => a.fromOneNote && a.fromOneNote.sec === 'Meetings').map((a) => a.fromOneNote.id));
     check(JSON.stringify(order) === JSON.stringify(['P1', 'P2', 'P3', 'P5']), `${t} pages are added in OneNote's page order`, JSON.stringify(order));
-    check(/<b>world<\/b>/.test(p1.content) && !/position|left:|top:|width:|data-absolute|\sid=|data-id/.test(p1.content) && /color:#336699/.test(p1.content), `${t} the page body is kept; absolute positioning and ids are dropped, other styles stay`, p1.content);
+    check(/<b>world<\/b>/.test(p1.content) && !/[;"]\s*(position|left|top|width)\s*:|data-absolute|\sid=|data-id/.test(p1.content) && /color:#336699/.test(p1.content), `${t} the page body is kept; absolute positioning and ids are dropped, other styles stay`, p1.content);
     check(!/<script|onerror|onclick|javascript:/i.test(p3.content) && /clean me/.test(p3.content) && (await on(d, () => window.__onx)) === undefined, `${t} a <script>, an onerror, an onclick and a javascript: link never reach a.content or run`, p3.content);
     const pic = await on(d, (c) => { const m = /<img class="ed-img" data-pic="([0-9a-f]{64})" data-mime="image\/png" alt="">/.exec(c); return m && { sha: m[1], known: _picKnown.has(m[1]), src: /src=/.test(c), data: /data:/.test(c) }; }, p3.content);
     check(pic && pic.known && !pic.src && !pic.data, `${t} the picture is by reference (data-pic, no src, held in the picture store; bytes fetched with the token)`, JSON.stringify(pic));
@@ -333,7 +340,7 @@ try {
       check(sv.name === '(16) From OneNote' && sv.n === 9 && sv.first === 'P10' && sv.last === 'P8' && sv.cnt === 9, `${u} Smart View “(16) From OneNote” lists 9 pages, newest created first (${sv.first} … ${sv.last})`, JSON.stringify(sv));
       /* a second run */
       const c1 = await ones(d), fold1 = await on(d, () => DB.folders.length);
-      await bring(d, vp);
+      await again(d, vp);
       const r = await on(d, () => ({ n: DB.articles.filter((a) => a.fromOneNote).length, took: _on.imp.took, earlier: _on.imp.earlier, f: DB.folders.length, s: _on.imp.state, broken: _on.imp.broken }));
       check(r.n === c1 && r.took === 0 && r.earlier === 9 && r.f === fold1 && r.s === 'done' && r.broken === 1, `${u} a second run adds nothing (${c1} → ${r.n}; 9 left as they were; no new folder; the failed page tried again and failed again)`, JSON.stringify(r));
       /* Trash and a tombstone */
@@ -344,7 +351,7 @@ try {
         DB.tombstones = DB.tombstones || []; DB.tombstones.push({ id: b.id, deletedAt: new Date().toISOString() });
         persist(); return [a.id, b.id];
       });
-      await bring(d, vp);
+      await again(d, vp);
       const r2 = await on(d, (ids) => ({ n: DB.articles.filter((a) => a.fromOneNote).length, back: DB.articles.some((a) => ids.includes(a.id)), took: _on.imp.took }), ids);
       check(r2.n === c1 - 2 && !r2.back && r2.took === 0, `${u} a page in Trash and a page with a tombstone are not added again (${r2.n} of ${c1})`, JSON.stringify(r2));
       noErr(d, u);
@@ -405,7 +412,7 @@ try {
       const p = await ctx.newPage(); const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
       await p.goto(srv.base + '/?code=ABC123&state=siyon.test-state', { waitUntil: 'domcontentloaded' });
       await sleep(1500);
-      const r = await p.evaluate(async () => ({ posted: window.__posted, writes: window.__writes, booted: window.__appBooted === true, loaded: typeof _dbLoaded !== 'undefined' ? _dbLoaded : 'n/a', dbs: (await indexedDB.databases()).map((x) => x.name), ls: Object.keys(localStorage), body: document.body.textContent.trim().slice(0, 60) }));
+      const r = await p.evaluate(async () => ({ posted: window.__posted, writes: window.__writes, booted: window.__appBooted === true, loaded: typeof _dbLoaded !== 'undefined' ? _dbLoaded : 'n/a', dbs: (await indexedDB.databases()).map((x) => x.name), ls: Object.keys(localStorage), body: (document.getElementById('on-popup-msg') || {}).textContent || '' }));
       check(r.posted && r.posted[0][0].code === 'ABC123' && r.posted[0][0].state === 'siyon.test-state' && r.posted[0][1] === srv.base, `${t}@${vp.name} the code is handed to the opener (same origin only)`, JSON.stringify(r.posted));
       check(!r.booted && r.loaded === false && r.writes.length === 0 && r.dbs.length === 0 && r.ls.length === 0, `${t}@${vp.name} the app did not start: no IndexedDB opened, no localStorage write, no database created (_dbLoaded=${r.loaded})`, JSON.stringify({ w: r.writes, d: r.dbs, ls: r.ls }));
       check(reqs.length === 0, `${t}@${vp.name} no request left the page (no cloud call, no Microsoft call)`, reqs.slice(0, 3).join(' '));

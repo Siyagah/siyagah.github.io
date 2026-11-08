@@ -5725,7 +5725,7 @@ async function _picExportHTML(){
   _picMissingToast(r.missing);
   return getExportHTML(r.inlined?r.text:undefined);
 }
-_picDB();
+if(!window.__onPopup) _picDB();   /* v05.78 · J110 ② — not in the Microsoft sign-in popup: that page starts nothing and opens no database */
 
 /* ── Pictures: the cloud copy (v04.93, S2b) ──────────────────────────────
    notebooks/{nb}/pics/{sha}        meta  {n bytes, t mime, p parts, at, b build}
@@ -34531,7 +34531,12 @@ function _onPopupBoot(){
   const m=window.__onPopup||{}, msg={siyOnenote:1,code:m.code||'',error:m.error||'',state:m.state||''};
   try{ const bc=new BroadcastChannel('siyagah-onenote'); bc.postMessage(msg); setTimeout(()=>{ try{ bc.close(); }catch(e){} },1500); }catch(e){}
   try{ if(window.opener) window.opener.postMessage(msg,location.origin); }catch(e){}
-  try{ document.body.innerHTML='<p style="font:16px system-ui,sans-serif;padding:24px">'+(m.error?'Sign-in did not finish. You can close this window.':'Signed in. You can close this window.')+'</p>'; }catch(e){}
+  try{   /* a cover over the (never started) app; the page's own markup is left alone, so no later handler finds a missing element */
+    const c=document.createElement('p'); c.id='on-popup-msg';
+    c.style.cssText='position:fixed;inset:0;z-index:2147483647;margin:0;padding:24px;background:#fff;color:#222;font:16px system-ui,sans-serif';
+    c.textContent=m.error?'Sign-in did not finish. You can close this window.':'Signed in. You can close this window.';
+    document.body.appendChild(c);
+  }catch(e){}
   setTimeout(()=>{ try{ window.close(); }catch(e){} },400);
 }
 function _onIdb(op,key,val){
@@ -34555,7 +34560,7 @@ function _onIdb(op,key,val){
 }
 async function _onLoadCfg(){
   if(_on.loaded) return;
-  try{ const c=await _onIdb('get','cfg'); if(c&&typeof c==='object'){ if(typeof c.cid==='string') _on.cid=c.cid; _on.common=c.common===true; } }catch(e){}
+  try{ const c=await _onIdb('get','cfg'); if(c&&typeof c==='object'){ if(typeof c.cid==='string'&&!_on.cid) _on.cid=c.cid; if(!_on.typed) _on.common=c.common===true; } }catch(e){}
   _on.loaded=true;
 }
 const _onSaveCfg=()=>_onIdb('put','cfg',{cid:_on.cid,common:_on.common}).catch(()=>{});
@@ -34732,7 +34737,7 @@ async function _onConvert(html,I){
       }
     }catch(x){
       if(x&&x.expired) throw x;
-      console.error('OneNote import: a resource was left out',name,x);
+      console.warn('OneNote import: a resource was left out',name,x&&x.message);
       I.left.push(name); html2='<p class="on-left">⚠ Left out (could not be fetched from OneNote): '+esc(name)+'</p>';
     }
     out.push(html2);
@@ -34914,6 +34919,10 @@ function _onImpHTML(){
 }
 function _onPaint(){
   const box=document.getElementById('on-box'); if(!box) return;
+  /* a repaint from an async read must never wipe what is being typed: take the field's value first */
+  const ci=document.getElementById('on-cid'), ct=document.getElementById('on-common');
+  if(ci&&ci.value.trim()) _on.cid=ci.value.trim().replace(/[^0-9a-zA-Z-]/g,'');
+  if(ct){ _on.common=ct.checked; _on.typed=true; }
   const v=_on.view;
   let h='<div class="rm-hd"><div class="rem-title">📥 OneNote import</div><button class="rem-btn cancel" onclick="closeOneNoteImport()">✕ Close</button></div>';
   if(v==='signing'){
