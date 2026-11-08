@@ -32111,8 +32111,10 @@ function _enxH(str,seed){   /* 2 x 32 bits (cyrb53 style) */
 }
 const _enxId=(pre,s)=>pre+_enxH(s,0)+_enxH(s,7).slice(0,6);
 /* how many notes the last 24 h hold, how many more may come now, and when the window next allows */
-function _enxWindow(now,flds){   /* v05.76 · J110 — flds: the import marks to count (Keep counts Evernote's too: one cloud quota) */
-  const lo=now-_ENX_DAY_MS, ats=[], fl=flds||['fromEvernote'];
+/* v05.77 · J128 — ONE list of import marks = ONE daily quota for every import. A new importer (OneNote/Notion) adds its mark HERE. */
+const _IMP_MARKS=['fromEvernote','fromKeep','fromOneNote'];   /* v05.78 · J110 ② adds OneNote's mark */
+function _enxWindow(now,flds){   /* flds: the import marks to count; default _IMP_MARKS */
+  const lo=now-_ENX_DAY_MS, ats=[], fl=flds||_IMP_MARKS;
   const add=a=>{ if(!a) return; for(const k of fl){ const f=a[k]; if(!f||!f.at) continue; const t=Date.parse(f.at); if(t>lo) ats.push(t); } };
   (DB.articles||[]).forEach(add); (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article') add(t.item); });
   ats.sort((a,b)=>a-b);
@@ -34318,7 +34320,7 @@ function _kpTitle(o,f){
 const _kpJobGet=async()=>{ try{ return (await _enxJobOp('readonly',s=>s.get('job-keep')))||null; }catch(e){ return null; } };
 const _kpJobPut=async v=>{ try{ await _enxJobOp('readwrite',s=>s.put(v,'job-keep')); }catch(e){} };
 const _kpJobDel=async()=>{ try{ await _enxJobOp('readwrite',s=>s.delete('job-keep')); }catch(e){} _kp.job=null; };
-const _kpWindow=now=>_enxWindow(now,['fromEvernote','fromKeep','fromOneNote']);   /* v05.78 · J110 ② — OneNote's notes share the same cloud quota */
+const _kpWindow=now=>_enxWindow(now);
 function _kpBrought(){
   let n=0; (DB.articles||[]).forEach(a=>{ if(a&&a.fromKeep) n++; });
   (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item&&t.item.fromKeep) n++; });
@@ -34758,7 +34760,7 @@ async function _onBuild(p,secName,nbName,I){
 const _onJobGet=async()=>{ try{ return (await _enxJobOp('readonly',s=>s.get('job-onenote')))||null; }catch(e){ return null; } };
 const _onJobPut=async v=>{ try{ await _enxJobOp('readwrite',s=>s.put(v,'job-onenote')); }catch(e){} };
 const _onJobDel=async()=>{ try{ await _enxJobOp('readwrite',s=>s.delete('job-onenote')); }catch(e){} _on.job=null; };
-const _onWindow=now=>_enxWindow(now,['fromEvernote','fromKeep','fromOneNote']);
+const _onWindow=now=>_enxWindow(now);   /* v05.78 · J110 ② — the one shared list, _IMP_MARKS (v05.77) */
 function _onBrought(){
   let n=0; (DB.articles||[]).forEach(a=>{ if(a&&a.fromOneNote) n++; });
   (DB.trash||[]).forEach(t=>{ if(t&&t.type==='article'&&t.item&&t.item.fromOneNote) n++; });
