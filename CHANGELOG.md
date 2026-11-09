@@ -11385,6 +11385,16 @@ The owner (screenshot of MyWall, red box before the count): "Add quick new note 
 **Not done.** The real Firestore rule is the owner's to paste, so a visitor read gets `permission-denied` until then; it cannot be tested from here. The visitor page itself is BwN's.
 
 
+## v05.80 — J135: ⬇ Export data as JSON backup, piece by piece (9 Nov 2026, issue #285)
+
+**Why.** The owner pressed ⬇ Export on a 127.60 MB notebook (about 804 MB used on the device) and nothing downloaded. `exportJSON()` → `_picInline(true)` stringified all of `DB`, read EVERY picture into one `data` map of base64 strings, stringified `DB` again with them inlined, and made one Blob: past the browser's string limit or out of memory, with nothing on screen.
+
+**What.** `exportJSON` writes the file as pieces (`_bxpInline` per record). Shape kept: one JSON object, same keys, pictures as `data:` srcs in the note HTML, so older builds' ⬆ Import still reads a small backup. Layout: `{`, then each key on its own line; a top-level array is `"key":[`, one compact element per line, `]`. Whitespace differs from `JSON.stringify(DB,null,2)`; parsing both gives the same value (tested). Laptop: `showSaveFilePicker` inside the click + `createWritable`; elsewhere `new Blob(parts)`, `revokeObjectURL` after 60 s. The dialog stays open (`#bxp-status`): progress, then "Saved: notebook-backup-YYYY-MM-DD.json, N MB" or the reason (out of space / refused / too big). `_picMissingToast` kept. ⬆ Import: ≤ 100 MB is today's FileReader + `JSON.parse` path; bigger is streamed line by line (`_bxpReadBig`) and each line's pictures go to `_picPut` (sha checked) and back to `data-pic` references; a big file in another layout → "This file is too big to read here and was not written by Siyagah v05.80 or later". Consent → merge unchanged (I1).
+
+**Not done.** `_picInline` / `_picInlineStr` (Save File `_picExportHTML`, the book page, `backupToGDrive`) are unchanged; block 139 measures Save File at the large size and prints it. Not run by the builder (the Architect's instruction): `app-check` and block 139. A phone at 600 MB through the Blob path is unmeasured here.
+
+**Check.** Block 139, `tools/backup-big.mjs` (`--mb=` size; default 60). Expected to FAIL on v05.78: 139a, 139b, 139c, 139d (no `#bxp-status`, no piece-by-piece file), and 139e (it waits for #bxp-exp).
+
 ## v05.78 — J110 ②: 📥 OneNote import (9 Nov 2026, issue #281)
 
 🧰 → Create → 📥 OneNote import reads the owner's notebooks directly from Microsoft Graph with their own Microsoft sign-in (authorization code + PKCE written by hand, in a popup; no MSAL, no secret; the access token is in memory only, the client id only in `siyagah-onenote-v1`). A look first (writes nothing), then 📥 Bring them in. Built on the Keep import's parts. Check: block 137, `tools/onenote-import.mjs`.

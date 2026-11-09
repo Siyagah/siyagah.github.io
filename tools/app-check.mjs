@@ -12881,6 +12881,19 @@ await r.block('134-theme-fold-j124', async () => {
   for (const row of rows) r.check(row.ok, '134: ' + row.label, row.detail);
   r.check(out.status === 0, 'the theme-fold-j124.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 139 — v05.80, J135: ⬇ Export data as JSON backup on a big notebook, written piece by piece; ⬆ Import streams a big file back. tools/backup-big.mjs runs 139a–139e
+   (the suite runs the small default, 60 MB of pictures; by hand: node tools/backup-big.mjs --mb=600). */
+await r.block('139-backup-big', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./backup-big.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1800000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 20, 'the backup-big.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '139: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the backup-big.mjs check exits cleanly', `exit ${out.status}`);
+});
 /* 137 — v05.78, J110 ②: 📥 OneNote import (Microsoft Graph, the owner's own sign-in, PKCE in a popup). tools/onenote-import.mjs runs 137a–137i at 390/820/1440
    against a FAKE Microsoft (the menu by a real tap, the sign-in and PKCE, the token in no storage, the dry run writes nothing, the import, dates, levels,
    pictures/files, 429, a second run, Trash/tombstones, the shared daily limit, an expired token, the popup-landing boot, 1,500 pages). */
