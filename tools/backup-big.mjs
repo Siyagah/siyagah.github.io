@@ -14,7 +14,7 @@
    139b  export → ⬆ Import into an EMPTY profile (a fresh browser): every note, folder, section equal (I1), every picture's bytes back in the store by sha
    139c  the small-size file also imports the OLD way: JSON.parse of the whole file → _showImportConsent (needs ≤ 100 MB: skipped, said so, at a larger size)
    139d  the progress line moves, the final line carries the real size, a failed write shows a reason and no "Saved", a cancelled picker is quiet, no double press
-   139e  at 390 / 820 / 1440: 🧰 → 💽 Storage & Backup → ⬇ Export, by a real click/tap, from a booted app
+   139e  at 390 / 820 / 1440: ⚙ → 💽 Storage & Backup → ⬇ Export, by a real click/tap, from a booted app
    note  peak JS heap during the export at this size (must stay well below the file's size at ≥ 300 MB), Save File (_picExportHTML) at this size — REPORTED, not changed. */
 import { playwright, serve, seedDB } from './harness.mjs';
 import { check, results } from './s1-fake.mjs';
@@ -167,6 +167,8 @@ try {
   note(`seeded ${seeded.pics} pictures (${(seeded.pics * PIC / 1048576).toFixed(0)} MB) in ${seeded.notes} notes + ${seeded.trashed} in Trash, in ${((Date.now() - t1) / 1000).toFixed(0)} s`);
   const truth = await A.page.evaluate(() => ({ arts: DB.articles.map((a) => a.id), tr: DB.trash.map((t) => t.id), folders: DB.folders.map((f) => f.id), secs: DB.sections.map((s) => s.id), json: JSON.stringify([DB.articles, DB.folders, DB.sections, DB.trash]).length }));
   const refsInDB = await A.page.evaluate(() => { const s = JSON.stringify(DB); return (s.match(/data-pic=/g) || []).length; });
+  /* Architect review: the export inlines the pictures the notes REFERENCE; a seeded picture no note uses is rightly not in the file */
+  const distinctRefs = await A.page.evaluate(() => new Set((JSON.stringify(DB).match(/data-pic=\\"[0-9a-f]{64}/g) || []).map((x) => x.slice(-64))).size);
 
 
   /* ══ 139d (picker path first: progress, the final line, the heap) ══ */
@@ -213,7 +215,7 @@ try {
       check(ver.json && ver.first === '{' && ver.last === '}', '139a the file is valid JSON by streaming it back, line by line (no whole-file parse)', ver.err);
       check(sameIds(ver.ids.articles, truth.arts) && sameIds(ver.ids.trash, truth.tr), `139a every note is in the file: ${ver.ids.articles.size} notes + ${ver.ids.trash.size} in Trash (expected ${truth.arts.length} + ${truth.tr.length})`);
       check(ver.refs === refsInDB && ver.nosrc === 0 && ver.bad === 0, `139a every picture is inlined and its bytes hash to its data-pic: ${ver.refs} references, ${ver.nosrc} without bytes, ${ver.bad} wrong (expected ${refsInDB} references)`);
-      check(ver.shas.size === seeded.pics, `139a all ${seeded.pics} distinct pictures are in the file (${ver.shas.size})`);
+      check(ver.shas.size === distinctRefs, `139a all ${distinctRefs} distinct pictures the notes reference are in the file (${ver.shas.size}; ${seeded.pics} seeded in the store)`);
       if (!BIG) {
         /* a file with no pictures: say how it differs from today's */
         /* a notebook with no pictures: the new file = JSON.stringify(DB) after parsing both (only whitespace differs) */
@@ -244,7 +246,10 @@ try {
       const cons = await B.page.evaluate(() => window.__seenConsent);
       check(cons.a === truth.arts.length && cons.tr === truth.tr.length, `139b the big-file reader hands _showImportConsent ${cons.a} notes + ${cons.tr} in Trash`, JSON.stringify(cons));
       check(cons.json < statSync(dlRun.file).size / 4, `139b the data given to the consent dialog is small: ${(cons.json / 1048576).toFixed(1)} MB for a ${(statSync(dlRun.file).size / 1048576).toFixed(0)} MB file (pictures went to the store)`);
-      await B.page.evaluate(() => { const b = [...document.querySelectorAll('#mb button')].find((x) => /^Merge/.test(x.textContent.trim())); if (b) b.click(); });
+      /* Architect review: Replace everything, the path that restores a whole notebook (Trash included); Merge adds notes/folders/sections only, as it always has */
+      await B.page.evaluate(() => { const b = [...document.querySelectorAll('#mb button')].find((x) => /^Replace everything/.test(x.textContent.trim())); if (b) b.click(); });
+      await sleep(500);
+      await B.page.evaluate(() => { const b = [...document.querySelectorAll('#mb button')].find((x) => /^Replace everything/.test(x.textContent.trim())); if (b) b.click(); });
       await sleep(1500);
       const got = await B.page.evaluate(() => ({ arts: DB.articles.map((a) => a.id), tr: DB.trash.map((t) => t.id), folders: DB.folders.map((f) => f.id), secs: DB.sections.map((s) => s.id) }));
       const eq = (x, y) => x.length === y.length && y.every((i) => x.includes(i));
@@ -271,7 +276,7 @@ try {
         const txt = (await import('node:fs')).readFileSync(dlRun.file, 'utf8');
         const d = JSON.parse(txt);   /* the OLD way: one parse of the whole file */
         const ok = await C.page.evaluate((d) => { _showImportConsent(d, 'notebook-backup.json'); return /In the file: \d+ notes/.test(document.getElementById('mb').textContent); }, d);
-        check(d.articles.length === truth.arts.length && d.trash.length === truth.tr.length && ok && /^<img src="data:image\/png;base64,/.test((d.articles[0].content.match(/<img[^>]*>/) || [''])[0]), `139c the small file imports the OLD way too: JSON.parse of the whole file → _showImportConsent (${d.articles.length} notes, pictures inlined as data: srcs)`);
+        check(d.articles.length === truth.arts.length && d.trash.length === truth.tr.length && ok && /^<img src="data:image\/png;base64,/.test(((d.articles.find((a) => /<img/.test(a.content || '')) || {}).content || '').match(/<img[^>]*>/)?.[0] || ''), `139c the small file imports the OLD way too: JSON.parse of the whole file → _showImportConsent (${d.articles.length} notes, pictures inlined as data: srcs)`);
       } finally { await C.ctx.close(); }
     }
   }
@@ -288,8 +293,8 @@ try {
     const E = await open(vp, seedDB());
     try {
       const p = E.page, act = (sel, opt) => (vp.touch ? p.locator(sel, opt).first().tap() : p.locator(sel, opt).first().click());
-      await act('#sb-tools-btn'); await sleep(300);
-      await act('#sb-tools .sb-mi', { hasText: 'Storage & Backup' });
+      await act('#sb-menu-btn'); await sleep(300);   /* Architect review: 💽 Storage & Backup is in the ⚙ Settings menu, not 🧰 (the issue said 🧰 by mistake) */
+      await act('#sb-menu .sb-mi', { hasText: 'Storage & Backup' });
       await p.waitForSelector('#bxp-exp');
       const fc = p.waitForEvent('download', { timeout: 60000 }).catch(() => null);
       await p.evaluate(() => { try { window.showSaveFilePicker = undefined; } catch {} });
@@ -297,7 +302,7 @@ try {
       await p.waitForFunction(() => /^Saved: notebook-backup-/.test((document.getElementById('bxp-status') || {}).textContent || ''), null, { timeout: 60000 }).catch(() => {});
       const st = await p.evaluate(() => (document.getElementById('bxp-status') || {}).textContent || '');
       const open_ = await p.evaluate(() => document.getElementById('ov').classList.contains('on'));
-      check(/^Saved: notebook-backup-\d{4}-\d\d-\d\d\.json, /.test(st) && open_ && !!(await fc), `139e@${vp.name} 🧰 → 💽 Storage & Backup → ⬇ Export by a real ${vp.touch ? 'tap' : 'click'}: a download starts, the dialog stays open and says "${st}"`);
+      check(/^Saved: notebook-backup-\d{4}-\d\d-\d\d\.json, /.test(st) && open_ && !!(await fc), `139e@${vp.name} ⚙ → 💽 Storage & Backup → ⬇ Export by a real ${vp.touch ? 'tap' : 'click'}: a download starts, the dialog stays open and says "${st}"`);
       check(E.errors.length === 0, `139e@${vp.name} no page errors`, E.errors.slice(0, 2).join(' · '));
     } catch (e) { check(false, `139e@${vp.name} threw: ${String(e.message || e).split('\n')[0]}`); }
     finally { await E.ctx.close(); }
