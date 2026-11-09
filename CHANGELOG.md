@@ -11437,4 +11437,4 @@ The owner's phone screenshot: "Folder attach popup from note in the middle pane.
 - A window resize pulls a remembered box back inside the window (`_mbClampNow`).
 - Shapes: 1440 handles on all 8 sides/corners + full screen; 820 the same with touch handles (24 px edges, 30 px corners, `.mb-fm`) + full screen; 390 no handles, today's sheet + full screen.
 - Not changed: `openPicker` and the pop-out Folder Browser (same behaviour, old geometry key). Nothing saved to a note changes (I1).
-- Not run by the builder (the brief: ship-check only): block 141 (`tools/folders-rsz-j141.mjs`) is not written in this round.
+- Block 141 (`tools/folders-rsz-j141.mjs`, 141a–141e at 390/820/1440) is written but NOT run by the builder (the brief: ship-check only); the Architect runs it. To look at: a full-screen box is per session, so ＋ New folder (which draws the dialog again) returns it to the normal box (the check reports it as a note).
