@@ -124,6 +124,17 @@ async function runExport(page, { picker, saveTo, timeout = 3600000 }) {
     window.__bxpOpfs = null;
     if (picker === 'opfs') {
       window.showSaveFilePicker = async (o) => { const root = await navigator.storage.getDirectory(); const h = await root.getFileHandle(o.suggestedName, { create: true }); window.__bxpOpfs = o.suggestedName; return h; };
+    } else if (picker === 'count') {
+      /* Architect review: at the large size the browser's private test storage (OPFS) in a fresh test profile has too little quota for an 800 MB file
+         ("Out of space on this device" after 0 bytes). A real disk picker is not limited that way, so this stand-in is a real writable that checks
+         every line as it arrives and counts the bytes, keeping nothing. */
+      window.__bxpCount = { n: 0, lines: 0, first: '', last: '', bad: 0, closed: false };
+      window.showSaveFilePicker = async (o) => ({ name: o.suggestedName, createWritable: async () => {
+        const C = window.__bxpCount, enc = new TextEncoder(); let buf = '';
+        const line = (l) => { if (!C.lines) C.first = l; C.last = l; C.lines++; if (l.length > 2 && !/^[{}\]]/.test(l) && !/^"[^"]*":\[?$/.test(l)) { try { JSON.parse(l.replace(/^("(?:[^"\\]|\\.)*"):/, '').replace(/,$/, '')); } catch { C.bad++; } } };
+        return { write: async (d) => { const s = typeof d === 'string' ? d : (d instanceof Blob ? await d.text() : new TextDecoder().decode(d.buffer ? d : new Uint8Array(d))); C.n += enc.encode(s).length; buf += s; let i; while ((i = buf.indexOf('\n')) >= 0) { line(buf.slice(0, i)); buf = buf.slice(i + 1); } },
+          close: async () => { if (buf) line(buf); buf = ''; C.closed = true; }, abort: async () => {} };
+      } });
     } else if (picker === 'throw') {
       window.showSaveFilePicker = async (o) => ({ name: o.suggestedName, createWritable: async () => ({ write: async () => { throw new DOMException('disk is full', 'QuotaExceededError'); }, close: async () => {}, abort: async () => {} }) });
     } else if (picker === 'cancel') {
@@ -174,11 +185,11 @@ try {
   /* ══ 139d (picker path first: progress, the final line, the heap) ══ */
   let pickRun = null;
   if (want('139a') || want('139d')) {
-    pickRun = await runExport(A.page, { picker: 'opfs', timeout: BIG ? 3600000 : 300000 });
+    pickRun = await runExport(A.page, { picker: BIG ? 'count' : 'opfs', timeout: BIG ? 3600000 : 300000 });
     const t = '139d';
     const prog = pickRun.seen.filter((s) => /^Writing your backup… [\d,]+ of [\d,]+ (pictures|notes and records)$/.test(s));
     check(prog.length >= 2, `${t} the progress line moved (${prog.length} different "Writing your backup… N of M" lines seen)`, JSON.stringify(pickRun.seen.slice(0, 6)));
-    const sz = await A.page.evaluate(async () => { try { const root = await navigator.storage.getDirectory(); const f = await (await root.getFileHandle(window.__bxpOpfs)).getFile(); return { n: f.size, name: f.name }; } catch (e) { return { n: -1, name: String(e) }; } });
+    const sz = BIG ? await A.page.evaluate(() => ({ n: window.__bxpCount.n, name: '(counted)' })) : await A.page.evaluate(async () => { try { const root = await navigator.storage.getDirectory(); const f = await (await root.getFileHandle(window.__bxpOpfs)).getFile(); return { n: f.size, name: f.name }; } catch (e) { return { n: -1, name: String(e) }; } });
     const mt = /^Saved: (notebook-backup-\d{4}-\d\d-\d\d\.json), /.exec(pickRun.status);
     check(!!mt && pickRun.ok, `${t} the final line says Saved: <name>, <size>`, pickRun.status || pickRun.how);
     const said = mbOf(pickRun.status);
@@ -187,7 +198,7 @@ try {
     note(`picker path: ${(pickRun.ms / 1000).toFixed(1)} s, file ${(sz.n / 1048576).toFixed(0)} MB, PEAK JS HEAP ${(pickRun.peak / 1048576).toFixed(0)} MB`);
     if (BIG) check(pickRun.peak < sz.n / 4, `${t} peak JS heap ${(pickRun.peak / 1048576).toFixed(0)} MB stays well below the file (${(sz.n / 1048576).toFixed(0)} MB; limit ¼)`);
     /* the file written through createWritable is valid by lines (streamed in the page) */
-    const inPage = await A.page.evaluate(async (name) => {
+    const inPage = BIG ? await A.page.evaluate(() => { const C = window.__bxpCount; return { lines: C.lines, first: C.first, last: C.last, bad: C.bad }; }) : await A.page.evaluate(async (name) => {
       const root = await navigator.storage.getDirectory(); const f = await (await root.getFileHandle(name)).getFile();
       const rd = f.stream().pipeThrough(new TextDecoderStream()).getReader(); let buf = '', lines = 0, first = '', last = '', bad = 0;
       for (;;) { const r = await rd.read(); if (r.done) break; buf += r.value; let i; while ((i = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, i); buf = buf.slice(i + 1); if (!lines) first = l; last = l; lines++; if (l.length > 2 && !/^[{}\]]/.test(l) && !/^"[^"]*":\[?$/.test(l)) { try { JSON.parse(l.replace(/^("(?:[^"\\]|\\.)*"):/, '').replace(/,$/, '')); } catch { bad++; } } } }
