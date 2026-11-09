@@ -11265,7 +11265,8 @@ await r.block('53d-save-file-opens-offline-with-the-picture', async () => {
   const s = await s53open(S53_VPS[2]);
   const { page } = s;
   const dl = page.waitForEvent('download');
-  await page.evaluate(() => { exportFile(); });
+  /* v05.81 (J138): Save File opens the save picker where showSaveFilePicker exists (Chromium at 1440), like ⬇ Export; this block measures the download path, so the picker is hidden */
+  await page.evaluate(() => { try { delete window.showSaveFilePicker; } catch (e) {} window.showSaveFilePicker = undefined; exportFile(); });
   const d = await dl;
   const dir = await mkdtemp(join(tmpdir(), 'siyagah-53d-'));
   const file = join(dir, 'copy.html');
@@ -11273,7 +11274,11 @@ await r.block('53d-save-file-opens-offline-with-the-picture', async () => {
   const text = await readFile(file, 'utf8');
   const nd = JSON.parse(text.match(/<script id="nd"[^>]*>([\s\S]*?)<\/script>/)[1]);
   const exported = nd.articles.find((a) => a.id === 'p1').content;
-  r.check((exported.match(/<img[^>]*\ssrc="data:image\/(jpeg|png);base64,/g) || []).length === 2, 'the Save File copy carries both pictures as data: srcs', exported.slice(0, 160));
+  /* v05.81 (J138), changed on purpose: the copy no longer inlines the pictures into the notes (that string was the one that gave up at 600 MB). The notes keep their
+     data-pic REFERENCES and each picture sits once after the page as <script type="application/x-siyagah-pic" id="pk-<sha>">. Opening it (below) still paints both. */
+  const refs = [...new Set((exported.match(/data-pic="[0-9a-f]{64}"/g) || []).map((x) => x.slice(10, 74)))];
+  const blocks = [...text.matchAll(/<script type="application\/x-siyagah-pic" id="pk-([0-9a-f]{64})" data-mime="[^"]*">[A-Za-z0-9+\/=]+<\/script>/g)].map((m) => m[1]);
+  r.check(refs.length >= 1 && !/<img[^>]*\ssrc=/.test(exported) && refs.every((sh) => blocks.filter((b) => b === sh).length === 1), 'the Save File copy keeps the notes with picture references and carries each picture once as a block', exported.slice(0, 160) + ' | blocks ' + blocks.length);
   const pw = await playwright();
   const browser = await pw.chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, offline: true });
@@ -12896,6 +12901,18 @@ await r.block('139-backup-big', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 20, 'the backup-big.mjs check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, '139: ' + row.label, row.detail);
   r.check(out.status === 0, 'the backup-big.mjs check exits cleanly', `exit ${out.status}`);
+});
+/* 140 — v05.81, J138: 📦 Save File on a big notebook keeps the pictures (the notes with references, each picture once as a block), written piece by piece; the copy opens from disk offline and shows them; Save File from inside the copy holds them too. tools/savefile-big.mjs runs 140a–140f (the suite runs the small default, 60 MB of pictures; by hand: node tools/savefile-big.mjs --mb=600). */
+await r.block('140-savefile-big', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./savefile-big.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 2400000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 20, 'the savefile-big.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '140: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the savefile-big.mjs check exits cleanly', `exit ${out.status}`);
 });
 /* 138 — v05.79, J130: the Mapping My Journey keeping-matching reads the site in slices (10 a page, a yield between pages, the parse its own task); a fake site of 1,000 posts / 150 categories; no long task while reading at 390 ×4, the result byte-identical to the unsliced read at 3 sizes, zero requests to the real site. tools/mmj-slices.mjs runs 138a–138d. */
 await r.block('138-mmj-slices', async () => {

@@ -18,6 +18,7 @@
    note  peak JS heap during the export at this size (must stay well below the file's size at ≥ 300 MB), Save File (_picExportHTML) at this size — REPORTED, not changed. */
 import { playwright, serve, seedDB } from './harness.mjs';
 import { check, results } from './s1-fake.mjs';
+import { seedBig as seedBigShared } from './big-seed.mjs';
 import { createReadStream, mkdtempSync, statSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { createHash } from 'node:crypto';
@@ -56,25 +57,7 @@ const open = async (vp, db) => {
 const EMPTY = { sections: [], folders: [], articles: [], trash: [], theme: { preset: 'forest', custom: {} } };
 
 /* the notebook at this size, made inside the page */
-const seedBig = (page) => page.evaluate(async ({ NPICS, NNOTES, PIC }) => {
-  const shas = [];
-  for (let i = 0; i < NPICS; i++) {
-    const u8 = new Uint8Array(PIC);
-    for (let o = 0; o < PIC; o += 65536) crypto.getRandomValues(u8.subarray(o, Math.min(PIC, o + 65536)));
-    shas.push(await _picPut(new Blob([u8], { type: 'image/png' }), 'image/png'));
-  }
-  const now = new Date().toISOString(), arts = [], trash = [];
-  let p = 0;
-  for (let n = 0; n < NNOTES; n++) {
-    const k = 1 + (n % 5); let html = '<p>Note ' + n + ' — ünïcode “quotes” & more</p>';
-    for (let j = 0; j < k; j++) html += '<p>pic</p><img class="ed-img" data-pic="' + shas[p++ % shas.length] + '" data-mime="image/png" alt="">';
-    const a = { id: 'bn' + n, title: 'Big note ' + n, content: html, folderIds: ['f1'], tags: ['big'], createdAt: now, updatedAt: now, kind: 'general' };
-    if (n % 20 === 7) trash.push({ id: 'bt' + n, type: 'article', deletedAt: now, item: a }); else arts.push(a);
-  }
-  DB.articles = DB.articles.concat(arts); DB.trash = (DB.trash || []).concat(trash);
-  persist();
-  return { pics: shas.length, notes: arts.length, trashed: trash.length };
-}, { NPICS, NNOTES, PIC });
+const seedBig = (page) => seedBigShared(page, { NPICS, NNOTES, PIC });   /* v05.81: the seed lives in tools/big-seed.mjs, shared with block 140 */
 
 /* Node-side streaming verifier of THIS writer's layout: every line parsed by itself, pictures hashed. */
 async function verifyFile(path) {
