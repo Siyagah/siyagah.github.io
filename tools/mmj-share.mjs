@@ -32,6 +32,7 @@ const browser = await pw.chromium.launch({ args: ['--js-flags=--max-old-space-si
 function mmjSeed() {
   const db = seedDB(T0);
   db.sections.push({ id: 'mmj-sec', name: 'Mapping My Journey', order: 1, updatedAt: T0, mmj: { site: 'https://x.invalid' } });
+  db.theme.mmjSync = false;   /* v05.79 · J130: keeping-matching is not what this check tests, and it would fetch the real site */
   db.folders.push(
     { id: 'mmj-c-1', name: 'Journeys', parentId: null, order: 1, sectionId: 'mmj-sec', updatedAt: T0, mmj: { n: 'Journeys' } },
     { id: 'mmj-c-2', name: 'Stops', parentId: 'mmj-c-1', order: 1, updatedAt: T0, mmj: { n: 'Stops' } },
@@ -301,7 +302,7 @@ try {
   if (want('126i')) {
     const cloud = makeCloud();
     const db = seedDB(T0);
-    db.sections.push({ id: 'mmj-sec', name: 'Mapping My Journey', order: 1, updatedAt: T0 });
+    db.sections.push({ id: 'mmj-sec', name: 'Mapping My Journey', order: 1, updatedAt: T0 }); db.theme.mmjSync = false;   /* v05.79 · J130 */
     for (let i = 0; i < 1464; i++) db.folders.push({ id: 'mmj-f' + i, name: 'Place ' + i, parentId: i < 40 ? null : 'mmj-f' + (i % 40), order: i, sectionId: i < 40 ? 'mmj-sec' : undefined, updatedAt: T0, mmj: { n: 'x' } });
     for (let i = 0; i < 300; i++) db.folders.push({ id: 'own' + i, name: 'Mine ' + i, parentId: 'mmj-f' + (i % 40), order: i, updatedAt: T0 });
     for (let i = 0; i < BIGN; i++) db.articles.push({ id: 'bn' + i, title: 'Bulk note ' + i, content: '<p>Body ' + i + ' lorem ipsum dolor sit amet</p>', folderIds: [i % 2 ? 'f1' : 'f2'], tags: [], createdAt: T0, updatedAt: T0, kind: 'general' });

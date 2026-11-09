@@ -154,6 +154,11 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
   await ctx.route('**gstatic.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: FAKE_SDK }));
   for (const p of ['**googleapis.com/**', '**firebaseapp.com/**', '**firebaseio.com/**']) await ctx.route(p, (r) => r.abort());
   const cfg = { firebaseConfig: { apiKey: 'fake', projectId: 'fake', authDomain: 'fake', appId: 'fake' }, notebookId: 'nb-s1' };
+  /* v05.79 · J130 — a request to the real mappingmyjourney.com is a counted error (in d.errors), never a silent block. Registered first, so a check that serves
+     a fake site with its own later route wins; only a request nobody served reaches this one. */
+  const realSiteHit = (r) => { d.errors.push('real-site request: ' + r.request().url()); r.abort(); };
+  await ctx.route('**://mappingmyjourney.com/**', realSiteHit);
+  await ctx.route('**://*.mappingmyjourney.com/**', realSiteHit);
   await ctx.addInitScript(([db, c, recsOnly]) => {
     try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(db)); localStorage.setItem('siyagah-sync-v1', JSON.stringify(c)); } catch {}
     if (recsOnly) window.__s1RecsOnly = true;   /* test-only: this device does not read the blob */
