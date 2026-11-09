@@ -71,7 +71,8 @@ for (const vp of VPS) {
     /* ── 141a ── */
     await page.evaluate(() => { selFolder('f1'); if (innerWidth < 640) showPane('p2'); });
     await sleep(500);
-    await tapOrClick(page, touch, page.locator('#p2 .ar[data-aid="a1"]').first());
+    /* tap near the card's top-left: its centre can be the badge (which has its own tap) */
+    await (touch ? page.locator('#p2 .ar[data-aid="a1"]').first().tap({ position: { x: 24, y: 10 } }) : page.locator('#p2 .ar[data-aid="a1"]').first().click({ position: { x: 24, y: 10 } }));
     await sleep(700);
     const hit = await reach(page, touch);
     const st = await page.evaluate(() => { const l = document.getElementById('fp-list'); const row = l && l.querySelector('.pr[data-fid="f2"]'); const b = row && row.getBoundingClientRect(); return { open: !!l, top: !!b && row.contains(document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)), title: (document.querySelector('#mb .mt') || {}).textContent, fs: !!document.getElementById('mb-fs') }; });
@@ -197,7 +198,10 @@ for (const vp of VPS) {
       check(/Second/.test(lbl) && res.f && res.f.parent === 'f2' && res.f.stamped && res.ticked && res.keep, `141d ${vp.name} ${stage}: ＋ New folder inside the chosen parent is made, ticked for the note, the other ticks kept`, JSON.stringify({ lbl, res }));
       const on2 = await onScreen(page);
       check(allOn(on2), `141d ${vp.name} ${stage}: after ＋ New folder (the dialog is drawn again) everything is still on the screen`, JSON.stringify(on2));
-      if (stage === 'fullscreen' && !res.fsOn) note(`${vp.name}: ＋ New folder draws the dialog again, so a full-screen box comes back as the normal box (full screen is per session, not kept) — reported, not changed`);
+      if (stage === 'fullscreen') {
+        const rF = await rectOf(page);
+        check(res.fsOn && near(rF.w, vp.w, 1.5) && near(rF.h, vp.h, 1.5), `141d ${vp.name} fullscreen: full screen is kept across ＋ New folder (the dialog is drawn again)`, JSON.stringify({ fsOn: res.fsOn, rF }));
+      }
       const rD = await rectOf(page);
       check(stage !== 'resized' || (near(rD.w, box.w, 3) && near(rD.h, box.h, 3)), `141d ${vp.name} ${stage}: the resized box keeps its size after ＋ New folder`, JSON.stringify({ box, rD }));
       scrollOk = scrollOk && (await hScroll(page));

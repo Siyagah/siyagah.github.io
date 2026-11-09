@@ -827,6 +827,10 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
   #mb.mb-fm>.rsz-ne,#mb.mb-fm>.rsz-nw{top:-12px}#mb.mb-fm>.rsz-se,#mb.mb-fm>.rsz-sw{bottom:-12px}
   #mb.mb-fm>.rsz-ne,#mb.mb-fm>.rsz-se{right:-12px}#mb.mb-fm>.rsz-nw,#mb.mb-fm>.rsz-sw{left:-12px}
 }
+/* #mb.mb-rsz clips (overflow:hidden), so a handle half outside the box was half dead and its centre hit #ov: keep every handle INSIDE the box edge */
+#mb.mb-rsz>.rsz-n{top:0}#mb.mb-rsz>.rsz-s{bottom:0}#mb.mb-rsz>.rsz-e{right:0}#mb.mb-rsz>.rsz-w{left:0}
+#mb.mb-rsz>.rsz-ne{top:0;right:0}#mb.mb-rsz>.rsz-nw{top:0;left:0}#mb.mb-rsz>.rsz-se{bottom:0;right:0}#mb.mb-rsz>.rsz-sw{bottom:0;left:0}
+#mb.mb-rsz:not(.mb-fm)>.rsz-n,#mb.mb-rsz:not(.mb-fm)>.rsz-s{height:12px}#mb.mb-rsz:not(.mb-fm)>.rsz-e,#mb.mb-rsz:not(.mb-fm)>.rsz-w{width:12px}
 .mb-drag-handle{cursor:move;user-select:none;-webkit-user-select:none;touch-action:none}
 .rsz{position:absolute;z-index:6}
 .rsz-n{top:-5px;left:12px;right:12px;height:9px;cursor:ns-resize}
@@ -4250,7 +4254,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 
 <div id="ctx" onclick="event.stopPropagation()" style="display:none"></div>
 <div id="ann-bubble" style="display:none"><button class="ann-bub-btn" onmousedown="annBubClick(event)">💬 Comment</button></div>
-<div id="ov" onclick="closeModal()" class=""><div id="mb" onclick="event.stopPropagation()"></div></div>
+<div id="ov" onclick="if(Date.now()-_mbGestureAt<400)return;closeModal()" class=""><div id="mb" onclick="event.stopPropagation()"></div></div>
 <!-- drag ghost label -->
 <div class="drag-hint" id="dgh" style=""></div>
 
@@ -22332,12 +22336,15 @@ function _mbDragMove(ev){
   mb.style.left=l+'px';mb.style.top=t+'px';
 }
 function _mbDragStop(){
+  _mbGestureAt=Date.now();
   _mbDrag=null;
   document.removeEventListener('pointermove',_mbDragMove);
   document.removeEventListener('pointerup',_mbDragStop);
   document.body.style.userSelect='';
   _mbSaveGeom();
 }
+/* a resize or move that ends outside the box lands its click on #ov: that click must not close the dialog */
+let _mbGestureAt=0;
 let _mbRsz=null;
 function _mbResizeStart(ev,dir){
   ev.preventDefault();ev.stopPropagation();
@@ -22371,6 +22378,7 @@ function _mbResizeMove(ev){
   mb.style.width=w+'px';mb.style.height=h+'px';mb.style.left=l+'px';mb.style.top=t+'px';
 }
 function _mbResizeStop(){
+  _mbGestureAt=Date.now();
   _mbRsz=null;
   document.removeEventListener('pointermove',_mbResizeMove);
   document.removeEventListener('pointerup',_mbResizeStop);
@@ -28401,6 +28409,8 @@ function showArtFolderPicker(aid){
 
   const ttl=art.title.length>45?art.title.slice(0,45)+'…':art.title;
   const cnt=art.folderIds.length;
+  /* ＋ New folder / ticking draws this dialog again: a full-screen box stays full screen while the dialog is open */
+  const _wasFs=document.getElementById('ov')?.classList.contains('on')&&document.getElementById('mb')?.classList.contains('mb-fs-on');
   showResizableModal(`<div class="mt mb-mt-fs"><span>📁 Manage folders</span>${_mbFsBtnHTML()}</div>
     <div style="font-size:12px;color:var(--t3);margin-bottom:6px">${esc(ttl)}</div>
     <input class="im-search" id="fp-srch" placeholder="Search folders…" oninput="fpFilter('${aid}',this.value)" onmousedown="event.stopPropagation()">
@@ -28417,6 +28427,7 @@ function showArtFolderPicker(aid){
       <span style="font-size:12px;color:var(--t3)" id="fp-count">${cnt} folder${cnt!==1?'s':''}</span>
       <button class="btn bp" onclick="closeModal()">Done</button>
     </div>`,{geomKey:'siyagah-mb-attach-geom',width:'460px',height:'min(600px,86vh)',phoneSheet:true});
+  if(_wasFs)_mbFsToggle();
   // Focus search; blur new-folder input to avoid auto-keyboard
   setTimeout(()=>{document.getElementById('fp-srch')?.focus();document.getElementById('npf')?.blur();},80);
 }
