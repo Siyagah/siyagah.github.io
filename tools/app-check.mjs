@@ -12902,6 +12902,18 @@ await r.block('139-backup-big', async () => {
   for (const row of rows) r.check(row.ok, '139: ' + row.label, row.detail);
   r.check(out.status === 0, 'the backup-big.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 142 — v05.83, J143: a busy start or a long import must not say ☁ Offline (a late timer gets one grace; the label says why). tools/offline-j143.mjs runs 142a–142e. */
+await r.block('142-offline-j143', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./offline-j143.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1800000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 20, 'the offline-j143.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '142: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the offline-j143.mjs check exits cleanly', `exit ${out.status}`);
+});
 /* 140 — v05.81, J138: 📦 Save File on a big notebook keeps the pictures (the notes with references, each picture once as a block), written piece by piece; the copy opens from disk offline and shows them; Save File from inside the copy holds them too. tools/savefile-big.mjs runs 140a–140f (the suite runs the small default, 60 MB of pictures; by hand: node tools/savefile-big.mjs --mb=600). */
 await r.block('140-savefile-big', async () => {
   const { spawnSync } = await import('node:child_process');
