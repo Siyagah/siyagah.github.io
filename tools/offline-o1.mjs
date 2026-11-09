@@ -319,7 +319,9 @@ try {
       /* as if the SDK had been loaded in this session: its tags are in the live page */
       await s.page.evaluate(() => { for (const n of ['app', 'firestore', 'auth']) { const e = document.createElement('script'); e.src = `https://www.gstatic.com/firebasejs/9.23.0/firebase-${n}-compat.js`; e.setAttribute('data-test', '1'); document.head.appendChild(e); } });
       const dl = s.page.waitForEvent('download');
-      await s.page.evaluate(() => { exportFile(); });
+      /* v05.81 (J138): where showSaveFilePicker exists (Chromium at desktop width) Save File asks where to save instead of downloading; this check reads the
+         downloaded copy, so the picker is hidden here (the picker path is block 140's) */
+      await s.page.evaluate(() => { window.showSaveFilePicker = undefined; exportFile(); });
       const d = await dl; const file = join(dir, 'copy.html'); await d.saveAs(file);
       const text = await readFile(file, 'utf8');
       check(!/<script\b[^>]*\bsrc=/i.test(text), `${t} the Save File copy carries no <script src> (the live page had three Firebase tags)`);

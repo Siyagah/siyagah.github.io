@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.80">
+<meta name="app-version" content="05.81">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4096,7 +4096,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.80</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.81</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -5408,6 +5408,8 @@ function _cleanExportRoot(){
            loaded on demand now). Inline scripts have no src, so the app itself
            and the #nd data tag are never touched. */
     root.querySelectorAll('script[src]').forEach(function(el){ el.remove(); });
+    /* 1b ─ v05.81 · J138: the picture blocks a copy carries are never cloned into a new copy; the writer writes each picture from the store, once */
+    root.querySelectorAll('script[type="application/x-siyagah-pic"]').forEach(function(el){ el.remove(); });
     /* 2 ─ Foreign stylesheets. Every <style> this app writes is either bare
            or carries one of our own ids; none of them set a type attribute,
            which is the reliable extension tell. */
@@ -5629,7 +5631,10 @@ function _picHydrateAll(root){
     if(_picUrls.has(sha)){_picShow(img,sha);return;}
     _picGet(sha).then(function(b){
       if(b)_picShow(img,sha,b);
-      else{_picPlace(img);_picWant(sha,img.getAttribute('data-mime'));}   /* v04.93 — ask the cloud */
+      else _pkTake(sha).then(function(pb){   /* v05.81 · J138 — a Save File copy carries its pictures in the page: look there FIRST */
+        if(pb)_picShow(img,sha,pb);
+        else{_picPlace(img);_picWant(sha,img.getAttribute('data-mime'));}   /* v04.93 — ask the cloud */
+      });
     });
   });
 }
@@ -5725,6 +5730,67 @@ async function _picExportHTML(){
   _picMissingToast(r.missing);
   return getExportHTML(r.inlined?r.text:undefined);
 }
+/* ── v05.81 · J138 — the pictures of a Save File copy. The copy keeps the notes with picture REFERENCES in the nd data tag and each picture ONCE after the page,
+   as <script type="application/x-siyagah-pic" id="pk-<sha>" data-mime="…">base64<\/script>. At start, a data-pic sha the device store lacks is looked for HERE first
+   (before any cloud fetch): the bytes are checked against the sha (a block that fails is ignored and never stored), stored with _picWrite (as _picPut does) and
+   painted. If the store cannot be written (a file:// page in some browsers) the picture is painted from an object URL and the block is KEPT in the page. A block
+   is dropped from the DOM once stored. Never a data: src or a block's text in a.content. ── */
+const _PK_TYPE='application/x-siyagah-pic',_PK_SEL='script[type="application/x-siyagah-pic"]';
+let _pkReadyP=null;
+const _pkBusy=new Map();
+function _pkReady(){
+  if(!_pkReadyP)_pkReadyP=new Promise(function(res){ if(document.readyState!=='loading')res(); else document.addEventListener('DOMContentLoaded',function(){res();},{once:true}); });
+  return _pkReadyP;
+}
+async function _pkRead(el,sha){
+  let bin;
+  try{bin=atob((el.textContent||'').replace(/\s+/g,''));}catch(e){return null;}
+  const u8=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+  bin=null;
+  if(!u8.length||await _picSha(u8.buffer)!==sha)return null;
+  let t=el.getAttribute('data-mime')||'';
+  if(!/^[A-Za-z0-9.+\/-]{1,80}$/.test(t))t='image/jpeg';
+  return new Blob([u8],{type:t});
+}
+function _pkTake(sha){
+  if(!/^[0-9a-f]{64}$/.test(sha||''))return Promise.resolve(null);
+  if(_pkBusy.has(sha))return _pkBusy.get(sha);
+  const p=(async function(){
+    await _pkReady();
+    const el=document.getElementById('pk-'+sha);
+    if(!el||el.getAttribute('type')!==_PK_TYPE||el.hasAttribute('data-bad'))return null;
+    const b=await _pkRead(el,sha);
+    if(!b){el.setAttribute('data-bad','1');return null;}   /* failed its check: ignored, never stored */
+    let stored=false;
+    try{ await _picDB(); if(!_picKnown.has(sha)||_picSm.has(sha))await _picWrite(sha,b,b.type); stored=true; }catch(e){}
+    if(stored)el.remove();   /* in the store now: the page's copy of the text may go (memory) */
+    return b;
+  })().then(function(x){_pkBusy.delete(sha);return x;},function(){_pkBusy.delete(sha);return null;});
+  _pkBusy.set(sha,p);
+  return p;
+}
+/* every block of an opened copy goes into the store one at a time, so ALL the copy's pictures are on the device (a re-save, offline use), not only the shown ones */
+let _pkAllRun=false;
+async function _pkAdoptAll(){
+  if(_pkAllRun)return;_pkAllRun=true;
+  try{
+    await _pkReady();
+    for(;;){
+      const el=document.querySelector(_PK_SEL+':not([data-seen])');
+      if(!el)break;
+      el.setAttribute('data-seen','1');
+      const m=/^pk-([0-9a-f]{64})$/.exec(el.id||'');
+      if(!m){el.setAttribute('data-bad','1');continue;}
+      await _picDB();
+      if(_picKnown.has(m[1])&&!_picSm.has(m[1])){el.remove();continue;}
+      await _pkTake(m[1]);
+      await _yieldTask();
+    }
+  }catch(e){console.error('picture blocks',e);}
+  _pkAllRun=false;
+}
+if(!window.__onPopup){ _pkReady().then(function(){ setTimeout(function(){ try{ if(document.querySelector(_PK_SEL))_pkAdoptAll(); }catch(e){} },3000); }); }
 if(!window.__onPopup) _picDB();   /* v05.78 · J110 ② — not in the Microsoft sign-in popup: that page starts nothing and opens no database */
 
 /* ── Pictures: the cloud copy (v04.93, S2b) ──────────────────────────────
@@ -6489,16 +6555,95 @@ function getExportHTML(ndOverride){
   return html;
 }
 
+/* v05.81 · J138 — 📦 Save File is written PIECE BY PIECE, never one string: the page before the nd data tag, the notebook as JSON with picture REFERENCES (one record per
+   line, `<` of `<\/script`/`<\!--` written <), the page after it, then each picture the device holds ONCE as <script type="application/x-siyagah-pic" id="pk-<sha>"
+   data-mime>base64<\/script>, read, written and dropped one at a time. A notebook with no pictures differs from the old file only in whitespace inside nd (newlines).
+   Used by every path that writes a copy: exportFile (download or picker), _writeToFile (linked file), runBackupNow (backup folder), downloadDatedBackup. The reader
+   is _pkTake / _pkAdoptAll. _picExportHTML (the one-string build) stays for the checks that call it; no button uses it. */
+let _sfBusy=false;
+function _sfSay(msg){
+  let el=document.getElementById('sf-prog');
+  if(!msg){ if(el)el.remove(); return; }
+  if(!el){ el=document.createElement('div'); el.id='sf-prog'; el.className='toast'; document.body.appendChild(el); }
+  el.textContent=msg;
+  _sfLine=msg;
+  try{ const sl=document.getElementById('save-lbl'); if(sl&&_fileHandle){ sl.textContent=msg; sl.className='save-lbl busy'; } }catch(e){}
+}
+let _sfLine='';
+async function _sfWrite(S,ctx){
+  const mk='/*SIYAGAH-ND-'+Math.random().toString(36).slice(2)+Date.now().toString(36)+'*/';
+  const html=getExportHTML(mk);
+  const at=html.indexOf(mk);
+  if(at<0||html.indexOf(mk,at+1)>=0)throw new Error('the page could not be split around its notes');
+  await S.put(html.slice(0,at));
+  const shas=new Set();
+  await _bxpWriteDB(S,ctx,{esc:true,shas:shas});
+  await S.put(html.slice(at+mk.length)+'\n');
+  try{ (await _picKeepShas()).forEach(function(s){shas.add(s);}); }catch(e){}
+  ctx.total=shas.size;
+  let yt=performance.now();
+  for(const sha of shas){
+    let b=await _picGet(sha);
+    if(!b)b=await _pkTake(sha);   /* an opened copy whose store could not be written still holds the block */
+    if(!b){ctx.missing.add(sha);continue;}
+    const r=await _bxpDataUrl(b);
+    if(!r){ctx.missing.add(sha);continue;}
+    let t=b.type||'';if(!/^[A-Za-z0-9.+\/-]{1,80}$/.test(t))t='image/jpeg';
+    await S.put('<script type="'+_PK_TYPE+'" id="pk-'+sha+'" data-mime="'+t+'">'+r.slice(r.indexOf(',')+1)+'<\/script>\n');
+    ctx.done.add(sha);ctx.tick();
+    if(performance.now()-yt>25){await _yieldTask();yt=performance.now();}
+  }
+  await S.flush();
+}
+/* o: {name, pickP (a picker asked inside the click) | fh (a file handle to write into), say}. Returns {ok,name,bytes,missing} or {cancelled}; throws on failure
+   (the writable is aborted first, so a linked file keeps its last good copy). */
+async function _sfTo(o){
+  let w=null,handle=o.fh||null,name=o.name;
+  const say=o.say||function(){};
+  try{
+    if(o.pickP){
+      try{handle=await o.pickP;}
+      catch(e){ if(e&&e.name==='AbortError')return {cancelled:true}; handle=null; }   /* refused: fall back to a download */
+    }
+    say('Writing your file…');
+    if(handle){ w=await handle.createWritable(); if(!o.fh)name=handle.name||name; }
+    const ctx=_bxpCtx('Writing your file…',say,0);
+    const S=_bxpSink(w);
+    await _sfWrite(S,ctx);
+    let bytes=S.bytes;
+    if(w){ await w.close();w=null; }
+    else bytes=_bxpDownload(S.parts,name,'text/html;charset=utf-8');
+    return {ok:true,name:name,bytes:bytes,missing:ctx.missing.size};
+  }catch(e){
+    if(w){try{await w.abort();}catch(_){}}
+    throw e;
+  }
+}
+function _sfSaved(r){
+  _sfSay('');
+  const miss=r.missing;
+  toast('📦 Saved: '+r.name+', '+_bxpSize(r.bytes)+(miss?' — '+miss+' picture'+(miss>1?'s':'')+' not on this device '+(miss>1?'were':'was')+' not included':''),7000);
+  _picMissingToast(miss);
+}
+function _sfFailed(e){
+  _sfSay('');
+  console.error('save file failed',e);
+  toast('⚠ Save File failed. '+_bxpWhy(e).replace('The backup could not','The file could not'),9000);
+}
 async function exportFile(){
-  persist();
-  const html=await _picExportHTML();   /* v04.92 — pictures carry their bytes (I4) */
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=getTimestampedName();
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  _fileDirty=false; updateSaveUI();
-  toast('📦 Saved — open this file on any device to continue');
+  if(_sfBusy){ toast('Still writing the last file…'); return; }
+  const name=getTimestampedName();
+  /* the picker is asked HERE, inside the click, before any await (user activation) */
+  const pickP=_bxpPicker(name,'Siyagah copy','text/html','.html');
+  _sfBusy=true;
+  try{
+    persist();
+    const r=await _sfTo({name:name,pickP:pickP,say:_sfSay});
+    if(r.cancelled){ _sfSay(''); toast('Save File cancelled'); return; }
+    _fileDirty=false; updateSaveUI();
+    _sfSaved(r);
+  }catch(e){ _sfFailed(e); }
+  finally{ _sfBusy=false; }
 }
 
 /** Deploy Export — same as Save File but with the nd data wiped clean.
@@ -6560,15 +6705,73 @@ async function _bxpInline(str,ctx){
   data=null;
   return out;
 }
+/* v05.81 · J138 — the writer's parts, shared by ⬇ Export (this file's exportJSON) and 📦 Save File (_sfTo): the picker asked inside the click, the sink of pieces, the
+   progress context, the record-per-line writer of DB, the download of a Blob of parts. ONE copy of each. */
+function _bxpPicker(name,desc,mime,ext){
+  if(typeof window.showSaveFilePicker!=='function')return null;
+  const acc={};acc[mime]=[ext];
+  try{return window.showSaveFilePicker({suggestedName:name,types:[{description:desc,accept:acc}]});}catch(e){return null;}
+}
+function _bxpSink(w){
+  const S={parts:[],bytes:0,buf:[],len:0};
+  S.flush=async function(){ if(!S.buf.length)return; const b=new Blob(S.buf);S.buf=[];S.len=0;S.bytes+=b.size; if(w)await w.write(b);else S.parts.push(b); };
+  S.put=async function(s){ S.buf.push(s);S.len+=s.length; if(S.len>1048576)await S.flush(); };
+  return S;
+}
+function _bxpCtx(verb,say,total){
+  return {missing:new Set(),done:new Set(),recs:0,nrec:0,t:0,total:total||0,tick:function(){
+    const now=performance.now();if(now-this.t<60)return;this.t=now;
+    if(this.total>0||this.done.size>0)say(verb+' '+this.done.size.toLocaleString()+' of '+Math.max(this.total,this.done.size).toLocaleString()+' pictures');
+    else say(verb+' '+this.recs.toLocaleString()+' of '+this.nrec.toLocaleString()+' notes and records');
+  }};
+}
+function _bxpDownload(parts,name,type){
+  const blob=new Blob(parts,{type:type});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(function(){try{URL.revokeObjectURL(url);}catch(e){}},60000);
+  return blob.size;
+}
+/* DB as ONE JSON object, every top-level array one compact element per line. o.inline: each record's pictures are read, inlined and dropped by themselves (the JSON
+   backup). o.shas (a Set): the shas the records reference are collected (Save File keeps the references and writes each picture once). o.esc: no `<` that could
+   open `<\/script` or `<\!--` is left raw (written \u003c, which JSON.parse reads back as `<`) — only for the text inside the nd data tag. */
+async function _bxpWriteDB(S,ctx,o){
+  const keys=Object.keys(DB).filter(function(k){const v=DB[k];return v!==undefined&&typeof v!=='function';});
+  keys.forEach(function(k){if(Array.isArray(DB[k]))ctx.nrec+=DB[k].length;});
+  const xf=async function(s){
+    if(o.shas&&s.indexOf('data-pic')!==-1){const re=/data-pic=\\?"([0-9a-f]{64})/g;let m;while((m=re.exec(s)))o.shas.add(m[1]);}
+    if(o.inline)s=await _bxpInline(s,ctx);
+    if(o.esc)s=s.replace(/<(?=\/script|!--)/gi,'\\u003c');
+    return s;
+  };
+  let yt=performance.now();
+  await S.put('{\n');
+  for(let ki=0;ki<keys.length;ki++){
+    const k=keys[ki],v=DB[k],last=ki===keys.length-1,tail=(last?'':',')+'\n',kj=JSON.stringify(k);
+    if(Array.isArray(v)&&v.length){
+      await S.put(kj+':[\n');
+      const arr=v.slice();
+      for(let i=0;i<arr.length;i++){
+        let s=JSON.stringify(arr[i]);if(s===undefined)s='null';
+        s=await xf(s);ctx.recs++;
+        await S.put(s+(i<arr.length-1?',':'')+'\n');
+        if(performance.now()-yt>25){ctx.tick();await _yieldTask();yt=performance.now();}
+      }
+      await S.put(']'+tail);
+    }else{
+      let s=JSON.stringify(v);
+      s=await xf(s);
+      await S.put(kj+':'+s+tail);
+    }
+  }
+  await S.put('}\n');
+}
 async function exportJSON(){
   if(_bxpBusy)return;
   const d0=new Date(),p2=function(n){return (n<10?'0':'')+n;};
   let name='notebook-backup-'+d0.getFullYear()+'-'+p2(d0.getMonth()+1)+'-'+p2(d0.getDate())+'.json';
   /* the picker is asked HERE, inside the click, before any await (user activation) */
-  let pickP=null;
-  if(typeof window.showSaveFilePicker==='function'){
-    try{pickP=window.showSaveFilePicker({suggestedName:name,types:[{description:'JSON backup',accept:{'application/json':['.json']}}]});}catch(e){pickP=null;}
-  }
+  const pickP=_bxpPicker(name,'JSON backup','application/json','.json');
   _bxpBusy=true;_bxpBtns(true);
   let w=null,cancelled=false;
   try{
@@ -6581,46 +6784,13 @@ async function exportJSON(){
     if(handle){ w=await handle.createWritable(); name=handle.name||name; }
     let total=0;
     try{ total=(await _picKeepShas()).size; }catch(e){}
-    const ctx={missing:new Set(),done:new Set(),recs:0,nrec:0,t:0,tick:function(){
-      const now=performance.now();if(now-this.t<60)return;this.t=now;
-      if(total>0||this.done.size>0)_bxpSay('Writing your backup… '+this.done.size.toLocaleString()+' of '+Math.max(total,this.done.size).toLocaleString()+' pictures');
-      else _bxpSay('Writing your backup… '+this.recs.toLocaleString()+' of '+this.nrec.toLocaleString()+' notes and records');
-    }};
-    const keys=Object.keys(DB).filter(function(k){const v=DB[k];return v!==undefined&&typeof v!=='function';});
-    keys.forEach(function(k){if(Array.isArray(DB[k]))ctx.nrec+=DB[k].length;});
-    const parts=[];let bytes=0,buf=[],bufLen=0;
-    const flush=async function(){ if(!buf.length)return; const b=new Blob(buf);buf=[];bufLen=0;bytes+=b.size; if(w)await w.write(b);else parts.push(b); };
-    const put=async function(s){ buf.push(s);bufLen+=s.length; if(bufLen>1048576)await flush(); };
-    let yt=performance.now();
-    await put('{\n');
-    for(let ki=0;ki<keys.length;ki++){
-      const k=keys[ki],v=DB[k],last=ki===keys.length-1,tail=(last?'':',')+'\n',kj=JSON.stringify(k);
-      if(Array.isArray(v)&&v.length){
-        await put(kj+':[\n');
-        const arr=v.slice();
-        for(let i=0;i<arr.length;i++){
-          let s=JSON.stringify(arr[i]);if(s===undefined)s='null';
-          s=await _bxpInline(s,ctx);ctx.recs++;
-          await put(s+(i<arr.length-1?',':'')+'\n');
-          if(performance.now()-yt>25){ctx.tick();await _yieldTask();yt=performance.now();}
-        }
-        await put(']'+tail);
-      }else{
-        let s=JSON.stringify(v);
-        s=await _bxpInline(s,ctx);
-        await put(kj+':'+s+tail);
-      }
-    }
-    await put('}\n');
-    await flush();
+    const ctx=_bxpCtx('Writing your backup…',_bxpSay,total);
+    const S=_bxpSink(w);
+    await _bxpWriteDB(S,ctx,{inline:true});
+    await S.flush();
+    let bytes=S.bytes;
     if(w){ await w.close();w=null; }
-    else{
-      const blob=new Blob(parts,{type:'application/json'});
-      bytes=blob.size;
-      const url=URL.createObjectURL(blob),a=document.createElement('a');
-      a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);
-      setTimeout(function(){try{URL.revokeObjectURL(url);}catch(e){}},60000);
-    }
+    else bytes=_bxpDownload(S.parts,name,'application/json');
     const miss=ctx.missing.size;
     _bxpSay('Saved: '+name+', '+_bxpSize(bytes)+(miss?' — '+miss+' picture'+(miss>1?'s':'')+' not on this device '+(miss>1?'were':'was')+' not included':''),'ok');
     toast('Backup saved ✓');
@@ -28476,21 +28646,28 @@ async function enableAutoSave(){
 /** Write current state directly to the linked file (FSA). */
 async function _writeToFile(fromEnableFlow=false){
   if(!_fileHandle) return;
+  if(_sfBusy){ clearTimeout(_autoTimer); _autoTimer=setTimeout(()=>_writeToFile(fromEnableFlow),3000); return; }   /* v05.81: one copy is written at a time */
+  _sfBusy=true;
   try{
-    const html=await _picExportHTML();
-    const w=await _fileHandle.createWritable();
-    await w.write(new Blob([html],{type:'text/html;charset=utf-8'}));
-    await w.close();
+    /* v05.81 · J138 — piece by piece, pictures included (the same writer as 📦 Save File); progress on the ● Saving… line */
+    const r=await _sfTo({name:_fileHandle.name||'',fh:_fileHandle,say:_sfSay});
+    _sfSay('');
     _fileDirty=false;
+    _sfLine='✓ File saved · '+_bxpSize(r.bytes);
     updateSaveUI();
+    if(r.missing)_picMissingToast(r.missing);
   }catch(e){
+    _sfSay('');
     if(e.name==='NotAllowedError'||e.name==='SecurityError'){
       // Browser revoked permission (happens after restart in some browsers)
       _fileHandle=null; updateSaveUI();
       if(!fromEnableFlow)
         toast('Auto-save permission expired — click 🔗 Enable auto-save to re-link');
+    }else{
+      console.error('auto-save failed',e);
+      toast('⚠ Auto-save could not write the file. '+_bxpWhy(e).replace('The backup could not','The file could not'),9000);   /* v05.81: never silent */
     }
-  }
+  }finally{ _sfBusy=false; }
 }
 
 /**
@@ -28532,7 +28709,7 @@ function updateSaveUI(){
       sl.textContent=(_lsFailQuota?'⚠ Storage full':'⚠ Storage error')+' — tap for details';
       sl.className='save-lbl err';
     } else if(_fileHandle && !_fileDirty){
-      sl.textContent='✓ File saved'; sl.className='save-lbl ok';
+      sl.textContent=(_sfLine&&_sfLine.indexOf('✓ File saved')===0)?_sfLine:'✓ File saved'; sl.className='save-lbl ok';
     } else if(_fileHandle && _fileDirty){
       sl.textContent='● Saving…'; sl.className='save-lbl busy';
     } else if(_fileDirty){
@@ -28706,24 +28883,28 @@ async function runBackupNow(manual){
     _bkRenderStatus();
     return false;
   }
+  if(_sfBusy){ if(manual)toast('Still writing the last file…'); return false; }
+  _sfBusy=true;
   try{
     persist();
-    const html=await _picExportHTML();
     const name=_bkFileName(cfg,new Date());
     const fh=await dir.getFileHandle(name,{create:true});
-    const w=await fh.createWritable();
-    await w.write(new Blob([html],{type:'text/html;charset=utf-8'}));
-    await w.close();
+    /* v05.81 · J138 — piece by piece, pictures included; progress shown, "Saved: name, size" at the end */
+    const sr=await _sfTo({name:name,fh:fh,say:manual?_sfSay:function(){}});
+    _sfSay('');
     const pr=await _bkPrune(dir);
     cfg.on=true;cfg.lastAt=Date.now();cfg.lastName=name;cfg.folder=dir.name||cfg.folder;
     _bkSaveCfg(cfg);
     _bkRenderStatus();
-    toast('🗄 Backed up — '+name+(pr.removed?(' · '+pr.removed+' old backup'+(pr.removed>1?'s':'')+' tidied'):''));
+    toast('🗄 Backed up — Saved: '+name+', '+_bxpSize(sr.bytes)+(pr.removed?(' · '+pr.removed+' old backup'+(pr.removed>1?'s':'')+' tidied'):''));
+    _picMissingToast(sr.missing);
     return true;
   }catch(e){
-    if(manual)toast('⚠ Backup failed: '+(e&&e.message?e.message:e));
+    _sfSay('');
+    console.error('backup failed',e);
+    toast('⚠ Backup failed. '+_bxpWhy(e).replace('The backup could not','The file could not'),9000);   /* v05.81: a plain reason, never silent */
     return false;
-  }
+  }finally{ _sfBusy=false; }
 }
 
 /** Pick (or re-pick) the folder. Must be called from a click — the picker
@@ -28755,18 +28936,20 @@ function setBackupEvery(v){
     Same file, same completeness — it just needs a click, because browsers
     without the File System Access API cannot write to a folder unattended. */
 async function downloadDatedBackup(){
+  if(_sfBusy){ toast('Still writing the last file…'); return; }
   const cfg=_bkCfg();
-  persist();
-  const html=await _picExportHTML();
-  const name=_bkFileName({every:'daily'},new Date());
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=name;
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  cfg.lastAt=Date.now();cfg.lastName=name;_bkSaveCfg(cfg);
-  _fileDirty=false;updateSaveUI();_bkRenderStatus();
-  toast('🗄 '+name+' downloaded — keep it somewhere safe');
+  _sfBusy=true;
+  try{
+    persist();
+    const name=_bkFileName({every:'daily'},new Date());
+    const r=await _sfTo({name:name,say:_sfSay});   /* v05.81 · J138 — piece by piece, pictures included */
+    _sfSay('');
+    cfg.lastAt=Date.now();cfg.lastName=name;_bkSaveCfg(cfg);
+    _fileDirty=false;updateSaveUI();_bkRenderStatus();
+    toast('🗄 Saved: '+name+', '+_bxpSize(r.bytes)+' — keep it somewhere safe',7000);
+    _picMissingToast(r.missing);
+  }catch(e){ _sfFailed(e); }
+  finally{ _sfBusy=false; }
 }
 
 /* ── Boot: run one if it is due, and nudge if it cannot ───────────────── */

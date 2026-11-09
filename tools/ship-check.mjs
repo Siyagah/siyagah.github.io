@@ -183,4 +183,22 @@ const dups = [...new Set(decl.filter((n, i) => decl.indexOf(n) !== i))].filter((
 r.check(dups.length === 0, 'no top-level function is declared twice (a later declaration silently replaces the earlier one)',
   dups.length ? `declared twice: ${dups.join(', ')}` : `${decl.length} declarations, no new duplicate`);
 
+/* ── The app's script ends where it should ─────────────────────────────
+   v05.81 (Architect's review): the Save File writer put a literal `</script>`
+   in a string and in four comments, so the HTML parser ended the app's script
+   at the first one and the app did not boot. An `<!--` inside an inline script
+   does the same kind of damage (the v04.11 lesson). Every inline script runs
+   from its `<script>` to its FIRST `</script`; every top-level function must lie
+   inside one of them, and none may hold `<!--`. Write `<\/script` and `<\!--`. */
+const scrRanges = [];
+for (const m of html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>/gi)) {
+  const s0 = m.index + m[0].length, e0 = html.indexOf('</script', s0);
+  if (e0 > 0) scrRanges.push([s0, e0, m[0]]);
+}
+const outside = [...html.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)/gm)]
+  .filter((m) => !scrRanges.some(([a, b]) => m.index >= a && m.index < b)).map((m) => m[1]);
+const cmtIn = scrRanges.filter(([a, b, tag]) => !/id="nd"/.test(tag) && html.slice(a, b).includes('<!--')).length;
+r.check(outside.length === 0 && cmtIn === 0, 'no inline script is cut short by a literal </script or holds <!-- (the app would not boot)',
+  outside.length ? `${outside.length} top-level function(s) fall outside every script, first: ${outside.slice(0, 3).join(', ')}` : cmtIn ? `${cmtIn} inline script(s) hold <!--` : `${scrRanges.length} inline scripts, all whole`);
+
 process.exit(r.finish() ? 1 : 0);
