@@ -11303,7 +11303,10 @@ await r.block('53e-export-json-imports-with-the-picture', async () => {
   const s = await s53open(S53_VPS[2]);
   const { page } = s;
   const dl = page.waitForEvent('download');
-  await page.evaluate(() => { exportJSON(); });
+  /* v05.80 (J135): where showSaveFilePicker exists (Chromium at 1440) the export opens the save picker instead of
+     downloading. This block measures the download path (phone, tablet, Safari, Firefox), so the picker is hidden here;
+     the picker path is block 139's. */
+  await page.evaluate(() => { try { delete window.showSaveFilePicker; } catch (e) {} window.showSaveFilePicker = undefined; exportJSON(); });
   const json = JSON.parse(await readFile(await (await dl).path(), 'utf8'));
   const c = json.articles.find((a) => a.id === 'p1').content;
   r.check((c.match(/<img[^>]*\ssrc="data:image\/(jpeg|png);base64,/g) || []).length === 2, 'the JSON backup carries both pictures', c.slice(0, 160));
