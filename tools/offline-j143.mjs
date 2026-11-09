@@ -75,6 +75,8 @@ try {
     {
       const d = await device(vp, { sdk: 'ok', busyMs: 18000 });
       try {
+        await d.page.waitForFunction(() => typeof firebase === 'object' && !!_syncFsDb, null, { timeout: 90000 }).catch(() => {});   /* the static markup already says "Live": wait for the SDK to really run */
+        await sleep(2000);
         const x = await waitDot(d, /Live|☁…/, 90000);
         const L = await log(d);
         const off = L.filter((e) => /Offline/.test(e[2]));
@@ -140,7 +142,7 @@ try {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
     await ctx.route('**/unit-ok.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.__unitRan=1;' }));
-    await ctx.route('**/unit-hang.js', () => {});
+    await ctx.route('**/unit-hang.js*', () => {});
     await page.goto(srv.base + '/', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => typeof _loadScript === 'function');
     const ok = await page.evaluate(async (base) => {
