@@ -11,7 +11,7 @@
      steady  the notebook already holds them; ~30 posts changed on the site; only those are read (modified_after). LIMITED (138a).
      daily   the same, with `_mmjS.full` made old, so the day's id lists are read too. LIMITED (138a).
    The boundary is marked by the APP (v05.79 `_mmjMk`, performance.mark): mmj:s0 right after the last await (the await-free stretch starts), mmj:s1 when the
-   decisions are made (before the save), mmj:s2 after the save and redraw. A long task starting before s0 is READING; decide = s1-s0, save+redraw = s2-s1.
+   decisions are made (before the save), mmj:s2 after the save and redraw. A long task that ends before s0 is READING (one running across s0 is the stretch; only its part before s0 counts as reading); decide = s1-s0, save+redraw = s2-s1.
 
    138a  steady and daily: no READING long task, and the DECIDE part (s1-s0), each within the host-scaled 50 ms; the save + redraw is printed, not limited
    138b  the written result of the first read (notes, folders, fromMmj) is byte-identical to the unsliced read (per_page=100, window.__mmjPer=100), at 390, 820 and 1440
@@ -105,8 +105,11 @@ async function oneRun(vp, per, phases) {
         return { lt: window.__lt, s0: t('s0'), s1: t('s1'), s2: t('s2') };
       });
       const s0 = o.s0, s2 = o.s2 == null ? Infinity : o.s2;
-      const reading = o.lt.filter((x) => s0 == null || x.st < s0 - 1);   /* 1 ms tolerance: a task starting as the stretch starts is the stretch */
-      const stretch = s0 == null ? [] : o.lt.filter((x) => x.st >= s0 - 1 && x.st <= s2);
+      /* Architect, review 3: a long task that is still running when s0 is marked IS the await-free stretch (it starts with the few
+         synchronous lines after the last await); only its part BEFORE s0 is reading, so that part is what reading is limited on. */
+      const reading = s0 == null ? o.lt.slice() : o.lt.filter((x) => x.st + x.d <= s0).concat(
+        o.lt.filter((x) => x.st < s0 && x.st + x.d > s0).map((x) => ({ st: x.st, d: Math.round(s0 - x.st), partBeforeS0: true })));
+      const stretch = s0 == null ? [] : o.lt.filter((x) => x.st + x.d > s0 && x.st <= s2);
       const decideMs = o.s0 != null && o.s1 != null ? Math.round(o.s1 - o.s0) : -1, saveMs = o.s1 != null && o.s2 != null ? Math.round(o.s2 - o.s1) : -1;
       return { name, sum, s0, reading, stretch, decideMs, saveMs, reqs: seen.slice(from) };
     };
