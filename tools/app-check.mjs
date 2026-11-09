@@ -12881,6 +12881,18 @@ await r.block('134-theme-fold-j124', async () => {
   for (const row of rows) r.check(row.ok, '134: ' + row.label, row.detail);
   r.check(out.status === 0, 'the theme-fold-j124.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 138 — v05.79, J130: the Mapping My Journey keeping-matching reads the site in slices (10 a page, a yield between pages, the parse its own task); a fake site of 1,000 posts / 150 categories; no long task while reading at 390 ×4, the result byte-identical to the unsliced read at 3 sizes, zero requests to the real site. tools/mmj-slices.mjs runs 138a–138d. */
+await r.block('138-mmj-slices', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./mmj-slices.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1500000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 15, 'the mmj-slices.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '138: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the mmj-slices.mjs check exits cleanly', `exit ${out.status}`);
+});
 /* 137 — v05.78, J110 ②: 📥 OneNote import (Microsoft Graph, the owner's own sign-in, PKCE in a popup). tools/onenote-import.mjs runs 137a–137i at 390/820/1440
    against a FAKE Microsoft (the menu by a real tap, the sign-in and PKCE, the token in no storage, the dry run writes nothing, the import, dates, levels,
    pictures/files, 429, a second run, Trash/tombstones, the shared daily limit, an expired token, the popup-landing boot, 1,500 pages). */

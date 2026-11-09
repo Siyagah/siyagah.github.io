@@ -45,6 +45,7 @@ const browser = await pw.chromium.launch({ args: ['--js-flags=--max-old-space-si
 function mmjSeed() {
   const db = seedDB(T0);
   db.sections.push({ id: 'mmj-sec', name: 'Mapping My Journey', order: 1, updatedAt: T0, mmj: { site: 'https://x.invalid' } });
+  db.theme.mmjSync = false;   /* v05.79 · J130: keeping-matching is not what this check tests, and it would fetch the real site */
   db.folders.push(
     { id: 'mmj-c-1', name: 'Journeys', parentId: null, order: 1, sectionId: 'mmj-sec', updatedAt: T0, mmj: { n: 'Journeys' } },
     { id: 'mmj-c-2', name: 'Stops', parentId: 'mmj-c-1', order: 1, updatedAt: T0, mmj: { n: 'Stops' } },
