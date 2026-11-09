@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.79">
+<meta name="app-version" content="05.80">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4096,7 +4096,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.79</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.80</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6519,11 +6519,203 @@ function exportDeploy(){
   URL.revokeObjectURL(url);
   toast('🚀 Deploy file ready — upload to Firebase Hosting / GitHub Pages');
 }
-async function exportJSON(){const _pr=await _picInline(true);const blob=new Blob([_pr.text],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='notebook-backup.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);toast('Backup downloaded ✓');_picMissingToast(_pr.missing);}
+/* v05.80 · J135 — ⬇ Export / ⬆ Import of the JSON backup for a BIG notebook. The file keeps today's shape (one JSON object, same keys, pictures inlined as data: srcs),
+   but is written PIECE BY PIECE — never one string of the whole notebook: every top-level array one element per line (compact JSON), each element's pictures read,
+   inlined and dropped by itself; other keys on one line. Whitespace differs from the old JSON.stringify(DB,null,2); the content does not. Laptop: showSaveFilePicker
+   (asked inside the click, before any await) + createWritable; elsewhere a Blob of the pieces. Import: under _BXP_BIG the old FileReader+JSON.parse path; bigger is
+   streamed line by line (this layout only), each line's data: pictures go to _picPut and become data-pic references again. */
+let _bxpBusy=false;
+const _BXP_BIG=100*1048576;
+function _bxpSay(msg,kind){const el=document.getElementById('bxp-status');if(el){el.textContent=msg;el.className='mm bxp-st'+(kind?' '+kind:'');}else if(kind)toast(msg,7000);}
+function _bxpBtns(off){['bxp-exp','bxp-imp'].forEach(function(i){const b=document.getElementById(i);if(b)b.disabled=!!off;});}
+function _bxpSize(n){return n>=10485760?Math.round(n/1048576).toLocaleString()+' MB':n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';}
+function _bxpWhy(e){
+  const n=(e&&e.name)||'',m=String(e&&e.message||e||'');
+  if(n==='QuotaExceededError'||/quota|no space|disk full/i.test(m))return 'Out of space on this device.';
+  if(n==='NotAllowedError'||n==='SecurityError')return 'This browser refused to save the file ('+(m||n)+').';
+  if(n==='RangeError'||/invalid string length|allocation|memory/i.test(m))return 'The notebook is too big for this browser to write ('+(m||n)+').';
+  return 'The backup could not be written: '+(m||n||'unknown error')+'.';
+}
+function _bxpDataUrl(b){return new Promise(function(res){const fr=new FileReader();fr.onload=function(){res(fr.result);};fr.onerror=function(){res(null);};fr.readAsDataURL(b);});}
+/* JSON text of ONE record (quotes written \") -> the same text with each of ITS pictures inlined; the bytes are read for this record only and dropped. */
+async function _bxpInline(str,ctx){
+  if(str.indexOf('data-pic')===-1)return str;
+  const re=/<img\b[^>]*?\bdata-pic=\\?"([0-9a-f]{64})\\?"[^>]*>/g;
+  const shas=new Set();let m;
+  while((m=re.exec(str)))shas.add(m[1]);
+  let data={};
+  for(const s of shas){
+    const b=await _picGet(s);
+    if(!b){ctx.missing.add(s);continue;}
+    const r=await _bxpDataUrl(b);
+    if(!r){ctx.missing.add(s);continue;}
+    data[s]=(b.type&&r.indexOf('data:'+b.type)===0)?r:('data:image/jpeg;base64,'+r.slice(r.indexOf(',')+1));
+    ctx.done.add(s);ctx.tick();
+  }
+  const out=str.replace(/<img\b[^>]*?\bdata-pic=\\?"([0-9a-f]{64})\\?"[^>]*>/g,function(tag,s){
+    if(!data[s]||/\ssrc\s*=/.test(tag))return tag;
+    const q=tag.indexOf('\\"')!==-1?'\\"':'"';
+    return '<img src='+q+data[s]+q+tag.slice(4);
+  });
+  data=null;
+  return out;
+}
+async function exportJSON(){
+  if(_bxpBusy)return;
+  const d0=new Date(),p2=function(n){return (n<10?'0':'')+n;};
+  let name='notebook-backup-'+d0.getFullYear()+'-'+p2(d0.getMonth()+1)+'-'+p2(d0.getDate())+'.json';
+  /* the picker is asked HERE, inside the click, before any await (user activation) */
+  let pickP=null;
+  if(typeof window.showSaveFilePicker==='function'){
+    try{pickP=window.showSaveFilePicker({suggestedName:name,types:[{description:'JSON backup',accept:{'application/json':['.json']}}]});}catch(e){pickP=null;}
+  }
+  _bxpBusy=true;_bxpBtns(true);
+  let w=null,cancelled=false;
+  try{
+    let handle=null;
+    if(pickP){
+      try{handle=await pickP;}
+      catch(e){ if(e&&e.name==='AbortError'){cancelled=true;return;} handle=null; }   /* refused: fall back to a download */
+    }
+    _bxpSay('Writing your backup…');
+    if(handle){ w=await handle.createWritable(); name=handle.name||name; }
+    let total=0;
+    try{ total=(await _picKeepShas()).size; }catch(e){}
+    const ctx={missing:new Set(),done:new Set(),recs:0,nrec:0,t:0,tick:function(){
+      const now=performance.now();if(now-this.t<60)return;this.t=now;
+      if(total>0||this.done.size>0)_bxpSay('Writing your backup… '+this.done.size.toLocaleString()+' of '+Math.max(total,this.done.size).toLocaleString()+' pictures');
+      else _bxpSay('Writing your backup… '+this.recs.toLocaleString()+' of '+this.nrec.toLocaleString()+' notes and records');
+    }};
+    const keys=Object.keys(DB).filter(function(k){const v=DB[k];return v!==undefined&&typeof v!=='function';});
+    keys.forEach(function(k){if(Array.isArray(DB[k]))ctx.nrec+=DB[k].length;});
+    const parts=[];let bytes=0,buf=[],bufLen=0;
+    const flush=async function(){ if(!buf.length)return; const b=new Blob(buf);buf=[];bufLen=0;bytes+=b.size; if(w)await w.write(b);else parts.push(b); };
+    const put=async function(s){ buf.push(s);bufLen+=s.length; if(bufLen>1048576)await flush(); };
+    let yt=performance.now();
+    await put('{\n');
+    for(let ki=0;ki<keys.length;ki++){
+      const k=keys[ki],v=DB[k],last=ki===keys.length-1,tail=(last?'':',')+'\n',kj=JSON.stringify(k);
+      if(Array.isArray(v)&&v.length){
+        await put(kj+':[\n');
+        const arr=v.slice();
+        for(let i=0;i<arr.length;i++){
+          let s=JSON.stringify(arr[i]);if(s===undefined)s='null';
+          s=await _bxpInline(s,ctx);ctx.recs++;
+          await put(s+(i<arr.length-1?',':'')+'\n');
+          if(performance.now()-yt>25){ctx.tick();await _yieldTask();yt=performance.now();}
+        }
+        await put(']'+tail);
+      }else{
+        let s=JSON.stringify(v);
+        s=await _bxpInline(s,ctx);
+        await put(kj+':'+s+tail);
+      }
+    }
+    await put('}\n');
+    await flush();
+    if(w){ await w.close();w=null; }
+    else{
+      const blob=new Blob(parts,{type:'application/json'});
+      bytes=blob.size;
+      const url=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(function(){try{URL.revokeObjectURL(url);}catch(e){}},60000);
+    }
+    const miss=ctx.missing.size;
+    _bxpSay('Saved: '+name+', '+_bxpSize(bytes)+(miss?' — '+miss+' picture'+(miss>1?'s':'')+' not on this device '+(miss>1?'were':'was')+' not included':''),'ok');
+    toast('Backup saved ✓');
+    _picMissingToast(miss);
+  }catch(e){
+    console.error('backup failed',e);
+    if(w){try{await w.abort();}catch(_){}}
+    _bxpSay('Backup failed. '+_bxpWhy(e),'err');
+  }finally{
+    if(cancelled)_bxpSay('Backup cancelled');
+    _bxpBusy=false;_bxpBtns(false);
+  }
+}
+/* ── the reader: this writer's own layout, one line at a time ── */
+async function _bxpDeinline(str){
+  if(str.indexOf('base64,')===-1)return str;
+  const re=/<img src=\\"data:([^;,"\\]*);base64,([A-Za-z0-9+\/=]*)\\"([^>]*?\bdata-pic=\\"([0-9a-f]{64})\\"[^>]*)>/g;
+  const hits=Array.from(str.matchAll(re));
+  if(!hits.length)return str;
+  let out='',pos=0;
+  for(const h of hits){
+    out+=str.slice(pos,h.index);pos=h.index+h[0].length;
+    let ref=h[0];
+    try{
+      const bin=atob(h[2]),u8=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+      if(await _picSha(u8.buffer)===h[4]){
+        const mime=h[1]||'image/jpeg';
+        if(await _picPut(new Blob([u8],{type:mime}),mime)===h[4])ref='<img'+h[3]+'>';
+      }
+    }catch(e){ if(e&&/picture store/.test(e.message||''))throw e; }
+    out+=ref;
+  }
+  return out+str.slice(pos);
+}
+async function _bxpReadBig(file,onProg){
+  const bad=function(){const e=new Error('layout');e.bxpLayout=true;return e;};
+  const rd=file.stream().pipeThrough(new TextDecoderStream()).getReader();
+  const obj={};let state='start',key=null,arr=null,parts=[],seen=0,n=0;
+  const line=async function(s){
+    if(state==='start'){ if(s!=='{')throw bad(); state='top'; return; }
+    if(state==='top'){
+      if(s==='}'){ state='done'; return; }
+      const m=/^("(?:[^"\\]|\\.)*"):(.*)$/.exec(s);if(!m)throw bad();
+      const k=JSON.parse(m[1]);let rest=m[2];
+      if(rest==='['){ key=k;arr=[];state='arr';return; }
+      if(rest.charAt(rest.length-1)===',')rest=rest.slice(0,-1);
+      obj[k]=JSON.parse(await _bxpDeinline(rest));return;
+    }
+    if(state==='arr'){
+      if(s===']'||s===']'+','){ obj[key]=arr;arr=null;state='top';return; }
+      if(s.charAt(s.length-1)===',')s=s.slice(0,-1);
+      arr.push(JSON.parse(await _bxpDeinline(s)));n++;
+      if(n%20===0)onProg(seen);
+      return;
+    }
+    throw bad();
+  };
+  for(;;){
+    const r=await rd.read();if(r.done)break;
+    const c=r.value;seen+=c.length;let pos=0;
+    for(;;){
+      const nl=c.indexOf('\n',pos);
+      if(nl===-1){ parts.push(c.slice(pos));break; }
+      parts.push(c.slice(pos,nl));
+      const s=parts.join('');parts=[];
+      if(s!=='')await line(s);   /* a blank line is never written */
+      pos=nl+1;
+    }
+    onProg(seen);
+  }
+  const tailS=parts.join('');if(tailS!=='')await line(tailS);
+  if(state==='start')throw bad();
+  if(state!=='done'){const e=new Error('The file ends too early — it looks cut short.');e.bxpCut=true;throw e;}
+  return obj;
+}
+async function _bxpImportBig(file){
+  if(_bxpBusy){toast('A backup is already running');return;}
+  _bxpBusy=true;
+  const el=document.createElement('div');el.className='toast';el.id='bxp-imp-prog';el.textContent='Reading your backup…';document.body.appendChild(el);
+  let t=0;
+  try{
+    const d=await _bxpReadBig(file,function(seen){const now=performance.now();if(now-t<150)return;t=now;el.textContent='Reading your backup… '+Math.min(99,Math.round(seen*100/Math.max(1,file.size)))+'%';});
+    el.remove();
+    if(d&&d.folders&&d.articles)_showImportConsent(d,file.name);else toast('Invalid file');
+  }catch(e){
+    el.remove();
+    if(e&&e.bxpLayout)toast('This file is too big to read here and was not written by Siyagah v05.80 or later',9000);
+    else toast('Could not read the file: '+(e&&e.message||e),9000);
+  }finally{_bxpBusy=false;}
+}
 /* v04.39 — this used to be DB=d;persist() with no question asked (I1). It now
    routes through the same consent dialog as importBackup() below, since both
    are "replace my notebook with a file" and neither should skip asking. */
-function importJSON(){const inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.onchange=e=>{const file=e.target.files[0];if(!file)return;const fr=new FileReader();fr.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.folders&&d.articles){_showImportConsent(d,file.name);}else toast('Invalid file');}catch{toast('Could not read file');}};fr.readAsText(file);};inp.click();}
+function importJSON(){const inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.onchange=e=>{const file=e.target.files[0];if(!file)return;if(file.size>(typeof window.__bxpBigMin==='number'?window.__bxpBigMin:_BXP_BIG)){_bxpImportBig(file);return;}const fr=new FileReader();fr.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.folders&&d.articles){_showImportConsent(d,file.name);}else toast('Invalid file');}catch{toast('Could not read file');}};fr.readAsText(file);};inp.click();}
 
 /* ── Toast ───────────────────────────────────────────────────────── */
 function toast(msg,dur=2800){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},dur);}
@@ -21973,9 +22165,10 @@ function openModal(type,target){
     showModal(`<div class="mt">💽 Storage & Backup</div>
       <div class="mm">Export a JSON backup, or restore from one.</div>
       <div class="ma" style="flex-direction:column;gap:8px;align-items:stretch">
-        <button class="btn bp" onclick="exportJSON();closeModal()">⬇ Export data as JSON backup</button>
-        <button class="btn" onclick="importJSON();closeModal()">⬆ Import data from JSON backup</button>
+        <button class="btn bp" id="bxp-exp" onclick="exportJSON()">⬇ Export data as JSON backup</button>
+        <button class="btn" id="bxp-imp" onclick="importJSON();closeModal()">⬆ Import data from JSON backup</button>
       </div>
+      <div class="mm" id="bxp-status" role="status" aria-live="polite" style="min-height:1.3em;margin-top:6px"></div>
       ${_storageSectionHTML()}
       <div class="ma" style="margin-top:10px">
         <button class="btn" onclick="closeModal()">Close</button>
