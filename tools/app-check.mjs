@@ -12902,6 +12902,18 @@ await r.block('139-backup-big', async () => {
   for (const row of rows) r.check(row.ok, '139: ' + row.label, row.detail);
   r.check(out.status === 0, 'the backup-big.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 141 — v05.82, J141: 📁 Manage folders resizes from 8 handles, moves by its title, goes ⛶ full screen; its own remembered place (siyagah-mb-attach-geom), the Folder Browser's untouched. tools/folders-rsz-j141.mjs runs 141a–141e at 390/820/1440. */
+await r.block('141-folders-rsz', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./folders-rsz-j141.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 26 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the folders-rsz-j141.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '141: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the folders-rsz-j141.mjs check exits cleanly', `exit ${out.status}`);
+});
 /* 140 — v05.81, J138: 📦 Save File on a big notebook keeps the pictures (the notes with references, each picture once as a block), written piece by piece; the copy opens from disk offline and shows them; Save File from inside the copy holds them too. tools/savefile-big.mjs runs 140a–140f (the suite runs the small default, 60 MB of pictures; by hand: node tools/savefile-big.mjs --mb=600). */
 await r.block('140-savefile-big', async () => {
   const { spawnSync } = await import('node:child_process');
