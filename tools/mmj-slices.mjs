@@ -10,10 +10,10 @@
      first   the first-ever read — 1,000 posts + 20 pages, all new (1,170 new notes and folders). REPORTED, not limited (138c).
      steady  the notebook already holds them; ~30 posts changed on the site; only those are read (modified_after). LIMITED (138a).
      daily   the same, with `_mmjS.full` made old, so the day's id lists are read too. LIMITED (138a).
-   The boundary between READING and DECIDING is marked from inside the page: `_mmjAssemble` is wrapped (start of the assemble + decide + write stretch) and
-   `_enxPersist` is wrapped (its end). A long task is attributed by its START time: before the assemble mark = reading; between the marks = deciding.
+   The boundary is marked by the APP (v05.79 `_mmjMk`, performance.mark): mmj:s0 right after the last await (the await-free stretch starts), mmj:s1 when the
+   decisions are made (before the save), mmj:s2 after the save and redraw. A long task starting before s0 is READING; decide = s1-s0, save+redraw = s2-s1.
 
-   138a  steady and daily: no READING long task over the host-scaled 50 ms (the deciding worst is printed beside it)
+   138a  steady and daily: no READING long task, and the DECIDE part (s1-s0), each within the host-scaled 50 ms; the save + redraw is printed, not limited
    138b  the written result of the first read (notes, folders, fromMmj) is byte-identical to the unsliced read (per_page=100, window.__mmjPer=100), at 390, 820 and 1440
    138c  the first-ever read and the decide-and-write stretch — worst reading / deciding long tasks PRINTED, not limited (the rule is to keep it one stretch)
    138d  zero requests to mappingmyjourney.com across the run, and no page errors (the harness's own "localStorage best-effort save failed" line is excluded, as in 56k)
@@ -51,7 +51,7 @@ function makeSite() {
 }
 const S = makeSite();
 /* post indexes whose modified_gmt the fake site has moved to CHANGED_AT: the owner's "~30 posts changed" */
-let CHANGED = new Set(), CHANGED_AT = '';
+let CHANGED = new Map();   /* post index -> the modified_gmt the fake site now gives it */
 const CORS = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'X-WP-Total, X-WP-TotalPages' };
 
 async function serveSite(ctx) {
@@ -61,7 +61,7 @@ async function serveSite(ctx) {
     const m = /^\/wp-json\/wp\/v2\/(categories|posts|pages|tags|media)$/.exec(u.pathname);
     if (!m) return route.fulfill({ status: 404, body: '{}', headers: CORS });
     let all = S[m[1]];
-    if (m[1] === 'posts' && CHANGED.size) all = all.map((p, i) => (CHANGED.has(i) ? { ...p, modified_gmt: CHANGED_AT } : p));
+    if (m[1] === 'posts' && CHANGED.size) all = all.map((p, i) => (CHANGED.has(i) ? { ...p, modified_gmt: CHANGED.get(i) } : p));
     const ma = u.searchParams.get('modified_after');
     if (ma && (m[1] === 'posts' || m[1] === 'pages')) all = all.filter((x) => x.modified_gmt > ma);
     const f = u.searchParams.get('_fields'); const fl = f ? f.split(',') : null;
@@ -86,28 +86,29 @@ async function oneRun(vp, per, phases) {
   const app = await openApp({ viewport: { width: vp.w, height: vp.h }, hasTouch: vp.touch, db: seed(), initScript: init });
   try {
     const { page, ctx } = app;
-    CHANGED = new Set(); CHANGED_AT = '';
+    CHANGED = new Map();
     const seen = await serveSite(ctx);
     await page.evaluate(() => {
-      window.__lt = []; window.__m = { asm: null, end: null };
+      window.__lt = [];
       try { new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__lt.push({ st: e.startTime, d: Math.round(e.duration) }))).observe({ type: 'longtask', buffered: false }); } catch (e) {}
-      const oa = window._mmjAssemble;
-      window._mmjAssemble = function () { if (window.__m.asm == null) window.__m.asm = performance.now(); return oa.apply(this, arguments); };
-      const op = window._enxPersist;
-      window._enxPersist = function () { const x = op.apply(this, arguments); window.__m.end = performance.now(); return x; };
     });
     if (vp.thr) { const cdp = await ctx.newCDPSession(page); await cdp.send('Emulation.setCPUThrottlingRate', { rate: vp.thr }); }
     await page.waitForTimeout(500);
+    /* the APP marks its own await-free stretch (v05.79 _mmjMk): mmj:s0 right after the last await, mmj:s1 decided (before the save), mmj:s2 saved and redrawn */
     const phase = async (name) => {
-      await page.evaluate(() => { window.__lt = []; window.__m = { asm: null, end: null }; });
+      await page.evaluate(() => { window.__lt = []; performance.clearMarks(); });
       const from = seen.length;
       const sum = await page.evaluate(() => _mmjSyncRun(true));
       await page.waitForTimeout(500);
-      const o = await page.evaluate(() => ({ lt: window.__lt, m: window.__m }));
-      const asm = o.m.asm, end = o.m.end == null ? Infinity : o.m.end;
-      const reading = o.lt.filter((x) => asm == null || x.st < asm);
-      const deciding = asm == null ? [] : o.lt.filter((x) => x.st >= asm && x.st <= end);
-      return { name, sum, asm, reading, deciding, reqs: seen.slice(from) };
+      const o = await page.evaluate(() => {
+        const t = (n) => { const e = performance.getEntriesByName('mmj:' + n); return e.length ? e[e.length - 1].startTime : null; };
+        return { lt: window.__lt, s0: t('s0'), s1: t('s1'), s2: t('s2') };
+      });
+      const s0 = o.s0, s2 = o.s2 == null ? Infinity : o.s2;
+      const reading = o.lt.filter((x) => s0 == null || x.st < s0 - 1);   /* 1 ms tolerance: a task starting as the stretch starts is the stretch */
+      const stretch = s0 == null ? [] : o.lt.filter((x) => x.st >= s0 - 1 && x.st <= s2);
+      const decideMs = o.s0 != null && o.s1 != null ? Math.round(o.s1 - o.s0) : -1, saveMs = o.s1 != null && o.s2 != null ? Math.round(o.s2 - o.s1) : -1;
+      return { name, sum, s0, reading, stretch, decideMs, saveMs, reqs: seen.slice(from) };
     };
     const first = await phase('first');
     const out = await page.evaluate(() => JSON.stringify({
@@ -117,10 +118,11 @@ async function oneRun(vp, per, phases) {
     const counts = await page.evaluate(() => ({ a: DB.articles.filter((a) => String(a.id).startsWith('mmj-')).length, f: DB.folders.filter((f) => String(f.id).startsWith('mmj-')).length }));
     let steady = null, daily = null;
     if (phases) {
-      for (let i = 0; i < 30; i++) CHANGED.add(i * 33);
-      CHANGED_AT = new Date().toISOString().slice(0, 19);
+      const t1 = new Date(Date.now() + 3600e3).toISOString().slice(0, 19), t2 = new Date(Date.now() + 7200e3).toISOString().slice(0, 19);
+      for (let i = 0; i < 30; i++) CHANGED.set(i * 33, t1);
       steady = await phase('steady');
       await page.evaluate(() => { _mmjS.full = 1; });   /* the last full check is long ago: the day's id lists are read as well */
+      for (let i = 0; i < 30; i++) CHANGED.set(i * 33 + 1, t2);   /* ANOTHER 30 posts, so the daily run has its own work */
       daily = await phase('daily');
     }
     return { out, counts, first, steady, daily, seen, errors: app.errors.slice() };
@@ -128,7 +130,7 @@ async function oneRun(vp, per, phases) {
 }
 
 const worst = (l) => Math.max(0, ...l.map((x) => x.d));
-const fmt = (ph) => (ph ? `${ph.reading.length} reading long tasks (worst ${worst(ph.reading)} ms), ${ph.deciding.length} deciding (worst ${worst(ph.deciding)} ms)` : 'not run');
+const fmt = (ph) => (ph ? `reading ${ph.reading.length} long tasks (worst ${worst(ph.reading)} ms); decide ${ph.decideMs} ms, save+redraw ${ph.saveMs} ms (stretch long tasks: ${ph.stretch.map((x) => x.d).join('/') || 'none'})` : 'not run');
 try {
   for (const vp of VPS) {
     if (!(want('138a') || want('138b') || want('138c') || want('138d'))) break;
@@ -137,9 +139,9 @@ try {
     const x3 = vp.thr ? ` ×${vp.thr}` : '';
     if (want('138a')) for (const ph of [sliced.steady, sliced.daily]) {
       const w = worst(ph.reading);
-      r.check(ph.asm != null && ph.sum && ph.sum.updated >= 30 && w <= HL.ms,
-        `138a ${vp.name}${x3}: ${ph.name === 'steady' ? '1,000 posts already held, ~30 changed' : 'the daily full run (id lists too), ~30 changed'} — no long task over ${HL.text} while READING (worst ${w} ms of ${ph.reading.length}); deciding worst ${worst(ph.deciding)} ms`,
-        JSON.stringify({ reading: ph.reading, deciding: ph.deciding, asm: ph.asm, sum: ph.sum, requests: ph.reqs.length }));
+      r.check(ph.s0 != null && ph.sum && ph.sum.updated >= 30 && w <= HL.ms && ph.decideMs >= 0 && ph.decideMs <= HL.ms,
+        `138a ${vp.name}${x3}: ${ph.name === 'steady' ? '1,000 posts already held, ~30 changed' : 'the daily full run (id lists too), another ~30 changed'} — READING worst ${w} ms and the DECIDE part ${ph.decideMs} ms, each within ${HL.text}; save+redraw (${ph.saveMs} ms) reported, not limited`,
+        JSON.stringify({ reading: ph.reading, stretch: ph.stretch, s0: ph.s0, decideMs: ph.decideMs, saveMs: ph.saveMs, sum: ph.sum, requests: ph.reqs.length }));
     }
     const sentSliced = sliced.first.reqs.filter((s) => /\/posts\?/.test(s) && /per_page=10(&|$)/.test(s)).length;
     const sentWhole = whole.first.reqs.filter((s) => /\/posts\?/.test(s) && /per_page=100/.test(s)).length;
@@ -148,7 +150,7 @@ try {
       r.check(sliced.out === whole.out && sentSliced >= 100 && sentWhole >= 1, `138b ${vp.name}: the sliced read writes exactly what the unsliced (100 a page) read writes — notes, folders, every fromMmj field (${sentSliced} small requests vs ${sentWhole} big ones)`,
         sliced.out === whole.out ? '' : `sliced ${sliced.out.length} chars vs whole ${whole.out.length} chars`);
     }
-    if (want('138c')) r.check(true, `138c ${vp.name}${x3}: FIRST-ever read (1,170 new), reported not limited — ${fmt(sliced.first)}; steady: ${fmt(sliced.steady)}; daily: ${fmt(sliced.daily)}`, JSON.stringify({ firstReading: sliced.first.reading, firstDeciding: sliced.first.deciding }));
+    if (want('138c')) r.check(true, `138c ${vp.name}${x3}: FIRST-ever read (1,170 new), reported not limited — ${fmt(sliced.first)}; steady: ${fmt(sliced.steady)}; daily: ${fmt(sliced.daily)}`, JSON.stringify({ firstReading: sliced.first.reading, firstStretch: sliced.first.stretch }));
     if (want('138d')) {
       /* the harness's own "localStorage best-effort save failed … QuotaExceededError" line is expected at this size (the notebook is in IndexedDB), as in 56k; every other error, including a real-site request, fails */
       const errs = [...sliced.errors, ...whole.errors].filter((e) => !/localStorage best-effort save failed \(IndexedDB is authoritative\)/.test(e));

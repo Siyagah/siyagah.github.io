@@ -32873,7 +32873,10 @@ async function _mmjAssemble(site,cats,posts,pages){
       cats:type==='post'?(p.categories||[]).filter(c=>byId.has(c)):[],tags:type==='post'?(p.tags||[]).map(t=>tagName.get(t)).filter(Boolean):[],
       parent:p.parent||0,feat:f&&!pre.imgs.includes(f)?f:'',html:pre.html,imgs:pre.imgs};
   };
-  const items=posts.map(p=>mk(p,'post')).concat(pages.map(p=>mk(p,'page')));
+  /* v05.79 · J130 — the site-side work (_mmjPrep of every post's html) runs in ~12 ms slices BEFORE the caller reads DB; it touches no DB */
+  const items=[]; let sl=performance.now();
+  for(const p of posts){ items.push(mk(p,'post')); if(performance.now()-sl>12){ await _yieldTask(); sl=performance.now(); } }
+  for(const p of pages){ items.push(mk(p,'page')); if(performance.now()-sl>12){ await _yieldTask(); sl=performance.now(); } }
   const cl=cats.map(c=>({id:c.id,name:_mmjDec(c.name),slug:c.slug||'',link:c.link||'',parent:parentOf.get(c.id)}));
   return {cats:cl,items};
 }
@@ -33156,6 +33159,8 @@ async function _mmjSyncTick(){
   if(_mmjS.retryAt>now||(_mmjS.last&&now-_mmjS.last<_MMJ_SYNC_MS)) return;
   await _mmjSyncRun(false);
 }
+/* v05.79 · J130 — marks for the check: s0 = the await-free stretch starts, s1 = decided (before the save), s2 = saved and redrawn */
+function _mmjMk(n){ try{ performance.mark('mmj:'+n); }catch(e){} }
 async function _mmjSyncRun(manual){
   if(_mmjS.busy||_mmj.run||_mmj.busy||!_dbLoaded||!_mmjHasSec()) return null;
   if(navigator.onLine===false){ _mmjS.msg='You are offline.'; _mmjKeepRefresh(); return null; }
@@ -33177,6 +33182,8 @@ async function _mmjSyncRun(manual){
       idsG=new Set((await _mmjAll('pages?_fields=id')).map(x=>x.id));
     }
     const A=await _mmjAssemble(site,catsRaw,posts,pages);
+    await _yieldTask();   /* v05.79 · J130 — the assembly's last task ends here; what follows reads DB */
+    _mmjMk('s0');
     /* pictures for what will be written */
     const idOf=i=>(i.type==='post'?'mmj-p-':'mmj-g-')+i.id;
     const aBy=new Map((DB.articles||[]).map(a=>[a.id,a])), dead0=_mmjDead();
@@ -33195,6 +33202,7 @@ async function _mmjSyncRun(manual){
        device; it changes nothing until its reader has caught up (no sync = always caught up) */
     if(!_s1WriteGate()){ _mmjS.msg='Waiting for this device to finish reading your notebook from the cloud. Will try again.'; _mmjS.retryAt=_mmjNow()+60000; return null; }
     /* from here to the save there is no await: DB is read and changed in one go */
+    _mmjMk('s0');   /* v05.79 · J130 — the await-free stretch starts here (the last mark wins; an earlier one was before the pictures) */
     const at=new Date().toISOString(), dead=_mmjDead();
     sum={added:0,updated:0,kept:0,gone:0}; let ch=0;
     const fById=new Map((DB.folders||[]).map(f=>[f.id,f]));
@@ -33260,7 +33268,9 @@ async function _mmjSyncRun(manual){
       if(!set.has(m.id)){ if(!m.gone){ _mmjMarkNote(a,{gone:true}); sum.gone++; ch++; } }
       else if(m.gone){ _mmjMarkNote(a,null,['gone']); ch++; }
     });
+    _mmjMk('s1');
     if(ch){ _enxPersist(); _enxPushEnd(); try{ _renderPreserveEdit(); }catch(e){} }   /* v05.58 · J85 — one save, so its push is not held; v05.62 review: not render() (it rebuilds #ed under the caret), and only when something changed */
+    _mmjMk('s2');
     _mmjS.last=t0; if(doFull) _mmjS.full=t0;
     try{ await _mmjKv('put',{at:_mmjS.last,full:_mmjS.full}); }catch(e){}
     _mmjS.sum=sum; _mmjS.msg=''; _mmjS.retryAt=0;
