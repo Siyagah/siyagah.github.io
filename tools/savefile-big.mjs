@@ -69,7 +69,8 @@ async function verifyCopy(path) {
       else ndLines.push(line);
       continue;
     }
-    if (!ndDone) { if (line.endsWith('<script id="nd" type="application/json">')) inNd = true; continue; }
+    /* the writer puts the notebook's opening `{` straight after the tag, on the same line */
+    if (!ndDone) { const at = line.indexOf('<script id="nd" type="application/json">'); if (at >= 0) { inNd = true; const rest = line.slice(at + 40); if (rest) ndLines.push(rest); } continue; }
     if (line.startsWith('<script type="application/x-siyagah-pic"')) {
       const m = B.exec(line);
       if (!m) { o.badMime++; continue; }
@@ -235,7 +236,7 @@ try {
       const src = await D.page.evaluate(() => ({ n: DB.articles.length, ids: DB.articles.map((a) => a.id), titles: DB.articles.map((a) => a.title) }));
       const sv = await saveCopy(D.page, VPS[2], { timeout: 120000 });
       const txt = sv.file ? (await import('node:fs')).readFileSync(sv.file, 'utf8') : '';
-      check(!!sv.file && !txt.includes('application/x-siyagah-pic" id="pk-'), '140d a notebook with no pictures gives a copy with no picture block');
+      check(!!sv.file && !/^<script type="application\/x-siyagah-pic" id="pk-[0-9a-f]{64}"/m.test(txt), '140d a notebook with no pictures gives a copy with no picture block');
       const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, offline: true });
       const page = await ctx.newPage(); const errs = [];
       page.on('pageerror', (e) => errs.push(String(e)));
