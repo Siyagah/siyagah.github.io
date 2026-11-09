@@ -5731,7 +5731,7 @@ async function _picExportHTML(){
   return getExportHTML(r.inlined?r.text:undefined);
 }
 /* ── v05.81 · J138 — the pictures of a Save File copy. The copy keeps the notes with picture REFERENCES in the nd data tag and each picture ONCE after the page,
-   as <script type="application/x-siyagah-pic" id="pk-<sha>" data-mime="…">base64</script>. At start, a data-pic sha the device store lacks is looked for HERE first
+   as <script type="application/x-siyagah-pic" id="pk-<sha>" data-mime="…">base64<\/script>. At start, a data-pic sha the device store lacks is looked for HERE first
    (before any cloud fetch): the bytes are checked against the sha (a block that fails is ignored and never stored), stored with _picWrite (as _picPut does) and
    painted. If the store cannot be written (a file:// page in some browsers) the picture is painted from an object URL and the block is KEPT in the page. A block
    is dropped from the DOM once stored. Never a data: src or a block's text in a.content. ── */
@@ -6556,8 +6556,8 @@ function getExportHTML(ndOverride){
 }
 
 /* v05.81 · J138 — 📦 Save File is written PIECE BY PIECE, never one string: the page before the nd data tag, the notebook as JSON with picture REFERENCES (one record per
-   line, `<` of `</script`/`<!--` written <), the page after it, then each picture the device holds ONCE as <script type="application/x-siyagah-pic" id="pk-<sha>"
-   data-mime>base64</script>, read, written and dropped one at a time. A notebook with no pictures differs from the old file only in whitespace inside nd (newlines).
+   line, `<` of `<\/script`/`<\!--` written <), the page after it, then each picture the device holds ONCE as <script type="application/x-siyagah-pic" id="pk-<sha>"
+   data-mime>base64<\/script>, read, written and dropped one at a time. A notebook with no pictures differs from the old file only in whitespace inside nd (newlines).
    Used by every path that writes a copy: exportFile (download or picker), _writeToFile (linked file), runBackupNow (backup folder), downloadDatedBackup. The reader
    is _pkTake / _pkAdoptAll. _picExportHTML (the one-string build) stays for the checks that call it; no button uses it. */
 let _sfBusy=false;
@@ -6589,7 +6589,7 @@ async function _sfWrite(S,ctx){
     const r=await _bxpDataUrl(b);
     if(!r){ctx.missing.add(sha);continue;}
     let t=b.type||'';if(!/^[A-Za-z0-9.+\/-]{1,80}$/.test(t))t='image/jpeg';
-    await S.put('<script type="'+_PK_TYPE+'" id="pk-'+sha+'" data-mime="'+t+'">'+r.slice(r.indexOf(',')+1)+'</script>\n');
+    await S.put('<script type="'+_PK_TYPE+'" id="pk-'+sha+'" data-mime="'+t+'">'+r.slice(r.indexOf(',')+1)+'<\/script>\n');
     ctx.done.add(sha);ctx.tick();
     if(performance.now()-yt>25){await _yieldTask();yt=performance.now();}
   }
@@ -6734,7 +6734,7 @@ function _bxpDownload(parts,name,type){
 }
 /* DB as ONE JSON object, every top-level array one compact element per line. o.inline: each record's pictures are read, inlined and dropped by themselves (the JSON
    backup). o.shas (a Set): the shas the records reference are collected (Save File keeps the references and writes each picture once). o.esc: no `<` that could
-   open `</script` or `<!--` is left raw (written \u003c, which JSON.parse reads back as `<`) — only for the text inside the nd data tag. */
+   open `<\/script` or `<\!--` is left raw (written \u003c, which JSON.parse reads back as `<`) — only for the text inside the nd data tag. */
 async function _bxpWriteDB(S,ctx,o){
   const keys=Object.keys(DB).filter(function(k){const v=DB[k];return v!==undefined&&typeof v!=='function';});
   keys.forEach(function(k){if(Array.isArray(DB[k]))ctx.nrec+=DB[k].length;});
