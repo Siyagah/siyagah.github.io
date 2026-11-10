@@ -59,7 +59,7 @@ try {
   const vp0 = VPS[2];
 
   /* ══ 144a — switch off ══ */
-  {
+  try {
     const cloud = makeCloud();
     const d = await dev(cloud, 'F', vp0, emptySeed(), { noCfg: true });
     try {
@@ -71,10 +71,10 @@ try {
       check(cloud.log.length === 0 && cloud.reads.length === 0, '144a no cloud read or write', `${cloud.reads.length} reads, ${cloud.log.length} writes`);
       check(d.errors.filter(realErr).length === 0, '144a no page errors', d.errors.slice(0, 2).join(' · '));
     } finally { await close(d); }
-  }
+  } catch (e) { check(false, '144a threw: ' + String(e.message || e).split('\n')[0]); }
 
   /* ══ 144b — switch on ══ */
-  {
+  try {
     const { cloud, A, ok, wrote } = await owner(vp0);
     let B;
     try {
@@ -110,10 +110,10 @@ try {
       check((await cfgOf(N)) === null, '144b no pointer: no config was saved');
       check(N.errors.filter(realErr).length === 0, '144b no page errors (no pointer)', N.errors.slice(0, 2).join(' · '));
     } finally { await close(N); }
-  }
+  } catch (e) { check(false, '144b threw: ' + String(e.message || e).split('\n')[0]); }
 
   /* ══ 144c — a device with its own config ══ */
-  {
+  try {
     const cloud = makeCloud();
     cloud.store.set('owners/u-s1', { nb: 'nb-other', b: '05.85' });
     const C = await dev(cloud, 'C', vp0, seedWith(NOTE));
@@ -124,10 +124,10 @@ try {
       check(!s.bi && !s.ok && s.cfg.notebookId === 'nb-s1' && s.cfg.firebaseConfig.projectId === 'fake', '144c a device with its own config ignores the built-in code and keeps its notebook id', JSON.stringify({ bi: s.bi, nb: s.cfg.notebookId, p: s.cfg.firebaseConfig.projectId }));
       check(C.errors.filter(realErr).length === 0, '144c no page errors', C.errors.slice(0, 2).join(' · '));
     } finally { await close(C); }
-  }
+  } catch (e) { check(false, '144c threw: ' + String(e.message || e).split('\n')[0]); }
 
   /* ══ 144d — the rules text, and the self-test ══ */
-  {
+  try {
     const { cloud, A } = await owner(vp0);
     try {
       const src = readFileSync(join(SRC, 'index.html'), 'utf8');
@@ -170,10 +170,10 @@ try {
       check(t.v === true && t.at, '144d the "I have published it" tick is stored in DB.theme and gets its stamp', JSON.stringify(t));
       check(A.errors.filter(realErr).length === 0, '144d no page errors', A.errors.slice(0, 2).join(' · '));
     } finally { await close(A); }
-  }
+  } catch (e) { check(false, '144d threw: ' + String(e.message || e).split('\n')[0]); }
 
   /* ══ 144e — the pointer is written once, and after the first read ══ */
-  {
+  try {
     const cloud = makeCloud();
     const H = await dev(cloud, 'H', vp0, seedWith(NOTE), { holdQ: true });   /* the reader is held: no first read yet */
     let A2;
@@ -194,10 +194,10 @@ try {
       const inBlob = await H.page.evaluate(() => JSON.stringify(DB).includes('"owners"') || JSON.stringify(DB).includes('u-s1'));
       check(!inBlob, '144e the pointer is not in DB (so not in a backup or export)');
     } finally { await close(H, A2); }
-  }
+  } catch (e) { check(false, '144e threw: ' + String(e.message || e).split('\n')[0]); }
 
   /* ══ 144f — file: and a Save File copy ══ */
-  {
+  try {
     const cloud = makeCloud();
     const F = await dev(cloud, 'F', vp0, emptySeed(), { noCfg: true });
     try {
@@ -229,10 +229,10 @@ try {
       check(s2.proto === 'file:' && !s2.ok && !s2.bi && !s2.auth, '144f a Save File copy opened from disk never uses the built-in code', JSON.stringify(s2));
       await ctx.close();
     } finally { await close(F); }
-  }
+  } catch (e) { check(false, '144f threw: ' + String(e.message || e).split('\n')[0]); }
 
   /* ══ 144g — the 🔐 section at three sizes ══ */
-  for (const vp of VPS) {
+  for (const vp of VPS) try {
     const cloud = makeCloud();
     const A = await dev(cloud, 'A', vp, seedWith(NOTE));
     try {
@@ -254,7 +254,7 @@ try {
       await A.page.click('#oa-copy').catch(() => {});
       check(A.errors.filter(realErr).length === 0, `144g@${vp.name} no page errors`, A.errors.slice(0, 2).join(' · '));
     } finally { await close(A); }
-  }
+  } catch (e) { check(false, '144g threw: ' + String(e.message || e).split('\n')[0]); }
 } catch (e) {
   check(false, 'signin-j144 threw: ' + (e && e.stack || e));
 } finally {
