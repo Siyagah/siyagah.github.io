@@ -12961,6 +12961,18 @@ await r.block('138-mmj-slices', async () => {
   for (const row of rows) r.check(row.ok, '138: ' + row.label, row.detail);
   r.check(out.status === 0, 'the mmj-slices.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 146 — v05.87, J154: Import → Merge leaves deleted notes, folders and sections deleted (box to bring notes back, second device, Save File / Automatic Backup copies, three sizes). tools/merge-j154.mjs runs 146a–146h. */
+await r.block('146-merge-j154', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./merge-j154.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1800000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the merge-j154.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '146: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the merge-j154.mjs check exits cleanly', `exit ${out.status}`);
+});
 /* 145 — v05.86, J150: Disaster Preparedness (watchdog, Import Backup of every copy, the backup-copy bar, last backup, ✈ offline line, OneNote all-in). tools/disaster-j150.mjs runs 145a–145g. */
 await r.block('145-disaster-j150', async () => {
   const { spawnSync } = await import('node:child_process');

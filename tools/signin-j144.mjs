@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /* tools/signin-j144.mjs — v05.85, J144: open on a new PC with only "Sign in with Google" (checks 144a–144g).
 
-   A fake Firebase (s1-fake.mjs) and ONE fake cloud per scenario. The built-in switch is a `const` in the page, so a check turns it on with the test hook
-   window.__builtinOn (an init script) and reloads; 144a leaves it off. A "fresh browser" is addDevice(..., {noCfg:true}) (no sync config in localStorage).
+   A fake Firebase (s1-fake.mjs) and ONE fake cloud per scenario. The built-in switch is a `const` in the page, and since v05.87 (J144 step 2) it ships ON, so 144b/c/f need no hook;
+   144a forces it off with the test hook window.__builtinOff (addDevice option builtinOff, an init script). A "fresh browser" is addDevice(..., {noCfg:true}) (no sync config in localStorage).
    144a  switch off: a fresh browser behaves as today (no sign-in started, no cloud read or write, the "Set up Cloud Sync first" hint)
    144b  switch on: signs in, reads owners/{uid}, saves {builtin code, nb}, syncs and shows the notes; with NO pointer: the message, nothing written, no config
    144c  a device with its own config ignores the built-in code (config and notebook id unchanged)
@@ -39,7 +39,8 @@ const emptySeed = () => { const s = seedDB(T0); s.articles = []; return s; };
 const NOTE = 'Note from the first device J144';
 
 const dev = (cloud, name, vp, seed, opts = {}) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, seed, opts);
-const builtinOn = async (d) => { await d.ctx.addInitScript('window.__builtinOn = true;'); await reopen(d); };
+/* v05.87: the switch is ON as shipped (J144 step 2); 144a forces it off with window.__builtinOff */
+const builtinOn = async (d) => { await reopen(d); };
 const cfgOf = (d) => d.page.evaluate(() => { try { return JSON.parse(localStorage.getItem('siyagah-sync-v1')); } catch { return null; } });
 const waitFor = async (d, fn, ms = 30000) => { try { await d.page.waitForFunction(fn, null, { timeout: ms }); return true; } catch { return false; } };
 const ownerWrites = (cloud) => cloud.log.filter((o) => o.t === 'set' && o.p.startsWith('owners/'));
@@ -61,11 +62,11 @@ try {
   /* ══ 144a — switch off ══ */
   try {
     const cloud = makeCloud();
-    const d = await dev(cloud, 'F', vp0, emptySeed(), { noCfg: true });
+    const d = await dev(cloud, 'F', vp0, emptySeed(), { noCfg: true, builtinOff: true });   /* the hook is in place from the first script, so nothing starts */
     try {
       await sleep(4000);
       const s = await d.page.evaluate(() => ({ auth: !!_authInstance, bi: _biMode, on: _BUILTIN_ON, cfg: localStorage.getItem('siyagah-sync-v1'), hint: (document.getElementById('login-err') || {}).textContent || '', fb: typeof firebase }));
-      check(s.on === false, '144a the shipped switch _BUILTIN_ON is false');
+      check(s.on === true, '144a the shipped switch _BUILTIN_ON is true (v05.87); forced off here with window.__builtinOff');
       check(!s.auth && !s.bi && !s.cfg, '144a switch off: no sign-in started, no config made', JSON.stringify(s));
       check(/Set up Cloud Sync first/.test(s.hint), '144a the hint is the one of today', s.hint);
       check(cloud.log.length === 0 && cloud.reads.length === 0, '144a no cloud read or write', `${cloud.reads.length} reads, ${cloud.log.length} writes`);
@@ -201,22 +202,19 @@ try {
     const cloud = makeCloud();
     const F = await dev(cloud, 'F', vp0, emptySeed(), { noCfg: true });
     try {
-      await F.ctx.addInitScript('window.__builtinOn = true;');
-      await F.page.reload({ waitUntil: 'domcontentloaded' });
-      await F.page.waitForFunction(() => window.__appBooted === true, null, { timeout: 30000 });
+      await sleep(1500);
       const http = await F.page.evaluate(() => _builtinCfgOk());
       check(http === true, '144f (control) with the switch on, an http page with no config WOULD use the built-in code');
       const html = await F.page.evaluate(() => _cleanExportRoot());
       const fileUrl = 'file://' + join(SRC, 'index.html');
       const ctx = await browser.newContext({ viewport: { width: 1200, height: 800 } });
-      await ctx.addInitScript('window.__builtinOn = true;');
       const pg = await ctx.newPage();
       const errs = []; pg.on('pageerror', (e) => errs.push(String(e)));
       await pg.goto(fileUrl, { waitUntil: 'domcontentloaded' });
       await pg.waitForFunction(() => window.__appBooted === true, null, { timeout: 30000 }).catch(() => {});
       await sleep(2500);
       const s = await pg.evaluate(() => ({ proto: location.protocol, ok: _builtinCfgOk(), bi: _biMode, auth: !!_authInstance, cfg: localStorage.getItem('siyagah-sync-v1') }));
-      check(s.proto === 'file:' && !s.ok && !s.bi && !s.auth && !s.cfg, '144f a file: open never uses the built-in code (even with the switch on)', JSON.stringify(s));
+      check(s.proto === 'file:' && !s.ok && !s.bi && !s.auth && !s.cfg, '144f a file: open never uses the built-in code (the shipped switch is on)', JSON.stringify(s));
       /* a Save File copy opened from disk */
       const copy = join(process.env.TMPDIR || '/tmp', 'j144-copy.html');
       const { writeFileSync } = await import('node:fs');

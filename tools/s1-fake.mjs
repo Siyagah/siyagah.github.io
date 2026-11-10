@@ -159,6 +159,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
   const realSiteHit = (r) => { d.errors.push('real-site request: ' + r.request().url()); r.abort(); };
   await ctx.route('**://mappingmyjourney.com/**', realSiteHit);
   await ctx.route('**://*.mappingmyjourney.com/**', realSiteHit);
+  if (opts.builtinOff) await ctx.addInitScript('window.__builtinOff = true;');   /* v05.87: _BUILTIN_ON ships true; a check that is not about the built-in sign-in turns it off */
   await ctx.addInitScript(([db, c, recsOnly, noCfg]) => {
     /* noCfg (v05.85, J144): a fresh browser with no sync config of its own */
     try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(db)); if (!noCfg) localStorage.setItem('siyagah-sync-v1', JSON.stringify(c)); } catch {}
