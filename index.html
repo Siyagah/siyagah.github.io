@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.82">
+<meta name="app-version" content="05.83">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1945,6 +1945,7 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 /* White swatch needs a visible border */
 .ctx-sw[title="#FFFFFF"]{border:2px solid rgba(0,0,0,.28)!important}
 /* Sync dot compact mode in toolbar */
+#sb-menu .sync-dot-tb[data-why]{white-space:normal;flex-shrink:1;max-width:100%;min-width:0;line-height:1.25}
 .sync-dot-tb{display:inline-flex;align-items:center;font-size:10px;padding:3px 5px;
              border-radius:var(--r);cursor:pointer;font-family:var(--ui);
              transition:opacity .2s;white-space:nowrap;flex-shrink:0;
@@ -4111,7 +4112,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.82</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.83</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -29675,7 +29676,17 @@ function setSyncStatus(s){
   el.className='sync-dot-tb '+m.cls;
   el.title={'off':'☁ Sync off — click to set up','conn':'☁ Connecting…','live':'☁ Live — synced','busy':'☁ Syncing…','err':'☁ Sync error','offline':'☁ Offline — changes are saved on this device and will sync when you\'re back online'}[s]||'☁ Sync';
   if(probTitle) el.title=probTitle;
-  el.textContent=m.txt;
+  let txt=m.txt;
+  if(s==='offline'){
+    /* v05.83 (J143) — say WHY, in plain words, and when it last tried; the classes stay as they were */
+    let why='the cloud is not answering';
+    try{ if(navigator.onLine===false)why='no connection'; else if(_lsGrace>0)why='still starting'; }catch(e){}
+    const d=new Date(_lsTry||Date.now()), hm=d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
+    txt='☁ Offline — '+why+' · last try '+hm;
+    el.title='☁ Offline — '+why+' · last try '+hm+'. It tries again by itself. '+el.title.replace(/^☁ Offline — /,'');
+    el.setAttribute('data-why',why);
+  }else el.removeAttribute('data-why');
+  el.textContent=txt;
 }
 
 /* v05.14 — an honest loader. Resolves only when the script has really run: a tag still
@@ -29683,20 +29694,46 @@ function setSyncStatus(s){
    removed and rejected, so the next call (back online) fetches it for real instead of
    believing a dead tag. A hanging network cannot freeze a caller: 15 s, then reject. */
 const _lsDone={}, _lsWait={};
+/* v05.83 (J143) — a timer that ran LATE is not a timeout: a busy page (boot, merge, an import) fires it
+   after the script's queued onload. _lsGrace counts loads waiting in their one 5 s grace ("still starting");
+   _lsTry is the last time a fetch was started or retried. */
+let _lsGrace=0,_lsTry=0;
+function _lsHave(src){   /* the SDK piece is already on the page (its script ran) */
+  try{
+    const f=window.firebase; if(!f)return false;
+    if(/firebase-app-compat/.test(src))return typeof f.initializeApp==='function';
+    if(/firebase-firestore-compat/.test(src))return typeof f.firestore==='function';
+    if(/firebase-auth-compat/.test(src))return typeof f.auth==='function';
+  }catch(e){}
+  return false;
+}
 function _loadScript(src,ms){
   if(_lsDone[src])return Promise.resolve();
   if(_lsWait[src])return _lsWait[src];
+  if(_lsHave(src)){_lsDone[src]=1;return Promise.resolve();}
+  _lsTry=Date.now();
   const p=new Promise((res,rej)=>{
     const s=document.createElement('script');
-    let over=false,t=null;
+    let over=false,t=null,graced=false;
+    const lim=ms||15000, armed=performance.now();
     const end=(ok,err)=>{
       if(over)return;over=true;clearTimeout(t);delete _lsWait[src];
+      if(graced){graced=false;_lsGrace=Math.max(0,_lsGrace-1);}
       if(ok){_lsDone[src]=1;res();}
       else{try{s.remove();}catch(e){}rej(err);}
     };
     s.onload=()=>end(true);
     s.onerror=()=>end(false,new Error('script failed to load: '+src));
-    t=setTimeout(()=>end(false,new Error('script timed out: '+src)),ms||15000);
+    const fire=()=>{
+      if(over)return;
+      const late=performance.now()-armed-lim;
+      if(!graced&&late>1000){   /* the page was busy, not the network: one grace wait, then decide */
+        graced=true;_lsGrace++;t=setTimeout(fire,5000);return;
+      }
+      /* let a queued onload run first, then decide; a script that has in fact run is success */
+      setTimeout(()=>{ if(over)return; if(_lsHave(src))end(true); else end(false,new Error('script timed out: '+src)); },0);
+    };
+    t=setTimeout(fire,lim);
     s.src=src;
     document.head.appendChild(s);
   });
