@@ -11389,9 +11389,20 @@ await r.block('53h-fast-path-export-is-unchanged', async () => {
     const old = getExportHTML();
     const now = await _picExportHTML();
     const j = await _picInlinedJSON();
-    return { eq: old === now, jsonEq: j === JSON.stringify(DB), len: old.length };
+    /* v05.86 · J150 stamps the copy's save time: each export carries its own
+       <meta name="siyagah-saved-at">, so compare with that content fixed. */
+    const re = /<meta\b[^>]*\bname="siyagah-saved-at"[^>]*>/g;
+    const metas = (h) => [...h.matchAll(re)].map(m => (m[0].match(/\bcontent="([^"]*)"/) || [])[1]);
+    const fix = (h) => h.replace(re, (m) => m.replace(/\bcontent="[^"]*"/, 'content="FIXED"'));
+    const iso = (v) => /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z$/.test(v || '') && !isNaN(Date.parse(v));
+    const mo = metas(old), mn = metas(now);
+    const one = mo.length === 1 && mn.length === 1;
+    return { eq: fix(old) === fix(now), jsonEq: j === JSON.stringify(DB), len: old.length,
+      one, valid: one && iso(mo[0]) && iso(mn[0]) };
   });
-  r.check(same.eq, 'no picture anywhere: the async export equals getExportHTML() byte for byte', String(same.len));
+  r.check(same.one, 'each export carries exactly one siyagah-saved-at meta');
+  r.check(same.valid, 'and its content is a valid ISO time');
+  r.check(same.eq, 'no picture anywhere: the async export equals getExportHTML() byte for byte (saved-at fixed)', String(same.len));
   r.check(same.jsonEq, 'and _picInlinedJSON() is exactly JSON.stringify(DB)');
   await s.close();
 });
