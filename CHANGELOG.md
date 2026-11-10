@@ -11461,3 +11461,7 @@ The owner's phone screenshot: "Folder attach popup from note in the middle pane.
 ## v05.86 — J150 (issue #297): Disaster Preparedness
 
 Cause of the owner's offline episode: J143 (fixed v05.83). This round makes a sync stop visible and recovery simple. Built: ① sync watchdog banner + "Last synced" + Diagnostics episodes; ② 📥 Import Backup reads Save File / Automatic Backup copies (`nd` + `pk-` blocks) and goes through the Merge consent; ③ a "working in a backup copy" bar on `file:`; ④ last-backup line; ⑤ ✈ Ready for offline line; ⑥ OneNote "all in" line. Check: block 145, `tools/disaster-j150.mjs`. (Details are added below as each part lands.)
+
+## v05.87 — J154 (issue #299): Import → Merge keeps deleted things deleted
+
+`_mergeBackup` skipped nothing the owner had deleted since the backup: a Merge from an older file brought notes from Trash or the tombstones back, and sync spread them. Now a section, folder or note whose id is in Trash (entry, `item.id`, `subtree.folders`) or the tombstones is left alone and counted in the result. The newer-edit path skips a trashed note. The consent dialog has an unticked box to bring deleted notes back (Trash entry and tombstone removed, `updatedAt` stamped now, same `persist()`). Zab pockets/items: `mergeDB` honours tombstones; it is now also given the local Trash. Replace everything unchanged. Check: block 146, `tools/merge-j154.mjs` (146a-146g).
