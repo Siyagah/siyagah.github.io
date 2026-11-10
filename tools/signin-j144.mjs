@@ -12,7 +12,7 @@
    144g  the 🔐 section at 390 / 820 / 1440 with nothing off screen
    Each printed ok/FAIL line becomes one app-check check (block 144). `--root=dir` serves another copy of the app (the stash run). */
 import { playwright, seedDB, ROOT } from './harness.mjs';
-import { makeCloud, addDevice, reopen, sleep, check, results } from './s1-fake.mjs';
+import { makeCloud, addDevice, reopen, sleep, check, results, push } from './s1-fake.mjs';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
@@ -139,10 +139,13 @@ try {
       /* every root the source uses: db.collection('X') straight off the database */
       const found = new Set();
       for (const m of src.matchAll(/(?:_syncFsDb|firestore\([^)]*\)|\bfs|\bdb)\s*\.collection\((['"])([\w-]+)\1\)/g)) found.add(m[2]);
+      found.delete('zz-probe-other');   /* the self-test's deliberate outsider: it must be REFUSED, so it is not in the rule */
       const missing = [...found].filter((r) => !roots.includes(r) || !text.includes('match /' + r + '/{any=**}'));
       check(found.size >= 1 && !missing.length, `144d every top-level collection in the source is in the rules (${[...found].join(', ')})`, 'missing: ' + missing.join(', '));
       check(roots.includes('owners') && text.includes('match /owners/{any=**}'), '144d the pointer collection owners is in the rules');
       /* every path this session touched, on the fake cloud, starts with a root */
+      await A.page.evaluate(() => { DB.articles[0].title += ' x'; DB.articles[0].updatedAt = new Date().toISOString(); });
+      await push(cloud, A);
       const paths = [...new Set([...cloud.log.map((o) => o.p), ...cloud.reads.map((r) => r.p)])];
       const stray = paths.filter((p) => !roots.includes(p.split('/')[0]));
       check(paths.length > 5 && !stray.length, `144d all ${paths.length} paths the app read or wrote are under a root of the rule`, stray.slice(0, 3).join(', '));
