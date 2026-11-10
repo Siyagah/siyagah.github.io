@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.84">
+<meta name="app-version" content="05.85">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4118,7 +4118,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.84</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.85</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4302,12 +4302,12 @@ let _dbLoaded=false;
    _JOB_GAP ms apart, so they never share a tick. Gated by their TIMERS and listeners only (`_jobOk(name)`); a direct call (a button, a test) is
    never held. NOT held: the recs reader and the push gate (initAuth/initSync), loadDB()'s reads, the service worker, pagehide/visibilitychange saves,
    the reminder-mail writer. `_jobsArm()` is idempotent; a 20 s fallback arms it even if boot never reaches its first render. */
-const _JOB_ORDER=['news','ms','mp','mi','pk','mydb','mmj'], _JOB_GAP=350;
+const _JOB_ORDER=['news','ms','mp','mi','pk','mydb','mmj','op'], _JOB_GAP=350;
 const _jobs={armed:false,at:0,ok:{},t:{}};
 function _jobOk(n){ return !!_jobs.ok[n]; }
 function _jobsArm(){
   if(_jobs.armed) return; _jobs.armed=true; _jobs.at=Date.now();
-  const kick={ news:()=>_newsTick(), ms:()=>_msTick(), mp:()=>_mpTick(), mi:()=>_miTick(), pk:()=>_picKeepTick(), mydb:()=>_mydbTick(), mmj:()=>_mmjSyncTick() };
+  const kick={ news:()=>_newsTick(), ms:()=>_msTick(), mp:()=>_mpTick(), mi:()=>_miTick(), pk:()=>_picKeepTick(), mydb:()=>_mydbTick(), mmj:()=>_mmjSyncTick(), op:()=>_opTick() };
   _JOB_ORDER.forEach((n,i)=>setTimeout(()=>{ _jobs.ok[n]=true; _jobs.t[n]=Date.now(); try{ const r=kick[n](); if(r&&r.catch) r.catch(()=>{}); }catch(e){} },i*_JOB_GAP));
 }
 function _jobsArmIdle(){
@@ -29586,14 +29586,17 @@ async function initAuth(){
   /* Show/hide the reset escape hatch on the login card */
   const _resetRow = document.getElementById('login-reset-row');
   if(_resetRow) _resetRow.style.display = cfg ? 'block' : 'none';
-  if(!cfg?.firebaseConfig){
+  /* v05.85 · J144 — no config of its own + the built-in switch on + an http(s) page: sign in with the built-in setup code (see _builtinCfgOk) */
+  let _fbc = cfg?.firebaseConfig;
+  if(!_fbc && _builtinCfgOk()){ _biMode = true; _fbc = _BUILTIN_FB; }
+  if(!_fbc){
     /* No Firebase config yet — overlay stays visible with a hint */
     const errEl = document.getElementById('login-err');
     if(errEl) errEl.textContent = 'Set up Cloud Sync first (⚙ → Cloud Sync) on this device.';
     return;
   }
 
-  const app = _getOrCreateFirebaseApp(cfg.firebaseConfig);
+  const app = _getOrCreateFirebaseApp(_fbc);
   _authInstance = firebase.auth(app);
 
   /* Persist session across tabs/visits */
@@ -29607,6 +29610,8 @@ async function initAuth(){
       const sc=getSyncConfig();
       if(sc?.firebaseConfig&&sc?.notebookId&&!_syncFsDb){
         initSync(sc);
+      }else if(!sc && _biMode){
+        _builtinResolve(user);
       }
     }else{
       if(overlay)overlay.style.display='flex';
@@ -29660,6 +29665,135 @@ async function doSignOut(){
 function getSyncConfig(){try{return JSON.parse(localStorage.getItem(SYNC_CFG_SK));}catch{return null;}}
 function _saveSyncConfig(c){localStorage.setItem(SYNC_CFG_SK,JSON.stringify(c));}
 function clearSyncConfig(){localStorage.removeItem(SYNC_CFG_SK);localStorage.removeItem(SYNC_TIME_SK);}
+
+/* ── v05.85 · J144 — open on a new PC with only "Sign in with Google" ─────────────────────────────────────────────────────────
+   The Firebase setup code is public by design (it is not a password); ONLY the Firestore rules keep strangers out. So the round has two states:
+   1. the rule first — ☁ Cloud Sync → "🔐 Only my Google account" shows the exact rules text for THIS signed-in uid, a tick, and a self-test;
+   2. the built-in code second — used ONLY when _BUILTIN_ON is true AND this browser has no sync config of its own AND the page is http(s)
+      (never file:, so a Save File copy never uses it). Shipped false; the Architect flips it once the owner has published the rule.
+   The notebook is found by the pointer doc owners/{uid} = {nb, at, b}, written by every signed-in syncing device (_opTick) through the write gate and only
+   when it would change. No pointer → nothing is created or written; a message and the setup dialog. NOT in recs, the blob, _S1_COLLS, mergeDB() or a backup.
+   A new top-level Firestore collection goes in _OA_ROOTS (the rules text); block 144d fails otherwise. */
+const _BUILTIN_ON=false;
+const _BUILTIN_FB={ apiKey:"AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA", authDomain:"aaas-notebook.firebaseapp.com", projectId:"aaas-notebook", storageBucket:"aaas-notebook.firebasestorage.app", messagingSenderId:"32292493079", appId:"1:32292493079:web:5bf236fbc566c861588952", measurementId:"G-78B0FQY8KJ" };
+const _OA_ROOTS=['notebooks','owners'];
+let _biMode=false, _biSettingsDone=false, _biBusy=false, _biNote='';
+/* window.__builtinOn is a test hook only (a page can only switch it on in its own browser) */
+function _builtinCfgOk(){
+  try{ return (_BUILTIN_ON===true||window.__builtinOn===true) && /^https?:$/.test(location.protocol) && !getSyncConfig(); }catch(e){ return false; }
+}
+function _fsApplySettings(db){
+  try{ db.settings(_preferStreaming() ? {experimentalForceLongPolling:false, experimentalAutoDetectLongPolling:true} : {experimentalForceLongPolling:true, experimentalAutoDetectLongPolling:false}); }
+  catch(e){ console.error('Firestore settings():',e); }
+}
+async function _builtinResolve(user){
+  if(_biBusy||getSyncConfig()||!user||!user.uid) return;
+  _biBusy=true;
+  try{
+    setSyncStatus('conn');
+    await _loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+    await _loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js');
+    const app=_getOrCreateFirebaseApp(_BUILTIN_FB);
+    const db=firebase.firestore(app);
+    if(!_biSettingsDone){ _fsApplySettings(db); _biSettingsDone=true; }
+    const snap=await db.collection('owners').doc(user.uid).get();
+    const d=snap.exists?snap.data():null;
+    const nb=d&&typeof d.nb==='string'?d.nb.trim():'';
+    if(getSyncConfig()) return;   /* the owner pasted a setup meanwhile: theirs wins */
+    if(!nb){
+      setSyncStatus('off');
+      _biNote='No notebook found for this Google account yet — open Siyagah on a device that already syncs, or set up sync.';
+      toast('☁ '+_biNote,6000);
+      setTimeout(()=>{ try{ openSyncModal(); }catch(e){} },0);
+      return;
+    }
+    const cfg={firebaseConfig:_BUILTIN_FB,notebookId:nb};
+    _saveSyncConfig(cfg); _biMode=false; _biNote='';
+    await initSync(cfg);
+  }catch(e){
+    const off=!!(e&&(e.code==='unavailable'||/offline|network/i.test(e.message||'')))||navigator.onLine===false;
+    if(off){ setSyncStatus('offline'); _fbRetryArm(()=>{ _biBusy=false; return _builtinResolve(user); }); }
+    else{ setSyncStatus('err'); _biNote='Could not look up your notebook: '+((e&&(e.code||e.message))||'unknown reason')+'. You can set up sync by hand.'; toast('☁ '+_biNote,6000); setTimeout(()=>{ try{ openSyncModal(); }catch(x){} },0); }
+  }finally{ _biBusy=false; }
+}
+
+/* the pointer: one doc per Google account, owners/{uid} = {nb, at, b} */
+const _opS={sig:null,busy:false,retryAt:0,err:null};
+async function _opTick(){
+  if(_opS.busy) return;
+  const cfg=getSyncConfig(), u=_authInstance&&_authInstance.currentUser;
+  if(!cfg||!cfg.notebookId||!_syncFsDb||!_dbLoaded||!u||!u.uid) return;
+  if(typeof navigator!=='undefined'&&navigator.onLine===false) return;
+  if(!(_s1WriteGate()&&(_s1RdCaught||_remMerged))) return;   /* never before the first read */
+  const nb=cfg.notebookId, sig=u.uid+'|'+nb;
+  if(_opS.sig===sig||Date.now()<_opS.retryAt) return;
+  _opS.busy=true;
+  try{
+    const ref=_syncFsDb.collection('owners').doc(u.uid);
+    const snap=await ref.get(), cur=snap.exists?snap.data():null;
+    if(cur&&cur.nb===nb){ _opS.sig=sig; return; }   /* already says so: write nothing */
+    if(!_s1WriteGate()) return;
+    await ref.set({nb:nb,at:firebase.firestore.FieldValue.serverTimestamp(),b:document.querySelector('meta[name="app-version"]').content});
+    _opS.sig=sig; _opS.err=null;
+  }catch(e){ _opS.err=e; _opS.retryAt=Date.now()+60000; }
+  finally{ _opS.busy=false; }
+}
+setInterval(()=>{ try{ if(_jobOk('op')) _opTick(); }catch(e){} },5000);
+
+/* the rules text for one uid: pub readable by anyone (MMJ-SHARE.md), the known paths only for that uid, everything else refused */
+function _oaRules(uid){
+  if(!/^[A-Za-z0-9_-]{3,128}$/.test(String(uid||''))) return '';
+  const who="request.auth != null && request.auth.uid == '"+uid+"'";
+  return ["rules_version = '2';","service cloud.firestore {","  match /databases/{database}/documents {",
+    "    // visitors' copy: readable by anyone (MMJ-SHARE.md); written only by the owner (below)",
+    "    match /notebooks/{nb}/pub/{doc=**} {","      allow read: if true;","    }",
+    ..._OA_ROOTS.map(r=>"    match /"+r+"/{any=**} {\n      allow read, write: if "+who+";\n    }"),
+    "    // anything else: refused","  }","}"].join('\n');
+}
+function _oaSectionHTML(){
+  const u=_authInstance&&_authInstance.currentUser, uid=u&&u.uid;
+  const rules=_oaRules(uid), pub=!!(DB.theme&&DB.theme.oaPublished);
+  const head='<div style="font-size:11.5px;font-weight:600;color:var(--t2);margin-bottom:6px">🔐 Only my Google account</div>';
+  if(!rules) return '<div class="mm" id="oa-sec" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2)">'+head+'<small style="color:var(--t3);font-size:11px">Sign in with Google on this device to see the rule for your account.</small></div>';
+  return '<div class="mm" id="oa-sec" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2);max-width:100%;overflow-wrap:anywhere">'+head
+   +'<div style="font-size:11px;color:var(--t3);line-height:1.5;margin-bottom:6px">Siyagah is a public website. This rule lets only your Google account into your notebook. Do it once, then Siyagah can open on a new computer with only “Sign in with Google”.</div>'
+   +'<ol class="sync-steps" style="font-size:12px;line-height:1.5;padding-left:20px;margin:6px 0">'
+   +'<li>Open <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> → your project → <strong>Firestore Database</strong> → <strong>Rules</strong>.</li>'
+   +'<li><strong>First copy your current rules into a note</strong>, so you can go back.</li>'
+   +'<li>Select everything there and paste the rules from the box below (📋 Copy).</li>'
+   +'<li>Press <strong>Publish</strong>, then tick the box and press Test.</li></ol>'
+   +'<textarea id="oa-rules" readonly class="sync-area" rows="12" style="width:100%;box-sizing:border-box;max-width:100%;font-size:11px;font-family:monospace" onfocus="this.select()">'+esc(rules)+'</textarea>'
+   +'<div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn bp" id="oa-copy" onclick="_oaCopy()">📋 Copy the rules</button><button class="btn" id="oa-test" onclick="_oaTest()">🧪 Test it</button></div>'
+   +'<label style="margin-top:8px;display:flex;gap:8px;align-items:center;font-size:12px;cursor:pointer;min-height:44px"><input type="checkbox" id="oa-pub" '+(pub?'checked':'')+' onchange="_oaTickSet(this.checked)" style="width:20px;height:20px;flex:none;margin:0"><span>✅ I have published it</span></label>'
+   +'<div id="oa-res" style="font-size:12px;line-height:1.5;margin-top:4px"></div></div>';
+}
+async function _oaCopy(){
+  const ta=document.getElementById('oa-rules'); if(!ta) return;
+  try{ await navigator.clipboard.writeText(ta.value); toast('Rules copied ✓'); }
+  catch(e){ try{ ta.focus(); ta.select(); document.execCommand('copy'); toast('Rules copied ✓'); }catch(x){ toast('Select the box and copy it by hand'); } }
+}
+function _oaTickSet(on){ DB.theme.oaPublished=!!on; persist(); }
+const _OA_DEV='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+async function _oaTest(){
+  const out=document.getElementById('oa-res'), btn=document.getElementById('oa-test');
+  const say=(ok,t)=>{ if(out){ out.style.color=ok?'var(--green)':'#c00'; out.textContent=t; } };
+  const cfg=getSyncConfig();
+  if(!cfg||!_syncFsDb){ say(false,'Cloud Sync is not connected on this device.'); return; }
+  if(btn) btn.disabled=true; say(true,'Testing…'); if(out) out.style.color='var(--t3)';
+  try{
+    const mine=_syncFsDb.collection('notebooks').doc(cfg.notebookId).collection('probe').doc(_OA_DEV);
+    try{ await mine.set({t:Date.now(),b:document.querySelector('meta[name="app-version"]').content}); const g=await mine.get(); if(!g.exists) throw new Error('written but not read back'); }
+    catch(e){ say(false,'Your own notebook could not be written or read ('+(e.code||e.message)+'). If you just published the rule, check it was pasted whole and that you are signed in with the same Google account.'); return; }
+    try{ await _syncFsDb.batch().delete(mine).commit(); }catch(e){}
+    const other=_syncFsDb.collection('zz-probe-other').doc('x');
+    let refused=false, why='';
+    try{ await other.set({t:Date.now()}); }
+    catch(e){ if(e&&(e.code==='permission-denied'||/permission|insufficient/i.test(e.message||''))) refused=true; else why=(e&&(e.code||e.message))||'unknown'; }
+    if(refused) say(true,'✅ Only your account can get in');
+    else if(why) say(false,'Could not finish the test: '+why+'. Try again.');
+    else{ try{ await _syncFsDb.batch().delete(other).commit(); }catch(e){} say(false,'The rule is not in place yet: a path outside Siyagah’s own was accepted. Publish the rules above (step 3–4), then test again.'); }
+  }finally{ if(btn) btn.disabled=false; }
+}
 
 /* v04.90 — a standing problem on the per-note copy (e.g. its reader is stuck and
    this device is syncing the old way) keeps the dot at "err" until it clears;
@@ -29863,7 +29997,7 @@ async function initSync(cfg){
        healthy network and merely avoids the hang on a hostile one. Set
        localStorage 'siyagah-sync-stream' = '1' on a device to try the
        streaming path there instead. */
-    try{
+    if(!_biSettingsDone) try{
       _syncFsDb.settings(_preferStreaming()
         ? {experimentalForceLongPolling:false, experimentalAutoDetectLongPolling:true}
         : {experimentalForceLongPolling:true,  experimentalAutoDetectLongPolling:false});
@@ -35998,6 +36132,7 @@ function openSyncModal(){
       </div>
       <div id="sync-copy-fb"></div>
     </div>
+    ${_oaSectionHTML()}
     <div class="mm" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2)">
       <div style="font-size:11.5px;font-weight:600;color:var(--t2);margin-bottom:6px">🩺 Diagnostics — on THIS device</div>
       <div id="sync-diag">${_syncDiagnosticsHTML()}</div>
@@ -36025,6 +36160,7 @@ function openSyncModal(){
       <button class="btn bp" onclick="closeSyncModal()">Done</button>
     </div>`:`
     <div class="mt">☁ Cloud Sync Setup</div>
+    ${_biNote?`<div id="bi-msg" class="mm" style="color:#c00;font-size:12.5px;line-height:1.5;margin-bottom:8px">${esc(_biNote)}</div>`:''}
     <div class="mm">
       Connect to <strong>Firebase</strong> (free) for real-time sync on any device — phone, tablet, desktop, any browser.
       <ol class="sync-steps">
@@ -36111,6 +36247,7 @@ async function connectSync(){
   const notebookId=(document.getElementById('nb-id-inp')?.value||'').trim()||generateNotebookId();
   const cfg={firebaseConfig,notebookId};
   _saveSyncConfig(cfg);
+  _biMode=false; _biNote='';   /* v05.85 · J144 — a pasted setup is the device's own config from now on */
   closeSyncModal();
   const cu=_authInstance?.currentUser;
   if(cu){await initSync(cfg);pushToCloud();}

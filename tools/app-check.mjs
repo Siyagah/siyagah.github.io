@@ -12950,6 +12950,18 @@ await r.block('138-mmj-slices', async () => {
   for (const row of rows) r.check(row.ok, '138: ' + row.label, row.detail);
   r.check(out.status === 0, 'the mmj-slices.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 144 — v05.85, J144: open on a new PC with only Google sign-in (the rule first, the built-in setup code second, off). tools/signin-j144.mjs runs 144a–144g. */
+await r.block('144-signin-j144', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./signin-j144.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1800000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the signin-j144.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '144: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the signin-j144.mjs check exits cleanly', `exit ${out.status}`);
+});
 /* 143 — v05.84, J148: the 📥 OneNote import under throttling, with a renewed sign-in, saved every 25, reasons kept. tools/onenote-j148.mjs runs 143a–143f
    against its own FAKE Microsoft (sustained 429, a revoked token, a refresh grant, refused pages, 2,722 pages). */
 await r.block('143-onenote-j148', async () => {
