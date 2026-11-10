@@ -8,6 +8,7 @@
    146d  the box "Also bring back notes I deleted since this backup" ticked → B and C come back, out of Trash, no tombstone; the second device receives them
    146e  a note in Trash whose copy in the file is newer → still not changed
    146f  a Save File copy and an Automatic Backups file (v05.86 paths) behave the same
+   146h  ticked: a note that also sits in a deleted folder group's subtree.articles leaves that entry
    146g  the dialog at 390 / 820 / 1440 with nothing off screen
    Each printed ok/FAIL line becomes one app-check check (block 146). `--root=dir` serves another copy of the app (the stash run). */
 import { playwright, seedDB, ROOT } from './harness.mjs';
@@ -105,7 +106,7 @@ async function doImport(page, file, name, tick) {
 /* one device: seed, make the file, delete, merge */
 async function single(vp, { extras = false, kind = 'backup', tick = false, newer = false } = {}) {
   const cloud = makeCloud();
-  const D = await dev(cloud, 'one', vp, baseSeed(extras), { noCfg: true });
+  const D = await dev(cloud, 'one', vp, baseSeed(extras), { noCfg: true, builtinOff: true });
   try {
     if (newer) await D.page.evaluate(() => { DB.articles.find((a) => a.id === 'jn-B').updatedAt = new Date(Date.now() + 3600e3).toISOString(); persist(); });
     const files = await makeFiles(D.page);
@@ -214,10 +215,38 @@ try {
     } catch (e) { check(false, `146f ${label} threw: ` + String(e.message || e).split('\n')[0]); }
   }
 
+  /* ══ 146h — ticked: a note that also sits in a deleted folder group's subtree.articles leaves that entry (v05.87 follow-up) ══ */
+  try {
+    const cloud = makeCloud();
+    const D = await dev(cloud, 'one', VPS[2], baseSeed(true), { noCfg: true, builtinOff: true });
+    try {
+      const files = await makeFiles(D.page);
+      await deleteStuff(D.page, true);
+      /* the group entry for fGrp also holds a copy of B, as an old group entry could */
+      const setup = await D.page.evaluate(() => {
+        const g = DB.trash.find((t) => t.type === 'folder' && t.subtree && (((t.item && t.item.id) === 'fGrp') || (t.subtree.folders || []).some((f) => f.id === 'fGrp')));
+        if (!g) return { ok: false };
+        const b = DB.trash.find((t) => t.item && t.item.id === 'jn-B').item;
+        g.subtree.articles = (g.subtree.articles || []).concat([JSON.parse(JSON.stringify(b))]);
+        persist();
+        return { ok: true, n: g.subtree.articles.length };
+      });
+      const res = await doImport(D.page, files.backup, 'Siyagah-backup-2026-11-10.html', true);
+      const o = await D.page.evaluate(() => {
+        const g = DB.trash.find((t) => t.type === 'folder' && t.subtree && (((t.item && t.item.id) === 'fGrp') || (t.subtree.folders || []).some((f) => f.id === 'fGrp')));
+        return { copies: DB.articles.filter((a) => a.id === 'jn-B').length, inGroup: g ? (g.subtree.articles || []).some((x) => x.id === 'jn-B') : null, inTrashEntry: DB.trash.some((t) => t.type === 'article' && t.item && t.item.id === 'jn-B'), groupKept: !!g, groupStillHolds: g ? (g.subtree.articles || []).some((x) => x.id === 'jn-G') : null };
+      });
+      check(setup.ok && res.asked, '146h set-up: the folder group holds a copy of B in subtree.articles', JSON.stringify(setup));
+      check(o.copies === 1 && !o.inTrashEntry, '146h ticked: B is back in the notebook once, and its own Trash entry is gone', JSON.stringify(o));
+      check(o.groupKept && o.inGroup === false, '146h ...and B is taken out of the group\'s Trash entry (no second copy on Restore)', JSON.stringify(o));
+      check(D.errors.filter(realErr).length === 0, '146h no page errors', D.errors.slice(0, 2).join(' · '));
+    } finally { await close(D); }
+  } catch (e) { check(false, '146h threw: ' + String(e.message || e).split('\n')[0]); }
+
   /* ══ 146g — the dialog at three sizes ══ */
   for (const vp of VPS) {
     const cloud = makeCloud();
-    const G = await dev(cloud, 'g' + vp.name, vp, baseSeed(false), { noCfg: true });
+    const G = await dev(cloud, 'g' + vp.name, vp, baseSeed(false), { noCfg: true, builtinOff: true });
     try {
       const files = await makeFiles(G.page);
       const [fc] = await Promise.all([G.page.waitForEvent('filechooser'), clickMenu(G.page, 'Import Backup')]);

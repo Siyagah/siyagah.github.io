@@ -48,7 +48,7 @@ const clickMenu = async (page, text) => { await page.click('#sb-menu-btn'); awai
 /* the source device: notes with pictures; returns the three kinds of file as Buffers */
 async function makeFiles() {
   const cloud = makeCloud();
-  const D = await dev(cloud, 'src', VPS[2], plainSeed(), { noCfg: true });
+  const D = await dev(cloud, 'src', VPS[2], plainSeed(), { noCfg: true, builtinOff: true });
   try {
     const info = await D.page.evaluate(async (bytes) => {
       const mk = async (n) => { const u8 = new Uint8Array(bytes[n]); return _picPut(new Blob([u8], { type: 'image/png' }), 'image/png'); };
@@ -71,7 +71,7 @@ async function makeFiles() {
 /* import one file into a fresh device through the real menu; returns the device state after Merge */
 async function importInto(vp, file, name, bigMin) {
   const cloud = makeCloud();
-  const R = await dev(cloud, 'rcv', vp, seedA(), { noCfg: true });
+  const R = await dev(cloud, 'rcv', vp, seedA(), { noCfg: true, builtinOff: true });
   try {
     if (bigMin) await R.page.evaluate((n) => { window.__bxpBigMin = n; }, bigMin);
     const before = await R.page.evaluate(() => ({ a: DB.articles.map((x) => x.id), f: DB.folders.map((x) => x.id) }));
@@ -171,7 +171,7 @@ try {
   if (FILES) {
     try {
       const cloudS = makeCloud();
-      const S = await dev(cloudS, 'save', VPS[2], plainSeed(), { noCfg: true });
+      const S = await dev(cloudS, 'save', VPS[2], plainSeed(), { noCfg: true, builtinOff: true });
       let copy;
       try {
         const b64 = await S.page.evaluate(async () => {
@@ -202,7 +202,7 @@ try {
       check(/notebook-backup-.*\.json$/.test(dl.suggestedFilename()), '145c ⬇ writes the JSON export', dl.suggestedFilename());
       await ctx.close();
       const cloudR = makeCloud();
-      const R = await dev(cloudR, 'app', VPS[2], plainSeed(), { noCfg: true });
+      const R = await dev(cloudR, 'app', VPS[2], plainSeed(), { noCfg: true, builtinOff: true });
       try {
         const before = await R.page.evaluate(() => ({ n: DB.articles.length, f: DB.folders.length, s: DB.sections.length, t: DB.articles.map((a) => a.id + '|' + a.title + '|' + a.content).filter((x) => !x.startsWith('a1|')).join('\n') }));
         await R.page.evaluate(() => openModal('settings'));
@@ -223,7 +223,7 @@ try {
   /* ══ 145d — the last-backup line ══ */
   try {
     const cloud = makeCloud();
-    const D = await dev(cloud, 'D', VPS[2], plainSeed(), { noCfg: true });
+    const D = await dev(cloud, 'D', VPS[2], plainSeed(), { noCfg: true, builtinOff: true });
     try {
       const line = async (lastAt) => { await D.page.evaluate((t) => { _bkSaveCfg(Object.assign({}, _bkCfg(), { lastAt: t })); _dpMenuFill(); }, lastAt); return D.page.evaluate(() => { const e = document.getElementById('bk-last'); return { t: e.textContent, stale: e.getAttribute('data-stale'), warn: e.classList.contains('dp-warn'), col: getComputedStyle(e).color }; }); };
       const fresh = await line(Date.now() - 3600e3), stale = await line(Date.now() - 3 * 86400e3), none = await line(0);
@@ -240,7 +240,7 @@ try {
   /* ══ 145e — ✈ Ready for offline ══ */
   try {
     const cloud = makeCloud();
-    const E = await dev(cloud, 'E', VPS[2], plainSeed(), { noCfg: true });
+    const E = await dev(cloud, 'E', VPS[2], plainSeed(), { noCfg: true, builtinOff: true });
     try {
       const miss = 'c'.repeat(64);
       await E.page.evaluate(async ([bytes, miss]) => {
@@ -268,7 +268,7 @@ try {
   /* ══ 145f — OneNote "all in" ══ */
   try {
     const cloud = makeCloud();
-    const F = await dev(cloud, 'F', VPS[2], plainSeed(), { noCfg: true });
+    const F = await dev(cloud, 'F', VPS[2], plainSeed(), { noCfg: true, builtinOff: true });
     try {
       const html = async (brought, broken) => F.page.evaluate(([b, k]) => {
         _onBrought = function () { return b; };

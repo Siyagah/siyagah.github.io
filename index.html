@@ -11968,6 +11968,8 @@ function _mergeBackup(bk,pr,opts){
     DB.articles.push(a);added++;}});
   if(backIds.size){
     DB.trash=(DB.trash||[]).filter(t=>!(t&&t.type==='article'&&t.item&&backIds.has(t.item.id)));
+    /* a note that also sits inside a deleted folder group's entry leaves that entry too, or a later Restore of the group would bring a second copy */
+    DB.trash.forEach(t=>{ if(t&&t.subtree&&Array.isArray(t.subtree.articles)&&t.subtree.articles.some(x=>x&&backIds.has(x.id))){ t.subtree.articles=t.subtree.articles.filter(x=>!(x&&backIds.has(x.id))); } });
     if(DB.tombstones)DB.tombstones=DB.tombstones.filter(t=>!(t&&backIds.has(t.id)));
   }
   /* v04.98 — Jeb goes through mergeDB's own rules (newest updatedAt wins, a
@@ -29772,17 +29774,17 @@ function clearSyncConfig(){localStorage.removeItem(SYNC_CFG_SK);localStorage.rem
    The Firebase setup code is public by design (it is not a password); ONLY the Firestore rules keep strangers out. So the round has two states:
    1. the rule first — ☁ Cloud Sync → "🔐 Only my Google account" shows the exact rules text for THIS signed-in uid, a tick, and a self-test;
    2. the built-in code second — used ONLY when _BUILTIN_ON is true AND this browser has no sync config of its own AND the page is http(s)
-      (never file:, so a Save File copy never uses it). Shipped false; the Architect flips it once the owner has published the rule.
+      (never file:, so a Save File copy never uses it). Shipped false in v05.85; switched on in v05.87 after the owner published the rule and the self-test passed (11 Nov 2026).
    The notebook is found by the pointer doc owners/{uid} = {nb, at, b}, written by every signed-in syncing device (_opTick) through the write gate and only
    when it would change. No pointer → nothing is created or written; a message and the setup dialog. NOT in recs, the blob, _S1_COLLS, mergeDB() or a backup.
    A new top-level Firestore collection goes in _OA_ROOTS (the rules text); block 144d fails otherwise. */
-const _BUILTIN_ON=false;
+const _BUILTIN_ON=true;
 const _BUILTIN_FB={ apiKey:"AIzaSyBxrQ5uNrerOAFiCmUbUkUM8tjMpjKygsA", authDomain:"aaas-notebook.firebaseapp.com", projectId:"aaas-notebook", storageBucket:"aaas-notebook.firebasestorage.app", messagingSenderId:"32292493079", appId:"1:32292493079:web:5bf236fbc566c861588952", measurementId:"G-78B0FQY8KJ" };
 const _OA_ROOTS=['notebooks','owners'];
 let _biMode=false, _biSettingsDone=false, _biBusy=false, _biNote='';
-/* window.__builtinOn is a test hook only (a page can only switch it on in its own browser) */
+/* window.__builtinOff is a test hook only: it forces the switch OFF in the tester's own browser (check 144a); nothing a page sets can switch it ON */
 function _builtinCfgOk(){
-  try{ return (_BUILTIN_ON===true||window.__builtinOn===true) && /^https?:$/.test(location.protocol) && !getSyncConfig(); }catch(e){ return false; }
+  try{ return _BUILTIN_ON===true && window.__builtinOff!==true && /^https?:$/.test(location.protocol) && !getSyncConfig(); }catch(e){ return false; }
 }
 function _fsApplySettings(db){
   try{ db.settings(_preferStreaming() ? {experimentalForceLongPolling:false, experimentalAutoDetectLongPolling:true} : {experimentalForceLongPolling:true, experimentalAutoDetectLongPolling:false}); }

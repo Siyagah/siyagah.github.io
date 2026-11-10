@@ -12961,7 +12961,7 @@ await r.block('138-mmj-slices', async () => {
   for (const row of rows) r.check(row.ok, '138: ' + row.label, row.detail);
   r.check(out.status === 0, 'the mmj-slices.mjs check exits cleanly', `exit ${out.status}`);
 });
-/* 146 — v05.87, J154: Import → Merge leaves deleted notes, folders and sections deleted (box to bring notes back, second device, Save File / Automatic Backup copies, three sizes). tools/merge-j154.mjs runs 146a–146g. */
+/* 146 — v05.87, J154: Import → Merge leaves deleted notes, folders and sections deleted (box to bring notes back, second device, Save File / Automatic Backup copies, three sizes). tools/merge-j154.mjs runs 146a–146h. */
 await r.block('146-merge-j154', async () => {
   const { spawnSync } = await import('node:child_process');
   const out = spawnSync(process.execPath, [new URL('./merge-j154.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1800000, maxBuffer: 1 << 28 });
