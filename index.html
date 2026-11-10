@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.85">
+<meta name="app-version" content="05.86">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1951,6 +1951,16 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
              transition:opacity .2s;white-space:nowrap;flex-shrink:0;
              border:1px solid transparent}
 .sync-dot-tb:hover{opacity:.75}
+/* v05.86 · J150 — watchdog / backup-copy bar (fixed to the TOP, so not in the --jeb-h lists), menu notes */
+#sw-banner,#bk-copy-bar{position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:9100;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;
+  max-width:min(640px,calc(100vw - 16px));box-sizing:border-box;padding:6px 10px;border-radius:12px;background:#FFF6DC;color:#5A4500;border:1px solid #E3C770;font-size:12.5px;line-height:1.35;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+#sw-banner .sw-tx,#bk-copy-bar .sw-tx{flex:1 1 200px;min-width:0;word-break:break-word}
+#sw-banner .sw-try,#bk-copy-bar .sw-try{min-height:36px;padding:4px 10px;font-size:12.5px}
+#sw-banner .sw-x{background:none;border:0;color:inherit;font-size:14px;min-width:36px;min-height:36px;cursor:pointer}
+#bk-copy-bar{background:#E8F3EC;color:#14502F;border-color:#9CCBAE}
+.sb-mi-note{font-size:11.5px;color:var(--t3);white-space:normal;line-height:1.35}
+.sb-mi-note.dp-warn{color:#8A6500}
+@media (max-width:639.98px){.sb-mi-note{min-height:44px;display:flex;align-items:center}#sw-last.sb-mi-note{min-height:0}}
 .sd-off.sync-dot-tb{color:var(--t3)}
 .sd-conn.sync-dot-tb{color:#A07800}
 .sd-live.sync-dot-tb{color:#1B7A46}
@@ -4118,7 +4128,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.85</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.86</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4186,6 +4196,9 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <div class="sb-tools-row" style="padding:6px 10px 4px">
             <div id="sync-dot" class="sync-dot-tb sd-live" onclick="openSyncModal();closeSBMenu()" title="☁ Live — synced">☁ Live</div>
           </div>
+          <div id="sw-last" class="sb-mi-note" style="padding:0 13px 4px"></div>
+          <div class="sb-mi sb-mi-note" id="bk-last" onclick="openBackupModal();closeSBMenu()" title="Open Automatic Backups"></div>
+          <div class="sb-mi sb-mi-note dp-offl" id="dp-offl-menu" onclick="openSyncModal();closeSBMenu()" title="Open Cloud Sync"></div>
           <div class="sb-mi-hd">Account</div>
           <div class="sb-mi" id="sync-menu-item" onclick="openSyncModal();closeSBMenu()">☁ Cloud Sync</div>
           <div class="sb-mi" onclick="doSignOut();closeSBMenu()" id="signout-menu-item">🔒 Sign Out</div>
@@ -6571,7 +6584,13 @@ function getExportHTML(ndOverride){
   const ids=['tree','p2h','p2c','p3h','p3c','ctx','mb'];
   const saved=ids.map(id=>document.getElementById(id).innerHTML);
   ids.forEach(id=>document.getElementById(id).innerHTML='');
+  /* v05.86 · J150 — when this copy was saved (the backup-copy bar says it); only in the clone's source, removed from the live page again */
+  let _sm=document.querySelector('meta[name="siyagah-saved-at"]');
+  const _smOld=_sm?_sm.getAttribute('content'):null;
+  if(!_sm){ _sm=document.createElement('meta'); _sm.setAttribute('name','siyagah-saved-at'); document.head.appendChild(_sm); }
+  _sm.setAttribute('content',new Date().toISOString());
   const html='<!DOCTYPE html>\n'+_cleanExportRoot();   /* v03.80 — sanitised clone, live DOM untouched */
+  if(_smOld===null)_sm.remove(); else _sm.setAttribute('content',_smOld);
   ids.forEach((id,i)=>document.getElementById(id).innerHTML=saved[i]);
   if(ndOverride!==undefined)document.getElementById('nd').textContent=JSON.stringify(DB); // restore live data
   return html;
@@ -11772,12 +11791,27 @@ function importBackup(){
     const file=e.target.files?.[0]; if(!file)return;
     toast('⏳ Reading backup file…');
     try{
+      /* v05.86 · J150 — a copy over _BXP_BIG is not read as one string (it would freeze the page): a plain message, and the JSON route (which streams) */
+      if(file.size>(typeof window.__bxpBigMin==='number'?window.__bxpBigMin:_BXP_BIG)){
+        toast('⚠ This backup file is too big to read in one go (over '+Math.round(_BXP_BIG/1048576)+' MB). Open the file itself in your browser, use ⬇ Export data as JSON backup there (💽 Storage & Backup), then ⬆ Import that .json file here.',12000);
+        return;
+      }
       const text=await file.text();
       /* Extract embedded JSON from the hidden script tag */
       const parser=new DOMParser();
       const doc=parser.parseFromString(text,'text/html');
       const dataEl=doc.getElementById('siyagah-backup-data');
       if(!dataEl){
+        /* v05.86 · J150 — a 📦 Save File copy or a 🗄 Automatic Backups file: the notes are in the nd data tag exactly as boot reads them (JSON.parse of its text),
+           the pictures in pk-<sha> blocks. They go through the same consent (Merge / Replace) as every other import; nothing is stored until the owner chooses. */
+        const nd=doc.getElementById('nd');
+        if(nd){
+          const d=JSON.parse(nd.textContent||'{}');
+          if(d&&Array.isArray(d.folders)&&Array.isArray(d.articles)){
+            _showImportConsent(d,file.name,Array.from(doc.querySelectorAll(_PK_SEL)));
+            return;
+          }
+        }
         toast('⚠ No importable data found.\n\nMake sure you are using a Siyagah Backup HTML file from v25 or later.\nOlder backup files are readable but cannot be imported.');
         return;
       }
@@ -11810,15 +11844,16 @@ function _importCounts(src){
 let _pendingImport=null;      // {data, fileName} between the two consent steps
 let _pendingImportRecovery=null; // result of _saveRecoveryCopy(), taken before the 2nd dialog
 
-function _showImportConsent(data,fileName){
-  _pendingImport={data,fileName};
+function _showImportConsent(data,fileName,pk){
+  _pendingImport={data,fileName,pk:pk&&pk.length?pk:null};
   const inc=_importCounts(data), cur=_importCounts(DB);
   showModal(`<div class="mt">📥 Import data</div>
     <div class="mm">
       File: <strong>${esc(fileName)}</strong><br><br>
       In the file: ${inc.a} notes · ${inc.f} folders · ${inc.s} sections · Zab items: ${inc.j}<br>
-      In your notebook now: ${cur.a} notes · ${cur.f} folders · ${cur.s} sections · Zab items: ${cur.j}<br><br>
-      <strong>Merge</strong> adds anything from the file you don't already have — nothing is removed.<br>
+      In your notebook now: ${cur.a} notes · ${cur.f} folders · ${cur.s} sections · Zab items: ${cur.j}<br>
+      ${pk&&pk.length?'Pictures in the file: '+pk.length+'<br>':''}<br>
+      <strong>Merge</strong> adds anything from the file you don't already have, and brings in a note the file holds a newer edit of (the older text stays in that note's history) — nothing is removed. A copy of your notebook is kept on this device first.<br>
       <strong>Replace everything</strong> deletes your current notebook and puts the file's content in its place.
     </div>
     <div class="ma imp-acts">
@@ -11829,10 +11864,31 @@ function _showImportConsent(data,fileName){
   setTimeout(()=>document.getElementById('imp-cancel-1')?.focus(),50);
 }
 function _cancelImport(){_pendingImport=null;_pendingImportRecovery=null;closeModal();}
-function _confirmMergeImport(){
-  const data=_pendingImport?.data; _pendingImport=null;_pendingImportRecovery=null;
+async function _confirmMergeImport(){
+  const data=_pendingImport?.data, pk=_pendingImport?.pk; _pendingImport=null;_pendingImportRecovery=null;
   closeModal();
-  if(data)_mergeBackup(data);
+  if(!data)return;
+  try{ _saveRecoveryCopy(DB); }catch(e){}   /* v05.86 · J150 — a merge can now bring in a newer edit: keep what is here first */
+  const pr=await _impPicsStore(pk);
+  _mergeBackup(data,pr);
+}
+/* v05.86 · J150 — the pk-<sha> blocks of an opened backup file: each is read with _pkRead (the sha256 is checked; a block that fails is ignored) and stored with _picWrite, as _pkTake does */
+async function _impPicsStore(els){
+  const r={stored:0,bad:0};
+  if(!els||!els.length)return r;
+  try{ await _picDB(); }catch(e){ r.bad=els.length; return r; }
+  for(const el of els){
+    const m=/^pk-([0-9a-f]{64})$/.exec(el.id||'');
+    if(!m||el.getAttribute('type')!==_PK_TYPE){ r.bad++; continue; }
+    try{
+      const b=await _pkRead(el,m[1]);
+      if(!b){ r.bad++; continue; }
+      if(!_picKnown.has(m[1])||_picSm.has(m[1]))await _picWrite(m[1],b,b.type);
+      r.stored++;
+    }catch(e){ r.bad++; }
+    await _yieldTask();
+  }
+  return r;
 }
 function _confirmReplaceImport(){
   const fileName=_pendingImport?.fileName;
@@ -11855,15 +11911,30 @@ function _confirmReplaceImport(){
     </div>`);
   setTimeout(()=>document.getElementById('imp-cancel-2')?.focus(),50);
 }
-function _doReplaceImport(){
-  const data=_pendingImport?.data; const rec=_pendingImportRecovery;
+async function _doReplaceImport(){
+  const data=_pendingImport?.data, pk=_pendingImport?.pk; const rec=_pendingImportRecovery;
   _pendingImport=null;_pendingImportRecovery=null;
   closeModal();
-  if(data)_replaceWithBackup(data,rec);
+  if(data){ await _impPicsStore(pk); _replaceWithBackup(data,rec); }
 }
 
-function _mergeBackup(bk){
+function _mergeBackup(bk,pr){
   const aIds=new Set(DB.articles.map(a=>a.id));
+  let updated=0;
+  /* v05.86 · J150 — a note the file holds a NEWER edit of (a backup copy that was worked in) replaces the older text; the older text is kept in the note's history.
+     A note open in the editor is left alone. Never an older or equal one. */
+  (bk.articles||[]).forEach(b=>{
+    if(!b||!b.id||String(b.id).startsWith('kb-')||!aIds.has(b.id))return;
+    const cur=DB.articles.find(a=>a.id===b.id); if(!cur)return;
+    const tb=Date.parse(b.updatedAt||''), tc=Date.parse(cur.updatedAt||'');
+    if(isNaN(tb)||(!isNaN(tc)&&tb<=tc))return;
+    if(ST.editing&&ST.article===cur.id)return;
+    try{ _captureNoteHistory(cur,'before import',true); }catch(e){}
+    const keep=cur.noteHistory;
+    const i=DB.articles.indexOf(cur);
+    DB.articles[i]=Object.assign({},b,keep?{noteHistory:keep}:{});
+    updated++;
+  });
   const fIds=new Set(DB.folders.map(f=>f.id));
   const sIds=new Set(DB.sections.map(s=>s.id));
   let added=0;
@@ -11879,7 +11950,7 @@ function _mergeBackup(bk){
     DB.jebPockets=m.jebPockets; DB.jeb=m.jeb; if(cnt>0) added+=cnt;
   }
   persist(); renderTree(); renderP2C(); renderP3H(); renderP3C();
-  toast(`✓ Merge complete — ${added} items restored. Syncing to cloud…`);
+  toast(`✓ Merge complete — ${added} items restored${updated?', '+updated+' note'+(updated>1?'s':'')+' updated':''}${pr&&pr.stored?', '+pr.stored+' picture'+(pr.stored>1?'s':''):''}${pr&&pr.bad?' ('+pr.bad+' picture block'+(pr.bad>1?'s':'')+' ignored)':''}. Syncing to cloud…`);
 }
 
 function _replaceWithBackup(bk,rec){
@@ -29161,7 +29232,9 @@ function toggleSBMenu(e){
   if(e) e.stopPropagation(); // stop click from bubbling to document (would instantly close)
   closeSBTools();closeSBHome(); // only one header dropdown open at a time
   const el=document.getElementById('sb-menu');
-  el?.classList.toggle('open');_sbDDFit(el);
+  el?.classList.toggle('open');
+  try{ _dpMenuFill(); if(el&&el.classList.contains('open'))_dpOfflineFill(); }catch(e){}   /* v05.86 · J150 */
+  _sbDDFit(el);
 }
 function closeSBMenu(){
   document.getElementById('sb-menu')?.classList.remove('open');
@@ -29813,6 +29886,7 @@ function setSyncStatus(s){
     offline:{cls:'sd-conn', txt:'☁ Offline'},   /* v04.72 — waiting for a connection, not an error */
   };
   const m=M[s]||M.off;
+  try{ _swNote(s); }catch(e){}   /* v05.86 · J150 — the watchdog follows the dot */
   el.className='sync-dot-tb '+m.cls;
   el.title={'off':'☁ Sync off — click to set up','conn':'☁ Connecting…','live':'☁ Live — synced','busy':'☁ Syncing…','err':'☁ Sync error','offline':'☁ Offline — changes are saved on this device and will sync when you\'re back online'}[s]||'☁ Sync';
   if(probTitle) el.title=probTitle;
@@ -29894,6 +29968,117 @@ function _fbRetryNow(){
   const fns=_fbRetryFns;_fbRetryFns=[];
   fns.forEach(f=>{try{const r=f();if(r&&r.catch)r.catch(()=>{});}catch(e){}});
 }
+
+/* ── v05.86 · J150 — Disaster Preparedness ─────────────────────────────────────────────────────────────────────────
+   The sync watchdog: online + visible + sync set up + the ☁ state not Live for 3 minutes → ONE calm banner at the TOP
+   (#sw-banner, fixed top, so it is not in the --jeb-h lists), with ⟳ Try now. It hides by itself when sync is Live again.
+   Each episode {start,end,reason} is kept for this session in _swLog (shown in 🩺 Diagnostics). Nothing is written to DB.
+   Test hooks: window.__swMs (threshold, default 180000). 'busy' counts as alive (a long push is not a stop). */
+let _swLive=Date.now(), _swSynced=parseInt(localStorage.getItem(SYNC_TIME_SK)||'0')||0, _swState='', _swEp=null, _swLog=[], _swDismissed=false;
+function _swNote(s){
+  _swState=s;
+  if(s==='live'){ _swLive=Date.now(); _swSynced=_swLive; _swEnd(); }
+  else if(s==='busy'){ _swLive=Date.now(); }
+  try{ _dpMenuFill(); }catch(e){}
+}
+function _swEnd(){
+  if(_swEp){ _swEp.end=Date.now(); _swLog.push(_swEp); if(_swLog.length>30)_swLog.shift(); _swEp=null; }
+  _swDismissed=false; _swShow(false);
+}
+function _swHm(ms){ const d=new Date(ms); return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0'); }
+function _swReason(){
+  const el=document.getElementById('sync-dot');
+  let why=el&&el.getAttribute('data-why');
+  if(!why){
+    if(_swState==='conn')why='still connecting';
+    else if(_swState==='err')why=(_lastSyncErr&&(_lastSyncErr.code||_lastSyncErr.message))||'the cloud reported an error';
+    else if(_swState==='off')why='sync has not started';
+    else why=(el&&el.title||'not live').replace(/^☁\s*/,'');
+  }
+  return why;
+}
+function _swShow(on,text){
+  let b=document.getElementById('sw-banner');
+  if(!on){ if(b)b.remove(); return; }
+  if(!b){
+    b=document.createElement('div'); b.id='sw-banner'; b.setAttribute('role','status');
+    b.innerHTML='<span class="sw-tx"></span><button type="button" class="btn sw-try" onclick="_swTryNow()">⟳ Try now</button><button type="button" class="sw-x" title="Hide until sync is back" aria-label="Hide" onclick="_swHide()">✕</button>';
+    document.body.appendChild(b);
+  }
+  b.querySelector('.sw-tx').textContent=text;
+}
+function _swHide(){ _swDismissed=true; _swShow(false); }
+function _swTryNow(){
+  try{
+    if(_fbRetryFns.length)_fbRetryNow();
+    else{ const sc=getSyncConfig(); if(sc&&sc.firebaseConfig&&!_syncFsDb)initSync(sc); else if(_syncFsDb&&typeof syncNow==='function')syncNow(); }
+  }catch(e){ console.warn('retry',e); }
+  const t=document.querySelector('#sw-banner .sw-tx'); if(t)t.textContent='⟳ Trying…';
+}
+function _swTick(){
+  try{
+    const sc=getSyncConfig();
+    const lim=typeof window.__swMs==='number'?window.__swMs:180000;
+    const ok=!!(sc&&sc.firebaseConfig)&&_dbLoaded&&navigator.onLine!==false&&document.visibilityState==='visible'&&_swState!=='live'&&_swState!=='busy';
+    if(!ok||Date.now()-_swLive<lim){
+      /* not stuck (or not countable right now): nothing shown; an open episode stays open until Live */
+      if(!ok&&_swEp&&(_swState==='live'))_swEnd();
+      if(!(sc&&sc.firebaseConfig)||navigator.onLine===false)_swShow(false);
+      else if(!_swEp)_swShow(false);
+      return;
+    }
+    if(!_swEp)_swEp={start:_swLive,end:0,reason:_swReason()};
+    else _swEp.reason=_swReason();
+    if(!_swDismissed)_swShow(true,'☁ Not synced since '+_swHm(_swLive)+' — '+_swEp.reason);
+  }catch(e){}
+}
+setInterval(_swTick,typeof window.__swTickMs==='number'?window.__swTickMs:3000);
+function _swDiagText(){
+  const rows=_swLog.slice();
+  if(_swEp)rows.push(_swEp);
+  if(!rows.length)return 'none this session';
+  return rows.map(function(e){ return _swHm(e.start)+' → '+(e.end?_swHm(e.end):'still going')+' ('+e.reason+')'; }).join(' · ');
+}
+/* the ⚙ menu: Last synced, Last backup (amber when old), and the ✈ line */
+function _dpBkInfo(){
+  let c={}; try{ c=_bkCfg()||{}; }catch(e){}
+  const at=+c.lastAt||0, stale=!at||(Date.now()-at)>2*86400000;
+  const when=at?(new Date(at).toLocaleDateString(undefined,{day:'numeric',month:'short'})+', '+_swHm(at)):'';
+  return {at:at,stale:stale,text:at?('🗄 Last backup: '+when+(stale?' — over 2 days ago':'')):'🗄 No backup yet — tap to set one up'};
+}
+function _dpMenuFill(){
+  const a=document.getElementById('sw-last');
+  if(a){ const t=_swSynced?('Last synced: '+_swHm(_swSynced)):'Last synced: not yet'; if(a.textContent!==t)a.textContent=t; }
+  const b=document.getElementById('bk-last');
+  if(b){ const i=_dpBkInfo(); if(b.textContent!==i.text)b.textContent=i.text; b.classList.toggle('dp-warn',i.stale); b.setAttribute('data-stale',i.stale?'1':'0'); }
+}
+async function _dpOffline(){
+  let notes=(DB.articles||[]).filter(function(a){return a&&!String(a.id||'').startsWith('kb-');}).length, want=new Set();
+  try{ await _picDB(); want=await _picKeepShas(); }catch(e){}
+  let miss=0; want.forEach(function(s){ if(!_picKnown.has(s))miss++; });
+  const pl=function(n,w){return n.toLocaleString()+' '+w+(n===1?'':'s');};
+  let t='✈ Ready for offline: '+(miss?('all '+pl(notes,'note')+' are on this device — '+pl(miss,'picture')+' still to fetch'):('all '+pl(notes,'note')+' and '+pl(want.size,'picture')+' are on this device'));
+  let prot=true; try{ if(navigator.storage&&navigator.storage.persisted)prot=await navigator.storage.persisted(); }catch(e){}
+  if(!prot)t+='. Storage not protected — 📱 Install App usually fixes this';
+  return {text:t,notes:notes,pics:want.size,missing:miss,protectedStore:prot};
+}
+async function _dpOfflineFill(){
+  const els=document.querySelectorAll('.dp-offl');
+  if(!els.length)return;
+  const r=await _dpOffline();
+  document.querySelectorAll('.dp-offl').forEach(function(e){ e.textContent=r.text; e.setAttribute('data-miss',String(r.missing)); });
+}
+/* a copy opened from disk: say so, and offer the way back (the JSON export; the normal app's ⬆ Import → Merge takes it) */
+function _dpCopyBar(){
+  if(location.protocol!=='file:'||document.getElementById('bk-copy-bar')||!document.body)return;
+  let at=''; try{ at=(document.querySelector('meta[name="siyagah-saved-at"]')||{}).content||''; }catch(e){}
+  const d=at&&!isNaN(Date.parse(at))?new Date(at):null;
+  const when=d?(d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})+', '+_swHm(d.getTime())):'an earlier date';
+  const b=document.createElement('div'); b.id='bk-copy-bar'; b.setAttribute('role','status');
+  b.innerHTML='<span class="sw-tx">You are working in a backup copy (saved '+esc(when)+').</span><button type="button" class="btn bp sw-try" id="bk-copy-save" onclick="exportJSON()">⬇ Save my changes to bring back</button>';
+  document.body.appendChild(b);
+}
+if(location.protocol==='file:'){ document.addEventListener('DOMContentLoaded',function(){ setTimeout(_dpCopyBar,0); }); if(document.readyState!=='loading')setTimeout(_dpCopyBar,0); }
 
 /* v03.96 — the deepest sync bug found wasn't a race at all: it was
    silence. Three separate catch blocks below (the realtime listener's
@@ -35652,6 +35837,12 @@ function _onImpHTML(){
       +(I.note?'<div class="enx-sub" id="on-inote">'+esc(I.note)+'</div>':'')+sum;
   }else if(I.state==='done'){
     h+='<div class="enx-prog" id="on-idone" role="status">✅ Done. '+N(I.took)+' pages brought in this time; '+N(_onBrought())+' from OneNote in all.</div>'+sum
+      +(I.total?(function(){   /* v05.86 · J150 — a plain completeness line */
+        const inn=Math.min(I.total,_onBrought()), left=I.total-inn;
+        return (left<=0&&!I.broken)
+          ?'<div class="enx-prog" id="on-allin" role="status">✅ All '+N(I.total)+' OneNote pages are in Siyagah</div>'
+          :'<div class="enx-prog" id="on-allin" role="status">'+N(inn)+' of '+N(I.total)+' are in; '+N(Math.max(left,I.broken||0))+' not yet — run it again to bring only the missing ones</div>';
+      })():'')
       +'<div class="enx-sub">They are in My Notebooks ▸ OneNote (Imported), and in the Smart View "(16) From OneNote". Each keeps its original OneNote dates.</div>'
       +'<button class="rm-big alt" onclick="_onAgain()">↩ Start again</button>';
   }
@@ -36087,6 +36278,7 @@ function _syncDiagnosticsHTML(){
     ['Realtime listener', _syncUnsub?('connected — '+statusTxt):'not connected'],
     ['Reconcile poll (15s safety net)', _reconcileTimer?'running':'not running'],
     ['Last successful sync', _syncAgo(_lastSyncTime)],
+    ['Sync stops (watchdog)', _swDiagText()],
     ['Push failures since load', String(_pushFailures||0)],
     ['Pull failures since load', String(_pullFailures||0)],
     ['Per-note copy', _s1DiagText()],
@@ -36115,6 +36307,7 @@ function openSyncModal(){
   const nbId=cfg?.notebookId||generateNotebookId();
   const cfgStr=cfg?.firebaseConfig?JSON.stringify(cfg.firebaseConfig,null,2):'';
   const isLive=!!(cfg&&_syncFsDb);
+  setTimeout(function(){ try{_dpOfflineFill();}catch(e){} },0);   /* v05.86 · J150 — the ✈ line */
   document.getElementById('sync-mb').innerHTML=isLive?`
     <div class="mt">☁ Cloud Sync</div>
     <div class="mm" style="line-height:1.7">
@@ -36131,6 +36324,7 @@ function openSyncModal(){
         <small style="color:var(--t3);font-size:11px;line-height:1.4;flex:1;min-width:160px">To make another device use exactly this cloud: copy here, then on that device ⚙ → ☁ → Disconnect, paste into the Firebase config box, Connect. Its notes are kept and joined in.</small>
       </div>
       <div id="sync-copy-fb"></div>
+      <div class="dp-offl" id="dp-offl-modal" style="margin-top:10px;font-size:12px;line-height:1.5;color:var(--t2)"></div>
     </div>
     ${_oaSectionHTML()}
     <div class="mm" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2)">

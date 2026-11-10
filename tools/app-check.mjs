@@ -11389,9 +11389,20 @@ await r.block('53h-fast-path-export-is-unchanged', async () => {
     const old = getExportHTML();
     const now = await _picExportHTML();
     const j = await _picInlinedJSON();
-    return { eq: old === now, jsonEq: j === JSON.stringify(DB), len: old.length };
+    /* v05.86 · J150 stamps the copy's save time: each export carries its own
+       <meta name="siyagah-saved-at">, so compare with that content fixed. */
+    const re = /<meta\b[^>]*\bname="siyagah-saved-at"[^>]*>/g;
+    const metas = (h) => [...h.matchAll(re)].map(m => (m[0].match(/\bcontent="([^"]*)"/) || [])[1]);
+    const fix = (h) => h.replace(re, (m) => m.replace(/\bcontent="[^"]*"/, 'content="FIXED"'));
+    const iso = (v) => /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z$/.test(v || '') && !isNaN(Date.parse(v));
+    const mo = metas(old), mn = metas(now);
+    const one = mo.length === 1 && mn.length === 1;
+    return { eq: fix(old) === fix(now), jsonEq: j === JSON.stringify(DB), len: old.length,
+      one, valid: one && iso(mo[0]) && iso(mn[0]) };
   });
-  r.check(same.eq, 'no picture anywhere: the async export equals getExportHTML() byte for byte', String(same.len));
+  r.check(same.one, 'each export carries exactly one siyagah-saved-at meta');
+  r.check(same.valid, 'and its content is a valid ISO time');
+  r.check(same.eq, 'no picture anywhere: the async export equals getExportHTML() byte for byte (saved-at fixed)', String(same.len));
   r.check(same.jsonEq, 'and _picInlinedJSON() is exactly JSON.stringify(DB)');
   await s.close();
 });
@@ -12949,6 +12960,18 @@ await r.block('138-mmj-slices', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 15, 'the mmj-slices.mjs check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, '138: ' + row.label, row.detail);
   r.check(out.status === 0, 'the mmj-slices.mjs check exits cleanly', `exit ${out.status}`);
+});
+/* 145 — v05.86, J150: Disaster Preparedness (watchdog, Import Backup of every copy, the backup-copy bar, last backup, ✈ offline line, OneNote all-in). tools/disaster-j150.mjs runs 145a–145g. */
+await r.block('145-disaster-j150', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./disaster-j150.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1800000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the disaster-j150.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '145: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the disaster-j150.mjs check exits cleanly', `exit ${out.status}`);
 });
 /* 144 — v05.85, J144: open on a new PC with only Google sign-in (the rule first, the built-in setup code second, off). tools/signin-j144.mjs runs 144a–144g. */
 await r.block('144-signin-j144', async () => {
