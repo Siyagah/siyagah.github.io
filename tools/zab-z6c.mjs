@@ -22,7 +22,8 @@
    72k  contrast of the new text on the five presets
 
    `--only=72a,72c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 72). */
-import { playwright, serve, seedDB, zabAct, zabTap } from './harness.mjs';
+/* v05.88 · J156 (changed in place, not deleted): the 3,000 ms panel/selector waits are now the harness's WAIT_MS; same assertions, only the wait. */
+import { WAIT_MS, playwright, serve, seedDB, zabAct, zabTap } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, check, results } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -60,7 +61,7 @@ const dev = (cloud, name, vp, db, opts = {}) => addDevice(browser, srv.base, clo
 const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
 const item = (d, id) => on(d, (i) => JSON.parse(JSON.stringify(DB.jeb.find((x) => x.id === i) || null)), id);
-const openPanel = async (d, vp, pid = 'jp-idea') => { await act(d, vp, `#jeb-bar .jeb-chip[data-pid="${pid}"] .jeb-main`); await d.page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await sleep(400); };
+const openPanel = async (d, vp, pid = 'jp-idea') => { await act(d, vp, `#jeb-bar .jeb-chip[data-pid="${pid}"] .jeb-main`); await d.page.waitForSelector('#jeb-panel.on', { timeout: WAIT_MS }); await sleep(400); };
 const closePanel = async (d, vp) => { await act(d, vp, '#jeb-panel .jeb-x'); await sleep(300); };
 const menuItem = async (d, vp, iid, label) => { await act(d, vp, `#jeb-panel .jeb-it[data-iid="${iid}"] .jeb-more`); await d.page.waitForSelector('#jeb-menu'); await act(d, vp, `#jeb-menu .jm:has-text("${label}")`); await sleep(250); };
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
@@ -71,7 +72,7 @@ const ids = (d, sel = '#jeb-panel .jeb-list') => on(d, (s) => [...document.query
 const igroups = (d) => on(d, () => [...document.querySelectorAll('#jeb-panel .ji-gh')].map((h) => h.querySelector('b').textContent.replace(/^# /, '') + ' ' + h.querySelector('small').textContent + ':' + [...h.nextElementSibling.querySelectorAll('.jeb-it')].map((e) => e.dataset.iid).join('+')).join(' | '));
 const shopView = (d) => on(d, () => { const g = (k) => { const l = document.querySelector('#jeb-panel .jeb-gl[data-g="' + k + '"]'); return l ? [...l.querySelectorAll('.jeb-it')].map((e) => e.dataset.iid).join('+') : '-'; }; const h = document.querySelector('#jeb-panel .js-basket b'); return g('open') + ' / ' + (h ? h.textContent : 'no basket') + ': ' + g('basket'); });
 const starsOn = (d, id, root = '#jeb-panel') => on(d, ([i, r]) => document.querySelectorAll(r + ' [data-iid="' + i + '"] .ji-star.on').length, [id, root]);
-const modalOpen = (d) => d.page.waitForSelector('#ov.on #mb', { timeout: 3000 });
+const modalOpen = (d) => d.page.waitForSelector('#ov.on #mb', { timeout: WAIT_MS });
 const typeAdd = async (d, vp, s) => { await act(d, vp, '#jeb-add-in'); await d.page.keyboard.type(s); await d.page.keyboard.press('Enter'); await sleep(350); };
 
 try {

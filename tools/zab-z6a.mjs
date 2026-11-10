@@ -19,7 +19,8 @@
    70i  contrast of the new text on the five presets (phone and laptop shapes, panel and deck)
 
    `--only=70a,70c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 70). */
-import { playwright, serve, seedDB, touchDrag, hostLimit, zabAct, zabTap, zabShow } from './harness.mjs';
+/* v05.88 · J156 (changed in place, not deleted): the 3,000 ms panel/selector waits are now the harness's WAIT_MS; same assertions, only the wait. */
+import { WAIT_MS, playwright, serve, seedDB, touchDrag, hostLimit, zabAct, zabTap, zabShow } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, check, results } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -62,7 +63,7 @@ const until = async (fn, ms = 8000) => { const t0 = Date.now(); while (Date.now(
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
 const item = (d, id) => on(d, (i) => JSON.parse(JSON.stringify(DB.jeb.find((x) => x.id === i) || null)), id);
 /* v05.40 · Z15: menuOf may already have opened this Zab (a folded chip is opened from the list first), and a second tap would close it */
-const openPanel = async (d, vp, name = 'Links to read') => { if (!(await on(d, (n) => { const p = DB.jebPockets.find((x) => x.name === n); return !!p && _jebOpen === p.id && document.getElementById('jeb-panel').classList.contains('on'); }, name))) await act(d, vp, `#jeb-bar .jeb-chip[title="${name}"]`); await d.page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await sleep(400); };
+const openPanel = async (d, vp, name = 'Links to read') => { if (!(await on(d, (n) => { const p = DB.jebPockets.find((x) => x.name === n); return !!p && _jebOpen === p.id && document.getElementById('jeb-panel').classList.contains('on'); }, name))) await act(d, vp, `#jeb-bar .jeb-chip[title="${name}"]`); await d.page.waitForSelector('#jeb-panel.on', { timeout: WAIT_MS }); await sleep(400); };
 const rowIds = (d) => on(d, () => [...document.querySelectorAll('#jeb-panel .jeb-it')].map((e) => e.dataset.iid));
 const menuOf = async (d, name) => { /* v05.40 · Z15: a folded chip is opened from "▸ N more" first (the open Zab's chip is never folded), then right-clicked */ await zabShow(d.page, `#jeb-bar .jeb-chip[title="${name}"]`, { touch: d.page.viewportSize().width < 1000 }); await d.page.locator(`#jeb-bar .jeb-chip[title="${name}"]`).first().click({ button: 'right' }); await d.page.waitForSelector('#jeb-menu'); await sleep(100); };
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));

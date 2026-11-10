@@ -60,7 +60,8 @@ const tag = (id, vp) => `${id} (${vp.name})`;
 /* a real tap on a phone / tablet, a real click on the laptop */
 const hit = async (d, loc) => { const l = typeof loc === 'string' ? d.page.locator(loc).first() : loc; await l.waitFor({ state: 'visible', timeout: 5000 }); await (d.vp.touch ? l.tap() : l.click()); await sleep(500); };
 const tools = async (d, label) => { await hit(d, '#sb-tools-btn'); await hit(d, d.page.locator('#sb-tools').locator(`text=${label}`).first()); };
-const menu = async (d, label) => { await hit(d, '#sb-menu-btn'); await hit(d, d.page.locator('#sb-menu').locator(`text=${label}`).first()); };
+/* v05.88 · J156 (changed in place, not deleted): ⚙ rows are found by their label inside .sb-mi, not by a bare 'text=' substring (the ✈ row mentions Storage) */
+const menu = async (d, label) => { await hit(d, '#sb-menu-btn'); await hit(d, d.page.locator('#sb-menu .sb-mi', { hasText: label }).first()); };
 const contrastOf = (page, sel) => page.evaluate((s) => {
   const e = document.querySelector(s); if (!e) return null;
   const parse = (c) => { const m = c.match(/rgba?\(([^)]+)\)/); const p = m[1].split(',').map(parseFloat); return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1]; };

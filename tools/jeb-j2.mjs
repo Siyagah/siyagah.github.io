@@ -19,7 +19,8 @@
    60l  the bottom-fixed sweep: each element against the bar
 
    `--only=60a,60c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 60). */
-import { playwright, serve, seedDB, touchDrag, zabAct, zabTap, zabShow } from './harness.mjs';
+/* v05.88 · J156 (changed in place, not deleted): the 3,000 ms panel/selector waits are now the harness's WAIT_MS; same assertions, only the wait. */
+import { WAIT_MS, playwright, serve, seedDB, touchDrag, zabAct, zabTap, zabShow } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, check, results, NB } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -45,7 +46,7 @@ const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelect
 const jebState = (d) => on(d, () => JSON.parse(JSON.stringify({ p: DB.jebPockets, i: DB.jeb, trash: (DB.trash || []).filter((t) => /^jeb/.test(t.type)).length })));
 const chipCounts = (d) => on(d, () => [...document.querySelectorAll('#jeb-bar .jeb-chip[data-pid]')].map((c) => c.querySelector('.jeb-nm').textContent + ':' + c.querySelector('.jeb-ct').textContent));
 const itemTexts = (d) => on(d, () => [...document.querySelectorAll('#jeb-panel .jeb-it .jeb-tx')].map((e) => e.textContent));
-const openPanel = async (d, vp, name) => { await act(d, vp, `#jeb-bar .jeb-chip[title="${name}"]`); await d.page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await sleep(300); };
+const openPanel = async (d, vp, name) => { await act(d, vp, `#jeb-bar .jeb-chip[title="${name}"]`); await d.page.waitForSelector('#jeb-panel.on', { timeout: WAIT_MS }); await sleep(300); };
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
 const each = async (fn) => { for (const vp of VPS) { const d = await dev(makeCloud(), 'D' + vp.name, vp); try { await fn(d, vp); } finally { await d.ctx.close(); } } };
 

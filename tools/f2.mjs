@@ -97,8 +97,9 @@ try {
     const d = await open(vp, seed()), t = tag('89b', vp);
     try {
       await hit(d, '#sb-menu-btn');
-      const item = await d.page.evaluate(() => [...document.querySelectorAll('#sb-menu .sb-mi')].map((e) => e.textContent.trim()).find((x) => /Storage/.test(x)));
-      await hit(d, d.page.locator('#sb-menu').locator('text=Storage & Backup').first());
+      const item = await d.page.evaluate(() => [...document.querySelectorAll('#sb-menu .sb-mi')].map((e) => e.textContent.trim()).find((x) => /Storage & Backup/.test(x)));
+      /* v05.88 · J156 (changed in place): v05.86's ✈ row says 'Storage not protected', so the bare word matched it; open the row by its full label */
+      await hit(d, d.page.locator('#sb-menu .sb-mi', { hasText: 'Storage & Backup' }).first());
       const title = await d.page.evaluate(() => (document.querySelector('#mb .mt') || document.querySelector('.mt') || {}).textContent || '');
       check(/Storage & Backup/.test(item || '') && title.trim() === item, `${t} 🧰 → "${item}" opens a window titled "${title.trim()}" (the same words)`);
       if (vp.name === '390') {

@@ -8,6 +8,8 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+/* v05.88 · J156: ONE wait for a panel/selector the Zab checks expect; 3,000 ms ran out on a busy machine. */
+export const WAIT_MS = 20000;
 export const ROOT = resolve(new URL('..', import.meta.url).pathname);
 
 /* Host calibration (v05.24, hs520). A speed check's millisecond limit was set on the GitHub runner; on a slower
@@ -354,14 +356,14 @@ export async function zabTap(page, sel, { touch = false } = {}) {
 /* a check that needs the CHIP (right-click menu, its box): when it is folded, open that Zab from the list; the open Zab's chip is never folded */
 export async function zabShow(page, sel, { touch = false } = {}) {
   if (await zabVisible(page, sel)) return false;
-  await zabTap(page, sel, { touch }); await page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await new Promise((r) => setTimeout(r, 500)); return true;
+  await zabTap(page, sel, { touch }); await page.waitForSelector('#jeb-panel.on', { timeout: WAIT_MS }); await new Promise((r) => setTimeout(r, 500)); return true;
 }
 /* what a check's `act()` calls for a bar chip: the ▦ half of a folded chip has no box, so the owner opens that Zab from "▸ N more" and spreads it with the ▦ in the panel header (.jeb-px);
    anything else goes through zabTap */
 export async function zabAct(page, sel, { touch = false } = {}) {
   if (!/\[data-jeb-cards\]\s*$/.test(sel) || await zabVisible(page, sel)) return zabTap(page, sel, { touch });
   const chipSel = sel.replace(/\s*\[data-jeb-cards\]\s*$/, '');
-  await zabTap(page, chipSel, { touch }); await page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await new Promise((r) => setTimeout(r, 400));
+  await zabTap(page, chipSel, { touch }); await page.waitForSelector('#jeb-panel.on', { timeout: WAIT_MS }); await new Promise((r) => setTimeout(r, 400));
   const px = await page.evaluate(() => { const e = document.querySelector('#jeb-panel .jeb-px'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
   if (!px) throw new Error('zabAct: no ▦ in the panel header');
   if (touch) await page.touchscreen.tap(px.x, px.y); else await page.mouse.click(px.x, px.y);
