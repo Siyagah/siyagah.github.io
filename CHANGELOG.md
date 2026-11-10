@@ -11442,3 +11442,12 @@ The owner's phone screenshot: "Folder attach popup from note in the middle pane.
 - Shapes: 1440 handles on all 8 sides/corners + full screen; 820 the same with touch handles (24 px edges, 30 px corners, `.mb-fm`) + full screen; 390 no handles, today's sheet + full screen.
 - Not changed: `openPicker` and the pop-out Folder Browser (same behaviour, old geometry key). Nothing saved to a note changes (I1).
 - Block 141 (`tools/folders-rsz-j141.mjs`, 141a–141e at 390/820/1440) is written but NOT run by the builder (the brief: ship-check only); the Architect runs it. To look at: a full-screen box is per session, so ＋ New folder (which draws the dialog again) returns it to the normal box (the check reports it as a note).
+
+## v05.84 — J148: the OneNote import no longer gives up on a throttled notebook (issue #293)
+- **What stopped the owner's run** ("0 pages are in so far; 2,722 to go", "89 pages could not be read"): see the PR. In the code: a page refused with 429/503 was retried 8 times and then counted as "could not be read" (reason lost); four requests stayed in flight while Microsoft asked for a slowdown; the token (about 1 h, no refresh token) always ended a long run; pages were saved only per 250.
+- Every page not read keeps `{title, why}` (`I.failed`); the done/import view groups them by reason, titles folded under each (`_onFailHTML`). The next run still tries them again.
+- Throttling: 429/503 set one shared hold (`_on.holdUntil`, from `Retry-After`, else 5 → 10 → 20 → 60 s); every request waits for it (`_onHold`); no try limit. While throttled (and 5 minutes after the last 429) ONE request is in flight (`_onLimit`). Status line: "Microsoft asked Siyagah to slow down — waiting N s (page X of Y)". Pause/Stop work during a wait.
+- Sign-in renewal: scope `Notes.Read offline_access`; the refresh token (`_on.rt`) lives only in memory beside `_on.tok` (never DB, DB.theme, localStorage, IndexedDB, a backup or a Save File copy; gone when the page closes). `_onRenew` runs shortly before expiry and once on a 401; only a failed renewal pauses with "Sign in again to continue".
+- OneNote saves every 25 pages (`_ON_BATCH`); `_ENX_BATCH` unchanged.
+- Typed client ID: `#on-cid` updates `_on.cid` on every `input` (`_on.cidTouched`) and `_onLoadCfg` never replaces a touched field.
+- Check: block 143, `tools/onenote-j148.mjs`. Block 137 rows 137b (scope) and 137d (slow-down wording, failed-list shape) updated in place for the new wording/scope.
