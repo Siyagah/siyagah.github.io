@@ -11431,3 +11431,14 @@ Nothing on screen changes.
 ## v05.83 — J143: a busy start or a long import must not say ☁ Offline (built by the builder, issue #291)
 
 Cause: `_loadScript` armed a 15 s timer; on a busy page it fired late, before the script's queued `onload`, rejected, and `initSync`/`initAuth` showed Offline. Now: a timer more than 1 s late gets ONE 5 s grace (`_lsGrace`); at the end one macrotask is yielded and a script that has in fact run (`_lsHave`: `firebase.initializeApp`/`firestore`/`auth`) is success; a hanging network still rejects (15 s + 5 s). `_loadScript` returns at once when the SDK global already exists, so every retry (`_fbRetryArm`) goes through the same rule. `setSyncStatus("offline")` says why ("no connection" / "still starting" / "the cloud is not answering"), "last try h:mm", and that it tries again by itself; classes unchanged, `data-why` lets the label wrap in the ⚙ menu. Check: block 142, `tools/offline-j143.mjs`.
+
+## v05.82 — J141: 📁 Manage folders (from a note) resizes from every side and corner, and opens full screen (built by the builder, issue #289)
+
+The owner's phone screenshot: "Folder attach popup from note in the middle pane. Enable this to all side n all corner resizeable n open in full screen."
+
+- `showArtFolderPicker` now opens through `showResizableModal` (no second copy of handles/drag/geometry). New options: `geomKey` (each caller's own device-local remembered place; default is the old `siyagah-mb-popout-geom`, so the Folder Browser is unchanged; Manage folders uses `siyagah-mb-attach-geom`) and `phoneSheet` (below 640 px: no handles, no drag, nothing remembered, today's sheet with a max height). `#fp-list` is the box's `.pl`, so it takes the spare height; search, "Inside:", new-folder row and Done stay.
+- Full screen: a framed drawn-SVG button in the title row (`_mbFsBtnHTML`, `_mbFsToggle`; title "Full screen" / "Exit full screen"); per session, never saved (`_mbSaveGeom` skips it); toggling back restores the box's earlier style. Esc/Done close as before.
+- A window resize pulls a remembered box back inside the window (`_mbClampNow`).
+- Shapes: 1440 handles on all 8 sides/corners + full screen; 820 the same with touch handles (24 px edges, 30 px corners, `.mb-fm`) + full screen; 390 no handles, today's sheet + full screen.
+- Not changed: `openPicker` and the pop-out Folder Browser (same behaviour, old geometry key). Nothing saved to a note changes (I1).
+- Block 141 (`tools/folders-rsz-j141.mjs`, 141a–141e at 390/820/1440) is written but NOT run by the builder (the brief: ship-check only); the Architect runs it. To look at: a full-screen box is per session, so ＋ New folder (which draws the dialog again) returns it to the normal box (the check reports it as a note).

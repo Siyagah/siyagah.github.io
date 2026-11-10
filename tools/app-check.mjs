@@ -12902,6 +12902,18 @@ await r.block('139-backup-big', async () => {
   for (const row of rows) r.check(row.ok, '139: ' + row.label, row.detail);
   r.check(out.status === 0, 'the backup-big.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 141 — v05.82, J141: 📁 Manage folders resizes from 8 handles, moves by its title, goes ⛶ full screen; its own remembered place (siyagah-mb-attach-geom), the Folder Browser's untouched. tools/folders-rsz-j141.mjs runs 141a–141e at 390/820/1440. */
+await r.block('141-folders-rsz', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./folders-rsz-j141.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 26 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the folders-rsz-j141.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '141: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the folders-rsz-j141.mjs check exits cleanly', `exit ${out.status}`);
+});
 /* 142 — v05.83, J143: a busy start or a long import must not say ☁ Offline (a late timer gets one grace; the label says why). tools/offline-j143.mjs runs 142a–142e. */
 await r.block('142-offline-j143', async () => {
   const { spawnSync } = await import('node:child_process');

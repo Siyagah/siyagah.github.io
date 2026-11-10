@@ -816,6 +816,21 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 #mb.mb-rsz{display:flex;flex-direction:column;overflow:hidden}
 #mb.mb-rsz>*{flex-shrink:0}
 #mb.mb-rsz>.pl{flex:1;min-height:60px;max-height:none;overflow-y:auto}
+.mb-mt-fs{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mb-fs-btn{flex-shrink:0;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:1.5px solid var(--t3,#999);border-radius:8px;background:transparent;color:var(--t1);cursor:pointer}
+#mb.mb-fm>.rsz{touch-action:none}
+#mb.mb-fs-on>.rsz{display:none}
+@media(max-width:1199.98px){
+  #mb.mb-fm>.rsz-n,#mb.mb-fm>.rsz-s{height:24px;left:28px;right:28px}#mb.mb-fm>.rsz-n{top:-12px}#mb.mb-fm>.rsz-s{bottom:-12px}
+  #mb.mb-fm>.rsz-e,#mb.mb-fm>.rsz-w{width:24px;top:28px;bottom:28px}#mb.mb-fm>.rsz-e{right:-12px}#mb.mb-fm>.rsz-w{left:-12px}
+  #mb.mb-fm>.rsz-ne,#mb.mb-fm>.rsz-nw,#mb.mb-fm>.rsz-se,#mb.mb-fm>.rsz-sw{width:30px;height:30px}
+  #mb.mb-fm>.rsz-ne,#mb.mb-fm>.rsz-nw{top:-12px}#mb.mb-fm>.rsz-se,#mb.mb-fm>.rsz-sw{bottom:-12px}
+  #mb.mb-fm>.rsz-ne,#mb.mb-fm>.rsz-se{right:-12px}#mb.mb-fm>.rsz-nw,#mb.mb-fm>.rsz-sw{left:-12px}
+}
+/* #mb.mb-rsz clips (overflow:hidden), so a handle half outside the box was half dead and its centre hit #ov: keep every handle INSIDE the box edge */
+#mb.mb-rsz>.rsz-n{top:0}#mb.mb-rsz>.rsz-s{bottom:0}#mb.mb-rsz>.rsz-e{right:0}#mb.mb-rsz>.rsz-w{left:0}
+#mb.mb-rsz>.rsz-ne{top:0;right:0}#mb.mb-rsz>.rsz-nw{top:0;left:0}#mb.mb-rsz>.rsz-se{bottom:0;right:0}#mb.mb-rsz>.rsz-sw{bottom:0;left:0}
+#mb.mb-rsz:not(.mb-fm)>.rsz-n,#mb.mb-rsz:not(.mb-fm)>.rsz-s{height:12px}#mb.mb-rsz:not(.mb-fm)>.rsz-e,#mb.mb-rsz:not(.mb-fm)>.rsz-w{width:12px}
 .mb-drag-handle{cursor:move;user-select:none;-webkit-user-select:none;touch-action:none}
 .rsz{position:absolute;z-index:6}
 .rsz-n{top:-5px;left:12px;right:12px;height:9px;cursor:ns-resize}
@@ -4240,7 +4255,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 
 <div id="ctx" onclick="event.stopPropagation()" style="display:none"></div>
 <div id="ann-bubble" style="display:none"><button class="ann-bub-btn" onmousedown="annBubClick(event)">💬 Comment</button></div>
-<div id="ov" onclick="closeModal()" class=""><div id="mb" onclick="event.stopPropagation()"></div></div>
+<div id="ov" onclick="if(Date.now()-_mbGestureAt<400)return;closeModal()" class=""><div id="mb" onclick="event.stopPropagation()"></div></div>
 <!-- drag ghost label -->
 <div class="drag-hint" id="dgh" style=""></div>
 
@@ -22157,7 +22172,7 @@ function offerAutoNumber(){
 /* ── Modals ──────────────────────────────────────────────────────── */
 function showModal(html){
   const mb=document.getElementById('mb');
-  mb.classList.remove('mb-rsz');
+  mb.classList.remove('mb-rsz','mb-fm','mb-fs-on');
   mb.removeAttribute('style');
   mb.innerHTML=html;
   document.getElementById('ov').classList.add('on');
@@ -22184,11 +22199,14 @@ const _RSZ_HANDLES_HTML=
  *  page reloads — device-local, on purpose: window chrome for one screen
  *  shouldn't be pushed onto a synced device with a different screen size. */
 const _MB_GEOM_KEY='siyagah-mb-popout-geom';
+/* v05.82 · J141 — each caller may keep its own remembered place (opts.geomKey); default = the Folder Browser's old key. */
+let _mbGeomKey=_MB_GEOM_KEY;
 function _mbSaveGeom(){
   try{
     const mb=document.getElementById('mb');if(!mb)return;
+    if(mb.classList.contains('mb-fs-on'))return;
     const r=mb.getBoundingClientRect();
-    localStorage.setItem(_MB_GEOM_KEY,JSON.stringify({
+    localStorage.setItem(_mbGeomKey,JSON.stringify({
       wPct:r.width/window.innerWidth*100,   hPct:r.height/window.innerHeight*100,
       lPct:r.left/window.innerWidth*100,    tPct:r.top/window.innerHeight*100,
     }));
@@ -22196,7 +22214,7 @@ function _mbSaveGeom(){
 }
 function _mbLoadGeom(){
   try{
-    const g=JSON.parse(localStorage.getItem(_MB_GEOM_KEY));
+    const g=JSON.parse(localStorage.getItem(_mbGeomKey));
     return (g&&typeof g.wPct==='number'&&typeof g.hPct==='number')?g:null;
   }catch(e){return null;}
 }
@@ -22208,6 +22226,14 @@ function showResizableModal(html,opts){
   showModal(html);
   const mb=document.getElementById('mb');
   mb.classList.add('mb-rsz');
+  _mbGeomKey=opts.geomKey||_MB_GEOM_KEY;
+  /* v05.82 · J141 — a phone gets today's sheet (no handles, no drag, nothing remembered), plus the full-screen button */
+  if(opts.phoneSheet&&window.innerWidth<640){
+    mb.classList.add('mb-fm');
+    mb.style.maxHeight='88vh';mb.style.boxSizing='border-box';
+    return;
+  }
+  if(opts.phoneSheet)mb.classList.add('mb-fm');
   // Tablet/mobile (same breakpoint the rest of the app already switches
   // panes on): a floating, resizable window doesn't work well on a small
   // touch screen, so opt-in callers (the Folder Browser) get a true
@@ -22234,6 +22260,7 @@ function showResizableModal(html,opts){
     mb.style.width=opts.width||'440px';
     mb.style.height=opts.height||'500px';
   }
+  if(opts.phoneSheet){mb.style.maxWidth='96vw';mb.style.maxHeight='92vh';mb.style.boxSizing='border-box';}
   mb.insertAdjacentHTML('beforeend',_RSZ_HANDLES_HTML);
   const mt=mb.querySelector('.mt');
   if(mt){
@@ -22242,10 +22269,50 @@ function showResizableModal(html,opts){
     mt.addEventListener('pointerdown',_mbDragStart);
   }
 }
+/* v05.82 · J141 — full screen for a resizable box: per session, never remembered; the box goes back to the style it had. */
+let _mbFsPrev=null;
+function _mbFsIcon(on){
+  return '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
+    (on?'<path d="M6 2v4H2M10 2v4h4M6 14v-4H2M10 14v-4h4"/>':'<path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>')+'</svg>';
+}
+function _mbFsBtnHTML(){
+  return '<button type="button" class="mb-fs-btn" id="mb-fs" title="Full screen" aria-label="Full screen" onpointerdown="event.stopPropagation()" onclick="_mbFsToggle()">'+_mbFsIcon(false)+'</button>';
+}
+function _mbFsToggle(){
+  const mb=document.getElementById('mb');if(!mb)return;
+  const on=!mb.classList.contains('mb-fs-on');
+  if(on){
+    _mbFsPrev=mb.getAttribute('style')||'';
+    mb.classList.add('mb-fs-on');
+    mb.style.position='fixed';mb.style.margin='0';mb.style.borderRadius='0';
+    mb.style.left='0';mb.style.top='0';
+    mb.style.width='100vw';mb.style.maxWidth='100vw';
+    mb.style.height='100%';mb.style.maxHeight='100%';
+  }else{
+    mb.classList.remove('mb-fs-on');
+    if(_mbFsPrev)mb.setAttribute('style',_mbFsPrev);else mb.removeAttribute('style');
+    _mbFsPrev=null;
+    _mbClampNow();
+  }
+  const b=document.getElementById('mb-fs');
+  if(b){const t=on?'Exit full screen':'Full screen';b.title=t;b.setAttribute('aria-label',t);b.innerHTML=_mbFsIcon(on);}
+}
+/* a remembered box is pulled back inside the window on a window resize */
+function _mbClampNow(){
+  const mb=document.getElementById('mb');
+  if(!mb||!mb.classList.contains('mb-rsz')||mb.classList.contains('mb-fs-on')||mb.style.position!=='fixed')return;
+  const W=window.innerWidth,H=window.innerHeight,r=mb.getBoundingClientRect();
+  const w=Math.min(r.width,W-8),h=Math.min(r.height,H-8);
+  mb.style.width=w+'px';mb.style.height=h+'px';
+  mb.style.left=Math.max(4,Math.min(r.left,W-w-4))+'px';
+  mb.style.top=Math.max(4,Math.min(r.top,H-h-4))+'px';
+}
+window.addEventListener('resize',_mbClampNow);
 /* ── Draggable-by-title-bar support ─────────────────────────────────── */
 let _mbDrag=null;
 function _mbDragStart(ev){
-  if(ev.target.closest('button,input,a,select')) return;   // don't hijack interactive children
+  if(ev.target.closest('button,input,a,select')) return;
+  if(document.getElementById('mb')?.classList.contains('mb-fs-on')) return;   // don't hijack interactive children
   ev.preventDefault();
   const mb=document.getElementById('mb');if(!mb)return;
   const rect=mb.getBoundingClientRect();
@@ -22270,12 +22337,15 @@ function _mbDragMove(ev){
   mb.style.left=l+'px';mb.style.top=t+'px';
 }
 function _mbDragStop(){
+  _mbGestureAt=Date.now();
   _mbDrag=null;
   document.removeEventListener('pointermove',_mbDragMove);
   document.removeEventListener('pointerup',_mbDragStop);
   document.body.style.userSelect='';
   _mbSaveGeom();
 }
+/* a resize or move that ends outside the box lands its click on #ov: that click must not close the dialog */
+let _mbGestureAt=0;
 let _mbRsz=null;
 function _mbResizeStart(ev,dir){
   ev.preventDefault();ev.stopPropagation();
@@ -22309,6 +22379,7 @@ function _mbResizeMove(ev){
   mb.style.width=w+'px';mb.style.height=h+'px';mb.style.left=l+'px';mb.style.top=t+'px';
 }
 function _mbResizeStop(){
+  _mbGestureAt=Date.now();
   _mbRsz=null;
   document.removeEventListener('pointermove',_mbResizeMove);
   document.removeEventListener('pointerup',_mbResizeStop);
@@ -28339,7 +28410,9 @@ function showArtFolderPicker(aid){
 
   const ttl=art.title.length>45?art.title.slice(0,45)+'…':art.title;
   const cnt=art.folderIds.length;
-  showModal(`<div class="mt">📁 Manage folders</div>
+  /* ＋ New folder / ticking draws this dialog again: a full-screen box stays full screen while the dialog is open */
+  const _wasFs=document.getElementById('ov')?.classList.contains('on')&&document.getElementById('mb')?.classList.contains('mb-fs-on');
+  showResizableModal(`<div class="mt mb-mt-fs"><span>📁 Manage folders</span>${_mbFsBtnHTML()}</div>
     <div style="font-size:12px;color:var(--t3);margin-bottom:6px">${esc(ttl)}</div>
     <input class="im-search" id="fp-srch" placeholder="Search folders…" oninput="fpFilter('${aid}',this.value)" onmousedown="event.stopPropagation()">
     <div class="pl" id="fp-list">${rows(DB.folders.filter(f=>!f.parentId),0)}</div>
@@ -28354,7 +28427,8 @@ function showArtFolderPicker(aid){
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
       <span style="font-size:12px;color:var(--t3)" id="fp-count">${cnt} folder${cnt!==1?'s':''}</span>
       <button class="btn bp" onclick="closeModal()">Done</button>
-    </div>`);
+    </div>`,{geomKey:'siyagah-mb-attach-geom',width:'460px',height:'min(600px,86vh)',phoneSheet:true});
+  if(_wasFs)_mbFsToggle();
   // Focus search; blur new-folder input to avoid auto-keyboard
   setTimeout(()=>{document.getElementById('fp-srch')?.focus();document.getElementById('npf')?.blur();},80);
 }
