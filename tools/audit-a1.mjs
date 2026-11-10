@@ -121,7 +121,8 @@ try {
       b = await hs('#sync-mb .btn');
       check(b.length >= 2 && (vp.name === '390' ? b.every((x) => x.h >= 44) : b.every((x) => x.h < 44)), `${t} Cloud Sync: ${b.map((x) => x.t + ' ' + x.h).join(', ')}`);
       await d.page.evaluate(() => closeSyncModal()); await sleep(300);
-      await menu(d, 'Storage');
+      /* v05.86 · J150 adds a ✈ row that may say 'Storage not protected'; open the dialog by its own label */
+      await menu(d, 'Storage & Backup');
       b = await hs('#mb .btn');
       check(b.length >= 3 && (vp.name === '390' ? b.every((x) => x.h >= 44) : b.every((x) => x.h < 44)), `${t} Storage & Backup: ${b.map((x) => x.t + ' ' + x.h).join(', ')}`);
       const ov = await d.page.evaluate(() => { const m = document.getElementById('mb'); return m ? m.scrollWidth <= m.clientWidth + 1 : true; });
