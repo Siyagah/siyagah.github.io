@@ -35529,6 +35529,9 @@ function _onPaint(){
   const ci=document.getElementById('on-cid'), ct=document.getElementById('on-common');
   if(ci&&(ci.value.trim()||_on.cidTouched)) _on.cid=ci.value.trim().replace(/[^0-9a-zA-Z-]/g,'');
   if(ct){ _on.common=ct.checked; _on.typed=true; }
+  /* v05.84 · J148 — the cause of 137d/137f's "invalid client ID": a repaint (the async config/job reads, a tick) replaced #on-cid while it had focus, so the keystrokes
+     that came next went nowhere and the field read back empty at Sign in. The field's focus and caret are put back on the new one. */
+  const ae=document.activeElement, keep=(ae&&ae.id==='on-cid'&&ae.type!=='hidden')?{s:ae.selectionStart,e:ae.selectionEnd}:null;
   const v=_on.view;
   let h='<div class="rm-hd"><div class="rem-title">📥 OneNote import</div><button class="rem-btn cancel" onclick="closeOneNoteImport()">✕ Close</button></div>';
   if(v==='signing'){
@@ -35553,6 +35556,7 @@ function _onPaint(){
     h+=_onSetupHTML();
   }
   box.innerHTML=h;
+  if(keep){ const n=document.getElementById('on-cid'); if(n&&n.type!=='hidden'){ try{ n.focus({preventScroll:true}); n.setSelectionRange(keep.s,keep.e); }catch(e){} } }
 }
 function openRemindMail(){
   let m=document.getElementById('remmail-modal');

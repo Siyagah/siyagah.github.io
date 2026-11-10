@@ -103,7 +103,7 @@ const fakeMs = async (ctx, FIX, opt) => {
 
 const dev = async (vp, cfg = {}) => {
   const cloud = makeCloud(); const d = await addDevice(browser, srv.base, cloud, 'D' + vp.name, { width: vp.w, height: vp.h }, vp.touch, seedDB(T0), cfg.dev || {});
-  d.cloud = cloud; d.FIX = makeFix(cfg.pages || 40, cfg.secs || 1); d.ms = await fakeMs(d.ctx, d.FIX, cfg.ms || {});
+  d.cloud = cloud; d.FIX = makeFix(cfg.pages || 40, cfg.secs || 1); d.ms = await fakeMs(d.ctx, d.FIX, { ...(cfg.ms || {}) });
   return d;
 };
 const act = (d, vp, sel, opt) => (vp.touch ? d.page.locator(sel, opt).first().tap() : d.page.locator(sel, opt).first().click());
@@ -223,6 +223,7 @@ try {
       check(r.s === 'signin' && /Sign in again to continue/.test(r.txt || '') && r.rt === '' && r.n >= 30, `${t} a failing refresh shows “Sign in again to continue” (${r.n} pages already in)`, JSON.stringify(r));
       d.ms.opt.failRefresh = false; d.ms.minTok = 1;
       await act(d, vp, '#on-signin');
+      await d.page.waitForFunction(() => _on.imp.run || _on.imp.state === 'done', null, { timeout: 30000 });
       await finish(d);
       const r2 = await on(d, () => ({ s: _on.imp.state, n: DB.articles.filter((a) => a.fromOneNote).length, ids: new Set(DB.articles.filter((a) => a.fromOneNote).map((a) => a.id)).size }));
       check(r2.s === 'done' && r2.n === 120 && r2.ids === 120, `${t} after signing in again it carried on where it stopped: ${r2.n} pages, no duplicate`, JSON.stringify(r2));
@@ -263,9 +264,9 @@ try {
     const g = await on(d, () => {
       const box = document.getElementById('on-box'), b = box.getBoundingClientRect(), gs = [...document.querySelectorAll('#on-why .on-why-g')];
       const over = [...box.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.right > innerWidth + 1 || r.left < -1); }).length;
-      return { n: gs.length, sums: gs.map((x) => x.querySelector('summary').textContent), open: gs.map((x) => x.open), vis: gs.map((x) => { const l = x.querySelector('li'); return l && l.getBoundingClientRect().height; }), bw: b.width, vw: innerWidth, sw: box.scrollWidth, cw: box.clientWidth, over, bottom: b.bottom, vh: innerHeight };
+      return { n: gs.length, sums: gs.map((x) => x.querySelector('summary').textContent), open: gs.map((x) => x.open), vis: gs.map((x) => x.querySelector('li').checkVisibility()), bw: b.width, vw: innerWidth, sw: box.scrollWidth, cw: box.clientWidth, over, bottom: b.bottom, vh: innerHeight };
     });
-    check(g.n === 3 && g.open.every((x) => !x) && g.vis.every((h) => !h) && /^\d+ pages? — /.test(g.sums[0]), `${t} grouped by reason, one folded line each: ${g.sums.join(' · ')}`, JSON.stringify(g));
+    check(g.n === 3 && g.open.every((x) => !x) && g.vis.every((h) => h === false) && /^\d+ pages? — /.test(g.sums[0]), `${t} grouped by reason, one folded line each: ${g.sums.join(' · ')}`, JSON.stringify(g));
     await act(d, vp, '#on-why .on-why-g summary');
     const g2 = await on(d, () => { const x = document.querySelector('#on-why .on-why-g'); const l = x.querySelector('li'); return { open: x.open, h: l.getBoundingClientRect().height, txt: l.textContent }; });
     check(g2.open && g2.h > 0 && /^Page /.test(g2.txt), `${t} tapping a reason shows the titles under it (“${g2.txt}”)`, JSON.stringify(g2));
