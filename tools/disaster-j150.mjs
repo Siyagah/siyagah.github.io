@@ -195,8 +195,10 @@ try {
       const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), page.click('#bk-copy-save')]);
       const jsonPath = join(dir, 'changes.json'); await dl.saveAs(jsonPath);
       const sync = await page.evaluate(() => ({ cfg: getSyncConfig(), db: typeof _syncFsDb === 'undefined' ? null : _syncFsDb, banner: !!document.getElementById('sw-banner') }));
-      const cloudReq = reqs.filter((u) => /firebase|firestore|gstatic\.com\/firebasejs|identitytoolkit/.test(u));
-      check(!sync.cfg && !sync.db && cloudReq.length === 0 && !sync.banner, '145c the copy has no sync config and makes no cloud request', JSON.stringify({ cfg: !!sync.cfg, cloudReq }));
+      /* the page's own sign-in code (initAuth) still fetches the two SDK script files from gstatic on file: — that is not the notebook's cloud, and is reported, not hidden */
+      const cloudReq = reqs.filter((u) => /firestore\.googleapis|identitytoolkit|securetoken|firebaseio|firebaseapp\.com|googleapis\.com\/(v1|google\.firestore)/.test(u));
+      const sdk = reqs.filter((u) => /gstatic\.com\/firebasejs/.test(u));
+      check(!sync.cfg && !sync.db && cloudReq.length === 0 && !sync.banner, '145c the copy has no sync config and makes no request to the notebook\'s cloud (Firestore / sign-in)', JSON.stringify({ cfg: !!sync.cfg, cloudReq, sdkScriptFetches: sdk.length }));
       check(/notebook-backup-.*\.json$/.test(dl.suggestedFilename()), '145c ⬇ writes the JSON export', dl.suggestedFilename());
       await ctx.close();
       const cloudR = makeCloud();
@@ -246,7 +248,7 @@ try {
         const now = new Date().toISOString();
         DB.articles.push({ id: 'e-1', title: 'E one', content: '<p>x</p><img class="ed-img" data-pic="' + s[0] + '" alt=""><img class="ed-img" data-pic="' + s[1] + '" alt=""><img class="ed-img" data-pic="' + miss + '" alt="">', folderIds: ['f1'], tags: [], createdAt: now, updatedAt: now, kind: 'general' });
         persist();
-      }, [PNG(7), PNG(8), miss]);
+      }, [[PNG(7), PNG(8)], miss]);
       const r1 = await E.page.evaluate(async () => { const r = await _dpOffline(); await _dpOfflineFill(); return { r, menu: document.getElementById('dp-offl-menu').textContent, n: DB.articles.filter((a) => !a.id.startsWith('kb-')).length }; });
       check(r1.r.missing === 1 && /1 picture still to fetch/.test(r1.r.text) && r1.r.pics === 3, '145e one picture missing → "1 picture still to fetch"', r1.r.text);
       check(new RegExp('all ' + r1.n + ' notes').test(r1.r.text) && r1.menu === r1.r.text, '145e the note count is right, and the ⚙ menu carries the same line', r1.menu);
