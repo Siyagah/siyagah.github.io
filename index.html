@@ -11854,7 +11854,9 @@ function _showImportConsent(data,fileName,pk){
       In your notebook now: ${cur.a} notes · ${cur.f} folders · ${cur.s} sections · Zab items: ${cur.j}<br>
       ${pk&&pk.length?'Pictures in the file: '+pk.length+'<br>':''}<br>
       <strong>Merge</strong> adds anything from the file you don't already have, and brings in a note the file holds a newer edit of (the older text stays in that note's history) — nothing is removed. A copy of your notebook is kept on this device first.<br>
+      Anything you deleted since this file was made stays deleted.<br>
       <strong>Replace everything</strong> deletes your current notebook and puts the file's content in its place.
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;cursor:pointer"><input type="checkbox" id="imp-back-del" style="margin-top:3px;flex-shrink:0"><span>Also bring back notes I deleted since this backup</span></label>
     </div>
     <div class="ma imp-acts">
       <button class="btn" id="imp-cancel-1" onclick="_cancelImport()">Cancel</button>
@@ -11866,11 +11868,12 @@ function _showImportConsent(data,fileName,pk){
 function _cancelImport(){_pendingImport=null;_pendingImportRecovery=null;closeModal();}
 async function _confirmMergeImport(){
   const data=_pendingImport?.data, pk=_pendingImport?.pk; _pendingImport=null;_pendingImportRecovery=null;
+  const bringBack=!!document.getElementById('imp-back-del')?.checked;   /* v05.87 · J154 */
   closeModal();
   if(!data)return;
   try{ _saveRecoveryCopy(DB); }catch(e){}   /* v05.86 · J150 — a merge can now bring in a newer edit: keep what is here first */
   const pr=await _impPicsStore(pk);
-  _mergeBackup(data,pr);
+  _mergeBackup(data,pr,{bringBack});
 }
 /* v05.86 · J150 — the pk-<sha> blocks of an opened backup file: each is read with _pkRead (the sha256 is checked; a block that fails is ignored) and stored with _picWrite, as _pkTake does */
 async function _impPicsStore(els){
@@ -11918,13 +11921,27 @@ async function _doReplaceImport(){
   if(data){ await _impPicsStore(pk); _replaceWithBackup(data,rec); }
 }
 
-function _mergeBackup(bk,pr){
+/* v05.87 · J154 — what the owner deleted since the backup: ids named by Trash (the entry's record, item.id, and a folder group's subtree FOLDERS — never subtree.articles,
+   those were unfiled and kept alive; mergeDB()'s own reading, v04.65) or by the tombstones. */
+function _impDeadSets(){
+  const trash=new Set(), tomb=new Set();
+  (DB.trash||[]).forEach(t=>{
+    if(!t)return;
+    const id=t.item&&t.item.id!=null?t.item.id:t.id; if(id!=null)trash.add(id);
+    if(t.subtree)(t.subtree.folders||[]).forEach(f=>{ if(f&&f.id!=null)trash.add(f.id); });
+  });
+  (DB.tombstones||[]).forEach(t=>{ if(t&&t.id!=null)tomb.add(t.id); });
+  return {trash,tomb,has:id=>trash.has(id)||tomb.has(id)};
+}
+function _mergeBackup(bk,pr,opts){
   const aIds=new Set(DB.articles.map(a=>a.id));
-  let updated=0;
+  const dead=_impDeadSets(), back=!!(opts&&opts.bringBack);
+  let updated=0, skipN=0, skipF=0, backN=0;
+  const backIds=new Set();
   /* v05.86 · J150 — a note the file holds a NEWER edit of (a backup copy that was worked in) replaces the older text; the older text is kept in the note's history.
      A note open in the editor is left alone. Never an older or equal one. */
   (bk.articles||[]).forEach(b=>{
-    if(!b||!b.id||String(b.id).startsWith('kb-')||!aIds.has(b.id))return;
+    if(!b||!b.id||String(b.id).startsWith('kb-')||!aIds.has(b.id)||dead.trash.has(b.id))return;
     const cur=DB.articles.find(a=>a.id===b.id); if(!cur)return;
     const tb=Date.parse(b.updatedAt||''), tc=Date.parse(cur.updatedAt||'');
     if(isNaN(tb)||(!isNaN(tc)&&tb<=tc))return;
@@ -11938,19 +11955,31 @@ function _mergeBackup(bk,pr){
   const fIds=new Set(DB.folders.map(f=>f.id));
   const sIds=new Set(DB.sections.map(s=>s.id));
   let added=0;
-  (bk.sections||[]).forEach(s=>{if(!sIds.has(s.id)&&!s.id?.startsWith('kb-')){DB.sections.push(s);added++;}});
-  (bk.folders||[]).forEach(f=>{if(!fIds.has(f.id)&&!f.id?.startsWith('kb-')){DB.folders.push(f);added++;}});
-  (bk.articles||[]).forEach(a=>{if(!aIds.has(a.id)&&!a.id?.startsWith('kb-')){DB.articles.push(a);added++;}});
+  (bk.sections||[]).forEach(s=>{if(!sIds.has(s.id)&&!s.id?.startsWith('kb-')){ if(dead.has(s.id)){skipF++;return;} DB.sections.push(s);added++;}});
+  (bk.folders||[]).forEach(f=>{if(!fIds.has(f.id)&&!f.id?.startsWith('kb-')){ if(dead.has(f.id)){skipF++;return;} DB.folders.push(f);added++;}});
+  (bk.articles||[]).forEach(a=>{if(!aIds.has(a.id)&&!a.id?.startsWith('kb-')){
+    if(dead.has(a.id)){
+      if(!back){skipN++;return;}
+      /* ticked: the note leaves Trash the way Restore does it — entry and tombstone removed, stamped now (past the tombstone), only folders that exist */
+      backIds.add(a.id);
+      a=Object.assign({},a,{folderIds:(a.folderIds||[]).filter(fid=>DB.folders.some(f=>f.id===fid)),updatedAt:new Date().toISOString()});
+      backN++;
+    }
+    DB.articles.push(a);added++;}});
+  if(backIds.size){
+    DB.trash=(DB.trash||[]).filter(t=>!(t&&t.type==='article'&&t.item&&backIds.has(t.item.id)));
+    if(DB.tombstones)DB.tombstones=DB.tombstones.filter(t=>!(t&&backIds.has(t.id)));
+  }
   /* v04.98 — Jeb goes through mergeDB's own rules (newest updatedAt wins, a
      deleted item stays deleted), never "local wins". Pockets/items only. */
   if(bk.jebPockets||bk.jeb){
-    const m=mergeDB({jebPockets:DB.jebPockets||[],jeb:DB.jeb||[],tombstones:DB.tombstones||[],trash:[]},
+    const m=mergeDB({jebPockets:DB.jebPockets||[],jeb:DB.jeb||[],tombstones:DB.tombstones||[],trash:DB.trash||[]},
                     {jebPockets:bk.jebPockets||[],jeb:bk.jeb||[]});
     const cnt=(m.jebPockets||[]).length+(m.jeb||[]).length-(DB.jebPockets||[]).length-(DB.jeb||[]).length;
     DB.jebPockets=m.jebPockets; DB.jeb=m.jeb; if(cnt>0) added+=cnt;
   }
   persist(); renderTree(); renderP2C(); renderP3H(); renderP3C();
-  toast(`✓ Merge complete — ${added} items restored${updated?', '+updated+' note'+(updated>1?'s':'')+' updated':''}${pr&&pr.stored?', '+pr.stored+' picture'+(pr.stored>1?'s':''):''}${pr&&pr.bad?' ('+pr.bad+' picture block'+(pr.bad>1?'s':'')+' ignored)':''}. Syncing to cloud…`);
+  toast(`✓ Merge complete — ${added} items restored${updated?', '+updated+' note'+(updated>1?'s':'')+' updated':''}${pr&&pr.stored?', '+pr.stored+' picture'+(pr.stored>1?'s':''):''}${pr&&pr.bad?' ('+pr.bad+' picture block'+(pr.bad>1?'s':'')+' ignored)':''}${skipN||skipF?'. '+skipN+' deleted note'+(skipN===1?'':'s')+(skipF?' (and '+skipF+' folder'+(skipF===1?'':'s')+')':'')+' '+(skipN+skipF===1?'was':'were')+' left deleted':''}${backN?'. '+backN+' deleted note'+(backN>1?'s':'')+' brought back':''}. Syncing to cloud…`);
 }
 
 function _replaceWithBackup(bk,rec){
