@@ -29742,7 +29742,7 @@ setInterval(()=>{ try{ if(_jobOk('op')) _opTick(); }catch(e){} },5000);
 
 /* the rules text for one uid: pub readable by anyone (MMJ-SHARE.md), the known paths only for that uid, everything else refused */
 function _oaRules(uid){
-  if(!/^[A-Za-z0-9_-]{6,128}$/.test(String(uid||''))) return '';
+  if(!/^[A-Za-z0-9_-]{3,128}$/.test(String(uid||''))) return '';
   const who="request.auth != null && request.auth.uid == '"+uid+"'";
   return ["rules_version = '2';","service cloud.firestore {","  match /databases/{database}/documents {",
     "    // visitors' copy: readable by anyone (MMJ-SHARE.md); written only by the owner (below)",

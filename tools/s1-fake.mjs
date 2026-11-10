@@ -159,10 +159,11 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
   const realSiteHit = (r) => { d.errors.push('real-site request: ' + r.request().url()); r.abort(); };
   await ctx.route('**://mappingmyjourney.com/**', realSiteHit);
   await ctx.route('**://*.mappingmyjourney.com/**', realSiteHit);
-  await ctx.addInitScript(([db, c, recsOnly]) => {
-    try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(db)); localStorage.setItem('siyagah-sync-v1', JSON.stringify(c)); } catch {}
+  await ctx.addInitScript(([db, c, recsOnly, noCfg]) => {
+    /* noCfg (v05.85, J144): a fresh browser with no sync config of its own */
+    try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(db)); if (!noCfg) localStorage.setItem('siyagah-sync-v1', JSON.stringify(c)); } catch {}
     if (recsOnly) window.__s1RecsOnly = true;   /* test-only: this device does not read the blob */
-  }, [seed, cfg, !!opts.recsOnly]);
+  }, [seed, cfg, !!opts.recsOnly, !!opts.noCfg]);
   const d = { name, ctx, offline: false, eqsubs: new Map(), listens: new Set(), errors: [], dieAfterRec: null, qsubs: new Map(), qchain: Promise.resolve(), qDelivered: 0, qChangeLog: [], partHook: null, holdQ: !!opts.holdQ, grace: opts.grace || 1500 };
   await ctx.exposeBinding('__fsGet', async (_s, path, src) => {
     if (d.offline && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get document because the client is offline.' } };
