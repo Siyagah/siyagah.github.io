@@ -151,7 +151,7 @@ function makeCloud() {
 }
 async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts = {}) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
-  await ctx.route('**gstatic.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: FAKE_SDK }));
+  await ctx.route('**gstatic.com/**', (r) => (d.sdkBlock ? r.abort() : r.fulfill({ status: 200, contentType: 'text/javascript', body: FAKE_SDK })));   /* v05.86 (J150): d.sdkBlock holds the SDK back */
   for (const p of ['**googleapis.com/**', '**firebaseapp.com/**', '**firebaseio.com/**']) await ctx.route(p, (r) => r.abort());
   const cfg = { firebaseConfig: { apiKey: 'fake', projectId: 'fake', authDomain: 'fake', appId: 'fake' }, notebookId: 'nb-s1' };
   /* v05.79 · J130 — a request to the real mappingmyjourney.com is a counted error (in d.errors), never a silent block. Registered first, so a check that serves
@@ -164,7 +164,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
     try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(db)); if (!noCfg) localStorage.setItem('siyagah-sync-v1', JSON.stringify(c)); } catch {}
     if (recsOnly) window.__s1RecsOnly = true;   /* test-only: this device does not read the blob */
   }, [seed, cfg, !!opts.recsOnly, !!opts.noCfg]);
-  const d = { name, ctx, offline: false, eqsubs: new Map(), listens: new Set(), errors: [], dieAfterRec: null, qsubs: new Map(), qchain: Promise.resolve(), qDelivered: 0, qChangeLog: [], partHook: null, holdQ: !!opts.holdQ, grace: opts.grace || 1500 };
+  const d = { name, ctx, offline: false, eqsubs: new Map(), listens: new Set(), errors: [], dieAfterRec: null, qsubs: new Map(), qchain: Promise.resolve(), qDelivered: 0, qChangeLog: [], partHook: null, holdQ: !!opts.holdQ, sdkBlock: !!opts.blockSdk, grace: opts.grace || 1500 };
   await ctx.exposeBinding('__fsGet', async (_s, path, src) => {
     if (d.offline && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get document because the client is offline.' } };
     if (cloud.refusedRead(path)) return { error: { code: 'permission-denied', message: 'Missing or insufficient permissions.' } };

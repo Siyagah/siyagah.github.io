@@ -12950,6 +12950,18 @@ await r.block('138-mmj-slices', async () => {
   for (const row of rows) r.check(row.ok, '138: ' + row.label, row.detail);
   r.check(out.status === 0, 'the mmj-slices.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 145 — v05.86, J150: Disaster Preparedness (watchdog, Import Backup of every copy, the backup-copy bar, last backup, ✈ offline line, OneNote all-in). tools/disaster-j150.mjs runs 145a–145g. */
+await r.block('145-disaster-j150', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./disaster-j150.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1800000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the disaster-j150.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '145: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the disaster-j150.mjs check exits cleanly', `exit ${out.status}`);
+});
 /* 144 — v05.85, J144: open on a new PC with only Google sign-in (the rule first, the built-in setup code second, off). tools/signin-j144.mjs runs 144a–144g. */
 await r.block('144-signin-j144', async () => {
   const { spawnSync } = await import('node:child_process');

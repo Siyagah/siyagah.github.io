@@ -11802,7 +11802,7 @@ function importBackup(){
       const doc=parser.parseFromString(text,'text/html');
       const dataEl=doc.getElementById('siyagah-backup-data');
       if(!dataEl){
-        /* v05.86 · J150 — a 📦 Save File copy or a 🗄 Automatic Backups file: the notes are in <script id="nd"> exactly as boot reads them (JSON.parse of its text),
+        /* v05.86 · J150 — a 📦 Save File copy or a 🗄 Automatic Backups file: the notes are in the nd data tag exactly as boot reads them (JSON.parse of its text),
            the pictures in pk-<sha> blocks. They go through the same consent (Merge / Replace) as every other import; nothing is stored until the owner chooses. */
         const nd=doc.getElementById('nd');
         if(nd){
