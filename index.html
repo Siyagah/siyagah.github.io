@@ -2163,6 +2163,12 @@ sup.ann-sup:hover{text-decoration:underline}
 .enx-dry{padding:9px 12px;border:1px solid var(--border2);border-radius:8px;background:var(--white);color:var(--t1);line-height:1.45;font-weight:600}
 /* v05.20 · S4b — the import: progress, the notes' own markers */
 .enx-sub{font-size:12px;line-height:1.45;color:var(--t2)}
+.on-why{display:flex;flex-direction:column;gap:6px;min-width:0}
+.on-why-g{font-size:12px;line-height:1.45;color:var(--t1);min-width:0}
+.on-why-g summary{cursor:pointer;overflow-wrap:anywhere;min-height:32px;display:flex;align-items:center}
+.on-why-g ul{margin:4px 0 0;padding-left:20px;max-height:30vh;overflow:auto}
+.on-why-g li{overflow-wrap:anywhere}
+#on-iprog,#on-prog{overflow-wrap:anywhere}
 .enx-bar{height:8px;border-radius:4px;background:var(--hover);overflow:hidden}
 .enx-bar>i{display:block;height:100%;width:0;background:var(--green);transition:width .2s}
 .rm-big:disabled{background:var(--hover);color:var(--t2);cursor:not-allowed}
@@ -35015,13 +35021,17 @@ function _kpPaint(){
    · SIGN-IN: OAuth 2.0 authorization code + PKCE written by hand (no MSAL, no script from another origin). The owner registers ONE app in Microsoft's portal and
      pastes its Application (client) ID (not a secret). A popup is opened INSIDE the click; it lands back on this origin with ?code=&state=siyon.…; the page decides
      that in <script id="on-popup"> before anything runs and _boot hands the code back (BroadcastChannel + opener.postMessage) and starts NOTHING (_onPopupBoot).
-   · THE TOKEN lives only in memory (_on.tok): never DB, DB.theme, localStorage, IndexedDB, a backup or a Save File copy; no refresh token (no offline_access).
-     It expires in about an hour: the import then pauses ("Sign in again to continue") and carries on where it stopped (done pages are skipped by id).
+   · THE TOKEN lives only in memory (_on.tok), and since v05.84 (J148) so does the REFRESH TOKEN (_on.rt, scope offline_access): neither is ever in DB, DB.theme,
+     localStorage, IndexedDB, a backup or a Save File copy, and both are gone when the page closes. _onRenew swaps the refresh token for a new access token a few
+     minutes before expiry and once on a 401; only when renewal fails does the import pause ("Sign in again to continue") and carry on where it stopped (done pages are skipped by id).
+   · THROTTLING (v05.84): 429/503 set ONE shared hold (_on.holdUntil: Retry-After, else 5/10/20/60 s); every request waits for it (_onHold), with no limit on the tries;
+     while throttled and for 5 minutes after the last 429 ONE request is in flight (_onLimit). A page not read keeps {title,why} in imp.failed. OneNote saves every _ON_BATCH (25).
    · THE CLIENT ID is kept in the device database siyagah-onenote-v1 (store kv; a NEW database; a read never creates it).
    · Graph calls: only to https://graph.microsoft.com/, never more than 4 in flight (_onSlot); 429/503 wait Retry-After and retry the same request.
    · A page: id _enxId('on-n-',page id); createdAt = createdDateTime, updatedAt = lastModifiedDateTime; fromOneNote:{id,nb,sec,created,edited,level,at}.
      A page whose content cannot be read is NOT imported (counted; the next run tries it again). A picture/file that cannot be fetched is a plain line in the page. ── */
-const _on={view:'setup',busy:false,stop:false,run:0,tok:null,exp:0,state:'',ver:'',popup:null,cid:'',common:false,loaded:false,res:null,cur:'',n:0,total:0,slow:0,job:null,after:'',msg:'',err:'',
+const _ON_BATCH=25, _ON_SCOPE='Notes.Read offline_access', _ON_WAITS=[5,10,20,60], _ON_THR_MS=300000, _ON_MAXPAGE=30000000;
+const _on={view:'setup',busy:false,stop:false,run:0,tok:null,rt:'',rtNext:0,exp:0,life:0,holdUntil:0,last429:0,cidTouched:false,state:'',ver:'',popup:null,cid:'',common:false,loaded:false,res:null,cur:'',n:0,total:0,slow:0,job:null,after:'',msg:'',err:'',
   imp:{state:'idle',run:false,runId:0,took:0,goal:0,total:0,doneAll:0,already:0,earlier:0,broken:0,newFolders:0,pause:false,capHit:false,pics:0,fls:0,left:[],failed:[],note:''}};
 const _ON_G='https://graph.microsoft.com/v1.0/me/onenote';
 const _onRedir=()=>location.origin+'/';
@@ -35069,7 +35079,7 @@ function _onIdb(op,key,val){
 }
 async function _onLoadCfg(){
   if(_on.loaded) return;
-  try{ const c=await _onIdb('get','cfg'); if(c&&typeof c==='object'){ if(typeof c.cid==='string'&&!_on.cid) _on.cid=c.cid; if(!_on.typed) _on.common=c.common===true; } }catch(e){}
+  try{ const c=await _onIdb('get','cfg'); if(c&&typeof c==='object'){ if(typeof c.cid==='string'&&!_on.cid&&!_on.cidTouched) _on.cid=c.cid; if(!_on.typed) _on.common=c.common===true; } }catch(e){}
   _on.loaded=true;
 }
 const _onSaveCfg=()=>_onIdb('put','cfg',{cid:_on.cid,common:_on.common}).catch(()=>{});
@@ -35084,7 +35094,7 @@ function _onWire(){
 }
 async function _onSignIn(){
   const inp=document.getElementById('on-cid'), tick=document.getElementById('on-common');
-  if(inp) _on.cid=inp.value.trim().replace(/[^0-9a-zA-Z-]/g,''); if(tick) _on.common=tick.checked;
+  if(inp&&(inp.type!=='hidden'||!_on.cid)) _on.cid=inp.value.trim().replace(/[^0-9a-zA-Z-]/g,''); if(tick) _on.common=tick.checked;
   if(!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(_on.cid)){ _on.err='That does not look like an Application (client) ID: it is 36 characters with dashes, like 11111111-2222-3333-4444-555555555555.'; _onPaint(); return; }
   _on.err='';
   /* the popup is opened INSIDE the tap/click (before any await), then sent to Microsoft */
@@ -35093,7 +35103,7 @@ async function _onSignIn(){
   _onWire(); _onSaveCfg();
   _on.popup=pop; _on.ver=_onRand(48); _on.state='siyon.'+_onRand(18);
   const ch=_onB64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(_on.ver)));
-  const q=new URLSearchParams({client_id:_on.cid,response_type:'code',redirect_uri:_onRedir(),response_mode:'query',scope:'Notes.Read',code_challenge:ch,code_challenge_method:'S256',state:_on.state,prompt:'select_account'});
+  const q=new URLSearchParams({client_id:_on.cid,response_type:'code',redirect_uri:_onRedir(),response_mode:'query',scope:_ON_SCOPE,code_challenge:ch,code_challenge_method:'S256',state:_on.state,prompt:'select_account'});
   _on.view='signing'; _onPaint();
   try{ pop.location.href=_onAuth()+'/oauth2/v2.0/authorize?'+q.toString(); }catch(e){ _on.err='The sign-in window could not be opened.'; _on.view='setup'; _onPaint(); return; }
   const my=_on.state, t0=Date.now();
@@ -35107,12 +35117,12 @@ async function _onGotCode(m){
   _on.state=''; try{ if(_on.popup) _on.popup.close(); }catch(e){} _on.popup=null;
   if(!m.code){ _on.err='Microsoft did not sign you in'+(m.error?': '+m.error:'')+'.'; _on.view='setup'; _onPaint(); return; }
   try{
-    const body=new URLSearchParams({client_id:_on.cid,scope:'Notes.Read',code:m.code,redirect_uri:_onRedir(),grant_type:'authorization_code',code_verifier:_on.ver});
+    const body=new URLSearchParams({client_id:_on.cid,scope:_ON_SCOPE,code:m.code,redirect_uri:_onRedir(),grant_type:'authorization_code',code_verifier:_on.ver});
     const r=await fetch(_onAuth()+'/oauth2/v2.0/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
     const j=await r.json().catch(()=>({}));
     if(!r.ok||!j.access_token) throw new Error(j.error_description||j.error||('HTTP '+r.status));
-    _on.tok=j.access_token; _on.exp=Date.now()+Math.max(60,(+j.expires_in||3600)-120)*1000;
-  }catch(e){ _on.tok=null; _on.err='The sign-in did not complete: '+String(e&&e.message||e).split('\n')[0]; _on.ver=''; _on.view='setup'; _onPaint(); return; }
+    _onTake(j);
+  }catch(e){ _on.tok=null; _on.rt=''; _on.err='The sign-in did not complete: '+String(e&&e.message||e).split('\n')[0]; _on.ver=''; _on.view='setup'; _onPaint(); return; }
   _on.ver=''; _on.err='';
   const a=_on.after; _on.after='';
   if(a==='import'&&_on.res){ _on.view='import'; _onImport(); }
@@ -35121,27 +35131,81 @@ async function _onGotCode(m){
 }
 /* ── Graph ── */
 let _onFly=0; const _onQ=[];
+/* v05.84 · J148 — ONE request in flight while Microsoft is throttling (a 429/503 within the last 5 minutes), else 4 */
+const _onLimit=()=>(Date.now()-_on.last429<(window.__onThrMs||_ON_THR_MS))?1:4;
 function _onSlot(fn){
   return new Promise((res,rej)=>{
-    const go=()=>{ _onFly++; Promise.resolve().then(fn).then(res,rej).finally(()=>{ _onFly--; const n=_onQ.shift(); if(n) n(); }); };
-    if(_onFly<4) go(); else _onQ.push(go);
+    const go=()=>{ _onFly++; Promise.resolve().then(fn).then(res,rej).finally(()=>{ _onFly--; while(_onQ.length&&_onFly<_onLimit()) _onQ.shift()(); }); };
+    if(_onFly<_onLimit()) go(); else _onQ.push(go);
   });
 }
-window.__onMaxFly=0;
+window.__onMaxFly=0; window.__onThrFly=0;
 const _onExpired=()=>Object.assign(new Error('Sign in again to continue'),{expired:true});
-async function _onWait(s){
-  for(let i=s;i>0;i--){ _on.slow=i; _onTickText(); await new Promise(r=>setTimeout(r,1000)); }
-  _on.slow=0; _onTickText();
+const _onHalt=()=>Object.assign(new Error('stopped'),{halt:true});
+/* Stop while reading, Pause while importing: a wait ends at once */
+const _onAbort=()=>(_on.busy&&_on.stop)||(_on.imp.run&&_on.imp.pause);
+/* what the status line adds to a slow-down: which page it is waiting on */
+function _onPageNote(){
+  const I=_on.imp;
+  if(I.run&&I.total) return ' (page '+_enxN(Math.min(I.total,I.doneAll+I.broken+1))+' of '+_enxN(I.total)+')';
+  if(_on.view==='reading'&&_on.n) return ' ('+_enxN(_on.n)+' pages so far)';
+  return '';
 }
+async function _onHold(){
+  while(_on.holdUntil>Date.now()){
+    if(_onAbort()) throw _onHalt();
+    _on.slow=Math.max(1,Math.ceil((_on.holdUntil-Date.now())/1000)); _onTickText();
+    await new Promise(r=>setTimeout(r,Math.min(250,Math.max(20,_on.holdUntil-Date.now()))));
+  }
+  if(_on.slow){ _on.slow=0; _onTickText(); }
+}
+/* a 429/503: one shared hold (Retry-After, else 5 → 10 → 20 → 60 s growing while no request has got through) */
+function _onThrottle(r){
+  const now=Date.now(), fresh=now>=_on.holdUntil, ra=parseInt(r.headers.get('Retry-After'),10);
+  let s;
+  if(ra>0) s=Math.min(900,ra);
+  else{ const W=window.__onWaits||_ON_WAITS; s=W[Math.min(_on.bstep|0,W.length-1)]; if(fresh) _on.bstep=(_on.bstep|0)+1; }
+  _on.last429=now; _on.holdUntil=Math.max(_on.holdUntil,now+s*1000);
+}
+function _onTake(j){
+  const life=Math.max(60,(+j.expires_in||3600)-120)*1000;
+  _on.tok=j.access_token; _on.life=life; _on.exp=Date.now()+life;
+  if(j.refresh_token) _on.rt=String(j.refresh_token);   /* memory only, like the token */
+}
+/* swap the refresh token for a new access token. A refusal (the grant is no good) clears it; a network failure keeps it and tries again in 30 s */
+let _onRenewP=null;
+function _onRenew(){
+  if(_onRenewP) return _onRenewP;
+  _onRenewP=(async()=>{
+    if(!_on.rt||!_on.cid) return false;
+    try{
+      const body=new URLSearchParams({client_id:_on.cid,scope:_ON_SCOPE,refresh_token:_on.rt,grant_type:'refresh_token'});
+      const r=await fetch(_onAuth()+'/oauth2/v2.0/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.access_token){ _on.rt=''; return false; }
+      _onTake(j); _on.rtNext=0; return true;
+    }catch(e){ _on.rtNext=Date.now()+30000; return false; }
+  })().finally(()=>{ _onRenewP=null; });
+  return _onRenewP;
+}
+const _onSoon=()=>!!_on.rt&&Date.now()>=_on.rtNext&&Date.now()>_on.exp-Math.min(180000,(_on.life||0)/2);
 async function _onFetch(url,kind){
   if(!_onUrlOk(url)) throw new Error('not a Microsoft Graph address');
-  for(let tr=0;;tr++){
+  let again401=false;
+  for(;;){
+    await _onHold();
+    if(_onSoon()) await _onRenew();
     if(!_onValid()) throw _onExpired();
     const tok=_on.tok;
-    const r=await _onSlot(()=>{ window.__onMaxFly=Math.max(window.__onMaxFly,_onFly); return fetch(url,{headers:{Authorization:'Bearer '+tok}}); });
-    if(r.status===401){ _on.tok=null; throw _onExpired(); }
-    if((r.status===429||r.status===503)&&tr<8){ await _onWait(Math.min(120,Math.max(1,parseInt(r.headers.get('Retry-After'),10)||5))); continue; }
+    const r=await _onSlot(()=>{ window.__onMaxFly=Math.max(window.__onMaxFly,_onFly); if(_onLimit()===1) window.__onThrFly=Math.max(window.__onThrFly,_onFly); return fetch(url,{headers:{Authorization:'Bearer '+tok}}); })
+      .catch(e=>{ throw Object.assign(new Error('network'),{why:'network'}); });
+    if(r.status===401){
+      if(!again401&&_on.rt){ again401=true; if(tok!==_on.tok||await _onRenew()) continue; }
+      _on.tok=null; throw _onExpired();
+    }
+    if(r.status===429||r.status===503){ _onThrottle(r); continue; }
     if(!r.ok) throw Object.assign(new Error('HTTP '+r.status),{status:r.status});
+    _on.bstep=0;
     return kind==='blob'?await r.blob():kind==='text'?await r.text():await r.json();
   }
 }
@@ -35181,6 +35245,7 @@ function _onSecList(node,chain,out){
 }
 async function _onLook(){
   const my=++_on.run;
+  if(!_onValid()&&_on.rt) await _onRenew();
   if(!_onValid()){ _on.after='look'; _on.view='setup'; _onPaint(); return; }
   Object.assign(_on,{view:'reading',stop:false,busy:true,res:null,n:0,cur:'',err:''}); _onPaint();
   let stopped=false;
@@ -35191,7 +35256,7 @@ async function _onLook(){
       if(_on.stop||my!==_on.run){ stopped=true; break; }
       const node={id:nb.id,name:nb.displayName||'Untitled notebook',secs:[],groups:[]};
       try{ await _onWalk(node,_ON_G+'/notebooks/'+encodeURIComponent(nb.id),my); }
-      catch(x){ if(x&&x.expired) throw x; R.failed.push(node.name); }
+      catch(x){ if(x&&(x.expired||x.halt)) throw x; R.failed.push(node.name); }
       const secList=_onSecList(node,[{id:nb.id,name:node.name,kind:'notebook'}],[]);
       let pages=0, already=0; secList.forEach(s=>s.sec.pages.forEach(p=>{ pages++; if(have.has(_onPid(p))) already++; }));
       R.nbs.push({node,secList,sections:secList.length,pages,already,tick:true});
@@ -35199,7 +35264,8 @@ async function _onLook(){
     }
     if(!stopped&&my===_on.run){ _on.res=R; _on.view='done'; }
   }catch(x){
-    if(x&&x.expired){ _on.view='setup'; _on.err='Sign in again to continue.'; }
+    if(x&&x.halt){ stopped=true; }
+    else if(x&&x.expired){ _on.view='setup'; _on.err='Sign in again to continue.'; }
     else{ console.error('OneNote import: the look failed',x); _on.view='setup'; _on.err='Could not read your notebooks from Microsoft: '+String(x&&x.message||x).split('\n')[0]; }
   }
   if(my!==_on.run) return;
@@ -35245,7 +35311,7 @@ async function _onConvert(html,I){
         html2='<p>'+_enxMediaHTML({k:_enxKind(mime)==='audio'?'audio':'file',sha,n:blob.size},esc(mime),esc(name))+'</p>'; I.fls++;
       }
     }catch(x){
-      if(x&&x.expired) throw x;
+      if(x&&(x.expired||x.halt)) throw x;
       console.warn('OneNote import: a resource was left out',name,x&&x.message);
       I.left.push(name); html2='<p class="on-left">⚠ Left out (could not be fetched from OneNote): '+esc(name)+'</p>';
     }
@@ -35254,11 +35320,27 @@ async function _onConvert(html,I){
   if(res.length) h=h.split(nonce).map((s,i)=>{ if(!i) return s; const m=/^(\d+)\u0002/.exec(s); return m?out[+m[1]]+s.slice(m[0].length):s; }).join('');
   return h.trim();
 }
+/* the reason a page was not read, in words for the screen */
+function _onWhy(x){
+  if(x&&x.why) return x.why;
+  const s=x&&x.status;
+  if(s===429||s===503) return 'Microsoft asked to slow down';
+  if(s===403||s===401) return 'Microsoft refused this page (HTTP '+s+')';
+  if(s===404) return 'Microsoft says the page is no longer there (HTTP 404)';
+  if(s) return 'Microsoft could not give this page (HTTP '+s+')';
+  return 'the page could not be turned into a note';
+}
 async function _onBuild(p,secName,nbName,I){
-  let html;
-  try{ html=await _onFetch(_ON_G+'/pages/'+encodeURIComponent(p.id)+'/content','text'); }
-  catch(x){ if(x&&x.expired) throw x; I.broken++; I.failed.push(p.title||p.id); return null; }
-  const content=await _onConvert(html,I);
+  let html, content;
+  try{
+    html=await _onFetch(_ON_G+'/pages/'+encodeURIComponent(p.id)+'/content','text');
+    if(html.length>_ON_MAXPAGE) throw Object.assign(new Error('big'),{why:'page too large'});
+    content=await _onConvert(html,I);
+  }catch(x){
+    if(x&&x.expired) throw x;
+    if(x&&x.halt) return null;   /* Pause/Stop during a wait: not a failure, the next run does it */
+    I.broken++; I.failed.push({title:p.title||p.id,why:_onWhy(x)}); return null;
+  }
   const ct=Date.parse(p.created), cr=new Date(isNaN(ct)?_enxNowMs():ct).toISOString(), ut=Date.parse(p.edited), up=isNaN(ut)?cr:new Date(ut).toISOString();
   return {id:_onPid(p),title:String(p.title||'').trim()||'OneNote page',content,folderIds:[],tags:[],createdAt:cr,updatedAt:up,
     fromOneNote:{id:p.id,nb:nbName,sec:secName,created:cr,edited:up,level:p.level|0,at:''}};
@@ -35277,6 +35359,8 @@ const _onIso=ms=>new Date(ms).toISOString();
 const _onFresh=R=>R.nbs.filter(n=>n.tick).reduce((s,n)=>s+n.pages-n.already,0);
 async function _onImport(){
   const I=_on.imp, R=_on.res; if(I.run||!R) return;
+  if(!_onValid()&&_on.rt) await _onRenew();
+  if(I.run) return;
   if(!_onValid()){ I.state='signin'; _on.view='import'; _onPaint(); return; }
   const now0=_enxNowMs(), w0=_onWindow(now0);
   if(!_s2RefsOk()){ I.state='idle'; I.note='Pictures cannot be stored on this device right now (the picture store is not ready). Try again in a moment; nothing was changed.'; _on.view='done'; _onPaint(); return; }
@@ -35319,12 +35403,12 @@ async function _onImport(){
           if(chunk.length>room){ chunk.length=Math.max(0,room); I.capHit=true; }
           const built=await Promise.all(chunk.map(p=>_onBuild(p,S.sec.name,nbE.node.name,I)));
           built.forEach(rec=>{ if(rec){ pend.push({rec,chain:S.chain}); have.add(rec.id); } });
-          while(pend.length>=_ENX_BATCH) await flush(pend.splice(0,_ENX_BATCH));
+          while(pend.length>=_ON_BATCH) await flush(pend.splice(0,_ON_BATCH));
           if(I.capHit) break outer;
         }
       }
     }
-    if(!I.pause) await flush(pend.splice(0),true);
+    await flush(pend.splice(0),true);   /* a pause keeps what is built, too */
     finished=!I.pause&&!I.capHit&&my===I.runId;
   }catch(x){
     if(x&&x.expired){ expired=true; try{ await flush(pend.splice(0),true); }catch(e){} }
@@ -35341,7 +35425,7 @@ async function _onImport(){
 }
 function _onProgText(){
   const I=_on.imp;
-  if(_on.slow>0) return 'Microsoft asked us to slow down — waiting '+_on.slow+' s';
+  if(_on.slow>0) return 'Microsoft asked Siyagah to slow down — waiting '+_on.slow+' s'+_onPageNote();
   return I.pause?'Pausing after this batch…':'Bringing in… '+_enxN(I.took)+' of '+_enxN(I.goal)+' this time'+(I.total?' · '+_enxN(I.total)+' in all':'');
 }
 function _onTickText(){
@@ -35360,6 +35444,7 @@ async function _onContinue(){
   const w=_onWindow(_enxNowMs());
   if(w.room<=0){ I.note='Not yet — the free cloud plan allows about '+_enxN(w.cap)+' notes a day. Continue after '+_enxWhen(w.next,_enxNowMs())+'.'; _onPaint(); return; }
   I.note='';
+  if(!_onValid()&&_on.rt) await _onRenew();
   if(_on.res&&_onValid()) return _onImport();
   _on.after=_on.res?'import':'look'; _onSignInAgain();
 }
@@ -35382,7 +35467,7 @@ function _onSetupHTML(){
   if(j&&j.total&&!_on.imp.run) h+='<div class="enx-prog" id="on-unfinished" role="status">📥 A OneNote import is unfinished. Sign in and look again, then tap “Bring them in”: pages already brought in are skipped, so it is safe.</div>';
   if(_on.err) h+='<div class="enx-dry" id="on-err" role="alert">'+esc(_on.err)+'</div>';
   h+='<p class="rm-p">Reads your OneNote notebooks <b>straight from Microsoft</b> and shows what it found first; nothing is added until you tap “Bring them in”. Each page keeps its OneNote dates. Meant for a laptop, but it works on a tablet or phone too (the sign-in opens in a new window or tab).</p>'
-    +'<label class="rm-row">Application (client) ID <input type="text" id="on-cid" class="rem-inp" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="11111111-2222-3333-4444-555555555555" value="'+esc(_on.cid)+'"></label>'
+    +'<label class="rm-row">Application (client) ID <input type="text" id="on-cid" class="rem-inp" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="_onCidIn(this)" placeholder="11111111-2222-3333-4444-555555555555" value="'+esc(_on.cid)+'"></label>'
     +'<label class="rm-sw"><input type="checkbox" id="on-common"'+(_on.common?' checked':'')+'> A work or school account (not a personal Microsoft account)</label>'
     +(signed?'<div class="enx-prog" id="on-signed" role="status">✅ Signed in to Microsoft (this stays only in memory; closing or reloading the page signs you out).</div><button class="rm-big" id="on-look" onclick="_onLook()">🔍 Look at my notebooks</button>':'')
     +'<button class="rm-big'+(signed?' alt':'')+'" id="on-signin" onclick="_onSignIn()">'+(signed?'Sign in again':'Sign in with Microsoft')+'</button>'
@@ -35399,11 +35484,23 @@ function _onNbRows(){
   return _on.res.nbs.map((n,i)=>'<label class="rm-sw on-nb"><input type="checkbox" class="on-nb-tick" data-i="'+i+'"'+(n.tick?' checked':'')+' onchange="_onTickNb('+i+',this.checked)"> <b>'+esc(n.node.name)+'</b> — '
     +_enxN(n.sections)+' sections · '+_enxN(n.pages)+' pages · '+_enxN(n.already)+' already in Siyagah</label>').join('');
 }
+/* pages not read, grouped by reason: a count line per reason with the titles folded under it */
+function _onFailHTML(I){
+  if(!I.failed.length) return '';
+  const g=new Map(); I.failed.forEach(f=>{ const w=(f&&f.why)||'the page could not be read', t=(f&&f.title!=null)?f.title:String(f); if(!g.has(w)) g.set(w,[]); g.get(w).push(t); });
+  let h='<div class="on-why" id="on-why">';
+  g.forEach((ts,w)=>{
+    h+='<details class="on-why-g"><summary>'+_enxN(ts.length)+(ts.length===1?' page — ':' pages — ')+esc(w)+'</summary><ul>'
+      +ts.slice(0,200).map(t=>'<li>'+esc(t)+'</li>').join('')+(ts.length>200?'<li>… and '+_enxN(ts.length-200)+' more</li>':'')+'</ul></details>';
+  });
+  return h+'</div>';
+}
+function _onCidIn(el){ _on.cid=el.value.trim().replace(/[^0-9a-zA-Z-]/g,''); _on.cidTouched=true; }
 function _onImpHTML(){
   const I=_on.imp, now=_enxNowMs(), w=_onWindow(now), N=_enxN, togo=I.total?Math.max(0,I.total-I.doneAll):0;
   const sum='<div class="enx-sub" id="on-isum">Left as they were: '+N(I.earlier)+' already in Siyagah · '+N(I.broken)+' pages could not be read (the next run tries them again). In: '+N(I.pics)+' pictures · '+N(I.fls)+' files (kept on this computer; pictures reach your other devices later).'
     +(I.left.length?' Left out, could not be fetched: '+esc(I.left.slice(0,20).join(', '))+(I.left.length>20?' … and '+(I.left.length-20)+' more':'')+'.':'')
-    +(I.failed.length?' Pages not read: '+esc(I.failed.slice(0,20).join(', '))+(I.failed.length>20?' … and '+(I.failed.length-20)+' more':'')+'.':'')+'</div>';
+    +'</div>'+_onFailHTML(I);
   let h='';
   if(I.state==='running'){
     h+='<div class="enx-prog" id="on-iprog" role="status">'+esc(_onProgText())+'</div>'
@@ -35430,7 +35527,7 @@ function _onPaint(){
   const box=document.getElementById('on-box'); if(!box) return;
   /* a repaint from an async read must never wipe what is being typed: take the field's value first */
   const ci=document.getElementById('on-cid'), ct=document.getElementById('on-common');
-  if(ci&&ci.value.trim()) _on.cid=ci.value.trim().replace(/[^0-9a-zA-Z-]/g,'');
+  if(ci&&(ci.value.trim()||_on.cidTouched)) _on.cid=ci.value.trim().replace(/[^0-9a-zA-Z-]/g,'');
   if(ct){ _on.common=ct.checked; _on.typed=true; }
   const v=_on.view;
   let h='<div class="rm-hd"><div class="rem-title">📥 OneNote import</div><button class="rem-btn cancel" onclick="closeOneNoteImport()">✕ Close</button></div>';
