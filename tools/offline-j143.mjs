@@ -8,7 +8,7 @@
 
    142a  busy 18 s, the SDK answers: the dot never says Offline, sync reaches Live/conn, no "timed out" warning                       (390, 820, 1440)
    142b  busy 18 s, the SDK URL hangs: ends Offline within 15 s + 5 s grace + the busy time, "the cloud is not answering"; setOffline -> "no connection"
-   142b2 3 s bursts for 90 s, the SDK refused for the first 5 s then working: the dot is never left Offline longer than one retry; ends Live/conn
+   142b2 page blocked 16 s from the script's insertion (SDK answers 0.3 s later), then 6 s busy bursts (50 ms gaps) for 60 s: the dot never says Offline; ends Live/conn
    142c  the label carries "last try" and fits its row in the ⚙ menu at 390 (no page scroll, text not cut)
    142d  unit: _loadScript, a script whose onload is queued behind a late timer, resolves (never rejects); a hanging one still rejects
    142e  no page errors
@@ -22,6 +22,7 @@ import { join, extname } from 'node:path';
 const argv = process.argv.slice(2);
 const SRC = (argv.find((a) => a.startsWith('--root=')) || '').slice(7) || process.env.J143_ROOT || ROOT;
 const VPS = [{ name: '390', w: 390, h: 844, touch: true }, { name: '820', w: 820, h: 1180, touch: true }, { name: '1440', w: 1440, h: 900, touch: false }];
+const LATE_MS = Number((argv.find((a) => a.startsWith('--late=')) || '').slice(7)) || 300;
 const pw = await playwright();
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 const srv = await new Promise((ok) => {
@@ -42,9 +43,10 @@ async function device(vp, { sdk = 'ok', busyMs = 0, burst = false }) {
   const cloud = makeCloud();
   const d = await addDevice(browser, srv.base, cloud, 'A', { width: vp.w, height: vp.h }, vp.touch, seed());
   d.sdk = sdk; d.t0 = Date.now(); d.warn = [];
-  await d.ctx.route('**gstatic.com/**', (r) => {
+  await d.ctx.route('**gstatic.com/**', async (r) => {
     if (d.sdk === 'hang') return;
     if (d.sdk === 'abort' || (d.sdk === 'abort5' && Date.now() - d.t0 < 5000)) return r.abort();
+    if (d.sdk === 'late14' && !d.lateDone) { d.lateDone = true; await sleep(LATE_MS); }   /* the FIRST answer comes LATE_MS after the request (--late=ms for a try by hand) */
     return r.fulfill({ status: 200, contentType: 'text/javascript', body: FAKE_SDK });
   });
   await d.ctx.addInitScript((ms) => {
@@ -53,6 +55,8 @@ async function device(vp, { sdk = 'ok', busyMs = 0, burst = false }) {
       const log = () => window.__dotLog.push([Math.round(performance.now()), el.className, el.textContent, el.title]); log();
       new MutationObserver(log).observe(el, { attributes: true, childList: true, characterData: true, subtree: true }); };
     document.addEventListener('DOMContentLoaded', watch);
+    window.__appendAt = [];   /* when each gstatic <script> is added (page time), for the 142b2 timeline */
+    new MutationObserver((muts) => { for (const m of muts) for (const n of m.addedNodes) if (n.tagName === 'SCRIPT' && /gstatic/.test(n.src || '')) window.__appendAt.push(Math.round(performance.now())); }).observe(document, { childList: true, subtree: true });
     if (ms) { let done = false;   /* the first gstatic <script> the app adds: spin right after, in the observer's microtask */
       new MutationObserver((muts) => { if (done) return; for (const m of muts) for (const n of m.addedNodes) if (n.tagName === 'SCRIPT' && /gstatic/.test(n.src || '')) { done = true; window.__busyAt = performance.now(); const e = performance.now() + ms; while (performance.now() < e); return; } })
         .observe(document, { childList: true, subtree: true }); }
@@ -60,6 +64,7 @@ async function device(vp, { sdk = 'ok', busyMs = 0, burst = false }) {
   d.page.on('console', (m) => { if (/not loaded|timed out/i.test(m.text())) d.warn.push(m.text()); });
   d.errors.length = 0;
   d.t0 = Date.now();
+  if (sdk === 'late14') { d.sdk = 'ok'; await sleep(1500); d.lateDone = false; d.sdk = 'late14'; d.t0 = Date.now(); }   /* the delay is for the RELOADED page's request, never an earlier page's */
   await d.page.reload({ waitUntil: 'domcontentloaded' });
   return d;
 }
@@ -68,8 +73,9 @@ const log = (d) => d.page.evaluate(() => window.__dotLog || []);
 const waitDot = async (d, re, ms) => { const t = Date.now(); while (Date.now() - t < ms) { const x = await dot(d).catch(() => null); if (x && re.test(x.txt)) return x; await sleep(300); } return null; };
 const realErr = (e) => !/ERR_|Failed to load resource|net::|timed out|failed to load/i.test(e);
 
+const ONLY_B2 = argv.includes('--only=b2');   /* by hand: just 142b2 (with its dot log), e.g. against a copy of main's index.html */
 try {
-  for (const vp of VPS) {
+  for (const vp of ONLY_B2 ? [] : VPS) {
     const t = `${vp.name}`;
     /* ══ 142a — busy 18 s, the SDK answers ══ */
     {
@@ -104,20 +110,24 @@ try {
     }
   }
 
-  /* ══ 142b2 — a long busy stretch (an import): 3 s bursts for 90 s, the SDK refused for the first 5 s ══ */
+  /* ══ 142b2 — the late-timer race, hit on purpose (a long import keeps the page busy). The page is blocked from the very task that adds the SDK script (the hook of 142a, 16 s,
+         past the app's 15 s timer), the SDK answers 0.3 s later, then the page stays busy in 6 s bursts with 50 ms gaps for 60 s. The answer is queued but cannot be handled
+         before the 15 s timer is due; old code: the timer rejects -> Offline although the SDK answered. NOTE (measured): with ONLY bursts and gaps, started after the script
+         was added, Chromium ran the script's load before the due timer whether the answer came before or after the due time, so that shape cannot fail on old code. ══ */
   {
     const vp = VPS[2];
-    const d = await device(vp, { sdk: 'abort5', busyMs: 3000 });
+    const d = await device(vp, { sdk: 'late14', busyMs: 16000 });
     try {
       const t1 = Date.now();
-      while (Date.now() - t1 < 90000) { await d.page.evaluate(() => { const e = performance.now() + 3000; while (performance.now() < e); }).catch(() => {}); await sleep(400); }
-      const fin = await waitDot(d, /Live|☁…/, 60000);
+      while (Date.now() - t1 < 60000) { await d.page.evaluate(() => { const e = performance.now() + 6000; while (performance.now() < e); }).catch(() => {}); await sleep(50); }
+      const ran = await d.page.waitForFunction(() => typeof firebase === 'object' && !!_syncFsDb, null, { timeout: 60000 }).then(() => true).catch(() => false);
+      const fin = await waitDot(d, /Live|☁…/, 30000);
       const L = await log(d);
-      let worst = 0, since = null;
-      for (let i = 0; i < L.length; i++) { const isOff = /Offline/.test(L[i][2]); if (isOff && since == null) since = L[i][0]; if (!isOff && since != null) { worst = Math.max(worst, L[i][0] - since); since = null; } }
-      if (since != null) worst = Math.max(worst, (await d.page.evaluate(() => Math.round(performance.now()))) - since);
-      check(worst <= 32000, `142b2 3 s bursts for 90 s: the dot is never Offline longer than one retry (worst ${Math.round(worst)} ms)`);
-      check(!!fin && !!(await d.page.evaluate(() => !!_syncFsDb)), `142b2 it ends Live/connecting with sync started`, JSON.stringify(await dot(d)));
+      const off = L.filter((e) => /Offline/.test(e[2]));
+      if (ONLY_B2) console.log('dot log:', JSON.stringify(L.map((e) => [e[0], e[2]])), 'warn:', d.warn.join(' | '), 'script appended at:', JSON.stringify(await d.page.evaluate(() => window.__appendAt)));
+      check(off.length === 0, `142b2 page blocked 16 s from the script's insertion (SDK answers 0.3 s later) then 6 s bursts for 60 s: the dot never says Offline (${L.length} changes)`, off.slice(0, 2).map((e) => e[2] + ' @' + e[0]).join(' | '));
+      check(ran && !!fin, `142b2 sync starts and ends Live/connecting`, JSON.stringify(await dot(d)));
+      check(d.warn.length === 0, '142b2 no "timed out" / "not loaded" warning', d.warn.join(' | '));
       check(d.errors.filter(realErr).length === 0, '142e 142b2 no page errors', d.errors.slice(0, 2).join(' · '));
     } finally { await d.ctx.close().catch(() => {}); }
   }
