@@ -227,8 +227,8 @@ try {
     await d.page.waitForFunction(() => _on.tok, null, { timeout: 30000 });
     await sleep(300);
     const au = d.ms.authorize[0], tk = d.ms.token[0];
-    check(au && au.path === '/consumers/oauth2/v2.0/authorize' && au.q.client_id === CID && au.q.response_type === 'code' && au.q.scope === 'Notes.Read' && au.q.code_challenge_method === 'S256' && au.q.redirect_uri === srv.base + '/', `${t} authorization-code request to /consumers with the client id, Notes.Read, S256 and the app's own address`, JSON.stringify(au));
-    check(tk && tk.body.grant_type === 'authorization_code' && tk.body.client_id === CID && tk.body.code === 'FAKECODE1' && !('client_secret' in tk.body) && tk.body.redirect_uri === srv.base + '/' && !/offline_access/.test(tk.body.scope), `${t} the code is exchanged at the token endpoint with no secret and no offline_access`, JSON.stringify(tk));
+    check(au && au.path === '/consumers/oauth2/v2.0/authorize' && au.q.client_id === CID && au.q.response_type === 'code' && au.q.scope === 'Notes.Read offline_access' && au.q.code_challenge_method === 'S256' && au.q.redirect_uri === srv.base + '/', `${t} authorization-code request to /consumers with the client id, Notes.Read, S256 and the app's own address`, JSON.stringify(au));
+    check(tk && tk.body.grant_type === 'authorization_code' && tk.body.client_id === CID && tk.body.code === 'FAKECODE1' && !('client_secret' in tk.body) && tk.body.redirect_uri === srv.base + '/' && tk.body.scope === 'Notes.Read offline_access', `${t} the code is exchanged at the token endpoint with no secret (scope Notes.Read offline_access since v05.84, J148)`, JSON.stringify(tk));
     check(au && tk && b64u(createHash('sha256').update(tk.body.code_verifier).digest()) === au.q.code_challenge && tk.body.code_verifier.length >= 43, `${t} PKCE: code_challenge = base64url(SHA-256(code_verifier)), verifier ${tk && tk.body.code_verifier.length} chars`);
     check(au && /^siyon\./.test(au.q.state) && tk.body.code_verifier !== au.q.state, `${t} a random state is sent`);
     const inMem = await on(d, () => ({ tok: _on.tok, ver: _on.ver, signed: _on.view !== 'signing' }));
@@ -277,13 +277,13 @@ try {
     const arts0 = await on(d, () => DB.articles.length);
     await look(d, vp);
     await act(d, vp, '#on-bring');
-    const slow = await d.page.waitForFunction(() => /Microsoft asked us to slow down — waiting \d+ s/.test((document.getElementById('on-iprog') || {}).textContent || ''), null, { timeout: 30000, polling: 40 }).then(() => true).catch(() => false);
+    const slow = await d.page.waitForFunction(() => /Microsoft asked Siyagah to slow down — waiting \d+ s/.test((document.getElementById('on-iprog') || {}).textContent || ''), null, { timeout: 30000, polling: 40 }).then(() => true).catch(() => false);
     await d.page.waitForFunction(() => !_on.imp.run && ['done', 'capped', 'paused', 'signin'].includes(_on.imp.state), null, { timeout: 120000 });
     const st = await on(d, () => ({ s: _on.imp.state, took: _on.imp.took, broken: _on.imp.broken, msg: (document.getElementById('on-idone') || {}).textContent, sum: (document.getElementById('on-isum') || {}).textContent, box: document.getElementById('on-box').textContent, left: _on.imp.left.slice(), failed: _on.imp.failed.slice(), fly: window.__onMaxFly }));
     check(st.s === 'done' && st.took === 9 && /My Notebooks ▸ OneNote \(Imported\)/.test(st.box), `${t} done: 9 of 10 pages brought in (one cannot be read); the message names “My Notebooks ▸ OneNote (Imported)”`, JSON.stringify({ s: st.s, took: st.took }));
-    check(st.broken === 1 && st.failed[0] === 'Broken page' && /1 pages could not be read/.test(st.sum || '') && /Pages not read: Broken page/.test(st.sum || ''), `${t} the page whose content failed is counted and named; the others went on`, st.sum);
+    check(st.broken === 1 && st.failed[0].title === 'Broken page' && /HTTP 500/.test(st.failed[0].why) && /1 pages could not be read/.test(st.sum || '') && /Broken page/.test(st.box) && /HTTP 500/.test(st.box), `${t} the page whose content failed is counted and named; the others went on`, st.sum);
     check(!(await byId(d, 'P4')) && (await ones(d)) === 9, `${t} the failing page was NOT imported (so the next run tries it again)`);
-    check(slow && d.ms.got429 > 0 && d.ms.p5 >= 900 && d.ms.contentReq.filter((x) => x === 'P5').length === 2, `${t} a 429 with Retry-After: 1 was waited (${d.ms.p5} ms), shown as “Microsoft asked us to slow down — waiting N s”, and that page retried`, JSON.stringify({ slow, p5: d.ms.p5, n: d.ms.contentReq.filter((x) => x === 'P5').length }));
+    check(slow && d.ms.got429 > 0 && d.ms.p5 >= 900 && d.ms.contentReq.filter((x) => x === 'P5').length === 2, `${t} a 429 with Retry-After: 1 was waited (${d.ms.p5} ms), shown as “Microsoft asked Siyagah to slow down — waiting N s”, and that page retried`, JSON.stringify({ slow, p5: d.ms.p5, n: d.ms.contentReq.filter((x) => x === 'P5').length }));
     check(d.ms.maxFly <= 4 && st.fly <= 4 && d.ms.maxFly >= 2, `${t} never more than 4 requests in flight (Microsoft saw at most ${d.ms.maxFly}; the app counted ${st.fly})`);
     /* folders */
     const F = await on(d, () => { const m = {}; DB.folders.filter((f) => f.on).forEach((f) => { m[f.on.name] = { id: f.id, parentId: f.parentId, kind: f.on.kind, sec: f.sectionId, order: f.order }; }); return { m, sec: (DB.sections.find((s) => s.name === 'My Notebooks') || {}).id, n: DB.folders.filter((f) => f.on).length, other: DB.folders.filter((f) => !f.on).length }; });
