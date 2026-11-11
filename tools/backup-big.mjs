@@ -254,11 +254,11 @@ try {
       check(refs.r === refsInDB && refs.d === 0, `139b the notes hold data-pic references again, no data: pictures left in them (${refs.r} refs, ${refs.d} data:)`);
       /* a big file NOT in the layout: a clear message, nothing imported */
       const bad = join(TMP, 'plain.json');
-      const fsm = await import('node:fs'); fsm.writeFileSync(bad, JSON.stringify({ folders: [], articles: [{ id: 'q', title: 'q', content: '<p>x</p>' }] }, null, 2));
+      const fsm = await import('node:fs'); fsm.writeFileSync(bad, JSON.stringify({ folders: [], articles: [{ id: 'q', title: 'q', content: '<p>x</p>' }] }));   /* v05.89 J159: the 2-space layout is now READ (block 147f); a one-line file is the 'not in any layout' case */
       const fc2 = B.page.waitForEvent('filechooser'); await B.page.evaluate(() => { window.__seenConsent = null; importJSON(); });
       await (await fc2).setFiles(bad); await sleep(1200);
       const msg = await B.page.evaluate(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | '));
-      check(/too big to read here and was not written by Siyagah v05\.80 or later/.test(msg) && (await B.page.evaluate(() => window.__seenConsent)) === null, '139b a big file not in the layout gets the clear message and imports nothing', msg);
+      check(/too big to read here and is not in a layout Siyagah writes/.test(msg) && (await B.page.evaluate(() => window.__seenConsent)) === null, '139b a big file not in the layout gets the clear message and imports nothing', msg);
     } finally { await B.ctx.close(); }
   }
 

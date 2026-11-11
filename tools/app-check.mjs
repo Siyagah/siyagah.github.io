@@ -12961,6 +12961,18 @@ await r.block('138-mmj-slices', async () => {
   for (const row of rows) r.check(row.ok, '138: ' + row.label, row.detail);
   r.check(out.status === 0, 'the mmj-slices.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 147 — v05.89, J159: the cloud's per-note copy lacked most of the notebook — Send everything again, the automatic check, the pointer that is never overwritten, Diagnostics, an export never 0 bytes, the old-layout big backup, a stuck reader that says so. tools/recs-j159.mjs runs 147a–147g. */
+await r.block('147-recs-j159', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./recs-j159.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 3000000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 25, 'the recs-j159.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '147: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the recs-j159.mjs check exits cleanly', 'exit ' + out.status);
+});
 /* 146 — v05.87, J154: Import → Merge leaves deleted notes, folders and sections deleted (box to bring notes back, second device, Save File / Automatic Backup copies, three sizes). tools/merge-j154.mjs runs 146a–146h. */
 await r.block('146-merge-j154', async () => {
   const { spawnSync } = await import('node:child_process');

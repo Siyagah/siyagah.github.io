@@ -37,7 +37,8 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       const hit = document.elementFromPoint(rc.left + rc.width / 2, rc.top + rc.height / 2);
       return { diag, inView, onTop: !!hit && (hit === b || b.contains(hit)), h: Math.round(rc.height) };
     });
-    r.check(/Cloud project\s*tablet-proj/.test(res.diag || ''), `105a@${w} the Diagnostics name the cloud project`, (res.diag || res.why || '').slice(0, 160));
+    /* v05.89 · J159 (changed in place, not deleted): the row is now labelled "Cloud project (Firebase)"; the check still demands the project id beside it */
+    r.check(/Cloud project(?: \(Firebase\))?\s*tablet-proj/.test(res.diag || ''), `105a@${w} the Diagnostics name the cloud project`, (res.diag || res.why || '').slice(0, 160));
     r.check(res.inView && res.onTop, `105b@${w} "📋 Copy sync setup" is reached from ⚙ → ☁ and can be tapped`, JSON.stringify({ inView: res.inView, onTop: res.onTop, h: res.h, why: res.why }));
     if (res.inView) {
       await page.click('#sync-copy-btn'); await page.waitForTimeout(300);
