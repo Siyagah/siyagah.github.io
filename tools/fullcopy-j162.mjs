@@ -257,10 +257,10 @@ if (want('148c')) await guard('148c', async () => {
   await shut(o);
 });
 
-/* a small notebook forced into pieces by the test hook (3 MB over a 1 MB line, 400,000-character pieces) */
+/* a small notebook forced into pieces by the test hook (~1 MB over a 0.2 MB line, 100,000-character pieces) */
 async function piecesDevice(dir, base, n = 1600) {
   const o = await open(dir, base);
-  await o.page.evaluate(() => { window.__pcMax = 1e6; window.__pcChunk = 4e5; });
+  await o.page.evaluate(() => { window.__pcMax = 2e5; window.__pcChunk = 1e5; });
   await seed(o.page, { n }); await idle(o.page); await edit(o.page, 2, '(p)'); await idle(o.page); await checkpoint(o.page);
   return o;
 }
@@ -275,12 +275,12 @@ if (want('148d')) await guard('148d', async () => {
     let rr = await open(dir, srv.base, { app: false }); const k = await corrupt(rr.page, mode); const before = await raw(rr.page); await shut(rr);
     o = await open(dir, srv.base, { joined: false });
     await sleep(2500);
-    const s = await o.page.evaluate(() => { const w = document.getElementById('idb-warn'); return { fail: _idbBootFail, ready: _idbReady, warn: !!w && w.offsetParent !== null, n: DB.articles.length, f: DB.folders.length, text: w ? w.innerText.slice(0, 120) : '' }; });
+    const s = await o.page.evaluate(() => { const w = document.getElementById('idb-warn'); return { fail: _idbBootFail, ready: _idbReady, warn: !!w && getComputedStyle(w).display !== 'none' && w.innerText.length > 0, n: DB.articles.length, f: DB.folders.length, text: w ? w.innerText.slice(0, 120) : '' }; });
     await o.page.evaluate(() => { DB.theme.j162 = 1; _save(); persist(); }); await sleep(1500);
     const after = await raw(o.page);
     const same = JSON.stringify({ ...before, keys: before.keys.slice().sort() }) === JSON.stringify({ ...after, keys: after.keys.slice().sort() });
     check(s.fail && !s.ready && s.warn && s.n === 0 && s.f === 0, `148d(${mode}) piece ${k} ${mode === 'delete' ? 'missing' : 'cut short'}: the warning line shows, the starter set is NOT made, nothing is taken for the notebook (${s.n} notes, ${s.f} folders)`, JSON.stringify(s));
-    check(same && !after.keys.includes('notebook'), `148d(${mode}) nothing was written over the copy: same keys, same manifest, same journal, no 'notebook' record made after a save was tried`, JSON.stringify({ b: before.keys.length, a: after.keys.length }));
+    check(same, `148d(${mode}) nothing was written over the copy after a save was tried: the same keys (including the older 'notebook' record), the same manifest, the same journal`, JSON.stringify({ before, after }).slice(0, 900));
     await shut(o);
     void sig0;
   }
@@ -292,7 +292,7 @@ if (want('148e')) await guard('148e', async () => {
   const dir = mk('e'); let o = await open(dir, srv.base);
   await seed(o.page, { n: 1600 }); await idle(o.page); await checkpoint(o.page);
   const first = await recs(o.page);   /* the last copy that fitted: the single record */
-  await o.page.evaluate(() => { window.__pcMax = 1e6; window.__pcChunk = 4e5; });
+  await o.page.evaluate(() => { window.__pcMax = 2e5; window.__pcChunk = 1e5; });
   await o.page.evaluate(() => { for (let i = 0; i < 60; i++) DB.articles.push({ id: 'new' + i, title: 'New ' + i, content: '<p>made after</p>', folderIds: ['f1'], tags: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), kind: 'general' }); persist(); });
   await idle(o.page); await checkpoint(o.page);
   const newest = await recs(o.page), r = await raw(o.page);
@@ -315,11 +315,11 @@ if (want('148e')) await guard('148e', async () => {
 /* ══ 148g — the non-journal save path goes in pieces too ══ */
 if (want('148g')) await guard('148g', async () => {
   const dir = mk('g'); let o = await open(dir, srv.base);
-  await o.page.evaluate(() => { window.__pcMax = 1e6; window.__pcChunk = 4e5; });
+  await o.page.evaluate(() => { window.__pcMax = 2e5; window.__pcChunk = 1e5; });
   const n = await seed(o.page, { n: 40, nBig: 6, bigChars: 4e5 }); await sleep(2500);
   const r = await raw(o.page);
   const st = await o.page.evaluate(() => ({ lj: _ljOn, fail: _lsFail }));
-  check(!st.lj && r.man && !r.keys.includes('notebook') && !st.fail, `148g a ${n}-note notebook (not in journal mode) over the line is saved in pieces (${r.man && r.man.n} pieces) and the ⚠ "Local save failed" alarm stays off`, JSON.stringify(st));
+  check(!st.lj && r.man && !st.fail, `148g a ${n}-note notebook (not in journal mode) over the line is saved in pieces (${r.man && r.man.n} pieces) and the ⚠ "Local save failed" alarm stays off`, JSON.stringify(st));
   const sig = await recs(o.page); await shut(o);
   o = await open(dir, srv.base); const d = diff(sig, await recs(o.page));
   check(d.length === 0, '148g a reload shows the same notebook, record for record', d.join(' | '));

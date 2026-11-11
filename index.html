@@ -4488,10 +4488,10 @@ const _PC_FULL_MAX=64e6, _PC_CHUNK=12e6, _PC_BATCH=32e6;
 let _pcKnown=false, _pcForce=false, _pcBusy=null, _pcAgain=false, _ljFullSeq=null, _pcEstAt=0, _pcEstV=0;
 window._pcStat={mode:'',n:0,chars:0,at:0};
 function _pcMax(){ return typeof window.__pcMax==='number'?window.__pcMax:_PC_FULL_MAX; }
-/* characters held in strings, at most 4 levels down: a few ms for a small notebook; cached 20 s while far under the line */
+/* characters held in strings, at most 4 levels down: a few ms for a notebook under the journal's 1,500 notes (never cached: a big import can
+   take a notebook over the line between two saves); the journal's own full copies are rare, so a bigger one is walked rarely */
 function _pcEstimate(){
   const now=Date.now();
-  if(_pcEstV<_pcMax()/4&&now-_pcEstAt<20000&&_pcEstAt) return _pcEstV;
   let n=0; const walk=(v,d)=>{ if(typeof v==='string') n+=v.length; else if(d<4&&v&&typeof v==='object'){ for(const k in v) walk(v[k],d+1); } };
   walk(DB,0); _pcEstV=n; _pcEstAt=now; return n;
 }
