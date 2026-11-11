@@ -6652,8 +6652,8 @@ async function _sfTo(o){
     const S=_bxpSink(w);
     await _sfWrite(S,ctx);
     let bytes=S.bytes;
-    if(w){ await w.close();w=null; }
-    else bytes=_bxpDownload(S.parts,name,'text/html;charset=utf-8');
+    if(w){ const ve=_bxpVerify(S,S.bytes,'file');if(ve)throw ve; await w.close();w=null; }
+    else{ const ve=_bxpVerify(S,S.parts.reduce(function(n,p){return n+p.size;},0),'file');if(ve)throw ve; bytes=_bxpDownload(S.parts,name,'text/html;charset=utf-8'); }
     return {ok:true,name:name,bytes:bytes,missing:ctx.missing.size};
   }catch(e){
     if(w){try{await w.abort();}catch(_){}}
@@ -6717,6 +6717,7 @@ function _bxpBtns(off){['bxp-exp','bxp-imp'].forEach(function(i){const b=documen
 function _bxpSize(n){return n>=10485760?Math.round(n/1048576).toLocaleString()+' MB':n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';}
 function _bxpWhy(e){
   const n=(e&&e.name)||'',m=String(e&&e.message||e||'');
+  if(e&&e.bxpEmpty)return m;
   if(n==='QuotaExceededError'||/quota|no space|disk full/i.test(m))return 'Out of space on this device.';
   if(n==='NotAllowedError'||n==='SecurityError')return 'This browser refused to save the file ('+(m||n)+').';
   if(n==='RangeError'||/invalid string length|allocation|memory/i.test(m))return 'The notebook is too big for this browser to write ('+(m||n)+').';
@@ -6768,10 +6769,21 @@ function _bxpCtx(verb,say,total){
 }
 function _bxpDownload(parts,name,type){
   const blob=new Blob(parts,{type:type});
+  /* v05.89 · J159 — a Blob of no pieces (or one that lost them) is never offered as a download: a 0-byte file is worse than an error */
+  if(!parts.length||blob.size===0){const e=new Error('The file came out empty (0 bytes), so it was not saved. Nothing was lost — your notes are untouched. Try ⬇ Export again.');e.bxpEmpty=true;throw e;}
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);
-  setTimeout(function(){try{URL.revokeObjectURL(url);}catch(e){}},60000);
+  setTimeout(function(){try{URL.revokeObjectURL(url);}catch(e){}},600000);   /* 10 min: a big file on a phone is copied out slowly (was 60 s) */
   return blob.size;
+}
+/* v05.89 · J159 — the file must hold what was written, and a notebook with notes never ends under 1 KB. Called after the last piece and before "Saved".
+   S = the sink; written = the bytes it flushed; got = the size the target reports (file on disk / Blob). Throws a plain-words error. */
+function _bxpVerify(S,got,label){
+  const holds=((DB.articles||[]).length+(DB.folders||[]).length)>0;
+  const fail=function(m){const e=new Error(m);e.bxpEmpty=true;return e;};
+  if(holds&&(S.bytes<1024||got<1024))return fail('The '+label+' came out almost empty ('+got+' bytes) although your notebook holds notes, so it is NOT reported as saved. Nothing was lost — your notes are untouched. Try again.');
+  if(got!==S.bytes)return fail('The '+label+' on disk is '+got+' bytes but '+S.bytes+' were written, so it is NOT reported as saved. Nothing was lost — try again.');
+  return null;
 }
 /* DB as ONE JSON object, every top-level array one compact element per line. o.inline: each record's pictures are read, inlined and dropped by themselves (the JSON
    backup). o.shas (a Set): the shas the records reference are collected (Save File keeps the references and writes each picture once). o.esc: no `<` that could
@@ -6830,8 +6842,14 @@ async function exportJSON(){
     await _bxpWriteDB(S,ctx,{inline:true});
     await S.flush();
     let bytes=S.bytes;
-    if(w){ await w.close();w=null; }
-    else bytes=_bxpDownload(S.parts,name,'application/json');
+    if(w){
+      const sinkErr=_bxpVerify(S,S.bytes,'backup');if(sinkErr)throw sinkErr;   /* nothing was written at all: the linked file keeps its last good copy */
+      await w.close();w=null;
+      if(handle&&typeof handle.getFile==='function'){ try{ const fsz=(await handle.getFile()).size; const ve=_bxpVerify(S,fsz,'backup'); if(ve)throw ve; }catch(e){ if(e&&e.bxpEmpty)throw e; } }
+    }else{
+      const ve=_bxpVerify(S,S.parts.reduce(function(n,p){return n+p.size;},0),'backup');if(ve)throw ve;
+      bytes=_bxpDownload(S.parts,name,'application/json');
+    }
     const miss=ctx.missing.size;
     _bxpSay('Saved: '+name+', '+_bxpSize(bytes)+(miss?' — '+miss+' picture'+(miss>1?'s':'')+' not on this device '+(miss>1?'were':'was')+' not included':''),'ok');
     toast('Backup saved ✓');
@@ -6870,9 +6888,47 @@ async function _bxpDeinline(str){
 async function _bxpReadBig(file,onProg){
   const bad=function(){const e=new Error('layout');e.bxpLayout=true;return e;};
   const rd=file.stream().pipeThrough(new TextDecoderStream()).getReader();
-  const obj={};let state='start',key=null,arr=null,parts=[],seen=0,n=0;
+  const obj={};let state='start',key=null,arr=null,parts=[],seen=0,n=0,buf=null;
+  /* v05.89 · J159 — the OLD layout (JSON.stringify(DB,null,2), before v05.80): top-level keys at 2 spaces, an array's elements at 4; an element that is an
+     object/array runs from its `    {` line to its `    }` line (a JSON string can never hold a raw newline, so these lines are unambiguous). One element at a time is
+     joined and parsed, its pictures go to _picPut as in the new layout; the whole text and its parse are never held together. */
+  const strip=function(t){return t.charAt(t.length-1)===','?t.slice(0,-1):t;};
+  const oldLine=async function(s){
+    if(state==='otop'){
+      if(s==='}'){ state='done'; return; }
+      const m=/^  ("(?:[^"\\]|\\.)*"): (.*)$/.exec(s);if(!m)throw bad();
+      const k=JSON.parse(m[1]),rest=m[2];
+      if(rest==='['){ key=k;arr=[];state='oarr';return; }
+      if(rest==='{'){ key=k;buf=['{'];state='oobj';return; }
+      obj[k]=JSON.parse(await _bxpDeinline(strip(rest)));return;
+    }
+    if(state==='oarr'){
+      if(s==='  ]'||s==='  ],'){ obj[key]=arr;arr=null;state='otop';return; }
+      if(s==='    {'||s==='    ['){ buf=[s.trim()];state='oel';return; }
+      if(s.slice(0,4)!=='    ')throw bad();
+      arr.push(JSON.parse(await _bxpDeinline(strip(s.slice(4)))));n++;return;
+    }
+    if(state==='oel'){
+      buf.push(s);
+      if(s==='    }'||s==='    },'||s==='    ]'||s==='    ],'){
+        const t=strip(buf.join('\n'));buf=null;
+        arr.push(JSON.parse(await _bxpDeinline(t)));n++;
+        if(n%20===0)onProg(seen);
+        state='oarr';
+      }
+      return;
+    }
+    if(state==='oobj'){
+      buf.push(s);
+      if(s==='  }'||s==='  },'){ obj[key]=JSON.parse(await _bxpDeinline(strip(buf.join('\n'))));buf=null;state='otop'; }
+      return;
+    }
+    throw bad();
+  };
   const line=async function(s){
     if(state==='start'){ if(s!=='{')throw bad(); state='top'; return; }
+    if(state==='top'&&s.charAt(0)===' ')state='otop';
+    if(state==='otop'||state==='oarr'||state==='oel'||state==='oobj')return oldLine(s);
     if(state==='top'){
       if(s==='}'){ state='done'; return; }
       const m=/^("(?:[^"\\]|\\.)*"):(.*)$/.exec(s);if(!m)throw bad();
@@ -6919,7 +6975,7 @@ async function _bxpImportBig(file){
     if(d&&d.folders&&d.articles)_showImportConsent(d,file.name);else toast('Invalid file');
   }catch(e){
     el.remove();
-    if(e&&e.bxpLayout)toast('This file is too big to read here and was not written by Siyagah v05.80 or later',9000);
+    if(e&&e.bxpLayout)toast('This file is too big to read here and is not in a layout Siyagah writes (v05.89 reads the old and the new)',9000);
     else toast('Could not read the file: '+(e&&e.message||e),9000);
   }finally{_bxpBusy=false;}
 }
@@ -29811,7 +29867,7 @@ async function _builtinResolve(user){
       setTimeout(()=>{ try{ openSyncModal(); }catch(e){} },0);
       return;
     }
-    const cfg={firebaseConfig:_BUILTIN_FB,notebookId:nb};
+    const cfg={firebaseConfig:_BUILTIN_FB,notebookId:nb,src:'built-in'};   /* v05.89 · J159 — Diagnostics says where the setup came from */
     _saveSyncConfig(cfg); _biMode=false; _biNote='';
     await initSync(cfg);
   }catch(e){
@@ -29835,12 +29891,56 @@ async function _opTick(){
   try{
     const ref=_syncFsDb.collection('owners').doc(u.uid);
     const snap=await ref.get(), cur=snap.exists?snap.data():null;
+    _opS.cur=cur?{nb:typeof cur.nb==='string'?cur.nb:'',b:cur.b||''}:null;
     if(cur&&cur.nb===nb){ _opS.sig=sig; return; }   /* already says so: write nothing */
+    /* v05.89 · J159 — the pointer is NOT last-writer-wins: one device on a stray or test notebook used to send every new computer to the wrong notebook.
+       An existing pointer that names another notebook is never overwritten here; the owner does it with "Make new computers open this notebook". */
+    if(cur&&typeof cur.nb==='string'&&cur.nb.trim()){ _opS.sig=sig; _opS.differs=true; return; }
     if(!_s1WriteGate()) return;
     await ref.set({nb:nb,at:firebase.firestore.FieldValue.serverTimestamp(),b:document.querySelector('meta[name="app-version"]').content});
+    _opS.cur={nb:nb,b:document.querySelector('meta[name="app-version"]').content}; _opS.differs=false;
     _opS.sig=sig; _opS.err=null;
   }catch(e){ _opS.err=e; _opS.retryAt=Date.now()+60000; }
   finally{ _opS.busy=false; }
+}
+/* what owners/{uid} names, read on demand (Diagnostics and the Cloud Sync line); a read, never a write */
+async function _opRead(){
+  const cfg=getSyncConfig(), u=_authInstance&&_authInstance.currentUser;
+  if(!cfg||!_syncFsDb||!u||!u.uid) return;
+  try{
+    const snap=await _syncFsDb.collection('owners').doc(u.uid).get();
+    const cur=snap.exists?snap.data():null;
+    _opS.cur=cur?{nb:typeof cur.nb==='string'?cur.nb:'',b:cur.b||''}:null;
+    _opS.differs=!!(_opS.cur&&_opS.cur.nb&&_opS.cur.nb!==cfg.notebookId);
+    _opS.readErr=null;
+  }catch(e){ _opS.readErr=(e&&(e.code||e.message))||'error'; }
+  try{ const d=document.getElementById('sync-diag'); if(d) d.innerHTML=_syncDiagnosticsHTML(); const l=document.getElementById('op-line'); if(l) l.outerHTML=_opLineHTML(); }catch(e){}
+}
+function _opText(){
+  const cfg=getSyncConfig();
+  if(_opS.cur===undefined) return _opS.readErr?'could not read it ('+_opS.readErr+')':'checking…';
+  if(_opS.cur===null) return 'none yet — a new computer would not find a notebook';
+  const nb=_opS.cur.nb;
+  if(!nb) return 'empty';
+  return nb===(cfg&&cfg.notebookId)?'this notebook (same as this device)':'a DIFFERENT notebook: '+nb;
+}
+function _opLineHTML(){
+  const cfg=getSyncConfig();
+  if(!cfg||!(_opS.cur&&_opS.cur.nb&&_opS.cur.nb!==cfg.notebookId)) return '<div id="op-line"></div>';
+  return '<div id="op-line" style="margin-top:10px;padding:8px;border-radius:6px;background:#c0392b18;font-size:11.5px;line-height:1.5;color:var(--t1)">A new computer that signs in opens notebook <strong style="font-family:monospace;overflow-wrap:anywhere">'+esc(_opS.cur.nb)+'</strong>. This device syncs <strong style="font-family:monospace;overflow-wrap:anywhere">'+esc(cfg.notebookId)+'</strong>.'
+    +'<div style="margin-top:6px"><button class="btn" id="op-make-btn" onclick="_opMakeMine()">Make new computers open this notebook</button></div></div>';
+}
+async function _opMakeMine(){
+  const cfg=getSyncConfig(), u=_authInstance&&_authInstance.currentUser;
+  if(!cfg||!_syncFsDb||!u||!u.uid){ toast('Sign in with Google on this device first'); return; }
+  if(!_s1WriteGate()){ toast('This device has not finished reading the cloud yet — try again in a moment'); return; }
+  if(!confirm('Make new computers open this notebook?\n\nA new computer that signs in with Google will open notebook:\n'+cfg.notebookId+'\n\ninstead of the one it opens now. Nothing in either notebook is changed.')) return;
+  try{
+    await _syncFsDb.collection('owners').doc(u.uid).set({nb:cfg.notebookId,at:firebase.firestore.FieldValue.serverTimestamp(),b:document.querySelector('meta[name="app-version"]').content});
+    _opS.cur={nb:cfg.notebookId,b:document.querySelector('meta[name="app-version"]').content}; _opS.differs=false; _opS.sig=u.uid+'|'+cfg.notebookId;
+    toast('✓ New computers will open this notebook');
+  }catch(e){ toast('Could not change it: '+((e&&(e.code||e.message))||'unknown'),6000); }
+  try{ const l=document.getElementById('op-line'); if(l) l.outerHTML=_opLineHTML(); const d=document.getElementById('sync-diag'); if(d) d.innerHTML=_syncDiagnosticsHTML(); }catch(e){}
 }
 setInterval(()=>{ try{ if(_jobOk('op')) _opTick(); }catch(e){} },5000);
 
@@ -30945,6 +31045,7 @@ function _s2IsOlder(b){ return !b||String(b)<_S2_MIN_BUILD; }
 const _S1_COLLS=['articles','folders','sections','calEvents','calCategories','noteKinds','noteKindCats','myFavCats','folderGroups','trash','tombstones'];
 const _S1_INLINE_MAX=700000, _S1_PART=900000, _S1_OPS=400, _S1_BYTES=8*1024*1024;
 window._s1Stat={enabled:true, reason:null, seeded:false, lastRun:0, lastWritten:0, lastErr:null};
+var _s1Send={active:false,total:0,done:0,at:0,auto:false,err:null,ended:0,state:'',written:0};   /* v05.89 · J159 — "Sending N of M" */
 let _s1Busy=0, _s1Pending=null, _s1Denied=false, _s1Dead=false, _s1Map=null, _s1MapNb=null;
 function _s1Key(c,id){ return c+'~'+encodeURIComponent(String(id)).replace(/\./g,'%2E'); }
 function _s1Eligible(){ return _dbLoaded && !_s1Denied && !_s1Dead; }
@@ -31178,7 +31279,8 @@ function _s1WriteGate(){
    (the reader has not caught up: nothing written, the snapshot goes back into the
    dirty set) or {written:n}. Errors propagate: _s1Run() swallows them, the awaited
    _s1Write() does not. */
-async function _s1Exec(nbId, snap){
+async function _s1Exec(nbId, snap, xo){
+  xo=xo||{};   /* v05.89 · J159 — xo.addOnly: write records only, never a `gone`; xo.progress: report "Sending N of M" in _s1Send */
   if(!_s1Eligible()){ _s1Redirty(snap); return {ineligible:true}; }
   if(!_s1WriteGate()){ _s1Redirty(snap); _s1KickSoon(); return {gated:true}; }
   if(snap.seq!==_s1MergeSeq){ try{ _stampRecordTouches(); }catch(e){} _s1Redirty(snap); snap=_s1TakeSnap(); }
@@ -31199,11 +31301,14 @@ async function _s1Exec(nbId, snap){
     Object.keys(m.s).forEach(key=>{ if((key.startsWith('trash~')||key.startsWith('tombstones~'))&&!snap.has(key)&&m.s[key]!=='gone'&&!snap.goneKeys.has(key)) work.push([key,null]); });
   }
   else Object.keys(m.s).forEach(key=>{ if(!snap.has(key)&&m.s[key]!=='gone') work.push([key,null]); });
+  if(xo.addOnly){ for(let i=work.length-1;i>=0;i--) if(!work[i][1]) work.splice(i,1); }
+  if(xo.progress){ _s1Send.total=work.length; _s1Send.done=0; }
   let batch=null, nOps=0, nBytes=0, done=[], written=0;
   const commit=async()=>{
     if(!nOps) return;
     const b=batch, d=done; batch=null; nOps=0; nBytes=0; done=[];
     await b.commit();
+    if(xo.progress){ _s1Send.done+=d.length; _s1Send.at=Date.now(); await _yieldTask(); }
     const dels=[];
     d.forEach(e=>{
       m.s[e.key]=e.sig; written++;
@@ -31275,12 +31380,12 @@ async function _s1Exec(nbId, snap){
 /* The awaited write (S1c): the same run, but waits for a run already in flight,
    and lets a failure reach the caller. Anything that did not get written goes
    back into the dirty set. */
-async function _s1Write(nbId, snap){
+async function _s1Write(nbId, snap, xo){
   while(_s1Busy){ await _s1BusyP.catch(()=>{}); }
   _s1Busy=Date.now();
   let done; _s1BusyP=new Promise(r0=>{ done=r0; });
   let r;
-  try{ r=await _s1Exec(nbId, snap); }
+  try{ r=await _s1Exec(nbId, snap, xo); }
   catch(e){ _s1Dirty.full=true; throw e; }
   finally{
     _s1Busy=0; done();
@@ -31475,6 +31580,140 @@ function _s1ReReadUI(){
   toast('Reading your whole notebook from the cloud again — this can take a few minutes');
   setTimeout(()=>{ const d=document.getElementById('sync-diag'); if(d) d.innerHTML=_syncDiagnosticsHTML(); },500);
 }
+/* ── v05.89 · J159 — "☁ Send everything to the cloud again", the automatic check, and a reader that is stuck saying so ──────────────
+   The cloud's per-note copy can lack records this device believes it sent: _s1Exec writes only keys whose sig differs from the sig map, and the map
+   (like the replica) can say "the cloud holds it" when it does not. RESEND forgets the map entry of every key the device's own FULL snapshot holds
+   (never a key the map marks `gone`), then runs the writer with addOnly: records only — a `gone` is never written by it. It goes through
+   _s1WriteGate() (inside _s1Exec), in the same 400-op batches with a yield after each, and reports "Sending N of M" in _s1Send. AUTOMATIC: once per
+   page load, after the reader has caught up and the notebook is >= 50 notes+folders, a server count() of recs if the loaded SDK has one (the
+   compat 9.23 build does not), else a 12-record spot check by id and, only when a third or more are missing, ONE re-read from cursor 0 whose
+   delivered live keys (`pass`) are counted; fewer than half of own notes+folders => RESEND. Never before the reader has caught up. */
+function _s1OwnCount(){ let n=0; ['articles','folders'].forEach(c=>{ (DB&&DB[c]||[]).forEach(x=>{ if(x&&x.id!=null&&!String(x.id).startsWith('kb-')) n++; }); }); return n; }
+function _s1HeldCount(){ let n=1; _S1_COLLS.forEach(c=>{ if(Array.isArray(DB[c])) n+=DB[c].length; }); return n; }
+async function _s1ResendAll(auto){
+  const cfg=getSyncConfig();
+  if(!cfg||!_syncFsDb) return {ok:false,why:'Cloud Sync is not running on this device'};
+  if(!_s1Eligible()) return {ok:false,why:'the per-note copy is switched off on this device'+(_s1Stat.reason?' ('+_s1Stat.reason+')':'')};
+  if(_s1Send.active) return {ok:false,why:'it is already sending'};
+  if(!_s1WriteGate()) return {ok:false,why:'this device has not finished reading the cloud yet — '+_s1GateText()};
+  const nb=cfg.notebookId;
+  _s1Send={active:true,total:0,done:0,at:Date.now(),auto:!!auto,err:null,ended:0,state:'preparing',written:0};
+  try{
+    _flushAllEditors(); _stampThemeTouches(); _stampRecordTouches(); _s1Dirty.full=true;
+    const snap=await _s1TakeSnapAsync();
+    const m=await _s1MapLoad(nb);
+    if(!m) throw new Error('this device cannot keep the list of what it has sent');
+    let forgot=0;
+    snap.forEach((r,key)=>{ if(m.s[key]!==undefined&&m.s[key]!=='gone'){ delete m.s[key]; forgot++; } });
+    await _idbPut('s1:'+nb,m);   /* forgotten before the write: a cut-off run is finished by the next ordinary one */
+    _s1Send.state='sending'; _s1Send.total=snap.size;
+    const res=await _s1Write(nb,snap,{addOnly:true,progress:true});
+    _s1Send.written=(res&&res.written)||0;
+    _s1Send.state=(res&&(res.gated||res.ineligible))?'waiting':'done';
+    return {ok:true,written:_s1Send.written,state:_s1Send.state};
+  }catch(e){
+    _s1Send.err={code:(e&&e.code)||'error',message:String((e&&e.message)||e).slice(0,200)}; _s1Send.state='failed';
+    return {ok:false,why:_s1Send.err.message||_s1Send.err.code};
+  }finally{ _s1Send.active=false; _s1Send.ended=Date.now(); }
+}
+function _s1SendText(){
+  const s=_s1Send;
+  if(!s.state) return '';
+  if(s.active) return s.state==='preparing'?'getting ready to send':'Sending '+(s.done||0).toLocaleString('en-US')+' of '+(s.total||0).toLocaleString('en-US')+' records'+(s.auto?' (automatic)':'');
+  if(s.state==='done') return 'sent '+(s.written||0).toLocaleString('en-US')+' records '+_syncAgo(s.ended)+(s.auto?' (automatic)':'');
+  if(s.state==='waiting') return 'paused — the rest goes out as soon as this device has read the cloud';
+  if(s.state==='failed') return 'failed — '+((s.err&&(s.err.message||s.err.code))||'unknown reason');
+  return '';
+}
+function _s1SendPaint(){
+  const l=document.getElementById('s1-send-line'); if(l) l.textContent=_s1SendText();
+  const d=document.getElementById('sync-diag'); if(d) d.innerHTML=_syncDiagnosticsHTML();
+}
+async function _s1ResendUI(){
+  if(!getSyncConfig()||!_syncFsDb){ toast('Cloud Sync is not running on this device'); return; }
+  if(_s1Send.active){ toast('It is already sending'); return; }
+  const n=_s1HeldCount();
+  if(!confirm('Send everything to the cloud again?\n\nThis device will send about '+n.toLocaleString('en-US')+' records (notes, folders, sections, Trash…) to the cloud. It only adds or updates; it never deletes anything there.\n\nFirebase counts each record as one paid write, and a big notebook can take several minutes. Keep this page open.\n\nSend now?')) return;
+  const tm=setInterval(()=>{ _s1SendPaint(); if(!_s1Send.active) clearInterval(tm); },500);
+  const r=await _s1ResendAll(false);
+  clearInterval(tm); _s1SendPaint();
+  toast(r.ok?(r.state==='done'?'☁ Sent '+(r.written||0).toLocaleString('en-US')+' records to the cloud':'☁ Paused until this device has read the cloud'):'☁ Not sent: '+r.why,6000);
+}
+const _s1Auto={nb:null,state:'',how:'',cloud:null,own:null,probe:null,err:null,at:0};
+async function _s1AutoCheck(){
+  const cfg=getSyncConfig();
+  if(!cfg||!_syncFsDb||!_s1Eligible()) return;
+  const nb=cfg.notebookId, A=_s1Auto, rd=_s1Stat.rd;
+  if(A.nb!==nb){ A.nb=nb; A.state='idle'; }
+  if(!rd||rd.perm||!rd.on) return;
+  if(A.state==='reading'){
+    if(rd.pass&&rd.pass.snaps>0&&_s1RdCaught){
+      const live=rd.pass.live.size, own=_s1OwnCount(); rd.pass=null; A.cloud=live; A.own=own;
+      if(live*2<own&&own>=_S1_REREAD_MIN){ A.state='sending'; const r=await _s1ResendAll(true); A.state=r.ok?'sent':'send-failed'; if(!r.ok) A.err=r.why; }
+      else A.state='ok';
+    }
+    return;
+  }
+  if(A.state!=='idle') return;
+  if(!_s1WriteGate()||!_s1RdCaught||_s1Send.active||_s1Busy) return;   /* never before the reader has caught up */
+  const own=_s1OwnCount(); A.own=own;
+  if(own<_S1_REREAD_MIN){ A.state='small'; return; }
+  A.state='probing'; A.at=Date.now();
+  try{
+    const recsC=_syncFsDb.collection('notebooks').doc(nb).collection('recs');
+    if(typeof recsC.count==='function'){
+      A.how='count';
+      const s=await recsC.count().get(); A.cloud=Number(s.data().count)||0;
+      if(A.cloud*2<own){ A.state='sending'; const r=await _s1ResendAll(true); A.state=r.ok?'sent':'send-failed'; if(!r.ok) A.err=r.why; } else A.state='ok';
+      return;
+    }
+    A.how='re-read';
+    const m=await _s1MapLoad(nb);
+    const keys=m?Object.keys(m.s).filter(k=>m.s[k]!=='gone'&&(k.startsWith('articles~')||k.startsWith('folders~'))):[];
+    if(!keys.length){ A.state='ok'; return; }
+    const pick=[], step=Math.max(1,keys.length/12);
+    for(let i=0;i<12&&Math.floor(i*step)<keys.length;i++) pick.push(keys[Math.floor(i*step)]);
+    let miss=0;
+    for(const k of pick){ const s=await recsC.doc(k).get({source:'server'}); if(!s.exists) miss++; }
+    A.probe={asked:pick.length,missing:miss};
+    if(miss*3<pick.length){ A.state='ok'; return; }
+    A.state='reading'; rd.pass={live:new Set(),snaps:0};
+    _s1ReReadDone.add(nb); rd.reread={at:Date.now(), was:rd.records||0, auto:true, why:'checking what the cloud holds'};
+    if(_s1Rep) _s1Rep.cursor=0;
+    _s1ReadStart(cfg);
+  }catch(e){ A.state='idle'; A.err=String((e&&e.message)||e).slice(0,160); A.retryAt=Date.now()+300000; if(!A.tries) A.tries=0; if(++A.tries>=3) A.state='gave-up'; }
+}
+function _s1AutoText(){
+  const A=_s1Auto;
+  if(!A.state||A.state==='idle') return 'not yet';
+  const m={small:'not needed (a small notebook)',probing:'checking…',reading:'reading the cloud once to count (the cloud lacked some)',sending:'sending what the cloud lacked',sent:'the cloud lacked records; sent',ok:'the cloud holds enough','send-failed':'could not send','gave-up':'could not check'};
+  return (m[A.state]||A.state)+(A.cloud!=null&&A.own!=null?' — cloud '+A.cloud.toLocaleString('en-US')+' of '+A.own.toLocaleString('en-US')+' notes+folders':'')+(A.how?' ['+A.how+']':'');
+}
+/* why may this device not write yet? '' when it may. Plain words for Diagnostics and the dot. */
+let _s1GateSince=0;
+function _s1GateText(){
+  const r=_s1Stat.rd;
+  if(!r) return 'the per-note copy has not started';
+  if(r.perm) return '';
+  if(!r.on) return 'the per-note reader is not running ('+_s1DiagText()+')';
+  if(!_s1RdCaught) return 'waiting for the cloud’s first answer';
+  if(_s1RepUnmerged||_s1RecsMergeQueued) return 'merging what the cloud sent';
+  if(_pullInFlight) return 'another sync step is still running';
+  return '';
+}
+function _s1StuckWhy(){ return (_s1GateSince&&Date.now()-_s1GateSince>=(window.__s1StuckMs||45000))?_s1GateText():''; }
+function _s1GateWatch(){
+  if(_s1WriteGate()) _s1GateSince=0; else if(!_s1GateSince) _s1GateSince=Date.now();
+  const el=document.getElementById('sync-dot'), why=_s1StuckWhy();
+  if(el&&el.classList.contains('sd-live')){
+    if(why){ el.title='☁ Live, but not sending your changes yet — '+why; el.setAttribute('data-stuck','1'); }
+    else if(el.getAttribute('data-stuck')){ el.title='☁ Live — synced'; el.removeAttribute('data-stuck'); }
+  }
+}
+function _s1StuckHTML(){
+  const why=_s1StuckWhy();
+  return why?'<div id="s1-stuck" style="margin-top:8px;padding:8px;border-radius:6px;background:#c0392b18;color:#c0392b;font-size:11.5px;line-height:1.5">⚠ Connected, but this device is not sending your changes to the cloud yet: '+esc(why)+'. It carries on by itself; nothing is lost.</div>':'';
+}
 function _s1ReadStop(){
   _s1RdGen++;
   clearTimeout(_s1RdTimer); _s1RdTimer=null;
@@ -31549,10 +31788,12 @@ async function _s1OnSnap(gen, snap, nbRef){
   if(gen!==_s1RdGen||!_s1Rep) return;
   const rep=_s1Rep, st=_s1Stat.rd, nb=rep.nb;
   const puts=[]; let skipMin=Infinity, maxAt=0, skipDelay=0, olderMax=0;
+  if(st.pass) st.pass.snaps++;   /* v05.89 · J159 — a counting re-read: every live key the cloud delivers is counted, held already or not */
   for(const ch of snap.docChanges()){
     if(ch.type==='removed'||ch.doc.metadata.hasPendingWrites) continue;   /* its `at` is not a server time yet */
     const key=ch.doc.id; let d=ch.doc.data(), at=_s1AtMs(d.at);
     if(at==null) continue;
+    if(st.pass&&!d.gone&&key!=='_head~0') st.pass.live.add(key);
     if(_s2IsOlder(d.b)&&at>olderMax) olderMax=at;   /* v04.93 — a rec from a build that cannot fetch pictures */
     const cur=rep.map.get(key);
     { const pa=_s1RdPending.get(key); if(pa!==undefined&&at>pa) _s1RdPending.delete(key); }   /* a newer version replaces the pending one */
@@ -31680,6 +31921,8 @@ function _s1KickSoon(){
    interval can be changed, by a check, after the page has started. */
 let _s1HbTimer=null;
 function _s1Heartbeat(){
+  try{ _s1GateWatch(); }catch(e){}
+  try{ if(Date.now()>=(_s1Auto.retryAt||0)) _s1AutoCheck(); }catch(e){}   /* v05.89 · J159 */
   if(Date.now()-_s1LastFull<_S1_FULL_MS) return;
   const cfg=getSyncConfig();
   if(!cfg||!_syncFsDb||!_s1Eligible()||_s1Busy||_pushInFlight) return;
@@ -36305,7 +36548,13 @@ function _syncDiagnosticsHTML(){
   const dotEl=document.getElementById('sync-dot');
   const statusTxt=dotEl?dotEl.title:'unknown';
   const rows=[
-    ['Cloud project', (()=>{ const c=getSyncConfig(); return (c&&c.firebaseConfig&&c.firebaseConfig.projectId)||'—'; })()],
+    /* v05.89 · J159 — what this device points at, in plain words and with nothing secret (never the apiKey): two screenshots can be compared */
+    ['Cloud project (Firebase)', (()=>{ const c=getSyncConfig(); return (c&&c.firebaseConfig&&c.firebaseConfig.projectId)||'—'; })()],
+    ['Notebook ID', (()=>{ const c=getSyncConfig(); return (c&&c.notebookId)||'—'; })()],
+    ['Setup came from', (()=>{ const c=getSyncConfig(); return !c?'—':c.src==='built-in'?'the built-in setup (Sign in with Google)':'pasted by hand on this device'; })()],
+    ['A new computer opens', _opText()],
+    ['Sending to the cloud', (()=>{ const w=_s1GateText(), s=_s1SendText(); return s?s:(w?'not yet — '+w:'ready'); })()],
+    ['Automatic check', _s1AutoText()],
     ['Realtime listener', _syncUnsub?('connected — '+statusTxt):'not connected'],
     ['Reconcile poll (15s safety net)', _reconcileTimer?'running':'not running'],
     ['Last successful sync', _syncAgo(_lastSyncTime)],
@@ -36356,6 +36605,8 @@ function openSyncModal(){
       </div>
       <div id="sync-copy-fb"></div>
       <div class="dp-offl" id="dp-offl-modal" style="margin-top:10px;font-size:12px;line-height:1.5;color:var(--t2)"></div>
+      ${_s1StuckHTML()}
+      ${_opLineHTML()}
     </div>
     ${_oaSectionHTML()}
     <div class="mm" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border2)">
@@ -36364,6 +36615,10 @@ function openSyncModal(){
       <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="btn" id="s1-reread-btn" onclick="_s1ReRead&&_s1ReReadUI()">⟳ Read everything again</button>
         <small style="color:var(--t3);font-size:11px;line-height:1.4;flex:1;min-width:160px">If notes your other devices have are missing here: fetches the whole notebook from the cloud again. Only adds; never removes a note.</small>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn" id="s1-resend-btn" onclick="_s1ResendUI()">☁ Send everything to the cloud again</button>
+        <small style="color:var(--t3);font-size:11px;line-height:1.4;flex:1;min-width:160px">If the cloud lacks notes this device has: sends every note, folder and section again. Only adds or updates; never deletes anything there. Uses Firebase writes. <span id="s1-send-line" style="font-weight:600"></span></small>
       </div>
       <label id="pickeep-row" style="margin-top:8px;display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:1.4;cursor:pointer;min-height:44px">
         <input type="checkbox" id="pickeep-cb" ${_picKeepOn()?'checked':''} onchange="_picKeepSet(this.checked)" style="width:20px;height:20px;flex:none;margin:0">
@@ -36409,6 +36664,7 @@ function openSyncModal(){
       <button class="btn bp" onclick="connectSync()">Connect</button>
     </div>`;
   document.getElementById('sync-modal').style.display='flex';
+  if(isLive){ try{ _opRead(); _s1SendPaint(); }catch(e){} }   /* v05.89 · J159 — what the pointer names, read now */
 }
 
 function closeSyncModal(){document.getElementById('sync-modal').style.display='none';}
