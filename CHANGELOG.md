@@ -11493,3 +11493,9 @@ Cause of the owner's offline episode: J143 (fixed v05.83). This round makes a sy
 **Found, not changed:** this Chromium refuses ONE IndexedDB record of 140 MB (100 MB is fine). The device's full copy (`notebook`) is one record, so a notebook this big logs "Local save failed" for the full copy and is kept by the per-record journal only. Check 147f reports it. The owner's 157 MB notebook is over that line; it needs its own job.
 
 **Checks:** block 147, `tools/recs-j159.mjs` (147a–147g). Block 139b updated in place: its "not in the layout" file was a 2-space file, which is now READ; it is a one-line file now, with the new message.
+
+**Architect review of v05.89 (11 Nov 2026):** ship-check 17/17; blocks 147+139 74/74 (19 of 147's 31 fail on v05.88); full app-check 1–67 3645/3647 (56k, J162), 68–103 4395/4399 (91f = J152; 100d under load, 17/17 alone), 104–138 1588/1592 → 105a read the renamed Diagnostics row, fixed in place (block 105 13/13), 139–147 452/452. The builder stopped during its final check run; the Architect opened PR #304.
+
+## v05.90 — J162 (issue #305): a notebook over ~128 MB writes its full device copy in pieces
+
+*(entry completed at the end of the round)*
