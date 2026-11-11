@@ -460,7 +460,10 @@ try {
     console.log('S56k-slow ' + JSON.stringify(out.slow.slice(0, 20)));
     check(ownMax <= 600, `56k the migration's own work has no call over 600 ms (longest ${ownMax} ms; the longest tasks overall, ${out.lt.join(', ')} ms, are the pre-existing whole-notebook save shrinking as notes are migrated)`, JSON.stringify(own));
     const errs = A.errors.filter((e) => !/localStorage best-effort save failed \(IndexedDB is authoritative\)/.test(e));
-    check(errs.length === 0, '56k no page errors (the app\'s own "localStorage best-effort save failed" note at a 187 MB notebook is expected and excluded)', errs.slice(0, 2).join(' · '));
+    /* v05.90 · J162 — the exclusion stays ONLY for the localStorage line (localStorage cannot hold 187 MB, and IndexedDB is the system of record). It used to hide nothing
+       else by luck: "Local save failed" (the whole notebook as ONE IndexedDB record, refused over ~128 MB) was reported here as "always fails". Since v05.90 the device copy is
+       written in pieces, so that line is no longer expected; it fails this check like any other error. */
+    check(errs.length === 0, '56k no page errors (the app\'s own "localStorage best-effort save failed" note at a 187 MB notebook is expected and excluded; "Local save failed" is NOT)', errs.slice(0, 2).join(' · '));
     await A.ctx.close();
   }
 } catch (e) {

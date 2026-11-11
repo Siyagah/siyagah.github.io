@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.89">
+<meta name="app-version" content="05.90">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4128,7 +4128,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.89</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.90</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4390,10 +4390,10 @@ async function _idbMigrateFrom(db){
   try{
     /* v05.17 · B1 — the first write of this device's copy happens only when a read has just SHOWN there is none:
        never over a copy that is there, never over one that could not be read */
-    const cur=await _idbRead(IDB_KEY);
+    const cur=await _idbReadFull();
     if(!cur.ok||(cur.v&&cur.v.folders)) return false;
-    await _idbPut(IDB_KEY, db);
-    const back=await _idbGet(IDB_KEY);
+    await _idbPutDB(null);   /* v05.90 · J162 — one record, or pieces when it is too big for one */
+    const bk=await _idbReadFull(), back=bk.ok?bk.v:null;
     if(!back) return false;
     return _idbIdSet(back.folders)===_idbIdSet(db.folders)
         && _idbIdSet(back.articles)===_idbIdSet(db.articles)
@@ -4462,19 +4462,160 @@ function _ljHoldOpen(st){
   spin();
 }
 /* the full copy and the save number it holds, in ONE transaction */
-function _ljFullPut(seq){
+function _ljFullPut(seq){ return _idbPutDB(seq).then(()=>{ _ljFullSeq=seq; return true; }); }
+/* ── v05.90 · J162 — the device copy in PIECES once it is too big for one record ───────────────────────────────────────────
+   This Chromium refuses ONE IndexedDB record over ~128 MB ("The serialized keys and/or value are too large"). The device copy
+   is one record ('notebook' in siyagah-local-v1), written from THREE places — the journal's full copy (_ljFullPut), the
+   non-journal save (_save) and the first write (_idbMigrateFrom) — and all three now go through _idbPutDB(seq).
+   · Small (estimated ≤ _PC_FULL_MAX = 64 M characters, half the limit because a non-Latin-1 string is two bytes a character):
+     EXACTLY today's single record, `st.put(DB,'notebook')` (+ 'notebook-seq' for the journal), byte for byte. A put that the
+     browser still refuses as too big falls to pieces too (_pcForce), whatever the estimate said.
+   · Big: the same store (no second database, nothing upgraded: three new key names, no schema change) holds
+       'nbp:<gen>:<i>'      {c, s, n}  a piece: c = the top-level key of an array (s = JSON of a run of WHOLE elements, n = how many),
+                                       or '' for the head (s = JSON of every key that is not an array)
+       'notebook-pieces'    the MANIFEST {v,gen,seq,keys[],order[],pcs[{c,n,l}],chars,at}: the pointer, written LAST.
+     New pieces are written beside the old ones (a new generation = the save number), the manifest switches to them in ONE
+     transaction, and only then are the old pieces removed (_pcSweep). A kill at any moment leaves the old manifest and its
+     pieces, or the new ones — never a mix. A piece is built in slices from ONE state: if _dbRev or _s1MergeSeq moves during a
+     yield the build restarts (3 tries, the 4th whole in one tick — the P4 rule).
+     'notebook' and 'notebook-seq' are NOT touched in pieces mode: a build older than v05.90 reads only those, so it sees the
+     last copy that fitted (an honest older copy), never an emptied or shrunk one.
+   · Reading (_idbReadFull): the manifest wins unless a single record carries a LARGER 'notebook-seq' (a notebook that shrank,
+     or an older build that wrote); a piece that is missing, the wrong length or the wrong count is {ok:false} — the B1 path
+     (#idb-warn, no mkDefaults, no write), never a partial notebook. The journal is then laid over it from the manifest's seq. */
+const _PC_MANIFEST='notebook-pieces', _PC_PREFIX='nbp:';
+const _PC_FULL_MAX=64e6, _PC_CHUNK=12e6, _PC_BATCH=32e6;
+let _pcKnown=false, _pcForce=false, _pcBusy=null, _pcAgain=false, _ljFullSeq=null, _pcEstAt=0, _pcEstV=0;
+window._pcStat={mode:'',n:0,chars:0,at:0};
+function _pcMax(){ return typeof window.__pcMax==='number'?window.__pcMax:_PC_FULL_MAX; }
+/* characters held in strings, at most 4 levels down: a few ms for a notebook under the journal's 1,500 notes (never cached: a big import can
+   take a notebook over the line between two saves); the journal's own full copies are rare, so a bigger one is walked rarely */
+function _pcEstimate(){
+  const now=Date.now();
+  let n=0; const walk=(v,d)=>{ if(typeof v==='string') n+=v.length; else if(d<4&&v&&typeof v==='object'){ for(const k in v) walk(v[k],d+1); } };
+  walk(DB,0); _pcEstV=n; _pcEstAt=now; return n;
+}
+function _pcTooBig(e){ return !!e&&(e.name==='DataError'||/too large|too big/i.test(String(e.message||e))); }
+/* the single record, as ever; in the same transaction a stale manifest is removed (a newer single record must never lose to it) */
+function _idbPutOne(seq){
   return _idbOpen().then(db=>new Promise((resolve,reject)=>{
     if(!db){ reject(new Error('IndexedDB unavailable')); return; }
+    let tx=null;
+    try{
+      tx=db.transaction(IDB_STORE,'readwrite'); const st=tx.objectStore(IDB_STORE);
+      const had=_pcKnown;
+      tx.oncomplete=()=>{ if(had){ _pcKnown=false; _pcSweep([]).catch(()=>{}); } window._pcStat={mode:'one',n:1,chars:_pcEstV,at:Date.now()}; resolve(true); };
+      tx.onerror=()=>reject(tx.error||new Error('IndexedDB write failed'));
+      tx.onabort=()=>reject(tx.error||new Error('IndexedDB write aborted'));
+      st.put(DB,IDB_KEY); if(seq!=null) st.put(seq,'notebook-seq'); if(had) st.delete(_PC_MANIFEST);
+      if(seq!=null) _ljHoldOpen(st);
+    }catch(e){ try{ if(tx) tx.abort(); }catch(_){} reject(e); }
+  }));
+}
+async function _idbPutDB(seq){
+  const est=_pcEstimate(), mx=_pcMax();
+  if(_pcForce&&est<mx/2) _pcForce=false;
+  if(!_pcForce&&est<=mx){
+    try{ return await _idbPutOne(seq); }catch(e){ if(!_pcTooBig(e)) throw e; _pcForce=true; }
+  }
+  return _pcPut(seq);
+}
+/* one writer at a time; a call that arrives meanwhile makes the running one go round again (non-journal saves come in a stream) */
+function _pcPut(seq){
+  if(_pcBusy){ _pcAgain=true; return _pcBusy; }
+  const run=async()=>{
+    try{ let s=seq; do{ _pcAgain=false; await _pcWrite(s==null?Math.max(_ljSeq+1,Date.now()):s); s=null; }while(_pcAgain); return true; }
+    finally{ _pcBusy=null; }
+  };
+  _pcBusy=run(); return _pcBusy;
+}
+function _pcTx(db,fn){
+  return new Promise((resolve,reject)=>{
     let tx=null;
     try{
       tx=db.transaction(IDB_STORE,'readwrite'); const st=tx.objectStore(IDB_STORE);
       tx.oncomplete=()=>resolve(true);
       tx.onerror=()=>reject(tx.error||new Error('IndexedDB write failed'));
       tx.onabort=()=>reject(tx.error||new Error('IndexedDB write aborted'));
-      st.put(DB,IDB_KEY); st.put(seq,'notebook-seq');
-      _ljHoldOpen(st);
+      fn(st);
     }catch(e){ try{ if(tx) tx.abort(); }catch(_){} reject(e); }
-  }));
+  });
+}
+async function _pcWrite(seq){
+  const db=await _idbOpen(); if(!db) throw new Error('IndexedDB unavailable');
+  const chunk=typeof window.__pcChunk==='number'?window.__pcChunk:_PC_CHUNK;
+  let built=null;
+  for(let attempt=0;attempt<4&&!built;attempt++){
+    const rev=_dbRev, ms=_s1MergeSeq, whole=attempt>=3; let t=performance.now();
+    const yl=async()=>{ if(whole||performance.now()-t<25) return; await _yieldTask(); t=performance.now(); if(_dbRev!==rev||_s1MergeSeq!==ms) throw 'restart'; };
+    try{
+      const order=Object.keys(DB), head={}, pcs=[]; let chars=0;
+      for(const k of order){
+        const v=DB[k];
+        if(!Array.isArray(v)){ head[k]=v; continue; }
+        let parts=[], len=0;
+        const flush=()=>{ pcs.push({c:k,s:'['+parts.join(',')+']',n:parts.length}); chars+=len; parts=[]; len=0; };
+        for(let i=0;i<v.length;i++){ const j=JSON.stringify(v[i]); const s=j===undefined?'null':j; parts.push(s); len+=s.length+1; if(len>=chunk) flush(); await yl(); }
+        if(parts.length||!v.length) flush();
+      }
+      const hs=JSON.stringify(head); pcs.unshift({c:'',s:hs,n:0}); chars+=hs.length;
+      built={order,pcs,chars};
+    }catch(e){ if(e!=='restart') throw e; }
+  }
+  if(!built) throw new Error('the notebook kept changing while its device copy was being made');
+  const gen=String(seq), keys=built.pcs.map((p,i)=>_PC_PREFIX+gen+':'+i), holdAt=typeof window.__ljHoldPiece==='number'?window.__ljHoldPiece:(window.__ljHoldPiece==='m'?-1:0);
+  let i=0, bi=0;
+  while(i<built.pcs.length){
+    let j=i, sz=0;
+    while(j<built.pcs.length&&(j===i||sz+built.pcs[j].s.length<=_PC_BATCH)){ sz+=built.pcs[j].s.length; j++; }
+    const a=i, b=j, hold=(bi===holdAt);
+    await _pcTx(db,st=>{ for(let q=a;q<b;q++) st.put({c:built.pcs[q].c,s:built.pcs[q].s,n:built.pcs[q].n},keys[q]); if(hold) _ljHoldOpen(st); });
+    i=j; bi++; await _yieldTask();
+  }
+  const man={v:1,gen:gen,seq:seq,keys:keys,order:built.order,pcs:built.pcs.map(p=>({c:p.c,n:p.n,l:p.s.length})),chars:built.chars,at:Date.now()};
+  await _pcTx(db,st=>{ st.put(man,_PC_MANIFEST); if(window.__ljHoldPiece==='m') _ljHoldOpen(st); });
+  _pcKnown=true; window._pcStat={mode:'pieces',n:keys.length,chars:built.chars,at:man.at};
+  try{ await _pcSweep(keys); }catch(e){}   /* the old generation goes only now that the new manifest has committed */
+}
+async function _pcSweep(keep){
+  const db=await _idbOpen(); if(!db) return;
+  const ks=new Set(keep);
+  await _pcTx(db,st=>{ const cr=st.openKeyCursor(IDBKeyRange.bound(_PC_PREFIX,_PC_PREFIX+'￿')); cr.onsuccess=()=>{ const c=cr.result; if(!c) return; if(!ks.has(c.key)) st.delete(c.key); c.continue(); }; });
+}
+/* the device copy, whichever layout it is in: {ok:true,v} (v undefined = genuinely absent) or {ok:false} */
+async function _idbReadFull(){
+  const mr=await _idbRead(_PC_MANIFEST); if(!mr.ok) return {ok:false};
+  const sr=await _idbRead('notebook-seq'); if(!sr.ok) return {ok:false};
+  const nseq=+sr.v||0, m=mr.v;
+  const good=!!(m&&Array.isArray(m.keys)&&Array.isArray(m.pcs)&&m.pcs.length===m.keys.length&&Array.isArray(m.order));
+  if(m&&!good) return {ok:false};   /* a manifest that does not read as one is a failed read, not an absent notebook */
+  if(good&&!(nseq>m.seq)){
+    const r=await _pcAssemble(m); if(!r.ok) return {ok:false};
+    _pcKnown=true; _ljFullSeq=m.seq; window._pcStat={mode:'pieces',n:m.keys.length,chars:m.chars||0,at:m.at||0};
+    return {ok:true,v:r.v};
+  }
+  const a=await _idbRead(IDB_KEY); if(!a.ok) return a;
+  if(good){ /* a newer single record: the manifest is stale */ }
+  _pcKnown=good; _ljFullSeq=nseq; if(a.v) window._pcStat={mode:'one',n:1,chars:0,at:0};
+  return a;
+}
+async function _pcAssemble(m){
+  try{
+    const arrs={}; let head=null;
+    for(let i=0;i<m.keys.length;i++){
+      const r=await _idbRead(m.keys[i]); if(!r.ok) return {ok:false};
+      const p=r.v, d=m.pcs[i];
+      if(!p||typeof p.s!=='string'||p.s.length!==d.l||p.c!==d.c) return {ok:false};
+      const x=JSON.parse(p.s);
+      if(d.c===''){ if(!x||typeof x!=='object'||Array.isArray(x)) return {ok:false}; head=x; }
+      else{ if(!Array.isArray(x)||x.length!==d.n) return {ok:false}; if(arrs[d.c]) for(let q=0;q<x.length;q++) arrs[d.c].push(x[q]); else arrs[d.c]=x; }
+    }
+    if(!head) return {ok:false};
+    const out={};
+    for(const k of m.order){ if(k in arrs) out[k]=arrs[k]; else if(k in head) out[k]=head[k]; else return {ok:false}; }
+    Object.keys(head).forEach(k=>{ if(!(k in out)) out[k]=head[k]; });
+    return {ok:true,v:out};
+  }catch(e){ return {ok:false}; }
 }
 /* one journal transaction: the puts, the newest-save marker, and (a checkpoint) the removal of
    what the full copy now makes redundant */
@@ -4518,7 +4659,7 @@ function _ljSave(sw){
     _ljStat.full++;
     const p=_ljRun(epoch,()=>_ljOpen().then(ldb=>{
       /* no second database on this device: save the old way, whole, for good */
-      if(!ldb){ _ljDead=true; _ljOn=false; return _idbPut(IDB_KEY,DB); }
+      if(!ldb){ _ljDead=true; _ljOn=false; return _idbPutDB(null); }
       return _ljFullPut(seq).then(()=>_ljTx([],{seq:seq,n:n},seq)).then(()=>{ _ljCkpt=seq; return true; });
     }));
     _ljStat.lastMs=performance.now()-t0;
@@ -4579,7 +4720,7 @@ async function _ljOverlay(db){
   if(!all) return false;
   const ent=new Map(); all[0].forEach((k,i)=>ent.set(k,all[1][i]));
   const m=ent.get('m'); if(!m) return false;   /* the journal was never written: the full copy is the notebook */
-  const baseSeq=+(await _idbGet('notebook-seq'))||0;
+  const baseSeq=(_ljFullSeq!=null)?_ljFullSeq:(+(await _idbGet('notebook-seq'))||0);   /* v05.90 · J162 — the seq of the layout that was read (the manifest's, in pieces) */
   const newer=v=>!!v&&v.s>baseSeq;
   const byColl={}, ords={}; let head=null;
   ent.forEach((v,k)=>{
@@ -4647,7 +4788,7 @@ async function loadDB(){
      (see _idbBootFail) and joins it back in when it can be read (_idbRecoverTry). */
   let _rd={ok:false};
   for(let k=0;k<_IDB_BOOT_TRIES;k++){
-    try{ _rd=await _idbRead(IDB_KEY); }catch(e){ _rd={ok:false}; }
+    try{ _rd=await _idbReadFull(); }catch(e){ _rd={ok:false}; }   /* v05.90 · J162 — one record or pieces; a piece that cannot be read is a failed read */
     if(_rd.ok) break;
     await new Promise(r=>setTimeout(r,_IDB_BOOT_GAP_MS));
   }
@@ -4838,7 +4979,7 @@ async function loadDB(){
     try{ _idbReady=await _idbMigrateFrom(DB); }catch(e){ _idbReady=false; }
     if(_idbReady) _hadSet();   /* v05.59 · J92 — from now on this device holds a notebook */
     /* B1 — the copy turned out to be there after all (read again just now): join it in, never write over it */
-    if(!_idbReady){ const again=await _idbRead(IDB_KEY).catch(()=>({ok:false})); if(!again.ok||(again.v&&again.v.folders)){ _idbBootFail=true; snapshotState(); _idbWarn(true); _idbRecoverTry(); return; } }
+    if(!_idbReady){ const again=await _idbReadFull().catch(()=>({ok:false})); if(!again.ok||(again.v&&again.v.folders)){ _idbBootFail=true; snapshotState(); _idbWarn(true); _idbRecoverTry(); return; } }
   }
   snapshotState();
 }
@@ -4856,7 +4997,7 @@ async function _idbRecoverTry(){
   if(!_idbBootFail||_idbRecBusy) return;
   _idbRecBusy=true; _idbRecN++;
   try{
-    const rd=await _idbRead(IDB_KEY).catch(()=>({ok:false}));
+    const rd=await _idbReadFull().catch(()=>({ok:false}));
     if(!rd.ok) return;
     const idb=rd.v;
     if(idb&&idb.folders){
@@ -5401,7 +5542,7 @@ function _save(pre,sw){
   }
 
   if(_idbReady){
-    (jm?_ljSave(sw):_idbPut(IDB_KEY, DB)).then(_clearSaveFailureIfNeeded).catch(_markSaveFailure);
+    (jm?_ljSave(sw):_idbPutDB(null)).then(_clearSaveFailureIfNeeded).catch(_markSaveFailure);
     if(lsErr) console.error('localStorage best-effort save failed (IndexedDB is authoritative):', lsErr);
     return true;
   }
@@ -36546,6 +36687,20 @@ function _syncAgo(ms){
   const h=Math.round(m/60); if(h<48)return h+'h ago';
   return Math.round(h/24)+'d ago';
 }
+/* v05.90 · J162 — "one record / N pieces, X MB, last written h:mm, journal holds N changes". The journal count is read when the
+   panel is drawn (a store count, no data) and shown the next time it is drawn. */
+let _dcJrn=null;
+function _dcRefresh(){
+  if(!_ljOn) { _dcJrn=null; return; }
+  _ljOpen().then(db=>{ if(!db) return; const rq=db.transaction(_LJ_STORE,'readonly').objectStore(_LJ_STORE).count(); rq.onsuccess=()=>{ const v=Math.max(0,(rq.result||0)-1); if(v!==_dcJrn){ _dcJrn=v; try{ const d=document.getElementById('sync-diag'); if(d) d.innerHTML=_syncDiagnosticsHTML(); }catch(e){} } }; }).catch(()=>{});   /* repaints only when the number changed, so the repaint's own refresh ends it */
+}
+function _dcText(){
+  _dcRefresh();
+  const s=window._pcStat||{}, mb=s.chars?Math.round(s.chars/1048576*10)/10:0;
+  const at=s.at?new Date(s.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'—';
+  const lay=s.mode==='pieces'?(s.n+' pieces'):s.mode==='one'?'one record':'not written yet';
+  return lay+(mb?', '+mb+' MB':'')+', last written '+at+(_ljOn?', journal holds '+(_dcJrn==null?'…':_dcJrn)+' changes':'');
+}
 function _syncDiagnosticsHTML(){
   const dotEl=document.getElementById('sync-dot');
   const statusTxt=dotEl?dotEl.title:'unknown';
@@ -36570,6 +36725,7 @@ function _syncDiagnosticsHTML(){
     ['Pictures', _picDiagText()],
     ['Cloud picture space', _picUseText()],
     ['Pictures kept here', _picKeepText()],
+    ['Device copy', _dcText()],   /* v05.90 · J162 */
     ['Storage protected', _storeProt.v||'checking…'],
   ];
   let h='<table style="width:100%;font-size:11px;border-collapse:collapse">'
