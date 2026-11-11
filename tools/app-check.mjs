@@ -4531,6 +4531,18 @@ async function forceIDBWriteFail(page, onlyWhileRecovery = false) {
       }
       return orig.call(this, k, v);
     };
+    /* v05.90 · J162 — the notebook write is now _idbPutDB(seq) (one record, or pieces), which no longer calls _idbPut; it is
+       failed under the same condition, so these checks still make saving GENUINELY fail. A no-op on code without it. */
+    if (typeof window._idbPutDB === 'function') {
+      const origDB = window._idbPutDB;
+      window._idbPutDB = function (seq) {
+        if (!only || localStorage.getItem('siyagah-recovery-latest-key')) {
+          const e = new Error('quota exceeded (stubbed for this check)'); e.name = 'QuotaExceededError';
+          return Promise.reject(e);
+        }
+        return origDB.call(this, seq);
+      };
+    }
   }, onlyWhileRecovery);
 }
 async function forceEveryNotebookWriteFail(page) {
@@ -5014,7 +5026,8 @@ await r.block('16e-idb-write-failure-then-recovery-clears-badge', async () => {
   r.check(idbReady === true, 'setup: IndexedDB is this session’s system of record on a normal boot', idbReady);
 
   await growDBInMemory(s.page);
-  await s.page.evaluate(() => { window._idbPut = () => Promise.reject(new Error('stubbed IndexedDB write failure')); });
+  /* v05.90 · J162 — the notebook write is now _idbPutDB (one record or pieces), so it is the one failed here; _idbPut too, as before */
+  await s.page.evaluate(() => { window.__origPutDB = window._idbPutDB; window._idbPut = () => Promise.reject(new Error('stubbed IndexedDB write failure')); if (window.__origPutDB) window._idbPutDB = () => Promise.reject(new Error('stubbed IndexedDB write failure')); });
   const ok1 = await s.page.evaluate(() => window._save());
   r.check(ok1 === true, '_save() still returns true synchronously — the IndexedDB failure surfaces only later, asynchronously', ok1);
 
@@ -5027,7 +5040,7 @@ await r.block('16e-idb-write-failure-then-recovery-clears-badge', async () => {
   });
   r.check(dotVisible1, 'and the ⚠ indicator is actually visible while the IndexedDB write is failing', dotVisible1);
 
-  await s.page.evaluate(() => { window._idbPut = () => Promise.resolve(true); });
+  await s.page.evaluate(() => { window._idbPut = () => Promise.resolve(true); if (window.__origPutDB) window._idbPutDB = () => Promise.resolve(true); });
   await s.page.evaluate(() => window._save());
   await s.page.waitForTimeout(500);
   const clearedNow = await s.page.evaluate(() => _lsFail);
