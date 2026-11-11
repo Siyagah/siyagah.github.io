@@ -31741,6 +31741,7 @@ async function _s1ReadStart(cfg){
   const gen=_s1RdGen, nb=cfg.notebookId;
   const st=_s1Stat.rd=_s1Stat.rd||{on:false, reason:null, records:0, lastRecv:0, cursor:0, err:null};
   st.on=false; st.reason='starting'; st.perm=false; _s1RdCaught=false;
+  if(!_s1ShutSince) _s1ShutSince=Date.now();   /* v05.89 · J159 — the clock of "not sending yet" starts with the reader */
   if(!_s1HbTimer) _s1HbTimer=setInterval(()=>{ try{ _s1Heartbeat(); }catch(e){} },5000);
   try{
     const nbRef=_syncFsDb.collection('notebooks').doc(nb), recsC=nbRef.collection('recs');
