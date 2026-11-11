@@ -24,7 +24,8 @@
    71i  contrast of the new text on the five presets (headers, chips, Overdue red, flag, counter, badge, chooser, deck)
 
    `--only=71a,71c` runs just those. Each printed ok/FAIL line becomes one app-check check (block 71). */
-import { playwright, serve, seedDB, touchDrag, hostLimit, zabAct, zabTap } from './harness.mjs';
+/* v05.88 · J156 (changed in place, not deleted): the 3,000 ms panel/selector waits are now the harness's WAIT_MS; same assertions, only the wait. */
+import { WAIT_MS, playwright, serve, seedDB, touchDrag, hostLimit, zabAct, zabTap } from './harness.mjs';
 import { makeCloud, addDevice, on, sleep, quiet, check, results } from './s1-fake.mjs';
 
 const argv = process.argv.slice(2);
@@ -62,7 +63,7 @@ const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabA
 const until = async (fn, ms = 8000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await sleep(150); } return false; };
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
 const item = (d, id) => on(d, (i) => JSON.parse(JSON.stringify(DB.jeb.find((x) => x.id === i) || null)), id);
-const openPanel = async (d, vp, pid = 'jp-task') => { await act(d, vp, `#jeb-bar .jeb-chip[data-pid="${pid}"] .jeb-main`); await d.page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await sleep(400); };
+const openPanel = async (d, vp, pid = 'jp-task') => { await act(d, vp, `#jeb-bar .jeb-chip[data-pid="${pid}"] .jeb-main`); await d.page.waitForSelector('#jeb-panel.on', { timeout: WAIT_MS }); await sleep(400); };
 const closePanel = async (d, vp) => { await act(d, vp, '#jeb-panel .jeb-x'); await sleep(300); };
 /* the panel as the owner reads it: "Overdue 1:t1 | Today 2:t3+t2 | ..." */
 const groups = (d) => on(d, () => [...document.querySelectorAll('#jeb-panel .jt-gh')].map((h) => {

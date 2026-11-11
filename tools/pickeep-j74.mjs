@@ -35,7 +35,10 @@ const setup = async (page, opts) => page.evaluate(async ([cfg, o]) => {
     }
   }
   const doc = (coll, id) => ({ get: async () => { reads.n++; const v = cloud.get(coll + '/' + id); return { exists: !!v, data: () => v }; } });
-  _syncFsDb = { collection: () => ({ doc: () => ({ collection: (c) => ({ doc: (id) => doc(c, id) }) }) }) };
+  /* v05.88 · J156 (changed in place): the stand-in also answers the sync push's calls harmlessly (get → missing; set/update/delete/commit → nothing), so an early app push no longer logs "nb.get is not a function"; pictures are served as before. */
+  const q0 = { get: async () => ({ exists: false, data: () => null, docs: [], empty: true, forEach() {} }), set: async () => {}, update: async () => {}, delete: async () => {}, onSnapshot: () => () => {} };
+  const nbDoc = () => ({ ...q0, collection: (c) => ({ ...q0, where: () => ({ ...q0 }), limit: () => ({ ...q0 }), doc: (id) => ({ ...q0, ...doc(c, id) }) }) });
+  _syncFsDb = { collection: () => ({ ...q0, doc: nbDoc }), batch: () => ({ set() {}, update() {}, delete() {}, commit: async () => {} }), runTransaction: async (f) => f({ get: async () => ({ exists: false, data: () => null }), set() {}, update() {}, delete() {} }) };
   _authInstance = { currentUser: { uid: 'u-test' } };
   const img = (s) => `<img class="ed-img" data-pic="${s}" data-mime="image/png" alt="">`;
   const now = new Date().toISOString();

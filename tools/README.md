@@ -319,6 +319,8 @@ assertions miss.
 
 ## Traps in this harness — learned the hard way, round 1
 
+- **(v05.88, J156) A bare `text=Word` against the ⚙ / 🧰 menus matches the first row that merely CONTAINS the word, and a fixed 3,000 ms wait runs out on a busy machine.** Open a menu row by its full label (`.sb-mi` + `hasText`); use the harness's `WAIT_MS` (20 s) for panels/selectors; a `_syncFsDb` stand-in must answer the push path (`get/set/…`) or an early app push logs "nb.get is not a function".
+
 - **A check that compares with an older build must find that build — a shallow clone hides it, and then the check compares the build with
   itself.** `makeBase()` in a tool runs `git log --grep=…` for the old commit and `git show <sha>:index.html`; with no sha that is
   `git show :index.html`, the CURRENT file, so "byte-identical to the build before" passes whatever changed. 83c (zab-z8) and 90d (tap-t2) passed
