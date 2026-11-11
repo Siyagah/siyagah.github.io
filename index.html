@@ -31648,7 +31648,7 @@ async function _s1AutoCheck(){
   if(!rd||rd.perm||!rd.on) return;
   if(A.state==='reading'){
     if(rd.pass&&rd.pass.snaps>0&&_s1RdCaught){
-      const live=rd.pass.live.size, own=_s1OwnCount(); rd.pass=null; A.cloud=live; A.own=own;
+      let live=0; rd.pass.live.forEach(k=>{ if(k.startsWith('articles~')||k.startsWith('folders~')) live++; }); const own=_s1OwnCount(); rd.pass=null;   /* the same two kinds as own */ A.cloud=live; A.own=own;
       if(live*2<own&&own>=_S1_REREAD_MIN){ A.state='sending'; const r=await _s1ResendAll(true); A.state=r.ok?'sent':'send-failed'; if(!r.ok) A.err=r.why; }
       else A.state='ok';
     }
@@ -31690,7 +31690,7 @@ function _s1AutoText(){
   return (m[A.state]||A.state)+(A.cloud!=null&&A.own!=null?' — cloud '+A.cloud.toLocaleString('en-US')+' of '+A.own.toLocaleString('en-US')+' notes+folders':'')+(A.how?' ['+A.how+']':'');
 }
 /* why may this device not write yet? '' when it may. Plain words for Diagnostics and the dot. */
-let _s1GateSince=0;
+let _s1ShutSince=0;
 function _s1GateText(){
   const r=_s1Stat.rd;
   if(!r) return 'the per-note copy has not started';
@@ -31701,9 +31701,9 @@ function _s1GateText(){
   if(_pullInFlight) return 'another sync step is still running';
   return '';
 }
-function _s1StuckWhy(){ return (_s1GateSince&&Date.now()-_s1GateSince>=(window.__s1StuckMs||45000))?_s1GateText():''; }
+function _s1StuckWhy(){ return (_s1ShutSince&&Date.now()-_s1ShutSince>=(window.__s1StuckMs||45000))?_s1GateText():''; }
 function _s1GateWatch(){
-  if(_s1WriteGate()) _s1GateSince=0; else if(!_s1GateSince) _s1GateSince=Date.now();
+  if(_s1WriteGate()) _s1ShutSince=0; else if(!_s1ShutSince) _s1ShutSince=Date.now();
   const el=document.getElementById('sync-dot'), why=_s1StuckWhy();
   if(el&&el.classList.contains('sd-live')){
     if(why){ el.title='☁ Live, but not sending your changes yet — '+why; el.setAttribute('data-stuck','1'); }

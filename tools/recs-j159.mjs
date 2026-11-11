@@ -148,7 +148,7 @@ if (want('147c') || want('147d')) {
       await sleep(900);
       const dg = await on(P, () => ({ t: document.getElementById('sync-diag').innerText, all: document.getElementById('sync-mb').innerHTML + document.getElementById('sync-mb').innerText }));
       const flat = dg.t.replace(/\s+/g, ' ');
-      check(/proj-abc/.test(flat) && /nb-s1/.test(flat) && /built-in setup/.test(flat) && /A DIFFERENT notebook: nb-other/.test(flat), '147d Diagnostics show the Firebase project, the notebook id, where the setup came from and what the pointer names', flat.slice(0, 400));
+      check(/proj-abc/.test(flat) && /nb-s1/.test(flat) && /built-in setup/.test(flat) && /a DIFFERENT notebook: nb-other/.test(flat), '147d Diagnostics show the Firebase project, the notebook id, where the setup came from and what the pointer names', flat.slice(0, 400));
       check(!/SECRET-APIKEY-XYZ/.test(dg.all), '147d the apiKey is nowhere in the dialog');
       await on(P, () => { const c = JSON.parse(localStorage.getItem('siyagah-sync-v1')); c.firebaseConfig.apiKey = 'fake'; c.firebaseConfig.projectId = 'fake'; delete c.src; localStorage.setItem('siyagah-sync-v1', JSON.stringify(c)); });
       const flat2 = (await on(P, () => { openSyncModal(); return document.getElementById('sync-diag').innerText; })).replace(/\s+/g, ' ');
@@ -216,7 +216,8 @@ if (want('147e')) {
     check(thrown === 'refused', `147e a Blob of no pieces is never offered as a download (${thrown})`);
     const btn = await p.evaluate(() => !document.getElementById('bxp-exp').disabled);
     check(btn, '147e the Export button is usable again after a refused export');
-    check(app.errors.length === 0, '147e no page errors', app.errors.slice(0, 2).join(' · '));
+    const realErrs = app.errors.filter((e) => !/^console: backup failed Error: The backup came out almost empty/.test(e));   /* the refused exports above log their reason on purpose */
+    check(realErrs.length === 0, '147e no page errors (the refused exports log their reason)', realErrs.slice(0, 2).join(' · '));
   } catch (e) { check(false, `147e threw: ${String(e && e.message || e).split('\n')[0]}`); }
   if (app) await app.close().catch(() => {});
 }
