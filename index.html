@@ -30021,6 +30021,7 @@ function setSyncStatus(s){
   el.className='sync-dot-tb '+m.cls;
   el.title={'off':'☁ Sync off — click to set up','conn':'☁ Connecting…','live':'☁ Live — synced','busy':'☁ Syncing…','err':'☁ Sync error','offline':'☁ Offline — changes are saved on this device and will sync when you\'re back online'}[s]||'☁ Sync';
   if(probTitle) el.title=probTitle;
+  if(s==='live'){ try{ const w=_s1StuckWhy(); if(w){ el.title='☁ Live, but not sending your changes yet — '+w; el.setAttribute('data-stuck','1'); } }catch(e){} }   /* v05.89 · J159 */
   let txt=m.txt;
   if(s==='offline'){
     /* v05.83 (J143) — say WHY, in plain words, and when it last tried; the classes stay as they were */
@@ -36665,7 +36666,7 @@ function openSyncModal(){
       <button class="btn bp" onclick="connectSync()">Connect</button>
     </div>`;
   document.getElementById('sync-modal').style.display='flex';
-  if(isLive){ try{ _opRead(); _s1SendPaint(); }catch(e){} }   /* v05.89 · J159 — what the pointer names, read now */
+  if(isLive){ try{ _s1GateWatch(); _opRead(); _s1SendPaint(); }catch(e){} }   /* v05.89 · J159 — what the pointer names, read now */
 }
 
 function closeSyncModal(){document.getElementById('sync-modal').style.display='none';}

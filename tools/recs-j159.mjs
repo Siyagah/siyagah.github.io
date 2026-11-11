@@ -293,7 +293,7 @@ if (want('147g')) {
     await A.ctx.addInitScript(() => { window.__s1StuckMs = 1500; });
     await reopen(A);
     const t0 = Date.now(); let d0 = ''; while (Date.now() - t0 < 120000) { d0 = await on(A, () => _s1DiagText()).catch(() => ''); if (/^live|reading|on/i.test(d0) || !/starting/.test(d0)) break; await sleep(300); }
-    await sleep(3500);
+    await sleep(7000);   /* a heartbeat (5 s) has run */
     const r = await on(A, () => { openSyncModal(); const dot = document.getElementById('sync-dot'); return { caught: _s1RdCaught, gate: _s1WriteGate(), why: _s1StuckWhy(), title: dot.title, stuck: !!document.getElementById('s1-stuck'), row: document.getElementById('sync-diag').innerText.replace(/\s+/g, ' ') }; });
     check(r.caught === false && r.gate === false && /first answer/.test(r.why), `147g the stuck reader is named in plain words: "${r.why}" (records on the device: ${wantN})`);
     check(r.stuck && /Sending to the cloud not yet — /.test(r.row) && (/not sending/.test(r.title) || !/Live/.test(r.title)), `147g the dialog and the dot say it (dot: "${r.title}")`, r.row.slice(0, 300));
