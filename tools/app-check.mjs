@@ -12961,6 +12961,19 @@ await r.block('138-mmj-slices', async () => {
   for (const row of rows) r.check(row.ok, '138: ' + row.label, row.detail);
   r.check(out.status === 0, 'the mmj-slices.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 148 — v05.90, J162: a notebook over ~128 MB writes its full device copy in pieces (manifest last), boot reads either layout, kills inside the piece write, a missing/short piece warns and writes nothing, the older build still opens it, start time. tools/fullcopy-j162.mjs runs 148a–148h. */
+await r.block('148-fullcopy-j162', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./fullcopy-j162.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 5400000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  for (const l of lines) if (/^\s*note\s/.test(l)) console.log(l);
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 16, 'the fullcopy-j162.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '148: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the fullcopy-j162.mjs check exits cleanly', 'exit ' + out.status);
+});
 /* 147 — v05.89, J159: the cloud's per-note copy lacked most of the notebook — Send everything again, the automatic check, the pointer that is never overwritten, Diagnostics, an export never 0 bytes, the old-layout big backup, a stuck reader that says so. tools/recs-j159.mjs runs 147a–147g. */
 await r.block('147-recs-j159', async () => {
   const { spawnSync } = await import('node:child_process');

@@ -4563,7 +4563,7 @@ async function _pcWrite(seq){
     }catch(e){ if(e!=='restart') throw e; }
   }
   if(!built) throw new Error('the notebook kept changing while its device copy was being made');
-  const gen=String(seq), keys=built.pcs.map((p,i)=>_PC_PREFIX+gen+':'+i), holdAt=typeof window.__ljHoldPiece==='number'?window.__ljHoldPiece:0;
+  const gen=String(seq), keys=built.pcs.map((p,i)=>_PC_PREFIX+gen+':'+i), holdAt=typeof window.__ljHoldPiece==='number'?window.__ljHoldPiece:(window.__ljHoldPiece==='m'?-1:0);
   let i=0, bi=0;
   while(i<built.pcs.length){
     let j=i, sz=0;
