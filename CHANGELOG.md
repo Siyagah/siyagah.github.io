@@ -11473,3 +11473,7 @@ Cause of the owner's offline episode: J143 (fixed v05.83). This round makes a sy
 - 89b (`tools/f2.mjs`) and the ⚙ helper of `tools/audit-a1.mjs` now open the "💽 Storage & Backup" row by its full label inside `.sb-mi`; v05.86's ✈ row also says "Storage".
 - 107h (`tools/pickeep-j74.mjs`): the `_syncFsDb` stand-in answers the sync push's calls harmlessly (get/set/update/delete/batch/transaction), so an early app push is no longer a page error.
 - Zab checks (`jeb-j2`, `zab-z6a/b/c`, and the harness's own `zabOpen` helpers): the 3,000 ms waits are the harness's `WAIT_MS` (20 s). Same assertions.
+
+## v05.89 — J159 (issue #303): the cloud per-note copy lacked most of the notebook (in progress)
+
+Entry is filled in as the round is built.
