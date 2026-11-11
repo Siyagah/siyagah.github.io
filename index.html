@@ -36692,7 +36692,7 @@ function _syncAgo(ms){
 let _dcJrn=null;
 function _dcRefresh(){
   if(!_ljOn) { _dcJrn=null; return; }
-  _ljOpen().then(db=>{ if(!db) return; const rq=db.transaction(_LJ_STORE,'readonly').objectStore(_LJ_STORE).count(); rq.onsuccess=()=>{ _dcJrn=Math.max(0,(rq.result||0)-1); }; }).catch(()=>{});
+  _ljOpen().then(db=>{ if(!db) return; const rq=db.transaction(_LJ_STORE,'readonly').objectStore(_LJ_STORE).count(); rq.onsuccess=()=>{ const v=Math.max(0,(rq.result||0)-1); if(v!==_dcJrn){ _dcJrn=v; try{ const d=document.getElementById('sync-diag'); if(d) d.innerHTML=_syncDiagnosticsHTML(); }catch(e){} } }; }).catch(()=>{});   /* repaints only when the number changed, so the repaint's own refresh ends it */
 }
 function _dcText(){
   _dcRefresh();

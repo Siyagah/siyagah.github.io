@@ -164,7 +164,7 @@ if (want('148a') || want('148b') || want('148f')) await guard('148a', async () =
   note(`seeded ${total} notes, ${Math.round(size / 1048576)} MB of text, in ${Math.round((Date.now() - t0) / 1000)} s`);
   const r0 = await raw(o.page);
   check(size > 133169152, `148a the notebook is over the browser's limit for one record (${size} characters > 133169152)`);
-  check(!!r0.man && r0.man.n >= 8 && !r0.keys.includes('notebook'), `148a the first full copy is written in pieces (${r0.man ? r0.man.n : 0} pieces, manifest seq ${r0.man && r0.man.seq}), and no single record is attempted`, JSON.stringify({ keys: r0.keys.length, seq: r0.seq }));
+  check(!!r0.man && r0.man.n >= 8 && r0.seq === null, `148a the first full copy is written in pieces (${r0.man ? r0.man.n : 0} pieces, manifest seq ${r0.man && r0.man.seq}), and no "notebook-seq" is written for it (a build older than v05.90 keeps the older record it can read)`, JSON.stringify({ keys: r0.keys.length, seq: r0.seq }));
   haveBigLayout = !!r0.man;
   await edit(o.page, 1, '(a)'); await idle(o.page);
   const r1b = await raw(o.page);
@@ -174,10 +174,11 @@ if (want('148a') || want('148b') || want('148f')) await guard('148a', async () =
   check(r1.man && r0.man && r1.man.seq > r0.man.seq, `148a the checkpoint moved the manifest's seq (${r0.man && r0.man.seq} -> ${r1.man && r1.man.seq}; ${r1.man ? r1.man.n : 0} pieces; ${Math.round(ckMs / 100) / 10} s)`);
   check(r1.jr && r1.jr.n === 1 && r1.jr.hasM, `148a the journal is cleaned (${r1.jr && r1.jr.n} entry left: the marker)`);
   check(r1.keys.filter((k) => k.startsWith('nbp:')).length === (r1.man ? r1.man.n : -1) && orphans(r1).length === 0, `148a the old generation's pieces were removed after the new manifest committed (${r1.keys.filter((k) => k.startsWith('nbp:')).length} pieces on disk, ${r1.man && r1.man.n} named)`);
-  const dc = await o.page.evaluate(() => _dcText());
+  await o.page.evaluate(() => { _dcText(); }); await sleep(600); const dc = await o.page.evaluate(() => _dcText());
   check(/\d+ pieces, [\d.]+ MB, last written .*, journal holds 0 changes/.test(dc), `148a Diagnostics says it: "${dc}"`);
-  const shown = await o.page.evaluate(async () => { openSyncModal(); await new Promise((r) => setTimeout(r, 400)); const t = document.getElementById('sync-diag'); return t ? t.innerText.replace(/\s+/g, ' ') : ''; });
-  check(/Device copy/.test(shown), '148a the 🩺 Diagnostics panel shows a "Device copy" row', shown.slice(0, 200));
+  /* the table is drawn in the ☁ Cloud Sync dialog once sync is set up (this device has none), so its builder is asked directly */
+  const shown = await o.page.evaluate(() => { const h = document.createElement('div'); h.innerHTML = _syncDiagnosticsHTML(); return h.textContent.replace(/\s+/g, ' '); });
+  check(/Device copy\s*\d+ pieces/.test(shown),'148a the 🩺 Diagnostics table has the "Device copy" row', shown.slice(0, 200));
   bigRecs = await recs(o.page);
   await shut(o);   /* the page goes away the normal way: pagehide, then the copy is made again if anything is new */
   o = await open(BIGDIR, srv.base); dctx = o;
