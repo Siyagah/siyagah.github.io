@@ -23,6 +23,7 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
   await p.context().route('**://zablink.test/**', (rt) => rt.fulfill({ status: 200, contentType: 'text/html', body: '<title>x</title>ok' }));
   await p.context().route('**://www.zablink.test/**', (rt) => rt.fulfill({ status: 200, contentType: 'text/html', body: '<title>x</title>ok' }));
   const act = async (loc) => (touch ? loc.tap() : loc.click());
+  const stab = async (loc) => { await loc.scrollIntoViewIfNeeded(); await sleep(500); await act(loc); };
   const panelItem = (iid) => p.locator(`#jeb-panel .jeb-it[data-iid="${iid}"]`).first();
   const mk = (pid, txt) => p.evaluate(([pid, txt]) => { const id = jebAddItem(pid, txt); jebOpenPanel(pid); _jebPanelSig = ''; jebRefresh(); return id; }, [pid, txt]);
   /* add one link by real taps: the control, type, Enter */
@@ -51,7 +52,8 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     if (pop) await pop.close().catch(() => {});
     const still = await p.evaluate(() => !document.querySelector('#jeb-panel .jeb-edit'));
     r.check(still, `149a${t} the tap on a card does not start editing the item`, '');
-    await act(p.locator(`#jeb-panel .jeb-it[data-iid="${a}"] .jlk-open`).first()); await sleep(150);
+    if (await p.locator(`#jeb-panel .jeb-it[data-iid="${a}"] .jlk-open`).count()) { await act(p.locator(`#jeb-panel .jeb-it[data-iid="${a}"] .jlk-open`).first()); await sleep(150); }
+    else await act(p.locator(`#jeb-panel .jeb-it[data-iid="${a}"] .jlk-in`).first());
     await p.keyboard.type('javascript:alert(1)'); await p.keyboard.press('Enter'); await sleep(200);
     const bad = await p.evaluate((i) => ({ n: (DB.jeb.find((x) => x.id === i).links || []).length, toast: (document.querySelector('.toast') || {}).textContent }), a);
     r.check(bad.n === 3 && /web address/i.test(bad.toast || ''), `149a${t} a javascript: address is refused with a plain message`, JSON.stringify(bad));
@@ -78,8 +80,8 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     /* ── 149c ── */
     await p.evaluate((pid) => { _jlkOpen = null; jebOpenPanel(pid); _jebPanelSig = ''; jebRefresh(); }, plain);
     await sleep(250);
-    await act(p.locator(`#jeb-panel .jeb-it[data-iid="${a}"] .jlk[data-lid="l2"] .jlk-more`).first()); await sleep(250);
-    const menu = await p.evaluate(() => [...document.querySelectorAll('#jeb-menu .ci, #jeb-menu button, #jeb-menu [role=menuitem]')].map((x) => x.textContent.trim()));
+    await stab(p.locator(`#jeb-panel .jeb-it[data-iid="${a}"] .jlk[data-lid="l2"] .jlk-more`).first()); await sleep(250);
+    const menu = await p.evaluate(() => [...document.querySelectorAll('#jeb-menu .jm')].map((x) => x.textContent.trim()));
     r.check(['Rename', 'Move to another Zab', 'To a new note in a folder', 'Add to an existing note', 'Delete link'].every((k) => menu.some((m) => m.includes(k))), `149c${t} the card's ⋯ menu has Rename, Move, A, B and Delete`, JSON.stringify(menu));
     await act(p.locator('#jeb-menu :text("Move to another Zab")').first()); await sleep(300);
     const rows = await p.evaluate(() => [...document.querySelectorAll('#mb .jx-mv')].map((b) => ({ n: b.textContent.trim(), off: b.disabled })));
@@ -110,13 +112,13 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     r.check(d2.back.join() === 'l3,l1' && d2.tr === 0, `149d${t} Restore puts it back on its item`, JSON.stringify(d2));
     const d3 = await p.evaluate((i) => { const it = DB.jeb.find((x) => x.id === i), pid = it.pocketId; jebDeleteLink(i, 'l3'); jebDeleteItem(i); const eid = DB.trash.find((x) => x.type === 'jebLink').id; restoreItem(eid); const nw = DB.jeb.filter((x) => (x.links || []).some((l) => l.id === 'l3')); return { n: nw.length, pid: nw[0] && nw[0].pocketId, want: pid }; }, a);
     r.check(d3.n === 1 && d3.pid === d3.want, `149d${t} with the item deleted, Restore makes a new item in the same Zab`, JSON.stringify(d3));
-    await p.evaluate(() => closeModal());
+    await p.evaluate(() => { closeTrash(); closeModal(); });
 
     /* ── 149e (A) ── */
     const e1 = await mk(plain, 'For A'); await sleep(200);
     await p.evaluate((i) => { jebAddLink(i, 'https://zablink.test/for-a'); _jebPanelSig = ''; jebRefresh(); }, e1);
     const eLid = await p.evaluate((i) => DB.jeb.find((x) => x.id === i).links[0].id, e1);
-    await act(p.locator(`#jeb-panel .jeb-it[data-iid="${e1}"] .jlk-more`).first()); await sleep(250);
+    await stab(p.locator(`#jeb-panel .jeb-it[data-iid="${e1}"] .jlk-more`).first()); await sleep(250);
     await act(p.locator('#jeb-menu :text("To a new note in a folder")').first()); await sleep(500);
     const box = await p.evaluate(() => { const m = document.getElementById('mb').getBoundingClientRect(); return { l: m.left, t: m.top, w: m.width, h: m.height, W: innerWidth, H: innerHeight, fs: document.getElementById('mb').classList.contains('mb-fs-on'), title: (document.querySelector('#mb .mt') || {}).textContent }; });
     if (phone) r.check(box.w >= box.W - 40 && box.h >= box.H * 0.8 - 2 && /pick a folder/.test(box.title), `149e${t} a full-height sheet on a phone`, JSON.stringify(box));
@@ -137,11 +139,11 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     /* ── 149f (B) ── */
     const f1 = await mk(plain, 'For B'); await sleep(200);
     await p.evaluate((i) => { jebAddLink(i, 'https://zablink.test/for-b'); jebAddLink(i, 'https://zablink.test/for-b2'); _jebPanelSig = ''; jebRefresh(); }, f1);
-    await act(p.locator(`#jeb-panel .jeb-it[data-iid="${f1}"] .jlk-more`).first()); await sleep(250);
+    await stab(p.locator(`#jeb-panel .jeb-it[data-iid="${f1}"] .jlk-more`).first()); await sleep(250);
     await act(p.locator('#jeb-menu :text("Add to an existing note")').first()); await sleep(500);
     await p.fill('#jlk-nq', 'Second'); await sleep(500);
     const nrows = await p.evaluate(() => [...document.querySelectorAll('#jlk-nl .pr')].map((x) => x.textContent.trim()));
-    r.check(nrows.length >= 1 && nrows.every((x) => /Second/i.test(x)), `149f${t} the note chooser searches notes`, JSON.stringify(nrows));
+    r.check(nrows.length === 1 && /Seeded note two/.test(nrows[0]), `149f${t} the note chooser searches notes`, JSON.stringify(nrows));
     await act(p.locator('#jlk-nl .pr', { hasText: 'Seeded note two' }).first()); await sleep(400);
     const bn = await p.evaluate((i) => { const n = DB.articles.find((x) => x.id === 'a2'); return { end: /for-b"/.test(n.content) && n.content.indexOf('Second note') < n.content.indexOf('for-b'), left: (DB.jeb.find((x) => x.id === i).links || []).length, live: /jlk|contenteditable|data:/.test(n.content) }; }, f1);
     r.check(bn.end && bn.left === 1 && !bn.live, `149f${t} B: appended at the end of the picked note, the item lost that link`, JSON.stringify(bn));
@@ -178,11 +180,11 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     /* ── 149h ── */
     await p.evaluate((pid) => { _jlkOpen = null; jebOpenPanel(pid); _jebPanelSig = ''; jebRefresh(); }, plain);
     await sleep(300);
-    const hh = await p.evaluate(() => {
+    const hh = await p.evaluate((phone) => {
       const bad = [];
       document.querySelectorAll('#jeb-panel .jlk-open, #jeb-panel .jlk-a, #jeb-panel .jlk-more').forEach((e) => { const b = e.getBoundingClientRect(); if (b.width && (b.height < 43.5 || b.width < 43.5 && !e.classList.contains('jlk-a'))) bad.push(e.className + ' ' + Math.round(b.width) + 'x' + Math.round(b.height)); });
       return { sw: document.documentElement.scrollWidth <= innerWidth + 1 && document.body.scrollWidth <= innerWidth + 1, pw: (() => { const pn = document.getElementById('jeb-panel'); return pn.scrollWidth <= pn.clientWidth + 1; })(), bad: phone ? bad : [] };
-    });
+    }, phone);
     r.check(hh.sw && hh.pw && hh.bad.length === 0, `149h${t} no horizontal overflow${phone ? ', every tap target >= 44 px' : ''}`, JSON.stringify(hh));
     r.check(app.errors.length === 0, `149h${t} no page errors`, app.errors.slice(0, 3).join(' | '));
   } catch (e) {
