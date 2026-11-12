@@ -11545,3 +11545,7 @@ The owner (phone, Shopping Zab): a space for links on an item, tap opens it, sev
 - Shape (D5): the same progress toast at 390, 820 and 1440 (the Save File toast).
 - Not done: a book page over `_BXP_BIG` still gets today's plain message on import.
 - Check: block 150, `tools/bookpage-j140.mjs`; block 140's book-page and Drive lines are updated.
+
+## v05.93 — J133 + J137 (issue #311)
+
+(stub — filled in below once built)
