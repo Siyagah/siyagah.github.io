@@ -11575,6 +11575,8 @@ await r.block('55e-every-surface-shows-the-picture', async () => {
     const s = await s53open(S53_VPS[2]);
     const { page } = s;
     const before = await page.evaluate(() => DB.articles.find((a) => a.id === 'p1').content);
+    /* v05.92 · J140: at 1440 exportBackupHTML() opens the save picker; hide it so the download path runs */
+    await page.evaluate(() => { try { delete window.showSaveFilePicker; } catch (e) {} window.showSaveFilePicker = undefined; });
     const dl = page.waitForEvent('download');
     await page.evaluate(() => { exportBackupHTML(); });
     const d = await dl;
@@ -11583,16 +11585,22 @@ await r.block('55e-every-surface-shows-the-picture', async () => {
     await d.saveAs(file);
     const text = await readFile(file, 'utf8');
     const body = text.split('<script id="siyagah-backup-data"')[0];
-    r.check((body.match(/<img[^>]*\ssrc="data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]{100,}/g) || []).length >= 2, 'backup page: both pictures of the note are inlined as data: in the readable page');
+    /* v05.92 · J140: the book page keeps references + pk- blocks (one copy per picture) */
+    const NONE = 'f'.repeat(64);
+    const imgTags = body.match(/<img[^>]*\sdata-pic="[0-9a-f]{64}"[^>]*>/g) || [];
+    const refShas = [...new Set(imgTags.map((t) => t.match(/data-pic="([0-9a-f]{64})"/)[1]).filter((h) => h !== NONE))];
+    r.check(refShas.length >= 2 && imgTags.every((t) => !/\ssrc=/.test(t)) && refShas.every((h) => text.includes('id="pk-' + h + '"')), 'backup page: both pictures of the note are img[data-pic] with no src, and each has a pk- block', refShas.length + ' shas');
     const emb = text.split('<script id="siyagah-backup-data"')[1] || '';
-    r.check(/<img[^>]*?src=\\"data:image\/(jpeg|png);base64,/.test(emb), 'backup page: the embedded data carries the bytes too (so Import Backup restores pictures)');
-    r.check(/data-pic="f{64}"/.test(body) && !/data-pic="f{64}"[^>]*\ssrc=/.test(body), 'backup page: a picture the store lacks stays a bare reference and the export still completed');
+    /* v05.92 · J140: the embedded data carries references; the pk- blocks hold the bytes */
+    r.check(!/src=\\"data:image/.test(emb) && refShas.every((h) => emb.includes(h)) && refShas.every((h) => new RegExp('id="pk-' + h + '"[^>]*>[A-Za-z0-9+/=]{100,}').test(text)), 'backup page: the embedded data carries the references, and the pk- blocks hold the bytes');
+    /* v05.92 · J140: a missing picture stays a bare reference with no pk- block */
+    r.check(/data-pic="f{64}"/.test(body) && !/data-pic="f{64}"[^>]*\ssrc=/.test(body) && !text.includes('id="pk-' + NONE + '"'), 'backup page: a picture the store lacks stays a bare reference and the export still completed');
     const pw = await playwright();
     const browser = await pw.chromium.launch();
     const ctx = await browser.newContext({ viewport: { width: 1000, height: 800 }, offline: true });
     const p2 = await ctx.newPage();
     await p2.goto('file://' + file);
-    await p2.waitForFunction(() => { const im = [...document.querySelectorAll('.bk-content img[data-pic]')].filter((i) => (i.getAttribute('src') || '').startsWith('data:')); return im.length >= 2 && im.every((i) => i.complete && i.naturalWidth > 0); }, null, { timeout: 8000 }).then(() => r.check(true, 'backup page opened offline from disk: both pictures are painted'), () => r.check(false, 'backup page opened offline from disk: both pictures are painted'));
+    await p2.waitForFunction(() => { /* v05.92 · J140: the loader sets blob: URLs, so wait for the pictures to paint */ const im = [...document.querySelectorAll('.bk-content img[data-pic]')].filter((i) => i.getAttribute('data-pic') !== 'f'.repeat(64)); return im.length >= 2 && im.every((i) => i.complete && i.naturalWidth > 0); }, null, { timeout: 8000 }).then(() => r.check(true, 'backup page opened offline from disk: both pictures are painted'), () => r.check(false, 'backup page opened offline from disk: both pictures are painted'));
     await browser.close();
     const after = await page.evaluate(() => DB.articles.find((a) => a.id === 'p1').content);
     r.check(after === before && s53noLive(after), 'exporting the backup page did not touch the live notebook');
