@@ -91,7 +91,7 @@ async function readPage(path) {
     }
     if (inJson) { const e = line.indexOf('</script>'); if (e >= 0) { jl.push(line.slice(0, e)); inJson = false; try { o.json = JSON.parse(jl.join('\n')); } catch (x) { o.jsonErr = String(x.message).slice(0, 120); } } else jl.push(line); continue; }
     const j = line.indexOf('<script id="siyagah-backup-data" type="application/json">');
-    if (j >= 0) { inJson = true; const rest = line.slice(j + 58); const e = rest.indexOf('</script>'); if (e >= 0) { inJson = false; try { o.json = JSON.parse(rest.slice(0, e)); } catch (x) { o.jsonErr = String(x.message).slice(0, 120); } } else jl.push(rest); continue; }
+    if (j >= 0) { inJson = true; const rest = line.slice(line.indexOf('>', j) + 1); const e = rest.indexOf('</script>'); if (e >= 0) { inJson = false; try { o.json = JSON.parse(rest.slice(0, e)); } catch (x) { o.jsonErr = String(x.message).slice(0, 120); } } else jl.push(rest); continue; }
     if (line.includes('img[data-pic]')) o.loader = true;
     if (/<img[^>]*\ssrc="data:/.test(line)) o.dataSrc++;
     for (const m of line.matchAll(/data-pic="([0-9a-f]{64})"/g)) o.refs.add(m[1]);
@@ -186,6 +186,24 @@ try {
         check(!!sameSize && sameSha, '150e Drive: the uploaded Blob is the same bytes as the download (size and hash after the dated header)', info ? `up ${info.size} vs file ${bigFile ? statSync(bigFile).size : '?'}` : 'nothing uploaded');
         await A.page.waitForFunction(() => [...document.querySelectorAll('.toast')].some((x) => /Saved to Google Drive/.test(x.textContent)), null, { timeout: 30000 }).catch(() => {});
       }
+      /* ── 150d on the big notebook: the window gets MANY pieces ── */
+      if (want('150d')) {
+        await A.page.evaluate(() => {
+          window.__wr = []; window.__prints = []; const ow = window.open.bind(window);
+          window.open = function () {
+            const w = ow.apply(null, arguments); if (!w) return w;
+            const d = w.document, wr = d.write.bind(d); d.write = function (s) { window.__wr.push(String(s).length); return wr(s); };
+            w.print = function () { window.__prints.push({ n: w.document.images.length, pending: Array.from(w.document.images).filter((i) => !i.complete).length }); };
+            return w;
+          };
+        });
+        await menu(A.page, VPS[2], 'Export PDF');
+        const pr = await A.page.waitForFunction(() => window.__prints.length > 0, null, { timeout: LONG }).then(() => true, () => false);
+        const p = await A.page.evaluate(() => ({ prints: window.__prints, wr: window.__wr }));
+        check(pr && p.prints.length === 1 && p.prints[0].pending === 0, `150d big notebook: print once, no picture still loading (${p.prints[0] ? p.prints[0].n : 0} images)`, JSON.stringify(p.prints));
+        check(p.wr.length >= 10 && Math.max(0, ...p.wr) < 64e6, `150d big notebook: the window received ${p.wr.length} pieces (largest ${(Math.max(0, ...p.wr) / 1e6).toFixed(1)} M characters), never one string`);
+        for (const pg of A.ctx.pages().slice(1)) await pg.close().catch(() => {});
+      }
       /* ── 150h the progress line at three sizes (on the small notebook, below) ── */
     } finally { await A.ctx.close().catch(() => {}); }
   }
@@ -218,7 +236,7 @@ try {
         const p = await R.page.evaluate(() => ({ prints: window.__prints, wr: window.__wr }));
         check(printed && p.prints.length === 1, '150d print() is called exactly once', JSON.stringify(p.prints));
         check(printed && p.prints[0].n >= 12 && p.prints[0].imgs.every(Boolean), `150d print is called only after every picture in the window loaded (${p.prints[0] ? p.prints[0].imgs.filter(Boolean).length : 0} of ${p.prints[0] ? p.prints[0].n : 0} images)`, JSON.stringify(p.prints[0]));
-        check(p.wr.length >= 3 && Math.max(...p.wr) < 64e6, `150d the window received ${p.wr.length} pieces (largest ${(Math.max(0, ...p.wr) / 1e3).toFixed(0)} K characters), never one string`);
+        check(p.wr.length >= 1 && Math.max(...p.wr) < 64e6, `150d the window received ${p.wr.length} write(s) (largest ${(Math.max(0, ...p.wr) / 1e3).toFixed(0)} K characters), never one string; the big notebook below is cut into many`);
         const pages = R.ctx.pages(); for (const pg of pages.slice(1)) await pg.close().catch(() => {});
       }
 
@@ -230,7 +248,7 @@ try {
           persist(); window.__db0 = JSON.stringify(DB); return window.__db0.length;
         });
         const ex2 = await exportPage(R.page, VPS[2], 'ghost');
-        const fin = ex2.toasts.find((t) => /^📦 Saved: /.test(t)) || '';
+        const fin = ex2.toasts.filter((t) => /^📦 Saved: /.test(t)).pop() || '';
         const same = await R.page.evaluate(() => JSON.stringify(DB) === window.__db0);
         check(/ — 1 picture was not on this device and is left out/.test(fin), `150f the message names the missing picture: "${fin.slice(0, 140)}"`, JSON.stringify(ex2.toasts));
         check(same && before > 0, '150f nothing in DB changed (JSON.stringify(DB) before = after)');
