@@ -11533,6 +11533,15 @@ The owner (phone, Shopping Zab): a space for links on an item, tap opens it, sev
 - Shapes: phone — cards and add box fit 390 px, every target ≥ 44 px, choosers are sheets; tablet/laptop — choosers open full screen.
 - Not done: "＋ new folder inside" in the chooser makes a top-level folder (no "Inside:" choice).
 
-## v05.92 — J140 (in progress)
+## v05.92 — J140 (built by the builder, issue #309)
 
-Book/backup page, Export PDF and Backup to Drive keep the pictures on a big notebook. Stub; entry follows.
+📦 Backup Export, 📄 Export PDF and ☁ Backup to Drive keep the pictures on a big notebook (block 140 had measured 0 of 2,917 pictures in the book page, with no warning).
+
+- ONE writer `_bkWrite`, piece by piece (never one string): head + CSS + contents (`_bkBuild`, shared with the old `generateBackupHTMLContent`, kept for block 140), each note's block with pictures as references (`<img data-pic>`, no src), the embedded `siyagah-backup-data` JSON record by record (`_bxpWriteDB` got `o.keys`), each picture the device holds ONCE as a `pk-<sha>` block (`_bxpWritePics`, extracted from `_sfWrite`, shared), then `_BK_LOADER`, a small script that turns each `img[data-pic]` into an object URL from its block (works from disk, offline: I4). Notes and `DB` are never changed (I1).
+- `_sfTo` gained `write`, `verb`, `label` and `blob` options (Drive takes the Blob instead of a download).
+- 📦 `exportBackupHTML`: picker asked inside the click, progress "Writing your backup… N of M pictures", "Saved: name, size", cancel = "Backup cancelled". 📄 `exportBackupPDF`: window opened first, `win.document.write` per piece, print after every picture loaded or 30 s (`_bkWaitImgs`). ☁ `backupToGDrive`: `_driveResumable` over 5 MB, else `_uploadToDrive`.
+- Never silent: pictures missing from the device are counted ("N pictures were not on this device and are left out"); `_bxpVerify` runs before "Saved".
+- 📥 `importBackup` hands the page's `pk-` blocks to the consent for the backup-data route; an old page with `data:` pictures imports exactly as before.
+- Shape (D5): the same progress toast at 390, 820 and 1440 (the Save File toast).
+- Not done: a book page over `_BXP_BIG` still gets today's plain message on import.
+- Check: block 150, `tools/bookpage-j140.mjs`; block 140's book-page and Drive lines are updated.

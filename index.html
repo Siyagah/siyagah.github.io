@@ -6773,7 +6773,13 @@ async function _sfWrite(S,ctx){
   const shas=new Set();
   await _bxpWriteDB(S,ctx,{esc:true,shas:shas});
   await S.put(html.slice(at+mk.length)+'\n');
-  try{ (await _picKeepShas()).forEach(function(s){shas.add(s);}); }catch(e){}
+  await _bxpWritePics(S,ctx,shas);
+  await S.flush();
+}
+/* v05.92 · J140 — each picture the device holds, ONCE, as a pk-<sha> block (the pictures part of Save File, shared with the book/backup page). `shas` = the shas the written
+   records reference; the device's kept shas are added. A picture not on the device goes to ctx.missing. */
+async function _bxpWritePics(S,ctx,shas,own){
+  if(!own)try{ (await _picKeepShas()).forEach(function(s){shas.add(s);}); }catch(e){}
   ctx.total=shas.size;
   let yt=performance.now();
   for(const sha of shas){
@@ -6787,7 +6793,6 @@ async function _sfWrite(S,ctx){
     ctx.done.add(sha);ctx.tick();
     if(performance.now()-yt>25){await _yieldTask();yt=performance.now();}
   }
-  await S.flush();
 }
 /* o: {name, pickP (a picker asked inside the click) | fh (a file handle to write into), say}. Returns {ok,name,bytes,missing} or {cancelled}; throws on failure
    (the writable is aborted first, so a linked file keeps its last good copy). */
@@ -6799,15 +6804,21 @@ async function _sfTo(o){
       try{handle=await o.pickP;}
       catch(e){ if(e&&e.name==='AbortError')return {cancelled:true}; handle=null; }   /* refused: fall back to a download */
     }
-    say('Writing your file…');
+    const verb=o.verb||'Writing your file…',label=o.label||'file';
+    say(verb);
     if(handle){ w=await handle.createWritable(); if(!o.fh)name=handle.name||name; }
-    const ctx=_bxpCtx('Writing your file…',say,0);
+    const ctx=_bxpCtx(verb,say,0);
     const S=_bxpSink(w);
-    await _sfWrite(S,ctx);
-    let bytes=S.bytes;
-    if(w){ const ve=_bxpVerify(S,S.bytes,'file');if(ve)throw ve; await w.close();w=null; }
-    else{ const ve=_bxpVerify(S,S.parts.reduce(function(n,p){return n+p.size;},0),'file');if(ve)throw ve; bytes=_bxpDownload(S.parts,name,'text/html;charset=utf-8'); }
-    return {ok:true,name:name,bytes:bytes,missing:ctx.missing.size};
+    await (o.write||_sfWrite)(S,ctx);
+    let bytes=S.bytes,blob=null;
+    if(w){ const ve=_bxpVerify(S,S.bytes,label);if(ve)throw ve; await w.close();w=null; }
+    else{
+      const ve=_bxpVerify(S,S.parts.reduce(function(n,p){return n+p.size;},0),label);if(ve)throw ve;
+      /* v05.92 · J140 — o.blob: the pieces are handed back as one Blob (Drive upload), not downloaded */
+      if(o.blob){ blob=new Blob(S.parts,{type:'text/html;charset=utf-8'}); bytes=blob.size; }
+      else bytes=_bxpDownload(S.parts,name,'text/html;charset=utf-8');
+    }
+    return {ok:true,name:name,bytes:bytes,missing:ctx.missing.size,blob:blob};
   }catch(e){
     if(w){try{await w.abort();}catch(_){}}
     throw e;
@@ -6942,8 +6953,10 @@ function _bxpVerify(S,got,label){
    backup). o.shas (a Set): the shas the records reference are collected (Save File keeps the references and writes each picture once). o.esc: no `<` that could
    open `<\/script` or `<\!--` is left raw (written \u003c, which JSON.parse reads back as `<`) — only for the text inside the nd data tag. */
 async function _bxpWriteDB(S,ctx,o){
-  const keys=Object.keys(DB).filter(function(k){const v=DB[k];return v!==undefined&&typeof v!=='function';});
-  keys.forEach(function(k){if(Array.isArray(DB[k]))ctx.nrec+=DB[k].length;});
+  /* v05.92 · J140 — o.keys: only these top-level keys (the book page's embedded data); one DB lacks is written as [] */
+  const keys=o.keys?o.keys.slice():Object.keys(DB).filter(function(k){const v=DB[k];return v!==undefined&&typeof v!=='function';});
+  const DBv=function(k){const v=DB[k];return (v===undefined&&o.keys)?[]:v;};
+  keys.forEach(function(k){if(Array.isArray(DBv(k)))ctx.nrec+=DBv(k).length;});
   const xf=async function(s){
     if(o.shas&&s.indexOf('data-pic')!==-1){const re=/data-pic=\\?"([0-9a-f]{64})/g;let m;while((m=re.exec(s)))o.shas.add(m[1]);}
     if(o.inline)s=await _bxpInline(s,ctx);
@@ -6953,7 +6966,7 @@ async function _bxpWriteDB(S,ctx,o){
   let yt=performance.now();
   await S.put('{\n');
   for(let ki=0;ki<keys.length;ki++){
-    const k=keys[ki],v=DB[k],last=ki===keys.length-1,tail=(last?'':',')+'\n',kj=JSON.stringify(k);
+    const k=keys[ki],v=DBv(k),last=ki===keys.length-1,tail=(last?'':',')+'\n',kj=JSON.stringify(k);
     if(Array.isArray(v)&&v.length){
       await S.put(kj+':[\n');
       const arr=v.slice();
@@ -11811,7 +11824,11 @@ async function runMigration(){
 
 
 /* ══ BACKUP EXPORT — standalone HTML (Layer 1) ══════════════════════════════ */
-async function generateBackupHTMLContent(){
+/* v05.92 · J140 — the book page's model, shared by generateBackupHTMLContent (the old one-string build, pictures inlined) and the piece-by-piece writer _bkWrite.
+   Returns {name, head (up to and including the contents list), emit(put) (walks the notes; `put` gets one string per note/folder piece), notes}. o.shas (a Set)
+   collects the data-pic shas of the notes written. */
+function _bkBuild(o){
+  o=o||{};
   const notes=DB.articles.filter(a=>!a.trash);
   const now=new Date();
   const dateStr=now.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
@@ -11824,32 +11841,45 @@ async function generateBackupHTMLContent(){
   function fmtDate(iso){if(!iso)return '';try{return new Date(iso).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch{return iso;}}
   function renderNote(a,depth){
     const d=depth||0;
+    if(o.shas&&typeof a.content==='string'&&a.content.indexOf('data-pic')!==-1){const re=/data-pic=["']?([0-9a-f]{64})/g;let m;while((m=re.exec(a.content)))o.shas.add(m[1]);}
     return `<div class="bk-note" id="n-${a.id}"><div class="bk-note-hd"><h${Math.min(d+2,5)} class="bk-title">${esc(a.title||'Untitled')}</h${Math.min(d+2,5)}><div class="bk-meta">${kindChips(a)}${tagChips(a)}${statusBadge(a)}<span class="bk-date">${fmtDate(a.updatedAt)}</span></div></div><div class="bk-content">${a.content||'<p><em>No content</em></p>'}</div></div>`;
   }
-  function renderFolder(fid,depth){
-    const f=DB.folders.find(x=>x.id===fid);if(!f)return '';
+  async function renderFolder(fid,depth,put){
+    const f=DB.folders.find(x=>x.id===fid);if(!f)return;
     const folNotes=notesIn(fid),subFolders=chOf(fid);
-    if(!folNotes.length&&!subFolders.length)return '';
+    if(!folNotes.length&&!subFolders.length)return;
     const d=depth||1;const hTag=`h${Math.min(d+1,5)}`;
-    let h=`<div class="bk-folder" id="f-${fid}"><${hTag} class="bk-folder-title">📁 ${esc(f.name)}</${hTag}>`;
-    folNotes.forEach(a=>{h+=renderNote(a,d+1);});subFolders.forEach(sf=>{h+=renderFolder(sf.id,d+1);});
-    return h+'</div>';
+    await put(`<div class="bk-folder" id="f-${fid}"><${hTag} class="bk-folder-title">📁 ${esc(f.name)}</${hTag}>`);
+    for(const a of folNotes)await put(renderNote(a,d+1));
+    for(const sf of subFolders)await renderFolder(sf.id,d+1,put);
+    await put('</div>');
   }
-  let tocHTML='<ul class="bk-toc-list">',bodyHTML='';
+  let tocHTML='<ul class="bk-toc-list">';
+  const plan=[];   /* the body, as steps run later by emit */
   const sections=(DB.sections||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0));
   sections.forEach(sec=>{
     const secFolders=DB.folders.filter(f=>f.sectionId===sec.id&&!f.parentId);if(!secFolders.length)return;
     tocHTML+=`<li><a href="#s-${sec.id}">📂 ${esc(sec.name)}</a></li>`;
-    bodyHTML+=`<div class="bk-section" id="s-${sec.id}"><h2 class="bk-sec-title">📂 ${esc(sec.name)}</h2>`;
-    secFolders.forEach(f=>{bodyHTML+=renderFolder(f.id,2);});bodyHTML+='</div>';
+    plan.push(async put=>{
+      await put(`<div class="bk-section" id="s-${sec.id}"><h2 class="bk-sec-title">📂 ${esc(sec.name)}</h2>`);
+      for(const f of secFolders)await renderFolder(f.id,2,put);
+      await put('</div>');
+    });
   });
   const rootFolders=DB.folders.filter(f=>!f.sectionId&&!f.parentId);
-  if(rootFolders.length){tocHTML+='<li><a href="#unsec">📁 Other Folders</a></li>';bodyHTML+='<div class="bk-section" id="unsec"><h2 class="bk-sec-title">📁 Other Folders</h2>';rootFolders.forEach(f=>{bodyHTML+=renderFolder(f.id,2);});bodyHTML+='</div>';}
+  if(rootFolders.length){tocHTML+='<li><a href="#unsec">📁 Other Folders</a></li>';plan.push(async put=>{await put('<div class="bk-section" id="unsec"><h2 class="bk-sec-title">📁 Other Folders</h2>');for(const f of rootFolders)await renderFolder(f.id,2,put);await put('</div>');});}
   const noFolder=notes.filter(a=>!(a.folderIds&&a.folderIds.length));
-  if(noFolder.length){tocHTML+='<li><a href="#nofol">📝 Unorganised</a></li>';bodyHTML+='<div class="bk-section" id="nofol"><h2 class="bk-sec-title">📝 Unorganised Notes</h2>';noFolder.forEach(a=>{bodyHTML+=renderNote(a,1);});bodyHTML+='</div>';}
+  if(noFolder.length){tocHTML+='<li><a href="#nofol">📝 Unorganised</a></li>';plan.push(async put=>{await put('<div class="bk-section" id="nofol"><h2 class="bk-sec-title">📝 Unorganised Notes</h2>');for(const a of noFolder)await put(renderNote(a,1));await put('</div>');});}
   tocHTML+='</ul>';
   const CSS=`*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;line-height:1.7;color:#1a1a1a;background:#fff;max-width:900px;margin:0 auto;padding:24px 20px}a{color:#2563eb;text-decoration:none}.bk-actions{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #e5e7eb;padding:10px 20px;display:flex;align-items:center;gap:10px;margin:0 -20px 24px}.bk-pdf-btn{background:#1d4ed8;color:#fff;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}.bk-pdf-btn:hover{background:#1e40af}.bk-dl-btn{background:transparent;color:#6b7280;border:1px solid #e5e7eb;padding:8px 14px;border-radius:6px;font-size:13px;cursor:pointer;margin-left:auto}.bk-header{border-bottom:2px solid #e5e7eb;padding-bottom:20px;margin-bottom:28px}.bk-header h1{font-size:26px;font-weight:800;color:#111;margin-bottom:6px}.bk-header p{color:#6b7280;font-size:13px}.bk-toc{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;margin-bottom:32px}.bk-toc h2{font-size:14px;font-weight:700;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}.bk-toc-list{list-style:none;display:flex;flex-wrap:wrap;gap:6px 20px}.bk-toc-list li{font-size:13px}.bk-section{margin-bottom:40px;padding-bottom:24px;border-bottom:2px solid #e5e7eb}.bk-sec-title{font-size:20px;font-weight:800;color:#111;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid #e5e7eb}.bk-folder{margin-bottom:24px;padding-left:16px;border-left:3px solid #e5e7eb}.bk-folder-title{font-size:15px;font-weight:700;color:#374151;margin-bottom:14px;padding:6px 0}.bk-note{background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:16px;overflow:hidden}.bk-note-hd{padding:12px 16px 10px;border-bottom:1px solid #f3f4f6;background:#fff}.bk-title{font-size:16px;font-weight:700;color:#111;margin-bottom:8px}.bk-meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.bk-nti{font-size:11px;font-weight:600;color:#fff;padding:2px 8px;border-radius:999px}.bk-tag{font-size:11px;color:#6b7280;background:#f3f4f6;padding:2px 7px;border-radius:999px}.bk-done{font-size:11px;font-weight:600;color:#15803d;background:#dcfce7;padding:2px 8px;border-radius:999px}.bk-arch{font-size:11px;font-weight:600;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:999px}.bk-date{font-size:11px;color:#9ca3af;margin-left:auto}.bk-content{padding:14px 16px;font-size:14px;line-height:1.75;color:#1f2937}.bk-content h2{font-size:17px;font-weight:700;margin:14px 0 8px}.bk-content h3{font-size:15px;font-weight:700;margin:12px 0 6px}.bk-content p{margin-bottom:10px}.bk-content ul,.bk-content ol{padding-left:24px;margin-bottom:10px}.bk-content li{margin-bottom:4px}.bk-content blockquote{border-left:3px solid #d1d5db;padding:8px 14px;color:#6b7280;margin:12px 0;font-style:italic;background:#f9fafb}.bk-content strong{font-weight:700}.bk-content em{font-style:italic}.bk-content img{max-width:100%;border-radius:6px;margin:8px 0}.bk-content hr{border:none;border-top:1px solid #e5e7eb;margin:16px 0}@media print{body{max-width:100%;padding:0 16px}.bk-actions{display:none}.bk-toc{display:none}.bk-header{margin-bottom:20px;border-bottom:2px solid #000;padding-bottom:12px}.bk-section{page-break-before:always;border:none;margin-top:0}.bk-section:first-of-type{page-break-before:avoid}.bk-note{break-inside:avoid;border:1px solid #ccc;margin-bottom:12px}.bk-folder{border-left:2px solid #999}@page{margin:20mm 15mm;size:A4}}`;
-  const html=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Siyagah Backup — ${dateStr}</title><style>${CSS}</style></head><body><div class="bk-actions"><button class="bk-pdf-btn" onclick="window.print()">🖨 Save as PDF</button><button class="bk-dl-btn" onclick="window.close()">✕ Close</button></div><div class="bk-header"><h1>🕌 Siyagah Backup</h1><p>Exported: ${dateStr} at ${timeStr} &nbsp;·&nbsp; ${notes.length} notes &nbsp;·&nbsp; ${DB.folders.length} folders</p></div><div class="bk-toc"><h2>Contents</h2>${tocHTML}</div>${bodyHTML}</body></html>`;
+  const head=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Siyagah Backup — ${dateStr}</title><style>${CSS}</style></head><body><div class="bk-actions"><button class="bk-pdf-btn" onclick="window.print()">🖨 Save as PDF</button><button class="bk-dl-btn" onclick="window.close()">✕ Close</button></div><div class="bk-header"><h1>🕌 Siyagah Backup</h1><p>Exported: ${dateStr} at ${timeStr} &nbsp;·&nbsp; ${notes.length} notes &nbsp;·&nbsp; ${DB.folders.length} folders</p></div><div class="bk-toc"><h2>Contents</h2>${tocHTML}</div>`;
+  return {name:`Siyagah-Backup-${now.toISOString().slice(0,10)}.html`,head:head,notes:notes,emit:async function(put){for(const step of plan)await step(put);}};
+}
+/* the old one-string build (pictures inlined twice); no button uses it since v05.92 — block 140 still measures it */
+async function generateBackupHTMLContent(){
+  const B=_bkBuild(),parts=[];
+  await B.emit(async s=>{parts.push(s);});
+  const html=B.head+parts.join('')+'</body></html>',now=new Date();
   const _t1='<scr'+'ipt id="siyagah-backup-data" type="application/json">';
   const _t2='</'+'script>';
   const _bkJson=JSON.stringify({folders:DB.folders,articles:DB.articles,
@@ -11863,21 +11893,76 @@ async function generateBackupHTMLContent(){
   const fullHtml=_ih.text.replace('</body>',()=>_t1+_ij.text+_t2+'</body>');
   return {html:fullHtml,name:`Siyagah-Backup-${now.toISOString().slice(0,10)}.html`};
 }
+/* v05.92 · J140 — the book page written PIECE BY PIECE (never one string): head + contents, each note's block with its pictures as REFERENCES (<img data-pic>, no src),
+   the embedded siyagah-backup-data JSON record by record (a `<` that could open a script end or comment is written <), each picture the device holds ONCE as a pk-<sha> block (the Save File
+   format), then a small script that turns each img[data-pic] into an object URL from its block. Works from disk, offline, with no network (I4). o.json===false (the PDF
+   window) leaves the embedded data out. Notes and DB are never changed (I1). */
+const _BK_KEYS=['folders','articles','sections','trash','noteKinds','noteKindCats','folderGroups','jebPockets','jeb'];
+const _BK_LOADER="(function(){var c={},im=document.querySelectorAll('img[data-pic]');for(var i=0;i<im.length;i++){var e=im[i];if(e.getAttribute('src'))continue;var s=e.getAttribute('data-pic');if(!c[s]){var p=document.getElementById('pk-'+s);if(!p)continue;try{var b=atob((p.textContent||'').replace(/\\s+/g,'')),u=new Uint8Array(b.length);for(var k=0;k<b.length;k++)u[k]=b.charCodeAt(k);c[s]=URL.createObjectURL(new Blob([u],{type:p.getAttribute('data-mime')||'image/jpeg'}));}catch(x){continue;}}e.src=c[s];}})();";
+async function _bkWrite(S,ctx,o){
+  o=o||{};
+  const shas=new Set(),B=_bkBuild({shas:shas});
+  await S.put(B.head);
+  let yt=performance.now();
+  await B.emit(async function(s){ await S.put(s); if(performance.now()-yt>25){ctx.tick();await _yieldTask();yt=performance.now();} });
+  if(o.json!==false){
+    await S.put('<scr'+'ipt id="siyagah-backup-data" type="application/json">');
+    await _bxpWriteDB(S,ctx,{esc:true,shas:shas,keys:_BK_KEYS});
+    await S.put('</'+'script>\n');
+  }
+  /* the PDF window (keepAll false): only the pictures of the notes shown, no device-wide sweep */
+  await _bxpWritePics(S,ctx,shas,o.keepAll===false);
+  await S.put('<scr'+'ipt>'+_BK_LOADER+'</'+'script></body></html>\n');
+  await S.flush();
+}
+let _bkBusy=false;
+function _bkMissText(n){return n+' picture'+(n>1?'s were':' was')+' not on this device and '+(n>1?'are':'is')+' left out';}
+function _bkDay(){return new Date().toISOString().slice(0,10);}
 async function exportBackupHTML(){
-  const {html,name}=await generateBackupHTMLContent();
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=name;
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  toast('📦 Backup downloaded — open in any browser or print as PDF');
+  if(_bkBusy){ toast('Still writing the last backup…'); return; }
+  const name='Siyagah-Backup-'+_bkDay()+'.html';
+  /* the picker is asked HERE, inside the click, before any await (user activation) */
+  const pickP=_bxpPicker(name,'Siyagah backup page','text/html','.html');
+  _bkBusy=true;
+  try{
+    const r=await _sfTo({name:name,pickP:pickP,say:_sfSay,write:_bkWrite,verb:'Writing your backup…',label:'backup'});
+    if(r.cancelled){ _sfSay(''); toast('Backup cancelled'); return; }
+    _sfSay('');
+    toast('📦 Saved: '+r.name+', '+_bxpSize(r.bytes)+(r.missing?' — '+_bkMissText(r.missing):'')+' — open in any browser or print as PDF',r.missing?9000:7000);
+  }catch(e){ _sfSay(''); console.error('backup page failed',e); toast('⚠ Backup failed. '+_bxpWhy(e),9000); }
+  finally{ _bkBusy=false; }
+}
+/* waits until every picture in the window has loaded or failed (limit ms), then resolves */
+function _bkWaitImgs(win,ms){
+  return new Promise(function(res){
+    let imgs=[];try{imgs=Array.from(win.document.images||[]);}catch(e){}
+    let left=0;const t=setTimeout(res,ms);
+    const done=function(){ if(--left<=0){clearTimeout(t);res();} };
+    imgs.forEach(function(im){ if(!im.complete){ left++; im.addEventListener('load',done,{once:true}); im.addEventListener('error',done,{once:true}); } });
+    if(!left){clearTimeout(t);res();}
+  });
 }
 async function exportBackupPDF(){
+  if(_bkBusy){ toast('Still writing the last backup…'); return; }
   const win=window.open('','_blank');   /* opened first, inside the click */
   if(!win){toast('⚠ Pop-up blocked — allow pop-ups then try again');return;}
-  const {html}=await generateBackupHTMLContent();
-  win.document.write(html);win.document.close();win.focus();
-  setTimeout(()=>{win.print();toast('📄 Choose "Save as PDF" in the print dialog');},600);
+  _bkBusy=true;
+  try{
+    _sfSay('Preparing your PDF…');
+    let buf=[],len=0,at=0;
+    const wr=function(){ if(!buf.length)return; const s=buf.join('');buf=[];len=0;at+=s.length; win.document.write(s); };
+    const S={bytes:0,put:async function(s){buf.push(s);len+=s.length; if(len>1048576)wr();},flush:async function(){wr();}};
+    const ctx=_bxpCtx('Preparing your PDF…',_sfSay,0);
+    await _bkWrite(S,ctx,{json:false,keepAll:false});
+    win.document.close();
+    _sfSay('Loading the pictures…');
+    await _bkWaitImgs(win,30000);
+    _sfSay('');
+    try{win.focus();}catch(e){}
+    win.print();
+    toast('📄 Choose "Save as PDF" in the print dialog'+(ctx.missing.size?' — '+_bkMissText(ctx.missing.size):''),ctx.missing.size?9000:5000);
+  }catch(e){ _sfSay(''); console.error('backup pdf failed',e); try{win.close();}catch(_){} toast('⚠ PDF failed. '+_bxpWhy(e),9000); }
+  finally{ _bkBusy=false; }
 }
 
 /* ══ GOOGLE DRIVE BACKUP (Layer 2) ══════════════════════════════════════════ */
@@ -11920,21 +12005,29 @@ function _driveWhy(e,what){
 }
 async function backupToGDrive(){
   if(!_authInstance){toast('⚠ Sign in first');return;}
+  if(_bkBusy){ toast('Still writing the last backup…'); return; }
   toast('⏳ Connecting to Drive…');
+  _bkBusy=true;
   try{
     const token=await _driveToken();
-    toast('⏳ Uploading to Drive…');
-    const {html,name}=await generateBackupHTMLContent();
-    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    /* v05.92 · J140 — the book page is written piece by piece into a Blob (pictures once each), then uploaded: resumable over 5 MB */
+    const r=await _sfTo({name:'Siyagah-Backup-'+_bkDay()+'.html',say:_sfSay,write:_bkWrite,verb:'Preparing your backup…',label:'backup',blob:true});
+    const blob=r.blob,name=r.name;
     const folderId=await _getDriveFolder(token,'Siyagah Backups');
-    await _uploadToDrive(token,folderId,name,blob);
-    toast('✓ Saved to Google Drive\n📁 Siyagah Backups');
+    _sfSay('Uploading to Drive…');
+    if(blob.size>5*1048576){
+      await _driveResumable(token,folderId,name,blob,'text/html',function(l,t){ _sfSay('Uploading to Drive… '+Math.round(100*l/Math.max(1,t))+'% of '+_bxpSize(blob.size)); });
+    }else await _uploadToDrive(token,folderId,name,blob);
+    _sfSay('');
+    toast('✓ Saved to Google Drive\n📁 Siyagah Backups'+(r.missing?'\n⚠ '+_bkMissText(r.missing):''),r.missing?9000:4000);
   }catch(e){
+    _sfSay('');
     if(e.noToken){toast('⚠ Could not get Drive access token');return;}
     if(e.code==='auth/popup-closed-by-user'){toast('Drive backup cancelled');return;}
+    if(e.bxpEmpty){toast('⚠ Drive backup failed. '+_bxpWhy(e),9000);return;}
     toast(_driveWhy(e,'backup'),8000,true);
     console.error('Drive error:',String(e.message||e));
-  }
+  }finally{ _bkBusy=false; }
 }
 async function _getDriveFolder(token,name){
   const q=encodeURIComponent(`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
@@ -12025,7 +12118,8 @@ function importBackup(){
         return;
       }
       const bk=JSON.parse(dataEl.textContent);
-      _showImportConsent(bk,file.name);
+      /* v05.92 · J140 — the new book page holds its pictures as pk-<sha> blocks; an old page (data: pictures) has none and imports as before */
+      _showImportConsent(bk,file.name,Array.from(doc.querySelectorAll(_PK_SEL)));
     }catch(e){
       toast('⚠ Import failed: '+(e.message||e));
       console.error('Import error:',e);
