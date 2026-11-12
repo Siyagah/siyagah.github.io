@@ -11532,3 +11532,7 @@ The owner (phone, Shopping Zab): a space for links on an item, tap opens it, sev
 - A and B open the app's resizable box full screen (⛶ makes it a window; < 640 px a full-height sheet), geometry key `siyagah-mb-zablink-geom`. B appends at the END of the note; a note open in an editor gets it appended through that editor (never at the caret).
 - Shapes: phone — cards and add box fit 390 px, every target ≥ 44 px, choosers are sheets; tablet/laptop — choosers open full screen.
 - Not done: "＋ new folder inside" in the chooser makes a top-level folder (no "Inside:" choice).
+
+## v05.92 — J140 (in progress)
+
+Book/backup page, Export PDF and Backup to Drive keep the pictures on a big notebook. Stub; entry follows.
