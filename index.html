@@ -40928,8 +40928,9 @@ document.addEventListener('keydown', function(ev){
 
   /* v05.93 · J133 — a fired long-press opens its menu UNDER the finger; the click the lift makes
      landed on that menu's row (outside #tree, so the swallow above never saw it) and ran it.
-     Cancelling the lift stops the browser making that click at all. */
-  tree.addEventListener('touchend',e=>{clearTimeout(_t);if(_fired&&e.cancelable)e.preventDefault();},{passive:false});
+     Cancelling the lift stops the browser making that click at all, and clears _fired, since no click
+     will come to clear it (left set, it ate the next mouse click in the side pane: block 57). */
+  tree.addEventListener('touchend',e=>{clearTimeout(_t);if(_fired&&e.cancelable){e.preventDefault();_fired=false;}},{passive:false});
   tree.addEventListener('touchcancel',()=>clearTimeout(_t),{passive:true});
 
   /* Swallow the click that follows a fired long-press */
