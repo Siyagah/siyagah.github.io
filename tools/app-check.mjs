@@ -12987,6 +12987,18 @@ await r.block('148-fullcopy-j162', async () => {
   for (const row of rows) r.check(row.ok, '148: ' + row.label, row.detail);
   r.check(out.status === 0, 'the fullcopy-j162.mjs check exits cleanly', 'exit ' + out.status);
 });
+/* 149 — v05.91, J147: links on every Zab item — add (several), small cards, open in a new tab, move to another Zab, delete + Restore, A (new note in a folder, full-screen chooser), B (add to a note), → Note, deck, sizes. tools/zab-links-j147.mjs runs 149a–149h at 390/820/1440. */
+await r.block('149-zab-links-j147', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-links-j147.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1800000, maxBuffer: 1 << 26 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the zab-links-j147.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '149: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the zab-links-j147.mjs check exits cleanly', 'exit ' + out.status);
+});
 /* 147 — v05.89, J159: the cloud's per-note copy lacked most of the notebook — Send everything again, the automatic check, the pointer that is never overwritten, Diagnostics, an export never 0 bytes, the old-layout big backup, a stuck reader that says so. tools/recs-j159.mjs runs 147a–147g. */
 await r.block('147-recs-j159', async () => {
   const { spawnSync } = await import('node:child_process');

@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.90">
+<meta name="app-version" content="05.91">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1329,6 +1329,18 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jx-ins button{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 10px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font:inherit;font-size:13px;cursor:pointer}
 .jx-ins .jeb-sw{width:20px;height:20px;font-size:12px}
 .jx-mvl{max-height:55vh;overflow-y:auto;margin:8px 0}
+/* v05.91 · J147 — links on a Zab item: small cards under the text, an add box, 44 px targets */
+.jlk-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;min-width:0;max-width:100%}
+.jlk{display:flex;align-items:stretch;min-width:0;max-width:100%;flex:1 1 180px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:transparent}
+.jlk-a{display:flex;flex-direction:column;justify-content:center;gap:1px;flex:1;min-width:0;min-height:44px;padding:5px 10px;color:inherit;text-decoration:none}
+.jlk-t{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jlk-h{font-size:11px;opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jlk-more{flex:0 0 44px;min-height:44px;border:0;border-left:1px solid var(--border);background:none;color:inherit;font-size:16px;cursor:pointer}
+.jlk-more:hover{background:var(--hover)}
+.jlk-open{min-height:44px;padding:0 12px;border:1px dashed var(--border);border-radius:10px;background:none;color:inherit;opacity:.8;font:inherit;font-size:12px;cursor:pointer}
+.jlk-add{display:flex;gap:6px;width:100%;align-items:center}
+.jlk-in{flex:1;min-width:0;min-height:44px;box-sizing:border-box;padding:6px 10px;border:1px solid var(--border);border-radius:10px;font:inherit;font-size:16px;background:transparent;color:inherit}
+.jlk-addb,.jlk-done{flex:0 0 auto;min-width:44px;min-height:44px;padding:0 10px;border:1px solid var(--border);border-radius:10px;background:none;color:inherit;font:inherit;font-size:14px;cursor:pointer}
 .jx-mv{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 10px;border:0;border-bottom:1px solid var(--border);background:none;color:var(--t1);font:inherit;font-size:14px;text-align:left;cursor:pointer;flex-wrap:wrap}
 .jx-mv:hover{background:var(--hover)}
 .jx-mv small{flex-basis:100%;margin-left:26px;color:var(--t2);font-size:12px}
@@ -4128,7 +4140,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.90</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.91</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -25437,6 +25449,16 @@ function jebEditItem(id,patch){
   if('src' in patch){ const s=String(patch.src==null?'':patch.src).trim(); if(s) it.src=s; else delete it.src; }
   if('color' in patch){ const s=String(patch.color==null?'':patch.color).trim(); if(/^#[0-9a-f]{6}$/i.test(s)) it.color=s; else delete it.color; }
   if('off' in patch){ if(patch.off) it.off=true; else delete it.off; }
+  /* v05.91 · J147 — links: [{id,u,t?,at}], deep-copied like steps; only http(s) addresses; absent when empty (never []) */
+  if(Array.isArray(patch.links)){
+    const ls=[];
+    patch.links.forEach(x=>{
+      if(!x||!x.id) return; const u=_jlkNorm(x.u); if(!u) return;
+      const o={id:String(x.id),u,at:String(x.at||_jebNow())}, t=String(x.t==null?'':x.t).trim().replace(/\s+/g,' ').slice(0,300);
+      if(t) o.t=t; ls.push(o);
+    });
+    if(ls.length) it.links=ls; else delete it.links;
+  }
   it.updatedAt=_jebNow(); persist(); return true;
 }
 /* ── v05.11 · Z6b — task items. A task's due/pri/steps ride the item record, so they sync with the item
@@ -25656,6 +25678,7 @@ function jebToNote(id){
       if(it.qty&&!it.title) note.title=(it.qty+' '+note.title).slice(0,120);
       if(it.shop) note.content+='<p>'+esc('🏪 '+it.shop)+'</p>';
     }
+    if(_jlks(it).length) note.content+=_jlks(it).map(_jlkNoteHTML).join('');   /* v05.91 · J147 — the item's links, as plain link cards at the end */
     if(it.kind){ note.kind=it.kind; note.kinds=[it.kind]; }
     if(it.journal) _ensureJournalTag(note);
     if(!note.title&&!note.content) note.title='Untitled';
@@ -25664,6 +25687,225 @@ function jebToNote(id){
   _addTombstones([id],_jebNow());
   DB.jeb=DB.jeb.filter(x=>x.id!==id);
   persist(); return note.id;
+}
+/* ══ v05.91 · J147 — links on every Zab item (not the News Zab: its items are channels). `links:[{id,u,t?,at}]` rides the item record
+   (whole-item last write wins, like steps). NOT the Links pocket's own url/ttl/ch/th. An address is untrusted text: http(s) only. ══ */
+let _jlkOpen=null, _jlkForce=false, _jlkCtx=null;
+const _jlkTry={}, _jlkBusy=new Set();
+function _jlks(it){ return Array.isArray(it&&it.links)?it.links:[]; }
+function _jlkNorm(s){
+  let v=String(s==null?'':s).trim(); if(!v||/\s/.test(v)||v.length>2000) return '';
+  if(!/^[a-z][a-z0-9+.-]*:/i.test(v)){ if(/^[\w-]+(\.[\w-]+)+([\/?#:].*)?$/.test(v)) v='https://'+v; else return ''; }
+  try{ const u=new URL(v); return (u.protocol==='http:'||u.protocol==='https:')&&u.hostname?u.href:''; }catch(e){ return ''; }
+}
+function _jlkHost(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return ''; } }
+function _jlkTitle(l){
+  if(l.t) return l.t;
+  try{ const x=new URL(l.u), s=x.hostname.replace(/^www\./,'')+x.pathname.replace(/\/+$/,''); return s.length>60?s.slice(0,57)+'…':s; }catch(e){ return String(l.u).slice(0,60); }
+}
+/* the ONE card builder: a real <a target=_blank> (one tap opens it) + a ⋯; no network for an icon */
+function _jebLinkCardHTML(iid,l){
+  if(!l.t&&_jebYtId(l.u)) _jlkQueue(iid,l.id);
+  return '<div class="jlk" data-iid="'+esc(iid)+'" data-lid="'+esc(l.id)+'"><a class="jlk-a" href="'+esc(l.u)+'" target="_blank" rel="noopener noreferrer" title="'+esc(l.u)+'"><span class="jlk-t">'+esc(_jlkTitle(l))+'</span><span class="jlk-h">'+esc(_jlkHost(l.u))+'</span></a><button type="button" class="jlk-more" aria-label="Link menu" title="Rename, move, put in a note, delete">⋯</button></div>';
+}
+/* every link of an item + the add control; drawn under the text by _jebChipsHTML (so every row, card and signature has it) */
+function _jebLinksHTML(i){
+  if(_jebType(_jebPocket(i.pocketId))==='news') return '';
+  const open=_jlkOpen===i.id;
+  return '<div class="jlk-wrap" data-iid="'+esc(i.id)+'">'+_jlks(i).map(l=>_jebLinkCardHTML(i.id,l)).join('')
+    +(open?'<div class="jlk-add"><input type="text" class="jlk-in" data-jeb="1" data-iid="'+esc(i.id)+'" inputmode="url" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste or type a link…" aria-label="Add a link"><button type="button" class="jlk-addb" aria-label="Add this link" title="Add this link">＋</button><button type="button" class="jlk-done" aria-label="Close the link box" title="Close">Done</button></div>'
+      :'<button type="button" class="jlk-open" title="Add a link to this item">🔗 Add link</button>')+'</div>';
+}
+/* a repaint never happens under an open add box that is focused or holds typing */
+function _jlkTyping(){ if(_jlkForce||!_jlkOpen) return false; return [...document.querySelectorAll('#jeb-panel .jlk-in,#jeb-deck .jlk-in')].some(x=>x.dataset.iid===_jlkOpen&&(x===document.activeElement||x.value!=='')); }
+function _jlkQueue(iid,lid){
+  const k=iid+'|'+lid; if(_jlkBusy.has(k)||(_jlkTry[k]||0)>=2||location.protocol==='file:'||typeof fetch!=='function') return;
+  _jlkTry[k]=(_jlkTry[k]||0)+1; _jlkBusy.add(k);
+  setTimeout(()=>{
+    const it=_jebItem(iid), l=_jlks(it).find(x=>x.id===lid);
+    if(!l||l.t){ _jlkBusy.delete(k); return; }
+    fetch('https://www.youtube.com/oembed?url='+encodeURIComponent(l.u)+'&format=json')
+      .then(r=>r.ok?r.json():Promise.reject(new Error('oembed '+r.status)))
+      .then(j=>{ if(j&&j.title&&_jebItem(iid)&&_jlks(_jebItem(iid)).some(x=>x.id===lid&&!x.t)){ jebRenameLink(iid,lid,String(j.title)); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } })
+      .catch(()=>{}).then(()=>{ _jlkBusy.delete(k); });
+  },0);
+}
+function jebAddLink(iid,raw){
+  _jebEnsure(); const it=_jebItem(iid); if(!it||_jebType(_jebPocket(it.pocketId))==='news') return null;
+  const u=_jlkNorm(raw); if(!u) return null;
+  const id=uid(); jebEditItem(iid,{links:_jlks(it).concat([{id,u,at:_jebNow()}])}); return id;
+}
+function jebRenameLink(iid,lid,t){
+  const it=_jebItem(iid); if(!it||!_jlks(it).some(x=>x.id===lid)) return false;
+  return jebEditItem(iid,{links:_jlks(it).map(x=>x.id===lid?Object.assign({},x,{t:String(t==null?'':t)}):x)});
+}
+/* takes a link off an item (no persist): the key goes when none is left */
+function _jlkDrop(it,lid,at){ const r=_jlks(it).filter(x=>x.id!==lid); if(r.length) it.links=r; else delete it.links; it.updatedAt=at; }
+function jebDeleteLink(iid,lid){
+  _jebEnsure(); const it=_jebItem(iid); if(!it) return false;
+  const l=_jlks(it).find(x=>x.id===lid); if(!l) return false;
+  const at=_jebNow();
+  DB.trash.push({id:uid(),type:'jebLink',itemId:iid,pocketId:it.pocketId,link:JSON.parse(JSON.stringify(l)),item:JSON.parse(JSON.stringify(l)),deletedAt:at});   /* `item` = the link too, so the purge/tombstone paths that read t.item.id stay safe */
+  _jlkDrop(it,lid,at); persist(); return true;
+}
+/* move: a NEW item in the chosen Zab holds the link, the old item loses it - both records in ONE persist() */
+function jebMoveLink(iid,lid,pid){
+  _jebEnsure(); const it=_jebItem(iid), pk=_jebPocket(pid);
+  if(!it||!pk||_jebType(pk)==='news'||pid===it.pocketId) return null;
+  const l=_jlks(it).find(x=>x.id===lid); if(!l) return null;
+  const now=_jebNow(), ty=_jebType(pk), nl=JSON.parse(JSON.stringify(l));
+  const ni={id:uid(),pocketId:pid,text:ty==='links'?nl.u:(nl.t||nl.u),done:false,folderIds:[],tags:[],kind:null,journal:false,
+    order:jebItems(pid).reduce((m,x)=>Math.max(m,(x.order||0)+1),0),createdAt:now,updatedAt:now,links:[nl]};
+  _jebLinkSync(ni); if(ty==='links'&&nl.t) ni.ttl=nl.t;
+  DB.jeb.push(ni); _jlkDrop(it,lid,now); persist(); return ni.id;
+}
+function _jlkNoteHTML(l){ return '<p>🔗 <a href="'+esc(l.u)+'">'+esc(_jlkTitle(l))+'</a> — '+esc(_jlkHost(l.u))+'</p>'; }
+/* A — a NEW note in a folder (fid '' = no folder); the link leaves the item in the same persist() */
+function jebLinkToNote(iid,lid,fid){
+  _jebEnsure(); const it=_jebItem(iid); if(!it) return null;
+  const l=_jlks(it).find(x=>x.id===lid); if(!l) return null;
+  const pk=_jebPocket(it.pocketId), now=_jebNow();
+  const note={id:uid(),title:(l.t||_jlkHost(l.u)||'Link').slice(0,120),content:_jlkNoteHTML(l),
+    folderIds:(fid&&DB.folders.some(f=>f.id===fid))?[fid]:[],tags:[],fromJeb:{pocket:pk?pk.name:'',at:now},createdAt:now,updatedAt:now};
+  DB.articles.push(note); _jlkDrop(it,lid,now); persist(); return note.id;
+}
+/* B — appended to the end of an existing note. A note open in an editor (Pane 3 or a float window) gets it through that editor
+   (appended at the end, never at the caret, and _edTouched so autosave keeps it); the stored copy is written too, so nothing waits on the timer. */
+function jebLinkToExisting(iid,lid,nid){
+  _jebEnsure(); const it=_jebItem(iid); if(!it) return null;
+  const l=_jlks(it).find(x=>x.id===lid), a=DB.articles.find(x=>x.id===nid); if(!l||!a) return null;
+  const html=_jlkNoteHTML(l), now=_jebNow();
+  const ed=(ST.editing&&ST.article===nid&&document.getElementById('ed'))||document.getElementById('fw-ed-'+nid);
+  if(ed&&document.contains(ed)){ ed.insertAdjacentHTML('beforeend',html); try{ _edTouched(ed); }catch(e){} }
+  a.content=String(a.content||'')+html; a.updatedAt=now;
+  _jlkDrop(it,lid,now); persist(); return nid;
+}
+function _jlkAfter(msg,nid){
+  _jebPanelSig=''; _jebDeckSig=''; _jebBarSig='';
+  if(typeof _renderPreserveEdit==='function') _renderPreserveEdit(); else render();
+  jebRefresh();
+  if(nid) _jebToastOpen(msg,nid); else toast(msg);
+}
+function _jlkAddFrom(inp){
+  const iid=inp.dataset.iid, raw=inp.value; if(!raw.trim()) return;
+  if(!_jlkNorm(raw)){ toast('Only web addresses (starting http:// or https://) can be added as a link.'); return; }
+  if(!jebAddLink(iid,raw)){ toast('Could not add the link'); return; }
+  inp.value=''; _jlkOpen=iid; _jlkForce=true;
+  try{ _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); }finally{ _jlkForce=false; }
+  const n=document.querySelector('#jeb-deck .jlk-in[data-iid="'+iid+'"]')||document.querySelector('#jeb-panel .jlk-in[data-iid="'+iid+'"]');
+  if(n) n.focus({preventScroll:true});
+}
+function _jlkOpenBox(iid){
+  const it=_jebItem(iid); if(!it) return; _jlkOpen=iid; _jebPanelSig=''; _jebDeckSig=''; jebRefresh();
+  const n=document.querySelector('#jeb-deck .jlk-in[data-iid="'+iid+'"]')||document.querySelector('#jeb-panel .jlk-in[data-iid="'+iid+'"]');
+  if(n) n.focus({preventScroll:true});
+}
+function _jlkCloseBox(){ _jlkOpen=null; _jlkForce=true; try{ _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); }finally{ _jlkForce=false; } }
+function _jlkRenameUI(iid,lid){
+  const it=_jebItem(iid), l=_jlks(it).find(x=>x.id===lid); if(!l) return;
+  _jebHideMenu();
+  showModal('<div class="mt">✏ Rename link</div><input class="mi" id="jlk-rn" data-jeb="1" maxlength="300" autocomplete="off" enterkeyhint="done" placeholder="A title for this link" aria-label="Link title" value="'+esc(l.t||'')+'"><div class="ma"><button class="btn" id="jlk-rn-x">Cancel</button><button class="btn bp" id="jlk-rn-ok">OK</button></div>');
+  const mb=_jebEl('mb'), inp=mb.querySelector('#jlk-rn');
+  const save=()=>{ jebRenameLink(iid,lid,inp.value); closeModal(); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); };
+  mb.querySelector('#jlk-rn-ok').addEventListener('click',save);
+  mb.querySelector('#jlk-rn-x').addEventListener('click',()=>closeModal());
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); save(); } else if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeModal(); } });
+  inp.focus(); inp.select();
+}
+/* 👝 Move to another Zab — every Zab at any depth, the "Move into…" picker's style; a News Zab and the Zab it is in are greyed */
+function _jlkMoveOpen(iid,lid){
+  const it=_jebItem(iid); if(!it) return; _jebHideMenu();
+  const t=_jebTree();
+  showModal('<div class="mt">👝 Move this link to…</div><div class="jx-mvl">'
+    +t.flat.map(x=>{ const q=t.byId.get(x.id), bad=q.id===it.pocketId?'it is in this Zab now':(_jebType(q)==='news'?'a News Zab holds channels':'');
+      return '<button type="button" class="jx-mv'+(bad?' off':'')+'" data-to="'+esc(q.id)+'"'+(bad?' disabled':'')+' style="padding-left:'+(10+Math.min(x.depth+1,8)*16)+'px"><span class="jx-mt">'+esc(q.icon)+' '+esc(q.name)+'</span>'+(bad?'<small>'+esc(bad)+'</small>':'')+'</button>'; }).join('')
+    +'</div><div class="ma"><button class="btn" onclick="closeModal()">Cancel</button></div>');
+  if(window.innerWidth<640) _jebEl('ov').classList.add('mydb-sheet');
+  _jebEl('mb').querySelectorAll('.jx-mv').forEach(b=>b.addEventListener('click',()=>{
+    if(b.disabled) return; const to=b.dataset.to; closeModal();
+    if(jebMoveLink(iid,lid,to)){ _jlkAfter('Link moved to '+((_jebPocket(to)||{}).name||'that Zab')); }
+  }));
+}
+const _JLK_CFG={pick:'_jlkFolderPicked'};
+/* A — the folder chooser opens FULL SCREEN (⛶ makes it a window); a phone gets a full-height sheet. The list is the app's one folder picker. */
+function _jlkFsStart(){
+  if(window.innerWidth<640){ const mb=_jebEl('mb'); if(mb){ mb.style.height='88vh'; } return; }
+  _mbFsToggle();
+}
+function _jlkFolderOpen(iid,lid){
+  _jebHideMenu(); _jlkCtx={iid,lid};
+  showResizableModal('<div class="mt mb-mt-fs"><span>📁 Put this link in a new note — pick a folder</span>'+_mbFsBtnHTML()+'</div>'
+    +'<input class="im-search" id="jlk-fq" placeholder="Search folders…" oninput="document.getElementById(\'jlk-fl\').innerHTML=_afInRows(this.value,_JLK_CFG)" onmousedown="event.stopPropagation()">'
+    +'<div class="pl" id="jlk-fl" style="max-height:calc(100dvh - 250px);overflow:auto">'+_afInRows('',_JLK_CFG)+'</div>'
+    +'<div style="display:flex;gap:6px;margin-top:8px"><input class="mi" id="jlk-nf" placeholder="New folder name…" style="flex:1;margin:0;min-width:0;min-height:44px" onkeydown="if(event.key===\'Enter\')_jlkNewFolder()"><button class="btn" style="flex-shrink:0;min-height:44px" onclick="_jlkNewFolder()">＋ New folder</button></div>'
+    +'<div class="ma"><button class="btn" onclick="closeModal()">Cancel</button></div>',
+    {geomKey:'siyagah-mb-zablink-geom',width:'460px',height:'min(600px,86vh)',phoneSheet:true});
+  _jlkFsStart();
+  setTimeout(()=>{ const q=document.getElementById('jlk-fq'); if(q&&window.innerWidth>=640) q.focus(); },80);
+}
+function _jlkNewFolder(){
+  const inp=document.getElementById('jlk-nf'); if(!inp||!inp.value.trim()){ toast('Enter a folder name'); return; }
+  const nid=mkFolder(null,inp.value); if(!nid) return;
+  inp.value=''; const l=document.getElementById('jlk-fl'), q=document.getElementById('jlk-fq');
+  if(l) l.innerHTML=_afInRows(q?q.value:'',_JLK_CFG);
+  if(typeof render==='function') render();
+}
+function _jlkFolderPicked(fid){
+  const c=_jlkCtx; if(!c) return; closeModal();
+  const nid=jebLinkToNote(c.iid,c.lid,fid||'');
+  if(!nid){ toast('Could not make the note'); return; }
+  const f=fid&&DB.folders.find(x=>x.id===fid);
+  _jlkAfter('Link put in a new note'+(f?' in 📁 '+f.name:''),nid);
+}
+/* B — the note chooser: search box (the app's one search, notes only), newest first when empty; full screen like A */
+function _jlkNoteOpen(iid,lid){
+  _jebHideMenu(); _jlkCtx={iid,lid};
+  showResizableModal('<div class="mt mb-mt-fs"><span>📝 Add this link to a note — pick one</span>'+_mbFsBtnHTML()+'</div>'
+    +'<input class="im-search" id="jlk-nq" placeholder="Search notes…" oninput="_jlkNoteListSoon(this.value)" onmousedown="event.stopPropagation()">'
+    +'<div class="pl" id="jlk-nl" style="max-height:calc(100dvh - 210px);overflow:auto"></div>'
+    +'<div class="ma"><button class="btn" onclick="closeModal()">Cancel</button></div>',
+    {geomKey:'siyagah-mb-zablink-geom',width:'460px',height:'min(600px,86vh)',phoneSheet:true});
+  _jlkFsStart(); _jlkNoteList('');
+  setTimeout(()=>{ const q=document.getElementById('jlk-nq'); if(q&&window.innerWidth>=640) q.focus(); },80);
+}
+let _jlkNT=0;
+function _jlkNoteListSoon(q){ clearTimeout(_jlkNT); _jlkNT=setTimeout(()=>_jlkNoteList(q),150); }
+function _jlkNoteList(q){
+  const el=document.getElementById('jlk-nl'); if(!el) return;
+  const arr=(_searchWords(q||'').length?_searchAll(q).noteHits.slice():DB.articles.slice().sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))).slice(0,60);
+  el.innerHTML=arr.length?arr.map(a=>'<div class="pr" style="min-height:44px" onclick="_jlkNotePicked('+_ja(a.id)+')"><span style="font-size:12px">📝</span><span style="font-size:13px">'+esc(a.title||'Untitled')+'</span></div>').join(''):'<div class="jeb-empty">No notes found.</div>';
+}
+function _jlkNotePicked(nid){
+  const c=_jlkCtx; if(!c) return; closeModal();
+  if(!jebLinkToExisting(c.iid,c.lid,nid)){ toast('Could not add it to that note'); return; }
+  const a=DB.articles.find(x=>x.id===nid);
+  _jlkAfter('Link added to the end of “'+String((a&&a.title)||'Untitled').slice(0,40)+'”',nid);
+}
+function _jlkMenu(iid,lid,anchor){
+  const it=_jebItem(iid), l=_jlks(it).find(x=>x.id===lid); if(!l) return;
+  _jebShowMenu(_menuRows([
+    ['open',{t:'🔗 Open link',f:()=>{ try{ window.open(l.u,'_blank','noopener'); }catch(e){} }}],
+    ['open',{t:'✏ Rename',f:()=>_jlkRenameUI(iid,lid)}],
+    ['organise',{t:'👝 Move to another Zab…',f:()=>_jlkMoveOpen(iid,lid)}],
+    ['organise',{t:'📁 To a new note in a folder…',f:()=>_jlkFolderOpen(iid,lid)}],
+    ['organise',{t:'📝 Add to an existing note…',f:()=>_jlkNoteOpen(iid,lid)}],
+    ['delete',{t:'🗑 Delete link',d:true,f:()=>{ if(jebDeleteLink(iid,lid)){ toast('Link moved to Trash'); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } }}]
+  ]),anchor);
+}
+/* one delegated listener for the panel, the deck and the Zab layouts (all end in those two) */
+function _jlkWire(){
+  document.addEventListener('click',e=>{
+    const t=e.target; if(!t.closest) return;
+    const more=t.closest('.jlk-more'); if(more){ const c=more.closest('.jlk'); e.stopPropagation(); _jlkMenu(c.dataset.iid,c.dataset.lid,more); return; }
+    const op=t.closest('.jlk-open'); if(op){ e.stopPropagation(); _jlkOpenBox(op.closest('.jlk-wrap').dataset.iid); return; }
+    const ab=t.closest('.jlk-addb'); if(ab){ e.stopPropagation(); const n=ab.closest('.jlk-add').querySelector('.jlk-in'); _jlkAddFrom(n); n.focus({preventScroll:true}); return; }
+    if(t.closest('.jlk-done')){ e.stopPropagation(); _jlkCloseBox(); return; }
+  },true);
+  document.addEventListener('keydown',e=>{
+    const t=e.target; if(!t.matches||!t.matches('.jlk-in')||e.isComposing) return;
+    if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); _jlkAddFrom(t); }
+    else if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); t.value=''; _jlkCloseBox(); }
+  },true);
 }
 /* ══ JEB UI (v04.99 · J2) — the bar and the pocket panel ═════════════════════
    The bar (#jeb-bar) and panel (#jeb-panel) are built here and repaint from
@@ -25715,6 +25957,7 @@ function _jebKbCheck(){
 }
 function _jebWireOnce(){
   if(_jebWired) return; _jebWired=true;
+  _jlkWire();   /* v05.91 · J147 */
   try{ new ResizeObserver(jebLayout).observe(_jebEl('sb')); }catch(e){}
   let wasWide=_jebWide(), wasTk=_jebTaskMode(), wasPhone=_zabPhone();
   window.addEventListener('resize',()=>{ jebLayout(); _jebKbCheck(); if(_zabPhone()!==wasPhone){ wasPhone=_zabPhone(); jebRefresh(); } else if(_zabOpen) _zabPaint(); _zabPlace(); _tkMeasure=true; if(_jebWide()!==wasWide||_jebTaskMode()!==wasTk){ wasWide=_jebWide(); wasTk=_jebTaskMode(); if(_jebOpen) jebRefresh(); } });   /* v05.10: a links pocket changes shape at 640 */
@@ -27109,7 +27352,7 @@ function jebTogglePanel(pid){ if(_jebOpen===pid){ if(!_JEB_APP) jebClosePanel();
 function jebToggleAllPanel(){ if(_jebOpen==='*'&&_jebMulti&&_jebMulti.all){ if(!_JEB_APP) jebClosePanel(); } else jebOpenPanelSel({ids:[],all:true}); }
 function jebOpenPanel(pid){
   if(!_jebPocket(pid)) return;
-  _zabClose(); jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen=pid; _jebMulti=null; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  _zabClose(); jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jlkOpen=null; _jebOpen=pid; _jebMulti=null; _jebEditId=null;   /* a link box left open closes when another Zab opens */ _jebBarSig=''; _jebPanelSig='';
   _jebAppRemember({ids:[pid],all:false},false);
   jebRefresh();
   const ta=_jebEl('jeb-add-in'); if(ta&&!_jebAppBusy) try{ ta.focus({preventScroll:true}); }catch(e){}   /* not at boot: no keyboard on a phone */
@@ -27119,7 +27362,7 @@ function jebOpenPanelSel(sel){
   const ids=_jebSelIds(sel);
   if(!sel.all&&ids.length===1){ jebOpenPanel(ids[0]); return; }
   if(!ids.length) return;
-  _zabClose(); jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jebOpen='*'; _jebMulti={ids:sel.all?[]:ids.slice(),all:!!sel.all}; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
+  _zabClose(); jebCloseDeck(); _jebHideMenu(); _jebAttClose(); _jlkOpen=null; _jebOpen='*'; _jebMulti={ids:sel.all?[]:ids.slice(),all:!!sel.all}; _jebEditId=null; _jebBarSig=''; _jebPanelSig='';
   _jebAppRemember(sel,false);
   jebRefresh();
 }
@@ -27413,7 +27656,7 @@ function _jebNewsGo(){
   _jebPanelSig=''; jebRefresh();
 }
 function _newsOpenZab(pid){ closeModal(); jebOpenPanel(pid); }
-function _jebItemSig(i){ return [i.id,i.title||'',i.text,i.done?1:0,i.url||'',i.ttl||'',i.ch||'',i.th||'',i.due||'',i.pri||0,_jebSteps(i).map(x=>x.id+':'+x.t+':'+(x.d?1:0)).join(','),_jebKindSig(i),_jebChipsHTML(i)].join('~'); }
+function _jebItemSig(i){ return [i.id,i.title||'',i.text,i.done?1:0,i.url||'',i.ttl||'',i.ch||'',i.th||'',i.due||'',i.pri||0,_jebSteps(i).map(x=>x.id+':'+x.t+':'+(x.d?1:0)).join(','),_jebKindSig(i),_jlks(i).map(x=>x.id+':'+x.u+':'+(x.t||'')).join(','),_jebChipsHTML(i)].join('~'); }
 function _jebRowHTML(i){
   const lpk=_jebPocket(i.pocketId);
   if(lpk&&_jebType(lpk)==='links') return _jebLinkRowHTML(i,lpk,'c');
@@ -27442,7 +27685,7 @@ function _jebPaintPanel(){
   const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W':'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):_jebType(pk)==='news'?_jebNewsSig(pk):kvSig(pk)),treeSig(pk),groups[k].map(_jebItemSig).join('|'),multi?'':_zabNoteSig(pk)].join('#')).join('@@')].join('%');
   if(sig===_jebPanelSig) return;
   /* never repaint under an item being typed in or dragged: it repaints when that ends */
-  if(_jebEditId||_jebDrag||_jebStepTyping()||_jebQtyOpen()||(document.activeElement&&document.activeElement.id==='jn-add-in')) return;
+  if(_jebEditId||_jebDrag||_jebStepTyping()||_jebQtyOpen()||_jlkTyping()||(document.activeElement&&document.activeElement.id==='jn-add-in')) return;
   _jebPanelSig=sig;
   const px=`<button class="jeb-px" aria-label="Spread as cards" title="Spread as cards">▦</button>`;
   const addBox=p.querySelector('.jeb-add'); if(addBox) addBox.style.display=(multi||_jebType(pks[0])==='news')?'none':'';
@@ -27594,7 +27837,7 @@ function jebToggleDeck(sel){
 }
 function jebOpenDeck(sel){
   const ids=_jebSelIds(sel); if(!ids.length) return;
-  _jebHideMenu(); _jebAttClose(); jebClosePanel();
+  _jebHideMenu(); _jebAttClose(); jebClosePanel(); _jlkOpen=null;
   _jebDeck={ids:sel.all?[]:ids.slice(),all:!!sel.all}; _jebDeckSig=''; _jebEditId=null; _jebBarSig='';
   _jebAppRemember(sel,true);
   jebRefresh();
@@ -27661,7 +27904,7 @@ function _jebPaintDeck(){
   const sig=(sel.all?'A':'')+'%'+pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='tasks'?_jebToday():'',inside(pk),groups[k].map(_jebItemSig).join('|')].join('#')).join('@@');
   if(sig===_jebDeckSig) return;
   /* never repaint under a card being typed in or dragged: it repaints when that ends */
-  if(_jebEditId||_jebDrag) return;
+  if(_jebEditId||_jebDrag||_jlkTyping()) return;
   _jebDeckSig=sig;
   const all=[].concat(...groups), open=all.filter(i=>!i.done).length, done=all.length-open, multi=pks.length>1||sel.all;
   d.querySelector('.jd-hd').innerHTML=`<b>${esc(_jebSelTitle(sel,pks))}</b><small>${open} open</small><span class="jd-sp"></span>`
@@ -27825,6 +28068,7 @@ function _jebItemMenu(iid,anchor){
     ...(ty==='ideas'?[M({t:'★ Stars…',f:()=>_jebStarsOpen(iid)}),G({t:'# Topic…',f:()=>_jebPickOpen(iid,'topics')})]:[]),   /* v05.12 · Z6c */
     ...(ty==='shop'?[G({t:'🔢 Quantity…',f:()=>_jebQtyEdit(iid)}),G({t:'🏪 Shop…',f:()=>_jebPickOpen(iid,'shop')})]:[]),
     O({t:'✎ Title…',f:()=>_jebTitleEdit(iid)}),
+    ...(ty!=='news'?[G({t:'🔗 Add link',f:()=>_jlkOpenBox(iid)})]:[]),   /* v05.91 · J147 */
     G({t:'📎 Attach',f:()=>_jebAttOpen(iid,anchor)}),
     G({t:'→ Note',f:()=>_jebToNoteUI(iid)}),
     G({t:'📂 Move to Zab ▸',keep:true,f:()=>{
@@ -28012,7 +28256,7 @@ function _jebChipsHTML(i){
   (i.tags||[]).forEach(t=>c.push(`<span class="jc-t">#${esc(t)}</span>`));
   const k=_jebKindOf(i.kind); if(k) c.push(`<span class="jc-k"><i class="jc-dot" style="background:${esc(k.color)}"></i>${esc(k.name)}</span>`);
   if(i.journal) c.push('<span class="jc-j">📔 Journal</span>');
-  return c.length?`<div class="jeb-chips">${c.join('')}</div>`:'';
+  return (c.length?`<div class="jeb-chips">${c.join('')}</div>`:'')+_jebLinksHTML(i);   /* v05.91 · J147 — the links and the add control, under the text of every kind of item */
 }
 function _jebAttClose(){ const a=_jebEl('jeb-att'); if(a) a.remove(); _jebAtt=null; }
 function _jebAttOpen(iid,anchor){
@@ -28337,10 +28581,11 @@ function renderTrashModal(){
     return;
   }
   body.innerHTML = items.map(t=>{
-    const icon = t.type==='article'?'📄':t.type==='jebItem'||t.type==='jebPocket'?'🗂':'📁';
+    const icon = t.type==='article'?'📄':t.type==='jebItem'||t.type==='jebPocket'||t.type==='jebLink'?'🗂':'📁';
     const nm = esc(t.type==='article'?t.item.title
       :t.type==='jebItem'?'Zab item: '+String(t.item.text||'').split(/\r?\n/)[0].slice(0,60)   /* v04.98 */
       :t.type==='jebPocket'?'Zab: '+(t.item.name||'Unnamed')
+      :t.type==='jebLink'?'Zab link: '+_jlkTitle(t.link||{u:''}).slice(0,60)   /* v05.91 · J147 */
       :(t.item.name||'Unnamed'));
     const age = fmtD(t.deletedAt);
     let sub = `Deleted ${age}`;
@@ -28375,6 +28620,25 @@ function restoreItem(tid){
       entry.item.folderIds = entry.item.folderIds.filter(fid=>DB.folders.find(f=>f.id===fid));
       entry.item.updatedAt=_now;
       DB.articles.push(entry.item);
+    }
+  } else if(entry.type==='jebLink'){
+    /* v05.91 · J147 — back on its item; if that item is gone, a NEW item in the same Zab (else the first Zab) holds it */
+    _jebEnsure();
+    const lk=entry.link, stamp=_now>(entry.deletedAt||'')?_now:new Date(Date.parse(entry.deletedAt)+1).toISOString();
+    const host=_jebItem(entry.itemId);
+    if(host){
+      if(!_jlks(host).some(x=>x.id===lk.id)) host.links=_jlks(host).concat([lk]);
+      host.updatedAt=stamp;
+    } else {
+      let pk=_jebPocket(entry.pocketId);
+      if(!pk||_jebType(pk)==='news') pk=jebPockets().find(p=>_jebType(p)!=='news');
+      if(!pk){ pk={id:uid(),name:'Restored',icon:'✶',color:'#FFF1A8',order:0,createdAt:stamp,updatedAt:stamp}; DB.jebPockets.push(pk); }
+      {
+        const ni={id:uid(),pocketId:pk.id,text:_jebType(pk)==='links'?lk.u:(lk.t||lk.u),done:false,folderIds:[],tags:[],kind:null,journal:false,
+          order:jebItems(pk.id).reduce((m,x)=>Math.max(m,(x.order||0)+1),0),createdAt:stamp,updatedAt:stamp,links:[lk]};
+        _jebLinkSync(ni); if(_jebType(pk)==='links'&&lk.t) ni.ttl=lk.t;
+        DB.jeb.push(ni);
+      }
     }
   } else if(entry.type==='jebItem'||entry.type==='jebPocket'){
     /* v04.98 — a fresh updatedAt that is certainly past any tombstone for it */

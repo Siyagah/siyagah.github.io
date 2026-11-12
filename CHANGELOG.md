@@ -11521,3 +11521,14 @@ Built by the builder (issue #305, PR #306). The owner's notebook is ~157 MB; thi
 **Checks:** block 148, `tools/fullcopy-j162.mjs` (148a–148h; 148e needs the v05.89 `index.html`, taken from git by the merge commit of PR #304). Block 56 69/69. Shown failing on unpatched code in the PR.
 
 **Architect review of v05.90 (11 Nov 2026):** ship-check 17/17; full app-check on 30778d6 in four parts: 1–67 3640/3647 → the 7 were 14a/14d/16e, which faked a failed save on `_idbPut`, which the notebook write no longer calls; changed in place to fail `_idbPutDB` too (blocks 14+16 53/53); 68–103 4034/4041 → 91f (J152), 72 under four parallel parts (389/389 alone), 86@390 "both" long task (216/225/239/196 ms on v05.90 against 200 ms; v05.89 on the same runner 1 of 2 failing at the same line; the new size walk measured 2–7 ms at 2,000 notes ×4 CPU, so not the cause; a borderline speed check, not a J162 fault); 104–138 1592/1592; 139–148 483/483 (56k passes).
+
+## v05.91 — J147: links on every Zab item (11 Nov 2026, builder, issue #307)
+
+The owner (phone, Shopping Zab): a space for links on an item, tap opens it, several per item, move to another Zab, delete, small cards with a title, move to a folder / a note, folder chooser full screen ("Enable A n B both options").
+
+- New item field `links:[{id,u,t?,at}]` on every kind of Zab (plain, links, tasks, ideas, shop). Not the News Zab (its items are channels). Not the Links pocket's own `url/ttl/ch/th`, which are unchanged. Only `http:`/`https:` accepted (`_jlkNorm`); anything else is refused with a plain message.
+- Drawn by one builder `_jebLinkCardHTML` under the item's text (panel row and deck card): title (`t`, else a YouTube title by oEmbed, else host + path), host in small type, no icon fetched. One tap opens it in a new tab. "🔗 Add link" opens a small box that stays for the next one; also in the item's ⋯ menu.
+- Card ⋯: Rename · Move to another Zab · To a new note in a folder (A) · Add to an existing note (B) · Delete (Trash entry `jebLink`, Restore to its item or a new item).
+- A and B open the app's resizable box full screen (⛶ makes it a window; < 640 px a full-height sheet), geometry key `siyagah-mb-zablink-geom`. B appends at the END of the note; a note open in an editor gets it appended through that editor (never at the caret).
+- Shapes: phone — cards and add box fit 390 px, every target ≥ 44 px, choosers are sheets; tablet/laptop — choosers open full screen.
+- Not done: "＋ new folder inside" in the chooser makes a top-level folder (no "Inside:" choice).

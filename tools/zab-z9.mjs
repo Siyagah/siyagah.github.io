@@ -157,16 +157,18 @@ try {
     const d = await open(vp, seed()), b = await open(vp, seed(), srvBase.base), t = tag('85d', vp);
     try {
       const btn = '<button class="jeb-ttl-b" title="Give this item a title">✎ Title</button>';
+      /* v05.91 · J147 adds 🔗 Add link to every item (.jlk-wrap, no item here has links): stripped from the new side like the ✎ Title button; anything else that differs still fails. */
+      const jlk = (s) => s.replace(/<div class="jlk-wrap"[^>]*>(?:<div class="jlk"[\s\S]*?<\/div>)*<button type="button" class="jlk-open"[^>]*>[^<]*<\/button><\/div>/g, '');
       for (const pid of ['P', 'L', 'T', 'I', 'S']) {
         await openP(d, pid); await openP(b, pid);
         const [x, y] = await Promise.all([d, b].map((q) => q.page.evaluate(() => document.querySelector('#jeb-panel .jeb-list').innerHTML)));
-        check(x.split(btn).join('') === y, `${t} pocket ${pid}: the panel list is v05.24's, apart from the new button`, x.split(btn).join('') === y ? '' : x.slice(0, 160));
+        check(jlk(x).split(btn).join('') === y, `${t} pocket ${pid}: the panel list is v05.24's, apart from the new button`, jlk(x).split(btn).join('') === y ? '' : jlk(x).slice(0, 160));
       }
       for (const q of [d, b]) await q.page.evaluate(() => { jebClosePanel(); jebOpenDeck({ ids: ['P', 'L'], all: false }); });
       await sleep(600);
       let [x, y] = await Promise.all([d, b].map((q) => q.page.evaluate(() => document.querySelector('#jeb-deck .jd-wrap').innerHTML)));
       const nj = (s) => s.replace(/ data-jump="[^"]*"/g, '');   /* where the card flies out from: a measured position, not markup */
-      const xs = nj(x.split('<button class="jeb-ttl-b" aria-label="Title" title="Give this item a title">✎</button>').join('')); y = nj(y);
+      const xs = nj(jlk(x).split('<button class="jeb-ttl-b" aria-label="Title" title="Give this item a title">✎</button>').join('')); y = nj(y);
       let k = 0; while (k < xs.length && xs[k] === y[k]) k++;
       check(xs === y, `${t} the deck cards are v05.24's, apart from the new button`, xs === y ? '' : `differs at ${k}: new …${xs.slice(k - 30, k + 60)}… old …${y.slice(k - 30, k + 60)}…`);
     } finally { await d.ctx.close(); await b.ctx.close(); }
