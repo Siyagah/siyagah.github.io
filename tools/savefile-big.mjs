@@ -17,7 +17,7 @@
          syncKnowledgeBase still reads nd
    140e  progress moves ("Writing your file… N of M …"), the final message carries the file's real size, a failed write shows a reason and no "Saved", no double press
    140f  at 390 / 820 / 1440: 🧰 → 💾 Save File by a real click/tap from a booted app
-   note  the book/backup page (_picInlineStr) and Google Drive backup (backupToGDrive) at this size — REPORTED, not changed. */
+   note  the old one-string book page at this size — REPORTED. (v05.92 · J140: the book page, PDF and Drive backup now keep the pictures; block 150 checks them.) */
 import { playwright, serve, seedDB } from './harness.mjs';
 import { check, results } from './s1-fake.mjs';
 import { bigSizes, seedBig } from './big-seed.mjs';
@@ -272,7 +272,7 @@ try {
     try {
       await seedBig(B.page, SZ);
       const bk = await B.page.evaluate(async () => { const t = performance.now(); try { const x = await generateBackupHTMLContent(); const miss = (x.html.match(/data-pic="[0-9a-f]{64}"(?![^>]*\ssrc=)/g) || []).length; return { ok: true, len: x.html.length, ms: Math.round(performance.now() - t), noSrc: miss, withData: (x.html.match(/src="data:image/g) || []).length }; } catch (e) { return { ok: false, err: String(e && e.message || e) }; } });
-      note(`book/backup page (_picInlineStr, also what backupToGDrive uploads) at ${MB} MB, NOT changed: ${bk.ok ? `built a string of ${(bk.len / 1048576).toFixed(0)} MB in ${bk.ms} ms; ${bk.withData} pictures inlined, ${bk.noSrc} left as bare references` : 'FAILED — ' + bk.err}`);
+      note(`v05.92 · J140 — the book/backup page, 📄 PDF and ☁ Drive no longer use this one-string build (they write piece by piece with the pictures kept: block 150); the old string (generateBackupHTMLContent, kept for this measurement only) at ${MB} MB: ${bk.ok ? `built a string of ${(bk.len / 1048576).toFixed(0)} MB in ${bk.ms} ms; ${bk.withData} pictures inlined, ${bk.noSrc} left as bare references` : 'FAILED — ' + bk.err}`);
     } catch (e) { note('book/backup page: could not measure — ' + String(e.message || e).split('\n')[0]); }
     finally { await B.ctx.close().catch(() => {}); }
   }
