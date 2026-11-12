@@ -11556,3 +11556,5 @@ The owner (phone, Shopping Zab): a space for links on an item, tap opens it, sev
 - Searching writes nothing to `DB`. Check: block 151, `tools/search-j133.mjs`.
 
 **J137.** The two messages (device copy lost; after ⬆ Import → Replace everything) said "🧰 → 💽 Storage & Backup"; that row is in ⚙. Both now say ⚙. **Sweep (every "🧰 →" / "⚙ →" in the source against the real menu):** 🎨 Appearance (4 places) and 👝 Siyagah Zab are in 🧰 ✓; ⚙ → Automatic Backups, ☁ Cloud Sync (4), Sign Out, ☁ are in ⚙ ✓; one code comment said "🧰 → Sync", now "⚙ → ☁ Cloud Sync". Nothing else found.
+
+**Found in the Architect's review (block 42d at 390 failed on this branch, passed on main).** A long-press on a side-pane result opens the note menu under the finger, and the click the finger's lift made landed on the menu's row (here ✏ Rename): the swallow for that click listens on `#tree` only, and the menu is outside it. The chips bar moved the row down by its height, which put a row under the finger. Fixed at the cause, not by moving the bar: the side pane's `touchend` after a fired long-press is cancelled (`preventDefault`, so no click is made at all). Block 42 12/12 again.
