@@ -34,18 +34,20 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 /* ── measure only ── */
 if (MEASURE) {
-  const app = await openApp({ viewport: { width: 1440, height: 900 }, db: seed() }); const p = app.page;
-  const m = await p.evaluate(async () => {
+  const app = await openApp({ viewport: { width: 1440, height: 900 }, db: seedDB() }); const p = app.page;
+  const m = await p.evaluate(async (NOTES) => {
+    const W = ['alpha', 'beta', 'gamma', 'delta', 'planning', 'land', 'village', 'lorem']; let sd = 7; const rnd = () => (sd = (sd * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; const now = new Date().toISOString();
+    for (let i = 0; i < NOTES; i++) { let c = ''; while (c.length < 1500) c += '<div>' + [0, 1, 2, 3, 4, 5].map(() => W[(rnd() * W.length) | 0]).join(' ') + '</div>'; DB.articles.push({ id: 'm' + i, title: 'Note ' + i, content: c, folderIds: ['f2'], tags: [], createdAt: now, updatedAt: now, kind: 'general' }); }
     const T = (fn) => { const t = performance.now(); fn(); return +(performance.now() - t).toFixed(1); };
     DB.articles.forEach(_stOf);
-    const out = {};
+    const out = { n: DB.articles.length };
     _stLast = null; out.today = T(() => _searchAll('alpha beta'));
     _stLast = null; _searchAll('alpha'); out.chip = T(() => _searchAll('alpha beta'));
     _stLast = null; out.coldChip = T(() => _searchAll('alpha beta -gamma'));
     _stLast = null; _searchAll('alpha'); out.chipExc = T(() => _searchAll('alpha -gamma'));
     return out;
-  });
-  console.log('measure ' + NOTES + ' notes (ms): today\'s search "alpha beta" cold ' + m.today + ' · one more chip (warm) ' + m.chip + ' · cold with exclusion ' + m.coldChip + ' · warm +exclusion ' + m.chipExc);
+  }, NOTES);
+  console.log('measure ' + m.n + ' notes (ms): today\'s search "alpha beta" cold ' + m.today + ' · one more chip (warm) ' + m.chip + ' · cold with exclusion ' + m.coldChip + ' · warm +exclusion ' + m.chipExc);
   await app.close(); process.exit(0);
 }
 
