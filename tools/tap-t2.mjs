@@ -79,7 +79,8 @@ async function open(s, w, h, touch, goto) {
   /* v05.76 (J110 ①), updated in place by the Architect in review: 📥 Keep import is a new 🧰 row under 📥 Evernote import, which moves the rows below it down, and so does
      the new Smart View row "📥 (15) From Keep" (sf-keep); both hidden for the comparison with v05.29 like the ones above. The 🧰 row's reach at all three sizes is checked by 135a.
      v05.78 (J110 ②): the same for the new 🧰 row "📥 OneNote import" and the Smart View row "📥 (16) From OneNote" (sf-onenote); reach checked by 137a. */
-  if (w >= 640) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.sec-pop{display:none!important}.zn-area{display:none!important}.sb-mi[onclick^="openMmjImport"]{display:none!important}.sb-mi[onclick^="openMydb"]{display:none!important}.sf-row[data-sfid="sf-mydb"]{display:none!important}.sb-mi[onclick^="openKeepImport"]{display:none!important}.sf-row[data-sfid="sf-keep"]{display:none!important}.sb-mi[onclick^="openOneNoteImport"]{display:none!important}.sf-row[data-sfid="sf-onenote"]{display:none!important}.sb-pp-btn,.p2-pp-btn,.sb-pp-mi{display:none!important}.jeb-ph .jeb-set,#jeb-deck .jd-hd button[data-d="set"]{display:none!important}'; document.head.appendChild(st); }); });
+  /* v05.91 · J147 adds 🔗 Add link to every item (.jlk-wrap, under each row): hidden for the comparison with v05.29 like the ones above, and its boxes are also left out of 90d's list by selector. Its reach and size are checked by block 149. */
+  if (w >= 640) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.sec-pop{display:none!important}.zn-area{display:none!important}.sb-mi[onclick^="openMmjImport"]{display:none!important}.sb-mi[onclick^="openMydb"]{display:none!important}.sf-row[data-sfid="sf-mydb"]{display:none!important}.sb-mi[onclick^="openKeepImport"]{display:none!important}.sf-row[data-sfid="sf-keep"]{display:none!important}.sb-mi[onclick^="openOneNoteImport"]{display:none!important}.sf-row[data-sfid="sf-onenote"]{display:none!important}.sb-pp-btn,.p2-pp-btn,.sb-pp-mi{display:none!important}.jeb-ph .jeb-set,#jeb-deck .jd-hd button[data-d="set"]{display:none!important}.jlk-wrap{display:none!important}'; document.head.appendChild(st); }); });
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e));
   page.on('console', (m) => { if (m.type() === 'error' && !/net::ERR_FAILED/.test(m.text())) errors.push('console: ' + m.text()); });
@@ -240,7 +241,7 @@ try {
         const a = cur.out[name], b = old.out[name];
         if (a.err || b.err) { diffs.push(`${name}: could not open (${a.err || b.err})`); continue; }
         /* v05.40 · Z15, updated in place: the Zab bar's tappable boxes changed ON PURPOSE (＋ New Zab is first, what does not fit folds into "▸ N more", a 📰 News chip); they are compared by block 99 (tools/zab-bar-more.mjs), so the bar's rows are left out of this comparison with the v05.29 build */
-        const sig = (m) => m.rows.filter((t) => !t.bar).map((t) => `${t.key}|${t.text.replace(/v\d\d\.\d\d/, 'vX')}|${Math.round(t.x)},${Math.round(t.y)},${Math.round(t.w)}x${Math.round(t.h)}`).sort();
+        const sig = (m) => m.rows.filter((t) => !t.bar && !/\bjlk-/.test(t.key)).map((t) => `${t.key}|${t.text.replace(/v\d\d\.\d\d/, 'vX')}|${Math.round(t.x)},${Math.round(t.y)},${Math.round(t.w)}x${Math.round(t.h)}`).sort();
         const A = sig(a), B = sig(b); n += A.length;
         const sa = new Set(A), sb = new Set(B);
         for (const x of A) if (!sb.has(x)) diffs.push(`${name}: now ${x}`);
