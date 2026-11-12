@@ -11546,6 +11546,13 @@ The owner (phone, Shopping Zab): a space for links on an item, tap opens it, sev
 - Not done: a book page over `_BXP_BIG` still gets today's plain message on import.
 - Check: block 150, `tools/bookpage-j140.mjs`; block 140's book-page and Drive lines are updated.
 
-## v05.93 — J133 + J137 (issue #311)
+## v05.93 — J133 + J137: narrow a search word by word, a movable search from the middle pane, two wrong menu pointers (built by the builder, issue #311)
 
-(stub — filled in below once built)
+**J133 (the owner: "Enable the filter in the search… set more criteria/keyword, one or multiple at a time"; "Enable mid search to pop up where it is and make it moveable/draggable").**
+- **One query model.** `_searchWords(q)` returns the include words as an array with the exclude words on `.exc` (a word written `-word` or `−word` with a letter after the hyphen; a bare `-` is no word). `_matchesAllWords`, `_searchNotes` and `_searchAll` (folders, tags, types too) use it; the folder/section window (`_fwSearchHTML`) now goes through the same functions (and the `_stOf` text cache). **`_stLast` reuse rule:** the last hits are reused only when every old include word is inside some new include word AND every old exclude word is still among the new exclude words; anything else searches every note.
+- **Chips, in all three boxes** (`_nwBarHTML`): a count line ("312 notes", "so far — still searching…"), one removable chip per word (an excluded word as `−word`, dashed), and a "＋ narrow" box (Enter appends its words). The query string of the surface (`ST.search`, `#gs-inp`, `w.q`) is the only state; `_nwRemove`/`_nwKey` rewrite it. `_nwSave`/`_nwRestore` keep a narrow box's typing, focus and caret across a repaint.
+- **Folder/section window:** no cut at 100; pages of 100 (`w.lim`, `_fwMore`, "Show 100 more (N left)"); the count line is the true total.
+- **The Pane 2 🔍 Search** now calls `openGlobalSearch({anchor})` (Ctrl+K and the side pane's 🔍 are unchanged). Width 640 and up: a floating box dragged by its top strip (`#gs-drag`, 5 px mouse / 8 px touch), place kept in localStorage `siyagah-gs-geom` (% of window, never DB), clamped on resize. Under 640: a top sheet dragged up/down only, session only, `max-height` clear of the Zab bar (`#gs-box` joined the `--jeb-h` lists) and of the keyboard (`dvh`). The pop-up still draws the first 30 notes (unchanged); its count line states the true total.
+- Searching writes nothing to `DB`. Check: block 151, `tools/search-j133.mjs`.
+
+**J137.** The two messages (device copy lost; after ⬆ Import → Replace everything) said "🧰 → 💽 Storage & Backup"; that row is in ⚙. Both now say ⚙. **Sweep (every "🧰 →" / "⚙ →" in the source against the real menu):** 🎨 Appearance (4 places) and 👝 Siyagah Zab are in 🧰 ✓; ⚙ → Automatic Backups, ☁ Cloud Sync (4), Sign Out, ☁ are in ⚙ ✓; one code comment said "🧰 → Sync", now "⚙ → ☁ Cloud Sync". Nothing else found.
