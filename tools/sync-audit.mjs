@@ -83,6 +83,10 @@ t('N09 tag added in edit mode tag box (addTag → saveArt)', 'Notes', { op: () =
 t('N10 Attach → Folder picker toggle (toggleArtFolder)', 'Notes', { op: () => toggleArtFolder('a2', 'f2') });
 t('N11 move note between folders in browser (pkMoveNote)', 'Notes', { op: () => pkMoveNote('a2', 'f1a', 'f2') });
 t('N12 drop note on sidebar folder (dDrop)', 'Notes', { op: () => { _artDragId = 'a2'; _dragId = null; dDrop({ preventDefault() {} }, 'f2'); } });
+/* v05.94 · J134 — the move and the many-note move/add: ONE persist() each; they must reach the other device like any other folder change */
+t('N12b move ONE note out of the folder being looked at (jmApply, keeps its other folders)', 'Notes', { setup: () => { DB.articles.find(x => x.id === 'a1').folderIds = ['f1', 'f3']; persist(); }, op: () => { ST.tag = null; ST.kind = null; ST.secSF = null; ST.folder = 'f1'; jmApply(['a1'], 'f2', 'move'); } });
+t('N12c move MANY notes (jmApply: one in the viewed folder, one in another)', 'Notes', { op: () => { ST.tag = null; ST.kind = null; ST.secSF = null; ST.folder = 'f1'; jmApply(['a1', 'a2'], 'f2', 'move'); } });
+t('N12d also add MANY notes to a folder (jmApply add)', 'Notes', { op: () => { ST.tag = null; ST.kind = null; ST.secSF = null; ST.folder = 'f1'; jmApply(['a1', 'a2', 'a4'], 'f2', 'add'); } });
 t('N13 set Note Type (setNoteKind)', 'Notes', { op: () => setNoteKind('a2', 'k_idea') });
 t('N14 toggle extra Note Type (toggleNoteKind)', 'Notes', { op: () => toggleNoteKind('a2', 'k_ref') });
 t('N15 favourite (toggleFav)', 'Notes', { op: () => toggleFav('a2') });
