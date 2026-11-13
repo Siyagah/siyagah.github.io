@@ -11571,3 +11571,7 @@ The owner: "Enable single and multiple notes to move to a different folder." Bef
 **Harness only (no app change): 143c.** `tools/onenote-j148.mjs` waited for 75 pages in `DB` and then read `window.__steps`, which a separate 10 ms interval fills, so on a busy machine it could read `(25, 25)`. It now waits on the recorded steps adding up to 75. The assertion is unchanged.
 
 **Architect review fixes (same round).** (1) Block 112f: the new `#jm-top` ☑ Choose row sat between the pane header and the search row, pushing the search row — which holds 🪟 Pane — 41 px down, under a popped-out side pane. `#jm-top` now comes AFTER `#p2-srch-bar`, so nothing in the header or search row moves. (2) Block 122d: a drop on a ⧉ folder window's row already goes through the same `dDrop` → `jmApply` as the side pane, so it now MOVES (Ctrl/⌘/⌥ held = also adds). Check 122d was updated in place, not deleted: it asserts the move (the note leaves its old folder) and adds an assertion for the Ctrl-held add. The old assertion ("filed there too") described the behaviour this round deliberately changed.
+
+## v05.95 — J172 (builder, issue #315)
+
+(stub — entry written when the round is done)
