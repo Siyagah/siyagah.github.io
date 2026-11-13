@@ -132,6 +132,7 @@ async function runExport(page, { picker, saveTo, timeout = 3600000 }) {
     r.oldBuild = !(await page.$('#bxp-exp'));   /* v05.78 and older: no status line — the download event is the only signal */
     const dl = saveTo ? page.waitForEvent('download', { timeout }).then((d) => d, () => null) : null;
     await page.click('#bxp-exp, button[onclick*="exportJSON"]');
+    if (!r.oldBuild) await page.click('#bxp-all');   /* v05.95 · J172 — ⬇ Export opens the choice first; 'Everything' is today's file */
     r.dbl = r.oldBuild ? null : await page.evaluate(() => document.getElementById('bxp-exp').disabled);
     if (r.oldBuild) {
       const d = await dl;
@@ -293,6 +294,7 @@ try {
       const fc = p.waitForEvent('download', { timeout: 60000 }).catch(() => null);
       await p.evaluate(() => { try { window.showSaveFilePicker = undefined; } catch {} });
       await act('#bxp-exp');
+      await act('#bxp-all');   /* v05.95 · J172 */
       await p.waitForFunction(() => /^Saved: notebook-backup-/.test((document.getElementById('bxp-status') || {}).textContent || ''), null, { timeout: 60000 }).catch(() => {});
       const st = await p.evaluate(() => (document.getElementById('bxp-status') || {}).textContent || '');
       const open_ = await p.evaluate(() => document.getElementById('ov').classList.contains('on'));

@@ -196,7 +196,7 @@ if (want('147e')) {
     await p.locator('#sb-menu .sb-mi', { hasText: 'Storage & Backup' }).first().tap();
     await p.waitForSelector('#bxp-exp');
     const status = () => p.evaluate(() => (document.getElementById('bxp-status') || {}).textContent || '');
-    const run = async () => { dls = 0; await p.evaluate(() => { document.getElementById('bxp-status').textContent = ''; }); await p.tap('#bxp-exp'); await p.waitForFunction(() => /^(Saved|Backup failed|Backup cancelled)/.test((document.getElementById('bxp-status') || {}).textContent || ''), null, { timeout: 30000 }).catch(() => {}); await sleep(600); return status(); };
+    const run = async () => { dls = 0; await p.evaluate(() => { document.getElementById('bxp-status').textContent = ''; }); await p.tap('#bxp-exp'); await p.tap('#bxp-all');   /* v05.95 · J172: the choice first */ await p.waitForFunction(() => /^(Saved|Backup failed|Backup cancelled)/.test((document.getElementById('bxp-status') || {}).textContent || ''), null, { timeout: 30000 }).catch(() => {}); await sleep(600); return status(); };
     const dlp = p.waitForEvent('download', { timeout: 30000 }).catch(() => null);
     const st1 = await run(); const dl = await dlp;
     let size = 0; if (dl) { const f = join(mkdtempSync(join(tmpdir(), 'j159-dl-')), 'b.json'); await dl.saveAs(f); size = statSync(f).size; }
