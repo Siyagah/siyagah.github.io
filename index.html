@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.93">
+<meta name="app-version" content="05.94">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -958,15 +958,33 @@ html{--jeb-h:0px;--jeb-l:0px;--jeb-hd:0px}
 #idb-warn.min .iw-t,#idb-warn.min .iw-try,#idb-warn.min .iw-hide{display:none}
 #idb-warn.min .iw-show{display:block;width:40px;height:40px;padding:0;border-radius:50%;background:#FFF4D6;border:1px solid #C9A227;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 @property --jeb-h{syntax:'<length>';inherits:false;initial-value:0px}
-html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:56px}
-html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:0px}
+/* v05.94 · J134 — ☑ Choose: the row, the bar, the tick on a card */
+#jm-top:empty,#jm-bar:empty{display:none}
+.jm-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 10px;background:var(--paper);border-bottom:1px solid var(--border)}
+.jm-row.jm-idle{justify-content:flex-end;padding:3px 10px}
+.jm-n{font-weight:700;font-size:13px;color:var(--green2);margin-right:2px}
+.jm-b,.jm-choose{min-height:34px;font-size:12.5px}
+.jm-b[disabled]{opacity:.45}
+.jm-choose.on{background:var(--greenlt);color:var(--green2);border-color:var(--green)}
+html.jm-on .ar::before{content:'';flex:0 0 20px;width:20px;height:20px;box-sizing:border-box;border:2px solid var(--border2);border-radius:5px;background:var(--white);text-align:center;font-size:14px;line-height:16px;font-weight:700}
+html.jm-on .ar.jm-on::before{content:'✓';background:var(--green);border-color:var(--green);color:var(--on-accent)}
+html.jm-on .ar.jm-on{border-color:var(--green)}
+@media(max-width:639.98px){
+  #jm-bar{position:fixed;left:0;right:0;bottom:calc(var(--jeb-h) + env(safe-area-inset-bottom,0px));z-index:140;box-shadow:0 -2px 10px rgba(0,0,0,.18)}
+  #jm-bar .jm-row{border-top:1px solid var(--border2);padding:6px 8px}
+  #jm-bar .jm-b,.jm-choose{min-height:44px}
+  html.zab-btn #jm-bar .jm-row{padding-right:66px}
+  html.jm-on #p2c{padding-bottom:150px}
+}
+html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:56px}
+html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:0px}
 html.jeb-kb #jeb-bar,html.jeb-kb #zab-btn,html.jeb-kb #zab-lay,html.jeb-kb #zab-tk,html.jeb-kb #zab-tk-again{display:none!important}
 /* v05.32 · Z10 — the scrolling titles band sits directly above the bar (#zab-tk's own --jeb-h is the bar's 56px, so its bottom edge is the bar's top edge).
    While it is shown (html.zab-tk, a plain class: it costs nothing) everything else that is offset by --jeb-h gains its height: 34px (44 on a phone, where the
    titles are tap targets), and with the round button (html.zab-btn, no bar) the band is at the very bottom and --jeb-h is its height alone. */
-html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#zab-btn,#zab-lay){--jeb-h:90px}
-html.zab-btn.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#zab-btn,#zab-lay){--jeb-h:calc(44px + env(safe-area-inset-bottom,0px))}
-@media(max-width:639.98px){html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#zab-btn,#zab-lay){--jeb-h:100px}}
+html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay){--jeb-h:90px}
+html.zab-btn.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay){--jeb-h:calc(44px + env(safe-area-inset-bottom,0px))}
+@media(max-width:639.98px){html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay){--jeb-h:100px}}
 #zab-tk{position:fixed;left:var(--jeb-l);right:0;bottom:var(--jeb-h);height:34px;z-index:139;overflow:hidden;background:#16422C;color:#E9F6EE;border-top:1px solid rgba(255,255,255,.14);font-size:13px;contain:layout paint}
 @media(max-width:1199.98px){#zab-tk,#zab-tk-again{left:0}}
 @media(max-width:639.98px){#zab-tk{height:44px}}
@@ -4158,7 +4176,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.93</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.94</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4283,9 +4301,11 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
   <div id="p2h"></div>
   <div id="p2h-path"></div>
   <div id="p2-srch-bar"></div>
+  <div id="jm-top"></div>
   <div id="p2c"></div>
 </div>
 
+<div id="jm-bar"></div>
 <div id="rsz2" title="Drag to resize panes" class=""></div>
 
 <div id="p3" class="toc-right" style="">
@@ -8032,6 +8052,7 @@ function renderP2H(){
   const _pathHost0=document.getElementById('p2h-path');
   if(_pathHost0)_pathHost0.innerHTML='';
   _renderP2SearchBar();
+  _jmBarSync();   /* v05.94 · J134 — the ☑ Choose row; another folder ends Choose */
   const curF=DB.folders.find(f=>f.id===ST.folder);
   const _sfDef=!curF&&SF.find(s=>s.id===ST.folder);
   /* Universal new-note button — always visible in every pane-2 state */
@@ -8592,7 +8613,7 @@ function _cardCtxCheck(){
   if(c!==_cardCtx||Math.abs(n-_cardN)>Math.max(50,_cardN/10)||_cardC.size>_CARD_CAP){ _cardC.clear(); _cardCtx=c; _cardN=n; }
 }
 function artCardC(a,sel,sfc){
-  if(sel||ST.snippet) return artCard(a,sel,sfc);
+  if(sel||ST.snippet||_jm.on) return artCard(a,sel,sfc);   /* v05.94 · J134 — while choosing, a card draws its tick from the Set: never from, never into, the cache */
   const s=a.updatedAt+'|'+a.title+'|'+(a.favourite?1:0)+(a.pinned?1:0)+(a.archived?1:0)+(sfc?1:0)+'|'+(a.reminder?a.reminder.dt:'')+'|'+(a.mrjDue||'')+'|'+(a.practice||'')+'|'+(a.kind||'')+'|'+(Array.isArray(a.kinds)?a.kinds.join(','):'')+'|'+a.folderIds.length+'|'+(a.fromJeb?(a.fromJeb.pocket||'Zab'):'')+'|'+(a.fromEvernote?(a.fromEvernote.nb||''):'')+(a.fromKeep?('k'+(a.fromKeep.created||'')+(a.fromKeep.pinned?'p':'')+(a.fromKeep.color||'')):'')+(a.fromOneNote?('o'+(a.fromOneNote.created||'')+'|'+(a.fromOneNote.nb||'')+'|'+(a.fromOneNote.sec||'')+'|'+(a.fromOneNote.level||0)):'')+(a.vis===1?'v':'')+(a.fromMydb?(a.fromMydb.pid+'|'+(a.fromMydb.kind||'')+(a.fromMydb.gone?'g':'')+(a.fromMydb.newer?'n':'')+'m'+_mydbMediaCount(a)):(a.rec?'m'+_mydbMediaCount(a):''))+(a.zabNote?_zabNoteLabel(a):'');
   const e=_cardC.get(a.id);
   if(e&&e.s===s) return e.h;
@@ -20143,18 +20164,19 @@ function dEnd(ev){
 /* ── Article drag-to-folder (copy/link – article stays in original folder) ── */
 function artDStart(ev,aid){
   _artDragId=aid;
-  ev.dataTransfer.effectAllowed='copy';
+  _jmDrag=(_jm.on&&_jm.set.has(aid))?Array.from(_jm.set):[aid];   /* v05.94 · J134 — a ticked card carries every ticked note */
+  ev.dataTransfer.effectAllowed='copyMove';
   ev.dataTransfer.setData('text','art:'+aid);
   const a=DB.articles.find(x=>x.id===aid);
   const gh=document.getElementById('dgh');
-  gh.textContent='📄 '+(a?.title||'Article').slice(0,42)+'  →  drop on a folder or the Tab bar';
+  gh.textContent=_jmGhost(false);
   gh.style.opacity='1';
   setTimeout(()=>ev.target.classList.add('drg'),0);
 }
 
 function artDEnd(ev){
   ev.target.classList.remove('drg');
-  _artDragId=null;
+  _artDragId=null; _jmDrag=null;
   document.getElementById('dgh').style.opacity='0';
   clearDI(); // remove any folder-highlight left from hovering
   const tb=document.getElementById('tab-bar');if(tb)tb.classList.remove('tab-drop-over');
@@ -20165,13 +20187,15 @@ function artDEnd(ev){
 function dOver(ev,fid){
   // ── Article drag: highlight folder as 'add to' target ─────────
   if(_artDragId && !_dragId){
-    const art=DB.articles.find(a=>a.id===_artDragId);
-    if(art && !art.folderIds.includes(fid)){
+    const _add=ev.ctrlKey||ev.metaKey||ev.altKey, _ids=_jmDrag||[_artDragId], _F=_jmFolder();
+    const _ok=_ids.some(id=>{ const a=DB.articles.find(x=>x.id===id); return a&&!a.folderIds.includes(fid); })||(!_add&&_F&&fid!==_F);
+    if(_ok){
       ev.preventDefault();
-      ev.dataTransfer.dropEffect='copy';
+      ev.dataTransfer.dropEffect=_add?'copy':'move';
       clearDI();
       ev.currentTarget.classList.add('doi');
       const gh=document.getElementById('dgh');
+      gh.textContent=_jmGhost(_add);
       gh.style.left=(ev.clientX+12)+'px';
       gh.style.top=(ev.clientY-18)+'px';
     }
@@ -20204,16 +20228,10 @@ function dDrop(ev,fid){
   // ── Article drop onto folder: add folder to article's folderIds ─
   if(_artDragId && !_dragId){
     clearDI();
-    const art=DB.articles.find(a=>a.id===_artDragId);
-    const folder=DB.folders.find(f=>f.id===fid);
-    if(art && folder && !art.folderIds.includes(fid)){
-      art.folderIds.push(fid);
-      art.folderIds=_autoLeavePrimary(art.folderIds);
-      persist();
-      renderP2C(); renderP3H(); renderP3C();
-      toast(`"${art.title.slice(0,30)}" now also in "${folder.name.slice(0,25)}" ✓`);
-    }
-    _artDragId=null;
+    /* v05.94 · J134 — a drop MOVES (the folder being looked at is left); Ctrl/⌘/⌥ held = also add. One save for every note carried. */
+    const _ids=_jmDrag||[_artDragId], _add=ev.ctrlKey||ev.metaKey||ev.altKey;
+    _artDragId=null; _jmDrag=null;
+    if(DB.folders.some(f=>f.id===fid)) jmApply(_ids,fid,_add?'add':'move');
     return;
   }
 
@@ -29070,6 +29088,8 @@ function _artCtxGroups(art,aid){
       sub('nti','🏷','NTI Types'),
       sub('tags','#','Tags'),
       sub('folders','📁','Folders'),
+      `<div class="ci" onclick="hideCtx();jmMoveOne('${aid}')">📂 Move to folder…</div>`,
+      `<div class="ci" onclick="hideCtx();jmStart('${aid}')">☑ Choose several notes</div>`,
       sub('favs','❤️','My Favourites',art.favCat?'<span style="font-size:10px;margin-left:4px;opacity:.6">✓</span>':''),
       `<div class="ci" onclick="hideCtx();toggleTab('${aid}')">${inTab?'📑 Remove Tab':'📑 Add to Tab'}</div>`]},
     {g:'remind',items:[
@@ -29257,13 +29277,149 @@ function _afSetIn(fid,focus){
 function _afInRows(q,cfg){
   const n=(q||'').toLowerCase().trim(), pick=(cfg&&cfg.pick)||'_afSetIn', bad=cfg&&cfg.bad;
   const list=DB.folders.filter(f=>!n||(f.name||'').toLowerCase().includes(n)).slice(0,80);
-  return `<div class="pr" style="min-height:44px" onclick="${pick}('')"><span style="font-size:13px">🏠 Top level</span></div>`
+  return (cfg&&cfg.noTop?'':`<div class="pr" style="min-height:44px" onclick="${pick}('')"><span style="font-size:13px">🏠 Top level</span></div>`)   /* v05.94 · J134 — a note has no "top level": noTop leaves the row out, same list */
     +list.map(f=>{
       const why=bad?bad(f):'';
       const path=esc(pathOf(f.id).map(x=>x.name).join(' › '));
       if(why) return `<div class="pr af-off" aria-disabled="true" style="min-height:44px;opacity:.5;cursor:not-allowed"><span style="font-size:12px">📁</span><span style="font-size:13px">${path} <i style="font-size:11px">— ${esc(why)}</i></span></div>`;
       return `<div class="pr" style="min-height:44px" onclick="${pick}(${_ja(f.id)})"><span style="font-size:12px">📁</span><span style="font-size:13px">${path}</span></div>`;
     }).join('');
+}
+
+/* ══ v05.94 · J134 — move one note, or many at once, to another folder.
+   MOVE (for a note shown in the folder being looked at, F = _jmFolder()): F leaves its folderIds, T joins; every other folder stays. Shown
+   anywhere else (a tag, a Smart View, search, a Note Type): the folders become exactly [T], and a line names what they leave first.
+   ALSO ADD: T joins, nothing leaves. ONE persist() for any number of notes (one undo frame); only `folderIds` and `updatedAt` change.
+   Choose: _jm.set is a Set of note ids in memory only (never DB, never storage); a card draws its tick from it (artCard bypasses the cache). */
+let _jm={on:false,set:new Set(),anchor:null,vk:''}, _jmPend=null, _jmDrag=null;
+function _jmFolder(){ return (!ST.tag&&!ST.kind&&!ST.secSF&&ST.folder&&DB.folders.some(f=>f.id===ST.folder))?ST.folder:null; }
+function _jmVk(){ return [ST.folder,ST.tag,ST.kind,ST.secSF?ST.secSF.secId+'|'+ST.secSF.sfId:''].join('\u0001'); }
+/* the notes of the list on the page, from the DATA when it is a window (a card off screen is not in the DOM) */
+function _jmIds(){
+  const W=_listWin, el=document.getElementById('p2c');
+  if(W&&W.arts&&W.el===el&&W.al.isConnected){ return W.rows?W.rows.map(r=>W.arts[r].id):W.arts.map(a=>a.id); }
+  return Array.from(document.querySelectorAll('#p2c .ar[data-aid]')).map(c=>c.dataset.aid);
+}
+function _jmGhost(add){
+  const ids=_jmDrag||[_artDragId], a=DB.articles.find(x=>x.id===ids[0]);
+  const w=ids.length>1?ids.length+' notes':'📄 '+String((a&&a.title)||'Note').slice(0,36);
+  return w+'  →  '+(add?'Also add to Folder':'Move to Folder');
+}
+function _jmBarSync(){
+  if(_jm.on&&_jm.vk!==_jmVk()){ _jm.on=false; _jm.set.clear(); _jm.anchor=null; }
+  document.documentElement.classList.toggle('jm-on',_jm.on);
+  const top=document.getElementById('jm-top'), bar=document.getElementById('jm-bar'); if(!top||!bar) return;
+  const phone=window.innerWidth<640, n=_jm.set.size, dis=n?'':' disabled';
+  const bh=_jm.on?`<span class="jm-n" aria-live="polite">${n} chosen</span>`
+    +`<button type="button" class="btn jm-b"${dis} onclick="jmMoveChosen('move')">📂 Move to folder…</button>`
+    +`<button type="button" class="btn jm-b"${dis} onclick="jmMoveChosen('add')">📁 Also add to folder…</button>`
+    +`<button type="button" class="btn jm-b" onclick="jmAll()">Select all (${_jmIds().length})</button>`
+    +`<button type="button" class="btn jm-b jm-x" aria-label="Stop choosing" title="Stop choosing (Esc)" onclick="jmEnd()">✕</button>`:'';
+  top.innerHTML=(_jm.on&&!phone)?`<div class="jm-row">${bh}</div>`
+    :`<div class="jm-row jm-idle"><button type="button" class="btn bn jm-choose${_jm.on?' on':''}" onclick="${_jm.on?'jmEnd()':'jmStart()'}" title="Tick several notes, then move them to a folder">☑ Choose</button></div>`;
+  bar.innerHTML=(_jm.on&&phone)?`<div class="jm-row">${bh}</div>`:'';
+}
+function jmStart(aid){
+  _jm.on=true; _jm.vk=_jmVk();
+  if(aid){ _jm.set.add(aid); _jm.anchor=aid; }
+  _jmBarSync(); renderP2C();
+}
+function jmEnd(){
+  _jm.on=false; _jm.set.clear(); _jm.anchor=null;
+  _jmBarSync(); renderP2C();
+}
+function jmAll(){ _jm.set=new Set(_jmIds()); _jmBarSync(); renderP2C(); }
+function _jmTick(id,on){
+  if(on) _jm.set.add(id); else _jm.set.delete(id);
+  const W=_listWin; if(W&&W.cards){ const i=_lwIdx(W,id); if(i>=0) W.cards[i]=undefined; }
+  _p2cLast=null;
+  document.querySelectorAll('#p2c .ar[data-aid]').forEach(c=>{ if(c.dataset.aid===id) c.classList.toggle('jm-on',on); });
+}
+/* Ctrl/⌘-click ticks and Shift-click ticks a range (a laptop, no ☑ Choose first); while choosing a plain tap ticks and never opens the note */
+document.addEventListener('click',e=>{
+  const c=e.target&&e.target.closest?e.target.closest('#p2c .ar[data-aid]'):null; if(!c) return;
+  const mod=e.ctrlKey||e.metaKey, sh=e.shiftKey;
+  if(!_jm.on&&!(mod||sh)) return;
+  if(_jm.on&&_jm.vk!==_jmVk()) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const id=c.dataset.aid, wasOn=_jm.on;
+  if(!wasOn){ _jm.set.add(id); _jm.anchor=id; _jm.vk=_jmVk(); _jm.on=true; _jmBarSync(); renderP2C(); return; }
+  if(sh&&_jm.anchor){
+    const ids=_jmIds(), a=ids.indexOf(_jm.anchor), b=ids.indexOf(id);
+    if(a>=0&&b>=0){ const lo=Math.min(a,b), hi=Math.max(a,b); for(let i=lo;i<=hi;i++) _jm.set.add(ids[i]); _jmBarSync(); renderP2C(); return; }
+  }
+  _jmTick(id,!_jm.set.has(id)); _jm.anchor=id; _jmBarSync();
+},true);
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&_jm.on&&!document.getElementById('ov')?.classList.contains('on')){ e.preventDefault(); jmEnd(); }
+});
+function jmMoveOne(aid){ _jmOpenPicker([aid],'move'); }
+function jmMoveChosen(mode){ _jmOpenPicker(Array.from(_jm.set),mode); }
+function _jmBad(f){ return _jmFolder()===f.id?'it is here now':''; }
+const _JM_CFG={pick:'jmPicked',noTop:true,bad:_jmBad};
+function _jmOpenPicker(ids,mode){
+  ids=ids.filter(id=>DB.articles.some(a=>a.id===id)); if(!ids.length) return;
+  _jmPend={ids:ids,mode:mode,t:null};
+  const a1=ids.length===1&&DB.articles.find(a=>a.id===ids[0]), ttl=String((a1&&a1.title)||'Untitled');
+  const what=ids.length>1?ids.length+' notes':'“'+esc(ttl.length>36?ttl.slice(0,36)+'…':ttl)+'”';
+  showModal(`<div class="mt">${mode==='add'?'📁 Also add':'📂 Move'} ${what} ${mode==='add'?'to':'to'}…</div>
+    <input class="im-search" id="mv-q" placeholder="Search folders…" oninput="document.getElementById('mv-l').innerHTML=_afInRows(this.value,_JM_CFG)" onmousedown="event.stopPropagation()">
+    <div class="pl" id="mv-l" style="max-height:min(60vh,360px);overflow:auto">${_afInRows('',_JM_CFG)}</div>
+    <div class="ma"><button class="btn" onclick="closeModal()">Cancel</button></div>`);
+  if(window.innerWidth<640) document.getElementById('ov').classList.add('mydb-sheet');
+  setTimeout(()=>document.getElementById('mv-q')?.focus(),80);
+}
+/* what each note's folders become: [[note,newFolderIds]…] (a note that would not change is left out) and the folders that leave */
+function _jmPlan(ids,T,mode){
+  const F=_jmFolder(), by=new Map(DB.articles.map(a=>[a.id,a])), out=[], leave=new Set();
+  ids.forEach(id=>{
+    const a=by.get(id); if(!a||!Array.isArray(a.folderIds)) return;
+    let n;
+    if(mode==='add') n=a.folderIds.includes(T)?a.folderIds:a.folderIds.concat([T]);
+    else if(F&&a.folderIds.includes(F)){ n=a.folderIds.filter(x=>x!==F); if(!n.includes(T)) n.push(T); }
+    else{ n=[T]; a.folderIds.forEach(x=>{ if(x!==T) leave.add(x); }); }
+    if(n.length===a.folderIds.length&&n.every((x,i)=>x===a.folderIds[i])) return;
+    out.push([a,n]);
+  });
+  return {out:out,leave:leave};
+}
+function jmPicked(T){
+  const P=_jmPend; if(!P||!DB.folders.some(f=>f.id===T)) return;
+  P.t=T;
+  const pl=_jmPlan(P.ids,T,P.mode);
+  if(P.mode==='move'&&pl.leave.size){
+    const nm=Array.from(pl.leave).map(id=>{ const f=DB.folders.find(x=>x.id===id); return f?f.name:null; }).filter(Boolean);
+    const t=DB.folders.find(f=>f.id===T);
+    closeModal();
+    showModal(`<div class="mt">📂 Move ${P.ids.length>1?P.ids.length+' notes':'this note'}?</div>
+      <div class="mm" id="jm-leave">These notes will leave: ${nm.map(x=>esc(x)).join(', ')||'other folders'}. They will be in “${esc(t.name)}” only.</div>
+      <div class="ma"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn bp" id="jm-go" onclick="jmGo()">Move</button></div>`);
+    return;
+  }
+  closeModal(); jmApply(P.ids,T,P.mode);
+}
+function jmGo(){ const P=_jmPend; closeModal(); if(P&&P.t) jmApply(P.ids,P.t,P.mode); }
+function jmApply(ids,T,mode){
+  const t=DB.folders.find(f=>f.id===T); if(!t) return;
+  const pl=_jmPlan(ids,T,mode), now=new Date().toISOString();
+  _jmPend=null;
+  if(!pl.out.length){ toast('Nothing to change — already there'); return; }
+  pl.out.forEach(([a,n])=>{ a.folderIds=n; a.updatedAt=now; });
+  persist();   /* ONE save, ONE undo frame, however many notes */
+  if(_jm.on){ _jm.on=false; _jm.set.clear(); _jm.anchor=null; }
+  render();
+  const c=pl.out.length;
+  _jmToast((mode==='add'?'Added ':'Moved ')+c+' note'+(c===1?'':'s')+' to '+String(t.name).slice(0,30));
+}
+function _jmToast(msg){
+  document.querySelectorAll('.toast-act').forEach(x=>x.remove());
+  const t=document.createElement('div'); t.className='toast toast-act'; t.setAttribute('role','button'); t.tabIndex=0;
+  t.innerHTML=esc(msg)+' · <b class="toast-open">Undo</b>';
+  const go=()=>{ t.remove(); undo(); };
+  t.addEventListener('click',go);
+  t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); },7000);
 }
 /* v05.67 · J111 — 📂 Move to folder… in the folder menu (sidebar, folder windows, phone long-press: all go through _buildFolderCtxMain) */
 let _mvFid=null;
@@ -30026,7 +30182,7 @@ function artCard(a, sel, showFolderCount, showNag, customMeta){
     + (a.zabNote ? ` · <span class="ar-jeb ar-zn" onclick="event.stopPropagation();_zabNoteGo('${esc(a.zabNote.pid)}')" title="Open this Zab">${esc(_zabNoteLabel(a))}</span>` : '')
     + (showNag && isNagNote(a) ? ` · <span class="ar-nag">⏳ untouched ${untouchedDays(a)}d</span>` : '');
   const meta=customMeta!==undefined?customMeta:_m0;
-  return `<div class="ar${expanded}${sel?' sel':''}" data-aid="${a.id}"${a.fromOneNote&&a.fromOneNote.level>0?` data-on-level="${Math.min(4,a.fromOneNote.level|0)}" style="margin-left:${Math.min(4,a.fromOneNote.level|0)*14}px"`:''} `
+  return `<div class="ar${expanded}${sel?' sel':''}${_jm.on&&_jm.set.has(a.id)?' jm-on':''}" data-aid="${a.id}"${a.fromOneNote&&a.fromOneNote.level>0?` data-on-level="${Math.min(4,a.fromOneNote.level|0)}" style="margin-left:${Math.min(4,a.fromOneNote.level|0)*14}px"`:''} `
     +`draggable="true" ondragstart="artDStart(event,'${a.id}')" `
     +`ondragend="artDEnd(event)" oncontextmenu="showArtCtx(event,'${a.id}')" `
     +`onclick="selArt('${a.id}')">`

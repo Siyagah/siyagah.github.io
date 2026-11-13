@@ -237,7 +237,7 @@ try {
     await ready(d);
     await on(d, () => { window.__steps = []; let last = 0; setInterval(() => { const n = DB.articles.filter((a) => a.fromOneNote).length; if (n !== last) { window.__steps.push(n - last); last = n; } }, 10); });
     await start(d, vp);
-    await d.page.waitForFunction(() => DB.articles.filter((a) => a.fromOneNote).length >= 75, null, { timeout: 120000, polling: 20 });
+    await d.page.waitForFunction(() => (window.__steps || []).reduce((a, b) => a + b, 0) >= 75, null, { timeout: 120000, polling: 20 });
     const steps = await on(d, () => window.__steps.slice());
     check(steps.length >= 3 && steps.every((x) => x === 25) && steps[0] === 25, `${t} pages arrive in DB 25 at a time (${steps.join(', ')})`, JSON.stringify(steps));
     await sleep(600);
