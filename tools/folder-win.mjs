@@ -99,7 +99,13 @@ for (const [W, H, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     } else await page.evaluate(() => { _artDragId = 'a3'; dDrop({ preventDefault() {} }, 'f1a'); });
     await page.waitForTimeout(300);
     const dropped = await page.evaluate(() => DB.articles.find((a) => a.id === 'a3').folderIds);
-    r.check(dropped.includes('f1a') && dropped.includes('f2'), `122d@${W} a note dropped on a window's folder is filed there too, as on the side pane`, JSON.stringify(dropped));
+    /* v05.94 (J134): a drop on a folder MOVES (the folder being looked at is left), as on the side pane — both go through dDrop → jmApply */
+    r.check(dropped.includes('f1a') && !dropped.includes('f2'), `122d@${W} a note dropped on a window's folder is MOVED there (leaves the folder it was in), as on the side pane`, JSON.stringify(dropped));
+    /* Ctrl/⌘/⌥ held = also add: a3 (now in f1a) is dropped on f2 while f1a is the folder looked at */
+    await page.evaluate(() => { selFolder('f1a'); _artDragId = 'a3'; dDrop({ preventDefault() {}, ctrlKey: true }, 'f2'); });
+    await page.waitForTimeout(300);
+    const added = await page.evaluate(() => DB.articles.find((a) => a.id === 'a3').folderIds);
+    r.check(added.includes('f1a') && added.includes('f2'), `122d@${W} with Ctrl/⌘/⌥ held the drop ALSO ADDS: the note keeps its folder and joins the other`, JSON.stringify(added));
     /* 122e */
     await page.evaluate(() => { const rem = JSON.parse(JSON.stringify(DB)); const f = rem.folders.find((x) => x.id === 'f1'); f.name = '(001) Merged name'; f.updatedAt = new Date(Date.now() + 5000).toISOString(); _mergeRemoteIn(rem, Date.now()); });
     await page.waitForTimeout(400);
