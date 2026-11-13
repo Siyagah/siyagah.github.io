@@ -38,7 +38,7 @@ const FAKE = () => {
     F.name = o.suggestedName; F.calls.push('pick');
     return { name: o.suggestedName,
       createWritable: async () => { F.calls.push('createWritable'); const parts = []; return {
-        write: async (d) => { F.calls.push('write'); const b = d instanceof Blob ? d : new Blob([d]); F.written += b.size; parts.push(b);
+        write: async (d) => { if (F.calls.indexOf('write') < 0) F.atFirst = (document.getElementById('bxp-status') || {}).textContent; F.calls.push('write'); const b = d instanceof Blob ? d : new Blob([d]); F.written += b.size; parts.push(b);
           if (F.hideOnWrite) { F.hideOnWrite = false; Object.defineProperty(document, 'hidden', { get: () => true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); } },
         close: async () => { F.calls.push('close'); F.file = new Blob(parts); },
         abort: async () => { F.calls.push('abort'); } }; },
@@ -76,14 +76,13 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     r.check(w >= 640 || touchTargets.every(([bw, bh]) => bw >= 44 && bh >= 44), `154h${t} the choice buttons are at least 44 x 44 on a phone`, JSON.stringify(touchTargets));
 
     /* 154f — the expected size is on screen BEFORE writing, within 25 % of the final size (Everything) */
-    await p.evaluate(() => { window.__fh.file = null; window.__fh.written = 0; window.__fh.calls = []; window.__fh.status = []; });
+    await p.evaluate(() => { window.__fh.file = null; window.__fh.written = 0; window.__fh.calls = []; window.__fh.status = []; window.__fh.atFirst = ''; });
     await (touch ? p.locator('#bxp-all').tap() : p.locator('#bxp-all').click());
     await waitDone(p);
     const st = await p.evaluate(() => ({ s: window.__fh.status.slice(), size: window.__fh.file ? window.__fh.file.size : -1, calls: window.__fh.calls.slice(), last: (document.getElementById('bxp-status') || {}).textContent }));
-    const iExp = st.s.findIndex((x) => /Expected size: about/.test(x) && /Keep Siyagah open/.test(x) && /0 bytes/.test(x));
-    const firstProg = st.s.findIndex((x) => /^Writing your backup… \d/.test(x));
-    r.check(iExp >= 0 && (firstProg < 0 || iExp < firstProg) && st.calls.indexOf('write') > -1, `154f${t} the expected size + the keep-open sentence show before the first progress line`, JSON.stringify(st.s.slice(0, 4)));
-    const m = iExp >= 0 ? /about ([\d.,]+) (MB|KB)/.exec(st.s[iExp]) : null;
+    const first = await p.evaluate(() => window.__fh.atFirst || '');
+    r.check(/Expected size: about/.test(first) && /Keep Siyagah open on this screen until it says Saved\. Until then the file shows 0 bytes\./.test(first), `154f${t} the expected size + the keep-open sentence are on screen when the first byte is written`, first.slice(0, 300));
+    const m = /Expected size: about ([\d.,]+) (MB|KB)/.exec(first);
     const est = m ? parseFloat(m[1].replace(/,/g, '')) * (m[2] === 'MB' ? 1048576 : 1024) : 0;
     r.check(est > 0 && Math.abs(est - st.size) / st.size <= 0.25, `154f${t} the estimate (${Math.round(est)}) is within 25 % of the final size (${st.size})`, '');
     r.check(/^Saved: /.test(st.last), `154f${t} an Everything backup says Saved`, st.last);
@@ -131,11 +130,11 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       await p.evaluate(() => exportJSON()); await waitDone(p);
       const okc = await p.evaluate(() => ({ c: window.__clicks, s: document.getElementById('bxp-status').textContent }));
       r.check(okc.c === 1 && /^Saved: /.test(okc.s), `154c${t} (control) a normal Blob export clicks one download link and says Saved`, JSON.stringify(okc));
-      await p.evaluate(() => { window.__clicks = 0; const os = Blob.prototype.slice; Blob.prototype.slice = function (a, b2, c) { if (a === -64) return { text: () => Promise.reject(new Error('cannot read')) }; return os.call(this, a, b2, c); }; });
+      await p.evaluate(() => { window.__clicks = 0; const os = window.__os = Blob.prototype.slice; Blob.prototype.slice = function (a, b2, c) { if (a === -64) return { text: () => Promise.reject(new Error('cannot read')) }; return os.call(this, a, b2, c); }; });
       await p.evaluate(() => exportJSON()); await waitDone(p);
       const bad = await p.evaluate(() => ({ c: window.__clicks, s: document.getElementById('bxp-status').textContent }));
       r.check(bad.c === 0 && /^Backup failed/.test(bad.s) && /could not be read back/.test(bad.s) && !/Error:|at \w+/.test(bad.s), `154c${t} unreadable Blob: no download link clicked, a plain message`, JSON.stringify(bad));
-      await p.evaluate(() => { delete Blob.prototype.slice; });
+      await p.evaluate(() => { Blob.prototype.slice = window.__os; });
     }
 
     /* 154d — an unfinished-job marker at start */
@@ -197,7 +196,8 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     const dbAfter = await p.evaluate(() => JSON.stringify(DB));
     r.check(dbBefore === dbAfter, `154h${t} JSON.stringify(DB) is unchanged by all the exports`, '');
   } catch (e) { r.check(false, `154${t} threw`, String((e && e.stack) || e).slice(0, 700)); }
-  r.check(app.errors.length === 0, `154h${t} no page errors`, app.errors.slice(0, 3).join(' | '));
+  const real = app.errors.filter((e) => !/backup failed/.test(e));   /* the failures this block causes on purpose are logged by the app (console.error) */
+  r.check(real.length === 0, `154h${t} no page errors (the deliberate failures' own log lines aside)`, real.slice(0, 3).join(' | '));
   await app.close();
 }
 process.exit(r.finish() ? 1 : 0);

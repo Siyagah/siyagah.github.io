@@ -7124,7 +7124,7 @@ async function _bxpEstimate(){
 }
 function _bxpEstText(n,fast){
   const secs=Math.max(1,Math.round(n/((fast?40:12)*1048576)));
-  return 'about '+_bxpSize(n)+', roughly '+(secs>=90?Math.round(secs/60)+' minutes':secs+' seconds');
+  return 'about '+_bxpSize(n)+', roughly '+(secs>=90?Math.round(secs/60)+' minutes':secs+(secs===1?' second':' seconds'));
 }
 const _BXP_KEEPOPEN='Keep Siyagah open on this screen until it says Saved. Until then the file shows 0 bytes.';
 /* ⬇ Export opens the choice (a bottom sheet below 640, two buttons in the same window above); the size is worked out for it before anything is asked of the file picker */
@@ -7200,8 +7200,10 @@ async function exportJSON(mode){
     else _bxpSay(_BXP_KEEPOPEN);
     if(handle){ w=await handle.createWritable(); created=true; name=handle.name||name; }
     let total=0;
+    if(est)g.say('Writing your backup… — Expected size: '+_bxpEstText(notesOnly?est.notes:est.all,notesOnly)+'. '+_BXP_KEEPOPEN);
     if(!notesOnly){ try{ total=(await _picKeepShas()).size; }catch(e){} }
-    const ctx=_bxpCtx('Writing your backup…',g.say,total);
+    const keep=est?' — Expected size: '+_bxpEstText(notesOnly?est.notes:est.all,notesOnly)+'. '+_BXP_KEEPOPEN:' — '+_BXP_KEEPOPEN;   /* stays on screen while it writes */
+    const ctx=_bxpCtx('Writing your backup…',function(m){g.say(m+keep);},total);
     const S=_bxpSink(w);S.guard=g;
     const shas=new Set();
     await _bxpWriteDB(S,ctx,notesOnly?{inline:false,shas:shas}:{inline:true});
