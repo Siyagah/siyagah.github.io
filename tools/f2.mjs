@@ -101,11 +101,12 @@ try {
       /* v05.88 · J156 (changed in place): v05.86's ✈ row says 'Storage not protected', so the bare word matched it; open the row by its full label */
       await hit(d, d.page.locator('#sb-menu .sb-mi', { hasText: 'Storage & Backup' }).first());
       const title = await d.page.evaluate(() => (document.querySelector('#mb .mt') || document.querySelector('.mt') || {}).textContent || '');
-      check(/Storage & Backup/.test(item || '') && title.trim() === item, `${t} 🧰 → "${item}" opens a window titled "${title.trim()}" (the same words)`);
+      check(/Storage & Backup/.test(item || '') && title.trim() === item, `${t} ⚙ → "${item}" opens a window titled "${title.trim()}" (the same words)`);
       if (vp.name === '390') {
         const src = await d.page.evaluate(() => fetch('/').then((r) => r.text()));
         check(!/Backup &(amp;)? Restore/.test(src), `${t} no "Backup & Restore" is left in the app's source`);
-        check(/restore it from 🧰 → 💽 Storage & Backup/.test(src), `${t} the message that sends the owner to the recovery copy names "Storage & Backup"`);
+        /* v05.93 · J137: the row is in the ⚙ menu (#sb-menu), so the message now says ⚙, not 🧰 (it was wrong since v05.29) */
+        check(/restore it from ⚙ → 💽 Storage & Backup/.test(src), `${t} the message that sends the owner to the recovery copy names "⚙ → 💽 Storage & Backup"`);
       }
       noErr(d, t);
     } finally { await d.ctx.close(); }

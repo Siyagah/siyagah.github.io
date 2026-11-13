@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.92">
+<meta name="app-version" content="05.93">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -958,15 +958,15 @@ html{--jeb-h:0px;--jeb-l:0px;--jeb-hd:0px}
 #idb-warn.min .iw-t,#idb-warn.min .iw-try,#idb-warn.min .iw-hide{display:none}
 #idb-warn.min .iw-show{display:block;width:40px;height:40px;padding:0;border-radius:50%;background:#FFF4D6;border:1px solid #C9A227;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 @property --jeb-h{syntax:'<length>';inherits:false;initial-value:0px}
-html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:56px}
-html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:0px}
+html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:56px}
+html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:0px}
 html.jeb-kb #jeb-bar,html.jeb-kb #zab-btn,html.jeb-kb #zab-lay,html.jeb-kb #zab-tk,html.jeb-kb #zab-tk-again{display:none!important}
 /* v05.32 · Z10 — the scrolling titles band sits directly above the bar (#zab-tk's own --jeb-h is the bar's 56px, so its bottom edge is the bar's top edge).
    While it is shown (html.zab-tk, a plain class: it costs nothing) everything else that is offset by --jeb-h gains its height: 34px (44 on a phone, where the
    titles are tap targets), and with the round button (html.zab-btn, no bar) the band is at the very bottom and --jeb-h is its height alone. */
-html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:90px}
-html.zab-btn.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:calc(44px + env(safe-area-inset-bottom,0px))}
-@media(max-width:639.98px){html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#zab-btn,#zab-lay){--jeb-h:100px}}
+html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#zab-btn,#zab-lay){--jeb-h:90px}
+html.zab-btn.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#zab-btn,#zab-lay){--jeb-h:calc(44px + env(safe-area-inset-bottom,0px))}
+@media(max-width:639.98px){html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#zab-btn,#zab-lay){--jeb-h:100px}}
 #zab-tk{position:fixed;left:var(--jeb-l);right:0;bottom:var(--jeb-h);height:34px;z-index:139;overflow:hidden;background:#16422C;color:#E9F6EE;border-top:1px solid rgba(255,255,255,.14);font-size:13px;contain:layout paint}
 @media(max-width:1199.98px){#zab-tk,#zab-tk-again{left:0}}
 @media(max-width:639.98px){#zab-tk{height:44px}}
@@ -3854,6 +3854,24 @@ sup.ann-sup:hover{text-decoration:underline}
 .gs-grp,.gs-cnt-row{padding:7px 16px 4px;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.03em;background:var(--hover)}
 @media(max-width:639.98px){#gs-overlay{padding-top:0}#gs-box{width:100vw;max-height:100dvh;height:100dvh;border-radius:0}#gs-results{max-height:none;flex:1}.gs-result{min-height:44px;justify-content:center}#gs-kbd{min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center}#gs-inp{font-size:16px;min-height:44px}}
 .gs-cnt{font-size:10px;font-weight:400;color:var(--t3);margin-left:auto;flex-shrink:0}
+/* v05.93 · J133 — the chips bar (side pane, 🔍 pop-up, folder windows) and the movable pop-up */
+.nw-bar{padding:6px 12px 8px;border-bottom:1px solid var(--border2);background:var(--paper)}
+.nw-cnt{font-size:11px;font-weight:700;color:var(--t3);margin-bottom:4px}
+.nw-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}
+.nw-chip{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--border2);border-radius:999px;padding:1px 2px 1px 9px;font-size:12px;color:var(--t1);background:var(--hover);max-width:100%;overflow-wrap:anywhere}
+.nw-chip.nw-x{border-style:dashed;background:rgba(200,60,60,.1);color:var(--t2)}
+.nw-chip button{border:none;background:none;cursor:pointer;color:var(--t3);font-size:12px;min-width:24px;min-height:24px;padding:0}
+.nw-chip button:hover{color:var(--t1)}
+.nw-in{width:100%;box-sizing:border-box;border:1px solid var(--border2);border-radius:8px;padding:5px 8px;font-size:12.5px;background:var(--paper);color:var(--t1);font-family:var(--ui)}
+.fwin-more{display:block;width:100%;margin:6px 0;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--hover);color:var(--t1);cursor:pointer;font-size:12.5px}
+#gs-drag{height:16px;flex-shrink:0;cursor:grab;touch-action:none;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:10px;letter-spacing:2px;background:var(--hover);user-select:none;-webkit-user-select:none}
+#gs-drag:active{cursor:grabbing}
+#gs-overlay.gs-fl{background:none;pointer-events:none;display:block;padding:0}
+#gs-overlay.gs-fl #gs-box{position:fixed;pointer-events:auto}
+@media(max-width:639.98px){.nw-chip button{min-width:44px;min-height:44px}.nw-in{min-height:44px;font-size:16px}
+#gs-overlay.gs-fl #gs-box{left:0;right:auto;top:0;width:100vw;height:auto;max-height:min(80dvh,calc(100dvh - var(--jeb-h,0px) - 8px));border-radius:0 0 14px 14px}
+#gs-overlay.gs-fl #gs-results{flex:1;min-height:0;max-height:none}
+#gs-drag{height:30px}}
 
 /* v28.03 Hijri Calendar */
 .cal-hj-num{display:block;font-size:9px;color:var(--t3);line-height:1;font-weight:400;margin-top:1px}
@@ -4140,7 +4158,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.92</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.93</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -5045,7 +5063,7 @@ function _idbLostWarn(){
   const sync=!!getSyncConfig();
   const el=document.createElement('div'); el.id='idb-warn'; el.className='lost'; el.setAttribute('role','alert');
   el.innerHTML='<span class="iw-t">⚠ The browser lost this device\'s saved copy of Siyagah (it can happen when the app is closed in the middle of saving). '
-    +(sync?'Your notes are being brought back from the cloud now. Changes made on this device that had not reached the cloud yet may be missing.':'This device is not connected to Cloud Sync: use 🧰 → 💽 Storage &amp; Backup to bring back your last backup.')
+    +(sync?'Your notes are being brought back from the cloud now. Changes made on this device that had not reached the cloud yet may be missing.':'This device is not connected to Cloud Sync: use ⚙ → 💽 Storage &amp; Backup to bring back your last backup.')
     +'</span><button type="button" class="iw-hide" onclick="_idbWarnMin(true)">Hide</button><button type="button" class="iw-show" onclick="_idbWarnMin(false)" aria-label="Show the notice about this device\'s copy" title="This device\'s saved copy was lost by the browser">⚠</button>';
   document.body.appendChild(el);
 }
@@ -6014,7 +6032,7 @@ async function _picMarkUp(sha){
 /* ── v05.27 · S4c — the cloud space guard. The free plan holds 1 GB in all; pictures may use _PIC_CLOUD_CAP of it.
    notebooks/{nb}/usage/v1 {picBytes, at} is the running total, moved with FieldValue.increment after each upload's meta doc is written. The first
    time it is unknown it is counted once from the pics meta docs (`n`), then kept. Over the cap a picture stays on the device, and is not asked
-   again until the cap changes. Never a toast, never an alarm: the diagnostics and 🧰 → Sync say it. __picCap is a test hook. ── */
+   again until the cap changes. Never a toast, never an alarm: the diagnostics and ⚙ → ☁ Cloud Sync say it. __picCap is a test hook. ── */
 const _PIC_CLOUD_CAP=600*1024*1024;
 const _picCap=function(){const c=window.__picCap;return (c>0)?+c:_PIC_CLOUD_CAP;};
 let _picUseBytes=null;                 /* what the cloud holds, as last read or counted; null = not known yet */
@@ -7694,8 +7712,18 @@ function _renderFor(ch,fullFn,opts){
   return 'full';
 }
 
-function _searchWords(q){return q.toLowerCase().split(/\s+/).filter(Boolean);}
-function _matchesAllWords(text,words){const t=text.toLowerCase();return words.every(w=>t.includes(w));}
+/* v05.93 · J133 — ONE query model. `-word` / `−word` (at least one letter after the hyphen) leaves OUT whatever holds the word; a bare `-` is no word.
+   Returns the include words as an array with the exclude words on `.exc`, so every older caller (`.length`, `.every`, `words[0]`) still works. */
+function _searchWords(q){
+  const inc=[],exc=[];
+  String(q||'').toLowerCase().split(/\s+/).filter(Boolean).forEach(t=>{
+    if(t==='-'||t==='−')return;
+    const m=/^[-−](.*\p{L}.*)$/u.exec(t);
+    if(m)exc.push(m[1]);else inc.push(t);
+  });
+  inc.exc=exc;return inc;
+}
+function _matchesAllWords(text,words){const t=text.toLowerCase();return words.every(w=>t.includes(w))&&!(words.exc||[]).some(w=>t.includes(w));}
 /* v05.65 · J106 — the ONE search: the side-pane box and the 🔍 pop-up both call this, so they can never find different things. */
 /* v05.71 · J117 — plain-text cache per note: id → {c:content string, ti:title, t:lower-case title+text}. Session memory only (never DB,
    never storage). A note is re-read only when its content string or title differs; the text is exactly what the old search compared. */
@@ -7743,19 +7771,68 @@ async function _searchRunAsync(tok){
 let _stLast=null;
 function _searchNotes(words){
   const L=_stLast,all=DB.articles;
-  let pool=all;
-  if(L&&L.arts===all&&L.len===all.length&&L.rev===_dbRev&&L.seq===_s1MergeSeq&&L.words.every(o=>words.some(w=>w.includes(o))))pool=L.hits;
-  const hits=pool.filter(a=>{if(_stPart&&!_stC.has(a.id))return false;const t=_stOf(a);return words.every(w=>t.includes(w));});
+  let pool=all;const ex=words.exc||[];
+  /* v05.93 — a narrowing only: every old include word inside some new include word, AND every old exclude word still excluded */
+  if(L&&L.arts===all&&L.len===all.length&&L.rev===_dbRev&&L.seq===_s1MergeSeq&&L.words.every(o=>words.some(w=>w.includes(o)))&&(L.words.exc||[]).every(o=>ex.includes(o)))pool=L.hits;
+  const hits=pool.filter(a=>{if(_stPart&&!_stC.has(a.id))return false;const t=_stOf(a);return words.every(w=>t.includes(w))&&!ex.some(w=>t.includes(w));});
   _stLast=_stPart?null:{arts:all,len:all.length,rev:_dbRev,seq:_s1MergeSeq,words,hits};
   return hits;
 }
 function _searchAll(q){
   const words=_searchWords(q||'');
+  if(!words.length&&!words.exc.length)return {words,noteHits:[],folderHits:[],tagHits:[],kindHits:[]};   /* only bare hyphens: nothing to look for */
   return {words,
     noteHits:_searchNotes(words),
     folderHits:DB.folders.filter(f=>_matchesAllWords(f.name,words)),
     tagHits:getAllTags().filter(t=>_matchesAllWords(t.tag,words)),
     kindHits:noteKinds().filter(k=>_matchesAllWords(k.name,words))};
+}
+/* v05.93 · J133 — the chips bar shared by the side pane ('side'), the 🔍 pop-up ('gs') and a folder window ('fw:<id>'). The chips and the
+   "＋ narrow" box are NOT a second source of truth: the query string of the surface is the only state; a chip is a word of it, removing a chip
+   rewrites the string and searches again, Enter in the box appends its words to the string. */
+function _nwTokens(q){return String(q||'').split(/\s+/).filter(Boolean);}
+function _nwBarHTML(s,q,n,partial){
+  const chips=_nwTokens(q).map((t,i)=>{
+    if(t==='-'||t==='−')return '';
+    const ex=/^[-−].*\p{L}/u.test(t);
+    return '<span class="nw-chip'+(ex?' nw-x':'')+'" data-i="'+i+'">'+esc(ex?'−'+t.slice(1):t)+'<button type="button" aria-label="Remove '+esc(t)+'" title="Remove" onclick="_nwRemove('+_ja(s)+','+i+')">✕</button></span>';
+  }).join('');
+  return '<div class="nw-bar" data-s="'+esc(s)+'"><div class="nw-cnt" data-n="'+n+'">'+n+' note'+(n!==1?'s':'')+(partial?' so far — still searching…':'')+'</div>'
+    +(chips?'<div class="nw-chips">'+chips+'</div>':'')
+    +'<input type="text" class="nw-in" data-s="'+esc(s)+'" placeholder="＋ narrow — add words, press Enter" aria-label="Add words to narrow the search" autocomplete="off" spellcheck="false" onkeydown="_nwKey(event,'+_ja(s)+')" onpointerdown="event.stopPropagation()"></div>';
+}
+function _nwGet(s){
+  if(s==='side')return ST.search||'';
+  if(s==='gs')return (document.getElementById('gs-inp')||{}).value||'';
+  if(s.indexOf('fw:')===0){const w=_fwGet(s.slice(3));return w?(w.q||''):'';}
+  return '';
+}
+function _nwSet(s,q){
+  if(s==='side'){const i=document.getElementById('sq');if(i)i.value=q;_searchTyped(q);}
+  else if(s==='gs'){const i=document.getElementById('gs-inp');if(i)i.value=q;_gsRender(q);}
+  else if(s.indexOf('fw:')===0){const id=s.slice(3),e=_fwEl(id),i=e&&e.querySelector('.fwin-q');if(i)i.value=q;_fwSearch(id,q);}
+}
+function _nwRemove(s,i){const t=_nwTokens(_nwGet(s));t.splice(i,1);_nwSet(s,t.join(' '));}
+function _nwKey(ev,s){
+  if(ev.key!=='Enter')return;
+  ev.preventDefault();ev.stopPropagation();
+  const v=ev.target.value.trim();if(!v)return;
+  ev.target.value='';
+  _nwSet(s,(_nwGet(s).trim()+' '+v).trim());
+}
+/* a repaint never rebuilds a narrow box that is focused or holds typing: keep value, focus and caret across an innerHTML */
+function _nwSave(root){
+  const m={};if(!root)return m;
+  root.querySelectorAll('.nw-in').forEach(n=>{const f=document.activeElement===n;m[n.dataset.s]={v:n.value,f,a:f?n.selectionStart:0,b:f?n.selectionEnd:0};});
+  return m;
+}
+function _nwRestore(root,m){
+  if(!root)return;
+  root.querySelectorAll('.nw-in').forEach(n=>{
+    const o=m[n.dataset.s];if(!o)return;
+    if(n.value!==o.v)n.value=o.v;
+    if(o.f){n.focus({preventScroll:true});try{n.setSelectionRange(o.a,o.b);}catch(e){}}
+  });
 }
 function renderTree(){
   const el=document.getElementById('tree');updateAccordionBtn();
@@ -7763,6 +7840,7 @@ function renderTree(){
     const {noteHits,folderHits,tagHits,kindHits}=_searchAll(ST.search);
     const total=noteHits.length+folderHits.length+tagHits.length+kindHits.length;
     let h=`<div class="srl">${total} result${total!==1?'s':''}${_stPart?' so far — still searching…':''}</div>`;
+    h+=_nwBarHTML('side',ST.search,noteHits.length,!!_stPart);
     if(!total){
       h+='<div class="sr" style="cursor:default;opacity:.75">No results</div>';
     } else {
@@ -7793,7 +7871,9 @@ function renderTree(){
         h+='<div class="sr-grp-hd">📄 Notes</div>'+noteHits.map(a=>`<div class="sr${ST.article===a.id?' on':''}" data-aid="${a.id}" draggable="true" ondragstart="artDStart(event,'${a.id}')" ondragend="artDEnd(event)" onclick="selArt('${a.id}')" oncontextmenu="showArtCtx(event,'${a.id}')" title="Drag onto the Tab bar to add it as a tab · right-click for more">${esc(a.title)}</div>`).join('');
       }
     }
+    const _ns=_nwSave(el);
     el.innerHTML=h;
+    _nwRestore(el,_ns);
     _fwRedraw();
     return;
   }
@@ -9174,7 +9254,7 @@ function _renderP2SearchBar(){
   const show=!!(ST.lastSearch&&!ST.search);
   el.innerHTML='<div class="mini-srch-row">'
     +'<button class="btn bn bi" onclick="goHome()" title="Home — reset search/filters and show the folder list" style="font-size:12.5px">🏠 Home</button>'
-    +'<button class="btn bn bi" onclick="focusSidebarSearch()" title="Search notes, folders, tags, types…" style="font-size:12.5px">🔍 Search</button>'
+    +'<button class="btn bn bi" id="p2-srch-btn" onclick="openGlobalSearch({anchor:this})" title="Search notes, folders, tags, types… (opens here; drag it where you like)" style="font-size:12.5px">🔍 Search</button>'
     +(show?'<button class="btn bn bi" onclick="restoreLastSearch()" title="Back to search results: \''+esc(ST.lastSearch)+'\'" style="font-size:12.5px">🔍↺ Back to results</button>':'')
     +'<button class="btn bn bi p2-pp-btn" onclick="_ppMenu(event,\'p2\')" title="This pane: pop it out as a window, or make it full width" style="font-size:12.5px">🪟 Pane</button>'
     +'</div>';
@@ -12204,7 +12284,7 @@ function _confirmReplaceImport(){
   const rec=_saveRecoveryCopy(DB);
   _pendingImportRecovery=rec;
   const safeMsg=rec.ok
-    ? `A copy of your current notebook has been saved on this device — restore it from 🧰 → 💽 Storage & Backup if anything goes wrong.`
+    ? `A copy of your current notebook has been saved on this device — restore it from ⚙ → 💽 Storage & Backup if anything goes wrong.`
     : `⚠ No copy could be kept (${esc(rec.reason)}). If you replace now, your current notebook cannot be recovered on this device.`;
   showModal(`<div class="mt">⚠ Replace everything?</div>
     <div class="mm">
@@ -16726,12 +16806,14 @@ function _calRenderCatList(){
 
 
 /* v28.02 GLOBAL SEARCH */
-function openGlobalSearch(){
+function openGlobalSearch(opts){
   if(document.getElementById('gs-overlay'))return;
+  const an=opts&&opts.anchor&&opts.anchor.getBoundingClientRect?opts.anchor:null;   /* v05.93 · J133 — the Pane 2 🔍 opens it beside its button, movable */
   const ov=document.createElement('div');
   ov.id='gs-overlay';
   ov.addEventListener('click',e=>{if(e.target===ov)closeGlobalSearch();});
   ov.innerHTML='<div id="gs-box">'
+    +(an?'<div id="gs-drag" title="Drag to move" aria-label="Drag to move"><span aria-hidden="true">⠿⠿⠿</span></div>':'')
     +'<div id="gs-inp-row">'
     +'<span id="gs-inp-icon">🔍</span>'
     +'<input id="gs-inp" placeholder="Search notes, folders, tags, types…" autocomplete="off" spellcheck="false">'
@@ -16740,8 +16822,9 @@ function openGlobalSearch(){
     +'<div id="gs-results"><div class="gs-empty">Start typing to search…</div></div>'
     +'</div>';
   document.body.appendChild(ov);
+  if(an)_gsFloat(ov,an);
   const inp=document.getElementById('gs-inp');
-  inp.focus();
+  inp.focus({preventScroll:true});
   let _gsTm;
   inp.addEventListener('input',()=>{clearTimeout(_gsTm);_gsTm=setTimeout(()=>_gsRender(inp.value),120);});
   inp.addEventListener('keydown',e=>{
@@ -16754,6 +16837,58 @@ function openGlobalSearch(){
 function closeGlobalSearch(){
   document.getElementById('gs-overlay')?.remove();
 }
+/* v05.93 · J133 — the movable search. ≥ 640: a floating box dragged by its top strip, its place kept on this device (localStorage, as % of the window,
+   like the resizable modals; never DB) and pulled back inside on a window resize. < 640: a sheet at the top, dragged up and down only, session only,
+   kept above the Zab bar (--jeb-h, via the CSS) and the keyboard (dvh). */
+const _GS_GEOM_KEY='siyagah-gs-geom';
+function _gsPhone(){return window.innerWidth<640;}
+function _gsPlace(box,l,t){
+  const W=window.innerWidth,H=window.innerHeight,r=box.getBoundingClientRect();
+  const jh=parseFloat(getComputedStyle(box).getPropertyValue('--jeb-h'))||0;
+  if(_gsPhone()){
+    box.style.left='0px';
+    box.style.top=Math.max(0,Math.min(t,H-r.height-jh-8))+'px';
+  }else{
+    box.style.left=Math.max(4,Math.min(l,W-r.width-4))+'px';
+    box.style.top=Math.max(4,Math.min(t,H-r.height-4))+'px';
+  }
+}
+function _gsFloat(ov,an){
+  ov.classList.add('gs-fl');
+  const box=document.getElementById('gs-box');
+  if(_gsPhone()){box.style.top='0px';box.style.left='0px';}
+  else{
+    let l,t,g=null;
+    try{g=JSON.parse(localStorage.getItem(_GS_GEOM_KEY));}catch(e){}
+    if(g&&typeof g.lPct==='number'&&typeof g.tPct==='number'){l=window.innerWidth*g.lPct/100;t=window.innerHeight*g.tPct/100;}
+    else{const r=an.getBoundingClientRect();l=r.left;t=r.bottom+6;}
+    box.style.left=l+'px';box.style.top=t+'px';
+    _gsPlace(box,l,t);
+  }
+  const strip=document.getElementById('gs-drag');if(!strip)return;
+  strip.addEventListener('pointerdown',ev=>{
+    if(ev.button>0)return;
+    const th=ev.pointerType==='mouse'?5:8,x0=ev.clientX,y0=ev.clientY,r0=box.getBoundingClientRect();let on=false;
+    try{strip.setPointerCapture(ev.pointerId);}catch(e){}
+    const mv=e=>{
+      const dx=e.clientX-x0,dy=e.clientY-y0;
+      if(!on){if(Math.hypot(dx,dy)<th)return;on=true;}
+      e.preventDefault();
+      _gsPlace(box,r0.left+dx,r0.top+dy);
+    };
+    const up=()=>{
+      strip.removeEventListener('pointermove',mv);strip.removeEventListener('pointerup',up);strip.removeEventListener('pointercancel',up);
+      if(on&&!_gsPhone()){
+        try{const r=box.getBoundingClientRect();localStorage.setItem(_GS_GEOM_KEY,JSON.stringify({lPct:r.left/window.innerWidth*100,tPct:r.top/window.innerHeight*100}));}catch(e){}
+      }
+    };
+    strip.addEventListener('pointermove',mv);strip.addEventListener('pointerup',up);strip.addEventListener('pointercancel',up);
+  });
+}
+window.addEventListener('resize',()=>{
+  const box=document.querySelector('#gs-overlay.gs-fl #gs-box');if(!box)return;
+  const r=box.getBoundingClientRect();_gsPlace(box,r.left,r.top);
+});
 /* v05.65 · J106 — the pop-up asks _searchAll(), the same function the side-pane box asks: notes (title + text), folders, tags, Note Types. */
 function _gsSearch(q){
   if(!q||!q.trim())return null;
@@ -16773,10 +16908,11 @@ function _gsRender(q){
   }
   const r=_gsSearch(q);
   const total=r.noteHits.length+r.folderHits.length+r.tagHits.length+r.kindHits.length;
-  if(!total){box.innerHTML='<div class="gs-empty">No results for “'+esc(q)+'”</div>';return;}
+  const ns=_nwSave(box),bar=_nwBarHTML('gs',q,r.noteHits.length,!!_stPart);
+  if(!total){box.innerHTML=bar+'<div class="gs-empty">No results for “'+esc(q)+'”</div>';_nwRestore(box,ns);return;}
   const w0=r.words[0]||'';
   const CAP=30;
-  let h='<div class="gs-cnt-row" role="presentation">'+total+' result'+(total!==1?'s':'')+'</div>';
+  let h=bar+'<div class="gs-cnt-row" role="presentation">'+total+' result'+(total!==1?'s':'')+'</div>';
   const row=(kind,id,inner)=>'<div class="gs-result" role="option" data-kind="'+kind+'" data-id="'+esc(id)+'" onclick="_gsOpen(\''+kind+'\','+_ja(id)+')">'+inner+'</div>';
   if(r.folderHits.length){
     h+='<div class="gs-grp" role="presentation">📁 Folders</div>';
@@ -16811,6 +16947,7 @@ function _gsRender(q){
     });
   }
   box.innerHTML=h;
+  _nwRestore(box,ns);
   _gsSetActive(0);
 }
 function _gsSetActive(idx){
@@ -19872,19 +20009,21 @@ function _fwClose(id,quiet){
   _fwLayout();
 }
 /* the search box: the notes in this folder's subtree (or this section's folders), title or text, any case; at most 100 shown */
-function _fwSearch(id,v){ const w=_fwGet(id); if(!w) return; w.q=String(v||''); _fwPaint(w); }
+function _fwSearch(id,v){ const w=_fwGet(id); if(!w) return; w.q=String(v||''); w.lim=100; _fwPaint(w); }
+function _fwMore(id){ const w=_fwGet(id); if(!w) return; w.lim=(w.lim||100)+100; _fwPaint(w); }   /* v05.93 · J133 — 100 more rows, never all at once */
 function _fwSearchHTML(w,q){
   const roots=w.kind==='s'?DB.folders.filter(x=>!x.parentId&&x.sectionId===w.id.slice(4)).map(x=>x.id):[w.id];
   const fids=new Set(); roots.forEach(r=>descOf(r).forEach(i=>fids.add(i)));
-  const words=q.split(/\s+/).filter(Boolean), out=[]; let more=false;
-  for(const a of DB.articles){
+  /* v05.93 · J133 — the same word model as the other two boxes (include + `-exclude`); every match is counted, rows are drawn a page (100) at a time */
+  const words=_searchWords(q), lim=w.lim||100, out=[]; let n=0;
+  if(words.length||words.exc.length) for(const a of DB.articles){
     if(!a.folderIds||!a.folderIds.some(i=>fids.has(i))) continue;
-    const hay=((a.title||'')+' '+String(a.content||'').replace(/<[^>]*>/g,' ')).toLowerCase();
-    if(!words.every(x=>hay.includes(x))) continue;
-    if(out.length>=100){ more=true; break; }
-    out.push('<div class="fwin-hit" role="button" tabindex="0" data-aid="'+esc(a.id)+'" onclick="selArt(\''+esc(a.id)+'\')">📄 '+esc(a.title||'Untitled')+'</div>');
+    if(!_matchesAllWords(_stOf(a),words)) continue;
+    n++;
+    if(out.length<lim) out.push('<div class="fwin-hit" role="button" tabindex="0" data-aid="'+esc(a.id)+'" onclick="selArt(\''+esc(a.id)+'\')">📄 '+esc(a.title||'Untitled')+'</div>');
   }
-  return '<div class="fwin-hits" data-n="'+out.length+'">'+(out.length?out.join(''):'<div class="fwin-none">No notes match “'+esc(q)+'”.</div>')+(more?'<div class="fwin-none">…more than 100 match; type more to narrow.</div>':'')+'</div>';
+  const left=n-out.length;
+  return _nwBarHTML('fw:'+w.id,w.q||q,n,false)+'<div class="fwin-hits" data-n="'+out.length+'" data-total="'+n+'">'+(out.length?out.join(''):'<div class="fwin-none">No notes match “'+esc(q)+'”.</div>')+(left>0?'<button type="button" class="fwin-more" onclick="_fwMore(\''+esc(w.id)+'\')">Show 100 more ('+left+' left)</button>':'')+'</div>';
 }
 function _fwPaint(w){
   const e=_fwEl(w.id); if(!e||!_fwExists(w.id)) return;
@@ -19904,7 +20043,7 @@ function _fwPaint(w){
     }finally{ _trWin=null; _trExp=null; }
   }
   const b=e.querySelector('.fwin-body');
-  if(b._fwHtml!==html){ const st=b.scrollTop; b.innerHTML=html; b._fwHtml=html; b.scrollTop=st; }
+  if(b._fwHtml!==html){ const st=b.scrollTop, ns=_nwSave(b); b.innerHTML=html; b._fwHtml=html; _nwRestore(b,ns); b.scrollTop=st; }
 }
 /* repainted from renderTree() — so every local edit and every received merge reaches the windows with the side pane */
 function _fwRedraw(){
@@ -25966,7 +26105,7 @@ let _jlkNT=0;
 function _jlkNoteListSoon(q){ clearTimeout(_jlkNT); _jlkNT=setTimeout(()=>_jlkNoteList(q),150); }
 function _jlkNoteList(q){
   const el=document.getElementById('jlk-nl'); if(!el) return;
-  const arr=(_searchWords(q||'').length?_searchAll(q).noteHits.slice():DB.articles.slice().sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))).slice(0,60);
+  const arr=((w=>w.length||w.exc.length)(_searchWords(q||''))?_searchAll(q).noteHits.slice():DB.articles.slice().sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))).slice(0,60);
   el.innerHTML=arr.length?arr.map(a=>'<div class="pr" style="min-height:44px" onclick="_jlkNotePicked('+_ja(a.id)+')"><span style="font-size:12px">📝</span><span style="font-size:13px">'+esc(a.title||'Untitled')+'</span></div>').join(''):'<div class="jeb-empty">No notes found.</div>';
 }
 function _jlkNotePicked(nid){
@@ -40787,7 +40926,11 @@ document.addEventListener('keydown', function(ev){
     if(Math.hypot(t.clientX-_sx,t.clientY-_sy)>10) clearTimeout(_t);
   },{passive:true});
 
-  tree.addEventListener('touchend',()=>clearTimeout(_t),{passive:true});
+  /* v05.93 · J133 — a fired long-press opens its menu UNDER the finger; the click the lift makes
+     landed on that menu's row (outside #tree, so the swallow above never saw it) and ran it.
+     Cancelling the lift stops the browser making that click at all, and clears _fired, since no click
+     will come to clear it (left set, it ate the next mouse click in the side pane: block 57). */
+  tree.addEventListener('touchend',e=>{clearTimeout(_t);if(_fired&&e.cancelable){e.preventDefault();_fired=false;}},{passive:false});
   tree.addEventListener('touchcancel',()=>clearTimeout(_t),{passive:true});
 
   /* Swallow the click that follows a fired long-press */
