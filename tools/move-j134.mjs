@@ -150,8 +150,8 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
 
     /* 152d — drag (laptop) */
     if (w >= 1200) {
-      await goF(p); await sleep(400);
-      const drag = async (aid, ctrl, drop = true) => p.evaluate(({ aid, ctrl, drop }) => {
+      await goF(p); await p.evaluate(() => { ST.secOpen['sec-1'] = true; renderTree(); }); await sleep(400);
+      const drag =async (aid, ctrl, drop = true) => p.evaluate(({ aid, ctrl, drop }) => {
         const c = document.querySelector(`#p2c .ar[data-aid="${aid}"]`), row = document.querySelector('#tree [data-fid="fT"]');
         const dt = new DataTransfer();
         c.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
@@ -201,7 +201,7 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
 /* 152e — a 2,000-note folder (a window), Select all, Move */
 {
   const lim = hostLimit(200);
-  const app = await openApp({ viewport: { width: 1440, height: 900 }, db: db(1994) });
+  const app = await openApp({ viewport: { width: 1440, height: 900 }, db: db(1995) });
   const p = app.page;
   try {
     await sleep(800); await goF(p); await sleep(1200);
