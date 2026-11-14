@@ -6884,7 +6884,7 @@ async function _sfTo(o){
     }
     const verb=o.verb||'Writing your file…',label=o.label||'file';
     say(verb);
-    if(!o.fh)g=await _bxpGuardStart('file',name,say);   /* v05.95 · J172 — a linked file's quiet auto-save is not guarded */
+    if(!o.fh)g=await _bxpGuardStart('file',name,say,handle?'picker':'download');   /* v05.95 · J172 — a linked file's quiet auto-save is not guarded */
     if(handle){ w=await handle.createWritable(); if(!o.fh){name=handle.name||name;created=true;} }
     const ctx=_bxpCtx(verb,g?g.say:say,0);
     const S=_bxpSink(w);if(g)S.guard=g;
@@ -7047,20 +7047,23 @@ function _bxpVerify(S,got,label,tail,endRe){
   return null;
 }
 async function _bxpTailOf(x){ try{ const t=await x.slice(-64).text(); return typeof t==='string'?t:null; }catch(e){ return null; } }
-/* v05.95 · J172 — a picker file exists, EMPTY, from the moment it is chosen; it fills only on close(). After a failure: remove it when it is empty (a file that holds
-   something — an older copy the owner chose to replace — is never removed), and always name it. Returns the sentence to add to the message. */
+/* v05.95 · J172 — a picker file exists, EMPTY, from the moment it is chosen; it fills only on close(). After a failure: remove it ONLY when a read just showed it is
+   empty (a file that holds something — an older copy the owner chose to replace — is never removed, and neither is one whose size could not be read: "could not
+   read it" is not "it is empty"), and always name it. Returns the sentence to add to the message. */
 async function _bxpCleanFile(handle,name){
   if(!handle)return '';
   let sz=-1;
   try{ if(typeof handle.getFile==='function')sz=(await handle.getFile()).size; }catch(e){}
-  if((sz===0||sz===-1)&&typeof handle.remove==='function'){
+  if(sz===0&&typeof handle.remove==='function'){
     try{ await handle.remove(); return ' The empty file “'+name+'” was removed.'; }catch(e){}
   }
-  return sz===0||sz===-1?' The file “'+name+'” is empty — please delete it.':' The file “'+name+'” may be incomplete — please delete it.';
+  if(sz===0)return ' The file “'+name+'” is empty — please delete it.';
+  if(sz===-1)return ' The file “'+name+'” may be empty or incomplete — please check it and delete it if it is.';
+  return ' The file “'+name+'” may be incomplete — please delete it.';
 }
 /* v05.95 · J172 — the guard around one write: keeps the screen awake (Wake Lock, where allowed), says "Paused" while the page is hidden and goes on when it is back, and
    keeps a marker in siyagah-enx-v1 (store job, key job-backup — never DB) while the write is unfinished, so a page the phone discarded is found at the next start. */
-async function _bxpGuardStart(kind,name,say){
+async function _bxpGuardStart(kind,name,say,via){
   const g={kind:kind,paused:false,wl:null,alive:true,waiters:[],last:''};
   const ask=async function(){
     try{ if(navigator.wakeLock&&typeof navigator.wakeLock.request==='function'){ const l=await navigator.wakeLock.request('screen'); if(g.alive)g.wl=l;else{try{await l.release();}catch(e){}} } }catch(e){ g.wl=null; }
@@ -7079,7 +7082,7 @@ async function _bxpGuardStart(kind,name,say){
     if(g.wl){ try{await g.wl.release();}catch(e){} g.wl=null; }
     try{ await _enxJobOp('readwrite',function(st){return st.delete('job-backup');}); }catch(e){}
   };
-  try{ await _enxJobOp('readwrite',function(st){return st.put({at:Date.now(),kind:kind,name:name},'job-backup');}); }catch(e){}
+  try{ await _enxJobOp('readwrite',function(st){return st.put({at:Date.now(),kind:kind,name:name,via:via||''},'job-backup');}); }catch(e){}   /* via: 'picker' (a file exists, empty) | 'download' (no file) */
   await ask();
   return g;
 }
@@ -7091,7 +7094,8 @@ async function _bxpOrphan(){
   if(!m)return false;
   try{ await _enxJobOp('readwrite',function(st){return st.delete('job-backup');}); }catch(e){}
   const t=new Date(m.at||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-  const msg='A backup started at '+t+' did not finish. The file it made is empty. Delete it, and start ⬇ Export again.';
+  const msg=m.via==='download'?'A backup started at '+t+' did not finish, so no file was saved. Start ⬇ Export again.'
+    :'A backup started at '+t+' did not finish. The file it made is empty. Delete it, and start ⬇ Export again.';
   _bxpSay(msg,'err');toast(msg,12000);
   return true;
 }
@@ -7192,7 +7196,7 @@ async function exportJSON(mode){
       catch(e){ if(e&&e.name==='AbortError'){cancelled=true;return;} handle=null; }   /* refused: fall back to a download */
     }
     _bxpSay('Writing your backup…');
-    g=await _bxpGuardStart('json',name,_bxpSay);
+    g=await _bxpGuardStart('json',name,_bxpSay,handle?'picker':'download');
     /* v05.95 · J172 — the size and the plain warning are on screen BEFORE the first byte */
     let est=null;
     try{ est=await _bxpEstimate(); }catch(e){}

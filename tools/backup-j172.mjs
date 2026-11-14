@@ -33,7 +33,7 @@ const seedPics = (p) => p.evaluate(async (b64) => {
   return s;
 }, PNG.toString('base64'));
 const FAKE = () => {
-  const F = window.__fh = { calls: [], written: 0, file: null, emptyRead: false, removed: false, name: '', hideOnWrite: false, status: [] };
+  const F = window.__fh = { calls: [], written: 0, file: null, emptyRead: false, readThrows: false, removed: false, name: '', hideOnWrite: false, status: [] };
   window.showSaveFilePicker = async (o) => {
     F.name = o.suggestedName; F.calls.push('pick');
     return { name: o.suggestedName,
@@ -42,7 +42,7 @@ const FAKE = () => {
           if (F.hideOnWrite) { F.hideOnWrite = false; Object.defineProperty(document, 'hidden', { get: () => true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); } },
         close: async () => { F.calls.push('close'); F.file = new Blob(parts); },
         abort: async () => { F.calls.push('abort'); } }; },
-      getFile: async () => (F.emptyRead ? new Blob([]) : (F.file || new Blob([]))),
+      getFile: async () => { if (F.readThrows) throw new DOMException('the file is busy', 'NotReadableError'); return F.emptyRead ? new Blob([]) : (F.file || new Blob([])); },
       remove: async () => { F.calls.push('remove'); F.removed = true; } };
   };
   setInterval(() => { const t = (document.getElementById('bxp-status') || {}).textContent; if (t && F.status[F.status.length - 1] !== t) F.status.push(t); }, 20);
@@ -111,6 +111,13 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     r.check(!/^Saved/.test(b.s) && /^Backup failed/.test(b.s) && b.removed && b.s.includes(b.name), `154b${t} unreadable/empty: not "Saved", remove() called, the message names ${b.name}`, b.s.slice(0, 300));
     await p.evaluate(() => { window.__fh.emptyRead = false; });
 
+    /* 154b2 (Architect review) — the size cannot be read after a failed write: the file is KEPT (it may be an older good backup the owner chose to replace) and named */
+    await p.evaluate(() => { const F = window.__fh; F.file = null; F.written = 0; F.calls = []; F.removed = false; F.readThrows = true; });
+    await p.evaluate(() => exportJSON('notes')); await waitDone(p);
+    const b2 = await p.evaluate(() => ({ s: document.getElementById('bxp-status').textContent, removed: window.__fh.removed, name: window.__fh.name }));
+    r.check(!/^Saved/.test(b2.s) && /^Backup failed/.test(b2.s) && !b2.removed && b2.s.includes(b2.name) && /may be empty or incomplete/.test(b2.s), `154b2${t} size unreadable: not "Saved", remove() NOT called, the message names ${b2.name}`, b2.s.slice(0, 300));
+    await p.evaluate(() => { window.__fh.readThrows = false; });
+
     /* 154g — Wake Lock: requested and released, on success, on a failed write and when refused */
     const wl = await p.evaluate(() => ({ req: window.__wl.req, rel: window.__wl.rel }));
     r.check(wl.req >= 3 && wl.rel === wl.req, `154g${t} Wake Lock requested and released for every export so far (${wl.req}/${wl.rel})`, JSON.stringify(wl));
@@ -147,6 +154,12 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       r.check(/A backup started at .* did not finish\. The file it made is empty\. Delete it, and start ⬇ Export again\./.test(txt) && !left && !again, `154d${t} the one-time message is shown, then the marker is gone (and it is not said twice)`, JSON.stringify({ said, left, again }));
       const none = await p.evaluate(() => _enxJobOp('readonly', (s) => s.get('job-backup')));
       r.check(!none, `154d${t} a finished export leaves no marker`, '');
+      /* Architect review: a download (no file was ever made) gets its own words */
+      await p.evaluate(() => _enxJobOp('readwrite', (s) => s.put({ at: Date.now() - 60000, kind: 'json', name: 'y.json', via: 'download' }, 'job-backup')));
+      await p.evaluate(() => _bxpOrphan());
+      const dtxt = await p.evaluate(() => (document.getElementById('bxp-status') || {}).textContent + ' | ' + document.body.innerText);
+      const dleft = await p.evaluate(() => _enxJobOp('readonly', (s) => s.get('job-backup')));
+      r.check(/A backup started at .* did not finish, so no file was saved\. Start ⬇ Export again\./.test(dtxt) && !dleft, `154d${t} a download that did not finish: "no file was saved", then the marker is gone`, dtxt.slice(0, 200));
     }
 
     /* 154e — Notes only */
