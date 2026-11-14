@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.94">
+<meta name="app-version" content="05.95">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -958,6 +958,9 @@ html{--jeb-h:0px;--jeb-l:0px;--jeb-hd:0px}
 #idb-warn.min .iw-t,#idb-warn.min .iw-try,#idb-warn.min .iw-hide{display:none}
 #idb-warn.min .iw-show{display:block;width:40px;height:40px;padding:0;border-radius:50%;background:#FFF4D6;border:1px solid #C9A227;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 @property --jeb-h{syntax:'<length>';inherits:false;initial-value:0px}
+/* v05.95 · J172 — ⬇ Export choice: in the 💽 window above 640 px, a bottom sheet below */
+.bxp-choice{margin-top:8px;padding:10px;border:1px solid var(--bdr,#8884);border-radius:8px}
+@media(max-width:639.98px){.bxp-choice{position:fixed;left:0;right:0;bottom:0;z-index:10070;margin:0;padding:14px 14px calc(14px + env(safe-area-inset-bottom));border-radius:14px 14px 0 0;background:var(--paper,#fff);box-shadow:0 -4px 18px #0004}}
 /* v05.94 · J134 — ☑ Choose: the row, the bar, the tick on a card */
 #jm-top:empty,#jm-bar:empty{display:none}
 .jm-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 10px;background:var(--paper);border-bottom:1px solid var(--border)}
@@ -4176,7 +4179,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.94</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.95</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -6343,7 +6346,7 @@ async function _picKeepTick(){
         if(b){ _picKeep.fetched++;_picKeep.missing--;_picKeepBad.delete(sha); try{ await _picShowAll(sha); }catch(e){} }
       }catch(e){
         _picKeep.failed++;_picKeep.err=String((e&&e.message)||e).slice(0,80);
-        const n=((bad&&bad.n)||0)+1;_picKeepBad.set(sha,{n:n,until:n>=3?Date.now()+21600000:0});
+        const n=((bad&&bad.n)||0)+1;_picKeepBad.set(sha,{n:n,until:n>=3?Date.now()+21600000:0,why:_picKeep.err||''});
       }
       if(_picKeep.fetched%25===0&&(await _picKeepFull())){ _picKeep.full=true; break; }
     }
@@ -6360,6 +6363,43 @@ function _picKeepText(){
   if(_picKeep.failed)t+=' · '+_picKeep.failed+' failed'+(_picKeep.err?' ('+_picKeep.err+')':'');
   return t;
 }
+/* v05.95 · J172 — "Pictures on this device: N of M; not here: K (reasons…)". Observes only; the keeping above is unchanged. Worked out when the panel is drawn,
+   shown the next time it is drawn (as _dcText does). Reasons come from what _picKeepTick already learned: _picKeepBad (failed / "picture is not in the cloud"),
+   _picKeep.cap (today's limit), otherwise "not tried yet". */
+let _picHold=null;
+async function _picHoldCalc(){
+  try{
+    await _picDB();
+    const want=await _picKeepShas();
+    let n=0;const r={cloud:0,limit:0,failed:0,untried:0};
+    want.forEach(function(sha){
+      if(_picKnown.has(sha)){n++;return;}
+      const bad=_picKeepBad.get(sha);
+      if(bad&&/not in the cloud/i.test(bad.why||''))r.cloud++;
+      else if(bad)r.failed++;
+      else if(_picKeep.cap)r.limit++;
+      else r.untried++;
+    });
+    const v={m:want.size,n:n,k:want.size-n,r:r};
+    const sig=JSON.stringify(v);
+    if(!_picHold||_picHold.sig!==sig){ _picHold={m:v.m,n:v.n,k:v.k,r:v.r,sig:sig}; try{ const d=document.getElementById('sync-diag'); if(d)d.innerHTML=_syncDiagnosticsHTML(); }catch(e){} }
+  }catch(e){}
+}
+function _picHoldText(){
+  _picHoldCalc();
+  const h=_picHold;if(!h)return 'counting…';
+  let t=h.n.toLocaleString()+' of '+h.m.toLocaleString()+'; not here: '+h.k.toLocaleString();
+  if(h.k>0){
+    const p=[];
+    if(h.r.cloud)p.push(h.r.cloud+' not in the cloud store');
+    if(h.r.limit)p.push(h.r.limit+' waiting for today’s limit');
+    if(h.r.failed)p.push(h.r.failed+' failed');
+    if(h.r.untried)p.push(h.r.untried+' not tried yet');
+    t+=' (reasons: '+p.join(', ')+')';
+  }
+  return t;
+}
+window._picHoldText=_picHoldText;
 window._picKeep=_picKeep;window._picKeepTick=_picKeepTick;window._picKeepSet=_picKeepSet;
 setInterval(function(){ try{ if(_jobOk('pk')) _picKeepTick(); }catch(e){} },20000);
 window.addEventListener('online',function(){ setTimeout(function(){ if(_jobOk('pk')) _picKeepTick(); },3000); });
@@ -6835,7 +6875,7 @@ async function _bxpWritePics(S,ctx,shas,own){
 /* o: {name, pickP (a picker asked inside the click) | fh (a file handle to write into), say}. Returns {ok,name,bytes,missing} or {cancelled}; throws on failure
    (the writable is aborted first, so a linked file keeps its last good copy). */
 async function _sfTo(o){
-  let w=null,handle=o.fh||null,name=o.name;
+  let w=null,handle=o.fh||null,name=o.name,g=null,created=false;
   const say=o.say||function(){};
   try{
     if(o.pickP){
@@ -6844,14 +6884,26 @@ async function _sfTo(o){
     }
     const verb=o.verb||'Writing your file…',label=o.label||'file';
     say(verb);
-    if(handle){ w=await handle.createWritable(); if(!o.fh)name=handle.name||name; }
-    const ctx=_bxpCtx(verb,say,0);
-    const S=_bxpSink(w);
+    if(!o.fh)g=await _bxpGuardStart('file',name,say,handle?'picker':'download');   /* v05.95 · J172 — a linked file's quiet auto-save is not guarded */
+    if(handle){ w=await handle.createWritable(); if(!o.fh){name=handle.name||name;created=true;} }
+    const ctx=_bxpCtx(verb,g?g.say:say,0);
+    const S=_bxpSink(w);if(g)S.guard=g;
     await (o.write||_sfWrite)(S,ctx);
     let bytes=S.bytes,blob=null;
-    if(w){ const ve=_bxpVerify(S,S.bytes,label);if(ve)throw ve; await w.close();w=null; }
+    const END=/\n$/;
+    if(w){
+      const ve=_bxpVerify(S,S.bytes,label);if(ve)throw ve;
+      await w.close();w=null;
+      if(!o.fh&&handle&&typeof handle.getFile==='function'){
+        let fsz=0,tail=null;
+        try{ const f=await handle.getFile(); fsz=f.size; tail=await _bxpTailOf(f); }catch(e){}
+        const ve2=_bxpVerify(S,fsz,label,tail,END);if(ve2)throw ve2;
+      }
+    }
     else{
-      const ve=_bxpVerify(S,S.parts.reduce(function(n,p){return n+p.size;},0),label);if(ve)throw ve;
+      const total0=S.parts.reduce(function(n,p){return n+p.size;},0);
+      const tail=await _bxpTailOf(new Blob(S.parts));
+      const ve=_bxpVerify(S,total0,label,tail,END);if(ve)throw ve;
       /* v05.92 · J140 — o.blob: the pieces are handed back as one Blob (Drive upload), not downloaded */
       if(o.blob){ blob=new Blob(S.parts,{type:'text/html;charset=utf-8'}); bytes=blob.size; }
       else bytes=_bxpDownload(S.parts,name,'text/html;charset=utf-8');
@@ -6859,8 +6911,9 @@ async function _sfTo(o){
     return {ok:true,name:name,bytes:bytes,missing:ctx.missing.size,blob:blob};
   }catch(e){
     if(w){try{await w.abort();}catch(_){}}
+    if(created&&handle&&e&&typeof e==='object'){ try{ const x=await _bxpCleanFile(handle,name); if(x)e.message=String(e.message||'')+x; }catch(_){} }
     throw e;
-  }
+  }finally{ if(g)await g.end(); }
 }
 function _sfSaved(r){
   _sfSay('');
@@ -6915,7 +6968,7 @@ function exportDeploy(){
 let _bxpBusy=false;
 const _BXP_BIG=100*1048576;
 function _bxpSay(msg,kind){const el=document.getElementById('bxp-status');if(el){el.textContent=msg;el.className='mm bxp-st'+(kind?' '+kind:'');}else if(kind)toast(msg,7000);}
-function _bxpBtns(off){['bxp-exp','bxp-imp'].forEach(function(i){const b=document.getElementById(i);if(b)b.disabled=!!off;});}
+function _bxpBtns(off){['bxp-exp','bxp-imp','bxp-all','bxp-notes'].forEach(function(i){const b=document.getElementById(i);if(b)b.disabled=!!off;});}
 function _bxpSize(n){return n>=10485760?Math.round(n/1048576).toLocaleString()+' MB':n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';}
 function _bxpWhy(e){
   const n=(e&&e.name)||'',m=String(e&&e.message||e||'');
@@ -6959,7 +7012,8 @@ function _bxpPicker(name,desc,mime,ext){
 function _bxpSink(w){
   const S={parts:[],bytes:0,buf:[],len:0};
   S.flush=async function(){ if(!S.buf.length)return; const b=new Blob(S.buf);S.buf=[];S.len=0;S.bytes+=b.size; if(w)await w.write(b);else S.parts.push(b); };
-  S.put=async function(s){ S.buf.push(s);S.len+=s.length; if(S.len>1048576)await S.flush(); };
+  S.put=async function(s){ if(S.guard&&document.hidden)await S.guard.wait();   /* v05.95 · J172 — hidden: wait here, come back to finish */
+    S.buf.push(s);S.len+=s.length; if(S.len>1048576)await S.flush(); };
   return S;
 }
 function _bxpCtx(verb,say,total){
@@ -6980,13 +7034,117 @@ function _bxpDownload(parts,name,type){
 }
 /* v05.89 · J159 — the file must hold what was written, and a notebook with notes never ends under 1 KB. Called after the last piece and before "Saved".
    S = the sink; written = the bytes it flushed; got = the size the target reports (file on disk / Blob). Throws a plain-words error. */
-function _bxpVerify(S,got,label){
+function _bxpVerify(S,got,label,tail,endRe){
   const holds=((DB.articles||[]).length+(DB.folders||[]).length)>0;
   const fail=function(m){const e=new Error(m);e.bxpEmpty=true;return e;};
   if(holds&&(S.bytes<1024||got<1024))return fail('The '+label+' came out almost empty ('+got+' bytes) although your notebook holds notes, so it is NOT reported as saved. Nothing was lost — your notes are untouched. Try again.');
   if(got!==S.bytes)return fail('The '+label+' on disk is '+got+' bytes but '+S.bytes+' were written, so it is NOT reported as saved. Nothing was lost — try again.');
+  /* v05.95 · J172 — the LAST bytes must read back and end the way the writer ended (tail = text of the last 64 bytes; null = it could not be read) */
+  if(tail!==undefined){
+    if(tail===null)return fail('The '+label+' could not be read back after it was written, so it is NOT reported as saved. Nothing was lost — your notes are untouched. Try again.');
+    if(endRe&&!endRe.test(tail))return fail('The '+label+' does not end the way it was written, so it is NOT reported as saved. Nothing was lost — your notes are untouched. Try again.');
+  }
   return null;
 }
+async function _bxpTailOf(x){ try{ const t=await x.slice(-64).text(); return typeof t==='string'?t:null; }catch(e){ return null; } }
+/* v05.95 · J172 — a picker file exists, EMPTY, from the moment it is chosen; it fills only on close(). After a failure: remove it ONLY when a read just showed it is
+   empty (a file that holds something — an older copy the owner chose to replace — is never removed, and neither is one whose size could not be read: "could not
+   read it" is not "it is empty"), and always name it. Returns the sentence to add to the message. */
+async function _bxpCleanFile(handle,name){
+  if(!handle)return '';
+  let sz=-1;
+  try{ if(typeof handle.getFile==='function')sz=(await handle.getFile()).size; }catch(e){}
+  if(sz===0&&typeof handle.remove==='function'){
+    try{ await handle.remove(); return ' The empty file “'+name+'” was removed.'; }catch(e){}
+  }
+  if(sz===0)return ' The file “'+name+'” is empty — please delete it.';
+  if(sz===-1)return ' The file “'+name+'” may be empty or incomplete — please check it and delete it if it is.';
+  return ' The file “'+name+'” may be incomplete — please delete it.';
+}
+/* v05.95 · J172 — the guard around one write: keeps the screen awake (Wake Lock, where allowed), says "Paused" while the page is hidden and goes on when it is back, and
+   keeps a marker in siyagah-enx-v1 (store job, key job-backup — never DB) while the write is unfinished, so a page the phone discarded is found at the next start. */
+async function _bxpGuardStart(kind,name,say,via){
+  const g={kind:kind,paused:false,wl:null,alive:true,waiters:[],last:''};
+  const ask=async function(){
+    try{ if(navigator.wakeLock&&typeof navigator.wakeLock.request==='function'){ const l=await navigator.wakeLock.request('screen'); if(g.alive)g.wl=l;else{try{await l.release();}catch(e){}} } }catch(e){ g.wl=null; }
+  };
+  g.wait=function(){ return new Promise(function(r){g.waiters.push(r);}); };
+  g.vis=function(){
+    if(document.hidden){ g.paused=true; try{say('Paused — come back to Siyagah to finish the backup');}catch(e){} }
+    else{ if(g.paused&&g.last){ try{say(g.last);}catch(e){} } g.paused=false; if(g.alive&&!g.wl)ask(); const w=g.waiters;g.waiters=[];w.forEach(function(r){r();}); }
+  };
+  g.say=function(m){ g.last=m; if(!document.hidden)say(m); };
+  document.addEventListener('visibilitychange',g.vis);
+  g.end=async function(){
+    if(!g.alive)return; g.alive=false;
+    document.removeEventListener('visibilitychange',g.vis);
+    const w=g.waiters;g.waiters=[];w.forEach(function(r){r();});
+    if(g.wl){ try{await g.wl.release();}catch(e){} g.wl=null; }
+    try{ await _enxJobOp('readwrite',function(st){return st.delete('job-backup');}); }catch(e){}
+  };
+  try{ await _enxJobOp('readwrite',function(st){return st.put({at:Date.now(),kind:kind,name:name,via:via||''},'job-backup');}); }catch(e){}   /* via: 'picker' (a file exists, empty) | 'download' (no file) */
+  await ask();
+  return g;
+}
+/* the next start finds a marker left by a write that never ended (the page was discarded) and says so, once */
+async function _bxpOrphan(){
+  if(_bxpBusy||_sfBusy)return false;
+  let m=null;
+  try{ m=await _enxJobOp('readonly',function(st){return st.get('job-backup');}); }catch(e){ return false; }
+  if(!m)return false;
+  try{ await _enxJobOp('readwrite',function(st){return st.delete('job-backup');}); }catch(e){}
+  const t=new Date(m.at||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  const msg=m.via==='download'?'A backup started at '+t+' did not finish, so no file was saved. Start ⬇ Export again.'
+    :'A backup started at '+t+' did not finish. The file it made is empty. Delete it, and start ⬇ Export again.';
+  _bxpSay(msg,'err');toast(msg,12000);
+  return true;
+}
+window._bxpOrphan=_bxpOrphan;
+(function _bxpOrphanWatch(){ if(!_dbLoaded){ setTimeout(_bxpOrphanWatch,1000); return; } setTimeout(function(){ try{ _bxpOrphan(); }catch(e){} },3500); })();
+/* the expected size, from the data and the picture records' sizes (a cursor over the store's small records — no picture is read) */
+let _bxpEstC=null;
+async function _bxpEstimate(){
+  if(_bxpEstC&&_bxpEstC.rev===_dbRev)return _bxpEstC.v;
+  let notes=0,yt=performance.now();
+  for(const k of Object.keys(DB)){
+    const v=DB[k];if(v===undefined||typeof v==='function')continue;
+    if(Array.isArray(v)){ const arr=v.slice(); for(let i=0;i<arr.length;i++){ const j=JSON.stringify(arr[i]); notes+=(j?j.length:4)+2; if(performance.now()-yt>20){await _yieldTask();yt=performance.now();} } }
+    else{ const j=JSON.stringify(v); notes+=(j?j.length:4)+k.length+4; }
+  }
+  let want=new Set();try{ want=await _picKeepShas(); }catch(e){}
+  let picBytes=0,here=0;
+  try{
+    const db=await _picDB();
+    if(db)await new Promise(function(res){
+      const rq=db.transaction('pics','readonly').objectStore('pics').openCursor();
+      rq.onsuccess=function(){ const c=rq.result; if(!c){res();return;} if(want.has(c.key)){here++;picBytes+=(c.value&&+c.value.n)||0;} c.continue(); };
+      rq.onerror=function(){res();};
+    });
+  }catch(e){}
+  const inl=Math.round(picBytes*4/3)+here*40;   /* base64 + the data: prefix */
+  const v={notes:notes,pics:want.size,here:here,picBytes:picBytes,all:notes+inl};
+  _bxpEstC={rev:_dbRev,v:v};
+  return v;
+}
+function _bxpEstText(n,fast){
+  const secs=Math.max(1,Math.round(n/((fast?40:12)*1048576)));
+  return 'about '+_bxpSize(n)+', roughly '+(secs>=90?Math.round(secs/60)+' minutes':secs+(secs===1?' second':' seconds'));
+}
+const _BXP_KEEPOPEN='Keep Siyagah open on this screen until it says Saved. Until then the file shows 0 bytes.';
+/* ⬇ Export opens the choice (a bottom sheet below 640, two buttons in the same window above); the size is worked out for it before anything is asked of the file picker */
+async function exportChoice(){
+  if(_bxpBusy)return;
+  const box=document.getElementById('bxp-choice');
+  if(!box){ exportJSON(); return; }
+  box.style.display='block';
+  const el=document.getElementById('bxp-est');
+  if(el)el.textContent='Working out the size…';
+  try{
+    const e=await _bxpEstimate();
+    if(el)el.innerHTML='<b>Everything</b>: '+esc(_bxpEstText(e.all))+'.<br><b>Notes only</b>: '+esc(_bxpEstText(e.notes,true))+' — the '+e.pics.toLocaleString()+' picture'+(e.pics===1?'':'s')+' stay in the picture store and the cloud.<br>'+esc(_BXP_KEEPOPEN);
+  }catch(x){ if(el)el.textContent=_BXP_KEEPOPEN; }
+}
+function exportChoiceHide(){ const b=document.getElementById('bxp-choice'); if(b)b.style.display='none'; }
 /* DB as ONE JSON object, every top-level array one compact element per line. o.inline: each record's pictures are read, inlined and dropped by themselves (the JSON
    backup). o.shas (a Set): the shas the records reference are collected (Save File keeps the references and writes each picture once). o.esc: no `<` that could
    open `<\/script` or `<\!--` is left raw (written \u003c, which JSON.parse reads back as `<`) — only for the text inside the nd data tag. */
@@ -7023,46 +7181,65 @@ async function _bxpWriteDB(S,ctx,o){
   }
   await S.put('}\n');
 }
-async function exportJSON(){
+async function exportJSON(mode){
   if(_bxpBusy)return;
+  const notesOnly=(mode==='notes');
   const d0=new Date(),p2=function(n){return (n<10?'0':'')+n;};
-  let name='notebook-backup-'+d0.getFullYear()+'-'+p2(d0.getMonth()+1)+'-'+p2(d0.getDate())+'.json';
+  let name='notebook-backup-'+d0.getFullYear()+'-'+p2(d0.getMonth()+1)+'-'+p2(d0.getDate())+(notesOnly?'-notes-only':'')+'.json';
   /* the picker is asked HERE, inside the click, before any await (user activation) */
   const pickP=_bxpPicker(name,'JSON backup','application/json','.json');
-  _bxpBusy=true;_bxpBtns(true);
-  let w=null,cancelled=false;
+  _bxpBusy=true;_bxpBtns(true);exportChoiceHide();
+  let w=null,cancelled=false,handle=null,g=null,created=false;
   try{
-    let handle=null;
     if(pickP){
       try{handle=await pickP;}
       catch(e){ if(e&&e.name==='AbortError'){cancelled=true;return;} handle=null; }   /* refused: fall back to a download */
     }
     _bxpSay('Writing your backup…');
-    if(handle){ w=await handle.createWritable(); name=handle.name||name; }
+    g=await _bxpGuardStart('json',name,_bxpSay,handle?'picker':'download');
+    /* v05.95 · J172 — the size and the plain warning are on screen BEFORE the first byte */
+    let est=null;
+    try{ est=await _bxpEstimate(); }catch(e){}
+    if(est)_bxpSay('Expected size: '+_bxpEstText(notesOnly?est.notes:est.all,notesOnly)+'. '+_BXP_KEEPOPEN);
+    else _bxpSay(_BXP_KEEPOPEN);
+    if(handle){ w=await handle.createWritable(); created=true; name=handle.name||name; }
     let total=0;
-    try{ total=(await _picKeepShas()).size; }catch(e){}
-    const ctx=_bxpCtx('Writing your backup…',_bxpSay,total);
-    const S=_bxpSink(w);
-    await _bxpWriteDB(S,ctx,{inline:true});
-    await S.flush();
+    if(est)g.say('Writing your backup… — Expected size: '+_bxpEstText(notesOnly?est.notes:est.all,notesOnly)+'. '+_BXP_KEEPOPEN);
+    if(!notesOnly){ try{ total=(await _picKeepShas()).size; }catch(e){} }
+    const keep=est?' — Expected size: '+_bxpEstText(notesOnly?est.notes:est.all,notesOnly)+'. '+_BXP_KEEPOPEN:' — '+_BXP_KEEPOPEN;   /* stays on screen while it writes */
+    const ctx=_bxpCtx('Writing your backup…',function(m){g.say(m+keep);},total);
+    const S=_bxpSink(w);S.guard=g;
+    const shas=new Set();
+    await _bxpWriteDB(S,ctx,notesOnly?{inline:false,shas:shas}:{inline:true});
+    await S.put('');await S.flush();
     let bytes=S.bytes;
+    const END=/\}\n$/;
     if(w){
       const sinkErr=_bxpVerify(S,S.bytes,'backup');if(sinkErr)throw sinkErr;   /* nothing was written at all: the linked file keeps its last good copy */
       await w.close();w=null;
-      if(handle&&typeof handle.getFile==='function'){ try{ const fsz=(await handle.getFile()).size; const ve=_bxpVerify(S,fsz,'backup'); if(ve)throw ve; }catch(e){ if(e&&e.bxpEmpty)throw e; } }
+      if(handle&&typeof handle.getFile==='function'){
+        let fsz=0,tail=null;
+        try{ const f=await handle.getFile(); fsz=f.size; tail=await _bxpTailOf(f); }catch(e){}
+        const ve=_bxpVerify(S,fsz,'backup',tail,END); if(ve)throw ve;
+      }
     }else{
-      const ve=_bxpVerify(S,S.parts.reduce(function(n,p){return n+p.size;},0),'backup');if(ve)throw ve;
+      const total0=S.parts.reduce(function(n,p){return n+p.size;},0);
+      const tail=await _bxpTailOf(new Blob(S.parts));
+      const ve=_bxpVerify(S,total0,'backup',tail,END);if(ve)throw ve;
       bytes=_bxpDownload(S.parts,name,'application/json');
     }
-    const miss=ctx.missing.size;
-    _bxpSay('Saved: '+name+', '+_bxpSize(bytes)+(miss?' — '+miss+' picture'+(miss>1?'s':'')+' not on this device '+(miss>1?'were':'was')+' not included':''),'ok');
+    const miss=notesOnly?shas.size:ctx.missing.size;
+    _bxpSay('Saved: '+name+', '+_bxpSize(bytes)+(notesOnly?(miss?' — notes only: '+miss+' picture'+(miss>1?'s stay':' stays')+' in the picture store and the cloud':' — notes only'):(miss?' — '+miss+' picture'+(miss>1?'s':'')+' not on this device '+(miss>1?'were':'was')+' not included':'')),'ok');
     toast('Backup saved ✓');
-    _picMissingToast(miss);
+    if(!notesOnly)_picMissingToast(miss);
   }catch(e){
     console.error('backup failed',e);
     if(w){try{await w.abort();}catch(_){}}
-    _bxpSay('Backup failed. '+_bxpWhy(e),'err');
+    let extra='';
+    if(created&&handle)extra=await _bxpCleanFile(handle,name);
+    _bxpSay('Backup failed. '+_bxpWhy(e)+extra,'err');
   }finally{
+    if(g)await g.end();
     if(cancelled)_bxpSay('Backup cancelled');
     _bxpBusy=false;_bxpBtns(false);
   }
@@ -22975,8 +23152,16 @@ function openModal(type,target){
     showModal(`<div class="mt">💽 Storage & Backup</div>
       <div class="mm">Export a JSON backup, or restore from one.</div>
       <div class="ma" style="flex-direction:column;gap:8px;align-items:stretch">
-        <button class="btn bp" id="bxp-exp" onclick="exportJSON()">⬇ Export data as JSON backup</button>
+        <button class="btn bp" id="bxp-exp" onclick="exportChoice()">⬇ Export data as JSON backup</button>
         <button class="btn" id="bxp-imp" onclick="importJSON();closeModal()">⬆ Import data from JSON backup</button>
+      </div>
+      <div id="bxp-choice" class="bxp-choice" style="display:none">
+        <div class="mm" id="bxp-est" style="margin-bottom:8px;line-height:1.5"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn bp" id="bxp-all" onclick="exportJSON()">Everything (pictures inside)</button>
+          <button class="btn" id="bxp-notes" onclick="exportJSON('notes')">Notes only</button>
+          <button class="btn" onclick="exportChoiceHide()">Cancel</button>
+        </div>
       </div>
       <div class="mm" id="bxp-status" role="status" aria-live="polite" style="min-height:1.3em;margin-top:6px"></div>
       ${_storageSectionHTML()}
@@ -37378,6 +37563,7 @@ function _syncDiagnosticsHTML(){
     ['Pictures', _picDiagText()],
     ['Cloud picture space', _picUseText()],
     ['Pictures kept here', _picKeepText()],
+    ['Pictures on this device', _picHoldText()],   /* v05.95 · J172 */
     ['Device copy', _dcText()],   /* v05.90 · J162 */
     ['Storage protected', _storeProt.v||'checking…'],
   ];

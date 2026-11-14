@@ -132,6 +132,7 @@ async function runExport(page, { picker, saveTo, timeout = 3600000 }) {
     r.oldBuild = !(await page.$('#bxp-exp'));   /* v05.78 and older: no status line — the download event is the only signal */
     const dl = saveTo ? page.waitForEvent('download', { timeout }).then((d) => d, () => null) : null;
     await page.click('#bxp-exp, button[onclick*="exportJSON"]');
+    if (!r.oldBuild) await page.click('#bxp-all');   /* v05.95 · J172 — ⬇ Export opens the choice first; 'Everything' is today's file */
     r.dbl = r.oldBuild ? null : await page.evaluate(() => document.getElementById('bxp-exp').disabled);
     if (r.oldBuild) {
       const d = await dl;
@@ -170,7 +171,7 @@ try {
   if (want('139a') || want('139d')) {
     pickRun = await runExport(A.page, { picker: BIG ? 'count' : 'opfs', timeout: BIG ? 3600000 : 300000 });
     const t = '139d';
-    const prog = pickRun.seen.filter((s) => /^Writing your backup… [\d,]+ of [\d,]+ (pictures|notes and records)$/.test(s));
+    const prog = pickRun.seen.filter((s) => /^Writing your backup… [\d,]+ of [\d,]+ (pictures|notes and records)( — Expected size: .*)?$/.test(s)   /* v05.95 · J172: the expected size and the keep-open sentence now stay on the progress line */);
     check(prog.length >= 2, `${t} the progress line moved (${prog.length} different "Writing your backup… N of M" lines seen)`, JSON.stringify(pickRun.seen.slice(0, 6)));
     const sz = BIG ? await A.page.evaluate(() => ({ n: window.__bxpCount.n, name: '(counted)' })) : await A.page.evaluate(async () => { try { const root = await navigator.storage.getDirectory(); const f = await (await root.getFileHandle(window.__bxpOpfs)).getFile(); return { n: f.size, name: f.name }; } catch (e) { return { n: -1, name: String(e) }; } });
     const mt = /^Saved: (notebook-backup-\d{4}-\d\d-\d\d\.json), /.exec(pickRun.status);
@@ -293,6 +294,7 @@ try {
       const fc = p.waitForEvent('download', { timeout: 60000 }).catch(() => null);
       await p.evaluate(() => { try { window.showSaveFilePicker = undefined; } catch {} });
       await act('#bxp-exp');
+      await act('#bxp-all');   /* v05.95 · J172 */
       await p.waitForFunction(() => /^Saved: notebook-backup-/.test((document.getElementById('bxp-status') || {}).textContent || ''), null, { timeout: 60000 }).catch(() => {});
       const st = await p.evaluate(() => (document.getElementById('bxp-status') || {}).textContent || '');
       const open_ = await p.evaluate(() => document.getElementById('ov').classList.contains('on'));
