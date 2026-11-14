@@ -30986,7 +30986,10 @@ function setSyncStatus(s){
   const el=document.getElementById('sync-dot');
   if(!el)return;
   let probTitle=null;
-  if(_s1Problem&&s==='live'){ s='err'; probTitle='☁ '+_s1Problem; }
+  let heldTxt=''; try{ heldTxt=_s1HeldText(); }catch(e){}   /* v05.96 · J175 — writes held: never a calm "Live" */
+  if(heldTxt&&(s==='live'||s==='busy')){ s='err'; probTitle='☁ '+heldTxt; }
+  else if(_s1Problem&&s==='live'){ s='err'; probTitle='☁ '+_s1Problem; }
+  else heldTxt='';
   const M={
     off: {cls:'sd-off', txt:'☁'},
     conn:{cls:'sd-conn',txt:'☁…'},
@@ -31010,7 +31013,8 @@ function setSyncStatus(s){
     txt='☁ Offline — '+why+' · last try '+hm;
     el.title='☁ Offline — '+why+' · last try '+hm+'. It tries again by itself. '+el.title.replace(/^☁ Offline — /,'');
     el.setAttribute('data-why',why);
-  }else el.removeAttribute('data-why');
+  }else if(heldTxt){ txt='☁ '+heldTxt; el.setAttribute('data-why',heldTxt); }
+  else el.removeAttribute('data-why');
   el.textContent=txt;
 }
 
@@ -31130,6 +31134,8 @@ function _swTick(){
   try{
     const sc=getSyncConfig();
     const lim=typeof window.__swMs==='number'?window.__swMs:180000;
+    const hw=_s1HeldText();   /* v05.96 · J175 — a held write is named at once, not after 3 minutes */
+    if(hw&&navigator.onLine!==false&&sc&&sc.firebaseConfig){ if(!_swDismissed)_swShow(true,'☁ '+hw); return; }
     const ok=!!(sc&&sc.firebaseConfig)&&_dbLoaded&&navigator.onLine!==false&&document.visibilityState==='visible'&&_swState!=='live'&&_swState!=='busy';
     if(!ok||Date.now()-_swLive<lim){
       /* not stuck (or not countable right now): nothing shown; an open episode stays open until Live */
@@ -32269,6 +32275,18 @@ async function _s1Exec(nbId, snap, xo){
   if(!m){ _s1Redirty(snap); _s1Disable(window.indexedDB?'map-not-persistable':'no-indexeddb'); return {ineligible:true}; }
   const nb=_syncFsDb.collection('notebooks').doc(nbId);
   const recsC=nb.collection('recs'), partsC=nb.collection('recparts');
+  /* v05.96 · J175 (C) — a big unknown set (this device's sig map lacks > _S1_BIGUNKNOWN of the snapshot's keys) is checked against the SERVER before it is written,
+     once per page load, same code as ☁ Send everything (no confirm). Only the keys the cloud already holds with the same sig are marked known; the rest is written as today. */
+  if(!xo.noCheck&&_s1ChkNb!==nbId){
+    let unk=0; snap.forEach((r,key)=>{ if(m.s[key]===undefined) unk++; });
+    if(unk>(window.__s1BigUnknown!=null?window.__s1BigUnknown:_S1_BIGUNKNOWN)){
+      const cloud=await _s1CloudCheck(nbId,snap.size,'auto',unk);
+      _s1ApplyCheck(m,snap,cloud,false); _s1ChkNb=nbId;
+      try{ await _idbPut(mk,m); }catch(err){ err.s1disable=true; throw err; }
+      if(!_s1Eligible()||!_s1WriteGate()){ _s1Redirty(snap); _s1KickSoon(); return {gated:true}; }
+      if(snap.seq!==_s1MergeSeq){ try{ _stampRecordTouches(); }catch(e){} _s1Redirty(snap); snap=_s1TakeSnap(); }
+    }
+  }
   const ts=()=>firebase.firestore.FieldValue.serverTimestamp();
   const utf8=s=>new TextEncoder().encode(s).length;
   const work=[];
@@ -32287,7 +32305,7 @@ async function _s1Exec(nbId, snap, xo){
   const commit=async()=>{
     if(!nOps) return;
     const b=batch, d=done; batch=null; nOps=0; nBytes=0; done=[];
-    await b.commit();
+    await _s1Commit(b,nbId);   /* v05.96 · J175 — a commit that never settles is named, never silent */
     if(xo.progress){ _s1Send.done+=d.length; _s1Send.at=Date.now(); await _yieldTask(); }
     const dels=[];
     d.forEach(e=>{
@@ -32577,17 +32595,19 @@ async function _s1ResendAll(auto){
   if(_s1Send.active) return {ok:false,why:'it is already sending'};
   if(!_s1WriteGate()) return {ok:false,why:'this device has not finished reading the cloud yet — '+_s1GateText()};
   const nb=cfg.notebookId;
-  _s1Send={active:true,total:0,done:0,at:Date.now(),auto:!!auto,err:null,ended:0,state:'preparing',written:0};
+  _s1Send={active:true,total:0,done:0,at:Date.now(),auto:!!auto,err:null,ended:0,state:'preparing',written:0,known:0};
   try{
     _flushAllEditors(); _stampThemeTouches(); _stampRecordTouches(); _s1Dirty.full=true;
     const snap=await _s1TakeSnapAsync();
     const m=await _s1MapLoad(nb);
     if(!m) throw new Error('this device cannot keep the list of what it has sent');
-    let forgot=0;
-    snap.forEach((r,key)=>{ if(m.s[key]!==undefined&&m.s[key]!=='gone'){ delete m.s[key]; forgot++; } });
+    /* v05.96 · J175 (B) — ask the SERVER first; forget (so: write) only what it lacks or holds differently. A read that fails part-way throws here: nothing was changed. */
+    _s1Send.state='checking'; _s1Send.total=snap.size;
+    const cloud=await _s1CloudCheck(nb,snap.size,'resend',snap.size);
+    const ap=_s1ApplyCheck(m,snap,cloud,true); _s1Send.known=ap.known; _s1ChkNb=nb;
     await _idbPut('s1:'+nb,m);   /* forgotten before the write: a cut-off run is finished by the next ordinary one */
     _s1Send.state='sending'; _s1Send.total=snap.size;
-    const res=await _s1Write(nb,snap,{addOnly:true,progress:true});
+    const res=await _s1Write(nb,snap,{addOnly:true,progress:true,noCheck:true});
     _s1Send.written=(res&&res.written)||0;
     _s1Send.state=(res&&(res.gated||res.ineligible))?'waiting':'done';
     return {ok:true,written:_s1Send.written,state:_s1Send.state};
@@ -32596,10 +32616,103 @@ async function _s1ResendAll(auto){
     return {ok:false,why:_s1Send.err.message||_s1Send.err.code};
   }finally{ _s1Send.active=false; _s1Send.ended=Date.now(); }
 }
+/* ── v05.96 · J175 — a stalled write is named; "send everything" sends only what the cloud lacks ───────────────────────────────────────
+   A: the Firebase free plan allows ~20,000 writes a day; past it the SDK keeps a commit queued and retries it, so `await b.commit()` never settles. `_s1Commit`
+   waits _S1_STALL_MS (hook __s1StallMs); if it has not settled and the browser is online it does ONE server read (`_head~0`): the read works => write-held
+   (`_s1Stat.held`, words in the ⚙ dot, the watchdog banner, Diagnostics and the Send line), the read fails => the ordinary offline case, nothing named. The queued
+   commit is NEVER cancelled or re-issued: the SDK delivers it when Firebase accepts writes; when it settles, `held` clears.
+   B/C: `_s1CloudCheck` pages recs from the server (300 a page, id order, a yield between pages); `_s1ApplyCheck` marks as known (m.s) ONLY a key whose server sig
+   equals the snapshot's, and (resend) forgets the rest. A record in pieces is compared by its head doc's sig; the pieces are not read. Nothing is ever deleted. */
+const _S1_STALL_MS=45000, _S1_BIGUNKNOWN=500;
+let _s1ChkNb=null;
+const _s1Chk={active:false,done:0,total:0,mode:'',unk:0,err:null,at:0};
+function _s1ResetTime(now){
+  now=now||Date.now();
+  let t=now+3600000;
+  try{
+    const p={}; new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hourCycle:'h23',hour:'numeric',minute:'numeric',second:'numeric'}).formatToParts(new Date(now)).forEach(x=>{ p[x.type]=+x.value; });
+    t=now+(86400-((p.hour%24)*3600+p.minute*60+p.second))*1000;
+  }catch(e){}
+  return new Date(t).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}).replace(/[  ]/g,' ').toLowerCase();
+}
+function _s1HeldText(){ const h=_s1Stat.held; return h?h.why:''; }
+function _s1HeldPaint(){
+  try{ setSyncStatus('live'); }catch(e){}
+  try{ _swTick(); }catch(e){}
+  try{ _s1SendPaint(); }catch(e){}
+}
+function _s1SetHeld(){
+  const now=Date.now();
+  _s1Stat.held={since:now, why:'Firebase is not accepting changes right now, most likely its free daily limit (about 20,000 changes a day). It carries on by itself after '+_s1ResetTime(now)+'.'};
+  if(_s1Send.active) _s1Send.state='held';
+  _s1HeldPaint();
+}
+async function _s1Commit(b,nbId){
+  const p=b.commit(); let settled=false;
+  p.then(()=>{ settled=true; _s1HeldClear(); },()=>{ settled=true; _s1HeldClear(); });
+  for(;;){
+    let tm; const r=await Promise.race([p.then(()=>1), new Promise(res=>{ tm=setTimeout(()=>res(0),window.__s1StallMs||_S1_STALL_MS); })]);
+    clearTimeout(tm);
+    if(r||settled) return;
+    if(_s1Stat.held||navigator.onLine===false) continue;
+    let ok=false;
+    try{
+      await Promise.race([_syncFsDb.collection('notebooks').doc(nbId).collection('recs').doc('_head~0').get({source:'server'}), new Promise((_,rej)=>setTimeout(()=>rej(new Error('no answer')),10000))]);
+      ok=true;
+    }catch(e){}
+    if(ok&&!settled) _s1SetHeld();
+  }
+}
+function _s1HeldClear(){
+  if(!_s1Stat.held) return;
+  _s1Stat.held=null;
+  if(_s1Send.state==='held') _s1Send.state='sending';
+  _s1HeldPaint();
+}
+async function _s1CloudCheck(nb,total,mode,unk){
+  const C=_s1Chk; C.active=true; C.done=0; C.total=total; C.mode=mode; C.unk=unk||0; C.err=null; C.at=Date.now();
+  const cloud=new Map();
+  try{
+    const recsC=_syncFsDb.collection('notebooks').doc(nb).collection('recs');
+    let last=null;
+    for(;;){
+      let q=recsC.orderBy(firebase.firestore.FieldPath.documentId()).limit(300);
+      if(last) q=q.startAfter(last);
+      const sn=await q.get({source:'server'});
+      sn.forEach(d=>{ const x=d.data()||{}; cloud.set(d.id,{sig:x.sig,gone:!!x.gone,g:x.g,n:x.n}); });
+      C.done+=sn.size;
+      if(mode==='resend') _s1SendPaint();
+      if(sn.size<300) break;
+      last=sn.docs[sn.docs.length-1];
+      await _yieldTask();
+    }
+  }catch(e){ C.err=String((e&&(e.message||e.code))||e).slice(0,160); throw new Error('the cloud could not be read ('+C.err+') — nothing was sent; press again to check again'); }
+  finally{ C.active=false; }
+  return cloud;
+}
+function _s1ApplyCheck(m,snap,cloud,forgetAll){
+  let known=0, forget=0;
+  snap.forEach((r,key)=>{
+    const c=cloud.get(key);
+    if(c&&!c.gone&&c.sig===r.sig){ m.s[key]=r.sig; if(c.n&&c.g) m.p[key]=[c.g,c.n]; known++; return; }
+    if(m.s[key]===undefined) return;
+    if(forgetAll&&m.s[key]!=='gone'){ delete m.s[key]; forget++; }
+  });
+  return {known:known,forget:forget};
+}
+function _s1ChkText(){
+  const C=_s1Chk;
+  if(C.active) return C.mode==='auto'?('Checking the cloud before sending '+C.unk.toLocaleString('en-US')+' records ('+Math.min(C.done,C.total).toLocaleString('en-US')+' of '+C.total.toLocaleString('en-US')+')'):('Checking '+Math.min(C.done,C.total).toLocaleString('en-US')+' of '+C.total.toLocaleString('en-US')+' in the cloud');
+  if(C.err) return 'could not read the cloud ('+C.err+')';
+  return C.at?'done '+_syncAgo(C.at):'not needed yet';
+}
+function _s1WritesText(){ const h=_s1Stat.held; return h?(h.why+' (since '+_swHm(h.since)+')'):'accepted'; }
 function _s1SendText(){
   const s=_s1Send;
   if(!s.state) return '';
-  if(s.active) return s.state==='preparing'?'getting ready to send':'Sending '+(s.done||0).toLocaleString('en-US')+' of '+(s.total||0).toLocaleString('en-US')+' records'+(s.auto?' (automatic)':'');
+  if(s.active&&s.state==='held'&&_s1HeldText()) return _s1HeldText();
+  if(s.active&&s.state==='checking') return 'Checking '+Math.min(_s1Chk.done||0,s.total||0).toLocaleString('en-US')+' of '+(s.total||0).toLocaleString('en-US')+' in the cloud';
+  if(s.active) return s.state==='preparing'?'getting ready to send':'Sending '+(s.done||0).toLocaleString('en-US')+' of '+(s.total||0).toLocaleString('en-US')+' records'+(s.known?' (the cloud already holds '+s.known.toLocaleString('en-US')+')':'')+(s.auto?' (automatic)':'');
   if(s.state==='done') return 'sent '+(s.written||0).toLocaleString('en-US')+' records '+_syncAgo(s.ended)+(s.auto?' (automatic)':'');
   if(s.state==='waiting') return 'paused — the rest goes out as soon as this device has read the cloud';
   if(s.state==='failed') return 'failed — '+((s.err&&(s.err.message||s.err.code))||'unknown reason');
@@ -32613,7 +32726,7 @@ async function _s1ResendUI(){
   if(!getSyncConfig()||!_syncFsDb){ toast('Cloud Sync is not running on this device'); return; }
   if(_s1Send.active){ toast('It is already sending'); return; }
   const n=_s1HeldCount();
-  if(!confirm('Send everything to the cloud again?\n\nThis device will send about '+n.toLocaleString('en-US')+' records (notes, folders, sections, Trash…) to the cloud. It only adds or updates; it never deletes anything there.\n\nFirebase counts each record as one paid write, and a big notebook can take several minutes. Keep this page open.\n\nSend now?')) return;
+  if(!confirm('Send everything to the cloud again?\n\nThis device holds about '+n.toLocaleString('en-US')+' records (notes, folders, sections, Trash…) to the cloud. It first reads about '+n.toLocaleString('en-US')+' records from the cloud to see what is already there (reads have their own, larger free limit), then sends only what is missing or different. It only adds or updates; it never deletes anything there.\n\nFirebase counts each record sent as one write (about 20,000 a day are free), and a big notebook can take several minutes. Keep this page open.\n\nSend now?')) return;
   const tm=setInterval(()=>{ _s1SendPaint(); if(!_s1Send.active) clearInterval(tm); },500);
   const r=await _s1ResendAll(false);
   clearInterval(tm); _s1SendPaint();
@@ -37549,6 +37662,8 @@ function _syncDiagnosticsHTML(){
     ['Setup came from', (()=>{ const c=getSyncConfig(); return !c?'—':c.src==='built-in'?'the built-in setup (Sign in with Google)':'pasted by hand on this device'; })()],
     ['A new computer opens', _opText()],
     ['Sending to the cloud', (()=>{ const w=_s1GateText(), s=_s1SendText(); return s?s:(w?'not yet — '+w:'ready'); })()],
+    ['Cloud writes', _s1WritesText()],   /* v05.96 · J175 */
+    ['Checking the cloud', _s1ChkText()],
     ['Automatic check', _s1AutoText()],
     ['Realtime listener', _syncUnsub?('connected — '+statusTxt):'not connected'],
     ['Reconcile poll (15s safety net)', _reconcileTimer?'running':'not running'],
