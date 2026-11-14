@@ -30982,10 +30982,11 @@ async function _oaTest(){
 /* v04.90 — a standing problem on the per-note copy (e.g. its reader is stuck and
    this device is syncing the old way) keeps the dot at "err" until it clears;
    nothing else may paint a calm "Live" over it. */
-let _s1Problem=null;
+let _s1Problem=null, _s1RawSync='';   /* _s1RawSync — v05.96 · J175 review: the status asked for, before a held write turns it red */
 function setSyncStatus(s){
   const el=document.getElementById('sync-dot');
   if(!el)return;
+  _s1RawSync=s;
   let probTitle=null;
   let heldTxt=''; try{ heldTxt=_s1HeldText(); }catch(e){}   /* v05.96 · J175 — writes held: never a calm "Live" */
   if(heldTxt&&(s==='live'||s==='busy')){ s='err'; probTitle='☁ '+heldTxt; }
@@ -32278,11 +32279,11 @@ async function _s1Exec(nbId, snap, xo){
   const recsC=nb.collection('recs'), partsC=nb.collection('recparts');
   /* v05.96 · J175 (C) — a big unknown set (this device's sig map lacks > _S1_BIGUNKNOWN of the snapshot's keys) is checked against the SERVER before it is written,
      once per page load, same code as ☁ Send everything (no confirm). Only the keys the cloud already holds with the same sig are marked known; the rest is written as today. */
-  if(!xo.noCheck&&_s1ChkNb!==nbId){
+  if(!xo.noCheck&&_s1ChkNb!==nbId&&!(m.chkAt&&Date.now()-m.chkAt<_S1_CHK_AGAIN_MS)){   /* checked in the last 12 h: what is still unknown is what the cloud lacked; a reload must not read the whole cloud again (about 28,000 reads, the free limit is ~50,000 a day) */
     let unk=0; snap.forEach((r,key)=>{ if(m.s[key]===undefined) unk++; });
     if(unk>(window.__s1BigUnknown!=null?window.__s1BigUnknown:_S1_BIGUNKNOWN)){
       const cloud=await _s1CloudCheck(nbId,snap.size,'auto',unk);
-      _s1ApplyCheck(m,snap,cloud,false); _s1ChkNb=nbId;
+      _s1ApplyCheck(m,snap,cloud,false); _s1ChkNb=nbId; m.chkAt=Date.now();
       try{ await _idbPut(mk,m); }catch(err){ err.s1disable=true; throw err; }
       if(!_s1Eligible()||!_s1WriteGate()){ _s1Redirty(snap); _s1KickSoon(); return {gated:true}; }
       if(snap.seq!==_s1MergeSeq){ try{ _stampRecordTouches(); }catch(e){} _s1Redirty(snap); snap=_s1TakeSnap(); }
@@ -32605,7 +32606,7 @@ async function _s1ResendAll(auto){
     /* v05.96 · J175 (B) — ask the SERVER first; forget (so: write) only what it lacks or holds differently. A read that fails part-way throws here: nothing was changed. */
     _s1Send.state='checking'; _s1Send.total=snap.size;
     const cloud=await _s1CloudCheck(nb,snap.size,'resend',snap.size);
-    const ap=_s1ApplyCheck(m,snap,cloud,true); _s1Send.known=ap.known; _s1ChkNb=nb;
+    const ap=_s1ApplyCheck(m,snap,cloud,true); _s1Send.known=ap.known; _s1ChkNb=nb; m.chkAt=Date.now();
     await _idbPut('s1:'+nb,m);   /* forgotten before the write: a cut-off run is finished by the next ordinary one */
     _s1Send.state='sending'; _s1Send.total=snap.size;
     const res=await _s1Write(nb,snap,{addOnly:true,progress:true,noCheck:true});
@@ -32624,7 +32625,7 @@ async function _s1ResendAll(auto){
    commit is NEVER cancelled or re-issued: the SDK delivers it when Firebase accepts writes; when it settles, `held` clears.
    B/C: `_s1CloudCheck` pages recs from the server (300 a page, id order, a yield between pages); `_s1ApplyCheck` marks as known (m.s) ONLY a key whose server sig
    equals the snapshot's, and (resend) forgets the rest. A record in pieces is compared by its head doc's sig; the pieces are not read. Nothing is ever deleted. */
-const _S1_STALL_MS=45000, _S1_BIGUNKNOWN=500;
+const _S1_STALL_MS=45000, _S1_BIGUNKNOWN=500, _S1_CHK_AGAIN_MS=12*3600000;   /* _S1_CHK_AGAIN_MS — review: the automatic check runs at most once in 12 h per device (m.chkAt in the sig map) */
 let _s1ChkNb=null;
 const _s1Chk={active:false,done:0,total:0,mode:'',unk:0,err:null,at:0};
 function _s1ResetTime(now){
@@ -32638,7 +32639,7 @@ function _s1ResetTime(now){
 }
 function _s1HeldText(){ const h=_s1Stat.held; return h?h.why:''; }
 function _s1HeldPaint(){
-  try{ setSyncStatus('live'); }catch(e){}
+  try{ setSyncStatus(_s1RawSync||'live'); }catch(e){}   /* repaint what the dot really is (a push may still be running), never a made-up "Live" */
   try{ _swTick(); }catch(e){}
   try{ _s1SendPaint(); }catch(e){}
 }

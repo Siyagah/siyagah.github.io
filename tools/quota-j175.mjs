@@ -140,6 +140,8 @@ if (want('155d')) {
     A = await seeded(cloud, 'A', 1000);
     cloudDrop(cloud, 700, 1000);
     await emptyMap(A, 0, 1000);
+    /* the tablet's map was written by v05.95, which keeps no check time (seeding 1,000 new notes here ran one) */
+    await on(A, async () => { const m = await _s1MapLoad(getSyncConfig().notebookId); delete m.chkAt; await _idbPut('s1:' + getSyncConfig().notebookId, m); });
     await reopen(A);
     await waitFor(() => _s1RdCaught === true && _s1WriteGate() === true, 120000, A);
     const log0 = cloud.log.length, pr0 = cloud.pagedReads || 0;
@@ -158,6 +160,20 @@ if (want('155d')) {
     await on(A, () => { _s1Dirty.full = true; });
     await push(cloud, A); await quiet(cloud, A);
     check(aWrites(cloud, log1) === 400 && (cloud.pagedReads || 0) === pr1, `155d with 400 unknown (under 500) all 400 are written as before (${aWrites(cloud, log1)}) and nothing was checked (${(cloud.pagedReads || 0) - pr1} pages)`);
+    /* review: a reload within 12 h of a check does NOT read the whole cloud again (the owner's tablet: ~28,000 reads each time, free limit ~50,000 a day) */
+    await emptyMap(A, 0, 1000);
+    await on(A, () => { _s1ChkNb = null; });
+    const log2 = cloud.log.length, pr2 = cloud.pagedReads || 0;
+    await on(A, () => { _s1Dirty.full = true; });
+    await push(cloud, A); await quiet(cloud, A);
+    check((cloud.pagedReads || 0) === pr2 && aWrites(cloud, log2) === 1000, `155d a second big unknown set within 12 h is written without a second cloud read (${(cloud.pagedReads || 0) - pr2} pages, ${aWrites(cloud, log2)} written)`);
+    /* …and after 12 h it checks again */
+    await emptyMap(A, 0, 1000);
+    await on(A, async () => { _s1ChkNb = null; const m = await _s1MapLoad(getSyncConfig().notebookId); m.chkAt = Date.now() - 13 * 3600000; await _idbPut('s1:' + getSyncConfig().notebookId, m); });
+    const log3 = cloud.log.length, pr3 = cloud.pagedReads || 0;
+    await on(A, () => { _s1Dirty.full = true; });
+    await push(cloud, A); await quiet(cloud, A);
+    check((cloud.pagedReads || 0) - pr3 >= 3 && aWrites(cloud, log3) === 0, `155d 13 h later the check runs again and writes nothing the cloud already holds (${(cloud.pagedReads || 0) - pr3} pages, ${aWrites(cloud, log3)} written)`);
     errs.push(...A.errors);
   } catch (e) { check(false, `155d threw: ${String(e && e.message || e).split('\n')[0]}`); }
   if (A) await A.ctx.close().catch(() => {});
