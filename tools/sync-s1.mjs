@@ -52,7 +52,11 @@ const FAKE_SDK = String.raw`(function(){
     async get(opts){ const r = await window.__fsGet(path, (opts && opts.source) || 'default'); if (r.error) throw mkErr(r.error); return snap(r.data); },
     async set(data){ const r = await window.__fsCommit([{ t: 'set', p: path, d: JSON.parse(JSON.stringify(data)) }]); if (r.error) throw mkErr(r.error); },
     onSnapshot(cb){ (listeners[path] = listeners[path] || []).push(cb); window.__fsListen(path); return () => { listeners[path] = (listeners[path] || []).filter((x) => x !== cb); }; } }; }
-  function collRef(path){ return { doc: (id) => docRef(path + '/' + id), where: (f, op, v) => query(path, v) }; }
+  /* v05.96 · J175 (Architect review) — orderBy(documentId()).limit(n).startAfter(doc).get({source}) pages through a collection by id,
+     as the real SDK does: v05.96's cloud check runs on a first seed of more than 500 records (51g). Mirrors s1-fake.mjs. */
+  function pq(path, after, lim){ return { orderBy: () => pq(path, after, lim), limit: (n) => pq(path, after, n), startAfter: (s) => pq(path, s && s.id, lim),
+    async get(opts){ const r = await window.__fsListP(path, (opts && opts.source) || 'default', after || '', lim || 0); if (r.error) throw mkErr(r.error); const rows = r.docs.map((x) => ({ id: x.id, data: () => conv(x.d) })); return { size: rows.length, docs: rows, forEach: (cb) => rows.forEach(cb) }; } }; }
+  function collRef(path){ return { doc: (id) => docRef(path + '/' + id), where: (f, op, v) => query(path, v), orderBy: () => pq(path, '', 0) }; }
   function batch(){ const ops = []; const b = {
     set(ref, data){ ops.push({ t: 'set', p: ref._path, d: JSON.parse(JSON.stringify(data)) }); return b; },
     delete(ref){ ops.push({ t: 'del', p: ref._path }); return b; },
@@ -61,6 +65,7 @@ const FAKE_SDK = String.raw`(function(){
   fb.firestore = function(){ return fs; };
   fb.firestore.FieldValue = { serverTimestamp: () => ({ __sts: 1 }) };
   fb.firestore.Timestamp = TS;
+  fb.firestore.FieldPath = { documentId: () => ({ __docId: 1 }) };   /* v05.96 · J175 */
   fb.firestore.Blob = FB;
   fb.auth = function(){ return { setPersistence: async () => {}, signInWithPopup: async () => ({}), signOut: async () => {},
     currentUser: { uid: 'u-s1' }, onAuthStateChanged(cb){ setTimeout(() => cb({ uid: 'u-s1', email: 'owner@example.invalid' }), 30); return () => {}; } }; };
@@ -174,6 +179,10 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
     await sleep(10 + Math.random() * 30);
     return { data: cloud.store.has(path) ? cloud.store.get(path) : null };
   });
+  await ctx.exposeBinding('__fsListP', async (_s, path, src, after, lim) => {   /* v05.96 · J175 — a paged server read by id; offline fails it */
+    await sleep(10); if (d.offline && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get documents from server.' } };
+    let docs = []; for (const [p, v] of cloud.store) if (p.startsWith(path + '/') && !p.slice(path.length + 1).includes('/')) docs.push({ id: p.split('/').pop(), d: v });
+    docs.sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0)); if (after) docs = docs.filter((x) => x.id > after); if (lim) docs = docs.slice(0, lim); return { docs }; });
   await ctx.exposeBinding('__fsListen', async (_s, path) => { d.listens.add(path); const data = cloud.store.has(path) ? cloud.store.get(path) : null; setTimeout(() => d.page.evaluate(([p, x]) => window.__fsDeliver && window.__fsDeliver(p, x), [path, data]).catch(() => {}), 50); });
   await ctx.exposeBinding('__fsListenQ', async (_s, id, path, cur) => { d.qsubs.set(id, { path, cur, sent: new Map() }); setTimeout(() => cloud.deliverQ(d, id, true), 50); });
   await ctx.exposeBinding('__fsUnlistenQ', async (_s, id) => { d.qsubs.delete(id); });
