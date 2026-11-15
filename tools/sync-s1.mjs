@@ -195,6 +195,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
     rows.sort((a, b) => cmp(a.d.at.__ts, b.d.at.__ts) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     if (after) rows = rows.filter((x) => { const c = cmp(x.d.at.__ts, [after[0], after[1]]); return c > 0 || (c === 0 && x.id > after[2]); });
     if (lim) rows = rows.slice(0, lim);
+    d.qDelivered += rows.length; d.qChangeLog.push(...rows.map((x) => ({ id: x.id, at: x.d.at.__ts })));   /* v05.97 (Architect review): a page delivers records too (51l counts them) */
     cloud.pagedAt = (cloud.pagedAt || 0) + 1; (cloud.pageLog = cloud.pageLog || []).push({ dev: d.name, after: after ? after[2] : null, n: rows.length });
     cloud.reads.push({ p: path + '/*at', dev: d.name }); return { docs: rows }; });
   await ctx.exposeBinding('__fsListen', async (_s, path) => { d.listens.add(path); const data = cloud.store.has(path) ? cloud.store.get(path) : null; setTimeout(() => d.page.evaluate(([p, x]) => window.__fsDeliver && window.__fsDeliver(p, x), [path, data]).catch(() => {}), 50); });
