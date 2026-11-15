@@ -34,6 +34,7 @@ const PAUSED = /^Paused: today's share of the free cloud limit is used\. Carries
 const RDHELD = /Firebase is not answering reads right now, most likely its free daily limit \(about 50,000 reads a day\)\. It carries on by itself after \d{1,2}:\d{2} (am|pm)\./;
 const recKeys = (cloud) => [...cloud.store.keys()].filter((p) => p.startsWith(NB + '/recs/'));
 const addNotes = (d, n) => on(d, (n) => { const a0 = DB.articles[0]; for (let i = 0; i < n; i++) DB.articles.push({ ...a0, id: 'j176-n' + i, title: 'Note ' + i, content: '<p>text ' + i + '</p>', folderIds: [...a0.folderIds], tags: [] }); persist(); }, n);
+const dbJson = (d) => on(d, () => JSON.stringify(DB));
 const dbHash = (d) => on(d, () => { const s = JSON.stringify(DB); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return s.length + ':' + h; });
 const caught = (d) => on(d, () => !!_s1RdCaught && !_s1RepUnmerged && !_pullInFlight);
 const repDump = (d) => on(d, () => JSON.stringify([..._s1Rep.map.entries()].map(([k, e]) => [k, e.sig, e.at, !!e.gone]).sort((a, b) => (a[0] < b[0] ? -1 : 1))));
@@ -133,7 +134,7 @@ if (want('156c') && B) {
 }
 
 /* ══ 156d — the automatic check never re-reads the whole cloud twice inside 12 h ══ */
-if (B && (want('156d') || want('156g'))) hBefore = await dbHash(B);
+if (B && (want('156d') || want('156g'))) hBefore = await dbJson(B);
 if (want('156d') && B) {
   try {
     const dropPicks = async () => {   /* delete from the cloud 5 of the 12 records the spot check will ask for */
@@ -163,6 +164,7 @@ if (want('156d') && B) {
   } catch (e) { check(false, `156d threw: ${String(e && e.message || e).split('\n')[0]}`); }
 }
 
+let hD = null; if (B && want('156g')) hD = await dbJson(B);   /* after 156d: the window 156d is compared over */
 /* ══ 156e — the daily budget ══ */
 if (want('156e')) {
   let F = null, P = null;
@@ -202,6 +204,7 @@ if (want('156e')) {
   for (const d of [F, P]) if (d) await d.ctx.close().catch(() => {});
 }
 
+let hF0 = null; if (B && want('156g')) hF0 = await dbJson(B);   /* before 156f (156e edits a note from another device on purpose, so it is not in a window) */
 /* ══ 156f — a refused read is named ══ */
 if (want('156f') && B) {
   let N = null;
@@ -230,8 +233,23 @@ if (want('156f') && B) {
   if (N) await N.ctx.close().catch(() => {});
 }
 
+let hF1 = null; if (B && want('156g')) hF1 = await dbJson(B);
 /* ══ 156g — DB unchanged, the words at three sizes ══ */
-if (want('156g') && B && hBefore) check(hBefore === await dbHash(B), '156g JSON.stringify(DB) of the existing device is unchanged by 156d–156f', hBefore + ' → ' + await dbHash(B));
+/* Architect review: compared key by key, value by value. Two things a merge may do without changing any content are allowed: give a record that had NO
+   updatedAt its first stamp (the existing _stampRecordTouches sweep; seen on the four built-in noteKindCats), and rebuild DB with its top-level keys in
+   another order. Any other difference fails and is listed. */
+const dbSame = (h0, h1) => {
+  const a0 = JSON.parse(h0), b0 = JSON.parse(h1), stamped = [];
+  for (const k of Object.keys(b0)) if (Array.isArray(b0[k]) && Array.isArray(a0[k])) b0[k].forEach((r, i) => { const o = a0[k][i]; if (r && o && typeof r === 'object' && o.updatedAt === undefined && r.updatedAt !== undefined && r.id === o.id) { delete r.updatedAt; stamped.push(k + '~' + r.id); } });
+  const dif = [];
+  for (const k of new Set([...Object.keys(a0), ...Object.keys(b0)])) { const x = JSON.stringify(a0[k]), y = JSON.stringify(b0[k]); if (x !== y) { if (a0[k] && b0[k] && typeof a0[k] === 'object') { for (const kk of new Set([...Object.keys(a0[k]), ...Object.keys(b0[k])])) if (JSON.stringify(a0[k][kk]) !== JSON.stringify(b0[k][kk])) dif.push(k + '.' + kk + ': ' + String(JSON.stringify(a0[k][kk])).slice(0, 140) + ' → ' + String(JSON.stringify(b0[k][kk])).slice(0, 140)); } else dif.push(k); } }
+  return { ok: dif.length === 0, stamped, dif };
+};
+/* Architect review: compared key by key, value by value, over the two steps that must change nothing (156d's skipped re-read, 156f's refused read);
+   156e edits a note from a second device on purpose, so it sits between the windows. Allowed without a change of content: a first updatedAt on a record
+   that had none (the existing _stampRecordTouches sweep; seen on the four built-in noteKindCats) and the top-level keys in another order. */
+if (want('156g') && B && hBefore && hD) { const r = dbSame(hBefore, hD); check(r.ok, `156g DB of the existing device is unchanged by 156d (apart from a first updatedAt on ${r.stamped.length} record(s) that had none)`, r.dif.slice(0, 6).join(' | ')); }
+if (want('156g') && B && hF0 && hF1) { const r = dbSame(hF0, hF1); check(r.ok, `156g DB of the existing device is unchanged by 156f (apart from a first updatedAt on ${r.stamped.length} record(s) that had none)`, r.dif.slice(0, 6).join(' | ')); }
 if (want('156g')) {
   for (const vp of [{ w: 390, h: 844, touch: true }, { w: 820, h: 1180, touch: true }, { w: 1440, h: 900, touch: false }]) {
     const c2 = makeCloud(); let G = null;
@@ -259,6 +277,23 @@ if (want('156g')) {
     } catch (e) { check(false, `156g@${vp.w} threw: ${String(e && e.message || e).split('\n')[0]}`); }
     if (G) await G.ctx.close().catch(() => {});
   }
+}
+/* ══ 156h — Architect review: a device that already holds notes never merges a half-read replica (the "merge the FULL replica" rule) ══ */
+if (want('156h') && B) {
+  try {
+    await on(B, () => { window.__mergeN = 0; const f = window._pullRecsMerge; window._pullRecsMerge = function () { window.__mergeN++; return f.apply(this, arguments); }; window.__s1PageRetry = [1500]; });
+    B.failListAfter = 2;
+    await on(B, () => { _s1ReRead(); });
+    const stalled = await waitFor(() => !!(_s1Stat.rd && _s1Stat.rd.paging && _s1Stat.rd.paging.nextAt), 60000, B);
+    await sleep(2500);
+    const mid = await on(B, () => ({ n: window.__mergeN, fresh: _s1Stat.rd.paging.fresh }));
+    check(stalled && mid.fresh === false && mid.n === 0, `156h a device holding notes whose re-read stalls after page 2 merges nothing meanwhile (fresh ${mid.fresh}, ${mid.n} merges)`);
+    B.failListAfter = null;
+    await waitFor(() => !!_s1RdCaught && !(_s1Stat.rd.paging && _s1Stat.rd.paging.active), 90000, B); await quiet(cloud, B);
+    const end = await on(B, () => ({ n: window.__mergeN, notes: DB.articles.length, caught: _s1RdCaught, active: !!(_s1Stat.rd.paging && _s1Stat.rd.paging.active), unmerged: !!_s1RepUnmerged }));
+    check(end.caught && !end.active && !end.unmerged && end.notes >= NOTES, `156h the re-read finished, nothing waits to be merged, and every note is still there (${end.notes} notes; ${end.n} merges were needed)`);
+    await on(B, () => { window.__s1PageRetry = undefined; });
+  } catch (e) { check(false, `156h threw: ${String(e && e.message || e).split('\n')[0]}`); }
 }
 if (B) await B.ctx.close().catch(() => {});
 

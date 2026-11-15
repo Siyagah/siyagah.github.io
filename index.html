@@ -32748,9 +32748,15 @@ async function _s1PagedRead(cfg, gen, nbRef, recsC, st){
   const rep=_s1Rep, nb=rep.nb;
   await _bgLoad();
   const pg=st.paging={active:true,done:0,total:(_bg&&_bg.cn)||0,since:Date.now(),nextAt:0};
-  try{ await _idbPut('s1page:'+nb,{at:Date.now()}); }catch(e){}
+  /* Architect review: a half-read replica is merged ONLY on a device that held no notes or folders when its first read began (`fresh`, kept in the marker
+     across a reload). The rule is "merge the FULL replica": mergeDB()'s v04.65 guard reads the whole remote side, and a partial one could let a tombstone
+     remove a note this device holds whose live rec is in a later page. A fresh device has nothing to lose, and shows what has arrived so far. */
+  let mk0=null; try{ mk0=await _idbGet('s1page:'+nb); }catch(e){}
+  const fresh=(mk0&&typeof mk0==='object'&&'fresh' in mk0)?!!mk0.fresh:_s1OwnCount()===0;
+  pg.fresh=fresh;
+  try{ await _idbPut('s1page:'+nb,{at:Date.now(),fresh:fresh}); }catch(e){}
   let last=null, fails=0;
-  const fin=()=>{ if(_s1RepUnmerged&&!_pullInFlight) _pullRecsMerge(); else if(_s1RepUnmerged) _s1RecsMergeQueued=true; };
+  const fin=(whole)=>{ if(!whole&&!fresh) return; if(_s1RepUnmerged&&!_pullInFlight) _pullRecsMerge(); else if(_s1RepUnmerged) _s1RecsMergeQueued=true; };
   for(;;){
     if(gen!==_s1RdGen){ pg.active=false; return false; }
     if(_bgRoom('r')<=0){ pg.active=false; _bgPause('r','page'); fin(); return false; }
@@ -32777,7 +32783,7 @@ async function _s1PagedRead(cfg, gen, nbRef, recsC, st){
     last=sn.docs[sn.docs.length-1];
     await _yieldTask();
   }
-  pg.active=false; _bgSetCn(st.records); fin();
+  pg.active=false; _bgSetCn(st.records); fin(true);
   try{ await _idbPut('s1page:'+nb,null); }catch(e){}
   return true;
 }
