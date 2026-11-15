@@ -32701,7 +32701,7 @@ function _bgUsed(k){ _bgRoll(); return _bg[k==='w'?'w':'r']; }
 function _bgRoom(k){ return _bgLimit(k)-_bgUsed(k); }
 function _bgAdd(k,n){ _bgRoll(); _bg[k==='w'?'w':'r']+=n; _bgSave(); }
 function _bgSetCn(n){ _bgRoll(); if(n>0&&_bg.cn!==n){ _bg.cn=n; _bgSave(); } }
-function _bgWords(now){ return 'Paused: today’s share of the free cloud limit is used. Carries on by itself after '+_s1ResetTime(now)+'.'; }
+function _bgWords(now){ return "Paused: today's share of the free cloud limit is used. Carries on by itself after "+_s1ResetTime(now)+'.'; }
 function _bgPause(kind,job){
   const now=_bgNow(); _s1Stat.big={since:now,kind:kind,job:job,day:_bgDay(now),why:_bgWords(now)};
   try{ _s1SendPaint(); }catch(e){}

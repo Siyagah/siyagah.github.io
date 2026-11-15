@@ -25,7 +25,9 @@ const FAKE_SDK = String.raw`(function(){
   window.__fsDeliverQ = (id, changes) => { const l = qls[id]; if (!l) return;
     try { l.cb({ docChanges: () => changes.map((c) => ({ type: c.type, doc: { id: c.id, data: () => conv(c.data), metadata: { hasPendingWrites: !!c.pending } } })) }); } catch (e) { console.error(e); } };
   window.__fsDeliverQErr = (id, e) => { const l = qls[id]; if (l && l.err) l.err(mkErr(e)); };
-  function query(path, cur){ const q = { orderBy(){ return q; },
+  function query(path, cur, after, lim){ const q = { orderBy(){ return q; }, limit: (n) => query(path, cur, after, n),
+    startAfter: (s) => { const t = s.data().at; return query(path, cur, [t.seconds, t.nanoseconds, s.id], lim); },   /* v05.97 · J176: the paged first read */
+    async get(opts){ const r = await window.__fsListAt(path, (opts && opts.source) || 'default', [cur.seconds, cur.nanoseconds], after || null, lim || 0); if (r.error) throw mkErr(r.error); const docs = r.docs.map((x) => ({ id: x.id, data: () => conv(x.d), metadata: { hasPendingWrites: false } })); return { size: docs.length, docs, forEach: (cb) => docs.forEach(cb), docChanges: () => docs.map((doc) => ({ type: 'added', doc })) }; },
     onSnapshot(cb, err){ const id = ++qid; qls[id] = { cb, err }; window.__fsListenQ(id, path, [cur.seconds, cur.nanoseconds]); return () => { delete qls[id]; window.__fsUnlistenQ(id); }; } }; return q; }
   function docRef(path){ return { _path: path, id: path.split('/').pop(),
     collection: (n) => collRef(path + '/' + n),
@@ -163,13 +165,14 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
   const realSiteHit = (r) => { d.errors.push('real-site request: ' + r.request().url()); r.abort(); };
   await ctx.route('**://mappingmyjourney.com/**', realSiteHit);
   await ctx.route('**://*.mappingmyjourney.com/**', realSiteHit);
+  if (opts.init) await ctx.addInitScript(opts.init);   /* v05.97 · J176: page-side test hooks that survive a reload (__bigReads, __s1PageRetry…) */
   if (opts.builtinOff) await ctx.addInitScript('window.__builtinOff = true;');   /* v05.87: _BUILTIN_ON ships true; a check that is not about the built-in sign-in turns it off */
   await ctx.addInitScript(([db, c, recsOnly, noCfg]) => {
     /* noCfg (v05.85, J144): a fresh browser with no sync config of its own */
     try { if (!localStorage.getItem('my-notebook-v1')) localStorage.setItem('my-notebook-v1', JSON.stringify(db)); if (!noCfg) localStorage.setItem('siyagah-sync-v1', JSON.stringify(c)); } catch {}
     if (recsOnly) window.__s1RecsOnly = true;   /* test-only: this device does not read the blob */
   }, [seed, cfg, !!opts.recsOnly, !!opts.noCfg]);
-  const d = { name, ctx, offline: false, eqsubs: new Map(), listens: new Set(), errors: [], dieAfterRec: null, qsubs: new Map(), qchain: Promise.resolve(), qDelivered: 0, qChangeLog: [], partHook: null, holdQ: !!opts.holdQ, sdkBlock: !!opts.blockSdk, grace: opts.grace || 1500 };
+  const d = { name, ctx, offline: false, eqsubs: new Map(), listens: new Set(), errors: [], dieAfterRec: null, qsubs: new Map(), qchain: Promise.resolve(), qDelivered: 0, qChangeLog: [], partHook: null, holdQ: !!opts.holdQ, failListAfter: opts.failListAfter != null ? opts.failListAfter : null, failCode: opts.failCode || null, sdkBlock: !!opts.blockSdk, grace: opts.grace || 1500 };
   await ctx.exposeBinding('__fsGet', async (_s, path, src) => {
     if ((d.offline || d.failReads) && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get document because the client is offline.' } };   /* v05.96 · J175: d.failReads = server reads fail */
     if (cloud.refusedRead(path)) return { error: { code: 'permission-denied', message: 'Missing or insufficient permissions.' } };
@@ -189,6 +192,18 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
     let docs = []; for (const [p, v] of cloud.store) if (p.startsWith(path + '/') && !p.slice(path.length + 1).includes('/')) docs.push({ id: p.split('/').pop(), d: v });
     if (lim) { docs.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)); if (after) docs = docs.filter((x) => x.id > after); docs = docs.slice(0, lim); cloud.pagedReads = (cloud.pagedReads || 0) + 1; }
     cloud.reads.push({ p: path + '/*', dev: d.name }); return { docs }; });
+  /* v05.97 · J176 — where('at','>',x).orderBy('at').limit(n).startAfter(doc).get({source}): the paged first read. Rows in (at, id) order; d.failReads / d.offline / d.failListAfter (n pages
+     let through, then fail) fail it with d.failCode (default 'unavailable'); cloud.pagedAt counts the pages, cloud.pageLog says which ones. Mirrors s1-fake.mjs / sync-s1.mjs. */
+  await ctx.exposeBinding('__fsListAt', async (_s, path, src, cur, after, lim) => { await sleep(10);
+    if (d.offline || d.failReads || (d.failListAfter != null && d.failListAfter <= 0)) return { error: { code: d.failCode || 'unavailable', message: 'Failed to get documents from server.' } };
+    if (d.failListAfter != null) d.failListAfter--;
+    const cmp = (a, b) => (a[0] - b[0]) || (a[1] - b[1]);
+    let rows = []; for (const [p, v] of cloud.store) { if (!p.startsWith(path + '/') || p.slice(path.length + 1).includes('/')) continue; if (!v.at || !v.at.__ts || cmp(v.at.__ts, cur) <= 0) continue; rows.push({ id: p.split('/').pop(), d: v }); }
+    rows.sort((a, b) => cmp(a.d.at.__ts, b.d.at.__ts) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    if (after) rows = rows.filter((x) => { const c = cmp(x.d.at.__ts, [after[0], after[1]]); return c > 0 || (c === 0 && x.id > after[2]); });
+    if (lim) rows = rows.slice(0, lim);
+    cloud.pagedAt = (cloud.pagedAt || 0) + 1; (cloud.pageLog = cloud.pageLog || []).push({ dev: d.name, after: after ? after[2] : null, n: rows.length });
+    cloud.reads.push({ p: path + '/*at', dev: d.name }); return { docs: rows }; });
   await ctx.exposeBinding('__fsListen', async (_s, path) => { d.listens.add(path); const data = cloud.store.has(path) ? cloud.store.get(path) : null; setTimeout(() => d.page.evaluate(([p, x]) => window.__fsDeliver && window.__fsDeliver(p, x), [path, data]).catch(() => {}), 50); });
   await ctx.exposeBinding('__fsListenQ', async (_s, id, path, cur) => { d.qsubs.set(id, { path, cur, sent: new Map() }); setTimeout(() => cloud.deliverQ(d, id, true), 50); });
   await ctx.exposeBinding('__fsUnlistenQ', async (_s, id) => { d.qsubs.delete(id); });
