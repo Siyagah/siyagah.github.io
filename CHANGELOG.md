@@ -11591,3 +11591,7 @@ J172 (the owner: a JSON backup on the phone/tablet was left as a 0-byte file). O
 **C — a big unknown set is checked first.** In `_s1Exec`, when more than `_S1_BIGUNKNOWN` (500; hook `window.__s1BigUnknown`) snapshot keys have no sig-map entry, the same check runs once per page load (no dialog; Diagnostics "Checking the cloud"), marks the keys the cloud holds unchanged, writes the rest. Under 500: as before. Still behind `_s1WriteGate()`, and the snapshot is retaken after the check if a merge moved.
 
 **Not changed:** `mergeDB()`, the replica, the reader, the blob, `_s1AutoCheck`'s rule. The sig map stays a belief; only a server read made this session makes a key "known". **Not done:** the daily write count is not measured (Firebase gives the app no way to read it); the reset time assumes midnight Pacific every day (off by an hour on the two DST-change days). Check: block 155, `tools/quota-j175.mjs`; the fake (`tools/s1-fake.mjs`) gained paged reads (`orderBy/limit/startAfter`), `FieldPath.documentId`, `d.holdCommits`, `d.failReads`, `d.failListAfter`.
+
+## v05.97 — J176 (stub)
+
+Live inside the free cloud limits: paged resumable first read, 12 h limit on the automatic re-read, a daily budget for whole-notebook jobs, a reached read limit named. Entry to be completed.
