@@ -45,7 +45,9 @@ const FAKE_SDK = String.raw`(function(){
   window.__fsDeliverQ = (id, changes) => { const l = qls[id]; if (!l) return;
     try { l.cb({ docChanges: () => changes.map((c) => ({ type: c.type, doc: { id: c.id, data: () => conv(c.data), metadata: { hasPendingWrites: !!c.pending } } })) }); } catch (e) { console.error(e); } };
   window.__fsDeliverQErr = (id, e) => { const l = qls[id]; if (l && l.err) l.err(mkErr(e)); };
-  function query(path, cur){ const q = { orderBy(){ return q; },
+  function query(path, cur, after, lim){ const q = { orderBy(){ return q; }, limit: (n) => query(path, cur, after, n),
+    startAfter: (s) => { const t = s.data().at; return query(path, cur, [t.seconds, t.nanoseconds, s.id], lim); },   /* v05.97 · J176: the paged first read */
+    async get(opts){ const r = await window.__fsListAt(path, (opts && opts.source) || 'default', [cur.seconds, cur.nanoseconds], after || null, lim || 0); if (r.error) throw mkErr(r.error); const docs = r.docs.map((x) => ({ id: x.id, data: () => conv(x.d), metadata: { hasPendingWrites: false } })); return { size: docs.length, docs, forEach: (cb) => docs.forEach(cb), docChanges: () => docs.map((doc) => ({ type: 'added', doc })) }; },
     onSnapshot(cb, err){ const id = ++qid; qls[id] = { cb, err }; window.__fsListenQ(id, path, [cur.seconds, cur.nanoseconds]); return () => { delete qls[id]; window.__fsUnlistenQ(id); }; } }; return q; }
   function docRef(path){ return { _path: path, id: path.split('/').pop(),
     collection: (n) => collRef(path + '/' + n),
@@ -183,6 +185,19 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
     await sleep(10); if (d.offline && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get documents from server.' } };
     let docs = []; for (const [p, v] of cloud.store) if (p.startsWith(path + '/') && !p.slice(path.length + 1).includes('/')) docs.push({ id: p.split('/').pop(), d: v });
     docs.sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0)); if (after) docs = docs.filter((x) => x.id > after); if (lim) docs = docs.slice(0, lim); return { docs }; });
+  /* v05.97 · J176 — where('at','>',x).orderBy('at').limit(n).startAfter(doc).get({source}): the paged first read. Rows in (at, id) order; d.failReads / d.offline / d.failListAfter (n pages
+     let through, then fail) fail it with d.failCode (default 'unavailable'); cloud.pagedAt counts the pages, cloud.pageLog says which ones. Mirrors s1-fake.mjs / sync-s1.mjs. */
+  await ctx.exposeBinding('__fsListAt', async (_s, path, src, cur, after, lim) => { await sleep(10);
+    if (d.offline || d.failReads || (d.failListAfter != null && d.failListAfter <= 0)) return { error: { code: d.failCode || 'unavailable', message: 'Failed to get documents from server.' } };
+    if (d.failListAfter != null) d.failListAfter--;
+    const cmp = (a, b) => (a[0] - b[0]) || (a[1] - b[1]);
+    let rows = []; for (const [p, v] of cloud.store) { if (!p.startsWith(path + '/') || p.slice(path.length + 1).includes('/')) continue; if (!v.at || !v.at.__ts || cmp(v.at.__ts, cur) <= 0) continue; rows.push({ id: p.split('/').pop(), d: v }); }
+    rows.sort((a, b) => cmp(a.d.at.__ts, b.d.at.__ts) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    if (after) rows = rows.filter((x) => { const c = cmp(x.d.at.__ts, [after[0], after[1]]); return c > 0 || (c === 0 && x.id > after[2]); });
+    if (lim) rows = rows.slice(0, lim);
+    d.qDelivered += rows.length; d.qChangeLog.push(...rows.map((x) => ({ id: x.id, at: x.d.at.__ts })));   /* v05.97 (Architect review): a page delivers records too (51l counts them) */
+    cloud.pagedAt = (cloud.pagedAt || 0) + 1; (cloud.pageLog = cloud.pageLog || []).push({ dev: d.name, after: after ? after[2] : null, n: rows.length });
+    cloud.reads.push({ p: path + '/*at', dev: d.name }); return { docs: rows }; });
   await ctx.exposeBinding('__fsListen', async (_s, path) => { d.listens.add(path); const data = cloud.store.has(path) ? cloud.store.get(path) : null; setTimeout(() => d.page.evaluate(([p, x]) => window.__fsDeliver && window.__fsDeliver(p, x), [path, data]).catch(() => {}), 50); });
   await ctx.exposeBinding('__fsListenQ', async (_s, id, path, cur) => { d.qsubs.set(id, { path, cur, sent: new Map() }); setTimeout(() => cloud.deliverQ(d, id, true), 50); });
   await ctx.exposeBinding('__fsUnlistenQ', async (_s, id) => { d.qsubs.delete(id); });

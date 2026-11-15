@@ -44,7 +44,10 @@ const FAKE_SDK = String.raw`(function(){
   let qid = 0; const qls = {};
   window.__fsDeliverQ = (id, changes) => { const l = qls[id]; if (!l) return;
     try { l.cb({ docChanges: () => changes.map((c) => ({ type: c.type, doc: { id: c.id, data: () => conv(c.data), metadata: { hasPendingWrites: false } } })) }); } catch (e) { console.error(e); } };
-  function query(path, cur){ const q = { orderBy(){ return q; },
+  /* v05.97 · J176 (Architect review): the paged first read — where('at','>',x).orderBy('at').limit(n).startAfter(doc).get({source}), as in s1-fake.mjs / sync-s1.mjs */
+  function query(path, cur, after, lim){ const q = { orderBy(){ return q; }, limit: (n) => query(path, cur, after, n),
+    startAfter: (s) => { const t = s.data().at; return query(path, cur, [t.seconds, t.nanoseconds, s.id], lim); },
+    async get(opts){ const r = await window.__fsListAt(path, (opts && opts.source) || 'default', [cur.seconds, cur.nanoseconds], after || null, lim || 0); if (r.error) throw mkErr(r.error); const docs = r.docs.map((x) => ({ id: x.id, data: () => conv(x.d), metadata: { hasPendingWrites: false } })); return { size: docs.length, docs, forEach: (cb) => docs.forEach(cb), docChanges: () => docs.map((doc) => ({ type: 'added', doc })) }; },
     onSnapshot(cb, err){ const id = ++qid; qls[id] = { cb, err }; window.__fsListenQ(id, path, [cur.seconds, cur.nanoseconds]); return () => { delete qls[id]; window.__fsUnlistenQ(id); }; } }; return q; }
   function docRef(path){ return { _path: path, id: path.split('/').pop(),
     collection: (n) => collRef(path + '/' + n),
@@ -145,6 +148,16 @@ async function addDevice(browser, base, name, viewport, touch, seed, cfg) {
     return { data: store.has(path) ? store.get(path) : null };
   });
   await ctx.exposeBinding('__fsListen', async (_s, path) => { d.listens.add(path); deliverTo(d, path); });
+  await ctx.exposeBinding('__fsListAt', async (_s, path, src, cur, after, lim) => {   /* v05.97 · J176 (Architect review) */
+    if (d.offline && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get documents from server.' } };
+    await sleep(20 + Math.random() * 40);
+    const cmp = (x, y) => (x[0] - y[0]) || (x[1] - y[1]);
+    let rows = []; for (const [p, v] of store) { if (!p.startsWith(path + '/') || p.slice(path.length + 1).includes('/')) continue; if (!v.at || !v.at.__ts || cmp(v.at.__ts, cur) <= 0) continue; rows.push({ id: p.split('/').pop(), d: v }); }
+    rows.sort((x, y) => cmp(x.d.at.__ts, y.d.at.__ts) || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
+    if (after) rows = rows.filter((x) => { const c = cmp(x.d.at.__ts, [after[0], after[1]]); return c > 0 || (c === 0 && x.id > after[2]); });
+    if (lim) rows = rows.slice(0, lim);
+    return { docs: JSON.parse(JSON.stringify(rows)) };
+  });
   await ctx.exposeBinding('__fsCommit', async (_s, ops) => {
     /* Offline: the real SDK queues the write and resolves it once the
        server has it — it does not fail. So does this. */
