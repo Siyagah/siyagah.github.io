@@ -2540,6 +2540,9 @@ await r.block('6o-1-menu-reorg', async () => {
     /* v05.78 (issue #281, J110 ②) — 📥 OneNote import in 🧰 Tools → Create, under 📥 Keep import, added on purpose
        (updated in place; block 137a proves a real tap reaches it). */
     'openOneNoteImport',
+    /* v05.98 (issue #321, J177) — 🧹 Find duplicate notes in 🧰 Tools, above 📥 Evernote import, added on purpose
+       (the Architect's full run caught it; updated in place; block 157g proves a real click reaches it). */
+    'openDupFinder',
     /* v05.52 (J82) — 🪟 Side pane: pop out or full width in 🧰 Tools → View, added on purpose (the Architect's full run caught it; updated in place). */
     '_ppMenu'];
   const now = [...m.tools, ...m.menu].map((x) => x.fn);
