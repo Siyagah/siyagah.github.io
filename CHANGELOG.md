@@ -11605,3 +11605,6 @@ The Firebase project is on the free plan (owner's decision, 15 Nov 2026: stay fr
 - **E. Diagnostics "Big jobs today"**: "reads N of 30,000 · writes N of 15,000 · resets h:mm".
 - **F. Not changed:** `mergeDB()`, the write gate, the sig map's meaning, the blob, pictures; nothing is deleted from the cloud.
 - Harness: both Firestore stand-ins (`tools/s1-fake.mjs`, `tools/sync-s1.mjs`) answer `where('at','>',x).orderBy('at').limit(n).startAfter(doc).get(opts)`; `d.failCode` sets the code of a failed paged read. Check: block 156, `tools/budget-j176.mjs`.
+
+## v05.98 — J177 (stub)
+- 🧹 Find duplicate notes (work in progress; see the final entry below once written).
