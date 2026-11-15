@@ -38,7 +38,10 @@ const FAKE_SDK = String.raw`(function(){
   function eqQuery(path, f, v, lim){ const q = { limit: (n) => eqQuery(path, f, v, n),
     async get(){ const r = await window.__fsListEq(path, f, v, lim || 0); const rows = r.docs.map((x) => ({ id: x.id, data: () => conv(x.d) })); return { size: rows.length, docs: rows, forEach: (cb) => rows.forEach(cb) }; },
     onSnapshot(cb, err){ const id = ++eqid; eqls[id] = { cb, err }; window.__fsListenEq(id, path, f, v, lim || 0); return () => { delete eqls[id]; window.__fsUnlistenEq(id); }; } }; return q; }
-  function collRef(path){ return { doc: (id) => docRef(path + '/' + id), where: (f, op, v) => (op === '==' ? eqQuery(path, f, v, 0) : query(path, v)),
+  /* v05.96 · J175 — orderBy(documentId()).limit(n).startAfter(doc).get({source}) pages through a collection by id */
+  function pq(path, after, lim){ return { orderBy: () => pq(path, after, lim), limit: (n) => pq(path, after, n), startAfter: (s) => pq(path, s && s.id, lim),
+    async get(opts){ const r = await window.__fsList(path, (opts && opts.source) || 'default', after || '', lim || 0); if (r.error) throw mkErr(r.error); const rows = r.docs.map((x) => ({ id: x.id, data: () => conv(x.d) })); return { size: rows.length, docs: rows, forEach: (cb) => rows.forEach(cb) }; } }; }
+  function collRef(path){ return { doc: (id) => docRef(path + '/' + id), orderBy: () => pq(path, '', 0), where: (f, op, v) => (op === '==' ? eqQuery(path, f, v, 0) : query(path, v)),
     async get(){ const r = await window.__fsList(path); const rows = r.docs.map((x) => ({ id: x.id, data: () => conv(x.d) })); return { size: rows.length, forEach: (cb) => rows.forEach(cb) }; } }; }
   function batch(){ const ops = []; const b = {
     set(ref, data){ ops.push({ t: 'set', p: ref._path, d: JSON.parse(JSON.stringify(data)) }); return b; },
@@ -49,6 +52,7 @@ const FAKE_SDK = String.raw`(function(){
   fb.firestore = function(){ return fs; };
   fb.firestore.FieldValue = { serverTimestamp: () => ({ __sts: 1 }), increment: (n) => ({ __inc: n }) };   /* v05.27 — S4c: the usage counter */
   fb.firestore.Timestamp = TS;
+  fb.firestore.FieldPath = { documentId: () => ({ __docId: 1 }) };   /* v05.96 · J175 */
   fb.firestore.Blob = FB;
   fb.auth = function(){ return { setPersistence: async () => {}, signInWithPopup: async () => ({}), signOut: async () => {},
     currentUser: { uid: 'u-s1' }, onAuthStateChanged(cb){ setTimeout(() => cb({ uid: 'u-s1', email: 'owner@example.invalid' }), 30); return () => {}; } }; };
@@ -167,7 +171,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
   }, [seed, cfg, !!opts.recsOnly, !!opts.noCfg]);
   const d = { name, ctx, offline: false, eqsubs: new Map(), listens: new Set(), errors: [], dieAfterRec: null, qsubs: new Map(), qchain: Promise.resolve(), qDelivered: 0, qChangeLog: [], partHook: null, holdQ: !!opts.holdQ, sdkBlock: !!opts.blockSdk, grace: opts.grace || 1500 };
   await ctx.exposeBinding('__fsGet', async (_s, path, src) => {
-    if (d.offline && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get document because the client is offline.' } };
+    if ((d.offline || d.failReads) && src !== 'cache') return { error: { code: 'unavailable', message: 'Failed to get document because the client is offline.' } };   /* v05.96 · J175: d.failReads = server reads fail */
     if (cloud.refusedRead(path)) return { error: { code: 'permission-denied', message: 'Missing or insufficient permissions.' } };
     if (d.partHook && /\/recparts\//.test(path)) { const h = d.partHook; d.partHook = null; await h(path); }
     cloud.reads.push({ p: path, dev: d.name });
@@ -177,13 +181,21 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
   await ctx.exposeBinding('__fsListEq', async (_s, path, f, v, lim) => { await sleep(10); if (d.offline) return { docs: [] }; return { docs: cloud.eqRows({ path, f, v, lim }) }; });
   await ctx.exposeBinding('__fsListenEq', async (_s, id, path, f, v, lim) => { d.eqsubs.set(id, { path, f, v, lim, sig: null }); setTimeout(() => cloud.deliverEq(d, id), 50); });
   await ctx.exposeBinding('__fsUnlistenEq', async (_s, id) => { d.eqsubs.delete(id); });
-  await ctx.exposeBinding('__fsList', async (_s, path) => { await sleep(10); const docs = []; for (const [p, v] of cloud.store) if (p.startsWith(path + '/') && !p.slice(path.length + 1).includes('/')) docs.push({ id: p.split('/').pop(), d: v }); cloud.reads.push({ p: path + '/*', dev: d.name }); return { docs }; });
+  await ctx.exposeBinding('__fsList', async (_s, path, src, after, lim) => { await sleep(10);
+    if (lim) {   /* v05.96 · J175 — a paged server read: d.failReads fails it; d.failListAfter = n lets n pages through, then fails */
+      if (d.offline || d.failReads || (d.failListAfter != null && d.failListAfter <= 0)) return { error: { code: 'unavailable', message: 'Failed to get documents from server.' } };
+      if (d.failListAfter != null) d.failListAfter--;
+    }
+    let docs = []; for (const [p, v] of cloud.store) if (p.startsWith(path + '/') && !p.slice(path.length + 1).includes('/')) docs.push({ id: p.split('/').pop(), d: v });
+    if (lim) { docs.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)); if (after) docs = docs.filter((x) => x.id > after); docs = docs.slice(0, lim); cloud.pagedReads = (cloud.pagedReads || 0) + 1; }
+    cloud.reads.push({ p: path + '/*', dev: d.name }); return { docs }; });
   await ctx.exposeBinding('__fsListen', async (_s, path) => { d.listens.add(path); const data = cloud.store.has(path) ? cloud.store.get(path) : null; setTimeout(() => d.page.evaluate(([p, x]) => window.__fsDeliver && window.__fsDeliver(p, x), [path, data]).catch(() => {}), 50); });
   await ctx.exposeBinding('__fsListenQ', async (_s, id, path, cur) => { d.qsubs.set(id, { path, cur, sent: new Map() }); setTimeout(() => cloud.deliverQ(d, id, true), 50); });
   await ctx.exposeBinding('__fsUnlistenQ', async (_s, id) => { d.qsubs.delete(id); });
   await ctx.exposeBinding('__fsCommit', async (_s, ops, exp) => {
     /* Offline: the SDK queues the write and lands it on reconnect. */
     while (d.offline) await sleep(100);
+    while (d.holdCommits) await sleep(100);   /* v05.96 · J175: the free daily limit — the SDK keeps the commit queued */
     await sleep(10 + Math.random() * 30);
     /* A phone killed mid-seed: let `dieAfterRec` commits that touch recs land,
        then hang every later one of those forever (the blob is not touched). */

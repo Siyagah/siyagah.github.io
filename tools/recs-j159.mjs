@@ -67,7 +67,9 @@ if (want('147a')) {
     const s = await on(A, () => ({ ..._s1Send, seen: [...window.__ss] }));
     check(cloudArts(cloud) === wantN, `147a "Send everything again" put every note back in the cloud (${cloudArts(cloud)} of ${wantN})`);
     check(goneN(cloud, log0) === 0, `147a it wrote no "gone" record (${goneN(cloud, log0)})`);
-    check(s.state === 'done' && s.total >= wantN && s.done === s.total, `147a progress ran to the end: ${s.done} of ${s.total}`, JSON.stringify(s.seen));
+    /* v05.96 · J175, updated in place by the Architect in review: Send everything now asks the server first and sends only what it lacks,
+       so the total is the records still missing (183 here: the cloud already held 40), not every note; every note in the cloud is checked above. */
+    check(s.state === 'done' && s.total > 0 && (s.known || 0) > 0 && s.done === s.total, `147a progress ran to the end: ${s.done} of ${s.total} (the cloud already held ${s.known || 0})`, JSON.stringify(s.seen));
     check(s.seen.some((t) => /^Sending \d+ of [\d,]+ records/.test(t)) || s.seen.some((t) => /^sent /.test(t)), '147a the line said "Sending N of M" (then "sent")', JSON.stringify(s.seen));
     B = await addDevice(browser, srv.base, cloud, 'B', { width: 1440, height: 900 }, false, seedDB(), { recsOnly: true, builtinOff: true });
     check(await waitFor((w) => DB.articles.filter((a) => !String(a.id).startsWith('kb-')).length >= w, 60000, B, wantN), `147a a second device has every note (${await noteCount(B)} of ${wantN})`);
