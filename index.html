@@ -35074,6 +35074,7 @@ function _dupPics(c){
 function _dupText(a){ try{ return _stOf(a).slice((String(a.title)+' ').toLowerCase().length); }catch(e){ return ''; } }
 function _dupWords(t){ const s=new Set(); t.slice(0,100000).split(/\s+/).forEach(w=>{ if(w) s.add(w); }); return s; }
 function _dupWhyOf(a,list,mem,jp){
+  if(_picMigOpen(a.id)) return 'Open in the editor';
   if(a.zabNote) return "A Zab's own note";
   if(a.fromMmj) return 'Kept in step with Mapping My Journey';
   if(a.fromMydb) return 'Kept in step with MyDatabase';
