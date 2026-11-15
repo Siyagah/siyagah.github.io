@@ -142,7 +142,7 @@ if (want('156d') && B) {
       return picks.length;
     };
     const setChk = (ageMs) => on(B, async (age) => { const m = await _s1MapLoad(getSyncConfig().notebookId); if (age == null) delete m.chkAt; else m.chkAt = Date.now() - age; await _idbPut('s1:' + getSyncConfig().notebookId, m); }, ageMs);
-    const settle = (d) => waitFor(() => !['idle', 'probing', 'reading', 'sending'].includes(_s1Auto.state), 120000, d);
+    const settle = (d) => waitFor(() => ['ok', 'skipped', 'sent', 'paused', 'send-failed', 'gave-up', 'small'].includes(_s1Auto.state), 120000, d);
     await quiet(cloud, B);
     check((await dropPicks()) === 12, '156d setup: the cloud lacks 5 of the 12 records the spot check asks for');
     await setChk(null);
@@ -165,7 +165,7 @@ if (want('156d') && B) {
 
 /* ══ 156e — the daily budget ══ */
 if (want('156e')) {
-  let F = null;
+  let F = null, P = null;
   try {
     const T0 = Date.now();
     const p0 = cloud.pagedAt || 0;
@@ -179,12 +179,12 @@ if (want('156e')) {
     check(info.text.includes(info.big.why) && /Big jobs today/.test(await on(F, () => _syncDiagnosticsHTML())) && /reads 1,\d{3} of 1,000/.test(info.line), '156e Diagnostics shows the paused words and "Big jobs today"', info.line);
     /* an ordinary push on a device that HAS caught up goes out even with its budget used up (this device's own push waits for its first read, as always) */
     const cl0 = cloud.log.length;
-    await on(B, () => { _bgRoll(); _bg.r = 99999; _bg.w = 99999; });
-    await on(B, () => { const a = DB.articles.find((x) => x.id === 'j176-n1'); a.title = 'edited e'; a.updatedAt = new Date(Date.now() + 5000).toISOString(); persist(); flushPendingPush(); });
-    await sleep(1500); await quiet(cloud, B);
-    const w = cloud.log.slice(cl0).filter((o) => o.dev === 'B' && o.t === 'set' && o.p.endsWith('/recs/articles~j176-n1')).length;
+    P = await mkDev(cloud, 'P'); await waitFor(() => !!_s1RdCaught, 120000, P); await quiet(cloud, P);
+    await on(P, () => { _bgRoll(); _bg.r = 99999; _bg.w = 99999; });
+    await on(P, () => { const a = DB.articles.find((x) => x.id === 'j176-n1'); a.title = 'edited e'; a.updatedAt = new Date(Date.now() + 5000).toISOString(); persist(); flushPendingPush(); });
+    await sleep(1500); await quiet(cloud, P);
+    const w = cloud.log.slice(cl0).filter((o) => o.dev === 'P' && o.t === 'set' && o.p.endsWith('/recs/articles~j176-n1')).length;
     check(w >= 1, `156e an ordinary push still went out with the budget used up (${w} write)`);
-    await on(B, () => { _bg.r = 0; _bg.w = 0; });
     /* the next Los Angeles days carry it on to the end */
     let day = 0, finished = false;
     while (day < 6 && !finished) {
@@ -195,10 +195,11 @@ if (want('156e')) {
     }
     await quiet(cloud, F);
     const fin = await on(F, () => ({ n: DB.articles.length, live: [..._s1Rep.map.entries()].filter(([k, e]) => !e.gone && k !== '_head~0').length, big: _s1Stat.big }));
-    check(finished && fin.live >= R - 2 && fin.n >= NOTES && !fin.big, `156e after ${day} Los Angeles days it carried on by itself and finished: ${fin.live} of ${R} records, ${fin.n} notes`);
+    const cl = recKeys(cloud).length, cn = [...cloud.store.keys()].filter((k) => k.startsWith(NB + '/recs/articles~j176-')).length;   /* 156d left the cloud 5 records short; the device must hold what the cloud holds */
+    check(finished && fin.live >= cl - 2 && fin.n >= cn && !fin.big && day >= 3, `156e after ${day} Los Angeles days it carried on by itself and finished: ${fin.live} of ${cl} records, ${fin.n} notes`);
     errs.push(...F.errors);
   } catch (e) { check(false, `156e threw: ${String(e && e.message || e).split('\n')[0]}`); }
-  if (F) await F.ctx.close().catch(() => {});
+  for (const d of [F, P]) if (d) await d.ctx.close().catch(() => {});
 }
 
 /* ══ 156f — a refused read is named ══ */

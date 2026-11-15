@@ -32739,7 +32739,7 @@ function _s1ReadOkNote(){
 }
 function _s1ReadsText(){ const h=_s1Stat.rdHeld; return h?(h.why+' (since '+_swHm(h.since)+')'):'answering'; }
 function _s1PagingText(){
-  const st=_s1Stat.rd, pg=st&&st.paging; if(!pg||!pg.active) return '';
+  const st=_s1Stat.rd, pg=st&&st.paging; if(!pg||!(pg.active||(_s1Stat.big&&_s1Stat.big.job==='page'))) return '';
   return 'reading the cloud: '+pg.done.toLocaleString('en-US')+(pg.total>pg.done?' of about '+pg.total.toLocaleString('en-US'):' records so far')
     +(pg.nextAt?' · that page did not answer; trying it again at '+_swHm(pg.nextAt):'')+(_s1Stat.big&&_s1Stat.big.job==='page'?' · '+_s1Stat.big.why:'');
 }
