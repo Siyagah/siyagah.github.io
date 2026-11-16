@@ -32932,12 +32932,14 @@ function _s1PagingText(){
    _pullRecsMerge — any other device keeps "merge the FULL replica, at the end". Nothing is written to the cloud meanwhile (_s1WriteGate is shut until the read ends). */
 const _FR_MERGE_PAGES=5, _FR_MERGE_MS=10000, _FR_QUOTA=200*1024*1024;
 function _frOn(pg){ return !!(pg&&(pg.active||(_s1Stat.big&&_s1Stat.big.job==='page'))); }
+function _frPartial(){ const pg=_s1Stat.rd&&_s1Stat.rd.paging; return !!(pg&&pg.fresh&&!pg.complete&&_frOn(pg)); }
 function _frPage(pg){
   pg.pages=(pg.pages||0)+1; const h=pg.hist||(pg.hist=[]); h.push([Date.now(),pg.done]); if(h.length>7) h.shift();
   _frPaint();
 }
-function _frMergeDue(pg){
-  if(pg.pages-(pg.mergePg||0)>=_FR_MERGE_PAGES||Date.now()-(pg.mergeAt||0)>=_FR_MERGE_MS){ pg.mergePg=pg.pages; pg.mergeAt=Date.now(); return true; }
+function _frMergeDue(pg){   /* every 5 pages or 10 s, whichever first — and never sooner than 3× the last merge took, so merging stays under a quarter of the read */
+  const now=Date.now();
+  if((pg.pages-(pg.mergePg||0)>=_FR_MERGE_PAGES||now-(pg.mergeAt||0)>=_FR_MERGE_MS)&&now-(pg.mergeAt||0)>=3*(pg.mergeCost||0)){ pg.mergePg=pg.pages; pg.mergeAt=now; return true; }
   return false;
 }
 /* "about 3 min left" — only after 2 pages, from the pace of the last pages; '' when it cannot be told */
@@ -32970,7 +32972,7 @@ function _frPaint(){
     const pg=_s1Stat.rd&&_s1Stat.rd.paging, on=_frOn(pg)&&!boot&&_dbLoaded;
     const ph=window.innerWidth<640;
     const spots=[
-      ['fr-sb','tree',on&&!(DB.folders||[]).some(f=>f&&!String(f.id).startsWith('kb-'))],
+      ['fr-sb','tree',on&&(window.innerWidth<1200||!(DB.folders||[]).some(f=>f&&!String(f.id).startsWith('kb-')))],   /* under 1200 the side pane is the first screen, so the card stays there while notes arrive */
       ['fr-p2','p2c',on&&ph&&!(DB.articles||[]).length],
       ['fr-p3','p3c',on&&!ph&&!ST.article]
     ];
@@ -33024,10 +33026,10 @@ async function _s1PagedRead(cfg, gen, nbRef, recsC, st){
     if(sn.size<PN) break;
     last=sn.docs[sn.docs.length-1];
     _frPage(pg);   /* v06.04 · J188 — the card, and (a fresh device only) the notes read so far */
-    if(fresh&&_frMergeDue(pg)) fin();
+    if(fresh&&_frMergeDue(pg)){ const t0=performance.now(); fin(); pg.mergeCost=performance.now()-t0; }
     await _yieldTask();
   }
-  pg.active=false; _bgSetCn(st.records); fin(true); _frPaint();
+  pg.active=false; pg.complete=true; _bgSetCn(st.records); fin(true); _frPaint();
   try{ await _idbPut('s1page:'+nb,null); }catch(e){}
   return true;
 }
@@ -38288,7 +38290,8 @@ function _mergeRemoteIn(remoteDB, remoteT){
     _edApplyRemote();   /* let the merged text reach an open, idle editor */
     try{ _picMigKick(2000); }catch(e){}   /* v04.95 — a merge may have brought in data: pictures */
     if(remoteT>_lastSyncTime){_lastSyncTime=remoteT;localStorage.setItem(SYNC_TIME_SK,_lastSyncTime);}
-    if(after>before) toast('☁ Merged entries from another device');
+    const _frP=_frPartial();   /* v06.04 · J188 — a half-read replica merged early: no toast, and NOTHING goes to the cloud until the read has ended */
+    if(after>before&&!_frP) toast('☁ Merged entries from another device');
     setSyncStatus('live');
     const rc=(remoteDB.articles||[]).length+(remoteDB.folders||[]).length+(remoteDB.trash||[]).length;
     /* v04.71 — push back whenever the merge left this device holding ANYTHING
@@ -38302,7 +38305,7 @@ function _mergeRemoteIn(remoteDB, remoteT){
        deletions, stamp maps), so two devices converge instead of
        ping-ponging: once both hold the same merged result, the digests
        match and nobody pushes. */
-    if(after>rc||_syncDigest(DB)!==_syncDigest(remoteDB)) pushToCloud();
+    if(!_frP&&(after>rc||_syncDigest(DB)!==_syncDigest(remoteDB))) pushToCloud();
     _s1KickSoon();   /* v04.89 — S1b: write back what the per-record copy lacks, after a grace */
 }
 

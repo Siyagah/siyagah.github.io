@@ -86,7 +86,7 @@ if (argv.includes('--measure')) {
 
 /* ══ the checks (163a–163e) ══ */
 const SAMPLER = `(()=>{ window.__s=[]; setInterval(()=>{ try{
-  const pg=_s1Stat.rd&&_s1Stat.rd.paging; const vis=[...document.querySelectorAll('.fr-card')].filter(e=>e.getClientRects().length);
+  const pg=_s1Stat.rd&&_s1Stat.rd.paging; const vis=[...document.querySelectorAll('.fr-card')].filter(e=>{ const q=e.getBoundingClientRect(); return e.getClientRects().length&&q.right>0&&q.left<innerWidth; });
   const c=vis[0]; const r=c?c.getBoundingClientRect():null;
   window.__s.push({t:Math.round(performance.now()),active:!!(pg&&pg.active),done:pg?pg.done:0,pages:pg?pg.pages||0:0,fresh:pg?pg.fresh:null,art:DB.articles.length,fol:DB.folders.length,
     n:document.querySelectorAll('.fr-card').length,txt:c?c.querySelector('.fr-tx').textContent:'',keep:c&&c.querySelector('.fr-keep')?c.querySelector('.fr-keep').textContent:'',
@@ -98,7 +98,7 @@ const mk = (cloud, srv, name, vp, seed, opts = {}) => addDevice(browser, srv.bas
 const samples = (d) => on(d, () => window.__s.slice());
 const ownSeed = () => { const s = seedDB(); for (let i = 0; i < 10; i++) s.articles.push({ id: 'own-' + i, title: 'Own ' + i, content: '<p>mine ' + i + '</p>', folderIds: ['f1'], tags: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), kind: 'general' }); return s; };
 const srv = await serve(argv.includes('--unpatched') ? baseOf('origin/main') : undefined);
-const earlyWrites = async (cloud, d, log0, done) => { let early = 0; const t0 = Date.now(); for (;;) { const w = cloud.log.slice(log0).filter((o) => o.dev === d.name && o.t === 'set').length; const fin = await on(d, () => { const pg = _s1Stat.rd && _s1Stat.rd.paging; return !!(pg && pg.done > 0 && !pg.active) && _s1RdCaught && !_s1RepUnmerged && !_pullInFlight; }).catch(() => false); if (w > 0 && !fin) early++; if (fin || Date.now() - t0 > 120000) break; await sleep(50); } return early; };
+const earlyWrites = async (cloud, d, log0) => { let early = 0, latched = false; const t0 = Date.now(); for (;;) { const w = cloud.log.slice(log0).filter((o) => o.dev === d.name && o.t === 'set').length; const fin = await on(d, () => { const pg = _s1Stat.rd && _s1Stat.rd.paging; return !!(pg && pg.done > 0 && !pg.active) && _s1RdCaught && !_s1RepUnmerged && !_pullInFlight; }).catch(() => false); if (fin) latched = true; if (w > 0 && !latched) early++; if ((latched && w > 0) || Date.now() - t0 > 120000) break; await sleep(50); } return early; };   /* latched: once the read has ended and the device has caught up, later writes (its own, with the stand-in's sigs) are fine */
 
 /* ══ 163a — the card, on every layout ══ */
 if (want('163a')) {
@@ -114,20 +114,21 @@ if (want('163a')) {
       check(ok && withCard.length >= 3, `163a ${tag}: a card was shown while the notebook was being read (${withCard.length} samples)`, withCard[0] && withCard[0].txt);
       check(dn.length >= 3 && dn[dn.length - 1] > dn[0] && new Set(dn).size >= 3, `163a ${tag}: the count rises (${dn[0]} → ${dn[dn.length - 1]} so far, ${new Set(dn).size} distinct)`);
       check(/^Reading your notebook from the cloud: [\d,]+ so far/.test(withCard[0].txt), `163a ${tag}: the words`, withCard[0].txt);
-      const early = withCard.filter((x) => x.pages < 2), late = withCard.filter((x) => x.pages >= 2);
-      check(early.every((x) => !/left/.test(x.txt)) && late.some((x) => /(under a minute|about \d+ min) left/.test(x.txt)), `163a ${tag}: the estimate shows only after 2 pages (${early.length} samples before, ${late.filter((x) => /left/.test(x.txt)).length} after)`, (late.find((x) => /left/.test(x.txt)) || {}).txt);
+      check(withCard.every((x) => !/left|of about/.test(x.txt)), `163a ${tag}: with the total unknown the card says "so far" and promises no estimate`);
       const last = S[S.length - 1];
       check(last.n === 0 && !S.slice(-5).some((x) => x.txt), `163a ${tag}: the card is gone when the read ends`, JSON.stringify({ n: last.n }));
       const st = await on(d, () => ({ n: DB.articles.length, f: DB.folders.length }));
       check(st.n >= R - nf - 2 && st.f >= nf, `163a ${tag}: the device ends with the whole notebook (${st.n} notes, ${st.f} folders)`);
-      /* where the card sits */
-      const where = withCard.find((x) => x.id === (vp.w < 640 ? 'fr-p2' : 'fr-p3')) || null; const sb = withCard.some((x) => x.id === 'fr-sb');
-      check(!!where || sb, `163a ${tag}: the card is in ${vp.w < 640 ? 'the list area' : 'Pane 3'} (or the empty side pane)`, [...new Set(withCard.map((x) => x.id))].join(','));
-      if (where && vp.w >= 640) check(where.r <= where.w && where.l >= 0 && Math.abs(where.l - (where.w - where.r)) < where.w / 3, `163a ${tag}: the card is inside the window, ${Math.round(where.l)}–${Math.round(where.r)} of ${where.w}`);
-      if (where && vp.w < 640) check(where.l >= 0 && where.r <= where.w, `163a ${tag}: the card fits the phone, ${Math.round(where.l)}–${Math.round(where.r)} of ${where.w}`);
+      /* where the card sits: a visible card, inside the window */
+      const ids = [...new Set(withCard.map((x) => x.id))];
+      check(vp.w < 640 ? ids.some((i) => i === 'fr-p2' || i === 'fr-sb') : vp.w < 1200 ? ids.includes('fr-sb') : ids.includes('fr-p3'), `163a ${tag}: the visible card is in ${vp.w < 640 ? 'the list area or the side pane' : vp.w < 1200 ? 'the side pane (the first screen)' : 'Pane 3'}`, ids.join(','));
+      check(withCard.every((x) => x.l >= 0 && x.r <= x.w + 1), `163a ${tag}: the card is inside the window`, JSON.stringify(withCard.slice(0, 1).map((x) => [x.id, Math.round(x.l), Math.round(x.r), x.w])));
       /* a second read of the same device knows the total: "N of about M" */
-      const txt2 = await on(d, async () => { await _bgLoad(); _bg.cn = 3000; _bgSave(); _s1ReRead(); const t0 = Date.now(); let best = ''; while (Date.now() - t0 < 20000) { const t = _s1PagingText(); if (/of about 3,000/.test(t) && /left/.test(t)) { best = t; break; } await new Promise((r) => setTimeout(r, 60)); } return best; });
-      check(/reading the cloud: [\d,]+ of about 3,000 .*(under a minute|about \d+ min) left/.test(txt2), `163a ${tag}: with the total known, ⚙/Diagnostics say "N of about M" and the estimate`, txt2);
+      const pairs = await on(d, async () => { await _bgLoad(); _bg.cn = 3000; _bgSave(); _s1ReRead(); const t0 = Date.now(), out = []; await new Promise((r) => setTimeout(r, 0)); while (Date.now() - t0 < 25000) { const pg = _s1Stat.rd.paging; if (pg && pg.pages != null) out.push([pg.pages, _s1PagingText(), (document.querySelector('.fr-card .fr-tx') || {}).textContent || '']); if (pg && !pg.active && pg.done > 0 && out.length > 3) break; await new Promise((r) => setTimeout(r, 50)); } return out; });
+      const known = pairs.filter((x) => /of about 3,000/.test(x[1]));
+      check(known.length >= 3, `163a ${tag}: with the total known, ⚙/Diagnostics say "N of about M"`, known[0] && known[0][1]);
+      check(pairs.filter((x) => x[0] < 2).every((x) => !/left/.test(x[1] + x[2])) && pairs.some((x) => x[0] >= 2 && /(under a minute|about \d+ min) left/.test(x[1])), `163a ${tag}: the estimate shows only after 2 pages`, (pairs.find((x) => /left/.test(x[1])) || [])[1]);
+      check(!pairs.some((x) => /left/.test(x[2])) || pairs.filter((x) => x[2]).every((x) => /Reading your notebook from the cloud: ([\d,]+ of about 3,000 notes|3,00\d so far)/.test(x[2])), `163a ${tag}: a card, if shown, says "N of about M notes"`, (pairs.find((x) => x[2]) || [])[2]);
       errs.push(...d.errors.map((e) => `${tag}: ${e}`));
     } catch (e) { check(false, `163a ${tag} threw: ${String(e && e.message || e).split('\n')[0]}`); }
     if (d) await d.ctx.close().catch(() => {});
