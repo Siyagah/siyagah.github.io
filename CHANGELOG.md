@@ -11658,4 +11658,10 @@ Built by the Architect (PCA J117, the owner: "I rcvd a installed prompt on mobil
 
 ## v06.02 — J177 follow-up: 🧹 duplicates keep the copy in your own folders (17 Nov 2026)
 
-(stub — filled in with the implementation)
+J177 follow-up (builder, issue #330; the owner: "I want to keep the one which is attached with folders and delete the other ones").
+
+- `_dupImpSet()` builds once per scan the set of import-made folder ids: a folder that (or whose ancestor) carries `enx`, `kp` or `on`, or whose id is `enx-root`/`kp-root`/`kp-arch`/`on-root`. Counted marks: those three. **Not counted:** `mmj` and `mydb` (mirrors of the owner's own site/store, kept by id so they rarely duplicate), as the issue named only enx/kp/on. A folder id not in `DB.folders` counts as nothing.
+- `rank` (lists 1 and 3, and each version's representative in list 2): own-folder count, then folder count, then tags, oldest `createdAt`, id.
+- List 2: the versions are first narrowed to the highest own-folder count, then the highest folder count; today's rule (longest if one contains the other, else newest) then picks within them. If this changed the pick, the group's line ends "· kept the copy in your folders".
+- A row whose folders are all import-made shows "in an import folder only" in its meta line.
+- Unchanged: greyed rules, day limit, the folder/tag merge, `dupTrashGo` (ONE `persist()`), what is written to `DB`. Check: block 157 `157-own…`, `tools/dups-j177.mjs`.
