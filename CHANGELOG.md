@@ -11614,3 +11614,6 @@ The owner: "There's many files are duplicate and common… Find the exact matchi
 - **Daily limit** `_DUP_DAY` 4,000 moved + 4,000 emptied (hook `window.__dupDay`), per device per Los Angeles day, record `dupday` in the device's own database (never `DB`); day and reset time from v05.97's `_bgDay`/`_s1ResetTime`. Over it: the words say how many wait; the ticks are remembered (id → `updatedAt`; a note edited since is dropped).
 - **Trash:** "🧹 Empty only the duplicates (N)" (`dupEmptyTrash`, also in the dialog) removes for good only `dup:1` entries (`_tombstoneTrashEntry`, `_tombstoneTrashEntryId`, `_popCleanupOrphans`), one confirmation, same day limit.
 - Not changed: `mergeDB()`, sync, pictures (stored once already; the cloud's picture copies are never deleted). No new Firestore query shape. Check: block 157, `tools/dups-j177.mjs`.
+
+## v05.99 — J181 (builder, issue #323): each section heading shows its folder and note counts
+(stub — entry follows in the next push)
