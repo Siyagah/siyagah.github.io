@@ -221,6 +221,7 @@ const seedMid = (page, N) => page.evaluate((N) => {
   _seedThemeSnap(); _seedRecSnap(); persist(); _histReset();
   return DB.articles.length;
 }, N);
+const vm_now = () => (readFileSync(join(here, 'index.html'), 'utf8').match(/name="app-version" content="([\d.]+)"/) || [])[1];
 const settle = (page, ms = 1500) => page.waitForTimeout(ms);
 
 if (want('160a')) {
@@ -322,12 +323,15 @@ if (want('160d')) {
     await A.page.evaluate(() => { window.dispatchEvent(new Event('pagehide')); });
     await settle(A.page, 800);
     /* the NEXT version: the same origin serves a copy with the version moved on */
-    writeFileSync(join(dir, 'index.html'), readFileSync(join(dir, 'index.html'), 'utf8').replace('<meta name="app-version" content="06.00">', '<meta name="app-version" content="06.01">'));
-    writeFileSync(join(dir, 'sw.js'), readFileSync(join(dir, 'sw.js'), 'utf8').replace("'v06.00.01'", "'v06.01.01'"));
+    /* v06.03 (J117d): the numbers come from the served copy itself — they were the literal 06.00 → 06.01 and went stale with every round (reason recorded) */
+    const vm = readFileSync(join(dir, 'index.html'), 'utf8').match(/name="app-version" content="(\d+)\.(\d+)"/);
+    const nextV = vm[1] + '.' + String(+vm[2] + 1).padStart(2, '0');
+    writeFileSync(join(dir, 'index.html'), readFileSync(join(dir, 'index.html'), 'utf8').replace(`name="app-version" content="${vm[1]}.${vm[2]}"`, `name="app-version" content="${nextV}"`));
+    writeFileSync(join(dir, 'sw.js'), readFileSync(join(dir, 'sw.js'), 'utf8').replace(`'v${vm[1]}.${vm[2]}.01'`, `'v${nextV}.01'`));
     await A.page.reload({ waitUntil: 'domcontentloaded' });
     await A.page.waitForFunction(() => window.__appBooted === true, null, { timeout: 120000 });
     const k = await A.page.evaluate(() => ({ v: document.querySelector('meta[name="app-version"]').content, n20: (DB.articles.find((x) => x.id === 'n20') || {}).title, f2: (DB.folders.find((x) => x.id === 'f2') || {}).name, set: DB.theme.zzJ117, n30: (DB.articles.find((x) => x.id === 'n30') || {}).title, last: DB.theme.lastArticle, count: DB.articles.length }));
-    r.check(k.v === '06.01' && k.n20 === 'Changed note title' && k.f2 === '(002) Renamed folder' && k.set === 'kept-setting' && k.n30 === 'In place, no save' && k.last === 'n44' && k.count === 1600, '160d changed a note, a folder and a setting (and a note in place before an open), reloaded as the next version: all kept, the open note remembered', JSON.stringify(k));
+    r.check(k.v !== (vm_now()) && /^\d+\.\d+$/.test(k.v) && k.n20 === 'Changed note title' && k.f2 === '(002) Renamed folder' && k.set === 'kept-setting' && k.n30 === 'In place, no save' && k.last === 'n44' && k.count === 1600, '160d changed a note, a folder and a setting (and a note in place before an open), reloaded as the next version: all kept, the open note remembered', JSON.stringify(k));
     r.check(A.errors.length === 0, '160d no page errors', A.errors.slice(0, 3).join(' | '));
   } catch (e) { r.check(false, '160d threw', String(e && e.stack || e).slice(0, 500)); } finally { if (A) await A.close(); }
 }
