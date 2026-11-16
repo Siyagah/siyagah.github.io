@@ -1685,9 +1685,16 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
         background:var(--sb-strip)}
 .sec-hd:hover,.sec-hd:hover .sec-acts{background:var(--sb-strip-hi);opacity:1}
 .sec-hd:active{cursor:grabbing}
-.sec-cnt{flex-shrink:0;white-space:nowrap;font-size:10.5px;line-height:1.2;color:var(--sb-ink-soft)}
+.sec-cnt{flex-shrink:0;white-space:nowrap;font-size:10.5px;line-height:1.2;color:var(--sb-ink-soft);
+         min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .sec-cnt .sc-s{display:none}
 @media(max-width:639.98px){.sec-cnt .sc-w{display:none}.sec-cnt .sc-s{display:inline}}
+/* v05.99 (review) — a narrow side pane (a 1440 laptop's is ~200 px; it can be dragged narrower) has no room for the name, the count and the
+   section buttons on one line: the count then moves to a small line of its own under the name (the name keeps its room, the pane never
+   scrolls sideways — 58h). The heading is the container, so this follows the side pane's own width, not the window's. */
+.sec-hd:has(> .sec-cnt){container:sechd/inline-size;flex-wrap:wrap}
+@media(min-width:640px){@container sechd (max-width:329.98px){.sec-hd > .sec-cnt{order:9;flex-basis:100%;padding-left:21px;margin-top:-2px}}}
+@container sechd (max-width:259.98px){.sec-hd > .sec-cnt{order:9;flex-basis:100%;padding-left:21px;margin-top:-2px}}
 .sec-tog{font-size:16px;color:var(--sb-ink);flex-shrink:0;cursor:pointer;
          width:16px;text-align:center;line-height:1}
 .sec-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;

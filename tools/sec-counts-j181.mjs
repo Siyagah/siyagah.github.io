@@ -128,6 +128,24 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
       r.check(m.out.length === 4 && worst >= 4.5, `159d@${w} ${preset}: count contrast ${worst.toFixed(2)}:1 ≥ 4.5 on ${m.out.length} headings`);
       r.check(m.out.every((o) => o.vis && !o.wrap && o.inside) && !m.ov, `159d@${w} ${preset}: the right form is shown, the name stays on one line, the count stays inside the heading, no horizontal overflow`, J(m.out.map((o) => [o.vis, o.wrap, o.inside])));
     }
+    /* Added in the Architect's review (v05.99): block 159 measured only the device's default side-pane width, and 58h (a 1440 laptop's
+       ~200 px side pane) caught the count pushing #tree into a sideways scroll. A narrow pane now moves the count under the name. */
+    const widths = w >= 1200 ? [200, 260, 330] : w < 640 ? [] : [260];
+    for (const sw of widths) {
+      const n = await p.evaluate(async (sw) => {
+        const sb = document.getElementById('sb'), old = sb.style.width; sb.style.width = sw + 'px'; renderTree();
+        await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+        const tr = document.getElementById('tree'), out = [];
+        document.querySelectorAll('#tree .sec-hd .sec-cnt').forEach((c) => {
+          const hd = c.closest('.sec-hd'), nm = hd.querySelector('.sec-nm'), hr = hd.getBoundingClientRect(), cr = c.getBoundingClientRect(), nr = nm.getBoundingClientRect();
+          out.push({ inside: cr.right <= hr.right + 0.5 && cr.left >= hr.left - 0.5, nameW: Math.round(nr.width), nameOneLine: nr.height <= 30, clipped: c.scrollWidth > c.clientWidth + 1 });
+        });
+        const res = { out, hscroll: tr.scrollWidth > tr.clientWidth + 1, sbScroll: sb.scrollWidth > sb.clientWidth + 1 };
+        sb.style.width = old; renderTree(); return res;
+      }, sw);
+      r.check(n.out.length === 4 && n.out.every((o) => o.inside && o.nameOneLine && !o.clipped && o.nameW >= 60) && !n.hscroll && !n.sbScroll,
+        `159d@${w} side pane ${sw}px: every count fits inside its heading, uncut, the name keeps ≥ 60 px on one line, no sideways scroll`, J(n));
+    }
     const after = await p.evaluate(() => { DB.theme.preset = 'forest'; return JSON.stringify(DB); });
     r.check(JSON.parse(after).articles.length === JSON.parse(before).articles.length && J(JSON.parse(after).folders) === J(JSON.parse(before).folders), `159d@${w} drawing the counts changed no note or folder`);
   } catch (e) { r.check(false, `159d@${w} threw: ` + String(e && e.message || e).split('\n')[0]); }
