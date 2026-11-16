@@ -30460,6 +30460,11 @@ function _sbDDFit(el){
      far as the owner can tell. Inset, so the fade stays on the bottom edge
      instead of scrolling away with the content. */
   el.classList.toggle('sb-dd-scroll',el.scrollHeight>el.clientHeight+1);
+  /* v06.01 (J186): rows filled in AFTER the menu opened (the ⚙ menu's "Last synced" lines, the 📱 Install row) made it taller
+     than this one measurement, so a phone's menu scrolled with no cue. Watch the menu's own content while it is open and
+     re-ask the one question; only the class changes, never the size or place. */
+  if(!el._ddMo&&window.MutationObserver){ el._ddMo=new MutationObserver(()=>{ if(el.classList.contains('open')) el.classList.toggle('sb-dd-scroll',el.scrollHeight>el.clientHeight+1); });
+    el._ddMo.observe(el,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['style','hidden']}); }
 }
 /* Settings (⚙): the app itself — account, sync, backups, export. */
 function toggleSBMenu(e){
