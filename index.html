@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.99">
+<meta name="app-version" content="06.00">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4204,7 +4204,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.99</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.00</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4512,6 +4512,7 @@ async function _idbMigrateFrom(db){
    forward); the frozen builds under legacy/ read-only and do not write. */
 const _LJ_NAME='siyagah-localrecs-v1', _LJ_STORE='kv';
 let _LJ_MIN_NOTES=1500, _LJ_CKPT_MS=600000, _LJ_CKPT_PUTS=3000;
+let _ljC=null;   /* v06.00 · J117c — what the last journaled save collected (sw.c): the head-only save below reads it, never the notebook */
 let _ljDbP=null, _ljOn=false, _ljDead=false, _ljSeq=0, _ljCkpt=0, _ljBase=null, _ljOrd=null, _ljHead=null;
 let _ljEpoch=0, _ljChain=Promise.resolve(), _ljCkptTimer=null, _ljCkptBusy=false, _ljPuts=0, _ljCkptWant=false;
 window._ljStat={writes:0,puts:0,full:0,lastMs:0};
@@ -4734,7 +4735,7 @@ function _ljSave(sw){
   if(!_ljOn){
     /* the first save of this journal: a full copy, and everything after it is a difference */
     const epoch=++_ljEpoch, seq=_ljSeq=Math.max(_ljSeq+1,Date.now()), n=_ljCounts(sw);
-    _ljBase=sw.map; _ljOrd=_ljOrdOf(sw); _ljHead=_headOf(DB,sw); _ljOn=true; _ljPuts=0;
+    _ljC=sw.c; _ljBase=sw.map; _ljOrd=_ljOrdOf(sw); _ljHead=_headOf(DB,sw); _ljOn=true; _ljPuts=0;
     _ljStat.full++;
     const p=_ljRun(epoch,()=>_ljOpen().then(ldb=>{
       /* no second database on this device: save the old way, whole, for good */
@@ -4749,7 +4750,7 @@ function _ljSave(sw){
   _ljBase.forEach((e,k)=>{ if(!cur.has(k)) puts.push(['r:'+k,{s:seq,g:1}]); });
   _LJ_COLLS.forEach(c=>{ const a=sw.c[c].keys; if(!_sameKeys(a,_ljOrd[c])){ puts.push(['o:'+c,{s:seq,j:JSON.stringify(a)}]); _ljOrd[c]=a; } });
   const hs=_headOf(DB,sw); if(hs!==_ljHead){ puts.push(['h',{s:seq,j:hs}]); _ljHead=hs; }
-  _ljBase=cur;
+  _ljC=sw.c; _ljBase=cur;
   _ljStat.lastMs=performance.now()-t0;
   if(!puts.length) return _ljChain.catch(()=>{}).then(()=>{ if(epoch!==_ljEpoch||!_ljOn) throw new Error('local journal restarted'); return true; });
   const m={seq:seq,n:_ljCounts(sw)};
@@ -4765,6 +4766,17 @@ function _ljSave(sw){
   _ljCkptWant=true;
   if(document.visibilityState==='hidden'){ clearTimeout(_ljCkptTimer); _ljCkptTimer=setTimeout(_ljHiddenCkpt,_LJ_CKPT_MS); }
   return p;
+}
+/* v06.00 · J117c — the journal write for a save whose ONLY change is the head (DB.theme, e.g. which note is open): no sweep, no record diff.
+   Records stay exactly as the last full save left them (_ljBase/_ljOrd untouched), so anything changed in place since is still seen by the next full
+   save. Returns null when it cannot be used (journal not running, nothing collected yet): the caller then takes the ordinary path. */
+function _ljSaveHead(){
+  if(!_ljOn||!_ljC||!_ljBase) return null;
+  const hs=_headOf(DB,{c:_ljC});
+  if(hs===_ljHead) return _ljChain.catch(()=>{}).then(()=>{ if(!_ljOn) throw new Error('local journal restarted'); return true; });
+  const epoch=_ljEpoch, seq=_ljSeq=Math.max(_ljSeq+1,Date.now());
+  _ljHead=hs; _ljStat.writes++; _ljStat.puts++; _ljPuts++;
+  return _ljRun(epoch,()=>_ljTx([['h',{s:seq,j:hs}]],{seq:seq,n:_ljCounts({c:_ljC})},null));
 }
 function _ljHiddenCkpt(){
   clearTimeout(_ljCkptTimer); _ljCkptTimer=null;
@@ -5629,6 +5641,20 @@ function _save(pre,sw){
   if(!lsErr){ _clearSaveFailureIfNeeded(); return true; }
   _markSaveFailure(lsErr);
   return false;
+}
+/* v06.00 · J117c — a save for a change that touches DB.theme and nothing else (opening a note writes theme.lastArticle). _save() sweeps EVERY record
+   (193 ms of a 249 ms note-open at 28,600 notes, phone x4) to find changes this call did not make. This does not sweep: the baseline of the records
+   is left as it was, so a record changed in place and not yet saved is stamped and journaled by the NEXT ordinary save, exactly as it would be after
+   any other quiet moment. Anything that edits a record calls persist()/_save() itself. Small notebooks and a journal that is not running take _save(). */
+function _saveHead(){
+  if(!_dbLoaded) return false;
+  if(!(_idbReady&&_ljWanted()&&_ljOn&&_ljC)) return _save();
+  _dbRev++;
+  _stampThemeTouches();
+  let p=null; try{ p=_ljSaveHead(); }catch(e){ p=null; }
+  if(!p) return _save();
+  p.then(_clearSaveFailureIfNeeded).catch(_markSaveFailure);
+  return true;
 }
 const persist = () => { if(!_dbLoaded) return; _stampThemeTouches(); const sw=_stampRecordTouches(); snapshotState(sw); _save(undefined,sw); scheduleAutoSave(); pushToCloud(); };
 
@@ -7656,7 +7682,16 @@ function chOf(pid){
   const a=C.ch.get(pid); return a?a.slice().sort((x,y)=>x.order-y.order):[];
 }
 function descOf(fid){const ids=[fid];function go(p){chOf(p).forEach(c=>{ids.push(c.id);go(c.id);});}go(fid);return ids;}
-function pathOf(fid){const p=[];let id=fid;while(id){const f=DB.folders.find(x=>x.id===id);if(!f)break;p.unshift(f);id=f.parentId;}return p;}
+/* v06.00 · J117c — id → position, so a folder is found without walking all of them (4,000 folders: autoFit called this for every one). A hit is verified
+   against the array itself; a miss rebuilds once, so a folder added, removed or swapped since is always seen. */
+let _poIdx=null, _poArr=null;
+function _poFind(id){
+  const A=DB.folders;
+  if(_poArr===A&&_poIdx){ const i=_poIdx.get(id); if(i!==undefined){ const f=A[i]; if(f&&f.id===id) return f; } }
+  const m=new Map(); for(let i=A.length-1;i>=0;i--) m.set(A[i].id,i);   /* first occurrence wins, as find() did */
+  _poArr=A; _poIdx=m; const i=m.get(id); return i===undefined?undefined:A[i];
+}
+function pathOf(fid){const p=[];let id=fid;while(id){const f=_poFind(id);if(!f)break;p.unshift(f);id=f.parentId;}return p;}
 /* v05.41 — P5. While the sidebar is being drawn (_cntC set by renderTree, dropped when it ends) every count comes from one pass,
    not a walk of every note per row. The folder map counts a note once per folder whose subtree holds any of its folders (the
    same answer as descOf + some); the Smart View counts are made without copying or sorting (the same filters as getSmartArts /
@@ -7759,7 +7794,12 @@ function _autoLeavePrimary(folderIdsArr){
 }
 
 /* ── Render ──────────────────────────────────────────────────────── */
-function render(){renderTree();renderP2H();renderP2C();renderP3H();renderP3C();renderTabBar();updateTrashBtn();adjustP3Layout();_applyHeadingStyles();_updateSearchAccessUI();try{jebRefresh();}catch(e){console.error('jebRefresh:',e);}}
+function _cntBoth(){   /* v06.00 · J117c — the sidebar and the list header draw from one count pass; dropped before anything else is drawn */
+  const own=!_cntC; if(own) _cntC={fo:null,sf:new Map(),sa:new Map(),sc:new Map()};
+  try{ renderTree(); renderP2H(); }
+  finally{ if(own) _cntC=null; }
+}
+function render(){_cntBoth();renderP2C();renderP3H();renderP3C();renderTabBar();updateTrashBtn();adjustP3Layout();_applyHeadingStyles();_updateSearchAccessUI();try{jebRefresh();}catch(e){console.error('jebRefresh:',e);}}
 /* v03.12.01 — render triggered by background cloud-sync must NOT rebuild the
    live editor (that reset the caret to the top mid-typing). When actively
    editing, refresh everything except the editor panes so the caret is kept. */
@@ -8128,9 +8168,10 @@ function renderTree(){
      would lose its keyboard); put them back on the rebuilt input */
   const _tf=document.activeElement,_tfOn=_tf&&_tf.id==='tag-find';
   const _tfS=_tfOn?_tf.selectionStart:0,_tfE=_tfOn?_tf.selectionEnd:0;
-  _cntC={fo:null,sf:new Map(),sa:new Map(),sc:new Map()};   /* v05.41 — P5: counts are worked out once for this draw and dropped with it, so they can never be stale */
+  const _cntOwn=!_cntC;   /* v06.00 · J117c — render() may hold ONE count pass for the sidebar and the list header together (nothing changes the notebook between them) */
+  if(_cntOwn) _cntC={fo:null,sf:new Map(),sa:new Map(),sc:new Map()};   /* v05.41 — P5: counts are worked out once for this draw and dropped with it, so they can never be stale */
   try{ el.innerHTML=renderSmartSection()+renderDatabaseSection()+_secs.map(s=>renderSection(s)).join('')+renderTagSection()+renderNTISection(); }
-  finally{ _cntC=null; }
+  finally{ if(_cntOwn) _cntC=null; }
   _fwRedraw();   /* v05.64 · J100 — the folder windows are repainted with the side pane */
   if(_tfOn){
     const n=document.getElementById('tag-find');
@@ -9349,7 +9390,7 @@ function selArt(id){
   const _prevA=ST.article, _fast=_selFastOk();
   ST.article=id;ST.editing=false;clearSearch();
   if(_pwMode&&_pwMode!=='p3') _pwSet(null);   /* v05.52 · J82 */
-  if(!DB.theme)DB.theme={};DB.theme.lastArticle=id;_save();
+  if(!DB.theme)DB.theme={};DB.theme.lastArticle=id;_saveHead();   /* v06.00 · J117c — only the head changed: no sweep of 28,600 notes */
   if(!(_fast&&_selFastMove(_prevA,id))) renderP2C();
   renderP3H();renderP3C();
   adjustP3Layout();
@@ -22587,6 +22628,14 @@ function _folderFullTreeHTML(curF){
   return h;
 }
 function _folderPathRowHTML(curF){
+  /* v06.00 · J117c — each subfolder's count used to walk every note (cntOf outside a sidebar draw): 30 subfolders x 28,600 notes was 134 ms of the
+     first render on a phone. Counted once for this row, dropped with it, like renderTree's. */
+  if(_cntC) return _folderPathRowHTML0(curF);
+  _cntC={fo:null,sf:new Map(),sa:new Map(),sc:new Map()};
+  try{ return _folderPathRowHTML0(curF); }
+  finally{ _cntC=null; }
+}
+function _folderPathRowHTML0(curF){
   const parent=curF.parentId?DB.folders.find(f=>f.id===curF.parentId):null;
   const children=chOf(curF.id);
   const treeOn=!!ST.p2hTreeMode;

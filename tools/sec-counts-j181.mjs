@@ -169,14 +169,16 @@ r.check(errs.length === 0, '159d no page errors', errs.slice(0, 3).join(' | '));
     await page.evaluate(() => { DB.articles.find((a) => a.id === 'n1').title = 'Edited 159e'; DB.folders.find((f) => f.id === 'b1').name = 'Renamed 159e'; DB.theme.preset = 'ocean'; persist(); });
     await sleep(1500);
     const exp = await page.evaluate(() => JSON.stringify({ a: DB.articles, f: DB.folders, s: DB.sections, t: DB.trash, p: DB.theme.preset }));
-    /* the next version: the served copy's meta and sw VERSION move on */
-    const html = readFileSync(join(dir, 'index.html'), 'utf8').replace(/(name="app-version" content=")[^"]+/, '$106.00');
+    /* the next version: the served copy's meta and sw VERSION move on. Worked out from the running version (v06.00 review: a fixed
+       '06.00' was "the next version" only while this build was 05.99, and failed once the base moved on). */
+    const [mj, mn] = v1.split('.').map(Number); const nx = String(mj).padStart(2, '0') + '.' + String(mn + 1).padStart(2, '0');
+    const html = readFileSync(join(dir, 'index.html'), 'utf8').replace(/(name="app-version" content=")[^"]+/, '$1' + nx);
     writeFileSync(join(dir, 'index.html'), html);
-    writeFileSync(join(dir, 'sw.js'), readFileSync(join(dir, 'sw.js'), 'utf8').replace(/v\d\d\.\d\d\.01/, 'v06.00.01'));
+    writeFileSync(join(dir, 'sw.js'), readFileSync(join(dir, 'sw.js'), 'utf8').replace(/v\d\d\.\d\d\.01/, 'v' + nx + '.01'));
     await page.reload(); await page.waitForFunction(() => window.__appBooted === true); await sleep(800);
     const v2 = await page.evaluate(() => document.querySelector('meta[name="app-version"]').content);
     const got = await page.evaluate(() => JSON.stringify({ a: DB.articles, f: DB.folders, s: DB.sections, t: DB.trash, p: DB.theme.preset }));
-    r.check(v1 !== v2 && v2 === '06.00', `159e the page reopened as the next version (${v1} → ${v2})`);
+    r.check(v1 !== v2 && v2 === nx, `159e the page reopened as the next version (${v1} → ${v2})`);
     r.check(got === exp, '159e the changed note, the renamed folder and the setting are still there; notes, folders, sections and Trash are exactly as saved', got === exp ? '' : got.slice(0, 200));
     r.check((await page.evaluate(CNT)).sA !== undefined && pe.length === 0, '159e the counts draw after the update; no page errors', pe.join(' | '));
   } catch (e) { r.check(false, '159e threw: ' + String(e && e.message || e).split('\n')[0]); }
