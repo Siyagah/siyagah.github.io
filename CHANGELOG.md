@@ -11658,4 +11658,16 @@ Built by the Architect (PCA J117, the owner: "I rcvd a installed prompt on mobil
 
 ## v06.03 — J117 part 4: a save touches only the notes it changed (17 Nov 2026)
 
-(entry written as the round is built — see below)
+Measured at 28,600 notes (`tools/speed-j117d.mjs --measure`; "before" = `09a3380`, v06.01):
+
+| build | viewport | autosave ms | 30-note move ms | 30-note import batch ms |
+|---|---|---|---|---|
+| v06.01 | 390 x4 | 178 | 193 | 169 |
+| v06.01 | 1440 | 36 | 42 | 34 |
+| v06.03 | 390 x4 | 6 | 18 | 11 |
+| v06.03 | 1440 | 2 | 4 | 2 |
+
+- **What changed.** `_save()`/`persist()` swept every record to find changes the caller had not reported. A caller that KNOWS its records now says so: `_tgGo(spec)` (spec = `[{c, ids, add}]`) stamps, journals (`_ljSaveRecs`: those records, the head, and an order list that grew) and marks dirty (`_s1Dirty`) only those, by the same rule as `_stampRecordTouches` (`updatedAt` forward if the content changed and the caller did not stamp; the baseline entry renewed). `_tgPlan` decides everything before anything is changed and returns false (the caller then keeps `persist()`/`_save()`) when the journal is not running, the notebook is under 1,500 notes, the array's length or slot order is not what the last sweep saw, a record is a duplicate or has no id, or there is no undo baseline.
+- **Who uses it.** `_edAutoSave` (the open note, including its `noteHistory` push); `jmApply` (`_persistRecs`: ONE undo frame of the moved notes, `_histCaptureRecs`/`_histPushFrame`); the Evernote import flush (`_enxPersist(spec)`, silent baseline, folders and notes appended at the end; a batch that also upgraded markers on older notes takes the full sweep). Not changed, on purpose: `dupTrashGo` (Trash and tombstones), the other `_enxPersist` callers, the Keep/OneNote/MMJ/MyDB writers.
+- **The full sweep still runs before anything that reads records for sync or a file.** A merge of a received change (`_stampRecordTouches` before the merge), a push (`_doPush`), `syncNow`, `pagehide`/`visibilitychange`→hidden (`_flushEverythingOut`: `_save()`) already did. Added: `_tgSweep()` (a full `_save()` when a targeted save has been made since the last full one) at the start of `_ljCheckpoint`/`_ljHiddenCkpt`, `exportJSON`, `_sfTo` (Save File, backup folder, auto-save), `_bkBuild` (book page, PDF, Drive backup). Every other record's baseline is untouched by a targeted save, so a record changed in place and never reported is stamped by the next full sweep.
+- No change to `mergeDB()` or the cloud formats. Check: block 162, `tools/speed-j117d.mjs`.

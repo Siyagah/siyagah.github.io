@@ -90,7 +90,7 @@ export async function measureSaves(page, reps = 5) {
     for (let i = 0; i < Math.min(reps, 3); i++) {
       const now = new Date().toISOString(), added = [];
       for (let j = 0; j < 30; j++) { const id = 'imp-' + i + '-' + j; added.push(id); DB.articles.push({ id, title: 'Imported ' + i + '-' + j, content: '<p>imported</p>', folderIds: ['fo9'], tags: [], createdAt: now, updatedAt: now, kind: 'general' }); }
-      const s0 = performance.now(); _enxPersist(added); E.push(performance.now() - s0);
+      const s0 = performance.now(); _enxPersist([{ c: 'articles', add: added }]); E.push(performance.now() - s0);
     }
     out.import30 = med(E);
     return out;
