@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="06.00">
+<meta name="app-version" content="06.01">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -708,6 +708,15 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 #jeb-menu{max-height:calc(100dvh - 12px);overflow-y:auto}
 
 /* Modal */
+/* v06.01 — J186: the install card (top of the screen, never near the Zab bar) and the how-to steps */
+#pwa-offer{position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:9100;display:flex;align-items:center;gap:10px;width:min(460px,calc(100vw - 24px));box-sizing:border-box;padding:10px 12px;background:var(--paper);color:var(--t1);border:1px solid var(--border);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+#pwa-offer .pwa-ic{font-size:22px;flex:none}
+#pwa-offer .pwa-tx{flex:1;min-width:0;display:flex;flex-direction:column;font-size:14px;line-height:1.3}
+#pwa-offer .pwa-sub{font-size:12.5px;color:var(--t2)}
+#pwa-offer .btn{flex:none;min-height:40px;white-space:nowrap}
+.pwa-steps{margin:10px 0 0 1.2em;padding:0;line-height:1.6}
+.pwa-note{margin-top:8px;font-size:13px;color:var(--t2)}
+.pwa-gl{display:inline-block;min-width:1.2em;text-align:center;font-weight:600}
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:10000}
 #ov.on{display:flex}
 #mb{position:relative;background:var(--white);border-radius:13px;padding:22px;width:400px;max-width:93vw}
@@ -4204,7 +4213,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.00</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.01</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4281,7 +4290,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <div class="sb-mi" onclick="doSignOut();closeSBMenu()" id="signout-menu-item">🔒 Sign Out</div>
           <div class="sb-mi-hd">App</div>
           <div class="sb-mi" onclick="refreshApp();closeSBMenu()" title="Reload the app to get the latest version">🔄 Refresh App</div>
-          <div id="pwa-install-mi" class="sb-mi" style="display:none" onclick="installPWA();closeSBMenu()" title="Add Siyagah to Home Screen">📱 Install App</div>
+          <div id="pwa-install-mi" class="sb-mi" style="display:none" onclick="installPWA();closeSBMenu()" title="Put Siyagah on your home screen: it opens like an app and works offline">📱 Install Siyagah</div>
           <div class="sb-mi-hd">Backup</div>
           <div class="sb-mi" onclick="openModal('settings');closeSBMenu()" title="Export/import JSON, see how much storage the notebook is using, and manage the recovery copy">💽 Storage &amp; Backup</div>
           <div class="sb-mi" onclick="openBackupModal();closeSBMenu()" title="Keep a dated copy of the whole app + notes, automatically">🗄 Automatic Backups</div>
@@ -17301,31 +17310,90 @@ function toggleHijri(){
 
 
 /* v29.00 PWA */
+/* v06.01 — J186 (the owner: "I rcvd a installed prompt on mobile for MSA… Why can't i have it for… Siyagah too?").
+   Siyagah passed every installability test (CDP: no errors); the offer never showed because beforeinstallprompt is
+   preventDefault()-ed (that hides Chrome's own mini-bar) and the replacement was a hidden row deep in the ⚙ menu, and an
+   iPhone has no install prompt at all. Now: _pwaCan() is the ONE decision ('prompt' = the browser's install prompt is held,
+   'ios' = iPhone/iPad, 'help' = installable some other way, '' = already installed or a file: copy). The ⚙ row
+   "📱 Install Siyagah" shows whenever _pwaCan() is not '', and a calm card #pwa-offer (top of the screen, so it never
+   meets the Zab bar) offers it ONCE per page load when 'prompt' or 'ios', 4 s after the start. "Not now" = the cookie
+   siyagah_pwa_off for 30 days (never localStorage, full on the owner's devices; never DB). Nothing here writes DB. */
 let _pwaPrompt=null;
+const _PWA_OFF_CK='siyagah_pwa_off';
+function _pwaStandalone(){
+  try{ if(window.matchMedia&&(matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: window-controls-overlay)').matches||matchMedia('(display-mode: fullscreen)').matches)) return true; }catch(e){}
+  return navigator.standalone===true;
+}
+function _pwaIOS(){
+  const u=navigator.userAgent||'';
+  return /iPad|iPhone|iPod/.test(u)||(navigator.platform==='MacIntel'&&(navigator.maxTouchPoints||0)>1);
+}
+function _pwaCan(){
+  if(location.protocol==='file:'||_pwaStandalone()) return '';
+  if(_pwaPrompt) return 'prompt';
+  if(_pwaIOS()) return 'ios';
+  return 'help';
+}
+function _pwaName(){ return (typeof _JEB_APP!=='undefined'&&_JEB_APP)?'Siyagah Zab':'Siyagah'; }
+function _pwaSync(){
+  const c=_pwaCan();
+  const btn=document.getElementById('pwa-install-mi');
+  if(btn) btn.style.display=c?'':'none';
+  if(!c) _pwaOfferHide();
+  try{ _jebAppHdSync(); }catch(e){}
+}
 function installPWA(){
-  if(!_pwaPrompt)return;
-  _pwaPrompt.prompt();
-  _pwaPrompt.userChoice.then(c=>{
-    if(c.outcome==='accepted')toast('📱 Installing Siyagah…');
-    _pwaPrompt=null;
-    const btn=document.getElementById('pwa-install-mi');
-    if(btn)btn.style.display='none';
-    _jebAppHdSync();
-  });
+  _pwaOfferHide();
+  const c=_pwaCan();
+  if(c==='prompt'){
+    const ev=_pwaPrompt;
+    ev.prompt();
+    ev.userChoice.then(ch=>{
+      if(ch.outcome==='accepted') toast('📱 Installing '+_pwaName()+'…');
+      _pwaPrompt=null; _pwaSync();
+    }).catch(()=>{ _pwaPrompt=null; _pwaSync(); });
+    return;
+  }
+  if(c==='') { toast('✓ '+_pwaName()+' is already installed on this device'); return; }
+  _pwaHowTo(c);
+}
+function _pwaHowTo(c){
+  const n=esc(_pwaName());
+  const steps=c==='ios'
+    ? `<ol class="pwa-steps"><li>Open this page in <b>Safari</b>.</li><li>Tap <b>Share</b> <span class="pwa-gl">⬆</span> (the square with an arrow, at the bottom or top of the screen).</li><li>Scroll down and tap <b>Add to Home Screen</b> <span class="pwa-gl">＋</span>, then <b>Add</b>.</li></ol>`
+    : `<ol class="pwa-steps"><li>Open your browser's menu (<b>⋮</b> or <b>⋯</b>).</li><li>Tap <b>Install app</b> or <b>Add to Home screen</b>.</li><li>Tap <b>Install</b> or <b>Add</b>.</li></ol><div class="pwa-note">On a computer, Chrome and Edge also show an install icon <span class="pwa-gl">⊕</span> at the right end of the address bar.</div>`;
+  showModal(`<div class="mt">📱 Install ${n}</div>
+    <div class="mm">${n} then opens from its own icon like an app, full screen, and works offline.${steps}</div>
+    <div class="ma"><button class="btn bp mi" onclick="closeModal()">OK</button></div>`);
+}
+function _pwaOffSet(){ try{ document.cookie=_PWA_OFF_CK+'=1; max-age='+(30*864e2)+'; path=/; SameSite=Lax'; }catch(e){} }
+function _pwaOffGet(){ try{ return (document.cookie||'').split(/;\s*/).some(x=>x===_PWA_OFF_CK+'=1'); }catch(e){ return false; } }
+let _pwaOfferDone=false;
+function _pwaOfferHide(){ const el=document.getElementById('pwa-offer'); if(el) el.remove(); }
+function _pwaOfferTick(){
+  /* automated browsers (every check) never see the card unless a check asks for it */
+  if(_pwaOfferDone||(navigator.webdriver&&!window.__pwaTest)) return;
+  if(typeof _dbLoaded!=='undefined'&&!_dbLoaded){ setTimeout(_pwaOfferTick,2000); return; }
+  if(document.visibilityState==='hidden'){ setTimeout(_pwaOfferTick,4000); return; }
+  const c=_pwaCan();
+  if((c!=='prompt'&&c!=='ios')||_pwaOffGet()) return;
+  _pwaOfferDone=true;
+  const n=esc(_pwaName());
+  const el=document.createElement('div'); el.id='pwa-offer'; el.setAttribute('role','dialog'); el.setAttribute('aria-label','Install '+_pwaName());
+  el.innerHTML=`<span class="pwa-ic" aria-hidden="true">📱</span><span class="pwa-tx"><b>Install ${n}</b><span class="pwa-sub">Opens from its own icon, like an app, and works offline.</span></span><button class="btn bp pwa-go" onclick="installPWA()">${c==='ios'?'How':'Install'}</button><button class="btn pwa-x" onclick="_pwaOffSet();_pwaOfferHide()" title="Not now (asks again in 30 days)" aria-label="Not now">Not now</button>`;
+  document.body.appendChild(el);
 }
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();_pwaPrompt=e;
-  const btn=document.getElementById('pwa-install-mi');
-  if(btn)btn.style.display='';
-  _jebAppHdSync();   /* v05.04 — the Jeb header's 📱 Install follows _pwaPrompt */
+  _pwaSync();   /* v05.04 — the Jeb header's 📱 Install follows _pwaCan() */
+  if(!_pwaOfferDone) setTimeout(_pwaOfferTick,4000);
 });
 window.addEventListener('appinstalled',()=>{
   _pwaPrompt=null;
-  const btn=document.getElementById('pwa-install-mi');
-  if(btn)btn.style.display='none';
-  _jebAppHdSync();
-  toast('✓ Siyagah installed!');
+  _pwaSync();
+  toast('✓ '+_pwaName()+' installed!');
 });
+document.addEventListener('DOMContentLoaded',()=>{ _pwaSync(); setTimeout(_pwaOfferTick,4000); });
 
 
 
@@ -27621,7 +27689,7 @@ function _jebAppHdSync(){
   }
   const w=document.getElementById('save-warn-dot'), jw=h.querySelector('#jah-warn');
   if(jw) jw.style.display=(w&&w.style.display!=='none')?'':'none';
-  const ji=h.querySelector('#jah-inst'); if(ji) ji.style.display=_pwaPrompt?'':'none';
+  const ji=h.querySelector('#jah-inst'); if(ji){ const c=_pwaCan(); ji.style.display=(c==='prompt'||c==='ios')?'':'none'; }
 }
 function _jebMakeBar(){
   const bar=document.createElement('div'); bar.id='jeb-bar'; bar.setAttribute('role','toolbar'); bar.setAttribute('aria-label','Zab bar');
