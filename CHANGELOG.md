@@ -11655,3 +11655,7 @@ Built by the Architect (PCA J117, the owner: "I rcvd a installed prompt on mobil
 
 - Found by the full recheck (6o-2, phone): the ⚙ menu, one row taller with 📱 Install Siyagah, scrolled with no cue, because `_sbDDFit` measured only at open and rows filled in later. `_sbDDFit` now keeps a MutationObserver on the menu that re-asks "does it scroll" (class only) while it is open.
 - Check 160a updated in place: its "before" was `origin/main`, which since v06.00 merged holds the very speed-up it measures (242 → 239 ms, "1 % less"). It now compares against the fixed commit before that merge (`5764277^1`; `--before=<ref>` picks another): 384 → 222 ms, 42 % less. 91f fails as on main (host timing, known).
+
+## v06.03 — J117 part 4: a save touches only the notes it changed (17 Nov 2026)
+
+(entry written as the round is built — see below)
