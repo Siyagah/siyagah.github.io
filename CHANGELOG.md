@@ -11615,6 +11615,22 @@ The owner: "There's many files are duplicate and common… Find the exact matchi
 - **Trash:** "🧹 Empty only the duplicates (N)" (`dupEmptyTrash`, also in the dialog) removes for good only `dup:1` entries (`_tombstoneTrashEntry`, `_tombstoneTrashEntryId`, `_popCleanupOrphans`), one confirmation, same day limit.
 - Not changed: `mergeDB()`, sync, pictures (stored once already; the cloud's picture copies are never deleted). No new Firestore query shape. Check: block 157, `tools/dups-j177.mjs`.
 
-## v06.00 — J117 part 3 (in progress)
+## v06.00 — J117 part 3: opening a note and the first screen at 28,600 notes (16 Nov 2026)
 
-Opening a note and the first screen at 28,600 notes. Stub; the entry is written when the round is built.
+Built by the builder from issue #325. Measured with `tools/speed-j117c.mjs` (28,600 notes, ~4,000 folders over 6 sections, pictures by reference, Trash of 2,000), the same tool on `origin/main` and on this build, 390 ×4 CPU:
+
+| | main | v06.00 |
+|---|---|---|
+| opening a note, script | 199 ms (`_save` 158, of it the sweep 142) | 29 ms |
+| the first `render()` | 244 ms (`renderP2H` 125) | 164 ms |
+| one keystroke, script | 1.4 ms | 1.9 ms |
+| debounced autosave | 177 ms | 181 ms (unchanged) |
+| a save after 30 notes changed | 197 ms | 191 ms (unchanged) |
+
+1440 ×1: opening a note 34 → 7 ms, first `render()` 65 → 40 ms.
+
+- **Opening a note** called `_save()`, which sweeps all ~34,600 records (`_stampRecordTouches` + `_collect`) to save `DB.theme.lastArticle`. `selArt` now calls `_saveHead()`: `_stampThemeTouches`, then one journal put of the head (`_ljSaveHead`; the collection info of the last sweep is kept in `_ljC`). The record baseline is not touched, so a record changed in place and not yet saved is found, stamped and journaled by the next ordinary save — it is deferred, never dropped (160b: every kind of record, edit/add/remove, same stamped set as a full save). Used only when the journal is running (≥ 1,500 notes); otherwise the old `_save()`.
+- **`pathOf`** looked each ancestor up with `DB.folders.find` (autoFit called it for each of 4,000 folders): now an id → index map, a hit verified against the array, a miss rebuilds once (`_poFind`).
+- **The first `render()`**: `cntOf` outside a sidebar draw scanned every note per subfolder in the list header's path row (125 ms). The row counts once (`_cntC`), and `render()` holds ONE count pass for the sidebar and the header (`_cntBoth`).
+- **Not done / for next time:** the debounced autosave and a bulk save still sweep the whole notebook (the same `_stampRecordTouches`); a per-record save for the open note needs `_ljBase`/`_hMap` copy-on-write (they share one Map) and was left rather than shipped half-checked. The start's other costs (loadDB 1.8 s, `_flushEverythingOut`'s full save, `autoFit` 0.6 s) are untouched. No change to `mergeDB()` or any cloud format.
+- Check: block 160, `tools/speed-j117c.mjs` (160a table + targets, 160b stamped-records oracle, 160c open 50 notes, 160d save · update · reopen as the next version, 160e three sizes).
