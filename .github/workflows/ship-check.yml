@@ -1,0 +1,28 @@
+# Ship check on every pull request that changes the app (J184, PCA J116 C, 16 Nov 2026).
+# Free and without Claude: it only runs `node tools/ship-check.mjs` (about 1 s, no browser), which checks the
+# version in all three places moved past main, no saved-page leftovers, no blocking scripts, no duplicate
+# top-level functions. The result shows on the pull request as a green tick or a red cross. It writes nothing.
+name: Ship check
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'sw.js'
+      - 'manifest*.json'
+      - 'icons/**'
+      - 'tools/**'
+permissions:
+  contents: read
+jobs:
+  ship-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # ship-check compares against origin/main
+      - run: git fetch --no-tags origin main:refs/remotes/origin/main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tools/ship-check.mjs
