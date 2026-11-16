@@ -13045,6 +13045,18 @@ await r.block('157-dups-j177', async () => {
   for (const row of rows) r.check(row.ok, '157: ' + row.label, row.detail);
   r.check(out.status === 0, 'the dups-j177.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 159 — v05.99, J181: each section heading in the side pane shows "N folders · M notes" (exact counts, open = closed, updates on file / unfile / trash / folder made / moved / deleted / merge), 28,600 notes at 390 px x4 CPU, five sidebar colours' contrast, no wrap, save-update-reopen. tools/sec-counts-j181.mjs runs 159a–159e. */
+await r.block('159-sec-counts-j181', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./sec-counts-j181.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1200000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 20, 'the sec-counts-j181.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '159: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the sec-counts-j181.mjs check exits cleanly', `exit ${out.status}`);
+});
 /* 160 — v06.00, J117 part 3: opening a note and the first screen at 28,600 notes. Opening a note saves only the head (no sweep of every record), pathOf is indexed, the first render counts folders once; the stamped-records oracle, the open-50-notes JSON check, save · update · reopen as the next version, three sizes. tools/speed-j117c.mjs runs 160a–160e. */
 await r.block('160-speed-j117c', async () => {
   const { spawnSync } = await import('node:child_process');
