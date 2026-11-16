@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.98">
+<meta name="app-version" content="05.99">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1685,6 +1685,16 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
         background:var(--sb-strip)}
 .sec-hd:hover,.sec-hd:hover .sec-acts{background:var(--sb-strip-hi);opacity:1}
 .sec-hd:active{cursor:grabbing}
+.sec-cnt{flex-shrink:0;white-space:nowrap;font-size:10.5px;line-height:1.2;color:var(--sb-ink-soft);
+         min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.sec-cnt .sc-s{display:none}
+@media(max-width:639.98px){.sec-cnt .sc-w{display:none}.sec-cnt .sc-s{display:inline}}
+/* v05.99 (review) — a narrow side pane (a 1440 laptop's is ~200 px; it can be dragged narrower) has no room for the name, the count and the
+   section buttons on one line: the count then moves to a small line of its own under the name (the name keeps its room, the pane never
+   scrolls sideways — 58h). The heading is the container, so this follows the side pane's own width, not the window's. */
+.sec-hd:has(> .sec-cnt){container:sechd/inline-size;flex-wrap:wrap}
+@media(min-width:640px){@container sechd (max-width:329.98px){.sec-hd > .sec-cnt{order:9;flex-basis:100%;padding-left:21px;margin-top:-2px}}}
+@container sechd (max-width:259.98px){.sec-hd > .sec-cnt{order:9;flex-basis:100%;padding-left:21px;margin-top:-2px}}
 .sec-tog{font-size:16px;color:var(--sb-ink);flex-shrink:0;cursor:pointer;
          width:16px;text-align:center;line-height:1}
 .sec-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
@@ -4194,7 +4204,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.98</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.99</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -7664,6 +7674,27 @@ function _cntFolders(){
     const s=new Set(); fs.forEach(f=>ancOf(f).forEach(x=>s.add(x))); s.forEach(x=>m.set(x,(m.get(x)||0)+1));
   });
   return (C.fo=m);
+}
+/* v05.99 · J181 — folders and distinct notes per section, worked out ONCE per side-pane draw for every section together (one pass over
+   DB.folders, one over DB.articles; display only, nothing is written). A folder belongs to the section of its top ancestor; a note counts
+   once in each section any of its folders is in. Outside a draw it is simply computed afresh (nothing kept). */
+function _secCounts(){
+  const C=_cntC; if(C&&C.se) return C.se;
+  const byId=new Map(); DB.folders.forEach(f=>byId.set(f.id,f));
+  const top=new Map(), secOf=fid=>{ if(top.has(fid)) return top.get(fid); const seen=new Set(); let c=fid, f, r=null; while(c!=null&&c!==''&&!seen.has(c)){ seen.add(c); f=byId.get(c); if(!f) break; if(!f.parentId){ r=f.sectionId||null; break; } c=f.parentId; } top.set(fid,r); return r; };
+  const m=new Map(), ent=sid=>{ let e=m.get(sid); if(!e){ e={f:0,n:0}; m.set(sid,e); } return e; };
+  DB.folders.forEach(f=>{ const s=secOf(f.id); if(s!=null) ent(s).f++; });
+  DB.articles.forEach(a=>{
+    if(a.trash) return; const fs=a.folderIds||[]; if(!fs.length) return;
+    if(fs.length===1){ const s=secOf(fs[0]); if(s!=null) ent(s).n++; return; }
+    const ss=new Set(); fs.forEach(x=>{ const s=secOf(x); if(s!=null) ss.add(s); }); ss.forEach(s=>ent(s).n++);
+  });
+  if(C) C.se=m; return m;
+}
+function _secCntHTML(sid){
+  const e=_secCounts().get(sid)||{f:0,n:0};
+  const w=e.f+(e.f===1?' folder':' folders')+' · '+e.n+(e.n===1?' note':' notes');
+  return '<span class="sec-cnt" title="'+w+'"><span class="sc-w">'+w+'</span><span class="sc-s">'+e.f+' 📁 · '+e.n+' 📝</span></span>';
 }
 function cntOf(fid){
   if(_cntC) return _cntFolders().get(fid)||0;
@@ -13127,6 +13158,7 @@ function renderDatabaseSection(){
     +'<div class="sec-hd db-hd-sec" onclick="ST.dbOpen=ST.dbOpen!==true;renderTree()" oncontextmenu="showDbSecCtx(event)" title="Right-click for new folders and options">'
     +'<span class="sec-tog">'+(open?'▾':'▸')+'</span>'
     +'<span class="sec-nm db-sec-nm" ondblclick="event.stopPropagation();startRenDbSec()">🗂 '+esc(_dbSecName())+'</span>'
+    +_secCntHTML('db-section')
     +'</div>'+body+'</div>';
 }
 function _renderMyJournalDB(){return _renderJournalSmartView();}
@@ -25007,6 +25039,7 @@ function renderSection(sec){
         onclick="toggleSection(event,'${sec.id}')">
       <span class="sec-tog">${open?'▾':'▸'}</span>
       <span class="sec-nm" ondblclick="event.stopPropagation();startRenSec('${sec.id}')" ${(sec.color||sec.bold)?`style="${sec.color?`color:${sec.color};`:''}${sec.bold?'font-weight:700':''}"`:''} >${esc(sec.name)}</span>
+      ${_secCntHTML(sec.id)}
       <span class="sec-acts">
         <span class="sec-act sec-pop" role="button" aria-label="Open ${esc(sec.name)} in its own window" onclick="event.stopPropagation();openSecWin('${sec.id}')" title="Open this section in its own window">⧉</span>
         <span class="sec-act" onclick="event.stopPropagation();addFolderInSec('${sec.id}')" title="New folder in this section">＋</span>
