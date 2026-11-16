@@ -193,8 +193,12 @@ import { join } from 'node:path';
 const r = report('J117 part 3 — opening a note and the first screen at 28,600 notes');
 const only = arg('only'); const want = (t) => !only || only.split(',').some((o) => t.startsWith(o));
 function makeBase() {
-  const dir = mkdtempSync(join(tmpdir(), 'j117c-base-'));
-  for (const f of ['index.html', 'sw.js', 'manifest.json']) writeFileSync(join(dir, f), execFileSync('git', ['show', `origin/main:${f}`], { encoding: 'buffer', maxBuffer: 1 << 28 }));
+  const BEFORE_REF = (process.argv.find((a) => a.startsWith('--before=')) || '').slice(9) || '5764277^1';
+const dir = mkdtempSync(join(tmpdir(), 'j117c-base-'));
+  /* v06.01: "before" was origin/main, which was right only until J117 part 3 itself merged (5764277); after that main holds the
+     speed-up and 160a compared v06.00 with itself (242 → 239 ms, "1 % less"). It is now the fixed commit before that merge
+     (its first parent), so the measurement keeps meaning what it says. `--before=<ref>` still picks another. */
+  for (const f of ['index.html', 'sw.js', 'manifest.json']) writeFileSync(join(dir, f), execFileSync('git', ['show', `${BEFORE_REF}:${f}`], { encoding: 'buffer', maxBuffer: 1 << 28 }));
   return dir;
 }
 const here = new URL('..', import.meta.url).pathname;
