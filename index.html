@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="05.97">
+<meta name="app-version" content="05.98">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -2232,6 +2232,20 @@ sup.ann-sup:hover{text-decoration:underline}
 .mydb-in{width:100%;box-sizing:border-box;min-height:44px;padding:0 12px;border:1px solid var(--border2);border-radius:8px;background:var(--white);color:var(--t1);font:inherit}
 .mydb-row{display:flex;flex-wrap:wrap;gap:8px}
 .mydb-row .rm-big{width:auto;min-height:44px;margin:0;padding:0 14px}
+/* v05.98 · J177 — 🧹 Find duplicate notes */
+#mb.mb-rsz>.dup-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;word-break:break-word;overflow-wrap:anywhere;font-size:13px;color:var(--t1)}
+.dup-sum{font-weight:600;margin:2px 0 6px}.dup-line{color:var(--t2);margin:4px 0;font-size:12.5px}
+.dup-bar{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.dup-bar .btn{min-height:44px}
+.dup-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.dup-tab{min-height:44px;padding:0 12px;border:1.5px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font:inherit;cursor:pointer}
+.dup-tab.on{background:var(--green);color:var(--on-accent);border-color:var(--green)}
+.dup-g{border:1px solid var(--border2);border-radius:8px;margin:8px 0;padding:6px 8px;background:var(--paper)}
+.dup-gh{font-size:12px;color:var(--t2);margin-bottom:4px}
+.dup-n{border-top:1px solid var(--border2);padding:6px 0}.dup-n:first-of-type{border-top:none}
+.dup-n.off .dup-t1{opacity:.7}.dup-t1{font-weight:600}.dup-meta{font-size:12px;color:var(--t2)}
+.dup-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:2px}
+.dup-lb{display:inline-flex;align-items:center;gap:6px;min-height:44px;min-width:44px;cursor:pointer}.dup-lb input{width:20px;height:20px;margin:0}
+.dup-why{color:var(--t2);font-style:italic;font-size:12px}
+.dup-open{min-height:44px}.dup-more{min-height:44px;width:100%}
 .mydb-st{padding:9px 12px;background:var(--hover);border-radius:8px;line-height:1.5;color:var(--t1);overflow-wrap:anywhere}
 .mydb-keep{display:flex;align-items:center;gap:8px;min-height:44px}
 .mydb-keep input{width:22px;height:22px;flex:none}
@@ -4180,7 +4194,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.97</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v05.98</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4212,6 +4226,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
           <button class="sb-mi" onclick="addRootFolder();closeSBTools()">📁 New Folder</button>
           <div class="sb-mi" onclick="addStarterMyDatabaseFolders();closeSBTools()" title="Adds MyResources, MyIdeas, MyMemories, MyPlanning, MyBuy-MyShopping, MyQueries, MyTravel under MyDatabase — safe to run more than once">🗂 Add Starter MyDatabase Folders</div>
           <div class="sb-mi" onclick="syncKnowledgeBase();closeSBTools()" title="Update the built-in guide notes to the latest version">📚 Sync Knowledge Base</div>
+          <div class="sb-mi" onclick="openDupFinder();closeSBTools()" title="Finds notes that are exact copies, the same note with an update, or the same text under another title. You get the list and tick what goes to Trash; nothing is changed until you say so.">🧹 Find duplicate notes</div>
           <div class="sb-mi" onclick="openEnexImport();closeSBTools()" title="Reads your Evernote export and shows what it found; then, when you say OK, brings the notes into My Notebooks ▸ Evernote.">📥 Evernote import</div>
           <div class="sb-mi" onclick="openKeepImport();closeSBTools()" title="Reads your Google Keep export (Takeout ▸ Keep) and shows what it found; then, when you say OK, brings the notes into My Notebooks ▸ Keep (Imported), each with its original creation date.">📥 Keep import</div>
           <div class="sb-mi" onclick="openOneNoteImport();closeSBTools()" title="Reads your OneNote notebooks straight from Microsoft (you sign in to Microsoft yourself) and shows what it found; then, when you say OK, brings the pages into My Notebooks ▸ OneNote (Imported), each with its original dates.">📥 OneNote import</div>
@@ -29013,6 +29028,8 @@ function renderTrashModal(){
   updateTrashBtn();
   const items=(DB.trash||[]).slice().reverse();
   if(emptyBtn) emptyBtn.style.display=items.length?'':'none';
+  { const db=document.getElementById('dup-empty-btn'), dn=(DB.trash||[]).reduce((n,t)=>n+(t&&t.dup?1:0),0);   /* v05.98 · J177 */
+    if(db){ db.style.display=dn?'':'none'; db.textContent='🧹 Empty only the duplicates ('+dn.toLocaleString('en-US')+')'; } }
   if(!items.length){
     body.innerHTML='<div class="trash-empty"><div style="font-size:44px;margin-bottom:12px;opacity:.3">🗑</div>Trash is empty</div>';
     return;
@@ -35026,6 +35043,308 @@ function _enxDupHTML(){
     +(r.rm.length>w.room?'<div class="rm-sub" id="enx-dday">Up to '+N(w.room)+' today (the free cloud plan); run it again for the rest.</div>':'');
   h+='<div class="enx-dry">This is a look only: nothing has been changed yet.</div><button class="rm-big" onclick="_enxDupCopy()">📋 Copy summary</button><div id="enx-fb"></div>'+back;
   return h;
+}
+/* ── v05.98 · J177 — 🧹 Find duplicate notes ───────────────────────────────────────────────────────────────────────────────────────
+   Whole notebook, whatever the source. The SCAN writes nothing (no DB, no storage, no cloud); it reads in 12 ms slices with a yield between. Three lists:
+   1 exact copies (same normalised title + same text + same pictures/files), 2 same title with changed text, 3 same text/pictures under different titles.
+   A hash only gathers candidates; EQUALITY (lists 1 and 3) is decided on the real strings. Different hashes prove "different", so list 2 needs no check.
+   Removal = Trash exactly like trashArt (entry + tombstone) with dup:1 on the entry, ONE persist() (one Undo). A per-device, per-Los-Angeles-day limit
+   (_DUP_DAY, record `dupday` in the device's own database, never DB; the day and reset time come from v05.97's _bgDay/_s1ResetTime) keeps the cloud writes
+   inside the free plan; the ticks not yet used are remembered there (id → updatedAt). Only "Empty only the duplicates" frees the space (Trash entries with dup:1). */
+const _DUP_DAY=4000;
+function _dupLimit(){ return window.__dupDay!=null?+window.__dupDay:_DUP_DAY; }
+let _dup=null;
+const _dupN=n=>(+n||0).toLocaleString('en-US');
+async function _dupDayLoad(){
+  let v; try{ v=await _idbGet('dupday'); }catch(e){}
+  const o=(v&&typeof v==='object')?v:{}, d=_bgDay(_bgNow());
+  const r={day:o.day||d,moved:+o.moved||0,emptied:+o.emptied||0,ticks:(o.ticks&&typeof o.ticks==='object')?o.ticks:{}};
+  if(r.day!==d){ r.day=d; r.moved=0; r.emptied=0; }
+  return r;
+}
+function _dupDaySave(r){ try{ _idbPut('dupday',{day:r.day,moved:r.moved,emptied:r.emptied,ticks:r.ticks||{}}).catch(()=>{}); }catch(e){} }
+function _dupSrc(a){ return a.fromEvernote?'Evernote':a.fromKeep?'Keep':a.fromOneNote?'OneNote':a.fromMmj?'Mapping My Journey':a.fromMydb?'MyDatabase':a.fromJeb?'Zab':'Siyagah'; }
+function _dupPics(c){
+  if(!c||c.indexOf('data-')<0) return '';
+  const s=new Set(), re=/data-(?:pic|file)="([^"]+)"/g; let m;
+  while((m=re.exec(c))) s.add(m[1]);
+  return Array.from(s).sort().join(',');
+}
+/* the note's plain text WITHOUT the title that _stOf puts in front */
+function _dupText(a){ try{ return _stOf(a).slice((String(a.title)+' ').toLowerCase().length); }catch(e){ return ''; } }
+function _dupWords(t){ const s=new Set(); t.slice(0,100000).split(/\s+/).forEach(w=>{ if(w) s.add(w); }); return s; }
+function _dupWhyOf(a,list,mem,jp){
+  if(_picMigOpen(a.id)) return 'Open in the editor';
+  if(a.zabNote) return "A Zab's own note";
+  if(a.fromMmj) return 'Kept in step with Mapping My Journey';
+  if(a.fromMydb) return 'Kept in step with MyDatabase';
+  if(a.versionGroupId&&mem.some(o=>o!==a&&o.versionGroupId===a.versionGroupId)) return 'A version of another note in this group';
+  if(list===2&&jp(a)) return 'Journal note: the same title repeats by design';
+  return '';
+}
+async function _dupScan(D){
+  const alive=()=>_dup===D&&document.getElementById('dup-body');
+  const arts=DB.articles.slice(), N=arts.length, recs=new Array(N), jp=_jrnPred();
+  let i=0;
+  while(i<N){
+    const end=performance.now()+12;
+    while(i<N&&performance.now()<end){
+      const a=arts[i], t=_dupText(a);
+      let h1=2166136261>>>0, h2=5381;
+      for(let k=0;k<t.length;k++){ const c=t.charCodeAt(k); h1=Math.imul(h1^c,16777619)>>>0; h2=(Math.imul(h2,33)+c)>>>0; }
+      const c=a.content||'', pics=_dupPics(c);
+      recs[i]={nt:String(a.title==null?'':a.title).trim().toLowerCase().replace(/\s+/g,' '),len:t.length,pics:pics,kx:t.length+'|'+h1+'|'+h2+'|'+pics};
+      D.u[a.id]=a.updatedAt||''; D.n[a.id]=c.length; D.pc[a.id]=pics?pics.split(',').length:0;
+      i++;
+    }
+    D.done=i; D.total=N; _dupPaint();
+    await _yieldTask(); if(!alive()) return;
+  }
+  D.phase='Comparing the notes that look alike…'; _dupPaint();
+  const push=(m,k,v)=>{ const l=m.get(k); if(l) l.push(v); else m.set(k,[v]); };
+  const L1=new Map(), L3=new Map(), T=new Map();
+  recs.forEach((r,ix)=>{ if(r.len||r.pics) push(L3,r.kx,ix); push(L1,r.nt+'\u0001'+r.kx,ix); if(r.nt) push(T,r.nt,ix); });
+  const rank=(x,y)=>{ const a=arts[x], b=arts[y]; return ((b.folderIds||[]).length-(a.folderIds||[]).length)||((b.tags||[]).length-(a.tags||[]).length)||String(a.createdAt||'').localeCompare(String(b.createdAt||''))||String(a.id).localeCompare(String(b.id)); };
+  const groups=[]; let gn=0, t0=performance.now();
+  const tick=async()=>{ if(performance.now()-t0>12){ await _yieldTask(); t0=performance.now(); } return !alive(); };
+  const mk=(list,ixs,keepIx,label,low)=>{
+    const mem=ixs.map(ix=>arts[ix]), why={};
+    mem.forEach(a=>{ const w=_dupWhyOf(a,list,mem,jp); if(w) why[a.id]=w; });
+    return {id:'d'+(++gn),list:list,members:mem.map(a=>a.id),why:why,keep:arts[keepIx].id,label:label,low:!!low};
+  };
+  /* list 1 — exact copies; the real text decides */
+  for(const ixs of L1.values()){
+    if(ixs.length<2) continue;
+    const cls=new Map();
+    for(const ix of ixs){ push(cls,_dupText(arts[ix]),ix); if(await tick()) return; }
+    for(const m of cls.values()){ if(m.length<2) continue; m.sort(rank); groups.push(mk(1,m,m[0],m.length+' identical copies',false)); }
+  }
+  /* list 3 — same text and pictures, different titles; the real text decides */
+  for(const ixs of L3.values()){
+    if(ixs.length<2) continue;
+    const cls=new Map();
+    for(const ix of ixs){ push(cls,_dupText(arts[ix]),ix); if(await tick()) return; }
+    for(const m of cls.values()){
+      if(m.length<2) continue;
+      const byT=new Map(); m.forEach(ix=>push(byT,recs[ix].nt,ix));
+      if(byT.size<2) continue;
+      const reps=[]; byT.forEach(l=>{ l.sort(rank); reps.push(l[0]); });
+      reps.sort(rank); groups.push(mk(3,reps,reps[0],'Same text under '+reps.length+' different titles',false));
+    }
+  }
+  /* list 2 — same title, different text: how alike? */
+  const g2=[];
+  for(const ixs of T.values()){
+    if(ixs.length<2) continue;
+    const vs=new Map(); ixs.forEach(ix=>push(vs,recs[ix].kx,ix));
+    if(vs.size<2) continue;
+    const reps=[]; vs.forEach(l=>{ l.sort(rank); reps.push(l[0]); });
+    if(reps.length>6){ g2.push(mk(2,reps,reps.slice().sort((x,y)=>String(arts[y].updatedAt||'').localeCompare(String(arts[x].updatedAt||'')))[0],reps.length+' versions with this title · same title only',true)); continue; }
+    const tx=reps.map(ix=>_dupText(arts[ix])), ws=tx.map(_dupWords);
+    let contains=true, pct=100;
+    for(let x=0;x<reps.length;x++) for(let y=x+1;y<reps.length;y++){
+      const s=tx[x].length<=tx[y].length?tx[x]:tx[y], l=tx[x].length<=tx[y].length?tx[y]:tx[x];
+      if(!l.includes(s)) contains=false;
+      let sh=0; ws[x].forEach(w=>{ if(ws[y].has(w)) sh++; });
+      const un=ws[x].size+ws[y].size-sh, p=un?Math.round(100*sh/un):100;
+      if(p<pct) pct=p;
+    }
+    let keepIx;
+    if(contains){ let b=0; for(let x=1;x<reps.length;x++){ if(tx[x].length>tx[b].length||(tx[x].length===tx[b].length&&String(arts[reps[x]].updatedAt||'')>String(arts[reps[b]].updatedAt||''))) b=x; } keepIx=reps[b]; }
+    else keepIx=reps.slice().sort((x,y)=>String(arts[y].updatedAt||'').localeCompare(String(arts[x].updatedAt||''))||rank(x,y))[0];
+    const likely=contains||pct>=60;
+    g2.push(mk(2,reps,keepIx,(contains?'One contains the other':pct+'% alike')+(likely?' · likely an older and a newer version':' · same title only'),!likely));
+    if(await tick()) return;
+  }
+  g2.sort((a,b)=>(a.low?1:0)-(b.low?1:0));
+  g2.forEach(g=>groups.push(g));
+  D.groups=groups;
+  groups.forEach(g=>{
+    D.keep[g.id]=g.keep;
+    if(!g.low) g.members.forEach(id=>{ if(id!==g.keep&&!g.why[id]) D.tick.add(id); });
+    g.def=g.members.filter(id=>id!==g.keep&&!g.why[id]&&!g.low);
+  });
+  const day=await _dupDayLoad(); D.day=day;
+  const here=new Set(); groups.forEach(g=>g.members.forEach(id=>here.add(id)));
+  const keeps=new Set(Object.values(D.keep));
+  Object.keys(day.ticks).forEach(id=>{ if(here.has(id)&&D.u[id]===day.ticks[id]&&!keeps.has(id)) D.tick.add(id); });
+  D.state='ready'; D.phase=''; D.byId=null;
+  _dupPaint();
+}
+/* what a click on 🗑 would move: the ticked notes that may go, in list order; a group never loses every note (its Keep is put back) */
+function _dupPlan(){
+  const D=_dup, R=new Set();
+  const grey=new Set(); D.groups.forEach(g=>Object.keys(g.why).forEach(id=>grey.add(id)));
+  D.tick.forEach(id=>{ if(!grey.has(id)&&!_picMigOpen(id)&&D.u[id]!=null) R.add(id); });
+  for(let k=0;k<3;k++){
+    let hit=false;
+    D.groups.forEach(g=>{ if(g.members.length&&g.members.every(id=>R.has(id))){ R.delete(D.keep[g.id]); hit=true; } });
+    if(!hit) break;
+  }
+  const ids=[], seen=new Set();
+  D.groups.forEach(g=>g.members.forEach(id=>{ if(R.has(id)&&!seen.has(id)){ seen.add(id); ids.push(id); } }));
+  let chars=0; ids.forEach(id=>{ chars+=D.n[id]||0; });
+  return {ids:ids,set:R,chars:chars};
+}
+function _dupMap(){ const D=_dup; if(!D.byId){ D.byId=new Map(); DB.articles.forEach(a=>D.byId.set(a.id,a)); } return D.byId; }
+function _dupFPaths(a,fm){
+  return (a.folderIds||[]).map(fid=>{ const p=[]; let f=fm.get(fid), g=0; while(f&&g++<50){ p.unshift(f.name||''); f=f.parentId?fm.get(f.parentId):null; } return p.join(' › '); }).filter(Boolean);
+}
+function _dupSumText(){
+  const D=_dup, P=_dupPlan();
+  let h='<div class="dup-sum" id="dup-sum">'+_dupN(D.groups.length)+' group'+(D.groups.length===1?'':'s')+' · '+_dupN(P.ids.length)+' note'+(P.ids.length===1?'':'s')+' can go · about '+(P.chars/1e6).toFixed(1)+' MB of note text</div>';
+  return h;
+}
+function _dupRowHTML(g,id){
+  const D=_dup, a=_dupMap().get(id); if(!a) return '';
+  const fm=D.fm||(D.fm=new Map(DB.folders.map(f=>[f.id,f]))), fp=_dupFPaths(a,fm);
+  const isKeep=D.keep[g.id]===id, why=g.why[id]||(_picMigOpen(id)?'Open in the editor':'');
+  const meta=[fp.length?esc(fp.slice(0,3).join(' · ')+(fp.length>3?' +'+(fp.length-3):'')):'No folder', esc(_dupSrc(a)), 'created '+esc(String(a.createdAt||'').slice(0,10)||'?'), 'edited '+esc(String(a.updatedAt||'').slice(0,10)||'?'), _dupN(D.n[id])+' characters'+(D.pc[id]?' · '+D.pc[id]+' picture'+(D.pc[id]===1?'':'s'):'')].join(' · ');
+  let ctl='<label class="dup-lb"><input type="radio" name="dk-'+g.id+'" '+(isKeep?'checked ':'')+'onchange="dupKeep('+_ja(g.id)+','+_ja(id)+')"> Keep</label>';
+  if(why) ctl+='<span class="dup-why">'+(isKeep?'':'Stays: ')+esc(why)+'</span>';
+  else if(!isKeep) ctl+='<label class="dup-lb"><input type="checkbox" class="dup-tk" data-id="'+esc(id)+'" '+(D.tick.has(id)?'checked ':'')+'onchange="dupTick('+_ja(id)+',this.checked)"> Remove</label>';
+  ctl+='<button type="button" class="btn dup-open" onclick="dupOpen('+_ja(id)+')">▶ Open</button>';
+  return '<div class="dup-n'+(why?' off':'')+'" data-id="'+esc(id)+'"><div class="dup-t1">'+esc(a.title||'(untitled)')+'</div><div class="dup-meta">'+meta+'</div><div class="dup-ctl">'+ctl+'</div></div>';
+}
+function _dupGroupHTML(g){
+  return '<div class="dup-g" id="dup-g-'+g.id+'" data-g="'+g.id+'"><div class="dup-gh">'+esc(g.label)+'</div>'+g.members.map(id=>_dupRowHTML(g,id)).join('')+'</div>';
+}
+function _dupPaint(){
+  const body=document.getElementById('dup-body'), D=_dup; if(!body||!D) return;
+  if(D.state==='scan'){
+    const txt=D.phase||('Checking '+_dupN(D.done)+' of '+_dupN(D.total)+' notes');
+    const el=document.getElementById('dup-stat');
+    if(el) el.textContent=txt; else body.innerHTML='<div class="enx-prog" id="dup-stat" role="status">'+esc(txt)+'</div>';
+    return;
+  }
+  D.fm=null;
+  const lim=_dupLimit(), day=D.day||{moved:0,emptied:0,ticks:{}};
+  const cnt=[1,2,3].map(l=>D.groups.filter(g=>g.list===l).length), names=['Exact copies','Same title, changed','Same text, different title'];
+  let h=_dupSumText();
+  h+='<div class="dup-bar"><button type="button" class="btn" id="dup-csv" onclick="dupSaveList()">⬇ Save the list</button>'
+    +'<button type="button" class="btn bd" id="dup-go" onclick="dupTrashGo()">🗑 Move the ticked notes to Trash</button></div>';
+  h+='<label class="dup-lb"><input type="checkbox" id="dup-merge"'+(D.merge?' checked':'')+' onchange="_dup.merge=this.checked"> Keep their folders and tags on the kept note</label>';
+  h+='<div class="dup-line" id="dup-day">Today: '+_dupN(day.moved)+' of '+_dupN(lim)+' notes moved to Trash. '+(day.moved>=lim?'The limit is used; the rest can go after '+esc(_s1ResetTime(_bgNow()))+', and your ticks are remembered. ':'The free cloud plan limits how many can go in a day. ')+esc(D.note||'')+'</div>';
+  h+='<div class="dup-line" id="dup-trashnote">A note in Trash is still a full copy. Only Trash → “🧹 Empty only the duplicates” frees the space. <button type="button" class="btn" id="dup-empty-in" onclick="dupEmptyTrash()">🧹 Empty only the duplicates ('+_dupN((DB.trash||[]).filter(t=>t&&t.dup).length)+')</button></div>';
+  h+='<div class="dup-line" id="dup-picnote">Pictures are stored once already; removing notes frees the note text.</div>';
+  h+='<div class="dup-tabs" role="tablist">'+[1,2,3].map(l=>'<button type="button" role="tab" class="dup-tab'+(D.tab===l?' on':'')+'" id="dup-tab-'+l+'" onclick="dupTab('+l+')">'+names[l-1]+' ('+_dupN(cnt[l-1])+')</button>').join('')+'</div>';
+  const gs=D.groups.filter(g=>g.list===D.tab), shown=D.shown[D.tab]||30;
+  h+='<div id="dup-list">'+(gs.length?gs.slice(0,shown).map(_dupGroupHTML).join('')+(gs.length>shown?'<button type="button" class="btn dup-more" id="dup-more" onclick="dupMore()">Show more ('+_dupN(gs.length-shown)+' left)</button>':''):'<div class="dup-line" id="dup-none">Nothing found in this list.</div>')+'</div>';
+  body.innerHTML=h;
+}
+function dupTab(l){ if(!_dup) return; _dup.tab=l; _dupPaint(); }
+function dupMore(){ if(!_dup) return; _dup.shown[_dup.tab]=(_dup.shown[_dup.tab]||30)+30; _dupPaint(); }
+function _dupSync(){
+  const D=_dup; if(!D) return;
+  document.querySelectorAll('.dup-tk').forEach(c=>{ c.checked=D.tick.has(c.dataset.id); });
+  const s=document.getElementById('dup-sum'); if(s) s.outerHTML=_dupSumText();
+}
+function dupTick(id,on){ if(!_dup) return; if(on) _dup.tick.add(id); else _dup.tick.delete(id); _dupSync(); }
+function dupKeep(gid,id){
+  const D=_dup; if(!D) return;
+  const g=D.groups.find(x=>x.id===gid); if(!g) return;
+  const old=D.keep[gid]; D.keep[gid]=id; D.tick.delete(id);
+  if(old&&old!==id&&!g.low&&!g.why[old]) D.tick.add(old);
+  const el=document.getElementById('dup-g-'+gid); if(el) el.outerHTML=_dupGroupHTML(g);
+  _dupSync();
+}
+function dupOpen(id){ closeModal(); try{ selArt(id); }catch(e){} }
+function openDupFinder(){
+  _dup={state:'scan',done:0,total:0,phase:'',groups:[],tab:1,keep:{},tick:new Set(),u:{},n:{},pc:{},shown:{1:30,2:30,3:30},merge:true,note:'',run:false,byId:null,fm:null,day:null};
+  const D=_dup;
+  showResizableModal('<div class="mt mb-mt-fs"><span>🧹 Find duplicate notes</span>'+_mbFsBtnHTML()+'</div><div class="dup-body" id="dup-body"></div>',{geomKey:'siyagah-mb-dups-geom',phoneSheet:true,width:'760px',height:'640px'});
+  if(window.innerWidth<640){ const mb=document.getElementById('mb'); if(mb) mb.style.height='88vh'; }
+  _dupPaint();
+  _dupScan(D).catch(e=>{ console.error('Find duplicate notes failed',e); const b=document.getElementById('dup-body'); if(b&&_dup===D) b.innerHTML='<div class="dup-line">Something went wrong while looking: '+esc(e&&e.message||e)+'. Nothing was changed.</div>'; });
+}
+/* ⬇ Save the list — one row per note listed */
+function _dupCsv(){
+  const D=_dup, byId=_dupMap(), fm=new Map(DB.folders.map(f=>[f.id,f]));
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const rows=[['group','list','title','folders','source','created','edited','size','suggested action']];
+  const names={1:'Exact copies',2:'Same title, changed',3:'Same text, different title'};
+  D.groups.forEach(g=>g.members.forEach(id=>{
+    const a=byId.get(id); if(!a) return;
+    const act=g.why[id]?'Stays ('+g.why[id]+')':id===g.keep?'Keep':g.def.indexOf(id)>=0?'Remove':'Keep (not suggested)';
+    rows.push([g.id,names[g.list],a.title||'',_dupFPaths(a,fm).join(' | '),_dupSrc(a),a.createdAt||'',a.updatedAt||'',(D.n[id]||0)+' characters'+(D.pc[id]?'; '+D.pc[id]+' pictures':''),act]);
+  }));
+  return '﻿'+rows.map(r=>r.map(q).join(',')).join('\r\n')+'\r\n';
+}
+function dupSaveList(){
+  if(!_dup||_dup.state!=='ready') return;
+  const url=URL.createObjectURL(new Blob([_dupCsv()],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a'); a.href=url; a.download='siyagah-duplicate-notes.csv'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+/* 🗑 the ticked notes go to Trash: ONE persist() = one Undo */
+async function dupTrashGo(){
+  const D=_dup; if(!D||D.state!=='ready'||D.run) return;
+  D.run=true;
+  try{
+    const day=await _dupDayLoad(); D.day=day;
+    const P=_dupPlan(), lim=_dupLimit(), room=Math.max(0,lim-day.moved);
+    if(!P.ids.length){ toast('Nothing is ticked.'); return; }
+    const take=P.ids.slice(0,room), rest=P.ids.slice(room);
+    const remember=()=>{ day.ticks={}; rest.forEach(id=>{ day.ticks[id]=D.u[id]; }); _dupDaySave(day); };
+    if(!take.length){
+      remember(); D.note=_dupN(rest.length)+' ticked note'+(rest.length===1?'':'s')+' wait for tomorrow.'; _dupPaint(); return;
+    }
+    const msg='Move '+_dupN(take.length)+' note'+(take.length===1?'':'s')+' to Trash?'+(rest.length?' (Only '+_dupN(take.length)+' can go today; the other '+_dupN(rest.length)+' can go after '+_s1ResetTime(_bgNow())+'.)':'')+' Undo or Restore brings them back.';
+    if(!confirm(msg)) return;
+    const byId=new Map(); DB.articles.forEach(a=>byId.set(a.id,a));
+    const go=take.filter(id=>{ const a=byId.get(id); return a&&a.updatedAt===D.u[id]&&!_picMigOpen(id); });
+    const skipped=take.length-go.length, goSet=new Set(go), iso=new Date().toISOString();
+    if(go.length){
+      if(D.merge){
+        D.groups.forEach(g=>{
+          const rem=g.members.filter(id=>goSet.has(id)); if(!rem.length) return;
+          let sid=D.keep[g.id]; if(goSet.has(sid)||!byId.has(sid)) sid=g.members.find(id=>!goSet.has(id)&&byId.has(id));
+          const k=byId.get(sid); if(!k) return;
+          const live=new Set(DB.folders.map(f=>f.id)); let ch=false;
+          rem.forEach(id=>{
+            const r=byId.get(id); if(!r) return;
+            (r.folderIds||[]).forEach(f=>{ if(live.has(f)&&!(k.folderIds||[]).includes(f)){ if(!k.folderIds) k.folderIds=[]; k.folderIds.push(f); ch=true; } });
+            (r.tags||[]).forEach(t=>{ if(!(k.tags||[]).includes(t)){ if(!k.tags) k.tags=[]; k.tags.push(t); ch=true; } });
+          });
+          if(ch) k.updatedAt=iso;
+        });
+      }
+      if(!DB.trash) DB.trash=[];
+      go.forEach(id=>{ const a=byId.get(id); DB.trash.push({id:uid(),type:'article',item:JSON.parse(JSON.stringify(a)),deletedAt:iso,dup:1}); });
+      _addTombstones(go,iso);
+      DB.articles=DB.articles.filter(a=>!goSet.has(a.id));
+      if(goSet.has(ST.article)){ ST.article=null; ST.editing=false; }
+      persist(); render(); try{ updateTrashBtn(); }catch(e){}
+    }
+    day.moved+=go.length;
+    day.ticks={}; rest.forEach(id=>{ day.ticks[id]=D.u[id]; }); _dupDaySave(day);
+    /* the list now: the moved notes are gone from the groups */
+    D.groups.forEach(g=>{ g.members=g.members.filter(id=>!goSet.has(id)); if(goSet.has(D.keep[g.id])) D.keep[g.id]=g.members[0]; });
+    D.groups=D.groups.filter(g=>g.members.length>=2);
+    goSet.forEach(id=>D.tick.delete(id)); D.byId=null;
+    D.note=_dupN(go.length)+' note'+(go.length===1?'':'s')+' moved to Trash'+(skipped?' ('+skipped+' changed since the look, left alone)':'')+(rest.length?'; '+_dupN(rest.length)+' more wait until after '+_s1ResetTime(_bgNow())+' (your ticks are remembered)':'')+'. To get the space back: Trash → Empty only the duplicates.';
+    _dupPaint();
+  }catch(e){ console.error('Move duplicates failed',e); D.note='Something went wrong: '+(e&&e.message||e)+'. Nothing was lost.'; _dupPaint(); }
+  finally{ D.run=false; }
+}
+/* Trash → 🧹 Empty only the duplicates: only entries with dup:1 leave for good (same steps as emptyTrash), at most the day's limit */
+async function dupEmptyTrash(){
+  const day=await _dupDayLoad(), lim=_dupLimit();
+  const list=(DB.trash||[]).filter(t=>t&&t.dup);
+  if(!list.length){ toast('No duplicates in Trash.'); return; }
+  const room=Math.max(0,lim-day.emptied);
+  if(!room){ toast("Today's limit for emptying is used. The rest can go after "+_s1ResetTime(_bgNow())+'.',6000); return; }
+  const take=list.slice(0,room);
+  if(!confirm('Permanently delete '+_dupN(take.length)+' duplicate note'+(take.length===1?'':'s')+' from Trash?'+(list.length>take.length?' (Only '+_dupN(take.length)+' can go today; the other '+_dupN(list.length-take.length)+' after '+_s1ResetTime(_bgNow())+'.)':'')+' Other items in Trash stay. This cannot be undone.')) return;
+  take.forEach(_tombstoneTrashEntry);
+  take.forEach(_tombstoneTrashEntryId);
+  const gone=new Set(take.map(t=>t.id));
+  DB.trash=DB.trash.filter(t=>!gone.has(t.id));
+  _popCleanupOrphans();
+  persist(); renderTrashModal();
+  day.emptied+=take.length; _dupDaySave(day);
+  if(_dup&&document.getElementById('dup-body')) _dupPaint();
+  toast(_dupN(take.length)+' duplicate'+(take.length===1?'':'s')+' emptied from Trash.');
 }
 function _enxImpHTML(){
   const I=_enx.imp, now=_enxNowMs(), w=_enxWindow(now), brought=_enxBrought();
@@ -41705,6 +42024,7 @@ document.getElementById('sb').addEventListener('contextmenu', e => {
     <div class="trash-hd">
       <span class="trash-hd-t">🗑 Trash</span>
       <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn bd" id="dup-empty-btn" onclick="dupEmptyTrash()" style="font-size:12px;display:none">🧹 Empty only the duplicates</button>
         <button class="btn bd" id="empty-btn" onclick="emptyTrash()" style="font-size:12px">Empty Trash</button>
         <button class="btn bn bi" onclick="closeTrash()" style="font-size:16px">✕</button>
       </div>
