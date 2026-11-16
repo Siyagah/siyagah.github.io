@@ -11616,4 +11616,9 @@ The owner: "There's many files are duplicate and common… Find the exact matchi
 - Not changed: `mergeDB()`, sync, pictures (stored once already; the cloud's picture copies are never deleted). No new Firestore query shape. Check: block 157, `tools/dups-j177.mjs`.
 
 ## v05.99 — J181 (builder, issue #323): each section heading shows its folder and note counts
-(stub — entry follows in the next push)
+The owner (16 Nov 2026, screenshot of the laptop side pane): wants to see, per section, how many folders and notes it holds, to choose what to clean up after J177.
+- **Each section heading** (`renderSection`'s `.sec-hd`, and the MyDatabase `db-hd-sec`) shows after the name "N folders · M notes" (`_secCntHTML`; `.sec-cnt`, ink `--sb-ink-soft`). ≥ 640 px the words (`.sc-w`); < 640 "N 📁 · M 📝" (`.sc-s`, a CSS media rule, no JS tier); the full words are in `title`. The name truncates first (it already had `min-width:0` + ellipsis); the count never wraps. Smart Views, Tags and Note Types headings have none.
+- **Numbers:** folders = every folder in the section at any depth (a folder belongs to the section of its top ancestor); notes = DISTINCT notes filed in any of them (a note in two folders of one section once, in two sections in each); Trash not counted; open or closed the same.
+- **Counted once per draw:** `_secCounts()` — one pass over `DB.folders`, one over `DB.articles`, cached in `_cntC.se` (dropped with the draw, like `cntOf`); outside a draw computed afresh. Display only: nothing is written to `DB`.
+- `_renderFor`: any change that can move a count (note filed/unfiled/trashed, folder made/moved/deleted) is already a full side-pane redraw; block 159b confirms it, including a merge from a second device. No new classification needed.
+- Measured (28,600 notes, 390 px ×4 CPU, 6 sections / 600 folders): side pane draw 25.6 ms with the counts, 25.5 ms without (+0.1 ms); contrast 15–16:1 on the five presets. Block 114's oracle needed no change (both sides draw the same count). Check: block 159, `tools/sec-counts-j181.mjs`.
