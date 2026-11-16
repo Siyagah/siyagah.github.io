@@ -32932,6 +32932,7 @@ function _s1PagingText(){
    _pullRecsMerge — any other device keeps "merge the FULL replica, at the end". Nothing is written to the cloud meanwhile (_s1WriteGate is shut until the read ends). */
 const _FR_MERGE_PAGES=5, _FR_MERGE_MS=10000, _FR_QUOTA=200*1024*1024;
 function _frOn(pg){ return !!(pg&&(pg.active||(_s1Stat.big&&_s1Stat.big.job==='page'))); }
+let _frPushHeld=false;
 function _frPartial(){ const pg=_s1Stat.rd&&_s1Stat.rd.paging; return !!(pg&&pg.fresh&&!pg.complete&&_frOn(pg)); }
 function _frPage(pg){
   pg.pages=(pg.pages||0)+1; const h=pg.hist||(pg.hist=[]); h.push([Date.now(),pg.done]); if(h.length>7) h.shift();
@@ -33030,6 +33031,7 @@ async function _s1PagedRead(cfg, gen, nbRef, recsC, st){
     await _yieldTask();
   }
   pg.active=false; pg.complete=true; _bgSetCn(st.records); fin(true); _frPaint();
+  if(_frPushHeld){ _frPushHeld=false; try{ pushToCloud(); }catch(e){} }
   try{ await _idbPut('s1page:'+nb,null); }catch(e){}
   return true;
 }
@@ -33579,6 +33581,7 @@ async function _pushWrite(cfg, o){
 }
 
 async function _doPush(){
+  if(_frPartial()){ _frPushHeld=true; return; }   /* v06.04 · J188 — a fresh device half-way through its first read holds a PARTIAL notebook: nothing goes out until the read has ended */
   if(_pushInFlight){ _pushAgain=true; return; }
   const cfg=getSyncConfig();
   if(!cfg||!_syncFsDb) return;
