@@ -77,6 +77,7 @@ const EXPECT = {
 const readGroups = (p) => p.evaluate(() => _dup.groups.map((g) => ({ id: g.id, list: g.list, label: g.label, low: g.low, keep: _dup.keep[g.id], members: g.members.slice().sort(), why: g.why, def: g.def.slice().sort(),
   titles: Array.from(new Set(g.members.map((id) => (DB.articles.find((a) => a.id === id) || {}).title))).sort() })));
 const waitReady = (p, ms = 120000) => p.waitForFunction(() => typeof _dup !== 'undefined' && _dup && _dup.state === 'ready', null, { timeout: ms });
+const sameSetL = (a, b) => JSON.stringify(a.slice().sort()) === JSON.stringify(b.slice().sort());
 const idsOf = (p) => p.evaluate(() => DB.articles.map((a) => a.id).sort().join(','));
 
 const pw = await playwright();
@@ -245,6 +246,52 @@ if (want('157d')) {
     check(app.errors.length === 0, '157d no page errors', app.errors.slice(0, 3).join(' | '));
   } catch (e) { check(false, `157d threw: ${String((e && e.stack) || e).split('\n').slice(0, 4).join(' | ')}`); }
   if (app) await app.close().catch(() => {});
+}
+
+/* ══ 157-own — v06.02: keep the copy in the owner's own folders ══ */
+if (want('157own') || want('157-own')) {
+  for (const [w, h, touch] of [[1440, 900, false], [820, 1180, true], [390, 844, true]]) {
+    let app = null; const t = `@${w}`;
+    try {
+      const d = seedDB(T(0));
+      d.folders = [
+        { id: 'enx-root', name: 'Evernote (Imported)', parentId: null, order: 1, sectionId: 'sec-1', enx: { kind: 'root', name: 'x' }, updatedAt: T(0) },
+        { id: 'enx-kid', name: 'Nested no mark', parentId: 'enx-root', order: 1, updatedAt: T(0) },
+        { id: 'fO', name: 'Mine', parentId: null, order: 2, sectionId: 'sec-1', updatedAt: T(0) },
+        { id: 'fO2', name: 'Mine two', parentId: null, order: 3, sectionId: 'sec-1', updatedAt: T(0) },
+      ];
+      d.articles = [
+        note('a1', 'Own one', '<p>own one body</p>', { folderIds: ['enx-kid'], createdAt: T(1) }),
+        note('a2', 'Own one', '<p>own one body</p>', { folderIds: ['fO'], createdAt: T(50) }),
+        note('a3', 'Own one', '<p>own one body</p>', { folderIds: [], createdAt: T(2) }),
+        note('b1', 'Own two', '<p>own two body</p>', { folderIds: ['fO'], createdAt: T(1) }),
+        note('b2', 'Own two', '<p>own two body</p>', { folderIds: ['fO', 'fO2'], createdAt: T(60) }),
+        note('c1', 'Own three', '<p>alpha beta gamma delta epsilon zeta eta theta</p>', { folderIds: ['enx-root'], updatedAt: T(500) }),
+        note('c2', 'Own three', '<p>alpha beta gamma delta</p>', { folderIds: ['fO'], updatedAt: T(100) }),
+        note('g1', 'Ghost', '<p>ghost body</p>', { folderIds: ['nope'], createdAt: T(1) }),
+        note('g2', 'Ghost', '<p>ghost body</p>', { folderIds: ['fO'], createdAt: T(9) }),
+      ];
+      app = await openApp({ viewport: { width: w, height: h }, db: d, hasTouch: touch });
+      const p = app.page; p.on('dialog', (x) => x.accept().catch(() => {}));
+      await p.evaluate(() => openDupFinder()); await waitReady(p);
+      const G = await readGroups(p); const gt = (t2) => G.find((g) => g.titles[0] === t2);
+      check(gt('Own one').keep === 'a2' && sameSetL(gt('Own one').def, ['a1', 'a3']), `157-own(a)${t} the copy in an owner folder is kept; the import-only and the unfiled copy are ticked`, gt('Own one').keep + ' ' + gt('Own one').def);
+      check(gt('Own two').keep === 'b2', `157-own(b)${t} two owner-folder copies: the one in 2 folders is kept`, gt('Own two').keep);
+      check(gt('Own three').keep === 'c2' && /kept the copy in your folders/.test(gt('Own three').label), `157-own(c)${t} list 2: the older owner-folder copy is kept over a newer longer import-only copy, and the line says so`, gt('Own three').keep + ' ' + gt('Own three').label);
+      check(await p.evaluate(() => _dupImpSet().has('enx-kid') && _dupImpSet().has('enx-root') && !_dupImpSet().has('fO')), `157-own(d)${t} a folder under enx-root without its own mark counts as import-made`);
+      check(gt('Ghost').keep === 'g2', `157-own(d2)${t} a folder id not in DB.folders does not count`, gt('Ghost').keep);
+      await p.evaluate(() => dupTab(1)); await sleep(150);
+      const m = await p.evaluate(() => { const r = Array.from(document.querySelectorAll('.dup-n')).find((n) => n.dataset.id === 'a1'); const b = document.getElementById('dup-body'), x = r && r.querySelector('.dup-imp'); const q = x && x.getBoundingClientRect(), bb = b.getBoundingClientRect(); return { txt: x ? x.textContent : '', vis: !!(x && x.offsetParent), inside: !!q && q.right <= bb.right + 1 && q.left >= bb.left - 1, ov: b.scrollWidth <= b.clientWidth + 1, a2: !!document.querySelector('.dup-n[data-id="a2"] .dup-imp'), a3: !!document.querySelector('.dup-n[data-id="a3"] .dup-imp') }; });
+      check(m.txt === 'in an import folder only' && m.vis && m.inside && m.ov && !m.a2 && !m.a3, `157-own(e)${t} "in an import folder only" shows on the import-only copy alone, visible, no overflow`, JSON.stringify(m));
+      if (w === 1440) {
+        await p.locator('#dup-go').click(); await sleep(1500);
+        const r = await p.evaluate(() => ({ a2: DB.articles.find((a) => a.id === 'a2').folderIds.slice().sort(), b2: DB.articles.find((a) => a.id === 'b2').folderIds.slice().sort(), c2: DB.articles.find((a) => a.id === 'c2').folderIds.slice().sort(), n: DB.articles.length, trash: DB.trash.filter((x) => x.dup === 1).length }));
+        check(JSON.stringify(r.a2) === JSON.stringify(['enx-kid', 'fO']) && JSON.stringify(r.b2) === JSON.stringify(['fO', 'fO2']) && JSON.stringify(r.c2) === JSON.stringify(['enx-root', 'fO']) && r.n === 4 && r.trash === 5, '157-own(e) after 🗑 Move the kept note holds every removed copy\'s folders; 5 notes in Trash, 4 left', JSON.stringify(r));
+      }
+      check(app.errors.length === 0, `157-own${t} no page errors`, app.errors.slice(0, 3).join(' | '));
+    } catch (e) { check(false, `157-own${t} threw: ${String((e && e.stack) || e).split('\n').slice(0, 4).join(' | ')}`); }
+    if (app) await app.close().catch(() => {});
+  }
 }
 
 /* ══ 157f — 28,000 notes at 390 px x4 CPU ══ */
