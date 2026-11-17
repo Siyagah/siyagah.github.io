@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="06.02">
+<meta name="app-version" content="06.03">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4213,7 +4213,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.02</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.03</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4790,6 +4790,7 @@ function _ljSaveHead(){
 function _ljHiddenCkpt(){
   clearTimeout(_ljCkptTimer); _ljCkptTimer=null;
   if(document.visibilityState!=='hidden'&&!_ljPageGone) return;
+  _tgSweep();   /* v06.03 · J117d — a full copy is made after a full sweep, never after targeted saves alone */
   if(_ljOn&&!_ljCkptBusy&&_ljSeq>_ljCkpt&&(_ljCkptWant||_ljPuts>0)) _ljCheckpoint();
 }
 let _ljPageGone=false;
@@ -4803,6 +4804,7 @@ window.addEventListener('pageshow',()=>{ _ljPageGone=false; });
 function _ljCheckpoint(){
   clearTimeout(_ljCkptTimer); _ljCkptTimer=null;
   if(!_ljOn||_ljCkptBusy||!_dbLoaded) return;
+  _tgSweep();   /* v06.03 · J117d */
   const epoch=_ljEpoch, seq=_ljSeq; _ljCkptBusy=true;
   _ljRun(epoch,()=>_ljFullPut(seq).then(()=>_ljTx([],null,seq)),true)
     .then(()=>{ _ljCkpt=seq; if(_ljSeq===seq){ _ljPuts=0; _ljCkptWant=false; } _ljStat.full++; })
@@ -5631,6 +5633,7 @@ function _markSaveFailure(e){
 function _save(pre,sw){
   if(!_dbLoaded) return false;   /* never write the pre-load placeholder over the real notebook — see _dbLoaded */
   _dbRev++;   /* v05.26 — P4: a snapshot built in slices restarts if this moved (see _s1TakeSnapAsync) */
+  _tgN=0;   /* v06.03 · J117d — this save sweeps every record (or was handed a sweep): no targeted save is waiting for one */
   _stampThemeTouches();
   if(!sw) sw=_stampRecordTouches();   /* v04.68 */
   const jm=_idbReady&&_ljWanted();
@@ -5665,7 +5668,134 @@ function _saveHead(){
   p.then(_clearSaveFailureIfNeeded).catch(_markSaveFailure);
   return true;
 }
-const persist = () => { if(!_dbLoaded) return; _stampThemeTouches(); const sw=_stampRecordTouches(); snapshotState(sw); _save(undefined,sw); scheduleAutoSave(); pushToCloud(); };
+/* v06.03 · J117 part 4 — a save that is TOLD which records changed. _save()/persist() sweep EVERY record (141–191 ms at 28,600 notes, phone x4) to find
+   changes the caller did not report; here the caller names them, so only those are stamped, journaled and marked dirty, exactly as the sweep would
+   for them (the same stamp rule, the same baseline entry, the same _s1Dirty key). Every OTHER record's baseline is left as it was, so a record changed
+   in place and not yet saved is still seen, stamped and journaled by the next full sweep (same guarantee as _saveHead). `_tgN` counts these saves since
+   the last full one: _tgSweep() runs that full sweep before anything that reads the records for the full copy or for a file — a checkpoint, an export,
+   a Save File, a backup page. A merge, a push and syncNow already sweep first (their own _stampRecordTouches), and so does pagehide (_flushEverythingOut).
+   spec = [{c, ids:[existing records that changed], add:[records appended at the END of the array]}]. Everything that could make this unsafe is decided
+   BEFORE anything is changed, and then false is returned and the caller takes persist()/_save(): journal not running, a small notebook, an array whose
+   length or order is not what the last sweep saw, a duplicate or id-less record, no undo baseline. */
+let _tgN=0;
+function _tgPlan(spec){
+  if(!(_dbLoaded&&_idbReady&&_ljWanted()&&_ljOn&&_ljC&&_ljBase&&_ljOrd&&_recSnap!==undefined)) return null;
+  const plan=[];
+  for(const s of spec){
+    const c=s.c, arr=DB[c], info=_ljC[c], add=s.add||[], ids=s.ids||[];
+    if(!Array.isArray(arr)||!info||!info.isArr||_REC_COLLS.indexOf(c)<0||!_recSnap[c]) return null;
+    const n0=info.keys.length;
+    if(arr.length!==n0+add.length) return null;
+    const want=new Set(ids), found=new Map();
+    for(let i=0;i<n0;i++){ const x=arr[i]; if(x&&x.id!=null&&want.has(x.id)){ if(found.has(x.id)) return null; found.set(x.id,i); } }
+    const recs=[];
+    for(const id of ids){
+      const i=found.get(id); if(i===undefined) return null;
+      const k=info.keys[i]; if(k===null||k!==_s1Key(c,id)) return null;   /* the slot is not the one the last sweep saw */
+      recs.push(arr[i]);
+    }
+    const seen=new Set(), nk=[];
+    for(let j=0;j<add.length;j++){
+      const x=arr[n0+j]; if(!x||typeof x!=='object'||x.id!==add[j]||x.id==null||seen.has(x.id)) return null;
+      seen.add(x.id); const k=_s1Key(c,x.id); if(_ljBase.has(k)||_recSnap[c][x.id]) return null;
+      nk.push(k); recs.push(x);
+    }
+    plan.push({c:c,recs:recs,nk:nk,shallow:(c==='trash'||c==='tombstones')});
+  }
+  return plan;
+}
+/* returns false (nothing changed) or true. o.frame: make ONE undo frame of the named records; otherwise none (an autosave makes none; an import batch makes none). */
+function _tgGo(spec,o){
+  o=o||{};
+  let plan; try{ plan=_tgPlan(spec); }catch(e){ plan=null; }
+  if(!plan) return false;
+  if((o.frame||o.silent)&&(_hMap===null||!HISTORY.length||!_hJson||!_hOrd)) return false;
+  if(o.frame&&plan.some(g=>g.nk.length)) return false;   /* an undo frame that adds records needs the order lists too: the full path */
+  _dbRev++; _stampThemeTouches();
+  const now=new Date().toISOString(), ents=[], ordPuts=[];
+  if(_ljBase===_hMap) _ljBase=new Map(_ljBase);   /* the undo baseline shares the sweep's Map; this save must not move it */
+  for(const g of plan){
+    const snap=_recSnap[g.c];
+    for(const r of g.recs){
+      let e=_rcEntry(r,g.shallow); const p=snap[r.id];
+      const same=!!p&&(p[3]===e||_pTok(p)===_rcTok(e,r));
+      const moved=r.updatedAt!=null&&(p?(p[1]==null||r.updatedAt>p[1]):true);
+      let stamped=false;
+      if(p&&!same&&!moved){ r.updatedAt=now; stamped=true; e=_rcEntry(r,g.shallow); }
+      const ua=r.updatedAt, nh=Array.isArray(r.noteHistory)?r.noteHistory.length:0;
+      if(!(p&&same&&p[1]===ua&&p[2]===nh)){ snap[r.id]=[p?(same?p[0]:_rcTok(e,r)):null,ua,nh,stamped?_rcEntry(r):e]; _s1Dirty.keys.add(_s1DirtyKey(g.c,r.id)); }
+      ents.push([_rcKey(g.c,r,e),e]);
+    }
+    if(g.nk.length){
+      const info=_ljC[g.c], keys=info.keys.concat(g.nk);
+      _ljC=Object.assign({},_ljC); _ljC[g.c]=Object.assign({},info,{keys:keys});
+      ordPuts.push(g.c);
+    }
+  }
+  let fr=null;
+  if(o.frame) fr=_histCaptureRecs(ents);
+  else if(o.silent) ents.forEach(x=>{ _hMap.set(x[0],x[1]); _hJson.delete(x[0]); });
+  if(o.silent&&ordPuts.length) ordPuts.forEach(c=>{ _hOrd[c]=_ljC[c].keys; });
+  if(fr){ _histPushFrame(fr); }
+  _tgN++;
+  let p=null; try{ p=_ljSaveRecs(ents,ordPuts); }catch(e){ p=null; }
+  if(!p){ _tgN=0; _save(); }
+  else p.then(_clearSaveFailureIfNeeded).catch(_markSaveFailure);
+  try{ updateUndoRedoBtns(); }catch(e){}
+  return true;
+}
+function _tgSweep(){ if(!_tgN) return; _tgN=0; try{ _save(); }catch(e){} }
+/* the journal write for a targeted save: only the named records (and the head, and an order list that grew), the same shape as _ljSave's */
+function _ljSaveRecs(ents,ordColls){
+  if(!_ljOn||!_ljC||!_ljBase) return null;
+  const epoch=_ljEpoch, seq=_ljSeq=Math.max(_ljSeq+1,Date.now()), puts=[];
+  ents.forEach(x=>{ if(_ljBase.get(x[0])!==x[1]){ puts.push(['r:'+x[0],{s:seq,j:_rcJson(x[1])}]); _ljBase.set(x[0],x[1]); } });
+  ordColls.forEach(c=>{ const a=_ljC[c].keys; puts.push(['o:'+c,{s:seq,j:JSON.stringify(a)}]); _ljOrd[c]=a; });
+  const hs=_headOf(DB,{c:_ljC}); if(hs!==_ljHead){ puts.push(['h',{s:seq,j:hs}]); _ljHead=hs; }
+  if(!puts.length) return _ljChain.catch(()=>{}).then(()=>{ if(epoch!==_ljEpoch||!_ljOn) throw new Error('local journal restarted'); return true; });
+  _ljStat.writes++; _ljStat.puts+=puts.length; _ljPuts+=puts.length;
+  const p=_ljRun(epoch,()=>_ljTx(puts,{seq:seq,n:_ljCounts({c:_ljC})},null));
+  if(puts.every(x=>x[0]==='h')) return p;
+  _ljCkptWant=true;
+  if(document.visibilityState==='hidden'){ clearTimeout(_ljCkptTimer); _ljCkptTimer=setTimeout(_ljHiddenCkpt,_LJ_CKPT_MS); }
+  return p;
+}
+/* the undo frame of a targeted save: _histCapture's per-record rule, for the named records only (the baseline moves for them alone) */
+function _histCaptureRecs(ents){
+  const ch=[]; let bytes=0, lost=false;
+  ents.forEach(x=>{
+    const k=x[0], e=x[1], be=_hMap.get(k);
+    if(be===e) return;
+    let bj=_hJson.get(k);
+    if(bj===undefined&&be!==undefined){ bj=_rcJsonOld(be); if(bj===null){ lost=true; bj=undefined; } }
+    const j=_rcJson(e);
+    _hMap.set(k,e);
+    if(bj===j) return;
+    if(!lost){ ch.push([k,bj===undefined?null:bj,j]); bytes+=(bj?bj.length:0)+j.length+60; }
+    _hJson.set(k,j);
+  });
+  const hs=_headOf(DB,{c:_ljC}); let head=null;
+  if(hs!==_hHead){ head=[_hHead,hs]; bytes+=(_hHead?_hHead.length:0)+hs.length; _hHead=hs; }
+  if(lost) return {lost:true,ch:[],ord:null,head:null,bytes:0};
+  if(!ch.length&&!head) return null;
+  return {ch:ch,ord:null,head:head,bytes:bytes};
+}
+function _histPushFrame(fr){
+  if(HIST_POS < HISTORY.length-1) HISTORY.splice(HIST_POS+1);
+  if(fr.lost||fr.bytes>_H_MAX_BYTES){ HISTORY.length=0; HISTORY.push({base:true}); }
+  else{
+    HISTORY.push(fr);
+    while(HISTORY.length>_H_MAX_FRAMES+1||(HISTORY.length>2&&_histBytes()>_H_MAX_BYTES)) HISTORY.splice(1,1);
+  }
+  HIST_POS=HISTORY.length-1;
+}
+/* persist() for a change whose records the caller KNOWS (jmApply): one undo frame of those records, a targeted journal write, then the same autosave and push */
+function _persistRecs(spec){
+  if(!_dbLoaded) return;
+  if(_tgGo(spec,{frame:true})){ scheduleAutoSave(); pushToCloud(); return; }
+  persist();
+}
+const persist = () => { if(!_dbLoaded) return; _tgN=0; _stampThemeTouches(); const sw=_stampRecordTouches(); snapshotState(sw); _save(undefined,sw); scheduleAutoSave(); pushToCloud(); };
 
 /* ── Export hygiene: never bake foreign DOM into a saved file (v03.80) ──
    getExportHTML() serialises the LIVE document, so anything that landed in
@@ -6936,6 +7066,7 @@ async function _bxpWritePics(S,ctx,shas,own){
 /* o: {name, pickP (a picker asked inside the click) | fh (a file handle to write into), say}. Returns {ok,name,bytes,missing} or {cancelled}; throws on failure
    (the writable is aborted first, so a linked file keeps its last good copy). */
 async function _sfTo(o){
+  _tgSweep();   /* v06.03 · J117d */
   let w=null,handle=o.fh||null,name=o.name,g=null,created=false;
   const say=o.say||function(){};
   try{
@@ -7244,6 +7375,7 @@ async function _bxpWriteDB(S,ctx,o){
 }
 async function exportJSON(mode){
   if(_bxpBusy)return;
+  _tgSweep();   /* v06.03 · J117d */
   const notesOnly=(mode==='notes');
   const d0=new Date(),p2=function(n){return (n<10?'0':'')+n;};
   let name='notebook-backup-'+d0.getFullYear()+'-'+p2(d0.getMonth()+1)+'-'+p2(d0.getDate())+(notesOnly?'-notes-only':'')+'.json';
@@ -12204,6 +12336,7 @@ async function runMigration(){
    collects the data-pic shas of the notes written. */
 function _bkBuild(o){
   o=o||{};
+  _tgSweep();   /* v06.03 · J117d */
   const notes=DB.articles.filter(a=>!a.trash);
   const now=new Date();
   const dateStr=now.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
@@ -19022,7 +19155,7 @@ function _edAutoSave(){
   if(!ed||!a||ed.dataset.aid!==a.id)return;
   _flushEd();
   try{_captureNoteHistory(a,'autosave');}catch(e){}
-  try{_save();}catch(e){}
+  try{ if(!_tgGo([{c:'articles',ids:[a.id]}])) _save(); }catch(e){}   /* v06.03 · J117d — the open note is the only record this save names */
   try{scheduleAutoSave();}catch(e){}
   try{pushToCloud();}catch(e){}
   flashSaved();
@@ -29758,7 +29891,7 @@ function jmApply(ids,T,mode){
   _jmPend=null;
   if(!pl.out.length){ toast('Nothing to change — already there'); return; }
   pl.out.forEach(([a,n])=>{ a.folderIds=n; a.updatedAt=now; });
-  persist();   /* ONE save, ONE undo frame, however many notes */
+  _persistRecs([{c:'articles',ids:pl.out.map(x=>x[0].id)}]);   /* ONE save, ONE undo frame, however many notes — v06.03 · J117d: only these notes are swept */
   if(_jm.on){ _jm.on=false; _jm.set.clear(); _jm.anchor=null; }
   render();
   const c=pl.out.length;
@@ -34696,10 +34829,13 @@ function _enxPushEnd(){
   clearTimeout(_enxPushT); _enxPushT=null; _enxPushAt=0; pushToCloud();
 }
 /* an undo frame of 250 notes is not wanted: take the baseline, make no frame (_histCapture silent), then save as persist() does */
-function _enxPersist(){
+/* v06.03 · J117d — `spec` (optional, as _tgGo's): the batch knows exactly which records it added, so only those are swept. Without it, or when the targeted save
+   cannot be used, the full sweep as before. */
+function _enxPersist(spec){
   if(!_dbLoaded) return;
   _tkEnxHold=true;   /* v05.33 · Z11 — the scrolling band is not rebuilt or measured while a batch is written; it repaints once just after */
   try{
+    if(spec&&_tgGo(spec,{silent:true})){ scheduleAutoSave(); _enxPushHeld(); return; }
     _stampThemeTouches(); const sw=_stampRecordTouches();
     try{ _histCapture(sw,true); }catch(e){ try{ _histReset(); }catch(_){} }
     _save(undefined,sw); scheduleAutoSave(); _enxPushHeld();   /* v05.58 · J85 — not a push per batch */
@@ -34893,7 +35029,7 @@ async function _enxImport(items){
     if(!list.length) return;
     await _enxYield();   /* converting a chunk and saving a batch are separate tasks: a phone never holds the page for both at once */
     const at=new Date(_enxNowMs()).toISOString();
-    const fById=new Map((DB.folders||[]).map(f=>[f.id,f])), kids=new Map();
+    const fById=new Map((DB.folders||[]).map(f=>[f.id,f])), kids=new Map(), newF=[];
     DB.folders.forEach(f=>{ const p=f.parentId||''; kids.set(p,(kids.get(p)||0)+1); });
     const sec=_enxSection();
     const trashF=new Set(); (DB.trash||[]).forEach(t=>{ if(t&&t.type==='folder'){ if(t.item&&t.item.id) trashF.add(t.item.id); ((t.subtree&&t.subtree.folders)||[]).forEach(f=>{ if(f&&f.id) trashF.add(f.id); }); } });
@@ -34906,7 +35042,7 @@ async function _enxImport(items){
       else order=1+Math.max(0,...DB.folders.filter(f=>!f.parentId&&(f.sectionId||null)===(sec?sec.id:null)).map(f=>f.order||0));
       const f={id,name,parentId:parentId||null,order,enx:{kind,name},updatedAt:at};
       if(!parentId&&sec) f.sectionId=sec.id;
-      DB.folders.push(f); fById.set(id,f); I.newFolders++;
+      DB.folders.push(f); fById.set(id,f); I.newFolders++; newF.push(id);
       return id;
     };
     const root=ensure('enx-root','Evernote',null,'root'), cache=new Map();
@@ -34919,7 +35055,7 @@ async function _enxImport(items){
       e.rec.folderIds=[cache.get(ck)]; e.rec.fromEvernote.at=at;
       DB.articles.push(e.rec);
     });
-    _enxPersist(); I.upDirty=0;
+    _enxPersist(I.upDirty?undefined:[{c:'folders',add:newF},{c:'articles',add:list.map(e=>e.rec.id)}]); I.upDirty=0;   /* a marker upgrade edited older notes in place: that batch takes the full sweep */   /* v06.03 · J117d — the batch's own records */
     I.took+=list.length; _enxTick();
     _enx.job=jobNow(); _enxJobPut(_enx.job);
     await _enxYield();
