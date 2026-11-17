@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="06.04">
+<meta name="app-version" content="06.05">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1255,6 +1255,38 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jeb-chips>.jc-p,.jeb-chips>.jc-i{color:var(--t1)}
 .jl-sug{display:inline-block;max-width:100%;margin:0 2px 4px;min-height:40px;padding:0 12px;border:1px dashed var(--green2);border-radius:999px;background:var(--paper);color:var(--green2);font-size:13px;font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;touch-action:manipulation}
 .jl-filters{position:sticky;top:0;z-index:2;background:var(--white);border-bottom:1px solid var(--border);padding:4px 8px}
+/* v06.05 · J178 — links Zab: one Filter button + chips, the Title box, ✎/→ on the top line, full screen */
+.jl-filters:has(.jl-fopen){display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.jl-fopen,.jl-fchip,.jl-fcb{min-height:40px;border:1px solid var(--border2);border-radius:999px;background:var(--paper);color:var(--t1);font-size:13px;cursor:pointer;touch-action:manipulation}
+.jl-fopen{padding:0 14px;font-weight:700}
+.jl-fchip{display:inline-flex;align-items:center;gap:4px;padding:0 4px 0 12px;max-width:100%;cursor:default;overflow-wrap:anywhere}
+.jl-fx{min-width:32px;min-height:32px;border:0;border-radius:50%;background:none;color:var(--t2);font-size:13px;cursor:pointer}
+.jl-fcb{min-width:44px;padding:0 8px;border-radius:8px}
+.jl-fch{font-size:12.5px;font-weight:700;color:var(--t2);margin:8px 2px 4px}
+.jl-fcr{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px}
+.jl-fcr .jl-fc{flex:1 1 auto;text-align:left;white-space:normal;overflow-wrap:anywhere}
+.jl-fcr .jl-fcin{flex:1 1 140px;min-width:0}
+.jl-fcq{flex:1 1 100%;font-size:13px;color:var(--t1);overflow-wrap:anywhere}
+.jl-fcs .jl-pknew{display:flex;gap:6px}.jl-fcs .jl-pknew .mi{flex:1;min-width:0}
+.jeb-addf{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.jeb-addf textarea{flex:none;width:100%}
+.jeb-add-ttl{box-sizing:border-box;width:100%;min-height:40px;padding:6px 10px;border:1px solid var(--border2);border-radius:8px;font:inherit;font-size:14px;color:var(--t1);background:var(--paper);outline:none}
+.jeb-add-ttl[hidden]{display:none}
+.jeb-add-ttl:focus{border-color:var(--green)}
+.jl-tb{display:flex;flex-wrap:wrap;gap:6px;padding:2px 2px 4px}
+.jl-tb button,.jl-ctl .jeb-ttl-b,.jl-ctl .jeb-note-b,.jl-dtop button{min-height:40px;min-width:40px;padding:0 10px;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.jl-tb .jeb-note-b,.jl-ctl .jeb-note-b,.jl-dtop .jeb-note-b{color:var(--green2)}
+.jl-dtop{display:flex;align-items:center;gap:4px;padding:0 6px}
+.jl-dtop .jc-grip{flex:1}
+.jl-dtop button{background:rgba(255,255,255,.55);color:#2A2418;border-color:rgba(42,36,24,.28)}
+.jl-fs{min-width:40px;min-height:40px;border:1px solid var(--border2);border-radius:8px;background:var(--paper);color:var(--t1);font-size:16px;cursor:pointer;touch-action:manipulation}
+#jeb-panel.jl-wide.jl-full{width:100vw}
+@media(max-width:639.98px){
+  .jl-tb button,.jl-ctl .jeb-ttl-b,.jl-ctl .jeb-note-b,.jl-dtop button,.jl-fopen,.jl-fcb{min-height:44px}
+  /* a phone: an open links Zab fills the screen; the list keeps a clear strip at its foot for the Zab button, nothing new is fixed */
+  #jeb-panel.jl-full{top:0;height:auto;border-radius:0;border-top:0}
+  #jeb-panel.jl-full .jeb-list{padding-bottom:64px}
+}
 .jl-frow,.jl-bar{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;overflow-x:auto;padding:2px 0}
 .jl-bar{padding:8px 12px;border-bottom:1px solid var(--border)}
 .jl-fl{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--t2)}
@@ -4222,7 +4254,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.04</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.05</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -26171,7 +26203,7 @@ function jebAddItem(pocketId,text){
     order:jebItems(pocketId).reduce((m,x)=>Math.max(m,(x.order||0)+1),0),createdAt:now,updatedAt:now};
   _jebLinkSync(it); DB.jeb.push(it); persist(); return it.id;
 }
-function jebEditItem(id,patch){
+function jebEditItem(id,patch,noSave){   /* v06.05 · J178: noSave = the caller changes several items and calls persist() ONCE */
   _jebEnsure(); const it=_jebItem(id); if(!it||!patch) return false;
   ['text','done','kind','journal','url','ttl','ch','th'].forEach(k=>{ if(k in patch) it[k]=patch[k]; });
   ['folderIds','tags','people','issues'].forEach(k=>{ if(Array.isArray(patch[k])) it[k]=patch[k].slice(); });
@@ -26203,7 +26235,7 @@ function jebEditItem(id,patch){
     });
     if(ls.length) it.links=ls; else delete it.links;
   }
-  it.updatedAt=_jebNow(); persist(); return true;
+  it.updatedAt=_jebNow(); if(!noSave) persist(); return true;
 }
 /* ── v05.11 · Z6b — task items. A task's due/pri/steps ride the item record, so they sync with the item
    (last write wins on the WHOLE item, as text does). A non-tasks pocket keeps them and does not show them. ── */
@@ -26328,26 +26360,41 @@ function _jebLinkOf(i){
   const url=i.url||_jebUrlIn(i.text), yt=url?_jebYtId(url):'';
   let domain=''; try{ domain=url?new URL(url).hostname.replace(/^www\./,''):''; }catch(e){}
   const th=yt?('https://i.ytimg.com/vi/'+yt+'/mqdefault.jpg'):'';
-  return {url,yt,domain,th,title:i.ttl||String(i.text==null?'':i.text)};
+  const tx=String(i.text==null?'':i.text);
+  /* v06.05 · J178 — the title shown: the fetched one, else the text; text that is only the address shows the short address (domain + first path part) */
+  return {url,yt,domain,th,title:i.ttl||((url&&tx.trim()===url)?_jebShortAddr(url):tx)};
+}
+function _jebShortAddr(url){
+  try{ const u=new URL(url), p=u.pathname.split('/').filter(Boolean)[0]; return u.hostname.replace(/^www\./,'')+(p?'/'+p:''); }catch(e){ return String(url||''); }
+}
+/* where a link's title comes from: YouTube and Vimeo have their own oEmbed, any other site goes through noembed (only the address is sent) */
+function _jebTitleSrc(url){
+  try{
+    const h=new URL(url).hostname.toLowerCase().replace(/^(www|m)\./,'');
+    if(_jebYtId(url)) return 'https://www.youtube.com/oembed?url='+encodeURIComponent(url)+'&format=json';
+    if(h==='vimeo.com'||h==='player.vimeo.com') return 'https://vimeo.com/api/oembed.json?url='+encodeURIComponent(url);
+    return 'https://noembed.com/embed?url='+encodeURIComponent(url);
+  }catch(e){ return ''; }
 }
 const _jebLinkTry={}, _jebLinkBusy=new Set();
 /* YouTube title/channel by oEmbed: quiet on any failure, one retry per item per session, never blocks anything */
 function _jebLinkFetch(iid){
   const it=_jebItem(iid); if(!it||it.ttl) return;
-  const L=_jebLinkOf(it); if(!L.yt||_jebLinkBusy.has(iid)||(_jebLinkTry[iid]||0)>=2) return;
+  const L=_jebLinkOf(it); if(!L.url||!/^https?:\/\//i.test(L.url)||_jebLinkBusy.has(iid)||(_jebLinkTry[iid]||0)>=2) return;
   if(location.protocol==='file:'||typeof fetch!=='function') return;
+  const src=_jebTitleSrc(L.url); if(!src) return;
   _jebLinkTry[iid]=(_jebLinkTry[iid]||0)+1; _jebLinkBusy.add(iid);
-  fetch('https://www.youtube.com/oembed?url='+encodeURIComponent(L.url)+'&format=json')
+  fetch(src)
     .then(r=>r.ok?r.json():Promise.reject(new Error('oembed '+r.status)))
     .then(j=>{
       const cur=_jebItem(iid); if(!cur||_jebLinkOf(cur).url!==L.url||!j||!j.title) return;
-      jebEditItem(iid,{url:L.url,ttl:String(j.title),ch:String(j.author_name||''),th:L.th});
+      jebEditItem(iid,L.yt?{url:L.url,ttl:String(j.title),ch:String(j.author_name||''),th:L.th}:{url:L.url,ttl:String(j.title)});   /* ttl only for other sites: never over the owner's own `title` (a different field) */
       _jebPanelSig=''; _jebDeckSig=''; jebRefresh();
     })
     .catch(()=>{})
     .then(()=>{ _jebLinkBusy.delete(iid); });
 }
-function _jebLinkScan(items){ let n=0; for(const i of items){ if(!i.ttl&&_jebLinkOf(i).yt&&!_jebLinkBusy.has(i.id)&&(_jebLinkTry[i.id]||0)<2){ _jebLinkFetch(i.id); if(++n>=3) break; } } }
+function _jebLinkScan(items){ let n=0; for(const i of items){ if(!i.ttl&&_jebLinkOf(i).url&&!_jebLinkBusy.has(i.id)&&(_jebLinkTry[i.id]||0)<2){ _jebLinkFetch(i.id); if(++n>=3) break; } } }
 function jebToggleDone(id){
   _jebEnsure(); const it=_jebItem(id); if(!it) return false;
   it.done=!it.done; it.updatedAt=_jebNow(); persist(); return true;
@@ -28122,11 +28169,12 @@ function jebClosePanel(){
 }
 function _jebMakePanel(){
   const p=document.createElement('div'); p.id='jeb-panel';
-  p.innerHTML='<div class="jeb-ph"></div><div class="jx-path" hidden></div><div class="jx-kids" hidden></div><div class="zn-area" hidden></div><div class="jeb-add"><textarea id="jeb-add-in" rows="1" placeholder="Jot something…" aria-label="New item"></textarea><button class="btn bp" data-act="add" style="min-height:40px">Add</button></div><div class="jt-hint" hidden></div><div class="jeb-list"></div><div class="jeb-foot"></div>';
+  p.innerHTML='<div class="jeb-ph"></div><div class="jx-path" hidden></div><div class="jx-kids" hidden></div><div class="zn-area" hidden></div><div class="jeb-add"><div class="jeb-addf"><input id="jeb-title-in" class="jeb-add-ttl" data-jeb="1" hidden maxlength="120" autocomplete="off" placeholder="Title (optional)" aria-label="Title for the new link"><textarea id="jeb-add-in" rows="1" placeholder="Jot something…" aria-label="New item"></textarea></div><button class="btn bp" data-act="add" style="min-height:40px">Add</button></div><div class="jt-hint" hidden></div><div class="jeb-list"></div><div class="jeb-foot"></div>';
   document.body.appendChild(p);
   const add=p.querySelector('#jeb-add-in');
   add.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); _jebAddFromInput(); } });
   add.addEventListener('input',()=>_jebFit(add));
+  p.querySelector('#jeb-title-in').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); _jebAddFromInput(); } });   /* v06.05 · J178 */
   p.addEventListener('click',e=>{
     const t=e.target;
     if(t.closest('.jeb-x')){ jebClosePanel(); return; }
@@ -28142,8 +28190,10 @@ function _jebMakePanel(){
     const fb=t.closest('.jx-fold'); if(fb){ const q=fb.dataset.pid; if(_jebFold.has(q)) _jebFold.delete(q); else _jebFold.add(q); _jebPanelSig=''; jebRefresh(); return; }
     if(t.closest('[data-act="add"]')){ _jebAddFromInput(); return; }
     if(t.closest('[data-act="clear"]')){ _jebClearDoneUI(_jebSelIds(_jebPanelSel())); return; }
-    const fc=t.closest('.jl-fc');   /* v05.10 · Z6a — phone filter chips */
-    if(fc){ const lp=fc.closest('.jl-filters'); _jebLinkSetView(lp.dataset.pid,{[fc.dataset.fk]:fc.dataset.fv}); _jebPanelSig=''; jebRefresh(); return; }
+    /* v06.05 · J178 — the Filter ▾ button opens the card; a chip's ✕ clears that filter; ⛶ toggles full screen (tablet / computer) */
+    const fo=t.closest('.jl-fopen'); if(fo){ _jlFilterOpen(fo.closest('.jl-filters').dataset.pid); return; }
+    const fx=t.closest('.jl-fx'); if(fx){ _jebLinkSetView(fx.closest('.jl-filters').dataset.pid,{[fx.dataset.fk]:''}); _jebPanelSig=''; jebRefresh(); return; }
+    if(t.closest('.jl-fs')){ _jlFullOn=!_jlFullOn; _jebPanelSig=''; jebRefresh(); return; }
     const gb=t.closest('.jl-gb');   /* group by People | Issues */
     if(gb){ _jebLinkSetView(gb.closest('.jl-bar').dataset.pid,{g:gb.dataset.g}); _jebPanelSig=''; jebRefresh(); return; }
     const gd=t.closest('.jt-gdone');   /* v05.11 · Z6b — the folded Done group */
@@ -28161,8 +28211,6 @@ function _jebMakePanel(){
     const jd=t.closest('.jt-due,.jt-flag'); if(jd){ _jebDueOpen(row.dataset.iid,jd); return; }
     if(t.closest('.jt-cnt')){ _jebStepsToggle(row.dataset.iid); return; }
     if(t.closest('.jl-sug')){ const x=_jebItem(row.dataset.iid); if(x&&x.ch) { jebEditItem(x.id,{people:[x.ch]}); _jebPanelSig=''; jebRefresh(); } return; }
-    if(t.closest('.jl-p-b')){ _jebPickOpen(row.dataset.iid,'people'); return; }
-    if(t.closest('.jl-i-b')){ _jebPickOpen(row.dataset.iid,'issues'); return; }
     if(t.closest('.jeb-more')){ _jebItemMenu(row.dataset.iid,t.closest('.jeb-more')); return; }
     if(t.closest('.jeb-ttl-b,.jeb-ttl')){ _jebTitleEdit(row.dataset.iid); return; }   /* v05.25 · Z9 */
     if(t.closest('.jeb-att-b')){ _jebAttOpen(row.dataset.iid,t.closest('.jeb-att-b')); return; }
@@ -28200,15 +28248,23 @@ function _jebLinkSugHTML(i){ return (i.ch&&!(i.people||[]).length)?`<button clas
 function _jebLinkRowHTML(i,pk,mode){
   const L=_jebLinkOf(i), th=_jebThumbHTML(L,pk);
   const tt=`${_jebMainHTML(i,i.title?_jebTxHTML(i.text):esc(L.title))}<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`;
-  const acts=`<div class="jeb-acts"><button class="jl-p-b" title="Who is this about">👤 Person</button><button class="jl-i-b" title="Which issue is this about"># Issue</button><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button>${_JEB_TTL_B}<button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div>`;
+  /* v06.05 · J178 — ✎ Title and → Note sit on the top line beside the link; 👤 Person / # Issue are in the ⋯ menu; 📎 Attach stays below */
+  const acts=`<div class="jeb-acts"><button class="jeb-att-b" title="Attach a folder, tag, Note Type or Journal">📎 Attach</button></div>`;
+  const tb=mode==='card'?`<button class="jeb-ttl-b" aria-label="Title" title="Give this item a title">✎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→</button>`:`<div class="jl-tb">${_JEB_TTL_B}<button class="jeb-note-b" title="Turn this item into a note">→ Note</button></div>`;
   const ctl=`<span class="jeb-grip" title="Drag to reorder">⠿</span><input type="checkbox" class="jeb-tick" aria-label="Done"${i.done?' checked':''}>`;
   const more='<button class="jeb-more" aria-label="Item menu" title="More">⋯</button>';
   const cls=`jeb-it jl-it jl-${mode}${i.done?' done':''}`;
-  if(mode==='card') return `<div class="${cls}" data-iid="${esc(i.id)}">${th}<div class="jl-ctl">${ctl}<span class="jl-sp"></span>${more}</div><div class="jeb-body">${tt}${_jebChipsHTML(i)}${_jebLinkSugHTML(i)}${acts}</div></div>`;
-  return `<div class="${cls}" data-iid="${esc(i.id)}">${ctl}<div class="jeb-body"><div class="jl-top">${th}<div class="jl-tt">${tt}</div></div>${_jebChipsHTML(i)}${_jebLinkSugHTML(i)}${acts}</div>${more}</div>`;
+  if(mode==='card') return `<div class="${cls}" data-iid="${esc(i.id)}"><div class="jl-ctl">${ctl}<span class="jl-sp"></span>${tb}${more}</div>${th}<div class="jeb-body">${tt}${_jebChipsHTML(i)}${_jebLinkSugHTML(i)}${acts}</div></div>`;
+  return `<div class="${cls}" data-iid="${esc(i.id)}">${ctl}<div class="jeb-body"><div class="jl-top">${th}<div class="jl-tt">${tt}${tb}</div></div>${_jebChipsHTML(i)}${_jebLinkSugHTML(i)}${acts}</div>${more}</div>`;
 }
 /* the saved filter/group choice for a links pocket (DB.theme.zabLinkView[pocketId] = {g,p,i}) */
-function _jebLinkView(pid){ const v=(DB.theme&&DB.theme.zabLinkView&&DB.theme.zabLinkView[pid])||{}; return {g:v.g==='issues'?'issues':'people',p:v.p||'',i:v.i||''}; }
+function _jebLinkView(pid){ const v=(DB.theme&&DB.theme.zabLinkView&&DB.theme.zabLinkView[pid])||{}; return {g:v.g==='issues'?'issues':'people',p:v.p||'',i:v.i||'',xp:Array.isArray(v.xp)?v.xp:[],xi:Array.isArray(v.xi)?v.xi:[]}; }   /* v06.05 · J178: xp / xi = names added in the Filter card that no link carries yet */
+/* every Person / Issue name of one links Zab: those on its items plus the ones added in the Filter card */
+function _jebLinkAllNames(pid,items,field){
+  const ex=_jebLinkView(pid)[field==='people'?'xp':'xi'], seen=new Set(), out=[];
+  _jebLinkNames(items,field).concat(ex).forEach(n=>{ const k=String(n).toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push(n); } });
+  return out.sort((a,b)=>String(a).localeCompare(String(b)));
+}
 function _jebLinkSetView(pid,patch){
   if(!DB.theme) DB.theme={};
   const all=Object.assign({},DB.theme.zabLinkView||{}); all[pid]=Object.assign({},_jebLinkView(pid),patch);
@@ -28223,20 +28279,97 @@ const _jebWide=()=>window.innerWidth>=640;
 function _jebLinkPanelHTML(pk,items){
   const rows=(list,mode)=>list.map(i=>_jebLinkRowHTML(i,pk,mode)).join('');
   if(!items.length) return '<div class="jeb-empty">Nothing here yet — paste a link above.</div>';
-  const v=_jebLinkView(pk.id);
+  const v=_jebLinkView(pk.id), pid=esc(pk.id);
+  /* v06.05 · J178 — the Person / Issue rows are gone from the top: ONE "Filter ▾" button opens the card; the current filter is a chip with ✕ */
+  const has=(a,n)=>(a||[]).some(x=>String(x).toLowerCase()===String(n).toLowerCase());
+  const fbar=`<div class="jl-filters" data-pid="${pid}"><button type="button" class="jl-fopen" aria-haspopup="dialog" title="Filter these links by person or issue">Filter ▾</button>${v.p?`<span class="jl-fchip">👤 ${esc(v.p)}<button type="button" class="jl-fx" data-fk="p" aria-label="Clear the person filter" title="Clear">✕</button></span>`:''}${v.i?`<span class="jl-fchip"># ${esc(v.i)}<button type="button" class="jl-fx" data-fk="i" aria-label="Clear the issue filter" title="Clear">✕</button></span>`:''}</div>`;
+  const shown=items.filter(i=>(!v.p||has(i.people,v.p))&&(!v.i||has(i.issues,v.i)));
   if(!_jebWide()){
-    const P=_jebLinkNames(items,'people'), I=_jebLinkNames(items,'issues'), p=P.includes(v.p)?v.p:'', q=I.includes(v.i)?v.i:'';
-    const frow=(label,list,cur,k)=>`<div class="jl-frow" role="group" aria-label="${label}"><span class="jl-fl">${label}</span><button class="jl-fc${cur?'':' on'}" data-fk="${k}" data-fv="">All</button>${list.map(n=>`<button class="jl-fc${cur===n?' on':''}" data-fk="${k}" data-fv="${esc(n)}">${esc(n)}</button>`).join('')}</div>`;
-    const shown=items.filter(i=>(!p||(i.people||[]).includes(p))&&(!q||(i.issues||[]).includes(q)));
-    return `<div class="jl-filters" data-pid="${esc(pk.id)}">${frow('👤 Person',P,p,'p')}${frow('# Issue',I,q,'i')}</div>`
-      +`<div class="jl-rows jl-list" data-pid="${esc(pk.id)}">${shown.length?rows(shown,'c'):'<div class="jeb-empty">No links match these filters.</div>'}</div>`;
+    return fbar+`<div class="jl-rows jl-list" data-pid="${pid}">${shown.length?rows(shown,'c'):'<div class="jeb-empty">No links match these filters.</div>'}</div>`;
   }
+  if(!shown.length) return fbar+'<div class="jeb-empty">No links match these filters.</div>';
+  items=shown;
   const field=v.g==='issues'?'issues':'people', none=field==='people'?'No person yet':'No issue yet';
   const names=_jebLinkNames(items,field);
   const groups=names.map(n=>({n,l:items.filter(i=>(i[field]||[]).some(x=>String(x).toLowerCase()===String(n).toLowerCase()))}));
   const rest=items.filter(i=>!(i[field]||[]).length); if(rest.length) groups.push({n:none,l:rest,none:true});
-  return `<div class="jl-bar" data-pid="${esc(pk.id)}"><span class="jl-fl">Group by:</span><button class="jl-gb${field==='people'?' on':''}" data-g="people">👤 People</button><button class="jl-gb${field==='issues'?' on':''}" data-g="issues"># Issues</button></div>`
+  return fbar+`<div class="jl-bar" data-pid="${esc(pk.id)}"><span class="jl-fl">Group by:</span><button class="jl-gb${field==='people'?' on':''}" data-g="people">👤 People</button><button class="jl-gb${field==='issues'?' on':''}" data-g="issues"># Issues</button></div>`
     +groups.map(g=>`<div class="jl-gh"><b>${g.none?'':(field==='people'?'👤 ':'# ')}${esc(g.n)}</b> <small>${g.l.length}</small></div><div class="jl-grid jl-list" data-pid="${esc(pk.id)}">${rows(g.l,'card')}</div>`).join('');
+}
+/* ── v06.05 · J178 — the Filter card of a links Zab: choose, add, rename, delete a Person / an Issue.
+   Rename and delete change only the `people` / `issues` arrays of THIS Zab's items that carry the name, through jebEditItem (its allow-list),
+   stamp only those items, and save ONCE. Items are never deleted. ── */
+let _jlFullOn=false;   /* ⛶ on a tablet / computer: this session only, never stored */
+const _jlSame=(a,b)=>String(a).toLowerCase()===String(b).toLowerCase();
+const _jlHas=(arr,n)=>[].concat(arr==null?[]:arr).some(x=>_jlSame(x,n));
+const _jlClean=s=>String(s==null?'':s).trim().replace(/\s+/g,' ').slice(0,60);
+const _jlFld=f=>f==='people'?'xp':'xi';
+function _jlViewRaw(pid){ if(!DB.theme) DB.theme={}; const all=Object.assign({},DB.theme.zabLinkView||{}); all[pid]=Object.assign({},all[pid]||{}); return all; }
+function _jlCount(pid,field,n){ return jebItems(pid).filter(i=>_jlHas(i[field],n)).length; }
+function jlAddName(pid,field,name){
+  const n=_jlClean(name); if(!n||!_jebPocket(pid)) return false;
+  if(_jlHas(_jebLinkAllNames(pid,jebItems(pid),field),n)) return false;
+  const k=_jlFld(field); _jebLinkSetView(pid,{[k]:_jebLinkView(pid)[k].concat([n])}); return true;
+}
+function jlRenameName(pid,field,oldN,newName){
+  const n=_jlClean(newName); if(!n||n===oldN||!_jebPocket(pid)) return 0;
+  const dedupe=a=>{ const out=[]; a.forEach(x=>{ if(!_jlHas(out,x)) out.push(x); }); return out; };
+  let c=0;
+  jebItems(pid).forEach(i=>{ if(!_jlHas(i[field],oldN)) return; jebEditItem(i.id,{[field]:dedupe([].concat(i[field]).map(x=>_jlSame(x,oldN)?n:x))},true); c++; });
+  const all=_jlViewRaw(pid), v=all[pid], k=_jlFld(field), fk=field==='people'?'p':'i';
+  if(Array.isArray(v[k])&&_jlHas(v[k],oldN)) v[k]=dedupe(v[k].map(x=>_jlSame(x,oldN)?n:x));
+  if(v[fk]&&_jlSame(v[fk],oldN)) v[fk]=n;
+  DB.theme.zabLinkView=all; persist(); return c;
+}
+function jlDeleteName(pid,field,name){
+  if(!_jebPocket(pid)) return 0; let c=0;
+  jebItems(pid).forEach(i=>{ if(!_jlHas(i[field],name)) return; jebEditItem(i.id,{[field]:[].concat(i[field]).filter(x=>!_jlSame(x,name))},true); c++; });
+  const all=_jlViewRaw(pid), v=all[pid], k=_jlFld(field), fk=field==='people'?'p':'i';
+  if(Array.isArray(v[k])) v[k]=v[k].filter(x=>!_jlSame(x,name));
+  if(v[fk]&&_jlSame(v[fk],name)) v[fk]='';
+  DB.theme.zabLinkView=all; persist(); return c;
+}
+function _jlFilterOpen(pid){
+  if(!_jebPocket(pid)) return;
+  _jebHideMenu(); _jebAttClose();
+  let mode=null;   /* {k:'ren'|'del', f, n} — one row at a time asks */
+  showModal('<div class="mt">Filter links</div><div id="jl-fc-body"></div><div class="ma"><button class="btn bp" id="jl-fc-done">Done</button></div>');
+  const mb=_jebEl('mb'), body=mb.querySelector('#jl-fc-body');
+  const secs=[['people','p','👤 Person'],['issues','i','# Issue']];
+  const after=()=>{ _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); };
+  const paint=()=>{
+    const v=_jebLinkView(pid);
+    body.innerHTML=secs.map(([f,fk,label])=>{
+      const names=_jebLinkAllNames(pid,jebItems(pid),f), cur=v[fk];
+      const rows=names.map(n=>{
+        const c=_jlCount(pid,f,n), e=esc(n);
+        if(mode&&mode.f===f&&_jlSame(mode.n,n)){
+          if(mode.k==='ren') return `<div class="jl-fcr" data-f="${f}" data-n="${e}"><input class="mi jl-fcin" data-jeb="1" maxlength="60" autocomplete="off" value="${e}" aria-label="New name"><button class="btn bp" data-a="ren-ok">Save</button><button class="btn" data-a="cancel">Cancel</button></div>`;
+          return `<div class="jl-fcr jl-fcdel" data-f="${f}" data-n="${e}"><span class="jl-fcq">Remove “${e}” from ${c} link${c===1?'':'s'}? The links stay.</span><button class="btn bp" data-a="del-ok">Remove</button><button class="btn" data-a="cancel">Cancel</button></div>`;
+        }
+        return `<div class="jl-fcr" data-f="${f}" data-n="${e}"><button class="jl-fc${cur&&_jlSame(cur,n)?' on':''}" data-a="pick" aria-pressed="${!!(cur&&_jlSame(cur,n))}">${e} <small>${c}</small></button><button class="jl-fcb" data-a="ren" aria-label="Rename ${e}" title="Rename">✎</button><button class="jl-fcb" data-a="del" aria-label="Remove ${e}" title="Remove from every link">🗑</button></div>`;
+      }).join('');
+      return `<div class="jl-fcs" data-f="${f}"><div class="jl-fch">${label}</div><div class="jl-pklist"><div class="jl-fcr" data-f="${f}"><button class="jl-fc${cur?'':' on'}" data-a="pick" data-n="" aria-pressed="${!cur}">All</button></div>${rows}</div><div class="jl-pknew"><input class="mi jl-fcnew" data-jeb="1" data-f="${f}" maxlength="60" autocomplete="off" placeholder="New…" aria-label="New ${f==='people'?'person':'issue'}"><button class="btn" data-a="add" data-f="${f}">Add</button></div></div>`;
+    }).join('');
+    const ri=body.querySelector('.jl-fcin'); if(ri){ ri.focus(); ri.select(); }
+  };
+  body.addEventListener('click',e=>{
+    const b=e.target.closest('button[data-a]'); if(!b) return;
+    const row=b.closest('.jl-fcr'), sec=b.closest('.jl-fcs'), f=(sec&&sec.dataset.f)||'', n=row?(row.dataset.n||''):'', a=b.dataset.a, fk=f==='people'?'p':'i';
+    if(a==='pick'){ _jebLinkSetView(pid,{[fk]:n}); closeModal(); after(); return; }
+    if(a==='add'){ const inp=sec.querySelector('.jl-fcnew'); if(jlAddName(pid,f,inp.value)){ mode=null; paint(); after(); } else { inp.value=''; } return; }
+    if(a==='ren'||a==='del'){ mode={k:a,f,n}; paint(); return; }
+    if(a==='cancel'){ mode=null; paint(); return; }
+    if(a==='ren-ok'){ jlRenameName(pid,f,n,row.querySelector('.jl-fcin').value); mode=null; paint(); after(); return; }
+    if(a==='del-ok'){ jlDeleteName(pid,f,n); mode=null; paint(); after(); return; }
+  });
+  body.addEventListener('keydown',e=>{
+    if(e.isComposing) return;
+    if(e.key==='Enter'){ const t=e.target; if(t.classList.contains('jl-fcnew')){ e.preventDefault(); t.closest('.jl-fcs').querySelector('button[data-a=add]').click(); } else if(t.classList.contains('jl-fcin')){ e.preventDefault(); t.closest('.jl-fcr').querySelector('[data-a=ren-ok]').click(); } }
+    else if(e.key==='Escape'&&mode){ e.stopPropagation(); mode=null; paint(); }
+  });
+  mb.querySelector('#jl-fc-done').addEventListener('click',()=>closeModal());
+  paint();
 }
 /* ── v05.11 · Z6b — task rows. mode 'w' (tablet/laptop): due chip, flag and counter on the right; 'c' (phone, and every "All pockets" group): under the text ── */
 function _jebTaskPieces(i,today,deck){
@@ -28426,7 +28559,7 @@ function _jebPaintPanel(){
   }
   const tkSig=pk=>_jebToday()+(_jebTaskMode()==='w'?'W':'N')+(_jebDoneOpen.has(pk.id)?'D':'')+(_jebHintPid===pk.id?'H':'')+[..._jebStepsOpen].join(',');
   const kvSig=pk=>{ const ty=_jebType(pk); return (ty==='ideas'?JSON.stringify(_jebIdeaView(pk.id)):ty==='shop'?JSON.stringify(_jebShopView(pk.id)):'')+(_jebHintPid===pk.id?'H':''); };   /* v05.12 · Z6c */
-  const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W':'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):_jebType(pk)==='news'?_jebNewsSig(pk):kvSig(pk)),treeSig(pk),groups[k].map(_jebItemSig).join('|'),multi?'':_zabNoteSig(pk)].join('#')).join('@@')].join('%');
+  const sig=[multi?'*'+(sel.all?'A':''):'',pks.map((pk,k)=>[pk.id,pk.name,pk.icon,pk.color,_jebType(pk),_jebType(pk)==='links'?(_jebWide()?'W'+(_jlFullOn?'F':''):'N')+JSON.stringify(_jebLinkView(pk.id)):(_jebType(pk)==='tasks'?tkSig(pk):_jebType(pk)==='news'?_jebNewsSig(pk):kvSig(pk)),treeSig(pk),groups[k].map(_jebItemSig).join('|'),multi?'':_zabNoteSig(pk)].join('#')).join('@@')].join('%');
   if(sig===_jebPanelSig) return;
   /* never repaint under an item being typed in or dragged: it repaints when that ends */
   if(_jebEditId||_jebDrag||_jebStepTyping()||_jebQtyOpen()||_jlkTyping()||(document.activeElement&&document.activeElement.id==='jn-add-in')) return;
@@ -28435,7 +28568,7 @@ function _jebPaintPanel(){
   const addBox=p.querySelector('.jeb-add'); if(addBox) addBox.style.display=(multi||_jebType(pks[0])==='news')?'none':'';
   if(!multi){
     const pk=pks[0], items=groups[0];
-    p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this Zab</small></div>${px}<button class="jeb-pm" aria-label="Zab menu" title="Zab menu: rename, move into another Zab, add a Zab inside">⋯</button><button class="jeb-set" aria-label="Zab settings" title="Zab settings: the Zab bar, the scrolling titles, News">⚙</button><button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
+    p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:${esc(pk.color)}">${esc(pk.icon)}</span><div class="jeb-pt"><b>${esc(pk.name)}</b><small>${open} open · ${items.length} in this Zab</small></div>${_jebType(pk)==='links'&&_jebWide()?`<button class="jl-fs" aria-label="${_jlFullOn?'Leave full screen':'Full screen'}" aria-pressed="${_jlFullOn}" title="${_jlFullOn?'Leave full screen':'Full screen'}">${_jlFullOn?'🗗':'⛶'}</button>`:''}${px}<button class="jeb-pm" aria-label="Zab menu" title="Zab menu: rename, move into another Zab, add a Zab inside">⋯</button><button class="jeb-set" aria-label="Zab settings" title="Zab settings: the Zab bar, the scrolling titles, News">⚙</button><button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
     const pth=jebPath(pk.id), kids=jebChildren(pk.id), pe=p.querySelector('.jx-path'), ke=p.querySelector('.jx-kids');
     pe.hidden=pth.length<2;
     pe.innerHTML=pth.length<2?'':'<nav aria-label="Where this Zab is">'+pth.map((x,k)=>k<pth.length-1?`<button type="button" data-pid="${esc(x.id)}">${esc(x.name)}</button><span aria-hidden="true"> › </span>`:`<b aria-current="true">${esc(x.name)}</b>`).join('')+'</nav>';
@@ -28453,12 +28586,14 @@ function _jebPaintPanel(){
       hn.textContent=!on?'':(sh?'Tip: start with a quantity (2 milk, 500g flour) and end with @shop (milk @Coles).':'Tip: end a task with ! for high priority, or with today or tomorrow to set its date.');
     }
     p.classList.toggle('jl-wide',lk&&_jebWide());
+    p.classList.toggle('jl-full',lk&&(!_jebWide()||_jlFullOn));   /* v06.05 · J178 — a phone: always the whole screen; tablet / computer: the ⛶ toggle */
+    const tbx=p.querySelector('#jeb-title-in'); if(tbx) tbx.hidden=!lk;
     p.querySelector('.jeb-add textarea').placeholder=lk?'Paste a link…':'Jot something…';
     p.querySelector('.jeb-list').innerHTML=lk?_jebLinkPanelHTML(pk,items):tk?_jebTaskPanelHTML(pk,items):id?_jebIdeaPanelHTML(pk,items):sh?_jebShopPanelHTML(pk,items):_jebType(pk)==='news'?_jebNewsPanelHTML(pk,items):(items.length?items.map(i=>_jebRowHTML(i)).join(''):'<div class="jeb-empty">Nothing here yet — jot something above.</div>');
     if(lk) _jebLinkScan(items);
   }else{
     const zn0=p.querySelector('.zn-area'); zn0.hidden=true; zn0.innerHTML=''; p.classList.remove('zn-has');   /* All Zabs: no note area */
-    p.classList.remove('jl-wide'); p.querySelector('.jeb-add textarea').placeholder='Jot something…'; const hn2=p.querySelector('.jt-hint'); if(hn2) hn2.hidden=true;
+    p.classList.remove('jl-wide','jl-full'); const tbm=p.querySelector('#jeb-title-in'); if(tbm) tbm.hidden=true; p.querySelector('.jeb-add textarea').placeholder='Jot something…'; const hn2=p.querySelector('.jt-hint'); if(hn2) hn2.hidden=true;
     p.querySelector('.jx-path').hidden=true; p.querySelector('.jx-kids').hidden=true; if(p.classList.contains('jx-has')) p.classList.remove('jx-has');
     p.querySelector('.jeb-ph').innerHTML=`<span class="jeb-sw" style="background:#EDE6D6">▤</span><div class="jeb-pt"><b>${esc(_jebSelTitle(sel,pks))}</b><small>${open} open · ${all.length} in all</small></div>${px}<button class="jeb-set" aria-label="Zab settings" title="Zab settings: the Zab bar, the scrolling titles, News">⚙</button><button class="jeb-x" aria-label="Close" title="Close">✕</button>`;
     const inSel=new Set(ids);
@@ -28497,6 +28632,9 @@ function _jebAddFromInput(){
   const id=jebAddItem(_jebOpen,q&&(q.due||q.pri)?q.text:(sq?sq.text:v));
   if(id&&q&&(q.due||q.pri)){ const pt={}; if(q.due) pt.due=q.due; if(q.pri) pt.pri=1; jebEditItem(id,pt); }
   if(id&&sq){ const pt={}; if(sq.qty) pt.qty=sq.qty; if(sq.shop) pt.shop=sq.shop; jebEditItem(id,pt); }
+  const ti=_jebEl('jeb-title-in');   /* v06.05 · J178 — the Title box of a links Zab: Z9 rules, absent when empty */
+  if(id&&ti&&!ti.hidden&&ti.value.trim()) jebEditItem(id,{title:ti.value});
+  if(ti) ti.value='';
   if(id) jebMoveItem(id,_jebOpen,0);   /* the newest goes on top */
   ta.value=''; ta.style.height='auto';
   _jebPanelSig=''; jebRefresh(); ta.focus({preventScroll:true});
@@ -28633,7 +28771,7 @@ function _jebMakeDeck(){
 }
 function _jebCardHTML(i,pk){
   const lk=_jebType(pk)==='links', tk=_jebType(pk)==='tasks', L=lk?_jebLinkOf(i):null;   /* v05.10: a link card = thumbnail on top, then the title */
-  return `<div class="jeb-card${i.done?' done':''}${lk?' jl-dcard':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg"><div class="jc-grip" title="Drag to reorder or move to another Zab" aria-label="Drag handle">⠿</div>${lk?_jebThumbHTML(L,pk):''}${_jebMainHTML(i,lk&&!i.title?esc(L.title):_jebTxHTML(i.text))}${tk?(()=>{ const pcs=_jebTaskPieces(i,_jebToday(),true); return pcs?'<div class="jt-meta">'+pcs+'</div>':''; })():''}${_jebKindMeta(i,pk,true)}${lk?`<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`:''}${_jebChipsHTML(i)}${lk?_jebLinkSugHTML(i):''}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button><button class="jeb-ttl-b" aria-label="Title" title="Give this item a title">✎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button><button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
+  return `<div class="jeb-card${i.done?' done':''}${lk?' jl-dcard':''}" data-iid="${esc(i.id)}" data-pid="${esc(pk.id)}" style="background:${esc(pk.color)};--rot:${_jebRot(i.id)}deg">${lk?'<div class="jl-dtop"><div class="jc-grip" title="Drag to reorder or move to another Zab" aria-label="Drag handle">⠿</div><button class="jeb-ttl-b" aria-label="Title" title="Give this item a title">✎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button></div>':'<div class="jc-grip" title="Drag to reorder or move to another Zab" aria-label="Drag handle">⠿</div>'}${lk?_jebThumbHTML(L,pk):''}${_jebMainHTML(i,lk&&!i.title?esc(L.title):_jebTxHTML(i.text))}${tk?(()=>{ const pcs=_jebTaskPieces(i,_jebToday(),true); return pcs?'<div class="jt-meta">'+pcs+'</div>':''; })():''}${_jebKindMeta(i,pk,true)}${lk?`<div class="jl-dom">${esc(L.domain)}${i.ch?' · '+esc(i.ch):''}</div>`:''}${_jebChipsHTML(i)}${lk?_jebLinkSugHTML(i):''}<div class="jc-acts"><button class="jc-tick" aria-pressed="${i.done?'true':'false'}" aria-label="Done" title="Tick as done">✓</button><button class="jeb-att-b" aria-label="Attach" title="Attach a folder, tag, Note Type or Journal">📎</button>${lk?'':'<button class="jeb-ttl-b" aria-label="Title" title="Give this item a title">✎</button><button class="jeb-note-b" aria-label="Turn into a note" title="Turn this item into a note">→ Note</button>'}<button class="jeb-more" aria-label="Item menu" title="More">⋯</button></div></div>`;
 }
 function _jebPaintDeck(){
   const sel=_jebDeck, ids=_jebSelIds(sel);
@@ -28898,7 +29036,7 @@ function _jebPickOpen(iid,field){
   const mb=_jebEl('mb'), list=mb.querySelector('#jl-pk-list'), inp=mb.querySelector('#jl-pk-in');
   const paint=()=>{
     const on=new Set(cur().map(n=>String(n).toLowerCase()));
-    const names=_jebLinkNames(jebItems(pid).concat(it),field);
+    const names=(field==='people'||field==='issues')&&_jebType(_jebPocket(pid))==='links'?_jebLinkAllNames(pid,jebItems(pid).concat(it),field):_jebLinkNames(jebItems(pid).concat(it),field);   /* v06.05: names added in the Filter card too */
     list.innerHTML=names.length?names.map(n=>`<label class="jl-pkrow"><input type="checkbox" data-n="${esc(n)}"${on.has(String(n).toLowerCase())?' checked':''}><span>${esc(n)}</span></label>`).join(''):'<div class="jeb-empty">No names yet — add one below.</div>';
   };
   const save=arr=>{ jebEditItem(iid,{[field]:single?(arr[0]||''):arr}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); paint(); };
