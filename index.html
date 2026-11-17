@@ -35373,9 +35373,18 @@ function _dupWhyOf(a,list,mem,jp){
   if(list===2&&jp(a)) return 'Journal note: the same title repeats by design';
   return '';
 }
+const _DUP_IMP_ROOTS=['enx-root','kp-root','kp-arch','on-root'];
+function _dupImpSet(){
+  const fm=new Map(DB.folders.map(f=>[f.id,f])), memo=new Map(), out=new Set();
+  const is=f=>{ const path=[]; let x=f, res=false, g=0;
+    while(x&&g++<60){ if(memo.has(x.id)){ res=memo.get(x.id); break; } path.push(x); if(x.enx||x.kp||x.on||_DUP_IMP_ROOTS.indexOf(x.id)>=0){ res=true; break; } x=x.parentId?fm.get(x.parentId):null; }
+    path.forEach(y=>memo.set(y.id,res)); return res; };
+  DB.folders.forEach(f=>{ if(is(f)) out.add(f.id); });
+  return out;
+}
 async function _dupScan(D){
   const alive=()=>_dup===D&&document.getElementById('dup-body');
-  const arts=DB.articles.slice(), N=arts.length, recs=new Array(N), jp=_jrnPred();
+  const arts=DB.articles.slice(), N=arts.length, recs=new Array(N), jp=_jrnPred(), fmap=new Map(DB.folders.map(f=>[f.id,f]));
   let i=0;
   while(i<N){
     const end=performance.now()+12;
@@ -35395,7 +35404,14 @@ async function _dupScan(D){
   const push=(m,k,v)=>{ const l=m.get(k); if(l) l.push(v); else m.set(k,[v]); };
   const L1=new Map(), L3=new Map(), T=new Map();
   recs.forEach((r,ix)=>{ if(r.len||r.pics) push(L3,r.kx,ix); push(L1,r.nt+'\u0001'+r.kx,ix); if(r.nt) push(T,r.nt,ix); });
-  const rank=(x,y)=>{ const a=arts[x], b=arts[y]; return ((b.folderIds||[]).length-(a.folderIds||[]).length)||((b.tags||[]).length-(a.tags||[]).length)||String(a.createdAt||'').localeCompare(String(b.createdAt||''))||String(a.id).localeCompare(String(b.id)); };
+  /* v06.02 — J177 follow-up: a folder made by an import (it or an ancestor carries enx / kp / on, or it is an import root) counts less than a folder the owner made.
+     Worked out ONCE per scan as a Set of ids (never a tree walk per comparison). mmj / mydb folders are NOT counted: they mirror the owner's own site / store, not an import dump. */
+  const imp=_dupImpSet(), ownC=new Array(N);
+  const own=ix=>{ let v=ownC[ix]; if(v===undefined){ v=0; const fi=arts[ix].folderIds||[]; for(let k=0;k<fi.length;k++){ if(fmap.has(fi[k])&&!imp.has(fi[k])) v++; } ownC[ix]=v; } return v; };
+  D.imp=imp;
+  const rank=(x,y)=>{ const a=arts[x], b=arts[y]; return (own(y)-own(x))||((b.folderIds||[]).length-(a.folderIds||[]).length)||((b.tags||[]).length-(a.tags||[]).length)||String(a.createdAt||'').localeCompare(String(b.createdAt||''))||String(a.id).localeCompare(String(b.id)); };
+  /* list 2: narrow to the versions with the most own folders, then the most folders in all */
+  const narrow=reps=>{ let c=reps, m=Math.max(...c.map(own)); c=c.filter(ix=>own(ix)===m); m=Math.max(...c.map(ix=>(arts[ix].folderIds||[]).length)); return c.filter(ix=>(arts[ix].folderIds||[]).length===m); };
   const groups=[]; let gn=0, t0=performance.now();
   const tick=async()=>{ if(performance.now()-t0>12){ await _yieldTask(); t0=performance.now(); } return !alive(); };
   const mk=(list,ixs,keepIx,label,low)=>{
@@ -35430,7 +35446,8 @@ async function _dupScan(D){
     const vs=new Map(); ixs.forEach(ix=>push(vs,recs[ix].kx,ix));
     if(vs.size<2) continue;
     const reps=[]; vs.forEach(l=>{ l.sort(rank); reps.push(l[0]); });
-    if(reps.length>6){ g2.push(mk(2,reps,reps.slice().sort((x,y)=>String(arts[y].updatedAt||'').localeCompare(String(arts[x].updatedAt||'')))[0],reps.length+' versions with this title · same title only',true)); continue; }
+    const NOTE=' · kept the copy in your folders', cand=narrow(reps);
+    if(reps.length>6){ const nw=ix=>ix.slice().sort((x,y)=>String(arts[y].updatedAt||'').localeCompare(String(arts[x].updatedAt||'')))[0], k0=nw(reps), k1=nw(cand); g2.push(mk(2,reps,k1,reps.length+' versions with this title · same title only'+(k1!==k0?NOTE:''),true)); continue; }
     const tx=reps.map(ix=>_dupText(arts[ix])), ws=tx.map(_dupWords);
     let contains=true, pct=100;
     for(let x=0;x<reps.length;x++) for(let y=x+1;y<reps.length;y++){
@@ -35440,11 +35457,13 @@ async function _dupScan(D){
       const un=ws[x].size+ws[y].size-sh, p=un?Math.round(100*sh/un):100;
       if(p<pct) pct=p;
     }
-    let keepIx;
-    if(contains){ let b=0; for(let x=1;x<reps.length;x++){ if(tx[x].length>tx[b].length||(tx[x].length===tx[b].length&&String(arts[reps[x]].updatedAt||'')>String(arts[reps[b]].updatedAt||''))) b=x; } keepIx=reps[b]; }
-    else keepIx=reps.slice().sort((x,y)=>String(arts[y].updatedAt||'').localeCompare(String(arts[x].updatedAt||''))||rank(x,y))[0];
+    const pick=set=>{
+      if(contains){ let b=set[0]; for(let x=1;x<set.length;x++){ const ix=set[x]; if(tx[reps.indexOf(ix)].length>tx[reps.indexOf(b)].length||(tx[reps.indexOf(ix)].length===tx[reps.indexOf(b)].length&&String(arts[ix].updatedAt||'')>String(arts[b].updatedAt||''))) b=ix; } return b; }
+      return set.slice().sort((x,y)=>String(arts[y].updatedAt||'').localeCompare(String(arts[x].updatedAt||''))||rank(x,y))[0];
+    };
+    const keepIx=pick(cand), kept=keepIx!==pick(reps);
     const likely=contains||pct>=60;
-    g2.push(mk(2,reps,keepIx,(contains?'One contains the other':pct+'% alike')+(likely?' · likely an older and a newer version':' · same title only'),!likely));
+    g2.push(mk(2,reps,keepIx,(contains?'One contains the other':pct+'% alike')+(likely?' · likely an older and a newer version':' · same title only')+(kept?NOTE:''),!likely));
     if(await tick()) return;
   }
   g2.sort((a,b)=>(a.low?1:0)-(b.low?1:0));
@@ -35490,7 +35509,8 @@ function _dupRowHTML(g,id){
   const D=_dup, a=_dupMap().get(id); if(!a) return '';
   const fm=D.fm||(D.fm=new Map(DB.folders.map(f=>[f.id,f]))), fp=_dupFPaths(a,fm);
   const isKeep=D.keep[g.id]===id, why=g.why[id]||(_picMigOpen(id)?'Open in the editor':'');
-  const meta=[fp.length?esc(fp.slice(0,3).join(' · ')+(fp.length>3?' +'+(fp.length-3):'')):'No folder', esc(_dupSrc(a)), 'created '+esc(String(a.createdAt||'').slice(0,10)||'?'), 'edited '+esc(String(a.updatedAt||'').slice(0,10)||'?'), _dupN(D.n[id])+' characters'+(D.pc[id]?' · '+D.pc[id]+' picture'+(D.pc[id]===1?'':'s'):'')].join(' · ');
+  const fids=(a.folderIds||[]).filter(f=>fm.has(f)), impOnly=D.imp&&fids.length&&fids.every(f=>D.imp.has(f));
+  const meta=[fp.length?esc(fp.slice(0,3).join(' · ')+(fp.length>3?' +'+(fp.length-3):'')):'No folder',impOnly?'<span class="dup-imp">in an import folder only</span>':'', esc(_dupSrc(a)), 'created '+esc(String(a.createdAt||'').slice(0,10)||'?'), 'edited '+esc(String(a.updatedAt||'').slice(0,10)||'?'), _dupN(D.n[id])+' characters'+(D.pc[id]?' · '+D.pc[id]+' picture'+(D.pc[id]===1?'':'s'):'')].filter(Boolean).join(' · ');
   let ctl='<label class="dup-lb"><input type="radio" name="dk-'+g.id+'" '+(isKeep?'checked ':'')+'onchange="dupKeep('+_ja(g.id)+','+_ja(id)+')"> Keep</label>';
   if(why) ctl+='<span class="dup-why">'+(isKeep?'':'Stays: ')+esc(why)+'</span>';
   else if(!isKeep) ctl+='<label class="dup-lb"><input type="checkbox" class="dup-tk" data-id="'+esc(id)+'" '+(D.tick.has(id)?'checked ':'')+'onchange="dupTick('+_ja(id)+',this.checked)"> Remove</label>';
