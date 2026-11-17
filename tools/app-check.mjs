@@ -13282,6 +13282,18 @@ await r.block('165-popwin-j168', async () => {
   for (const row of rows) r.check(row.ok, '165: ' + row.label, row.detail);
   r.check(out.status === 0, 'the popwin-j168.mjs check exits cleanly', `exit ${out.status}`);
 });
+/* 166 — v06.07, J170: a pop-up (⧉ folder/section window or note window) tucked into a chip by a double-click / double-tap on its bar; chips over the side pane / note pane on a computer, one bottom row above the Zab bar on a phone and tablet; reopen at the same box, ✕ closes, no note written, typing kept, keep1116. tools/tuck-j170.mjs runs 166a–166f. */
+await r.block('166-tuck-j170', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./tuck-j170.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1200000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the tuck-j170.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '166: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the tuck-j170.mjs check exits cleanly', `exit ${out.status}`);
+});
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
