@@ -6020,7 +6020,9 @@ await r.block('20c-multi-version-switch-stays-in-window', async () => {
   await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
     window.render(); openNotePopup('a1', 'float'); });
   await s.page.waitForTimeout(400);
-  await s.page.click('#fw-a1 .pop-meta-strip .ver-strip .ver-pill:not(.on):not(.ver-add)');
+  /* v06.06 · J168, updated in place by the Architect in review: a pop-up note window's version pills moved out of the meta strip into its own always-visible row
+     (`.pop-ver-row`, drawn by the same builder as Pane 3's); the click is the same, only where the pill sits changed. */
+  await s.page.click('#fw-a1 .pop-ver-row .ver-strip .ver-pill:not(.on):not(.ver-add)');
   await s.page.waitForTimeout(500);
   const after = await s.page.evaluate(() => ({
     windows: [...document.querySelectorAll('.float-win')].map((w) => w.id),
