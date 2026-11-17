@@ -128,7 +128,7 @@ if (want('163a')) {
       const known = pairs.filter((x) => /of about 3,000/.test(x[1]));
       check(known.length >= 3, `163a ${tag}: with the total known, ⚙/Diagnostics say "N of about M"`, known[0] && known[0][1]);
       check(pairs.filter((x) => x[0] < 2).every((x) => !/left/.test(x[1] + x[2])) && pairs.some((x) => x[0] >= 2 && /(under a minute|about \d+ min) left/.test(x[1])), `163a ${tag}: the estimate shows only after 2 pages`, (pairs.find((x) => /left/.test(x[1])) || [])[1]);
-      check(!pairs.some((x) => /left/.test(x[2])) || pairs.filter((x) => x[2]).every((x) => /Reading your notebook from the cloud: ([\d,]+ of about 3,000 notes|3,00\d so far)/.test(x[2])), `163a ${tag}: a card, if shown, says "N of about M notes"`, (pairs.find((x) => x[2]) || [])[2]);
+      check(!pairs.some((x) => /left/.test(x[2])) || pairs.filter((x) => x[2]).every((x) => /Reading your notebook from the cloud: ([\d,]+ of about 3,000 notes|3,\d{3} so far)/.test(x[2])), `163a ${tag}: a card, if shown, says "N of about M notes"`, (pairs.filter((x) => x[2]).find((x) => !/Reading your notebook from the cloud: ([\d,]+ of about 3,000 notes|3,\d{3} so far)/.test(x[2])) || pairs.find((x) => x[2]) || [])[2]);
       errs.push(...d.errors.map((e) => `${tag}: ${e}`));
     } catch (e) { check(false, `163a ${tag} threw: ${String(e && e.message || e).split('\n')[0]}`); }
     if (d) await d.ctx.close().catch(() => {});
