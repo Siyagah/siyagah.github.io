@@ -11658,4 +11658,30 @@ Built by the Architect (PCA J117, the owner: "I rcvd a installed prompt on mobil
 
 ## v06.04 — J188: a new device that reads the whole notebook says so, and shows notes as they arrive
 
-(Stub — filled in below as the round is built.)
+(built by the builder, issue #334; the owner, 17 Nov 2026, office PC in incognito: "App is not loading the notebooks. It did now, after 4 minutes.")
+
+**What happened.** A device with no copy reads all ~28,600 records in pages of 500 (`_s1PagedRead`, J176). For about 4 minutes the screen was empty, and a fresh device merged the replica only at the end.
+
+**What changed.**
+- **A progress card** (`.fr-card`, built only by `_frHTML`, placed only by `_frPaint`, repainted in place after each page, gone when the read ends; also called at the end of `render()`): "☁ Reading your notebook from the cloud: 6,500 of about 28,600 notes · about 3 min left". Sits in the side pane (always under 1200 px, where it is the first screen; at 1200+ only while it has no folder), in the list area under 640 px while there are no notes, and centred in Pane 3 at 640+ while no note is open. The total is `_bg.cn` when a read finished before, else "N so far" (no estimate then: it needs a total). The estimate (`_frEta`) is the records left ÷ the pace of the last pages, shown only after 2 pages ("under a minute left" / "about N min left"). A page that did not answer shows the existing retry words. `_s1PagingText()` (⚙ line, Diagnostics) gained the same estimate.
+- **Notes appear as they arrive, on a fresh device only.** `_frMergeDue`: every 5 pages or 10 s (whichever first, and never sooner than 3× the last merge took) a `fresh` device merges the half-read replica through the same `_pullRecsMerge`. A device that held anything keeps "merge the FULL replica, at the end" exactly. **While the read is partial (`_frPartial()`: `fresh`, not `complete`, paging or paused) a merge shows no toast and calls no `pushToCloud()`, and `_doPush` holds (`_frPushHeld`) until the read has ended — found by the first run of 163b/163d: without it the early merge pushed the PARTIAL notebook to the cloud's blob (chunks + main doc), also after a reload in the middle.** `pg.complete` is set when the last page is applied; the held push goes out then.
+- **"This window keeps nothing"** (`_frKeepCheck`): shown inside the card only when `navigator.storage.persisted()` is false AND `navigator.storage.estimate().quota` is under 200 MB (`_FR_QUOTA`, hook `window.__frQuota`). Why this test: a normal window's quota is a share of the disk (gigabytes) and a private/incognito window gets a small fixed allowance, so a normal first visit does not match; persisted storage never matches. Never a toast or a dialog.
+- **Page size.** `window.__s1Page` (test hook) sets the page size; the shipped `_S1_PAGE` stays 500 (see the table).
+
+**Measured** (28,600 records, 390 ×4 CPU, stand-in server answering each page after the delay; `tools/firstread-j188.mjs --measure`; "before" = `09a3380`, the v06.01 merge):
+
+| build | page size | server delay | first notes on screen | end of read | pages | page handling (avg) | merges (avg) | longest long task |
+|---|---|---|---|---|---|---|---|---|
+| before | 500 | 100 ms | 24.3 s | 24.3 s | 58 | 96 ms | 1 (748 ms) | 752 ms |
+| this build | 500 | 100 ms | 2.9 s | 29.6 s | 58 | 95 ms | 12 (392 ms) | 863 ms |
+| this build | 1000 | 100 ms | 4.1 s | 22.7 s | 29 | 170 ms | 6 (396 ms) | 853 ms |
+| before | 500 | 400 ms | 41.4 s | 41.4 s | 58 | 97 ms | 1 (751 ms) | 755 ms |
+| this build | 500 | 400 ms | 4.4 s | 45.8 s | 58 | 92 ms | 12 (339 ms) | 765 ms |
+| this build | 1000 | 400 ms | 5.5 s | 30.4 s | 29 | 157 ms | 6 (371 ms) | 823 ms |
+
+Notes on screen after ~3–4 s instead of after the whole read; the early merges cost the end of the read ~5 s (29.6 vs 24.3 s). **1,000 a page is faster to the end (22.7 / 30.4 s) but is NOT adopted:** the rule was "no long task over 200 ms at 390 ×4", and every merge (also the single end merge before this round: 752 ms) is longer than that; a page of 1,000 adds ~160 ms of its own page handling. `_S1_PAGE` stays 500. The reads counted by `_bgAdd` are unchanged (one per record either way). Making a merge itself shorter (the full replica is re-assembled each time) is the next step, not done here.
+
+**Not done / limits.** A device that reloads while its first read is half-way can push in the moment before the read restarts (the marker is read asynchronously); only the time while paging is held. The card's count is of cloud records (notes + folders), worded "notes" as the owner asked. Under 1200 px the card in the side pane stays until the read ends, also once notes have arrived.
+
+Check: block 163, `tools/firstread-j188.mjs` (163a–163e; the stand-in cloud is synthesised records written straight into the store, `synthCloud`; `cloud.pageDelay` in `s1-fake.mjs` delays each page).
+
