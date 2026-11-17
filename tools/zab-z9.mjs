@@ -92,8 +92,9 @@ try {
     try {
       for (const [pid, iid] of [['P', 'p1'], ['L', 'l1'], ['T', 't1'], ['I', 'i1'], ['S', 's1']]) {
         await openP(d, pid);
-        const m = await d.page.evaluate((r) => { const b = document.querySelector(r + ' .jeb-ttl-b'); if (!b) return null; const q = b.getBoundingClientRect(), n = document.querySelector(r + ' .jeb-note-b').getBoundingClientRect(); return { h: q.height, w: q.width, text: b.textContent, sameRow: Math.abs(q.top - n.top) < q.height }; }, rowSel(iid));
-        check(!!m && /Title/.test(m.text), `${t} pocket ${pid}: the row has a "✎ Title" button`, JSON.stringify(m));
+        const m = await d.page.evaluate((r) => { const b = document.querySelector(r + ' .jeb-ttl-b'); if (!b) return null; const q = b.getBoundingClientRect(), n = document.querySelector(r + ' .jeb-note-b').getBoundingClientRect(); return { label: b.getAttribute('aria-label') || '', h: q.height, w: q.width, text: b.textContent, sameRow: Math.abs(q.top - n.top) < q.height }; }, rowSel(iid));
+        check(!!m && /Title/.test(m.text + ' ' + m.label),   /* v06.05 · J178 (in place): a Links card shows ✎ alone (its aria-label says Title) */
+           `${t} pocket ${pid}: the row has a "✎ Title" button`, JSON.stringify(m));
         if (vp.name === '390') check(!!m && m.h >= 44 && m.w >= 44, `${t} pocket ${pid}: the button is a >= 44 px target (${m && Math.round(m.w)} x ${m && Math.round(m.h)})`);
       }
       await openP(d, 'P');
@@ -159,12 +160,13 @@ try {
       const btn = '<button class="jeb-ttl-b" title="Give this item a title">✎ Title</button>';
       /* v05.91 · J147 adds 🔗 Add link to every item (.jlk-wrap, no item here has links): stripped from the new side like the ✎ Title button; anything else that differs still fails. */
       const jlk = (s) => s.replace(/<div class="jlk-wrap"[^>]*>(?:<div class="jlk"[\s\S]*?<\/div>)*<button type="button" class="jlk-open"[^>]*>[^<]*<\/button><\/div>/g, '');
-      for (const pid of ['P', 'L', 'T', 'I', 'S']) {
+      /* v06.05 · J178 (changed in place): the Links pocket (L) is redesigned on purpose (Filter card, buttons on the top line), so it is no longer compared with v05.24's HTML; block 164 holds it */
+      for (const pid of ['P', 'T', 'I', 'S']) {
         await openP(d, pid); await openP(b, pid);
         const [x, y] = await Promise.all([d, b].map((q) => q.page.evaluate(() => document.querySelector('#jeb-panel .jeb-list').innerHTML)));
         check(jlk(x).split(btn).join('') === y, `${t} pocket ${pid}: the panel list is v05.24's, apart from the new button`, jlk(x).split(btn).join('') === y ? '' : jlk(x).slice(0, 160));
       }
-      for (const q of [d, b]) await q.page.evaluate(() => { jebClosePanel(); jebOpenDeck({ ids: ['P', 'L'], all: false }); });
+      for (const q of [d, b]) await q.page.evaluate(() => { jebClosePanel(); jebOpenDeck({ ids: ['P'], all: false }); });   /* v06.05 · J178: L left out, see above */
       await sleep(600);
       let [x, y] = await Promise.all([d, b].map((q) => q.page.evaluate(() => document.querySelector('#jeb-deck .jd-wrap').innerHTML)));
       const nj = (s) => s.replace(/ data-jump="[^"]*"/g, '');   /* where the card flies out from: a measured position, not markup */

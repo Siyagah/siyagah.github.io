@@ -251,6 +251,10 @@ try {
       for (const name of WIDE_SURF) {
         const a = cur.out[name], b = old.out[name];
         if (a.err || b.err) { diffs.push(`${name}: could not open (${a.err || b.err})`); continue; }
+        /* v06.05 · J178, updated in place by the Architect in review: the zabPanel surface opens the seed's first Zab, which is the Links Zab, and its panel was redesigned ON PURPOSE
+           (one Filter ▾ button in place of the Person / Issue rows, ✎ Title and → Note on the item's top line, ⛶, a Title box). Its boxes are left out of this comparison with v05.29;
+           their reach, size and behaviour at 390 / 820 / 1440 are checked by block 164 (tools/links-j178.mjs). zabTasks still compares a Zab panel here. */
+        if (name === 'zabPanel') continue;
         /* v05.40 · Z15, updated in place: the Zab bar's tappable boxes changed ON PURPOSE (＋ New Zab is first, what does not fit folds into "▸ N more", a 📰 News chip); they are compared by block 99 (tools/zab-bar-more.mjs), so the bar's rows are left out of this comparison with the v05.29 build */
         const sig = (m) => m.rows.filter((t) => !t.bar && !/\bjlk-/.test(t.key)).map((t) => `${t.key.replace('#p2-srch-btn', '')}|${t.text.replace(/v\d\d\.\d\d/, 'vX')}|${Math.round(t.x)},${Math.round(t.y)},${Math.round(t.w)}x${Math.round(t.h)}`).sort();
         const A = sig(a), B = sig(b); n += A.length;

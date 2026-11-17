@@ -54,6 +54,9 @@ const dev = async (cloud, name, vp, db, mode = {}) => {
     if (d.mode.oembed === 'fail') return r.abort();
     return r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ title: 'Fixture title for ' + (u.split(/[=/]/).pop()), author_name: 'Fixture channel' }) });
   });
+  /* v06.05 · J178 (changed in place): other sites now ask noembed for a title; the check serves no title (an abort) and counts the requests */
+  d.hits.ne = [];
+  await d.ctx.route('**/noembed.com/**', (r) => { d.hits.ne.push(r.request().url()); return r.abort(); });
   await d.ctx.route('**/i.ytimg.com/**', (r) => { d.hits.thumb++; return d.mode.thumb === 'fail' ? r.abort() : r.fulfill({ status: 200, contentType: 'image/png', body: PNG }); });
   return d;
 };
@@ -65,6 +68,8 @@ const item = (d, id) => on(d, (i) => JSON.parse(JSON.stringify(DB.jeb.find((x) =
 /* v05.40 · Z15: menuOf may already have opened this Zab (a folded chip is opened from the list first), and a second tap would close it */
 const openPanel = async (d, vp, name = 'Links to read') => { if (!(await on(d, (n) => { const p = DB.jebPockets.find((x) => x.name === n); return !!p && _jebOpen === p.id && document.getElementById('jeb-panel').classList.contains('on'); }, name))) await act(d, vp, `#jeb-bar .jeb-chip[title="${name}"]`); await d.page.waitForSelector('#jeb-panel.on', { timeout: WAIT_MS }); await sleep(400); };
 const rowIds = (d) => on(d, () => [...document.querySelectorAll('#jeb-panel .jeb-it')].map((e) => e.dataset.iid));
+/* v06.05 · J178 (changed in place): the 👤 Person / # Issue buttons left the row; the owner reaches the same picker through the item's ⋯ menu */
+const viaMenu = async (d, vp, iid, word) => { await act(d, vp, `#jeb-panel .jl-it[data-iid="${iid}"] .jeb-more`); await act(d, vp, `#jeb-menu .jm:has-text("${word}")`); };
 const menuOf = async (d, name) => { /* v05.40 · Z15: a folded chip is opened from "▸ N more" first (the open Zab's chip is never folded), then right-clicked */ await zabShow(d.page, `#jeb-bar .jeb-chip[title="${name}"]`, { touch: d.page.viewportSize().width < 1000 }); await d.page.locator(`#jeb-bar .jeb-chip[title="${name}"]`).first().click({ button: 'right' }); await d.page.waitForSelector('#jeb-menu'); await sleep(100); };
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
 const each = async (fn, vps = VPS, mode) => { for (const vp of vps) { const d = await dev(makeCloud(), 'D' + vp.name, vp, null, mode); try { await fn(d, vp); } finally { await d.ctx.close(); } } };
@@ -93,7 +98,7 @@ try {
     check(asPlain.link === 0 && asPlain.rows === 4 && asPlain.filt === 0 && asPlain.ph === 'Jot something…', `${t} as a Plain pocket the same 4 items show as ordinary rows`, JSON.stringify(asPlain));
     await menuOf(d, 'Links to read'); await act(d, vp, '#jeb-menu .jm:has-text("Zab kind")'); await act(d, vp, '#jeb-menu .jm:has-text("Links")'); await sleep(400);
     const asLinks = await on(d, () => ({ link: document.querySelectorAll('#jeb-panel .jl-it').length, filt: document.querySelectorAll('#jeb-panel .jl-filters,#jeb-panel .jl-bar').length, ph: document.getElementById('jeb-add-in').placeholder, kind: _jebType(_jebPocket('jp-link')) }));
-    check(asLinks.link === 4 && asLinks.filt === 1 && asLinks.kind === 'links' && asLinks.ph === 'Paste a link…', `${t} switching back to Links brings the link layout back`, JSON.stringify(asLinks));
+    check(asLinks.link === 4 && asLinks.filt === (vp.w < 640 ? 1 : 2) && asLinks.kind === 'links' && asLinks.ph === 'Paste a link…', `${t} switching back to Links brings the link layout back`, JSON.stringify(asLinks));
     const tasks = await on(d, () => { jebEditPocket('jp-idea', { ztype: 'tasks' }); jebEditPocket('jp-shop', { ztype: 'nonsense' }); return [_jebType(_jebPocket('jp-idea')), _jebType(_jebPocket('jp-shop'))]; });
     check(tasks.join() === 'tasks,shop', `${t} jebEditPocket takes a valid ztype and ignores a bad one`, tasks.join());
     noErr(d, t);
@@ -118,7 +123,7 @@ try {
       const n0 = d.hits.oembed.length;
       await act(d, vp, ta); await d.page.keyboard.type('https://example.com/some/page'); await d.page.keyboard.press('Enter'); await sleep(900);
       const other = await on(d, () => { const x = DB.jeb.find((i) => i.text === 'https://example.com/some/page'); const r = document.querySelector(`#jeb-panel .jl-it[data-iid="${x.id}"]`); return { ttl: x.ttl, th: x.th, tx: r.querySelector('.jeb-tx').textContent, dom: r.querySelector('.jl-dom').textContent, img: r.querySelectorAll('img').length, fb: r.querySelector('.jl-fb').textContent }; });
-      check(d.hits.oembed.length === n0 && !other.ttl && !other.th && other.tx === 'https://example.com/some/page' && other.dom === 'example.com' && other.img === 0 && /example\.com/.test(other.fb), `${t} another site: no fetch, the text is the title, the domain is under it, a ▶ box stands in for the picture`, JSON.stringify(other));
+      check(d.hits.oembed.length === n0 && !other.ttl && !other.th && other.tx === 'example.com/some' && other.dom === 'example.com' && other.img === 0 && /example\.com/.test(other.fb), `${t} another site (v06.05 J178: asks noembed, not YouTube; with no title the SHORT ADDRESS shows), the domain is under it, a ▶ box stands in for the picture`, JSON.stringify(other));
       noErr(d, t);
     });
     /* oEmbed failing (offline / blocked) */
@@ -128,8 +133,8 @@ try {
       const url = 'https://www.youtube.com/watch?v=FAILFAILFAI';
       await act(d, vp, '#jeb-add-in'); await d.page.keyboard.type(url); await d.page.keyboard.press('Enter'); await sleep(1200);
       const it = await on(d, () => DB.jeb.find((x) => /FAILFAILFAI/.test(x.text)));
-      const row = await on(d, () => { const r = [...document.querySelectorAll('#jeb-panel .jl-it')].find((e) => /FAILFAILFAI/.test(e.querySelector('.jeb-tx').textContent)); return !!r; });
-      check(it && !it.ttl && row && d.hits.oembed.length === 1, `${t} a failing oEmbed leaves a usable item: no title, the text shows, nothing blocked`, JSON.stringify({ it, row, hits: d.hits.oembed.length }));
+      const row = await on(d, () => { const r = [...document.querySelectorAll('#jeb-panel .jl-it')].find((e) => e.dataset.iid === (DB.jeb.find((x) => /FAILFAILFAI/.test(x.text)) || {}).id); return !!r && /youtube\.com/.test(r.querySelector('.jeb-tx').textContent); });   /* v06.05 · J178 (in place): a row whose text is only an address shows the SHORT address */
+      check(it && !it.ttl && row && d.hits.oembed.length >= 1 && d.hits.oembed.length <= 2,   /* v06.05 · J178 (in place): the other seed links now ask noembed too, which shifts when the one retry lands; the limit of two requests in all is still asserted below */ `${t} a failing oEmbed leaves a usable item: no title, the text shows, nothing blocked`, JSON.stringify({ it, row, hits: d.hits.oembed.length }));
       const toasts = await on(d, () => window.__toasts.filter((m) => /fail|error|offline|title/i.test(m)));
       check(toasts.length === 0 && !(await on(d, () => !!document.querySelector('.toast'))), `${t} no error is shown to the owner`, JSON.stringify(toasts));
       await act(d, vp, '#jeb-add-in'); await d.page.keyboard.type('second item'); await d.page.keyboard.press('Enter'); await sleep(900);
@@ -166,7 +171,7 @@ try {
     await act(d, vp, '#jeb-panel .jl-sug'); await sleep(400);
     check(JSON.stringify((await item(d, 'l2')).people) === '["Chan Two"]' && (await sug()).length === 0, `${t} tapping the suggestion adds the channel as the person, and it goes away`);
     /* 👤 on l3 (Bob) */
-    await act(d, vp, '#jeb-panel .jl-it[data-iid="l3"] .jl-p-b');
+    await viaMenu(d, vp, 'l3', 'Person');
     await d.page.waitForSelector('#ov.on .jl-pkrow'); await sleep(200);
     const names = await on(d, () => [...document.querySelectorAll('#ov .jl-pkrow')].map((e) => e.textContent + (e.querySelector('input').checked ? '✓' : '')));
     check(names.join('|') === 'Ann|Bob✓|Chan Two' && !names.some((n) => /Zed/.test(n)), `${t} the 👤 picker lists this pocket's names with Bob ticked, and not another pocket's (Zed)`, names.join('|'));
@@ -182,7 +187,7 @@ try {
     const chips = await on(d, () => document.querySelector('#jeb-panel .jl-it[data-iid="l3"] .jeb-chips').textContent);
     check(/👤 Ann/.test(chips) && /👤 Cara/.test(chips), `${t} the item shows its people as chips`, chips);
     /* # on l4 */
-    await act(d, vp, '#jeb-panel .jl-it[data-iid="l4"] .jl-i-b');
+    await viaMenu(d, vp, 'l4', 'Issue');
     await d.page.waitForSelector('#ov.on .jl-pkrow'); await sleep(200);
     const inames = await on(d, () => [...document.querySelectorAll('#ov .jl-pkrow')].map((e) => e.textContent));
     check(inames.join('|') === 'Rent|Tax', `${t} the # picker lists this pocket's issues`, inames.join('|'));
@@ -202,18 +207,18 @@ try {
     const t = '70d@390';
     await openPanel(d, vp);
     const lay = await on(d, () => { const q = (s) => [...document.querySelectorAll(s)]; const th = document.querySelector('#jeb-panel .jl-c .jl-th'); const r = th.getBoundingClientRect(); const rows = q('#jeb-panel .jl-frow').map((e) => e.getAttribute('aria-label') + ':' + q('#jeb-panel .jl-frow').indexOf(e) + ':' + [...e.querySelectorAll('.jl-fc')].map((b) => b.textContent).join(',')); return { rows, w: Math.round(r.width), h: Math.round(r.height), cards: q('#jeb-panel .jl-card').length, grid: q('#jeb-panel .jl-grid').length, bar: q('#jeb-panel .jl-bar').length, panelW: Math.round(document.getElementById('jeb-panel').getBoundingClientRect().width) }; });
-    check(lay.rows.length === 2 && /^👤 Person:0:All,Ann,Bob$/.test(lay.rows[0]) && /^# Issue:1:All,Rent,Tax$/.test(lay.rows[1]), `${t} two filter rows, Person then Issue, each All + the pocket's names`, lay.rows.join(' / '));
+    check(lay.rows.length === 0 && (await on(d, () => document.querySelector('#jeb-panel .jl-filters .jl-fopen').textContent)) === 'Filter ▾', `${t} (v06.05 J178: the two filter rows moved into the Filter ▾ card) no Person / Issue rows at the top, one Filter ▾ button`, lay.rows.join(' / '));
     check(lay.w === 96 && Math.abs(lay.h - 54) <= 1 && lay.cards === 0 && lay.grid === 0 && lay.bar === 0, `${t} compact rows with a 96 px wide 16:9 thumbnail (${lay.w}x${lay.h}); no cards or grid`, JSON.stringify(lay));
     check((await rowIds(d)).join() === 'l1,l2,l3,l4', `${t} All / All shows every link`, (await rowIds(d)).join());
-    const tapF = (k, v) => act(d, vp, `#jeb-panel .jl-fc[data-fk="${k}"][data-fv="${v}"]`).then(() => sleep(300));
+    const tapF = async (k, v) => { const f = k === 'p' ? 'people' : 'issues'; await act(d, vp, '#jeb-panel .jl-fopen'); await d.page.waitForSelector('#ov .jl-fcs'); await act(d, vp, `#ov .jl-fcs[data-f="${f}"] ` + (v ? `.jl-fcr[data-n="${v}"] [data-a=pick]` : '.jl-fcr:first-child [data-a=pick]')); await sleep(300); };   /* v06.05 · J178: the choice is made in the Filter card */
     await tapF('p', 'Ann'); const a = (await rowIds(d)).join();
     await tapF('p', ''); await tapF('i', 'Rent'); const b = (await rowIds(d)).join();
     await tapF('p', 'Ann'); const c = (await rowIds(d)).join();
     await tapF('i', 'Tax'); const e = (await rowIds(d)).join(); const empty = await on(d, () => /No links match/.test(document.querySelector('#jeb-panel .jeb-list').textContent));
     await tapF('p', 'Bob'); await tapF('i', ''); const f = (await rowIds(d)).join();
     check(a === 'l1' && b === 'l1,l2' && c === 'l1' && e === '' && empty && f === 'l3', `${t} the filters combine: Ann → ${a}; Rent → ${b}; Ann+Rent → ${c}; Ann+Tax → none (${empty ? 'says so' : 'silent'}); Bob → ${f}`);
-    const sel = await on(d, () => [...document.querySelectorAll('#jeb-panel .jl-fc.on')].map((x) => x.textContent).join('|'));
-    check(sel === 'Bob|All', `${t} the chosen chips are marked`, sel);
+    const sel = await on(d, () => [...document.querySelectorAll('#jeb-panel .jl-fchip')].map((x) => x.textContent.replace('✕', '').trim()).join('|'));
+    check(sel === '👤 Bob', `${t} the chosen chips are marked`, sel);
     const saved = await on(d, () => JSON.stringify(DB.theme.zabLinkView));
     check(JSON.parse(saved)['jp-link'].p === 'Bob', `${t} the choice is stored per pocket in DB.theme.zabLinkView`, saved);
     await act(d, vp, '#jeb-panel .jeb-x'); await sleep(300); await openPanel(d, vp);
@@ -233,7 +238,7 @@ try {
     const t = `70e@${vp.name}`;
     await openPanel(d, vp);
     const geo = await on(d, () => { const q = (s) => [...document.querySelectorAll(s)]; const cs = q('#jeb-panel .jl-card'); const xs = new Set(cs.map((c) => Math.round(c.getBoundingClientRect().left))); return { cards: cs.length, minW: Math.round(Math.min(...cs.map((c) => c.getBoundingClientRect().width))), cols: xs.size, filt: q('#jeb-panel .jl-filters').length, bar: q('#jeb-panel .jl-bar').length, panelW: Math.round(document.getElementById('jeb-panel').getBoundingClientRect().width), vw: innerWidth, btn: q('#jeb-panel .jl-gb').map((b) => b.textContent + (b.classList.contains('on') ? '*' : '')) }; });
-    check(geo.cards === 4 && geo.minW >= 200 && geo.cols >= 2 && geo.filt === 0 && geo.bar === 1 && geo.panelW > 380, `${t} cards in a grid (${geo.cols} columns, each ≥ 200 px: ${geo.minW}); no phone filter rows; a wider panel (${geo.panelW})`, JSON.stringify(geo));
+    check(geo.cards === 4 && geo.minW >= 200 && geo.cols >= 2 && geo.filt === 1 && geo.bar === 1 && geo.panelW > 380, `${t} cards in a grid (${geo.cols} columns, each ≥ 200 px: ${geo.minW}); no phone filter rows; a wider panel (${geo.panelW})`, JSON.stringify(geo));
     check(geo.btn.join('|') === '👤 People*|# Issues', `${t} "Group by: People | Issues", People first`, geo.btn.join('|'));
     const groups = () => on(d, () => [...document.querySelectorAll('#jeb-panel .jl-gh')].map((g, i) => g.querySelector('b').textContent.trim() + ' ' + g.querySelector('small').textContent + ':' + [...g.nextElementSibling.querySelectorAll('.jeb-it')].map((e) => e.dataset.iid).join('+')));
     const g1 = (await groups()).join(' | ');
@@ -316,9 +321,9 @@ try {
       await on(A, () => { const a = DB.articles.find((x) => x.id === 'a1'); a.content += '<p>x</p>'; a.updatedAt = new Date().toISOString(); persist(); flushPendingPush(); });
       await sleep(800); await quiet(cloud, A); await quiet(cloud, B);
       await openPanel(A, VPS[2]); await openPanel(B, VPS[2]);
-      await act(A, VPS[2], '#jeb-panel .jl-it[data-iid="l4"] .jl-p-b'); await A.page.waitForSelector('#ov.on #jl-pk-in');
+      await viaMenu(A, VPS[2], 'l4', 'Person'); await A.page.waitForSelector('#ov.on #jl-pk-in');
       await A.page.locator('#jl-pk-in').fill('Dana'); await A.page.keyboard.press('Enter'); await sleep(200); await A.page.locator('#jl-pk-done').click();
-      await act(A, VPS[2], '#jeb-panel .jl-it[data-iid="l4"] .jl-i-b'); await A.page.waitForSelector('#ov.on #jl-pk-in');
+      await viaMenu(A, VPS[2], 'l4', 'Issue'); await A.page.waitForSelector('#ov.on #jl-pk-in');
       await A.page.locator('#jl-pk-in').fill('Move'); await A.page.keyboard.press('Enter'); await sleep(200); await A.page.locator('#jl-pk-done').click();
       await sleep(500); await quiet(cloud, A);
       let ok = false; for (let i = 0; i < 60 && !ok; i++) { const x = await item(B, 'l4'); ok = !!x && (x.people || []).join() === 'Dana' && (x.issues || []).join() === 'Move'; if (!ok) await sleep(500); }
