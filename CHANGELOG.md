@@ -11721,3 +11721,12 @@ J178 (builder, issue #336; the owner's phone screenshot of the Quick Links Zab, 
 - **Real link titles.** `_jebTitleSrc(url)`: YouTube oEmbed (as before, with channel and thumbnail), Vimeo `vimeo.com/api/oembed.json?url=`, any other site `noembed.com/embed?url=` — only the address is sent; `ttl` only (no `ch`), never over the owner's `title`; silent on failure, at most two requests per item per session. `_jebLinkScan` now looks at every http(s) link without a `ttl`. With no title from anywhere, a row whose text is only the address shows `_jebShortAddr` (domain + first path part).
 - **Tidier buttons.** Row (mode `c`): `.jl-tb` (✎ Title, → Note) sits under the title and domain beside the thumbnail, above the chips; card (mode `card`): the `.jl-ctl` line above the thumbnail now holds ✎ and → between the tick and ⋯ (the thumbnail follows it); deck card: `.jl-dtop` (grip, ✎, → Note) above the thumbnail. 📎 Attach stays below (row) / in `.jc-acts` (deck). Other kinds keep `_JEB_ROW_ACTS`.
 - Checks changed in place (block 70, `tools/zab-z6a.mjs`): the Person / Issue taps go through the ⋯ menu (`viaMenu`); the phone filter rows became the Filter card (`tapF`); a non-YouTube link now asks noembed (routed and aborted in the check) and shows the short address; the 70b-fail first-count allows the retry to land earlier. Check: block 164, `tools/links-j178.mjs`.
+
+## v06.06 — J168 + J171 + J169: pop-up windows (17 Nov 2026)
+
+Builder, issue #338.
+
+- **J168 — versioning in a pop-up note window.** Before: Pane 3 showed the pills, ➕ and the date; a pop-up folded them into one button that opened Details, and Rename / Icon / Unlink repainted only Pane 3. Now `_verDateInnerHTML(a,host)` is the one builder (used by `_p3MetaRowHTML` and `_popVerRowHTML`); the pop-up row is always visible (phone: scrolls sideways; tablet/computer: wraps). `_fwRefreshVer` repaints only that row; `_verRefreshAll()` runs after start, new, rename, icon, unlink and delete.
+- **J171 — 🏠 and search in a ⧉ folder window.** 🏠 (`_fwHome`) switches the window to its section (folded, top), again returns; `home` is saved with the window's place. The search box already sat above the scrolling body in every ⧉ window; a section view searches the section.
+- **J169 — counts.** The section's folder/note count on a section view's bar and on the Folder Browser's section headings, from one `_secCounts()` pass per draw (`_secCM`).
+- Checks: block 165 (`tools/popwin-j168.mjs`, 59 checks at 390 / 820 / 1440 plus keep1116). Not done: nothing from the issue.
