@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="06.05">
+<meta name="app-version" content="06.06">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -875,6 +875,16 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .fwin-qw{flex:0 0 auto;padding:6px 8px 2px}
 .fwin-q{width:100%;box-sizing:border-box;min-height:34px;padding:0 10px;border-radius:8px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.12);color:var(--sb-ink);font:inherit;font-size:13px}
 .fwin-q::placeholder{color:var(--sb-ink-soft)}
+/* v06.06 · J171/J169 — 🏠 on a folder window's bar, and the section's "N folders · M notes" on the bar of a section view. The search box (.fwin-qw) is a flex row of the window itself, outside the scrolling body, so it never scrolls away. */
+.fwin-cnt{flex:0 1 auto;min-width:0;white-space:nowrap;font-size:10.5px;color:var(--sb-ink-soft);overflow:hidden;text-overflow:ellipsis}
+.fwin-cnt .sec-cnt{font-size:10.5px}
+.fwin-home{flex:0 0 auto}
+.fwin-home.on{background:rgba(255,255,255,.25)}
+.pk-sec-hd .sec-cnt{margin-left:auto;font-weight:500;color:var(--t3)}
+/* v06.06 · J168 — the version row of a pop-up note window: the SAME pills + ➕ + date as Pane 3, always visible. Phone: scrolls sideways in the header; tablet/computer: wraps. */
+.pop-ver-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:3px 10px 4px}
+.pop-ver-row .ver-strip{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+@media(max-width:639.98px){.pop-ver-row{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}.pop-ver-row .ver-strip{flex-wrap:nowrap;flex:0 0 auto}.pop-ver-row .ver-pill,.pop-ver-row .dl-flip{flex:0 0 auto}}
 .fwin-hit{padding:9px 12px;cursor:pointer;font-size:13px;color:var(--sb-ink);border-bottom:1px solid rgba(255,255,255,.08);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fwin-hit:hover{background:var(--sb-panel)}
 .fwin-none{padding:10px 14px;font-size:12.5px;color:var(--sb-ink-soft);font-style:italic}
@@ -4254,7 +4264,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.05</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.06</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -7722,10 +7732,18 @@ function _dateLineHTML(a){
    phone/tablet edit view — a laptop renders that button inside the unified
    toolbar instead, and #ed-col-wrap is an id, so rendering both would put two
    of it in the document and _edColInit() would only ever find the first. */
+/* v06.06 · J168 — the ONE builder of "version pills + ➕ + date": Pane 3's row (host falsy) and a pop-up note window's row (host = its note id). */
+function _verDateInnerHTML(a,host){
+  return {v:_versionStripHTML(a,host),d:_dateLineHTML(a).replace(/<div class="note-dateline-hr"[^>]*><\/div>/,'')};
+}
+function _popVerRowHTML(a,host){
+  if(!a)return '';
+  const x=_verDateInnerHTML(a,host);
+  return '<div class="pop-ver-row" data-ps="verrow">'+x.v+x.d+'</div>';
+}
 function _p3MetaRowHTML(a,withCol){
   if(!a)return '';
-  const v=_versionStripHTML(a);
-  const d=_dateLineHTML(a).replace(/<div class="note-dateline-hr"[^>]*><\/div>/,'');
+  const _x=_verDateInnerHTML(a), v=_x.v, d=_x.d;
   const c=withCol?_edColToolbarHTML():'';
   if(!v&&!d&&!c)return '';
   return `<div class="p3-meta-row">${v}${d}${c}</div><div class="note-dateline-hr"></div>`;
@@ -7793,12 +7811,13 @@ function _popDetailsLineHTML(a,host){
   h+=_folderChipsHTML(a,true);
   const sibs=_versionSiblings(a);
   const vi=sibs.findIndex(v=>v.id===a.id);
-  h+=sibs.length&&vi>-1
+  /* v06.06 · J168 — a pop-up note window (host) has its own always-visible version row (_popVerRowHTML); the single button is Single's only */
+  if(!host) h+=sibs.length&&vi>-1
     ?`<button class="ver-pill on pdl-ver" data-ps="versions" onclick="${go('ver')}" title="Version ${vi+1} of ${sibs.length} — tap to see them all">${esc(a.versionIcon||'📝')} ${esc(a.versionLabel||'Version')} · ${vi+1}/${sibs.length}</button>`
     :`<button class="ver-pill ver-add pdl-ver" data-ps="versions" onclick="${go('ver')}" title="Versions — tap to see or start them">🔀</button>`;
   const nt=_tagsGet(host).length;
   h+=`<button class="nti-picker-btn pdl-tags" data-ps="tags" onclick="${go('tags')}" title="Tags — tap to add or remove">🏷 ${nt||'Tags'}</button>`;
-  const dt=_dateFlipHTML(a);
+  const dt=host?'':_dateFlipHTML(a);
   if(dt)h+=`<span class="pdl-date" data-ps="date">${dt}</span>`;
   h+=`<span class="pdl-attach">${_attachBtnHTML(a)}</span><span class="pdl-arch">${_archBtnHTML(a)}</span>`;
   h+='</span><span class="pdl-fmt">'+_popFormatRowHTML(host||null,a)+'</span>';
@@ -7840,8 +7859,8 @@ function _popMetaStripHTML(a,host){
   const fols=_folderChipsHTML(a);
   h+='<div class="pop-row pop-fv-row">'
     +(fols?`<div class="fw-meta fw-fols" data-ps="folders">${fols}</div>`:'')
-    +_versionStripHTML(a,host)+'</div>';
-  h+=`<div class="pop-row" data-ps="date">${_dateLineHTML(a)}${_fieldsPanelHTML(a)}</div>`;
+    +(host?'':_versionStripHTML(a,host))+'</div>';
+  h+=`<div class="pop-row" data-ps="date">${host?'':_dateLineHTML(a)}${_fieldsPanelHTML(a)}</div>`;
   h+='</div>';
   return h;
 }
@@ -7895,7 +7914,9 @@ function _cntFolders(){
 /* v05.99 · J181 — folders and distinct notes per section, worked out ONCE per side-pane draw for every section together (one pass over
    DB.folders, one over DB.articles; display only, nothing is written). A folder belongs to the section of its top ancestor; a note counts
    once in each section any of its folders is in. Outside a draw it is simply computed afresh (nothing kept). */
+let _secCM=null;
 function _secCounts(){
+  if(_secCM) return _secCM;
   const C=_cntC; if(C&&C.se) return C.se;
   const byId=new Map(); DB.folders.forEach(f=>byId.set(f.id,f));
   const top=new Map(), secOf=fid=>{ if(top.has(fid)) return top.get(fid); const seen=new Set(); let c=fid, f, r=null; while(c!=null&&c!==''&&!seen.has(c)){ seen.add(c); f=byId.get(c); if(!f) break; if(!f.parentId){ r=f.sectionId||null; break; } c=f.parentId; } top.set(fid,r); return r; };
@@ -16262,11 +16283,24 @@ function _fwNavigate(aid,dir){
    changes the note's own data (starting versioning) without switching which
    note the window shows, so it must not rebuild the title/editor and lose
    focus or an in-progress keystroke the way a full _fwRenderBody() would. */
+/* v06.06 · J168 — repaint ONLY the version row (never the title or the editor, so typing is never rebuilt). Skipped when nothing changed. */
+function _fwRefreshVer(aid){
+  const win=document.getElementById('fw-'+aid);if(!win)return;
+  const a=DB.articles.find(x=>x.id===aid);if(!a)return;
+  const html=_popVerRowHTML(a,aid), old=win.querySelector('.pop-ver-row');
+  if(old){ if(old._h===html)return; const sl=old.scrollLeft; old.outerHTML=html; const n=win.querySelector('.pop-ver-row'); if(n){ n._h=html; n.scrollLeft=sl; } }
+  else{ const st=win.querySelector('.pop-meta-strip'); if(st){ st.insertAdjacentHTML('afterend',html); const n=win.querySelector('.pop-ver-row'); if(n)n._h=html; } }
+}
+/* every version action (new, switch, rename, icon, unlink, delete, start) ends here: Pane 3 and EVERY open pop-up note window follow */
+function _verRefreshAll(){
+  document.querySelectorAll('.float-win').forEach(w=>{ try{ _fwRefreshVer(w.id.slice(3)); }catch(e){} });
+}
 function _fwRefreshMeta(aid){
   const win=document.getElementById('fw-'+aid);if(!win)return;
   const a=DB.articles.find(x=>x.id===aid);if(!a)return;
   const old=win.querySelector('.pop-meta-strip');
   if(old)old.outerHTML=_popMetaStripHTML(a,aid);
+  _fwRefreshVer(aid);
   /* v04.81 — with Details closed the tools are inside the strip; open, they
      are their own row under it. Keep exactly one of the two. */
   const strip=win.querySelector('.pop-meta-strip');
@@ -16609,6 +16643,7 @@ function _fwRenderBody(aid){
     +_popTitleRowHTML(aid,'float')
     +'<div class="fw-body">'
     +_popMetaStripHTML(a,aid)
+    +_popVerRowHTML(a,aid)   /* v06.06 · J168 — always visible */
     +(_popDetailsIsOpen()?_popFormatRowHTML(aid,a):'')   /* v04.81 — closed: inside the Details line */
     +'<div class="fw-editarea">'
     +'<div class="fw-find" id="fw-find-'+aid+'" style="display:none">'
@@ -20441,7 +20476,7 @@ function _fwDbOpen(){
 /* v05.64 review: named _fwinSave, NOT _fwSave — a second top-level _fwSave replaced the float NOTE window's save (its 💾 button did nothing) */
 function _fwinSave(id){
   const w=_fwGet(id); if(!w) return;
-  const rec={l:w.l,t:w.t,w:w.w,h:w.h,exp:Object.assign({},w.exp),z:_fwWins.indexOf(w)};
+  const rec={l:w.l,t:w.t,w:w.w,h:w.h,exp:Object.assign({},w.exp),z:_fwWins.indexOf(w),home:!!w.home};
   _fwDbOpen().then(d=>{ if(!d) return; try{ d.transaction('kv','readwrite').objectStore('kv').put(rec,'fw:'+id); }catch(e){} });
 }
 function _fwForget(id){ _fwDbOpen().then(d=>{ if(!d) return; try{ d.transaction('kv','readwrite').objectStore('kv').delete('fw:'+id); }catch(e){} }); }
@@ -20475,11 +20510,12 @@ function _fwExists(id){ return _fwIsSec(id)?DB.sections.some(s=>s.id===id.slice(
 function _fwNameOf(id){ const o=_fwIsSec(id)?DB.sections.find(s=>s.id===id.slice(4)):DB.folders.find(f=>f.id===id); return o?o.name:''; }
 function _fwAdd(id,g,restoring){
   if(!_fwExists(id)) return null;
-  const w={id,kind:_fwIsSec(id)?'s':'f',name:_fwNameOf(id),l:+g.l||0,t:+g.t||0,w:+g.w||320,h:+g.h||480,exp:Object.assign({},g.exp||{}),q:''};
+  const w={id,kind:_fwIsSec(id)?'s':'f',name:_fwNameOf(id),l:+g.l||0,t:+g.t||0,w:+g.w||320,h:+g.h||480,exp:Object.assign({},g.exp||{}),q:'',home:g.home===true&&_fwIsSec(id)===false};
   if(!restoring&&w.kind==='f') w.exp[id]=true;
   _fwClamp(w); _fwWins.push(w);
   const d=document.createElement('div'); d.className='fwin'; d.dataset.fwid=id; d.setAttribute('role','dialog'); d.setAttribute('aria-label',w.kind==='s'?'Section window':'Folder window');
-  d.innerHTML='<div class="pp-bar fwin-bar" onpointerdown="_ppGrab(event,\'fw:'+id+'\',\'move\')" title="Drag to move"><span class="pp-ttl fwin-ttl"></span>'
+  d.innerHTML='<div class="pp-bar fwin-bar" onpointerdown="_ppGrab(event,\'fw:'+id+'\',\'move\')" title="Drag to move"><span class="pp-ttl fwin-ttl"></span><span class="fwin-cnt"></span>'
+    +(w.kind==='s'?'':'<button class="pp-b fwin-home" onpointerdown="event.stopPropagation()" onclick="_fwHome(\''+id+'\')" title="Section root — the whole section this folder is in" aria-label="Section root">🏠</button>')
     +'<button class="pp-b fwin-x" onpointerdown="event.stopPropagation()" onclick="_fwClose(\''+id+'\')" title="Close this window" aria-label="Close this window">✕</button></div>'
     +'<div class="fwin-qw"><input type="search" class="fwin-q" placeholder="🔍 Search '+(w.kind==='s'?'this section':'this folder')+'…" aria-label="Search '+(w.kind==='s'?'this section':'this folder')+'" autocomplete="off" oninput="_fwSearch(\''+id+'\',this.value)" onpointerdown="event.stopPropagation()"></div>'
     +'<div class="fwin-body"></div>'
@@ -20540,8 +20576,22 @@ function _fwClose(id,quiet){
 /* the search box: the notes in this folder's subtree (or this section's folders), title or text, any case; at most 100 shown */
 function _fwSearch(id,v){ const w=_fwGet(id); if(!w) return; w.q=String(v||''); w.lim=100; _fwPaint(w); }
 function _fwMore(id){ const w=_fwGet(id); if(!w) return; w.lim=(w.lim||100)+100; _fwPaint(w); }   /* v05.93 · J133 — 100 more rows, never all at once */
+/* v06.06 · J171 — the section a window shows as a whole: a section window's own, or (🏠 on) the section of the folder; else null */
+function _fwSecOf(w){
+  if(w.kind==='s') return w.id.slice(4);
+  if(w.home){ const p=pathOf(w.id); return p.length?(p[0].sectionId||null):null; }
+  return null;
+}
+function _fwHome(id){
+  const w=_fwGet(id); if(!w||w.kind==='s') return;
+  w.home=!w.home; w.exp={}; if(!w.home) w.exp[id]=true;   /* the section root comes folded; back to the folder = as when it was opened */
+  w.q=''; const e=_fwEl(id), qi=e&&e.querySelector('.fwin-q'); if(qi) qi.value='';
+  _fwPaint(w); const b=e&&e.querySelector('.fwin-body'); if(b) b.scrollTop=0;
+  _fwinSave(id);
+}
 function _fwSearchHTML(w,q){
-  const roots=w.kind==='s'?DB.folders.filter(x=>!x.parentId&&x.sectionId===w.id.slice(4)).map(x=>x.id):[w.id];
+  const sid=_fwSecOf(w);
+  const roots=sid?DB.folders.filter(x=>!x.parentId&&x.sectionId===sid).map(x=>x.id):[w.id];
   const fids=new Set(); roots.forEach(r=>descOf(r).forEach(i=>fids.add(i)));
   /* v05.93 · J133 — the same word model as the other two boxes (include + `-exclude`); every match is counted, rows are drawn a page (100) at a time */
   const words=_searchWords(q), lim=w.lim||100, out=[]; let n=0;
@@ -20556,9 +20606,14 @@ function _fwSearchHTML(w,q){
 }
 function _fwPaint(w){
   const e=_fwEl(w.id); if(!e||!_fwExists(w.id)) return;
-  const sec=w.kind==='s', f=sec?null:DB.folders.find(x=>x.id===w.id);
+  const secId=_fwSecOf(w), sec=!!secId, f=w.kind==='s'?null:DB.folders.find(x=>x.id===w.id);
   w.name=_fwNameOf(w.id);
-  const ttl=e.querySelector('.fwin-ttl'), tx='⠿ '+(sec?'🗂 ':'📁 ')+w.name; if(ttl.textContent!==tx) ttl.textContent=tx;
+  const secName=sec?((DB.sections.find(x=>x.id===secId)||{}).name||''):'';
+  const ttl=e.querySelector('.fwin-ttl'), tx='⠿ '+(sec?'🗂 ':'📁 ')+(w.home?secName:w.name); if(ttl.textContent!==tx) ttl.textContent=tx;
+  /* v06.06 · J169/J171 — the section's folder and note counts on the bar (from _secCounts, once per draw); the 🏠 shows it is on */
+  const cn=e.querySelector('.fwin-cnt'), ch=sec?_secCntHTML(secId):''; if(cn&&cn._h!==ch){ cn.innerHTML=ch; cn._h=ch; }
+  const hb=e.querySelector('.fwin-home'); if(hb){ hb.classList.toggle('on',!!w.home); hb.title=w.home?'Back to the folder':'Section root — the whole section this folder is in'; hb.setAttribute('aria-pressed',w.home?'true':'false'); }
+  const qi=e.querySelector('.fwin-q'); if(qi){ const ph='🔍 Search '+(sec?'this section':'this folder')+'…'; if(qi.placeholder!==ph) qi.placeholder=ph; }
   let html='';
   const q=(w.q||'').trim().toLowerCase();
   if(q) html=_fwSearchHTML(w,q);
@@ -20566,7 +20621,7 @@ function _fwPaint(w){
     _trWin=w.id; _trExp=w.exp;
     try{
       if(sec){
-        const rs=DB.folders.filter(x=>!x.parentId&&x.sectionId===w.id.slice(4)).sort((a,b)=>(a.order||0)-(b.order||0));
+        const rs=DB.folders.filter(x=>!x.parentId&&x.sectionId===secId).sort((a,b)=>(a.order||0)-(b.order||0));
         html=rs.map(x=>trNode(x,0)).join('')||'<div class="fwin-none">Empty — add a folder with ＋ in the side pane.</div>';
       }else html=trNode(f,0);
     }finally{ _trWin=null; _trExp=null; }
@@ -20582,7 +20637,8 @@ function _fwRedraw(){
   _fwWins.filter(w=>!_fwExists(w.id)).forEach(w=>{
     const nm=w.name; _fwClose(w.id,true); toast('🗗 The window for "'+nm+'" closed — that '+(w.kind==='s'?'section':'folder')+' is gone');
   });
-  _fwWins.forEach(_fwPaint);
+  _secCM=_secCounts();   /* v06.06 · J169 — ONE count pass for every window of this draw */
+  try{ _fwWins.forEach(_fwPaint); }finally{ _secCM=null; }
 }
 function openFolderWin(fid){
   const f=DB.folders.find(x=>x.id===fid); if(!f) return;
@@ -21885,6 +21941,7 @@ function startVersioning(aid,host){
   a.versionOrder=0;
   persist();
   if(host)_fwRefreshMeta(host);else{renderP3H();renderP3C();}
+  _verRefreshAll();
   toast('🔀 Versioning started — tap ➕ to add another version any time');
 }
 function addNewVersion(aid,host){
@@ -21909,6 +21966,7 @@ function addNewVersion(aid,host){
   DB.articles.push(nv);
   persist();
   if(host)_fwHandTo(host,nv.id);else selArt(nv.id);
+  _verRefreshAll();
   toast('➕ New version "'+label.trim()+'" created from "'+(a.versionLabel||'this version')+'"');
 }
 function showVersionCtx(ev,aid){
@@ -21929,7 +21987,7 @@ function renameVersion(aid){
   const label=prompt('Rename version:',a.versionLabel||'');
   if(!label?.trim())return;
   a.versionLabel=label.trim();
-  persist();renderP3H();renderP3C();
+  persist();renderP3H();renderP3C();_verRefreshAll();
 }
 function setVersionIcon(aid){
   hideCtx();
@@ -21937,13 +21995,13 @@ function setVersionIcon(aid){
   const icon=prompt('Icon (emoji) for this version:',a.versionIcon||'📝');
   if(icon==null)return;
   a.versionIcon=icon.trim()||'📝';
-  persist();renderP3H();renderP3C();
+  persist();renderP3H();renderP3C();_verRefreshAll();
 }
 function unlinkVersion(aid){
   const a=DB.articles.find(x=>x.id===aid);if(!a)return;
   if(!confirm('Remove "'+(a.versionLabel||'this note')+'" from its version set? The note itself is kept — it just stops being linked to the others.'))return;
   delete a.versionGroupId;delete a.versionLabel;delete a.versionOrder;delete a.versionIcon;
-  persist();renderP3H();renderP3C();
+  persist();renderP3H();renderP3C();_verRefreshAll();
   toast('🔓 Removed from version set');
 }
 /* ══ Quick Phrases ═════════════════════════════════════════════════════
@@ -23951,13 +24009,17 @@ function _pkAllSectionsHTML(){
   const secs=[...DB.sections].sort((a,b)=>a.order-b.order);
   if(!ST.pkAllSecOpen)ST.pkAllSecOpen={};
   const smart=_pkAllSmartHTML();
+  _secCM=_secCounts();   /* v06.06 · J169 — one pass for every heading of this draw (cleared below) */
+  try{ return _pkAllSecBody(secs,smart); }finally{ _secCM=null; }
+}
+function _pkAllSecBody(secs,smart){
   if(!secs.length)return smart+'<div style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">No sections yet</div>';
   return smart+secs.map(sec=>{
     const roots=DB.folders.filter(f=>!f.parentId&&f.sectionId===sec.id).sort((a,b)=>a.order-b.order);
     const open=!!ST.pkAllSecOpen[sec.id];
     const chev=roots.length?(open?'▾':'▸'):'';
     const hd=`<div class="pk-sec-hd" onclick="pkToggleAllSec('${esc(sec.id)}')" style="cursor:pointer">`
-      +`<span class="pk-chev" style="font-size:16px;width:20px">${chev}</span>📂 ${esc(sec.name)}</div>`;
+      +`<span class="pk-chev" style="font-size:16px;width:20px">${chev}</span>📂 ${esc(sec.name)}${_secCntHTML(sec.id)}</div>`;
     if(!open)return hd;   // section starts (and returns to) collapsed — its root folders don't even render until opened
     const body=roots.length
       ?_pkTreeHTML(roots,0)
@@ -26053,6 +26115,7 @@ function trashArt(id){
   DB.articles = DB.articles.filter(a=>a.id!==id);
   if(ST.article===id){ST.article=null;ST.editing=false;}
   persist(); render();
+  try{ _verRefreshAll(); }catch(e){}   /* v06.06 · J168 — a deleted version leaves every open pop-up's row */
 }
 
 /* ══ JEB (v04.98 · J1) — pockets and quick items; data only, no UI yet ══════

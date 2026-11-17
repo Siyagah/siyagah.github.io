@@ -6020,7 +6020,9 @@ await r.block('20c-multi-version-switch-stays-in-window', async () => {
   await s.page.evaluate(() => { ST.folder = 'f1'; ST.article = 'a1'; ST.editing = false;
     window.render(); openNotePopup('a1', 'float'); });
   await s.page.waitForTimeout(400);
-  await s.page.click('#fw-a1 .pop-meta-strip .ver-strip .ver-pill:not(.on):not(.ver-add)');
+  /* v06.06 · J168, updated in place by the Architect in review: a pop-up note window's version pills moved out of the meta strip into its own always-visible row
+     (`.pop-ver-row`, drawn by the same builder as Pane 3's); the click is the same, only where the pill sits changed. */
+  await s.page.click('#fw-a1 .pop-ver-row .ver-strip .ver-pill:not(.on):not(.ver-add)');
   await s.page.waitForTimeout(500);
   const after = await s.page.evaluate(() => ({
     windows: [...document.querySelectorAll('.float-win')].map((w) => w.id),
@@ -13268,6 +13270,18 @@ await r.block('133-speed-j117b', async () => {
   r.check(out.status === 0, 'the speed-j117b.mjs check exits cleanly', `exit ${out.status}`);
 });
 
+/* 165 — v06.06, J168 + J171 + J169: the version row in a pop-up note window (one builder with Pane 3, every version action repaints every pop-up), 🏠 Section root and the search box in a ⧉ folder window, section counts on a section window's bar and in the Folder Browser; no note written by opening windows; save · update · reopen. tools/popwin-j168.mjs runs 165a–165f. */
+await r.block('165-popwin-j168', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./popwin-j168.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1200000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the popwin-j168.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '165: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the popwin-j168.mjs check exits cleanly', `exit ${out.status}`);
+});
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —
    nothing has actually run yet. With no --only, every registered block runs
