@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="06.06">
+<meta name="app-version" content="06.07">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -893,6 +893,18 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
 .fw-chip.on{background:var(--green);color:var(--on-accent);border-color:transparent}
 @media(min-width:640px){#fw-strip{display:none}}
 body.fw-tuck .fwin{display:none}
+/* v06.07 · J170 — a tucked pop-up is a chip. Computer: folder/section chips in a row over the side pane's top band, note chips over the note pane's; else ONE row at the foot (#tk-bot, in both --jeb-h lists). Below menus (9200) and modals (10000). */
+.fwin.fw-tk,.float-win.fw-tk{display:none!important}
+.tk-row{position:fixed;z-index:5000;display:flex;align-items:center;gap:6px;height:34px;padding:3px 6px;box-sizing:border-box;overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:none;touch-action:pan-x;-webkit-overflow-scrolling:touch}
+.tk-row::-webkit-scrollbar{display:none}
+#tk-bot{left:0;right:0;bottom:calc(2px + var(--jeb-h));z-index:9000;pointer-events:none}
+#tk-bot .tk-chip{pointer-events:auto}
+html.zab-btn #tk-bot{right:68px}
+.tk-chip{flex:0 0 auto;display:inline-flex;align-items:stretch;max-width:200px;min-height:28px;border-radius:14px;border:1px solid rgba(255,255,255,.45);background:var(--forest);color:var(--sb-ink);font-size:12.5px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.3);overflow:hidden}
+.tk-chip button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;min-height:28px}
+.tk-chip .tk-open{padding:0 6px 0 11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-chip .tk-x{padding:0 10px 0 6px;opacity:.85}
+@media(max-width:1199.98px){.tk-chip{min-height:36px}.tk-chip button{min-height:36px}#tk-bot{height:42px}}
 #fw-pill{position:fixed;top:8px;right:8px;z-index:5003;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid rgba(255,255,255,.45);background:var(--forest);color:var(--sb-ink);font:inherit;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer}
 /* v05.64 · J103 — the handles can be found: a corner grip always painted, an edge that lights up with its resize cursor on hover (cursor is set per handle above); a phone's sheet keeps only the top edge (height) */
 .pp>.rsz-ne::after,.pp>.rsz-nw::after,.pp>.rsz-se::after,.pp>.rsz-sw::after,.fwin>.rsz-ne::after,.fwin>.rsz-nw::after,.fwin>.rsz-se::after,.fwin>.rsz-sw::after{content:'';position:absolute;width:9px;height:9px;pointer-events:none;border:0 solid rgba(128,128,128,.95);opacity:1}
@@ -1007,15 +1019,15 @@ html.jm-on .ar.jm-on{border-color:var(--green)}
   html.zab-btn #jm-bar .jm-row{padding-right:66px}
   html.jm-on #p2c{padding-bottom:150px}
 }
-html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:56px}
-html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:0px}
+html.jeb-on :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#tk-bot,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:56px}
+html.jeb-kb :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#tk-bot,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay,#zab-tk,#zab-tk-again){--jeb-h:0px}
 html.jeb-kb #jeb-bar,html.jeb-kb #zab-btn,html.jeb-kb #zab-lay,html.jeb-kb #zab-tk,html.jeb-kb #zab-tk-again{display:none!important}
 /* v05.32 · Z10 — the scrolling titles band sits directly above the bar (#zab-tk's own --jeb-h is the bar's 56px, so its bottom edge is the bar's top edge).
    While it is shown (html.zab-tk, a plain class: it costs nothing) everything else that is offset by --jeb-h gains its height: 34px (44 on a phone, where the
    titles are tap targets), and with the round button (html.zab-btn, no bar) the band is at the very bottom and --jeb-h is its height alone. */
-html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay){--jeb-h:90px}
-html.zab-btn.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay){--jeb-h:calc(44px + env(safe-area-inset-bottom,0px))}
-@media(max-width:639.98px){html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay){--jeb-h:100px}}
+html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#tk-bot,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay){--jeb-h:90px}
+html.zab-btn.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#tk-bot,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay){--jeb-h:calc(44px + env(safe-area-inset-bottom,0px))}
+@media(max-width:639.98px){html.jeb-on.zab-tk:not(.jeb-kb) :is(.toast,#sb,#p2,#p3,#jeb-deck,#jeb-panel,.float-win,#fw-closeall,#fw-switch,#tk-bot,#toc-float-btn,#gs-box,#jm-bar,#zab-btn,#zab-lay){--jeb-h:100px}}
 #zab-tk{position:fixed;left:var(--jeb-l);right:0;bottom:var(--jeb-h);height:34px;z-index:139;overflow:hidden;background:#16422C;color:#E9F6EE;border-top:1px solid rgba(255,255,255,.14);font-size:13px;contain:layout paint}
 @media(max-width:1199.98px){#zab-tk,#zab-tk-again{left:0}}
 @media(max-width:639.98px){#zab-tk{height:44px}}
@@ -4264,7 +4276,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.06</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.07</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -15859,7 +15871,7 @@ function closeAllPopouts(){
    one window the header ✕ is already right there. Self-contained: created and
    removed on demand, no existing markup touched. */
 function _fwSyncCloseAllChip(){
-  const n=document.querySelectorAll('.float-win').length;
+  const n=document.querySelectorAll('.float-win:not(.fw-tk)').length;
   let chip=document.getElementById('fw-closeall');
   const sheet=_popTier()==='sheet';
   const sw=document.getElementById('fw-switch');
@@ -15874,7 +15886,7 @@ function _fwSyncCloseAllChip(){
     document.body.classList.add('fw-sheets');
     let bar=sw;
     if(!bar){ bar=document.createElement('div'); bar.id='fw-switch'; document.body.appendChild(bar); }
-    const wins=Array.from(document.querySelectorAll('.float-win'));
+    const wins=Array.from(document.querySelectorAll('.float-win:not(.fw-tk)'));
     const front=wins.reduce((a,b)=>(+b.style.zIndex>+(a?.style.zIndex||0)?b:a),null);
     bar.innerHTML=wins.map(w=>{
       const id=w.id.slice(3);
@@ -15954,6 +15966,7 @@ function popOutNote(aid){
     ST.editing=false;renderP3H();renderP3C();adjustP3Layout();
   }
   const ex=document.getElementById('fw-'+aid);
+  if(ex&&ex.classList.contains('fw-tk')){ _tkNoteSet(aid,false); return; }
   if(ex){ _fwZTop++; ex.style.zIndex=_fwZTop; const ed=ex.querySelector('.fw-ed'); if(ed)ed.focus(); _fwFocus(aid); return; }
   _fwCreate(aid);
 }
@@ -15987,6 +16000,8 @@ function _fwCreate(aid){
   /* v03.74 — restore this note's remembered position/size if it has one
      (clamped to the current viewport), otherwise the proportionate default. */
   const saved=_popGeoAll().float[aid];
+  if(saved&&saved.tk){ delete saved.tk; _popGeoFlush(); }   /* v06.07 · J170 — opened again: no longer tucked */
+  _tkPend.delete(aid);
   let w,h,x,y;
   if(saved&&saved.width&&saved.height){
     w=Math.min(saved.width,vw-8);h=Math.min(saved.height,vh-8);
@@ -16035,6 +16050,7 @@ function _fwCreate(aid){
   _captureNoteHistory(a,'session-start');
   _fwFocus(aid);
   _fwSyncCloseAllChip();
+  _tkNoteWire(win,aid); _tkPaint();
   /* v04.33 — and the caret is IN it. Re-opening an existing window already
      focused .fw-ed (see popOutNote); a brand-new one left the focus on
      <body>, so the window opened on an editor you still had to click into.
@@ -16097,6 +16113,7 @@ function _fwSavePos(aid){
      next time it popped the same note out. Sheets remember nothing. */
   if(_popTier()==='sheet')return;
   const win=document.getElementById('fw-'+aid);if(!win)return;
+  if(win.classList.contains('fw-tk'))return;   /* v06.07 · J170 — a tucked window has no box to read; its old one stays */
   const r=win.getBoundingClientRect();
   _popGeoAll().float[aid]={left:Math.round(r.left),top:Math.round(r.top),width:Math.round(r.width),height:Math.round(r.height)};
   _popGeoFlush();   /* P8 — was a full persist() on every resize-end */
@@ -16786,6 +16803,7 @@ function _fwWireDrag(handle,win,aid){
    .fw-hd (tier crossing) can be re-wired without a second ResizeObserver. */
 function _fwWireDragHandle(handle,win,aid){
   if(!handle)return;
+  if(aid) _tkTapWire(handle,'.fw-close,.pf-ti,.tab-it,.tab-add-btn,.tab-nav,.tab-x,.pf-act,button,input,textarea,select,a',()=>_tkNoteSet(aid,true));   /* v06.07 · J170 */
   let sx,sy,sl,st;
   function move(e){
     win.style.left=Math.max(0,Math.min(sl+(e.clientX-sx),window.innerWidth-60))+'px';
@@ -16884,9 +16902,11 @@ function closeFloatWin(aid,quiet){
     if(!quiet){persist();renderTree();renderP2C();renderP3H();renderP3C();renderTabBar();}}
   const win=document.getElementById('fw-'+aid);if(win)win.remove();
   _fwSyncCloseAllChip();
+  try{ const g=_popGeoAll().float[aid]; if(g&&g.tk){ delete g.tk; _popGeoFlush(); } }catch(e){}   /* v06.07 · J170 */
+  _tkPend.delete(aid); _tkPaint();
   _zabNoteClosed(aid);   /* v05.33 · Z11 — a Zab's note: drop it if nothing was written, repaint the note area */
   if(_fwFocusedAid===aid){
-    const rest=Array.from(document.querySelectorAll('.float-win'));
+    const rest=Array.from(document.querySelectorAll('.float-win:not(.fw-tk)'));
     _fwFocusedAid=rest.length?rest.reduce((a,b)=>(+a.style.zIndex>+b.style.zIndex?a:b)).id.slice(3):null;
     _tocInject();          /* Contents first — F9 */
     _pinPanelInject();
@@ -20476,12 +20496,13 @@ function _fwDbOpen(){
 /* v05.64 review: named _fwinSave, NOT _fwSave — a second top-level _fwSave replaced the float NOTE window's save (its 💾 button did nothing) */
 function _fwinSave(id){
   const w=_fwGet(id); if(!w) return;
-  const rec={l:w.l,t:w.t,w:w.w,h:w.h,exp:Object.assign({},w.exp),z:_fwWins.indexOf(w),home:!!w.home};
+  const rec={l:w.l,t:w.t,w:w.w,h:w.h,exp:Object.assign({},w.exp),z:_fwWins.indexOf(w),home:!!w.home,tk:!!w.tk};
   _fwDbOpen().then(d=>{ if(!d) return; try{ d.transaction('kv','readwrite').objectStore('kv').put(rec,'fw:'+id); }catch(e){} });
 }
 function _fwForget(id){ _fwDbOpen().then(d=>{ if(!d) return; try{ d.transaction('kv','readwrite').objectStore('kv').delete('fw:'+id); }catch(e){} }); }
 function _fwRestore(){
   if(_fwRestored) return; _fwRestored=true;
+  _tkRestoreNotes();
   _fwDbOpen().then(d=>{
     if(!d) return;
     let kr,vr;
@@ -20510,7 +20531,7 @@ function _fwExists(id){ return _fwIsSec(id)?DB.sections.some(s=>s.id===id.slice(
 function _fwNameOf(id){ const o=_fwIsSec(id)?DB.sections.find(s=>s.id===id.slice(4)):DB.folders.find(f=>f.id===id); return o?o.name:''; }
 function _fwAdd(id,g,restoring){
   if(!_fwExists(id)) return null;
-  const w={id,kind:_fwIsSec(id)?'s':'f',name:_fwNameOf(id),l:+g.l||0,t:+g.t||0,w:+g.w||320,h:+g.h||480,exp:Object.assign({},g.exp||{}),q:'',home:g.home===true&&_fwIsSec(id)===false};
+  const w={id,kind:_fwIsSec(id)?'s':'f',name:_fwNameOf(id),l:+g.l||0,t:+g.t||0,w:+g.w||320,h:+g.h||480,exp:Object.assign({},g.exp||{}),q:'',home:g.home===true&&_fwIsSec(id)===false,tk:g.tk===true};
   if(!restoring&&w.kind==='f') w.exp[id]=true;
   _fwClamp(w); _fwWins.push(w);
   const d=document.createElement('div'); d.className='fwin'; d.dataset.fwid=id; d.setAttribute('role','dialog'); d.setAttribute('aria-label',w.kind==='s'?'Section window':'Folder window');
@@ -20521,6 +20542,7 @@ function _fwAdd(id,g,restoring){
     +'<div class="fwin-body"></div>'
     +['n','s','e','w','ne','nw','se','sw'].map(x=>'<div class="rsz rsz-'+x+'" onpointerdown="_ppGrab(event,\'fw:'+id+'\',\''+x+'\')"></div>').join('');
   d.addEventListener('pointerdown',()=>_fwFront(id),true);
+  _tkTapWire(d.querySelector('.fwin-bar'),'button,input',()=>_fwTkSet(id,true));   /* v06.07 · J170 — double-click / double-tap the bar: tuck */
   const body=d.querySelector('.fwin-body');
   /* a finger held on a row opens the same folder menu a right-click does (the side pane's own rule, 600 ms) */
   body.addEventListener('touchstart',e=>{
@@ -20538,10 +20560,11 @@ function _fwAdd(id,g,restoring){
   return w;
 }
 function _fwLayout(){
-  const ph=window.innerWidth<640, n=_fwWins.length;
+  const ph=window.innerWidth<640, vis=_fwWins.filter(w=>!w.tk), n=vis.length;
   _fwWins.forEach((w,i)=>{
     _fwClamp(w);
     const e=_fwEl(w.id); if(!e) return;
+    e.classList.toggle('fw-tk',!!w.tk);
     e.style.left=w.l+'px'; e.style.top=w.t+'px'; e.style.width=w.w+'px'; e.style.height=w.h+'px'; e.style.zIndex=String(5002+i);
     e.classList.toggle('fw-multi',ph&&n>1);
   });
@@ -20550,15 +20573,16 @@ function _fwLayout(){
   if(ph&&n>1&&!_fwTucked){
     if(!strip){ strip=document.createElement('div'); strip.id='fw-strip'; strip.setAttribute('role','tablist'); strip.setAttribute('aria-label','Open windows');
       strip.addEventListener('click',ev=>{ const c=ev.target.closest('[data-fwid]'); if(c) _fwFront(c.dataset.fwid); }); document.body.appendChild(strip); }
-    const html=_fwWins.map((w,i)=>'<button type="button" class="fw-chip'+(i===n-1?' on':'')+'" role="tab" aria-selected="'+(i===n-1)+'" data-fwid="'+esc(w.id)+'">'+(w.kind==='s'?'🗂 ':'📁 ')+esc(w.name)+'</button>').join('');
+    const html=vis.map((w,i)=>'<button type="button" class="fw-chip'+(i===n-1?' on':'')+'" role="tab" aria-selected="'+(i===n-1)+'" data-fwid="'+esc(w.id)+'">'+(w.kind==='s'?'🗂 ':'📁 ')+esc(w.name)+'</button>').join('');
     if(strip._h!==html){ strip.innerHTML=html; strip._h=html; }
   }else if(strip) strip.remove();
-  document.body.classList.toggle('fw-tuck',_fwTucked&&n>0);
+  document.body.classList.toggle('fw-tuck',_fwTucked&&_fwWins.length>0);
   let pill=document.getElementById('fw-pill');
-  if(_fwTucked&&n>0){
+  if(_fwTucked&&_fwWins.length>0){
     if(!pill){ pill=document.createElement('button'); pill.id='fw-pill'; pill.type='button'; pill.onclick=()=>_fwTuck(false); document.body.appendChild(pill); }
-    pill.textContent='🗗 Folder windows ('+n+')';
+    pill.textContent='🗗 Folder windows ('+_fwWins.length+')';
   }else if(pill) pill.remove();
+  _tkPaint();
 }
 function _fwFront(id){
   const w=_fwGet(id); if(!w||_fwWins[_fwWins.length-1]===w) return;
@@ -20573,6 +20597,121 @@ function _fwClose(id,quiet){
   if(!_fwWins.length) _fwTucked=false;
   _fwLayout();
 }
+/* ── v06.07 · J170 — tuck a pop-up window into a chip ───────────────────────────────────────────────────────────────────────────
+   Double-click (or two taps within 350 ms and 10 px) on a pop-up's top bar tucks it; one press still drags. A folder/section window
+   keeps `tk` in its own place record (_fwinSave, IndexedDB siyagah-pp-v1); a note window keeps `tk` in its place record in the
+   device-local nb_popgeo_v1 (float[aid].tk). NEVER DB. A tucked note window stays in the page, hidden (.fw-tk), editor and all; after
+   a reload it is only a chip (_tkPend) and the window is made when the chip is opened. Chips: ONE painter, _tkPaint. */
+let _tkPend=new Set(), _tkRO=null;
+function _tkTapWire(bar,skip,fn){
+  if(!bar||bar._tkW) return; bar._tkW=1;
+  let last=null;
+  const skipped=t=>!!(t&&t.closest&&t.closest(skip));
+  bar.addEventListener('pointerdown',e=>{
+    if(e.button>0||skipped(e.target)) return;
+    const d={x:e.clientX,y:e.clientY};
+    const up=ev=>{
+      document.removeEventListener('pointerup',up,true); document.removeEventListener('pointercancel',up,true);
+      if(ev.type==='pointercancel'||Math.hypot(ev.clientX-d.x,ev.clientY-d.y)>10){ last=null; return; }
+      const now=Date.now();
+      if(last&&now-last.t<=350&&Math.hypot(d.x-last.x,d.y-last.y)<=10){ last=null; fn(); } else last={t:now,x:d.x,y:d.y};
+    };
+    document.addEventListener('pointerup',up,true); document.addEventListener('pointercancel',up,true);
+  });
+  bar.addEventListener('dblclick',e=>{ if(skipped(e.target)) return; last=null; fn(); });
+}
+function _fwTkSet(id,on){
+  const w=_fwGet(id); if(!w||!!w.tk===!!on) return;
+  w.tk=!!on;
+  if(!on) _fwFront(id);
+  _fwLayout(); _fwinSave(id);
+  if(!on){ try{ _fwPaint(w); }catch(e){} }
+}
+function _tkNoteWin(aid){ return document.getElementById('fw-'+aid); }
+function _tkNoteSet(aid,on){
+  const win=_tkNoteWin(aid), g=()=>{ const f=_popGeoAll().float; return f[aid]||(f[aid]={}); };
+  if(on){
+    if(!win||win.classList.contains('fw-tk')) return;
+    /* typing waiting for its autosave goes through the normal save path first; nothing else is written */
+    if(_fwAutoSince[aid]){
+      clearTimeout(_fwAutoTimer[aid]); delete _fwAutoSince[aid];
+      const a=DB.articles.find(x=>x.id===aid), u=a&&a.updatedAt;
+      _fwFlush(aid);
+      if(a&&a.updatedAt!==u){ _captureNoteHistory(a,'autosave'); persist(); renderTree(); renderP2C(); }
+    }
+    try{ _fwSavePos(aid); }catch(e){}
+    try{ const ae=document.activeElement; if(ae&&win.contains(ae)) ae.blur(); }catch(e){}
+    g().tk=1; _popGeoFlush();
+    win.classList.add('fw-tk');
+    _fwSyncCloseAllChip();
+    if(_fwFocusedAid===aid){
+      const rest=Array.from(document.querySelectorAll('.float-win:not(.fw-tk)'));
+      _fwFocusedAid=rest.length?rest.reduce((a,b)=>(+a.style.zIndex>+b.style.zIndex?a:b)).id.slice(3):null;
+      try{ _tocInject(); _pinPanelInject(); }catch(e){}
+    }
+  }else{
+    if(win&&win.classList.contains('fw-tk')){
+      win.classList.remove('fw-tk'); delete g().tk; _popGeoFlush();
+      _fwZTop++; win.style.zIndex=_fwZTop; _fwSyncCloseAllChip(); _fwFocus(aid);
+      try{ const ed=win.querySelector('.fw-ed'); if(ed) ed.focus({preventScroll:true}); }catch(e){}
+    }else if(_tkPend.has(aid)){
+      popOutNote(aid);   /* _fwCreate clears the mark and the pending entry */
+    }
+  }
+  _tkPaint();
+}
+function _tkNoteWire(win,aid){ /* the bar is wired by _fwWireDragHandle; nothing more per window */ }
+function _tkRestoreNotes(){
+  try{
+    const f=_popGeoAll().float||{};
+    Object.keys(f).forEach(aid=>{ if(f[aid]&&f[aid].tk&&DB.articles.some(a=>a.id===aid)&&!_tkNoteWin(aid)) _tkPend.add(aid); });
+  }catch(e){}
+  _tkPaint();
+}
+function _tkcItems(){
+  const fo=_fwWins.filter(w=>w.tk).map(w=>({k:'f',id:w.id,ic:w.kind==='s'?'🗂':'📁',nm:w.name||''}));
+  const ids=new Set(_tkPend);
+  document.querySelectorAll('.float-win.fw-tk').forEach(e=>ids.add(e.id.slice(3)));
+  const no=[];
+  ids.forEach(aid=>{ const a=DB.articles.find(x=>x.id===aid); if(a) no.push({k:'n',id:aid,ic:'📝',nm:a.title||'Untitled'}); else _tkPend.delete(aid); });
+  return {fo,no};
+}
+function _tkChipHTML(c){
+  const t=c.ic+' '+c.nm;
+  return '<span class="tk-chip" data-k="'+c.k+'" data-id="'+esc(c.id)+'" title="'+esc(t)+' — tap to open it again"><button type="button" class="tk-open" aria-label="Open '+esc(c.nm)+'">'+esc(t)+'</button><button type="button" class="tk-x" title="Close this window" aria-label="Close '+esc(c.nm)+'">✕</button></span>';
+}
+function _tkRow(id,items,rect){
+  let el=document.getElementById(id);
+  if(!items.length){ if(el) el.remove(); return; }
+  if(!el){
+    el=document.createElement('div'); el.id=id; el.className='tk-row'; el.setAttribute('role','toolbar'); el.setAttribute('aria-label','Tucked windows');
+    el.addEventListener('click',ev=>{
+      const c=ev.target.closest('.tk-chip'); if(!c) return;
+      const k=c.dataset.k, cid=c.dataset.id, x=!!ev.target.closest('.tk-x');
+      if(k==='f'){ if(x) _fwClose(cid); else _fwTkSet(cid,false); }
+      else if(x){ if(_tkNoteWin(cid)) closeFloatWin(cid); else{ try{ const g=_popGeoAll().float[cid]; if(g) delete g.tk; _popGeoFlush(); }catch(e){} _tkPend.delete(cid); _tkPaint(); } }
+      else _tkNoteSet(cid,false);
+    });
+    document.body.appendChild(el);
+  }
+  const html=items.map(_tkChipHTML).join('');
+  if(el._h!==html){ el.innerHTML=html; el._h=html; }
+  if(rect){ el.style.left=Math.round(rect.left)+'px'; el.style.top=Math.round(rect.top)+'px'; el.style.width=Math.round(rect.width)+'px'; }
+}
+function _tkPaint(){
+  if(typeof DB==='undefined'||!DB||!DB.articles) return;
+  const {fo,no}=_tkcItems();
+  const pc=window.innerWidth>=1200;
+  const okRect=(id)=>{ const e=document.getElementById(id); if(!e||e.classList.contains('pp')||e.classList.contains('closed')) return null; const r=e.getBoundingClientRect(); return (r.width>=120&&r.height>=60)?r:null; };
+  const sbR=pc?okRect('sb'):null, p3R=pc?okRect('p3'):null;
+  const bot=[]; if(!sbR) bot.push(...fo); if(!p3R) bot.push(...no);
+  _tkRow('tk-sb',sbR?fo:[],sbR); _tkRow('tk-p3',p3R?no:[],p3R); _tkRow('tk-bot',bot,null);
+  if(!_tkRO&&typeof ResizeObserver!=='undefined'){
+    _tkRO=new ResizeObserver(()=>{ clearTimeout(_tkRO._t); _tkRO._t=setTimeout(_tkPaint,60); });
+    ['sb','p3'].forEach(i=>{ const e=document.getElementById(i); if(e) _tkRO.observe(e); });
+  }
+}
+window.addEventListener('resize',()=>{ try{ _tkPaint(); }catch(e){} });
 /* the search box: the notes in this folder's subtree (or this section's folders), title or text, any case; at most 100 shown */
 function _fwSearch(id,v){ const w=_fwGet(id); if(!w) return; w.q=String(v||''); w.lim=100; _fwPaint(w); }
 function _fwMore(id){ const w=_fwGet(id); if(!w) return; w.lim=(w.lim||100)+100; _fwPaint(w); }   /* v05.93 · J133 — 100 more rows, never all at once */
@@ -20643,7 +20782,7 @@ function _fwRedraw(){
 function openFolderWin(fid){
   const f=DB.folders.find(x=>x.id===fid); if(!f) return;
   const from=_fwCtxFrom&&_fwCtxFrom.isConnected?_fwCtxFrom:null; _fwCtxFrom=null;
-  if(_fwGet(fid)){ _fwTucked=false; _fwFront(fid); _fwLayout(); _fwRedraw(); return; }
+  if(_fwGet(fid)){ _fwTucked=false; if(_fwGet(fid).tk){ _fwGet(fid).tk=false; _fwinSave(fid); } _fwFront(fid); _fwLayout(); _fwRedraw(); return; }
   let g={l:60,t:60,w:320,h:480};
   const ph=window.innerWidth<640;
   if(from){ const r=from.getBoundingClientRect(); g={l:r.left+24,t:r.top+24,w:r.width,h:r.height}; }
@@ -20662,7 +20801,7 @@ function openSecWin(sid){
   const sec=DB.sections.find(x=>x.id===sid); if(!sec) return;
   const id='sec:'+sid;
   _fwCtxFrom=null;
-  if(_fwGet(id)){ _fwTucked=false; _fwFront(id); _fwLayout(); _fwRedraw(); return; }
+  if(_fwGet(id)){ _fwTucked=false; if(_fwGet(id).tk){ _fwGet(id).tk=false; _fwinSave(id); } _fwFront(id); _fwLayout(); _fwRedraw(); return; }
   let g={l:60,t:60,w:320,h:480};
   const sb=document.getElementById('sb'), r=sb?sb.getBoundingClientRect():null;
   if(r&&r.width>=_FW_MIN_W&&r.height>=_FW_MIN_H) g={l:(r.right+16+r.width<=window.innerWidth)?r.right+16:r.left+24,t:r.top+(r.height<window.innerHeight-60?0:24),w:r.width,h:r.height};
