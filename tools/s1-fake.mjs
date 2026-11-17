@@ -194,7 +194,7 @@ async function addDevice(browser, base, cloud, name, viewport, touch, seed, opts
     cloud.reads.push({ p: path + '/*', dev: d.name }); return { docs }; });
   /* v05.97 · J176 — where('at','>',x).orderBy('at').limit(n).startAfter(doc).get({source}): the paged first read. Rows in (at, id) order; d.failReads / d.offline / d.failListAfter (n pages
      let through, then fail) fail it with d.failCode (default 'unavailable'); cloud.pagedAt counts the pages, cloud.pageLog says which ones. Mirrors s1-fake.mjs / sync-s1.mjs. */
-  await ctx.exposeBinding('__fsListAt', async (_s, path, src, cur, after, lim) => { await sleep(10);
+  await ctx.exposeBinding('__fsListAt', async (_s, path, src, cur, after, lim) => { await sleep(10 + (cloud.pageDelay || 0));   /* v06.04 · J188: cloud.pageDelay = how long the (stand-in) server takes to answer one page */
     if (d.offline || d.failReads || (d.failListAfter != null && d.failListAfter <= 0)) return { error: { code: d.failCode || 'unavailable', message: 'Failed to get documents from server.' } };
     if (d.failListAfter != null) d.failListAfter--;
     const cmp = (a, b) => (a[0] - b[0]) || (a[1] - b[1]);
