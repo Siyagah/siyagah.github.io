@@ -11731,6 +11731,10 @@ Builder, issue #338.
 - **J169 — counts.** The section's folder/note count on a section view's bar and on the Folder Browser's section headings, from one `_secCounts()` pass per draw (`_secCM`).
 - Checks: block 165 (`tools/popwin-j168.mjs`, 59 checks at 390 / 820 / 1440 plus keep1116). Not done: nothing from the issue.
 
+## v06.08 — J196: Zabs lost when another device's head lands over ours (18 Nov 2026)
+
+The owner: phone 18 Zabs, computer 12, both "last synced". Zabs ride in `_head~0` (not in `_S1_COLLS`). Reproduced (`tools/zab-sync-j196.mjs`, block 167): when another device's older head is written over the phone's, the phone's merge changes nothing and its sig map still says "the cloud holds my head", so the head was never written back and every other device stayed at 12. Fix: `_s1OnSnap` forgets that belief (`m.s['_head~0']`) only when the received head lacks a Zab/item this device holds (or holds it older) (`_zhHeadBehind`), then pushes; a head that is not behind is left alone, so devices never trade heads. 🩺 Diagnostics row "Zabs" (here / last sent / last received, with times). Normal Zab changes both ways (add, rename, item, reorder; 9,000 notes with the journal; after reload) already worked. Not done: moving Zabs to per-record `recs` (backlog). Repair: nothing to tap; the phone must open once on this version.
+
 ## v06.07 — J170: tuck a pop-up window into a chip (17 Nov 2026)
 
 Built by the builder (issue #340). The owner: "Enable Pop-Up folder to collapse to a bar and dock on the notepane bar on double-clicking on the popup topbar"; folders over the side pane's top, notes over the note pane's top, on a phone and tablet at the bottom.
