@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="06.07">
+<meta name="app-version" content="06.08">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4276,7 +4276,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.07</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.08</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -33031,6 +33031,7 @@ async function _s1Exec(nbId, snap, xo){
     }
   }
   await commit();
+  try{ const hr=snap.get('_head~0'); if(hr&&work.some(w=>w[0]==='_head~0')){ const c=_zhCount(JSON.parse(hr.json)); _zhSent={p:c.p,i:c.i,at:Date.now()}; } }catch(_){}
   if(!snap.partial){ let seeded=true; snap.forEach((r,key)=>{ if(m.s[key]!==r.sig) seeded=false; }); _s1Stat.seeded=seeded; }
   _s1Stat.lastRun=Date.now(); _s1Stat.lastWritten=written; _s1Stat.lastErr=null;
   return {written:written};
@@ -33738,6 +33739,23 @@ function _s1RdFail(cfg, e, listener){
   /* Anything else may pass: rebuild the listener, from the saved cursor. */
   if(listener){ _s1ReadStop(); _s1RdTimer=setTimeout(()=>{ const c=getSyncConfig(); if(c&&_syncFsDb) _s1ReadStart(c); },15000); }
 }
+/* v06.08 · J196 — Zabs ride in the head doc (_head~0). What this device last wrote / last received, and whether a received head is behind this device. */
+var _zhHeal=false, _zhSent=null, _zhGot=null;
+function _zhCount(h){ return {p:(h&&Array.isArray(h.jebPockets))?h.jebPockets.length:0, i:(h&&Array.isArray(h.jeb))?h.jeb.length:0}; }
+function _zhHeadSeen(e){ try{ if(e&&e.rec!=null&&!e.gone){ const c=_zhCount(JSON.parse(e.rec)); _zhGot={p:c.p,i:c.i,at:Date.now()}; } }catch(_){} }
+function _zhHeadBehind(json){
+  const h=JSON.parse(json);
+  for(const k of ['jebPockets','jeb']){
+    const have=new Map(); (Array.isArray(h[k])?h[k]:[]).forEach(x=>{ if(x&&x.id!=null) have.set(x.id,x.updatedAt||''); });
+    for(const x of (DB[k]||[])){ if(!x||x.id==null) continue; if(!have.has(x.id)) return true; if((x.updatedAt||'')>have.get(x.id)) return true; }
+  }
+  return false;
+}
+function _zhText(){
+  const f=t=>t?new Date(t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'—';
+  const P=(DB.jebPockets||[]).length, I=(DB.jeb||[]).length;
+  return 'here '+P+' Zabs, '+I+' items · last sent '+(_zhSent?_zhSent.p+' Zabs, '+_zhSent.i+' items at '+f(_zhSent.at):'—')+' · last received '+(_zhGot?_zhGot.p+' Zabs, '+_zhGot.i+' items at '+f(_zhGot.at):'—');
+}
 async function _s1OnSnap(gen, snap, nbRef, paging){   /* paging (v05.97 · J176): one page of the paged first read — saved like a listener snapshot, but it never says "caught up" */
   if(gen!==_s1RdGen||!_s1Rep) return;
   if(!paging) _s1ReadOkNote();
@@ -33806,6 +33824,12 @@ async function _s1OnSnap(gen, snap, nbRef, paging){   /* paging (v05.97 · J176)
        received. The head is the exception — every device's head differs in
        what it alone keeps, so "received = known" there would make two devices
        rewrite each other's head for ever. */
+    if(m&&key==='_head~0'){
+      /* v06.08 · J196 — another device's head landed over the one this device wrote. The sig map still says "the cloud holds MY head", so a head
+         that holds Zabs/items the cloud's now lacks would never be written back (phone 18 Zabs, computer 12, both "synced"). Forget the belief, only
+         when this device holds Zabs or items the received head lacks (or newer): a head that is not behind is left alone, so two devices never trade heads. */
+      try{ _zhHeadSeen(e); if(m.s[key]!==undefined&&m.s[key]!==e.sig&&_zhHeadBehind(e.rec)){ delete m.s[key]; touched=true; _zhHeal=true; } }catch(_){}
+    }
     if(m&&key!=='_head~0'){
       m.s[key]=e.gone?'gone':e.sig;
       if(e.g&&e.n) m.p[key]=[e.g,e.n]; else delete m.p[key];
@@ -33817,7 +33841,8 @@ async function _s1OnSnap(gen, snap, nbRef, paging){   /* paging (v05.97 · J176)
   if(hold===Infinity&&!paging) _s1RdCaught=true;
   if(puts.length){
     st.lastRecv=Date.now(); if(!(st.err&&st.err.code==='unresolvable')) st.err=null;
-    if(!echo){ _s1RepUnmerged=true; if(!paging) _pullRecsMerge(); }   /* a paged read merges once, when it stops (v05.97 · J176): a merge per 500-record page would redo the whole replica 57 times */
+    if(!echo){ _s1RepUnmerged=true; if(!paging) _pullRecsMerge(); }
+    if(_zhHeal){ _zhHeal=false; setTimeout(()=>{ try{ pushToCloud(); }catch(_){} },1200); }   /* v06.08 · J196 — after the merge, write this device's head back */   /* a paged read merges once, when it stops (v05.97 · J176): a merge per 500-record page would redo the whole replica 57 times */
   }
   if(skipMin<Infinity){
     clearTimeout(_s1RdTimer);
@@ -38853,6 +38878,7 @@ function _syncDiagnosticsHTML(){
     ['A new computer opens', _opText()],
     ['Sending to the cloud', (()=>{ const w=_s1GateText(), s=_s1SendText(); return s?s:(w?'not yet — '+w:'ready'); })()],
     ['Cloud writes', _s1WritesText()],   /* v05.96 · J175 */
+    ['Zabs', _zhText()],   /* v06.08 · J196 */
     ['Cloud reads', _s1ReadsText()],   /* v05.97 · J176 */
     ['Big jobs today', _bgText()],   /* v05.97 · J176 */
     ['Checking the cloud', _s1ChkText()],
