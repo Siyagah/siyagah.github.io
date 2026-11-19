@@ -427,7 +427,7 @@ try {
           const pw = document.getElementById('jeb-panel').clientWidth;
           const rows = [...document.querySelectorAll('#jeb-panel .jt-it')];
           const tops = rows.map((r) => { const a = r.querySelector('.jeb-att-b'), n = r.querySelector('.jeb-note-b'); return a && n ? [Math.round(a.getBoundingClientRect().top), Math.round(n.getBoundingClientRect().top)] : null; });
-          const split = tops.filter((t) => !t || t[0] !== t[1]).length;
+          const split = rows.filter((r) => r.querySelector('.jeb-att-b,.jeb-note-b,.jeb-acts')).length; /* v06.09 · J197 (in place): the Attach / → Note buttons are gone from a jot's body (⋯ holds them); a row that still carries one is the fault */
           const over = rows.filter((r) => r.scrollWidth > r.clientWidth).length;
           const withDue = rows.filter((r) => r.querySelector('.jt-due, .jt-flag, .jt-cnt'));
           const side = withDue.filter((r) => r.querySelector('.jt-side')).length, meta = withDue.filter((r) => r.querySelector('.jt-meta')).length;
@@ -435,7 +435,7 @@ try {
         });
         const wide = m.pw >= 560;
         const shapeOk = wide ? m.side === m.withDue && m.meta === 0 : m.meta === m.withDue && m.side === 0;
-        check(m.n >= 7 && m.withDue >= 5 && m.split === 0 && m.over === 0 && shapeOk, `71j@${c.tag} panel ${m.pw}px: chips ${wide ? 'in the side column' : 'under the text'}, Attach and → Note on one line in all ${m.n} rows, no row overflows`, JSON.stringify(m));
+        check(m.n >= 7 && m.withDue >= 5 && m.split === 0 && m.over === 0 && shapeOk, `71j@${c.tag} panel ${m.pw}px: chips ${wide ? 'in the side column' : 'under the text'}, no Attach / → Note buttons (they are in ⋯) in all ${m.n} rows, no row overflows`, JSON.stringify(m));
         noErr(d, '71j@' + c.tag);
       } finally { await d.ctx.close(); }
     }

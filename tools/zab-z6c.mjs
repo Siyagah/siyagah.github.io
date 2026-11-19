@@ -429,7 +429,7 @@ try {
           const m = await on(d, () => {
             const rows = [...document.querySelectorAll('#jeb-panel .jk-it')];
             const tops = rows.map((r) => { const a = r.querySelector('.jeb-att-b'), n = r.querySelector('.jeb-note-b'); return a && n ? [Math.round(a.getBoundingClientRect().top), Math.round(n.getBoundingClientRect().top)] : null; });
-            const split = tops.filter((t) => !t || t[0] !== t[1]).length;
+            const split = rows.filter((r) => r.querySelector('.jeb-att-b,.jeb-note-b,.jeb-acts')).length; /* v06.09 · J197 (in place): the Attach / → Note buttons are gone from a jot's body (⋯ holds them); a row that still carries one is the fault */
             const over = rows.filter((r) => r.scrollWidth > r.clientWidth).length;
             const bar = document.querySelector('#jeb-panel .ji-bar .jl-frow, #jeb-panel .js-filters .jl-frow');
             const bt = bar ? [...bar.children].map((e) => { const r = e.getBoundingClientRect(); return Math.round(r.top + r.height / 2); }) : [];
@@ -438,7 +438,7 @@ try {
             const pn = document.getElementById('jeb-panel');
             return { n: rows.length, split, over, bar: !!bar, barFits: bar ? bar.scrollWidth <= bar.clientWidth + 1 : false, oneLine: new Set(bt).size === 1, stars, hd: Math.round(hd), pw: pn.clientWidth, pover: pn.scrollWidth > pn.clientWidth + 1 };
           });
-          check(m.n >= 5 && m.split === 0 && m.over === 0 && m.bar && m.barFits && m.oneLine && m.stars === 0 && m.hd <= 72 && !m.pover, `72h@${c.tag} ${pid === 'jp-idea' ? 'Ideas' : 'Shopping'} (panel ${m.pw}px): Attach and → Note on one line in all ${m.n} rows, no row overflows, the ${pid === 'jp-idea' ? 'Sort / Group by' : 'Shop'} bar fits on one line, the header is not wrapped (${m.hd}px)`, JSON.stringify(m));
+          check(m.n >= 5 && m.split === 0 && m.over === 0 && m.bar && m.barFits && m.oneLine && m.stars === 0 && m.hd <= 72 && !m.pover, `72h@${c.tag} ${pid === 'jp-idea' ? 'Ideas' : 'Shopping'} (panel ${m.pw}px): no Attach / → Note buttons (they are in ⋯) in all ${m.n} rows, no row overflows, the ${pid === 'jp-idea' ? 'Sort / Group by' : 'Shop'} bar fits on one line, the header is not wrapped (${m.hd}px)`, JSON.stringify(m));
           await closePanel(d, c.vp).catch(() => {});
         }
         noErr(d, '72h@' + c.tag);

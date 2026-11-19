@@ -388,7 +388,7 @@ try {
       check(rv.tb.length > 0 && rv.tb.every((b) => b.ov === 0 || b.ov >= b.area - 1), `${t} no sidebar button is half covered`, JSON.stringify(rv.tb.filter((b) => b.ov > 0 && b.ov < b.area - 1)));
     }
     check(rv.acts.length >= 4 && rv.acts.every((a) => a.name && a.title), `${t} every card action has a name and a title`);
-    check(rv.acts.filter((a) => /jeb-note-b/.test(a.cls)).every((a) => /Note/.test(a.txt)) && rv.acts.some((a) => /jeb-note-b/.test(a.cls)), `${t} the note button reads "→ Note"`);
+    check(!rv.acts.some((a) => /jeb-note-b|jeb-att-b|jeb-ttl-b/.test(a.cls)), `${t} a deck card has no Attach / Title / → Note button (they are in ⋯)`);   /* v06.09 · J197, in place */
     check(rv.acts.every((a) => !a.out), `${t} no card action overflows its card`, JSON.stringify(rv.acts.filter((a) => a.out)));
     noErr(d, t);
   });

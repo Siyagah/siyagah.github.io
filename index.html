@@ -26712,7 +26712,8 @@ function _jebLinkCardHTML(iid,l){
 /* every link of an item + the add control; drawn under the text by _jebChipsHTML (so every row, card and signature has it) */
 function _jebLinksHTML(i){
   if(_jebType(_jebPocket(i.pocketId))==='news') return '';
-  const open=_jlkOpen===i.id;
+  const open=_jlkOpen===i.id, ls=_jlks(i);
+  if(!open&&!ls.length) return '';   /* v06.09 · J197 — no links and no open box: nothing is drawn (no empty gap) */
   return '<div class="jlk-wrap" data-iid="'+esc(i.id)+'">'+_jlks(i).map(l=>_jebLinkCardHTML(i.id,l)).join('')
     +(open?'<div class="jlk-add"><input type="text" class="jlk-in" data-jeb="1" data-iid="'+esc(i.id)+'" inputmode="url" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste or type a link…" aria-label="Add a link"><button type="button" class="jlk-addb" aria-label="Add this link" title="Add this link">＋</button><button type="button" class="jlk-done" aria-label="Close the link box" title="Close">Done</button></div>'
       :'')+'</div>';

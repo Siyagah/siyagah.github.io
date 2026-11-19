@@ -263,7 +263,7 @@ try {
         const chips = [...p.querySelectorAll('.jeb-it[data-iid="t1"] .jeb-chips > span')].map((e) => e.getBoundingClientRect());
         return { att: b('.jeb-att-b') && b('.jeb-att-b').height, note: b('.jeb-note-b') && b('.jeb-note-b').height, tx: b('.jeb-tx') && b('.jeb-tx').width, chips: chips.length, chipOut: chips.some((c) => c.right > pr.right + 0.5 || c.left < pr.left - 0.5), pw: [p.scrollWidth, p.clientWidth], lw: [l.scrollWidth, l.clientWidth], doc: [document.documentElement.scrollWidth, document.documentElement.clientWidth] };
       });
-      check(m.att >= 40 && m.note >= 40, `${t} 📎 Attach and → Note are at least 40px tall`, `${m.att} / ${m.note}`);
+      check(m.att === null && m.note === null, `${t} a jot has no 📎 Attach / → Note button in its body (they are in ⋯)`, `${m.att} / ${m.note}`);   /* v06.09 · J197, in place */
       check(m.tx >= 160, `${t} the item's text keeps >= 160px of width`, String(m.tx));
       check(m.chips === 10 && !m.chipOut && m.pw[0] <= m.pw[1] && m.lw[0] <= m.lw[1] && m.doc[0] <= m.doc[1], `${t} no horizontal overflow with 2 folders, 6 tags, a type and Journal attached (10 chips)`, JSON.stringify(m));
       await act(d, vp, `${row('t1')} .jeb-att-b`); await d.page.waitForSelector('#jeb-att'); await sleep(250);
