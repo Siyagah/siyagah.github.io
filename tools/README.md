@@ -766,3 +766,7 @@ Trap: a first `persist()` stamps `themeAt` once, so a "DB is byte-identical" bas
 ## `mmj-pub.mjs` (v05.69, block 129)
 
 The visitors' copy `notebooks/{nb}/pub`, on the mock cloud. `node tools/mmj-pub.mjs [--only=129a,…] [--notes=9000] [--mmj=600] [--vis=50]`. s1-fake has no Firestore rules engine, so 129l is a stand-in model built from the rule text in `MMJ-SHARE.md` (the real rule cannot be tested here; the owner pastes it). Pictures are put in the device store with `_picPut`; 129d writes bytes straight into `siyagah-pics-v1` to make a wrong or a small copy.
+
+## `calendar-j195.mjs` (v06.10, block 168)
+
+The Calendar like Google Calendar. `node tools/calendar-j195.mjs [--shots=<dir>]` (saves month/week/day/schedule/year screenshots at 390 / 820 / 1440). 168a is pure expander checks in the page (and a 5,000-event timing, also at 4× CPU); 168b opens the calendar by a real click on the side pane's My Calendar row; 168c uses real mouse drags and, for touch, CDP `Input.dispatchTouchEvent` (press-and-hold = a 650 ms wait before the first move). Trap: `slot()` scrolls the grid, so take every pixel position AFTER the last scroll (a block's rect read before it is stale). Trap: the clock — reminder checks set `window.__calRemNow`. Trap: a 30-minute-snap drag range depends on where inside the slot the press lands (+6 px ≈ 7 min).

@@ -139,17 +139,18 @@ try {
       await hit(d, '.sec-hd.db-hd-sec');
       await hit(d, d.page.locator('.tr-row', { hasText: 'My Calendar' }).first());
       await sleep(600);
+      /* v06.10 · J195 — the calendar's header is the Google-style top bar (#gc-tb); the five layer buttons became the five checkboxes of "My calendars" (docked panel on a computer, the ☰ drawer elsewhere) */
+      await d.page.evaluate(() => { if (!document.querySelector('#p3c .gc-side')) _calDrawer(true); }); await sleep(300);
       const m = await d.page.evaluate(() => {
-        const h = document.getElementById('p3h'); if (!h || !h.querySelector('.cal-layers')) return null;
+        const h = document.getElementById('p3h'), tb = document.getElementById('gc-tb'); if (!h || !tb) return null;
         const vw = innerWidth, R = (e) => e.getBoundingClientRect();
-        const btns = [...h.querySelectorAll('.cal-layer-btn')].map((b) => R(b));
-        const title = h.querySelector(':scope > span');
-        return { vw, h: R(h).height, n: btns.length, inside: btns.every((r) => r.left >= R(h).left - 1 && r.right <= R(h).right + 1) && R(h).width <= vw + 1, titleW: title ? R(title).width : 0, titleTxt: title ? title.innerText.trim() : '', };
+        const n = document.querySelectorAll('#p3c .gc-side .gc-lyr input').length;
+        const title = tb.querySelector('.gc-ttl');
+        return { vw, h: R(h).height, n, inside: R(tb).left >= -1 && R(tb).right <= vw + 1 && tb.scrollWidth <= tb.clientWidth + 1, titleW: title ? R(title).width : 0, titleTxt: title ? title.innerText.trim() : '', };
       });
-      check(m !== null && m.n === 5 && m.inside, `${t} all five layer buttons are inside the screen`, JSON.stringify(m));
+      check(m !== null && m.n === 5 && m.inside, `${t} the top bar is inside the screen and the five calendar layers are there as checkboxes`, JSON.stringify(m));
       check(m !== null && m.titleW >= 80 && /\d{4}/.test(m.titleTxt), `${t} the month title is visible (${m && Math.round(m.titleW)} px wide: "${m && m.titleTxt.replace(/\s+/g, ' ')}")`);
-      if (vp.name === '390') check(m !== null && m.h > 70 && m.h < 180, `${t} the header is two rows on a phone (${m && Math.round(m.h)} px; v05.30 T2: its buttons are 44 px tall now, so two rows are ~157 px — the limit was 130)`);
-      else check(m !== null && m.h < 70, `${t} the header stays one row (${m && Math.round(m.h)} px)`);
+      check(m !== null && m.h < 90, `${t} the header stays one row (${m && Math.round(m.h)} px)`);
       errorsAll.push(...d.errors);
     } finally { await d.ctx.close(); }
   }

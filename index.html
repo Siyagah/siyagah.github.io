@@ -14401,6 +14401,7 @@ function _calOccurrences(from,to,o){
     const ev=evs[i];if(!ev||!ev.date)continue;
     const s0=_cdn(ev.date);if(s0!==s0)continue;
     if(o.rem&&!(ev.rem&&ev.rem.length))continue;
+    if(o.plain&&ev.rep&&ev.rep.f)continue;
     let dur=ev.endDate?_cdn(ev.endDate)-s0:0;if(!(dur>0))dur=0;
     if(!ev.rep||!ev.rep.f){if(s0<=hi&&s0+dur>=lo)out.push(_calOcc(ev,ev.date,dur));continue;}
     if(s0>hi)continue;
@@ -14451,7 +14452,7 @@ function _calJrnMap(lo,hi){
 /* the shape of this calendar: by the width of the PANE it sits in (Pane 3 is a column, not the screen) */
 function _calMode(){
   const e=document.getElementById('p3c'),w=(e&&e.clientWidth)||window.innerWidth;
-  return w<560?'phone':w<700?'tab':'wide';
+  return w<560?'phone':(window.innerWidth<1200||w<700)?'tab':'wide';
 }
 function _calIsOpen(){return (ST.article==='cal'||ST.folder==='db-mycal')&&!ST.calManageCats&&!!document.querySelector('#p3c .gc');}
 function _calFocusTs(ts){
@@ -18073,8 +18074,7 @@ function _renderMyCalP2(){
   const tds=todayStr(),t0=_cdn(tds);
   const dayOf=oc=>_cdn(oc.date)-t0;
   const fut=_calOccurrences(tds,_cds(t0+365)).filter(oc=>dayOf(oc)>=0||(oc.endDate&&_cdn(oc.endDate)>=t0)).map(oc=>Object.assign({},oc,{diff:Math.max(0,dayOf(oc))}));
-  const past=_calOccurrences(_cds(t0-400),_cds(t0-1)).map(oc=>Object.assign({},oc,{diff:dayOf(oc)})).filter(oc=>oc.diff<0&&!(oc.endDate&&_cdn(oc.endDate)>=t0));
-  (DB.calEvents||[]).forEach(ev=>{if(ev.date&&!(ev.rep&&ev.rep.f)){const d=_cdn(ev.date)-t0;if(d<-400)past.push(Object.assign({},ev,{evId:ev.id,occ:ev.date,diff:d}));}});
+  const past=_calOccurrences(_cds(t0-400),_cds(t0-1)).concat(_calOccurrences('1990-01-01',_cds(t0-401),{plain:true})).map(oc=>Object.assign({},oc,{diff:dayOf(oc)})).filter(oc=>oc.diff<0&&!(oc.endDate&&_cdn(oc.endDate)>=t0));
   fut.sort((a,b)=>a.diff-b.diff||String(a.startTime||'').localeCompare(String(b.startTime||'')));
   past.sort((a,b)=>b.diff-a.diff);
   const upcoming=fut;
