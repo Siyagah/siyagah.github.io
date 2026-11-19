@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* tools/zab-marks-j197.mjs — v06.09, J197 (block 167): no body buttons under a jot; Urgent / Important / Priority marks.
+/* tools/zab-marks-j197.mjs — v06.09, J197 (block 168): no body buttons under a jot; Urgent / Important / Priority marks.
    node tools/zab-marks-j197.mjs
    167a  390 / 820 / 1440: no Attach / Title / → Note button and no empty "Add link" box in the panel, the deck, All pockets — every pocket kind; the item's ⋯ and the tick stay
    167b  the ⋯ menu still holds ✎ Title… · 📎 Attach · → Note · 🔗 Add link; Add link from ⋯ adds a link that shows as its card; an item's existing links still show

@@ -19,7 +19,7 @@ The owner (19 Nov 2026): "Remove all the buttons below the Jots, they are alread
 - **Removed from the body of every jot** (panel rows of every kind, deck cards, All pockets, Links rows/cards): the 📎 Attach · ✎ Title · → Note buttons (`_JEB_ROW_ACTS`, `.jeb-acts`, Links `.jl-tb` / `.jl-dtop` / card `.jeb-ttl-b`/`.jeb-note-b`) and the dashed "🔗 Add link" box. All four are in the item's ⋯ menu (`_jebItemMenu`); ⋯ → 🔗 Add link (`_jlkOpenBox`) still opens the box, and `_jlkTyping` still stops a repaint under it. Chips, steps, kind lines and every link an item holds (`_jebLinkCardHTML`) stay. Dead handlers (`.jeb-att-b`, `.jeb-note-b`, `.jlk-open`) removed; `.jeb-ttl` (the title text) still opens the title box.
 - **Marks:** `urg`, `imp`, `prio` (true or absent), written only by `jebEditItem`, in `_jebKindSig` (so in `_jebItemSig`). ⋯ → MARK has 🔥 Urgent, ❗ Important, 🚩 Priority beside ☑ Done. A Tasks Zab has no 🚩 row: its ⚑ High priority (`pri`) is its priority. Badges `.jc-m` are drawn by `_jebMarksHTML` at the head of `_jebChipsHTML` (rows, cards, All pockets); word from 640 px, icon only below; done items dim them. The scrolling band shows the icons (`mk` in `_tkOwnItems`, part of its signature). `jebToNote` adds a plain first line "🔥 Urgent · ❗ Important". **No sorting changes; Choose (several at once) was left out; `_jebChipInfo` unchanged.**
 - Older Zab checks updated in place (reason: the buttons they clicked or measured are gone): `jeb-j3/j4/j5`, `zab-z1/z6a/z6b/z6c/n1` (`act()` opens ⋯ and picks the same row), `zab-links-j147`, `links-j178`, `zab-z8`, `zab-z9` (the old build's button row is removed from the OLD side of the byte comparison). Run alone: j3 156/156, j4 248/248, z6b 299/299, z6c 389/389, z8 127/127, z9 121/121, j147 86/86, j178 105/105, block 69 28/28. Full app-check left to the Architect.
-- Check: block 167, `tools/zab-marks-j197.mjs` (45 checks at 390 / 820 / 1440).
+- Check: block 168, `tools/zab-marks-j197.mjs` (45 checks at 390 / 820 / 1440).
 
 ## Before the log existed (v03.x → v04.05)
 
@@ -11739,6 +11739,10 @@ Builder, issue #338.
 - **J171 — 🏠 and search in a ⧉ folder window.** 🏠 (`_fwHome`) switches the window to its section (folded, top), again returns; `home` is saved with the window's place. The search box already sat above the scrolling body in every ⧉ window; a section view searches the section.
 - **J169 — counts.** The section's folder/note count on a section view's bar and on the Folder Browser's section headings, from one `_secCounts()` pass per draw (`_secCM`).
 - Checks: block 165 (`tools/popwin-j168.mjs`, 59 checks at 390 / 820 / 1440 plus keep1116). Not done: nothing from the issue.
+
+## v06.08 — J196: Zabs lost when another device's head lands over ours (18 Nov 2026)
+
+The owner: phone 18 Zabs, computer 12, both "last synced". Zabs ride in `_head~0` (not in `_S1_COLLS`). Reproduced (`tools/zab-sync-j196.mjs`, block 167): when another device's older head is written over the phone's, the phone's merge changes nothing and its sig map still says "the cloud holds my head", so the head was never written back and every other device stayed at 12. Fix: `_s1OnSnap` forgets that belief (`m.s['_head~0']`) only when the received head lacks a Zab/item this device holds (or holds it older) (`_zhHeadBehind`), then pushes; a head that is not behind is left alone, so devices never trade heads. 🩺 Diagnostics row "Zabs" (here / last sent / last received, with times). Normal Zab changes both ways (add, rename, item, reorder; 9,000 notes with the journal; after reload) already worked. Not done: moving Zabs to per-record `recs` (backlog). Repair: nothing to tap; the phone must open once on this version.
 
 ## v06.07 — J170: tuck a pop-up window into a chip (17 Nov 2026)
 
