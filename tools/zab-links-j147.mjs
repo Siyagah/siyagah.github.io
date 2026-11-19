@@ -24,12 +24,13 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
   await p.context().route('**://www.zablink.test/**', (rt) => rt.fulfill({ status: 200, contentType: 'text/html', body: '<title>x</title>ok' }));
   const act = async (loc) => (touch ? loc.tap() : loc.click());
   const stab = async (loc) => { await loc.scrollIntoViewIfNeeded(); await sleep(500); await act(loc); };
+  /* v06.09 · J197: the dashed "🔗 Add link" box is gone from a jot's body; the add box opens from the item's ⋯ menu (panel row or deck card) */
+  const openAdd = async (scope, iid) => { if (await p.locator(`${scope}[data-iid="${iid}"] .jlk-in`).count()) return; await act(p.locator(`${scope}[data-iid="${iid}"] .jeb-more`).first()); await p.waitForSelector('#jeb-menu'); await act(p.locator('#jeb-menu .jm:has-text("Add link")').first()); await sleep(200); };
   const panelItem = (iid) => p.locator(`#jeb-panel .jeb-it[data-iid="${iid}"]`).first();
   const mk = (pid, txt) => p.evaluate(([pid, txt]) => { const id = jebAddItem(pid, txt); jebOpenPanel(pid); _jebPanelSig = ''; jebRefresh(); return id; }, [pid, txt]);
   /* add one link by real taps: the control, type, Enter */
   const addByTap = async (iid, url) => {
-    const open = p.locator(`#jeb-panel .jeb-it[data-iid="${iid}"] .jlk-open`).first();
-    if (await open.count()) { await act(open); await sleep(150); }
+    await openAdd('#jeb-panel .jeb-it', iid);
     await p.keyboard.type(url); await p.keyboard.press('Enter'); await sleep(250);
   };
   const links = (iid) => p.evaluate((i) => (DB.jeb.find((x) => x.id === i) || {}).links || null, iid);
@@ -52,8 +53,8 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     if (pop) await pop.close().catch(() => {});
     const still = await p.evaluate(() => !document.querySelector('#jeb-panel .jeb-edit'));
     r.check(still, `149a${t} the tap on a card does not start editing the item`, '');
-    if (await p.locator(`#jeb-panel .jeb-it[data-iid="${a}"] .jlk-open`).count()) { await act(p.locator(`#jeb-panel .jeb-it[data-iid="${a}"] .jlk-open`).first()); await sleep(150); }
-    else await act(p.locator(`#jeb-panel .jeb-it[data-iid="${a}"] .jlk-in`).first());
+    await openAdd('#jeb-panel .jeb-it', a);
+    await act(p.locator(`#jeb-panel .jeb-it[data-iid="${a}"] .jlk-in`).first());
     await p.keyboard.type('javascript:alert(1)'); await p.keyboard.press('Enter'); await sleep(200);
     const bad = await p.evaluate((i) => ({ n: (DB.jeb.find((x) => x.id === i).links || []).length, toast: (document.querySelector('.toast') || {}).textContent }), a);
     r.check(bad.n === 3 && /web address/i.test(bad.toast || ''), `149a${t} a javascript: address is refused with a plain message`, JSON.stringify(bad));
@@ -166,9 +167,9 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     const g2 = await mk(plain, 'Deck item'); await sleep(200);
     await p.evaluate((i) => { jebAddLink(i, 'https://zablink.test/deck1'); _jebPanelSig = ''; jebRefresh(); jebOpenDeck({ ids: [DB.jeb.find((x) => x.id === i).pocketId], all: false }); }, g2);
     await sleep(500);
-    const dk = await p.evaluate((i) => ({ n: document.querySelectorAll(`#jeb-deck .jeb-card[data-iid="${i}"] .jlk`).length, open: !!document.querySelector(`#jeb-deck .jeb-card[data-iid="${i}"] .jlk-open`) }), g2);
-    r.check(dk.n === 1 && dk.open, `149g${t} a deck card shows the link cards and the add control`, JSON.stringify(dk));
-    await act(p.locator(`#jeb-deck .jeb-card[data-iid="${g2}"] .jlk-open`).first()); await sleep(200);
+    const dk = await p.evaluate((i) => ({ n: document.querySelectorAll(`#jeb-deck .jeb-card[data-iid="${i}"] .jlk`).length, open: !!document.querySelector(`#jeb-deck .jeb-card[data-iid="${i}"] .jeb-more`) }), g2);   /* v06.09 · J197: the add control is in the card's ⋯ menu now */
+    r.check(dk.n === 1 && dk.open, `149g${t} a deck card shows the link cards; its ⋯ menu holds the add control`, JSON.stringify(dk));
+    await openAdd('#jeb-deck .jeb-card', g2);
     await p.keyboard.type('https://zablink.test/typing-in-progr');
     const g3 = await p.evaluate(() => { const iid = DB.jeb.find((x) => x.text === 'Deck item').id; jebEditItem(iid, { done: true }); _jebDeckSig = ''; jebRefresh(); const inp = document.querySelector('#jeb-deck .jlk-in'); return { v: inp && inp.value, same: !!inp }; });
     r.check(g3.same && g3.v === 'https://zablink.test/typing-in-progr', `149g${t} a repaint never happens under an open add box`, JSON.stringify(g3));
@@ -182,7 +183,7 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     await sleep(300);
     const hh = await p.evaluate((phone) => {
       const bad = [];
-      document.querySelectorAll('#jeb-panel .jlk-open, #jeb-panel .jlk-a, #jeb-panel .jlk-more').forEach((e) => { const b = e.getBoundingClientRect(); if (b.width && (b.height < 43.5 || b.width < 43.5 && !e.classList.contains('jlk-a'))) bad.push(e.className + ' ' + Math.round(b.width) + 'x' + Math.round(b.height)); });
+      document.querySelectorAll('#jeb-panel .jlk-a, #jeb-panel .jlk-more').forEach((e) => { const b = e.getBoundingClientRect(); if (b.width && (b.height < 43.5 || b.width < 43.5 && !e.classList.contains('jlk-a'))) bad.push(e.className + ' ' + Math.round(b.width) + 'x' + Math.round(b.height)); });
       return { sw: document.documentElement.scrollWidth <= innerWidth + 1 && document.body.scrollWidth <= innerWidth + 1, pw: (() => { const pn = document.getElementById('jeb-panel'); return pn.scrollWidth <= pn.clientWidth + 1; })(), bad: phone ? bad : [] };
     }, phone);
     r.check(hh.sw && hh.pw && hh.bad.length === 0, `149h${t} no horizontal overflow${phone ? ', every tap target >= 44 px' : ''}`, JSON.stringify(hh));

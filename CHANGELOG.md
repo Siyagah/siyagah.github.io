@@ -12,6 +12,15 @@ session.
 
 ---
 
+## v06.09 — J197: no buttons under a jot; Urgent · Important · Priority (17+ Nov 2026 build, issue #344)
+
+The owner (19 Nov 2026): "Remove all the buttons below the Jots, they are already in the 3 dots", "Enable the Jot to mark Urgent. Important. Priority.", "Remove the Add link too."
+
+- **Removed from the body of every jot** (panel rows of every kind, deck cards, All pockets, Links rows/cards): the 📎 Attach · ✎ Title · → Note buttons (`_JEB_ROW_ACTS`, `.jeb-acts`, Links `.jl-tb` / `.jl-dtop` / card `.jeb-ttl-b`/`.jeb-note-b`) and the dashed "🔗 Add link" box. All four are in the item's ⋯ menu (`_jebItemMenu`); ⋯ → 🔗 Add link (`_jlkOpenBox`) still opens the box, and `_jlkTyping` still stops a repaint under it. Chips, steps, kind lines and every link an item holds (`_jebLinkCardHTML`) stay. Dead handlers (`.jeb-att-b`, `.jeb-note-b`, `.jlk-open`) removed; `.jeb-ttl` (the title text) still opens the title box.
+- **Marks:** `urg`, `imp`, `prio` (true or absent), written only by `jebEditItem`, in `_jebKindSig` (so in `_jebItemSig`). ⋯ → MARK has 🔥 Urgent, ❗ Important, 🚩 Priority beside ☑ Done. A Tasks Zab has no 🚩 row: its ⚑ High priority (`pri`) is its priority. Badges `.jc-m` are drawn by `_jebMarksHTML` at the head of `_jebChipsHTML` (rows, cards, All pockets); word from 640 px, icon only below; done items dim them. The scrolling band shows the icons (`mk` in `_tkOwnItems`, part of its signature). `jebToNote` adds a plain first line "🔥 Urgent · ❗ Important". **No sorting changes; Choose (several at once) was left out; `_jebChipInfo` unchanged.**
+- Older Zab checks (`jeb-j3/j4/j5`, `zab-z1/z6a/z6b/z6c/n1` via their `act()`, `zab-links-j147`) now open ⋯ and pick the same row instead of clicking a removed button. Still to be reconciled by the Architect's full run: checks that read the removed buttons' geometry or markup (`links-j178`, `zab-z8`, `zab-z9`, parts of `jeb-j3/j4`, `zab-z6b/z6c` row-top comparisons).
+- Check: block 167, `tools/zab-marks-j197.mjs` (45 checks at 390 / 820 / 1440).
+
 ## Before the log existed (v03.x → v04.05)
 
 Reconstructed from git commit messages on 4 September 2026, when this file was

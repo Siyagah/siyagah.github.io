@@ -43,7 +43,10 @@ const pockets = (names) => [...SEEDS.map(([id, name, icon, color], i) => ({ id, 
   ...names.map((n, i) => ({ id: n, name: n, icon: '✶', color: '#CFE8FF', order: 4 + i, createdAt: T0, updatedAt: T0 }))];
 const dev = (cloud, name, vp, db, opts = {}) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed(), opts);
 /* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
-const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v06.09 · J197: the Attach / Title / → Note buttons and the "Add link" box are gone from a jot's body (the owner: they are in the ⋯ menu). A step that used one now opens the item's ⋯ menu and picks the same row, so what it proves is unchanged. */
+const act0 = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+const _VIA = { 'jeb-att-b': '📎 Attach', 'jeb-note-b': '→ Note', 'jeb-ttl-b': '✎ Title', 'jlk-open': '🔗 Add link' };
+const act = async (d, vp, sel) => { const m = /^(.*?)\s+\.(jeb-att-b|jeb-note-b|jeb-ttl-b|jlk-open)$/.exec(sel); if (!m) return act0(d, vp, sel); await act0(d, vp, m[1] + ' .jeb-more'); await d.page.waitForSelector('#jeb-menu'); return act0(d, vp, '#jeb-menu .jm:has-text("' + _VIA[m[2]] + '")'); };
 const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, d.errors.slice(0, 2).join(' · '));
 const each = async (fn, vps = VPS, opts, db) => { for (const vp of vps) { const d = await dev(makeCloud(), 'D' + vp.name, vp, db ? db() : null, opts); try { await fn(d, vp); } finally { await d.ctx.close(); } } };
 const chip = (pid) => `#jeb-bar .jeb-chip[data-pid="${pid}"]`;
