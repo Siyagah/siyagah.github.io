@@ -45,7 +45,10 @@ const seed = (extra) => {
 };
 const dev = (cloud, name, vp, db) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed());
 /* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
-const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v06.09 · J197: the Attach / Title / → Note buttons and the "Add link" box are gone from a jot's body (the owner: they are in the ⋯ menu). A step that used one now opens the item's ⋯ menu and picks the same row, so what it proves is unchanged. */
+const act0 = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+const _VIA = { 'jeb-att-b': '📎 Attach', 'jeb-note-b': '→ Note', 'jeb-ttl-b': '✎ Title', 'jlk-open': '🔗 Add link' };
+const act = async (d, vp, sel) => { const m = /^(.*?)\s+\.(jeb-att-b|jeb-note-b|jeb-ttl-b|jlk-open)$/.exec(sel); if (!m) return act0(d, vp, sel); await act0(d, vp, m[1] + ' .jeb-more'); await d.page.waitForSelector('#jeb-menu'); return act0(d, vp, '#jeb-menu .jm:has-text("' + _VIA[m[2]] + '")'); };
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height, cx: r.left + r.width / 2, cy: r.top + r.height / 2 }; }, sel);
 const item = (d, id) => on(d, (i) => JSON.parse(JSON.stringify((DB.jeb || []).find((x) => x.id === i) || null)), id);
 const order = (d, pid) => on(d, (p) => jebItems(p).map((x) => x.id), pid);
@@ -385,7 +388,7 @@ try {
       check(rv.tb.length > 0 && rv.tb.every((b) => b.ov === 0 || b.ov >= b.area - 1), `${t} no sidebar button is half covered`, JSON.stringify(rv.tb.filter((b) => b.ov > 0 && b.ov < b.area - 1)));
     }
     check(rv.acts.length >= 4 && rv.acts.every((a) => a.name && a.title), `${t} every card action has a name and a title`);
-    check(rv.acts.filter((a) => /jeb-note-b/.test(a.cls)).every((a) => /Note/.test(a.txt)) && rv.acts.some((a) => /jeb-note-b/.test(a.cls)), `${t} the note button reads "→ Note"`);
+    check(!rv.acts.some((a) => /jeb-note-b|jeb-att-b|jeb-ttl-b/.test(a.cls)), `${t} a deck card has no Attach / Title / → Note button (they are in ⋯)`);   /* v06.09 · J197, in place */
     check(rv.acts.every((a) => !a.out), `${t} no card action overflows its card`, JSON.stringify(rv.acts.filter((a) => a.out)));
     noErr(d, t);
   });

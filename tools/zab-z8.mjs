@@ -164,7 +164,7 @@ try {
           .replace(/<div class="jlk-wrap"[^>]*>(?:<div class="jlk"[\s\S]*?<\/div>)*<button type="button" class="jlk-open"[^>]*>[^<]*<\/button><\/div>/g, '')
           /* v06.05 · J178, updated in place by the Architect in review: the add box now holds the links Zab's Title box (`#jeb-title-in`, hidden in every other kind) with the
              textarea inside a `.jeb-addf` wrapper; both are unwrapped from the new build's panel like the ones above; anything else that differs still fails. The box is checked by block 164. */
-          .replace(/<div class="jeb-addf"><input id="jeb-title-in"[^>]*>(<textarea[\s\S]*?<\/textarea>)<\/div>/, '$1'), b = await html(dold, pid);
+          .replace(/<div class="jeb-addf"><input id="jeb-title-in"[^>]*>(<textarea[\s\S]*?<\/textarea>)<\/div>/, '$1'), b = (await html(dold, pid)).replace(/<div class="jeb-acts">[\s\S]*?<\/div>/g, '');   /* v06.09 · J197, in place: the OLD build's 📎 Attach · ✎ Title · → Note row is removed from the old side, because the new build no longer draws it (the buttons are in ⋯) */
         check(a === b, `${t} pocket ${pid} (nothing inside): the panel's HTML is byte-identical to the previous build's (apart from v05.25's ✎ Title button)`, a === b ? '' : (() => { let i = 0; while (i < a.length && a[i] === b[i]) i++; return `new ${a.length} bytes, old ${b.length}; first difference at ${i}: new …${a.slice(Math.max(0, i - 60), i + 120)}… old …${b.slice(Math.max(0, i - 60), i + 120)}…`; })());
       }
       const k = await on(dn, () => { const e = document.querySelector('#jeb-panel .jx-kids'); return { hidden: e.hidden, empty: e.innerHTML === '', has: document.getElementById('jeb-panel').classList.contains('jx-has') }; });

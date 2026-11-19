@@ -36,7 +36,10 @@ const mkItem = (id, pocketId, text, order, extra = {}) => ({ id, pocketId, text,
 const seed = (extra) => { const db = seedDB(T0); db.jeb = [mkItem('t1', 'jp-task', 'Alpha item\nsecond line of alpha', 0), mkItem('t2', 'jp-task', 'Bravo', 1), mkItem('t3', 'jp-task', 'Charlie', 2)]; if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.18: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
 const dev = (cloud, name, vp, db) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed());
 /* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
-const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v06.09 · J197: the Attach / Title / → Note buttons and the "Add link" box are gone from a jot's body (the owner: they are in the ⋯ menu). A step that used one now opens the item's ⋯ menu and picks the same row, so what it proves is unchanged. */
+const act0 = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+const _VIA = { 'jeb-att-b': '📎 Attach', 'jeb-note-b': '→ Note', 'jeb-ttl-b': '✎ Title', 'jlk-open': '🔗 Add link' };
+const act = async (d, vp, sel) => { const m = /^(.*?)\s+\.(jeb-att-b|jeb-note-b|jeb-ttl-b|jlk-open)$/.exec(sel); if (!m) return act0(d, vp, sel); await act0(d, vp, m[1] + ' .jeb-more'); await d.page.waitForSelector('#jeb-menu'); return act0(d, vp, '#jeb-menu .jm:has-text("' + _VIA[m[2]] + '")'); };
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
 const item = (d, id) => on(d, (i) => JSON.parse(JSON.stringify((DB.jeb || []).find((x) => x.id === i) || null)), id);
 const openPanel = async (d, vp, name) => { await act(d, vp, `#jeb-bar .jeb-chip[title="${name}"]`); await d.page.waitForSelector('#jeb-panel.on', { timeout: 3000 }); await sleep(300); };
@@ -260,7 +263,7 @@ try {
         const chips = [...p.querySelectorAll('.jeb-it[data-iid="t1"] .jeb-chips > span')].map((e) => e.getBoundingClientRect());
         return { att: b('.jeb-att-b') && b('.jeb-att-b').height, note: b('.jeb-note-b') && b('.jeb-note-b').height, tx: b('.jeb-tx') && b('.jeb-tx').width, chips: chips.length, chipOut: chips.some((c) => c.right > pr.right + 0.5 || c.left < pr.left - 0.5), pw: [p.scrollWidth, p.clientWidth], lw: [l.scrollWidth, l.clientWidth], doc: [document.documentElement.scrollWidth, document.documentElement.clientWidth] };
       });
-      check(m.att >= 40 && m.note >= 40, `${t} 📎 Attach and → Note are at least 40px tall`, `${m.att} / ${m.note}`);
+      check(m.att === null && m.note === null, `${t} a jot has no 📎 Attach / → Note button in its body (they are in ⋯)`, `${m.att} / ${m.note}`);   /* v06.09 · J197, in place */
       check(m.tx >= 160, `${t} the item's text keeps >= 160px of width`, String(m.tx));
       check(m.chips === 10 && !m.chipOut && m.pw[0] <= m.pw[1] && m.lw[0] <= m.lw[1] && m.doc[0] <= m.doc[1], `${t} no horizontal overflow with 2 folders, 6 tags, a type and Journal attached (10 chips)`, JSON.stringify(m));
       await act(d, vp, `${row('t1')} .jeb-att-b`); await d.page.waitForSelector('#jeb-att'); await sleep(250);

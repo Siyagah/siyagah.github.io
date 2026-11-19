@@ -153,26 +153,23 @@ for (const [w, h, touch] of [[390, 844, true], [820, 1180, true], [1440, 900, fa
     r.check(failHits <= 2 && failHits >= 1, `164d${t} one retry at most (${failHits} requests)`);
 
     /* ── 164e ── */
-    const pos = await p.evaluate(() => {
-      const row = document.querySelector('#jeb-panel .jl-it[data-iid="l1"]'), R = (e) => e && e.getBoundingClientRect();
-      const ttl = R(row.querySelector('.jeb-ttl-b')), note = R(row.querySelector('.jeb-note-b')), att = R(row.querySelector('.jeb-att-b')), th = R(row.querySelector('.jl-th')), chips = R(row.querySelector('.jeb-chips')), more = R(row.querySelector('.jeb-more'));
-      return { ttlTop: ttl.top, noteTop: note.top, thTop: th.top, thBot: th.bottom, attTop: att.top, chipsTop: chips ? chips.top : 1e9, moreTop: more.top, row: R(row).top, hasP: !!row.querySelector('.jl-p-b,.jl-i-b'), attTxt: row.querySelector('.jeb-att-b').textContent, acts: [...row.querySelectorAll('.jeb-acts button')].map((b) => b.textContent).join('|') };
-    });
-    r.check((w < 640 ? (pos.ttlTop < pos.thBot && pos.noteTop < pos.thBot) : (pos.ttlTop < pos.thTop && pos.noteTop < pos.thTop)) && pos.ttlTop < pos.attTop && pos.noteTop < pos.chipsTop && !pos.hasP && /Attach/.test(pos.acts) && !/Title|Note/.test(pos.acts), `164e${t} ✎ Title and → Note are on the top line (beside the link), above the chips; 📎 Attach stays below; no 👤 / # buttons`, JSON.stringify(pos));
+    /* v06.09 · J197 (changed in place): a Links item has no ✎ Title / → Note / 📎 Attach buttons now (the owner: they are in ⋯); block 167 holds the removal for every kind */
+    const pos = await p.evaluate(() => { const row = document.querySelector('#jeb-panel .jl-it[data-iid="l1"]'); return { btns: row.querySelectorAll('.jeb-ttl-b,.jeb-note-b,.jeb-att-b,.jeb-acts,.jl-tb').length, hasP: !!row.querySelector('.jl-p-b,.jl-i-b'), more: !!row.querySelector('.jeb-more') }; });
+    r.check(pos.btns === 0 && !pos.hasP && pos.more, `164e${t} a Links item has no Title / → Note / Attach buttons in its body; no 👤 / # buttons; ⋯ stays`, JSON.stringify(pos));
     await p.locator('#jeb-panel .jl-it[data-iid="l1"] .jeb-more').click(); await sleep(300);
     const menu = await p.evaluate(() => [...document.querySelectorAll('#jeb-menu .jm')].map((e) => e.textContent).join('|'));
     r.check(/Person/.test(menu) && /Issue/.test(menu), `164e${t} the item's ⋯ menu holds 👤 Person… and # Issue…`, menu);
     await p.keyboard.press('Escape'); await sleep(200);
     await p.evaluate(() => { _jebHideMenu(); });
-    await p.locator('#jeb-panel .jl-it[data-iid="l1"] .jeb-ttl-b').click(); await sleep(400);
-    r.check(await p.evaluate(() => document.getElementById('ov').classList.contains('on')), `164e${t} the top-line ✎ Title still opens the title dialog`);
+    await p.locator('#jeb-panel .jl-it[data-iid="l1"] .jeb-more').click(); await p.waitForSelector('#jeb-menu'); await p.locator('#jeb-menu .jm:has-text("Title")').first().click(); await sleep(400);
+    r.check(await p.evaluate(() => document.getElementById('ov').classList.contains('on')), `164e${t} ⋯ → ✎ Title opens the title dialog`);
     await p.evaluate(() => closeModal());
     await p.evaluate(() => { jebOpenDeck({ ids: ['jp-link'], all: false }); }); await p.waitForSelector('#jeb-deck.on .jeb-card', { timeout: 10000 }); await sleep(400);
-    const dk = await p.evaluate(() => { const c = document.querySelector('#jeb-deck .jeb-card.jl-dcard'); const R = (e) => e.getBoundingClientRect(); const th = R(c.querySelector('.jl-th')); const tb = c.querySelector('.jl-dtop .jeb-ttl-b'), nb = c.querySelector('.jl-dtop .jeb-note-b'); return { ok: !!tb && !!nb, above: !!tb && (R(tb).top + R(tb).bottom) / 2 < th.top && (R(nb).top + R(nb).bottom) / 2 < th.top,   /* the deck cards are tilted a little: compare centres */ dbg: [R(tb).bottom, R(nb).bottom, th.top].join('/'), acts: [...c.querySelectorAll('.jc-acts button')].map((b) => b.getAttribute('aria-label')).join('|') }; });
-    r.check(dk.ok && dk.above && !/Title|note/i.test(dk.acts), `164e${t} the deck card: ✎ and → Note on its top line, above the thumbnail; 📎 and ⋯ stay below`, JSON.stringify(dk));
+    const dk = await p.evaluate(() => { const c = document.querySelector('#jeb-deck .jeb-card.jl-dcard'); return { n: c.querySelectorAll('.jl-dtop,.jeb-ttl-b,.jeb-note-b,.jeb-att-b').length, more: !!c.querySelector('.jeb-more'), th: !!c.querySelector('.jl-th') }; });
+    r.check(dk.n === 0 && dk.more && dk.th, `164e${t} the deck card has no Title / → Note / Attach buttons (v06.09 · J197, in place); ⋯ stays`, JSON.stringify(dk));
     await p.evaluate(() => jebCloseDeck());
     await p.evaluate(() => jebOpenPanel('jp-idea')); await sleep(400);
-    r.check((await p.evaluate(() => document.querySelector('#jeb-panel .jeb-it .jeb-acts').textContent.replace(/\s+/g, ' '))).includes('Attach') && (await p.evaluate(() => !!document.querySelector('#jeb-panel .jeb-it .jeb-acts .jeb-ttl-b'))), `164e${t} an Ideas row keeps its three buttons`);
+    r.check(await p.evaluate(() => !document.querySelector('#jeb-panel .jeb-it .jeb-acts') && !!document.querySelector('#jeb-panel .jeb-it .jeb-more')), `164e${t} an Ideas row has no button row now (v06.09 · J197, in place)`);
     await open(p);
 
     /* ── 164f ── */
