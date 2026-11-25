@@ -3,7 +3,7 @@
 Read this first, every session. It is the standing brief, and it is meant to
 stay short enough to read in full before starting work.
 
-**Current version: v06.09.** Live at `siyagah.github.io`, served from `main`.
+**Current version: v06.11.** Live at `siyagah.github.io`, served from `main`.
 
 > **PERMANENT RULE: Project Control File.** The owner keeps ONE shared Project
 > Control File (PCF) for all projects: https://claude.ai/artifact/PhW1KKX28qrqj9dE7Ha8dZ. Siyagah's section is **SIY**:
@@ -47,6 +47,7 @@ must never accumulate here instead of there.
 
 ### The five most recent rounds
 
+- **v06.11** (25 Nov 2026) — J199 (built by the builder, issue #347; the owner: "Add a follow up button for Jots, and add a marking on the jot"): `fup` (true or absent) is a fourth mark beside `urg`/`imp`/`prio`: `jebEditItem` only, in `_jebKindSig`, ⋯ → MARK row "↩ Follow up" (every Zab kind, a Tasks Zab too), `_JEB_MARKS` entry so `_jebMarksHTML` badge (`.jc-m-fup`, teal-blue `#0B5E73`), band `mk` and → Note line follow. **A new mark = one `_JEB_MARKS` row + the `jebEditItem` list + `_jebKindSig` + a `.jc-m-<key>` colour + the ⋯ menu row.** Check: block 169, `tools/zab-followup-j199.mjs`.
 - **v06.09** (19 Nov 2026) — J197 (built by the builder, issue #344): no 📎 Attach / ✎ Title / → Note buttons and no dashed "🔗 Add link" box under a jot (all in ⋯; `_JEB_ROW_ACTS` gone); marks `urg`/`imp`/`prio` (true or absent, `jebEditItem` only, in `_jebKindSig`), badges via `_jebMarksHTML` at the head of `_jebChipsHTML`, band `mk`; a Tasks Zab's priority stays `pri`. **A new button for a jot goes in `_jebItemMenu`, not under the text.** Check: block 168, `tools/zab-marks-j197.mjs`.
 - **v06.08** (18 Nov 2026) — J196 (built by the builder, issue #343; phone 18 Zabs, computer 12, both "synced"): Zabs ride in `_head~0`; another device's older head written over ours left our sig map saying "the cloud holds my head", so it was never written back. `_s1OnSnap` forgets that belief when the received head lacks a Zab/item we hold (`_zhHeadBehind`) and pushes; a head not behind is left alone (no head trading). 🩺 row "Zabs" (`_zhText`). **The sig map's head entry is a belief: any new head-like single doc shared by devices needs the same check.** Check: block 167, `tools/zab-sync-j196.mjs`.
 - **v06.07** (17 Nov 2026) — J170 (built by the builder, issue #340; the owner: "collapse to a bar and dock … on double-clicking on the popup topbar"): a double-click / double-tap (350 ms, 10 px) on a ⧉ window's bar or a note window's top bar tucks it into a chip (`_tkTapWire`; the window stays, `.fw-tk` = hidden, a note keeps its editor; unsaved typing goes through the normal save first). ONE painter `_tkPaint`: ≥ 1200 folder/section chips in `#tk-sb` over `#sb`'s top band, note chips in `#tk-p3` over `#p3`'s (hidden/`.closed`/`.pp` pane → the bottom row); < 1200 ONE row `#tk-bot` above the Zab bar (`bottom:calc(2px + var(--jeb-h))`, in all five `--jeb-h` lists). Chip tap = reopen at the old box, ✕ = close. State: folder `tk` in `_fwinSave`'s record, note `tk` in `nb_popgeo_v1` `float[aid].tk`, never `DB`; after a reload a tucked note is a chip (`_tkPend`) until opened. **Anything that counts or lists open pop-ups must skip `.fw-tk` / `w.tk`.** Check: block 166, `tools/tuck-j170.mjs`.

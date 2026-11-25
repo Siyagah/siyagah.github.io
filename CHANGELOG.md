@@ -12,6 +12,10 @@ session.
 
 ---
 
+## v06.11 — J199: ↩ Follow up mark on jots (25 Nov 2026, issue #347)
+
+The owner: "Add a follow up button for Jots, and add a marking on the jot for that." Built exactly like J197's marks: `fup` (true or absent) written only by `jebEditItem`, in `_jebKindSig`; ⋯ → MARK has ☐/☑ ↩ Follow up under 🚩 Priority (in every kind; a Tasks Zab keeps `pri` and gets Follow up as a plain mark). The badge `.jc-m-fup` (teal-blue, dark ink, > 4.5:1) is drawn by `_jebMarksHTML` on rows, deck cards and All pockets (word from 640 px, icon only below); the band shows ↩; → Note adds "↩ Follow up" to its first line. No new button under the text; nothing written to `<html>`. Check: block 169, `tools/zab-followup-j199.mjs` (33 checks at 390/820/1440). Block 168 needed no change (it only requires its three rows to be present). Not done: no sorting or filtering by Follow up.
+
 ## v06.09 — J197: no buttons under a jot; Urgent · Important · Priority (17+ Nov 2026 build, issue #344)
 
 The owner (19 Nov 2026): "Remove all the buttons below the Jots, they are already in the 3 dots", "Enable the Jot to mark Urgent. Important. Priority.", "Remove the Add link too."
