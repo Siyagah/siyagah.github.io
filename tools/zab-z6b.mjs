@@ -59,7 +59,10 @@ const taskItems = (from) => [
 const seed = (extra, from) => { const db = seedDB(T0); db.jeb = taskItems(from); if (extra) extra(db); db.theme = Object.assign({}, db.theme, { zabPhoneLayout: 'bar' }); return db; };   /* v05.18: a phone's Zab is a corner button now; this check is about the bar (block 77 covers the button) */
 const dev = (cloud, name, vp, db, opts = {}) => addDevice(browser, srv.base, cloud, name, { width: vp.w, height: vp.h }, vp.touch, db || seed(), opts);
 /* v05.40 · Z15: a Zab chip the bar has folded into "▸ N more" is reached through the more-list, as the owner does (harness zabTap); a folded chip's ▦ half is reached through the panel header (zabAct) */
-const act = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+/* v06.09 · J197: the Attach / Title / → Note buttons and the "Add link" box are gone from a jot's body (the owner: they are in the ⋯ menu). A step that used one now opens the item's ⋯ menu and picks the same row, so what it proves is unchanged. */
+const act0 = (d, vp, sel) => (/^#jeb-bar[ >]+\.jeb-(?:chip|all)/.test(sel) ? zabAct(d.page, sel, { touch: vp.touch }) : vp.touch ? d.page.locator(sel).first().tap() : d.page.locator(sel).first().click());
+const _VIA = { 'jeb-att-b': '📎 Attach', 'jeb-note-b': '→ Note', 'jeb-ttl-b': '✎ Title', 'jlk-open': '🔗 Add link' };
+const act = async (d, vp, sel) => { const m = /^(.*?)\s+\.(jeb-att-b|jeb-note-b|jeb-ttl-b|jlk-open)$/.exec(sel); if (!m) return act0(d, vp, sel); await act0(d, vp, m[1] + ' .jeb-more'); await d.page.waitForSelector('#jeb-menu'); return act0(d, vp, '#jeb-menu .jm:has-text("' + _VIA[m[2]] + '")'); };
 const until = async (fn, ms = 8000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await sleep(150); } return false; };
 const rect = (d, sel) => d.page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
 const item = (d, id) => on(d, (i) => JSON.parse(JSON.stringify(DB.jeb.find((x) => x.id === i) || null)), id);
@@ -424,7 +427,7 @@ try {
           const pw = document.getElementById('jeb-panel').clientWidth;
           const rows = [...document.querySelectorAll('#jeb-panel .jt-it')];
           const tops = rows.map((r) => { const a = r.querySelector('.jeb-att-b'), n = r.querySelector('.jeb-note-b'); return a && n ? [Math.round(a.getBoundingClientRect().top), Math.round(n.getBoundingClientRect().top)] : null; });
-          const split = tops.filter((t) => !t || t[0] !== t[1]).length;
+          const split = rows.filter((r) => r.querySelector('.jeb-att-b,.jeb-note-b,.jeb-acts')).length; /* v06.09 · J197 (in place): the Attach / → Note buttons are gone from a jot's body (⋯ holds them); a row that still carries one is the fault */
           const over = rows.filter((r) => r.scrollWidth > r.clientWidth).length;
           const withDue = rows.filter((r) => r.querySelector('.jt-due, .jt-flag, .jt-cnt'));
           const side = withDue.filter((r) => r.querySelector('.jt-side')).length, meta = withDue.filter((r) => r.querySelector('.jt-meta')).length;
@@ -432,7 +435,7 @@ try {
         });
         const wide = m.pw >= 560;
         const shapeOk = wide ? m.side === m.withDue && m.meta === 0 : m.meta === m.withDue && m.side === 0;
-        check(m.n >= 7 && m.withDue >= 5 && m.split === 0 && m.over === 0 && shapeOk, `71j@${c.tag} panel ${m.pw}px: chips ${wide ? 'in the side column' : 'under the text'}, Attach and → Note on one line in all ${m.n} rows, no row overflows`, JSON.stringify(m));
+        check(m.n >= 7 && m.withDue >= 5 && m.split === 0 && m.over === 0 && shapeOk, `71j@${c.tag} panel ${m.pw}px: chips ${wide ? 'in the side column' : 'under the text'}, no Attach / → Note buttons (they are in ⋯) in all ${m.n} rows, no row overflows`, JSON.stringify(m));
         noErr(d, '71j@' + c.tag);
       } finally { await d.ctx.close(); }
     }

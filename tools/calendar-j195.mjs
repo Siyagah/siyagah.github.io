@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* tools/calendar-j195.mjs — v06.10, J195 R1 (block 168): the Calendar like Google Calendar.
+/* tools/calendar-j195.mjs — v06.10, J195 R1 (block 169): the Calendar like Google Calendar.
    168a the expander: daily / weekly / monthly (date and nth weekday) / yearly, until, count, exceptions, overrides, this-and-following, delete scopes; 5,000 events fast (also at 4× CPU)
    168b the layout at 390 / 820 / 1440 (docked panel or drawer, view dropdown, ＋ button above the Zab button, no sideways overflow), reached by a real click
    168c time grid by real mouse: click an empty slot, drag across slots (30-min snap), drag a block, resize it, Escape cancels; month drag; touch press-and-hold then drag

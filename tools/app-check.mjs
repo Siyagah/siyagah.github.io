@@ -13299,7 +13299,7 @@ await r.block('167-zab-sync-j196', async () => {
   const { spawnSync } = await import('node:child_process');
   const out = spawnSync(process.execPath, [new URL('./zab-sync-j196.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1200000, maxBuffer: 1 << 28 });
 /* 168 — v06.10, J195 R1: the Calendar like Google Calendar — one expander (repeat rules, this / this-and-following / all), Google layout at 390 / 820 / 1440, time grid by real mouse and touch (create, move, resize, month drag), event dialog, reminders (card once, e-mail list), search, keys, old events unchanged (keep1116). tools/calendar-j195.mjs. */
-await r.block('168-calendar-j195', async () => {
+await r.block('169-calendar-j195', async () => {
   const { spawnSync } = await import('node:child_process');
   const out = spawnSync(process.execPath, [new URL('./calendar-j195.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1200000, maxBuffer: 1 << 28 });
   const txt = (out.stdout || '') + (out.stderr || '');
@@ -13307,7 +13307,7 @@ await r.block('168-calendar-j195', async () => {
   const rows = [];
   lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 60, 'the calendar-j195.mjs check ran to the end', txt.slice(-400));
-  for (const row of rows) r.check(row.ok, '168: ' + row.label, row.detail);
+  for (const row of rows) r.check(row.ok, '169: ' + row.label, row.detail);
   r.check(out.status === 0, 'the calendar-j195.mjs check exits cleanly', `exit ${out.status}`);
 });
   const txt = (out.stdout || '') + (out.stderr || '');
@@ -13317,6 +13317,18 @@ await r.block('168-calendar-j195', async () => {
   r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 10, 'the zab-sync-j196.mjs check ran to the end', txt.slice(-400));
   for (const row of rows) r.check(row.ok, '167: ' + row.label, row.detail);
   r.check(out.status === 0, 'the zab-sync-j196.mjs check exits cleanly', `exit ${out.status}`);
+});
+/* 168 — v06.09, J197: no Attach / Title / → Note buttons and no "Add link" box under a jot (all in ⋯); 🔥 Urgent · ❗ Important · 🚩 Priority marks. tools/zab-marks-j197.mjs runs 167a–167d. */
+await r.block('168-zab-marks-j197', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const out = spawnSync(process.execPath, [new URL('./zab-marks-j197.mjs', import.meta.url).pathname], { encoding: 'utf8', timeout: 1200000, maxBuffer: 1 << 28 });
+  const txt = (out.stdout || '') + (out.stderr || '');
+  const lines = txt.split('\n');
+  const rows = [];
+  lines.forEach((l, i) => { const m = /^\s*(ok|FAIL)\s{2,}(.*)$/.exec(l); if (m) rows.push({ ok: m[1] === 'ok', label: m[2], detail: (lines[i + 1] || '').trim().slice(0, 600) }); });
+  r.check(/\d+\/\d+ passed/.test(txt) && rows.length >= 30, 'the zab-marks-j197.mjs check ran to the end', txt.slice(-400));
+  for (const row of rows) r.check(row.ok, '168: ' + row.label, row.detail);
+  r.check(out.status === 0, 'the zab-marks-j197.mjs check exits cleanly', `exit ${out.status}`);
 });
 /* ── run everything registered above, or a --only subset ─────────────────
    v04.49: every r.block() call above this line only REGISTERED a block —

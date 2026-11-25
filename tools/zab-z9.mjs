@@ -78,9 +78,11 @@ const noErr = (d, tag) => check(d.errors.length === 0, `${tag} no page errors`, 
 const tag = (id, vp) => `${id} (${vp.name})`;
 const tap = async (d, vp, loc) => { if (vp.touch) await loc.tap(); else await loc.click(); };
 const rowSel = (iid) => `#jeb-panel .jeb-it[data-iid="${iid}"]`;
+/* v06.09 · J197: the ✎ Title button is gone from a jot's body; the title box opens from the item's ⋯ menu (row or deck card) */
+const viaTitle = async (d, vp, scope) => { await tap(d, vp, d.page.locator(scope + ' .jeb-more').first()); await d.page.waitForSelector('#jeb-menu'); await tap(d, vp, d.page.locator('#jeb-menu .jm:has-text("Title")').first()); };
 const openP = async (d, pid) => { await d.page.evaluate((p) => { jebClosePanel && jebClosePanel(); jebOpenPanel(p); }, pid); await sleep(600); };
 const setTitle = async (d, vp, iid, text) => {
-  await tap(d, vp, d.page.locator(rowSel(iid) + ' .jeb-ttl-b'));
+  await viaTitle(d, vp, rowSel(iid));
   await d.page.waitForSelector('#jt-tm'); await d.page.fill('#jt-tm', text); await d.page.press('#jt-tm', 'Enter'); await sleep(500);
 };
 const dbItem = (d, iid) => d.page.evaluate((i) => JSON.parse(JSON.stringify(DB.jeb.find((x) => x.id === i) || null)), iid);
@@ -92,19 +94,18 @@ try {
     try {
       for (const [pid, iid] of [['P', 'p1'], ['L', 'l1'], ['T', 't1'], ['I', 'i1'], ['S', 's1']]) {
         await openP(d, pid);
-        const m = await d.page.evaluate((r) => { const b = document.querySelector(r + ' .jeb-ttl-b'); if (!b) return null; const q = b.getBoundingClientRect(), n = document.querySelector(r + ' .jeb-note-b').getBoundingClientRect(); return { label: b.getAttribute('aria-label') || '', h: q.height, w: q.width, text: b.textContent, sameRow: Math.abs(q.top - n.top) < q.height }; }, rowSel(iid));
-        check(!!m && /Title/.test(m.text + ' ' + m.label),   /* v06.05 · J178 (in place): a Links card shows ✎ alone (its aria-label says Title) */
-           `${t} pocket ${pid}: the row has a "✎ Title" button`, JSON.stringify(m));
-        if (vp.name === '390') check(!!m && m.h >= 44 && m.w >= 44, `${t} pocket ${pid}: the button is a >= 44 px target (${m && Math.round(m.w)} x ${m && Math.round(m.h)})`);
+        /* v06.09 · J197 (in place): the row no longer carries a Title button; its ⋯ menu does (checked below and in block 167) */
+        const m = await d.page.evaluate((r) => ({ btn: !!document.querySelector(r + ' .jeb-ttl-b'), more: !!document.querySelector(r + ' .jeb-more') }), rowSel(iid));
+        check(!m.btn && m.more, `${t} pocket ${pid}: no "✎ Title" button on the row (it is in ⋯)`, JSON.stringify(m));
       }
       await openP(d, 'P');
       await tap(d, vp, d.page.locator(rowSel('p1') + ' .jeb-more')); await sleep(400);
       check(await d.page.evaluate(() => document.body.innerText.includes('✎ Title…')), `${t} the ⋯ menu has "✎ Title…"`);
       await d.page.keyboard.press('Escape');
       await d.page.evaluate(() => { jebClosePanel(); jebOpenDeck({ ids: ['P'], all: false }); }); await sleep(600);
-      check(await d.page.evaluate(() => !!document.querySelector('#jeb-deck .jeb-card[data-iid="p1"] .jeb-ttl-b')), `${t} a deck card has the title button`);
+      check(await d.page.evaluate(() => !document.querySelector('#jeb-deck .jeb-card[data-iid="p1"] .jeb-ttl-b') && !!document.querySelector('#jeb-deck .jeb-card[data-iid="p1"] .jeb-more')), `${t} a deck card has no title button (⋯ only)`);
       await d.page.evaluate(() => { jebCloseDeck(); jebOpenPanelSel({ ids: [], all: true }); }); await sleep(600);
-      check(await d.page.evaluate(() => document.querySelectorAll('#jeb-panel .jeb-it .jeb-ttl-b').length >= 6), `${t} All pockets: every row has the title button`);
+      check(await d.page.evaluate(() => document.querySelectorAll('#jeb-panel .jeb-it .jeb-ttl-b').length === 0 && document.querySelectorAll('#jeb-panel .jeb-it .jeb-more').length >= 6), `${t} All pockets: no row has a title button (⋯ only)`);
       noErr(d, t);
     } finally { await d.ctx.close(); }
   }
@@ -115,7 +116,7 @@ try {
     try {
       await openP(d, 'P');
       const before = await d.page.evaluate((r) => document.querySelector(r).outerHTML, rowSel('p2'));
-      await tap(d, vp, d.page.locator(rowSel('p2') + ' .jeb-ttl-b'));
+      await viaTitle(d, vp, rowSel('p2'));
       await d.page.waitForSelector('#jt-tm');
       await d.page.fill('#jt-tm', 'Should not be saved'); await d.page.press('#jt-tm', 'Escape'); await sleep(400);
       let it = await dbItem(d, 'p2');
@@ -138,7 +139,7 @@ try {
       check(await d.page.evaluate(() => !!document.querySelector('#jeb-panel .jeb-edit') && document.querySelector('#jeb-panel .jeb-edit').value.startsWith('https://x.com')), `${t} tapping the rest of the line edits the TEXT`);
       await d.page.keyboard.press('Escape'); await sleep(300);
       /* clear */
-      await tap(d, vp, d.page.locator(rowSel('p2') + ' .jeb-ttl-b'));
+      await viaTitle(d, vp, rowSel('p2'));
       await d.page.waitForSelector('#jt-tm');
       check(await d.page.evaluate(() => document.getElementById('jt-tm').value) === 'A saved title', `${t2} the dialog starts with the current title`);
       await tap(d, vp, d.page.locator('#jt-tm-c')); await sleep(500);
@@ -163,14 +164,16 @@ try {
       /* v06.05 · J178 (changed in place): the Links pocket (L) is redesigned on purpose (Filter card, buttons on the top line), so it is no longer compared with v05.24's HTML; block 164 holds it */
       for (const pid of ['P', 'T', 'I', 'S']) {
         await openP(d, pid); await openP(b, pid);
-        const [x, y] = await Promise.all([d, b].map((q) => q.page.evaluate(() => document.querySelector('#jeb-panel .jeb-list').innerHTML)));
-        check(jlk(x).split(btn).join('') === y, `${t} pocket ${pid}: the panel list is v05.24's, apart from the new button`, jlk(x).split(btn).join('') === y ? '' : jlk(x).slice(0, 160));
+        const [x, y0] = await Promise.all([d, b].map((q) => q.page.evaluate(() => document.querySelector('#jeb-panel .jeb-list').innerHTML)));
+        const y = y0.replace(/<div class="jeb-acts">[\s\S]*?<\/div>/g, '');   /* v06.09 · J197, in place: the old build's button row is removed from the old side (the new build has none; the buttons are in ⋯) */
+        check(jlk(x) === y, `${t} pocket ${pid}: the panel list is v05.24's, apart from the new button`, jlk(x) === y ? '' : jlk(x).slice(0, 160));
       }
       for (const q of [d, b]) await q.page.evaluate(() => { jebClosePanel(); jebOpenDeck({ ids: ['P'], all: false }); });   /* v06.05 · J178: L left out, see above */
       await sleep(600);
       let [x, y] = await Promise.all([d, b].map((q) => q.page.evaluate(() => document.querySelector('#jeb-deck .jd-wrap').innerHTML)));
+      y = y.replace(/<button class="jeb-(?:att|ttl|note)-b"[^>]*>[^<]*<\/button>/g, '');   /* v06.09 · J197, in place: the old card's Attach / Title / → Note buttons are removed from the old side */
       const nj = (s) => s.replace(/ data-jump="[^"]*"/g, '');   /* where the card flies out from: a measured position, not markup */
-      const xs = nj(jlk(x).split('<button class="jeb-ttl-b" aria-label="Title" title="Give this item a title">✎</button>').join('')); y = nj(y);
+      const xs = nj(jlk(x)); y = nj(y);
       let k = 0; while (k < xs.length && xs[k] === y[k]) k++;
       check(xs === y, `${t} the deck cards are v05.24's, apart from the new button`, xs === y ? '' : `differs at ${k}: new …${xs.slice(k - 30, k + 60)}… old …${y.slice(k - 30, k + 60)}…`);
     } finally { await d.ctx.close(); await b.ctx.close(); }
@@ -235,7 +238,7 @@ try {
       await d.page.evaluate(() => jebOpenDeck({ ids: ['P', 'L'], all: false })); await sleep(700);
       const dk = await d.page.evaluate(() => ['p2', 'l1'].map((i) => { const c = document.querySelector('#jeb-deck .jeb-card[data-iid="' + i + '"]'); return c && c.querySelector('.jeb-ttl') && c.querySelector('.jeb-ttl').textContent; }));
       check(dk[0] === 'Shown everywhere' && dk[1] === 'Shown on a link', `${t} the deck cards show the title`, JSON.stringify(dk));
-      await tap(d, vp, d.page.locator('#jeb-deck .jeb-card[data-iid="p1"] .jeb-ttl-b')); await d.page.waitForSelector('#jt-tm');
+      await viaTitle(d, vp, '#jeb-deck .jeb-card[data-iid="p1"]'); await d.page.waitForSelector('#jt-tm');
       check(await d.page.evaluate(() => document.getElementById('jt-tm').value) === 'Hanging', `${t} the deck card's ✎ opens the dialog with its title`);
       const box = await d.page.evaluate(() => { const r = document.getElementById('mb').getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, vw: innerWidth, vh: innerHeight }; });
       check(box.l >= 0 && box.r <= box.vw && box.t >= 0 && box.b <= box.vh + 1, `${t} the dialog is on the screen`, JSON.stringify(box));
