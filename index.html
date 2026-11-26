@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="06.11">
+<meta name="app-version" content="06.12">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -175,6 +175,25 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
                 font-variant-numeric:tabular-nums;line-height:1.35;
                 padding:2px 7px;border-radius:999px;color:var(--sb-ink);
                 background:var(--sb-strip);border:1px solid var(--sb-line)}
+/* v06.12 · J198 — 🌐 Sites: a worded, framed button beside 🏠 and ONE list of the owner's sites. Menu z 9200 (above float windows, below modals 10000); the phone sheet sits over the Zab bar on purpose (top/bottom:0, no --jeb-h). */
+.sb-hd .sb-sites{height:34px;padding:0 9px;gap:4px;flex-shrink:0;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;line-height:1;white-space:nowrap;
+  background:var(--sb-panel)!important;border:1px solid var(--sb-line)!important;color:var(--sb-ink)!important}
+.sb-hd .sb-sites:hover{background:var(--sb-panel-hi)!important}
+#sites-bk{position:fixed;inset:0;z-index:9199;background:transparent}
+#sites-menu{position:fixed;z-index:9200;background:var(--paper,#fff);color:var(--t1,#222);border:1px solid var(--line,#ccc);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.28);overflow-y:auto;overscroll-behavior:contain;width:340px;max-width:calc(100vw - 16px);padding:6px 0;font-size:13.5px}
+#sites-menu.st-sheet{left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;max-height:82vh;border-radius:16px 16px 0 0;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+#sites-bk.st-dim{background:rgba(0,0,0,.35)}
+.st-hd{padding:8px 14px 6px;font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--t2,#555)}
+.st-row{display:flex;align-items:stretch;border-top:1px solid var(--line,#e5e5e5)}
+.st-a{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:7px 14px;min-height:48px;color:inherit;text-decoration:none}
+.st-a:hover{background:var(--hover,#eee)}
+.st-n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-u{font-size:11px;color:var(--t2,#555);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-more,.st-add{min-width:48px;min-height:48px;background:none;border:0;color:inherit;font-size:18px;cursor:pointer}
+.st-add{display:block;width:100%;text-align:left;padding:0 14px;font-size:13.5px;font-weight:600;border-top:1px solid var(--line,#e5e5e5)}
+.st-more:hover,.st-add:hover{background:var(--hover,#eee)}
+.st-act{display:flex;flex-wrap:wrap;gap:6px;padding:6px 14px 10px;background:var(--hover,#f3f3f3)}
+.st-act button{min-height:44px;padding:0 12px;border-radius:9px;border:1px solid var(--line,#ccc);background:var(--paper,#fff);color:inherit;font-size:13px;cursor:pointer}
 /* One size, one shape, one hover for every button in the header. They were
    37x36, 14x19, 37x36, 42x40 and 37x45, in four different font sizes. */
 .sb-hd-acts{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;
@@ -206,6 +225,7 @@ body{font-family:var(--ui);display:flex;height:100vh;overflow:hidden;background:
   .sb-hd-acts{gap:4px}
   .sb-hd .sb-act{width:42px;height:42px;font-size:19px;border-radius:11px}
   .sb-hd .sb-split .sb-act{border-radius:11px 0 0 11px}
+  .sb-hd .sb-sites{height:44px;min-width:44px;border-radius:11px;font-size:13px}   /* v06.12 · J198: a tap target ≥ 44 on a phone */
   .sb-hd .sb-home-cv{width:30px;font-size:13px;border-radius:0 11px 11px 0}
   .sb-split{border-radius:11px}
 }
@@ -4450,7 +4470,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.11</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.12</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -4463,6 +4483,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
             Opens in a new tab, read-only, on your current notes.</div>
         </div>
       </div>
+      <button class="btn sb-sites" id="sites-btn" onclick="toggleSites(event)" title="My sites and blogs" aria-haspopup="true">🌐 Sites</button>
       <button class="btn sb-act" onclick="openGlobalSearch()" title="Search (Ctrl+K)">🔍</button>
       <div class="sb-menu-wrap" id="sb-tools-wrap">
         <button class="btn sb-act" id="sb-tools-btn" onclick="toggleSBTools(event)" title="Tools — create, insert, view, save">🧰</button>
@@ -6085,6 +6106,7 @@ function _cleanExportRoot(){
     root.querySelectorAll('grammarly-extension,[data-grammarly-shadow-root],[class*="recall-"]')
       .forEach(function(el){ el.remove(); });
     /* 4b ─ v05.35: the News preview (headlines from the net) is never part of a saved copy, even if the Appearance window's markup is in the page. */
+    root.querySelectorAll('#sites-menu,#sites-bk').forEach(function(el){ el.remove(); });   /* v06.12 · J198: an open Sites menu is never part of a saved copy */
     root.querySelectorAll('#nw-prev').forEach(function(el){ el.innerHTML = ''; });
     root.querySelectorAll('#nw-status').forEach(function(el){ el.textContent = ''; });
     /* 4c ─ v05.62: the MyDatabase window (the key box) is never part of a saved copy. */
@@ -31875,6 +31897,121 @@ function toggleSBHome(e){
 }
 function closeSBHome(){
   document.getElementById('sb-home')?.classList.remove('open');
+}
+
+/* ── 🌐 Sites (v06.12, J198) ─────────────────────────────────────────────
+   The owner's list of sites and blogs. DB.theme.sites = [{id,n,u}] is ONE whole key (an array: last write wins in mergeDB(), like zabNews.chans).
+   Read ONLY through _sitesList(); written ONLY through _sitesSet() (one persist()). While the key is ABSENT the built-in list is returned and
+   nothing is written; the first edit writes the whole list (absent ≠ empty: an emptied list stays empty). */
+const _SITES_DEF=[
+  ["Jumua'h Khutbah","https://basheerawanazeera.github.io/BasheeraWaNazeera/library/page.html?p=6BYUwxCixuSj5Jde4x7qBS"],
+  ["Color Studio","https://basheerawanazeera.github.io/BasheeraWaNazeera/library/page.html?p=ms-natural-color-studio"],
+  ["Basheera Wa Nazeera","https://basheerawanazeera.github.io/BasheeraWaNazeera/"],
+  ["BwN Database","https://basheerawanazeera.github.io/BasheeraWaNazeera/library/my.html"],
+  ["Siyagah · My Knowledge Notebook","https://siyagah.github.io/"],
+  ["Mapping My Journey","https://mappingmyjourney.github.io/MappingMyJourney/"],
+  ["Madrasatul Muslimeen","https://madrasatul-muslimeen.github.io/Madrasatul-Muslimeen/"],
+  ["Madrasatul Muslimeen · QuranRevival","https://madrasatul-muslimeen.github.io/"],
+  ["QuranRevival","https://quranrevival.github.io/"],
+  ["Learn Deen On-the-Go","https://learndeenonthego.github.io/LearnDeenOnTheGo/"],
+  ["Hijrah Made Easy","https://hijrahmadeeasy.github.io/HijrahMadeEasy/"],
+  ["For the Good Hearts","https://forthegoodhearts.github.io/"],
+  ["SSEVM","https://ssevm.github.io/SSEVM/"]
+];
+function _sitesOk(u){ return /^https?:\/\/[^\s]+$/i.test(String(u||'').trim()); }
+function _sitesList(){
+  const t=DB&&DB.theme;
+  if(t&&Array.isArray(t.sites)) return t.sites.filter(x=>x&&typeof x==='object'&&x.id).map(x=>({id:String(x.id),n:String(x.n==null?'':x.n),u:String(x.u==null?'':x.u)}));
+  return _SITES_DEF.map((r,i)=>({id:'st-'+(i+1),n:r[0],u:r[1]}));
+}
+function _sitesSet(list){
+  if(!DB.theme) DB.theme={};
+  DB.theme.sites=list.map(x=>({id:x.id,n:x.n,u:x.u}));
+  persist();
+}
+let _sitesOpenId=null;   /* the row whose ⋯ actions are showing (session only) */
+function _sitesNewId(list){ let k=Date.now().toString(36)+Math.random().toString(36).slice(2,6); while(list.some(x=>x.id==='st-'+k)) k+='x'; return 'st-'+k; }
+function _sitesHTML(){
+  const L=_sitesList();
+  let h='<div class="st-hd">🌐 My sites</div>';
+  L.forEach((x,i)=>{
+    const ok=_sitesOk(x.u);
+    h+='<div class="st-row" data-sid="'+esc(x.id)+'">'+
+      (ok?'<a class="st-a" href="'+esc(x.u.trim())+'" target="_blank" rel="noopener noreferrer">':'<span class="st-a">')+
+      '<span class="st-n">'+esc(x.n||x.u)+'</span><span class="st-u">'+esc(x.u)+'</span>'+(ok?'</a>':'</span>')+
+      '<button type="button" class="st-more" data-st="more" aria-label="Actions for '+esc(x.n)+'" title="Rename, change address, move, delete">⋯</button></div>';
+    if(_sitesOpenId===x.id) h+='<div class="st-act" data-sid="'+esc(x.id)+'"><button type="button" data-st="ren">Rename</button><button type="button" data-st="adr">Change address</button>'+
+      '<button type="button" data-st="up"'+(i===0?' disabled':'')+'>▲ Move up</button><button type="button" data-st="dn"'+(i===L.length-1?' disabled':'')+'>▼ Move down</button><button type="button" data-st="del">Delete</button></div>';
+  });
+  h+='<button type="button" class="st-add" data-st="add">＋ Add a site</button>';
+  return h;
+}
+function closeSites(){ _sitesOpenId=null; document.getElementById('sites-menu')?.remove(); document.getElementById('sites-bk')?.remove(); document.removeEventListener('keydown',_sitesKey,true); window.removeEventListener('resize',_sitesPlace); }
+function _sitesKey(e){ if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeSites(); } }
+function _sitesPlace(){
+  const m=document.getElementById('sites-menu'), b=document.getElementById('sites-btn'); if(!m) return;
+  const sheet=window.innerWidth<640;
+  m.classList.toggle('st-sheet',sheet); document.getElementById('sites-bk')?.classList.toggle('st-dim',sheet);
+  m.style.left=m.style.top=m.style.maxHeight='';
+  if(sheet) return;
+  const r=b?b.getBoundingClientRect():{left:8,bottom:40}, top=Math.round(r.bottom+4);
+  m.style.top=top+'px'; m.style.maxHeight=Math.max(180,window.innerHeight-top-12)+'px';
+  const w=m.getBoundingClientRect().width;
+  m.style.left=Math.max(8,Math.min(Math.round(r.left),window.innerWidth-w-8))+'px';
+}
+function openSites(){
+  closeSBMenu();closeSBTools();closeSBHome();closeSites();
+  const bk=document.createElement('div'); bk.id='sites-bk'; bk.addEventListener('click',closeSites);
+  const m=document.createElement('div'); m.id='sites-menu'; m.setAttribute('role','menu'); m.innerHTML=_sitesHTML();
+  document.body.appendChild(bk); document.body.appendChild(m);
+  m.addEventListener('click',_sitesClick);
+  document.addEventListener('keydown',_sitesKey,true); window.addEventListener('resize',_sitesPlace);
+  _sitesPlace();
+}
+function toggleSites(e){ if(e) e.stopPropagation(); if(document.getElementById('sites-menu')) closeSites(); else openSites(); }
+function _sitesRepaint(){ const m=document.getElementById('sites-menu'); if(m){ const st=m.scrollTop; m.innerHTML=_sitesHTML(); m.scrollTop=st; } }
+function _sitesClick(e){
+  if(e.target.closest('a.st-a')){ setTimeout(closeSites,0); return; }
+  const b=e.target.closest('[data-st]'); if(!b) return;
+  const act=b.getAttribute('data-st'), row=b.closest('[data-sid]'), id=row&&row.getAttribute('data-sid');
+  if(act==='more'){ _sitesOpenId=(_sitesOpenId===id?null:id); _sitesRepaint(); return; }
+  if(act==='add'){ _sitesDialog(null); return; }
+  if(act==='ren'||act==='adr'){ _sitesDialog(id,act); return; }
+  const L=_sitesList(), i=L.findIndex(x=>x.id===id); if(i<0) return;
+  if(act==='up'||act==='dn'){
+    const j=i+(act==='up'?-1:1); if(j<0||j>=L.length) return;
+    const t=L[i]; L[i]=L[j]; L[j]=t; _sitesSet(L); _sitesRepaint(); return;
+  }
+  if(act==='del'){
+    const nm=L[i].n; L.splice(i,1); _sitesOpenId=null; _sitesSet(L); _sitesRepaint(); _jmToast('Removed “'+nm+'”');
+  }
+}
+/* mode: null = add (name + address); 'ren' = name only; 'adr' = address only */
+function _sitesDialog(id,mode){
+  const L=_sitesList(), cur=id?L.find(x=>x.id===id):null;
+  if(id&&!cur) return;
+  const wantN=!mode||mode==='ren', wantU=!mode||mode==='adr';
+  closeSites();
+  showModal('<div class="mt">'+(!mode?'＋ Add a site':mode==='ren'?'Rename site':'Change address')+'</div>'+
+    (wantN?'<input class="mi" id="st-in-n" maxlength="120" autocomplete="off" placeholder="Name" aria-label="Name" value="'+esc(cur?cur.n:'')+'">':'')+
+    (wantU?'<input class="mi" id="st-in-u" maxlength="2000" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url" placeholder="https://…" aria-label="Address" style="margin-top:8px" value="'+esc(cur?cur.u:'')+'">':'')+
+    '<div class="st-err" id="st-err" style="color:#B3261E;font-size:12px;min-height:16px;margin-top:6px"></div>'+
+    '<div class="ma"><button class="btn" id="st-x">Cancel</button><button class="btn bp" id="st-ok">Save</button></div>');
+  const mb=document.getElementById('mb'), nI=mb.querySelector('#st-in-n'), uI=mb.querySelector('#st-in-u'), err=mb.querySelector('#st-err');
+  const done=()=>{ closeModal(); openSites(); };
+  const save=()=>{
+    const n=nI?nI.value.trim().replace(/\s+/g,' '):null, u=uI?uI.value.trim():null;
+    if(nI&&!n){ err.textContent='Please type a name.'; nI.focus(); return; }
+    if(uI&&!_sitesOk(u)){ err.textContent='The address must start with http:// or https://'; uI.focus(); return; }
+    const L2=_sitesList();
+    if(cur){ const x=L2.find(y=>y.id===cur.id); if(!x){ done(); return; } if(n!=null) x.n=n; if(u!=null) x.u=u; }
+    else L2.push({id:_sitesNewId(L2),n:n,u:u});
+    _sitesSet(L2); done();
+  };
+  mb.querySelector('#st-ok').addEventListener('click',save);
+  mb.querySelector('#st-x').addEventListener('click',done);
+  [nI,uI].forEach(el=>{ if(el) el.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); save(); } else if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); done(); } }); });
+  (nI||uI).focus();
 }
 /* Opens a sealed build from /legacy/. Those files are frozen forever and are
    read-only over your live notes — see legacy/README.md.
