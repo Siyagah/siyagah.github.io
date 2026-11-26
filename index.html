@@ -3936,10 +3936,10 @@ sup.ann-sup:hover{text-decoration:underline}
 .gc-dn{font-size:12px;font-weight:600;min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;color:var(--t1)}
 .gc-dn:hover{background:var(--hover)}
 .gc-today .gc-dn{background:var(--forest);color:#fff}
-.gc-chip{--c:#6366F1;display:block;box-sizing:border-box;font-size:11px;line-height:16px;padding:0 4px;margin:1px 0;border-radius:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;color:var(--t1);background:color-mix(in srgb,var(--c) 22%,var(--paper));border-left:3px solid var(--c)}
+.gc-chip{--c:#6366F1;display:block;box-sizing:border-box;font-size:11px;line-height:16px;padding:0 4px;margin:1px 0;border-radius:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;color:var(--t1);background:color-mix(in srgb,var(--c,#6366F1) 22%,var(--paper));border-left:3px solid var(--c,#6366F1)}
 .gc-chip:hover{filter:brightness(.94)}
 .gc-chip-t{background:none;border-left:0;padding-left:2px}
-.gc-chip-t i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--c);margin-right:3px;vertical-align:1px}
+.gc-chip-t i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--c,#6366F1);margin-right:3px;vertical-align:1px}
 .gc-chip-t:hover{background:var(--hover)}
 .gc-ct{color:var(--t2);font-size:10px}
 .gc-phone .gc-ct{display:none}
@@ -3951,7 +3951,7 @@ sup.ann-sup:hover{text-decoration:underline}
 /* the time grid */
 .gc-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;position:relative}
 .gc-tg{--n:7;--hr:48px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-.gc-tg-hd,.gc-tg-ad,.gc-tg-body{display:grid;grid-template-columns:52px repeat(var(--n),minmax(0,1fr))}
+.gc-tg-hd,.gc-tg-ad,.gc-tg-body{display:grid;grid-template-columns:52px repeat(var(--n,7),minmax(0,1fr))}
 .gc-tg-hd{position:sticky;top:0;z-index:6;background:var(--paper);border-bottom:1px solid var(--border2);height:58px}
 .gc-tg-dh{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer;border-left:1px solid var(--border2);font-size:11px;color:var(--t2);min-width:0}
 .gc-tg-dh small{font-size:9px;color:var(--t3)}
@@ -3966,14 +3966,14 @@ sup.ann-sup:hover{text-decoration:underline}
 .gc-ad-it.gc-jr{background:rgba(139,92,246,.14);border-left-color:#8B5CF6}
 .gc-hls{position:relative;grid-column:1;grid-row:1}
 .gc-hls span{position:absolute;right:6px;font-size:10px;color:var(--t3);background:var(--paper);padding:0 2px}
-.gc-tgc{position:relative;grid-row:1;border-left:1px solid var(--border2);background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--hr) - 1px),var(--border2) calc(var(--hr) - 1px),var(--border2) var(--hr));cursor:cell;touch-action:pan-y}
+.gc-tgc{position:relative;grid-row:1;border-left:1px solid var(--border2);background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--hr,48px) - 1px),var(--border2) calc(var(--hr,48px) - 1px),var(--border2) var(--hr,48px));cursor:cell;touch-action:pan-y}
 .gc-tgc.gc-today{background-color:rgba(47,111,79,.05)}
-.gc-blk{--c:#6366F1;position:absolute;box-sizing:border-box;overflow:hidden;border-radius:5px;padding:2px 5px;font-size:11px;line-height:14px;cursor:pointer;color:var(--t1);background:color-mix(in srgb,var(--c) 26%,var(--paper));border-left:3px solid var(--c);z-index:2;touch-action:pan-y}
+.gc-blk{--c:#6366F1;position:absolute;box-sizing:border-box;overflow:hidden;border-radius:5px;padding:2px 5px;font-size:11px;line-height:14px;cursor:pointer;color:var(--t1);background:color-mix(in srgb,var(--c,#6366F1) 26%,var(--paper));border-left:3px solid var(--c,#6366F1);z-index:2;touch-action:pan-y}
 .gc-blk:hover{filter:brightness(.95)}
 .gc-bt{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gc-bm{font-size:10px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gc-rz{position:absolute;left:0;right:0;bottom:0;height:8px;cursor:ns-resize}
-.gc-ghost{opacity:.85;z-index:4;pointer-events:none;border:1px dashed var(--c);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.gc-ghost{opacity:.85;z-index:4;pointer-events:none;border:1px dashed var(--c,#6366F1);box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .gc-moving{opacity:.4}
 .gc-now{position:absolute;left:0;right:0;height:0;border-top:2px solid #EA4335;z-index:3;pointer-events:none}
 .gc-now i{position:absolute;left:-5px;top:-6px;width:10px;height:10px;border-radius:50%;background:#EA4335}
