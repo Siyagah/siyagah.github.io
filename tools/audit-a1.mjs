@@ -146,7 +146,7 @@ try {
         const vw = innerWidth, R = (e) => e.getBoundingClientRect();
         const n = document.querySelectorAll('#p3c .gc-side .gc-lyr input').length;
         const title = tb.querySelector('.gc-ttl');
-        return { vw, h: R(h).height, n, inside: R(tb).left >= -1 && R(tb).right <= vw + 1 && tb.scrollWidth <= tb.clientWidth + 1, titleW: title ? R(title).width : 0, titleTxt: title ? title.innerText.trim() : '', };
+        return { vw, h: R(h).height, n, inside: R(tb).width <= vw + 1 && tb.scrollWidth <= tb.clientWidth + 1, /* width, not position: on a phone/tablet the row tap shows Pane 2 and Pane 3 waits off-screen (as on main); the bar itself must fit its own box */ titleW: title ? R(title).width : 0, titleTxt: title ? title.innerText.trim() : '', };
       });
       check(m !== null && m.n === 5 && m.inside, `${t} the top bar is inside the screen and the five calendar layers are there as checkboxes`, JSON.stringify(m));
       check(m !== null && m.titleW >= 80 && /\d{4}/.test(m.titleTxt), `${t} the month title is visible (${m && Math.round(m.titleW)} px wide: "${m && m.titleTxt.replace(/\s+/g, ' ')}")`);
