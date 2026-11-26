@@ -27,7 +27,7 @@
      the day v04.00 began). NOTHING in that folder is ever updated: no
      feature, no fix, no refactor, and no version bump. The rule above
      applies to THIS file and sw.js only. See legacy/README.md. -->
-<meta name="app-version" content="06.10">
+<meta name="app-version" content="06.11">
 <meta name="theme-color" content="#6366F1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1431,7 +1431,7 @@ html.jeb-app #jeb-deck{top:var(--jeb-hd)}
 .jlk-more{flex:0 0 44px;min-height:44px;border:0;border-left:1px solid var(--border);background:none;color:inherit;font-size:16px;cursor:pointer}
 .jlk-more:hover{background:var(--hover)}
 .jc-m{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.5;border:1px solid currentColor}
-.jc-m-urg{color:#B3261E;background:rgba(179,38,30,.10)}.jc-m-imp{color:#8A5A00;background:rgba(240,170,0,.18)}.jc-m-prio{color:#1B5FB5;background:rgba(27,95,181,.10)}
+.jc-m-urg{color:#B3261E;background:rgba(179,38,30,.10)}.jc-m-imp{color:#8A5A00;background:rgba(240,170,0,.18)}.jc-m-prio{color:#1B5FB5;background:rgba(27,95,181,.10)}.jc-m-fup{color:#0B5E73;background:rgba(14,140,170,.12)}
 .jc-mw{display:none}@media(min-width:640px){.jc-mw{display:inline}}
 .done .jc-m{opacity:.55}
 #zab-tk .tk-mk{font-size:.9em}
@@ -4450,7 +4450,7 @@ table.sg-g{border-collapse:separate;border-spacing:0;table-layout:fixed;font-var
 <aside id="sb" style="width: 390px;" class="">
   <div class="sb-hd">
     <button class="btn sb-act sb-nav-btn" onclick="openP2()" title="Note list">≡</button>
-    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.10</span></div>
+    <div class="sb-logo" onclick="goHome()" style="cursor:pointer" title="Home"><span class="ico">📚</span><span class="sb-logo-name">Siyagah</span><span id="app-version-tag" class="sb-version-tag" title="App version"> v06.11</span></div>
     <div class="sb-hd-acts">
       <div class="sb-menu-wrap sb-split" id="sb-home-wrap">
         <button class="btn sb-act" onclick="goHome()" title="Home — reset search/filters and show the folder list">🏠</button><button class="btn sb-act sb-home-cv" onclick="toggleSBHome(event)" title="Older versions of this app">▾</button>
@@ -27301,7 +27301,7 @@ function jebEditItem(id,patch,noSave){   /* v06.05 · J178: noSave = the caller 
   _jebEnsure(); const it=_jebItem(id); if(!it||!patch) return false;
   ['text','done','kind','journal','url','ttl','ch','th'].forEach(k=>{ if(k in patch) it[k]=patch[k]; });
   /* v06.09 · J197 — marks: urg / imp / prio are true or absent (never false); prio is the non-Tasks "Priority" (a Tasks Zab uses pri) */
-  ['urg','imp','prio'].forEach(k=>{ if(k in patch){ if(patch[k]) it[k]=true; else delete it[k]; } });
+  ['urg','imp','prio','fup'].forEach(k=>{ if(k in patch){ if(patch[k]) it[k]=true; else delete it[k]; } });
   ['folderIds','tags','people','issues'].forEach(k=>{ if(Array.isArray(patch[k])) it[k]=patch[k].slice(); });
   if('text' in patch) _jebLinkSync(it);
   /* v05.11 · Z6b — task fields. due = 'YYYY-MM-DD' or absent; pri = 1 or absent (a number, so more levels fit later); steps = [{id,t,d}] deep-copied */
@@ -27416,7 +27416,7 @@ function _jebShopSetView(pid,patch){
   DB.theme.zabShopView=all; persist();
 }
 /* the part of an item's signature that belongs to its kind (a field is drawn only in its own kind, but a change must always repaint) */
-function _jebKindSig(i){ return [(i.urg?'U':'')+(i.imp?'I':'')+(i.prio?'P':''),i.stars||0,(i.topics||[]).join(','),i.qty||'',i.shop||'',i.src||'',i.color||'',i.off?1:0].join('^'); }
+function _jebKindSig(i){ return [(i.urg?'U':'')+(i.imp?'I':'')+(i.prio?'P':'')+(i.fup?'F':''),i.stars||0,(i.topics||[]).join(','),i.qty||'',i.shop||'',i.src||'',i.color||'',i.off?1:0].join('^'); }
 /* in "All pockets" and the deck a shopping pocket lists its ticked items last */
 function _jebBasketLast(pk,items){ return _jebType(pk)==='shop'?items.filter(i=>!i.done).concat(items.filter(i=>i.done)):items; }
 /* ── v05.10 · Z6a — link items. url/ttl/ch/th/people/issues are optional fields on the item. ── */
@@ -30032,7 +30032,7 @@ function _jebItemMenu(iid,anchor){
       _jebStartEdit(iid);
     }}),
     ...(ty==='links'?[G({t:'👤 Person…',f:()=>_jebPickOpen(iid,'people')}),G({t:'# Issue…',f:()=>_jebPickOpen(iid,'issues')})]:[]),
-    ...[['urg','🔥 Urgent'],['imp','❗ Important'],...(ty==='tasks'?[]:[['prio','🚩 Priority']])].map(m=>M({t:(it[m[0]]?'☑ ':'☐ ')+m[1],f:()=>{ const x=_jebItem(iid); if(x){ jebEditItem(iid,{[m[0]]:!x[m[0]]}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } }})),   /* v06.09 · J197 */
+    ...[['urg','🔥 Urgent'],['imp','❗ Important'],...(ty==='tasks'?[]:[['prio','🚩 Priority']]),['fup','↩ Follow up']].map(m=>M({t:(it[m[0]]?'☑ ':'☐ ')+m[1],f:()=>{ const x=_jebItem(iid); if(x){ jebEditItem(iid,{[m[0]]:!x[m[0]]}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } }})),   /* v06.09 · J197 */
     ...(ty==='tasks'?[
       R({t:'📅 Due…',f:()=>_jebDueOpen(iid,anchor)}),
       M({t:(it.pri>0?'☑ ':'☐ ')+'⚑ High priority',f:()=>{ const x=_jebItem(iid); if(x){ jebEditItem(iid,{pri:x.pri>0?0:1}); _jebPanelSig=''; _jebDeckSig=''; jebRefresh(); } }}),
@@ -30221,7 +30221,7 @@ function _jebFolderName(fid){ const p=pathOf(fid); return p.length?p[p.length-1]
 function _jebKindOf(id){ return id?(ensureNoteKinds().find(k=>k.id===id)||null):null; }
 /* small chips under an item's text: 📁 folders, #tags, the Note Type with its dot, 📔 Journal */
 /* v06.09 · J197 — Urgent / Important / Priority badges (icon always, word from 640 px); a Tasks Zab shows its own ⚑ flag instead of 🚩 */
-const _JEB_MARKS=[['urg','🔥','Urgent'],['imp','❗','Important'],['prio','🚩','Priority']];
+const _JEB_MARKS=[['urg','🔥','Urgent'],['imp','❗','Important'],['prio','🚩','Priority'],['fup','↩','Follow up']];
 function _jebMarksHTML(i){
   return _JEB_MARKS.filter(m=>i[m[0]]).map(m=>'<span class="jc-m jc-m-'+m[0]+'" title="'+m[2]+'" aria-label="'+m[2]+'"><span aria-hidden="true">'+m[1]+'</span><span class="jc-mw">'+m[2]+'</span></span>').join('');
 }

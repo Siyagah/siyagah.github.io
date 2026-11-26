@@ -259,7 +259,8 @@ try {
            comparison with v05.29 and checked by block 169 (tools/calendar-j195.mjs) and 90a–90c at the phone sizes. v06.09 · J197: the 📎 Attach / ✎ Title / → Note buttons left the jot's body on purpose (they live in ⋯), so they are left out of the old build's list (block 168). */
         if (name === 'cal') continue;
         /* v05.40 · Z15, updated in place: the Zab bar's tappable boxes changed ON PURPOSE (＋ New Zab is first, what does not fit folds into "▸ N more", a 📰 News chip); they are compared by block 99 (tools/zab-bar-more.mjs), so the bar's rows are left out of this comparison with the v05.29 build */
-        const sig = (m) => m.rows.filter((t) => !t.bar && !/\bjlk-|jeb-att-b|jeb-note-b|jeb-ttl-b/.test(t.key)).map((t) => `${t.key.replace('#p2-srch-btn', '')}|${t.text.replace(/v\d\d\.\d\d/, 'vX')}|${Math.round(t.x)},${Math.round(t.y)},${Math.round(t.w)}x${Math.round(t.h)}`).sort();
+        /* v06.11 · J199, updated in place: the logo box holds the version number ("v06.11"), and a '1' is a pixel narrower than a '2' or '5', so its width changes with every release; its place and height still compare. */
+        const sig = (m) => m.rows.filter((t) => !t.bar && !/\bjlk-|jeb-att-b|jeb-note-b|jeb-ttl-b/.test(t.key)).map((t) => `${t.key.replace('#p2-srch-btn', '')}|${t.text.replace(/v\d\d\.\d\d/, 'vX')}|${Math.round(t.x)},${Math.round(t.y)},${/sb-logo/.test(t.key) ? 'W' : Math.round(t.w)}x${Math.round(t.h)}`).sort();
         const A = sig(a), B = sig(b); n += A.length;
         const sa = new Set(A), sb = new Set(B);
         for (const x of A) if (!sb.has(x)) diffs.push(`${name}: now ${x}`);
